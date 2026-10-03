@@ -2,6 +2,10 @@
 
 AI Nexus 採單一 ASP.NET Core host 的模組化單體與 Angular 按路由功能載入。第一版保留同一 assembly／scoped context 的 transaction 邊界；需要獨立部署或實際依賴邊界時再拆專案，避免每層只有轉送。
 
+`Attachments` 負責上傳、文件抽取、下載權限與配額；`Library` 管理個人提示詞。`Conversations` 的 Organization service 管理收藏、封存、標籤、複製與文字備份，與生成寫入分開。各模組有自己的 EF configuration，仍透過既有 `IEfHelper<INexusDatabase>` 共用 transaction。
+
+Inference message 支援帶型別的 image parts，供應商的 Google／Ollama 格式只存在 adapter。ContextBuilder 將抽取文字與圖片成本納入同一套預算，生成參數保存當時的對話指令與圖片能力。
+
 ```mermaid
 flowchart LR
     UI[Angular 工作台] --> API[同源 API／SSE]
@@ -20,13 +24,13 @@ flowchart LR
 
 ## 模組責任
 
-| 模組 | 責任 |
-| --- | --- |
-| Identity | AD／Windows 認證、SID 映射、cookie／CSRF、個人偏好 |
-| AccessControl | 角色／群組／功能、有效 grant、FeatureRequirement policy |
-| Conversations | 擁有者隔離、標題／soft-delete、訊息樹、分支選擇 |
-| Inference | provider adapter、核准模型／呈現政策、reasoning、Context、run／排程／SSE |
-| Operations | 經驗證的服務狀態、稽核、replay 清理 |
+| 模組          | 責任                                                                     |
+| ------------- | ------------------------------------------------------------------------ |
+| Identity      | AD／Windows 認證、SID 映射、cookie／CSRF、個人偏好                       |
+| AccessControl | 角色／群組／功能、有效 grant、FeatureRequirement policy                  |
+| Conversations | 擁有者隔離、標題／soft-delete、訊息樹、分支選擇                          |
+| Inference     | provider adapter、核准模型／呈現政策、reasoning、Context、run／排程／SSE |
+| Operations    | 經驗證的服務狀態、稽核、replay 清理                                      |
 
 各模組自己的 endpoint 檔案由 BuildingBlocks.ApiEndpoints 組裝。BuildingBlocks 只放共用 DTO／錯誤、host 設定、DB model 與 migrations；Database 放 SqlClient 與 EDoc adapter。模組對模組使用明確服務，不任意新增可繞過 owner／policy 的查詢入口。
 

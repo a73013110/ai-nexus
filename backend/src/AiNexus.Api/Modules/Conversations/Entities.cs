@@ -9,6 +9,16 @@ public sealed class Conversation
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
     public bool IsDeleted { get; set; }
+    public bool IsFavorite { get; set; }
+    public bool IsArchived { get; set; }
+    public string SystemInstruction { get; set; } = "";
+    public List<ConversationLabel> Labels { get; set; } = [];
+}
+
+public sealed class ConversationLabel
+{
+    public Guid ConversationId { get; set; }
+    public string Name { get; set; } = "";
 }
 
 public sealed class Message
@@ -22,4 +32,5 @@ public sealed class Message
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public Guid? RunId { get; set; }
     public string? ModelId { get; set; }
+    public string? ErrorCode { get; set; }
 }

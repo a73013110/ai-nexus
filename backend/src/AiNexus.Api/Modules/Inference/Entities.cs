@@ -46,6 +46,8 @@ public sealed class ModelProfile
     public bool SupportsStreaming { get; set; } = true;
     public bool SupportsUsage { get; set; } = true;
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public bool SupportsImages { get; set; }
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public string ReasoningControl { get; set; } = "none";
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public List<string> ReasoningEfforts { get; set; } = [];

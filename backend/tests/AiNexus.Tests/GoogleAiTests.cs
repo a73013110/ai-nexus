@@ -77,6 +77,23 @@ public sealed class GoogleAiTests
         await foreach (var chunk in provider.StreamAsync("gemma-4-26b-a4b-it", [new("user", "test")], new(8192, 512, .6, "system", effort, "google-level"), CancellationToken.None)) { }
     }
 
+    [Fact]
+    public async Task ImagePartUsesNativeInlineDataAndPreservesTheUserPrompt()
+    {
+        var bytes = new byte[] { 1, 2, 3 };
+        var provider = Provider(new Handler(request =>
+        {
+            using var payload = JsonDocument.Parse(request.Content!.ReadAsStringAsync().GetAwaiter().GetResult());
+            var parts = payload.RootElement.GetProperty("contents")[0].GetProperty("parts");
+            Assert.Equal("describe", parts[1].GetProperty("text").GetString());
+            Assert.Equal("image/png", parts[0].GetProperty("inlineData").GetProperty("mimeType").GetString());
+            Assert.Equal(Convert.ToBase64String(bytes), parts[0].GetProperty("inlineData").GetProperty("data").GetString());
+            var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("data: {\"candidates\":[{\"finishReason\":\"STOP\"}]}\n\n") };
+            response.Content.Headers.ContentType = new("text/event-stream"); return response;
+        }));
+        await foreach (var chunk in provider.StreamAsync("gemma-4-26b-a4b-it", [new("user", "describe", [new(Guid.NewGuid(), "image/png", bytes, 4096)])], new(8192, 512, .6, "system", SupportsImages: true), CancellationToken.None)) { }
+    }
+
     private sealed class Handler(Func<HttpRequestMessage, HttpResponseMessage> callback) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) => Task.FromResult(callback(request));

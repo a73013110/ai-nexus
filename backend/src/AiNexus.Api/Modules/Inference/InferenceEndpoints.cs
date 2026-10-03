@@ -2,6 +2,7 @@ using AiNexus.BuildingBlocks;
 using AiNexus.Modules.AccessControl;
 using AiNexus.Modules.Conversations;
 using AiNexus.Modules.Identity;
+using AiNexus.Modules.Attachments;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Inference;
@@ -12,12 +13,14 @@ public static class InferenceEndpoints
     {
         var api = root.MapGroup("").RequireAuthorization(BuiltInAccess.ChatPolicy).WithTags("Inference");
         api.MapGet("/models", async (ModelCatalog models, CancellationToken ct) => Results.Ok(await models.GetAsync(ct))).WithName("ListModels").Produces<ModelsDto>();
-        api.MapPost("/context", async (ContextPreviewRequest body, CurrentUser current, ConversationService conversations, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, CancellationToken ct) =>
+        api.MapPost("/context", async (ContextPreviewRequest body, CurrentUser current, ConversationService conversations, AttachmentService attachments, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, CancellationToken ct) =>
         {
             if (body.Prompt?.Length > options.Value.MaxInputCharacters) throw new ApiException(400, "input_too_long", "訊息超過字數上限。");
-            if (body.ConversationId is Guid id) await conversations.OwnedAsync((await current.GetAsync(ct)).Id, id, ct);
+            var owner = (await current.GetAsync(ct)).Id;
+            var instruction = body.ConversationId is Guid id ? (await conversations.OwnedAsync(owner, id, ct)).SystemInstruction : "";
+            var files = await attachments.RequireAsync(owner, body.AttachmentIds, ct);
             var model = await models.RequireAsync(body.ModelId, ct);
-            return Results.Ok(await context.PreviewAsync(body.ConversationId, body.ParentMessageId, body.Prompt, new(model.ContextTokens, model.MaxOutputTokens, .6, options.Value.SystemPrompt), ct));
+            return Results.Ok(await context.PreviewAsync(body.ConversationId, body.ParentMessageId, body.Prompt, new(model.ContextTokens, model.MaxOutputTokens, .6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, instruction), SupportsImages: model.SupportsImages), ct, files));
         }).WithName("PreviewContext").Produces<ContextUsageDto>();
         api.MapPost("/runs", async (CreateRunRequest body, HttpContext http, CurrentUser current, RunService service, CancellationToken ct) =>
         {

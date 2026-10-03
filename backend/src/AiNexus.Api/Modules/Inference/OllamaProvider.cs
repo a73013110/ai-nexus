@@ -23,7 +23,7 @@ public sealed class OllamaProvider(HttpClient client) : IInferenceProvider
         var payload = new Dictionary<string, object?>
         {
             ["model"] = model,
-            ["messages"] = messages.Select(x => new { role = x.Role, content = x.Content }),
+            ["messages"] = messages.Select(x => new { role = x.Role, content = x.Content, images = (x.Images ?? []).Select(i => Convert.ToBase64String(i.Data ?? throw new InvalidDataException("Image data missing."))).ToArray() }),
             ["stream"] = true,
             ["options"] = new { num_ctx = parameters.ContextTokens, num_predict = parameters.MaxOutputTokens, temperature = parameters.Temperature },
             ["keep_alive"] = "5m"

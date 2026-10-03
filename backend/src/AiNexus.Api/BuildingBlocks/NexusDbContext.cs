@@ -20,6 +20,9 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
     protected override void OnModelCreating(ModelBuilder model)
     {
         AccessControlConfiguration.Configure(model);
+        ConversationConfiguration.Configure(model);
+        AiNexus.Modules.Attachments.AttachmentConfiguration.Configure(model);
+        AiNexus.Modules.Library.LibraryConfiguration.Configure(model);
         var user = model.Entity<NexusUser>();
         user.ToTable("Users", "identity");
         user.HasKey(x => x.Id);
@@ -33,21 +36,6 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
             p.Property(x => x.Theme).HasMaxLength(12);
             p.Property(x => x.DefaultModelId).HasMaxLength(160);
         });
-        var conversation = model.Entity<Conversation>();
-        conversation.ToTable("Conversations", "conversations");
-        conversation.HasKey(x => x.Id);
-        conversation.Property(x => x.Title).HasMaxLength(120);
-        conversation.HasIndex(x => new { x.OwnerId, x.IsDeleted, x.UpdatedAt });
-        conversation.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
-        var message = model.Entity<Message>();
-        message.ToTable("Messages", "conversations");
-        message.HasKey(x => x.Id);
-        message.Property(x => x.Role).HasMaxLength(16);
-        message.Property(x => x.Status).HasMaxLength(16);
-        message.Property(x => x.ModelId).HasMaxLength(160);
-        message.HasIndex(x => new { x.ConversationId, x.CreatedAt });
-        message.HasOne<Conversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
-        message.HasOne<Message>().WithMany().HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Restrict);
         var run = model.Entity<GenerationRun>();
         run.ToTable("GenerationRuns", "inference");
         run.HasKey(x => x.Id);

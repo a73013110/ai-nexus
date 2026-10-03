@@ -52,7 +52,7 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
         if (parameters.ReasoningControl == "google-level" && parameters.ReasoningEffort != "auto") generation["thinkingConfig"] = new { thinkingLevel = parameters.ReasoningEffort };
         request.Content = JsonContent.Create(new
         {
-            contents = messages.Where(x => x.Role != "system").Select(x => new { role = x.Role == "assistant" ? "model" : "user", parts = new[] { new { text = x.Content } } }),
+            contents = messages.Where(x => x.Role != "system").Select(x => new { role = x.Role == "assistant" ? "model" : "user", parts = Parts(x) }),
             systemInstruction = new { parts = new[] { new { text = parameters.SystemPrompt } } },
             generationConfig = generation
         });
@@ -104,6 +104,13 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
         yield return new InferenceChunk("", true, input, output);
     }
 
+    private static IReadOnlyList<object> Parts(InferenceMessage message)
+    {
+        var parts = new List<object>();
+        foreach (var image in message.Images ?? []) parts.Add(new { inlineData = new { mimeType = image.ContentType, data = Convert.ToBase64String(image.Data ?? throw new InvalidDataException("Image data missing.")) } });
+        parts.Add(new { text = message.Content });
+        return parts;
+    }
     private static ApiException Blocked() => new(422, "google_response_blocked", "Google AI 未完成此回答，請調整提問後重試。");
     private static void RequireSuccess(HttpResponseMessage response)
     {

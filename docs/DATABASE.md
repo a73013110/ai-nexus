@@ -4,23 +4,36 @@
 
 ## 物件清單
 
-| Schema／物件 | 用途與關鍵規則 |
-| --- | --- |
-| `identity.Users` | 平台身分；以 AD SID 唯一索引映射，保存帳號、顯示名稱、建立／最近登入時間，不存個人密碼 |
-| `identity.UserPreferences` | Users 的 1:1 owned entity；外觀、減少動態、偏好模型 |
-| `access.Roles` | 角色主檔；穩定文字 ID、名稱、Enabled |
-| `access.RoleGroups` | 多個角色可加入的功能集合，Enabled 可一次停用該群組 |
-| `access.Features` | 功能主檔，包含 ID、名稱、前端 route、排序、Enabled |
-| `access.UserRoles` | 使用者與角色多對多；複合 PK `UserId+RoleId` |
-| `access.RoleGroupRoles` | 角色與群組多對多；複合 PK `RoleId+GroupId` |
-| `access.RoleGroupFeatures` | 群組與功能多對多；複合 PK `GroupId+FeatureId` |
-| `conversations.Conversations` | 擁有者、標題、目前 leaf、時間、soft-delete；擁有者／刪除狀態／時間索引 |
-| `conversations.Messages` | 不可覆寫的訊息樹，ParentId 外鍵；user／assistant、內容、模型、狀態、run ID |
-| `inference.GenerationRuns` | 一次生成；擁有者、訊息關聯、參數 JSON 快照、冪等 key／hash、狀態、部分回答、時間、實際 usage |
-| `inference.RunEvents` | `RunId+Sequence` 複合 PK 的重播事件；24 小時後清理，快照仍可恢復 |
-| `inference.ModelProfiles` | SQL 可保存的模型能力記錄；目前執行核准清單由設定檔管理，worker 啟動同步能力，思考／呈現政策仍由設定管理 |
-| `operations.AuditEvents` | 必要操作追蹤，保存 resource／owner ID、動作、結果、時間，不存 prompt／回答／密碼 |
-| `dbo.__EFMigrationsHistory` | EF 已套用版本，不能手改或以刪除此表重跑 migrations |
+`WorkspaceExtensions` migration 新增以下物件，保留既有使用者與对話資料。
+
+| 新增物件／欄位                                              | 用途與規則                                                           |
+| ----------------------------------------------------------- | -------------------------------------------------------------------- |
+| `attachments.Attachments`                                   | owner、原始 SQL binary、MIME、大小、抽取文字與建立時間               |
+| `attachments.MessageAttachments`                            | MessageId + AttachmentId 複合主鍵；讓分支及副本共用附件              |
+| `library.PromptTemplates`                                   | 個人提示詞範本；owner 索引，每人最多 100 個                          |
+| `conversations.ConversationLabels`                          | ConversationId + Name 複合主鍵，每段對話最多 5 個                    |
+| `Conversations.IsFavorite / IsArchived / SystemInstruction` | 收藏、可還原封存、對話專屬指令；新增 owner + 整理狀態 + 更新時間索引 |
+| `Messages.ErrorCode`                                        | 保存失敗原因，重新開啟仍能顯示正確回饋                               |
+
+標題與訊息內容搜尋使用 owner 限制下的 SQL substring 查詢。目前不依賴 SQL Server Full-Text Catalog；資料量增大時可保留 API 契約，改用全文索引或搜尋服務。
+
+| Schema／物件                  | 用途與關鍵規則                                                                                          |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `identity.Users`              | 平台身分；以 AD SID 唯一索引映射，保存帳號、顯示名稱、建立／最近登入時間，不存個人密碼                  |
+| `identity.UserPreferences`    | Users 的 1:1 owned entity；外觀、減少動態、偏好模型                                                     |
+| `access.Roles`                | 角色主檔；穩定文字 ID、名稱、Enabled                                                                    |
+| `access.RoleGroups`           | 多個角色可加入的功能集合，Enabled 可一次停用該群組                                                      |
+| `access.Features`             | 功能主檔，包含 ID、名稱、前端 route、排序、Enabled                                                      |
+| `access.UserRoles`            | 使用者與角色多對多；複合 PK `UserId+RoleId`                                                             |
+| `access.RoleGroupRoles`       | 角色與群組多對多；複合 PK `RoleId+GroupId`                                                              |
+| `access.RoleGroupFeatures`    | 群組與功能多對多；複合 PK `GroupId+FeatureId`                                                           |
+| `conversations.Conversations` | 擁有者、標題、目前 leaf、時間、soft-delete；擁有者／刪除狀態／時間索引                                  |
+| `conversations.Messages`      | 不可覆寫的訊息樹，ParentId 外鍵；user／assistant、內容、模型、狀態、run ID                              |
+| `inference.GenerationRuns`    | 一次生成；擁有者、訊息關聯、參數 JSON 快照、冪等 key／hash、狀態、部分回答、時間、實際 usage            |
+| `inference.RunEvents`         | `RunId+Sequence` 複合 PK 的重播事件；24 小時後清理，快照仍可恢復                                        |
+| `inference.ModelProfiles`     | SQL 可保存的模型能力記錄；目前執行核准清單由設定檔管理，worker 啟動同步能力，思考／呈現政策仍由設定管理 |
+| `operations.AuditEvents`      | 必要操作追蹤，保存 resource／owner ID、動作、結果、時間，不存 prompt／回答／密碼                        |
+| `dbo.__EFMigrationsHistory`   | EF 已套用版本，不能手改或以刪除此表重跑 migrations                                                      |
 
 `GenerationRuns` 唯一索引 `OwnerId+IdempotencyKey` 防重複送出；`ActiveOwnerId IS NOT NULL` 的 filtered unique index 保護每人一個 active run。完成／取消／失敗清除 ActiveOwnerId。重要業務外鍵採 Restrict，防止刪使用者／對話造成歷史連鎖刪除；run events 屬生成的附屬資料。
 
@@ -62,7 +75,7 @@ Dapper 預設建立自己的連線，不能假設它參與 EF transaction；需�
 ./scripts/Initialize-Database.ps1
 ```
 
-本機工具僅建立／更新 AiNexus，不刪除資料。版本由 EF 控制：`InitialNexus` 建立聊天結構，`AccessControl` 新增授權與預設 seed／既有使用者 backfill。migration 原始碼在 `BuildingBlocks/Migrations`。本機重跑只套用未完成版本。
+本機工具僅建立／更新 AiNexus，不刪除資料。版本由 EF 控制：`InitialNexus` 建立聊天結構，`AccessControl` 新增授權與預設 seed／既有使用者 backfill，`WorkspaceExtensions` 加入附件、範本與對話整理。原始碼在 `BuildingBlocks/Migrations`，重跑只套用未完成版本。
 
 DBA 可先建立 AiNexus，再審閱執行 [db/migrations.sql](../db/migrations.sql)；這份 EF 產生的 idempotent SQL 包含全部版本，需要在 AiNexus database 中執行。腳本不包含 CREATE LOGIN、CREATE DATABASE 或秘密。正式應用預設不啟動 migration，應由獨立部署帳號執行 DDL。EF 指引：[Applying migrations](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/applying)。
 

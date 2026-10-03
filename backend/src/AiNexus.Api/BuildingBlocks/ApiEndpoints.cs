@@ -2,6 +2,8 @@ using AiNexus.Modules.Conversations;
 using AiNexus.Modules.Identity;
 using AiNexus.Modules.Inference;
 using AiNexus.Modules.Operations;
+using AiNexus.Modules.Attachments;
+using AiNexus.Modules.Library;
 
 namespace AiNexus.BuildingBlocks;
 
@@ -15,6 +17,8 @@ public static class ApiEndpoints
         api.MapIdentity();
         api.MapConversations();
         api.MapInference();
+        api.MapAttachments();
+        api.MapPromptLibrary();
         api.MapOperations();
     }
 }

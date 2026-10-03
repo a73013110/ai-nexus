@@ -1,4 +1,4 @@
-IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
+﻿IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
 BEGIN
     CREATE TABLE [__EFMigrationsHistory] (
         [MigrationId] nvarchar(150) NOT NULL,
@@ -487,3 +487,159 @@ END;
 
 COMMIT;
 GO
+
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261003204750_WorkspaceExtensions'
+)
+BEGIN
+    IF SCHEMA_ID(N'attachments') IS NULL EXEC(N'CREATE SCHEMA [attachments];');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261003204750_WorkspaceExtensions'
+)
+BEGIN
+    IF SCHEMA_ID(N'library') IS NULL EXEC(N'CREATE SCHEMA [library];');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261003204750_WorkspaceExtensions'
+)
+BEGIN
+    ALTER TABLE [conversations].[Messages] ADD [ErrorCode] nvarchar(80) NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261003204750_WorkspaceExtensions'
+)
+BEGIN
+    ALTER TABLE [conversations].[Conversations] ADD [IsArchived] bit NOT NULL DEFAULT CAST(0 AS bit);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261003204750_WorkspaceExtensions'
+)
+BEGIN
+    ALTER TABLE [conversations].[Conversations] ADD [IsFavorite] bit NOT NULL DEFAULT CAST(0 AS bit);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261003204750_WorkspaceExtensions'
+)
+BEGIN
+    ALTER TABLE [conversations].[Conversations] ADD [SystemInstruction] nvarchar(4000) NOT NULL DEFAULT N'';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261003204750_WorkspaceExtensions'
+)
+BEGIN
+    CREATE TABLE [attachments].[Attachments] (
+        [Id] uniqueidentifier NOT NULL,
+        [OwnerId] uniqueidentifier NOT NULL,
+        [FileName] nvarchar(180) NOT NULL,
+        [ContentType] nvarchar(80) NOT NULL,
+        [Size] bigint NOT NULL,
+        [Data] varbinary(max) NOT NULL,
+        [ExtractedText] nvarchar(max) NULL,
+        [CreatedAt] datetimeoffset NOT NULL,
+        CONSTRAINT [PK_Attachments] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_Attachments_Users_OwnerId] FOREIGN KEY ([OwnerId]) REFERENCES [identity].[Users] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261003204750_WorkspaceExtensions'
+)
+BEGIN
+    CREATE TABLE [conversations].[ConversationLabels] (
+        [ConversationId] uniqueidentifier NOT NULL,
+        [Name] nvarchar(24) NOT NULL,
+        CONSTRAINT [PK_ConversationLabels] PRIMARY KEY ([ConversationId], [Name]),
+        CONSTRAINT [FK_ConversationLabels_Conversations_ConversationId] FOREIGN KEY ([ConversationId]) REFERENCES [conversations].[Conversations] ([Id]) ON DELETE CASCADE
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261003204750_WorkspaceExtensions'
+)
+BEGIN
+    CREATE TABLE [library].[PromptTemplates] (
+        [Id] uniqueidentifier NOT NULL,
+        [OwnerId] uniqueidentifier NOT NULL,
+        [Title] nvarchar(80) NOT NULL,
+        [Content] nvarchar(max) NOT NULL,
+        [UpdatedAt] datetimeoffset NOT NULL,
+        CONSTRAINT [PK_PromptTemplates] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_PromptTemplates_Users_OwnerId] FOREIGN KEY ([OwnerId]) REFERENCES [identity].[Users] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261003204750_WorkspaceExtensions'
+)
+BEGIN
+    CREATE TABLE [attachments].[MessageAttachments] (
+        [MessageId] uniqueidentifier NOT NULL,
+        [AttachmentId] uniqueidentifier NOT NULL,
+        CONSTRAINT [PK_MessageAttachments] PRIMARY KEY ([MessageId], [AttachmentId]),
+        CONSTRAINT [FK_MessageAttachments_Attachments_AttachmentId] FOREIGN KEY ([AttachmentId]) REFERENCES [attachments].[Attachments] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_MessageAttachments_Messages_MessageId] FOREIGN KEY ([MessageId]) REFERENCES [conversations].[Messages] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261003204750_WorkspaceExtensions'
+)
+BEGIN
+    CREATE INDEX [IX_Conversations_OwnerId_IsDeleted_IsArchived_IsFavorite_UpdatedAt] ON [conversations].[Conversations] ([OwnerId], [IsDeleted], [IsArchived], [IsFavorite], [UpdatedAt]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261003204750_WorkspaceExtensions'
+)
+BEGIN
+    CREATE INDEX [IX_Attachments_OwnerId_CreatedAt] ON [attachments].[Attachments] ([OwnerId], [CreatedAt]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261003204750_WorkspaceExtensions'
+)
+BEGIN
+    CREATE INDEX [IX_MessageAttachments_AttachmentId] ON [attachments].[MessageAttachments] ([AttachmentId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261003204750_WorkspaceExtensions'
+)
+BEGIN
+    CREATE INDEX [IX_PromptTemplates_OwnerId_UpdatedAt] ON [library].[PromptTemplates] ([OwnerId], [UpdatedAt]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261003204750_WorkspaceExtensions'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261003204750_WorkspaceExtensions', N'10.0.12');
+END;
+
+COMMIT;
+GO
+

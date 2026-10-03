@@ -4,21 +4,25 @@ using AiNexus.Modules.Operations;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Database;
 using EDoc.Core.Database.Interfaces;
+using AiNexus.Modules.Attachments;
 
 namespace AiNexus.Modules.Conversations;
 
 public sealed class ConversationService(IEfHelper<INexusDatabase> ef, GenerationScheduler scheduler, ModelPresentation presentation)
 {
     public async Task<Conversation> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
-        => await ef.Set<Conversation>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner && !x.IsDeleted, ct)
+        => await ef.Set<Conversation>().Include(x => x.Labels).SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner && !x.IsDeleted, ct)
            ?? throw new ApiException(404, "conversation_not_found", "找不到這個對話。");
 
-    public async Task<IReadOnlyList<ConversationDto>> ListAsync(Guid owner, string? search, int offset, CancellationToken ct)
+    public async Task<IReadOnlyList<ConversationDto>> ListAsync(Guid owner, string? search, int offset, CancellationToken ct, string view = "active", string? label = null)
     {
-        if (search?.Length > 120 || offset < 0 || offset > 100000) throw new ApiException(400, "invalid_query", "搜尋條件不正確。");
-        var query = ef.Set<Conversation>().AsNoTracking().Where(x => x.OwnerId == owner && !x.IsDeleted);
-        if (!string.IsNullOrWhiteSpace(search)) query = query.Where(x => x.Title.Contains(search.Trim()));
-        var rows = await query.OrderByDescending(x => x.UpdatedAt).ThenBy(x => x.Id).Skip(offset).Take(100).ToListAsync(ct);
+        if (search?.Length > 120 || label?.Length > 24 || view is not ("active" or "archived" or "favorites" or "all") || offset < 0 || offset > 100000) throw new ApiException(400, "invalid_query", "搜尋條件不正確。");
+        var query = ef.Set<Conversation>().Include(x => x.Labels).AsNoTracking().Where(x => x.OwnerId == owner && !x.IsDeleted);
+        if (view != "all") query = query.Where(x => x.IsArchived == (view == "archived"));
+        if (view == "favorites") query = query.Where(x => x.IsFavorite);
+        if (!string.IsNullOrWhiteSpace(label)) query = query.Where(x => x.Labels.Any(l => l.Name == label));
+        if (!string.IsNullOrWhiteSpace(search)) query = query.Where(x => x.Title.Contains(search.Trim()) || ef.Set<Message>().Any(m => m.ConversationId == x.Id && m.Content.Contains(search.Trim())));
+        var rows = await query.OrderByDescending(x => x.IsFavorite).ThenByDescending(x => x.UpdatedAt).ThenBy(x => x.Id).Skip(offset).Take(100).ToListAsync(ct);
         return rows.Select(x => x.ToDto()).ToList();
     }
 
@@ -36,7 +40,10 @@ public sealed class ConversationService(IEfHelper<INexusDatabase> ef, Generation
         var conversation = await OwnedAsync(owner, id, ct);
         var messages = await ef.Set<Message>().AsNoTracking().Where(x => x.ConversationId == id).OrderBy(x => x.CreatedAt).ToListAsync(ct);
         var run = await ef.Set<GenerationRun>().AsNoTracking().SingleOrDefaultAsync(x => x.ConversationId == id && x.ActiveOwnerId == owner, ct);
-        return new(conversation.ToDto(), messages.Select(presentation.Message).ToList(), run is null ? null : presentation.Run(run));
+        var links = await ef.Set<MessageAttachment>().AsNoTracking().Where(x => messages.Select(m => m.Id).Contains(x.MessageId))
+            .Select(x => new { x.MessageId, x.Attachment.Id, x.Attachment.FileName, x.Attachment.ContentType, x.Attachment.Size, HasText = x.Attachment.ExtractedText != null }).ToListAsync(ct);
+        var attachments = links.ToLookup(x => x.MessageId, x => new AttachmentDto(x.Id, x.FileName, x.ContentType, x.Size, x.ContentType.StartsWith("image/"), x.HasText ? "extracted-text" : "vision"));
+        return new(conversation.ToDto(), messages.Select(x => presentation.Message(x) with { Attachments = attachments[x.Id].ToList() }).ToList(), run is null ? null : presentation.Run(run));
     }
 
     public async Task<ConversationDto> RenameAsync(Guid owner, Guid id, string title, CancellationToken ct)
@@ -82,6 +89,7 @@ public sealed class ConversationService(IEfHelper<INexusDatabase> ef, Generation
     public async Task<(Message User, Message Assistant)> PrepareGenerationAsync(Guid owner, CreateRunRequest request, Guid runId, CancellationToken ct)
     {
         var conversation = await OwnedAsync(owner, request.ConversationId, ct);
+        if (conversation.IsArchived) throw new ApiException(409, "conversation_archived", "請先還原封存對話，再繼續提問。");
         Message user;
         if (request.RegenerateUserMessageId is Guid userId)
         {
@@ -110,6 +118,7 @@ public sealed class ConversationService(IEfHelper<INexusDatabase> ef, Generation
         var message = await ef.Set<Message>().SingleAsync(x => x.Id == run.AssistantMessageId, ct);
         message.Content = run.Content;
         message.Status = run.Status;
+        message.ErrorCode = run.ErrorCode;
         var conversation = await ef.Set<Conversation>().SingleAsync(x => x.Id == run.ConversationId, ct);
         conversation.UpdatedAt = DateTimeOffset.UtcNow;
     }

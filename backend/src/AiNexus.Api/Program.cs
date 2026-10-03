@@ -14,6 +14,8 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Threading.RateLimiting;
 using AiNexus.Modules.AccessControl;
 using Microsoft.AspNetCore.DataProtection;
+using AiNexus.Modules.Attachments;
+using AiNexus.Modules.Library;
 
 var builder = WebApplication.CreateBuilder(args);
 NexusConfiguration.Load(builder, args);
@@ -82,6 +84,14 @@ builder.Services.AddSingleton<StorageReadiness>();
 builder.Services.AddSingleton<IdentityWriteLock>();
 builder.Services.AddScoped<CurrentUser>();
 builder.Services.AddScoped<ConversationService>();
+builder.Services.AddScoped<ConversationOrganization>();
+builder.Services.AddScoped<PromptLibraryService>();
+builder.Services.AddScoped<AttachmentService>();
+builder.Services.AddScoped<DocumentExtractor>();
+builder.Services.AddSingleton<AttachmentWriteLock>();
+builder.Services.AddOptions<AttachmentOptions>().BindConfiguration("Attachments")
+    .Validate(x => x.MaxFileBytes is >= 1024 and <= 8 * 1024 * 1024 && x.MaxFilesPerMessage is >= 1 and <= 8 && x.MaxMessageBytes >= x.MaxFileBytes && x.MaxMessageBytes <= 16 * 1024 * 1024 && x.MaxOwnerBytes >= x.MaxMessageBytes && x.MaxOwnerBytes <= 1024 * 1024 * 1024 && x.MaxExtractedCharacters is >= 1000 and <= 256000 && x.MaxPdfPages is >= 1 and <= 100 && x.ImageTokenEstimate is >= 1024 and <= 16384, "Invalid attachment limits.")
+    .ValidateOnStart();
 builder.Services.AddScoped<RunService>();
 builder.Services.AddScoped<ContextBuilder>();
 builder.Services.AddOptions<InferenceOptions>().BindConfiguration("Inference")
@@ -107,8 +117,10 @@ builder.Services.AddSingleton<SubscriptionLimits>();
 builder.Services.AddHostedService<GenerationWorker>();
 builder.Services.AddHostedService<RunRecoveryWorker>();
 builder.Services.AddHostedService<EventRetentionWorker>();
-builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 65536);
-builder.Services.Configure<IISServerOptions>(options => options.MaxRequestBodySize = 65536);
+// Upload/import endpoints need larger bodies. Ordinary JSON endpoints keep a small per-request limit.
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 10 * 1024 * 1024);
+builder.Services.Configure<IISServerOptions>(options => options.MaxRequestBodySize = 10 * 1024 * 1024);
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options => options.MultipartBodyLengthLimit = 9 * 1024 * 1024);
 
 var app = builder.Build();
 if (builder.Configuration.GetValue<bool>("InitializeDatabase"))
@@ -160,6 +172,10 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 app.Use(async (http, next) =>
 {
+    var bodyLimit = http.Request.Path == "/api/v1/attachments" ? 9 * 1024 * 1024 : http.Request.Path == "/api/v1/conversations/import" ? 8 * 1024 * 1024 : 65536;
+    if (http.Request.ContentLength > bodyLimit) throw new ApiException(413, "request_too_large", "上傳內容超過大小上限。");
+    var bodySize = http.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();
+    if (bodySize is { IsReadOnly: false }) bodySize.MaxRequestBodySize = bodyLimit;
     if (http.Request.Path.StartsWithSegments("/api/v1") && !http.Request.Path.StartsWithSegments("/api/v1/auth")) http.RequestServices.GetRequiredService<StorageReadiness>().RequireConfigured();
     await next(http);
 });
