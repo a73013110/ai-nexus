@@ -1,0 +1,35 @@
+# Generated dependencies, builds, and reports
+node_modules/
+.angular/
+.cache/
+dist/
+bin/
+obj/
+TestResults/
+test-results/
+playwright-report/
+/artifacts/
+
+# Machine config, credentials, keys, logs, and working notes
+/.local/
+appsettings.Local.json
+appsettings.*.Local.json
+appsettings.Secrets.json
+appsettings.*.Secrets.json
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.private.key
+*.log
+
+# Editor/user metadata
+.vs/
+.idea/
+*.user
+*.suo
+/.agents/
+/.codex/
+Thumbs.db
+.DS_Store

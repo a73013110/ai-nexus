@@ -1,0 +1,362 @@
+<a class="skip-link" href="#composer" [attr.inert]="narrow() && sidebarOpen() ? '' : null"
+  >跳至訊息輸入</a
+>
+<div class="workbench" [class.sidebar-closed]="!sidebarOpen()">
+  @if (sidebarOpen()) {
+    <button class="sidebar-backdrop" aria-label="關閉對話側欄" (click)="closeSidebar()"></button>
+  }
+  <aside class="sidebar" aria-label="對話導覽" [attr.inert]="sidebarOpen() ? null : ''">
+    <button
+      class="icon-button mobile-sidebar-close"
+      aria-label="關閉對話導覽"
+      (click)="closeSidebar()"
+    >
+      <nx-icon name="close" />
+    </button>
+    <a class="brand" routerLink="/chat" (click)="newChat()" aria-label="AI Nexus 新對話"
+      ><span class="brand-symbol"
+        ><svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+          <path
+            d="M9 24V8l14 16V8M5 8h4M23 24h4"
+            stroke="currentColor"
+            stroke-width="1.8"
+          /></svg></span
+      ><span>AI <strong>Nexus</strong><small>公司工作台</small></span></a
+    >
+    @if (store.hasChatAccess()) {
+      <a routerLink="/chat" class="new-chat" (click)="newChat()"
+        ><nx-icon name="plus" />新對話<span class="new-chat-hint">開始</span></a
+      >
+    }
+    <div class="history-search">
+      <nx-icon name="search" /><input
+        type="search"
+        aria-label="搜尋對話標題"
+        placeholder="搜尋對話"
+        [formField]="searchForm.query"
+        (input)="searchChanged()"
+      />
+    </div>
+    <nav class="history" aria-label="對話歷史">
+      @if (store.loading()) {
+        <p class="sidebar-note" role="status">正在取得對話…</p>
+      }
+      @for (group of groups(); track group.label) {
+        <div class="history-group">
+          <h2>{{ group.label }}</h2>
+          @for (conversation of group.conversations; track conversation.id) {
+            <div class="history-row" [class.selected]="store.selected()?.id === conversation.id">
+              <a
+                [routerLink]="['/chat', conversation.id]"
+                (click)="closeMobileSidebar()"
+                [attr.aria-current]="store.selected()?.id === conversation.id ? 'page' : null"
+                [title]="conversation.title"
+                ><span>{{ conversation.title }}</span></a
+              >
+              <button
+                class="icon-button history-edit"
+                aria-label="重新命名對話"
+                (click)="openDialog('rename', conversation)"
+              >
+                <nx-icon name="edit" />
+              </button>
+            </div>
+          }
+        </div>
+      } @empty {
+        @if (!store.loading()) {
+          <p class="sidebar-note">
+            {{ searchModel().query ? '沒有符合的對話。' : '對話會保存在這裡，隨時接續。' }}
+          </p>
+        }
+      }
+      @if (store.hasMore()) {
+        <button class="quiet-button load-more" (click)="loadMore()">載入更早的對話</button>
+      }
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="workspace-label">
+        <span class="workspace-dot"></span>區網文字工作台<span>V1</span>
+      </div>
+      <details class="profile-menu">
+        <summary>
+          <span class="avatar">{{ store.me()?.displayName?.slice(0, 1) || 'N' }}</span
+          ><span class="profile-name"
+            ><strong>{{ store.me()?.displayName || 'Windows 驗證' }}</strong
+            ><small>{{ store.me()?.account || '等待伺服器連線' }}</small></span
+          ><nx-icon name="more" />
+        </summary>
+        <div class="preferences-panel">
+          <h2>工作台偏好</h2>
+          <label for="theme">外觀</label
+          ><select id="theme" [formField]="preferencesForm.theme" (change)="savePreferences()">
+            <option value="system">跟隨系統</option>
+            <option value="light">淺色</option>
+            <option value="dark">深色</option></select
+          ><label class="check-label"
+            ><input
+              type="checkbox"
+              [formField]="preferencesForm.reducedMotion"
+              (change)="savePreferences()"
+            />減少動態效果</label
+          >
+          <p>使用公司 AD 身分辨識。</p>
+          @if (store.me()?.access; as access) {
+            <div class="access-summary">
+              @for (role of access.roles; track role.id) {
+                <span>{{ role.name }}</span>
+              }
+              @for (feature of access.features; track feature.id) {
+                <span class="feature-badge">{{ feature.name }}</span>
+              }
+            </div>
+          }
+          @if (store.auth.session()?.mode === 'Ldap') {
+            <button class="quiet-button" type="button" (click)="store.logout()">登出工作台</button>
+          }
+        </div>
+      </details>
+    </div>
+  </aside>
+  <main class="main-workspace" id="main" [attr.inert]="narrow() && sidebarOpen() ? '' : null">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button
+          class="icon-button sidebar-toggle"
+          (click)="toggleSidebar()"
+          [attr.aria-expanded]="sidebarOpen()"
+          [attr.aria-label]="sidebarOpen() ? '收合側欄' : '開啟側欄'"
+        >
+          <nx-icon name="sidebar" /></button
+        ><span class="topbar-divider"></span>
+        <div class="conversation-heading">
+          <h1>{{ store.selected()?.title || '新對話' }}</h1>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        @if (statusText()) {
+          <span class="inference-status" role="status"
+            ><nx-inference-signal [active]="true" /><span>{{ statusText() }}</span></span
+          >
+        }
+        @if (store.selected(); as conversation) {
+          <button
+            class="icon-button desktop-conversation-action"
+            aria-label="匯出目前分支為 Markdown"
+            [disabled]="store.busy()"
+            (click)="exportConversation()"
+          >
+            <nx-icon name="download" />
+          </button>
+          <button
+            class="icon-button desktop-conversation-action"
+            aria-label="重新命名目前對話"
+            (click)="openDialog('rename', conversation)"
+          >
+            <nx-icon name="edit" /></button
+          ><button
+            class="icon-button desktop-conversation-action delete-conversation"
+            aria-label="刪除目前對話"
+            [disabled]="store.busy()"
+            (click)="openDialog('delete', conversation)"
+          >
+            <nx-icon name="trash" />
+          </button>
+          <details class="mobile-conversation-menu">
+            <summary class="icon-button" aria-label="對話操作"><nx-icon name="more" /></summary>
+            <div>
+              <button [disabled]="store.busy()" (click)="exportConversation()">
+                匯出 Markdown
+              </button>
+              <button (click)="openDialog('rename', conversation)">重新命名</button
+              ><button [disabled]="store.busy()" (click)="openDialog('delete', conversation)">
+                刪除對話
+              </button>
+            </div>
+          </details>
+        }
+      </div>
+    </header>
+    @if (store.error(); as error) {
+      <div class="error-banner" role="alert">
+        <nx-icon name="info" /><span>{{ error }}</span>
+        @if (!store.ready()) {
+          <button (click)="reload()" [disabled]="store.loading()">重新連線</button>
+        } @else if (store.pendingSubmission()) {
+          <button (click)="store.retrySubmission()" [disabled]="store.submitting()">
+            重試提交
+          </button>
+        } @else if (store.connection() === 'disconnected') {
+          <button (click)="store.resume()">恢復連線</button>
+        } @else {
+          <button class="icon-button" aria-label="關閉錯誤提示" (click)="store.error.set(null)">
+            <nx-icon name="close" />
+          </button>
+        }
+      </div>
+    }
+    <div class="conversation-viewport" #viewport (scroll)="onScroll()">
+      @if (store.loadingConversation()) {
+        <div class="conversation-loading" role="status">正在開啟對話…</div>
+      } @else if (!store.visibleMessages().length) {
+        <section class="empty-state" animate.enter="empty-enter">
+          <div class="empty-eyebrow"><span class="tiny-rule"></span>一段對話，一個新的起點</div>
+          <h2>今天，從哪件事開始？</h2>
+          <p>整理想法、打磨文字，或一起拆解問題。<br />把正在思考的事放在這裡。</p>
+          <div class="suggestions">
+            @for (suggestion of suggestions; track suggestion.title; let index = $index) {
+              <button (click)="pickSuggestion(suggestion.text)" [disabled]="store.busy()">
+                <span class="suggestion-index">0{{ index + 1 }}</span
+                ><nx-icon [name]="suggestion.icon" /><span>{{ suggestion.title }}</span
+                ><nx-icon name="chevron" />
+              </button>
+            }
+          </div>
+          <div class="empty-footnote">
+            <span class="tiny-rule"></span>你的對話，保存在你的工作空間。
+          </div>
+        </section>
+      } @else {
+        <section class="message-list" aria-label="目前對話訊息">
+          @for (message of store.visibleMessages(); track message.id) {
+            <nx-chat-message
+              [message]="message"
+              [all]="store.messages()"
+              [active]="store.liveRun()?.assistantMessageId === message.id"
+              [streamContent]="
+                store.liveRun()?.assistantMessageId === message.id ? store.streamingText() : ''
+              "
+              [status]="store.liveRun()?.status || ''"
+              [busy]="store.busy()"
+              [showModelNames]="store.policy().showModelNames"
+              (edit)="store.edit($event); editMessageFocus()"
+              (regenerate)="store.regenerate($event)"
+              (version)="store.selectVersion(message, $event)"
+            />
+          }
+        </section>
+      }
+    </div>
+    <div class="composer-region">
+      @if (!following() && store.visibleMessages().length) {
+        <button class="latest-button" (click)="scrollLatest()">
+          <nx-icon name="down" />回到最新
+        </button>
+      }
+      <div class="composer-container">
+        @if (store.modelNotice(); as notice) {
+          <p class="model-notice"><nx-icon name="info" />{{ notice }}</p>
+        }
+        @if (store.liveRun(); as run) {
+          @if (run.conversationId !== store.selected()?.id) {
+            <p class="other-run">
+              另有對話正在生成。<a [routerLink]="['/chat', run.conversationId]">回到該對話</a>
+            </p>
+          }
+        }
+        @if (store.editing()) {
+          <div class="editing-notice">
+            <nx-icon name="edit" /><span>編輯提問 · 送出後建立新分支，原始內容保留</span
+            ><button class="icon-button" aria-label="取消編輯" (click)="store.cancelEdit()">
+              <nx-icon name="close" />
+            </button>
+          </div>
+        }
+        <form class="composer" [class.is-busy]="store.busy()" (submit)="send($event)">
+          <label class="sr-only" for="composer">{{
+            store.editing() ? '修改你的提問' : '傳送訊息'
+          }}</label
+          ><textarea
+            #composer
+            id="composer"
+            aria-describedby="composer-hint"
+            placeholder="輸入訊息，讓想法繼續…"
+            [formField]="composerForm.text"
+            (input)="resizeComposer()"
+            (keydown)="keydown($event)"
+            (compositionstart)="composing.set(true)"
+            (compositionend)="composing.set(false)"
+            rows="1"
+          ></textarea>
+          <div class="composer-bottom">
+            <nx-composer-controls
+              [models]="store.models()"
+              [policy]="store.policy()"
+              [modelId]="store.modelId()"
+              [effort]="store.reasoningEffort()"
+              [disabled]="store.busy()"
+              [usage]="store.contextUsage()"
+              (modelChange)="selectModel($event)"
+              (effortChange)="store.reasoningEffort.set($event)"
+            />
+            @if (store.liveRun()) {
+              <button
+                class="send-button stop-button"
+                type="button"
+                (click)="store.stop()"
+                aria-label="停止生成"
+                [disabled]="store.stopping()"
+              >
+                <nx-icon name="stop" />
+              </button>
+            } @else {
+              <button
+                class="send-button"
+                type="submit"
+                aria-label="送出訊息"
+                [disabled]="
+                  !store.canSend() || !store.draft().text.trim() || composerForm.text().invalid()
+                "
+              >
+                <nx-icon name="arrow" />
+              </button>
+            }
+          </div>
+        </form>
+        @if (store.contextUsage()?.budgetExceeded) {
+          <p class="context-warning" role="status">本次提問超出 Context 預算，請縮短內容。</p>
+        }
+        @if (store.contextNotice(); as notice) {
+          <p class="context-warning">{{ notice }}</p>
+        }
+        <div class="composer-hint" id="composer-hint">
+          <span><kbd>Enter</kbd> 送出 · <kbd>Shift + Enter</kbd> 換行</span
+          ><span>AI 回答可能有誤，請確認重要資訊。</span>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<dialog #dialog class="action-dialog" (close)="modal.set(null)">
+  <form (submit)="confirmDialog($event)">
+    <div class="dialog-heading">
+      <h2>{{ modal() === 'delete' ? '刪除這段對話？' : '重新命名對話' }}</h2>
+      <button type="button" class="icon-button" aria-label="關閉對話視窗" (click)="closeDialog()">
+        <nx-icon name="close" />
+      </button>
+    </div>
+    @if (modal() === 'rename') {
+      <label for="conversation-title">對話標題</label
+      ><input id="conversation-title" [formField]="renameForm.title" autofocus />
+    } @else {
+      <p>「{{ modalTarget()?.title }}」將從歷史移除，無法在工作台中復原。</p>
+    }
+    <div class="dialog-actions">
+      <button
+        type="button"
+        class="secondary-button"
+        (click)="closeDialog()"
+        [disabled]="modalBusy()"
+      >
+        取消</button
+      ><button
+        type="submit"
+        class="primary-button"
+        [class.danger-button]="modal() === 'delete'"
+        [disabled]="modalBusy() || (modal() === 'rename' && renameForm.title().invalid())"
+      >
+        {{ modalBusy() ? '處理中…' : modal() === 'delete' ? '刪除對話' : '儲存標題' }}
+      </button>
+    </div>
+  </form>
+</dialog>

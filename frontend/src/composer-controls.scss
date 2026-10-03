@@ -1,0 +1,203 @@
+.composer-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-1);
+  min-width: 0;
+  flex: 1;
+}
+.composer-bottom nx-composer-controls {
+  min-width: 0;
+  flex: 1;
+}
+.composer-bottom .send-button {
+  flex: none;
+}
+.composer-select {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+.composer-select select {
+  min-width: 0;
+  min-height: var(--button-target);
+  padding: var(--p-space-1) var(--p-space-2);
+  max-width: 13rem;
+  border: 0;
+  border-radius: var(--p-radius-sm);
+  background: transparent;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+.composer-select select:hover {
+  background: var(--hover);
+}
+.model-control {
+  flex: 0 1 auto;
+}
+.reasoning-control select {
+  max-width: 7.5rem;
+}
+.model-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  min-height: var(--button-target);
+  padding-inline: var(--p-space-2);
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.model-lock nx-icon {
+  width: 1rem;
+  height: 1rem;
+}
+.context-details {
+  position: relative;
+  flex: none;
+}
+.context-trigger {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  min-width: var(--button-target);
+  min-height: var(--button-target);
+  padding: var(--p-space-1) var(--p-space-2);
+  font-size: var(--text-caption);
+  color: var(--secondary);
+  border-radius: var(--p-radius-sm);
+}
+.context-trigger::-webkit-details-marker {
+  display: none;
+}
+.context-trigger:hover,
+.context-details[open] .context-trigger {
+  background: var(--hover);
+}
+.context-ring {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: none;
+  transform: rotate(-90deg);
+}
+.context-ring circle {
+  fill: none;
+  stroke-width: 2;
+}
+.context-ring-track {
+  stroke: var(--line);
+}
+.context-ring-used {
+  stroke: var(--signal);
+  transition: stroke-dasharray var(--motion);
+}
+.context-ring.warning .context-ring-used {
+  stroke: var(--error);
+}
+.context-panel {
+  position: absolute;
+  bottom: calc(100% + var(--p-space-3));
+  right: 0;
+  z-index: 12;
+  width: min(21rem, calc(100vw - 2rem));
+  max-height: min(26rem, 65dvh);
+  overflow-y: auto;
+  padding: var(--p-space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  font-size: var(--text-caption);
+  line-height: var(--line-reading);
+}
+.context-panel p {
+  margin: var(--p-space-2) 0 0;
+  color: var(--secondary);
+}
+.context-panel .context-value {
+  font-size: var(--text-heading);
+  color: var(--ink);
+}
+.context-value span {
+  font-size: var(--text-caption);
+}
+.context-panel .context-explanation {
+  padding-top: var(--p-space-3);
+  border-top: 1px solid var(--line);
+}
+.context-panel .error-note {
+  color: var(--error);
+}
+.context-panel meter {
+  width: 100%;
+  height: 0.6rem;
+  margin-top: var(--p-space-3);
+  accent-color: var(--signal);
+}
+.context-warning {
+  font-size: var(--text-caption);
+  color: var(--error);
+  margin: var(--p-space-2) 0 0;
+}
+.access-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+  margin-block: var(--p-space-3);
+  font-size: var(--text-caption);
+}
+.feature-badge {
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding-inline: var(--p-space-2);
+  border-radius: var(--p-radius-sm);
+}
+@media (max-width: 859px) {
+  .model-control select {
+    max-width: 8rem;
+  }
+  .reasoning-control select {
+    max-width: 6rem;
+  }
+}
+@media (max-width: 520px) {
+  .composer {
+    position: relative;
+  }
+  .context-details {
+    position: static;
+  }
+  .composer-controls {
+    gap: 0;
+    flex-wrap: wrap;
+  }
+  .model-control {
+    flex: 1 1 5rem;
+  }
+  .model-control select {
+    width: 100%;
+    max-width: 8rem;
+    padding-inline: var(--p-space-1);
+  }
+  .reasoning-control select {
+    max-width: 6rem;
+    padding-inline: var(--p-space-1);
+  }
+  .context-trigger {
+    padding: var(--p-space-1);
+    justify-content: center;
+  }
+  .context-trigger > span {
+    display: none;
+  }
+  .context-panel {
+    right: 0;
+    width: min(21rem, calc(100vw - 2 * var(--workspace-gutter)));
+  }
+  .model-lock {
+    max-width: 8rem;
+    padding-inline: var(--p-space-1);
+  }
+}

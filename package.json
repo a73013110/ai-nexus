@@ -1,0 +1,15 @@
+{
+  "name": "ai-nexus-workspace",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test:e2e": "playwright test --config tests/e2e/playwright.config.ts"
+  },
+  "engines": {
+    "node": "26.5.0",
+    "npm": "11.6.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

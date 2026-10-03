@@ -1,0 +1,62 @@
+<main class="login-workspace">
+  <section class="login-intro" aria-label="AI Nexus">
+    <div class="login-brand">
+      <svg class="login-monogram" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M9 24V8l14 16V8M5 8h4M23 24h4" stroke="currentColor" stroke-width="1.8" /></svg
+      ><span>AI <strong>Nexus</strong><small>INTERNAL WORKSPACE</small></span>
+    </div>
+    <div class="login-intro-copy">
+      <span class="login-eyebrow">你的工作，從這裡接續</span>
+      <h1>讓想法有個<br />專注的空間。</h1>
+      <p>整理資訊、打磨文字，和 AI 一起推進手上的工作。</p>
+    </div>
+    <span class="login-footnote">公司帳號 · 個人工作空間</span>
+  </section>
+  <section class="login-panel" aria-labelledby="login-heading">
+    <div class="login-content">
+      <span class="login-eyebrow">歡迎回來</span>
+      <h2 id="login-heading">登入工作台</h2>
+      <p class="login-description">使用公司 AD 帳號與密碼。</p>
+      @if (loading()) {
+        <p role="status">正在確認登入設定…</p>
+      } @else if (!auth.session()?.configured) {
+        <p class="login-notice" role="status">
+          AD 登入尚未完成設定。請在後端本機設定填入服務帳號的 DnPass，再重新啟動。
+        </p>
+      }
+      @if (error(); as message) {
+        <p class="login-error" role="alert">{{ message }}</p>
+      }
+      <form (submit)="submit($event)">
+        <label for="ad-account">AD 帳號</label
+        ><input
+          id="ad-account"
+          autocomplete="username"
+          placeholder="公司帳號，例如 chen"
+          [formField]="loginForm.account"
+          [readOnly]="submitting()"
+          aria-describedby="account-hint"
+        />
+        <p id="account-hint" class="login-field-hint">輸入帳號名稱，無需加入網域。</p>
+        <label for="ad-password">AD 密碼</label
+        ><input
+          id="ad-password"
+          type="password"
+          autocomplete="current-password"
+          [formField]="loginForm.password"
+          [readOnly]="submitting()"
+        />
+        <button
+          class="primary-button login-submit"
+          type="submit"
+          [disabled]="
+            loading() || submitting() || !auth.session()?.configured || loginForm().invalid()
+          "
+        >
+          {{ submitting() ? '正在登入…' : '登入工作台' }}
+        </button>
+      </form>
+      <p class="login-privacy">對話預設只屬於你。登入後可接續自己的歷史。</p>
+    </div>
+  </section>
+</main>

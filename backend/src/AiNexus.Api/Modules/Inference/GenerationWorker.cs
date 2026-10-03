@@ -1,0 +1,159 @@
+using System.Diagnostics;
+using System.Text;
+using System.Text.Json;
+using AiNexus.BuildingBlocks;
+using AiNexus.Modules.Conversations;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+
+namespace AiNexus.Modules.Inference;
+
+public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, IInferenceProvider provider, IOptions<InferenceOptions> options, StorageReadiness storage, ILogger<GenerationWorker> logger) : BackgroundService
+{
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        if (!storage.Configured) { logger.LogWarning("Generation disabled: storage is not configured."); return; }
+        try
+        {
+            using var startup = scopes.CreateScope();
+            var db = startup.ServiceProvider.GetRequiredService<NexusDbContext>();
+            if (!await db.Database.CanConnectAsync(stoppingToken)) { logger.LogWarning("Generation disabled: storage is unavailable."); return; }
+            var service = startup.ServiceProvider.GetRequiredService<RunService>();
+            foreach (var run in await db.Runs.Where(x => x.ActiveOwnerId != null).ToListAsync(stoppingToken))
+                await service.FinishAsync(run, RunStates.Failed, "server_restarted", stoppingToken);
+            foreach (var profile in options.Value.Models)
+            {
+                var existing = await db.ModelProfiles.FindAsync([profile.Id], stoppingToken);
+                if (existing is null) db.ModelProfiles.Add(profile);
+                else db.Entry(existing).CurrentValues.SetValues(profile);
+            }
+            await db.SaveChangesAsync(stoppingToken);
+            scheduler.Ready = true;
+        }
+        catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+        {
+            logger.LogWarning("Generation disabled during startup ({ErrorType}). Check storage and migrations.", ex.GetType().Name);
+            return;
+        }
+        try
+        {
+            await foreach (var job in scheduler.Reader.ReadAllAsync(stoppingToken))
+            {
+                scheduler.Dequeued();
+                try { await GenerateAsync(job, stoppingToken); }
+                catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+                {
+                    logger.LogError("Run {RunId} persistence failed ({ErrorType}).", job.RunId, ex.GetType().Name);
+                    try
+                    {
+                        await scheduler.StateGate.WaitAsync(CancellationToken.None);
+                        try
+                        {
+                            using var scope = scopes.CreateScope();
+                            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+                            var run = await db.Runs.SingleAsync(x => x.Id == job.RunId);
+                            if (RunStates.IsActive(run.Status)) await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, RunStates.Failed, "internal_error", CancellationToken.None);
+                        }
+                        finally { scheduler.StateGate.Release(); }
+                    }
+                    catch (Exception recovery) { logger.LogWarning("Run {RunId} awaits orphan recovery ({ErrorType}).", job.RunId, recovery.GetType().Name); }
+                }
+                finally { scheduler.Generating = false; scheduler.Finish(job); }
+            }
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
+        finally { scheduler.Ready = false; }
+    }
+
+    private async Task GenerateAsync(GenerationJob job, CancellationToken stoppingToken)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(job.Cancellation.Token, stoppingToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.TimeoutSeconds));
+        GenerationParameters parameters;
+        IReadOnlyList<InferenceMessage> messages;
+        string model;
+        await scheduler.StateGate.WaitAsync(stoppingToken);
+        try
+        {
+            using var scope = scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var run = await db.Runs.SingleAsync(x => x.Id == job.RunId, stoppingToken);
+            if (!RunStates.IsActive(run.Status)) return;
+            run.Status = RunStates.Running;
+            run.StartedAt = DateTimeOffset.UtcNow;
+            RunService.AddEvent(db, run, "status");
+            await scope.ServiceProvider.GetRequiredService<ConversationService>().UpdateAnswerAsync(run, stoppingToken);
+            await db.SaveChangesAsync(stoppingToken);
+            parameters = JsonSerializer.Deserialize<GenerationParameters>(run.ParametersJson)!;
+            messages = await scope.ServiceProvider.GetRequiredService<ContextBuilder>().BuildAsync(run.ConversationId, run.UserMessageId, parameters, stoppingToken);
+            model = run.ModelId;
+            scheduler.Generating = true;
+        }
+        finally { scheduler.StateGate.Release(); }
+        var buffer = new StringBuilder();
+        var elapsed = Stopwatch.StartNew();
+        long? input = null, output = null;
+        var characters = 0;
+        string finalStatus = RunStates.Completed;
+        string? error = null;
+        try
+        {
+            await foreach (var chunk in provider.StreamAsync(model, messages, parameters, timeout.Token))
+            {
+                characters += chunk.Text.Length;
+                if (characters > 65536) throw new InvalidDataException("Output exceeds platform limit.");
+                buffer.Append(chunk.Text);
+                input = chunk.InputTokens ?? input;
+                output = chunk.OutputTokens ?? output;
+                if (elapsed.ElapsedMilliseconds >= 80 || buffer.Length >= 512 || chunk.Done)
+                {
+                    await FlushAsync(job.RunId, buffer.ToString(), input, output, stoppingToken);
+                    buffer.Clear();
+                    elapsed.Restart();
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            finalStatus = job.Cancellation.IsCancellationRequested ? RunStates.Cancelled : RunStates.Failed;
+            error = finalStatus == RunStates.Cancelled ? null : stoppingToken.IsCancellationRequested ? "server_stopping" : "generation_timeout";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or IOException or JsonException or InvalidOperationException or ApiException)
+        {
+            finalStatus = RunStates.Failed;
+            error = (ex as ApiException)?.Code ?? "provider_error";
+            logger.LogWarning("Run {RunId} provider failed ({ErrorType}).", job.RunId, ex.GetType().Name);
+        }
+        // Request cancellation does not interrupt persistence; partial output survives.
+        await FlushAsync(job.RunId, buffer.ToString(), input, output, CancellationToken.None);
+        await scheduler.StateGate.WaitAsync(CancellationToken.None);
+        try
+        {
+            using var scope = scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var run = await db.Runs.SingleAsync(x => x.Id == job.RunId);
+            if (RunStates.IsActive(run.Status)) await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, finalStatus, error, CancellationToken.None);
+        }
+        finally { scheduler.StateGate.Release(); }
+    }
+
+    private async Task FlushAsync(Guid id, string delta, long? input, long? output, CancellationToken ct)
+    {
+        if (delta.Length == 0 && input is null && output is null) return;
+        await scheduler.StateGate.WaitAsync(ct);
+        try
+        {
+            using var scope = scopes.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var run = await db.Runs.SingleAsync(x => x.Id == id, ct);
+            if (!RunStates.IsActive(run.Status)) return;
+            run.Content += delta;
+            run.InputTokens = input ?? run.InputTokens;
+            run.OutputTokens = output ?? run.OutputTokens;
+            if (delta.Length > 0) RunService.AddEvent(db, run, "delta", delta);
+            await scope.ServiceProvider.GetRequiredService<ConversationService>().UpdateAnswerAsync(run, ct);
+            await db.SaveChangesAsync(ct);
+        }
+        finally { scheduler.StateGate.Release(); }
+    }
+}

@@ -1,0 +1,46 @@
+import { defineConfig, devices } from "@playwright/test";
+import path from "node:path";
+
+export default defineConfig({
+  testDir: ".",
+  testMatch: "*.spec.ts",
+  fullyParallel: false,
+  workers: 1,
+  timeout: 30000,
+  expect: { timeout: 8000 },
+  outputDir: "../../artifacts/browser-results",
+  reporter: [
+    ["list"],
+    ["html", { outputFolder: "../../artifacts/browser-report", open: "never" }],
+  ],
+  use: {
+    baseURL: "http://localhost:5180",
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
+  },
+  projects: [
+    {
+      name: "edge",
+      use: {
+        ...devices["Desktop Edge"],
+        channel: "msedge",
+        viewport: { width: 1440, height: 1000 },
+      },
+    },
+  ],
+  webServer: {
+    command:
+      "pwsh -NoProfile -File scripts/Start-Local.ps1 -SkipBuild -Port 5180",
+    cwd: path.resolve(__dirname, "../.."),
+    url: "http://localhost:5180/health/live",
+    timeout: 30000,
+    reuseExistingServer: false,
+    env: {
+      ConnectionStrings__Nexus: "",
+      Storage__ApplyMigrationsOnStartup: "false",
+      Database__User: "",
+      Database__Password: "",
+      AdAuthentication__Mode: "Windows",
+    },
+  },
+});

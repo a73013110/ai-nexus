@@ -1,0 +1,110 @@
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using AiNexus.BuildingBlocks;
+using AiNexus.Modules.Conversations;
+using AiNexus.Modules.Operations;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+
+namespace AiNexus.Modules.Inference;
+
+public sealed class RunService(NexusDbContext db, ConversationService conversations, GenerationScheduler scheduler, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, ModelPresentation presentation)
+{
+    public async Task<GenerationRun> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
+    {
+        var run = await db.Runs.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct)
+                  ?? throw new ApiException(404, "run_not_found", "找不到這次生成。");
+        await conversations.OwnedAsync(owner, run.ConversationId, ct);
+        return run;
+    }
+
+    public async Task<RunDto> CreateAsync(Guid owner, CreateRunRequest request, string key, CancellationToken ct)
+    {
+        if (key.Length is < 16 or > 80 || key.Any(x => !char.IsAsciiLetterOrDigit(x) && x is not '-' and not '_')) throw new ApiException(400, "idempotency_key_required", "請提供 16 至 80 字元的 Idempotency-Key。");
+        if (request.Prompt?.Length > options.Value.MaxInputCharacters || request.ModelId?.Length > 160) throw new ApiException(400, "input_too_long", "提問或模型識別碼過長。");
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(request))));
+        var previous = await db.Runs.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct);
+        if (previous is not null)
+        {
+            await conversations.OwnedAsync(owner, previous.ConversationId, ct);
+            if (previous.RequestHash != hash) throw new ApiException(409, "idempotency_conflict", "此提交識別碼已用於不同內容。");
+            return presentation.Run(previous);
+        }
+        // Provider discovery can take seconds. Never hold the cancellation/state gate over it.
+        var profile = await models.RequireAsync(request.ModelId, ct);
+        var effort = ModelCatalog.RequireReasoning(profile, request.ReasoningEffort);
+        await scheduler.StateGate.WaitAsync(ct);
+        var reserved = false;
+        try
+        {
+            var existing = await db.Runs.SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct);
+            if (existing is not null)
+            {
+                await conversations.OwnedAsync(owner, existing.ConversationId, ct);
+                if (existing.RequestHash != hash) throw new ApiException(409, "idempotency_conflict", "此提交識別碼已用於不同內容。");
+                return presentation.Run(existing);
+            }
+            if (!scheduler.Ready) throw new ApiException(503, "scheduler_unavailable", "生成服務尚未就緒，請稍後重試。");
+            if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) throw new ApiException(409, "generation_active", "你已有一則排隊或生成中的訊息，請先等待或停止。");
+            if (!(reserved = scheduler.TryReserve())) throw new ApiException(429, "queue_full", "生成佇列已滿，請稍後再試。");
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            var run = new GenerationRun
+            {
+                OwnerId = owner, ActiveOwnerId = owner, ConversationId = request.ConversationId,
+                ModelId = profile.Id, IdempotencyKey = key, RequestHash = hash,
+                ParametersJson = JsonSerializer.Serialize(new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, 0.6, options.Value.SystemPrompt, effort, profile.ReasoningControl))
+            };
+            var (user, assistant) = await conversations.PrepareGenerationAsync(owner, request with { ModelId = profile.Id }, run.Id, ct);
+            run.UserMessageId = user.Id;
+            run.AssistantMessageId = assistant.Id;
+            await context.BuildAsync(run.ConversationId, user.Id, JsonSerializer.Deserialize<GenerationParameters>(run.ParametersJson)!, ct);
+            db.Runs.Add(run);
+            AddEvent(db, run, "status");
+            db.AuditEvents.Add(new AuditEvent { OwnerId = owner, Action = "run.created", ResourceId = run.Id, Result = run.Status });
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+            scheduler.Enqueue(run.Id);
+            reserved = false;
+            return presentation.Run(run);
+        }
+        finally
+        {
+            if (reserved) scheduler.ReleaseReservation();
+            scheduler.StateGate.Release();
+        }
+    }
+
+    public async Task<RunDto> CancelAsync(Guid owner, Guid id, CancellationToken ct)
+    {
+        await scheduler.StateGate.WaitAsync(ct);
+        try
+        {
+            var run = await OwnedAsync(owner, id, ct);
+            if (!RunStates.IsActive(run.Status)) return presentation.Run(run);
+            scheduler.Cancel(id);
+            await FinishAsync(run, RunStates.Cancelled, null, ct);
+            return presentation.Run(run);
+        }
+        finally { scheduler.StateGate.Release(); }
+    }
+
+    // Called under StateGate, so cancellation and token flushes cannot overwrite each other.
+    public async Task FinishAsync(GenerationRun run, string status, string? error, CancellationToken ct)
+    {
+        run.Status = status;
+        run.ErrorCode = error;
+        run.ActiveOwnerId = null;
+        run.FinishedAt = DateTimeOffset.UtcNow;
+        AddEvent(db, run, "status");
+        await conversations.UpdateAnswerAsync(run, ct);
+        db.AuditEvents.Add(new AuditEvent { OwnerId = run.OwnerId, Action = "run.finished", ResourceId = run.Id, Result = error ?? status });
+        await db.SaveChangesAsync(ct);
+    }
+
+    public static void AddEvent(NexusDbContext db, GenerationRun run, string type, string? delta = null)
+    {
+        run.LastSequence++;
+        db.RunEvents.Add(new RunEvent { RunId = run.Id, Sequence = run.LastSequence, Type = type, Status = run.Status, Delta = delta, ErrorCode = run.ErrorCode });
+    }
+}
