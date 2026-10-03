@@ -34,7 +34,6 @@
           autocomplete="username"
           placeholder="公司帳號，例如 chen"
           [formField]="loginForm.account"
-          [readOnly]="submitting()"
           aria-describedby="account-hint"
         />
         <p id="account-hint" class="login-field-hint">輸入帳號名稱，無需加入網域。</p>
@@ -44,7 +43,6 @@
           type="password"
           autocomplete="current-password"
           [formField]="loginForm.password"
-          [readOnly]="submitting()"
         />
         <button
           class="primary-button login-submit"

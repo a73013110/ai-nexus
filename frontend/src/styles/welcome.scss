@@ -1,0 +1,210 @@
+.empty-state {
+  width: min(700px, calc(100% - 80px));
+  margin: 0 auto;
+  padding: clamp(48px, 11vh, 118px) 0 28px;
+}
+.empty-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: var(--text-caption);
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+}
+.tiny-rule {
+  display: inline-block;
+  width: 21px;
+  height: 1px;
+  background: var(--muted);
+}
+.empty-state h2 {
+  font-size: var(--text-display);
+  line-height: 1.5;
+  font-weight: 500;
+  letter-spacing: -0.7px;
+  margin: 0 0 16px;
+}
+.empty-state > p {
+  color: var(--secondary);
+  font-size: var(--text-label);
+  line-height: 1.95;
+  margin: 0 0 38px;
+}
+.suggestions {
+  max-width: 480px;
+  border-top: 1px solid var(--line);
+}
+.suggestions > button {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  width: 100%;
+  padding: 18px 6px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  color: var(--ink);
+  font-size: var(--text-caption);
+}
+.suggestion-index {
+  color: var(--muted);
+  font:
+    var(--text-caption) ui-monospace,
+    'Cascadia Code',
+    monospace;
+}
+.suggestions nx-icon {
+  width: 17px;
+  height: 17px;
+  color: var(--accent);
+}
+.suggestions nx-icon:last-child {
+  margin-left: auto;
+  width: 14px;
+  color: var(--muted);
+}
+.empty-footnote {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  margin-top: 38px;
+  font-size: var(--text-caption);
+  letter-spacing: 0.3px;
+}
+.empty-footnote .tiny-rule {
+  width: 12px;
+}
+@media (max-width: 859px) {
+  .empty-state {
+    width: min(700px, calc(100% - 64px));
+    padding-top: 60px;
+  }
+}
+@media (max-width: 520px) {
+  .empty-state {
+    width: calc(100% - 48px);
+    padding-top: 39px;
+  }
+  .empty-eyebrow {
+    font-size: var(--text-caption);
+    gap: 9px;
+    margin-bottom: 17px;
+  }
+  .empty-state h2 {
+    font-size: var(--p-font-2xl);
+    letter-spacing: -0.8px;
+  }
+  .empty-state > p {
+    font-size: var(--text-caption);
+    margin-bottom: 29px;
+  }
+  .suggestions > button {
+    padding: 15px 3px;
+    gap: 13px;
+    min-height: 48px;
+    font-size: var(--text-caption);
+  }
+  .empty-footnote {
+    margin-top: 29px;
+    font-size: var(--text-caption);
+  }
+}
+.empty-state {
+  width: min(var(--welcome-width), calc(100% - 2 * var(--workspace-gutter)));
+  padding-top: clamp(2.5rem, 8dvh, 6rem);
+}
+.empty-heading {
+  position: relative;
+  min-height: 2.5rem;
+}
+.nexus-emblem {
+  width: 5rem;
+  height: 5rem;
+  position: absolute;
+  right: 0;
+  top: -0.75rem;
+}
+.emblem-orbit {
+  stroke: var(--line);
+  stroke-dasharray: 3 6;
+  stroke-width: 1;
+}
+.emblem-link {
+  stroke: var(--accent);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.emblem-node {
+  fill: var(--surface);
+  stroke: var(--accent);
+  stroke-width: 1.5;
+}
+.emblem-point {
+  fill: var(--signal);
+}
+.empty-state > p {
+  margin-bottom: var(--p-space-6);
+  font-size: var(--text-ui);
+}
+.empty-state h2 {
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  margin-bottom: var(--p-space-3);
+  padding-right: 5rem;
+}
+.suggestions {
+  max-width: none;
+  border: 0;
+  display: grid;
+  gap: var(--p-space-2);
+}
+.suggestions > button {
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  padding: var(--p-space-4);
+  background: var(--surface);
+  gap: var(--p-space-3);
+}
+.suggestions > button:hover {
+  background: var(--canvas);
+  border-color: var(--accent);
+}
+.suggestion-copy {
+  min-width: 0;
+  flex: 1;
+}
+.suggestion-copy strong {
+  display: block;
+  font-weight: 500;
+  font-size: var(--text-ui);
+}
+.suggestion-copy small {
+  display: block;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  margin-top: var(--p-space-1);
+}
+.empty-footnote {
+  margin-top: var(--p-space-6);
+}
+@media (max-width: 520px) {
+  .nexus-emblem {
+    width: 3.75rem;
+    height: 3.75rem;
+    top: 0;
+  }
+  .empty-state h2 {
+    padding-right: 0;
+  }
+  .empty-eyebrow {
+    padding-right: 3.75rem;
+  }
+  .suggestions > button {
+    padding: var(--p-space-3);
+  }
+  .suggestion-index {
+    display: none;
+  }
+}

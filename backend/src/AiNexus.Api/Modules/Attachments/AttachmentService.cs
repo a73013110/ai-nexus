@@ -24,6 +24,10 @@ public sealed class AttachmentService(IEfHelper<INexusDatabase> ef, DocumentExtr
         await writes.Gate.WaitAsync(ct);
         try
         {
+            // Reclaim interrupted uploads and abandoned browser drafts before checking quota.
+            // The write gate also covers generation binding; linked history is never eligible.
+            var cutoff = DateTimeOffset.UtcNow.AddDays(-options.Value.DraftRetentionDays);
+            await ef.Set<Attachment>().Where(x => x.OwnerId == owner && x.CreatedAt < cutoff && !ef.Set<MessageAttachment>().Any(link => link.AttachmentId == x.Id)).ExecuteDeleteAsync(ct);
             var used = await ef.Set<Attachment>().Where(x => x.OwnerId == owner).SumAsync(x => (long?)x.Size, ct) ?? 0;
             if (used + bytes.Length > options.Value.MaxOwnerBytes) throw new ApiException(413, "attachment_quota", "個人附件空間已滿，請移除尚未使用的附件或聯絡管理員。");
             var attachment = new Attachment { OwnerId = owner, FileName = name, ContentType = type, Data = bytes, Size = bytes.Length, ExtractedText = text };

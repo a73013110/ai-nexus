@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5281/"
+      "url": "http://localhost:5080/"
     }
   ],
   "paths": {
@@ -3542,6 +3542,11 @@
           },
           "defaultModelId": {
             "type": ["null", "string"]
+          },
+          "maxInputCharacters": {
+            "type": "integer",
+            "format": "int32",
+            "default": 12000
           }
         }
       },

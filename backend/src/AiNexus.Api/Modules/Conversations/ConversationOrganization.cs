@@ -79,6 +79,7 @@ public sealed class ConversationOrganization(IEfHelper<INexusDatabase> ef, Conve
 
     public async Task<ConversationDto> ImportAsync(Guid owner, ConversationBackup backup, CancellationToken ct)
     {
+        if (backup.Messages.Any(x => x is null)) InvalidBackup();
         if (backup.Version != 1 || backup.Title.Trim().Length is < 1 or > 120 || backup.SystemInstruction.Length > 4000 || backup.Messages.Count > 400 || backup.Messages.Sum(x => (long)x.Content.Length) > 1_000_000)
             throw new ApiException(400, "invalid_backup", "備份格式不正確或內容過大（最多 400 則訊息）。");
         var labels = CleanLabels(backup.Labels);

@@ -1,4 +1,4 @@
-import { Injectable, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
 import type { Preferences } from '../api/types';
 
 @Injectable({ providedIn: 'root' })
@@ -9,8 +9,18 @@ export class ThemeService {
     defaultModelId: null,
   });
   private readonly dark = window.matchMedia('(prefers-color-scheme: dark)');
+  private readonly motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  private readonly systemReduced = signal(this.motion.matches);
+  readonly reducedMotion = computed(() => this.preferences().reducedMotion || this.systemReduced());
   constructor() {
-    this.dark.addEventListener('change', () => this.render());
+    const themeChanged = () => this.render();
+    const motionChanged = () => this.systemReduced.set(this.motion.matches);
+    this.dark.addEventListener('change', themeChanged);
+    this.motion.addEventListener('change', motionChanged);
+    inject(DestroyRef).onDestroy(() => {
+      this.dark.removeEventListener('change', themeChanged);
+      this.motion.removeEventListener('change', motionChanged);
+    });
     try {
       const local = JSON.parse(
         localStorage.getItem('nexus.appearance') ?? 'null',

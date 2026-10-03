@@ -635,6 +635,11 @@ export interface components {
       allowModelSelection: boolean;
       showModelNames: boolean;
       defaultModelId: null | string;
+      /**
+       * Format: int32
+       * @default 12000
+       */
+      maxInputCharacters: number;
     };
     ModelsDto: {
       models: components['schemas']['ModelDto'][];

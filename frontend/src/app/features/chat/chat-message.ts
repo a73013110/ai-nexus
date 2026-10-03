@@ -1,24 +1,24 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-  output,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import type { Message } from '../../core/api/types';
 import { Icon } from '../../shared/ui/icon';
 import { renderMarkdown } from '../../shared/ui/markdown';
+import { CopyFeedback } from '../../shared/browser/copy-feedback';
+import { AttachmentList } from '../attachments/attachment-list';
+import { MessageTree } from './message-tree';
+import { InferenceSignal } from '../../shared/ui/inference-signal';
 
 @Component({
   selector: 'nx-chat-message',
-  imports: [Icon],
+  imports: [Icon, AttachmentList, InferenceSignal],
+  providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <article
     class="message"
     [class.user]="message().role === 'user'"
+    [class.search-match]="matched()"
+    [class.search-current]="currentMatch()"
+    [attr.data-message-id]="message().id"
     animate.enter="message-enter"
   >
     <div class="message-heading">
@@ -32,13 +32,19 @@ import { renderMarkdown } from '../../shared/ui/markdown';
     </div>
     @if (message().role === 'user') {
       <div class="user-copy">{{ message().content }}</div>
+      @if (message().attachments?.length) {
+        <nx-attachment-list [files]="message().attachments!" />
+      }
     } @else if (active()) {
       @if (streamContent()) {
         <div class="streaming-copy">{{ streamContent() }}</div>
       } @else {
         <div class="waiting-copy">
-          <span class="loading-dot"></span
-          >{{ status() === 'queued' ? '已加入佇列，等待模型…' : '正在整理回答…' }}
+          <span class="waiting-graphic"><nx-inference-signal [active]="true" /></span
+          ><span
+            >{{ status() === 'queued' ? '已加入佇列，等待模型…' : '正在整理回答…'
+            }}<small>讓資訊逐步成形</small></span
+          >
         </div>
       }
     } @else {
@@ -110,57 +116,43 @@ import { renderMarkdown } from '../../shared/ui/markdown';
 export class ChatMessage {
   private readonly sanitizer = inject(DomSanitizer);
   readonly message = input.required<Message>();
-  readonly all = input.required<Message[]>();
+  readonly tree = input.required<MessageTree>();
+  readonly matched = input(false);
+  readonly currentMatch = input(false);
   readonly active = input(false);
   readonly showModelNames = input(true);
   readonly busy = input(false);
   readonly streamContent = input('');
   readonly status = input('');
-  readonly errorCode = input<string | null>(null);
   readonly edit = output<Message>();
   readonly regenerate = output<Message>();
   readonly version = output<number>();
-  readonly copied = signal(false);
-  readonly copyError = signal('');
+  readonly feedback = inject(CopyFeedback);
+  readonly copied = this.feedback.copied;
+  readonly copyError = this.feedback.error;
   readonly html = computed(() =>
     this.active()
       ? ''
       : this.sanitizer.bypassSecurityTrustHtml(renderMarkdown(this.message().content)),
   );
-  readonly versions = computed(() =>
-    this.all().filter(
-      (x) => x.parentId === this.message().parentId && x.role === this.message().role,
-    ),
-  );
+  readonly versions = computed(() => this.tree().versions(this.message()));
   readonly versionIndex = computed(() =>
     this.versions().findIndex((x) => x.id === this.message().id),
   );
   readonly failureText = computed(() =>
-    this.errorCode() === 'generation_timeout'
+    this.message().errorCode === 'generation_timeout'
       ? '模型回應逾時'
-      : this.errorCode() === 'server_restarted'
+      : this.message().errorCode === 'server_restarted'
         ? '伺服器重新啟動，生成已中斷'
         : '生成未完成',
   );
   async copyAnswer() {
-    try {
-      await navigator.clipboard.writeText(this.message().content);
-      this.copied.set(true);
-      setTimeout(() => this.copied.set(false), 1800);
-    } catch {
-      this.copyError.set('瀏覽器未允許複製，請選取文字後複製。');
-    }
+    await this.feedback.copy(this.message().content);
   }
   async copyCode(event: MouseEvent) {
     const target = event.target instanceof Element ? event.target.closest('.code-copy') : null;
     const code = target?.closest('.code-block')?.querySelector('code');
     if (!target || !code) return;
-    try {
-      await navigator.clipboard.writeText(code.textContent ?? '');
-      target.textContent = '已複製';
-      setTimeout(() => (target.textContent = '複製程式碼'), 1800);
-    } catch {
-      this.copyError.set('瀏覽器未允許複製，請選取程式碼後複製。');
-    }
+    await this.feedback.copy(code.textContent ?? '', target);
   }
 }

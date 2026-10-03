@@ -1,5 +1,4 @@
 import {
-  afterNextRender,
   ChangeDetectionStrategy,
   Component,
   computed,
@@ -11,19 +10,51 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormField, form, maxLength, required } from '@angular/forms/signals';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import {
+  FormField,
+  form,
+  maxLength,
+  required,
+  readonly as readonlyField,
+} from '@angular/forms/signals';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ThemeService } from '../../core/preferences/theme-service';
-import type { Conversation } from '../../core/api/types';
+import type { Conversation, ConversationSettings } from '../../core/api/types';
 import { Icon } from '../../shared/ui/icon';
+import { InferenceSignal } from '../../shared/ui/inference-signal';
+import { Autosize } from '../../shared/browser/autosize';
+import { FileDrop } from '../../shared/browser/file-drop';
+import { downloadFile } from '../../shared/browser/download';
+import { Command, CommandPalette } from '../../shared/ui/command-palette';
+import { AttachmentList } from '../attachments/attachment-list';
+import { ConversationAction, ConversationActions } from '../workspace/conversation-actions';
+import { ConversationSettingsDialog } from '../workspace/conversation-settings-dialog';
+import { PromptLibraryDialog } from '../workspace/prompt-library-dialog';
 import { ChatMessage } from './chat-message';
+import { ChatSidebar } from './chat-sidebar';
 import { ChatStore } from './chat-store';
 import { ComposerControls } from './composer-controls';
-import { InferenceSignal } from '../../shared/ui/inference-signal';
+import { ConversationFind } from './conversation-find';
 
 @Component({
   selector: 'nx-chat-workspace',
-  imports: [FormField, RouterLink, Icon, ChatMessage, ComposerControls, InferenceSignal],
+  imports: [
+    FormField,
+    RouterLink,
+    Icon,
+    ChatMessage,
+    ChatSidebar,
+    ComposerControls,
+    InferenceSignal,
+    Autosize,
+    FileDrop,
+    AttachmentList,
+    ConversationActions,
+    ConversationSettingsDialog,
+    PromptLibraryDialog,
+    CommandPalette,
+    ConversationFind,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chat-workspace.html',
 })
@@ -32,41 +63,46 @@ export class ChatWorkspace {
   readonly themes = inject(ThemeService);
   private readonly destroy = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   readonly sidebarOpen = signal(window.innerWidth >= 860);
   readonly narrow = signal(window.innerWidth < 860);
   readonly following = signal(true);
   readonly composing = signal(false);
+  readonly findOpen = signal(false);
+  readonly matches = signal<string[]>([]);
+  readonly currentMatch = signal<string | null>(null);
   readonly modal = signal<'rename' | 'delete' | null>(null);
   readonly modalTarget = signal<Conversation | null>(null);
   readonly modalBusy = signal(false);
-  readonly searchModel = signal({ query: '' });
-  readonly searchForm = form(this.searchModel, (schema) => maxLength(schema.query, 120));
   readonly composerForm = form(this.store.draft, (schema) => {
+    readonlyField(schema.text, {
+      when: () =>
+        this.store.loading() ||
+        this.store.loadingConversation() ||
+        !!this.store.selected()?.isArchived ||
+        this.store.submitting() ||
+        this.store.pendingSubmission(),
+    });
     required(schema.text, { message: '請輸入訊息。' });
-    maxLength(schema.text, 12000, { message: '訊息最多 12,000 個字元。' });
+    maxLength(schema.text, () => this.store.policy().maxInputCharacters, {
+      message: '訊息超過系統允許的字數，請縮短內容。',
+    });
   });
   readonly renameModel = signal({ title: '' });
   readonly renameForm = form(this.renameModel, (schema) => {
     required(schema.title);
     maxLength(schema.title, 120);
   });
-  readonly preferencesForm = form(this.themes.preferences);
   readonly textarea = viewChild<ElementRef<HTMLTextAreaElement>>('composer');
   readonly viewport = viewChild<ElementRef<HTMLElement>>('viewport');
   readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
-  readonly groups = computed(() => {
-    const now = new Date();
-    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' });
-    const today = day.format(now),
-      yesterday = day.format(new Date(now.getTime() - 86400000));
-    const groups = new Map<string, Conversation[]>();
-    for (const conversation of this.store.conversations()) {
-      const date = day.format(new Date(conversation.updatedAt));
-      const label = date === today ? '今天' : date === yesterday ? '昨天' : '先前的對話';
-      groups.set(label, [...(groups.get(label) ?? []), conversation]);
-    }
-    return [...groups].map(([label, conversations]) => ({ label, conversations }));
-  });
+  readonly library = viewChild(PromptLibraryDialog);
+  readonly settings = viewChild(ConversationSettingsDialog);
+  readonly palette = viewChild(CommandPalette);
+  readonly finder = viewChild(ConversationFind);
+  readonly importInput = viewChild<ElementRef<HTMLInputElement>>('importInput');
+  readonly saveSettings = (conversation: Conversation, settings: ConversationSettings) =>
+    this.store.organize(conversation, settings);
   readonly statusText = computed(() =>
     this.store.stopping()
       ? '正在停止…'
@@ -81,41 +117,114 @@ export class ChatWorkspace {
               : '',
   );
   readonly suggestions = [
-    { icon: 'lines', title: '整理思緒', text: '幫我整理以下筆記，歸納重點與待辦事項：\n' },
-    { icon: 'document', title: '寫得更精準', text: '幫我修改以下文字，讓語氣清楚、自然且專業：\n' },
+    {
+      icon: 'lines',
+      title: '整理思緒',
+      detail: '讓重點與下一步更清楚',
+      text: '幫我整理以下筆記，歸納重點與待辦事項：\n',
+    },
+    {
+      icon: 'document',
+      title: '寫得更精準',
+      detail: '打磨文字，保留你的觀點',
+      text: '幫我修改以下文字，讓語氣清楚、自然且專業：\n',
+    },
     {
       icon: 'idea',
       title: '拆解問題',
+      detail: '從複雜問題找到可行方向',
       text: '和我一起分析以下問題，列出可行方向與需要確認的資訊：\n',
     },
   ];
-  private searchTimer: ReturnType<typeof setTimeout> | null = null;
+  readonly commands = computed<Command[]>(() => [
+    {
+      id: 'new',
+      label: '開始新對話',
+      detail: '建立新的工作思路',
+      icon: 'plus',
+      shortcut: 'Ctrl Alt N',
+    },
+    {
+      id: 'prompts',
+      label: '開啟常用提示詞',
+      detail: '套用或整理個人範本',
+      icon: 'library',
+      shortcut: 'Ctrl Shift L',
+    },
+    {
+      id: 'import',
+      label: '匯入對話文字備份',
+      detail: '從 AI Nexus JSON 備份還原',
+      icon: 'upload',
+    },
+    {
+      id: 'theme',
+      label: this.themes.preferences().theme === 'dark' ? '切換淺色外觀' : '切換深色外觀',
+      detail: '依目前工作環境調整',
+      icon: 'sliders',
+    },
+    ...(this.store.selected()
+      ? [
+          { id: 'find', label: '搜尋目前對話訊息', detail: '定位分支中的文字', icon: 'search' },
+          {
+            id: 'settings',
+            label: '編輯對話指令與標籤',
+            detail: '設定回答方式並分類',
+            icon: 'tag',
+          },
+          { id: 'duplicate', label: '建立對話副本', detail: '保留所有分支與附件', icon: 'copy' },
+        ]
+      : []),
+    ...this.store.conversations().map((conversation) => ({
+      id: 'conversation:' + conversation.id,
+      label: conversation.title,
+      detail: conversation.isArchived ? '封存對話' : '開啟對話',
+      icon: 'document',
+    })),
+  ]);
   private scrollFrame = 0;
 
   constructor() {
     const resize = () => this.narrow.set(window.innerWidth < 860);
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && this.narrow() && this.sidebarOpen()) this.closeSidebar();
+    const keyboard = (event: KeyboardEvent) => {
+      if (event.isComposing || event.repeat) return;
+      if (
+        event.key === 'Escape' &&
+        this.narrow() &&
+        this.sidebarOpen() &&
+        !document.querySelector('dialog[open]')
+      )
+        this.closeSidebar();
+      if (!(event.ctrlKey || event.metaKey) || document.querySelector('dialog[open]')) return;
+      if (event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        this.palette()?.open();
+      } else if (event.altKey && event.key.toLowerCase() === 'n') {
+        event.preventDefault();
+        void this.router.navigate(['/chat']);
+      } else if (event.shiftKey && event.key.toLowerCase() === 'l') {
+        event.preventDefault();
+        void this.library()?.open();
+      }
     };
     window.addEventListener('resize', resize);
-    document.addEventListener('keydown', escape);
+    document.addEventListener('keydown', keyboard);
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       void this.store.initialize().then(() => {
         if (this.store.ready()) void this.store.select(params.get('id'));
       });
       this.following.set(true);
-    });
-    effect(() => {
-      this.store.draft();
-      requestAnimationFrame(() => this.resizeComposer());
+      this.closeFind();
     });
     effect((onCleanup) => {
-      const ready = this.store.ready();
-      const modelId = this.store.modelId();
-      const conversation = this.store.selected();
-      const edit = this.store.editing();
-      const prompt = this.store.draft().text;
+      const ready = this.store.ready(),
+        modelId = this.store.modelId(),
+        conversation = this.store.selected(),
+        edit = this.store.editing(),
+        prompt = this.store.draft().text;
+      const attachmentIds = this.store.attachments.files().map((file) => file.id);
       this.store.messages();
+      this.store.contextUsage.set(null);
       if (!ready || !modelId) return;
       const controller = new AbortController();
       const timer = setTimeout(
@@ -126,6 +235,7 @@ export class ChatWorkspace {
               parentMessageId: edit ? edit.parentId : (conversation?.activeLeafId ?? null),
               prompt,
               modelId,
+              attachmentIds,
             },
             controller.signal,
           ),
@@ -148,17 +258,9 @@ export class ChatWorkspace {
     });
     this.destroy.onDestroy(() => {
       window.removeEventListener('resize', resize);
-      document.removeEventListener('keydown', escape);
-      if (this.searchTimer) clearTimeout(this.searchTimer);
+      document.removeEventListener('keydown', keyboard);
       cancelAnimationFrame(this.scrollFrame);
     });
-    afterNextRender(() => this.resizeComposer());
-  }
-  searchChanged() {
-    if (this.searchTimer) clearTimeout(this.searchTimer);
-    this.searchTimer = setTimeout(() => {
-      void this.store.searchHistory(this.searchModel().query);
-    }, 250);
   }
   pickSuggestion(text: string) {
     this.store.draft.set({ text });
@@ -190,13 +292,6 @@ export class ChatWorkspace {
       void this.store.send();
     }
   }
-  resizeComposer() {
-    const field = this.textarea()?.nativeElement;
-    if (!field) return;
-    field.style.height = 'auto';
-    const limit = Math.min(192, window.innerHeight * 0.25);
-    field.style.height = `${Math.min(field.scrollHeight, limit)}px`;
-  }
   onScroll() {
     const view = this.viewport()?.nativeElement;
     if (view) {
@@ -209,31 +304,29 @@ export class ChatWorkspace {
     const view = this.viewport()?.nativeElement;
     if (!view) return;
     this.following.set(true);
-    const reduce =
-      this.themes.preferences().reducedMotion ||
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    view.scrollTo({ top: view.scrollHeight, behavior: smooth && !reduce ? 'smooth' : 'instant' });
+    view.scrollTo({
+      top: view.scrollHeight,
+      behavior: smooth && !this.themes.reducedMotion() ? 'smooth' : 'instant',
+    });
   }
   closeMobileSidebar() {
     if (this.narrow()) this.sidebarOpen.set(false);
   }
   closeSidebar() {
-    const previousFocus = document.activeElement;
+    const previous = document.activeElement;
     this.sidebarOpen.set(false);
     if (this.narrow())
       requestAnimationFrame(() => {
         const active = document.activeElement;
-        if (active === previousFocus || active === document.body || active?.closest('.sidebar')) {
+        if (active === previous || active === document.body || active?.closest('.sidebar'))
           document.querySelector<HTMLButtonElement>('.sidebar-toggle')?.focus();
-        }
       });
   }
   newChat() {
-    this.store.cancelEdit();
     this.closeMobileSidebar();
   }
   editMessageFocus() {
-    setTimeout(() => this.textarea()?.nativeElement.focus(), 0);
+    requestAnimationFrame(() => this.textarea()?.nativeElement.focus());
   }
   openDialog(type: 'rename' | 'delete', target: Conversation) {
     this.modalTarget.set(target);
@@ -262,20 +355,12 @@ export class ChatWorkspace {
     this.modalBusy.set(false);
     if (success) this.closeDialog();
   }
-  savePreferences() {
-    queueMicrotask(
-      () =>
-        void this.store.savePreferences({
-          ...this.themes.preferences(),
-          defaultModelId: this.store.policy().allowModelSelection
-            ? this.store.modelId() || null
-            : null,
-        }),
-    );
-  }
   selectModel(id: string) {
     this.store.chooseModel(id);
-    this.savePreferences();
+    void this.store.savePreferences({
+      ...this.themes.preferences(),
+      defaultModelId: this.store.modelId() || null,
+    });
   }
   exportConversation() {
     const conversation = this.store.selected();
@@ -285,24 +370,11 @@ export class ChatWorkspace {
       ...this.store
         .visibleMessages()
         .map(
-          (message) => `## ${message.role === 'user' ? '你' : 'AI Nexus'}\n\n${message.content}`,
+          (message) =>
+            `## ${message.role === 'user' ? '你' : 'AI Nexus'}\n\n${message.content}${message.attachments?.length ? '\n\n附件：' + message.attachments.map((file) => file.fileName).join('、') : ''}`,
         ),
     ].join('\n\n');
-    const url = URL.createObjectURL(new Blob([content], { type: 'text/markdown;charset=utf-8' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download =
-      (conversation.title.replace(/[\\/:*?"<>|\u0000-\u001f]/g, '_').slice(0, 80) || 'AI-Nexus') +
-      '.md';
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-  async loadMore() {
-    try {
-      await this.store.refreshHistory(true);
-    } catch (error) {
-      this.store.report(error);
-    }
+    downloadFile(content, conversation.title, 'md');
   }
   toggleSidebar() {
     this.sidebarOpen.update((value) => !value);
@@ -314,5 +386,85 @@ export class ChatWorkspace {
   async reload() {
     await this.store.initialize(true);
     if (this.store.ready()) await this.store.select(this.route.snapshot.paramMap.get('id'), true);
+  }
+  action(action: ConversationAction) {
+    const conversation = this.store.selected();
+    if (!conversation) return;
+    switch (action) {
+      case 'rename':
+      case 'delete':
+        this.openDialog(action, conversation);
+        break;
+      case 'markdown':
+        this.exportConversation();
+        break;
+      case 'backup':
+        void this.store.exportBackup();
+        break;
+      case 'settings':
+        this.settings()?.open(conversation);
+        break;
+      case 'duplicate':
+        void this.store.duplicate();
+        break;
+      case 'favorite':
+        void this.store.organize(conversation, { isFavorite: !conversation.isFavorite });
+        break;
+      case 'archive':
+        void this.store.organize(conversation, { isArchived: !conversation.isArchived });
+        break;
+      case 'find':
+        this.findOpen.set(true);
+        requestAnimationFrame(() => this.finder()?.focus());
+        break;
+    }
+  }
+  command(id: string) {
+    this.closeMobileSidebar();
+    if (id.startsWith('conversation:')) {
+      void this.router.navigate(['/chat', id.slice(13)]);
+      return;
+    }
+    if (id === 'new') void this.router.navigate(['/chat']);
+    else if (id === 'prompts') void this.library()?.open();
+    else if (id === 'import') this.importInput()?.nativeElement.click();
+    else if (id === 'theme')
+      void this.store.savePreferences({
+        ...this.themes.preferences(),
+        theme: this.themes.preferences().theme === 'dark' ? 'light' : 'dark',
+      });
+    else this.action(id as ConversationAction);
+  }
+  find(result: { ids: string[]; active: string | null }) {
+    this.matches.set(result.ids);
+    this.currentMatch.set(result.active);
+    if (result.active) {
+      this.following.set(false);
+      requestAnimationFrame(() =>
+        this.viewport()
+          ?.nativeElement.querySelector<HTMLElement>(
+            `[data-message-id="${CSS.escape(result.active!)}"]`,
+          )
+          ?.scrollIntoView({
+            block: 'center',
+            behavior: this.themes.reducedMotion() ? 'instant' : 'smooth',
+          }),
+      );
+    }
+  }
+  closeFind() {
+    this.findOpen.set(false);
+    this.matches.set([]);
+    this.currentMatch.set(null);
+  }
+  uploadChanged(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files) void this.store.attachments.upload(input.files);
+    input.value = '';
+  }
+  importChanged(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files?.[0]) void this.store.importBackup(input.files[0]);
+    input.value = '';
   }
 }

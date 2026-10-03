@@ -14,11 +14,15 @@ flowchart LR
     API --> Chat[Conversations：個人訊息樹]
     API --> Inference[Inference：模型政策與排程]
     API --> Operations[Operations：狀態與稽核]
+    API --> Attachments[Attachments：文件與圖片]
+    API --> Library[Library：個人提示詞]
     Identity --> SQL[(AiNexus SQL Server)]
     Access --> SQL
     Chat --> SQL
     Inference --> SQL
     Operations --> SQL
+    Attachments --> SQL
+    Library --> SQL
     Inference --> Provider[Google AI／Ollama adapter]
 ```
 
@@ -31,10 +35,26 @@ flowchart LR
 | Conversations | 擁有者隔離、標題／soft-delete、訊息樹、分支選擇                          |
 | Inference     | provider adapter、核准模型／呈現政策、reasoning、Context、run／排程／SSE |
 | Operations    | 經驗證的服務狀態、稽核、replay 清理                                      |
+| Attachments   | 格式驗證、文件抽取、個人配額、owner 下載、訊息共用關聯                   |
+| Library       | 個人提示詞範本 CRUD 與容量限制                                           |
 
 各模組自己的 endpoint 檔案由 BuildingBlocks.ApiEndpoints 組裝。BuildingBlocks 只放共用 DTO／錯誤、host 設定、DB model 與 migrations；Database 放 SqlClient 與 EDoc adapter。模組對模組使用明確服務，不任意新增可繞過 owner／policy 的查詢入口。
 
 Angular 的 features 放 UI 與業務 store；core 管 API／auth／themes／stream；shared/ui 放沒有業務狀態的可重用元件。ChatWorkspace 組合 ChatMessage、ComposerControls、InferenceSignal，設計 token 與樣式分區集中管理。新增功能採 lazy route 與獨立 store；不要把所有業務持續加進 ChatStore。
+
+### 前端共用與功能邊界
+
+| 位置                                   | 責任                                                                                                |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `core/api/api-transport.ts`            | JSON、multipart、SSE 共用 transport；集中處理 CSRF、安全錯誤與登入失效                              |
+| `core/preferences/draft-repository.ts` | 依使用者／對話保存草稿，容量限制與受限儲存回饋                                                      |
+| `features/attachments`                 | DraftAttachments 管上傳／還原／移除；AttachmentList 共用於輸入區與歷史                              |
+| `features/workspace`                   | WorkspaceApi 管整理、範本與附件契約；操作、指令、範本 dialog 各自封裝                               |
+| `features/chat`                        | Workspace 組合 UI；Sidebar 管導覽與偏好；Store 管生成與對話狀態；MessageTree 每份歷史只建立一次索引 |
+| `shared/browser`                       | autosize、拖放／貼圖、下載、複製回饋及可取消等待                                                    |
+| `shared/ui`                            | 圖示、Markdown、Disclosure、CommandPalette 與生成訊號，不依賴 workspace API                         |
+
+登出／登入失效會清除目前使用者狀態與串流訂閱。回應帶有選取／身分版本檢查，避免晚到的舊結果覆蓋新對話；附件與 SSE 使用 AbortSignal。草稿、圖片能力、Context 與契約使用型別資料，不在 UI 複製 provider 判斷。
 
 ## 身分、功能與資料邊界
 
@@ -58,7 +78,7 @@ Google 原生 SSE 與 Ollama JSONL 只存在各自 adapter。模型核准清單�
 
 ## 資料層與契約
 
-EF Core migrations 管五個業務 schema；正式禁止 EnsureCreated。ConversationService 重用 EDoc IEfHelper，和其他服務共享 DI scoped NexusDbContext／transaction。Dapper DbHelper 原封保留，透過 SqlClient factory 用於狀態、初始化與特定參數化 SQL；自有連線不自動加入 EF transaction。來源與適配見 [EDoc README](../backend/src/AiNexus.Api/Database/EDoc/README.md)，物件見 [DATABASE](DATABASE.md)。
+EF Core migrations 管七個業務 schema；正式禁止 EnsureCreated。ConversationService 重用 EDoc IEfHelper，和其他服務共享 DI scoped NexusDbContext／transaction。Dapper DbHelper 原封保留，透過 SqlClient factory 用於狀態、初始化與特定參數化 SQL；自有連線不自動加入 EF transaction。來源與適配見 [EDoc README](../backend/src/AiNexus.Api/Database/EDoc/README.md)，物件見 [DATABASE](DATABASE.md)。
 
 OpenAPI 產生前端 JSON／SSE 型別；契約工具隔離 TypeScript 5，Angular 使用 TypeScript 6。套件精確版本與 lockfiles 一起保存，升級時更新契約與驗證證據。
 

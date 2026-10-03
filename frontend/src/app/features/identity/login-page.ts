@@ -1,5 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { FormField, form, maxLength, required } from '@angular/forms/signals';
+import {
+  FormField,
+  form,
+  maxLength,
+  required,
+  readonly as readonlyField,
+} from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth-service';
 import { ChatStore } from '../chat/chat-store';
@@ -16,14 +22,16 @@ export class LoginPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   readonly credentials = signal({ account: '', password: '' });
+  readonly loading = signal(true);
+  readonly submitting = signal(false);
   readonly loginForm = form(this.credentials, (schema) => {
+    readonlyField(schema.account, { when: () => this.submitting() });
+    readonlyField(schema.password, { when: () => this.submitting() });
     required(schema.account);
     maxLength(schema.account, 64);
     required(schema.password);
     maxLength(schema.password, 1024);
   });
-  readonly loading = signal(true);
-  readonly submitting = signal(false);
   readonly error = signal<string | null>(null);
   constructor() {
     void this.initialize();

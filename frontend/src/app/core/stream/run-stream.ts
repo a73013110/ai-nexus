@@ -1,7 +1,8 @@
 import { inject, Injectable } from '@angular/core';
-import { NexusApi } from '../api/nexus-api';
+import { ApiError, NexusApi } from '../api/nexus-api';
 import { isActive, Run, RunEvent } from '../api/types';
 import { SseParser } from './sse-parser';
+import { abortableDelay } from '../../shared/browser/abortable-delay';
 
 export interface StreamObserver {
   content(value: string): void;
@@ -22,13 +23,8 @@ export class RunStream {
     for (let attempt = 0; attempt < 8 && !signal.aborted; attempt++) {
       try {
         if (!isActive(run.status)) return run;
-        const response = await fetch(`/api/v1/runs/${run.id}/events?after=${cursor}`, {
-          credentials: 'same-origin',
-          cache: 'no-store',
-          signal,
-          headers: { Accept: 'text/event-stream' },
-        });
-        if (!response.ok || !response.body) throw new Error('事件連線失敗');
+        const response = await this.api.events(run.id, cursor, signal);
+        if (!response.body) throw new Error('事件連線失敗');
         observer.connection('connected');
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
@@ -69,36 +65,30 @@ export class RunStream {
           await reader.cancel().catch(() => undefined);
           reader.releaseLock();
         }
-        if (!isActive(run.status)) return this.api.run(run.id);
+        if (!isActive(run.status)) return this.api.run(run.id, signal);
         throw new Error('串流提前結束');
       } catch (error) {
-        if (signal.aborted) throw error;
+        if (signal.aborted || this.permanent(error)) throw error;
         observer.connection('reconnecting');
-        await new Promise<void>((resolve, reject) => {
-          const finish = () => {
-            signal.removeEventListener('abort', abort);
-            resolve();
-          };
-          const timer = setTimeout(finish, Math.min(500 * 2 ** attempt, 6000));
-          const abort = () => {
-            clearTimeout(timer);
-            signal.removeEventListener('abort', abort);
-            reject(new DOMException('Aborted', 'AbortError'));
-          };
-          signal.addEventListener('abort', abort, { once: true });
-        });
+        await abortableDelay(Math.min(500 * 2 ** attempt, 6000), signal);
         try {
-          run = await this.api.run(run.id);
+          run = await this.api.run(run.id, signal);
           cursor = run.lastSequence;
           content = run.content;
           observer.content(content);
           observer.status(run);
           if (!isActive(run.status)) return run;
-        } catch {
+        } catch (stateError) {
+          if (signal.aborted || this.permanent(stateError)) throw stateError;
           /* Next attempt fetches state again; no POST is ever repeated here. */
         }
       }
     }
     throw new Error('暫時無法恢復事件連線，請按「恢復連線」。生成仍由伺服器管理。');
+  }
+  private permanent(error: unknown) {
+    return (
+      error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 429
+    );
   }
 }

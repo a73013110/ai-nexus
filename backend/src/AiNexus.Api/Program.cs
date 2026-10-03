@@ -51,7 +51,8 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy("ad-login", http => RateLimitPartition.GetFixedWindowLimiter(http.Connection.RemoteIpAddress?.ToString() ?? "local", _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));
     options.OnRejected = (context, ct) => new ValueTask(Results.Problem(statusCode: 429, title: "登入嘗試過於頻繁，請稍後再試。", extensions: new Dictionary<string, object?> { ["code"] = "login_rate_limited" }).ExecuteAsync(context.HttpContext));
 });
-builder.Services.AddAuthorization(options => {
+builder.Services.AddAuthorization(options =>
+{
     options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
     options.AddPolicy(BuiltInAccess.ChatPolicy, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(BuiltInAccess.ChatFeature)));
 });
@@ -90,7 +91,7 @@ builder.Services.AddScoped<AttachmentService>();
 builder.Services.AddScoped<DocumentExtractor>();
 builder.Services.AddSingleton<AttachmentWriteLock>();
 builder.Services.AddOptions<AttachmentOptions>().BindConfiguration("Attachments")
-    .Validate(x => x.MaxFileBytes is >= 1024 and <= 8 * 1024 * 1024 && x.MaxFilesPerMessage is >= 1 and <= 8 && x.MaxMessageBytes >= x.MaxFileBytes && x.MaxMessageBytes <= 16 * 1024 * 1024 && x.MaxOwnerBytes >= x.MaxMessageBytes && x.MaxOwnerBytes <= 1024 * 1024 * 1024 && x.MaxExtractedCharacters is >= 1000 and <= 256000 && x.MaxPdfPages is >= 1 and <= 100 && x.ImageTokenEstimate is >= 1024 and <= 16384, "Invalid attachment limits.")
+    .Validate(x => x.MaxFileBytes is >= 1024 and <= 8 * 1024 * 1024 && x.MaxFilesPerMessage is >= 1 and <= 8 && x.MaxMessageBytes >= x.MaxFileBytes && x.MaxMessageBytes <= 16 * 1024 * 1024 && x.MaxOwnerBytes >= x.MaxMessageBytes && x.MaxOwnerBytes <= 1024 * 1024 * 1024 && x.MaxExtractedCharacters is >= 1000 and <= 256000 && x.MaxPdfPages is >= 1 and <= 100 && x.ImageTokenEstimate is >= 1024 and <= 16384 && x.DraftRetentionDays is >= 1 and <= 365, "Invalid attachment limits.")
     .ValidateOnStart();
 builder.Services.AddScoped<RunService>();
 builder.Services.AddScoped<ContextBuilder>();
@@ -158,8 +159,8 @@ app.Use(async (http, next) =>
     {
         var error = ex as ApiException;
         var status = error?.Status ?? (ex is BadHttpRequestException bad ? bad.StatusCode : ex is AntiforgeryValidationException ? 403 : 503);
-        var code = error?.Code ?? (status == 403 ? "csrf_invalid" : status == 400 ? "invalid_request" : "service_unavailable");
-        var detail = error?.Message ?? (status == 403 ? "安全驗證已失效，請重新載入頁面。" : status == 400 ? "請求格式不正確。" : "服務暫時無法使用，請稍後重試。");
+        var code = error?.Code ?? (status == 403 ? "csrf_invalid" : status == 413 ? "request_too_large" : status == 400 ? "invalid_request" : "service_unavailable");
+        var detail = error?.Message ?? (status == 403 ? "安全驗證已失效，請重新載入頁面。" : status == 413 ? "上傳內容超過大小上限，請減少檔案或拆分內容。" : status == 400 ? "請求格式不正確。" : "服務暫時無法使用，請稍後重試。");
         if (error is null && status == 503)
         {
             app.Logger.LogWarning("Request failed ({ErrorType}), trace {TraceId}.", ex.GetType().Name, http.TraceIdentifier);
@@ -172,7 +173,10 @@ app.UseDefaultFiles();
 app.UseStaticFiles();
 app.Use(async (http, next) =>
 {
-    var bodyLimit = http.Request.Path == "/api/v1/attachments" ? 9 * 1024 * 1024 : http.Request.Path == "/api/v1/conversations/import" ? 8 * 1024 * 1024 : 65536;
+    // JSON-escaped UTF-16 characters can occupy six bytes. Keep prompt limits usable for Chinese clients too.
+    var bodyLimit = http.Request.Path == "/api/v1/attachments" ? 9 * 1024 * 1024 : http.Request.Path == "/api/v1/conversations/import" ? 8 * 1024 * 1024 :
+        http.Request.Path is var inputPath && (inputPath == "/api/v1/runs" || inputPath == "/api/v1/context") ? Math.Max(65536, http.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptions<InferenceOptions>>().Value.MaxInputCharacters * 6 + 8192) :
+        http.Request.Path.StartsWithSegments("/api/v1/prompt-templates") ? 12000 * 6 + 8192 : 65536;
     if (http.Request.ContentLength > bodyLimit) throw new ApiException(413, "request_too_large", "上傳內容超過大小上限。");
     var bodySize = http.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();
     if (bodySize is { IsReadOnly: false }) bodySize.MaxRequestBodySize = bodyLimit;

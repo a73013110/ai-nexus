@@ -3,6 +3,8 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using AiNexus.BuildingBlocks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using AiNexus.Modules.Attachments;
 using AiNexus.Modules.Conversations;
 using AiNexus.Modules.Library;
@@ -78,6 +80,54 @@ public sealed class WorkspaceExtensionTests
         var file = await Upload(client, "image.png", Png);
         Assert.Equal(HttpStatusCode.BadRequest, (await PostRun(client, new(conversation.Id, "test-model", "describe", null, null, AttachmentIds: [file.Id]))).StatusCode);
         Assert.Empty((await client.GetFromJsonAsync<ConversationDetailDto>($"/api/v1/conversations/{conversation.Id}"))!.Messages);
+    }
+
+    [Fact]
+    public async Task DeletingTheLastConversationReclaimsAttachmentQuota()
+    {
+        await using var factory = new NexusFactory(attachments: x => { x.MaxFileBytes = 1024; x.MaxMessageBytes = 1024; x.MaxOwnerBytes = 1024; });
+        using var client = await factory.SignedInAsync();
+        var conversation = await CreateConversation(client);
+        var content = Encoding.UTF8.GetBytes(new string('x', 600));
+        var file = await Upload(client, "first.txt", content);
+        await Send(client, conversation.Id, file.Id);
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, (await UploadResponse(client, "second.txt", content)).StatusCode);
+        (await client.DeleteAsync($"/api/v1/conversations/{conversation.Id}")).EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/v1/attachments/{file.Id}/content")).StatusCode);
+        await Upload(client, "second.txt", content);
+    }
+
+    [Fact]
+    public async Task BrowserReceivesTheConfiguredPromptCharacterLimit()
+    {
+        await using var factory = new NexusFactory(inference: x => x.MaxInputCharacters = 18000);
+        using var client = await factory.SignedInAsync();
+        var catalog = (await client.GetFromJsonAsync<ModelsDto>("/api/v1/models"))!;
+        Assert.Equal(18000, catalog.Policy.MaxInputCharacters);
+        var preview = await client.PostAsJsonAsync("/api/v1/context", new ContextPreviewRequest(null, null, new string('文', 12000), "test-model"));
+        preview.EnsureSuccessStatusCode(); // Escaped Chinese JSON is larger than the ordinary 64 KB body limit.
+        Assert.True((await preview.Content.ReadFromJsonAsync<ContextUsageDto>())!.BudgetExceeded);
+    }
+
+    [Fact]
+    public async Task NewUploadsReclaimExpiredDraftsAndNeverRemoveLinkedHistory()
+    {
+        await using var factory = new NexusFactory();
+        using var client = await factory.SignedInAsync();
+        var draft = await Upload(client, "abandoned.txt", Encoding.UTF8.GetBytes("old draft"));
+        var history = await Upload(client, "retained.txt", Encoding.UTF8.GetBytes("retained history"));
+        var conversation = await CreateConversation(client);
+        await Send(client, conversation.Id, history.Id);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            var files = await db.Set<Attachment>().ToListAsync();
+            foreach (var file in files) file.CreatedAt = DateTimeOffset.UtcNow.AddDays(-15);
+            await db.SaveChangesAsync();
+        }
+        await Upload(client, "current.txt", Encoding.UTF8.GetBytes("current"));
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/v1/attachments/{draft.Id}")).StatusCode);
+        Assert.Equal(Encoding.UTF8.GetBytes("retained history"), await client.GetByteArrayAsync($"/api/v1/attachments/{history.Id}/content"));
     }
 
     [Fact]
@@ -197,6 +247,9 @@ public sealed class WorkspaceExtensionTests
         Assert.Equal(file.Id, Assert.Single(cloned.Messages.Single(x => x.Role == "user").Attachments!).Id);
         (await client.DeleteAsync($"/api/v1/conversations/{original.Id}")).EnsureSuccessStatusCode();
         Assert.Equal(Encoding.UTF8.GetBytes("clone attachment"), await client.GetByteArrayAsync($"/api/v1/attachments/{file.Id}/content"));
+        (await client.DeleteAsync($"/api/v1/conversations/{clone.Id}")).EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/v1/attachments/{file.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/v1/attachments/{file.Id}/content")).StatusCode);
     }
 
     [Fact]

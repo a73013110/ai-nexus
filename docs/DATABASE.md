@@ -4,7 +4,7 @@
 
 ## 物件清單
 
-`WorkspaceExtensions` migration 新增以下物件，保留既有使用者與对話資料。
+`WorkspaceExtensions` migration 新增以下物件，保留既有使用者與對話資料。共有 identity、access、conversations、inference、operations、attachments、library 七個業務 schema。
 
 | 新增物件／欄位                                              | 用途與規則                                                           |
 | ----------------------------------------------------------- | -------------------------------------------------------------------- |
@@ -51,6 +51,11 @@ erDiagram
     Conversations ||--o{ Messages : contains
     Conversations ||--o{ GenerationRuns : generates
     GenerationRuns ||--o{ RunEvents : replays
+    Users ||--o{ Attachments : owns
+    Messages ||--o{ MessageAttachments : includes
+    Attachments ||--o{ MessageAttachments : shared
+    Users ||--o{ PromptTemplates : owns
+    Conversations ||--o{ ConversationLabels : classified
 ```
 
 現在預設 `member`（一般使用者）→ `workspace`（基本工作台）→ `chat`（AI 對話，`/chat`）。AccessControl migration 補上既有使用者的 member；首次登入的新使用者在同一 transaction 建立角色關聯。既有使用者登入不重新授予被管理員撤銷的角色，細節見 [ACCESS_CONTROL](ACCESS_CONTROL.md)。
@@ -79,7 +84,7 @@ Dapper 預設建立自己的連線，不能假設它參與 EF transaction；需�
 
 DBA 可先建立 AiNexus，再審閱執行 [db/migrations.sql](../db/migrations.sql)；這份 EF 產生的 idempotent SQL 包含全部版本，需要在 AiNexus database 中執行。腳本不包含 CREATE LOGIN、CREATE DATABASE 或秘密。正式應用預設不啟動 migration，應由獨立部署帳號執行 DDL。EF 指引：[Applying migrations](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/applying)。
 
-正式帳號至少需要 identity、conversations、inference、operations schema 的 SELECT／INSERT／UPDATE／DELETE，以及 access schema SELECT／INSERT（首次登入寫 UserRoles）。更細的 access 權限可分為主檔 SELECT 與 UserRoles SELECT／INSERT；授權管理使用另一個受控管理登入。不可讓一般 UI 直接寫 Roles／Features，也不給應用登入 master 建庫與 ALTER schema 權限。
+正式帳號至少需要 identity、conversations、inference、operations、attachments、library schema 的 SELECT／INSERT／UPDATE／DELETE，以及 access schema SELECT／INSERT（首次登入寫 UserRoles）。更細的 access 權限可分為主檔 SELECT 與 UserRoles SELECT／INSERT；授權管理使用另一個受控管理登入。不可讓一般 UI 直接寫 Roles／Features，也不給應用登入 master 建庫與 ALTER schema 權限。
 
 ## 備份與資料生命週期
 

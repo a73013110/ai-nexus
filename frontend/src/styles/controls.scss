@@ -1,0 +1,50 @@
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--button-target);
+  height: var(--button-target);
+  flex: none;
+  border-radius: var(--p-radius-sm);
+  color: var(--secondary);
+}
+.quiet-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 7px;
+  min-height: var(--button-target);
+  border-radius: var(--p-radius-sm);
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.quiet-button nx-icon {
+  width: 14px;
+  height: 14px;
+}
+kbd {
+  font: inherit;
+}
+.primary-button,
+.secondary-button {
+  min-height: var(--button-target);
+  border-radius: var(--p-radius-sm);
+  padding: 10px 17px;
+  font-size: var(--text-caption);
+}
+.primary-button {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+.primary-button:not(:disabled):hover {
+  background: var(--accent);
+  opacity: 0.9;
+}
+.secondary-button {
+  border: 1px solid var(--line);
+}
+.danger-button,
+.danger-button:not(:disabled):hover {
+  background: var(--error);
+  color: var(--canvas);
+}

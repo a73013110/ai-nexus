@@ -8,7 +8,7 @@ using AiNexus.Modules.Attachments;
 
 namespace AiNexus.Modules.Conversations;
 
-public sealed class ConversationService(IEfHelper<INexusDatabase> ef, GenerationScheduler scheduler, ModelPresentation presentation)
+public sealed class ConversationService(IEfHelper<INexusDatabase> ef, NexusDbContext db, GenerationScheduler scheduler, ModelPresentation presentation, AttachmentWriteLock attachmentWrites)
 {
     public async Task<Conversation> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
         => await ef.Set<Conversation>().Include(x => x.Labels).SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner && !x.IsDeleted, ct)
@@ -76,11 +76,26 @@ public sealed class ConversationService(IEfHelper<INexusDatabase> ef, Generation
         await scheduler.StateGate.WaitAsync(ct);
         try
         {
-            var conversation = await OwnedAsync(owner, id, ct);
-            if (await ef.Set<GenerationRun>().AnyAsync(x => x.ConversationId == id && x.ActiveOwnerId != null, ct)) throw new ApiException(409, "generation_active", "請先停止生成，再刪除對話。");
-            conversation.IsDeleted = true;
-            ef.Set<AuditEvent>().Add(new AuditEvent { OwnerId = owner, Action = "conversation.deleted", ResourceId = id });
-            await ef.SaveChangesAsync(ct);
+            await attachmentWrites.Gate.WaitAsync(ct);
+            try
+            {
+                var conversation = await OwnedAsync(owner, id, ct);
+                if (await ef.Set<GenerationRun>().AnyAsync(x => x.ConversationId == id && x.ActiveOwnerId != null, ct)) throw new ApiException(409, "generation_active", "請先停止生成，再刪除對話。");
+                await using var transaction = await db.Database.BeginTransactionAsync(ct);
+                var links = await ef.Set<MessageAttachment>().Where(x => ef.Set<Message>().Any(m => m.Id == x.MessageId && m.ConversationId == id)).ToListAsync(ct);
+                var fileIds = links.Select(x => x.AttachmentId).Distinct().ToList();
+                ef.Set<MessageAttachment>().RemoveRange(links);
+                conversation.IsDeleted = true;
+                ef.Set<AuditEvent>().Add(new AuditEvent { OwnerId = owner, Action = "conversation.deleted", ResourceId = id });
+                await ef.SaveChangesAsync(ct);
+                // Delete only metadata stubs; never materialize image bytes to reclaim quota.
+                // Clones and other branches keep their own links and retain the shared file.
+                var unused = await ef.Set<Attachment>().Where(x => x.OwnerId == owner && fileIds.Contains(x.Id) && !ef.Set<MessageAttachment>().Any(link => link.AttachmentId == x.Id)).Select(x => new Attachment { Id = x.Id }).ToListAsync(ct);
+                ef.Set<Attachment>().RemoveRange(unused);
+                await ef.SaveChangesAsync(ct);
+                await transaction.CommitAsync(ct);
+            }
+            finally { attachmentWrites.Gate.Release(); }
         }
         finally { scheduler.StateGate.Release(); }
     }

@@ -8,10 +8,37 @@ import type {
   Preferences,
   Run,
   RunEvent,
+  Attachment,
+  PromptTemplate,
 } from "../../frontend/src/app/core/api/types";
 
 export const richAnswer =
   '可以。我們先把內容整理成一份方便追蹤的工作筆記。\n\n## 本週工作重點\n\n先確認需要交付的成果，再把工作拆成明確步驟。\n\n| 項目 | 下一步 |\n| --- | --- |\n| 需求確認 | 彙整問題，確認優先順序 |\n| 第一版實作 | 完成文字聊天與資料保存 |\n\n```typescript\nconst nextStep = "開始實作";\nconsole.log(nextStep);\n```\n\n> 保留原始資訊，讓每一項決定都能回頭確認。';
+
+// Capture final surfaces, while allowing intentional inference loops to keep running.
+export async function settleEntrance(page: Page) {
+  await page.evaluate(async () => {
+    const finished = Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => {
+          const target = (animation.effect as KeyframeEffect | null)?.target;
+          return (
+            target instanceof Element &&
+            target.getClientRects().length > 0 &&
+            animation.playState === "running" &&
+            Number.isFinite(animation.effect?.getTiming().iterations ?? 1)
+          );
+        })
+        .map((animation) => animation.finished.catch(() => undefined)),
+    );
+    // Chromium can suspend transitions in closed details; those should never block a capture.
+    await Promise.race([
+      finished,
+      new Promise((resolve) => setTimeout(resolve, 1000)),
+    ]);
+  });
+}
 
 // Browser fixtures only. These routes are never included in frontend bundles or server auth.
 export class ApiFixture {
@@ -20,6 +47,14 @@ export class ApiFixture {
   readonly runs: Run[] = [];
   readonly events = new Map<string, RunEvent[]>();
   readonly submissions = new Map<string, Run>();
+  readonly attachments: Attachment[] = [];
+  readonly attachmentData = new Map<string, Buffer>();
+  readonly prompts: PromptTemplate[] = [];
+  readonly messageConversation = new Map<string, string>();
+  userId = randomUUID();
+  supportsImages = true;
+  eventsStatus = 200;
+  eventReads = 0;
   preferences: Preferences = {
     theme: "light",
     reducedMotion: false,
@@ -41,6 +76,7 @@ export class ApiFixture {
     allowModelSelection: true,
     showModelNames: true,
     defaultModelId: "fixture:8b",
+    maxInputCharacters: 12000,
   };
   lastRequest: CreateRun | null = null;
 
@@ -100,7 +136,7 @@ export class ApiFixture {
           503,
         );
       return json({
-        id: randomUUID(),
+        id: this.userId,
         account: "TEST\\fixture",
         displayName: "測試使用者",
         preferences: this.preferences,
@@ -130,6 +166,7 @@ export class ApiFixture {
             maxOutputTokens: 2048,
             supportsStreaming: true,
             supportsUsage: true,
+            supportsImages: this.supportsImages,
             reasoningEfforts: ["minimal", "high"],
             defaultReasoningEffort: "minimal",
           },
@@ -140,7 +177,15 @@ export class ApiFixture {
       });
     if (path === "/context") {
       const request = route.request().postDataJSON();
-      const input = 220 + new TextEncoder().encode(request.prompt ?? "").length;
+      const input =
+        220 +
+        new TextEncoder().encode(request.prompt ?? "").length +
+        (request.attachmentIds ?? []).reduce(
+          (sum: number, id: string) =>
+            sum +
+            (this.attachments.find((x) => x.id === id)?.isImage ? 4096 : 100),
+          0,
+        );
       return json({
         estimatedInputTokens: input,
         contextTokens: 8192,
@@ -161,11 +206,199 @@ export class ApiFixture {
       this.preferences = route.request().postDataJSON();
       return json(this.preferences);
     }
+    if (path === "/attachments/policy")
+      return json({
+        maxFileBytes: 4194304,
+        maxFilesPerMessage: 4,
+        maxMessageBytes: 8388608,
+        extensions: [
+          ".png",
+          ".jpg",
+          ".jpeg",
+          ".webp",
+          ".pdf",
+          ".docx",
+          ".txt",
+          ".md",
+          ".csv",
+          ".json",
+        ],
+      });
+    if (path === "/attachments" && method === "POST") {
+      const multipart = await new Response(route.request().postDataBuffer(), {
+        headers: { "content-type": route.request().headers()["content-type"] },
+      }).formData();
+      const file = multipart.get("file") as File;
+      const data = Buffer.from(await file.arrayBuffer());
+      const isImage = /\.(png|jpe?g|webp)$/i.test(file.name);
+      const attachment: Attachment = {
+        id: randomUUID(),
+        fileName: file.name,
+        contentType: isImage ? file.type || "image/png" : "text/plain",
+        size: data.length,
+        isImage,
+        analysisMode: isImage ? "vision" : "extracted-text",
+      };
+      this.attachments.push(attachment);
+      this.attachmentData.set(attachment.id, data);
+      return json(attachment);
+    }
+    const attachmentRoute = /^\/attachments\/([^/]+)(\/content)?$/.exec(path);
+    if (attachmentRoute) {
+      const file = this.attachments.find(
+        (file) => file.id === attachmentRoute[1],
+      );
+      if (!file) return json({ title: "找不到附件。" }, 404);
+      if (method === "DELETE") {
+        this.attachments.splice(this.attachments.indexOf(file), 1);
+        return route.fulfill({ status: 204 });
+      }
+      if (attachmentRoute[2])
+        return route.fulfill({
+          contentType: file.contentType,
+          body: this.attachmentData.get(file.id),
+        });
+      return json(file);
+    }
+    if (path === "/prompt-templates" && method === "GET")
+      return json(this.prompts);
+    if (path === "/prompt-templates" && method === "POST") {
+      const body = route.request().postDataJSON();
+      const prompt = {
+        id: randomUUID(),
+        ...body,
+        updatedAt: new Date().toISOString(),
+      };
+      this.prompts.unshift(prompt);
+      return json(prompt);
+    }
+    const promptRoute = /^\/prompt-templates\/([^/]+)$/.exec(path);
+    if (promptRoute) {
+      const prompt = this.prompts.find((x) => x.id === promptRoute[1]);
+      if (!prompt) return json({ title: "找不到範本。" }, 404);
+      if (method === "DELETE") {
+        this.prompts.splice(this.prompts.indexOf(prompt), 1);
+        return route.fulfill({ status: 204 });
+      }
+      Object.assign(prompt, route.request().postDataJSON());
+      return json(prompt);
+    }
+    if (path === "/conversations/labels")
+      return json([
+        ...new Set(this.conversations.flatMap((x) => x.labels ?? [])),
+      ]);
+    if (path === "/conversations/import") {
+      const body = route.request().postDataJSON();
+      const now = new Date().toISOString();
+      const ids = new Map<string, string>(
+        body.messages.map((x: Message) => [x.id, randomUUID()]),
+      );
+      const imported: Conversation = {
+        id: randomUUID(),
+        title: body.title,
+        activeLeafId: ids.get(body.activeLeafId) ?? null,
+        createdAt: now,
+        updatedAt: now,
+        isFavorite: false,
+        isArchived: false,
+        labels: body.labels,
+        systemInstruction: body.systemInstruction,
+      };
+      this.conversations.unshift(imported);
+      for (const message of body.messages) {
+        const copy = {
+          ...message,
+          id: ids.get(message.id)!,
+          parentId: ids.get(message.parentId) ?? null,
+          modelId: null,
+          runId: null,
+          attachments: [],
+          errorCode: null,
+        };
+        this.messages.push(copy);
+        this.messageConversation.set(copy.id, imported.id);
+      }
+      return json(imported);
+    }
+    const organizationRoute =
+      /^\/conversations\/([^/]+)\/(settings|duplicate|export)$/.exec(path);
+    if (organizationRoute) {
+      const conversation = this.conversations.find(
+        (x) => x.id === organizationRoute[1],
+      );
+      if (!conversation) return json({ title: "找不到對話。" }, 404);
+      if (organizationRoute[2] === "settings") {
+        Object.assign(conversation, route.request().postDataJSON());
+        return json(conversation);
+      }
+      const messages = this.messages.filter(
+        (x) => this.messageConversation.get(x.id) === conversation.id,
+      );
+      if (organizationRoute[2] === "export")
+        return json({
+          version: 1,
+          title: conversation.title,
+          systemInstruction: conversation.systemInstruction,
+          labels: conversation.labels,
+          activeLeafId: conversation.activeLeafId,
+          messages: messages.map((x) => ({
+            id: x.id,
+            parentId: x.parentId,
+            role: x.role,
+            content: x.content,
+            status: x.status,
+            createdAt: x.createdAt,
+            attachmentNames: (x.attachments ?? []).map((f) => f.fileName),
+          })),
+        });
+      const ids = new Map(messages.map((x) => [x.id, randomUUID()]));
+      const clone = {
+        ...conversation,
+        id: randomUUID(),
+        title: conversation.title + " · 副本",
+        activeLeafId: ids.get(conversation.activeLeafId!) ?? null,
+        isFavorite: false,
+        isArchived: false,
+      };
+      this.conversations.unshift(clone);
+      for (const message of messages) {
+        const copy = {
+          ...message,
+          id: ids.get(message.id)!,
+          parentId: ids.get(message.parentId!) ?? null,
+          runId: null,
+        };
+        this.messages.push(copy);
+        this.messageConversation.set(copy.id, clone.id);
+      }
+      return json(clone);
+    }
     if (path === "/conversations" && method === "GET") {
       const search = url.searchParams.get("search") ?? "";
       return json(
         this.conversations
-          .filter((x) => x.title.includes(search))
+          .filter(
+            (x) =>
+              x.title.includes(search) ||
+              this.messages.some(
+                (message) =>
+                  this.messageConversation.get(message.id) === x.id &&
+                  message.content.includes(search),
+              ),
+          )
+          .filter(
+            (x) =>
+              url.searchParams.get("view") === "all" ||
+              !!x.isArchived === (url.searchParams.get("view") === "archived"),
+          )
+          .filter(
+            (x) => url.searchParams.get("view") !== "favorites" || x.isFavorite,
+          )
+          .filter(
+            (x) =>
+              !url.searchParams.get("label") ||
+              x.labels?.includes(url.searchParams.get("label")!),
+          )
           .slice(Number(url.searchParams.get("offset") ?? 0), 100),
       );
     }
@@ -177,6 +410,10 @@ export class ApiFixture {
         activeLeafId: null,
         createdAt: now,
         updatedAt: now,
+        isFavorite: false,
+        isArchived: false,
+        systemInstruction: "",
+        labels: [],
       };
       this.conversations.unshift(conversation);
       return json(conversation, 201);
@@ -203,12 +440,8 @@ export class ApiFixture {
       }
       return json({
         conversation,
-        messages: this.messages.filter((x) =>
-          this.runs.some(
-            (run) =>
-              run.conversationId === conversation.id &&
-              (run.userMessageId === x.id || run.assistantMessageId === x.id),
-          ),
+        messages: this.messages.filter(
+          (x) => this.messageConversation.get(x.id) === conversation.id,
         ),
         activeRun:
           this.runs.find(
@@ -242,6 +475,10 @@ export class ApiFixture {
           createdAt: now,
           runId: null,
           modelId: null,
+          attachments: (request.attachmentIds ?? [])
+            .map((id) => this.attachments.find((file) => file.id === id)!)
+            .filter(Boolean),
+          errorCode: null,
         };
         this.messages.push(user);
       }
@@ -254,6 +491,8 @@ export class ApiFixture {
         createdAt: now,
         runId: null,
         modelId: request.modelId ?? this.modelPolicy.defaultModelId!,
+        attachments: [],
+        errorCode: null,
       };
       const run: Run = {
         id: randomUUID(),
@@ -273,6 +512,8 @@ export class ApiFixture {
       };
       assistant.runId = run.id;
       this.messages.push(assistant);
+      this.messageConversation.set(user.id, conversation.id);
+      this.messageConversation.set(assistant.id, conversation.id);
       this.runs.push(run);
       this.submissions.set(key, run);
       this.generated++;
@@ -319,6 +560,12 @@ export class ApiFixture {
         return json(run);
       }
       if (runRoute[3] === "events") {
+        this.eventReads++;
+        if (this.eventsStatus !== 200)
+          return json(
+            { title: "沒有 AI 對話權限。", code: "feature_denied" },
+            this.eventsStatus,
+          );
         if (run.status === "queued") {
           run.status = "running";
           run.startedAt = new Date().toISOString();

@@ -17,6 +17,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using AiNexus.Database;
 using AiNexus.Modules.Identity;
+using AiNexus.Modules.Attachments;
 using EDoc.Core.Database.Interfaces;
 using EDoc.Core.Database.Markers;
 using System.Data.Common;
@@ -28,12 +29,14 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
 {
     private readonly bool ldap;
     private readonly Action<InferenceOptions>? configureInference;
+    private readonly Action<AttachmentOptions>? configureAttachments;
     private readonly string databasePath = Path.Combine(Path.GetTempPath(), $"nexus-test-{Guid.NewGuid():N}.db");
     public TestProvider Provider { get; } = new();
-    public NexusFactory(Action<NexusDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null)
+    public NexusFactory(Action<NexusDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null)
     {
         this.ldap = ldap;
         configureInference = inference;
+        configureAttachments = attachments;
         using var db = new NexusDbContext(new DbContextOptionsBuilder<NexusDbContext>().UseSqlite($"Data Source={databasePath};Default Timeout=10").Options);
         db.Database.EnsureCreated();
         seed?.Invoke(db);
@@ -68,6 +71,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
                 options.Models = [new ModelProfile { Id = "test-model", DisplayName = "測試模型", ContextTokens = 8192, MaxOutputTokens = 512 }];
                 configureInference?.Invoke(options);
             });
+            services.PostConfigure<AttachmentOptions>(options => configureAttachments?.Invoke(options));
         });
     }
 

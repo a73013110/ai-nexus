@@ -1,0 +1,280 @@
+.action-dialog {
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 25px;
+  width: min(430px, calc(100% - 36px));
+  box-shadow: var(--shadow);
+}
+.action-dialog::backdrop {
+  background: var(--scrim);
+}
+.dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 24px;
+}
+.dialog-heading h2 {
+  font-size: var(--text-heading);
+  font-weight: 600;
+  margin: 0;
+}
+.action-dialog label {
+  display: block;
+  font-size: var(--text-caption);
+  margin-bottom: 9px;
+  color: var(--secondary);
+}
+.action-dialog input {
+  border: 1px solid var(--line);
+  padding: 12px;
+  border-radius: var(--p-radius-sm);
+  background: var(--canvas);
+  width: 100%;
+}
+.action-dialog p {
+  font-size: var(--text-caption);
+  line-height: var(--line-reading);
+  color: var(--secondary);
+}
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 25px;
+}
+.workspace-dialog,
+.command-dialog {
+  padding: var(--p-space-6);
+  width: min(var(--dialog-width), calc(100% - 2rem));
+  max-height: min(85dvh, 52rem);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-lg);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--shadow-floating);
+}
+.workspace-dialog::backdrop,
+.command-dialog::backdrop {
+  background: var(--scrim);
+}
+.workspace-dialog .dialog-heading {
+  margin-bottom: var(--p-space-4);
+}
+.panel-eyebrow {
+  display: block;
+  margin-bottom: var(--p-space-2);
+  color: var(--accent);
+  font-size: var(--text-caption);
+  letter-spacing: 0.12em;
+}
+.panel-note {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  line-height: var(--line-reading);
+  margin: var(--p-space-2) 0 var(--p-space-4);
+}
+.inline-error {
+  color: var(--error);
+  background: var(--error-bg);
+  border-radius: var(--p-radius-md);
+  padding: var(--p-space-3);
+  font-size: var(--text-label);
+}
+.workspace-dialog label {
+  display: block;
+  color: var(--ink);
+  font-size: var(--text-label);
+  font-weight: 500;
+  margin: var(--p-space-4) 0 var(--p-space-2);
+}
+.workspace-dialog input,
+.workspace-dialog textarea {
+  width: 100%;
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  padding: var(--p-space-3);
+  font-size: var(--text-ui);
+  line-height: var(--line-ui);
+}
+.workspace-dialog textarea {
+  resize: vertical;
+  min-height: 7rem;
+  max-height: 40dvh;
+}
+.workspace-dialog .primary-button,
+.workspace-dialog .secondary-button {
+  min-height: var(--button-target);
+  font-size: var(--text-label);
+}
+.library-dialog {
+  --dialog-width: var(--library-width);
+}
+.library-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--p-space-6);
+}
+.template-list {
+  min-width: 0;
+  overflow: auto;
+  max-height: 55dvh;
+}
+.template-create {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  width: 100%;
+  min-height: var(--button-target);
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: var(--p-radius-md);
+  padding: var(--p-space-3);
+  text-align: left;
+  font-size: var(--text-label);
+}
+.template-row {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  border-bottom: 1px solid var(--line);
+  padding-block: var(--p-space-2);
+}
+.template-row.is-editing {
+  background: var(--canvas);
+}
+.template-use {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  padding: var(--p-space-2);
+  border-radius: var(--p-radius-md);
+}
+.template-use strong,
+.template-use small {
+  display: block;
+}
+.template-use strong {
+  font-size: var(--text-label);
+  font-weight: 500;
+}
+.template-use small {
+  font-size: var(--text-caption);
+  color: var(--secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: var(--p-space-1);
+}
+.template-editor {
+  min-width: 0;
+  border-left: 1px solid var(--line);
+  padding-left: var(--p-space-6);
+}
+.template-editor h3 {
+  font-size: var(--text-heading);
+  margin: 0;
+  font-weight: 500;
+}
+.command-dialog {
+  --dialog-width: var(--command-width);
+  padding: 0;
+  margin-top: max(3rem, 14dvh);
+}
+.command-search {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  padding: var(--p-space-4);
+  border-bottom: 1px solid var(--line);
+}
+.command-search > nx-icon {
+  color: var(--accent);
+}
+.command-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  min-height: var(--button-target);
+  font-size: var(--text-ui);
+}
+.command-results {
+  padding: var(--p-space-2);
+  overflow: auto;
+  max-height: 48dvh;
+}
+.command-results > button {
+  display: flex;
+  width: 100%;
+  min-height: var(--button-target);
+  align-items: center;
+  gap: var(--p-space-3);
+  text-align: left;
+  padding: var(--p-space-3);
+  border-radius: var(--p-radius-md);
+}
+.command-results > button[aria-selected='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.command-results button > span {
+  min-width: 0;
+  flex: 1;
+}
+.command-results strong {
+  display: block;
+  font-size: var(--text-label);
+  font-weight: 500;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.command-results small {
+  display: block;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.command-results kbd {
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.command-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--p-space-3) var(--p-space-4);
+  border-top: 1px solid var(--line);
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.command-footer kbd {
+  display: inline-block;
+  padding-inline: var(--p-space-1);
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-sm);
+}
+@media (max-width: 600px) {
+  .library-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .template-list {
+    max-height: 25dvh;
+  }
+  .template-editor {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding: var(--p-space-4) 0 0;
+  }
+  .workspace-dialog {
+    padding: var(--p-space-4);
+  }
+  .command-results kbd {
+    display: none;
+  }
+}

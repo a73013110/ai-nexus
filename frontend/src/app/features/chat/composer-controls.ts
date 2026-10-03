@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import type { ContextUsage, Model, ModelPolicy } from '../../core/api/types';
 import { Icon } from '../../shared/ui/icon';
+import { Disclosure } from '../../shared/ui/disclosure';
 
 @Component({
   selector: 'nx-composer-controls',
-  imports: [Icon],
+  imports: [Icon, Disclosure],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="composer-controls">
     @if (policy().allowModelSelection) {
@@ -50,7 +51,7 @@ import { Icon } from '../../shared/ui/icon';
         </select>
       </label>
     }
-    <details class="context-details" (keydown.escape)="closeContext($event)">
+    <details class="context-details" nxDisclosure>
       <summary
         class="context-trigger"
         [attr.aria-label]="'上下文用量：' + (usage() ? percent() + '%（預估）' : '尚未取得')"
@@ -130,11 +131,5 @@ export class ComposerControls {
   }
   effortChanged(event: Event) {
     if (event.target instanceof HTMLSelectElement) this.effortChange.emit(event.target.value);
-  }
-  closeContext(event: Event) {
-    const target = event.currentTarget as HTMLDetailsElement;
-    target.open = false;
-    target.querySelector<HTMLElement>('summary')?.focus();
-    event.stopPropagation();
   }
 }

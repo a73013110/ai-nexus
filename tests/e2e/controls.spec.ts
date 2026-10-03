@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { ApiFixture } from "./fixtures";
+import { ApiFixture, settleEntrance } from "./fixtures";
 
 test("composer exposes model, supported reasoning and keyboard-accessible context", async ({
   page,
@@ -35,6 +35,7 @@ test("composer exposes model, supported reasoning and keyboard-accessible contex
     "animation-name",
     "signal-transit",
   );
+  await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/active-inference.png",
     fullPage: true,
@@ -49,6 +50,7 @@ test("locked hidden model has no selector or provider name in current or histori
     allowModelSelection: false,
     showModelNames: false,
     defaultModelId: "model-1",
+    maxInputCharacters: 12000,
   };
   await fixture.attach(page);
   await page.goto("/chat");
@@ -89,6 +91,7 @@ test("compact conversation uses readable text and preserves over 70 percent of d
   expect(viewport!.height).toBeGreaterThanOrEqual(768 * 0.7);
   await expect(page.locator(".markdown")).toHaveCSS("font-size", "17px");
   await expect(page.locator(".topbar")).toHaveCSS("height", "52px");
+  await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/compact-desktop-chat.png",
     fullPage: true,
@@ -106,6 +109,7 @@ test("compact conversation uses readable text and preserves over 70 percent of d
     ),
   ).toBe(true);
   await expect(page.locator(".markdown")).toHaveCSS("font-size", "17px");
+  await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/mobile-context.png",
     fullPage: true,
@@ -127,10 +131,13 @@ test("signal motion respects reduced motion and Markdown export follows the visi
     "animation-name",
     "none",
   );
+  await page.getByLabel("對話操作", { exact: true }).click();
   await expect(
     page.getByRole("button", { name: "匯出目前分支為 Markdown" }),
   ).toBeDisabled();
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "停止生成" }).click();
+  await page.getByLabel("對話操作", { exact: true }).click();
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "匯出目前分支為 Markdown" }).click();
   const file = await download;
@@ -152,7 +159,7 @@ test("context over budget blocks submission until the draft is shortened", async
   const input = page.getByRole("textbox", { name: "傳送訊息" });
   await input.fill("中".repeat(2500));
   await expect(
-    page.getByText("本次提問超出 Context 預算，請縮短內容。"),
+    page.getByText("本次提問與附件超出 Context 預算，請縮短內容或減少附件。"),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "送出訊息" })).toBeDisabled();
   await input.fill("縮短後");
@@ -183,6 +190,7 @@ test("200 percent text scaling keeps composer controls operable without page ove
   ).toBe(true);
   await send.click();
   await expect(page.getByRole("table")).toBeVisible();
+  await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/large-text-chat.png",
     fullPage: true,

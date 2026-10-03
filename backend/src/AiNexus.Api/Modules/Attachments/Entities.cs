@@ -31,6 +31,7 @@ public sealed class AttachmentOptions
     public int MaxExtractedCharacters { get; set; } = 64000;
     public int MaxPdfPages { get; set; } = 40;
     public int ImageTokenEstimate { get; set; } = 4096;
+    public int DraftRetentionDays { get; set; } = 14;
 }
 
 // Serializes quota checks and attachment writes; provider calls never hold this gate.

@@ -1,0 +1,94 @@
+.conversation-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+}
+.favorite-button.is-favorite {
+  color: var(--accent);
+}
+.favorite-button.is-favorite svg {
+  fill: var(--accent-soft);
+}
+.conversation-menu {
+  position: relative;
+}
+.conversation-menu summary {
+  list-style: none;
+}
+.conversation-menu summary::-webkit-details-marker {
+  display: none;
+}
+.floating-menu {
+  position: absolute;
+  top: calc(100% + var(--p-space-2));
+  right: 0;
+  width: min(var(--menu-width), calc(100vw - 2rem));
+  z-index: 20;
+  padding: var(--p-space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-floating);
+  transform-origin: top right;
+}
+.floating-menu button {
+  width: 100%;
+  min-height: var(--button-target);
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  padding: var(--p-space-2) var(--p-space-3);
+  border-radius: var(--p-radius-md);
+  text-align: left;
+  font-size: var(--text-label);
+}
+.floating-menu hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin-block: var(--p-space-2);
+}
+.danger-text {
+  color: var(--error);
+}
+.archive-badge {
+  flex: none;
+  font-size: var(--text-caption);
+  color: var(--secondary);
+  background: var(--hover);
+  border-radius: var(--p-radius-sm);
+  padding: 0 var(--p-space-2);
+}
+.conversation-find {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  padding: var(--p-space-1) var(--workspace-gutter);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.conversation-find > input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  min-height: var(--button-target);
+  font-size: var(--text-label);
+}
+.find-count {
+  font-size: var(--text-caption);
+  color: var(--secondary);
+  flex: none;
+}
+@media (max-width: 600px) {
+  .conversation-find {
+    gap: 0;
+  }
+}
+@media (max-width: 520px) {
+  .archive-badge {
+    display: none;
+  }
+  .conversation-actions {
+    gap: 0;
+  }
+}

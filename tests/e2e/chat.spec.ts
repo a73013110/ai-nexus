@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { ApiFixture, richAnswer } from "./fixtures";
+import { ApiFixture, richAnswer, settleEntrance } from "./fixtures";
 
 test("blank desktop workspace, real forms, keyboard and Markdown copy", async ({
   page,
@@ -13,6 +13,7 @@ test("blank desktop workspace, real forms, keyboard and Markdown copy", async ({
   await expect(page.locator(".workbench")).toHaveCSS("display", "grid");
   await expect(page.locator(".sidebar")).toHaveCSS("width", "264px");
   await expect(page.getByRole("button", { name: "送出訊息" })).toBeDisabled();
+  await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/desktop-empty.png",
     fullPage: true,
@@ -38,6 +39,7 @@ test("blank desktop workspace, real forms, keyboard and Markdown copy", async ({
       page.evaluate(() => (window as unknown as { __copied: string }).__copied),
     )
     .toBe('const nextStep = "開始實作";\nconsole.log(nextStep);\n');
+  await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/desktop-chat.png",
     fullPage: true,
@@ -87,15 +89,19 @@ test("editing and regenerating preserve versions; history can be renamed and del
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect(page.getByText("修改後的提問", { exact: true })).toBeVisible();
   expect(fixture.messages.some((x) => x.content === "原始提問")).toBe(true);
+  await page.getByLabel("對話操作", { exact: true }).click();
   await page.getByRole("button", { name: "重新命名目前對話" }).click();
   await page.getByRole("textbox", { name: "對話標題" }).fill("第一版開發紀錄");
   await page.getByRole("button", { name: "儲存標題" }).click();
   await expect(
     page.getByRole("heading", { name: "第一版開發紀錄" }),
   ).toBeVisible();
-  await page.getByRole("searchbox", { name: "搜尋對話標題" }).fill("不存在");
+  await page
+    .getByRole("searchbox", { name: "搜尋對話標題與內容" })
+    .fill("不存在");
   await expect(page.getByText("沒有符合的對話。")).toBeVisible();
-  await page.getByRole("searchbox", { name: "搜尋對話標題" }).fill("");
+  await page.getByRole("searchbox", { name: "搜尋對話標題與內容" }).fill("");
+  await page.getByLabel("對話操作", { exact: true }).click();
   await page.getByRole("button", { name: "刪除目前對話" }).click();
   await page.getByRole("button", { name: "刪除對話", exact: true }).click();
   await expect(
@@ -183,6 +189,7 @@ test("dark theme, reduced motion and narrow viewport remain usable", async ({
     "true",
   );
   await page.locator(".profile-menu summary").click();
+  await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/desktop-dark.png",
     fullPage: true,
@@ -201,12 +208,13 @@ test("dark theme, reduced motion and narrow viewport remain usable", async ({
       () => document.documentElement.scrollWidth <= window.innerWidth,
     ),
   ).toBe(true);
+  await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/mobile-dark-chat.png",
     fullPage: true,
   });
   await page.getByLabel("對話操作", { exact: true }).click();
-  await page.getByRole("button", { name: "刪除對話", exact: true }).click();
+  await page.getByRole("button", { name: "刪除目前對話", exact: true }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("button", { name: "取消", exact: true }).click();
 });

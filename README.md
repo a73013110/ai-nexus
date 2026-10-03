@@ -1,8 +1,10 @@
 # AI Nexus
 
-公司文字 AI 工作台：Angular 22、ASP.NET Core 10、SQL Server、AD 登入、Google AI／Ollama。以模組化單體與 lazy-loaded 前端維持清楚結構，資料層重用 EDoc 的 Dapper DbHelper 及 scoped EfHelper。
+公司 AI 工作台：Angular 22、ASP.NET Core 10、SQL Server、AD 登入、Google AI／Ollama。以模組化單體與 lazy-loaded 前端維持清楚結構，資料層重用 EDoc 的 Dapper DbHelper 及 scoped EfHelper。
 
 第一版包含個人對話、Markdown／程式碼、編輯與重新生成分支、停止／斷線恢復、角色→群組→功能授權、模型鎖定／名稱隱藏、思考選項、Context 預估、Markdown 匯出、明暗主題與減少動態。
+
+工作台新增 12 項功能：文件／圖片分析、提示詞範本、對話指令、收藏、封存、標籤、內容搜尋、個人草稿、副本、JSON 文字備份、訊息尋找與快捷指令。操作見 [功能指南](docs/FEATURES.md)。
 
 ## 快速啟動
 
@@ -21,15 +23,17 @@
 
 ## 設定與文件
 
-| 文件 | 內容 |
-| --- | --- |
-| [參數設定](docs/CONFIGURATION.md) | SQL／AD／Google、設定優先順序、模型鎖定與名稱隱藏、思考能力 |
-| [開發與執行](docs/DEVELOPMENT.md) | 一鍵啟動、建置／驗證、契約與 migration、文件版控規則 |
-| [資料庫](docs/DATABASE.md) | 五個 schema、資料表／索引／關聯、EDoc 分工、初始化與正式權限 |
-| [授權](docs/ACCESS_CONTROL.md) | 使用者→角色→群組→功能、預設 chat、撤銷與功能擴充 |
-| [架構](docs/ARCHITECTURE.md) | 模組責任、推論生命週期、資料隔離與擴充邊界 |
-| [設計系統](docs/DESIGN_SYSTEM.md) | 三層 tokens、字級／密度、motion／可及性與調整方式 |
-| [IIS 部署](deploy/iis/README.md) | 單程序部署、LDAP／Windows、秘密來源、SSE 與交付驗收 |
+| 文件                              | 內容                                                             |
+| --------------------------------- | ---------------------------------------------------------------- |
+| [參數設定](docs/CONFIGURATION.md) | SQL／AD／Google、設定優先順序、模型鎖定與名稱隱藏、思考能力      |
+| [開發與執行](docs/DEVELOPMENT.md) | 一鍵啟動、建置／驗證、契約與 migration、文件版控規則             |
+| [功能指南](docs/FEATURES.md)      | 12 項擴充的操作入口、快捷鍵、保存與備份規則                      |
+| [文件與圖片](docs/ATTACHMENTS.md) | 格式、抽取方式、配額、模型能力與附件生命週期                     |
+| [資料庫](docs/DATABASE.md)        | 七個業務 schema、資料表／索引／關聯、EDoc 分工、初始化與正式權限 |
+| [授權](docs/ACCESS_CONTROL.md)    | 使用者→角色→群組→功能、預設 chat、撤銷與功能擴充                 |
+| [架構](docs/ARCHITECTURE.md)      | 模組責任、推論生命週期、資料隔離與擴充邊界                       |
+| [設計系統](docs/DESIGN_SYSTEM.md) | 三層 tokens、字級／密度、motion／可及性與調整方式                |
+| [IIS 部署](deploy/iis/README.md)  | 單程序部署、LDAP／Windows、秘密來源、SSE 與交付驗收              |
 
 本機一般參數放 `.local/config/appsettings.Local.json`，帳密與 key 放 `.local/secrets/appsettings.Secrets.json`；修改後重啟。`.local` 與 `artifacts` 整體忽略，機器環境／進度／排查筆記留在 `.local/notes`。Git 只保存 public defaults／examples、source、lockfiles、contracts、migrations 與長期文件。
 
@@ -42,6 +46,6 @@
 ./scripts/Test-Connections.ps1
 ```
 
-Verify 使用獨立資料庫與測試 provider，Edge 測試也明確使用 fixture；不代表正式 AD／SQL／模型驗收。Test-Connections 使用本機實際設定，檢查 SQL／EDoc helpers／access seed、AD 服務 bind 與模型串流，會使用模型配額。報告與截圖在 `artifacts`。
+Verify 使用獨立資料庫與測試 provider，Edge 測試也明確使用 fixture；不代表正式 AD／SQL／模型驗收。Test-Connections 使用本機實際設定，檢查 SQL／EDoc helpers／access seed、AD 服務 bind、模型串流及合成文件／圖片辨識，會使用模型配額。報告與截圖在 `artifacts`。
 
-目前部署設計要求單一 host／IIS worker。跨主機調度、角色管理後台、RAG、檔案上傳與搜尋是可擴充功能，第一版未提供。正式 IIS、區網雙帳號隔離、設備效能與備份還原按部署文件另行驗收。
+目前部署設計要求單一 host／IIS worker。跨主機調度、角色管理後台、RAG、掃描文件 OCR 仍需後續擴充。JSON 文字備份不含附件原始檔；完整備份使用 SQL 備份。正式 IIS、區網雙帳號隔離、設備效能與備份還原按部署文件另行驗收。

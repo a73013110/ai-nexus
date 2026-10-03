@@ -2,6 +2,15 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 
 const paths: Record<string, string> = {
   plus: 'M12 5v14M5 12h14',
+  star: 'm12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.3-5.7-3-5.7 3 1.1-6.3L3.2 9.6l6.3-.9L12 3Z',
+  archive: 'M3 4h18v4H3zM5 8v12h14V8M10 12h4',
+  restore: 'M5 8v12h14V8M3 4h18v4H3zM12 17v-5m-3 3 3-3 3 3',
+  upload: 'M12 16V3m-5 5 5-5 5 5M4 15v6h16v-6',
+  paperclip: 'm8 12 7-7a4 4 0 1 1 6 6L10 22a6 6 0 0 1-8-8L13 3m-7 12 9-9a2 2 0 0 1 3 3l-9 9',
+  library: 'M3 4h5v16H3zM9 4h5v16H9zm8 0 4 1-3 15-4-1z',
+  command: 'M9 9V5a2 2 0 1 0-2 2h10a2 2 0 1 0-2-2v14a2 2 0 1 0 2-2H7a2 2 0 1 0 2 2V9Z',
+  sliders: 'M4 7h3m4 0h9M4 17h9m4 0h3M7 4h4v6H7zM13 14h4v6h-4z',
+  tag: 'M3 3h8l10 10-8 8L3 11V3ZM7 7h.01',
   search: 'm21 21-4.5-4.5M10.5 18a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15Z',
   sidebar: 'M9 3v18M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z',
   arrow: 'M12 19V5m-6 6 6-6 6 6',

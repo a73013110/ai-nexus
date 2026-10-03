@@ -1,0 +1,182 @@
+<aside class="sidebar" aria-label="對話導覽" [attr.inert]="open() ? null : ''">
+  <button class="icon-button mobile-sidebar-close" aria-label="關閉對話導覽" (click)="close.emit()">
+    <nx-icon name="close" />
+  </button>
+  <a class="brand" routerLink="/chat" (click)="navigate.emit()" aria-label="AI Nexus 新對話">
+    <span class="brand-symbol"
+      ><svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <path d="M9 24V8l14 16V8M5 8h4M23 24h4" stroke="currentColor" stroke-width="1.8" /></svg
+    ></span>
+    <span>AI <strong>Nexus</strong><small>公司工作台</small></span>
+  </a>
+  @if (store.hasChatAccess()) {
+    <a routerLink="/chat" class="new-chat" (click)="navigate.emit()"
+      ><nx-icon name="plus" />新對話<span class="new-chat-hint">開始</span></a
+    >
+  }
+  @if (store.hasChatAccess()) {
+    <div class="sidebar-tools">
+      <button type="button" class="quiet-button" (click)="prompts.emit()">
+        <nx-icon name="library" />常用範本
+      </button>
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="開啟快捷指令"
+        title="快捷指令 Ctrl + K"
+        (click)="commands.emit()"
+      >
+        <nx-icon name="command" />
+      </button>
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="匯入對話文字備份"
+        title="匯入 JSON 文字備份"
+        (click)="backupInput.click()"
+      >
+        <nx-icon name="upload" />
+      </button>
+      <input
+        #backupInput
+        type="file"
+        class="sr-only"
+        accept="application/json,.json"
+        (change)="importFile($event)"
+      />
+    </div>
+    <div class="history-search">
+      <nx-icon name="search" /><input
+        type="search"
+        aria-label="搜尋對話標題與內容"
+        placeholder="搜尋標題與內容"
+        [formField]="searchForm.query"
+        (input)="searchChanged()"
+      />
+    </div>
+    <div class="history-filters" aria-label="對話篩選">
+      @for (
+        view of [
+          { id: 'active', name: '近期' },
+          { id: 'favorites', name: '收藏' },
+          { id: 'archived', name: '封存' },
+        ];
+        track view.id
+      ) {
+        <button
+          type="button"
+          [attr.aria-pressed]="store.historyView() === view.id"
+          (click)="store.filterHistory(view.id)"
+        >
+          {{ view.name }}
+        </button>
+      }
+      @if (store.labels().length) {
+        <label class="label-filter"
+          ><span class="sr-only">依標籤篩選</span
+          ><select
+            aria-label="依標籤篩選"
+            [value]="store.historyLabel()"
+            (change)="selectLabel($event)"
+          >
+            <option value="" [selected]="!store.historyLabel()">全部標籤</option>
+            @for (label of store.labels(); track label) {
+              <option [value]="label" [selected]="store.historyLabel() === label">
+                {{ label }}
+              </option>
+            }
+          </select></label
+        >
+      }
+    </div>
+    <nav class="history" aria-label="對話歷史">
+      @if (store.loading()) {
+        <p class="sidebar-note" role="status">正在取得對話…</p>
+      }
+      @for (group of groups(); track group.label) {
+        <div class="history-group">
+          <h2>{{ group.label }}</h2>
+          @for (conversation of group.conversations; track conversation.id) {
+            <div class="history-row" [class.selected]="store.selected()?.id === conversation.id">
+              <a
+                [routerLink]="['/chat', conversation.id]"
+                (click)="navigate.emit()"
+                [attr.aria-current]="store.selected()?.id === conversation.id ? 'page' : null"
+                [title]="conversation.title"
+                ><span>{{ conversation.title }}</span></a
+              >
+              <button
+                class="icon-button history-edit"
+                aria-label="重新命名對話"
+                (click)="rename.emit(conversation)"
+              >
+                <nx-icon name="edit" />
+              </button>
+            </div>
+          }
+        </div>
+      } @empty {
+        @if (!store.loading()) {
+          <p class="sidebar-note">
+            {{
+              searchModel().query
+                ? '沒有符合的對話。'
+                : store.historyView() === 'archived'
+                  ? '封存的對話會放在這裡。'
+                  : store.historyView() === 'favorites'
+                    ? '收藏重要對話，方便再次開啟。'
+                    : '對話會保存在這裡，隨時接續。'
+            }}
+          </p>
+        }
+      }
+      @if (store.hasMore()) {
+        <button class="quiet-button load-more" (click)="loadMore()">載入更早的對話</button>
+      }
+    </nav>
+  }
+  <div class="sidebar-bottom">
+    <div class="workspace-label">
+      <span class="workspace-dot"></span>個人 AI 工作空間<span>V1</span>
+    </div>
+    <details class="profile-menu" nxDisclosure>
+      <summary>
+        <span class="avatar">{{ store.me()?.displayName?.slice(0, 1) || 'N' }}</span
+        ><span class="profile-name"
+          ><strong>{{ store.me()?.displayName || 'Windows 驗證' }}</strong
+          ><small>{{ store.me()?.account || '等待伺服器連線' }}</small></span
+        ><nx-icon name="more" />
+      </summary>
+      <div class="preferences-panel">
+        <h2>工作台偏好</h2>
+        <label for="theme">外觀</label
+        ><select id="theme" [formField]="preferencesForm.theme" (change)="savePreferences()">
+          <option value="system">跟隨系統</option>
+          <option value="light">淺色</option>
+          <option value="dark">深色</option>
+        </select>
+        <label class="check-label"
+          ><input
+            type="checkbox"
+            [formField]="preferencesForm.reducedMotion"
+            (change)="savePreferences()"
+          />減少動態效果</label
+        >
+        <p>使用公司 AD 身分辨識。</p>
+        @if (store.me()?.access; as access) {
+          <div class="access-summary">
+            @for (role of access.roles; track role.id) {
+              <span>{{ role.name }}</span>
+            }
+            @for (feature of access.features; track feature.id) {
+              <span class="feature-badge">{{ feature.name }}</span>
+            }
+          </div>
+        }
+        @if (store.auth.session()?.mode === 'Ldap') {
+          <button class="quiet-button" type="button" (click)="store.logout()">登出工作台</button>
+        }
+      </div>
+    </details>
+  </div>
+</aside>

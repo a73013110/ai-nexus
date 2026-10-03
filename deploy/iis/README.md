@@ -14,7 +14,18 @@ IIS hosting、Hosting Bundle 與 application pool 參考 [Microsoft 官方文件
 
 ## 上線前實測
 
+附件／文字備份需要較大的 request body，API host 上限為 10 MB。IIS 額外的 request filtering 必須至少允許該大小；可將以下節點合併到 publish `web.config` 的 `system.webServer`，保留原有 `aspNetCore`／handler 設定。每檔、單則及個人配額仍由應用程式檢查，詳見 [附件設定](../../docs/ATTACHMENTS.md)。
+
+```xml
+<security>
+  <requestFiltering>
+    <requestLimits maxAllowedContentLength="10485760" />
+  </requestFiltering>
+</security>
+```
+
 - 以至少兩個真 AD 帳號，確認名稱映射與彼此對話／run／SSE 隔離。
+- 實測文件、圖片、預覽與下載；另一個帳號不能讀取附件。確認 Google 外送文件／圖片符合部署單位設定的使用範圍。
 - 用另一台區網電腦測試 HTTPS、多輪、停止、重試、重新整理與分頁關閉後還原歷史。
 - 確認 SSE 沒有被 IIS／額外 proxy compression、buffering 或 idle timeout 延遲；10 秒 heartbeat 必須持續，跨 180 秒生成也能收到狀態。API 已 DisableBuffering，IIS 設定仍需實測。不要加入 application response compression 壓縮 text/event-stream。
 - 驗證 bounded queue、每人一個 active run、多使用者提交與取消。先維持單 GPU worker，不啟用雙生成。

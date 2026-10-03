@@ -101,10 +101,13 @@
   --motion: 200ms;
   --motion-enter: 320ms;
   --motion-signal: 1800ms;
+  --motion-stagger: 70ms;
+  --motion-panel: 240ms;
+  --motion-draw: 900ms;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
 
-  --sidebar-width: 16.5rem;
+  --sidebar-width: min(16.5rem, calc(100vw - var(--button-target)));
   --reading-width: 52rem;
   --composer-width: 54rem;
   --topbar-height: 3.25rem;
@@ -114,6 +117,13 @@
   --composer-input-max: min(12rem, 25dvh);
   --composer-radius: var(--p-radius-lg);
   --message-gap: var(--p-space-6);
+  --welcome-width: 42rem;
+  --menu-width: 17rem;
+  --dialog-width: 34rem;
+  --library-width: 52rem;
+  --command-width: 38rem;
+  --attachment-thumb: 3rem;
+  --attachment-list-max: min(11rem, 22dvh);
 }
 
 :root[data-theme='dark'] {

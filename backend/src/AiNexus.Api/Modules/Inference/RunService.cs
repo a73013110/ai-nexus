@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Inference;
 
-public sealed class RunService(NexusDbContext db, ConversationService conversations, AttachmentService attachments, GenerationScheduler scheduler, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, ModelPresentation presentation)
+public sealed class RunService(NexusDbContext db, ConversationService conversations, AttachmentService attachments, AttachmentWriteLock attachmentWrites, GenerationScheduler scheduler, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, ModelPresentation presentation)
 {
     public async Task<GenerationRun> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
     {
@@ -37,6 +37,7 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
         var effort = ModelCatalog.RequireReasoning(profile, request.ReasoningEffort);
         await scheduler.StateGate.WaitAsync(ct);
         var reserved = false;
+        var attachmentsLocked = false;
         try
         {
             var existing = await db.Runs.SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct);
@@ -49,6 +50,9 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
             if (!scheduler.Ready) throw new ApiException(503, "scheduler_unavailable", "生成服務尚未就緒，請稍後重試。");
             if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) throw new ApiException(409, "generation_active", "你已有一則排隊或生成中的訊息，請先等待或停止。");
             if (!(reserved = scheduler.TryReserve())) throw new ApiException(429, "queue_full", "生成佇列已滿，請稍後再試。");
+            // Keep unbound file removal and binding in the same short critical section.
+            await attachmentWrites.Gate.WaitAsync(ct);
+            attachmentsLocked = true;
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             var conversation = await conversations.OwnedAsync(owner, request.ConversationId, ct);
             if (request.RegenerateUserMessageId is not null && request.AttachmentIds?.Count > 0) throw new ApiException(400, "invalid_request", "重新生成會使用原始提問的附件。");
@@ -76,6 +80,7 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
         finally
         {
             if (reserved) scheduler.ReleaseReservation();
+            if (attachmentsLocked) attachmentWrites.Gate.Release();
             scheduler.StateGate.Release();
         }
     }

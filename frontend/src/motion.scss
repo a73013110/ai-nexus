@@ -41,6 +41,112 @@
 .composer.is-busy {
   border-color: var(--signal);
 }
+.composer {
+  position: relative;
+}
+.composer.is-busy::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px solid var(--signal);
+  border-radius: inherit;
+  pointer-events: none;
+  animation: inference-breathe var(--motion-signal) ease-in-out infinite;
+}
+.attachment-enter {
+  animation: attachment-arrive var(--motion-panel) var(--ease);
+}
+.workspace-dialog[open],
+.command-dialog[open] {
+  animation: panel-arrive var(--motion-panel) var(--ease);
+}
+.conversation-menu[open] .floating-menu,
+.context-details[open] .context-panel,
+.profile-menu[open] .preferences-panel {
+  animation: panel-arrive var(--motion-panel) var(--ease);
+}
+.empty-enter .suggestions > button {
+  animation: suggestion-arrive var(--motion-enter) var(--ease) both;
+  animation-delay: calc(var(--item-index) * var(--motion-stagger));
+}
+.empty-enter .emblem-link {
+  stroke-dasharray: 150;
+  stroke-dashoffset: 150;
+  animation: emblem-draw var(--motion-draw) var(--ease) both;
+}
+.empty-enter .emblem-point {
+  transform-origin: 40px 40px;
+  animation: point-arrive var(--motion-draw) var(--ease) both;
+}
+.suggestions > button {
+  transition:
+    border-color var(--motion),
+    background-color var(--motion),
+    transform var(--motion) var(--ease);
+}
+.suggestions > button:hover {
+  transform: translateY(-2px);
+}
+.send-button:not(:disabled):active {
+  transform: scale(0.94);
+}
+.send-button {
+  transition:
+    transform var(--motion-fast) var(--ease),
+    background-color var(--motion),
+    color var(--motion);
+}
+@keyframes inference-breathe {
+  50% {
+    opacity: 0.3;
+  }
+}
+@keyframes attachment-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(5px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes panel-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes suggestion-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes emblem-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes point-arrive {
+  0%,
+  50% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
 .streaming-copy::after {
   content: '';
   display: inline-block;
@@ -68,11 +174,48 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .signal-flow,
-  .streaming-copy::after {
+  .streaming-copy::after,
+  .composer.is-busy::before {
     animation: none !important;
   }
 }
 :root[data-reduced-motion='true'] .signal-flow,
-:root[data-reduced-motion='true'] .streaming-copy::after {
+:root[data-reduced-motion='true'] .streaming-copy::after,
+:root[data-reduced-motion='true'] .composer.is-busy::before {
   animation: none !important;
+}
+
+.empty-enter {
+  animation: arrive var(--motion-enter) var(--ease);
+}
+.message-enter {
+  animation: arrive var(--motion) var(--ease);
+}
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+:root[data-reduced-motion='true'] *,
+:root[data-reduced-motion='true'] *::before,
+:root[data-reduced-motion='true'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
 }

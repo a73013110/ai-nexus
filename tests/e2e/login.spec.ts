@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { ApiFixture } from "./fixtures";
+import { ApiFixture, settleEntrance } from "./fixtures";
 
 test("LDAP login rejects passwords, clears secrets and returns to chat", async ({
   page,
@@ -43,6 +43,7 @@ test("login works at 375px and cannot redirect to an external origin", async ({
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/login-mobile.png",
     fullPage: true,
@@ -60,6 +61,7 @@ test("desktop login keeps the workspace visual language", async ({ page }) => {
   await page.goto("/login");
   await expect(page.getByRole("heading", { name: "登入工作台" })).toBeVisible();
   await expect(page.locator(".login-workspace")).toHaveCSS("display", "grid");
+  await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/login-desktop.png",
     fullPage: true,

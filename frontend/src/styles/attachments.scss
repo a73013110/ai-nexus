@@ -1,0 +1,114 @@
+.attachment-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+  margin: var(--p-space-3) 0;
+  padding: 0;
+}
+.composer .attachment-list {
+  margin-top: 0;
+  max-height: var(--attachment-list-max);
+  overflow-y: auto;
+}
+.attachment-card {
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  overflow: hidden;
+}
+.attachment-card > a {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  padding: var(--p-space-2);
+  border-radius: var(--p-radius-md);
+}
+.attachment-card > a:hover {
+  background: var(--hover);
+}
+.attachment-card img {
+  width: var(--attachment-thumb);
+  height: var(--attachment-thumb);
+  object-fit: cover;
+  border-radius: var(--p-radius-sm);
+  background: var(--hover);
+}
+.attachment-symbol {
+  width: var(--attachment-thumb);
+  height: var(--attachment-thumb);
+  display: grid;
+  place-items: center;
+  border-radius: var(--p-radius-sm);
+  color: var(--accent);
+  background: var(--accent-soft);
+  flex: none;
+}
+.attachment-card a > span:last-child {
+  min-width: 0;
+}
+.attachment-card strong {
+  display: block;
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-caption);
+  font-weight: 500;
+}
+.attachment-card small {
+  display: block;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.attachment-card > button {
+  align-self: stretch;
+  height: auto;
+  min-height: var(--button-target);
+}
+.upload-status {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--button-target);
+  color: var(--signal);
+  font-size: var(--text-caption);
+}
+.attach-button {
+  color: var(--accent);
+  border-radius: var(--p-radius-md);
+}
+.main-workspace.is-dragging::after {
+  content: '放開檔案，加入這次提問';
+  position: absolute;
+  inset: var(--p-space-4);
+  z-index: 25;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  border: 2px dashed var(--accent);
+  border-radius: var(--p-radius-lg);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  font-size: var(--text-heading);
+  font-weight: 600;
+  pointer-events: none;
+}
+@media (max-width: 520px) {
+  .attachment-card {
+    flex-basis: 100%;
+  }
+  .attachment-card > a {
+    flex: 1;
+  }
+  .attachment-card strong {
+    max-width: none;
+  }
+  .attachment-thumb {
+    width: 2.5rem;
+  }
+}

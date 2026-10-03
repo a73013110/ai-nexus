@@ -15,18 +15,19 @@
 
 一般設定放在 `.local/config/appsettings.Local.json`，不需新增密碼。環境變數可用 `Attachments__MaxFileBytes` 等名稱覆寫。
 
-| 參數                                 | 預設值                 | 用途              |
-| ------------------------------------ | ---------------------- | ----------------- |
-| `Attachments.MaxFileBytes`           | 4194304                | 單檔大小          |
-| `Attachments.MaxFilesPerMessage`     | 4                      | 單則附件數        |
-| `Attachments.MaxMessageBytes`        | 8388608                | 單則附件總大小    |
-| `Attachments.MaxOwnerBytes`          | 67108864               | 個人儲存配額      |
-| `Attachments.MaxExtractedCharacters` | 64000                  | 文件文字上限      |
-| `Attachments.MaxPdfPages`            | 40                     | PDF 頁數上限      |
-| `Attachments.ImageTokenEstimate`     | 4096                   | 圖片 Context 預估 |
-| `Inference.Models[].SupportsImages`  | false，Gemma 範本 true | 模型圖片能力      |
+| 參數                                 | 預設值                 | 用途                             |
+| ------------------------------------ | ---------------------- | -------------------------------- |
+| `Attachments.MaxFileBytes`           | 4194304                | 單檔大小                         |
+| `Attachments.MaxFilesPerMessage`     | 4                      | 單則附件數                       |
+| `Attachments.MaxMessageBytes`        | 8388608                | 單則附件總大小                   |
+| `Attachments.MaxOwnerBytes`          | 67108864               | 個人儲存配額                     |
+| `Attachments.MaxExtractedCharacters` | 64000                  | 文件文字上限                     |
+| `Attachments.MaxPdfPages`            | 40                     | PDF 頁數上限                     |
+| `Attachments.ImageTokenEstimate`     | 4096                   | 圖片 Context 預估                |
+| `Attachments.DraftRetentionDays`     | 14                     | 未送出附件的回收期限（1–365 天） |
+| `Inference.Models[].SupportsImages`  | false，Gemma 範本 true | 模型圖片能力                     |
 
-Host request body 上限 10 MB；一般 JSON 操作仍為 64 KB，附件端點最多 9 MB（含 multipart overhead），文字備份匯入最多 8 MB。調高附件限制需同步檢查 host 與 IIS request filtering。
+Host request body 上限 10 MB；一般 JSON 操作為 64 KB。提問／Context 依 `MaxInputCharacters × 6 + 8192` 放寬（最低 64 KB），範本為 `12000 × 6 + 8192`，以容納 JSON 跳脫的中文字元。附件端點最多 9 MB（含 multipart overhead），文字備份匯入最多 8 MB。調高附件限制需同步檢查 host 與 IIS request filtering。
 
 ## 保存與權限
 
@@ -34,6 +35,6 @@ Host request body 上限 10 MB；一般 JSON 操作仍為 64 KB，附件端點�
 
 歷史只載入 metadata；Context 預覽只讀文字及圖片預估成本。生成完成分支裁切後，才載入仍需要的圖片資料。附件關聯、提問與 run 在同一筆 transaction 建立，檢查失敗不會留下孤立訊息。
 
-未送出的附件可移除；送出後隨對話保留。對話刪除後停止原對話存取，若副本仍使用該附件則保留存取。資料庫備份需包含 attachments schema。JSON **文字備份**保存分支、指令、標籤及附件名稱，**不含原始檔**，匯入後須重新上傳附件；「建立對話副本」完整保留附件關聯。
+未送出的附件可移除；送出後隨對話保留。刪除對話會在同一 transaction 移除附件關聯，沒有其他引用的原始檔會釋放配額；副本仍使用該附件則保留。訊息本身仍採 soft-delete。未送出的附件超過 `DraftRetentionDays`（預設 14 天）後，在該使用者下次上傳時清理，以回收中斷上傳／遺棄草稿；已連到歷史的附件不會被這項規則移除。清除瀏覽器草稿不等同即時伺服器刪檔。資料庫備份需包含 attachments schema。JSON **文字備份**保存分支、指令、標籤及附件名稱，**不含原始檔**，匯入後須重新上傳附件；「建立對話副本」完整保留附件關聯。
 
 Google key 僅存在後端。使用 Google 時，本次需要的文字／圖片會傳送到 Google API。格式參考：[Gemma 圖片能力](https://ai.google.dev/gemma/docs/core/gemma_on_gemini_api#image-understanding)、[Google 圖片請求](https://ai.google.dev/gemini-api/docs/image-understanding)、[Ollama Chat API](https://docs.ollama.com/api/chat)、[PdfPig](https://github.com/UglyToad/PdfPig)。

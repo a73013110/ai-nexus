@@ -1,7 +1,15 @@
 @use './tokens';
 @use './base';
-@use './workbench';
-@use './accessibility';
+@use './styles/controls';
+@use './styles/shell';
+@use './styles/sidebar';
+@use './styles/welcome';
+@use './styles/messages';
+@use './styles/markdown';
+@use './styles/composer';
+@use './styles/dialogs';
+@use './styles/tools';
+@use './styles/attachments';
 @use './login';
 @use './composer-controls';
 @use './motion';
