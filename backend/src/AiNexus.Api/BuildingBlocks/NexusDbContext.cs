@@ -20,6 +20,7 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
     protected override void OnModelCreating(ModelBuilder model)
     {
         AccessControlConfiguration.Configure(model);
+        AiNexus.Modules.Administration.AdministrationConfiguration.Configure(model);
         ConversationConfiguration.Configure(model);
         AiNexus.Modules.Attachments.AttachmentConfiguration.Configure(model);
         AiNexus.Modules.Library.LibraryConfiguration.Configure(model);
@@ -80,6 +81,7 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
         audit.HasKey(x => x.Id);
         audit.Property(x => x.Action).HasMaxLength(64);
         audit.Property(x => x.Result).HasMaxLength(80);
+        audit.Property(x => x.DetailsJson).HasMaxLength(12000);
         audit.HasIndex(x => x.At);
         // SQLite is used only by relational integration tests; it lacks native offset ordering.
         if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")

@@ -12,14 +12,23 @@ public static class InferenceEndpoints
     public static void MapInference(this RouteGroupBuilder root)
     {
         var api = root.MapGroup("").RequireAuthorization(BuiltInAccess.ChatPolicy).WithTags("Inference");
-        api.MapGet("/models", async (ModelCatalog models, CancellationToken ct) => Results.Ok(await models.GetAsync(ct))).WithName("ListModels").Produces<ModelsDto>();
-        api.MapPost("/context", async (ContextPreviewRequest body, CurrentUser current, ConversationService conversations, AttachmentService attachments, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, CancellationToken ct) =>
+        api.MapGet("/models", async (ModelCatalog models, CurrentUser current, AiNexus.Modules.Administration.ModelPolicyService policies, CancellationToken ct) =>
+        {
+            var catalog = await models.GetAsync(ct);
+            var policy = await policies.ForAsync((await current.GetAsync(ct)).Id, ct);
+            var allowed = catalog.Models.Where(x => policy.AllowedModelIds is null || policy.AllowedModelIds.Contains(x.Id)).ToArray();
+            var defaultId = allowed.Any(x => x.Id == catalog.Policy.DefaultModelId) ? catalog.Policy.DefaultModelId : allowed.FirstOrDefault()?.Id;
+            return Results.Ok(catalog with { Models = allowed, Notice = allowed.Length == 0 && catalog.ProviderAvailable ? "你的群組目前沒有可用模型，請聯絡管理員。" : catalog.Notice,
+                Policy = catalog.Policy with { DefaultModelId = defaultId } });
+        }).WithName("ListModels").Produces<ModelsDto>();
+        api.MapPost("/context", async (ContextPreviewRequest body, CurrentUser current, ConversationService conversations, AttachmentService attachments, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, AiNexus.Modules.Administration.ModelPolicyService policies, CancellationToken ct) =>
         {
             if (body.Prompt?.Length > options.Value.MaxInputCharacters) throw new ApiException(400, "input_too_long", "訊息超過字數上限。");
             var owner = (await current.GetAsync(ct)).Id;
             var instruction = body.ConversationId is Guid id ? (await conversations.OwnedAsync(owner, id, ct)).SystemInstruction : "";
             var files = await attachments.RequireAsync(owner, body.AttachmentIds, ct);
             var model = await models.RequireAsync(body.ModelId, ct);
+            await policies.RequireAsync(owner, model.Id, ct, checkQuota: false);
             return Results.Ok(await context.PreviewAsync(body.ConversationId, body.ParentMessageId, body.Prompt, new(model.ContextTokens, model.MaxOutputTokens, .6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, instruction), SupportsImages: model.SupportsImages), ct, files));
         }).WithName("PreviewContext").Produces<ContextUsageDto>();
         api.MapPost("/runs", async (CreateRunRequest body, HttpContext http, CurrentUser current, RunService service, CancellationToken ct) =>

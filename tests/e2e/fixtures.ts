@@ -95,6 +95,7 @@ export class ApiFixture {
   ldap = false;
   authenticated = false;
   chatAccess = true;
+  adminAccess = false;
   modelPolicy: ModelPolicy = {
     allowModelSelection: true,
     showModelNames: true,
@@ -165,11 +166,21 @@ export class ApiFixture {
         preferences: this.preferences,
         csrfToken: "browser-test-csrf",
         access: {
-          roles: [{ id: "member", name: "一般使用者" }],
+          roles: [
+            { id: "member", name: "一般使用者" },
+            ...(this.adminAccess
+              ? [{ id: "administrator", name: "平台管理員" }]
+              : []),
+          ],
           groups: [{ id: "workspace", name: "基本工作台" }],
-          features: this.chatAccess
-            ? [{ id: "chat", name: "AI 對話", route: "/chat" }]
-            : [],
+          features: [
+            ...(this.chatAccess
+              ? [{ id: "chat", name: "AI 對話", route: "/chat" }]
+              : []),
+            ...(this.adminAccess
+              ? [{ id: "admin", name: "管理", route: "/admin" }]
+              : []),
+          ],
         },
         activeRunId:
           this.runs.find(
@@ -218,6 +229,14 @@ export class ApiFixture {
         isEstimate: true,
       });
     }
+    if (path === "/settings/model-policy")
+      return json({
+        allowedModelIds: null,
+        dailyRequestLimit: null,
+        storedAttachmentLimitBytes: null,
+        requestsToday: this.generated,
+        resetsAt: "2026-10-05T00:00:00Z",
+      });
     if (path === "/settings") {
       if (route.request().method() === "PUT") {
         const { appearance, ...settings } = route.request().postDataJSON();

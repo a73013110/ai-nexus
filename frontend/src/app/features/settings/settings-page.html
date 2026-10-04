@@ -337,6 +337,49 @@
           @case ('usage') {
             @if (usage(); as stats) {
               <p class="secondary">最近 {{ stats.days }} 天 · 依 UTC 日期統計</p>
+              @if (policy(); as limits) {
+                <section class="settings-card">
+                  <h2>今日配額</h2>
+                  <div class="setting-row">
+                    <div>
+                      <strong>{{ limits.requestsToday }} 次生成</strong>
+                      <p>
+                        {{
+                          limits.dailyRequestLimit == null
+                            ? '群組未設定每日生成次數限制'
+                            : '每日上限 ' + limits.dailyRequestLimit + ' 次'
+                        }}
+                      </p>
+                    </div>
+                    <span class="feature-badge">{{
+                      limits.dailyRequestLimit == null
+                        ? '依系統政策'
+                        : '剩餘 ' +
+                          (limits.dailyRequestLimit > limits.requestsToday
+                            ? limits.dailyRequestLimit - limits.requestsToday
+                            : 0) +
+                          ' 次'
+                    }}</span>
+                  </div>
+                  @if (limits.dailyRequestLimit != null) {
+                    <meter
+                      min="0"
+                      [max]="limits.dailyRequestLimit || 1"
+                      [value]="limits.requestsToday"
+                      aria-label="今日生成配額用量"
+                    ></meter>
+                    <p class="form-note">
+                      配額於 {{ limits.resetsAt }} 重設（UTC）。取消與失敗的請求也計次。
+                    </p>
+                  }
+                  @if (limits.storedAttachmentLimitBytes != null) {
+                    <p class="form-note">
+                      群組附件空間上限
+                      {{ mb(limits.storedAttachmentLimitBytes) }} MB；系統上限仍適用。
+                    </p>
+                  }
+                </section>
+              }
               <div class="usage-grid">
                 <div class="stat-card">
                   <span>生成次數</span><strong>{{ format(stats.requests) }}</strong

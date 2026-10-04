@@ -20,6 +20,8 @@
 
 ## SQL Server
 
+管理員 bootstrap 放一般設定的 `Administration.BootstrapAdministrators`，使用 AD 短帳號陣列。此設定僅授權一次，不保存個人密碼；詳細步驟見 [管理後台](ADMINISTRATION.md)。
+
 | 參數                               | 檔案            | 說明                                               |
 | ---------------------------------- | --------------- | -------------------------------------------------- |
 | `Database.Server`                  | config          | DNS／IP、`host\\instance` 或 `host,port`           |

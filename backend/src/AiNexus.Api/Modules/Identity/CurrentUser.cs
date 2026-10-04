@@ -16,7 +16,7 @@ public sealed class IdentityWriteLock
     public SemaphoreSlim Gate { get; } = new(1, 1);
 }
 
-public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, ModelPresentation models)
+public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, ModelPresentation models, AiNexus.Modules.Administration.AdminBootstrap bootstrap)
 {
     private static readonly ConcurrentDictionary<string, (string Name, DateTimeOffset At)> DisplayNames = new();
     private NexusUser? resolved;
@@ -51,6 +51,7 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
                 user.LastSeenAt = DateTimeOffset.UtcNow;
                 await db.SaveChangesAsync(ct);
             }
+            await bootstrap.ApplyAsync(user, ct);
             return resolved = user;
         }
         finally { writeLock.Gate.Release(); }

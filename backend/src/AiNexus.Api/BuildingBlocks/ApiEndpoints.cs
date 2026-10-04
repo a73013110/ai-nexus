@@ -4,6 +4,7 @@ using AiNexus.Modules.Inference;
 using AiNexus.Modules.Operations;
 using AiNexus.Modules.Attachments;
 using AiNexus.Modules.Library;
+using AiNexus.Modules.Administration;
 
 namespace AiNexus.BuildingBlocks;
 
@@ -20,5 +21,6 @@ public static class ApiEndpoints
         api.MapAttachments();
         api.MapPromptLibrary();
         api.MapOperations();
+        api.MapAdministration();
     }
 }

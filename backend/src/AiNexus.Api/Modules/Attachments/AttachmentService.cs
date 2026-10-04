@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Attachments;
 
-public sealed class AttachmentService(IEfHelper<INexusDatabase> ef, DocumentExtractor extractor, IOptions<AttachmentOptions> options, AttachmentWriteLock writes)
+public sealed class AttachmentService(IEfHelper<INexusDatabase> ef, DocumentExtractor extractor, IOptions<AttachmentOptions> options, AttachmentWriteLock writes, AiNexus.Modules.Administration.ModelPolicyService policies)
 {
     public AttachmentPolicyDto Policy => new(options.Value.MaxFileBytes, options.Value.MaxFilesPerMessage, options.Value.MaxMessageBytes, DocumentExtractor.Extensions);
     public static AttachmentDto Describe(Attachment file) => new(file.Id, file.FileName, file.ContentType, file.Size, file.ContentType.StartsWith("image/"), file.ExtractedText is null ? "vision" : "extracted-text");
@@ -29,7 +29,8 @@ public sealed class AttachmentService(IEfHelper<INexusDatabase> ef, DocumentExtr
             var cutoff = DateTimeOffset.UtcNow.AddDays(-options.Value.DraftRetentionDays);
             await ef.Set<Attachment>().Where(x => x.OwnerId == owner && x.CreatedAt < cutoff && !ef.Set<MessageAttachment>().Any(link => link.AttachmentId == x.Id)).ExecuteDeleteAsync(ct);
             var used = await ef.Set<Attachment>().Where(x => x.OwnerId == owner).SumAsync(x => (long?)x.Size, ct) ?? 0;
-            if (used + bytes.Length > options.Value.MaxOwnerBytes) throw new ApiException(413, "attachment_quota", "個人附件空間已滿，請移除尚未使用的附件或聯絡管理員。");
+            var groupLimit = (await policies.ForAsync(owner, ct)).StoredAttachmentLimitBytes ?? options.Value.MaxOwnerBytes;
+            if (used + bytes.Length > Math.Min(groupLimit, options.Value.MaxOwnerBytes)) throw new ApiException(413, "attachment_quota", "個人附件空間已達系統或群組上限，請移除尚未使用的附件或聯絡管理員。");
             var attachment = new Attachment { OwnerId = owner, FileName = name, ContentType = type, Data = bytes, Size = bytes.Length, ExtractedText = text };
             ef.Set<Attachment>().Add(attachment);
             await ef.SaveChangesAsync(ct);

@@ -25,7 +25,7 @@ AD login → Users（SID）→ UserRoles → Roles
 3. 前端新增 lazy route／feature，根據 `/me` 的 features 顯示入口；UI 判斷只改善體驗，API policy 仍是實際權限邊界。
 4. 以至少兩個角色驗沒有 grant 的 403、資料 owner 的 404 與停用／撤銷。更新 migration SQL、OpenAPI、文件。
 
-目前角色分派與功能主檔由受控 DB／migration 管理，尚未提供管理後台與一般使用者可呼叫的授權編輯 API。新增管理後台時需獨立管理功能 grant、稽核記錄與 CSRF，不能以登入成功即開放管理。
+角色、群組、使用者分派與功能啟用由 [管理工作台](ADMINISTRATION.md) 維護。`administrator → administrators → admin` 是獨立的管理授權；一般使用者無法呼叫其編輯 API。bootstrap 使用明確設定的 AD 帳號且只授權一次，撤銷不會因再次登入而補回。
 
 ## 受控查詢例子
 

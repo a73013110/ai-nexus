@@ -1,0 +1,23 @@
+using AiNexus.BuildingBlocks;
+using AiNexus.Modules.AccessControl;
+using AiNexus.Modules.Identity;
+
+namespace AiNexus.Modules.Administration;
+
+public static class AdministrationEndpoints
+{
+    public static void MapAdministration(this RouteGroupBuilder root)
+    {
+        var api = root.MapGroup("/admin").RequireAuthorization(AdministrationConfiguration.Policy).WithTags("Administration");
+        api.MapGet("/catalog", async (AdministrationService service, CancellationToken ct) => Results.Ok(await service.CatalogAsync(ct))).WithName("GetAdminCatalog").Produces<AdminCatalogDto>();
+        api.MapGet("/users", async (string? search, int? offset, AdministrationService service, CancellationToken ct) => Results.Ok(await service.UsersAsync(search, offset ?? 0, ct))).WithName("ListAdminUsers").Produces<AdminUsersDto>();
+        api.MapPut("/users/{id:guid}/roles", async (Guid id, UserRolesRequest body, AdministrationService service, CancellationToken ct) => { await service.SetUserRolesAsync(id, body, ct); return Results.NoContent(); }).WithName("SetUserRoles");
+        api.MapGet("/users/{id:guid}/access", async (Guid id, AdministrationService service, CancellationToken ct) => Results.Ok(await service.EffectiveAsync(id, ct))).WithName("PreviewUserAccess").Produces<AccessDto>();
+        api.MapPut("/roles/{id}", async (string id, RoleUpdateRequest body, AdministrationService service, CancellationToken ct) => { await service.SaveRoleAsync(id, body, ct); return Results.NoContent(); }).WithName("SaveRole");
+        api.MapPut("/groups/{id}", async (string id, GroupUpdateRequest body, AdministrationService service, CancellationToken ct) => { await service.SaveGroupAsync(id, body, ct); return Results.NoContent(); }).WithName("SaveRoleGroup");
+        api.MapPut("/features/{id}", async (string id, FeatureUpdateRequest body, AdministrationService service, CancellationToken ct) => { await service.SaveFeatureAsync(id, body, ct); return Results.NoContent(); }).WithName("SaveFeature");
+        api.MapGet("/audit", async (long? before, AdministrationService service, CancellationToken ct) => Results.Ok(await service.AuditAsync(before, ct))).WithName("ListAdminAudit").Produces<IReadOnlyList<AuditDto>>();
+        api.MapGet("/usage", async (AdministrationService service, CancellationToken ct) => Results.Ok(await service.UsageAsync(ct))).WithName("GetAdminUsage").Produces<AdminUsageDto>();
+        root.MapGet("/settings/model-policy", async (CurrentUser current, ModelPolicyService service, CancellationToken ct) => Results.Ok(await service.ForAsync((await current.GetAsync(ct)).Id, ct))).WithName("GetEffectiveModelPolicy").Produces<EffectiveModelPolicyDto>();
+    }
+}

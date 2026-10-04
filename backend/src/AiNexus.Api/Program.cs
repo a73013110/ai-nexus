@@ -16,6 +16,7 @@ using AiNexus.Modules.AccessControl;
 using Microsoft.AspNetCore.DataProtection;
 using AiNexus.Modules.Attachments;
 using AiNexus.Modules.Library;
+using AiNexus.Modules.Administration;
 
 var builder = WebApplication.CreateBuilder(args);
 NexusConfiguration.Load(builder, args);
@@ -55,6 +56,7 @@ builder.Services.AddAuthorization(options =>
 {
     options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
     options.AddPolicy(BuiltInAccess.ChatPolicy, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(BuiltInAccess.ChatFeature)));
+    options.AddPolicy(AdministrationConfiguration.Policy, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(AdministrationConfiguration.Feature)));
 });
 builder.Services.AddScoped<AccessService>();
 builder.Services.AddScoped<IAuthorizationHandler, FeatureAuthorizationHandler>();
@@ -85,6 +87,12 @@ builder.Services.AddSingleton<StorageReadiness>();
 builder.Services.AddSingleton<IdentityWriteLock>();
 builder.Services.AddScoped<CurrentUser>();
 builder.Services.AddScoped<PersonalSettingsService>();
+builder.Services.AddOptions<AdministrationOptions>().BindConfiguration("Administration")
+    .Validate(x => x.BootstrapAdministrators.Length <= 20 && x.BootstrapAdministrators.All(a => a.Length is > 0 and <= 64 && a.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-' or '.')), "Invalid bootstrap administrator accounts.").ValidateOnStart();
+builder.Services.AddScoped<AdminBootstrap>();
+builder.Services.AddScoped<AdministrationService>();
+builder.Services.AddScoped<ModelPolicyService>();
+builder.Services.AddSingleton<AdministrativeWriteLock>();
 builder.Services.AddScoped<ConversationService>();
 builder.Services.AddScoped<ConversationOrganization>();
 builder.Services.AddScoped<PromptLibraryService>();

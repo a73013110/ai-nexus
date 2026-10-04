@@ -30,13 +30,15 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     private readonly bool ldap;
     private readonly Action<InferenceOptions>? configureInference;
     private readonly Action<AttachmentOptions>? configureAttachments;
+    private readonly string[] bootstrapAdministrators;
     private readonly string databasePath = Path.Combine(Path.GetTempPath(), $"nexus-test-{Guid.NewGuid():N}.db");
     public TestProvider Provider { get; } = new();
-    public NexusFactory(Action<NexusDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null)
+    public NexusFactory(Action<NexusDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null, string[]? administrators = null)
     {
         this.ldap = ldap;
         configureInference = inference;
         configureAttachments = attachments;
+        bootstrapAdministrators = administrators ?? [];
         using var db = new NexusDbContext(new DbContextOptionsBuilder<NexusDbContext>().UseSqlite($"Data Source={databasePath};Default Timeout=10").Options);
         db.Database.EnsureCreated();
         seed?.Invoke(db);
@@ -72,6 +74,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
                 configureInference?.Invoke(options);
             });
             services.PostConfigure<AttachmentOptions>(options => configureAttachments?.Invoke(options));
+            services.PostConfigure<AiNexus.Modules.Administration.AdministrationOptions>(options => options.BootstrapAdministrators = bootstrapAdministrators);
         });
     }
 

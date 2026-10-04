@@ -1,6 +1,6 @@
 import { Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { ApiTransport } from '../api/api-transport';
-import type { UserSettings, PersonalUsage } from '../api/types';
+import type { UserSettings, PersonalUsage, EffectiveModelPolicy } from '../api/types';
 export type { UserSettings, PersonalUsage } from '../api/types';
 import { ThemeService } from './theme-service';
 import { AuthService } from '../auth/auth-service';
@@ -30,9 +30,13 @@ export class UserSettingsService {
   constructor() {
     effect(() => {
       const generation = this.auth.generation();
-      if (this.generation >= 0 && generation !== this.generation) untracked(() => {
-        this.owner = ''; this.generation = -1; this.value.set(defaultSettings()); this.render(this.value());
-      });
+      if (this.generation >= 0 && generation !== this.generation)
+        untracked(() => {
+          this.owner = '';
+          this.generation = -1;
+          this.value.set(defaultSettings());
+          this.render(this.value());
+        });
     });
   }
   async load(owner: string, refresh = false) {
@@ -62,6 +66,9 @@ export class UserSettingsService {
   }
   usage() {
     return this.http.json<PersonalUsage>('/settings/usage');
+  }
+  policy() {
+    return this.http.json<EffectiveModelPolicy>('/settings/model-policy');
   }
   private apply(value: UserSettings) {
     this.value.set(value);

@@ -16,7 +16,7 @@ import {
 } from '../../core/preferences/user-settings';
 import { DraftRepository } from '../../core/preferences/draft-repository';
 import { NexusApi } from '../../core/api/nexus-api';
-import type { Models } from '../../core/api/types';
+import type { Models, EffectiveModelPolicy } from '../../core/api/types';
 import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
 import { WorkspaceNavigation } from '../../shared/ui/workspace-navigation';
@@ -43,6 +43,7 @@ export class SettingsPage {
   readonly section = signal('appearance');
   readonly usage = signal<PersonalUsage | null>(null);
   readonly models = signal<Models | null>(null);
+  readonly policy = signal<EffectiveModelPolicy | null>(null);
   readonly notificationPermission = signal(
     'Notification' in window ? Notification.permission : 'unsupported',
   );
@@ -123,11 +124,13 @@ export class SettingsPage {
       const results = await Promise.allSettled([
         this.service.usage(),
         this.session.has('chat') ? this.api.models() : Promise.resolve(null),
+        this.service.policy(),
       ]);
       if (!this.alive) return;
       if (results[0].status === 'fulfilled') this.usage.set(results[0].value);
       else this.error.set('使用統計暫時無法取得，其他偏好仍可設定。');
       if (results[1].status === 'fulfilled') this.models.set(results[1].value);
+      if (results[2].status === 'fulfilled') this.policy.set(results[2].value);
     } catch (error) {
       if (this.alive)
         this.error.set(error instanceof Error ? error.message : '設定載入失敗，請重試。');

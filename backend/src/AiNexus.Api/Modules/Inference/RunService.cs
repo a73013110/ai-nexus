@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Inference;
 
-public sealed class RunService(NexusDbContext db, ConversationService conversations, AttachmentService attachments, AttachmentWriteLock attachmentWrites, GenerationScheduler scheduler, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, ModelPresentation presentation)
+public sealed class RunService(NexusDbContext db, ConversationService conversations, AttachmentService attachments, AttachmentWriteLock attachmentWrites, GenerationScheduler scheduler, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, ModelPresentation presentation, AiNexus.Modules.Administration.ModelPolicyService policies)
 {
     public async Task<GenerationRun> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
     {
@@ -49,6 +49,7 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
             }
             if (!scheduler.Ready) throw new ApiException(503, "scheduler_unavailable", "生成服務尚未就緒，請稍後重試。");
             if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) throw new ApiException(409, "generation_active", "你已有一則排隊或生成中的訊息，請先等待或停止。");
+            await policies.RequireAsync(owner, profile.Id, ct);
             if (!(reserved = scheduler.TryReserve())) throw new ApiException(429, "queue_full", "生成佇列已滿，請稍後再試。");
             // Keep unbound file removal and binding in the same short critical section.
             await attachmentWrites.Gate.WaitAsync(ct);

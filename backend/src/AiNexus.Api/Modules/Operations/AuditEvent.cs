@@ -7,5 +7,6 @@ public sealed class AuditEvent
     public string Action { get; set; } = "";
     public Guid? ResourceId { get; set; }
     public string? Result { get; set; }
+    public string? DetailsJson { get; set; }
     public DateTimeOffset At { get; set; } = DateTimeOffset.UtcNow;
 }

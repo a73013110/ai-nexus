@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
+  { path: 'admin', loadComponent: () => import('./features/admin/admin-page').then(module => module.AdminPage) },
   { path: 'settings', loadComponent: () => import('./features/settings/settings-page').then(module => module.SettingsPage) },
   {
     path: 'login',

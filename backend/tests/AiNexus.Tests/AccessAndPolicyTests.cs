@@ -40,9 +40,9 @@ public sealed class AccessAndPolicyTests
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             switch (target)
             {
-                case "role": (await db.Set<Role>().SingleAsync()).Enabled = false; break;
-                case "group": (await db.Set<RoleGroup>().SingleAsync()).Enabled = false; break;
-                case "feature": (await db.Set<Feature>().SingleAsync()).Enabled = false; break;
+                case "role": (await db.Set<Role>().SingleAsync(x => x.Id == "member")).Enabled = false; break;
+                case "group": (await db.Set<RoleGroup>().SingleAsync(x => x.Id == "workspace")).Enabled = false; break;
+                case "feature": (await db.Set<Feature>().SingleAsync(x => x.Id == "chat")).Enabled = false; break;
                 case "membership": db.Set<UserRole>().RemoveRange(db.Set<UserRole>()); break;
             }
             await db.SaveChangesAsync();
