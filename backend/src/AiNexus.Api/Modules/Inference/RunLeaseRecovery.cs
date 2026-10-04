@@ -12,6 +12,7 @@ public sealed class RunLeaseRecovery(NexusDbContext db, ConversationService conv
     {
         var expired = await db.Runs.AsNoTracking()
             .Where(x => x.ActiveOwnerId != null && (x.LeaseExpiresAt == null || x.LeaseExpiresAt <= now))
+            .OrderBy(x => x.LeaseExpiresAt).ThenBy(x => x.Id)
             .Select(x => x.Id).Take(100).ToArrayAsync(ct);
         var recovered = 0;
         foreach (var id in expired)
