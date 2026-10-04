@@ -23,6 +23,7 @@ public static class ApiEndpoints
         api.MapOperations();
         api.MapJobs();
         AiNexus.Modules.Knowledge.KnowledgeEndpoints.MapKnowledge(api);
+        AiNexus.Modules.Artifacts.ArtifactEndpoints.MapArtifacts(api);
         api.MapAdministration();
     }
 }

@@ -93,7 +93,7 @@
         }
       </div>
     }
-    <div class="conversation-viewport" #viewport (scroll)="onScroll()">
+    <div class="conversation-viewport" #viewport nxTextSelection (textSelected)="paragraph.set($event)" (scroll)="onScroll()">
       @if (store.loadingConversation()) {
         <div class="conversation-loading" role="status">正在開啟對話…</div>
       } @else if (!store.visibleMessages().length) {
@@ -144,6 +144,8 @@
               [status]="store.liveRun()?.status || ''"
               [busy]="store.busy()"
               [showModelNames]="store.policy().showModelNames"
+              [allowArtifacts]="store.hasArtifactsAccess()"
+              (saveArtifact)="textTools()?.open($event.content, 'save', $event.id)"
               (edit)="store.edit($event); editMessageFocus()"
               (regenerate)="store.regenerate($event)"
               (version)="store.selectVersion(message, $event)"
@@ -322,6 +324,8 @@
 <nx-command-palette [commands]="commands()" (selected)="command($event)" />
 <nx-prompt-library [draft]="store.draft().text" (used)="pickSuggestion($event)" />
 <nx-conversation-settings [save]="saveSettings" />
+<nx-text-tools [modelId]="store.modelId() || null" />
+@if (paragraph(); as selected) { <div class="paragraph-float" role="toolbar" aria-label="選取文字操作" [style.left.px]="selected.left" [style.top.px]="selected.top" (pointerdown)="$event.preventDefault()"><button (click)="paragraphAction('rewrite')">改寫</button><button (click)="paragraphAction('summarize')">摘要</button><button (click)="paragraphAction('translate')">翻譯</button>@if (store.hasArtifactsAccess()) { <button (click)="paragraphAction('save')">儲存成果</button> }<button class="icon-button" aria-label="關閉選取文字操作" (click)="paragraph.set(null)"><nx-icon name="close" /></button></div> }
 <input
   #importInput
   type="file"

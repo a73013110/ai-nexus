@@ -6,7 +6,8 @@ Push-Location -LiteralPath $taskRoot
 try {
     $taskFiles = @(git -c core.quotepath=false ls-files --cached)
     if ($LASTEXITCODE -ne 0 -or !$taskFiles.Count) { throw 'Stage the intended source files first.' }
-    $taskForbidden = @($taskFiles | Where-Object { $_ -match '(^|/)(\.local|artifacts|node_modules|bin|obj)/|(^|/)appsettings\.(.*\.)?(Local|Secrets)\.json$|(^|/)\.env($|\.(?!example$))' })
+    # artifacts/ is the root build-output folder; feature source modules may also be named Artifacts.
+    $taskForbidden = @($taskFiles | Where-Object { $_ -match '^artifacts/|(^|/)(\.local|node_modules|bin|obj)/|(^|/)appsettings\.(.*\.)?(Local|Secrets)\.json$|(^|/)\.env($|\.(?!example$))' })
     if ($taskForbidden.Count) { throw 'The Git index contains a local/generated/secret path. Unstage it before committing.' }
     $taskPrivatePath = Join-Path $taskRoot '.local/secrets/appsettings.Secrets.json'
     $taskPrivateValues = @()

@@ -2,7 +2,7 @@
 
 所有業務資料存於同一個 **AiNexus** SQL Server database。`schema` 是資料庫內的命名空間，例如 `[access].[Roles]`；不是另一個資料庫或獨立連線。依模組分 schema，讓物件責任、migration 與權限授予清楚，也避免未來功能都擠在 dbo。跨 schema 的外鍵與同一個 EF transaction 仍可使用。
 
-`KnowledgeAndJobs` migration 增加 collaboration／knowledge schema，並補上以下物件。原先七個 schema 仍保留，共九個業務 schema。
+`KnowledgeAndJobs` migration 增加 collaboration／knowledge schema，並補上以下物件。原先七個 schema 仍保留；content schema 保存成果文件版本。
 
 | 物件                                               | 責任                                                      |
 | -------------------------------------------------- | --------------------------------------------------------- |
@@ -105,8 +105,10 @@ Dapper 預設建立自己的連線，不能假設它參與 EF transaction；需�
 
 DBA 可先建立 AiNexus，再審閱執行 [db/migrations.sql](../db/migrations.sql)；這份 EF 產生的 idempotent SQL 包含全部版本，需要在 AiNexus database 中執行。腳本不包含 CREATE LOGIN、CREATE DATABASE 或秘密。正式應用預設不啟動 migration，應由獨立部署帳號執行 DDL。EF 指引：[Applying migrations](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/applying)。
 
-正式帳號至少需要 identity、conversations、inference、operations、attachments、library、collaboration、knowledge schema 的 SELECT／INSERT／UPDATE／DELETE，以及 access schema SELECT／INSERT（首次登入寫 UserRoles）。更細的 access 權限可分為主檔 SELECT 與 UserRoles SELECT／INSERT；授權管理使用另一個受控管理登入。不可讓一般 UI 直接寫 Roles／Features，也不給應用登入 master 建庫與 ALTER schema 權限。
+正式帳號至少需要 identity、conversations、inference、operations、attachments、library、collaboration、knowledge、content schema 的 SELECT／INSERT／UPDATE／DELETE，以及 access schema SELECT／INSERT（首次登入寫 UserRoles）。更細的 access 權限可分為主檔 SELECT 與 UserRoles SELECT／INSERT；授權管理使用另一個受控管理登入。不可讓一般 UI 直接寫 Roles／Features，也不給應用登入 master 建庫與 ALTER schema 權限。
 
 ## 備份與資料生命週期
 
 RunEvents 預設 24 小時回播保留，conversation soft-delete 沒有自動永久清除；對話、soft-delete 與 audit 的保存期由部署單位決定，再加入明確的 retention 工作。SQL 備份需保護 ACL 與加密，key ring 另備份；在獨立資料庫實際還原，確認 SID、角色、訊息樹、重啟恢復與跨帳號隔離。不能只以產生 bak 檔判定成功。正式 recovery model 與完整／差異／log 備份排程由 DBA 設定，參考 [SQL Server 備份還原](https://learn.microsoft.com/en-us/sql/relational-databases/backup-restore/back-up-and-restore-of-sql-server-databases?view=sql-server-ver17)。
+
+成果文件的 content.Artifacts 與 content.ArtifactRevisions 關聯及版本策略，見 [ARTIFACTS](ARTIFACTS.md)。

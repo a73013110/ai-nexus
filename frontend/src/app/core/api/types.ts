@@ -46,4 +46,8 @@ export type DocumentPage = Dto<'DocumentPageDto'>;
 export type DocumentJob = Dto<'DocumentJobDto'> & { job: Job };
 export type KnowledgeSearch = Dto<'KnowledgeSearchDto'>;
 export type Citation = Dto<'CitationDto'>;
+export type ArtifactSummary = Dto<'ArtifactSummaryDto'> & { resource: Resource };
+export type ArtifactDocument = Dto<'ArtifactDto'> & { resource: Resource };
+export type ArtifactRevision = Dto<'ArtifactRevisionDto'>;
+export type TransformResult = Dto<'TransformTextDto'>;
 export const isActive = (state: string) => state === 'queued' || state === 'running';

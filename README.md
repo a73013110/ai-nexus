@@ -33,7 +33,7 @@
 | [開發與執行](docs/DEVELOPMENT.md) | 一鍵啟動、建置／驗證、契約與 migration、文件版控規則             |
 | [功能指南](docs/FEATURES.md)      | 12 項擴充的操作入口、快捷鍵、保存與備份規則                      |
 | [文件與圖片](docs/ATTACHMENTS.md) | 格式、抽取方式、配額、模型能力與附件生命週期                     |
-| [資料庫](docs/DATABASE.md)        | 七個業務 schema、資料表／索引／關聯、EDoc 分工、初始化與正式權限 |
+| [資料庫](docs/DATABASE.md)        | 業務 schema、資料表／索引／關聯、EDoc 分工、初始化與正式權限 |
 | [授權](docs/ACCESS_CONTROL.md)    | 使用者→角色→群組→功能、預設 chat、撤銷與功能擴充                 |
 | [架構](docs/ARCHITECTURE.md)      | 模組責任、推論生命週期、資料隔離與擴充邊界                       |
 | [設計系統](docs/DESIGN_SYSTEM.md) | 三層 tokens、字級／密度、motion／可及性與調整方式                |
@@ -53,3 +53,5 @@
 Verify 使用獨立資料庫與測試 provider，Edge 測試也明確使用 fixture；不代表正式 AD／SQL／模型驗收。Test-Connections 使用本機實際設定，檢查 SQL／EDoc helpers／access seed、AD 服務 bind、模型串流及合成文件／圖片辨識，會使用模型配額。報告與截圖在 `artifacts`。
 
 目前聊天部署設計要求單一 host／IIS worker；文件背景任務已具備 durable 租約與 checkpoint。JSON 文字備份不含附件原始檔；完整備份使用 SQL 備份。正式 IIS、區網雙帳號隔離、設備效能與備份還原按部署文件另行驗收。
+
+成果文件支援不可變版本、共用編輯、段落工具與 Word／PDF 匯出。見 [成果文件](docs/ARTIFACTS.md)。

@@ -38,6 +38,8 @@ import { ConversationFind } from './conversation-find';
 import { InlineTitle } from '../../shared/ui/inline-title';
 import { ConversationOutline } from './conversation-outline';
 import { KnowledgePicker } from '../knowledge/knowledge-picker';
+import { TextSelection, type SelectedText } from '../../shared/browser/text-selection';
+import { TextTools } from '../artifacts/text-tools';
 
 @Component({
   selector: 'nx-chat-workspace',
@@ -60,6 +62,8 @@ import { KnowledgePicker } from '../knowledge/knowledge-picker';
     InlineTitle,
     ConversationOutline,
     KnowledgePicker,
+    TextSelection,
+    TextTools,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chat-workspace.html',
@@ -77,6 +81,9 @@ export class ChatWorkspace {
   readonly findOpen = signal(false);
   readonly matches = signal<string[]>([]);
   readonly currentMatch = signal<string | null>(null);
+  readonly paragraph = signal<SelectedText | null>(null);
+  readonly textTools = viewChild(TextTools);
+  paragraphAction(action: string) { const selected = this.paragraph(); if (!selected) return; this.textTools()?.open(selected.text, action, selected.sourceId); this.paragraph.set(null); window.getSelection()?.removeAllRanges(); }
   readonly modal = signal<'rename' | 'delete' | null>(null);
   readonly modalTarget = signal<Conversation | null>(null);
   readonly modalBusy = signal(false);
@@ -305,6 +312,7 @@ export class ChatWorkspace {
     }
   }
   onScroll() {
+    this.paragraph.set(null);
     const view = this.viewport()?.nativeElement;
     if (view) {
       const near = view.scrollHeight - view.scrollTop - view.clientHeight < 96;
@@ -465,6 +473,7 @@ export class ChatWorkspace {
     }
   }
   closeFind() {
+    this.paragraph.set(null);
     this.findOpen.set(false);
     this.matches.set([]);
     this.currentMatch.set(null);

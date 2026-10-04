@@ -61,6 +61,7 @@ export class ChatStore {
   readonly hasKnowledgeAccess = computed(
     () => this.me()?.access.features?.some((x) => x.id === 'knowledge') ?? false,
   );
+  readonly hasArtifactsAccess = computed(() => this.me()?.access.features?.some(x => x.id === 'artifacts') ?? false);
   readonly modelNotice = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly ready = signal(false);

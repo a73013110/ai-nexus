@@ -1,8 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import { DomSanitizer } from '@angular/platform-browser';
 import type { Message } from '../../core/api/types';
 import { Icon } from '../../shared/ui/icon';
-import { renderMarkdown } from '../../shared/ui/markdown';
+import { MarkdownView } from '../../shared/ui/markdown-view';
 import { CopyFeedback } from '../../shared/browser/copy-feedback';
 import { AttachmentList } from '../attachments/attachment-list';
 import { MessageTree } from './message-tree';
@@ -11,7 +10,7 @@ import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'nx-chat-message',
-  imports: [Icon, AttachmentList, InferenceSignal, RouterLink],
+  imports: [Icon, AttachmentList, InferenceSignal, RouterLink, MarkdownView],
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <article
@@ -53,7 +52,7 @@ import { RouterLink } from '@angular/router';
         </div>
       }
     } @else {
-      <div class="markdown" [innerHTML]="html()" (click)="copyCode($event)"></div>
+      <nx-markdown-view [content]="message().content" />
     }
     @if (!active() && message().sources?.length) {
       <nav class="source-citations" aria-label="回答引用來源">
@@ -95,6 +94,7 @@ import { RouterLink } from '@angular/router';
             <nx-icon name="edit" /><span>編輯</span>
           </button>
         } @else {
+          @if (allowArtifacts()) { <button class="quiet-button" (click)="saveArtifact.emit(message())" [disabled]="busy()" aria-label="儲存回答為成果文件"><nx-icon name="document" /><span>儲存成果</span></button> }
           <button
             class="quiet-button"
             (click)="regenerate.emit(message())"
@@ -132,13 +132,14 @@ import { RouterLink } from '@angular/router';
   </article>`,
 })
 export class ChatMessage {
-  private readonly sanitizer = inject(DomSanitizer);
   readonly message = input.required<Message>();
   readonly tree = input.required<MessageTree>();
   readonly matched = input(false);
   readonly currentMatch = input(false);
   readonly active = input(false);
   readonly showModelNames = input(true);
+  readonly allowArtifacts = input(false);
+  readonly saveArtifact = output<Message>();
   readonly busy = input(false);
   readonly streamContent = input('');
   readonly status = input('');
@@ -148,11 +149,6 @@ export class ChatMessage {
   readonly feedback = inject(CopyFeedback);
   readonly copied = this.feedback.copied;
   readonly copyError = this.feedback.error;
-  readonly html = computed(() =>
-    this.active()
-      ? ''
-      : this.sanitizer.bypassSecurityTrustHtml(renderMarkdown(this.message().content)),
-  );
   readonly versions = computed(() => this.tree().versions(this.message()));
   readonly versionIndex = computed(() =>
     this.versions().findIndex((x) => x.id === this.message().id),
@@ -166,11 +162,5 @@ export class ChatMessage {
   );
   async copyAnswer() {
     await this.feedback.copy(this.message().content);
-  }
-  async copyCode(event: MouseEvent) {
-    const target = event.target instanceof Element ? event.target.closest('.code-copy') : null;
-    const code = target?.closest('.code-block')?.querySelector('code');
-    if (!target || !code) return;
-    await this.feedback.copy(code.textContent ?? '', target);
   }
 }

@@ -80,7 +80,7 @@ Google 原生 SSE 與 Ollama JSONL 只存在各自 adapter。模型核准清單�
 
 ## 資料層與契約
 
-EF Core migrations 管七個業務 schema；正式禁止 EnsureCreated。ConversationService 重用 EDoc IEfHelper，和其他服務共享 DI scoped NexusDbContext／transaction。Dapper DbHelper 原封保留，透過 SqlClient factory 用於狀態、初始化與特定參數化 SQL；自有連線不自動加入 EF transaction。來源與適配見 [EDoc README](../backend/src/AiNexus.Api/Database/EDoc/README.md)，物件見 [DATABASE](DATABASE.md)。
+EF Core migrations 依模組管理業務 schema；正式禁止 EnsureCreated。ConversationService 重用 EDoc IEfHelper，和其他服務共享 DI scoped NexusDbContext／transaction。Dapper DbHelper 原封保留，透過 SqlClient factory 用於狀態、初始化與特定參數化 SQL；自有連線不自動加入 EF transaction。來源與適配見 [EDoc README](../backend/src/AiNexus.Api/Database/EDoc/README.md)，物件見 [DATABASE](DATABASE.md)。
 
 OpenAPI 產生前端 JSON／SSE 型別；契約工具隔離 TypeScript 5，Angular 使用 TypeScript 6。套件精確版本與 lockfiles 一起保存，升級時更新契約與驗證證據。
 

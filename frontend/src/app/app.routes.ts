@@ -1,6 +1,9 @@
 import { Routes } from '@angular/router';
+import { pendingChanges } from './shared/browser/pending-changes';
 
 export const routes: Routes = [
+  { path: 'artifacts/:id', canDeactivate: [pendingChanges], loadComponent: () => import('./features/artifacts/artifacts-page').then(module => module.ArtifactsPage) },
+  { path: 'artifacts', canDeactivate: [pendingChanges], loadComponent: () => import('./features/artifacts/artifacts-page').then(module => module.ArtifactsPage) },
   {
     path: 'knowledge',
     loadComponent: () =>
