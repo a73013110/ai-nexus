@@ -31,7 +31,7 @@ public sealed record SaveArtifactRequest(string Title, string Content, int Expec
 public sealed record TransformTextRequest(string Text, string Action, string? ModelId = null, string Language = "繁體中文");
 public sealed record TransformTextDto(string Text, bool Truncated);
 
-public sealed class ArtifactService(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, ConversationService conversations, AiNexus.Modules.AccessControl.AccessService features)
+public sealed class ArtifactService(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, ConversationService conversations, AiNexus.Modules.AccessControl.AccessService features, AiNexus.Modules.Sharing.ShareService shares)
 {
     public async Task<IReadOnlyList<ArtifactSummaryDto>> ListAsync(Guid actor, CancellationToken ct)
     {
@@ -92,7 +92,7 @@ public sealed class ArtifactService(NexusDbContext db, ResourceAccess access, Re
     public async Task DeleteAsync(Guid actor, Guid id, CancellationToken ct)
     {
         await writes.Gate.WaitAsync(ct);
-        try { await using var transaction = await db.Database.BeginTransactionAsync(ct); var resource = await access.OwnerAsync(actor, id, "artifact", ct); resource.IsDeleted = true; await db.Set<ArtifactRevision>().Where(x => x.ArtifactId == id).ExecuteDeleteAsync(ct); db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "artifact.deleted", Result = "deleted" }); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct); }
+        try { await using var transaction = await db.Database.BeginTransactionAsync(ct); var resource = await access.OwnerAsync(actor, id, "artifact", ct); resource.IsDeleted = true; await shares.RevokeSourceAsync("artifact", id, ct); await db.Set<ArtifactRevision>().Where(x => x.ArtifactId == id).ExecuteDeleteAsync(ct); db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "artifact.deleted", Result = "deleted" }); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct); }
         finally { writes.Gate.Release(); }
     }
     private static void Validate(string title, string text)

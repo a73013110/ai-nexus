@@ -22,6 +22,7 @@ import { MarkdownView } from '../../shared/ui/markdown-view';
 import { downloadBlob } from '../../shared/browser/download';
 import { ArtifactsApi } from './artifacts-api';
 import { TextTools } from './text-tools';
+import { ShareDialog } from '../sharing/share-dialog';
 
 @Component({
   selector: 'nx-artifacts-page',
@@ -33,7 +34,7 @@ import { TextTools } from './text-tools';
     ConfirmDialog,
     TextTools,
     RouterLink,
-    MarkdownView,
+    MarkdownView, ShareDialog,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -60,6 +61,7 @@ export class ArtifactsPage {
   readonly selection = signal<{ start: number; end: number; text: string } | null>(null);
   readonly listOpen = signal(false);
   readonly confirm = viewChild.required(ConfirmDialog);
+  readonly readonlyShare = viewChild(ShareDialog);
   readonly tools = viewChild.required(TextTools);
   readonly sharing = viewChild(ResourceSharing);
   readonly editor = viewChild<ElementRef<HTMLTextAreaElement>>('editor');

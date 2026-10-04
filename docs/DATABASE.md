@@ -115,3 +115,6 @@ RunEvents 預設 24 小時回播保留，conversation soft-delete 沒有自動�
 
 Projects migration 新增 projects.Projects／ProjectTemplates，並以 Resources.ParentId、Conversations.ProjectId 與 Artifacts.ProjectId 建立工作區關聯。專案子項目以同一套 ACL 繼承一層授權。
 
+
+Sharing migration 在 collaboration 增加 ShareLinks／ShareRecipients；分享快照與期限獨立於原始內容，附件沿用保留參照。
+

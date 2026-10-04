@@ -2,6 +2,8 @@ import type { components } from './schema';
 
 type Dto<Name extends keyof components['schemas']> = Required<components['schemas'][Name]>;
 export type Me = Dto<'MeDto'>;
+export type ReadonlyShare = Dto<'ShareDto'>;
+export type SharedContent = Dto<'SharedContentDto'> & { share: ReadonlyShare; snapshot: Dto<'ShareSnapshot'> & { messages: (Dto<'SharedMessageDto'> & { attachments: Attachment[] })[] } };
 export type Project = Dto<'ProjectDto'> & { resource: Dto<'ResourceDto'> };
 export type ProjectTemplate = Dto<'ProjectTemplateDto'>;
 export type Preferences = Dto<'PreferencesDto'>;

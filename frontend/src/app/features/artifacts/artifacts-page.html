@@ -96,6 +96,15 @@
             </p>
           }
           <div class="artifact-toolbar">
+            @if (doc.resource.isOwner && session.has('shared')) {
+              <button
+                class="quiet-button"
+                [disabled]="busy() || dirty()"
+                (click)="readonlyShare()?.open()"
+              >
+                <nx-icon name="share" />唯讀分享
+              </button>
+            }
             <div class="reader-mode">
               <button [attr.aria-pressed]="mode() === 'read'" (click)="mode.set('read')">
                 閱讀
@@ -204,3 +213,13 @@
   }
 </nx-feature-page>
 <nx-text-tools [canReplace]="true" (replace)="replace($event)" #tools /><nx-confirm-dialog />
+@if (document(); as doc) {
+  @if (doc.resource.isOwner && session.has('shared')) {
+    <nx-share-dialog
+      kind="artifact"
+      [sourceId]="doc.resource.id"
+      [name]="doc.resource.name"
+      [version]="doc.version"
+    />
+  }
+}

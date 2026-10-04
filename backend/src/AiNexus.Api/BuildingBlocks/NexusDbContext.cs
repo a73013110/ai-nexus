@@ -27,6 +27,8 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
         AiNexus.Modules.Knowledge.KnowledgeConfiguration.Configure(model);
         AiNexus.Modules.Artifacts.ArtifactConfiguration.Configure(model);
         AiNexus.Modules.Projects.ProjectConfiguration.Configure(model);
+        AiNexus.Modules.Sharing.SharingConfiguration.Configure(model);
+        PlatformFeatures.Add(model, "shared", "分享", "/shared", 50);
         PlatformFeatures.Add(model, "projects", "專案", "/projects", 20);
         AiNexus.Modules.Attachments.AttachmentReferenceConfiguration.Configure(model);
         PlatformFeatures.Add(model, "knowledge", "知識庫", "/knowledge", 30);

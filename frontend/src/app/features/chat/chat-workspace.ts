@@ -40,6 +40,7 @@ import { ConversationOutline } from './conversation-outline';
 import { KnowledgePicker } from '../knowledge/knowledge-picker';
 import { TextSelection, type SelectedText } from '../../shared/browser/text-selection';
 import { TextTools } from '../artifacts/text-tools';
+import { ShareDialog } from '../sharing/share-dialog';
 
 @Component({
   selector: 'nx-chat-workspace',
@@ -64,6 +65,7 @@ import { TextTools } from '../artifacts/text-tools';
     KnowledgePicker,
     TextSelection,
     TextTools,
+    ShareDialog,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chat-workspace.html',
@@ -83,6 +85,8 @@ export class ChatWorkspace {
   readonly currentMatch = signal<string | null>(null);
   readonly paragraph = signal<SelectedText | null>(null);
   readonly textTools = viewChild(TextTools);
+  readonly shareDialog = viewChild(ShareDialog);
+  readonly hasSharing = computed(() => this.store.me()?.access.features.some(x => x.id === 'shared') ?? false);
   paragraphAction(action: string) { const selected = this.paragraph(); if (!selected) return; this.textTools()?.open(selected.text, action, selected.sourceId); this.paragraph.set(null); window.getSelection()?.removeAllRanges(); }
   readonly modal = signal<'rename' | 'delete' | null>(null);
   readonly modalTarget = signal<Conversation | null>(null);

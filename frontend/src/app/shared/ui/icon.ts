@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 
 const paths: Record<string, string> = {
+  share: 'M9 11l6-5M9 13l6 5M7 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z',
   plus: 'M12 5v14M5 12h14',
   star: 'm12 3 2.8 5.7 6.3.9-4.5 4.4 1.1 6.3-5.7-3-5.7 3 1.1-6.3L3.2 9.6l6.3-.9L12 3Z',
   archive: 'M3 4h18v4H3zM5 8v12h14V8M10 12h4',

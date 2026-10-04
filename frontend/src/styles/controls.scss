@@ -26,7 +26,8 @@ kbd {
   font: inherit;
 }
 .primary-button,
-.secondary-button {
+.secondary-button,
+.danger-button {
   min-height: var(--button-target);
   border-radius: var(--p-radius-sm);
   padding: 10px 17px;
@@ -46,5 +47,5 @@ kbd {
 .danger-button,
 .danger-button:not(:disabled):hover {
   background: var(--error);
-  color: var(--canvas);
+  color: var(--p-white);
 }

@@ -8,7 +8,7 @@ using AiNexus.Modules.Attachments;
 
 namespace AiNexus.Modules.Conversations;
 
-public sealed class ConversationService(IEfHelper<INexusDatabase> ef, NexusDbContext db, GenerationScheduler scheduler, ModelPresentation presentation, AttachmentWriteLock attachmentWrites)
+public sealed class ConversationService(IEfHelper<INexusDatabase> ef, NexusDbContext db, GenerationScheduler scheduler, ModelPresentation presentation, AttachmentWriteLock attachmentWrites, AiNexus.Modules.Sharing.ShareService shares)
 {
     public async Task<Conversation> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
         => await ef.Set<Conversation>().Include(x => x.Labels).SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner && !x.IsDeleted, ct)
@@ -88,6 +88,7 @@ public sealed class ConversationService(IEfHelper<INexusDatabase> ef, NexusDbCon
                 var fileIds = links.Select(x => x.AttachmentId).Distinct().ToList();
                 ef.Set<MessageAttachment>().RemoveRange(links);
                 conversation.IsDeleted = true;
+                await shares.RevokeSourceAsync("conversation", id, ct);
                 ef.Set<AuditEvent>().Add(new AuditEvent { OwnerId = owner, Action = "conversation.deleted", ResourceId = id });
                 await ef.SaveChangesAsync(ct);
                 // Delete only metadata stubs; never materialize image bytes to reclaim quota.
