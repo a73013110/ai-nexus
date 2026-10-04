@@ -13,11 +13,11 @@ public sealed class PersonalSettingsTests
     {
         await using var factory = new NexusFactory(); using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var original = (await alice.GetFromJsonAsync<UserSettingsDto>("/api/v1/settings"))!;
-        var modified = original with { ReadingFontSize = 22, EnterToSend = false, AutoFollow = false, SaveLocalDrafts = false, SidebarWidth = 320 };
+        var modified = original with { ReadingFontSize = 12, ReadingLineHeight = 1, EnterToSend = false, AutoFollow = false, SaveLocalDrafts = false, SidebarWidth = 320 };
         (await alice.PutAsJsonAsync("/api/v1/settings", modified)).EnsureSuccessStatusCode();
         (await alice.PutAsJsonAsync("/api/v1/preferences", new PreferencesDto("dark", true, null))).EnsureSuccessStatusCode();
         var saved = (await alice.GetFromJsonAsync<UserSettingsDto>("/api/v1/settings"))!;
-        Assert.Equal(22, saved.ReadingFontSize); Assert.False(saved.EnterToSend); Assert.False(saved.AutoFollow); Assert.False(saved.SaveLocalDrafts);
+        Assert.Equal(12, saved.ReadingFontSize); Assert.Equal(1, saved.ReadingLineHeight); Assert.False(saved.EnterToSend); Assert.False(saved.AutoFollow); Assert.False(saved.SaveLocalDrafts);
         Assert.Equal("dark", saved.Appearance.Theme);
         Assert.Equal(17, (await bob.GetFromJsonAsync<UserSettingsDto>("/api/v1/settings"))!.ReadingFontSize);
     }

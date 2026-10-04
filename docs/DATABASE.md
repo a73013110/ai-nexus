@@ -63,9 +63,12 @@ erDiagram
 - BackgroundJobs 保存 ActiveKey、LeaseToken／期限、階段／完成量及 attempt；checkpoint 經 fencing，過期 worker 不能提交。
 - EvaluationResults 的 RunId＋CaseIndex＋VariantIndex 複合主鍵支援重試跳過已完成結果。VariantsJson 保存模型設定及指紋，不含 key／密碼。
 - ShareLinks 按擁有者／期限索引；撤銷、到期及原始刪除停止閱讀，清理快照與附件引用。
+- AuditEvents 以 At、Action＋Id、ResourceId＋Id 索引支援日期篩選與遞減游標；`20261004112414_AdministrativeInspectionAudit` migration 新增後兩個索引。DetailsJson 保存管理異動的前後狀態或唯讀檢視範圍，不保存密碼、API key、搜尋文字或對話內容。
 - 重要業務外鍵採 Restrict，避免刪使用者／專案造成歷史連鎖刪除；純附屬資料依明確策略處理。
 
 搜尋目前以 owner 限制下的 SQL substring 查詢，未建立 Full-Text Catalog；資料量增大可保留 API 再加全文搜尋。Context 只裁切此次提供模型的上文，不刪歷史，預估與實測 tokens 分開保存。
+
+UsageReports 共用 GenerationRuns／ModelInvocations 的 SQL 聚合查詢，提供平台、各使用者與個人設定的用量；使用者清單批次取得用量，避免逐人查詢。管理員可透過獨立且受稽核的唯讀 endpoint 檢視使用者的所有對話版本（包含封存及選擇顯示的已刪除對話），一般對話 API 仍維持擁有者隔離。
 
 ## 向量與外部來源
 

@@ -4559,6 +4559,54 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/admin/users/{id}/insights': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['GetAdminUserInsights'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/users/{id}/conversations': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['ListAdminUserConversations'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/conversations/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['ReadAdminConversation'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/admin/users/{id}/roles': {
     parameters: {
       query?: never;
@@ -4746,6 +4794,37 @@ export interface components {
       features: components['schemas']['AdminFeatureDto'][];
       models: components['schemas']['ModelDto'][];
     };
+    AdminConversationDetailDto: {
+      conversation: components['schemas']['AdminConversationDto'];
+      ownerAccount: string;
+      ownerName: string;
+      systemInstruction: string;
+      messages: components['schemas']['AdminMessageDto'][];
+      /** Format: int32 */
+      offset: number;
+      /** Format: int32 */
+      total: number;
+    };
+    AdminConversationDto: {
+      /** Format: uuid */
+      id: string;
+      title: string;
+      /** Format: date-time */
+      createdAt: string;
+      /** Format: date-time */
+      updatedAt: string;
+      isArchived: boolean;
+      isDeleted: boolean;
+      /** Format: int32 */
+      messages: number;
+    };
+    AdminConversationPageDto: {
+      items: components['schemas']['AdminConversationDto'][];
+      /** Format: int32 */
+      total: number;
+      /** Format: int32 */
+      offset: number;
+    };
     AdminFeatureDto: {
       id: string;
       name: string;
@@ -4760,6 +4839,19 @@ export interface components {
       enabled: boolean;
       featureIds: string[];
       policy: null | components['schemas']['GroupPolicyRequest'];
+    };
+    AdminMessageDto: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      parentId: null | string;
+      role: string;
+      content: string;
+      status: string;
+      /** Format: date-time */
+      createdAt: string;
+      modelId: null | string;
+      attachments: components['schemas']['AttachmentDto'][];
     };
     AdminRoleDto: {
       id: string;
@@ -4783,6 +4875,20 @@ export interface components {
       /** Format: int32 */
       requestsWithUsage: number;
     };
+    AdminUserActivityDto: {
+      usage: components['schemas']['UsageTotalsDto'];
+      /** Format: int32 */
+      conversations: number;
+      /** Format: int64 */
+      attachmentBytes: number;
+    };
+    AdminUserDetailDto: {
+      user: components['schemas']['AdminUserDto'];
+      usage: components['schemas']['PersonalUsageDto'];
+      kinds: components['schemas']['UsageKindDto'][];
+      /** Format: int32 */
+      conversations: number;
+    };
     AdminUserDto: {
       /** Format: uuid */
       id: string;
@@ -4791,6 +4897,7 @@ export interface components {
       /** Format: date-time */
       lastSeenAt: string;
       roleIds: string[];
+      activity?: null | components['schemas']['AdminUserActivityDto'];
     };
     AdminUsersDto: {
       users: components['schemas']['AdminUserDto'][];
@@ -5583,6 +5690,31 @@ export interface components {
       inputTokens: number;
       /** Format: int64 */
       outputTokens: number;
+    };
+    UsageKindDto: {
+      kind: string;
+      /** Format: int32 */
+      requests: number;
+      /** Format: int64 */
+      inputTokens: number;
+      /** Format: int64 */
+      outputTokens: number;
+    };
+    UsageTotalsDto: {
+      /** Format: int32 */
+      requests: number;
+      /** Format: int32 */
+      completed: number;
+      /** Format: int32 */
+      failed: number;
+      /** Format: int32 */
+      cancelled: number;
+      /** Format: int64 */
+      inputTokens: number;
+      /** Format: int64 */
+      outputTokens: number;
+      /** Format: int32 */
+      requestsWithUsage: number;
     };
     UserRolesRequest: {
       roleIds: string[];
@@ -11500,6 +11632,267 @@ export interface operations {
       };
     };
   };
+  GetAdminUserInsights: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AdminUserDetailDto'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ListAdminUserConversations: {
+    parameters: {
+      query?: {
+        search?: string;
+        offset?: number;
+        includeDeleted?: boolean;
+      };
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AdminConversationPageDto'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ReadAdminConversation: {
+    parameters: {
+      query?: {
+        offset?: number;
+      };
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AdminConversationDetailDto'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
   SetUserRoles: {
     parameters: {
       query?: never;
@@ -11909,6 +12302,11 @@ export interface operations {
     parameters: {
       query?: {
         before?: number;
+        search?: string;
+        action?: string;
+        result?: string;
+        from?: string;
+        until?: string;
       };
       header?: never;
       path?: never;

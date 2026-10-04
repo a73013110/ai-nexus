@@ -1819,3 +1819,32 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004112414_AdministrativeInspectionAudit'
+)
+BEGIN
+    CREATE INDEX [IX_AuditEvents_Action_Id] ON [operations].[AuditEvents] ([Action], [Id]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004112414_AdministrativeInspectionAudit'
+)
+BEGIN
+    CREATE INDEX [IX_AuditEvents_ResourceId_Id] ON [operations].[AuditEvents] ([ResourceId], [Id]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004112414_AdministrativeInspectionAudit'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261004112414_AdministrativeInspectionAudit', N'10.0.12');
+END;
+
+COMMIT;
+GO
+

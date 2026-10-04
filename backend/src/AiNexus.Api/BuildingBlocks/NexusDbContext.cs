@@ -98,8 +98,10 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
         audit.HasKey(x => x.Id);
         audit.Property(x => x.Action).HasMaxLength(64);
         audit.Property(x => x.Result).HasMaxLength(80);
-        audit.Property(x => x.DetailsJson).HasMaxLength(12000);
+        audit.Property(x => x.DetailsJson).HasMaxLength(40000);
         audit.HasIndex(x => x.At);
+        audit.HasIndex(x => new { x.Action, x.Id });
+        audit.HasIndex(x => new { x.ResourceId, x.Id });
         // SQLite is used only by relational integration tests; it lacks native offset ordering.
         if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
         {

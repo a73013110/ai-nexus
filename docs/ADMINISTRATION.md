@@ -28,6 +28,22 @@
 
 異動在同一個 serializable transaction 保存授權與稽核。會撤銷操作者自身管理權的變更以 409 拒絕並回滾，避免鎖在管理介面之外；此類變更交由另一位管理員執行。異動 JSON 僅包含授權、模型識別碼及限制，不含提示詞、回覆、密碼或 key。
 
+## 使用者 AI 用量與對話
+
+使用者列表直接顯示最近 30 天生成次數、回報 tokens 與所有對話數。點姓名或用量開啟唯讀活動視窗，包含輸入／輸出 tokens、完成／失敗、AI 任務分類及附件空間。各用量來源透過共用 `UsageReports` 統計 `GenerationRuns` 與 `ModelInvocations`，包含對話及 OCR／文字處理／評測等任務；期間為最近 30 個 UTC 日期，每日分組使用 UTC，顯示時間採台北時區。未回報的 token 不估算。
+
+活動視窗可搜尋標題與本文、瀏覽封存及已刪除的對話；預設包含已刪除的 soft-delete 資料。對話每頁 50 段，內容每次 100 則，按時間顯示資料庫仍保存的所有分支版本，後續訊息可繼續載入。附件提供名稱／大小資訊，沒有新增跨使用者下載或修改權限。
+
+這是獨立的管理唯讀 API：`GET /admin/users/{id}/insights`、`GET /admin/users/{id}/conversations`、`GET /admin/conversations/{id}`（皆帶 `/api/v1` 前綴）。每次重新檢查 `admin` 功能，回應內容前成功保存 `admin.user_usage_read`、`admin.conversations_list` 或 `admin.conversation_read` 稽核。一般 conversations 的 owner 檢查保持有效；管理員不能透過一般 API 修改其他使用者的對話。登入頁會說明管理員授權檢視及稽核。
+
+## 異動稽核
+
+角色分派、角色、群組／模型政策、功能異動保存 `resourceKey`、完整 `before`／`after` 快照與結果。驗證失敗／自我鎖定等業務拒絕會回滾，再保存失敗代碼及原值。對話敏感讀取只記錄操作者、資源、分頁與數量，搜尋僅記錄是否套用，不保存搜尋本文、提問或回答。基礎設施無法寫入 SQL 時，既有伺服器錯誤記錄可供排查，不能保證資料庫離線期間仍保存 SQL 稽核。
+
+介面可依帳號／識別碼、動作、結果及台北日期篩選，展開顯示欄位前後差異和原始 metadata。`GET /admin/audit` 支援 `search`、`action`（前綴）、`result`、`from`（含）、`until`（不含）、`before`（ID 游標），每頁最多 100 筆；穩定 ID 游標避免新事件造成重複。時間與 action/resource 游標索引由 `AdministrativeInspectionAudit` migration 維護。
+
+「匯出已載入 N 筆」只匯出目前已載入的篩選結果，檔名明確標示筆數；更多紀錄需先載入。CSV 使用 UTF-8 BOM、正確引號及公式前綴防護。稽核沒有更新／刪除 API；資料庫管理帳號仍應依公司政策限制直接修改資料表的權限。
+
 ## 群組模型限制與配額
 
 - 功能授權取有效群組的聯集；模型限制是額外的邊界，取各有效群組限制的交集。

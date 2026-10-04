@@ -1,0 +1,78 @@
+using System.Data;
+using System.Text.Json;
+using AiNexus.BuildingBlocks;
+using AiNexus.Modules.AccessControl;
+using AiNexus.Modules.Identity;
+using Microsoft.EntityFrameworkCore;
+
+namespace AiNexus.Modules.Administration;
+
+/// <summary>All administrative mutations and their before/after record share one transaction.</summary>
+public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, AccessService access, AdministrativeWriteLock writes)
+{
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    public async Task MutateAsync(string action, Guid? resource, string key, Func<Task> mutation, CancellationToken ct)
+    {
+        var actor = (await current.GetAsync(ct)).Id;
+        await writes.Gate.WaitAsync(ct);
+        object? before = null;
+        try
+        {
+            try
+            {
+                await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+                await RequireAsync(actor, ct);
+                before = await SnapshotAsync(action, resource, key, ct);
+                await mutation(); await db.SaveChangesAsync(ct);
+                if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == AdministrationConfiguration.Feature))
+                    throw new ApiException(409, "admin_lockout", "此變更會撤銷你的管理權限。請先由另一位管理員處理。");
+                var after = await SnapshotAsync(action, resource, key, ct);
+                db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource, Action = action, Result = "saved", DetailsJson = JsonSerializer.Serialize(new { resourceKey = key, before, after }, Json) });
+                await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
+            }
+            catch (ApiException error)
+            {
+                // The failed transaction is already disposed. Do not accidentally save pending grants.
+                db.ChangeTracker.Clear();
+                db.AuditEvents.Add(new()
+                {
+                    OwnerId = actor,
+                    ResourceId = resource,
+                    Action = action,
+                    Result = error.Code,
+                    DetailsJson = JsonSerializer.Serialize(new { resourceKey = key[..Math.Min(key.Length, 64)], before, failureCode = error.Code }, Json)
+                });
+                await db.SaveChangesAsync(ct); throw;
+            }
+        }
+        finally { writes.Gate.Release(); }
+    }
+    private async Task RequireAsync(Guid actor, CancellationToken ct)
+    {
+        if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == AdministrationConfiguration.Feature))
+            throw new ApiException(403, "admin_required", "需要平台管理權限。");
+    }
+    private async Task<object?> SnapshotAsync(string action, Guid? resource, string key, CancellationToken ct)
+    {
+        if (action == "admin.user_roles") return new { roleIds = await db.Set<UserRole>().AsNoTracking().Where(x => x.UserId == resource).OrderBy(x => x.RoleId).Select(x => x.RoleId).ToArrayAsync(ct) };
+        if (action == "admin.role")
+        {
+            var value = await db.Set<Role>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == key, ct);
+            return value is null ? null : new { value.Name, value.Enabled, groupIds = await db.Set<RoleGroupRole>().AsNoTracking().Where(x => x.RoleId == key).OrderBy(x => x.GroupId).Select(x => x.GroupId).ToArrayAsync(ct) };
+        }
+        if (action == "admin.group")
+        {
+            var value = await db.Set<RoleGroup>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == key, ct);
+            var policy = await db.Set<GroupModelPolicy>().AsNoTracking().SingleOrDefaultAsync(x => x.GroupId == key, ct);
+            return value is null ? null : new
+            {
+                value.Name,
+                value.Enabled,
+                featureIds = await db.Set<RoleGroupFeature>().AsNoTracking().Where(x => x.GroupId == key).OrderBy(x => x.FeatureId).Select(x => x.FeatureId).ToArrayAsync(ct),
+                policy = policy is null ? null : new GroupPolicyRequest(policy.AllowedModelsJson is null ? null : JsonSerializer.Deserialize<string[]>(policy.AllowedModelsJson), policy.DailyRequestLimit, policy.StoredAttachmentLimitBytes)
+            };
+        }
+        var feature = await db.Set<Feature>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == key, ct);
+        return feature is null ? null : new { feature.Name, feature.Enabled, feature.SortOrder };
+    }
+}

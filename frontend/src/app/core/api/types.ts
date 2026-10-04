@@ -18,7 +18,23 @@ export type AdminCatalog = Dto<'AdminCatalogDto'>;
 export type AdminRole = Dto<'AdminRoleDto'>;
 export type AdminGroup = Dto<'AdminGroupDto'>;
 export type AdminFeature = Dto<'AdminFeatureDto'>;
-export type AdminUser = Dto<'AdminUserDto'>;
+export type UsageTotals = Dto<'UsageTotalsDto'>;
+export type AdminUser = Omit<Dto<'AdminUserDto'>, 'activity'> & {
+  activity?: (Dto<'AdminUserActivityDto'> & { usage: UsageTotals }) | null;
+};
+export type AdminUserDetail = Dto<'AdminUserDetailDto'> & {
+  user: AdminUser;
+  usage: PersonalUsage;
+  kinds: Dto<'UsageKindDto'>[];
+};
+export type AdminConversation = Dto<'AdminConversationDto'>;
+export type AdminConversationPage = Dto<'AdminConversationPageDto'> & {
+  items: AdminConversation[];
+};
+export type AdminConversationDetail = Dto<'AdminConversationDetailDto'> & {
+  conversation: AdminConversation;
+  messages: (Dto<'AdminMessageDto'> & { attachments: Attachment[] })[];
+};
 export type AdminUsers = Dto<'AdminUsersDto'>;
 export type AdminUsage = Dto<'AdminUsageDto'>;
 export type AuditEntry = Dto<'AuditDto'>;

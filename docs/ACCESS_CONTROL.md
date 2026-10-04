@@ -2,6 +2,8 @@
 
 AD 驗證決定「你是誰」，access schema 決定「你可以用哪些功能」，conversation owner 決定「你可讀寫哪筆資料」。取得 chat 功能也只能存取自己的對話，其他人的 ID 一律以 404 回應。
 
+具有 `admin` 功能的管理員可透過獨立、會留下敏感讀取稽核的管理 API 檢視使用者用量及對話。此例外僅提供唯讀內容，沒有放寬一般 conversations 的 owner 檢查或附件下載 ACL；操作方式見 [管理工作台](ADMINISTRATION.md)。
+
 ## 第一版預設
 
 每個首次登入的使用者取得 `member` 角色，加入 `workspace` 群組。最初版本只授予 `chat`；完整 migrations 後亦提供 projects、knowledge、artifacts、shared、quality、tasks。平台管理員可調整群組功能；admin／integrations 預設在獨立的 administrators 群組。三種主檔皆有 Enabled，停用會排除 grant。多個角色／群組的功能取聯集並去重，不採名稱或前端路由推斷權限。

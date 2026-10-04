@@ -93,10 +93,13 @@ builder.Services.AddSingleton<StorageReadiness>();
 builder.Services.AddSingleton<IdentityWriteLock>();
 builder.Services.AddScoped<CurrentUser>();
 builder.Services.AddScoped<PersonalSettingsService>();
+builder.Services.AddScoped<UsageReports>();
 builder.Services.AddOptions<AdministrationOptions>().BindConfiguration("Administration")
     .Validate(x => x.BootstrapAdministrators.Length <= 20 && x.BootstrapAdministrators.All(a => a.Length is > 0 and <= 64 && a.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-' or '.')), "Invalid bootstrap administrator accounts.").ValidateOnStart();
 builder.Services.AddScoped<AdminBootstrap>();
 builder.Services.AddScoped<AdministrationService>();
+builder.Services.AddScoped<AdministrativeAudit>();
+builder.Services.AddScoped<AdministrativeReader>();
 builder.Services.AddScoped<ModelPolicyService>();
 builder.Services.AddSingleton<ModelQuotaLock>();
 builder.Services.AddScoped<ModelTaskService>();

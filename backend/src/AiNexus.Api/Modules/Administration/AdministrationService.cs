@@ -1,4 +1,3 @@
-using System.Data;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using AiNexus.BuildingBlocks;
@@ -14,7 +13,8 @@ public sealed record AdminRoleDto(string Id, string Name, bool Enabled, IReadOnl
 public sealed record AdminGroupDto(string Id, string Name, bool Enabled, IReadOnlyList<string> FeatureIds, GroupPolicyRequest? Policy);
 public sealed record AdminFeatureDto(string Id, string Name, string Route, int SortOrder, bool Enabled);
 public sealed record AdminCatalogDto(IReadOnlyList<AdminRoleDto> Roles, IReadOnlyList<AdminGroupDto> Groups, IReadOnlyList<AdminFeatureDto> Features, IReadOnlyList<ModelDto> Models);
-public sealed record AdminUserDto(Guid Id, string Account, string DisplayName, DateTimeOffset LastSeenAt, IReadOnlyList<string> RoleIds);
+public sealed record AdminUserActivityDto(UsageTotalsDto Usage, int Conversations, long AttachmentBytes);
+public sealed record AdminUserDto(Guid Id, string Account, string DisplayName, DateTimeOffset LastSeenAt, IReadOnlyList<string> RoleIds, AdminUserActivityDto? Activity = null);
 public sealed record AdminUsersDto(IReadOnlyList<AdminUserDto> Users, int Total, int Offset);
 public sealed record UserRolesRequest(IReadOnlyList<string> RoleIds);
 public sealed record RoleUpdateRequest(string Name, bool Enabled, IReadOnlyList<string> GroupIds);
@@ -24,7 +24,7 @@ public sealed record FeatureUpdateRequest(string Name, int SortOrder, bool Enabl
 public sealed record AuditDto(long Id, string Actor, string Action, Guid? ResourceId, string? Result, DateTimeOffset At, string? DetailsJson);
 public sealed record AdminUsageDto(int Users, int Requests, int Completed, long InputTokens, long OutputTokens, int RequestsWithUsage);
 
-public sealed class AdministrationService(NexusDbContext db, CurrentUser current, AccessService access, AdministrativeWriteLock writes, IOptions<InferenceOptions> inference)
+public sealed class AdministrationService(NexusDbContext db, AccessService access, IOptions<InferenceOptions> inference, AdministrativeAudit mutations, UsageReports reports)
 {
     public async Task<AdminCatalogDto> CatalogAsync(CancellationToken ct)
     {
@@ -46,12 +46,17 @@ public sealed class AdministrationService(NexusDbContext db, CurrentUser current
         if (!string.IsNullOrWhiteSpace(search)) query = query.Where(x => x.Account.Contains(search) || x.DisplayName.Contains(search));
         var total = await query.CountAsync(ct); var rows = await query.OrderBy(x => x.Account).ThenBy(x => x.Id).Skip(offset).Take(100).ToListAsync(ct);
         var ids = rows.Select(x => x.Id).ToArray(); var roles = await db.Set<UserRole>().AsNoTracking().Where(x => ids.Contains(x.UserId)).ToListAsync(ct);
-        return new(rows.Select(x => new AdminUserDto(x.Id, x.Account, x.DisplayName, x.LastSeenAt, roles.Where(y => y.UserId == x.Id).Select(y => y.RoleId).ToArray())).ToArray(), total, offset);
+        var usage = (await reports.ByOwnersAsync(ids, ct)).ToDictionary(x => x.OwnerId, x => x.Usage);
+        var conversations = await db.Conversations.Where(x => ids.Contains(x.OwnerId)).GroupBy(x => x.OwnerId).Select(g => new { OwnerId = g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.OwnerId, x => x.Count, ct);
+        var bytes = await db.Set<AiNexus.Modules.Attachments.Attachment>().Where(x => ids.Contains(x.OwnerId)).GroupBy(x => x.OwnerId).Select(g => new { OwnerId = g.Key, Bytes = g.Sum(x => x.Size) }).ToDictionaryAsync(x => x.OwnerId, x => x.Bytes, ct);
+        return new(rows.Select(x => new AdminUserDto(x.Id, x.Account, x.DisplayName, x.LastSeenAt, roles.Where(y => y.UserId == x.Id).Select(y => y.RoleId).ToArray(),
+            new(usage.GetValueOrDefault(x.Id) ?? new(0, 0, 0, 0, 0, 0, 0), conversations.GetValueOrDefault(x.Id), bytes.GetValueOrDefault(x.Id)))).ToArray(), total, offset);
     }
     public async Task SetUserRolesAsync(Guid id, UserRolesRequest request, CancellationToken ct)
     {
-        Keys(request.RoleIds);
-        await MutateAsync("admin.user_roles", id, new { request.RoleIds }, async () => {
+        await mutations.MutateAsync("admin.user_roles", id, id.ToString(), async () =>
+        {
+            Keys(request.RoleIds);
             if (!await db.Users.AnyAsync(x => x.Id == id, ct)) throw Missing();
             await ExistingAsync(db.Set<Role>().Select(x => x.Id), request.RoleIds, ct);
             var old = await db.Set<UserRole>().Where(x => x.UserId == id).ToListAsync(ct);
@@ -61,8 +66,9 @@ public sealed class AdministrationService(NexusDbContext db, CurrentUser current
     }
     public async Task SaveRoleAsync(string id, RoleUpdateRequest request, CancellationToken ct)
     {
-        Key(id); Name(request.Name); Keys(request.GroupIds);
-        await MutateAsync("admin.role", null, new { id, request.Enabled, request.GroupIds }, async () => {
+        await mutations.MutateAsync("admin.role", null, id, async () =>
+        {
+            Key(id); Name(request.Name); Keys(request.GroupIds);
             await ExistingAsync(db.Set<RoleGroup>().Select(x => x.Id), request.GroupIds, ct);
             var role = await db.Set<Role>().FindAsync([id], ct);
             if (role is null) { role = new() { Id = id }; db.Add(role); }
@@ -74,14 +80,16 @@ public sealed class AdministrationService(NexusDbContext db, CurrentUser current
     }
     public async Task SaveGroupAsync(string id, GroupUpdateRequest request, CancellationToken ct)
     {
-        Key(id); Name(request.Name); Keys(request.FeatureIds);
-        if (request.Policy is { } policy) {
-            if (policy.DailyRequestLimit is < 0 or > 100000 || policy.StoredAttachmentLimitBytes is < 1048576 or > 1073741824 ||
-                policy.AllowedModelIds?.Count > 24 || policy.AllowedModelIds?.Distinct().Count() != policy.AllowedModelIds?.Count ||
-                policy.AllowedModelIds?.Any(x => !inference.Value.Models.Any(m => m.Id == x)) == true)
-                throw new ApiException(400, "invalid_model_policy", "模型清單或群組配額不正確。");
-        }
-        await MutateAsync("admin.group", null, new { id, request.Enabled, request.FeatureIds, request.Policy }, async () => {
+        await mutations.MutateAsync("admin.group", null, id, async () =>
+        {
+            Key(id); Name(request.Name); Keys(request.FeatureIds);
+            if (request.Policy is { } policy)
+            {
+                if (policy.DailyRequestLimit is < 0 or > 100000 || policy.StoredAttachmentLimitBytes is < 1048576 or > 1073741824 ||
+                    policy.AllowedModelIds?.Count > 24 || policy.AllowedModelIds?.Distinct().Count() != policy.AllowedModelIds?.Count ||
+                    policy.AllowedModelIds?.Any(x => !inference.Value.Models.Any(m => m.Id == x)) == true)
+                    throw new ApiException(400, "invalid_model_policy", "模型清單或群組配額不正確。");
+            }
             await ExistingAsync(db.Set<Feature>().Select(x => x.Id), request.FeatureIds, ct);
             var group = await db.Set<RoleGroup>().FindAsync([id], ct);
             if (group is null) { group = new() { Id = id }; db.Add(group); }
@@ -91,7 +99,8 @@ public sealed class AdministrationService(NexusDbContext db, CurrentUser current
             db.AddRange(request.FeatureIds.Where(x => !old.Any(y => y.FeatureId == x)).Select(x => new RoleGroupFeature { GroupId = id, FeatureId = x }));
             var value = await db.Set<GroupModelPolicy>().FindAsync([id], ct);
             if (request.Policy is null) { if (value is not null) db.Remove(value); }
-            else {
+            else
+            {
                 if (value is null) { value = new() { GroupId = id }; db.Add(value); }
                 value.AllowedModelsJson = request.Policy.AllowedModelIds is null ? null : JsonSerializer.Serialize(request.Policy.AllowedModelIds.Order());
                 value.DailyRequestLimit = request.Policy.DailyRequestLimit; value.StoredAttachmentLimitBytes = request.Policy.StoredAttachmentLimitBytes;
@@ -100,38 +109,38 @@ public sealed class AdministrationService(NexusDbContext db, CurrentUser current
     }
     public async Task SaveFeatureAsync(string id, FeatureUpdateRequest request, CancellationToken ct)
     {
-        Key(id); Name(request.Name); if (request.SortOrder is < 0 or > 10000) throw new ApiException(400, "invalid_order", "排序值必須介於 0 與 10000。");
-        await MutateAsync("admin.feature", null, new { id, request.Enabled, request.SortOrder }, async () => {
+        await mutations.MutateAsync("admin.feature", null, id, async () =>
+        {
+            Key(id); Name(request.Name); if (request.SortOrder is < 0 or > 10000) throw new ApiException(400, "invalid_order", "排序值必須介於 0 與 10000。");
             var feature = await db.Set<Feature>().FindAsync([id], ct) ?? throw Missing();
             feature.Name = request.Name.Trim(); feature.SortOrder = request.SortOrder; feature.Enabled = request.Enabled;
         }, ct);
     }
     public async Task<AccessDto> EffectiveAsync(Guid id, CancellationToken ct) { if (!await db.Users.AnyAsync(x => x.Id == id, ct)) throw Missing(); return await access.ForUserAsync(id, ct); }
-    public async Task<IReadOnlyList<AuditDto>> AuditAsync(long? before, CancellationToken ct) => await (
-        from entry in db.AuditEvents.AsNoTracking() join actor in db.Users on entry.OwnerId equals actor.Id
-        where before == null || entry.Id < before
-        orderby entry.Id descending
-        select new AuditDto(entry.Id, actor.Account, entry.Action, entry.ResourceId, entry.Result, entry.At, entry.DetailsJson)).Take(100).ToListAsync(ct);
+    public async Task<IReadOnlyList<AuditDto>> AuditAsync(long? before, CancellationToken ct, string? search = null, string? action = null, string? result = null, DateTimeOffset? from = null, DateTimeOffset? until = null)
+    {
+        if (search?.Length > 120 || action?.Length > 120 || result?.Length > 80 || before is <= 0 || from > until)
+            throw new ApiException(400, "invalid_audit_filter", "稽核篩選條件不正確。");
+        var query = from entry in db.AuditEvents.AsNoTracking() join actor in db.Users on entry.OwnerId equals actor.Id select new { entry, actor };
+        if (before is { } cursor) query = query.Where(x => x.entry.Id < cursor);
+        if (from is { } start) query = query.Where(x => x.entry.At >= start);
+        if (until is { } end) query = query.Where(x => x.entry.At < end);
+        if (!string.IsNullOrWhiteSpace(action)) query = query.Where(x => x.entry.Action.StartsWith(action));
+        if (!string.IsNullOrWhiteSpace(result)) query = result == "failed"
+            ? query.Where(x => x.entry.Result != "saved" && x.entry.Result != "read" && x.entry.Result != "completed" && x.entry.Result != "success" && x.entry.Result != "granted")
+            : query.Where(x => x.entry.Result == result);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            if (Guid.TryParse(search, out var resource)) query = query.Where(x => x.entry.ResourceId == resource || x.actor.Id == resource);
+            else query = query.Where(x => x.actor.Account.Contains(search) || x.actor.DisplayName.Contains(search) || x.entry.Action.Contains(search) || (x.entry.DetailsJson != null && x.entry.DetailsJson.Contains(search)));
+        }
+        return await query.OrderByDescending(x => x.entry.Id).Take(100)
+            .Select(x => new AuditDto(x.entry.Id, x.actor.Account, x.entry.Action, x.entry.ResourceId, x.entry.Result, x.entry.At, x.entry.DetailsJson)).ToListAsync(ct);
+    }
     public async Task<AdminUsageDto> UsageAsync(CancellationToken ct)
     {
-        DateTimeOffset since = DateTimeOffset.UtcNow.Date.AddDays(-29);
-        var totals = await db.Runs.AsNoTracking().Where(x => x.CreatedAt >= since).Select(x => new { x.Status, x.InputTokens, x.OutputTokens })
-            .Concat(db.Set<ModelInvocation>().AsNoTracking().Where(x => x.CreatedAt >= since).Select(x => new { x.Status, x.InputTokens, x.OutputTokens })).GroupBy(x => 1)
-            .Select(g => new { Requests = g.Count(), Completed = g.Count(x => x.Status == "completed"), Input = g.Sum(x => x.InputTokens ?? 0), Output = g.Sum(x => x.OutputTokens ?? 0), WithUsage = g.Count(x => x.InputTokens.HasValue && x.OutputTokens.HasValue) }).SingleOrDefaultAsync(ct);
-        return new(await db.Users.CountAsync(ct), totals?.Requests ?? 0, totals?.Completed ?? 0, totals?.Input ?? 0, totals?.Output ?? 0, totals?.WithUsage ?? 0);
-    }
-    private async Task MutateAsync(string action, Guid? resource, object details, Func<Task> mutation, CancellationToken ct)
-    {
-        var actor = (await current.GetAsync(ct)).Id; await writes.Gate.WaitAsync(ct);
-        try {
-            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-            if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == AdministrationConfiguration.Feature)) throw new ApiException(403, "admin_required", "需要平台管理權限。");
-            await mutation(); await db.SaveChangesAsync(ct);
-            if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == AdministrationConfiguration.Feature))
-                throw new ApiException(409, "admin_lockout", "此變更會撤銷你的管理權限。請先由另一位管理員處理。");
-            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource, Action = action, Result = "saved", DetailsJson = JsonSerializer.Serialize(details) });
-            await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
-        } finally { writes.Gate.Release(); }
+        var totals = await reports.AllAsync(ct);
+        return new(await db.Users.CountAsync(ct), totals.Requests, totals.Completed, totals.InputTokens, totals.OutputTokens, totals.RequestsWithUsage);
     }
     private static void Key(string id) { if (!Regex.IsMatch(id, "^[a-z][a-z0-9_-]{0,63}$", RegexOptions.CultureInvariant)) throw new ApiException(400, "invalid_access_id", "識別碼使用小寫英文、數字、底線與連字號，最多 64 字元。"); }
     private static void Keys(IReadOnlyList<string> ids) { if (ids.Count > 50 || ids.Distinct().Count() != ids.Count) throw new ApiException(400, "invalid_access_ids", "授權清單過長或有重複。"); foreach (var id in ids) Key(id); }
