@@ -9,10 +9,12 @@ import {
   input,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import type { Message } from '../../core/api/types';
 import { ThemeService } from '../../core/preferences/theme-service';
 import { Icon } from '../../shared/ui/icon';
+import { positionSidePopover } from '../../shared/browser/side-popover-position';
 
 @Component({
   selector: 'nx-conversation-outline',
@@ -53,7 +55,12 @@ import { Icon } from '../../shared/ui/icon';
         }
       </div>
       @if (expanded()) {
-        <div class="outline-popover outline-directory" aria-label="所有對話輪次">
+        <div
+          #panel
+          popover="manual"
+          class="outline-popover outline-directory"
+          aria-label="所有對話輪次"
+        >
           <div class="outline-heading">
             <strong>{{ turns().length }} 輪對話</strong
             ><button type="button" class="icon-button" aria-label="關閉對話目錄" (click)="close()">
@@ -75,13 +82,10 @@ import { Icon } from '../../shared/ui/icon';
       } @else if (preview() !== null) {
         @let turn = turns()[preview()!];
         @if (turn) {
-          <div
-            class="outline-popover outline-preview"
-            [style.--turn-position]="(preview()! + 0.5) / turns().length"
-          >
+          <div class="outline-popover outline-preview" #panel popover="manual">
             <span class="panel-eyebrow">第 {{ preview()! + 1 }} 輪</span
             ><strong>{{ turn.prompt }}</strong>
-            <p>{{ turn.answer || '尚未有 AI 回覆' }}</p>
+            <p>{{ excerpt(turn.answer) || '尚未有 AI 回覆' }}</p>
             <button type="button" class="quiet-button" (click)="jump(preview()!); close()">
               跳到這段對話 <nx-icon name="arrow" />
             </button>
@@ -115,8 +119,42 @@ export class ConversationOutline {
   });
   private readonly themes = inject(ThemeService);
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
+  private readonly panel = viewChild<ElementRef<HTMLElement>>('panel');
   private leaveTimer?: ReturnType<typeof setTimeout>;
   constructor() {
+    effect((onCleanup) => {
+      const panel = this.panel()?.nativeElement,
+        root = this.viewport(),
+        preview = this.preview();
+      const expanded = this.expanded();
+      if (!panel || !root) return;
+      const position = () => {
+        const trigger = this.element.querySelector<HTMLElement>(
+          expanded ? '.outline-count' : `.outline-tick:nth-child(${(preview ?? 0) + 1})`,
+        );
+        if (trigger) positionSidePopover(trigger, panel, root.parentElement!);
+      };
+      panel.showPopover();
+      position();
+      const outside = (event: PointerEvent) => {
+        if (event.target instanceof Node && !this.element.contains(event.target)) this.close();
+      };
+      const escape = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          this.close();
+        }
+      };
+      window.addEventListener('resize', position);
+      document.addEventListener('pointerdown', outside);
+      document.addEventListener('keydown', escape);
+      onCleanup(() => {
+        if (panel.isConnected && panel.matches(':popover-open')) panel.hidePopover();
+        window.removeEventListener('resize', position);
+        document.removeEventListener('pointerdown', outside);
+        document.removeEventListener('keydown', escape);
+      });
+    });
     effect((onCleanup) => {
       const root = this.viewport(),
         turns = this.turns();
@@ -129,11 +167,10 @@ export class ConversationOutline {
         frame = requestAnimationFrame(() => {
           const top = root.getBoundingClientRect().top + 90;
           let index = 0;
-          for (let i = 0; i < turns.length; i++) {
-            const node = root.querySelector<HTMLElement>(
-              `[data-message-id="${CSS.escape(turns[i].id)}"]`,
-            );
-            if (node && node.getBoundingClientRect().top <= top) index = i;
+          const nodes = root.querySelectorAll<HTMLElement>('.message.user');
+          for (let i = 0; i < nodes.length; i++) {
+            if (nodes[i].getBoundingClientRect().top <= top) index = i;
+            else break;
           }
           this.active.set(index);
         });
@@ -150,6 +187,14 @@ export class ConversationOutline {
       });
     });
     inject(DestroyRef).onDestroy(() => this.cancelLeave());
+  }
+  excerpt(value: string) {
+    return value
+      .replace(/```[\s\S]*?```/g, '程式碼區塊')
+      .replace(/[*_#>`]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 240);
   }
   hover(event: PointerEvent, index: number) {
     if (event.pointerType === 'mouse') {

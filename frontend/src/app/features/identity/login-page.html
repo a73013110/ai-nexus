@@ -1,17 +1,18 @@
 <main class="login-workspace">
-  <section class="login-intro" aria-label="AI Nexus">
-    <div class="login-brand">
-      <svg class="login-monogram" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <path d="M9 24V8l14 16V8M5 8h4M23 24h4" stroke="currentColor" stroke-width="1.8" /></svg
-      ><span>AI <strong>Nexus</strong><small>INTERNAL WORKSPACE</small></span>
+  <section class="login-intro" [class.intro-ready]="introReady()" aria-label="AI Nexus">
+    <div class="login-brand" [attr.aria-hidden]="!introReady()">
+      <span #brandAnchor class="login-mark-anchor" aria-hidden="true"></span>
+      <span class="login-reveal">AI <strong>Nexus</strong><small>INTERNAL WORKSPACE</small></span>
     </div>
-    <nx-fourier-mark />
-    <div class="login-intro-copy">
-      <span class="login-eyebrow">你的工作，從這裡接續</span>
-      <h1>讓想法有個<br />專注的空間。</h1>
-      <p>整理資訊、打磨文字，和 AI 一起推進手上的工作。</p>
+    <nx-fourier-mark [anchor]="brandAnchor" (finishedChange)="introReady.set($event)" />
+    <div class="login-intro-copy" [attr.aria-hidden]="!introReady()">
+      <span class="login-eyebrow login-reveal">你的工作，從這裡接續</span>
+      <h1 class="login-reveal">讓想法有個<br />專注的空間。</h1>
+      <p class="login-reveal">整理資訊、打磨文字，和 AI 一起推進手上的工作。</p>
     </div>
-    <span class="login-footnote">公司帳號 · 個人工作空間</span>
+    <span class="login-footnote login-reveal" [attr.aria-hidden]="!introReady()"
+      >公司帳號 · 個人工作空間</span
+    >
   </section>
   <section class="login-panel" aria-labelledby="login-heading">
     <div class="login-content">
@@ -55,7 +56,7 @@
           {{ submitting() ? '正在登入…' : '登入工作台' }}
         </button>
       </form>
-      <p class="login-privacy">對話預設只屬於你。登入後可接續自己的歷史。</p>
+      <p class="login-privacy">以公司身分登入，接續自己的對話。管理員的授權檢視會留下稽核紀錄。</p>
     </div>
   </section>
 </main>

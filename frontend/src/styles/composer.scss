@@ -26,20 +26,73 @@
 .composer textarea {
   display: block;
   border: 0;
-  padding: 0;
+  padding: 0 44px 0 0;
   margin: 0;
   width: 100%;
   resize: none;
   min-height: var(--composer-input-min);
   max-height: var(--composer-input-max);
   font-size: var(--text-body);
-  line-height: 1.8;
+  line-height: var(--line-reading);
   background: transparent;
   outline: none;
   overflow-y: auto;
 }
 .composer textarea::placeholder {
   color: var(--muted);
+}
+.composer-expand {
+  position: absolute;
+  right: var(--p-space-2);
+  top: var(--p-space-1);
+  color: var(--muted);
+}
+.composer-expand nx-icon {
+  width: 15px;
+  height: 15px;
+}
+.platform-dialog.focus-composer-dialog {
+  --dialog-width: 60rem;
+  display: none;
+  height: min(720px, calc(100dvh - 3rem));
+  overflow: hidden;
+}
+.platform-dialog.focus-composer-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+.focus-composer-dialog textarea {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  padding: var(--p-space-4);
+  resize: none;
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  color: var(--ink);
+  background: var(--canvas);
+  font-size: var(--text-body);
+  line-height: var(--line-reading);
+}
+.focus-composer-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+  padding-top: var(--p-space-4);
+}
+.focus-composer-footer > span {
+  flex: 1;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+@media (max-width: 600px) {
+  .focus-composer-footer > span {
+    flex-basis: 100%;
+  }
+  .focus-composer-footer button {
+    flex: 1;
+  }
 }
 .composer-bottom {
   display: flex;

@@ -2,14 +2,7 @@
   <button class="icon-button mobile-sidebar-close" aria-label="關閉對話導覽" (click)="close.emit()">
     <nx-icon name="close" />
   </button>
-  <a class="brand" routerLink="/chat" (click)="navigate.emit()" aria-label="AI Nexus 新對話">
-    <span class="brand-symbol"
-      ><svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
-        <path d="M9 24V8l14 16V8M5 8h4M23 24h4" stroke="currentColor" stroke-width="1.8" /></svg
-    ></span>
-    <span>AI <strong>Nexus</strong><small>公司工作台</small></span>
-  </a>
-  <nx-workspace-navigation [compact]="true" />
+  <nx-workspace-brand />
   @if (store.hasChatAccess()) {
     <a routerLink="/chat" class="new-chat" (click)="navigate.emit()"
       ><nx-icon name="plus" />新對話<span class="new-chat-hint">開始</span></a
@@ -129,48 +122,7 @@
     </nav>
   }
   <div class="sidebar-bottom">
-    <div class="workspace-label">
-      <span class="workspace-dot"></span>個人 AI 工作空間<span>V1</span>
-    </div>
-    <details class="profile-menu" nxDisclosure>
-      <summary>
-        <span class="avatar">{{ store.me()?.displayName?.slice(0, 1) || 'N' }}</span
-        ><span class="profile-name"
-          ><strong>{{ store.me()?.displayName || 'Windows 驗證' }}</strong
-          ><small>{{ store.me()?.account || '等待伺服器連線' }}</small></span
-        ><nx-icon name="more" />
-      </summary>
-      <div class="preferences-panel">
-        <h2>工作台偏好</h2>
-        <nx-select
-          label="外觀"
-          [value]="themes.preferences().theme"
-          [options]="themeOptions"
-          (valueChange)="themeChanged($event)"
-        />
-        <a class="quiet-button" routerLink="/settings"><nx-icon name="sliders" />全部個人設定</a>
-        <label class="check-label"
-          ><input
-            type="checkbox"
-            [formField]="preferencesForm.reducedMotion"
-            (change)="savePreferences()"
-          />減少動態效果</label
-        >
-        <p>使用公司 AD 身分辨識。</p>
-        @if (store.me()?.access; as access) {
-          <div class="access-summary">
-            @for (role of access.roles; track role.id) {
-              <span>{{ role.name }}</span>
-            }
-            @for (feature of access.features; track feature.id) {
-              <span class="feature-badge">{{ feature.name }}</span>
-            }
-          </div>
-        }
-        @if (store.auth.session()?.mode === 'Ldap') {
-          <button class="quiet-button" type="button" (click)="store.logout()">登出工作台</button>
-        }
-      </div>
-    </details>
+    <nx-workspace-navigation [collapsible]="true" (activated)="navigate.emit()" />
+    <nx-account-menu />
   </div>
 </aside>

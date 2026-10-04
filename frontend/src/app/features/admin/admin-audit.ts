@@ -1,0 +1,145 @@
+import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import { AdminApi } from './admin-api';
+import type { AuditEntry } from '../../core/api/types';
+import { SearchField } from '../../shared/ui/search-field';
+import { Select } from '../../shared/ui/select';
+import { Icon } from '../../shared/ui/icon';
+import { downloadBlob } from '../../shared/browser/download';
+import { toCsv } from '../../shared/browser/csv';
+import { formatDate } from '../../shared/browser/format';
+import { auditAction, auditChanges, auditResource } from './audit-presentation';
+
+@Component({
+  selector: 'nx-admin-audit',
+  imports: [SearchField, Select, Icon],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  templateUrl: './admin-audit.html',
+})
+export class AdminAudit {
+  readonly rows = signal<AuditEntry[]>([]);
+  readonly loading = signal(false);
+  readonly more = signal(false);
+  readonly error = signal('');
+  readonly search = signal('');
+  readonly action = signal('');
+  readonly result = signal('');
+  readonly from = signal('');
+  readonly until = signal('');
+  readonly date = formatDate;
+  readonly label = auditAction;
+  readonly changes = auditChanges;
+  readonly resource = auditResource;
+  readonly actions = [
+    { value: '', label: '所有動作' },
+    { value: 'admin.', label: '平台管理' },
+    { value: 'admin.user_roles', label: '使用者角色' },
+    { value: 'admin.role', label: '角色授權' },
+    { value: 'admin.group', label: '群組與模型政策' },
+    { value: 'admin.feature', label: '功能異動' },
+    { value: 'admin.conversation_read', label: '對話內容檢視' },
+    { value: 'admin.user_usage_read', label: '使用者用量檢視' },
+  ];
+  readonly results = [
+    { value: '', label: '所有結果' },
+    { value: 'saved', label: '已儲存' },
+    { value: 'read', label: '已檢視' },
+    { value: 'failed', label: '未完成／拒絕' },
+  ];
+  private readonly api = inject(AdminApi);
+  private version = 0;
+  private timer?: ReturnType<typeof setTimeout>;
+  constructor() {
+    void this.load();
+    inject(DestroyRef).onDestroy(() => {
+      ++this.version;
+      clearTimeout(this.timer);
+    });
+  }
+  searchChanged(value: string) {
+    this.search.set(value);
+    ++this.version;
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => void this.load(), 250);
+  }
+  filter(key: 'action' | 'result' | 'from' | 'until', value: string) {
+    this[key].set(value);
+    clearTimeout(this.timer);
+    void this.load();
+  }
+  async load(append = false) {
+    if (append && this.loading()) return;
+    const version = ++this.version;
+    this.loading.set(true);
+    this.error.set('');
+    if (!append) {
+      this.rows.set([]);
+      this.more.set(false);
+    }
+    try {
+      const filters = {
+        search: this.search(),
+        action: this.action(),
+        result: this.result(),
+        from: this.from() ? this.from() + 'T00:00:00+08:00' : '',
+        until: this.until() ? this.nextDay(this.until()) + 'T00:00:00+08:00' : '',
+      };
+      const rows = await this.api.audit(append ? this.rows().at(-1)?.id : undefined, filters);
+      if (version !== this.version) return;
+      this.rows.update((old) => (append ? [...old, ...rows] : rows));
+      this.more.set(rows.length === 100);
+    } catch (error) {
+      if (version === this.version)
+        this.error.set(error instanceof Error ? error.message : '無法載入稽核，請重試。');
+    } finally {
+      if (version === this.version) this.loading.set(false);
+    }
+  }
+  export() {
+    const rows = this.rows();
+    downloadBlob(
+      new Blob(
+        [
+          toCsv([
+            [
+              '紀錄 ID',
+              '時間（台北）',
+              '操作者',
+              '動作',
+              '資源 ID',
+              '資源識別碼',
+              '結果',
+              '異動資訊',
+            ],
+            ...rows.map((row) => [
+              row.id,
+              this.date(row.at),
+              row.actor,
+              row.action,
+              row.resourceId,
+              this.resource(row.detailsJson),
+              row.result,
+              row.detailsJson,
+            ]),
+          ]),
+        ],
+        { type: 'text/csv;charset=utf-8' },
+      ),
+      `AI-Nexus-稽核-${new Date().toISOString().slice(0, 10)}-${rows.length}筆`,
+      'csv',
+    );
+  }
+  status(value: string | null | undefined) {
+    return value === 'saved'
+      ? '已儲存'
+      : value === 'read'
+        ? '已檢視'
+        : value === 'granted'
+          ? '已授權'
+          : value || '已記錄';
+  }
+  private nextDay(day: string) {
+    const date = new Date(day + 'T00:00:00Z');
+    date.setUTCDate(date.getUTCDate() + 1);
+    return date.toISOString().slice(0, 10);
+  }
+}

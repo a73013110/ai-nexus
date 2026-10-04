@@ -19,7 +19,9 @@ test("real local server serves CSP-compatible assets and explicit unconfigured s
   await expect(page.locator(".sidebar")).toHaveCSS("width", "264px");
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("本機草稿");
   await expect(page.getByRole("button", { name: "送出訊息" })).toBeDisabled();
-  await expect(page.getByText("Windows 驗證", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "登入者選單", exact: true }),
+  ).toBeVisible();
   expect(errors).toEqual([]);
   await page.screenshot({
     path: "artifacts/screenshots/local-unconfigured.png",

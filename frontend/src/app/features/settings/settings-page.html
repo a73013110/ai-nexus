@@ -1,7 +1,8 @@
-<a class="skip-link" href="#settings-main">跳到設定內容</a>
-<div class="settings-layout">
+<div class="settings-layout" [class.embedded]="embedded()">
   <aside class="settings-sidebar" aria-label="設定分類">
-    <a class="settings-back" routerLink="/chat"><nx-icon name="left" />返回工作台</a>
+    @if (!embedded()) {
+      <a class="settings-back" routerLink="/chat"><nx-icon name="left" />返回工作台</a>
+    }
     <h2>設定</h2>
     <label class="settings-search"
       ><nx-icon name="search" /><input
@@ -35,6 +36,16 @@
   </aside>
   <main id="settings-main" class="settings-main">
     <header class="settings-page-header">
+      @if (embedded()) {
+        <button
+          class="icon-button settings-close"
+          aria-label="關閉設定"
+          type="button"
+          (click)="closeRequested.emit()"
+        >
+          <nx-icon name="close" />
+        </button>
+      }
       <span class="panel-eyebrow">AI NEXUS · 個人偏好</span>
       <h1>{{ currentSection().name }}</h1>
       <p>讓工作台符合你的閱讀與工作習慣。</p>

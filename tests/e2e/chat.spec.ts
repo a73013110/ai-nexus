@@ -5,6 +5,7 @@ import {
   settleEntrance,
   chooseSelect,
 } from "./fixtures";
+import { openSettings } from "./fixtures";
 
 test("blank desktop workspace, real forms, keyboard and Markdown copy", async ({
   page,
@@ -185,15 +186,16 @@ test("dark theme, reduced motion and narrow viewport remain usable", async ({
   const fixture = new ApiFixture();
   await fixture.attach(page);
   await page.goto("/chat");
-  await page.locator(".profile-menu summary").click();
-  await chooseSelect(page, "外觀", "深色");
+  await openSettings(page);
+  await chooseSelect(page, "主題", "深色");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await page.getByRole("checkbox", { name: "減少動態效果" }).check();
+  await page.getByRole("switch", { name: "減少動態效果" }).click();
   await expect(page.locator("html")).toHaveAttribute(
     "data-reduced-motion",
     "true",
   );
-  await page.locator(".profile-menu summary").click();
+  await page.getByRole("button", { name: "儲存變更" }).click();
+  await page.getByRole("button", { name: "關閉設定", exact: true }).click();
   await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/desktop-dark.png",
@@ -241,22 +243,26 @@ test("mobile drawer supports Escape and restores visible keyboard focus", async 
   await expect(page.locator(".composer")).toHaveCSS("outline-width", "2px");
 });
 
-test("failed preference save restores the last confirmed theme and can be retried", async ({
+test("failed preference save retains editable changes and can be retried", async ({
   page,
 }) => {
   const fixture = new ApiFixture();
   await fixture.attach(page);
   await page.goto("/chat");
   await expect(page.getByText("測試使用者", { exact: true })).toBeVisible();
-  await page.locator(".profile-menu summary").click();
-  await chooseSelect(page, "外觀", "深色");
+  await openSettings(page);
+  await chooseSelect(page, "主題", "深色");
+  await page.getByRole("button", { name: "儲存變更" }).click();
   await expect.poll(() => fixture.preferences.theme).toBe("dark");
   fixture.failPreferencesOnce = true;
-  await chooseSelect(page, "外觀", "淺色");
+  await chooseSelect(page, "主題", "淺色");
+  await page.getByRole("button", { name: "儲存變更" }).click();
   await expect(page.getByRole("alert")).toContainText("偏好設定保存失敗。");
-  await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.getByRole("combobox", { name: "外觀", exact: true })).toContainText("深色");
-  await chooseSelect(page, "外觀", "淺色");
+  expect(fixture.preferences.theme).toBe("dark");
+  await expect(
+    page.getByRole("combobox", { name: "主題", exact: true }),
+  ).toContainText("淺色");
+  await page.getByRole("button", { name: "儲存變更" }).click();
   await expect.poll(() => fixture.preferences.theme).toBe("light");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 });

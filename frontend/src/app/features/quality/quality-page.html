@@ -203,14 +203,12 @@
       [name]="set.resource.name"
     />
   } @else {
-    <label class="platform-search"
-      ><nx-icon name="search" /><input
-        type="search"
-        aria-label="搜尋評測集"
-        placeholder="搜尋評測集…"
-        [value]="filter()"
-        (input)="filter.set($any($event.target).value)"
-    /></label>
+    <nx-search-field
+      class="list-search"
+      label="搜尋評測集"
+      [value]="filter()"
+      (valueChange)="filter.set($event)"
+    />
     <div class="platform-grid">
       @for (set of visible(); track set.resource.id) {
         <a class="platform-card" [routerLink]="['/quality', set.resource.id]"

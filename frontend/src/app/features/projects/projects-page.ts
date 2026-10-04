@@ -31,10 +31,20 @@ import { WorkspaceApi } from '../workspace/workspace-api';
 import { KnowledgeApi } from '../knowledge/knowledge-api';
 import { ProjectsApi } from './projects-api';
 import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
+import { SearchField } from '../../shared/ui/search-field';
 
 @Component({
   selector: 'nx-projects-page',
-  imports: [FeaturePage, Icon, RouterLink, FileDrop, ConfirmDialog, ResourceSharing, TextTools],
+  imports: [
+    FeaturePage,
+    Icon,
+    RouterLink,
+    FileDrop,
+    ConfirmDialog,
+    ResourceSharing,
+    TextTools,
+    SearchField,
+  ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './projects-page.html',

@@ -19,6 +19,8 @@ import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { InlineTitle } from '../../shared/ui/inline-title';
 import { JobProgress } from '../../shared/ui/job-progress';
 import { MarkdownView } from '../../shared/ui/markdown-view';
+import { Checkbox } from '../../shared/ui/checkbox';
+import { SearchField } from '../../shared/ui/search-field';
 
 const sampleTitle = '把想法，整理成可用的成果';
 const jobStates: SelectOption[] = [
@@ -42,6 +44,8 @@ const jobStates: SelectOption[] = [
     InlineTitle,
     JobProgress,
     MarkdownView,
+    Checkbox,
+    SearchField,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -56,6 +60,8 @@ export class DesignPage {
   readonly title = signal(sampleTitle);
   readonly titleVersion = signal(0);
   readonly selection = signal('standard');
+  readonly checked = signal(true);
+  readonly search = signal('');
   readonly notice = signal('');
   readonly states = jobStates;
   readonly demo = signal<Job>({

@@ -1,0 +1,177 @@
+<dialog
+  #dialog
+  class="platform-dialog admin-inspector"
+  aria-labelledby="inspector-title"
+  (close)="closed.emit()"
+>
+  <header class="dialog-heading">
+    <div>
+      <span class="panel-eyebrow">使用者活動 · 唯讀</span>
+      <h2 id="inspector-title">{{ user()?.displayName }}</h2>
+      <p>{{ user()?.account }}</p>
+    </div>
+    <button class="icon-button" aria-label="關閉使用者活動" (click)="close()">
+      <nx-icon name="close" />
+    </button>
+  </header>
+  @if (overview(); as stats) {
+    <div class="inspector-stats" aria-label="最近三十天 AI 用量">
+      <div>
+        <span>30 天生成</span><strong>{{ format(stats.usage.requests) }}</strong
+        ><small>{{ stats.usage.completed }} 完成 · {{ stats.usage.failed }} 失敗</small>
+      </div>
+      <div>
+        <span>回報 tokens</span
+        ><strong>{{ format(stats.usage.inputTokens + stats.usage.outputTokens) }}</strong
+        ><small
+          >輸入 {{ format(stats.usage.inputTokens) }} · 輸出
+          {{ format(stats.usage.outputTokens) }}</small
+        >
+      </div>
+      <div>
+        <span>所有對話／附件</span
+        ><strong>{{ format(stats.conversations) }} <small>段對話</small></strong
+        ><small>附件 {{ bytes(stats.usage.attachmentBytes) }}</small>
+      </div>
+    </div>
+    <div class="inspector-kind-list">
+      @for (item of stats.kinds; track item.kind) {
+        <span>{{ kind(item.kind) }} {{ format(item.requests) }} 次</span>
+      }
+      <small>僅計算模型實際回報用量；未回報的 token 不估算。</small>
+    </div>
+  }
+  <p class="inspector-audit-note">
+    <nx-icon name="shield" />檢視行為會寫入稽核。對話包含各分支版本；附件僅提供資訊。
+  </p>
+  @if (error()) {
+    <p role="alert" class="inline-error">{{ error() }}</p>
+  }
+  <div class="inspector-body">
+    <aside class="inspector-list" aria-label="使用者對話清單">
+      <nx-search-field
+        label="搜尋使用者對話"
+        placeholder="搜尋標題與對話內容"
+        [value]="search()"
+        (valueChange)="searchChanged($event)"
+      />
+      <nx-checkbox
+        label="包含已刪除對話"
+        [checked]="includeDeleted()"
+        (checkedChange)="deletedChanged($event)"
+      />
+      @if (loading()) {
+        <p role="status" class="form-note">正在取得對話…</p>
+      }
+      <div class="inspector-conversations">
+        @for (conversation of conversations()?.items || []; track conversation.id) {
+          <button
+            class="inspector-conversation"
+            [attr.aria-current]="detail()?.conversation?.id === conversation.id ? 'true' : null"
+            [attr.aria-label]="'檢視對話：' + conversation.title"
+            (click)="read(conversation.id)"
+          >
+            <strong>{{ conversation.title }}</strong
+            ><small>{{ date(conversation.updatedAt) }} · {{ conversation.messages }} 則</small>
+            @if (conversation.isDeleted || conversation.isArchived) {
+              <span>{{ conversation.isDeleted ? '已刪除' : '已封存' }}</span>
+            }
+          </button>
+        } @empty {
+          @if (!loading()) {
+            <p class="form-note">沒有符合的對話。</p>
+          }
+        }
+      </div>
+      @if (conversations(); as list) {
+        <div class="inspector-pagination">
+          <button
+            class="icon-button"
+            aria-label="上一頁對話"
+            [disabled]="loading() || !list.offset"
+            (click)="loadList(list.offset - 50)"
+          >
+            <nx-icon name="left" /></button
+          ><span
+            >{{ list.total ? list.offset + 1 : 0 }}–{{ list.offset + list.items.length }} /
+            {{ list.total }}</span
+          ><button
+            class="icon-button"
+            aria-label="下一頁對話"
+            [disabled]="loading() || list.offset + 50 >= list.total"
+            (click)="loadList(list.offset + 50)"
+          >
+            <nx-icon name="chevron" />
+          </button>
+        </div>
+      }
+    </aside>
+    <section
+      class="inspector-reading"
+      aria-label="唯讀對話內容"
+      aria-live="polite"
+      [attr.aria-busy]="reading()"
+    >
+      @if (readError()) {
+        <p class="inline-error" role="alert">{{ readError() }}</p>
+      }
+      @if (detail(); as data) {
+        <header class="inspector-conversation-heading">
+          <h3>{{ data.conversation.title }}</h3>
+          <small>{{ data.ownerName }} · 共 {{ data.total }} 則 · 所有版本按時間排列</small>
+        </header>
+        @if (data.systemInstruction) {
+          <details class="inspector-instructions">
+            <summary>對話指示</summary>
+            <p>{{ data.systemInstruction }}</p>
+          </details>
+        }
+        @for (message of data.messages; track message.id) {
+          <article
+            class="inspector-message"
+            [class.inspector-user-message]="message.role === 'user'"
+          >
+            <header>
+              <strong>{{ message.role === 'user' ? data.ownerName + ' 的提問' : 'AI 回覆' }}</strong
+              ><small>{{ date(message.createdAt) }} · {{ message.status }}</small>
+            </header>
+            @if (message.role === 'user') {
+              <p class="inspector-input">{{ message.content }}</p>
+            } @else {
+              <nx-markdown-view [content]="message.content" />
+            }
+            @if (message.attachments.length) {
+              <div class="inspector-attachments">
+                @for (file of message.attachments; track file.id) {
+                  <span
+                    ><nx-icon name="paperclip" />{{ file.fileName }} · {{ bytes(file.size) }}</span
+                  >
+                }
+              </div>
+            }
+            <small class="inspector-version"
+              >訊息 {{ message.id.slice(0, 8) }}
+              @if (message.parentId) {
+                · 上一則 {{ message.parentId.slice(0, 8) }}
+              }
+            </small>
+          </article>
+        }
+        @if (data.messages.length < data.total) {
+          <button
+            class="secondary-button"
+            [disabled]="reading()"
+            (click)="read(data.conversation.id, true)"
+          >
+            {{ reading() ? '載入中…' : '載入後續訊息' }}
+          </button>
+        }
+      } @else {
+        <div class="inspector-empty">
+          <nx-icon name="lines" />
+          <p>{{ reading() ? '正在讀取對話…' : '選取左側對話，查看完整內容。' }}</p>
+        </div>
+      }
+    </section>
+  </div>
+</dialog>

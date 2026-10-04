@@ -1,6 +1,7 @@
 @use './tokens';
 @use './base';
 @use './styles/controls';
+@use './styles/forms';
 @use './styles/shell';
 @use './styles/sidebar';
 @use './styles/welcome';
@@ -9,6 +10,8 @@
 @use './styles/select';
 @use './styles/settings';
 @use './styles/platform';
+@use './styles/admin';
+@use './styles/navigation';
 @use './styles/knowledge';
 @use './styles/artifacts';
 @use './styles/projects';

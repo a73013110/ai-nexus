@@ -86,14 +86,6 @@ nx-chat-message {
   line-height: var(--line-reading);
   overflow-wrap: anywhere;
 }
-.waiting-copy {
-  color: var(--secondary);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: var(--text-caption);
-  padding: 10px 0 18px;
-}
 .message-actions {
   display: flex;
   align-items: center;
@@ -156,23 +148,4 @@ nx-chat-message {
 }
 .message.search-current {
   box-shadow: -3px 0 0 var(--accent);
-}
-.waiting-copy {
-  gap: var(--p-space-3);
-  min-height: 4.5rem;
-}
-.waiting-copy small {
-  display: block;
-  font-size: var(--text-caption);
-  color: var(--muted);
-  margin-top: var(--p-space-1);
-}
-.waiting-graphic {
-  display: grid;
-  place-items: center;
-  width: 3.5rem;
-  height: 3.5rem;
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
-  background: var(--canvas);
 }

@@ -1,0 +1,135 @@
+nx-checkbox {
+  display: block;
+  min-width: 0;
+}
+.selection-control {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  min-height: var(--button-target);
+  margin: 0;
+  padding: var(--p-space-3);
+  border: 1px solid transparent;
+  border-radius: var(--p-radius-md);
+  cursor: pointer;
+  color: var(--ink);
+  transition:
+    background var(--motion),
+    border-color var(--motion);
+}
+.selection-control:hover:not(.is-disabled) {
+  background: var(--hover);
+}
+.selection-control.is-selected {
+  background: var(--accent-soft);
+  border-color: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+.selection-box {
+  position: relative;
+  display: block;
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+.selection-box input[type='checkbox'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+.selection-indicator {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border: 1.5px solid var(--muted);
+  border-radius: 5px;
+  background: var(--surface);
+  pointer-events: none;
+}
+.selection-indicator nx-icon {
+  width: 14px;
+  height: 14px;
+  opacity: 0;
+}
+.selection-box input:checked + .selection-indicator {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.selection-box input:checked + .selection-indicator nx-icon {
+  opacity: 1;
+}
+.selection-box input:focus-visible + .selection-indicator {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.selection-control.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.selection-copy {
+  min-width: 0;
+}
+.selection-copy strong {
+  display: block;
+  font-size: var(--text-label);
+  font-weight: 500;
+  line-height: var(--line-ui);
+  overflow-wrap: anywhere;
+}
+.selection-copy small {
+  display: block;
+  font-size: var(--text-caption);
+  color: var(--secondary);
+  margin-top: 2px;
+  line-height: 1.5;
+}
+nx-search-field {
+  display: block;
+  width: min(100%, 28rem);
+  min-width: 0;
+}
+.list-search {
+  margin-bottom: var(--p-space-4);
+}
+.search-field {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--button-target);
+  padding: 0 var(--p-space-3);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+}
+.search-field > nx-icon {
+  color: var(--muted);
+  width: 18px;
+  height: 18px;
+}
+.search-field input[type='search'] {
+  border: 0;
+  outline: none;
+  background: transparent;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  min-height: var(--button-target);
+  font-size: var(--text-ui);
+}
+.search-field input::-webkit-search-cancel-button {
+  display: none;
+}
+.search-field:focus-within {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 12%, transparent);
+}
+.search-field .icon-button {
+  width: var(--button-target);
+  height: var(--button-target);
+  margin-right: -0.5rem;
+}

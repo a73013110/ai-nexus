@@ -136,8 +136,8 @@ test("logout clears private workspace state while drafts restore only for their 
   await input.fill("Alice 的私人草稿");
   await upload(page, "private.txt", Buffer.from("private draft"));
   async function logout() {
-    await page.locator(".profile-menu summary").click();
-    await page.getByRole("button", { name: "登出工作台" }).click();
+    await page.getByRole("button", { name: "登入者選單", exact: true }).click();
+    await page.getByRole("menuitem", { name: "登出工作台" }).click();
     await expect(
       page.getByRole("heading", { name: "登入工作台" }),
     ).toBeVisible();
@@ -189,15 +189,18 @@ test("the composer uses the server character limit rather than a fixed local con
   await input.fill("a".repeat(500));
   await expect(page.getByRole("button", { name: "送出訊息" })).toBeEnabled();
 });
-const upload = (
+const upload = async (
   page: Page,
   name: string,
   buffer: Buffer,
   mimeType = "text/plain",
-) =>
-  page
-    .locator("input[type=file][multiple]")
-    .setInputFiles({ name, mimeType, buffer });
+) => {
+  const chooser = page.waitForEvent("filechooser");
+  await page
+    .getByRole("button", { name: "加入文件或圖片", exact: true })
+    .click();
+  await (await chooser).setFiles({ name, mimeType, buffer });
+};
 async function send(page: Page, text = "請分析目前文件") {
   await page.getByRole("textbox", { name: "傳送訊息", exact: true }).fill(text);
   await page.getByRole("button", { name: "送出訊息" }).click();

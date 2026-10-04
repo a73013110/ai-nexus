@@ -134,7 +134,7 @@ test("theme previews have readable contrast, full navigation and usable narrow l
   }
   await page.getByRole("button", { name: "匯出目前 tokens" }).click();
   const nav = page.getByRole("navigation", { name: "工作台功能" });
-  await expect(nav.getByRole("link")).toHaveCount(10);
+  await expect(nav.getByRole("link")).toHaveCount(9);
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator(".feature-main").evaluate((el) => (el.scrollTop = 0));
   await settleEntrance(page);

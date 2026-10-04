@@ -102,6 +102,23 @@
           </div>
           <p class="form-note">彈出層可跨越捲動區及確認視窗，提供停用狀態與目前選項。</p>
         </section>
+        <section class="platform-card" aria-labelledby="design-form-heading">
+          <span class="panel-eyebrow">表單與選取</span>
+          <h2 id="design-form-heading">看得清楚，也容易點選</h2>
+          <nx-search-field
+            label="示範搜尋"
+            placeholder="搜尋文件與對話"
+            [value]="search()"
+            (valueChange)="search.set($event)"
+          />
+          <nx-checkbox
+            label="開啟此項授權"
+            description="整個項目都可點選，保留原生鍵盤操作。"
+            [checked]="checked()"
+            (checkedChange)="checked.set($event)"
+          />
+          <nx-checkbox label="目前無法調整" description="停用狀態" [disabled]="true" />
+        </section>
         <section class="platform-card" aria-labelledby="design-title-heading">
           <span class="panel-eyebrow">直接編輯</span>
           <h2 id="design-title-heading">在看到的地方修改</h2>

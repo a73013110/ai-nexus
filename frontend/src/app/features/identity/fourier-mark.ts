@@ -6,6 +6,8 @@ import {
   ElementRef,
   effect,
   inject,
+  input,
+  output,
   signal,
   viewChild,
 } from '@angular/core';
@@ -39,11 +41,10 @@ const duration = 4200;
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="fourier-stage">
-      <canvas #canvas aria-hidden="true"></canvas
-      ><span class="fourier-coordinate" aria-hidden="true">N / 01</span>
+      <canvas #canvas aria-hidden="true"></canvas>
     </div>
     <div class="fourier-caption">
-      <span>一道訊號，連起思考。</span
+      <span [class.fourier-copy-complete]="complete()">一道訊號，連起思考。</span
       ><button
         type="button"
         class="icon-button"
@@ -52,11 +53,13 @@ const duration = 4200;
         [attr.title]="complete() ? '重播標誌動畫' : '跳過標誌動畫'"
         (click)="complete() ? play() : finish()"
       >
-        <nx-icon [name]="complete() ? 'repeat' : 'stop'" />
+        <nx-icon [name]="complete() ? 'refresh' : 'chevron'" />
       </button>
     </div>`,
 })
 export class FourierMark {
+  readonly anchor = input<HTMLElement | null>(null);
+  readonly finishedChange = output<boolean>();
   readonly themes = inject(ThemeService);
   readonly complete = signal(false);
   private readonly canvas = viewChild.required<ElementRef<HTMLCanvasElement>>('canvas');
@@ -69,6 +72,7 @@ export class FourierMark {
   private signal = '';
   private line = '';
   private visible = true;
+  private destination = { x: 40, y: 40 };
   constructor() {
     const destroy = inject(DestroyRef);
     effect(() => {
@@ -83,10 +87,18 @@ export class FourierMark {
       this.ctx = element.getContext('2d') ?? undefined;
       if (!this.ctx) {
         this.complete.set(true);
+        this.finishedChange.emit(true);
         return;
       }
       const resize = new ResizeObserver(() => {
         this.size = Math.min(element.clientWidth, element.clientHeight);
+        const anchor = this.anchor()?.getBoundingClientRect(),
+          bounds = element.getBoundingClientRect();
+        if (anchor)
+          this.destination = {
+            x: anchor.left - bounds.left + anchor.width / 2,
+            y: anchor.top - bounds.top + anchor.height / 2,
+          };
         const dpr = Math.min(devicePixelRatio || 1, 2);
         element.width = Math.round(element.clientWidth * dpr);
         element.height = Math.round(element.clientHeight * dpr);
@@ -132,6 +144,7 @@ export class FourierMark {
     this.elapsed = 0;
     this.previous = 0;
     this.complete.set(false);
+    this.finishedChange.emit(false);
     if (this.themes.reducedMotion()) {
       this.finish();
       return;
@@ -142,6 +155,7 @@ export class FourierMark {
     cancelAnimationFrame(this.frame);
     this.elapsed = duration;
     this.complete.set(true);
+    this.finishedChange.emit(true);
     this.paint(duration);
   }
   private tick(time: number) {
@@ -160,18 +174,20 @@ export class FourierMark {
       h = element.clientHeight;
     const progress = Math.min(1, elapsed / 3100),
       settle = Math.min(1, Math.max(0, (elapsed - 3100) / 1100));
-    const fade = 1 - settle * settle * (3 - 2 * settle),
-      unit = this.size * (0.24 - 0.015 * settle),
-      cx = w / 2,
-      cy = h / 2;
+    const eased = settle * settle * (3 - 2 * settle);
+    const fade = 1 - eased;
+    const destination = this.destination;
+    const unit = this.size * 0.24 * fade + 16 * eased,
+      cx = (w / 2) * fade + destination.x * eased,
+      cy = (h / 2) * fade + destination.y * eased;
     ctx.clearRect(0, 0, w, h);
     ctx.lineWidth = 1;
     ctx.strokeStyle = this.line;
-    ctx.globalAlpha = 0.65;
+    ctx.globalAlpha = 0.5 * fade;
     for (let i = 0; i < 4; i++) {
       const r = this.size * (0.17 + i * 0.09);
       ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.arc(w / 2, h / 2, r, 0, Math.PI * 2);
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
@@ -224,7 +240,7 @@ export class FourierMark {
       ctx.arc(x, y, 3.5, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.globalAlpha = 0.8;
+    ctx.globalAlpha = 0.8 * fade;
     ctx.fillStyle = this.signal;
     [
       [-0.78, -0.82],

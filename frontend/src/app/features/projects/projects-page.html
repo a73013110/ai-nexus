@@ -21,12 +21,11 @@
   } @else {
     <div class="project-workspace">
       <aside class="project-list">
-        <input
-          type="search"
-          aria-label="搜尋專案"
+        <nx-search-field
+          label="搜尋專案"
           placeholder="尋找專案"
           [value]="filter()"
-          (input)="filter.set($any($event.target).value)"
+          (valueChange)="filter.set($event)"
         /><button
           class="quiet-button"
           [attr.aria-pressed]="archived()"

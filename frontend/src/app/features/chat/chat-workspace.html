@@ -81,11 +81,6 @@
           />
         }
       </div>
-      <nx-conversation-outline
-        [messages]="store.visibleMessages()"
-        [viewport]="viewport"
-        (navigated)="following.set(false)"
-      />
     </header>
     @if (findOpen()) {
       <nx-conversation-find
@@ -112,73 +107,80 @@
         }
       </div>
     }
-    <div
-      class="conversation-viewport"
-      #viewport
-      nxTextSelection
-      (textSelected)="paragraph.set($event)"
-      (scroll)="onScroll()"
-    >
-      @if (store.loadingConversation()) {
-        <div class="conversation-loading" role="status">正在開啟對話…</div>
-      } @else if (!store.visibleMessages().length) {
-        <section class="empty-state" animate.enter="empty-enter">
-          <div class="empty-heading">
-            <div class="empty-eyebrow"><span class="tiny-rule"></span>你的 AI 工作空間</div>
-            <svg class="nexus-emblem" viewBox="0 0 80 80" fill="none" aria-hidden="true">
-              <circle class="emblem-orbit" cx="40" cy="40" r="32" />
-              <path class="emblem-link" d="M20 56V24l40 32V24M12 24h8M60 56h8M20 40h40" />
-              <circle class="emblem-node" cx="20" cy="24" r="3" />
-              <circle class="emblem-node" cx="60" cy="56" r="3" />
-              <circle class="emblem-point" cx="40" cy="40" r="4" />
-            </svg>
-          </div>
-          <h2>今天，從哪件事開始？</h2>
-          <p>把想法放在這裡，讓下一步逐漸清晰。<br />也可以加入文件或圖片，一起看得更深入。</p>
-          <div class="suggestions">
-            @for (suggestion of suggestions; track suggestion.title; let index = $index) {
-              <button
-                (click)="pickSuggestion(suggestion.text)"
-                [disabled]="store.busy()"
-                [style.--item-index]="index"
-              >
-                <span class="suggestion-index">0{{ index + 1 }}</span
-                ><nx-icon [name]="suggestion.icon" /><span class="suggestion-copy"
-                  ><strong>{{ suggestion.title }}</strong
-                  ><small>{{ suggestion.detail }}</small></span
-                ><nx-icon name="chevron" />
-              </button>
+    <div class="conversation-body">
+      <div
+        class="conversation-viewport"
+        #viewport
+        nxTextSelection
+        (textSelected)="paragraph.set($event)"
+        (scroll)="onScroll()"
+      >
+        @if (store.loadingConversation()) {
+          <div class="conversation-loading" role="status">正在開啟對話…</div>
+        } @else if (!store.visibleMessages().length) {
+          <section class="empty-state" animate.enter="empty-enter">
+            <div class="empty-heading">
+              <div class="empty-eyebrow"><span class="tiny-rule"></span>你的 AI 工作空間</div>
+              <svg class="nexus-emblem" viewBox="0 0 80 80" fill="none" aria-hidden="true">
+                <circle class="emblem-orbit" cx="40" cy="40" r="32" />
+                <path class="emblem-link" d="M20 56V24l40 32V24M12 24h8M60 56h8M20 40h40" />
+                <circle class="emblem-node" cx="20" cy="24" r="3" />
+                <circle class="emblem-node" cx="60" cy="56" r="3" />
+                <circle class="emblem-point" cx="40" cy="40" r="4" />
+              </svg>
+            </div>
+            <h2>今天，從哪件事開始？</h2>
+            <p>把想法放在這裡，讓下一步逐漸清晰。<br />也可以加入文件或圖片，一起看得更深入。</p>
+            <div class="suggestions">
+              @for (suggestion of suggestions; track suggestion.title; let index = $index) {
+                <button
+                  (click)="pickSuggestion(suggestion.text)"
+                  [disabled]="store.busy()"
+                  [style.--item-index]="index"
+                >
+                  <span class="suggestion-index">0{{ index + 1 }}</span
+                  ><nx-icon [name]="suggestion.icon" /><span class="suggestion-copy"
+                    ><strong>{{ suggestion.title }}</strong
+                    ><small>{{ suggestion.detail }}</small></span
+                  ><nx-icon name="chevron" />
+                </button>
+              }
+            </div>
+            <div class="empty-footnote">
+              <span class="tiny-rule"></span>你的對話與範本，都在你的工作空間。
+            </div>
+          </section>
+        } @else {
+          <section class="message-list" aria-label="目前對話訊息">
+            @for (message of store.visibleMessages(); track message.id) {
+              <nx-chat-message
+                [message]="message"
+                [tree]="store.tree()"
+                [matched]="matches().includes(message.id)"
+                [currentMatch]="currentMatch() === message.id"
+                [active]="store.liveRun()?.assistantMessageId === message.id"
+                [streamContent]="
+                  store.liveRun()?.assistantMessageId === message.id ? store.streamingText() : ''
+                "
+                [status]="store.liveRun()?.status || ''"
+                [busy]="store.busy()"
+                [showModelNames]="store.policy().showModelNames"
+                [allowArtifacts]="store.hasArtifactsAccess()"
+                (saveArtifact)="textTools()?.open($event.content, 'save', $event.id)"
+                (rated)="store.rateMessage($event)"
+                (edit)="store.edit($event); editMessageFocus()"
+                (regenerate)="store.regenerate($event)"
+                (version)="store.selectVersion(message, $event)"
+              />
             }
-          </div>
-          <div class="empty-footnote">
-            <span class="tiny-rule"></span>你的對話與範本，都在你的工作空間。
-          </div>
-        </section>
-      } @else {
-        <section class="message-list" aria-label="目前對話訊息">
-          @for (message of store.visibleMessages(); track message.id) {
-            <nx-chat-message
-              [message]="message"
-              [tree]="store.tree()"
-              [matched]="matches().includes(message.id)"
-              [currentMatch]="currentMatch() === message.id"
-              [active]="store.liveRun()?.assistantMessageId === message.id"
-              [streamContent]="
-                store.liveRun()?.assistantMessageId === message.id ? store.streamingText() : ''
-              "
-              [status]="store.liveRun()?.status || ''"
-              [busy]="store.busy()"
-              [showModelNames]="store.policy().showModelNames"
-              [allowArtifacts]="store.hasArtifactsAccess()"
-              (saveArtifact)="textTools()?.open($event.content, 'save', $event.id)"
-              (rated)="store.rateMessage($event)"
-              (edit)="store.edit($event); editMessageFocus()"
-              (regenerate)="store.regenerate($event)"
-              (version)="store.selectVersion(message, $event)"
-            />
-          }
-        </section>
-      }
+          </section>
+        }
+      </div>
+      <nx-conversation-outline
+        [messages]="store.visibleMessages()"
+        [viewport]="viewport"
+        (navigated)="following.set(false)"
+      />
     </div>
     <div class="composer-region">
       @if (!following() && store.visibleMessages().length) {
@@ -217,6 +219,15 @@
           [class.has-attachments]="store.attachments.files().length"
           (submit)="send($event)"
         >
+          <button
+            type="button"
+            class="icon-button composer-expand"
+            aria-label="展開訊息輸入"
+            title="展開訊息輸入"
+            (click)="focusComposer().open()"
+          >
+            <nx-icon name="maximize" />
+          </button>
           @if (store.attachments.files().length) {
             <nx-attachment-list
               [files]="store.attachments.files()"
@@ -360,6 +371,15 @@
     </div>
   </main>
 </div>
+<nx-focus-composer
+  [text]="store.draft().text"
+  (textChange)="store.draft.set({ text: $event })"
+  [readonly]="composerForm.text().readonly()"
+  [canSend]="store.canSend() && !composerForm.text().invalid()"
+  [maxLength]="store.policy().maxInputCharacters"
+  [enterToSend]="store.personal.value().enterToSend"
+  (sent)="submitDraft()"
+/>
 <nx-command-palette [commands]="commands()" (selected)="command($event)" />
 <nx-prompt-library [draft]="store.draft().text" (used)="pickSuggestion($event)" />
 <nx-conversation-settings [save]="saveSettings" />

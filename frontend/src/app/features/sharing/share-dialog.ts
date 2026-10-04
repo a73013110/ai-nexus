@@ -16,9 +16,10 @@ import { CopyFeedback } from '../../shared/browser/copy-feedback';
 import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
 import { SharingApi } from './sharing-api';
+import { Checkbox } from '../../shared/ui/checkbox';
 @Component({
   selector: 'nx-share-dialog',
-  imports: [Select, Icon, RouterLink],
+  imports: [Select, Icon, RouterLink, Checkbox],
   providers: [ViewScope, CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog #dialog class="platform-dialog" (cancel)="busy() && $event.preventDefault()">
@@ -101,16 +102,13 @@ import { SharingApi } from './sharing-api';
             (valueChange)="hours.set($event)"
         /></label>
         @if (kind() === 'conversation') {
-          <label class="toggle-setting"
-            ><input
-              type="checkbox"
-              [checked]="includeAttachments()"
-              [disabled]="busy()"
-              (change)="includeAttachments.set($any($event.target).checked)"
-            />包含此分支的附件<span class="form-note"
-              >附件將可由相同收件者下載，到期或撤銷後停止存取。</span
-            ></label
-          >
+          <nx-checkbox
+            label="包含此分支的附件"
+            description="收件者可下載；到期或撤銷後停止存取。"
+            [checked]="includeAttachments()"
+            [disabled]="busy()"
+            (checkedChange)="includeAttachments.set($event)"
+          />
         }
         <p class="form-note">最多 20 位收件者。建立後可在「我分享的」隨時撤銷。</p>
         <div class="dialog-actions">

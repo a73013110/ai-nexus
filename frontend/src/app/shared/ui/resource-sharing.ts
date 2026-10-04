@@ -14,10 +14,11 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../browser/view-scope';
 import { Icon } from './icon';
 import { Select } from './select';
+import { Checkbox } from './checkbox';
 
 @Component({
   selector: 'nx-resource-sharing',
-  imports: [Icon, Select],
+  imports: [Icon, Select, Checkbox],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog #dialog class="platform-dialog" (cancel)="cancel($event)">
@@ -97,13 +98,12 @@ import { Select } from './select';
             <p class="form-note">群組授權只允許閱讀。協作編輯請加入具名成員。</p>
             <div class="choice-list">
               @for (group of groups(); track group.id) {
-                <label
-                  ><input
-                    type="checkbox"
-                    [checked]="groupIds().includes(group.id)"
-                    (change)="toggleGroup(group.id, $any($event.target).checked)"
-                  />{{ group.name }}</label
-                >
+                <nx-checkbox
+                  [label]="group.name"
+                  [checked]="groupIds().includes(group.id)"
+                  [disabled]="saving()"
+                  (checkedChange)="toggleGroup(group.id, $event)"
+                />
               }
             </div>
           </fieldset>

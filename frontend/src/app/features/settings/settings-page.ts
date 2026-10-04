@@ -4,6 +4,9 @@ import {
   DestroyRef,
   computed,
   inject,
+  input,
+  output,
+  effect,
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -29,6 +32,9 @@ import { downloadFile } from '../../shared/browser/download';
   templateUrl: './settings-page.html',
 })
 export class SettingsPage {
+  readonly embedded = input(false);
+  readonly closeRequested = output<void>();
+  readonly stateChange = output<{ changed: boolean; saving: boolean }>();
   readonly session = inject(WorkspaceSession);
   readonly service = inject(UserSettingsService);
   private readonly api = inject(NexusApi);
@@ -71,11 +77,11 @@ export class SettingsPage {
     { value: 'light', label: '淺色' },
     { value: 'dark', label: '深色' },
   ];
-  readonly fontOptions = [16, 17, 18, 20, 22, 24].map((x) => ({
+  readonly fontOptions = [12, 13, 14, 15, 16, 17, 18, 20, 22, 24].map((x) => ({
     value: String(x),
     label: `${x} px`,
   }));
-  readonly lineOptions = [1.5, 1.6, 1.8, 2, 2.2].map((x) => ({
+  readonly lineOptions = [1, 1.2, 1.4, 1.5, 1.6, 1.8, 2, 2.2].map((x) => ({
     value: String(x),
     label: `${x} 倍`,
   }));
@@ -105,6 +111,7 @@ export class SettingsPage {
   ]);
   private alive = true;
   constructor() {
+    effect(() => this.stateChange.emit({ changed: this.changed(), saving: this.saving() }));
     void this.load();
     inject(DestroyRef).onDestroy(() => {
       this.alive = false;

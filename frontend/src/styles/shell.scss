@@ -94,6 +94,13 @@
   scrollbar-color: var(--line) transparent;
   scroll-padding: 30px;
 }
+.conversation-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
 .conversation-loading {
   color: var(--secondary);
   font-size: var(--text-label);

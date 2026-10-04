@@ -41,6 +41,62 @@
 .composer.is-busy {
   border-color: var(--signal);
 }
+.thinking-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-4);
+  padding: var(--p-space-4) 0 var(--p-space-5);
+  color: var(--secondary);
+}
+.thinking-spectrum {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 62px;
+  height: 44px;
+  background: color-mix(in srgb, var(--signal) 8%, transparent);
+  border-radius: var(--p-radius-md);
+}
+.thinking-spectrum i {
+  width: 3px;
+  height: 22px;
+  border-radius: 3px;
+  background: var(--signal);
+  animation: spectrum-wave 1600ms var(--ease) infinite;
+}
+.thinking-spectrum i:nth-child(2n) {
+  height: 30px;
+  animation-delay: -300ms;
+}
+.thinking-spectrum i:nth-child(3n) {
+  height: 14px;
+  animation-delay: -650ms;
+}
+.thinking-spectrum i:nth-child(4n) {
+  animation-delay: -1050ms;
+}
+.thinking-label {
+  font-size: var(--text-label);
+  font-weight: 500;
+}
+.thinking-label small {
+  display: block;
+  font-weight: 400;
+  font-size: var(--text-caption);
+  margin-top: 4px;
+}
+@keyframes spectrum-wave {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
 .composer {
   position: relative;
 }
@@ -62,9 +118,6 @@
 }
 .conversation-menu[open] .floating-menu,
 .context-details[open] .context-panel,
-.profile-menu[open] .preferences-panel {
-  animation: panel-arrive var(--motion-panel) var(--ease);
-}
 .empty-enter .suggestions > button {
   animation: suggestion-arrive var(--motion-enter) var(--ease) both;
   animation-delay: calc(var(--item-index) * var(--motion-stagger));

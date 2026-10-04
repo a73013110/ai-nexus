@@ -42,6 +42,8 @@ import { TextSelection, type SelectedText } from '../../shared/browser/text-sele
 import { TextTools } from '../artifacts/text-tools';
 import { ShareDialog } from '../sharing/share-dialog';
 import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
+import { FocusComposer } from './focus-composer';
+import { isSubmitKey } from '../../shared/browser/submit-key';
 
 @Component({
   selector: 'nx-chat-workspace',
@@ -67,6 +69,7 @@ import { ConversationDraftTransfer } from '../../core/preferences/conversation-d
     TextSelection,
     TextTools,
     ShareDialog,
+    FocusComposer,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chat-workspace.html',
@@ -88,6 +91,7 @@ export class ChatWorkspace {
   readonly currentMatch = signal<string | null>(null);
   readonly paragraph = signal<SelectedText | null>(null);
   readonly textTools = viewChild(TextTools);
+  readonly focusComposer = viewChild.required(FocusComposer);
   readonly shareDialog = viewChild(ShareDialog);
   readonly hasSharing = computed(
     () => this.store.me()?.access.features.some((x) => x.id === 'shared') ?? false,
@@ -313,27 +317,15 @@ export class ChatWorkspace {
     this.textarea()?.nativeElement.focus();
   }
   keydown(event: KeyboardEvent) {
-    if (
-      event.key !== 'Enter' ||
-      event.shiftKey ||
-      event.isComposing ||
-      this.composing() ||
-      event.keyCode === 229
-    )
-      return;
-    if (!this.store.personal.value().enterToSend && !event.ctrlKey && !event.metaKey) return;
+    if (!isSubmitKey(event, this.composing(), this.store.personal.value().enterToSend)) return;
     event.preventDefault();
-    if (
-      this.store.canSend() &&
-      this.store.draft().text.trim() &&
-      !this.composerForm.text().invalid()
-    ) {
-      this.following.set(this.store.personal.value().autoFollow);
-      void this.store.send();
-    }
+    this.submitDraft();
   }
   send(event: Event) {
     event.preventDefault();
+    this.submitDraft();
+  }
+  submitDraft() {
     if (this.store.canSend() && !this.composerForm.text().invalid()) {
       this.following.set(this.store.personal.value().autoFollow);
       void this.store.send();

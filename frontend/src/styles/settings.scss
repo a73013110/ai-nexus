@@ -4,6 +4,99 @@
   height: 100dvh;
   overflow: hidden;
 }
+.platform-dialog.settings-dialog {
+  --dialog-width: 64rem;
+  padding: 0;
+  overflow: hidden;
+  height: min(760px, calc(100dvh - 3rem));
+}
+.settings-dialog .settings-layout {
+  height: 100%;
+  grid-template-columns: 14rem minmax(0, 1fr);
+}
+.settings-dialog nx-settings-page {
+  display: block;
+  height: 100%;
+}
+.settings-dialog .settings-sidebar {
+  padding: var(--p-space-5) var(--p-space-3);
+  gap: var(--p-space-3);
+}
+.settings-dialog .settings-main {
+  padding: 0 var(--p-space-6);
+}
+.settings-dialog .settings-page-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin-bottom: var(--p-space-5);
+  padding-top: var(--p-space-6);
+  padding-right: var(--button-target);
+  padding-bottom: var(--p-space-3);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.settings-page-header {
+  position: relative;
+}
+.settings-close {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+.settings-dialog .settings-close {
+  top: var(--p-space-6);
+}
+.settings-dialog .settings-page-header h1 {
+  font-size: var(--p-font-2xl);
+}
+.settings-dialog .settings-card {
+  padding: var(--p-space-4);
+}
+.settings-dialog .settings-content {
+  gap: var(--p-space-4);
+}
+.settings-loading {
+  padding: var(--p-space-6);
+}
+@media (max-width: 680px) {
+  .settings-dialog {
+    height: calc(100dvh - 1.5rem);
+  }
+  .settings-dialog .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .settings-dialog .settings-sidebar {
+    padding: var(--p-space-3);
+    gap: var(--p-space-2);
+    overflow: hidden;
+  }
+  .settings-dialog .settings-sidebar .panel-eyebrow,
+  .settings-dialog .settings-sidebar h2,
+  .settings-dialog .settings-account {
+    display: none;
+  }
+  .settings-dialog .settings-categories {
+    flex-direction: row;
+    overflow: auto;
+  }
+  .settings-dialog .settings-main {
+    padding: 0 var(--p-space-3);
+  }
+  .settings-dialog .settings-page-header {
+    padding-top: var(--p-space-4);
+  }
+  .settings-dialog .settings-close {
+    top: var(--p-space-4);
+  }
+  .settings-dialog .setting-row {
+    gap: var(--p-space-3);
+  }
+  .settings-dialog .setting-row nx-select {
+    width: 9rem;
+  }
+}
 .settings-sidebar {
   padding: var(--p-space-6) var(--p-space-4);
   display: flex;

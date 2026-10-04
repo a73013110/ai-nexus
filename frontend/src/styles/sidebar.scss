@@ -5,7 +5,7 @@
   min-height: 0;
   background: var(--sidebar);
   border-right: 1px solid var(--line);
-  padding: 32px 17px 16px;
+  padding: 20px 14px 10px;
   overflow: hidden;
 }
 .sidebar-closed .sidebar {
@@ -15,7 +15,7 @@
   display: flex;
   gap: 12px;
   align-items: center;
-  margin: 0 9px 34px;
+  margin: 0 7px 22px;
   width: fit-content;
   font-size: var(--p-font-2xl);
   letter-spacing: -0.7px;
@@ -159,43 +159,7 @@
 }
 .sidebar-bottom {
   border-top: 1px solid var(--line);
-  padding-top: 17px;
-}
-.workspace-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 10px 19px;
-  font-size: var(--text-caption);
-  color: var(--secondary);
-}
-.workspace-label > span:last-child {
-  margin-left: auto;
-  letter-spacing: 1px;
-  font-size: var(--text-caption);
-}
-.workspace-dot {
-  width: 5px;
-  height: 5px;
-  background: var(--secondary);
-  border-radius: 50%;
-}
-.profile-menu {
-  position: relative;
-}
-.profile-menu summary {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  list-style: none;
-  padding: 7px 9px;
-  border-radius: var(--p-radius-md);
-}
-.profile-menu summary::-webkit-details-marker {
-  display: none;
-}
-.profile-menu summary:hover {
-  background: var(--hover);
+  padding-top: var(--p-space-2);
 }
 .avatar {
   display: grid;
@@ -208,71 +172,6 @@
   color: var(--accent);
   font-size: var(--text-caption);
   font-weight: 600;
-}
-.profile-name {
-  flex: 1;
-  min-width: 0;
-}
-.profile-name strong,
-.profile-name small {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.profile-name strong {
-  font-size: var(--text-caption);
-  font-weight: 600;
-}
-.profile-name small {
-  font-size: var(--text-caption);
-  color: var(--secondary);
-  margin-top: 3px;
-}
-.profile-menu summary > nx-icon {
-  color: var(--secondary);
-}
-.preferences-panel {
-  position: absolute;
-  bottom: calc(100% + 14px);
-  left: 0;
-  width: 230px;
-  z-index: 20;
-  padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-.preferences-panel h2 {
-  font-size: var(--text-label);
-  font-weight: 600;
-  margin: 0 0 18px;
-}
-.preferences-panel > label {
-  font-size: var(--text-caption);
-  display: block;
-  margin-bottom: 8px;
-}
-.preferences-panel .check-label {
-  margin-top: 18px;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  cursor: pointer;
-}
-.check-label input {
-  accent-color: var(--accent);
-  width: 16px;
-  height: 16px;
-}
-.preferences-panel p {
-  border-top: 1px solid var(--line);
-  padding-top: 15px;
-  margin: 18px 0 0;
-  font-size: var(--text-caption);
-  line-height: 1.8;
-  color: var(--secondary);
 }
 .sidebar-backdrop {
   display: none;

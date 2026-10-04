@@ -70,8 +70,42 @@ nx-select {
   color: var(--accent);
 }
 .select-option strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 500;
   font-size: var(--text-ui);
+}
+.select-option > span {
+  min-width: 0;
+  flex: 1;
+}
+.select-search {
+  position: sticky;
+  top: calc(-1 * var(--p-space-2));
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  padding: var(--p-space-2);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  z-index: 1;
+}
+.select-search input {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--button-target);
+  border: 0;
+  padding: var(--p-space-2);
+  background: transparent;
+  font-size: var(--text-ui);
+}
+.select-count,
+.select-empty {
+  font-size: var(--text-caption);
+  color: var(--secondary);
+  margin: var(--p-space-2);
 }
 .select-option small {
   display: block;

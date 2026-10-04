@@ -73,7 +73,7 @@ export const routes: Routes = [
   {
     path: 'settings',
     loadComponent: () =>
-      import('./features/settings/settings-page').then((module) => module.SettingsPage),
+      import('./features/settings/settings-entry').then((module) => module.SettingsEntry),
   },
   {
     path: 'login',

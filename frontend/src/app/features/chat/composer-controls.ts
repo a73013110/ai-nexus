@@ -17,6 +17,7 @@ import { Select } from '../../shared/ui/select';
         [value]="modelId()"
         [disabled]="disabled()"
         [options]="modelOptions()"
+        [searchable]="true"
         (valueChange)="modelChange.emit($event)"
       />
     } @else {
@@ -101,7 +102,11 @@ export class ComposerControls {
   readonly effortChange = output<string>();
   readonly selected = computed(() => this.models().find((x) => x.id === this.modelId()));
   readonly modelOptions = computed(() =>
-    this.models().map((x) => ({ value: x.id, label: x.displayName })),
+    this.models().map((x) => ({
+      value: x.id,
+      label: x.displayName,
+      description: `${x.contextTokens.toLocaleString()} Context${x.supportsImages ? ' · 圖片分析' : ''}`,
+    })),
   );
   readonly effortOptions = computed(() => [
     { value: 'auto', label: '自動思考' },

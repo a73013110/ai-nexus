@@ -34,6 +34,7 @@ export class LoginPage {
     maxLength(schema.password, 1024);
   });
   readonly error = signal<string | null>(null);
+  readonly introReady = signal(false);
   constructor() {
     void this.initialize();
   }

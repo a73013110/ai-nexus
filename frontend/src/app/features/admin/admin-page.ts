@@ -20,9 +20,13 @@ import type {
   AdminGroup,
   AdminFeature,
   AdminUsage,
-  AuditEntry,
 } from '../../core/api/types';
 import { AdminApi } from './admin-api';
+import { Checkbox } from '../../shared/ui/checkbox';
+import { SearchField } from '../../shared/ui/search-field';
+import { AdminUserInspector } from './admin-user-inspector';
+import { AdminAudit } from './admin-audit';
+import { formatDate, formatNumber } from '../../shared/browser/format';
 
 interface Editor {
   kind: 'user' | 'role' | 'group' | 'feature';
@@ -40,7 +44,7 @@ interface Editor {
 }
 @Component({
   selector: 'nx-admin-page',
-  imports: [FeaturePage, Icon, RouterLink],
+  imports: [FeaturePage, Icon, RouterLink, Checkbox, SearchField, AdminUserInspector, AdminAudit],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-page.html',
 })
@@ -49,7 +53,7 @@ export class AdminPage {
   private readonly api = inject(AdminApi);
   readonly catalog = signal<AdminCatalog | null>(null);
   readonly users = signal<AdminUsers | null>(null);
-  readonly audit = signal<AuditEntry[]>([]);
+  readonly inspected = signal<AdminUser | null>(null);
   readonly usage = signal<AdminUsage | null>(null);
   readonly loading = signal(true);
   readonly error = signal('');
@@ -121,10 +125,6 @@ export class AdminPage {
     this.tab.set(id);
     this.error.set('');
     try {
-      if (id === 'audit') {
-        const rows = await this.api.audit();
-        if (this.alive) this.audit.set(rows);
-      }
       if (id === 'usage') {
         const value = await this.api.usage();
         if (this.alive) this.usage.set(value);
@@ -146,14 +146,6 @@ export class AdminPage {
     this.search.set(value);
     clearTimeout(this.timer);
     this.timer = setTimeout(() => void this.loadUsers(), 250);
-  }
-  async loadMoreAudit() {
-    try {
-      const rows = await this.api.audit(this.audit().at(-1)?.id);
-      if (this.alive) this.audit.update((old) => [...old, ...rows]);
-    } catch (error) {
-      this.error.set(this.message(error));
-    }
   }
   roleNames(ids: string[]) {
     return ids.map((id) => this.catalog()?.roles.find((x) => x.id === id)?.name || id);
@@ -257,27 +249,8 @@ export class AdminPage {
       >
     )[kind];
   }
-  action(value: string) {
-    return (
-      (
-        {
-          'admin.bootstrap': '初始化管理員',
-          'admin.user_roles': '調整使用者角色',
-          'admin.role': '調整角色與群組',
-          'admin.group': '調整群組、功能與模型政策',
-          'admin.feature': '調整功能',
-        } as Record<string, string>
-      )[value] || value
-    );
-  }
-  date(value: string) {
-    return new Intl.DateTimeFormat('zh-TW', { dateStyle: 'short', timeStyle: 'short' }).format(
-      new Date(value),
-    );
-  }
-  format(value: number) {
-    return value.toLocaleString('zh-TW');
-  }
+  readonly date = formatDate;
+  readonly format = formatNumber;
   private message(error: unknown) {
     return error instanceof Error ? error.message : '服務暫時無法使用，請重試。';
   }

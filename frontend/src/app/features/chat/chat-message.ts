@@ -5,13 +5,13 @@ import { MarkdownView } from '../../shared/ui/markdown-view';
 import { CopyFeedback } from '../../shared/browser/copy-feedback';
 import { AttachmentList } from '../attachments/attachment-list';
 import { MessageTree } from './message-tree';
-import { InferenceSignal } from '../../shared/ui/inference-signal';
+import { ThinkingIndicator } from '../../shared/ui/thinking-indicator';
 import { RouterLink } from '@angular/router';
 import { MessageFeedback } from '../quality/message-feedback';
 
 @Component({
   selector: 'nx-chat-message',
-  imports: [Icon, AttachmentList, InferenceSignal, RouterLink, MarkdownView, MessageFeedback],
+  imports: [Icon, AttachmentList, ThinkingIndicator, RouterLink, MarkdownView, MessageFeedback],
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <article
@@ -44,13 +44,12 @@ import { MessageFeedback } from '../quality/message-feedback';
       @if (streamContent()) {
         <div class="streaming-copy">{{ streamContent() }}</div>
       } @else {
-        <div class="waiting-copy">
-          <span class="waiting-graphic"><nx-inference-signal [active]="true" /></span
-          ><span
-            >{{ status() === 'queued' ? '已加入佇列，等待模型…' : '正在整理回答…'
-            }}<small>讓資訊逐步成形</small></span
-          >
-        </div>
+        <nx-thinking-indicator
+          [label]="status() === 'queued' ? '等待模型回應' : '正在思考'"
+          [detail]="
+            status() === 'queued' ? '已加入佇列，可隨時停止' : '正在整理資訊，回答將逐步呈現'
+          "
+        />
       }
     } @else {
       <nx-markdown-view [content]="message().content" />

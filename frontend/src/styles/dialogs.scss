@@ -7,6 +7,36 @@
   width: min(430px, calc(100% - 36px));
   box-shadow: var(--shadow);
 }
+.platform-dialog {
+  width: min(var(--dialog-width), calc(100vw - 2rem));
+  max-width: none;
+  max-height: calc(100dvh - 3rem);
+  padding: var(--p-space-6);
+  margin: auto;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
+  border-radius: 1.125rem;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-floating);
+}
+.platform-dialog::backdrop {
+  background: var(--scrim);
+  backdrop-filter: blur(4px);
+}
+.platform-dialog[open] {
+  animation: panel-arrive var(--motion-panel) var(--ease);
+}
+.platform-dialog .dialog-heading {
+  margin-bottom: var(--p-space-5);
+}
+.platform-dialog .dialog-actions {
+  position: sticky;
+  bottom: calc(-1 * var(--p-space-6));
+  padding-block: var(--p-space-3);
+  background: var(--surface);
+}
 .action-dialog::backdrop {
   background: var(--scrim);
 }
@@ -85,14 +115,14 @@
   padding: var(--p-space-3);
   font-size: var(--text-label);
 }
-.workspace-dialog label {
+.workspace-dialog label:not(.selection-control) {
   display: block;
   color: var(--ink);
   font-size: var(--text-label);
   font-weight: 500;
   margin: var(--p-space-4) 0 var(--p-space-2);
 }
-.workspace-dialog input,
+.workspace-dialog input:not([type='checkbox']),
 .workspace-dialog textarea {
   width: 100%;
   background: var(--canvas);
@@ -273,6 +303,13 @@
   }
   .workspace-dialog {
     padding: var(--p-space-4);
+  }
+  .platform-dialog {
+    padding: var(--p-space-4);
+    max-height: calc(100dvh - 1.5rem);
+  }
+  .platform-dialog .dialog-actions {
+    bottom: calc(-1 * var(--p-space-4));
   }
   .command-results kbd {
     display: none;

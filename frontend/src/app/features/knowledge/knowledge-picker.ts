@@ -13,10 +13,12 @@ import { RouterLink } from '@angular/router';
 import { Icon } from '../../shared/ui/icon';
 import { positionPopover } from '../../shared/browser/popover-position';
 import { KnowledgeSelection } from './knowledge-selection';
+import { Checkbox } from '../../shared/ui/checkbox';
+import { SearchField } from '../../shared/ui/search-field';
 
 @Component({
   selector: 'nx-knowledge-picker',
-  imports: [Icon, RouterLink],
+  imports: [Icon, RouterLink, Checkbox, SearchField],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<button
       #trigger
@@ -42,14 +44,12 @@ import { KnowledgeSelection } from './knowledge-selection';
       (toggle)="opened.set($any($event).newState === 'open')"
     >
       <div class="picker-heading"><strong>知識來源</strong><span>最多 3 個 · 選取即儲存</span></div>
-      <label class="page-search"
-        ><nx-icon name="search" /><input
-          type="search"
-          aria-label="搜尋可用知識庫"
-          placeholder="尋找知識庫"
-          [value]="query()"
-          (input)="query.set($any($event.target).value)"
-      /></label>
+      <nx-search-field
+        label="搜尋可用知識庫"
+        placeholder="尋找知識庫"
+        [value]="query()"
+        (valueChange)="query.set($event)"
+      />
       @if (selection.error()) {
         <p class="error-note" role="alert">{{ selection.error() }}</p>
       }
@@ -65,26 +65,22 @@ import { KnowledgeSelection } from './knowledge-selection';
       }
       <div class="knowledge-choices">
         @for (collection of visible(); track collection.resource.id) {
-          <label
-            ><input
-              type="checkbox"
-              [checked]="selection.ids().includes(collection.resource.id)"
-              [disabled]="
-                disabled() ||
-                selection.saving() ||
-                selection.loadFailed() ||
-                (selection.ids().length >= 3 && !selection.ids().includes(collection.resource.id))
-              "
-              (change)="selection.toggle(collection.resource.id, $any($event.target).checked)"
-            /><span
-              ><strong>{{ collection.resource.name }}</strong
-              ><small
-                >{{ collection.readyDocuments }} 份文件可查詢{{
-                  collection.resource.isOwner ? '' : ' · 已共用'
-                }}</small
-              ></span
-            ></label
-          >
+          <nx-checkbox
+            [label]="collection.resource.name"
+            [description]="
+              collection.readyDocuments +
+              ' 份文件可查詢' +
+              (collection.resource.isOwner ? '' : ' · 已共用')
+            "
+            [checked]="selection.ids().includes(collection.resource.id)"
+            [disabled]="
+              disabled() ||
+              selection.saving() ||
+              selection.loadFailed() ||
+              (selection.ids().length >= 3 && !selection.ids().includes(collection.resource.id))
+            "
+            (checkedChange)="selection.toggle(collection.resource.id, $event)"
+          />
         } @empty {
           <p class="form-note">目前沒有符合的知識庫。</p>
         }

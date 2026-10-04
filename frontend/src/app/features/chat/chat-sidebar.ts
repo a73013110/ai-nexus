@@ -11,22 +11,21 @@ import {
 import { FormField, form, maxLength } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import type { Conversation } from '../../core/api/types';
-import { ThemeService } from '../../core/preferences/theme-service';
 import { Icon } from '../../shared/ui/icon';
-import { Disclosure } from '../../shared/ui/disclosure';
 import { ChatStore } from './chat-store';
 import { Select } from '../../shared/ui/select';
 import { WorkspaceNavigation } from '../../shared/ui/workspace-navigation';
+import { WorkspaceBrand } from '../../shared/ui/workspace-brand';
+import { AccountMenu } from '../../shared/ui/account-menu';
 
 @Component({
   selector: 'nx-chat-sidebar',
-  imports: [RouterLink, FormField, Icon, Disclosure, Select, WorkspaceNavigation],
+  imports: [RouterLink, FormField, Icon, Select, WorkspaceNavigation, WorkspaceBrand, AccountMenu],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chat-sidebar.html',
 })
 export class ChatSidebar {
   readonly store = inject(ChatStore);
-  readonly themes = inject(ThemeService);
   readonly open = input(true);
   readonly narrow = input(false);
   readonly close = output<void>();
@@ -37,12 +36,6 @@ export class ChatSidebar {
   readonly import = output<File>();
   readonly searchModel = signal({ query: '' });
   readonly searchForm = form(this.searchModel, (schema) => maxLength(schema.query, 120));
-  readonly preferencesForm = form(this.themes.preferences);
-  readonly themeOptions = [
-    { value: 'system', label: '跟隨系統' },
-    { value: 'light', label: '淺色' },
-    { value: 'dark', label: '深色' },
-  ];
   readonly labelOptions = computed(() => [
     { value: '', label: '全部標籤' },
     ...this.store.labels().map((value) => ({ value, label: value })),
@@ -83,21 +76,6 @@ export class ChatSidebar {
   }
   selectLabel(value: string) {
     void this.store.filterHistory(undefined, value);
-  }
-  themeChanged(theme: string) {
-    this.themes.preferences.update((value) => ({ ...value, theme }));
-    this.savePreferences();
-  }
-  savePreferences() {
-    queueMicrotask(
-      () =>
-        void this.store.savePreferences({
-          ...this.themes.preferences(),
-          defaultModelId: this.store.policy().allowModelSelection
-            ? this.store.modelId() || null
-            : null,
-        }),
-    );
   }
   importFile(event: Event) {
     const input = event.target as HTMLInputElement;

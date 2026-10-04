@@ -1,5 +1,5 @@
 .quality-dialog {
-  width: min(48rem, calc(100vw - 2rem));
+  --dialog-width: 48rem;
 }
 .quality-case-form {
   border: 1px solid var(--line);

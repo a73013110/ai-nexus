@@ -11,6 +11,17 @@ export async function chooseSelect(
     .getByRole("option", { name: text, exact: true })
     .click();
 }
+export async function openSettings(page: Page) {
+  const account = page.getByRole("button", { name: "登入者選單", exact: true });
+  await account.waitFor({ state: "attached" });
+  if (!(await account.isVisible()))
+    await page.getByRole("button", { name: "開啟側欄" }).click();
+  await account.click();
+  await page.getByRole("menuitem", { name: "設定", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "個人設定", exact: true });
+  await dialog.waitFor({ state: "visible" });
+  return dialog;
+}
 import type {
   Conversation,
   CreateRun,
@@ -241,6 +252,13 @@ export class ApiFixture {
       });
     if (path === "/settings") {
       if (route.request().method() === "PUT") {
+        if (this.failPreferencesOnce) {
+          this.failPreferencesOnce = false;
+          return json(
+            { title: "偏好設定保存失敗。", code: "service_unavailable" },
+            503,
+          );
+        }
         const { appearance, ...settings } = route.request().postDataJSON();
         this.preferences = appearance;
         this.settings = settings;

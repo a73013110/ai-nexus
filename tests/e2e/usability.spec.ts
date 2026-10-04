@@ -84,6 +84,12 @@ test("conversation minimap previews a turn and jumps; mobile exposes a direct di
   const first = rail.getByRole("button", { name: /跳至第 1 輪/ });
   await first.hover();
   await expect(rail.locator(".outline-preview")).toContainText("本週會議摘要");
+  const card = await rail.locator(".outline-preview").boundingBox();
+  const body = await page.locator(".conversation-body").boundingBox();
+  const tick = await first.boundingBox();
+  expect(card!.y).toBeGreaterThanOrEqual(body!.y);
+  expect(card!.y + card!.height).toBeLessThanOrEqual(body!.y + body!.height);
+  expect(card!.x + card!.width).toBeLessThan(tick!.x + 1);
   await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/conversation-minimap.png",

@@ -1,0 +1,105 @@
+<div class="audit-toolbar">
+  <nx-search-field
+    label="搜尋稽核"
+    placeholder="帳號、動作或資源識別碼"
+    [value]="search()"
+    (valueChange)="searchChanged($event)"
+  />
+  <nx-select
+    label="稽核動作"
+    [options]="actions"
+    [value]="action()"
+    (valueChange)="filter('action', $event)"
+  />
+  <nx-select
+    label="稽核結果"
+    [options]="results"
+    [value]="result()"
+    (valueChange)="filter('result', $event)"
+  />
+  <label class="audit-date"
+    >從<input
+      type="date"
+      aria-label="稽核開始日期"
+      [value]="from()"
+      (change)="filter('from', $any($event.target).value)"
+  /></label>
+  <label class="audit-date"
+    >至<input
+      type="date"
+      aria-label="稽核結束日期"
+      [value]="until()"
+      (change)="filter('until', $any($event.target).value)"
+  /></label>
+  <button class="icon-button" aria-label="重新整理稽核" [disabled]="loading()" (click)="load()">
+    <nx-icon name="refresh" />
+  </button>
+</div>
+<div class="page-toolbar">
+  <p class="form-note">
+    授權異動保存前後內容，失敗異動會回復原值；敏感讀取也留下紀錄。時間以台北時區顯示。
+  </p>
+  <button class="secondary-button" [disabled]="!rows().length || loading()" (click)="export()">
+    <nx-icon name="download" />匯出已載入 {{ rows().length }} 筆
+  </button>
+</div>
+@if (error()) {
+  <p class="inline-error" role="alert">{{ error() }}</p>
+}
+@if (loading()) {
+  <p class="form-note" role="status">正在取得稽核紀錄…</p>
+}
+<div class="resource-list">
+  @for (entry of rows(); track entry.id) {
+    <article class="resource-row audit-row">
+      <time>{{ date(entry.at) }}</time>
+      <div class="resource-summary">
+        <strong>{{ label(entry.action) }}</strong
+        ><small
+          >{{ entry.actor }} · #{{ entry.id }}
+          @if (resource(entry.detailsJson)) {
+            · {{ resource(entry.detailsJson) }}
+          }
+        </small>
+        @if (entry.detailsJson) {
+          <details class="audit-details">
+            <summary>
+              {{ changes(entry.detailsJson).length ? '查看前後差異' : '查看紀錄資訊' }}
+            </summary>
+            @if (changes(entry.detailsJson).length) {
+              <dl class="audit-changes">
+                @for (change of changes(entry.detailsJson); track change.key) {
+                  <div>
+                    <dt>{{ change.label }}</dt>
+                    <dd>
+                      <span class="audit-before">{{ change.before }}</span
+                      ><nx-icon name="chevron" /><strong>{{ change.after }}</strong>
+                    </dd>
+                  </div>
+                }
+              </dl>
+            }
+            <pre>{{ entry.detailsJson }}</pre>
+          </details>
+        }
+      </div>
+      <span
+        class="audit-result"
+        [class.audit-rejected]="
+          entry.result !== 'saved' &&
+          entry.result !== 'read' &&
+          entry.result !== 'granted' &&
+          entry.result !== 'completed'
+        "
+        >{{ status(entry.result) }}</span
+      >
+    </article>
+  } @empty {
+    @if (!loading()) {
+      <p class="empty-state">沒有符合條件的稽核紀錄。</p>
+    }
+  }
+</div>
+@if (more()) {
+  <button class="quiet-button" [disabled]="loading()" (click)="load(true)">載入更早紀錄</button>
+}

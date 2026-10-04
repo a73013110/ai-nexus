@@ -1,7 +1,10 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { ApiFixture, settleEntrance } from "./fixtures";
-import type { AdminCatalog, AuditEntry } from "../../frontend/src/app/core/api/types";
+import { ApiFixture, settleEntrance, chooseSelect } from "./fixtures";
+import type {
+  AdminCatalog,
+  AuditEntry,
+} from "../../frontend/src/app/core/api/types";
 
 async function administration(page: Page) {
   const fixture = new ApiFixture();
@@ -85,6 +88,17 @@ async function administration(page: Page) {
     ],
   };
   const audit: AuditEntry[] = [];
+  const conversationId = randomUUID();
+  const recordRead = (action: string, resourceId: string) =>
+    audit.unshift({
+      id: audit.length + 1,
+      actor: actor.account,
+      action,
+      resourceId,
+      result: "read",
+      at: actor.lastSeenAt,
+      detailsJson: JSON.stringify({ userId: bob.id }),
+    });
   await page.route("**/api/v1/admin/**", async (route: Route) => {
     const url = new URL(route.request().url()),
       path = url.pathname.replace("/api/v1/admin", ""),
@@ -109,7 +123,98 @@ async function administration(page: Page) {
         groups: [],
         features: [{ id: "chat", name: "AI 對話", route: "/chat" }],
       });
-    if (path === "/audit") return json(audit);
+    if (path.endsWith("/insights")) {
+      recordRead("admin.user_usage_read", bob.id);
+      return json({
+        user: bob,
+        conversations: 1,
+        kinds: [
+          { kind: "chat", requests: 4, inputTokens: 1200, outputTokens: 600 },
+        ],
+        usage: {
+          days: 30,
+          requests: 4,
+          completed: 4,
+          failed: 0,
+          cancelled: 0,
+          inputTokens: 1200,
+          outputTokens: 600,
+          requestsWithUsage: 4,
+          attachmentBytes: 2048,
+          daily: [],
+        },
+      });
+    }
+    if (path.endsWith("/conversations")) {
+      recordRead("admin.conversations_list", bob.id);
+      const items = [
+        {
+          id: conversationId,
+          title: "公文內容討論",
+          createdAt: actor.lastSeenAt,
+          updatedAt: actor.lastSeenAt,
+          isArchived: true,
+          isDeleted: true,
+          messages: 2,
+        },
+      ].filter(
+        (x) =>
+          url.searchParams.get("includeDeleted") === "true" &&
+          x.title.includes(url.searchParams.get("search") || ""),
+      );
+      return json({ items, total: items.length, offset: 0 });
+    }
+    if (path === `/conversations/${conversationId}`) {
+      recordRead("admin.conversation_read", conversationId);
+      return json({
+        conversation: {
+          id: conversationId,
+          title: "公文內容討論",
+          createdAt: actor.lastSeenAt,
+          updatedAt: actor.lastSeenAt,
+          isArchived: true,
+          isDeleted: true,
+          messages: 2,
+        },
+        ownerAccount: bob.account,
+        ownerName: bob.displayName,
+        systemInstruction: "請附上來源",
+        offset: 0,
+        total: 2,
+        messages: [
+          {
+            id: randomUUID(),
+            parentId: null,
+            role: "user",
+            content: "請協助摘要公文",
+            status: "completed",
+            createdAt: actor.lastSeenAt,
+            modelId: null,
+            attachments: [],
+          },
+          {
+            id: randomUUID(),
+            parentId: null,
+            role: "assistant",
+            content: "## 摘要\n\n這是唯讀的 AI 回覆。",
+            status: "completed",
+            createdAt: actor.lastSeenAt,
+            modelId: "fixture:8b",
+            attachments: [],
+          },
+        ],
+      });
+    }
+    if (path === "/audit")
+      return json(
+        audit.filter(
+          (x) =>
+            (!url.searchParams.get("action") ||
+              x.action.startsWith(url.searchParams.get("action")!)) &&
+            (!url.searchParams.get("result") ||
+              x.result === url.searchParams.get("result")),
+        ),
+      );
     if (path === "/usage")
       return json({
         users: 2,
@@ -163,7 +268,7 @@ async function administration(page: Page) {
     page.getByRole("heading", { name: "平台管理", exact: true }),
   ).toBeVisible();
   await expect(page.getByText("王小明", { exact: true })).toBeVisible();
-  return { fixture, catalog, bob, audit };
+  return { fixture, catalog, bob, audit, conversationId };
 }
 test("administrators edit roles with effective access preview and an audit trail", async ({
   page,
@@ -180,7 +285,7 @@ test("administrators edit roles with effective access preview and an audit trail
   expect(state.bob.roleIds).toContain("administrator");
   await page.getByRole("button", { name: "異動稽核", exact: true }).click();
   await expect(page.getByText("調整使用者角色", { exact: true })).toBeVisible();
-  await page.getByText("查看異動", { exact: true }).click();
+  await page.getByText("查看紀錄資訊", { exact: true }).click();
   await expect(page.locator(".audit-details pre")).toContainText(
     "administrator",
   );
@@ -255,5 +360,141 @@ test("members have no management navigation and direct routes show an access exp
     page
       .getByRole("navigation", { name: "工作台功能" })
       .getByRole("link", { name: "管理", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("administrators inspect user usage and deleted conversations through an audited read only view", async ({
+  page,
+}) => {
+  const state = await administration(page);
+  await page
+    .getByRole("button", { name: "使用者活動：王小明", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "王小明", exact: true });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator(".inspector-stats")).toContainText("1,800");
+  await dialog
+    .getByRole("button", { name: "檢視對話：公文內容討論", exact: true })
+    .click();
+  await expect(
+    dialog.getByRole("heading", { name: "摘要", exact: true }),
+  ).toBeVisible();
+  await expect(dialog.locator(".inspector-user-message")).toContainText(
+    "請協助摘要公文",
+  );
+  await expect(
+    dialog.getByRole("button", { name: "送出訊息", exact: true }),
+  ).toHaveCount(0);
+  expect(
+    state.audit.some(
+      (x) =>
+        x.action === "admin.conversation_read" &&
+        x.resourceId === state.conversationId,
+    ),
+  ).toBe(true);
+  await settleEntrance(page);
+  await page.screenshot({
+    path: "artifacts/screenshots/admin-user-insights.png",
+    fullPage: true,
+  });
+  await dialog
+    .getByRole("checkbox", { name: "包含已刪除對話", exact: true })
+    .uncheck();
+  await expect(
+    dialog.getByRole("button", { name: "檢視對話：公文內容討論", exact: true }),
+  ).toHaveCount(0);
+  await page.setViewportSize({ width: 375, height: 812 });
+  expect(
+    await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+  ).toBe(true);
+  await page.screenshot({
+    path: "artifacts/screenshots/admin-user-insights-mobile.png",
+    fullPage: true,
+  });
+  await dialog
+    .getByRole("button", { name: "關閉使用者活動", exact: true })
+    .click();
+  await page.getByRole("button", { name: "異動稽核", exact: true }).click();
+  await chooseSelect(page, "稽核動作", "對話內容檢視");
+  await expect(page.locator(".audit-row")).toHaveCount(1);
+  const download = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "匯出已載入 1 筆", exact: true })
+    .click();
+  expect((await download).suggestedFilename()).toContain("1筆.csv");
+});
+
+test("audit shows readable before after differences and server filters", async ({
+  page,
+}) => {
+  const state = await administration(page);
+  state.audit.push({
+    id: 1,
+    actor: "AD\\admin",
+    action: "admin.role",
+    resourceId: null,
+    result: "saved",
+    at: "2026-10-04T00:00:00Z",
+    detailsJson: JSON.stringify({
+      resourceKey: "analyst",
+      before: { name: "分析人員", enabled: false },
+      after: { name: "資深分析人員", enabled: true },
+    }),
+  });
+  await page.getByRole("button", { name: "異動稽核", exact: true }).click();
+  await page.getByText("查看前後差異", { exact: true }).click();
+  await expect(page.locator(".audit-changes")).toContainText("資深分析人員");
+  await expect(page.locator(".audit-before").first()).toContainText("分析人員");
+  await chooseSelect(page, "稽核結果", "已檢視");
+  await expect(page.locator(".audit-row")).toHaveCount(0);
+});
+
+test("a delayed initial conversation list cannot overwrite a newer filter", async ({
+  page,
+}) => {
+  const state = await administration(page);
+  let release!: () => void;
+  let arrived!: () => void;
+  const pending = new Promise<void>((resolve) => (release = resolve));
+  const received = new Promise<void>((resolve) => (arrived = resolve));
+  let initial = true;
+  await page.route("**/api/v1/admin/users/*/conversations*", async (route) => {
+    if (!initial) return route.fallback();
+    initial = false;
+    arrived();
+    await pending;
+    await route.fulfill({
+      json: {
+        items: [
+          {
+            id: state.conversationId,
+            title: "公文內容討論",
+            createdAt: state.bob.lastSeenAt,
+            updatedAt: state.bob.lastSeenAt,
+            isArchived: true,
+            isDeleted: true,
+            messages: 2,
+          },
+        ],
+        total: 1,
+        offset: 0,
+      },
+    });
+  });
+  await page
+    .getByRole("button", { name: "使用者活動：王小明", exact: true })
+    .click();
+  await received;
+  const dialog = page.getByRole("dialog", { name: "王小明", exact: true });
+  await dialog
+    .getByRole("checkbox", { name: "包含已刪除對話", exact: true })
+    .uncheck();
+  await expect(
+    dialog.getByText("沒有符合的對話。", { exact: true }),
+  ).toBeVisible();
+  release();
+  await expect(dialog.locator(".inspector-stats")).toBeVisible();
+  await expect(
+    dialog.getByRole("button", { name: "檢視對話：公文內容討論", exact: true }),
   ).toHaveCount(0);
 });

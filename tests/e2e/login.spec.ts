@@ -21,8 +21,8 @@ test("LDAP login rejects passwords, clears secrets and returns to chat", async (
   await expect(
     page.getByRole("heading", { name: "今天，從哪件事開始？" }),
   ).toBeVisible();
-  await page.locator(".profile-menu summary").click();
-  await page.getByRole("button", { name: "登出工作台" }).click();
+  await page.getByRole("button", { name: "登入者選單", exact: true }).click();
+  await page.getByRole("menuitem", { name: "登出工作台" }).click();
   await expect(page.getByRole("heading", { name: "登入工作台" })).toBeVisible();
   expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain(
     "fixture-password",

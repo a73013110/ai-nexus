@@ -28,6 +28,7 @@ let sequence = 0;
       #trigger
       type="button"
       class="icon-button"
+      [class.profile-trigger]="profile()"
       [attr.aria-label]="label()"
       aria-haspopup="menu"
       [attr.aria-expanded]="opened()"
@@ -35,7 +36,11 @@ let sequence = 0;
       (click)="toggle()"
       (keydown)="key($event, true)"
     >
-      <nx-icon name="more" />
+      @if (profile()) {
+        <ng-content />
+      } @else {
+        <nx-icon name="more" />
+      }
     </button>
     <div
       #panel
@@ -61,6 +66,7 @@ let sequence = 0;
     </div>`,
 })
 export class ActionMenu {
+  readonly profile = input(false);
   readonly label = input('更多操作');
   readonly items = input.required<MenuAction[]>();
   readonly action = output<string>();

@@ -18,7 +18,7 @@
 
 | 用途                         | Token                           | 預設（16px root）                        |
 | ---------------------------- | ------------------------------- | ---------------------------------------- |
-| 附註／工具列／模型與 Context | `--text-caption`                | 14px，最小可見字級                       |
+| 附註／工具列／模型與 Context | `--text-caption`                | 14px，介面輔助字級                       |
 | 標籤／清單／標題輔助         | `--text-label`                  | 15px                                     |
 | 一般 UI／表單                | `--text-ui`                     | 16px                                     |
 | 對話正文／訊息輸入           | `--text-body`                   | 17px，1.8 行高                           |
@@ -27,6 +27,10 @@
 | 工作台開場／登入主標         | `--text-display`／`--text-hero` | 26–34／36–58px 流動字級，使用 rem 上下限 |
 
 正文色使用 ink，輔助文字使用 secondary／muted，不能以低對比淡字承載操作與狀態。配色以一般文字 WCAG AA 4.5:1 為驗證目標；focus 有 2px 可見輪廓。新文字／背景組合仍需實測對比，不能因 token 有色值就視為全部合格。
+
+個人閱讀偏好可將 `--text-body` 調至 12–24px、`--line-reading` 調至 1–2.2；不縮小其他 UI token。彈出視窗統一以 `--dialog-width` 設定理想寬度，並受 viewport 邊界限制，不使用瀏覽器預設粗框或由內容推算的窄寬度。按鈕／圖示使用 inline-flex 對齊；勾選的 20px 指示器與文字同行，整列至少 44px 可操作。
+
+`Icon` 使用 Lucide 1.52.0：語意名稱對應精選 SVG 資料，再由單一 Angular renderer 繪製，避免匯入整套圖示或保留每個圖示的 Angular component metadata。新增圖示只更新此對照；品牌、傅立葉畫布及資料圖表保留自身圖形語彙。
 
 ## 對話的空間分配
 
@@ -38,7 +42,7 @@
 
 ## Motion tokens
 
-提問泡泡的寬度、底色與邊框使用 `--message-user-width`、`--user-bubble`、`--user-bubble-border`；AI 正文保留左側閱讀線與角色標籤。對話定位使用 `--outline-space`、`--outline-card-width`，桌面預留側邊空間，手機將目錄入口放在頂列。摘要卡支援 hover 與 focus，跳轉遵循減少動態設定。
+提問泡泡的寬度、底色與邊框使用 `--message-user-width`、`--user-bubble`、`--user-bubble-border`；AI 正文保留左側閱讀線與角色標籤。對話定位使用 `--outline-space`，桌面預留側邊空間，手機將目錄入口放在閱讀區右下。摘要卡以實際觸發元素及閱讀區邊界定位，支援 hover 與 focus，跳轉遵循減少動態設定。
 
 | Token                               | 預設                        | 使用                                 |
 | ----------------------------------- | --------------------------- | ------------------------------------ |
@@ -70,15 +74,18 @@
 
 平台管理頁右上方「介面元件」開啟 `/design`。此頁組合正式元件，提供淺色／深色局部預覽及目前 semantic tokens 的 JSON 匯出；不修改個人偏好，不呼叫模型或建立公司資料。只有具 admin 功能者顯示工作台，範例不含敏感資訊。
 
-| 元件                             | 使用與互動                                                                           |
-| -------------------------------- | ------------------------------------------------------------------------------------ |
-| Select                           | 單選 combobox／listbox、方向鍵／Home／End／typeahead、Enter 套用、Esc 關閉、停用選項 |
-| ActionMenu                       | 動作 menu、上下移動跳過停用、Esc 返回 trigger；危險操作仍進入確認                    |
-| ConfirmDialog                    | 原生 modal、清楚名稱及描述、初始焦點放取消、Esc／關閉取消，結束返回先前焦點          |
-| InlineTitle                      | 雙擊／F2／Enter 編輯，Enter／離開儲存、Esc 取消；版本 guard 與每個實例唯一 ID        |
-| MarkdownView                     | 共用文字／表格／程式碼渲染及複製；HTML／外部圖片與危險 URL 受限                      |
-| JobProgress／InferenceSignal     | 真實階段及完成單位、未知總量的不定進度、取消要求與完成分開、減少動態仍保留文字       |
-| FeaturePage／WorkspaceNavigation | 共用功能頁、依有效授權顯示；聊天精簡四欄入口與完整 aria-label，留空間給歷史          |
+| 元件                             | 使用與互動                                                                                 |
+| -------------------------------- | ------------------------------------------------------------------------------------------ |
+| Select                           | 單選 combobox／listbox、方向鍵／Home／End／typeahead、搜尋、單行名稱、Enter 套用、Esc 關閉 |
+| ActionMenu                       | 動作 menu、上下移動跳過停用、Esc 返回 trigger；危險操作仍進入確認                          |
+| ConfirmDialog                    | 原生 modal、清楚名稱及描述、初始焦點放取消、Esc／關閉取消，結束返回先前焦點                |
+| InlineTitle                      | 雙擊／F2／Enter 編輯，Enter／離開儲存、Esc 取消；版本 guard 與每個實例唯一 ID              |
+| MarkdownView                     | 共用文字／表格／程式碼渲染及複製；HTML／外部圖片與危險 URL 受限                            |
+| JobProgress／InferenceSignal     | 真實階段及完成單位、未知總量的不定進度、取消要求與完成分開、減少動態仍保留文字             |
+| Checkbox／SearchField            | 原生語意、整列勾選、停用與焦點狀態、搜尋圖示與清除；管理／分享／來源共用                   |
+| FeaturePage／WorkspaceNavigation | 所有頁面共用分類四欄入口與完整 aria-label；聊天底部預設收合，歷史為主                      |
+| AccountMenu／SettingsDialog      | 共用登入者選單；設定在當頁開啟，延遲載入、未儲存確認、焦點返回                             |
+| ThinkingIndicator／FocusComposer | 不定進度訊號波形及可放大編輯的同步草稿；減少動態與 IME 規則共用                            |
 
 主題 zone 使用 `[data-theme='light'|'dark']` 重新映射同一組 semantic tokens，避免元件複製 dark 條件。危險按鈕使用 `--danger-surface`／`--danger-text`，與錯誤文字 `--error` 分開，讓深色的提示色不會變成低對比按鈕。主要／次要操作與 quiet labels 為 15px，icon button 及歷史操作保留 44px 範圍。sr-only／visually-hidden 供螢幕閱讀器，儲存回饋不佔用對話版面。
 
