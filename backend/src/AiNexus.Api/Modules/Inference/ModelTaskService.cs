@@ -25,13 +25,14 @@ public sealed record ModelTaskResult(string Text, bool Truncated, long? InputTok
 // Database locks are released before the provider request starts.
 public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog catalog, IInferenceProvider provider, ModelQuotaLock writes, IOptions<InferenceOptions> options)
 {
-    public async Task<ModelTaskResult> GenerateAsync(Guid owner, string kind, string prompt, string instruction, CancellationToken ct, string? model = null, IReadOnlyList<InferenceImage>? images = null)
+    public async Task<ModelTaskResult> GenerateAsync(Guid owner, string kind, string prompt, string instruction, CancellationToken ct, string? model = null, IReadOnlyList<InferenceImage>? images = null, string? expectedConfiguration = null)
     {
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
         var policy = scope.ServiceProvider.GetRequiredService<ModelPolicyService>();
         if (prompt.Length > 16000 || instruction.Length > 24000) throw new ApiException(400, "task_input_too_long", "處理內容過長，請縮小選取範圍。");
         var profile = await catalog.RequireAsync(model, ct);
+        if (kind == "evaluation") ModelTaskConfiguration.Require(profile, options.Value, expectedConfiguration);
         if (images?.Count > 0 && !profile.SupportsImages) throw new ApiException(400, "vision_not_supported", "系統模型不支援圖片辨識。");
         // Reject invalid input before reserving quota or recording a model invocation.
         if (Encoding.UTF8.GetByteCount(prompt + instruction) + (images?.Sum(x => x.EstimatedTokens) ?? 0) + profile.MaxOutputTokens + 160 > profile.ContextTokens)
@@ -52,7 +53,7 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
         timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.TimeoutSeconds));
         try
         {
-            var parameters = new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, .2, instruction, profile.DefaultReasoningEffort, profile.ReasoningControl, profile.SupportsImages);
+            var parameters = new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, ModelTaskConfiguration.Temperature, instruction, profile.DefaultReasoningEffort, profile.ReasoningControl, profile.SupportsImages);
             await foreach (var chunk in provider.StreamAsync(profile.Id, [new("user", prompt, images)], parameters, timeout.Token))
             {
                 text.Append(chunk.Text); done |= chunk.Done;

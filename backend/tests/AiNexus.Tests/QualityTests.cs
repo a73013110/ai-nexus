@@ -7,6 +7,7 @@ using AiNexus.Modules.Collaboration;
 using AiNexus.Modules.Inference;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Xunit;
 using static AiNexus.Tests.ChatApiTests;
 
@@ -64,7 +65,24 @@ public sealed class QualityTests
         Assert.Equal(1, f.Provider.Calls); Assert.Equal(2, (await owner.GetFromJsonAsync<EvaluationDetailDto>($"/api/v1/quality/runs/{run.Id}"))!.Results.Count);
         using var check = f.Services.CreateScope(); var actor = (await owner.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var task = check.ServiceProvider.GetRequiredService<ModelTaskService>();
-        var invalid = await Assert.ThrowsAsync<ApiException>(() => task.GenerateAsync(actor, "evaluation", new string('中', 4000), "", CancellationToken.None)); Assert.Equal("context_budget_exceeded", invalid.Code);
+        var settings = f.Services.GetRequiredService<IOptions<InferenceOptions>>().Value;
+        var invalid = await Assert.ThrowsAsync<ApiException>(() => task.GenerateAsync(actor, "evaluation", new string('中', 4000), "", CancellationToken.None, expectedConfiguration: ModelTaskConfiguration.Capture(settings.Models[0], settings).Fingerprint)); Assert.Equal("context_budget_exceeded", invalid.Code);
         Assert.Equal(1, await check.ServiceProvider.GetRequiredService<NexusDbContext>().Set<ModelInvocation>().CountAsync());
+    }
+    [Fact]
+    public async Task ChangedModelSettingsBlockQueuedComparisonAndRetryBeforeConsumingQuota()
+    {
+        await using var f = new NexusFactory(backgroundJobs: false); using var owner = await f.SignedInAsync();
+        var set = (await (await owner.PostAsJsonAsync("/api/v1/quality/sets", Sample)).Content.ReadFromJsonAsync<EvaluationSetDto>())!;
+        var run = (await (await owner.PostAsJsonAsync($"/api/v1/quality/sets/{set.Resource.Id}/runs", new EvaluationRunRequest([new("固定設定")]))).Content.ReadFromJsonAsync<EvaluationRunDto>())!;
+        var config = (await owner.GetFromJsonAsync<EvaluationDetailDto>($"/api/v1/quality/runs/{run.Id}"))!.Variants[0].Configuration!;
+        Assert.Equal(512, config.MaxOutputTokens); Assert.Equal(.2, config.Temperature);
+        f.Services.GetRequiredService<IOptions<InferenceOptions>>().Value.Models[0].MaxOutputTokens = 256;
+        await ActivatorUtilities.CreateInstance<BackgroundJobWorker>(f.Services).ProcessNextAsync(CancellationToken.None);
+        var detail = (await owner.GetFromJsonAsync<EvaluationDetailDto>($"/api/v1/quality/runs/{run.Id}"))!;
+        Assert.Equal("failed", detail.Run.Job.Status); Assert.Equal("evaluation_configuration_changed", detail.Run.Job.ErrorCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await owner.PostAsync($"/api/v1/jobs/{run.Job.Id}/retry", null)).StatusCode);
+        Assert.Equal(0, f.Provider.Calls);
+        using var scope = f.Services.CreateScope(); Assert.Equal(0, await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<ModelInvocation>().CountAsync());
     }
 }

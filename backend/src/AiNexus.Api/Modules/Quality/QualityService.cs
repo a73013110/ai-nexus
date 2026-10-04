@@ -4,10 +4,11 @@ using AiNexus.Modules.Collaboration;
 using AiNexus.Modules.Inference;
 using AiNexus.Modules.Operations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Quality;
 
-public sealed class QualityService(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, JobService jobs, ModelCatalog models, ModelPresentation presentation, AiNexus.Modules.Administration.ModelPolicyService policy)
+public sealed class QualityService(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, JobService jobs, ModelCatalog models, ModelPresentation presentation, AiNexus.Modules.Administration.ModelPolicyService policy, IOptions<InferenceOptions> inference)
 {
     public async Task<FeedbackDto?> FeedbackAsync(Guid actor, Guid message, FeedbackRequest request, CancellationToken ct)
     {
@@ -73,7 +74,7 @@ public sealed class QualityService(NexusDbContext db, ResourceAccess access, Res
     {
         if (request.Variants.Count is < 1 or > 3 || request.Variants.Any(x => x.Label.Trim().Length is < 1 or > 80 || x.Instruction.Length > 4000) || request.Variants.Select(x => x.Label.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() != request.Variants.Count) throw new ApiException(400, "evaluation_variants_invalid", "請設定 1 至 3 個名稱不同的比較方案，指令最多 4,000 字元。");
         var variants = new List<EvaluationVariant>();
-        foreach (var variant in request.Variants) { var model = await models.RequireAsync(variant.ModelId, ct); await policy.RequireAsync(actor, model.Id, ct); variants.Add(new(variant.Label.Trim(), model.Id, variant.Instruction.Trim())); }
+        foreach (var variant in request.Variants) { var model = await models.RequireAsync(variant.ModelId, ct); await policy.RequireAsync(actor, model.Id, ct); variants.Add(new(variant.Label.Trim(), model.Id, variant.Instruction.Trim(), ModelTaskConfiguration.Capture(model, inference.Value))); }
         await writes.Gate.WaitAsync(ct);
         try
         {

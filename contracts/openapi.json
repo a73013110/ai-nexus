@@ -12699,6 +12699,16 @@
           },
           "instruction": {
             "type": "string"
+          },
+          "configuration": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ModelTaskSnapshot"
+              }
+            ]
           }
         }
       },
@@ -13177,6 +13187,36 @@
           },
           "policy": {
             "$ref": "#/components/schemas/ModelPolicyDto"
+          }
+        }
+      },
+      "ModelTaskSnapshot": {
+        "required": [
+          "contextTokens",
+          "maxOutputTokens",
+          "temperature",
+          "reasoningEffort",
+          "fingerprint"
+        ],
+        "type": "object",
+        "properties": {
+          "contextTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "maxOutputTokens": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "temperature": {
+            "type": "number",
+            "format": "double"
+          },
+          "reasoningEffort": {
+            "type": "string"
+          },
+          "fingerprint": {
+            "type": "string"
           }
         }
       },

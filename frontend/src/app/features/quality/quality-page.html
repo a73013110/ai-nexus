@@ -135,6 +135,16 @@
                   <details>
                     <summary>本次比較指令</summary>
                     <p class="plain-copy">{{ variant.instruction || '模型預設指令' }}</p>
+                    @if (variant.configuration; as config) {
+                      <p class="form-note">
+                        Context {{ config.contextTokens | number }} · 輸出上限
+                        {{ config.maxOutputTokens | number }} · temperature
+                        {{ config.temperature }} · 思考 {{ config.reasoningEffort }}
+                      </p>
+                      <p class="form-note">
+                        設定指紋 <code>{{ config.fingerprint.slice(0, 12) }}</code>
+                      </p>
+                    }
                   </details>
                   @if (result(c, v); as answer) {
                     <div class="evaluation-metrics">

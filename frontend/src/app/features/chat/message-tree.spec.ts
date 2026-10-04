@@ -13,6 +13,7 @@ const message = (id: string, parentId: string | null, role = 'assistant'): Messa
   modelId: null,
   attachments: [],
   errorCode: null,
+  feedbackRating: 0,
 });
 
 describe('Conversation branch index', () => {

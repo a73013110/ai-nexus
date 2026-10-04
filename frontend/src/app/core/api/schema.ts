@@ -5133,6 +5133,7 @@ export interface components {
       label: string;
       modelId: string;
       instruction: string;
+      configuration?: null | components['schemas']['ModelTaskSnapshot'];
     };
     EvaluationVariantRequest: {
       label: string;
@@ -5291,6 +5292,16 @@ export interface components {
       providerAvailable: boolean;
       notice: null | string;
       policy: components['schemas']['ModelPolicyDto'];
+    };
+    ModelTaskSnapshot: {
+      /** Format: int32 */
+      contextTokens: number;
+      /** Format: int32 */
+      maxOutputTokens: number;
+      /** Format: double */
+      temperature: number;
+      reasoningEffort: string;
+      fingerprint: string;
     };
     PersonalUsageDto: {
       /** Format: int32 */

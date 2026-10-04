@@ -6,6 +6,7 @@ using AiNexus.Modules.Collaboration;
 using AiNexus.Modules.Inference;
 using AiNexus.Modules.Operations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Quality;
 
@@ -18,7 +19,7 @@ public static class EvaluationMetrics
         return (required.Count(x => answer.Contains(x.Trim(), StringComparison.OrdinalIgnoreCase)), required.Count, forbidden.Count(x => answer.Contains(x.Trim(), StringComparison.OrdinalIgnoreCase)));
     }
 }
-public sealed class EvaluationHandler(NexusDbContext db, ResourceAccess access, AccessService features, ModelTaskService model, ModelPresentation presentation) : IBackgroundJobHandler
+public sealed class EvaluationHandler(NexusDbContext db, ResourceAccess access, AccessService features, ModelTaskService model, ModelPresentation presentation, ModelCatalog catalog, IOptions<InferenceOptions> inference) : IBackgroundJobHandler
 {
     public string Kind => "evaluation";
     private async Task<EvaluationRun> RequireAsync(BackgroundJob job, CancellationToken ct)
@@ -27,7 +28,12 @@ public sealed class EvaluationHandler(NexusDbContext db, ResourceAccess access, 
         var run = await db.Set<EvaluationRun>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == job.SubjectId && x.OwnerId == job.OwnerId, ct) ?? throw new ApiException(404, "evaluation_run_missing", "找不到原始評測。");
         await access.RequireAsync(job.OwnerId, run.SetId, "evaluation", ct); return run;
     }
-    public async Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => await RequireAsync(job, ct);
+    public async Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct)
+    {
+        var run = await RequireAsync(job, ct);
+        foreach (var variant in QualityService.Parse<EvaluationVariant>(run.VariantsJson))
+            ModelTaskConfiguration.Require(await catalog.RequireAsync(presentation.PublicId(variant.ModelId), ct), inference.Value, variant.Configuration?.Fingerprint);
+    }
     public async Task ExecuteAsync(JobExecution execution, CancellationToken ct)
     {
         var run = await RequireAsync(execution.Job, ct); var cases = QualityService.Parse<EvaluationCase>(run.CasesJson); var variants = QualityService.Parse<EvaluationVariant>(run.VariantsJson);
@@ -41,7 +47,7 @@ public sealed class EvaluationHandler(NexusDbContext db, ResourceAccess access, 
                 await execution.CheckpointAsync($"第 {c + 1} 題 · {variants[v].Label}", completed, total, ct);
                 var timer = Stopwatch.StartNew();
                 // The reference answer and check terms are withheld from the model.
-                var answer = await model.GenerateAsync(run.OwnerId, "evaluation", cases[c].Question, variants[v].Instruction, ct, presentation.PublicId(variants[v].ModelId));
+                var answer = await model.GenerateAsync(run.OwnerId, "evaluation", cases[c].Question, variants[v].Instruction, ct, presentation.PublicId(variants[v].ModelId), expectedConfiguration: variants[v].Configuration?.Fingerprint);
                 await RequireAsync(execution.Job, ct); var metrics = EvaluationMetrics.Measure(answer.Text, cases[c]);
                 db.Add(new EvaluationResult { RunId = run.Id, CaseIndex = c, VariantIndex = v, Output = answer.Text, Truncated = answer.Truncated, RequiredMatches = metrics.Matches, RequiredTotal = metrics.Total, ForbiddenMatches = metrics.Forbidden, ElapsedMs = timer.ElapsedMilliseconds, InputTokens = answer.InputTokens, OutputTokens = answer.OutputTokens });
                 await execution.CheckpointAsync($"完成 {completed + 1} / {total} 次回答", ++completed, total, ct);
