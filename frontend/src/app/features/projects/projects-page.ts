@@ -30,6 +30,7 @@ import { ArtifactsApi } from '../artifacts/artifacts-api';
 import { WorkspaceApi } from '../workspace/workspace-api';
 import { KnowledgeApi } from '../knowledge/knowledge-api';
 import { ProjectsApi } from './projects-api';
+import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
 
 @Component({
   selector: 'nx-projects-page',
@@ -41,6 +42,7 @@ import { ProjectsApi } from './projects-api';
 export class ProjectsPage {
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(ProjectsApi);
+  private readonly transfer = inject(ConversationDraftTransfer);
   private readonly workspace = inject(WorkspaceApi);
   private readonly knowledge = inject(KnowledgeApi);
   private readonly artifacts = inject(ArtifactsApi);
@@ -219,10 +221,10 @@ export class ProjectsPage {
     this.error.set('');
     try {
       const value = await this.api.start(current.resource.id, templateId);
-      if (valid())
-        await this.router.navigate(['/chat', value.conversation.id], {
-          state: { projectPrompt: value.prompt },
-        });
+      if (valid()) {
+        this.transfer.put(value.conversation.id, value.prompt);
+        await this.router.navigate(['/chat', value.conversation.id]);
+      }
     } catch (e) {
       if (valid()) this.error.set(this.scope.message(e));
     } finally {

@@ -120,3 +120,5 @@ Sharing migration 在 collaboration 增加 ShareLinks／ShareRecipients；分享
 
 
 品質模組使用 quality schema：MessageFeedback 是對話擁有者的回答評價；EvaluationSets 保存有版本的固定題庫；EvaluationRuns 凍結題庫與比較方案；EvaluationResults 保存逐題模型回答、自動文字檢核與獨立人工評分。評測沿用 collaboration ACL 與 operations 背景任務。詳見 [QUALITY.md](QUALITY.md)。
+
+content.SourceReferences 保存匯入快照的來源代碼、外部識別碼與版本；原始公文／校務仍在獨立來源資料庫，以 nexus 授權 view 唯讀取得。AiNexus migrations 不會在外部來源建物件，DBA 契約範本另置於 db/integrations。

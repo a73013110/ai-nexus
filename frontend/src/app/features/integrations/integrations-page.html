@@ -1,0 +1,159 @@
+<nx-feature-page
+  title="系統整合"
+  description="以你的來源權限查詢公文與校務資料，快速接續閱讀、整理與分析。"
+>
+  @if (error()) {
+    <p role="alert" class="error-banner">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p role="status" class="form-note">{{ notice() }}</p>
+  }
+  @if (loading()) {
+    <p role="status">正在載入資料來源…</p>
+  } @else {
+    <div class="source-catalog" role="group" aria-label="資料來源">
+      @for (source of sources(); track source.id) {
+        <button
+          class="source-card"
+          [class.current]="current()?.id === source.id"
+          [attr.aria-pressed]="current()?.id === source.id"
+          (click)="select(source)"
+          [disabled]="busy()"
+        >
+          <nx-icon [name]="source.id === 'gdweb' ? 'document' : 'library'" />
+          <div>
+            <strong>{{ source.name }}</strong
+            ><span>{{ source.description }}</span
+            ><small>{{ source.canQuery ? '連線已設定' : source.notice }}</small>
+          </div>
+          <nx-icon [name]="source.canQuery ? 'chevron' : 'lock'" />
+        </button>
+      }
+    </div>
+    @if (current(); as source) {
+      @if (!source.canQuery) {
+        <div class="empty-state">
+          <nx-icon name="lock" />
+          <h2>{{ source.name }}尚未可用</h2>
+          <p>{{ source.notice }}</p>
+          <p class="form-note">完成來源設定及授權後，就能在此搜尋與閱讀。</p>
+        </div>
+      } @else {
+        <form class="source-search" (submit)="search($event)">
+          <label
+            ><span class="sr-only">搜尋 {{ source.name }}</span
+            ><input
+              type="search"
+              required
+              minlength="2"
+              maxlength="120"
+              [placeholder]="'搜尋' + source.name + '的標題或識別碼…'"
+              [value]="query()"
+              (input)="query.set($any($event.target).value)"
+              [disabled]="searching() || busy()" /></label
+          ><nx-select
+            label="來源資料類型"
+            [options]="kindOptions()"
+            [value]="kind()"
+            (valueChange)="kind.set($event)"
+            [disabled]="searching() || busy()"
+          /><button
+            class="primary-button"
+            type="submit"
+            [disabled]="searching() || busy() || query().trim().length < 2"
+          >
+            <nx-icon name="search" />{{ searching() ? '正在搜尋…' : '搜尋' }}
+          </button>
+        </form>
+        <div class="source-workbench">
+          <aside class="source-results" aria-label="查詢結果">
+            @for (row of rows(); track row.id) {
+              <button
+                [class.current]="detail()?.record?.id === row.id"
+                [disabled]="busy()"
+                (click)="read(row.id)"
+              >
+                <span class="panel-eyebrow">{{ label(row.kind) }} · {{ row.status }}</span
+                ><strong>{{ row.title }}</strong
+                ><small>{{ row.id }} · {{ row.revision }}</small>
+              </button>
+            } @empty {
+              <p class="form-note">
+                {{ searched() ? '沒有符合且你有權限閱讀的資料。' : '輸入兩個字以上開始搜尋。' }}
+              </p>
+            }
+            @if (rows().length) {
+              <p class="form-note">依更新時間排序；搜尋範圍由來源權限決定。</p>
+            }
+          </aside>
+          <section class="source-reading" aria-label="來源內容">
+            @if (reading()) {
+              <p role="status">正在取得最新資料與授權…</p>
+            } @else if (detail(); as view) {
+              <header class="resource-heading">
+                <div>
+                  <span class="panel-eyebrow"
+                    >{{ source.name }} · {{ label(view.record.kind) }}</span
+                  >
+                  <h2>{{ view.record.title }}</h2>
+                  <p>
+                    {{ view.record.id }} · {{ view.record.status }} · {{ view.record.revision }}
+                  </p>
+                  <time>{{ date(view.record.modifiedAt) }}</time>
+                </div>
+                <div class="page-actions">
+                  @if (session.has('chat')) {
+                    <button class="primary-button" (click)="use('chat')" [disabled]="busy()">
+                      <nx-icon name="lines" />帶入對話
+                    </button>
+                  }
+                  @if (session.has('artifacts')) {
+                    <button class="secondary-button" (click)="use('import')" [disabled]="busy()">
+                      <nx-icon name="document" />儲存個人快照
+                    </button>
+                  }
+                  <button
+                    class="icon-button"
+                    aria-label="重新載入來源"
+                    (click)="read(view.record.id)"
+                    [disabled]="busy()"
+                  >
+                    <nx-icon name="repeat" />
+                  </button>
+                </div>
+              </header>
+              <p class="form-note">
+                帶入對話後先檢視草稿再送出。個人快照保存當下版本，來源更新或撤權不會回收已儲存的文字。
+              </p>
+              <nx-markdown-view [content]="view.body" />
+              <section class="source-history">
+                <h3>歷程與版本</h3>
+                @for (entry of view.history; track $index) {
+                  <article>
+                    <span class="history-point"></span>
+                    <div>
+                      <strong>{{ label(entry.kind) }}</strong>
+                      <p>{{ entry.description }}</p>
+                      <small>{{ entry.actor }} · {{ entry.revision }} · {{ date(entry.at) }}</small>
+                    </div>
+                  </article>
+                } @empty {
+                  <p class="form-note">來源未提供可讀的歷程。</p>
+                }
+                @if (view.historyLimited) {
+                  <p class="form-note">目前顯示最近 100 筆，完整歷程請至原系統檢視。</p>
+                }
+              </section>
+            } @else {
+              <div class="empty-state">
+                <nx-icon name="document" />
+                <h2>選擇一筆資料開始閱讀</h2>
+                <p>來源授權會在每次讀取及匯入時重新確認。</p>
+              </div>
+            }
+          </section>
+        </div>
+      }
+    }
+  }
+</nx-feature-page>

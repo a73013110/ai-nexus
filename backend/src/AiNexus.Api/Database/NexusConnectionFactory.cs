@@ -25,6 +25,12 @@ public sealed class NexusConnectionFactory(IConfiguration configuration) : IDbCo
     {
         var connection = new SqlConnectionStringBuilder(ConnectionString<TDb>());
         if (typeof(TDb) == typeof(INexusBootstrapDatabase)) connection.InitialCatalog = "master";
+        if (typeof(TDb) == typeof(AiNexus.Modules.Integrations.ILegacyGdwebDatabase) || typeof(TDb) == typeof(AiNexus.Modules.Integrations.ILegacyMeihoDatabase))
+        {
+            connection.ApplicationIntent = ApplicationIntent.ReadOnly;
+            connection.Encrypt = SqlConnectionEncryptOption.Mandatory;
+            connection.ConnectTimeout = 10;
+        }
         return new SqlConnection(connection.ConnectionString);
     }
     public DbContextOptions<TContext> CreateDbContextOptions<TDb, TContext>()

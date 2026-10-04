@@ -1756,3 +1756,66 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004074051_Integrations'
+)
+BEGIN
+    CREATE TABLE [content].[SourceReferences] (
+        [ArtifactId] uniqueidentifier NOT NULL,
+        [SourceId] nvarchar(32) NOT NULL,
+        [ExternalId] nvarchar(160) NOT NULL,
+        [Revision] nvarchar(160) NOT NULL,
+        [ImportedAt] datetimeoffset NOT NULL,
+        CONSTRAINT [PK_SourceReferences] PRIMARY KEY ([ArtifactId]),
+        CONSTRAINT [FK_SourceReferences_Artifacts_ArtifactId] FOREIGN KEY ([ArtifactId]) REFERENCES [content].[Artifacts] ([Id]) ON DELETE CASCADE
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004074051_Integrations'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Enabled', N'Name', N'Route', N'SortOrder') AND [object_id] = OBJECT_ID(N'[access].[Features]'))
+        SET IDENTITY_INSERT [access].[Features] ON;
+    EXEC(N'INSERT INTO [access].[Features] ([Id], [Enabled], [Name], [Route], [SortOrder])
+    VALUES (N''integrations'', CAST(1 AS bit), N''系統整合'', N''/integrations'', 80)');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Enabled', N'Name', N'Route', N'SortOrder') AND [object_id] = OBJECT_ID(N'[access].[Features]'))
+        SET IDENTITY_INSERT [access].[Features] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004074051_Integrations'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'FeatureId', N'GroupId') AND [object_id] = OBJECT_ID(N'[access].[RoleGroupFeatures]'))
+        SET IDENTITY_INSERT [access].[RoleGroupFeatures] ON;
+    EXEC(N'INSERT INTO [access].[RoleGroupFeatures] ([FeatureId], [GroupId])
+    VALUES (N''integrations'', N''administrators'')');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'FeatureId', N'GroupId') AND [object_id] = OBJECT_ID(N'[access].[RoleGroupFeatures]'))
+        SET IDENTITY_INSERT [access].[RoleGroupFeatures] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004074051_Integrations'
+)
+BEGIN
+    CREATE INDEX [IX_SourceReferences_SourceId_ExternalId] ON [content].[SourceReferences] ([SourceId], [ExternalId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004074051_Integrations'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261004074051_Integrations', N'10.0.12');
+END;
+
+COMMIT;
+GO
+

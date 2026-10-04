@@ -63,3 +63,5 @@ Verify 使用獨立資料庫與測試 provider，Edge 測試也明確使用 fixt
 
 
 品質功能：回答旁一鍵回饋、固定題庫匯入／匯出、模型與指令比較、逐題背景進度及人工評分。操作與權限說明見 [docs/QUALITY.md](docs/QUALITY.md)。
+
+公文／校務唯讀 adapter：固定授權 view、參數化搜尋、狀態／簽核／版本歷程、聊天草稿與個人成果快照。正式來源尚待設定連線與原系統授權 view，完整分析與啟用步驟見 [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md)。

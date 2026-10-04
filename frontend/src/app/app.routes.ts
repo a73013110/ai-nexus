@@ -3,6 +3,11 @@ import { pendingChanges } from './shared/browser/pending-changes';
 
 export const routes: Routes = [
   {
+    path: 'integrations',
+    loadComponent: () =>
+      import('./features/integrations/integrations-page').then((m) => m.IntegrationsPage),
+  },
+  {
     path: 'quality/:id',
     loadComponent: () => import('./features/quality/quality-page').then((m) => m.QualityPage),
   },

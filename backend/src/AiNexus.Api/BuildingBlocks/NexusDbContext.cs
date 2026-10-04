@@ -29,6 +29,8 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
         AiNexus.Modules.Projects.ProjectConfiguration.Configure(model);
         AiNexus.Modules.Sharing.SharingConfiguration.Configure(model);
         AiNexus.Modules.Quality.QualityConfiguration.Configure(model);
+        AiNexus.Modules.Integrations.IntegrationConfiguration.Configure(model);
+        PlatformFeatures.Add(model, "integrations", "系統整合", "/integrations", 80, administratorsOnly: true);
         PlatformFeatures.Add(model, "quality", "品質評測", "/quality", 60);
         PlatformFeatures.Add(model, "shared", "分享", "/shared", 50);
         PlatformFeatures.Add(model, "projects", "專案", "/projects", 20);

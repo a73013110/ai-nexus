@@ -30,6 +30,13 @@ export type Conversation = Dto<'ConversationDto'>;
 export type Message = Omit<Dto<'MessageDto'>, 'sources' | 'feedbackRating'> &
   Pick<components['schemas']['MessageDto'], 'sources' | 'feedbackRating'>;
 export type Feedback = Dto<'FeedbackDto'>;
+export type ExternalSource = Dto<'SourceDto'>;
+export type SourceRecord = Dto<'SourceRecordDto'>;
+export type SourceDetail = Dto<'SourceDetailDto'> & {
+  record: SourceRecord;
+  history: Dto<'SourceHistoryDto'>[];
+};
+export type SourceChat = Dto<'SourceChatDto'> & { conversation: Conversation };
 export type EvaluationCase = Dto<'EvaluationCase'>;
 export type EvaluationVariant = Dto<'EvaluationVariant'>;
 export type EvaluationSet = Dto<'EvaluationSetDto'> & {

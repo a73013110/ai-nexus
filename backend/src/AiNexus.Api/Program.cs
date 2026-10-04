@@ -58,7 +58,7 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
     options.AddPolicy(BuiltInAccess.ChatPolicy, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(BuiltInAccess.ChatFeature)));
     options.AddPolicy(AdministrationConfiguration.Policy, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(AdministrationConfiguration.Feature)));
-    foreach (var feature in new[] { "knowledge", "tasks", "artifacts", "projects", "shared", "quality" })
+    foreach (var feature in new[] { "knowledge", "tasks", "artifacts", "projects", "shared", "quality", "integrations" })
         options.AddPolicy("feature:" + feature, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(feature)));
     options.AddPolicy("feature:attachments", policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement("chat", "knowledge", "projects")));
     options.AddPolicy("feature:text", policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement("chat", "artifacts")));
@@ -102,6 +102,17 @@ builder.Services.AddSingleton<ModelQuotaLock>();
 builder.Services.AddScoped<ModelTaskService>();
 builder.Services.AddScoped<AiNexus.Modules.Quality.QualityService>();
 builder.Services.AddScoped<IBackgroundJobHandler, AiNexus.Modules.Quality.EvaluationHandler>();
+builder.Services.AddScoped<IDbHelper<AiNexus.Modules.Integrations.ILegacyGdwebDatabase>, DbHelper<AiNexus.Modules.Integrations.ILegacyGdwebDatabase>>();
+builder.Services.AddScoped<IDbHelper<AiNexus.Modules.Integrations.ILegacyMeihoDatabase>, DbHelper<AiNexus.Modules.Integrations.ILegacyMeihoDatabase>>();
+builder.Services.AddOptions<AiNexus.Modules.Integrations.IntegrationsOptions>().BindConfiguration("Integrations")
+    .Validate(x => new[] { x.Gdweb, x.Meiho }.All(s => s.CommandTimeoutSeconds is >= 2 and <= 30 && s.MaxResults is >= 1 and <= 50 && s.AllowedGroupIds.Length <= 20 && s.AllowedGroupIds.All(g => g.Length is >= 1 and <= 64 && g.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.'))), "Invalid read-only source limits.").ValidateOnStart();
+if (!builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing"))
+    foreach (var key in new[] { "LegacyGdweb", "LegacyMeiho" })
+        if (builder.Configuration.GetConnectionString(key) is { Length: > 0 } legacy && new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(legacy).TrustServerCertificate)
+            throw new InvalidOperationException("Production source connections must verify SQL TLS certificates.");
+builder.Services.AddScoped<AiNexus.Modules.Integrations.IntegrationService>();
+builder.Services.AddScoped<AiNexus.Modules.Integrations.IControlledSourceAdapter, AiNexus.Modules.Integrations.GdwebSource>();
+builder.Services.AddScoped<AiNexus.Modules.Integrations.IControlledSourceAdapter, AiNexus.Modules.Integrations.MeihoSource>();
 builder.Services.AddSingleton<AiNexus.Modules.Collaboration.ResourceWriteLock>();
 builder.Services.AddScoped<AiNexus.Modules.Collaboration.ResourceAccess>();
 builder.Services.AddScoped<JobService>();

@@ -41,6 +41,7 @@ import { KnowledgePicker } from '../knowledge/knowledge-picker';
 import { TextSelection, type SelectedText } from '../../shared/browser/text-selection';
 import { TextTools } from '../artifacts/text-tools';
 import { ShareDialog } from '../sharing/share-dialog';
+import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
 
 @Component({
   selector: 'nx-chat-workspace',
@@ -76,6 +77,8 @@ export class ChatWorkspace {
   private readonly destroy = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly transfer = inject(ConversationDraftTransfer);
+  private navigationSequence = 0;
   readonly sidebarOpen = signal(window.innerWidth >= 860);
   readonly narrow = signal(window.innerWidth < 860);
   readonly following = signal(true);
@@ -86,8 +89,16 @@ export class ChatWorkspace {
   readonly paragraph = signal<SelectedText | null>(null);
   readonly textTools = viewChild(TextTools);
   readonly shareDialog = viewChild(ShareDialog);
-  readonly hasSharing = computed(() => this.store.me()?.access.features.some(x => x.id === 'shared') ?? false);
-  paragraphAction(action: string) { const selected = this.paragraph(); if (!selected) return; this.textTools()?.open(selected.text, action, selected.sourceId); this.paragraph.set(null); window.getSelection()?.removeAllRanges(); }
+  readonly hasSharing = computed(
+    () => this.store.me()?.access.features.some((x) => x.id === 'shared') ?? false,
+  );
+  paragraphAction(action: string) {
+    const selected = this.paragraph();
+    if (!selected) return;
+    this.textTools()?.open(selected.text, action, selected.sourceId);
+    this.paragraph.set(null);
+    window.getSelection()?.removeAllRanges();
+  }
   readonly modal = signal<'rename' | 'delete' | null>(null);
   readonly modalTarget = signal<Conversation | null>(null);
   readonly modalBusy = signal(false);
@@ -230,15 +241,22 @@ export class ChatWorkspace {
     };
     window.addEventListener('resize', resize);
     document.addEventListener('keydown', keyboard);
+    this.destroy.onDestroy(() => this.navigationSequence++);
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      const navigation = ++this.navigationSequence;
       void this.store.initialize().then(() => {
-        if (this.store.ready()) void this.store.select(params.get('id')).then(() => {
-          const prompt = history.state?.projectPrompt;
-          if (typeof prompt === 'string' && prompt && this.store.selected()?.id === params.get('id')) {
-            this.store.draft.set({ text: prompt.slice(0, this.store.policy().maxInputCharacters) });
-            const state = { ...history.state }; delete state.projectPrompt; history.replaceState(state, '');
-          }
-        });
+        if (navigation === this.navigationSequence && this.store.ready())
+          void this.store.select(params.get('id')).then(() => {
+            if (
+              navigation !== this.navigationSequence ||
+              this.store.selected()?.id !== params.get('id')
+            )
+              return;
+            const prompt = this.transfer.take(params.get('id'));
+            if (prompt) {
+              this.store.draft.set({ text: prompt });
+            }
+          });
       });
       this.following.set(this.store.personal.value().autoFollow);
       this.closeFind();

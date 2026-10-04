@@ -27,6 +27,7 @@ public static class ApiEndpoints
         AiNexus.Modules.Projects.ProjectEndpoints.MapProjects(api);
         AiNexus.Modules.Sharing.ShareEndpoints.MapSharing(api);
         AiNexus.Modules.Quality.QualityEndpoints.MapQuality(api);
+        AiNexus.Modules.Integrations.IntegrationEndpoints.MapIntegrations(api);
         api.MapAdministration();
     }
 }
