@@ -80,9 +80,10 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
         }
         finally { writes.Gate.Release(); }
     }
-    public async Task<DocumentDto> AddAsync(Guid actor, Guid? collection, Guid attachment, CancellationToken ct)
+    public async Task<DocumentDto> AddAsync(Guid actor, Guid? collection, Guid attachment, CancellationToken ct, Guid? project = null)
     {
         if (collection is Guid collectionId) await access.RequireAsync(actor, collectionId, "knowledge", ct, write: true);
+        if (project is Guid projectId) await access.RequireAsync(actor, projectId, "project", ct, write: true);
         await writes.Gate.WaitAsync(ct);
         try
         {
@@ -90,7 +91,7 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
             var file = await attachments.OwnedAsync(actor, attachment, ct, includeData: false);
             if (collection is null)
             {
-                var existing = await (from doc in db.Set<KnowledgeDocument>() join ownerResource in db.Set<WorkspaceResource>() on doc.Id equals ownerResource.Id where doc.AttachmentId == attachment && doc.CollectionId == null && !doc.IsDeleted && ownerResource.OwnerId == actor select doc).FirstOrDefaultAsync(ct);
+                var existing = await (from doc in db.Set<KnowledgeDocument>() join ownerResource in db.Set<WorkspaceResource>() on doc.Id equals ownerResource.Id where doc.AttachmentId == attachment && doc.CollectionId == null && !doc.IsDeleted && ownerResource.OwnerId == actor && ownerResource.ParentId == project select doc).FirstOrDefaultAsync(ct);
                 if (existing is not null) return await DescribeAsync(actor, existing, ct);
             }
             else
@@ -100,7 +101,7 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
                 if (await db.Set<KnowledgeDocument>().CountAsync(x => x.CollectionId == collection && !x.IsDeleted, ct) >= options.Value.MaxDocumentsPerCollection)
                     throw new ApiException(409, "document_limit", "此知識庫的文件數量已達上限。");
             }
-            var resource = new WorkspaceResource { OwnerId = actor, Kind = "document", Name = string.Concat(file.FileName.Take(120)) };
+            var resource = new WorkspaceResource { OwnerId = actor, ParentId = project, Kind = "document", Name = string.Concat(file.FileName.Take(120)) };
             var document = new KnowledgeDocument { Id = resource.Id, AttachmentId = file.Id, CollectionId = collection, FileName = file.FileName, ContentType = file.ContentType };
             db.Add(resource); db.Add(document); db.Add(new AttachmentReference { ResourceId = resource.Id, AttachmentId = file.Id });
             document.JobId = jobs.Enqueue(actor, resource.Id, document.Id, "document-ingest", file.FileName).Id;
@@ -120,7 +121,11 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
         else
         {
             if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id is "chat" or "knowledge" or "projects")) throw Missing();
-            await access.OwnerAsync(actor, doc.Id, "document", ct);
+            var resource = await access.RequireAsync(actor, doc.Id, "document", ct, write);
+            if (resource.ParentId is Guid parent) {
+                if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "projects")) throw Missing();
+                await access.RequireAsync(actor, parent, "project", ct, write);
+            }
         }
         return doc;
     }
@@ -165,8 +170,8 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
     }
     private async Task<DocumentDto> DescribeAsync(Guid actor, KnowledgeDocument doc, CancellationToken ct)
     {
-        var resource = doc.CollectionId is Guid collection ? await access.RequireAsync(actor, collection, "knowledge", ct) : await access.OwnerAsync(actor, doc.Id, "document", ct);
-        var editable = doc.CollectionId is null || (await access.DescribeAsync(actor, resource, ct)).CanEdit;
+        var resource = doc.CollectionId is Guid collection ? await access.RequireAsync(actor, collection, "knowledge", ct) : await access.RequireAsync(actor, doc.Id, "document", ct);
+        var editable = (await access.DescribeAsync(actor, resource, ct)).CanEdit;
         var state = doc.JobId is Guid job ? await db.Set<BackgroundJob>().Where(x => x.Id == job).Select(x => x.Status).SingleOrDefaultAsync(ct) : null;
         return Describe(doc, editable, state);
     }

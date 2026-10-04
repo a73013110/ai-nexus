@@ -15,6 +15,7 @@ public static class ConversationConfiguration
         conversation.HasIndex(x => new { x.OwnerId, x.IsDeleted, x.UpdatedAt });
         conversation.HasIndex(x => new { x.OwnerId, x.IsDeleted, x.IsArchived, x.IsFavorite, x.UpdatedAt });
         conversation.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
+        conversation.HasOne<AiNexus.Modules.Projects.Project>().WithMany().HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Restrict);
         var label = model.Entity<ConversationLabel>();
         label.ToTable("ConversationLabels", "conversations");
         label.HasKey(x => new { x.ConversationId, x.Name });

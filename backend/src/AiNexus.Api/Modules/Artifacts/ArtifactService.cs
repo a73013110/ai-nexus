@@ -26,18 +26,18 @@ public sealed class ArtifactRevision
 public sealed record ArtifactSummaryDto(ResourceDto Resource, int Version, Guid? ProjectId);
 public sealed record ArtifactDto(ResourceDto Resource, int Version, int CurrentVersion, string Content, Guid? SourceMessageId, Guid? ProjectId);
 public sealed record ArtifactRevisionDto(int Version, string Title, string Author, DateTimeOffset CreatedAt);
-public sealed record CreateArtifactRequest(string Title, string Content, Guid? SourceMessageId = null);
+public sealed record CreateArtifactRequest(string Title, string Content, Guid? SourceMessageId = null, Guid? ProjectId = null);
 public sealed record SaveArtifactRequest(string Title, string Content, int ExpectedVersion);
 public sealed record TransformTextRequest(string Text, string Action, string? ModelId = null, string Language = "繁體中文");
 public sealed record TransformTextDto(string Text, bool Truncated);
 
-public sealed class ArtifactService(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, ConversationService conversations)
+public sealed class ArtifactService(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, ConversationService conversations, AiNexus.Modules.AccessControl.AccessService features)
 {
     public async Task<IReadOnlyList<ArtifactSummaryDto>> ListAsync(Guid actor, CancellationToken ct)
     {
         var query = await access.QueryAsync(actor, "artifact", ct);
         return await (from resource in query.AsNoTracking() join item in db.Set<Artifact>() on resource.Id equals item.Id orderby resource.UpdatedAt descending
-            select new ArtifactSummaryDto(new(resource.Id, resource.Name, resource.Kind, resource.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == item.Id && m.UserId == actor && m.Role == "editor"), resource.OwnerId == actor, resource.UpdatedAt), item.Version, item.ProjectId)).Take(200).ToListAsync(ct);
+            select new ArtifactSummaryDto(new(resource.Id, resource.Name, resource.Kind, resource.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == item.Id && m.UserId == actor && m.Role == "editor") || db.Set<WorkspaceResource>().Any(p => p.Id == resource.ParentId && !p.IsDeleted && (p.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == p.Id && m.UserId == actor && m.Role == "editor"))), resource.OwnerId == actor, resource.UpdatedAt), item.Version, item.ProjectId)).Take(200).ToListAsync(ct);
     }
     public async Task<ArtifactDto> GetAsync(Guid actor, Guid id, int? version, CancellationToken ct)
     {
@@ -57,8 +57,12 @@ public sealed class ArtifactService(NexusDbContext db, ResourceAccess access, Re
             await conversations.OwnedAsync(actor, conversation, ct);
         }
         if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == "artifact" && !x.IsDeleted, ct) >= 200) throw new ApiException(409, "artifact_limit", "個人成果文件已達 200 份上限。");
-        var resource = new WorkspaceResource { OwnerId = actor, Kind = "artifact", Name = request.Title.Trim() };
-        db.Add(resource); db.Add(new Artifact { Id = resource.Id, SourceMessageId = request.SourceMessageId }); db.Add(new ArtifactRevision { ArtifactId = resource.Id, Version = 1, AuthorId = actor, Title = resource.Name, Content = request.Content });
+        if (request.ProjectId is Guid project) {
+            if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "projects")) throw new ApiException(403, "project_access_required", "需要專案功能權限。");
+            await access.RequireAsync(actor, project, "project", ct, write: true);
+        }
+        var resource = new WorkspaceResource { OwnerId = actor, ParentId = request.ProjectId, Kind = "artifact", Name = request.Title.Trim() };
+        db.Add(resource); db.Add(new Artifact { Id = resource.Id, SourceMessageId = request.SourceMessageId, ProjectId = request.ProjectId }); db.Add(new ArtifactRevision { ArtifactId = resource.Id, Version = 1, AuthorId = actor, Title = resource.Name, Content = request.Content });
         await db.SaveChangesAsync(ct); return await GetAsync(actor, resource.Id, null, ct);
     }
     public async Task<ArtifactDto> SaveAsync(Guid actor, Guid id, SaveArtifactRequest request, CancellationToken ct)

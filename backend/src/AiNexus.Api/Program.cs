@@ -58,7 +58,7 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
     options.AddPolicy(BuiltInAccess.ChatPolicy, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(BuiltInAccess.ChatFeature)));
     options.AddPolicy(AdministrationConfiguration.Policy, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(AdministrationConfiguration.Feature)));
-    foreach (var feature in new[] { "knowledge", "tasks", "artifacts" })
+    foreach (var feature in new[] { "knowledge", "tasks", "artifacts", "projects" })
         options.AddPolicy("feature:" + feature, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(feature)));
     options.AddPolicy("feature:attachments", policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement("chat", "knowledge", "projects")));
     options.AddPolicy("feature:text", policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement("chat", "artifacts")));
@@ -106,6 +106,7 @@ builder.Services.AddScoped<JobService>();
 builder.Services.AddOptions<KnowledgeOptions>().BindConfiguration("Knowledge")
     .Validate(x => x.EmbeddingProvider is "google" or "ollama" or "none" && x.Dimensions == 768 && x.EmbeddingModel.Length is > 0 and <= 160 && x.EmbeddingModel.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or ':' or '.') && x.MaxDailyEmbeddingRequests is >= 1 and <= 100000 && x.PortableCandidateLimit is >= 100 and <= 10000 && x.MaxCollections is >= 1 and <= 100 && x.MaxDocumentsPerCollection is >= 1 and <= 1000 && x.ChunkCharacters is >= 200 and <= 1600 && x.ChunkOverlap >= 0 && x.ChunkOverlap < x.ChunkCharacters / 2 && x.TopK is >= 1 and <= 10 && x.ContextCharacters is >= 1000 and <= 12000, "Invalid knowledge limits or embedding configuration.").ValidateOnStart();
 builder.Services.AddScoped<DocumentService>();
+builder.Services.AddScoped<AiNexus.Modules.Projects.ProjectService>();
 builder.Services.AddScoped<NativeVectorStore>();
 builder.Services.AddScoped<KnowledgeRetrieval>();
 builder.Services.AddScoped<AiNexus.Modules.Artifacts.ArtifactService>();

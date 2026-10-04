@@ -26,6 +26,8 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
         ModelInvocationConfiguration.Configure(model);
         AiNexus.Modules.Knowledge.KnowledgeConfiguration.Configure(model);
         AiNexus.Modules.Artifacts.ArtifactConfiguration.Configure(model);
+        AiNexus.Modules.Projects.ProjectConfiguration.Configure(model);
+        PlatformFeatures.Add(model, "projects", "專案", "/projects", 20);
         AiNexus.Modules.Attachments.AttachmentReferenceConfiguration.Configure(model);
         PlatformFeatures.Add(model, "knowledge", "知識庫", "/knowledge", 30);
         PlatformFeatures.Add(model, "tasks", "背景任務", "/tasks", 70);

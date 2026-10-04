@@ -1,0 +1,340 @@
+<nx-feature-page
+  title="專案"
+  description="共用背景、指示與參考文件，讓每次工作都從相同的脈絡開始。"
+>
+  <button
+    page-actions
+    class="primary-button"
+    [disabled]="loading() || busy() || !session.has('projects')"
+    (click)="openProject()"
+  >
+    <nx-icon name="plus" />新增專案
+  </button>
+  @if (error()) {
+    <p class="error-banner" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="success-note" role="status">{{ notice() }}</p>
+  }
+  @if (loading()) {
+    <p role="status">正在載入專案…</p>
+  } @else {
+    <div class="project-workspace">
+      <aside class="project-list">
+        <input
+          type="search"
+          aria-label="搜尋專案"
+          placeholder="尋找專案"
+          [value]="filter()"
+          (input)="filter.set($any($event.target).value)"
+        /><button
+          class="quiet-button"
+          [attr.aria-pressed]="archived()"
+          (click)="archived.set(!archived())"
+        >
+          {{ archived() ? '顯示進行中專案' : '檢視封存專案' }}
+        </button>
+        <nav aria-label="專案清單">
+          @for (item of visible(); track item.resource.id) {
+            <a
+              [routerLink]="['/projects', item.resource.id]"
+              [attr.aria-current]="current()?.resource?.id === item.resource.id ? 'page' : null"
+              ><nx-icon name="archive" /><span
+                ><strong>{{ item.resource.name }}</strong
+                ><small>{{
+                  item.resource.isOwner
+                    ? '我的專案'
+                    : item.resource.canEdit
+                      ? '共用 · 可編輯'
+                      : '共用 · 可閱讀'
+                }}</small></span
+              ></a
+            >
+          } @empty {
+            <p class="form-note">尚無符合的專案。</p>
+          }
+        </nav>
+      </aside>
+      @if (current(); as project) {
+        <section class="project-detail">
+          <div class="project-heading">
+            <div>
+              <span class="panel-eyebrow">{{
+                project.isArchived ? '已封存' : 'PROJECT WORKSPACE'
+              }}</span>
+              <h2>{{ project.resource.name }}</h2>
+              <p>{{ project.description || '在這裡集中管理工作背景與參考資料。' }}</p>
+            </div>
+            <div class="project-actions">
+              @if (project.resource.canEdit) {
+                <button class="secondary-button" [disabled]="busy()" (click)="openProject(project)">
+                  編輯專案</button
+                ><button class="quiet-button" [disabled]="busy()" (click)="archive()">
+                  {{ project.isArchived ? '還原' : '封存' }}
+                </button>
+              }
+              @if (project.resource.isOwner) {
+                <button class="icon-button" aria-label="專案成員與權限" (click)="sharing.open()">
+                  <nx-icon name="lock" />
+                </button>
+              }
+            </div>
+          </div>
+          <details class="project-instructions">
+            <summary>
+              <nx-icon name="sliders" />共用指示<span>{{
+                project.instructions ? '套用至專案對話' : '尚未設定'
+              }}</span>
+            </summary>
+            <p>{{ project.instructions || '加入工作目的、回覆格式或應遵守的原則。' }}</p>
+            <p class="form-note">
+              參考文件會隨下一次提問帶入。完整參考文字上限 12,000 字元；較大量的資料請使用知識庫。
+            </p>
+          </details>
+          <div class="project-grid">
+            <section
+              class="platform-card"
+              [nxFileDrop]="project.resource.canEdit && !project.isArchived && !busy()"
+              (filesDropped)="upload($event)"
+            >
+              <div class="section-heading">
+                <h3>
+                  參考文件 <span>{{ files().length }}</span>
+                </h3>
+                @if (project.resource.canEdit && !project.isArchived) {
+                  <label class="secondary-button upload-label"
+                    ><nx-icon name="upload" />上傳<input
+                      type="file"
+                      aria-label="上傳專案文件"
+                      multiple
+                      accept=".pdf,.txt,.md,.csv,.json,.png,.jpg,.jpeg,.webp"
+                      [disabled]="busy()"
+                      (change)="chooseFiles($event)"
+                  /></label>
+                }
+              </div>
+              <div class="project-items">
+                @for (file of files(); track file.id) {
+                  <div class="project-item">
+                    <a [routerLink]="['/reader', file.id]"
+                      ><nx-icon name="document" /><span
+                        ><strong>{{ file.fileName }}</strong
+                        ><small>{{
+                          file.status === 'ready'
+                            ? '可供對話參考'
+                            : file.status === 'failed'
+                              ? '需要處理 · 開啟查看'
+                              : file.status === 'cancelled'
+                                ? '已停止'
+                                : '正在處理 · 開啟查看'
+                        }}</small></span
+                      ></a
+                    >
+                    @if (file.canEdit && !project.isArchived) {
+                      <button
+                        class="icon-button"
+                        [attr.aria-label]="'移除 ' + file.fileName"
+                        [disabled]="busy()"
+                        (click)="remove('file', file.id)"
+                      >
+                        <nx-icon name="trash" />
+                      </button>
+                    }
+                  </div>
+                } @empty {
+                  <p class="form-note">拖曳文件到此區。文字、PDF 與圖片均可建立參考內容。</p>
+                }
+              </div>
+            </section>
+            <section class="platform-card">
+              <div class="section-heading">
+                <h3>
+                  共用範本 <span>{{ templates().length }}</span>
+                </h3>
+                @if (project.resource.canEdit && !project.isArchived) {
+                  <button class="quiet-button" [disabled]="busy()" (click)="openTemplate()">
+                    <nx-icon name="plus" />新增範本
+                  </button>
+                }
+              </div>
+              <div class="project-items">
+                @for (item of templates(); track item.id) {
+                  <div class="project-template">
+                    <button
+                      class="project-template-start"
+                      [disabled]="busy() || project.isArchived || !session.has('chat')"
+                      (click)="start(item.id)"
+                    >
+                      <strong>{{ item.title }}</strong
+                      ><span>{{ item.content.slice(0, 120) }}</span
+                      ><small>使用範本開始對話 →</small>
+                    </button>
+                    @if (project.resource.canEdit && !project.isArchived) {
+                      <div>
+                        <button
+                          class="icon-button"
+                          [attr.aria-label]="'編輯範本 ' + item.title"
+                          (click)="openTemplate(item)"
+                        >
+                          <nx-icon name="edit" /></button
+                        ><button
+                          class="icon-button"
+                          [attr.aria-label]="'移除範本 ' + item.title"
+                          [disabled]="busy()"
+                          (click)="remove('template', item.id)"
+                        >
+                          <nx-icon name="trash" />
+                        </button>
+                      </div>
+                    }
+                  </div>
+                } @empty {
+                  <p class="form-note">把常用提問保存為範本，成員點一下即可開始。</p>
+                }
+              </div>
+            </section>
+            <section class="platform-card">
+              <div class="section-heading">
+                <h3>
+                  我的專案對話 <span>{{ conversations().length }}</span>
+                </h3>
+                @if (session.has('chat')) {
+                  <button
+                    class="quiet-button"
+                    [disabled]="busy() || project.isArchived"
+                    (click)="start()"
+                  >
+                    <nx-icon name="plus" />開始對話
+                  </button>
+                }
+              </div>
+              <p class="form-note">
+                這裡顯示你的提問紀錄。需要讓同事閱讀時，可在對話建立具名分享。
+              </p>
+              <nav class="project-items">
+                @for (item of conversations(); track item.id) {
+                  <a class="project-item" [routerLink]="['/chat', item.id]"
+                    ><nx-icon name="lines" /><span>{{ item.title }}</span
+                    ><nx-icon name="chevron"
+                  /></a>
+                } @empty {
+                  <p class="form-note">尚無對話，從共用範本或「開始對話」接續工作。</p>
+                }
+              </nav>
+            </section>
+            <section class="platform-card">
+              <div class="section-heading">
+                <h3>
+                  共用成果 <span>{{ outputs().length }}</span>
+                </h3>
+                @if (session.has('artifacts') && project.resource.canEdit && !project.isArchived) {
+                  <button
+                    class="quiet-button"
+                    [disabled]="busy()"
+                    (click)="tools.open('請在這裡撰寫專案成果。', 'save')"
+                  >
+                    <nx-icon name="plus" />新增成果
+                  </button>
+                }
+              </div>
+              <nav class="project-items">
+                @for (item of outputs(); track item.resource.id) {
+                  <a class="project-item" [routerLink]="['/artifacts', item.resource.id]"
+                    ><nx-icon name="document" /><span
+                      ><strong>{{ item.resource.name }}</strong
+                      ><small>版本 {{ item.version }}</small></span
+                    ><nx-icon name="chevron"
+                  /></a>
+                } @empty {
+                  <p class="form-note">專案成果沿用成員權限，可檢視版本與匯出。</p>
+                }
+              </nav>
+            </section>
+          </div>
+          <nx-resource-sharing
+            [path]="'/projects/' + project.resource.id + '/access'"
+            [name]="project.resource.name"
+            #sharing
+          />
+        </section>
+      } @else {
+        <section class="artifact-empty">
+          <span class="empty-symbol"><nx-icon name="archive" /></span>
+          <h2>把工作放進同一個脈絡</h2>
+          <p>
+            建立專案，集中共用指示、參考文件、範本與成果。<br />成員能從相同的背景開始，各自保留提問紀錄。
+          </p>
+        </section>
+      }
+    </div>
+  }
+</nx-feature-page>
+<dialog #dialog class="platform-dialog" (cancel)="close($event)">
+  <div class="dialog-heading">
+    <h2>{{ kind() === 'project' ? '專案設定' : '共用範本' }}</h2>
+    <button class="icon-button" aria-label="關閉專案設定" (click)="close()">
+      <nx-icon name="close" />
+    </button>
+  </div>
+  @if (error()) {
+    <p role="alert" class="error-banner">{{ error() }}</p>
+  }
+  <form class="platform-form" (submit)="save($event)">
+    <label
+      >{{ kind() === 'project' ? '專案名稱' : '範本名稱'
+      }}<input
+        aria-label="項目名稱"
+        autofocus
+        required
+        [disabled]="busy()"
+        [attr.maxlength]="kind() === 'project' ? 120 : 80"
+        [value]="name()"
+        (input)="name.set($any($event.target).value)"
+    /></label>
+    @if (kind() === 'project') {
+      <label
+        >工作說明<textarea
+          aria-label="專案說明"
+          maxlength="2000"
+          rows="3"
+          [disabled]="busy()"
+          [value]="description()"
+          (input)="description.set($any($event.target).value)"
+        ></textarea></label
+      ><label
+        >共用指示<textarea
+          aria-label="專案共用指示"
+          maxlength="4000"
+          rows="6"
+          [disabled]="busy()"
+          placeholder="例如：以繁體中文回答、先列結論，最後列出待確認事項。"
+          [value]="instructions()"
+          (input)="instructions.set($any($event.target).value)"
+        ></textarea>
+      </label>
+    } @else {
+      <label
+        >提問內容<textarea
+          aria-label="範本提問內容"
+          maxlength="12000"
+          rows="8"
+          required
+          [disabled]="busy()"
+          [value]="templateText()"
+          (input)="templateText.set($any($event.target).value)"
+        ></textarea>
+      </label>
+    }
+    <div class="dialog-actions">
+      <button type="button" class="secondary-button" [disabled]="busy()" (click)="close()">
+        取消</button
+      ><button
+        class="primary-button"
+        [disabled]="busy() || !name().trim() || (kind() === 'template' && !templateText().trim())"
+      >
+        {{ busy() ? '正在儲存…' : '儲存' }}
+      </button>
+    </div>
+  </form>
+</dialog>
+<nx-confirm-dialog /><nx-text-tools [projectId]="current()?.resource?.id || null" #tools />

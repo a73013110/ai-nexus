@@ -55,3 +55,6 @@ Verify 使用獨立資料庫與測試 provider，Edge 測試也明確使用 fixt
 目前聊天部署設計要求單一 host／IIS worker；文件背景任務已具備 durable 租約與 checkpoint。JSON 文字備份不含附件原始檔；完整備份使用 SQL 備份。正式 IIS、區網雙帳號隔離、設備效能與備份還原按部署文件另行驗收。
 
 成果文件支援不可變版本、共用編輯、段落工具與 Word／PDF 匯出。見 [成果文件](docs/ARTIFACTS.md)。
+
+專案工作區集中共用指示、文件、提問範本與成果，私人提問可明確分享。見 [專案](docs/PROJECTS.md)。
+

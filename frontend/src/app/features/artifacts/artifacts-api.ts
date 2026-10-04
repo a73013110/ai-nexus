@@ -15,8 +15,8 @@ export class ArtifactsApi {
     this.http.json<ArtifactDocument>(
       `/artifacts/${encodeURIComponent(id)}${version ? '?version=' + version : ''}`,
     );
-  create = (title: string, content: string, sourceMessageId: string | null = null) =>
-    this.http.json<ArtifactDocument>('/artifacts', 'POST', { title, content, sourceMessageId });
+  create = (title: string, content: string, sourceMessageId: string | null = null, projectId: string | null = null) =>
+    this.http.json<ArtifactDocument>('/artifacts', 'POST', { title, content, sourceMessageId, projectId });
   save = (id: string, title: string, content: string, expectedVersion: number) =>
     this.http.json<ArtifactDocument>(`/artifacts/${encodeURIComponent(id)}`, 'PUT', {
       title,

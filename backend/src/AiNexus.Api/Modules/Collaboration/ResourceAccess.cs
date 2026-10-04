@@ -13,6 +13,7 @@ public sealed class WorkspaceResource
     public Guid OwnerId { get; set; }
     public string Kind { get; set; } = "";
     public string Name { get; set; } = "";
+    public Guid? ParentId { get; set; }
     public bool IsDeleted { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
@@ -42,19 +43,27 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
 {
     public async Task<IQueryable<WorkspaceResource>> QueryAsync(Guid actor, string kind, CancellationToken ct)
     {
-        var groups = (await access.ForUserAsync(actor, ct)).Groups.Select(x => x.Id).ToArray();
-        return db.Set<WorkspaceResource>().Where(x => !x.IsDeleted && x.Kind == kind &&
+        var effective = await access.ForUserAsync(actor, ct);
+        var groups = effective.Groups.Select(x => x.Id).ToArray();
+        var inheritProjects = effective.Features.Any(x => x.Id == "projects");
+        var direct = db.Set<WorkspaceResource>().Where(x => !x.IsDeleted &&
             (x.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == x.Id && m.UserId == actor) || db.Set<ResourceGroup>().Any(g => g.ResourceId == x.Id && groups.Contains(g.GroupId))));
+        return db.Set<WorkspaceResource>().Where(x => !x.IsDeleted && x.Kind == kind &&
+            (direct.Any(r => r.Id == x.Id) || inheritProjects && direct.Any(r => r.Kind == "project" && r.Id == x.ParentId)));
     }
     public async Task<WorkspaceResource> RequireAsync(Guid actor, Guid id, string kind, CancellationToken ct, bool write = false)
     {
         var resource = await (await QueryAsync(actor, kind, ct)).SingleOrDefaultAsync(x => x.Id == id, ct) ?? throw Missing();
-        if (write && resource.OwnerId != actor && !await db.Set<ResourceMember>().AnyAsync(x => x.ResourceId == id && x.UserId == actor && x.Role == "editor", ct))
+        if (write && !await CanEditAsync(actor, resource, ct))
             throw new ApiException(403, "resource_read_only", "此項目目前只有檢視權限。");
         return resource;
     }
+    public async Task<bool> CanEditAsync(Guid actor, WorkspaceResource value, CancellationToken ct) => value.OwnerId == actor ||
+        await db.Set<ResourceMember>().AnyAsync(x => x.ResourceId == value.Id && x.UserId == actor && x.Role == "editor", ct) ||
+        await db.Set<WorkspaceResource>().AnyAsync(x => x.Id == value.ParentId && x.Kind == "project" && !x.IsDeleted &&
+            (x.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == x.Id && m.UserId == actor && m.Role == "editor")), ct);
     public async Task<ResourceDto> DescribeAsync(Guid actor, WorkspaceResource value, CancellationToken ct) => new(value.Id, value.Name, value.Kind,
-        value.OwnerId == actor || await db.Set<ResourceMember>().AnyAsync(x => x.ResourceId == value.Id && x.UserId == actor && x.Role == "editor", ct), value.OwnerId == actor, value.UpdatedAt);
+        await CanEditAsync(actor, value, ct), value.OwnerId == actor, value.UpdatedAt);
     public async Task<ResourceAclDto> AclAsync(Guid actor, Guid id, string kind, CancellationToken ct)
     {
         await OwnerAsync(actor, id, kind, ct);
@@ -110,6 +119,7 @@ public static class CollaborationConfiguration
         resource.Property(x => x.Kind).HasMaxLength(24); resource.Property(x => x.Name).HasMaxLength(120);
         resource.HasIndex(x => new { x.OwnerId, x.Kind, x.UpdatedAt });
         resource.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
+        resource.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Restrict);
         var member = model.Entity<ResourceMember>(); member.ToTable("ResourceMembers", "collaboration"); member.HasKey(x => new { x.ResourceId, x.UserId }); member.Property(x => x.Role).HasMaxLength(12);
         member.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.ResourceId).OnDelete(DeleteBehavior.Cascade);
         member.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);

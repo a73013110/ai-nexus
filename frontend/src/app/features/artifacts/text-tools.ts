@@ -127,6 +127,7 @@ export class TextTools {
   readonly session = inject(WorkspaceSession);
   readonly copy = inject(CopyFeedback);
   readonly modelId = input<string | null>(null);
+  readonly projectId = input<string | null>(null);
   readonly canReplace = input(false);
   readonly replace = output<string>();
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
@@ -210,7 +211,7 @@ export class TextTools {
     this.saving.set(true);
     this.error.set('');
     try {
-      const artifact = await this.api.create(this.title(), this.result(), this.sourceMessage);
+      const artifact = await this.api.create(this.title(), this.result(), this.sourceMessage, this.projectId());
       if (valid()) {
         this.dialog().nativeElement.close();
         await this.router.navigate(['/artifacts', artifact.resource.id]);

@@ -4,6 +4,10 @@
   height: 100dvh;
   overflow: hidden;
 }
+.platform-card { min-width: 0; padding: var(--p-space-5); border: 1px solid var(--line); border-radius: var(--p-radius-lg); background: var(--surface); }
+.upload-label { position: relative; cursor: pointer; display: inline-flex; align-items: center; gap: var(--p-space-2); }
+.upload-label input[type=file] { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
+.upload-label:focus-within { outline: 2px solid var(--focus); outline-offset: 3px; }
 .feature-sidebar {
   display: flex;
   flex-direction: column;

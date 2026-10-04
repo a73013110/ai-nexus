@@ -228,7 +228,13 @@ export class ChatWorkspace {
     document.addEventListener('keydown', keyboard);
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       void this.store.initialize().then(() => {
-        if (this.store.ready()) void this.store.select(params.get('id'));
+        if (this.store.ready()) void this.store.select(params.get('id')).then(() => {
+          const prompt = history.state?.projectPrompt;
+          if (typeof prompt === 'string' && prompt && this.store.selected()?.id === params.get('id')) {
+            this.store.draft.set({ text: prompt.slice(0, this.store.policy().maxInputCharacters) });
+            const state = { ...history.state }; delete state.projectPrompt; history.replaceState(state, '');
+          }
+        });
       });
       this.following.set(this.store.personal.value().autoFollow);
       this.closeFind();

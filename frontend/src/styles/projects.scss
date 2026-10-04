@@ -1,0 +1,213 @@
+.project-workspace {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  gap: var(--p-space-6);
+  align-items: start;
+}
+.project-list {
+  display: grid;
+  gap: var(--p-space-3);
+  min-width: 0;
+  position: sticky;
+  top: 0;
+}
+.project-list input {
+  width: 100%;
+  min-height: 44px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  padding: var(--p-space-3);
+}
+.project-list nav {
+  display: grid;
+  gap: var(--p-space-2);
+}
+.project-list a {
+  display: flex;
+  gap: var(--p-space-3);
+  padding: var(--p-space-3);
+  border-radius: var(--p-radius-md);
+}
+.project-list a[aria-current],
+.project-list a:hover {
+  background: var(--accent-soft);
+}
+.project-list strong,
+.project-list small,
+.project-item strong,
+.project-item small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.project-list small,
+.project-item small {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  margin-top: var(--p-space-1);
+}
+.project-detail {
+  min-width: 0;
+}
+.project-heading {
+  display: flex;
+  align-items: start;
+  gap: var(--p-space-4);
+  margin-bottom: var(--p-space-5);
+}
+.project-heading > div:first-child {
+  flex: 1;
+  min-width: 0;
+}
+.project-heading h2 {
+  margin: var(--p-space-2) 0;
+  font-size: var(--p-font-2xl);
+  overflow-wrap: anywhere;
+}
+.project-heading p {
+  color: var(--secondary);
+  line-height: var(--line-reading);
+}
+.project-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+}
+.project-instructions {
+  background: var(--sidebar);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  padding: var(--p-space-4);
+  margin-bottom: var(--p-space-6);
+}
+.project-instructions summary {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  min-height: 44px;
+  cursor: pointer;
+}
+.project-instructions summary span {
+  margin-left: auto;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.project-instructions p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: var(--line-reading);
+}
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--p-space-5);
+}
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p-space-2);
+  margin-bottom: var(--p-space-3);
+}
+.section-heading h3 {
+  margin: 0;
+  font-size: var(--text-heading);
+}
+.section-heading h3 span {
+  color: var(--muted);
+  margin-left: var(--p-space-2);
+  font-size: var(--text-caption);
+}
+.project-items {
+  display: grid;
+  gap: var(--p-space-2);
+}
+.project-item {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  padding-block: var(--p-space-3);
+  border-top: 1px solid var(--line);
+}
+.project-item a {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  flex: 1;
+  min-width: 0;
+}
+.project-item span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.project-item a:hover strong,
+a.project-item:hover span {
+  text-decoration: underline;
+}
+.project-template {
+  display: flex;
+  gap: var(--p-space-2);
+  border-top: 1px solid var(--line);
+  padding-top: var(--p-space-2);
+}
+.project-template-start {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: var(--p-space-2);
+  text-align: left;
+  padding: var(--p-space-3);
+  border-radius: var(--p-radius-md);
+}
+.project-template-start:hover {
+  background: var(--hover);
+}
+.project-template-start span {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  line-height: var(--line-reading);
+  overflow-wrap: anywhere;
+}
+.project-template-start small {
+  color: var(--accent);
+  font-size: var(--text-caption);
+}
+.project-chat-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  color: var(--secondary);
+  padding: var(--p-space-2);
+  font-size: var(--text-caption);
+  min-height: 44px;
+}
+@media (max-width: 1100px) {
+  .project-grid {
+    grid-template-columns: 1fr;
+  }
+  .project-heading {
+    flex-direction: column;
+  }
+}
+@media (max-width: 700px) {
+  .project-workspace {
+    grid-template-columns: 1fr;
+  }
+  .project-list {
+    position: static;
+  }
+  .project-list nav {
+    display: flex;
+    overflow: auto;
+  }
+  .project-list a {
+    min-width: 180px;
+  }
+  .project-list {
+    margin-bottom: var(--p-space-3);
+  }
+  .project-instructions summary {
+    flex-wrap: wrap;
+  }
+}

@@ -1339,3 +1339,153 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004062441_Projects'
+)
+BEGIN
+    IF SCHEMA_ID(N'projects') IS NULL EXEC(N'CREATE SCHEMA [projects];');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004062441_Projects'
+)
+BEGIN
+    ALTER TABLE [collaboration].[Resources] ADD [ParentId] uniqueidentifier NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004062441_Projects'
+)
+BEGIN
+    ALTER TABLE [conversations].[Conversations] ADD [ProjectId] uniqueidentifier NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004062441_Projects'
+)
+BEGIN
+    CREATE TABLE [projects].[Projects] (
+        [Id] uniqueidentifier NOT NULL,
+        [Description] nvarchar(2000) NOT NULL,
+        [Instructions] nvarchar(4000) NOT NULL,
+        [Version] int NOT NULL,
+        [IsArchived] bit NOT NULL,
+        CONSTRAINT [PK_Projects] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_Projects_Resources_Id] FOREIGN KEY ([Id]) REFERENCES [collaboration].[Resources] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004062441_Projects'
+)
+BEGIN
+    CREATE TABLE [projects].[ProjectTemplates] (
+        [Id] uniqueidentifier NOT NULL,
+        [ProjectId] uniqueidentifier NOT NULL,
+        [Title] nvarchar(80) NOT NULL,
+        [Content] nvarchar(max) NOT NULL,
+        CONSTRAINT [PK_ProjectTemplates] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_ProjectTemplates_Projects_ProjectId] FOREIGN KEY ([ProjectId]) REFERENCES [projects].[Projects] ([Id]) ON DELETE CASCADE
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004062441_Projects'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Enabled', N'Name', N'Route', N'SortOrder') AND [object_id] = OBJECT_ID(N'[access].[Features]'))
+        SET IDENTITY_INSERT [access].[Features] ON;
+    EXEC(N'INSERT INTO [access].[Features] ([Id], [Enabled], [Name], [Route], [SortOrder])
+    VALUES (N''projects'', CAST(1 AS bit), N''專案'', N''/projects'', 20)');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Enabled', N'Name', N'Route', N'SortOrder') AND [object_id] = OBJECT_ID(N'[access].[Features]'))
+        SET IDENTITY_INSERT [access].[Features] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004062441_Projects'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'FeatureId', N'GroupId') AND [object_id] = OBJECT_ID(N'[access].[RoleGroupFeatures]'))
+        SET IDENTITY_INSERT [access].[RoleGroupFeatures] ON;
+    EXEC(N'INSERT INTO [access].[RoleGroupFeatures] ([FeatureId], [GroupId])
+    VALUES (N''projects'', N''workspace'')');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'FeatureId', N'GroupId') AND [object_id] = OBJECT_ID(N'[access].[RoleGroupFeatures]'))
+        SET IDENTITY_INSERT [access].[RoleGroupFeatures] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004062441_Projects'
+)
+BEGIN
+    CREATE INDEX [IX_Resources_ParentId] ON [collaboration].[Resources] ([ParentId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004062441_Projects'
+)
+BEGIN
+    CREATE INDEX [IX_Conversations_ProjectId] ON [conversations].[Conversations] ([ProjectId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004062441_Projects'
+)
+BEGIN
+    CREATE INDEX [IX_Artifacts_ProjectId] ON [content].[Artifacts] ([ProjectId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004062441_Projects'
+)
+BEGIN
+    CREATE INDEX [IX_ProjectTemplates_ProjectId] ON [projects].[ProjectTemplates] ([ProjectId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004062441_Projects'
+)
+BEGIN
+    ALTER TABLE [content].[Artifacts] ADD CONSTRAINT [FK_Artifacts_Projects_ProjectId] FOREIGN KEY ([ProjectId]) REFERENCES [projects].[Projects] ([Id]) ON DELETE NO ACTION;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004062441_Projects'
+)
+BEGIN
+    ALTER TABLE [conversations].[Conversations] ADD CONSTRAINT [FK_Conversations_Projects_ProjectId] FOREIGN KEY ([ProjectId]) REFERENCES [projects].[Projects] ([Id]) ON DELETE NO ACTION;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004062441_Projects'
+)
+BEGIN
+    ALTER TABLE [collaboration].[Resources] ADD CONSTRAINT [FK_Resources_Resources_ParentId] FOREIGN KEY ([ParentId]) REFERENCES [collaboration].[Resources] ([Id]) ON DELETE NO ACTION;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004062441_Projects'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261004062441_Projects', N'10.0.12');
+END;
+
+COMMIT;
+GO
+

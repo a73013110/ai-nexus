@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Inference;
 
-public sealed class RunService(NexusDbContext db, ConversationService conversations, AttachmentService attachments, AttachmentWriteLock attachmentWrites, GenerationScheduler scheduler, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, ModelPresentation presentation, AiNexus.Modules.Administration.ModelPolicyService policies, ModelQuotaLock quotaWrites, AiNexus.Modules.Knowledge.KnowledgeRetrieval knowledge)
+public sealed class RunService(NexusDbContext db, ConversationService conversations, AttachmentService attachments, AttachmentWriteLock attachmentWrites, GenerationScheduler scheduler, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, ModelPresentation presentation, AiNexus.Modules.Administration.ModelPolicyService policies, ModelQuotaLock quotaWrites, AiNexus.Modules.Knowledge.KnowledgeRetrieval knowledge, AiNexus.Modules.Projects.ProjectService projects)
 {
     public async Task<GenerationRun> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
     {
@@ -61,6 +61,7 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
             await policies.RequireAsync(owner, profile.Id, ct);
             var conversation = await conversations.OwnedAsync(owner, request.ConversationId, ct);
+            var projectContext = await projects.ContextAsync(owner, conversation.ProjectId, ct);
             var currentSelection = await knowledge.SelectionAsync(owner, request.ConversationId, ct);
             if (!currentSelection.CollectionIds.Order().SequenceEqual(knowledgeSelection.CollectionIds.Order())) throw new ApiException(409, "knowledge_selection_changed", "知識來源剛剛已變更，請重新送出提問。");
             await knowledge.ValidateHitsAsync(owner, sources, ct);
@@ -70,7 +71,7 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
             {
                 OwnerId = owner, ActiveOwnerId = owner, ConversationId = request.ConversationId,
                 ModelId = profile.Id, IdempotencyKey = key, RequestHash = hash,
-                ParametersJson = JsonSerializer.Serialize(new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, 0.6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, conversation.SystemInstruction) + AiNexus.Modules.Knowledge.KnowledgeRetrieval.Prompt(sources), effort, profile.ReasoningControl, profile.SupportsImages))
+                ParametersJson = JsonSerializer.Serialize(new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, 0.6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, conversation.SystemInstruction) + projectContext + AiNexus.Modules.Knowledge.KnowledgeRetrieval.Prompt(sources), effort, profile.ReasoningControl, profile.SupportsImages))
             };
             var (user, assistant) = await conversations.PrepareGenerationAsync(owner, request with { ModelId = profile.Id }, run.Id, ct);
             run.UserMessageId = user.Id;

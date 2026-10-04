@@ -47,6 +47,7 @@
         @if (store.selected()?.isArchived) {
           <span class="archive-badge">已封存</span>
         }
+        @if (store.selected()?.projectId; as projectId) { <a class="project-chat-link" [routerLink]="['/projects',projectId]" title="檢視專案指示與參考文件"><nx-icon name="archive" />專案</a> }
       </div>
       <div class="topbar-actions">
         @if (statusText()) {
@@ -324,7 +325,7 @@
 <nx-command-palette [commands]="commands()" (selected)="command($event)" />
 <nx-prompt-library [draft]="store.draft().text" (used)="pickSuggestion($event)" />
 <nx-conversation-settings [save]="saveSettings" />
-<nx-text-tools [modelId]="store.modelId() || null" />
+<nx-text-tools [modelId]="store.modelId() || null" [projectId]="store.selected()?.projectId || null" />
 @if (paragraph(); as selected) { <div class="paragraph-float" role="toolbar" aria-label="選取文字操作" [style.left.px]="selected.left" [style.top.px]="selected.top" (pointerdown)="$event.preventDefault()"><button (click)="paragraphAction('rewrite')">改寫</button><button (click)="paragraphAction('summarize')">摘要</button><button (click)="paragraphAction('translate')">翻譯</button>@if (store.hasArtifactsAccess()) { <button (click)="paragraphAction('save')">儲存成果</button> }<button class="icon-button" aria-label="關閉選取文字操作" (click)="paragraph.set(null)"><nx-icon name="close" /></button></div> }
 <input
   #importInput

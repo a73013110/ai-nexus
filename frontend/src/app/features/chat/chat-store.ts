@@ -26,9 +26,17 @@ import { downloadFile } from '../../shared/browser/download';
 import { UserSettingsService } from '../../core/preferences/user-settings';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { KnowledgeSelection } from '../knowledge/knowledge-selection';
+import { ProjectsApi } from '../projects/projects-api';
 
 @Injectable({ providedIn: 'root' })
 export class ChatStore {
+  private readonly projectsApi = inject(ProjectsApi);
+  async assignProject(conversation: Conversation, projectId: string | null) {
+    if (this.busy()) return false;
+    const generation = this.auth.generation();
+    try { const value = await this.projectsApi.assign(conversation.id, projectId); if (generation !== this.auth.generation()) return false; if (this.selected()?.id === value.id) this.selected.set(value); await this.refreshHistory(); return true; }
+    catch (error) { this.report(error); return false; }
+  }
   private readonly api = inject(NexusApi);
   private readonly stream = inject(RunStream);
   private readonly router = inject(Router);

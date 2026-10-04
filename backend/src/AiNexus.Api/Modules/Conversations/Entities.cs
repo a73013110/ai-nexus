@@ -4,6 +4,7 @@ public sealed class Conversation
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid OwnerId { get; set; }
+    public Guid? ProjectId { get; set; }
     public string Title { get; set; } = "新對話";
     public Guid? ActiveLeafId { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;

@@ -112,3 +112,6 @@ DBA 可先建立 AiNexus，再審閱執行 [db/migrations.sql](../db/migrations.
 RunEvents 預設 24 小時回播保留，conversation soft-delete 沒有自動永久清除；對話、soft-delete 與 audit 的保存期由部署單位決定，再加入明確的 retention 工作。SQL 備份需保護 ACL 與加密，key ring 另備份；在獨立資料庫實際還原，確認 SID、角色、訊息樹、重啟恢復與跨帳號隔離。不能只以產生 bak 檔判定成功。正式 recovery model 與完整／差異／log 備份排程由 DBA 設定，參考 [SQL Server 備份還原](https://learn.microsoft.com/en-us/sql/relational-databases/backup-restore/back-up-and-restore-of-sql-server-databases?view=sql-server-ver17)。
 
 成果文件的 content.Artifacts 與 content.ArtifactRevisions 關聯及版本策略，見 [ARTIFACTS](ARTIFACTS.md)。
+
+Projects migration 新增 projects.Projects／ProjectTemplates，並以 Resources.ParentId、Conversations.ProjectId 與 Artifacts.ProjectId 建立工作區關聯。專案子項目以同一套 ACL 繼承一層授權。
+
