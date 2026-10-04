@@ -53,6 +53,16 @@ import { KnowledgeSelection } from './knowledge-selection';
       @if (selection.error()) {
         <p class="error-note" role="alert">{{ selection.error() }}</p>
       }
+      @if (selection.loadFailed()) {
+        <button
+          type="button"
+          class="secondary-button"
+          [disabled]="selection.saving()"
+          (click)="selection.reload()"
+        >
+          重新載入知識來源
+        </button>
+      }
       <div class="knowledge-choices">
         @for (collection of visible(); track collection.resource.id) {
           <label
@@ -62,6 +72,7 @@ import { KnowledgeSelection } from './knowledge-selection';
               [disabled]="
                 disabled() ||
                 selection.saving() ||
+                selection.loadFailed() ||
                 (selection.ids().length >= 3 && !selection.ids().includes(collection.resource.id))
               "
               (change)="selection.toggle(collection.resource.id, $any($event.target).checked)"

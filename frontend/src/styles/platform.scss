@@ -4,10 +4,115 @@
   height: 100dvh;
   overflow: hidden;
 }
-.platform-card { min-width: 0; padding: var(--p-space-5); border: 1px solid var(--line); border-radius: var(--p-radius-lg); background: var(--surface); }
-.upload-label { position: relative; cursor: pointer; display: inline-flex; align-items: center; gap: var(--p-space-2); }
-.upload-label input[type=file] { position: absolute; width: 1px; height: 1px; clip-path: inset(50%); overflow: hidden; }
-.upload-label:focus-within { outline: 2px solid var(--focus); outline-offset: 3px; }
+.workspace-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-1);
+}
+.workspace-navigation a {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--button-target);
+  padding: var(--p-space-2) var(--p-space-3);
+  border-radius: var(--p-radius-md);
+  color: var(--secondary);
+  font-size: var(--text-label);
+}
+.workspace-navigation a:hover {
+  background: var(--hover);
+}
+.workspace-navigation a.current {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+.workspace-navigation.compact {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: var(--p-space-3);
+}
+.workspace-navigation.compact a {
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: var(--p-space-1);
+  font-size: var(--text-caption);
+}
+.workspace-navigation.compact nx-icon {
+  width: 18px;
+  height: 18px;
+}
+.page-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+}
+.page-actions > a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
+}
+.resource-heading {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--p-space-4);
+  margin-bottom: var(--p-space-5);
+}
+.resource-heading > div:first-child {
+  flex: 1;
+  min-width: min(100%, 12rem);
+}
+.resource-heading h2 {
+  font-size: var(--p-font-xl);
+  margin: 0 0 var(--p-space-2);
+}
+.resource-heading p {
+  margin: 0;
+  color: var(--secondary);
+}
+.source-load-error {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+  padding: var(--p-space-2) var(--p-space-3);
+  margin-bottom: var(--p-space-2);
+  border-radius: var(--p-radius-md);
+  background: var(--error-bg);
+  color: var(--error);
+  font-size: var(--text-label);
+}
+.source-load-error .quiet-button {
+  color: inherit;
+}
+.platform-card {
+  min-width: 0;
+  padding: var(--p-space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-lg);
+  background: var(--surface);
+}
+.upload-label {
+  position: relative;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
+}
+.upload-label input[type='file'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+}
+.upload-label:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
 .feature-sidebar {
   display: flex;
   flex-direction: column;

@@ -313,33 +313,6 @@
   color: var(--secondary);
   font-size: var(--text-caption);
 }
-.workspace-navigation {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--p-space-1);
-}
-.workspace-navigation a {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  min-height: var(--button-target);
-  padding: var(--p-space-2) var(--p-space-3);
-  border-radius: var(--p-radius-md);
-  color: var(--secondary);
-  font-size: var(--text-caption);
-}
-.workspace-navigation a:hover {
-  background: var(--hover);
-}
-.workspace-navigation a.current {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-.workspace-navigation.compact a {
-  flex: 1;
-  justify-content: center;
-  padding: var(--p-space-2);
-}
 @media (max-width: 860px) {
   .settings-layout {
     grid-template-columns: 1fr;

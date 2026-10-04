@@ -67,21 +67,23 @@
         </form>
         <div class="source-workbench">
           <aside class="source-results" aria-label="查詢結果">
-            @for (row of rows(); track row.id) {
-              <button
-                [class.current]="detail()?.record?.id === row.id"
-                [disabled]="busy()"
-                (click)="read(row.id)"
-              >
-                <span class="panel-eyebrow">{{ label(row.kind) }} · {{ row.status }}</span
-                ><strong>{{ row.title }}</strong
-                ><small>{{ row.id }} · {{ row.revision }}</small>
-              </button>
-            } @empty {
-              <p class="form-note">
-                {{ searched() ? '沒有符合且你有權限閱讀的資料。' : '輸入兩個字以上開始搜尋。' }}
-              </p>
-            }
+            <div class="source-result-list">
+              @for (row of rows(); track row.id) {
+                <button
+                  [class.current]="detail()?.record?.id === row.id"
+                  [disabled]="busy()"
+                  (click)="read(row.id)"
+                >
+                  <span class="panel-eyebrow">{{ label(row.kind) }} · {{ row.status }}</span
+                  ><strong>{{ row.title }}</strong
+                  ><small>{{ row.id }} · {{ row.revision }}</small>
+                </button>
+              } @empty {
+                <p class="form-note">
+                  {{ searched() ? '沒有符合且你有權限閱讀的資料。' : '輸入兩個字以上開始搜尋。' }}
+                </p>
+              }
+            </div>
             @if (rows().length) {
               <p class="form-note">依更新時間排序；搜尋範圍由來源權限決定。</p>
             }

@@ -15,7 +15,7 @@
   padding: 6px 7px;
   min-height: var(--button-target);
   border-radius: var(--p-radius-sm);
-  font-size: var(--text-caption);
+  font-size: var(--text-label);
   color: var(--secondary);
 }
 .quiet-button nx-icon {
@@ -31,7 +31,7 @@ kbd {
   min-height: var(--button-target);
   border-radius: var(--p-radius-sm);
   padding: 10px 17px;
-  font-size: var(--text-caption);
+  font-size: var(--text-label);
 }
 .primary-button {
   background: var(--accent);
@@ -46,6 +46,6 @@ kbd {
 }
 .danger-button,
 .danger-button:not(:disabled):hover {
-  background: var(--error);
-  color: var(--p-white);
+  background: var(--danger-surface);
+  color: var(--danger-text);
 }

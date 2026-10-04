@@ -59,6 +59,12 @@
   gap: var(--p-space-2);
   min-width: 0;
 }
+.source-result-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-2);
+  min-width: 0;
+}
 .source-results button {
   display: grid;
   gap: var(--p-space-2);
@@ -123,11 +129,12 @@
   .source-workbench {
     grid-template-columns: 1fr;
   }
-  .source-results {
+  .source-result-list {
     flex-direction: row;
     overflow-x: auto;
   }
-  .source-results button {
+  .source-result-list button {
+    flex: 0 0 auto;
     min-width: min(16rem, 80vw);
   }
 }

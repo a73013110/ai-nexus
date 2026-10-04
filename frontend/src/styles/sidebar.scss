@@ -108,7 +108,7 @@
 .history-row > a {
   display: block;
   padding: 12px 10px;
-  font-size: var(--text-caption);
+  font-size: var(--text-label);
   min-width: 0;
   flex: 1;
 }
@@ -133,9 +133,9 @@
 }
 .history-edit {
   opacity: 0;
-  flex: 0 0 28px;
-  width: 28px !important;
-  height: 32px !important;
+  flex: 0 0 var(--button-target);
+  width: var(--button-target);
+  height: var(--button-target);
   margin-right: 3px;
 }
 .history-edit nx-icon {
@@ -254,14 +254,6 @@
   display: block;
   margin-bottom: 8px;
 }
-.preferences-panel select {
-  border: 1px solid var(--line);
-  background: var(--canvas);
-  border-radius: var(--p-radius-sm);
-  padding: 9px;
-  width: 100%;
-  font-size: var(--text-caption);
-}
 .preferences-panel .check-label {
   margin-top: 18px;
   display: flex;
@@ -324,7 +316,7 @@ nx-chat-sidebar .sidebar {
   padding-top: var(--p-space-6);
 }
 .brand {
-  margin-bottom: var(--p-space-6);
+  margin-bottom: var(--p-space-4);
 }
 .sidebar-tools {
   display: flex;
@@ -373,16 +365,6 @@ nx-chat-sidebar .sidebar {
 }
 .label-filter {
   flex-basis: 100%;
-}
-.label-filter select {
-  width: 100%;
-  min-height: var(--button-target);
-  border: 0;
-  border-bottom: 1px solid var(--line);
-  background: transparent;
-  color: var(--secondary);
-  font-size: var(--text-caption);
-  padding-inline: var(--p-space-2);
 }
 @media (max-width: 859px) {
   nx-chat-sidebar {

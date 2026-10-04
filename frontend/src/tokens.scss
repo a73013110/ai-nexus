@@ -1,4 +1,27 @@
-// Primitive → semantic → component. Change this file to restyle the whole workspace.
+// Primitive → semantic → component. Theme zones also power the component review page.
+@mixin light-theme {
+  color-scheme: light;
+  --canvas: var(--p-stone-50);
+  --sidebar: var(--p-stone-100);
+  --surface: var(--p-white);
+  --hover: var(--p-stone-200);
+  --ink: var(--p-ink-900);
+  --secondary: var(--p-stone-600);
+  --muted: var(--p-stone-500);
+  --line: var(--p-stone-300);
+  --accent: var(--p-navy-700);
+  --accent-text: var(--p-white);
+  --accent-soft: var(--p-blue-100);
+  --focus: var(--p-blue-600);
+  --signal: var(--p-teal-700);
+  --error: var(--p-red-700);
+  --error-bg: var(--p-orange-50);
+  --code: var(--sidebar);
+  --code-keyword: var(--p-code-keyword);
+  --code-string: var(--p-code-string);
+  --code-number: var(--p-code-number);
+  --shadow: 0 10px 32px rgb(38 48 38 / 8%);
+}
 :root {
   --p-white: #fff;
   --p-stone-50: #fcfcf9;
@@ -63,28 +86,10 @@
   --p-radius-lg: 0.75rem;
   --p-radius-pill: 999px;
 
-  color-scheme: light;
-  --canvas: var(--p-stone-50);
-  --sidebar: var(--p-stone-100);
-  --surface: var(--p-white);
-  --hover: var(--p-stone-200);
-  --ink: var(--p-ink-900);
-  --secondary: var(--p-stone-600);
-  --muted: var(--p-stone-500);
-  --line: var(--p-stone-300);
-  --accent: var(--p-navy-700);
-  --accent-text: var(--p-white);
-  --accent-soft: var(--p-blue-100);
-  --focus: var(--p-blue-600);
-  --signal: var(--p-teal-700);
-  --error: var(--p-red-700);
-  --error-bg: var(--p-orange-50);
-  --code: var(--sidebar);
-  --code-keyword: var(--p-code-keyword);
-  --code-string: var(--p-code-string);
-  --code-number: var(--p-code-number);
+  @include light-theme;
+  --danger-surface: var(--p-red-700);
+  --danger-text: var(--p-white);
   --scrim: rgb(16 28 40 / 50%);
-  --shadow: 0 10px 32px rgb(38 48 38 / 8%);
   --shadow-floating: 0 16px 70px rgb(0 0 0 / 20%);
   --font-ui: 'Segoe UI', 'Microsoft JhengHei UI', 'Microsoft JhengHei', system-ui, sans-serif;
   --font-code: 'Cascadia Code', ui-monospace, monospace;
@@ -135,7 +140,11 @@
   --attachment-list-max: min(11rem, 22dvh);
 }
 
-:root[data-theme='dark'] {
+[data-theme='light'] {
+  @include light-theme;
+}
+
+[data-theme='dark'] {
   color-scheme: dark;
   --canvas: var(--p-night-900);
   --sidebar: var(--p-night-950);

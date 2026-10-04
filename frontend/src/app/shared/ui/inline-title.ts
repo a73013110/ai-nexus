@@ -9,23 +9,24 @@ import {
 } from '@angular/core';
 import { Icon } from './icon';
 
+let sequence = 0;
 @Component({
   selector: 'nx-inline-title',
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `@if (editing()) {
       <div class="inline-title-editor" #editor (focusout)="leave($event)">
-        <label class="sr-only" for="inline-conversation-title">目前對話名稱</label>
+        <label class="sr-only" [for]="id">目前對話名稱</label>
         <input
           #field
-          id="inline-conversation-title"
+          [id]="id"
           [value]="draft()"
           maxlength="120"
           (input)="draft.set($any($event.target).value)"
           (keydown)="key($event)"
           [readOnly]="saving()"
           [attr.aria-invalid]="!!error()"
-          aria-describedby="inline-title-help"
+          [attr.aria-describedby]="id + '-help'"
         />
         <button
           type="button"
@@ -46,7 +47,7 @@ import { Icon } from './icon';
           <nx-icon name="close" />
         </button>
         <span
-          id="inline-title-help"
+          [id]="id + '-help'"
           class="inline-title-help"
           [class.inline-error]="error()"
           role="status"
@@ -78,6 +79,7 @@ import { Icon } from './icon';
     }`,
 })
 export class InlineTitle {
+  readonly id = `nx-title-${++sequence}`;
   readonly value = input.required<string>();
   readonly scope = input.required<string>();
   readonly disabled = input(false);

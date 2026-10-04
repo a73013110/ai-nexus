@@ -124,6 +124,7 @@ export class ChatStore {
       !this.attachments.uploading() &&
       !this.attachments.files().some((x) => x.analysisMode === 'ocr-required') &&
       !this.knowledge.saving() &&
+      !this.knowledge.loadFailed() &&
       !this.visionNotice() &&
       !this.busy() &&
       !this.contextUsage()?.budgetExceeded,

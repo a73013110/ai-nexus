@@ -50,7 +50,7 @@ export class LoginPage {
   }
   private returnUrl() {
     const url = this.route.snapshot.queryParamMap.get('returnUrl') ?? '/chat';
-    return /^\/(?:chat|projects|artifacts|knowledge|tasks|settings|admin|quality|integrations|shared|reader)(?:\/[a-z0-9-]+)?(?:\?[a-z0-9=&%_-]+)?$/i.test(
+    return /^\/(?:(?:chat|projects|artifacts|knowledge|tasks|settings|admin|design|quality|integrations|shared)(?:\/[a-z0-9-]+)?|reader(?:\/attachment)?\/[a-z0-9-]+)(?:\?[a-z0-9=&%_-]+)?$/i.test(
       url,
     )
       ? url

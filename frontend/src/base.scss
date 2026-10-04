@@ -1,7 +1,8 @@
 * {
   box-sizing: border-box;
 }
-.sr-only {
+.sr-only,
+.visually-hidden {
   position: absolute !important;
   width: 1px;
   height: 1px;

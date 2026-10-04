@@ -11,6 +11,7 @@ export class KnowledgeSelection {
   readonly collections = signal<Collection[]>([]);
   readonly ids = signal<string[]>([]);
   readonly saving = signal(false);
+  readonly loadFailed = signal(false);
   readonly error = signal('');
   readonly revision = signal(0);
   private conversation: string | null = null;
@@ -21,6 +22,7 @@ export class KnowledgeSelection {
     this.collections.set([]);
     this.ids.set([]);
     this.saving.set(false);
+    this.loadFailed.set(false);
     this.error.set('');
     this.revision.update((x) => x + 1);
   }
@@ -42,6 +44,7 @@ export class KnowledgeSelection {
     this.conversation = conversation;
     this.ids.set([]);
     this.saving.set(!!conversation);
+    this.loadFailed.set(false);
     this.error.set('');
     try {
       if (conversation) {
@@ -50,10 +53,12 @@ export class KnowledgeSelection {
           this.ids.set(value.collectionIds);
       }
     } catch (error) {
-      if (version === this.version && generation === this.auth.generation())
+      if (version === this.version && generation === this.auth.generation()) {
+        this.loadFailed.set(true);
         this.error.set(
           error instanceof Error ? error.message : '知識來源載入失敗，請重新載入對話。',
         );
+      }
     } finally {
       if (version === this.version && generation === this.auth.generation()) {
         this.saving.set(false);
@@ -61,8 +66,12 @@ export class KnowledgeSelection {
       }
     }
   }
+  reload() {
+    if (!this.saving()) return this.load(this.conversation);
+    return Promise.resolve();
+  }
   async toggle(id: string, checked: boolean) {
-    if (this.saving()) return;
+    if (this.saving() || this.loadFailed()) return;
     const before = this.ids(),
       next = checked ? [...new Set([...before, id])] : before.filter((x) => x !== id);
     if (next.length > 3) return;

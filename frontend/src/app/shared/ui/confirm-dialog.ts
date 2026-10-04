@@ -15,6 +15,7 @@ export interface Confirmation {
   confirm: string;
   danger?: boolean;
 }
+let sequence = 0;
 @Component({
   selector: 'nx-confirm-dialog',
   imports: [Icon],
@@ -22,18 +23,21 @@ export interface Confirmation {
   template: `<dialog
     #dialog
     class="platform-dialog"
+    [attr.aria-labelledby]="id + '-title'"
+    [attr.aria-describedby]="id + '-message'"
     (cancel)="$event.preventDefault(); answer(false)"
   >
     <div class="dialog-heading">
-      <h2>{{ value()?.title }}</h2>
-      <button class="icon-button" aria-label="關閉確認視窗" (click)="answer(false)">
+      <h2 [id]="id + '-title'">{{ value()?.title }}</h2>
+      <button type="button" class="icon-button" aria-label="關閉確認視窗" (click)="answer(false)">
         <nx-icon name="close" />
       </button>
     </div>
-    <p class="confirmation-message">{{ value()?.message }}</p>
+    <p class="confirmation-message" [id]="id + '-message'">{{ value()?.message }}</p>
     <div class="dialog-actions">
-      <button autofocus class="secondary-button" (click)="answer(false)">取消</button
+      <button type="button" autofocus class="secondary-button" (click)="answer(false)">取消</button
       ><button
+        type="button"
         [class]="value()?.danger ? 'danger-button' : 'primary-button'"
         (click)="answer(true)"
       >
@@ -43,6 +47,7 @@ export interface Confirmation {
   </dialog>`,
 })
 export class ConfirmDialog {
+  readonly id = `nx-confirm-${++sequence}`;
   readonly value = signal<Confirmation | null>(null);
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private resolve?: (answer: boolean) => void;

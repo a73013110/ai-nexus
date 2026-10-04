@@ -231,6 +231,19 @@
               }}
             </div>
           }
+          @if (store.knowledge.loadFailed()) {
+            <div class="source-load-error" role="alert">
+              <span>知識來源尚未載入，重新載入後即可送出訊息。</span>
+              <button
+                type="button"
+                class="quiet-button"
+                [disabled]="store.knowledge.saving()"
+                (click)="store.knowledge.reload()"
+              >
+                <nx-icon name="repeat" />重新載入來源
+              </button>
+            </div>
+          }
           <label class="sr-only" for="composer">{{
             store.editing() ? '修改你的提問' : '傳送訊息'
           }}</label

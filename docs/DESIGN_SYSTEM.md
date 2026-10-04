@@ -66,3 +66,20 @@
 
 登入頁的傅立葉標誌使用自有 N 輪廓、等弧長取樣與一次性 DFT，逐幀只繪製預算內的圓與軌跡。4.2 秒後完全停止；支援跳過／重播、背景分頁暫停、DPR 上限 2、ResizeObserver、淺／深色及減少動畫偏好。手機版縮成品牌旁的圖形，表單全程可用。繪圖原始碼位於 shared/graphics，避免動畫生命週期與登入驗證耦合。
 
+## 共用元件與直接檢視
+
+平台管理頁右上方「介面元件」開啟 `/design`。此頁組合正式元件，提供淺色／深色局部預覽及目前 semantic tokens 的 JSON 匯出；不修改個人偏好，不呼叫模型或建立公司資料。只有具 admin 功能者顯示工作台，範例不含敏感資訊。
+
+| 元件                             | 使用與互動                                                                           |
+| -------------------------------- | ------------------------------------------------------------------------------------ |
+| Select                           | 單選 combobox／listbox、方向鍵／Home／End／typeahead、Enter 套用、Esc 關閉、停用選項 |
+| ActionMenu                       | 動作 menu、上下移動跳過停用、Esc 返回 trigger；危險操作仍進入確認                    |
+| ConfirmDialog                    | 原生 modal、清楚名稱及描述、初始焦點放取消、Esc／關閉取消，結束返回先前焦點          |
+| InlineTitle                      | 雙擊／F2／Enter 編輯，Enter／離開儲存、Esc 取消；版本 guard 與每個實例唯一 ID        |
+| MarkdownView                     | 共用文字／表格／程式碼渲染及複製；HTML／外部圖片與危險 URL 受限                      |
+| JobProgress／InferenceSignal     | 真實階段及完成單位、未知總量的不定進度、取消要求與完成分開、減少動態仍保留文字       |
+| FeaturePage／WorkspaceNavigation | 共用功能頁、依有效授權顯示；聊天精簡四欄入口與完整 aria-label，留空間給歷史          |
+
+主題 zone 使用 `[data-theme='light'|'dark']` 重新映射同一組 semantic tokens，避免元件複製 dark 條件。危險按鈕使用 `--danger-surface`／`--danger-text`，與錯誤文字 `--error` 分開，讓深色的提示色不會變成低對比按鈕。主要／次要操作與 quiet labels 為 15px，icon button 及歷史操作保留 44px 範圍。sr-only／visually-hidden 供螢幕閱讀器，儲存回饋不佔用對話版面。
+
+改元件後至少在此頁檢查：light／dark 文字及按鈕對比、390px 捲動與浮層、Tab／方向鍵／Esc、確認視窗焦點返回、停用狀態及減少動態。Edge 測試會檢查已選定的文字／背景組合 ≥4.5:1、控制面積及頁面無橫向溢出；仍需人工檢視實際頁面，不能推定所有可能 token 組合都通過。

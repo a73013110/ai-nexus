@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { FeaturePage } from '../../shared/ui/feature-page';
 import { Icon } from '../../shared/ui/icon';
+import { RouterLink } from '@angular/router';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import type {
   AdminCatalog,
@@ -39,7 +40,7 @@ interface Editor {
 }
 @Component({
   selector: 'nx-admin-page',
-  imports: [FeaturePage, Icon],
+  imports: [FeaturePage, Icon, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-page.html',
 })

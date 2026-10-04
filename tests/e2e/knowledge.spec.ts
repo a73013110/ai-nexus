@@ -12,13 +12,11 @@ test("knowledge upload, source query and named reader permissions are direct and
   await expect(
     page.getByRole("link", { name: /差旅費用申請.pdf/ }),
   ).toBeVisible();
-  await page
-    .locator("nx-knowledge-page input[type=file]")
-    .setInputFiles({
-      name: "差旅補充.txt",
-      mimeType: "text/plain",
-      buffer: Buffer.from("測試補充資料"),
-    });
+  await page.locator("nx-knowledge-page input[type=file]").setInputFiles({
+    name: "差旅補充.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("測試補充資料"),
+  });
   await expect(page.getByRole("link", { name: /差旅補充.txt/ })).toBeVisible();
   await page.getByRole("textbox", { name: "知識庫查詢內容" }).fill("差旅簽核");
   await page.getByRole("button", { name: "檢索來源", exact: true }).click();
@@ -136,4 +134,51 @@ test("background tasks show real stages and distinguish cancellation requests fr
   await expect(page.locator(".job-error")).toContainText("暫時無法使用");
   await page.getByRole("button", { name: "重試", exact: true }).click();
   expect(job.status).toBe("queued");
+});
+
+test("failed conversation source loading blocks submission until an explicit successful retry", async ({
+  page,
+}) => {
+  const fixture = new KnowledgeFixture();
+  fixture.seed();
+  await fixture.attach(page);
+  await page.goto("/chat");
+  await page
+    .getByRole("textbox", { name: "傳送訊息", exact: true })
+    .fill("查詢公司規範");
+  await page.getByRole("button", { name: "送出訊息", exact: true }).click();
+  await expect(page.getByRole("table")).toBeVisible();
+  const selected = fixture.core.conversations[0];
+  fixture.selections.set(selected.id, [fixture.collections[0].resource.id]);
+  let failing = true;
+  await page.route("**/api/v1/conversations/*/knowledge", (route) =>
+    failing && route.request().method() === "GET"
+      ? route.fulfill({
+          status: 503,
+          contentType: "application/json",
+          body: JSON.stringify({
+            title: "來源暫時無法載入",
+            code: "fixture_unavailable",
+          }),
+        })
+      : route.fallback(),
+  );
+  await page.reload();
+  await expect(page.locator(".source-load-error")).toBeVisible();
+  await page
+    .getByRole("textbox", { name: "傳送訊息", exact: true })
+    .fill("要有來源的下一題");
+  await expect(
+    page.getByRole("button", { name: "送出訊息", exact: true }),
+  ).toBeDisabled();
+  failing = false;
+  await page.getByRole("button", { name: "重新載入來源", exact: true }).click();
+  await expect(page.locator(".source-load-error")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "選取對話知識來源" }),
+  ).toContainText("來源 1");
+  await expect(
+    page.getByRole("button", { name: "送出訊息", exact: true }),
+  ).toBeEnabled();
+  expect(fixture.core.posts).toBe(1);
 });

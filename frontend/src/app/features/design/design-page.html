@@ -1,0 +1,152 @@
+<nx-feature-page
+  title="介面元件"
+  description="用實際元件檢視風格與互動，讓下一個功能保持一致。"
+  eyebrow="AI NEXUS · DESIGN SYSTEM"
+>
+  <div page-actions class="page-actions">
+    <a routerLink="/admin" class="secondary-button"><nx-icon name="left" />回到平台管理</a>
+  </div>
+  @if (loading()) {
+    <p role="status">正在載入介面工作台…</p>
+  } @else if (error()) {
+    <p class="error-banner" role="alert">
+      {{ error() }}<button type="button" (click)="load()">重新載入</button>
+    </p>
+  } @else if (!session.has('admin')) {
+    <p class="error-banner" role="alert">介面元件工作台僅提供平台管理員使用。</p>
+  } @else {
+    <div class="design-intro">
+      <div>
+        <h2>清楚、有層次，也保留一點科技感。</h2>
+        <p>所有範例僅在此頁示範，不會呼叫 AI 或修改資料。預覽主題不會改動你的個人設定。</p>
+      </div>
+      <div class="design-theme" role="group" aria-label="預覽主題">
+        <button
+          type="button"
+          [attr.aria-pressed]="theme() === 'light'"
+          (click)="theme.set('light')"
+        >
+          淺色
+        </button>
+        <button type="button" [attr.aria-pressed]="theme() === 'dark'" (click)="theme.set('dark')">
+          深色
+        </button>
+      </div>
+    </div>
+    <div #preview class="design-preview" [attr.data-theme]="theme()">
+      <div class="design-preview-heading">
+        <div>
+          <span class="panel-eyebrow">01 / 基礎語彙</span>
+          <h2>從 tokens 到每一個細節</h2>
+        </div>
+        <button type="button" class="quiet-button" (click)="exportTokens()">
+          <nx-icon name="download" />匯出目前 tokens
+        </button>
+      </div>
+      <div class="design-swatches">
+        @for (swatch of swatches; track swatch.token) {
+          <div class="design-swatch">
+            <span
+              class="design-color"
+              [style.background]="'var(' + swatch.token + ')'"
+              aria-hidden="true"
+            ></span
+            ><strong>{{ swatch.label }}</strong
+            ><small>{{ swatch.purpose }}</small
+            ><code>{{ swatch.token }}</code>
+          </div>
+        }
+      </div>
+      <div class="design-grid">
+        <section class="platform-card design-type" aria-labelledby="design-type-title">
+          <span class="panel-eyebrow">字級與閱讀</span>
+          <h2 id="design-type-title">先讓資訊看得清楚</h2>
+          <p class="design-reading">
+            正文 17px，提供自然的閱讀節奏。行距及閱讀寬度可在個人設定調整。
+          </p>
+          <p class="design-ui-copy">介面 16px：傳達下一個動作</p>
+          <p class="form-note">輔助資訊 14px：時間、狀態與來源</p>
+          <div class="design-spacing" aria-label="間距為 4、8、12、16、24、32 像素">
+            @for (space of [4, 8, 12, 16, 24, 32]; track space) {
+              <span><i [style.width.px]="space" aria-hidden="true"></i>{{ space }}</span>
+            }
+          </div>
+        </section>
+        <section class="platform-card" aria-labelledby="design-actions-title">
+          <span class="panel-eyebrow">操作與狀態</span>
+          <h2 id="design-actions-title">一致的操作層級</h2>
+          <p class="form-note">主要操作、次要操作及危險操作有清楚的區別，點擊範圍至少 44px。</p>
+          <div class="design-actions">
+            <button type="button" class="primary-button" (click)="notice.set('主要操作示範。')">
+              主要操作</button
+            ><button type="button" class="secondary-button" (click)="notice.set('次要操作示範。')">
+              次要操作</button
+            ><button type="button" class="danger-button" (click)="reset()">重設示範</button
+            ><button type="button" class="secondary-button" disabled>停用操作</button>
+          </div>
+          <p class="design-notice" role="status">
+            {{ notice() || '選取操作後，回饋會出現在這裡。' }}
+          </p>
+        </section>
+        <section class="platform-card" aria-labelledby="design-selection-title">
+          <span class="panel-eyebrow">選擇與選單</span>
+          <h2 id="design-selection-title">熟悉，而且容易操作</h2>
+          <p class="form-note">Tab 移動焦點，方向鍵選取，Enter 套用，Esc 關閉。</p>
+          <div class="design-select-row">
+            <nx-select
+              label="示範閱讀模式"
+              [value]="selection()"
+              [options]="choices"
+              (valueChange)="selection.set($event)"
+            /><nx-action-menu label="示範更多操作" [items]="actions" (action)="action($event)" />
+          </div>
+          <p class="form-note">彈出層可跨越捲動區及確認視窗，提供停用狀態與目前選項。</p>
+        </section>
+        <section class="platform-card" aria-labelledby="design-title-heading">
+          <span class="panel-eyebrow">直接編輯</span>
+          <h2 id="design-title-heading">在看到的地方修改</h2>
+          <p class="form-note">雙擊標題或按 F2／Enter，即可直接編輯；Esc 取消。</p>
+          <div class="design-inline-title">
+            <nx-inline-title
+              [value]="title()"
+              [scope]="'design-' + titleVersion()"
+              [save]="saveTitle"
+            />
+          </div>
+        </section>
+        <section class="platform-card design-status" aria-labelledby="design-status-title">
+          <div class="resource-heading">
+            <div>
+              <span class="panel-eyebrow">動態與回饋</span>
+              <h2 id="design-status-title">進度必須代表真正的階段</h2>
+            </div>
+            <button
+              type="button"
+              class="secondary-button"
+              [disabled]="demo().status === 'running'"
+              (click)="play()"
+            >
+              <nx-icon name="repeat" />播放狀態示範
+            </button>
+          </div>
+          <p class="form-note">
+            這是三個步驟的動畫示範。正式任務直接顯示伺服器階段與數量，支援減少動態效果。
+          </p>
+          <nx-job-progress [job]="demo()" />
+          <nx-select
+            label="示範任務狀態"
+            [value]="demo().status"
+            [options]="states"
+            (valueChange)="setState($event)"
+          />
+        </section>
+        <section class="platform-card design-markdown" aria-labelledby="design-markdown-title">
+          <span class="panel-eyebrow">02 / 內容閱讀</span>
+          <h2 id="design-markdown-title">長文字也能輕鬆瀏覽</h2>
+          <nx-markdown-view [content]="markdown" />
+        </section>
+      </div>
+      <nx-confirm-dialog />
+    </div>
+  }
+</nx-feature-page>
