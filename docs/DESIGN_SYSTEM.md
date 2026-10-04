@@ -63,3 +63,6 @@
 工作台、dialog、範本、快捷指令、附件縮圖與列表高度使用 component tokens：`--welcome-width`、`--dialog-width`、`--library-width`、`--command-width`、`--attachment-thumb`、`--attachment-list-max`。主要 controls 維持 44px 最小目標；輸入自動增高讀取 CSS token 上下限，無需同步修改 JavaScript 常數。
 
 改 token 後用 `scripts/Verify.ps1` 並看 artifacts screenshots，至少檢查 light／dark、375px 手機、1280×768、長回答／長草稿、Context popover、減少動態與鍵盤。瀏覽器測試檢查字級、對話可用高度、橫向溢出、隱藏模型、Context 與匯出行為；新視覺需人工檢查，不以 build 成功取代視覺驗收。
+
+登入頁的傅立葉標誌使用自有 N 輪廓、等弧長取樣與一次性 DFT，逐幀只繪製預算內的圓與軌跡。4.2 秒後完全停止；支援跳過／重播、背景分頁暫停、DPR 上限 2、ResizeObserver、淺／深色及減少動畫偏好。手機版縮成品牌旁的圖形，表單全程可用。繪圖原始碼位於 shared/graphics，避免動畫生命週期與登入驗證耦合。
+

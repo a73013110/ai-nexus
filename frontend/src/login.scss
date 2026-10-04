@@ -12,7 +12,7 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 60px;
+  gap: 24px;
 }
 .login-brand {
   display: flex;
@@ -55,6 +55,48 @@
 .login-footnote {
   color: var(--muted);
   font-size: var(--text-caption);
+}
+nx-fourier-mark {
+  display: block;
+  width: min(100%, 360px);
+  align-self: center;
+}
+.fourier-stage {
+  aspect-ratio: 1;
+  position: relative;
+}
+.fourier-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.fourier-coordinate {
+  position: absolute;
+  bottom: 12%;
+  left: 0;
+  font: var(--text-caption) var(--font-code);
+  letter-spacing: 2px;
+  color: var(--muted);
+}
+.fourier-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.fourier-caption button {
+  opacity: 0.7;
+}
+.fourier-caption button:hover,
+.fourier-caption button:focus-visible {
+  opacity: 1;
+}
+.login-intro h1 {
+  font-size: clamp(2rem, 3.3vw, 3rem);
+}
+.login-intro-copy {
+  margin-top: 6px;
 }
 .login-panel {
   display: grid;
@@ -129,6 +171,32 @@
     gap: 30px;
     border-right: 0;
     border-bottom: 1px solid var(--line);
+  }
+  nx-fourier-mark {
+    width: 132px;
+    position: absolute;
+    right: 14px;
+    top: 8px;
+  }
+  .login-intro {
+    position: relative;
+    min-height: 150px;
+    padding-right: 145px;
+  }
+  .fourier-caption,
+  .fourier-coordinate {
+    display: none;
+  }
+  .login-brand {
+    font-size: var(--p-font-xl);
+    gap: 12px;
+  }
+  .login-brand small {
+    letter-spacing: 1px;
+    font-size: var(--text-caption);
+  }
+  .login-monogram {
+    display: none;
   }
   .login-intro-copy,
   .login-footnote {

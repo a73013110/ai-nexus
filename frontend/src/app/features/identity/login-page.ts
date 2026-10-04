@@ -9,10 +9,11 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth-service';
 import { ChatStore } from '../chat/chat-store';
+import { FourierMark } from './fourier-mark';
 
 @Component({
   selector: 'nx-login-page',
-  imports: [FormField],
+  imports: [FormField, FourierMark],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login-page.html',
 })
@@ -49,7 +50,11 @@ export class LoginPage {
   }
   private returnUrl() {
     const url = this.route.snapshot.queryParamMap.get('returnUrl') ?? '/chat';
-    return /^\/chat(?:\/[a-f0-9-]+)?$/i.test(url) ? url : '/chat';
+    return /^\/(?:chat|projects|artifacts|knowledge|tasks|settings|admin|quality|integrations|shared|reader)(?:\/[a-z0-9-]+)?(?:\?[a-z0-9=&%_-]+)?$/i.test(
+      url,
+    )
+      ? url
+      : '/chat';
   }
   async submit(event: Event) {
     event.preventDefault();
