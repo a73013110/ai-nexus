@@ -10,7 +10,9 @@ async function conversation(page: import("@playwright/test").Page) {
     .fill("本週會議摘要");
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect(page.getByRole("table")).toBeVisible();
-  await expect(page.getByRole("button", { name: "重新生成", exact: true })).toBeEnabled();
+  await expect(
+    page.getByRole("button", { name: "重新生成", exact: true }),
+  ).toBeEnabled();
   return fixture;
 }
 
@@ -101,7 +103,7 @@ test("conversation minimap previews a turn and jumps; mobile exposes a direct di
     })
     .toBeLessThan(8);
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.getByRole("button", { name: "關閉對話側欄" }).click();
+  await page.getByRole("button", { name: "關閉對話導覽", exact: true }).click();
   await rail.getByRole("button", { name: "開啟對話目錄" }).click();
   await expect(rail.locator(".outline-entry")).toHaveCount(2);
   await rail.locator(".outline-entry").last().click();

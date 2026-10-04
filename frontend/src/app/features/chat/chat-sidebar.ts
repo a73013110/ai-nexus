@@ -15,10 +15,12 @@ import { ThemeService } from '../../core/preferences/theme-service';
 import { Icon } from '../../shared/ui/icon';
 import { Disclosure } from '../../shared/ui/disclosure';
 import { ChatStore } from './chat-store';
+import { Select } from '../../shared/ui/select';
+import { WorkspaceNavigation } from '../../shared/ui/workspace-navigation';
 
 @Component({
   selector: 'nx-chat-sidebar',
-  imports: [RouterLink, FormField, Icon, Disclosure],
+  imports: [RouterLink, FormField, Icon, Disclosure, Select, WorkspaceNavigation],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chat-sidebar.html',
 })
@@ -36,6 +38,15 @@ export class ChatSidebar {
   readonly searchModel = signal({ query: '' });
   readonly searchForm = form(this.searchModel, (schema) => maxLength(schema.query, 120));
   readonly preferencesForm = form(this.themes.preferences);
+  readonly themeOptions = [
+    { value: 'system', label: '跟隨系統' },
+    { value: 'light', label: '淺色' },
+    { value: 'dark', label: '深色' },
+  ];
+  readonly labelOptions = computed(() => [
+    { value: '', label: '全部標籤' },
+    ...this.store.labels().map((value) => ({ value, label: value })),
+  ]);
   readonly groups = computed(() => {
     const now = new Date();
     const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' });
@@ -70,9 +81,12 @@ export class ChatSidebar {
       250,
     );
   }
-  selectLabel(event: Event) {
-    if (event.target instanceof HTMLSelectElement)
-      void this.store.filterHistory(undefined, event.target.value);
+  selectLabel(value: string) {
+    void this.store.filterHistory(undefined, value);
+  }
+  themeChanged(theme: string) {
+    this.themes.preferences.update((value) => ({ ...value, theme }));
+    this.savePreferences();
   }
   savePreferences() {
     queueMicrotask(

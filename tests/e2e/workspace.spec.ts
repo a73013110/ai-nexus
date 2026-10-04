@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { ApiFixture, settleEntrance } from "./fixtures";
+import { ApiFixture, settleEntrance, chooseSelect } from "./fixtures";
 
 const png = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jJRkAAAAASUVORK5CYII=",
@@ -408,7 +408,7 @@ test("conversation instruction and tags persist and allow label filtering", asyn
   await expect
     .poll(() => fixture.conversations[0].systemInstruction)
     .toBe("先提供摘要，再列出待辦");
-  await page.getByRole("combobox", { name: "依標籤篩選" }).selectOption("企劃");
+  await chooseSelect(page, "依標籤篩選", "企劃");
   await expect(page.locator(".history-row")).toHaveCount(1);
   await page.reload();
   await menu(page, "對話指令與標籤");

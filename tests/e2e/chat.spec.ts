@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { ApiFixture, richAnswer, settleEntrance } from "./fixtures";
+import {
+  ApiFixture,
+  richAnswer,
+  settleEntrance,
+  chooseSelect,
+} from "./fixtures";
 
 test("blank desktop workspace, real forms, keyboard and Markdown copy", async ({
   page,
@@ -181,7 +186,7 @@ test("dark theme, reduced motion and narrow viewport remain usable", async ({
   await fixture.attach(page);
   await page.goto("/chat");
   await page.locator(".profile-menu summary").click();
-  await page.getByLabel("外觀", { exact: true }).selectOption("dark");
+  await chooseSelect(page, "外觀", "深色");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
   await page.getByRole("checkbox", { name: "減少動態效果" }).check();
   await expect(page.locator("html")).toHaveAttribute(
@@ -244,14 +249,14 @@ test("failed preference save restores the last confirmed theme and can be retrie
   await page.goto("/chat");
   await expect(page.getByText("測試使用者", { exact: true })).toBeVisible();
   await page.locator(".profile-menu summary").click();
-  await page.getByLabel("外觀", { exact: true }).selectOption("dark");
+  await chooseSelect(page, "外觀", "深色");
   await expect.poll(() => fixture.preferences.theme).toBe("dark");
   fixture.failPreferencesOnce = true;
-  await page.getByLabel("外觀", { exact: true }).selectOption("light");
+  await chooseSelect(page, "外觀", "淺色");
   await expect(page.getByRole("alert")).toContainText("偏好設定保存失敗。");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-  await expect(page.getByLabel("外觀", { exact: true })).toHaveValue("dark");
-  await page.getByLabel("外觀", { exact: true }).selectOption("light");
+  await expect(page.getByRole("combobox", { name: "外觀", exact: true })).toContainText("深色");
+  await chooseSelect(page, "外觀", "淺色");
   await expect.poll(() => fixture.preferences.theme).toBe("light");
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
 });

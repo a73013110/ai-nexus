@@ -74,4 +74,10 @@ export class DraftRepository {
   clear(user: string, conversation: string | null) {
     this.save(user, conversation, '', []);
   }
+  clearAccount(user: string) {
+    try {
+      Object.keys(localStorage).filter(key => key.startsWith(`nexus.draft.${user}.`)).forEach(key => localStorage.removeItem(key));
+      this.available.set(true); return true;
+    } catch { this.available.set(false); return false; }
+  }
 }

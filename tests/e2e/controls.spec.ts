@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { ApiFixture, settleEntrance } from "./fixtures";
+import { ApiFixture, settleEntrance, chooseSelect } from "./fixtures";
 
 test("composer exposes model, supported reasoning and keyboard-accessible context", async ({
   page,
@@ -12,11 +12,11 @@ test("composer exposes model, supported reasoning and keyboard-accessible contex
   await expect(
     page.locator(".composer").getByRole("combobox", { name: "選擇模型" }),
   ).toBeVisible();
-  await expect(model).toHaveValue("fixture:8b");
-  await expect(page.getByRole("combobox", { name: "思考強度" })).toHaveValue(
-    "minimal",
+  await expect(model).toContainText("本機測試模型");
+  await expect(page.getByRole("combobox", { name: "思考強度" })).toContainText(
+    "快速回應",
   );
-  await page.getByRole("combobox", { name: "思考強度" }).selectOption("high");
+  await chooseSelect(page, "思考強度", "深入思考");
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("測試思考設定");
   const context = page.getByLabel(/上下文用量：/);
   await expect(context).toHaveAccessibleName(/預估/);

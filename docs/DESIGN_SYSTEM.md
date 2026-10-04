@@ -56,6 +56,8 @@
 
 ## 檔案與驗證
 
+共用 `Select` 使用 combobox／listbox、可見 focus、方向鍵、typeahead 與原生 popover top layer，避免被側欄或 dialog 裁切；浮層依可用畫面翻轉並限制高度。個人設定只修改 semantic／component tokens，UI 最小字級與觸控目標保留。設定頁的分類側欄與內容寬度使用 `--settings-sidebar-width`、`--settings-content-width`。
+
 `styles.scss` 只管理載入順序；`tokens.scss`／`base.scss` 管全域，`styles/` 依責任拆分 controls、shell、sidebar、welcome、messages、markdown、composer、dialogs、tools、attachments。每個檔案包含自身的響應規則；`login.scss` 管登入頁，`composer-controls.scss` 管模型／思考／Context，`motion.scss` 統一動效。UI 元件不複製 token，也不維持第二份桌面／手機對話選單。
 
 工作台、dialog、範本、快捷指令、附件縮圖與列表高度使用 component tokens：`--welcome-width`、`--dialog-width`、`--library-width`、`--command-width`、`--attachment-thumb`、`--attachment-list-max`。主要 controls 維持 44px 最小目標；輸入自動增高讀取 CSS token 上下限，無需同步修改 JavaScript 常數。

@@ -18,5 +18,8 @@ public static class IdentityEndpoints
             return Results.Ok(new MeDto(user.Id, user.Account, user.DisplayName, models.Preferences(user.Preferences), csrf.GetAndStoreTokens(http).RequestToken!, active, await access.ForUserAsync(user.Id, ct)));
         }).WithName("GetMe").Produces<MeDto>();
         api.MapPut("/preferences", async (PreferencesDto body, CurrentUser current, CancellationToken ct) => Results.Ok(await current.UpdatePreferencesAsync(body, ct))).WithName("UpdatePreferences").Produces<PreferencesDto>();
+        api.MapGet("/settings", async (PersonalSettingsService service, CancellationToken ct) => Results.Ok(await service.GetAsync(ct))).WithName("GetUserSettings").Produces<UserSettingsDto>();
+        api.MapPut("/settings", async (UserSettingsDto body, PersonalSettingsService service, CancellationToken ct) => Results.Ok(await service.SaveAsync(body, ct))).WithName("SaveUserSettings").Produces<UserSettingsDto>();
+        api.MapGet("/settings/usage", async (PersonalSettingsService service, CancellationToken ct) => Results.Ok(await service.UsageAsync(ct))).WithName("GetPersonalUsage").Produces<PersonalUsageDto>();
     }
 }

@@ -9,6 +9,7 @@
     ></span>
     <span>AI <strong>Nexus</strong><small>公司工作台</small></span>
   </a>
+  <nx-workspace-navigation [compact]="true" />
   @if (store.hasChatAccess()) {
     <a routerLink="/chat" class="new-chat" (click)="navigate.emit()"
       ><nx-icon name="plus" />新對話<span class="new-chat-hint">開始</span></a
@@ -72,21 +73,13 @@
         </button>
       }
       @if (store.labels().length) {
-        <label class="label-filter"
-          ><span class="sr-only">依標籤篩選</span
-          ><select
-            aria-label="依標籤篩選"
-            [value]="store.historyLabel()"
-            (change)="selectLabel($event)"
-          >
-            <option value="" [selected]="!store.historyLabel()">全部標籤</option>
-            @for (label of store.labels(); track label) {
-              <option [value]="label" [selected]="store.historyLabel() === label">
-                {{ label }}
-              </option>
-            }
-          </select></label
-        >
+        <nx-select
+          class="label-filter"
+          label="依標籤篩選"
+          [value]="store.historyLabel()"
+          [options]="labelOptions()"
+          (valueChange)="selectLabel($event)"
+        />
       }
     </div>
     <nav class="history" aria-label="對話歷史">
@@ -149,12 +142,13 @@
       </summary>
       <div class="preferences-panel">
         <h2>工作台偏好</h2>
-        <label for="theme">外觀</label
-        ><select id="theme" [formField]="preferencesForm.theme" (change)="savePreferences()">
-          <option value="system">跟隨系統</option>
-          <option value="light">淺色</option>
-          <option value="dark">深色</option>
-        </select>
+        <nx-select
+          label="外觀"
+          [value]="themes.preferences().theme"
+          [options]="themeOptions"
+          (valueChange)="themeChanged($event)"
+        />
+        <a class="quiet-button" routerLink="/settings"><nx-icon name="sliders" />全部個人設定</a>
         <label class="check-label"
           ><input
             type="checkbox"

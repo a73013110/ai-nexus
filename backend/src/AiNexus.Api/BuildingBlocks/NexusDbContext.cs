@@ -35,6 +35,18 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
             p.ToTable("UserPreferences", "identity");
             p.Property(x => x.Theme).HasMaxLength(12);
             p.Property(x => x.DefaultModelId).HasMaxLength(160);
+            p.Property(x => x.Density).HasMaxLength(16);
+            p.Property(x => x.ReadingWidth).HasMaxLength(16);
+            p.Property(x => x.DefaultReasoningEffort).HasMaxLength(16);
+            p.Property(x => x.Density).HasDefaultValue("comfortable");
+            p.Property(x => x.ReadingWidth).HasDefaultValue("standard");
+            p.Property(x => x.DefaultReasoningEffort).HasDefaultValue("auto");
+            p.Property(x => x.ReadingFontSize).HasDefaultValue(17);
+            p.Property(x => x.ReadingLineHeight).HasDefaultValue(1.8);
+            p.Property(x => x.SidebarWidth).HasDefaultValue(264);
+            p.Property(x => x.EnterToSend).HasDefaultValue(true);
+            p.Property(x => x.AutoFollow).HasDefaultValue(true);
+            p.Property(x => x.SaveLocalDrafts).HasDefaultValue(true);
         });
         var run = model.Entity<GenerationRun>();
         run.ToTable("GenerationRuns", "inference");

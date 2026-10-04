@@ -221,7 +221,7 @@ export class ChatWorkspace {
       void this.store.initialize().then(() => {
         if (this.store.ready()) void this.store.select(params.get('id'));
       });
-      this.following.set(true);
+      this.following.set(this.store.personal.value().autoFollow);
       this.closeFind();
     });
     effect((onCleanup) => {
@@ -283,20 +283,21 @@ export class ChatWorkspace {
       event.keyCode === 229
     )
       return;
+    if (!this.store.personal.value().enterToSend && !event.ctrlKey && !event.metaKey) return;
     event.preventDefault();
     if (
       this.store.canSend() &&
       this.store.draft().text.trim() &&
       !this.composerForm.text().invalid()
     ) {
-      this.following.set(true);
+      this.following.set(this.store.personal.value().autoFollow);
       void this.store.send();
     }
   }
   send(event: Event) {
     event.preventDefault();
     if (this.store.canSend() && !this.composerForm.text().invalid()) {
-      this.following.set(true);
+      this.following.set(this.store.personal.value().autoFollow);
       void this.store.send();
     }
   }

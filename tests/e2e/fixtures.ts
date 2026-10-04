@@ -1,5 +1,16 @@
 import type { Page, Route } from "@playwright/test";
 import { randomUUID } from "node:crypto";
+export async function chooseSelect(
+  page: import("@playwright/test").Page,
+  label: string,
+  text: string,
+) {
+  await page.getByRole("combobox", { name: label, exact: true }).click();
+  await page
+    .getByRole("listbox", { name: label, exact: true })
+    .getByRole("option", { name: text, exact: true })
+    .click();
+}
 import type {
   Conversation,
   CreateRun,
@@ -52,6 +63,18 @@ export class ApiFixture {
   readonly prompts: PromptTemplate[] = [];
   readonly messageConversation = new Map<string, string>();
   userId = randomUUID();
+  settings = {
+    readingFontSize: 17,
+    readingLineHeight: 1.8,
+    density: "comfortable",
+    sidebarWidth: 264,
+    readingWidth: "standard",
+    enterToSend: true,
+    autoFollow: true,
+    saveLocalDrafts: true,
+    notifyOnCompletion: false,
+    defaultReasoningEffort: "auto",
+  };
   supportsImages = true;
   eventsStatus = 200;
   eventReads = 0;
@@ -195,6 +218,27 @@ export class ApiFixture {
         isEstimate: true,
       });
     }
+    if (path === "/settings") {
+      if (route.request().method() === "PUT") {
+        const { appearance, ...settings } = route.request().postDataJSON();
+        this.preferences = appearance;
+        this.settings = settings;
+      }
+      return json({ ...this.settings, appearance: this.preferences });
+    }
+    if (path === "/settings/usage")
+      return json({
+        days: 30,
+        requests: this.generated,
+        completed: this.generated,
+        failed: 0,
+        cancelled: 0,
+        inputTokens: 123,
+        outputTokens: 12,
+        requestsWithUsage: this.generated,
+        attachmentBytes: 0,
+        daily: [],
+      });
     if (path === "/preferences") {
       if (this.failPreferencesOnce) {
         this.failPreferencesOnce = false;

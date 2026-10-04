@@ -3,6 +3,8 @@ import type { components } from './schema';
 type Dto<Name extends keyof components['schemas']> = Required<components['schemas'][Name]>;
 export type Me = Dto<'MeDto'>;
 export type Preferences = Dto<'PreferencesDto'>;
+export type UserSettings = Dto<'UserSettingsDto'> & { appearance: Preferences };
+export type PersonalUsage = Dto<'PersonalUsageDto'> & { daily: Dto<'UsageDayDto'>[] };
 export type Model = Dto<'ModelDto'>;
 export type Models = Dto<'ModelsDto'>;
 export type Conversation = Dto<'ConversationDto'>;

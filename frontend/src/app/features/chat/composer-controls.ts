@@ -2,30 +2,23 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import type { ContextUsage, Model, ModelPolicy } from '../../core/api/types';
 import { Icon } from '../../shared/ui/icon';
 import { Disclosure } from '../../shared/ui/disclosure';
+import { Select } from '../../shared/ui/select';
 
 @Component({
   selector: 'nx-composer-controls',
-  imports: [Icon, Disclosure],
+  imports: [Icon, Disclosure, Select],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="composer-controls">
     @if (policy().allowModelSelection) {
-      <label class="composer-select model-control">
-        <span class="sr-only">選擇模型</span>
-        <select
-          aria-label="選擇模型"
-          [value]="modelId()"
-          [disabled]="disabled() || !models().length"
-          (change)="modelChanged($event)"
-        >
-          @for (model of models(); track model.id) {
-            <option [value]="model.id" [selected]="modelId() === model.id">
-              {{ model.displayName }}
-            </option>
-          } @empty {
-            <option value="">模型未就緒</option>
-          }
-        </select>
-      </label>
+      <nx-select
+        class="composer-select model-control"
+        label="選擇模型"
+        placeholder="模型未就緒"
+        [value]="modelId()"
+        [disabled]="disabled()"
+        [options]="modelOptions()"
+        (valueChange)="modelChange.emit($event)"
+      />
     } @else {
       <span class="model-lock" title="模型由系統指定"
         ><nx-icon name="lock" />{{
@@ -34,22 +27,14 @@ import { Disclosure } from '../../shared/ui/disclosure';
       >
     }
     @if (selected()?.reasoningEfforts?.length) {
-      <label class="composer-select reasoning-control">
-        <span class="sr-only">思考強度</span>
-        <select
-          aria-label="思考強度"
-          [value]="effort()"
-          [disabled]="disabled()"
-          (change)="effortChanged($event)"
-        >
-          <option value="auto" [selected]="effort() === 'auto'">自動思考</option>
-          @for (value of selected()!.reasoningEfforts; track value) {
-            <option [value]="value" [selected]="effort() === value">
-              {{ effortLabel(value) }}
-            </option>
-          }
-        </select>
-      </label>
+      <nx-select
+        class="composer-select reasoning-control"
+        label="思考強度"
+        [value]="effort()"
+        [disabled]="disabled()"
+        [options]="effortOptions()"
+        (valueChange)="effortChange.emit($event)"
+      />
     }
     <details class="context-details" nxDisclosure>
       <summary
@@ -110,6 +95,16 @@ export class ComposerControls {
   readonly modelChange = output<string>();
   readonly effortChange = output<string>();
   readonly selected = computed(() => this.models().find((x) => x.id === this.modelId()));
+  readonly modelOptions = computed(() =>
+    this.models().map((x) => ({ value: x.id, label: x.displayName })),
+  );
+  readonly effortOptions = computed(() => [
+    { value: 'auto', label: '自動思考' },
+    ...(this.selected()?.reasoningEfforts || []).map((value) => ({
+      value,
+      label: this.effortLabel(value),
+    })),
+  ]);
   readonly percent = computed(() => {
     const value = this.usage();
     return value
@@ -125,11 +120,5 @@ export class ComposerControls {
         >
       )[value] ?? value
     );
-  }
-  modelChanged(event: Event) {
-    if (event.target instanceof HTMLSelectElement) this.modelChange.emit(event.target.value);
-  }
-  effortChanged(event: Event) {
-    if (event.target instanceof HTMLSelectElement) this.effortChange.emit(event.target.value);
   }
 }

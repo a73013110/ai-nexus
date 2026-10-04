@@ -56,7 +56,7 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
         finally { writeLock.Gate.Release(); }
     }
 
-    public async Task<PreferencesDto> UpdatePreferencesAsync(PreferencesDto value, CancellationToken ct)
+    public async Task<PreferencesDto> UpdatePreferencesAsync(PreferencesDto value, CancellationToken ct, bool persist = true)
     {
         if (value.Theme is not ("light" or "dark" or "system")) throw new ApiException(400, "invalid_theme", "請選擇淺色、深色或跟隨系統。");
         if (value.DefaultModelId?.Length > 160) throw new ApiException(400, "invalid_model", "模型識別碼過長。");
@@ -64,7 +64,7 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
         user.Preferences.Theme = value.Theme;
         user.Preferences.ReducedMotion = value.ReducedMotion;
         user.Preferences.DefaultModelId = value.DefaultModelId is null ? null : models.InternalId(value.DefaultModelId) ?? throw new ApiException(400, "model_not_allowed", "偏好的模型未經伺服器核准。");
-        await db.SaveChangesAsync(ct);
+        if (persist) await db.SaveChangesAsync(ct);
         return models.Preferences(user.Preferences);
     }
 

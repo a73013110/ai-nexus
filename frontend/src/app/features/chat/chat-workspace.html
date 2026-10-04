@@ -291,10 +291,18 @@
           <span>
             @if (store.draft().text.trim() && !store.editing()) {
               <span class="draft-saved">{{
-                store.drafts.available() ? '草稿自動保存' : '此瀏覽器無法保存草稿'
+                !store.personal.value().saveLocalDrafts
+                  ? '草稿只保留在目前畫面'
+                  : store.drafts.available()
+                    ? '草稿自動保存'
+                    : '此瀏覽器無法保存草稿'
               }}</span>
             } @else {
-              <kbd>Enter</kbd> 送出 · <kbd>Shift + Enter</kbd> 換行
+              {{
+                store.personal.value().enterToSend
+                  ? 'Enter 送出 · Shift + Enter 換行'
+                  : 'Ctrl / ⌘ + Enter 送出 · Enter 換行'
+              }}
             }</span
           ><span>AI 回答可能有誤，請確認重要資訊。</span>
         </div>

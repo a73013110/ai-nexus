@@ -23,6 +23,8 @@ import { WorkspaceApi } from '../workspace/workspace-api';
 import { MessageTree } from './message-tree';
 import type { ConversationBackup, ConversationSettings } from '../../core/api/types';
 import { downloadFile } from '../../shared/browser/download';
+import { UserSettingsService } from '../../core/preferences/user-settings';
+import { WorkspaceSession } from '../../core/auth/workspace-session';
 
 @Injectable({ providedIn: 'root' })
 export class ChatStore {
@@ -34,6 +36,8 @@ export class ChatStore {
   readonly drafts = inject(DraftRepository);
   private readonly workspace = inject(WorkspaceApi);
   readonly auth = inject(AuthService);
+  readonly personal = inject(UserSettingsService);
+  private readonly session = inject(WorkspaceSession);
   readonly me = signal<Me | null>(null);
   readonly conversations = signal<Conversation[]>([]);
   readonly selected = signal<Conversation | null>(null);
@@ -151,6 +155,7 @@ export class ChatStore {
       this.ready() &&
       !this.loadingConversation() &&
       !this.editing() &&
+      this.personal.value().saveLocalDrafts &&
       !this.restoringDraft
     )
       this.drafts.save(
@@ -162,7 +167,7 @@ export class ChatStore {
   }
   private async restoreDraft(id: string | null) {
     const user = this.me();
-    if (!user) return;
+    if (!user || !this.personal.value().saveLocalDrafts) return;
     const saved = this.drafts.load(user.id, id);
     this.restoringDraft = true;
     if (saved) {
@@ -191,6 +196,9 @@ export class ChatStore {
       const me = await this.api.me();
       if (generation !== this.auth.generation()) return;
       this.me.set(me);
+      this.session.adopt(me);
+      await this.personal.load(me.id, true);
+      if (generation !== this.auth.generation()) return;
       this.themes.apply({
         theme: me.preferences.theme ?? 'system',
         reducedMotion: me.preferences.reducedMotion ?? false,
@@ -215,7 +223,11 @@ export class ChatStore {
             : (catalog.models[0]?.id ?? ''),
       );
       this.reasoningEffort.set(
-        this.models().find((x) => x.id === this.modelId())?.defaultReasoningEffort ?? 'auto',
+        this.models()
+          .find((x) => x.id === this.modelId())
+          ?.reasoningEfforts.includes(this.personal.value().defaultReasoningEffort)
+          ? this.personal.value().defaultReasoningEffort
+          : (this.models().find((x) => x.id === this.modelId())?.defaultReasoningEffort ?? 'auto'),
       );
       await this.refreshHistory();
       if (generation !== this.auth.generation()) return;
@@ -534,6 +546,8 @@ export class ChatStore {
     if (this.liveRun()?.id === run.id) this.liveRun.set(null);
     this.connection.set('connected');
     await this.refreshHistory();
+    if (generation === this.auth.generation() && run.status === 'completed')
+      this.personal.notifyCompleted();
   }
 
   async rename(id: string, title: string) {

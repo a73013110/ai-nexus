@@ -4,6 +4,8 @@
 
 ## 物件清單
 
+`PersonalSettings` migration 擴充 `identity.UserPreferences`，保存閱讀字級、行距、密度、內容與側欄寬度、Enter 送出、自動跟隨、草稿保存、完成通知與思考強度。預設值保留既有閱讀與操作習慣；設定以 UserId 的 1:1 關聯隔離，AD 密碼與 API key 不會放在個人偏好中。
+
 `WorkspaceExtensions` migration 新增以下物件，保留既有使用者與對話資料。共有 identity、access、conversations、inference、operations、attachments、library 七個業務 schema。
 
 | 新增物件／欄位                                              | 用途與規則                                                           |

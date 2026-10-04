@@ -18,7 +18,7 @@
   align-items: center;
   min-width: 0;
 }
-.composer-select select {
+.composer-select .select-trigger {
   min-width: 0;
   min-height: var(--button-target);
   padding: var(--p-space-1) var(--p-space-2);
@@ -31,13 +31,13 @@
   cursor: pointer;
   text-overflow: ellipsis;
 }
-.composer-select select:hover {
+.composer-select .select-trigger:hover {
   background: var(--hover);
 }
 .model-control {
   flex: 0 1 auto;
 }
-.reasoning-control select {
+.reasoning-control .select-trigger {
   max-width: 7.5rem;
 }
 .model-lock {
@@ -155,10 +155,10 @@
   border-radius: var(--p-radius-sm);
 }
 @media (max-width: 859px) {
-  .model-control select {
+  .model-control .select-trigger {
     max-width: 8rem;
   }
-  .reasoning-control select {
+  .reasoning-control .select-trigger {
     max-width: 6rem;
   }
 }
@@ -176,12 +176,12 @@
   .model-control {
     flex: 1 1 5rem;
   }
-  .model-control select {
+  .model-control .select-trigger {
     width: 100%;
     max-width: 8rem;
     padding-inline: var(--p-space-1);
   }
-  .reasoning-control select {
+  .reasoning-control .select-trigger {
     max-width: 6rem;
     padding-inline: var(--p-space-1);
   }

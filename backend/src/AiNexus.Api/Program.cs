@@ -84,6 +84,7 @@ builder.Services.AddScoped<DatabaseInitializer>();
 builder.Services.AddSingleton<StorageReadiness>();
 builder.Services.AddSingleton<IdentityWriteLock>();
 builder.Services.AddScoped<CurrentUser>();
+builder.Services.AddScoped<PersonalSettingsService>();
 builder.Services.AddScoped<ConversationService>();
 builder.Services.AddScoped<ConversationOrganization>();
 builder.Services.AddScoped<PromptLibraryService>();
