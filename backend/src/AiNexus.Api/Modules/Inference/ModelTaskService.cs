@@ -33,6 +33,9 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
         if (prompt.Length > 16000 || instruction.Length > 24000) throw new ApiException(400, "task_input_too_long", "處理內容過長，請縮小選取範圍。");
         var profile = await catalog.RequireAsync(model, ct);
         if (images?.Count > 0 && !profile.SupportsImages) throw new ApiException(400, "vision_not_supported", "系統模型不支援圖片辨識。");
+        // Reject invalid input before reserving quota or recording a model invocation.
+        if (Encoding.UTF8.GetByteCount(prompt + instruction) + (images?.Sum(x => x.EstimatedTokens) ?? 0) + profile.MaxOutputTokens + 160 > profile.ContextTokens)
+            throw new ApiException(400, "context_budget_exceeded", "此段內容超過模型上下文，請縮小範圍或調整系統模型。");
         var call = new ModelInvocation { OwnerId = owner, Kind = kind, ModelId = profile.Id };
         await writes.Gate.WaitAsync(ct);
         try
@@ -50,9 +53,6 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
         try
         {
             var parameters = new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, .2, instruction, profile.DefaultReasoningEffort, profile.ReasoningControl, profile.SupportsImages);
-            // Same conservative byte budget as chat; no undisclosed truncation.
-            if (Encoding.UTF8.GetByteCount(prompt + instruction) + (images?.Sum(x => x.EstimatedTokens) ?? 0) + profile.MaxOutputTokens + 160 > profile.ContextTokens)
-                throw new ApiException(400, "context_budget_exceeded", "此段內容超過模型上下文，請縮小範圍或調整系統模型。");
             await foreach (var chunk in provider.StreamAsync(profile.Id, [new("user", prompt, images)], parameters, timeout.Token))
             {
                 text.Append(chunk.Text); done |= chunk.Done;

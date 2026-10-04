@@ -118,3 +118,5 @@ Projects migration 新增 projects.Projects／ProjectTemplates，並以 Resource
 
 Sharing migration 在 collaboration 增加 ShareLinks／ShareRecipients；分享快照與期限獨立於原始內容，附件沿用保留參照。
 
+
+品質模組使用 quality schema：MessageFeedback 是對話擁有者的回答評價；EvaluationSets 保存有版本的固定題庫；EvaluationRuns 凍結題庫與比較方案；EvaluationResults 保存逐題模型回答、自動文字檢核與獨立人工評分。評測沿用 collaboration ACL 與 operations 背景任務。詳見 [QUALITY.md](QUALITY.md)。

@@ -7,10 +7,11 @@ import { AttachmentList } from '../attachments/attachment-list';
 import { MessageTree } from './message-tree';
 import { InferenceSignal } from '../../shared/ui/inference-signal';
 import { RouterLink } from '@angular/router';
+import { MessageFeedback } from '../quality/message-feedback';
 
 @Component({
   selector: 'nx-chat-message',
-  imports: [Icon, AttachmentList, InferenceSignal, RouterLink, MarkdownView],
+  imports: [Icon, AttachmentList, InferenceSignal, RouterLink, MarkdownView, MessageFeedback],
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <article
@@ -94,7 +95,16 @@ import { RouterLink } from '@angular/router';
             <nx-icon name="edit" /><span>編輯</span>
           </button>
         } @else {
-          @if (allowArtifacts()) { <button class="quiet-button" (click)="saveArtifact.emit(message())" [disabled]="busy()" aria-label="儲存回答為成果文件"><nx-icon name="document" /><span>儲存成果</span></button> }
+          @if (allowArtifacts()) {
+            <button
+              class="quiet-button"
+              (click)="saveArtifact.emit(message())"
+              [disabled]="busy()"
+              aria-label="儲存回答為成果文件"
+            >
+              <nx-icon name="document" /><span>儲存成果</span>
+            </button>
+          }
           <button
             class="quiet-button"
             (click)="regenerate.emit(message())"
@@ -129,6 +139,9 @@ import { RouterLink } from '@angular/router';
     @if (copyError()) {
       <p role="status" class="message-note">{{ copyError() }}</p>
     }
+    @if (!active() && message().role === 'assistant' && message().content) {
+      <nx-message-feedback [message]="message()" (rated)="rated.emit($event)" />
+    }
   </article>`,
 })
 export class ChatMessage {
@@ -140,6 +153,7 @@ export class ChatMessage {
   readonly showModelNames = input(true);
   readonly allowArtifacts = input(false);
   readonly saveArtifact = output<Message>();
+  readonly rated = output<{ id: string; rating: number }>();
   readonly busy = input(false);
   readonly streamContent = input('');
   readonly status = input('');

@@ -3,7 +3,12 @@ import type { components } from './schema';
 type Dto<Name extends keyof components['schemas']> = Required<components['schemas'][Name]>;
 export type Me = Dto<'MeDto'>;
 export type ReadonlyShare = Dto<'ShareDto'>;
-export type SharedContent = Dto<'SharedContentDto'> & { share: ReadonlyShare; snapshot: Dto<'ShareSnapshot'> & { messages: (Dto<'SharedMessageDto'> & { attachments: Attachment[] })[] } };
+export type SharedContent = Dto<'SharedContentDto'> & {
+  share: ReadonlyShare;
+  snapshot: Dto<'ShareSnapshot'> & {
+    messages: (Dto<'SharedMessageDto'> & { attachments: Attachment[] })[];
+  };
+};
 export type Project = Dto<'ProjectDto'> & { resource: Dto<'ResourceDto'> };
 export type ProjectTemplate = Dto<'ProjectTemplateDto'>;
 export type Preferences = Dto<'PreferencesDto'>;
@@ -22,8 +27,23 @@ export type Access = Dto<'AccessDto'>;
 export type Model = Dto<'ModelDto'>;
 export type Models = Dto<'ModelsDto'>;
 export type Conversation = Dto<'ConversationDto'>;
-export type Message = Omit<Dto<'MessageDto'>, 'sources'> &
-  Pick<components['schemas']['MessageDto'], 'sources'>;
+export type Message = Omit<Dto<'MessageDto'>, 'sources' | 'feedbackRating'> &
+  Pick<components['schemas']['MessageDto'], 'sources' | 'feedbackRating'>;
+export type Feedback = Dto<'FeedbackDto'>;
+export type EvaluationCase = Dto<'EvaluationCase'>;
+export type EvaluationVariant = Dto<'EvaluationVariant'>;
+export type EvaluationSet = Dto<'EvaluationSetDto'> & {
+  resource: Resource;
+  cases: EvaluationCase[];
+};
+export type EvaluationRun = Dto<'EvaluationRunDto'> & { job: Job };
+export type EvaluationResult = Dto<'EvaluationResultDto'>;
+export type EvaluationDetail = Dto<'EvaluationDetailDto'> & {
+  run: EvaluationRun;
+  cases: EvaluationCase[];
+  variants: EvaluationVariant[];
+  results: EvaluationResult[];
+};
 export type ConversationDetail = Dto<'ConversationDetailDto'>;
 export type Run = Dto<'RunDto'>;
 export type RunEvent = Dto<'RunEventDto'>;

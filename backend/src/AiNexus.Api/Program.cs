@@ -58,7 +58,7 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
     options.AddPolicy(BuiltInAccess.ChatPolicy, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(BuiltInAccess.ChatFeature)));
     options.AddPolicy(AdministrationConfiguration.Policy, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(AdministrationConfiguration.Feature)));
-    foreach (var feature in new[] { "knowledge", "tasks", "artifacts", "projects", "shared" })
+    foreach (var feature in new[] { "knowledge", "tasks", "artifacts", "projects", "shared", "quality" })
         options.AddPolicy("feature:" + feature, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(feature)));
     options.AddPolicy("feature:attachments", policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement("chat", "knowledge", "projects")));
     options.AddPolicy("feature:text", policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement("chat", "artifacts")));
@@ -100,6 +100,8 @@ builder.Services.AddScoped<AdministrationService>();
 builder.Services.AddScoped<ModelPolicyService>();
 builder.Services.AddSingleton<ModelQuotaLock>();
 builder.Services.AddScoped<ModelTaskService>();
+builder.Services.AddScoped<AiNexus.Modules.Quality.QualityService>();
+builder.Services.AddScoped<IBackgroundJobHandler, AiNexus.Modules.Quality.EvaluationHandler>();
 builder.Services.AddSingleton<AiNexus.Modules.Collaboration.ResourceWriteLock>();
 builder.Services.AddScoped<AiNexus.Modules.Collaboration.ResourceAccess>();
 builder.Services.AddScoped<JobService>();
@@ -224,7 +226,7 @@ app.Use(async (http, next) =>
     // JSON-escaped UTF-16 characters can occupy six bytes. Keep prompt limits usable for Chinese clients too.
     var bodyLimit = http.Request.Path == "/api/v1/attachments" ? 9 * 1024 * 1024 : http.Request.Path == "/api/v1/conversations/import" ? 8 * 1024 * 1024 :
         http.Request.Path is var inputPath && (inputPath == "/api/v1/runs" || inputPath == "/api/v1/context") ? Math.Max(65536, http.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptions<InferenceOptions>>().Value.MaxInputCharacters * 6 + 8192) :
-        http.Request.Path.StartsWithSegments("/api/v1/prompt-templates") ? 12000 * 6 + 8192 : http.Request.Path.StartsWithSegments("/api/v1/artifacts") ? 64000 * 6 + 8192 : 65536;
+        http.Request.Path.StartsWithSegments("/api/v1/prompt-templates") ? 12000 * 6 + 8192 : http.Request.Path.StartsWithSegments("/api/v1/artifacts") ? 64000 * 6 + 8192 : http.Request.Path.StartsWithSegments("/api/v1/quality/sets") ? 224000 * 6 + 8192 : 65536;
     if (http.Request.ContentLength > bodyLimit) throw new ApiException(413, "request_too_large", "上傳內容超過大小上限。");
     var bodySize = http.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();
     if (bodySize is { IsReadOnly: false }) bodySize.MaxRequestBodySize = bodyLimit;

@@ -45,7 +45,8 @@ public sealed class ConversationService(IEfHelper<INexusDatabase> ef, NexusDbCon
         var attachments = links.ToLookup(x => x.MessageId, x => new AttachmentDto(x.Id, x.FileName, x.ContentType, x.Size, x.ContentType.StartsWith("image/"), x.HasText ? "extracted-text" : "vision"));
         var citations = (await ef.Set<AiNexus.Modules.Knowledge.MessageCitation>().AsNoTracking().Where(x => messages.Select(m => m.Id).Contains(x.MessageId)).OrderBy(x => x.Number).ToListAsync(ct))
             .ToLookup(x => x.MessageId, x => new AiNexus.Modules.Knowledge.CitationDto(x.Number, x.DocumentId, x.Title, x.PageNumber, x.Excerpt));
-        return new(conversation.ToDto(), messages.Select(x => presentation.Message(x) with { Attachments = attachments[x.Id].ToList(), Sources = citations[x.Id].ToList() }).ToList(), run is null ? null : presentation.Run(run));
+        var ratings = await db.Set<AiNexus.Modules.Quality.MessageFeedback>().AsNoTracking().Where(x => x.OwnerId == owner && messages.Select(m => m.Id).Contains(x.MessageId)).ToDictionaryAsync(x => x.MessageId, x => x.Rating, ct);
+        return new(conversation.ToDto(), messages.Select(x => presentation.Message(x) with { Attachments = attachments[x.Id].ToList(), Sources = citations[x.Id].ToList(), FeedbackRating = ratings.GetValueOrDefault(x.Id) }).ToList(), run is null ? null : presentation.Run(run));
     }
 
     public async Task<ConversationDto> RenameAsync(Guid owner, Guid id, string title, CancellationToken ct)

@@ -61,3 +61,5 @@ Verify 使用獨立資料庫與測試 provider，Edge 測試也明確使用 fixt
 
 具名唯讀分享支援到期、撤銷與明確附件授權，保存分享當下的版本。見 [分享](docs/SHARING.md)。
 
+
+品質功能：回答旁一鍵回饋、固定題庫匯入／匯出、模型與指令比較、逐題背景進度及人工評分。操作與權限說明見 [docs/QUALITY.md](docs/QUALITY.md)。

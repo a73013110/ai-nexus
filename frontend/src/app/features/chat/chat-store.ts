@@ -34,8 +34,16 @@ export class ChatStore {
   async assignProject(conversation: Conversation, projectId: string | null) {
     if (this.busy()) return false;
     const generation = this.auth.generation();
-    try { const value = await this.projectsApi.assign(conversation.id, projectId); if (generation !== this.auth.generation()) return false; if (this.selected()?.id === value.id) this.selected.set(value); await this.refreshHistory(); return true; }
-    catch (error) { this.report(error); return false; }
+    try {
+      const value = await this.projectsApi.assign(conversation.id, projectId);
+      if (generation !== this.auth.generation()) return false;
+      if (this.selected()?.id === value.id) this.selected.set(value);
+      await this.refreshHistory();
+      return true;
+    } catch (error) {
+      this.report(error);
+      return false;
+    }
   }
   private readonly api = inject(NexusApi);
   private readonly stream = inject(RunStream);
@@ -52,6 +60,11 @@ export class ChatStore {
   readonly conversations = signal<Conversation[]>([]);
   readonly selected = signal<Conversation | null>(null);
   readonly messages = signal<Message[]>([]);
+  rateMessage(value: { id: string; rating: number }) {
+    this.messages.update((items) =>
+      items.map((x) => (x.id === value.id ? { ...x, feedbackRating: value.rating } : x)),
+    );
+  }
   readonly models = signal<Model[]>([]);
   readonly modelId = signal('');
   readonly policy = signal<ModelPolicy>({
@@ -69,7 +82,9 @@ export class ChatStore {
   readonly hasKnowledgeAccess = computed(
     () => this.me()?.access.features?.some((x) => x.id === 'knowledge') ?? false,
   );
-  readonly hasArtifactsAccess = computed(() => this.me()?.access.features?.some(x => x.id === 'artifacts') ?? false);
+  readonly hasArtifactsAccess = computed(
+    () => this.me()?.access.features?.some((x) => x.id === 'artifacts') ?? false,
+  );
   readonly modelNotice = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly ready = signal(false);

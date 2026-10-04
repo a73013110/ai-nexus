@@ -1588,3 +1588,171 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004071532_Quality'
+)
+BEGIN
+    IF SCHEMA_ID(N'quality') IS NULL EXEC(N'CREATE SCHEMA [quality];');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004071532_Quality'
+)
+BEGIN
+    CREATE TABLE [quality].[EvaluationSets] (
+        [Id] uniqueidentifier NOT NULL,
+        [Description] nvarchar(2000) NOT NULL,
+        [CasesJson] nvarchar(max) NOT NULL,
+        [Version] int NOT NULL,
+        CONSTRAINT [PK_EvaluationSets] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_EvaluationSets_Resources_Id] FOREIGN KEY ([Id]) REFERENCES [collaboration].[Resources] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004071532_Quality'
+)
+BEGIN
+    CREATE TABLE [quality].[MessageFeedback] (
+        [MessageId] uniqueidentifier NOT NULL,
+        [OwnerId] uniqueidentifier NOT NULL,
+        [Rating] int NOT NULL,
+        [Reason] nvarchar(24) NOT NULL,
+        [Note] nvarchar(2000) NOT NULL,
+        [UpdatedAt] datetimeoffset NOT NULL,
+        CONSTRAINT [PK_MessageFeedback] PRIMARY KEY ([MessageId]),
+        CONSTRAINT [FK_MessageFeedback_Messages_MessageId] FOREIGN KEY ([MessageId]) REFERENCES [conversations].[Messages] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_MessageFeedback_Users_OwnerId] FOREIGN KEY ([OwnerId]) REFERENCES [identity].[Users] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004071532_Quality'
+)
+BEGIN
+    CREATE TABLE [quality].[EvaluationRuns] (
+        [Id] uniqueidentifier NOT NULL,
+        [SetId] uniqueidentifier NOT NULL,
+        [OwnerId] uniqueidentifier NOT NULL,
+        [JobId] uniqueidentifier NOT NULL,
+        [SetVersion] int NOT NULL,
+        [SetTitle] nvarchar(120) NOT NULL,
+        [CasesJson] nvarchar(max) NOT NULL,
+        [VariantsJson] nvarchar(max) NOT NULL,
+        [CreatedAt] datetimeoffset NOT NULL,
+        CONSTRAINT [PK_EvaluationRuns] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_EvaluationRuns_BackgroundJobs_JobId] FOREIGN KEY ([JobId]) REFERENCES [operations].[BackgroundJobs] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_EvaluationRuns_EvaluationSets_SetId] FOREIGN KEY ([SetId]) REFERENCES [quality].[EvaluationSets] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_EvaluationRuns_Users_OwnerId] FOREIGN KEY ([OwnerId]) REFERENCES [identity].[Users] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004071532_Quality'
+)
+BEGIN
+    CREATE TABLE [quality].[EvaluationResults] (
+        [RunId] uniqueidentifier NOT NULL,
+        [CaseIndex] int NOT NULL,
+        [VariantIndex] int NOT NULL,
+        [Output] nvarchar(max) NOT NULL,
+        [Truncated] bit NOT NULL,
+        [RequiredMatches] int NOT NULL,
+        [RequiredTotal] int NOT NULL,
+        [ForbiddenMatches] int NOT NULL,
+        [ElapsedMs] bigint NOT NULL,
+        [InputTokens] bigint NULL,
+        [OutputTokens] bigint NULL,
+        [ReviewScore] int NULL,
+        [ReviewNote] nvarchar(2000) NOT NULL,
+        [ReviewerId] uniqueidentifier NULL,
+        CONSTRAINT [PK_EvaluationResults] PRIMARY KEY ([RunId], [CaseIndex], [VariantIndex]),
+        CONSTRAINT [FK_EvaluationResults_EvaluationRuns_RunId] FOREIGN KEY ([RunId]) REFERENCES [quality].[EvaluationRuns] ([Id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_EvaluationResults_Users_ReviewerId] FOREIGN KEY ([ReviewerId]) REFERENCES [identity].[Users] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004071532_Quality'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Enabled', N'Name', N'Route', N'SortOrder') AND [object_id] = OBJECT_ID(N'[access].[Features]'))
+        SET IDENTITY_INSERT [access].[Features] ON;
+    EXEC(N'INSERT INTO [access].[Features] ([Id], [Enabled], [Name], [Route], [SortOrder])
+    VALUES (N''quality'', CAST(1 AS bit), N''品質評測'', N''/quality'', 60)');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Enabled', N'Name', N'Route', N'SortOrder') AND [object_id] = OBJECT_ID(N'[access].[Features]'))
+        SET IDENTITY_INSERT [access].[Features] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004071532_Quality'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'FeatureId', N'GroupId') AND [object_id] = OBJECT_ID(N'[access].[RoleGroupFeatures]'))
+        SET IDENTITY_INSERT [access].[RoleGroupFeatures] ON;
+    EXEC(N'INSERT INTO [access].[RoleGroupFeatures] ([FeatureId], [GroupId])
+    VALUES (N''quality'', N''workspace'')');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'FeatureId', N'GroupId') AND [object_id] = OBJECT_ID(N'[access].[RoleGroupFeatures]'))
+        SET IDENTITY_INSERT [access].[RoleGroupFeatures] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004071532_Quality'
+)
+BEGIN
+    CREATE INDEX [IX_EvaluationResults_ReviewerId] ON [quality].[EvaluationResults] ([ReviewerId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004071532_Quality'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_EvaluationRuns_JobId] ON [quality].[EvaluationRuns] ([JobId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004071532_Quality'
+)
+BEGIN
+    CREATE INDEX [IX_EvaluationRuns_OwnerId] ON [quality].[EvaluationRuns] ([OwnerId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004071532_Quality'
+)
+BEGIN
+    CREATE INDEX [IX_EvaluationRuns_SetId_CreatedAt] ON [quality].[EvaluationRuns] ([SetId], [CreatedAt]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004071532_Quality'
+)
+BEGIN
+    CREATE INDEX [IX_MessageFeedback_OwnerId_UpdatedAt] ON [quality].[MessageFeedback] ([OwnerId], [UpdatedAt]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004071532_Quality'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261004071532_Quality', N'10.0.12');
+END;
+
+COMMIT;
+GO
+
