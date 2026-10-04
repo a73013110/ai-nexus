@@ -1,0 +1,164 @@
+{
+  "": [
+    "ConfigurationVersion",
+    "AllowedHosts",
+    "Database",
+    "AdAuthentication",
+    "Administration",
+    "DataProtection",
+    "Security",
+    "Inference",
+    "Prompts",
+    "Knowledge",
+    "Integrations",
+    "Attachments",
+    "Exports",
+    "Storage",
+    "Logging",
+    "ConnectionStrings"
+  ],
+  "Database": [
+    "Server",
+    "Name",
+    "TrustServerCertificate",
+    "ConnectTimeoutSeconds",
+    "User",
+    "Password"
+  ],
+  "AdAuthentication": [
+    "Mode",
+    "Url",
+    "Domain",
+    "DnUser",
+    "AdAccountAttrName",
+    "DnPass"
+  ],
+  "Administration": ["BootstrapAdministrators"],
+  "DataProtection": ["KeyRingPath"],
+  "Security": ["DisableHttpsRedirection"],
+  "Inference": ["Provider", "Execution", "ModelPolicy", "Providers"],
+  "Inference.Execution": [
+    "QueueCapacity",
+    "TimeoutSeconds",
+    "MaxInputCharacters",
+    "MaxOutputCharacters"
+  ],
+  "Inference.ModelPolicy": ["AllowModelSelection", "ShowModelNames"],
+  "Inference.Providers": ["Google", "Ollama"],
+  "Inference.Providers.Google": ["ApiKey", "DefaultModelId", "Models"],
+  "Inference.Providers.Google.Models": [],
+  "Inference.Providers.Google.Models.default": [
+    "Id",
+    "DisplayName",
+    "ContextTokens",
+    "MaxOutputTokens",
+    "SupportsStreaming",
+    "SupportsUsage",
+    "SupportsImages",
+    "ReasoningControl",
+    "ReasoningEfforts",
+    "DefaultReasoningEffort"
+  ],
+  "Inference.Providers.Ollama": ["Endpoint", "DefaultModelId", "Models"],
+  "Inference.Providers.Ollama.Models": [],
+  "Inference.Providers.Ollama.Models.default": [
+    "Id",
+    "DisplayName",
+    "ContextTokens",
+    "MaxOutputTokens",
+    "SupportsStreaming",
+    "SupportsUsage",
+    "SupportsImages",
+    "ReasoningControl",
+    "ReasoningEfforts",
+    "DefaultReasoningEffort"
+  ],
+  "Prompts": ["DefaultSystemInstruction"],
+  "Knowledge": ["Embedding", "Indexing", "Retrieval"],
+  "Knowledge.Embedding": [
+    "Provider",
+    "Model",
+    "Dimensions",
+    "TimeoutSeconds",
+    "MaxDailyRequests"
+  ],
+  "Knowledge.Indexing": [
+    "MaxCollections",
+    "MaxDocumentsPerCollection",
+    "ChunkCharacters",
+    "ChunkOverlap"
+  ],
+  "Knowledge.Retrieval": [
+    "UseNativeVector",
+    "PortableCandidateLimit",
+    "TopK",
+    "ContextCharacters"
+  ],
+  "Integrations": ["Sources"],
+  "Integrations.Sources": ["Gdweb", "Meiho"],
+  "Integrations.Sources.Gdweb": [
+    "Enabled",
+    "Transport",
+    "AclContractConfirmed",
+    "AllowedGroupIds",
+    "CommandTimeoutSeconds",
+    "MaxResults",
+    "Database"
+  ],
+  "Integrations.Sources.Gdweb.Database": [
+    "Server",
+    "Name",
+    "TrustServerCertificate",
+    "ConnectTimeoutSeconds",
+    "User",
+    "Password"
+  ],
+  "Integrations.Sources.Meiho": [
+    "Enabled",
+    "Transport",
+    "AclContractConfirmed",
+    "AllowedGroupIds",
+    "CommandTimeoutSeconds",
+    "MaxResults",
+    "Database"
+  ],
+  "Integrations.Sources.Meiho.Database": [
+    "Server",
+    "Name",
+    "TrustServerCertificate",
+    "ConnectTimeoutSeconds",
+    "User",
+    "Password"
+  ],
+  "Attachments": [
+    "MaxOwnerBytes",
+    "MaxFileBytes",
+    "MaxMessageBytes",
+    "MaxFilesPerMessage",
+    "MaxExtractedCharacters",
+    "MaxPdfPages",
+    "ImageTokenEstimate",
+    "DraftRetentionDays"
+  ],
+  "Exports": ["BrowserChannel", "TimeoutSeconds"],
+  "Storage": ["ApplyMigrationsOnStartup"],
+  "Logging": ["LogLevel"],
+  "Logging.LogLevel": [
+    "Default",
+    "Microsoft.AspNetCore",
+    "Microsoft.EntityFrameworkCore.Database.Command"
+  ],
+  "ConnectionStrings": ["Nexus", "LegacyGdweb", "LegacyMeiho"],
+  "*.ModelProfile": [
+    "Id",
+    "DisplayName",
+    "ContextTokens",
+    "MaxOutputTokens",
+    "SupportsStreaming",
+    "SupportsUsage",
+    "SupportsImages",
+    "ReasoningControl",
+    "ReasoningEfforts",
+    "DefaultReasoningEffort"
+  ]
+}

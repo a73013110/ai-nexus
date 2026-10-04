@@ -33,6 +33,7 @@ import { ResourceSharing } from '../../shared/ui/resource-sharing';
 import { JobsApi } from '../tasks/jobs-api';
 import { QualityApi } from './quality-api';
 import { SearchField } from '../../shared/ui/search-field';
+import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 
 type VariantForm = { label: string; modelId: string | null; instruction: string };
 const blankCase = (): EvaluationCase => ({
@@ -46,6 +47,7 @@ const blankCase = (): EvaluationCase => ({
   imports: [
     FeaturePage,
     SearchField,
+    ConfirmDialog,
     RouterLink,
     Icon,
     Select,
@@ -67,6 +69,7 @@ export class QualityPage {
   private readonly router = inject(Router);
   private readonly scope = inject(ViewScope);
   readonly sets = signal<EvaluationSet[]>([]);
+  readonly confirm = viewChild.required(ConfirmDialog);
   readonly current = signal<EvaluationSet | null>(null);
   readonly runs = signal<EvaluationRun[]>([]);
   readonly detail = signal<EvaluationDetail | null>(null);
@@ -162,6 +165,32 @@ export class QualityPage {
       if (selected) await this.selectRun(selected);
     } catch (e) {
       if (valid()) this.error.set(this.scope.message(e));
+    }
+  }
+  async removeSet() {
+    const current = this.current(),
+      valid = this.guard();
+    if (!current?.resource.isOwner || this.busy()) return;
+    if (
+      !(await this.confirm().ask({
+        title: `刪除「${current.resource.name}」？`,
+        message:
+          '評測集將從工作區移除，授權成員無法再開啟。歷史結果與稽核紀錄會保留。建議先匯出需要保存的題庫。',
+        confirm: '刪除評測集',
+        danger: true,
+      })) ||
+      !valid()
+    )
+      return;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      await this.api.remove(current.resource.id);
+      if (valid()) await this.router.navigate(['/quality']);
+    } catch (e) {
+      if (valid()) this.error.set(this.scope.message(e));
+    } finally {
+      if (valid()) this.busy.set(false);
     }
   }
   async selectRun(id: string) {

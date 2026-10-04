@@ -2,14 +2,16 @@
   title="專案"
   description="共用背景、指示與參考文件，讓每次工作都從相同的脈絡開始。"
 >
-  <button
-    page-actions
-    class="primary-button"
-    [disabled]="loading() || busy() || !session.has('projects')"
-    (click)="openProject()"
-  >
-    <nx-icon name="plus" />新增專案
-  </button>
+  <div page-actions class="page-actions">
+    <nx-personal-documents />
+    <button
+      class="primary-button"
+      [disabled]="loading() || busy() || !session.has('projects')"
+      (click)="openProject()"
+    >
+      <nx-icon name="plus" />新增專案
+    </button>
+  </div>
   @if (error()) {
     <p class="error-banner" role="alert">{{ error() }}</p>
   }
@@ -73,6 +75,14 @@
                 </button>
               }
               @if (project.resource.isOwner) {
+                <button
+                  class="icon-button danger-text"
+                  aria-label="刪除專案"
+                  [disabled]="busy()"
+                  (click)="removeProject()"
+                >
+                  <nx-icon name="trash" />
+                </button>
                 <button class="icon-button" aria-label="專案成員與權限" (click)="sharing.open()">
                   <nx-icon name="lock" />
                 </button>

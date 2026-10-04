@@ -76,6 +76,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
                 options.QueueCapacity = 2;
                 options.DefaultModelId = null; options.AllowModelSelection = true; options.ShowModelNames = true;
                 options.TimeoutSeconds = 5;
+                options.SystemPrompt = "請用繁體中文回答。";
                 options.Models = [new ModelProfile { Id = "test-model", DisplayName = "測試模型", ContextTokens = 8192, MaxOutputTokens = 512 }];
                 configureInference?.Invoke(options);
             });

@@ -698,6 +698,9 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("nvarchar(80)");
 
+                    b.Property<Guid?>("ExecutorId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<DateTimeOffset?>("FinishedAt")
                         .HasColumnType("datetimeoffset");
 
@@ -711,6 +714,9 @@ namespace AiNexus.BuildingBlocks.Migrations
 
                     b.Property<long>("LastSequence")
                         .HasColumnType("bigint");
+
+                    b.Property<DateTimeOffset?>("LeaseExpiresAt")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("ModelId")
                         .IsRequired()
@@ -752,6 +758,8 @@ namespace AiNexus.BuildingBlocks.Migrations
                     b.HasIndex("AssistantMessageId");
 
                     b.HasIndex("UserMessageId");
+
+                    b.HasIndex("ActiveOwnerId", "LeaseExpiresAt");
 
                     b.HasIndex("ConversationId", "CreatedAt");
 

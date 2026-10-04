@@ -13,6 +13,7 @@ public sealed class KnowledgeOptions
     public string EmbeddingProvider { get; set; } = "google";
     public string EmbeddingModel { get; set; } = "gemini-embedding-2";
     public int Dimensions { get; set; } = 768;
+    public int TimeoutSeconds { get; set; } = 60;
     public bool UseNativeVector { get; set; } = true;
     public int MaxDailyEmbeddingRequests { get; set; } = 2000;
     public int PortableCandidateLimit { get; set; } = 2000;
@@ -49,7 +50,7 @@ public sealed class EmbeddingProvider(IHttpClientFactory clients, IOptions<Knowl
             db.Add(call); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         }
         finally { writes.Gate.Release(); }
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(40));
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(knowledge.Value.TimeoutSeconds));
         try
         {
             float[] vector;

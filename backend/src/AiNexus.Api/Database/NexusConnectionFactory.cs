@@ -28,8 +28,7 @@ public sealed class NexusConnectionFactory(IConfiguration configuration) : IDbCo
         if (typeof(TDb) == typeof(AiNexus.Modules.Integrations.ILegacyGdwebDatabase) || typeof(TDb) == typeof(AiNexus.Modules.Integrations.ILegacyMeihoDatabase))
         {
             connection.ApplicationIntent = ApplicationIntent.ReadOnly;
-            connection.Encrypt = SqlConnectionEncryptOption.Mandatory;
-            connection.ConnectTimeout = 10;
+            if (connection.Encrypt == SqlConnectionEncryptOption.Optional) connection.Encrypt = SqlConnectionEncryptOption.Mandatory;
         }
         return new SqlConnection(connection.ConnectionString);
     }

@@ -193,7 +193,7 @@ public sealed class ChatApiTests
         factory.Provider.Fail = true;
         var first = await CreateRun(client, conversation.Id, "失敗");
         var failure = await WaitForTerminal(client, first.Id);
-        Assert.Equal("provider_error", failure.ErrorCode);
+        Assert.Equal("provider_connection_lost", failure.ErrorCode);
         factory.Provider.Fail = false;
         factory.Provider.NeverFinish = true;
         var second = await CreateRun(client, conversation.Id, "逾時");

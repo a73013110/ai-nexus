@@ -61,6 +61,14 @@
       <div class="page-actions">
         <button class="secondary-button" (click)="exportSet()">匯出題庫</button>
         @if (set.resource.isOwner) {
+          <button
+            class="icon-button danger-text"
+            aria-label="刪除評測集"
+            [disabled]="busy()"
+            (click)="removeSet()"
+          >
+            <nx-icon name="trash" />
+          </button>
           <button class="secondary-button" (click)="sharing()?.open()">存取權限</button>
         }
         @if (set.resource.canEdit) {
@@ -407,3 +415,4 @@
     </div>
   </form>
 </dialog>
+<nx-confirm-dialog />

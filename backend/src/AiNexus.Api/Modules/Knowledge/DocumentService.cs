@@ -10,6 +10,13 @@ namespace AiNexus.Modules.Knowledge;
 
 public sealed class DocumentService(NexusDbContext db, ResourceAccess access, AccessService features, AttachmentService attachments, AttachmentWriteLock writes, JobService jobs, IOptions<KnowledgeOptions> options)
 {
+    public async Task<IReadOnlyList<DocumentDto>> PersonalAsync(Guid actor, CancellationToken ct)
+    {
+        var rows = await (from r in db.Set<WorkspaceResource>() join d in db.Set<KnowledgeDocument>() on r.Id equals d.Id
+            where r.OwnerId == actor && r.ParentId == null && !r.IsDeleted && !d.IsDeleted && d.CollectionId == null
+            orderby r.UpdatedAt descending select d).AsNoTracking().Take(200).ToListAsync(ct);
+        return rows.Select(x => Describe(x, true)).ToArray();
+    }
     public async Task<IReadOnlyList<CollectionDto>> CollectionsAsync(Guid actor, CancellationToken ct)
     {
         var query = await access.QueryAsync(actor, "knowledge", ct);
@@ -24,7 +31,9 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
         if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == "knowledge" && !x.IsDeleted, ct) >= options.Value.MaxCollections)
             throw new ApiException(409, "collection_limit", "個人知識庫數量已達上限。");
         var resource = new WorkspaceResource { OwnerId = actor, Kind = "knowledge", Name = name };
-        db.Add(resource); db.Add(new KnowledgeCollection { Id = resource.Id, Description = request.Description.Trim() }); await db.SaveChangesAsync(ct);
+        db.Add(resource); db.Add(new KnowledgeCollection { Id = resource.Id, Description = request.Description.Trim() });
+        db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource.Id, Action = "knowledge.created", Result = "created" });
+        await db.SaveChangesAsync(ct);
         return new(await access.DescribeAsync(actor, resource, ct), request.Description.Trim(), 0, 0);
     }
     public async Task<IReadOnlyList<DocumentDto>> ListAsync(Guid actor, Guid collection, CancellationToken ct)
@@ -42,6 +51,7 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
         resource.Name = ResourceAccess.Name(request.Name);
         if (request.Description.Length > 2000) throw new ApiException(400, "description_too_long", "知識庫說明最多 2000 個字元。");
         (await db.Set<KnowledgeCollection>().SingleAsync(x => x.Id == id, ct)).Description = request.Description.Trim(); resource.UpdatedAt = DateTimeOffset.UtcNow;
+        db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "knowledge.updated", Result = "saved" });
         await db.SaveChangesAsync(ct);
     }
     public async Task DeleteCollectionAsync(Guid actor, Guid id, CancellationToken ct)
@@ -75,7 +85,9 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
             var doc = await RequireAsync(actor, id, ct, write: true);
             if (doc.CollectionId is null) throw new ApiException(409, "document_not_indexed", "只有知識庫文件需要重新索引。");
             if (await db.Set<BackgroundJob>().AnyAsync(x => x.SubjectId == id && (x.Status == "queued" || x.Status == "running"), ct)) throw new ApiException(409, "job_active", "此文件仍在處理中。");
-            doc.Status = "queued"; doc.Warning = null; doc.JobId = jobs.Enqueue(actor, doc.Id, doc.Id, "document-ingest", doc.FileName).Id; await db.SaveChangesAsync(ct);
+            doc.Status = "queued"; doc.Warning = null; doc.JobId = jobs.Enqueue(actor, doc.Id, doc.Id, "document-ingest", doc.FileName).Id;
+            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "document.reindexed", Result = "queued" });
+            await db.SaveChangesAsync(ct);
             return Describe(doc, true);
         }
         finally { writes.Gate.Release(); }
@@ -105,6 +117,7 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
             var document = new KnowledgeDocument { Id = resource.Id, AttachmentId = file.Id, CollectionId = collection, FileName = file.FileName, ContentType = file.ContentType };
             db.Add(resource); db.Add(document); db.Add(new AttachmentReference { ResourceId = resource.Id, AttachmentId = file.Id });
             document.JobId = jobs.Enqueue(actor, resource.Id, document.Id, "document-ingest", file.FileName).Id;
+            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource.Id, Action = "document.created", Result = "queued" });
             await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
             return Describe(document, true);
         }
@@ -162,6 +175,7 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
             await db.Set<AttachmentReference>().Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
             await db.Set<KnowledgeChunk>().Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
             await db.Set<DocumentPage>().Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
+            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "document.deleted", Result = "deleted" });
             await db.SaveChangesAsync(ct);
             if (attachment is Guid file) await db.Set<Attachment>().Where(x => x.Id == file && !db.Set<AttachmentReference>().Any(l => l.AttachmentId == file) && !db.Set<MessageAttachment>().Any(l => l.AttachmentId == file)).ExecuteDeleteAsync(ct);
             await transaction.CommitAsync(ct);

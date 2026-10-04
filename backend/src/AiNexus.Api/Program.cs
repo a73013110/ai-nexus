@@ -21,7 +21,7 @@ using AiNexus.Modules.Knowledge;
 
 var builder = WebApplication.CreateBuilder(args);
 NexusConfiguration.Load(builder, args);
-LocalDatabaseSettings.Apply(builder.Configuration, builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"));
+LocalDatabaseSettings.Apply(builder.Configuration);
 var keyRing = builder.Configuration["DataProtection:KeyRingPath"];
 if (keyRing is null && builder.Environment.IsDevelopment()) keyRing = Path.Combine(builder.Configuration["LocalWorkspaceRoot"]!, ".local", "keys");
 var protection = builder.Services.AddDataProtection().SetApplicationName("AiNexus");
@@ -107,19 +107,17 @@ builder.Services.AddScoped<AiNexus.Modules.Quality.QualityService>();
 builder.Services.AddScoped<IBackgroundJobHandler, AiNexus.Modules.Quality.EvaluationHandler>();
 builder.Services.AddScoped<IDbHelper<AiNexus.Modules.Integrations.ILegacyGdwebDatabase>, DbHelper<AiNexus.Modules.Integrations.ILegacyGdwebDatabase>>();
 builder.Services.AddScoped<IDbHelper<AiNexus.Modules.Integrations.ILegacyMeihoDatabase>, DbHelper<AiNexus.Modules.Integrations.ILegacyMeihoDatabase>>();
-builder.Services.AddOptions<AiNexus.Modules.Integrations.IntegrationsOptions>().BindConfiguration("Integrations")
+builder.Services.AddOptions<AiNexus.Modules.Integrations.IntegrationsOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Integrations(c, o))
     .Validate(x => new[] { x.Gdweb, x.Meiho }.All(s => s.CommandTimeoutSeconds is >= 2 and <= 30 && s.MaxResults is >= 1 and <= 50 && s.AllowedGroupIds.Length <= 20 && s.AllowedGroupIds.All(g => g.Length is >= 1 and <= 64 && g.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.'))), "Invalid read-only source limits.").ValidateOnStart();
-if (!builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing"))
-    foreach (var key in new[] { "LegacyGdweb", "LegacyMeiho" })
-        if (builder.Configuration.GetConnectionString(key) is { Length: > 0 } legacy && new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(legacy).TrustServerCertificate)
-            throw new InvalidOperationException("Production source connections must verify SQL TLS certificates.");
 builder.Services.AddScoped<AiNexus.Modules.Integrations.IntegrationService>();
 builder.Services.AddScoped<AiNexus.Modules.Integrations.IControlledSourceAdapter, AiNexus.Modules.Integrations.GdwebSource>();
 builder.Services.AddScoped<AiNexus.Modules.Integrations.IControlledSourceAdapter, AiNexus.Modules.Integrations.MeihoSource>();
 builder.Services.AddSingleton<AiNexus.Modules.Collaboration.ResourceWriteLock>();
 builder.Services.AddScoped<AiNexus.Modules.Collaboration.ResourceAccess>();
+builder.Services.AddScoped<AiNexus.Modules.Collaboration.ResourceLifecycle>();
 builder.Services.AddScoped<JobService>();
-builder.Services.AddOptions<KnowledgeOptions>().BindConfiguration("Knowledge")
+builder.Services.AddOptions<KnowledgeOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Knowledge(c, o))
+    .Validate(x => x.TimeoutSeconds is >= 5 and <= 300, "Invalid embedding timeout.")
     .Validate(x => x.EmbeddingProvider is "google" or "ollama" or "none" && x.Dimensions == 768 && x.EmbeddingModel.Length is > 0 and <= 160 && x.EmbeddingModel.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or ':' or '.') && x.MaxDailyEmbeddingRequests is >= 1 and <= 100000 && x.PortableCandidateLimit is >= 100 and <= 10000 && x.MaxCollections is >= 1 and <= 100 && x.MaxDocumentsPerCollection is >= 1 and <= 1000 && x.ChunkCharacters is >= 200 and <= 1600 && x.ChunkOverlap >= 0 && x.ChunkOverlap < x.ChunkCharacters / 2 && x.TopK is >= 1 and <= 10 && x.ContextCharacters is >= 1000 and <= 12000, "Invalid knowledge limits or embedding configuration.").ValidateOnStart();
 builder.Services.AddScoped<DocumentService>();
 builder.Services.AddScoped<AiNexus.Modules.Projects.ProjectService>();
@@ -147,17 +145,18 @@ builder.Services.AddOptions<AttachmentOptions>().BindConfiguration("Attachments"
     .Validate(x => x.MaxFileBytes is >= 1024 and <= 8 * 1024 * 1024 && x.MaxFilesPerMessage is >= 1 and <= 8 && x.MaxMessageBytes >= x.MaxFileBytes && x.MaxMessageBytes <= 16 * 1024 * 1024 && x.MaxOwnerBytes >= x.MaxMessageBytes && x.MaxOwnerBytes <= 1024 * 1024 * 1024 && x.MaxExtractedCharacters is >= 1000 and <= 256000 && x.MaxPdfPages is >= 1 and <= 100 && x.ImageTokenEstimate is >= 1024 and <= 16384 && x.DraftRetentionDays is >= 1 and <= 365, "Invalid attachment limits.")
     .ValidateOnStart();
 builder.Services.AddScoped<RunService>();
+builder.Services.AddScoped<RunLeaseRecovery>();
 builder.Services.AddScoped<ContextBuilder>();
-builder.Services.AddOptions<InferenceOptions>().BindConfiguration("Inference")
+builder.Services.AddOptions<InferenceOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Inference(c, o))
     .Validate(x => x.Provider is "google" or "ollama", "Inference Provider must be google or ollama.")
     .Validate(x => (x.DefaultModelId is null || x.Models.Any(m => m.Id == x.DefaultModelId)) && x.Models.All(m => m.ValidReasoning(x.Provider)), "Invalid default model or reasoning capabilities.")
     .Validate(x => Uri.TryCreate(x.BaseUrl, UriKind.Absolute, out var url) && (url.Scheme is "http" or "https") && string.IsNullOrEmpty(url.UserInfo), "Inference BaseUrl must be a server-controlled HTTP endpoint.")
-    .Validate(x => x.QueueCapacity is >= 1 and <= 64 && x.TimeoutSeconds is >= 5 and <= 600 && x.MaxInputCharacters is >= 100 and <= 32000, "Invalid inference capacity or limits.")
+    .Validate(x => x.QueueCapacity is >= 1 and <= 64 && x.TimeoutSeconds is >= 5 and <= 600 && x.MaxInputCharacters is >= 100 and <= 32000 && x.MaxOutputCharacters is >= 4096 and <= 262144, "Invalid inference capacity or limits.")
     .Validate(x => x.Models.Select(m => m.Id).Distinct(StringComparer.Ordinal).Count() == x.Models.Count && x.Models.All(m => !string.IsNullOrWhiteSpace(m.Id) && m.Id.Length <= 160 && m.ContextTokens is >= 1024 and <= 32768 && m.MaxOutputTokens >= 128 && m.MaxOutputTokens < m.ContextTokens && m.SupportsStreaming), "Invalid model profiles.")
     .ValidateOnStart();
 builder.Services.AddHttpClient("Ollama", client =>
 {
-    client.BaseAddress = new Uri(builder.Configuration["Inference:BaseUrl"] ?? "http://localhost:11434/");
+    client.BaseAddress = new Uri(builder.Configuration["Inference:BaseUrl"] ?? builder.Configuration["Inference:Providers:Ollama:Endpoint"] ?? "http://localhost:11434/");
     client.Timeout = Timeout.InfiniteTimeSpan;
 });
 builder.Services.AddHttpClient("GoogleAI", client => { client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/v1beta/"); client.Timeout = Timeout.InfiniteTimeSpan; });
@@ -177,6 +176,12 @@ builder.Services.Configure<IISServerOptions>(options => options.MaxRequestBodySi
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options => options.MultipartBodyLengthLimit = 9 * 1024 * 1024);
 
 var app = builder.Build();
+if (builder.Configuration.GetValue<bool>("VerifyDeployment"))
+{
+    if (!await DeploymentVerifier.VerifyAsync(app.Services, builder.Configuration, builder.Environment, CancellationToken.None)) Environment.ExitCode = 1;
+    await app.DisposeAsync();
+    return;
+}
 if (builder.Configuration.GetValue<bool>("InitializeDatabase"))
 {
     try
@@ -232,7 +237,8 @@ app.Use(async (http, next) =>
         await Results.Problem(statusCode: status, title: detail, type: $"urn:ai-nexus:problem:{code}", extensions: new Dictionary<string, object?> { ["code"] = code, ["traceId"] = http.TraceIdentifier }).ExecuteAsync(http);
     }
 });
-if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing")) { app.UseHsts(); app.UseHttpsRedirection(); }
+var enforceHttps = !app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing") && !builder.Configuration.GetValue<bool>("Security:DisableHttpsRedirection");
+if (enforceHttps) { app.UseHsts(); app.UseHttpsRedirection(); }
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.Use(async (http, next) =>
@@ -244,7 +250,6 @@ app.Use(async (http, next) =>
     if (http.Request.ContentLength > bodyLimit) throw new ApiException(413, "request_too_large", "上傳內容超過大小上限。");
     var bodySize = http.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();
     if (bodySize is { IsReadOnly: false }) bodySize.MaxRequestBodySize = bodyLimit;
-    if (http.Request.Path.StartsWithSegments("/api/v1") && !http.Request.Path.StartsWithSegments("/api/v1/auth")) http.RequestServices.GetRequiredService<StorageReadiness>().RequireConfigured();
     await next(http);
 });
 app.UseAuthentication();
@@ -252,6 +257,7 @@ app.UseAuthorization();
 app.UseRateLimiter();
 app.Use(async (http, next) =>
 {
+    if (http.Request.Path.StartsWithSegments("/api/v1") && !http.Request.Path.StartsWithSegments("/api/v1/auth")) http.RequestServices.GetRequiredService<StorageReadiness>().RequireConfigured();
     if (http.Request.Path.StartsWithSegments("/api/v1") && http.Request.Method is not ("GET" or "HEAD" or "OPTIONS"))
         await http.RequestServices.GetRequiredService<IAntiforgery>().ValidateRequestAsync(http);
     await next(http);

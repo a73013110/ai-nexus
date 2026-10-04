@@ -58,7 +58,8 @@ public sealed class GoogleAiTests
     public async Task TruncatedGoogleStreamCannotPretendCompletion()
     {
         var provider = Provider(new Handler(_ => { var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"partial\"}]}}]}\n\n") }; response.Content.Headers.ContentType = new("text/event-stream"); return response; }));
-        await Assert.ThrowsAsync<InvalidDataException>(async () => { await foreach (var chunk in provider.StreamAsync("gemma-4-26b-a4b-it", [new("user", "test")], new(8192, 512, .6, "system"), CancellationToken.None)) { } });
+        var error = await Assert.ThrowsAsync<ApiException>(async () => { await foreach (var chunk in provider.StreamAsync("gemma-4-26b-a4b-it", [new("user", "test")], new(8192, 512, .6, "system"), CancellationToken.None)) { } });
+        Assert.Equal("provider_stream_incomplete", error.Code);
     }
 
     [Theory]

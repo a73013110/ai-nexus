@@ -18,6 +18,11 @@ public static class AuthEndpoints
         var auth = app.MapGroup("/api/v1/auth");
         auth.MapGet("/session", (HttpContext http, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf) => Results.Ok(Session(http, options.Value, csrf)))
             .AllowAnonymous().WithName("GetAuthSession").Produces<AuthSessionDto>();
+        auth.MapGet("/windows", (HttpContext http, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf) =>
+        {
+            if (options.Value.Mode != "Windows") throw new ApiException(400, "authentication_mode", "此工作台使用 AD 帳號登入。");
+            return Results.Ok(Session(http, options.Value, csrf));
+        }).RequireAuthorization().WithName("WindowsLogin").Produces<AuthSessionDto>().ProducesProblem(401);
         auth.MapPost("/login", async (AdLoginRequest body, HttpContext http, IAdAuthenticator directory, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, CancellationToken ct) =>
         {
             if (options.Value.Mode != "Ldap") throw new ApiException(400, "authentication_mode", "此工作台使用 Windows 整合驗證。");

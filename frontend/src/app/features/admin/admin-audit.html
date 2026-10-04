@@ -83,16 +83,9 @@
           </details>
         }
       </div>
-      <span
-        class="audit-result"
-        [class.audit-rejected]="
-          entry.result !== 'saved' &&
-          entry.result !== 'read' &&
-          entry.result !== 'granted' &&
-          entry.result !== 'completed'
-        "
-        >{{ status(entry.result) }}</span
-      >
+      <span class="audit-result" [class.audit-rejected]="rejected(entry.result)">{{
+        status(entry.result)
+      }}</span>
     </article>
   } @empty {
     @if (!loading()) {

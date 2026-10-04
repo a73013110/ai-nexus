@@ -7,6 +7,7 @@ export class ApiError extends Error {
     readonly status: number,
     readonly code: string,
     message: string,
+    readonly traceId?: string,
   ) {
     super(message);
   }
@@ -17,11 +18,9 @@ export class ApiError extends Error {
 export class ApiTransport {
   private readonly router = inject(Router);
   private csrf = '';
-  private ldap = false;
   readonly expired = signal(0);
   session(value: AuthSession) {
     this.csrf = value.csrfToken;
-    this.ldap = value.mode === 'Ldap';
   }
   token(value: string) {
     this.csrf = value;
@@ -55,13 +54,16 @@ export class ApiTransport {
       throw new ApiError(0, 'network_error', '連線中斷，請確認區網連線後重試。');
     }
     if (!response.ok) {
-      if (response.status === 401 && this.ldap && !path.startsWith('/auth/')) {
+      if (response.status === 401 && !path.startsWith('/auth/')) {
+        this.csrf = '';
         this.expired.update((value) => value + 1);
-        void this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
+        if (!this.router.url.startsWith('/login'))
+          void this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
       }
       const problem = (await response.json().catch(() => ({}))) as {
         code?: string;
         title?: string;
+        traceId?: string;
       };
       throw new ApiError(
         response.status,
@@ -70,6 +72,7 @@ export class ApiTransport {
           (response.status === 401
             ? '登入已失效，請重新登入工作台。'
             : '服務暫時無法使用，請稍後重試。'),
+        problem.traceId,
       );
     }
     return response;

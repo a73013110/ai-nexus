@@ -219,6 +219,7 @@ export class ChatWorkspace {
     })),
   ]);
   private scrollFrame = 0;
+  private lastScrollTop = 0;
 
   constructor() {
     const resize = () => this.narrow.set(window.innerWidth < 860);
@@ -336,9 +337,16 @@ export class ChatWorkspace {
     const view = this.viewport()?.nativeElement;
     if (view) {
       const near = view.scrollHeight - view.scrollTop - view.clientHeight < 96;
-      this.following.set(near);
+      // A smooth jump upwards begins near the bottom; that first event must not restart auto-follow.
+      this.following.set(near && (this.following() || view.scrollTop > this.lastScrollTop));
+      this.lastScrollTop = view.scrollTop;
       if (!near) cancelAnimationFrame(this.scrollFrame);
     }
+  }
+  pauseFollowing() {
+    this.following.set(false);
+    cancelAnimationFrame(this.scrollFrame);
+    this.lastScrollTop = this.viewport()?.nativeElement.scrollTop ?? 0;
   }
   scrollLatest(smooth = true) {
     const view = this.viewport()?.nativeElement;

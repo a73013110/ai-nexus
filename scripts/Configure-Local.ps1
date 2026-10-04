@@ -25,10 +25,10 @@ foreach ($taskField in @(
     @{ Section = 'Database'; Name = 'User'; Prompt = '既有 SQL 登入帳號' },
     @{ Section = 'Database'; Name = 'Password'; Prompt = 'SQL 密碼' },
     @{ Section = 'AdAuthentication'; Name = 'DnPass'; Prompt = 'AD 服務帳號密碼' },
-    @{ Section = 'Inference'; Name = 'GoogleApiKey'; Prompt = 'Google AI API key' }
+    @{ Section = 'Inference.Providers.Google'; Name = 'ApiKey'; Prompt = 'Google AI API key' }
 )) {
     $taskValue = Read-NexusSecret ($taskField.Prompt + '（遮蔽輸入，Enter 保留）')
-    if ($taskValue) { $taskSecrets[$taskField.Section][$taskField.Name] = $taskValue }
+    if ($taskValue) { Set-NexusSetting $taskSecrets ($taskField.Section + '.' + $taskField.Name) $taskValue }
 }
 Save-NexusJson $taskPaths.Settings $taskConfig
 Save-NexusJson $taskPaths.Secrets $taskSecrets

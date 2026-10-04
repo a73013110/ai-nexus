@@ -16,6 +16,9 @@ appsettings.Local.json
 appsettings.*.Local.json
 appsettings.Secrets.json
 appsettings.*.Secrets.json
+appsettings.Production.json
+appsettings.Staging.json
+appsettings.*.json.*.bak
 .env
 .env.*
 !.env.example

@@ -252,7 +252,7 @@ test("clipboard image and file drop use the same validated upload flow", async (
   await expect(
     page.getByRole("button", { name: "加入文件或圖片" }),
   ).toBeEnabled();
-  await page.evaluate(
+  const pasted = await page.evaluate(
     (bytes) => {
       const data = new DataTransfer();
       data.items.add(
@@ -260,16 +260,17 @@ test("clipboard image and file drop use the same validated upload flow", async (
           type: "image/png",
         }),
       );
-      document.querySelector("#composer")!.dispatchEvent(
-        new ClipboardEvent("paste", {
-          bubbles: true,
-          cancelable: true,
-          clipboardData: data,
-        }),
-      );
+      const event = new ClipboardEvent("paste", {
+        bubbles: true,
+        cancelable: true,
+        clipboardData: data,
+      });
+      document.querySelector("#composer")!.dispatchEvent(event);
+      return event.defaultPrevented;
     },
     [...png],
   );
+  expect(pasted).toBe(true);
   await expect(page.locator(".composer .attachment-card")).toHaveCount(1);
   await page.evaluate(() => {
     const data = new DataTransfer();

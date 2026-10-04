@@ -1848,3 +1848,40 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004151226_GenerationExecutorLeases'
+)
+BEGIN
+    ALTER TABLE [inference].[GenerationRuns] ADD [ExecutorId] uniqueidentifier NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004151226_GenerationExecutorLeases'
+)
+BEGIN
+    ALTER TABLE [inference].[GenerationRuns] ADD [LeaseExpiresAt] datetimeoffset NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004151226_GenerationExecutorLeases'
+)
+BEGIN
+    CREATE INDEX [IX_GenerationRuns_ActiveOwnerId_LeaseExpiresAt] ON [inference].[GenerationRuns] ([ActiveOwnerId], [LeaseExpiresAt]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004151226_GenerationExecutorLeases'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261004151226_GenerationExecutorLeases', N'10.0.12');
+END;
+
+COMMIT;
+GO
+

@@ -24,10 +24,20 @@ import { ResourceSharing } from '../../shared/ui/resource-sharing';
 import { FileDrop } from '../../shared/browser/file-drop';
 import { WorkspaceApi } from '../workspace/workspace-api';
 import { KnowledgeApi } from './knowledge-api';
+import { PersonalDocuments } from './personal-documents';
 
 @Component({
   selector: 'nx-knowledge-page',
-  imports: [FeaturePage, Icon, Select, ActionMenu, ResourceSharing, RouterLink, FileDrop],
+  imports: [
+    FeaturePage,
+    Icon,
+    Select,
+    ActionMenu,
+    ResourceSharing,
+    RouterLink,
+    FileDrop,
+    PersonalDocuments,
+  ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './knowledge-page.html',

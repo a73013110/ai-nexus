@@ -4,6 +4,7 @@ using AiNexus.BuildingBlocks;
 using AiNexus.Modules.AccessControl;
 using AiNexus.Modules.Identity;
 using AiNexus.Modules.Inference;
+using AiNexus.Modules.Operations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -127,7 +128,8 @@ public sealed class AdministrationService(NexusDbContext db, AccessService acces
         if (until is { } end) query = query.Where(x => x.entry.At < end);
         if (!string.IsNullOrWhiteSpace(action)) query = query.Where(x => x.entry.Action.StartsWith(action));
         if (!string.IsNullOrWhiteSpace(result)) query = result == "failed"
-            ? query.Where(x => x.entry.Result != "saved" && x.entry.Result != "read" && x.entry.Result != "completed" && x.entry.Result != "success" && x.entry.Result != "granted")
+            ? query.Where(x => x.entry.Result != null && !AuditOutcomes.Accepted.Contains(x.entry.Result))
+            : result == "success" ? query.Where(x => x.entry.Result != null && AuditOutcomes.Accepted.Contains(x.entry.Result))
             : query.Where(x => x.entry.Result == result);
         if (!string.IsNullOrWhiteSpace(search))
         {

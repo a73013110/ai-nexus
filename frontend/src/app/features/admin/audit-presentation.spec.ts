@@ -1,6 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { auditChanges, auditResource } from './audit-presentation';
+import { auditChanges, auditResource, auditResult, auditRejected } from './audit-presentation';
 describe('audit presentation', () => {
+  it('does not label successful removal, scheduling or legacy read operations as rejected', () => {
+    for (const result of [
+      'created',
+      'deleted',
+      'soft_deleted',
+      'queued',
+      'read-only',
+      'granted_once',
+      'cancelled',
+    ]) {
+      expect(auditRejected(result)).toBe(false);
+      expect(auditResult(result)).not.toBe(result);
+    }
+    expect(auditRejected('executor_lost')).toBe(true);
+    expect(auditRejected('unknown_access_id')).toBe(true);
+  });
   it('compares nested policy changes and preserves the removal of an explicit limit', () => {
     const changes = auditChanges(
       JSON.stringify({

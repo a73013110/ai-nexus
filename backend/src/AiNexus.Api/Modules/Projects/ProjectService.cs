@@ -55,6 +55,7 @@ public sealed class ProjectService(NexusDbContext db, ResourceAccess access, Res
         if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == "project" && !x.IsDeleted, ct) >= 100) throw new ApiException(409, "project_limit", "個人專案已達 100 個上限。");
         var resource = new WorkspaceResource { OwnerId = actor, Name = ResourceAccess.Name(request.Name), Kind = "project" };
         db.Add(resource); db.Add(new Project { Id = resource.Id, Description = request.Description.Trim(), Instructions = request.Instructions.Trim() });
+        db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource.Id, Action = "project.created", Result = "created" });
         await db.SaveChangesAsync(ct); return await GetAsync(actor, resource.Id, ct);
     }
     public async Task<ProjectDto> SaveAsync(Guid actor, Guid id, ProjectRequest request, CancellationToken ct)
@@ -96,12 +97,20 @@ public sealed class ProjectService(NexusDbContext db, ResourceAccess access, Res
         ProjectTemplate row;
         if (key is Guid existing) row = await db.Set<ProjectTemplate>().SingleOrDefaultAsync(x => x.Id == existing && x.ProjectId == id, ct) ?? throw new ApiException(404, "template_missing", "找不到此範本。");
         else { if (await db.Set<ProjectTemplate>().CountAsync(x => x.ProjectId == id, ct) >= 30) throw new ApiException(409, "template_limit", "專案最多 30 個範本。"); row = new() { ProjectId = id }; db.Add(row); }
-        row.Title = request.Title.Trim(); row.Content = request.Content.Trim(); await db.SaveChangesAsync(ct); return new(row.Id, row.Title, row.Content);
+        row.Title = request.Title.Trim(); row.Content = request.Content.Trim();
+        db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = row.Id, Action = key is null ? "project.template.created" : "project.template.updated", Result = "saved" });
+        await db.SaveChangesAsync(ct); return new(row.Id, row.Title, row.Content);
     }
     public async Task DeleteTemplateAsync(Guid actor, Guid id, Guid key, CancellationToken ct)
     {
+        await using var transaction = await db.Database.BeginTransactionAsync(ct);
         await RequireActiveAsync(actor, id, ct, true);
-        await db.Set<ProjectTemplate>().Where(x => x.ProjectId == id && x.Id == key).ExecuteDeleteAsync(ct);
+        if (await db.Set<ProjectTemplate>().Where(x => x.ProjectId == id && x.Id == key).ExecuteDeleteAsync(ct) > 0)
+        {
+            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = key, Action = "project.template.deleted", Result = "deleted" });
+            await db.SaveChangesAsync(ct);
+        }
+        await transaction.CommitAsync(ct);
     }
     public async Task<IReadOnlyList<ConversationDto>> ConversationsAsync(Guid actor, Guid id, CancellationToken ct)
     {

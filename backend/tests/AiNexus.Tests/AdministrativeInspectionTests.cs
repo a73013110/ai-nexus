@@ -115,4 +115,22 @@ public sealed class AdministrativeInspectionTests
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.GetAsync($"/api/v1/admin/users/{me.Id}/insights")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.GetAsync($"/api/v1/admin/users/{me.Id}/conversations")).StatusCode);
     }
+    [Fact]
+    public async Task AuditFailureFilterExcludesAcceptedLifecycleAndLegacyOperations()
+    {
+        await using var factory = new NexusFactory(administrators: ["alice"], backgroundJobs: false);
+        using var admin = await factory.SignedInAsync();
+        var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            foreach (var result in new[] { "created", "deleted", "soft_deleted", "queued", "read-only", "cancelled", "executor_lost" })
+                db.AuditEvents.Add(new() { OwnerId = user.Id, Action = "fixture.lifecycle", Result = result });
+            await db.SaveChangesAsync();
+        }
+        var failures = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?result=failed"))!;
+        Assert.Equal("executor_lost", Assert.Single(failures).Result);
+        var accepted = (await admin.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=fixture.lifecycle&result=success"))!;
+        Assert.Equal(6, accepted.Length);
+    }
 }

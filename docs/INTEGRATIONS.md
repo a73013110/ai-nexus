@@ -24,32 +24,48 @@
 
 1. 原系統 DBA 準備兩個 `nexus` view，契約見 [authorized-views.sql](../db/integrations/authorized-views.sql)。範本故意不回傳任何列；先根據原系統資料列授權替換內容並驗證撤權、代理、停用、機密、學生範圍等案例。
 2. 建立專用唯讀 SQL login/user，只給 `nexus_reader` 對兩個 view 的 SELECT。不給來源全庫 `db_datareader`、原始表 SELECT、寫入或簽核 procedure 權限。`ApplicationIntent=ReadOnly` 只是連線意圖，不能取代真正的 SQL 權限。
-3. 在 `.local/secrets/appsettings.Secrets.json` 的 `ConnectionStrings.LegacyGdweb`／`LegacyMeiho` 填 SqlClient 連線字串。公開範本為空值；帳密不放 `.local/config` 或聊天。
-4. 在 `.local/config/appsettings.Local.json` 設定對應 `Integrations.Gdweb`／`Meiho` 的 `Enabled=true`、`AclContractConfirmed=true`、`AllowedGroupIds`、`CommandTimeoutSeconds`（2–30 秒）及 `MaxResults`（1–50）。空群組不會授權任何人，平台管理員也不能繞過。
+3. 在 `.local/config/appsettings.Local.json` 的 `Integrations.Sources.Gdweb.Database`／`Meiho.Database` 設定 Server、Name、TrustServerCertificate、ConnectTimeoutSeconds；帳密在 `.local/secrets/appsettings.Secrets.json` 的相同位置填 User／Password。進階使用者仍可在秘密檔填 `ConnectionStrings.LegacyGdweb`／`LegacyMeiho` 完整 SqlClient 字串，非空時優先於分項設定。
+4. 在一般設定的 `Integrations.Sources.Gdweb`／`Meiho` 設定 `Transport=sql`、`Enabled=true`、`AclContractConfirmed=true`、`AllowedGroupIds`、`CommandTimeoutSeconds`（2–30 秒）及 `MaxResults`（1–50）。空群組不會授權任何人，平台管理員也不能繞過。未來 API adapter 可沿用來源識別與 ACL 契約；目前設定其他 transport 會明確顯示未支援。
 5. 「管理 → 角色群組」將 `系統整合` 功能授予需要的群組。此功能初始只提供給平台管理員，來源權限仍須另外設定。重新啟動後查詢，測試帳號應只有原系統核准的列。
 
 ```json
 {
   "Integrations": {
-    "Gdweb": {
-      "Enabled": false,
-      "AclContractConfirmed": false,
-      "AllowedGroupIds": [],
-      "CommandTimeoutSeconds": 10,
-      "MaxResults": 30
-    },
-    "Meiho": {
-      "Enabled": false,
-      "AclContractConfirmed": false,
-      "AllowedGroupIds": [],
-      "CommandTimeoutSeconds": 10,
-      "MaxResults": 30
+    "Sources": {
+      "Gdweb": {
+        "Enabled": false,
+        "Transport": "sql",
+        "AclContractConfirmed": false,
+        "AllowedGroupIds": [],
+        "CommandTimeoutSeconds": 10,
+        "MaxResults": 30,
+        "Database": {
+          "Server": "",
+          "Name": "",
+          "TrustServerCertificate": false,
+          "ConnectTimeoutSeconds": 10
+        }
+      },
+      "Meiho": {
+        "Enabled": false,
+        "Transport": "sql",
+        "AclContractConfirmed": false,
+        "AllowedGroupIds": [],
+        "CommandTimeoutSeconds": 10,
+        "MaxResults": 30,
+        "Database": {
+          "Server": "",
+          "Name": "",
+          "TrustServerCertificate": false,
+          "ConnectTimeoutSeconds": 10
+        }
+      }
     }
   }
 }
 ```
 
-兩個來源 marker 強制加密、10 秒連線 timeout 及唯讀意圖；正式環境禁止 `TrustServerCertificate=true`。API 不回傳連線字串，失敗記錄僅保留來源代碼與例外類型。
+兩個來源 marker 強制加密與唯讀意圖，連線 timeout 預設 10 秒。Production 也可明確設定 `TrustServerCertificate=true` 使用自簽 SQL 憑證，連線仍加密。API 不回傳連線字串，失敗記錄僅保留來源代碼與例外類型。
 
 ## View 契約與查詢
 

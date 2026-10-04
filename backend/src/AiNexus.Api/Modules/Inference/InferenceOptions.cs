@@ -8,6 +8,7 @@ public sealed class InferenceOptions
     public int QueueCapacity { get; set; } = 16;
     public int TimeoutSeconds { get; set; } = 180;
     public int MaxInputCharacters { get; set; } = 12000;
+    public int MaxOutputCharacters { get; set; } = 65536;
     public string SystemPrompt { get; set; } = "請用繁體中文回答。";
     public bool AllowModelSelection { get; set; } = true;
     public bool ShowModelNames { get; set; } = true;

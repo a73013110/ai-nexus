@@ -19,20 +19,21 @@
 
 ## 設定
 
-一般設定放 `.local/config/appsettings.Local.json`；Google key 共用 `.local/secrets/appsettings.Secrets.json` 的 `Inference.GoogleApiKey`，不要新增前端 key。
+一般設定放 `.local/config/appsettings.Local.json`；Google key 共用 `.local/secrets/appsettings.Secrets.json` 的 `Inference.Providers.Google.ApiKey`，只由後端使用。聊天與向量模型各自選擇 provider；完全本地運行請參閱 [本地 AI 與向量化](LOCAL-AI.md)。
 
-| 參數                                         | 預設                 | 用途                                          |
-| -------------------------------------------- | -------------------- | --------------------------------------------- |
-| `Knowledge.EmbeddingProvider`                | `google`             | `google`、`ollama`；`none` 明確改用關鍵字搜尋 |
-| `Knowledge.EmbeddingModel`                   | `gemini-embedding-2` | 向量模型，與聊天 Gemma 分開                   |
-| `Knowledge.Dimensions`                       | 768                  | 本版固定 768，與原生 SQL 欄位一致             |
-| `Knowledge.UseNativeVector`                  | true                 | 可用時使用 SQL 原生精確 cosine 距離           |
-| `Knowledge.MaxDailyEmbeddingRequests`        | 2000                 | 每人每日索引與查詢向量呼叫上限，按 UTC 日重設 |
-| `Knowledge.PortableCandidateLimit`           | 2000                 | 無原生向量時的授權候選上限；超限需縮小範圍    |
-| `Knowledge.MaxCollections`                   | 30                   | 每人知識庫上限                                |
-| `Knowledge.MaxDocumentsPerCollection`        | 100                  | 每個知識庫文件上限                            |
-| `Knowledge.ChunkCharacters` / `ChunkOverlap` | 600 / 80             | 切段與重疊字元，保護 UTF-16 字元邊界          |
-| `Knowledge.TopK` / `ContextCharacters`       | 6 / 5000             | 最多片段數與帶入對話的來源文字上限            |
+| 參數                                                  | 預設                 | 用途                                          |
+| ----------------------------------------------------- | -------------------- | --------------------------------------------- |
+| `Knowledge.Embedding.Provider`                        | `google`             | `google`、`ollama`；`none` 明確改用關鍵字搜尋 |
+| `Knowledge.Embedding.Model`                           | `gemini-embedding-2` | 向量模型，與聊天模型分開                      |
+| `Knowledge.Embedding.Dimensions`                      | 768                  | 本版固定 768，與原生 SQL 欄位一致             |
+| `Knowledge.Embedding.TimeoutSeconds`                  | 60                   | 每次向量請求的時間上限                        |
+| `Knowledge.Embedding.MaxDailyRequests`                | 2000                 | 每人每日索引與查詢向量呼叫上限，按 UTC 日重設 |
+| `Knowledge.Indexing.MaxCollections`                   | 30                   | 每人知識庫上限                                |
+| `Knowledge.Indexing.MaxDocumentsPerCollection`        | 100                  | 每個知識庫文件上限                            |
+| `Knowledge.Indexing.ChunkCharacters` / `ChunkOverlap` | 600 / 80             | 切段與重疊字元，保護 UTF-16 字元邊界          |
+| `Knowledge.Retrieval.UseNativeVector`                 | true                 | 可用時使用 SQL 原生精確 cosine 距離           |
+| `Knowledge.Retrieval.PortableCandidateLimit`          | 2000                 | 無原生向量時的授權候選上限；超限需縮小範圍    |
+| `Knowledge.Retrieval.TopK` / `ContextCharacters`      | 6 / 5000             | 最多片段數與帶入對話的來源文字上限            |
 
 OCR 與一般文字生成共用核准模型、群組政策、日生成配額與實際 token 記錄。向量呼叫另計次數上限，不會占用日生成次數。失敗的生成保留狀態供用量及問題排查；記錄不保存帳密。
 
@@ -44,4 +45,4 @@ OCR 與一般文字生成共用核准模型、群組政策、日生成配額與�
 
 `operations.BackgroundJobs` 是 durable queue。Worker 原子取得租約、每兩秒續約／檢查取消，checkpoint 驗證租約 token 與未取消狀態後才提交資料。程序中止後，租約到期可由下一個 worker 接手；失去租約的 worker 無法提交舊結果。同一來源的 active key 唯一，避免重複排程。失敗／取消後最多六次處理；重試先重新檢查來源權限。
 
-此可靠佇列用於文件辨識與索引。聊天 SSE 排程仍採單一 host 限制，請遵守 IIS 部署文件；不要因為加入背景租約就增加聊天 worker 數量。
+此可靠佇列用於文件辨識與索引。聊天有獨立的 executor 租約，避免另一個實例誤判正在生成的回答；其排程仍在記憶體，每個 IIS app 使用一個 worker，完整限制與升級流程見 [IIS 部署](../deploy/iis/README.md)。

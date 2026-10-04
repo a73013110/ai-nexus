@@ -18,9 +18,16 @@ public sealed class RunRecoveryWorker(IServiceScopeFactory scopes, GenerationSch
                 {
                     using var scope = scopes.CreateScope();
                     var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-                    var active = await db.Runs.Where(x => x.ActiveOwnerId != null).ToListAsync(stoppingToken);
-                    foreach (var run in active.Where(x => !scheduler.IsTracked(x.Id)))
-                        await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, RunStates.Failed, "orphaned_run", stoppingToken);
+                    var now = DateTimeOffset.UtcNow;
+                    var tracked = scheduler.TrackedRuns;
+                    if (tracked.Length > 0)
+                    {
+                        await db.Runs.Where(x => tracked.Contains(x.Id) && x.ExecutorId == scheduler.InstanceId && x.ActiveOwnerId != null)
+                            .ExecuteUpdateAsync(p => p.SetProperty(x => x.LeaseExpiresAt, now + GenerationScheduler.LeaseDuration), stoppingToken);
+                        var active = await db.Runs.Where(x => tracked.Contains(x.Id) && x.ActiveOwnerId != null).Select(x => x.Id).ToArrayAsync(stoppingToken);
+                        foreach (var id in tracked.Except(active)) scheduler.Cancel(id);
+                    }
+                    await scope.ServiceProvider.GetRequiredService<RunLeaseRecovery>().RecoverAsync(now, stoppingToken);
                 }
                 catch (Exception ex) when (!stoppingToken.IsCancellationRequested) { logger.LogWarning("Orphan recovery postponed ({ErrorType}).", ex.GetType().Name); }
                 finally { scheduler.StateGate.Release(); }

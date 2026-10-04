@@ -27,6 +27,11 @@ export class NexusApi {
     this.http.session(session);
     return session;
   }
+  async windowsLogin(): Promise<AuthSession> {
+    const session = await this.http.json<AuthSession>('/auth/windows');
+    this.http.session(session);
+    return session;
+  }
   logout = () => this.http.json<AuthSession>('/auth/logout', 'POST');
   async me(): Promise<Me> {
     const me = await this.http.json<Me>('/me');

@@ -1,20 +1,21 @@
 #requires -Version 7.4
 # Checks staged files before a commit. Never prints a credential or file contents.
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot 'Settings-Schema.ps1')
 $taskRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Push-Location -LiteralPath $taskRoot
 try {
     $taskFiles = @(git -c core.quotepath=false ls-files --cached)
     if ($LASTEXITCODE -ne 0 -or !$taskFiles.Count) { throw 'Stage the intended source files first.' }
     # artifacts/ is the root build-output folder; feature source modules may also be named Artifacts.
-    $taskForbidden = @($taskFiles | Where-Object { $_ -match '^artifacts/|(^|/)(\.local|node_modules|bin|obj)/|(^|/)appsettings\.(.*\.)?(Local|Secrets)\.json$|(^|/)\.env($|\.(?!example$))' })
+    $taskForbidden = @($taskFiles | Where-Object { $_ -match '^artifacts/|(^|/)(\.local|node_modules|bin|obj)/|(^|/)appsettings\.(.*\.)?(Local|Secrets|Production|Staging)\.json$|(^|/)\.env($|\.(?!example$))' })
     if ($taskForbidden.Count) { throw 'The Git index contains a local/generated/secret path. Unstage it before committing.' }
     $taskPrivatePath = Join-Path $taskRoot '.local/secrets/appsettings.Secrets.json'
     $taskPrivateValues = @()
     if (Test-Path -LiteralPath $taskPrivatePath) {
         try { $taskSecrets = [System.IO.File]::ReadAllText($taskPrivatePath) | ConvertFrom-Json -AsHashtable }
         catch { throw 'Local secrets JSON is invalid; repair it in your editor. Values were not printed.' }
-        $taskPrivateValues = @($taskSecrets.Database.Password, $taskSecrets.AdAuthentication.DnPass, $taskSecrets.Inference.GoogleApiKey, $taskSecrets.ConnectionStrings.Nexus) | Where-Object { $_ -is [string] -and $_.Length -ge 6 }
+        $taskPrivateValues = @(Get-NexusSecretValues $taskSecrets) | Where-Object { $_.Length -ge 6 }
     }
     foreach ($taskFile in $taskFiles) {
         $taskContent = (git show (':' + $taskFile)) -join "`n"
@@ -26,7 +27,7 @@ try {
         if ($taskFile -match '(^|/)appsettings[^/]*\.json$') {
             try { $taskJson = $taskContent | ConvertFrom-Json -AsHashtable }
             catch { throw "Public configuration JSON is invalid: $taskFile" }
-            if ($taskJson.Database.User -or $taskJson.Database.Password -or $taskJson.AdAuthentication.DnPass -or $taskJson.Inference.GoogleApiKey -or $taskJson.ConnectionStrings.Nexus) { throw "Public configuration must use empty secrets: $taskFile" }
+            if (@(Get-NexusSecretValues $taskJson -IncludeUser).Count) { throw "Public configuration must use empty secrets: $taskFile" }
         }
     }
     git -c core.whitespace=-blank-at-eof diff --cached --check -- . ':(exclude)backend/src/AiNexus.Api/Database/EDoc/**'

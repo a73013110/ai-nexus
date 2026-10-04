@@ -10,6 +10,7 @@ export class AuthService {
   private readonly router = inject(Router);
   readonly session = signal<AuthSession | null>(null);
   readonly generation = signal(0);
+  private pending: Promise<AuthSession> | null = null;
   constructor() {
     const transport = inject(ApiTransport);
     effect(() => {
@@ -21,18 +22,29 @@ export class AuthService {
     });
   }
   async load(): Promise<AuthSession> {
-    const session = await this.api.authSession();
-    this.session.set(session);
-    return session;
+    if (this.pending) return this.pending;
+    this.pending = this.api.authSession().then((session) => {
+      this.session.set(session);
+      return session;
+    });
+    try {
+      return await this.pending;
+    } finally {
+      this.pending = null;
+    }
   }
   async requireLogin(): Promise<boolean> {
     const session = await this.load();
-    if (session.mode !== 'Ldap' || session.authenticated) return true;
+    if (session.authenticated) return true;
     await this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
     return false;
   }
   async login(account: string, password: string) {
     this.session.set(await this.api.login(account, password));
+    this.generation.update((value) => value + 1);
+  }
+  async windowsLogin() {
+    this.session.set(await this.api.windowsLogin());
     this.generation.update((value) => value + 1);
   }
   async logout() {

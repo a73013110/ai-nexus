@@ -15,6 +15,7 @@ public sealed class IntegrationsOptions
 }
 public sealed class SourceOptions
 {
+    public string Transport { get; set; } = "sql";
     public bool Enabled { get; set; }
     public bool AclContractConfirmed { get; set; }
     public string[] AllowedGroupIds { get; set; } = [];

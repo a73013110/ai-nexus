@@ -17,6 +17,7 @@ export class QualityApi {
   feedbackFor = (id: string) => this.http.json<Feedback | null>(`/messages/${id}/feedback`);
   sets = () => this.http.json<EvaluationSet[]>('/quality/sets');
   get = (id: string) => this.http.json<EvaluationSet>(`/quality/sets/${id}`);
+  remove = (id: string) => this.http.json<void>(`/quality/sets/${id}`, 'DELETE');
   save = (
     id: string | null,
     name: string,

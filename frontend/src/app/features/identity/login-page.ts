@@ -38,11 +38,12 @@ export class LoginPage {
   constructor() {
     void this.initialize();
   }
-  private async initialize() {
+  async initialize() {
+    this.loading.set(true);
+    this.error.set(null);
     try {
       const session = await this.auth.load();
-      if (session.authenticated || session.mode === 'Windows')
-        await this.router.navigateByUrl(this.returnUrl());
+      if (session.authenticated) await this.router.navigateByUrl(this.returnUrl());
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : '登入服務暫時無法使用。');
     } finally {
@@ -56,6 +57,23 @@ export class LoginPage {
     )
       ? url
       : '/chat';
+  }
+  async windowsLogin() {
+    if (this.submitting()) return;
+    this.submitting.set(true);
+    this.error.set(null);
+    try {
+      await this.auth.windowsLogin();
+      await this.router.navigateByUrl(this.returnUrl());
+    } catch (error) {
+      this.error.set(
+        error instanceof Error
+          ? error.message
+          : '未取得 Windows 身分，請確認公司網域與瀏覽器設定。',
+      );
+    } finally {
+      this.submitting.set(false);
+    }
   }
   async submit(event: Event) {
     event.preventDefault();

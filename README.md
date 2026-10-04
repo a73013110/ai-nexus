@@ -36,18 +36,20 @@
 
 一般參數在 .local/config/appsettings.Local.json，秘密在 .local/secrets/appsettings.Secrets.json，修改後重啟。.local／artifacts 整體忽略，進度／排查放 .local/notes。Git 保存 source、public defaults／examples、lockfiles、contracts、migrations 及長期文件。
 
-| 文件                                | 內容                                            |
-| ----------------------------------- | ----------------------------------------------- |
-| [參數](docs/CONFIGURATION.md)       | SQL／AD／Google、設定順序、鎖定／隱藏及模型能力 |
-| [開發](docs/DEVELOPMENT.md)         | 啟動、build／驗證、契約、migration、版控        |
-| [功能](docs/FEATURES.md)            | 工作區、聊天操作、快捷鍵及保存                  |
-| [附件](docs/ATTACHMENTS.md)         | 格式、OCR、配額及檔案生命週期                   |
-| [資料庫](docs/DATABASE.md)          | 12 個 schema、物件／關聯、初始化、SQL 權限      |
-| [授權](docs/ACCESS_CONTROL.md)      | 功能 grant、預設角色、撤銷及擴充                |
-| [架構](docs/ARCHITECTURE.md)        | 模組、共用邊界、隔離、推論與 durable jobs       |
-| [設計](docs/DESIGN_SYSTEM.md)       | tokens、字級、主題、共用元件及動畫              |
-| [向量](docs/VECTOR_ARCHITECTURE.md) | 實作路徑、公文／校務資料、ACL 與 ANN 評估       |
-| [IIS](deploy/iis/README.md)         | 單程序部署、AD、秘密、SSE 與驗收                |
+| 文件                                  | 內容                                            |
+| ------------------------------------- | ----------------------------------------------- |
+| [參數](docs/CONFIGURATION.md)         | SQL／AD／Google、設定順序、鎖定／隱藏及模型能力 |
+| [開發](docs/DEVELOPMENT.md)           | 啟動、build／驗證、契約、migration、版控        |
+| [功能](docs/FEATURES.md)              | 工作區、聊天操作、快捷鍵及保存                  |
+| [附件](docs/ATTACHMENTS.md)           | 格式、OCR、配額及檔案生命週期                   |
+| [資料庫](docs/DATABASE.md)            | 12 個 schema、物件／關聯、初始化、SQL 權限      |
+| [授權](docs/ACCESS_CONTROL.md)        | 功能 grant、預設角色、撤銷及擴充                |
+| [架構](docs/ARCHITECTURE.md)          | 模組、共用邊界、隔離、推論與 durable jobs       |
+| [設計](docs/DESIGN_SYSTEM.md)         | tokens、字級、主題、共用元件及動畫              |
+| [向量](docs/VECTOR_ARCHITECTURE.md)   | 實作路徑、公文／校務資料、ACL 與 ANN 評估       |
+| [本地 AI](docs/LOCAL-AI.md)           | Ollama、16 GB GPU 的模型規劃與向量化優先順序    |
+| [資源操作](docs/FEATURE_LIFECYCLE.md) | 各功能的增刪修、歷史保存及操作權限              |
+| [IIS](deploy/iis/README.md)           | 單程序部署、AD、秘密、SSE 與驗收                |
 
 預設 Google 模型為 gemma-4-26b-a4b-it，key 只在後端。Google 模式將此次需要的文字／圖片／上下文送往 Google，embedding 與聊天模型獨立。登入頁的傅立葉動畫使用自有 N 輪廓與 DFT，支援跳過／重播、手機及減少動態，表單全程可用。
 
@@ -61,4 +63,4 @@
 
 Verify 使用獨立資料庫、test provider 與 Edge fixtures；真實 AD／SQL／模型另用 Test-Connections，會使用模型配額。Test-SqlCapabilities 檢查實際 SQL、原生向量及精確 cosine。報告／截圖在 artifacts，提交前 stage 後執行 `./scripts/Test-Repository.ps1`。
 
-目前聊天要求單一 host／IIS worker，文件及評測已有 durable 租約／checkpoint。JSON 文字備份不含附件，完整備份使用 SQL。公文／校務 adapter 與授權 view 契約已準備，實際連線／view 仍需設定；正式 IIS、來源 ACL、區網隔離、效能及備份還原需實機驗收。
+每個 IIS app 使用一個 worker；聊天 executor 租約避免共用 SQL 的實例互相中止生成，但排程與模型容量仍在各程序內。首次升級須停止所有舊 host。文件及評測已有 durable 租約／checkpoint。JSON 文字備份不含附件，完整備份使用 SQL。公文／校務 adapter 與授權 view 契約已準備，實際連線／view 仍需設定；正式 IIS、來源 ACL、區網隔離、效能及備份還原需實機驗收。

@@ -5,7 +5,7 @@
 | 類型                                                    | 模型收到的內容                                                              |
 | ------------------------------------------------------- | --------------------------------------------------------------------------- |
 | PNG、JPEG、WebP                                         | 原始圖片，Google `inlineData`／Ollama `images`；模型需啟用 `SupportsImages` |
-| PDF                                                     | PdfPig 逐頁抽取原生文字，掃描頁另經背景 OCR；可在閱讀器核對原始頁面        |
+| PDF                                                     | PdfPig 逐頁抽取原生文字，掃描頁另經背景 OCR；可在閱讀器核對原始頁面         |
 | Word `.docx`                                            | 主文件段落及表格文字，不讀巨集、外部連結或內嵌圖片                          |
 | UTF-8 文字、Markdown、CSV、JSON、log、XML、YAML、程式碼 | 文件內容以使用者訊息附文傳送                                                |
 
@@ -15,17 +15,17 @@
 
 一般設定放在 `.local/config/appsettings.Local.json`，不需新增密碼。環境變數可用 `Attachments__MaxFileBytes` 等名稱覆寫。
 
-| 參數                                 | 預設值                 | 用途                             |
-| ------------------------------------ | ---------------------- | -------------------------------- |
-| `Attachments.MaxFileBytes`           | 4194304                | 單檔大小                         |
-| `Attachments.MaxFilesPerMessage`     | 4                      | 單則附件數                       |
-| `Attachments.MaxMessageBytes`        | 8388608                | 單則附件總大小                   |
-| `Attachments.MaxOwnerBytes`          | 67108864               | 個人儲存配額                     |
-| `Attachments.MaxExtractedCharacters` | 64000                  | 文件文字上限                     |
-| `Attachments.MaxPdfPages`            | 40                     | PDF 頁數上限                     |
-| `Attachments.ImageTokenEstimate`     | 4096                   | 圖片 Context 預估                |
-| `Attachments.DraftRetentionDays`     | 14                     | 未送出附件的回收期限（1–365 天） |
-| `Inference.Models[].SupportsImages`  | false，Gemma 範本 true | 模型圖片能力                     |
+| 參數                                                           | 預設值                 | 用途                             |
+| -------------------------------------------------------------- | ---------------------- | -------------------------------- |
+| `Attachments.MaxFileBytes`                                     | 4194304                | 單檔大小                         |
+| `Attachments.MaxFilesPerMessage`                               | 4                      | 單則附件數                       |
+| `Attachments.MaxMessageBytes`                                  | 8388608                | 單則附件總大小                   |
+| `Attachments.MaxOwnerBytes`                                    | 67108864               | 個人儲存配額                     |
+| `Attachments.MaxExtractedCharacters`                           | 64000                  | 文件文字上限                     |
+| `Attachments.MaxPdfPages`                                      | 40                     | PDF 頁數上限                     |
+| `Attachments.ImageTokenEstimate`                               | 4096                   | 圖片 Context 預估                |
+| `Attachments.DraftRetentionDays`                               | 14                     | 未送出附件的回收期限（1–365 天） |
+| `Inference.Providers.<provider>.Models.<alias>.SupportsImages` | false，Gemma 範本 true | 模型圖片能力                     |
 
 Host request body 上限 10 MB；一般 JSON 操作為 64 KB。提問／Context 依 `MaxInputCharacters × 6 + 8192` 放寬（最低 64 KB），範本為 `12000 × 6 + 8192`，以容納 JSON 跳脫的中文字元。附件端點最多 9 MB（含 multipart overhead），文字備份匯入最多 8 MB。調高附件限制需同步檢查 host 與 IIS request filtering。
 

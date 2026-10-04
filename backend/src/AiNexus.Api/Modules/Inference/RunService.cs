@@ -70,6 +70,7 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
             var run = new GenerationRun
             {
                 OwnerId = owner, ActiveOwnerId = owner, ConversationId = request.ConversationId,
+                ExecutorId = scheduler.InstanceId, LeaseExpiresAt = DateTimeOffset.UtcNow + GenerationScheduler.LeaseDuration,
                 ModelId = profile.Id, IdempotencyKey = key, RequestHash = hash,
                 ParametersJson = JsonSerializer.Serialize(new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, 0.6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, conversation.SystemInstruction) + projectContext + AiNexus.Modules.Knowledge.KnowledgeRetrieval.Prompt(sources), effort, profile.ReasoningControl, profile.SupportsImages))
             };
@@ -117,6 +118,7 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
         run.Status = status;
         run.ErrorCode = error;
         run.ActiveOwnerId = null;
+        run.LeaseExpiresAt = null;
         run.FinishedAt = DateTimeOffset.UtcNow;
         AddEvent(db, run, "status");
         await conversations.UpdateAnswerAsync(run, ct);

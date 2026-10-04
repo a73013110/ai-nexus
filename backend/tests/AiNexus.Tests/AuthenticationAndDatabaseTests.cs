@@ -92,17 +92,18 @@ public sealed class AuthenticationAndDatabaseTests
     }
 
     [Fact]
-    public void ProductionRejectsUntrustedSqlCertificates()
+    public void ExplicitSelfSignedSqlCertificatesRemainEncryptedInProduction()
     {
         var config = new ConfigurationManager(); config["Database:User"] = "fixture"; config["Database:Password"] = "fixture"; config["Database:TrustServerCertificate"] = "true";
-        Assert.Throws<InvalidOperationException>(() => LocalDatabaseSettings.Apply(config));
-        LocalDatabaseSettings.Apply(config, allowUntrustedCertificates: true);
-        Assert.True(new SqlConnectionStringBuilder(config.GetConnectionString("Nexus")).TrustServerCertificate);
+        LocalDatabaseSettings.Apply(config);
+        var connection = new SqlConnectionStringBuilder(config.GetConnectionString("Nexus"));
+        Assert.True(connection.TrustServerCertificate);
+        Assert.Equal(SqlConnectionEncryptOption.Mandatory, connection.Encrypt);
     }
 
     [Theory]
     [InlineData("Encrypt=False;TrustServerCertificate=False")]
-    [InlineData("Encrypt=True;TrustServerCertificate=True")]
+    [InlineData("Encrypt=False;TrustServerCertificate=True")]
     public void FullConnectionStringCannotBypassProductionTls(string settings)
     {
         var config = new ConfigurationManager();

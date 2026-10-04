@@ -6,6 +6,7 @@ export class ProjectsApi {
   private readonly http = inject(ApiTransport);
   list = () => this.http.json<Project[]>('/projects');
   get = (id: string) => this.http.json<Project>(`/projects/${id}`);
+  remove = (id: string) => this.http.json<void>(`/projects/${id}`, 'DELETE');
   save = (
     id: string | null,
     name: string,

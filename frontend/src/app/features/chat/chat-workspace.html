@@ -179,7 +179,7 @@
       <nx-conversation-outline
         [messages]="store.visibleMessages()"
         [viewport]="viewport"
-        (navigated)="following.set(false)"
+        (navigated)="pauseFollowing()"
       />
     </div>
     <div class="composer-region">
@@ -271,11 +271,13 @@
             rows="1"
           ></textarea>
           <div class="composer-bottom">
+            <!-- Keep upload unavailable during the initial DOM creation, before readiness binds. -->
             <button
               type="button"
               class="icon-button attach-button"
               aria-label="加入文件或圖片"
               title="加入附件，也可以拖放或貼上圖片"
+              disabled
               [disabled]="!store.canUpload()"
               (click)="fileInput.click()"
             >

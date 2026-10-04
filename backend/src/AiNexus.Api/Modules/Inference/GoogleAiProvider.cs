@@ -58,7 +58,7 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
         });
         using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
         RequireSuccess(response);
-        if (response.Content.Headers.ContentType?.MediaType != "text/event-stream") throw new InvalidDataException("Provider did not return SSE.");
+        if (response.Content.Headers.ContentType?.MediaType != "text/event-stream") throw new ApiException(502, "provider_protocol_error", "模型服務未回傳預期的串流格式。");
         using var reader = new StreamReader(await response.Content.ReadAsStreamAsync(ct));
         var frame = new StringBuilder();
         var completed = false;
@@ -99,10 +99,10 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
                 if (line is null) break;
                 continue;
             }
-            if (line.Length > 262144 || frame.Length + line.Length > 262144) throw new InvalidDataException("Provider frame exceeds limit.");
+            if (line.Length > 262144 || frame.Length + line.Length > 262144) throw new ApiException(502, "provider_frame_too_large", "模型回傳的單筆串流資料超過限制。");
             if (line.StartsWith("data:", StringComparison.Ordinal)) frame.AppendLine(line[5..].TrimStart(' '));
         }
-        if (!completed) throw new InvalidDataException("Provider stream ended without completion.");
+        if (!completed) throw new ApiException(502, "provider_stream_incomplete", "模型串流提前中斷，已保留收到的內容。");
         yield return new InferenceChunk("", true, input, output, finishReason);
     }
 

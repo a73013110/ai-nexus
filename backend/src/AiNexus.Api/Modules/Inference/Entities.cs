@@ -8,6 +8,8 @@ public sealed class GenerationRun
     public Guid OwnerId { get; set; }
     // Unique filtered index enforces one active generation per owner, even across requests.
     public Guid? ActiveOwnerId { get; set; }
+    public Guid? ExecutorId { get; set; }
+    public DateTimeOffset? LeaseExpiresAt { get; set; }
     public Guid ConversationId { get; set; }
     public Guid UserMessageId { get; set; }
     public Guid AssistantMessageId { get; set; }

@@ -32,6 +32,7 @@ import { KnowledgeApi } from '../knowledge/knowledge-api';
 import { ProjectsApi } from './projects-api';
 import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
 import { SearchField } from '../../shared/ui/search-field';
+import { PersonalDocuments } from '../knowledge/personal-documents';
 
 @Component({
   selector: 'nx-projects-page',
@@ -44,6 +45,7 @@ import { SearchField } from '../../shared/ui/search-field';
     ResourceSharing,
     TextTools,
     SearchField,
+    PersonalDocuments,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -262,6 +264,32 @@ export class ProjectsPage {
         );
         this.notice.set(value.isArchived ? '專案已封存，文件仍可閱讀。' : '專案已還原。');
       }
+    } catch (e) {
+      if (valid()) this.error.set(this.scope.message(e));
+    } finally {
+      if (valid()) this.busy.set(false);
+    }
+  }
+  async removeProject() {
+    const current = this.current(),
+      valid = this.guard();
+    if (!current?.resource.isOwner || this.busy()) return;
+    if (
+      !(await this.confirm().ask({
+        title: `刪除「${current.resource.name}」？`,
+        message:
+          '專案與繼承的成員權限將移除。對話、文件與成果會保留在各自擁有者的工作區；既有的直接分享權限會保留。若只是暫停工作，可選擇封存專案。',
+        confirm: '刪除專案',
+        danger: true,
+      })) ||
+      !valid()
+    )
+      return;
+    this.busy.set(true);
+    this.error.set('');
+    try {
+      await this.api.remove(current.resource.id);
+      if (valid()) await this.router.navigate(['/projects']);
     } catch (e) {
       if (valid()) this.error.set(this.scope.message(e));
     } finally {

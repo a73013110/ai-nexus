@@ -1,12 +1,14 @@
 <nx-feature-page title="知識庫" description="整理可查核的文件來源，讓 AI 回答附上依據與頁碼。">
-  <button
-    page-actions
-    class="primary-button"
-    (click)="openEditor()"
-    [disabled]="loading() || !session.has('knowledge')"
-  >
-    <nx-icon name="plus" />新增知識庫
-  </button>
+  <div page-actions class="page-actions">
+    <nx-personal-documents />
+    <button
+      class="primary-button"
+      (click)="openEditor()"
+      [disabled]="loading() || !session.has('knowledge')"
+    >
+      <nx-icon name="plus" />新增知識庫
+    </button>
+  </div>
   @if (error()) {
     <p class="error-banner" role="alert">{{ error() }}</p>
   }

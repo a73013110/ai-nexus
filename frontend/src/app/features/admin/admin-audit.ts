@@ -7,7 +7,13 @@ import { Icon } from '../../shared/ui/icon';
 import { downloadBlob } from '../../shared/browser/download';
 import { toCsv } from '../../shared/browser/csv';
 import { formatDate } from '../../shared/browser/format';
-import { auditAction, auditChanges, auditResource } from './audit-presentation';
+import {
+  auditAction,
+  auditChanges,
+  auditResource,
+  auditResult,
+  auditRejected,
+} from './audit-presentation';
 
 @Component({
   selector: 'nx-admin-audit',
@@ -29,6 +35,8 @@ export class AdminAudit {
   readonly label = auditAction;
   readonly changes = auditChanges;
   readonly resource = auditResource;
+  readonly status = auditResult;
+  readonly rejected = auditRejected;
   readonly actions = [
     { value: '', label: '所有動作' },
     { value: 'admin.', label: '平台管理' },
@@ -38,9 +46,18 @@ export class AdminAudit {
     { value: 'admin.feature', label: '功能異動' },
     { value: 'admin.conversation_read', label: '對話內容檢視' },
     { value: 'admin.user_usage_read', label: '使用者用量檢視' },
+    { value: 'project.', label: '專案與範本' },
+    { value: 'knowledge.', label: '知識庫' },
+    { value: 'document.', label: '文件與索引' },
+    { value: 'evaluation.', label: '評測資源' },
+    { value: 'quality.', label: '評測與回饋' },
+    { value: 'run.', label: 'AI 生成' },
+    { value: 'integration.', label: '外部資料查閱' },
+    { value: 'resource.acl', label: '資源授權' },
   ];
   readonly results = [
     { value: '', label: '所有結果' },
+    { value: 'success', label: '已受理／完成' },
     { value: 'saved', label: '已儲存' },
     { value: 'read', label: '已檢視' },
     { value: 'failed', label: '未完成／拒絕' },
@@ -127,15 +144,6 @@ export class AdminAudit {
       `AI-Nexus-稽核-${new Date().toISOString().slice(0, 10)}-${rows.length}筆`,
       'csv',
     );
-  }
-  status(value: string | null | undefined) {
-    return value === 'saved'
-      ? '已儲存'
-      : value === 'read'
-        ? '已檢視'
-        : value === 'granted'
-          ? '已授權'
-          : value || '已記錄';
   }
   private nextDay(day: string) {
     const date = new Date(day + 'T00:00:00Z');

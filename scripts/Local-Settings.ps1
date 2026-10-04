@@ -1,3 +1,5 @@
+. (Join-Path $PSScriptRoot 'Settings-Schema.ps1')
+
 function Get-NexusLocalPaths {
     $taskWorkspace = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
     return @{ Root = $taskWorkspace; Settings = Join-Path $taskWorkspace '.local/config/appsettings.Local.json'; Secrets = Join-Path $taskWorkspace '.local/secrets/appsettings.Secrets.json' }
@@ -16,10 +18,6 @@ function Protect-NexusSecrets([string]$Path) {
     [System.IO.FileSystemAclExtensions]::SetAccessControl([System.IO.FileInfo]::new($Path), $taskFileAcl)
 }
 
-function Save-NexusJson([string]$Path, [hashtable]$Value) {
-    [System.IO.File]::WriteAllText($Path, ($Value | ConvertTo-Json -Depth 30), [System.Text.UTF8Encoding]::new($false))
-}
-
 function Initialize-NexusLocalSettings {
     $taskPaths = Get-NexusLocalPaths
     foreach ($taskDirectory in @((Split-Path $taskPaths.Settings), (Split-Path $taskPaths.Secrets))) { New-Item -ItemType Directory -Path $taskDirectory -Force | Out-Null }
@@ -27,7 +25,7 @@ function Initialize-NexusLocalSettings {
     if (Test-Path -LiteralPath $taskLegacy) {
         $taskValues = [System.IO.File]::ReadAllText($taskLegacy) | ConvertFrom-Json -AsHashtable
         $taskPrivate = @{ Database = @{ User = $taskValues.Database.User; Password = $taskValues.Database.Password }; AdAuthentication = @{ DnPass = $taskValues.AdAuthentication.DnPass }; Inference = @{ GoogleApiKey = $taskValues.Inference.GoogleApiKey } }
-        if ($taskValues.ConnectionStrings.Nexus) { $taskPrivate.ConnectionStrings = @{ Nexus = $taskValues.ConnectionStrings.Nexus } }
+        if ($taskValues.ConnectionStrings) { $taskPrivate.ConnectionStrings = $taskValues.ConnectionStrings }
         [void]$taskValues.Database.Remove('User'); [void]$taskValues.Database.Remove('Password')
         [void]$taskValues.AdAuthentication.Remove('DnPass'); [void]$taskValues.Inference.Remove('GoogleApiKey'); [void]$taskValues.Remove('ConnectionStrings')
         if (!(Test-Path -LiteralPath $taskPaths.Settings)) { Save-NexusJson $taskPaths.Settings $taskValues }
@@ -50,4 +48,5 @@ function Initialize-NexusLocalSettings {
         if (!(Test-Path -LiteralPath $taskTemplate.Path)) { Copy-Item -LiteralPath (Join-Path $taskPaths.Root ('backend/src/AiNexus.Api/' + $taskTemplate.Example)) -Destination $taskTemplate.Path }
     }
     Protect-NexusSecrets $taskPaths.Secrets
+    & (Join-Path $PSScriptRoot 'Migrate-Settings.ps1') -SettingsPath $taskPaths.Settings -SecretsPath $taskPaths.Secrets
 }

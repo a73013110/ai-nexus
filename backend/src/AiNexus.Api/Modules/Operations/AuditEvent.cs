@@ -1,5 +1,11 @@
 namespace AiNexus.Modules.Operations;
 
+public static class AuditOutcomes
+{
+    // Legacy records retain their original result; filters must recognize every successful operation.
+    public static readonly string[] Accepted = ["saved", "read", "completed", "success", "granted", "granted_once", "created", "deleted", "soft_deleted", "queued", "running", "cancelled", "revoked", "removed", "assigned", "read-only", "private"];
+}
+
 public sealed class AuditEvent
 {
     public long Id { get; set; }

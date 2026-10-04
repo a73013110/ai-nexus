@@ -12,6 +12,9 @@ public sealed class GenerationScheduler
     private readonly SemaphoreSlim capacity;
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> cancellations = new();
     private int count;
+    public Guid InstanceId { get; } = Guid.NewGuid();
+    public static readonly TimeSpan LeaseDuration = TimeSpan.FromMinutes(2);
+    public Guid[] TrackedRuns => cancellations.Keys.ToArray();
     public SemaphoreSlim StateGate { get; } = new(1, 1);
     public bool Ready { get; set; }
     public bool Generating { get; set; }

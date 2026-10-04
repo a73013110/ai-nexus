@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import type { Message } from '../../core/api/types';
+import { generationError } from '../../core/api/generation-error';
 import { Icon } from '../../shared/ui/icon';
 import { MarkdownView } from '../../shared/ui/markdown-view';
 import { CopyFeedback } from '../../shared/browser/copy-feedback';
@@ -166,13 +167,7 @@ export class ChatMessage {
   readonly versionIndex = computed(() =>
     this.versions().findIndex((x) => x.id === this.message().id),
   );
-  readonly failureText = computed(() =>
-    this.message().errorCode === 'generation_timeout'
-      ? '模型回應逾時'
-      : this.message().errorCode === 'server_restarted'
-        ? '伺服器重新啟動，生成已中斷'
-        : '生成未完成',
-  );
+  readonly failureText = computed(() => generationError(this.message().errorCode));
   async copyAnswer() {
     await this.feedback.copy(this.message().content);
   }

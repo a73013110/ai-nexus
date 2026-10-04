@@ -18,9 +18,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
             using var startup = scopes.CreateScope();
             var db = startup.ServiceProvider.GetRequiredService<NexusDbContext>();
             if (!await db.Database.CanConnectAsync(stoppingToken)) { logger.LogWarning("Generation disabled: storage is unavailable."); return; }
-            var service = startup.ServiceProvider.GetRequiredService<RunService>();
-            foreach (var run in await db.Runs.Where(x => x.ActiveOwnerId != null).ToListAsync(stoppingToken))
-                await service.FinishAsync(run, RunStates.Failed, "server_restarted", stoppingToken);
+            await startup.ServiceProvider.GetRequiredService<RunLeaseRecovery>().RecoverAsync(DateTimeOffset.UtcNow, stoppingToken);
             foreach (var profile in options.Value.Models)
             {
                 var existing = await db.ModelProfiles.FindAsync([profile.Id], stoppingToken);
@@ -78,7 +76,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
             using var scope = scopes.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             var run = await db.Runs.SingleAsync(x => x.Id == job.RunId, stoppingToken);
-            if (!RunStates.IsActive(run.Status)) return;
+            if (!RunStates.IsActive(run.Status) || run.ExecutorId != scheduler.InstanceId) return;
             try
             {
                 var grants = await scope.ServiceProvider.GetRequiredService<AiNexus.Modules.AccessControl.AccessService>().ForUserAsync(run.OwnerId, stoppingToken);
@@ -109,6 +107,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
         var elapsed = Stopwatch.StartNew();
         long? input = null, output = null;
         var characters = 0;
+        var completed = false;
         string finalStatus = RunStates.Completed;
         string? error = null;
         try
@@ -116,7 +115,8 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
             await foreach (var chunk in provider.StreamAsync(model, messages, parameters, timeout.Token))
             {
                 characters += chunk.Text.Length;
-                if (characters > 65536) throw new InvalidDataException("Output exceeds platform limit.");
+                if (characters > options.Value.MaxOutputCharacters) throw new ApiException(502, "output_limit_exceeded", "回答超過文字上限，請分段提問。");
+                completed |= chunk.Done;
                 buffer.Append(chunk.Text);
                 input = chunk.InputTokens ?? input;
                 output = chunk.OutputTokens ?? output;
@@ -127,6 +127,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
                     elapsed.Restart();
                 }
             }
+            if (!completed) throw new ApiException(502, "provider_stream_incomplete", "模型串流提前結束。");
         }
         catch (OperationCanceledException)
         {
@@ -136,8 +137,8 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
         catch (Exception ex) when (ex is HttpRequestException or IOException or JsonException or InvalidOperationException or ApiException)
         {
             finalStatus = RunStates.Failed;
-            error = (ex as ApiException)?.Code ?? "provider_error";
-            logger.LogWarning("Run {RunId} provider failed ({ErrorType}).", job.RunId, ex.GetType().Name);
+            error = (ex as ApiException)?.Code ?? (ex is HttpRequestException or IOException ? "provider_connection_lost" : "provider_protocol_error");
+            logger.LogWarning("Run {RunId} provider failed: {ErrorCode} ({ErrorType}).", job.RunId, error, ex.GetType().Name);
         }
         // Request cancellation does not interrupt persistence; partial output survives.
         await FlushAsync(job.RunId, buffer.ToString(), input, output, CancellationToken.None);

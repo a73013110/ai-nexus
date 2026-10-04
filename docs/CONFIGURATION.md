@@ -1,107 +1,123 @@
-# 專案參數與秘密設定
+# 設定參數與檔案配置（v2）
 
-一般設定與秘密分開保存。第一次執行 `scripts/Configure-Local.ps1`、`Start-Local.ps1` 或 `Start-Dev.ps1` 會建立以下本機檔案；Configure 以遮蔽方式詢問 SQL 登入、密碼、AD 服務密碼與 API key，Enter 保留既有值。
+設定只由後端在啟動時讀取。前端呼叫同源 `/api/v1`，不保存 SQL、AD 密碼或 AI key。改檔後須重新啟動後端／回收 IIS application pool。
 
-| 位置                                                                             | 內容                                     | 版控 |
-| -------------------------------------------------------------------------------- | ---------------------------------------- | ---- |
-| `backend/src/AiNexus.Api/appsettings.json`                                       | 可公開的預設值、模型能力                 | 是   |
-| `appsettings.Local.example.json`／`appsettings.Secrets.example.json`（同資料夾） | 可複製的設定格式，沒有真實帳密           | 是   |
-| `.local/config/appsettings.Local.json`                                           | 此機器的 SQL／AD 位址、模型及管理政策    | 否   |
-| `.local/secrets/appsettings.Secrets.json`                                        | SQL 帳密、AD 服務密碼、Google key        | 否   |
-| `.local/keys`                                                                    | 本機 cookie 加密金鑰，Windows DPAPI 保護 | 否   |
+## 檔案與載入順序
 
-舊的 `backend/src/AiNexus.Api/appsettings.Local.json` 會由啟動腳本拆分並遷移；新檔已有值時保留新值，只補空欄位，完整舊檔備份留在受保護的 `.local/secrets/legacy-settings-*.json`。秘密檔 NTFS ACL 限目前使用者、SYSTEM、Administrators；仍須依公司政策保護電腦與備份。不要把 `.local`、秘密檔或 key ring 放入 `wwwroot`。
+| 用途                 | 本機開發                                   | IIS                                  |
+| -------------------- | ------------------------------------------ | ------------------------------------ |
+| 版控的公開預設值     | `backend/src/AiNexus.Api/appsettings.json` | `app/appsettings.json`（來自發版）   |
+| 此環境的一般設定     | `.local/config/appsettings.Local.json`     | `config/appsettings.Production.json` |
+| 密碼與連線秘密       | `.local/secrets/appsettings.Secrets.json`  | `config/appsettings.Secrets.json`    |
+| 登入 cookie 加密金鑰 | `.local/keys`                              | `keys`（保留，不隨發版覆蓋）         |
 
-## 設定優先順序
+後面的來源優先：公開 `appsettings.json` → app 內環境檔 → 外部一般設定 → 外部秘密檔 → 環境變數 → 命令列。環境變數使用 `__` 表示階層；例如 `Database__Password`、`Inference__Providers__Google__ApiKey`。密碼不可放在命令列或前端。
 
-後面的來源覆蓋前面：ASP.NET 預設 appsettings 與環境設定 → 本機一般設定 → 本機秘密設定 → 環境變數 → 命令列。設定只在啟動讀取，修改後重新啟動後端。Testing 環境不載入本機設定，測試不使用真實帳密。
+Development 向上尋找 `global.json`，預設使用工作區 `.local`。Production 預設找 app 的旁邊 `../config/appsettings.Production.json`、`../config/appsettings.Secrets.json` 與 `../keys`；不讀工作區的 `.local`。Testing 不讀機器設定。`LocalConfigPath`、`SecretsConfigPath` 和 `DataProtection__KeyRingPath` 可明確指定；相對路徑一律相對 **app 的 content root**。明確指定的設定檔不存在會使啟動失敗，避免悄悄使用錯誤環境。
 
-本機腳本自動指定 `LocalConfigPath` 與 `SecretsConfigPath`；Production 可用相同參數指向主機上受 ACL 保護的檔案，或用部署系統注入環境變數。階層使用雙底線，例如 `Database__Password`、`Inference__GoogleApiKey`。秘密不要放在命令列、shell history、前端環境檔或 Git。前端只呼叫同源 `/api/v1`，不需要 SQL、AD 或 Google key。
+## 一次設定、快速執行
 
-## SQL Server
+在專案根目錄用 PowerShell 7.4 以上執行：
 
-管理員 bootstrap 放一般設定的 `Administration.BootstrapAdministrators`，使用 AD 短帳號陣列。此設定僅授權一次，不保存個人密碼；詳細步驟見 [管理後台](ADMINISTRATION.md)。
+```powershell
+pwsh -NoProfile -File scripts/Configure-Local.ps1
+pwsh -NoProfile -File scripts/Initialize-Database.ps1
+pwsh -NoProfile -File scripts/Start-Local.ps1
+```
 
-| 參數                               | 檔案            | 說明                                               |
-| ---------------------------------- | --------------- | -------------------------------------------------- |
-| `Database.Server`                  | config          | DNS／IP、`host\\instance` 或 `host,port`           |
-| `Database.Name`                    | config          | `AiNexus`；本機初始化指令只允許此專用名稱          |
-| `Database.TrustServerCertificate`  | config          | 預設 false；只有 Development 可設 true，連線仍加密 |
-| `Database.User`／`Password`        | secrets         | 既有 SQL Authentication 登入，不必再建立一組登入   |
-| `ConnectionStrings.Nexus`          | secrets（選用） | 完整連線字串；非空時優先於分欄設定                 |
-| `Storage.ApplyMigrationsOnStartup` | config          | 預設 false；用初始化／部署操作管理 schema          |
+第一個指令以遮蔽方式輸入 SQL 帳密、AD 服務密碼和 Google key；Enter 保留舊值。初始化可重跑，不會清空資料。`Start-Local` 編譯前端並發版後端，**一個後端程序**在 `http://localhost:5080` 同時提供網站與 API；日常使用不需開兩個視窗。若要前端熱更新，再使用 `Start-Dev.ps1` 的開發流程，見 [README](../README.md)。
 
-`Initialize-Database.ps1` 會檢查 master，AiNexus 不存在才建立，接著套用尚未執行的 EF migrations；重跑不會清空資料。需要建庫／DDL 權限，若既有登入權限不足，由 DBA 依 [資料庫文件](DATABASE.md) 初始化。正式應用帳號只保留 DML 權限。Production 強制加密且拒絕略過 SQL 憑證驗證，應使用受信任的憑證與符合憑證 SAN 的主機名稱。
+```powershell
+# 已建置時快速啟動
+pwsh -NoProfile -File scripts/Start-Local.ps1 -SkipBuild
+# 建置、測試與 IIS 套件
+pwsh -NoProfile -File scripts/Verify.ps1
+pwsh -NoProfile -File scripts/Publish-IIS.ps1 -SkipBuild
+```
 
-## AD 登入
+## 統一順序與舊檔遷移
 
-| 參數                                 | 說明                                                                                                                       |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
-| `AdAuthentication.Mode`              | `Ldap` 顯示公司帳號／密碼登入頁；`Windows` 使用 Negotiate／IIS 整合登入                                                    |
-| `AdAuthentication.Url`               | `ldap://ad.company.internal/DC=company,DC=internal`（StartTLS）或 `ldaps://ad.company.internal:636/DC=company,DC=internal` |
-| `AdAuthentication.DnUser`            | 服務帳號 DN，例如 `CN=directory-reader,CN=Users,DC=company,DC=internal`                                                    |
-| `AdAuthentication.DnPass`            | 放 secrets 的服務帳號密碼                                                                                                  |
-| `AdAuthentication.AdAccountAttrName` | 預設 `sAMAccountName`，會 HTML decode 並 trim                                                                              |
-| `AdAuthentication.Domain`            | 帳號呈現用的 AD 網域名稱                                                                                                   |
+所有範本與寫檔工具共用 `scripts/settings-layout.json` 的順序：版本／Host → SQL → AD／管理 → 金鑰／安全 → 對話模型 → 提示詞 → 知識 → 整合 → 附件／匯出 → 儲存／日誌 → 進階連線字串。子區塊與模型欄位也有固定順序；未知的擴充欄位排序在後，會保留。
 
-Ldap 模式先以服務帳號搜尋使用者，再以使用者 DN 和個人密碼 bind；以 AD `objectSid` 映射平台使用者。個人密碼只用於當次驗證，不寫 SQL／日誌。StartTLS／LDAPS 信任作業系統憑證；不提供略過 AD 憑證驗證的開關。Windows 模式需另驗 IIS 與瀏覽器政策，見 [IIS 部署](../deploy/iis/README.md)。
+```powershell
+# 本機：備份 v1，遷移到 v2，再統一欄位順序
+pwsh -NoProfile -File scripts/Migrate-Settings.ps1
+# IIS：使用主機上的實際檔案，別把秘密複製回 Git
+pwsh -NoProfile -File scripts/Migrate-Settings.ps1 `
+  -SettingsPath 'D:\CoreProject\AiNexus\config\appsettings.Production.json' `
+  -SecretsPath 'D:\CoreProject\AiNexus\config\appsettings.Secrets.json'
+```
 
-## Google AI 與模型政策
+遷移在原檔旁保存 `.v1-時間.bak`，保留秘密檔 ACL，不輸出值；v2 重跑只格式化。舊欄位仍有相容讀取，但請將一般檔與秘密檔 **一起遷移**；同時保留 v1 與 v2 的同一參數容易造成覆蓋混淆。未知 `ConfigurationVersion` 會被拒絕。備份與實際 Local／Production／Secrets 檔都不進 Git。
 
-`Inference.Provider=google`；`Inference.GoogleApiKey` 只放 secrets。後端使用官方 HTTPS API，以 header 傳 key。系統會把使用者提問、系統指令與目前分支上下文送到 Google。模型清單必須同時存在於管理員核准的 `Inference.Models` 及該 key 可用的模型目錄。
+## SQL、AD 與平台權限
 
-模型控制都在伺服器執行，下列一般設定可直接放 `.local/config/appsettings.Local.json` 的 `Inference` 區段：
+| 參數                                                            | 放置       | 行為                                                                                  |
+| --------------------------------------------------------------- | ---------- | ------------------------------------------------------------------------------------- |
+| `Database.Server`                                               | 一般       | IP／DNS、`host\\instance` 或 `host,port`                                              |
+| `Database.Name`                                                 | 一般       | 專用 `AiNexus`；初始化工具不處理其他資料庫                                            |
+| `Database.TrustServerCertificate`                               | 一般       | **Production 也支援 true**，略過 SQL 憑證鏈驗證；連線仍要求加密                       |
+| `Database.ConnectTimeoutSeconds`                                | 一般       | 預設 10 秒                                                                            |
+| `Database.User`／`Password`                                     | 秘密       | 使用既有 SQL Authentication 帳號，不會自動新增登入                                    |
+| `ConnectionStrings.Nexus`                                       | 秘密，選用 | 非空優先於分欄設定，須 `Encrypt=True` 或 `Strict`；`TrustServerCertificate=True` 可用 |
+| `AdAuthentication.Mode`                                         | 一般       | `Ldap`（網站登入）或 `Windows`（IIS 整合驗證）                                        |
+| `AdAuthentication.Url`／`Domain`／`DnUser`／`AdAccountAttrName` | 一般       | LDAP 位址含 Base DN、網域、服務帳號 DN、帳號屬性（預設 `sAMAccountName`）             |
+| `AdAuthentication.DnPass`                                       | 秘密       | 目錄查詢服務帳號密碼；不是使用者密碼                                                  |
+| `Administration.BootstrapAdministrators`                        | 一般       | AD 短帳號陣列；首次 bootstrap 授權，後續用管理後台異動                                |
+| `Storage.ApplyMigrationsOnStartup`                              | 一般       | 預設 false；正式用獨立部署步驟套用 migrations                                         |
+
+`TrustServerCertificate=true` 只改變 SQL TLS 驗證，與網站 HTTPS、AD TLS、cookie 完全不同。**無需也不應為此將 IIS 設為 Development**。舊 `AllowUntrustedCertificateInProduction` 已移除，遷移工具會清理。AD LDAP 連線使用 TLS，主機須信任 AD 的憑證，見 [IIS 文件](../deploy/iis/README.md)。
+
+分項設定會建立 `Encrypt=True` 的連線。若使用進階完整連線字串，自簽憑證請使用 `Encrypt=True;TrustServerCertificate=True`；`Encrypt=Strict` 會忽略 TrustServerCertificate 並仍驗證憑證，請勿以它搭配略過驗證的需求。[Microsoft SqlClient 憑證設定](https://learn.microsoft.com/en-us/sql/connect/ado-net/connection-string-syntax?view=sql-server-ver17#use-trustservercertificate)
+
+## 對話模型與提示詞
 
 ```json
 {
   "Inference": {
-    "Provider": "google",
-    "AllowModelSelection": false,
-    "ShowModelNames": false,
-    "DefaultModelId": "gemma-4-26b-a4b-it"
+    "Provider": "ollama",
+    "Execution": {
+      "QueueCapacity": 16,
+      "TimeoutSeconds": 300,
+      "MaxInputCharacters": 12000,
+      "MaxOutputCharacters": 65536
+    },
+    "ModelPolicy": { "AllowModelSelection": false, "ShowModelNames": false },
+    "Providers": {
+      "Ollama": {
+        "Endpoint": "http://localhost:11434/",
+        "DefaultModelId": "qwen3:8b"
+      }
+    }
+  },
+  "Prompts": {
+    "DefaultSystemInstruction": "請以繁體中文回答，引用資料時指出來源。"
   }
 }
 ```
 
-| 政策                                          | 結果                                     |
-| --------------------------------------------- | ---------------------------------------- |
-| AllowModelSelection=true、ShowModelNames=true | 顯示核准模型下拉與名稱                   |
-| false、true                                   | 顯示指定模型，不能切換；後端拒絕其他模型 |
-| false、false                                  | 顯示「系統指定」，API／歷史訊息使用代號  |
-| true、false                                   | 可選「AI 助理 1／2…」，API 使用代號      |
+`Provider` 只選擇對話供應商。`Providers.Google` 保存 Google 的 `DefaultModelId`、`Models`，其 `ApiKey` 只在秘密檔。Google API 固定連線到官方 HTTPS endpoint。`Providers.Ollama` 保存地端 `Endpoint`、`DefaultModelId`、`Models`，不需 Google key。IIS 與 GPU 不在同台時，`localhost` 是 IIS 主機，須改成 GPU 主機位址。
 
-鎖定模型不存在時會停用送出，不能自動換另一個模型。SQL 保留實際 provider ID 供執行與稽核；名稱隱藏涵蓋 catalog、run、message、preferences 回應，不會更改模型自行生成的文字。代號依核准清單順序產生，調整清單後前端應重新載入。
+`Models` 是以別名為 key 的物件，**不是陣列**。`default` 是範本的預設模型項目；更換模型時更新它的 `Id`，並更新供應商的 `DefaultModelId`。增加模型可加 `secondary` 等穩定別名。不要在別名使用 `:`；實際模型 `Id` 可以有 `:`，例如 `qwen3:8b`。ASP.NET 設定來源依 key 合併，範本中已有的 `default` 仍會保留，應直接修改該項目。
 
-| 模型／執行參數                       | 用途                                                         |
-| ------------------------------------ | ------------------------------------------------------------ |
-| `Models[].Id`／`DisplayName`         | provider 真實 ID 與可見名稱                                  |
-| `ContextTokens`／`MaxOutputTokens`   | 此工作台的上下文與輸出限制；輸出必須小於 context             |
-| `SupportsStreaming`／`SupportsUsage` | 能力描述；只有 provider 回傳 usage 才有實際 token 數         |
-| `SupportsImages`                     | 明確核准圖片能力；Gemma 範本為 true，其他 profile 預設 false |
-| `ReasoningControl`                   | `none`、`google-level`、`ollama-toggle` 或 `ollama-level`    |
-| `ReasoningEfforts`                   | 此模型實際支援的選項；後端拒絕未核准值                       |
-| `DefaultReasoningEffort`             | 預設 `auto` 或上述選項之一                                   |
-| `QueueCapacity`／`TimeoutSeconds`    | 有界佇列容量（包含執行中工作）／生成逾時秒數                 |
-| `MaxInputCharacters`／`SystemPrompt` | 輸入字數上限／伺服器系統指令                                 |
+每個 profile 含 `Id`、`DisplayName`、`ContextTokens`、`MaxOutputTokens`、`SupportsStreaming`、`SupportsUsage`、`SupportsImages`、`ReasoningControl`、`ReasoningEfforts`、`DefaultReasoningEffort`。Context 範圍 1,024–32,768，輸出 token 必須小於 Context。模型須同時通過設定核准、實際安裝／API 可用性及群組政策。文字 Qwen profile 不應宣告圖片能力；圖片須配置支援 vision 的模型。思考模式只在模型實際支援時開啟。
 
-目前 Gemma 4 設定為 `google-level`、`["minimal","high"]`、預設 `minimal`。官方 API 的 minimal 關閉 thinking，high 開啟；介面呈現「快速回應／深入思考」，`auto` 不傳 thinking override。依 [Google Gemma 官方說明](https://ai.google.dev/gemma/docs/core/gemma_on_gemini_api#thinking)，不要套用其他模型的思考級別。
+`AllowModelSelection=false` 固定系統指定模型，`ShowModelNames=false` 隱藏名稱。逾時範圍 5–600 秒、排隊容量 1–64、輸入 100–32,000 字元、輸出 4,096–262,144 字元。排隊容量不是 GPU 並行數。提示詞與參考文件也佔 Context；Context 使用量為估算，完成後另記錄模型實際回報用量。
 
-切換 `ollama` 時須一起設定 `BaseUrl`、`DefaultModelId` 與完整核准 profiles（陣列覆蓋採 .NET 逐項合併，不是整體替換；若模型數減少請同步修改基礎清單）。預設不宣告思考能力；確認實際裝置 `/api/show` 支援後才設定 toggle 或 level，見 [Ollama thinking](https://docs.ollama.com/capabilities/thinking)。切換 provider／政策後重新啟動，舊的 active run 會依重啟恢復規則結束。
+## 向量設定獨立於對話
 
-## Context 與診斷
+| 區塊                  | 參數                                                                                                        |
+| --------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `Knowledge.Embedding` | `Provider`（google／ollama／none）、`Model`、`Dimensions`（目前 768）、`TimeoutSeconds`、`MaxDailyRequests` |
+| `Knowledge.Indexing`  | `MaxCollections`、`MaxDocumentsPerCollection`、`ChunkCharacters`、`ChunkOverlap`                            |
+| `Knowledge.Retrieval` | `UseNativeVector`、`PortableCandidateLimit`、`TopK`、`ContextCharacters`                                    |
 
-其餘模組參數同樣放一般本機設定；來源帳密仍放 secrets，完整 public example 在 `backend/src/AiNexus.Api/appsettings.Local.example.json`。
+對話用 Ollama 不會自動改變向量供應商。完全地端須同時設定 `Inference.Provider=ollama` 與 `Knowledge.Embedding.Provider=ollama`；`none` 改用既有關鍵字檢索。換 embedding model 必須重建索引，舊模型的向量不能與新模型混用，即使維度相同。後端驗證回傳長度、有限數值並正規化，原生 SQL 欄位目前為 `VECTOR(768)`。本地規劃與硬體建議見 [LOCAL-AI](LOCAL-AI.md)。
 
-| 區段           | 設定用途與說明                                                                                            |
-| -------------- | --------------------------------------------------------------------------------------------------------- |
-| Administration | 明確管理員 bootstrap；群組功能／模型配額由 [管理頁](ADMINISTRATION.md) 保存於 SQL                         |
-| Attachments    | 格式／大小／容量及保留，見 [附件](ATTACHMENTS.md)                                                         |
-| Knowledge      | 獨立 embedding、固定 768 維、索引／檢索範圍及日呼叫上限，見 [知識庫](KNOWLEDGE.md)                        |
-| Exports        | PDF 的 BrowserChannel／TimeoutSeconds，見 [成果](ARTIFACTS.md)；區段名為複數 Exports                      |
-| Integrations   | 來源開關、ACL 確認與允許群組；LegacyGdweb／LegacyMeiho 連線含秘密時放 secrets，見 [來源](INTEGRATIONS.md) |
+## 系統整合與其他限制
 
-個人閱讀／通知等偏好由設定頁存入 SQL，不必為每個使用者建立 appsettings。模型設定改變後，既有待處理評測會因指紋不同停止，請建立新的比較；已完成結果不變。見 [品質評測](QUALITY.md)。
+每個來源位於 `Integrations.Sources.Gdweb`／`Meiho`，包含 `Enabled`、`Transport`、`AclContractConfirmed`、`AllowedGroupIds`、`CommandTimeoutSeconds`、`MaxResults` 與自己的 `Database` 區塊。來源 SQL 的 Server／Name／憑證設定放一般檔，User／Password 放秘密檔。舊 `ConnectionStrings.LegacyGdweb`／`LegacyMeiho` 保留作進階相容方式。
 
-輸入框旁用量包含系統與對話指令、目前分支、草稿及附件，預留輸出 token。文字採保守 UTF-8 byte 預算，圖片採 `Attachments.ImageTokenEstimate`；不是精確 tokenizer 計數。超出預算時先略過最早完整輪次，原歷史仍保留；最新提問仍超限會拒絕送出。生成完成的實際 usage 另存 `GenerationRuns`，不把預估當實測數字。附件格式、配額及保存規則見 [文件與圖片分析](ATTACHMENTS.md)。
+`Transport=sql` 是目前已實作的唯讀 adapter。未來可在來源下擴充 API 的專屬設定與 adapter；目前若指定其他 transport，來源清楚顯示尚未支援，不會悄悄改用 SQL。來源端必須提供逐筆 ACL view，平台群組只是第一層門檻；見 [INTEGRATIONS](INTEGRATIONS.md)。
 
-`scripts/Test-Connections.ps1` 驗 SQL／EDoc helpers、預設功能關聯、AD 服務 bind 與設定模型的真實串流／思考選項。圖片能力啟用時，另以合成文字文件和純色圖片驗證辨識，不使用個人文件。會使用 Google 配額；SQL 只建立並清理自己的隨機驗證 audit。安全診斷在 `artifacts/connection-checks.json`，個人 AD 登入及跨帳號隔離需另行驗收。
+`Attachments` 管理檔案、訊息、個人容量、PDF 頁數、文字擷取、圖片 token 估算與草稿保留天數。`Exports` 管理 PDF 匯出瀏覽器及逾時。`AllowedHosts` 是 IIS 接受的實際 Host 名稱（不含 scheme／port）。`Security.DisableHttpsRedirection` 預設 false；停用轉址不會停用 Production 的 Secure cookie。`Logging.LogLevel` 控制日誌，不記錄密碼、key、完整提問或回答。

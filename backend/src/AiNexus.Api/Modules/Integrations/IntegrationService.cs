@@ -34,8 +34,8 @@ public sealed class IntegrationService(NexusDbContext db, AccessService access, 
             var option = options.Value.For(item.Id);
             var configured = !string.IsNullOrWhiteSpace(config.GetConnectionString(Key(item.Id)));
             var allowed = option.AllowedGroupIds.Any(id => grants.Groups.Any(g => g.Id == id));
-            var status = !option.Enabled ? "disabled" : !option.AclContractConfirmed ? "acl-unconfirmed" : !configured ? "unconfigured" : !allowed ? "not-authorized" : "configured";
-            var message = status switch { "disabled" => "來源尚未啟用。", "acl-unconfirmed" => "等待確認來源端的帳號映射與逐筆唯讀授權 view。", "unconfigured" => "等待設定專用的唯讀 SQL 連線。", "not-authorized" => "你的有效群組尚未取得此來源權限。", _ => "已設定。搜尋時才會驗證實際連線及資料權限。" };
+            var status = !option.Enabled ? "disabled" : option.Transport != "sql" ? "unsupported-transport" : !option.AclContractConfirmed ? "acl-unconfirmed" : !configured ? "unconfigured" : !allowed ? "not-authorized" : "configured";
+            var message = status switch { "disabled" => "來源尚未啟用。", "unsupported-transport" => "此來源的 API adapter 尚未實作，請使用 sql 傳輸。", "acl-unconfirmed" => "等待確認來源端的帳號映射與逐筆唯讀授權 view。", "unconfigured" => "等待設定專用的唯讀 SQL 連線。", "not-authorized" => "你的有效群組尚未取得此來源權限。", _ => "已設定。搜尋時才會驗證實際連線及資料權限。" };
             result.Add(new(item.Id, item.Name, item.Description, status, message, status == "configured", item.Kinds));
         }
         return result;
@@ -45,6 +45,7 @@ public sealed class IntegrationService(NexusDbContext db, AccessService access, 
         var grants = await access.ForUserAsync(actor, ct);
         if (!grants.Features.Any(x => x.Id == "integrations")) throw new ApiException(403, "integration_feature_revoked", "系統整合功能已停用。");
         var value = options.Value.For(source);
+        if (value.Transport != "sql") throw new ApiException(503, "source_transport_unsupported", "此來源的 API adapter 尚未實作。");
         if (!value.Enabled || !value.AclContractConfirmed || string.IsNullOrWhiteSpace(config.GetConnectionString(Key(source)))) throw new ApiException(503, "source_not_configured", "資料來源尚未完成唯讀連線與來源授權設定。");
         if (!value.AllowedGroupIds.Any(id => grants.Groups.Any(g => g.Id == id))) throw new ApiException(403, "source_forbidden", "你的群組沒有查詢此資料來源的權限。");
         var user = await db.Users.AsNoTracking().SingleAsync(x => x.Id == actor, ct);

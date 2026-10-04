@@ -18,10 +18,20 @@
     <div class="login-content">
       <span class="login-eyebrow">歡迎回來</span>
       <h2 id="login-heading">登入工作台</h2>
-      <p class="login-description">使用公司 AD 帳號與密碼。</p>
+      <p class="login-description">
+        {{
+          auth.session()?.mode === 'Windows'
+            ? '使用公司電腦的 Windows 身分登入。'
+            : '使用公司 AD 帳號與密碼。'
+        }}
+      </p>
       @if (loading()) {
         <p role="status">正在確認登入設定…</p>
-      } @else if (!auth.session()?.configured) {
+      } @else if (auth.session()?.mode === 'Windows') {
+        <p class="login-notice" role="status">
+          尚未取得 Windows 身分。請使用公司網域電腦，並確認瀏覽器與 IIS 的 Windows 驗證設定。
+        </p>
+      } @else if (auth.session() && !auth.session()?.configured) {
         <p class="login-notice" role="status">
           AD 登入尚未完成設定。請在後端本機設定填入服務帳號的 DnPass，再重新啟動。
         </p>
@@ -29,33 +39,50 @@
       @if (error(); as message) {
         <p class="login-error" role="alert">{{ message }}</p>
       }
-      <form (submit)="submit($event)">
-        <label for="ad-account">AD 帳號</label
-        ><input
-          id="ad-account"
-          autocomplete="username"
-          placeholder="公司帳號，例如 chen"
-          [formField]="loginForm.account"
-          aria-describedby="account-hint"
-        />
-        <p id="account-hint" class="login-field-hint">輸入帳號名稱，無需加入網域。</p>
-        <label for="ad-password">AD 密碼</label
-        ><input
-          id="ad-password"
-          type="password"
-          autocomplete="current-password"
-          [formField]="loginForm.password"
-        />
-        <button
-          class="primary-button login-submit"
-          type="submit"
-          [disabled]="
-            loading() || submitting() || !auth.session()?.configured || loginForm().invalid()
-          "
-        >
-          {{ submitting() ? '正在登入…' : '登入工作台' }}
+      @if (auth.session()?.mode !== 'Windows') {
+        <form (submit)="submit($event)">
+          <label for="ad-account">AD 帳號</label
+          ><input
+            id="ad-account"
+            autocomplete="username"
+            placeholder="公司帳號，例如 chen"
+            [formField]="loginForm.account"
+            aria-describedby="account-hint"
+          />
+          <p id="account-hint" class="login-field-hint">輸入帳號名稱，無需加入網域。</p>
+          <label for="ad-password">AD 密碼</label
+          ><input
+            id="ad-password"
+            type="password"
+            autocomplete="current-password"
+            [formField]="loginForm.password"
+          />
+          <button
+            class="primary-button login-submit"
+            type="submit"
+            [disabled]="
+              loading() || submitting() || !auth.session()?.configured || loginForm().invalid()
+            "
+          >
+            {{ submitting() ? '正在登入…' : '登入工作台' }}
+          </button>
+        </form>
+      }
+      @if (!loading() && (error() || auth.session()?.mode === 'Windows')) {
+        @if (auth.session()?.mode === 'Windows') {
+          <button
+            class="primary-button login-submit"
+            type="button"
+            [disabled]="submitting()"
+            (click)="windowsLogin()"
+          >
+            {{ submitting() ? '正在確認 Windows 身分…' : '使用 Windows 身分登入' }}
+          </button>
+        }
+        <button class="secondary-button login-submit" type="button" (click)="initialize()">
+          重新確認登入服務
         </button>
-      </form>
+      }
       <p class="login-privacy">以公司身分登入，接續自己的對話。管理員的授權檢視會留下稽核紀錄。</p>
     </div>
   </section>

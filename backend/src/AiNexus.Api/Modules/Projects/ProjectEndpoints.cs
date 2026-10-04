@@ -14,6 +14,7 @@ public static class ProjectEndpoints
         var routes = api.MapGroup("/projects").RequireAuthorization("feature:projects").WithTags("Projects");
         routes.MapGet("", async (CurrentUser u, ProjectService s, CancellationToken ct) => Results.Ok(await s.ListAsync((await u.GetAsync(ct)).Id, ct))).Produces<IReadOnlyList<ProjectDto>>();
         routes.MapPost("", async (ProjectRequest body, CurrentUser u, ProjectService s, CancellationToken ct) => Results.Ok(await s.CreateAsync((await u.GetAsync(ct)).Id, body, ct))).Produces<ProjectDto>();
+        routes.MapDelete("/{id:guid}", async (Guid id, CurrentUser u, ResourceLifecycle s, CancellationToken ct) => { await s.DeleteAsync((await u.GetAsync(ct)).Id, id, "project", ct); return Results.NoContent(); });
         routes.MapGet("/{id:guid}", async (Guid id, CurrentUser u, ProjectService s, CancellationToken ct) => Results.Ok(await s.GetAsync((await u.GetAsync(ct)).Id, id, ct))).Produces<ProjectDto>();
         routes.MapPut("/{id:guid}", async (Guid id, ProjectRequest body, CurrentUser u, ProjectService s, CancellationToken ct) => Results.Ok(await s.SaveAsync((await u.GetAsync(ct)).Id, id, body, ct))).Produces<ProjectDto>();
         routes.MapGet("/{id:guid}/access", async (Guid id, CurrentUser u, ResourceAccess s, CancellationToken ct) => Results.Ok(await s.AclAsync((await u.GetAsync(ct)).Id, id, "project", ct))).Produces<ResourceAclDto>();

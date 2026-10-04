@@ -71,7 +71,7 @@ BuildingBlocks.ApiEndpoints 組裝模組；BuildingBlocks 管 host、共用錯�
 
 OCR、段落工具與評測共用 ModelTaskService 的核准、配額及用量；保留配額以使用者 SQL row lock 序列化，RPC 不持有 transaction。評測凍結題庫、指令及模型設定指紋，設定變更阻擋執行／重試，已完成結果保留。來源文字以不可信資料封裝，授權在遠端呼叫前後再檢查。
 
-聊天排程／取消仍在程序內，目前**只允許一個 host／IIS worker**，不可開 web garden 或重疊 recycle。durable 文件任務不代表聊天已能多程序部署；擴展前需持久排程、租約／fencing 與跨程序取消。
+聊天排程仍在程序內，**每個 IIS app 使用一個 worker**，不開 web garden 或重疊 recycle。GenerationRuns 保存 ExecutorId 與兩分鐘的 LeaseExpiresAt，worker 每 15 秒續約；其他實例只處理已到期的租約，避免 local 與 IIS 共用資料庫時互相中止生成。取消先更新 SQL，原 executor 在續約時偵測並停止。這並未提供全域持久佇列或跨程序的模型容量限制；擴展前仍需補上。首次升級租約版本必須先停止所有舊 host，詳見 [IIS 文件](../deploy/iis/README.md)。
 
 ## 資料層與新增功能
 

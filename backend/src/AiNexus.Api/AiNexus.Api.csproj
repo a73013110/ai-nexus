@@ -22,5 +22,9 @@
   <ItemGroup>
     <Content Update="appsettings.Local.json" CopyToPublishDirectory="Never" />
     <Content Update="appsettings.Secrets.json" CopyToPublishDirectory="Never" />
+    <Content Update="appsettings.Production.json" CopyToPublishDirectory="Never" />
+    <Content Update="appsettings.Staging.json" CopyToPublishDirectory="Never" />
+    <Content Update="appsettings.*.example.json" CopyToPublishDirectory="Never" />
+    <Content Update="web.config" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
