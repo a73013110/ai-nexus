@@ -90,6 +90,18 @@ Ldap 模式先以服務帳號搜尋使用者，再以使用者 DN 和個人密�
 
 ## Context 與診斷
 
+其餘模組參數同樣放一般本機設定；來源帳密仍放 secrets，完整 public example 在 `backend/src/AiNexus.Api/appsettings.Local.example.json`。
+
+| 區段           | 設定用途與說明                                                                                            |
+| -------------- | --------------------------------------------------------------------------------------------------------- |
+| Administration | 明確管理員 bootstrap；群組功能／模型配額由 [管理頁](ADMINISTRATION.md) 保存於 SQL                         |
+| Attachments    | 格式／大小／容量及保留，見 [附件](ATTACHMENTS.md)                                                         |
+| Knowledge      | 獨立 embedding、固定 768 維、索引／檢索範圍及日呼叫上限，見 [知識庫](KNOWLEDGE.md)                        |
+| Exports        | PDF 的 BrowserChannel／TimeoutSeconds，見 [成果](ARTIFACTS.md)；區段名為複數 Exports                      |
+| Integrations   | 來源開關、ACL 確認與允許群組；LegacyGdweb／LegacyMeiho 連線含秘密時放 secrets，見 [來源](INTEGRATIONS.md) |
+
+個人閱讀／通知等偏好由設定頁存入 SQL，不必為每個使用者建立 appsettings。模型設定改變後，既有待處理評測會因指紋不同停止，請建立新的比較；已完成結果不變。見 [品質評測](QUALITY.md)。
+
 輸入框旁用量包含系統與對話指令、目前分支、草稿及附件，預留輸出 token。文字採保守 UTF-8 byte 預算，圖片採 `Attachments.ImageTokenEstimate`；不是精確 tokenizer 計數。超出預算時先略過最早完整輪次，原歷史仍保留；最新提問仍超限會拒絕送出。生成完成的實際 usage 另存 `GenerationRuns`，不把預估當實測數字。附件格式、配額及保存規則見 [文件與圖片分析](ATTACHMENTS.md)。
 
 `scripts/Test-Connections.ps1` 驗 SQL／EDoc helpers、預設功能關聯、AD 服務 bind 與設定模型的真實串流／思考選項。圖片能力啟用時，另以合成文字文件和純色圖片驗證辨識，不使用個人文件。會使用 Google 配額；SQL 只建立並清理自己的隨機驗證 audit。安全診斷在 `artifacts/connection-checks.json`，個人 AD 登入及跨帳號隔離需另行驗收。

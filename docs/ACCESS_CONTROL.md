@@ -4,7 +4,7 @@ AD 驗證決定「你是誰」，access schema 決定「你可以用哪些功能
 
 ## 第一版預設
 
-每個首次登入的使用者取得 `member` 角色。該角色加入 `workspace` 群組，群組授予 `chat`。三種主檔都有 Enabled；停用角色、群組或功能會排除相關 grant。多個角色／群組的有效功能取聯集並去重，不採名稱或前端路由推斷權限。
+每個首次登入的使用者取得 `member` 角色，加入 `workspace` 群組。最初版本只授予 `chat`；完整 migrations 後亦提供 projects、knowledge、artifacts、shared、quality、tasks。平台管理員可調整群組功能；admin／integrations 預設在獨立的 administrators 群組。三種主檔皆有 Enabled，停用會排除 grant。多個角色／群組的功能取聯集並去重，不採名稱或前端路由推斷權限。
 
 ```text
 AD login → Users（SID）→ UserRoles → Roles

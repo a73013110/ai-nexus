@@ -1,93 +1,82 @@
 # 架構與擴充邊界
 
-AI Nexus 採單一 ASP.NET Core host 的模組化單體與 Angular 按路由功能載入。第一版保留同一 assembly／scoped context 的 transaction 邊界；需要獨立部署或實際依賴邊界時再拆專案，避免每層只有轉送。
-
-`Attachments` 負責上傳、文件抽取、下載權限與配額；`Library` 管理個人提示詞。`Conversations` 的 Organization service 管理收藏、封存、標籤、複製與文字備份，與生成寫入分開。各模組有自己的 EF configuration，仍透過既有 `IEfHelper<INexusDatabase>` 共用 transaction。
-
-`Collaboration.ResourceAccess` 統一私有資源、具名成員與群組唯讀授權，前端以 `ResourceApi`／`ResourceSharing` 共用操作。`Knowledge` 管逐頁閱讀、切段、embedding、ACL 檢索與引用；`Operations` 提供通用 durable 任務 registry、租約與 fenced checkpoint。生成與 OCR 由 `ModelTaskService` 共用核准模型、日配額及實際用量，remote RPC 不持有資料庫交易。原生向量寫入接在同一 checkpoint transaction 內。
-
-Inference message 支援帶型別的 image parts，供應商的 Google／Ollama 格式只存在 adapter。ContextBuilder 將抽取文字與圖片成本納入同一套預算，生成參數保存當時的對話指令與圖片能力。
+AI Nexus 採 ASP.NET Core 模組化單體與 Angular 功能路由。模組各自管理 endpoint、資料模型與服務，共用 scoped NexusDbContext，讓跨模組異動仍在同一個 transaction 完成。需要獨立部署或強制依賴邊界時才拆 assembly；避免只有轉送用途的 service／repository。
 
 ```mermaid
 flowchart LR
-    UI[Angular 工作台] --> API[同源 API／SSE]
-    API --> Identity[Identity：AD 身分]
-    API --> Access[AccessControl：功能授權]
-    API --> Chat[Conversations：個人訊息樹]
-    API --> Inference[Inference：模型政策與排程]
-    API --> Operations[Operations：狀態與稽核]
-    API --> Attachments[Attachments：文件與圖片]
-    API --> Library[Library：個人提示詞]
-    Identity --> SQL[(AiNexus SQL Server)]
-    Access --> SQL
-    Chat --> SQL
-    Inference --> SQL
-    Operations --> SQL
-    Attachments --> SQL
-    Library --> SQL
-    Inference --> Provider[Google AI／Ollama adapter]
+    UI[Angular 功能頁面] --> API[同源 API／SSE]
+    API --> Gates[AD 身分／功能政策／資源 ACL]
+    Gates --> Modules[聊天／專案／知識／成果／分享／評測]
+    Modules --> EF[EF Core／scoped EDoc EfHelper]
+    EF --> SQL[(AiNexus SQL Server)]
+    Modules --> Jobs[Operations durable 任務]
+    Jobs --> Tasks[Inference 共用配額與模型任務]
+    Tasks --> Models[Google AI／Ollama]
+    Modules --> Sources[Integrations 來源政策]
+    Sources --> Dapper[EDoc DbHelper／固定參數化 SELECT]
+    Dapper --> Legacy[(獨立公文／校務授權 view)]
 ```
 
 ## 模組責任
 
-| 模組          | 責任                                                                     |
-| ------------- | ------------------------------------------------------------------------ |
-| Identity      | AD／Windows 認證、SID 映射、cookie／CSRF、個人偏好                       |
-| AccessControl | 角色／群組／功能、有效 grant、FeatureRequirement policy                  |
-| Conversations | 擁有者隔離、標題／soft-delete、訊息樹、分支選擇                          |
-| Inference     | provider adapter、核准模型／呈現政策、reasoning、Context、run／排程／SSE |
-| Operations    | 經驗證的服務狀態、稽核、replay 清理                                      |
-| Attachments   | 格式驗證、文件抽取、個人配額、owner 下載、訊息共用關聯                   |
-| Library       | 個人提示詞範本 CRUD 與容量限制                                           |
+| 模組           | 責任與邊界                                                        |
+| -------------- | ----------------------------------------------------------------- |
+| Identity       | AD／Windows、SID 映射、cookie／CSRF、帳號偏好；不保存個人密碼     |
+| AccessControl  | 使用者→角色→群組→功能的有效授權及 server-side policy              |
+| Administration | 一次性管理員 bootstrap、授權、群組模型／配額、稽核與用量          |
+| Conversations  | 私人訊息樹／分支、標題、收藏／封存／標籤、搜尋與文字備份          |
+| Inference      | provider、模型呈現政策、Context、聊天排程／SSE、共用模型任務      |
+| Operations     | 健康狀態、audit、事件清理、durable jobs、租約及 fenced checkpoint |
+| Attachments    | 格式及大小驗證、原始檔／文字、配額、下載授權與保留引用            |
+| Library        | 個人提示詞範本及容量限制                                          |
+| Collaboration  | 私有資源、具名 viewer／editor、群組唯讀 ACL、具名到期分享         |
+| Knowledge      | 逐頁閱讀、OCR／索引、獨立 embedding、授權檢索及引用快照           |
+| Artifacts      | 不可變版本、樂觀衝突檢查、段落工具及 Word／PDF                    |
+| Projects       | 共用指示／文件／範本／成果；提問仍屬個人                          |
+| Quality        | 私人回饋、固定評測、方案／設定快照、逐題結果及人工評分            |
+| Integrations   | 來源政策、固定授權 view、唯讀搜尋／歷程、明確匯入與聊天草稿       |
 
-各模組自己的 endpoint 檔案由 BuildingBlocks.ApiEndpoints 組裝。BuildingBlocks 只放共用 DTO／錯誤、host 設定、DB model 與 migrations；Database 放 SqlClient 與 EDoc adapter。模組對模組使用明確服務，不任意新增可繞過 owner／policy 的查詢入口。
+BuildingBlocks.ApiEndpoints 組裝模組；BuildingBlocks 管 host、共用錯誤／契約、context 與 migrations，Database 管 SqlClient、markers 與原始 EDoc helpers。模組間使用明確服務，不新增能繞過 owner、ACL 或模型核准的資料入口。
 
-Angular 的 features 放 UI 與業務 store；core 管 API／auth／themes／stream；shared/ui 放沒有業務狀態的可重用元件。ChatWorkspace 組合 ChatMessage、ComposerControls、InferenceSignal，設計 token 與樣式分區集中管理。新增功能採 lazy route 與獨立 store；不要把所有業務持續加進 ChatStore。
+## 三種權限
 
-### 前端共用與功能邊界
+1. **平台功能**：每次 request 由 SQL 計算有效角色／群組／feature；UI 導覽只是呈現，撤銷影響後續操作。
+2. **平台資料**：私人對話驗 owner；專案、知識、成果、評測驗 ResourceAccess。子文件／成果繼承專案 ACL。具名分享另保存快照、收件人及期限。
+3. **來源資料**：公文／校務先驗功能及允許來源的群組，再以完整登入者 SID／account 查來源授權 view。平台管理員不自動取得外部資料權限。
 
-| 位置                                   | 責任                                                                                                |
-| -------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `core/api/api-transport.ts`            | JSON、multipart、SSE 共用 transport；集中處理 CSRF、安全錯誤與登入失效                              |
-| `core/preferences/draft-repository.ts` | 依使用者／對話保存草稿，容量限制與受限儲存回饋                                                      |
-| `features/attachments`                 | DraftAttachments 管上傳／還原／移除；AttachmentList 共用於輸入區與歷史                              |
-| `features/workspace`                   | WorkspaceApi 管整理、範本與附件契約；操作、指令、範本 dialog 各自封裝                               |
-| `features/chat`                        | Workspace 組合 UI；Sidebar 管導覽與偏好；Store 管生成與對話狀態；MessageTree 每份歷史只建立一次索引 |
-| `shared/browser`                       | autosize、拖放／貼圖、下載、複製回饋及可取消等待                                                    |
-| `shared/ui`                            | 圖示、Markdown、Disclosure、CommandPalette 與生成訊號，不依賴 workspace API                         |
+擁有者／具名 editor 可寫，群組只授予閱讀。專案成員不因此取得彼此的私人聊天。分享不是匿名 bearer link，也不是原資源的 editor grant。詳見 [授權](ACCESS_CONTROL.md)、[專案](PROJECTS.md)、[分享](SHARING.md)、[整合](INTEGRATIONS.md)。
 
-登出／登入失效會清除目前使用者狀態與串流訂閱。回應帶有選取／身分版本檢查，避免晚到的舊結果覆蓋新對話；附件與 SSE 使用 AbortSignal。草稿、圖片能力、Context 與契約使用型別資料，不在 UI 複製 provider 判斷。
+## 前端共用邊界
 
-## 身分、功能與資料邊界
+| 位置                | 責任                                                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| core/api            | OpenAPI 型別、JSON／multipart／SSE transport、CSRF／登入失效／安全錯誤                                             |
+| core/auth           | 帳號世代與 WorkspaceSession；功能頁不為導覽載入聊天歷史                                                            |
+| core/preferences    | 主題、帳號設定、本機草稿、跨頁新對話草稿交接                                                                       |
+| features            | 按路由載入的 UI、feature API 與業務 store；不持續擴大 ChatStore                                                    |
+| shared/ui           | Select、ActionMenu、ConfirmDialog、InlineTitle、Markdown、JobProgress；FeaturePage／導覽與資源授權 UI 共用基礎服務 |
+| shared/browser      | ViewScope、autosize、拖放／貼圖、下載、複製、文字選取、popover 定位與未儲存提示                                    |
+| shared/graphics     | 不含認證／業務依賴的數學，例如傅立葉取樣／DFT                                                                      |
+| tokens.scss／styles | 三層 tokens、嵌套主題、分區樣式與統一減少動態規則                                                                  |
 
-Ldap 模式用服務帳號查 AD，再以使用者 DN／個人密碼 bind，取得 objectSid 後簽發 HttpOnly／SameSite=Strict cookie；採 StartTLS／LDAPS 信任 OS 憑證，不保存個人密碼。Windows 模式使用 Negotiate／IIS。登入有 CSRF／rate limit，正式 host 不提供測試身分 header。
+頁面使用 Signals、OnPush 與 zoneless。ViewScope 管生命週期與延遲回應的帳號檢查；同頁切換資源還需自己的 request version。離開／換帳號取消訂閱或忽略舊回應。新對話交接只留在記憶體，綁定帳號世代與 conversation ID，讀取一次；不把來源全文放在 URL、history state 或 localStorage。
 
-登入後 `/me` 回傳有效 roles／groups／features。chat endpoints 需要 server-side feature policy；每次 request 查 SQL 讓撤銷立即影響下一次操作。資料仍要驗 owner；對話、父節點、run／cancel／SSE／版本切換統一以 404 回應其他人的資源。寫入需身分綁定的 antiforgery cookie＋header。詳見 [ACCESS_CONTROL](ACCESS_CONTROL.md)。
+共享 UI 的 DOM ID 每個實例唯一；浮層使用原生 top layer，避免 dialog／捲動區裁切。管理員元件頁 /design 以正式元件及本機範例檢查主題、鍵盤、停用、確認與有限階段動畫。見 [設計系統](DESIGN_SYSTEM.md)。
 
-## 生成的生命週期
+## 生成與背景任務
 
-1. 驗證核准模型與系統鎖定政策、思考能力、owner、輸入與冪等 key。
-2. 保留有界佇列容量，在 transaction 保存訊息、run、參數 JSON 快照、首個事件與 audit；檢查 Context 後提交。
-3. 單一 worker 從 SQL 重建該訊息分支與系統指令，依快照呼叫 adapter。每人只能有一個 active run，SQL filtered unique index 與排程 gate 共同保護。
-4. 每 80ms／512 字元批次保存部分文字與遞增事件，SSE 訂閱只讀、不控制模型生命週期。
-5. 完成／取消／失敗保存最終狀態與 usage，釋放 active owner／佇列容量。停止保留部分回答，重啟會標示殘留工作 `server_restarted`。
+聊天生成驗核准模型、群組配額、owner、思考能力及冪等 key，再於 transaction 保存訊息、run、參數與首個事件。Context 只略過本次送往模型的最舊完整輪次，不刪歷史。worker 每 80ms／512 字元保存部分文字與 replay 事件；SSE 中斷不停止生成，恢復以 GET snapshot／序號進行。編輯新增分支，重新生成新增 assistant sibling。見 [SSE 契約](../contracts/SSE.md)。
 
-編輯建立 user 新分支，重新生成建立 assistant sibling；不覆寫歷史。Context 只裁切本次送給模型的最舊完整輪次，預留輸出 token，不刪 Messages。Context 預覽與實際建構共用演算法，清楚標示保守估算。
+文件／索引與評測使用 SQL durable jobs：claim、60 秒租約、2 秒 heartbeat、fenced checkpoint 與已完成項目的重用。停止先記取消要求，離開頁面不取消。外部 RPC 不保證跨程序 exactly-once，未保存結果的呼叫可能在重試時重做。
 
-Google 原生 SSE 與 Ollama JSONL 只存在各自 adapter。模型核准清單與可用目錄取交集；reasoning 依 profile 能力驗證並傳原生參數。key 在後端 header，adapter 過濾 thought／將 quota 等錯誤轉為安全碼。ModelPresentation 負責所有瀏覽器模型 ID／名稱呈現；隱藏名稱時 SQL 仍保留 provider ID。
+OCR、段落工具與評測共用 ModelTaskService 的核准、配額及用量；保留配額以使用者 SQL row lock 序列化，RPC 不持有 transaction。評測凍結題庫、指令及模型設定指紋，設定變更阻擋執行／重試，已完成結果保留。來源文字以不可信資料封裝，授權在遠端呼叫前後再檢查。
 
-斷線以 GET snapshot 與 `after` 序號恢復，不重送生成 POST；POST 回應遺失只以同一 idempotency key 重試。24 小時後重播事件可清理，authoritative run snapshot 仍可恢復。詳見 [SSE 契約](../contracts/SSE.md)。
+聊天排程／取消仍在程序內，目前**只允許一個 host／IIS worker**，不可開 web garden 或重疊 recycle。durable 文件任務不代表聊天已能多程序部署；擴展前需持久排程、租約／fencing 與跨程序取消。
 
-## 資料層與契約
+## 資料層與新增功能
 
-EF Core migrations 依模組管理業務 schema；正式禁止 EnsureCreated。ConversationService 重用 EDoc IEfHelper，和其他服務共享 DI scoped NexusDbContext／transaction。Dapper DbHelper 原封保留，透過 SqlClient factory 用於狀態、初始化與特定參數化 SQL；自有連線不自動加入 EF transaction。來源與適配見 [EDoc README](../backend/src/AiNexus.Api/Database/EDoc/README.md)，物件見 [DATABASE](DATABASE.md)。
+EF Core 管 mapping、migration、實體關聯與跨模組 transaction。保留 [EDoc helpers](../backend/src/AiNexus.Api/Database/EDoc/README.md)，adapter 讓業務寫入共用 scoped context。Dapper 自有連線不自動加入 EF transaction；原生向量寫入明確使用目前 connection／transaction。來源 adapter 只使用固定 SQL 及參數。見 [資料庫](DATABASE.md)。
 
-OpenAPI 產生前端 JSON／SSE 型別；契約工具隔離 TypeScript 5，Angular 使用 TypeScript 6。套件精確版本與 lockfiles 一起保存，升級時更新契約與驗證證據。
+新增功能建立 module、資料及授權規則、migration、必要的 feature seed、lazy route、共用元件組合，再更新 OpenAPI／型別與實際邊界測試。不是每個操作都要新建授權 feature；工具可沿用所屬功能政策。新增 job 實作 IBackgroundJobHandler，在 RPC 前後驗授權並以 checkpoint 保存結果。
 
-## 擴充與執行限制
-
-第一版排程、取消與狀態 gate 在程序記憶體，**只允許一個 host／IIS worker**。禁止 web garden、雙實例與重疊 recycle；分散式或多 GPU 調度要先加入 durable queue、lease／fencing 與跨程序取消，再改部署數量。不可只增加 worker processes。
-
-新增業務功能先建立 Module、Feature grant、前端 feature route、owner／scope policy 及 migration，再加契約／測試。角色管理後台需另有管理 grant 與 audit。更換 provider 時維持 IInferenceProvider 與可序列化參數快照；實際能力由管理設定核准，不在前端猜測。
-
-本機參數／secrets／key ring 與開發紀錄在 `.local`，build／報告在 artifacts，全部不進 Git。日誌只記 ID、狀態與錯誤類別，不記 prompt／回答／provider error body／連線字串。正式保留政策、備份還原、雙帳號隔離與區網效能需實機驗收。
+契約工具使用隔離的 TypeScript 5，Angular 使用 TypeScript 6。版本與 lockfiles 一起提交，不手改 generated schema。本機參數、秘密、key ring／進度在 .local，build／報告在 artifacts，整體忽略。日誌只記 ID、狀態與錯誤類別。正式 IIS、效能、來源真實 ACL 與備份還原需在部署環境驗收。
