@@ -21,6 +21,13 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
     {
         AccessControlConfiguration.Configure(model);
         AiNexus.Modules.Administration.AdministrationConfiguration.Configure(model);
+        AiNexus.Modules.Collaboration.CollaborationConfiguration.Configure(model);
+        BackgroundJobConfiguration.Configure(model);
+        ModelInvocationConfiguration.Configure(model);
+        AiNexus.Modules.Knowledge.KnowledgeConfiguration.Configure(model);
+        AiNexus.Modules.Attachments.AttachmentReferenceConfiguration.Configure(model);
+        PlatformFeatures.Add(model, "knowledge", "知識庫", "/knowledge", 30);
+        PlatformFeatures.Add(model, "tasks", "背景任務", "/tasks", 70);
         ConversationConfiguration.Configure(model);
         AiNexus.Modules.Attachments.AttachmentConfiguration.Configure(model);
         AiNexus.Modules.Library.LibraryConfiguration.Configure(model);

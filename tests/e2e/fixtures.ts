@@ -96,6 +96,7 @@ export class ApiFixture {
   authenticated = false;
   chatAccess = true;
   adminAccess = false;
+  extraFeatures: { id: string; name: string; route: string }[] = [];
   modelPolicy: ModelPolicy = {
     allowModelSelection: true,
     showModelNames: true,
@@ -174,6 +175,7 @@ export class ApiFixture {
           ],
           groups: [{ id: "workspace", name: "基本工作台" }],
           features: [
+            ...this.extraFeatures,
             ...(this.chatAccess
               ? [{ id: "chat", name: "AI 對話", route: "/chat" }]
               : []),

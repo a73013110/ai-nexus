@@ -79,6 +79,19 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             var run = await db.Runs.SingleAsync(x => x.Id == job.RunId, stoppingToken);
             if (!RunStates.IsActive(run.Status)) return;
+            try
+            {
+                var grants = await scope.ServiceProvider.GetRequiredService<AiNexus.Modules.AccessControl.AccessService>().ForUserAsync(run.OwnerId, stoppingToken);
+                if (!grants.Features.Any(x => x.Id == "chat")) throw new ApiException(403, "chat_access_revoked", "對話功能權限已撤銷。");
+                await scope.ServiceProvider.GetRequiredService<AiNexus.Modules.Administration.ModelPolicyService>().RequireAsync(run.OwnerId, run.ModelId, stoppingToken, checkQuota: false);
+                var sources = await db.Set<AiNexus.Modules.Knowledge.MessageCitation>().Where(x => x.MessageId == run.AssistantMessageId).Select(x => new AiNexus.Modules.Knowledge.KnowledgeHitDto(x.DocumentId, x.Title, x.PageNumber, x.Excerpt, 0)).ToListAsync(stoppingToken);
+                await scope.ServiceProvider.GetRequiredService<AiNexus.Modules.Knowledge.KnowledgeRetrieval>().ValidateHitsAsync(run.OwnerId, sources, stoppingToken);
+            }
+            catch (ApiException revoked)
+            {
+                await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, RunStates.Failed, revoked.Code, stoppingToken);
+                return;
+            }
             run.Status = RunStates.Running;
             run.StartedAt = DateTimeOffset.UtcNow;
             RunService.AddEvent(db, run, "status");

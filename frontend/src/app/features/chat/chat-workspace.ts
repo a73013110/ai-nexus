@@ -37,6 +37,7 @@ import { ComposerControls } from './composer-controls';
 import { ConversationFind } from './conversation-find';
 import { InlineTitle } from '../../shared/ui/inline-title';
 import { ConversationOutline } from './conversation-outline';
+import { KnowledgePicker } from '../knowledge/knowledge-picker';
 
 @Component({
   selector: 'nx-chat-workspace',
@@ -58,6 +59,7 @@ import { ConversationOutline } from './conversation-outline';
     ConversationFind,
     InlineTitle,
     ConversationOutline,
+    KnowledgePicker,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chat-workspace.html',
@@ -232,6 +234,7 @@ export class ChatWorkspace {
         prompt = this.store.draft().text;
       const attachmentIds = this.store.attachments.files().map((file) => file.id);
       this.store.messages();
+      this.store.knowledge.revision();
       this.store.contextUsage.set(null);
       if (!ready || !modelId) return;
       const controller = new AbortController();

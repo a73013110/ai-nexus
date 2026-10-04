@@ -58,7 +58,7 @@ public sealed class DocumentExtractor(IOptions<AttachmentOptions> options)
             }
             else text = new UTF8Encoding(false, true).GetString(data).TrimStart('\uFEFF');
             RequireLength(text.Length);
-            if (string.IsNullOrWhiteSpace(text)) throw new ApiException(400, "document_has_no_text", "文件沒有可讀文字；掃描 PDF 請轉成圖片後上傳。");
+            if (string.IsNullOrWhiteSpace(text) && extension != ".pdf") throw new ApiException(400, "document_has_no_text", "文件沒有可讀文字。");
             if (text.Contains('\0')) throw new InvalidDataException();
             return (extension == ".pdf" ? "application/pdf" : extension == ".docx" ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "text/plain", text);
         }

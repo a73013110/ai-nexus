@@ -39,7 +39,8 @@ public sealed class PersonalSettingsService(NexusDbContext db, CurrentUser curre
         var owner = (await current.GetAsync(ct)).Id;
         var since = DateTimeOffset.UtcNow.Date.AddDays(-29);
         var rows = await db.Runs.AsNoTracking().Where(x => x.OwnerId == owner && x.CreatedAt >= since)
-            .Select(x => new { x.CreatedAt, x.Status, x.InputTokens, x.OutputTokens }).ToListAsync(ct);
+            .Select(x => new { x.CreatedAt, x.Status, x.InputTokens, x.OutputTokens })
+            .Concat(db.Set<ModelInvocation>().AsNoTracking().Where(x => x.OwnerId == owner && x.CreatedAt >= since).Select(x => new { x.CreatedAt, x.Status, x.InputTokens, x.OutputTokens })).ToListAsync(ct);
         var bytes = await db.Set<Attachment>().Where(x => x.OwnerId == owner).SumAsync(x => (long?)x.Size, ct) ?? 0;
         var daily = rows.GroupBy(x => DateOnly.FromDateTime(x.CreatedAt.UtcDateTime)).OrderBy(x => x.Key)
             .Select(x => new UsageDayDto(x.Key, x.Count(), x.Sum(y => y.InputTokens ?? 0), x.Sum(y => y.OutputTokens ?? 0))).ToArray();

@@ -21,6 +21,8 @@ public static class ApiEndpoints
         api.MapAttachments();
         api.MapPromptLibrary();
         api.MapOperations();
+        api.MapJobs();
+        AiNexus.Modules.Knowledge.KnowledgeEndpoints.MapKnowledge(api);
         api.MapAdministration();
     }
 }

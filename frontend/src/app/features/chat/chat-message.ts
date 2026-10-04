@@ -7,10 +7,11 @@ import { CopyFeedback } from '../../shared/browser/copy-feedback';
 import { AttachmentList } from '../attachments/attachment-list';
 import { MessageTree } from './message-tree';
 import { InferenceSignal } from '../../shared/ui/inference-signal';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'nx-chat-message',
-  imports: [Icon, AttachmentList, InferenceSignal],
+  imports: [Icon, AttachmentList, InferenceSignal, RouterLink],
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <article
@@ -53,6 +54,19 @@ import { InferenceSignal } from '../../shared/ui/inference-signal';
       }
     } @else {
       <div class="markdown" [innerHTML]="html()" (click)="copyCode($event)"></div>
+    }
+    @if (!active() && message().sources?.length) {
+      <nav class="source-citations" aria-label="回答引用來源">
+        @for (source of message().sources; track source.number) {
+          <a
+            [routerLink]="['/reader', source.documentId]"
+            [queryParams]="{ page: source.pageNumber }"
+            [title]="source.excerpt"
+            ><strong>[{{ source.number }}]</strong><span>{{ source.title }}</span
+            ><small>第 {{ source.pageNumber }} 頁</small><nx-icon name="document"
+          /></a>
+        }
+      </nav>
     }
     @if (message().status === 'cancelled' && !active()) {
       <p class="message-note">已停止 · 保留部分回答</p>

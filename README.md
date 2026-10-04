@@ -8,6 +8,8 @@
 
 個人設定提供閱讀、外觀、對話操作、通知與用量；管理後台支援角色、功能群組、模型限制、日配額與異動稽核，詳見 [平台管理](docs/ADMINISTRATION.md)。
 
+知識庫支援具名與群組授權、文件索引及回答來源；共用閱讀器提供 PDF 頁碼、縮放、原文核對與文字搜尋，掃描 PDF／圖片可辨識文字。背景任務保存進度並支援取消與重試。見 [知識庫與文件](docs/KNOWLEDGE.md)、[SQL 向量設計](docs/VECTOR_ARCHITECTURE.md)。
+
 ## 快速啟動
 
 需要 Node 26.5.0、npm 11.6.1、.NET SDK 10.0.401 與 PowerShell 7.4+。在專案根目錄執行：
@@ -50,4 +52,4 @@
 
 Verify 使用獨立資料庫與測試 provider，Edge 測試也明確使用 fixture；不代表正式 AD／SQL／模型驗收。Test-Connections 使用本機實際設定，檢查 SQL／EDoc helpers／access seed、AD 服務 bind、模型串流及合成文件／圖片辨識，會使用模型配額。報告與截圖在 `artifacts`。
 
-目前部署設計要求單一 host／IIS worker。跨主機調度、RAG、掃描文件 OCR 仍需後續擴充。JSON 文字備份不含附件原始檔；完整備份使用 SQL 備份。正式 IIS、區網雙帳號隔離、設備效能與備份還原按部署文件另行驗收。
+目前聊天部署設計要求單一 host／IIS worker；文件背景任務已具備 durable 租約與 checkpoint。JSON 文字備份不含附件原始檔；完整備份使用 SQL 備份。正式 IIS、區網雙帳號隔離、設備效能與備份還原按部署文件另行驗收。

@@ -18,7 +18,7 @@ public sealed class InferenceOptions
 public sealed record InferenceImage(Guid AttachmentId, string ContentType, byte[]? Data, int EstimatedTokens);
 public sealed record InferenceMessage(string Role, string Content, IReadOnlyList<InferenceImage>? Images = null);
 public sealed record GenerationParameters(int ContextTokens, int MaxOutputTokens, double Temperature, string SystemPrompt, string ReasoningEffort = "auto", string ReasoningControl = "none", bool SupportsImages = false);
-public sealed record InferenceChunk(string Text, bool Done = false, long? InputTokens = null, long? OutputTokens = null);
+public sealed record InferenceChunk(string Text, bool Done = false, long? InputTokens = null, long? OutputTokens = null, string? FinishReason = null);
 
 public interface IInferenceProvider
 {

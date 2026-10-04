@@ -4,6 +4,8 @@ AI Nexus 採單一 ASP.NET Core host 的模組化單體與 Angular 按路由功�
 
 `Attachments` 負責上傳、文件抽取、下載權限與配額；`Library` 管理個人提示詞。`Conversations` 的 Organization service 管理收藏、封存、標籤、複製與文字備份，與生成寫入分開。各模組有自己的 EF configuration，仍透過既有 `IEfHelper<INexusDatabase>` 共用 transaction。
 
+`Collaboration.ResourceAccess` 統一私有資源、具名成員與群組唯讀授權，前端以 `ResourceApi`／`ResourceSharing` 共用操作。`Knowledge` 管逐頁閱讀、切段、embedding、ACL 檢索與引用；`Operations` 提供通用 durable 任務 registry、租約與 fenced checkpoint。生成與 OCR 由 `ModelTaskService` 共用核准模型、日配額及實際用量，remote RPC 不持有資料庫交易。原生向量寫入接在同一 checkpoint transaction 內。
+
 Inference message 支援帶型別的 image parts，供應商的 Google／Ollama 格式只存在 adapter。ContextBuilder 將抽取文字與圖片成本納入同一套預算，生成參數保存當時的對話指令與圖片能力。
 
 ```mermaid

@@ -21,7 +21,8 @@ public sealed class AccessAndPolicyTests
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Assert.Equal("member", Assert.Single(me.Access.Roles).Id);
         Assert.Equal("workspace", Assert.Single(me.Access.Groups).Id);
-        Assert.Equal(new FeatureDto("chat", "AI 對話", "/chat"), Assert.Single(me.Access.Features));
+        Assert.Contains(new FeatureDto("chat", "AI 對話", "/chat"), me.Access.Features);
+        Assert.Equal(me.Access.Features.Count, me.Access.Features.Select(x => x.Id).Distinct().Count());
         (await client.GetAsync("/api/v1/models")).EnsureSuccessStatusCode();
     }
 
@@ -48,13 +49,13 @@ public sealed class AccessAndPolicyTests
             await db.SaveChangesAsync();
         }
         // /me remains usable for account/preferences even when chat is unavailable.
-        Assert.Empty((await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features);
+        Assert.DoesNotContain((await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == "chat");
         foreach (var route in new[] { "models", "conversations", $"conversations/{conversation.Id}" })
             Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync($"/api/v1/{route}")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsJsonAsync("/api/v1/context", new ContextPreviewRequest(null, null, "hello", "test-model"))).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await PostRun(client, new(conversation.Id, "test-model", "hello", null, null))).StatusCode);
         using var newSession = await factory.SignedInAsync();
-        Assert.Empty((await newSession.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features);
+        Assert.DoesNotContain((await newSession.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == "chat");
     }
 
     [Fact]
@@ -76,7 +77,8 @@ public sealed class AccessAndPolicyTests
         var access = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access;
         Assert.Equal(2, access.Roles.Count);
         Assert.Equal(2, access.Groups.Count);
-        Assert.Single(access.Features);
+        Assert.Equal(access.Features.Count, access.Features.Select(x => x.Id).Distinct().Count());
+        Assert.Single(access.Features, x => x.Id == "chat");
     }
 
     [Fact]

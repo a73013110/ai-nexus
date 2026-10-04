@@ -69,6 +69,11 @@ import { Select } from '../../shared/ui/select';
           </p>
           <meter min="0" max="100" [value]="percent()" aria-label="預估上下文用量"></meter>
           <p>預留 {{ context.reservedOutputTokens.toLocaleString() }} tokens 給回答。</p>
+          @if (context.reservedKnowledgeTokens) {
+            <p>
+              其中約 {{ context.reservedKnowledgeTokens.toLocaleString() }} tokens 預留給知識來源。
+            </p>
+          }
           @if (context.droppedMessages) {
             <p>這次會略過最早 {{ context.droppedMessages }} 則上文；原始歷史仍保留。</p>
           }

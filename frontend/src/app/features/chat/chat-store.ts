@@ -25,6 +25,7 @@ import type { ConversationBackup, ConversationSettings } from '../../core/api/ty
 import { downloadFile } from '../../shared/browser/download';
 import { UserSettingsService } from '../../core/preferences/user-settings';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
+import { KnowledgeSelection } from '../knowledge/knowledge-selection';
 
 @Injectable({ providedIn: 'root' })
 export class ChatStore {
@@ -33,6 +34,7 @@ export class ChatStore {
   private readonly router = inject(Router);
   private readonly themes = inject(ThemeService);
   readonly attachments = inject(DraftAttachments);
+  readonly knowledge = inject(KnowledgeSelection);
   readonly drafts = inject(DraftRepository);
   private readonly workspace = inject(WorkspaceApi);
   readonly auth = inject(AuthService);
@@ -55,6 +57,9 @@ export class ChatStore {
   readonly contextNotice = signal<string | null>(null);
   readonly hasChatAccess = computed(
     () => this.me()?.access?.features?.some((x) => x.id === 'chat') ?? false,
+  );
+  readonly hasKnowledgeAccess = computed(
+    () => this.me()?.access.features?.some((x) => x.id === 'knowledge') ?? false,
   );
   readonly modelNotice = signal<string | null>(null);
   readonly error = signal<string | null>(null);
@@ -93,6 +98,8 @@ export class ChatStore {
       !this.loadingConversation() &&
       !this.selected()?.isArchived &&
       !this.attachments.uploading() &&
+      !this.attachments.files().some((x) => x.analysisMode === 'ocr-required') &&
+      !this.knowledge.saving() &&
       !this.visionNotice() &&
       !this.busy() &&
       !this.contextUsage()?.budgetExceeded,
@@ -235,6 +242,9 @@ export class ChatStore {
       const extensions = await Promise.allSettled([
         this.attachments.initialize(),
         this.workspace.labels(),
+        ...(this.me()?.access.features?.some((x) => x.id === 'knowledge')
+          ? [this.knowledge.initialize()]
+          : []),
       ]);
       if (generation !== this.auth.generation()) return;
       if (extensions[1].status === 'fulfilled') this.labels.set(extensions[1].value);
@@ -292,6 +302,7 @@ export class ChatStore {
     this.draft.set({ text: '' });
     this.attachments.reset();
     if (!id) {
+      await this.knowledge.load(null);
       this.selected.set(null);
       this.messages.set([]);
       this.loadingConversation.set(true);
@@ -308,6 +319,9 @@ export class ChatStore {
       if (version !== this.selectionVersion) return;
       this.selected.set(detail.conversation as Conversation);
       this.messages.set(detail.messages as Message[]);
+      if (this.me()?.access.features?.some((x) => x.id === 'knowledge'))
+        await this.knowledge.load(id);
+      if (version !== this.selectionVersion) return;
       await this.restoreDraft(id);
       if (version !== this.selectionVersion) return;
       if (detail.activeRun && this.liveRun()?.id !== detail.activeRun.id)
@@ -334,6 +348,8 @@ export class ChatStore {
       const draftId = conversation?.id ?? null;
       if (!conversation) {
         conversation = await this.api.createConversation();
+        if (generation !== this.auth.generation()) return;
+        await this.knowledge.bindNew(conversation.id);
         if (generation !== this.auth.generation()) return;
         this.selected.set(conversation);
         await this.router.navigate(['/chat', conversation.id]);
@@ -709,6 +725,7 @@ export class ChatStore {
     }
   }
   private resetSession() {
+    this.knowledge.reset();
     this.persistDraft();
     this.subscription?.abort();
     this.initialized = null;

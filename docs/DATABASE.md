@@ -2,6 +2,23 @@
 
 所有業務資料存於同一個 **AiNexus** SQL Server database。`schema` 是資料庫內的命名空間，例如 `[access].[Roles]`；不是另一個資料庫或獨立連線。依模組分 schema，讓物件責任、migration 與權限授予清楚，也避免未來功能都擠在 dbo。跨 schema 的外鍵與同一個 EF transaction 仍可使用。
 
+`KnowledgeAndJobs` migration 增加 collaboration／knowledge schema，並補上以下物件。原先七個 schema 仍保留，共九個業務 schema。
+
+| 物件                                               | 責任                                                      |
+| -------------------------------------------------- | --------------------------------------------------------- |
+| `collaboration.Resources`                          | 共用資源名稱、類別、擁有者、soft-delete 與更新時間        |
+| `collaboration.ResourceMembers` / `ResourceGroups` | 具名閱讀／編輯與群組唯讀 grant；擁有者權限隱含            |
+| `attachments.ResourceAttachments`                  | 文件／專案保留原檔引用，與訊息引用共同決定清理            |
+| `knowledge.Collections` / `Documents`              | 知識庫說明、原檔來源、處理狀態、頁數、索引 profile        |
+| `knowledge.DocumentPages`                          | 逐頁文字、native／OCR 標記與核對提示                      |
+| `knowledge.Chunks`                                 | 切段文字、頁碼、768 維 JSON；SQL 2025 額外有原生 VECTOR   |
+| `knowledge.ConversationCollections`                | 每段對話使用的知識庫，最多三個                            |
+| `knowledge.MessageCitations`                       | 回答當時的來源識別、頁碼、標題與摘要快照                  |
+| `operations.BackgroundJobs`                        | 租約、checkpoint、取消要求、嘗試次數與安全錯誤            |
+| `inference.ModelInvocations`                       | OCR／文字任務及 embedding 的實際用量與狀態；不保存 prompt |
+
+首次登入仍取得 member；workspace 群組增加 knowledge／tasks 功能。撤銷仍按 SQL 的有效角色、群組及功能判斷，不重新授予被撤銷角色。詳見 [知識庫](KNOWLEDGE.md)。
+
 ## 物件清單
 
 `PersonalSettings` migration 擴充 `identity.UserPreferences`，保存閱讀字級、行距、密度、內容與側欄寬度、Enter 送出、自動跟隨、草稿保存、完成通知與思考強度。預設值保留既有閱讀與操作習慣；設定以 UserId 的 1:1 關聯隔離，AD 密碼與 API key 不會放在個人偏好中。
@@ -62,7 +79,7 @@ erDiagram
     Conversations ||--o{ ConversationLabels : classified
 ```
 
-現在預設 `member`（一般使用者）→ `workspace`（基本工作台）→ `chat`（AI 對話，`/chat`）。AccessControl migration 補上既有使用者的 member；首次登入的新使用者在同一 transaction 建立角色關聯。既有使用者登入不重新授予被管理員撤銷的角色，細節見 [ACCESS_CONTROL](ACCESS_CONTROL.md)。
+預設 `member`（一般使用者）→ `workspace`（基本工作台）→ `chat`、`knowledge`、`tasks`。AccessControl migration 補上既有使用者的 member；首次登入的新使用者在同一 transaction 建立角色關聯。既有使用者登入不重新授予被管理員撤銷的角色，細節見 [ACCESS_CONTROL](ACCESS_CONTROL.md)。
 
 ## 訊息、分支與 Context
 
@@ -88,7 +105,7 @@ Dapper 預設建立自己的連線，不能假設它參與 EF transaction；需�
 
 DBA 可先建立 AiNexus，再審閱執行 [db/migrations.sql](../db/migrations.sql)；這份 EF 產生的 idempotent SQL 包含全部版本，需要在 AiNexus database 中執行。腳本不包含 CREATE LOGIN、CREATE DATABASE 或秘密。正式應用預設不啟動 migration，應由獨立部署帳號執行 DDL。EF 指引：[Applying migrations](https://learn.microsoft.com/en-us/ef/core/managing-schemas/migrations/applying)。
 
-正式帳號至少需要 identity、conversations、inference、operations、attachments、library schema 的 SELECT／INSERT／UPDATE／DELETE，以及 access schema SELECT／INSERT（首次登入寫 UserRoles）。更細的 access 權限可分為主檔 SELECT 與 UserRoles SELECT／INSERT；授權管理使用另一個受控管理登入。不可讓一般 UI 直接寫 Roles／Features，也不給應用登入 master 建庫與 ALTER schema 權限。
+正式帳號至少需要 identity、conversations、inference、operations、attachments、library、collaboration、knowledge schema 的 SELECT／INSERT／UPDATE／DELETE，以及 access schema SELECT／INSERT（首次登入寫 UserRoles）。更細的 access 權限可分為主檔 SELECT 與 UserRoles SELECT／INSERT；授權管理使用另一個受控管理登入。不可讓一般 UI 直接寫 Roles／Features，也不給應用登入 master 建庫與 ALTER schema 權限。
 
 ## 備份與資料生命週期
 

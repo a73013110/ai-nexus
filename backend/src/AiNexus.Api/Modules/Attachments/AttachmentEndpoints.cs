@@ -8,7 +8,7 @@ public static class AttachmentEndpoints
 {
     public static void MapAttachments(this RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/attachments").RequireAuthorization(BuiltInAccess.ChatPolicy).WithTags("Attachments");
+        var routes = api.MapGroup("/attachments").RequireAuthorization("feature:attachments").WithTags("Attachments");
         routes.MapGet("/policy", (AttachmentService files) => Results.Ok(files.Policy)).WithName("AttachmentPolicy").Produces<AttachmentPolicyDto>();
         // The application's header-based antiforgery middleware validates this upload as well.
         routes.MapPost("", async (HttpContext http, CurrentUser current, AttachmentService files, CancellationToken ct) =>

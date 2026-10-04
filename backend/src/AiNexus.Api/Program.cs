@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.DataProtection;
 using AiNexus.Modules.Attachments;
 using AiNexus.Modules.Library;
 using AiNexus.Modules.Administration;
+using AiNexus.Modules.Knowledge;
 
 var builder = WebApplication.CreateBuilder(args);
 NexusConfiguration.Load(builder, args);
@@ -57,6 +58,9 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
     options.AddPolicy(BuiltInAccess.ChatPolicy, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(BuiltInAccess.ChatFeature)));
     options.AddPolicy(AdministrationConfiguration.Policy, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(AdministrationConfiguration.Feature)));
+    foreach (var feature in new[] { "knowledge", "tasks" })
+        options.AddPolicy("feature:" + feature, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(feature)));
+    options.AddPolicy("feature:attachments", policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement("chat", "knowledge", "projects")));
 });
 builder.Services.AddScoped<AccessService>();
 builder.Services.AddScoped<IAuthorizationHandler, FeatureAuthorizationHandler>();
@@ -83,6 +87,7 @@ builder.Services.AddScoped<IDbHelper<INexusDatabase>, DbHelper<INexusDatabase>>(
 builder.Services.AddScoped<IEfHelper<INexusDatabase>>(sp => new EfHelper<INexusDatabase>(sp.GetRequiredService<NexusDbContext>()));
 builder.Services.AddScoped<IDbHelper<INexusBootstrapDatabase>, DbHelper<INexusBootstrapDatabase>>();
 builder.Services.AddScoped<DatabaseInitializer>();
+builder.Services.AddScoped<SqlVectorCapabilities>();
 builder.Services.AddSingleton<StorageReadiness>();
 builder.Services.AddSingleton<IdentityWriteLock>();
 builder.Services.AddScoped<CurrentUser>();
@@ -92,6 +97,19 @@ builder.Services.AddOptions<AdministrationOptions>().BindConfiguration("Administ
 builder.Services.AddScoped<AdminBootstrap>();
 builder.Services.AddScoped<AdministrationService>();
 builder.Services.AddScoped<ModelPolicyService>();
+builder.Services.AddSingleton<ModelQuotaLock>();
+builder.Services.AddScoped<ModelTaskService>();
+builder.Services.AddSingleton<AiNexus.Modules.Collaboration.ResourceWriteLock>();
+builder.Services.AddScoped<AiNexus.Modules.Collaboration.ResourceAccess>();
+builder.Services.AddScoped<JobService>();
+builder.Services.AddOptions<KnowledgeOptions>().BindConfiguration("Knowledge")
+    .Validate(x => x.EmbeddingProvider is "google" or "ollama" or "none" && x.Dimensions == 768 && x.EmbeddingModel.Length is > 0 and <= 160 && x.EmbeddingModel.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or ':' or '.') && x.MaxDailyEmbeddingRequests is >= 1 and <= 100000 && x.PortableCandidateLimit is >= 100 and <= 10000 && x.MaxCollections is >= 1 and <= 100 && x.MaxDocumentsPerCollection is >= 1 and <= 1000 && x.ChunkCharacters is >= 200 and <= 1600 && x.ChunkOverlap >= 0 && x.ChunkOverlap < x.ChunkCharacters / 2 && x.TopK is >= 1 and <= 10 && x.ContextCharacters is >= 1000 and <= 12000, "Invalid knowledge limits or embedding configuration.").ValidateOnStart();
+builder.Services.AddScoped<DocumentService>();
+builder.Services.AddScoped<NativeVectorStore>();
+builder.Services.AddScoped<KnowledgeRetrieval>();
+builder.Services.AddSingleton<IEmbeddingProvider, EmbeddingProvider>();
+builder.Services.AddScoped<IBackgroundJobHandler, DocumentIngestHandler>();
+builder.Services.AddHostedService<BackgroundJobWorker>();
 builder.Services.AddSingleton<AdministrativeWriteLock>();
 builder.Services.AddScoped<ConversationService>();
 builder.Services.AddScoped<ConversationOrganization>();
@@ -146,6 +164,17 @@ if (builder.Configuration.GetValue<bool>("InitializeDatabase"))
         Console.Error.WriteLine(ex is ApiException api ? api.Message : LocalDatabaseSettings.Diagnose(ex));
         Environment.ExitCode = 1;
     }
+    await app.DisposeAsync();
+    return;
+}
+if (builder.Configuration.GetValue<bool>("VerifySqlCapabilities"))
+{
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<SqlVectorCapabilities>().VerifyAsync(builder.Configuration["VerificationOutput"] ?? "sql-capabilities.json", CancellationToken.None);
+    }
+    catch (Exception ex) { Console.Error.WriteLine(LocalDatabaseSettings.Diagnose(ex)); Environment.ExitCode = 1; }
     await app.DisposeAsync();
     return;
 }

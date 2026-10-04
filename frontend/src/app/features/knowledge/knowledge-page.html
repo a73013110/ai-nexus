@@ -1,0 +1,239 @@
+<nx-feature-page title="知識庫" description="整理可查核的文件來源，讓 AI 回答附上依據與頁碼。">
+  <button
+    page-actions
+    class="primary-button"
+    (click)="openEditor()"
+    [disabled]="loading() || !session.has('knowledge')"
+  >
+    <nx-icon name="plus" />新增知識庫
+  </button>
+  @if (error()) {
+    <p class="error-banner" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="success-note" role="status">{{ notice() }}</p>
+  }
+  @if (loading()) {
+    <p role="status">正在載入知識庫…</p>
+  } @else if (!collections().length && session.has('knowledge')) {
+    <div class="knowledge-empty">
+      <span class="empty-symbol"><nx-icon name="library" /></span>
+      <h2>給工作一個可靠的資料來源</h2>
+      <p>
+        建立知識庫後，直接放入 PDF、Word、圖片或文字文件。<br />可保留為個人資料，也可授權同事或群組閱讀。
+      </p>
+      <button class="primary-button" (click)="openEditor()">
+        建立第一個知識庫<nx-icon name="plus" />
+      </button>
+    </div>
+  } @else if (current(); as collection) {
+    <div class="knowledge-heading">
+      <nx-select
+        label="目前知識庫"
+        [options]="choices()"
+        [value]="selected()"
+        (valueChange)="select($event)"
+      />
+      <div class="resource-badges">
+        <span>{{ documents().length }} 份文件</span
+        ><span>{{
+          collection.resource.isOwner
+            ? '我擁有的知識庫'
+            : collection.resource.canEdit
+              ? '可協作編輯'
+              : '共用給我 · 可閱讀'
+        }}</span>
+      </div>
+      <nx-action-menu label="知識庫操作" [items]="collectionActions()" (action)="action($event)" />
+    </div>
+    @if (collection.description) {
+      <p class="knowledge-description">{{ collection.description }}</p>
+    }
+    @if (collection.resource.canEdit) {
+      <div class="knowledge-upload" [nxFileDrop]="!uploading()" (filesDropped)="upload($event)">
+        <nx-icon name="upload" />
+        <div>
+          <strong>{{ uploadLabel() || '將文件拖到這裡，或選取檔案' }}</strong
+          ><small
+            >每份最多 {{ (policy()?.maxFileBytes || 4194304) / 1048576 }} MB · 掃描 PDF
+            與圖片會自動辨識文字</small
+          >
+        </div>
+        <button class="secondary-button" [disabled]="uploading()" (click)="fileInput.click()">
+          {{ uploading() ? '正在上傳…' : '選取文件' }}</button
+        ><input
+          #fileInput
+          type="file"
+          multiple
+          [accept]="accept()"
+          hidden
+          (change)="upload(fileInput.files!); fileInput.value = ''"
+        />
+      </div>
+    }
+    <div class="knowledge-sections">
+      <section class="knowledge-documents">
+        <div class="page-toolbar">
+          <h2>來源文件</h2>
+          <label class="page-search"
+            ><nx-icon name="search" /><input
+              type="search"
+              aria-label="篩選來源文件"
+              placeholder="依檔名篩選"
+              [value]="filter()"
+              (input)="filter.set($any($event.target).value)"
+          /></label>
+        </div>
+        @if (loadingDocuments()) {
+          <p role="status">正在載入文件…</p>
+        } @else {
+          <div class="resource-list">
+            @for (document of visible(); track document.id) {
+              <div class="resource-row document-row" animate.enter="panel-arrive">
+                <span class="document-symbol"><nx-icon name="document" /></span
+                ><a class="resource-summary" [routerLink]="['/reader', document.id]"
+                  ><strong>{{ document.fileName }}</strong
+                  ><small
+                    >{{ document.pageCount ? document.pageCount + ' 頁 · ' : ''
+                    }}{{
+                      document.chunkCount ? document.chunkCount + ' 段索引' : '點擊閱讀原檔與文字'
+                    }}</small
+                  ></a
+                ><span class="resource-status" [attr.data-status]="document.status">{{
+                  status(document.status)
+                }}</span>
+                @if (document.canEdit) {
+                  <nx-action-menu
+                    [label]="'文件操作：' + document.fileName"
+                    [items]="actions(document)"
+                    (action)="documentAction($event, document)"
+                  />
+                }
+              </div>
+            } @empty {
+              <div class="empty-state">
+                <h3>尚無符合的文件</h3>
+                <p>上傳文件後即可閱讀、索引及查詢。</p>
+              </div>
+            }
+          </div>
+        }
+      </section>
+      <section class="knowledge-test">
+        <span class="panel-eyebrow">先核對，再帶入對話</span>
+        <h2>查詢這個知識庫</h2>
+        <p class="form-note">
+          僅檢索已完成處理、且你有權限的來源。需要 AI 回答時，可在對話的輸入框旁選取知識庫。
+        </p>
+        <form class="platform-form" (submit)="search($event)">
+          <label
+            >查詢內容<textarea
+              aria-label="知識庫查詢內容"
+              rows="3"
+              maxlength="2000"
+              placeholder="例如：差旅費用申請需要哪些文件？"
+              [value]="query()"
+              (input)="query.set($any($event.target).value)"
+            ></textarea></label
+          ><button class="primary-button" [disabled]="searching() || !query().trim()">
+            {{ searching() ? '正在檢索…' : '檢索來源' }}<nx-icon name="search" />
+          </button>
+        </form>
+        @if (result(); as result) {
+          <p class="form-note" role="status">
+            {{ result.mode === 'keyword' ? '關鍵字檢索' : '語意向量檢索' }} ·
+            {{ result.hits.length }} 個結果
+          </p>
+          <div class="knowledge-hits">
+            @for (hit of result.hits; track $index) {
+              <a
+                class="knowledge-hit"
+                [routerLink]="['/reader', hit.documentId]"
+                [queryParams]="{ page: hit.pageNumber }"
+                ><strong>{{ hit.title }}</strong
+                ><span>第 {{ hit.pageNumber }} 頁<nx-icon name="chevron" /></span>
+                <p>{{ hit.text }}</p></a
+              >
+            } @empty {
+              <p class="source-warning">目前沒有符合來源。請調整查詢內容，或確認文件已完成索引。</p>
+            }
+          </div>
+        }
+      </section>
+    </div>
+    <nx-resource-sharing
+      [path]="'/knowledge/collections/' + collection.resource.id + '/access'"
+      [name]="collection.resource.name"
+      (saved)="notice.set('存取權限已更新，下次操作立即生效。')"
+    />
+  }
+</nx-feature-page>
+<dialog #editorDialog class="platform-dialog" (cancel)="cancel($event)">
+  <form class="platform-form" (submit)="save($event)">
+    <div class="dialog-heading">
+      <h2>{{ editorId() ? '編輯知識庫' : '新增知識庫' }}</h2>
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="關閉知識庫設定"
+        [disabled]="saving()"
+        (click)="editorDialog.close()"
+      >
+        <nx-icon name="close" />
+      </button>
+    </div>
+    @if (editorError()) {
+      <p class="error-banner" role="alert">{{ editorError() }}</p>
+    }
+    <label
+      >名稱<input
+        aria-label="知識庫名稱"
+        autofocus
+        required
+        maxlength="120"
+        [value]="editorName()"
+        (input)="editorName.set($any($event.target).value)" /></label
+    ><label
+      >說明<textarea
+        aria-label="知識庫說明"
+        rows="3"
+        maxlength="2000"
+        [value]="editorDescription()"
+        (input)="editorDescription.set($any($event.target).value)"
+      ></textarea>
+    </label>
+    <p class="form-note">新建時僅你可以存取。建立後可從「存取權限」加入同事或群組。</p>
+    <div class="dialog-actions">
+      <button
+        type="button"
+        class="secondary-button"
+        [disabled]="saving()"
+        (click)="editorDialog.close()"
+      >
+        取消</button
+      ><button class="primary-button" [disabled]="saving()">
+        {{ saving() ? '正在儲存…' : '儲存知識庫' }}
+      </button>
+    </div>
+  </form>
+</dialog>
+<dialog #deleteDialog class="platform-dialog" (cancel)="cancel($event)">
+  @if (editorError()) {
+    <p class="error-banner" role="alert">{{ editorError() }}</p>
+  }
+  <div class="dialog-heading">
+    <h2>移除{{ deleteTarget()?.collection ? '知識庫' : '文件' }}</h2>
+  </div>
+  <p>
+    將移除「{{ deleteTarget()?.name }}」{{
+      deleteTarget()?.collection ? '與其中所有文件' : ''
+    }}的來源與索引。已生成的對話文字會保留；來源連結將無法再開啟。
+  </p>
+  <div class="dialog-actions">
+    <button class="secondary-button" [disabled]="saving()" (click)="deleteDialog.close()">
+      取消</button
+    ><button class="danger-button" [disabled]="saving()" (click)="remove()">
+      {{ saving() ? '正在移除…' : '移除來源' }}
+    </button>
+  </div>
+</dialog>

@@ -31,14 +31,17 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     private readonly Action<InferenceOptions>? configureInference;
     private readonly Action<AttachmentOptions>? configureAttachments;
     private readonly string[] bootstrapAdministrators;
+    private readonly bool backgroundJobs;
     private readonly string databasePath = Path.Combine(Path.GetTempPath(), $"nexus-test-{Guid.NewGuid():N}.db");
     public TestProvider Provider { get; } = new();
-    public NexusFactory(Action<NexusDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null, string[]? administrators = null)
+    public TestEmbeddings Embeddings { get; } = new();
+    public NexusFactory(Action<NexusDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null, string[]? administrators = null, bool backgroundJobs = true)
     {
         this.ldap = ldap;
         configureInference = inference;
         configureAttachments = attachments;
         bootstrapAdministrators = administrators ?? [];
+        this.backgroundJobs = backgroundJobs;
         using var db = new NexusDbContext(new DbContextOptionsBuilder<NexusDbContext>().UseSqlite($"Data Source={databasePath};Default Timeout=10").Options);
         db.Database.EnsureCreated();
         seed?.Invoke(db);
@@ -65,6 +68,9 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
             services.PostConfigure<AdAuthenticationOptions>(options => { options.Mode = ldap ? "Ldap" : "Windows"; options.DnPass = "fixture-only"; });
             services.RemoveAll<IInferenceProvider>();
             services.AddSingleton<IInferenceProvider>(Provider);
+            services.RemoveAll<AiNexus.Modules.Knowledge.IEmbeddingProvider>();
+            services.AddSingleton<AiNexus.Modules.Knowledge.IEmbeddingProvider>(Embeddings);
+            if (!backgroundJobs) services.Remove(services.Single(x => x.ServiceType == typeof(IHostedService) && x.ImplementationType == typeof(AiNexus.Modules.Operations.BackgroundJobWorker)));
             services.PostConfigure<InferenceOptions>(options =>
             {
                 options.QueueCapacity = 2;
@@ -102,6 +108,21 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     {
         base.Dispose(disposing);
         if (disposing) { SqliteConnection.ClearAllPools(); File.Delete(databasePath); }
+    }
+}
+
+public sealed class TestEmbeddings : AiNexus.Modules.Knowledge.IEmbeddingProvider
+{
+    public string Profile => "fixture-embedding:768:v1";
+    public bool Enabled { get; set; } = true;
+    public bool Fail { get; set; }
+    public int Calls;
+    public int DelayMs { get; set; }
+    public async Task<float[]> EmbedAsync(Guid owner, string text, bool document, string? title, CancellationToken ct)
+    {
+        Interlocked.Increment(ref Calls); await Task.Delay(DelayMs, ct);
+        if (Fail) throw new ApiException(503, "fixture_embedding_failed", "測試索引服務暫停。");
+        var value = new float[768]; value[0] = 1; return value;
     }
 }
 

@@ -62,6 +62,7 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
         using var reader = new StreamReader(await response.Content.ReadAsStreamAsync(ct));
         var frame = new StringBuilder();
         var completed = false;
+        string? finishReason = null;
         long? input = null, output = null;
         while (true)
         {
@@ -89,6 +90,7 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
                         if (candidate.TryGetProperty("finishReason", out var finish))
                         {
                             if (finish.GetString() is not ("STOP" or "MAX_TOKENS")) throw Blocked();
+                            finishReason = finish.GetString();
                             completed = true;
                         }
                     }
@@ -101,7 +103,7 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
             if (line.StartsWith("data:", StringComparison.Ordinal)) frame.AppendLine(line[5..].TrimStart(' '));
         }
         if (!completed) throw new InvalidDataException("Provider stream ended without completion.");
-        yield return new InferenceChunk("", true, input, output);
+        yield return new InferenceChunk("", true, input, output, finishReason);
     }
 
     private static IReadOnlyList<object> Parts(InferenceMessage message)

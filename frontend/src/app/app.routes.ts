@@ -1,8 +1,34 @@
 import { Routes } from '@angular/router';
 
 export const routes: Routes = [
-  { path: 'admin', loadComponent: () => import('./features/admin/admin-page').then(module => module.AdminPage) },
-  { path: 'settings', loadComponent: () => import('./features/settings/settings-page').then(module => module.SettingsPage) },
+  {
+    path: 'knowledge',
+    loadComponent: () =>
+      import('./features/knowledge/knowledge-page').then((module) => module.KnowledgePage),
+  },
+  {
+    path: 'tasks',
+    loadComponent: () => import('./features/tasks/tasks-page').then((module) => module.TasksPage),
+  },
+  {
+    path: 'reader/attachment/:id',
+    loadComponent: () =>
+      import('./features/knowledge/document-reader').then((module) => module.DocumentReader),
+  },
+  {
+    path: 'reader/:id',
+    loadComponent: () =>
+      import('./features/knowledge/document-reader').then((module) => module.DocumentReader),
+  },
+  {
+    path: 'admin',
+    loadComponent: () => import('./features/admin/admin-page').then((module) => module.AdminPage),
+  },
+  {
+    path: 'settings',
+    loadComponent: () =>
+      import('./features/settings/settings-page').then((module) => module.SettingsPage),
+  },
   {
     path: 'login',
     loadComponent: () =>

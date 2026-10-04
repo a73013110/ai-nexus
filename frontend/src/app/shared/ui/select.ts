@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Icon } from './icon';
+import { positionPopover } from '../browser/popover-position';
 
 export interface SelectOption {
   value: string;
@@ -122,14 +123,7 @@ export class Select {
     this.reveal();
   }
   private position() {
-    const anchor = this.trigger().nativeElement.getBoundingClientRect(),
-      panel = this.panel().nativeElement;
-    const width = Math.min(Math.max(anchor.width, 220), innerWidth - 24);
-    panel.style.width = `${width}px`;
-    panel.style.maxHeight = `${Math.max(120, Math.min(320, innerHeight - 32))}px`;
-    const height = panel.getBoundingClientRect().height;
-    panel.style.left = `${Math.max(12, Math.min(anchor.left, innerWidth - width - 12))}px`;
-    panel.style.top = `${Math.max(12, anchor.bottom + height + 8 < innerHeight ? anchor.bottom + 6 : anchor.top - height - 6)}px`;
+    positionPopover(this.trigger().nativeElement, this.panel().nativeElement);
   }
   close() {
     this.panel().nativeElement.hidePopover();

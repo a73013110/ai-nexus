@@ -24,7 +24,7 @@ public sealed class AccessService(NexusDbContext db)
     }
 }
 
-public sealed record FeatureRequirement(string FeatureId) : IAuthorizationRequirement;
+public sealed record FeatureRequirement(params string[] FeatureIds) : IAuthorizationRequirement;
 
 // Grants are read from SQL per request so revocation does not wait for a cookie to expire.
 public sealed class FeatureAuthorizationHandler(CurrentUser current, AccessService access, IHttpContextAccessor http)
@@ -36,7 +36,7 @@ public sealed class FeatureAuthorizationHandler(CurrentUser current, AccessServi
         var ct = http.HttpContext?.RequestAborted ?? CancellationToken.None;
         var user = await current.GetAsync(ct);
         var grants = await access.ForUserAsync(user.Id, ct);
-        if (grants.Features.Any(x => x.Id == requirement.FeatureId)) context.Succeed(requirement);
+        if (grants.Features.Any(x => requirement.FeatureIds.Contains(x.Id))) context.Succeed(requirement);
         else throw new ApiException(403, "feature_forbidden", "你的角色目前沒有使用此功能的權限，請聯絡管理員。");
     }
 }

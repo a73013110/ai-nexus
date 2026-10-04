@@ -43,7 +43,9 @@ public sealed class ConversationService(IEfHelper<INexusDatabase> ef, NexusDbCon
         var links = await ef.Set<MessageAttachment>().AsNoTracking().Where(x => messages.Select(m => m.Id).Contains(x.MessageId))
             .Select(x => new { x.MessageId, x.Attachment.Id, x.Attachment.FileName, x.Attachment.ContentType, x.Attachment.Size, HasText = x.Attachment.ExtractedText != null }).ToListAsync(ct);
         var attachments = links.ToLookup(x => x.MessageId, x => new AttachmentDto(x.Id, x.FileName, x.ContentType, x.Size, x.ContentType.StartsWith("image/"), x.HasText ? "extracted-text" : "vision"));
-        return new(conversation.ToDto(), messages.Select(x => presentation.Message(x) with { Attachments = attachments[x.Id].ToList() }).ToList(), run is null ? null : presentation.Run(run));
+        var citations = (await ef.Set<AiNexus.Modules.Knowledge.MessageCitation>().AsNoTracking().Where(x => messages.Select(m => m.Id).Contains(x.MessageId)).OrderBy(x => x.Number).ToListAsync(ct))
+            .ToLookup(x => x.MessageId, x => new AiNexus.Modules.Knowledge.CitationDto(x.Number, x.DocumentId, x.Title, x.PageNumber, x.Excerpt));
+        return new(conversation.ToDto(), messages.Select(x => presentation.Message(x) with { Attachments = attachments[x.Id].ToList(), Sources = citations[x.Id].ToList() }).ToList(), run is null ? null : presentation.Run(run));
     }
 
     public async Task<ConversationDto> RenameAsync(Guid owner, Guid id, string title, CancellationToken ct)
@@ -90,7 +92,7 @@ public sealed class ConversationService(IEfHelper<INexusDatabase> ef, NexusDbCon
                 await ef.SaveChangesAsync(ct);
                 // Delete only metadata stubs; never materialize image bytes to reclaim quota.
                 // Clones and other branches keep their own links and retain the shared file.
-                var unused = await ef.Set<Attachment>().Where(x => x.OwnerId == owner && fileIds.Contains(x.Id) && !ef.Set<MessageAttachment>().Any(link => link.AttachmentId == x.Id)).Select(x => new Attachment { Id = x.Id }).ToListAsync(ct);
+                var unused = await ef.Set<Attachment>().Where(x => x.OwnerId == owner && fileIds.Contains(x.Id) && !ef.Set<MessageAttachment>().Any(link => link.AttachmentId == x.Id) && !ef.Set<AttachmentReference>().Any(link => link.AttachmentId == x.Id)).Select(x => new Attachment { Id = x.Id }).ToListAsync(ct);
                 ef.Set<Attachment>().RemoveRange(unused);
                 await ef.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);

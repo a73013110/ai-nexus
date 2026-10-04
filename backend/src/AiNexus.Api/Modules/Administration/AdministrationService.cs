@@ -115,7 +115,8 @@ public sealed class AdministrationService(NexusDbContext db, CurrentUser current
     public async Task<AdminUsageDto> UsageAsync(CancellationToken ct)
     {
         DateTimeOffset since = DateTimeOffset.UtcNow.Date.AddDays(-29);
-        var totals = await db.Runs.AsNoTracking().Where(x => x.CreatedAt >= since).GroupBy(x => 1)
+        var totals = await db.Runs.AsNoTracking().Where(x => x.CreatedAt >= since).Select(x => new { x.Status, x.InputTokens, x.OutputTokens })
+            .Concat(db.Set<ModelInvocation>().AsNoTracking().Where(x => x.CreatedAt >= since).Select(x => new { x.Status, x.InputTokens, x.OutputTokens })).GroupBy(x => 1)
             .Select(g => new { Requests = g.Count(), Completed = g.Count(x => x.Status == "completed"), Input = g.Sum(x => x.InputTokens ?? 0), Output = g.Sum(x => x.OutputTokens ?? 0), WithUsage = g.Count(x => x.InputTokens.HasValue && x.OutputTokens.HasValue) }).SingleOrDefaultAsync(ct);
         return new(await db.Users.CountAsync(ct), totals?.Requests ?? 0, totals?.Completed ?? 0, totals?.Input ?? 0, totals?.Output ?? 0, totals?.WithUsage ?? 0);
     }

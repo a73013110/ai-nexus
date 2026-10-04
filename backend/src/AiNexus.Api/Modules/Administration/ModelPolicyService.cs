@@ -20,7 +20,8 @@ public sealed class ModelPolicyService(NexusDbContext db, AccessService access, 
             if (allowed is null) allowed = ids.ToHashSet(StringComparer.Ordinal); else allowed.IntersectWith(ids);
         }
         DateTimeOffset start = DateTimeOffset.UtcNow.Date;
-        var count = await db.Runs.CountAsync(x => x.OwnerId == owner && x.CreatedAt >= start, ct);
+        var count = await db.Runs.CountAsync(x => x.OwnerId == owner && x.CreatedAt >= start, ct)
+            + await db.Set<ModelInvocation>().CountAsync(x => x.OwnerId == owner && x.CreatedAt >= start && x.Kind != "embedding", ct);
         return new(allowed?.Select(presentation.PublicId).ToArray(), policies.Select(x => x.DailyRequestLimit).Min(),
             policies.Select(x => x.StoredAttachmentLimitBytes).Min(), count, start.AddDays(1));
     }

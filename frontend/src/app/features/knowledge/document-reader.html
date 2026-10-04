@@ -1,0 +1,141 @@
+<nx-feature-page
+  [title]="document()?.fileName || '文件閱讀器'"
+  description="核對原始頁面、閱讀擷取文字，並直接跳至引用的來源。"
+>
+  <div page-actions class="reader-actions">
+    <a class="secondary-button" [routerLink]="document()?.collectionId ? '/knowledge' : '/chat'"
+      ><nx-icon name="left" />返回工作台</a
+    >
+    @if (document()?.hasOriginal) {
+      <a class="secondary-button" [href]="contentUrl() + '?download=true'"
+        ><nx-icon name="download" />下載原檔</a
+      >
+    }
+  </div>
+  @if (error()) {
+    <p role="alert" class="error-banner">{{ error() }}</p>
+  }
+  @if (loading()) {
+    <p role="status">正在開啟文件…</p>
+  }
+  @if (document(); as info) {
+    @if (info.warning) {
+      <p class="source-warning"><nx-icon name="info" />{{ info.warning }}</p>
+    }
+    @if (job(); as job) {
+      @if (job.status !== 'completed') {
+        <div class="reader-job">
+          <nx-job-progress [job]="job" />
+          @if (canControl()) {
+            @if (['failed', 'cancelled'].includes(job.status) && job.attempt < 6) {
+              <button class="secondary-button" [disabled]="busy()" (click)="control(true)">
+                重試處理
+              </button>
+            } @else if (['queued', 'running'].includes(job.status)) {
+              <button
+                class="quiet-button"
+                [disabled]="busy() || job.cancelRequested"
+                (click)="control(false)"
+              >
+                停止
+              </button>
+            }
+          }
+        </div>
+      }
+    }
+    <div class="reader-toolbar">
+      <div class="reader-pagination">
+        <button
+          class="icon-button"
+          aria-label="上一頁"
+          [disabled]="page() <= 1"
+          (click)="navigate(page() - 1)"
+        >
+          <nx-icon name="left" />
+        </button>
+        <nx-select
+          label="文件頁碼"
+          [options]="pageOptions()"
+          [value]="'' + page()"
+          (valueChange)="navigate(+$event)"
+        /><span class="form-note">共 {{ total() }} 頁</span>
+        <button
+          class="icon-button"
+          aria-label="下一頁"
+          [disabled]="page() >= total()"
+          (click)="navigate(page() + 1)"
+        >
+          <nx-icon name="chevron" />
+        </button>
+      </div>
+      @if (isPdf() || isImage()) {
+        <div class="reader-mode">
+          <button [attr.aria-pressed]="mode() === 'original'" (click)="mode.set('original')">
+            原始頁面</button
+          ><button [attr.aria-pressed]="mode() === 'text'" (click)="mode.set('text')">
+            擷取文字
+          </button>
+        </div>
+      }
+      @if (isPdf() && mode() === 'original') {
+        <nx-select
+          label="文件縮放"
+          [options]="zoomOptions"
+          [value]="zoom()"
+          (valueChange)="zoom.set($event)"
+        />
+      }
+    </div>
+    <div class="reader-search">
+      <label class="page-search"
+        ><nx-icon name="search" /><input
+          type="search"
+          aria-label="搜尋文件文字"
+          placeholder="搜尋文件文字，直接跳頁"
+          maxlength="200"
+          [value]="query()"
+          (input)="query.set($any($event.target).value)"
+      /></label>
+      @if (query().trim()) {
+        <span class="form-note" role="status">{{ matches().length }} 頁符合</span>
+        <div class="reader-matches">
+          @for (match of matches(); track match.pageNumber) {
+            <button class="quiet-button" (click)="navigate(match.pageNumber); mode.set('text')">
+              第 {{ match.pageNumber }} 頁
+            </button>
+          }
+        </div>
+      }
+    </div>
+    @if (mode() === 'original' && (isPdf() || isImage())) {
+      <div class="reader-original" [attr.aria-busy]="rendering()">
+        @if (isPdf()) {
+          <canvas #pdfCanvas [attr.aria-label]="info.fileName + ' 第 ' + page() + ' 頁'"></canvas>
+        } @else {
+          <img [src]="contentUrl()" [alt]="info.fileName" />
+        }
+      </div>
+      @if (rendering()) {
+        <p class="form-note" role="status">正在繪製第 {{ page() }} 頁…</p>
+      }
+      @if (renderError()) {
+        <p class="error-banner" role="alert">{{ renderError() }}</p>
+      }
+    } @else {
+      <article class="reader-text">
+        @if (text(); as text) {
+          <div class="reader-text-meta">
+            <span>第 {{ text.pageNumber }} 頁</span
+            ><span>{{
+              text.extraction === 'ocr' ? 'AI 文字辨識 · 請核對原文' : '文件原生文字'
+            }}</span>
+          </div>
+          <pre><nx-text-highlight [text]="text.text" [query]="query()" /></pre>
+        } @else {
+          <p class="form-note">此頁尚無擷取文字，請查看處理狀態或原始頁面。</p>
+        }
+      </article>
+    }
+  }
+</nx-feature-page>

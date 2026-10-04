@@ -64,6 +64,22 @@ namespace AiNexus.BuildingBlocks.Migrations
                             Name = "管理",
                             Route = "/admin",
                             SortOrder = 90
+                        },
+                        new
+                        {
+                            Id = "knowledge",
+                            Enabled = true,
+                            Name = "知識庫",
+                            Route = "/knowledge",
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = "tasks",
+                            Enabled = true,
+                            Name = "背景任務",
+                            Route = "/tasks",
+                            SortOrder = 70
                         });
                 });
 
@@ -157,6 +173,16 @@ namespace AiNexus.BuildingBlocks.Migrations
                         {
                             GroupId = "administrators",
                             FeatureId = "admin"
+                        },
+                        new
+                        {
+                            GroupId = "workspace",
+                            FeatureId = "knowledge"
+                        },
+                        new
+                        {
+                            GroupId = "workspace",
+                            FeatureId = "tasks"
                         });
                 });
 
@@ -275,6 +301,21 @@ namespace AiNexus.BuildingBlocks.Migrations
                     b.ToTable("Attachments", "attachments");
                 });
 
+            modelBuilder.Entity("AiNexus.Modules.Attachments.AttachmentReference", b =>
+                {
+                    b.Property<Guid>("ResourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("AttachmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ResourceId", "AttachmentId");
+
+                    b.HasIndex("AttachmentId");
+
+                    b.ToTable("ResourceAttachments", "attachments");
+                });
+
             modelBuilder.Entity("AiNexus.Modules.Attachments.MessageAttachment", b =>
                 {
                     b.Property<Guid>("MessageId")
@@ -288,6 +329,77 @@ namespace AiNexus.BuildingBlocks.Migrations
                     b.HasIndex("AttachmentId");
 
                     b.ToTable("MessageAttachments", "attachments");
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Collaboration.ResourceGroup", b =>
+                {
+                    b.Property<Guid>("ResourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("GroupId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.HasKey("ResourceId", "GroupId");
+
+                    b.HasIndex("GroupId");
+
+                    b.ToTable("ResourceGroups", "collaboration");
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Collaboration.ResourceMember", b =>
+                {
+                    b.Property<Guid>("ResourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("nvarchar(12)");
+
+                    b.HasKey("ResourceId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ResourceMembers", "collaboration");
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Collaboration.WorkspaceResource", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(24)
+                        .HasColumnType("nvarchar(24)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "Kind", "UpdatedAt");
+
+                    b.ToTable("Resources", "collaboration");
                 });
 
             modelBuilder.Entity("AiNexus.Modules.Conversations.Conversation", b =>
@@ -520,6 +632,46 @@ namespace AiNexus.BuildingBlocks.Migrations
                     b.ToTable("GenerationRuns", "inference");
                 });
 
+            modelBuilder.Entity("AiNexus.Modules.Inference.ModelInvocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<long?>("InputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)");
+
+                    b.Property<long?>("OutputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "CreatedAt");
+
+                    b.ToTable("ModelInvocations", "inference");
+                });
+
             modelBuilder.Entity("AiNexus.Modules.Inference.ModelProfile", b =>
                 {
                     b.Property<string>("Id")
@@ -579,6 +731,182 @@ namespace AiNexus.BuildingBlocks.Migrations
                     b.HasKey("RunId", "Sequence");
 
                     b.ToTable("RunEvents", "inference");
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Knowledge.ConversationKnowledge", b =>
+                {
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CollectionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("ConversationId", "CollectionId");
+
+                    b.HasIndex("CollectionId");
+
+                    b.ToTable("ConversationCollections", "knowledge");
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Knowledge.DocumentPage", b =>
+                {
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("PageNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Extraction")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<bool>("NeedsReview")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("DocumentId", "PageNumber");
+
+                    b.ToTable("DocumentPages", "knowledge");
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Knowledge.KnowledgeChunk", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("EmbeddingJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("EmbeddingProfile")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("Ordinal")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PageNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentId", "Ordinal")
+                        .IsUnique();
+
+                    b.ToTable("Chunks", "knowledge");
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Knowledge.KnowledgeCollection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Collections", "knowledge");
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Knowledge.KnowledgeDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("AttachmentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("ChunkCount")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("CollectionId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("EmbeddingProfile")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("nvarchar(180)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("bit");
+
+                    b.Property<Guid?>("JobId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("PageCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<string>("Warning")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttachmentId");
+
+                    b.HasIndex("CollectionId", "Status");
+
+                    b.ToTable("Documents", "knowledge");
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Knowledge.MessageCitation", b =>
+                {
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("int");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Excerpt")
+                        .IsRequired()
+                        .HasMaxLength(800)
+                        .HasColumnType("nvarchar(800)");
+
+                    b.Property<int>("PageNumber")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("nvarchar(180)");
+
+                    b.HasKey("MessageId", "Number");
+
+                    b.HasIndex("DocumentId");
+
+                    b.ToTable("MessageCitations", "knowledge");
                 });
 
             modelBuilder.Entity("AiNexus.Modules.Library.PromptTemplate", b =>
@@ -645,6 +973,92 @@ namespace AiNexus.BuildingBlocks.Migrations
                     b.HasIndex("At");
 
                     b.ToTable("AuditEvents", "operations");
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Operations.BackgroundJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("ActiveKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Attempt")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("CancelRequested")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("CompletedUnits")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(240)
+                        .HasColumnType("nvarchar(240)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("nvarchar(180)");
+
+                    b.Property<Guid?>("LeaseToken")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTimeOffset?>("LeaseUntil")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ResourceId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)");
+
+                    b.Property<Guid>("SubjectId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int?>("TotalUnits")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActiveKey")
+                        .IsUnique()
+                        .HasFilter("[ActiveKey] IS NOT NULL");
+
+                    b.HasIndex("ResourceId");
+
+                    b.HasIndex("OwnerId", "CreatedAt");
+
+                    b.HasIndex("Status", "LeaseUntil", "CreatedAt");
+
+                    b.ToTable("BackgroundJobs", "operations");
                 });
 
             modelBuilder.Entity("AiNexus.Modules.AccessControl.RoleGroupFeature", b =>
@@ -719,6 +1133,21 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("AiNexus.Modules.Attachments.AttachmentReference", b =>
+                {
+                    b.HasOne("AiNexus.Modules.Attachments.Attachment", null)
+                        .WithMany()
+                        .HasForeignKey("AttachmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AiNexus.Modules.Collaboration.WorkspaceResource", null)
+                        .WithMany()
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("AiNexus.Modules.Attachments.MessageAttachment", b =>
                 {
                     b.HasOne("AiNexus.Modules.Attachments.Attachment", "Attachment")
@@ -734,6 +1163,45 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .IsRequired();
 
                     b.Navigation("Attachment");
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Collaboration.ResourceGroup", b =>
+                {
+                    b.HasOne("AiNexus.Modules.AccessControl.RoleGroup", null)
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AiNexus.Modules.Collaboration.WorkspaceResource", null)
+                        .WithMany()
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Collaboration.ResourceMember", b =>
+                {
+                    b.HasOne("AiNexus.Modules.Collaboration.WorkspaceResource", null)
+                        .WithMany()
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("AiNexus.Modules.Identity.NexusUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Collaboration.WorkspaceResource", b =>
+                {
+                    b.HasOne("AiNexus.Modules.Identity.NexusUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("AiNexus.Modules.Conversations.Conversation", b =>
@@ -880,11 +1348,96 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("AiNexus.Modules.Inference.ModelInvocation", b =>
+                {
+                    b.HasOne("AiNexus.Modules.Identity.NexusUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("AiNexus.Modules.Inference.RunEvent", b =>
                 {
                     b.HasOne("AiNexus.Modules.Inference.GenerationRun", null)
                         .WithMany()
                         .HasForeignKey("RunId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Knowledge.ConversationKnowledge", b =>
+                {
+                    b.HasOne("AiNexus.Modules.Knowledge.KnowledgeCollection", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AiNexus.Modules.Conversations.Conversation", null)
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Knowledge.DocumentPage", b =>
+                {
+                    b.HasOne("AiNexus.Modules.Knowledge.KnowledgeDocument", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Knowledge.KnowledgeChunk", b =>
+                {
+                    b.HasOne("AiNexus.Modules.Knowledge.KnowledgeDocument", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Knowledge.KnowledgeCollection", b =>
+                {
+                    b.HasOne("AiNexus.Modules.Collaboration.WorkspaceResource", null)
+                        .WithMany()
+                        .HasForeignKey("Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Knowledge.KnowledgeDocument", b =>
+                {
+                    b.HasOne("AiNexus.Modules.Attachments.Attachment", null)
+                        .WithMany()
+                        .HasForeignKey("AttachmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("AiNexus.Modules.Knowledge.KnowledgeCollection", null)
+                        .WithMany()
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("AiNexus.Modules.Collaboration.WorkspaceResource", null)
+                        .WithMany()
+                        .HasForeignKey("Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Knowledge.MessageCitation", b =>
+                {
+                    b.HasOne("AiNexus.Modules.Knowledge.KnowledgeDocument", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AiNexus.Modules.Conversations.Message", null)
+                        .WithMany()
+                        .HasForeignKey("MessageId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
@@ -896,6 +1449,20 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Operations.BackgroundJob", b =>
+                {
+                    b.HasOne("AiNexus.Modules.Identity.NexusUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AiNexus.Modules.Collaboration.WorkspaceResource", null)
+                        .WithMany()
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("AiNexus.Modules.Conversations.Conversation", b =>
