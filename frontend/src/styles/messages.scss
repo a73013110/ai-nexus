@@ -11,6 +11,31 @@ nx-chat-message {
   padding: 0 0 var(--message-gap);
   font-size: var(--text-body);
 }
+.message.user {
+  width: var(--message-user-width);
+  margin-left: auto;
+}
+.message.user .message-heading,
+.message.user .message-actions {
+  justify-content: flex-end;
+}
+.message.user .user-copy {
+  background: var(--user-bubble);
+  border-color: var(--user-bubble-border);
+  border-radius: var(--p-radius-lg) var(--p-radius-lg) var(--p-radius-sm) var(--p-radius-lg);
+}
+.message:not(.user) {
+  padding-left: var(--p-space-4);
+  border-left: 2px solid var(--line);
+}
+.assistant-label {
+  color: var(--signal);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-pill);
+  padding: 1px var(--p-space-2);
+  font-size: var(--text-caption);
+}
 .message-heading {
   display: flex;
   align-items: center;

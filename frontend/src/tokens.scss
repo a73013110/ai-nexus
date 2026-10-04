@@ -117,6 +117,11 @@
   --composer-input-max: min(12rem, 25dvh);
   --composer-radius: var(--p-radius-lg);
   --message-gap: var(--p-space-6);
+  --message-user-width: 85%;
+  --user-bubble: var(--accent-soft);
+  --user-bubble-border: var(--line);
+  --outline-space: 2.5rem;
+  --outline-card-width: 21rem;
   --welcome-width: 42rem;
   --menu-width: 17rem;
   --dialog-width: 34rem;

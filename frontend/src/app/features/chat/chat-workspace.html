@@ -33,7 +33,16 @@
           <nx-icon name="sidebar" /></button
         ><span class="topbar-divider"></span>
         <div class="conversation-heading">
-          <h1>{{ store.selected()?.title || '新對話' }}</h1>
+          @if (store.selected(); as conversation) {
+            <nx-inline-title
+              [value]="conversation.title"
+              [scope]="conversation.id"
+              [save]="renameCurrent"
+              [disabled]="store.loadingConversation()"
+            />
+          } @else {
+            <h1>新對話</h1>
+          }
         </div>
         @if (store.selected()?.isArchived) {
           <span class="archive-badge">已封存</span>
@@ -53,6 +62,11 @@
           />
         }
       </div>
+      <nx-conversation-outline
+        [messages]="store.visibleMessages()"
+        [viewport]="viewport"
+        (navigated)="following.set(false)"
+      />
     </header>
     @if (findOpen()) {
       <nx-conversation-find

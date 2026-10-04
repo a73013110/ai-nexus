@@ -35,6 +35,8 @@ import { ChatSidebar } from './chat-sidebar';
 import { ChatStore } from './chat-store';
 import { ComposerControls } from './composer-controls';
 import { ConversationFind } from './conversation-find';
+import { InlineTitle } from '../../shared/ui/inline-title';
+import { ConversationOutline } from './conversation-outline';
 
 @Component({
   selector: 'nx-chat-workspace',
@@ -54,6 +56,8 @@ import { ConversationFind } from './conversation-find';
     PromptLibraryDialog,
     CommandPalette,
     ConversationFind,
+    InlineTitle,
+    ConversationOutline,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chat-workspace.html',
@@ -103,6 +107,10 @@ export class ChatWorkspace {
   readonly importInput = viewChild<ElementRef<HTMLInputElement>>('importInput');
   readonly saveSettings = (conversation: Conversation, settings: ConversationSettings) =>
     this.store.organize(conversation, settings);
+  readonly renameCurrent = (title: string) => {
+    const conversation = this.store.selected();
+    return conversation ? this.store.rename(conversation.id, title) : Promise.resolve(false);
+  };
   readonly statusText = computed(() =>
     this.store.stopping()
       ? '正在停止…'

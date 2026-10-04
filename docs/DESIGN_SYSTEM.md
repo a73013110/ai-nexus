@@ -38,6 +38,8 @@
 
 ## Motion tokens
 
+提問泡泡的寬度、底色與邊框使用 `--message-user-width`、`--user-bubble`、`--user-bubble-border`；AI 正文保留左側閱讀線與角色標籤。對話定位使用 `--outline-space`、`--outline-card-width`，桌面預留側邊空間，手機將目錄入口放在頂列。摘要卡支援 hover 與 focus，跳轉遵循減少動態設定。
+
 | Token                               | 預設                        | 使用                                 |
 | ----------------------------------- | --------------------------- | ------------------------------------ |
 | `--motion-fast`                     | 120ms                       | 快速提示                             |

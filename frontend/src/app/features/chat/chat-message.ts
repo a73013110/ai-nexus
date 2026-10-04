@@ -19,13 +19,17 @@ import { InferenceSignal } from '../../shared/ui/inference-signal';
     [class.search-match]="matched()"
     [class.search-current]="currentMatch()"
     [attr.data-message-id]="message().id"
+    [attr.aria-label]="message().role === 'user' ? '你的提問' : 'AI 回覆'"
     animate.enter="message-enter"
   >
     <div class="message-heading">
       <span class="role-mark" [class.nexus]="message().role === 'assistant'">{{
         message().role === 'user' ? '你' : 'N'
       }}</span
-      ><strong>{{ message().role === 'user' ? '你' : 'AI Nexus' }}</strong>
+      ><strong>{{ message().role === 'user' ? '你的提問' : 'AI Nexus' }}</strong>
+      @if (message().role === 'assistant') {
+        <span class="assistant-label">AI 回覆</span>
+      }
       @if (showModelNames() && message().modelId) {
         <span class="message-model">{{ message().modelId }}</span>
       }
