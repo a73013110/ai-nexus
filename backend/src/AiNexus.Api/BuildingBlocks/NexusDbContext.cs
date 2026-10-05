@@ -24,6 +24,9 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
         AiNexus.Modules.Collaboration.CollaborationConfiguration.Configure(model);
         BackgroundJobConfiguration.Configure(model);
         ModelInvocationConfiguration.Configure(model);
+        AiNexus.Modules.Billing.BillingConfiguration.Configure(model);
+        AiNexus.Modules.WebSearch.WebSearchConfiguration.Configure(model);
+        AiNexus.Modules.Repositories.RepositoryConfiguration.Configure(model);
         AiNexus.Modules.Knowledge.KnowledgeConfiguration.Configure(model);
         AiNexus.Modules.Artifacts.ArtifactConfiguration.Configure(model);
         AiNexus.Modules.Projects.ProjectConfiguration.Configure(model);
@@ -34,6 +37,8 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
         PlatformFeatures.Add(model, "quality", "品質評測", "/quality", 60);
         PlatformFeatures.Add(model, "shared", "分享", "/shared", 50);
         PlatformFeatures.Add(model, "projects", "專案", "/projects", 20);
+        PlatformFeatures.Add(model, "dashboard", "總覽", "/dashboard", 5);
+        PlatformFeatures.Add(model, "repositories", "程式庫", "/repositories", 65);
         AiNexus.Modules.Attachments.AttachmentReferenceConfiguration.Configure(model);
         PlatformFeatures.Add(model, "knowledge", "知識庫", "/knowledge", 30);
         PlatformFeatures.Add(model, "tasks", "背景任務", "/tasks", 70);

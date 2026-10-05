@@ -63,7 +63,7 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
         var frame = new StringBuilder();
         var completed = false;
         string? finishReason = null;
-        long? input = null, output = null;
+        long? input = null, output = null, cached = null, reasoning = null;
         while (true)
         {
             var line = await reader.ReadLineAsync(ct);
@@ -79,7 +79,9 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
                     if (root.TryGetProperty("usageMetadata", out var usage))
                     {
                         if (usage.TryGetProperty("promptTokenCount", out var prompt)) input = prompt.GetInt64();
-                        if (usage.TryGetProperty("candidatesTokenCount", out var answer)) output = answer.GetInt64();
+                        cached = usage.TryGetProperty("cachedContentTokenCount", out var cache) ? cache.GetInt64() : 0;
+                        reasoning = usage.TryGetProperty("thoughtsTokenCount", out var thoughts) ? thoughts.GetInt64() : 0;
+                        if (usage.TryGetProperty("candidatesTokenCount", out var answer)) output = checked(answer.GetInt64() + reasoning.Value);
                     }
                     var text = new StringBuilder();
                     if (root.TryGetProperty("candidates", out var candidates) && candidates.GetArrayLength() > 0)
@@ -94,7 +96,7 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
                             completed = true;
                         }
                     }
-                    if (text.Length > 0) yield return new InferenceChunk(text.ToString());
+                    if (text.Length > 0 || root.TryGetProperty("usageMetadata", out _)) yield return new InferenceChunk(text.ToString(), false, input, output, null, cached, reasoning);
                 }
                 if (line is null) break;
                 continue;
@@ -103,7 +105,7 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
             if (line.StartsWith("data:", StringComparison.Ordinal)) frame.AppendLine(line[5..].TrimStart(' '));
         }
         if (!completed) throw new ApiException(502, "provider_stream_incomplete", "模型串流提前中斷，已保留收到的內容。");
-        yield return new InferenceChunk("", true, input, output, finishReason);
+        yield return new InferenceChunk("", true, input, output, finishReason, cached, reasoning);
     }
 
     private static IReadOnlyList<object> Parts(InferenceMessage message)

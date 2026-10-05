@@ -11,15 +11,22 @@ namespace AiNexus.Modules.Knowledge;
 public sealed partial class NativeVectorStore(NexusDbContext db, IDbHelper<INexusDatabase> sql, IOptions<KnowledgeOptions> options)
 {
     private bool? native;
+    private int Dimensions => options.Value.Dimensions == 1024 ? 1024 : 768;
+    private string Column => Dimensions == 1024 ? "EmbeddingVector1024" : "EmbeddingVector";
     private async Task<bool> NativeAsync(CancellationToken ct)
     {
         if (!db.Database.IsSqlServer() || !options.Value.UseNativeVector) return false;
-        return native ??= await sql.QuerySingleAsync<int>("SELECT CASE WHEN COL_LENGTH('knowledge.Chunks','EmbeddingVector') IS NOT NULL THEN 1 ELSE 0 END", commandTimeout: 5, cancellationToken: ct) == 1;
+        return native ??= await sql.QuerySingleAsync<int>("SELECT CASE WHEN COL_LENGTH('knowledge.Chunks', @Column) IS NOT NULL THEN 1 ELSE 0 END", new { Column }, commandTimeout: 5, cancellationToken: ct) == 1;
     }
     public async Task WriteAsync(Guid id, string? vector, CancellationToken ct)
     {
         if (vector is not null && await NativeAsync(ct))
-            await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE [knowledge].[Chunks] SET [EmbeddingVector] = CAST({vector} AS VECTOR(768)) WHERE [Id] = {id}", ct);
+        {
+            if (options.Value.Dimensions == 1024)
+                await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE [knowledge].[Chunks] SET [EmbeddingVector1024] = CAST({vector} AS VECTOR(1024)) WHERE [Id] = {id}", ct);
+            else
+                await db.Database.ExecuteSqlInterpolatedAsync($"UPDATE [knowledge].[Chunks] SET [EmbeddingVector] = CAST({vector} AS VECTOR(768)) WHERE [Id] = {id}", ct);
+        }
     }
     public async Task<KnowledgeSearchDto> SearchAsync(IReadOnlyList<Guid> collections, string query, float[]? vector, string profile, CancellationToken ct)
     {
@@ -27,14 +34,14 @@ public sealed partial class NativeVectorStore(NexusDbContext db, IDbHelper<INexu
         if (vector is not null && await NativeAsync(ct))
         {
             // ACL-approved collection IDs are in the WHERE predicate before TOP/distance.
-            const string statement = """
+            var statement = $"""
                 SELECT TOP (@Take) c.[DocumentId], d.[FileName] AS [Title], c.[PageNumber], c.[Text],
-                    1.0 - VECTOR_DISTANCE('cosine', c.[EmbeddingVector], CAST(@Vector AS VECTOR(768))) AS [Score]
+                    1.0 - VECTOR_DISTANCE('cosine', c.[{Column}], CAST(@Vector AS VECTOR({Dimensions}))) AS [Score]
                 FROM [knowledge].[Chunks] c
                 INNER JOIN [knowledge].[Documents] d ON d.[Id] = c.[DocumentId]
                 WHERE d.[CollectionId] IN @Collections AND d.[IsDeleted] = 0 AND d.[Status] = 'ready'
-                    AND c.[EmbeddingProfile] = @Profile AND c.[EmbeddingVector] IS NOT NULL
-                ORDER BY VECTOR_DISTANCE('cosine', c.[EmbeddingVector], CAST(@Vector AS VECTOR(768))), c.[Id]
+                    AND c.[EmbeddingProfile] = @Profile AND c.[{Column}] IS NOT NULL
+                ORDER BY VECTOR_DISTANCE('cosine', c.[{Column}], CAST(@Vector AS VECTOR({Dimensions}))), c.[Id]
                 """;
             var hits = await sql.QueryAsync<KnowledgeHitDto>(statement, new { Take = options.Value.TopK, Collections = collections, Vector = JsonSerializer.Serialize(vector), Profile = profile }, commandTimeout: 10, cancellationToken: ct);
             return new("sql-vector", hits.Where(x => x.Score > .1).ToList());

@@ -1885,3 +1885,266 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    IF CONVERT(int,SERVERPROPERTY('ProductMajorVersion')) >= 17 AND COL_LENGTH('knowledge.Chunks','EmbeddingVector1024') IS NULL EXEC(N'ALTER TABLE [knowledge].[Chunks] ADD [EmbeddingVector1024] VECTOR(1024) NULL');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    IF SCHEMA_ID(N'workspace') IS NULL EXEC(N'CREATE SCHEMA [workspace];');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    CREATE TABLE [inference].[ModelPrices] (
+        [Id] uniqueidentifier NOT NULL,
+        [Provider] nvarchar(32) NOT NULL,
+        [ModelId] nvarchar(160) NOT NULL,
+        [Currency] nvarchar(3) NOT NULL,
+        [Kind] nvarchar(16) NOT NULL,
+        [InputPerMillion] decimal(20,8) NOT NULL,
+        [CachedInputPerMillion] decimal(20,8) NOT NULL,
+        [OutputPerMillion] decimal(20,8) NOT NULL,
+        [PerRequest] decimal(20,8) NOT NULL,
+        [RequestCharge] nvarchar(16) NOT NULL,
+        [Note] nvarchar(500) NOT NULL,
+        [EffectiveAt] datetimeoffset NOT NULL,
+        [CreatedAt] datetimeoffset NOT NULL,
+        [CreatedBy] uniqueidentifier NOT NULL,
+        CONSTRAINT [PK_ModelPrices] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_ModelPrices_Users_CreatedBy] FOREIGN KEY ([CreatedBy]) REFERENCES [identity].[Users] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    CREATE TABLE [workspace].[RepositoryConnections] (
+        [OwnerId] uniqueidentifier NOT NULL,
+        [BaseUrl] nvarchar(500) NOT NULL,
+        [Login] nvarchar(100) NOT NULL,
+        [ProtectedToken] nvarchar(max) NOT NULL,
+        [ConnectedAt] datetimeoffset NOT NULL,
+        CONSTRAINT [PK_RepositoryConnections] PRIMARY KEY ([OwnerId]),
+        CONSTRAINT [FK_RepositoryConnections_Users_OwnerId] FOREIGN KEY ([OwnerId]) REFERENCES [identity].[Users] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    CREATE TABLE [knowledge].[RepositoryImports] (
+        [Id] uniqueidentifier NOT NULL,
+        [OwnerId] uniqueidentifier NOT NULL,
+        [CollectionId] uniqueidentifier NOT NULL,
+        [DocumentId] uniqueidentifier NOT NULL,
+        [Repository] nvarchar(201) NOT NULL,
+        [Path] nvarchar(500) NOT NULL,
+        [Commit] nvarchar(64) NOT NULL,
+        [BaseUrl] nvarchar(500) NOT NULL,
+        CONSTRAINT [PK_RepositoryImports] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_RepositoryImports_Documents_DocumentId] FOREIGN KEY ([DocumentId]) REFERENCES [knowledge].[Documents] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    CREATE TABLE [inference].[WebSearches] (
+        [Id] uniqueidentifier NOT NULL,
+        [OwnerId] uniqueidentifier NOT NULL,
+        [ConversationId] uniqueidentifier NOT NULL,
+        [IdempotencyKey] nvarchar(80) NOT NULL,
+        [RequestHash] nvarchar(64) NOT NULL,
+        [Status] nvarchar(16) NOT NULL,
+        [ResultsJson] nvarchar(max) NOT NULL,
+        [CreatedAt] datetimeoffset NOT NULL,
+        [RunId] uniqueidentifier NULL,
+        CONSTRAINT [PK_WebSearches] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_WebSearches_Users_OwnerId] FOREIGN KEY ([OwnerId]) REFERENCES [identity].[Users] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    CREATE TABLE [inference].[ModelCharges] (
+        [Id] uniqueidentifier NOT NULL,
+        [OwnerId] uniqueidentifier NOT NULL,
+        [ConversationId] uniqueidentifier NULL,
+        [Provider] nvarchar(32) NOT NULL,
+        [ModelId] nvarchar(160) NOT NULL,
+        [Operation] nvarchar(32) NOT NULL,
+        [CreatedAt] datetimeoffset NOT NULL,
+        [StartedAt] datetimeoffset NULL,
+        [FinishedAt] datetimeoffset NULL,
+        [PriceId] uniqueidentifier NULL,
+        [Currency] nvarchar(3) NOT NULL,
+        [Kind] nvarchar(16) NOT NULL,
+        [InputPerMillion] decimal(20,8) NOT NULL,
+        [CachedInputPerMillion] decimal(20,8) NOT NULL,
+        [OutputPerMillion] decimal(20,8) NOT NULL,
+        [PerRequest] decimal(20,8) NOT NULL,
+        [RequestCharge] nvarchar(16) NOT NULL,
+        [InputTokens] bigint NULL,
+        [CachedInputTokens] bigint NULL,
+        [OutputTokens] bigint NULL,
+        [ReasoningTokens] bigint NULL,
+        [UsageComplete] bit NOT NULL,
+        [Amount] decimal(20,8) NULL,
+        [State] nvarchar(24) NOT NULL,
+        [Outcome] nvarchar(16) NOT NULL,
+        CONSTRAINT [PK_ModelCharges] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_ModelCharges_Conversations_ConversationId] FOREIGN KEY ([ConversationId]) REFERENCES [conversations].[Conversations] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_ModelCharges_ModelPrices_PriceId] FOREIGN KEY ([PriceId]) REFERENCES [inference].[ModelPrices] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_ModelCharges_Users_OwnerId] FOREIGN KEY ([OwnerId]) REFERENCES [identity].[Users] ([Id]) ON DELETE NO ACTION
+    );
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Enabled', N'Name', N'Route', N'SortOrder') AND [object_id] = OBJECT_ID(N'[access].[Features]'))
+        SET IDENTITY_INSERT [access].[Features] ON;
+    EXEC(N'INSERT INTO [access].[Features] ([Id], [Enabled], [Name], [Route], [SortOrder])
+    VALUES (N''dashboard'', CAST(1 AS bit), N''總覽'', N''/dashboard'', 5),
+    (N''repositories'', CAST(1 AS bit), N''程式庫'', N''/repositories'', 65)');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Enabled', N'Name', N'Route', N'SortOrder') AND [object_id] = OBJECT_ID(N'[access].[Features]'))
+        SET IDENTITY_INSERT [access].[Features] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'FeatureId', N'GroupId') AND [object_id] = OBJECT_ID(N'[access].[RoleGroupFeatures]'))
+        SET IDENTITY_INSERT [access].[RoleGroupFeatures] ON;
+    EXEC(N'INSERT INTO [access].[RoleGroupFeatures] ([FeatureId], [GroupId])
+    VALUES (N''dashboard'', N''workspace''),
+    (N''repositories'', N''workspace'')');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'FeatureId', N'GroupId') AND [object_id] = OBJECT_ID(N'[access].[RoleGroupFeatures]'))
+        SET IDENTITY_INSERT [access].[RoleGroupFeatures] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    CREATE INDEX [IX_ModelCharges_ConversationId] ON [inference].[ModelCharges] ([ConversationId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    CREATE INDEX [IX_ModelCharges_CreatedAt] ON [inference].[ModelCharges] ([CreatedAt]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    CREATE INDEX [IX_ModelCharges_OwnerId_CreatedAt] ON [inference].[ModelCharges] ([OwnerId], [CreatedAt]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    CREATE INDEX [IX_ModelCharges_PriceId] ON [inference].[ModelCharges] ([PriceId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    CREATE INDEX [IX_ModelPrices_CreatedBy] ON [inference].[ModelPrices] ([CreatedBy]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_ModelPrices_Provider_ModelId_EffectiveAt] ON [inference].[ModelPrices] ([Provider], [ModelId], [EffectiveAt]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    CREATE INDEX [IX_RepositoryImports_DocumentId] ON [knowledge].[RepositoryImports] ([DocumentId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    CREATE INDEX [IX_RepositoryImports_OwnerId_CollectionId_Repository_Commit_Path] ON [knowledge].[RepositoryImports] ([OwnerId], [CollectionId], [Repository], [Commit], [Path]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    CREATE INDEX [IX_WebSearches_OwnerId_CreatedAt] ON [inference].[WebSearches] ([OwnerId], [CreatedAt]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_WebSearches_OwnerId_IdempotencyKey] ON [inference].[WebSearches] ([OwnerId], [IdempotencyKey]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    CREATE INDEX [IX_WebSearches_RunId] ON [inference].[WebSearches] ([RunId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261004235154_ModelSpendAndConnectedWorkspace'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261004235154_ModelSpendAndConnectedWorkspace', N'10.0.12');
+END;
+
+COMMIT;
+GO
+

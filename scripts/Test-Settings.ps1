@@ -8,6 +8,7 @@ $taskGeneralPath = Join-Path $taskFixture 'appsettings.Production.json'
 $taskSecretsPath = Join-Path $taskFixture 'appsettings.Secrets.json'
 $taskGeneral = @{ AllowedHosts = 'fixture.test'; Database = @{ Server = 'fixture'; Password = 'fixture-only-password'; TrustServerCertificate = $true }; Inference = @{ Provider = 'ollama'; Models = @(@{ Id = 'qwen3:8b'; ContextTokens = 8192 }); DefaultModelId = 'qwen3:8b'; BaseUrl = 'http://fixture.test:11434/'; SystemPrompt = 'fixture instruction' }; CustomExtension = @{ Preserve = 42 }; Knowledge = @{ EmbeddingProvider = 'none'; Dimensions = 768 } }
 $taskPrivate = @{ AdAuthentication = @{ DnPass = 'fixture-only-ad-password' }; Inference = @{ GoogleApiKey = 'fixture-only-google-key' } }
+$taskGeneral.Tools = @{ WebSearch = @{ Provider = 'brave'; ApiKey = 'fixture-only-search-key' } }
 Save-NexusJson $taskGeneralPath $taskGeneral
 Save-NexusJson $taskSecretsPath $taskPrivate
 function Get-TestAcl([string]$Path) {
@@ -18,7 +19,7 @@ $taskAcl = Get-TestAcl $taskSecretsPath
 & (Join-Path $PSScriptRoot 'Migrate-Settings.ps1') -SettingsPath $taskGeneralPath -SecretsPath $taskSecretsPath
 $taskGeneral = [IO.File]::ReadAllText($taskGeneralPath) | ConvertFrom-Json -AsHashtable
 $taskPrivate = [IO.File]::ReadAllText($taskSecretsPath) | ConvertFrom-Json -AsHashtable
-if (@(Get-NexusSecretValues $taskGeneral -IncludeUser).Count -or $taskPrivate.Database.Password -cne 'fixture-only-password' -or $taskPrivate.Inference.Providers.Google.ApiKey -cne 'fixture-only-google-key') { throw 'Secret migration did not preserve separation.' }
+if (@(Get-NexusSecretValues $taskGeneral -IncludeUser).Count -or $taskPrivate.Database.Password -cne 'fixture-only-password' -or $taskPrivate.Inference.Providers.Google.ApiKey -cne 'fixture-only-google-key' -or $taskPrivate.Tools.WebSearch.ApiKey -cne 'fixture-only-search-key') { throw 'Secret migration did not preserve separation.' }
 if ($taskGeneral.Inference.Providers.Ollama.Models.default.Id -ne 'qwen3:8b' -or $taskGeneral.Prompts.DefaultSystemInstruction -ne 'fixture instruction' -or $taskGeneral.CustomExtension.Preserve -ne 42 -or $taskGeneral.Knowledge.Embedding.Provider -ne 'none') { throw 'Provider, prompt or custom-extension migration failed.' }
 if ((Get-TestAcl $taskSecretsPath) -cne $taskAcl) { throw 'Secret file ACL was changed.' }
 $taskBefore = [IO.File]::ReadAllText($taskGeneralPath) + [IO.File]::ReadAllText($taskSecretsPath)

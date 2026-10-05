@@ -43,8 +43,8 @@ export type Access = Dto<'AccessDto'>;
 export type Model = Dto<'ModelDto'>;
 export type Models = Dto<'ModelsDto'>;
 export type Conversation = Dto<'ConversationDto'>;
-export type Message = Omit<Dto<'MessageDto'>, 'sources' | 'feedbackRating'> &
-  Pick<components['schemas']['MessageDto'], 'sources' | 'feedbackRating'>;
+export type Message = Omit<Dto<'MessageDto'>, 'sources' | 'feedbackRating' | 'charge' | 'webSources' | 'webSearchCharge'> &
+  Pick<components['schemas']['MessageDto'], 'sources' | 'feedbackRating' | 'charge' | 'webSources' | 'webSearchCharge'>;
 export type Feedback = Dto<'FeedbackDto'>;
 export type ExternalSource = Dto<'SourceDto'>;
 export type SourceRecord = Dto<'SourceRecordDto'>;
@@ -70,12 +70,29 @@ export type EvaluationDetail = Dto<'EvaluationDetailDto'> & {
 export type ConversationDetail = Dto<'ConversationDetailDto'>;
 export type Run = Dto<'RunDto'>;
 export type RunEvent = Dto<'RunEventDto'>;
-export type CreateRun = Dto<'CreateRunRequest'>;
+export type CreateRun = Omit<Dto<'CreateRunRequest'>, 'webSearch'> & Pick<components['schemas']['CreateRunRequest'], 'webSearch'>;
+
+export type Charge = Dto<'ChargeDto'>;
+export type MoneyTotal = Dto<'MoneyTotalDto'>;
+export type SpendBucket = Dto<'SpendBucketDto'>;
+export type SpendUser = Dto<'SpendUserDto'>;
+export type SpendReport = Dto<'SpendReportDto'> & { totals: MoneyTotal[]; daily: SpendBucket[]; models: SpendBucket[]; users: SpendUser[] };
+export type ConversationSpend = Dto<'ConversationSpendDto'> & { totals: MoneyTotal[]; models: SpendBucket[] };
+export type ModelPrice = Dto<'PriceDto'>;
+export type PriceRequest = Dto<'PriceRequest'>;
+export type Dashboard = Dto<'DashboardDto'> & { counts: Dto<'DashboardCountsDto'>; spend: SpendReport; recent: Dto<'RecentWorkDto'>[] };
+export type WebSearchStatus = Dto<'WebSearchStatusDto'>;
+export type RepositoryStatus = Dto<'RepositoryStatusDto'>;
+export type Repository = Dto<'RepositoryDto'>;
+export type RepositoryPage = Dto<'RepositoryPageDto'> & { items: Repository[] };
+export type RepositoryTree = Dto<'RepositoryTreeDto'> & { entries: Dto<'RepositoryEntryDto'>[] };
+export type RepositoryFile = Dto<'RepositoryFileDto'>;
+export type RepositoryIssue = Dto<'RepositoryIssueDto'>;
 export type AuthSession = Dto<'AuthSessionDto'>;
 export type ModelPolicy = Dto<'ModelPolicyDto'>;
-export type ContextUsage = Omit<Dto<'ContextUsageDto'>, 'reservedKnowledgeTokens'> &
-  Pick<components['schemas']['ContextUsageDto'], 'reservedKnowledgeTokens'>;
-export type ContextPreview = Dto<'ContextPreviewRequest'>;
+export type ContextUsage = Omit<Dto<'ContextUsageDto'>, 'reservedKnowledgeTokens' | 'reservedWebSearchTokens'> &
+  Pick<components['schemas']['ContextUsageDto'], 'reservedKnowledgeTokens' | 'reservedWebSearchTokens'>;
+export type ContextPreview = Omit<Dto<'ContextPreviewRequest'>, 'webSearch'> & Pick<components['schemas']['ContextPreviewRequest'], 'webSearch'>;
 export type Attachment = Dto<'AttachmentDto'>;
 export type AttachmentPolicy = Dto<'AttachmentPolicyDto'>;
 export type PromptTemplate = Dto<'PromptTemplateDto'>;

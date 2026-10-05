@@ -5,12 +5,13 @@ using AiNexus.BuildingBlocks;
 using AiNexus.Modules.Conversations;
 using AiNexus.Modules.Attachments;
 using AiNexus.Modules.Operations;
+using AiNexus.Modules.Billing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Inference;
 
-public sealed class RunService(NexusDbContext db, ConversationService conversations, AttachmentService attachments, AttachmentWriteLock attachmentWrites, GenerationScheduler scheduler, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, ModelPresentation presentation, AiNexus.Modules.Administration.ModelPolicyService policies, ModelQuotaLock quotaWrites, AiNexus.Modules.Knowledge.KnowledgeRetrieval knowledge, AiNexus.Modules.Projects.ProjectService projects)
+public sealed class RunService(NexusDbContext db, ConversationService conversations, AttachmentService attachments, AttachmentWriteLock attachmentWrites, GenerationScheduler scheduler, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, ModelPresentation presentation, AiNexus.Modules.Administration.ModelPolicyService policies, ModelQuotaLock quotaWrites, AiNexus.Modules.Knowledge.KnowledgeRetrieval knowledge, AiNexus.Modules.Projects.ProjectService projects, AiNexus.Modules.WebSearch.WebSearchService webSearch, BillingService billing)
 {
     public async Task<GenerationRun> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
     {
@@ -37,6 +38,16 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
         var effort = ModelCatalog.RequireReasoning(profile, request.ReasoningEffort);
         var knowledgeSelection = await knowledge.SelectionAsync(owner, request.ConversationId, ct);
         var sources = await knowledge.ForRunAsync(owner, request, ct, knowledgeSelection.CollectionIds);
+        AiNexus.Modules.WebSearch.WebSearchRecord? search = null;
+        if (request.WebSearch)
+        {
+            await conversations.OwnedAsync(owner, request.ConversationId, ct);
+            await policies.RequireAsync(owner, profile.Id, ct);
+            if (!scheduler.Ready) throw new ApiException(503, "scheduler_unavailable", "生成服務尚未就緒。");
+            if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) throw new ApiException(409, "generation_active", "請先等待目前的回答完成。");
+            var query = request.RegenerateUserMessageId is Guid old ? await db.Messages.Where(x => x.Id == old && x.ConversationId == request.ConversationId && x.Role == "user").Select(x => x.Content).SingleOrDefaultAsync(ct) : request.Prompt;
+            search = await webSearch.SearchAsync(owner, request.ConversationId, key, hash, query ?? "", ct);
+        }
         await scheduler.StateGate.WaitAsync(ct);
         var reserved = false;
         var attachmentsLocked = false;
@@ -72,11 +83,13 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
                 OwnerId = owner, ActiveOwnerId = owner, ConversationId = request.ConversationId,
                 ExecutorId = scheduler.InstanceId, LeaseExpiresAt = DateTimeOffset.UtcNow + GenerationScheduler.LeaseDuration,
                 ModelId = profile.Id, IdempotencyKey = key, RequestHash = hash,
-                ParametersJson = JsonSerializer.Serialize(new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, 0.6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, conversation.SystemInstruction) + projectContext + AiNexus.Modules.Knowledge.KnowledgeRetrieval.Prompt(sources), effort, profile.ReasoningControl, profile.SupportsImages))
+                ParametersJson = JsonSerializer.Serialize(new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, 0.6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, conversation.SystemInstruction) + projectContext + AiNexus.Modules.Knowledge.KnowledgeRetrieval.Prompt(sources) + AiNexus.Modules.WebSearch.WebSearchService.Prompt(search), effort, profile.ReasoningControl, profile.SupportsImages))
             };
+            await billing.ReserveAsync(run.Id, owner, request.ConversationId, options.Value.Provider, profile.Id, "chat", run.CreatedAt, ct);
             var (user, assistant) = await conversations.PrepareGenerationAsync(owner, request with { ModelId = profile.Id }, run.Id, ct);
             run.UserMessageId = user.Id;
             run.AssistantMessageId = assistant.Id;
+            if (search is not null) search.RunId = run.Id;
             knowledge.Bind(assistant.Id, sources);
             foreach (var file in files) db.Set<MessageAttachment>().Add(new() { MessageId = user.Id, AttachmentId = file.Id });
             await context.BuildAsync(run.ConversationId, user.Id, JsonSerializer.Deserialize<GenerationParameters>(run.ParametersJson)!, ct);
@@ -120,6 +133,7 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
         run.ActiveOwnerId = null;
         run.LeaseExpiresAt = null;
         run.FinishedAt = DateTimeOffset.UtcNow;
+        await billing.FinishAsync(run.Id, status, ct);
         AddEvent(db, run, "status");
         await conversations.UpdateAnswerAsync(run, ct);
         db.AuditEvents.Add(new AuditEvent { OwnerId = run.OwnerId, Action = "run.finished", ResourceId = run.Id, Result = error ?? status });

@@ -1,12 +1,13 @@
 using AiNexus.BuildingBlocks;
 using AiNexus.Modules.Conversations;
 using AiNexus.Modules.Operations;
+using AiNexus.Modules.Billing;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Modules.Inference;
 
 /// <summary>Expiry is checked again in an atomic UPDATE, so a renewed foreign lease cannot be reclaimed.</summary>
-public sealed class RunLeaseRecovery(NexusDbContext db, ConversationService conversations)
+public sealed class RunLeaseRecovery(NexusDbContext db, ConversationService conversations, BillingService billing)
 {
     public async Task<int> RecoverAsync(DateTimeOffset now, CancellationToken ct)
     {
@@ -28,6 +29,7 @@ public sealed class RunLeaseRecovery(NexusDbContext db, ConversationService conv
             if (changed == 0) { await transaction.RollbackAsync(ct); continue; }
             var run = await db.Runs.SingleAsync(x => x.Id == id, ct);
             await db.Entry(run).ReloadAsync(ct);
+            await billing.FinishAsync(run.Id, run.Status, ct);
             RunService.AddEvent(db, run, "status");
             await conversations.UpdateAnswerAsync(run, ct);
             db.AuditEvents.Add(new AuditEvent { OwnerId = run.OwnerId, Action = "run.recovered", ResourceId = id, Result = "executor_lost" });

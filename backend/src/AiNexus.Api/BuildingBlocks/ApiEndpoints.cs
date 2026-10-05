@@ -29,5 +29,12 @@ public static class ApiEndpoints
         AiNexus.Modules.Quality.QualityEndpoints.MapQuality(api);
         AiNexus.Modules.Integrations.IntegrationEndpoints.MapIntegrations(api);
         api.MapAdministration();
+        AiNexus.Modules.Billing.BillingEndpoints.MapBilling(api);
+        AiNexus.Modules.Repositories.RepositoryEndpoints.MapRepositories(api);
+        api.MapGet("/dashboard", async (string? scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, CurrentUser current, AiNexus.Modules.Dashboard.DashboardService service, CancellationToken ct) =>
+            Results.Ok(await service.GetAsync((await current.GetAsync(ct)).Id, scope ?? "personal", ownerId, from, until, offsetMinutes, ct)))
+            .RequireAuthorization("feature:dashboard").WithName("GetDashboard").Produces<AiNexus.Modules.Dashboard.DashboardDto>();
+        api.MapGet("/tools/web-search", (AiNexus.Modules.WebSearch.WebSearchService service) => Results.Ok(service.Status))
+            .RequireAuthorization("feature:chat").WithName("GetWebSearchStatus").Produces<AiNexus.Modules.WebSearch.WebSearchStatusDto>();
     }
 }

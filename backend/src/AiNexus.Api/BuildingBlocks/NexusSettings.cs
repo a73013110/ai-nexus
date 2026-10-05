@@ -33,6 +33,9 @@ public static class NexusSettings
         options.EmbeddingProvider = embedding["Provider"] ?? options.EmbeddingProvider;
         options.EmbeddingModel = embedding["Model"] ?? options.EmbeddingModel;
         options.Dimensions = embedding.GetValue("Dimensions", options.Dimensions);
+        options.InputFormat = embedding["InputFormat"] ?? options.InputFormat;
+        options.QueryInstruction = embedding["QueryInstruction"] ?? options.QueryInstruction;
+        options.Revision = embedding["Revision"] ?? options.Revision;
         options.TimeoutSeconds = embedding.GetValue("TimeoutSeconds", options.TimeoutSeconds);
         options.MaxDailyEmbeddingRequests = embedding.GetValue("MaxDailyRequests", options.MaxDailyEmbeddingRequests);
         section.GetSection("Indexing").Bind(options);

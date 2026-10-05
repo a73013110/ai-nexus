@@ -15,7 +15,7 @@ foreach ($taskFile in $taskFiles) {
 }
 $taskGeneral = ConvertTo-NexusV2 ($taskOriginals[0] | ConvertTo-Json -Depth 40 | ConvertFrom-Json -AsHashtable)
 $taskPrivate = ConvertTo-NexusV2 ($taskOriginals[1] | ConvertTo-Json -Depth 40 | ConvertFrom-Json -AsHashtable)
-$taskSensitivePaths = @('Database.User','Database.Password','AdAuthentication.DnPass','Inference.Providers.Google.ApiKey','ConnectionStrings.Nexus','ConnectionStrings.LegacyGdweb','ConnectionStrings.LegacyMeiho')
+$taskSensitivePaths = @('Database.User','Database.Password','AdAuthentication.DnPass','Inference.Providers.Google.ApiKey','Tools.WebSearch.ApiKey','ConnectionStrings.Nexus','ConnectionStrings.LegacyGdweb','ConnectionStrings.LegacyMeiho')
 foreach ($taskSource in @('Gdweb','Meiho')) { $taskSensitivePaths += "Integrations.Sources.$taskSource.Database.User", "Integrations.Sources.$taskSource.Database.Password" }
 foreach ($taskPath in $taskSensitivePaths) {
     $taskFound = Get-NexusSetting $taskGeneral $taskPath

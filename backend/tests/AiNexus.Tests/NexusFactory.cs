@@ -32,16 +32,18 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     private readonly Action<AttachmentOptions>? configureAttachments;
     private readonly string[] bootstrapAdministrators;
     private readonly bool backgroundJobs;
+    private readonly Action<IServiceCollection>? configureServices;
     private readonly string databasePath = Path.Combine(Path.GetTempPath(), $"nexus-test-{Guid.NewGuid():N}.db");
     public TestProvider Provider { get; } = new();
     public TestEmbeddings Embeddings { get; } = new();
-    public NexusFactory(Action<NexusDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null, string[]? administrators = null, bool backgroundJobs = true)
+    public NexusFactory(Action<NexusDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null, string[]? administrators = null, bool backgroundJobs = true, Action<IServiceCollection>? services = null)
     {
         this.ldap = ldap;
         configureInference = inference;
         configureAttachments = attachments;
         bootstrapAdministrators = administrators ?? [];
         this.backgroundJobs = backgroundJobs;
+        configureServices = services;
         using var db = new NexusDbContext(new DbContextOptionsBuilder<NexusDbContext>().UseSqlite($"Data Source={databasePath};Default Timeout=10").Options);
         db.Database.EnsureCreated();
         seed?.Invoke(db);
@@ -82,6 +84,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
             });
             services.PostConfigure<AttachmentOptions>(options => configureAttachments?.Invoke(options));
             services.PostConfigure<AiNexus.Modules.Administration.AdministrationOptions>(options => options.BootstrapAdministrators = bootstrapAdministrators);
+            configureServices?.Invoke(services);
         });
     }
 
@@ -189,7 +192,7 @@ public sealed class TestProvider : IInferenceProvider
                 yield return new InferenceChunk(text);
             }
             if (NeverFinish) await Task.Delay(Timeout.Infinite, ct);
-            yield return new InferenceChunk("", true, 123, 6);
+            yield return new InferenceChunk("", true, 123, 6, CachedInputTokens: 0, ReasoningTokens: 0);
         }
         finally { Interlocked.Decrement(ref Concurrent); }
     }

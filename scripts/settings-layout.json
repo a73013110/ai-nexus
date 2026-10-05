@@ -10,6 +10,7 @@
     "Inference",
     "Prompts",
     "Knowledge",
+    "Tools",
     "Integrations",
     "Attachments",
     "Exports",
@@ -79,6 +80,9 @@
     "Provider",
     "Model",
     "Dimensions",
+    "InputFormat",
+    "QueryInstruction",
+    "Revision",
     "TimeoutSeconds",
     "MaxDailyRequests"
   ],
@@ -94,7 +98,11 @@
     "TopK",
     "ContextCharacters"
   ],
-  "Integrations": ["Sources"],
+  "Tools": ["WebSearch"],
+  "Tools.WebSearch": ["Enabled", "Provider", "Endpoint", "TimeoutSeconds", "MaxResults", "MaxDailyRequests", "ApiKey"],
+  "Integrations": ["Sources", "Connectors"],
+  "Integrations.Connectors": ["Gitea"],
+  "Integrations.Connectors.Gitea": ["Enabled", "BaseUrl", "TimeoutSeconds", "MaxFileBytes"],
   "Integrations.Sources": ["Gdweb", "Meiho"],
   "Integrations.Sources.Gdweb": [
     "Enabled",

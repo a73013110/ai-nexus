@@ -30,6 +30,7 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
         var policy = scope.ServiceProvider.GetRequiredService<ModelPolicyService>();
+        var billing = scope.ServiceProvider.GetRequiredService<AiNexus.Modules.Billing.BillingService>();
         if (prompt.Length > 16000 || instruction.Length > 24000) throw new ApiException(400, "task_input_too_long", "處理內容過長，請縮小選取範圍。");
         var profile = await catalog.RequireAsync(model, ct);
         if (kind == "evaluation") ModelTaskConfiguration.Require(profile, options.Value, expectedConfiguration);
@@ -45,6 +46,7 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
             // A harmless update serializes reservations for this account across application hosts.
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
             await policy.RequireAsync(owner, profile.Id, ct);
+            await billing.ReserveAsync(call.Id, owner, null, options.Value.Provider, profile.Id, kind, call.CreatedAt, ct);
             db.Add(call); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         }
         finally { writes.Gate.Release(); }
@@ -53,11 +55,13 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
         timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.TimeoutSeconds));
         try
         {
+            await billing.StartAsync(call.Id, ct); await db.SaveChangesAsync(ct);
             var parameters = new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, ModelTaskConfiguration.Temperature, instruction, profile.DefaultReasoningEffort, profile.ReasoningControl, profile.SupportsImages);
             await foreach (var chunk in provider.StreamAsync(profile.Id, [new("user", prompt, images)], parameters, timeout.Token))
             {
                 text.Append(chunk.Text); done |= chunk.Done;
                 call.InputTokens = chunk.InputTokens ?? call.InputTokens; call.OutputTokens = chunk.OutputTokens ?? call.OutputTokens;
+                await billing.MeterAsync(call.Id, chunk.InputTokens, chunk.OutputTokens, chunk.CachedInputTokens, chunk.ReasoningTokens, ct, chunk.Done);
                 finish = chunk.FinishReason ?? finish;
                 if (text.Length > 64000) throw new ApiException(502, "task_output_too_long", "模型輸出超過處理上限。");
             }
@@ -68,7 +72,7 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { call.Status = "cancelled"; throw; }
         catch (OperationCanceledException) { call.Status = "failed"; throw new ApiException(504, "model_timeout", "模型處理逾時，請稍後重試。"); }
         catch { call.Status = "failed"; throw; }
-        finally { await db.SaveChangesAsync(CancellationToken.None); }
+        finally { await billing.FinishAsync(call.Id, call.Status, CancellationToken.None); await db.SaveChangesAsync(CancellationToken.None); }
     }
 }
 public static class ModelInvocationConfiguration

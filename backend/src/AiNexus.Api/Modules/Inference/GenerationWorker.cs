@@ -99,13 +99,15 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
             await db.SaveChangesAsync(stoppingToken);
             parameters = JsonSerializer.Deserialize<GenerationParameters>(run.ParametersJson)!;
             messages = await scope.ServiceProvider.GetRequiredService<ContextBuilder>().BuildAsync(run.ConversationId, run.UserMessageId, parameters, stoppingToken);
+            await scope.ServiceProvider.GetRequiredService<AiNexus.Modules.Billing.BillingService>().StartAsync(run.Id, stoppingToken);
+            await db.SaveChangesAsync(stoppingToken);
             model = run.ModelId;
             scheduler.Generating = true;
         }
         finally { scheduler.StateGate.Release(); }
         var buffer = new StringBuilder();
         var elapsed = Stopwatch.StartNew();
-        long? input = null, output = null;
+        long? input = null, output = null, cached = null, reasoning = null;
         var characters = 0;
         var completed = false;
         string finalStatus = RunStates.Completed;
@@ -120,9 +122,10 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
                 buffer.Append(chunk.Text);
                 input = chunk.InputTokens ?? input;
                 output = chunk.OutputTokens ?? output;
+                cached = chunk.CachedInputTokens ?? cached; reasoning = chunk.ReasoningTokens ?? reasoning;
                 if (elapsed.ElapsedMilliseconds >= 80 || buffer.Length >= 512 || chunk.Done)
                 {
-                    await FlushAsync(job.RunId, buffer.ToString(), input, output, stoppingToken);
+                    await FlushAsync(job.RunId, buffer.ToString(), input, output, cached, reasoning, completed, stoppingToken);
                     buffer.Clear();
                     elapsed.Restart();
                 }
@@ -141,7 +144,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
             logger.LogWarning("Run {RunId} provider failed: {ErrorCode} ({ErrorType}).", job.RunId, error, ex.GetType().Name);
         }
         // Request cancellation does not interrupt persistence; partial output survives.
-        await FlushAsync(job.RunId, buffer.ToString(), input, output, CancellationToken.None);
+        await FlushAsync(job.RunId, buffer.ToString(), input, output, cached, reasoning, completed, CancellationToken.None);
         await scheduler.StateGate.WaitAsync(CancellationToken.None);
         try
         {
@@ -153,7 +156,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
         finally { scheduler.StateGate.Release(); }
     }
 
-    private async Task FlushAsync(Guid id, string delta, long? input, long? output, CancellationToken ct)
+    private async Task FlushAsync(Guid id, string delta, long? input, long? output, long? cached, long? reasoning, bool complete, CancellationToken ct)
     {
         if (delta.Length == 0 && input is null && output is null) return;
         await scheduler.StateGate.WaitAsync(ct);
@@ -166,6 +169,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
             run.Content += delta;
             run.InputTokens = input ?? run.InputTokens;
             run.OutputTokens = output ?? run.OutputTokens;
+            await scope.ServiceProvider.GetRequiredService<AiNexus.Modules.Billing.BillingService>().MeterAsync(id, input, output, cached, reasoning, ct, complete);
             if (delta.Length > 0) RunService.AddEvent(db, run, "delta", delta);
             await scope.ServiceProvider.GetRequiredService<ConversationService>().UpdateAnswerAsync(run, ct);
             await db.SaveChangesAsync(ct);

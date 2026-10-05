@@ -46,7 +46,16 @@ public sealed class ConversationService(IEfHelper<INexusDatabase> ef, NexusDbCon
         var citations = (await ef.Set<AiNexus.Modules.Knowledge.MessageCitation>().AsNoTracking().Where(x => messages.Select(m => m.Id).Contains(x.MessageId)).OrderBy(x => x.Number).ToListAsync(ct))
             .ToLookup(x => x.MessageId, x => new AiNexus.Modules.Knowledge.CitationDto(x.Number, x.DocumentId, x.Title, x.PageNumber, x.Excerpt));
         var ratings = await db.Set<AiNexus.Modules.Quality.MessageFeedback>().AsNoTracking().Where(x => x.OwnerId == owner && messages.Select(m => m.Id).Contains(x.MessageId)).ToDictionaryAsync(x => x.MessageId, x => x.Rating, ct);
-        return new(conversation.ToDto(), messages.Select(x => presentation.Message(x) with { Attachments = attachments[x.Id].ToList(), Sources = citations[x.Id].ToList(), FeedbackRating = ratings.GetValueOrDefault(x.Id) }).ToList(), run is null ? null : presentation.Run(run));
+        var charges = await db.Set<AiNexus.Modules.Billing.ModelCharge>().AsNoTracking().Where(x => x.OwnerId == owner && x.ConversationId == id).ToDictionaryAsync(x => x.Id, ct);
+        var searches = await db.Set<AiNexus.Modules.WebSearch.WebSearchRecord>().AsNoTracking().Where(x => x.OwnerId == owner && x.ConversationId == id && x.RunId != null).ToDictionaryAsync(x => x.RunId!.Value, ct);
+        return new(conversation.ToDto(), messages.Select(x =>
+        {
+            var search = x.RunId is Guid runId ? searches.GetValueOrDefault(runId) : null;
+            return presentation.Message(x) with { Attachments = attachments[x.Id].ToList(), Sources = citations[x.Id].ToList(), FeedbackRating = ratings.GetValueOrDefault(x.Id),
+                Charge = x.RunId is Guid call && charges.TryGetValue(call, out var charge) ? AiNexus.Modules.Billing.ChargeCalculator.Describe(charge) : null,
+                WebSources = search is null ? null : AiNexus.Modules.WebSearch.WebSearchService.Sources(search),
+                WebSearchCharge = search is not null && charges.TryGetValue(search.Id, out var webCharge) ? AiNexus.Modules.Billing.ChargeCalculator.Describe(webCharge) : null };
+        }).ToList(), run is null ? null : presentation.Run(run));
     }
 
     public async Task<ConversationDto> RenameAsync(Guid owner, Guid id, string title, CancellationToken ct)

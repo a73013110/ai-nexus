@@ -2,6 +2,8 @@
 node_modules/
 .angular/
 .cache/
+__pycache__/
+*.py[cod]
 dist/
 bin/
 obj/

@@ -31,7 +31,8 @@ public static class InferenceEndpoints
             var model = await models.RequireAsync(body.ModelId, ct);
             await policies.RequireAsync(owner, model.Id, ct, checkQuota: false);
             var reserved = body.ConversationId is Guid cid ? await knowledge.ReservedContextAsync(owner, cid, ct) : 0;
-            return Results.Ok((await context.PreviewAsync(body.ConversationId, body.ParentMessageId, body.Prompt, new(model.ContextTokens, model.MaxOutputTokens, .6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, instruction) + project + new string(' ', reserved), SupportsImages: model.SupportsImages), ct, files)) with { ReservedKnowledgeTokens = reserved });
+            var webReserved = body.WebSearch ? AiNexus.Modules.WebSearch.WebSearchService.ReservedTokens : 0;
+            return Results.Ok((await context.PreviewAsync(body.ConversationId, body.ParentMessageId, body.Prompt, new(model.ContextTokens, model.MaxOutputTokens, .6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, instruction) + project + new string(' ', reserved + webReserved), SupportsImages: model.SupportsImages), ct, files)) with { ReservedKnowledgeTokens = reserved, ReservedWebSearchTokens = webReserved });
         }).WithName("PreviewContext").Produces<ContextUsageDto>();
         api.MapPost("/runs", async (CreateRunRequest body, HttpContext http, CurrentUser current, RunService service, CancellationToken ct) =>
         {
