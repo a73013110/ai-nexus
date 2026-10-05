@@ -1,0 +1,199 @@
+nx-document-reader {
+  .feature-header {
+    align-items: center;
+    gap: var(--p-space-5);
+    h1 {
+      font-size: clamp(1.4rem, 2.2vw, 2rem);
+      overflow-wrap: anywhere;
+      line-height: 1.5;
+    }
+  }
+  .reader-back {
+    background: var(--surface);
+  }
+  .reader-download {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+    border-color: color-mix(in srgb, var(--accent) 20%, var(--line));
+  }
+}
+.reader-workspace {
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-lg);
+  background: var(--surface);
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--ink) 3%, transparent);
+  min-width: 0;
+  .reader-toolbar {
+    top: 0;
+    background: var(--surface);
+    border-block: 1px solid var(--line);
+    padding: var(--p-space-3) var(--p-space-4);
+    gap: var(--p-space-3);
+  }
+  .reader-mode {
+    margin-left: auto;
+    background: var(--canvas);
+    border-color: transparent;
+    button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--p-space-2);
+      color: var(--secondary);
+      transition:
+        background var(--motion) var(--ease),
+        color var(--motion) var(--ease),
+        box-shadow var(--motion) var(--ease);
+    }
+    button[aria-pressed='true'] {
+      color: var(--accent);
+      box-shadow:
+        0 1px 4px color-mix(in srgb, var(--ink) 9%, transparent),
+        inset 0 0 0 1px var(--line);
+    }
+    nx-icon {
+      width: 16px;
+      height: 16px;
+    }
+  }
+  .reader-search {
+    margin: var(--p-space-4);
+    .page-search {
+      max-width: 100%;
+    }
+  }
+  .reader-matches {
+    margin-top: var(--p-space-2);
+  }
+  .source-warning {
+    margin: var(--p-space-4);
+    padding: var(--p-space-3);
+    gap: var(--p-space-2);
+    background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+    border-radius: var(--p-radius-md);
+    color: var(--secondary);
+    line-height: var(--line-ui);
+    nx-icon {
+      flex: none;
+      color: var(--accent);
+      width: 18px;
+      height: 18px;
+    }
+  }
+  .reader-original {
+    margin: var(--p-space-4);
+    min-height: 16rem;
+    padding: clamp(16px, 3vw, 36px);
+    background: linear-gradient(145deg, var(--canvas), var(--sidebar));
+    border-radius: var(--p-radius-md);
+    img {
+      grid-area: 1 / 1;
+      display: block;
+      max-height: min(70dvh, 48rem);
+      border-radius: var(--p-radius-sm);
+      box-shadow: var(--shadow);
+      transition: opacity var(--motion-enter) var(--ease);
+    }
+  }
+  .reader-text {
+    margin: var(--p-space-4);
+    padding: clamp(16px, 3vw, 28px);
+    border-radius: var(--p-radius-md);
+    background: var(--canvas);
+    pre {
+      margin-top: var(--p-space-4);
+    }
+  }
+  .reader-text-meta {
+    flex-wrap: wrap;
+    gap: var(--p-space-2);
+    padding-bottom: var(--p-space-3);
+    border-bottom: 1px solid var(--line);
+  }
+  .error-banner {
+    margin: var(--p-space-4);
+    padding: var(--p-space-3);
+    border: 1px solid var(--line);
+    border-radius: var(--p-radius-md);
+  }
+}
+.reader-overview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+  padding: var(--p-space-4);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.reader-format {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  color: var(--accent);
+  font-weight: 500;
+  nx-icon {
+    width: 18px;
+    height: 18px;
+  }
+}
+.reader-page-label {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.reader-image-loading {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  gap: var(--p-space-3);
+  min-height: 12rem;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.reader-image-pending {
+  opacity: 0;
+}
+@media (hover: hover) and (pointer: fine) {
+  .reader-workspace .reader-mode button:hover {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  }
+}
+@media (max-width: 520px) {
+  nx-document-reader .reader-actions {
+    width: 100%;
+    > a {
+      flex: 1;
+      justify-content: center;
+    }
+  }
+  .reader-workspace {
+    .reader-toolbar {
+      padding: var(--p-space-3);
+    }
+    .reader-mode {
+      width: 100%;
+      button {
+        flex: 1;
+        padding-inline: var(--p-space-2);
+      }
+    }
+    .reader-pagination {
+      justify-content: center;
+    }
+    .reader-original,
+    .reader-text,
+    .reader-search,
+    .source-warning {
+      margin: var(--p-space-3);
+    }
+    .reader-original {
+      padding: var(--p-space-3);
+      min-height: 12rem;
+    }
+  }
+}

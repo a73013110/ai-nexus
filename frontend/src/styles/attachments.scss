@@ -16,26 +16,95 @@
   max-width: 100%;
   display: flex;
   align-items: center;
-  background: var(--canvas);
+  gap: var(--p-space-1);
+  padding: var(--p-space-1);
+  background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
-  overflow: hidden;
+  border-radius: var(--p-radius-lg);
+  transition:
+    border-color var(--motion) var(--ease),
+    box-shadow var(--motion) var(--ease);
 }
-.attachment-card > a {
+.attachment-preview {
   min-width: 0;
+  flex: 1;
   display: flex;
   align-items: center;
-  gap: var(--p-space-2);
+  gap: var(--p-space-3);
   padding: var(--p-space-2);
+  min-height: var(--button-target);
   border-radius: var(--p-radius-md);
+  color: var(--ink);
+  transition: background var(--motion) var(--ease);
 }
-.attachment-card > a:hover {
-  background: var(--hover);
+.attachment-open {
+  flex: none;
+  color: var(--muted);
+  width: 16px;
+  height: 16px;
+  transition:
+    color var(--motion) var(--ease),
+    transform var(--motion) var(--ease);
+}
+.attachment-card:focus-within {
+  border-color: var(--focus);
+}
+.attachment-card .attachment-download,
+.attachment-card .attachment-remove {
+  flex: 0 0 var(--button-target);
+  align-self: center;
+  min-width: var(--button-target);
+  min-height: var(--button-target);
+  border-radius: var(--p-radius-md);
+  color: var(--secondary);
+  background: transparent;
+  transition:
+    background var(--motion) var(--ease),
+    color var(--motion) var(--ease),
+    transform var(--motion-fast) var(--ease);
+}
+.attachment-download {
+  position: relative;
+  &::before {
+    content: '';
+    position: absolute;
+    left: -3px;
+    top: var(--p-space-2);
+    bottom: var(--p-space-2);
+    width: 1px;
+    background: var(--line);
+  }
+}
+.attachment-download:active,
+.attachment-remove:active {
+  transform: scale(0.94);
+}
+@media (hover: hover) and (pointer: fine) {
+  .attachment-card:hover {
+    border-color: color-mix(in srgb, var(--accent) 32%, var(--line));
+    box-shadow: 0 4px 14px color-mix(in srgb, var(--ink) 6%, transparent);
+  }
+  .attachment-preview:hover {
+    background: color-mix(in srgb, var(--accent) 5%, var(--surface));
+  }
+  .attachment-preview:hover .attachment-open {
+    color: var(--accent);
+    transform: translateX(2px);
+  }
+  .attachment-card .attachment-download:hover {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .attachment-card .attachment-remove:hover {
+    color: var(--error);
+    background: var(--error-bg);
+  }
 }
 .attachment-card img {
   width: var(--attachment-thumb);
   height: var(--attachment-thumb);
   object-fit: cover;
+  flex: none;
   border-radius: var(--p-radius-sm);
   background: var(--hover);
 }
@@ -49,12 +118,12 @@
   background: var(--accent-soft);
   flex: none;
 }
-.attachment-card a > span:last-child {
+.attachment-copy {
   min-width: 0;
 }
 .attachment-card strong {
   display: block;
-  max-width: 14rem;
+  max-width: 20rem;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -65,11 +134,7 @@
   display: block;
   color: var(--secondary);
   font-size: var(--text-caption);
-}
-.attachment-card > button {
-  align-self: stretch;
-  height: auto;
-  min-height: var(--button-target);
+  margin-top: 2px;
 }
 .upload-status {
   display: flex;
@@ -102,13 +167,10 @@
   .attachment-card {
     flex-basis: 100%;
   }
-  .attachment-card > a {
+  .attachment-preview {
     flex: 1;
   }
   .attachment-card strong {
     max-width: none;
-  }
-  .attachment-thumb {
-    width: 2.5rem;
   }
 }

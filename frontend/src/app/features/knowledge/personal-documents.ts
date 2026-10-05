@@ -7,7 +7,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ReaderLink } from '../../shared/browser/reader-link';
 import { ApiTransport } from '../../core/api/api-transport';
 import type { DocumentInfo } from '../../core/api/types';
 import { ViewScope } from '../../shared/browser/view-scope';
@@ -17,7 +17,7 @@ import { SearchField } from '../../shared/ui/search-field';
 
 @Component({
   selector: 'nx-personal-documents',
-  imports: [RouterLink, Icon, SearchField, ConfirmDialog],
+  imports: [ReaderLink, Icon, SearchField, ConfirmDialog],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<button class="secondary-button" type="button" (click)="open()">
@@ -49,7 +49,7 @@ import { SearchField } from '../../shared/ui/search-field';
           <div class="personal-document-list">
             @for (file of visible(); track file.id) {
               <div class="personal-document-row">
-                <a [routerLink]="['/reader', file.id]" (click)="dialog.close()"
+                <a [nxReaderLink]="file.id" (click)="dialog.close()"
                   ><nx-icon name="document" /><span>{{ file.fileName }}</span></a
                 >
                 <button

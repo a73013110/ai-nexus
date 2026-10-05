@@ -125,7 +125,7 @@
               <div class="project-items">
                 @for (file of files(); track file.id) {
                   <div class="project-item">
-                    <a [routerLink]="['/reader', file.id]"
+                    <a [nxReaderLink]="file.id"
                       ><nx-icon name="document" /><span
                         ><strong>{{ file.fileName }}</strong
                         ><small>{{

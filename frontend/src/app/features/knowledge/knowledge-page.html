@@ -93,7 +93,7 @@
             @for (document of visible(); track document.id) {
               <div class="resource-row document-row" animate.enter="panel-arrive">
                 <span class="document-symbol"><nx-icon name="document" /></span
-                ><a class="resource-summary" [routerLink]="['/reader', document.id]"
+                ><a class="resource-summary" [nxReaderLink]="document.id"
                   ><strong>{{ document.fileName }}</strong
                   ><small
                     >{{ document.pageCount ? document.pageCount + ' 頁 · ' : ''
@@ -148,10 +148,7 @@
           </p>
           <div class="knowledge-hits">
             @for (hit of result.hits; track $index) {
-              <a
-                class="knowledge-hit"
-                [routerLink]="['/reader', hit.documentId]"
-                [queryParams]="{ page: hit.pageNumber }"
+              <a class="knowledge-hit" [nxReaderLink]="hit.documentId" [readerPage]="hit.pageNumber"
                 ><strong>{{ hit.title }}</strong
                 ><span>第 {{ hit.pageNumber }} 頁<nx-icon name="chevron" /></span>
                 <p>{{ hit.text }}</p></a

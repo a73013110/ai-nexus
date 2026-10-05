@@ -44,6 +44,7 @@ export class KnowledgeFixture {
   readonly core = new ApiFixture();
   readonly collections: Collection[] = [];
   readonly documents: DocumentInfo[] = [];
+  readonly attachmentDocuments = new Map<string, string>();
   readonly jobs: Job[] = [];
   readonly selections = new Map<string, string[]>();
   acl: ResourceAcl = { members: [], groupIds: [] };
@@ -213,12 +214,63 @@ export class KnowledgeFixture {
             : [],
         });
       }
+      const attachmentDocument = /^\/attachments\/([^/]+)\/document$/.exec(
+        path,
+      );
+      if (attachmentDocument) {
+        const file = this.core.attachments.find(
+          (value) => value.id === attachmentDocument[1],
+        );
+        if (!file) return json({ title: "找不到附件。" }, 404);
+        const existing = this.attachmentDocuments.get(file.id);
+        if (existing)
+          return json(this.documents.find((value) => value.id === existing));
+        const doc: DocumentInfo = {
+          id: randomUUID(),
+          collectionId: null,
+          fileName: file.fileName,
+          contentType: file.contentType,
+          status: "ready",
+          pageCount: 1,
+          chunkCount: 1,
+          warning: file.isImage
+            ? "包含 AI 辨識文字，使用前請對照原始頁面確認。"
+            : null,
+          jobId: null,
+          canEdit: true,
+          hasOriginal: true,
+        };
+        this.documents.push(doc);
+        this.attachmentDocuments.set(file.id, doc.id);
+        return json(doc);
+      }
       const document = /^\/documents\/([^/]+)(\/pages|\/content|\/job)?$/.exec(
         path,
       );
       if (document) {
         const doc = this.documents.find((x) => x.id === document[1]);
         if (!doc) return json({ title: "來源已移除。" }, 404);
+        if (document[2] === "/pages" && doc.contentType.startsWith("image/"))
+          return json([
+            {
+              pageNumber: 1,
+              text: "圖片內容：文件、索引與答案的工作流程。",
+              extraction: "ocr",
+              needsReview: true,
+            },
+          ]);
+        if (
+          document[2] === "/content" &&
+          doc.contentType.startsWith("image/")
+        ) {
+          const source = Array.from(this.attachmentDocuments).find(
+            ([, id]) => id === doc.id,
+          )?.[0];
+          return route.fulfill({
+            contentType: doc.contentType,
+            body: this.core.attachmentData.get(source!),
+          });
+        }
         if (document[2] === "/pages")
           return json([
             {

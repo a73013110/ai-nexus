@@ -9,6 +9,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ReaderLink } from '../../shared/browser/reader-link';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import type {
@@ -40,6 +41,7 @@ import { PersonalDocuments } from '../knowledge/personal-documents';
     FeaturePage,
     Icon,
     RouterLink,
+    ReaderLink,
     FileDrop,
     ConfirmDialog,
     ResourceSharing,

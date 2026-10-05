@@ -10,7 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import type { PDFDocumentProxy, PDFDocumentLoadingTask, RenderTask } from 'pdfjs-dist';
 import type { DocumentInfo, DocumentPage, Job } from '../../core/api/types';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
@@ -22,10 +22,16 @@ import { JobProgress } from '../../shared/ui/job-progress';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { JobsApi } from '../tasks/jobs-api';
 import { KnowledgeApi } from './knowledge-api';
+import {
+  ReaderNavigation,
+  readerReturnLabel,
+  readerReturnUrl,
+} from '../../shared/browser/reader-navigation';
+import { WORKSPACE_HOME } from '../../core/workspace-home';
 
 @Component({
   selector: 'nx-document-reader',
-  imports: [FeaturePage, Icon, Select, TextHighlight, JobProgress, RouterLink],
+  imports: [FeaturePage, Icon, Select, TextHighlight, JobProgress],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './document-reader.html',
@@ -36,6 +42,9 @@ export class DocumentReader {
   private readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
   private readonly route = inject(ActivatedRoute);
+  private readonly navigation = inject(ReaderNavigation);
+  readonly returnTo = signal(WORKSPACE_HOME);
+  readonly returnLabel = computed(() => readerReturnLabel(this.returnTo()));
   readonly document = signal<DocumentInfo | null>(null);
   readonly pages = signal<DocumentPage[]>([]);
   readonly job = signal<Job | null>(null);
@@ -72,6 +81,11 @@ export class DocumentReader {
   );
   readonly isPdf = computed(() => this.document()?.contentType === 'application/pdf');
   readonly isImage = computed(() => this.document()?.contentType.startsWith('image/') ?? false);
+  readonly format = computed(() =>
+    this.isPdf() ? 'PDF 文件' : this.isImage() ? '圖片' : '文字文件',
+  );
+  readonly imageLoading = signal(false);
+  readonly hasText = computed(() => this.pages().some((page) => page.text.trim()));
   readonly contentUrl = computed(() => `/api/v1/documents/${this.document()?.id}/content`);
   private pdf: PDFDocumentProxy | null = null;
   private pdfLoad: PDFDocumentLoadingTask | null = null;
@@ -132,6 +146,10 @@ export class DocumentReader {
     this.pdf = null;
     this.pdfLoad = null;
     this.loading.set(true);
+    const returnTo = readerReturnUrl(this.route.snapshot.queryParamMap.get('returnTo'));
+    this.returnTo.set(returnTo ?? WORKSPACE_HOME);
+    this.navigation.enter(returnTo);
+    this.imageLoading.set(false);
     this.error.set('');
     this.renderError.set('');
     this.document.set(null);
@@ -149,6 +167,8 @@ export class DocumentReader {
         : this.api.document(id, this.controller.signal));
       if (!valid()) return;
       this.document.set(info);
+      if (!returnTo && info.collectionId) this.returnTo.set('/knowledge');
+      this.imageLoading.set(info.contentType.startsWith('image/'));
       this.mode.set(
         info.contentType === 'application/pdf' || info.contentType.startsWith('image/')
           ? 'original'
@@ -249,6 +269,16 @@ export class DocumentReader {
   }
   navigate(number: number) {
     this.page.set(Math.max(1, Math.min(number, this.total())));
+  }
+  back(event: MouseEvent) {
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
+      return;
+    event.preventDefault();
+    this.navigation.back(this.returnTo());
+  }
+  imageFailed() {
+    this.imageLoading.set(false);
+    this.renderError.set('原始圖片無法顯示，請重新開啟或下載原檔。');
   }
   async control(retry: boolean) {
     const job = this.job();

@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  afterRenderEffect,
   DestroyRef,
   effect,
   ElementRef,
@@ -45,6 +46,7 @@ import { ConversationDraftTransfer } from '../../core/preferences/conversation-d
 import { FocusComposer } from './focus-composer';
 import { isSubmitKey } from '../../shared/browser/submit-key';
 import { ConversationSpendView } from '../billing/conversation-spend';
+import { ReaderNavigation, type ReaderOrigin } from '../../shared/browser/reader-navigation';
 
 @Component({
   selector: 'nx-chat-workspace',
@@ -82,6 +84,8 @@ export class ChatWorkspace {
   private readonly destroy = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly readerNavigation = inject(ReaderNavigation);
+  private readonly returnPosition = signal<ReaderOrigin | null>(null);
   private readonly transfer = inject(ConversationDraftTransfer);
   private navigationSequence = 0;
   readonly sidebarOpen = signal(window.innerWidth >= 860);
@@ -253,6 +257,8 @@ export class ChatWorkspace {
     this.destroy.onDestroy(() => this.navigationSequence++);
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const navigation = ++this.navigationSequence;
+      const position = this.readerNavigation.takeReturn(this.router.url);
+      this.following.set(position ? false : this.store.personal.value().autoFollow);
       void this.store.initialize().then(() => {
         if (navigation === this.navigationSequence && this.store.ready())
           void this.store.select(params.get('id')).then(() => {
@@ -265,10 +271,26 @@ export class ChatWorkspace {
             if (prompt) {
               this.store.draft.set({ text: prompt });
             }
+            this.returnPosition.set(position);
           });
       });
-      this.following.set(this.store.personal.value().autoFollow);
       this.closeFind();
+    });
+    afterRenderEffect(() => {
+      const position = this.returnPosition(),
+        view = this.viewport()?.nativeElement;
+      if (!position || !view || this.store.loadingConversation()) return;
+      view.scrollTop = position.scrollTop;
+      this.lastScrollTop = view.scrollTop;
+      const link = Array.from(view.querySelectorAll<HTMLAnchorElement>('a[data-reader-id]')).find(
+        (element) =>
+          element.dataset['readerId'] === position.documentId &&
+          (!position.messageId ||
+            element.closest<HTMLElement>('[data-message-id]')?.dataset['messageId'] ===
+              position.messageId),
+      );
+      link?.focus({ preventScroll: true });
+      this.returnPosition.set(null);
     });
     effect((onCleanup) => {
       const ready = this.store.ready(),
@@ -348,12 +370,16 @@ export class ChatWorkspace {
       // A smooth jump upwards begins near the bottom; that first event must not restart auto-follow.
       this.following.set(near && (this.following() || view.scrollTop > this.lastScrollTop));
       this.lastScrollTop = view.scrollTop;
-      if (!near) cancelAnimationFrame(this.scrollFrame);
+      if (!near) {
+        cancelAnimationFrame(this.scrollFrame);
+        this.scrollFrame = 0;
+      }
     }
   }
   pauseFollowing() {
     this.following.set(false);
     cancelAnimationFrame(this.scrollFrame);
+    this.scrollFrame = 0;
     this.lastScrollTop = this.viewport()?.nativeElement.scrollTop ?? 0;
   }
   scrollLatest(smooth = true) {

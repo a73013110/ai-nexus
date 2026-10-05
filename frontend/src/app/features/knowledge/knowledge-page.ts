@@ -7,7 +7,6 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import type {
   Collection,
   DocumentInfo,
@@ -25,6 +24,7 @@ import { FileDrop } from '../../shared/browser/file-drop';
 import { WorkspaceApi } from '../workspace/workspace-api';
 import { KnowledgeApi } from './knowledge-api';
 import { PersonalDocuments } from './personal-documents';
+import { ReaderLink } from '../../shared/browser/reader-link';
 
 @Component({
   selector: 'nx-knowledge-page',
@@ -34,9 +34,9 @@ import { PersonalDocuments } from './personal-documents';
     Select,
     ActionMenu,
     ResourceSharing,
-    RouterLink,
     FileDrop,
     PersonalDocuments,
+    ReaderLink,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,

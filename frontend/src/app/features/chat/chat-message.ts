@@ -7,7 +7,7 @@ import { CopyFeedback } from '../../shared/browser/copy-feedback';
 import { AttachmentList } from '../attachments/attachment-list';
 import { MessageTree } from './message-tree';
 import { ThinkingIndicator } from '../../shared/ui/thinking-indicator';
-import { RouterLink } from '@angular/router';
+import { ReaderLink } from '../../shared/browser/reader-link';
 import { MessageFeedback } from '../quality/message-feedback';
 import { ChargeLabel } from '../billing/charge-label';
 import { StreamingAnswer } from '../../shared/ui/streaming-answer';
@@ -18,7 +18,7 @@ import { StreamingAnswer } from '../../shared/ui/streaming-answer';
     Icon,
     AttachmentList,
     ThinkingIndicator,
-    RouterLink,
+    ReaderLink,
     MarkdownView,
     MessageFeedback,
     ChargeLabel,
@@ -78,8 +78,8 @@ import { StreamingAnswer } from '../../shared/ui/streaming-answer';
       <nav class="source-citations" aria-label="回答引用來源">
         @for (source of message().sources; track source.number) {
           <a
-            [routerLink]="['/reader', source.documentId]"
-            [queryParams]="{ page: source.pageNumber }"
+            [nxReaderLink]="source.documentId"
+            [readerPage]="source.pageNumber"
             [title]="source.excerpt"
             ><strong>[{{ source.number }}]</strong><span>{{ source.title }}</span
             ><small>第 {{ source.pageNumber }} 頁</small><nx-icon name="document"
