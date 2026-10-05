@@ -54,7 +54,7 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         AiNexus.Modules.Attachments.AttachmentConfiguration.Configure(model);
         AiNexus.Modules.Library.LibraryConfiguration.Configure(model);
         var user = model.Entity<NexusUser>();
-        user.ToTable("Users", "identity");
+        user.ToTable("Users", "identity", table => table.HasCheckConstraint("CK_Users_AttachmentLimitBytes", "[AttachmentLimitBytes] IS NULL OR [AttachmentLimitBytes] BETWEEN 0 AND 1000000000000000"));
         user.HasKey(x => x.Id);
         user.Property(x => x.Sid).HasMaxLength(184);
         user.HasIndex(x => x.Sid).IsUnique();
@@ -90,6 +90,8 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         run.ToTable("GenerationRuns", "inference");
         run.HasKey(x => x.Id);
         run.Property(x => x.ModelId).HasMaxLength(160);
+        run.Property(x => x.Provider).HasMaxLength(32);
+        run.Property(x => x.ProviderModelId).HasMaxLength(150);
         run.Property(x => x.Status).HasMaxLength(16);
         run.Property(x => x.ErrorCode).HasMaxLength(80);
         run.Property(x => x.IdempotencyKey).HasMaxLength(80);
@@ -114,6 +116,8 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         profile.HasKey(x => x.Id);
         profile.Property(x => x.Id).HasMaxLength(160);
         profile.Property(x => x.DisplayName).HasMaxLength(120);
+        profile.Property(x => x.Provider).HasMaxLength(32);
+        profile.Property(x => x.ProviderModelId).HasMaxLength(150);
         var audit = model.Entity<AuditEvent>();
         audit.ToTable("AuditEvents", "operations");
         audit.HasKey(x => x.Id);

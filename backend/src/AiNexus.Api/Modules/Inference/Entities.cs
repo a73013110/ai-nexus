@@ -14,6 +14,8 @@ public sealed class GenerationRun
     public Guid UserMessageId { get; set; }
     public Guid AssistantMessageId { get; set; }
     public string ModelId { get; set; } = "";
+    public string Provider { get; set; } = "google";
+    public string ProviderModelId { get; set; } = "";
     public string ParametersJson { get; set; } = "{}";
     public string IdempotencyKey { get; set; } = "";
     public string RequestHash { get; set; } = "";
@@ -26,6 +28,8 @@ public sealed class GenerationRun
     public DateTimeOffset? FinishedAt { get; set; }
     public long? InputTokens { get; set; }
     public long? OutputTokens { get; set; }
+    public long? DurationMilliseconds { get; set; }
+    public long? GenerationMilliseconds { get; set; }
 }
 
 public sealed class RunEvent
@@ -42,6 +46,10 @@ public sealed class RunEvent
 public sealed class ModelProfile
 {
     public string Id { get; set; } = "";
+    public string Provider { get; set; } = "google";
+    public string ProviderModelId { get; set; } = "";
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string NativeId => ProviderModelId;
     public string DisplayName { get; set; } = "";
     public int ContextTokens { get; set; } = 8192;
     public int MaxOutputTokens { get; set; } = 2048;

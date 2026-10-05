@@ -31,7 +31,7 @@ public sealed record ShareSnapshot(string Content, int? ArtifactVersion, IReadOn
 public sealed record SharedContentDto(ShareDto Share, ShareSnapshot Snapshot);
 public sealed class ShareWriteLock { public SemaphoreSlim Gate { get; } = new(1, 1); }
 
-public sealed class ShareService(NexusDbContext db, ResourceAccess access, AccessService features, AttachmentWriteLock attachmentWrites, ShareWriteLock writes, AiNexus.Modules.Inference.GenerationScheduler scheduler)
+public sealed class ShareService(NexusDbContext db, ResourceAccess access, AccessService features, AttachmentWriteLock attachmentWrites, ShareWriteLock writes, AiNexus.Modules.Inference.GenerationScheduler scheduler, AttachmentQuota quota)
 {
     public async Task<ShareDto> CreateAsync(Guid actor, CreateShareRequest request, CancellationToken ct)
     {
@@ -46,6 +46,7 @@ public sealed class ShareService(NexusDbContext db, ResourceAccess access, Acces
             try
             {
                 await using var tx = await db.Database.BeginTransactionAsync(ct);
+                await quota.LockOwnerAsync(actor, ct);
                 var now = DateTimeOffset.UtcNow;
                 if (await db.Set<ShareLink>().CountAsync(x => x.OwnerId == actor && !x.IsRevoked && x.ExpiresAt > now, ct) >= 100) throw new ApiException(409, "share_limit", "有效分享已達 100 個，請撤銷不再使用的分享。");
                 await RequireSourceFeature(actor, request.Kind, ct);
@@ -103,7 +104,7 @@ public sealed class ShareService(NexusDbContext db, ResourceAccess access, Acces
     {
         var share = await RequireAsync(actor, id, ct);
         if (!share.IncludeAttachments || !await db.Set<AttachmentReference>().AnyAsync(x => x.ResourceId == id && x.AttachmentId == fileId, ct)) throw Missing();
-        return await db.Set<Attachment>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == fileId, ct) ?? throw Missing();
+        return await db.Set<Attachment>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == fileId && x.StorageState == AttachmentStates.Ready, ct) ?? throw Missing();
     }
     public async Task RevokeAsync(Guid actor, Guid id, CancellationToken ct)
     {

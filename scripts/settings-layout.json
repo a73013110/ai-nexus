@@ -34,19 +34,41 @@
     "AdAccountAttrName",
     "DnPass"
   ],
-  "Administration": ["BootstrapAdministrators"],
-  "DataProtection": ["KeyRingPath"],
-  "Security": ["DisableHttpsRedirection"],
-  "Inference": ["Provider", "Execution", "ModelPolicy", "Providers"],
+  "Administration": [
+    "BootstrapAdministrators"
+  ],
+  "DataProtection": [
+    "KeyRingPath"
+  ],
+  "Security": [
+    "DisableHttpsRedirection"
+  ],
+  "Inference": [
+    "Execution",
+    "ModelPolicy",
+    "Providers"
+  ],
   "Inference.Execution": [
     "QueueCapacity",
     "TimeoutSeconds",
     "MaxInputCharacters",
     "MaxOutputCharacters"
   ],
-  "Inference.ModelPolicy": ["AllowModelSelection", "ShowModelNames"],
-  "Inference.Providers": ["Google", "Ollama"],
-  "Inference.Providers.Google": ["ApiKey", "DefaultModelId", "Models"],
+  "Inference.ModelPolicy": [
+    "AllowModelSelection",
+    "ShowModelNames",
+    "DefaultModelId"
+  ],
+  "Inference.Providers": [
+    "Google",
+    "Ollama"
+  ],
+  "Inference.Providers.Google": [
+    "Enabled",
+    "MaxConcurrency",
+    "ApiKey",
+    "Models"
+  ],
   "Inference.Providers.Google.Models": [],
   "Inference.Providers.Google.Models.default": [
     "Id",
@@ -60,7 +82,12 @@
     "ReasoningEfforts",
     "DefaultReasoningEffort"
   ],
-  "Inference.Providers.Ollama": ["Endpoint", "DefaultModelId", "Models"],
+  "Inference.Providers.Ollama": [
+    "Enabled",
+    "MaxConcurrency",
+    "Endpoint",
+    "Models"
+  ],
   "Inference.Providers.Ollama.Models": [],
   "Inference.Providers.Ollama.Models.default": [
     "Id",
@@ -74,8 +101,14 @@
     "ReasoningEfforts",
     "DefaultReasoningEffort"
   ],
-  "Prompts": ["DefaultSystemInstruction"],
-  "Knowledge": ["Embedding", "Indexing", "Retrieval"],
+  "Prompts": [
+    "DefaultSystemInstruction"
+  ],
+  "Knowledge": [
+    "Embedding",
+    "Indexing",
+    "Retrieval"
+  ],
   "Knowledge.Embedding": [
     "Provider",
     "Model",
@@ -98,12 +131,35 @@
     "TopK",
     "ContextCharacters"
   ],
-  "Tools": ["WebSearch"],
-  "Tools.WebSearch": ["Enabled", "Provider", "Endpoint", "TimeoutSeconds", "MaxResults", "MaxDailyRequests", "ApiKey"],
-  "Integrations": ["Sources", "Connectors"],
-  "Integrations.Connectors": ["Gitea"],
-  "Integrations.Connectors.Gitea": ["Enabled", "BaseUrl", "TimeoutSeconds", "MaxFileBytes"],
-  "Integrations.Sources": ["Gdweb", "Meiho"],
+  "Tools": [
+    "WebSearch"
+  ],
+  "Tools.WebSearch": [
+    "Enabled",
+    "Provider",
+    "Endpoint",
+    "TimeoutSeconds",
+    "MaxResults",
+    "MaxDailyRequests",
+    "ApiKey"
+  ],
+  "Integrations": [
+    "Sources",
+    "Connectors"
+  ],
+  "Integrations.Connectors": [
+    "Gitea"
+  ],
+  "Integrations.Connectors.Gitea": [
+    "Enabled",
+    "BaseUrl",
+    "TimeoutSeconds",
+    "MaxFileBytes"
+  ],
+  "Integrations.Sources": [
+    "Gdweb",
+    "Meiho"
+  ],
   "Integrations.Sources.Gdweb": [
     "Enabled",
     "Transport",
@@ -139,24 +195,37 @@
     "Password"
   ],
   "Attachments": [
-    "MaxOwnerBytes",
+    "StoragePath",
+    "DefaultOwnerLimitBytes",
     "MaxFileBytes",
     "MaxMessageBytes",
     "MaxFilesPerMessage",
     "MaxExtractedCharacters",
     "MaxPdfPages",
     "ImageTokenEstimate",
-    "DraftRetentionDays"
+    "DraftRetentionDays",
+    "CleanupIntervalMinutes"
   ],
-  "Exports": ["BrowserChannel", "TimeoutSeconds"],
-  "Storage": ["ApplyMigrationsOnStartup"],
-  "Logging": ["LogLevel"],
+  "Exports": [
+    "BrowserChannel",
+    "TimeoutSeconds"
+  ],
+  "Storage": [
+    "ApplyMigrationsOnStartup"
+  ],
+  "Logging": [
+    "LogLevel"
+  ],
   "Logging.LogLevel": [
     "Default",
     "Microsoft.AspNetCore",
     "Microsoft.EntityFrameworkCore.Database.Command"
   ],
-  "ConnectionStrings": ["Nexus", "LegacyGdweb", "LegacyMeiho"],
+  "ConnectionStrings": [
+    "Nexus",
+    "LegacyGdweb",
+    "LegacyMeiho"
+  ],
   "*.ModelProfile": [
     "Id",
     "DisplayName",

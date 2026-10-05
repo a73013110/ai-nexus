@@ -12,7 +12,7 @@ using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 
 namespace AiNexus.Modules.Knowledge;
 
-public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskService model, IEmbeddingProvider embeddings, NativeVectorStore vectors, IOptions<KnowledgeOptions> knowledge, IOptions<AttachmentOptions> limits) : IBackgroundJobHandler
+public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskService model, IEmbeddingProvider embeddings, NativeVectorStore vectors, IOptions<KnowledgeOptions> knowledge, IOptions<AttachmentOptions> limits, AttachmentService attachments) : IBackgroundJobHandler
 {
     public string Kind => "document-ingest";
     public async Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => _ = await documents.RequireAsync(job.OwnerId, job.SubjectId, ct, write: true);
@@ -22,7 +22,8 @@ public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskSe
         var document = await documents.RequireAsync(actor, execution.Job.SubjectId, ct, write: true);
         var file = await documents.OriginalAsync(actor, document.Id, ct);
         document.Status = "processing";
-        using var pdf = file.ContentType == "application/pdf" ? PdfDocument.Open(file.Data) : null;
+        var data = await attachments.ReadAsync(file, ct);
+        using var pdf = file.ContentType == "application/pdf" ? PdfDocument.Open(data) : null;
         var total = pdf?.NumberOfPages ?? 1;
         if (total > limits.Value.MaxPdfPages) throw new ApiException(400, "pdf_page_limit", "PDF 頁數超過處理上限，請先拆分文件。");
         document.PageCount = total;
@@ -39,7 +40,7 @@ public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskSe
             {
                 await execution.CheckpointAsync($"辨識第 {number} 頁文字", number - 1, total, ct);
                 var images = new List<InferenceImage>();
-                if (pdf is null) images.Add(new(file.Id, file.ContentType, file.Data, limits.Value.ImageTokenEstimate));
+                if (pdf is null) images.Add(new(file.Id, file.ContentType, data, limits.Value.ImageTokenEstimate));
                 else
                 {
                     var pageImages = pdf.GetPage(number).GetImages().ToList();

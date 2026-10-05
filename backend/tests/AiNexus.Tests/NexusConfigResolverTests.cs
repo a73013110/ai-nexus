@@ -47,8 +47,8 @@ public sealed class NexusConfigResolverTests
     {
         var config = new ConfigurationManager();
         config.AddInMemoryCollection(new Dictionary<string, string?> {
-            ["Inference:Provider"] = "ollama", ["Inference:Providers:Ollama:Endpoint"] = "http://local-ai:11434/",
-            ["Inference:Providers:Ollama:DefaultModelId"] = "qwen3:8b", ["Inference:Providers:Ollama:Models:default:Id"] = "qwen3:8b",
+            ["Inference:Providers:Ollama:Enabled"] = "true", ["Inference:Providers:Ollama:Endpoint"] = "http://local-ai:11434/",
+            ["Inference:ModelPolicy:DefaultModelId"] = "ollama/qwen3:8b", ["Inference:Providers:Ollama:Models:default:Id"] = "qwen3:8b",
             ["Inference:Providers:Google:Models:default:Id"] = "google-only", ["Inference:Providers:Google:ApiKey"] = "fixture",
             ["Inference:Execution:TimeoutSeconds"] = "300", ["Inference:ModelPolicy:ShowModelNames"] = "false",
             ["Prompts:DefaultSystemInstruction"] = "local instruction", ["Knowledge:Embedding:Provider"] = "none",
@@ -56,7 +56,7 @@ public sealed class NexusConfigResolverTests
         });
         var inference = new InferenceOptions(); var knowledge = new KnowledgeOptions();
         NexusSettings.Inference(config, inference); NexusSettings.Knowledge(config, knowledge);
-        Assert.Equal("qwen3:8b", Assert.Single(inference.Models).Id); Assert.Equal("fixture", inference.GoogleApiKey);
+        Assert.Equal("ollama/qwen3:8b", Assert.Single(inference.Models).Id); Assert.Equal("qwen3:8b", inference.Models[0].NativeId); Assert.Equal("ollama", inference.Models[0].Provider); Assert.Equal("fixture", inference.GoogleApiKey);
         Assert.Equal("http://local-ai:11434/", inference.BaseUrl); Assert.False(inference.ShowModelNames);
         Assert.Equal(300, inference.TimeoutSeconds); Assert.Equal("local instruction", inference.SystemPrompt);
         Assert.Equal("none", knowledge.EmbeddingProvider); Assert.Equal(4, knowledge.TopK);

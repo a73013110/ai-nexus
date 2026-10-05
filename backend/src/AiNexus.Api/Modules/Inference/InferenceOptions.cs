@@ -2,7 +2,7 @@ namespace AiNexus.Modules.Inference;
 
 public sealed class InferenceOptions
 {
-    public string Provider { get; set; } = "google";
+    public Dictionary<string, int> ProviderConcurrency { get; set; } = new(StringComparer.Ordinal) { ["google"] = 1 };
     public string GoogleApiKey { get; set; } = "";
     public string BaseUrl { get; set; } = "http://localhost:11434/";
     public int QueueCapacity { get; set; } = 16;

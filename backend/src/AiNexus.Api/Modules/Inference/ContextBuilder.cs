@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Inference;
 
-public sealed class ContextBuilder(NexusDbContext db, IOptions<AttachmentOptions> attachments)
+public sealed class ContextBuilder(NexusDbContext db, IOptions<AttachmentOptions> attachments, AttachmentService storage)
 {
     public static string SystemPrompt(string baseline, string instruction) => string.IsNullOrWhiteSpace(instruction) ? baseline : baseline + "\n\n此對話的使用者偏好：\n" + instruction;
 
@@ -17,7 +17,10 @@ public sealed class ContextBuilder(NexusDbContext db, IOptions<AttachmentOptions
         if (preview.BudgetExceeded) throw new ApiException(400, "context_budget_exceeded", "提問超過此模型的上下文預算，請縮短內容或選擇較大上下文的模型。");
         RequireVision(chain, parameters);
         var imageIds = chain.SelectMany(x => x.Images ?? []).Select(x => x.AttachmentId).Distinct().ToArray();
-        var data = await db.Set<Attachment>().AsNoTracking().Where(x => imageIds.Contains(x.Id)).Select(x => new { x.Id, x.Data }).ToDictionaryAsync(x => x.Id, x => x.Data, ct);
+        var originals = await db.Set<Attachment>().AsNoTracking().Where(x => imageIds.Contains(x.Id) && x.StorageState == AttachmentStates.Ready).Select(x => new Attachment { Id = x.Id, StorageKey = x.StorageKey, Size = x.Size }).ToListAsync(ct);
+        var data = new Dictionary<Guid, byte[]>();
+        foreach (var original in originals) data.Add(original.Id, await storage.ReadAsync(original, ct));
+        if (data.Count != imageIds.Length) throw new ApiException(409, "attachment_not_found", "對話附件已無法使用。");
         chain = chain.Select(x => x with { Images = x.Images?.Select(i => i with { Data = data[i.AttachmentId] }).ToArray() }).ToList();
         return new[] { new InferenceMessage("system", parameters.SystemPrompt) }.Concat(chain).ToList();
     }

@@ -22,16 +22,26 @@ import { Checkbox } from '../../shared/ui/checkbox';
 import { MarkdownView } from '../../shared/ui/markdown-view';
 import { formatBytes, formatDate, formatNumber } from '../../shared/browser/format';
 import { AdminApi } from './admin-api';
+import { StorageUsage } from '../../shared/ui/storage-usage';
+import { RunTimingDisplay } from '../../shared/ui/run-timing';
+import { parseStorageLimitGb, storageLimitGb } from '../../shared/browser/storage-limit';
+import { WorkspaceSession } from '../../core/auth/workspace-session';
 
 @Component({
   selector: 'nx-admin-user-inspector',
-  imports: [Icon, SearchField, Checkbox, MarkdownView],
+  imports: [Icon, SearchField, Checkbox, MarkdownView, StorageUsage, RunTimingDisplay],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-user-inspector.html',
 })
 export class AdminUserInspector {
   readonly user = input<AdminUser | null>(null);
   readonly closed = output<void>();
+  readonly storageChanged = output<void>();
+  readonly storageLimit = signal('');
+  readonly savingStorage = signal(false);
+  readonly storageError = signal('');
+  readonly storageNotice = signal('');
+  readonly session = inject(WorkspaceSession);
   readonly overview = signal<AdminUserDetail | null>(null);
   readonly conversations = signal<AdminConversationPage | null>(null);
   readonly detail = signal<AdminConversationDetail | null>(null);
@@ -66,6 +76,10 @@ export class AdminUserInspector {
       this.error.set('');
       this.readError.set('');
       this.reading.set(false);
+      this.storageError.set('');
+      this.storageNotice.set('');
+      this.savingStorage.set(false);
+      this.storageLimit.set('');
       if (user) {
         if (!dialog.open) dialog.showModal();
         void this.load(user.id, this.version);
@@ -91,11 +105,34 @@ export class AdminUserInspector {
       ]);
       if (version !== this.version) return;
       this.overview.set(overview);
+      this.storageLimit.set(storageLimitGb(overview.user.storage?.personalLimitBytes));
       if (listVersion === this.listVersion) this.conversations.set(conversations);
     } catch (error) {
       if (version === this.version) this.error.set(this.message(error));
     } finally {
       if (version === this.version && listVersion === this.listVersion) this.loading.set(false);
+    }
+  }
+  async saveStorage(event: Event) {
+    event.preventDefault();
+    const user = this.user(),
+      version = this.version;
+    if (!user || this.savingStorage()) return;
+    this.storageError.set('');
+    this.storageNotice.set('');
+    this.savingStorage.set(true);
+    try {
+      const bytes = parseStorageLimitGb(this.storageLimit());
+      await this.api.storage(user.id, bytes);
+      const overview = await this.api.insights(user.id);
+      if (version !== this.version) return;
+      this.overview.set(overview);
+      this.storageNotice.set('個人容量上限已更新。');
+      this.storageChanged.emit();
+    } catch (error) {
+      if (version === this.version) this.storageError.set(this.message(error));
+    } finally {
+      if (version === this.version) this.savingStorage.set(false);
     }
   }
   searchChanged(value: string) {

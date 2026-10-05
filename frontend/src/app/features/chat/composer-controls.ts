@@ -3,6 +3,7 @@ import type { ContextUsage, Model, ModelPolicy } from '../../core/api/types';
 import { Icon } from '../../shared/ui/icon';
 import { Disclosure } from '../../shared/ui/disclosure';
 import { Select } from '../../shared/ui/select';
+import { formatModelName } from '../../shared/browser/format';
 
 @Component({
   selector: 'nx-composer-controls',
@@ -25,7 +26,7 @@ import { Select } from '../../shared/ui/select';
         ><nx-icon name="lock" />{{
           selected()
             ? policy().showModelNames
-              ? selected()!.displayName
+              ? modelName(selected()!)
               : '系統指定'
             : modelPlaceholder()
         }}</span
@@ -143,7 +144,7 @@ export class ComposerControls {
   readonly modelOptions = computed(() =>
     this.models().map((x) => ({
       value: x.id,
-      label: x.displayName,
+      label: formatModelName(x),
       description: `${x.contextTokens.toLocaleString()} Context${x.supportsImages ? ' · 圖片分析' : ''}`,
     })),
   );
@@ -154,6 +155,7 @@ export class ComposerControls {
       label: this.effortLabel(value),
     })),
   ]);
+  readonly modelName = formatModelName;
   readonly percent = computed(() => {
     const value = this.usage();
     return value

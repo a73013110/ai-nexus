@@ -80,9 +80,9 @@
     </div>
   </div>
   <div class="file-library-summary">
-    <span>{{ store.total() }} 份檔案</span
-    ><span>已保存 {{ bytes(store.result()?.storedBytes || 0) }}</span>
+    <span>{{ store.total() }} 份檔案</span>
   </div>
+  <nx-storage-usage [storage]="store.result()?.storage" />
   @if (store.loading()) {
     <div class="file-loading" role="status"><nx-icon name="document" />正在載入檔案…</div>
   } @else if (store.items().length) {

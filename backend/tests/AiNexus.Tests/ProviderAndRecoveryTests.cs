@@ -69,7 +69,7 @@ public sealed class ProviderAndRecoveryTests
         });
         using var client = await factory.SignedInAsync();
         var run = (await client.GetFromJsonAsync<RunDto>($"/api/v1/runs/{interruptedId}"))!;
-        Assert.Equal(RunStates.Failed, run.Status); Assert.Equal("executor_lost", run.ErrorCode); Assert.Equal("既有部分回答", run.Content); Assert.Equal(0, factory.Provider.Calls);
+        Assert.Equal(RunStates.Failed, run.Status); Assert.Equal("executor_lost", run.ErrorCode); Assert.Equal("既有部分回答", run.Content); Assert.Equal(0, factory.Provider.Calls); Assert.NotNull(run.Timing);
     }
 
     [Fact]

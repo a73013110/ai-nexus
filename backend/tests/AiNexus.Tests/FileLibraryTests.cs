@@ -36,6 +36,8 @@ public sealed class FileLibraryTests
         using var run = await PostRun(alice, new(conversation.Id, "test-model", "Read file", null, null, AttachmentIds: [chatFile.Id])); run.EnsureSuccessStatusCode();
         await WaitForTerminal(alice, (await run.Content.ReadFromJsonAsync<RunDto>())!.Id);
         var library = (await alice.GetFromJsonAsync<FileLibraryPageDto>("/api/v1/files"))!;
+        Assert.Equal(privateFile.Size + draft.Size + chatFile.Size, library.Storage.UsedBytes);
+        Assert.Equal(5_000_000_000, library.Storage.LimitBytes);
         Assert.Equal(2, library.Total); Assert.DoesNotContain(library.Items, x => x.File.Id == draft.Id);
         Assert.Contains(library.Items, x => x.File.Id == privateFile.Id && x.Usages.Any(u => u.Kind == "knowledge" && u.ResourceId == collection.Resource.Id));
         Assert.Contains(library.Items, x => x.File.Id == chatFile.Id && x.Usages.Any(u => u.Kind == "chat" && u.ResourceId == conversation.Id));

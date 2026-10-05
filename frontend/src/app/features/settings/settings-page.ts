@@ -24,10 +24,12 @@ import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
 import { WorkspaceNavigation } from '../../shared/ui/workspace-navigation';
 import { downloadFile } from '../../shared/browser/download';
+import { StorageUsage } from '../../shared/ui/storage-usage';
+import { formatDuration, formatBytes, formatModelName } from '../../shared/browser/format';
 
 @Component({
   selector: 'nx-settings-page',
-  imports: [RouterLink, Select, Icon, WorkspaceNavigation],
+  imports: [RouterLink, Select, Icon, WorkspaceNavigation, StorageUsage],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './settings-page.html',
 })
@@ -107,7 +109,7 @@ export class SettingsPage {
   ];
   readonly modelOptions = computed(() => [
     { value: '', label: '依系統預設' },
-    ...(this.models()?.models || []).map((x) => ({ value: x.id, label: x.displayName })),
+    ...(this.models()?.models || []).map((x) => ({ value: x.id, label: formatModelName(x) })),
   ]);
   private alive = true;
   constructor() {
@@ -210,7 +212,6 @@ export class SettingsPage {
   format(value: number) {
     return value.toLocaleString('zh-TW');
   }
-  mb(value: number) {
-    return (value / 1024 / 1024).toFixed(1);
-  }
+  readonly duration = formatDuration;
+  readonly bytes = formatBytes;
 }

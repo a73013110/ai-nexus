@@ -38,23 +38,24 @@ public static class ConnectionVerifier
         await Check("AD", async () => { await services.GetRequiredService<IAdAuthenticator>().VerifyServiceAsync(ct); return "服務帳號加密 LDAP bind 成功；個人登入仍需實際帳號驗收"; });
         await Check("Inference", async () =>
         {
-            var provider = services.GetRequiredService<IInferenceProvider>();
+            var router = services.GetRequiredService<InferenceRouter>();
             var options = services.GetRequiredService<IOptions<InferenceOptions>>().Value;
             var profile = options.Models.FirstOrDefault(x => x.Id == (options.DefaultModelId ?? options.Models.FirstOrDefault()?.Id))
                 ?? throw new ApiException(503, "model_not_configured", "請設定預設模型。");
+            var provider = router.For(profile.Provider);
             var models = await provider.InstalledModelsAsync(ct);
-            if (!models.Contains(profile.Id)) throw new ApiException(503, "model_unavailable", "目前的模型服務無法使用系統預設模型。");
+            if (!models.Contains(profile.NativeId)) throw new ApiException(503, "model_unavailable", "目前的模型服務無法使用系統預設模型。");
             var efforts = profile.ReasoningEfforts.Count > 0 ? profile.ReasoningEfforts : ["auto"];
             var counts = new List<string>();
             foreach (var effort in efforts)
             {
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(60));
                 var text = new StringBuilder(); var done = false;
-                await foreach (var chunk in provider.StreamAsync(profile.Id, [new("user", "2+2 等於多少？請只回覆一個數字，不要解釋。")], new(profile.ContextTokens, Math.Min(profile.MaxOutputTokens, 512), .2, "簡短回答。", effort, profile.ReasoningControl), timeout.Token)) { text.Append(chunk.Text); done |= chunk.Done; }
+                await foreach (var chunk in provider.StreamAsync(profile.NativeId, [new("user", "2+2 等於多少？請只回覆一個數字，不要解釋。")], new(profile.ContextTokens, Math.Min(profile.MaxOutputTokens, 512), .2, "簡短回答。", effort, profile.ReasoningControl), timeout.Token)) { text.Append(chunk.Text); done |= chunk.Done; }
                 if (!done || text.Length == 0) throw new InvalidDataException("Empty or incomplete model response.");
                 counts.Add($"{effort} 收到 {text.Length} 字元");
             }
-            return $"{options.Provider} 系統預設模型真實串流完成：{string.Join("；", counts)}";
+            return $"{profile.Provider} 系統預設模型真實串流完成：{string.Join("；", counts)}";
         });
         await Check("AttachmentInference", async () =>
         {
@@ -68,7 +69,7 @@ public static class ConnectionVerifier
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(60));
             var text = new StringBuilder(); var done = false;
             var parameters = new GenerationParameters(profile.ContextTokens, Math.Min(profile.MaxOutputTokens, 512), .2, "Answer concisely in English.", profile.DefaultReasoningEffort, profile.ReasoningControl, profile.SupportsImages);
-            await foreach (var chunk in services.GetRequiredService<IInferenceProvider>().StreamAsync(profile.Id, [new("user", prompt, images)], parameters, timeout.Token)) { text.Append(chunk.Text); done |= chunk.Done; }
+            await foreach (var chunk in services.GetRequiredService<InferenceRouter>().For(profile.Provider).StreamAsync(profile.NativeId, [new("user", prompt, images)], parameters, timeout.Token)) { text.Append(chunk.Text); done |= chunk.Done; }
             if (!done || !text.ToString().Contains("NEXUSCHECK42", StringComparison.OrdinalIgnoreCase) || (images.Length > 0 && !text.ToString().Contains("red", StringComparison.OrdinalIgnoreCase)))
                 throw new ApiException(503, "attachment_probe_failed", "模型未正確識別合成文件或圖片，請檢查模型能力設定。");
             return images.Length > 0 ? "真實模型已辨識合成文件代碼及紅色 PNG 圖片；未傳送私人資料" : "真實模型已辨識合成文件代碼；此 profile 未啟用圖片能力";

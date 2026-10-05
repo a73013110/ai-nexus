@@ -22,6 +22,15 @@ async function administration(page: Page) {
     displayName: "王小明",
     lastSeenAt: "2026-10-04T00:00:00Z",
     roleIds: ["member"],
+    storage: {
+      usedBytes: 2048,
+      limitBytes: 5_000_000_000,
+      remainingBytes: 5_000_000_000 - 2048,
+      personalLimitBytes: null as number | null,
+      groupLimitBytes: null,
+      defaultLimitBytes: 5_000_000_000,
+      limitSource: "default",
+    },
   };
   const actor = {
     id: fixture.userId,
@@ -193,8 +202,10 @@ async function administration(page: Page) {
           inputTokens: 1200,
           outputTokens: 600,
           requestsWithUsage: 4,
-          attachmentBytes: 2048,
           daily: [],
+          storage: bob.storage,
+          totalDurationMilliseconds: 6000,
+          timedRequests: 4,
         },
       });
     }
@@ -253,6 +264,13 @@ async function administration(page: Page) {
             status: "completed",
             createdAt: actor.lastSeenAt,
             modelId: "fixture:8b",
+            timing: {
+              totalMilliseconds: 1500,
+              queueMilliseconds: 200,
+              generationMilliseconds: 1300,
+              inputTokens: 300,
+              outputTokens: 150,
+            },
             attachments: [],
           },
         ],
@@ -276,9 +294,22 @@ async function administration(page: Page) {
         inputTokens: 1200,
         outputTokens: 600,
         requestsWithUsage: 4,
+        totalDurationMilliseconds: 6000,
+        timedRequests: 4,
       });
     if (method === "PUT") {
       const body = route.request().postDataJSON();
+      if (path === `/users/${bob.id}/storage`) {
+        bob.storage.personalLimitBytes = body.limitBytes;
+        bob.storage.limitBytes = body.limitBytes ?? 5_000_000_000;
+        bob.storage.remainingBytes = Math.max(
+          0,
+          bob.storage.limitBytes - bob.storage.usedBytes,
+        );
+        bob.storage.limitSource =
+          body.limitBytes == null ? "default" : "personal";
+        return route.fulfill({ status: 204 });
+      }
       if (
         path === `/users/${actor.id}/roles` &&
         !body.roleIds.includes("administrator")
@@ -536,7 +567,7 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
         tab === "異動稽核" ? ".audit-toolbar" : ".feature-content > .form-note";
       await expect(page.locator(target)).toBeVisible();
       if (tab === "平台用量")
-        await expect(page.locator(".stat-card")).toHaveCount(3);
+        await expect(page.locator(".stat-card")).toHaveCount(4);
       const header = await page.locator(".feature-header").boundingBox();
       const content = await page.locator(target).boundingBox();
       expect(Math.abs(header!.x - content!.x)).toBeLessThan(1);
@@ -629,6 +660,19 @@ test("administrators inspect user usage and deleted conversations through an aud
   const dialog = page.getByRole("dialog", { name: "王小明", exact: true });
   await expect(dialog).toBeVisible();
   await expect(dialog.locator(".inspector-stats")).toContainText("1,800");
+  await expect(dialog.locator("nx-storage-usage")).toContainText("5.00 GB");
+  await dialog.getByLabel("個人容量上限（GB）", { exact: true }).fill("10");
+  await dialog
+    .getByRole("button", { name: "儲存容量上限", exact: true })
+    .click();
+  await expect(dialog.locator("nx-storage-usage")).toContainText("10.00 GB");
+  expect(state.bob.storage.personalLimitBytes).toBe(10_000_000_000);
+  await dialog.getByLabel("個人容量上限（GB）", { exact: true }).fill("");
+  await dialog
+    .getByRole("button", { name: "儲存容量上限", exact: true })
+    .click();
+  await expect(dialog.locator("nx-storage-usage")).toContainText("5.00 GB");
+  expect(state.bob.storage.personalLimitBytes).toBeNull();
   await dialog
     .getByRole("button", { name: "檢視對話：公文內容討論", exact: true })
     .click();
@@ -638,6 +682,11 @@ test("administrators inspect user usage and deleted conversations through an aud
   await expect(dialog.locator(".inspector-user-message")).toContainText(
     "請協助摘要公文",
   );
+  await dialog.locator("nx-run-timing summary").click();
+  await expect(dialog.locator("nx-run-timing details")).toContainText(
+    "輸入 300",
+  );
+  await expect(dialog.locator("nx-run-timing details")).toContainText("1.5 秒");
   await expect(
     dialog.getByRole("button", { name: "送出訊息", exact: true }),
   ).toHaveCount(0);
@@ -660,6 +709,11 @@ test("administrators inspect user usage and deleted conversations through an aud
     dialog.getByRole("button", { name: "檢視對話：公文內容討論", exact: true }),
   ).toHaveCount(0);
   await page.setViewportSize({ width: 375, height: 812 });
+  await dialog.getByLabel("個人容量上限（GB）", { exact: true }).fill("10");
+  await dialog
+    .getByRole("button", { name: "儲存容量上限", exact: true })
+    .click();
+  await expect(dialog.locator("nx-storage-usage")).toContainText("10.00 GB");
   expect(
     await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
   ).toBe(true);

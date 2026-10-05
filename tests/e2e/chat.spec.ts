@@ -39,6 +39,10 @@ test("blank desktop workspace, real forms, keyboard and Markdown copy", async ({
     page.getByRole("button", { name: "重新生成", exact: true }),
   ).toBeEnabled();
   expect(fixture.posts).toBe(1);
+  await expect(page.locator("nx-run-timing")).toContainText("1.5 秒");
+  await page.locator("nx-run-timing summary").click();
+  await expect(page.locator("nx-run-timing")).toContainText("輸入 123");
+  await expect(page.locator("nx-run-timing")).toContainText("輸出 12");
   await page.getByRole("button", { name: "複製程式碼", exact: true }).click();
   await expect
     .poll(() =>

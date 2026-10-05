@@ -386,7 +386,7 @@
                   @if (limits.storedAttachmentLimitBytes != null) {
                     <p class="form-note">
                       群組附件空間上限
-                      {{ mb(limits.storedAttachmentLimitBytes) }} MB；系統上限仍適用。
+                      {{ bytes(limits.storedAttachmentLimitBytes) }}；系統上限仍適用。
                     </p>
                   }
                 </section>
@@ -412,9 +412,16 @@
                   回報；其餘未計入 token 合計。
                 </p>
                 <p class="secondary">
-                  {{ stats.failed }} 次失敗 · {{ stats.cancelled }} 次取消 · 附件占用
-                  {{ mb(stats.attachmentBytes) }} MB
+                  {{ stats.failed }} 次失敗 · {{ stats.cancelled }} 次取消 · 累計耗時
+                  {{ duration(stats.totalDurationMilliseconds) }}（{{
+                    stats.timedRequests
+                  }}
+                  次有耗時紀錄）
                 </p>
+              </section>
+              <section class="settings-card">
+                <h2>原檔容量</h2>
+                <nx-storage-usage [storage]="stats.storage" />
               </section>
               <section class="settings-card">
                 <h2>每日生成</h2>

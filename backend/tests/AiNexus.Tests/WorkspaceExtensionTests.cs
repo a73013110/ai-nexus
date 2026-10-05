@@ -86,7 +86,7 @@ public sealed class WorkspaceExtensionTests
     [Fact]
     public async Task DeletingConversationRetainsLibraryFileUntilOwnerExplicitlyReclaimsQuota()
     {
-        await using var factory = new NexusFactory(attachments: x => { x.MaxFileBytes = 1024; x.MaxMessageBytes = 1024; x.MaxOwnerBytes = 1024; });
+        await using var factory = new NexusFactory(attachments: x => { x.MaxFileBytes = 1024; x.MaxMessageBytes = 1024; x.DefaultOwnerLimitBytes = 1024; });
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client);
         var content = Encoding.UTF8.GetBytes(new string('x', 600));

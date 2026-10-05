@@ -29,6 +29,7 @@ public sealed class RunLeaseRecovery(NexusDbContext db, ConversationService conv
             if (changed == 0) { await transaction.RollbackAsync(ct); continue; }
             var run = await db.Runs.SingleAsync(x => x.Id == id, ct);
             await db.Entry(run).ReloadAsync(ct);
+            RunTiming.Finish(run, now);
             await billing.FinishAsync(run.Id, run.Status, ct);
             RunService.AddEvent(db, run, "status");
             await conversations.UpdateAnswerAsync(run, ct);

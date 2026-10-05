@@ -82,10 +82,10 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
             {
                 OwnerId = owner, ActiveOwnerId = owner, ConversationId = request.ConversationId,
                 ExecutorId = scheduler.InstanceId, LeaseExpiresAt = DateTimeOffset.UtcNow + GenerationScheduler.LeaseDuration,
-                ModelId = profile.Id, IdempotencyKey = key, RequestHash = hash,
+                ModelId = profile.Id, Provider = profile.Provider, ProviderModelId = profile.NativeId, IdempotencyKey = key, RequestHash = hash,
                 ParametersJson = JsonSerializer.Serialize(new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, 0.6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, conversation.SystemInstruction) + projectContext + AiNexus.Modules.Knowledge.KnowledgeRetrieval.Prompt(sources) + AiNexus.Modules.WebSearch.WebSearchService.Prompt(search), effort, profile.ReasoningControl, profile.SupportsImages))
             };
-            await billing.ReserveAsync(run.Id, owner, request.ConversationId, options.Value.Provider, profile.Id, "chat", run.CreatedAt, ct);
+            await billing.ReserveAsync(run.Id, owner, request.ConversationId, profile.Provider, profile.NativeId, "chat", run.CreatedAt, ct);
             var (user, assistant) = await conversations.PrepareGenerationAsync(owner, request with { ModelId = profile.Id }, run.Id, ct);
             run.UserMessageId = user.Id;
             run.AssistantMessageId = assistant.Id;
@@ -100,7 +100,7 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
             db.AuditEvents.Add(new AuditEvent { OwnerId = owner, Action = "run.created", ResourceId = run.Id, Result = run.Status });
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
-            scheduler.Enqueue(run.Id);
+            scheduler.Enqueue(run.Id, profile.Provider);
             reserved = false;
             return presentation.Run(run);
         }
@@ -134,7 +134,7 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
         run.ErrorCode = error;
         run.ActiveOwnerId = null;
         run.LeaseExpiresAt = null;
-        run.FinishedAt = DateTimeOffset.UtcNow;
+        RunTiming.Finish(run, DateTimeOffset.UtcNow);
         await billing.FinishAsync(run.Id, status, ct);
         AddEvent(db, run, "status");
         await conversations.UpdateAnswerAsync(run, ct);

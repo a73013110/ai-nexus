@@ -27,10 +27,10 @@ public static class KnowledgeEndpoints
         documents.MapGet("/{id:guid}", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.DetailAsync((await current.GetAsync(ct)).Id, id, ct)).WithName("GetDocument").Produces<DocumentDto>();
         documents.MapGet("/{id:guid}/pages", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.PagesAsync((await current.GetAsync(ct)).Id, id, ct)).WithName("DocumentPages").Produces<IReadOnlyList<DocumentPageDto>>();
         documents.MapGet("/{id:guid}/job", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.JobAsync((await current.GetAsync(ct)).Id, id, ct)).WithName("DocumentJob").Produces<DocumentJobDto>();
-        documents.MapGet("/{id:guid}/content", async (Guid id, bool? download, HttpContext http, CurrentUser current, DocumentService docs, CancellationToken ct) =>
+        documents.MapGet("/{id:guid}/content", async (Guid id, bool? download, HttpContext http, CurrentUser current, DocumentService docs, AiNexus.Modules.Attachments.AttachmentService files, CancellationToken ct) =>
         {
             var file = await docs.OriginalAsync((await current.GetAsync(ct)).Id, id, ct);
-            return WebSecurity.File(http, file.Data, file.ContentType, file.FileName, download == true);
+            return WebSecurity.File(http, await files.OpenAsync(file, ct), file.ContentType, file.FileName, download == true);
         }).WithName("DocumentOriginal");
         documents.MapDelete("/{id:guid}", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => { await docs.DeleteAsync((await current.GetAsync(ct)).Id, id, ct); return Results.NoContent(); }).WithName("DeleteDocument").Produces(204);
         documents.MapPost("/{id:guid}/reindex", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.ReindexAsync((await current.GetAsync(ct)).Id, id, ct)).WithName("ReindexDocument").Produces<DocumentDto>();

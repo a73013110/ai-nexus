@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Inference;
 
-public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, IInferenceProvider provider, IOptions<InferenceOptions> options, StorageReadiness storage, ILogger<GenerationWorker> logger) : BackgroundService
+public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, InferenceRouter router, IOptions<InferenceOptions> options, StorageReadiness storage, ILogger<GenerationWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -35,32 +35,38 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
         }
         try
         {
-            await foreach (var job in scheduler.Reader.ReadAllAsync(stoppingToken))
-            {
-                scheduler.Dequeued();
-                try { await GenerateAsync(job, stoppingToken); }
-                catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
-                {
-                    logger.LogError("Run {RunId} persistence failed ({ErrorType}).", job.RunId, ex.GetType().Name);
-                    try
-                    {
-                        await scheduler.StateGate.WaitAsync(CancellationToken.None);
-                        try
-                        {
-                            using var scope = scopes.CreateScope();
-                            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-                            var run = await db.Runs.SingleAsync(x => x.Id == job.RunId);
-                            if (RunStates.IsActive(run.Status)) await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, RunStates.Failed, "internal_error", CancellationToken.None);
-                        }
-                        finally { scheduler.StateGate.Release(); }
-                    }
-                    catch (Exception recovery) { logger.LogWarning("Run {RunId} awaits orphan recovery ({ErrorType}).", job.RunId, recovery.GetType().Name); }
-                }
-                finally { scheduler.Generating = false; scheduler.Finish(job); }
-            }
+            await Task.WhenAll(scheduler.Workers.SelectMany(queue => Enumerable.Range(0, queue.Concurrency).Select(_ => ConsumeAsync(queue.Reader, stoppingToken))));
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
         finally { scheduler.Ready = false; }
+    }
+
+    private async Task ConsumeAsync(System.Threading.Channels.ChannelReader<GenerationJob> reader, CancellationToken stoppingToken)
+    {
+        await foreach (var job in reader.ReadAllAsync(stoppingToken))
+        {
+            scheduler.Dequeued();
+            scheduler.Started();
+            try { await GenerateAsync(job, stoppingToken); }
+            catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
+            {
+                logger.LogError("Run {RunId} persistence failed ({ErrorType}).", job.RunId, ex.GetType().Name);
+                try
+                {
+                    await scheduler.StateGate.WaitAsync(CancellationToken.None);
+                    try
+                    {
+                        using var scope = scopes.CreateScope();
+                        var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+                        var run = await db.Runs.SingleAsync(x => x.Id == job.RunId);
+                        if (RunStates.IsActive(run.Status)) await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, RunStates.Failed, "internal_error", CancellationToken.None);
+                    }
+                    finally { scheduler.StateGate.Release(); }
+                }
+                catch (Exception recovery) { logger.LogWarning("Run {RunId} awaits orphan recovery ({ErrorType}).", job.RunId, recovery.GetType().Name); }
+            }
+            finally { scheduler.Stopped(); scheduler.Finish(job); }
+        }
     }
 
     private async Task GenerateAsync(GenerationJob job, CancellationToken stoppingToken)
@@ -70,6 +76,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
         GenerationParameters parameters;
         IReadOnlyList<InferenceMessage> messages;
         string model;
+        string provider;
         await scheduler.StateGate.WaitAsync(stoppingToken);
         try
         {
@@ -101,8 +108,8 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
             messages = await scope.ServiceProvider.GetRequiredService<ContextBuilder>().BuildAsync(run.ConversationId, run.UserMessageId, parameters, stoppingToken);
             await scope.ServiceProvider.GetRequiredService<AiNexus.Modules.Billing.BillingService>().StartAsync(run.Id, stoppingToken);
             await db.SaveChangesAsync(stoppingToken);
-            model = run.ModelId;
-            scheduler.Generating = true;
+            model = run.ProviderModelId;
+            provider = run.Provider;
         }
         finally { scheduler.StateGate.Release(); }
         var buffer = new StringBuilder();
@@ -114,7 +121,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
         string? error = null;
         try
         {
-            await foreach (var chunk in provider.StreamAsync(model, messages, parameters, timeout.Token))
+            await foreach (var chunk in router.StreamAsync(provider, model, messages, parameters, timeout.Token))
             {
                 characters += chunk.Text.Length;
                 if (characters > options.Value.MaxOutputCharacters) throw new ApiException(502, "output_limit_exceeded", "回答超過文字上限，請分段提問。");

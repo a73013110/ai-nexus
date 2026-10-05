@@ -43,7 +43,7 @@ function Remove-NexusSetting([System.Collections.IDictionary]$Value, [string]$Pa
     $taskNode.Remove($taskKeys[-1]) | Out-Null
 }
 
-function ConvertTo-NexusV2([System.Collections.IDictionary]$Value) {
+function ConvertTo-NexusV3([System.Collections.IDictionary]$Value) {
     $taskProvider = if ($Value.Inference.Provider -eq 'ollama') { 'Ollama' } else { 'Google' }
     foreach ($taskKey in @('QueueCapacity', 'TimeoutSeconds', 'MaxInputCharacters', 'MaxOutputCharacters')) { Move-NexusSetting $Value "Inference.$taskKey" "Inference.Execution.$taskKey" }
     foreach ($taskKey in @('AllowModelSelection', 'ShowModelNames')) { Move-NexusSetting $Value "Inference.$taskKey" "Inference.ModelPolicy.$taskKey" }
@@ -69,7 +69,25 @@ function ConvertTo-NexusV2([System.Collections.IDictionary]$Value) {
     foreach ($taskKey in @('UseNativeVector','PortableCandidateLimit','TopK','ContextCharacters')) { Move-NexusSetting $Value "Knowledge.$taskKey" "Knowledge.Retrieval.$taskKey" }
     foreach ($taskKey in @('Gdweb','Meiho')) { Move-NexusSetting $Value "Integrations.$taskKey" "Integrations.Sources.$taskKey" }
     if ($Value.Database) { $Value.Database.Remove('AllowUntrustedCertificateInProduction') | Out-Null }
-    $Value.ConfigurationVersion = 2
+    if ($Value.Inference) {
+        foreach ($taskProviderKey in @('Google','Ollama')) {
+            $taskSection = Get-NexusSetting $Value "Inference.Providers.$taskProviderKey"
+            if ($taskSection -and $taskSection.Contains('Models')) {
+                if (!$taskSection.Contains('Enabled')) { $taskSection.Enabled = $taskProviderKey -eq $taskProvider }
+                if (!$taskSection.Contains('MaxConcurrency')) { $taskSection.MaxConcurrency = 1 }
+                if ($taskSection.DefaultModelId -and !(Get-NexusSetting $Value 'Inference.ModelPolicy.DefaultModelId') -and $taskProviderKey -eq $taskProvider) {
+                    Set-NexusSetting $Value 'Inference.ModelPolicy.DefaultModelId' ($taskProviderKey.ToLowerInvariant() + '/' + $taskSection.DefaultModelId)
+                }
+                $taskSection.Remove('DefaultModelId') | Out-Null
+            }
+        }
+        $Value.Inference.Remove('Provider') | Out-Null
+    }
+    if ($Value.Attachments) {
+        $Value.Attachments.Remove('MaxOwnerBytes') | Out-Null
+        if (!$Value.Attachments.Contains('DefaultOwnerLimitBytes')) { $Value.Attachments.DefaultOwnerLimitBytes = 5000000000 }
+    }
+    $Value.ConfigurationVersion = 3
     return $Value
 }
 

@@ -35,6 +35,6 @@ public static class NexusConfiguration
             NexusSettings.SourceConnections(builder.Configuration);
         }
         var version = builder.Configuration.GetValue("ConfigurationVersion", 1);
-        if (version is not (1 or NexusSettings.Version)) throw new InvalidOperationException("Unsupported ConfigurationVersion. Use the templates matching this release.");
+        if (version != NexusSettings.Version) throw new InvalidOperationException("Unsupported ConfigurationVersion. Use the templates matching this release.");
     }
 }

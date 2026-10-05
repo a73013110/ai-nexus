@@ -54,6 +54,7 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
     }
     private async Task<object?> SnapshotAsync(string action, Guid? resource, string key, CancellationToken ct)
     {
+        if (action == "admin.user_storage") return await db.Users.AsNoTracking().Where(x => x.Id == resource).Select(x => new { x.AttachmentLimitBytes }).SingleOrDefaultAsync(ct);
         if (action is "admin.user" or "admin.user_delete")
         {
             var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == resource, ct);

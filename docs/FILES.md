@@ -14,10 +14,10 @@
 
 `attachments.Attachments.InLibrary` 區分已保存與未送出草稿；MessageAttachments／ResourceAttachments 分別連接歷史與知識／專案。原始檔只存一份，索引、頁面及 ACL 屬於各來源。新增來源可重用同一擁有者、同一不可變原檔的完成頁面；向量索引與授權不會跨來源共用。未完成的擷取各自以 durable job 處理。
 
-`GET /api/v1/files` 是 metadata-only、伺服器篩選與分頁；不讀 binary／擷取全文。關聯名稱採固定批次查詢並限制筆數；只顯示登入者仍可讀的來源。`POST /files/{id}/retain` 保存獨立上傳；`DELETE /files/{id}` 在寫入鎖與 transaction 內檢查所有引用並清理私有閱讀器。所有端點檢查 owner 及 chat／knowledge／projects 其中一項功能 grant。沒有新增可略過既有授權的「檔案庫」grant。
+`GET /api/v1/files` 是 metadata-only、伺服器篩選與分頁；不讀原檔／擷取全文。回應的 `storage` 包含所有原檔、草稿與待刪容量，列表篩選不影響容量統計。關聯名稱採固定批次查詢並限制筆數；只顯示登入者仍可讀的來源。`POST /files/{id}/retain` 保存獨立上傳；`DELETE /files/{id}` 在使用者 SQL row lock 與 transaction 內檢查所有引用並清理私有閱讀器，再於 commit 後實體刪檔。所有端點檢查 owner 及 chat／knowledge／projects 其中一項功能 grant。
 
 FileLibraryStore 共用於頁面與選取器，搜尋去抖、取消舊請求並檢查 view／登入身分世代。FileBrowser 共用卡片、選取與列表。DocumentViewer 延遲載入，PDF.js 僅在需要 PDF 時下載；關閉預覽取消載入、輪詢及畫布渲染。
 
-## 升級
+## 儲存與初始化
 
-`FileLibraryRetention` migration 新增保留欄位與 owner／保留狀態／時間／ID 索引，把已有 MessageAttachments 或 ResourceAttachments 的檔案標記為已保存，不複製 binary。停用舊 host 後執行 `./scripts/Initialize-Database.ps1` 再啟動新版本。SQL 審閱產物在 `db/migrations.sql`；完整備份包含 attachments、knowledge 及 collaboration schemas。
+原檔位於站外 `Attachments.StoragePath`，資料庫保存 opaque 儲存識別、metadata、引用及衍生搜尋資料。預設每人 5,000,000,000 bytes；個人 override 優先於群組與預設。同一 attachment ID 多處使用只計一次。本版只有 `InitialCreate`，針對空資料庫初始化，不提供舊版 binary 遷移。詳見 [附件生命週期](ATTACHMENTS.md)、[SQL 初始化](DATABASE.md) 與 [SQL／原檔備份](BACKUP.md)。

@@ -23,6 +23,7 @@ import type {
   ModelPolicy,
 } from '../../core/api/types';
 import { ViewScope } from '../../shared/browser/view-scope';
+import { formatModelName } from '../../shared/browser/format';
 import { downloadFile } from '../../shared/browser/download';
 import { FeaturePage } from '../../shared/ui/feature-page';
 import { Select } from '../../shared/ui/select';
@@ -93,7 +94,7 @@ export class QualityPage {
   readonly models = signal<Model[]>([]);
   readonly policy = signal<ModelPolicy | null>(null);
   readonly modelOptions = computed(() =>
-    this.models().map((x) => ({ value: x.id, label: x.displayName })),
+    this.models().map((x) => ({ value: x.id, label: formatModelName(x) })),
   );
   readonly score = signal('');
   readonly reviewNote = signal('');

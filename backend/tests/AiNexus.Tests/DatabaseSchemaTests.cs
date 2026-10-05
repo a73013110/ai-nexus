@@ -25,22 +25,39 @@ public sealed class DatabaseSchemaTests
     }
 
     [Fact]
-    public async Task OlderSchemaRejectsAllPendingMigrationsAndExplainsUpgrade()
+    public async Task EmptyHistoryExplainsInitialCreateWithoutChangingSchema()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
         await using var db = Context(connection);
         var migrations = db.Database.GetMigrations().ToArray();
-        var missing = migrations.Skip(1).ToArray();
-        await RecordHistoryAsync(db, migrations.Except(missing));
+        Assert.Single(migrations);
+        Assert.EndsWith("_InitialCreate", migrations[0]);
+        var missing = migrations;
+        await RecordHistoryAsync(db, []);
         var schema = new DatabaseSchema(db);
         Assert.Equal(missing, await schema.PendingMigrationsAsync(CancellationToken.None));
         var error = await Assert.ThrowsAsync<ApiException>(() => schema.RequireCurrentAsync(CancellationToken.None));
         Assert.All(missing, id => Assert.Contains(id, error.Message));
-        Assert.Contains("20261005131605_FileLibraryRetention", error.Message);
+        Assert.Contains("InitialCreate", error.Message);
         Assert.Contains("scripts/Initialize-Database.ps1", error.Message);
         Assert.Contains("db/migrations.sql", error.Message);
-        Assert.Equal(migrations.Except(missing), await db.Database.GetAppliedMigrationsAsync());
+        Assert.Empty(await db.Database.GetAppliedMigrationsAsync());
+        Assert.Equal(1, await TableCountAsync(db));
+    }
+
+    [Fact]
+    public async Task PreviousBaselineIsRejectedWithoutApplyingOrDeletingAnything()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        await using var db = Context(connection);
+        const string previous = "20261003141107_InitialNexus";
+        await RecordHistoryAsync(db, [previous]);
+        var schema = new DatabaseSchema(db);
+        var error = await Assert.ThrowsAsync<ApiException>(() => schema.RequireCompatibleHistoryAsync(CancellationToken.None));
+        Assert.Equal("migration_baseline_mismatch", error.Code);
+        Assert.Equal(new[] { previous }, await db.Database.GetAppliedMigrationsAsync());
         Assert.Equal(1, await TableCountAsync(db));
     }
 

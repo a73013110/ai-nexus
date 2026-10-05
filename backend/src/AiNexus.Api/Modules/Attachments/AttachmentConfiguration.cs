@@ -9,10 +9,18 @@ public static class AttachmentConfiguration
     public static void Configure(ModelBuilder model)
     {
         var file = model.Entity<Attachment>();
-        file.ToTable("Attachments", "attachments");
+        file.ToTable("Attachments", "attachments", table =>
+        {
+            table.HasCheckConstraint("CK_Attachments_Size", "[Size] > 0");
+            table.HasCheckConstraint("CK_Attachments_StorageState", "[StorageState] IN ('pending', 'ready', 'deleting')");
+        });
         file.HasKey(x => x.Id);
         file.Property(x => x.FileName).HasMaxLength(180);
         file.Property(x => x.ContentType).HasMaxLength(80);
+        file.Property(x => x.StorageKey).HasMaxLength(32);
+        file.Property(x => x.StorageState).HasMaxLength(16);
+        file.HasIndex(x => x.StorageKey).IsUnique();
+        file.HasIndex(x => new { x.StorageState, x.CreatedAt });
         file.HasIndex(x => new { x.OwnerId, x.CreatedAt });
         file.HasIndex(x => new { x.OwnerId, x.InLibrary, x.CreatedAt, x.Id });
         file.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);

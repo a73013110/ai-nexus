@@ -25,8 +25,11 @@ export type AdminGroup = Dto<'AdminGroupDto'>;
 export type AdminFeature = Dto<'AdminFeatureDto'>;
 export type Feature = Dto<'FeatureDto'>;
 export type UsageTotals = Dto<'UsageTotalsDto'>;
-export type AdminUser = Omit<Dto<'AdminUserDto'>, 'activity' | 'enabled' | 'authentication'> &
-  Pick<components['schemas']['AdminUserDto'], 'enabled' | 'authentication'> & {
+export type AdminUser = Omit<
+  Dto<'AdminUserDto'>,
+  'activity' | 'enabled' | 'authentication' | 'storage'
+> &
+  Pick<components['schemas']['AdminUserDto'], 'enabled' | 'authentication' | 'storage'> & {
     activity?: (Dto<'AdminUserActivityDto'> & { usage: UsageTotals }) | null;
   };
 export type AdminUserDetail = Dto<'AdminUserDetailDto'> & {
@@ -47,16 +50,17 @@ export type AdminUsage = Dto<'AdminUsageDto'>;
 export type AuditEntry = Dto<'AuditDto'>;
 export type EffectiveModelPolicy = Dto<'EffectiveModelPolicyDto'>;
 export type Access = Dto<'AccessDto'>;
-export type Model = Dto<'ModelDto'>;
+export type Model = Omit<Dto<'ModelDto'>, 'provider'> &
+  Pick<components['schemas']['ModelDto'], 'provider'>;
 export type Models = Dto<'ModelsDto'>;
 export type Conversation = Dto<'ConversationDto'>;
 export type Message = Omit<
   Dto<'MessageDto'>,
-  'sources' | 'feedbackRating' | 'charge' | 'webSources' | 'webSearchCharge'
+  'sources' | 'feedbackRating' | 'charge' | 'webSources' | 'webSearchCharge' | 'timing'
 > &
   Pick<
     components['schemas']['MessageDto'],
-    'sources' | 'feedbackRating' | 'charge' | 'webSources' | 'webSearchCharge'
+    'sources' | 'feedbackRating' | 'charge' | 'webSources' | 'webSearchCharge' | 'timing'
   >;
 export type Feedback = Dto<'FeedbackDto'>;
 export type ExternalSource = Dto<'SourceDto'>;
@@ -81,7 +85,7 @@ export type EvaluationDetail = Dto<'EvaluationDetailDto'> & {
   results: EvaluationResult[];
 };
 export type ConversationDetail = Dto<'ConversationDetailDto'>;
-export type Run = Dto<'RunDto'>;
+export type Run = Omit<Dto<'RunDto'>, 'timing'> & Pick<components['schemas']['RunDto'], 'timing'>;
 export type RunEvent = Dto<'RunEventDto'>;
 export type CreateRun = Omit<Dto<'CreateRunRequest'>, 'webSearch'> &
   Pick<components['schemas']['CreateRunRequest'], 'webSearch'>;
@@ -129,6 +133,8 @@ export type ContextPreview = Omit<Dto<'ContextPreviewRequest'>, 'webSearch'> &
   Pick<components['schemas']['ContextPreviewRequest'], 'webSearch'>;
 export type Attachment = Dto<'AttachmentDto'>;
 export type AttachmentPolicy = Dto<'AttachmentPolicyDto'>;
+export type AttachmentStorage = Dto<'AttachmentStorageDto'>;
+export type RunTiming = Dto<'RunTimingDto'>;
 export type PromptTemplate = Dto<'PromptTemplateDto'>;
 export type ConversationBackup = Dto<'ConversationBackup'>;
 export type ConversationSettings = components['schemas']['ConversationSettingsRequest'];

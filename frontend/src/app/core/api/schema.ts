@@ -841,6 +841,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/attachments/storage': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['GetAttachmentStorage'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/attachments': {
     parameters: {
       query?: never;
@@ -4901,6 +4917,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/admin/users/{id}/storage': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['SetUserAttachmentStorage'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/admin/users/{id}/access': {
     parameters: {
       query?: never;
@@ -5324,6 +5356,7 @@ export interface components {
       createdAt: string;
       modelId: null | string;
       attachments: components['schemas']['AttachmentDto'][];
+      timing?: null | components['schemas']['RunTimingDto'];
     };
     AdminRoleDto: {
       id: string;
@@ -5346,13 +5379,15 @@ export interface components {
       outputTokens: number;
       /** Format: int32 */
       requestsWithUsage: number;
+      /** Format: int64 */
+      totalDurationMilliseconds: number;
+      /** Format: int32 */
+      timedRequests: number;
     };
     AdminUserActivityDto: {
       usage: components['schemas']['UsageTotalsDto'];
       /** Format: int32 */
       conversations: number;
-      /** Format: int64 */
-      attachmentBytes: number;
     };
     AdminUserDetailDto: {
       user: components['schemas']['AdminUserDto'];
@@ -5373,6 +5408,7 @@ export interface components {
       /** @default true */
       enabled: boolean;
       authentication?: null | components['schemas']['UserAuthenticationDto'];
+      storage?: null | components['schemas']['AttachmentStorageDto'];
     };
     AdminUsersDto: {
       users: components['schemas']['AdminUserDto'][];
@@ -5426,6 +5462,25 @@ export interface components {
       /** Format: int64 */
       maxMessageBytes: number;
       extensions: string[];
+    };
+    AttachmentStorageDto: {
+      /** Format: int64 */
+      usedBytes: number;
+      /** Format: int64 */
+      limitBytes: number;
+      /** Format: int64 */
+      remainingBytes: number;
+      /** Format: int64 */
+      personalLimitBytes: null | number;
+      /** Format: int64 */
+      groupLimitBytes: null | number;
+      /** Format: int64 */
+      defaultLimitBytes: number;
+      limitSource: string;
+    };
+    AttachmentStorageLimitRequest: {
+      /** Format: int64 */
+      limitBytes: null | number;
     };
     AuditDto: {
       /** Format: int64 */
@@ -5839,8 +5894,7 @@ export interface components {
       items: components['schemas']['LibraryFileDto'][];
       /** Format: int32 */
       total: number;
-      /** Format: int64 */
-      storedBytes: number;
+      storage: components['schemas']['AttachmentStorageDto'];
       /** Format: int32 */
       offset: number;
       /** Format: int32 */
@@ -5954,6 +6008,7 @@ export interface components {
       charge?: null | components['schemas']['ChargeDto'];
       webSources?: null | components['schemas']['WebSourceDto'][];
       webSearchCharge?: null | components['schemas']['ChargeDto'];
+      timing?: null | components['schemas']['RunTimingDto'];
     };
     ModelDto: {
       id: string;
@@ -5968,6 +6023,7 @@ export interface components {
       defaultReasoningEffort: string;
       /** @default false */
       supportsImages: boolean;
+      provider?: null | string;
     };
     ModelPolicyDto: {
       allowModelSelection: boolean;
@@ -5984,6 +6040,7 @@ export interface components {
       providerAvailable: boolean;
       notice: null | string;
       policy: components['schemas']['ModelPolicyDto'];
+      providers?: null | components['schemas']['ProviderStatusDto'][];
     };
     ModelTaskSnapshot: {
       /** Format: int32 */
@@ -6022,9 +6079,18 @@ export interface components {
       outputTokens: number;
       /** Format: int32 */
       requestsWithUsage: number;
-      /** Format: int64 */
-      attachmentBytes: number;
       daily: components['schemas']['UsageDayDto'][];
+      storage: components['schemas']['AttachmentStorageDto'];
+      /**
+       * Format: int64
+       * @default 0
+       */
+      totalDurationMilliseconds: number;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      timedRequests: number;
     };
     PreferencesDto: {
       theme: string;
@@ -6125,6 +6191,11 @@ export interface components {
       content: string;
       /** Format: date-time */
       updatedAt: string;
+    };
+    ProviderStatusDto: {
+      id: string;
+      available: boolean;
+      notice: null | string;
     };
     RecentWorkDto: {
       /** Format: uuid */
@@ -6258,6 +6329,7 @@ export interface components {
       inputTokens: null | number;
       /** Format: int64 */
       outputTokens: null | number;
+      timing?: null | components['schemas']['RunTimingDto'];
     };
     RunEventDto: {
       /** Format: int32 */
@@ -6270,6 +6342,18 @@ export interface components {
       status: string;
       delta: null | string;
       errorCode: null | string;
+    };
+    RunTimingDto: {
+      /** Format: int64 */
+      totalMilliseconds: number;
+      /** Format: int64 */
+      queueMilliseconds: number;
+      /** Format: int64 */
+      generationMilliseconds: null | number;
+      /** Format: int64 */
+      inputTokens: null | number;
+      /** Format: int64 */
+      outputTokens: null | number;
     };
     SaveArtifactRequest: {
       title: string;
@@ -6476,6 +6560,16 @@ export interface components {
       outputTokens: number;
       /** Format: int32 */
       requestsWithUsage: number;
+      /**
+       * Format: int64
+       * @default 0
+       */
+      totalDurationMilliseconds: number;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      timedRequests: number;
     };
     UserAccountRequest: {
       displayName: string;
@@ -9557,6 +9651,89 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['AttachmentPolicyDto'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetAttachmentStorage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AttachmentStorageDto'];
         };
       };
       /** @description Bad Request */
@@ -13541,6 +13718,93 @@ export interface operations {
       };
     };
     responses: {
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  SetUserAttachmentStorage: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['AttachmentStorageLimitRequest'];
+      };
+    };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
       /** @description Bad Request */
       400: {
         headers: {

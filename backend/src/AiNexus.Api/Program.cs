@@ -165,18 +165,26 @@ builder.Services.AddScoped<AttachmentService>();
 builder.Services.AddScoped<FileLibraryService>();
 builder.Services.AddScoped<DocumentExtractor>();
 builder.Services.AddSingleton<AttachmentWriteLock>();
+builder.Services.AddSingleton<IAttachmentStorage, FileAttachmentStorage>();
+builder.Services.AddScoped<AttachmentQuota>();
+builder.Services.AddScoped<AttachmentLifecycle>();
+builder.Services.AddHostedService<AttachmentCleanupWorker>();
 builder.Services.AddOptions<AttachmentOptions>().BindConfiguration("Attachments")
-    .Validate(x => x.MaxFileBytes is >= 1024 and <= 8 * 1024 * 1024 && x.MaxFilesPerMessage is >= 1 and <= 8 && x.MaxMessageBytes >= x.MaxFileBytes && x.MaxMessageBytes <= 16 * 1024 * 1024 && x.MaxOwnerBytes >= x.MaxMessageBytes && x.MaxOwnerBytes <= 1024 * 1024 * 1024 && x.MaxExtractedCharacters is >= 1000 and <= 256000 && x.MaxPdfPages is >= 1 and <= 100 && x.ImageTokenEstimate is >= 1024 and <= 16384 && x.DraftRetentionDays is >= 1 and <= 365, "Invalid attachment limits.")
+    .Configure<IHostEnvironment, IConfiguration>((x, environment, config) =>
+    {
+        if (string.IsNullOrWhiteSpace(x.StoragePath) && environment.IsDevelopment()) x.StoragePath = Path.Combine(config["LocalWorkspaceRoot"]!, ".local", "data", "attachments");
+    })
+    .Validate(x => x.MaxFileBytes is >= 1024 and <= 8 * 1024 * 1024 && x.MaxFilesPerMessage is >= 1 and <= 8 && x.MaxMessageBytes >= x.MaxFileBytes && x.MaxMessageBytes <= 16 * 1024 * 1024 && x.DefaultOwnerLimitBytes >= x.MaxMessageBytes && x.DefaultOwnerLimitBytes <= AttachmentOptions.MaximumLimitBytes && x.MaxExtractedCharacters is >= 1000 and <= 256000 && x.MaxPdfPages is >= 1 and <= 100 && x.ImageTokenEstimate is >= 1024 and <= 16384 && x.DraftRetentionDays is >= 1 and <= 365 && x.CleanupIntervalMinutes is >= 1 and <= 1440 && Path.IsPathFullyQualified(x.StoragePath), "Invalid attachment storage or limits.")
     .ValidateOnStart();
 builder.Services.AddScoped<RunService>();
 builder.Services.AddScoped<RunLeaseRecovery>();
 builder.Services.AddScoped<ContextBuilder>();
 builder.Services.AddOptions<InferenceOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Inference(c, o))
-    .Validate(x => x.Provider is "google" or "ollama", "Inference Provider must be google or ollama.")
-    .Validate(x => (x.DefaultModelId is null || x.Models.Any(m => m.Id == x.DefaultModelId)) && x.Models.All(m => m.ValidReasoning(x.Provider)), "Invalid default model or reasoning capabilities.")
+    .Validate(x => x.ProviderConcurrency.Count > 0 && x.ProviderConcurrency.All(p => p.Key is "google" or "ollama" && p.Value is >= 1 and <= 8), "Invalid enabled inference providers or concurrency.")
+    .Validate(x => (x.DefaultModelId is null || x.Models.Any(m => m.Id == x.DefaultModelId)) && x.Models.All(m => x.ProviderConcurrency.ContainsKey(m.Provider) && m.ValidReasoning(m.Provider)), "Invalid default model or reasoning capabilities.")
     .Validate(x => Uri.TryCreate(x.BaseUrl, UriKind.Absolute, out var url) && (url.Scheme is "http" or "https") && string.IsNullOrEmpty(url.UserInfo), "Inference BaseUrl must be a server-controlled HTTP endpoint.")
     .Validate(x => x.QueueCapacity is >= 1 and <= 64 && x.TimeoutSeconds is >= 5 and <= 600 && x.MaxInputCharacters is >= 100 and <= 32000 && x.MaxOutputCharacters is >= 4096 and <= 262144, "Invalid inference capacity or limits.")
-    .Validate(x => x.Models.Select(m => m.Id).Distinct(StringComparer.Ordinal).Count() == x.Models.Count && x.Models.All(m => !string.IsNullOrWhiteSpace(m.Id) && m.Id.Length <= 160 && m.ContextTokens is >= 1024 and <= 32768 && m.MaxOutputTokens >= 128 && m.MaxOutputTokens < m.ContextTokens && m.SupportsStreaming), "Invalid model profiles.")
+    .Validate(x => x.Models.Count > 0 && x.Models.Select(m => m.Id).Distinct(StringComparer.Ordinal).Count() == x.Models.Count && x.Models.All(m => !string.IsNullOrWhiteSpace(m.Id) && m.Id.Length <= 160 && m.NativeId.Length is > 0 and <= 150 && m.NativeId.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or ':' or '.' or '/') && m.ContextTokens is >= 1024 and <= 32768 && m.MaxOutputTokens >= 128 && m.MaxOutputTokens < m.ContextTokens && m.SupportsStreaming), "Invalid model profiles.")
     .ValidateOnStart();
 builder.Services.AddHttpClient("Ollama", (services, client) =>
 {
@@ -184,9 +192,9 @@ builder.Services.AddHttpClient("Ollama", (services, client) =>
     client.Timeout = Timeout.InfiniteTimeSpan;
 });
 builder.Services.AddHttpClient("GoogleAI", client => { client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/v1beta/"); client.Timeout = Timeout.InfiniteTimeSpan; });
-builder.Services.AddSingleton<IInferenceProvider>(services => services.GetRequiredService<Microsoft.Extensions.Options.IOptions<InferenceOptions>>().Value.Provider == "google"
-    ? new GoogleAiProvider(services.GetRequiredService<IHttpClientFactory>().CreateClient("GoogleAI"), services.GetRequiredService<Microsoft.Extensions.Options.IOptions<InferenceOptions>>())
-    : new OllamaProvider(services.GetRequiredService<IHttpClientFactory>().CreateClient("Ollama")));
+builder.Services.AddKeyedSingleton<IInferenceProvider>("google", (services, _) => new GoogleAiProvider(services.GetRequiredService<IHttpClientFactory>().CreateClient("GoogleAI"), services.GetRequiredService<Microsoft.Extensions.Options.IOptions<InferenceOptions>>()));
+builder.Services.AddKeyedSingleton<IInferenceProvider>("ollama", (services, _) => new OllamaProvider(services.GetRequiredService<IHttpClientFactory>().CreateClient("Ollama")));
+builder.Services.AddSingleton<InferenceRouter>();
 builder.Services.AddSingleton<ModelCatalog>();
 builder.Services.AddSingleton<ModelPresentation>();
 builder.Services.AddSingleton<GenerationScheduler>();
@@ -200,6 +208,7 @@ builder.Services.Configure<IISServerOptions>(options => options.MaxRequestBodySi
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options => options.MultipartBodyLengthLimit = 9 * 1024 * 1024);
 
 var app = builder.Build();
+_ = app.Services.GetRequiredService<IAttachmentStorage>();
 if (builder.Configuration.GetValue<bool>("VerifyDeployment"))
 {
     if (!await DeploymentVerifier.VerifyAsync(app.Services, builder.Configuration, builder.Environment, CancellationToken.None)) Environment.ExitCode = 1;

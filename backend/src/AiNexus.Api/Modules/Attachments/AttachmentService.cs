@@ -3,13 +3,10 @@ using AiNexus.Database;
 using EDoc.Core.Database.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using AiNexus.Modules.Knowledge;
-using AiNexus.Modules.Collaboration;
-using AiNexus.Modules.Operations;
 
 namespace AiNexus.Modules.Attachments;
 
-public sealed class AttachmentService(IEfHelper<INexusDatabase> ef, DocumentExtractor extractor, IOptions<AttachmentOptions> options, AttachmentWriteLock writes, AiNexus.Modules.Administration.ModelPolicyService policies, NexusDbContext db)
+public sealed class AttachmentService(IEfHelper<INexusDatabase> ef, DocumentExtractor extractor, IOptions<AttachmentOptions> options, AttachmentWriteLock writes, NexusDbContext db, IAttachmentStorage storage, AttachmentQuota quota, AttachmentLifecycle lifecycle)
 {
     public AttachmentPolicyDto Policy => new(options.Value.MaxFileBytes, options.Value.MaxFilesPerMessage, options.Value.MaxMessageBytes, DocumentExtractor.Extensions);
     public static AttachmentDto Describe(Attachment file) => new(file.Id, file.FileName, file.ContentType, file.Size, file.ContentType.StartsWith("image/"), file.ContentType == "application/pdf" && string.IsNullOrWhiteSpace(file.ExtractedText) ? "ocr-required" : file.ExtractedText is null ? "vision" : "extracted-text");
@@ -20,32 +17,68 @@ public sealed class AttachmentService(IEfHelper<INexusDatabase> ef, DocumentExtr
         var name = Path.GetFileName(file.FileName.Replace('\\', '/'));
         if (name.Length is < 1 or > 180 || name.Any(char.IsControl)) throw new ApiException(400, "invalid_file_name", "檔案名稱不正確或過長。");
         using var data = new MemoryStream();
-        await file.CopyToAsync(data, ct);
-        if (data.Length > options.Value.MaxFileBytes) throw new ApiException(413, "file_size_limit", "檔案過大。");
+        await using (var input = file.OpenReadStream())
+        {
+            var buffer = new byte[65536];
+            int read;
+            while ((read = await input.ReadAsync(buffer, ct)) > 0)
+            {
+                if (data.Length + read > options.Value.MaxFileBytes) throw new ApiException(413, "file_size_limit", "檔案過大。");
+                await data.WriteAsync(buffer.AsMemory(0, read), ct);
+            }
+        }
+        if (data.Length == 0 || data.Length != file.Length) throw new ApiException(400, "file_size_mismatch", "上傳檔案內容不完整，請重新上傳。");
         var bytes = data.ToArray();
         var (type, text) = extractor.Extract(name, bytes, ct);
+        await lifecycle.ReclaimAsync(ct);
+        var attachment = new Attachment { OwnerId = owner, FileName = name, ContentType = type, Size = bytes.Length, ExtractedText = text, StorageState = AttachmentStates.Pending };
         await writes.Gate.WaitAsync(ct);
         try
         {
-            // Reclaim interrupted uploads and abandoned browser drafts before checking quota.
-            // The write gate also covers generation binding; linked history is never eligible.
-            var cutoff = DateTimeOffset.UtcNow.AddDays(-options.Value.DraftRetentionDays);
-            await ef.Set<Attachment>().Where(x => x.OwnerId == owner && !x.InLibrary && x.CreatedAt < cutoff && !ef.Set<MessageAttachment>().Any(link => link.AttachmentId == x.Id) && !ef.Set<AttachmentReference>().Any(link => link.AttachmentId == x.Id)).ExecuteDeleteAsync(ct);
-            var used = await ef.Set<Attachment>().Where(x => x.OwnerId == owner).SumAsync(x => (long?)x.Size, ct) ?? 0;
-            var groupLimit = (await policies.ForAsync(owner, ct)).StoredAttachmentLimitBytes ?? options.Value.MaxOwnerBytes;
-            if (used + bytes.Length > Math.Min(groupLimit, options.Value.MaxOwnerBytes)) throw new ApiException(413, "attachment_quota", "個人附件空間已達系統或群組上限，請移除尚未使用的附件或聯絡管理員。");
-            var attachment = new Attachment { OwnerId = owner, FileName = name, ContentType = type, Data = bytes, Size = bytes.Length, ExtractedText = text };
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            await quota.ReserveAsync(owner, bytes.Length, ct);
             ef.Set<Attachment>().Add(attachment);
             await ef.SaveChangesAsync(ct);
-            return Describe(attachment);
+            await transaction.CommitAsync(ct);
         }
         finally { writes.Gate.Release(); }
+        try
+        {
+            await storage.WriteAsync(attachment.StorageKey, bytes, ct);
+            var activated = await db.Set<Attachment>().Where(x => x.Id == attachment.Id && x.StorageState == AttachmentStates.Pending)
+                .ExecuteUpdateAsync(p => p.SetProperty(x => x.StorageState, AttachmentStates.Ready), ct);
+            if (activated != 1) throw new ApiException(409, "attachment_upload_expired", "上傳已失效，請重新上傳。");
+            return Describe(attachment);
+        }
+        catch
+        {
+            await lifecycle.AbortUploadAsync(attachment, CancellationToken.None);
+            throw;
+        }
     }
 
-    public async Task<Attachment> OwnedAsync(Guid owner, Guid id, CancellationToken ct, bool includeData = true)
+    public Task<int> LockOwnerAsync(Guid owner, CancellationToken ct) => quota.LockOwnerAsync(owner, ct);
+    public async Task<Stream> OpenAsync(Attachment file, CancellationToken ct)
     {
-        var query = ef.Set<Attachment>().AsNoTracking().Where(x => x.Id == id && x.OwnerId == owner);
-        var file = await (includeData ? query : query.Select(x => new Attachment { Id = x.Id, OwnerId = x.OwnerId, FileName = x.FileName, ContentType = x.ContentType, Size = x.Size, ExtractedText = x.ExtractedText, CreatedAt = x.CreatedAt, InLibrary = x.InLibrary })).SingleOrDefaultAsync(ct)
+        var stream = await storage.OpenReadAsync(file.StorageKey, ct);
+        if (stream.CanSeek && stream.Length != file.Size)
+        {
+            await stream.DisposeAsync();
+            throw new ApiException(503, "attachment_content_invalid", "附件原檔與儲存記錄不符，請聯絡管理員檢查備份。");
+        }
+        return stream;
+    }
+    public async Task<byte[]> ReadAsync(Attachment file, CancellationToken ct)
+    {
+        await using var stream = await OpenAsync(file, ct);
+        using var data = new MemoryStream();
+        await stream.CopyToAsync(data, ct);
+        return data.ToArray();
+    }
+
+    public async Task<Attachment> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
+    {
+        var file = await ef.Set<Attachment>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner && x.StorageState == AttachmentStates.Ready, ct)
             ?? throw new ApiException(404, "attachment_not_found", "找不到這個附件。");
         if (!file.InLibrary && !await ef.Set<AttachmentReference>().AnyAsync(x => x.AttachmentId == id, ct) && await ef.Set<MessageAttachment>().AnyAsync(x => x.AttachmentId == id, ct) &&
             !await (from link in ef.Set<MessageAttachment>() join message in ef.Set<AiNexus.Modules.Conversations.Message>() on link.MessageId equals message.Id join conversation in ef.Set<AiNexus.Modules.Conversations.Conversation>() on message.ConversationId equals conversation.Id where link.AttachmentId == id && !conversation.IsDeleted && conversation.OwnerId == owner select link).AnyAsync(ct))
@@ -58,7 +91,7 @@ public sealed class AttachmentService(IEfHelper<INexusDatabase> ef, DocumentExtr
         if (ids is null || ids.Count == 0) return [];
         if (ids.Count > options.Value.MaxFilesPerMessage || ids.Distinct().Count() != ids.Count) throw new ApiException(400, "attachment_limit", $"每則提問最多 {options.Value.MaxFilesPerMessage} 個不同附件。");
         var files = new List<Attachment>();
-        foreach (var id in ids) files.Add(await OwnedAsync(owner, id, ct, includeData: false));
+        foreach (var id in ids) files.Add(await OwnedAsync(owner, id, ct));
         if (files.Any(x => x.ContentType == "application/pdf" && string.IsNullOrWhiteSpace(x.ExtractedText))) throw new ApiException(409, "document_processing_required", "掃描 PDF 尚未完成文字辨識，請等待附件處理完成後再送出。");
         if (files.Sum(x => x.Size) > options.Value.MaxMessageBytes) throw new ApiException(413, "attachment_total_limit", "這次附件總大小超過上限。");
         return files;
@@ -69,26 +102,19 @@ public sealed class AttachmentService(IEfHelper<INexusDatabase> ef, DocumentExtr
         await writes.Gate.WaitAsync(ct);
         try
         {
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            await quota.LockOwnerAsync(owner, ct);
             var file = await OwnedAsync(owner, id, ct);
             // Removing a reused file from the composer must never delete its library original.
             if (file.InLibrary && !fromLibrary) return;
             if (await ef.Set<MessageAttachment>().AnyAsync(x => x.AttachmentId == id, ct)) throw new ApiException(409, "attachment_in_use", "已送出的附件由對話保留，無法單獨刪除。");
-            await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            var readers = await (from doc in db.Set<KnowledgeDocument>() join resource in db.Set<WorkspaceResource>() on doc.Id equals resource.Id where doc.AttachmentId == id && doc.CollectionId == null && resource.ParentId == null && resource.OwnerId == owner && !doc.IsDeleted select doc).ToListAsync(ct);
-            var readerIds = readers.Select(x => x.Id).ToArray();
-            if (await ef.Set<AttachmentReference>().AnyAsync(x => x.AttachmentId == id && !readerIds.Contains(x.ResourceId), ct)) throw new ApiException(409, "attachment_in_use", "此附件由知識庫或專案保留，請從該項目移除。");
-            foreach (var reader in readers) { reader.IsDeleted = true; reader.Status = "deleted"; reader.AttachmentId = null; }
-            await db.Set<WorkspaceResource>().Where(x => readerIds.Contains(x.Id)).ExecuteUpdateAsync(p => p.SetProperty(x => x.IsDeleted, true), ct);
-            await db.Set<BackgroundJob>().Where(x => readerIds.Contains(x.SubjectId) && (x.Status == "queued" || x.Status == "running")).ExecuteUpdateAsync(p => p.SetProperty(x => x.CancelRequested, true), ct);
-            await db.Set<KnowledgeChunk>().Where(x => readerIds.Contains(x.DocumentId)).ExecuteDeleteAsync(ct);
-            await db.Set<DocumentPage>().Where(x => readerIds.Contains(x.DocumentId)).ExecuteDeleteAsync(ct);
-            await db.Set<AttachmentReference>().Where(x => readerIds.Contains(x.ResourceId)).ExecuteDeleteAsync(ct);
-            await db.SaveChangesAsync(ct);
-            ef.Set<Attachment>().Remove(file);
-            await ef.SaveChangesAsync(ct);
+            if (await ef.Set<AttachmentReference>().AnyAsync(x => x.AttachmentId == id && !lifecycle.PrivateReaders(owner).Contains(x.ResourceId), ct)) throw new ApiException(409, "attachment_in_use", "此附件由知識庫、專案或分享保留，請從該項目移除。");
+            await lifecycle.RemovePrivateReadersAsync(owner, [id], ct);
+            await db.Set<Attachment>().Where(x => x.Id == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, false).SetProperty(x => x.StorageState, AttachmentStates.Deleting), ct);
             if (fromLibrary) { db.AuditEvents.Add(new() { OwnerId = owner, ResourceId = id, Action = "file.deleted", Result = "deleted" }); await db.SaveChangesAsync(ct); }
             await transaction.CommitAsync(ct);
         }
         finally { writes.Gate.Release(); }
+        await lifecycle.DeletePendingAsync(ct, id);
     }
 }

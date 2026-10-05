@@ -26,7 +26,7 @@ ollama ps
 
 ## AI Nexus 設定
 
-將一般設定的 `Inference.Provider` 改 `ollama`，保留或調整 `Inference.Providers.Ollama` 的 endpoint、default profile。另將 `Knowledge.Embedding.Provider` 改 `ollama`、`Model` 改 `qwen3-embedding:0.6b`、`Dimensions` 保持 768、`InputFormat=qwen-query`；或選 BGE-M3、1024、plain。兩個設定都改才是完全本地。也可先 `Embedding.Provider=none` 用關鍵字，等本地模型可連後切換；不會自動改你目前已成功使用的 Google 設定。
+將 `Inference.Providers.Ollama.Enabled` 設 true，保留或調整 endpoint／default profile；預設路由設 `Inference.ModelPolicy.DefaultModelId=ollama/qwen3:8b`。Google 可保持啟用以同時提供兩者；完全本地才停用 Google.Enabled。另將 `Knowledge.Embedding.Provider` 改 `ollama`、`Model` 改 `qwen3-embedding:0.6b`、`Dimensions` 保持 768、`InputFormat=qwen-query`；或選 BGE-M3、1024、plain。兩個設定都改才是完全本地。也可先 `Embedding.Provider=none` 用關鍵字，等本地模型可連後切換；不會自動改你目前已成功使用的 Google 設定。
 
 模型主機不同於 IIS 時，Ollama endpoint 改為 GPU 主機 LAN 位址。Ollama API 只開給需要的應用主機，避免以無驗證 API 對整個網路開放。文字 `qwen3:8b` profile 的 `SupportsImages=false`；要分析圖片另選 vision 模型並測 OCR／圖片推論的額外 VRAM，不能只把這個旗標改 true。
 

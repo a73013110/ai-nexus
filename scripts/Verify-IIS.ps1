@@ -21,9 +21,19 @@ foreach ($taskPair in @(@('LocalConfigPath','..\config\appsettings.Production.js
     Add-NexusCheck $taskPair[0] (Test-Path -LiteralPath $taskFile -PathType Leaf) $taskFile
     if (Test-Path -LiteralPath $taskFile) {
         $taskSettings = [IO.File]::ReadAllText($taskFile) | ConvertFrom-Json -AsHashtable
-        Add-NexusCheck ($taskPair[0] + ' v2') ($taskSettings.ConfigurationVersion -eq 2) 'Migrate both external settings files before starting this release'
+        Add-NexusCheck ($taskPair[0] + ' v3') ($taskSettings.ConfigurationVersion -eq 3) 'Migrate both external settings files before starting this release'
         if ($taskPair[0] -eq 'LocalConfigPath') {
             Add-NexusCheck 'AllowedHosts configured' ([bool]$taskSettings.AllowedHosts -and $taskSettings.AllowedHosts -notmatch 'company\.internal') 'Use your actual IIS DNS host name (without scheme or port)'
+            $taskAttachmentSetting = if ($taskEnv.Attachments__StoragePath) { $taskEnv.Attachments__StoragePath } else { $taskSettings.Attachments.StoragePath }
+            $taskAttachmentAbsolute = ![string]::IsNullOrWhiteSpace([string]$taskAttachmentSetting) -and [IO.Path]::IsPathFullyQualified([string]$taskAttachmentSetting)
+            Add-NexusCheck 'Attachment path absolute' $taskAttachmentAbsolute 'Attachments__StoragePath overrides the external JSON setting'
+            if ($taskAttachmentAbsolute) {
+                $taskAttachmentPath = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($taskAttachmentSetting))
+                $taskAppCanonical = [IO.Path]::TrimEndingDirectorySeparator($taskApp)
+                $taskOutside = !$taskAttachmentPath.Equals($taskAppCanonical, [StringComparison]::OrdinalIgnoreCase) -and !$taskAttachmentPath.StartsWith($taskAppCanonical + '\', [StringComparison]::OrdinalIgnoreCase)
+                Add-NexusCheck 'Attachments outside app' $taskOutside $taskAttachmentPath
+                Add-NexusCheck 'Attachment directory exists' (Test-Path -LiteralPath $taskAttachmentPath -PathType Container) 'VerifyDeployment additionally tests read/write/delete under the invoking identity; validate IIS ACLs separately'
+            }
         }
         $taskSettings = $null
     }

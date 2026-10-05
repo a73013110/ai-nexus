@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "https://localhost:5193/"
+      "url": "http://127.0.0.1:5191/"
     }
   ],
   "paths": {
@@ -3878,6 +3878,94 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/AttachmentPolicyDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/attachments/storage": {
+      "get": {
+        "tags": ["Attachments"],
+        "operationId": "GetAttachmentStorage",
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AttachmentStorageDto"
                 }
               }
             }
@@ -12298,6 +12386,108 @@
         }
       }
     },
+    "/api/v1/admin/users/{id}/storage": {
+      "put": {
+        "tags": ["Administration"],
+        "operationId": "SetUserAttachmentStorage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachmentStorageLimitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
     "/api/v1/admin/users/{id}/access": {
       "get": {
         "tags": ["Administration"],
@@ -14588,6 +14778,16 @@
             "items": {
               "$ref": "#/components/schemas/AttachmentDto"
             }
+          },
+          "timing": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RunTimingDto"
+              }
+            ]
           }
         }
       },
@@ -14623,7 +14823,9 @@
           "completed",
           "inputTokens",
           "outputTokens",
-          "requestsWithUsage"
+          "requestsWithUsage",
+          "totalDurationMilliseconds",
+          "timedRequests"
         ],
         "type": "object",
         "properties": {
@@ -14650,11 +14852,19 @@
           "requestsWithUsage": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalDurationMilliseconds": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "timedRequests": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
       "AdminUserActivityDto": {
-        "required": ["usage", "conversations", "attachmentBytes"],
+        "required": ["usage", "conversations"],
         "type": "object",
         "properties": {
           "usage": {
@@ -14663,10 +14873,6 @@
           "conversations": {
             "type": "integer",
             "format": "int32"
-          },
-          "attachmentBytes": {
-            "type": "integer",
-            "format": "int64"
           }
         }
       },
@@ -14737,6 +14943,16 @@
               },
               {
                 "$ref": "#/components/schemas/UserAuthenticationDto"
+              }
+            ]
+          },
+          "storage": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AttachmentStorageDto"
               }
             ]
           }
@@ -14893,6 +15109,57 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "AttachmentStorageDto": {
+        "required": [
+          "usedBytes",
+          "limitBytes",
+          "remainingBytes",
+          "personalLimitBytes",
+          "groupLimitBytes",
+          "defaultLimitBytes",
+          "limitSource"
+        ],
+        "type": "object",
+        "properties": {
+          "usedBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "limitBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "remainingBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "personalLimitBytes": {
+            "type": ["null", "integer"],
+            "format": "int64"
+          },
+          "groupLimitBytes": {
+            "type": ["null", "integer"],
+            "format": "int64"
+          },
+          "defaultLimitBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "limitSource": {
+            "type": "string"
+          }
+        }
+      },
+      "AttachmentStorageLimitRequest": {
+        "required": ["limitBytes"],
+        "type": "object",
+        "properties": {
+          "limitBytes": {
+            "type": ["null", "integer"],
+            "format": "int64"
           }
         }
       },
@@ -16103,7 +16370,7 @@
         }
       },
       "FileLibraryPageDto": {
-        "required": ["items", "total", "storedBytes", "offset", "limit"],
+        "required": ["items", "total", "storage", "offset", "limit"],
         "type": "object",
         "properties": {
           "items": {
@@ -16116,9 +16383,8 @@
             "type": "integer",
             "format": "int32"
           },
-          "storedBytes": {
-            "type": "integer",
-            "format": "int64"
+          "storage": {
+            "$ref": "#/components/schemas/AttachmentStorageDto"
           },
           "offset": {
             "type": "integer",
@@ -16483,6 +16749,16 @@
                 "$ref": "#/components/schemas/ChargeDto"
               }
             ]
+          },
+          "timing": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RunTimingDto"
+              }
+            ]
           }
         }
       },
@@ -16531,6 +16807,9 @@
           "supportsImages": {
             "type": "boolean",
             "default": false
+          },
+          "provider": {
+            "type": ["null", "string"]
           }
         }
       },
@@ -16572,6 +16851,12 @@
           },
           "policy": {
             "$ref": "#/components/schemas/ModelPolicyDto"
+          },
+          "providers": {
+            "type": ["null", "array"],
+            "items": {
+              "$ref": "#/components/schemas/ProviderStatusDto"
+            }
           }
         }
       },
@@ -16645,8 +16930,8 @@
           "inputTokens",
           "outputTokens",
           "requestsWithUsage",
-          "attachmentBytes",
-          "daily"
+          "daily",
+          "storage"
         ],
         "type": "object",
         "properties": {
@@ -16682,15 +16967,24 @@
             "type": "integer",
             "format": "int32"
           },
-          "attachmentBytes": {
-            "type": "integer",
-            "format": "int64"
-          },
           "daily": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/UsageDayDto"
             }
+          },
+          "storage": {
+            "$ref": "#/components/schemas/AttachmentStorageDto"
+          },
+          "totalDurationMilliseconds": {
+            "type": "integer",
+            "format": "int64",
+            "default": 0
+          },
+          "timedRequests": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -16970,6 +17264,21 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "ProviderStatusDto": {
+        "required": ["id", "available", "notice"],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "notice": {
+            "type": ["null", "string"]
           }
         }
       },
@@ -17367,6 +17676,16 @@
           "outputTokens": {
             "type": ["null", "integer"],
             "format": "int64"
+          },
+          "timing": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RunTimingDto"
+              }
+            ]
           }
         }
       },
@@ -17405,6 +17724,38 @@
           },
           "errorCode": {
             "type": ["null", "string"]
+          }
+        }
+      },
+      "RunTimingDto": {
+        "required": [
+          "totalMilliseconds",
+          "queueMilliseconds",
+          "generationMilliseconds",
+          "inputTokens",
+          "outputTokens"
+        ],
+        "type": "object",
+        "properties": {
+          "totalMilliseconds": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "queueMilliseconds": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "generationMilliseconds": {
+            "type": ["null", "integer"],
+            "format": "int64"
+          },
+          "inputTokens": {
+            "type": ["null", "integer"],
+            "format": "int64"
+          },
+          "outputTokens": {
+            "type": ["null", "integer"],
+            "format": "int64"
           }
         }
       },
@@ -18021,6 +18372,16 @@
           "requestsWithUsage": {
             "type": "integer",
             "format": "int32"
+          },
+          "totalDurationMilliseconds": {
+            "type": "integer",
+            "format": "int64",
+            "default": 0
+          },
+          "timedRequests": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
           }
         }
       },

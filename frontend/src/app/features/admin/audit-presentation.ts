@@ -1,6 +1,7 @@
 const actions: Record<string, string> = {
   'admin.bootstrap': '初始化管理員',
   'admin.user_roles': '調整使用者角色',
+  'admin.user_storage': '調整使用者容量',
   'admin.user': '建立或調整使用者',
   'admin.user_delete': '移除使用者',
   'identity.test_start': '開始測試身分',
@@ -63,6 +64,7 @@ const labels: Record<string, string> = {
   name: '名稱',
   displayName: '姓名',
   account: '帳號',
+  attachmentLimitBytes: '個人原檔容量上限（bytes）',
   securityVersion: '登入撤銷版本',
   deletedAt: '移除時間',
   'authentication.adEnabled': 'AD 驗證',

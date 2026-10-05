@@ -3,6 +3,7 @@ import { ApiTransport } from '../../core/api/api-transport';
 import type {
   Attachment,
   AttachmentPolicy,
+  AttachmentStorage,
   Conversation,
   ConversationBackup,
   ConversationSettings,
@@ -35,8 +36,13 @@ export class WorkspaceApi {
   deletePrompt = (id: string) =>
     this.http.json<void>(`/prompt-templates/${encodeURIComponent(id)}`, 'DELETE');
   attachmentPolicy = () => this.http.json<AttachmentPolicy>('/attachments/policy');
+  attachmentStorage = (signal?: AbortSignal) =>
+    this.http.json<AttachmentStorage>('/attachments/storage', 'GET', undefined, undefined, signal);
   attachment = (id: string) => this.http.json<Attachment>(`/attachments/${encodeURIComponent(id)}`);
-  upload(file: File, signal: AbortSignal) {
+  async upload(file: File, signal: AbortSignal) {
+    const storage = await this.attachmentStorage(signal);
+    if (file.size > storage.remainingBytes)
+      throw new Error('附件容量不足，請刪除未引用的檔案，或聯絡管理員調整個人上限。');
     const body = new FormData();
     body.append('file', file);
     return this.http.json<Attachment>('/attachments', 'POST', body, undefined, signal);

@@ -11,6 +11,7 @@ import { ReaderLink } from '../../shared/browser/reader-link';
 import { MessageFeedback } from '../quality/message-feedback';
 import { ChargeLabel } from '../billing/charge-label';
 import { StreamingAnswer } from '../../shared/ui/streaming-answer';
+import { RunTimingDisplay } from '../../shared/ui/run-timing';
 
 @Component({
   selector: 'nx-chat-message',
@@ -23,6 +24,7 @@ import { StreamingAnswer } from '../../shared/ui/streaming-answer';
     MessageFeedback,
     ChargeLabel,
     StreamingAnswer,
+    RunTimingDisplay,
   ],
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -109,6 +111,7 @@ import { StreamingAnswer } from '../../shared/ui/streaming-answer';
       }
     }
     @if (!active() && message().role === 'assistant') {
+      <nx-run-timing [value]="message().timing" />
       <div class="message-charges">
         @if (message().charge; as charge) {
           <nx-charge-label [charge]="charge" />

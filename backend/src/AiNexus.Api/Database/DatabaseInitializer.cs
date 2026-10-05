@@ -14,6 +14,7 @@ public sealed class DatabaseInitializer(IConfiguration configuration, IDbHelper<
         if (target != "AiNexus") throw new ApiException(400, "database_name", "本初始化指令只允許建立或更新 AiNexus 專用資料庫。");
         var exists = await bootstrap.QuerySingleAsync<int>("SELECT COUNT(*) FROM sys.databases WHERE name = @Name", new { Name = target }, commandTimeout: 5, cancellationToken: ct);
         if (exists == 0) await bootstrap.ExecuteAsync("CREATE DATABASE [AiNexus]", commandTimeout: 30, cancellationToken: ct);
+        await schema.RequireCompatibleHistoryAsync(ct);
         await db.Database.MigrateAsync(ct);
         await schema.RequireCurrentAsync(ct);
         // Explicit initialization refreshes descriptions for indexes/constraints added by future migrations.

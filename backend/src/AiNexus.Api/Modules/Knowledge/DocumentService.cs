@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Knowledge;
 
-public sealed class DocumentService(NexusDbContext db, ResourceAccess access, AccessService features, AttachmentService attachments, AttachmentWriteLock writes, JobService jobs, IOptions<KnowledgeOptions> options)
+public sealed class DocumentService(NexusDbContext db, ResourceAccess access, AccessService features, AttachmentService attachments, AttachmentWriteLock writes, JobService jobs, IOptions<KnowledgeOptions> options, AttachmentLifecycle lifecycle)
 {
     public async Task<IReadOnlyList<CollectionDto>> CollectionsAsync(Guid actor, CancellationToken ct)
     {
@@ -53,6 +53,7 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            await attachments.LockOwnerAsync(actor, ct);
             var resource = await access.OwnerAsync(actor, id, "knowledge", ct);
             var docs = await db.Set<KnowledgeDocument>().Where(x => x.CollectionId == id && !x.IsDeleted).ToListAsync(ct);
             var documentIds = docs.Select(x => x.Id).ToArray(); var files = docs.Where(x => x.AttachmentId != null).Select(x => x.AttachmentId!.Value).Distinct().ToArray();
@@ -65,10 +66,11 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
             await db.Set<KnowledgeChunk>().Where(x => documentIds.Contains(x.DocumentId)).ExecuteDeleteAsync(ct);
             await db.Set<DocumentPage>().Where(x => documentIds.Contains(x.DocumentId)).ExecuteDeleteAsync(ct);
             await db.SaveChangesAsync(ct);
-            await db.Set<Attachment>().Where(x => files.Contains(x.Id) && !x.InLibrary && !db.Set<AttachmentReference>().Any(l => l.AttachmentId == x.Id) && !db.Set<MessageAttachment>().Any(l => l.AttachmentId == x.Id)).ExecuteDeleteAsync(ct);
+            await lifecycle.MarkUnusedAsync(files, ct);
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "knowledge.deleted", Result = "deleted" }); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         }
         finally { writes.Gate.Release(); }
+        await lifecycle.DeletePendingAsync(ct);
     }
     public async Task<DocumentDto> ReindexAsync(Guid actor, Guid id, CancellationToken ct)
     {
@@ -93,9 +95,10 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            await attachments.LockOwnerAsync(actor, ct);
             if (collection is Guid currentCollection) await access.RequireAsync(actor, currentCollection, "knowledge", ct, write: true);
             if (project is Guid currentProject) await access.RequireAsync(actor, currentProject, "project", ct, write: true);
-            var file = await attachments.OwnedAsync(actor, attachment, ct, includeData: false);
+            var file = await attachments.OwnedAsync(actor, attachment, ct);
             if (collection is null)
             {
                 var existing = await (from doc in db.Set<KnowledgeDocument>() join ownerResource in db.Set<WorkspaceResource>() on doc.Id equals ownerResource.Id where doc.AttachmentId == attachment && doc.CollectionId == null && !doc.IsDeleted && ownerResource.OwnerId == actor && ownerResource.ParentId == project select doc).FirstOrDefaultAsync(ct);
@@ -164,7 +167,7 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
     {
         var document = await RequireAsync(actor, id, ct);
         if (document.AttachmentId is not Guid attachment) throw Missing();
-        return await db.Set<Attachment>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == attachment, ct) ?? throw Missing();
+        return await db.Set<Attachment>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == attachment && x.StorageState == AttachmentStates.Ready, ct) ?? throw Missing();
     }
     public async Task DeleteAsync(Guid actor, Guid id, CancellationToken ct)
     {
@@ -173,6 +176,7 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            await attachments.LockOwnerAsync(actor, ct);
             var document = await RequireAsync(actor, id, ct, write: true);
             document.IsDeleted = true; document.Status = "deleted"; var attachment = document.AttachmentId; document.AttachmentId = null;
             (await db.Set<WorkspaceResource>().SingleAsync(x => x.Id == id, ct)).IsDeleted = true;
@@ -182,10 +186,11 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
             await db.Set<DocumentPage>().Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "document.deleted", Result = "deleted" });
             await db.SaveChangesAsync(ct);
-            if (attachment is Guid file) await db.Set<Attachment>().Where(x => x.Id == file && !x.InLibrary && !db.Set<AttachmentReference>().Any(l => l.AttachmentId == file) && !db.Set<MessageAttachment>().Any(l => l.AttachmentId == file)).ExecuteDeleteAsync(ct);
+            if (attachment is Guid file) await lifecycle.MarkUnusedAsync([file], ct);
             await transaction.CommitAsync(ct);
         }
         finally { writes.Gate.Release(); }
+        await lifecycle.DeletePendingAsync(ct);
     }
     private async Task<DocumentDto> DescribeAsync(Guid actor, KnowledgeDocument doc, CancellationToken ct)
     {

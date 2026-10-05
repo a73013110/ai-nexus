@@ -6,6 +6,27 @@ import {
   settleEntrance,
 } from "./fixtures";
 
+test("capacity preflight prevents an upload when the remaining space is exhausted", async ({
+  page,
+}) => {
+  const fixture = new KnowledgeFixture();
+  fixture.seed();
+  fixture.core.attachmentLimitBytes = 0;
+  await fixture.attach(page);
+  await page.goto("/files");
+  await expect(page.locator("nx-files-page nx-storage-usage")).toContainText(
+    "剩餘 0 bytes",
+  );
+  const count = fixture.core.attachments.length;
+  await page.locator("nx-files-page input[type=file]").setInputFiles({
+    name: "超額.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("over quota"),
+  });
+  await expect(page.getByRole("alert")).toContainText("附件容量不足");
+  expect(fixture.core.attachments.length).toBe(count);
+});
+
 test("library files can be searched, previewed, reused in chat and added to knowledge without another upload", async ({
   page,
 }) => {
@@ -18,17 +39,19 @@ test("library files can be searched, previewed, reused in chat and added to know
   await expect(
     page.getByRole("heading", { name: "檔案庫", exact: true }),
   ).toBeVisible();
-  await page
-    .locator("nx-files-page input[type=file]")
-    .setInputFiles({
-      name: "分析計畫.txt",
-      mimeType: "text/plain",
-      buffer: Buffer.from("Plan an accessible file library."),
-    });
+  await expect(page.locator("nx-files-page nx-storage-usage")).toContainText(
+    "5.00 GB",
+  );
+  await page.locator("nx-files-page input[type=file]").setInputFiles({
+    name: "分析計畫.txt",
+    mimeType: "text/plain",
+    buffer: Buffer.from("Plan an accessible file library."),
+  });
   await expect(
     page.locator(".file-card").filter({ hasText: "分析計畫.txt" }),
   ).toBeVisible();
   expect(fixture.core.attachments).toHaveLength(2);
+  const storedOnce = fixture.core.storage().usedBytes;
   await page
     .getByRole("searchbox", { name: "搜尋檔案庫", exact: true })
     .fill("分析");
@@ -91,6 +114,7 @@ test("library files can be searched, previewed, reused in chat and added to know
     page.getByRole("button", { name: "重新生成", exact: true }),
   ).toBeVisible();
   expect(fixture.core.attachments).toHaveLength(2);
+  expect(fixture.core.storage().usedBytes).toBe(storedOnce);
   expect(fixture.core.lastRequest!.attachmentIds).toEqual([
     fixture.core.attachments.find((value) => value.fileName === "分析計畫.txt")!
       .id,

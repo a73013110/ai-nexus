@@ -68,21 +68,26 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
             services.RemoveAll<IAdAuthenticator>();
             services.AddSingleton<IAdAuthenticator, FixtureAdAuthenticator>();
             services.PostConfigure<AdAuthenticationOptions>(options => { options.Mode = ldap ? "Ldap" : "Windows"; options.DnPass = "fixture-only"; });
-            services.RemoveAll<IInferenceProvider>();
-            services.AddSingleton<IInferenceProvider>(Provider);
+            services.RemoveAllKeyed<IInferenceProvider>("google");
+            services.RemoveAllKeyed<IInferenceProvider>("ollama");
+            services.AddKeyedSingleton<IInferenceProvider>("google", Provider);
+            services.AddKeyedSingleton<IInferenceProvider>("ollama", Provider);
             services.RemoveAll<AiNexus.Modules.Knowledge.IEmbeddingProvider>();
             services.AddSingleton<AiNexus.Modules.Knowledge.IEmbeddingProvider>(Embeddings);
             if (!backgroundJobs) services.Remove(services.Single(x => x.ServiceType == typeof(IHostedService) && x.ImplementationType == typeof(AiNexus.Modules.Operations.BackgroundJobWorker)));
             services.PostConfigure<InferenceOptions>(options =>
             {
                 options.QueueCapacity = 2;
+                options.ProviderConcurrency = new() { ["google"] = 1 };
                 options.DefaultModelId = null; options.AllowModelSelection = true; options.ShowModelNames = true;
                 options.TimeoutSeconds = 5;
                 options.SystemPrompt = "請用繁體中文回答。";
                 options.Models = [new ModelProfile { Id = "test-model", DisplayName = "測試模型", ContextTokens = 8192, MaxOutputTokens = 512 }];
                 configureInference?.Invoke(options);
+                foreach (var model in options.Models)
+                    if (model.ProviderModelId.Length == 0) model.ProviderModelId = model.Id;
             });
-            services.PostConfigure<AttachmentOptions>(options => configureAttachments?.Invoke(options));
+            services.PostConfigure<AttachmentOptions>(options => { options.StoragePath = databasePath + ".attachments"; configureAttachments?.Invoke(options); });
             services.PostConfigure<AiNexus.Modules.Administration.AdministrationOptions>(options => options.BootstrapAdministrators = bootstrapAdministrators);
             configureServices?.Invoke(services);
         });
@@ -111,7 +116,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        if (disposing) { SqliteConnection.ClearAllPools(); File.Delete(databasePath); }
+        if (disposing) { SqliteConnection.ClearAllPools(); File.Delete(databasePath); if (Directory.Exists(databasePath + ".attachments")) Directory.Delete(databasePath + ".attachments", recursive: true); }
     }
 }
 
@@ -169,6 +174,7 @@ public sealed class TestIdentityHandler(IOptionsMonitor<AuthenticationSchemeOpti
 
 public sealed class TestProvider : IInferenceProvider
 {
+    public bool DiscoveryFail { get; set; }
     public int DelayMs { get; set; } = 30;
     public bool Fail { get; set; }
     public bool NeverFinish { get; set; }
@@ -178,7 +184,7 @@ public sealed class TestProvider : IInferenceProvider
     public IReadOnlyList<InferenceMessage> LastMessages { get; private set; } = [];
     public GenerationParameters? LastParameters { get; private set; }
     public string? LastModel { get; private set; }
-    public Task<IReadOnlySet<string>> InstalledModelsAsync(CancellationToken ct) => Task.FromResult<IReadOnlySet<string>>(new HashSet<string> { "test-model", "not-approved" });
+    public Task<IReadOnlySet<string>> InstalledModelsAsync(CancellationToken ct) => DiscoveryFail ? throw new HttpRequestException("fixture discovery failure") : Task.FromResult<IReadOnlySet<string>>(new HashSet<string> { "test-model", "not-approved" });
     public async IAsyncEnumerable<InferenceChunk> StreamAsync(string model, IReadOnlyList<InferenceMessage> messages, GenerationParameters parameters, [EnumeratorCancellation] CancellationToken ct)
     {
         Interlocked.Increment(ref Calls);

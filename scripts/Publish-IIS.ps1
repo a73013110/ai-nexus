@@ -35,6 +35,9 @@ if ($IncludeLocalConfig) {
     if (!(Test-Path -LiteralPath $taskSecrets)) { Copy-Item -LiteralPath (Join-Path $taskRoot 'backend/src/AiNexus.Api/appsettings.Secrets.example.json') -Destination $taskSecrets; Protect-NexusSecrets $taskSecrets }
 }
 $taskValue = [IO.File]::ReadAllText($taskSettings) | ConvertFrom-Json -AsHashtable
+if ([string]::IsNullOrWhiteSpace([string]$taskValue.Attachments.StoragePath)) {
+    Set-NexusSetting $taskValue 'Attachments.StoragePath' 'D:\CoreProject\AiNexus\data\attachments'
+}
 if ($AllowUntrustedSql) { Set-NexusSetting $taskValue 'Database.TrustServerCertificate' $true }
 Save-NexusJson $taskSettings $taskValue
 Save-NexusJson $taskSecrets ([IO.File]::ReadAllText($taskSecrets) | ConvertFrom-Json -AsHashtable)
@@ -45,4 +48,4 @@ $taskWeb.SelectSingleNode("//environmentVariable[@name='LocalConfigPath']").SetA
 $taskWeb.Save((Join-Path $taskApp 'web.config'))
 Copy-Item -LiteralPath (Join-Path $taskRoot 'scripts/Verify-IIS.ps1') -Destination $taskPackage
 Write-Output "IIS release package: $taskPackage"
-Write-Output 'Only app/ is the IIS physical path. Preserve live config/ and keys/ during updates. Set the host name, credentials and application-pool ACLs before first start; see deploy/iis/README.md.'
+Write-Output 'Only app/ is the IIS physical path. Preserve live config/, keys/ and data/attachments during updates. Create the external attachment directory and set its application-pool Modify ACL before first start; see deploy/iis/README.md.'

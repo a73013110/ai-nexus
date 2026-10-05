@@ -8,14 +8,20 @@ namespace AiNexus.Modules.AccessControl;
 
 public sealed class AccessService(NexusDbContext db)
 {
+    public IQueryable<UserGroupGrant> GroupMemberships(IReadOnlyList<Guid> users) =>
+        (from user in db.Users join assignment in db.Set<UserRole>() on user.Id equals assignment.UserId
+         join role in db.Set<Role>() on assignment.RoleId equals role.Id
+         join link in db.Set<RoleGroupRole>() on role.Id equals link.RoleId
+         join roleGroup in db.Set<RoleGroup>() on link.GroupId equals roleGroup.Id
+         where users.Contains(user.Id) && user.Enabled && user.DeletedAt == null && role.Enabled && roleGroup.Enabled
+         select new UserGroupGrant { UserId = user.Id, GroupId = roleGroup.Id }).Distinct();
     public async Task<AccessDto> ForUserAsync(Guid user, CancellationToken ct)
     {
         if (!await db.Users.AnyAsync(x => x.Id == user && x.Enabled && x.DeletedAt == null, ct)) return new([], [], []);
         var roleIds = db.Set<UserRole>().Where(x => x.UserId == user).Select(x => x.RoleId);
         var roles = await db.Set<Role>().AsNoTracking().Where(x => roleIds.Contains(x.Id) && x.Enabled)
             .OrderBy(x => x.Id).Select(x => new AccessItemDto(x.Id, x.Name)).ToListAsync(ct);
-        var enabledRoles = roles.Select(x => x.Id).ToArray();
-        var groupIds = db.Set<RoleGroupRole>().Where(x => enabledRoles.Contains(x.RoleId)).Select(x => x.GroupId);
+        var groupIds = GroupMemberships([user]).Select(x => x.GroupId);
         var groups = await db.Set<RoleGroup>().AsNoTracking().Where(x => groupIds.Contains(x.Id) && x.Enabled)
             .OrderBy(x => x.Id).Select(x => new AccessItemDto(x.Id, x.Name)).ToListAsync(ct);
         var enabledGroups = groups.Select(x => x.Id).ToArray();
@@ -24,6 +30,12 @@ public sealed class AccessService(NexusDbContext db)
             .OrderBy(x => x.SortOrder).ThenBy(x => x.Id).Select(x => new FeatureDto(x.Id, x.Name, x.Route)).ToListAsync(ct);
         return new(roles, groups, features);
     }
+}
+
+public sealed class UserGroupGrant
+{
+    public Guid UserId { get; init; }
+    public string GroupId { get; init; } = "";
 }
 
 public sealed record FeatureRequirement(params string[] FeatureIds) : IAuthorizationRequirement;

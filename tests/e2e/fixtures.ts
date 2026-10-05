@@ -82,6 +82,22 @@ export class ApiFixture {
   readonly events = new Map<string, RunEvent[]>();
   readonly submissions = new Map<string, Run>();
   readonly attachments: Attachment[] = [];
+  attachmentLimitBytes = 5_000_000_000;
+  storage() {
+    const usedBytes = this.attachments.reduce(
+      (sum, file) => sum + file.size,
+      0,
+    );
+    return {
+      usedBytes,
+      limitBytes: this.attachmentLimitBytes,
+      remainingBytes: Math.max(0, this.attachmentLimitBytes - usedBytes),
+      personalLimitBytes: null,
+      groupLimitBytes: null,
+      defaultLimitBytes: 5_000_000_000,
+      limitSource: "default",
+    };
+  }
   readonly retainedFiles = new Set<string>();
   readonly fileUsages = new Map<string, LibraryFile["usages"]>();
   libraryItems(): LibraryFile[] {
@@ -350,8 +366,10 @@ export class ApiFixture {
         inputTokens: 123,
         outputTokens: 12,
         requestsWithUsage: this.generated,
-        attachmentBytes: 0,
         daily: [],
+        storage: this.storage(),
+        totalDurationMilliseconds: this.generated * 1500,
+        timedRequests: this.generated,
       });
     if (path === "/preferences") {
       if (this.failPreferencesOnce) {
@@ -364,6 +382,7 @@ export class ApiFixture {
       this.preferences = route.request().postDataJSON();
       return json(this.preferences);
     }
+    if (path === "/attachments/storage") return json(this.storage());
     if (path === "/attachments/policy")
       return json({
         maxFileBytes: 4194304,
@@ -426,10 +445,6 @@ export class ApiFixture {
     if (path === "/files") {
       const query = new URL(route.request().url()).searchParams;
       let items = this.libraryItems();
-      const storedBytes = items.reduce(
-        (sum, value) => sum + value.file.size,
-        0,
-      );
       const search = (query.get("search") || "").toLowerCase(),
         type = query.get("type"),
         source = query.get("source");
@@ -448,7 +463,7 @@ export class ApiFixture {
       return json({
         items: items.slice(offset, offset + limit),
         total: items.length,
-        storedBytes,
+        storage: this.storage(),
         offset,
         limit,
       });
@@ -761,6 +776,13 @@ export class ApiFixture {
       if (runRoute[3] === "cancel") {
         run.status = assistant.status = "cancelled";
         run.finishedAt = new Date().toISOString();
+        run.timing = assistant.timing = {
+          totalMilliseconds: 1500,
+          queueMilliseconds: 200,
+          generationMilliseconds: 1300,
+          inputTokens: null,
+          outputTokens: null,
+        };
         run.lastSequence++;
         this.events.get(run.id)!.push({
           version: 1,
@@ -811,6 +833,15 @@ export class ApiFixture {
             run.status = "completed";
             run.lastSequence = 4;
             run.finishedAt = new Date().toISOString();
+            run.inputTokens = 123;
+            run.outputTokens = 12;
+            run.timing = assistant.timing = {
+              totalMilliseconds: 1500,
+              queueMilliseconds: 200,
+              generationMilliseconds: 1300,
+              inputTokens: 123,
+              outputTokens: 12,
+            };
             events.push({
               version: 1,
               sequence: 4,

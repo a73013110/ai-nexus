@@ -37,6 +37,8 @@ export class AdminApi {
       `/admin/conversations/${encodeURIComponent(id)}?offset=${offset}`,
     );
   usage = () => this.http.json<AdminUsage>('/admin/usage');
+  storage = (id: string, limitBytes: number | null) =>
+    this.http.json<void>(`/admin/users/${encodeURIComponent(id)}/storage`, 'PUT', { limitBytes });
   roles = (id: string, roleIds: string[]) =>
     this.http.json<void>(`/admin/users/${encodeURIComponent(id)}/roles`, 'PUT', { roleIds });
   saveUser = (id: string | null, body: components['schemas']['UserAccountRequest']) =>

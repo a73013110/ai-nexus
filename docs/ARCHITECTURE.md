@@ -9,6 +9,8 @@ flowchart LR
     Gates --> Modules[聊天／專案／知識／成果／分享／評測]
     Modules --> EF[EF Core／scoped EDoc EfHelper]
     EF --> SQL[(AiNexus SQL Server)]
+    Modules --> Storage[IAttachmentStorage／opaque key]
+    Storage --> Files[(站外原檔目錄)]
     Modules --> Jobs[Operations durable 任務]
     Jobs --> Tasks[Inference 共用配額與模型任務]
     Tasks --> Models[Google AI／Ollama]
@@ -19,26 +21,26 @@ flowchart LR
 
 ## 模組責任
 
-| 模組           | 責任與邊界                                                        |
-| -------------- | ----------------------------------------------------------------- |
-| Identity       | AD／Windows、SID 映射、cookie／CSRF、帳號偏好；不保存個人密碼     |
-| AccessControl  | 使用者→角色→群組→功能的有效授權及 server-side policy              |
-| Administration | 一次性管理員 bootstrap、授權、群組模型／配額、稽核與用量          |
-| Conversations  | 私人訊息樹／分支、標題、收藏／封存／標籤、搜尋與文字備份          |
-| Inference      | provider、模型呈現政策、Context、聊天排程／SSE、共用模型任務      |
-| Operations     | 健康狀態、audit、事件清理、durable jobs、租約及 fenced checkpoint |
-| Attachments    | 格式及大小驗證、原始檔／文字、配額、下載授權與保留引用            |
-| Library        | 個人提示詞範本及容量限制                                          |
-| Collaboration  | 私有資源、具名 viewer／editor、群組唯讀 ACL、具名到期分享         |
-| Knowledge      | 逐頁閱讀、OCR／索引、獨立 embedding、授權檢索及引用快照           |
-| Artifacts      | 不可變版本、樂觀衝突檢查、段落工具及 Word／PDF                    |
-| Projects       | 共用指示／文件／範本／成果；提問仍屬個人                          |
-| Quality        | 私人回饋、固定評測、方案／設定快照、逐題結果及人工評分            |
-| Integrations   | 來源政策、固定授權 view、唯讀搜尋／歷程、明確匯入與聊天草稿       |
+| 模組           | 責任與邊界                                                                               |
+| -------------- | ---------------------------------------------------------------------------------------- |
+| Identity       | AD／Windows、SID 映射、cookie／CSRF、帳號偏好；不保存個人密碼                            |
+| AccessControl  | 使用者→角色→群組→功能的有效授權及 server-side policy                                     |
+| Administration | 一次性管理員 bootstrap、授權、群組模型／配額、稽核與用量                                 |
+| Conversations  | 私人訊息樹／分支、標題、收藏／封存／標籤、搜尋與文字備份                                 |
+| Inference      | provider、模型呈現政策、Context、聊天排程／SSE、共用模型任務                             |
+| Operations     | 健康狀態、audit、事件清理、durable jobs、租約及 fenced checkpoint                        |
+| Attachments    | 格式及大小驗證、原始檔／文字、配額、下載授權與保留引用                                   |
+| Library        | 個人提示詞範本及容量限制                                                                 |
+| Collaboration  | 私有資源、具名 viewer／editor、群組唯讀 ACL、具名到期分享                                |
+| Knowledge      | 逐頁閱讀、OCR／索引、獨立 embedding、授權檢索及引用快照                                  |
+| Artifacts      | 不可變版本、樂觀衝突檢查、段落工具及 Word／PDF                                           |
+| Projects       | 共用指示／文件／範本／成果；提問仍屬個人                                                 |
+| Quality        | 私人回饋、固定評測、方案／設定快照、逐題結果及人工評分                                   |
+| Integrations   | 來源政策、固定授權 view、唯讀搜尋／歷程、明確匯入與聊天草稿                              |
 | Billing        | 追加價格版本、呼叫價格快照、實際用量計費、區間 SQL 彙總與 CSV；不以 Context 預估冒充帳單 |
-| WebSearch      | 可控搜尋 provider、本人配額與冪等搜尋紀錄、可核對來源；不爬取結果網站 |
-| Repositories   | 使用者 Gitea token 保護、唯讀 repository／issues／檔案、固定 commit 匯入與來源追溯 |
-| Dashboard      | 組合已授權的資源、任務與費用統計；平台範圍另驗 admin，沒有第二套計量邏輯 |
+| WebSearch      | 可控搜尋 provider、本人配額與冪等搜尋紀錄、可核對來源；不爬取結果網站                    |
+| Repositories   | 使用者 Gitea token 保護、唯讀 repository／issues／檔案、固定 commit 匯入與來源追溯       |
+| Dashboard      | 組合已授權的資源、任務與費用統計；平台範圍另驗 admin，沒有第二套計量邏輯                 |
 
 BuildingBlocks.ApiEndpoints 組裝模組；BuildingBlocks 管 host、共用錯誤／契約、context 與 migrations，Database 管 SqlClient、markers 與原始 EDoc helpers。模組間使用明確服務，不新增能繞過 owner、ACL 或模型核准的資料入口。
 
@@ -67,13 +69,17 @@ BuildingBlocks.ApiEndpoints 組裝模組；BuildingBlocks 管 host、共用錯�
 
 共享 UI 的 DOM ID 每個實例唯一；浮層使用原生 top layer，避免 dialog／捲動區裁切。管理員元件頁 /design 以正式元件及本機範例檢查主題、鍵盤、停用、確認與有限階段動畫。見 [設計系統](DESIGN_SYSTEM.md)。
 
-`InfoPopover` 統一單次／全對話費用的焦點、Esc 與邊界定位；`TrendChart` 使用同一份資料提供 SVG、鍵盤游標與文字表格。Dashboard 的流向圖只呈現真實資源／索引／生成狀態，與後端查詢分離。圖示沿用同一個 Lucide renderer，工作區與快捷指令各有獨立語意。
+`InfoPopover` 統一單次／全對話費用的焦點、Esc 與邊界定位；StorageUsage／RunTimingDisplay 共用容量與耗時呈現；`TrendChart` 使用同一份資料提供 SVG、鍵盤游標與文字表格。Dashboard 的流向圖只呈現真實資源／索引／生成狀態，與後端查詢分離。圖示沿用同一個 Lucide renderer，工作區與快捷指令各有獨立語意。
 
 ## 生成與背景任務
 
 聊天生成驗核准模型、群組配額、owner、思考能力及冪等 key，再於 transaction 保存訊息、run、參數與首個事件。Context 只略過本次送往模型的最舊完整輪次，不刪歷史。worker 每 80ms／512 字元保存部分文字與 replay 事件；SSE 中斷不停止生成，恢復以 GET snapshot／序號進行。編輯新增分支，重新生成新增 assistant sibling。見 [SSE 契約](../contracts/SSE.md)。
 
 文件／索引與評測使用 SQL durable jobs：claim、60 秒租約、2 秒 heartbeat、fenced checkpoint 與已完成項目的重用。停止先記取消要求，離開頁面不取消。外部 RPC 不保證跨程序 exactly-once，未保存結果的呼叫可能在重試時重做。
+
+Google／Ollama adapter 以 keyed DI 註冊，InferenceRouter 依核准 profile 路由並管理每個 provider 容量；聊天佇列按 provider 分開，模型清單探測隔離失敗。排隊 run 保存 provider／原生模型，文字與圖片都從同一路由送出，不自動 fallback。
+
+AttachmentQuota 統一個人／群組／預設容量及 SQL owner lock；AttachmentLifecycle 負責草稿、durable 刪檔 outbox 及孤兒 reconciliation，IAttachmentStorage 負責站外 IO 與串流列舉。DB 不保存原檔 bytes，引用沿用既有 ACL，完整備份需要 SQL＋檔案共同時點。
 
 OCR、段落工具與評測共用 ModelTaskService 的核准、配額及用量；保留配額以使用者 SQL row lock 序列化，RPC 不持有 transaction。評測凍結題庫、指令及模型設定指紋，設定變更阻擋執行／重試，已完成結果保留。來源文字以不可信資料封裝，授權在遠端呼叫前後再檢查。
 

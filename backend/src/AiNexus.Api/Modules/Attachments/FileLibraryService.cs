@@ -9,21 +9,24 @@ namespace AiNexus.Modules.Attachments;
 
 public sealed record FileUsageDto(string Kind, Guid ResourceId, string Name, Guid? DocumentId, string? Status);
 public sealed record LibraryFileDto(AttachmentDto File, DateTimeOffset CreatedAt, IReadOnlyList<FileUsageDto> Usages, bool CanDelete);
-public sealed record FileLibraryPageDto(IReadOnlyList<LibraryFileDto> Items, int Total, long StoredBytes, int Offset, int Limit);
+public sealed record FileLibraryPageDto(IReadOnlyList<LibraryFileDto> Items, int Total, AttachmentStorageDto Storage, int Offset, int Limit);
 
 /// <summary>The original is stored once. History and knowledge index it through independent references.</summary>
-public sealed class FileLibraryService(NexusDbContext db, AttachmentService files, AttachmentWriteLock writes, ResourceAccess access, AccessService features)
+public sealed class FileLibraryService(NexusDbContext db, AttachmentService files, AttachmentWriteLock writes, ResourceAccess access, AccessService features, AttachmentQuota quota)
 {
     public async Task RetainAsync(Guid actor, Guid id, CancellationToken ct)
     {
         await writes.Gate.WaitAsync(ct);
         try
         {
-            var file = await files.OwnedAsync(actor, id, ct, includeData: false);
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            await quota.LockOwnerAsync(actor, ct);
+            var file = await files.OwnedAsync(actor, id, ct);
             if (file.InLibrary) return;
             await db.Set<Attachment>().Where(x => x.Id == id && x.OwnerId == actor).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "file.retained", Result = "saved" });
             await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
         }
         finally { writes.Gate.Release(); }
     }
@@ -46,8 +49,8 @@ public sealed class FileLibraryService(NexusDbContext db, AttachmentService file
         var projectFiles = resourceFiles.Where(x => x.ParentId != null && projects.Contains(x.ParentId.Value));
         var privateReaders = from doc in db.Set<KnowledgeDocument>() join resource in db.Set<WorkspaceResource>() on doc.Id equals resource.Id
             where !doc.IsDeleted && !resource.IsDeleted && doc.CollectionId == null && resource.ParentId == null && resource.OwnerId == actor select doc.Id;
-        var owned = db.Set<Attachment>().AsNoTracking().Where(x => x.OwnerId == actor && x.InLibrary);
-        var storedBytes = await owned.SumAsync(x => (long?)x.Size, ct) ?? 0;
+        var owned = db.Set<Attachment>().AsNoTracking().Where(x => x.OwnerId == actor && x.InLibrary && x.StorageState == AttachmentStates.Ready);
+        var storage = await quota.ForAsync(actor, ct);
         var query = owned;
         if (!string.IsNullOrWhiteSpace(search)) query = query.Where(x => x.FileName.Contains(search.Trim()));
         if (type == "images") query = query.Where(x => x.ContentType.StartsWith("image/"));
@@ -74,6 +77,6 @@ public sealed class FileLibraryService(NexusDbContext db, AttachmentService file
         usage.AddRange(project.Select(x => (x.AttachmentId, new FileUsageDto("projects", x.Id, x.Name, x.DocumentId, x.Status))));
         var byFile = usage.ToLookup(x => x.FileId, x => x.Value);
         return new(rows.Select(x => new LibraryFileDto(new(x.Id, x.FileName, x.ContentType, x.Size, x.ContentType.StartsWith("image/"),
-            x.ContentType == "application/pdf" && !x.HasText ? "ocr-required" : x.ContentType.StartsWith("image/") && !x.HasText ? "vision" : "extracted-text"), x.CreatedAt, byFile[x.Id].Take(8).ToArray(), x.CanDelete)).ToArray(), total, storedBytes, offset, limit);
+            x.ContentType == "application/pdf" && !x.HasText ? "ocr-required" : x.ContentType.StartsWith("image/") && !x.HasText ? "vision" : "extracted-text"), x.CreatedAt, byFile[x.Id].Take(8).ToArray(), x.CanDelete)).ToArray(), total, storage, offset, limit);
     }
 }

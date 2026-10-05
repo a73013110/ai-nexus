@@ -26,12 +26,20 @@ import { Checkbox } from '../../shared/ui/checkbox';
 import { SearchField } from '../../shared/ui/search-field';
 import { AdminUserInspector } from './admin-user-inspector';
 import { AdminAudit } from './admin-audit';
-import { formatDate, formatNumber } from '../../shared/browser/format';
+import {
+  formatDate,
+  formatNumber,
+  formatBytes,
+  formatDuration,
+  formatModelName,
+} from '../../shared/browser/format';
 import { PriceBook } from '../billing/price-book';
 import { FeatureSummary } from '../../shared/ui/feature-summary';
 import { groupFeatures } from '../../core/feature-groups';
 import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
+
+import { parseStorageLimitGb, storageLimitGb } from '../../shared/browser/storage-limit';
 
 interface Editor {
   kind: 'user' | 'role' | 'group' | 'feature';
@@ -213,7 +221,7 @@ export class AdminPage {
       storage:
         group?.policy?.storedAttachmentLimitBytes == null
           ? ''
-          : String(group.policy.storedAttachmentLimitBytes / 1048576),
+          : storageLimitGb(group.policy.storedAttachmentLimitBytes),
       order: String(feature?.sortOrder || 10),
       isNew: !item,
       adEnabled: user?.authentication?.adEnabled ?? !!user,
@@ -298,7 +306,7 @@ export class AdminPage {
           policy: {
             allowedModelIds: e.restricted ? e.modelIds : null,
             dailyRequestLimit: e.daily === '' ? null : Number(e.daily),
-            storedAttachmentLimitBytes: e.storage === '' ? null : Number(e.storage) * 1048576,
+            storedAttachmentLimitBytes: parseStorageLimitGb(e.storage),
           },
         });
       if (e.kind === 'feature')
@@ -328,6 +336,9 @@ export class AdminPage {
     )[kind];
   }
   readonly date = formatDate;
+  readonly bytes = formatBytes;
+  readonly duration = formatDuration;
+  readonly modelName = formatModelName;
   readonly format = formatNumber;
   actions(user: AdminUser): MenuAction[] {
     const testing = !!this.session.auth.session()?.testing;

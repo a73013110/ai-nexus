@@ -9,8 +9,8 @@ public sealed record UserSettingsDto(PreferencesDto Appearance, int ReadingFontS
     bool NotifyOnCompletion = false, string DefaultReasoningEffort = "auto");
 public sealed record UsageDayDto(DateOnly Date, int Requests, long InputTokens, long OutputTokens);
 public sealed record PersonalUsageDto(int Days, int Requests, int Completed, int Failed, int Cancelled,
-    long InputTokens, long OutputTokens, int RequestsWithUsage, long AttachmentBytes,
-    IReadOnlyList<UsageDayDto> Daily);
+    long InputTokens, long OutputTokens, int RequestsWithUsage,
+    IReadOnlyList<UsageDayDto> Daily, AiNexus.Modules.Attachments.AttachmentStorageDto Storage, long TotalDurationMilliseconds = 0, int TimedRequests = 0);
 
 public sealed class PersonalSettingsService(NexusDbContext db, CurrentUser current, ModelPresentation models, UsageReports reports)
 {

@@ -487,11 +487,6 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasColumnType("datetimeoffset")
                         .HasComment("資料建立時間，採 UTC offset。");
 
-                    b.Property<byte[]>("Data")
-                        .IsRequired()
-                        .HasColumnType("varbinary(max)")
-                        .HasComment("原始附件二進位內容；不在 wwwroot 公開。");
-
                     b.Property<string>("ExtractedText")
                         .HasColumnType("nvarchar(max)")
                         .HasComment("附件分析後的文字。");
@@ -514,15 +509,36 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasColumnType("bigint")
                         .HasComment("原始附件大小，以 bytes 計。");
 
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("站外原檔的不可變隨機識別碼；不含使用者路徑或檔名。");
+
+                    b.Property<string>("StorageState")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasComment("原檔儲存狀態 pending／ready／deleting；刪檔成功才釋放 metadata 與容量。");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("StorageKey")
+                        .IsUnique();
+
                     b.HasIndex("OwnerId", "CreatedAt");
+
+                    b.HasIndex("StorageState", "CreatedAt");
 
                     b.HasIndex("OwnerId", "InLibrary", "CreatedAt", "Id");
 
                     b.ToTable("Attachments", "attachments", t =>
                         {
-                            t.HasComment("使用者附件的原始二進位資料、擷取文字及保留狀態。");
+                            t.HasComment("站外附件原檔的 metadata、儲存識別、擷取文字及生命週期；不保存原始 bytes。");
+
+                            t.HasCheckConstraint("CK_Attachments_Size", "[Size] > 0");
+
+                            t.HasCheckConstraint("CK_Attachments_StorageState", "[StorageState] IN ('pending', 'ready', 'deleting')");
                         });
                 });
 
@@ -1062,6 +1078,10 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasDefaultValue(true)
                         .HasComment("是否允許使用 AD／Windows 整合驗證登入。");
 
+                    b.Property<long?>("AttachmentLimitBytes")
+                        .HasColumnType("bigint")
+                        .HasComment("管理者設定的個人容量上限 bytes；優先於群組，空值使用群組或預設 5 GB。");
+
                     b.Property<DateTimeOffset?>("DeletedAt")
                         .HasColumnType("datetimeoffset")
                         .HasComment("登入身分刪除時間；保留關聯與歷史資料。");
@@ -1135,6 +1155,8 @@ namespace AiNexus.BuildingBlocks.Migrations
                     b.ToTable("Users", "identity", t =>
                         {
                             t.HasComment("使用者身分、AD SID 綁定、可用登入方式與工作階段撤銷版本；不保存 AD 密碼。");
+
+                            t.HasCheckConstraint("CK_Users_AttachmentLimitBytes", "[AttachmentLimitBytes] IS NULL OR [AttachmentLimitBytes] BETWEEN 0 AND 1000000000000000");
                         });
                 });
 
@@ -1166,6 +1188,10 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasColumnType("datetimeoffset")
                         .HasComment("資料建立時間，採 UTC offset。");
 
+                    b.Property<long?>("DurationMilliseconds")
+                        .HasColumnType("bigint")
+                        .HasComment("從請求建立至終止的總耗時毫秒；包括排隊、生成、取消與失敗。");
+
                     b.Property<string>("ErrorCode")
                         .HasMaxLength(80)
                         .HasColumnType("nvarchar(80)")
@@ -1178,6 +1204,10 @@ namespace AiNexus.BuildingBlocks.Migrations
                     b.Property<DateTimeOffset?>("FinishedAt")
                         .HasColumnType("datetimeoffset")
                         .HasComment("工作結束時間。");
+
+                    b.Property<long?>("GenerationMilliseconds")
+                        .HasColumnType("bigint")
+                        .HasComment("從生成開始至終止的耗時毫秒；未開始的請求保持空值。");
 
                     b.Property<string>("IdempotencyKey")
                         .IsRequired()
@@ -1215,6 +1245,18 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasComment("執行參數的 JSON 快照，不含服務密鑰。");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("模型或搜尋服務供應商識別碼。");
+
+                    b.Property<string>("ProviderModelId")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasComment("送往指定供應商的原生模型識別碼，與核准路由識別碼分開保存。");
 
                     b.Property<string>("RequestHash")
                         .IsRequired()
@@ -1270,6 +1312,10 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasColumnType("datetimeoffset")
                         .HasComment("資料建立時間，採 UTC offset。");
 
+                    b.Property<long?>("DurationMilliseconds")
+                        .HasColumnType("bigint")
+                        .HasComment("從請求建立至終止的總耗時毫秒；包括排隊、生成、取消與失敗。");
+
                     b.Property<long?>("InputTokens")
                         .HasColumnType("bigint")
                         .HasComment("模型回報的輸入 tokens；未知保持空值。");
@@ -1293,6 +1339,12 @@ namespace AiNexus.BuildingBlocks.Migrations
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uniqueidentifier")
                         .HasComment("資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("模型或搜尋服務供應商識別碼。");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1330,6 +1382,18 @@ namespace AiNexus.BuildingBlocks.Migrations
                     b.Property<int>("MaxOutputTokens")
                         .HasColumnType("int")
                         .HasComment("模型核准的最大輸出 tokens。");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("模型或搜尋服務供應商識別碼。");
+
+                    b.Property<string>("ProviderModelId")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasComment("送往指定供應商的原生模型識別碼，與核准路由識別碼分開保存。");
 
                     b.Property<bool>("SupportsStreaming")
                         .HasColumnType("bit")

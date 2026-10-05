@@ -16,7 +16,7 @@
 | inference     | ModelPrices、ModelCharges、WebSearches                                    | 不可變價格版本、呼叫價格／用量快照、搜尋來源與冪等          |
 | workspace     | RepositoryConnections                                                     | 每個人自己的 Gitea 帳號與 Data Protection 加密 token        |
 | operations    | AuditEvents、BackgroundJobs                                               | 同交易稽核、durable 租約／checkpoint／取消／重試            |
-| attachments   | Attachments、MessageAttachments、ResourceAttachments                      | 原始檔、文字、訊息及資源引用／保留與配額                    |
+| attachments   | Attachments、MessageAttachments、ResourceAttachments                      | 站外原檔 metadata、儲存識別、文字、引用及配額               |
 | library       | PromptTemplates                                                           | 個人提示詞，最多 100 個                                     |
 | collaboration | Resources、ResourceMembers、ResourceGroups                                | 擁有者、具名 viewer／editor、群組唯讀、ParentId 繼承        |
 | collaboration | ShareLinks、ShareRecipients                                               | 到期／撤銷、具名收件人、版本快照及明確附件授權              |
@@ -28,15 +28,15 @@
 | quality       | MessageFeedback、EvaluationSets、EvaluationRuns、EvaluationResults        | 私人回饋、固定題庫、執行設定及逐題結果／人工評分            |
 | dbo           | \_\_EFMigrationsHistory                                                   | 已套用的 EF 版本，不可手改或刪除以重跑 migration            |
 
-共有 13 個業務 schema，由 source migrations 管理。原始附件存於 SQL binary，不在 wwwroot。個人偏好為 UserId 的 1:1 關聯，包含外觀、閱讀、對話操作及通知；API key／SQL／AD 服務密碼不在偏好表。Gitea token 是各帳號的加密 connector 授權，與個人偏好分開。
+共有 13 個業務 schema，由單一 InitialCreate 基線管理。原始附件存於站外 Attachments.StoragePath，SQL 不保存原始 bytes。StorageKey 唯一索引與狀態／時間索引支持存取及回收；Users.AttachmentLimitBytes 為個人容量 override，null 繼承群組／預設 5 GB，DB 檢核非負及安全上限。個人偏好為 UserId 的 1:1 關聯；API key／SQL／AD 服務密碼不在偏好表，Gitea token 獨立加密保存。
 
 ## 物件描述與版本維護
 
 `BuildingBlocks/DatabaseDescriptions.cs` 是資料表及欄位描述的唯一模型來源；新增映射物件漏寫說明會在建立模型時被攔下。EF migration 將其寫入 SQL Server `MS_Description`。`db/object-descriptions.sql` 可重跑，補上 schema、實體索引、主鍵／外鍵／唯一／預設／檢核約束、原生向量欄位及 EF 版本表說明；不變更業務資料。明確執行初始化時會重套用此內嵌 SQL，涵蓋後續新增的索引與約束，一般啟動不執行 DDL。新增物件的 migration 應同步更新其描述。執行 `scripts/Test-DatabaseDescriptions.ps1` 可唯讀檢查部署後是否有遺漏；初始化也會自動檢查。
 
-本次使用 `ManagedIdentitiesAndDescriptions` 一個增量版本同時新增登入政策、Argon2id 雜湊、登入撤銷版本、測試來源稽核及物件描述。既有使用者預設仍允許 AD；本地登入須管理者明確設定帳號與密碼。預設群組名稱改為「基本工作區」，保留管理員已自訂的名稱。歷史 migration 的名稱 literal 以 Unicode escape 保留原值與可重建性。
+InitialCreate 包含目前登入政策、Argon2id 雜湊、登入撤銷版本、測試身分稽核、物件描述及全部功能種子。基本群組名稱為「基本工作區」，本地登入須由管理者明確設定。
 
-目前保留所有已套用 migration。版本多不影響一般查詢效能，正式啟動也不自動執行 DDL。單人開發可在第一個正式版本前建立 baseline，但應先備份資料、在空白測試庫重建、比對 schema／seed／向量 SQL，並保留舊庫可用的升級路徑；不能直接刪 migration 或版本表後在現有資料庫重跑。本次尚未發佈的新增內容已合併為一個 migration，未清空或重設既有資料庫。
+本版將累積 migrations 合併成 `20261005171400_InitialCreate`，僅適用全新空資料庫，沒有舊 binary 遷移或舊資料庫相容。初始化不會 DROP 或清空現有 DB；遇到其他基線的 history 會停止，不可刪 history 硬套新基線。日後模型變更追加具名 migration，不再任意重置正式基線。
 
 ## 授權關聯
 
@@ -70,12 +70,13 @@ erDiagram
 
 - Messages.ParentId 形成訊息樹，Conversations.ActiveLeafId 決定目前路徑。編輯新增 user，重新生成新增 assistant sibling，停止／失敗保存部分回答。
 - GenerationRuns 的 OwnerId＋IdempotencyKey 唯一索引防重複送出；ActiveOwnerId 非空的 filtered unique index 限制每人一個 active run。
-- `20261004151226_GenerationExecutorLeases` 新增 ExecutorId、LeaseExpiresAt 與 ActiveOwnerId＋LeaseExpiresAt 索引。租約每 15 秒續約，兩分鐘未續約才判定 executor 中斷；保留部分回答與歷史事件，停止重複處理。升級需先停止所有舊 host，以免舊版 recovery 繼續誤判其他實例。
+- GenerationRuns 保存 ExecutorId、LeaseExpiresAt 與 ActiveOwnerId＋LeaseExpiresAt 索引。租約每 15 秒續約，兩分鐘未續約才判定 executor 中斷，保留部分回答與歷史事件。
+- GenerationRuns 凍結 Provider、ProviderModelId 與核准路由 ModelId；完成／取消／失敗保存 DurationMilliseconds、GenerationMilliseconds 與 InputTokens／OutputTokens。ModelInvocations 也保存 provider 與耗時，管理分析不用解析 audit JSON。執行耗時包含 Context 準備及等待 provider 容量，不能直接視為模型純輸出速度。
 - ArtifactRevisions 的 ArtifactId＋Version 複合主鍵保存版本；expected version 衝突不覆蓋他人的異動。
 - BackgroundJobs 保存 ActiveKey、LeaseToken／期限、階段／完成量及 attempt；checkpoint 經 fencing，過期 worker 不能提交。
 - EvaluationResults 的 RunId＋CaseIndex＋VariantIndex 複合主鍵支援重試跳過已完成結果。VariantsJson 保存模型設定及指紋，不含 key／密碼。
 - ShareLinks 按擁有者／期限索引；撤銷、到期及原始刪除停止閱讀，清理快照與附件引用。
-- AuditEvents 以 At、Action＋Id、ResourceId＋Id 索引支援日期篩選與遞減游標；`20261004112414_AdministrativeInspectionAudit` migration 新增後兩個索引。DetailsJson 保存管理異動的前後狀態或唯讀檢視範圍，不保存密碼、API key、搜尋文字或對話內容。
+- AuditEvents 以 At、Action＋Id、ResourceId＋Id 索引支援日期篩選與遞減游標。DetailsJson 保存管理異動前後狀態或唯讀檢視範圍，不保存秘密、搜尋文字或對話內容。
 - 重要業務外鍵採 Restrict，避免刪使用者／專案造成歷史連鎖刪除；純附屬資料依明確策略處理。
 
 搜尋目前以 owner 限制下的 SQL substring 查詢，未建立 Full-Text Catalog；資料量增大可保留 API 再加全文搜尋。Context 只裁切此次提供模型的上文，不刪歷史，預估與實測 tokens 分開保存。
@@ -98,7 +99,14 @@ NexusConnectionFactory 以 marker 對應 AiNexus、CLI 專用 master，以及 Le
 ./scripts/Initialize-Database.ps1
 ```
 
-工具不刪資料，重跑只套用未完成版本。DBA 可先建 AiNexus，再在此資料庫執行 [idempotent SQL](../db/migrations.sql)；腳本不含 CREATE LOGIN／DATABASE 或秘密。版本 source 在 backend/src/AiNexus.Api/BuildingBlocks/Migrations。正式 DDL 使用獨立部署帳號，不開應用啟動 migration。
+工具只在 AiNexus 不存在時建庫，適用空資料庫或相同基線的未完成版本。DBA 可先建空 AiNexus，再執行 [idempotent SQL](../db/migrations.sql)，其中沒有 CREATE LOGIN／DATABASE 或秘密。source、designer、snapshot 位於 BuildingBlocks/Migrations，只有一個 InitialCreate。正式 DDL 使用獨立部署帳號。
+
+```powershell
+dotnet ef migrations list --project backend/src/AiNexus.Api
+dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Api
+```
+
+初始 migration 一次建立所有表、索引、約束、種子及描述；SQL Server 2025 條件建立 VECTOR(768)／VECTOR(1024)，較舊 SQL 使用 portable 路徑。初始化及正常 SQL Server 啟動檢查模型與 snapshot 一致。
 
 已設定 SQL 的 host 會在 HTTP 與背景 worker 啟動前檢查所有 migration；缺少任何版本會以退出碼 1 停止，列出待套用的版本及初始化方式。`Storage.ApplyMigrationsOnStartup=false` 仍會執行唯讀版本檢查，不會修改 schema。啟動、初始化與連線／部署驗證共用 `DatabaseSchema`，新增 migration 不必另加欄位特例。測試的 SQLite 使用當前模型建庫，不執行 SQL Server migrations。
 
@@ -108,16 +116,16 @@ NexusConnectionFactory 以 marker 對應 AiNexus、CLI 專用 master，以及 Le
 
 RunEvents 預設保留 24 小時 replay，權威 run 快照仍可恢復；未保存到檔案庫且未被訊息／資源／分享引用的草稿附件依保留期清理。檔案庫原檔需沒有引用後由擁有者明確刪除。分享到期可清理快照，soft-delete 對話、成果、audit 與評測等保存期由部署單位制定，再加入明確 retention。
 
-完整備份包含全部 schema 與原始附件，JSON 文字備份不含附件。Data Protection key ring 另備份。應在獨立資料庫實際還原，核對 SID、角色、ACL、訊息樹、版本、索引 profile 及跨帳號隔離；不能只以產生 bak 檔判定完成。recovery model 與完整／差異／log 排程由 DBA 設定。
+完整備份包含全部 schema 與同一時點的站外附件目錄，只備份 SQL 無法還原原檔。config 及 Data Protection key ring 另受 ACL 保護。停機一致性備份與還原校驗見 [BACKUP](BACKUP.md)，須在隔離環境核對 SID、角色、ACL、訊息樹、版本、索引 profile、原檔及跨帳號隔離。
 
-## 費用、搜尋與 1024 維升級
+## 費用、搜尋與 1024 維向量
 
-`20261004235154_ModelSpendAndConnectedWorkspace` 新增 ModelPrices／ModelCharges／WebSearches、RepositoryConnections／RepositoryImports、dashboard／repositories 功能授權，以及 SQL Server 2025 的 1024 維欄位。既有向量、對話、用量與角色保留。新價格版本與每次呼叫快照使用 decimal(20,8)，輸入／快取／輸出／思考用量及完整回報旗標分開保存；未知費用保持 null，舊呼叫不推定歷史價格。呼叫 ID 是費用表主鍵，避免重試重複計費。
+InitialCreate 包含 ModelPrices／ModelCharges／WebSearches、RepositoryConnections／RepositoryImports、dashboard／repositories 功能種子及 SQL Server 2025 的 1024 維欄位。價格快照為 decimal(20,8)，未知費用保持 null；呼叫 ID 是主鍵，避免重試重複計費。價格 ModelId 為供應商原生 ID，核准路由另含 provider。
 
 報表在 SQL 彙總 owner／日期／模型／幣別／類型，不讀取所有訊息內容；查詢上限 366 天，使用開始含／結束不含。費用與搜尋表有 owner／created time 索引，價格有 provider／model／effective time 唯一索引，搜尋有 owner／idempotency key 唯一索引。Gitea token 用 Data Protection 加密，備份 SQL 時需同時保存 key ring 與保護身分；否則 token 需重新連線。
 
 詳見 [費用](BILLING.md)、[搜尋](WEB_SEARCH.md)、[Gitea](GITEA.md)、[模型比較](EMBEDDING_MODELS.md)。
 
-## 檔案庫升級
+## 檔案庫與容量
 
-`20261005131605_FileLibraryRetention` 新增 Attachments.InLibrary 與 owner／保留狀態／時間／ID 索引。已有對話或資源引用的原檔會標記為已保存，不複製 binary，既有 ACL 維持由文件來源授權。新版本的 API 需要先套用 migration；停止舊 host，執行 `./scripts/Initialize-Database.ps1` 後再啟動。見 [檔案庫](FILES.md)。
+Attachments.InLibrary 管理原檔保存；同一原檔多個引用只計一次。容量以 Size 加總，包含草稿、預約及刪檔重試；上傳／引用異動使用使用者 SQL row lock 協調程序。先 commit metadata 狀態再做 IO，實體刪檔成功才刪 metadata 及釋放配額。見 [附件](ATTACHMENTS.md)、[檔案庫](FILES.md)。

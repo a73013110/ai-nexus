@@ -11,7 +11,7 @@ namespace AiNexus.Modules.Administration;
 public sealed record AdminUserDetailDto(AdminUserDto User, PersonalUsageDto Usage, IReadOnlyList<UsageKindDto> Kinds, int Conversations);
 public sealed record AdminConversationDto(Guid Id, string Title, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, bool IsArchived, bool IsDeleted, int Messages);
 public sealed record AdminConversationPageDto(IReadOnlyList<AdminConversationDto> Items, int Total, int Offset);
-public sealed record AdminMessageDto(Guid Id, Guid? ParentId, string Role, string Content, string Status, DateTimeOffset CreatedAt, string? ModelId, IReadOnlyList<AttachmentDto> Attachments);
+public sealed record AdminMessageDto(Guid Id, Guid? ParentId, string Role, string Content, string Status, DateTimeOffset CreatedAt, string? ModelId, IReadOnlyList<AttachmentDto> Attachments, RunTimingDto? Timing = null);
 public sealed record AdminConversationDetailDto(AdminConversationDto Conversation, string OwnerAccount, string OwnerName, string SystemInstruction, IReadOnlyList<AdminMessageDto> Messages, int Offset, int Total);
 
 /// <summary>Explicit, read-only administrative access. Never weakens conversation owner checks.</summary>
@@ -22,7 +22,8 @@ public sealed class AdministrativeReader(NexusDbContext db, CurrentUser current,
         await RequireAsync(ct);
         var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct) ?? throw Missing();
         var roles = await db.Set<UserRole>().Where(x => x.UserId == id).Select(x => x.RoleId).ToListAsync(ct);
-        var detail = new AdminUserDetailDto(new(id, user.Account, user.DisplayName, user.LastSeenAt, roles, null, user.Enabled, UserAccounts.Authentication(user)), await usage.ForOwnerAsync(id, ct), await usage.KindsAsync(id, ct), await db.Conversations.CountAsync(x => x.OwnerId == id, ct));
+        var report = await usage.ForOwnerAsync(id, ct);
+        var detail = new AdminUserDetailDto(new(id, user.Account, user.DisplayName, user.LastSeenAt, roles, null, user.Enabled, UserAccounts.Authentication(user), report.Storage), report, await usage.KindsAsync(id, ct), await db.Conversations.CountAsync(x => x.OwnerId == id, ct));
         await AuditAsync("admin.user_usage_read", id, new { userId = id }, ct);
         return detail;
     }
@@ -47,10 +48,11 @@ public sealed class AdministrativeReader(NexusDbContext db, CurrentUser current,
         var total = await query.CountAsync(ct);
         var rows = await query.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).Skip(offset).Take(100).ToListAsync(ct);
         var ids = rows.Select(x => x.Id).ToArray();
+        var timings = await RunTiming.ReadAsync(db, rows.Where(x => x.RunId != null).Select(x => x.RunId!.Value).Distinct().ToArray(), ct);
         var attachments = await db.Set<MessageAttachment>().AsNoTracking().Where(x => ids.Contains(x.MessageId))
             .Select(x => new { x.MessageId, x.Attachment.Id, x.Attachment.FileName, x.Attachment.ContentType, x.Attachment.Size }).ToListAsync(ct);
         var messages = rows.Select(x => new AdminMessageDto(x.Id, x.ParentId, x.Role, x.Content, x.Status, x.CreatedAt, x.ModelId is { } model ? models.PublicId(model) : null,
-            attachments.Where(a => a.MessageId == x.Id).Select(a => new AttachmentDto(a.Id, a.FileName, a.ContentType, a.Size, a.ContentType.StartsWith("image/"), "reference")).ToArray())).ToArray();
+            attachments.Where(a => a.MessageId == x.Id).Select(a => new AttachmentDto(a.Id, a.FileName, a.ContentType, a.Size, a.ContentType.StartsWith("image/"), "reference")).ToArray(), x.RunId is Guid run ? timings.GetValueOrDefault(run) : null)).ToArray();
         await AuditAsync("admin.conversation_read", id, new { userId = owner.Id, conversationId = id, offset, count = messages.Length }, ct);
         return new(new(id, value.Title, value.CreatedAt, value.UpdatedAt, value.IsArchived, value.IsDeleted, total), owner.Account, owner.DisplayName, value.SystemInstruction, messages, offset, total);
     }

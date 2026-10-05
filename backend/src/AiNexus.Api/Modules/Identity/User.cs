@@ -7,6 +7,7 @@ public sealed class NexusUser
     public string Account { get; set; } = "";
     public string DisplayName { get; set; } = "";
     public bool Enabled { get; set; } = true;
+    public long? AttachmentLimitBytes { get; set; }
     public DateTimeOffset? DeletedAt { get; set; }
     public bool AdEnabled { get; set; } = true;
     public bool LocalEnabled { get; set; }

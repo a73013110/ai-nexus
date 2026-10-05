@@ -23,6 +23,7 @@ import { FilesApi } from './files-api';
 import { FileBrowser } from './file-browser';
 import { FileLibraryStore } from './file-library-store';
 import { AddToKnowledge } from './add-to-knowledge';
+import { StorageUsage } from '../../shared/ui/storage-usage';
 
 @Component({
   selector: 'nx-files-page',
@@ -36,6 +37,7 @@ import { AddToKnowledge } from './add-to-knowledge';
     AddToKnowledge,
     ConfirmDialog,
     RouterLink,
+    StorageUsage,
   ],
   providers: [ViewScope, FileLibraryStore],
   changeDetection: ChangeDetectionStrategy.OnPush,

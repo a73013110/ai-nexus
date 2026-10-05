@@ -12,7 +12,7 @@ public sealed record ConversationSettingsRequest(bool? IsFavorite = null, bool? 
 public sealed record ConversationBackup(int Version, string Title, string SystemInstruction, IReadOnlyList<string> Labels, Guid? ActiveLeafId, IReadOnlyList<BackupMessage> Messages);
 public sealed record BackupMessage(Guid Id, Guid? ParentId, string Role, string Content, string Status, DateTimeOffset CreatedAt, IReadOnlyList<string> AttachmentNames);
 
-public sealed class ConversationOrganization(IEfHelper<INexusDatabase> ef, ConversationService conversations, GenerationScheduler scheduler)
+public sealed class ConversationOrganization(IEfHelper<INexusDatabase> ef, ConversationService conversations, GenerationScheduler scheduler, NexusDbContext db, AttachmentQuota quota)
 {
     public async Task<IReadOnlyList<string>> LabelsAsync(Guid owner, CancellationToken ct)
         => await (from label in ef.Set<ConversationLabel>() join conversation in ef.Set<Conversation>() on label.ConversationId equals conversation.Id where conversation.OwnerId == owner && !conversation.IsDeleted select label.Name).Distinct().OrderBy(x => x).ToListAsync(ct);
@@ -52,6 +52,8 @@ public sealed class ConversationOrganization(IEfHelper<INexusDatabase> ef, Conve
         await scheduler.StateGate.WaitAsync(ct);
         try
         {
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            await quota.LockOwnerAsync(owner, ct);
             var original = await conversations.OwnedAsync(owner, id, ct);
             await RequireIdle(id, ct);
             var messages = await ef.Set<Message>().AsNoTracking().Where(x => x.ConversationId == id).OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToListAsync(ct);
@@ -64,6 +66,7 @@ public sealed class ConversationOrganization(IEfHelper<INexusDatabase> ef, Conve
             foreach (var link in links) ef.Set<MessageAttachment>().Add(new() { MessageId = ids[link.MessageId], AttachmentId = link.AttachmentId });
             ef.Set<AuditEvent>().Add(new() { OwnerId = owner, Action = "conversation.duplicated", ResourceId = clone.Id });
             await ef.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
             return clone.ToDto();
         }
         finally { scheduler.StateGate.Release(); }

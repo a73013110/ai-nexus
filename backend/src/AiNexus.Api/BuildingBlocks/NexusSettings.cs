@@ -8,22 +8,31 @@ namespace AiNexus.BuildingBlocks;
 /// <summary>Deployment schema is separated from the domain options used by services.</summary>
 public static class NexusSettings
 {
-    public const int Version = 2;
+    public const int Version = 3;
     public static void Inference(IConfiguration config, InferenceOptions options)
     {
         var section = config.GetSection("Inference");
-        options.Provider = section["Provider"] ?? options.Provider;
         section.GetSection("Execution").Bind(options);
         section.GetSection("ModelPolicy").Bind(options);
         var providers = section.GetSection("Providers");
         options.BaseUrl = providers["Ollama:Endpoint"] ?? options.BaseUrl;
         options.GoogleApiKey = providers["Google:ApiKey"] ?? "";
         options.SystemPrompt = config["Prompts:DefaultSystemInstruction"] ?? options.SystemPrompt;
-        var provider = providers.GetSection(options.Provider == "ollama" ? "Ollama" : "Google");
-        options.DefaultModelId = provider["DefaultModelId"];
-        options.Models = provider.GetSection("Models").GetChildren().Select(x => x.Get<ModelProfile>()!).ToList();
-        // v1 deployments continue to work while operators run Migrate-Settings.ps1.
-        section.Bind(options);
+        options.DefaultModelId = section["ModelPolicy:DefaultModelId"];
+        options.Models = [];
+        options.ProviderConcurrency = new(StringComparer.Ordinal);
+        foreach (var provider in providers.GetChildren().Where(x => x.GetValue<bool>("Enabled")))
+        {
+            var id = provider.Key.ToLowerInvariant();
+            options.ProviderConcurrency.Add(id, provider.GetValue("MaxConcurrency", 1));
+            foreach (var model in provider.GetSection("Models").GetChildren().Select(x => x.Get<ModelProfile>()!))
+            {
+                model.Provider = id;
+                model.ProviderModelId = model.Id;
+                model.Id = id + "/" + model.ProviderModelId;
+                options.Models.Add(model);
+            }
+        }
     }
 
     public static void Knowledge(IConfiguration config, KnowledgeOptions options)

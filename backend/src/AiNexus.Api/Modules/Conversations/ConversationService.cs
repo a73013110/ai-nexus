@@ -8,7 +8,7 @@ using AiNexus.Modules.Attachments;
 
 namespace AiNexus.Modules.Conversations;
 
-public sealed class ConversationService(IEfHelper<INexusDatabase> ef, NexusDbContext db, GenerationScheduler scheduler, ModelPresentation presentation, AttachmentWriteLock attachmentWrites, AiNexus.Modules.Sharing.ShareService shares)
+public sealed class ConversationService(IEfHelper<INexusDatabase> ef, NexusDbContext db, GenerationScheduler scheduler, ModelPresentation presentation, AttachmentWriteLock attachmentWrites, AiNexus.Modules.Sharing.ShareService shares, AttachmentLifecycle lifecycle, AttachmentQuota quota)
 {
     public async Task<Conversation> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
         => await ef.Set<Conversation>().Include(x => x.Labels).SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner && !x.IsDeleted, ct)
@@ -48,10 +48,11 @@ public sealed class ConversationService(IEfHelper<INexusDatabase> ef, NexusDbCon
         var ratings = await db.Set<AiNexus.Modules.Quality.MessageFeedback>().AsNoTracking().Where(x => x.OwnerId == owner && messages.Select(m => m.Id).Contains(x.MessageId)).ToDictionaryAsync(x => x.MessageId, x => x.Rating, ct);
         var charges = await db.Set<AiNexus.Modules.Billing.ModelCharge>().AsNoTracking().Where(x => x.OwnerId == owner && x.ConversationId == id).ToDictionaryAsync(x => x.Id, ct);
         var searches = await db.Set<AiNexus.Modules.WebSearch.WebSearchRecord>().AsNoTracking().Where(x => x.OwnerId == owner && x.ConversationId == id && x.RunId != null).ToDictionaryAsync(x => x.RunId!.Value, ct);
+        var timings = await RunTiming.ReadAsync(db, messages.Where(x => x.RunId != null).Select(x => x.RunId!.Value).Distinct().ToArray(), ct);
         return new(conversation.ToDto(), messages.Select(x =>
         {
             var search = x.RunId is Guid runId ? searches.GetValueOrDefault(runId) : null;
-            return presentation.Message(x) with { Attachments = attachments[x.Id].ToList(), Sources = citations[x.Id].ToList(), FeedbackRating = ratings.GetValueOrDefault(x.Id),
+            return presentation.Message(x) with { Timing = x.RunId is Guid timingId ? timings.GetValueOrDefault(timingId) : null, Attachments = attachments[x.Id].ToList(), Sources = citations[x.Id].ToList(), FeedbackRating = ratings.GetValueOrDefault(x.Id),
                 Charge = x.RunId is Guid call && charges.TryGetValue(call, out var charge) ? AiNexus.Modules.Billing.ChargeCalculator.Describe(charge) : null,
                 WebSources = search is null ? null : AiNexus.Modules.WebSearch.WebSearchService.Sources(search),
                 WebSearchCharge = search is not null && charges.TryGetValue(search.Id, out var webCharge) ? AiNexus.Modules.Billing.ChargeCalculator.Describe(webCharge) : null };
@@ -94,6 +95,7 @@ public sealed class ConversationService(IEfHelper<INexusDatabase> ef, NexusDbCon
                 var conversation = await OwnedAsync(owner, id, ct);
                 if (await ef.Set<GenerationRun>().AnyAsync(x => x.ConversationId == id && x.ActiveOwnerId != null, ct)) throw new ApiException(409, "generation_active", "請先停止生成，再刪除對話。");
                 await using var transaction = await db.Database.BeginTransactionAsync(ct);
+                await quota.LockOwnerAsync(owner, ct);
                 var links = await ef.Set<MessageAttachment>().Where(x => ef.Set<Message>().Any(m => m.Id == x.MessageId && m.ConversationId == id)).ToListAsync(ct);
                 var fileIds = links.Select(x => x.AttachmentId).Distinct().ToList();
                 ef.Set<MessageAttachment>().RemoveRange(links);
@@ -101,16 +103,13 @@ public sealed class ConversationService(IEfHelper<INexusDatabase> ef, NexusDbCon
                 await shares.RevokeSourceAsync("conversation", id, ct);
                 ef.Set<AuditEvent>().Add(new AuditEvent { OwnerId = owner, Action = "conversation.deleted", ResourceId = id });
                 await ef.SaveChangesAsync(ct);
-                // Delete only metadata stubs; never materialize image bytes to reclaim quota.
-                // Clones and other branches keep their own links and retain the shared file.
-                var unused = await ef.Set<Attachment>().Where(x => x.OwnerId == owner && !x.InLibrary && fileIds.Contains(x.Id) && !ef.Set<MessageAttachment>().Any(link => link.AttachmentId == x.Id) && !ef.Set<AttachmentReference>().Any(link => link.AttachmentId == x.Id)).Select(x => new Attachment { Id = x.Id }).ToListAsync(ct);
-                ef.Set<Attachment>().RemoveRange(unused);
-                await ef.SaveChangesAsync(ct);
+                await lifecycle.MarkUnusedAsync(fileIds, ct);
                 await transaction.CommitAsync(ct);
             }
             finally { attachmentWrites.Gate.Release(); }
         }
         finally { scheduler.StateGate.Release(); }
+        await lifecycle.DeletePendingAsync(ct);
     }
 
     // The inference module changes conversation history through this module's contract.

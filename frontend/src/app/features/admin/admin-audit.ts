@@ -64,6 +64,7 @@ export class AdminAudit {
     { value: 'admin.user', label: '使用者設定' },
     { value: 'identity.test_', label: '測試身分' },
     { value: 'admin.user_roles', label: '使用者角色' },
+    { value: 'admin.user_storage', label: '使用者容量上限' },
     { value: 'admin.role', label: '角色授權' },
     { value: 'admin.group', label: '群組與模型政策' },
     { value: 'admin.feature', label: '功能異動' },

@@ -85,6 +85,13 @@
                     tokens</strong
                   >
                   <small>最近 30 天 · {{ activity.conversations }} 段對話</small>
+                  @if (user.storage; as capacity) {
+                    <small
+                      >已用 {{ bytes(capacity.usedBytes) }} · 上限
+                      {{ bytes(capacity.limitBytes) }} · 剩餘
+                      {{ bytes(capacity.remainingBytes) }}</small
+                    >
+                  }
                 } @else {
                   <strong>查看用量與對話</strong>
                 }
@@ -252,13 +259,22 @@
               ><strong>{{ format(stats.inputTokens + stats.outputTokens) }}</strong
               ><small>{{ stats.requestsWithUsage }} 次請求有完整用量</small>
             </div>
+            <div class="stat-card">
+              <span>累計處理時間</span
+              ><strong>{{ duration(stats.totalDurationMilliseconds) }}</strong>
+              <small>{{ stats.timedRequests }} 次請求有耗時紀錄</small>
+            </div>
           </div>
         }
       }
     }
   }
 </nx-feature-page>
-<nx-admin-user-inspector [user]="inspected()" (closed)="inspected.set(null)" />
+<nx-admin-user-inspector
+  [user]="inspected()"
+  (closed)="inspected.set(null)"
+  (storageChanged)="loadUsers(users()?.offset || 0)"
+/>
 <dialog
   #editorDialog
   class="workspace-dialog platform-dialog"
@@ -445,7 +461,7 @@
               <div class="choice-list">
                 @for (model of catalog()?.models || []; track model.id) {
                   <nx-checkbox
-                    [label]="model.displayName"
+                    [label]="modelName(model)"
                     [checked]="e.modelIds.includes(model.id)"
                     [disabled]="saving()"
                     (checkedChange)="check(model.id, $event, true)"
@@ -469,20 +485,21 @@
               [readOnly]="saving()"
               (input)="update('daily', $any($event.target).value)" /></label
           ><label
-            >個人附件空間上限（MB）<input
+            >群組附件空間上限（GB）<input
               type="number"
-              aria-label="個人附件空間上限"
-              min="1"
-              max="1024"
-              step="1"
-              placeholder="依系統上限"
+              aria-label="群組附件空間上限"
+              min="0"
+              max="1000000"
+              step="0.000000001"
+              placeholder="使用預設 5 GB"
               [value]="e.storage"
               [readOnly]="saving()"
               (input)="update('storage', $any($event.target).value)"
           /></label>
           <p class="form-note">
             空白表示不增加群組限制。每日配額於 UTC
-            午夜重設，取消與失敗的請求也計次；系統模型與附件上限仍適用。
+            午夜重設，取消與失敗的請求也計次。群組容量取最低值；管理者設定的個人容量優先，未設定時預設
+            5 GB。1 GB = 1,000,000,000 bytes。
           </p>
         }
         @if (e.kind === 'feature') {
