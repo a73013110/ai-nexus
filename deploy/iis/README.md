@@ -196,7 +196,7 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Api.dll' `
   --VerifyDeployment true
 ```
 
-輸出應有 `environment=Production`、`sqlConnected=true`、`pendingMigrations=0`、`sqlEncrypted=true`、`trustsSqlCertificate=true`、`adConfigured=true`、正確 provider、模型數與 keyRingPath、`ready=true`。退出碼 0 才通過。此指令用**目前維運 shell 身分**讀檔，IIS 身分仍需實際網站驗證。
+輸出應有 `environment=Production`、`sqlConnected=true`、`pendingMigrations=0`、`providerAvailable=true`、`availableModelCount>0`、`sqlEncrypted=true`、`trustsSqlCertificate=true`、`adConfigured=true`、正確 provider、模型數與 keyRingPath、`ready=true`。SQL 版本落後會列出 `pendingMigrationIds`，模型服務或指定模型不可用會列出 `modelNotice`。檢查會讀取 provider 模型清單，不產生回答；`ready` 是平台狀態，個別群組仍需模型授權。切換 provider 或模型後，於管理頁確認各群組允許的模型，既有白名單不會自動清空或放寬。退出碼 0 才通過。此指令用**目前維運 shell 身分**讀檔，IIS 身分仍需實際網站驗證。
 
 輸出也顯示 embedding provider／維度、webSearchEnabled 與 giteaEnabled，並驗證這些 optional tools 的參數範圍。`ready=true` 只表示核心設定與 SQL 可用，不代表 Gitea token、搜尋 API 或 embedding 品質已實測通過。
 

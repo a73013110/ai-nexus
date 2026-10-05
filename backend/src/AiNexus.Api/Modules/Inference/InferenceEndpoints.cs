@@ -18,7 +18,7 @@ public static class InferenceEndpoints
             var policy = await policies.ForAsync((await current.GetAsync(ct)).Id, ct);
             var allowed = catalog.Models.Where(x => policy.AllowedModelIds is null || policy.AllowedModelIds.Contains(x.Id)).ToArray();
             var defaultId = allowed.Any(x => x.Id == catalog.Policy.DefaultModelId) ? catalog.Policy.DefaultModelId : allowed.FirstOrDefault()?.Id;
-            return Results.Ok(catalog with { Models = allowed, Notice = allowed.Length == 0 && catalog.ProviderAvailable ? "你的群組目前沒有可用模型，請聯絡管理員。" : catalog.Notice,
+            return Results.Ok(catalog with { Models = allowed, Notice = catalog.Models.Count > 0 && allowed.Length == 0 ? "你的群組目前沒有可用模型，請由管理員確認群組允許的模型與目前服務設定。" : catalog.Notice,
                 Policy = catalog.Policy with { DefaultModelId = defaultId } });
         }).WithName("ListModels").Produces<ModelsDto>();
         api.MapPost("/context", async (ContextPreviewRequest body, CurrentUser current, ConversationService conversations, AttachmentService attachments, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, AiNexus.Modules.Administration.ModelPolicyService policies, AiNexus.Modules.Knowledge.KnowledgeRetrieval knowledge, AiNexus.Modules.Projects.ProjectService projects, CancellationToken ct) =>

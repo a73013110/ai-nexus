@@ -13,9 +13,9 @@ import { Select } from '../../shared/ui/select';
       <nx-select
         class="composer-select model-control"
         label="選擇模型"
-        placeholder="模型未就緒"
+        [placeholder]="modelPlaceholder()"
         [value]="modelId()"
-        [disabled]="disabled()"
+        [disabled]="disabled() || loading() || !models().length"
         [options]="modelOptions()"
         [searchable]="true"
         (valueChange)="modelChange.emit($event)"
@@ -23,7 +23,11 @@ import { Select } from '../../shared/ui/select';
     } @else {
       <span class="model-lock" title="模型由系統指定"
         ><nx-icon name="lock" />{{
-          policy().showModelNames ? selected()?.displayName || '模型未就緒' : '系統指定'
+          selected()
+            ? policy().showModelNames
+              ? selected()!.displayName
+              : '系統指定'
+            : modelPlaceholder()
         }}</span
       >
     }
@@ -117,6 +121,8 @@ export class ComposerControls {
   readonly modelId = input.required<string>();
   readonly effort = input('auto');
   readonly disabled = input(false);
+  readonly loading = input(false);
+  readonly loadFailed = input(false);
   readonly usage = input<ContextUsage | null>(null);
   readonly modelChange = output<string>();
   readonly effortChange = output<string>();
@@ -125,6 +131,15 @@ export class ComposerControls {
   readonly webSearchNotice = input('');
   readonly webSearchChange = output<boolean>();
   readonly selected = computed(() => this.models().find((x) => x.id === this.modelId()));
+  readonly modelPlaceholder = computed(() =>
+    this.loading()
+      ? '正在載入模型…'
+      : this.loadFailed()
+        ? '模型清單載入失敗'
+        : this.models().length
+          ? '請選擇模型'
+          : '沒有可用模型',
+  );
   readonly modelOptions = computed(() =>
     this.models().map((x) => ({
       value: x.id,

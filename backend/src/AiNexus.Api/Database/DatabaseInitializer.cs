@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Database;
 
-public sealed class DatabaseInitializer(IConfiguration configuration, IDbHelper<INexusBootstrapDatabase> bootstrap, NexusDbContext db)
+public sealed class DatabaseInitializer(IConfiguration configuration, IDbHelper<INexusBootstrapDatabase> bootstrap, NexusDbContext db, DatabaseSchema schema)
 {
     public async Task InitializeAsync(CancellationToken ct)
     {
@@ -15,6 +15,7 @@ public sealed class DatabaseInitializer(IConfiguration configuration, IDbHelper<
         var exists = await bootstrap.QuerySingleAsync<int>("SELECT COUNT(*) FROM sys.databases WHERE name = @Name", new { Name = target }, commandTimeout: 5, cancellationToken: ct);
         if (exists == 0) await bootstrap.ExecuteAsync("CREATE DATABASE [AiNexus]", commandTimeout: 30, cancellationToken: ct);
         await db.Database.MigrateAsync(ct);
+        await schema.RequireCurrentAsync(ct);
         // Explicit initialization refreshes descriptions for indexes/constraints added by future migrations.
         using var descriptions = typeof(DatabaseInitializer).Assembly.GetManifestResourceStream("AiNexus.Database.ObjectDescriptions.sql")
             ?? throw new InvalidOperationException("Database descriptions resource is missing.");

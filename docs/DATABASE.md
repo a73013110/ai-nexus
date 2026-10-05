@@ -100,7 +100,9 @@ NexusConnectionFactory 以 marker 對應 AiNexus、CLI 專用 master，以及 Le
 
 工具不刪資料，重跑只套用未完成版本。DBA 可先建 AiNexus，再在此資料庫執行 [idempotent SQL](../db/migrations.sql)；腳本不含 CREATE LOGIN／DATABASE 或秘密。版本 source 在 backend/src/AiNexus.Api/BuildingBlocks/Migrations。正式 DDL 使用獨立部署帳號，不開應用啟動 migration。
 
-本版管理與一般 endpoint 共用 Nexus 連線，runtime 登入需要上述 13 個業務 schema 的 SELECT／INSERT／UPDATE／DELETE，也包括 bootstrap／管理異動的 access 物件；實際操作由後端政策控制。**目前沒有管理專用寫入連線**，不能只給 access SELECT／首次登入 INSERT 就預期後台可運作。runtime 不給 master 建庫、ALTER schema 或 db_owner；進一步分離管理 SQL 權限需要實作獨立連線及交易邊界。外部來源登入則只授兩個固定授權 view 的 SELECT。
+已設定 SQL 的 host 會在 HTTP 與背景 worker 啟動前檢查所有 migration；缺少任何版本會以退出碼 1 停止，列出待套用的版本及初始化方式。`Storage.ApplyMigrationsOnStartup=false` 仍會執行唯讀版本檢查，不會修改 schema。啟動、初始化與連線／部署驗證共用 `DatabaseSchema`，新增 migration 不必另加欄位特例。測試的 SQLite 使用當前模型建庫，不執行 SQL Server migrations。
+
+本版管理與一般 endpoint 共用 Nexus 連線，runtime 登入需要上述 13 個業務 schema 的 SELECT／INSERT／UPDATE／DELETE，也包括 bootstrap／管理異動的 access 物件；版本檢查另需 `dbo.__EFMigrationsHistory` 的 SELECT，不需修改 history 的權限。實際操作由後端政策控制。**目前沒有管理專用寫入連線**，不能只給 access SELECT／首次登入 INSERT 就預期後台可運作。runtime 不給 master 建庫、ALTER schema 或 db_owner；進一步分離管理 SQL 權限需要實作獨立連線及交易邊界。外部來源登入則只授兩個固定授權 view 的 SELECT。
 
 ## 保存與備份
 

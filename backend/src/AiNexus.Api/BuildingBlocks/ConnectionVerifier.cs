@@ -26,8 +26,7 @@ public static class ConnectionVerifier
         await Check("SQL", async () =>
         {
             await services.GetRequiredService<IDbHelper<INexusDatabase>>().QuerySingleAsync<int>("SELECT 1", commandTimeout: 5, cancellationToken: ct);
-            var pending = await services.GetRequiredService<NexusDbContext>().Database.GetPendingMigrationsAsync(ct);
-            if (pending.Any()) throw new ApiException(503, "migrations_pending", "SQL 已連線；請先執行 Initialize-Database.ps1 套用 migrations。");
+            await services.GetRequiredService<DatabaseSchema>().RequireCurrentAsync(ct);
             await VerifyPersistenceAsync(services, ct);
             var db = services.GetRequiredService<NexusDbContext>();
             if (!await db.Set<RoleGroupRole>().AnyAsync(x => x.RoleId == BuiltInAccess.MemberRole && x.GroupId == BuiltInAccess.WorkspaceGroup, ct)

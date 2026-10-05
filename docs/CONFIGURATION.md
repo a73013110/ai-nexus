@@ -64,7 +64,7 @@ pwsh -NoProfile -File scripts/Migrate-Settings.ps1 `
 | `AdAuthentication.Url`／`Domain`／`DnUser`／`AdAccountAttrName` | 一般       | LDAP 位址含 Base DN、網域、服務帳號 DN、帳號屬性（預設 `sAMAccountName`）             |
 | `AdAuthentication.DnPass`                                       | 秘密       | 目錄查詢服務帳號密碼；不是使用者密碼                                                  |
 | `Administration.BootstrapAdministrators`                        | 一般       | AD 短帳號陣列；首次 bootstrap 授權，後續用管理後台異動                                |
-| `Storage.ApplyMigrationsOnStartup`                              | 一般       | 預設 false；正式用獨立部署步驟套用 migrations                                         |
+| `Storage.ApplyMigrationsOnStartup`                              | 一般       | 預設 false；啟動仍檢查 migration 版本，未升級則停止；正式用獨立部署步驟套用 migrations |
 
 `TrustServerCertificate=true` 只改變 SQL TLS 驗證，與網站 HTTPS、AD TLS、cookie 完全不同。**無需也不應為此將 IIS 設為 Development**。舊 `AllowUntrustedCertificateInProduction` 已移除，遷移工具會清理。AD LDAP 連線使用 TLS，主機須信任 AD 的憑證，見 [IIS 文件](../deploy/iis/README.md)。
 

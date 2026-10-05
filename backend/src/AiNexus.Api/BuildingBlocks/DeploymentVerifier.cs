@@ -9,7 +9,7 @@ namespace AiNexus.BuildingBlocks;
 
 public static class DeploymentVerifier
 {
-    // Read-only SQL checks. No hosted workers, AD login attempts or AI calls are started.
+    // Read-only SQL and model-list checks. No hosted workers, AD logins or generation requests.
     public static async Task<bool> VerifyAsync(IServiceProvider services, IConfiguration config, IHostEnvironment environment, CancellationToken ct)
     {
         using var scope = services.CreateScope();
@@ -27,14 +27,17 @@ public static class DeploymentVerifier
             var sql = new SqlConnectionStringBuilder(config.GetConnectionString("Nexus"));
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             var connected = await db.Database.CanConnectAsync(ct);
-            var pending = connected ? (await db.Database.GetPendingMigrationsAsync(ct)).Count() : -1;
+            var pending = connected ? await scope.ServiceProvider.GetRequiredService<DatabaseSchema>().PendingMigrationsAsync(ct) : null;
             var providerConfigured = inference.Provider != "google" || !string.IsNullOrWhiteSpace(inference.GoogleApiKey);
-            var ready = connected && pending == 0 && inference.Models.Count > 0 && providerConfigured && (ad.Mode == "Windows" || ad.Configured);
+            var catalog = await scope.ServiceProvider.GetRequiredService<ModelCatalog>().GetAsync(ct);
+            var ready = connected && pending?.Count == 0 && catalog.ProviderAvailable && catalog.Models.Count > 0 && providerConfigured && (ad.Mode == "Windows" || ad.Configured);
             Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new {
                 environment = environment.EnvironmentName, configurationVersion = config.GetValue("ConfigurationVersion", 1),
-                sqlConnected = connected, pendingMigrations = pending, sqlEncrypted = sql.Encrypt != SqlConnectionEncryptOption.Optional,
+                sqlConnected = connected, pendingMigrations = pending?.Count ?? -1, pendingMigrationIds = pending,
+                sqlEncrypted = sql.Encrypt != SqlConnectionEncryptOption.Optional,
                 trustsSqlCertificate = sql.TrustServerCertificate, authMode = ad.Mode, adConfigured = ad.Mode == "Windows" || ad.Configured,
                 provider = inference.Provider, providerConfigured, configuredModelCount = inference.Models.Count,
+                providerAvailable = catalog.ProviderAvailable, availableModelCount = catalog.Models.Count, modelNotice = catalog.Notice,
                 embeddingProvider = knowledge.EmbeddingProvider, embeddingDimensions = knowledge.Dimensions,
                 webSearchEnabled = search.Enabled, giteaEnabled = gitea.Enabled,
                 keyRingPath = config["DataProtection:KeyRingPath"], ready

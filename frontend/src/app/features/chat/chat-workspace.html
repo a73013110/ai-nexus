@@ -313,6 +313,8 @@
               [modelId]="store.modelId()"
               [effort]="store.reasoningEffort()"
               [disabled]="store.busy()"
+              [loading]="store.loading()"
+              [loadFailed]="!store.ready() && !!store.error()"
               [usage]="store.contextUsage()"
               [webSearch]="store.webSearchEnabled()"
               [webSearchAvailable]="store.webSearchStatus().available"

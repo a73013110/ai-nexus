@@ -13,6 +13,24 @@ namespace AiNexus.Tests;
 
 public sealed class AccessAndPolicyTests
 {
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task EmptyCatalogDistinguishesUnavailableProfilesFromGroupRestrictions(bool profileInstalled)
+    {
+        await using var factory = new NexusFactory(
+            seed: db => { db.Set<AiNexus.Modules.Administration.GroupModelPolicy>().Add(new() { GroupId = "workspace", AllowedModelsJson = "[\"retired-provider-model\"]" }); db.SaveChanges(); },
+            inference: options => { if (!profileInstalled) { options.Models[0].Id = "not-installed"; options.DefaultModelId = "not-installed"; } });
+        using var client = await factory.SignedInAsync();
+        var catalog = (await client.GetFromJsonAsync<ModelsDto>("/api/v1/models"))!;
+        Assert.Empty(catalog.Models);
+        Assert.True(catalog.ProviderAvailable);
+        Assert.Equal(profileInstalled
+            ? "你的群組目前沒有可用模型，請由管理員確認群組允許的模型與目前服務設定。"
+            : "系統指定的模型尚未就緒，請由管理員確認模型設定。", catalog.Notice);
+        Assert.Null(catalog.Policy.DefaultModelId);
+    }
+
     [Fact]
     public async Task FirstLoginCreatesMemberAndResolvesGroupFeatures()
     {

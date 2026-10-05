@@ -91,6 +91,7 @@ builder.Services.AddScoped<IDbHelper<INexusDatabase>, DbHelper<INexusDatabase>>(
 builder.Services.AddScoped<IEfHelper<INexusDatabase>>(sp => new EfHelper<INexusDatabase>(sp.GetRequiredService<NexusDbContext>()));
 builder.Services.AddScoped<IDbHelper<INexusBootstrapDatabase>, DbHelper<INexusBootstrapDatabase>>();
 builder.Services.AddScoped<DatabaseInitializer>();
+builder.Services.AddScoped<DatabaseSchema>();
 builder.Services.AddScoped<SqlVectorCapabilities>();
 builder.Services.AddSingleton<StorageReadiness>();
 builder.Services.AddSingleton<IdentityWriteLock>();
@@ -177,9 +178,9 @@ builder.Services.AddOptions<InferenceOptions>().Configure<IConfiguration>((o, c)
     .Validate(x => x.QueueCapacity is >= 1 and <= 64 && x.TimeoutSeconds is >= 5 and <= 600 && x.MaxInputCharacters is >= 100 and <= 32000 && x.MaxOutputCharacters is >= 4096 and <= 262144, "Invalid inference capacity or limits.")
     .Validate(x => x.Models.Select(m => m.Id).Distinct(StringComparer.Ordinal).Count() == x.Models.Count && x.Models.All(m => !string.IsNullOrWhiteSpace(m.Id) && m.Id.Length <= 160 && m.ContextTokens is >= 1024 and <= 32768 && m.MaxOutputTokens >= 128 && m.MaxOutputTokens < m.ContextTokens && m.SupportsStreaming), "Invalid model profiles.")
     .ValidateOnStart();
-builder.Services.AddHttpClient("Ollama", client =>
+builder.Services.AddHttpClient("Ollama", (services, client) =>
 {
-    client.BaseAddress = new Uri(builder.Configuration["Inference:BaseUrl"] ?? builder.Configuration["Inference:Providers:Ollama:Endpoint"] ?? "http://localhost:11434/");
+    client.BaseAddress = new Uri(services.GetRequiredService<Microsoft.Extensions.Options.IOptions<InferenceOptions>>().Value.BaseUrl);
     client.Timeout = Timeout.InfiniteTimeSpan;
 });
 builder.Services.AddHttpClient("GoogleAI", client => { client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/v1beta/"); client.Timeout = Timeout.InfiniteTimeSpan; });
@@ -333,11 +334,29 @@ app.MapNexusAuthentication();
 // Unknown API paths must never return the SPA's HTML document.
 app.Map("/api/{**path}", () => Results.NotFound()).RequireAuthorization();
 app.MapFallbackToFile("index.html").AllowAnonymous();
-if (builder.Configuration.GetValue<bool>("Storage:ApplyMigrationsOnStartup"))
+using (var scope = app.Services.CreateScope())
 {
-    using var scope = app.Services.CreateScope();
-    scope.ServiceProvider.GetRequiredService<StorageReadiness>().RequireConfigured();
-    await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Database.MigrateAsync();
+    var storage = scope.ServiceProvider.GetRequiredService<StorageReadiness>();
+    var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+    var migrate = builder.Configuration.GetValue<bool>("Storage:ApplyMigrationsOnStartup");
+    if (migrate) storage.RequireConfigured();
+    // SQL Server migrations are checked before requests or hosted workers start.
+    // SQLite fixtures build the current model directly with EnsureCreated.
+    if (storage.Configured && db.Database.IsSqlServer())
+    {
+        try
+        {
+            if (migrate) await db.Database.MigrateAsync();
+            await scope.ServiceProvider.GetRequiredService<DatabaseSchema>().RequireCurrentAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine(ex is ApiException api ? api.Message : LocalDatabaseSettings.Diagnose(ex));
+            Environment.ExitCode = 1;
+            await app.DisposeAsync();
+            return;
+        }
+    }
 }
 await app.RunAsync();
 public partial class Program;

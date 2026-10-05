@@ -1,6 +1,89 @@
 import { test, expect } from "@playwright/test";
 import { ApiFixture, settleEntrance, chooseSelect } from "./fixtures";
 
+test("model selector reports loading before enabling installed models", async ({
+  page,
+}) => {
+  const fixture = new ApiFixture();
+  await fixture.attach(page);
+  let release!: () => void;
+  const loading = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/v1/models", async (route) => {
+    await loading;
+    await route.fallback();
+  });
+  await page.goto("/chat");
+  const model = page.getByRole("combobox", { name: "選擇模型" });
+  try {
+    await expect(model).toContainText("正在載入模型…");
+    await expect(model).toBeDisabled();
+  } finally {
+    release();
+  }
+  await expect(model).toContainText("本機測試模型");
+  await expect(model).toBeEnabled();
+});
+
+test("group restrictions explain an empty model list and prevent submission", async ({
+  page,
+}) => {
+  const fixture = new ApiFixture();
+  await fixture.attach(page);
+  const notice =
+    "你的群組目前沒有可用模型，請由管理員確認群組允許的模型與目前服務設定。";
+  await page.route("**/api/v1/models", (route) =>
+    route.fulfill({
+      json: {
+        models: [],
+        providerAvailable: true,
+        notice,
+        policy: { ...fixture.modelPolicy, defaultModelId: null },
+      },
+    }),
+  );
+  await page.goto("/chat");
+  const model = page.getByRole("combobox", { name: "選擇模型" });
+  await expect(model).toContainText("沒有可用模型");
+  await expect(model).toBeDisabled();
+  await expect(page.getByText(notice, { exact: true })).toBeVisible();
+  await page.getByRole("textbox", { name: "傳送訊息" }).fill("保留授權限制");
+  await expect(page.getByRole("button", { name: "送出訊息" })).toBeDisabled();
+  expect(fixture.posts).toBe(0);
+});
+
+test("model list failures show a retry path and recover without losing the draft", async ({
+  page,
+}) => {
+  const fixture = new ApiFixture();
+  await fixture.attach(page);
+  let attempts = 0;
+  await page.route("**/api/v1/models", (route) =>
+    ++attempts === 1
+      ? route.fulfill({
+          status: 503,
+          json: {
+            title: "資料庫正在升級，請稍後再試。",
+            code: "migrations_pending",
+          },
+        })
+      : route.fallback(),
+  );
+  await page.goto("/chat");
+  const model = page.getByRole("combobox", { name: "選擇模型" });
+  await expect(model).toContainText("模型清單載入失敗");
+  await expect(model).toBeDisabled();
+  await expect(page.getByRole("alert")).toContainText("資料庫正在升級");
+  const draft = page.getByRole("textbox", { name: "傳送訊息" });
+  await draft.fill("恢復後保留的草稿");
+  await page.getByRole("button", { name: "重新連線" }).click();
+  await expect(model).toContainText("本機測試模型");
+  await expect(model).toBeEnabled();
+  await expect(draft).toHaveValue("恢復後保留的草稿");
+  await expect(page.getByRole("button", { name: "送出訊息" })).toBeEnabled();
+});
+
 test("composer exposes model, supported reasoning and keyboard-accessible context", async ({
   page,
 }) => {
