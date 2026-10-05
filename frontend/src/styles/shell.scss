@@ -90,8 +90,8 @@
   min-height: 0;
   overflow: auto;
   overflow-anchor: none;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line) transparent;
+  scrollbar-gutter: stable both-edges;
+  overscroll-behavior: contain;
   scroll-padding: 30px;
 }
 .conversation-body {

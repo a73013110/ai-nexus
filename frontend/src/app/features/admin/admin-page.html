@@ -5,7 +5,9 @@
 >
   <div page-actions class="page-actions">
     @if (session.has('admin')) {
-      <a routerLink="/dashboard" [queryParams]="{ scope: 'platform' }" class="secondary-button"><nx-icon name="chart" />平台費用</a>
+      <a routerLink="/dashboard" [queryParams]="{ scope: 'platform' }" class="secondary-button"
+        ><nx-icon name="chart" />平台費用</a
+      >
       <nx-price-book />
       <a routerLink="/design" class="secondary-button"><nx-icon name="sliders" />介面元件</a>
     }
@@ -241,154 +243,161 @@
   (close)="editor.set(null)"
   (cancel)="cancel($event)"
 >
-  @if (editor(); as e) {
-    <div class="dialog-heading">
-      <div>
-        <span class="panel-eyebrow">{{ e.isNew ? '新增' : '編輯' }}{{ label(e.kind) }}</span>
-        <h2 id="admin-editor-title">{{ e.name || '建立新的' + label(e.kind) }}</h2>
-        <p>{{ e.subtitle }}</p>
-      </div>
-      <button class="icon-button" aria-label="關閉管理編輯" [disabled]="saving()" (click)="close()">
-        <nx-icon name="close" />
-      </button>
-    </div>
-    @if (editorError()) {
-      <p role="alert" class="inline-error">{{ editorError() }}</p>
-    }
-    <form class="platform-form" (submit)="save($event)">
-      @if (e.kind !== 'user') {
-        @if (e.isNew) {
-          <label
-            >識別碼<input
-              aria-label="識別碼"
-              required
-              maxlength="64"
-              pattern="[a-z][a-z0-9_-]{0,63}"
-              placeholder="例如：document-reviewers"
-              [value]="e.id"
-              [readOnly]="saving()"
-              (input)="update('id', $any($event.target).value)"
-          /></label>
-        }
-        <label
-          >名稱<input
-            aria-label="名稱"
-            required
-            maxlength="120"
-            [value]="e.name"
-            [readOnly]="saving()"
-            (input)="update('name', $any($event.target).value)"
-        /></label>
-        <nx-checkbox
-          [label]="'啟用' + label(e.kind)"
-          [checked]="e.enabled"
-          [disabled]="saving()"
-          (checkedChange)="update('enabled', $event)"
-        />
-      }
-      @if (e.kind !== 'feature') {
-        <fieldset>
-          <legend>
-            {{ e.kind === 'user' ? '分派角色' : e.kind === 'role' ? '加入功能群組' : '授予功能' }}
-          </legend>
-          <div class="choice-list">
-            @for (item of choices(); track item.id) {
-              <nx-checkbox
-                [label]="item.name + (item.enabled ? '' : '（停用）')"
-                [description]="item.id"
-                [checked]="e.ids.includes(item.id)"
-                [disabled]="saving()"
-                (checkedChange)="check(item.id, $event)"
-              />
-            }
-          </div>
-        </fieldset>
-      }
-      @if (e.kind === 'user') {
-        <p class="form-note">儲存後可用功能（預覽）：</p>
-        <div class="resource-badges">
-          @for (feature of proposedFeatures(); track feature.id) {
-            <span>{{ feature.name }}</span>
-          } @empty {
-            <span>尚無功能授權</span>
-          }
+  <div class="dialog-scroll">
+    @if (editor(); as e) {
+      <div class="dialog-heading">
+        <div>
+          <span class="panel-eyebrow">{{ e.isNew ? '新增' : '編輯' }}{{ label(e.kind) }}</span>
+          <h2 id="admin-editor-title">{{ e.name || '建立新的' + label(e.kind) }}</h2>
+          <p>{{ e.subtitle }}</p>
         </div>
+        <button
+          class="icon-button"
+          aria-label="關閉管理編輯"
+          [disabled]="saving()"
+          (click)="close()"
+        >
+          <nx-icon name="close" />
+        </button>
+      </div>
+      @if (editorError()) {
+        <p role="alert" class="inline-error">{{ editorError() }}</p>
       }
-      @if (e.kind === 'group') {
-        <fieldset>
-          <legend>AI 模型政策</legend>
+      <form class="platform-form" (submit)="save($event)">
+        @if (e.kind !== 'user') {
+          @if (e.isNew) {
+            <label
+              >識別碼<input
+                aria-label="識別碼"
+                required
+                maxlength="64"
+                pattern="[a-z][a-z0-9_-]{0,63}"
+                placeholder="例如：document-reviewers"
+                [value]="e.id"
+                [readOnly]="saving()"
+                (input)="update('id', $any($event.target).value)"
+            /></label>
+          }
+          <label
+            >名稱<input
+              aria-label="名稱"
+              required
+              maxlength="120"
+              [value]="e.name"
+              [readOnly]="saving()"
+              (input)="update('name', $any($event.target).value)"
+          /></label>
           <nx-checkbox
-            label="限制可用模型"
-            description="僅允許下方選取的模型"
-            [checked]="e.restricted"
+            [label]="'啟用' + label(e.kind)"
+            [checked]="e.enabled"
             [disabled]="saving()"
-            (checkedChange)="update('restricted', $event)"
+            (checkedChange)="update('enabled', $event)"
           />
-          @if (e.restricted) {
+        }
+        @if (e.kind !== 'feature') {
+          <fieldset>
+            <legend>
+              {{ e.kind === 'user' ? '分派角色' : e.kind === 'role' ? '加入功能群組' : '授予功能' }}
+            </legend>
             <div class="choice-list">
-              @for (model of catalog()?.models || []; track model.id) {
+              @for (item of choices(); track item.id) {
                 <nx-checkbox
-                  [label]="model.displayName"
-                  [checked]="e.modelIds.includes(model.id)"
+                  [label]="item.name + (item.enabled ? '' : '（停用）')"
+                  [description]="item.id"
+                  [checked]="e.ids.includes(item.id)"
                   [disabled]="saving()"
-                  (checkedChange)="check(model.id, $event, true)"
+                  (checkedChange)="check(item.id, $event)"
                 />
               }
             </div>
-            @if (!e.modelIds.length) {
-              <p class="form-note">未選取模型，此群組的使用者將無法生成。</p>
+          </fieldset>
+        }
+        @if (e.kind === 'user') {
+          <p class="form-note">儲存後可用功能（預覽）：</p>
+          <div class="resource-badges">
+            @for (feature of proposedFeatures(); track feature.id) {
+              <span>{{ feature.name }}</span>
+            } @empty {
+              <span>尚無功能授權</span>
             }
-          }
-        </fieldset>
-        <label
-          >每日生成次數上限<input
-            type="number"
-            aria-label="每日生成次數上限"
-            min="0"
-            max="100000"
-            step="1"
-            placeholder="不限制"
-            [value]="e.daily"
-            [readOnly]="saving()"
-            (input)="update('daily', $any($event.target).value)" /></label
-        ><label
-          >個人附件空間上限（MB）<input
-            type="number"
-            aria-label="個人附件空間上限"
-            min="1"
-            max="1024"
-            step="1"
-            placeholder="依系統上限"
-            [value]="e.storage"
-            [readOnly]="saving()"
-            (input)="update('storage', $any($event.target).value)"
-        /></label>
-        <p class="form-note">
-          空白表示不增加群組限制。每日配額於 UTC
-          午夜重設，取消與失敗的請求也計次；系統模型與附件上限仍適用。
-        </p>
-      }
-      @if (e.kind === 'feature') {
-        <label
-          >顯示順序<input
-            type="number"
-            aria-label="顯示順序"
-            required
-            min="0"
-            max="10000"
-            step="1"
-            [value]="e.order"
-            [readOnly]="saving()"
-            (input)="update('order', $any($event.target).value)"
-        /></label>
-      }
-      <div class="dialog-actions">
-        <button type="button" class="secondary-button" [disabled]="saving()" (click)="close()">
-          取消</button
-        ><button type="submit" class="primary-button" [disabled]="saving()">
-          {{ saving() ? '儲存中…' : '儲存授權' }}
-        </button>
-      </div>
-    </form>
-  }
+          </div>
+        }
+        @if (e.kind === 'group') {
+          <fieldset>
+            <legend>AI 模型政策</legend>
+            <nx-checkbox
+              label="限制可用模型"
+              description="僅允許下方選取的模型"
+              [checked]="e.restricted"
+              [disabled]="saving()"
+              (checkedChange)="update('restricted', $event)"
+            />
+            @if (e.restricted) {
+              <div class="choice-list">
+                @for (model of catalog()?.models || []; track model.id) {
+                  <nx-checkbox
+                    [label]="model.displayName"
+                    [checked]="e.modelIds.includes(model.id)"
+                    [disabled]="saving()"
+                    (checkedChange)="check(model.id, $event, true)"
+                  />
+                }
+              </div>
+              @if (!e.modelIds.length) {
+                <p class="form-note">未選取模型，此群組的使用者將無法生成。</p>
+              }
+            }
+          </fieldset>
+          <label
+            >每日生成次數上限<input
+              type="number"
+              aria-label="每日生成次數上限"
+              min="0"
+              max="100000"
+              step="1"
+              placeholder="不限制"
+              [value]="e.daily"
+              [readOnly]="saving()"
+              (input)="update('daily', $any($event.target).value)" /></label
+          ><label
+            >個人附件空間上限（MB）<input
+              type="number"
+              aria-label="個人附件空間上限"
+              min="1"
+              max="1024"
+              step="1"
+              placeholder="依系統上限"
+              [value]="e.storage"
+              [readOnly]="saving()"
+              (input)="update('storage', $any($event.target).value)"
+          /></label>
+          <p class="form-note">
+            空白表示不增加群組限制。每日配額於 UTC
+            午夜重設，取消與失敗的請求也計次；系統模型與附件上限仍適用。
+          </p>
+        }
+        @if (e.kind === 'feature') {
+          <label
+            >顯示順序<input
+              type="number"
+              aria-label="顯示順序"
+              required
+              min="0"
+              max="10000"
+              step="1"
+              [value]="e.order"
+              [readOnly]="saving()"
+              (input)="update('order', $any($event.target).value)"
+          /></label>
+        }
+        <div class="dialog-actions">
+          <button type="button" class="secondary-button" [disabled]="saving()" (click)="close()">
+            取消</button
+          ><button type="submit" class="primary-button" [disabled]="saving()">
+            {{ saving() ? '儲存中…' : '儲存授權' }}
+          </button>
+        </div>
+      </form>
+    }
+  </div>
 </dialog>

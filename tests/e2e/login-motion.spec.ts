@@ -47,5 +47,5 @@ test("Fourier identity keeps sign-in usable, can settle immediately and respects
     fullPage: true,
   });
   await page.getByRole("button", { name: "登入工作台", exact: true }).click();
-  await expect(page).toHaveURL(/\/chat$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
 });

@@ -1,42 +1,16 @@
 .sidebar {
-  display: flex;
-  flex-direction: column;
   width: var(--sidebar-width);
-  min-height: 0;
-  background: var(--sidebar);
-  border-right: 1px solid var(--line);
-  padding: var(--sidebar-padding-top) 14px 8px;
-  overflow: hidden;
+  height: 100%;
 }
 .sidebar-closed .sidebar {
   visibility: hidden;
 }
-.brand {
-  display: flex;
-  gap: 9px;
-  align-items: center;
-  margin: 0 7px var(--sidebar-brand-gap);
-  width: fit-content;
-  font-size: var(--sidebar-brand-size);
-  letter-spacing: -0.7px;
-}
-.brand strong {
-  font-weight: 600;
-}
-.brand-symbol {
-  width: 28px;
-  height: 32px;
-  color: var(--accent);
-}
-.brand-symbol svg {
-  width: 100%;
-  height: 100%;
-}
 .new-chat {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 13px 15px;
+  gap: var(--p-space-2);
+  min-height: var(--button-target);
+  padding: var(--p-space-2) var(--p-space-3);
   background: var(--accent);
   color: var(--accent-text);
   border-radius: var(--p-radius-md);
@@ -52,168 +26,10 @@
   opacity: 0.75;
   font-size: var(--text-caption);
 }
-.history-search {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  border-bottom: 1px solid var(--line);
-  margin: 18px 3px 10px;
-  padding: 4px 7px 11px;
-  color: var(--secondary);
-}
-.history-search nx-icon {
-  width: 17px;
-  height: 17px;
-}
-.history-search input {
-  background: transparent;
-  border: 0;
-  min-width: 0;
-  width: 100%;
-  font-size: var(--text-caption);
-}
-.history-search input::placeholder {
-  color: var(--muted);
-}
-.history {
-  overflow-y: auto;
-  min-height: 0;
-  flex: 1;
-  padding-bottom: 25px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--line) transparent;
-}
-.history-group h2 {
-  margin: 22px 11px 10px;
-  color: var(--muted);
-  font-size: var(--text-caption);
-  font-weight: 500;
-  letter-spacing: 0.5px;
-}
-.history-row {
-  display: flex;
-  align-items: center;
-  border-radius: var(--p-radius-sm);
-  margin-bottom: 3px;
-  position: relative;
-}
-.history-row > a {
-  display: block;
-  padding: 12px 10px;
-  font-size: var(--text-label);
-  min-width: 0;
-  flex: 1;
-}
-.history-row > a span {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.history-row.selected,
-.history-row:hover {
-  background: var(--hover);
-}
-.history-row.selected::before {
-  content: '';
-  height: 13px;
-  width: 2px;
-  background: var(--accent);
-  position: absolute;
-  left: 0;
-  top: 15px;
-}
-.history-edit {
-  opacity: 0;
-  flex: 0 0 var(--button-target);
-  width: var(--button-target);
-  height: var(--button-target);
-  margin-right: 3px;
-}
-.history-edit nx-icon {
-  width: 14px;
-  height: 14px;
-}
-.history-row:hover .history-edit,
-.history-row:focus-within .history-edit {
-  opacity: 1;
-}
-.sidebar-note {
-  font-size: var(--text-caption);
-  line-height: 1.8;
-  color: var(--secondary);
-  margin: 26px 11px;
-}
-.load-more {
-  width: 100%;
-  margin-top: 15px;
-  justify-content: center;
-}
-.sidebar-bottom {
-  border-top: 1px solid var(--line);
-  padding-top: var(--p-space-2);
-}
-.avatar {
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  color: var(--accent);
-  font-size: var(--text-caption);
-  font-weight: 600;
-}
-.sidebar-backdrop {
-  display: none;
-}
-@media (max-width: 859px) {
-  .sidebar {
-    position: fixed;
-    z-index: 30;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    box-shadow: var(--shadow);
-    transform: translateX(0);
-    transition:
-      transform var(--motion) var(--ease),
-      visibility var(--motion);
-    padding-top: 26px;
-  }
-  .sidebar-closed .sidebar {
-    transform: translateX(-100%);
-    visibility: hidden;
-  }
-  .sidebar-backdrop {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: var(--scrim);
-    z-index: 29;
-  }
-  .history-edit {
-    opacity: 1;
-  }
-}
-nx-chat-sidebar {
-  display: block;
-  min-height: 0;
-  overflow: visible;
-}
-nx-chat-sidebar .sidebar {
-  height: 100%;
-  padding-top: var(--p-space-6);
-}
-.brand {
-  margin-bottom: var(--p-space-4);
-}
 .sidebar-tools {
   display: flex;
   align-items: center;
   gap: var(--p-space-1);
-  margin-top: var(--p-space-2);
 }
 .sidebar-tools > .quiet-button {
   display: flex;
@@ -230,16 +46,32 @@ nx-chat-sidebar .sidebar {
   width: var(--button-target);
 }
 .history-search {
-  margin-top: var(--p-space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--button-target);
+  border-bottom: 1px solid var(--line);
+  padding: var(--p-space-2);
+  color: var(--secondary);
+}
+.history-search nx-icon {
+  width: 17px;
+  height: 17px;
 }
 .history-search input {
+  background: transparent;
+  border: 0;
+  min-width: 0;
+  width: 100%;
   font-size: var(--text-label);
+}
+.history-search input::placeholder {
+  color: var(--muted);
 }
 .history-filters {
   display: flex;
   flex-wrap: wrap;
   gap: var(--p-space-1);
-  padding: var(--p-space-1) 0;
 }
 .history-filters > button {
   flex: 1;
@@ -257,6 +89,94 @@ nx-chat-sidebar .sidebar {
 .label-filter {
   flex-basis: 100%;
 }
+.history {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  padding-bottom: var(--p-space-2);
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+.history-group h2 {
+  margin: var(--p-space-3) var(--p-space-2) var(--p-space-1);
+  color: var(--muted);
+  font-size: var(--text-caption);
+  font-weight: 500;
+}
+.history-group:first-child h2 {
+  margin-top: var(--p-space-1);
+}
+.history-row {
+  display: flex;
+  align-items: center;
+  border-radius: var(--p-radius-sm);
+  margin-bottom: var(--p-space-1);
+  position: relative;
+}
+.history-row > a {
+  display: flex;
+  align-items: center;
+  min-height: var(--button-target);
+  padding: var(--p-space-2);
+  font-size: var(--text-label);
+  min-width: 0;
+  flex: 1;
+}
+.history-row > a span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-row.selected,
+.history-row:hover {
+  background: var(--hover);
+}
+.history-row.selected::before {
+  content: '';
+  height: var(--p-space-4);
+  width: 2px;
+  background: var(--accent);
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: var(--p-radius-pill);
+}
+.history-edit {
+  opacity: 0;
+  flex: 0 0 var(--button-target);
+  width: var(--button-target);
+  height: var(--button-target);
+  margin-right: var(--p-space-1);
+}
+.history-edit nx-icon {
+  width: 14px;
+  height: 14px;
+}
+.history-row:hover .history-edit,
+.history-row:focus-within .history-edit {
+  opacity: 1;
+}
+.sidebar-note {
+  font-size: var(--text-caption);
+  line-height: 1.8;
+  color: var(--secondary);
+  margin: var(--p-space-4) var(--p-space-2);
+}
+.load-more {
+  width: 100%;
+  margin-top: var(--p-space-3);
+  justify-content: center;
+}
+nx-chat-sidebar {
+  display: block;
+  min-height: 0;
+}
+.sidebar-backdrop,
+.mobile-sidebar-close {
+  display: none;
+}
 @media (max-width: 859px) {
   nx-chat-sidebar {
     position: absolute;
@@ -265,23 +185,43 @@ nx-chat-sidebar .sidebar {
     width: var(--sidebar-width);
     pointer-events: none;
   }
-  nx-chat-sidebar .sidebar {
+  .sidebar {
+    position: fixed;
+    z-index: 30;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    box-shadow: var(--shadow);
+    transform: translateX(0);
+    transition:
+      transform var(--motion) var(--ease),
+      visibility var(--motion);
     pointer-events: auto;
   }
-  .sidebar-closed nx-chat-sidebar {
-    pointer-events: none;
+  .sidebar-closed .sidebar {
+    transform: translateX(-100%);
+    visibility: hidden;
   }
-}
-.mobile-sidebar-close {
-  display: none;
-}
-@media (max-width: 859px) {
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: var(--scrim);
+    z-index: 29;
+  }
+  .history-edit {
+    opacity: 1;
+  }
   .mobile-sidebar-close {
     display: flex;
     position: absolute;
-    right: 12px;
-    top: 12px;
+    right: var(--p-space-3);
+    top: var(--sidebar-padding-top);
     width: var(--button-target);
     height: var(--button-target);
+  }
+  .sidebar > nx-workspace-brand {
+    min-height: var(--button-target);
+    padding-right: var(--button-target);
   }
 }

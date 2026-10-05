@@ -1,8 +1,19 @@
-<aside class="sidebar" aria-label="對話導覽" [attr.inert]="open() ? null : ''">
-  <button class="icon-button mobile-sidebar-close" aria-label="關閉對話導覽" (click)="close.emit()">
+<aside
+  nxWorkspaceSidebar
+  class="sidebar"
+  aria-label="對話導覽"
+  [attr.inert]="open() ? null : ''"
+  [collapsibleNavigation]="true"
+  (activated)="navigate.emit()"
+>
+  <button
+    sidebar-controls
+    class="icon-button mobile-sidebar-close"
+    aria-label="關閉對話導覽"
+    (click)="close.emit()"
+  >
     <nx-icon name="close" />
   </button>
-  <nx-workspace-brand />
   @if (store.hasChatAccess()) {
     <a routerLink="/chat" class="new-chat" (click)="navigate.emit()"
       ><nx-icon name="plus" />新對話<span class="new-chat-hint">開始</span></a
@@ -121,8 +132,4 @@
       }
     </nav>
   }
-  <div class="sidebar-bottom">
-    <nx-workspace-navigation [collapsible]="true" (activated)="navigate.emit()" />
-    <nx-account-menu />
-  </div>
 </aside>

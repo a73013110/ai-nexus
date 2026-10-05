@@ -1,4 +1,4 @@
-import type { Page, Route } from "@playwright/test";
+import { expect, type Page, type Route } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 export async function chooseSelect(
   page: import("@playwright/test").Page,
@@ -21,6 +21,13 @@ export async function openSettings(page: Page) {
   const dialog = page.getByRole("dialog", { name: "個人設定", exact: true });
   await dialog.waitFor({ state: "visible" });
   return dialog;
+}
+
+export async function expectViewportContained(page: Page) {
+  await expect.poll(() => page.evaluate(() => ({
+    vertical: document.documentElement.scrollHeight <= innerHeight,
+    horizontal: document.documentElement.scrollWidth <= innerWidth,
+  }))).toEqual({ vertical: true, horizontal: true });
 }
 import type {
   Conversation,

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { ApiFixture, chooseSelect, settleEntrance } from './fixtures';
+import { ApiFixture, chooseSelect, expectViewportContained, settleEntrance } from './fixtures';
 
 function dashboardFixture(fixture: ApiFixture) {
   const day = new Date().toLocaleDateString('sv-SE');
@@ -18,8 +18,15 @@ test('dashboard keeps currencies separate, supports node inspection, and fits mo
   const fixture = new ApiFixture(); fixture.adminAccess = true; fixture.extraFeatures = [{ id: 'dashboard', name: '總覽', route: '/dashboard' }, { id: 'knowledge', name: '知識庫', route: '/knowledge' }];
   await fixture.attach(page);
   await page.route('**/api/v1/dashboard?**', route => { const data = dashboardFixture(fixture); data.scope = new URL(route.request().url()).searchParams.get('scope') ?? 'personal'; return route.fulfill({ json: data }); });
-  await page.goto('/dashboard');
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole('heading', { name: '總覽', exact: true })).toBeVisible();
+  await expect(page.locator('.metric-card')).toHaveCount(4);
+  for (const width of [1920, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expectViewportContained(page);
+    expect(await page.locator('.feature-main').evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  }
   await expect(page.locator('.metric-card').first()).toContainText('USD');
   await expect(page.locator('.metric-card').first()).not.toContainText('15.1208');
   await page.locator('.flow-node').filter({ hasText: '知識' }).click();
@@ -28,6 +35,8 @@ test('dashboard keeps currencies separate, supports node inspection, and fits mo
   await expect(chart.locator('.trend-tooltip')).toBeVisible();
   await chooseSelect(page, '顯示的費用幣別與類型', 'TWD · 本機內部成本');
   await expect(page.locator('.metric-card').first()).toContainText('TWD');
+  await chart.getByRole('slider').focus(); await page.keyboard.press('End');
+  await expect(chart.locator('.trend-tooltip')).toContainText('TWD');
   await chooseSelect(page, '總覽範圍', '整個平台');
   await expect(page.getByRole('heading', { name: '使用者區間費用' })).toBeVisible();
   const appliedFrom = await page.getByLabel('費用開始日期', { exact: true }).inputValue();
@@ -48,6 +57,7 @@ test('dashboard keeps currencies separate, supports node inspection, and fits mo
   await page.setViewportSize({ width: 375, height: 812 });
   await page.evaluate(() => { document.documentElement.dataset.theme = 'dark'; document.documentElement.dataset.reducedMotion = 'true'; });
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expectViewportContained(page);
   await expect(page.locator('.flow-pulse')).toHaveCSS('animation-name', 'none');
   await page.locator('.feature-main').evaluate(el => el.scrollTo({ top: 0, behavior: 'instant' }));
   await page.screenshot({ animations: 'disabled', path: 'artifacts/screenshots/dashboard-mobile-dark.png' });
@@ -69,12 +79,27 @@ test('price dialog creates immutable versions and stays within the viewport', as
   await chooseSelect(page, '計費供應商', 'ollama'); await chooseSelect(page, '費用類型', '本機內部成本');
   await dialog.getByLabel('每次呼叫固定費用', { exact: true }).fill('0.3');
   await dialog.getByRole('button', { name: '新增價格版本', exact: true }).click();
-  await expect(dialog.getByRole('status')).toContainText('新價格版本已儲存');
+  await expect(dialog.getByRole('status').filter({ hasText: '新價格版本已儲存' })).toBeVisible();
   expect(saved).toMatchObject({ provider: 'ollama', modelId: 'qwen3:8b', currency: 'USD', kind: 'internal', perRequest: .3 });
   await page.screenshot({ animations: 'disabled', path: 'artifacts/screenshots/model-prices.png' });
   await page.setViewportSize({ width: 375, height: 812 });
   const bounds = await dialog.boundingBox(); expect(bounds!.x).toBeGreaterThanOrEqual(0); expect(bounds!.width).toBeLessThanOrEqual(375); expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(812);
+  const body = dialog.locator('.dialog-scroll');
+  expect(await body.evaluate(el => el.scrollHeight > el.clientHeight)).toBe(true);
+  expect(await dialog.evaluate(el => el.scrollHeight <= el.clientHeight)).toBe(true);
+  const bodyBounds = await body.boundingBox();
+  expect(bounds!.x + bounds!.width - (bodyBounds!.x + bodyBounds!.width)).toBeGreaterThanOrEqual(8);
+  await body.hover();
+  await page.mouse.wheel(0, 500);
+  await expect.poll(() => body.evaluate(el => el.scrollTop)).toBeGreaterThan(0);
+  await expectViewportContained(page);
   await page.screenshot({ animations: 'disabled', path: 'artifacts/screenshots/model-prices-mobile.png' });
+  await page.evaluate(() => document.documentElement.dataset.theme = 'dark');
+  await body.evaluate(el => el.scrollTo({ top: 0, behavior: 'instant' }));
+  await page.screenshot({ animations: 'disabled', path: 'artifacts/screenshots/model-prices-mobile-dark.png' });
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect(page.getByRole('button', { name: '模型價格', exact: true })).toBeFocused();
 });
 
 test('chat search is opt-in and cost/source panels stay accessible without clipping', async ({ page }) => {

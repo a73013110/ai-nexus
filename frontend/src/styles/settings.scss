@@ -24,6 +24,8 @@
 }
 .settings-dialog .settings-main {
   padding: 0 var(--p-space-6);
+  margin-block: var(--dialog-inset);
+  margin-right: var(--dialog-inset);
 }
 .settings-dialog .settings-page-header {
   position: sticky;
@@ -177,7 +179,10 @@
 }
 .settings-main {
   min-width: 0;
+  min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   padding: clamp(24px, 5vw, 72px) var(--workspace-gutter) 0;
   scroll-padding-top: 32px;
 }
@@ -352,30 +357,6 @@
   gap: var(--p-space-2);
   color: var(--secondary);
 }
-.usage-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--p-space-4);
-}
-.stat-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--p-space-3);
-  padding: var(--p-space-6);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  border-radius: var(--p-radius-lg);
-}
-.stat-card > span,
-.stat-card small {
-  color: var(--secondary);
-  font-size: var(--text-caption);
-}
-.stat-card strong {
-  font-size: var(--p-font-2xl);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
 .usage-daily > div {
   display: flex;
   align-items: center;
@@ -447,12 +428,6 @@
   }
   .setting-row nx-select {
     width: 9rem;
-  }
-  .usage-grid {
-    grid-template-columns: 1fr;
-  }
-  .stat-card {
-    padding: var(--p-space-4);
   }
   .shortcut-list > div {
     flex-wrap: wrap;

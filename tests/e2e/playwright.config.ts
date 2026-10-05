@@ -24,6 +24,8 @@ export default defineConfig({
       use: {
         ...devices["Desktop Edge"],
         channel: "msedge",
+        // Scrollbars are part of the UI and must be visible during visual QA.
+        launchOptions: { ignoreDefaultArgs: ["--hide-scrollbars"] },
         viewport: { width: 1440, height: 1000 },
       },
     },

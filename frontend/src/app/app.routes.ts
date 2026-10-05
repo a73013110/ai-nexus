@@ -1,10 +1,20 @@
 import { Routes } from '@angular/router';
 import { authenticated } from './core/auth/auth-guard';
 import { pendingChanges } from './shared/browser/pending-changes';
+import { WORKSPACE_HOME } from './core/workspace-home';
 
 export const routes: Routes = [
-  { path: 'dashboard', canActivate: [authenticated], loadComponent: () => import('./features/dashboard/dashboard-page').then(m => m.DashboardPage) },
-  { path: 'repositories', canActivate: [authenticated], loadComponent: () => import('./features/repositories/repositories-page').then(m => m.RepositoriesPage) },
+  {
+    path: 'dashboard',
+    canActivate: [authenticated],
+    loadComponent: () => import('./features/dashboard/dashboard-page').then((m) => m.DashboardPage),
+  },
+  {
+    path: 'repositories',
+    canActivate: [authenticated],
+    loadComponent: () =>
+      import('./features/repositories/repositories-page').then((m) => m.RepositoriesPage),
+  },
   {
     path: 'design',
     canActivate: [authenticated],
@@ -111,6 +121,6 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/chat/chat-workspace').then((module) => module.ChatWorkspace),
   },
-  { path: '', pathMatch: 'full', redirectTo: 'chat' },
-  { path: '**', redirectTo: 'chat' },
+  { path: '', pathMatch: 'full', redirectTo: WORKSPACE_HOME },
+  { path: '**', redirectTo: WORKSPACE_HOME },
 ];

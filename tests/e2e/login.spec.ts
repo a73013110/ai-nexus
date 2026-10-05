@@ -51,8 +51,29 @@ test("login works at 375px and cannot redirect to an external origin", async ({
   await page.getByLabel("AD 帳號", { exact: true }).fill("alice");
   await page.getByLabel("AD 密碼", { exact: true }).fill("fixture-password");
   await page.getByRole("button", { name: "登入工作台", exact: true }).click();
-  await expect(page).toHaveURL(/\/chat$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
 });
+
+for (const destination of ['/dashboard?scope=personal', '/repositories']) {
+  test(`sign-in preserves the requested ${destination} route without loading chat data`, async ({ page }) => {
+    const fixture = new ApiFixture();
+    fixture.ldap = true;
+    fixture.extraFeatures = [{ id: 'dashboard', name: '總覽', route: '/dashboard' }];
+    const chatRequests: string[] = [];
+    page.on('request', request => {
+      if (/\/api\/v1\/(?:models|conversations|attachments)(?:\?|$)/.test(new URL(request.url()).pathname))
+        chatRequests.push(request.url());
+    });
+    await fixture.attach(page);
+    await page.goto(`/login?returnUrl=${encodeURIComponent(destination)}`);
+    await page.getByLabel('AD 帳號', { exact: true }).fill('alice');
+    await page.getByLabel('AD 密碼', { exact: true }).fill('fixture-password');
+    await page.getByRole('button', { name: '登入工作台', exact: true }).click();
+    await expect(page).toHaveURL(new RegExp(destination.replace('?', '\\?') + '$'));
+    await expect(page.locator('.feature-header')).toBeVisible();
+    expect(chatRequests).toEqual([]);
+  });
+}
 
 test("desktop login keeps the workspace visual language", async ({ page }) => {
   const fixture = new ApiFixture();

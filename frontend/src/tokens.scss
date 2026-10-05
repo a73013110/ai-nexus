@@ -21,6 +21,8 @@
   --code-string: var(--p-code-string);
   --code-number: var(--p-code-number);
   --shadow: 0 10px 32px rgb(38 48 38 / 8%);
+  --scrollbar-thumb: color-mix(in srgb, var(--muted) 82%, var(--canvas));
+  --scrollbar-thumb-hover: var(--accent);
 }
 :root {
   --p-white: #fff;
@@ -139,6 +141,11 @@
   --dialog-width: 34rem;
   --library-width: 52rem;
   --command-width: 38rem;
+  --scrollbar-size: 0.75rem;
+  --scrollbar-inset: 0.1875rem;
+  --dialog-radius: 1.125rem;
+  --dialog-inset: var(--p-space-2);
+  --dialog-padding: var(--p-space-6);
   --attachment-thumb: 3rem;
   --attachment-list-max: min(11rem, 22dvh);
 }
@@ -169,4 +176,6 @@
   --code-string: var(--p-code-string-dark);
   --code-number: var(--p-code-number-dark);
   --shadow: 0 10px 32px rgb(0 0 0 / 20%);
+  --scrollbar-thumb: color-mix(in srgb, var(--muted) 82%, var(--canvas));
+  --scrollbar-thumb-hover: var(--accent);
 }

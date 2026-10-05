@@ -279,71 +279,73 @@
   }
 </nx-feature-page>
 <dialog #dialog class="platform-dialog" (cancel)="close($event)">
-  <div class="dialog-heading">
-    <h2>{{ kind() === 'project' ? '專案設定' : '共用範本' }}</h2>
-    <button class="icon-button" aria-label="關閉專案設定" (click)="close()">
-      <nx-icon name="close" />
-    </button>
-  </div>
-  @if (error()) {
-    <p role="alert" class="error-banner">{{ error() }}</p>
-  }
-  <form class="platform-form" (submit)="save($event)">
-    <label
-      >{{ kind() === 'project' ? '專案名稱' : '範本名稱'
-      }}<input
-        aria-label="項目名稱"
-        autofocus
-        required
-        [disabled]="busy()"
-        [attr.maxlength]="kind() === 'project' ? 120 : 80"
-        [value]="name()"
-        (input)="name.set($any($event.target).value)"
-    /></label>
-    @if (kind() === 'project') {
-      <label
-        >工作說明<textarea
-          aria-label="專案說明"
-          maxlength="2000"
-          rows="3"
-          [disabled]="busy()"
-          [value]="description()"
-          (input)="description.set($any($event.target).value)"
-        ></textarea></label
-      ><label
-        >共用指示<textarea
-          aria-label="專案共用指示"
-          maxlength="4000"
-          rows="6"
-          [disabled]="busy()"
-          placeholder="例如：以繁體中文回答、先列結論，最後列出待確認事項。"
-          [value]="instructions()"
-          (input)="instructions.set($any($event.target).value)"
-        ></textarea>
-      </label>
-    } @else {
-      <label
-        >提問內容<textarea
-          aria-label="範本提問內容"
-          maxlength="12000"
-          rows="8"
-          required
-          [disabled]="busy()"
-          [value]="templateText()"
-          (input)="templateText.set($any($event.target).value)"
-        ></textarea>
-      </label>
-    }
-    <div class="dialog-actions">
-      <button type="button" class="secondary-button" [disabled]="busy()" (click)="close()">
-        取消</button
-      ><button
-        class="primary-button"
-        [disabled]="busy() || !name().trim() || (kind() === 'template' && !templateText().trim())"
-      >
-        {{ busy() ? '正在儲存…' : '儲存' }}
+  <div class="dialog-scroll">
+    <div class="dialog-heading">
+      <h2>{{ kind() === 'project' ? '專案設定' : '共用範本' }}</h2>
+      <button class="icon-button" aria-label="關閉專案設定" (click)="close()">
+        <nx-icon name="close" />
       </button>
     </div>
-  </form>
+    @if (error()) {
+      <p role="alert" class="error-banner">{{ error() }}</p>
+    }
+    <form class="platform-form" (submit)="save($event)">
+      <label
+        >{{ kind() === 'project' ? '專案名稱' : '範本名稱'
+        }}<input
+          aria-label="項目名稱"
+          autofocus
+          required
+          [disabled]="busy()"
+          [attr.maxlength]="kind() === 'project' ? 120 : 80"
+          [value]="name()"
+          (input)="name.set($any($event.target).value)"
+      /></label>
+      @if (kind() === 'project') {
+        <label
+          >工作說明<textarea
+            aria-label="專案說明"
+            maxlength="2000"
+            rows="3"
+            [disabled]="busy()"
+            [value]="description()"
+            (input)="description.set($any($event.target).value)"
+          ></textarea></label
+        ><label
+          >共用指示<textarea
+            aria-label="專案共用指示"
+            maxlength="4000"
+            rows="6"
+            [disabled]="busy()"
+            placeholder="例如：以繁體中文回答、先列結論，最後列出待確認事項。"
+            [value]="instructions()"
+            (input)="instructions.set($any($event.target).value)"
+          ></textarea>
+        </label>
+      } @else {
+        <label
+          >提問內容<textarea
+            aria-label="範本提問內容"
+            maxlength="12000"
+            rows="8"
+            required
+            [disabled]="busy()"
+            [value]="templateText()"
+            (input)="templateText.set($any($event.target).value)"
+          ></textarea>
+        </label>
+      }
+      <div class="dialog-actions">
+        <button type="button" class="secondary-button" [disabled]="busy()" (click)="close()">
+          取消</button
+        ><button
+          class="primary-button"
+          [disabled]="busy() || !name().trim() || (kind() === 'template' && !templateText().trim())"
+        >
+          {{ busy() ? '正在儲存…' : '儲存' }}
+        </button>
+      </div>
+    </form>
+  </div>
 </dialog>
 <nx-confirm-dialog /><nx-text-tools [projectId]="current()?.resource?.id || null" #tools />

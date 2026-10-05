@@ -8,7 +8,7 @@ import {
 } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth-service';
-import { ChatStore } from '../chat/chat-store';
+import { WORKSPACE_HOME } from '../../core/workspace-home';
 import { FourierMark } from './fourier-mark';
 
 @Component({
@@ -19,7 +19,6 @@ import { FourierMark } from './fourier-mark';
 })
 export class LoginPage {
   readonly auth = inject(AuthService);
-  private readonly store = inject(ChatStore);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   readonly credentials = signal({ account: '', password: '' });
@@ -51,12 +50,12 @@ export class LoginPage {
     }
   }
   private returnUrl() {
-    const url = this.route.snapshot.queryParamMap.get('returnUrl') ?? '/chat';
-    return /^\/(?:(?:chat|projects|artifacts|knowledge|tasks|settings|admin|design|quality|integrations|shared)(?:\/[a-z0-9-]+)?|reader(?:\/attachment)?\/[a-z0-9-]+)(?:\?[a-z0-9=&%_-]+)?$/i.test(
+    const url = this.route.snapshot.queryParamMap.get('returnUrl') ?? WORKSPACE_HOME;
+    return /^\/(?:(?:dashboard|repositories|chat|projects|artifacts|knowledge|tasks|settings|admin|design|quality|integrations|shared)(?:\/[a-z0-9-]+)?|reader(?:\/attachment)?\/[a-z0-9-]+)(?:\?[a-z0-9=&%_-]+)?$/i.test(
       url,
     )
       ? url
-      : '/chat';
+      : WORKSPACE_HOME;
   }
   async windowsLogin() {
     if (this.submitting()) return;
@@ -83,7 +82,6 @@ export class LoginPage {
     const { account, password } = this.credentials();
     try {
       await this.auth.login(account.trim(), password);
-      await this.store.initialize(true);
       await this.router.navigateByUrl(this.returnUrl());
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : '登入失敗，請稍後重試。');

@@ -237,182 +237,184 @@
   }
 </nx-feature-page>
 <dialog #dialog class="platform-dialog quality-dialog" (cancel)="close($event)">
-  <form (submit)="save($event)">
-    <div class="dialog-heading">
-      <div>
-        <h2>
-          {{
-            form() === 'set'
-              ? editing()
-                ? '編輯評測集'
-                : '建立評測集'
-              : form() === 'run'
-                ? '設定比較方案'
-                : '人工評分'
-          }}
-        </h2>
-        <p>
-          {{
-            form() === 'run'
-              ? '最多三個方案，模型呼叫數 = 題目數 × 方案數。'
-              : '內容不會自動送出，儲存後才套用。'
-          }}
-        </p>
+  <div class="dialog-scroll">
+    <form (submit)="save($event)">
+      <div class="dialog-heading">
+        <div>
+          <h2>
+            {{
+              form() === 'set'
+                ? editing()
+                  ? '編輯評測集'
+                  : '建立評測集'
+                : form() === 'run'
+                  ? '設定比較方案'
+                  : '人工評分'
+            }}
+          </h2>
+          <p>
+            {{
+              form() === 'run'
+                ? '最多三個方案，模型呼叫數 = 題目數 × 方案數。'
+                : '內容不會自動送出，儲存後才套用。'
+            }}
+          </p>
+        </div>
+        <button
+          type="button"
+          class="icon-button"
+          aria-label="關閉評測設定"
+          (click)="close()"
+          [disabled]="busy()"
+        >
+          <nx-icon name="close" />
+        </button>
       </div>
-      <button
-        type="button"
-        class="icon-button"
-        aria-label="關閉評測設定"
-        (click)="close()"
-        [disabled]="busy()"
-      >
-        <nx-icon name="close" />
-      </button>
-    </div>
-    @if (error()) {
-      <p class="error-banner" role="alert">{{ error() }}</p>
-    }
-    <fieldset class="platform-form" [disabled]="busy()">
-      @if (form() === 'set') {
-        <label
-          >名稱<input
-            required
-            maxlength="120"
-            [value]="name()"
-            (input)="name.set($any($event.target).value)" /></label
-        ><label
-          >說明<textarea
-            rows="2"
-            maxlength="2000"
-            [value]="description()"
-            (input)="description.set($any($event.target).value)"
-          ></textarea>
-        </label>
-        @for (test of cases(); track $index; let i = $index) {
-          <fieldset class="quality-case-form">
-            <legend>第 {{ i + 1 }} 題</legend>
-            <label
-              >問題<textarea
-                required
-                rows="3"
-                maxlength="4000"
-                [value]="test.question"
-                (input)="updateCase(i, 'question', $any($event.target).value)"
-              ></textarea></label
-            ><label
-              >參考答案<textarea
-                rows="2"
-                maxlength="4000"
-                [value]="test.reference"
-                (input)="updateCase(i, 'reference', $any($event.target).value)"
-              ></textarea>
-            </label>
-            <div class="quality-field-pair">
-              <label
-                >必要詞（逗號分隔）<input
-                  [value]="test.requiredTerms?.join(', ') || ''"
-                  (change)="updateCase(i, 'requiredTerms', $any($event.target).value)" /></label
-              ><label
-                >禁用詞（逗號分隔）<input
-                  [value]="test.forbiddenTerms?.join(', ') || ''"
-                  (change)="updateCase(i, 'forbiddenTerms', $any($event.target).value)"
-              /></label>
-            </div>
-            <button
-              type="button"
-              class="quiet-button"
-              (click)="removeCase(i)"
-              [disabled]="cases().length === 1"
-            >
-              移除此題
-            </button>
-          </fieldset>
-        }
-        <button
-          type="button"
-          class="secondary-button"
-          (click)="addCase()"
-          [disabled]="cases().length >= 20"
-        >
-          <nx-icon name="plus" />新增題目（{{ cases().length }} / 20）
-        </button>
-      } @else if (form() === 'run') {
-        @for (item of variants(); track $index; let i = $index) {
-          <fieldset class="quality-case-form">
-            <legend>比較方案 {{ i + 1 }}</legend>
-            <label
-              >方案名稱<input
-                required
-                maxlength="80"
-                [value]="item.label"
-                (input)="variant(i, 'label', $any($event.target).value)"
-            /></label>
-            @if (policy()?.allowModelSelection) {
-              <label
-                >模型<nx-select
-                  [label]="'方案 ' + (i + 1) + ' 模型'"
-                  [options]="modelOptions()"
-                  [value]="item.modelId || ''"
-                  (valueChange)="variant(i, 'modelId', $event)"
-                  [disabled]="busy()"
-              /></label>
-            } @else {
-              <p class="form-note">使用系統指定的 AI 助理</p>
-            }
-            <label
-              >比較指令<textarea
-                rows="4"
-                maxlength="4000"
-                placeholder="例如：先寫結論，再列出待確認事項。"
-                [value]="item.instruction"
-                (input)="variant(i, 'instruction', $any($event.target).value)"
-              ></textarea>
-            </label>
-            @if (variants().length > 1) {
-              <button type="button" class="quiet-button" (click)="removeVariant(i)">
-                移除此方案
-              </button>
-            }
-          </fieldset>
-        }
-        <button
-          type="button"
-          class="secondary-button"
-          (click)="addVariant()"
-          [disabled]="variants().length >= 3"
-        >
-          加入比較方案
-        </button>
-        <p class="form-note">
-          預計
-          {{ (current()?.cases?.length || 0) * variants().length }}
-          次模型呼叫。結果與指令會保存在此題庫，供授權成員檢視。
-        </p>
-      } @else {
-        <label
-          >評分<nx-select
-            label="人工品質評分"
-            [options]="scores"
-            [value]="score()"
-            (valueChange)="score.set($event)"
-            [disabled]="busy()" /></label
-        ><label
-          >判讀說明<textarea
-            rows="4"
-            maxlength="2000"
-            [value]="reviewNote()"
-            (input)="reviewNote.set($any($event.target).value)"
-          ></textarea>
-        </label>
+      @if (error()) {
+        <p class="error-banner" role="alert">{{ error() }}</p>
       }
-    </fieldset>
-    <div class="dialog-actions">
-      <button type="button" class="secondary-button" (click)="close()" [disabled]="busy()">
-        取消</button
-      ><button type="submit" class="primary-button" [disabled]="busy()">
-        {{ busy() ? '正在儲存…' : form() === 'run' ? '開始評測' : '儲存' }}
-      </button>
-    </div>
-  </form>
+      <fieldset class="platform-form" [disabled]="busy()">
+        @if (form() === 'set') {
+          <label
+            >名稱<input
+              required
+              maxlength="120"
+              [value]="name()"
+              (input)="name.set($any($event.target).value)" /></label
+          ><label
+            >說明<textarea
+              rows="2"
+              maxlength="2000"
+              [value]="description()"
+              (input)="description.set($any($event.target).value)"
+            ></textarea>
+          </label>
+          @for (test of cases(); track $index; let i = $index) {
+            <fieldset class="quality-case-form">
+              <legend>第 {{ i + 1 }} 題</legend>
+              <label
+                >問題<textarea
+                  required
+                  rows="3"
+                  maxlength="4000"
+                  [value]="test.question"
+                  (input)="updateCase(i, 'question', $any($event.target).value)"
+                ></textarea></label
+              ><label
+                >參考答案<textarea
+                  rows="2"
+                  maxlength="4000"
+                  [value]="test.reference"
+                  (input)="updateCase(i, 'reference', $any($event.target).value)"
+                ></textarea>
+              </label>
+              <div class="quality-field-pair">
+                <label
+                  >必要詞（逗號分隔）<input
+                    [value]="test.requiredTerms?.join(', ') || ''"
+                    (change)="updateCase(i, 'requiredTerms', $any($event.target).value)" /></label
+                ><label
+                  >禁用詞（逗號分隔）<input
+                    [value]="test.forbiddenTerms?.join(', ') || ''"
+                    (change)="updateCase(i, 'forbiddenTerms', $any($event.target).value)"
+                /></label>
+              </div>
+              <button
+                type="button"
+                class="quiet-button"
+                (click)="removeCase(i)"
+                [disabled]="cases().length === 1"
+              >
+                移除此題
+              </button>
+            </fieldset>
+          }
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="addCase()"
+            [disabled]="cases().length >= 20"
+          >
+            <nx-icon name="plus" />新增題目（{{ cases().length }} / 20）
+          </button>
+        } @else if (form() === 'run') {
+          @for (item of variants(); track $index; let i = $index) {
+            <fieldset class="quality-case-form">
+              <legend>比較方案 {{ i + 1 }}</legend>
+              <label
+                >方案名稱<input
+                  required
+                  maxlength="80"
+                  [value]="item.label"
+                  (input)="variant(i, 'label', $any($event.target).value)"
+              /></label>
+              @if (policy()?.allowModelSelection) {
+                <label
+                  >模型<nx-select
+                    [label]="'方案 ' + (i + 1) + ' 模型'"
+                    [options]="modelOptions()"
+                    [value]="item.modelId || ''"
+                    (valueChange)="variant(i, 'modelId', $event)"
+                    [disabled]="busy()"
+                /></label>
+              } @else {
+                <p class="form-note">使用系統指定的 AI 助理</p>
+              }
+              <label
+                >比較指令<textarea
+                  rows="4"
+                  maxlength="4000"
+                  placeholder="例如：先寫結論，再列出待確認事項。"
+                  [value]="item.instruction"
+                  (input)="variant(i, 'instruction', $any($event.target).value)"
+                ></textarea>
+              </label>
+              @if (variants().length > 1) {
+                <button type="button" class="quiet-button" (click)="removeVariant(i)">
+                  移除此方案
+                </button>
+              }
+            </fieldset>
+          }
+          <button
+            type="button"
+            class="secondary-button"
+            (click)="addVariant()"
+            [disabled]="variants().length >= 3"
+          >
+            加入比較方案
+          </button>
+          <p class="form-note">
+            預計
+            {{ (current()?.cases?.length || 0) * variants().length }}
+            次模型呼叫。結果與指令會保存在此題庫，供授權成員檢視。
+          </p>
+        } @else {
+          <label
+            >評分<nx-select
+              label="人工品質評分"
+              [options]="scores"
+              [value]="score()"
+              (valueChange)="score.set($event)"
+              [disabled]="busy()" /></label
+          ><label
+            >判讀說明<textarea
+              rows="4"
+              maxlength="2000"
+              [value]="reviewNote()"
+              (input)="reviewNote.set($any($event.target).value)"
+            ></textarea>
+          </label>
+        }
+      </fieldset>
+      <div class="dialog-actions">
+        <button type="button" class="secondary-button" (click)="close()" [disabled]="busy()">
+          取消</button
+        ><button type="submit" class="primary-button" [disabled]="busy()">
+          {{ busy() ? '正在儲存…' : form() === 'run' ? '開始評測' : '儲存' }}
+        </button>
+      </div>
+    </form>
+  </div>
 </dialog>
 <nx-confirm-dialog />

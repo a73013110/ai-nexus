@@ -24,47 +24,49 @@ import { SearchField } from '../../shared/ui/search-field';
       <nx-icon name="document" />個人文件
     </button>
     <dialog #dialog class="platform-dialog" aria-label="個人文件">
-      <div class="dialog-heading">
-        <h2>個人文件</h2>
-        <button class="icon-button" aria-label="關閉個人文件" (click)="dialog.close()">
-          <nx-icon name="close" />
-        </button>
-      </div>
-      <p class="form-note">
-        獨立閱讀的文件，以及刪除專案後保留的文件。此處僅顯示自己的最近 200 份文件。
-      </p>
-      <nx-search-field
-        label="搜尋個人文件"
-        placeholder="尋找文件"
-        [value]="filter()"
-        (valueChange)="filter.set($event)"
-      />
-      @if (error()) {
-        <p class="error-banner" role="alert">{{ error() }}</p>
-      }
-      @if (loading()) {
-        <p role="status">正在載入個人文件…</p>
-      } @else {
-        <div class="personal-document-list">
-          @for (file of visible(); track file.id) {
-            <div class="personal-document-row">
-              <a [routerLink]="['/reader', file.id]" (click)="dialog.close()"
-                ><nx-icon name="document" /><span>{{ file.fileName }}</span></a
-              >
-              <button
-                class="icon-button danger-text"
-                [attr.aria-label]="'刪除 ' + file.fileName"
-                [disabled]="busy()"
-                (click)="remove(file)"
-              >
-                <nx-icon name="trash" />
-              </button>
-            </div>
-          } @empty {
-            <p class="form-note">沒有符合的個人文件。</p>
-          }
+      <div class="dialog-scroll">
+        <div class="dialog-heading">
+          <h2>個人文件</h2>
+          <button class="icon-button" aria-label="關閉個人文件" (click)="dialog.close()">
+            <nx-icon name="close" />
+          </button>
         </div>
-      }
+        <p class="form-note">
+          獨立閱讀的文件，以及刪除專案後保留的文件。此處僅顯示自己的最近 200 份文件。
+        </p>
+        <nx-search-field
+          label="搜尋個人文件"
+          placeholder="尋找文件"
+          [value]="filter()"
+          (valueChange)="filter.set($event)"
+        />
+        @if (error()) {
+          <p class="error-banner" role="alert">{{ error() }}</p>
+        }
+        @if (loading()) {
+          <p role="status">正在載入個人文件…</p>
+        } @else {
+          <div class="personal-document-list">
+            @for (file of visible(); track file.id) {
+              <div class="personal-document-row">
+                <a [routerLink]="['/reader', file.id]" (click)="dialog.close()"
+                  ><nx-icon name="document" /><span>{{ file.fileName }}</span></a
+                >
+                <button
+                  class="icon-button danger-text"
+                  [attr.aria-label]="'刪除 ' + file.fileName"
+                  [disabled]="busy()"
+                  (click)="remove(file)"
+                >
+                  <nx-icon name="trash" />
+                </button>
+              </div>
+            } @empty {
+              <p class="form-note">沒有符合的個人文件。</p>
+            }
+          </div>
+        }
+      </div>
     </dialog>
     <nx-confirm-dialog />`,
   styles: `

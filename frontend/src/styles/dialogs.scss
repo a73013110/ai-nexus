@@ -1,22 +1,26 @@
 .action-dialog {
+  --dialog-max-height: calc(100dvh - 3rem);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--dialog-radius);
   background: var(--surface);
   color: var(--ink);
-  padding: 25px;
+  padding: var(--dialog-inset);
+  max-height: var(--dialog-max-height);
+  overflow: hidden;
   width: min(430px, calc(100% - 36px));
   box-shadow: var(--shadow);
 }
 .platform-dialog {
+  --dialog-max-height: calc(100dvh - 3rem);
   width: min(var(--dialog-width), calc(100vw - 2rem));
   max-width: none;
-  max-height: calc(100dvh - 3rem);
+  max-height: var(--dialog-max-height);
   padding: var(--p-space-6);
   margin: auto;
-  overflow: auto;
+  overflow: hidden;
   overscroll-behavior: contain;
   border: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
-  border-radius: 1.125rem;
+  border-radius: var(--dialog-radius);
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow-floating);
@@ -33,7 +37,7 @@
 }
 .platform-dialog .dialog-actions {
   position: sticky;
-  bottom: calc(-1 * var(--p-space-6));
+  bottom: calc(var(--dialog-inset) - var(--dialog-padding));
   padding-block: var(--p-space-3);
   background: var(--surface);
 }
@@ -51,6 +55,13 @@
   font-size: var(--text-heading);
   font-weight: 600;
   margin: 0;
+  overflow-wrap: anywhere;
+}
+.dialog-heading > :first-child {
+  min-width: 0;
+}
+.dialog-heading > .icon-button {
+  flex: none;
 }
 .action-dialog label {
   display: block;
@@ -78,15 +89,31 @@
 }
 .workspace-dialog,
 .command-dialog {
+  --dialog-max-height: min(85dvh, 52rem);
   padding: var(--p-space-6);
   width: min(var(--dialog-width), calc(100% - 2rem));
-  max-height: min(85dvh, 52rem);
-  overflow: auto;
+  max-height: var(--dialog-max-height);
+  overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
+  border-radius: var(--dialog-radius);
   color: var(--ink);
   background: var(--surface);
   box-shadow: var(--shadow-floating);
+}
+.platform-dialog:has(> .dialog-scroll),
+.workspace-dialog:has(> .dialog-scroll) {
+  padding: var(--dialog-inset);
+}
+.dialog-scroll {
+  position: relative;
+  min-width: 0;
+  max-height: calc(var(--dialog-max-height) - 2 * var(--dialog-inset) - 2px);
+  padding: calc(var(--dialog-padding) - var(--dialog-inset));
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scroll-padding-block: var(--dialog-padding);
+  border-radius: calc(var(--dialog-radius) - var(--dialog-inset));
 }
 .workspace-dialog::backdrop,
 .command-dialog::backdrop {
@@ -302,14 +329,12 @@
     padding: var(--p-space-4) 0 0;
   }
   .workspace-dialog {
-    padding: var(--p-space-4);
+    --dialog-padding: var(--p-space-4);
   }
   .platform-dialog {
-    padding: var(--p-space-4);
-    max-height: calc(100dvh - 1.5rem);
-  }
-  .platform-dialog .dialog-actions {
-    bottom: calc(-1 * var(--p-space-4));
+    --dialog-padding: var(--p-space-4);
+    --dialog-max-height: calc(100dvh - 1.5rem);
+    padding: var(--dialog-padding);
   }
   .command-results kbd {
     display: none;

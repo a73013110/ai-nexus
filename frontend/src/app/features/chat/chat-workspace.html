@@ -7,7 +7,6 @@
   }
   <nx-chat-sidebar
     [open]="sidebarOpen()"
-    [narrow]="narrow()"
     (close)="closeSidebar()"
     (navigate)="newChat()"
     (rename)="openDialog('rename', $event)"
@@ -57,7 +56,12 @@
         }
       </div>
       <div class="topbar-actions">
-        @if (store.selected(); as conversation) { <nx-conversation-spend [id]="conversation.id" [revision]="conversation.updatedAt + (store.liveRun()?.status ?? '')" /> }
+        @if (store.selected(); as conversation) {
+          <nx-conversation-spend
+            [id]="conversation.id"
+            [revision]="conversation.updatedAt + (store.liveRun()?.status ?? '')"
+          />
+        }
         @if (statusText()) {
           <span class="inference-status" role="status"
             ><nx-inference-signal [active]="true" /><span>{{ statusText() }}</span></span
@@ -190,7 +194,11 @@
         </button>
       }
       <div class="composer-container">
-        @if (store.webSearchEnabled()) { <p class="web-search-notice"><nx-icon name="globe" />會將這次提問送往搜尋服務；附件與歷史對話不會送出。</p> }
+        @if (store.webSearchEnabled()) {
+          <p class="web-search-notice">
+            <nx-icon name="globe" />會將這次提問送往搜尋服務；附件與歷史對話不會送出。
+          </p>
+        }
         @if (store.modelNotice(); as notice) {
           <p class="model-notice"><nx-icon name="info" />{{ notice }}</p>
         }
@@ -430,39 +438,41 @@
   (change)="importChanged($event)"
 />
 <dialog #dialog class="action-dialog" (close)="modal.set(null)">
-  <form (submit)="confirmDialog($event)">
-    <div class="dialog-heading">
-      <h2>{{ modal() === 'delete' ? '刪除這段對話？' : '重新命名對話' }}</h2>
-      <button type="button" class="icon-button" aria-label="關閉對話視窗" (click)="closeDialog()">
-        <nx-icon name="close" />
-      </button>
-    </div>
-    @if (modal() === 'rename') {
-      <label for="conversation-title">對話標題</label
-      ><input id="conversation-title" [formField]="renameForm.title" autofocus />
-    } @else {
-      <p>
-        「{{
-          modalTarget()?.title
-        }}」將從歷史移除，僅由此對話使用的附件也會刪除。若想之後再接續，可先取消並使用封存。
-      </p>
-    }
-    <div class="dialog-actions">
-      <button
-        type="button"
-        class="secondary-button"
-        (click)="closeDialog()"
-        [disabled]="modalBusy()"
-      >
-        取消</button
-      ><button
-        type="submit"
-        class="primary-button"
-        [class.danger-button]="modal() === 'delete'"
-        [disabled]="modalBusy() || (modal() === 'rename' && renameForm.title().invalid())"
-      >
-        {{ modalBusy() ? '處理中…' : modal() === 'delete' ? '刪除對話' : '儲存標題' }}
-      </button>
-    </div>
-  </form>
+  <div class="dialog-scroll">
+    <form (submit)="confirmDialog($event)">
+      <div class="dialog-heading">
+        <h2>{{ modal() === 'delete' ? '刪除這段對話？' : '重新命名對話' }}</h2>
+        <button type="button" class="icon-button" aria-label="關閉對話視窗" (click)="closeDialog()">
+          <nx-icon name="close" />
+        </button>
+      </div>
+      @if (modal() === 'rename') {
+        <label for="conversation-title">對話標題</label
+        ><input id="conversation-title" [formField]="renameForm.title" autofocus />
+      } @else {
+        <p>
+          「{{
+            modalTarget()?.title
+          }}」將從歷史移除，僅由此對話使用的附件也會刪除。若想之後再接續，可先取消並使用封存。
+        </p>
+      }
+      <div class="dialog-actions">
+        <button
+          type="button"
+          class="secondary-button"
+          (click)="closeDialog()"
+          [disabled]="modalBusy()"
+        >
+          取消</button
+        ><button
+          type="submit"
+          class="primary-button"
+          [class.danger-button]="modal() === 'delete'"
+          [disabled]="modalBusy() || (modal() === 'rename' && renameForm.title().invalid())"
+        >
+          {{ modalBusy() ? '處理中…' : modal() === 'delete' ? '刪除對話' : '儲存標題' }}
+        </button>
+      </div>
+    </form>
+  </div>
 </dialog>

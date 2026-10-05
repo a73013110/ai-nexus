@@ -83,7 +83,7 @@
 | MarkdownView                     | 共用文字／表格／程式碼渲染及複製；HTML／外部圖片與危險 URL 受限                            |
 | JobProgress／InferenceSignal     | 真實階段及完成單位、未知總量的不定進度、取消要求與完成分開、減少動態仍保留文字             |
 | Checkbox／SearchField            | 原生語意、整列勾選、停用與焦點狀態、搜尋圖示與清除；管理／分享／來源共用                   |
-| FeaturePage／WorkspaceNavigation | 所有頁面共用分類四欄入口與完整 aria-label；聊天底部預設收合，歷史為主                      |
+| FeaturePage／WorkspaceSidebar／WorkspaceNavigation | 所有頁面共用側欄外框、品牌、分類四欄入口與帳號列；聊天投影操作與歷史，底部導覽預設收合 |
 | AccountMenu／SettingsDialog      | 共用登入者選單；設定在當頁開啟，延遲載入、未儲存確認、焦點返回                             |
 | ThinkingIndicator／FocusComposer | 不定進度訊號波形及可放大編輯的同步草稿；減少動態與 IME 規則共用                            |
 | InfoPopover                      | 費用與用量資訊的原生 top layer；可見名稱、鍵盤開啟／Esc、邊界翻轉與焦點返回 |
@@ -96,6 +96,20 @@
 ## 緊湊側欄與總覽
 
 側欄品牌與帳號各保留單列，移除重複副標；`--sidebar-brand-gap`、品牌字級與內距集中在 tokens。工作區採 PanelsTopLeft，快捷指令採 SquareTerminal，避免不同操作共用相同符號。44px 點擊目標保持不變，增加空間優先縮減裝飾與重複資訊。
+
+`aside[nxWorkspaceSidebar]` 是側欄外框的唯一實作，`styles/workspace-sidebar.scss` 管共同尺寸、品牌與區域分配；`styles/sidebar.scss` 只管理聊天內容與手機 drawer。聊天使用 `collapsibleNavigation` 將同一份導覽放在歷史下方，不另建入口或複製帳號列。首頁、品牌與登入預設目的地共用 `core/workspace-home.ts` 的 `/dashboard`；登入後由目的頁載入自己的資料，不預先初始化聊天模型、歷史與附件。
+
+`FeaturePage` 在主要捲動區內使用單一 `.feature-content` 容器設定內容上限與置中，說明、稽核子元件及統計卡共用同一條對齊線。捲動區使用 `min-height: 0`，並建立定位上下文，避免圖表的螢幕閱讀器標籤在 viewport 外產生第二個網頁捲軸。路由 host 保持 block；全頁主要內容只由 `.feature-main` 捲動。統計卡 `.usage-grid`／`.stat-card` 由 platform 樣式共用，依可用寬度自動換欄。頁面內容使用 opacity 進場，遵循既有減少動態規則。
+
+## 共用捲軸與彈窗
+
+全專案捲軸集中在 `styles/scrollbars.scss`，不引入捲動 JavaScript 或覆寫滑鼠滾輪行為。`--scrollbar-thumb`／`--scrollbar-thumb-hover` 隨主題映射；`--scrollbar-size=12px` 保留操作範圍，`--scrollbar-inset=3px` 形成 6px 圓角滑塊。Chromium／WebKit 使用透明軌道及 inset thumb；其他引擎使用標準 scrollbar properties。高對比 forced-colors 保留瀏覽器的原生捲軸。
+
+Playwright 保留捲軸顯示，排除 headless 預設的 `--hide-scrollbars`，讓截圖與溢出檢查涵蓋使用者實際看到的滑塊與 gutter。
+
+一般彈窗的原生 `<dialog>` 只負責圓角外框、top layer、焦點與關閉行為；內容放入共用 `.dialog-scroll`。`--dialog-inset` 留出外框與捲軸間距，內層負責最大高度、捲動與 overscroll containment，避免滑塊貼到圓角。`--dialog-padding` 控制桌面／手機內容內距；設定、使用者檢視與放大輸入這類分區彈窗保留各自的內部捲動區，套用同一份捲軸樣式。主要內容與 dialog body 使用 stable gutter 防止資料變多時寬度跳動，參考 [MDN scrollbar-gutter](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/scrollbar-gutter)。
+
+稽核清單的文字、資源識別與異動內容由 computed presentation 在資料變更時建立，避免每次模板更新重複解析 JSON。共用 TrendChart 的數值 formatter 依幣別快取，滑鼠／鍵盤檢查資料點時不重建 Intl.NumberFormat；切換幣別後自動更新。
 
 總覽採四張指標卡、可檢查節點的資料流向圖、費用趨勢與模型／使用者分布，使用既有 platform-card、form-input 與語意色。流向圖的位置表達文件→向量→回答的關係；只有真實 activeJobs／activeGenerations 會觸發訊號動畫，減少動態時靜態保留狀態。桌面多欄、手機單欄，使用主內容捲動，不放假即時數據或與工作無關的 3D 場景。
 

@@ -27,22 +27,25 @@ let sequence = 0;
     [attr.aria-describedby]="id + '-message'"
     (cancel)="$event.preventDefault(); answer(false)"
   >
-    <div class="dialog-heading">
-      <h2 [id]="id + '-title'">{{ value()?.title }}</h2>
-      <button type="button" class="icon-button" aria-label="關閉確認視窗" (click)="answer(false)">
-        <nx-icon name="close" />
-      </button>
-    </div>
-    <p class="confirmation-message" [id]="id + '-message'">{{ value()?.message }}</p>
-    <div class="dialog-actions">
-      <button type="button" autofocus class="secondary-button" (click)="answer(false)">取消</button
-      ><button
-        type="button"
-        [class]="value()?.danger ? 'danger-button' : 'primary-button'"
-        (click)="answer(true)"
-      >
-        {{ value()?.confirm }}
-      </button>
+    <div class="dialog-scroll">
+      <div class="dialog-heading">
+        <h2 [id]="id + '-title'">{{ value()?.title }}</h2>
+        <button type="button" class="icon-button" aria-label="關閉確認視窗" (click)="answer(false)">
+          <nx-icon name="close" />
+        </button>
+      </div>
+      <p class="confirmation-message" [id]="id + '-message'">{{ value()?.message }}</p>
+      <div class="dialog-actions">
+        <button type="button" autofocus class="secondary-button" (click)="answer(false)">
+          取消</button
+        ><button
+          type="button"
+          [class]="value()?.danger ? 'danger-button' : 'primary-button'"
+          (click)="answer(true)"
+        >
+          {{ value()?.confirm }}
+        </button>
+      </div>
     </div>
   </dialog>`,
 })

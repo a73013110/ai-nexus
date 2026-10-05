@@ -1,6 +1,6 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { ApiFixture, settleEntrance, chooseSelect } from "./fixtures";
+import { ApiFixture, settleEntrance, chooseSelect, expectViewportContained } from "./fixtures";
 import type {
   AdminCatalog,
   AuditEntry,
@@ -294,6 +294,30 @@ test("administrators edit roles with effective access preview and an audit trail
     path: "artifacts/screenshots/admin-audit.png",
     fullPage: true,
   });
+});
+test('feature notes, audit and platform usage stay aligned on wide and narrow screens', async ({ page }) => {
+  const { audit, catalog } = await administration(page);
+  catalog.features[0].name = 'AI 對話功能與模型管理';
+  audit.push({ id: 1, actor: 'AD\\admin', action: 'admin.feature', resourceId: 'chat', result: 'saved',
+    at: '2026-10-04T00:00:00Z', detailsJson: JSON.stringify({ featureId: 'chat', before: { name: 'AI 對話' }, after: { name: 'AI 對話功能與模型管理' } }) });
+  for (const width of [1920, 1440, 860, 375]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const tab of ['功能', '異動稽核', '平台用量']) {
+      await page.getByRole('button', { name: tab, exact: true }).click();
+      const target = tab === '異動稽核' ? '.audit-toolbar' : '.feature-content > .form-note';
+      await expect(page.locator(target)).toBeVisible();
+      if (tab === '平台用量') await expect(page.locator('.stat-card')).toHaveCount(3);
+      const header = await page.locator('.feature-header').boundingBox();
+      const content = await page.locator(target).boundingBox();
+      expect(Math.abs(header!.x - content!.x)).toBeLessThan(1);
+      expect(Math.abs(header!.width - content!.width)).toBeLessThan(1);
+      await expectViewportContained(page);
+      if (width === 1920 || width === 375) {
+        await settleEntrance(page);
+        await page.screenshot({ path: `artifacts/screenshots/admin-layout-${width}-${tab}.png` });
+      }
+    }
+  }
 });
 test("group model limits and self-lockout errors work on desktop and mobile", async ({
   page,

@@ -24,100 +24,104 @@ import { ArtifactsApi } from './artifacts-api';
   providers: [ViewScope, CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog #dialog class="platform-dialog text-tools-dialog" (cancel)="cancel($event)">
-    <div class="dialog-heading">
-      <h2>{{ mode() === 'save' ? '儲存成果文件' : labels[mode()] }}</h2>
-      <button class="icon-button" aria-label="關閉段落工具" (click)="close()">
-        <nx-icon name="close" />
-      </button>
-    </div>
-    @if (error()) {
-      <p class="error-banner" role="alert">{{ error() }}</p>
-    }
-    @if (mode() === 'save') {
-      <form class="platform-form" (submit)="save($event)">
-        <label
-          >成果名稱<input
-            autofocus
-            aria-label="成果名稱"
-            maxlength="120"
-            required
-            [value]="title()"
-            (input)="title.set($any($event.target).value)" /></label
-        ><label
-          >內容<textarea
-            aria-label="成果內容"
-            rows="10"
-            maxlength="64000"
-            required
-            [value]="result()"
-            (input)="result.set($any($event.target).value)"
-          ></textarea>
-        </label>
-        <div class="dialog-actions">
-          <button type="button" class="secondary-button" (click)="close()" [disabled]="saving()">
-            取消</button
-          ><button
-            class="primary-button"
-            [disabled]="saving() || !title().trim() || !result().trim()"
-          >
-            {{ saving() ? '正在儲存…' : '儲存並開啟' }}
-          </button>
-        </div>
-      </form>
-    } @else {
-      <p class="text-tool-source">{{ source() }}</p>
-      @if (mode() === 'translate') {
-        <nx-select
-          label="翻譯語言"
-          [value]="language()"
-          [options]="languages"
-          [disabled]="busy()"
-          (valueChange)="language.set($event)"
-        />
-      }
-      @if (busy()) {
-        <p class="upload-status" role="status">
-          <nx-inference-signal [active]="true" />模型正在處理選取段落…<button
-            class="quiet-button"
-            (click)="stop()"
-          >
-            停止
-          </button>
-        </p>
-      }
-      @if (result()) {
-        <label class="text-tool-result"
-          >處理結果<textarea
-            aria-label="段落處理結果"
-            rows="10"
-            maxlength="64000"
-            [value]="result()"
-            (input)="result.set($any($event.target).value)"
-          ></textarea>
-        </label>
-      }
-      @if (truncated()) {
-        <p class="source-warning">模型輸出已達上限，結果可能不完整；請核對或縮小選取範圍後重試。</p>
-      }
-      <div class="dialog-actions">
-        <button class="secondary-button" [disabled]="busy() || saving()" (click)="generate()">
-          {{ result() ? '重新處理' : '開始處理' }}
+    <div class="dialog-scroll">
+      <div class="dialog-heading">
+        <h2>{{ mode() === 'save' ? '儲存成果文件' : labels[mode()] }}</h2>
+        <button class="icon-button" aria-label="關閉段落工具" (click)="close()">
+          <nx-icon name="close" />
         </button>
-        @if (result()) {
-          <button class="secondary-button" (click)="copy.copy(result())">
-            {{ copy.copied() ? '已複製' : '複製結果' }}
-          </button>
-          @if (canReplace()) {
-            <button class="primary-button" (click)="replace.emit(result()); close()">
-              套用到選取段落
-            </button>
-          }
-          @if (session.has('artifacts')) {
-            <button class="secondary-button" (click)="mode.set('save')">另存成果</button>
-          }
-        }
       </div>
-    }
+      @if (error()) {
+        <p class="error-banner" role="alert">{{ error() }}</p>
+      }
+      @if (mode() === 'save') {
+        <form class="platform-form" (submit)="save($event)">
+          <label
+            >成果名稱<input
+              autofocus
+              aria-label="成果名稱"
+              maxlength="120"
+              required
+              [value]="title()"
+              (input)="title.set($any($event.target).value)" /></label
+          ><label
+            >內容<textarea
+              aria-label="成果內容"
+              rows="10"
+              maxlength="64000"
+              required
+              [value]="result()"
+              (input)="result.set($any($event.target).value)"
+            ></textarea>
+          </label>
+          <div class="dialog-actions">
+            <button type="button" class="secondary-button" (click)="close()" [disabled]="saving()">
+              取消</button
+            ><button
+              class="primary-button"
+              [disabled]="saving() || !title().trim() || !result().trim()"
+            >
+              {{ saving() ? '正在儲存…' : '儲存並開啟' }}
+            </button>
+          </div>
+        </form>
+      } @else {
+        <p class="text-tool-source">{{ source() }}</p>
+        @if (mode() === 'translate') {
+          <nx-select
+            label="翻譯語言"
+            [value]="language()"
+            [options]="languages"
+            [disabled]="busy()"
+            (valueChange)="language.set($event)"
+          />
+        }
+        @if (busy()) {
+          <p class="upload-status" role="status">
+            <nx-inference-signal [active]="true" />模型正在處理選取段落…<button
+              class="quiet-button"
+              (click)="stop()"
+            >
+              停止
+            </button>
+          </p>
+        }
+        @if (result()) {
+          <label class="text-tool-result"
+            >處理結果<textarea
+              aria-label="段落處理結果"
+              rows="10"
+              maxlength="64000"
+              [value]="result()"
+              (input)="result.set($any($event.target).value)"
+            ></textarea>
+          </label>
+        }
+        @if (truncated()) {
+          <p class="source-warning">
+            模型輸出已達上限，結果可能不完整；請核對或縮小選取範圍後重試。
+          </p>
+        }
+        <div class="dialog-actions">
+          <button class="secondary-button" [disabled]="busy() || saving()" (click)="generate()">
+            {{ result() ? '重新處理' : '開始處理' }}
+          </button>
+          @if (result()) {
+            <button class="secondary-button" (click)="copy.copy(result())">
+              {{ copy.copied() ? '已複製' : '複製結果' }}
+            </button>
+            @if (canReplace()) {
+              <button class="primary-button" (click)="replace.emit(result()); close()">
+                套用到選取段落
+              </button>
+            }
+            @if (session.has('artifacts')) {
+              <button class="secondary-button" (click)="mode.set('save')">另存成果</button>
+            }
+          }
+        </div>
+      }
+    </div>
   </dialog>`,
 })
 export class TextTools {
@@ -211,7 +215,12 @@ export class TextTools {
     this.saving.set(true);
     this.error.set('');
     try {
-      const artifact = await this.api.create(this.title(), this.result(), this.sourceMessage, this.projectId());
+      const artifact = await this.api.create(
+        this.title(),
+        this.result(),
+        this.sourceMessage,
+        this.projectId(),
+      );
       if (valid()) {
         this.dialog().nativeElement.close();
         await this.router.navigate(['/artifacts', artifact.resource.id]);

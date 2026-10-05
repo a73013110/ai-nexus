@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
 import { AdminApi } from './admin-api';
 import type { AuditEntry } from '../../core/api/types';
 import { SearchField } from '../../shared/ui/search-field';
@@ -19,6 +26,7 @@ import {
   selector: 'nx-admin-audit',
   imports: [SearchField, Select, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: ':host { display: block; min-width: 0; }',
   templateUrl: './admin-audit.html',
 })
 export class AdminAudit {
@@ -32,11 +40,17 @@ export class AdminAudit {
   readonly from = signal('');
   readonly until = signal('');
   readonly date = formatDate;
-  readonly label = auditAction;
-  readonly changes = auditChanges;
-  readonly resource = auditResource;
-  readonly status = auditResult;
-  readonly rejected = auditRejected;
+  readonly presentedRows = computed(() =>
+    this.rows().map((entry) => ({
+      entry,
+      date: formatDate(entry.at),
+      action: auditAction(entry.action),
+      resource: auditResource(entry.detailsJson),
+      changes: auditChanges(entry.detailsJson),
+      result: auditResult(entry.result),
+      rejected: auditRejected(entry.result),
+    })),
+  );
   readonly actions = [
     { value: '', label: '所有動作' },
     { value: 'admin.', label: '平台管理' },
@@ -133,7 +147,7 @@ export class AdminAudit {
               row.actor,
               row.action,
               row.resourceId,
-              this.resource(row.detailsJson),
+              auditResource(row.detailsJson),
               row.result,
               row.detailsJson,
             ]),

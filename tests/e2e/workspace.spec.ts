@@ -146,6 +146,8 @@ test("logout clears private workspace state while drafts restore only for their 
     await page.getByLabel("AD 帳號", { exact: true }).fill(account);
     await page.getByLabel("AD 密碼", { exact: true }).fill("fixture-password");
     await page.getByRole("button", { name: "登入工作台", exact: true }).click();
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await page.getByRole("link", { name: "AI 對話", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "加入文件或圖片" }),
     ).toBeEnabled();

@@ -27,55 +27,66 @@ import { ChatStore } from '../chat/chat-store';
     aria-labelledby="settings-title"
     (cancel)="busy() && $event.preventDefault()"
   >
-    <form (submit)="submit($event)">
-      <div class="dialog-heading">
-        <div>
-          <span class="panel-eyebrow">CONVERSATION SETTINGS</span>
-          <h2 id="settings-title">讓這段對話更合用</h2>
+    <div class="dialog-scroll">
+      <form (submit)="submit($event)">
+        <div class="dialog-heading">
+          <div>
+            <span class="panel-eyebrow">CONVERSATION SETTINGS</span>
+            <h2 id="settings-title">讓這段對話更合用</h2>
+          </div>
+          <button
+            type="button"
+            class="icon-button"
+            aria-label="關閉對話設定"
+            [disabled]="busy()"
+            (click)="dialog.close()"
+          >
+            <nx-icon name="close" />
+          </button>
         </div>
-        <button
-          type="button"
-          class="icon-button"
-          aria-label="關閉對話設定"
-          [disabled]="busy()"
-          (click)="dialog.close()"
-        >
-          <nx-icon name="close" />
-        </button>
-      </div>
-      <label for="conversation-instruction">對話指令</label
-      ><textarea
-        id="conversation-instruction"
-        [formField]="fields.instruction"
-        rows="5"
-        placeholder="例如：先提供摘要，再列出待辦事項；專有名詞保留英文。"
-      ></textarea>
-      <p class="panel-note">套用至這段對話後續的提問；已生成的回答與其他對話保留原樣。</p>
-      <label for="conversation-labels">標籤</label
-      ><input id="conversation-labels" [formField]="fields.labels" placeholder="工作, 企劃, 會議" />
-      <p class="panel-note">以逗號分隔，最多 5 個標籤，每個最多 24 字元。</p>
-      @if (session.has('projects') || projectId()) {
-        <label>所屬專案</label
-        ><nx-select
-          label="對話所屬專案"
-          [value]="projectId()"
-          [options]="projectOptions()"
-          [disabled]="busy()"
-          (valueChange)="assignProject($event)"
+        <label for="conversation-instruction">對話指令</label
+        ><textarea
+          id="conversation-instruction"
+          [formField]="fields.instruction"
+          rows="5"
+          placeholder="例如：先提供摘要，再列出待辦事項；專有名詞保留英文。"
+        ></textarea>
+        <p class="panel-note">套用至這段對話後續的提問；已生成的回答與其他對話保留原樣。</p>
+        <label for="conversation-labels">標籤</label
+        ><input
+          id="conversation-labels"
+          [formField]="fields.labels"
+          placeholder="工作, 企劃, 會議"
         />
-        <p class="panel-note">變更後立即儲存。加入專案後，後續提問會使用共用指示與參考文件。</p>
-      }
-      @if (error()) {
-        <p class="inline-error" role="alert">{{ error() }}</p>
-      }
-      <div class="dialog-actions">
-        <button type="button" class="secondary-button" [disabled]="busy()" (click)="dialog.close()">
-          取消</button
-        ><button type="submit" class="primary-button" [disabled]="busy() || fields().invalid()">
-          {{ busy() ? '儲存中…' : '儲存設定' }}
-        </button>
-      </div>
-    </form>
+        <p class="panel-note">以逗號分隔，最多 5 個標籤，每個最多 24 字元。</p>
+        @if (session.has('projects') || projectId()) {
+          <label>所屬專案</label
+          ><nx-select
+            label="對話所屬專案"
+            [value]="projectId()"
+            [options]="projectOptions()"
+            [disabled]="busy()"
+            (valueChange)="assignProject($event)"
+          />
+          <p class="panel-note">變更後立即儲存。加入專案後，後續提問會使用共用指示與參考文件。</p>
+        }
+        @if (error()) {
+          <p class="inline-error" role="alert">{{ error() }}</p>
+        }
+        <div class="dialog-actions">
+          <button
+            type="button"
+            class="secondary-button"
+            [disabled]="busy()"
+            (click)="dialog.close()"
+          >
+            取消</button
+          ><button type="submit" class="primary-button" [disabled]="busy() || fields().invalid()">
+            {{ busy() ? '儲存中…' : '儲存設定' }}
+          </button>
+        </div>
+      </form>
+    </div>
   </dialog>`,
 })
 export class ConversationSettingsDialog {

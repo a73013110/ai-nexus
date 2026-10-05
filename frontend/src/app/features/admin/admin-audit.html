@@ -50,25 +50,26 @@
   <p class="form-note" role="status">正在取得稽核紀錄…</p>
 }
 <div class="resource-list">
-  @for (entry of rows(); track entry.id) {
+  @for (row of presentedRows(); track row.entry.id) {
+    @let entry = row.entry;
     <article class="resource-row audit-row">
-      <time>{{ date(entry.at) }}</time>
+      <time>{{ row.date }}</time>
       <div class="resource-summary">
-        <strong>{{ label(entry.action) }}</strong
+        <strong>{{ row.action }}</strong
         ><small
           >{{ entry.actor }} · #{{ entry.id }}
-          @if (resource(entry.detailsJson)) {
-            · {{ resource(entry.detailsJson) }}
+          @if (row.resource) {
+            · {{ row.resource }}
           }
         </small>
         @if (entry.detailsJson) {
           <details class="audit-details">
             <summary>
-              {{ changes(entry.detailsJson).length ? '查看前後差異' : '查看紀錄資訊' }}
+              {{ row.changes.length ? '查看前後差異' : '查看紀錄資訊' }}
             </summary>
-            @if (changes(entry.detailsJson).length) {
+            @if (row.changes.length) {
               <dl class="audit-changes">
-                @for (change of changes(entry.detailsJson); track change.key) {
+                @for (change of row.changes; track change.key) {
                   <div>
                     <dt>{{ change.label }}</dt>
                     <dd>
@@ -83,9 +84,7 @@
           </details>
         }
       </div>
-      <span class="audit-result" [class.audit-rejected]="rejected(entry.result)">{{
-        status(entry.result)
-      }}</span>
+      <span class="audit-result" [class.audit-rejected]="row.rejected">{{ row.result }}</span>
     </article>
   } @empty {
     @if (!loading()) {

@@ -31,7 +31,7 @@ AI 工作空間：Angular 22、ASP.NET Core 10、MSSQL、AD 與 Google AI／Olla
 ./scripts/Start-Local.ps1
 ```
 
-開啟 [本機工作台](http://localhost:5080/chat)。Configure 以遮蔽輸入保存既有 SQL 登入、AD 服務密碼及 Google key，不必另建 SQL login。Initialize 僅建立不存在的 AiNexus，套用未完成 migrations，保留既有資料。
+開啟 [本機工作台](http://localhost:5080/)，預設進入總覽。Configure 以遮蔽輸入保存既有 SQL 登入、AD 服務密碼及 Google key，不必另建 SQL login。Initialize 僅建立不存在的 AiNexus，套用未完成 migrations，保留既有資料。
 
 **整合預覽只執行一個 ASP.NET 程序**，同時提供 Angular 產物與 API；已有 build 用 `./scripts/Start-Local.ps1 -SkipBuild`。熱更新用 `./scripts/Start-Dev.ps1`，管理 Angular 4200／API 5080，以 Ctrl+C 一起停止。見 [開發與執行](docs/DEVELOPMENT.md)。
 

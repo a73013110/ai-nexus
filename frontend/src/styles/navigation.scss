@@ -79,7 +79,6 @@
   padding: var(--p-space-2) 0;
   max-height: min(43dvh, 24rem);
   overflow: auto;
-  scrollbar-width: thin;
   animation: panel-arrive var(--motion-panel) var(--ease);
 }
 nx-account-menu {
@@ -154,6 +153,7 @@ nx-account-menu {
   .feature-sidebar nx-account-menu {
     border: 0;
     padding: 0;
+    margin: 0;
   }
   .feature-sidebar .profile-trigger.icon-button {
     padding: 0;

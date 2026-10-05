@@ -1,6 +1,7 @@
 .feature-layout {
   display: grid;
   grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   height: 100dvh;
   overflow: hidden;
 }
@@ -56,6 +57,33 @@
   border-radius: var(--p-radius-lg);
   background: var(--surface);
 }
+.usage-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: var(--p-space-4);
+  margin-top: var(--p-space-4);
+}
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: var(--p-space-3);
+  padding: var(--p-space-6);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: var(--p-radius-lg);
+}
+.stat-card > span,
+.stat-card small {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.stat-card strong {
+  font-size: var(--p-font-2xl);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
 .upload-label {
   position: relative;
   cursor: pointer;
@@ -74,24 +102,26 @@
   outline: 2px solid var(--focus);
   outline-offset: 3px;
 }
-.feature-sidebar {
-  display: flex;
-  flex-direction: column;
-  padding: var(--sidebar-padding-top) var(--p-space-3) var(--p-space-2);
-  gap: var(--sidebar-brand-gap);
-  background: var(--sidebar);
-  border-right: 1px solid var(--line);
-  overflow: auto;
-}
-.feature-sidebar .brand { margin-bottom: 0; }
 .feature-main {
+  // Anchor visually hidden labels and other absolute children inside this
+  // scroll region; otherwise their static positions expand the document.
+  position: relative;
   padding: var(--p-space-6) var(--workspace-gutter) var(--p-space-8);
   overflow: auto;
   min-width: 0;
+  min-height: 0;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
 }
-.feature-main > * {
+.feature-content {
+  width: 100%;
   max-width: var(--platform-content-width);
   margin-inline: auto;
+  min-width: 0;
+  animation: content-arrive var(--motion-enter) var(--ease);
+}
+.feature-content > .form-note {
+  margin-bottom: var(--p-space-3);
 }
 .feature-header {
   display: flex;
@@ -101,11 +131,13 @@
 }
 .feature-header > div:first-child {
   flex: 1;
+  min-width: 0;
 }
 .feature-header h1 {
   font-size: var(--p-font-3xl);
   margin: var(--p-space-2) 0;
   letter-spacing: -0.025em;
+  text-wrap: balance;
 }
 .feature-header p {
   color: var(--secondary);
@@ -187,6 +219,7 @@
 .resource-summary > strong {
   font-size: var(--text-ui);
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 .resource-summary small {
   display: block;

@@ -14,20 +14,17 @@ import type { Conversation } from '../../core/api/types';
 import { Icon } from '../../shared/ui/icon';
 import { ChatStore } from './chat-store';
 import { Select } from '../../shared/ui/select';
-import { WorkspaceNavigation } from '../../shared/ui/workspace-navigation';
-import { WorkspaceBrand } from '../../shared/ui/workspace-brand';
-import { AccountMenu } from '../../shared/ui/account-menu';
+import { WorkspaceSidebar } from '../../shared/ui/workspace-sidebar';
 
 @Component({
   selector: 'nx-chat-sidebar',
-  imports: [RouterLink, FormField, Icon, Select, WorkspaceNavigation, WorkspaceBrand, AccountMenu],
+  imports: [RouterLink, FormField, Icon, Select, WorkspaceSidebar],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chat-sidebar.html',
 })
 export class ChatSidebar {
   readonly store = inject(ChatStore);
   readonly open = input(true);
-  readonly narrow = input(false);
   readonly close = output<void>();
   readonly navigate = output<void>();
   readonly rename = output<Conversation>();

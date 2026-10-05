@@ -171,71 +171,75 @@
   }
 </nx-feature-page>
 <dialog #editorDialog class="platform-dialog" (cancel)="cancel($event)">
-  <form class="platform-form" (submit)="save($event)">
-    <div class="dialog-heading">
-      <h2>{{ editorId() ? '編輯知識庫' : '新增知識庫' }}</h2>
-      <button
-        type="button"
-        class="icon-button"
-        aria-label="關閉知識庫設定"
-        [disabled]="saving()"
-        (click)="editorDialog.close()"
-      >
-        <nx-icon name="close" />
-      </button>
-    </div>
+  <div class="dialog-scroll">
+    <form class="platform-form" (submit)="save($event)">
+      <div class="dialog-heading">
+        <h2>{{ editorId() ? '編輯知識庫' : '新增知識庫' }}</h2>
+        <button
+          type="button"
+          class="icon-button"
+          aria-label="關閉知識庫設定"
+          [disabled]="saving()"
+          (click)="editorDialog.close()"
+        >
+          <nx-icon name="close" />
+        </button>
+      </div>
+      @if (editorError()) {
+        <p class="error-banner" role="alert">{{ editorError() }}</p>
+      }
+      <label
+        >名稱<input
+          aria-label="知識庫名稱"
+          autofocus
+          required
+          maxlength="120"
+          [value]="editorName()"
+          (input)="editorName.set($any($event.target).value)" /></label
+      ><label
+        >說明<textarea
+          aria-label="知識庫說明"
+          rows="3"
+          maxlength="2000"
+          [value]="editorDescription()"
+          (input)="editorDescription.set($any($event.target).value)"
+        ></textarea>
+      </label>
+      <p class="form-note">新建時僅你可以存取。建立後可從「存取權限」加入同事或群組。</p>
+      <div class="dialog-actions">
+        <button
+          type="button"
+          class="secondary-button"
+          [disabled]="saving()"
+          (click)="editorDialog.close()"
+        >
+          取消</button
+        ><button class="primary-button" [disabled]="saving()">
+          {{ saving() ? '正在儲存…' : '儲存知識庫' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</dialog>
+<dialog #deleteDialog class="platform-dialog" (cancel)="cancel($event)">
+  <div class="dialog-scroll">
     @if (editorError()) {
       <p class="error-banner" role="alert">{{ editorError() }}</p>
     }
-    <label
-      >名稱<input
-        aria-label="知識庫名稱"
-        autofocus
-        required
-        maxlength="120"
-        [value]="editorName()"
-        (input)="editorName.set($any($event.target).value)" /></label
-    ><label
-      >說明<textarea
-        aria-label="知識庫說明"
-        rows="3"
-        maxlength="2000"
-        [value]="editorDescription()"
-        (input)="editorDescription.set($any($event.target).value)"
-      ></textarea>
-    </label>
-    <p class="form-note">新建時僅你可以存取。建立後可從「存取權限」加入同事或群組。</p>
+    <div class="dialog-heading">
+      <h2>移除{{ deleteTarget()?.collection ? '知識庫' : '文件' }}</h2>
+    </div>
+    <p>
+      將移除「{{ deleteTarget()?.name }}」{{
+        deleteTarget()?.collection ? '與其中所有文件' : ''
+      }}的來源與索引。已生成的對話文字會保留；來源連結將無法再開啟。
+    </p>
     <div class="dialog-actions">
-      <button
-        type="button"
-        class="secondary-button"
-        [disabled]="saving()"
-        (click)="editorDialog.close()"
-      >
+      <button class="secondary-button" [disabled]="saving()" (click)="deleteDialog.close()">
         取消</button
-      ><button class="primary-button" [disabled]="saving()">
-        {{ saving() ? '正在儲存…' : '儲存知識庫' }}
+      ><button class="danger-button" [disabled]="saving()" (click)="remove()">
+        {{ saving() ? '正在移除…' : '移除來源' }}
       </button>
     </div>
-  </form>
-</dialog>
-<dialog #deleteDialog class="platform-dialog" (cancel)="cancel($event)">
-  @if (editorError()) {
-    <p class="error-banner" role="alert">{{ editorError() }}</p>
-  }
-  <div class="dialog-heading">
-    <h2>移除{{ deleteTarget()?.collection ? '知識庫' : '文件' }}</h2>
-  </div>
-  <p>
-    將移除「{{ deleteTarget()?.name }}」{{
-      deleteTarget()?.collection ? '與其中所有文件' : ''
-    }}的來源與索引。已生成的對話文字會保留；來源連結將無法再開啟。
-  </p>
-  <div class="dialog-actions">
-    <button class="secondary-button" [disabled]="saving()" (click)="deleteDialog.close()">
-      取消</button
-    ><button class="danger-button" [disabled]="saving()" (click)="remove()">
-      {{ saving() ? '正在移除…' : '移除來源' }}
-    </button>
   </div>
 </dialog>
