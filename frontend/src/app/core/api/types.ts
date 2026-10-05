@@ -2,6 +2,11 @@ import type { components } from './schema';
 
 type Dto<Name extends keyof components['schemas']> = Required<components['schemas'][Name]>;
 export type Me = Dto<'MeDto'>;
+export type LibraryFile = Dto<'LibraryFileDto'> & {
+  file: Attachment;
+  usages: Dto<'FileUsageDto'>[];
+};
+export type FileLibraryPage = Dto<'FileLibraryPageDto'> & { items: LibraryFile[] };
 export type ReadonlyShare = Dto<'ShareDto'>;
 export type SharedContent = Dto<'SharedContentDto'> & {
   share: ReadonlyShare;

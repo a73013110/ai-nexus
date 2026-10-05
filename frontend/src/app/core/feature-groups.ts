@@ -1,6 +1,10 @@
 /** Shared information architecture for navigation, grants and access previews. */
 export const WORKSPACE_FEATURE_GROUPS = [
-  { id: 'work', name: '工作', ids: ['dashboard', 'chat', 'projects', 'knowledge', 'artifacts'] },
+  {
+    id: 'work',
+    name: '工作',
+    ids: ['dashboard', 'chat', 'files', 'projects', 'knowledge', 'artifacts'],
+  },
   { id: 'collaboration', name: '協作與品質', ids: ['shared', 'quality', 'tasks', 'repositories'] },
   { id: 'system', name: '系統', ids: ['integrations', 'admin'] },
 ] as const;

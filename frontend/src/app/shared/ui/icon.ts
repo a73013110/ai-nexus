@@ -53,6 +53,8 @@ import {
   History,
   ArrowLeft,
   Eye,
+  Image as ImageIcon,
+  ExternalLink,
   Filter,
   Play,
 } from 'lucide';
@@ -61,6 +63,8 @@ import { LucideDynamicIcon } from '@lucide/angular';
 // Semantic names keep business templates independent of the icon vendor.
 // Import curated SVG data; a single Angular renderer avoids retaining per-icon component metadata.
 const icons: Record<string, IconNode> = {
+  image: ImageIcon,
+  external: ExternalLink,
   'thumb-up': ThumbsUp,
   'thumb-down': ThumbsDown,
   share: Share2,

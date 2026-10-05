@@ -10,6 +10,12 @@
   min-width: 0;
   flex: 1;
 }
+.composer-tools {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: var(--p-space-1);
+}
 .composer-bottom .send-button {
   flex: none;
 }

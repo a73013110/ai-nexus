@@ -2,7 +2,7 @@ import { Directive, ElementRef, computed, inject, input } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter, map } from 'rxjs';
-import { ReaderNavigation } from './reader-navigation';
+import { ReaderOverlay } from './reader-overlay';
 
 /** Native links support new tabs; same-tab navigation also retains the reading position. */
 @Directive({
@@ -11,7 +11,7 @@ import { ReaderNavigation } from './reader-navigation';
 })
 export class ReaderLink {
   private readonly router = inject(Router);
-  private readonly navigation = inject(ReaderNavigation);
+  private readonly overlay = inject(ReaderOverlay);
   private readonly element = inject<ElementRef<HTMLAnchorElement>>(ElementRef);
   readonly id = input.required<string>({ alias: 'nxReaderLink' });
   readonly attachment = input(false, { alias: 'readerAttachment' });
@@ -44,8 +44,6 @@ export class ReaderLink {
     )
       return;
     event.preventDefault();
-    void this.router.navigateByUrl(this.href(), {
-      state: { readerOrigin: this.navigation.capture(this.id(), this.element.nativeElement) },
-    });
+    this.overlay.open({ id: this.id(), attachment: this.attachment(), page: this.page() });
   }
 }

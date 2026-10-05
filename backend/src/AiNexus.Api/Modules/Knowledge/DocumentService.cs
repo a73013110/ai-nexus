@@ -10,13 +10,6 @@ namespace AiNexus.Modules.Knowledge;
 
 public sealed class DocumentService(NexusDbContext db, ResourceAccess access, AccessService features, AttachmentService attachments, AttachmentWriteLock writes, JobService jobs, IOptions<KnowledgeOptions> options)
 {
-    public async Task<IReadOnlyList<DocumentDto>> PersonalAsync(Guid actor, CancellationToken ct)
-    {
-        var rows = await (from r in db.Set<WorkspaceResource>() join d in db.Set<KnowledgeDocument>() on r.Id equals d.Id
-            where r.OwnerId == actor && r.ParentId == null && !r.IsDeleted && !d.IsDeleted && d.CollectionId == null
-            orderby r.UpdatedAt descending select d).AsNoTracking().Take(200).ToListAsync(ct);
-        return rows.Select(x => Describe(x, true)).ToArray();
-    }
     public async Task<IReadOnlyList<CollectionDto>> CollectionsAsync(Guid actor, CancellationToken ct)
     {
         var query = await access.QueryAsync(actor, "knowledge", ct);
@@ -72,7 +65,7 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
             await db.Set<KnowledgeChunk>().Where(x => documentIds.Contains(x.DocumentId)).ExecuteDeleteAsync(ct);
             await db.Set<DocumentPage>().Where(x => documentIds.Contains(x.DocumentId)).ExecuteDeleteAsync(ct);
             await db.SaveChangesAsync(ct);
-            await db.Set<Attachment>().Where(x => files.Contains(x.Id) && !db.Set<AttachmentReference>().Any(l => l.AttachmentId == x.Id) && !db.Set<MessageAttachment>().Any(l => l.AttachmentId == x.Id)).ExecuteDeleteAsync(ct);
+            await db.Set<Attachment>().Where(x => files.Contains(x.Id) && !x.InLibrary && !db.Set<AttachmentReference>().Any(l => l.AttachmentId == x.Id) && !db.Set<MessageAttachment>().Any(l => l.AttachmentId == x.Id)).ExecuteDeleteAsync(ct);
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "knowledge.deleted", Result = "deleted" }); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         }
         finally { writes.Gate.Release(); }
@@ -100,6 +93,8 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            if (collection is Guid currentCollection) await access.RequireAsync(actor, currentCollection, "knowledge", ct, write: true);
+            if (project is Guid currentProject) await access.RequireAsync(actor, currentProject, "project", ct, write: true);
             var file = await attachments.OwnedAsync(actor, attachment, ct, includeData: false);
             if (collection is null)
             {
@@ -116,6 +111,16 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
             var resource = new WorkspaceResource { OwnerId = actor, ParentId = project, Kind = "document", Name = string.Concat(file.FileName.Take(120)) };
             var document = new KnowledgeDocument { Id = resource.Id, AttachmentId = file.Id, CollectionId = collection, FileName = file.FileName, ContentType = file.ContentType };
             db.Add(resource); db.Add(document); db.Add(new AttachmentReference { ResourceId = resource.Id, AttachmentId = file.Id });
+            if (collection is not null || project is not null)
+                await db.Set<Attachment>().Where(x => x.Id == file.Id && x.OwnerId == actor).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
+            // Reuse completed extraction for the same immutable original; each collection keeps its own ACL/index.
+            var extracted = await db.Set<KnowledgeDocument>().AsNoTracking().Where(x => x.AttachmentId == attachment && !x.IsDeleted && x.Status == "ready").OrderBy(x => x.Id).FirstOrDefaultAsync(ct);
+            if (extracted is not null)
+            {
+                var pages = await db.Set<DocumentPage>().AsNoTracking().Where(x => x.DocumentId == extracted.Id).ToListAsync(ct);
+                foreach (var page in pages) db.Add(new DocumentPage { DocumentId = document.Id, PageNumber = page.PageNumber, Text = page.Text, Extraction = page.Extraction, NeedsReview = page.NeedsReview });
+                document.Warning = extracted.Warning;
+            }
             document.JobId = jobs.Enqueue(actor, resource.Id, document.Id, "document-ingest", file.FileName).Id;
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource.Id, Action = "document.created", Result = "queued" });
             await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
@@ -177,7 +182,7 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
             await db.Set<DocumentPage>().Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "document.deleted", Result = "deleted" });
             await db.SaveChangesAsync(ct);
-            if (attachment is Guid file) await db.Set<Attachment>().Where(x => x.Id == file && !db.Set<AttachmentReference>().Any(l => l.AttachmentId == file) && !db.Set<MessageAttachment>().Any(l => l.AttachmentId == file)).ExecuteDeleteAsync(ct);
+            if (attachment is Guid file) await db.Set<Attachment>().Where(x => x.Id == file && !x.InLibrary && !db.Set<AttachmentReference>().Any(l => l.AttachmentId == file) && !db.Set<MessageAttachment>().Any(l => l.AttachmentId == file)).ExecuteDeleteAsync(ct);
             await transaction.CommitAsync(ct);
         }
         finally { writes.Gate.Release(); }

@@ -79,10 +79,11 @@ public sealed class KnowledgeAndJobsTests
         var collection = await Collection(client);
         var retained = await Upload(client, "retained.txt", Encoding.UTF8.GetBytes("Knowledge source to retain."));
         (await client.PostAsJsonAsync($"/api/v1/knowledge/collections/{collection.Resource.Id}/documents", new AddDocumentRequest(retained.Id))).EnsureSuccessStatusCode();
-        Assert.Equal(HttpStatusCode.Conflict, (await client.DeleteAsync($"/api/v1/attachments/{retained.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/v1/attachments/{retained.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await client.DeleteAsync($"/api/v1/files/{retained.Id}")).StatusCode);
     }
     [Fact]
-    public async Task DeletingCollectionPurgesTextAndOriginalsAndUnlinksConversationSources()
+    public async Task DeletingCollectionPurgesIndexAndUnlinksSourcesButRetainsLibraryOriginal()
     {
         await using var factory = new NexusFactory(backgroundJobs: false);
         using var client = await factory.SignedInAsync(); var collection = await Collection(client);
@@ -93,7 +94,9 @@ public sealed class KnowledgeAndJobsTests
         Assert.Empty((await client.GetFromJsonAsync<KnowledgeSelectionDto>($"/api/v1/conversations/{conversation.Id}/knowledge"))!.CollectionIds);
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/v1/documents/{doc.Id}/content")).StatusCode);
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-        Assert.False(await db.Set<DocumentPage>().AnyAsync()); Assert.False(await db.Set<KnowledgeChunk>().AnyAsync()); Assert.False(await db.Set<Attachment>().AnyAsync());
+        Assert.False(await db.Set<DocumentPage>().AnyAsync()); Assert.False(await db.Set<KnowledgeChunk>().AnyAsync());
+        var file = Assert.Single(await db.Set<Attachment>().ToListAsync()); Assert.True(file.InLibrary);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/v1/attachments/{file.Id}/content")).StatusCode);
     }
     [Fact]
     public async Task RetrievedSourceIsSnapshottedWithPageCitationForGeneration()
@@ -160,6 +163,8 @@ public sealed class KnowledgeAndJobsTests
         (await client.DeleteAsync($"/api/v1/conversations/{conversation.Id}")).EnsureSuccessStatusCode();
         Assert.NotEmpty(await client.GetByteArrayAsync($"/api/v1/documents/{document.Id}/content"));
         (await client.DeleteAsync($"/api/v1/documents/{document.Id}")).EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/v1/attachments/{file.Id}")).StatusCode);
+        (await client.DeleteAsync($"/api/v1/files/{file.Id}")).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/v1/attachments/{file.Id}")).StatusCode);
     }
     [Fact]

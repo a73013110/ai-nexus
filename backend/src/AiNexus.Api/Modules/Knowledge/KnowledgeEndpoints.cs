@@ -24,14 +24,13 @@ public static class KnowledgeEndpoints
         selection.MapGet("", async (Guid id, CurrentUser current, KnowledgeRetrieval search, CancellationToken ct) => await search.SelectionAsync((await current.GetAsync(ct)).Id, id, ct)).WithName("ConversationKnowledge").Produces<KnowledgeSelectionDto>();
         selection.MapPut("", async (Guid id, KnowledgeSelectionDto request, CurrentUser current, KnowledgeRetrieval search, CancellationToken ct) => { await search.SetSelectionAsync((await current.GetAsync(ct)).Id, id, request, ct); return Results.NoContent(); }).WithName("SaveConversationKnowledge").Produces(204);
         var documents = api.MapGroup("/documents").WithTags("Documents");
-        documents.MapGet("", async (CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.PersonalAsync((await current.GetAsync(ct)).Id, ct)).RequireAuthorization("feature:attachments").WithName("PersonalDocuments").Produces<IReadOnlyList<DocumentDto>>();
         documents.MapGet("/{id:guid}", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.DetailAsync((await current.GetAsync(ct)).Id, id, ct)).WithName("GetDocument").Produces<DocumentDto>();
         documents.MapGet("/{id:guid}/pages", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.PagesAsync((await current.GetAsync(ct)).Id, id, ct)).WithName("DocumentPages").Produces<IReadOnlyList<DocumentPageDto>>();
         documents.MapGet("/{id:guid}/job", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.JobAsync((await current.GetAsync(ct)).Id, id, ct)).WithName("DocumentJob").Produces<DocumentJobDto>();
         documents.MapGet("/{id:guid}/content", async (Guid id, bool? download, HttpContext http, CurrentUser current, DocumentService docs, CancellationToken ct) =>
         {
-            var file = await docs.OriginalAsync((await current.GetAsync(ct)).Id, id, ct); http.Response.Headers.CacheControl = "private, no-store";
-            return Results.File(file.Data, file.ContentType, fileDownloadName: download == true ? file.FileName : null);
+            var file = await docs.OriginalAsync((await current.GetAsync(ct)).Id, id, ct);
+            return WebSecurity.File(http, file.Data, file.ContentType, file.FileName, download == true);
         }).WithName("DocumentOriginal");
         documents.MapDelete("/{id:guid}", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => { await docs.DeleteAsync((await current.GetAsync(ct)).Id, id, ct); return Results.NoContent(); }).WithName("DeleteDocument").Produces(204);
         documents.MapPost("/{id:guid}/reindex", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.ReindexAsync((await current.GetAsync(ct)).Id, id, ct)).WithName("ReindexDocument").Produces<DocumentDto>();

@@ -6163,3 +6163,45 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261005131605_FileLibraryRetention'
+)
+BEGIN
+    ALTER TABLE [attachments].[Attachments] ADD [InLibrary] bit NOT NULL DEFAULT CAST(0 AS bit);
+    DECLARE @description387 AS sql_variant;
+    SET @description387 = N'是否由個人檔案庫獨立保留原檔；移除對話或知識索引不會刪除保留的檔案。';
+    EXEC sp_addextendedproperty 'MS_Description', @description387, 'SCHEMA', N'attachments', 'TABLE', N'Attachments', 'COLUMN', N'InLibrary';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261005131605_FileLibraryRetention'
+)
+BEGIN
+    UPDATE a SET [InLibrary] = 1 FROM [attachments].[Attachments] a
+    WHERE EXISTS (SELECT 1 FROM [attachments].[MessageAttachments] m WHERE m.[AttachmentId] = a.[Id])
+       OR EXISTS (SELECT 1 FROM [attachments].[ResourceAttachments] r WHERE r.[AttachmentId] = a.[Id]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261005131605_FileLibraryRetention'
+)
+BEGIN
+    CREATE INDEX [IX_Attachments_OwnerId_InLibrary_CreatedAt_Id] ON [attachments].[Attachments] ([OwnerId], [InLibrary], [CreatedAt], [Id]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261005131605_FileLibraryRetention'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261005131605_FileLibraryRetention', N'10.0.12');
+END;
+
+COMMIT;
+GO
+

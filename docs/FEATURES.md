@@ -61,7 +61,7 @@
 
 重新生成保留正在撰寫的草稿；編輯歷史提問時可重用附件，移除只影響新分支。送出編輯分支後恢復先前正常提問草稿。副本採新的收藏／封存狀態。正在生成時，需先停止才可封存、複製、備份或刪除。
 
-JSON **文字備份不含附件原始檔**，匯入後需重新上傳；上限 8 MB、400 則訊息、總共 1,000,000 內容字元。匯入檢查版本、父節點、角色順序及循環，不匯入 provider ID 或舊 run。站內副本保留附件；完整備份需包含 SQL 的所有業務 schema。刪除最後一個引用附件的對話會釋放檔案及配額，副本仍引用的檔案保留。
+JSON **文字備份不含附件原始檔**，匯入後需重新上傳；上限 8 MB、400 則訊息、總共 1,000,000 內容字元。匯入檢查版本、父節點、角色順序及循環，不匯入 provider ID 或舊 run。站內副本保留附件；完整備份需包含 SQL 的所有業務 schema。刪除對話會保留檔案庫原檔，要釋放配額需在沒有其他引用時從檔案庫明確刪除。檔案庫可搜尋歷史原檔、重用於新的提問或指定加入知識庫，見 [檔案庫](FILES.md)。
 
 PDF 優先抽取原生文字，掃描頁經背景 OCR；完成前暫停送出，可在閱讀器核對原文。DOCX 抽取段落及表格，不讀內嵌圖片／巨集；圖片聊天直接交給核准的圖片模型。格式與設定見 [文件與圖片分析](ATTACHMENTS.md)。
 
@@ -74,4 +74,4 @@ PDF 優先抽取原生文字，掃描頁經背景 OCR；完成前暫停送出，
 ./scripts/Start-Local.ps1
 ```
 
-Initialize 只套用未完成的 migration，保留既有資料。Start-Local 建置後由一個 ASP.NET host 提供前端及 API，開啟 [工作區](http://localhost:5080/chat)。開發熱更新使用 `./scripts/Start-Dev.ps1`。詳見 [參數設定](CONFIGURATION.md)、[開發與執行](DEVELOPMENT.md)、[資料庫](DATABASE.md)。
+Initialize 只套用未完成的 migration，保留既有資料。Start-Local 建置後由一個 ASP.NET host 提供前端及 API，開啟 [工作區](https://localhost:5080/chat)。開發機首次以 `dotnet dev-certs https --trust` 信任 SDK 憑證。開發熱更新使用 `./scripts/Start-Dev.ps1`。詳見 [參數設定](CONFIGURATION.md)、[開發與執行](DEVELOPMENT.md)、[資料庫](DATABASE.md)。

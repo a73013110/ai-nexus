@@ -99,75 +99,51 @@ for (const kind of ["project", "evaluation"] as const) {
   });
 }
 
-test("personal files open in place, can be searched and safely removed using a nested confirmation", async ({
+test("retained project originals are discoverable through the library and explicit deletion is confirmed", async ({
   page,
 }) => {
   const core = new ApiFixture();
   core.extraFeatures.push({ id: "projects", name: "專案", route: "/projects" });
+  const id = randomUUID();
+  core.attachments.push({
+    id,
+    fileName: "保留的參考文件.txt",
+    contentType: "text/plain",
+    size: 100,
+    isImage: false,
+    analysisMode: "extracted-text",
+  });
+  core.retainedFiles.add(id);
   await core.attach(page);
   await page.route("**/api/v1/projects", (route) =>
     route.fulfill({ contentType: "application/json", body: "[]" }),
   );
-  const id = randomUUID();
-  let deleted = false,
-    calls = 0;
-  await page.route("**/api/v1/documents**", (route) => {
-    if (route.request().method() === "DELETE") {
-      ++calls;
-      deleted = true;
-      return route.fulfill({ status: 204 });
-    }
-    return route.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify(
-        deleted
-          ? []
-          : [
-              {
-                id,
-                collectionId: null,
-                fileName: "保留的參考文件.txt",
-                contentType: "text/plain",
-                status: "ready",
-                pages: 1,
-                chunks: 0,
-                warning: null,
-                jobId: null,
-                canEdit: true,
-                hasOriginal: true,
-              },
-            ],
-      ),
-    });
-  });
   await page.goto("/projects");
-  await page.getByRole("button", { name: "個人文件", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "個人文件", exact: true });
+  await page.getByRole("link", { name: "檔案庫", exact: true }).last().click();
+  await expect(page.locator(".file-card")).toContainText("保留的參考文件.txt");
+  const search = page.getByRole("searchbox", {
+    name: "搜尋檔案庫",
+    exact: true,
+  });
+  await search.fill("不符合的文字");
   await expect(
-    dialog.getByRole("link", { name: "保留的參考文件.txt" }),
+    page.getByRole("heading", { name: "沒有符合的檔案" }),
   ).toBeVisible();
-  await dialog
-    .getByRole("searchbox", { name: "搜尋個人文件" })
-    .fill("不符合的文字");
-  await expect(dialog.getByText("沒有符合的個人文件。")).toBeVisible();
-  await dialog.getByRole("searchbox", { name: "搜尋個人文件" }).fill("參考");
-  await page.screenshot({
-    path: "artifacts/screenshots/personal-documents.png",
-  });
-  await dialog.getByRole("button", { name: "刪除 保留的參考文件.txt" }).click();
-  const confirm = page.getByRole("dialog", {
-    name: "刪除「保留的參考文件.txt」？",
-  });
+  await search.fill("參考");
+  await expect(page.locator(".file-card")).toBeVisible();
+  await page
+    .getByRole("button", { name: "刪除 保留的參考文件.txt", exact: true })
+    .click();
+  const confirm = page.getByRole("dialog", { name: "刪除檔案", exact: true });
   await expect(confirm).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(dialog).toBeVisible();
-  expect(calls).toBe(0);
-  await dialog.getByRole("button", { name: "刪除 保留的參考文件.txt" }).click();
-  await confirm.getByRole("button", { name: "刪除文件", exact: true }).click();
-  await expect(dialog.getByText("沒有符合的個人文件。")).toBeVisible();
-  expect(calls).toBe(1);
-  await dialog.getByRole("button", { name: "關閉個人文件" }).click();
-  await expect(page).toHaveURL(/\/projects$/);
+  expect(core.retainedFiles.has(id)).toBe(true);
+  await page
+    .getByRole("button", { name: "刪除 保留的參考文件.txt", exact: true })
+    .click();
+  await confirm.getByRole("button", { name: "刪除檔案", exact: true }).click();
+  await expect(page.locator(".file-card")).toHaveCount(0);
+  expect(core.retainedFiles.has(id)).toBe(false);
 });
 
 test("Windows users remain at login until an explicit identity challenge succeeds", async ({

@@ -37,8 +37,8 @@ public sealed class ResourceLifecycleTests
         Assert.Equal("body", (await owner.GetFromJsonAsync<ArtifactDto>($"/api/v1/artifacts/{artifact.Resource.Id}"))!.Content);
         var detail = (await editor.GetFromJsonAsync<ConversationDetailDto>($"/api/v1/conversations/{conversation.Conversation.Id}"))!;
         Assert.Null(detail.Conversation.ProjectId);
-        Assert.Equal(document.Id, Assert.Single((await owner.GetFromJsonAsync<DocumentDto[]>("/api/v1/documents"))!).Id);
-        Assert.Empty((await editor.GetFromJsonAsync<DocumentDto[]>("/api/v1/documents"))!);
+        Assert.Equal(attachment.Id, Assert.Single((await owner.GetFromJsonAsync<FileLibraryPageDto>("/api/v1/files"))!.Items).File.Id);
+        Assert.Empty((await editor.GetFromJsonAsync<FileLibraryPageDto>("/api/v1/files"))!.Items);
         Assert.Equal(HttpStatusCode.NotFound, (await editor.GetAsync($"/api/v1/documents/{document.Id}")).StatusCode);
         using var scope = f.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
         Assert.Single(await db.AuditEvents.Where(x => x.ResourceId == id && x.Action == "project.deleted").ToArrayAsync());

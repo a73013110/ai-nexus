@@ -12,6 +12,7 @@ AI 工作空間：Angular 22、ASP.NET Core 10、MSSQL、AD 與 Google AI／Olla
 | 個人設定     | 當頁設定視窗、主題、12–24px 閱讀／密度、操作、通知、草稿及用量 | [功能指南](docs/FEATURES.md)      |
 | 平台管理     | 角色／群組／功能、模型政策、個別用量與唯讀對話、前後差異稽核   | [管理](docs/ADMINISTRATION.md)    |
 | 知識／閱讀器 | ACL、索引／OCR、SQL 向量檢索、引用及原文核對                   | [知識庫](docs/KNOWLEDGE.md)       |
+| 檔案庫 | 對話／知識／專案原檔、自動保存、搜尋篩選、重用與大型預覽 | [檔案庫](docs/FILES.md) |
 | 成果         | 共用編輯、不可變版本、段落工具、Word／PDF                      | [成果](docs/ARTIFACTS.md)         |
 | 專案         | 共用指示、文件、範本及成果，提問仍屬個人                       | [專案](docs/PROJECTS.md)          |
 | 分享         | 具名收件人、版本快照、附件授權、到期／撤銷                     | [分享](docs/SHARING.md)           |
@@ -28,10 +29,11 @@ AI 工作空間：Angular 22、ASP.NET Core 10、MSSQL、AD 與 Google AI／Olla
 ./scripts/Restore.ps1
 ./scripts/Configure-Local.ps1
 ./scripts/Initialize-Database.ps1
+dotnet dev-certs https --trust
 ./scripts/Start-Local.ps1
 ```
 
-開啟 [本機工作區](http://localhost:5080/)，預設進入總覽。Configure 以遮蔽輸入保存既有 SQL 登入、AD 服務密碼及 Google key，不必另建 SQL login。Initialize 僅建立不存在的 AiNexus，套用未完成 migrations，保留既有資料。
+開啟 [本機工作區](https://localhost:5080/)，預設進入總覽。Configure 以遮蔽輸入保存既有 SQL 登入、AD 服務密碼及 Google key，不必另建 SQL login。Initialize 僅建立不存在的 AiNexus，套用未完成 migrations，保留既有資料。HTTPS 憑證只需在開發機首次建立與信任。
 
 **整合預覽只執行一個 ASP.NET 程序**，同時提供 Angular 產物與 API；已有 build 用 `./scripts/Start-Local.ps1 -SkipBuild`。熱更新用 `./scripts/Start-Dev.ps1`，管理 Angular 4200／API 5080，以 Ctrl+C 一起停止。見 [開發與執行](docs/DEVELOPMENT.md)。
 
@@ -47,6 +49,7 @@ AI 工作空間：Angular 22、ASP.NET Core 10、MSSQL、AD 與 Google AI／Olla
 | [附件](docs/ATTACHMENTS.md)           | 格式、OCR、配額及檔案生命週期                   |
 | [資料庫](docs/DATABASE.md)            | 13 個 schema、物件／關聯、初始化、SQL 權限      |
 | [授權](docs/ACCESS_CONTROL.md)        | 功能 grant、預設角色、撤銷及擴充                |
+| [網站安全](docs/SECURITY.md) | HTTPS／Cookie、CSRF、安全標頭、檔案隔離與部署驗收 |
 | [架構](docs/ARCHITECTURE.md)          | 模組、共用邊界、隔離、推論與 durable jobs       |
 | [設計](docs/DESIGN_SYSTEM.md)         | tokens、字級、主題、共用元件及動畫              |
 | [向量](docs/VECTOR_ARCHITECTURE.md)   | 實作路徑、公文／校務資料、ACL 與 ANN 評估       |

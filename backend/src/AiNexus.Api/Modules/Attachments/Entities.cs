@@ -9,6 +9,7 @@ public sealed class Attachment
     public long Size { get; set; }
     public byte[] Data { get; set; } = [];
     public string? ExtractedText { get; set; }
+    public bool InLibrary { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 

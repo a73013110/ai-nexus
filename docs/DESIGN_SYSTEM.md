@@ -81,6 +81,9 @@
 | ConfirmDialog                    | 原生 modal、清楚名稱及描述、初始焦點放取消、Esc／關閉取消，結束返回先前焦點                |
 | InlineTitle                      | 雙擊／F2／Enter 編輯，Enter／離開儲存、Esc 取消；版本 guard 與每個實例唯一 ID              |
 | MarkdownView                     | 共用文字／表格／程式碼渲染及複製；HTML／外部圖片與危險 URL 受限                            |
+| StreamingAnswer | 沿用 MarkdownView 的安全邊界；保留完成段落 DOM、僅解析尾段，短暫緩衝突發文字，減少動態時直接更新 |
+| FileBrowser／LibraryPicker | 個人原檔卡片／列表、來源關聯、選取、伺服器分頁與可見的存取說明 |
+| DocumentViewer／ReaderDialog | 共用原圖／PDF／文字預覽；精簡工具列、桌面近全螢幕、手機全螢幕、Esc 與焦點返回 |
 | JobProgress／InferenceSignal     | 真實階段及完成單位、未知總量的不定進度、取消要求與完成分開、減少動態仍保留文字             |
 | Checkbox／SearchField            | 原生語意、整列勾選、停用與焦點狀態、搜尋圖示與清除；管理／分享／來源共用                   |
 | FeaturePage／WorkspaceSidebar／WorkspaceNavigation | 所有頁面共用側欄外框、品牌、分類四欄入口與帳號列；聊天投影操作與歷史，底部導覽預設收合 |

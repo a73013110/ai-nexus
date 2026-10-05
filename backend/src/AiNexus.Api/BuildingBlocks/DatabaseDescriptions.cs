@@ -59,6 +59,7 @@ public static class DatabaseDescriptions
     };
     private static readonly IReadOnlyDictionary<string, string> Columns = new Dictionary<string, string>
     {
+        ["InLibrary"] = "是否由個人檔案庫獨立保留原檔；移除對話或知識索引不會刪除保留的檔案。",
         ["Id"] = "資料的主鍵識別碼。", ["Account"] = "登入身分顯示帳號；AD 連結後保存目錄提供的帳號。",
         ["Sid"] = "AD 的不可變 SID；尚未綁定 AD 的手動帳號使用 managed: 識別碼。",
         ["DisplayName"] = "使用者或模型的介面顯示名稱。", ["Enabled"] = "是否啟用；停用不刪除歷史資料。",

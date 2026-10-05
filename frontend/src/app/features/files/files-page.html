@@ -1,0 +1,136 @@
+<nx-feature-page
+  title="檔案庫"
+  eyebrow="AI NEXUS · 你的檔案與素材"
+  description="保存原檔，重用於對話，也能指定加入知識庫。"
+>
+  <div page-actions class="page-actions">
+    @if (session.has('knowledge')) {
+      <a routerLink="/knowledge" class="secondary-button"><nx-icon name="library" />知識庫</a>
+    }
+    <button
+      class="primary-button"
+      [disabled]="uploading() || !policy()"
+      (click)="fileInput.click()"
+    >
+      <nx-icon name="upload" />{{ uploading() ? '正在保存…' : '上傳檔案' }}
+    </button>
+    <input
+      #fileInput
+      type="file"
+      multiple
+      hidden
+      [accept]="accept()"
+      (change)="upload(fileInput.files!); fileInput.value = ''"
+    />
+  </div>
+  <section
+    class="file-library-intro"
+    [nxFileDrop]="!uploading() && !!policy()"
+    (filesDropped)="upload($event)"
+  >
+    <span class="file-library-mark"><nx-icon name="paperclip" /></span>
+    <div>
+      <strong>{{ uploadLabel() || '工作中用過的檔案，都在這裡' }}</strong>
+      <p>對話附件、知識庫與專案的原檔會自動保存。也可以將新檔案拖曳到這裡。</p>
+    </div>
+    <span class="file-library-private"><nx-icon name="lock" />個人檔案庫</span>
+  </section>
+  @if (error() || store.error()) {
+    <p class="error-banner" role="alert">{{ error() || store.error() }}</p>
+  }
+  @if (notice()) {
+    <p class="success-note" role="status">{{ notice() }}</p>
+  }
+  <div class="file-library-toolbar">
+    <div class="file-type-tabs" role="group" aria-label="檔案類型">
+      @for (kind of kinds; track kind.id) {
+        <button [attr.aria-pressed]="store.type() === kind.id" (click)="store.filter(kind.id)">
+          {{ kind.name }}
+        </button>
+      }
+    </div>
+    <nx-search-field
+      label="搜尋檔案庫"
+      placeholder="搜尋檔案名稱"
+      [value]="store.search()"
+      (valueChange)="store.find($event)"
+    />
+    <nx-select
+      label="檔案來源"
+      [options]="sources"
+      [value]="store.source()"
+      (valueChange)="store.filter(store.type(), $event)"
+    />
+    <div class="file-layout-toggle" role="group" aria-label="檔案排列">
+      <button
+        class="icon-button"
+        aria-label="網格排列"
+        [attr.aria-pressed]="layout() === 'grid'"
+        (click)="layout.set('grid')"
+      >
+        <nx-icon name="dashboard" /></button
+      ><button
+        class="icon-button"
+        aria-label="清單排列"
+        [attr.aria-pressed]="layout() === 'list'"
+        (click)="layout.set('list')"
+      >
+        <nx-icon name="lines" />
+      </button>
+    </div>
+  </div>
+  <div class="file-library-summary">
+    <span>{{ store.total() }} 份檔案</span
+    ><span>已保存 {{ bytes(store.result()?.storedBytes || 0) }}</span>
+  </div>
+  @if (store.loading()) {
+    <div class="file-loading" role="status"><nx-icon name="document" />正在載入檔案…</div>
+  } @else if (store.items().length) {
+    <nx-file-browser
+      [items]="store.items()"
+      [layout]="layout()"
+      [knowledge]="session.has('knowledge')"
+      [busy]="busy()"
+      (addKnowledge)="knowledge().open($event)"
+      (remove)="remove($event)"
+    />
+  } @else {
+    <div class="files-empty">
+      <nx-icon name="document" />
+      <h2>
+        {{
+          store.search() || store.type() !== 'all' || store.source() !== 'all'
+            ? '沒有符合的檔案'
+            : '從一份檔案開始'
+        }}
+      </h2>
+      <p>
+        上傳圖片或文件，或在對話中傳送附件。<br />加入知識庫後，即可讓 AI 在回答時檢索並引用它。
+      </p>
+    </div>
+  }
+  @if (store.total() > 40) {
+    <div class="file-pagination">
+      <span>第 {{ store.offset() / 40 + 1 }} 頁</span
+      ><button
+        class="secondary-button"
+        [disabled]="store.loading() || !store.offset()"
+        (click)="store.page(-1)"
+      >
+        上一頁</button
+      ><button
+        class="secondary-button"
+        [disabled]="store.loading() || !store.canNext()"
+        (click)="store.page(1)"
+      >
+        下一頁
+      </button>
+    </div>
+  }
+  <p class="file-library-note">
+    <nx-icon
+      name="info"
+    />檔案庫保存原檔；知識庫管理可檢索的來源與成員權限。移除知識庫來源，原檔仍會保留在這裡。
+  </p>
+  <nx-add-to-knowledge (added)="added()" /><nx-confirm-dialog />
+</nx-feature-page>

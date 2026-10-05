@@ -47,6 +47,7 @@ import { FocusComposer } from './focus-composer';
 import { isSubmitKey } from '../../shared/browser/submit-key';
 import { ConversationSpendView } from '../billing/conversation-spend';
 import { ReaderNavigation, type ReaderOrigin } from '../../shared/browser/reader-navigation';
+import { LibraryPicker } from '../files/library-picker';
 
 @Component({
   selector: 'nx-chat-workspace',
@@ -74,6 +75,7 @@ import { ReaderNavigation, type ReaderOrigin } from '../../shared/browser/reader
     ShareDialog,
     FocusComposer,
     ConversationSpendView,
+    LibraryPicker,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chat-workspace.html',

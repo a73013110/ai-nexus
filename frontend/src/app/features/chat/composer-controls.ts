@@ -37,60 +37,78 @@ import { Select } from '../../shared/ui/select';
         (valueChange)="effortChange.emit($event)"
       />
     }
-    <button type="button" class="search-toggle" aria-label="搜尋網路" [attr.aria-pressed]="webSearch()" [title]="webSearchNotice()" [disabled]="disabled() || !webSearchAvailable()" (click)="webSearchChange.emit(!webSearch())"><nx-icon name="globe" /><span>搜尋網路</span></button>
-    <details class="context-details" nxDisclosure>
-      <summary
-        class="context-trigger"
-        [attr.aria-label]="'上下文用量：' + (usage() ? percent() + '%（預估）' : '尚未取得')"
-        title="查看 Context 用量"
+    <div class="composer-tools">
+      <button
+        type="button"
+        class="search-toggle"
+        aria-label="搜尋網路"
+        [attr.aria-pressed]="webSearch()"
+        [title]="webSearchNotice()"
+        [disabled]="disabled() || !webSearchAvailable()"
+        (click)="webSearchChange.emit(!webSearch())"
       >
-        <svg
-          viewBox="0 0 24 24"
-          class="context-ring"
-          [class.warning]="usage()?.budgetExceeded"
-          aria-hidden="true"
+        <nx-icon name="globe" /><span>搜尋網路</span>
+      </button>
+      <details class="context-details" nxDisclosure>
+        <summary
+          class="context-trigger"
+          [attr.aria-label]="'上下文用量：' + (usage() ? percent() + '%（預估）' : '尚未取得')"
+          title="查看 Context 用量"
         >
-          <circle class="context-ring-track" cx="12" cy="12" r="8" />
-          <circle
-            class="context-ring-used"
-            cx="12"
-            cy="12"
-            r="8"
-            pathLength="100"
-            [attr.stroke-dasharray]="percent() + ' ' + (100 - percent())"
-          />
-        </svg>
-        <span>{{ usage() ? percent() + '%' : 'Context' }}</span>
-      </summary>
-      <div class="context-panel">
-        <strong>Context 用量</strong>
-        @if (usage(); as context) {
-          <p class="context-value">
-            約 {{ context.estimatedInputTokens.toLocaleString() }}
-            <span>/ {{ context.contextTokens.toLocaleString() }} tokens</span>
-          </p>
-          <meter min="0" max="100" [value]="percent()" aria-label="預估上下文用量"></meter>
-          <p>預留 {{ context.reservedOutputTokens.toLocaleString() }} tokens 給回答。</p>
-          @if (context.reservedKnowledgeTokens) {
-            <p>
-              其中約 {{ context.reservedKnowledgeTokens.toLocaleString() }} tokens 預留給知識來源。
+          <svg
+            viewBox="0 0 24 24"
+            class="context-ring"
+            [class.warning]="usage()?.budgetExceeded"
+            aria-hidden="true"
+          >
+            <circle class="context-ring-track" cx="12" cy="12" r="8" />
+            <circle
+              class="context-ring-used"
+              cx="12"
+              cy="12"
+              r="8"
+              pathLength="100"
+              [attr.stroke-dasharray]="percent() + ' ' + (100 - percent())"
+            />
+          </svg>
+          <span>{{ usage() ? percent() + '%' : 'Context' }}</span>
+        </summary>
+        <div class="context-panel">
+          <strong>Context 用量</strong>
+          @if (usage(); as context) {
+            <p class="context-value">
+              約 {{ context.estimatedInputTokens.toLocaleString() }}
+              <span>/ {{ context.contextTokens.toLocaleString() }} tokens</span>
             </p>
+            <meter min="0" max="100" [value]="percent()" aria-label="預估上下文用量"></meter>
+            <p>預留 {{ context.reservedOutputTokens.toLocaleString() }} tokens 給回答。</p>
+            @if (context.reservedKnowledgeTokens) {
+              <p>
+                其中約 {{ context.reservedKnowledgeTokens.toLocaleString() }} tokens
+                預留給知識來源。
+              </p>
+            }
+            @if (context.reservedWebSearchTokens) {
+              <p>
+                約 {{ context.reservedWebSearchTokens.toLocaleString() }} tokens
+                預留給網路摘要（不會在預覽時搜尋）。
+              </p>
+            }
+            @if (context.droppedMessages) {
+              <p>這次會略過最早 {{ context.droppedMessages }} 則上文；原始歷史仍保留。</p>
+            }
+            @if (context.budgetExceeded) {
+              <p class="error-note">本次提問超出可用預算，請縮短內容。</p>
+            }
+            <p class="context-explanation">
+              包含系統指令、目前分支與草稿，以保守 UTF-8 預算估算；實際 token 數依模型而異。
+            </p>
+          } @else {
+            <p>選定可用模型後會取得預估用量。</p>
           }
-          @if (context.reservedWebSearchTokens) { <p>約 {{ context.reservedWebSearchTokens.toLocaleString() }} tokens 預留給網路摘要（不會在預覽時搜尋）。</p> }
-          @if (context.droppedMessages) {
-            <p>這次會略過最早 {{ context.droppedMessages }} 則上文；原始歷史仍保留。</p>
-          }
-          @if (context.budgetExceeded) {
-            <p class="error-note">本次提問超出可用預算，請縮短內容。</p>
-          }
-          <p class="context-explanation">
-            包含系統指令、目前分支與草稿，以保守 UTF-8 預算估算；實際 token 數依模型而異。
-          </p>
-        } @else {
-          <p>選定可用模型後會取得預估用量。</p>
-        }
-      </div>
-    </details>
+        </div>
+      </details>
+    </div>
   </div>`,
 })
 export class ComposerControls {

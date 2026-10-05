@@ -44,7 +44,7 @@ builder.Services.AddAuthentication("NexusSession")
         options.Cookie.Name = "Nexus.Session";
         options.Cookie.HttpOnly = true;
         options.Cookie.SameSite = SameSiteMode.Strict;
-        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing") ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+        options.Cookie.SecurePolicy = WebSecurity.CookiePolicy(builder.Environment, builder.Configuration);
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
         options.Events.OnValidatePrincipal = SessionIdentity.ValidateAsync;
@@ -74,7 +74,7 @@ builder.Services.AddAntiforgery(options =>
     options.Cookie.Name = "Nexus.Antiforgery";
     options.Cookie.HttpOnly = true;
     options.Cookie.SameSite = SameSiteMode.Strict;
-    options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing") ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+    options.Cookie.SecurePolicy = WebSecurity.CookiePolicy(builder.Environment, builder.Configuration);
 });
 builder.Services.AddHttpContextAccessor();
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -161,6 +161,7 @@ builder.Services.AddScoped<ConversationService>();
 builder.Services.AddScoped<ConversationOrganization>();
 builder.Services.AddScoped<PromptLibraryService>();
 builder.Services.AddScoped<AttachmentService>();
+builder.Services.AddScoped<FileLibraryService>();
 builder.Services.AddScoped<DocumentExtractor>();
 builder.Services.AddSingleton<AttachmentWriteLock>();
 builder.Services.AddOptions<AttachmentOptions>().BindConfiguration("Attachments")
@@ -193,7 +194,7 @@ builder.Services.AddHostedService<GenerationWorker>();
 builder.Services.AddHostedService<RunRecoveryWorker>();
 builder.Services.AddHostedService<EventRetentionWorker>();
 // Upload/import endpoints need larger bodies. Ordinary JSON endpoints keep a small per-request limit.
-builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 10 * 1024 * 1024);
+builder.WebHost.ConfigureKestrel(options => { options.AddServerHeader = false; options.Limits.MaxRequestBodySize = 10 * 1024 * 1024; });
 builder.Services.Configure<IISServerOptions>(options => options.MaxRequestBodySize = 10 * 1024 * 1024);
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options => options.MultipartBodyLengthLimit = 9 * 1024 * 1024);
 
@@ -252,10 +253,7 @@ if (builder.Configuration.GetValue<bool>("VerifyConnections"))
 }
 app.Use(async (http, next) =>
 {
-    http.Response.Headers["X-Content-Type-Options"] = "nosniff";
-    http.Response.Headers["Referrer-Policy"] = "no-referrer";
-    http.Response.Headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'";
-    http.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    WebSecurity.Headers(http);
     try { await next(http); }
     catch (OperationCanceledException) when (http.RequestAborted.IsCancellationRequested || http.Response.HasStarted) { }
     catch (Exception ex) when (!http.Response.HasStarted)
@@ -271,8 +269,19 @@ app.Use(async (http, next) =>
         await Results.Problem(statusCode: status, title: detail, type: $"urn:ai-nexus:problem:{code}", extensions: new Dictionary<string, object?> { ["code"] = code, ["traceId"] = http.TraceIdentifier }).ExecuteAsync(http);
     }
 });
-var enforceHttps = !app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing") && !builder.Configuration.GetValue<bool>("Security:DisableHttpsRedirection");
-if (enforceHttps) { app.UseHsts(); app.UseHttpsRedirection(); }
+var localHttp = WebSecurity.AllowsLocalHttp(app.Environment, builder.Configuration);
+if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing")) app.UseHsts();
+if (!app.Environment.IsEnvironment("Testing") && !localHttp) app.UseHttpsRedirection();
+app.Use(async (http, next) =>
+{
+    if (!http.Request.IsHttps && !app.Environment.IsEnvironment("Testing") &&
+        (!localHttp || !WebSecurity.IsLoopback(http.Request, http.Connection.RemoteIpAddress)))
+    {
+        await Results.Problem(statusCode: 400, title: "此工作區需要 HTTPS 安全連線。", extensions: new Dictionary<string, object?> { ["code"] = "https_required" }).ExecuteAsync(http);
+        return;
+    }
+    await next(http);
+});
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.Use(async (http, next) =>

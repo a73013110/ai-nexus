@@ -109,7 +109,7 @@ public static class AuthEndpoints
 
     private static AuthSessionDto Session(HttpContext http, AdAuthenticationOptions options, IAntiforgery csrf)
     {
-        http.Response.Headers.CacheControl = "no-store";
+        WebSecurity.NoStore(http.Response);
         TestIdentityDto? testing = null;
         if (Guid.TryParse(http.User.FindFirstValue(SessionIdentity.ActorId), out var actorId) && Guid.TryParse(http.User.FindFirstValue(SessionIdentity.UserId), out var targetId) && long.TryParse(http.User.FindFirstValue(SessionIdentity.TestExpires), out var seconds))
             testing = new(actorId, http.User.FindFirstValue("nexus_actor_name") ?? "管理者", targetId, DateTimeOffset.FromUnixTimeSeconds(seconds));

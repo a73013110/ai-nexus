@@ -30,7 +30,7 @@ public sealed class AttachmentService(IEfHelper<INexusDatabase> ef, DocumentExtr
             // Reclaim interrupted uploads and abandoned browser drafts before checking quota.
             // The write gate also covers generation binding; linked history is never eligible.
             var cutoff = DateTimeOffset.UtcNow.AddDays(-options.Value.DraftRetentionDays);
-            await ef.Set<Attachment>().Where(x => x.OwnerId == owner && x.CreatedAt < cutoff && !ef.Set<MessageAttachment>().Any(link => link.AttachmentId == x.Id) && !ef.Set<AttachmentReference>().Any(link => link.AttachmentId == x.Id)).ExecuteDeleteAsync(ct);
+            await ef.Set<Attachment>().Where(x => x.OwnerId == owner && !x.InLibrary && x.CreatedAt < cutoff && !ef.Set<MessageAttachment>().Any(link => link.AttachmentId == x.Id) && !ef.Set<AttachmentReference>().Any(link => link.AttachmentId == x.Id)).ExecuteDeleteAsync(ct);
             var used = await ef.Set<Attachment>().Where(x => x.OwnerId == owner).SumAsync(x => (long?)x.Size, ct) ?? 0;
             var groupLimit = (await policies.ForAsync(owner, ct)).StoredAttachmentLimitBytes ?? options.Value.MaxOwnerBytes;
             if (used + bytes.Length > Math.Min(groupLimit, options.Value.MaxOwnerBytes)) throw new ApiException(413, "attachment_quota", "個人附件空間已達系統或群組上限，請移除尚未使用的附件或聯絡管理員。");
@@ -45,9 +45,9 @@ public sealed class AttachmentService(IEfHelper<INexusDatabase> ef, DocumentExtr
     public async Task<Attachment> OwnedAsync(Guid owner, Guid id, CancellationToken ct, bool includeData = true)
     {
         var query = ef.Set<Attachment>().AsNoTracking().Where(x => x.Id == id && x.OwnerId == owner);
-        var file = await (includeData ? query : query.Select(x => new Attachment { Id = x.Id, OwnerId = x.OwnerId, FileName = x.FileName, ContentType = x.ContentType, Size = x.Size, ExtractedText = x.ExtractedText, CreatedAt = x.CreatedAt })).SingleOrDefaultAsync(ct)
+        var file = await (includeData ? query : query.Select(x => new Attachment { Id = x.Id, OwnerId = x.OwnerId, FileName = x.FileName, ContentType = x.ContentType, Size = x.Size, ExtractedText = x.ExtractedText, CreatedAt = x.CreatedAt, InLibrary = x.InLibrary })).SingleOrDefaultAsync(ct)
             ?? throw new ApiException(404, "attachment_not_found", "找不到這個附件。");
-        if (!await ef.Set<AttachmentReference>().AnyAsync(x => x.AttachmentId == id, ct) && await ef.Set<MessageAttachment>().AnyAsync(x => x.AttachmentId == id, ct) &&
+        if (!file.InLibrary && !await ef.Set<AttachmentReference>().AnyAsync(x => x.AttachmentId == id, ct) && await ef.Set<MessageAttachment>().AnyAsync(x => x.AttachmentId == id, ct) &&
             !await (from link in ef.Set<MessageAttachment>() join message in ef.Set<AiNexus.Modules.Conversations.Message>() on link.MessageId equals message.Id join conversation in ef.Set<AiNexus.Modules.Conversations.Conversation>() on message.ConversationId equals conversation.Id where link.AttachmentId == id && !conversation.IsDeleted && conversation.OwnerId == owner select link).AnyAsync(ct))
             throw new ApiException(404, "attachment_not_found", "附件所屬對話已刪除。");
         return file;
@@ -64,15 +64,17 @@ public sealed class AttachmentService(IEfHelper<INexusDatabase> ef, DocumentExtr
         return files;
     }
 
-    public async Task RemoveDraftAsync(Guid owner, Guid id, CancellationToken ct)
+    public async Task RemoveDraftAsync(Guid owner, Guid id, CancellationToken ct, bool fromLibrary = false)
     {
         await writes.Gate.WaitAsync(ct);
         try
         {
             var file = await OwnedAsync(owner, id, ct);
+            // Removing a reused file from the composer must never delete its library original.
+            if (file.InLibrary && !fromLibrary) return;
             if (await ef.Set<MessageAttachment>().AnyAsync(x => x.AttachmentId == id, ct)) throw new ApiException(409, "attachment_in_use", "已送出的附件由對話保留，無法單獨刪除。");
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            var readers = await (from doc in db.Set<KnowledgeDocument>() join resource in db.Set<WorkspaceResource>() on doc.Id equals resource.Id where doc.AttachmentId == id && doc.CollectionId == null && resource.OwnerId == owner && !doc.IsDeleted select doc).ToListAsync(ct);
+            var readers = await (from doc in db.Set<KnowledgeDocument>() join resource in db.Set<WorkspaceResource>() on doc.Id equals resource.Id where doc.AttachmentId == id && doc.CollectionId == null && resource.ParentId == null && resource.OwnerId == owner && !doc.IsDeleted select doc).ToListAsync(ct);
             var readerIds = readers.Select(x => x.Id).ToArray();
             if (await ef.Set<AttachmentReference>().AnyAsync(x => x.AttachmentId == id && !readerIds.Contains(x.ResourceId), ct)) throw new ApiException(409, "attachment_in_use", "此附件由知識庫或專案保留，請從該項目移除。");
             foreach (var reader in readers) { reader.IsDeleted = true; reader.Status = "deleted"; reader.AttachmentId = null; }
@@ -84,6 +86,7 @@ public sealed class AttachmentService(IEfHelper<INexusDatabase> ef, DocumentExtr
             await db.SaveChangesAsync(ct);
             ef.Set<Attachment>().Remove(file);
             await ef.SaveChangesAsync(ct);
+            if (fromLibrary) { db.AuditEvents.Add(new() { OwnerId = owner, ResourceId = id, Action = "file.deleted", Result = "deleted" }); await db.SaveChangesAsync(ct); }
             await transaction.CommitAsync(ct);
         }
         finally { writes.Gate.Release(); }

@@ -302,6 +302,11 @@
               [accept]="store.attachments.accept()"
               (change)="uploadChanged($event)"
             />
+            <nx-library-picker
+              [compact]="true"
+              [disabled]="!store.canUpload()"
+              (chosen)="store.attachments.use($event.file)"
+            />
             <nx-composer-controls
               [models]="store.models()"
               [policy]="store.policy()"
@@ -455,7 +460,7 @@
         <p>
           「{{
             modalTarget()?.title
-          }}」將從歷史移除，僅由此對話使用的附件也會刪除。若想之後再接續，可先取消並使用封存。
+          }}」將從歷史移除，附件原檔仍保留在檔案庫。若想之後再接續，可先取消並使用封存。
         </p>
       }
       <div class="dialog-actions">

@@ -103,7 +103,7 @@ public sealed class ConversationService(IEfHelper<INexusDatabase> ef, NexusDbCon
                 await ef.SaveChangesAsync(ct);
                 // Delete only metadata stubs; never materialize image bytes to reclaim quota.
                 // Clones and other branches keep their own links and retain the shared file.
-                var unused = await ef.Set<Attachment>().Where(x => x.OwnerId == owner && fileIds.Contains(x.Id) && !ef.Set<MessageAttachment>().Any(link => link.AttachmentId == x.Id) && !ef.Set<AttachmentReference>().Any(link => link.AttachmentId == x.Id)).Select(x => new Attachment { Id = x.Id }).ToListAsync(ct);
+                var unused = await ef.Set<Attachment>().Where(x => x.OwnerId == owner && !x.InLibrary && fileIds.Contains(x.Id) && !ef.Set<MessageAttachment>().Any(link => link.AttachmentId == x.Id) && !ef.Set<AttachmentReference>().Any(link => link.AttachmentId == x.Id)).Select(x => new Attachment { Id = x.Id }).ToListAsync(ct);
                 ef.Set<Attachment>().RemoveRange(unused);
                 await ef.SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);

@@ -46,6 +46,22 @@ export class DraftAttachments {
     if (this.files().some((x) => x.analysisMode === 'ocr-required'))
       void this.processScans(version);
   }
+  async use(file: Attachment) {
+    const policy = this.policy();
+    if (!policy || this.uploading() || this.files().some((value) => value.id === file.id)) return;
+    if (
+      this.files().length >= policy.maxFilesPerMessage ||
+      this.files().reduce((sum, value) => sum + value.size, file.size) > policy.maxMessageBytes
+    ) {
+      this.error.set(
+        `每則提問最多 ${policy.maxFilesPerMessage} 個附件，總大小上限 ${Math.round(policy.maxMessageBytes / 1048576)} MB。`,
+      );
+      return;
+    }
+    this.files.update((values) => [...values, file]);
+    this.error.set('');
+    if (file.analysisMode === 'ocr-required') await this.processScans();
+  }
   async upload(files: FileList | File[]) {
     if (this.uploading() || !this.policy()) return;
     const policy = this.policy()!;

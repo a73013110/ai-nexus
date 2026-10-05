@@ -26,7 +26,7 @@ export function readerReturnUrl(value: unknown): string | null {
   const url = new URL(value, 'https://nexus.invalid');
   if (
     url.origin !== 'https://nexus.invalid' ||
-    !/^\/(?:dashboard|chat|knowledge|projects|artifacts|repositories|quality|shared|tasks|integrations|admin|settings)(?:\/[a-z0-9-]+)?$/i.test(
+    !/^\/(?:dashboard|chat|files|knowledge|projects|artifacts|repositories|quality|shared|tasks|integrations|admin|settings)(?:\/[a-z0-9-]+)?$/i.test(
       url.pathname,
     )
   )
@@ -35,6 +35,7 @@ export function readerReturnUrl(value: unknown): string | null {
 }
 
 export function readerReturnLabel(url: string) {
+  if (/^\/files(?:[/?#]|$)/.test(url)) return '返回檔案庫';
   if (/^\/chat(?:[/?#]|$)/.test(url)) return '返回對話';
   if (/^\/projects(?:[/?#]|$)/.test(url)) return '返回專案';
   if (/^\/knowledge(?:[/?#]|$)/.test(url)) return '返回知識庫';

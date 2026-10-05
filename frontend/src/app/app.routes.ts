@@ -5,6 +5,11 @@ import { WORKSPACE_HOME } from './core/workspace-home';
 
 export const routes: Routes = [
   {
+    path: 'files',
+    canActivate: [authenticated],
+    loadComponent: () => import('./features/files/files-page').then((module) => module.FilesPage),
+  },
+  {
     path: 'dashboard',
     canActivate: [authenticated],
     loadComponent: () => import('./features/dashboard/dashboard-page').then((m) => m.DashboardPage),

@@ -32,7 +32,7 @@ export default defineConfig({
   ],
   webServer: {
     command:
-      "pwsh -NoProfile -File scripts/Start-Local.ps1 -SkipBuild -Port 5180",
+      "pwsh -NoProfile -File scripts/Start-Local.ps1 -SkipBuild -Http -Port 5180",
     cwd: path.resolve(__dirname, "../.."),
     url: "http://localhost:5180/health/live",
     timeout: 30000,

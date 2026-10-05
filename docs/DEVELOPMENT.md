@@ -8,10 +8,11 @@
 ./scripts/Restore.ps1
 ./scripts/Configure-Local.ps1
 ./scripts/Initialize-Database.ps1
+dotnet dev-certs https --trust
 ./scripts/Start-Local.ps1
 ```
 
-開啟 http://localhost:5080/chat。第一次初始化使用有 DDL 權限的既有 SQL 登入；設定方式見 [CONFIGURATION](CONFIGURATION.md)。已有設定與 migrations 的日常啟動只需要 `Start-Local.ps1`。
+開啟 https://localhost:5080/chat。第一次初始化使用有 DDL 權限的既有 SQL 登入；設定方式見 [CONFIGURATION](CONFIGURATION.md)。開發機首次信任 SDK HTTPS 憑證後，已有設定與 migrations 的日常啟動只需要 `Start-Local.ps1`。
 
 ## 兩種運行方式
 
@@ -23,6 +24,8 @@
 整合預覽先 build Angular，再 publish .NET，將靜態產物放進 `artifacts/publish/wwwroot`；不需另外跑 npm server。已 build 可用 `Start-Local.ps1 -SkipBuild`。Ctrl+C 停止 host，重新 build 前先停止正在使用 publish 目錄的程序。
 
 開發模式會啟動 `dotnet watch` 與 Angular dev server。請開 4200；`/api`／`/health` 代理至後端，同源 cookie／CSRF 可以正常運作。Ctrl+C 同時停止腳本啟動的兩個程序。日誌放 `.local/logs/backend.log`、`frontend.log` 與各自 `.error.log`。啟動後等待前後端編譯完成才開頁面。
+
+兩種模式預設 HTTPS，Session／Antiforgery Cookie 使用 `Secure`、`HttpOnly`、`SameSite=Strict`。開發代理使用同一 SDK 憑證，將 PEM／private key 暫存在 ignored `.local/certs`，Node 只信任該憑證。純 HTTP 的自動化／localhost 測試必須明確加 `-Http`；例外只在 Development 且 Host 與來源 IP 都為 loopback 時生效，不能用於 Production。舊 `Security:DisableHttpsRedirection` 已移除，詳見 [安全](SECURITY.md)。
 
 ```powershell
 # 既有預覽占用 5080 時使用另一組 port
@@ -51,7 +54,7 @@
 開啟 Development API 後執行（整合預覽也可）：
 
 ```powershell
-./scripts/Export-Contracts.ps1 -BaseUrl http://localhost:5080
+./scripts/Export-Contracts.ps1 -BaseUrl https://localhost:5080
 ```
 
 一起提交 `contracts/openapi.json` 與自動產生的 `frontend/src/app/core/api/schema.ts`，不手改 generated 型別。JSON／SSE 的額外規範在 [contracts/SSE](../contracts/SSE.md)。工具的 TypeScript 5 獨立於 Angular 的 TypeScript 6。

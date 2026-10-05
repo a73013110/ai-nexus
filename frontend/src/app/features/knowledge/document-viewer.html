@@ -1,0 +1,211 @@
+<header class="viewer-heading">
+  <span class="viewer-symbol"><nx-icon [name]="isImage() ? 'image' : 'document'" /></span>
+  <div class="viewer-title">
+    <h1 [title]="document()?.fileName || ''">{{ document()?.fileName || '檔案預覽' }}</h1>
+    <span>{{ format() }}{{ total() > 1 ? ' · ' + total() + ' 頁' : '' }}</span>
+  </div>
+  <div class="viewer-actions">
+    @if (document()?.hasOriginal) {
+      <a
+        class="icon-button"
+        [href]="contentUrl() + '?download=true'"
+        aria-label="下載原檔"
+        title="下載原檔"
+        ><nx-icon name="download"
+      /></a>
+    }
+    @if (embedded()) {
+      <a
+        class="icon-button viewer-new-tab"
+        [href]="standaloneUrl()"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="在新分頁開啟"
+        title="在新分頁開啟"
+        ><nx-icon name="external"
+      /></a>
+      <button
+        class="icon-button"
+        [attr.aria-label]="expanded() ? '還原預覽視窗' : '放大預覽視窗'"
+        [title]="expanded() ? '還原視窗' : '放大視窗'"
+        (click)="expandRequested.emit()"
+      >
+        <nx-icon [name]="expanded() ? 'minimize' : 'maximize'" />
+      </button>
+      <button
+        autofocus
+        class="icon-button viewer-close"
+        aria-label="關閉檔案預覽"
+        title="關閉（Esc）"
+        (click)="closeRequested.emit()"
+      >
+        <nx-icon name="close" />
+      </button>
+    }
+  </div>
+</header>
+@if (document(); as info) {
+  <div class="viewer-toolbar">
+    @if (isPdf()) {
+      <div class="reader-pagination">
+        <button
+          class="icon-button"
+          aria-label="上一頁"
+          [disabled]="page() <= 1"
+          (click)="navigate(page() - 1)"
+        >
+          <nx-icon name="back" />
+        </button>
+        <nx-select
+          label="文件頁碼"
+          [options]="pageOptions()"
+          [value]="'' + page()"
+          (valueChange)="navigate(+$event)"
+        />
+        <button
+          class="icon-button"
+          aria-label="下一頁"
+          [disabled]="page() >= total()"
+          (click)="navigate(page() + 1)"
+        >
+          <nx-icon name="chevron" />
+        </button>
+      </div>
+    }
+    @if (isPdf() || isImage()) {
+      <div class="reader-mode" role="group" aria-label="文件檢視方式">
+        <button [attr.aria-pressed]="mode() === 'original'" (click)="setMode('original')">
+          <nx-icon name="eye" />{{ isImage() ? '原始圖片' : '原始頁面' }}
+        </button>
+        <button
+          [attr.aria-pressed]="mode() === 'text'"
+          [disabled]="busy()"
+          (click)="setMode('text')"
+        >
+          <nx-icon name="lines" />{{ rawImage() ? '辨識文字' : '擷取文字' }}
+        </button>
+      </div>
+    }
+    @if (isPdf() && mode() === 'original') {
+      <nx-select
+        class="viewer-zoom"
+        label="文件縮放"
+        [options]="zoomOptions"
+        [value]="zoom()"
+        (valueChange)="zoom.set($event)"
+      />
+    }
+    @if (isImage() && mode() === 'original') {
+      <nx-select
+        class="viewer-zoom"
+        label="圖片縮放"
+        [options]="imageZoomOptions"
+        [value]="imageZoom()"
+        [disabled]="imageLoading()"
+        (valueChange)="imageZoom.set($event)"
+      />
+    }
+    @if (hasText()) {
+      <label class="viewer-search"
+        ><nx-icon name="search" /><input
+          type="search"
+          aria-label="搜尋文件文字"
+          placeholder="搜尋文字"
+          maxlength="200"
+          [value]="query()"
+          (input)="query.set($any($event.target).value)"
+      /></label>
+    }
+  </div>
+  @if (query().trim()) {
+    <div class="reader-matches">
+      <span role="status">{{ matches().length }} 頁符合</span>
+      @for (match of matches(); track match.pageNumber) {
+        <button class="quiet-button" (click)="navigate(match.pageNumber); setMode('text')">
+          第 {{ match.pageNumber }} 頁
+        </button>
+      }
+    </div>
+  }
+  @if (job(); as job) {
+    @if (job.status !== 'completed' || info.warning) {
+      <details class="viewer-processing" [open]="job.status === 'failed'">
+        <summary>
+          <nx-icon name="info" />{{
+            job.status === 'failed'
+              ? '文件處理未完成'
+              : info.warning || '文字辨識與索引正在背景處理'
+          }}
+        </summary>
+        <nx-job-progress [job]="job" />
+        @if (canControl()) {
+          @if (job.status === 'queued' || job.status === 'running') {
+            <button
+              class="quiet-button"
+              [disabled]="busy() || job.cancelRequested"
+              (click)="control(false)"
+            >
+              停止處理
+            </button>
+          } @else if (job.status === 'failed' || job.status === 'cancelled') {
+            <button class="secondary-button" [disabled]="busy()" (click)="control(true)">
+              重新處理
+            </button>
+          }
+        }
+      </details>
+    }
+  }
+}
+@if (error() || renderError()) {
+  <p role="alert" class="viewer-error">{{ error() || renderError() }}</p>
+}
+<div
+  class="viewer-stage"
+  [class.viewer-image]="isImage() && mode() === 'original'"
+  [class.viewer-image-zoomed]="isImage() && imageZoom() !== 'fit'"
+  [attr.aria-busy]="loading() || rendering() || imageLoading()"
+>
+  @if (loading()) {
+    <p class="reader-loading" role="status">正在開啟文件…</p>
+  } @else if (document(); as info) {
+    @if (mode() === 'original' && (isPdf() || isImage())) {
+      <div class="reader-original">
+        @if (isPdf()) {
+          <canvas #pdfCanvas [attr.aria-label]="info.fileName + ' 第 ' + page() + ' 頁'"></canvas>
+        } @else {
+          @if (imageLoading()) {
+            <p class="reader-image-loading" role="status">正在載入原始圖片…</p>
+          }
+          <img
+            [src]="contentUrl()"
+            [alt]="info.fileName"
+            decoding="async"
+            [style.width.px]="imageZoom() === 'fit' ? null : imageSize().width * +imageZoom()"
+            [style.height.px]="imageZoom() === 'fit' ? null : imageSize().height * +imageZoom()"
+            [class.reader-image-pending]="imageLoading()"
+            [hidden]="!!renderError()"
+            (load)="imageLoaded($event)"
+            (error)="imageFailed()"
+          />
+        }
+      </div>
+    } @else {
+      <article class="reader-text">
+        @if (text(); as text) {
+          <div class="reader-text-meta">
+            <span>第 {{ text.pageNumber }} 頁</span
+            ><span>{{
+              text.extraction === 'ocr' ? 'AI 文字辨識 · 請核對原文' : '文件原生文字'
+            }}</span>
+          </div>
+          <pre><nx-text-highlight [text]="text.text" [query]="query()" /></pre>
+        } @else {
+          <p class="form-note">
+            {{ busy() ? '正在建立文字辨識工作…' : '此頁尚無擷取文字。處理完成後會自動顯示。' }}
+          </p>
+        }
+      </article>
+    }
+  }
+</div>

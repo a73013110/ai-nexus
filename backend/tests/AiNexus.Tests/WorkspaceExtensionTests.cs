@@ -53,7 +53,8 @@ public sealed class WorkspaceExtensionTests
         Assert.Equal(file.Id, Assert.Single(detail.Messages.Single(x => x.Role == "user").Attachments!).Id);
         await Send(client, conversation.Id, file.Id, first.UserMessageId);
         Assert.Contains("測試文件的重要內容", factory.Provider.LastMessages.Last().Content);
-        Assert.Equal(HttpStatusCode.Conflict, (await client.DeleteAsync($"/api/v1/attachments/{file.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/v1/attachments/{file.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await client.DeleteAsync($"/api/v1/files/{file.Id}")).StatusCode);
     }
 
     [Fact]
@@ -83,7 +84,7 @@ public sealed class WorkspaceExtensionTests
     }
 
     [Fact]
-    public async Task DeletingTheLastConversationReclaimsAttachmentQuota()
+    public async Task DeletingConversationRetainsLibraryFileUntilOwnerExplicitlyReclaimsQuota()
     {
         await using var factory = new NexusFactory(attachments: x => { x.MaxFileBytes = 1024; x.MaxMessageBytes = 1024; x.MaxOwnerBytes = 1024; });
         using var client = await factory.SignedInAsync();
@@ -93,7 +94,9 @@ public sealed class WorkspaceExtensionTests
         await Send(client, conversation.Id, file.Id);
         Assert.Equal(HttpStatusCode.RequestEntityTooLarge, (await UploadResponse(client, "second.txt", content)).StatusCode);
         (await client.DeleteAsync($"/api/v1/conversations/{conversation.Id}")).EnsureSuccessStatusCode();
-        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/v1/attachments/{file.Id}/content")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/v1/attachments/{file.Id}/content")).StatusCode);
+        Assert.Equal(HttpStatusCode.RequestEntityTooLarge, (await UploadResponse(client, "second.txt", content)).StatusCode);
+        (await client.DeleteAsync($"/api/v1/files/{file.Id}")).EnsureSuccessStatusCode();
         await Upload(client, "second.txt", content);
     }
 
@@ -248,7 +251,8 @@ public sealed class WorkspaceExtensionTests
         (await client.DeleteAsync($"/api/v1/conversations/{original.Id}")).EnsureSuccessStatusCode();
         Assert.Equal(Encoding.UTF8.GetBytes("clone attachment"), await client.GetByteArrayAsync($"/api/v1/attachments/{file.Id}/content"));
         (await client.DeleteAsync($"/api/v1/conversations/{clone.Id}")).EnsureSuccessStatusCode();
-        Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/v1/attachments/{file.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync($"/api/v1/attachments/{file.Id}")).StatusCode);
+        (await client.DeleteAsync($"/api/v1/files/{file.Id}")).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.NotFound, (await client.GetAsync($"/api/v1/attachments/{file.Id}/content")).StatusCode);
     }
 

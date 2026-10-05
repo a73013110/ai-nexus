@@ -1,5 +1,5 @@
 #requires -Version 7.4
-param([string]$BaseUrl = 'http://localhost:5080')
+param([string]$BaseUrl = 'https://localhost:5080')
 $ErrorActionPreference = 'Stop'
 $taskRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 # Start-Local or the development API must be running. No identity credentials are needed for this Development-only endpoint.

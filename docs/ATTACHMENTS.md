@@ -35,6 +35,6 @@ Host request body 上限 10 MB；一般 JSON 操作為 64 KB。提問／Context 
 
 歷史只載入 metadata；Context 預覽只讀文字及圖片預估成本。生成完成分支裁切後，才載入仍需要的圖片資料。附件關聯、提問與 run 在同一筆 transaction 建立，檢查失敗不會留下孤立訊息。
 
-未送出的附件可移除；送出後隨對話保留。刪除對話會在同一 transaction 移除附件關聯，沒有其他引用的原始檔會釋放配額；副本仍使用該附件則保留。訊息本身仍採 soft-delete。未送出的附件超過 `DraftRetentionDays`（預設 14 天）後，在該使用者下次上傳時清理，以回收中斷上傳／遺棄草稿；已連到歷史或資源引用的附件不會被這項規則移除。清除瀏覽器草稿不等同即時伺服器刪檔。資料庫備份需包含 attachments schema。JSON **文字備份**保存分支、指令、標籤及附件名稱，**不含原始檔**，匯入後須重新上傳附件；「建立對話副本」完整保留附件關聯。
+未送出的新附件可移除；成功送出、加入知識庫／專案或從檔案庫上傳後，`InLibrary` 保存原檔。刪除對話只移除訊息引用；原檔可在檔案庫再次使用。從輸入框移除已保存的檔案不會刪除原檔。要釋放空間，先移除對話、知識庫、專案與分享引用，再明確從檔案庫刪除；伺服器重新檢查引用，衝突回應 409。訊息本身仍採 soft-delete。未保存且未送出的附件超過 `DraftRetentionDays`（預設 14 天）後，在該使用者下次上傳時清理；檔案庫與任何資源仍引用的附件不在此規則內。清除瀏覽器草稿不等同即時伺服器刪檔。資料庫備份需包含 attachments schema。JSON **文字備份**保存分支、指令、標籤及附件名稱，**不含原始檔**，匯入後須重新上傳附件；「建立對話副本」完整保留附件關聯。操作與權限見 [檔案庫](FILES.md)。
 
 Google key 僅存在後端。使用 Google 時，本次需要的文字／圖片會傳送到 Google API。格式參考：[Gemma 圖片能力](https://ai.google.dev/gemma/docs/core/gemma_on_gemini_api#image-understanding)、[Google 圖片請求](https://ai.google.dev/gemini-api/docs/image-understanding)、[Ollama Chat API](https://docs.ollama.com/api/chat)、[PdfPig](https://github.com/UglyToad/PdfPig)。

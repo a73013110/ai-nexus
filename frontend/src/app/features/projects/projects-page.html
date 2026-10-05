@@ -3,7 +3,7 @@
   description="共用背景、指示與參考文件，讓每次工作都從相同的脈絡開始。"
 >
   <div page-actions class="page-actions">
-    <nx-personal-documents />
+    <a routerLink="/files" class="secondary-button"><nx-icon name="document" />檔案庫</a>
     <button
       class="primary-button"
       [disabled]="loading() || busy() || !session.has('projects')"

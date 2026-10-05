@@ -1,8 +1,10 @@
 #requires -Version 7.4
-param([switch]$Restore, [ValidateRange(1024,65535)][int]$BackendPort = 5080, [ValidateRange(1024,65535)][int]$FrontendPort = 4200)
+param([switch]$Restore, [switch]$Http, [ValidateRange(1024,65535)][int]$BackendPort = 5080, [ValidateRange(1024,65535)][int]$FrontendPort = 4200)
 $ErrorActionPreference = 'Stop'
 $taskRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 . (Join-Path $PSScriptRoot 'Local-Settings.ps1')
+. (Join-Path $PSScriptRoot 'Local-Https.ps1')
+if (!$Http) { Assert-NexusHttpsCertificate }
 Initialize-NexusLocalSettings
 $taskPaths = Get-NexusLocalPaths
 if ($Restore) { & (Join-Path $PSScriptRoot 'Restore.ps1') }
@@ -16,7 +18,17 @@ $taskDotnet = (Get-Command dotnet -CommandType Application | Select-Object -Firs
 $taskNg = Join-Path $taskRoot 'frontend/node_modules/@angular/cli/bin/ng.js'
 if (!(Test-Path -LiteralPath $taskNg)) { throw 'Run scripts/Restore.ps1 first.' }
 $taskProxy = Join-Path $taskRoot '.local/config/dev-proxy.json'
-Save-NexusJson $taskProxy @{ '/api' = @{ target = "http://localhost:$BackendPort"; secure = $false; changeOrigin = $false }; '/health' = @{ target = "http://localhost:$BackendPort"; secure = $false; changeOrigin = $false } }
+$taskScheme = if ($Http) { 'http' } else { 'https' }
+Save-NexusJson $taskProxy @{ '/api' = @{ target = "${taskScheme}://localhost:$BackendPort"; secure = $true; changeOrigin = $false }; '/health' = @{ target = "${taskScheme}://localhost:$BackendPort"; secure = $true; changeOrigin = $false } }
+$taskSslArguments = @()
+if (!$Http) {
+    $taskCertDirectory = Join-Path $taskRoot '.local/certs'
+    New-Item -ItemType Directory -Path $taskCertDirectory -Force | Out-Null
+    $taskCert = Join-Path $taskCertDirectory 'nexus-dev.pem'
+    dotnet dev-certs https --export-path $taskCert --format PEM --no-password --quiet
+    if ($LASTEXITCODE -ne 0) { throw '匯出本機 HTTPS 憑證失敗。' }
+    $taskSslArguments = @('--ssl', '--ssl-cert', $taskCert, '--ssl-key', (Join-Path $taskCertDirectory 'nexus-dev.key'))
+}
 $taskLogs = Join-Path $taskRoot '.local/logs'
 New-Item -ItemType Directory -Path $taskLogs -Force | Out-Null
 $taskChildren = [System.Collections.Generic.List[object]]::new()
@@ -32,6 +44,7 @@ function Start-NexusDevChild([string]$Name, [string]$Executable, [string]$Direct
     $taskInfo.Environment['NG_CLI_ANALYTICS'] = 'false'
     $taskInfo.Environment['DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER'] = '1'
     $taskInfo.Environment['DOTNET_WATCH_SUPPRESS_EMOJIS'] = '1'
+    if (!$Http) { $taskInfo.Environment['NODE_EXTRA_CA_CERTS'] = $taskCert }
     foreach ($taskArgument in $Arguments) { $taskInfo.ArgumentList.Add($taskArgument) }
     $taskChild = [System.Diagnostics.Process]::new()
     $taskChild.StartInfo = $taskInfo
@@ -42,9 +55,9 @@ function Start-NexusDevChild([string]$Name, [string]$Executable, [string]$Direct
 }
 
 try {
-    Start-NexusDevChild 'backend' $taskDotnet $taskRoot @('watch', '--project', 'backend/src/AiNexus.Api/AiNexus.Api.csproj', 'run', '--no-launch-profile', '--', '--urls', "http://localhost:$BackendPort", '--LocalConfigPath', $taskPaths.Settings, '--SecretsConfigPath', $taskPaths.Secrets)
-    Start-NexusDevChild 'frontend' $taskNode (Join-Path $taskRoot 'frontend') @($taskNg, 'serve', '--host', 'localhost', '--port', "$FrontendPort", '--proxy-config', $taskProxy)
-    Write-Output "開發模式：http://localhost:$FrontendPort/chat（Angular + API）。儲存原始碼後自動更新。"
+    Start-NexusDevChild 'backend' $taskDotnet $taskRoot @('watch', '--project', 'backend/src/AiNexus.Api/AiNexus.Api.csproj', 'run', '--no-launch-profile', '--', '--urls', "${taskScheme}://localhost:$BackendPort", '--Security:AllowInsecureLocalhost', "$($Http.IsPresent)", '--LocalConfigPath', $taskPaths.Settings, '--SecretsConfigPath', $taskPaths.Secrets)
+    Start-NexusDevChild 'frontend' $taskNode (Join-Path $taskRoot 'frontend') (@($taskNg, 'serve', '--host', 'localhost', '--port', "$FrontendPort", '--proxy-config', $taskProxy) + $taskSslArguments)
+    Write-Output "開發模式：${taskScheme}://localhost:$FrontendPort/chat（Angular + API）。儲存原始碼後自動更新。"
     Write-Output "啟動與錯誤紀錄：$taskLogs。Ctrl+C 同時停止兩個服務。"
     while ($true) {
         foreach ($taskChild in $taskChildren) {

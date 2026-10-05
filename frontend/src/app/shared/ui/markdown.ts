@@ -22,19 +22,26 @@ markdown.renderer.rules['link_open'] = (tokens, index, options, _env, self) => {
   token.attrSet('rel', 'noopener noreferrer');
   return self.renderToken(tokens, index, options);
 };
-markdown.renderer.rules['fence'] = (tokens, index) => {
+markdown.renderer.rules['fence'] = (tokens, index, _options, env) => {
   const token = tokens[index];
   const language = token.info.trim().split(/\s+/)[0].toLowerCase();
   const label = /^[\w#+-]{1,24}$/.test(language) ? language : 'text';
-  const code = hljs.getLanguage(language)
-    ? hljs.highlight(token.content, { language, ignoreIllegals: true }).value
-    : escape(token.content);
+  const code =
+    !env?.['streaming'] && hljs.getLanguage(language)
+      ? hljs.highlight(token.content, { language, ignoreIllegals: true }).value
+      : escape(token.content);
   return `<div class="code-block"><div class="code-toolbar"><span>${escape(label)}</span><button type="button" class="code-copy" title="複製程式碼" aria-label="複製程式碼">複製程式碼</button></div><pre><code>${code}</code></pre></div>`;
 };
 // This is the sole trusted-HTML boundary. Raw HTML is disabled at parsing, then the
 // generated markup is reduced to a small HTML allowlist. No arbitrary HTML input is trusted.
-export const renderMarkdown = (content: string): string =>
-  DOMPurify.sanitize(markdown.render(content), {
+export const markdownBlockStarts = (content: string): number[] =>
+  markdown
+    .parse(content, {})
+    .filter((token) => token.level === 0 && token.map)
+    .map((token) => token.map![0]);
+
+export const renderMarkdown = (content: string, streaming = false): string =>
+  DOMPurify.sanitize(markdown.render(content, { streaming }), {
     ALLOWED_TAGS: [
       'p',
       'br',

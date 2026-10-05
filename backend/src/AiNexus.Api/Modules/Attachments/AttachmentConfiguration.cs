@@ -14,6 +14,7 @@ public static class AttachmentConfiguration
         file.Property(x => x.FileName).HasMaxLength(180);
         file.Property(x => x.ContentType).HasMaxLength(80);
         file.HasIndex(x => new { x.OwnerId, x.CreatedAt });
+        file.HasIndex(x => new { x.OwnerId, x.InLibrary, x.CreatedAt, x.Id });
         file.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
         var link = model.Entity<MessageAttachment>();
         link.ToTable("MessageAttachments", "attachments");

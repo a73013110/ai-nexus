@@ -63,8 +63,23 @@ export class WorkspaceNavigation {
   readonly activated = output<void>();
   readonly expanded = signal(false);
   readonly toggle = (value: boolean) => !value;
-  readonly visibleGroups = computed(() => groupFeatures(this.session.me()?.access.features || []));
+  readonly visibleGroups = computed(() => {
+    const features = this.session.me()?.access.features || [];
+    const hasFiles = features.some((feature) =>
+      ['chat', 'knowledge', 'projects'].includes(feature.id),
+    );
+    return groupFeatures(
+      hasFiles
+        ? [
+            ...features.slice(0, 2),
+            { id: 'files', name: '檔案庫', route: '/files' },
+            ...features.slice(2),
+          ]
+        : features,
+    );
+  });
   readonly shortNames: Record<string, string> = {
+    files: '檔案庫',
     dashboard: '總覽',
     repositories: '程式庫',
     chat: '對話',
@@ -78,6 +93,7 @@ export class WorkspaceNavigation {
     shared: '分享',
   };
   readonly icons: Record<string, string> = {
+    files: 'document',
     dashboard: 'dashboard',
     repositories: 'git',
     chat: 'lines',

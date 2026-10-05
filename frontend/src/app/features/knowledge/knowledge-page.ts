@@ -23,7 +23,9 @@ import { ResourceSharing } from '../../shared/ui/resource-sharing';
 import { FileDrop } from '../../shared/browser/file-drop';
 import { WorkspaceApi } from '../workspace/workspace-api';
 import { KnowledgeApi } from './knowledge-api';
-import { PersonalDocuments } from './personal-documents';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { LibraryPicker } from '../files/library-picker';
+import type { LibraryFile } from '../../core/api/types';
 import { ReaderLink } from '../../shared/browser/reader-link';
 
 @Component({
@@ -35,7 +37,8 @@ import { ReaderLink } from '../../shared/browser/reader-link';
     ActionMenu,
     ResourceSharing,
     FileDrop,
-    PersonalDocuments,
+    RouterLink,
+    LibraryPicker,
     ReaderLink,
   ],
   providers: [ViewScope],
@@ -48,7 +51,7 @@ export class KnowledgePage {
   private readonly scope = inject(ViewScope);
   readonly session = inject(WorkspaceSession);
   readonly collections = signal<Collection[]>([]);
-  readonly selected = signal('');
+  readonly selected = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('collection') || '');
   readonly documents = signal<DocumentInfo[]>([]);
   readonly policy = signal<AttachmentPolicy | null>(null);
   readonly loading = signal(true);
@@ -133,6 +136,24 @@ export class KnowledgePage {
     this.query.set('');
     this.filter.set('');
     await this.loadDocuments();
+  }
+  async addLibrary(file: LibraryFile) {
+    const collection = this.selected(),
+      valid = this.scope.guard();
+    if (!collection || this.uploading() || !this.current()?.resource.canEdit) return;
+    this.uploading.set(true);
+    this.error.set('');
+    try {
+      await this.api.add(collection, file.file.id);
+      if (valid()) {
+        this.notice.set('已從檔案庫加入來源，索引會在背景建立。');
+        await this.load();
+      }
+    } catch (error) {
+      if (valid()) this.error.set(this.scope.message(error));
+    } finally {
+      if (valid()) this.uploading.set(false);
+    }
   }
   async loadDocuments(poll = false) {
     const id = this.selected(),

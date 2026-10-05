@@ -92,6 +92,8 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
             if (search is not null) search.RunId = run.Id;
             knowledge.Bind(assistant.Id, sources);
             foreach (var file in files) db.Set<MessageAttachment>().Add(new() { MessageId = user.Id, AttachmentId = file.Id });
+            var fileIds = files.Select(x => x.Id).ToArray();
+            await db.Set<Attachment>().Where(x => fileIds.Contains(x.Id) && x.OwnerId == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
             await context.BuildAsync(run.ConversationId, user.Id, JsonSerializer.Deserialize<GenerationParameters>(run.ParametersJson)!, ct);
             db.Runs.Add(run);
             AddEvent(db, run, "status");

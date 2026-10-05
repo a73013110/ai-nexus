@@ -25,7 +25,7 @@ pwsh -NoProfile -File scripts/Initialize-Database.ps1
 pwsh -NoProfile -File scripts/Start-Local.ps1
 ```
 
-第一個指令以遮蔽方式輸入 SQL 帳密、AD 服務密碼和 Google key；Enter 保留舊值。初始化可重跑，不會清空資料。`Start-Local` 編譯前端並發版後端，**一個後端程序**在 `http://localhost:5080` 同時提供網站與 API；日常使用不需開兩個視窗。若要前端熱更新，再使用 `Start-Dev.ps1` 的開發流程，見 [README](../README.md)。
+第一個指令以遮蔽方式輸入 SQL 帳密、AD 服務密碼和 Google key；Enter 保留舊值。初始化可重跑，不會清空資料。`Start-Local` 編譯前端並發版後端，**一個後端程序**在 `https://localhost:5080` 同時提供網站與 API；開發機先以 `dotnet dev-certs https --trust` 信任 SDK 憑證。日常使用不需開兩個視窗。若要前端熱更新，再使用 `Start-Dev.ps1` 的開發流程，見 [README](../README.md)。
 
 ```powershell
 # 已建置時快速啟動

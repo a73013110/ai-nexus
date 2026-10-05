@@ -85,7 +85,10 @@ test("chat history stays primary with grouped tools collapsed and settings only 
   await expect(
     page.getByRole("menuitem", { name: "設定", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("menuitem")).toHaveCount(1);
+  await expect(
+    page.getByRole("menuitem", { name: "切換登入方式", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("menuitem")).toHaveCount(2);
   await page.keyboard.press("Escape");
   await settleEntrance(page);
   await page.screenshot({

@@ -82,9 +82,14 @@ nx-chat-message {
   border-radius: var(--p-radius-md);
 }
 .streaming-copy {
-  white-space: pre-wrap;
   line-height: var(--line-reading);
   overflow-wrap: anywhere;
+  > nx-markdown-view {
+    display: block;
+  }
+  .stream-committed {
+    margin-bottom: 16px;
+  }
 }
 .message-actions {
   display: flex;

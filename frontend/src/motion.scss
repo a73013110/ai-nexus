@@ -243,7 +243,7 @@
     transform: scale(1);
   }
 }
-.streaming-copy::after {
+.stream-cursor {
   content: '';
   display: inline-block;
   width: 0.35rem;
@@ -270,13 +270,13 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .signal-flow,
-  .streaming-copy::after,
+  .stream-cursor,
   .composer.is-busy::before {
     animation: none !important;
   }
 }
 :root[data-reduced-motion='true'] .signal-flow,
-:root[data-reduced-motion='true'] .streaming-copy::after,
+:root[data-reduced-motion='true'] .stream-cursor,
 :root[data-reduced-motion='true'] .composer.is-busy::before {
   animation: none !important;
 }

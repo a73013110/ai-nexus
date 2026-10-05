@@ -33,7 +33,6 @@ import { KnowledgeApi } from '../knowledge/knowledge-api';
 import { ProjectsApi } from './projects-api';
 import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
 import { SearchField } from '../../shared/ui/search-field';
-import { PersonalDocuments } from '../knowledge/personal-documents';
 
 @Component({
   selector: 'nx-projects-page',
@@ -47,7 +46,6 @@ import { PersonalDocuments } from '../knowledge/personal-documents';
     ResourceSharing,
     TextTools,
     SearchField,
-    PersonalDocuments,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,

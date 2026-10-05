@@ -42,6 +42,7 @@ import type {
   Run,
   RunEvent,
   Attachment,
+  LibraryFile,
   PromptTemplate,
 } from "../../frontend/src/app/core/api/types";
 
@@ -81,6 +82,44 @@ export class ApiFixture {
   readonly events = new Map<string, RunEvent[]>();
   readonly submissions = new Map<string, Run>();
   readonly attachments: Attachment[] = [];
+  readonly retainedFiles = new Set<string>();
+  readonly fileUsages = new Map<string, LibraryFile["usages"]>();
+  libraryItems(): LibraryFile[] {
+    return this.attachments
+      .filter((file) => this.retainedFiles.has(file.id))
+      .slice()
+      .reverse()
+      .map((file) => {
+        const usages = [...(this.fileUsages.get(file.id) || [])];
+        for (const message of this.messages.filter((value) =>
+          value.attachments?.some((attachment) => attachment.id === file.id),
+        )) {
+          const conversation = this.conversations.find(
+            (value) => value.id === this.messageConversation.get(message.id),
+          );
+          if (
+            conversation &&
+            !usages.some(
+              (value) =>
+                value.kind === "chat" && value.resourceId === conversation.id,
+            )
+          )
+            usages.push({
+              kind: "chat",
+              resourceId: conversation.id,
+              name: conversation.title,
+              documentId: null,
+              status: null,
+            });
+        }
+        return {
+          file,
+          createdAt: "2026-10-05T02:00:00Z",
+          usages,
+          canDelete: !usages.length,
+        };
+      });
+  }
   readonly attachmentData = new Map<string, Buffer>();
   readonly prompts: PromptTemplate[] = [];
   readonly messageConversation = new Map<string, string>();
@@ -110,6 +149,7 @@ export class ApiFixture {
   stateReads = 0;
   answer = richAnswer;
   hold = false;
+  partialAnswer = "這是已保存的部分回答。";
   disconnectOnce = false;
   losePostOnce = false;
   unavailable = false;
@@ -352,7 +392,11 @@ export class ApiFixture {
       const attachment: Attachment = {
         id: randomUUID(),
         fileName: file.name,
-        contentType: isImage ? file.type || "image/png" : "text/plain",
+        contentType: isImage
+          ? file.type || "image/png"
+          : /\.pdf$/i.test(file.name)
+            ? "application/pdf"
+            : "text/plain",
         size: data.length,
         isImage,
         analysisMode: isImage ? "vision" : "extracted-text",
@@ -361,6 +405,54 @@ export class ApiFixture {
       this.attachmentData.set(attachment.id, data);
       return json(attachment);
     }
+    const libraryFile = /^\/files\/([^/]+)(\/retain)?$/.exec(path);
+    if (libraryFile) {
+      const file = this.attachments.find(
+        (value) => value.id === libraryFile[1],
+      );
+      if (!file) return json({ title: "找不到檔案。" }, 404);
+      if (libraryFile[2]) this.retainedFiles.add(file.id);
+      else {
+        if (
+          this.libraryItems().find((value) => value.file.id === file.id)
+            ?.canDelete === false
+        )
+          return json({ title: "檔案仍被引用。" }, 409);
+        this.retainedFiles.delete(file.id);
+        this.attachments.splice(this.attachments.indexOf(file), 1);
+      }
+      return route.fulfill({ status: 204 });
+    }
+    if (path === "/files") {
+      const query = new URL(route.request().url()).searchParams;
+      let items = this.libraryItems();
+      const storedBytes = items.reduce(
+        (sum, value) => sum + value.file.size,
+        0,
+      );
+      const search = (query.get("search") || "").toLowerCase(),
+        type = query.get("type"),
+        source = query.get("source");
+      items = items.filter(
+        (value) =>
+          value.file.fileName.toLowerCase().includes(search) &&
+          (type !== "images" || value.file.isImage) &&
+          (type !== "documents" || !value.file.isImage) &&
+          (!source ||
+            source === "all" ||
+            (source === "library" && !value.usages.length) ||
+            value.usages.some((usage) => usage.kind === source)),
+      );
+      const offset = Number(query.get("offset")) || 0,
+        limit = Number(query.get("limit")) || 40;
+      return json({
+        items: items.slice(offset, offset + limit),
+        total: items.length,
+        storedBytes,
+        offset,
+        limit,
+      });
+    }
     const attachmentRoute = /^\/attachments\/([^/]+)(\/content)?$/.exec(path);
     if (attachmentRoute) {
       const file = this.attachments.find(
@@ -368,6 +460,8 @@ export class ApiFixture {
       );
       if (!file) return json({ title: "找不到附件。" }, 404);
       if (method === "DELETE") {
+        if (this.retainedFiles.has(file.id))
+          return route.fulfill({ status: 204 });
         this.attachments.splice(this.attachments.indexOf(file), 1);
         return route.fulfill({ status: 204 });
       }
@@ -599,6 +693,8 @@ export class ApiFixture {
           errorCode: null,
         };
         this.messages.push(user);
+        for (const id of request.attachmentIds ?? [])
+          this.retainedFiles.add(id);
       }
       const assistant: Message = {
         id: randomUUID(),
@@ -688,7 +784,7 @@ export class ApiFixture {
           run.status = "running";
           run.startedAt = new Date().toISOString();
           run.content = assistant.content = this.hold
-            ? "這是已保存的部分回答。"
+            ? this.partialAnswer
             : this.answer;
           assistant.status = this.hold ? "running" : "completed";
           const events = this.events.get(run.id)!;

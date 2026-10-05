@@ -104,7 +104,7 @@ NexusConnectionFactory 以 marker 對應 AiNexus、CLI 專用 master，以及 Le
 
 ## 保存與備份
 
-RunEvents 預設保留 24 小時 replay，權威 run 快照仍可恢復；未被訊息／資源／分享引用的附件依保留期清理。分享到期可清理快照，soft-delete 對話、成果、audit 與評測等保存期由部署單位制定，再加入明確 retention。
+RunEvents 預設保留 24 小時 replay，權威 run 快照仍可恢復；未保存到檔案庫且未被訊息／資源／分享引用的草稿附件依保留期清理。檔案庫原檔需沒有引用後由擁有者明確刪除。分享到期可清理快照，soft-delete 對話、成果、audit 與評測等保存期由部署單位制定，再加入明確 retention。
 
 完整備份包含全部 schema 與原始附件，JSON 文字備份不含附件。Data Protection key ring 另備份。應在獨立資料庫實際還原，核對 SID、角色、ACL、訊息樹、版本、索引 profile 及跨帳號隔離；不能只以產生 bak 檔判定完成。recovery model 與完整／差異／log 排程由 DBA 設定。
 
@@ -115,3 +115,7 @@ RunEvents 預設保留 24 小時 replay，權威 run 快照仍可恢復；未被
 報表在 SQL 彙總 owner／日期／模型／幣別／類型，不讀取所有訊息內容；查詢上限 366 天，使用開始含／結束不含。費用與搜尋表有 owner／created time 索引，價格有 provider／model／effective time 唯一索引，搜尋有 owner／idempotency key 唯一索引。Gitea token 用 Data Protection 加密，備份 SQL 時需同時保存 key ring 與保護身分；否則 token 需重新連線。
 
 詳見 [費用](BILLING.md)、[搜尋](WEB_SEARCH.md)、[Gitea](GITEA.md)、[模型比較](EMBEDDING_MODELS.md)。
+
+## 檔案庫升級
+
+`20261005131605_FileLibraryRetention` 新增 Attachments.InLibrary 與 owner／保留狀態／時間／ID 索引。已有對話或資源引用的原檔會標記為已保存，不複製 binary，既有 ACL 維持由文件來源授權。新版本的 API 需要先套用 migration；停止舊 host，執行 `./scripts/Initialize-Database.ps1` 後再啟動。見 [檔案庫](FILES.md)。

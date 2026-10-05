@@ -1,6 +1,6 @@
 <nx-feature-page title="知識庫" description="整理可查核的文件來源，讓 AI 回答附上依據與頁碼。">
   <div page-actions class="page-actions">
-    <nx-personal-documents />
+    <a routerLink="/files" class="secondary-button"><nx-icon name="document" />檔案庫</a>
     <button
       class="primary-button"
       (click)="openEditor()"
@@ -52,6 +52,12 @@
       <p class="knowledge-description">{{ collection.description }}</p>
     }
     @if (collection.resource.canEdit) {
+      <div class="knowledge-library-action">
+        <nx-library-picker [disabled]="uploading()" (chosen)="addLibrary($event)" /><span
+          class="form-note"
+          >重用對話附件與已保存的原檔，無須再次上傳。</span
+        >
+      </div>
       <div class="knowledge-upload" [nxFileDrop]="!uploading()" (filesDropped)="upload($event)">
         <nx-icon name="upload" />
         <div>
@@ -229,7 +235,7 @@
     <p>
       將移除「{{ deleteTarget()?.name }}」{{
         deleteTarget()?.collection ? '與其中所有文件' : ''
-      }}的來源與索引。已生成的對話文字會保留；來源連結將無法再開啟。
+      }}的來源與索引。原檔仍保留在檔案庫；已生成的對話文字會保留，來源引用連結將失效。
     </p>
     <div class="dialog-actions">
       <button class="secondary-button" [disabled]="saving()" (click)="deleteDialog.close()">

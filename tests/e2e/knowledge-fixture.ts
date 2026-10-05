@@ -45,6 +45,7 @@ export class KnowledgeFixture {
   readonly collections: Collection[] = [];
   readonly documents: DocumentInfo[] = [];
   readonly attachmentDocuments = new Map<string, string>();
+  readonly documentFiles = new Map<string, string>();
   readonly jobs: Job[] = [];
   readonly selections = new Map<string, string[]>();
   acl: ResourceAcl = { members: [], groupIds: [] };
@@ -89,6 +90,27 @@ export class KnowledgeFixture {
     });
     collection.documents = 1;
     collection.readyDocuments = 1;
+    const fileId = randomUUID();
+    this.core.attachments.push({
+      id: fileId,
+      fileName: "差旅費用申請.pdf",
+      contentType: "application/pdf",
+      size: twoPagePdf().length,
+      isImage: false,
+      analysisMode: "extracted-text",
+    });
+    this.core.attachmentData.set(fileId, twoPagePdf());
+    this.core.retainedFiles.add(fileId);
+    this.core.fileUsages.set(fileId, [
+      {
+        kind: "knowledge",
+        resourceId: collection.resource.id,
+        name: collection.resource.name,
+        documentId: id,
+        status: "ready",
+      },
+    ]);
+    this.documentFiles.set(id, fileId);
     return this.documents[0];
   }
   collection(name: string) {
@@ -164,6 +186,20 @@ export class KnowledgeFixture {
             hasOriginal: true,
           };
           this.documents.push(document);
+          this.documentFiles.set(document.id, file.id);
+          this.core.retainedFiles.add(file.id);
+          const collection = this.collections.find(
+            (value) => value.resource.id === list[1],
+          )!;
+          const usages = this.core.fileUsages.get(file.id) || [];
+          usages.push({
+            kind: "knowledge",
+            resourceId: list[1],
+            name: collection.resource.name,
+            documentId: document.id,
+            status: "ready",
+          });
+          this.core.fileUsages.set(file.id, usages);
           return json(document);
         }
         return json(this.documents.filter((x) => x.collectionId === list[1]));
@@ -250,6 +286,18 @@ export class KnowledgeFixture {
       if (document) {
         const doc = this.documents.find((x) => x.id === document[1]);
         if (!doc) return json({ title: "來源已移除。" }, 404);
+        if (method === "DELETE") {
+          const file = this.documentFiles.get(doc.id);
+          if (file)
+            this.core.fileUsages.set(
+              file,
+              (this.core.fileUsages.get(file) || []).filter(
+                (value) => value.documentId !== doc.id,
+              ),
+            );
+          this.documents.splice(this.documents.indexOf(doc), 1);
+          return route.fulfill({ status: 204 });
+        }
         if (document[2] === "/pages" && doc.contentType.startsWith("image/"))
           return json([
             {
