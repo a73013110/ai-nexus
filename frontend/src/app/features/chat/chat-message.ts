@@ -9,10 +9,11 @@ import { MessageTree } from './message-tree';
 import { ThinkingIndicator } from '../../shared/ui/thinking-indicator';
 import { RouterLink } from '@angular/router';
 import { MessageFeedback } from '../quality/message-feedback';
+import { ChargeLabel } from '../billing/charge-label';
 
 @Component({
   selector: 'nx-chat-message',
-  imports: [Icon, AttachmentList, ThinkingIndicator, RouterLink, MarkdownView, MessageFeedback],
+  imports: [Icon, AttachmentList, ThinkingIndicator, RouterLink, MarkdownView, MessageFeedback, ChargeLabel],
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <article
@@ -71,6 +72,11 @@ import { MessageFeedback } from '../quality/message-feedback';
     @if (message().status === 'cancelled' && !active()) {
       <p class="message-note">已停止 · 保留部分回答</p>
     }
+    @if (!active() && message().webSources; as sources) {
+      @if (sources.length) { <nav class="source-citations web-citations" aria-label="網路搜尋來源">@for (source of sources; track source.number) { <a [href]="source.url" target="_blank" rel="noopener noreferrer" [title]="source.excerpt + ' · ' + source.retrievedAt"><strong>[網路{{ source.number }}]</strong><span>{{ source.title }}</span><nx-icon name="globe" /></a> }</nav> }
+      @else { <p class="message-note">這次網路搜尋沒有可引用的摘要。</p> }
+    }
+    @if (!active() && message().role === 'assistant') { <div class="message-charges">@if (message().charge; as charge) { <nx-charge-label [charge]="charge" /> }@if (message().webSearchCharge; as charge) { <span>搜尋</span><nx-charge-label [charge]="charge" /> }</div> }
     @if (message().status === 'failed' && !active()) {
       <p class="message-note error-note">{{ failureText() }}，可重新生成。</p>
     }

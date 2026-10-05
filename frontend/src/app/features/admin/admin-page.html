@@ -5,6 +5,8 @@
 >
   <div page-actions class="page-actions">
     @if (session.has('admin')) {
+      <a routerLink="/dashboard" [queryParams]="{ scope: 'platform' }" class="secondary-button"><nx-icon name="chart" />平台費用</a>
+      <nx-price-book />
       <a routerLink="/design" class="secondary-button"><nx-icon name="sliders" />介面元件</a>
     }
   </div>

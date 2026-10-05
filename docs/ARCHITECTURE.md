@@ -35,6 +35,10 @@ flowchart LR
 | Projects       | 共用指示／文件／範本／成果；提問仍屬個人                          |
 | Quality        | 私人回饋、固定評測、方案／設定快照、逐題結果及人工評分            |
 | Integrations   | 來源政策、固定授權 view、唯讀搜尋／歷程、明確匯入與聊天草稿       |
+| Billing        | 追加價格版本、呼叫價格快照、實際用量計費、區間 SQL 彙總與 CSV；不以 Context 預估冒充帳單 |
+| WebSearch      | 可控搜尋 provider、本人配額與冪等搜尋紀錄、可核對來源；不爬取結果網站 |
+| Repositories   | 使用者 Gitea token 保護、唯讀 repository／issues／檔案、固定 commit 匯入與來源追溯 |
+| Dashboard      | 組合已授權的資源、任務與費用統計；平台範圍另驗 admin，沒有第二套計量邏輯 |
 
 BuildingBlocks.ApiEndpoints 組裝模組；BuildingBlocks 管 host、共用錯誤／契約、context 與 migrations，Database 管 SqlClient、markers 與原始 EDoc helpers。模組間使用明確服務，不新增能繞過 owner、ACL 或模型核准的資料入口。
 
@@ -63,6 +67,8 @@ BuildingBlocks.ApiEndpoints 組裝模組；BuildingBlocks 管 host、共用錯�
 
 共享 UI 的 DOM ID 每個實例唯一；浮層使用原生 top layer，避免 dialog／捲動區裁切。管理員元件頁 /design 以正式元件及本機範例檢查主題、鍵盤、停用、確認與有限階段動畫。見 [設計系統](DESIGN_SYSTEM.md)。
 
+`InfoPopover` 統一單次／全對話費用的焦點、Esc 與邊界定位；`TrendChart` 使用同一份資料提供 SVG、鍵盤游標與文字表格。Dashboard 的流向圖只呈現真實資源／索引／生成狀態，與後端查詢分離。圖示沿用同一個 Lucide renderer，工作區與快捷指令各有獨立語意。
+
 ## 生成與背景任務
 
 聊天生成驗核准模型、群組配額、owner、思考能力及冪等 key，再於 transaction 保存訊息、run、參數與首個事件。Context 只略過本次送往模型的最舊完整輪次，不刪歷史。worker 每 80ms／512 字元保存部分文字與 replay 事件；SSE 中斷不停止生成，恢復以 GET snapshot／序號進行。編輯新增分支，重新生成新增 assistant sibling。見 [SSE 契約](../contracts/SSE.md)。
@@ -72,6 +78,14 @@ BuildingBlocks.ApiEndpoints 組裝模組；BuildingBlocks 管 host、共用錯�
 OCR、段落工具與評測共用 ModelTaskService 的核准、配額及用量；保留配額以使用者 SQL row lock 序列化，RPC 不持有 transaction。評測凍結題庫、指令及模型設定指紋，設定變更阻擋執行／重試，已完成結果保留。來源文字以不可信資料封裝，授權在遠端呼叫前後再檢查。
 
 聊天排程仍在程序內，**每個 IIS app 使用一個 worker**，不開 web garden 或重疊 recycle。GenerationRuns 保存 ExecutorId 與兩分鐘的 LeaseExpiresAt，worker 每 15 秒續約；其他實例只處理已到期的租約，避免 local 與 IIS 共用資料庫時互相中止生成。取消先更新 SQL，原 executor 在續約時偵測並停止。這並未提供全域持久佇列或跨程序的模型容量限制；擴展前仍需補上。首次升級租約版本必須先停止所有舊 host，詳見 [IIS 文件](../deploy/iis/README.md)。
+
+## 費用與外部連線
+
+呼叫以 run／invocation ID 建立唯一 `ModelCharge`，預約時凍結有效價格；串流用量更新與結束狀態使用同一個 BillingService。價格為追加版本，歷史不重算；取消、失敗與 usage 缺失會保留未知費用，不填成零。SQL 報表依幣別與 API／內部成本分組，以參數化日期區間在資料庫彙總；隱藏模型名稱的政策同時套用對話與個人費用報表。詳見 [費用](BILLING.md)。
+
+WebSearch 在送出前才對公開提問查詢，搜尋冪等 key 與配額在 SQL 協調；來源是有限摘要，封裝為不可信資料。Gitea 不使用共用平台 token，每人透過 Data Protection 加密保存自己的 token，保護目的綁定登入者與伺服器 URL。兩種 provider 都限制 HTTP 回應大小、停用重新導向及預設 request logging，避免 credential／query 外洩。
+
+Gitea 的連線／解除與匯入寫入由本機鎖協調，固定 commit 的成功匯入會重用既有文件。此部署要求一個 worker；若擴展為多台並行匯入，需再建立資料庫層的匯入預約與唯一約束。外部呼叫不持有 SQL transaction，也不宣稱能保證外部 exactly-once。
 
 ## 資料層與新增功能
 

@@ -37,6 +37,7 @@ import { Select } from '../../shared/ui/select';
         (valueChange)="effortChange.emit($event)"
       />
     }
+    <button type="button" class="search-toggle" aria-label="搜尋網路" [attr.aria-pressed]="webSearch()" [title]="webSearchNotice()" [disabled]="disabled() || !webSearchAvailable()" (click)="webSearchChange.emit(!webSearch())"><nx-icon name="globe" /><span>搜尋網路</span></button>
     <details class="context-details" nxDisclosure>
       <summary
         class="context-trigger"
@@ -75,6 +76,7 @@ import { Select } from '../../shared/ui/select';
               其中約 {{ context.reservedKnowledgeTokens.toLocaleString() }} tokens 預留給知識來源。
             </p>
           }
+          @if (context.reservedWebSearchTokens) { <p>約 {{ context.reservedWebSearchTokens.toLocaleString() }} tokens 預留給網路摘要（不會在預覽時搜尋）。</p> }
           @if (context.droppedMessages) {
             <p>這次會略過最早 {{ context.droppedMessages }} 則上文；原始歷史仍保留。</p>
           }
@@ -100,6 +102,10 @@ export class ComposerControls {
   readonly usage = input<ContextUsage | null>(null);
   readonly modelChange = output<string>();
   readonly effortChange = output<string>();
+  readonly webSearch = input(false);
+  readonly webSearchAvailable = input(false);
+  readonly webSearchNotice = input('');
+  readonly webSearchChange = output<boolean>();
   readonly selected = computed(() => this.models().find((x) => x.id === this.modelId()));
   readonly modelOptions = computed(() =>
     this.models().map((x) => ({

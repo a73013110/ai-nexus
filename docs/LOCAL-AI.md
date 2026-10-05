@@ -10,9 +10,7 @@ Context 與並行數會增加 KV 記憶體。先設定 Ollama `OLLAMA_NUM_PARALL
 
 若實測 KV cache 佔用偏高，再測 Flash Attention 與 `OLLAMA_KV_CACHE_TYPE=q8_0`；先確認後端／GPU 支援並比較檢索回答品質，不預設開 q4 cache。Ollama 的 cache 量化是全域設定，也會影響其他模型，不能把權重量化與 KV cache 量化當成同一件事。[Ollama KV cache 說明](https://docs.ollama.com/faq#how-can-i-set-the-quantization-type-for-the-k-v-cache)
 
-Embedding 建議先測 `qwen3-embedding:0.6b`，Ollama 下載約 639MB；Qwen 官方模型支援 32–1024 自訂維度，所以可先用 **768 維**配合現有 `VECTOR(768)`。仍須確認實際 Ollama 版本的 `/api/embed` 回傳 768，不可任意截斷不支援降維的其他模型。[Ollama embedding 模型](https://ollama.com/library/qwen3-embedding)、[Qwen 模型規格](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B)、[Ollama embed API](https://docs.ollama.com/api/embed)
-
-本地檢索驗收亦需比較模型的 query 前處理。Qwen 官方建議查詢加檢索任務指示、文件不加；現行通用 Ollama adapter 尚未自動加入這種模型專屬前綴。下一階段將它做成版本化的 embedding profile，讓查詢與文件前處理可重現，先經繁中驗收集比較再切換。[Qwen 查詢指示範例](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B#usage)
+Embedding 現在建議把 **BGE-M3（1024 維）與 Qwen3-Embedding-0.6B（768／1024 維）並列比較**。BGE 可與 Qwen 回答模型搭配，不需要相同品牌。先前 Qwen 建議著重小型 Ollama 部署與既有 768 維相容性，不是繁中檢索品質的定論；本版已新增 BGE 1024 欄位與 Qwen query-only 前處理／版本指紋。規格、取捨與可重複驗收工具見 [EMBEDDING_MODELS](EMBEDDING_MODELS.md)。
 
 在 GPU 主機下載模型後，執行只使用合成資料的探測：
 
@@ -28,11 +26,11 @@ ollama ps
 
 ## AI Nexus 設定
 
-將一般設定的 `Inference.Provider` 改 `ollama`，保留或調整 `Inference.Providers.Ollama` 的 endpoint、default profile。另將 `Knowledge.Embedding.Provider` 改 `ollama`、`Model` 改 `qwen3-embedding:0.6b`、`Dimensions` 保持 768。兩個設定都改才是完全本地。也可先 `Embedding.Provider=none` 用關鍵字，等本地模型可連後切換；不會自動改你目前已成功使用的 Google 設定。
+將一般設定的 `Inference.Provider` 改 `ollama`，保留或調整 `Inference.Providers.Ollama` 的 endpoint、default profile。另將 `Knowledge.Embedding.Provider` 改 `ollama`、`Model` 改 `qwen3-embedding:0.6b`、`Dimensions` 保持 768、`InputFormat=qwen-query`；或選 BGE-M3、1024、plain。兩個設定都改才是完全本地。也可先 `Embedding.Provider=none` 用關鍵字，等本地模型可連後切換；不會自動改你目前已成功使用的 Google 設定。
 
 模型主機不同於 IIS 時，Ollama endpoint 改為 GPU 主機 LAN 位址。Ollama API 只開給需要的應用主機，避免以無驗證 API 對整個網路開放。文字 `qwen3:8b` profile 的 `SupportsImages=false`；要分析圖片另選 vision 模型並測 OCR／圖片推論的額外 VRAM，不能只把這個旗標改 true。
 
-更換 embedding 後，**全部相關文件重新索引**。同維度不同模型的向量仍不是同一個空間；現行 profile 會阻擋混用，新的索引須完成才可檢索。若將來改 1024 維，另做 schema migration、profile 版本與離線重建，不能只改 JSON。
+更換 embedding 後，**全部相關文件重新索引**。同維度不同模型的向量仍不是同一個空間；現行 profile 會阻擋混用，新的索引須完成才可檢索。本版 migration 已新增 1024 維欄位；仍須先套用 migration、設定 profile 並重建，不能只改 JSON。
 
 ## 接著值得製作的功能（建議優先順序）
 

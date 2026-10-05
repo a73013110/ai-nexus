@@ -44,6 +44,7 @@ import { ShareDialog } from '../sharing/share-dialog';
 import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
 import { FocusComposer } from './focus-composer';
 import { isSubmitKey } from '../../shared/browser/submit-key';
+import { ConversationSpendView } from '../billing/conversation-spend';
 
 @Component({
   selector: 'nx-chat-workspace',
@@ -70,6 +71,7 @@ import { isSubmitKey } from '../../shared/browser/submit-key';
     TextTools,
     ShareDialog,
     FocusComposer,
+    ConversationSpendView,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chat-workspace.html',
@@ -149,7 +151,7 @@ export class ChatWorkspace {
           : this.store.liveRun()?.status === 'running'
             ? '模型正在回答'
             : this.store.submitting()
-              ? '正在提交訊息…'
+              ? this.store.webSearchEnabled() ? '正在搜尋網路並準備回答…' : '正在提交訊息…'
               : '',
   );
   readonly suggestions = [
@@ -273,6 +275,7 @@ export class ChatWorkspace {
         edit = this.store.editing(),
         prompt = this.store.draft().text;
       const attachmentIds = this.store.attachments.files().map((file) => file.id);
+      const webSearch = this.store.webSearchEnabled();
       this.store.messages();
       this.store.knowledge.revision();
       this.store.contextUsage.set(null);
@@ -287,6 +290,7 @@ export class ChatWorkspace {
               prompt,
               modelId,
               attachmentIds,
+              webSearch,
             },
             controller.signal,
           ),

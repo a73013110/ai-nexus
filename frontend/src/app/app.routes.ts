@@ -3,6 +3,8 @@ import { authenticated } from './core/auth/auth-guard';
 import { pendingChanges } from './shared/browser/pending-changes';
 
 export const routes: Routes = [
+  { path: 'dashboard', canActivate: [authenticated], loadComponent: () => import('./features/dashboard/dashboard-page').then(m => m.DashboardPage) },
+  { path: 'repositories', canActivate: [authenticated], loadComponent: () => import('./features/repositories/repositories-page').then(m => m.RepositoriesPage) },
   {
     path: 'design',
     canActivate: [authenticated],

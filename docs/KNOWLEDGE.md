@@ -25,7 +25,10 @@
 | ----------------------------------------------------- | -------------------- | --------------------------------------------- |
 | `Knowledge.Embedding.Provider`                        | `google`             | `google`、`ollama`；`none` 明確改用關鍵字搜尋 |
 | `Knowledge.Embedding.Model`                           | `gemini-embedding-2` | 向量模型，與聊天模型分開                      |
-| `Knowledge.Embedding.Dimensions`                      | 768                  | 本版固定 768，與原生 SQL 欄位一致             |
+| `Knowledge.Embedding.Dimensions`                      | 768                  | 支援 768／1024，查詢只使用相同維度與 profile 的片段 |
+| `Knowledge.Embedding.InputFormat`                     | `plain`              | BGE-M3 使用 plain；Qwen 查詢使用 qwen-query，文件保持原文 |
+| `Knowledge.Embedding.QueryInstruction`                | 英文檢索指令         | qwen-query 查詢前綴；更改後需重新索引 |
+| `Knowledge.Embedding.Revision`                        | 空字串               | 同模型名稱更新權重時填寫新版本，避免混用舊索引 |
 | `Knowledge.Embedding.TimeoutSeconds`                  | 60                   | 每次向量請求的時間上限                        |
 | `Knowledge.Embedding.MaxDailyRequests`                | 2000                 | 每人每日索引與查詢向量呼叫上限，按 UTC 日重設 |
 | `Knowledge.Indexing.MaxCollections`                   | 30                   | 每人知識庫上限                                |
@@ -36,6 +39,8 @@
 | `Knowledge.Retrieval.TopK` / `ContextCharacters`      | 6 / 5000             | 最多片段數與帶入對話的來源文字上限            |
 
 OCR 與一般文字生成共用核准模型、群組政策、日生成配額與實際 token 記錄。向量呼叫另計次數上限，不會占用日生成次數。失敗的生成保留狀態供用量及問題排查；記錄不保存帳密。
+
+本地 BGE-M3／Qwen 的設定、查詢格式、硬體取捨與可重現比較指令見 [模型比較](EMBEDDING_MODELS.md)。切換 provider、模型、維度、查詢指令或 Revision 後，重新索引目標知識庫；總覽的「需重建索引」統計可協助檢查。
 
 變更向量模型後需重新索引；不同 profile 不混用。Google 官方目前提供獨立 embeddings API，Gemma 可搭配後端檢索結果；不要假設 Gemma 已支援 Google File Search。[Embeddings](https://ai.google.dev/gemini-api/docs/embeddings)、[File Search](https://ai.google.dev/gemini-api/docs/file-search)。
 

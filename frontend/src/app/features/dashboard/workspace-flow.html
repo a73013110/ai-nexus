@@ -1,0 +1,9 @@
+        <div class="flow-layout">
+          <div class="flow-map" aria-label="工作流程，點選節點檢視狀態">
+            <div class="flow-grid" aria-hidden="true"></div>
+            <svg class="flow-links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="M20 26 L51 37 L81 23 M51 37 L31 77 M51 37 L70 77" /><path class="flow-pulse" [class.active]="counts().activeJobs + counts().activeGenerations > 0" d="M20 26 L51 37 L81 23 M51 37 L31 77 M51 37 L70 77" /></svg>
+            @for (node of nodes(); track node.id) { <button type="button" class="flow-node" [class.selected]="selectedNode() === node.id" [style.left.%]="node.x" [style.top.%]="node.y" [attr.aria-pressed]="selectedNode() === node.id" (click)="selectedNode.set(node.id)"><span class="flow-node-icon"><nx-icon [name]="node.icon" /></span><span>{{ node.label }}<strong>{{ node.count.toLocaleString() }}</strong></span></button> }
+          </div>
+          <aside class="flow-inspector" aria-live="polite"><nx-icon [name]="selected().icon" /><span class="panel-eyebrow">{{ scope() === 'personal' ? '我的工作' : '平台狀態' }}</span><h3>{{ selected().label }}</h3><strong>{{ selected().count.toLocaleString() }}</strong><p>{{ selected().detail }}</p><small>{{ selected().meta }}</small>@if (session.has(selected().feature)) { <a class="secondary-button" [routerLink]="selected().route">前往{{ selected().label }}<nx-icon name="chevron" /></a> }</aside>
+        </div>
+        <footer class="dashboard-services"><span><nx-icon name="database" />{{ embeddingMode() }}</span><span><nx-icon name="globe" />搜尋{{ webSearchAvailable() ? '已啟用' : '待設定' }}</span><span><nx-icon name="git" />Gitea {{ giteaAvailable() ? '可連線' : '待設定' }}</span></footer>

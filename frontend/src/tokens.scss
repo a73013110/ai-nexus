@@ -113,6 +113,10 @@
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
 
   --sidebar-width: min(16.5rem, calc(100vw - var(--button-target)));
+  --sidebar-padding-top: var(--p-space-3);
+  --sidebar-brand-gap: var(--p-space-3);
+  --sidebar-brand-size: 1.3rem;
+  --sidebar-account-height: var(--button-target);
   --reading-width: 52rem;
   --composer-width: 54rem;
   --topbar-height: 3.25rem;

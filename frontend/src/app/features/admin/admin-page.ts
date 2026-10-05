@@ -27,6 +27,7 @@ import { SearchField } from '../../shared/ui/search-field';
 import { AdminUserInspector } from './admin-user-inspector';
 import { AdminAudit } from './admin-audit';
 import { formatDate, formatNumber } from '../../shared/browser/format';
+import { PriceBook } from '../billing/price-book';
 
 interface Editor {
   kind: 'user' | 'role' | 'group' | 'feature';
@@ -44,7 +45,7 @@ interface Editor {
 }
 @Component({
   selector: 'nx-admin-page',
-  imports: [FeaturePage, Icon, RouterLink, Checkbox, SearchField, AdminUserInspector, AdminAudit],
+  imports: [FeaturePage, Icon, RouterLink, Checkbox, SearchField, AdminUserInspector, AdminAudit, PriceBook],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-page.html',
 })

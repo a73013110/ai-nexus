@@ -10,6 +10,7 @@
   margin: 0 auto;
 }
 .composer {
+  position: relative;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--composer-radius);

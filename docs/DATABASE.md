@@ -13,6 +13,8 @@
 | access        | AdministratorBootstraps、GroupModelPolicies                               | 一次性 bootstrap、模型清單／日配額／儲存限制                |
 | conversations | Conversations、Messages、ConversationLabels                               | 私人訊息樹、目前分支、指令、收藏／封存／標籤                |
 | inference     | GenerationRuns、RunEvents、ModelProfiles、ModelInvocations                | 執行參數／冪等、SSE replay、能力、OCR／文字／embedding 用量 |
+| inference     | ModelPrices、ModelCharges、WebSearches | 不可變價格版本、呼叫價格／用量快照、搜尋來源與冪等 |
+| workspace     | RepositoryConnections | 每個人自己的 Gitea 帳號與 Data Protection 加密 token |
 | operations    | AuditEvents、BackgroundJobs                                               | 同交易稽核、durable 租約／checkpoint／取消／重試            |
 | attachments   | Attachments、MessageAttachments、ResourceAttachments                      | 原始檔、文字、訊息及資源引用／保留與配額                    |
 | library       | PromptTemplates                                                           | 個人提示詞，最多 100 個                                     |
@@ -20,12 +22,13 @@
 | collaboration | ShareLinks、ShareRecipients                                               | 到期／撤銷、具名收件人、版本快照及明確附件授權              |
 | knowledge     | Collections、Documents、DocumentPages、Chunks                             | 頁面、OCR 狀態、索引 profile、片段／向量                    |
 | knowledge     | ConversationCollections、MessageCitations                                 | 對話選定來源及回答當時的文件／頁碼／摘要                    |
+| knowledge     | RepositoryImports | 固定 Gitea commit／path／host 與知識庫文件來源識別 |
 | content       | Artifacts、ArtifactRevisions、SourceReferences                            | 成果不可變版本、目前版本、來源識別／版本／時間              |
 | projects      | Projects、ProjectTemplates                                                | 共用指示、專案版本及範本，文件／成果透過 Resources 關聯     |
 | quality       | MessageFeedback、EvaluationSets、EvaluationRuns、EvaluationResults        | 私人回饋、固定題庫、執行設定及逐題結果／人工評分            |
 | dbo           | \_\_EFMigrationsHistory                                                   | 已套用的 EF 版本，不可手改或刪除以重跑 migration            |
 
-共有 12 個業務 schema，由 source migrations 管理。原始附件存於 SQL binary，不在 wwwroot。個人偏好為 UserId 的 1:1 關聯，包含外觀、閱讀、對話操作及通知；API key／SQL／AD 服務密碼不在偏好表。
+共有 13 個業務 schema，由 source migrations 管理。原始附件存於 SQL binary，不在 wwwroot。個人偏好為 UserId 的 1:1 關聯，包含外觀、閱讀、對話操作及通知；API key／SQL／AD 服務密碼不在偏好表。Gitea token 是各帳號的加密 connector 授權，與個人偏好分開。
 
 ## 授權關聯
 
@@ -51,7 +54,7 @@ erDiagram
     EvaluationRuns ||--o{ EvaluationResults : checkpoints
 ```
 
-首次登入在同一 transaction 建立 Users 與 member。本版完整 migrations 後，member→workspace 提供 chat、projects、knowledge、artifacts、shared、quality、tasks；admin／integrations 預設只授予 administrators。既有帳號登入不重新授予被撤銷角色。個人設定依登入帳號可用，不另建秘密表。bootstrap 完成一次即留下標記，防止撤銷後又因登入取得管理權。
+首次登入在同一 transaction 建立 Users 與 member。本版完整 migrations 後，member→workspace 提供 dashboard、chat、projects、knowledge、artifacts、shared、quality、tasks、repositories；admin／integrations 預設只授予 administrators。既有帳號登入不重新授予被撤銷角色。個人設定依登入帳號可用，不另建秘密表。bootstrap 完成一次即留下標記，防止撤銷後又因登入取得管理權。
 
 **功能 grant 不等於資料 grant**：knowledge 不授予全庫閱讀，專案不公開彼此私人聊天。Resources.ParentId 提供一層專案繼承，具名 editor 可寫、群組唯讀。ShareRecipients 與原資源 ACL 分開。外部來源還需完整 SID／account 授權。
 
@@ -89,10 +92,18 @@ NexusConnectionFactory 以 marker 對應 AiNexus、CLI 專用 master，以及 Le
 
 工具不刪資料，重跑只套用未完成版本。DBA 可先建 AiNexus，再在此資料庫執行 [idempotent SQL](../db/migrations.sql)；腳本不含 CREATE LOGIN／DATABASE 或秘密。版本 source 在 backend/src/AiNexus.Api/BuildingBlocks/Migrations。正式 DDL 使用獨立部署帳號，不開應用啟動 migration。
 
-本版管理與一般 endpoint 共用 Nexus 連線，runtime 登入需要上述 12 個業務 schema 的 SELECT／INSERT／UPDATE／DELETE，也包括 bootstrap／管理異動的 access 物件；實際操作由後端政策控制。**目前沒有管理專用寫入連線**，不能只給 access SELECT／首次登入 INSERT 就預期後台可運作。runtime 不給 master 建庫、ALTER schema 或 db_owner；進一步分離管理 SQL 權限需要實作獨立連線及交易邊界。外部來源登入則只授兩個固定授權 view 的 SELECT。
+本版管理與一般 endpoint 共用 Nexus 連線，runtime 登入需要上述 13 個業務 schema 的 SELECT／INSERT／UPDATE／DELETE，也包括 bootstrap／管理異動的 access 物件；實際操作由後端政策控制。**目前沒有管理專用寫入連線**，不能只給 access SELECT／首次登入 INSERT 就預期後台可運作。runtime 不給 master 建庫、ALTER schema 或 db_owner；進一步分離管理 SQL 權限需要實作獨立連線及交易邊界。外部來源登入則只授兩個固定授權 view 的 SELECT。
 
 ## 保存與備份
 
 RunEvents 預設保留 24 小時 replay，權威 run 快照仍可恢復；未被訊息／資源／分享引用的附件依保留期清理。分享到期可清理快照，soft-delete 對話、成果、audit 與評測等保存期由部署單位制定，再加入明確 retention。
 
 完整備份包含全部 schema 與原始附件，JSON 文字備份不含附件。Data Protection key ring 另備份。應在獨立資料庫實際還原，核對 SID、角色、ACL、訊息樹、版本、索引 profile 及跨帳號隔離；不能只以產生 bak 檔判定完成。recovery model 與完整／差異／log 排程由 DBA 設定。
+
+## 費用、搜尋與 1024 維升級
+
+`20261004235154_ModelSpendAndConnectedWorkspace` 新增 ModelPrices／ModelCharges／WebSearches、RepositoryConnections／RepositoryImports、dashboard／repositories 功能授權，以及 SQL Server 2025 的 1024 維欄位。既有向量、對話、用量與角色保留。新價格版本與每次呼叫快照使用 decimal(20,8)，輸入／快取／輸出／思考用量及完整回報旗標分開保存；未知費用保持 null，舊呼叫不推定歷史價格。呼叫 ID 是費用表主鍵，避免重試重複計費。
+
+報表在 SQL 彙總 owner／日期／模型／幣別／類型，不讀取所有訊息內容；查詢上限 366 天，使用開始含／結束不含。費用與搜尋表有 owner／created time 索引，價格有 provider／model／effective time 唯一索引，搜尋有 owner／idempotency key 唯一索引。Gitea token 用 Data Protection 加密，備份 SQL 時需同時保存 key ring 與保護身分；否則 token 需重新連線。
+
+詳見 [費用](BILLING.md)、[搜尋](WEB_SEARCH.md)、[Gitea](GITEA.md)、[模型比較](EMBEDDING_MODELS.md)。

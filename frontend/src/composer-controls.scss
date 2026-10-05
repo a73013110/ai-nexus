@@ -54,7 +54,7 @@
   height: 1rem;
 }
 .context-details {
-  position: relative;
+  position: static;
   flex: none;
 }
 .context-trigger {
@@ -163,18 +163,12 @@
   }
 }
 @media (max-width: 520px) {
-  .composer {
-    position: relative;
-  }
-  .context-details {
-    position: static;
-  }
   .composer-controls {
     gap: 0;
     flex-wrap: wrap;
   }
   .model-control {
-    flex: 1 1 5rem;
+    flex: 1 1 3rem;
   }
   .model-control .select-trigger {
     width: 100%;
@@ -184,6 +178,9 @@
   .reasoning-control .select-trigger {
     max-width: 6rem;
     padding-inline: var(--p-space-1);
+  }
+  .reasoning-control {
+    flex: 0 1 5rem;
   }
   .context-trigger {
     padding: var(--p-space-1);

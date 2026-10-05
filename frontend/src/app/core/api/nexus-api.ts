@@ -11,6 +11,7 @@ import type {
   AuthSession,
   ContextPreview,
   ContextUsage,
+  WebSearchStatus,
 } from './types';
 export { ApiError } from './api-transport';
 
@@ -39,6 +40,7 @@ export class NexusApi {
     return me;
   }
   models = () => this.http.json<Models>('/models');
+  webSearchStatus = () => this.http.json<WebSearchStatus>('/tools/web-search');
   context = (body: ContextPreview, signal: AbortSignal) =>
     this.http.json<ContextUsage>('/context', 'POST', body, undefined, signal);
   conversations = (search = '', offset = 0, view = 'active', label = '') =>

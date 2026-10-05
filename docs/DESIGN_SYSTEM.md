@@ -86,7 +86,17 @@
 | FeaturePage／WorkspaceNavigation | 所有頁面共用分類四欄入口與完整 aria-label；聊天底部預設收合，歷史為主                      |
 | AccountMenu／SettingsDialog      | 共用登入者選單；設定在當頁開啟，延遲載入、未儲存確認、焦點返回                             |
 | ThinkingIndicator／FocusComposer | 不定進度訊號波形及可放大編輯的同步草稿；減少動態與 IME 規則共用                            |
+| InfoPopover                      | 費用與用量資訊的原生 top layer；可見名稱、鍵盤開啟／Esc、邊界翻轉與焦點返回 |
+| TrendChart                       | SVG 趨勢、滑鼠／鍵盤共用游標、Home／End、文字資料表；不依賴顏色辨識數值 |
 
 主題 zone 使用 `[data-theme='light'|'dark']` 重新映射同一組 semantic tokens，避免元件複製 dark 條件。危險按鈕使用 `--danger-surface`／`--danger-text`，與錯誤文字 `--error` 分開，讓深色的提示色不會變成低對比按鈕。主要／次要操作與 quiet labels 為 15px，icon button 及歷史操作保留 44px 範圍。sr-only／visually-hidden 供螢幕閱讀器，儲存回饋不佔用對話版面。
 
 改元件後至少在此頁檢查：light／dark 文字及按鈕對比、390px 捲動與浮層、Tab／方向鍵／Esc、確認視窗焦點返回、停用狀態及減少動態。Edge 測試會檢查已選定的文字／背景組合 ≥4.5:1、控制面積及頁面無橫向溢出；仍需人工檢視實際頁面，不能推定所有可能 token 組合都通過。
+
+## 緊湊側欄與總覽
+
+側欄品牌與帳號各保留單列，移除重複副標；`--sidebar-brand-gap`、品牌字級與內距集中在 tokens。工作區採 PanelsTopLeft，快捷指令採 SquareTerminal，避免不同操作共用相同符號。44px 點擊目標保持不變，增加空間優先縮減裝飾與重複資訊。
+
+總覽採四張指標卡、可檢查節點的資料流向圖、費用趨勢與模型／使用者分布，使用既有 platform-card、form-input 與語意色。流向圖的位置表達文件→向量→回答的關係；只有真實 activeJobs／activeGenerations 會觸發訊號動畫，減少動態時靜態保留狀態。桌面多欄、手機單欄，使用主內容捲動，不放假即時數據或與工作無關的 3D 場景。
+
+費用數字最多顯示小數八位，保持 token 單價的可讀性；不同幣別與成本類型分開呈現。空資料、未定價、尚未取得 usage、載入、錯誤都有明確文字，沒有把未知金額顯示為零。模型分布使用相同報表資料，總覽及聊天不另外計算費用。

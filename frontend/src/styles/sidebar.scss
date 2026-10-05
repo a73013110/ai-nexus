@@ -5,7 +5,7 @@
   min-height: 0;
   background: var(--sidebar);
   border-right: 1px solid var(--line);
-  padding: 20px 14px 10px;
+  padding: var(--sidebar-padding-top) 14px 8px;
   overflow: hidden;
 }
 .sidebar-closed .sidebar {
@@ -13,27 +13,19 @@
 }
 .brand {
   display: flex;
-  gap: 12px;
+  gap: 9px;
   align-items: center;
-  margin: 0 7px 22px;
+  margin: 0 7px var(--sidebar-brand-gap);
   width: fit-content;
-  font-size: var(--p-font-2xl);
+  font-size: var(--sidebar-brand-size);
   letter-spacing: -0.7px;
 }
 .brand strong {
   font-weight: 600;
 }
-.brand small {
-  display: block;
-  font-size: var(--text-caption);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  color: var(--secondary);
-  margin-top: 5px;
-}
 .brand-symbol {
-  width: 36px;
-  height: 40px;
+  width: 28px;
+  height: 32px;
   color: var(--accent);
 }
 .brand-symbol svg {

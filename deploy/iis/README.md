@@ -149,7 +149,15 @@ icacls 'D:\CoreProject\AiNexus\logs' /inheritance:r `
 
 ## 8. 套用資料庫更新
 
-**本次新增 `inference.GenerationRuns.ExecutorId`、`LeaseExpiresAt` 與索引**。先暫停所有共用這個 AiNexus 資料庫的舊版 app（含本機），備份資料庫。舊版復原器不認租約，不能與新版同時執行。
+先暫停所有共用這個 AiNexus 資料庫的舊版 app（含本機），備份資料庫。舊版復原器不認生成租約，不能與新版同時執行。
+
+此版的累積 migrations 包含：
+
+- `GenerationExecutorLeases`：`inference.GenerationRuns.ExecutorId`、`LeaseExpiresAt` 與索引。
+- `ModelSpendAndConnectedWorkspace`：`inference.ModelPrices`、`ModelCharges`、`workspace.RepositoryConnections`、`research.WebSearches`、`knowledge.RepositoryImports`，以及 SQL Server 2025 的 `knowledge.Chunks.EmbeddingVector1024`。保留既有 768 維欄位與資料。
+- 功能種子新增 `dashboard`／`repositories`，基本工作台群組可用；Gitea 遠端權限仍由個人 token 決定。
+
+資料庫現有 13 個業務 schema。若 runtime 帳號採逐 schema 授權，務必將新 `workspace`／`research` schema 的資料讀寫加入原有授權；DDL 仍只給部署身分。價格在管理介面新增，不寫在公開 JSON；升級前的呼叫保持「早期呼叫尚無價格紀錄」，不推測重算。
 
 使用有 DDL 權限的維運身分，在主機 PowerShell 7 執行：
 
@@ -190,6 +198,8 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Api.dll' `
 
 輸出應有 `environment=Production`、`sqlConnected=true`、`pendingMigrations=0`、`sqlEncrypted=true`、`trustsSqlCertificate=true`、`adConfigured=true`、正確 provider、模型數與 keyRingPath、`ready=true`。退出碼 0 才通過。此指令用**目前維運 shell 身分**讀檔，IIS 身分仍需實際網站驗證。
 
+輸出也顯示 embedding provider／維度、webSearchEnabled 與 giteaEnabled，並驗證這些 optional tools 的參數範圍。`ready=true` 只表示核心設定與 SQL 可用，不代表 Gitea token、搜尋 API 或 embedding 品質已實測通過。
+
 最後用新的無痕瀏覽器驗收：
 
 1. 直接開 `/chat`、`/projects`：未登入會到 `/login?returnUrl=...`，沒有先出現私人工作台。
@@ -199,6 +209,10 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Api.dll' `
 5. 網路面板 `/api/v1/status` 是 ready；`/health/live` 只有存活，不代表 SQL 或模型就緒。
 6. 一般帳號不可開管理 API；管理員查看對話會留稽核。專案／知識權限隔離正常。
 7. 回收集區後重新登入／生成可用；config／keys／logs 的 URL 無法讀取。
+8. 總覽在個人／平台範圍、日期與不同幣別間正確切換；先設定測試模型價格，再確認單次／全對話金額及管理 CSV。平台查閱應有稽核。
+9. 啟用 Gitea 後用唯讀個人 token 連線、讀取固定 commit 檔案並帶入草稿；回收集區後仍可解密 token。`keys` 同時保護此 token，不能在更新時清空。
+10. 如啟用連網搜尋，先完成 [SearXNG／Brave 設定](../../docs/WEB_SEARCH.md)，再測 opt-in、來源與每日配額；未設定時入口停用。自架搜尋仍會向外部搜尋引擎送出公開提問。
+11. 若切到本地 embedding，先確認 Ollama 可達、指定模型已安裝且回傳維度正確，再重新索引合成文件及檢查引用；不要把核心 ready 當成向量驗收。
 
 如需真實 AI、AD TLS 與 EF／Dapper 寫入探測，再於受控環境跑 `--VerifyConnections true --VerificationOutput <logs內檔案>`。該工具會發送合成資料並呼叫真實模型；不是上面唯讀 VerifyDeployment 的一部分。
 
@@ -208,7 +222,7 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Api.dll' `
 
 首次依序：備份 → 停止全部舊版 → 外部設定遷移 → 新 app → DB migration → ACL → 唯讀驗證 → 啟動 IIS → 瀏覽器驗收。日後沒有 schema 變更時省略 migration。使用 `app_offline.htm` 亦可讓 ANCM 停止應用，移除後重啟；不要把該檔留在發版套件。[ANCM 的部署與啟動診斷](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/aspnet-core-module?view=aspnetcore-10.0) 說明了此機制。
 
-失敗時先停止新版，還原上一版 app 與相符 config。資料庫 migration 不應未確認就 Down；本次是增欄位，可以保留，但回退舊版仍須維持只有舊版執行，避免舊復原器誤殺新版。key ring 留原位置，固定身分；若換身分就接受重新登入或另行規劃金鑰重保護。
+失敗時先停止新版，還原上一版 app 與相符 config。資料庫 migration 不應未確認就 Down；新版追加的欄位／表通常可保留，但仍需先檢查舊版是否相容。回退後舊版不會記錄新的費用或 connector 功能；原價格與費用表保留，不刪計量證據。只有舊版執行，避免舊復原器誤殺新版。key ring 留原位置，固定身分；若換身分就接受重新登入／連線 Gitea，或另行規劃金鑰重保護。
 
 ## 11. 常見錯誤與診斷
 
@@ -224,4 +238,4 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Api.dll' `
 | 生成中斷，executor_lost | 執行主機停止、心跳逾期、時鐘不同步；確認共用 DB 的所有主機都已更新到租約版本                                                                               |
 | 附件／PDF 匯出錯誤      | 上傳上限、集區權限、PDF 匯出需該執行身分可用的 Edge／Chromium，伺服器未安裝時改成已部署瀏覽器                                                              |
 
-日誌可能包含部署資訊，只開放維運人員，stdout 不能長期开啟且無內建輪替。一般 request 錯誤帶 `traceId`；生成錯誤另有 run ID／error code 可對照稽核。上線設定與金鑰不是可公開的成果，不上傳 Git。
+日誌可能包含部署資訊，只開放維運人員，stdout 不能長期開啟且無內建輪替。一般 request 錯誤帶 `traceId`；生成錯誤另有 run ID／error code 可對照稽核。上線設定與金鑰不是可公開的成果，不上傳 Git。

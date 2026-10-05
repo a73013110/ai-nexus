@@ -1,0 +1,17 @@
+{
+  "description": "合成測試資料，只用於檢查比較工具，內容不是實際公文或校務規定。請以取得授權的繁體中文資料替換，才能決定模型。",
+  "documents": [
+    { "id": "official-doc", "title": "公文查詢", "text": "公文可依文號、主旨與承辦人查詢。辦理紀錄顯示簽核歷程與修訂版本。來源權限需要在檢索前確認。" },
+    { "id": "school-course", "title": "選課作業", "text": "學生選課作業包含課程時段、學分與加退選期間。查詢時要依學期與學生身分取得獲授權的資料。" },
+    { "id": "school-leave", "title": "請假作業", "text": "請假申請應填寫事由、開始與結束日期，並提供相關證明。申請進度包含待審核、核准與退回補件。" },
+    { "id": "repo-release", "title": "程式發版", "text": "程式發版需確認建置結果、資料庫 migration 與環境設定。Gitea 提交版本可以保留程式與部署文件的歷史。" },
+    { "id": "finance-budget", "title": "AI 使用費用", "text": "模型費用依輸入與輸出 token、快取輸入以及單次呼叫成本計算。不同幣別必須分別統計，未知用量不能視為免費。" }
+  ],
+  "queries": [
+    { "id": "q1", "text": "如何查到某份文的承辦與簽核歷程？", "relevantDocumentIds": ["official-doc"] },
+    { "id": "q2", "text": "我要改選修課，什麼資料可以查？", "relevantDocumentIds": ["school-course"] },
+    { "id": "q3", "text": "假單被退件時要補哪些內容？", "relevantDocumentIds": ["school-leave"] },
+    { "id": "q4", "text": "要上版時怎麼追蹤程式的版本？", "relevantDocumentIds": ["repo-release"] },
+    { "id": "q5", "text": "如何統計各模型 token 用量所產生的成本？", "relevantDocumentIds": ["finance-budget"] }
+  ]
+}

@@ -4,7 +4,7 @@ AI Nexus 將原始文件、逐頁文字、來源權限與向量留在同一個 S
 
 ## 現行實作
 
-`knowledge.Chunks.EmbeddingJson` 保存 768 維正規化向量，profile 包含 provider、模型、維度。SQL Server 2025 migration 額外建立 `EmbeddingVector VECTOR(768)`；向量寫入與片段 checkpoint 在同一 EF transaction 內完成。
+`knowledge.Chunks.EmbeddingJson` 保存 768／1024 維正規化向量，profile 包含 provider、模型、維度與前處理／revision。SQL Server 2025 migrations 建立 `EmbeddingVector VECTOR(768)` 與 `EmbeddingVector1024 VECTOR(1024)`；向量寫入與片段 checkpoint 在同一 EF transaction 內完成。
 
 SQL 路徑以授權知識庫、未刪除、已完成、相同 profile 作為 WHERE 條件，再以 `VECTOR_DISTANCE('cosine', …)` 排序及 TOP K。無原生欄位時使用同一授權範圍的可攜式 cosine；候選量超過設定上限就回報縮小範圍，不任意丟棄來源。明確設定 provider=`none` 才用關鍵字，不因遠端失敗悄悄降低為另一種檢索方式。
 
@@ -55,4 +55,4 @@ GDWEB 的 Doc_vwInOutDetail 可提供文號、主旨、承辦及部門 metadata�
 
 文件所列向量索引限制包含 **int 的 clustered primary key**。目前 Chunks 使用 Guid 主鍵，不能直接假設加一條 CREATE VECTOR INDEX 就能完成；若採 ANN，需另規劃 int surrogate 的搜尋表、ChunkId 映射、同步及重建策略。精確 VECTOR_DISTANCE 本身不使用向量索引，新增 ANN index 不會自動加速現有查詢。[索引限制](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-vector-index-transact-sql?view=sql-server-ver17)、[精確距離](https://learn.microsoft.com/en-us/sql/t-sql/functions/vector-distance-transact-sql?view=sql-server-ver17)。
 
-本版固定 768 維 float32 與獨立 embedding profile。更換向量模型、維度或前處理需建立新 profile 並重建全部片段，不能只因維度相同就混合向量；聊天模型更換則不必同步更換 embedding。對話用 Google、未來本機模型也可共用核准的同一檢索服務。
+本版支援 768／1024 維 float32 與版本化 embedding profile。BGE-M3 與 Qwen 的實際設定與比較工具見 [EMBEDDING_MODELS](EMBEDDING_MODELS.md)。更換向量模型、維度或前處理需建立新 profile 並重建全部片段，不能只因維度相同就混合向量；聊天模型更換則不必同步更換 embedding。對話用 Google、未來本機模型也可共用核准的同一檢索服務。

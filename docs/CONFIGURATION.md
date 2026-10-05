@@ -37,7 +37,7 @@ pwsh -NoProfile -File scripts/Publish-IIS.ps1 -SkipBuild
 
 ## 統一順序與舊檔遷移
 
-所有範本與寫檔工具共用 `scripts/settings-layout.json` 的順序：版本／Host → SQL → AD／管理 → 金鑰／安全 → 對話模型 → 提示詞 → 知識 → 整合 → 附件／匯出 → 儲存／日誌 → 進階連線字串。子區塊與模型欄位也有固定順序；未知的擴充欄位排序在後，會保留。
+所有範本與寫檔工具共用 `scripts/settings-layout.json` 的順序：版本／Host → SQL → AD／管理 → 金鑰／安全 → 對話模型 → 提示詞 → 知識 → 工具 → 整合 → 附件／匯出 → 儲存／日誌 → 進階連線字串。子區塊與模型欄位也有固定順序；未知的擴充欄位排序在後，會保留。
 
 ```powershell
 # 本機：備份 v1，遷移到 v2，再統一欄位順序
@@ -108,11 +108,19 @@ pwsh -NoProfile -File scripts/Migrate-Settings.ps1 `
 
 | 區塊                  | 參數                                                                                                        |
 | --------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `Knowledge.Embedding` | `Provider`（google／ollama／none）、`Model`、`Dimensions`（目前 768）、`TimeoutSeconds`、`MaxDailyRequests` |
+| `Knowledge.Embedding` | `Provider`（google／ollama／none）、`Model`、`Dimensions`（768／1024）、`InputFormat`、`QueryInstruction`、`Revision`、`TimeoutSeconds`、`MaxDailyRequests` |
 | `Knowledge.Indexing`  | `MaxCollections`、`MaxDocumentsPerCollection`、`ChunkCharacters`、`ChunkOverlap`                            |
 | `Knowledge.Retrieval` | `UseNativeVector`、`PortableCandidateLimit`、`TopK`、`ContextCharacters`                                    |
 
-對話用 Ollama 不會自動改變向量供應商。完全地端須同時設定 `Inference.Provider=ollama` 與 `Knowledge.Embedding.Provider=ollama`；`none` 改用既有關鍵字檢索。換 embedding model 必須重建索引，舊模型的向量不能與新模型混用，即使維度相同。後端驗證回傳長度、有限數值並正規化，原生 SQL 欄位目前為 `VECTOR(768)`。本地規劃與硬體建議見 [LOCAL-AI](LOCAL-AI.md)。
+對話用 Ollama 不會自動改變向量供應商。完全地端須同時設定 `Inference.Provider=ollama` 與 `Knowledge.Embedding.Provider=ollama`；`none` 改用既有關鍵字檢索。換模型／維度／前處理／Revision 必須重建索引，舊向量不能與新 profile 混用。`InputFormat=plain` 用於 BGE-M3；`qwen-query` 僅對查詢加入 QueryInstruction，文件不加。Revision 可保存固定模型版本識別。後端驗證長度、有限數值並正規化，SQL Server 2025 分別保存 `VECTOR(768)` 與 `VECTOR(1024)`。比較指令、範例與切換流程見 [embedding 評估](EMBEDDING_MODELS.md)、[本機 AI](LOCAL-AI.md)。
+
+## 工具與程式庫 connector
+
+`Tools.WebSearch` 與 AI 推論供應商分開，包含 `Enabled`、`Provider`（searxng／brave）、SearXNG 的 `Endpoint`、`TimeoutSeconds`（2–30）、`MaxResults`（1–8）、`MaxDailyRequests`（1–10000）。Brave 的 `ApiKey` 只在秘密檔 `Tools.WebSearch.ApiKey`；遷移工具會移出誤放在一般檔的 key。搜尋預設停用，未配置不自動換用 Google。見 [連網搜尋](WEB_SEARCH.md)。
+
+`Integrations.Connectors.Gitea` 保存 `Enabled`、`BaseUrl`、`TimeoutSeconds`（2–30）、`MaxFileBytes`（1024–500000）。BaseUrl 使用 HTTPS（loopback 可用 HTTP）。每個人的唯讀 token 由使用者在網頁連線，經後端加密存於 SQL，沒有共用 token 設定值；IIS 更新須保留 key ring。見 [Gitea](GITEA.md)。
+
+模型價格以管理頁中的不可變 SQL 版本維護，沒有散落在各供應商 JSON 的價格欄位；能追蹤生效時間與每次呼叫的快照。見 [費用](BILLING.md)。
 
 ## 系統整合與其他限制
 

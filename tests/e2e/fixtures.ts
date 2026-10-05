@@ -222,6 +222,8 @@ export class ApiFixture {
         notice: null,
         policy: this.modelPolicy,
       });
+    if (path === "/tools/web-search") return json({ available: false, notice: "測試環境尚未啟用搜尋。" });
+    if (/^\/conversations\/[^/]+\/spend$/.test(path)) return json({ requests: this.generated, pendingCalls: 0, legacyCalls: this.generated, totals: [], models: [] });
     if (path === "/context") {
       const request = route.request().postDataJSON();
       const input =

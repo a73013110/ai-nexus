@@ -57,6 +57,7 @@
         }
       </div>
       <div class="topbar-actions">
+        @if (store.selected(); as conversation) { <nx-conversation-spend [id]="conversation.id" [revision]="conversation.updatedAt + (store.liveRun()?.status ?? '')" /> }
         @if (statusText()) {
           <span class="inference-status" role="status"
             ><nx-inference-signal [active]="true" /><span>{{ statusText() }}</span></span
@@ -189,6 +190,7 @@
         </button>
       }
       <div class="composer-container">
+        @if (store.webSearchEnabled()) { <p class="web-search-notice"><nx-icon name="globe" />會將這次提問送往搜尋服務；附件與歷史對話不會送出。</p> }
         @if (store.modelNotice(); as notice) {
           <p class="model-notice"><nx-icon name="info" />{{ notice }}</p>
         }
@@ -297,6 +299,10 @@
               [effort]="store.reasoningEffort()"
               [disabled]="store.busy()"
               [usage]="store.contextUsage()"
+              [webSearch]="store.webSearchEnabled()"
+              [webSearchAvailable]="store.webSearchStatus().available"
+              [webSearchNotice]="store.webSearchStatus().notice"
+              (webSearchChange)="store.webSearchEnabled.set($event)"
               (modelChange)="selectModel($event)"
               (effortChange)="store.reasoningEffort.set($event)"
             />

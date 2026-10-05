@@ -77,12 +77,13 @@
 .feature-sidebar {
   display: flex;
   flex-direction: column;
-  padding: var(--p-space-5) var(--p-space-3);
-  gap: var(--p-space-6);
+  padding: var(--sidebar-padding-top) var(--p-space-3) var(--p-space-2);
+  gap: var(--sidebar-brand-gap);
   background: var(--sidebar);
   border-right: 1px solid var(--line);
   overflow: auto;
 }
+.feature-sidebar .brand { margin-bottom: 0; }
 .feature-main {
   padding: var(--p-space-6) var(--workspace-gutter) var(--p-space-8);
   overflow: auto;
@@ -250,7 +251,8 @@
   font-weight: 550;
 }
 .platform-form input:not([type='checkbox']),
-.platform-form textarea {
+.platform-form textarea,
+.form-input {
   width: 100%;
   min-height: var(--button-target);
   padding: var(--p-space-3);

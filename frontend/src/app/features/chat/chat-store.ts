@@ -74,6 +74,8 @@ export class ChatStore {
     maxInputCharacters: 12000,
   });
   readonly reasoningEffort = signal('auto');
+  readonly webSearchEnabled = signal(false);
+  readonly webSearchStatus = signal({ available: false, notice: '正在確認網路搜尋設定…' });
   readonly contextUsage = signal<ContextUsage | null>(null);
   readonly contextNotice = signal<string | null>(null);
   readonly hasChatAccess = computed(
@@ -264,6 +266,9 @@ export class ChatStore {
       await this.refreshHistory();
       if (generation !== this.auth.generation()) return;
       this.ready.set(true);
+      void this.api.webSearchStatus().then(status => {
+        if (generation === this.auth.generation()) this.webSearchStatus.set(status);
+      }).catch(() => { if (generation === this.auth.generation()) this.webSearchStatus.set({ available: false, notice: '暫時無法確認搜尋服務，請重新連線。' }); });
       const extensions = await Promise.allSettled([
         this.attachments.initialize(),
         this.workspace.labels(),
@@ -392,6 +397,7 @@ export class ChatStore {
           regenerateUserMessageId: null,
           reasoningEffort: this.reasoningEffort(),
           attachmentIds: this.attachments.files().map((file) => file.id),
+          webSearch: this.webSearchEnabled(),
         },
       };
       await this.submitPending();
@@ -475,6 +481,7 @@ export class ChatStore {
         regenerateUserMessageId: message.parentId,
         reasoningEffort: this.reasoningEffort(),
         attachmentIds: null,
+        webSearch: this.webSearchEnabled(),
       },
     };
     try {
@@ -751,6 +758,8 @@ export class ChatStore {
   }
   private resetSession() {
     this.knowledge.reset();
+    this.webSearchEnabled.set(false);
+    this.webSearchStatus.set({ available: false, notice: '正在確認網路搜尋設定…' });
     this.persistDraft();
     this.subscription?.abort();
     this.initialized = null;

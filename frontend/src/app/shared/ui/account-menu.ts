@@ -16,7 +16,7 @@ import { Icon } from './icon';
     >
       <span class="avatar">{{ session.me()?.displayName?.slice(0, 1) || 'N' }}</span>
       <span class="profile-name"
-        ><strong>{{ session.me()?.displayName || '公司帳號' }}</strong
+        ><strong>{{ session.me()?.displayName || '帳號' }}</strong
         ><small>{{ session.me()?.account }}</small></span
       >
       <nx-icon name="more" />

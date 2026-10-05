@@ -12,8 +12,8 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { Icon } from './icon';
 
 const groups = [
-  { id: 'work', name: '工作', ids: ['chat', 'projects', 'knowledge', 'artifacts'] },
-  { id: 'collaboration', name: '協作與品質', ids: ['shared', 'quality', 'tasks'] },
+  { id: 'work', name: '工作', ids: ['dashboard', 'chat', 'projects', 'knowledge', 'artifacts'] },
+  { id: 'collaboration', name: '協作與品質', ids: ['shared', 'quality', 'tasks', 'repositories'] },
   { id: 'system', name: '系統', ids: ['integrations', 'admin'] },
 ];
 @Component({
@@ -32,7 +32,7 @@ const groups = [
         [attr.aria-expanded]="expanded()"
         (click)="expanded.update(toggle)"
       >
-        <nx-icon name="command" /><strong>工作區</strong> <nx-icon name="chevron" />
+        <nx-icon name="workspace" /><strong>工作區</strong> <nx-icon name="chevron" />
       </button>
     }
     @if (!collapsible() || expanded()) {
@@ -80,6 +80,8 @@ export class WorkspaceNavigation {
     ].filter((group) => group.features.length);
   });
   readonly shortNames: Record<string, string> = {
+    dashboard: '總覽',
+    repositories: '程式庫',
     chat: '對話',
     projects: '專案',
     knowledge: '知識',
@@ -91,6 +93,8 @@ export class WorkspaceNavigation {
     shared: '分享',
   };
   readonly icons: Record<string, string> = {
+    dashboard: 'dashboard',
+    repositories: 'git',
     chat: 'lines',
     projects: 'projects',
     knowledge: 'library',
