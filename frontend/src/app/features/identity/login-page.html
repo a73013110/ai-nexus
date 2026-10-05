@@ -17,17 +17,33 @@
   <section class="login-panel" aria-labelledby="login-heading">
     <div class="login-content">
       <span class="login-eyebrow">歡迎回來</span>
-      <h2 id="login-heading">登入工作台</h2>
+      <h2 id="login-heading">登入工作區</h2>
       <p class="login-description">
         {{
-          auth.session()?.mode === 'Windows'
+          method() === 'windows'
             ? '使用公司電腦的 Windows 身分登入。'
-            : '使用公司 AD 帳號與密碼。'
+            : method() === 'local'
+              ? '使用管理者設定的本地帳號與密碼。'
+              : '使用公司 AD 帳號與密碼。'
         }}
       </p>
+      @if (!loading() && methods().length > 1) {
+        <div class="login-methods" role="group" aria-label="登入方式">
+          @for (item of methods(); track item) {
+            <button
+              type="button"
+              [attr.aria-pressed]="method() === item"
+              [disabled]="submitting()"
+              (click)="selectMethod(item)"
+            >
+              {{ item === 'local' ? '本地帳號' : item === 'windows' ? 'Windows 身分' : 'AD 帳號' }}
+            </button>
+          }
+        </div>
+      }
       @if (loading()) {
         <p role="status">正在確認登入設定…</p>
-      } @else if (auth.session()?.mode === 'Windows') {
+      } @else if (method() === 'windows') {
         <p class="login-notice" role="status">
           尚未取得 Windows 身分。請使用公司網域電腦，並確認瀏覽器與 IIS 的 Windows 驗證設定。
         </p>
@@ -39,18 +55,24 @@
       @if (error(); as message) {
         <p class="login-error" role="alert">{{ message }}</p>
       }
-      @if (auth.session()?.mode !== 'Windows') {
+      @if (method() !== 'windows') {
         <form (submit)="submit($event)">
-          <label for="ad-account">AD 帳號</label
+          <label for="ad-account">{{ method() === 'local' ? '本地帳號' : 'AD 帳號' }}</label
           ><input
             id="ad-account"
             autocomplete="username"
-            placeholder="公司帳號，例如 chen"
+            [placeholder]="method() === 'local' ? '管理者設定的登入帳號' : '公司帳號，例如 chen'"
             [formField]="loginForm.account"
             aria-describedby="account-hint"
           />
-          <p id="account-hint" class="login-field-hint">輸入帳號名稱，無需加入網域。</p>
-          <label for="ad-password">AD 密碼</label
+          <p id="account-hint" class="login-field-hint">
+            {{
+              method() === 'local'
+                ? '使用本地密碼；與 AD 密碼分開管理。'
+                : '輸入帳號名稱，無需加入網域。'
+            }}
+          </p>
+          <label for="ad-password">{{ method() === 'local' ? '本地密碼' : 'AD 密碼' }}</label
           ><input
             id="ad-password"
             type="password"
@@ -64,12 +86,12 @@
               loading() || submitting() || !auth.session()?.configured || loginForm().invalid()
             "
           >
-            {{ submitting() ? '正在登入…' : '登入工作台' }}
+            {{ submitting() ? '正在登入…' : '登入工作區' }}
           </button>
         </form>
       }
-      @if (!loading() && (error() || auth.session()?.mode === 'Windows')) {
-        @if (auth.session()?.mode === 'Windows') {
+      @if (!loading() && (error() || method() === 'windows')) {
+        @if (method() === 'windows') {
           <button
             class="primary-button login-submit"
             type="button"

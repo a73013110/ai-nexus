@@ -49,14 +49,57 @@
   color: var(--secondary);
 }
 .thinking-spectrum {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  width: 62px;
-  height: 44px;
+  width: 64px;
+  height: 64px;
+  flex: none;
   background: color-mix(in srgb, var(--signal) 8%, transparent);
   border-radius: var(--p-radius-md);
+}
+.thinking-orbit {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: var(--signal);
+  stroke-width: 1;
+  animation: thinking-orbit 6s linear infinite;
+}
+.thinking-orbit > circle:first-child {
+  stroke: var(--line);
+}
+.thinking-orbit path {
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+.thinking-orbit-node {
+  fill: var(--signal);
+  stroke: none;
+}
+.thinking-indicator.is-waiting .thinking-orbit {
+  animation-duration: 10s;
+}
+.thinking-indicator.is-waiting .thinking-spectrum i {
+  animation-duration: 2400ms;
+}
+@keyframes thinking-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.streaming-answer {
+  display: block;
+}
+.stream-frontier {
+  color: var(--ink);
+}
+.answer-settled {
+  animation: content-arrive var(--motion-fast) var(--ease);
 }
 .thinking-spectrum i {
   width: 3px;

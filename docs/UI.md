@@ -1,10 +1,12 @@
-# 工作台互動與渲染
+# 工作區互動與渲染
 
 視覺、尺寸、字級與 motion 的維護規範見 [DESIGN_SYSTEM](DESIGN_SYSTEM.md)。
 
 聊天 lazy-loaded，Signal Forms、zoneless 與 OnPush。IME composition／229 Enter 不送出，Shift+Enter 換行；草稿自動增高，讀取歷史時保持捲動位置並提供「回到最新」。手機 drawer 有關閉、Escape、inert 與焦點返回。
 
-登入頁延續工作台 token：桌面雙欄、手機單欄；自有傅立葉標誌動畫可跳過／重播，遵循減少動態，表單全程可用。提交後清除個人密碼，返回位置只接受列入白名單的本站功能／閱讀器路徑；登入／登出重設 ChatStore。SQL、AD 服務密碼與 Google key 在後端。
+串流增量透過共用 `FramePublisher` 合併為每 32ms 最多一次更新，terminal status 前立即 flush。`StreamingAnswer` 在畫面以約 30fps 平滑追上突發文字，只保留固定的兩個文字 span、避免半個 UTF-16 surrogate；完成／停止後改用伺服器完整 Markdown。思考／等待狀態共用 SVG 軌道與音波動畫，不顯示虛構思考內容。捲動跟隨每 frame 只排一次，使用者閱讀歷史時維持原行為。減少動態模式直接呈現最新文字。
+
+登入頁延續工作區 token：桌面雙欄、手機單欄；自有傅立葉標誌動畫可跳過／重播，遵循減少動態，表單全程可用。提交後清除個人密碼，返回位置只接受列入白名單的本站功能／閱讀器路徑；登入／登出重設 ChatStore。SQL、AD 服務密碼與 Google key 在後端。
 
 登入動畫先於中央描繪 N，完成後縮合至固定品牌錨點，最後依序顯示品牌文字、標題、說明與頁尾。畫布覆蓋品牌欄，不參與高度計算；常見桌面、375×667 與 320×568 手機保持一頁。低高度／大幅文字縮放仍允許必要的表單捲動以維持可操作性。
 

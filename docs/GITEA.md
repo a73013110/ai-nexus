@@ -21,7 +21,7 @@
 }
 ```
 
-重啟後，「程式庫」對有 repositories 功能的角色顯示。預設基本工作台群組已授予此功能，但讀取仍要各自連線。公開部署範本保持 Disabled，本機已啟用你提供的 Gitea 位址；沒有任何共用管理者 token。
+重啟後，「程式庫」對有 repositories 功能的角色顯示。預設基本工作區群組已授予此功能，但讀取仍要各自連線。公開部署範本保持 Disabled，本機已啟用你提供的 Gitea 位址；沒有任何共用管理者 token。
 
 BaseUrl 支援 Gitea 在子路徑部署；使用 HTTPS，HTTP 僅允許 loopback 本機測試。IIS 主機需要信任 Gitea 憑證，並可連到 `/api/v1`。網站登入頁可存取不代表 API 權限已通過。
 

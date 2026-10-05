@@ -4,10 +4,12 @@ import {
   DestroyRef,
   computed,
   inject,
+  input,
   signal,
 } from '@angular/core';
 import { AdminApi } from './admin-api';
-import type { AuditEntry } from '../../core/api/types';
+import type { AuditEntry, Feature } from '../../core/api/types';
+import { FeatureSummary } from '../../shared/ui/feature-summary';
 import { SearchField } from '../../shared/ui/search-field';
 import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
@@ -24,12 +26,13 @@ import {
 
 @Component({
   selector: 'nx-admin-audit',
-  imports: [SearchField, Select, Icon],
+  imports: [SearchField, Select, Icon, FeatureSummary],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: ':host { display: block; min-width: 0; }',
   templateUrl: './admin-audit.html',
 })
 export class AdminAudit {
+  readonly features = input<readonly Feature[]>([]);
   readonly rows = signal<AuditEntry[]>([]);
   readonly loading = signal(false);
   readonly more = signal(false);
@@ -46,7 +49,11 @@ export class AdminAudit {
       date: formatDate(entry.at),
       action: auditAction(entry.action),
       resource: auditResource(entry.detailsJson),
-      changes: auditChanges(entry.detailsJson),
+      changes: auditChanges(entry.detailsJson).map((change) => ({
+        ...change,
+        featureBefore: change.featureIds ? this.resolveFeatures(change.featureIds.before) : null,
+        featureAfter: change.featureIds ? this.resolveFeatures(change.featureIds.after) : null,
+      })),
       result: auditResult(entry.result),
       rejected: auditRejected(entry.result),
     })),
@@ -54,6 +61,8 @@ export class AdminAudit {
   readonly actions = [
     { value: '', label: '所有動作' },
     { value: 'admin.', label: '平台管理' },
+    { value: 'admin.user', label: '使用者設定' },
+    { value: 'identity.test_', label: '測試身分' },
     { value: 'admin.user_roles', label: '使用者角色' },
     { value: 'admin.role', label: '角色授權' },
     { value: 'admin.group', label: '群組與模型政策' },
@@ -69,6 +78,10 @@ export class AdminAudit {
     { value: 'integration.', label: '外部資料查閱' },
     { value: 'resource.acl', label: '資源授權' },
   ];
+  private resolveFeatures(ids: string[]): Feature[] {
+    const catalog = new Map(this.features().map((feature) => [feature.id, feature]));
+    return ids.map((id) => catalog.get(id) ?? { id, name: id, route: '' });
+  }
   readonly results = [
     { value: '', label: '所有結果' },
     { value: 'success', label: '已受理／完成' },
@@ -135,6 +148,7 @@ export class AdminAudit {
               '紀錄 ID',
               '時間（台北）',
               '操作者',
+              '測試身分',
               '動作',
               '資源 ID',
               '資源識別碼',
@@ -145,6 +159,7 @@ export class AdminAudit {
               row.id,
               this.date(row.at),
               row.actor,
+              row.actingAs || '',
               row.action,
               row.resourceId,
               auditResource(row.detailsJson),

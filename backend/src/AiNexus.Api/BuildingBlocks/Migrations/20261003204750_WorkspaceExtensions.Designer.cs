@@ -112,7 +112,7 @@ namespace AiNexus.BuildingBlocks.Migrations
                         {
                             Id = "workspace",
                             Enabled = true,
-                            Name = "基本工作台"
+                            Name = "基本工作\u53f0"
                         });
                 });
 

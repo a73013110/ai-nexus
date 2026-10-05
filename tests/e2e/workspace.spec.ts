@@ -137,15 +137,15 @@ test("logout clears private workspace state while drafts restore only for their 
   await upload(page, "private.txt", Buffer.from("private draft"));
   async function logout() {
     await page.getByRole("button", { name: "登入者選單", exact: true }).click();
-    await page.getByRole("menuitem", { name: "登出工作台" }).click();
+    await page.getByRole("menuitem", { name: "登出工作區" }).click();
     await expect(
-      page.getByRole("heading", { name: "登入工作台" }),
+      page.getByRole("heading", { name: "登入工作區" }),
     ).toBeVisible();
   }
   async function login(account: string) {
     await page.getByLabel("AD 帳號", { exact: true }).fill(account);
     await page.getByLabel("AD 密碼", { exact: true }).fill("fixture-password");
-    await page.getByRole("button", { name: "登入工作台", exact: true }).click();
+    await page.getByRole("button", { name: "登入工作區", exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard$/);
     await page.getByRole("link", { name: "AI 對話", exact: true }).click();
     await expect(

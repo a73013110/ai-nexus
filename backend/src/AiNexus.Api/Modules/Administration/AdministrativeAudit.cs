@@ -54,6 +54,11 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
     }
     private async Task<object?> SnapshotAsync(string action, Guid? resource, string key, CancellationToken ct)
     {
+        if (action is "admin.user" or "admin.user_delete")
+        {
+            var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == resource, ct);
+            return user is null ? null : new { user.Account, user.DisplayName, user.Enabled, user.DeletedAt, user.SecurityVersion, authentication = UserAccounts.Authentication(user), roleIds = await db.Set<UserRole>().AsNoTracking().Where(x => x.UserId == resource).OrderBy(x => x.RoleId).Select(x => x.RoleId).ToArrayAsync(ct) };
+        }
         if (action == "admin.user_roles") return new { roleIds = await db.Set<UserRole>().AsNoTracking().Where(x => x.UserId == resource).OrderBy(x => x.RoleId).Select(x => x.RoleId).ToArrayAsync(ct) };
         if (action == "admin.role")
         {

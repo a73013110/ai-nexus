@@ -68,7 +68,7 @@ public sealed class AccessAndPolicyTests
         {
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             db.Set<Role>().Add(new() { Id = "reviewer", Name = "覆核人員" });
-            db.Set<RoleGroup>().Add(new() { Id = "review", Name = "覆核工作台" });
+            db.Set<RoleGroup>().Add(new() { Id = "review", Name = "覆核工作區" });
             db.Set<UserRole>().Add(new() { UserId = me.Id, RoleId = "reviewer" });
             db.Set<RoleGroupRole>().AddRange(new RoleGroupRole { RoleId = "reviewer", GroupId = "workspace" }, new RoleGroupRole { RoleId = "reviewer", GroupId = "review" });
             db.Set<RoleGroupFeature>().Add(new() { GroupId = "review", FeatureId = "chat" });

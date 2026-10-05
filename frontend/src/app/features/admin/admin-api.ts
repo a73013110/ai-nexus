@@ -39,6 +39,14 @@ export class AdminApi {
   usage = () => this.http.json<AdminUsage>('/admin/usage');
   roles = (id: string, roleIds: string[]) =>
     this.http.json<void>(`/admin/users/${encodeURIComponent(id)}/roles`, 'PUT', { roleIds });
+  saveUser = (id: string | null, body: components['schemas']['UserAccountRequest']) =>
+    this.http.json<void | { id: string }>(
+      id ? `/admin/users/${encodeURIComponent(id)}` : '/admin/users',
+      id ? 'PUT' : 'POST',
+      body,
+    );
+  deleteUser = (id: string) =>
+    this.http.json<void>(`/admin/users/${encodeURIComponent(id)}`, 'DELETE');
   role = (id: string, body: components['schemas']['RoleUpdateRequest']) =>
     this.http.json<void>(`/admin/roles/${encodeURIComponent(id)}`, 'PUT', body);
   group = (id: string, body: components['schemas']['GroupUpdateRequest']) =>

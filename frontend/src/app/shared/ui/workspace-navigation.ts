@@ -10,19 +10,14 @@ import {
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { Icon } from './icon';
-
-const groups = [
-  { id: 'work', name: '工作', ids: ['dashboard', 'chat', 'projects', 'knowledge', 'artifacts'] },
-  { id: 'collaboration', name: '協作與品質', ids: ['shared', 'quality', 'tasks', 'repositories'] },
-  { id: 'system', name: '系統', ids: ['integrations', 'admin'] },
-];
+import { groupFeatures } from '../../core/feature-groups';
 @Component({
   selector: 'nx-workspace-navigation',
   imports: [RouterLink, RouterLinkActive, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nav
     class="workspace-navigation"
-    aria-label="工作台功能"
+    aria-label="工作區功能"
     [class.collapsible]="collapsible()"
   >
     @if (collapsible()) {
@@ -68,17 +63,7 @@ export class WorkspaceNavigation {
   readonly activated = output<void>();
   readonly expanded = signal(false);
   readonly toggle = (value: boolean) => !value;
-  readonly visibleGroups = computed(() => {
-    const features = this.session.me()?.access.features || [];
-    const known = new Set(groups.flatMap((x) => x.ids));
-    return [
-      ...groups.map((group) => ({
-        ...group,
-        features: features.filter((x) => group.ids.includes(x.id)),
-      })),
-      { id: 'additional', name: '更多工具', features: features.filter((x) => !known.has(x.id)) },
-    ].filter((group) => group.features.length);
-  });
+  readonly visibleGroups = computed(() => groupFeatures(this.session.me()?.access.features || []));
   readonly shortNames: Record<string, string> = {
     dashboard: '總覽',
     repositories: '程式庫',

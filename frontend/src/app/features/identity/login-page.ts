@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import {
   FormField,
   form,
@@ -24,6 +24,12 @@ export class LoginPage {
   readonly credentials = signal({ account: '', password: '' });
   readonly loading = signal(true);
   readonly submitting = signal(false);
+  readonly method = signal('ad');
+  readonly methods = computed(
+    () =>
+      this.auth.session()?.methods ??
+      (this.auth.session()?.mode === 'Windows' ? ['windows'] : ['ad']),
+  );
   readonly loginForm = form(this.credentials, (schema) => {
     readonlyField(schema.account, { when: () => this.submitting() });
     readonlyField(schema.password, { when: () => this.submitting() });
@@ -42,7 +48,11 @@ export class LoginPage {
     this.error.set(null);
     try {
       const session = await this.auth.load();
-      if (session.authenticated) await this.router.navigateByUrl(this.returnUrl());
+      const requested = this.route.snapshot.queryParamMap.get('method');
+      const switching = requested !== null && this.methods().includes(requested);
+      if (switching) this.method.set(requested);
+      if (!this.methods().includes(this.method())) this.method.set(this.methods()[0] ?? 'ad');
+      if (session.authenticated && !switching) await this.router.navigateByUrl(this.returnUrl());
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : '登入服務暫時無法使用。');
     } finally {
@@ -81,7 +91,7 @@ export class LoginPage {
     this.error.set(null);
     const { account, password } = this.credentials();
     try {
-      await this.auth.login(account.trim(), password);
+      await this.auth.login(account.trim(), password, this.method());
       await this.router.navigateByUrl(this.returnUrl());
     } catch (error) {
       this.error.set(error instanceof Error ? error.message : '登入失敗，請稍後重試。');
@@ -89,5 +99,10 @@ export class LoginPage {
       this.credentials.update((value) => ({ ...value, password: '' }));
       this.submitting.set(false);
     }
+  }
+  selectMethod(method: string) {
+    this.method.set(method);
+    this.credentials.update((value) => ({ ...value, password: '' }));
+    this.error.set(null);
   }
 }

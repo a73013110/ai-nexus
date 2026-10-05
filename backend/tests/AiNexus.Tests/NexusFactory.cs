@@ -148,7 +148,11 @@ public sealed class FixtureAdAuthenticator : IAdAuthenticator
 
 public sealed class TestSchemeProvider : AuthenticationSchemeProvider
 {
-    public TestSchemeProvider(IOptions<AuthenticationOptions> options) : base(options) => RemoveScheme("Negotiate");
+    public TestSchemeProvider(IOptions<AuthenticationOptions> options) : base(options)
+    {
+        RemoveScheme("Negotiate");
+        AddScheme(new AuthenticationScheme("Negotiate", "Fixture Windows", typeof(TestIdentityHandler)));
+    }
 }
 
 public sealed class TestIdentityHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)

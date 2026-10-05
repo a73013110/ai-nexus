@@ -1,4 +1,4 @@
-# 工作台功能指南
+# 工作區功能指南
 
 左側工作區依登入者的有效功能顯示；每個功能還會檢查自己的資料權限。所有頁面共用分類圖示導覽，分為工作、協作與品質、系統。聊天頁將工作區放在歷史清單下方，預設收合；其他功能頁直接顯示分類入口。完整名稱保留於鍵盤／螢幕閱讀器標籤與滑鼠提示，手機可橫向瀏覽。
 
@@ -74,4 +74,4 @@ PDF 優先抽取原生文字，掃描頁經背景 OCR；完成前暫停送出，
 ./scripts/Start-Local.ps1
 ```
 
-Initialize 只套用未完成的 migration，保留既有資料。Start-Local 建置後由一個 ASP.NET host 提供前端及 API，開啟 [工作台](http://localhost:5080/chat)。開發熱更新使用 `./scripts/Start-Dev.ps1`。詳見 [參數設定](CONFIGURATION.md)、[開發與執行](DEVELOPMENT.md)、[資料庫](DATABASE.md)。
+Initialize 只套用未完成的 migration，保留既有資料。Start-Local 建置後由一個 ASP.NET host 提供前端及 API，開啟 [工作區](http://localhost:5080/chat)。開發熱更新使用 `./scripts/Start-Dev.ps1`。詳見 [參數設定](CONFIGURATION.md)、[開發與執行](DEVELOPMENT.md)、[資料庫](DATABASE.md)。

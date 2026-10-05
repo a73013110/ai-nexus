@@ -13,8 +13,8 @@
 | access        | AdministratorBootstraps、GroupModelPolicies                               | 一次性 bootstrap、模型清單／日配額／儲存限制                |
 | conversations | Conversations、Messages、ConversationLabels                               | 私人訊息樹、目前分支、指令、收藏／封存／標籤                |
 | inference     | GenerationRuns、RunEvents、ModelProfiles、ModelInvocations                | 執行參數／冪等、SSE replay、能力、OCR／文字／embedding 用量 |
-| inference     | ModelPrices、ModelCharges、WebSearches | 不可變價格版本、呼叫價格／用量快照、搜尋來源與冪等 |
-| workspace     | RepositoryConnections | 每個人自己的 Gitea 帳號與 Data Protection 加密 token |
+| inference     | ModelPrices、ModelCharges、WebSearches                                    | 不可變價格版本、呼叫價格／用量快照、搜尋來源與冪等          |
+| workspace     | RepositoryConnections                                                     | 每個人自己的 Gitea 帳號與 Data Protection 加密 token        |
 | operations    | AuditEvents、BackgroundJobs                                               | 同交易稽核、durable 租約／checkpoint／取消／重試            |
 | attachments   | Attachments、MessageAttachments、ResourceAttachments                      | 原始檔、文字、訊息及資源引用／保留與配額                    |
 | library       | PromptTemplates                                                           | 個人提示詞，最多 100 個                                     |
@@ -22,13 +22,21 @@
 | collaboration | ShareLinks、ShareRecipients                                               | 到期／撤銷、具名收件人、版本快照及明確附件授權              |
 | knowledge     | Collections、Documents、DocumentPages、Chunks                             | 頁面、OCR 狀態、索引 profile、片段／向量                    |
 | knowledge     | ConversationCollections、MessageCitations                                 | 對話選定來源及回答當時的文件／頁碼／摘要                    |
-| knowledge     | RepositoryImports | 固定 Gitea commit／path／host 與知識庫文件來源識別 |
+| knowledge     | RepositoryImports                                                         | 固定 Gitea commit／path／host 與知識庫文件來源識別          |
 | content       | Artifacts、ArtifactRevisions、SourceReferences                            | 成果不可變版本、目前版本、來源識別／版本／時間              |
 | projects      | Projects、ProjectTemplates                                                | 共用指示、專案版本及範本，文件／成果透過 Resources 關聯     |
 | quality       | MessageFeedback、EvaluationSets、EvaluationRuns、EvaluationResults        | 私人回饋、固定題庫、執行設定及逐題結果／人工評分            |
 | dbo           | \_\_EFMigrationsHistory                                                   | 已套用的 EF 版本，不可手改或刪除以重跑 migration            |
 
 共有 13 個業務 schema，由 source migrations 管理。原始附件存於 SQL binary，不在 wwwroot。個人偏好為 UserId 的 1:1 關聯，包含外觀、閱讀、對話操作及通知；API key／SQL／AD 服務密碼不在偏好表。Gitea token 是各帳號的加密 connector 授權，與個人偏好分開。
+
+## 物件描述與版本維護
+
+`BuildingBlocks/DatabaseDescriptions.cs` 是資料表及欄位描述的唯一模型來源；新增映射物件漏寫說明會在建立模型時被攔下。EF migration 將其寫入 SQL Server `MS_Description`。`db/object-descriptions.sql` 可重跑，補上 schema、實體索引、主鍵／外鍵／唯一／預設／檢核約束、原生向量欄位及 EF 版本表說明；不變更業務資料。明確執行初始化時會重套用此內嵌 SQL，涵蓋後續新增的索引與約束，一般啟動不執行 DDL。新增物件的 migration 應同步更新其描述。執行 `scripts/Test-DatabaseDescriptions.ps1` 可唯讀檢查部署後是否有遺漏；初始化也會自動檢查。
+
+本次使用 `ManagedIdentitiesAndDescriptions` 一個增量版本同時新增登入政策、Argon2id 雜湊、登入撤銷版本、測試來源稽核及物件描述。既有使用者預設仍允許 AD；本地登入須管理者明確設定帳號與密碼。預設群組名稱改為「基本工作區」，保留管理員已自訂的名稱。歷史 migration 的名稱 literal 以 Unicode escape 保留原值與可重建性。
+
+目前保留所有已套用 migration。版本多不影響一般查詢效能，正式啟動也不自動執行 DDL。單人開發可在第一個正式版本前建立 baseline，但應先備份資料、在空白測試庫重建、比對 schema／seed／向量 SQL，並保留舊庫可用的升級路徑；不能直接刪 migration 或版本表後在現有資料庫重跑。本次尚未發佈的新增內容已合併為一個 migration，未清空或重設既有資料庫。
 
 ## 授權關聯
 

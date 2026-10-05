@@ -1,5 +1,6 @@
 using AiNexus.BuildingBlocks;
 using AiNexus.Modules.Identity;
+using AiNexus.Modules.Administration;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,6 +10,7 @@ public sealed class AccessService(NexusDbContext db)
 {
     public async Task<AccessDto> ForUserAsync(Guid user, CancellationToken ct)
     {
+        if (!await db.Users.AnyAsync(x => x.Id == user && x.Enabled && x.DeletedAt == null, ct)) return new([], [], []);
         var roleIds = db.Set<UserRole>().Where(x => x.UserId == user).Select(x => x.RoleId);
         var roles = await db.Set<Role>().AsNoTracking().Where(x => roleIds.Contains(x.Id) && x.Enabled)
             .OrderBy(x => x.Id).Select(x => new AccessItemDto(x.Id, x.Name)).ToListAsync(ct);
@@ -33,6 +35,9 @@ public sealed class FeatureAuthorizationHandler(CurrentUser current, AccessServi
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, FeatureRequirement requirement)
     {
         if (context.User.Identity?.IsAuthenticated != true) return;
+        if (requirement.FeatureIds.Contains(AdministrationConfiguration.Feature) && context.User.HasClaim(x => x.Type == SessionIdentity.ActorId) &&
+            http.HttpContext?.Request.Method is not ("GET" or "HEAD" or "OPTIONS"))
+            throw new ApiException(403, "test_admin_read_only", "測試身分期間只能檢視管理功能；請先返回管理者再異動帳號與授權。");
         var ct = http.HttpContext?.RequestAborted ?? CancellationToken.None;
         var user = await current.GetAsync(ct);
         var grants = await access.ForUserAsync(user.Id, ct);

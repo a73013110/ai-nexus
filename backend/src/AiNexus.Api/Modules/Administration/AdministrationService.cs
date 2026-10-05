@@ -15,14 +15,14 @@ public sealed record AdminGroupDto(string Id, string Name, bool Enabled, IReadOn
 public sealed record AdminFeatureDto(string Id, string Name, string Route, int SortOrder, bool Enabled);
 public sealed record AdminCatalogDto(IReadOnlyList<AdminRoleDto> Roles, IReadOnlyList<AdminGroupDto> Groups, IReadOnlyList<AdminFeatureDto> Features, IReadOnlyList<ModelDto> Models);
 public sealed record AdminUserActivityDto(UsageTotalsDto Usage, int Conversations, long AttachmentBytes);
-public sealed record AdminUserDto(Guid Id, string Account, string DisplayName, DateTimeOffset LastSeenAt, IReadOnlyList<string> RoleIds, AdminUserActivityDto? Activity = null);
+public sealed record AdminUserDto(Guid Id, string Account, string DisplayName, DateTimeOffset LastSeenAt, IReadOnlyList<string> RoleIds, AdminUserActivityDto? Activity = null, bool Enabled = true, UserAuthenticationDto? Authentication = null);
 public sealed record AdminUsersDto(IReadOnlyList<AdminUserDto> Users, int Total, int Offset);
 public sealed record UserRolesRequest(IReadOnlyList<string> RoleIds);
 public sealed record RoleUpdateRequest(string Name, bool Enabled, IReadOnlyList<string> GroupIds);
 public sealed record GroupPolicyRequest(IReadOnlyList<string>? AllowedModelIds = null, int? DailyRequestLimit = null, long? StoredAttachmentLimitBytes = null);
 public sealed record GroupUpdateRequest(string Name, bool Enabled, IReadOnlyList<string> FeatureIds, GroupPolicyRequest? Policy = null);
 public sealed record FeatureUpdateRequest(string Name, int SortOrder, bool Enabled);
-public sealed record AuditDto(long Id, string Actor, string Action, Guid? ResourceId, string? Result, DateTimeOffset At, string? DetailsJson);
+public sealed record AuditDto(long Id, string Actor, string Action, Guid? ResourceId, string? Result, DateTimeOffset At, string? DetailsJson, string? ActingAs = null);
 public sealed record AdminUsageDto(int Users, int Requests, int Completed, long InputTokens, long OutputTokens, int RequestsWithUsage);
 
 public sealed class AdministrationService(NexusDbContext db, AccessService access, IOptions<InferenceOptions> inference, AdministrativeAudit mutations, UsageReports reports)
@@ -43,15 +43,15 @@ public sealed class AdministrationService(NexusDbContext db, AccessService acces
     public async Task<AdminUsersDto> UsersAsync(string? search, int offset, CancellationToken ct)
     {
         if (search?.Length > 120 || offset < 0) throw new ApiException(400, "invalid_search", "搜尋條件不正確。");
-        var query = db.Users.AsNoTracking();
-        if (!string.IsNullOrWhiteSpace(search)) query = query.Where(x => x.Account.Contains(search) || x.DisplayName.Contains(search));
+        var query = db.Users.AsNoTracking().Where(x => x.DeletedAt == null);
+        if (!string.IsNullOrWhiteSpace(search)) query = query.Where(x => x.Account.Contains(search) || x.DisplayName.Contains(search) || x.LocalAccount != null && x.LocalAccount.Contains(search) || x.AdAccount != null && x.AdAccount.Contains(search));
         var total = await query.CountAsync(ct); var rows = await query.OrderBy(x => x.Account).ThenBy(x => x.Id).Skip(offset).Take(100).ToListAsync(ct);
         var ids = rows.Select(x => x.Id).ToArray(); var roles = await db.Set<UserRole>().AsNoTracking().Where(x => ids.Contains(x.UserId)).ToListAsync(ct);
         var usage = (await reports.ByOwnersAsync(ids, ct)).ToDictionary(x => x.OwnerId, x => x.Usage);
         var conversations = await db.Conversations.Where(x => ids.Contains(x.OwnerId)).GroupBy(x => x.OwnerId).Select(g => new { OwnerId = g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.OwnerId, x => x.Count, ct);
         var bytes = await db.Set<AiNexus.Modules.Attachments.Attachment>().Where(x => ids.Contains(x.OwnerId)).GroupBy(x => x.OwnerId).Select(g => new { OwnerId = g.Key, Bytes = g.Sum(x => x.Size) }).ToDictionaryAsync(x => x.OwnerId, x => x.Bytes, ct);
         return new(rows.Select(x => new AdminUserDto(x.Id, x.Account, x.DisplayName, x.LastSeenAt, roles.Where(y => y.UserId == x.Id).Select(y => y.RoleId).ToArray(),
-            new(usage.GetValueOrDefault(x.Id) ?? new(0, 0, 0, 0, 0, 0, 0), conversations.GetValueOrDefault(x.Id), bytes.GetValueOrDefault(x.Id)))).ToArray(), total, offset);
+            new(usage.GetValueOrDefault(x.Id) ?? new(0, 0, 0, 0, 0, 0, 0), conversations.GetValueOrDefault(x.Id), bytes.GetValueOrDefault(x.Id)), x.Enabled, UserAccounts.Authentication(x))).ToArray(), total, offset);
     }
     public async Task SetUserRolesAsync(Guid id, UserRolesRequest request, CancellationToken ct)
     {
@@ -122,7 +122,10 @@ public sealed class AdministrationService(NexusDbContext db, AccessService acces
     {
         if (search?.Length > 120 || action?.Length > 120 || result?.Length > 80 || before is <= 0 || from > until)
             throw new ApiException(400, "invalid_audit_filter", "稽核篩選條件不正確。");
-        var query = from entry in db.AuditEvents.AsNoTracking() join actor in db.Users on entry.OwnerId equals actor.Id select new { entry, actor };
+        var query = from entry in db.AuditEvents.AsNoTracking()
+                    join actor in db.Users on (entry.ActorId ?? entry.OwnerId) equals actor.Id
+                    join subject in db.Users on entry.OwnerId equals subject.Id
+                    select new { entry, actor, subject };
         if (before is { } cursor) query = query.Where(x => x.entry.Id < cursor);
         if (from is { } start) query = query.Where(x => x.entry.At >= start);
         if (until is { } end) query = query.Where(x => x.entry.At < end);
@@ -133,11 +136,11 @@ public sealed class AdministrationService(NexusDbContext db, AccessService acces
             : query.Where(x => x.entry.Result == result);
         if (!string.IsNullOrWhiteSpace(search))
         {
-            if (Guid.TryParse(search, out var resource)) query = query.Where(x => x.entry.ResourceId == resource || x.actor.Id == resource);
-            else query = query.Where(x => x.actor.Account.Contains(search) || x.actor.DisplayName.Contains(search) || x.entry.Action.Contains(search) || (x.entry.DetailsJson != null && x.entry.DetailsJson.Contains(search)));
+            if (Guid.TryParse(search, out var resource)) query = query.Where(x => x.entry.ResourceId == resource || x.actor.Id == resource || x.subject.Id == resource);
+            else query = query.Where(x => x.actor.Account.Contains(search) || x.actor.DisplayName.Contains(search) || x.subject.Account.Contains(search) || x.entry.Action.Contains(search) || (x.entry.DetailsJson != null && x.entry.DetailsJson.Contains(search)));
         }
         return await query.OrderByDescending(x => x.entry.Id).Take(100)
-            .Select(x => new AuditDto(x.entry.Id, x.actor.Account, x.entry.Action, x.entry.ResourceId, x.entry.Result, x.entry.At, x.entry.DetailsJson)).ToListAsync(ct);
+            .Select(x => new AuditDto(x.entry.Id, x.actor.Account, x.entry.Action, x.entry.ResourceId, x.entry.Result, x.entry.At, x.entry.DetailsJson, x.entry.ActorId != null && x.entry.ActorId != x.entry.OwnerId ? x.subject.Account : null)).ToListAsync(ct);
     }
     public async Task<AdminUsageDto> UsageAsync(CancellationToken ct)
     {

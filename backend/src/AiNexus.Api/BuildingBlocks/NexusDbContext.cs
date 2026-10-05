@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.BuildingBlocks;
 
-public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : DbContext(options)
+public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHttpContextAccessor? http = null) : DbContext(options)
 {
     public DbSet<NexusUser> Users => Set<NexusUser>();
     public DbSet<Conversation> Conversations => Set<Conversation>();
@@ -16,6 +16,13 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
     public DbSet<RunEvent> RunEvents => Set<RunEvent>();
     public DbSet<ModelProfile> ModelProfiles => Set<ModelProfile>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        if (Guid.TryParse(http?.HttpContext?.User.FindFirst(SessionIdentity.ActorId)?.Value, out var actor))
+            foreach (var entry in ChangeTracker.Entries<AuditEvent>().Where(x => x.State == EntityState.Added)) entry.Entity.ActorId ??= actor;
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -53,6 +60,14 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
         user.HasIndex(x => x.Sid).IsUnique();
         user.Property(x => x.Account).HasMaxLength(256);
         user.Property(x => x.DisplayName).HasMaxLength(256);
+        user.Property(x => x.Enabled).HasDefaultValue(true);
+        user.Property(x => x.AdEnabled).HasDefaultValue(true);
+        user.Property(x => x.AdAccount).HasMaxLength(64);
+        user.Property(x => x.LocalAccount).HasMaxLength(64);
+        user.Property(x => x.PasswordHash).HasMaxLength(512);
+        user.Property(x => x.SecurityVersion).IsConcurrencyToken();
+        user.HasIndex(x => x.AdAccount).IsUnique().HasFilter("[AdAccount] IS NOT NULL");
+        user.HasIndex(x => x.LocalAccount).IsUnique().HasFilter("[LocalAccount] IS NOT NULL");
         user.OwnsOne(x => x.Preferences, p =>
         {
             p.ToTable("UserPreferences", "identity");
@@ -108,6 +123,8 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
         audit.HasIndex(x => x.At);
         audit.HasIndex(x => new { x.Action, x.Id });
         audit.HasIndex(x => new { x.ResourceId, x.Id });
+        audit.HasIndex(x => new { x.ActorId, x.Id });
+        DatabaseDescriptions.Configure(model);
         // SQLite is used only by relational integration tests; it lacks native offset ordering.
         if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")
         {

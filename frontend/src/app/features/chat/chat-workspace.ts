@@ -151,7 +151,9 @@ export class ChatWorkspace {
           : this.store.liveRun()?.status === 'running'
             ? '模型正在回答'
             : this.store.submitting()
-              ? this.store.webSearchEnabled() ? '正在搜尋網路並準備回答…' : '正在提交訊息…'
+              ? this.store.webSearchEnabled()
+                ? '正在搜尋網路並準備回答…'
+                : '正在提交訊息…'
               : '',
   );
   readonly suggestions = [
@@ -304,12 +306,7 @@ export class ChatWorkspace {
     effect(() => {
       this.store.streamingText();
       this.store.visibleMessages();
-      if (this.following()) {
-        cancelAnimationFrame(this.scrollFrame);
-        this.scrollFrame = requestAnimationFrame(() => {
-          if (this.following()) this.scrollLatest(false);
-        });
-      }
+      this.scheduleFollow();
     });
     this.destroy.onDestroy(() => {
       window.removeEventListener('resize', resize);
@@ -320,6 +317,13 @@ export class ChatWorkspace {
   pickSuggestion(text: string) {
     this.store.draft.set({ text });
     this.textarea()?.nativeElement.focus();
+  }
+  scheduleFollow() {
+    if (!this.following() || this.scrollFrame) return;
+    this.scrollFrame = requestAnimationFrame(() => {
+      this.scrollFrame = 0;
+      if (this.following()) this.scrollLatest(false);
+    });
   }
   keydown(event: KeyboardEvent) {
     if (!isSubmitKey(event, this.composing(), this.store.personal.value().enterToSend)) return;

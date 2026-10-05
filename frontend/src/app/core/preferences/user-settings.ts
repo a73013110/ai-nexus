@@ -97,7 +97,7 @@ export class UserSettingsService {
       Notification.permission === 'granted'
     )
       new Notification('AI Nexus', {
-        body: 'AI 回覆已完成，回到工作台查看。',
+        body: 'AI 回覆已完成，回到工作區查看。',
         tag: 'nexus-completed',
       });
   }

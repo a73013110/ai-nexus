@@ -24,10 +24,14 @@ export async function openSettings(page: Page) {
 }
 
 export async function expectViewportContained(page: Page) {
-  await expect.poll(() => page.evaluate(() => ({
-    vertical: document.documentElement.scrollHeight <= innerHeight,
-    horizontal: document.documentElement.scrollWidth <= innerWidth,
-  }))).toEqual({ vertical: true, horizontal: true });
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        vertical: document.documentElement.scrollHeight <= innerHeight,
+        horizontal: document.documentElement.scrollWidth <= innerWidth,
+      })),
+    )
+    .toEqual({ vertical: true, horizontal: true });
 }
 import type {
   Conversation,
@@ -112,6 +116,7 @@ export class ApiFixture {
   failPreferencesOnce = false;
   ldap = false;
   authenticated = false;
+  loginMethod = "ad";
   chatAccess = true;
   adminAccess = false;
   extraFeatures: { id: string; name: string; route: string }[] = [];
@@ -148,6 +153,7 @@ export class ApiFixture {
       });
     if (
       path === "/auth/session" ||
+      path === "/auth/windows" ||
       path === "/auth/login" ||
       path === "/auth/logout"
     ) {
@@ -158,8 +164,13 @@ export class ApiFixture {
             401,
           );
         this.authenticated = true;
+        this.loginMethod = route.request().postDataJSON().method || "ad";
       }
       if (path === "/auth/logout") this.authenticated = false;
+      if (path === "/auth/windows") {
+        this.authenticated = true;
+        this.loginMethod = "windows";
+      }
       return json({
         mode: this.ldap ? "Ldap" : "Windows",
         authenticated: this.ldap ? this.authenticated : true,
@@ -167,6 +178,13 @@ export class ApiFixture {
         account: "TEST\\fixture",
         displayName: "測試使用者",
         csrfToken: "browser-test-csrf",
+        methods: this.ldap ? ["ad", "local"] : ["windows", "local"],
+        method:
+          this.ldap || (this.authenticated && this.loginMethod === "local")
+            ? this.loginMethod
+            : "windows",
+        userId: this.userId,
+        testing: null,
       });
     }
     if (path === "/me") {
@@ -191,7 +209,7 @@ export class ApiFixture {
               ? [{ id: "administrator", name: "平台管理員" }]
               : []),
           ],
-          groups: [{ id: "workspace", name: "基本工作台" }],
+          groups: [{ id: "workspace", name: "基本工作區" }],
           features: [
             ...this.extraFeatures,
             ...(this.chatAccess
@@ -229,8 +247,16 @@ export class ApiFixture {
         notice: null,
         policy: this.modelPolicy,
       });
-    if (path === "/tools/web-search") return json({ available: false, notice: "測試環境尚未啟用搜尋。" });
-    if (/^\/conversations\/[^/]+\/spend$/.test(path)) return json({ requests: this.generated, pendingCalls: 0, legacyCalls: this.generated, totals: [], models: [] });
+    if (path === "/tools/web-search")
+      return json({ available: false, notice: "測試環境尚未啟用搜尋。" });
+    if (/^\/conversations\/[^/]+\/spend$/.test(path))
+      return json({
+        requests: this.generated,
+        pendingCalls: 0,
+        legacyCalls: this.generated,
+        totals: [],
+        models: [],
+      });
     if (path === "/context") {
       const request = route.request().postDataJSON();
       const input =

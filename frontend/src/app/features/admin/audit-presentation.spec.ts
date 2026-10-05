@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { auditChanges, auditResource, auditResult, auditRejected } from './audit-presentation';
 describe('audit presentation', () => {
+  it('preserves feature identities for grouped before and after rendering', () => {
+    const changes = auditChanges(
+      JSON.stringify({
+        before: { featureIds: ['chat', 'admin'] },
+        after: { featureIds: ['chat', 'reports'] },
+      }),
+    );
+    expect(changes[0].featureIds).toEqual({
+      before: ['chat', 'admin'],
+      after: ['chat', 'reports'],
+    });
+  });
   it('does not label successful removal, scheduling or legacy read operations as rejected', () => {
     for (const result of [
       'created',
@@ -10,6 +22,8 @@ describe('audit presentation', () => {
       'read-only',
       'granted_once',
       'cancelled',
+      'started',
+      'restored',
     ]) {
       expect(auditRejected(result)).toBe(false);
       expect(auditResult(result)).not.toBe(result);

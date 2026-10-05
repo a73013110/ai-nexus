@@ -19,7 +19,7 @@ public static class AccessControlConfiguration
         group.HasKey(x => x.Id);
         group.Property(x => x.Id).HasMaxLength(64);
         group.Property(x => x.Name).HasMaxLength(120);
-        group.HasData(new RoleGroup { Id = BuiltInAccess.WorkspaceGroup, Name = "基本工作台" });
+        group.HasData(new RoleGroup { Id = BuiltInAccess.WorkspaceGroup, Name = "基本工作區" });
 
         var feature = model.Entity<Feature>();
         feature.ToTable("Features", "access");

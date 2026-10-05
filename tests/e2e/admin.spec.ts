@@ -1,9 +1,15 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { ApiFixture, settleEntrance, chooseSelect, expectViewportContained } from "./fixtures";
+import {
+  ApiFixture,
+  settleEntrance,
+  chooseSelect,
+  expectViewportContained,
+} from "./fixtures";
 import type {
   AdminCatalog,
   AuditEntry,
+  AdminUser,
 } from "../../frontend/src/app/core/api/types";
 
 async function administration(page: Page) {
@@ -24,6 +30,7 @@ async function administration(page: Page) {
     lastSeenAt: "2026-10-04T00:00:00Z",
     roleIds: ["member", "administrator"],
   };
+  const managedUsers: AdminUser[] = [actor, bob];
   const catalog: AdminCatalog = {
     roles: [
       {
@@ -44,7 +51,7 @@ async function administration(page: Page) {
     groups: [
       {
         id: "workspace",
-        name: "基本工作台",
+        name: "基本工作區",
         enabled: true,
         featureIds: ["chat"],
         policy: null,
@@ -111,11 +118,57 @@ async function administration(page: Page) {
       });
     if (path === "/catalog") return json(catalog);
     if (path === "/users") {
+      if (route.request().method() === "POST") {
+        const body = route.request().postDataJSON();
+        const user = {
+          id: randomUUID(),
+          account: body.localAccount || body.adAccount,
+          displayName: body.displayName,
+          enabled: body.enabled,
+          lastSeenAt: actor.lastSeenAt,
+          roleIds: body.roleIds,
+          authentication: {
+            adEnabled: body.adEnabled,
+            localEnabled: body.localEnabled,
+            adAccount: body.adAccount,
+            localAccount: body.localAccount,
+            hasLocalPassword: !!body.password,
+          },
+        };
+        managedUsers.push(user);
+        return json({ id: user.id }, 201);
+      }
       const search = url.searchParams.get("search") || "";
-      const users = [actor, bob].filter((x) =>
+      const users = managedUsers.filter((x) =>
         (x.displayName + x.account).includes(search),
       );
       return json({ users, total: users.length, offset: 0 });
+    }
+    if (/^\/users\/[^/]+$/.test(path)) {
+      const index = managedUsers.findIndex(
+        (user) => user.id === path.split("/").at(-1),
+      );
+      if (route.request().method() === "DELETE") {
+        managedUsers.splice(index, 1);
+        return route.fulfill({ status: 204 });
+      }
+      if (route.request().method() === "PUT") {
+        const body = route.request().postDataJSON(),
+          user = managedUsers[index];
+        Object.assign(user, {
+          displayName: body.displayName,
+          enabled: body.enabled,
+          roleIds: body.roleIds,
+          authentication: {
+            ...user.authentication,
+            adEnabled: body.adEnabled,
+            localEnabled: body.localEnabled,
+            adAccount: body.adAccount,
+            localAccount: body.localAccount,
+          },
+        });
+        return route.fulfill({ status: 204 });
+      }
     }
     if (path.endsWith("/access"))
       return json({
@@ -268,7 +321,7 @@ async function administration(page: Page) {
     page.getByRole("heading", { name: "平台管理", exact: true }),
   ).toBeVisible();
   await expect(page.getByText("王小明", { exact: true })).toBeVisible();
-  return { fixture, catalog, bob, audit, conversationId };
+  return { fixture, catalog, bob, actor, managedUsers, audit, conversationId };
 }
 test("administrators edit roles with effective access preview and an audit trail", async ({
   page,
@@ -279,7 +332,7 @@ test("administrators edit roles with effective access preview and an audit trail
   await dialog
     .getByRole("checkbox", { name: "平台管理員", exact: true })
     .check();
-  await expect(dialog.locator(".resource-badges")).toContainText("管理");
+  await expect(dialog.locator("nx-feature-summary")).toContainText("管理");
   await dialog.getByRole("button", { name: "儲存授權" }).click();
   await expect(dialog).not.toBeVisible();
   expect(state.bob.roleIds).toContain("administrator");
@@ -295,26 +348,205 @@ test("administrators edit roles with effective access preview and an audit trail
     fullPage: true,
   });
 });
-test('feature notes, audit and platform usage stay aligned on wide and narrow screens', async ({ page }) => {
+
+test("manual user creation, dual login editing and removal share the administrator dialog", async ({
+  page,
+}) => {
+  const state = await administration(page);
+  await page.getByRole("button", { name: "新增使用者", exact: true }).click();
+  const dialog = page.locator('dialog[aria-labelledby="admin-editor-title"]');
+  await dialog.getByLabel("使用者姓名", { exact: true }).fill("本地測試者");
+  await dialog.getByLabel("本地登入帳號", { exact: true }).fill("local-tester");
+  await dialog
+    .getByLabel("設定本地密碼", { exact: true })
+    .fill("test long password 123!");
+  await expect(dialog.locator(".feature-summary-group")).toContainText([
+    "工作",
+  ]);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await settleEntrance(page);
+  await page.screenshot({
+    path: "artifacts/screenshots/admin-local-user-mobile.png",
+  });
+  expect(
+    await dialog.evaluate(
+      (element) => element.scrollWidth <= element.clientWidth,
+    ),
+  ).toBe(true);
+  await dialog.getByRole("button", { name: "儲存使用者", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  const created = state.managedUsers.find(
+    (user) => user.displayName === "本地測試者",
+  )!;
+  expect(created.authentication.localEnabled).toBe(true);
+  expect(created.authentication.adEnabled).toBe(false);
+  expect(JSON.stringify(created)).not.toContain("test long password 123!");
+  await page
+    .getByRole("button", { name: "使用者操作：本地測試者", exact: true })
+    .click();
+  await page
+    .getByRole("menuitem", { name: "編輯使用者與登入方式", exact: true })
+    .click();
+  const edit = page.locator('dialog[aria-labelledby="admin-editor-title"]');
+  await expect(edit.getByLabel("設定本地密碼", { exact: true })).toHaveValue(
+    "",
+  );
+  await edit
+    .getByRole("checkbox", { name: "允許 AD 驗證", exact: true })
+    .check();
+  await edit.getByLabel("使用者 AD 帳號", { exact: true }).fill("test-ad");
+  await edit.getByRole("button", { name: "儲存使用者", exact: true }).click();
+  await expect(edit).not.toBeVisible();
+  expect(created.authentication.adEnabled).toBe(true);
+  await page
+    .getByRole("button", { name: "使用者操作：本地測試者", exact: true })
+    .click();
+  await page.getByRole("menuitem", { name: "刪除使用者", exact: true }).click();
+  const confirm = page.getByRole("dialog", {
+    name: "刪除使用者：本地測試者",
+    exact: true,
+  });
+  await expect(confirm).toContainText("仍會保留");
+  await confirm
+    .getByRole("button", { name: "刪除使用者", exact: true })
+    .click();
+  await expect(page.getByText("本地測試者", { exact: true })).toHaveCount(0);
+});
+
+test("testing an identity clears the prior draft, shows a responsive banner and returns to management", async ({
+  page,
+}) => {
+  const { fixture, actor, bob } = await administration(page);
+  let testing = false;
+  const session = () => ({
+    mode: "Windows",
+    authenticated: true,
+    configured: true,
+    methods: ["windows", "local"],
+    method: testing ? "test" : "windows",
+    csrfToken: "browser-test-csrf",
+    account: testing ? bob.account : actor.account,
+    displayName: testing ? bob.displayName : actor.displayName,
+    userId: testing ? bob.id : actor.id,
+    testing: testing
+      ? {
+          administratorId: actor.id,
+          administratorName: actor.displayName,
+          userId: bob.id,
+          expiresAt: new Date(Date.now() + 15 * 60_000).toISOString(),
+        }
+      : null,
+  });
+  await page.route("**/api/v1/auth/**", async (route) => {
+    if (route.request().url().endsWith("/test-identity")) {
+      expect(route.request().postDataJSON().userId).toBe(bob.id);
+      testing = true;
+    } else if (route.request().url().endsWith("/test-identity/end"))
+      testing = false;
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(session()),
+    });
+  });
+  await page.route("**/api/v1/me", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: testing ? bob.id : actor.id,
+        account: session().account,
+        displayName: session().displayName,
+        preferences: fixture.preferences,
+        csrfToken: "browser-test-csrf",
+        activeRunId: null,
+        access: {
+          roles: [],
+          groups: [],
+          features: [
+            { id: "chat", name: "AI 對話", route: "/chat" },
+            ...(!testing
+              ? [{ id: "admin", name: "管理", route: "/admin" }]
+              : []),
+          ],
+        },
+      }),
+    }),
+  );
+  await page.goto("/chat");
+  await page
+    .getByRole("textbox", { name: "傳送訊息", exact: true })
+    .fill("管理者私人草稿");
+  await page.goto("/admin");
+  await page
+    .getByRole("button", { name: "使用者操作：王小明", exact: true })
+    .click();
+  await page
+    .getByRole("menuitem", { name: "以此身分測試", exact: true })
+    .click();
+  await page.getByLabel("測試目的", { exact: true }).fill("核對一般使用者權限");
+  await page.getByRole("button", { name: "開始身分測試", exact: true }).click();
+  await expect(page).toHaveURL(/\/dashboard$/);
+  const banner = page.getByRole("region", {
+    name: "管理者測試身分",
+    exact: true,
+  });
+  await expect(banner).toContainText("王小明");
+  await expect(banner).toContainText("15 分鐘");
+  await page.goto("/chat");
+  await expect(
+    page.getByRole("textbox", { name: "傳送訊息", exact: true }),
+  ).toHaveValue("");
+  for (const width of [1920, 375]) {
+    await page.setViewportSize({ width, height: 900 });
+    await expectViewportContained(page);
+    await settleEntrance(page);
+    await page.screenshot({
+      path: `artifacts/screenshots/test-identity-${width}.png`,
+    });
+  }
+  await banner.getByRole("button", { name: "返回管理者", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin$/);
+  await expect(banner).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", { name: "平台管理", exact: true }),
+  ).toBeVisible();
+});
+test("feature notes, audit and platform usage stay aligned on wide and narrow screens", async ({
+  page,
+}) => {
   const { audit, catalog } = await administration(page);
-  catalog.features[0].name = 'AI 對話功能與模型管理';
-  audit.push({ id: 1, actor: 'AD\\admin', action: 'admin.feature', resourceId: 'chat', result: 'saved',
-    at: '2026-10-04T00:00:00Z', detailsJson: JSON.stringify({ featureId: 'chat', before: { name: 'AI 對話' }, after: { name: 'AI 對話功能與模型管理' } }) });
+  catalog.features[0].name = "AI 對話功能與模型管理";
+  audit.push({
+    id: 1,
+    actor: "AD\\admin",
+    action: "admin.feature",
+    resourceId: "chat",
+    result: "saved",
+    at: "2026-10-04T00:00:00Z",
+    detailsJson: JSON.stringify({
+      featureId: "chat",
+      before: { name: "AI 對話" },
+      after: { name: "AI 對話功能與模型管理" },
+    }),
+  });
   for (const width of [1920, 1440, 860, 375]) {
     await page.setViewportSize({ width, height: 900 });
-    for (const tab of ['功能', '異動稽核', '平台用量']) {
-      await page.getByRole('button', { name: tab, exact: true }).click();
-      const target = tab === '異動稽核' ? '.audit-toolbar' : '.feature-content > .form-note';
+    for (const tab of ["功能", "異動稽核", "平台用量"]) {
+      await page.getByRole("button", { name: tab, exact: true }).click();
+      const target =
+        tab === "異動稽核" ? ".audit-toolbar" : ".feature-content > .form-note";
       await expect(page.locator(target)).toBeVisible();
-      if (tab === '平台用量') await expect(page.locator('.stat-card')).toHaveCount(3);
-      const header = await page.locator('.feature-header').boundingBox();
+      if (tab === "平台用量")
+        await expect(page.locator(".stat-card")).toHaveCount(3);
+      const header = await page.locator(".feature-header").boundingBox();
       const content = await page.locator(target).boundingBox();
       expect(Math.abs(header!.x - content!.x)).toBeLessThan(1);
       expect(Math.abs(header!.width - content!.width)).toBeLessThan(1);
       await expectViewportContained(page);
       if (width === 1920 || width === 375) {
         await settleEntrance(page);
-        await page.screenshot({ path: `artifacts/screenshots/admin-layout-${width}-${tab}.png` });
+        await page.screenshot({
+          path: `artifacts/screenshots/admin-layout-${width}-${tab}.png`,
+        });
       }
     }
   }
@@ -333,7 +565,7 @@ test("group model limits and self-lockout errors work on desktop and mobile", as
     .fill("research");
   await dialog
     .getByRole("textbox", { name: "名稱", exact: true })
-    .fill("研發工作台");
+    .fill("研發工作區");
   await dialog.getByRole("checkbox", { name: "AI 對話", exact: true }).check();
   await dialog.getByRole("checkbox", { name: "限制可用模型" }).check();
   await dialog.getByRole("checkbox", { name: "測試模型", exact: true }).check();
@@ -382,7 +614,7 @@ test("members have no management navigation and direct routes show an access exp
   await expect(page.getByRole("alert")).toContainText("沒有平台管理權限");
   await expect(
     page
-      .getByRole("navigation", { name: "工作台功能" })
+      .getByRole("navigation", { name: "工作區功能" })
       .getByRole("link", { name: "管理", exact: true }),
   ).toHaveCount(0);
 });

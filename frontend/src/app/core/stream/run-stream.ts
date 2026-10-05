@@ -3,6 +3,7 @@ import { ApiError, NexusApi } from '../api/nexus-api';
 import { isActive, Run, RunEvent } from '../api/types';
 import { SseParser } from './sse-parser';
 import { abortableDelay } from '../../shared/browser/abortable-delay';
+import { FramePublisher } from './frame-publisher';
 
 export interface StreamObserver {
   content(value: string): void;
@@ -15,6 +16,28 @@ export class RunStream {
   private readonly api = inject(NexusApi);
 
   async follow(initial: Run, signal: AbortSignal, observer: StreamObserver): Promise<Run> {
+    const content = new FramePublisher((value) => {
+      if (!signal.aborted) observer.content(value);
+    });
+    try {
+      return await this.followEvents(initial, signal, {
+        ...observer,
+        content: (value) => content.set(value),
+        status: (value) => {
+          content.flush();
+          observer.status(value);
+        },
+      });
+    } finally {
+      if (!signal.aborted) content.flush();
+      content.dispose();
+    }
+  }
+  private async followEvents(
+    initial: Run,
+    signal: AbortSignal,
+    observer: StreamObserver,
+  ): Promise<Run> {
     let run = initial;
     let cursor = run.lastSequence;
     let content = run.content;

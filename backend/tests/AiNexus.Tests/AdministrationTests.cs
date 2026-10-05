@@ -50,7 +50,7 @@ public sealed class AdministrationTests
     public async Task DailyQuotaRejectsNewRequestsButKeepsIdempotentReplayAndOtherAccountsIndependent()
     {
         await using var factory = new NexusFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
-        (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("基本工作台", true, ["chat"], new(["test-model"], 1)))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("基本工作區", true, ["chat"], new(["test-model"], 1)))).EnsureSuccessStatusCode();
         var conversation = await CreateConversation(bob); var body = new CreateRunRequest(conversation.Id, "test-model", "唯一一次", null, null); var key = Guid.NewGuid().ToString();
         var first = await PostRun(bob, body, key); first.EnsureSuccessStatusCode(); var run = (await first.Content.ReadFromJsonAsync<RunDto>())!; await WaitForTerminal(bob, run.Id);
         var replay = await PostRun(bob, body, key); replay.EnsureSuccessStatusCode(); Assert.Equal(run.Id, (await replay.Content.ReadFromJsonAsync<RunDto>())!.Id);
@@ -64,7 +64,7 @@ public sealed class AdministrationTests
     {
         await using var factory = new NexusFactory(administrators: ["alice"], inference: options => options.ShowModelNames = false);
         using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
-        (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("基本工作台", true, ["chat"], new([])))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("基本工作區", true, ["chat"], new([])))).EnsureSuccessStatusCode();
         Assert.Empty((await bob.GetFromJsonAsync<ModelsDto>("/api/v1/models"))!.Models);
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.PostAsJsonAsync("/api/v1/context", new ContextPreviewRequest(null, null, "test", "model-1"))).StatusCode);
         var conversation = await CreateConversation(bob);

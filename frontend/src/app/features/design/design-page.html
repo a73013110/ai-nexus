@@ -7,13 +7,13 @@
     <a routerLink="/admin" class="secondary-button"><nx-icon name="left" />回到平台管理</a>
   </div>
   @if (loading()) {
-    <p role="status">正在載入介面工作台…</p>
+    <p role="status">正在載入介面工作區…</p>
   } @else if (error()) {
     <p class="error-banner" role="alert">
       {{ error() }}<button type="button" (click)="load()">重新載入</button>
     </p>
   } @else if (!session.has('admin')) {
-    <p class="error-banner" role="alert">介面元件工作台僅提供平台管理員使用。</p>
+    <p class="error-banner" role="alert">介面元件工作區僅提供平台管理員使用。</p>
   } @else {
     <div class="design-intro">
       <div>

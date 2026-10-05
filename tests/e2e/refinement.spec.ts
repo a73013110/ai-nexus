@@ -43,7 +43,7 @@ test("login copy follows the completed mark and fits standard desktop and mobile
       ),
     ).toBe(true);
     const submit = await page
-      .getByRole("button", { name: "登入工作台", exact: true })
+      .getByRole("button", { name: "登入工作區", exact: true })
       .boundingBox();
     expect(submit!.y + submit!.height).toBeLessThan(viewport.height);
   }
@@ -61,7 +61,7 @@ test("chat history stays primary with grouped tools collapsed and settings only 
   await fixture.attach(page);
   await page.goto("/chat");
   const tools = page.getByRole("navigation", {
-    name: "工作台功能",
+    name: "工作區功能",
     exact: true,
   });
   await expect(
@@ -94,29 +94,40 @@ test("chat history stays primary with grouped tools collapsed and settings only 
   });
 });
 
-test('chat and feature sidebars share brand, account alignment and compact navigation sizing', async ({ page }) => {
+test("chat and feature sidebars share brand, account alignment and compact navigation sizing", async ({
+  page,
+}) => {
   const fixture = new ApiFixture();
   fixture.adminAccess = true;
-  fixture.extraFeatures = [{ id: 'tasks', name: '背景任務', route: '/tasks' }];
+  fixture.extraFeatures = [{ id: "tasks", name: "背景任務", route: "/tasks" }];
   await fixture.attach(page);
-  await page.goto('/chat');
-  await page.getByRole('button', { name: '工作區', exact: true }).click();
-  await expect(page.locator('.workspace-icons a').first()).toBeVisible();
+  await page.goto("/chat");
+  await page.getByRole("button", { name: "工作區", exact: true }).click();
+  await expect(page.locator(".workspace-icons a").first()).toBeVisible();
   await settleEntrance(page);
-  const measure = () => page.locator('.workspace-sidebar').evaluate(el => {
-    const brand = el.querySelector('.brand')!.getBoundingClientRect();
-    const account = el.querySelector('nx-account-menu')!.getBoundingClientRect();
-    const link = el.querySelector('.workspace-icons a')!.getBoundingClientRect();
-    return { brand: { x: brand.x, y: brand.y }, account: { x: account.x, bottom: account.bottom }, link: { width: link.width, height: link.height } };
-  });
+  const measure = () =>
+    page.locator(".workspace-sidebar").evaluate((el) => {
+      const brand = el.querySelector(".brand")!.getBoundingClientRect();
+      const account = el
+        .querySelector("nx-account-menu")!
+        .getBoundingClientRect();
+      const link = el
+        .querySelector(".workspace-icons a")!
+        .getBoundingClientRect();
+      return {
+        brand: { x: brand.x, y: brand.y },
+        account: { x: account.x, bottom: account.bottom },
+        link: { width: link.width, height: link.height },
+      };
+    });
   const chat = await measure();
-  await expect(page.locator('.brand')).toHaveAttribute('href', '/dashboard');
+  await expect(page.locator(".brand")).toHaveAttribute("href", "/dashboard");
   await expectViewportContained(page);
-  await page.goto('/tasks');
-  await expect(page.locator('.workspace-icons a').first()).toBeVisible();
+  await page.goto("/tasks");
+  await expect(page.locator(".workspace-icons a").first()).toBeVisible();
   expect(await measure()).toEqual(chat);
   await expectViewportContained(page);
-  await page.locator('.brand').click();
+  await page.locator(".brand").click();
   await expect(page).toHaveURL(/\/dashboard$/);
 });
 

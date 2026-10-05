@@ -1,7 +1,7 @@
 .settings-layout {
   display: grid;
   grid-template-columns: var(--settings-sidebar-width) minmax(0, 1fr);
-  height: 100dvh;
+  height: calc(100dvh - var(--identity-banner-height, 0px));
   overflow: hidden;
 }
 .platform-dialog.settings-dialog {

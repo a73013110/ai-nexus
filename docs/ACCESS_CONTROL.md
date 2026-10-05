@@ -1,8 +1,8 @@
 # 身分、角色、群組與功能
 
-AD 驗證決定「你是誰」，access schema 決定「你可以用哪些功能」，conversation owner 決定「你可讀寫哪筆資料」。取得 chat 功能也只能存取自己的對話，其他人的 ID 一律以 404 回應。
+AD 或本地密碼驗證決定「你是誰」，access schema 決定「你可以用哪些功能」，conversation owner 決定「你可讀寫哪筆資料」。兩種登入可綁定同一個平台 UserId；停用或移除使用者會排除所有 grant。取得 chat 功能也只能存取自己的對話，其他人的 ID 一律以 404 回應。
 
-具有 `admin` 功能的管理員可透過獨立、會留下敏感讀取稽核的管理 API 檢視使用者用量及對話。此例外僅提供唯讀內容，沒有放寬一般 conversations 的 owner 檢查或附件下載 ACL；操作方式見 [管理工作台](ADMINISTRATION.md)。
+具有 `admin` 功能的管理員可透過獨立、會留下敏感讀取稽核的管理 API 檢視使用者用量及對話。此例外僅提供唯讀內容，沒有放寬一般 conversations 的 owner 檢查或附件下載 ACL；操作方式見 [管理工作區](ADMINISTRATION.md)。
 
 ## 第一版預設
 
@@ -27,7 +27,7 @@ AD login → Users（SID）→ UserRoles → Roles
 3. 前端新增 lazy route／feature，根據 `/me` 的 features 顯示入口；UI 判斷只改善體驗，API policy 仍是實際權限邊界。
 4. 以至少兩個角色驗沒有 grant 的 403、資料 owner 的 404 與停用／撤銷。更新 migration SQL、OpenAPI、文件。
 
-角色、群組、使用者分派與功能啟用由 [管理工作台](ADMINISTRATION.md) 維護。`administrator → administrators → admin` 是獨立的管理授權；一般使用者無法呼叫其編輯 API。bootstrap 使用明確設定的 AD 帳號且只授權一次，撤銷不會因再次登入而補回。
+角色、群組、使用者分派與功能啟用由 [管理工作區](ADMINISTRATION.md) 維護。`administrator → administrators → admin` 是獨立的管理授權；一般使用者無法呼叫其編輯 API。bootstrap 使用明確設定的 AD 帳號且只授權一次，撤銷不會因再次登入而補回。
 
 ## 受控查詢例子
 

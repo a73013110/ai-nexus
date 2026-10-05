@@ -15,5 +15,10 @@ public sealed class DatabaseInitializer(IConfiguration configuration, IDbHelper<
         var exists = await bootstrap.QuerySingleAsync<int>("SELECT COUNT(*) FROM sys.databases WHERE name = @Name", new { Name = target }, commandTimeout: 5, cancellationToken: ct);
         if (exists == 0) await bootstrap.ExecuteAsync("CREATE DATABASE [AiNexus]", commandTimeout: 30, cancellationToken: ct);
         await db.Database.MigrateAsync(ct);
+        // Explicit initialization refreshes descriptions for indexes/constraints added by future migrations.
+        using var descriptions = typeof(DatabaseInitializer).Assembly.GetManifestResourceStream("AiNexus.Database.ObjectDescriptions.sql")
+            ?? throw new InvalidOperationException("Database descriptions resource is missing.");
+        using var reader = new StreamReader(descriptions);
+        await db.Database.ExecuteSqlRawAsync(await reader.ReadToEndAsync(ct), ct);
     }
 }

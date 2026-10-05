@@ -168,6 +168,8 @@
                   store.liveRun()?.assistantMessageId === message.id ? store.streamingText() : ''
                 "
                 [status]="store.liveRun()?.status || ''"
+                [reasoning]="store.reasoningEffort()"
+                (rendered)="scheduleFollow()"
                 [busy]="store.busy()"
                 [showModelNames]="store.policy().showModelNames"
                 [allowArtifacts]="store.hasArtifactsAccess()"

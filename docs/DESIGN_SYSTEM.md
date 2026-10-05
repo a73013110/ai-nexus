@@ -1,6 +1,6 @@
 # AI Nexus design tokens 與互動
 
-介面以閱讀長對話為主：中性色工作台、清楚字級、緊湊 chrome；青綠訊號只用於生成狀態與 Context，用動效表達系統正在工作。所有主題、字級與主要尺寸集中在 `frontend/src/tokens.scss`。
+介面以閱讀長對話為主：中性色工作區、清楚字級、緊湊 chrome；青綠訊號只用於生成狀態與 Context，用動效表達系統正在工作。所有主題、字級與主要尺寸集中在 `frontend/src/tokens.scss`。
 
 ## 三層 token
 
@@ -24,7 +24,7 @@
 | 對話正文／訊息輸入           | `--text-body`                   | 17px，1.8 行高                           |
 | 小標題                       | `--text-heading`                | 18px                                     |
 | 主要標題                     | font xl／2xl／3xl               | 20／24／32px                             |
-| 工作台開場／登入主標         | `--text-display`／`--text-hero` | 26–34／36–58px 流動字級，使用 rem 上下限 |
+| 工作區開場／登入主標         | `--text-display`／`--text-hero` | 26–34／36–58px 流動字級，使用 rem 上下限 |
 
 正文色使用 ink，輔助文字使用 secondary／muted，不能以低對比淡字承載操作與狀態。配色以一般文字 WCAG AA 4.5:1 為驗證目標；focus 有 2px 可見輪廓。新文字／背景組合仍需實測對比，不能因 token 有色值就視為全部合格。
 
@@ -48,7 +48,7 @@
 | ----------------------------------- | --------------------------- | ------------------------------------ |
 | `--motion-fast`                     | 120ms                       | 快速提示                             |
 | `--motion`                          | 200ms                       | hover／焦點／drawer／訊息進場        |
-| `--motion-enter`                    | 320ms                       | 空白工作台淡入                       |
+| `--motion-enter`                    | 320ms                       | 空白工作區淡入                       |
 | `--motion-signal`                   | 1800ms                      | 生成訊號流／串流游標呼吸             |
 | `--motion-panel`                    | 240ms                       | dialog／選單與附件進場               |
 | `--motion-stagger`／`--motion-draw` | 70／900ms                   | 建議卡片分段進場／SVG Nexus 線條繪製 |
@@ -64,7 +64,7 @@
 
 `styles.scss` 只管理載入順序；`tokens.scss`／`base.scss` 管全域，`styles/` 依責任拆分 controls、shell、sidebar、welcome、messages、markdown、composer、dialogs、tools、attachments。每個檔案包含自身的響應規則；`login.scss` 管登入頁，`composer-controls.scss` 管模型／思考／Context，`motion.scss` 統一動效。UI 元件不複製 token，也不維持第二份桌面／手機對話選單。
 
-工作台、dialog、範本、快捷指令、附件縮圖與列表高度使用 component tokens：`--welcome-width`、`--dialog-width`、`--library-width`、`--command-width`、`--attachment-thumb`、`--attachment-list-max`。主要 controls 維持 44px 最小目標；輸入自動增高讀取 CSS token 上下限，無需同步修改 JavaScript 常數。
+工作區、dialog、範本、快捷指令、附件縮圖與列表高度使用 component tokens：`--welcome-width`、`--dialog-width`、`--library-width`、`--command-width`、`--attachment-thumb`、`--attachment-list-max`。主要 controls 維持 44px 最小目標；輸入自動增高讀取 CSS token 上下限，無需同步修改 JavaScript 常數。
 
 改 token 後用 `scripts/Verify.ps1` 並看 artifacts screenshots，至少檢查 light／dark、375px 手機、1280×768、長回答／長草稿、Context popover、減少動態與鍵盤。瀏覽器測試檢查字級、對話可用高度、橫向溢出、隱藏模型、Context 與匯出行為；新視覺需人工檢查，不以 build 成功取代視覺驗收。
 
@@ -72,7 +72,7 @@
 
 ## 共用元件與直接檢視
 
-平台管理頁右上方「介面元件」開啟 `/design`。此頁組合正式元件，提供淺色／深色局部預覽及目前 semantic tokens 的 JSON 匯出；不修改個人偏好，不呼叫模型或建立公司資料。只有具 admin 功能者顯示工作台，範例不含敏感資訊。
+平台管理頁右上方「介面元件」開啟 `/design`。此頁組合正式元件，提供淺色／深色局部預覽及目前 semantic tokens 的 JSON 匯出；不修改個人偏好，不呼叫模型或建立公司資料。只有具 admin 功能者顯示工作區，範例不含敏感資訊。
 
 | 元件                             | 使用與互動                                                                                 |
 | -------------------------------- | ------------------------------------------------------------------------------------------ |

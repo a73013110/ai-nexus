@@ -13,7 +13,7 @@ test("Fourier identity keeps sign-in usable, can settle immediately and respects
   await account.fill("fixture");
   await page.locator("#ad-password").fill("fixture-password");
   await expect(
-    page.getByRole("button", { name: "登入工作台", exact: true }),
+    page.getByRole("button", { name: "登入工作區", exact: true }),
   ).toBeEnabled();
   const canvas = page.locator("nx-fourier-mark canvas");
   await expect(canvas).toHaveAttribute("width", /[1-9]\d+/);
@@ -46,6 +46,6 @@ test("Fourier identity keeps sign-in usable, can settle immediately and respects
     path: "artifacts/screenshots/login-fourier-mobile.png",
     fullPage: true,
   });
-  await page.getByRole("button", { name: "登入工作台", exact: true }).click();
+  await page.getByRole("button", { name: "登入工作區", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 });

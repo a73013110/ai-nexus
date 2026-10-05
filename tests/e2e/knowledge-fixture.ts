@@ -194,7 +194,7 @@ export class KnowledgeFixture {
           this.colleague,
         ]);
       if (path === "/directory/groups")
-        return json([{ id: "workspace", name: "基本工作台" }]);
+        return json([{ id: "workspace", name: "基本工作區" }]);
       if (path === "/knowledge/search") {
         this.sourceQueries++;
         const doc = this.documents[0];

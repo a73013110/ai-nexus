@@ -32,7 +32,7 @@ test("knowledge upload, source query and named reader permissions are direct and
   await directory.fill("同事");
   await dialog.getByRole("button", { name: /林同事/ }).click();
   await chooseSelect(page, "林同事的權限", "可編輯");
-  await dialog.getByRole("checkbox", { name: "基本工作台" }).check();
+  await dialog.getByRole("checkbox", { name: "基本工作區" }).check();
   await dialog.getByRole("button", { name: "儲存權限" }).click();
   await expect(dialog).not.toBeVisible();
   expect(fixture.acl.members[0].role).toBe("editor");

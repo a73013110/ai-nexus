@@ -13,7 +13,7 @@ test("real anonymous startup shows login before constructing the private workspa
     "script-src 'self'",
   );
   await expect(page).toHaveURL(/\/login\?returnUrl=%2Fchat$/);
-  await expect(page.getByRole("heading", { name: "登入工作台" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "登入工作區" })).toBeVisible();
   await expect(
     page.getByText("尚未取得 Windows 身分。", { exact: false }),
   ).toBeVisible();

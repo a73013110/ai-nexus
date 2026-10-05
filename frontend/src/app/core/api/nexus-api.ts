@@ -23,8 +23,12 @@ export class NexusApi {
     this.http.session(session);
     return session;
   }
-  async login(account: string, password: string): Promise<AuthSession> {
-    const session = await this.http.json<AuthSession>('/auth/login', 'POST', { account, password });
+  async login(account: string, password: string, method = 'ad'): Promise<AuthSession> {
+    const session = await this.http.json<AuthSession>('/auth/login', 'POST', {
+      account,
+      password,
+      method,
+    });
     this.http.session(session);
     return session;
   }
@@ -33,7 +37,24 @@ export class NexusApi {
     this.http.session(session);
     return session;
   }
-  logout = () => this.http.json<AuthSession>('/auth/logout', 'POST');
+  async logout(): Promise<AuthSession> {
+    const session = await this.http.json<AuthSession>('/auth/logout', 'POST');
+    this.http.session(session);
+    return session;
+  }
+  async testIdentity(userId: string, reason: string): Promise<AuthSession> {
+    const session = await this.http.json<AuthSession>('/auth/test-identity', 'POST', {
+      userId,
+      reason,
+    });
+    this.http.session(session);
+    return session;
+  }
+  async endTestIdentity(): Promise<AuthSession> {
+    const session = await this.http.json<AuthSession>('/auth/test-identity/end', 'POST');
+    this.http.session(session);
+    return session;
+  }
   async me(): Promise<Me> {
     const me = await this.http.json<Me>('/me');
     this.http.token(me.csrfToken);

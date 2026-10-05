@@ -13,7 +13,7 @@
     }
   </div>
   @if (loading()) {
-    <p role="status">正在載入管理工作台…</p>
+    <p role="status">正在載入管理工作區…</p>
   }
   @if (error()) {
     <p class="error-banner" role="alert">{{ error() }}<button (click)="load()">重新載入</button></p>
@@ -38,11 +38,18 @@
         <div class="page-toolbar">
           <nx-search-field
             label="搜尋使用者"
-            placeholder="搜尋姓名或 AD 帳號"
+            placeholder="搜尋姓名或登入帳號"
             [value]="search()"
             (valueChange)="searchChanged($event)"
           />
-          <span class="form-note">{{ users()?.total || 0 }} 位使用者 · 首次登入自動建立</span>
+          <span class="form-note">{{ users()?.total || 0 }} 位使用者</span>
+          <button
+            class="primary-button"
+            [disabled]="!!session.auth.session()?.testing"
+            (click)="open('user')"
+          >
+            <nx-icon name="plus" />新增使用者
+          </button>
         </div>
         <div class="resource-list">
           @for (user of users()?.users || []; track user.id) {
@@ -56,6 +63,13 @@
               >
                 <strong>{{ user.displayName }}</strong
                 ><small>{{ user.account }} · 最近使用 {{ date(user.lastSeenAt) }}</small>
+                <small
+                  >{{ (user.authentication?.adEnabled ?? true) ? 'AD' : ''
+                  }}{{
+                    user.authentication?.adEnabled && user.authentication.localEnabled ? ' · ' : ''
+                  }}{{ user.authentication?.localEnabled ? '本地密碼' : ''
+                  }}{{ user.enabled === false ? ' · 已停用' : '' }}</small
+                >
               </button>
               <button
                 class="admin-user-usage"
@@ -83,15 +97,21 @@
               <button
                 class="icon-button"
                 [attr.aria-label]="'設定角色：' + user.displayName"
+                [disabled]="!!session.auth.session()?.testing"
                 (click)="open('user', user)"
               >
                 <nx-icon name="edit" />
               </button>
+              <nx-action-menu
+                [label]="'使用者操作：' + user.displayName"
+                [items]="actions(user)"
+                (action)="userAction($event, user)"
+              />
             </div>
           } @empty {
             <div class="empty-state">
               <h2>沒有符合的使用者</h2>
-              <p>使用者完成第一次 AD 登入後會出現在這裡。</p>
+              <p>可手動建立使用者，或在第一次 AD 登入時自動建立。</p>
             </div>
           }
         </div>
@@ -170,11 +190,7 @@
                   }}</small
                 >
               </button>
-              <div class="resource-badges">
-                @for (feature of featureNames(group.featureIds); track feature) {
-                  <span>{{ feature }}</span>
-                }
-              </div>
+              <nx-feature-summary [features]="groupSummaries()[group.id] || []" />
               <button
                 class="icon-button"
                 [attr.aria-label]="'編輯群組：' + group.name"
@@ -190,28 +206,35 @@
         <p class="form-note">
           功能由模組註冊，路由與 API 授權由程式定義。可調整顯示名稱、順序或停用功能。
         </p>
-        <div class="resource-list">
-          @for (feature of data.features; track feature.id) {
-            <div class="resource-row">
-              <button class="resource-summary" (click)="open('feature', feature)">
-                <strong>{{ feature.name }}</strong
-                ><small
-                  >{{ feature.id }} · {{ feature.route }} · 順序 {{ feature.sortOrder }} ·
-                  {{ feature.enabled ? '啟用' : '停用' }}</small
-                ></button
-              ><button
-                class="icon-button"
-                [attr.aria-label]="'編輯功能：' + feature.name"
-                (click)="open('feature', feature)"
-              >
-                <nx-icon name="edit" />
-              </button>
+        @for (section of groupedFeatures(); track section.id) {
+          <section class="admin-feature-section" [attr.aria-label]="section.name + '功能'">
+            <h2 class="feature-section-heading">
+              {{ section.name }}<small>{{ section.features.length }} 項功能</small>
+            </h2>
+            <div class="resource-list">
+              @for (feature of section.features; track feature.id) {
+                <div class="resource-row">
+                  <button class="resource-summary" (click)="open('feature', feature)">
+                    <strong>{{ feature.name }}</strong
+                    ><small
+                      >{{ feature.id }} · {{ feature.route }} · 順序 {{ feature.sortOrder }} ·
+                      {{ feature.enabled ? '啟用' : '停用' }}</small
+                    ></button
+                  ><button
+                    class="icon-button"
+                    [attr.aria-label]="'編輯功能：' + feature.name"
+                    (click)="open('feature', feature)"
+                  >
+                    <nx-icon name="edit" />
+                  </button>
+                </div>
+              }
             </div>
-          }
-        </div>
+          </section>
+        }
       }
       @case ('audit') {
-        <nx-admin-audit />
+        <nx-admin-audit [features]="catalog()?.features || []" />
       }
       @case ('usage') {
         @if (usage(); as stats) {
@@ -264,6 +287,81 @@
         <p role="alert" class="inline-error">{{ editorError() }}</p>
       }
       <form class="platform-form" (submit)="save($event)">
+        @if (e.kind === 'user') {
+          <label
+            >姓名<input
+              aria-label="使用者姓名"
+              required
+              maxlength="120"
+              [value]="e.name"
+              [readOnly]="saving()"
+              (input)="update('name', $any($event.target).value)"
+          /></label>
+          <nx-checkbox
+            label="啟用使用者"
+            [checked]="e.enabled"
+            [disabled]="saving()"
+            (checkedChange)="update('enabled', $event)"
+          />
+          <fieldset>
+            <legend>允許的登入方式</legend>
+            <p class="form-note">可同時開啟多種方式，皆使用同一份角色、對話與個人設定。</p>
+            <nx-checkbox
+              label="允許 AD 驗證"
+              [checked]="e.adEnabled"
+              [disabled]="saving()"
+              (checkedChange)="update('adEnabled', $event)"
+            />
+            @if (e.adEnabled) {
+              <label
+                >AD 帳號<input
+                  aria-label="使用者 AD 帳號"
+                  required
+                  maxlength="64"
+                  autocomplete="off"
+                  [value]="e.adAccount"
+                  [readOnly]="saving()"
+                  (input)="update('adAccount', $any($event.target).value)"
+              /></label>
+              <p class="form-note">填目錄中的帳號，不含網域。驗證後綁定 AD SID，不保存 AD 密碼。</p>
+            }
+            <nx-checkbox
+              label="允許本地密碼登入"
+              [checked]="e.localEnabled"
+              [disabled]="saving()"
+              (checkedChange)="update('localEnabled', $event)"
+            />
+            @if (e.localEnabled) {
+              <label
+                >本地登入帳號<input
+                  aria-label="本地登入帳號"
+                  required
+                  maxlength="64"
+                  autocomplete="off"
+                  [value]="e.localAccount"
+                  [readOnly]="saving()"
+                  (input)="update('localAccount', $any($event.target).value)"
+              /></label>
+              <label
+                >{{ e.hasLocalPassword ? '重設本地密碼' : '初始本地密碼'
+                }}<input
+                  aria-label="設定本地密碼"
+                  type="password"
+                  autocomplete="new-password"
+                  minlength="12"
+                  maxlength="128"
+                  [required]="!e.hasLocalPassword"
+                  [value]="e.password"
+                  [readOnly]="saving()"
+                  (input)="update('password', $any($event.target).value)"
+              /></label>
+              <p class="form-note">
+                12–128 個字元，以 Argon2id
+                加鹽雜湊保存。編輯時留白可保留既有密碼，重設後舊登入會失效。
+              </p>
+            }
+          </fieldset>
+        }
         @if (e.kind !== 'user') {
           @if (e.isNew) {
             <label
@@ -300,27 +398,38 @@
               {{ e.kind === 'user' ? '分派角色' : e.kind === 'role' ? '加入功能群組' : '授予功能' }}
             </legend>
             <div class="choice-list">
-              @for (item of choices(); track item.id) {
-                <nx-checkbox
-                  [label]="item.name + (item.enabled ? '' : '（停用）')"
-                  [description]="item.id"
-                  [checked]="e.ids.includes(item.id)"
-                  [disabled]="saving()"
-                  (checkedChange)="check(item.id, $event)"
-                />
+              @if (e.kind === 'group') {
+                @for (section of groupedFeatures(); track section.id) {
+                  <fieldset class="feature-choice-group">
+                    <legend>{{ section.name }}</legend>
+                    @for (item of section.features; track item.id) {
+                      <nx-checkbox
+                        [label]="item.name + (item.enabled ? '' : '（停用）')"
+                        [description]="item.id"
+                        [checked]="e.ids.includes(item.id)"
+                        [disabled]="saving()"
+                        (checkedChange)="check(item.id, $event)"
+                      />
+                    }
+                  </fieldset>
+                }
+              } @else {
+                @for (item of choices(); track item.id) {
+                  <nx-checkbox
+                    [label]="item.name + (item.enabled ? '' : '（停用）')"
+                    [description]="item.id"
+                    [checked]="e.ids.includes(item.id)"
+                    [disabled]="saving()"
+                    (checkedChange)="check(item.id, $event)"
+                  />
+                }
               }
             </div>
           </fieldset>
         }
-        @if (e.kind === 'user') {
+        @if (e.kind === 'user' || e.kind === 'role') {
           <p class="form-note">儲存後可用功能（預覽）：</p>
-          <div class="resource-badges">
-            @for (feature of proposedFeatures(); track feature.id) {
-              <span>{{ feature.name }}</span>
-            } @empty {
-              <span>尚無功能授權</span>
-            }
-          </div>
+          <nx-feature-summary [features]="proposedFeatures()" />
         }
         @if (e.kind === 'group') {
           <fieldset>
@@ -394,10 +503,71 @@
           <button type="button" class="secondary-button" [disabled]="saving()" (click)="close()">
             取消</button
           ><button type="submit" class="primary-button" [disabled]="saving()">
-            {{ saving() ? '儲存中…' : '儲存授權' }}
+            {{
+              saving()
+                ? '儲存中…'
+                : e.kind === 'user' && e.profileChanged
+                  ? '儲存使用者'
+                  : '儲存授權'
+            }}
           </button>
         </div>
       </form>
     }
+  </div>
+</dialog>
+<nx-confirm-dialog />
+<dialog
+  #testDialog
+  class="platform-dialog"
+  aria-labelledby="test-identity-title"
+  (close)="testing.set(null)"
+  (cancel)="cancel($event)"
+>
+  <div class="dialog-scroll">
+    <div class="dialog-heading">
+      <h2 id="test-identity-title">以 {{ testing()?.displayName }} 的身分測試</h2>
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="關閉身分測試"
+        [disabled]="saving()"
+        (click)="testDialog.close()"
+      >
+        <nx-icon name="close" />
+      </button>
+    </div>
+    <p class="form-note">
+      接下來會使用此使用者的實際權限與私人資料範圍。操作會生效並記錄管理者來源；15
+      分鐘後返回原管理者，亦可隨時提前返回。
+    </p>
+    @if (testError()) {
+      <p class="inline-error" role="alert">{{ testError() }}</p>
+    }
+    <form class="platform-form" (submit)="startTest($event)">
+      <label
+        >測試目的<input
+          aria-label="測試目的"
+          required
+          minlength="4"
+          maxlength="240"
+          [value]="testReason()"
+          [readOnly]="saving()"
+          (input)="testReason.set($any($event.target).value)"
+      /></label>
+      <div class="dialog-actions">
+        <button
+          type="button"
+          class="secondary-button"
+          [disabled]="saving()"
+          (click)="testDialog.close()"
+        >
+          取消
+        </button>
+        <button type="submit" class="primary-button" [disabled]="saving()">
+          {{ saving() ? '正在切換…' : '開始身分測試' }}
+        </button>
+      </div>
+    </form>
   </div>
 </dialog>

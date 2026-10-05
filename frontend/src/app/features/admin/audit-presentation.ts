@@ -1,6 +1,10 @@
 const actions: Record<string, string> = {
   'admin.bootstrap': '初始化管理員',
   'admin.user_roles': '調整使用者角色',
+  'admin.user': '建立或調整使用者',
+  'admin.user_delete': '移除使用者',
+  'identity.test_start': '開始測試身分',
+  'identity.test_end': '結束測試身分',
   'admin.role': '調整角色與群組',
   'admin.group': '調整群組、功能與模型政策',
   'admin.feature': '調整功能',
@@ -25,6 +29,8 @@ const actions: Record<string, string> = {
 export const auditAction = (action: string) => actions[action] || action;
 const outcomes: Record<string, string> = {
   saved: '已儲存',
+  started: '已開始',
+  restored: '已返回',
   read: '已檢視',
   completed: '已完成',
   success: '已完成',
@@ -51,9 +57,19 @@ export interface AuditChange {
   label: string;
   before: string;
   after: string;
+  featureIds?: { before: string[]; after: string[] };
 }
 const labels: Record<string, string> = {
   name: '名稱',
+  displayName: '姓名',
+  account: '帳號',
+  securityVersion: '登入撤銷版本',
+  deletedAt: '移除時間',
+  'authentication.adEnabled': 'AD 驗證',
+  'authentication.localEnabled': '本地密碼驗證',
+  'authentication.adAccount': 'AD 帳號',
+  'authentication.localAccount': '本地帳號',
+  'authentication.hasLocalPassword': '已設定本地密碼',
   enabled: '啟用狀態',
   roleIds: '角色',
   groupIds: '功能群組',
@@ -94,6 +110,14 @@ export function auditChanges(json: string | null | undefined): AuditChange[] {
         label: labels[key] || key,
         before: display(before[key]),
         after: display(after[key]),
+        ...(key === 'featureIds'
+          ? {
+              featureIds: {
+                before: Array.isArray(before[key]) ? (before[key] as unknown[]).map(String) : [],
+                after: Array.isArray(after[key]) ? (after[key] as unknown[]).map(String) : [],
+              },
+            }
+          : {}),
       }));
   } catch {
     return [];

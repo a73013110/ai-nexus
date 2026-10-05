@@ -155,7 +155,7 @@ icacls 'D:\CoreProject\AiNexus\logs' /inheritance:r `
 
 - `GenerationExecutorLeases`：`inference.GenerationRuns.ExecutorId`、`LeaseExpiresAt` 與索引。
 - `ModelSpendAndConnectedWorkspace`：`inference.ModelPrices`、`ModelCharges`、`workspace.RepositoryConnections`、`research.WebSearches`、`knowledge.RepositoryImports`，以及 SQL Server 2025 的 `knowledge.Chunks.EmbeddingVector1024`。保留既有 768 維欄位與資料。
-- 功能種子新增 `dashboard`／`repositories`，基本工作台群組可用；Gitea 遠端權限仍由個人 token 決定。
+- 功能種子新增 `dashboard`／`repositories`，基本工作區群組可用；Gitea 遠端權限仍由個人 token 決定。
 
 資料庫現有 13 個業務 schema。若 runtime 帳號採逐 schema 授權，務必將新 `workspace`／`research` schema 的資料讀寫加入原有授權；DDL 仍只給部署身分。價格在管理介面新增，不寫在公開 JSON；升級前的呼叫保持「早期呼叫尚無價格紀錄」，不推測重算。
 
@@ -202,7 +202,7 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Api.dll' `
 
 最後用新的無痕瀏覽器驗收：
 
-1. 直接開 `/chat`、`/projects`：未登入會到 `/login?returnUrl=...`，沒有先出現私人工作台。
+1. 直接開 `/chat`、`/projects`：未登入會到 `/login?returnUrl=...`，沒有先出現私人工作區。
 2. AD 登入後能開對話，重新整理仍登入；登出後私人 URL 再次要求登入。
 3. 短回答與「圖解傅立葉轉換」能串流到完成；停止／重新生成都保留歷史。
 4. 上傳合成文字檔及圖片，實際模型能力正確；文字模型不應允許圖片。

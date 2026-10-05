@@ -22,7 +22,7 @@ public sealed class AdministrativeReader(NexusDbContext db, CurrentUser current,
         await RequireAsync(ct);
         var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct) ?? throw Missing();
         var roles = await db.Set<UserRole>().Where(x => x.UserId == id).Select(x => x.RoleId).ToListAsync(ct);
-        var detail = new AdminUserDetailDto(new(id, user.Account, user.DisplayName, user.LastSeenAt, roles), await usage.ForOwnerAsync(id, ct), await usage.KindsAsync(id, ct), await db.Conversations.CountAsync(x => x.OwnerId == id, ct));
+        var detail = new AdminUserDetailDto(new(id, user.Account, user.DisplayName, user.LastSeenAt, roles, null, user.Enabled, UserAccounts.Authentication(user)), await usage.ForOwnerAsync(id, ct), await usage.KindsAsync(id, ct), await db.Conversations.CountAsync(x => x.OwnerId == id, ct));
         await AuditAsync("admin.user_usage_read", id, new { userId = id }, ct);
         return detail;
     }

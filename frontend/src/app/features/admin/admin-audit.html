@@ -58,6 +58,9 @@
         <strong>{{ row.action }}</strong
         ><small
           >{{ entry.actor }} · #{{ entry.id }}
+          @if (entry.actingAs) {
+            · 測試身分：{{ entry.actingAs }}
+          }
           @if (row.resource) {
             · {{ row.resource }}
           }
@@ -72,9 +75,20 @@
                 @for (change of row.changes; track change.key) {
                   <div>
                     <dt>{{ change.label }}</dt>
-                    <dd>
-                      <span class="audit-before">{{ change.before }}</span
-                      ><nx-icon name="chevron" /><strong>{{ change.after }}</strong>
+                    <dd [class.audit-feature-change]="change.featureBefore !== null">
+                      @if (change.featureBefore && change.featureAfter) {
+                        <div>
+                          <small>異動前</small
+                          ><nx-feature-summary [features]="change.featureBefore" />
+                        </div>
+                        <div>
+                          <small>異動後</small
+                          ><nx-feature-summary [features]="change.featureAfter" />
+                        </div>
+                      } @else {
+                        <span class="audit-before">{{ change.before }}</span
+                        ><nx-icon name="chevron" /><strong>{{ change.after }}</strong>
+                      }
                     </dd>
                   </div>
                 }

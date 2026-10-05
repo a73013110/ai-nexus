@@ -4782,8 +4782,24 @@ export interface paths {
     };
     get: operations['ListAdminUsers'];
     put?: never;
-    post?: never;
+    post: operations['CreateAdminUser'];
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/admin/users/{id}': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put: operations['SaveAdminUser'];
+    post?: never;
+    delete: operations['DeleteAdminUser'];
     options?: never;
     head?: never;
     patch?: never;
@@ -5157,6 +5173,38 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/auth/test-identity': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['StartTestIdentity'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  '/api/v1/auth/test-identity/end': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations['EndTestIdentity'];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5177,6 +5225,8 @@ export interface components {
     AdLoginRequest: {
       account: string;
       password: string;
+      /** @default ad */
+      method: string;
     };
     AdminCatalogDto: {
       roles: components['schemas']['AdminRoleDto'][];
@@ -5288,6 +5338,9 @@ export interface components {
       lastSeenAt: string;
       roleIds: string[];
       activity?: null | components['schemas']['AdminUserActivityDto'];
+      /** @default true */
+      enabled: boolean;
+      authentication?: null | components['schemas']['UserAuthenticationDto'];
     };
     AdminUsersDto: {
       users: components['schemas']['AdminUserDto'][];
@@ -5353,6 +5406,7 @@ export interface components {
       /** Format: date-time */
       at: string;
       detailsJson: null | string;
+      actingAs?: null | string;
     };
     AuthSessionDto: {
       mode: string;
@@ -5361,6 +5415,11 @@ export interface components {
       account: null | string;
       displayName: null | string;
       csrfToken: string;
+      methods?: null | string[];
+      method?: null | string;
+      /** Format: uuid */
+      userId?: null | string;
+      testing?: null | components['schemas']['TestIdentityDto'];
     };
     BackupMessage: {
       /** Format: uuid */
@@ -5513,6 +5572,10 @@ export interface components {
     };
     CreateConversationRequest: {
       title?: null | string;
+    };
+    CreatedUserDto: {
+      /** Format: uuid */
+      id: string;
     };
     CreateRunRequest: {
       /** Format: uuid */
@@ -6295,6 +6358,20 @@ export interface components {
       queueDepth: number;
       generating: boolean;
     };
+    TestIdentityDto: {
+      /** Format: uuid */
+      administratorId: string;
+      administratorName: string;
+      /** Format: uuid */
+      userId: string;
+      /** Format: date-time */
+      expiresAt: string;
+    };
+    TestIdentityRequest: {
+      /** Format: uuid */
+      userId: string;
+      reason: string;
+    };
     TransformTextDto: {
       text: string;
       truncated: boolean;
@@ -6340,6 +6417,23 @@ export interface components {
       outputTokens: number;
       /** Format: int32 */
       requestsWithUsage: number;
+    };
+    UserAccountRequest: {
+      displayName: string;
+      enabled: boolean;
+      adEnabled: boolean;
+      localEnabled: boolean;
+      adAccount: null | string;
+      localAccount: null | string;
+      roleIds: string[];
+      password?: null | string;
+    };
+    UserAuthenticationDto: {
+      adEnabled: boolean;
+      localEnabled: boolean;
+      adAccount: null | string;
+      localAccount: null | string;
+      hasLocalPassword: boolean;
     };
     UserRolesRequest: {
       roleIds: string[];
@@ -12697,6 +12791,249 @@ export interface operations {
       };
     };
   };
+  CreateAdminUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UserAccountRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['CreatedUserDto'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  SaveAdminUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['UserAccountRequest'];
+      };
+    };
+    responses: {
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  DeleteAdminUser: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
   GetAdminUserInsights: {
     parameters: {
       query?: never;
@@ -14658,6 +14995,50 @@ export interface operations {
     };
   };
   AdLogout: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AuthSessionDto'];
+        };
+      };
+    };
+  };
+  StartTestIdentity: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['TestIdentityRequest'];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AuthSessionDto'];
+        };
+      };
+    };
+  };
+  EndTestIdentity: {
     parameters: {
       query?: never;
       header?: never;

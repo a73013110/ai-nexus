@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5182/"
+      "url": "http://localhost:5080/"
     }
   ],
   "paths": {
@@ -11368,6 +11368,288 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "CreateAdminUser",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserAccountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedUserDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users/{id}": {
+      "put": {
+        "tags": ["Administration"],
+        "operationId": "SaveAdminUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserAccountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Administration"],
+        "operationId": "DeleteAdminUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/v1/admin/users/{id}/insights": {
@@ -13750,6 +14032,52 @@
           }
         }
       }
+    },
+    "/api/v1/auth/test-identity": {
+      "post": {
+        "tags": ["AiNexus.Api"],
+        "operationId": "StartTestIdentity",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestIdentityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/test-identity/end": {
+      "post": {
+        "tags": ["AiNexus.Api"],
+        "operationId": "EndTestIdentity",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionDto"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -13809,6 +14137,10 @@
           },
           "password": {
             "type": "string"
+          },
+          "method": {
+            "type": "string",
+            "default": "ad"
           }
         }
       },
@@ -14173,6 +14505,20 @@
                 "$ref": "#/components/schemas/AdminUserActivityDto"
               }
             ]
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "authentication": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/UserAuthenticationDto"
+              }
+            ]
           }
         }
       },
@@ -14365,6 +14711,9 @@
           },
           "detailsJson": {
             "type": ["null", "string"]
+          },
+          "actingAs": {
+            "type": ["null", "string"]
           }
         }
       },
@@ -14396,6 +14745,29 @@
           },
           "csrfToken": {
             "type": "string"
+          },
+          "methods": {
+            "type": ["null", "array"],
+            "items": {
+              "type": "string"
+            }
+          },
+          "method": {
+            "type": ["null", "string"]
+          },
+          "userId": {
+            "type": ["null", "string"],
+            "format": "uuid"
+          },
+          "testing": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TestIdentityDto"
+              }
+            ]
           }
         }
       },
@@ -14827,6 +15199,16 @@
         "properties": {
           "title": {
             "type": ["null", "string"]
+          }
+        }
+      },
+      "CreatedUserDto": {
+        "required": ["id"],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
           }
         }
       },
@@ -17194,6 +17576,45 @@
           }
         }
       },
+      "TestIdentityDto": {
+        "required": [
+          "administratorId",
+          "administratorName",
+          "userId",
+          "expiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "administratorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "administratorName": {
+            "type": "string"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TestIdentityRequest": {
+        "required": ["userId", "reason"],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
       "TransformTextDto": {
         "required": ["text", "truncated"],
         "type": "object",
@@ -17307,6 +17728,74 @@
           "requestsWithUsage": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "UserAccountRequest": {
+        "required": [
+          "displayName",
+          "enabled",
+          "adEnabled",
+          "localEnabled",
+          "adAccount",
+          "localAccount",
+          "roleIds"
+        ],
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "adEnabled": {
+            "type": "boolean"
+          },
+          "localEnabled": {
+            "type": "boolean"
+          },
+          "adAccount": {
+            "type": ["null", "string"]
+          },
+          "localAccount": {
+            "type": ["null", "string"]
+          },
+          "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "password": {
+            "type": ["null", "string"]
+          }
+        }
+      },
+      "UserAuthenticationDto": {
+        "required": [
+          "adEnabled",
+          "localEnabled",
+          "adAccount",
+          "localAccount",
+          "hasLocalPassword"
+        ],
+        "type": "object",
+        "properties": {
+          "adEnabled": {
+            "type": "boolean"
+          },
+          "localEnabled": {
+            "type": "boolean"
+          },
+          "adAccount": {
+            "type": ["null", "string"]
+          },
+          "localAccount": {
+            "type": ["null", "string"]
+          },
+          "hasLocalPassword": {
+            "type": "boolean"
           }
         }
       },

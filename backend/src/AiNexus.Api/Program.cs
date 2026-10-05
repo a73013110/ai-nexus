@@ -31,11 +31,13 @@ if (keyRing is not null)
     protection.PersistKeysToFileSystem(new DirectoryInfo(keyRing));
     if (OperatingSystem.IsWindows()) protection.ProtectKeysWithDpapi();
 }
-var authMode = builder.Configuration["AdAuthentication:Mode"] ?? "Ldap";
 builder.Services.AddOptions<AdAuthenticationOptions>().BindConfiguration("AdAuthentication")
     .Validate(x => x.Mode is "Ldap" or "Windows", "AD Mode must be Ldap or Windows.").ValidateOnStart();
 builder.Services.AddSingleton<IAdAuthenticator, LdapAuthenticator>();
-builder.Services.AddAuthentication(authMode == "Ldap" ? AuthEndpoints.CookieScheme : NegotiateDefaults.AuthenticationScheme)
+builder.Services.AddAuthentication("NexusSession")
+    .AddPolicyScheme("NexusSession", null, options => options.ForwardDefaultSelector = http =>
+        http.Request.Cookies.ContainsKey("Nexus.Session") || http.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptions<AdAuthenticationOptions>>().Value.Mode == "Ldap"
+            ? AuthEndpoints.CookieScheme : NegotiateDefaults.AuthenticationScheme)
     .AddNegotiate()
     .AddCookie(AuthEndpoints.CookieScheme, options =>
     {
@@ -45,7 +47,8 @@ builder.Services.AddAuthentication(authMode == "Ldap" ? AuthEndpoints.CookieSche
         options.Cookie.SecurePolicy = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing") ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
-        options.Events.OnRedirectToLogin = context => Results.Problem(statusCode: 401, title: "請先使用 AD 帳號登入。", extensions: new Dictionary<string, object?> { ["code"] = "authentication_required" }).ExecuteAsync(context.HttpContext);
+        options.Events.OnValidatePrincipal = SessionIdentity.ValidateAsync;
+        options.Events.OnRedirectToLogin = context => Results.Problem(statusCode: 401, title: "請先登入工作區。", extensions: new Dictionary<string, object?> { ["code"] = "authentication_required" }).ExecuteAsync(context.HttpContext);
         options.Events.OnRedirectToAccessDenied = context => Results.Problem(statusCode: 403, title: "沒有存取此資料的權限。").ExecuteAsync(context.HttpContext);
     });
 builder.Services.AddRateLimiter(options =>
@@ -92,6 +95,9 @@ builder.Services.AddScoped<SqlVectorCapabilities>();
 builder.Services.AddSingleton<StorageReadiness>();
 builder.Services.AddSingleton<IdentityWriteLock>();
 builder.Services.AddScoped<CurrentUser>();
+builder.Services.AddSingleton<Argon2Passwords>();
+builder.Services.AddScoped<LocalAuthenticator>();
+builder.Services.AddScoped<UserAccountAdministration>();
 builder.Services.AddScoped<PersonalSettingsService>();
 builder.Services.AddScoped<UsageReports>();
 builder.Services.AddScoped<AiNexus.Modules.Billing.BillingService>();
@@ -204,6 +210,7 @@ if (builder.Configuration.GetValue<bool>("InitializeDatabase"))
     {
         using var scope = app.Services.CreateScope();
         await scope.ServiceProvider.GetRequiredService<DatabaseInitializer>().InitializeAsync(CancellationToken.None);
+        await DatabaseDescriptionVerifier.VerifyAsync(scope.ServiceProvider.GetRequiredService<NexusDbContext>(), CancellationToken.None);
         Console.WriteLine("AiNexus 資料庫與 migrations 初始化完成。");
     }
     catch (Exception ex)
@@ -211,6 +218,17 @@ if (builder.Configuration.GetValue<bool>("InitializeDatabase"))
         Console.Error.WriteLine(ex is ApiException api ? api.Message : LocalDatabaseSettings.Diagnose(ex));
         Environment.ExitCode = 1;
     }
+    await app.DisposeAsync();
+    return;
+}
+if (builder.Configuration.GetValue<bool>("VerifyDatabaseDescriptions"))
+{
+    try
+    {
+        using var scope = app.Services.CreateScope();
+        await DatabaseDescriptionVerifier.VerifyAsync(scope.ServiceProvider.GetRequiredService<NexusDbContext>(), CancellationToken.None);
+    }
+    catch (Exception ex) { Console.Error.WriteLine(ex is ApiException api ? api.Message : LocalDatabaseSettings.Diagnose(ex)); Environment.ExitCode = 1; }
     await app.DisposeAsync();
     return;
 }
@@ -269,6 +287,27 @@ app.Use(async (http, next) =>
     await next(http);
 });
 app.UseAuthentication();
+app.Use(async (http, next) =>
+{
+    http.Response.OnStarting(() =>
+    {
+        if (http.Request.Path.StartsWithSegments("/api/v1") && http.User.Identity?.IsAuthenticated == true)
+        {
+            var id = http.User.FindFirst(SessionIdentity.UserId)?.Value ?? http.RequestServices.GetRequiredService<CurrentUser>().ResolvedId?.ToString();
+            if (id is not null) http.Response.Headers["X-Nexus-Identity"] = id + ":" + http.User.FindFirst(SessionIdentity.ActorId)?.Value;
+        }
+        return Task.CompletedTask;
+    });
+    if (http.Items.ContainsKey(SessionIdentity.Restored) && http.Request.Path.StartsWithSegments("/api/v1") &&
+        !http.Request.Path.StartsWithSegments("/api/v1/auth"))
+    {
+        // An operation submitted as the target must never execute under the restored administrator.
+        await Results.Problem(statusCode: 409, title: "測試身分已結束，請重新載入工作區。",
+            extensions: new Dictionary<string, object?> { ["code"] = "identity_changed" }).ExecuteAsync(http);
+        return;
+    }
+    await next(http);
+});
 app.UseAuthorization();
 app.UseRateLimiter();
 app.Use(async (http, next) =>

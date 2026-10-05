@@ -10,10 +10,20 @@ import { ThinkingIndicator } from '../../shared/ui/thinking-indicator';
 import { RouterLink } from '@angular/router';
 import { MessageFeedback } from '../quality/message-feedback';
 import { ChargeLabel } from '../billing/charge-label';
+import { StreamingAnswer } from '../../shared/ui/streaming-answer';
 
 @Component({
   selector: 'nx-chat-message',
-  imports: [Icon, AttachmentList, ThinkingIndicator, RouterLink, MarkdownView, MessageFeedback, ChargeLabel],
+  imports: [
+    Icon,
+    AttachmentList,
+    ThinkingIndicator,
+    RouterLink,
+    MarkdownView,
+    MessageFeedback,
+    ChargeLabel,
+    StreamingAnswer,
+  ],
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <article
@@ -23,6 +33,7 @@ import { ChargeLabel } from '../billing/charge-label';
     [class.search-current]="currentMatch()"
     [attr.data-message-id]="message().id"
     [attr.aria-label]="message().role === 'user' ? '你的提問' : 'AI 回覆'"
+    [attr.aria-busy]="active()"
     animate.enter="message-enter"
   >
     <div class="message-heading">
@@ -44,17 +55,24 @@ import { ChargeLabel } from '../billing/charge-label';
       }
     } @else if (active()) {
       @if (streamContent()) {
-        <div class="streaming-copy">{{ streamContent() }}</div>
+        <nx-streaming-answer [content]="streamContent()" (rendered)="rendered.emit()" />
       } @else {
         <nx-thinking-indicator
-          [label]="status() === 'queued' ? '等待模型回應' : '正在思考'"
+          [mode]="status() === 'queued' ? 'waiting' : 'thinking'"
+          [label]="
+            status() === 'queued'
+              ? '等待模型回應'
+              : reasoning() !== 'auto' && reasoning() !== 'none'
+                ? '正在推理'
+                : '正在思考'
+          "
           [detail]="
             status() === 'queued' ? '已加入佇列，可隨時停止' : '正在整理資訊，回答將逐步呈現'
           "
         />
       }
     } @else {
-      <nx-markdown-view [content]="message().content" />
+      <nx-markdown-view [content]="message().content" animate.enter="answer-settled" />
     }
     @if (!active() && message().sources?.length) {
       <nav class="source-citations" aria-label="回答引用來源">
@@ -73,10 +91,33 @@ import { ChargeLabel } from '../billing/charge-label';
       <p class="message-note">已停止 · 保留部分回答</p>
     }
     @if (!active() && message().webSources; as sources) {
-      @if (sources.length) { <nav class="source-citations web-citations" aria-label="網路搜尋來源">@for (source of sources; track source.number) { <a [href]="source.url" target="_blank" rel="noopener noreferrer" [title]="source.excerpt + ' · ' + source.retrievedAt"><strong>[網路{{ source.number }}]</strong><span>{{ source.title }}</span><nx-icon name="globe" /></a> }</nav> }
-      @else { <p class="message-note">這次網路搜尋沒有可引用的摘要。</p> }
+      @if (sources.length) {
+        <nav class="source-citations web-citations" aria-label="網路搜尋來源">
+          @for (source of sources; track source.number) {
+            <a
+              [href]="source.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              [title]="source.excerpt + ' · ' + source.retrievedAt"
+              ><strong>[網路{{ source.number }}]</strong><span>{{ source.title }}</span
+              ><nx-icon name="globe"
+            /></a>
+          }
+        </nav>
+      } @else {
+        <p class="message-note">這次網路搜尋沒有可引用的摘要。</p>
+      }
     }
-    @if (!active() && message().role === 'assistant') { <div class="message-charges">@if (message().charge; as charge) { <nx-charge-label [charge]="charge" /> }@if (message().webSearchCharge; as charge) { <span>搜尋</span><nx-charge-label [charge]="charge" /> }</div> }
+    @if (!active() && message().role === 'assistant') {
+      <div class="message-charges">
+        @if (message().charge; as charge) {
+          <nx-charge-label [charge]="charge" />
+        }
+        @if (message().webSearchCharge; as charge) {
+          <span>搜尋</span><nx-charge-label [charge]="charge" />
+        }
+      </div>
+    }
     @if (message().status === 'failed' && !active()) {
       <p class="message-note error-note">{{ failureText() }}，可重新生成。</p>
     }
@@ -163,6 +204,8 @@ export class ChatMessage {
   readonly busy = input(false);
   readonly streamContent = input('');
   readonly status = input('');
+  readonly reasoning = input('auto');
+  readonly rendered = output<void>();
   readonly edit = output<Message>();
   readonly regenerate = output<Message>();
   readonly version = output<number>();

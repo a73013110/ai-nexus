@@ -18,9 +18,13 @@ export class ApiError extends Error {
 export class ApiTransport {
   private readonly router = inject(Router);
   private csrf = '';
+  private identity: string | null = null;
   readonly expired = signal(0);
   session(value: AuthSession) {
     this.csrf = value.csrfToken;
+    this.identity = value.userId
+      ? value.userId + ':' + (value.testing?.administratorId ?? '')
+      : null;
   }
   token(value: string) {
     this.csrf = value;
@@ -53,6 +57,16 @@ export class ApiTransport {
       if (signal?.aborted) throw error;
       throw new ApiError(0, 'network_error', '連線中斷，請確認區網連線後重試。');
     }
+    const identity = response.headers.get('X-Nexus-Identity');
+    if (identity) {
+      if (this.identity && identity !== this.identity && !path.startsWith('/auth/')) {
+        this.csrf = '';
+        this.expired.update((value) => value + 1);
+        window.location.assign('/dashboard');
+        throw new ApiError(409, 'identity_changed', '登入身分已變更，正在重新載入工作區。');
+      }
+      this.identity = identity;
+    }
     if (!response.ok) {
       if (response.status === 401 && !path.startsWith('/auth/')) {
         this.csrf = '';
@@ -70,7 +84,7 @@ export class ApiTransport {
         problem.code ?? 'request_failed',
         problem.title ??
           (response.status === 401
-            ? '登入已失效，請重新登入工作台。'
+            ? '登入已失效，請重新登入工作區。'
             : '服務暫時無法使用，請稍後重試。'),
         problem.traceId,
       );

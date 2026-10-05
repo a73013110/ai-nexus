@@ -149,7 +149,7 @@ namespace AiNexus.BuildingBlocks.Migrations
                 schema: "access",
                 table: "RoleGroups",
                 columns: new[] { "Id", "Enabled", "Name" },
-                values: new object[] { "workspace", true, "基本工作台" });
+                values: new object[] { "workspace", true, "基本工作\u53f0" });
 
             migrationBuilder.InsertData(
                 schema: "access",
