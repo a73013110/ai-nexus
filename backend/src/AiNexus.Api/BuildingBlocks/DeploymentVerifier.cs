@@ -32,7 +32,8 @@ public static class DeploymentVerifier
             var providerConfigured = !inference.ProviderConcurrency.ContainsKey("google") || !string.IsNullOrWhiteSpace(inference.GoogleApiKey);
             var catalog = await scope.ServiceProvider.GetRequiredService<ModelCatalog>().GetAsync(ct);
             await scope.ServiceProvider.GetRequiredService<AiNexus.Modules.Attachments.IAttachmentStorage>().VerifyAsync(ct);
-            var ready = connected && pending?.Count == 0 && catalog.ProviderAvailable && catalog.Models.Count > 0 && providerConfigured && (ad.Mode == "Windows" || ad.Configured);
+            var retrieval = await scope.ServiceProvider.GetRequiredService<Modules.Knowledge.RetrievalModelProbe>().CheckAsync(null, ct);
+            var ready = connected && pending?.Count == 0 && catalog.ProviderAvailable && catalog.Models.Count > 0 && providerConfigured && (ad.Mode == "Windows" || ad.Configured) && retrieval.Embedding.Available == true && retrieval.Rerank.Available == true;
             Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new {
                 environment = environment.EnvironmentName, configurationVersion = config.GetValue("ConfigurationVersion", 1),
                 sqlConnected = connected, pendingMigrations = pending?.Count ?? -1, pendingMigrationIds = pending,
@@ -41,6 +42,7 @@ public static class DeploymentVerifier
                 providers = catalog.Providers, providerConfigured, configuredModelCount = inference.Models.Count,
                 providerAvailable = catalog.ProviderAvailable, availableModelCount = catalog.Models.Count, modelNotice = catalog.Notice,
                 embeddingProvider = knowledge.EmbeddingProvider, embeddingDimensions = knowledge.Dimensions,
+                embeddingAvailable = retrieval.Embedding.Available, embeddingNotice = retrieval.Embedding.Notice, rerankAvailable = retrieval.Rerank.Available, rerankNotice = retrieval.Rerank.Notice,
                 webSearchEnabled = search.Enabled, giteaEnabled = gitea.Enabled,
                 keyRingPath = config["DataProtection:KeyRingPath"], attachmentStoragePath = attachments.StoragePath, attachmentStorageWritable = true, ready
             }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));

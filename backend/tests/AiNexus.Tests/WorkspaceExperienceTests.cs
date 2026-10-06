@@ -62,6 +62,7 @@ public sealed class WorkspaceExperienceTests
     {
         using var worker = ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services);
         Assert.True(await worker.ProcessNextAsync(CancellationToken.None));
+        while (await worker.ProcessNextAsync(CancellationToken.None)) { }
     }
     [Fact]
     public async Task NotificationPagingHandlesEqualTimestampsAndReadThroughNeverCrossesAccountsOrNewEvents()

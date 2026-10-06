@@ -26,6 +26,7 @@ import { Checkbox } from '../../shared/ui/checkbox';
 import { SearchField } from '../../shared/ui/search-field';
 import { AdminUserInspector } from './admin-user-inspector';
 import { AdminAudit } from './admin-audit';
+import { RetrievalAdmin } from './retrieval-admin';
 import {
   formatDate,
   formatNumber,
@@ -77,6 +78,7 @@ interface Editor {
     SearchField,
     AdminUserInspector,
     AdminAudit,
+    RetrievalAdmin,
     PriceBook,
     FeatureSummary,
     ActionMenu,
@@ -121,6 +123,7 @@ export class AdminPage {
     { id: 'features', name: '功能' },
     { id: 'audit', name: '異動稽核' },
     { id: 'usage', name: '平台用量' },
+    { id: 'retrieval', name: '知識檢索' },
   ];
   readonly featureIcons = FEATURE_ICONS;
   readonly usageModelName = formatModelDisplayName;
@@ -133,6 +136,8 @@ export class AdminPage {
           evaluation: '評測',
           ocr: '圖片辨識',
           embedding: '知識向量',
+          rerank: '知識重排',
+          'query-rewrite': '檢索查詢改寫',
           'web-search': '網路搜尋',
         } as Record<string, string>
       )[kind] || kind

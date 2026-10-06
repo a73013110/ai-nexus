@@ -33,12 +33,16 @@ export type MessageDisplay = Pick<
               [readerPage]="source.pageNumber"
               [title]="source.excerpt"
               ><strong>[{{ source.number }}]</strong><span>{{ source.title }}</span
-              ><small>第 {{ source.pageNumber }} 頁</small><nx-icon name="document"
+              ><small
+                >第 {{ source.pageNumber
+                }}{{ source.endPage > source.pageNumber ? '–' + source.endPage : '' }} 頁</small
+              ><nx-icon name="document"
             /></a>
           } @else {
             <details class="shared-citation">
               <summary>
-                [{{ source.number }}] {{ source.title }} · 第 {{ source.pageNumber }} 頁
+                [{{ source.number }}] {{ source.title }} · 第 {{ source.pageNumber
+                }}{{ source.endPage > source.pageNumber ? '–' + source.endPage : '' }} 頁
               </summary>
               <p>{{ source.excerpt }}</p>
             </details>

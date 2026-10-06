@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5181/"
+      "url": "http://localhost/"
     }
   ],
   "paths": {
@@ -12395,6 +12395,648 @@
         }
       }
     },
+    "/api/v1/admin/knowledge/profiles": {
+      "get": {
+        "tags": ["Administration"],
+        "operationId": "ListEmbeddingProfiles",
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EmbeddingProfileDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/knowledge/profiles/{id}/rebuild": {
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "RebuildEmbeddingProfile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/knowledge/profiles/{id}/activate": {
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "ActivateEmbeddingProfile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/knowledge/profiles/{id}/vectors": {
+      "delete": {
+        "tags": ["Administration"],
+        "operationId": "ClearRetiredEmbeddingVectors",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/knowledge/capabilities": {
+      "get": {
+        "tags": ["Administration"],
+        "operationId": "GetRetrievalCapabilities",
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetrievalCapabilitiesDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/knowledge/capabilities/probe": {
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "ProbeRetrievalModels",
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetrievalCapabilitiesDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/knowledge/search": {
+      "post": {
+        "tags": ["Administration"],
+        "operationId": "TestAdminRetrieval",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminRetrievalSearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeSearchDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/catalog": {
       "get": {
         "tags": ["Administration"],
@@ -16588,6 +17230,28 @@
           }
         }
       },
+      "AdminRetrievalSearchRequest": {
+        "required": ["query", "collectionIds"],
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "collectionIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "mode": {
+            "type": ["null", "string"]
+          },
+          "rerank": {
+            "type": ["null", "boolean"]
+          }
+        }
+      },
       "AdminRoleDto": {
         "required": ["id", "name", "enabled", "groupIds", "userCount"],
         "type": "object",
@@ -17233,6 +17897,11 @@
           },
           "excerpt": {
             "type": "string"
+          },
+          "endPage": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -17946,6 +18615,94 @@
           }
         }
       },
+      "EmbeddingCoverageDto": {
+        "required": ["completedChunks", "totalChunks", "pendingDocuments"],
+        "type": "object",
+        "properties": {
+          "completedChunks": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalChunks": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pendingDocuments": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "complete": {
+            "type": "boolean"
+          },
+          "ratio": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "EmbeddingProfileDto": {
+        "required": [
+          "id",
+          "key",
+          "provider",
+          "model",
+          "dimensions",
+          "status",
+          "createdAt",
+          "activatedAt",
+          "retiredAt",
+          "coverage",
+          "job"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "key": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "dimensions": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "activatedAt": {
+            "type": ["null", "string"],
+            "format": "date-time"
+          },
+          "retiredAt": {
+            "type": ["null", "string"],
+            "format": "date-time"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/EmbeddingCoverageDto"
+          },
+          "job": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JobDto"
+              }
+            ]
+          }
+        }
+      },
       "EvaluationCase": {
         "required": ["question"],
         "type": "object",
@@ -18464,7 +19221,14 @@
         }
       },
       "KnowledgeHitDto": {
-        "required": ["documentId", "title", "pageNumber", "text", "score"],
+        "required": [
+          "documentId",
+          "title",
+          "pageNumber",
+          "text",
+          "score",
+          "chunkId"
+        ],
         "type": "object",
         "properties": {
           "documentId": {
@@ -18484,6 +19248,44 @@
           "score": {
             "type": "number",
             "format": "double"
+          },
+          "chunkId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "endPage": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          "ordinal": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          "vectorRank": {
+            "type": ["null", "integer"],
+            "format": "int32"
+          },
+          "ftsRank": {
+            "type": ["null", "integer"],
+            "format": "int32"
+          },
+          "vectorScore": {
+            "type": ["null", "number"],
+            "format": "double"
+          },
+          "rrfScore": {
+            "type": ["null", "number"],
+            "format": "double"
+          },
+          "rerankScore": {
+            "type": ["null", "number"],
+            "format": "double"
+          },
+          "headingPath": {
+            "type": "string",
+            "default": ""
           }
         }
       },
@@ -18499,6 +19301,26 @@
             "items": {
               "$ref": "#/components/schemas/KnowledgeHitDto"
             }
+          },
+          "rewriteMs": {
+            "type": "integer",
+            "format": "int64",
+            "default": 0
+          },
+          "embedMs": {
+            "type": "integer",
+            "format": "int64",
+            "default": 0
+          },
+          "searchMs": {
+            "type": "integer",
+            "format": "int64",
+            "default": 0
+          },
+          "rerankMs": {
+            "type": "integer",
+            "format": "int64",
+            "default": 0
           }
         }
       },
@@ -19856,6 +20678,52 @@
           }
         }
       },
+      "RetrievalCapabilitiesDto": {
+        "required": ["sql", "testStore", "embedding", "rerank"],
+        "type": "object",
+        "properties": {
+          "sql": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SqlVectorCapabilitiesDto"
+              }
+            ]
+          },
+          "testStore": {
+            "type": "boolean"
+          },
+          "embedding": {
+            "$ref": "#/components/schemas/RetrievalConnectionDto"
+          },
+          "rerank": {
+            "$ref": "#/components/schemas/RetrievalConnectionDto"
+          }
+        }
+      },
+      "RetrievalConnectionDto": {
+        "required": ["provider", "model", "endpoint", "available", "notice"],
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "endpoint": {
+            "type": "string"
+          },
+          "available": {
+            "type": ["null", "boolean"]
+          },
+          "notice": {
+            "type": "string"
+          }
+        }
+      },
       "ReviewRequest": {
         "required": ["score"],
         "type": "object",
@@ -20529,6 +21397,46 @@
           "unknownCalls": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "SqlVectorCapabilitiesDto": {
+        "required": [
+          "version",
+          "edition",
+          "majorVersion",
+          "nativeVector",
+          "exactDistance"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "edition": {
+            "type": "string"
+          },
+          "majorVersion": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "nativeVector": {
+            "type": "boolean"
+          },
+          "exactDistance": {
+            "type": "boolean"
+          },
+          "fullTextInstalled": {
+            "type": "boolean",
+            "default": false
+          },
+          "traditionalChineseWordBreaker": {
+            "type": "boolean",
+            "default": false
+          },
+          "fullTextIndex": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

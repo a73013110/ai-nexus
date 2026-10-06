@@ -80,7 +80,8 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
             var doc = await RequireAsync(actor, id, ct, write: true);
             if (doc.CollectionId is null) throw new ApiException(409, "document_not_indexed", "只有知識庫文件需要重新索引。");
             if (await db.Set<BackgroundJob>().AnyAsync(x => x.SubjectId == id && (x.Status == "queued" || x.Status == "running"), ct)) throw new ApiException(409, "job_active", "此文件仍在處理中。");
-            doc.Status = "queued"; doc.Warning = null; doc.JobId = jobs.Enqueue(actor, doc.Id, doc.Id, "document-ingest", doc.FileName).Id;
+            var savedPages = await db.Set<DocumentPage>().AnyAsync(x => x.DocumentId == id, ct);
+            doc.Status = "queued"; doc.JobId = jobs.Enqueue(actor, doc.Id, doc.Id, savedPages ? "document-embedding" : "document-ingest", doc.FileName).Id;
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "document.reindexed", Result = "queued" });
             await db.SaveChangesAsync(ct);
             return Describe(doc, true);

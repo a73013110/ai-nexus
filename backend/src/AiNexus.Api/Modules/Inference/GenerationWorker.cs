@@ -89,7 +89,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
                 var grants = await scope.ServiceProvider.GetRequiredService<AiNexus.Modules.AccessControl.AccessService>().ForUserAsync(run.OwnerId, stoppingToken);
                 if (!grants.Features.Any(x => x.Id == "chat")) throw new ApiException(403, "chat_access_revoked", "對話功能權限已撤銷。");
                 await scope.ServiceProvider.GetRequiredService<AiNexus.Modules.Administration.ModelPolicyService>().RequireAsync(run.OwnerId, run.ModelId, stoppingToken, checkQuota: false);
-                var sources = await db.Set<AiNexus.Modules.Knowledge.MessageCitation>().Where(x => x.MessageId == run.AssistantMessageId).Select(x => new AiNexus.Modules.Knowledge.KnowledgeHitDto(x.DocumentId, x.Title, x.PageNumber, x.Excerpt, 0)).ToListAsync(stoppingToken);
+                var sources = await db.Set<AiNexus.Modules.Knowledge.MessageCitation>().Where(x => x.MessageId == run.AssistantMessageId).Select(x => new AiNexus.Modules.Knowledge.KnowledgeHitDto(x.DocumentId, x.Title, x.PageNumber, x.Excerpt, 0, Guid.Empty, x.EndPage)).ToListAsync(stoppingToken);
                 await scope.ServiceProvider.GetRequiredService<AiNexus.Modules.Knowledge.KnowledgeRetrieval>().ValidateHitsAsync(run.OwnerId, sources, stoppingToken);
                 var projectId = await db.Conversations.Where(x => x.Id == run.ConversationId).Select(x => x.ProjectId).SingleAsync(stoppingToken);
                 await scope.ServiceProvider.GetRequiredService<AiNexus.Modules.Projects.ProjectService>().ContextAsync(run.OwnerId, projectId, stoppingToken);

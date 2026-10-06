@@ -43,6 +43,7 @@ public sealed class RetrievalPipelineTests
         using var added = await client.PostAsJsonAsync($"/api/v1/knowledge/collections/{collection}/text", new TextDocumentRequest("採購規範", "採購應先核准。主管簽署後才可付款。")); added.EnsureSuccessStatusCode();
         var document = (await added.Content.ReadFromJsonAsync<DocumentDto>())!;
         using var worker = ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services); Assert.True(await worker.ProcessNextAsync(CancellationToken.None));
+        while (await worker.ProcessNextAsync(CancellationToken.None)) { }
         var actor = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         return (collection, actor, document);
     }

@@ -102,7 +102,7 @@ public sealed record AddDocumentRequest(Guid AttachmentId);
 public sealed record KnowledgeSearchRequest(string Query, IReadOnlyList<Guid> CollectionIds);
 public sealed record KnowledgeSearchDto(string Mode, IReadOnlyList<KnowledgeHitDto> Hits, long RewriteMs = 0, long EmbedMs = 0, long SearchMs = 0, long RerankMs = 0);
 public sealed record KnowledgeHitDto(Guid DocumentId, string Title, int PageNumber, string Text, double Score,
-    Guid ChunkId = default, int EndPage = 0, int Ordinal = 0, int? VectorRank = null, int? FtsRank = null,
+    Guid ChunkId, int EndPage = 0, int Ordinal = 0, int? VectorRank = null, int? FtsRank = null,
     double? VectorScore = null, double? RrfScore = null, double? RerankScore = null, string HeadingPath = "");
 
 public static class KnowledgeConfiguration

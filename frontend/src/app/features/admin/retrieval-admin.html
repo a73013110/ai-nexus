@@ -1,0 +1,177 @@
+@if (loading()) {
+  <p role="status">正在載入知識檢索設定…</p>
+}
+@if (error()) {
+  <p class="error-banner" role="alert">
+    {{ error() }}<button type="button" (click)="load()">重新載入</button>
+  </p>
+}
+@if (notice()) {
+  <p class="form-note" role="status">{{ notice() }}</p>
+}
+<section class="platform-card">
+  <div class="page-toolbar">
+    <h2>檢索索引</h2>
+    <button type="button" class="secondary-button" [disabled]="working()" (click)="load()">
+      重新整理
+    </button>
+  </div>
+  <p class="form-note">覆蓋率 100% 且全部文件就緒後才能啟用。重新上傳的資料會建立新索引。</p>
+  <div class="resource-list">
+    @for (profile of profiles(); track profile.id) {
+      <div class="resource-row retrieval-profile">
+        <div class="resource-summary">
+          <strong>{{ profile.model }} · {{ profile.dimensions }} 維</strong>
+          <small>{{ statuses[profile.status] || profile.status }} · {{ profile.provider }}</small>
+          <small
+            >建立 {{ date(profile.createdAt)
+            }}{{ profile.activatedAt ? ' · 啟用 ' + date(profile.activatedAt) : '' }}</small
+          >
+          <label class="retrieval-coverage"
+            >向量覆蓋率 {{ profile.coverage.completedChunks }} /
+            {{ profile.coverage.totalChunks }} · 待處理文件 {{ profile.coverage.pendingDocuments }}
+            <progress
+              [attr.aria-label]="profile.model + '向量覆蓋率'"
+              [value]="profile.coverage.ratio"
+              max="1"
+            ></progress>
+          </label>
+          @if (profile.job; as job) {
+            <nx-job-progress [job]="job" />
+          }
+        </div>
+        <div class="page-actions">
+          @if (profile.status !== 'retired') {
+            <button
+              type="button"
+              class="secondary-button"
+              [disabled]="
+                working() ||
+                !!session.auth.session()?.testing ||
+                profile.job?.status === 'queued' ||
+                profile.job?.status === 'running'
+              "
+              (click)="operate(profile, 'rebuild')"
+            >
+              開始重建
+            </button>
+          }
+          @if (profile.status === 'building') {
+            <button
+              type="button"
+              class="primary-button"
+              [disabled]="
+                working() || !profile.coverage.complete || !!session.auth.session()?.testing
+              "
+              (click)="operate(profile, 'activate')"
+            >
+              啟用索引
+            </button>
+          }
+          @if (profile.status === 'retired') {
+            <button
+              type="button"
+              class="secondary-button"
+              [disabled]="
+                working() ||
+                profile.coverage.completedChunks === 0 ||
+                !!session.auth.session()?.testing
+              "
+              (click)="operate(profile, 'clear')"
+            >
+              清除退役向量
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</section>
+@if (capabilities(); as capabilities) {
+  <section class="platform-card">
+    <div class="page-toolbar">
+      <h2>服務能力</h2>
+      <button
+        type="button"
+        class="secondary-button"
+        [disabled]="working() || !!session.auth.session()?.testing"
+        (click)="probe()"
+      >
+        {{ working() ? '正在驗證…' : '驗證檢索模型' }}
+      </button>
+    </div>
+    <p class="form-note">模型驗證只傳送合成資料，會計入檢索模型呼叫配額。</p>
+    <div class="usage-grid">
+      <div class="usage-stat-card">
+        <span>SQL 原生向量</span
+        ><strong>{{
+          capabilities.sql?.nativeVector
+            ? '可用'
+            : capabilities.testStore
+              ? 'SQLite 測試儲存'
+              : '無法使用'
+        }}</strong>
+      </div>
+      <div class="usage-stat-card">
+        <span>全文／1028 斷詞器／索引</span
+        ><strong
+          >{{ capabilities.sql?.fullTextInstalled ? '可用' : '未安裝' }} /
+          {{ capabilities.sql?.traditionalChineseWordBreaker ? '可用' : '缺少' }} /
+          {{ capabilities.sql?.fullTextIndex ? '已建立' : '未建立' }}</strong
+        >
+      </div>
+      <div class="usage-stat-card">
+        <span>向量模型 {{ capabilities.embedding.model }}</span
+        ><strong>{{ capabilities.embedding.notice }}</strong
+        ><small>{{ capabilities.embedding.endpoint }}</small>
+      </div>
+      <div class="usage-stat-card">
+        <span>重排模型 {{ capabilities.rerank.model }}</span
+        ><strong>{{ capabilities.rerank.notice }}</strong
+        ><small>{{ capabilities.rerank.endpoint }}</small>
+      </div>
+    </div>
+  </section>
+}
+<section class="platform-card">
+  <h2>檢索測試台</h2>
+  <p class="form-note">選擇最多三個有權限的知識庫。每次測試會使用目前 active 索引。</p>
+  <div class="usage-grid">
+    @for (collection of collections(); track collection.resource.id) {
+      <nx-checkbox
+        [label]="collection.resource.name"
+        [checked]="selected().includes(collection.resource.id)"
+        [disabled]="!selected().includes(collection.resource.id) && selected().length >= 3"
+        (checkedChange)="select(collection.resource.id, $event)"
+      />
+    } @empty {
+      <p class="form-note">目前沒有可存取的知識庫。</p>
+    }
+  </div>
+  <form class="platform-form" [formGroup]="form" (submit)="search($event)">
+    <label
+      >檢索模式<nx-select
+        label="檢索模式"
+        [options]="modes"
+        [value]="mode()"
+        (valueChange)="mode.set($event)"
+    /></label>
+    <nx-checkbox label="使用重排模型" [checked]="rerank()" (checkedChange)="rerank.set($event)" />
+    <label
+      >查詢內容<textarea
+        formControlName="query"
+        aria-label="管理端查詢內容"
+        rows="3"
+        maxlength="2000"
+        required
+      ></textarea>
+    </label>
+    <button class="primary-button" [disabled]="form.invalid || !selected().length || searching()">
+      {{ searching() ? '正在檢索…' : '測試檢索' }}
+    </button>
+  </form>
+  @if (result(); as result) {
+    <nx-retrieval-results [result]="result" />
+  }
+</section>
+<nx-confirm-dialog />

@@ -205,6 +205,9 @@ export class TasksPage {
       (
         {
           'document-ingest': '文件辨識與索引',
+          'document-embedding': '文件批次向量化',
+          'embedding-reindex': '檢索索引重建',
+          'retrieval-eval': '檢索品質評測',
           evaluation: '品質評測',
           'repository-review': '程式碼 Review',
           'integration-import': '資料來源匯入',

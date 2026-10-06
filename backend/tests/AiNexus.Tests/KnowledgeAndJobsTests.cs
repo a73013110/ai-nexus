@@ -39,6 +39,7 @@ public sealed class KnowledgeAndJobsTests
     {
         using var worker = ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services);
         Assert.True(await worker.ProcessNextAsync(CancellationToken.None));
+        while (await worker.ProcessNextAsync(CancellationToken.None)) { }
     }
     [Fact]
     public async Task CollectionAclPrefiltersSearchAndOriginalsAndRevocationStopsLaterRetrieval()
@@ -119,6 +120,7 @@ public sealed class KnowledgeAndJobsTests
         using var client = await factory.SignedInAsync(); var collection = await Collection(client);
         var document = await Document(client, collection.Resource.Id, new string('文', 1300));
         factory.Embeddings.Fail = true; await Process(factory);
+        document = (await client.GetFromJsonAsync<DocumentDto>($"/api/v1/documents/{document.Id}"))!;
         var failed = (await client.GetFromJsonAsync<JobDto>($"/api/v1/jobs/{document.JobId}"))!;
         Assert.Equal("failed", failed.Status); Assert.Equal("fixture_embedding_failed", failed.ErrorCode);
         Assert.Single((await client.GetFromJsonAsync<DocumentPageDto[]>($"/api/v1/documents/{document.Id}/pages"))!);
@@ -127,7 +129,7 @@ public sealed class KnowledgeAndJobsTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-            var job = await db.Set<BackgroundJob>().SingleAsync(); job.Status = "running"; job.LeaseToken = Guid.NewGuid(); job.LeaseUntil = DateTimeOffset.UtcNow.AddMinutes(-1); await db.SaveChangesAsync();
+            var job = await db.Set<BackgroundJob>().SingleAsync(x => x.Id == document.JobId); job.Status = "running"; job.LeaseToken = Guid.NewGuid(); job.LeaseUntil = DateTimeOffset.UtcNow.AddMinutes(-1); await db.SaveChangesAsync();
         }
         using var first = ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services);
         using var second = ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services);

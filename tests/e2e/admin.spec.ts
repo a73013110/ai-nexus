@@ -4,6 +4,7 @@ import {
   ApiFixture,
   settleEntrance,
   chooseSelect,
+  openSettings,
   expectViewportContained,
 } from "./fixtures";
 import type {
@@ -11,6 +12,220 @@ import type {
   AuditEntry,
   AdminUser,
 } from "../../frontend/src/app/core/api/types";
+
+test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", async ({ page }) => {
+  await administration(page);
+  const collection = randomUUID(),
+    document = randomUUID();
+  const coverage = {
+    completedChunks: 0,
+    totalChunks: 1,
+    pendingDocuments: 0,
+    complete: false,
+    ratio: 0,
+  };
+  const profiles = [
+    {
+      id: 1,
+      key: "ollama:bge-m3:1024:old",
+      provider: "ollama",
+      model: "bge-m3",
+      dimensions: 1024,
+      status: "active",
+      createdAt: "2026-10-06T00:00:00Z",
+      activatedAt: "2026-10-06T00:00:00Z",
+      retiredAt: null,
+      coverage: { ...coverage, completedChunks: 1, complete: true, ratio: 1 },
+      job: null,
+    },
+    {
+      id: 2,
+      key: "ollama:bge-m3-v2:1024:new",
+      provider: "ollama",
+      model: "bge-m3-v2",
+      dimensions: 1024,
+      status: "building",
+      createdAt: "2026-10-06T01:00:00Z",
+      activatedAt: null,
+      retiredAt: null,
+      coverage,
+      job: null,
+    },
+  ];
+  let rebuilding = false;
+  await page.route("**/api/v1/knowledge/collections", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          resource: {
+            id: collection,
+            name: "採購規範",
+            kind: "knowledge",
+            canEdit: true,
+            isOwner: true,
+            updatedAt: "2026-10-06T00:00:00Z",
+          },
+          description: "",
+          documents: 1,
+          readyDocuments: 1,
+        },
+      ]),
+    }),
+  );
+  await page.route("**/api/v1/admin/knowledge/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const json = (value: unknown) =>
+      route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(value),
+      });
+    if (path.endsWith("/profiles")) {
+      if (rebuilding)
+        Object.assign(coverage, {
+          completedChunks: 1,
+          complete: true,
+          ratio: 1,
+        });
+      return json(profiles);
+    }
+    if (path.includes("/capabilities"))
+      return json({
+        testStore: false,
+        sql: {
+          version: "17.0",
+          edition: "Developer",
+          majorVersion: 17,
+          nativeVector: true,
+          exactDistance: true,
+          fullTextInstalled: true,
+          traditionalChineseWordBreaker: true,
+          fullTextIndex: true,
+        },
+        embedding: {
+          provider: "ollama",
+          model: "bge-m3",
+          endpoint: "http://localhost:11434",
+          available: true,
+          notice: "批次向量化通過，維度 1024。",
+        },
+        rerank: {
+          provider: "none",
+          model: "bge-reranker-v2-m3",
+          endpoint: "",
+          available: true,
+          notice: "未啟用重排。",
+        },
+      });
+    if (path.endsWith("/rebuild")) {
+      rebuilding = true;
+      return json({
+        id: randomUUID(),
+        kind: "embedding-reindex",
+        subjectId: randomUUID(),
+        status: "queued",
+        label: "重建索引",
+        stage: "等待處理",
+        attempt: 0,
+        completedUnits: 0,
+        totalUnits: 1,
+      });
+    }
+    if (path.endsWith("/activate")) {
+      profiles[0].status = "retired";
+      profiles[1].status = "active";
+      return route.fulfill({ status: 204 });
+    }
+    if (path.endsWith("/vectors")) {
+      profiles[0].coverage.completedChunks = 0;
+      return route.fulfill({ status: 204 });
+    }
+    if (path.endsWith("/search")) {
+      const body = route.request().postDataJSON();
+      expect(body.collectionIds).toEqual([collection]);
+      expect(body.mode).toBe("hybrid");
+      return json({
+        mode: "hybrid",
+        rewriteMs: 0,
+        embedMs: 8,
+        searchMs: 2,
+        rerankMs: 0,
+        hits: [
+          {
+            documentId: document,
+            chunkId: randomUUID(),
+            title: "採購規範",
+            pageNumber: 1,
+            endPage: 2,
+            ordinal: 0,
+            text: "主管核准後才可付款。",
+            headingPath: "第三章",
+            score: 0.03,
+            vectorRank: 1,
+            ftsRank: 2,
+            rrfScore: 0.0325,
+            rerankScore: null,
+          },
+        ],
+      });
+    }
+    return route.fulfill({ status: 404 });
+  });
+  await page.getByRole("button", { name: "知識檢索", exact: true }).click();
+  const activate = page.getByRole("button", { name: "啟用索引", exact: true });
+  await expect(activate).toBeDisabled();
+  await page
+    .locator(".retrieval-profile")
+    .filter({ hasText: "bge-m3-v2" })
+    .getByRole("button", { name: "開始重建" })
+    .click();
+  await expect(activate).toBeEnabled();
+  await activate.click();
+  await expect(page.getByText("使用中索引已切換。")).toBeVisible();
+  await page.getByRole("checkbox", { name: "採購規範", exact: true }).check();
+  await page
+    .getByRole("textbox", { name: "管理端查詢內容", exact: true })
+    .fill("採購如何核准？");
+  await page.getByRole("button", { name: "測試檢索", exact: true }).click();
+  await expect(page.getByText("模式：hybrid · 1 個結果")).toBeVisible();
+  await expect(page.getByText("第 1–2 頁", { exact: false })).toBeVisible();
+  await expect(
+    page.getByText("向量排名 1 · 全文排名 2", { exact: false }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "清除退役向量", exact: true }).click();
+  await page
+    .getByRole("dialog", { name: "清除退役向量" })
+    .getByRole("button", { name: "清除向量", exact: true })
+    .click();
+  await expect(page.getByText("退役向量已清除。")).toBeVisible();
+  for (const theme of ["light", "dark"] as const) {
+    const dialog = await openSettings(page);
+    await chooseSelect(page, "主題", theme === "light" ? "淺色" : "深色");
+    const save = dialog.getByRole("button", { name: "儲存變更", exact: true });
+    if (await save.count()) {
+      await save.click();
+      await expect(dialog.getByRole("status")).toContainText("已儲存");
+    }
+    await dialog.getByRole("button", { name: "關閉設定", exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await page.setViewportSize({
+      width: theme === "light" ? 1440 : 375,
+      height: 900,
+    });
+    await page.emulateMedia({ colorScheme: theme, reducedMotion: "reduce" });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: `artifacts/screenshots/retrieval-admin-${theme}.png`,
+      fullPage: true,
+      animations: "disabled",
+    });
+  }
+});
 
 async function administration(page: Page) {
   const fixture = new ApiFixture();

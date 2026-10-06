@@ -70,7 +70,8 @@ public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskSe
         await execution.CheckpointAsync("文件文字已完成", total, total, ct);
         if (document.CollectionId is not null)
         {
-            await indexer.IndexCurrentAsync(execution, document, ct);
+            await indexer.QueueAsync(execution, document, ct);
+            return;
         }
         document.Status = "ready";
         (await db.Set<WorkspaceResource>().SingleAsync(x => x.Id == document.Id, ct)).UpdatedAt = DateTimeOffset.UtcNow;

@@ -75,6 +75,11 @@ public static class ConnectionVerifier
                 throw new ApiException(503, "attachment_probe_failed", "模型未正確識別合成文件或圖片，請檢查模型能力設定。");
             return images.Length > 0 ? "真實模型已辨識合成文件代碼及紅色 PNG 圖片；未傳送私人資料" : "真實模型已辨識合成文件代碼；此 profile 未啟用圖片能力";
         });
+        await Check("RetrievalModels", async () => {
+            var result = await services.GetRequiredService<AiNexus.Modules.Knowledge.RetrievalModelProbe>().CheckAsync(null, ct);
+            if (result.Embedding.Available != true || result.Rerank.Available != true) throw new ApiException(503, "retrieval_models_unavailable", result.Embedding.Notice + " " + result.Rerank.Notice);
+            return result.Embedding.Notice + " " + result.Rerank.Notice;
+        });
         var destination = configuration["VerificationOutput"] ?? Path.Combine(contentRoot, "connection-checks.json");
         await File.WriteAllTextAsync(destination, JsonSerializer.Serialize(new { checkedAt = DateTimeOffset.UtcNow, results }, new JsonSerializerOptions { WriteIndented = true }), ct);
         return passed;

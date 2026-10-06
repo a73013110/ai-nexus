@@ -34,6 +34,9 @@
       }
     </nav>
     @switch (tab()) {
+      @case ('retrieval') {
+        <nx-retrieval-admin />
+      }
       @case ('users') {
         <div class="page-toolbar">
           <nx-search-field

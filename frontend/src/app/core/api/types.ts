@@ -168,6 +168,17 @@ export type DocumentPage = Dto<'DocumentPageDto'>;
 export type DocumentJob = Dto<'DocumentJobDto'> & { job: Job };
 export type KnowledgeSearch = Dto<'KnowledgeSearchDto'>;
 export type Citation = Dto<'CitationDto'>;
+export type EmbeddingProfile = Omit<Dto<'EmbeddingProfileDto'>, 'coverage' | 'job'> & {
+  coverage: Dto<'EmbeddingCoverageDto'>;
+  job: Job | null;
+};
+export type RetrievalCapabilities = Omit<
+  Dto<'RetrievalCapabilitiesDto'>,
+  'embedding' | 'rerank'
+> & {
+  embedding: Dto<'RetrievalConnectionDto'>;
+  rerank: Dto<'RetrievalConnectionDto'>;
+};
 export type ArtifactSummary = Dto<'ArtifactSummaryDto'> & { resource: Resource };
 export type ArtifactDocument = Dto<'ArtifactDto'> & { resource: Resource };
 export type ArtifactRevision = Dto<'ArtifactRevisionDto'>;

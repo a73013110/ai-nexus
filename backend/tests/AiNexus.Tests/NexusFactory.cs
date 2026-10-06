@@ -126,12 +126,15 @@ public sealed class TestEmbeddings : AiNexus.Modules.Knowledge.IEmbeddingClient
     public string Provider => "ollama";
     public bool Enabled { get; set; } = true;
     public bool Fail { get; set; }
+    public int? FailProfileId { get; set; }
+    public int? FailOnCall { get; set; }
+    public int LastProfileId { get; private set; }
     public int Calls;
     public int DelayMs { get; set; }
     public async Task<AiNexus.Modules.Knowledge.EmbeddingBatchResult> EmbedBatchAsync(IReadOnlyList<string> inputs, AiNexus.Modules.Knowledge.EmbeddingPurpose purpose, AiNexus.Modules.Knowledge.EmbeddingProfile profile, CancellationToken ct)
     {
-        Interlocked.Increment(ref Calls); await Task.Delay(DelayMs, ct);
-        if (Fail) throw new ApiException(503, "fixture_embedding_failed", "測試索引服務暫停。");
+        var call = Interlocked.Increment(ref Calls); LastProfileId = profile.Id; await Task.Delay(DelayMs, ct);
+        if (Fail || FailProfileId == profile.Id || FailOnCall == call) throw new ApiException(503, "fixture_embedding_failed", "測試索引服務暫停。");
         return new(inputs.Select(_ => { var value = new float[profile.Dimensions]; value[0] = 1; return value; }).ToArray());
     }
 }

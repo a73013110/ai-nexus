@@ -9,6 +9,7 @@ public static class AdministrationEndpoints
     public static void MapAdministration(this RouteGroupBuilder root)
     {
         var api = root.MapGroup("/admin").RequireAuthorization(AdministrationConfiguration.Policy).WithTags("Administration");
+        api.MapRetrievalAdministration();
         api.MapGet("/catalog", async (AdministrationService service, CancellationToken ct) => Results.Ok(await service.CatalogAsync(ct))).WithName("GetAdminCatalog").Produces<AdminCatalogDto>();
         api.MapGet("/users", async (string? search, int? offset, AdministrationService service, CancellationToken ct) => Results.Ok(await service.UsersAsync(search, offset ?? 0, ct))).WithName("ListAdminUsers").Produces<AdminUsersDto>();
         api.MapPost("/users", async (UserAccountRequest body, UserAccountAdministration service, CancellationToken ct) => Results.Ok(new CreatedUserDto(await service.SaveAsync(null, body, ct)))).WithName("CreateAdminUser").Produces<CreatedUserDto>();

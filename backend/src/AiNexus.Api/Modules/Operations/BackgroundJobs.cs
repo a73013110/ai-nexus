@@ -73,10 +73,10 @@ public sealed class JobExecution(NexusDbContext db, BackgroundJob job, Guid leas
 {
     public BackgroundJob Job => job;
     public NexusDbContext Database => db;
-    public async Task CheckpointAsync(string stage, int completed, int? total, CancellationToken ct, Func<Task>? afterSave = null)
+    public async Task CheckpointAsync(string stage, int completed, int? total, CancellationToken ct, Func<Task>? afterSave = null, System.Data.IsolationLevel isolation = System.Data.IsolationLevel.ReadCommitted)
     {
         ct.ThrowIfCancellationRequested();
-        await using var transaction = await db.Database.BeginTransactionAsync(ct);
+        await using var transaction = await db.Database.BeginTransactionAsync(isolation, ct);
         var changed = await db.Set<BackgroundJob>().Where(x => x.Id == job.Id && x.LeaseToken == lease && x.Status == "running" && !x.CancelRequested)
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.Stage, stage).SetProperty(x => x.CompletedUnits, completed).SetProperty(x => x.TotalUnits, total).SetProperty(x => x.UpdatedAt, DateTimeOffset.UtcNow).SetProperty(x => x.LeaseUntil, DateTimeOffset.UtcNow.AddSeconds(60)), ct);
         if (changed != 1) throw new OperationCanceledException("Job lease lost or cancellation requested.", ct);

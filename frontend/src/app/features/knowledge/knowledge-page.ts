@@ -28,6 +28,7 @@ import { LibraryPicker } from '../files/library-picker';
 import type { LibraryFile } from '../../core/api/types';
 import { TextSourceEditor } from './text-source-editor';
 import { ReaderLink } from '../../shared/browser/reader-link';
+import { RetrievalResults } from '../../shared/ui/retrieval-results';
 
 @Component({
   selector: 'nx-knowledge-page',
@@ -41,6 +42,7 @@ import { ReaderLink } from '../../shared/browser/reader-link';
     RouterLink,
     LibraryPicker,
     ReaderLink,
+    RetrievalResults,
     TextSourceEditor,
   ],
   providers: [ViewScope],
