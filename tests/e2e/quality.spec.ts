@@ -6,6 +6,146 @@ import type {
   EvaluationDetail,
 } from "../../frontend/src/app/core/api/types";
 
+test("檢索評測固定驗收集並顯示四模式指標及降級原因", async ({ page }) => {
+  const core = new ApiFixture();
+  core.extraFeatures.push(
+    { id: "quality", name: "品質評測", route: "/quality" },
+    { id: "knowledge", name: "知識庫", route: "/knowledge" },
+  );
+  await core.attach(page);
+  const collection = randomUUID(),
+    document = randomUUID(),
+    id = randomUUID();
+  const now = new Date().toISOString();
+  const run = {
+    id,
+    title: "採購驗收",
+    cases: 2,
+    topK: 6,
+    profileKey: "ollama:bge-m3:1024:test",
+    configurationFingerprint: "a".repeat(64),
+    createdAt: now,
+    job: {
+      id: randomUUID(),
+      kind: "retrieval-eval",
+      subjectId: id,
+      label: "檢索評測",
+      status: "completed",
+      stage: "處理完成",
+      attempt: 1,
+      completedUnits: 8,
+      totalUnits: 8,
+      cancelRequested: false,
+      errorCode: null,
+      errorMessage: null,
+      createdAt: now,
+      updatedAt: now,
+    },
+  };
+  const modes = ["vector", "keyword", "hybrid", "hybrid+rerank"];
+  const latency = { p50: 12, p95: 21 };
+  const report = {
+    run,
+    refusalDefinition: "無答案題未提供任何來源的比例；不評斷生成回答內容。",
+    latencyDefinition: "共用正常查詢快取。",
+    summary: modes.map((mode) => ({
+      mode,
+      comparable: mode !== "hybrid+rerank",
+      completed: 2,
+      unavailable: 0,
+      recall: 1,
+      mrr: 1,
+      ndcg: 1,
+      refusalRate: 0.5,
+      rewrite: latency,
+      embed: latency,
+      search: latency,
+      rerank: latency,
+      total: latency,
+    })),
+    results: modes.map((mode) => ({
+      caseId: "一",
+      mode,
+      actualMode: mode === "hybrid+rerank" ? "hybrid(rerank-skipped)" : mode,
+      unavailable: null,
+    })),
+  };
+  let created = false;
+  await page.route("**/api/v1/knowledge/collections", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          resource: {
+            id: collection,
+            name: "採購規範",
+            kind: "knowledge",
+            isOwner: true,
+            canEdit: true,
+            updatedAt: now,
+          },
+          description: "",
+          documents: 1,
+          readyDocuments: 1,
+        },
+      ]),
+    }),
+  );
+  await page.route("**/api/v1/quality/**", async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    let data: unknown = [];
+    if (
+      path.endsWith("/retrieval-evals") &&
+      route.request().method() === "POST"
+    ) {
+      const body = route.request().postDataJSON();
+      expect(body.collectionIds).toEqual([collection]);
+      expect(body.cases).toHaveLength(2);
+      created = true;
+      data = run;
+    } else if (path.endsWith("/retrieval-evals")) data = created ? [run] : [];
+    else if (path.includes(`/retrieval-evals/${id}`)) data = report;
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify(data),
+    });
+  });
+  await page.goto("/quality");
+  await settleEntrance(page);
+  await page.getByRole("button", { name: "檢索評測", exact: true }).click();
+  await page.getByRole("textbox", { name: "檢索評測名稱" }).fill("採購驗收");
+  await page.getByRole("checkbox", { name: "採購規範" }).check();
+  const corpus = page.getByRole("textbox", { name: "檢索驗收集 JSON" });
+  await corpus.fill("{bad JSON");
+  await page.getByRole("button", { name: "開始四模式評測" }).click();
+  await expect(page.getByRole("alert")).toContainText("JSON 格式不正確");
+  await corpus.fill(
+    JSON.stringify([
+      {
+        id: "一",
+        query: "採購核准",
+        relevant: [{ documentId: document, pages: [1], grade: 3 }],
+      },
+      { id: "二", query: "火星", relevant: [], noAnswer: true },
+    ]),
+  );
+  await page.getByRole("button", { name: "開始四模式評測" }).click();
+  for (const mode of modes)
+    await expect(
+      page.getByRole("heading", { name: mode, exact: true }),
+    ).toBeVisible();
+  await expect(
+    page.getByText("含降級、略過或尚無結果", { exact: false }),
+  ).toBeVisible();
+  await page.getByText("逐題實際模式", { exact: true }).click();
+  await expect(
+    page.getByText("hybrid(rerank-skipped)", { exact: true }),
+  ).toBeVisible();
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "下載指標報告" }).click();
+  expect((await download).suggestedFilename()).toBe("採購驗收.json");
+});
+
 test("fixed evaluation cases compare instructions, show diagnostic results and retain a manual review", async ({
   page,
 }) => {

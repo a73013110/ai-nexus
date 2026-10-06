@@ -129,6 +129,8 @@ builder.Services.AddScoped<ModelPolicyService>();
 builder.Services.AddSingleton<ModelQuotaLock>();
 builder.Services.AddScoped<ModelTaskService>();
 builder.Services.AddScoped<AiNexus.Modules.Quality.QualityService>();
+builder.Services.AddScoped<AiNexus.Modules.Quality.RetrievalEvaluationService>();
+builder.Services.AddScoped<IBackgroundJobHandler, AiNexus.Modules.Quality.RetrievalEvaluationHandler>();
 builder.Services.AddScoped<IBackgroundJobHandler, AiNexus.Modules.Quality.EvaluationHandler>();
 builder.Services.AddScoped<IDbHelper<AiNexus.Modules.Integrations.ILegacyGdwebDatabase>, DbHelper<AiNexus.Modules.Integrations.ILegacyGdwebDatabase>>();
 builder.Services.AddScoped<IDbHelper<AiNexus.Modules.Integrations.ILegacyMeihoDatabase>, DbHelper<AiNexus.Modules.Integrations.ILegacyMeihoDatabase>>();

@@ -87,6 +87,20 @@ export type SourceDetail = Dto<'SourceDetailDto'> & {
 };
 export type SourceChat = Dto<'SourceChatDto'> & { conversation: Conversation };
 export type EvaluationCase = Dto<'EvaluationCase'>;
+export type RetrievalEvaluationCase = Dto<'RetrievalEvaluationCase'>;
+export type RetrievalEvaluationRun = Omit<Dto<'RetrievalEvaluationDto'>, 'job'> & { job: Job };
+export type RetrievalEvaluationSummary = Dto<'RetrievalSummaryDto'> & {
+  rewrite: Dto<'RetrievalLatencyDto'>;
+  embed: Dto<'RetrievalLatencyDto'>;
+  search: Dto<'RetrievalLatencyDto'>;
+  rerank: Dto<'RetrievalLatencyDto'>;
+  total: Dto<'RetrievalLatencyDto'>;
+};
+export type RetrievalReport = Omit<Dto<'RetrievalReportDto'>, 'run' | 'summary' | 'results'> & {
+  run: RetrievalEvaluationRun;
+  summary: RetrievalEvaluationSummary[];
+  results: Dto<'RetrievalMetricDto'>[];
+};
 export type EvaluationVariant = ModelReference<'EvaluationVariant'>;
 export type EvaluationSet = Dto<'EvaluationSetDto'> & {
   resource: Resource;

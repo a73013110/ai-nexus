@@ -60,14 +60,15 @@ public sealed class RetrievalPipeline(NexusDbContext db, RetrievalAuthorization 
         timer.Restart(); var result = await store.SearchAsync(request.CollectionIds, profile, query, vector, actual, ct); searchMs = timer.ElapsedMilliseconds;
         await authorization.HitsAsync(actor, result.Hits, ct);
         var hits = result.Hits; actual = result.Mode;
-        if ((rerank ?? settings.Rerank.Provider != "none") && hits.Count > 0)
+        if (rerank ?? settings.Rerank.Provider != "none")
         {
             timer.Restart();
             try
             {
                 if (settings.Rerank.Provider == "none") throw new ApiException(503, "rerank_disabled", "尚未啟用重排模型。");
                 // Source text leaves the server here; access was checked immediately above.
-                hits = await reranker.RerankAsync(actor, query, hits, ct); actual += "+rerank";
+                if (hits.Count > 0) hits = await reranker.RerankAsync(actor, query, hits, ct);
+                actual += "+rerank";
             }
             catch (Exception error) when (error is ApiException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
             {

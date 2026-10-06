@@ -2,7 +2,7 @@
   [title]="session.featureName('quality')"
   description="用固定題目比較模型與指令，留下可重現的結果與人工判讀。"
 >
-  <div page-actions class="page-actions">
+  <div page-actions class="page-actions" [hidden]="tab() === 'retrieval'">
     <label class="upload-label secondary-button"
       ><nx-icon name="upload" />匯入題庫<input
         type="file"
@@ -20,6 +20,12 @@
     <p role="status" class="form-note">{{ notice() }}</p>
   }
   <nav class="page-tabs" aria-label="品質功能">
+    <button
+      [attr.aria-current]="tab() === 'retrieval' ? 'page' : null"
+      (click)="tab.set('retrieval')"
+    >
+      檢索評測
+    </button>
     <button [attr.aria-current]="tab() === 'sets' ? 'page' : null" (click)="tab.set('sets')">
       評測與比較</button
     ><button
@@ -31,6 +37,8 @@
   </nav>
   @if (loading()) {
     <p role="status">正在載入品質評測…</p>
+  } @else if (tab() === 'retrieval') {
+    <nx-retrieval-evaluation />
   } @else if (tab() === 'feedback') {
     <div class="platform-grid">
       @for (item of feedback(); track item.messageId) {

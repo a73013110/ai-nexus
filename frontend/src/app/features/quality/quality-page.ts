@@ -35,6 +35,7 @@ import { JobsApi } from '../tasks/jobs-api';
 import { QualityApi } from './quality-api';
 import { SearchField } from '../../shared/ui/search-field';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
+import { RetrievalEvaluation } from './retrieval-evaluation';
 
 type VariantForm = { label: string; modelId: string | null; instruction: string };
 const blankCase = (): EvaluationCase => ({
@@ -56,6 +57,7 @@ const blankCase = (): EvaluationCase => ({
     JobProgress,
     ResourceSharing,
     DecimalPipe,
+    RetrievalEvaluation,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,

@@ -1,0 +1,202 @@
+@if (loading()) {
+  <p role="status">正在載入檢索評測…</p>
+}
+@if (error()) {
+  <p role="alert" class="error-banner">{{ error() }}</p>
+}
+<section class="platform-card">
+  <div class="page-toolbar">
+    <h2>建立檢索驗收集</h2>
+    <label class="upload-label secondary-button"
+      >匯入驗收集<input
+        type="file"
+        accept=".json"
+        (change)="importCorpus($event)"
+        [disabled]="busy()"
+    /></label>
+  </div>
+  <p class="form-note">
+    每題標註相關文件與頁碼，使用同一批資料比較向量、全文、混合與混合重排。評測結果僅供本人查看。
+  </p>
+  <form [formGroup]="form" (submit)="create($event)">
+    <label class="field"
+      >評測名稱<input
+        aria-label="檢索評測名稱"
+        formControlName="title"
+        maxlength="120"
+        placeholder="例如：採購規範驗收"
+    /></label>
+    <fieldset class="choice-fieldset">
+      <legend>選擇知識庫（最多三個）</legend>
+      @for (collection of collections(); track collection.resource.id) {
+        <nx-checkbox
+          [label]="collection.resource.name"
+          [checked]="selected().includes(collection.resource.id)"
+          [disabled]="!selected().includes(collection.resource.id) && selected().length >= 3"
+          (checkedChange)="choose(collection.resource.id, $event)"
+        />
+      } @empty {
+        <p class="form-note">請先在知識庫上傳資料並完成索引。</p>
+      }
+    </fieldset>
+    <label class="field"
+      >驗收集 JSON（1 至 20 題）<textarea
+        aria-label="檢索驗收集 JSON"
+        formControlName="corpus"
+        rows="9"
+        spellcheck="false"
+        [placeholder]="example"
+      ></textarea>
+    </label>
+    <details>
+      <summary>查看驗收集格式</summary>
+      <p class="form-note">
+        documentId 請填入文件網址中的 UUID。pages 為相關頁碼，空陣列代表整份文件；grade 為 1 至 3
+        級相關性。每題每份文件只標註一次。無答案題填入 noAnswer: true 且 relevant 為空陣列。
+      </p>
+      <pre>{{ example }}</pre>
+    </details>
+    <div class="page-actions">
+      <button
+        type="submit"
+        class="primary-button"
+        [disabled]="
+          busy() || form.invalid || !selected().length || !!session.auth.session()?.testing
+        "
+      >
+        開始四模式評測
+      </button>
+    </div>
+  </form>
+</section>
+@if (runs().length) {
+  <section class="platform-card">
+    <div class="page-toolbar">
+      <h2>評測報告</h2>
+      <button type="button" class="secondary-button" (click)="load()" [disabled]="busy()">
+        重新整理
+      </button>
+    </div>
+    <label class="field"
+      >執行紀錄<nx-select
+        label="選擇檢索評測紀錄"
+        [options]="options()"
+        [value]="report()?.run?.id || ''"
+        (valueChange)="select($event)"
+    /></label>
+    @if (report(); as report) {
+      <nx-job-progress [job]="report.run.job" />
+      <div class="page-actions">
+        @if (report.run.job.status === 'queued' || report.run.job.status === 'running') {
+          <button class="secondary-button" [disabled]="busy()" (click)="control('cancel')">
+            取消評測
+          </button>
+        }
+        @if (report.run.job.status === 'failed' || report.run.job.status === 'cancelled') {
+          <button
+            class="secondary-button"
+            [disabled]="busy() || !!session.auth.session()?.testing"
+            (click)="control('retry')"
+          >
+            續跑評測
+          </button>
+        }
+        <button class="secondary-button" [disabled]="busy()" (click)="download()">
+          下載指標報告
+        </button>
+      </div>
+      <p class="form-note">{{ report.refusalDefinition }} {{ report.latencyDefinition }}</p>
+      <p class="form-note">
+        K = {{ report.run.topK }} · 設定指紋 {{ report.run.configurationFingerprint.slice(0, 12) }}
+      </p>
+      <div class="platform-grid">
+        @for (metric of report.summary; track metric.mode) {
+          <article class="platform-card">
+            <h3>{{ metric.mode }}</h3>
+            <p class="form-note">
+              完成 {{ metric.completed }} 次 · 無法評測 {{ metric.unavailable }} 次
+            </p>
+            @if (!metric.comparable) {
+              <p class="form-note">含降級、略過或尚無結果，請確認實際模式後再比較。</p>
+            }
+            <dl class="metadata-list">
+              <div>
+                <dt>Recall@{{ report.run.topK }}</dt>
+                <dd>{{ metric.recall === null ? '—' : (metric.recall | number: '1.3-3') }}</dd>
+              </div>
+              <div>
+                <dt>MRR</dt>
+                <dd>{{ metric.mrr === null ? '—' : (metric.mrr | number: '1.3-3') }}</dd>
+              </div>
+              <div>
+                <dt>nDCG@{{ report.run.topK }}</dt>
+                <dd>{{ metric.ndcg === null ? '—' : (metric.ndcg | number: '1.3-3') }}</dd>
+              </div>
+              <div>
+                <dt>無來源拒答率</dt>
+                <dd>
+                  {{
+                    metric.refusalRate === null
+                      ? '—'
+                      : (metric.refusalRate * 100 | number: '1.0-1') + '%'
+                  }}
+                </dd>
+              </div>
+              <div>
+                <dt>總延遲 p50 / p95</dt>
+                <dd>
+                  {{ metric.total.p50 | number: '1.0-1' }} /
+                  {{ metric.total.p95 | number: '1.0-1' }} ms
+                </dd>
+              </div>
+              <div>
+                <dt>改寫 p50 / p95</dt>
+                <dd>
+                  {{ metric.rewrite.p50 | number: '1.0-1' }} /
+                  {{ metric.rewrite.p95 | number: '1.0-1' }} ms
+                </dd>
+              </div>
+              <div>
+                <dt>向量化 p50 / p95</dt>
+                <dd>
+                  {{ metric.embed.p50 | number: '1.0-1' }} /
+                  {{ metric.embed.p95 | number: '1.0-1' }} ms
+                </dd>
+              </div>
+              <div>
+                <dt>召回 p50 / p95</dt>
+                <dd>
+                  {{ metric.search.p50 | number: '1.0-1' }} /
+                  {{ metric.search.p95 | number: '1.0-1' }} ms
+                </dd>
+              </div>
+              <div>
+                <dt>重排 p50 / p95</dt>
+                <dd>
+                  {{ metric.rerank.p50 | number: '1.0-1' }} /
+                  {{ metric.rerank.p95 | number: '1.0-1' }} ms
+                </dd>
+              </div>
+            </dl>
+          </article>
+        }
+      </div>
+      <details>
+        <summary>逐題實際模式</summary>
+        <div class="resource-list">
+          @for (result of report.results; track result.caseId + result.mode) {
+            <div class="resource-row">
+              <div class="resource-summary">
+                <strong>{{ result.caseId }} · {{ result.mode }}</strong
+                ><small
+                  >{{ result.actualMode
+                  }}{{ result.unavailable ? ' · ' + result.unavailable : '' }}</small
+                >
+              </div>
+            </div>
+          }
+        </div>
+      </details>
+    }
+  </section>
+}

@@ -10691,6 +10691,387 @@
         }
       }
     },
+    "/api/v1/quality/retrieval-evals": {
+      "get": {
+        "tags": ["Quality"],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RetrievalEvaluationDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Quality"],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetrievalEvaluationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetrievalEvaluationDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/retrieval-evals/{id}": {
+      "get": {
+        "tags": ["Quality"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetrievalReportDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/quality/retrieval-evals/{id}/report": {
+      "get": {
+        "tags": ["Quality"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetrievalReportDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/quality/feedback": {
       "get": {
         "tags": ["Quality"],
@@ -20721,6 +21102,290 @@
           },
           "notice": {
             "type": "string"
+          }
+        }
+      },
+      "RetrievalEvaluationCase": {
+        "required": ["id", "query", "relevant"],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "query": {
+            "type": "string"
+          },
+          "relevant": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RetrievalRelevance"
+            }
+          },
+          "noAnswer": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "RetrievalEvaluationDto": {
+        "required": [
+          "id",
+          "title",
+          "cases",
+          "topK",
+          "profileKey",
+          "configurationFingerprint",
+          "createdAt",
+          "job"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "cases": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "topK": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "profileKey": {
+            "type": "string"
+          },
+          "configurationFingerprint": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "job": {
+            "$ref": "#/components/schemas/JobDto"
+          }
+        }
+      },
+      "RetrievalEvaluationRequest": {
+        "required": ["title", "collectionIds", "cases"],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "collectionIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "cases": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RetrievalEvaluationCase"
+            }
+          }
+        }
+      },
+      "RetrievalLatencyDto": {
+        "required": ["p50", "p95"],
+        "type": "object",
+        "properties": {
+          "p50": {
+            "type": "number",
+            "format": "double"
+          },
+          "p95": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "RetrievalMetricDto": {
+        "required": [
+          "caseId",
+          "mode",
+          "actualMode",
+          "unavailable",
+          "recall",
+          "reciprocalRank",
+          "ndcg",
+          "refused",
+          "rewriteMs",
+          "embedMs",
+          "searchMs",
+          "rerankMs",
+          "elapsedMs"
+        ],
+        "type": "object",
+        "properties": {
+          "caseId": {
+            "type": "string"
+          },
+          "mode": {
+            "type": "string"
+          },
+          "actualMode": {
+            "type": "string"
+          },
+          "unavailable": {
+            "type": ["null", "string"]
+          },
+          "recall": {
+            "type": ["null", "number"],
+            "format": "double"
+          },
+          "reciprocalRank": {
+            "type": ["null", "number"],
+            "format": "double"
+          },
+          "ndcg": {
+            "type": ["null", "number"],
+            "format": "double"
+          },
+          "refused": {
+            "type": ["null", "boolean"]
+          },
+          "rewriteMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "embedMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "searchMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rerankMs": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "elapsedMs": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "RetrievalRelevance": {
+        "required": ["documentId", "pages"],
+        "type": "object",
+        "properties": {
+          "documentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pages": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "grade": {
+            "type": "integer",
+            "format": "int32",
+            "default": 1
+          }
+        }
+      },
+      "RetrievalReportDto": {
+        "required": ["run", "summary", "results"],
+        "type": "object",
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/RetrievalEvaluationDto"
+          },
+          "summary": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RetrievalSummaryDto"
+            }
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RetrievalMetricDto"
+            }
+          },
+          "refusalDefinition": {
+            "type": "string",
+            "default": "無答案題未提供任何來源的比例；不評斷生成回答內容。"
+          },
+          "latencyDefinition": {
+            "type": "string",
+            "default": "依 vector、keyword、hybrid、hybrid+rerank 順序執行；共用正常查詢快取，延遲包含快取命中。相鄰片段合併後依相關文件及頁碼評分。"
+          }
+        }
+      },
+      "RetrievalSummaryDto": {
+        "required": [
+          "mode",
+          "comparable",
+          "completed",
+          "unavailable",
+          "recall",
+          "mrr",
+          "ndcg",
+          "refusalRate",
+          "rewrite",
+          "embed",
+          "search",
+          "rerank",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string"
+          },
+          "comparable": {
+            "type": "boolean"
+          },
+          "completed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unavailable": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "recall": {
+            "type": ["null", "number"],
+            "format": "double"
+          },
+          "mrr": {
+            "type": ["null", "number"],
+            "format": "double"
+          },
+          "ndcg": {
+            "type": ["null", "number"],
+            "format": "double"
+          },
+          "refusalRate": {
+            "type": ["null", "number"],
+            "format": "double"
+          },
+          "rewrite": {
+            "$ref": "#/components/schemas/RetrievalLatencyDto"
+          },
+          "embed": {
+            "$ref": "#/components/schemas/RetrievalLatencyDto"
+          },
+          "search": {
+            "$ref": "#/components/schemas/RetrievalLatencyDto"
+          },
+          "rerank": {
+            "$ref": "#/components/schemas/RetrievalLatencyDto"
+          },
+          "total": {
+            "$ref": "#/components/schemas/RetrievalLatencyDto"
           }
         }
       },

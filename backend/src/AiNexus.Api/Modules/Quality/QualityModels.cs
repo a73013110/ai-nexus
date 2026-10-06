@@ -69,6 +69,7 @@ public static class QualityConfiguration
 {
     public static void Configure(ModelBuilder model)
     {
+        RetrievalEvaluationConfiguration.Configure(model);
         var f = model.Entity<MessageFeedback>(); f.ToTable("MessageFeedback", "quality"); f.HasKey(x => x.MessageId);
         f.Property(x => x.Reason).HasMaxLength(24); f.Property(x => x.Note).HasMaxLength(2000); f.HasIndex(x => new { x.OwnerId, x.UpdatedAt });
         f.HasOne<Message>().WithMany().HasForeignKey(x => x.MessageId).OnDelete(DeleteBehavior.Restrict);
