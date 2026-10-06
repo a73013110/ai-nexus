@@ -19,7 +19,7 @@ export class ChargeLabel {
   readonly kind = computed(() => chargeKind(this.charge().kind));
   readonly label = computed(() => {
     const c = this.charge();
-    if (c.state === 'pending') return '費用結算中';
+    if (c.state === 'pending') return '費用待結算';
     if (c.state === 'not_started') return '未呼叫模型';
     if (c.state === 'unpriced') return '未設定價格';
     if (c.amount == null) return '用量未完整回報';

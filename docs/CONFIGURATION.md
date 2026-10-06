@@ -135,9 +135,9 @@ Google 與 Ollama 可同時 Enabled，不再有全域 provider 開關。每個�
 
 `Tools.WebSearch` 與 AI 推論供應商分開，包含 `Enabled`、`Provider`（searxng／brave）、SearXNG 的 `Endpoint`、`TimeoutSeconds`（2–30）、`MaxResults`（1–8）、`MaxDailyRequests`（1–10000）。Brave 的 `ApiKey` 只在秘密檔 `Tools.WebSearch.ApiKey`；遷移工具會移出誤放在一般檔的 key。搜尋預設停用，未配置不自動換用 Google。見 [連網搜尋](WEB_SEARCH.md)。
 
-`Integrations.Connectors.Gitea` 保存 `Enabled`、`BaseUrl`、`TimeoutSeconds`（2–30）、`MaxFileBytes`（1024–500000）。BaseUrl 使用 HTTPS（loopback 可用 HTTP）。每個人的唯讀 token 由使用者在網頁連線，經後端加密存於 SQL，沒有共用 token 設定值；IIS 更新須保留 key ring。見 [Gitea](GITEA.md)。
+`Integrations.Connectors.Gitea` 保存 `Enabled`、`BaseUrl`、`TimeoutSeconds`（2–30）、`MaxFileBytes`（1024–500000）。BaseUrl 使用 HTTPS（loopback 可用 HTTP）。每個人的唯讀權杖由使用者在網頁連線，經後端加密存於 SQL，沒有共用權杖設定值；IIS 更新須保留 key ring。見 [Gitea](GITEA.md)。
 
-模型價格以管理頁中的不可變 SQL 版本維護，沒有散落在各供應商 JSON 的價格欄位；能追蹤生效時間與每次呼叫的快照。見 [費用](BILLING.md)。
+模型與工具價格以管理頁中的不可變 SQL 版本維護，沒有散落在各供應商 JSON 的價格欄位；能追蹤生效時間與每次呼叫的快照。見 [費用](BILLING.md)。
 
 ## 系統整合與其他限制
 

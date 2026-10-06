@@ -15,7 +15,7 @@ import { SharingApi } from './sharing-api';
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
-      title="分享"
+      [title]="session.featureName('shared')"
       description="收到的內容集中閱讀，自己建立的分享可隨時撤銷。"
       ><button
         page-actions
@@ -122,7 +122,7 @@ export class SharedPage {
   readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly api = inject(SharingApi);
-  private readonly session = inject(WorkspaceSession);
+  readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
   readonly confirm = viewChild.required(ConfirmDialog);
   readonly sent = signal(false);

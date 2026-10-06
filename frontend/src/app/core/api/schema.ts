@@ -5754,6 +5754,8 @@ export interface components {
       failedJobs: number;
       /** Format: int32 */
       staleIndexes: number;
+      /** Format: int32 */
+      files: number;
     };
     DashboardDto: {
       scope: string;

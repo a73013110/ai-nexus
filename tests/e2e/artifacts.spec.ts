@@ -114,7 +114,7 @@ test("artifact versions preserve edits, restore older content and export a saved
   expect(exportedVersion).toBe("3");
   await editor.fill("尚未儲存");
   await page
-    .getByRole("link", { name: "AI 對話", exact: true })
+    .getByRole("link", { name: "對話", exact: true })
     .first()
     .click();
   await expect(page.getByRole("dialog")).toContainText("尚有未儲存的編輯");

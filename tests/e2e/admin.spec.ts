@@ -83,14 +83,14 @@ async function administration(page: Page) {
       },
       {
         id: "chat",
-        name: "AI 對話",
+        name: "對話",
         route: "/chat",
         sortOrder: 10,
         enabled: true,
       },
       {
         id: "admin",
-        name: "管理",
+        name: "平台管理",
         route: "/admin",
         sortOrder: 90,
         enabled: true,
@@ -223,7 +223,7 @@ async function administration(page: Page) {
       return json({
         roles: [],
         groups: [],
-        features: [{ id: "chat", name: "AI 對話", route: "/chat" }],
+        features: [{ id: "chat", name: "對話", route: "/chat" }],
       });
     if (path.endsWith("/insights")) {
       recordRead("admin.user_usage_read", bob.id);
@@ -556,9 +556,9 @@ test("testing an identity clears the prior draft, shows a responsive banner and 
           roles: [],
           groups: [],
           features: [
-            { id: "chat", name: "AI 對話", route: "/chat" },
+            { id: "chat", name: "對話", route: "/chat" },
             ...(!testing
-              ? [{ id: "admin", name: "管理", route: "/admin" }]
+              ? [{ id: "admin", name: "平台管理", route: "/admin" }]
               : []),
           ],
         },
@@ -608,7 +608,7 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
   page,
 }) => {
   const { audit, catalog } = await administration(page);
-  catalog.features[0].name = "AI 對話功能與模型管理";
+  catalog.features[0].name = "對話功能與模型管理";
   audit.push({
     id: 1,
     actor: "AD\\admin",
@@ -618,8 +618,8 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
     at: "2026-10-04T00:00:00Z",
     detailsJson: JSON.stringify({
       featureId: "chat",
-      before: { name: "AI 對話" },
-      after: { name: "AI 對話功能與模型管理" },
+      before: { name: "對話" },
+      after: { name: "對話功能與模型管理" },
     }),
   });
   for (const width of [1920, 1440, 860, 375]) {
@@ -661,7 +661,7 @@ test("group model limits and self-lockout errors work on desktop and mobile", as
     .getByRole("textbox", { name: "名稱", exact: true })
     .fill("研發工作區");
   await dialog.getByRole("button", { name: "功能授權", exact: true }).click();
-  await dialog.getByRole("checkbox", { name: "AI 對話", exact: true }).check();
+  await dialog.getByRole("checkbox", { name: "對話", exact: true }).check();
   await dialog.getByRole("button", { name: "AI 模型", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "限制可用模型" }).check();
   await dialog.getByRole("checkbox", { name: "測試模型", exact: true }).check();
@@ -713,7 +713,7 @@ test("members have no management navigation and direct routes show an access exp
   await expect(
     page
       .getByRole("navigation", { name: "工作區功能" })
-      .getByRole("link", { name: "管理", exact: true }),
+      .getByRole("link", { name: "平台管理", exact: true }),
   ).toHaveCount(0);
 });
 

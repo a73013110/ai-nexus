@@ -16059,7 +16059,8 @@
           "activeGenerations",
           "activeJobs",
           "failedJobs",
-          "staleIndexes"
+          "staleIndexes",
+          "files"
         ],
         "type": "object",
         "properties": {
@@ -16104,6 +16105,10 @@
             "format": "int32"
           },
           "staleIndexes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "files": {
             "type": "integer",
             "format": "int32"
           }

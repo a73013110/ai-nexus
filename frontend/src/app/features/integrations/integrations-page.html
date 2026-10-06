@@ -1,5 +1,5 @@
 <nx-feature-page
-  title="系統整合"
+  [title]="session.featureName('integrations')"
   description="以你的來源權限查詢公文與校務資料，快速接續閱讀、整理與分析。"
 >
   @if (error()) {

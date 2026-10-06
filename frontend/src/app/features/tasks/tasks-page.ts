@@ -14,7 +14,7 @@ import { JobsApi } from './jobs-api';
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
-    title="背景任務"
+    [title]="session.featureName('tasks')"
     description="追蹤文件辨識、索引與評測。離開頁面後任務仍會繼續。"
   >
     <button page-actions class="secondary-button" (click)="refresh()">
@@ -39,8 +39,10 @@ import { JobsApi } from './jobs-api';
       <div class="empty-state">
         <nx-icon name="check" />
         <h2>{{ filter() === 'active' ? '目前沒有處理中的任務' : '這裡尚無任務' }}</h2>
-        <p>上傳知識文件或執行評測後，即可在這裡追蹤。</p>
-        <a class="secondary-button" routerLink="/knowledge">前往知識庫</a>
+        <p>加入知識庫文件或執行評測後，即可在這裡追蹤。</p>
+        @if (session.has('knowledge')) {
+          <a class="secondary-button" routerLink="/knowledge">前往{{ session.featureName('knowledge') }}</a>
+        }
       </div>
     } @else {
       <div class="job-list">
@@ -88,7 +90,7 @@ import { JobsApi } from './jobs-api';
   </nx-feature-page>`,
 })
 export class TasksPage {
-  private readonly session = inject(WorkspaceSession);
+  readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
   private readonly api = inject(JobsApi);
   readonly jobs = signal<Job[]>([]);

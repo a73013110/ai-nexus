@@ -12,7 +12,7 @@ test("controlled source search opens authorized status and history, then hands a
   const core = new ApiFixture();
   core.extraFeatures.push({
     id: "integrations",
-    name: "系統整合",
+    name: "資料來源",
     route: "/integrations",
   });
   await core.attach(page);
@@ -134,7 +134,7 @@ test("unconfigured sources disclose setup status and do not offer queries", asyn
   const core = new ApiFixture();
   core.extraFeatures.push({
     id: "integrations",
-    name: "系統整合",
+    name: "資料來源",
     route: "/integrations",
   });
   await core.attach(page);

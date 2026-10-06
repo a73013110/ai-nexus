@@ -76,7 +76,7 @@ public sealed class LdapAuthenticator(IOptions<AdAuthenticationOptions> options)
         catch (LdapException ex) when (ex.ErrorCode == 49) { throw InvalidCredentials(); }
         catch (LdapException) { throw new ApiException(503, "ad_unavailable", "AD 服務暫時無法使用，請稍後重試。"); }
         ct.ThrowIfCancellationRequested();
-        if (entry.Attributes["objectSid"]?[0] is not byte[] bytes) throw new ApiException(403, "ad_sid_required", "AD 帳號缺少 SID，無法建立工作空間。");
+        if (entry.Attributes["objectSid"]?[0] is not byte[] bytes) throw new ApiException(403, "ad_sid_required", "AD 帳號缺少 SID，無法建立工作區。");
         var sid = new SecurityIdentifier(bytes, 0).Value;
         var name = entry.Attributes["sAMAccountName"]?[0]?.ToString() ?? account;
         var display = entry.Attributes["displayName"]?[0]?.ToString() ?? name;

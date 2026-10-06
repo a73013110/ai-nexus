@@ -13,13 +13,13 @@ import { BillingApi, chargeKind, money } from './billing-api';
         <p>包含所有分支、重新生成與網路搜尋，不只目前顯示的回答。</p>
         @for (total of spend.totals; track total.currency + total.kind) {
           <p>{{ kind(total.kind) }} · {{ total.currency ? money(total.amount, total.currency) : '未定價' }}
-            @if (total.unknownCalls) { <span> · {{ total.unknownCalls }} 次未知費用</span> }
+            @if (total.unknownCalls) { <span> · {{ total.unknownCalls }} 次費用未知</span> }
           </p>
         }
         @for (model of spend.models; track model.label + model.currency + model.kind) {
           <div class="spend-breakdown"><span>{{ model.label }}</span><span>{{ model.requests }} 次 · {{ model.currency ? money(model.amount, model.currency) : '未定價' }}</span></div>
         }
-        @if (spend.pendingCalls) { <p>{{ spend.pendingCalls }} 次處理中。</p> }
+        @if (spend.pendingCalls) { <p>{{ spend.pendingCalls }} 次待結算。</p> }
         @if (spend.legacyCalls) { <p>{{ spend.legacyCalls }} 次早期呼叫尚無價格紀錄。</p> }
       </div>
     </nx-info-popover>

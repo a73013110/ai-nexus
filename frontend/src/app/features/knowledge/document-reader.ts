@@ -16,7 +16,7 @@ import { DocumentViewer } from './document-viewer';
   imports: [WorkspaceSidebar, Icon, DocumentViewer],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="feature-layout">
-    <aside nxWorkspaceSidebar class="feature-sidebar" aria-label="工作空間導覽"></aside>
+    <aside nxWorkspaceSidebar class="feature-sidebar" aria-label="工作區導覽"></aside>
     <main class="reader-page" id="feature-content" tabindex="-1">
       <a class="reader-return quiet-button" [href]="returnTo()" (click)="back($event)"
         ><nx-icon name="back" />{{ returnLabel() }}</a

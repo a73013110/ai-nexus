@@ -52,7 +52,7 @@ public sealed class BillingService(NexusDbContext db)
             || new[] { body.InputPerMillion, body.CachedInputPerMillion, body.OutputPerMillion, body.PerRequest }.Any(x => x < 0 || x > 100000 || decimal.Round(x, 8) != x)
             || body.CachedInputPerMillion > body.InputPerMillion
             || (body.Kind == "free" && new[] { body.InputPerMillion, body.CachedInputPerMillion, body.OutputPerMillion, body.PerRequest }.Any(x => x != 0)))
-            throw new ApiException(400, "invalid_price", "請檢查模型價格、幣別、生效時間與計費方式。新價格只能由現在起生效。");
+            throw new ApiException(400, "invalid_price", "請檢查模型與工具價格、幣別、生效時間與計費方式。新價格只能由現在起生效。");
         if (await db.Set<ModelPrice>().AnyAsync(x => x.Provider == body.Provider && x.ModelId == body.ModelId && x.EffectiveAt == body.EffectiveAt, ct))
             throw new ApiException(409, "price_exists", "此生效時間已有價格版本，請選擇新的時間。");
         var price = new ModelPrice { Provider = body.Provider, ModelId = body.ModelId, Currency = body.Currency, Kind = body.Kind,

@@ -1,5 +1,6 @@
 using AiNexus.BuildingBlocks;
 using AiNexus.Modules.AccessControl;
+using AiNexus.Modules.Attachments;
 using AiNexus.Modules.Billing;
 using AiNexus.Modules.Collaboration;
 using AiNexus.Modules.Inference;
@@ -10,7 +11,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Modules.Dashboard;
 
 public sealed record DashboardCountsDto(int Conversations, int Projects, int Collections, int Documents, int ReadyDocuments,
-    int FailedDocuments, int Chunks, int ActiveGenerations, int ActiveJobs, int FailedJobs, int StaleIndexes);
+    int FailedDocuments, int Chunks, int ActiveGenerations, int ActiveJobs, int FailedJobs, int StaleIndexes, int Files);
 public sealed record RecentWorkDto(Guid Id, string Kind, string Title, DateTimeOffset UpdatedAt);
 public sealed record DashboardDto(string Scope, DashboardCountsDto Counts, SpendReportDto Spend, IReadOnlyList<RecentWorkDto> Recent,
     bool WebSearchAvailable, bool GiteaAvailable, string EmbeddingMode);
@@ -33,7 +34,9 @@ public sealed class DashboardService(NexusDbContext db, SpendReports reports, Ac
             await docs.CountAsync(ct), await docs.CountAsync(x => x.Status == "ready", ct), await docs.CountAsync(x => x.Status == "failed", ct), await chunks.CountAsync(ct),
             await db.Runs.CountAsync(x => x.ActiveOwnerId != null && (owner == null || x.OwnerId == owner), ct),
             await jobs.CountAsync(x => x.Status == "queued" || x.Status == "running", ct), await jobs.CountAsync(x => x.Status == "failed", ct),
-            embedding.Enabled ? await docs.CountAsync(d => d.Status == "ready" && db.Set<KnowledgeChunk>().Any(x => x.DocumentId == d.Id && x.EmbeddingProfile != embedding.Profile), ct) : 0);
+            embedding.Enabled ? await docs.CountAsync(d => d.Status == "ready" && db.Set<KnowledgeChunk>().Any(x => x.DocumentId == d.Id && x.EmbeddingProfile != embedding.Profile), ct) : 0,
+            // Originals are counted once, independently of document readers and collection indexes.
+            await db.Set<Attachment>().CountAsync(x => x.InLibrary && x.StorageState == AttachmentStates.Ready && (owner == null || x.OwnerId == owner), ct));
         var spend = await reports.ReportAsync(owner, from, until, offset, scope == "platform", ct);
         // Recent titles always belong to the current user, including in the platform scope.
         var recent = await db.Conversations.AsNoTracking().Where(x => x.OwnerId == actor && !x.IsDeleted)

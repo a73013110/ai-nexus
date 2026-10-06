@@ -4,7 +4,7 @@
   eyebrow="AI NEXUS · DESIGN SYSTEM"
 >
   <div page-actions class="page-actions">
-    <a routerLink="/admin" class="secondary-button"><nx-icon name="left" />回到平台管理</a>
+    <a routerLink="/admin" class="secondary-button"><nx-icon name="left" />回到{{ session.featureName('admin') }}</a>
   </div>
   @if (loading()) {
     <p role="status">正在載入介面工作區…</p>

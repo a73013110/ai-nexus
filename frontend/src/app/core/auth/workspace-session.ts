@@ -3,6 +3,7 @@ import { AuthService } from './auth-service';
 import { NexusApi } from '../api/nexus-api';
 import type { Me } from '../api/types';
 import { UserSettingsService } from '../preferences/user-settings';
+import { FEATURE_NAMES } from '../feature-names';
 
 /** Account context shared by feature pages; it never loads conversation history. */
 @Injectable({ providedIn: 'root' })
@@ -34,5 +35,8 @@ export class WorkspaceSession {
   }
   has(id: string) {
     return this.me()?.access.features?.some((x) => x.id === id) ?? false;
+  }
+  featureName(id: string) {
+    return this.me()?.access.features?.find((x) => x.id === id)?.name || FEATURE_NAMES[id] || id;
   }
 }

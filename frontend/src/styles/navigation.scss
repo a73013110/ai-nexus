@@ -15,7 +15,7 @@
 }
 .workspace-icons {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--p-space-1);
 }
 .workspace-icons a {
@@ -37,9 +37,8 @@
 }
 .workspace-icons a span {
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 .workspace-icons a:hover {
   background: var(--hover);

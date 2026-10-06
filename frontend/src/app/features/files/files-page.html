@@ -1,11 +1,11 @@
 <nx-feature-page
-  title="檔案庫"
+  [title]="session.featureName('files')"
   eyebrow="AI NEXUS · 你的檔案與素材"
   description="保存原檔，重用於對話，也能指定加入知識庫。"
 >
   <div page-actions class="page-actions">
     @if (session.has('knowledge')) {
-      <a routerLink="/knowledge" class="secondary-button"><nx-icon name="library" />知識庫</a>
+      <a routerLink="/knowledge" class="secondary-button"><nx-icon name="library" />{{ session.featureName('knowledge') }}</a>
     }
     <button
       class="primary-button"

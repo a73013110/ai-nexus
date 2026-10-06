@@ -43,7 +43,7 @@ public sealed class IntegrationService(NexusDbContext db, AccessService access, 
     private async Task<(IControlledSourceAdapter Adapter, SourceOptions Options, SourceActor Actor)> RequireAsync(Guid actor, string source, CancellationToken ct)
     {
         var grants = await access.ForUserAsync(actor, ct);
-        if (!grants.Features.Any(x => x.Id == "integrations")) throw new ApiException(403, "integration_feature_revoked", "系統整合功能已停用。");
+        if (!grants.Features.Any(x => x.Id == "integrations")) throw new ApiException(403, "integration_feature_revoked", "資料來源功能已停用。");
         var value = options.Value.For(source);
         if (value.Transport != "sql") throw new ApiException(503, "source_transport_unsupported", "此來源的 API adapter 尚未實作。");
         if (!value.Enabled || !value.AclContractConfirmed || string.IsNullOrWhiteSpace(config.GetConnectionString(Key(source)))) throw new ApiException(503, "source_not_configured", "資料來源尚未完成唯讀連線與來源授權設定。");
@@ -85,7 +85,7 @@ public sealed class IntegrationService(NexusDbContext db, AccessService access, 
     }
     public async Task<SourceChatDto> PrepareChatAsync(Guid actor, string source, SourceImportRequest request, CancellationToken ct)
     {
-        if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "chat")) throw new ApiException(403, "chat_feature_required", "需要 AI 對話功能權限。");
+        if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "chat")) throw new ApiException(403, "chat_feature_required", "需要對話功能權限。");
         var detail = await ReadAsync(actor, source, request.RecordId, ct);
         if (detail.Record.Revision != request.ExpectedRevision) throw new ApiException(409, "source_changed", "來源版本已更新，請重新載入。");
         var data = JsonSerializer.Serialize(new { source, title = detail.Record.Title, id = detail.Record.Id, version = detail.Record.Revision, content = detail.Body }, new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });

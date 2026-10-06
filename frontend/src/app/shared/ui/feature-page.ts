@@ -8,7 +8,7 @@ import { WorkspaceSidebar } from './workspace-sidebar';
   styles: ':host { display: block; min-width: 0; }',
   template: `<a class="skip-link" href="#feature-content">跳到主要內容</a>
     <div class="feature-layout">
-      <aside nxWorkspaceSidebar class="feature-sidebar" aria-label="工作空間導覽"></aside>
+      <aside nxWorkspaceSidebar class="feature-sidebar" aria-label="工作區導覽"></aside>
       <main class="feature-main" id="feature-content" tabindex="-1">
         <div class="feature-content">
           <header class="feature-header">
@@ -27,5 +27,5 @@ import { WorkspaceSidebar } from './workspace-sidebar';
 export class FeaturePage {
   readonly title = input.required<string>();
   readonly description = input('');
-  readonly eyebrow = input('AI NEXUS · 工作空間');
+  readonly eyebrow = input('AI NEXUS · 工作區');
 }

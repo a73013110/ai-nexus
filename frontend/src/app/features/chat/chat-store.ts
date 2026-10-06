@@ -240,7 +240,7 @@ export class ChatStore {
       });
       if (!this.hasChatAccess()) {
         this.ready.set(false);
-        this.error.set('你的角色目前沒有 AI 對話功能，請聯絡管理員。');
+        this.error.set('你的角色目前沒有對話功能，請聯絡管理員。');
         return;
       }
       const catalog = await this.api.models();

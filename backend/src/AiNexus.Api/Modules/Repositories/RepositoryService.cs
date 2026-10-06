@@ -27,7 +27,7 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
     public async Task<RepositoryStatusDto> ConnectAsync(Guid owner, string token, CancellationToken ct)
     {
         Enabled();
-        if (token.Length is < 20 or > 512 || token.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not '-' and not '_')) throw new ApiException(400, "invalid_gitea_token", "請輸入有效的 Gitea 個人存取 token。");
+        if (token.Length is < 20 or > 512 || token.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not '-' and not '_')) throw new ApiException(400, "invalid_gitea_token", "請輸入有效的 Gitea 個人存取權杖。");
         using var identity = await client.GetAsync(token, "api/v1/user", ct);
         var login = Text(identity.RootElement, "login", 100);
         if (login.Length == 0) throw new ApiException(502, "gitea_identity_invalid", "Gitea 未回傳帳號資訊。");

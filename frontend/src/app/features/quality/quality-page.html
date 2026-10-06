@@ -1,5 +1,5 @@
 <nx-feature-page
-  title="品質評測"
+  [title]="session.featureName('quality')"
   description="用固定題目比較模型與指令，留下可重現的結果與人工判讀。"
 >
   <div page-actions class="page-actions">
@@ -30,7 +30,7 @@
     </button>
   </nav>
   @if (loading()) {
-    <p role="status">正在載入品質工作區…</p>
+    <p role="status">正在載入品質評測…</p>
   } @else if (tab() === 'feedback') {
     <div class="platform-grid">
       @for (item of feedback(); track item.messageId) {
@@ -47,7 +47,7 @@
           <nx-icon name="check" />
           <h2>回饋從回答旁開始</h2>
           <p>在 AI 回覆下方按讚或標示待改善，就會保存在這裡。</p>
-          <a routerLink="/chat" class="secondary-button">前往對話</a>
+          <a routerLink="/chat" class="secondary-button">前往{{ session.featureName('chat') }}</a>
         </div>
       }
     </div>

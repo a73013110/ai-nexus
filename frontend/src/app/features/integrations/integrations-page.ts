@@ -56,7 +56,7 @@ export class IntegrationsPage {
     try {
       await this.session.load();
       if (!valid() || !this.session.me()) return;
-      if (!this.session.has('integrations')) throw new Error('你的帳號目前沒有系統整合功能權限。');
+      if (!this.session.has('integrations')) throw new Error('你的帳號目前沒有資料來源功能權限。');
       const sources = await this.api.list();
       if (!valid()) return;
       this.sources.set(sources);

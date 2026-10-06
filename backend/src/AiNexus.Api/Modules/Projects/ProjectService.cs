@@ -120,7 +120,7 @@ public sealed class ProjectService(NexusDbContext db, ResourceAccess access, Res
     public async Task<ProjectConversationDto> StartAsync(Guid actor, Guid id, ProjectConversationRequest request, CancellationToken ct)
     {
         await RequireActiveAsync(actor, id, ct, false);
-        if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "chat")) throw new ApiException(403, "chat_access_required", "需要 AI 對話權限才能開啟專案對話。");
+        if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "chat")) throw new ApiException(403, "chat_access_required", "需要對話權限才能開啟專案對話。");
         var prompt = ""; var title = request.Title ?? "新對話";
         if (request.TemplateId is Guid key) { var template = await db.Set<ProjectTemplate>().SingleOrDefaultAsync(x => x.Id == key && x.ProjectId == id, ct) ?? throw new ApiException(404, "template_missing", "找不到此範本。"); title = template.Title; prompt = template.Content; }
         var row = new Conversation { OwnerId = actor, ProjectId = id, Title = ResourceAccess.Name(title) };

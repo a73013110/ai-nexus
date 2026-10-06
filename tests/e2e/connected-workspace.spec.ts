@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
 import { ApiFixture, chooseSelect, expectViewportContained, settleEntrance } from './fixtures';
+import { FEATURE_NAMES } from '../../frontend/src/app/core/feature-names';
 
 function dashboardFixture(fixture: ApiFixture) {
   const day = new Date().toLocaleDateString('sv-SE');
   return {
-    scope: 'personal', counts: { conversations: 12, projects: 3, collections: 2, documents: 8, readyDocuments: 7, failedDocuments: 1, chunks: 214, activeGenerations: 0, activeJobs: 1, failedJobs: 0, staleIndexes: 1 },
+    scope: 'personal', counts: { files: 5, conversations: 12, projects: 3, collections: 2, documents: 8, readyDocuments: 7, failedDocuments: 1, chunks: 214, activeGenerations: 0, activeJobs: 1, failedJobs: 0, staleIndexes: 1 },
     spend: { from: new Date().toISOString(), until: new Date().toISOString(), offsetMinutes: 480, requests: 42, pendingCalls: 1, legacyCalls: 2, inputTokens: 10200, outputTokens: 1400,
       totals: [{ currency: 'USD', kind: 'api', amount: .1208, knownCalls: 38, unknownCalls: 1 }, { currency: 'TWD', kind: 'internal', amount: 15, knownCalls: 1, unknownCalls: 0 }],
       daily: [{ label: day, currency: 'USD', kind: 'api', amount: .1208, requests: 40, unknownCalls: 1, inputTokens: 10000, outputTokens: 1300 }],
@@ -15,7 +16,7 @@ function dashboardFixture(fixture: ApiFixture) {
 }
 
 test('dashboard keeps currencies separate, supports node inspection, and fits mobile with reduced motion', async ({ page }) => {
-  const fixture = new ApiFixture(); fixture.adminAccess = true; fixture.extraFeatures = [{ id: 'dashboard', name: '總覽', route: '/dashboard' }, { id: 'knowledge', name: '知識庫', route: '/knowledge' }];
+  const fixture = new ApiFixture(); fixture.adminAccess = true; fixture.extraFeatures = ['dashboard', 'knowledge', 'tasks', 'projects'].map(id => ({ id, name: FEATURE_NAMES[id], route: '/' + id }));
   await fixture.attach(page);
   await page.route('**/api/v1/dashboard?**', route => { const data = dashboardFixture(fixture); data.scope = new URL(route.request().url()).searchParams.get('scope') ?? 'personal'; return route.fulfill({ json: data }); });
   await page.goto('/');
@@ -30,25 +31,57 @@ test('dashboard keeps currencies separate, supports node inspection, and fits mo
   await expect(page.locator('.metric-card').first()).toContainText('USD');
   await expect(page.locator('.metric-card').first()).not.toContainText('15.1208');
   await page.locator('.flow-node').filter({ hasText: '知識' }).click();
-  await expect(page.locator('.flow-inspector')).toContainText('知識');
+  const inspector = page.locator('.flow-inspector');
+  await expect(inspector).toContainText(/2\s*個知識庫/);
+  await expect(inspector).toContainText('214 段索引');
+  for (const [label, count, unit, destination, route] of [
+    ['檔案庫', '5', '個檔案', '檔案庫', '/files'],
+    ['知識庫', '2', '個知識庫', '知識庫', '/knowledge'],
+    ['AI 回覆生成', '0', '件進行中', '對話', '/chat'],
+    ['背景任務', '1', '件進行中', '背景任務', '/tasks'],
+    ['專案', '3', '個專案', '專案', '/projects'],
+  ]) {
+    const node = page.locator('.flow-node').filter({ hasText: label });
+    await node.click();
+    await expect(node).toHaveAttribute('aria-pressed', 'true');
+    await expect(inspector.getByRole('heading')).toHaveText(label);
+    await expect(inspector.locator('strong')).toHaveText(count);
+    await expect(inspector).toContainText(unit);
+    await expect(inspector.getByRole('link', { name: '前往' + destination, exact: true })).toHaveAttribute('href', route);
+  }
+  await page.locator('.flow-node').filter({ hasText: '檔案庫' }).click();
+  await inspector.getByRole('link', { name: '前往檔案庫', exact: true }).click();
+  await expect(page).toHaveURL(/\/files$/);
+  await expect(page.getByRole('heading', { name: '檔案庫', exact: true })).toBeVisible();
+  await page.goto('/dashboard');
   const chart = page.locator('nx-trend-chart').first(); await chart.getByRole('slider').focus(); await page.keyboard.press('End');
   await expect(chart.locator('.trend-tooltip')).toBeVisible();
-  await chooseSelect(page, '顯示的費用幣別與類型', 'TWD · 本機內部成本');
+  await chooseSelect(page, '顯示的費用幣別與類型', 'TWD · 內部成本估算');
   await expect(page.locator('.metric-card').first()).toContainText('TWD');
   await chart.getByRole('slider').focus(); await page.keyboard.press('End');
   await expect(chart.locator('.trend-tooltip')).toContainText('TWD');
   await chooseSelect(page, '總覽範圍', '整個平台');
+  await expect(page.locator('.flow-scope-note')).toContainText('目前帳號有權限的工作區');
   await expect(page.getByRole('heading', { name: '使用者區間費用' })).toBeVisible();
+  await chooseSelect(page, '顯示的費用幣別與類型', 'USD · API 計費估算');
+  await page.locator('.dashboard-users').getByRole('button', { name: '檢視', exact: true }).click();
+  await expect(page.locator('.dashboard-content > .form-note')).toContainText('使用者：測試使用者');
+  await expect(inspector.locator('.panel-eyebrow')).toHaveText('使用者：測試使用者');
   const appliedFrom = await page.getByLabel('費用開始日期', { exact: true }).inputValue();
   let exportedFrom = '';
+  let exportedOwner = '';
   await page.route('**/api/v1/admin/billing/export?**', route => {
     exportedFrom = new URL(route.request().url()).searchParams.get('from')!;
+    exportedOwner = new URL(route.request().url()).searchParams.get('ownerId')!;
     return route.fulfill({ contentType: 'text/csv', body: '使用者,費用\n測試,1' });
   });
   await page.getByLabel('費用開始日期', { exact: true }).fill('2025-01-01');
   await page.getByRole('button', { name: '匯出費用', exact: true }).click();
   await expect.poll(() => exportedFrom).toBe(new Date(appliedFrom + 'T00:00:00').toISOString());
+  expect(exportedOwner).toBe(fixture.userId);
   await page.getByLabel('費用開始日期', { exact: true }).fill(appliedFrom);
+  await page.getByRole('button', { name: '查看所有人', exact: true }).click();
+  await expect(page.locator('.dashboard-content > .form-note')).toContainText('整個平台');
   await settleEntrance(page);
   await page.locator('.feature-main').evaluate(el => el.scrollTo({ top: 0, behavior: 'instant' }));
   await page.screenshot({ animations: 'disabled', path: 'artifacts/screenshots/dashboard-light.png' });
@@ -59,10 +92,42 @@ test('dashboard keeps currencies separate, supports node inspection, and fits mo
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await expectViewportContained(page);
   await expect(page.locator('.flow-pulse')).toHaveCSS('animation-name', 'none');
+  const nodeBounds = await page.locator('.flow-node').evaluateAll(nodes => nodes.map(node => {
+    const { left, right, top, bottom } = node.getBoundingClientRect();
+    return { left, right, top, bottom };
+  }));
+  for (let i = 0; i < nodeBounds.length; i++) {
+    for (const other of nodeBounds.slice(i + 1)) {
+      const node = nodeBounds[i];
+      expect(node.right <= other.left || other.right <= node.left || node.bottom <= other.top || other.bottom <= node.top).toBe(true);
+    }
+  }
   await page.locator('.feature-main').evaluate(el => el.scrollTo({ top: 0, behavior: 'instant' }));
   await page.screenshot({ animations: 'disabled', path: 'artifacts/screenshots/dashboard-mobile-dark.png' });
   await page.locator('.feature-main').evaluate(el => el.scrollTo({ top: el.scrollHeight, behavior: 'instant' }));
   await page.screenshot({ animations: 'disabled', path: 'artifacts/screenshots/dashboard-reports-mobile-dark.png' });
+  await page.locator('.flow-map').screenshot({ animations: 'disabled', path: 'artifacts/screenshots/dashboard-flow-mobile-dark.png' });
+  await page.locator('.flow-inspector').screenshot({ animations: 'disabled', path: 'artifacts/screenshots/dashboard-inspector-mobile-dark.png' });
+});
+
+test('custom feature names stay consistent across navigation, overview links and destination headings', async ({ page }) => {
+  const fixture = new ApiFixture();
+  fixture.extraFeatures = [
+    { id: 'dashboard', name: '總覽', route: '/dashboard' },
+    { id: 'knowledge', name: '部門知識庫', route: '/knowledge' },
+  ];
+  await fixture.attach(page);
+  await page.route('**/api/v1/dashboard?**', route => route.fulfill({ json: dashboardFixture(fixture) }));
+  await page.route('**/api/v1/knowledge/collections', route => route.fulfill({ json: [] }));
+  await page.goto('/dashboard');
+  await expect(page.getByRole('navigation', { name: '工作區功能' }).getByRole('link', { name: '部門知識庫', exact: true })).toBeVisible();
+  await expect(page.locator('.flow-inspector').getByRole('heading')).toHaveText('部門知識庫');
+  await page.getByRole('link', { name: '前往部門知識庫', exact: true }).click();
+  await expect(page).toHaveURL(/\/knowledge$/);
+  await expect(page.getByRole('heading', { name: '部門知識庫', exact: true })).toBeVisible();
+  await page.goto('/dashboard');
+  await page.locator('.flow-node').filter({ hasText: '背景任務' }).click();
+  await expect(page.locator('.flow-inspector').getByRole('link')).toHaveCount(0);
 });
 
 test('price dialog creates immutable versions and stays within the viewport', async ({ page }) => {
@@ -73,10 +138,10 @@ test('price dialog creates immutable versions and stays within the viewport', as
     if (route.request().method() === 'POST') { saved = route.request().postDataJSON(); return route.fulfill({ json: { ...saved, id: crypto.randomUUID() } }); }
     return route.fulfill({ json: [] });
   });
-  await page.goto('/dashboard'); await page.getByRole('button', { name: '模型價格', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: '模型價格版本' }); await expect(dialog).toBeVisible();
+  await page.goto('/dashboard'); await page.getByRole('button', { name: '模型與工具價格', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: '模型與工具價格版本' }); await expect(dialog).toBeVisible();
   await dialog.getByLabel('模型 ID', { exact: true }).fill('qwen3:8b');
-  await chooseSelect(page, '計費供應商', 'ollama'); await chooseSelect(page, '費用類型', '本機內部成本');
+  await chooseSelect(page, '計費供應商', 'ollama'); await chooseSelect(page, '費用類型', '內部成本估算');
   await dialog.getByLabel('每次呼叫固定費用', { exact: true }).fill('0.3');
   await dialog.getByRole('button', { name: '新增價格版本', exact: true }).click();
   await expect(dialog.getByRole('status').filter({ hasText: '新價格版本已儲存' })).toBeVisible();
@@ -99,7 +164,7 @@ test('price dialog creates immutable versions and stays within the viewport', as
   await page.screenshot({ animations: 'disabled', path: 'artifacts/screenshots/model-prices-mobile-dark.png' });
   await page.keyboard.press('Escape');
   await expect(dialog).not.toBeVisible();
-  await expect(page.getByRole('button', { name: '模型價格', exact: true })).toBeFocused();
+  await expect(page.getByRole('button', { name: '模型與工具價格', exact: true })).toBeFocused();
 });
 
 test('chat search is opt-in and cost/source panels stay accessible without clipping', async ({ page }) => {
@@ -148,7 +213,7 @@ test('Gitea token is cleared after connecting, pinned files become drafts withou
     return route.fulfill({ json: { items: [{ fullName: 'hanglong/nexus', description: '唯讀文件', private: true, defaultBranch: 'main', url: 'https://gitea.fixture/hanglong/nexus' }], page: 1, hasMore: false } });
   });
   await page.route('**/api/v1/knowledge/collections', route => route.fulfill({ json: [] }));
-  await page.goto('/repositories'); await page.getByLabel('個人存取 token', { exact: true }).fill('fixtureReadOnlyToken00000000');
+  await page.goto('/repositories'); await page.getByLabel('個人存取權杖', { exact: true }).fill('fixtureReadOnlyToken00000000');
   await page.getByRole('button', { name: '連線 Gitea', exact: true }).click();
   await expect(page.locator('.repository-login')).toContainText('fixture-user'); expect(tokenReceived).toBe('fixtureReadOnlyToken00000000');
   await expect(page.locator('#gitea-token')).toHaveCount(0);

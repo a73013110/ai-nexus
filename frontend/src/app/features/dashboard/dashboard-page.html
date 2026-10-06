@@ -1,4 +1,4 @@
-<nx-feature-page title="總覽" description="從使用量到知識索引，掌握每一步工作的狀態。" eyebrow="AI NEXUS · OVERVIEW">
+<nx-feature-page [title]="session.featureName('dashboard')" description="從使用量到知識索引，掌握每一步工作的狀態。" eyebrow="AI NEXUS · OVERVIEW">
   <div page-actions class="page-actions">
     @if (session.has('admin')) {
       <nx-select label="總覽範圍" [value]="scope()" [options]="[{value:'personal', label:'我的工作'}, {value:'platform',label:'整個平台'}]" (valueChange)="setScope($event)" />
@@ -7,7 +7,7 @@
     <button type="button" class="icon-button" aria-label="重新整理總覽" [disabled]="loading()" (click)="load()"><nx-icon name="refresh" /></button>
   </div>
   <form class="dashboard-filters" (submit)="$event.preventDefault(); load()">
-    <nx-select label="查詢期間" [options]="rangeOptions" [value]="range()" (valueChange)="setRange($event)" />
+    <nx-select label="費用查詢期間" [options]="rangeOptions" [value]="range()" (valueChange)="setRange($event)" />
     <label>從<input class="form-input" aria-label="費用開始日期" type="date" required [max]="through()" [value]="from()" (input)="from.set($any($event.target).value); range.set('custom')" /></label>
     <label>至<input class="form-input" aria-label="費用結束日期" type="date" required [min]="from()" [max]="today" [value]="through()" (input)="through.set($any($event.target).value); range.set('custom')" /></label>
     <button type="submit" class="secondary-button" [disabled]="loading()">套用</button>
@@ -19,26 +19,27 @@
   @if (data(); as d) {
     <div class="dashboard-content" [attr.aria-busy]="loading()" [class.is-refreshing]="loading()">
       <div class="dashboard-metrics">
-        <article class="platform-card metric-card"><span><nx-icon name="money" />區間已知費用</span><strong>{{ total()?.knownCalls ? money(total()!.amount, total()!.currency) : '尚無已知金額' }}</strong><small>{{ total() ? kind(total()!.kind) : '請由管理員設定模型價格' }}@if (unknown()) { · {{ unknown() }} 次費用未知 }</small></article>
-        <article class="platform-card metric-card"><span><nx-icon name="chart" />模型與工具呼叫</span><strong>{{ d.spend.requests.toLocaleString() }}<em>次</em></strong><small>{{ d.spend.pendingCalls }} 次待結算 · 包含索引與評測</small></article>
+        <article class="platform-card metric-card"><span><nx-icon name="money" />區間已知費用</span><strong>{{ total()?.knownCalls ? money(total()!.amount, total()!.currency) : '尚無已知金額' }}</strong><small>{{ total() ? kind(total()!.kind) : '請由管理員設定模型與工具價格' }}@if (unknown()) { · 各類型共 {{ unknown() }} 次費用未知 }</small></article>
+        <article class="platform-card metric-card"><span><nx-icon name="chart" />模型與工具呼叫</span><strong>{{ d.spend.requests.toLocaleString() }}<em>次</em></strong><small>{{ d.spend.pendingCalls }} 次待結算 · 包含搜尋、OCR、索引與評測</small></article>
         <article class="platform-card metric-card"><span><nx-icon name="database" />Token 使用量</span><strong>{{ (d.spend.inputTokens + d.spend.outputTokens).toLocaleString() }}</strong><small>輸入 {{ d.spend.inputTokens.toLocaleString() }} · 輸出 {{ d.spend.outputTokens.toLocaleString() }}</small></article>
-        <article class="platform-card metric-card"><span><nx-icon name="tasks" />正在處理</span><strong>{{ d.counts.activeJobs + d.counts.activeGenerations }}<em>件</em></strong><small>{{ d.counts.readyDocuments }} 份文件就緒 · {{ d.counts.conversations }} 個對話</small></article>
+        <article class="platform-card metric-card"><span><nx-icon name="tasks" />處理中工作</span><strong>{{ d.counts.activeJobs + d.counts.activeGenerations }}<em>件</em></strong><small>{{ d.counts.activeGenerations }} 件 AI 回覆生成 · {{ d.counts.activeJobs }} 件背景任務</small></article>
       </div>
+      <p class="form-note">統計範圍：{{ scopeLabel() }}。費用、呼叫與 Token 使用量依查詢期間統計；工作狀態與資源數量顯示目前狀況。</p>
       <section class="operations-overview platform-card">
-        <header class="dashboard-section-heading"><div><span class="panel-eyebrow">WORKSPACE FLOW</span><h2>讓資訊走到答案</h2></div><span class="system-status"><i [class.busy]="d.counts.activeJobs + d.counts.activeGenerations > 0"></i>{{ d.counts.activeJobs + d.counts.activeGenerations ? '正在處理' : '目前無進行中任務' }}</span></header>
-        <nx-workspace-flow [counts]="d.counts" [requests]="d.spend.requests" [scope]="scope()" [embeddingMode]="d.embeddingMode" [webSearchAvailable]="d.webSearchAvailable" [giteaAvailable]="d.giteaAvailable" />
+        <header class="dashboard-section-heading"><div><span class="panel-eyebrow">WORKSPACE FLOW</span><h2>讓資訊走到答案</h2></div><span class="system-status"><i [class.busy]="d.counts.activeJobs + d.counts.activeGenerations > 0"></i>{{ d.counts.activeJobs + d.counts.activeGenerations ? '工作處理中' : '目前無進行中工作' }}</span></header>
+        <nx-workspace-flow [counts]="d.counts" [requests]="d.spend.requests" [scope]="scope()" [scopeLabel]="scopeLabel()" [embeddingMode]="d.embeddingMode" [webSearchAvailable]="d.webSearchAvailable" [giteaAvailable]="d.giteaAvailable" />
       </section>
       <div class="dashboard-charts">
         <section class="platform-card"><nx-trend-chart [points]="trend()" label="每日已知費用" [currency]="total()?.currency ?? ''" /><p class="form-note">{{ total() ? kind(total()!.kind) : '尚無價格紀錄' }} · 未知費用未納入金額，不同幣別與費用類型不相加。</p></section>
         <section class="platform-card"><nx-trend-chart [points]="calls()" label="每日呼叫次數" /><p class="form-note">目前費用紀錄涵蓋對話、搜尋、向量、OCR、文字處理與評測。@if (d.spend.legacyCalls) { 另有 {{ d.spend.legacyCalls }} 次早期呼叫尚無費用紀錄。 }</p></section>
       </div>
       <div class="dashboard-lower">
-        <section class="platform-card"><header class="dashboard-section-heading"><h2>模型費用分布</h2><span>{{ total()?.currency ?? '' }}</span></header>@for (model of modelRows(); track model.label) { <div class="model-spend-row"><div><strong>{{ model.label }}</strong><small>{{ model.requests }} 次@if (model.unknownCalls) { · {{ model.unknownCalls }} 次未知費用 }</small></div><strong>{{ money(model.amount, model.currency) }}</strong><meter min="0" [max]="total()?.amount || 1" [value]="model.amount" [attr.aria-label]="model.label + '費用占比'"></meter></div> }@if (!modelRows().length) { <p class="form-note">價格設定完成後，新的呼叫會呈現在這裡。</p> }</section>
+        <section class="platform-card"><header class="dashboard-section-heading"><h2>模型與工具費用分布</h2><span>{{ total()?.currency ?? '' }}</span></header>@for (model of modelRows(); track model.label) { <div class="model-spend-row"><div><strong>{{ model.label }}</strong><small>{{ model.requests }} 次@if (model.unknownCalls) { · {{ model.unknownCalls }} 次費用未知 }</small></div><strong>{{ money(model.amount, model.currency) }}</strong><meter min="0" [max]="total()?.amount || 1" [value]="model.amount" [attr.aria-label]="model.label + '費用占比'"></meter></div> }@if (!modelRows().length) { <p class="form-note">價格設定完成後，新的呼叫會呈現在這裡。</p> }</section>
         <section class="platform-card"><header class="dashboard-section-heading"><h2>繼續工作</h2><a routerLink="/chat" class="quiet-button">新對話<nx-icon name="plus" /></a></header>@for (work of d.recent; track work.id) { <a class="recent-work" [routerLink]="['/chat', work.id]"><nx-icon name="lines" /><span>{{ work.title }}</span><nx-icon name="chevron" /></a> }@if (!d.recent.length) { <p class="form-note">第一段對話會出現在這裡。</p> }</section>
       </div>
       @if (scope() === 'platform') {
-        <section class="platform-card dashboard-users"><header class="dashboard-section-heading"><div><h2>使用者區間費用</h2><p class="form-note">依目前選擇的幣別與費用類型呈現；匯出涵蓋查詢期間的全部使用者。</p></div>@if (owner()) { <button class="secondary-button" (click)="owner.set(''); load()">查看所有人</button> }</header>
-          <div class="dashboard-table-scroll"><table><thead><tr><th scope="col">使用者</th><th scope="col">呼叫</th><th scope="col">已知費用</th><th scope="col">未知費用</th><th scope="col"><span class="sr-only">操作</span></th></tr></thead><tbody>@for (user of users(); track user.ownerId) { <tr><th scope="row"><strong>{{ user.displayName }}</strong><small>{{ user.account }}</small></th><td>{{ user.requests }}</td><td>{{ money(user.amount, user.currency) }}</td><td>{{ user.unknownCalls }}</td><td><button type="button" class="quiet-button" (click)="owner.set(user.ownerId); load()">檢視</button></td></tr> }</tbody></table></div>
+        <section class="platform-card dashboard-users"><header class="dashboard-section-heading"><div><h2>使用者區間費用</h2><p class="form-note">依目前選擇的幣別與費用類型呈現；匯出涵蓋目前已套用範圍與期間的資料。</p></div>@if (owner()) { <button class="secondary-button" (click)="owner.set(''); load()">查看所有人</button> }</header>
+          <div class="dashboard-table-scroll"><table><thead><tr><th scope="col">使用者</th><th scope="col">呼叫</th><th scope="col">已知費用</th><th scope="col">費用未知次數</th><th scope="col"><span class="sr-only">操作</span></th></tr></thead><tbody>@for (user of users(); track user.ownerId) { <tr><th scope="row"><strong>{{ user.displayName }}</strong><small>{{ user.account }}</small></th><td>{{ user.requests }}</td><td>{{ money(user.amount, user.currency) }}</td><td>{{ user.unknownCalls }}</td><td><button type="button" class="quiet-button" (click)="owner.set(user.ownerId); load()">檢視</button></td></tr> }</tbody></table></div>
           @if (!users().length) { <p class="form-note">此期間尚無符合條件的費用紀錄。</p> }
         </section>
       }

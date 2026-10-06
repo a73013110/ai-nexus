@@ -8,7 +8,7 @@ const features = [
   { id: "tasks", name: "背景任務", route: "/tasks" },
   { id: "quality", name: "品質評測", route: "/quality" },
   { id: "shared", name: "分享", route: "/shared" },
-  { id: "integrations", name: "公司資料", route: "/integrations" },
+  { id: "integrations", name: "資料來源", route: "/integrations" },
 ];
 async function gallery(page: Page) {
   const fixture = new ApiFixture();

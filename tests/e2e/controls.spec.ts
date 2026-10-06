@@ -156,7 +156,7 @@ test("chat access is resolved at login and a missing grant prevents submission",
   fixture.chatAccess = false;
   await fixture.attach(page);
   await page.goto("/chat");
-  await expect(page.getByRole("alert")).toContainText("沒有 AI 對話功能");
+  await expect(page.getByRole("alert")).toContainText("沒有對話功能");
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("權限測試");
   await expect(page.getByRole("button", { name: "送出訊息" })).toBeDisabled();
   expect(fixture.posts).toBe(0);

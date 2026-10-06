@@ -147,7 +147,7 @@ test("logout clears private workspace state while drafts restore only for their 
     await page.getByLabel("AD 密碼", { exact: true }).fill("fixture-password");
     await page.getByRole("button", { name: "登入工作區", exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard$/);
-    await page.getByRole("link", { name: "AI 對話", exact: true }).click();
+    await page.getByRole("link", { name: "對話", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "加入文件或圖片" }),
     ).toBeEnabled();
@@ -559,7 +559,7 @@ test("shared disclosures close outside and permanent authorization errors do not
   ).not.toHaveAttribute("open");
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("權限撤銷");
   await page.getByRole("button", { name: "送出訊息" }).click();
-  await expect(page.getByRole("alert")).toContainText("沒有 AI 對話權限");
+  await expect(page.getByRole("alert")).toContainText("沒有對話權限");
   await page.waitForTimeout(1000);
   expect(fixture.eventReads).toBe(1);
   expect(fixture.posts).toBe(1);

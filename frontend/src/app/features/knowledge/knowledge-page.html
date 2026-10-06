@@ -1,6 +1,6 @@
-<nx-feature-page title="知識庫" description="整理可查核的文件來源，讓 AI 回答附上依據與頁碼。">
+<nx-feature-page [title]="session.featureName('knowledge')" description="整理可查核的文件來源，讓 AI 回答附上依據與頁碼。">
   <div page-actions class="page-actions">
-    <a routerLink="/files" class="secondary-button"><nx-icon name="document" />檔案庫</a>
+    @if (session.has('files')) { <a routerLink="/files" class="secondary-button"><nx-icon name="document" />{{ session.featureName('files') }}</a> }
     <button
       class="primary-button"
       (click)="openEditor()"

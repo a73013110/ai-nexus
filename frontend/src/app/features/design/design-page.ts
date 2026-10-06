@@ -29,9 +29,9 @@ import { generationStatus } from '../../core/api/generation-status';
 const sampleTitle = '把想法，整理成可用的成果';
 const jobStates: SelectOption[] = [
   { value: 'completed', label: '已完成' },
-  { value: 'queued', label: '等候處理' },
+  { value: 'queued', label: '等待處理' },
   { value: 'failed', label: '需要重試' },
-  { value: 'cancelled', label: '已停止' },
+  { value: 'cancelled', label: '已取消' },
   { value: 'running', label: '處理中（示範播放）', disabled: true },
 ];
 

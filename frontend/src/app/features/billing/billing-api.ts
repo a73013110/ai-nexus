@@ -16,7 +16,7 @@ export function money(amount: number, currency: string): string {
   return new Intl.NumberFormat('zh-TW', { style: 'currency', currency, currencyDisplay: 'code', maximumFractionDigits: 8 }).format(amount);
 }
 export function chargeKind(kind: string): string {
-  return ({ api: 'API 計費估算', internal: '本機內部成本', free: '免費', unpriced: '未定價' } as Record<string, string>)[kind] ?? kind;
+  return ({ api: 'API 計費估算', internal: '內部成本估算', free: '免費', unpriced: '未定價' } as Record<string, string>)[kind] ?? kind;
 }
 @Injectable({ providedIn: 'root' })
 export class BillingApi {

@@ -1,5 +1,5 @@
 <nx-feature-page
-  title="成果文件"
+  [title]="session.featureName('artifacts')"
   description="把回答整理為可交付的文件，保留每次修改，與同事協作核對。"
 >
   <button
@@ -46,14 +46,14 @@
               ></a
             >
           } @empty {
-            <p class="form-note">尚無符合的成果文件。可新增文件，或從 AI 回答儲存成果。</p>
+            <p class="form-note">尚無符合的成果文件。可新增成果文件，或從 AI 回答儲存成果。</p>
           }
         </nav>
       </aside>
       @if (document(); as doc) {
         <section class="artifact-detail">
           <button class="quiet-button artifact-mobile-list" (click)="listOpen.set(!listOpen())">
-            <nx-icon name="left" />{{ listOpen() ? '返回文件' : '所有成果文件' }}
+            <nx-icon name="left" />{{ listOpen() ? '返回成果文件' : '所有成果文件' }}
           </button>
           <div class="artifact-title">
             <div>

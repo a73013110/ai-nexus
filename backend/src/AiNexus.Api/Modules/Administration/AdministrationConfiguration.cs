@@ -33,7 +33,7 @@ public static class AdministrationConfiguration
     {
         model.Entity<AccessControl.Role>().HasData(new AccessControl.Role { Id = Role, Name = "平台管理員" });
         model.Entity<RoleGroup>().HasData(new RoleGroup { Id = Group, Name = "平台管理" });
-        model.Entity<AccessControl.Feature>().HasData(new AccessControl.Feature { Id = Feature, Name = "管理", Route = "/admin", SortOrder = 90 });
+        model.Entity<AccessControl.Feature>().HasData(new AccessControl.Feature { Id = Feature, Name = "平台管理", Route = "/admin", SortOrder = 90 });
         model.Entity<RoleGroupRole>().HasData(new RoleGroupRole { RoleId = Role, GroupId = Group });
         model.Entity<RoleGroupFeature>().HasData(new RoleGroupFeature { GroupId = Group, FeatureId = Feature });
         var bootstrap = model.Entity<AdministratorBootstrap>();

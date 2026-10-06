@@ -33,7 +33,7 @@ const emptyPrice = (): PriceRequest => ({
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './price-book.scss',
   template: `<button class="secondary-button" type="button" (click)="open()">
-      <nx-icon name="money" />模型價格
+      <nx-icon name="money" />模型與工具價格
     </button>
     <dialog
       #dialog
@@ -45,7 +45,7 @@ const emptyPrice = (): PriceRequest => ({
         <div class="dialog-heading">
           <div>
             <span class="panel-eyebrow">計費設定</span>
-            <h2 id="price-title">模型價格版本</h2>
+            <h2 id="price-title">模型與工具價格版本</h2>
           </div>
           <button class="icon-button" type="button" aria-label="關閉價格設定" (click)="close()">
             <nx-icon name="close" />

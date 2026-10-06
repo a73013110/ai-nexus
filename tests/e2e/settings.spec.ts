@@ -75,7 +75,7 @@ test("personal settings preview, cancel, save and reload account preferences", a
     page.getByRole("dialog", { name: "個人設定", exact: true }),
   ).not.toBeVisible();
   const composer = page.getByRole("textbox", { name: "傳送訊息", exact: true });
-  await page.getByRole("link", { name: "AI 對話", exact: true }).click();
+  await page.getByRole("link", { name: "對話", exact: true }).click();
   await composer.click();
   await composer.fill("換行模式");
   await expect(

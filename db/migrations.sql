@@ -2821,3 +2821,64 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006035611_UnifiedWorkspaceTerminology'
+)
+BEGIN
+    UPDATE [access].[Features] SET [Name] = N'平台管理' WHERE [Id] = N'admin' AND [Name] = N'管理';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006035611_UnifiedWorkspaceTerminology'
+)
+BEGIN
+    UPDATE [access].[Features] SET [Name] = N'成果文件' WHERE [Id] = N'artifacts' AND [Name] = N'成果';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006035611_UnifiedWorkspaceTerminology'
+)
+BEGIN
+    UPDATE [access].[Features] SET [Name] = N'資料來源' WHERE [Id] = N'integrations' AND [Name] = N'來源';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006035611_UnifiedWorkspaceTerminology'
+)
+BEGIN
+    UPDATE [access].[Features] SET [Name] = N'知識庫' WHERE [Id] = N'knowledge' AND [Name] = N'知識';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006035611_UnifiedWorkspaceTerminology'
+)
+BEGIN
+    UPDATE [access].[Features] SET [Name] = N'品質評測' WHERE [Id] = N'quality' AND [Name] = N'評測';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006035611_UnifiedWorkspaceTerminology'
+)
+BEGIN
+    UPDATE [access].[Features] SET [Name] = N'背景任務' WHERE [Id] = N'tasks' AND [Name] = N'任務';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006035611_UnifiedWorkspaceTerminology'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261006035611_UnifiedWorkspaceTerminology', N'10.0.12');
+END;
+
+COMMIT;
+GO
+

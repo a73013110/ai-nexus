@@ -270,12 +270,12 @@ export class ApiFixture {
             ...this.extraFeatures,
             ...(this.chatAccess
               ? [
-                  { id: "chat", name: "AI 對話", route: "/chat" },
+                  { id: "chat", name: "對話", route: "/chat" },
                   { id: "files", name: "檔案庫", route: "/files" },
                 ]
               : []),
             ...(this.adminAccess
-              ? [{ id: "admin", name: "管理", route: "/admin" }]
+              ? [{ id: "admin", name: "平台管理", route: "/admin" }]
               : []),
           ],
         },
@@ -810,7 +810,7 @@ export class ApiFixture {
         this.eventReads++;
         if (this.eventsStatus !== 200)
           return json(
-            { title: "沒有 AI 對話權限。", code: "feature_denied" },
+            { title: "沒有對話權限。", code: "feature_denied" },
             this.eventsStatus,
           );
         if (run.status === "queued") {
