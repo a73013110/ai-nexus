@@ -3157,3 +3157,419 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    DELETE FROM [knowledge].[Chunks];
+    UPDATE [knowledge].[Documents] SET [Status] = 'reindex', [ChunkCount] = 0 WHERE [CollectionId] IS NOT NULL AND [IsDeleted] = 0;
+    IF COL_LENGTH('knowledge.Chunks', 'EmbeddingVector') IS NOT NULL ALTER TABLE [knowledge].[Chunks] DROP COLUMN [EmbeddingVector];
+    IF COL_LENGTH('knowledge.Chunks', 'EmbeddingVector1024') IS NOT NULL ALTER TABLE [knowledge].[Chunks] DROP COLUMN [EmbeddingVector1024];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    DROP INDEX [IX_Documents_CollectionId_Status] ON [knowledge].[Documents];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    DECLARE @var66 nvarchar(max);
+    SELECT @var66 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[knowledge].[Documents]') AND [c].[name] = N'EmbeddingProfile');
+    IF @var66 IS NOT NULL EXEC(N'ALTER TABLE [knowledge].[Documents] DROP CONSTRAINT ' + @var66 + ';');
+    ALTER TABLE [knowledge].[Documents] DROP COLUMN [EmbeddingProfile];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    DECLARE @var67 nvarchar(max);
+    SELECT @var67 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[knowledge].[Chunks]') AND [c].[name] = N'EmbeddingJson');
+    IF @var67 IS NOT NULL EXEC(N'ALTER TABLE [knowledge].[Chunks] DROP CONSTRAINT ' + @var67 + ';');
+    ALTER TABLE [knowledge].[Chunks] DROP COLUMN [EmbeddingJson];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    DECLARE @var68 nvarchar(max);
+    SELECT @var68 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[knowledge].[Chunks]') AND [c].[name] = N'EmbeddingProfile');
+    IF @var68 IS NOT NULL EXEC(N'ALTER TABLE [knowledge].[Chunks] DROP CONSTRAINT ' + @var68 + ';');
+    ALTER TABLE [knowledge].[Chunks] DROP COLUMN [EmbeddingProfile];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    DECLARE @var69 nvarchar(max);
+    SELECT @var69 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[knowledge].[Chunks]') AND [c].[name] = N'PageNumber');
+    IF @var69 IS NOT NULL EXEC(N'ALTER TABLE [knowledge].[Chunks] DROP CONSTRAINT ' + @var69 + ';');
+    ALTER TABLE [knowledge].[Chunks] DROP COLUMN [PageNumber];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    DECLARE @description70 AS sql_variant;
+    EXEC sp_dropextendedproperty 'MS_Description', 'SCHEMA', N'knowledge', 'TABLE', N'Chunks';
+    SET @description70 = N'結構化檢索片段與 profile 專屬切段版本；查詢先套用資料 ACL。';
+    EXEC sp_addextendedproperty 'MS_Description', @description70, 'SCHEMA', N'knowledge', 'TABLE', N'Chunks';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    DECLARE @var71 nvarchar(max);
+    SELECT @var71 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[knowledge].[Chunks]') AND [c].[name] = N'Text');
+    IF @var71 IS NOT NULL EXEC(N'ALTER TABLE [knowledge].[Chunks] DROP CONSTRAINT ' + @var71 + ';');
+    ALTER TABLE [knowledge].[Chunks] ALTER COLUMN [Text] nvarchar(4000) NOT NULL;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    ALTER TABLE [knowledge].[Chunks] ADD [ContentHash] binary(32) NOT NULL DEFAULT 0x;
+    DECLARE @description72 AS sql_variant;
+    SET @description72 = N'實際向量輸入（文件名稱、標題路徑與本文）的 SHA-256。';
+    EXEC sp_addextendedproperty 'MS_Description', @description72, 'SCHEMA', N'knowledge', 'TABLE', N'Chunks', 'COLUMN', N'ContentHash';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    ALTER TABLE [knowledge].[Chunks] ADD [EndPage] int NOT NULL DEFAULT 0;
+    DECLARE @description73 AS sql_variant;
+    SET @description73 = N'片段結束的原始文件頁碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description73, 'SCHEMA', N'knowledge', 'TABLE', N'Chunks', 'COLUMN', N'EndPage';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    ALTER TABLE [knowledge].[Chunks] ADD [HeadingPath] nvarchar(400) NOT NULL DEFAULT N'';
+    DECLARE @description74 AS sql_variant;
+    SET @description74 = N'由標題階層組成的結構路徑。';
+    EXEC sp_addextendedproperty 'MS_Description', @description74, 'SCHEMA', N'knowledge', 'TABLE', N'Chunks', 'COLUMN', N'HeadingPath';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    ALTER TABLE [knowledge].[Chunks] ADD [ProfileId] int NOT NULL DEFAULT 0;
+    DECLARE @description75 AS sql_variant;
+    SET @description75 = N'向量空間及切段版本的 EmbeddingProfiles 外鍵。';
+    EXEC sp_addextendedproperty 'MS_Description', @description75, 'SCHEMA', N'knowledge', 'TABLE', N'Chunks', 'COLUMN', N'ProfileId';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    ALTER TABLE [knowledge].[Chunks] ADD [SearchId] int NOT NULL IDENTITY;
+    DECLARE @description76 AS sql_variant;
+    SET @description76 = N'全文索引使用的整數唯一鍵；保留未來 ANN 映射。';
+    EXEC sp_addextendedproperty 'MS_Description', @description76, 'SCHEMA', N'knowledge', 'TABLE', N'Chunks', 'COLUMN', N'SearchId';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    ALTER TABLE [knowledge].[Chunks] ADD [StartPage] int NOT NULL DEFAULT 0;
+    DECLARE @description77 AS sql_variant;
+    SET @description77 = N'片段開始的原始文件頁碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description77, 'SCHEMA', N'knowledge', 'TABLE', N'Chunks', 'COLUMN', N'StartPage';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    ALTER TABLE [knowledge].[Chunks] ADD [TokenEstimate] int NOT NULL DEFAULT 0;
+    DECLARE @description78 AS sql_variant;
+    SET @description78 = N'依 CJK 與其他字元比例估算的片段 token 數。';
+    EXEC sp_addextendedproperty 'MS_Description', @description78, 'SCHEMA', N'knowledge', 'TABLE', N'Chunks', 'COLUMN', N'TokenEstimate';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    CREATE TABLE [knowledge].[EmbeddingProfiles] (
+        [Id] int NOT NULL IDENTITY,
+        [Key] nvarchar(200) NOT NULL,
+        [Provider] nvarchar(32) NOT NULL,
+        [Model] nvarchar(160) NOT NULL,
+        [Dimensions] int NOT NULL,
+        [InputFormat] nvarchar(32) NOT NULL,
+        [QueryInstruction] nvarchar(500) NOT NULL,
+        [Revision] nvarchar(64) NOT NULL,
+        [ChunkerConfiguration] nvarchar(500) NOT NULL,
+        [Status] nvarchar(16) NOT NULL,
+        [CreatedAt] datetimeoffset NOT NULL,
+        [ActivatedAt] datetimeoffset NULL,
+        [RetiredAt] datetimeoffset NULL,
+        CONSTRAINT [PK_EmbeddingProfiles] PRIMARY KEY ([Id])
+    );
+    DECLARE @description79 AS sql_variant;
+    SET @description79 = N'向量空間及切段規則的不可變快照；同時最多一個 active。';
+    EXEC sp_addextendedproperty 'MS_Description', @description79, 'SCHEMA', N'knowledge', 'TABLE', N'EmbeddingProfiles';
+    SET @description79 = N'資料的主鍵識別碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description79, 'SCHEMA', N'knowledge', 'TABLE', N'EmbeddingProfiles', 'COLUMN', N'Id';
+    SET @description79 = N'供應商、模型、維度及輸入／切段規則的唯一指紋。';
+    EXEC sp_addextendedproperty 'MS_Description', @description79, 'SCHEMA', N'knowledge', 'TABLE', N'EmbeddingProfiles', 'COLUMN', N'Key';
+    SET @description79 = N'模型或搜尋服務供應商識別碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description79, 'SCHEMA', N'knowledge', 'TABLE', N'EmbeddingProfiles', 'COLUMN', N'Provider';
+    SET @description79 = N'建立此向量空間時的模型識別碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description79, 'SCHEMA', N'knowledge', 'TABLE', N'EmbeddingProfiles', 'COLUMN', N'Model';
+    SET @description79 = N'向量維度，限已建立資料表的 allowlist。';
+    EXEC sp_addextendedproperty 'MS_Description', @description79, 'SCHEMA', N'knowledge', 'TABLE', N'EmbeddingProfiles', 'COLUMN', N'Dimensions';
+    SET @description79 = N'查詢輸入格式 plain 或 qwen-query。';
+    EXEC sp_addextendedproperty 'MS_Description', @description79, 'SCHEMA', N'knowledge', 'TABLE', N'EmbeddingProfiles', 'COLUMN', N'InputFormat';
+    SET @description79 = N'qwen-query 的檢索任務指令快照。';
+    EXEC sp_addextendedproperty 'MS_Description', @description79, 'SCHEMA', N'knowledge', 'TABLE', N'EmbeddingProfiles', 'COLUMN', N'QueryInstruction';
+    SET @description79 = N'外部來源或 repository 的固定版本識別。';
+    EXEC sp_addextendedproperty 'MS_Description', @description79, 'SCHEMA', N'knowledge', 'TABLE', N'EmbeddingProfiles', 'COLUMN', N'Revision';
+    SET @description79 = N'切段器版本及 token／重疊參數快照；重建期間保留舊版本。';
+    EXEC sp_addextendedproperty 'MS_Description', @description79, 'SCHEMA', N'knowledge', 'TABLE', N'EmbeddingProfiles', 'COLUMN', N'ChunkerConfiguration';
+    SET @description79 = N'業務執行狀態。';
+    EXEC sp_addextendedproperty 'MS_Description', @description79, 'SCHEMA', N'knowledge', 'TABLE', N'EmbeddingProfiles', 'COLUMN', N'Status';
+    SET @description79 = N'資料建立時間，採 UTC offset。';
+    EXEC sp_addextendedproperty 'MS_Description', @description79, 'SCHEMA', N'knowledge', 'TABLE', N'EmbeddingProfiles', 'COLUMN', N'CreatedAt';
+    SET @description79 = N'此 profile 完整覆蓋並切換為 active 的 UTC 時間。';
+    EXEC sp_addextendedproperty 'MS_Description', @description79, 'SCHEMA', N'knowledge', 'TABLE', N'EmbeddingProfiles', 'COLUMN', N'ActivatedAt';
+    SET @description79 = N'此 profile 退役的 UTC 時間；作為保留期清理依據。';
+    EXEC sp_addextendedproperty 'MS_Description', @description79, 'SCHEMA', N'knowledge', 'TABLE', N'EmbeddingProfiles', 'COLUMN', N'RetiredAt';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    CREATE TABLE [knowledge].[ChunkEmbeddings1024] (
+        [Id] int NOT NULL IDENTITY,
+        [ChunkId] uniqueidentifier NOT NULL,
+        [ProfileId] int NOT NULL,
+        [ContentHash] binary(32) NOT NULL,
+        [Vector] vector(1024) NOT NULL,
+        CONSTRAINT [PK_ChunkEmbeddings1024] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [FK_ChunkEmbeddings1024_Chunks_ChunkId] FOREIGN KEY ([ChunkId]) REFERENCES [knowledge].[Chunks] ([Id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_ChunkEmbeddings1024_EmbeddingProfiles_ProfileId] FOREIGN KEY ([ProfileId]) REFERENCES [knowledge].[EmbeddingProfiles] ([Id]) ON DELETE NO ACTION
+    );
+    DECLARE @description80 AS sql_variant;
+    SET @description80 = N'1024 維原生向量、片段關聯與 profile 內容快取。';
+    EXEC sp_addextendedproperty 'MS_Description', @description80, 'SCHEMA', N'knowledge', 'TABLE', N'ChunkEmbeddings1024';
+    SET @description80 = N'資料的主鍵識別碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description80, 'SCHEMA', N'knowledge', 'TABLE', N'ChunkEmbeddings1024', 'COLUMN', N'Id';
+    SET @description80 = N'向量對應的結構化片段 Guid 識別碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description80, 'SCHEMA', N'knowledge', 'TABLE', N'ChunkEmbeddings1024', 'COLUMN', N'ChunkId';
+    SET @description80 = N'向量空間及切段版本的 EmbeddingProfiles 外鍵。';
+    EXEC sp_addextendedproperty 'MS_Description', @description80, 'SCHEMA', N'knowledge', 'TABLE', N'ChunkEmbeddings1024', 'COLUMN', N'ProfileId';
+    SET @description80 = N'實際向量輸入（文件名稱、標題路徑與本文）的 SHA-256。';
+    EXEC sp_addextendedproperty 'MS_Description', @description80, 'SCHEMA', N'knowledge', 'TABLE', N'ChunkEmbeddings1024', 'COLUMN', N'ContentHash';
+    SET @description80 = N'L2 正規化的 float32 向量；SQL Server 使用 VECTOR 型別。';
+    EXEC sp_addextendedproperty 'MS_Description', @description80, 'SCHEMA', N'knowledge', 'TABLE', N'ChunkEmbeddings1024', 'COLUMN', N'Vector';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    CREATE TABLE [knowledge].[ChunkEmbeddings768] (
+        [Id] int NOT NULL IDENTITY,
+        [ChunkId] uniqueidentifier NOT NULL,
+        [ProfileId] int NOT NULL,
+        [ContentHash] binary(32) NOT NULL,
+        [Vector] vector(768) NOT NULL,
+        CONSTRAINT [PK_ChunkEmbeddings768] PRIMARY KEY CLUSTERED ([Id]),
+        CONSTRAINT [FK_ChunkEmbeddings768_Chunks_ChunkId] FOREIGN KEY ([ChunkId]) REFERENCES [knowledge].[Chunks] ([Id]) ON DELETE CASCADE,
+        CONSTRAINT [FK_ChunkEmbeddings768_EmbeddingProfiles_ProfileId] FOREIGN KEY ([ProfileId]) REFERENCES [knowledge].[EmbeddingProfiles] ([Id]) ON DELETE NO ACTION
+    );
+    DECLARE @description81 AS sql_variant;
+    SET @description81 = N'768 維原生向量、片段關聯與 profile 內容快取。';
+    EXEC sp_addextendedproperty 'MS_Description', @description81, 'SCHEMA', N'knowledge', 'TABLE', N'ChunkEmbeddings768';
+    SET @description81 = N'資料的主鍵識別碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description81, 'SCHEMA', N'knowledge', 'TABLE', N'ChunkEmbeddings768', 'COLUMN', N'Id';
+    SET @description81 = N'向量對應的結構化片段 Guid 識別碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description81, 'SCHEMA', N'knowledge', 'TABLE', N'ChunkEmbeddings768', 'COLUMN', N'ChunkId';
+    SET @description81 = N'向量空間及切段版本的 EmbeddingProfiles 外鍵。';
+    EXEC sp_addextendedproperty 'MS_Description', @description81, 'SCHEMA', N'knowledge', 'TABLE', N'ChunkEmbeddings768', 'COLUMN', N'ProfileId';
+    SET @description81 = N'實際向量輸入（文件名稱、標題路徑與本文）的 SHA-256。';
+    EXEC sp_addextendedproperty 'MS_Description', @description81, 'SCHEMA', N'knowledge', 'TABLE', N'ChunkEmbeddings768', 'COLUMN', N'ContentHash';
+    SET @description81 = N'L2 正規化的 float32 向量；SQL Server 使用 VECTOR 型別。';
+    EXEC sp_addextendedproperty 'MS_Description', @description81, 'SCHEMA', N'knowledge', 'TABLE', N'ChunkEmbeddings768', 'COLUMN', N'Vector';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    CREATE INDEX [IX_Documents_CollectionId_Status_IsDeleted] ON [knowledge].[Documents] ([CollectionId], [Status], [IsDeleted]) INCLUDE ([Id], [FileName], [ChunkCount]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    CREATE INDEX [IX_Chunks_ProfileId_DocumentId] ON [knowledge].[Chunks] ([ProfileId], [DocumentId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_Chunks_SearchId] ON [knowledge].[Chunks] ([SearchId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    CREATE INDEX [IX_ChunkEmbeddings1024_ChunkId] ON [knowledge].[ChunkEmbeddings1024] ([ChunkId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_ChunkEmbeddings1024_ProfileId_ChunkId] ON [knowledge].[ChunkEmbeddings1024] ([ProfileId], [ChunkId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    CREATE INDEX [IX_ChunkEmbeddings1024_ProfileId_ContentHash] ON [knowledge].[ChunkEmbeddings1024] ([ProfileId], [ContentHash]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    CREATE INDEX [IX_ChunkEmbeddings768_ChunkId] ON [knowledge].[ChunkEmbeddings768] ([ChunkId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_ChunkEmbeddings768_ProfileId_ChunkId] ON [knowledge].[ChunkEmbeddings768] ([ProfileId], [ChunkId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    CREATE INDEX [IX_ChunkEmbeddings768_ProfileId_ContentHash] ON [knowledge].[ChunkEmbeddings768] ([ProfileId], [ContentHash]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_EmbeddingProfiles_Key] ON [knowledge].[EmbeddingProfiles] ([Key]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    EXEC(N'CREATE UNIQUE INDEX [IX_EmbeddingProfiles_Status] ON [knowledge].[EmbeddingProfiles] ([Status]) WHERE [Status] = ''active''');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    ALTER TABLE [knowledge].[Chunks] ADD CONSTRAINT [FK_Chunks_EmbeddingProfiles_ProfileId] FOREIGN KEY ([ProfileId]) REFERENCES [knowledge].[EmbeddingProfiles] ([Id]) ON DELETE NO ACTION;
+END;
+
+COMMIT;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    IF CONVERT(int, SERVERPROPERTY('IsFullTextInstalled')) = 1
+        AND EXISTS (SELECT 1 FROM sys.fulltext_languages WHERE lcid = 1028)
+    BEGIN
+        IF NOT EXISTS (SELECT 1 FROM sys.fulltext_catalogs WHERE name = 'KnowledgeSearch')
+            EXEC('CREATE FULLTEXT CATALOG [KnowledgeSearch]');
+        IF NOT EXISTS (SELECT 1 FROM sys.fulltext_indexes WHERE object_id = OBJECT_ID('knowledge.Chunks'))
+            EXEC('CREATE FULLTEXT INDEX ON [knowledge].[Chunks] ([Text] LANGUAGE 1028, [HeadingPath] LANGUAGE 1028) KEY INDEX [IX_Chunks_SearchId] ON [KnowledgeSearch] WITH CHANGE_TRACKING AUTO');
+    END
+    ELSE RAISERROR(N'知識全文索引未建立：未安裝全文元件或繁體中文 1028 斷詞器；執行期會明確回報 vector 模式。', 10, 1) WITH NOWAIT;
+END;
+GO
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006144804_VectorRetrievalProfiles'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261006144804_VectorRetrievalProfiles', N'10.0.12');
+END;
+GO
+

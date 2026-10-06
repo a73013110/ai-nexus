@@ -67,6 +67,17 @@ function ConvertTo-NexusV3([System.Collections.IDictionary]$Value) {
     }
     foreach ($taskKey in @('MaxCollections','MaxDocumentsPerCollection','ChunkCharacters','ChunkOverlap')) { Move-NexusSetting $Value "Knowledge.$taskKey" "Knowledge.Indexing.$taskKey" }
     foreach ($taskKey in @('UseNativeVector','PortableCandidateLimit','TopK','ContextCharacters')) { Move-NexusSetting $Value "Knowledge.$taskKey" "Knowledge.Retrieval.$taskKey" }
+    $taskOldCharacters = Get-NexusSetting $Value 'Knowledge.Indexing.ChunkCharacters'
+    $taskOldOverlap = Get-NexusSetting $Value 'Knowledge.Indexing.ChunkOverlap'
+    if ($null -ne $taskOldCharacters) {
+        if ($null -eq (Get-NexusSetting $Value 'Knowledge.Indexing.ChunkTargetTokens')) { Set-NexusSetting $Value 'Knowledge.Indexing.ChunkTargetTokens' ([Math]::Max(80, [Math]::Ceiling($taskOldCharacters / 2))) }
+        if ($null -eq (Get-NexusSetting $Value 'Knowledge.Indexing.ChunkMaxTokens')) { Set-NexusSetting $Value 'Knowledge.Indexing.ChunkMaxTokens' ([Math]::Max(700, [Math]::Ceiling($taskOldCharacters / 2))) }
+        if ($null -eq (Get-NexusSetting $Value 'Knowledge.Indexing.ChunkMinTokens')) { Set-NexusSetting $Value 'Knowledge.Indexing.ChunkMinTokens' 80 }
+        if ($null -ne $taskOldOverlap -and $null -eq (Get-NexusSetting $Value 'Knowledge.Indexing.ChunkOverlapRatio')) { Set-NexusSetting $Value 'Knowledge.Indexing.ChunkOverlapRatio' ([Math]::Min(0.3, $taskOldOverlap / [Math]::Max(1, $taskOldCharacters))) }
+    }
+    $taskOldContext = Get-NexusSetting $Value 'Knowledge.Retrieval.ContextCharacters'
+    if ($null -ne $taskOldContext -and $null -eq (Get-NexusSetting $Value 'Knowledge.Retrieval.ContextTokens')) { Set-NexusSetting $Value 'Knowledge.Retrieval.ContextTokens' ([Math]::Max(100, [Math]::Ceiling($taskOldContext / 2))) }
+    foreach ($taskPath in @('Knowledge.Indexing.ChunkCharacters','Knowledge.Indexing.ChunkOverlap','Knowledge.Retrieval.ContextCharacters','Knowledge.Retrieval.UseNativeVector','Knowledge.Retrieval.PortableCandidateLimit')) { Remove-NexusSetting $Value $taskPath }
     foreach ($taskKey in @('Gdweb','Meiho')) { Move-NexusSetting $Value "Integrations.$taskKey" "Integrations.Sources.$taskKey" }
     if ($Value.Database) { $Value.Database.Remove('AllowUntrustedCertificateInProduction') | Out-Null }
     if ($Value.Inference) {

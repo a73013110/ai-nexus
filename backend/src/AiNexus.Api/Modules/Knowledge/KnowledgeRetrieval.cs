@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Knowledge;
 
-public sealed class KnowledgeRetrieval(NexusDbContext db, ResourceAccess access, ConversationService conversations, IEmbeddingProvider embeddings, NativeVectorStore vectors, IOptions<KnowledgeOptions> options, AiNexus.Modules.AccessControl.AccessService features, GenerationScheduler scheduler)
+public sealed class KnowledgeRetrieval(NexusDbContext db, ResourceAccess access, ConversationService conversations, EmbeddingService embeddings, IRetrievalStore vectors, EmbeddingProfiles profiles, IOptions<KnowledgeOptions> options, AiNexus.Modules.AccessControl.AccessService features, GenerationScheduler scheduler)
 {
     public async Task<KnowledgeSelectionDto> SelectionAsync(Guid actor, Guid conversation, CancellationToken ct)
     {
@@ -40,16 +40,19 @@ public sealed class KnowledgeRetrieval(NexusDbContext db, ResourceAccess access,
         var count = await (from chunk in db.Set<KnowledgeChunk>() join doc in db.Set<KnowledgeDocument>() on chunk.DocumentId equals doc.Id
             where doc.CollectionId != null && selection.CollectionIds.Contains(doc.CollectionId.Value) && doc.Status == "ready" && !doc.IsDeleted
             select chunk.Id).CountAsync(ct);
-        return Math.Min(options.Value.ContextCharacters, Math.Min(count, options.Value.TopK) * options.Value.ChunkCharacters) * 4 + (count > 0 ? 1000 : 0);
+        return Math.Min(options.Value.ContextTokens, Math.Min(count, options.Value.TopK) * options.Value.ChunkMaxTokens) * 4 + (count > 0 ? 1000 : 0);
     }
     public async Task<KnowledgeSearchDto> SearchAsync(Guid actor, KnowledgeSearchRequest request, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(request.Query) || request.Query.Length > 2000) throw new ApiException(400, "knowledge_query_invalid", "查詢需為 1 至 2000 個字元。");
         await ValidateCollectionsAsync(actor, request.CollectionIds, ct);
-        var vector = embeddings.Enabled && request.CollectionIds.Count > 0 ? await embeddings.EmbedAsync(actor, request.Query.Trim(), false, null, ct) : null;
+        var profile = await profiles.ActiveAsync(ct);
+        var vector = profile.Provider != "none" && request.CollectionIds.Count > 0 ? (await embeddings.EmbedBatchAsync(actor, profile, [request.Query.Trim()], EmbeddingPurpose.Query, ct))[0] : null;
         // Recheck access after the remote request, before any source text leaves the server.
         await ValidateCollectionsAsync(actor, request.CollectionIds, ct);
-        return await vectors.SearchAsync(request.CollectionIds, request.Query, vector, embeddings.Profile, ct);
+        var result = await vectors.SearchAsync(request.CollectionIds, profile, request.Query, vector, options.Value.Mode, ct);
+        await ValidateHitsAsync(actor, result.Hits, ct);
+        return result with { Hits = result.Hits.Take(options.Value.TopK).ToArray() };
     }
     public async Task<IReadOnlyList<KnowledgeHitDto>> ForRunAsync(Guid actor, CreateRunRequest request, CancellationToken ct, IReadOnlyList<Guid>? collections = null)
     {
@@ -59,11 +62,11 @@ public sealed class KnowledgeRetrieval(NexusDbContext db, ResourceAccess access,
         if (request.RegenerateUserMessageId is Guid user) query = await db.Messages.Where(x => x.Id == user && x.ConversationId == request.ConversationId && x.Role == "user").Select(x => x.Content).SingleOrDefaultAsync(ct);
         if (string.IsNullOrWhiteSpace(query)) throw new ApiException(400, "prompt_required", "請輸入提問。");
         var result = await SearchAsync(actor, new(string.Concat(query.Take(2000)), selection.CollectionIds), ct);
-        var remaining = options.Value.ContextCharacters; var selected = new List<KnowledgeHitDto>();
+        var remaining = options.Value.ContextTokens; var selected = new List<KnowledgeHitDto>();
         foreach (var hit in result.Hits)
         {
             if (remaining < 100) break;
-            var text = string.Concat(hit.Text.Take(remaining)); remaining -= text.Length; selected.Add(hit with { Text = text });
+            var text = TokenEstimator.Truncate(hit.Text, remaining); remaining -= TokenEstimator.Estimate(text); selected.Add(hit with { Text = text });
         }
         return selected;
     }

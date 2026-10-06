@@ -42,11 +42,10 @@ public sealed class TextDocumentService(NexusDbContext db, DocumentService docum
                 throw new ApiException(409, "document_processing", "來源仍在處理，請等待完成或停止處理後再編輯。");
             document.TextContent = source.Text; document.TextVersion++; document.FileName = source.Title + ".txt";
             document.AttachmentId = uploaded.Id; document.Status = "queued"; document.PageCount = 0; document.ChunkCount = 0;
-            document.EmbeddingProfile = null; document.Warning = null;
+            document.Warning = null;
             await db.Set<AttachmentReference>().Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
             db.Add(new AttachmentReference { ResourceId = id, AttachmentId = uploaded.Id });
             await db.Set<Attachment>().Where(x => x.Id == uploaded.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
-            await db.Set<KnowledgeChunk>().Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
             await db.Set<DocumentPage>().Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
             var resource = await db.Set<WorkspaceResource>().SingleAsync(x => x.Id == id, ct);
             resource.Name = source.Title; resource.UpdatedAt = DateTimeOffset.UtcNow;

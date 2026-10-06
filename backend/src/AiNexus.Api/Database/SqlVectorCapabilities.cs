@@ -4,7 +4,8 @@ using EDoc.Core.Database.Interfaces;
 
 namespace AiNexus.Database;
 
-public sealed record SqlVectorCapabilitiesDto(string Version, string Edition, int MajorVersion, bool NativeVector, bool ExactDistance);
+public sealed record SqlVectorCapabilitiesDto(string Version, string Edition, int MajorVersion, bool NativeVector, bool ExactDistance,
+    bool FullTextInstalled = false, bool TraditionalChineseWordBreaker = false, bool FullTextIndex = false);
 public sealed class SqlVectorCapabilities(IDbHelper<INexusDatabase> sql)
 {
     public async Task<SqlVectorCapabilitiesDto> ReadAsync(CancellationToken ct)
@@ -20,13 +21,15 @@ public sealed class SqlVectorCapabilities(IDbHelper<INexusDatabase> sql)
             }
             catch (Microsoft.Data.SqlClient.SqlException) { }
         }
-        return new(info.Version, info.Edition, info.MajorVersion, available, available);
+        var fulltext = await sql.QuerySingleAsync<FullTextInfo>("SELECT CONVERT(int,SERVERPROPERTY('IsFullTextInstalled')) AS Installed, CASE WHEN EXISTS (SELECT 1 FROM sys.fulltext_languages WHERE lcid = 1028) THEN 1 ELSE 0 END AS Chinese, CASE WHEN EXISTS (SELECT 1 FROM sys.fulltext_indexes WHERE object_id = OBJECT_ID('knowledge.Chunks') AND is_enabled = 1) THEN 1 ELSE 0 END AS Indexed", commandTimeout: 5, cancellationToken: ct);
+        return new(info.Version, info.Edition, info.MajorVersion, available, available, fulltext.Installed == 1, fulltext.Chinese == 1, fulltext.Indexed == 1);
     }
     public async Task VerifyAsync(string output, CancellationToken ct)
     {
         var result = await ReadAsync(ct);
         await File.WriteAllTextAsync(output, JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }), ct);
-        Console.WriteLine($"SQL {result.Version} · {result.Edition} · native VECTOR / exact cosine distance: {(result.ExactDistance ? "PASS" : "unavailable; portable retrieval required")}");
+        Console.WriteLine($"SQL {result.Version} · {result.Edition} · 原生向量／精確距離：{(result.ExactDistance ? "通過" : "無法使用；需要 SQL Server 2025")}");
+        Console.WriteLine($"全文元件：{result.FullTextInstalled} · 繁中 1028 斷詞器：{result.TraditionalChineseWordBreaker} · 知識全文索引：{result.FullTextIndex}");
     }
     private sealed class ServerInfo
     {
@@ -34,4 +37,5 @@ public sealed class SqlVectorCapabilities(IDbHelper<INexusDatabase> sql)
         public string Edition { get; set; } = "";
         public int MajorVersion { get; set; }
     }
+    private sealed class FullTextInfo { public int Installed { get; set; } public int Chinese { get; set; } public int Indexed { get; set; } }
 }

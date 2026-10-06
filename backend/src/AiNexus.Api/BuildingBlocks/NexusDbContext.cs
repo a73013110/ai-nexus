@@ -36,7 +36,7 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         AiNexus.Modules.WebSearch.WebSearchConfiguration.Configure(model);
         AiNexus.Modules.Repositories.RepositoryConfiguration.Configure(model);
         AiNexus.Modules.Repositories.RepositoryReviewConfiguration.Configure(model);
-        AiNexus.Modules.Knowledge.KnowledgeConfiguration.Configure(model);
+        AiNexus.Modules.Knowledge.KnowledgeConfiguration.Configure(model, Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite");
         AiNexus.Modules.Artifacts.ArtifactConfiguration.Configure(model);
         AiNexus.Modules.Projects.ProjectConfiguration.Configure(model);
         AiNexus.Modules.Sharing.SharingConfiguration.Configure(model);

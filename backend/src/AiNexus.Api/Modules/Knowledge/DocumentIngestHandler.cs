@@ -12,7 +12,7 @@ using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 
 namespace AiNexus.Modules.Knowledge;
 
-public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskService model, IEmbeddingProvider embeddings, NativeVectorStore vectors, IOptions<KnowledgeOptions> knowledge, IOptions<AttachmentOptions> limits, AttachmentService attachments) : IBackgroundJobHandler
+public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskService model, DocumentIndexer indexer, IOptions<AttachmentOptions> limits, AttachmentService attachments) : IBackgroundJobHandler
 {
     public string Kind => "document-ingest";
     public async Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => _ = await documents.RequireAsync(job.OwnerId, job.SubjectId, ct, write: true);
@@ -70,39 +70,10 @@ public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskSe
         await execution.CheckpointAsync("文件文字已完成", total, total, ct);
         if (document.CollectionId is not null)
         {
-            var chunks = Split(existing.Values.OrderBy(x => x.PageNumber)).ToArray();
-            var persisted = await db.Set<KnowledgeChunk>().Where(x => x.DocumentId == document.Id).ToDictionaryAsync(x => x.Ordinal, ct);
-            var ordinal = 0;
-            foreach (var chunk in chunks)
-            {
-                ct.ThrowIfCancellationRequested(); await documents.RequireAsync(actor, document.Id, ct, write: true);
-                if (persisted.TryGetValue(ordinal, out var old) && old.EmbeddingProfile == (embeddings.Enabled ? embeddings.Profile : "keyword")) { ordinal++; continue; }
-                await execution.CheckpointAsync(embeddings.Enabled ? "建立語意索引" : "建立文字索引", ordinal, chunks.Length, ct);
-                var vector = embeddings.Enabled ? await embeddings.EmbedAsync(actor, chunk.Text, true, document.FileName, ct) : null;
-                var record = old ?? new KnowledgeChunk { DocumentId = document.Id, Ordinal = ordinal };
-                record.PageNumber = chunk.Page; record.Text = chunk.Text; record.EmbeddingProfile = embeddings.Enabled ? embeddings.Profile : "keyword";
-                record.EmbeddingJson = vector is null ? null : JsonSerializer.Serialize(vector);
-                if (old is null) db.Add(record);
-                await execution.CheckpointAsync("索引進行中", ++ordinal, chunks.Length, ct, () => vectors.WriteAsync(record.Id, record.EmbeddingJson, ct));
-            }
-            document.ChunkCount = chunks.Length; document.EmbeddingProfile = embeddings.Enabled ? embeddings.Profile : "keyword";
+            await indexer.IndexCurrentAsync(execution, document, ct);
         }
         document.Status = "ready";
         (await db.Set<WorkspaceResource>().SingleAsync(x => x.Id == document.Id, ct)).UpdatedAt = DateTimeOffset.UtcNow;
         await execution.CheckpointAsync("處理完成", document.CollectionId is null ? total : document.ChunkCount, document.CollectionId is null ? total : document.ChunkCount, ct);
-    }
-    private IEnumerable<(int Page, string Text)> Split(IEnumerable<DocumentPage> pages)
-    {
-        foreach (var page in pages)
-            for (var start = 0; start < page.Text.Length; start += knowledge.Value.ChunkCharacters - knowledge.Value.ChunkOverlap)
-            {
-                if (char.IsLowSurrogate(page.Text[start])) start++;
-                if (start >= page.Text.Length) break;
-                var end = Math.Min(page.Text.Length, start + knowledge.Value.ChunkCharacters);
-                // Do not split a UTF-16 surrogate pair across chunks.
-                if (end < page.Text.Length && char.IsHighSurrogate(page.Text[end - 1])) end--;
-                var text = page.Text[start..end].Trim(); if (text.Length > 0) yield return (page.PageNumber, text);
-                if (end == page.Text.Length) break;
-            }
     }
 }

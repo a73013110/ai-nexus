@@ -107,7 +107,9 @@
   "Knowledge": [
     "Embedding",
     "Indexing",
-    "Retrieval"
+    "Retrieval",
+    "Rerank",
+    "QueryRewrite"
   ],
   "Knowledge.Embedding": [
     "Provider",
@@ -116,20 +118,35 @@
     "InputFormat",
     "QueryInstruction",
     "Revision",
+    "Endpoint",
     "TimeoutSeconds",
-    "MaxDailyRequests"
+    "MaxDailyRequests",
+    "BatchSize",
+    "MaxConcurrentBatches",
+    "AutoActivate",
+    "RetiredRetentionDays"
   ],
   "Knowledge.Indexing": [
     "MaxCollections",
     "MaxDocumentsPerCollection",
-    "ChunkCharacters",
-    "ChunkOverlap"
+    "ChunkTargetTokens",
+    "ChunkMaxTokens",
+    "ChunkMinTokens",
+    "ChunkOverlapRatio"
   ],
   "Knowledge.Retrieval": [
-    "UseNativeVector",
-    "PortableCandidateLimit",
+    "Mode",
+    "VectorCandidates",
+    "FtsCandidates",
+    "RrfK",
+    "VectorWeight",
+    "FtsWeight",
+    "RerankCandidates",
     "TopK",
-    "ContextCharacters"
+    "MaxChunksPerDocument",
+    "MinVectorScore",
+    "ContextTokens",
+    "QueryCacheMinutes"
   ],
   "Tools": [
     "WebSearch"
@@ -237,5 +254,18 @@
     "ReasoningControl",
     "ReasoningEfforts",
     "DefaultReasoningEffort"
+  ],
+  "Knowledge.Rerank": [
+    "Provider",
+    "Endpoint",
+    "Model",
+    "TimeoutSeconds",
+    "MinScore",
+    "FailurePolicy"
+  ],
+  "Knowledge.QueryRewrite": [
+    "Enabled",
+    "MaxTurns",
+    "TimeoutSeconds"
   ]
 }

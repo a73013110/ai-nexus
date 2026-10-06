@@ -16,7 +16,7 @@ public sealed record RecentWorkDto(Guid Id, string Kind, string Title, DateTimeO
 public sealed record DashboardDto(string Scope, DashboardCountsDto Counts, SpendReportDto Spend, IReadOnlyList<RecentWorkDto> Recent,
     bool WebSearchAvailable, bool GiteaAvailable, string EmbeddingMode, TokenUsageDto? Tokens = null);
 
-public sealed class DashboardService(NexusDbContext db, SpendReports reports, UsageReports usage, AccessService access, IEmbeddingProvider embedding,
+public sealed class DashboardService(NexusDbContext db, SpendReports reports, UsageReports usage, AccessService access, EmbeddingService embedding,
     AiNexus.Modules.WebSearch.WebSearchService search, Microsoft.Extensions.Options.IOptions<AiNexus.Modules.Repositories.GiteaOptions> gitea)
 {
     public async Task<DashboardDto> GetAsync(Guid actor, string scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offset, CancellationToken ct)
@@ -34,7 +34,7 @@ public sealed class DashboardService(NexusDbContext db, SpendReports reports, Us
             await docs.CountAsync(ct), await docs.CountAsync(x => x.Status == "ready", ct), await docs.CountAsync(x => x.Status == "failed", ct), await chunks.CountAsync(ct),
             await db.Runs.CountAsync(x => x.ActiveOwnerId != null && (owner == null || x.OwnerId == owner), ct),
             await jobs.CountAsync(x => x.Status == "queued" || x.Status == "running", ct), await jobs.CountAsync(x => x.Status == "failed", ct),
-            embedding.Enabled ? await docs.CountAsync(d => d.Status == "ready" && db.Set<KnowledgeChunk>().Any(x => x.DocumentId == d.Id && x.EmbeddingProfile != embedding.Profile), ct) : 0,
+            embedding.Enabled ? await docs.CountAsync(d => d.CollectionId != null && d.Status == "ready" && !db.Set<KnowledgeChunk>().Any(x => x.DocumentId == d.Id && db.Set<EmbeddingProfile>().Any(p => p.Id == x.ProfileId && p.Key == embedding.Profile)), ct) : 0,
             // Originals are counted once, independently of document readers and collection indexes.
             await db.Set<Attachment>().CountAsync(x => x.InLibrary && x.StorageState == AttachmentStates.Ready && (owner == null || x.OwnerId == owner), ct));
         var spend = await reports.ReportAsync(owner, from, until, offset, scope == "platform", ct);

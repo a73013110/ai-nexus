@@ -134,8 +134,8 @@ public sealed class KnowledgeAndJobsTests
         await Task.WhenAll(first.ProcessNextAsync(CancellationToken.None), second.ProcessNextAsync(CancellationToken.None));
         var done = (await client.GetFromJsonAsync<JobDto>($"/api/v1/jobs/{document.JobId}"))!;
         Assert.Equal("completed", done.Status); Assert.Equal(2, done.Attempt);
-        Assert.Equal(3, (await client.GetFromJsonAsync<DocumentDto>($"/api/v1/documents/{document.Id}"))!.ChunkCount);
-        Assert.Equal(4, factory.Embeddings.Calls); // one failure + three unique chunks
+        Assert.Equal(2, (await client.GetFromJsonAsync<DocumentDto>($"/api/v1/documents/{document.Id}"))!.ChunkCount);
+        Assert.Equal(2, factory.Embeddings.Calls); // one failed batch and one resumed batch
     }
     [Fact]
     public async Task JobsAreOwnerScopedCancellationIsDurableAndRetryRequiresCsrf()

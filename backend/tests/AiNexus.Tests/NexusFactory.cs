@@ -72,8 +72,9 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
             services.RemoveAllKeyed<IInferenceProvider>("ollama");
             services.AddKeyedSingleton<IInferenceProvider>("google", Provider);
             services.AddKeyedSingleton<IInferenceProvider>("ollama", Provider);
-            services.RemoveAll<AiNexus.Modules.Knowledge.IEmbeddingProvider>();
-            services.AddSingleton<AiNexus.Modules.Knowledge.IEmbeddingProvider>(Embeddings);
+            services.RemoveAll<AiNexus.Modules.Knowledge.IEmbeddingClient>();
+            services.AddSingleton<AiNexus.Modules.Knowledge.IEmbeddingClient>(Embeddings);
+            services.PostConfigure<AiNexus.Modules.Knowledge.KnowledgeOptions>(x => { x.EmbeddingProvider = "ollama"; x.Dimensions = 768; });
             if (!backgroundJobs) services.Remove(services.Single(x => x.ServiceType == typeof(IHostedService) && x.ImplementationType == typeof(AiNexus.Modules.Operations.BackgroundJobWorker)));
             services.PostConfigure<InferenceOptions>(options =>
             {
@@ -120,18 +121,18 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     }
 }
 
-public sealed class TestEmbeddings : AiNexus.Modules.Knowledge.IEmbeddingProvider
+public sealed class TestEmbeddings : AiNexus.Modules.Knowledge.IEmbeddingClient
 {
-    public string Profile => "fixture-embedding:768:v1";
+    public string Provider => "ollama";
     public bool Enabled { get; set; } = true;
     public bool Fail { get; set; }
     public int Calls;
     public int DelayMs { get; set; }
-    public async Task<float[]> EmbedAsync(Guid owner, string text, bool document, string? title, CancellationToken ct)
+    public async Task<AiNexus.Modules.Knowledge.EmbeddingBatchResult> EmbedBatchAsync(IReadOnlyList<string> inputs, AiNexus.Modules.Knowledge.EmbeddingPurpose purpose, AiNexus.Modules.Knowledge.EmbeddingProfile profile, CancellationToken ct)
     {
         Interlocked.Increment(ref Calls); await Task.Delay(DelayMs, ct);
         if (Fail) throw new ApiException(503, "fixture_embedding_failed", "測試索引服務暫停。");
-        var value = new float[768]; value[0] = 1; return value;
+        return new(inputs.Select(_ => { var value = new float[profile.Dimensions]; value[0] = 1; return value; }).ToArray());
     }
 }
 

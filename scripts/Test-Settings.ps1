@@ -10,6 +10,8 @@ $taskGeneral = @{ AllowedHosts = 'fixture.test'; Database = @{ Server = 'fixture
 $taskPrivate = @{ AdAuthentication = @{ DnPass = 'fixture-only-ad-password' }; Inference = @{ GoogleApiKey = 'fixture-only-google-key' } }
 $taskGeneral.Tools = @{ WebSearch = @{ Provider = 'brave'; ApiKey = 'fixture-only-search-key' } }
 $taskGeneral.Attachments = @{ MaxOwnerBytes = 67108864 }
+$taskGeneral.Knowledge.ChunkCharacters = 600; $taskGeneral.Knowledge.ChunkOverlap = 80; $taskGeneral.Knowledge.ContextCharacters = 5000
+$taskGeneral.Knowledge.UseNativeVector = $true; $taskGeneral.Knowledge.PortableCandidateLimit = 2000
 Save-NexusJson $taskGeneralPath $taskGeneral
 Save-NexusJson $taskSecretsPath $taskPrivate
 function Get-TestAcl([string]$Path) {
@@ -24,6 +26,7 @@ if (@(Get-NexusSecretValues $taskGeneral -IncludeUser).Count -or $taskPrivate.Da
 if ($taskGeneral.Inference.Providers.Ollama.Models.default.Id -ne 'qwen3:8b' -or $taskGeneral.Prompts.DefaultSystemInstruction -ne 'fixture instruction' -or $taskGeneral.CustomExtension.Preserve -ne 42 -or $taskGeneral.Knowledge.Embedding.Provider -ne 'none') { throw 'Provider, prompt or custom-extension migration failed.' }
 if ($taskGeneral.ConfigurationVersion -ne 3 -or $taskGeneral.Inference.Contains('Provider') -or !$taskGeneral.Inference.Providers.Ollama.Enabled -or $taskGeneral.Inference.Providers.Ollama.MaxConcurrency -ne 1 -or $taskGeneral.Inference.ModelPolicy.DefaultModelId -ne 'ollama/qwen3:8b' -or $taskGeneral.Attachments.DefaultOwnerLimitBytes -ne 5000000000) { throw 'Multi-provider routing or default capacity migration failed.' }
 if ((Get-TestAcl $taskSecretsPath) -cne $taskAcl) { throw 'Secret file ACL was changed.' }
+if ($taskGeneral.Knowledge.Indexing.ChunkTargetTokens -ne 300 -or $taskGeneral.Knowledge.Indexing.ChunkMaxTokens -ne 700 -or [Math]::Abs($taskGeneral.Knowledge.Indexing.ChunkOverlapRatio - (80.0 / 600)) -gt 0.00001 -or $taskGeneral.Knowledge.Retrieval.ContextTokens -ne 2500 -or $taskGeneral.Knowledge.Retrieval.Contains('PortableCandidateLimit')) { throw 'Token-based indexing migration failed.' }
 $taskBefore = [IO.File]::ReadAllText($taskGeneralPath) + [IO.File]::ReadAllText($taskSecretsPath)
 & (Join-Path $PSScriptRoot 'Migrate-Settings.ps1') -SettingsPath $taskGeneralPath -SecretsPath $taskSecretsPath
 if ($taskBefore -cne ([IO.File]::ReadAllText($taskGeneralPath) + [IO.File]::ReadAllText($taskSecretsPath))) { throw 'Migration is not idempotent.' }
