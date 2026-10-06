@@ -22,11 +22,11 @@ test("personal settings preview, cancel, save and reload account preferences", a
     "font-size",
     "20px",
   );
-  expect(fixture.settings.readingFontSize).toBe(17);
+  expect(fixture.settings.readingFontSize).toBe(15);
   await page.getByRole("button", { name: "取消", exact: true }).click();
   await expect(page.locator(".reading-preview p")).toHaveCSS(
     "font-size",
-    "17px",
+    "15px",
   );
   await chooseSelect(page, "主題", "深色");
   await chooseSelect(page, "對話字級", "20 px");

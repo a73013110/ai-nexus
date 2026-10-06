@@ -117,6 +117,17 @@ test("theme previews have readable contrast, full navigation and usable narrow l
         muted: ratio(resolved("--muted"), resolved("--canvas")),
         primary: ratio(resolved("--accent-text"), resolved("--accent")),
         danger: ratio(resolved("--danger-text"), resolved("--danger-surface")),
+        ...Object.fromEntries(
+          [...element.querySelectorAll("nx-count-badge:not(.is-dot)")].map(
+            (badge, index) => {
+              const colors = getComputedStyle(badge);
+              return [
+                "badge-" + index,
+                ratio(colors.color, colors.backgroundColor),
+              ];
+            },
+          ),
+        ),
         caption: parseFloat(style.getPropertyValue("--text-caption")),
       };
     });

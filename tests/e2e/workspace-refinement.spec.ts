@@ -1,0 +1,372 @@
+import { test, expect, type Page } from "@playwright/test";
+import { randomUUID } from "node:crypto";
+import {
+  ApiFixture,
+  chooseSelect,
+  expectViewportContained,
+  settleEntrance,
+} from "./fixtures";
+import { KnowledgeFixture } from "./knowledge-fixture";
+
+test("one header notification icon exposes the full count and workspace expansion uses the chat sidebar", async ({
+  page,
+}) => {
+  const core = new ApiFixture();
+  core.extraFeatures.push(
+    { id: "knowledge", name: "知識庫", route: "/knowledge" },
+    { id: "tasks", name: "背景任務", route: "/tasks" },
+    { id: "repositories", name: "程式庫", route: "/repositories" },
+  );
+  await core.attach(page);
+  let unread = 125;
+  await page.route("**/api/v1/notifications**", (route) =>
+    route.fulfill({ json: { items: [], unread, hasMore: false } }),
+  );
+  await page.goto("/chat");
+  const sidebar = page.locator(".workspace-sidebar");
+  const bell = sidebar.getByRole("button", { name: "通知", exact: true });
+  await expect(bell).toHaveCount(1);
+  await expect(bell.locator("nx-count-badge")).toHaveText("99+");
+  const description = await bell.getAttribute("aria-describedby");
+  await expect(page.locator("#" + description)).toHaveText("125 則未讀通知");
+  const [notification, toggle] = await Promise.all([
+    bell.boundingBox(),
+    sidebar.locator(".sidebar-toggle").boundingBox(),
+  ]);
+  expect(notification!.x + notification!.width).toBeLessThanOrEqual(toggle!.x);
+  await expect(sidebar).toHaveCSS("width", "240px");
+  await expect(
+    page.getByRole("textbox", { name: "傳送訊息", exact: true }),
+  ).toHaveCSS("font-size", "15px");
+  await expect(
+    page.getByRole("textbox", { name: "傳送訊息", exact: true }),
+  ).toHaveCSS("line-height", "18px");
+  const workspace = sidebar.getByRole("button", {
+    name: "工作區",
+    exact: true,
+  });
+  await workspace.click();
+  await expect(sidebar.locator(".new-chat")).not.toBeVisible();
+  await expect(sidebar.locator(".history-search")).not.toBeVisible();
+  await expect(workspace).toHaveAttribute("aria-expanded", "true");
+  await expect(sidebar.locator(".workspace-groups")).toHaveCSS(
+    "max-height",
+    "none",
+  );
+  const [heading, navigation] = await Promise.all([
+    sidebar.locator(".workspace-sidebar-heading").boundingBox(),
+    workspace.boundingBox(),
+  ]);
+  expect(navigation!.y - (heading!.y + heading!.height)).toBeLessThanOrEqual(
+    16,
+  );
+  await settleEntrance(page);
+  await page.screenshot({
+    path: "artifacts/screenshots/chat-workspace-expanded.png",
+  });
+  await workspace.press("Enter");
+  await expect(sidebar.locator(".new-chat")).toBeVisible();
+  await expect(sidebar.locator(".history-search")).toBeVisible();
+  unread = 0;
+  await bell.click();
+  await expect(bell.locator("nx-count-badge")).not.toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(bell).toBeFocused();
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.getByRole("button", { name: "展開側欄", exact: true }).click();
+  await workspace.click();
+  await expect(sidebar.locator(".new-chat")).not.toBeVisible();
+  await expect(
+    sidebar.getByRole("link", { name: "背景任務", exact: true }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  const compactBell = await bell.boundingBox();
+  const compactToggle = sidebar.getByRole("button", {
+    name: "展開側欄",
+    exact: true,
+  });
+  const compactToggleBounds = await compactToggle.boundingBox();
+  expect(compactBell!.y + compactBell!.height).toBeLessThanOrEqual(
+    compactToggleBounds!.y,
+  );
+  await bell.focus();
+  await bell.press("Tab");
+  await expect(compactToggle).toBeFocused();
+  await expectViewportContained(page);
+});
+
+test("vector retrieval cards contain long filenames, URLs and multiline excerpts in both themes and small viewports", async ({
+  page,
+}) => {
+  const fixture = new KnowledgeFixture();
+  fixture.seed();
+  await fixture.attach(page);
+  await page.route("**/api/v1/knowledge/search", (route) =>
+    route.fulfill({
+      json: {
+        mode: "vector",
+        hits: [
+          {
+            documentId: fixture.documents[0].id,
+            title: "LOG-".repeat(80) + ".pdf",
+            pageNumber: 1,
+            text:
+              "誤植原因與處理紀錄\n" +
+              "https://example.test/" +
+              "long-url-".repeat(160) +
+              "\n後續處理\n".repeat(40),
+            score: 0.9,
+          },
+        ],
+      },
+    }),
+  );
+  await page.goto("/knowledge");
+  await page.getByRole("textbox", { name: "知識庫查詢內容" }).fill("誤植原因");
+  await page.getByRole("button", { name: "檢索來源" }).click();
+  const hit = page.locator(".knowledge-hit");
+  await expect(hit).toBeVisible();
+  for (const theme of ["light", "dark"]) {
+    for (const width of [1440, 1101, 375]) {
+      await page.evaluate(
+        (value) => (document.documentElement.dataset["theme"] = value),
+        theme,
+      );
+      await page.setViewportSize({ width, height: 900 });
+      await hit.scrollIntoViewIfNeeded();
+      const contained = await hit.evaluate((element) => {
+        const card = element.getBoundingClientRect();
+        const panel = element.closest(".knowledge-test")!;
+        const bounds = panel.getBoundingClientRect();
+        const style = getComputedStyle(panel);
+        const excerpt = element.querySelector("p")!;
+        return (
+          card.left >= bounds.left + parseFloat(style.paddingLeft) - 1 &&
+          card.right <= bounds.right - parseFloat(style.paddingRight) + 1 &&
+          excerpt.scrollWidth <= excerpt.clientWidth
+        );
+      });
+      expect(contained, theme + " " + width).toBe(true);
+      await expectViewportContained(page);
+      if (width !== 1101) {
+        await settleEntrance(page);
+        await page.screenshot({
+          path:
+            "artifacts/screenshots/vector-results-" +
+            theme +
+            "-" +
+            width +
+            ".png",
+        });
+      }
+    }
+  }
+});
+
+async function reviewFixture(page: Page) {
+  const core = new ApiFixture();
+  core.extraFeatures.push(
+    { id: "repositories", name: "程式庫", route: "/repositories" },
+    { id: "tasks", name: "背景任務", route: "/tasks" },
+  );
+  await core.attach(page);
+  const id = randomUUID(),
+    commit = "a".repeat(40),
+    basis = "b".repeat(40);
+  let release!: () => void;
+  const ready = new Promise<void>((resolve) => (release = resolve));
+  const job = {
+    id: randomUUID(),
+    subjectId: id,
+    kind: "repository-review",
+    label: "team/repo",
+    status: "running",
+    stage: "檢閱區段 1 / 2",
+    attempt: 1,
+    completedUnits: 0,
+    totalUnits: 3,
+    cancelRequested: false,
+    errorCode: null,
+    errorMessage: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  const review = {
+    id,
+    repository: "team/repo",
+    commit,
+    baseCommit: basis,
+    purpose: "summary",
+    note: "",
+    modelId: "fixture:8b",
+    createdAt: job.createdAt,
+    job,
+  };
+  let created = false;
+  let report: object | null = null;
+  await page.route("**/api/v1/repositories**", async (route) => {
+    const url = new URL(route.request().url()),
+      path = url.pathname;
+    if (path.endsWith("/connection"))
+      return route.fulfill({
+        json: {
+          available: true,
+          connected: true,
+          baseUrl: "https://gitea.example/",
+          login: "fixture",
+          notice: "",
+        },
+      });
+    if (path.endsWith("/tree"))
+      return route.fulfill({
+        json: { repository: "team/repo", commit, path: "", entries: [] },
+      });
+    if (path.endsWith("/commits")) {
+      await ready;
+      return route.fulfill({
+        json: [
+          { sha: commit, message: "最後版本" },
+          { sha: basis, message: "起始版本" },
+        ],
+      });
+    }
+    if (path.endsWith("/reviews")) {
+      if (route.request().method() === "POST") {
+        expect(route.request().postDataJSON()).toMatchObject({
+          purpose: "summary",
+          commit,
+          baseCommit: basis,
+        });
+        created = true;
+        return route.fulfill({ json: review });
+      }
+      return route.fulfill({ json: created ? [review] : [] });
+    }
+    if (path.endsWith("/" + id))
+      return route.fulfill({
+        json: {
+          review,
+          version: 2,
+          report,
+          sections: [
+            {
+              ordinal: 0,
+              label: "src/auth.ts",
+              diff: "+authorize(user)",
+              output: "區段筆記，不應預設展開",
+              binary: false,
+              truncated: false,
+            },
+          ],
+        },
+      });
+    return route.fulfill({
+      json: {
+        items: [
+          {
+            fullName: "team/repo",
+            description: "",
+            private: true,
+            defaultBranch: "main",
+            url: "https://gitea.example/team/repo",
+          },
+        ],
+        page: 1,
+        hasMore: false,
+      },
+    });
+  });
+  return {
+    release,
+    job,
+    commit,
+    basis,
+    setReport: (value: object) => (report = value),
+  };
+}
+
+test("review explains loading, selects both endpoints and presents one expandable overall report", async ({
+  page,
+}) => {
+  const fixture = await reviewFixture(page);
+  await page.goto("/repositories");
+  await page.locator(".repository-row").click();
+  await page.getByRole("button", { name: "AI Review", exact: true }).click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "正在載入 AI Review" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "建立背景 review", exact: true }),
+  ).toHaveCount(0);
+  fixture.release();
+  await chooseSelect(page, "檢閱範圍", "Commit 區間");
+  const start = page.getByRole("combobox", { name: "起點 SHA", exact: true });
+  await start.click();
+  await page.getByRole("combobox", { name: "搜尋起點 SHA" }).fill("起始");
+  await page.getByRole("option", { name: /起始版本/ }).click();
+  await expect(start).toContainText("bbbbbbbbbb");
+  const endpoint = page.getByRole("combobox", {
+    name: "終點 SHA",
+    exact: true,
+  });
+  await endpoint.click();
+  await expect(page.getByRole("option", { name: /起始版本/ })).toBeDisabled();
+  await page.keyboard.press("Escape");
+  const picker = page
+    .locator("nx-repository-commit-picker")
+    .filter({ has: start });
+  await picker.getByText("貼上完整 SHA", { exact: true }).click();
+  const sha = page.getByRole("textbox", { name: "起點 SHA（完整 SHA）" });
+  await sha.fill("c".repeat(40));
+  await expect(start).toContainText("自訂版本");
+  await sha.fill(fixture.basis);
+  await page.getByRole("combobox", { name: "檢閱目的", exact: true }).click();
+  await page.getByRole("option", { name: /^變更摘要/ }).click();
+  await page
+    .getByRole("button", { name: "建立背景 review", exact: true })
+    .click();
+  await expect(page.locator(".review-report")).toContainText(
+    "正在分析變更並彙整整體報告",
+  );
+  const stage = page.locator(".review-results .job-stage-label");
+  const [signal, label] = await Promise.all([
+    stage.locator("svg").boundingBox(),
+    stage.locator("> span").boundingBox(),
+  ]);
+  expect(signal!.x + signal!.width + 8).toBeLessThanOrEqual(label!.x);
+  await expect(page.locator(".review-evidence")).not.toHaveAttribute(
+    "open",
+    "",
+  );
+  fixture.job.status = "completed";
+  fixture.job.stage = "整體報告已完成";
+  fixture.setReport({
+    output:
+      "結論：已彙整跨檔案影響。\n\n" +
+      "變更說明與主要影響。\n\n".repeat(100) +
+      "最後一項跨檔結論",
+    truncated: true,
+    inputTokens: 200,
+    outputTokens: 100,
+    elapsedMs: 1000,
+  });
+  await expect(
+    page.getByRole("region", { name: "整體報告內容" }),
+  ).toContainText("已彙整跨檔案影響");
+  const body = page.locator(".review-report-body");
+  expect(await body.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(
+    true,
+  );
+  await page.getByRole("button", { name: "展開完整報告", exact: true }).click();
+  await expect(body).toHaveCSS("max-height", "none");
+  await expect(page.locator(".review-report .error-banner")).toContainText(
+    "結果不完整",
+  );
+  await page.locator(".review-evidence > summary").click();
+  await page.locator(".review-section > summary").click();
+  await expect(page.locator(".review-section")).toContainText(
+    "authorize(user)",
+  );
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expectViewportContained(page);
+});

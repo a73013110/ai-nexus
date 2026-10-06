@@ -5919,6 +5919,8 @@ export interface components {
       modelId: null | string;
       note: null | string;
       idempotencyKey: string;
+      /** @default review */
+      purpose: string;
     };
     CreateRunRequest: {
       /** Format: uuid */
@@ -6572,6 +6574,12 @@ export interface components {
     RepositoryReviewDetailDto: {
       review: components['schemas']['RepositoryReviewDto'];
       sections: components['schemas']['RepositoryReviewSectionDto'][];
+      report?: null | components['schemas']['RepositoryReviewReportDto'];
+      /**
+       * Format: int32
+       * @default 1
+       */
+      version: number;
     };
     RepositoryReviewDto: {
       /** Format: uuid */
@@ -6584,6 +6592,18 @@ export interface components {
       /** Format: date-time */
       createdAt: string;
       job: components['schemas']['JobDto'];
+      /** @default review */
+      purpose: string;
+    };
+    RepositoryReviewReportDto: {
+      output: string;
+      truncated: boolean;
+      /** Format: int64 */
+      inputTokens: null | number;
+      /** Format: int64 */
+      outputTokens: null | number;
+      /** Format: int64 */
+      elapsedMs: number;
     };
     RepositoryReviewSectionDto: {
       /** Format: int32 */
@@ -7004,19 +7024,19 @@ export interface components {
       appearance: components['schemas']['PreferencesDto'];
       /**
        * Format: int32
-       * @default 17
+       * @default 15
        */
       readingFontSize: number;
       /**
        * Format: double
-       * @default 1.8
+       * @default 1.2
        */
       readingLineHeight: number;
       /** @default comfortable */
       density: string;
       /**
        * Format: int32
-       * @default 264
+       * @default 240
        */
       sidebarWidth: number;
       /** @default standard */

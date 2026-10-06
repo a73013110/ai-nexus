@@ -32,6 +32,7 @@ export class RepositoriesApi {
     baseCommit: string | null;
     modelId: string;
     note: string;
+    purpose: string;
     idempotencyKey: string;
   }) => this.http.json<RepositoryReview>('/repositories/reviews', 'POST', request);
   reviewJob = (id: string, retry: boolean) =>

@@ -1,0 +1,47 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.job-stage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p-space-3);
+  font-size: var(--text-label);
+  > span:last-child:not(.job-stage-label) {
+    flex: none;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+}
+.job-stage-label {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.job-progress progress {
+  display: block;
+  width: 100%;
+  height: var(--p-space-2);
+  accent-color: var(--signal);
+  border: 0;
+  border-radius: var(--p-radius-pill);
+  overflow: hidden;
+  margin-block: var(--p-space-4);
+  &::-webkit-progress-bar {
+    background: var(--hover);
+  }
+  &::-webkit-progress-value {
+    background: var(--signal);
+  }
+}
+.job-progress[data-status='completed'] .job-stage {
+  color: var(--signal);
+}
+.job-error {
+  color: var(--error);
+  line-height: 1.7;
+  margin-bottom: 0;
+}

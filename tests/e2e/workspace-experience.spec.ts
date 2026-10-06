@@ -440,6 +440,7 @@ test("repository range review creates a fixed background task and opens the same
     baseCommit: basis,
     modelId: "fixture:8b",
     note: "確認授權",
+    purpose: "review",
     createdAt: job.createdAt,
     job,
   };
@@ -475,6 +476,7 @@ test("repository range review creates a fixed background task and opens the same
           commit,
           baseCommit: basis,
           note: "確認授權",
+          purpose: "review",
         });
         expect(body.idempotencyKey).toMatch(/^[\da-f-]{36}$/);
         created = true;
@@ -486,6 +488,14 @@ test("repository range review creates a fixed background task and opens the same
       return route.fulfill({
         json: {
           review,
+          version: 2,
+          report: {
+            output: "## [P2] 檢查角色範圍\n\n請測試未授權帳號的請求。",
+            truncated: false,
+            inputTokens: 800,
+            outputTokens: 120,
+            elapsedMs: 1000,
+          },
           sections: [
             {
               ordinal: 0,
@@ -524,7 +534,8 @@ test("repository range review creates a fixed background task and opens the same
     .click();
   await page.getByRole("button", { name: "AI Review", exact: true }).click();
   await chooseSelect(page, "檢閱範圍", "Commit 區間");
-  await page.getByLabel("起點 SHA", { exact: true }).fill(basis);
+  await page.getByRole("combobox", { name: "起點 SHA", exact: true }).click();
+  await page.getByRole("option", { name: /bbbbbbbbbb · 起始版本/ }).click();
   await page
     .getByLabel("特別關注的內容（選填）", { exact: true })
     .fill("確認授權");
@@ -543,12 +554,21 @@ test("repository range review creates a fixed background task and opens the same
   await settleEntrance(page);
   await expect(page.locator(".review-results > header")).toBeInViewport();
   await expect(page.locator(".review-results > header")).toBeFocused();
+  await expect
+    .poll(() =>
+      page
+        .locator(".review-report-body")
+        .evaluate((element) => element.scrollHeight - element.clientHeight),
+    )
+    .toBeLessThanOrEqual(1);
   await page.screenshot({
     path: "artifacts/screenshots/repository-review.png",
   });
   await page.setViewportSize({ width: 375, height: 812 });
   await page.reload();
-  await expect(page.locator(".review-results")).toContainText("請測試未授權帳號");
+  await expect(page.locator(".review-results")).toContainText(
+    "請測試未授權帳號",
+  );
   await expectViewportContained(page);
   await expect(page.locator(".review-results > header")).toBeInViewport();
   await page.screenshot({
@@ -622,17 +642,15 @@ test("a running conversation keeps its sidebar signal when another conversation 
   run.finishedAt = new Date().toISOString();
   core.messages.find((x) => x.id === run.assistantMessageId)!.status =
     "completed";
-  core.events
-    .get(run.id)!
-    .push({
-      version: 1,
-      sequence: ++run.lastSequence,
-      runId: run.id,
-      type: "status",
-      status: "completed",
-      delta: null,
-      errorCode: null,
-    });
+  core.events.get(run.id)!.push({
+    version: 1,
+    sequence: ++run.lastSequence,
+    runId: run.id,
+    type: "status",
+    status: "completed",
+    delta: null,
+    errorCode: null,
+  });
   await expect(page.locator(".history-state.is-running")).toHaveCount(0);
   await expect(page.locator(".history-complete")).toBeVisible();
   await page.locator(".history-row").getByRole("link").click();

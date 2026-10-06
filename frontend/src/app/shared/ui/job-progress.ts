@@ -6,13 +6,14 @@ import { InferenceSignal } from './inference-signal';
   selector: 'nx-job-progress',
   imports: [InferenceSignal],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './job-progress.scss',
   template: `<div class="job-progress" [attr.data-status]="job().status">
     <div class="job-stage">
-      <span>
+      <span class="job-stage-label">
         @if (active()) {
           <nx-inference-signal [active]="true" />
         }
-        {{ job().stage }}</span
+        <span>{{ job().stage }}</span></span
       >
       @if (job().totalUnits; as total) {
         <span>{{ job().completedUnits }} / {{ total }}</span>

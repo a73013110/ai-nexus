@@ -1,13 +1,11 @@
 .inference-signal {
-  width: 2.5rem;
-  height: 1.25rem;
+  width: 100%;
+  height: 100%;
   display: block;
   fill: var(--signal);
   overflow: visible;
 }
 .inference-signal.is-subtle {
-  width: 2rem;
-  height: 1rem;
   opacity: 0.7;
 }
 .inference-signal path {

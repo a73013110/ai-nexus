@@ -55,7 +55,13 @@
   color: var(--secondary);
 }
 .notification-row[data-severity='error'] > nx-icon {
-  color: var(--error);
+  color: var(--danger);
+}
+.notification-row[data-severity='success'] > nx-icon {
+  color: var(--success);
+}
+.notification-row[data-severity='info'] > nx-icon {
+  color: var(--info);
 }
 .notification-actions {
   display: flex;

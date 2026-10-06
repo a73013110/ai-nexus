@@ -141,10 +141,10 @@ export class ApiFixture {
   readonly messageConversation = new Map<string, string>();
   userId = randomUUID();
   settings = {
-    readingFontSize: 17,
-    readingLineHeight: 1.8,
+    readingFontSize: 15,
+    readingLineHeight: 1.2,
     density: "comfortable",
-    sidebarWidth: 264,
+    sidebarWidth: 240,
     readingWidth: "standard",
     enterToSend: true,
     autoFollow: true,

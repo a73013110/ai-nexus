@@ -176,6 +176,21 @@
   align-items: center;
   gap: var(--p-space-2);
 }
+.design-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--p-space-4);
+  margin-block: var(--p-space-4);
+  > span {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--p-space-2);
+  }
+}
+.design-badge-anchor {
+  position: relative;
+}
 .design-status nx-job-progress {
   display: block;
   margin: var(--p-space-5) 0;

@@ -1,12 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  input,
-  output,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { Icon } from './icon';
@@ -25,7 +17,7 @@ import { groupFeatures, FEATURE_ICONS } from '../../core/feature-groups';
         type="button"
         class="workspace-disclosure"
         [attr.aria-expanded]="expanded()"
-        (click)="expanded.update(toggle)"
+        (click)="expandedChange.emit(!expanded())"
       >
         <nx-icon name="workspace" /><strong>工作區</strong> <nx-icon name="chevron" />
       </button>
@@ -62,8 +54,8 @@ export class WorkspaceNavigation {
   readonly collapsible = input(false);
   readonly compact = input(false);
   readonly activated = output<void>();
-  readonly expanded = signal(false);
-  readonly toggle = (value: boolean) => !value;
+  readonly expanded = input(false);
+  readonly expandedChange = output<boolean>();
   readonly visibleGroups = computed(() => groupFeatures(this.session.me()?.access.features || []));
   readonly icons = FEATURE_ICONS;
 }

@@ -16,6 +16,11 @@
   --signal: var(--p-teal-700);
   --error: var(--p-red-700);
   --error-bg: var(--p-orange-50);
+  --info: var(--focus);
+  --success: var(--signal);
+  --warning: var(--p-amber-700);
+  --danger: var(--error);
+  --status-on-color: var(--p-white);
   --code: var(--sidebar);
   --code-keyword: var(--p-code-keyword);
   --code-string: var(--p-code-string);
@@ -39,6 +44,8 @@
   --p-teal-700: #087e83;
   --p-red-700: #97462c;
   --p-orange-50: #fff4e9;
+  --p-amber-700: #885900;
+  --p-amber-300: #f0c674;
   --p-night-950: #181d21;
   --p-night-900: #1d2227;
   --p-night-800: #252c32;
@@ -65,7 +72,7 @@
   --p-font-sm: 0.875rem;
   --p-font-label: 0.9375rem;
   --p-font-base: 1rem;
-  --p-font-reading: 1.0625rem;
+  --p-font-reading: 0.9375rem;
   --p-font-lg: 1.125rem;
   --p-font-xl: 1.25rem;
   --p-font-2xl: 1.5rem;
@@ -103,7 +110,7 @@
   --text-display: clamp(var(--p-font-display-min), 2.4vw, var(--p-font-display-max));
   --text-hero: clamp(var(--p-font-hero-min), 4vw, var(--p-font-hero-max));
   --line-ui: 1.5;
-  --line-reading: 1.8;
+  --line-reading: 1.2;
   --motion-fast: 120ms;
   --motion: 200ms;
   --motion-enter: 320ms;
@@ -116,7 +123,11 @@
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
 
-  --sidebar-width: min(16.5rem, calc(100vw - var(--button-target)));
+  --sidebar-width: min(15rem, calc(100vw - var(--button-target)));
+  --count-badge-size: 1.25rem;
+  --count-badge-font-size: 0.75rem;
+  --count-badge-padding: 0.3125rem;
+  --count-badge-dot-size: 0.5rem;
   --sidebar-padding-top: var(--p-space-3);
   --sidebar-brand-gap: var(--p-space-3);
   --sidebar-brand-size: 1.3rem;
@@ -174,6 +185,11 @@
   --signal: var(--p-teal-300);
   --error: var(--p-dark-error);
   --error-bg: var(--p-dark-error-bg);
+  --info: var(--focus);
+  --success: var(--signal);
+  --warning: var(--p-amber-300);
+  --danger: var(--error);
+  --status-on-color: var(--p-night-950);
   --code: var(--p-night-code);
   --code-keyword: var(--p-code-keyword-dark);
   --code-string: var(--p-code-string-dark);

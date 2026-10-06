@@ -24,10 +24,20 @@ import { MarkdownView } from '../../shared/ui/markdown-view';
 import { Select } from '../../shared/ui/select';
 import { ResourceTarget } from '../../shared/ui/resource-target';
 import { RepositoriesApi } from './repositories-api';
+import { RepositoryCommitPicker } from './repository-commit-picker';
+import { InferenceSignal } from '../../shared/ui/inference-signal';
 
 @Component({
   selector: 'nx-repository-review',
-  imports: [Select, JobProgress, MarkdownView, RouterLink, ResourceTarget],
+  imports: [
+    Select,
+    JobProgress,
+    MarkdownView,
+    RouterLink,
+    ResourceTarget,
+    RepositoryCommitPicker,
+    InferenceSignal,
+  ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './repository-review-panel.html',
@@ -47,11 +57,14 @@ export class RepositoryReviewPanel {
   readonly reviews = signal<RepositoryReview[]>([]);
   readonly detail = signal<RepositoryReviewDetail | null>(null);
   readonly mode = signal('commit');
+  readonly purpose = signal('review');
   readonly commit = signal('');
   readonly basis = signal('');
   readonly model = signal('');
   readonly note = signal('');
-  readonly loading = signal(false);
+  readonly loading = signal(true);
+  readonly detailLoading = signal(false);
+  readonly reportExpanded = signal(false);
   readonly busy = signal(false);
   readonly error = signal('');
   readonly date = formatDate;
@@ -65,12 +78,11 @@ export class RepositoryReviewPanel {
       label: x.commit.slice(0, 10) + ' · ' + this.date(x.createdAt) + ' · ' + x.job?.stage,
     })),
   );
-  readonly commitChoices = computed(() =>
-    this.commits().map((x) => ({
-      value: x.sha,
-      label: x.sha.slice(0, 10) + ' · ' + x.message.split('\n')[0],
-    })),
-  );
+  readonly longReport = computed(() => {
+    const output = this.detail()?.report?.output ?? '';
+    return output.length > 1200 || output.split('\n').length > 24;
+  });
+  readonly binarySections = computed(() => this.detail()?.sections.filter((x) => x.binary) ?? []);
   readonly active = computed(() =>
     ['queued', 'running'].includes(this.detail()?.review.job?.status || ''),
   );
@@ -91,8 +103,13 @@ export class RepositoryReviewPanel {
     ++this.readSequence;
     this.scope.cancel('review');
     this.detail.set(null);
+    this.detailLoading.set(false);
     this.reviews.set([]);
     this.commits.set([]);
+    this.models.set(null);
+    this.model.set('');
+    this.commit.set('');
+    this.basis.set('');
     this.loading.set(true);
     this.error.set('');
     try {
@@ -106,6 +123,10 @@ export class RepositoryReviewPanel {
       this.commits.set(commits);
       this.reviews.set(reviews);
       this.commit.set(this.head() || commits[0]?.sha || '');
+      const index = commits.findIndex((x) => x.sha === this.commit());
+      this.basis.set(
+        commits[index + 1]?.sha === this.commit() ? '' : commits[index + 1]?.sha || '',
+      );
       this.model.set(models.policy.defaultModelId || models.models[0]?.id || '');
       if (id) await this.read(id);
       else if (reviews[0]) await this.read(reviews[0].id);
@@ -119,6 +140,11 @@ export class RepositoryReviewPanel {
     const sequence = ++this.readSequence,
       repository = this.repository(),
       valid = this.scope.guard();
+    if (!poll) {
+      this.detailLoading.set(true);
+      this.detail.set(null);
+      this.reportExpanded.set(false);
+    }
     try {
       const detail = await this.api.review(id);
       if (!valid() || sequence !== this.readSequence || repository !== this.repository()) return;
@@ -136,6 +162,8 @@ export class RepositoryReviewPanel {
         this.detail.set(null);
         this.error.set(this.scope.message(e));
       }
+    } finally {
+      if (valid() && sequence === this.readSequence) this.detailLoading.set(false);
     }
   }
   async choose(id: string) {
@@ -145,7 +173,7 @@ export class RepositoryReviewPanel {
   }
   async create(event: Event) {
     event.preventDefault();
-    if (this.busy()) return;
+    if (this.busy() || this.loading() || this.detailLoading()) return;
     const sha = /^[\da-f]{40}$|^[\da-f]{64}$/i;
     if (
       !sha.test(this.commit().trim()) ||
@@ -154,12 +182,17 @@ export class RepositoryReviewPanel {
       this.error.set('請選擇或貼上完整的 40／64 位 commit SHA。');
       return;
     }
+    if (this.mode() === 'range' && this.commit().toLowerCase() === this.basis().toLowerCase()) {
+      this.error.set('起點與終點必須是不同的 commit。');
+      return;
+    }
     const request = {
       repository: this.repository(),
       commit: this.commit().trim(),
       baseCommit: this.mode() === 'range' ? this.basis().trim() : null,
       modelId: this.model(),
       note: this.note(),
+      purpose: this.purpose(),
     };
     const signature = JSON.stringify(request);
     if (signature !== this.requestSignature) {

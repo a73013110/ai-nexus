@@ -4,13 +4,15 @@
 
 ## Commit review
 
-「AI Review」選擇單一 commit 或區間，可從最近 30 個 commit 選終點，或貼上完整 40／64 位 SHA。單一 commit 比對父版本，區間為起點與終點的淨變更（兩點比較），不是逐一列出每個 commit。選模型及最多 2,000 字元關注事項後建立背景任務，切換頁面仍繼續，結果深連結 `/repositories?review={id}`，完成／失敗／取消進入[通知](NOTIFICATIONS.md)。
+「AI Review」進入時先顯示載入區，取得近期 commit、模型及歷史報告後才顯示操作。單一 commit 或區間的兩端均使用可搜尋的最近 30 個 commit 選單，也可展開貼上完整 40／64 位 SHA；相同起訖不可提交。單一 commit 比對父版本，區間為起點與終點的淨變更（兩點比較），不是逐一列出每個 commit。
 
-建立時固定主機、SHA、diff、review 指令及模型設定 fingerprint。最多 256,000 bytes diff、60 區段，依檔案及 Context 預算切分，過大要求縮小範圍，不悄悄裁切；二進位列為人工確認，不傳模型。模型逐段提供 P0–P3、檔案／行號、觸發條件、影響、修正及測試建議，輸出上限會標示不完整。這是靜態分析，不執行程式、不代表測試通過，仍須核對上下文。
+目的可選 `review`（整體檢閱）、`summary`（變更摘要）、`typos`（內容誤植），預設 review。選模型及最多 2,000 字元關注事項後建立背景任務；關注事項可指定單一檔案。結果先呈現一份精簡的整體結論與重點，固定 diff／區段分析依需要展開。長報告使用可聚焦的捲動區，另可展開完整內容。切換頁面仍繼續，結果深連結 `/repositories?review={id}`，完成／失敗／取消進入[通知](NOTIFICATIONS.md)。
 
-沿用 BackgroundJobWorker 的租約、取消、checkpoint；完成區段即持久化，失敗／取消最多六次處理，重試只處理未完成區段。每次模型呼叫前後重新驗證 Gitea 及功能權限，模型設定變更拒絕沿用舊任務。共用 ModelTaskService 的額度、用量及價格快照；結果僅 owner 可讀，每次仍確認目前 Gitea 權限，不因保存 diff 繞過撤銷。
+建立時固定主機、SHA、diff、目的、分析／彙整／報告指令、UTF-8 byte 預算及模型設定 fingerprint。最多 256,000 bytes diff、60 區段，依檔案及 Context 預算切分，保留完整 Unicode 字元與來源。小型變更一次交給模型，跨檔案整體分析；大型變更先產生精簡中間筆記，再依實際 bytes 分批、多層彙整成一份報告，合併重複問題。中間筆記與整體報告分別最多 512／1,200 output tokens，仍受模型及個人額度上限限制。任何分析或彙整達輸出上限，整體結果都標示不完整；中間彙整仍超預算則明確失敗並保留 checkpoint，不悄悄裁切證據。二進位列為人工確認，不傳原始內容給文字模型，純二進位變更不呼叫模型。這是靜態分析，不執行程式、不代表測試通過，仍須核對上下文。
 
-API 前綴 `/api/v1`：`GET /repositories/commits?repository={name}`、`GET /repositories/reviews?repository={name}`、`POST /repositories/reviews`、`GET /repositories/reviews/{id}`、`POST /repositories/reviews/{id}/cancel`／`retry`。建立 body `{ repository, commit, baseCommit, modelId, note, idempotencyKey }`，key 為 GUID，owner scoped，同 key 同內容回原任務，不同內容回 409。
+沿用 BackgroundJobWorker 的租約、取消、checkpoint；區段分析、中間彙整、最終報告均持久化，失敗／取消最多六次處理，重試只處理未完成步驟。結果 ordinal `0..slices-1` 是區段、`slices..` 是可重用的中間彙整、`-1` 是整體報告，沿用既有資料表。快照 v2 提供整體報告；v1 保留原本固定指令與逐段結果，不自動重跑舊 review，頁面可展開舊報告或另建新 review。每次模型呼叫前後重新驗證 Gitea 及功能權限，模型設定變更拒絕沿用舊任務。共用 ModelTaskService 的額度、用量及價格快照；結果僅 owner 可讀，每次仍確認目前 Gitea 權限，不因保存 diff 繞過撤銷。
+
+API 前綴 `/api/v1`：`GET /repositories/commits?repository={name}`、`GET /repositories/reviews?repository={name}`、`POST /repositories/reviews`、`GET /repositories/reviews/{id}`、`POST /repositories/reviews/{id}/cancel`／`retry`。建立 body `{ repository, commit, baseCommit, modelId, note, idempotencyKey, purpose }`，purpose 可省略。Detail 回傳 `{ review, sections, report, version }`，未完成／v1 的 report 為 null。key 為 GUID，owner scoped，同 key 同內容回原任務，不同內容（含 purpose）回 409；v1 預設目的的既有 key 可重用。
 
 使用官方唯讀 API：[單一 commit diff](https://docs.gitea.com/api/operations/repo-download-commit-diff-or-patch/)、[區間比較](https://docs.gitea.com/api/operations/repo-compare-diff/) 的 `?output=diff`。舊版不支援 compare diff 時明確拒絕並提示確認版本，不把 JSON metadata 當程式碼送模型。
 

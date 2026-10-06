@@ -174,7 +174,7 @@ test("compact conversation uses readable text and preserves over 70 percent of d
   await expect(page.getByRole("table")).toBeVisible();
   const viewport = await page.locator(".conversation-viewport").boundingBox();
   expect(viewport!.height).toBeGreaterThanOrEqual(768 * 0.7);
-  await expect(page.locator(".markdown")).toHaveCSS("font-size", "17px");
+  await expect(page.locator(".markdown")).toHaveCSS("font-size", "15px");
   await expect(page.locator(".topbar")).toHaveCSS("height", "52px");
   await settleEntrance(page);
   await page.screenshot({
@@ -197,7 +197,7 @@ test("compact conversation uses readable text and preserves over 70 percent of d
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await expect(page.locator(".markdown")).toHaveCSS("font-size", "17px");
+  await expect(page.locator(".markdown")).toHaveCSS("font-size", "15px");
   await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/mobile-context.png",

@@ -127,7 +127,9 @@ test("background tasks show real stages and distinguish cancellation requests fr
   await page.goto("/tasks");
   await expect(page.locator("progress")).toHaveAttribute("value", "1");
   await page.getByRole("button", { name: "停止處理" }).click();
-  await expect(page.getByRole("status")).toContainText("已提出停止要求");
+  await expect(page.getByRole("main").getByRole("status")).toContainText(
+    "已提出停止要求",
+  );
   job.status = "failed";
   job.errorCode = "fixture_error";
   job.errorMessage = "來源服務暫時無法使用。";

@@ -7,10 +7,10 @@ import { AuthService } from '../auth/auth-service';
 
 export const defaultSettings = (): UserSettings => ({
   appearance: { theme: 'system', reducedMotion: false, defaultModelId: null },
-  readingFontSize: 17,
-  readingLineHeight: 1.8,
+  readingFontSize: 15,
+  readingLineHeight: 1.2,
   density: 'comfortable',
-  sidebarWidth: 264,
+  sidebarWidth: 240,
   readingWidth: 'standard',
   enterToSend: true,
   autoFollow: true,

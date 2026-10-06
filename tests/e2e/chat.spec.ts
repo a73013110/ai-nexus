@@ -17,7 +17,7 @@ test("blank desktop workspace, real forms, keyboard and Markdown copy", async ({
     page.getByRole("heading", { name: "今天，從哪件事開始？" }),
   ).toBeVisible();
   await expect(page.locator(".workbench")).toHaveCSS("display", "grid");
-  await expect(page.locator(".sidebar")).toHaveCSS("width", "264px");
+  await expect(page.locator(".sidebar")).toHaveCSS("width", "240px");
   await expect(page.getByRole("button", { name: "送出訊息" })).toBeDisabled();
   await settleEntrance(page);
   await page.screenshot({

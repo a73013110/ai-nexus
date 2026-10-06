@@ -178,7 +178,7 @@ public sealed class WorkspaceExperienceTests
     [Fact]
     public async Task ReviewRangesArePinnedIdempotentAndCheckpointRetriesOnlyUnfinishedSections()
     {
-        var source = new FixtureGitea { Diff = "diff --git a/a.cs b/a.cs\n@@ -1 +1 @@\n-a\n+b\ndiff --git a/b.cs b/b.cs\n@@ -1 +1 @@\n-c\n+d\n" };
+        var source = new FixtureGitea { Diff = "diff --git a/a.cs b/a.cs\n@@ -1 +1 @@\n-a\n+" + new string('x', 6000) + "\ndiff --git a/b.cs b/b.cs\n@@ -1 +1 @@\n-c\n+d\n" };
         await using var factory = new NexusFactory(backgroundJobs: false, services: services => { services.RemoveAll<IGiteaClient>(); services.AddSingleton<IGiteaClient>(source); services.PostConfigure<GiteaOptions>(o => o.Enabled = true); });
         using var owner = await factory.SignedInAsync(); using var other = await factory.SignedInAsync("bob");
         (await owner.PostAsJsonAsync("/api/v1/repositories/connection", new ConnectRepositoryRequest("fixtureOnlyReadTokenForGitea00001"))).EnsureSuccessStatusCode();
@@ -194,8 +194,9 @@ public sealed class WorkspaceExperienceTests
             await db.Set<BackgroundJob>().Where(x => x.Id == review.Job.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, "failed").SetProperty(x => x.ActiveKey, (string?)null)); await db.SaveChangesAsync(); }
         (await owner.PostAsync($"/api/v1/repositories/reviews/{review.Id}/retry", null)).EnsureSuccessStatusCode(); await Process(factory);
         var detail = (await owner.GetFromJsonAsync<RepositoryReviewDetailDto>($"/api/v1/repositories/reviews/{review.Id}"))!;
-        Assert.Equal("completed", detail.Review.Job.Status); Assert.Equal(2, detail.Sections.Count); Assert.Equal("已完成區段", detail.Sections[0].Output); Assert.Equal(1, factory.Provider.Calls);
+        Assert.Equal("completed", detail.Review.Job.Status); Assert.True(detail.Sections.Count > 2); Assert.Equal("已完成區段", detail.Sections[0].Output); Assert.Equal(detail.Sections.Count, factory.Provider.Calls);
         Assert.All(detail.Sections, x => Assert.NotNull(x.Output));
+        Assert.NotNull(detail.Report); Assert.Equal(2, detail.Version); Assert.Equal(detail.Sections.Count + 1, detail.Review.Job.TotalUnits);
         Assert.Contains((await owner.GetFromJsonAsync<NotificationPageDto>("/api/v1/notifications"))!.Items, x => x.Target == new NotificationTargetDto("repository-review", review.Id));
         source.Revoked = true;
         Assert.Equal(HttpStatusCode.Forbidden, (await owner.GetAsync($"/api/v1/repositories/reviews/{review.Id}")).StatusCode);

@@ -3,8 +3,8 @@ using AiNexus.Modules.Inference;
 
 namespace AiNexus.Modules.Identity;
 
-public sealed record UserSettingsDto(PreferencesDto Appearance, int ReadingFontSize = 17, double ReadingLineHeight = 1.8,
-    string Density = "comfortable", int SidebarWidth = 264, string ReadingWidth = "standard",
+public sealed record UserSettingsDto(PreferencesDto Appearance, int ReadingFontSize = UserPreferences.DefaultReadingFontSize, double ReadingLineHeight = UserPreferences.DefaultReadingLineHeight,
+    string Density = "comfortable", int SidebarWidth = UserPreferences.DefaultSidebarWidth, string ReadingWidth = "standard",
     bool EnterToSend = true, bool AutoFollow = true, bool SaveLocalDrafts = true,
     bool NotifyOnCompletion = false, string DefaultReasoningEffort = "auto");
 public sealed record UsageDayDto(DateOnly Date, int Requests, long InputTokens, long OutputTokens);

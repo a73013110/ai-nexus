@@ -5,6 +5,7 @@ import {
   inject,
   input,
   output,
+  signal,
 } from '@angular/core';
 import { WorkspaceBrand } from './workspace-brand';
 import { WorkspaceNavigation } from './workspace-navigation';
@@ -12,14 +13,19 @@ import { AccountMenu } from './account-menu';
 import { Icon } from './icon';
 import { WorkspaceLayout } from '../../core/preferences/workspace-layout';
 import { NotificationStore } from '../../core/notifications/notification-store';
+import { CountBadge } from './count-badge';
+
+let sequence = 0;
 
 @Component({
   selector: 'aside[nxWorkspaceSidebar]',
-  imports: [WorkspaceBrand, WorkspaceNavigation, AccountMenu, Icon],
+  imports: [WorkspaceBrand, WorkspaceNavigation, AccountMenu, Icon, CountBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'workspace-sidebar',
     '[class.is-compact]': 'layout.compact()',
+    '[class.has-expanded-navigation]':
+      'collapsibleNavigation() && navigationExpanded() && !layout.compact()',
     '(keydown)': 'key($event)',
   },
   template: `@if (layout.overlay()) {
@@ -27,41 +33,49 @@ import { NotificationStore } from '../../core/notifications/notification-store';
     }
     <div class="workspace-sidebar-heading">
       <nx-workspace-brand />
-      <button
-        class="icon-button sidebar-toggle"
-        type="button"
-        [attr.aria-expanded]="!layout.compact()"
-        [attr.aria-label]="layout.compact() ? '展開側欄' : '收合側欄'"
-        [title]="layout.compact() ? '展開側欄' : '收合側欄'"
-        (click)="layout.toggle()"
+      <div class="workspace-sidebar-controls">
+        <button
+          type="button"
+          class="icon-button sidebar-notifications"
+          aria-label="通知"
+          title="通知"
+          [attr.aria-describedby]="notificationStatusId"
+          [attr.aria-expanded]="notifications.opened()"
+          aria-haspopup="dialog"
+          (click)="notifications.open()"
+        >
+          <nx-icon name="bell" />
+          <nx-count-badge [count]="notifications.unread()" [overlay]="true" />
+        </button>
+        <button
+          class="icon-button sidebar-toggle"
+          type="button"
+          [attr.aria-expanded]="!layout.compact()"
+          [attr.aria-label]="layout.compact() ? '展開側欄' : '收合側欄'"
+          [title]="layout.compact() ? '展開側欄' : '收合側欄'"
+          (click)="layout.toggle()"
+        >
+          <nx-icon name="sidebar" />
+        </button>
+      </div>
+      <span class="sr-only" role="status" aria-atomic="true" [id]="notificationStatusId"
+        >{{ notifications.unread() }} 則未讀通知</span
       >
-        <nx-icon name="sidebar" />
-      </button>
     </div>
     <nx-workspace-navigation
       [class.sidebar-navigation-bottom]="collapsibleNavigation()"
       [collapsible]="collapsibleNavigation()"
       [compact]="layout.compact()"
+      [expanded]="navigationExpanded()"
+      (expandedChange)="navigationExpanded.set($event)"
       (activated)="layout.closeMobile(); activated.emit()"
     />
-    <div class="workspace-sidebar-content"><ng-content /></div>
-    <button
-      type="button"
-      class="sidebar-notifications quiet-button"
-      aria-label="通知"
-      title="通知"
-      (click)="notifications.open()"
+    <div
+      class="workspace-sidebar-content"
+      [hidden]="collapsibleNavigation() && navigationExpanded() && !layout.compact()"
     >
-      <nx-icon name="bell" /><span>通知</span>
-      @if (notifications.unread()) {
-        <b
-          class="notification-count"
-          role="status"
-          [attr.aria-label]="notifications.unread() + ' 則未讀通知'"
-          >{{ notifications.unread() > 99 ? '99+' : notifications.unread() }}</b
-        >
-      }
-    </button>
+      <ng-content />
+    </div>
     <nx-account-menu />`,
 })
 export class WorkspaceSidebar {
@@ -69,6 +83,8 @@ export class WorkspaceSidebar {
   readonly notifications = inject(NotificationStore);
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   readonly collapsibleNavigation = input(false);
+  readonly navigationExpanded = signal(false);
+  readonly notificationStatusId = `sidebar-notification-status-${++sequence}`;
   readonly activated = output<void>();
   collapse() {
     this.layout.compact.set(true);

@@ -4,7 +4,9 @@
   eyebrow="AI NEXUS · DESIGN SYSTEM"
 >
   <div page-actions class="page-actions">
-    <a routerLink="/admin" class="secondary-button"><nx-icon name="left" />回到{{ session.featureName('admin') }}</a>
+    <a routerLink="/admin" class="secondary-button"
+      ><nx-icon name="left" />回到{{ session.featureName('admin') }}</a
+    >
   </div>
   @if (loading()) {
     <p role="status">正在載入介面工作區…</p>
@@ -62,7 +64,7 @@
           <span class="panel-eyebrow">字級與閱讀</span>
           <h2 id="design-type-title">先讓資訊看得清楚</h2>
           <p class="design-reading">
-            正文 17px，提供自然的閱讀節奏。行距及閱讀寬度可在個人設定調整。
+            正文預設 15px、行距 1.2 倍。字級、行距及閱讀寬度可在個人設定調整。
           </p>
           <p class="design-ui-copy">介面 16px：傳達下一個動作</p>
           <p class="form-note">輔助資訊 14px：時間、狀態與來源</p>
@@ -171,6 +173,46 @@
               [detail]="current.detail"
             />
           }
+        </section>
+        <section class="platform-card" aria-labelledby="design-badges-title">
+          <span class="panel-eyebrow">數量與提醒</span>
+          <h2 id="design-badges-title">小標示，共用同一套語意</h2>
+          <p class="form-note">
+            數量超過 99 顯示 99+；零值預設隱藏。色彩搭配文字，數量更新由所屬功能提供完整提示。
+          </p>
+          <div class="design-badges">
+            @for (badge of badgeTones; track badge.tone) {
+              <span
+                >{{ badge.label }}
+                <nx-count-badge [count]="badge.count" [tone]="badge.tone" [size]="'md'"
+              /></span>
+            }
+            <span>大量 <nx-count-badge [count]="125" /></span>
+            <span>零值 <nx-count-badge [count]="0" [showZero]="true" tone="neutral" /></span>
+          </div>
+          <div class="design-badges">
+            <button
+              type="button"
+              class="icon-button design-badge-anchor"
+              aria-label="通知示範，12 則未讀"
+              (click)="notice.set('通知示範。')"
+            >
+              <nx-icon name="bell" /><nx-count-badge [count]="12" [overlay]="true" />
+            </button>
+            <button
+              type="button"
+              class="icon-button design-badge-anchor"
+              aria-label="提醒示範，有新的錯誤"
+              (click)="notice.set('提醒示範。')"
+            >
+              <nx-icon name="info" /><nx-count-badge
+                [count]="1"
+                [overlay]="true"
+                [dot]="true"
+                tone="danger"
+              />
+            </button>
+          </div>
         </section>
         <section class="platform-card design-markdown" aria-labelledby="design-markdown-title">
           <span class="panel-eyebrow">02 / 內容閱讀</span>

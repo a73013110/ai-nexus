@@ -1,0 +1,52 @@
+:host {
+  --count-badge-background: var(--info);
+  --count-badge-foreground: var(--status-on-color);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-width: var(--count-badge-size);
+  height: var(--count-badge-size);
+  padding-inline: var(--count-badge-padding);
+  border-radius: var(--p-radius-pill);
+  background: var(--count-badge-background);
+  color: var(--count-badge-foreground);
+  font-size: var(--count-badge-font-size);
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+:host([hidden]) {
+  display: none;
+}
+:host([data-tone='neutral']) {
+  --count-badge-background: var(--secondary);
+}
+:host([data-tone='success']) {
+  --count-badge-background: var(--success);
+}
+:host([data-tone='warning']) {
+  --count-badge-background: var(--warning);
+}
+:host([data-tone='danger']) {
+  --count-badge-background: var(--danger);
+}
+:host([data-size='md']) {
+  --count-badge-size: 1.5rem;
+  --count-badge-font-size: var(--text-caption);
+}
+:host(.is-overlay) {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  transform: translate(20%, -10%);
+  box-shadow: 0 0 0 2px var(--count-badge-ring, var(--surface));
+  pointer-events: none;
+}
+:host(.is-dot) {
+  min-width: var(--count-badge-dot-size);
+  width: var(--count-badge-dot-size);
+  height: var(--count-badge-dot-size);
+  padding: 0;
+}

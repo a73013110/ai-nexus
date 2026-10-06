@@ -98,8 +98,7 @@
 .knowledge-heading,
 .resource-badges,
 .job-actions,
-.job-heading,
-.job-stage {
+.job-heading {
   display: flex;
   align-items: center;
   gap: var(--p-space-3);
@@ -234,10 +233,13 @@
 }
 .knowledge-hits {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--p-space-3);
 }
 .knowledge-hit {
   display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
   padding: var(--p-space-4);
   border: 1px solid var(--line);
   border-radius: var(--p-radius-md);
@@ -261,7 +263,7 @@
     font-size: var(--text-label);
     white-space: pre-wrap;
     max-height: 12rem;
-    overflow: auto;
+    overflow-y: auto;
   }
   &:hover {
     border-color: var(--signal);
@@ -305,43 +307,6 @@
     color: var(--secondary);
     font-size: var(--text-caption);
   }
-}
-.job-stage {
-  justify-content: space-between;
-  font-size: var(--text-label);
-  > span:first-child {
-    display: flex;
-    align-items: center;
-    gap: var(--p-space-3);
-  }
-  nx-inference-signal {
-    width: 1.5rem;
-    height: 1.5rem;
-  }
-}
-.job-progress progress {
-  display: block;
-  width: 100%;
-  height: var(--p-space-2);
-  accent-color: var(--signal);
-  border: 0;
-  border-radius: var(--p-radius-pill);
-  overflow: hidden;
-  margin-block: var(--p-space-4);
-  &::-webkit-progress-bar {
-    background: var(--hover);
-  }
-  &::-webkit-progress-value {
-    background: var(--signal);
-  }
-}
-.job-progress[data-status='completed'] .job-stage {
-  color: var(--signal);
-}
-.job-error {
-  color: var(--error);
-  line-height: 1.7;
-  margin-bottom: 0;
 }
 .job-actions {
   margin-top: var(--p-space-4);

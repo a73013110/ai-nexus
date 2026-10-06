@@ -76,8 +76,6 @@
 }
 .collapsible .workspace-groups {
   padding: var(--p-space-2) 0;
-  max-height: min(43dvh, 24rem);
-  overflow: auto;
   animation: panel-arrive var(--motion-panel) var(--ease);
 }
 nx-account-menu {

@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:5182/"
+      "url": "http://localhost:5181/"
     }
   ],
   "paths": {
@@ -17502,6 +17502,10 @@
           },
           "idempotencyKey": {
             "type": "string"
+          },
+          "purpose": {
+            "type": "string",
+            "default": "review"
           }
         }
       },
@@ -19452,6 +19456,21 @@
             "items": {
               "$ref": "#/components/schemas/RepositoryReviewSectionDto"
             }
+          },
+          "report": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RepositoryReviewReportDto"
+              }
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32",
+            "default": 1
           }
         }
       },
@@ -19493,6 +19512,40 @@
           },
           "job": {
             "$ref": "#/components/schemas/JobDto"
+          },
+          "purpose": {
+            "type": "string",
+            "default": "review"
+          }
+        }
+      },
+      "RepositoryReviewReportDto": {
+        "required": [
+          "output",
+          "truncated",
+          "inputTokens",
+          "outputTokens",
+          "elapsedMs"
+        ],
+        "type": "object",
+        "properties": {
+          "output": {
+            "type": "string"
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "inputTokens": {
+            "type": ["null", "integer"],
+            "format": "int64"
+          },
+          "outputTokens": {
+            "type": ["null", "integer"],
+            "format": "int64"
+          },
+          "elapsedMs": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -20759,12 +20812,12 @@
           "readingFontSize": {
             "type": "integer",
             "format": "int32",
-            "default": 17
+            "default": 15
           },
           "readingLineHeight": {
             "type": "number",
             "format": "double",
-            "default": 1.8
+            "default": 1.2
           },
           "density": {
             "type": "string",
@@ -20773,7 +20826,7 @@
           "sidebarWidth": {
             "type": "integer",
             "format": "int32",
-            "default": 264
+            "default": 240
           },
           "readingWidth": {
             "type": "string",

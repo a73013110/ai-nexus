@@ -3102,3 +3102,58 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006105804_ReadingDefaults'
+)
+BEGIN
+    DECLARE @var63 nvarchar(max);
+    SELECT @var63 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[identity].[UserPreferences]') AND [c].[name] = N'SidebarWidth');
+    IF @var63 IS NOT NULL EXEC(N'ALTER TABLE [identity].[UserPreferences] DROP CONSTRAINT ' + @var63 + ';');
+    ALTER TABLE [identity].[UserPreferences] ADD DEFAULT 240 FOR [SidebarWidth];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006105804_ReadingDefaults'
+)
+BEGIN
+    DECLARE @var64 nvarchar(max);
+    SELECT @var64 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[identity].[UserPreferences]') AND [c].[name] = N'ReadingLineHeight');
+    IF @var64 IS NOT NULL EXEC(N'ALTER TABLE [identity].[UserPreferences] DROP CONSTRAINT ' + @var64 + ';');
+    ALTER TABLE [identity].[UserPreferences] ADD DEFAULT 1.2E0 FOR [ReadingLineHeight];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006105804_ReadingDefaults'
+)
+BEGIN
+    DECLARE @var65 nvarchar(max);
+    SELECT @var65 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[identity].[UserPreferences]') AND [c].[name] = N'ReadingFontSize');
+    IF @var65 IS NOT NULL EXEC(N'ALTER TABLE [identity].[UserPreferences] DROP CONSTRAINT ' + @var65 + ';');
+    ALTER TABLE [identity].[UserPreferences] ADD DEFAULT 15 FOR [ReadingFontSize];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006105804_ReadingDefaults'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261006105804_ReadingDefaults', N'10.0.12');
+END;
+
+COMMIT;
+GO
+

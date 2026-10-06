@@ -21,7 +21,7 @@
 | 附註／工具列／模型與 Context | `--text-caption`                | 14px，介面輔助字級                       |
 | 標籤／清單／標題輔助         | `--text-label`                  | 15px                                     |
 | 一般 UI／表單                | `--text-ui`                     | 16px                                     |
-| 對話正文／訊息輸入           | `--text-body`                   | 17px，1.8 行高                           |
+| 對話正文／訊息輸入           | `--text-body`                   | 15px，1.2 行高                           |
 | 小標題                       | `--text-heading`                | 18px                                     |
 | 主要標題                     | font xl／2xl／3xl               | 20／24／32px                             |
 | 工作區開場／登入主標         | `--text-display`／`--text-hero` | 26–34／36–58px 流動字級，使用 rem 上下限 |
@@ -75,6 +75,12 @@
 
 ## 共用元件與直接檢視
 
+系統閱讀預設為 15px、1.2 倍行高、240px 側欄；前端預設與 tokens、後端 UserPreferences 常數、API 及資料庫 default constraint 同步。ReadingDefaults migration 只更新預設值，保留已保存的個人偏好。
+
+`CountBadge` 是共用數量標示：`count`、`max`（預設 99）、`tone`、`size`、`overlay`、`dot`、`showZero`。零值預設隱藏，大於上限顯示 `99+`，負數／非有限值視為零；`neutral / info / success / warning / danger` 使用 semantic tokens（neutral 使用 `--secondary`，其餘為同名 token）與 `--status-on-color`，兩個主題使用各自的前景配對。尺寸由 `--count-badge-*` component tokens 管理。Overlay 的父控制須定位，可用 `--count-badge-ring` 配合背景。
+
+數量預設是裝飾，由父按鈕的名稱／描述提供「125 則未讀通知」等完整脈絡；獨立使用可傳 `label` 作文字替代。共用 badge 不自帶 live region，各功能只在一個 contextual status 播報更新。側欄鈴鐺使用 info 表示未讀數量，事件 success／error 在通知中心分別對應 success／danger，不用清單單頁的嚴重性推測全通知匣。`/design` 可檢查各語意色、零值、超量及 dot／overlay。
+
 平台管理頁右上方「介面元件」開啟 `/design`。此頁組合正式元件，提供淺色／深色局部預覽及目前 semantic tokens 的 JSON 匯出；不修改個人偏好，不呼叫模型或建立公司資料。只有具 admin 功能者顯示工作區，範例不含敏感資訊。
 
 | 元件                             | 使用與互動                                                                                 |
@@ -103,7 +109,9 @@
 
 側欄品牌與帳號各保留單列，移除重複副標；`--sidebar-brand-gap`、品牌字級與內距集中在 tokens。工作區採 PanelsTopLeft，快捷指令採 SquareTerminal，避免不同操作共用相同符號。44px 點擊目標保持不變，增加空間優先縮減裝飾與重複資訊。
 
-`aside[nxWorkspaceSidebar]` 是側欄外框的唯一實作，`styles/workspace-sidebar.scss` 管共同尺寸、品牌與區域分配；`styles/sidebar.scss` 只管理聊天內容與手機 drawer。聊天使用 `collapsibleNavigation` 將同一份導覽放在歷史下方，不另建入口或複製帳號列。首頁、品牌與登入預設目的地共用 `core/workspace-home.ts` 的 `/dashboard`；登入後由目的頁載入自己的資料，不預先初始化聊天模型、歷史與附件。
+`aside[nxWorkspaceSidebar]` 是側欄外框的唯一實作，`styles/workspace-sidebar.scss` 管共同尺寸、品牌與區域分配；`styles/sidebar.scss` 只管理聊天內容與手機 drawer。所有側欄共用 heading 鈴鐺，位於 sidebar-toggle 左側，收合 rail 時垂直排列。聊天使用 `collapsibleNavigation`：收合工作區時顯示歷史與聊天工具，展開時導覽延伸至品牌列下方並暫時隱藏聊天內容；收合後原有搜尋、篩選與捲動狀態仍在。導航的展開狀態由側欄管理，不以 CSS 猜測子元件狀態。首頁、品牌與登入預設目的地共用 `core/workspace-home.ts` 的 `/dashboard`；登入後由目的頁載入自己的資料，不預先初始化聊天模型、歷史與附件。
+
+`InferenceSignal` 的 SVG 使用 host 的實際寬高，host 不參與 flex shrink；`JobProgress` 的進度樣式由元件管理，文字與動畫各佔獨立區域，避免小尺寸 host 與較大 SVG 重疊。
 
 `FeaturePage` 在主要捲動區內使用單一 `.feature-content` 容器設定內容上限與置中，說明、稽核子元件及統計卡共用同一條對齊線。捲動區使用 `min-height: 0`，並建立定位上下文，避免圖表的螢幕閱讀器標籤在 viewport 外產生第二個網頁捲軸。路由 host 保持 block；全頁主要內容只由 `.feature-main` 捲動。統計卡 `.usage-grid`／`.stat-card` 由 platform 樣式共用，依可用寬度自動換欄。頁面內容使用 opacity 進場，遵循既有減少動態規則。
 
