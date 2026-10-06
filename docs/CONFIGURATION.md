@@ -127,11 +127,17 @@ Google 與 Ollama 可同時 Enabled，不再有全域 provider 開關。每個�
 
 | 區塊                  | 參數                                                                                                                                                        |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Knowledge.Embedding` | `Provider`（google／ollama／none）、`Model`、`Dimensions`（768／1024）、`InputFormat`、`QueryInstruction`、`Revision`、`TimeoutSeconds`、`MaxDailyRequests` |
-| `Knowledge.Indexing`  | `MaxCollections`、`MaxDocumentsPerCollection`、`ChunkCharacters`、`ChunkOverlap`                                                                            |
-| `Knowledge.Retrieval` | `UseNativeVector`、`PortableCandidateLimit`、`TopK`、`ContextCharacters`                                                                                    |
+| `Knowledge.Embedding` | Provider=ollama、Model=bge-m3、Dimensions=1024、InputFormat=plain、QueryInstruction=Given a web search query, retrieve relevant passages that answer the query、Revision=""、Endpoint=""、TimeoutSeconds=60、MaxDailyRequests=20000、BatchSize=16、MaxConcurrentBatches=1、AutoActivate=false、RetiredRetentionDays=7 |
+| `Knowledge.Indexing`  | MaxCollections=30、MaxDocumentsPerCollection=100、ChunkTargetTokens=450、ChunkMaxTokens=700、ChunkMinTokens=80、ChunkOverlapRatio=0.12 |
+| `Knowledge.Retrieval` | Mode=hybrid、VectorCandidates=40、FtsCandidates=40、RrfK=60、VectorWeight=1、FtsWeight=1、RerankCandidates=30、TopK=6、MaxChunksPerDocument=3、MinVectorScore=0、ContextTokens=3500、QueryCacheMinutes=10 |
+| `Knowledge.Rerank` | Provider=none、Endpoint=""、Model=bge-reranker-v2-m3、TimeoutSeconds=10、MinScore=0、FailurePolicy=skip |
+| `Knowledge.QueryRewrite` | Enabled=true、MaxTurns=4、TimeoutSeconds=5 |
 
-對話啟用 Ollama 不會自動改變向量供應商。完全地端須停用 `Inference.Providers.Google.Enabled`、啟用 Ollama 並指定 Ollama 路由，另設 `Knowledge.Embedding.Provider=ollama`；`none` 改用既有關鍵字檢索。換模型／維度／前處理／Revision 必須重建索引，舊向量不能與新 profile 混用。`InputFormat=plain` 用於 BGE-M3；`qwen-query` 僅對查詢加入 QueryInstruction，文件不加。Revision 可保存固定模型版本識別。後端驗證長度、有限數值並正規化，SQL Server 2025 分別保存 `VECTOR(768)` 與 `VECTOR(1024)`。比較指令、範例與切換流程見 [embedding 評估](EMBEDDING_MODELS.md)、[本機 AI](LOCAL-AI.md)。
+Embedding 支援 google／ollama／none，Mode 支援 hybrid／vector／keyword；none 強制全文，正式環境須有 SQL 全文元件。Endpoint 空值沿用 Inference.Providers.Ollama 端點，填值可獨立移至另一台主機。Rerank 支援 none／tei／openai-compatible，非 none 必填合法 HTTP(S) Endpoint；FailurePolicy 支援 skip／fail。完全地端另停用 Inference.Providers.Google.Enabled 並選核准 Ollama 聊天模型。
+
+啟動驗證維度只允許 768／1024、批次 1–128、併發 1–8、候選 1–200、TopK 1–20 且不超過重排候選、重疊 0–0.3、ContextTokens 100–16000、快取 0–60 分鐘（0 停用），並檢查最小／目標／最大 token 次序及有限分數。MinVectorScore=0 表示不過濾。QueryRewrite 在既有 Knowledge.QueryRewrite 區塊綁定，只在有歷史時用本機核准模型，非額外一般設定頁功能。
+
+模型／維度／前處理／Revision 或切段設定變更需重建 profile；管理端完整覆蓋後切換。設定鏈含正式 appsettings、兩個 example、settings-layout／schema／遷移腳本；Migrate-Settings 將舊字元切段及 context 近似換成 token、移除 PortableCandidateLimit／UseNativeVector。它只轉設定，不提供舊索引查詢。既有本機設定會保留明確值，不會因新預設而自動改成 Ollama。完整流程見 [架構](VECTOR_ARCHITECTURE.md)、[模型](EMBEDDING_MODELS.md)、[本機 AI](LOCAL-AI.md)。
 
 ## 工具與程式庫 connector
 

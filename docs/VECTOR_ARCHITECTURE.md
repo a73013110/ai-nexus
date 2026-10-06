@@ -1,58 +1,65 @@
-# SQL Server 2025 向量檢索設計
+# 知識檢索架構
 
-AI Nexus 將原始文件、逐頁文字、來源權限與向量留在同一個 SQL Server database。權限以知識庫的擁有者／具名成員／有效群組檢查，檢索前及遠端 embedding 呼叫後都再確認一次；不先搜尋全庫再於前端隱藏結果。
+正式環境固定 SQL Server 2025（17.x），預設 Ollama `bge-m3`、1024 維。本次移除舊片段與 JSON 向量查詢，保留原始檔及 `DocumentPages`；可重新上傳資料，也可由保存的頁面重建，無須重做 OCR。SQLite 僅供測試。
 
-## 現行實作
+## 元件與資料流
 
-`knowledge.Chunks.EmbeddingJson` 保存 768／1024 維正規化向量，profile 包含 provider、模型、維度與前處理／revision。SQL Server 2025 migrations 建立 `EmbeddingVector VECTOR(768)` 與 `EmbeddingVector1024 VECTOR(1024)`；向量寫入與片段 checkpoint 在同一 EF transaction 內完成。
+```text
+原檔 → document-ingest（逐頁擷取／OCR checkpoint）
+     → ITextChunker → Chunks → document-embedding
+     → IEmbeddingClient → hash 快取／正規化 → 維度分表
 
-SQL 路徑以授權知識庫、未刪除、已完成、相同 profile 作為 WHERE 條件，再以 `VECTOR_DISTANCE('cosine', …)` 排序及 TOP K。無原生欄位時使用同一授權範圍的可攜式 cosine；候選量超過設定上限就回報縮小範圍，不任意丟棄來源。明確設定 provider=`none` 才用關鍵字，不因遠端失敗悄悄降低為另一種檢索方式。
-
-`VECTOR` 與精確距離適合第一階段驗證和中小型來源。SQL Server 2025 的 approximate `VECTOR_SEARCH`／`CREATE VECTOR INDEX` 目前仍有預覽限制；本版不自動啟用 preview 功能。[VECTOR 型別](https://learn.microsoft.com/en-us/sql/t-sql/data-types/vector-data-type?view=sql-server-ver17)、[VECTOR_DISTANCE](https://learn.microsoft.com/en-us/sql/t-sql/functions/vector-distance-transact-sql?view=sql-server-ver17)、[向量搜尋](https://learn.microsoft.com/en-us/sql/t-sql/functions/vector-search-transact-sql?view=sql-server-ver17)。
-
-```powershell
-./scripts/Test-SqlCapabilities.ps1
+授權 collection IDs + query
+  → IQueryRewriter → 查詢向量快取 → IRetrievalStore（ACL → vector／FTS → RRF）
+  → IRerankClient → 文件多樣性／相鄰合併 → ContextTokens → 來源再授權
 ```
 
-此指令以本機設定檢查實際版本、edition、原生向量與 cosine 距離；不輸出連線帳密。結果放在忽略版控的 `artifacts/sql-capabilities.json`。較舊 SQL 版本可使用 JSON 可攜式路徑；升級至 2025 後需要另行建立／回填原生欄位，不只切換設定。
+各元件透過 DI 替換；公文、校務 adapter 匯入授權知識庫後可共用此管線，不直接繞過來源 ACL。`KnowledgeRetrieval` 委派 `RetrievalPipeline`，對話、搜尋測試與品質評測使用同一套處理。
 
-## 公司系統整合的原則
+`StructuredChunker` 先找標題、中文條文、段落及句界，再做硬切；維護標題階層，允許跨頁，引用顯示起訖頁。預設目標 450、上限 700、最小 80 tokens、句界重疊 12%。CJK 約每字一 token，其他文字約四字元一 token；這是估算。表格按完整列處理，超過硬上限的單列明確失敗，不悄悄截斷。UTF-16 surrogate pair 保持完整。
 
-公文及校務資料來源以受控唯讀 adapter 擷取。原系統資料庫與帳號保持獨立，不將整個來源庫複製到聊天，也不讓 LLM 產生 SQL。來源 adapter 必須回傳可信識別碼、版本／修改時間及權限範圍；匯入至明確授權的來源後才切段索引。
+實際 embedding 輸入為 `文件名 › HeadingPath\n本文`，`Text` 只存本文。SHA-256 ContentHash 計算完整輸入；同 profile 的相同 hash 可複製向量。批次預設 16，背景併發 1，在聊天生成或排隊時讓出 GPU；容量限制屬每個程序，已發出的請求不會被聊天搶占。每批寫入使用多列 Dapper INSERT，參與 lease-fenced checkpoint 的同一個 EF transaction。HTTP 共用具名 client、逾時與暫時錯誤重試；最多重試兩次，408／429／5xx／網路錯誤採指數退避與抖動。向量檢查數量、維度、有限值與非零值後 L2 正規化。
 
-公文可先從文件標題、文號、部門、流程狀態、核准的本文及附件開始；版本和核章記錄要保存來源識別碼，避免回答引用過期文件。機密等級及承辦／部門存取必須以原系統授權為準。
+查詢快取以 profile key + 正規化查詢 hash 為鍵，獨立 `IMemoryCache` 最多 512 筆、預設 TTL 10 分鐘，條帶鎖抑制重複請求。embedding 與 rerank 共用每人每日 20,000 次配額、SQL 使用者列鎖與 `ModelQuotaLock`；批次算一次，快取命中不新增模型呼叫。
 
-校務應先選作業規範、公開表單與政策。學生個資、成績與人員資料需要逐類唯讀查詢和原系統權限映射；使用者對某張表有查詢權不代表能取得所有學生資料。不以平台管理員身份推定所有外部資料權限。
+## Schema 與 profile
 
-資料量增加後先量測來源筆數、候選量、回應時間、引用命中率與權限拒絕案例，再評估混合關鍵字／向量排序、預先摘要與 ANN。升級 ANN 前以固定評測集比較召回率、延遲、更新行為，並驗證其實際 filter 行為能維持相同授權邊界。
+`EmbeddingProfiles` 保存 provider、model、dimensions、input format、query instruction、revision、chunker 版本及參數快照。Key 的 hash 防止向量空間混用；filtered unique index 強制最多一個 active。`Chunks` 使用一套切段布局，保留 Guid 引用鍵、唯一 int identity SearchId、文件序號、頁碼範圍、HeadingPath、ContentHash 與 TokenEstimate。
 
-## 公文與校務的落地順序
+`ChunkEmbeddings768`／`ChunkEmbeddings1024` 以 int identity clustered PK 預留 ANN 映射，真正保存 `VECTOR(n)`；每個 `(ProfileId, ChunkId)` 唯一，片段刪除 cascade 向量。同一片段可持有 active 與 building 向量，但一次查詢只排名 active profile。SQLite 使用 blob converter 與測試用 cosine／詞頻，正式環境沒有 portable 或舊索引查詢。
 
-本版已分析 GDWEB_HOTAI 與 HL_Mvc_MEIHO 原始碼並準備固定 Dapper／EDoc adapters，來源契約見 [INTEGRATIONS](INTEGRATIONS.md)。**實際來源連線與逐筆授權 view 尚未啟用**；不把程式中的搜尋篩選或選單角色直接認定為完整的資料讀取權。
+啟動無 active 時建立目標為 active，將 migration 標記的文件排入索引；設定變更則建立 building，預設等待管理員「開始重建」。`embedding-reindex` 逐文件／逐批補齊，重試跳過已完成向量，使用文件擁有者授權與配額。新增／編輯資料填入 active 及所有 building；active 完成即可 ready，building 失敗可續跑。編輯前先取得 hash 快取，未變片段沿用 ID／向量；單一布局不保存舊切段版本。
 
-| 資料                           | 建議處理                         | 原因                             |
-| ------------------------------ | -------------------------------- | -------------------------------- |
-| 公文本文、核准附件、規範       | 有原文與頁碼的文字索引／向量檢索 | 適合語意找資料與引用核對         |
-| 文號、流程狀態、簽核／版本歷程 | 固定參數化唯讀查詢               | 精確值與最新狀態應以來源為準     |
-| 校務規章、公開表單、單位說明   | 先經明確授權的知識庫索引         | 有適合團隊閱讀的文字來源         |
-| 學生個資、成績、健康／人員資料 | 另建逐筆授權的專用查詢 adapter   | 不能由選單可見性推定所有資料可讀 |
+啟用需所有文件 ready 且片段覆蓋率 100%，在 serializable transaction 內將舊 active 改 retired、building 改 active。`AutoActivate=true` 會排重建並完成後自動切換，需已有管理員；預設 false。退役向量可由管理員清除，或每小時清理超過 `RetiredRetentionDays=7` 的資料；保留 profile 與原文。操作有權限檢查及稽核。這支援往後模型版本管理，不提供舊版 JSON 索引兼容。
 
-GDWEB 的 Doc_vwInOutDetail 可提供文號、主旨、承辦及部門 metadata，但既有報表的部門篩選不足以推定機密／承辦／代理的完整 ACL。MEIHO 的 T_Account_Group／WebFunctionRole／T_WebFunctionAcc 決定功能入口，不能取代學生資料的 row scope；目前 adapter 只接受 reference／organization 類型。
+## 混合排名與授權
 
-以下是下一階段**受控來源索引的建議設計**，尚未實作自動同步：
+SQL 的 Authorized CTE 先限制授權 collections、ready 與非刪除文件，再計算 cosine／全文候選，向量 40、全文 40，合併取 30 供重排。RRF 為：
 
-1. DBA 完成來源帳號映射與授權 view，用至少兩個帳號驗證允許／拒絕、代理／部門、停用與版本變動。使用專用 view-only SQL 登入，不授原始表全集讀取。
-2. 來源目錄保留 SourceId、ExternalId、Revision、修改時間、來源 URI／頁碼、分類及可信 ACL 識別。唯一鍵包含來源與外部 ID，修訂變更觸發重建，刪除／撤權先停用檢索。
-3. ACL 與索引分開同步，使用者查詢時仍以當下來源授權限制候選文件；來源驗權服務不可用時拒絕查詢，不能退回舊 grant。已在平台另存的明確個人副本使用另一套保存契約，不與同步鏡像混用。
-4. 通過授權後才讀本文、逐頁 OCR／切段、建立 embedding；先在 staging 保存完整新版本，再切換 ready 版本，避免半份文件進入檢索。引用記錄來源／修訂／頁碼，開原文時再驗權。
-5. 用品質評測集保存代表問題、正確引用與拒絕案例，量測引用命中、無答案行為、ACL 撤銷、索引延遲及查詢 p50／p95。達成部署單位的目標後，再擴大範圍。
+```text
+score = VectorWeight / (RrfK + vectorRank) + FtsWeight / (RrfK + ftsRank)
+```
 
-**我的建議是先繼續使用 MSSQL 的精確向量檢索。**目前原文、ACL、片段、版本與向量已可在同一交易範圍管理，不必為第一階段再引入另一個資料庫。此為本專案的架構判斷；若未來實測顯示需要更大規模、獨立擴展或更成熟的 ANN filter，再以相同權限契約比較其他搜尋服務。
+排名從 1 開始，缺少的通道貢獻零；預設 k=60、權重各 1。使用 FREETEXTTABLE 及參數化自然語言，避免全文查詢語法注入。**不傳全域 top_n_by_rank**：該參數在授權 join 前截斷整庫，會使未授權資料擠掉授權結果。因此先 join Authorized 再 ROW_NUMBER／TOP FtsCandidates，這是為遵守「ACL 先於 TOP」而調整規格的字面 SQL。[Microsoft 全文排名限制](https://learn.microsoft.com/en-us/sql/relational-databases/search/limit-search-results-with-rank?view=sql-server-ver17)
 
-## ANN 升級的實際限制
+預設 hybrid；全文元件、1028 斷詞器或 index 不可用時明確回報 vector 並記 log，keyword 則回應 503。Embedding provider none 強制 keyword。MinVectorScore=0 不做分數過濾。重排 provider 非 none 時依 MinScore 過濾；失敗依 skip／fail，skip 回報 `hybrid(rerank-skipped)` 等實際模式。不同重排模型分數不能直接互比。
 
-2026-10-04 查閱 Microsoft 文件：SQL Server 2025 的 VECTOR_SEARCH／向量索引仍為 preview；不要將 Azure SQL 的 GA 或最新索引能力直接套用到本機 17.x 版本。新舊索引的篩選及寫入行為不同，升級需查實際 build／索引版本與 execution plan。[VECTOR_SEARCH 功能與版本](https://learn.microsoft.com/en-us/sql/t-sql/functions/vector-search-transact-sql?view=sql-server-ver17)。
+最後取 TopK=6，每文件最多 3 片段，相鄰 Ordinal 合併、去除句子重疊，再按 ContextTokens=3500 裁切，預算含標題及來源框架。最近 4 輪追問才做本機 query rewrite，走 ModelTaskService、生成 token 配額與 5 秒逾時；僅選實際可用且核准的 Ollama 模型。失敗使用原句並標 rewrite-skipped。改寫只用於檢索，僅 debug log 記錄，未對使用者顯示或存檔；正式環境應限制 debug log 留存。
 
-文件所列向量索引限制包含 **int 的 clustered primary key**。目前 Chunks 使用 Guid 主鍵，不能直接假設加一條 CREATE VECTOR INDEX 就能完成；若採 ANN，需另規劃 int surrogate 的搜尋表、ChunkId 映射、同步及重建策略。精確 VECTOR_DISTANCE 本身不使用向量索引，新增 ANN index 不會自動加速現有查詢。[索引限制](https://learn.microsoft.com/en-us/sql/t-sql/statements/create-vector-index-transact-sql?view=sql-server-ver17)、[精確距離](https://learn.microsoft.com/en-us/sql/t-sql/functions/vector-distance-transact-sql?view=sql-server-ver17)。
+每個遠端呼叫後、來源送 reranker／回答模型／瀏覽器前重新檢查 collections 與命中授權，索引切換則請求重試。來源與對話歷史以資料傳入，防注入指令不授予它們指令權限。
 
-本版支援 768／1024 維 float32 與版本化 embedding profile。BGE-M3 與 Qwen 的實際設定與比較工具見 [EMBEDDING_MODELS](EMBEDDING_MODELS.md)。更換向量模型、維度或前處理需建立新 profile 並重建全部片段，不能只因維度相同就混合向量；聊天模型更換則不必同步更換 embedding。對話用 Google、未來本機模型也可共用核准的同一檢索服務。
+## 全文與維度擴充
+
+SQL Setup 對既有 instance 加入「Full-Text and Semantic Extractions for Search」。migration 在交易外建立 catalog 及 Chunks(Text, HeadingPath) 的 LANGUAGE 1028 index，key 為 SearchId 唯一索引、CHANGE_TRACKING AUTO；缺少全文不阻擋 migration，但有 warning。全文填入非同步，新文件可能暫無 keyword 命中。[Microsoft 新增功能](https://learn.microsoft.com/en-us/sql/database-engine/install-windows/add-features-to-an-instance-of-sql-server-setup?view=sql-server-ver17)
+
+```sql
+SELECT SERVERPROPERTY('ProductMajorVersion'), SERVERPROPERTY('IsFullTextInstalled');
+SELECT * FROM sys.fulltext_languages WHERE lcid = 1028;
+SELECT * FROM sys.fulltext_indexes WHERE object_id = OBJECT_ID('knowledge.Chunks');
+```
+
+執行 `scripts/Test-SqlCapabilities.ps1` 或管理 → 知識檢索查看狀態；安裝後若 catalog 尚未建立，由 DBA 依 migration 的全文 DDL 建立 catalog/index，勿改 migration history。已登記的 migration 不會因重跑 idempotent script 而再執行。
+
+新增維度：新增 EF vector entity／`ConfigureVector` 映射及對應表 migration；在單一 `VectorDimensions` allowlist／Table 映射加入維度，擴充 store、coverage、SQLite converter 與設定驗證／腳本。補齊 DatabaseDescriptions 與真實 SQL 測試，再生成 migration SQL、契約，建立新 profile 重建驗證。不能任意拼接使用者提供的表名或維度。
+
+目前採精確 cosine，未啟用 VECTOR_SEARCH／CREATE VECTOR INDEX preview；int clustered PK 與 SearchId 已保留接縫。資料量、p95、Recall@K 確認成為瓶頸後，再評估正式支援的 ANN，必須保留授權候選邊界並驗證召回與撤權。不使用其他向量資料庫。四模式驗收與操作見 [品質評測](QUALITY.md)、[模型與重排](EMBEDDING_MODELS.md)。

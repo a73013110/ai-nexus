@@ -144,6 +144,24 @@ test("檢索評測固定驗收集並顯示四模式指標及降級原因", async
   const download = page.waitForEvent("download");
   await page.getByRole("button", { name: "下載指標報告" }).click();
   expect((await download).suggestedFilename()).toBe("採購驗收.json");
+  for (const width of [1440, 375]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.getByText("查看驗收集格式", { exact: true }).click();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    const input = await page
+      .getByRole("textbox", { name: "檢索評測名稱" })
+      .boundingBox();
+    expect(input!.width).toBeGreaterThan(width === 375 ? 170 : 500);
+    await page.screenshot({
+      path: `artifacts/screenshots/retrieval-evaluation-${width}.png`,
+      fullPage: true,
+    });
+    await page.getByText("查看驗收集格式", { exact: true }).click();
+  }
 });
 
 test("fixed evaluation cases compare instructions, show diagnostic results and retain a manual review", async ({

@@ -1,48 +1,32 @@
-# 本地向量與 RTX 5080 的建議路徑
+# 地端 AI 與向量化
 
-以 **RTX 5080 16GB VRAM + 64GB RAM**，優先做「本地 embedding → MSSQL 向量／關鍵字檢索 → 少量授權來源 → Qwen 回答」。大量資料放在索引中，每次只送檢索出的片段；不要把整個公文／校務庫塞進聊天 Context。
+已安裝並測試成功的 Ollama bge-m3 可直接作為本版預設：Knowledge.Embedding.Provider=ollama、Model=bge-m3、Dimensions=1024、InputFormat=plain。聊天仍使用自己的核准模型；完全地端須同時停用 Inference.Providers.Google.Enabled，選取可用的 Ollama 路由。
 
-## 起步配置與測量
+## 啟用與探測
 
-建議從 `qwen3:8b`、8,192 Context、2,048 輸出 token、預設不思考、單次生成開始。Ollama 目前列出的 8B 檔案約 5.2GB、14B 約 9.3GB、30B 約 19GB、32B 約 20GB；**下載大小不是執行時 VRAM**。因此先測 8B，再測 14B；30B／32B 不適合作為這張卡的速度基準。這是依容量的工程判斷，實際仍需量化版本、KV cache 與你的文件測試。[Ollama Qwen3 模型清單](https://ollama.com/library/qwen3)
-
-Context 與並行數會增加 KV 記憶體。先設定 Ollama `OLLAMA_NUM_PARALLEL=1`、`OLLAMA_CONTEXT_LENGTH=8192`，在實際啟動 Ollama 的服務／帳號設定後重啟；AI Nexus profile 的 Context 也設 8192。64GB RAM 能容納更大模型的 CPU 部分，但不能取代 VRAM 的速度。用 GPU 主機上的 `ollama ps` 確認 GPU／CPU 分配，並記錄冷啟動與暖機後的速度。[Ollama FAQ](https://docs.ollama.com/faq)、[Context 與記憶體](https://docs.ollama.com/context-length)
-
-若實測 KV cache 佔用偏高，再測 Flash Attention 與 `OLLAMA_KV_CACHE_TYPE=q8_0`；先確認後端／GPU 支援並比較檢索回答品質，不預設開 q4 cache。Ollama 的 cache 量化是全域設定，也會影響其他模型，不能把權重量化與 KV cache 量化當成同一件事。[Ollama KV cache 說明](https://docs.ollama.com/faq#how-can-i-set-the-quantization-type-for-the-k-v-cache)
-
-Embedding 現在建議把 **BGE-M3（1024 維）與 Qwen3-Embedding-0.6B（768／1024 維）並列比較**。BGE 可與 Qwen 回答模型搭配，不需要相同品牌。先前 Qwen 建議著重小型 Ollama 部署與既有 768 維相容性，不是繁中檢索品質的定論；本版已新增 BGE 1024 欄位與 Qwen query-only 前處理／版本指紋。規格、取捨與可重複驗收工具見 [EMBEDDING_MODELS](EMBEDDING_MODELS.md)。
-
-在 GPU 主機下載模型後，執行只使用合成資料的探測：
+先套用 [資料庫升級](DATABASE.md)，重啟 API，再重新上傳資料。管理 → 知識檢索顯示 SQL 原生向量、全文元件、1028 斷詞器及端點，按「探測模型」使用合成資料檢查實際 batch 數量／維度／rerank 格式；會計入操作人的模型呼叫配額。
 
 ```powershell
-ollama pull qwen3:8b
-ollama pull qwen3-embedding:0.6b
-pwsh -NoProfile -File scripts/Test-LocalAI.ps1 `
-  -Endpoint 'http://localhost:11434/'
+./scripts/Test-LocalAI.ps1 -Endpoint 'http://localhost:11434/' `
+  -EmbeddingModel bge-m3 -Dimensions 1024
+./scripts/Test-SqlCapabilities.ps1
 ollama ps
 ```
 
-探測會檢查已安裝模型、768 維回應、短生成是否完成、載入時間與 tokens/sec；不會呼叫 Google，不會送私人公文，亦不代表多人實際吞吐量。先用 20–50 題繁體中文公文／校務問題，測 recall、頁碼引用、首字延遲、輸出速度及尖峰 VRAM。再決定 14B、16K Context 或 reranker 是否值得。8B 與小 embedding 可能同時放入卡中，但不是保證；索引排離峰、限制並行，可避免模型來回卸載。
+Test-LocalAI 同時檢查預設聊天模型 qwen3:8b、批次 embedding、短生成、載入與輸出速度；聊天不同時加 -ChatModel。資料僅為合成測試，不送私人原文，不代表多人吞吐或檢索品質。ConnectionVerifier／DeploymentVerifier 也檢查真實合成 embedding 及已啟用 rerank，會有模型運算／載入成本。
 
-## AI Nexus 設定
+Ollama 主機與 IIS 分開時，Inference.Providers.Ollama.Endpoint 改成可連的主機位址；只移 embedding 可填 Knowledge.Embedding.Endpoint，空值沿用 Ollama 端點。模型服務位址由伺服器設定，限制可連的應用主機。none 會強制 SQL keyword，需要全文元件，沒有舊 substring／JSON fallback。
 
-將 `Inference.Providers.Ollama.Enabled` 設 true，保留或調整 endpoint／default profile；預設路由設 `Inference.ModelPolicy.DefaultModelId=ollama/qwen3:8b`。Google 可保持啟用以同時提供兩者；完全本地才停用 Google.Enabled。另將 `Knowledge.Embedding.Provider` 改 `ollama`、`Model` 改 `qwen3-embedding:0.6b`、`Dimensions` 保持 768、`InputFormat=qwen-query`；或選 BGE-M3、1024、plain。兩個設定都改才是完全本地。也可先 `Embedding.Provider=none` 用關鍵字，等本地模型可連後切換；不會自動改你目前已成功使用的 Google 設定。
+## GPU 與並行
 
-模型主機不同於 IIS 時，Ollama endpoint 改為 GPU 主機 LAN 位址。Ollama API 只開給需要的應用主機，避免以無驗證 API 對整個網路開放。文字 `qwen3:8b` 不含 vision；要分析圖片另選含 vision／projector 的模型，Ollama profile 使用 `SupportsImages=null` 自動讀取實際能力。明確設 false 可禁止圖片，設 true 不能讓文字模型支援圖片。圖片推論與 OCR 的額外 VRAM 仍須實測。
+16 GB VRAM／64 GB RAM 可作為測量環境，模型檔案大小不能推算實際峰值。先用單一聊天生成、8192 Context、適當輸出上限，量冷啟動、暖機 p95、GPU／CPU 分配、VRAM 與引用品質；再一次增加一項（較大聊天模型、較長 Context、OCR 或 rerank）。[Ollama Context 說明](https://docs.ollama.com/context-length)
 
-更換 embedding 後，**全部相關文件重新索引**。同維度不同模型的向量仍不是同一個空間；現行 profile 會阻擋混用，新的索引須完成才可檢索。本版 migration 已新增 1024 維欄位；仍須先套用 migration、設定 profile 並重建，不能只改 JSON。
+預設 embedding BatchSize=16、MaxConcurrentBatches=1，背景批次在聊天生成或排隊時等待，已發出的批次不能搶占；每日配額及 durable queue 跨程序保存，GPU semaphore／查詢快取屬每個 API 程序。多 IIS instance 的整體 GPU 容量由部署端協調。可設定 Ollama OLLAMA_NUM_PARALLEL=1，再依實測調整；調整服務環境變數後須重啟 Ollama。[Ollama 並行說明](https://docs.ollama.com/faq)
 
-## 接著值得製作的功能（建議優先順序）
+聊天、embedding、rerank 不保證同時留在 VRAM。可將 embedding 移到另一主機，rerank 也可使用獨立 TEI／llama.cpp 端點；CPU offload 的線上延遲仍需測量。[重排部署指令](EMBEDDING_MODELS.md)提供兩種範例，預設不啟用，先完成四模式評測再決定配置。
 
-| 優先 | 功能               | 具體成果                                                                                     |
-| ---- | ------------------ | -------------------------------------------------------------------------------------------- |
-| 1    | 本地檢索驗收集     | 繁中問題／預期來源／版本／頁碼；比較 keyword、vector 與混合結果，資料不離開公司              |
-| 2    | 公文增量索引       | 來源 revision／checksum／刪除 tombstone、斷點續作、只索引變更內容；沿用來源 ACL view         |
-| 3    | 混合檢索與去重     | 精確文號、日期、姓名等走 keyword／metadata；語意找相關段落，再合併排名                       |
-| 4    | ACL 與撤權同步     | 檢索前過濾、送模型前再驗來源授權；停用／機密／代理期限同步，避免向量索引成為旁路             |
-| 5    | 索引版本與切換     | embedding profile／chunker／來源 revision 可追蹤；新索引完成後切換、可回復，失敗不破壞舊索引 |
-| 6    | 小 reranker        | 在有限授權候選內重排，先測 0.6B／CPU 或離峰；依實測品質決定是否佔 GPU                        |
-| 7    | 本地 OCR 工作池    | PDF 版面、表格、頁碼、批次 OCR；與聊天排程分離，限制 GPU 競爭                                |
-| 8    | 來源診斷與容量面板 | 文件／chunk 數、失敗原因、索引進度、權限過期、GPU 工作排隊與可追溯引用                       |
+## 更新與驗收
 
-MSSQL 2025 先沿用已驗證的精確 cosine 與 metadata／ACL 條件。不要只因有 VECTOR 就立即導入 ANN；來源資料量與召回率確認後，再依實際 SQL 版本能力選索引方案。現有實作、原生向量探測與權限邊界見 [VECTOR_ARCHITECTURE](VECTOR_ARCHITECTURE.md)。校務先做規章／公開單位資料；學生敏感資料必須有逐筆權限與經核准的檢索問題集。
+模型／維度／Revision／切段改變後建立 building，管理員重建、100% 覆蓋後切換；AutoActivate 預設 false，退役向量預設保留 7 日。保留原始頁面重建不重做 OCR；資料編輯以完整輸入 hash 重用向量。管理動作有稽核，查詢只讀 active profile。
+
+品質 → 檢索評測用固定的真實驗收集比較四種模式與頁碼相關性，報告不含來源或問題原文。資料品質、授權、Recall／nDCG 與 p95 優先驗證；目前 SQL Server 2025 使用精確 cosine，ANN preview 尚未啟用。公文／校務來源仍需先通過來源 ACL 後匯入 collection，共用同一管線。[架構](VECTOR_ARCHITECTURE.md)、[品質評測](QUALITY.md)

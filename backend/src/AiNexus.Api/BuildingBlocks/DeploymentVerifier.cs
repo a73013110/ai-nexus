@@ -9,7 +9,7 @@ namespace AiNexus.BuildingBlocks;
 
 public static class DeploymentVerifier
 {
-    // Read-only SQL/model checks and a transient attachment IO probe. No workers, AD login or generation.
+    // Read-only SQL checks, synthetic embedding/rerank requests and a transient attachment IO probe.
     public static async Task<bool> VerifyAsync(IServiceProvider services, IConfiguration config, IHostEnvironment environment, CancellationToken ct)
     {
         using var scope = services.CreateScope();

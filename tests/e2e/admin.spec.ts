@@ -840,7 +840,9 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
   for (const width of [1920, 1440, 860, 375]) {
     await page.setViewportSize({ width, height: 900 });
     for (const tab of ["功能", "異動稽核", "平台用量"]) {
-      await page.getByRole("button", { name: tab, exact: true }).click();
+      const tabButton = page.getByRole("button", { name: tab, exact: true });
+      await tabButton.click();
+      await expect(tabButton).toHaveAttribute("aria-current", "page");
       const target =
         tab === "異動稽核" ? ".audit-toolbar" : ".feature-content > .form-note";
       await expect(page.locator(target).first()).toBeVisible();

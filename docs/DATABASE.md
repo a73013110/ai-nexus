@@ -23,11 +23,13 @@
 | collaboration | Resources、ResourceMembers、ResourceGroups                                | 擁有者、具名 viewer／editor、群組唯讀、ParentId 繼承        |
 | collaboration | ShareLinks、ShareRecipients                                               | 到期／撤銷、具名收件人、版本快照及明確附件授權              |
 | knowledge     | Collections、Documents、DocumentPages、Chunks                             | 頁面、OCR 狀態、索引 profile、片段／向量                    |
+| knowledge     | EmbeddingProfiles、ChunkEmbeddings768、ChunkEmbeddings1024                | profile 生命週期、真正 VECTOR(n)、內容 hash 快取與覆蓋率 |
 | knowledge     | ConversationCollections、MessageCitations                                 | 對話選定來源及回答當時的文件／頁碼／摘要                    |
 | knowledge     | RepositoryImports                                                         | 固定 Gitea commit／path／host 與知識庫文件來源識別          |
 | content       | Artifacts、ArtifactRevisions、SourceReferences                            | 成果不可變版本、目前版本、來源識別／版本／時間              |
 | projects      | Projects、ProjectTemplates                                                | 共用指示、專案版本及範本，文件／成果透過 Resources 關聯     |
 | quality       | MessageFeedback、EvaluationSets、EvaluationRuns、EvaluationResults        | 私人回饋、固定題庫、執行設定及逐題結果／人工評分            |
+| quality       | RetrievalEvaluations、RetrievalEvaluationResults                          | 固定檢索驗收集及四模式相關性、拒答、延遲指標 |
 | dbo           | \_\_EFMigrationsHistory                                                   | 已套用的 EF 版本，不可手改或刪除以重跑 migration            |
 
 共有 13 個業務 schema，以 InitialCreate 基線與增量 migrations 管理。原始附件存於站外 Attachments.StoragePath，SQL 不保存原始 bytes。StorageKey 唯一索引與狀態／時間索引支持存取及回收；Users.AttachmentLimitBytes 為個人容量 override，null 繼承群組／預設 5 GB，DB 檢核非負及安全上限。個人偏好為 UserId 的 1:1 關聯；API key／SQL／AD 服務密碼不在偏好表，Gitea token 獨立加密保存。
@@ -87,7 +89,7 @@ UsageReports 共用 GenerationRuns／ModelInvocations 的 SQL 聚合查詢，提
 
 ## 向量與外部來源
 
-knowledge.Chunks.EmbeddingJson 保存正規化 768 維向量及 profile。SQL Server 2025 額外有 EmbeddingVector VECTOR(768)，寫入與 checkpoint 共用 EF transaction；欄位由條件式 migration 建立，不以 EF 直接映射 VECTOR。檢索先限定授權知識庫、ready 文件及相同 profile，再排序精確 cosine，不自動開 ANN preview。見 [向量設計及公文／校務建議](VECTOR_ARCHITECTURE.md)。
+本版僅支援 SQL Server 2025（17.x），EF Core 10 原生映射 SqlVector<float>。knowledge.EmbeddingProfiles 保存不可變空間／切段快照；Chunks 保存單一切段布局及唯一 SearchId，ChunkEmbeddings768／1024 分別使用 VECTOR(n)、int identity clustered PK、profile/hash 索引及 profile/chunk 唯一鍵。舊 EmbeddingJson／EmbeddingVector 欄位及 portable cosine 查詢已移除。LANGUAGE 1028 全文索引在交易外建立，缺少元件時跳過並警示；精確向量依授權候選先過濾，不開 ANN preview。見 [架構及擴充](VECTOR_ARCHITECTURE.md)。
 
 content.SourceReferences 保存明確匯入的個人成果之 SourceId／ExternalId／Revision／ImportedAt。公文／校務仍為獨立來源庫，透過 nexus.AuthorizedRecords／AuthorizedRecordHistory view 與來源專用唯讀登入，以完整 SID／account 取得資料。來源版本變更要求重新讀取；已明確保存的個人副本不因來源撤權自動遠端抹除。AiNexus migration 不在外部庫建物件，DBA 範本在 db/integrations。見 [來源契約](INTEGRATIONS.md)。
 
@@ -108,13 +110,24 @@ dotnet ef migrations list --project backend/src/AiNexus.Api
 dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Api
 ```
 
-初始 migration 一次建立所有表、索引、約束、種子及描述；SQL Server 2025 條件建立 VECTOR(768)／VECTOR(1024)，較舊 SQL 使用 portable 路徑。初始化及正常 SQL Server 啟動檢查模型與 snapshot 一致。
+初始 migration 保持原樣，後續升級追加四個版本：20261006144804_VectorRetrievalProfiles、20261006145833_SingleChunkLayout、20261006150830_CitationPageRanges、20261006155137_RetrievalEvaluationReports。第一個清空舊片段、標記知識文件 reindex，原始附件與 DocumentPages 保留；後續建立單一布局、引用頁碼範圍及評測表。沒有舊索引兼容查詢；本次更新尚須在部署環境套用 migration 並重新上傳或重建。初始化及正常啟動檢查模型與 snapshot 一致。
 
 已設定 SQL 的 host 會在 HTTP 與背景 worker 啟動前檢查所有 migration；缺少任何版本會以退出碼 1 停止，列出待套用的版本及初始化方式。`Storage.ApplyMigrationsOnStartup=false` 仍會執行唯讀版本檢查，不會修改 schema。啟動、初始化與連線／部署驗證共用 `DatabaseSchema`，新增 migration 不必另加欄位特例。測試的 SQLite 使用當前模型建庫，不執行 SQL Server migrations。
 
 本版管理與一般 endpoint 共用 Nexus 連線，runtime 登入需要上述 13 個業務 schema 的 SELECT／INSERT／UPDATE／DELETE，也包括 bootstrap／管理異動的 access 物件；版本檢查另需 `dbo.__EFMigrationsHistory` 的 SELECT，不需修改 history 的權限。實際操作由後端政策控制。**目前沒有管理專用寫入連線**，不能只給 access SELECT／首次登入 INSERT 就預期後台可運作。runtime 不給 master 建庫、ALTER schema 或 db_owner；進一步分離管理 SQL 權限需要實作獨立連線及交易邊界。外部來源登入則只授兩個固定授權 view 的 SELECT。
 
 ## 保存與備份
+
+`quality.RetrievalEvaluations` 保存私人驗收集、collection IDs、配置／文件版本指紋及 job；`RetrievalEvaluationResults` 以 run/case/mode 為鍵，只保存指標、實際模式、錯誤代碼及延遲。下載報告不含問題、標註文件 ID、向量或來源文字，仍須重新通過 owner、quality 與知識庫 ACL。所有新表／欄位都有繁中 MS_Description，DBA 套用 migrations 後執行 Test-DatabaseDescriptions 檢查。
+
+真實 SQL 整合測試需明確指定測試 instance（登入須能建立／刪除測試資料庫及全文 catalog），每項建立隨機 AINexus_Retrieval_Test_ 資料庫，只清理該項自行建立的資料庫，不使用連線字串指定的現有資料庫。
+
+```powershell
+$env:AINEXUS_SQLSERVER_TEST = 'Server=localhost;Integrated Security=true;Encrypt=true;TrustServerCertificate=true'
+dotnet test backend/tests/AiNexus.Tests --filter FullyQualifiedName~SqlServerRetrievalTests
+```
+
+測試驗證原生 768／1024 向量、Dapper 批次與交易回滾、profile 隔離、1028 中文 FREETEXTTABLE、授權範圍先於 TOP；全文非同步填入輪詢上限 90 秒。未提供環境變數時明確 skip，不以 SQLite 代替真實 SQL 驗證。
 
 RunEvents 預設保留 24 小時 replay，權威 run 快照仍可恢復；未保存到檔案庫且未被訊息／資源／分享引用的草稿附件依保留期清理。檔案庫原檔需沒有引用後由擁有者明確刪除。分享到期可清理快照，soft-delete 對話、成果、audit 與評測等保存期由部署單位制定，再加入明確 retention。
 

@@ -21,6 +21,7 @@ import { JobsApi } from '../tasks/jobs-api';
 
 @Component({
   selector: 'nx-retrieval-evaluation',
+  host: { class: 'platform-form' },
   imports: [ReactiveFormsModule, DecimalPipe, Checkbox, Select, JobProgress],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,

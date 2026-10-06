@@ -18,15 +18,15 @@
   <p class="form-note">
     每題標註相關文件與頁碼，使用同一批資料比較向量、全文、混合與混合重排。評測結果僅供本人查看。
   </p>
-  <form [formGroup]="form" (submit)="create($event)">
-    <label class="field"
+  <form class="platform-form" [formGroup]="form" (submit)="create($event)">
+    <label
       >評測名稱<input
         aria-label="檢索評測名稱"
         formControlName="title"
         maxlength="120"
         placeholder="例如：採購規範驗收"
     /></label>
-    <fieldset class="choice-fieldset">
+    <fieldset>
       <legend>選擇知識庫（最多三個）</legend>
       @for (collection of collections(); track collection.resource.id) {
         <nx-checkbox
@@ -39,7 +39,7 @@
         <p class="form-note">請先在知識庫上傳資料並完成索引。</p>
       }
     </fieldset>
-    <label class="field"
+    <label
       >驗收集 JSON（1 至 20 題）<textarea
         aria-label="檢索驗收集 JSON"
         formControlName="corpus"
@@ -48,7 +48,7 @@
         [placeholder]="example"
       ></textarea>
     </label>
-    <details>
+    <details class="audit-details">
       <summary>查看驗收集格式</summary>
       <p class="form-note">
         documentId 請填入文件網址中的 UUID。pages 為相關頁碼，空陣列代表整份文件；grade 為 1 至 3
@@ -77,7 +77,7 @@
         重新整理
       </button>
     </div>
-    <label class="field"
+    <label class="quality-run-picker"
       >執行紀錄<nx-select
         label="選擇檢索評測紀錄"
         [options]="options()"

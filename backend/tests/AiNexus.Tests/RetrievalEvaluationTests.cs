@@ -36,6 +36,23 @@ public sealed class RetrievalEvaluationTests
         var latency = RetrievalMetrics.Latency([10, 20, 30, 40]); Assert.Equal(25, latency.P50); Assert.Equal(38.5, latency.P95);
         Assert.Equal(new RetrievalLatencyDto(0, 0), RetrievalMetrics.Latency([]));
     }
+    [Fact]
+    public void IncompleteReportsAreNotMarkedComparable()
+    {
+        var result = new RetrievalMetricDto("一", "vector", "vector", null, 1, 1, 1, null, 0, 0, 1, 0, 1);
+        Assert.False(RetrievalMetrics.Summarize([result], 2).Single(x => x.Mode == "vector").Comparable);
+        Assert.True(RetrievalMetrics.Summarize([result], 1).Single(x => x.Mode == "vector").Comparable);
+    }
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("[{}]")]
+    [InlineData("[{\"index\":0,\"score\":\"bad\"}]")]
+    [InlineData("[{\"index\":0,\"score\":1e999}]")]
+    public void MalformedRerankerPayloadUsesDeclaredFailurePolicy(string json)
+    {
+        using var payload = JsonDocument.Parse(json);
+        Assert.Equal("rerank_invalid", Assert.Throws<ApiException>(() => RerankPayload.Parse(payload.RootElement, "score")).Code);
+    }
     private static async Task Drain(NexusFactory factory)
     {
         using var worker = ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services);

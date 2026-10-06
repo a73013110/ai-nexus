@@ -15,3 +15,28 @@ AI 回覆下方可直接按「有幫助」或「待改善」，再按一次會�
 題庫沿用共用 ACL：擁有者／具名編輯者可改題目與人工評分，讀者可查看及以自身配額建立比較；群組授權僅提供檢視。**題庫的授權成員可以閱讀其中所有比較結果與指令**，請使用適合團隊分享的案例。個人聊天回饋不因此公開。
 
 `quality.MessageFeedback` 保存個人回饋；`EvaluationSets` 保存目前題庫與版本；`EvaluationRuns` 保存執行時的不可變快照及背景任務；`EvaluationResults` 以執行／題目序號／方案序號為鍵，保存完成答案、指標及人工判讀。權限撤銷會阻擋後續閱讀、執行與重試。
+
+## 四模式檢索評測
+
+品質 → 檢索評測可選 1–3 個有權限的知識庫、貼上或匯入 1–20 題 JSON。每題 ID 唯一、查詢最多 2,000 字元；相關文件必須 ready 且在選取範圍，頁碼必須存在，每份文件每題只標註一次、grade 1–3。pages 空陣列表示整份文件；無答案題只填 relevant=[]、noAnswer=true。文件 UUID 可由文件網址取得，以下 UUID 請換成實際資料。
+
+```json
+[
+  { "id": "採購核准", "query": "採購如何核准？", "relevant": [
+    { "documentId": "11111111-1111-1111-1111-111111111111", "pages": [1, 2], "grade": 3 }
+  ] },
+  { "id": "無答案", "query": "未記載的燃料規範", "relevant": [], "noAnswer": true }
+]
+```
+
+API 前綴 /api/v1：POST /quality/retrieval-evals 接受 `{title, collectionIds, cases}`，GET 同路徑列出本人紀錄，GET /{id} 返回指標，GET /{id}/report 下載 JSON。停止／續跑共用 /jobs/{jobId}/cancel、/retry。每人最多保留 500 次，且同時只啟動一個檢索評測。
+
+`retrieval-eval` 依 vector → keyword → hybrid → hybrid+rerank 執行，同一題最多四次檢索。前三級關閉重排，第四級明確要求；未配置重排會標 rerank-skipped，重排錯誤依 FailurePolicy 處理，fulltext 不可用的 keyword 記 unavailable。ACL 或導致召回無法完成的配額錯誤停止工作。報告保存 requested／actual mode；尚未完成全部題目，或有降級、略過、不可用的組不標示為 comparable。
+
+先執行正常 context 合併／預算裁切，再以文件及任一相關頁碼落在命中起訖範圍評分：Recall@K 是命中的相關文件數／全部相關文件數；MRR 是首個相關命中排名倒數的平均；nDCG@K 用 `(2^grade-1)/log2(rank+1)`，除以理想相關性排序。重複文件僅首個符合頁碼的命中得分，避免相鄰或重疊片段重複加分。有答案題沒命中計零；無答案題不混入相關性平均。
+
+**拒答率是無答案題「未提供任何來源」的比例，不是生成回答正確率。** 本評測不生成答案，需另以人工／既有生成評測檢查真正拒答與引用準確性。總延遲與 rewrite／embed／search／rerank 各有 p50／p95，採排序後線性內插；使用正常共用查詢快取，後續模式可能暖機／命中快取。無歷史問題的 rewrite 延遲為零；沒有有效樣本時延遲值零而指標為 null，不能解讀成零成本。
+
+建立時固定 active profile key、TopK、Knowledge 設定及相關文件版本／狀態指紋，每題前後及重試再驗。若文件、索引或設定變更，重新建立評測；不能把不同狀態混成一份報告。每次檢索結果的 checkpoint 與 job 租約在同一交易，重試跳過完成組合。
+
+驗收集包含問題及文件 ID，私下存於 RetrievalEvaluations；結果表及下載只含 case ID、模式、指標、耗時、設定 hash、job 及評測名稱，不含查詢、片段原文或向量。每次讀取／下載／執行／重試驗 owner、quality 功能及原知識庫 ACL；不是共用模型評測題庫的 ACL。調參指南見 [模型](EMBEDDING_MODELS.md)、[架構](VECTOR_ARCHITECTURE.md)。

@@ -68,7 +68,7 @@ public sealed class RetrievalEvaluationService(NexusDbContext db, RetrievalAutho
         var rows = await db.Set<RetrievalEvaluationResult>().AsNoTracking().Where(x => x.RunId == id).OrderBy(x => x.CaseIndex).ThenBy(x => x.Mode).ToListAsync(ct);
         var metrics = rows.Select(x => new RetrievalMetricDto(cases[x.CaseIndex].Id, x.Mode, x.ActualMode, x.Unavailable, x.Recall, x.ReciprocalRank, x.Ndcg, x.Refused, x.RewriteMs, x.EmbedMs, x.SearchMs, x.RerankMs, x.ElapsedMs)).ToArray();
         await RequireAccessAsync(actor, Parse<Guid>(run.CollectionsJson), ct);
-        return new(Describe(run, job), RetrievalMetrics.Summarize(metrics), metrics);
+        return new(Describe(run, job), RetrievalMetrics.Summarize(metrics, cases.Length), metrics);
     }
     private async Task RequireAccessAsync(Guid actor, IReadOnlyList<Guid> collections, CancellationToken ct)
     {
