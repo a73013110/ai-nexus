@@ -5,8 +5,10 @@ import {
   effect,
   inject,
   input,
+  output,
   signal,
   untracked,
+  type WritableSignal,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import type {
@@ -47,6 +49,8 @@ export class RepositoryReviewPanel {
   readonly repository = input.required<string>();
   readonly head = input('');
   readonly reviewId = input('');
+  readonly initialDetail = input<RepositoryReviewDetail | null>(null);
+  readonly initialDetailConsumed = output<void>();
   private readonly api = inject(RepositoriesApi);
   private readonly nexus = inject(NexusApi);
   private readonly scope = inject(ViewScope);
@@ -62,9 +66,16 @@ export class RepositoryReviewPanel {
   readonly basis = signal('');
   readonly model = signal('');
   readonly note = signal('');
-  readonly loading = signal(true);
+  readonly commitsLoading = signal(true);
+  readonly modelsLoading = signal(true);
+  readonly historyLoading = signal(true);
+  readonly commitsError = signal('');
+  readonly modelsError = signal('');
+  readonly historyError = signal('');
   readonly detailLoading = signal(false);
   readonly reportExpanded = signal(false);
+  readonly evidenceExpanded = signal(false);
+  readonly expandedSections = signal(new Set<number>());
   readonly busy = signal(false);
   readonly error = signal('');
   readonly date = formatDate;
@@ -92,67 +103,133 @@ export class RepositoryReviewPanel {
   private requestSignature = '';
   constructor() {
     effect(() => {
-      const repository = this.repository(),
-        id = this.reviewId();
-      untracked(() => void this.load(repository, id));
+      const repository = this.repository();
+      untracked(() => void this.load(repository));
+    });
+    effect(() => {
+      const id = this.reviewId(),
+        initial = this.initialDetail(),
+        repository = this.repository();
+      untracked(() => {
+        if (!id || this.detail()?.review.id === id) return;
+        if (initial?.review.id === id && initial.review.repository === repository) {
+          ++this.readSequence;
+          this.resetResult();
+          this.show(initial);
+          this.initialDetailConsumed.emit();
+        } else void this.choose(id);
+      });
     });
   }
-  async load(repository: string, id: string) {
-    const sequence = ++this.sequence,
-      valid = this.scope.guard();
+  async load(repository: string) {
+    ++this.sequence;
     ++this.readSequence;
-    this.scope.cancel('review');
-    this.detail.set(null);
-    this.detailLoading.set(false);
+    this.resetResult();
     this.reviews.set([]);
     this.commits.set([]);
     this.models.set(null);
     this.model.set('');
-    this.commit.set('');
+    this.commit.set(this.head());
     this.basis.set('');
-    this.loading.set(true);
     this.error.set('');
+    await Promise.allSettled([
+      this.loadModels(),
+      this.loadCommits(repository),
+      this.loadHistory(repository),
+    ]);
+  }
+  private async loadResource<T>(
+    request: Promise<T>,
+    apply: (value: T) => void,
+    loading: WritableSignal<boolean>,
+    error: WritableSignal<string>,
+  ) {
+    const sequence = this.sequence,
+      valid = this.scope.guard();
+    const current = () => valid() && sequence === this.sequence;
+    loading.set(true);
+    error.set('');
     try {
-      const [models, commits, reviews] = await Promise.all([
-        this.nexus.models(),
-        this.api.commits(repository),
-        this.api.reviews(repository),
-      ]);
-      if (!valid() || sequence !== this.sequence) return;
-      this.models.set(models);
-      this.commits.set(commits);
-      this.reviews.set(reviews);
-      this.commit.set(this.head() || commits[0]?.sha || '');
-      const index = commits.findIndex((x) => x.sha === this.commit());
-      this.basis.set(
-        commits[index + 1]?.sha === this.commit() ? '' : commits[index + 1]?.sha || '',
-      );
-      this.model.set(models.policy.defaultModelId || models.models[0]?.id || '');
-      if (id) await this.read(id);
-      else if (reviews[0]) await this.read(reviews[0].id);
+      const value = await request;
+      if (current()) apply(value);
     } catch (e) {
-      if (valid() && sequence === this.sequence) this.error.set(this.scope.message(e));
+      if (current()) error.set(this.scope.message(e));
     } finally {
-      if (valid() && sequence === this.sequence) this.loading.set(false);
+      if (current()) loading.set(false);
     }
+  }
+  loadModels() {
+    return this.loadResource(
+      this.nexus.models(),
+      (models) => {
+        this.models.set(models);
+        this.model.set(models.policy.defaultModelId || models.models[0]?.id || '');
+      },
+      this.modelsLoading,
+      this.modelsError,
+    );
+  }
+  loadCommits(repository = this.repository()) {
+    return this.loadResource(
+      this.api.commits(repository),
+      (commits) => {
+        this.commits.set(commits);
+        if (!this.commit()) this.commit.set(commits[0]?.sha || '');
+        const index = commits.findIndex((x) => x.sha === this.commit());
+        if (!this.basis() && index >= 0) this.basis.set(commits[index + 1]?.sha || '');
+      },
+      this.commitsLoading,
+      this.commitsError,
+    );
+  }
+  loadHistory(repository = this.repository()) {
+    return this.loadResource(
+      this.api.reviews(repository),
+      (reviews) => {
+        this.reviews.update((current) => [
+          ...current,
+          ...reviews.filter((row) => !current.some((x) => x.id === row.id)),
+        ]);
+      },
+      this.historyLoading,
+      this.historyError,
+    );
+  }
+  private show(detail: RepositoryReviewDetail) {
+    this.detail.set(detail);
+    if (['queued', 'running'].includes(detail.review.job!.status))
+      this.scope.later(() => void this.read(detail.review.id, true), 3000, 'review');
+  }
+  private resetResult() {
+    this.scope.cancel('review');
+    this.detail.set(null);
+    this.detailLoading.set(false);
+    this.reportExpanded.set(false);
+    this.evidenceExpanded.set(false);
+    this.expandedSections.set(new Set());
+  }
+  toggleSection(ordinal: number, open: boolean) {
+    this.expandedSections.update((current) => {
+      const next = new Set(current);
+      if (open) next.add(ordinal);
+      else next.delete(ordinal);
+      return next;
+    });
   }
   async read(id: string, poll = false) {
     const sequence = ++this.readSequence,
       repository = this.repository(),
       valid = this.scope.guard();
     if (!poll) {
+      this.resetResult();
       this.detailLoading.set(true);
-      this.detail.set(null);
-      this.reportExpanded.set(false);
     }
     try {
       const detail = await this.api.review(id);
       if (!valid() || sequence !== this.readSequence || repository !== this.repository()) return;
       if (detail.review.repository !== repository) throw new Error('這份 review 屬於其他程式庫。');
-      this.detail.set(detail);
-      if (['queued', 'running'].includes(detail.review.job!.status))
-        this.scope.later(() => void this.read(id, true), 3000, 'review');
-      else if (poll) {
+      this.show(detail);
+      if (poll && !this.active()) {
         const reviews = await this.api.reviews(repository);
         if (valid() && sequence === this.readSequence && repository === this.repository())
           this.reviews.set(reviews);
@@ -167,13 +244,12 @@ export class RepositoryReviewPanel {
     }
   }
   async choose(id: string) {
-    this.scope.cancel('review');
     this.error.set('');
     await this.read(id);
   }
   async create(event: Event) {
     event.preventDefault();
-    if (this.busy() || this.loading() || this.detailLoading()) return;
+    if (this.busy() || !this.model() || this.detailLoading()) return;
     const sha = /^[\da-f]{40}$|^[\da-f]{64}$/i;
     if (
       !sha.test(this.commit().trim()) ||

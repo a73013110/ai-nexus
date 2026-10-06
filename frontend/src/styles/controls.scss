@@ -55,3 +55,10 @@ kbd {
   background: var(--danger-surface);
   color: var(--danger-text);
 }
+.icon-badge-anchor {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  --count-badge-top: 0;
+  --count-badge-end: -0.375rem;
+}

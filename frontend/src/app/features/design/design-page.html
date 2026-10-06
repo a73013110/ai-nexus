@@ -193,24 +193,28 @@
           <div class="design-badges">
             <button
               type="button"
-              class="icon-button design-badge-anchor"
+              class="icon-button"
               aria-label="通知示範，12 則未讀"
               (click)="notice.set('通知示範。')"
             >
-              <nx-icon name="bell" /><nx-count-badge [count]="12" [overlay]="true" />
+              <span class="icon-badge-anchor">
+                <nx-icon name="bell" /><nx-count-badge [count]="12" [overlay]="true" />
+              </span>
             </button>
             <button
               type="button"
-              class="icon-button design-badge-anchor"
+              class="icon-button"
               aria-label="提醒示範，有新的錯誤"
               (click)="notice.set('提醒示範。')"
             >
-              <nx-icon name="info" /><nx-count-badge
-                [count]="1"
-                [overlay]="true"
-                [dot]="true"
-                tone="danger"
-              />
+              <span class="icon-badge-anchor"
+                ><nx-icon name="info" /><nx-count-badge
+                  [count]="1"
+                  [overlay]="true"
+                  [dot]="true"
+                  tone="danger"
+                />
+              </span>
             </button>
           </div>
         </section>

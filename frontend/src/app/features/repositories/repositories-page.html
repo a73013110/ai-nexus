@@ -162,6 +162,8 @@
                 [repository]="repo.fullName"
                 [head]="tree()?.commit || ''"
                 [reviewId]="reviewId()"
+                [initialDetail]="selectedReview()"
+                (initialDetailConsumed)="selectedReview.set(null)"
               />
             } @else if (tab() === 'files') {
               @if (tree(); as t) {

@@ -16,6 +16,11 @@ test("personal settings preview, cancel, save and reload account preferences", a
   await expect(
     page.getByRole("heading", { name: "外觀與閱讀", exact: true }),
   ).toBeVisible();
+  await page.locator(".reading-preview").scrollIntoViewIfNeeded();
+  await settleEntrance(page);
+  await page.screenshot({
+    path: "artifacts/screenshots/personal-settings-light.png",
+  });
   await chooseSelect(page, "主題", "深色");
   await chooseSelect(page, "對話字級", "20 px");
   await expect(page.locator(".reading-preview p")).toHaveCSS(

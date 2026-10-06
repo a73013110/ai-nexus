@@ -38,9 +38,9 @@
 }
 :host(.is-overlay) {
   position: absolute;
-  inset-block-start: 0;
-  inset-inline-end: 0;
-  transform: translate(20%, -10%);
+  inset-block-start: var(--count-badge-top, 0);
+  inset-inline-end: var(--count-badge-end, 0);
+  transform: translate(50%, -50%);
   box-shadow: 0 0 0 2px var(--count-badge-ring, var(--surface));
   pointer-events: none;
 }

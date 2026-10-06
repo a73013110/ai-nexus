@@ -37,7 +37,8 @@ import { Select } from '../../shared/ui/select';
       [value]="value()"
       [disabled]="disabled()"
       [searchable]="true"
-      placeholder="選擇近期 commit"
+      [placeholder]="loading() ? '正在取得近期 commit…' : '選擇近期 commit'"
+      [attr.aria-busy]="loading()"
       (valueChange)="valueChange.emit($event)"
     />
     <details>
@@ -60,6 +61,7 @@ export class RepositoryCommitPicker {
   readonly excluded = input('');
   readonly commits = input.required<RepositoryCommit[]>();
   readonly disabled = input(false);
+  readonly loading = input(false);
   readonly valueChange = output<string>();
   readonly choices = computed(() => {
     const rows = this.commits().map((x) => ({

@@ -155,11 +155,7 @@
 .suggestions > button {
   transition:
     border-color var(--motion),
-    background-color var(--motion),
-    transform var(--motion) var(--ease);
-}
-.suggestions > button:hover {
-  transform: translateY(-2px);
+    background-color var(--motion);
 }
 .send-button:not(:disabled):active {
   transform: scale(0.94);

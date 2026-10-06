@@ -194,9 +194,9 @@ public sealed class WorkspaceExperienceTests
             await db.Set<BackgroundJob>().Where(x => x.Id == review.Job.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, "failed").SetProperty(x => x.ActiveKey, (string?)null)); await db.SaveChangesAsync(); }
         (await owner.PostAsync($"/api/v1/repositories/reviews/{review.Id}/retry", null)).EnsureSuccessStatusCode(); await Process(factory);
         var detail = (await owner.GetFromJsonAsync<RepositoryReviewDetailDto>($"/api/v1/repositories/reviews/{review.Id}"))!;
-        Assert.Equal("completed", detail.Review.Job.Status); Assert.True(detail.Sections.Count > 2); Assert.Equal("已完成區段", detail.Sections[0].Output); Assert.Equal(detail.Sections.Count, factory.Provider.Calls);
+        Assert.Equal("completed", detail.Review.Job.Status); Assert.True(detail.Sections.Count > 1); Assert.Equal("已完成區段", detail.Sections[0].Output); Assert.Equal(detail.Sections.Count, factory.Provider.Calls);
         Assert.All(detail.Sections, x => Assert.NotNull(x.Output));
-        Assert.NotNull(detail.Report); Assert.Equal(2, detail.Version); Assert.Equal(detail.Sections.Count + 1, detail.Review.Job.TotalUnits);
+        Assert.NotNull(detail.Report); Assert.Equal(3, detail.Version); Assert.Equal(detail.Sections.Count + 1, detail.Review.Job.TotalUnits);
         Assert.Contains((await owner.GetFromJsonAsync<NotificationPageDto>("/api/v1/notifications"))!.Items, x => x.Target == new NotificationTargetDto("repository-review", review.Id));
         source.Revoked = true;
         Assert.Equal(HttpStatusCode.Forbidden, (await owner.GetAsync($"/api/v1/repositories/reviews/{review.Id}")).StatusCode);

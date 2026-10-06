@@ -3,13 +3,9 @@
   align-items: center;
   gap: 18px;
   padding: 24px;
-  border: 1px dashed color-mix(in srgb, var(--accent) 24%, var(--line));
+  border: 1px solid var(--line);
   border-radius: var(--p-radius-lg);
-  background: linear-gradient(
-    110deg,
-    color-mix(in srgb, var(--accent) 5%, var(--surface)),
-    var(--surface)
-  );
+  background: var(--surface-subtle);
   p {
     margin: 6px 0 0;
     color: var(--secondary);

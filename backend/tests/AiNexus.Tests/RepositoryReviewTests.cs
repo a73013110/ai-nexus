@@ -50,7 +50,7 @@ public sealed class RepositoryReviewTests
         await using var factory = Factory(source, provider); using var client = await factory.SignedInAsync();
         var review = await Create(client, purpose); await Process(factory);
         var detail = (await client.GetFromJsonAsync<RepositoryReviewDetailDto>($"/api/v1/repositories/reviews/{review.Id}"))!;
-        Assert.Equal("completed", detail.Review.Job.Status); Assert.Equal(purpose, detail.Review.Purpose); Assert.Equal(2, detail.Version);
+        Assert.Equal("completed", detail.Review.Job.Status); Assert.Equal(purpose, detail.Review.Purpose); Assert.Equal(3, detail.Version);
         var call = Assert.Single(provider.Calls); Assert.Contains(focus, call.Parameters.SystemPrompt);
         Assert.Contains("file-0.cs", call.Prompt); Assert.Contains("file-1.cs", call.Prompt);
         Assert.NotNull(detail.Report); Assert.Contains("file-0.cs", detail.Report.Output); Assert.Contains("file-1.cs", detail.Report.Output);
@@ -154,6 +154,88 @@ public sealed class RepositoryReviewTests
         using var scope = factory.Services.CreateScope(); Assert.Empty(await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<RepositoryReview>().ToListAsync());
     }
 
+    [Theory]
+    [InlineData("english")]
+    [InlineData("oversized")]
+    [InlineData("truncated")]
+    public async Task InvalidBriefGetsOneCorrectionAndNeverPublishesAPartialReport(string failure)
+    {
+        var provider = new ReviewProvider { InvalidReport = failure };
+        await using var factory = Factory(new() { Diff = Diff(2, 10) }, provider); using var client = await factory.SignedInAsync();
+        var review = await Create(client); await Process(factory);
+        var detail = (await client.GetFromJsonAsync<RepositoryReviewDetailDto>($"/api/v1/repositories/reviews/{review.Id}"))!;
+        Assert.Equal("completed", detail.Review.Job.Status); Assert.NotNull(detail.Report); Assert.False(detail.Report.Truncated);
+        Assert.Equal(2, provider.Calls.Count); Assert.Contains("繁體中文", provider.Calls[0].Parameters.SystemPrompt);
+        Assert.Contains("上一份輸出未通過", provider.Calls[1].Prompt);
+        Assert.Contains("跨檔案變更", detail.Report.Output); Assert.True(detail.Report.Output.Length < 600);
+        Assert.Equal(246, detail.Report.InputTokens); Assert.Equal(12, detail.Report.OutputTokens);
+    }
+
+    [Fact]
+    public async Task RepeatedInvalidOutputFailsWithoutSavingABrokenFinalReport()
+    {
+        var provider = new ReviewProvider { InvalidReport = "truncated", AlwaysInvalid = true };
+        await using var factory = Factory(new() { Diff = Diff(2, 10) }, provider); using var client = await factory.SignedInAsync();
+        var review = await Create(client); await Process(factory);
+        var detail = (await client.GetFromJsonAsync<RepositoryReviewDetailDto>($"/api/v1/repositories/reviews/{review.Id}"))!;
+        Assert.Equal("failed", detail.Review.Job.Status); Assert.Equal("review_brief_invalid", detail.Review.Job.ErrorCode);
+        Assert.Null(detail.Report); Assert.Equal(2, provider.Calls.Count);
+    }
+
+    [Fact]
+    public void ManySmallFilesShareAnalysisCallsWithoutLosingSource()
+    {
+        var diff = Diff(20, 100);
+        var snapshot = RepositoryReviewPlan.Create(diff, new() { ContextTokens = 12000, MaxOutputTokens = 10000 }, "team/repo", new string('a', 40), null, "", "review");
+        Assert.True(snapshot.Slices.Length < 20); Assert.Equal(diff, RepositoryReviewPlan.Source(snapshot.Slices));
+        Assert.All(snapshot.Slices, x => Assert.InRange(Encoding.UTF8.GetByteCount(x.Diff), 1, snapshot.InputBudget));
+    }
+
+    [Fact]
+    public void MaximumFocusNoteStillLeavesRoomForFramingAndCorrection()
+    {
+        var note = new string('x', 2000); var head = new string('a', 40);
+        var snapshot = RepositoryReviewPlan.Create(Diff(3, 9000), new() { ContextTokens = 32768, MaxOutputTokens = 4096 }, "team/repo", head, null, note, "review");
+        var context = RepositoryReviewPlan.Context("team/repo", head, null, note);
+        Assert.All(snapshot.Slices, slice => Assert.True(context.Length + slice.Label.Length + slice.Diff.Length + 1024 < ModelTaskService.MaxPromptCharacters));
+        Assert.Equal(Diff(3, 9000), RepositoryReviewPlan.Source(snapshot.Slices));
+    }
+
+    [Theory]
+    [InlineData("{\"conclusion\":\"No issues\",\"changes\":[],\"findings\":[],\"limitation\":\"\"}")]
+    [InlineData("{\"conclusion\":\"未發現明確缺陷\",\"changes\":[],\"findings\":[]}")]
+    [InlineData("{\"conclusion\":\"結論\",\"changes\":[\"一\",\"二\",\"三\",\"四\"],\"findings\":[],\"limitation\":\"\"}")]
+    public void BriefRejectsEnglishIncompleteAndExcessiveResponses(string json) =>
+        Assert.False(RepositoryReviewBrief.TryRender(json, "review", out _));
+
+    [Fact]
+    public async Task BoundedModelTasksReserveTheRequestedOutputInsteadOfTheFullModelLimit()
+    {
+        await using var factory = new NexusFactory(backgroundJobs: false, inference: o => o.Models[0].MaxOutputTokens = 7000);
+        using var client = await factory.SignedInAsync(); using var scope = factory.Services.CreateScope();
+        var owner = await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Users.Select(x => x.Id).SingleAsync();
+        var result = await scope.ServiceProvider.GetRequiredService<ModelTaskService>().GenerateAsync(owner, "test-task", new string('x', 4000), "精簡回答。", CancellationToken.None, maxOutputTokens: 128);
+        Assert.False(result.Truncated); Assert.Equal(128, factory.Provider.LastParameters!.MaxOutputTokens);
+    }
+
+    [Fact]
+    public async Task VersionTwoReportsStillUseTheirFrozenMarkdownInstruction()
+    {
+        var provider = new ReviewProvider(); await using var factory = Factory(new() { Diff = Diff(2, 10) }, provider);
+        using var client = await factory.SignedInAsync(); var review = await Create(client);
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>(); var row = await db.Set<RepositoryReview>().SingleAsync(x => x.Id == review.Id);
+            var snapshot = RepositoryReviewService.Snapshot(row);
+            row.SnapshotJson = JsonSerializer.Serialize(snapshot with { Version = 2, ReportInstruction = "請產生一份舊版固定 Markdown 報告。" });
+            await db.SaveChangesAsync();
+        }
+        await Process(factory);
+        var detail = (await client.GetFromJsonAsync<RepositoryReviewDetailDto>($"/api/v1/repositories/reviews/{review.Id}"))!;
+        Assert.Equal("completed", detail.Review.Job.Status); Assert.Equal(2, detail.Version); Assert.NotNull(detail.Report);
+        Assert.Equal("請產生一份舊版固定 Markdown 報告。", Assert.Single(provider.Calls).Parameters.SystemPrompt);
+    }
+
     private sealed class ReviewProvider : IInferenceProvider
     {
         public List<(string Prompt, GenerationParameters Parameters)> Calls { get; } = [];
@@ -161,6 +243,8 @@ public sealed class RepositoryReviewTests
         public bool VerboseReduction { get; set; }
         public bool FailReportOnce { get; set; }
         public bool TruncateAnalysis { get; init; }
+        public string? InvalidReport { get; set; }
+        public bool AlwaysInvalid { get; init; }
         public Task<IReadOnlySet<string>> InstalledModelsAsync(CancellationToken ct) => Task.FromResult<IReadOnlySet<string>>(new HashSet<string> { "test-model" });
         public async IAsyncEnumerable<InferenceChunk> StreamAsync(string model, IReadOnlyList<InferenceMessage> messages, GenerationParameters parameters, [EnumeratorCancellation] CancellationToken ct)
         {
@@ -169,9 +253,22 @@ public sealed class RepositoryReviewTests
             if (report && FailReportOnce) { FailReportOnce = false; throw new HttpRequestException("Synthetic final report failure."); }
             var files = Regex.Matches(prompt, @"file-\d\.cs").Select(x => x.Value).Distinct().ToArray();
             var output = (report ? "整體結論：" : "分析：") + string.Join(", ", files);
+            var truncated = analysis && TruncateAnalysis;
+            if (report && parameters.SystemPrompt.Contains("JSON"))
+            {
+                output = JsonSerializer.Serialize(new { conclusion = "已彙整跨檔案變更，未發現明確缺陷。", changes = files.Take(3).Select(x => "變更包含 " + x).ToArray(), findings = Array.Empty<object>(), limitation = "" });
+                if (InvalidReport is { } failure)
+                {
+                    output = failure is "english" or "oversized"
+                        ? JsonSerializer.Serialize(new { conclusion = failure == "english" ? "No issues found" : new string('中', 500), changes = Array.Empty<string>(), findings = Array.Empty<object>(), limitation = "" })
+                        : "{\"conclusion\":\"未完成";
+                    truncated = failure == "truncated";
+                    if (!AlwaysInvalid) InvalidReport = null;
+                }
+            }
             if ((analysis && VerboseAnalysis) || (!report && !analysis && VerboseReduction)) output += new string('中', 1000);
             yield return new(output);
-            yield return new("", true, 123, 6, analysis && TruncateAnalysis ? "MAX_TOKENS" : "STOP");
+            yield return new("", true, 123, 6, truncated ? "MAX_TOKENS" : "STOP");
         }
     }
 }

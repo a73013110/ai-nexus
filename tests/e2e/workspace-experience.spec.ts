@@ -219,6 +219,19 @@ test("icon rail, notification filtering and typed task navigation work across pa
   await page.getByRole("button", { name: "通知", exact: true }).click();
   let dialog = page.getByRole("dialog", { name: "通知", exact: true });
   await expect(dialog.locator(".notification-row")).toHaveCount(2);
+  await settleEntrance(page);
+  await page.screenshot({
+    path: "artifacts/screenshots/notifications-light.png",
+  });
+  await page.evaluate(() =>
+    document.documentElement.setAttribute("data-theme", "dark"),
+  );
+  await page.screenshot({
+    path: "artifacts/screenshots/notifications-dark.png",
+  });
+  await page.evaluate(() =>
+    document.documentElement.setAttribute("data-theme", "light"),
+  );
   await expect(
     dialog
       .locator(".notification-row")

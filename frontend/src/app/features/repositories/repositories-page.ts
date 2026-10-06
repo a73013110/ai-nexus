@@ -13,6 +13,7 @@ import type {
   Repository,
   RepositoryFile,
   RepositoryIssue,
+  RepositoryReviewDetail,
   RepositoryPage,
   RepositoryStatus,
   RepositoryTree,
@@ -66,6 +67,7 @@ export class RepositoriesPage {
   readonly page = signal<RepositoryPage | null>(null);
   readonly query = signal('');
   readonly selected = signal<Repository | null>(null);
+  readonly selectedReview = signal<RepositoryReviewDetail | null>(null);
   readonly tree = signal<RepositoryTree | null>(null);
   readonly file = signal<RepositoryFile | null>(null);
   readonly issues = signal<RepositoryIssue[]>([]);
@@ -104,6 +106,7 @@ export class RepositoriesPage {
       const detail = await this.api.review(id);
       if (!valid() || sequence !== this.sequence || id !== this.reviewId()) return;
       const name = detail.review.repository;
+      this.selectedReview.set(detail);
       this.selected.set(
         this.page()?.items.find((x) => x.fullName === name) || {
           fullName: name,
@@ -203,6 +206,7 @@ export class RepositoriesPage {
   async choose(repo: Repository) {
     if (this.busy()) return;
     this.reviewId.set('');
+    this.selectedReview.set(null);
     void this.router.navigate(['/repositories'], { replaceUrl: true });
     this.selected.set(repo);
     this.file.set(null);

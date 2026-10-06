@@ -27,19 +27,19 @@
   overflow-y: auto;
   max-height: 65dvh;
   padding-block: var(--p-space-2);
+  overscroll-behavior: contain;
 }
 .notification-row {
   display: flex;
   gap: var(--p-space-3);
   padding: var(--p-space-4);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--p-radius-sm);
 }
 .notification-row.is-unread {
-  background: var(--accent-soft);
-  box-shadow: inset 3px 0 var(--signal);
+  background: var(--surface-subtle);
 }
 .notification-row + .notification-row {
-  margin-top: var(--p-space-2);
+  border-top: 1px solid var(--line);
 }
 .notification-row > div {
   flex: 1;
@@ -49,6 +49,30 @@
 .notification-row p {
   margin: var(--p-space-1) 0;
   color: var(--secondary);
+}
+.notification-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+}
+.notification-title strong {
+  font-weight: 550;
+}
+.notification-unread {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.notification-unread::before {
+  content: '';
+  width: 0.3125rem;
+  height: 0.3125rem;
+  border-radius: 50%;
+  background: var(--ink);
+  flex: none;
 }
 .notification-row time {
   font-size: var(--text-caption);

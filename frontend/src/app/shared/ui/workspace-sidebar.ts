@@ -44,8 +44,10 @@ let sequence = 0;
           aria-haspopup="dialog"
           (click)="notifications.open()"
         >
-          <nx-icon name="bell" />
-          <nx-count-badge [count]="notifications.unread()" [overlay]="true" />
+          <span class="icon-badge-anchor">
+            <nx-icon name="bell" />
+            <nx-count-badge [count]="notifications.unread()" [overlay]="true" />
+          </span>
         </button>
         <button
           class="icon-button sidebar-toggle"

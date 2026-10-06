@@ -27,6 +27,13 @@ test("one header notification icon exposes the full count and workspace expansio
   const bell = sidebar.getByRole("button", { name: "通知", exact: true });
   await expect(bell).toHaveCount(1);
   await expect(bell.locator("nx-count-badge")).toHaveText("99+");
+  const [iconBounds, badgeBounds] = await Promise.all([
+    bell.locator("nx-icon").boundingBox(),
+    bell.locator("nx-count-badge").boundingBox(),
+  ]);
+  expect(badgeBounds!.x).toBeLessThan(iconBounds!.x + iconBounds!.width);
+  expect(badgeBounds!.x).toBeGreaterThan(iconBounds!.x + iconBounds!.width / 3);
+  expect(badgeBounds!.y + badgeBounds!.height).toBeGreaterThan(iconBounds!.y);
   const description = await bell.getAttribute("aria-describedby");
   await expect(page.locator("#" + description)).toHaveText("125 則未讀通知");
   const [notification, toggle] = await Promise.all([
@@ -163,7 +170,7 @@ test("vector retrieval cards contain long filenames, URLs and multiline excerpts
   }
 });
 
-async function reviewFixture(page: Page) {
+async function reviewFixture(page: Page, existing = false) {
   const core = new ApiFixture();
   core.extraFeatures.push(
     { id: "repositories", name: "程式庫", route: "/repositories" },
@@ -204,6 +211,7 @@ async function reviewFixture(page: Page) {
   };
   let created = false;
   let report: object | null = null;
+  const calls = { commits: 0, detail: 0 };
   await page.route("**/api/v1/repositories**", async (route) => {
     const url = new URL(route.request().url()),
       path = url.pathname;
@@ -222,6 +230,7 @@ async function reviewFixture(page: Page) {
         json: { repository: "team/repo", commit, path: "", entries: [] },
       });
     if (path.endsWith("/commits")) {
+      calls.commits++;
       await ready;
       return route.fulfill({
         json: [
@@ -240,9 +249,10 @@ async function reviewFixture(page: Page) {
         created = true;
         return route.fulfill({ json: review });
       }
-      return route.fulfill({ json: created ? [review] : [] });
+      return route.fulfill({ json: created || existing ? [review] : [] });
     }
-    if (path.endsWith("/" + id))
+    if (path.endsWith("/" + id)) {
+      calls.detail++;
       return route.fulfill({
         json: {
           review,
@@ -260,6 +270,7 @@ async function reviewFixture(page: Page) {
           ],
         },
       });
+    }
     return route.fulfill({
       json: {
         items: [
@@ -278,6 +289,8 @@ async function reviewFixture(page: Page) {
   });
   return {
     release,
+    calls,
+    id,
     job,
     commit,
     basis,
@@ -285,7 +298,7 @@ async function reviewFixture(page: Page) {
   };
 }
 
-test("review explains loading, selects both endpoints and presents one expandable overall report", async ({
+test("review stays usable while commits load and presents one expandable overall report", async ({
   page,
 }) => {
   const fixture = await reviewFixture(page);
@@ -293,13 +306,13 @@ test("review explains loading, selects both endpoints and presents one expandabl
   await page.locator(".repository-row").click();
   await page.getByRole("button", { name: "AI Review", exact: true }).click();
   await expect(
-    page.getByRole("status").filter({ hasText: "正在載入 AI Review" }),
+    page.getByRole("status").filter({ hasText: "正在取得近期 commit" }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "建立背景 review", exact: true }),
-  ).toHaveCount(0);
-  fixture.release();
+  ).toBeEnabled();
   await chooseSelect(page, "檢閱範圍", "Commit 區間");
+  fixture.release();
   const start = page.getByRole("combobox", { name: "起點 SHA", exact: true });
   await start.click();
   await page.getByRole("combobox", { name: "搜尋起點 SHA" }).fill("起始");
@@ -338,6 +351,7 @@ test("review explains loading, selects both endpoints and presents one expandabl
     "open",
     "",
   );
+  await expect(page.locator(".review-section pre")).toHaveCount(0);
   fixture.job.status = "completed";
   fixture.job.stage = "整體報告已完成";
   fixture.setReport({
@@ -369,4 +383,72 @@ test("review explains loading, selects both endpoints and presents one expandabl
   );
   await page.setViewportSize({ width: 375, height: 812 });
   await expectViewportContained(page);
+});
+
+test("historical reports are read on selection and a deep link reuses the authorized detail while commits wait", async ({
+  page,
+}) => {
+  const fixture = await reviewFixture(page, true);
+  fixture.job.status = "completed";
+  fixture.setReport({
+    output: "已彙整變更，未發現明確缺陷。",
+    truncated: false,
+    elapsedMs: 100,
+  });
+  await page.goto("/repositories");
+  await page.locator(".repository-row").click();
+  await page.getByRole("button", { name: "AI Review", exact: true }).click();
+  await expect(
+    page.getByRole("combobox", { name: "歷史 review", exact: true }),
+  ).toBeVisible();
+  expect(fixture.calls.detail).toBe(0);
+  await page.goto(`/repositories?review=${fixture.id}`);
+  await expect(page.locator(".review-report")).toContainText("未發現明確缺陷");
+  await page.locator(".review-create > summary").click();
+  await expect(
+    page.getByRole("status").filter({ hasText: "正在取得近期 commit" }),
+  ).toBeVisible();
+  expect(fixture.calls.detail).toBe(1);
+  fixture.release();
+  await expect(
+    page.getByRole("status").filter({ hasText: "正在取得近期 commit" }),
+  ).toHaveCount(0);
+  expect(fixture.calls.detail).toBe(1);
+  await page.locator(".review-create > summary").click();
+  await page.screenshot({
+    path: "artifacts/screenshots/repository-review-brief.png",
+  });
+  await page.getByRole("button", { name: "檔案", exact: true }).click();
+  await page.getByRole("button", { name: "AI Review", exact: true }).click();
+  await expect(page.locator(".review-report")).toContainText("未發現明確缺陷");
+  expect(fixture.calls.detail).toBe(2);
+});
+
+test("a failed commit list and history keep manual SHA entry and the review form available", async ({
+  page,
+}) => {
+  const fixture = await reviewFixture(page);
+  await page.route("**/api/v1/repositories/commits?**", (route) =>
+    route.fulfill({
+      status: 503,
+      json: { message: "近期 commit 暫時無法取得" },
+    }),
+  );
+  await page.route("**/api/v1/repositories/reviews?**", (route) =>
+    route.fulfill({ status: 503, json: { message: "歷史紀錄暫時無法取得" } }),
+  );
+  await page.goto("/repositories");
+  await page.locator(".repository-row").click();
+  await page.getByRole("button", { name: "AI Review", exact: true }).click();
+  await expect(page.locator(".review-create")).toContainText(
+    "可直接貼上完整 SHA",
+  );
+  await page.getByText("貼上完整 SHA", { exact: true }).click();
+  await page
+    .getByRole("textbox", { name: "Commit SHA（完整 SHA）" })
+    .fill("c".repeat(40));
+  await expect(
+    page.getByRole("button", { name: "建立背景 review", exact: true }),
+  ).toBeEnabled();
+  fixture.release();
 });

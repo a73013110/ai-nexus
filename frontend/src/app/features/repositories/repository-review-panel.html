@@ -1,248 +1,268 @@
-@if (loading()) {
-  <div class="review-loading" role="status" aria-atomic="true">
-    <nx-inference-signal [active]="true" />
-    <div>
-      <h3>正在載入 AI Review</h3>
-      <p>正在取得近期 commit、可用模型與歷史報告，載入後即可選擇版本。</p>
-    </div>
-  </div>
-} @else {
-  @if (error()) {
-    <p class="error-banner" role="alert">{{ error() }}</p>
-  }
-  <details class="review-create" [open]="!detail()">
-    <summary>建立新的背景 review</summary>
-    <h3>讓 AI 整體檢閱變更</h3>
-    <p class="form-note">
-      先給結論與重點摘要，再列出需要處理的問題。可切換頁面，完成或失敗時會收到通知。
-    </p>
-    <form class="platform-form" (submit)="create($event)">
-      <nx-select
-        label="檢閱目的"
-        [options]="[
-          { value: 'review', label: '整體檢閱', description: '找出有證據的缺陷與跨檔案不一致' },
-          { value: 'summary', label: '變更摘要', description: '快速理解改了什麼與主要影響' },
-          { value: 'typos', label: '內容誤植', description: '聚焦文字、數字、名稱與條件的誤植' },
-        ]"
-        [value]="purpose()"
-        (valueChange)="purpose.set($event)"
-      />
-      <nx-select
-        label="檢閱範圍"
-        [options]="[
-          { value: 'commit', label: '單一 commit' },
-          { value: 'range', label: 'Commit 區間' },
-        ]"
-        [value]="mode()"
-        (valueChange)="mode.set($event)"
-      />
-      <div class="review-commit-fields">
-        @if (mode() === 'range') {
-          <nx-repository-commit-picker
-            label="起點 SHA"
-            [commits]="commits()"
-            [value]="basis()"
-            [excluded]="commit()"
-            (valueChange)="basis.set($event)"
-          />
-        }
+@if (error()) {
+  <p class="error-banner" role="alert">{{ error() }}</p>
+}
+<details class="review-create" [open]="!detail()">
+  <summary>建立新的背景 review</summary>
+  <h3>快速掌握變更</h3>
+  <p class="form-note">
+    繁體中文結論、至多三個變更重點與優先確認事項。詳細查證可將 diff 交給前沿模型。
+  </p>
+  <form class="platform-form" (submit)="create($event)">
+    <nx-select
+      label="檢閱目的"
+      [options]="[
+        { value: 'review', label: '快速檢閱', description: '聚焦有證據的重大缺陷' },
+        { value: 'summary', label: '變更摘要', description: '快速理解改了什麼與主要影響' },
+        { value: 'typos', label: '內容誤植', description: '聚焦文字、數字、名稱與條件的誤植' },
+      ]"
+      [value]="purpose()"
+      (valueChange)="purpose.set($event)"
+    />
+    <nx-select
+      label="檢閱範圍"
+      [options]="[
+        { value: 'commit', label: '單一 commit' },
+        { value: 'range', label: 'Commit 區間' },
+      ]"
+      [value]="mode()"
+      (valueChange)="mode.set($event)"
+    />
+    <div class="review-commit-fields">
+      @if (mode() === 'range') {
         <nx-repository-commit-picker
-          [label]="mode() === 'range' ? '終點 SHA' : 'Commit SHA'"
+          label="起點 SHA"
           [commits]="commits()"
-          [value]="commit()"
-          [excluded]="mode() === 'range' ? basis() : ''"
-          (valueChange)="commit.set($event)"
+          [loading]="commitsLoading()"
+          [value]="basis()"
+          [excluded]="commit()"
+          (valueChange)="basis.set($event)"
         />
+      }
+      <nx-repository-commit-picker
+        [label]="mode() === 'range' ? '終點 SHA' : 'Commit SHA'"
+        [commits]="commits()"
+        [loading]="commitsLoading()"
+        [value]="commit()"
+        [excluded]="mode() === 'range' ? basis() : ''"
+        (valueChange)="commit.set($event)"
+      />
+    </div>
+    @if (commitsLoading()) {
+      <p class="form-note" role="status">正在取得近期 commit…也可直接貼上完整 SHA。</p>
+    } @else if (commitsError()) {
+      <p class="source-load-error" role="alert">
+        {{ commitsError() }} 可直接貼上完整 SHA。
+        <button type="button" class="quiet-button" (click)="loadCommits()">重新載入</button>
+      </p>
+    } @else if (!commits().length) {
+      <p class="form-note">
+        目前沒有近期 commit 可選。若有固定版本，可展開「貼上完整 SHA」直接輸入。
+      </p>
+    }
+    @if (mode() === 'range') {
+      <p class="form-note">不含起點 commit 的既有變更；比較起點與終點之間的淨變更。</p>
+    }
+    @if (models()?.policy?.allowModelSelection) {
+      <nx-select
+        label="Review 模型"
+        [options]="choices()"
+        [value]="model()"
+        (valueChange)="model.set($event)"
+      />
+    }
+    @if (modelsLoading()) {
+      <p class="form-note" role="status">正在取得可用模型…</p>
+    } @else if (modelsError()) {
+      <p class="source-load-error" role="alert">
+        {{ modelsError() }}
+        <button type="button" class="quiet-button" (click)="loadModels()">重新載入</button>
+      </p>
+    } @else if (models()?.notice) {
+      <p class="form-note">{{ models()!.notice }}</p>
+    }
+    <label
+      >特別關注的內容（選填）<textarea
+        rows="2"
+        maxlength="2000"
+        [value]="note()"
+        placeholder="例如：只檢查 src/auth.ts 的權限判斷，或確認金額與文案有沒有誤植"
+        (input)="note.set($any($event.target).value)"
+      ></textarea>
+    </label>
+    <p class="form-note">
+      單一 commit 比對父版本。可切換頁面，完成時會收到通知。使用目前帳號的模型額度。
+    </p>
+    <button
+      class="primary-button"
+      [disabled]="
+        busy() ||
+        detailLoading() ||
+        !commit() ||
+        !model() ||
+        (mode() === 'range' && (!basis() || basis() === commit()))
+      "
+    >
+      {{ busy() ? '正在安排…' : '建立背景 review' }}
+    </button>
+  </form>
+</details>
+@if (historyLoading()) {
+  <p class="form-note" role="status">正在載入歷史 review…</p>
+} @else if (historyError()) {
+  <p class="source-load-error" role="alert">
+    {{ historyError() }}
+    <button type="button" class="quiet-button" (click)="loadHistory()">重新載入</button>
+  </p>
+}
+@if (reviews().length) {
+  <nx-select
+    label="歷史 review"
+    [options]="historyChoices()"
+    [value]="detail()?.review?.id || ''"
+    [disabled]="detailLoading() || busy()"
+    (valueChange)="choose($event)"
+  />
+}
+@if (detailLoading()) {
+  <div class="review-loading" role="status">
+    <nx-inference-signal [active]="true" />
+    <p>正在載入整體報告與檢閱進度…</p>
+  </div>
+}
+@if (detail(); as d) {
+  <section class="review-results">
+    <header [nxResourceTarget]="reviewId() === d.review.id">
+      <div>
+        <h3>
+          {{ d.review.baseCommit ? d.review.baseCommit.slice(0, 10) + ' → ' : ''
+          }}{{ d.review.commit.slice(0, 10) }}
+        </h3>
+        <p class="form-note">{{ date(d.review.createdAt) }} · {{ modelName(d.review.modelId) }}</p>
       </div>
-      @if (!commits().length) {
-        <p class="form-note">
-          目前沒有近期 commit 可選。若有固定版本，可展開「貼上完整 SHA」直接輸入。
+      <a
+        class="quiet-button"
+        [routerLink]="['/repositories']"
+        [queryParams]="{ review: d.review.id }"
+        >結果連結</a
+      >
+    </header>
+    <nx-job-progress [job]="d.review.job!" />
+    <div class="page-actions">
+      @if (active()) {
+        <button
+          class="secondary-button"
+          [disabled]="busy() || d.review.job!.cancelRequested"
+          (click)="changeJob(false)"
+        >
+          停止 review
+        </button>
+      }
+      @if (['failed', 'cancelled'].includes(d.review.job!.status)) {
+        <button
+          class="secondary-button"
+          [disabled]="busy() || d.review.job!.attempt >= 6"
+          (click)="changeJob(true)"
+        >
+          沿用已完成分析重試
+        </button>
+      }
+      @if (session.has('tasks')) {
+        <a class="quiet-button" routerLink="/tasks" [queryParams]="{ job: d.review.job!.id }"
+          >查看背景任務</a
+        >
+      }
+    </div>
+    <article class="review-report" aria-label="整體報告">
+      <h3>
+        整體{{
+          d.review.purpose === 'summary'
+            ? '變更摘要'
+            : d.review.purpose === 'typos'
+              ? '誤植檢查'
+              : '檢閱結果'
+        }}
+      </h3>
+      @if (d.report; as report) {
+        <div
+          class="review-report-body"
+          [class.is-expanded]="reportExpanded() || !longReport()"
+          tabindex="0"
+          role="region"
+          aria-label="整體報告內容"
+        >
+          <nx-markdown-view [content]="report.output" />
+        </div>
+        @if (longReport()) {
+          <button
+            type="button"
+            class="quiet-button"
+            [attr.aria-expanded]="reportExpanded()"
+            (click)="reportExpanded.set(!reportExpanded())"
+          >
+            {{ reportExpanded() ? '收合完整報告' : '展開完整報告' }}
+          </button>
+        }
+        @if (report.truncated) {
+          <p class="error-banner">
+            部分分析或整體報告達到模型輸出上限，結果不完整。請縮小範圍或改用其他模型重新檢閱。
+          </p>
+        }
+      } @else {
+        <p class="form-note" role="status">
+          {{
+            d.version === 1
+              ? '這是舊版逐段報告，可展開下方明細；建立新的 review 即可取得整體結果。'
+              : active()
+                ? '正在分析變更並彙整整體報告，完成後會顯示結論與重點。'
+                : '整體報告尚未完成，可沿用已完成分析重試。'
+          }}
         </p>
       }
-      @if (mode() === 'range') {
-        <p class="form-note">不含起點 commit 的既有變更；比較起點與終點之間的淨變更。</p>
+      @if (binarySections().length) {
+        <p class="source-warning">
+          包含 {{ binarySections().length }} 個二進位區段，需人工確認原檔；可在下方固定 diff 查核。
+        </p>
       }
-      @if (models()?.policy?.allowModelSelection) {
-        <nx-select
-          label="Review 模型"
-          [options]="choices()"
-          [value]="model()"
-          (valueChange)="model.set($event)"
-        />
-      }
-      <label
-        >特別關注的內容（選填）<textarea
-          rows="2"
-          maxlength="2000"
-          [value]="note()"
-          placeholder="例如：只檢查 src/auth.ts 的權限判斷，或確認金額與文案有沒有誤植"
-          (input)="note.set($any($event.target).value)"
-        ></textarea>
-      </label>
-      <p class="form-note">
-        單一 commit 比對父版本。大型變更會分段分析後彙整為一份整體報告；最多 256 KB／60
-        區段，二進位變更需人工確認。Review 使用目前帳號的模型額度。
-      </p>
-      <button
-        class="primary-button"
-        [disabled]="
-          busy() ||
-          detailLoading() ||
-          !commit() ||
-          !model() ||
-          (mode() === 'range' && (!basis() || basis() === commit()))
-        "
-      >
-        {{ busy() ? '正在安排…' : '建立背景 review' }}
-      </button>
-    </form>
-  </details>
-  @if (reviews().length) {
-    <nx-select
-      label="歷史 review"
-      [options]="historyChoices()"
-      [value]="detail()?.review?.id || ''"
-      [disabled]="detailLoading() || busy()"
-      (valueChange)="choose($event)"
-    />
-  }
-  @if (detailLoading()) {
-    <div class="review-loading" role="status">
-      <nx-inference-signal [active]="true" />
-      <p>正在載入整體報告與檢閱進度…</p>
-    </div>
-  }
-  @if (detail(); as d) {
-    <section class="review-results">
-      <header [nxResourceTarget]="reviewId() === d.review.id">
-        <div>
-          <h3>
-            {{ d.review.baseCommit ? d.review.baseCommit.slice(0, 10) + ' → ' : ''
-            }}{{ d.review.commit.slice(0, 10) }}
-          </h3>
-          <p class="form-note">
-            {{ date(d.review.createdAt) }} · {{ modelName(d.review.modelId) }}
-          </p>
-        </div>
-        <a
-          class="quiet-button"
-          [routerLink]="['/repositories']"
-          [queryParams]="{ review: d.review.id }"
-          >結果連結</a
-        >
-      </header>
-      <nx-job-progress [job]="d.review.job!" />
-      <div class="page-actions">
-        @if (active()) {
-          <button
-            class="secondary-button"
-            [disabled]="busy() || d.review.job!.cancelRequested"
-            (click)="changeJob(false)"
-          >
-            停止 review
-          </button>
-        }
-        @if (['failed', 'cancelled'].includes(d.review.job!.status)) {
-          <button
-            class="secondary-button"
-            [disabled]="busy() || d.review.job!.attempt >= 6"
-            (click)="changeJob(true)"
-          >
-            沿用已完成分析重試
-          </button>
-        }
-        @if (session.has('tasks')) {
-          <a class="quiet-button" routerLink="/tasks" [queryParams]="{ job: d.review.job!.id }"
-            >查看背景任務</a
-          >
-        }
-      </div>
-      <article class="review-report" aria-label="整體報告">
-        <h3>
-          整體{{
-            d.review.purpose === 'summary'
-              ? '變更摘要'
-              : d.review.purpose === 'typos'
-                ? '誤植檢查'
-                : '檢閱結果'
-          }}
-        </h3>
-        @if (d.report; as report) {
-          <div
-            class="review-report-body"
-            [class.is-expanded]="reportExpanded() || !longReport()"
-            tabindex="0"
-            role="region"
-            aria-label="整體報告內容"
-          >
-            <nx-markdown-view [content]="report.output" />
-          </div>
-          @if (longReport()) {
-            <button
-              type="button"
-              class="quiet-button"
-              [attr.aria-expanded]="reportExpanded()"
-              (click)="reportExpanded.set(!reportExpanded())"
-            >
-              {{ reportExpanded() ? '收合完整報告' : '展開完整報告' }}
-            </button>
-          }
-          @if (report.truncated) {
-            <p class="error-banner">
-              部分分析或整體報告達到模型輸出上限，結果不完整。請縮小範圍或改用其他模型重新檢閱。
-            </p>
-          }
-        } @else {
-          <p class="form-note" role="status">
-            {{
-              d.version === 1
-                ? '這是舊版逐段報告，可展開下方明細；建立新的 review 即可取得整體結果。'
-                : active()
-                  ? '正在分析變更並彙整整體報告，完成後會顯示結論與重點。'
-                  : '整體報告尚未完成，可沿用已完成分析重試。'
-            }}
-          </p>
-        }
-        @if (binarySections().length) {
-          <p class="source-warning">
-            包含 {{ binarySections().length }} 個二進位區段，需人工確認原檔；可在下方固定 diff
-            查核。
-          </p>
-        }
-      </article>
-      <details class="review-evidence">
-        <summary>查看固定 diff 與區段明細（{{ d.sections.length }}）</summary>
-        <p class="form-note">區段分析是整體報告的查核依據，可按需要展開。</p>
+    </article>
+    <details class="review-evidence" (toggle)="evidenceExpanded.set($any($event.target).open)">
+      <summary>查看固定 diff 與區段明細（{{ d.sections.length }}）</summary>
+      @if (evidenceExpanded()) {
+        <p class="form-note">可核對原始變更；快速初檢只涵蓋明確問題。</p>
         @for (section of d.sections; track section.ordinal) {
-          <details class="review-section">
+          <details
+            class="review-section"
+            (toggle)="toggleSection(section.ordinal, $any($event.target).open)"
+          >
             <summary>{{ section.label }}</summary>
-            @if (section.output) {
-              <nx-markdown-view [content]="section.output" />
-            } @else {
-              <p class="form-note">
-                {{
-                  active()
-                    ? '正在整體分析此變更…'
-                    : d.report
-                      ? '此區段已納入整體分析，可核對下方固定 diff。'
-                      : '此區段尚未完成分析。'
-                }}
-              </p>
-            }
-            @if (section.truncated) {
-              <p class="error-banner">這個區段的分析達到模型輸出上限，結果不完整。</p>
-            }
-            <pre><code>{{ section.diff }}</code></pre>
-            @if (section.inputTokens != null || section.outputTokens != null) {
-              <p class="form-note">
-                輸入 {{ section.inputTokens?.toLocaleString() ?? '未回報' }} · 輸出
-                {{ section.outputTokens?.toLocaleString() ?? '未回報' }} tokens
-              </p>
+            @if (expandedSections().has(section.ordinal)) {
+              @if (section.output) {
+                <nx-markdown-view [content]="section.output" />
+              } @else {
+                <p class="form-note">
+                  {{
+                    active()
+                      ? '正在整體分析此變更…'
+                      : d.report
+                        ? '此區段已納入整體分析，可核對下方固定 diff。'
+                        : '此區段尚未完成分析。'
+                  }}
+                </p>
+              }
+              @if (section.truncated) {
+                <p class="error-banner">這個區段的分析達到模型輸出上限，結果不完整。</p>
+              }
+              <pre><code>{{ section.diff }}</code></pre>
+              @if (section.inputTokens != null || section.outputTokens != null) {
+                <p class="form-note">
+                  輸入 {{ section.inputTokens?.toLocaleString() ?? '未回報' }} · 輸出
+                  {{ section.outputTokens?.toLocaleString() ?? '未回報' }} tokens
+                </p>
+              }
             }
           </details>
         }
-      </details>
-      <p class="form-note">結果來自變更的靜態分析，仍需核對上下文與執行測試。</p>
-    </section>
-  }
+      }
+    </details>
+    <p class="form-note">結果來自變更的靜態分析，仍需核對上下文與執行測試。</p>
+  </section>
 }

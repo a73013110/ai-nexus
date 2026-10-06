@@ -4,6 +4,7 @@
   --canvas: var(--p-stone-50);
   --sidebar: var(--p-stone-100);
   --surface: var(--p-white);
+  --surface-subtle: color-mix(in srgb, var(--surface) 60%, var(--canvas));
   --hover: var(--p-stone-200);
   --ink: var(--p-ink-900);
   --secondary: var(--p-stone-600);
@@ -173,6 +174,7 @@
   --canvas: var(--p-night-900);
   --sidebar: var(--p-night-950);
   --surface: var(--p-night-800);
+  --surface-subtle: color-mix(in srgb, var(--surface) 60%, var(--canvas));
   --hover: var(--p-night-700);
   --ink: var(--p-silver-50);
   --secondary: var(--p-silver-200);

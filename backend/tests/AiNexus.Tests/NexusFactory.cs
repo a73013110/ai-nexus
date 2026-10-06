@@ -196,6 +196,13 @@ public sealed class TestProvider : IInferenceProvider
         try
         {
             if (Fail) throw new HttpRequestException("fixture failure");
+            if (parameters.SystemPrompt.Contains("\"conclusion\"", StringComparison.Ordinal))
+            {
+                await Task.Delay(DelayMs, ct);
+                yield return new InferenceChunk("{\"conclusion\":\"已完成快速初檢，未發現明確缺陷。\",\"changes\":[\"更新程式邏輯。\"],\"findings\":[],\"limitation\":\"\"}");
+                yield return new InferenceChunk("", true, 123, 6, "STOP", CachedInputTokens: 0, ReasoningTokens: 0);
+                yield break;
+            }
             foreach (var text in new[] { "這是", "測試", "回答。" })
             {
                 await Task.Delay(DelayMs, ct);

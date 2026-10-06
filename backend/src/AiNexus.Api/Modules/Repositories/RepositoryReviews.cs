@@ -105,10 +105,9 @@ public sealed class RepositoryReviewService(NexusDbContext db, RepositoryService
     {
         if (repository is not null) RepositoryService.RepositoryRoute(repository);
         var rows = await db.Set<RepositoryReview>().AsNoTracking().Where(x => x.OwnerId == owner && x.BaseUrl == repositories.BaseUrl && (repository == null || x.Repository == repository))
-            .OrderByDescending(x => x.CreatedAt).Take(30).ToListAsync(ct);
-        var result = new List<RepositoryReviewDto>();
-        foreach (var row in rows) result.Add(await DescribeAsync(row, ct));
-        return result;
+            .OrderByDescending(x => x.CreatedAt).Take(30)
+            .Join(db.Set<BackgroundJob>().AsNoTracking(), x => x.JobId, job => job.Id, (review, job) => new { Review = review, Job = job }).ToListAsync(ct);
+        return rows.Select(x => Describe(x.Review, x.Job)).ToArray();
     }
     public async Task<RepositoryReviewDetailDto> DetailAsync(Guid owner, Guid id, CancellationToken ct)
     {
@@ -134,9 +133,11 @@ public sealed class RepositoryReviewService(NexusDbContext db, RepositoryService
         await repositories.RequireCommitAsync(owner, row.Repository, row.Commit, ct);
         if (row.BaseCommit is not null) await repositories.RequireCommitAsync(owner, row.Repository, row.BaseCommit, ct);
     }
-    private async Task<RepositoryReviewDto> DescribeAsync(RepositoryReview x, CancellationToken ct) => new(x.Id, x.Repository, x.Commit, x.BaseCommit,
-        presentation.PublicId(x.ModelId), x.Note, x.CreatedAt, JobService.Describe(await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(j => j.Id == x.JobId, ct)), Snapshot(x).Purpose);
-    public static ReviewSnapshot Snapshot(RepositoryReview row) => JsonSerializer.Deserialize<ReviewSnapshot>(row.SnapshotJson) is { Version: 1 or 2 } snapshot
+    private async Task<RepositoryReviewDto> DescribeAsync(RepositoryReview x, CancellationToken ct) =>
+        Describe(x, await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(j => j.Id == x.JobId, ct));
+    private RepositoryReviewDto Describe(RepositoryReview x, BackgroundJob job) => new(x.Id, x.Repository, x.Commit, x.BaseCommit,
+        presentation.PublicId(x.ModelId), x.Note, x.CreatedAt, JobService.Describe(job), Snapshot(x).Purpose);
+    public static ReviewSnapshot Snapshot(RepositoryReview row) => JsonSerializer.Deserialize<ReviewSnapshot>(row.SnapshotJson) is { Version: 1 or 2 or 3 } snapshot
         ? snapshot : throw new ApiException(409, "review_snapshot_unsupported", "此 review 快照版本目前無法處理，請建立新的 review。");
     public static ReviewSlice[] Split(string diff, int budget)
     {
@@ -169,25 +170,26 @@ public sealed class RepositoryReviewHandler(NexusDbContext db, RepositoryReviewS
         var row = await reviews.OwnedAsync(job.OwnerId, job.SubjectId, ct);
         await reviews.RequireSourceAsync(job.OwnerId, row, ct); return row;
     }
-    public async Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct)
+    private async Task<RepositoryReview> RequireCurrentAsync(BackgroundJob job, CancellationToken ct)
     {
         var row = await RequireAsync(job, ct);
         ModelTaskConfiguration.Require(await catalog.RequireAsync(presentation.PublicId(row.ModelId), ct), inference.Value, row.ConfigurationFingerprint);
+        return row;
     }
+    public async Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => await RequireCurrentAsync(job, ct);
     public async Task ExecuteAsync(JobExecution execution, CancellationToken ct)
     {
-        await ValidateRetryAsync(execution.Job, ct);
-        var row = await RequireAsync(execution.Job, ct); var snapshot = RepositoryReviewService.Snapshot(row); var slices = snapshot.Slices;
+        var row = await RequireCurrentAsync(execution.Job, ct); var snapshot = RepositoryReviewService.Snapshot(row); var slices = snapshot.Slices;
         var results = await db.Set<RepositoryReviewResult>().AsNoTracking().Where(x => x.ReviewId == row.Id).ToDictionaryAsync(x => x.Ordinal, ct);
-        var modern = snapshot.Version == 2;
+        var modern = snapshot.Version >= 2;
         if (modern && (snapshot.Direct || slices.All(x => x.Binary)))
         {
             if (results.ContainsKey(RepositoryReviewPlan.ReportOrdinal)) return;
             await execution.CheckpointAsync("正在分析整體變更", 0, 1, ct);
             var binary = slices.All(x => x.Binary);
-            await GenerateAsync(execution, row, RepositoryReviewPlan.ReportOrdinal, RepositoryReviewPlan.Source(slices), snapshot.ReportInstruction!,
-                "untrusted_diff", "整體報告已完成", 1, 1, ct, maxOutputTokens: 1200,
-                answer: binary ? new("此變更只有二進位內容，無法由文字模型判定是否有問題，請人工確認原檔。\n" + RepositoryReviewPlan.Source(slices), false, null, null) : null);
+            await GenerateAsync(execution, row, snapshot, RepositoryReviewPlan.ReportOrdinal, RepositoryReviewPlan.Source(slices), snapshot.ReportInstruction!,
+                "untrusted_diff", "整體報告已完成", 1, 1, ct, maxOutputTokens: snapshot.ReportOutputTokens,
+                answer: binary ? new("此變更只有二進位內容，需人工確認原檔。" + (snapshot.Version < 3 ? "\n" + RepositoryReviewPlan.Source(slices) : ""), false, null, null) : null);
             return;
         }
         var completed = results.Keys.Count(x => x >= 0 && x < slices.Length);
@@ -197,9 +199,9 @@ public sealed class RepositoryReviewHandler(NexusDbContext db, RepositoryReviewS
             if (results.ContainsKey(i)) continue;
             await execution.CheckpointAsync($"檢閱區段 {i + 1} / {slices.Length}", completed, total, ct);
             var slice = slices[i];
-            results[i] = await GenerateAsync(execution, row, i, $"區段：{slice.Label}\n{slice.Diff}", snapshot.Instruction,
+            results[i] = await GenerateAsync(execution, row, snapshot, i, $"區段：{slice.Label}\n{slice.Diff}", snapshot.Instruction,
                 "untrusted_diff", $"已分析 {++completed} / {slices.Length} 區段", completed, total, ct,
-                maxOutputTokens: modern ? 512 : null,
+                maxOutputTokens: modern ? snapshot.AnalysisOutputTokens : null,
                 answer: slice.Binary ? new("二進位變更未送交文字模型檢閱，請人工確認原檔。", false, null, null) : null);
         }
         if (!modern || results.ContainsKey(RepositoryReviewPlan.ReportOrdinal)) return;
@@ -218,7 +220,7 @@ public sealed class RepositoryReviewHandler(NexusDbContext db, RepositoryReviewS
                 if (!results.TryGetValue(ordinal, out var result))
                 {
                     await execution.CheckpointAsync($"正在彙整整體報告 · 第 {level} 輪 {i + 1} / {batches.Length}", completed, total, ct);
-                    result = await GenerateAsync(execution, row, ordinal, batches[i], snapshot.ReductionInstruction!, "untrusted_analysis",
+                    result = await GenerateAsync(execution, row, snapshot, ordinal, batches[i], snapshot.ReductionInstruction!, "untrusted_analysis",
                         "正在彙整整體報告", completed, total, ct, maxOutputTokens: Math.Clamp(snapshot.InputBudget / 12, 32, 384), byteLimit: snapshot.InputBudget / 3);
                     results[ordinal] = result;
                 }
@@ -227,19 +229,33 @@ public sealed class RepositoryReviewHandler(NexusDbContext db, RepositoryReviewS
             batches = RepositoryReviewPlan.Batches(reduced, snapshot.InputBudget);
         }
         await execution.CheckpointAsync("正在產生整體報告", completed, total, ct);
-        await GenerateAsync(execution, row, RepositoryReviewPlan.ReportOrdinal, batches.Single(), snapshot.ReportInstruction!, "untrusted_analysis",
-            "整體報告已完成", total, total, ct, maxOutputTokens: 1200, truncated: truncated);
+        await GenerateAsync(execution, row, snapshot, RepositoryReviewPlan.ReportOrdinal, batches.Single(), snapshot.ReportInstruction!, "untrusted_analysis",
+            "整體報告已完成", total, total, ct, maxOutputTokens: snapshot.ReportOutputTokens, truncated: truncated);
     }
 
-    private async Task<RepositoryReviewResult> GenerateAsync(JobExecution execution, RepositoryReview row, int ordinal, string text, string instruction,
+    private async Task<RepositoryReviewResult> GenerateAsync(JobExecution execution, RepositoryReview row, ReviewSnapshot snapshot, int ordinal, string text, string instruction,
         string sourceTag, string stage, int completed, int total, CancellationToken ct, int? maxOutputTokens = null, bool truncated = false,
         int? byteLimit = null, ModelTaskResult? answer = null)
     {
         await RequireAsync(execution.Job, ct);
         var timer = Stopwatch.StartNew();
-        answer ??= await model.GenerateAsync(row.OwnerId, Kind,
-            RepositoryReviewPlan.Context(row.Repository, row.Commit, row.BaseCommit, row.Note) + $"<{sourceTag}>\n{text}\n</{sourceTag}>",
-            instruction, ct, presentation.PublicId(row.ModelId), expectedConfiguration: row.ConfigurationFingerprint, maxOutputTokens: maxOutputTokens);
+        var prompt = RepositoryReviewPlan.Context(row.Repository, row.Commit, row.BaseCommit, row.Note) + $"<{sourceTag}>\n{text}\n</{sourceTag}>";
+        var brief = answer is null && ordinal == RepositoryReviewPlan.ReportOrdinal && snapshot.Version >= 3;
+        if (brief) prompt += "\n請依系統指定的 JSON 格式回覆；說明只用繁體中文，合計最多 350 字。";
+        answer ??= await GenerateModelAsync(prompt);
+        if (brief)
+        {
+            if (answer.Truncated || !RepositoryReviewBrief.TryRender(answer.Text, snapshot.Purpose, out _))
+            {
+                await execution.CheckpointAsync("正在整理精簡結果", completed, total, ct);
+                await RequireAsync(execution.Job, ct);
+                var correction = await GenerateModelAsync(prompt + "\n上一份輸出未通過完整性、繁體中文或長度檢查。請重新生成更短的完整 JSON：結論 40 字、變更與問題各至多 2 項，每項 40 字，不貼程式碼。不要解釋格式。請務必閉合 JSON。");
+                answer = correction with { InputTokens = Sum(answer.InputTokens, correction.InputTokens), OutputTokens = Sum(answer.OutputTokens, correction.OutputTokens) };
+            }
+            if (answer.Truncated || !RepositoryReviewBrief.TryRender(answer.Text, snapshot.Purpose, out var output))
+                throw new ApiException(502, "review_brief_invalid", "模型未傳回完整的繁體中文精簡結果，已保留完成的分析。請重試或改用其他模型。");
+            answer = answer with { Text = output };
+        }
         if (byteLimit is not null && Encoding.UTF8.GetByteCount(answer.Text) > byteLimit)
             throw new ApiException(502, "review_summary_too_long", "模型未能將分析彙整到上下文預算內，已保留完成區段。請重試，或縮小範圍、改用其他模型建立 review。");
         await RequireAsync(execution.Job, ct);
@@ -248,6 +264,10 @@ public sealed class RepositoryReviewHandler(NexusDbContext db, RepositoryReviewS
         db.Add(result);
         await execution.CheckpointAsync(stage, completed, total, ct);
         return result;
+
+        Task<ModelTaskResult> GenerateModelAsync(string source) => model.GenerateAsync(row.OwnerId, Kind, source,
+            instruction, ct, presentation.PublicId(row.ModelId), expectedConfiguration: row.ConfigurationFingerprint, maxOutputTokens: maxOutputTokens);
+        static long? Sum(long? first, long? second) => first is null || second is null ? null : first + second;
     }
 }
 public static class RepositoryReviewConfiguration

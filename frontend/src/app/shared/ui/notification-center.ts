@@ -79,7 +79,12 @@ import { formatDate } from '../browser/format';
             "
           />
           <div>
-            <strong>{{ item.title }}</strong>
+            <div class="notification-title">
+              <strong>{{ item.title }}</strong>
+              @if (!item.readAt) {
+                <span class="notification-unread">未讀</span>
+              }
+            </div>
             <p>{{ item.body }}</p>
             <time [attr.datetime]="item.createdAt">{{ date(item.createdAt) }}</time>
             <div class="notification-actions">
