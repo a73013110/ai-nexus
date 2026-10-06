@@ -35,10 +35,16 @@ import {
 } from '../../shared/browser/format';
 import { PriceBook } from '../billing/price-book';
 import { FeatureSummary } from '../../shared/ui/feature-summary';
-import { groupFeatures } from '../../core/feature-groups';
+import { groupFeatures, FEATURE_ICONS } from '../../core/feature-groups';
 import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 
+import {
+  ModelPolicyEditor,
+  modelPolicyDraft,
+  modelPolicyRequest,
+  type ModelPolicyDraft,
+} from './model-policy-editor';
 import { parseStorageLimitGb, storageLimitGb } from '../../shared/browser/storage-limit';
 
 interface Editor {
@@ -48,9 +54,7 @@ interface Editor {
   subtitle: string;
   enabled: boolean;
   ids: string[];
-  restricted: boolean;
-  modelIds: string[];
-  daily: string;
+  modelPolicy: ModelPolicyDraft;
   storage: string;
   order: string;
   isNew: boolean;
@@ -76,6 +80,7 @@ interface Editor {
     FeatureSummary,
     ActionMenu,
     ConfirmDialog,
+    ModelPolicyEditor,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-page.html',
@@ -91,6 +96,13 @@ export class AdminPage {
   readonly error = signal('');
   readonly notice = signal('');
   readonly tab = signal('users');
+  readonly groupSection = signal('general');
+  readonly groupSections = [
+    { id: 'general', name: '基本資料' },
+    { id: 'features', name: '功能授權' },
+    { id: 'models', name: 'AI 模型' },
+    { id: 'storage', name: '附件容量' },
+  ];
   readonly search = signal('');
   readonly editor = signal<Editor | null>(null);
   readonly saving = signal(false);
@@ -109,6 +121,24 @@ export class AdminPage {
     { id: 'audit', name: '異動稽核' },
     { id: 'usage', name: '平台用量' },
   ];
+  readonly featureIcons = FEATURE_ICONS;
+  usageModelName(id: string) {
+    return this.catalog()?.models.find((model) => model.id === id)?.displayName || id;
+  }
+  usageKindName(kind: string) {
+    return (
+      (
+        {
+          chat: '對話',
+          transform: '文字處理',
+          evaluation: '評測',
+          ocr: '圖片辨識',
+          embedding: '知識向量',
+          'web-search': '網路搜尋',
+        } as Record<string, string>
+      )[kind] || kind
+    );
+  }
   readonly choices = computed(() => {
     const e = this.editor(),
       c = this.catalog();
@@ -215,9 +245,7 @@ export class AdminPage {
       enabled: role?.enabled ?? group?.enabled ?? feature?.enabled ?? true,
       ids:
         user?.roleIds || role?.groupIds || group?.featureIds || (kind === 'user' ? ['member'] : []),
-      restricted: group?.policy?.allowedModelIds != null,
-      modelIds: group?.policy?.allowedModelIds || [],
-      daily: group?.policy?.dailyRequestLimit == null ? '' : String(group.policy.dailyRequestLimit),
+      modelPolicy: modelPolicyDraft(group?.policy),
       storage:
         group?.policy?.storedAttachmentLimitBytes == null
           ? ''
@@ -235,6 +263,7 @@ export class AdminPage {
     });
     if (user) this.update('enabled', user.enabled ?? true);
     if (user) this.editor.update((old) => (old ? { ...old, profileChanged: false } : null));
+    this.groupSection.set('general');
     this.dialog().nativeElement.showModal();
   }
   update<K extends keyof Editor>(key: K, value: Editor[K]) {
@@ -259,8 +288,8 @@ export class AdminPage {
         : null,
     );
   }
-  check(id: string, checked: boolean, models = false) {
-    const key = models ? 'modelIds' : 'ids';
+  check(id: string, checked: boolean) {
+    const key = 'ids';
     const e = this.editor();
     if (e) this.update(key, checked ? [...e[key], id] : e[key].filter((x) => x !== id));
   }
@@ -304,8 +333,7 @@ export class AdminPage {
           enabled: e.enabled,
           featureIds: e.ids,
           policy: {
-            allowedModelIds: e.restricted ? e.modelIds : null,
-            dailyRequestLimit: e.daily === '' ? null : Number(e.daily),
+            ...modelPolicyRequest(e.modelPolicy),
             storedAttachmentLimitBytes: parseStorageLimitGb(e.storage),
           },
         });

@@ -1,4 +1,3 @@
-using System.Text.Json;
 using System.Text.RegularExpressions;
 using AiNexus.BuildingBlocks;
 using AiNexus.Modules.AccessControl;
@@ -6,7 +5,6 @@ using AiNexus.Modules.Identity;
 using AiNexus.Modules.Inference;
 using AiNexus.Modules.Operations;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using AiNexus.Modules.Attachments;
 
 namespace AiNexus.Modules.Administration;
@@ -20,13 +18,15 @@ public sealed record AdminUserDto(Guid Id, string Account, string DisplayName, D
 public sealed record AdminUsersDto(IReadOnlyList<AdminUserDto> Users, int Total, int Offset);
 public sealed record UserRolesRequest(IReadOnlyList<string> RoleIds);
 public sealed record RoleUpdateRequest(string Name, bool Enabled, IReadOnlyList<string> GroupIds);
-public sealed record GroupPolicyRequest(IReadOnlyList<string>? AllowedModelIds = null, int? DailyRequestLimit = null, long? StoredAttachmentLimitBytes = null);
+public sealed record GroupPolicyRequest(IReadOnlyList<string>? AllowedModelIds = null, IReadOnlyDictionary<string, long>? DailyTokenLimits = null, long? StoredAttachmentLimitBytes = null);
 public sealed record GroupUpdateRequest(string Name, bool Enabled, IReadOnlyList<string> FeatureIds, GroupPolicyRequest? Policy = null);
 public sealed record FeatureUpdateRequest(string Name, int SortOrder, bool Enabled);
 public sealed record AuditDto(long Id, string Actor, string Action, Guid? ResourceId, string? Result, DateTimeOffset At, string? DetailsJson, string? ActingAs = null);
-public sealed record AdminUsageDto(int Users, int Requests, int Completed, long InputTokens, long OutputTokens, int RequestsWithUsage, long TotalDurationMilliseconds, int TimedRequests);
+public sealed record AdminUsageDto(int Users, int Requests, int Completed, long InputTokens, long OutputTokens, int RequestsWithUsage, long TotalDurationMilliseconds, int TimedRequests,
+    int ActiveUsers, int Failed, int Cancelled, long StoredBytes, int StoredFiles, IReadOnlyList<UsageModelDto> Models, IReadOnlyList<UsageKindDto> Kinds,
+    IReadOnlyList<ProviderStatusDto> Providers, AiNexus.Modules.WebSearch.WebSearchStatusDto WebSearch, DateTimeOffset Since, DateTimeOffset Until);
 
-public sealed class AdministrationService(NexusDbContext db, AccessService access, IOptions<InferenceOptions> inference, AdministrativeAudit mutations, UsageReports reports, AttachmentQuota quota)
+public sealed class AdministrationService(NexusDbContext db, AccessService access, AdministrativeAudit mutations, UsageReports reports, AttachmentQuota quota, ModelPolicyService modelPolicies, ModelCatalog catalog, AiNexus.Modules.WebSearch.WebSearchService search)
 {
     public async Task<AdminCatalogDto> CatalogAsync(CancellationToken ct)
     {
@@ -38,8 +38,8 @@ public sealed class AdministrationService(NexusDbContext db, AccessService acces
         var policies = await db.Set<GroupModelPolicy>().AsNoTracking().ToDictionaryAsync(x => x.GroupId, ct);
         var counts = await db.Set<UserRole>().GroupBy(x => x.RoleId).Select(x => new { RoleId = x.Key, Count = x.Count() }).ToDictionaryAsync(x => x.RoleId, x => x.Count, ct);
         return new(roles.Select(x => new AdminRoleDto(x.Id, x.Name, x.Enabled, links.Where(y => y.RoleId == x.Id).Select(y => y.GroupId).ToArray(), counts.GetValueOrDefault(x.Id))).ToArray(),
-            groups.Select(x => new AdminGroupDto(x.Id, x.Name, x.Enabled, grants.Where(y => y.GroupId == x.Id).Select(y => y.FeatureId).ToArray(), policies.TryGetValue(x.Id, out var p) ? new(p.AllowedModelsJson is null ? null : JsonSerializer.Deserialize<string[]>(p.AllowedModelsJson), p.DailyRequestLimit, p.StoredAttachmentLimitBytes) : null)).ToArray(),
-            features.Select(x => new AdminFeatureDto(x.Id, x.Name, x.Route, x.SortOrder, x.Enabled)).ToArray(), inference.Value.Models.Select(x => x.ToDto()).ToArray());
+            groups.Select(x => new AdminGroupDto(x.Id, x.Name, x.Enabled, grants.Where(y => y.GroupId == x.Id).Select(y => y.FeatureId).ToArray(), policies.TryGetValue(x.Id, out var p) ? new(ModelPolicyService.Allowed(p.AllowedModelsJson), ModelPolicyService.Limits(p.DailyTokenLimitsJson), p.StoredAttachmentLimitBytes) : null)).ToArray(),
+            features.Select(x => new AdminFeatureDto(x.Id, x.Name, x.Route, x.SortOrder, x.Enabled)).ToArray(), (await catalog.ProfilesAsync(ct)).Select(x => x.ToDto()).ToArray());
     }
     public async Task<AdminUsersDto> UsersAsync(string? search, int offset, CancellationToken ct)
     {
@@ -60,6 +60,16 @@ public sealed class AdministrationService(NexusDbContext db, AccessService acces
         if (await quota.LockOwnerAsync(id, ct) != 1) throw Missing();
         var user = await db.Users.SingleOrDefaultAsync(x => x.Id == id && x.DeletedAt == null, ct) ?? throw Missing();
         user.AttachmentLimitBytes = request.LimitBytes;
+    }, ct);
+    public Task SetModelPolicyAsync(Guid id, ModelPolicyRequest request, CancellationToken ct) => mutations.MutateAsync("admin.user_model_policy", id, id.ToString(), async () =>
+    {
+        modelPolicies.Validate(request);
+        if (await db.Users.Where(x => x.Id == id && x.DeletedAt == null).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct) != 1) throw Missing();
+        var value = await db.Set<UserModelPolicy>().FindAsync([id], ct);
+        if (value is null) { value = new() { UserId = id }; db.Add(value); }
+        value.AllowedModelsJson = ModelPolicyService.SerializeAllowed(request.AllowedModelIds);
+        value.DailyTokenLimitsJson = ModelPolicyService.SerializeLimits(request.DailyTokenLimits);
+        if (value.AllowedModelsJson is null && value.DailyTokenLimitsJson is null) db.Remove(value);
     }, ct);
     public async Task SetUserRolesAsync(Guid id, UserRolesRequest request, CancellationToken ct)
     {
@@ -94,10 +104,9 @@ public sealed class AdministrationService(NexusDbContext db, AccessService acces
             Key(id); Name(request.Name); Keys(request.FeatureIds);
             if (request.Policy is { } policy)
             {
-                if (policy.DailyRequestLimit is < 0 or > 100000 || policy.StoredAttachmentLimitBytes is < 0 or > AttachmentOptions.MaximumLimitBytes ||
-                    policy.AllowedModelIds?.Count > 24 || policy.AllowedModelIds?.Distinct().Count() != policy.AllowedModelIds?.Count ||
-                    policy.AllowedModelIds?.Any(x => !inference.Value.Models.Any(m => m.Id == x)) == true)
-                    throw new ApiException(400, "invalid_model_policy", "模型清單或群組配額不正確。");
+                modelPolicies.Validate(new(policy.AllowedModelIds, policy.DailyTokenLimits));
+                if (policy.StoredAttachmentLimitBytes is < 0 or > AttachmentOptions.MaximumLimitBytes)
+                    throw new ApiException(400, "invalid_model_policy", "群組容量上限不正確。");
             }
             await ExistingAsync(db.Set<Feature>().Select(x => x.Id), request.FeatureIds, ct);
             var group = await db.Set<RoleGroup>().FindAsync([id], ct);
@@ -111,8 +120,8 @@ public sealed class AdministrationService(NexusDbContext db, AccessService acces
             else
             {
                 if (value is null) { value = new() { GroupId = id }; db.Add(value); }
-                value.AllowedModelsJson = request.Policy.AllowedModelIds is null ? null : JsonSerializer.Serialize(request.Policy.AllowedModelIds.Order());
-                value.DailyRequestLimit = request.Policy.DailyRequestLimit; value.StoredAttachmentLimitBytes = request.Policy.StoredAttachmentLimitBytes;
+                value.AllowedModelsJson = ModelPolicyService.SerializeAllowed(request.Policy.AllowedModelIds);
+                value.DailyTokenLimitsJson = ModelPolicyService.SerializeLimits(request.Policy.DailyTokenLimits); value.StoredAttachmentLimitBytes = request.Policy.StoredAttachmentLimitBytes;
             }
         }, ct);
     }
@@ -153,7 +162,11 @@ public sealed class AdministrationService(NexusDbContext db, AccessService acces
     public async Task<AdminUsageDto> UsageAsync(CancellationToken ct)
     {
         var totals = await reports.AllAsync(ct);
-        return new(await db.Users.CountAsync(ct), totals.Requests, totals.Completed, totals.InputTokens, totals.OutputTokens, totals.RequestsWithUsage, totals.TotalDurationMilliseconds, totals.TimedRequests);
+        var models = await reports.ModelsAsync(ct);
+        var providers = await catalog.ProviderStatusesAsync(ct);
+        return new(await db.Users.CountAsync(x => x.Enabled && x.DeletedAt == null, ct), totals.Requests, totals.Completed, totals.InputTokens, totals.OutputTokens, totals.RequestsWithUsage, totals.TotalDurationMilliseconds, totals.TimedRequests,
+            await reports.ActiveOwnersAsync(ct), totals.Failed, totals.Cancelled, await db.Set<Attachment>().SumAsync(x => x.Size, ct), await db.Set<Attachment>().CountAsync(ct),
+            models, await reports.PlatformKindsAsync(ct), providers, search.Status, UsageReports.Since, DateTimeOffset.UtcNow);
     }
     private static void Key(string id) { if (!Regex.IsMatch(id, "^[a-z][a-z0-9_-]{0,63}$", RegexOptions.CultureInvariant)) throw new ApiException(400, "invalid_access_id", "識別碼使用小寫英文、數字、底線與連字號，最多 64 字元。"); }
     private static void Keys(IReadOnlyList<string> ids) { if (ids.Count > 50 || ids.Distinct().Count() != ids.Count) throw new ApiException(400, "invalid_access_ids", "授權清單過長或有重複。"); foreach (var id in ids) Key(id); }

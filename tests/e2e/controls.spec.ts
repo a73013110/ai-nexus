@@ -105,11 +105,13 @@ test("composer exposes model, supported reasoning and keyboard-accessible contex
   await expect(context).toHaveAccessibleName(/預估/);
   await context.focus();
   await context.press("Enter");
-  await expect(page.locator(".context-panel")).toContainText(
-    "預留 2,048 tokens",
-  );
+  await expect(
+    page.getByRole("group", { name: "上下文用量", exact: true }),
+  ).toContainText("預留 2,048 tokens");
   await page.keyboard.press("Escape");
-  await expect(page.locator(".context-details")).not.toHaveAttribute("open");
+  await expect(
+    page.getByRole("group", { name: "上下文用量", exact: true }),
+  ).not.toHaveAttribute("open");
   await expect(context).toBeFocused();
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect.poll(() => fixture.lastRequest?.reasoningEffort).toBe("high");
@@ -183,7 +185,10 @@ test("compact conversation uses readable text and preserves over 70 percent of d
   const close = page.getByRole("button", { name: "關閉對話導覽" });
   if (await close.isVisible()) await close.click();
   await page.getByLabel(/上下文用量：/).click();
-  const panel = await page.locator(".context-panel").boundingBox();
+  const panel = await page
+    .getByRole("group", { name: "上下文用量", exact: true })
+    .locator(".context-panel")
+    .boundingBox();
   expect(panel!.x).toBeGreaterThanOrEqual(0);
   expect(panel!.x + panel!.width).toBeLessThanOrEqual(375);
   expect(

@@ -7,7 +7,7 @@ public static class FileLibraryEndpoints
 {
     public static void MapFileLibrary(RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/files").RequireAuthorization("feature:attachments").WithTags("File library");
+        var routes = api.MapGroup("/files").RequireAuthorization("feature:files").WithTags("File library");
         routes.MapGet("", async (string? search, string? type, string? source, int? offset, int? limit, CurrentUser current, FileLibraryService library, CancellationToken ct) =>
             await library.ListAsync((await current.GetAsync(ct)).Id, search, type ?? "all", source ?? "all", offset ?? 0, limit ?? 40, ct))
             .WithName("ListLibraryFiles").Produces<FileLibraryPageDto>();

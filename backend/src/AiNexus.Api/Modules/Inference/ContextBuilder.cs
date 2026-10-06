@@ -90,6 +90,7 @@ public sealed class ContextBuilder(NexusDbContext db, IOptions<AttachmentOptions
         }
         return new((int)Math.Min(int.MaxValue, cost + system), parameters.ContextTokens, parameters.MaxOutputTokens, count - chain.Count, exceeded);
     }
+    public static long Estimate(IReadOnlyList<InferenceMessage> messages) => messages.Sum(Cost) + 128;
     private static long Cost(InferenceMessage message) => Cost(message.Content) + (message.Images ?? []).Sum(x => (long)x.EstimatedTokens);
     private static int Cost(string value) => Encoding.UTF8.GetByteCount(value) + 32;
 }

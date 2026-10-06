@@ -8,6 +8,7 @@ public static class AttachmentConfiguration
 {
     public static void Configure(ModelBuilder model)
     {
+        AiNexus.Modules.AccessControl.PlatformFeatures.Add(model, "files", "檔案庫", "/files", 15);
         var file = model.Entity<Attachment>();
         file.ToTable("Attachments", "attachments", table =>
         {

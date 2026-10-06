@@ -6,9 +6,9 @@
 ./scripts/Initialize-Database.ps1
 ```
 
-此本機工具只建立／更新 AiNexus，使用已設定登入的建庫／DDL 權限。本版累積 migrations 已合併為單一 InitialCreate，只適用空資料庫或相同基線，沒有舊 binary 遷移。初始化不刪庫、不清空或重寫 history；其他基線會拒絕。
+此本機工具只建立／更新 AiNexus，使用已設定登入的建庫／DDL 權限。InitialCreate 建立空資料庫基線，後續 migrations 延續此基線升級；升級前停止舊 host。初始化不刪庫、不清空或重寫 history；其他基線會拒絕。
 
-[Migration SQL](migrations.sql) 包含單一 InitialCreate，之後新增版本延續此基線，依 \_\_EFMigrationsHistory 以 idempotent 方式執行；DBA 先建立 AiNexus，選擇該資料庫後審閱執行。正式由獨立管理登入部署 schema，應用登入只需必要 DML，預設不在 startup 自動 migration。已設定 SQL 的 host 會先唯讀檢查版本，若有未套用 migration 則停止啟動並列出版本。
+[Migration SQL](migrations.sql) 包含 InitialCreate 與後續增量版本，依 \_\_EFMigrationsHistory 以 idempotent 方式執行；DBA 先建立 AiNexus，選擇該資料庫後審閱執行。正式由獨立管理登入部署 schema，應用登入只需必要 DML，預設不在 startup 自動 migration。已設定 SQL 的 host 會先唯讀檢查版本，若有未套用 migration 則停止啟動並列出版本。
 
 產生 SQL：
 

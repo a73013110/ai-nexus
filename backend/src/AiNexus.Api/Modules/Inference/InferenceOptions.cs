@@ -20,9 +20,11 @@ public sealed record InferenceImage(Guid AttachmentId, string ContentType, byte[
 public sealed record InferenceMessage(string Role, string Content, IReadOnlyList<InferenceImage>? Images = null);
 public sealed record GenerationParameters(int ContextTokens, int MaxOutputTokens, double Temperature, string SystemPrompt, string ReasoningEffort = "auto", string ReasoningControl = "none", bool SupportsImages = false);
 public sealed record InferenceChunk(string Text, bool Done = false, long? InputTokens = null, long? OutputTokens = null, string? FinishReason = null, long? CachedInputTokens = null, long? ReasoningTokens = null);
+public sealed record ModelCapabilities(bool SupportsImages);
 
 public interface IInferenceProvider
 {
     Task<IReadOnlySet<string>> InstalledModelsAsync(CancellationToken ct);
+    Task<ModelCapabilities?> CapabilitiesAsync(string model, CancellationToken ct) => Task.FromResult<ModelCapabilities?>(null);
     IAsyncEnumerable<InferenceChunk> StreamAsync(string model, IReadOnlyList<InferenceMessage> messages, GenerationParameters parameters, CancellationToken ct);
 }

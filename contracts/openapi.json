@@ -6,7 +6,7 @@
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:5191/"
+      "url": "https://localhost:5191/"
     }
   ],
   "paths": {
@@ -12488,6 +12488,205 @@
         }
       }
     },
+    "/api/v1/admin/users/{id}/model-policy": {
+      "get": {
+        "tags": ["Administration"],
+        "operationId": "GetUserModelPolicy",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminUserModelPolicyDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Administration"],
+        "operationId": "SetUserModelPolicy",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelPolicyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
     "/api/v1/admin/users/{id}/access": {
       "get": {
         "tags": ["Administration"],
@@ -14825,7 +15024,18 @@
           "outputTokens",
           "requestsWithUsage",
           "totalDurationMilliseconds",
-          "timedRequests"
+          "timedRequests",
+          "activeUsers",
+          "failed",
+          "cancelled",
+          "storedBytes",
+          "storedFiles",
+          "models",
+          "kinds",
+          "providers",
+          "webSearch",
+          "since",
+          "until"
         ],
         "type": "object",
         "properties": {
@@ -14860,6 +15070,55 @@
           "timedRequests": {
             "type": "integer",
             "format": "int32"
+          },
+          "activeUsers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "cancelled": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "storedBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "storedFiles": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageModelDto"
+            }
+          },
+          "kinds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UsageKindDto"
+            }
+          },
+          "providers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProviderStatusDto"
+            }
+          },
+          "webSearch": {
+            "$ref": "#/components/schemas/WebSearchStatusDto"
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "until": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -14955,6 +15214,18 @@
                 "$ref": "#/components/schemas/AttachmentStorageDto"
               }
             ]
+          }
+        }
+      },
+      "AdminUserModelPolicyDto": {
+        "required": ["personal", "effective"],
+        "type": "object",
+        "properties": {
+          "personal": {
+            "$ref": "#/components/schemas/ModelPolicyRequest"
+          },
+          "effective": {
+            "$ref": "#/components/schemas/EffectiveModelPolicyDto"
           }
         }
       },
@@ -15994,9 +16265,8 @@
       "EffectiveModelPolicyDto": {
         "required": [
           "allowedModelIds",
-          "dailyRequestLimit",
           "storedAttachmentLimitBytes",
-          "requestsToday",
+          "models",
           "resetsAt"
         ],
         "type": "object",
@@ -16007,17 +16277,15 @@
               "type": "string"
             }
           },
-          "dailyRequestLimit": {
-            "type": ["null", "integer"],
-            "format": "int32"
-          },
           "storedAttachmentLimitBytes": {
             "type": ["null", "integer"],
             "format": "int64"
           },
-          "requestsToday": {
-            "type": "integer",
-            "format": "int32"
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModelTokenBudgetDto"
+            }
           },
           "resetsAt": {
             "type": "string",
@@ -16428,9 +16696,12 @@
               "type": "string"
             }
           },
-          "dailyRequestLimit": {
-            "type": ["null", "integer"],
-            "format": "int32"
+          "dailyTokenLimits": {
+            "type": ["null", "object"],
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int64"
+            }
           },
           "storedAttachmentLimitBytes": {
             "type": ["null", "integer"],
@@ -16833,6 +17104,24 @@
           }
         }
       },
+      "ModelPolicyRequest": {
+        "type": "object",
+        "properties": {
+          "allowedModelIds": {
+            "type": ["null", "array"],
+            "items": {
+              "type": "string"
+            }
+          },
+          "dailyTokenLimits": {
+            "type": ["null", "object"],
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        }
+      },
       "ModelsDto": {
         "required": ["models", "providerAvailable", "notice", "policy"],
         "type": "object",
@@ -16886,6 +17175,41 @@
             "type": "string"
           },
           "fingerprint": {
+            "type": "string"
+          }
+        }
+      },
+      "ModelTokenBudgetDto": {
+        "required": [
+          "modelId",
+          "dailyTokenLimit",
+          "usedTokens",
+          "reservedTokens",
+          "remainingTokens",
+          "source"
+        ],
+        "type": "object",
+        "properties": {
+          "modelId": {
+            "type": "string"
+          },
+          "dailyTokenLimit": {
+            "type": ["null", "integer"],
+            "format": "int64"
+          },
+          "usedTokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reservedTokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "remainingTokens": {
+            "type": ["null", "integer"],
+            "format": "int64"
+          },
+          "source": {
             "type": "string"
           }
         }
@@ -18328,6 +18652,47 @@
             "format": "int64"
           },
           "outputTokens": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "UsageModelDto": {
+        "required": [
+          "modelId",
+          "requests",
+          "failed",
+          "requestsWithUsage",
+          "inputTokens",
+          "outputTokens",
+          "durationMilliseconds"
+        ],
+        "type": "object",
+        "properties": {
+          "modelId": {
+            "type": "string"
+          },
+          "requests": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "requestsWithUsage": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inputTokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "outputTokens": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "durationMilliseconds": {
             "type": "integer",
             "format": "int64"
           }

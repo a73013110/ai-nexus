@@ -117,7 +117,7 @@ Google 與 Ollama 可同時 Enabled，不再有全域 provider 開關。每個�
 
 `Models` 是以別名為 key 的物件，**不是陣列**。`default` 是範本的預設模型項目；更換模型時更新它的原生 `Id`，並更新 `ModelPolicy.DefaultModelId` 的完整路由。增加模型可加 `secondary` 等穩定別名。不要在別名使用 `:`；原生 Id 可以有 `:`，例如 `qwen3:8b`。設定來源依 key 合併，範本中已有的 `default` 仍會保留，應直接修改該項目。上例省略能力欄位，完整範本見 `appsettings.Production.example.json`。
 
-每個 profile 含 `Id`、`DisplayName`、`ContextTokens`、`MaxOutputTokens`、`SupportsStreaming`、`SupportsUsage`、`SupportsImages`、`ReasoningControl`、`ReasoningEfforts`、`DefaultReasoningEffort`。Context 範圍 1,024–32,768，輸出 token 必須小於 Context。模型須同時通過設定核准、實際安裝／API 可用性及群組政策。文字 Qwen profile 不應宣告圖片能力；圖片須配置支援 vision 的模型。思考模式只在模型實際支援時開啟。
+每個 profile 含 `Id`、`DisplayName`、`ContextTokens`、`MaxOutputTokens`、`SupportsStreaming`、`SupportsUsage`、`SupportsImages`、`ReasoningControl`、`ReasoningEfforts`、`DefaultReasoningEffort`。Context 範圍 1,024–32,768，輸出 token 必須小於 Context。模型須同時通過設定核准、實際安裝／API 可用性及群組政策。Ollama 的 `SupportsImages=null`（或省略）表示由 `/api/show` 的 `capabilities` 自動判定，`false` 明確停用；`true` 也不能覆蓋供應商已回報不支援 vision 的模型。能力讀取失敗時停止圖片使用，文字仍可使用；結果短暫快取。Google 沿用管理者設定的圖片能力。圖片須使用實際含 vision／projector 的模型。思考模式只在模型實際支援時開啟。
 
 `AllowModelSelection=false` 固定系統指定模型，`ShowModelNames=false` 隱藏名稱與 provider。逾時範圍 5–600 秒、排隊容量 1–64、輸入 100–32,000 字元、輸出 4,096–262,144 字元。各 provider 的 `MaxConcurrency` 為 1–8，聊天排程按 provider 分開，OCR／文字工具／評測與聊天共用 provider 容量；Google 與 Ollama 可同時執行。QueueCapacity 是整體待排隊容量，並行容量仍是每個 app 程序的設定，不是跨 IIS 實例的全域 GPU 限制。提示詞與參考文件也佔 Context；Context 使用量為估算，完成後另記錄實際 token 與耗時。
 

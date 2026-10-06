@@ -55,6 +55,9 @@ export class SettingsPage {
   readonly notificationPermission = signal(
     'Notification' in window ? Notification.permission : 'unsupported',
   );
+  modelLabel(id: string) {
+    return this.models()?.models.find((model) => model.id === id)?.displayName || id;
+  }
   readonly sections = [
     {
       id: 'appearance',

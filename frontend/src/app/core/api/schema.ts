@@ -4933,6 +4933,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/admin/users/{id}/model-policy': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['GetUserModelPolicy'];
+    put: operations['SetUserModelPolicy'];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/admin/users/{id}/access': {
     parameters: {
       query?: never;
@@ -5383,6 +5399,24 @@ export interface components {
       totalDurationMilliseconds: number;
       /** Format: int32 */
       timedRequests: number;
+      /** Format: int32 */
+      activeUsers: number;
+      /** Format: int32 */
+      failed: number;
+      /** Format: int32 */
+      cancelled: number;
+      /** Format: int64 */
+      storedBytes: number;
+      /** Format: int32 */
+      storedFiles: number;
+      models: components['schemas']['UsageModelDto'][];
+      kinds: components['schemas']['UsageKindDto'][];
+      providers: components['schemas']['ProviderStatusDto'][];
+      webSearch: components['schemas']['WebSearchStatusDto'];
+      /** Format: date-time */
+      since: string;
+      /** Format: date-time */
+      until: string;
     };
     AdminUserActivityDto: {
       usage: components['schemas']['UsageTotalsDto'];
@@ -5409,6 +5443,10 @@ export interface components {
       enabled: boolean;
       authentication?: null | components['schemas']['UserAuthenticationDto'];
       storage?: null | components['schemas']['AttachmentStorageDto'];
+    };
+    AdminUserModelPolicyDto: {
+      personal: components['schemas']['ModelPolicyRequest'];
+      effective: components['schemas']['EffectiveModelPolicyDto'];
     };
     AdminUsersDto: {
       users: components['schemas']['AdminUserDto'][];
@@ -5767,12 +5805,9 @@ export interface components {
     };
     EffectiveModelPolicyDto: {
       allowedModelIds: null | string[];
-      /** Format: int32 */
-      dailyRequestLimit: null | number;
       /** Format: int64 */
       storedAttachmentLimitBytes: null | number;
-      /** Format: int32 */
-      requestsToday: number;
+      models: components['schemas']['ModelTokenBudgetDto'][];
       /** Format: date-time */
       resetsAt: string;
     };
@@ -5911,8 +5946,9 @@ export interface components {
     };
     GroupPolicyRequest: {
       allowedModelIds?: null | string[];
-      /** Format: int32 */
-      dailyRequestLimit?: null | number;
+      dailyTokenLimits?: null | {
+        [key: string]: number;
+      };
       /** Format: int64 */
       storedAttachmentLimitBytes?: null | number;
     };
@@ -6035,6 +6071,12 @@ export interface components {
        */
       maxInputCharacters: number;
     };
+    ModelPolicyRequest: {
+      allowedModelIds?: null | string[];
+      dailyTokenLimits?: null | {
+        [key: string]: number;
+      };
+    };
     ModelsDto: {
       models: components['schemas']['ModelDto'][];
       providerAvailable: boolean;
@@ -6051,6 +6093,18 @@ export interface components {
       temperature: number;
       reasoningEffort: string;
       fingerprint: string;
+    };
+    ModelTokenBudgetDto: {
+      modelId: string;
+      /** Format: int64 */
+      dailyTokenLimit: null | number;
+      /** Format: int64 */
+      usedTokens: number;
+      /** Format: int64 */
+      reservedTokens: number;
+      /** Format: int64 */
+      remainingTokens: null | number;
+      source: string;
     };
     MoneyTotalDto: {
       currency: string;
@@ -6544,6 +6598,21 @@ export interface components {
       inputTokens: number;
       /** Format: int64 */
       outputTokens: number;
+    };
+    UsageModelDto: {
+      modelId: string;
+      /** Format: int32 */
+      requests: number;
+      /** Format: int32 */
+      failed: number;
+      /** Format: int32 */
+      requestsWithUsage: number;
+      /** Format: int64 */
+      inputTokens: number;
+      /** Format: int64 */
+      outputTokens: number;
+      /** Format: int64 */
+      durationMilliseconds: number;
     };
     UsageTotalsDto: {
       /** Format: int32 */
@@ -13795,6 +13864,178 @@ export interface operations {
     requestBody: {
       content: {
         'application/json': components['schemas']['AttachmentStorageLimitRequest'];
+      };
+    };
+    responses: {
+      /** @description No Content */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  GetUserModelPolicy: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['AdminUserModelPolicyDto'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  SetUserModelPolicy: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['ModelPolicyRequest'];
       };
     };
     responses: {

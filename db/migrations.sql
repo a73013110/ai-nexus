@@ -2585,3 +2585,182 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006005809_PerModelTokenBudgets'
+)
+BEGIN
+    DECLARE @var48 nvarchar(max);
+    SELECT @var48 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[access].[GroupModelPolicies]') AND [c].[name] = N'DailyRequestLimit');
+    IF @var48 IS NOT NULL EXEC(N'ALTER TABLE [access].[GroupModelPolicies] DROP CONSTRAINT ' + @var48 + ';');
+    ALTER TABLE [access].[GroupModelPolicies] DROP COLUMN [DailyRequestLimit];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006005809_PerModelTokenBudgets'
+)
+BEGIN
+    DECLARE @description49 AS sql_variant;
+    EXEC sp_dropextendedproperty 'MS_Description', 'SCHEMA', N'access', 'TABLE', N'GroupModelPolicies';
+    SET @description49 = N'功能群組的模型白名單、各模型每日 token 及附件空間限制。';
+    EXEC sp_addextendedproperty 'MS_Description', @description49, 'SCHEMA', N'access', 'TABLE', N'GroupModelPolicies';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006005809_PerModelTokenBudgets'
+)
+BEGIN
+    ALTER TABLE [inference].[ModelInvocations] ADD [ReservedTokens] bigint NOT NULL DEFAULT CAST(0 AS bigint);
+    DECLARE @description50 AS sql_variant;
+    SET @description50 = N'生成預留的保守輸入加最大輸出 token；執行中或缺失 usage 時占用配額，未執行即取消釋放。';
+    EXEC sp_addextendedproperty 'MS_Description', @description50, 'SCHEMA', N'inference', 'TABLE', N'ModelInvocations', 'COLUMN', N'ReservedTokens';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006005809_PerModelTokenBudgets'
+)
+BEGIN
+    ALTER TABLE [access].[GroupModelPolicies] ADD [DailyTokenLimitsJson] nvarchar(max) NULL;
+    DECLARE @description51 AS sql_variant;
+    SET @description51 = N'各模型每日輸入加輸出 token 上限 JSON；個人覆寫優先，群組取最低值，UTC 午夜重設。';
+    EXEC sp_addextendedproperty 'MS_Description', @description51, 'SCHEMA', N'access', 'TABLE', N'GroupModelPolicies', 'COLUMN', N'DailyTokenLimitsJson';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006005809_PerModelTokenBudgets'
+)
+BEGIN
+    ALTER TABLE [inference].[GenerationRuns] ADD [ReservedTokens] bigint NOT NULL DEFAULT CAST(0 AS bigint);
+    DECLARE @description52 AS sql_variant;
+    SET @description52 = N'生成預留的保守輸入加最大輸出 token；執行中或缺失 usage 時占用配額，未執行即取消釋放。';
+    EXEC sp_addextendedproperty 'MS_Description', @description52, 'SCHEMA', N'inference', 'TABLE', N'GenerationRuns', 'COLUMN', N'ReservedTokens';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006005809_PerModelTokenBudgets'
+)
+BEGIN
+    CREATE TABLE [access].[UserModelPolicies] (
+        [UserId] uniqueidentifier NOT NULL,
+        [AllowedModelsJson] nvarchar(4000) NULL,
+        [DailyTokenLimitsJson] nvarchar(max) NULL,
+        CONSTRAINT [PK_UserModelPolicies] PRIMARY KEY ([UserId]),
+        CONSTRAINT [FK_UserModelPolicies_Users_UserId] FOREIGN KEY ([UserId]) REFERENCES [identity].[Users] ([Id]) ON DELETE CASCADE
+    );
+    DECLARE @description53 AS sql_variant;
+    SET @description53 = N'使用者的模型白名單與各模型每日 token 覆寫政策。';
+    EXEC sp_addextendedproperty 'MS_Description', @description53, 'SCHEMA', N'access', 'TABLE', N'UserModelPolicies';
+    SET @description53 = N'關聯使用者的 Users 主鍵。';
+    EXEC sp_addextendedproperty 'MS_Description', @description53, 'SCHEMA', N'access', 'TABLE', N'UserModelPolicies', 'COLUMN', N'UserId';
+    SET @description53 = N'模型白名單 JSON；空值不增加限制，空陣列禁止生成。';
+    EXEC sp_addextendedproperty 'MS_Description', @description53, 'SCHEMA', N'access', 'TABLE', N'UserModelPolicies', 'COLUMN', N'AllowedModelsJson';
+    SET @description53 = N'各模型每日輸入加輸出 token 上限 JSON；個人覆寫優先，群組取最低值，UTC 午夜重設。';
+    EXEC sp_addextendedproperty 'MS_Description', @description53, 'SCHEMA', N'access', 'TABLE', N'UserModelPolicies', 'COLUMN', N'DailyTokenLimitsJson';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006005809_PerModelTokenBudgets'
+)
+BEGIN
+    UPDATE [access].[Features] SET [Name] = N'成果' WHERE [Id] = N'artifacts' AND [Name] = N'成果文件';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006005809_PerModelTokenBudgets'
+)
+BEGIN
+    UPDATE [access].[Features] SET [Name] = N'對話' WHERE [Id] = N'chat' AND [Name] = N'AI 對話';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006005809_PerModelTokenBudgets'
+)
+BEGIN
+    UPDATE [access].[Features] SET [Name] = N'來源' WHERE [Id] = N'integrations' AND [Name] = N'系統整合';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006005809_PerModelTokenBudgets'
+)
+BEGIN
+    UPDATE [access].[Features] SET [Name] = N'知識' WHERE [Id] = N'knowledge' AND [Name] = N'知識庫';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006005809_PerModelTokenBudgets'
+)
+BEGIN
+    UPDATE [access].[Features] SET [Name] = N'評測' WHERE [Id] = N'quality' AND [Name] = N'品質評測';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006005809_PerModelTokenBudgets'
+)
+BEGIN
+    UPDATE [access].[Features] SET [Name] = N'任務' WHERE [Id] = N'tasks' AND [Name] = N'背景任務';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006005809_PerModelTokenBudgets'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Enabled', N'Name', N'Route', N'SortOrder') AND [object_id] = OBJECT_ID(N'[access].[Features]'))
+        SET IDENTITY_INSERT [access].[Features] ON;
+    EXEC(N'INSERT INTO [access].[Features] ([Id], [Enabled], [Name], [Route], [SortOrder])
+    VALUES (N''files'', CAST(1 AS bit), N''檔案庫'', N''/files'', 15)');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Enabled', N'Name', N'Route', N'SortOrder') AND [object_id] = OBJECT_ID(N'[access].[Features]'))
+        SET IDENTITY_INSERT [access].[Features] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006005809_PerModelTokenBudgets'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'FeatureId', N'GroupId') AND [object_id] = OBJECT_ID(N'[access].[RoleGroupFeatures]'))
+        SET IDENTITY_INSERT [access].[RoleGroupFeatures] ON;
+    EXEC(N'INSERT INTO [access].[RoleGroupFeatures] ([FeatureId], [GroupId])
+    VALUES (N''files'', N''workspace'')');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'FeatureId', N'GroupId') AND [object_id] = OBJECT_ID(N'[access].[RoleGroupFeatures]'))
+        SET IDENTITY_INSERT [access].[RoleGroupFeatures] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006005809_PerModelTokenBudgets'
+)
+BEGIN
+    INSERT INTO [access].[RoleGroupFeatures] ([FeatureId], [GroupId])
+    SELECT DISTINCT N'files', grants.[GroupId] FROM [access].[RoleGroupFeatures] grants
+    WHERE grants.[FeatureId] IN (N'chat', N'knowledge', N'projects')
+      AND NOT EXISTS (SELECT 1 FROM [access].[RoleGroupFeatures] existing WHERE existing.[GroupId] = grants.[GroupId] AND existing.[FeatureId] = N'files');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006005809_PerModelTokenBudgets'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261006005809_PerModelTokenBudgets', N'10.0.12');
+END;
+
+COMMIT;
+GO
+

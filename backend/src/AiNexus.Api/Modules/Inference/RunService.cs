@@ -94,7 +94,12 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
             foreach (var file in files) db.Set<MessageAttachment>().Add(new() { MessageId = user.Id, AttachmentId = file.Id });
             var fileIds = files.Select(x => x.Id).ToArray();
             await db.Set<Attachment>().Where(x => fileIds.Contains(x.Id) && x.OwnerId == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
-            await context.BuildAsync(run.ConversationId, user.Id, JsonSerializer.Deserialize<GenerationParameters>(run.ParametersJson)!, ct);
+            var parameters = JsonSerializer.Deserialize<GenerationParameters>(run.ParametersJson)!;
+            var messages = await context.BuildAsync(run.ConversationId, user.Id, parameters, ct);
+            var inputEstimate = ContextBuilder.Estimate(messages);
+            parameters = await policies.BudgetAsync(owner, profile.Id, parameters, inputEstimate, run.CreatedAt, ct);
+            run.ReservedTokens = inputEstimate + parameters.MaxOutputTokens;
+            run.ParametersJson = JsonSerializer.Serialize(parameters);
             db.Runs.Add(run);
             AddEvent(db, run, "status");
             db.AuditEvents.Add(new AuditEvent { OwnerId = owner, Action = "run.created", ResourceId = run.Id, Result = run.Status });
@@ -130,6 +135,7 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
     // Called under StateGate, so cancellation and token flushes cannot overwrite each other.
     public async Task FinishAsync(GenerationRun run, string status, string? error, CancellationToken ct)
     {
+        if (run.StartedAt is null) run.ReservedTokens = 0;
         run.Status = status;
         run.ErrorCode = error;
         run.ActiveOwnerId = null;

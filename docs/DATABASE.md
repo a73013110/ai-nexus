@@ -10,7 +10,7 @@
 | ------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | identity      | Users、UserPreferences                                                    | AD SID、帳號與個人偏好，不保存個人 AD 密碼                  |
 | access        | Roles、RoleGroups、Features、UserRoles、RoleGroupRoles、RoleGroupFeatures | 使用者→角色→群組→功能、Enabled／有效授權                    |
-| access        | AdministratorBootstraps、GroupModelPolicies                               | 一次性 bootstrap、模型清單／日配額／儲存限制                |
+| access        | AdministratorBootstraps、GroupModelPolicies、UserModelPolicies            | 一次性 bootstrap、個人與群組模型／每日 token／儲存限制      |
 | conversations | Conversations、Messages、ConversationLabels                               | 私人訊息樹、目前分支、指令、收藏／封存／標籤                |
 | inference     | GenerationRuns、RunEvents、ModelProfiles、ModelInvocations                | 執行參數／冪等、SSE replay、能力、OCR／文字／embedding 用量 |
 | inference     | ModelPrices、ModelCharges、WebSearches                                    | 不可變價格版本、呼叫價格／用量快照、搜尋來源與冪等          |
@@ -28,7 +28,7 @@
 | quality       | MessageFeedback、EvaluationSets、EvaluationRuns、EvaluationResults        | 私人回饋、固定題庫、執行設定及逐題結果／人工評分            |
 | dbo           | \_\_EFMigrationsHistory                                                   | 已套用的 EF 版本，不可手改或刪除以重跑 migration            |
 
-共有 13 個業務 schema，由單一 InitialCreate 基線管理。原始附件存於站外 Attachments.StoragePath，SQL 不保存原始 bytes。StorageKey 唯一索引與狀態／時間索引支持存取及回收；Users.AttachmentLimitBytes 為個人容量 override，null 繼承群組／預設 5 GB，DB 檢核非負及安全上限。個人偏好為 UserId 的 1:1 關聯；API key／SQL／AD 服務密碼不在偏好表，Gitea token 獨立加密保存。
+共有 13 個業務 schema，以 InitialCreate 基線與增量 migrations 管理。原始附件存於站外 Attachments.StoragePath，SQL 不保存原始 bytes。StorageKey 唯一索引與狀態／時間索引支持存取及回收；Users.AttachmentLimitBytes 為個人容量 override，null 繼承群組／預設 5 GB，DB 檢核非負及安全上限。個人偏好為 UserId 的 1:1 關聯；API key／SQL／AD 服務密碼不在偏好表，Gitea token 獨立加密保存。
 
 ## 物件描述與版本維護
 
@@ -99,7 +99,7 @@ NexusConnectionFactory 以 marker 對應 AiNexus、CLI 專用 master，以及 Le
 ./scripts/Initialize-Database.ps1
 ```
 
-工具只在 AiNexus 不存在時建庫，適用空資料庫或相同基線的未完成版本。DBA 可先建空 AiNexus，再執行 [idempotent SQL](../db/migrations.sql)，其中沒有 CREATE LOGIN／DATABASE 或秘密。source、designer、snapshot 位於 BuildingBlocks/Migrations，只有一個 InitialCreate。正式 DDL 使用獨立部署帳號。
+工具只在 AiNexus 不存在時建庫，適用空資料庫或相同基線的未完成版本。DBA 可先建空 AiNexus，再執行 [idempotent SQL](../db/migrations.sql)，其中沒有 CREATE LOGIN／DATABASE 或秘密。source、designer、snapshot 位於 BuildingBlocks/Migrations，包含 InitialCreate 與後續增量版本。正式 DDL 使用獨立部署帳號。
 
 ```powershell
 dotnet ef migrations list --project backend/src/AiNexus.Api
@@ -129,3 +129,5 @@ InitialCreate 包含 ModelPrices／ModelCharges／WebSearches、RepositoryConnec
 ## 檔案庫與容量
 
 Attachments.InLibrary 管理原檔保存；同一原檔多個引用只計一次。容量以 Size 加總，包含草稿、預約及刪檔重試；上傳／引用異動使用使用者 SQL row lock 協調程序。先 commit metadata 狀態再做 IO，實體刪檔成功才刪 metadata 及釋放配額。見 [附件](ATTACHMENTS.md)、[檔案庫](FILES.md)。
+
+`access.UserModelPolicies` 保存個人模型白名單與逐模型每日 token 覆寫；`GroupModelPolicies.DailyTokenLimitsJson` 保存群組預算。`GenerationRuns` 與 `ModelInvocations.ReservedTokens` 用於原子預約與缺失用量保護，不是實際 token 計量。舊每日請求次數由 PerModelTokenBudgets migration 移除。

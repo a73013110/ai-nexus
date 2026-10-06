@@ -25,3 +25,18 @@ export function groupFeatures<T extends { id: string }>(features: readonly T[]) 
     .map((group) => ({ id: group.id, name: group.name, features: buckets.get(group.id) ?? [] }))
     .filter((group) => group.features.length > 0);
 }
+
+export const FEATURE_ICONS: Record<string, string> = {
+  files: 'document',
+  dashboard: 'dashboard',
+  repositories: 'git',
+  chat: 'lines',
+  projects: 'projects',
+  knowledge: 'library',
+  artifacts: 'document',
+  tasks: 'tasks',
+  quality: 'shield',
+  admin: 'lock',
+  integrations: 'integrations',
+  shared: 'share',
+};

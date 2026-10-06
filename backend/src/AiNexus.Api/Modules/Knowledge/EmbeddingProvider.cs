@@ -49,8 +49,8 @@ public sealed class EmbeddingProvider(IHttpClientFactory clients, IOptions<Knowl
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
-            DateTimeOffset since = DateTimeOffset.UtcNow.Date;
-            if (await db.Set<ModelInvocation>().CountAsync(x => x.OwnerId == owner && x.Kind == "embedding" && x.CreatedAt >= since, ct) >= knowledge.Value.MaxDailyEmbeddingRequests)
+            var since = UtcDay.Start(call.CreatedAt); var until = since.AddDays(1);
+            if (await db.Set<ModelInvocation>().CountAsync(x => x.OwnerId == owner && x.Kind == "embedding" && x.CreatedAt >= since && x.CreatedAt < until, ct) >= knowledge.Value.MaxDailyEmbeddingRequests)
                 throw new ApiException(429, "embedding_daily_quota", "今日索引與語意查詢次數已達系統上限，請稍後重試。");
             await billing.ReserveAsync(call.Id, owner, null, knowledge.Value.EmbeddingProvider, call.ModelId, "embedding", call.CreatedAt, ct);
             db.Add(call); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);

@@ -28,7 +28,7 @@ ollama ps
 
 將 `Inference.Providers.Ollama.Enabled` 設 true，保留或調整 endpoint／default profile；預設路由設 `Inference.ModelPolicy.DefaultModelId=ollama/qwen3:8b`。Google 可保持啟用以同時提供兩者；完全本地才停用 Google.Enabled。另將 `Knowledge.Embedding.Provider` 改 `ollama`、`Model` 改 `qwen3-embedding:0.6b`、`Dimensions` 保持 768、`InputFormat=qwen-query`；或選 BGE-M3、1024、plain。兩個設定都改才是完全本地。也可先 `Embedding.Provider=none` 用關鍵字，等本地模型可連後切換；不會自動改你目前已成功使用的 Google 設定。
 
-模型主機不同於 IIS 時，Ollama endpoint 改為 GPU 主機 LAN 位址。Ollama API 只開給需要的應用主機，避免以無驗證 API 對整個網路開放。文字 `qwen3:8b` profile 的 `SupportsImages=false`；要分析圖片另選 vision 模型並測 OCR／圖片推論的額外 VRAM，不能只把這個旗標改 true。
+模型主機不同於 IIS 時，Ollama endpoint 改為 GPU 主機 LAN 位址。Ollama API 只開給需要的應用主機，避免以無驗證 API 對整個網路開放。文字 `qwen3:8b` 不含 vision；要分析圖片另選含 vision／projector 的模型，Ollama profile 使用 `SupportsImages=null` 自動讀取實際能力。明確設 false 可禁止圖片，設 true 不能讓文字模型支援圖片。圖片推論與 OCR 的額外 VRAM 仍須實測。
 
 更換 embedding 後，**全部相關文件重新索引**。同維度不同模型的向量仍不是同一個空間；現行 profile 會阻擋混用，新的索引須完成才可檢索。本版 migration 已新增 1024 維欄位；仍須先套用 migration、設定 profile 並重建，不能只改 JSON。
 

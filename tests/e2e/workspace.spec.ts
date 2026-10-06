@@ -550,9 +550,13 @@ test("shared disclosures close outside and permanent authorization errors do not
   await fixture.attach(page);
   await page.goto("/chat");
   await page.getByLabel(/上下文用量：/).click();
-  await expect(page.locator(".context-details")).toHaveAttribute("open");
+  await expect(
+    page.getByRole("group", { name: "上下文用量", exact: true }),
+  ).toHaveAttribute("open");
   await page.getByRole("textbox", { name: "傳送訊息" }).click();
-  await expect(page.locator(".context-details")).not.toHaveAttribute("open");
+  await expect(
+    page.getByRole("group", { name: "上下文用量", exact: true }),
+  ).not.toHaveAttribute("open");
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("權限撤銷");
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect(page.getByRole("alert")).toContainText("沒有 AI 對話權限");

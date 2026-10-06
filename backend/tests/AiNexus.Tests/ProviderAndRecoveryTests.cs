@@ -43,6 +43,24 @@ public sealed class ProviderAndRecoveryTests
     }
 
     [Fact]
+    public async Task OllamaReadsVisionMetadataAndSendsImageBytesUsingItsNativeProtocol()
+    {
+        using var client = new HttpClient(new FixtureHandler(async request =>
+        {
+            var body = await request.Content!.ReadAsStringAsync();
+            using var json = JsonDocument.Parse(body);
+            Assert.Equal("vision-model", json.RootElement.GetProperty("model").GetString());
+            if (request.RequestUri!.AbsolutePath == "/api/show")
+                return new(HttpStatusCode.OK) { Content = new StringContent("{\"capabilities\":[\"completion\",\"vision\"]}") };
+            Assert.Equal("AQID", json.RootElement.GetProperty("messages")[0].GetProperty("images")[0].GetString());
+            return new(HttpStatusCode.OK) { Content = new StringContent("{\"message\":{\"content\":\"圖片\"},\"done\":true,\"prompt_eval_count\":8,\"eval_count\":2}\n") };
+        })) { BaseAddress = new Uri("http://fixture.test/") };
+        var provider = new OllamaProvider(client);
+        Assert.True((await provider.CapabilitiesAsync("vision-model", CancellationToken.None))!.SupportsImages);
+        await foreach (var chunk in provider.StreamAsync("vision-model", [new("user", "分析圖片", [new(Guid.NewGuid(), "image/png", [1, 2, 3], 4096)])], new(8192, 512, .6, "", SupportsImages: true), CancellationToken.None)) Assert.True(chunk.Done);
+    }
+
+    [Fact]
     public async Task ModelDiscoveryUsesTheNativeInstalledCatalog()
     {
         using var client = new HttpClient(new FixtureHandler(request =>
@@ -64,12 +82,14 @@ public sealed class ProviderAndRecoveryTests
             var user = new Message { ConversationId = conversation.Id, Content = "原始訊息" };
             var answer = new Message { ConversationId = conversation.Id, ParentId = user.Id, Role = "assistant", Status = RunStates.Running, Content = "既有部分回答", RunId = interruptedId };
             conversation.ActiveLeafId = answer.Id;
-            var run = new GenerationRun { Id = interruptedId, OwnerId = owner.Id, ActiveOwnerId = owner.Id, ConversationId = conversation.Id, UserMessageId = user.Id, AssistantMessageId = answer.Id, ModelId = "test-model", Status = RunStates.Running, Content = answer.Content, IdempotencyKey = Guid.NewGuid().ToString(), RequestHash = new string('A', 64) };
+            var run = new GenerationRun { Id = interruptedId, OwnerId = owner.Id, ActiveOwnerId = owner.Id, ConversationId = conversation.Id, UserMessageId = user.Id, AssistantMessageId = answer.Id, ModelId = "test-model", Status = RunStates.Running, StartedAt = DateTimeOffset.UtcNow, ReservedTokens = 500, Content = answer.Content, IdempotencyKey = Guid.NewGuid().ToString(), RequestHash = new string('A', 64) };
             db.AddRange(owner, conversation, user, answer, run); db.SaveChanges();
         });
         using var client = await factory.SignedInAsync();
         var run = (await client.GetFromJsonAsync<RunDto>($"/api/v1/runs/{interruptedId}"))!;
         Assert.Equal(RunStates.Failed, run.Status); Assert.Equal("executor_lost", run.ErrorCode); Assert.Equal("既有部分回答", run.Content); Assert.Equal(0, factory.Provider.Calls); Assert.NotNull(run.Timing);
+        var budget = Assert.Single((await client.GetFromJsonAsync<AiNexus.Modules.Administration.EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
+        Assert.Equal(500, budget.ReservedTokens);
     }
 
     [Fact]
@@ -83,6 +103,8 @@ public sealed class ProviderAndRecoveryTests
         (await bob.PostAsync($"/api/v1/runs/{second.Id}/cancel", null)).EnsureSuccessStatusCode();
         (await alice.PostAsync($"/api/v1/runs/{first.Id}/cancel", null)).EnsureSuccessStatusCode();
         Assert.Equal(RunStates.Cancelled, (await ChatApiTests.WaitForTerminal(bob, second.Id)).Status);
+        var budget = Assert.Single((await bob.GetFromJsonAsync<AiNexus.Modules.Administration.EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
+        Assert.Equal(0, budget.ReservedTokens);
         await Task.Delay(100); Assert.True(factory.Provider.Calls <= 1);
     }
 

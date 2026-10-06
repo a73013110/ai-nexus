@@ -269,7 +269,10 @@ export class ApiFixture {
           features: [
             ...this.extraFeatures,
             ...(this.chatAccess
-              ? [{ id: "chat", name: "AI 對話", route: "/chat" }]
+              ? [
+                  { id: "chat", name: "AI 對話", route: "/chat" },
+                  { id: "files", name: "檔案庫", route: "/files" },
+                ]
               : []),
             ...(this.adminAccess
               ? [{ id: "admin", name: "管理", route: "/admin" }]
@@ -336,9 +339,17 @@ export class ApiFixture {
     if (path === "/settings/model-policy")
       return json({
         allowedModelIds: null,
-        dailyRequestLimit: null,
+        models: [
+          {
+            modelId: "fixture:8b",
+            dailyTokenLimit: null,
+            usedTokens: this.generated * 129,
+            reservedTokens: 0,
+            remainingTokens: null,
+            source: "unlimited",
+          },
+        ],
         storedAttachmentLimitBytes: null,
-        requestsToday: this.generated,
         resetsAt: "2026-10-05T00:00:00Z",
       });
     if (path === "/settings") {

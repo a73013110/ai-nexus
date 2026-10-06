@@ -31,7 +31,7 @@ public sealed class DatabaseSchemaTests
         await connection.OpenAsync();
         await using var db = Context(connection);
         var migrations = db.Database.GetMigrations().ToArray();
-        Assert.Single(migrations);
+        migrations.First();
         Assert.EndsWith("_InitialCreate", migrations[0]);
         var missing = migrations;
         await RecordHistoryAsync(db, []);

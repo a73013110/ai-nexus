@@ -15,8 +15,15 @@ public sealed class GroupModelPolicy
 {
     public string GroupId { get; set; } = "";
     public string? AllowedModelsJson { get; set; }
-    public int? DailyRequestLimit { get; set; }
+    public string? DailyTokenLimitsJson { get; set; }
     public long? StoredAttachmentLimitBytes { get; set; }
+}
+
+public sealed class UserModelPolicy
+{
+    public Guid UserId { get; set; }
+    public string? AllowedModelsJson { get; set; }
+    public string? DailyTokenLimitsJson { get; set; }
 }
 
 public static class AdministrationConfiguration
@@ -34,7 +41,11 @@ public static class AdministrationConfiguration
         bootstrap.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         var policy = model.Entity<GroupModelPolicy>();
         policy.ToTable("GroupModelPolicies", "access"); policy.HasKey(x => x.GroupId);
-        policy.Property(x => x.GroupId).HasMaxLength(64); policy.Property(x => x.AllowedModelsJson).HasMaxLength(4000);
+        policy.Property(x => x.GroupId).HasMaxLength(64); policy.Property(x => x.AllowedModelsJson).HasMaxLength(4000); policy.Property(x => x.DailyTokenLimitsJson).HasMaxLength(8000);
         policy.HasOne<RoleGroup>().WithMany().HasForeignKey(x => x.GroupId).OnDelete(DeleteBehavior.Cascade);
+        var personal = model.Entity<UserModelPolicy>();
+        personal.ToTable("UserModelPolicies", "access"); personal.HasKey(x => x.UserId);
+        personal.Property(x => x.AllowedModelsJson).HasMaxLength(4000); personal.Property(x => x.DailyTokenLimitsJson).HasMaxLength(8000);
+        personal.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
     }
 }

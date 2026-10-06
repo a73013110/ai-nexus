@@ -10,7 +10,7 @@ import {
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { Icon } from './icon';
-import { groupFeatures } from '../../core/feature-groups';
+import { groupFeatures, FEATURE_ICONS } from '../../core/feature-groups';
 @Component({
   selector: 'nx-workspace-navigation',
   imports: [RouterLink, RouterLinkActive, Icon],
@@ -46,7 +46,7 @@ import { groupFeatures } from '../../core/feature-groups';
                   (click)="activated.emit()"
                 >
                   <nx-icon [name]="icons[feature.id] || 'document'" /><span>{{
-                    shortNames[feature.id] || feature.name
+                    feature.name
                   }}</span>
                 </a>
               }
@@ -63,47 +63,6 @@ export class WorkspaceNavigation {
   readonly activated = output<void>();
   readonly expanded = signal(false);
   readonly toggle = (value: boolean) => !value;
-  readonly visibleGroups = computed(() => {
-    const features = this.session.me()?.access.features || [];
-    const hasFiles = features.some((feature) =>
-      ['chat', 'knowledge', 'projects'].includes(feature.id),
-    );
-    return groupFeatures(
-      hasFiles
-        ? [
-            ...features.slice(0, 2),
-            { id: 'files', name: '檔案庫', route: '/files' },
-            ...features.slice(2),
-          ]
-        : features,
-    );
-  });
-  readonly shortNames: Record<string, string> = {
-    files: '檔案庫',
-    dashboard: '總覽',
-    repositories: '程式庫',
-    chat: '對話',
-    projects: '專案',
-    knowledge: '知識',
-    artifacts: '成果',
-    tasks: '任務',
-    quality: '評測',
-    admin: '管理',
-    integrations: '來源',
-    shared: '分享',
-  };
-  readonly icons: Record<string, string> = {
-    files: 'document',
-    dashboard: 'dashboard',
-    repositories: 'git',
-    chat: 'lines',
-    projects: 'projects',
-    knowledge: 'library',
-    artifacts: 'document',
-    tasks: 'tasks',
-    quality: 'shield',
-    admin: 'lock',
-    integrations: 'integrations',
-    shared: 'share',
-  };
+  readonly visibleGroups = computed(() => groupFeatures(this.session.me()?.access.features || []));
+  readonly icons = FEATURE_ICONS;
 }

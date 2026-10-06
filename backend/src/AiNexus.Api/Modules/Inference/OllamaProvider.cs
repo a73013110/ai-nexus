@@ -18,6 +18,17 @@ public sealed class OllamaProvider(HttpClient client) : IInferenceProvider
         return json.RootElement.GetProperty("models").EnumerateArray().Select(x => x.GetProperty("name").GetString()!).ToHashSet(StringComparer.Ordinal);
     }
 
+    public async Task<ModelCapabilities?> CapabilitiesAsync(string model, CancellationToken ct)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        timeout.CancelAfter(TimeSpan.FromSeconds(5));
+        using var response = await client.PostAsJsonAsync("api/show", new { model }, timeout.Token);
+        response.EnsureSuccessStatusCode();
+        using var json = await AiNexus.BuildingBlocks.BoundedHttpJson.ReadAsync(response, 4 * 1024 * 1024, timeout.Token);
+        if (!json.RootElement.TryGetProperty("capabilities", out var capabilities) || capabilities.ValueKind != JsonValueKind.Array) return null;
+        return new(capabilities.EnumerateArray().Any(x => x.GetString() == "vision"));
+    }
+
     public async IAsyncEnumerable<InferenceChunk> StreamAsync(string model, IReadOnlyList<InferenceMessage> messages, GenerationParameters parameters, [EnumeratorCancellation] CancellationToken ct)
     {
         var payload = new Dictionary<string, object?>

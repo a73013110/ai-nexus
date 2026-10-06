@@ -16,6 +16,7 @@ public sealed class ModelInvocation
     public string Provider { get; set; } = "google";
     public long? DurationMilliseconds { get; set; }
     public string Status { get; set; } = "running";
+    public long ReservedTokens { get; set; }
     public long? InputTokens { get; set; }
     public long? OutputTokens { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
@@ -41,13 +42,17 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
         if (Encoding.UTF8.GetByteCount(prompt + instruction) + (images?.Sum(x => x.EstimatedTokens) ?? 0) + profile.MaxOutputTokens + 160 > profile.ContextTokens)
             throw new ApiException(400, "context_budget_exceeded", "此段內容超過模型上下文，請縮小範圍或調整系統模型。");
         var call = new ModelInvocation { OwnerId = owner, Kind = kind, ModelId = profile.Id, Provider = profile.Provider };
+        var parameters = new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, ModelTaskConfiguration.Temperature, instruction, profile.DefaultReasoningEffort, profile.ReasoningControl, profile.SupportsImages);
+        var messages = new[] { new InferenceMessage("system", instruction), new InferenceMessage("user", prompt, images) };
+        var inputEstimate = ContextBuilder.Estimate(messages);
         await writes.Gate.WaitAsync(ct);
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             // A harmless update serializes reservations for this account across application hosts.
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
-            await policy.RequireAsync(owner, profile.Id, ct);
+            parameters = await policy.BudgetAsync(owner, profile.Id, parameters, inputEstimate, call.CreatedAt, ct);
+            call.ReservedTokens = inputEstimate + parameters.MaxOutputTokens;
             await billing.ReserveAsync(call.Id, owner, null, profile.Provider, profile.NativeId, kind, call.CreatedAt, ct);
             db.Add(call); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         }
@@ -58,7 +63,6 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
         try
         {
             await billing.StartAsync(call.Id, ct); await db.SaveChangesAsync(ct);
-            var parameters = new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, ModelTaskConfiguration.Temperature, instruction, profile.DefaultReasoningEffort, profile.ReasoningControl, profile.SupportsImages);
             await foreach (var chunk in router.StreamAsync(profile.Provider, profile.NativeId, [new("user", prompt, images)], parameters, timeout.Token))
             {
                 text.Append(chunk.Text); done |= chunk.Done;

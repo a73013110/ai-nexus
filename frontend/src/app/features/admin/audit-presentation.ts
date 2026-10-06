@@ -1,6 +1,7 @@
 const actions: Record<string, string> = {
   'admin.bootstrap': '初始化管理員',
   'admin.user_roles': '調整使用者角色',
+  'admin.user_model_policy': '設定個人模型政策',
   'admin.user_storage': '調整使用者容量',
   'admin.user': '建立或調整使用者',
   'admin.user_delete': '移除使用者',
@@ -78,10 +79,14 @@ const labels: Record<string, string> = {
   featureIds: '功能',
   sortOrder: '顯示順序',
   'policy.allowedModelIds': '可用模型',
-  'policy.dailyRequestLimit': '每日生成上限',
+  'policy.dailyRequestLimit': '舊制每日生成次數上限',
+  allowedModelIds: '可用模型',
+  'policy.dailyTokenLimits': '各模型每日 token 上限',
+  dailyTokenLimits: '各模型每日 token 上限',
   'policy.storedAttachmentLimitBytes': '附件空間上限（bytes）',
 };
 function flatten(value: unknown, prefix = ''): Record<string, unknown> {
+  if (value == null && ['dailyTokenLimits', 'policy.dailyTokenLimits'].includes(prefix)) return {};
   if (!value || typeof value !== 'object' || Array.isArray(value)) return { [prefix]: value };
   return Object.fromEntries(
     Object.entries(value).flatMap(([key, item]) =>
@@ -99,7 +104,10 @@ const display = (value: unknown) =>
       : Array.isArray(value)
         ? value.join('、') || '無'
         : String(value);
-export function auditChanges(json: string | null | undefined): AuditChange[] {
+export function auditChanges(
+  json: string | null | undefined,
+  modelNames: Readonly<Record<string, string>> = {},
+): AuditChange[] {
   try {
     const data = JSON.parse(json || '{}');
     if (!Object.hasOwn(data, 'after')) return [];
@@ -107,20 +115,30 @@ export function auditChanges(json: string | null | undefined): AuditChange[] {
       after = data.after == null ? {} : flatten(data.after);
     return [...new Set([...Object.keys(before), ...Object.keys(after)])]
       .filter((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]))
-      .map((key) => ({
-        key,
-        label: labels[key] || key,
-        before: display(before[key]),
-        after: display(after[key]),
-        ...(key === 'featureIds'
-          ? {
-              featureIds: {
-                before: Array.isArray(before[key]) ? (before[key] as unknown[]).map(String) : [],
-                after: Array.isArray(after[key]) ? (after[key] as unknown[]).map(String) : [],
-              },
-            }
-          : {}),
-      }));
+      .map((key) => {
+        const tokenPrefix = ['policy.dailyTokenLimits.', 'dailyTokenLimits.'].find((prefix) =>
+          key.startsWith(prefix),
+        );
+        const modelId = tokenPrefix ? key.slice(tokenPrefix.length) : null;
+        const tokenValue = (value: unknown) =>
+          value == null ? '繼承設定' : Number(value).toLocaleString('zh-TW') + ' tokens';
+        return {
+          key,
+          label: modelId
+            ? '每日 token 上限 · ' + (modelNames[modelId] || modelId)
+            : labels[key] || key,
+          before: modelId ? tokenValue(before[key]) : display(before[key]),
+          after: modelId ? tokenValue(after[key]) : display(after[key]),
+          ...(key === 'featureIds'
+            ? {
+                featureIds: {
+                  before: Array.isArray(before[key]) ? (before[key] as unknown[]).map(String) : [],
+                  after: Array.isArray(after[key]) ? (after[key] as unknown[]).map(String) : [],
+                },
+              }
+            : {}),
+        };
+      });
   } catch {
     return [];
   }

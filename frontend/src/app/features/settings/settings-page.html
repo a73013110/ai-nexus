@@ -350,39 +350,41 @@
               <p class="secondary">最近 {{ stats.days }} 天 · 依 UTC 日期統計</p>
               @if (policy(); as limits) {
                 <section class="settings-card">
-                  <h2>今日配額</h2>
-                  <div class="setting-row">
-                    <div>
-                      <strong>{{ limits.requestsToday }} 次生成</strong>
-                      <p>
-                        {{
-                          limits.dailyRequestLimit == null
-                            ? '群組未設定每日生成次數限制'
-                            : '每日上限 ' + limits.dailyRequestLimit + ' 次'
-                        }}
-                      </p>
+                  <h2>各模型今日 token 預算</h2>
+                  @for (model of limits.models; track model.modelId) {
+                    <div class="setting-row">
+                      <div>
+                        <strong>{{ modelLabel(model.modelId) }}</strong>
+                        <p>
+                          已回報 {{ format(model.usedTokens) }} · 預留
+                          {{ format(model.reservedTokens) }}
+                        </p>
+                        <p>
+                          {{
+                            model.dailyTokenLimit == null
+                              ? '未設定上限'
+                              : '每日上限 ' + format(model.dailyTokenLimit) + ' tokens'
+                          }}
+                        </p>
+                      </div>
+                      <span class="feature-badge">{{
+                        model.remainingTokens == null
+                          ? '不限制'
+                          : '剩餘 ' + format(model.remainingTokens)
+                      }}</span>
                     </div>
-                    <span class="feature-badge">{{
-                      limits.dailyRequestLimit == null
-                        ? '依系統政策'
-                        : '剩餘 ' +
-                          (limits.dailyRequestLimit > limits.requestsToday
-                            ? limits.dailyRequestLimit - limits.requestsToday
-                            : 0) +
-                          ' 次'
-                    }}</span>
-                  </div>
-                  @if (limits.dailyRequestLimit != null) {
-                    <meter
-                      min="0"
-                      [max]="limits.dailyRequestLimit || 1"
-                      [value]="limits.requestsToday"
-                      aria-label="今日生成配額用量"
-                    ></meter>
-                    <p class="form-note">
-                      配額於 {{ limits.resetsAt }} 重設（UTC）。取消與失敗的請求也計次。
-                    </p>
+                    @if (model.dailyTokenLimit != null) {
+                      <meter
+                        min="0"
+                        [max]="model.dailyTokenLimit || 1"
+                        [value]="model.usedTokens + model.reservedTokens"
+                        [attr.aria-label]="'今日 token 用量：' + modelLabel(model.modelId)"
+                      ></meter>
+                    }
                   }
+                  <p class="form-note">
+                    輸入與輸出合計，台北時間每日 08:00 重設。未回報完整用量的請求保留預估額度。
+                  </p>
                   @if (limits.storedAttachmentLimitBytes != null) {
                     <p class="form-note">
                       群組附件空間上限
@@ -413,9 +415,7 @@
                 </p>
                 <p class="secondary">
                   {{ stats.failed }} 次失敗 · {{ stats.cancelled }} 次取消 · 累計耗時
-                  {{ duration(stats.totalDurationMilliseconds) }}（{{
-                    stats.timedRequests
-                  }}
+                  {{ duration(stats.totalDurationMilliseconds) }}（{{ stats.timedRequests }}
                   次有耗時紀錄）
                 </p>
               </section>

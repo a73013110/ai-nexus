@@ -35,10 +35,10 @@ public sealed class WebSearchService(NexusDbContext db, IWebSearchProvider provi
                 if (previous.Status != "completed") throw new ApiException(409, "web_search_pending_or_failed", "這次搜尋正在處理或未完成。請重新提交新的訊息。");
                 return previous;
             }
-            DateTimeOffset since = DateTimeOffset.UtcNow.Date;
-            if (await db.Set<WebSearchRecord>().CountAsync(x => x.OwnerId == owner && x.CreatedAt >= since, ct) >= options.Value.MaxDailyRequests)
-                throw new ApiException(429, "web_search_daily_quota", "今日網路搜尋已達上限。");
             record = new() { OwnerId = owner, ConversationId = conversation, IdempotencyKey = key, RequestHash = hash };
+            var since = UtcDay.Start(record.CreatedAt); var until = since.AddDays(1);
+            if (await db.Set<WebSearchRecord>().CountAsync(x => x.OwnerId == owner && x.CreatedAt >= since && x.CreatedAt < until, ct) >= options.Value.MaxDailyRequests)
+                throw new ApiException(429, "web_search_daily_quota", "今日網路搜尋已達上限。");
             call = new() { Id = record.Id, OwnerId = owner, ModelId = "web-search", Kind = "web-search", CreatedAt = record.CreatedAt };
             await billing.ReserveAsync(call.Id, owner, conversation, options.Value.Provider, call.ModelId, call.Kind, call.CreatedAt, ct);
             db.Add(record); db.Add(call); await billing.StartAsync(call.Id, ct); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);

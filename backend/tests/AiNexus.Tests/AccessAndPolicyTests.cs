@@ -39,7 +39,7 @@ public sealed class AccessAndPolicyTests
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Assert.Equal("member", Assert.Single(me.Access.Roles).Id);
         Assert.Equal("workspace", Assert.Single(me.Access.Groups).Id);
-        Assert.Contains(new FeatureDto("chat", "AI 對話", "/chat"), me.Access.Features);
+        Assert.Contains(new FeatureDto("chat", "對話", "/chat"), me.Access.Features);
         Assert.Equal(me.Access.Features.Count, me.Access.Features.Select(x => x.Id).Distinct().Count());
         (await client.GetAsync("/api/v1/models")).EnsureSuccessStatusCode();
     }

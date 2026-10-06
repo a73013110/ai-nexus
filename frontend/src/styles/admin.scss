@@ -33,20 +33,23 @@
   flex-direction: column;
   gap: 12px;
 }
-.admin-inspector .dialog-heading {
+.platform-dialog.admin-inspector .dialog-heading {
   margin-bottom: 0;
   flex: none;
 }
 .inspector-content {
   flex: 1;
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 12px;
   overscroll-behavior: contain;
 }
-.inspector-content > :not(.inspector-body) {
+.inspector-content > .inspector-stats,
+.inspector-content > .inspector-tabs,
+.inspector-content > .inspector-audit-note,
+.inspector-content > .inline-error {
   flex: none;
 }
 .inspector-storage {
@@ -99,17 +102,6 @@
   line-height: 1.25;
   letter-spacing: -0.035em;
 }
-.inspector-kind-list {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  color: var(--secondary);
-  font-size: var(--text-caption);
-}
-.inspector-kind-list small {
-  font-size: inherit;
-}
 .inspector-audit-note {
   display: flex;
   align-items: center;
@@ -122,8 +114,8 @@
   color: var(--secondary);
 }
 .inspector-body {
-  flex: 1 0 320px;
-  min-height: 320px;
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: 264px minmax(0, 1fr);
   gap: 20px;
@@ -364,16 +356,17 @@
   .inspector-body {
     display: flex;
     flex-direction: column;
-    min-height: 360px;
-    overflow: visible;
-    flex: none;
+    min-height: 0;
+    overflow: auto;
+    flex: 1;
   }
   .inspector-list {
     max-height: 260px;
     flex: none;
   }
   .inspector-reading {
-    overflow: visible;
+    flex: 1;
+    overflow: auto;
     padding: 0;
   }
   .inspector-stats {
@@ -381,9 +374,6 @@
   }
   .inspector-stats strong {
     font-size: 22px;
-  }
-  .inspector-kind-list {
-    display: none;
   }
   .inspector-audit-note {
     align-items: flex-start;
@@ -446,4 +436,234 @@
 }
 .audit-feature-change small {
   color: var(--secondary);
+}
+
+.admin-editor {
+  --dialog-width: 44rem;
+}
+.admin-editor.admin-group-editor {
+  --dialog-width: 64rem;
+}
+.admin-editor .dialog-scroll {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.admin-group-editor .dialog-scroll {
+  height: min(700px, calc(100dvh - 4rem));
+}
+.admin-editor .dialog-heading,
+.admin-editor .page-tabs,
+.admin-editor .inline-error {
+  flex: none;
+}
+.admin-editor-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.admin-editor-fields {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 8px 16px 0;
+  overscroll-behavior: contain;
+}
+.platform-dialog.admin-editor .dialog-actions {
+  flex: none;
+  position: static;
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.inspector-tabs {
+  flex: none;
+  margin: 0;
+}
+.inspector-settings {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 8px 16px 0;
+}
+.inspector-model-settings {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+.inspector-model-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.inspector-model-fields {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 8px 16px 0;
+  overscroll-behavior: contain;
+}
+.platform-dialog.admin-inspector .dialog-actions {
+  flex: none;
+  position: static;
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+.model-policy-heading h3 {
+  margin: 0 0 8px;
+  font-size: var(--text-heading);
+}
+.model-policy-heading {
+  margin-bottom: 20px;
+}
+.model-policy-list {
+  display: grid;
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  overflow: hidden;
+}
+.model-policy-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 240px);
+  gap: 12px 24px;
+  padding: 18px;
+}
+.model-policy-row + .model-policy-row {
+  border-top: 1px solid var(--line);
+}
+.model-policy-name {
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.model-policy-name small,
+.model-policy-effective {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.model-policy-limit {
+  display: grid;
+  gap: 8px;
+  font-size: var(--text-caption);
+}
+.model-policy-effective {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 6px;
+}
+.model-policy-effective small {
+  font-size: inherit;
+}
+.admin-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.admin-feature-card {
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  padding: 16px;
+  background: var(--surface);
+  min-width: 0;
+}
+.admin-feature-card .resource-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+}
+.admin-feature-card .resource-summary > div {
+  min-width: 0;
+}
+.admin-feature-card small {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.admin-feature-card .icon-button {
+  float: right;
+}
+.admin-usage-section {
+  margin-top: 28px;
+}
+.admin-usage-section h2 {
+  font-size: var(--text-heading);
+}
+.admin-service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+}
+.admin-service-card {
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  padding: 16px;
+}
+.admin-service-card p {
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.admin-usage-table {
+  overflow-x: auto;
+}
+.admin-usage-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-caption);
+}
+.admin-usage-table th,
+.admin-usage-table td {
+  text-align: left;
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.admin-usage-table th {
+  color: var(--secondary);
+  font-weight: 500;
+}
+.admin-usage-table th:not(:first-child),
+.admin-usage-table td:not(:first-child) {
+  text-align: right;
+  white-space: nowrap;
+}
+.admin-usage-table td:first-child {
+  max-width: 22rem;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1100px) {
+  .admin-feature-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .admin-feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .admin-group-editor .page-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    overflow: visible;
+  }
+  .admin-group-editor .page-tabs button {
+    padding-inline: 4px;
+    white-space: normal;
+    font-size: var(--text-caption);
+    min-width: 0;
+  }
+  .model-policy-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 16px;
+  }
+}
+@media (max-height: 600px) {
+  .inspector-stats {
+    padding: 6px 0;
+  }
+  .inspector-stats small {
+    display: none;
+  }
 }

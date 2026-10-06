@@ -26,6 +26,7 @@ public sealed class GenerationRun
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? StartedAt { get; set; }
     public DateTimeOffset? FinishedAt { get; set; }
+    public long ReservedTokens { get; set; }
     public long? InputTokens { get; set; }
     public long? OutputTokens { get; set; }
     public long? DurationMilliseconds { get; set; }
@@ -57,6 +58,8 @@ public sealed class ModelProfile
     public bool SupportsUsage { get; set; } = true;
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public bool SupportsImages { get; set; }
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public bool? ImageCapabilityOverride { get; set; }
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public string ReasoningControl { get; set; } = "none";
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]

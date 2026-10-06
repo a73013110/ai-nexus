@@ -54,6 +54,11 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
     }
     private async Task<object?> SnapshotAsync(string action, Guid? resource, string key, CancellationToken ct)
     {
+        if (action == "admin.user_model_policy")
+        {
+            var policy = await db.Set<UserModelPolicy>().AsNoTracking().SingleOrDefaultAsync(x => x.UserId == resource, ct);
+            return new ModelPolicyRequest(ModelPolicyService.Allowed(policy?.AllowedModelsJson), ModelPolicyService.Limits(policy?.DailyTokenLimitsJson));
+        }
         if (action == "admin.user_storage") return await db.Users.AsNoTracking().Where(x => x.Id == resource).Select(x => new { x.AttachmentLimitBytes }).SingleOrDefaultAsync(ct);
         if (action is "admin.user" or "admin.user_delete")
         {
@@ -75,7 +80,7 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
                 value.Name,
                 value.Enabled,
                 featureIds = await db.Set<RoleGroupFeature>().AsNoTracking().Where(x => x.GroupId == key).OrderBy(x => x.FeatureId).Select(x => x.FeatureId).ToArrayAsync(ct),
-                policy = policy is null ? null : new GroupPolicyRequest(policy.AllowedModelsJson is null ? null : JsonSerializer.Deserialize<string[]>(policy.AllowedModelsJson), policy.DailyRequestLimit, policy.StoredAttachmentLimitBytes)
+                policy = policy is null ? null : new GroupPolicyRequest(ModelPolicyService.Allowed(policy.AllowedModelsJson), ModelPolicyService.Limits(policy.DailyTokenLimitsJson), policy.StoredAttachmentLimitBytes)
             };
         }
         var feature = await db.Set<Feature>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == key, ct);

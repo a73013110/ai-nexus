@@ -61,9 +61,9 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
     options.AddPolicy(BuiltInAccess.ChatPolicy, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(BuiltInAccess.ChatFeature)));
     options.AddPolicy(AdministrationConfiguration.Policy, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(AdministrationConfiguration.Feature)));
-    foreach (var feature in new[] { "knowledge", "tasks", "artifacts", "projects", "shared", "quality", "integrations", "dashboard", "repositories" })
+    foreach (var feature in new[] { "files", "knowledge", "tasks", "artifacts", "projects", "shared", "quality", "integrations", "dashboard", "repositories" })
         options.AddPolicy("feature:" + feature, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(feature)));
-    options.AddPolicy("feature:attachments", policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement("chat", "knowledge", "projects")));
+    options.AddPolicy("feature:attachments", policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement("files", "chat", "knowledge", "projects")));
     options.AddPolicy("feature:text", policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement("chat", "artifacts")));
 });
 builder.Services.AddScoped<AccessService>();

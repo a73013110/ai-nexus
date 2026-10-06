@@ -60,11 +60,12 @@ public static class ConnectionVerifier
         await Check("AttachmentInference", async () =>
         {
             var options = services.GetRequiredService<IOptions<InferenceOptions>>().Value;
-            var profile = options.Models.FirstOrDefault(x => x.Id == (options.DefaultModelId ?? options.Models.FirstOrDefault()?.Id))
+            var profiles = await services.GetRequiredService<ModelCatalog>().ProfilesAsync(ct);
+            var profile = profiles.FirstOrDefault(x => x.Id == (options.DefaultModelId ?? options.Models.FirstOrDefault()?.Id))
                 ?? throw new ApiException(503, "model_not_configured", "請設定預設模型。");
             // Synthetic content only: no personal files, prompt history or identity credentials.
             var (_, document) = services.GetRequiredService<DocumentExtractor>().Extract("connection-check.txt", Encoding.UTF8.GetBytes("Project verification code: NEXUSCHECK42"), ct);
-            var images = profile.SupportsImages ? new[] { new InferenceImage(Guid.NewGuid(), "image/png", Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAIAAABMXPacAAABWklEQVR4nO3OQQ0AMBAEofVv+iqDxzRBALvtg/wgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwg7gEgaMOyrMtNTwAAAABJRU5ErkJggg=="), 4096) } : [];
+            var images = profile.SupportsImages ? new[] { new InferenceImage(Guid.NewGuid(), "image/png", Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAIAAABMXPacAAABWklEQVR4nO3OQQ0AMBAEofVv+iqDxzRBALvtg/wgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vzg2h4gaMOyHY2XLAAAAABJRU5ErkJggg=="), 4096) } : [];
             var prompt = "Read the attached document and reply with its project verification code." + (images.Length > 0 ? " Also identify the dominant color in the attached image using one English color word." : "") + "\n<document>\n" + document + "\n</document>";
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(60));
             var text = new StringBuilder(); var done = false;

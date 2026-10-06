@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import type {
   AdminUser,
+  Model,
   AdminUserDetail,
   AdminConversationPage,
   AdminConversationDetail,
@@ -25,18 +26,41 @@ import { AdminApi } from './admin-api';
 import { StorageUsage } from '../../shared/ui/storage-usage';
 import { RunTimingDisplay } from '../../shared/ui/run-timing';
 import { parseStorageLimitGb, storageLimitGb } from '../../shared/browser/storage-limit';
+import {
+  ModelPolicyEditor,
+  modelPolicyDraft,
+  modelPolicyRequest,
+  type ModelPolicyDraft,
+} from './model-policy-editor';
+import type { components } from '../../core/api/schema';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 
 @Component({
   selector: 'nx-admin-user-inspector',
-  imports: [Icon, SearchField, Checkbox, MarkdownView, StorageUsage, RunTimingDisplay],
+  imports: [
+    Icon,
+    SearchField,
+    Checkbox,
+    MarkdownView,
+    StorageUsage,
+    RunTimingDisplay,
+    ModelPolicyEditor,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-user-inspector.html',
 })
 export class AdminUserInspector {
   readonly user = input<AdminUser | null>(null);
   readonly closed = output<void>();
-  readonly storageChanged = output<void>();
+  readonly settingsChanged = output<void>();
+  readonly models = input<Model[]>([]);
+  readonly tab = signal('conversations');
+  readonly modelPolicy = signal<components['schemas']['AdminUserModelPolicyDto'] | null>(null);
+  readonly modelDraft = signal<ModelPolicyDraft>(modelPolicyDraft());
+  readonly savingModels = signal(false);
+  readonly modelError = signal('');
+  readonly modelNotice = signal('');
+  readonly loadingModels = signal(false);
   readonly storageLimit = signal('');
   readonly savingStorage = signal(false);
   readonly storageError = signal('');
@@ -80,6 +104,13 @@ export class AdminUserInspector {
       this.storageNotice.set('');
       this.savingStorage.set(false);
       this.storageLimit.set('');
+      this.tab.set('conversations');
+      this.modelPolicy.set(null);
+      this.modelDraft.set(modelPolicyDraft());
+      this.modelError.set('');
+      this.modelNotice.set('');
+      this.loadingModels.set(false);
+      this.savingModels.set(false);
       if (user) {
         if (!dialog.open) dialog.showModal();
         void this.load(user.id, this.version);
@@ -128,11 +159,55 @@ export class AdminUserInspector {
       if (version !== this.version) return;
       this.overview.set(overview);
       this.storageNotice.set('個人容量上限已更新。');
-      this.storageChanged.emit();
+      this.settingsChanged.emit();
     } catch (error) {
       if (version === this.version) this.storageError.set(this.message(error));
     } finally {
       if (version === this.version) this.savingStorage.set(false);
+    }
+  }
+  async selectTab(tab: string) {
+    this.tab.set(tab);
+    if (tab !== 'models' || this.modelPolicy() || this.loadingModels()) return;
+    await this.loadModels();
+  }
+  async loadModels() {
+    const user = this.user(),
+      version = this.version;
+    if (!user) return;
+    this.loadingModels.set(true);
+    this.modelError.set('');
+    try {
+      const policy = await this.api.modelPolicy(user.id);
+      if (version !== this.version) return;
+      this.modelPolicy.set(policy);
+      this.modelDraft.set(modelPolicyDraft(policy.personal));
+    } catch (error) {
+      if (version === this.version) this.modelError.set(this.message(error));
+    } finally {
+      if (version === this.version) this.loadingModels.set(false);
+    }
+  }
+  async saveModels(event: Event) {
+    event.preventDefault();
+    const user = this.user(),
+      version = this.version;
+    if (!user || this.savingModels()) return;
+    this.savingModels.set(true);
+    this.modelError.set('');
+    this.modelNotice.set('');
+    try {
+      await this.api.saveModelPolicy(user.id, modelPolicyRequest(this.modelDraft()));
+      const policy = await this.api.modelPolicy(user.id);
+      if (version !== this.version) return;
+      this.modelPolicy.set(policy);
+      this.modelDraft.set(modelPolicyDraft(policy.personal));
+      this.modelNotice.set('個人模型政策已儲存，下次生成生效。');
+      this.settingsChanged.emit();
+    } catch (error) {
+      if (version === this.version) this.modelError.set(this.message(error));
+    } finally {
+      if (version === this.version) this.savingModels.set(false);
     }
   }
   searchChanged(value: string) {
@@ -184,13 +259,6 @@ export class AdminUserInspector {
     } finally {
       if (version === this.readVersion) this.reading.set(false);
     }
-  }
-  kind(value: string) {
-    return (
-      ({ chat: '對話', transform: '文字處理', evaluation: '品質評測' } as Record<string, string>)[
-        value
-      ] || value
-    );
   }
   private message(error: unknown) {
     return error instanceof Error ? error.message : '無法取得資料，請重試。';

@@ -2,6 +2,8 @@
 
 檔案庫是每個人的原檔清單；知識庫是有權限控制的檢索來源。知識庫、專案及成功送出的對話附件都會保存到上傳者的檔案庫。也可直接上傳到 `/files`，先保存素材再決定用途。共用知識庫的成員只在授權來源中閱讀文件，不會取得上傳者的整個檔案庫。
 
+檔案庫使用正式的 `files` 功能授權，管理員可於功能群組設定或停用，側欄與平台管理共用名稱與排序。附件上傳仍可由對話、知識或專案授權使用，不必另開檔案庫權限。
+
 ## 操作
 
 - 搜尋名稱，依圖片／文件及對話／知識庫／專案／尚未引用篩選，切換卡片或清單。每頁 40 筆；附件配額維持同一個原檔計算。
@@ -20,4 +22,4 @@ FileLibraryStore 共用於頁面與選取器，搜尋去抖、取消舊請求並
 
 ## 儲存與初始化
 
-原檔位於站外 `Attachments.StoragePath`，資料庫保存 opaque 儲存識別、metadata、引用及衍生搜尋資料。預設每人 5,000,000,000 bytes；個人 override 優先於群組與預設。同一 attachment ID 多處使用只計一次。本版只有 `InitialCreate`，針對空資料庫初始化，不提供舊版 binary 遷移。詳見 [附件生命週期](ATTACHMENTS.md)、[SQL 初始化](DATABASE.md) 與 [SQL／原檔備份](BACKUP.md)。
+原檔位於站外 `Attachments.StoragePath`，資料庫保存 opaque 儲存識別、metadata、引用及衍生搜尋資料。預設每人 5,000,000,000 bytes；個人 override 優先於群組與預設。同一 attachment ID 多處使用只計一次。`InitialCreate` 建立空資料庫基線，後續增量 migration 提供版本升級。詳見 [附件生命週期](ATTACHMENTS.md)、[SQL 初始化](DATABASE.md) 與 [SQL／原檔備份](BACKUP.md)。

@@ -27,7 +27,7 @@ public static class AccessControlConfiguration
         feature.Property(x => x.Id).HasMaxLength(64);
         feature.Property(x => x.Name).HasMaxLength(120);
         feature.Property(x => x.Route).HasMaxLength(160);
-        feature.HasData(new Feature { Id = BuiltInAccess.ChatFeature, Name = "AI 對話", Route = "/chat", SortOrder = 10 });
+        feature.HasData(new Feature { Id = BuiltInAccess.ChatFeature, Name = "對話", Route = "/chat", SortOrder = 10 });
 
         var userRole = model.Entity<UserRole>();
         userRole.ToTable("UserRoles", "access");

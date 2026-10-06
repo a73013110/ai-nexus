@@ -6,7 +6,7 @@
   <div page-actions class="page-actions">
     @if (session.has('admin')) {
       <a routerLink="/dashboard" [queryParams]="{ scope: 'platform' }" class="secondary-button"
-        ><nx-icon name="chart" />平台費用</a
+        ><nx-icon name="chart" />用量與費用總覽</a
       >
       <nx-price-book />
       <a routerLink="/design" class="secondary-button"><nx-icon name="sliders" />介面元件</a>
@@ -189,12 +189,7 @@
               <button class="resource-summary" (click)="open('group', group)">
                 <strong>{{ group.name }}</strong
                 ><small
-                  >{{ group.id }} · {{ group.enabled ? '啟用' : '停用' }} ·
-                  {{
-                    group.policy?.dailyRequestLimit == null
-                      ? '無每日群組限制'
-                      : group.policy.dailyRequestLimit + ' 次 / 日'
-                  }}</small
+                  >{{ group.id }} · {{ group.enabled ? '啟用' : '停用' }} · 各模型 token 預算</small
                 >
               </button>
               <nx-feature-summary [features]="groupSummaries()[group.id] || []" />
@@ -218,53 +213,154 @@
             <h2 class="feature-section-heading">
               {{ section.name }}<small>{{ section.features.length }} 項功能</small>
             </h2>
-            <div class="resource-list">
+            <div class="admin-feature-grid">
               @for (feature of section.features; track feature.id) {
-                <div class="resource-row">
+                <article class="admin-feature-card">
                   <button class="resource-summary" (click)="open('feature', feature)">
-                    <strong>{{ feature.name }}</strong
-                    ><small
-                      >{{ feature.id }} · {{ feature.route }} · 順序 {{ feature.sortOrder }} ·
-                      {{ feature.enabled ? '啟用' : '停用' }}</small
-                    ></button
-                  ><button
+                    <nx-icon [name]="featureIcons[feature.id] || 'document'" />
+                    <div>
+                      <strong>{{ feature.name }}</strong
+                      ><small
+                        >{{ feature.enabled ? '啟用' : '停用' }} · 順序
+                        {{ feature.sortOrder }}</small
+                      >
+                    </div>
+                  </button>
+                  <button
                     class="icon-button"
                     [attr.aria-label]="'編輯功能：' + feature.name"
                     (click)="open('feature', feature)"
                   >
                     <nx-icon name="edit" />
                   </button>
-                </div>
+                  <small class="form-note">{{ feature.route }}</small>
+                </article>
               }
             </div>
           </section>
         }
       }
       @case ('audit') {
-        <nx-admin-audit [features]="catalog()?.features || []" />
+        <nx-admin-audit [features]="catalog()?.features || []" [models]="catalog()?.models || []" />
       }
       @case ('usage') {
         @if (usage(); as stats) {
-          <p class="form-note">最近 30 天 · 全平台 · token 合計僅包含模型有回報的紀錄</p>
+          <div class="page-toolbar">
+            <p class="form-note">
+              最近 30 天 · {{ date(stats.since) }} 至 {{ date(stats.until) }} · 全平台
+            </p>
+            <button class="secondary-button" (click)="selectTab('usage')">
+              <nx-icon name="refresh" />更新用量
+            </button>
+          </div>
+          <p class="form-note">
+            在此檢查模型使用、生成品質、原檔容量與服務狀態。日期篩選、費用及 CSV
+            請開啟「用量與費用總覽」。
+          </p>
           <div class="usage-grid">
             <div class="stat-card">
-              <span>使用者</span><strong>{{ format(stats.users) }}</strong>
+              <span>啟用帳號</span><strong>{{ format(stats.users) }}</strong
+              ><small>{{ format(stats.activeUsers) }} 位在區間內使用 AI</small>
             </div>
             <div class="stat-card">
               <span>生成次數</span><strong>{{ format(stats.requests) }}</strong
-              ><small>{{ stats.completed }} 次完成</small>
+              ><small
+                >{{ format(stats.completed) }} 完成 · {{ format(stats.failed) }} 失敗 ·
+                {{ format(stats.cancelled) }} 取消</small
+              >
             </div>
             <div class="stat-card">
               <span>回報 tokens</span
               ><strong>{{ format(stats.inputTokens + stats.outputTokens) }}</strong
-              ><small>{{ stats.requestsWithUsage }} 次請求有完整用量</small>
+              ><small
+                >輸入 {{ format(stats.inputTokens) }} · 輸出 {{ format(stats.outputTokens) }}</small
+              >
             </div>
             <div class="stat-card">
-              <span>累計處理時間</span
-              ><strong>{{ duration(stats.totalDurationMilliseconds) }}</strong>
-              <small>{{ stats.timedRequests }} 次請求有耗時紀錄</small>
+              <span>原檔容量</span><strong>{{ bytes(stats.storedBytes) }}</strong
+              ><small>{{ format(stats.storedFiles) }} 份原檔 · 所有期間，重複引用不重複計算</small>
             </div>
           </div>
+          <p class="form-note">
+            {{ format(stats.requestsWithUsage) }} 次請求回報完整用量；其餘
+            {{ format(stats.requests - stats.requestsWithUsage) }} 次未回報完整
+            token，不估算實際用量。累計處理 {{ duration(stats.totalDurationMilliseconds) }}（{{
+              stats.timedRequests
+            }}
+            次有紀錄）。
+          </p>
+          <section class="admin-usage-section" aria-label="各模型用量">
+            <h2>各模型使用狀況</h2>
+            <div class="admin-usage-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">模型</th>
+                    <th scope="col">請求</th>
+                    <th scope="col">輸入 tokens</th>
+                    <th scope="col">輸出 tokens</th>
+                    <th scope="col">失敗</th>
+                    <th scope="col">缺少完整用量</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (model of stats.models; track model.modelId) {
+                    <tr>
+                      <td>{{ usageModelName(model.modelId) }}</td>
+                      <td>{{ format(model.requests) }}</td>
+                      <td>{{ format(model.inputTokens) }}</td>
+                      <td>{{ format(model.outputTokens) }}</td>
+                      <td>{{ format(model.failed) }}</td>
+                      <td>{{ format(model.requests - model.requestsWithUsage) }}</td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="6">區間內尚無模型使用紀錄。</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+          <section class="admin-usage-section" aria-label="功能用量">
+            <h2>使用來源</h2>
+            <div class="resource-badges">
+              @for (kind of stats.kinds; track kind.kind) {
+                <span>{{ usageKindName(kind.kind) }} · {{ format(kind.requests) }} 次</span>
+              } @empty {
+                <p class="form-note">尚無使用紀錄。</p>
+              }
+            </div>
+          </section>
+          <section class="admin-usage-section" aria-label="模型與搜尋服務">
+            <h2>服務狀態</h2>
+            <div class="admin-service-grid">
+              @for (provider of stats.providers; track provider.id) {
+                <article class="admin-service-card">
+                  <strong
+                    >{{
+                      provider.id === 'ollama'
+                        ? '地端 Ollama'
+                        : provider.id === 'google'
+                          ? 'Google AI'
+                          : provider.id
+                    }}
+                    · {{ provider.available ? '已連線' : '無法連線' }}</strong
+                  >
+                  <p>
+                    {{ provider.notice || '模型目錄可正常讀取。圖片能力依各模型實際回報判定。' }}
+                  </p>
+                </article>
+              }
+              <article class="admin-service-card">
+                <strong>網路搜尋 · {{ stats.webSearch.available ? '已設定' : '尚未啟用' }}</strong>
+                <p>{{ stats.webSearch.notice }}</p>
+                <p>地端部署可搭配公司自架 SearXNG；模型本身不會自動連網。</p>
+              </article>
+            </div>
+          </section>
+        } @else {
+          <p role="status">正在載入平台用量…</p>
         }
       }
     }
@@ -272,12 +368,14 @@
 </nx-feature-page>
 <nx-admin-user-inspector
   [user]="inspected()"
+  [models]="catalog()?.models || []"
   (closed)="inspected.set(null)"
-  (storageChanged)="loadUsers(users()?.offset || 0)"
+  (settingsChanged)="loadUsers(users()?.offset || 0)"
 />
 <dialog
   #editorDialog
-  class="workspace-dialog platform-dialog"
+  class="workspace-dialog platform-dialog admin-editor"
+  [class.admin-group-editor]="editor()?.kind === 'group'"
   aria-labelledby="admin-editor-title"
   (close)="editor.set(null)"
   (cancel)="cancel($event)"
@@ -302,220 +400,211 @@
       @if (editorError()) {
         <p role="alert" class="inline-error">{{ editorError() }}</p>
       }
-      <form class="platform-form" (submit)="save($event)">
-        @if (e.kind === 'user') {
-          <label
-            >姓名<input
-              aria-label="使用者姓名"
-              required
-              maxlength="120"
-              [value]="e.name"
-              [readOnly]="saving()"
-              (input)="update('name', $any($event.target).value)"
-          /></label>
-          <nx-checkbox
-            label="啟用使用者"
-            [checked]="e.enabled"
-            [disabled]="saving()"
-            (checkedChange)="update('enabled', $event)"
-          />
-          <fieldset>
-            <legend>允許的登入方式</legend>
-            <p class="form-note">可同時開啟多種方式，皆使用同一份角色、對話與個人設定。</p>
-            <nx-checkbox
-              label="允許 AD 驗證"
-              [checked]="e.adEnabled"
-              [disabled]="saving()"
-              (checkedChange)="update('adEnabled', $event)"
-            />
-            @if (e.adEnabled) {
-              <label
-                >AD 帳號<input
-                  aria-label="使用者 AD 帳號"
-                  required
-                  maxlength="64"
-                  autocomplete="off"
-                  [value]="e.adAccount"
-                  [readOnly]="saving()"
-                  (input)="update('adAccount', $any($event.target).value)"
-              /></label>
-              <p class="form-note">填目錄中的帳號，不含網域。驗證後綁定 AD SID，不保存 AD 密碼。</p>
-            }
-            <nx-checkbox
-              label="允許本地密碼登入"
-              [checked]="e.localEnabled"
-              [disabled]="saving()"
-              (checkedChange)="update('localEnabled', $event)"
-            />
-            @if (e.localEnabled) {
-              <label
-                >本地登入帳號<input
-                  aria-label="本地登入帳號"
-                  required
-                  maxlength="64"
-                  autocomplete="off"
-                  [value]="e.localAccount"
-                  [readOnly]="saving()"
-                  (input)="update('localAccount', $any($event.target).value)"
-              /></label>
-              <label
-                >{{ e.hasLocalPassword ? '重設本地密碼' : '初始本地密碼'
-                }}<input
-                  aria-label="設定本地密碼"
-                  type="password"
-                  autocomplete="new-password"
-                  minlength="12"
-                  maxlength="128"
-                  [required]="!e.hasLocalPassword"
-                  [value]="e.password"
-                  [readOnly]="saving()"
-                  (input)="update('password', $any($event.target).value)"
-              /></label>
-              <p class="form-note">
-                12–128 個字元，以 Argon2id
-                加鹽雜湊保存。編輯時留白可保留既有密碼，重設後舊登入會失效。
-              </p>
-            }
-          </fieldset>
-        }
-        @if (e.kind !== 'user') {
-          @if (e.isNew) {
-            <label
-              >識別碼<input
-                aria-label="識別碼"
-                required
-                maxlength="64"
-                pattern="[a-z][a-z0-9_-]{0,63}"
-                placeholder="例如：document-reviewers"
-                [value]="e.id"
-                [readOnly]="saving()"
-                (input)="update('id', $any($event.target).value)"
-            /></label>
+      @if (e.kind === 'group') {
+        <nav class="page-tabs" aria-label="群組設定分類">
+          @for (section of groupSections; track section.id) {
+            <button
+              type="button"
+              [attr.aria-current]="groupSection() === section.id ? 'page' : null"
+              (click)="groupSection.set(section.id)"
+            >
+              {{ section.name }}
+            </button>
           }
-          <label
-            >名稱<input
-              aria-label="名稱"
-              required
-              maxlength="120"
-              [value]="e.name"
-              [readOnly]="saving()"
-              (input)="update('name', $any($event.target).value)"
-          /></label>
-          <nx-checkbox
-            [label]="'啟用' + label(e.kind)"
-            [checked]="e.enabled"
-            [disabled]="saving()"
-            (checkedChange)="update('enabled', $event)"
-          />
-        }
-        @if (e.kind !== 'feature') {
-          <fieldset>
-            <legend>
-              {{ e.kind === 'user' ? '分派角色' : e.kind === 'role' ? '加入功能群組' : '授予功能' }}
-            </legend>
-            <div class="choice-list">
-              @if (e.kind === 'group') {
-                @for (section of groupedFeatures(); track section.id) {
-                  <fieldset class="feature-choice-group">
-                    <legend>{{ section.name }}</legend>
-                    @for (item of section.features; track item.id) {
-                      <nx-checkbox
-                        [label]="item.name + (item.enabled ? '' : '（停用）')"
-                        [description]="item.id"
-                        [checked]="e.ids.includes(item.id)"
-                        [disabled]="saving()"
-                        (checkedChange)="check(item.id, $event)"
-                      />
-                    }
-                  </fieldset>
-                }
-              } @else {
-                @for (item of choices(); track item.id) {
-                  <nx-checkbox
-                    [label]="item.name + (item.enabled ? '' : '（停用）')"
-                    [description]="item.id"
-                    [checked]="e.ids.includes(item.id)"
-                    [disabled]="saving()"
-                    (checkedChange)="check(item.id, $event)"
-                  />
-                }
-              }
-            </div>
-          </fieldset>
-        }
-        @if (e.kind === 'user' || e.kind === 'role') {
-          <p class="form-note">儲存後可用功能（預覽）：</p>
-          <nx-feature-summary [features]="proposedFeatures()" />
-        }
-        @if (e.kind === 'group') {
-          <fieldset>
-            <legend>AI 模型政策</legend>
+        </nav>
+      }
+      <form class="admin-editor-form" (submit)="save($event)">
+        <div class="platform-form admin-editor-fields">
+          @if (e.kind === 'user') {
+            <label
+              >姓名<input
+                aria-label="使用者姓名"
+                required
+                maxlength="120"
+                [value]="e.name"
+                [readOnly]="saving()"
+                (input)="update('name', $any($event.target).value)"
+            /></label>
             <nx-checkbox
-              label="限制可用模型"
-              description="僅允許下方選取的模型"
-              [checked]="e.restricted"
+              label="啟用使用者"
+              [checked]="e.enabled"
               [disabled]="saving()"
-              (checkedChange)="update('restricted', $event)"
+              (checkedChange)="update('enabled', $event)"
             />
-            @if (e.restricted) {
+            <fieldset>
+              <legend>允許的登入方式</legend>
+              <p class="form-note">可同時開啟多種方式，皆使用同一份角色、對話與個人設定。</p>
+              <nx-checkbox
+                label="允許 AD 驗證"
+                [checked]="e.adEnabled"
+                [disabled]="saving()"
+                (checkedChange)="update('adEnabled', $event)"
+              />
+              @if (e.adEnabled) {
+                <label
+                  >AD 帳號<input
+                    aria-label="使用者 AD 帳號"
+                    required
+                    maxlength="64"
+                    autocomplete="off"
+                    [value]="e.adAccount"
+                    [readOnly]="saving()"
+                    (input)="update('adAccount', $any($event.target).value)"
+                /></label>
+                <p class="form-note">
+                  填目錄中的帳號，不含網域。驗證後綁定 AD SID，不保存 AD 密碼。
+                </p>
+              }
+              <nx-checkbox
+                label="允許本地密碼登入"
+                [checked]="e.localEnabled"
+                [disabled]="saving()"
+                (checkedChange)="update('localEnabled', $event)"
+              />
+              @if (e.localEnabled) {
+                <label
+                  >本地登入帳號<input
+                    aria-label="本地登入帳號"
+                    required
+                    maxlength="64"
+                    autocomplete="off"
+                    [value]="e.localAccount"
+                    [readOnly]="saving()"
+                    (input)="update('localAccount', $any($event.target).value)"
+                /></label>
+                <label
+                  >{{ e.hasLocalPassword ? '重設本地密碼' : '初始本地密碼'
+                  }}<input
+                    aria-label="設定本地密碼"
+                    type="password"
+                    autocomplete="new-password"
+                    minlength="12"
+                    maxlength="128"
+                    [required]="!e.hasLocalPassword"
+                    [value]="e.password"
+                    [readOnly]="saving()"
+                    (input)="update('password', $any($event.target).value)"
+                /></label>
+                <p class="form-note">
+                  12–128 個字元，以 Argon2id
+                  加鹽雜湊保存。編輯時留白可保留既有密碼，重設後舊登入會失效。
+                </p>
+              }
+            </fieldset>
+          }
+          @if (e.kind !== 'user' && (e.kind !== 'group' || groupSection() === 'general')) {
+            @if (e.isNew) {
+              <label
+                >識別碼<input
+                  aria-label="識別碼"
+                  required
+                  maxlength="64"
+                  pattern="[a-z][a-z0-9_-]{0,63}"
+                  placeholder="例如：document-reviewers"
+                  [value]="e.id"
+                  [readOnly]="saving()"
+                  (input)="update('id', $any($event.target).value)"
+              /></label>
+            }
+            <label
+              >名稱<input
+                aria-label="名稱"
+                required
+                maxlength="120"
+                [value]="e.name"
+                [readOnly]="saving()"
+                (input)="update('name', $any($event.target).value)"
+            /></label>
+            <nx-checkbox
+              [label]="'啟用' + label(e.kind)"
+              [checked]="e.enabled"
+              [disabled]="saving()"
+              (checkedChange)="update('enabled', $event)"
+            />
+          }
+          @if (e.kind !== 'feature' && (e.kind !== 'group' || groupSection() === 'features')) {
+            <fieldset>
+              <legend>
+                {{
+                  e.kind === 'user' ? '分派角色' : e.kind === 'role' ? '加入功能群組' : '授予功能'
+                }}
+              </legend>
               <div class="choice-list">
-                @for (model of catalog()?.models || []; track model.id) {
-                  <nx-checkbox
-                    [label]="modelName(model)"
-                    [checked]="e.modelIds.includes(model.id)"
-                    [disabled]="saving()"
-                    (checkedChange)="check(model.id, $event, true)"
-                  />
+                @if (e.kind === 'group') {
+                  @for (section of groupedFeatures(); track section.id) {
+                    <fieldset class="feature-choice-group">
+                      <legend>{{ section.name }}</legend>
+                      @for (item of section.features; track item.id) {
+                        <nx-checkbox
+                          [label]="item.name + (item.enabled ? '' : '（停用）')"
+                          [description]="item.id"
+                          [checked]="e.ids.includes(item.id)"
+                          [disabled]="saving()"
+                          (checkedChange)="check(item.id, $event)"
+                        />
+                      }
+                    </fieldset>
+                  }
+                } @else {
+                  @for (item of choices(); track item.id) {
+                    <nx-checkbox
+                      [label]="item.name + (item.enabled ? '' : '（停用）')"
+                      [description]="item.id"
+                      [checked]="e.ids.includes(item.id)"
+                      [disabled]="saving()"
+                      (checkedChange)="check(item.id, $event)"
+                    />
+                  }
                 }
               </div>
-              @if (!e.modelIds.length) {
-                <p class="form-note">未選取模型，此群組的使用者將無法生成。</p>
-              }
-            }
-          </fieldset>
-          <label
-            >每日生成次數上限<input
-              type="number"
-              aria-label="每日生成次數上限"
-              min="0"
-              max="100000"
-              step="1"
-              placeholder="不限制"
-              [value]="e.daily"
-              [readOnly]="saving()"
-              (input)="update('daily', $any($event.target).value)" /></label
-          ><label
-            >群組附件空間上限（GB）<input
-              type="number"
-              aria-label="群組附件空間上限"
-              min="0"
-              max="1000000"
-              step="0.000000001"
-              placeholder="使用預設 5 GB"
-              [value]="e.storage"
-              [readOnly]="saving()"
-              (input)="update('storage', $any($event.target).value)"
-          /></label>
-          <p class="form-note">
-            空白表示不增加群組限制。每日配額於 UTC
-            午夜重設，取消與失敗的請求也計次。群組容量取最低值；管理者設定的個人容量優先，未設定時預設
-            5 GB。1 GB = 1,000,000,000 bytes。
-          </p>
-        }
-        @if (e.kind === 'feature') {
-          <label
-            >顯示順序<input
-              type="number"
-              aria-label="顯示順序"
-              required
-              min="0"
-              max="10000"
-              step="1"
-              [value]="e.order"
-              [readOnly]="saving()"
-              (input)="update('order', $any($event.target).value)"
-          /></label>
-        }
+            </fieldset>
+          }
+          @if (e.kind === 'user' || e.kind === 'role') {
+            <p class="form-note">儲存後可用功能（預覽）：</p>
+            <nx-feature-summary [features]="proposedFeatures()" />
+          }
+          @if (e.kind === 'group' && groupSection() === 'models') {
+            <nx-model-policy-editor
+              [models]="catalog()?.models || []"
+              [value]="e.modelPolicy"
+              [disabled]="saving()"
+              (valueChange)="update('modelPolicy', $event)"
+            />
+          }
+          @if (e.kind === 'group' && groupSection() === 'storage') {
+            <h3>每位成員的原檔容量</h3>
+            <label
+              >群組附件空間上限（GB）<input
+                type="number"
+                aria-label="群組附件空間上限"
+                min="0"
+                max="1000000"
+                step="0.000000001"
+                placeholder="使用預設 5 GB"
+                [value]="e.storage"
+                [readOnly]="saving()"
+                (input)="update('storage', $any($event.target).value)"
+            /></label>
+            <p class="form-note">
+              各有效群組容量取最低值；個人設定優先。留空使用網站預設，0
+              禁止新增上傳。降低上限保留既有檔案。1 GB = 1,000,000,000 bytes。
+            </p>
+          }
+          @if (e.kind === 'feature') {
+            <label
+              >顯示順序<input
+                type="number"
+                aria-label="顯示順序"
+                required
+                min="0"
+                max="10000"
+                step="1"
+                [value]="e.order"
+                [readOnly]="saving()"
+                (input)="update('order', $any($event.target).value)"
+            /></label>
+          }
+        </div>
         <div class="dialog-actions">
           <button type="button" class="secondary-button" [disabled]="saving()" (click)="close()">
             取消</button

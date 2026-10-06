@@ -25,8 +25,10 @@ public static class NexusSettings
         {
             var id = provider.Key.ToLowerInvariant();
             options.ProviderConcurrency.Add(id, provider.GetValue("MaxConcurrency", 1));
-            foreach (var model in provider.GetSection("Models").GetChildren().Select(x => x.Get<ModelProfile>()!))
+            foreach (var modelSection in provider.GetSection("Models").GetChildren())
             {
+                var model = modelSection.Get<ModelProfile>()!;
+                model.ImageCapabilityOverride = modelSection.GetValue<bool?>("SupportsImages");
                 model.Provider = id;
                 model.ProviderModelId = model.Id;
                 model.Id = id + "/" + model.ProviderModelId;

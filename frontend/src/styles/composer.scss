@@ -255,3 +255,14 @@
   outline: 2px solid var(--focus);
   outline-offset: 3px;
 }
+
+.search-setup summary {
+  cursor: pointer;
+}
+.search-setup summary small {
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.search-setup summary::-webkit-details-marker {
+  display: none;
+}

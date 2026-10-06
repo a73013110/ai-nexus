@@ -11,6 +11,49 @@ public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptio
     private DateTimeOffset checkedAt;
     private IReadOnlyList<ProviderStatusDto> providers = [];
     private IReadOnlySet<string> installed = new HashSet<string>();
+    private IReadOnlyDictionary<string, ModelProfile> profiles = new Dictionary<string, ModelProfile>();
+
+    private async Task<ModelProfile> ResolveAsync(ModelProfile profile, CancellationToken ct)
+    {
+        var images = profile.SupportsImages;
+        if (profile.Provider == "ollama" && installed.Contains(profile.Id))
+        {
+            try
+            {
+                var capabilities = await router.For(profile.Provider).CapabilitiesAsync(profile.NativeId, ct);
+                images = profile.ImageCapabilityOverride != false && (capabilities?.SupportsImages ?? profile.ImageCapabilityOverride ?? false);
+            }
+            catch (Exception error) when (error is HttpRequestException or OperationCanceledException or JsonException or IOException or AiNexus.BuildingBlocks.ApiException)
+            {
+                ct.ThrowIfCancellationRequested();
+                images = false;
+            }
+        }
+        return Copy(profile, images);
+    }
+
+    private static ModelProfile Copy(ModelProfile profile, bool images) => new ModelProfile
+        {
+            Id = profile.Id, Provider = profile.Provider, ProviderModelId = profile.ProviderModelId,
+            DisplayName = profile.DisplayName, ContextTokens = profile.ContextTokens, MaxOutputTokens = profile.MaxOutputTokens,
+            SupportsStreaming = profile.SupportsStreaming, SupportsUsage = profile.SupportsUsage, SupportsImages = images,
+            ImageCapabilityOverride = profile.ImageCapabilityOverride, ReasoningControl = profile.ReasoningControl,
+            ReasoningEfforts = profile.ReasoningEfforts, DefaultReasoningEffort = profile.DefaultReasoningEffort
+        };
+
+    private ModelProfile Current(ModelProfile profile) => Copy(profile, profile.Provider == "ollama" ? profile.ImageCapabilityOverride != false && (profiles.GetValueOrDefault(profile.Id)?.SupportsImages ?? false) : profile.SupportsImages);
+
+    public async Task<IReadOnlyList<ModelProfile>> ProfilesAsync(CancellationToken ct)
+    {
+        await GetAsync(ct);
+        return options.Value.Models.Select(x => Current(x)).ToArray();
+    }
+
+    public async Task<IReadOnlyList<ProviderStatusDto>> ProviderStatusesAsync(CancellationToken ct)
+    {
+        await GetAsync(ct);
+        return providers;
+    }
 
     private async Task<(ProviderStatusDto Status, IReadOnlySet<string> Models)> DiscoverAsync(string id, CancellationToken ct)
     {
@@ -32,9 +75,10 @@ public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptio
                 var discovered = await Task.WhenAll(options.Value.ProviderConcurrency.Keys.Select(x => DiscoverAsync(x, ct)));
                 providers = discovered.Select(x => x.Status).ToArray();
                 installed = options.Value.Models.Where(m => discovered.Any(p => p.Status.Id == m.Provider && p.Models.Contains(m.NativeId))).Select(m => m.Id).ToHashSet(StringComparer.Ordinal);
+                profiles = (await Task.WhenAll(options.Value.Models.Select(x => ResolveAsync(x, ct)))).ToDictionary(x => x.Id, StringComparer.Ordinal);
                 checkedAt = DateTimeOffset.UtcNow;
             }
-            var allowed = options.Value.Models.Where(x => installed.Contains(x.Id) && (options.Value.AllowModelSelection || x.Id == presentation.DefaultId)).Select(presentation.Model).ToList();
+            var allowed = options.Value.Models.Select(Current).Where(x => installed.Contains(x.Id) && (options.Value.AllowModelSelection || x.Id == presentation.DefaultId)).Select(presentation.Model).ToList();
             var available = providers.Any(x => x.Available);
             return new(allowed, available, !available ? providers.FirstOrDefault()?.Notice ?? "目前無法連線至模型服務，請稍後重試。" : allowed.Count == 0 ? "系統指定的模型尚未就緒，請由管理員確認模型設定。" : providers.Any(x => !x.Available) ? "部分模型供應商暫時無法使用，其餘模型可正常使用。" : null, presentation.Policy,
                 options.Value.ShowModelNames ? providers : []);
@@ -51,7 +95,7 @@ public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptio
         var profile = options.Value.Models.FirstOrDefault(x => presentation.PublicId(x.Id) == requested);
         if (profile is not null && providers.Any(x => x.Id == profile.Provider && !x.Available)) throw new AiNexus.BuildingBlocks.ApiException(503, "provider_unavailable", "此模型供應商暫時無法使用，請選擇其他模型。");
         if (!catalog.Models.Any(x => x.Id == requested)) throw new AiNexus.BuildingBlocks.ApiException(400, "model_not_allowed", "此模型不可用或未經伺服器核准。");
-        return options.Value.Models.Single(x => presentation.PublicId(x.Id) == requested);
+        return Current(options.Value.Models.Single(x => presentation.PublicId(x.Id) == requested));
     }
 
     public static string RequireReasoning(ModelProfile model, string? effort)

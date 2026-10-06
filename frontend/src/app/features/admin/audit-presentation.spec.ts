@@ -32,14 +32,24 @@ describe('audit presentation', () => {
     expect(auditRejected('unknown_access_id')).toBe(true);
   });
   it('compares nested policy changes and preserves the removal of an explicit limit', () => {
-    const changes = auditChanges(
-      JSON.stringify({
-        before: { name: '舊名稱', policy: { dailyRequestLimit: 1, allowedModelIds: ['a'] } },
-        after: { name: '新名稱', policy: { dailyRequestLimit: null, allowedModelIds: ['a'] } },
-      }),
-    );
-    expect(changes).toHaveLength(2);
-    expect(changes.find((x) => x.key === 'policy.dailyRequestLimit')?.after).toBe('未設定');
+    const modelId = 'ollama/qwen3.8:27b';
+    for (const nested of [true, false]) {
+      const before = { allowedModelIds: ['a'], dailyTokenLimits: { [modelId]: 100000 } },
+        after = { allowedModelIds: ['a'], dailyTokenLimits: null };
+      const changes = auditChanges(
+        JSON.stringify({
+          before: { name: '舊名稱', ...(nested ? { policy: before } : before) },
+          after: { name: '新名稱', ...(nested ? { policy: after } : after) },
+        }),
+        { [modelId]: '測試模型' },
+      );
+      expect(changes).toHaveLength(2);
+      expect(changes.find((x) => x.key.endsWith(modelId))).toMatchObject({
+        label: '每日 token 上限 · 測試模型',
+        before: '100,000 tokens',
+        after: '繼承設定',
+      });
+    }
   });
   it('supports creation and safely tolerates legacy or malformed details', () => {
     expect(auditChanges('{')).toEqual([]);

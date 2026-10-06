@@ -43,18 +43,31 @@ import { formatModelName } from '../../shared/browser/format';
       />
     }
     <div class="composer-tools">
-      <button
-        type="button"
-        class="search-toggle"
-        aria-label="搜尋網路"
-        [attr.aria-pressed]="webSearch()"
-        [title]="webSearchNotice()"
-        [disabled]="disabled() || !webSearchAvailable()"
-        (click)="webSearchChange.emit(!webSearch())"
-      >
-        <nx-icon name="globe" /><span>搜尋網路</span>
-      </button>
-      <details class="context-details" nxDisclosure>
+      @if (webSearchAvailable()) {
+        <button
+          type="button"
+          class="search-toggle"
+          aria-label="搜尋網路"
+          [attr.aria-pressed]="webSearch()"
+          [title]="webSearchNotice()"
+          [disabled]="disabled() || !webSearchAvailable()"
+          (click)="webSearchChange.emit(!webSearch())"
+        >
+          <nx-icon name="globe" /><span>搜尋網路</span>
+        </button>
+      } @else {
+        <details class="context-details search-setup" aria-label="網路搜尋設定" nxDisclosure>
+          <summary class="search-toggle" aria-label="搜尋網路：查看設定說明">
+            <nx-icon name="globe" /><span>搜尋網路</span><small>未啟用</small>
+          </summary>
+          <div class="context-panel">
+            <strong>網路搜尋尚未啟用</strong>
+            <p>{{ webSearchNotice() }}</p>
+            <p>地端模型本身不會連網。管理員可部署公司自架的 SearXNG，再啟用搜尋服務。</p>
+          </div>
+        </details>
+      }
+      <details class="context-details" aria-label="上下文用量" nxDisclosure>
         <summary
           class="context-trigger"
           [attr.aria-label]="'上下文用量：' + (usage() ? percent() + '%（預估）' : '尚未取得')"

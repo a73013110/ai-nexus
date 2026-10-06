@@ -47,15 +47,16 @@ public sealed class AdministrationTests
         Assert.Contains(audit!, x => x.Action == "admin.user_roles" && x.ResourceId == target.Id && x.DetailsJson!.Contains("administrator"));
     }
     [Fact]
-    public async Task DailyQuotaRejectsNewRequestsButKeepsIdempotentReplayAndOtherAccountsIndependent()
+    public async Task TokenQuotaRejectsNewRequestsButKeepsIdempotentReplayAndOtherAccountsIndependent()
     {
         await using var factory = new NexusFactory(administrators: ["alice"]); using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
-        (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("基本工作區", true, ["chat"], new(["test-model"], 1)))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("基本工作區", true, ["chat"], new(["test-model"], new Dictionary<string, long> { ["test-model"] = 2200 })))).EnsureSuccessStatusCode();
         var conversation = await CreateConversation(bob); var body = new CreateRunRequest(conversation.Id, "test-model", "唯一一次", null, null); var key = Guid.NewGuid().ToString();
         var first = await PostRun(bob, body, key); first.EnsureSuccessStatusCode(); var run = (await first.Content.ReadFromJsonAsync<RunDto>())!; await WaitForTerminal(bob, run.Id);
+        (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("基本工作區", true, ["chat"], new(["test-model"], new Dictionary<string, long> { ["test-model"] = 129 })))).EnsureSuccessStatusCode();
         var replay = await PostRun(bob, body, key); replay.EnsureSuccessStatusCode(); Assert.Equal(run.Id, (await replay.Content.ReadFromJsonAsync<RunDto>())!.Id);
         Assert.Equal(HttpStatusCode.TooManyRequests, (await PostRun(bob, new(conversation.Id, "test-model", "超出配額", null, null))).StatusCode);
-        var ownPolicy = (await admin.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!; Assert.Equal(0, ownPolicy.RequestsToday);
+        var ownPolicy = (await admin.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!; Assert.Equal(0, Assert.Single(ownPolicy.Models).UsedTokens);
         var usage = (await admin.GetFromJsonAsync<AdminUsageDto>("/api/v1/admin/usage"))!; Assert.Equal(1, usage.Requests); Assert.Equal(123, usage.InputTokens); Assert.Equal(2, usage.Users);
         var detail = (await bob.GetFromJsonAsync<ConversationDetailDto>($"/api/v1/conversations/{conversation.Id}"))!; Assert.Equal(2, detail.Messages.Count);
     }

@@ -62,7 +62,7 @@ async function administration(page: Page) {
         id: "workspace",
         name: "基本工作區",
         enabled: true,
-        featureIds: ["chat"],
+        featureIds: ["chat", "files"],
         policy: null,
       },
       {
@@ -74,6 +74,13 @@ async function administration(page: Page) {
       },
     ],
     features: [
+      {
+        id: "files",
+        name: "檔案庫",
+        route: "/files",
+        sortOrder: 15,
+        enabled: true,
+      },
       {
         id: "chat",
         name: "AI 對話",
@@ -103,6 +110,10 @@ async function administration(page: Page) {
       },
     ],
   };
+  let personalPolicy = {
+    allowedModelIds: null as string[] | null,
+    dailyTokenLimits: {} as Record<string, number>,
+  };
   const audit: AuditEntry[] = [];
   const conversationId = randomUUID();
   const recordRead = (action: string, resourceId: string) =>
@@ -126,6 +137,35 @@ async function administration(page: Page) {
         body: JSON.stringify(data),
       });
     if (path === "/catalog") return json(catalog);
+    if (path.endsWith("/model-policy")) {
+      if (method === "PUT") {
+        personalPolicy = route.request().postDataJSON();
+        return route.fulfill({ status: 204 });
+      }
+      return json({
+        personal: personalPolicy,
+        effective: {
+          allowedModelIds: personalPolicy.allowedModelIds,
+          storedAttachmentLimitBytes: null,
+          models: catalog.models.map((model) => ({
+            modelId: model.id,
+            dailyTokenLimit:
+              personalPolicy.dailyTokenLimits[model.id] ?? 100000,
+            usedTokens: 1800,
+            reservedTokens: 300,
+            remainingTokens: Math.max(
+              0,
+              (personalPolicy.dailyTokenLimits[model.id] ?? 100000) - 2100,
+            ),
+            source:
+              personalPolicy.dailyTokenLimits[model.id] == null
+                ? "group"
+                : "personal",
+          })),
+          resetsAt: "2026-10-07T00:00:00Z",
+        },
+      });
+    }
     if (path === "/users") {
       if (route.request().method() === "POST") {
         const body = route.request().postDataJSON();
@@ -289,6 +329,29 @@ async function administration(page: Page) {
     if (path === "/usage")
       return json({
         users: 2,
+        activeUsers: 1,
+        failed: 0,
+        cancelled: 0,
+        storedBytes: 2048,
+        storedFiles: 1,
+        since: "2026-09-07T00:00:00Z",
+        until: "2026-10-06T01:00:00Z",
+        models: [
+          {
+            modelId: "fixture:8b",
+            requests: 4,
+            failed: 0,
+            requestsWithUsage: 4,
+            inputTokens: 1200,
+            outputTokens: 600,
+            durationMilliseconds: 6000,
+          },
+        ],
+        kinds: [
+          { kind: "chat", requests: 4, inputTokens: 1200, outputTokens: 600 },
+        ],
+        providers: [{ id: "ollama", available: true, notice: null }],
+        webSearch: { available: false, notice: "尚未部署地端搜尋服務。" },
         requests: 4,
         completed: 4,
         inputTokens: 1200,
@@ -565,11 +628,11 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
       await page.getByRole("button", { name: tab, exact: true }).click();
       const target =
         tab === "異動稽核" ? ".audit-toolbar" : ".feature-content > .form-note";
-      await expect(page.locator(target)).toBeVisible();
+      await expect(page.locator(target).first()).toBeVisible();
       if (tab === "平台用量")
         await expect(page.locator(".stat-card")).toHaveCount(4);
       const header = await page.locator(".feature-header").boundingBox();
-      const content = await page.locator(target).boundingBox();
+      const content = await page.locator(target).first().boundingBox();
       expect(Math.abs(header!.x - content!.x)).toBeLessThan(1);
       expect(Math.abs(header!.width - content!.width)).toBeLessThan(1);
       await expectViewportContained(page);
@@ -597,16 +660,20 @@ test("group model limits and self-lockout errors work on desktop and mobile", as
   await dialog
     .getByRole("textbox", { name: "名稱", exact: true })
     .fill("研發工作區");
+  await dialog.getByRole("button", { name: "功能授權", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "AI 對話", exact: true }).check();
+  await dialog.getByRole("button", { name: "AI 模型", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "限制可用模型" }).check();
   await dialog.getByRole("checkbox", { name: "測試模型", exact: true }).check();
-  await dialog.getByRole("spinbutton", { name: "每日生成次數上限" }).fill("50");
+  await dialog
+    .getByRole("spinbutton", { name: "每日 token 上限：測試模型" })
+    .fill("50000");
   await dialog.getByRole("button", { name: "儲存授權" }).click();
   await expect(dialog).not.toBeVisible();
   expect(
     state.catalog.groups?.find((x) => x.id === "research")?.policy
-      ?.dailyRequestLimit,
-  ).toBe(50);
+      ?.dailyTokenLimits?.["fixture:8b"],
+  ).toBe(50000);
   await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/admin-groups.png",
@@ -660,6 +727,7 @@ test("administrators inspect user usage and deleted conversations through an aud
   const dialog = page.getByRole("dialog", { name: "王小明", exact: true });
   await expect(dialog).toBeVisible();
   await expect(dialog.locator(".inspector-stats")).toContainText("1,800");
+  await dialog.getByRole("button", { name: "附件容量", exact: true }).click();
   await expect(dialog.locator("nx-storage-usage")).toContainText("5.00 GB");
   await dialog.getByLabel("個人容量上限（GB）", { exact: true }).fill("10");
   await dialog
@@ -673,6 +741,7 @@ test("administrators inspect user usage and deleted conversations through an aud
     .click();
   await expect(dialog.locator("nx-storage-usage")).toContainText("5.00 GB");
   expect(state.bob.storage.personalLimitBytes).toBeNull();
+  await dialog.getByRole("button", { name: "對話", exact: true }).click();
   await dialog
     .getByRole("button", { name: "檢視對話：公文內容討論", exact: true })
     .click();
@@ -709,6 +778,7 @@ test("administrators inspect user usage and deleted conversations through an aud
     dialog.getByRole("button", { name: "檢視對話：公文內容討論", exact: true }),
   ).toHaveCount(0);
   await page.setViewportSize({ width: 375, height: 812 });
+  await dialog.getByRole("button", { name: "附件容量", exact: true }).click();
   await dialog.getByLabel("個人容量上限（GB）", { exact: true }).fill("10");
   await dialog
     .getByRole("button", { name: "儲存容量上限", exact: true })
@@ -747,14 +817,27 @@ test("audit shows readable before after differences and server filters", async (
     at: "2026-10-04T00:00:00Z",
     detailsJson: JSON.stringify({
       resourceKey: "analyst",
-      before: { name: "分析人員", enabled: false },
-      after: { name: "資深分析人員", enabled: true },
+      before: {
+        name: "分析人員",
+        enabled: false,
+        policy: { dailyTokenLimits: { "fixture:8b": 100000 } },
+      },
+      after: {
+        name: "資深分析人員",
+        enabled: true,
+        policy: { dailyTokenLimits: { "fixture:8b": 150000 } },
+      },
     }),
   });
   await page.getByRole("button", { name: "異動稽核", exact: true }).click();
   await page.getByText("查看前後差異", { exact: true }).click();
   await expect(page.locator(".audit-changes")).toContainText("資深分析人員");
   await expect(page.locator(".audit-before").first()).toContainText("分析人員");
+  await expect(page.locator(".audit-changes")).toContainText(
+    "每日 token 上限 · 測試模型",
+  );
+  await expect(page.locator(".audit-changes")).toContainText("100,000 tokens");
+  await expect(page.locator(".audit-changes")).toContainText("150,000 tokens");
   await chooseSelect(page, "稽核結果", "已檢視");
   await expect(page.locator(".audit-row")).toHaveCount(0);
 });
@@ -807,4 +890,110 @@ test("a delayed initial conversation list cannot overwrite a newer filter", asyn
   await expect(
     dialog.getByRole("button", { name: "檢視對話：公文內容討論", exact: true }),
   ).toHaveCount(0);
+});
+
+test("personal model budgets share the group editor and keep conversations spacious", async ({
+  page,
+}) => {
+  await administration(page);
+  await page
+    .getByRole("button", { name: "使用者活動：王小明", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "王小明", exact: true });
+  await expect(dialog.getByLabel("個人容量上限（GB）")).toHaveCount(0);
+  const content = await dialog.locator(".inspector-body").boundingBox();
+  expect(content!.height).toBeGreaterThan(400);
+  await dialog.getByRole("button", { name: "AI 模型", exact: true }).click();
+  await expect(dialog).toContainText("100,000 tokens / 日");
+  await dialog
+    .getByLabel("每日 token 上限：測試模型", { exact: true })
+    .fill("150000");
+  await dialog
+    .getByRole("button", { name: "儲存模型政策", exact: true })
+    .click();
+  await expect(dialog).toContainText("150,000 tokens / 日");
+  await expect(dialog).toContainText("個人設定");
+  await page.screenshot({
+    path: "artifacts/screenshots/admin-user-model-policy.png",
+    animations: "disabled",
+  });
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expectViewportContained(page);
+  await expect
+    .poll(() => dialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1))
+    .toBe(true);
+  await dialog
+    .getByLabel("每日 token 上限：測試模型", { exact: true })
+    .fill("");
+  await dialog
+    .getByRole("button", { name: "儲存模型政策", exact: true })
+    .click();
+  await expect(dialog).toContainText("群組設定");
+  await expect(
+    dialog.getByRole("navigation", { name: "使用者活動分類" }),
+  ).toBeInViewport();
+  await expect(dialog.locator(".inspector-stats")).toBeInViewport();
+  await expect(
+    dialog.getByRole("button", { name: "儲存模型政策", exact: true }),
+  ).toBeInViewport({ ratio: 1 });
+  await page.screenshot({
+    path: "artifacts/screenshots/admin-user-model-policy-mobile.png",
+    animations: "disabled",
+  });
+});
+
+test("many model policies keep group tabs and save controls reachable on small screens", async ({
+  page,
+}) => {
+  const state = await administration(page);
+  state.catalog.models = Array.from({ length: 12 }, (_, index) => ({
+    ...state.catalog.models![0],
+    id: `fixture:${index}`,
+    displayName: `地端模型 ${index + 1}`,
+  }));
+  state.fixture.preferences.theme = "system";
+  await page.reload();
+  await page
+    .getByRole("button", { name: "功能群組與模型", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "編輯群組：基本工作區", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "AI 模型", exact: true }).click();
+  for (const viewport of [
+    { width: 1440, height: 1000 },
+    { width: 375, height: 812 },
+    { width: 812, height: 375 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await dialog
+      .getByLabel("每日 token 上限：地端模型 12", { exact: true })
+      .fill("50000");
+    await expect(
+      dialog.getByRole("navigation", { name: "群組設定分類" }),
+    ).toBeInViewport({ ratio: 1 });
+    await expect(
+      dialog.getByRole("button", { name: "儲存授權", exact: true }),
+    ).toBeInViewport({ ratio: 1 });
+    expect(
+      await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+    ).toBe(true);
+    await page.screenshot({
+      path: `artifacts/screenshots/admin-group-models-${viewport.width}.png`,
+      animations: "disabled",
+    });
+    await page.emulateMedia({ colorScheme: "light" });
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+    await expect(
+      dialog.getByRole("button", { name: "儲存授權", exact: true }),
+    ).toBeInViewport({ ratio: 1 });
+  }
+  await dialog.getByRole("button", { name: "儲存授權", exact: true }).click();
+  expect(
+    state.catalog.groups!.find((group) => group.id === "workspace")!.policy!
+      .dailyTokenLimits!["fixture:11"],
+  ).toBe(50000);
 });

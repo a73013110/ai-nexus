@@ -36,6 +36,12 @@ export class AdminApi {
     this.http.json<AdminConversationDetail>(
       `/admin/conversations/${encodeURIComponent(id)}?offset=${offset}`,
     );
+  modelPolicy = (id: string) =>
+    this.http.json<components['schemas']['AdminUserModelPolicyDto']>(
+      `/admin/users/${encodeURIComponent(id)}/model-policy`,
+    );
+  saveModelPolicy = (id: string, body: components['schemas']['ModelPolicyRequest']) =>
+    this.http.json<void>(`/admin/users/${encodeURIComponent(id)}/model-policy`, 'PUT', body);
   usage = () => this.http.json<AdminUsage>('/admin/usage');
   storage = (id: string, limitBytes: number | null) =>
     this.http.json<void>(`/admin/users/${encodeURIComponent(id)}/storage`, 'PUT', { limitBytes });

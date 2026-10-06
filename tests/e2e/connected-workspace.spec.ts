@@ -159,3 +159,29 @@ test('Gitea token is cleared after connecting, pinned files become drafts withou
   await expect(page.getByRole('textbox', { name: '傳送訊息', exact: true })).toHaveValue(/內部技術文件/);
   expect(fixture.posts).toBe(0); expect(fixture.conversations).toHaveLength(1);
 });
+
+test("local deployments explain why web search is not enabled", async ({
+  page,
+}) => {
+  const fixture = new ApiFixture();
+  await fixture.attach(page);
+  await page.route("**/api/v1/tools/web-search", (route) =>
+    route.fulfill({
+      json: {
+        available: false,
+        notice: "管理員尚未啟用網路搜尋。可設定自架 SearXNG。",
+      },
+    }),
+  );
+  await page.goto("/chat");
+  await page.getByText("搜尋網路", { exact: true }).click();
+  await expect(
+    page.getByText("網路搜尋尚未啟用", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".search-setup")).toContainText(
+    "地端模型本身不會連網",
+  );
+  expect(fixture.lastRequest?.webSearch).not.toBe(true);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expectViewportContained(page);
+});

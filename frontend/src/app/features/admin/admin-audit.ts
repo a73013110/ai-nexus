@@ -8,14 +8,14 @@ import {
   signal,
 } from '@angular/core';
 import { AdminApi } from './admin-api';
-import type { AuditEntry, Feature } from '../../core/api/types';
+import type { AuditEntry, Feature, Model } from '../../core/api/types';
 import { FeatureSummary } from '../../shared/ui/feature-summary';
 import { SearchField } from '../../shared/ui/search-field';
 import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
 import { downloadBlob } from '../../shared/browser/download';
 import { toCsv } from '../../shared/browser/csv';
-import { formatDate } from '../../shared/browser/format';
+import { formatDate, formatModelName } from '../../shared/browser/format';
 import {
   auditAction,
   auditChanges,
@@ -33,6 +33,10 @@ import {
 })
 export class AdminAudit {
   readonly features = input<readonly Feature[]>([]);
+  readonly models = input<readonly Model[]>([]);
+  readonly modelNames = computed(() =>
+    Object.fromEntries(this.models().map((model) => [model.id, formatModelName(model)])),
+  );
   readonly rows = signal<AuditEntry[]>([]);
   readonly loading = signal(false);
   readonly more = signal(false);
@@ -49,7 +53,7 @@ export class AdminAudit {
       date: formatDate(entry.at),
       action: auditAction(entry.action),
       resource: auditResource(entry.detailsJson),
-      changes: auditChanges(entry.detailsJson).map((change) => ({
+      changes: auditChanges(entry.detailsJson, this.modelNames()).map((change) => ({
         ...change,
         featureBefore: change.featureIds ? this.resolveFeatures(change.featureIds.before) : null,
         featureAfter: change.featureIds ? this.resolveFeatures(change.featureIds.after) : null,
@@ -64,6 +68,7 @@ export class AdminAudit {
     { value: 'admin.user', label: '使用者設定' },
     { value: 'identity.test_', label: '測試身分' },
     { value: 'admin.user_roles', label: '使用者角色' },
+    { value: 'admin.user_model_policy', label: '個人模型政策' },
     { value: 'admin.user_storage', label: '使用者容量上限' },
     { value: 'admin.role', label: '角色授權' },
     { value: 'admin.group', label: '群組與模型政策' },
