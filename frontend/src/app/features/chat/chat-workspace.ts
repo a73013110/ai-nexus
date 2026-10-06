@@ -23,6 +23,7 @@ import { ThemeService } from '../../core/preferences/theme-service';
 import type { Conversation, ConversationSettings } from '../../core/api/types';
 import { Icon } from '../../shared/ui/icon';
 import { InferenceSignal } from '../../shared/ui/inference-signal';
+import { generationStatus } from '../../core/api/generation-status';
 import { Autosize } from '../../shared/browser/autosize';
 import { FileDrop } from '../../shared/browser/file-drop';
 import { downloadFile } from '../../shared/browser/download';
@@ -152,15 +153,13 @@ export class ChatWorkspace {
       ? '正在停止…'
       : this.store.connection() === 'reconnecting'
         ? '連線中斷，正在恢復…'
-        : this.store.liveRun()?.status === 'queued'
-          ? '等待模型 · 已加入佇列'
-          : this.store.liveRun()?.status === 'running'
-            ? '模型正在回答'
-            : this.store.submitting()
-              ? this.store.webSearchEnabled()
-                ? '正在搜尋網路並準備回答…'
-                : '正在提交訊息…'
-              : '',
+        : (generationStatus(this.store.liveRun()?.status ?? '', !!this.store.streamingText())
+            ?.label ??
+          (this.store.submitting()
+            ? this.store.webSearchEnabled()
+              ? '正在搜尋網路並準備回答…'
+              : '正在提交訊息…'
+            : '')),
   );
   readonly suggestions = [
     {

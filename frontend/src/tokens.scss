@@ -108,6 +108,8 @@
   --motion: 200ms;
   --motion-enter: 320ms;
   --motion-signal: 1800ms;
+  --motion-generation: 2100ms;
+  --motion-waiting: 2800ms;
   --motion-stagger: 70ms;
   --motion-panel: 240ms;
   --motion-draw: 900ms;
@@ -121,6 +123,7 @@
   --sidebar-account-height: var(--button-target);
   --reading-width: 52rem;
   --composer-width: 54rem;
+  --generation-indicator-size: 1.75rem;
   --topbar-height: 3.25rem;
   --workspace-gutter: clamp(1rem, 4vw, 3rem);
   --button-target: 2.75rem;

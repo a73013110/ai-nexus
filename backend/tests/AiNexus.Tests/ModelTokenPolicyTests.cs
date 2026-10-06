@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using AiNexus.BuildingBlocks;
 using AiNexus.Modules.Administration;
+using AiNexus.Modules.AccessControl;
 using AiNexus.Modules.Inference;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,8 +13,77 @@ namespace AiNexus.Tests;
 
 public sealed class ModelTokenPolicyTests
 {
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task UnrestrictedGroupsGrantAllModelsAndBudgetsAcrossCatalogContextChatAndTasks(bool savedPolicy)
+    {
+        await using var factory = new NexusFactory(administrators: ["alice"],
+            seed: db =>
+            {
+                db.Add(new GroupModelPolicy { GroupId = BuiltInAccess.WorkspaceGroup, AllowedModelsJson = "[\"test-model\"]", DailyTokenLimitsJson = "{\"test-model\":0}" });
+                if (savedPolicy) db.Add(new GroupModelPolicy { GroupId = AdministrationConfiguration.Group });
+                db.SaveChanges();
+            },
+            inference: options => options.Models.Add(new() { Id = "not-approved", DisplayName = "另一模型" }));
+        using var admin = await factory.SignedInAsync();
+        var owner = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
+        var effective = (await admin.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!;
+        Assert.Null(effective.AllowedModelIds);
+        Assert.All(effective.Models, model => { Assert.Null(model.DailyTokenLimit); Assert.Equal("unlimited", model.Source); });
+        Assert.Equal(2, (await admin.GetFromJsonAsync<ModelsDto>("/api/v1/models"))!.Models.Count);
+        (await admin.PostAsJsonAsync("/api/v1/context", new ContextPreviewRequest(null, null, "準備", "not-approved"))).EnsureSuccessStatusCode();
+        var conversation = await CreateConversation(admin);
+        var accepted = await PostRun(admin, new(conversation.Id, "not-approved", "開始回答", null, null));
+        accepted.EnsureSuccessStatusCode();
+        await WaitForTerminal(admin, (await accepted.Content.ReadFromJsonAsync<RunDto>())!.Id);
+        var task = await factory.Services.GetRequiredService<ModelTaskService>().GenerateAsync(owner, "transform", "短文", "改寫", CancellationToken.None, model: "test-model");
+        Assert.NotEmpty(task.Text);
+        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{owner}/model-policy", new ModelPolicyRequest(["test-model"], new Dictionary<string, long> { ["test-model"] = 0 }))).EnsureSuccessStatusCode();
+        Assert.Equal("test-model", Assert.Single((await admin.GetFromJsonAsync<ModelsDto>("/api/v1/models"))!.Models).Id);
+        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsJsonAsync("/api/v1/context", new ContextPreviewRequest(null, null, "禁止", "not-approved"))).StatusCode);
+        var quota = await Assert.ThrowsAsync<ApiException>(() => factory.Services.GetRequiredService<ModelTaskService>().GenerateAsync(owner, "ocr", "短文", "辨識", CancellationToken.None));
+        Assert.Equal("model_token_quota", quota.Code);
+    }
+
     [Fact]
-    public async Task PersonalOverridesArePerModelAndGroupGrantsRemainAnIntersection()
+    public async Task RestrictedGroupsAccumulateAndRevocationRemovesOnlyThatGroupsModelsAndBudgets()
+    {
+        await using var factory = new NexusFactory(administrators: ["alice"], inference: options => options.Models.Add(new() { Id = "not-approved", DisplayName = "另一模型" }));
+        using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
+        var owner = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
+        (await admin.PutAsJsonAsync("/api/v1/admin/groups/workspace", new GroupUpdateRequest("工作區", true, ["chat"], new(["test-model"], new Dictionary<string, long> { ["test-model"] = 1000, ["not-approved"] = 1 })))).EnsureSuccessStatusCode();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            db.AddRange(new RoleGroup { Id = "specialists", Name = "專業工作區" },
+                new RoleGroupRole { RoleId = BuiltInAccess.MemberRole, GroupId = "specialists" },
+                new GroupModelPolicy { GroupId = "specialists", AllowedModelsJson = "[\"test-model\",\"not-approved\"]", DailyTokenLimitsJson = "{\"test-model\":2000,\"not-approved\":3000}" });
+            await db.SaveChangesAsync();
+        }
+        var effective = (await bob.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!;
+        Assert.Equal(2, effective.AllowedModelIds!.Count);
+        Assert.Equal(2000, effective.Models.Single(x => x.ModelId == "test-model").DailyTokenLimit);
+        Assert.Equal(3000, effective.Models.Single(x => x.ModelId == "not-approved").DailyTokenLimit);
+        Assert.Equal(2, (await bob.GetFromJsonAsync<ModelsDto>("/api/v1/models"))!.Models.Count);
+        (await bob.PostAsJsonAsync("/api/v1/context", new ContextPreviewRequest(null, null, "準備", "not-approved"))).EnsureSuccessStatusCode();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            (await db.Set<RoleGroup>().SingleAsync(x => x.Id == "specialists")).Enabled = false;
+            await db.SaveChangesAsync();
+        }
+        effective = (await bob.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!;
+        Assert.Equal("test-model", Assert.Single(effective.AllowedModelIds!));
+        Assert.Equal(1000, effective.Models.Single(x => x.ModelId == "test-model").DailyTokenLimit);
+        Assert.Equal("test-model", Assert.Single((await bob.GetFromJsonAsync<ModelsDto>("/api/v1/models"))!.Models).Id);
+        Assert.Equal(HttpStatusCode.Forbidden, (await bob.PostAsJsonAsync("/api/v1/context", new ContextPreviewRequest(null, null, "禁止", "not-approved"))).StatusCode);
+        var denied = await Assert.ThrowsAsync<ApiException>(() => factory.Services.GetRequiredService<ModelTaskService>().GenerateAsync(owner, "transform", "短文", "改寫", CancellationToken.None, model: "not-approved"));
+        Assert.Equal("model_group_forbidden", denied.Code);
+    }
+
+    [Fact]
+    public async Task PersonalBudgetsOverrideGroupsAndPersonalModelsNarrowGroupGrants()
     {
         await using var factory = new NexusFactory(administrators: ["alice"], inference: options => options.Models.Add(new() { Id = "not-approved", Provider = "google", ProviderModelId = "not-approved", DisplayName = "另一模型" }));
         using var admin = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
@@ -24,7 +94,7 @@ public sealed class ModelTokenPolicyTests
         Assert.Equal("test-model", Assert.Single(policy.AllowedModelIds!));
         Assert.Equal(2000, policy.Models.Single(x => x.ModelId == "test-model").DailyTokenLimit);
         Assert.Equal("personal", policy.Models.Single(x => x.ModelId == "test-model").Source);
-        Assert.Equal(500, policy.Models.Single(x => x.ModelId == "not-approved").DailyTokenLimit);
+        Assert.Null(policy.Models.Single(x => x.ModelId == "not-approved").DailyTokenLimit);
         (await admin.PutAsJsonAsync($"/api/v1/admin/users/{owner}/model-policy", new ModelPolicyRequest())).EnsureSuccessStatusCode();
         policy = (await bob.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!;
         Assert.Equal(1000, policy.Models.Single(x => x.ModelId == "test-model").DailyTokenLimit);

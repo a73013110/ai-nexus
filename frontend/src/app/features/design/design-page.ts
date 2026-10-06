@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   ElementRef,
   inject,
   signal,
@@ -21,6 +22,9 @@ import { JobProgress } from '../../shared/ui/job-progress';
 import { MarkdownView } from '../../shared/ui/markdown-view';
 import { Checkbox } from '../../shared/ui/checkbox';
 import { SearchField } from '../../shared/ui/search-field';
+import { GenerationIndicator } from '../../shared/ui/generation-indicator';
+import { InferenceSignal } from '../../shared/ui/inference-signal';
+import { generationStatus } from '../../core/api/generation-status';
 
 const sampleTitle = '把想法，整理成可用的成果';
 const jobStates: SelectOption[] = [
@@ -46,6 +50,8 @@ const jobStates: SelectOption[] = [
     MarkdownView,
     Checkbox,
     SearchField,
+    GenerationIndicator,
+    InferenceSignal,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -64,6 +70,7 @@ export class DesignPage {
   readonly search = signal('');
   readonly notice = signal('');
   readonly states = jobStates;
+  readonly generation = computed(() => generationStatus(this.demo().status, false));
   readonly demo = signal<Job>({
     id: 'design-sample',
     subjectId: 'design-sample',

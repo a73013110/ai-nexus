@@ -6,7 +6,8 @@ import { MarkdownView } from '../../shared/ui/markdown-view';
 import { CopyFeedback } from '../../shared/browser/copy-feedback';
 import { AttachmentList } from '../attachments/attachment-list';
 import { MessageTree } from './message-tree';
-import { ThinkingIndicator } from '../../shared/ui/thinking-indicator';
+import { GenerationIndicator } from '../../shared/ui/generation-indicator';
+import { generationStatus } from '../../core/api/generation-status';
 import { ReaderLink } from '../../shared/browser/reader-link';
 import { MessageFeedback } from '../quality/message-feedback';
 import { ChargeLabel } from '../billing/charge-label';
@@ -18,7 +19,7 @@ import { RunTimingDisplay } from '../../shared/ui/run-timing';
   imports: [
     Icon,
     AttachmentList,
-    ThinkingIndicator,
+    GenerationIndicator,
     ReaderLink,
     MarkdownView,
     MessageFeedback,
@@ -58,19 +59,11 @@ import { RunTimingDisplay } from '../../shared/ui/run-timing';
     } @else if (active()) {
       @if (streamContent()) {
         <nx-streaming-answer [content]="streamContent()" (rendered)="rendered.emit()" />
-      } @else {
-        <nx-thinking-indicator
-          [mode]="status() === 'queued' ? 'waiting' : 'thinking'"
-          [label]="
-            status() === 'queued'
-              ? '等待模型回應'
-              : reasoning() !== 'auto' && reasoning() !== 'none'
-                ? '正在推理'
-                : '正在思考'
-          "
-          [detail]="
-            status() === 'queued' ? '已加入佇列，可隨時停止' : '正在整理資訊，回答將逐步呈現'
-          "
+      } @else if (generation(); as current) {
+        <nx-generation-indicator
+          [waiting]="current.phase === 'queued'"
+          [label]="current.label"
+          [detail]="current.detail"
         />
       }
     } @else {
@@ -207,7 +200,7 @@ export class ChatMessage {
   readonly busy = input(false);
   readonly streamContent = input('');
   readonly status = input('');
-  readonly reasoning = input('auto');
+  readonly generation = computed(() => generationStatus(this.status(), !!this.streamContent()));
   readonly rendered = output<void>();
   readonly edit = output<Message>();
   readonly regenerate = output<Message>();

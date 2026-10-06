@@ -8,6 +8,8 @@ AD 或本地密碼驗證決定「你是誰」，access schema 決定「你可以
 
 每個首次登入的使用者取得 `member` 角色，加入 `workspace` 群組。最初版本只授予 `chat`；完整 migrations 後亦提供 files、projects、knowledge、artifacts、shared、quality、tasks。平台管理員可調整群組功能；admin／integrations 預設在獨立的 administrators 群組。三種主檔皆有 Enabled，停用會排除 grant。多個角色／群組的功能取聯集並去重，不採名稱或前端路由推斷權限。
 
+模型授權也取有效群組聯集；任一群組未限制模型即可使用全部平台可用模型，個人白名單只能進一步限縮。逐模型 token 額度只合併有授權該模型的群組，取最高值、無上限優先，個人覆寫優先。停用群組或撤銷角色後，下一次請求重新計算授權與額度。詳見 [模型政策](ADMINISTRATION.md)。
+
 ```text
 AD login → Users（SID）→ UserRoles → Roles
                                   → RoleGroupRoles → RoleGroups

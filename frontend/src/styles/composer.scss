@@ -24,6 +24,9 @@
   border-color: var(--accent);
   box-shadow: 0 0 0 1px var(--accent-soft);
 }
+.composer.is-busy {
+  border-color: var(--signal);
+}
 .composer textarea {
   display: block;
   border: 0;

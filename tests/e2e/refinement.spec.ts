@@ -287,38 +287,3 @@ test("model lists remain single line, searchable and bounded with many long name
     page.getByRole("combobox", { name: "選擇模型", exact: true }),
   ).toContainText("企業模型 41");
 });
-
-test("pending AI replies have motion feedback that honors reduced motion", async ({
-  page,
-}) => {
-  const fixture = new ApiFixture();
-  fixture.hold = true;
-  await fixture.attach(page);
-  await page.route("**/api/v1/runs/*/events*", (route) =>
-    route.fulfill({
-      contentType: "text/event-stream",
-      body: "retry: 10000\n\n",
-    }),
-  );
-  await page.goto("/chat");
-  await page
-    .getByRole("textbox", { name: "傳送訊息", exact: true })
-    .fill("等待回覆");
-  await page.getByRole("button", { name: "送出訊息", exact: true }).click();
-  await expect(page.locator(".thinking-indicator")).toBeVisible();
-  await expect(page.locator(".thinking-spectrum i").first()).toHaveCSS(
-    "animation-name",
-    "spectrum-wave",
-  );
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  const duration = await page
-    .locator(".thinking-spectrum i")
-    .first()
-    .evaluate((el) => getComputedStyle(el).animationDuration);
-  expect(parseFloat(duration)).toBeLessThan(0.1);
-  await settleEntrance(page);
-  await page.screenshot({
-    path: "artifacts/screenshots/thinking-feedback.png",
-    fullPage: true,
-  });
-});

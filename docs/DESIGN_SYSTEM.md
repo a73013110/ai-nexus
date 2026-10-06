@@ -50,13 +50,16 @@
 | `--motion`                          | 200ms                       | hover／焦點／drawer／訊息進場        |
 | `--motion-enter`                    | 320ms                       | 空白工作區淡入                       |
 | `--motion-signal`                   | 1800ms                      | 生成訊號流／串流游標呼吸             |
+| `--motion-generation`／`--motion-waiting` | 2100／2800ms               | 準備回答／排隊的三節短線淡亮         |
 | `--motion-panel`                    | 240ms                       | dialog／選單與附件進場               |
 | `--motion-stagger`／`--motion-draw` | 70／900ms                   | 建議卡片分段進場／SVG Nexus 線條繪製 |
 | `--ease`                            | cubic-bezier(0.2,0.8,0.2,1) | 一般進場／過渡                       |
 
-生成時 SVG 雙軌訊號流動、composer 邊框狀態色與文字尾端游標；工作結束即停止。禁止未知進度的假百分比、會干擾閱讀的持續整頁動畫。串流時先顯示純文字，結束再渲染 Markdown，維持輸入與捲動回應。
+生成時上方使用較小、較淡的 SVG 雙軌訊號流動，訊息等待區使用三節短線依序淡亮（尺寸由 `--generation-indicator-size` 控制），兩者共用 signal 色與圓角筆畫但動態不同。composer 僅維持靜態狀態邊框，收到內容後移除等待訊號並顯示文字尾端游標，工作結束即停止。禁止未知進度的假百分比、會干擾閱讀的持續整頁動畫。串流沿用安全 Markdown 渲染，保留完成段落、僅更新尾段，維持輸入與捲動回應。
 
-系統 `prefers-reduced-motion` 或個人「減少動態效果」停止 signal／cursor loop，進場與 transition 幾乎立即完成；顏色與文字狀態仍保留。motion 與全域 reduced-motion 在 `motion.scss`，響應規則隨元件樣式保存；鍵盤行為由共用 Disclosure、原生 dialog、CommandPalette 及頁面協調。
+`generationStatus` 共用排隊、準備回答與輸出中的顯示規則，僅依伺服器 run 狀態及是否收到內容判定。思考強度不是實際推理階段，不以設定值宣稱「正在推理」。聊天上方的單一 status 區負責讀屏通知，訊息區的 `GenerationIndicator` 只呈現文字與裝飾訊號，避免重複播報。
+
+系統 `prefers-reduced-motion` 或個人「減少動態效果」停止 signal／generation／cursor loop，進場與 transition 幾乎立即完成；顏色與文字狀態仍保留。兩種入口共用 `motion.scss` 的 reduced-motion mixin，響應規則隨元件樣式保存；鍵盤行為由共用 Disclosure、原生 dialog、CommandPalette 及頁面協調。
 
 ## 檔案與驗證
 
@@ -88,7 +91,7 @@
 | Checkbox／SearchField            | 原生語意、整列勾選、停用與焦點狀態、搜尋圖示與清除；管理／分享／來源共用                   |
 | FeaturePage／WorkspaceSidebar／WorkspaceNavigation | 所有頁面共用側欄外框、品牌、分類四欄入口與帳號列；聊天投影操作與歷史，底部導覽預設收合 |
 | AccountMenu／SettingsDialog      | 共用登入者選單；設定在當頁開啟，延遲載入、未儲存確認、焦點返回                             |
-| ThinkingIndicator／FocusComposer | 不定進度訊號波形及可放大編輯的同步草稿；減少動態與 IME 規則共用                            |
+| GenerationIndicator／FocusComposer | 三節短線與可覆寫的狀態文字、可放大編輯的同步草稿；減少動態與 IME 規則共用                  |
 | InfoPopover                      | 費用與用量資訊的原生 top layer；可見名稱、鍵盤開啟／Esc、邊界翻轉與焦點返回 |
 | TrendChart                       | SVG 趨勢、滑鼠／鍵盤共用游標、Home／End、文字資料表；不依賴顏色辨識數值 |
 

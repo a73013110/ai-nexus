@@ -7,6 +7,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
     viewBox="0 0 48 24"
     class="inference-signal"
     [class.active]="active()"
+    [class.is-subtle]="subtle()"
     aria-hidden="true"
   >
     <path class="signal-track" d="M2 12h10l6-7h12l6 7h10M12 12l6 7h12l6-7" />
@@ -18,4 +19,5 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 })
 export class InferenceSignal {
   readonly active = input(false);
+  readonly subtle = input(false);
 }

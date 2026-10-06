@@ -156,6 +156,21 @@
             [options]="states"
             (valueChange)="setState($event)"
           />
+          @if (generation(); as current) {
+            <p class="form-note">
+              對話上方的線路流動與訊息區的短線淡亮共用配色，動態與層級各自區分。
+            </p>
+            <div class="inference-status">
+              <nx-inference-signal [active]="true" [subtle]="true" /><span>{{
+                current.label
+              }}</span>
+            </div>
+            <nx-generation-indicator
+              [waiting]="current.phase === 'queued'"
+              [label]="current.label"
+              [detail]="current.detail"
+            />
+          }
         </section>
         <section class="platform-card design-markdown" aria-labelledby="design-markdown-title">
           <span class="panel-eyebrow">02 / 內容閱讀</span>

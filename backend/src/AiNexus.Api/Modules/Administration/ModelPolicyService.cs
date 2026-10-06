@@ -38,13 +38,11 @@ public sealed class ModelPolicyService(NexusDbContext db, AccessService access, 
         var grants = await access.ForUserAsync(owner, ct); var groups = grants.Groups.Select(x => x.Id).ToArray();
         var policies = await db.Set<GroupModelPolicy>().AsNoTracking().Where(x => groups.Contains(x.GroupId)).ToListAsync(ct);
         var personal = await db.Set<UserModelPolicy>().AsNoTracking().SingleOrDefaultAsync(x => x.UserId == owner, ct);
-        HashSet<string>? allowed = null;
-        foreach (var list in policies.Select(x => Allowed(x.AllowedModelsJson)).Append(Allowed(personal?.AllowedModelsJson)).Where(x => x is not null))
-        {
-            if (allowed is null) allowed = list!.ToHashSet(StringComparer.Ordinal); else allowed.IntersectWith(list!);
-        }
-        var groupLimits = policies.SelectMany(x => Limits(x.DailyTokenLimitsJson)).GroupBy(x => x.Key).ToDictionary(g => g.Key, g => g.Min(x => x.Value));
+        var byGroup = policies.ToDictionary(x => x.GroupId, StringComparer.Ordinal);
         var overrides = Limits(personal?.DailyTokenLimitsJson);
+        var effective = ModelPolicyResolver.Resolve(groups.Select(id => byGroup.TryGetValue(id, out var policy)
+            ? new ModelPolicyRequest(Allowed(policy.AllowedModelsJson), Limits(policy.DailyTokenLimitsJson)) : new()).ToArray(),
+            new(Allowed(personal?.AllowedModelsJson), overrides));
         var start = UtcDay.Start(asOf ?? DateTimeOffset.UtcNow); var end = start.AddDays(1);
         var usage = await db.Runs.AsNoTracking().Where(x => x.OwnerId == owner && x.CreatedAt >= start && x.CreatedAt < end)
             .Select(x => new { x.ModelId, x.InputTokens, x.OutputTokens, x.ReservedTokens, Active = x.ActiveOwnerId != null })
@@ -59,31 +57,35 @@ public sealed class ModelPolicyService(NexusDbContext db, AccessService access, 
         string Id(string id) => publicIds ? presentation.PublicId(id) : id;
         var budgets = inference.Value.Models.Select(model =>
         {
-            long? limit = overrides.TryGetValue(model.Id, out var personalLimit) ? personalLimit : groupLimits.TryGetValue(model.Id, out var groupLimit) ? groupLimit : null;
+            long? limit = effective.DailyTokenLimits.TryGetValue(model.Id, out var cap) ? cap : null;
             var value = usage.GetValueOrDefault(model.Id);
             return new ModelTokenBudgetDto(Id(model.Id), limit, value?.Used ?? 0, value?.Reserved ?? 0,
-                limit is long cap ? Math.Max(0, cap - (value?.Used ?? 0) - (value?.Reserved ?? 0)) : null,
-                overrides.ContainsKey(model.Id) ? "personal" : groupLimits.ContainsKey(model.Id) ? "group" : "unlimited");
+                limit is long maximum ? Math.Max(0, maximum - (value?.Used ?? 0) - (value?.Reserved ?? 0)) : null,
+                overrides.ContainsKey(model.Id) ? "personal" : limit is not null ? "group" : "unlimited");
         }).ToArray();
-        return new(allowed?.Select(Id).ToArray(), policies.Select(x => x.StoredAttachmentLimitBytes).Min(), budgets, end);
+        return new(effective.AllowedModelIds?.Select(Id).ToArray(), policies.Select(x => x.StoredAttachmentLimitBytes).Min(), budgets, end);
     }
     public async Task RequireAsync(Guid owner, string internalModel, CancellationToken ct, bool checkQuota = true)
     {
         var value = await ForAsync(owner, ct, publicIds: false);
-        if (value.AllowedModelIds is not null && !value.AllowedModelIds.Contains(internalModel))
-            throw new ApiException(403, "model_group_forbidden", "此模型不在你的個人或群組授權範圍。");
+        RequireModel(value, internalModel);
         if (checkQuota && value.Models.FirstOrDefault(x => x.ModelId == internalModel)?.RemainingTokens is <= 0) throw Exhausted();
     }
     // Call inside the owner row-lock transaction, then persist the reservation before releasing it.
     public async Task<GenerationParameters> BudgetAsync(Guid owner, string model, GenerationParameters parameters, long inputEstimate, DateTimeOffset createdAt, CancellationToken ct)
     {
         var value = await ForAsync(owner, ct, publicIds: false, asOf: createdAt);
-        if (value.AllowedModelIds is not null && !value.AllowedModelIds.Contains(model)) throw new ApiException(403, "model_group_forbidden", "此模型不在你的個人或群組授權範圍。");
+        RequireModel(value, model);
         var remaining = value.Models.First(x => x.ModelId == model).RemainingTokens;
         var output = remaining is long cap ? Math.Min(parameters.MaxOutputTokens, cap - inputEstimate) : parameters.MaxOutputTokens;
         if (output < 1) throw Exhausted();
         // Preserve the original history trimming budget when reducing the output allowance.
         return parameters with { MaxOutputTokens = (int)output, ContextTokens = parameters.ContextTokens - parameters.MaxOutputTokens + (int)output };
+    }
+    private static void RequireModel(EffectiveModelPolicyDto policy, string model)
+    {
+        if (policy.AllowedModelIds is not null && !policy.AllowedModelIds.Contains(model))
+            throw new ApiException(403, "model_group_forbidden", "此模型不在你的個人或群組授權範圍。");
     }
     private static ApiException Exhausted() => new(429, "model_token_quota", "此模型今日可用 token 不足（包含輸入、輸出與待結算預留）。請縮短提問、切換模型或聯絡管理員；台北時間每日 08:00 重設。");
 }

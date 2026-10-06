@@ -2764,3 +2764,60 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006025742_AdditiveModelGrants'
+)
+BEGIN
+    DECLARE @description54 AS sql_variant;
+    EXEC sp_dropextendedproperty 'MS_Description', 'SCHEMA', N'access', 'TABLE', N'UserModelPolicies', 'COLUMN', N'DailyTokenLimitsJson';
+    SET @description54 = N'各模型每日輸入加輸出 token 上限 JSON；授權群組取最高值、留空不限，個人覆寫優先，UTC 午夜重設。';
+    EXEC sp_addextendedproperty 'MS_Description', @description54, 'SCHEMA', N'access', 'TABLE', N'UserModelPolicies', 'COLUMN', N'DailyTokenLimitsJson';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006025742_AdditiveModelGrants'
+)
+BEGIN
+    DECLARE @description55 AS sql_variant;
+    EXEC sp_dropextendedproperty 'MS_Description', 'SCHEMA', N'access', 'TABLE', N'UserModelPolicies', 'COLUMN', N'AllowedModelsJson';
+    SET @description55 = N'模型白名單 JSON；群組取聯集，空值授予全部、空陣列不授權；個人白名單再限縮。';
+    EXEC sp_addextendedproperty 'MS_Description', @description55, 'SCHEMA', N'access', 'TABLE', N'UserModelPolicies', 'COLUMN', N'AllowedModelsJson';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006025742_AdditiveModelGrants'
+)
+BEGIN
+    DECLARE @description56 AS sql_variant;
+    EXEC sp_dropextendedproperty 'MS_Description', 'SCHEMA', N'access', 'TABLE', N'GroupModelPolicies', 'COLUMN', N'DailyTokenLimitsJson';
+    SET @description56 = N'各模型每日輸入加輸出 token 上限 JSON；授權群組取最高值、留空不限，個人覆寫優先，UTC 午夜重設。';
+    EXEC sp_addextendedproperty 'MS_Description', @description56, 'SCHEMA', N'access', 'TABLE', N'GroupModelPolicies', 'COLUMN', N'DailyTokenLimitsJson';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006025742_AdditiveModelGrants'
+)
+BEGIN
+    DECLARE @description57 AS sql_variant;
+    EXEC sp_dropextendedproperty 'MS_Description', 'SCHEMA', N'access', 'TABLE', N'GroupModelPolicies', 'COLUMN', N'AllowedModelsJson';
+    SET @description57 = N'模型白名單 JSON；群組取聯集，空值授予全部、空陣列不授權；個人白名單再限縮。';
+    EXEC sp_addextendedproperty 'MS_Description', @description57, 'SCHEMA', N'access', 'TABLE', N'GroupModelPolicies', 'COLUMN', N'AllowedModelsJson';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006025742_AdditiveModelGrants'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261006025742_AdditiveModelGrants', N'10.0.12');
+END;
+
+COMMIT;
+GO
+

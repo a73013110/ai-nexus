@@ -5,6 +5,11 @@
   fill: var(--signal);
   overflow: visible;
 }
+.inference-signal.is-subtle {
+  width: 2rem;
+  height: 1rem;
+  opacity: 0.7;
+}
 .inference-signal path {
   fill: none;
   stroke-width: 1.5;
@@ -23,7 +28,7 @@
   animation: signal-transit var(--motion-signal) linear infinite;
 }
 .inference-signal.active .signal-flow.secondary {
-  animation-delay: -900ms;
+  animation-delay: calc(var(--motion-signal) / -2);
   opacity: 0.65;
 }
 @keyframes signal-transit {
@@ -38,59 +43,25 @@
   font-size: var(--text-caption);
   color: var(--secondary);
 }
-.composer.is-busy {
-  border-color: var(--signal);
-}
-.thinking-indicator {
+.generation-indicator {
   display: flex;
   align-items: center;
-  gap: var(--p-space-4);
+  gap: var(--p-space-3);
   padding: var(--p-space-4) 0 var(--p-space-5);
   color: var(--secondary);
 }
-.thinking-spectrum {
-  position: relative;
+.generation-segments {
+  --generation-cycle: var(--motion-generation);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  width: 64px;
-  height: 64px;
+  gap: 3px;
+  width: var(--generation-indicator-size);
+  height: var(--generation-indicator-size);
   flex: none;
-  background: color-mix(in srgb, var(--signal) 8%, transparent);
-  border-radius: var(--p-radius-md);
 }
-.thinking-orbit {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  fill: none;
-  stroke: var(--signal);
-  stroke-width: 1;
-  animation: thinking-orbit 6s linear infinite;
-}
-.thinking-orbit > circle:first-child {
-  stroke: var(--line);
-}
-.thinking-orbit path {
-  stroke-width: 2;
-  stroke-linecap: round;
-}
-.thinking-orbit-node {
-  fill: var(--signal);
-  stroke: none;
-}
-.thinking-indicator.is-waiting .thinking-orbit {
-  animation-duration: 10s;
-}
-.thinking-indicator.is-waiting .thinking-spectrum i {
-  animation-duration: 2400ms;
-}
-@keyframes thinking-orbit {
-  to {
-    transform: rotate(360deg);
-  }
+.generation-indicator.is-waiting .generation-segments {
+  --generation-cycle: var(--motion-waiting);
 }
 .streaming-answer {
   display: block;
@@ -101,56 +72,38 @@
 .answer-settled {
   animation: content-arrive var(--motion-fast) var(--ease);
 }
-.thinking-spectrum i {
-  width: 3px;
-  height: 22px;
+.generation-segments i {
+  width: 7px;
+  height: 3px;
   border-radius: 3px;
   background: var(--signal);
-  animation: spectrum-wave 1600ms var(--ease) infinite;
+  animation: generation-pulse var(--generation-cycle) ease-in-out infinite;
 }
-.thinking-spectrum i:nth-child(2n) {
-  height: 30px;
-  animation-delay: -300ms;
+.generation-segments i:nth-child(2) {
+  animation-delay: calc(var(--generation-cycle) / -3 * 2);
 }
-.thinking-spectrum i:nth-child(3n) {
-  height: 14px;
-  animation-delay: -650ms;
+.generation-segments i:nth-child(3) {
+  animation-delay: calc(var(--generation-cycle) / -3);
 }
-.thinking-spectrum i:nth-child(4n) {
-  animation-delay: -1050ms;
-}
-.thinking-label {
+.generation-label {
   font-size: var(--text-label);
   font-weight: 500;
 }
-.thinking-label small {
+.generation-label small {
   display: block;
   font-weight: 400;
   font-size: var(--text-caption);
   margin-top: 4px;
 }
-@keyframes spectrum-wave {
+@keyframes generation-pulse {
   0%,
+  65%,
   100% {
-    transform: scaleY(0.35);
-    opacity: 0.4;
+    opacity: 0.3;
   }
-  50% {
-    transform: scaleY(1);
+  25% {
     opacity: 1;
   }
-}
-.composer {
-  position: relative;
-}
-.composer.is-busy::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border: 1px solid var(--signal);
-  border-radius: inherit;
-  pointer-events: none;
-  animation: inference-breathe var(--motion-signal) ease-in-out infinite;
 }
 .attachment-enter {
   animation: attachment-arrive var(--motion-panel) var(--ease);
@@ -191,11 +144,6 @@
     transform var(--motion-fast) var(--ease),
     background-color var(--motion),
     color var(--motion);
-}
-@keyframes inference-breathe {
-  50% {
-    opacity: 0.3;
-  }
 }
 @keyframes attachment-arrive {
   from {
@@ -268,19 +216,6 @@
     overflow: hidden;
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  .signal-flow,
-  .stream-cursor,
-  .composer.is-busy::before {
-    animation: none !important;
-  }
-}
-:root[data-reduced-motion='true'] .signal-flow,
-:root[data-reduced-motion='true'] .stream-cursor,
-:root[data-reduced-motion='true'] .composer.is-busy::before {
-  animation: none !important;
-}
-
 .empty-enter {
   animation: arrive var(--motion-enter) var(--ease);
 }
@@ -305,7 +240,12 @@
     opacity: 1;
   }
 }
-@media (prefers-reduced-motion: reduce) {
+@mixin reduced-motion {
+  .signal-flow,
+  .stream-cursor,
+  .generation-segments i {
+    animation: none !important;
+  }
   *,
   *::before,
   *::after {
@@ -315,11 +255,9 @@
     scroll-behavior: auto !important;
   }
 }
-:root[data-reduced-motion='true'] *,
-:root[data-reduced-motion='true'] *::before,
-:root[data-reduced-motion='true'] *::after {
-  animation-duration: 0.01ms !important;
-  animation-iteration-count: 1 !important;
-  transition-duration: 0.01ms !important;
-  scroll-behavior: auto !important;
+@media (prefers-reduced-motion: reduce) {
+  @include reduced-motion;
+}
+:root[data-reduced-motion='true'] {
+  @include reduced-motion;
 }

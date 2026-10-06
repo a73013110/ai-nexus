@@ -178,7 +178,10 @@
       }
       @case ('groups') {
         <div class="page-toolbar">
-          <p class="form-note">功能取各群組聯集；模型限制取交集，配額採最低設定。</p>
+          <p class="form-note">
+            功能與模型授權取各群組聯集；模型 token
+            額度取授權群組最高值，無上限優先。個人政策另行套用。
+          </p>
           <button class="primary-button" (click)="open('group')">
             <nx-icon name="plus" />新增群組
           </button>
@@ -189,7 +192,12 @@
               <button class="resource-summary" (click)="open('group', group)">
                 <strong>{{ group.name }}</strong
                 ><small
-                  >{{ group.id }} · {{ group.enabled ? '啟用' : '停用' }} · 各模型 token 預算</small
+                  >{{ group.id }} · {{ group.enabled ? '啟用' : '停用' }} ·
+                  {{
+                    group.policy?.allowedModelIds == null
+                      ? '全部模型'
+                      : '授予 ' + group.policy.allowedModelIds.length + ' 個模型'
+                  }}</small
                 >
               </button>
               <nx-feature-summary [features]="groupSummaries()[group.id] || []" />
