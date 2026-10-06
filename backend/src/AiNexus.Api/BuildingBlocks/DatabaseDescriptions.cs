@@ -43,7 +43,7 @@ public static class DatabaseDescriptions
         ["Collections"] = "知識庫的資料資源關聯及索引資訊。",
         ["Documents"] = "知識庫文件的原始附件、分析／索引狀態與 embedding profile。",
         ["DocumentPages"] = "文件逐頁擷取的文字、頁碼與 OCR 結果。",
-        ["Chunks"] = "結構化檢索片段與 profile 專屬切段版本；查詢先套用資料 ACL。",
+        ["Chunks"] = "結構化檢索片段、頁碼與內容指紋；查詢先套用資料 ACL。",
         ["EmbeddingProfiles"] = "向量空間及切段規則的不可變快照；同時最多一個 active。",
         ["ChunkEmbeddings768"] = "768 維原生向量、片段關聯與 profile 內容快取。",
         ["ChunkEmbeddings1024"] = "1024 維原生向量、片段關聯與 profile 內容快取。",

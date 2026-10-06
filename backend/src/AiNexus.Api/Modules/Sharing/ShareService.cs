@@ -99,7 +99,7 @@ public sealed class ShareService(NexusDbContext db, ResourceAccess access, Acces
         var searches = await db.Set<WebSearchRecord>().AsNoTracking().Where(x => x.RunId != null && runIds.Contains(x.RunId.Value)).ToListAsync(ct);
         var messages = branch.Select(x => new SharedMessageDto(x.Role, x.Content, x.Status, x.CreatedAt,
             links.Where(l => l.MessageId == x.Id).Select(l => new AttachmentDto(l.Id, l.FileName, l.ContentType, l.Size, l.ContentType.StartsWith("image/"), "shared-file")).ToArray(),
-            x.ModelId, x.ErrorCode, citations.Where(c => c.MessageId == x.Id).OrderBy(c => c.Number).Select(c => new CitationDto(c.Number, c.DocumentId, c.Title, c.PageNumber, c.Excerpt)).ToArray(),
+            x.ModelId, x.ErrorCode, citations.Where(c => c.MessageId == x.Id).OrderBy(c => c.Number).Select(c => new CitationDto(c.Number, c.DocumentId, c.Title, c.PageNumber, c.Excerpt, c.EndPage)).ToArray(),
             runs.TryGetValue(x.Id, out var run) && searches.Any(s => s.RunId == run.Id) ? searches.Where(s => s.RunId == run.Id).SelectMany(WebSearchService.Sources).ToArray() : null,
             runs.TryGetValue(x.Id, out var timing) ? RunTiming.Describe(timing) : null)).ToArray();
         return (conversation.Title, new("", null, messages), links.Select(x => x.Id).Distinct().ToArray());

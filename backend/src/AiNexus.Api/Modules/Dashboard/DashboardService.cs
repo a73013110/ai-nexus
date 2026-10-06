@@ -34,7 +34,7 @@ public sealed class DashboardService(NexusDbContext db, SpendReports reports, Us
             await docs.CountAsync(ct), await docs.CountAsync(x => x.Status == "ready", ct), await docs.CountAsync(x => x.Status == "failed", ct), await chunks.CountAsync(ct),
             await db.Runs.CountAsync(x => x.ActiveOwnerId != null && (owner == null || x.OwnerId == owner), ct),
             await jobs.CountAsync(x => x.Status == "queued" || x.Status == "running", ct), await jobs.CountAsync(x => x.Status == "failed", ct),
-            embedding.Enabled ? await docs.CountAsync(d => d.CollectionId != null && d.Status == "ready" && !db.Set<KnowledgeChunk>().Any(x => x.DocumentId == d.Id && db.Set<EmbeddingProfile>().Any(p => p.Id == x.ProfileId && p.Key == embedding.Profile)), ct) : 0,
+            embedding.Enabled ? await docs.CountAsync(d => d.CollectionId != null && d.Status != "ready", ct) : 0,
             // Originals are counted once, independently of document readers and collection indexes.
             await db.Set<Attachment>().CountAsync(x => x.InLibrary && x.StorageState == AttachmentStates.Ready && (owner == null || x.OwnerId == owner), ct));
         var spend = await reports.ReportAsync(owner, from, until, offset, scope == "platform", ct);

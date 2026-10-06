@@ -44,7 +44,7 @@ public sealed class ConversationService(IEfHelper<INexusDatabase> ef, NexusDbCon
             .Select(x => new { x.MessageId, x.Attachment.Id, x.Attachment.FileName, x.Attachment.ContentType, x.Attachment.Size, HasText = x.Attachment.ExtractedText != null }).ToListAsync(ct);
         var attachments = links.ToLookup(x => x.MessageId, x => new AttachmentDto(x.Id, x.FileName, x.ContentType, x.Size, x.ContentType.StartsWith("image/"), x.HasText ? "extracted-text" : "vision"));
         var citations = (await ef.Set<AiNexus.Modules.Knowledge.MessageCitation>().AsNoTracking().Where(x => messages.Select(m => m.Id).Contains(x.MessageId)).OrderBy(x => x.Number).ToListAsync(ct))
-            .ToLookup(x => x.MessageId, x => new AiNexus.Modules.Knowledge.CitationDto(x.Number, x.DocumentId, x.Title, x.PageNumber, x.Excerpt));
+            .ToLookup(x => x.MessageId, x => new AiNexus.Modules.Knowledge.CitationDto(x.Number, x.DocumentId, x.Title, x.PageNumber, x.Excerpt, x.EndPage));
         var ratings = await db.Set<AiNexus.Modules.Quality.MessageFeedback>().AsNoTracking().Where(x => x.OwnerId == owner && messages.Select(m => m.Id).Contains(x.MessageId)).ToDictionaryAsync(x => x.MessageId, x => x.Rating, ct);
         var charges = await db.Set<AiNexus.Modules.Billing.ModelCharge>().AsNoTracking().Where(x => x.OwnerId == owner && x.ConversationId == id).ToDictionaryAsync(x => x.Id, ct);
         var searches = await db.Set<AiNexus.Modules.WebSearch.WebSearchRecord>().AsNoTracking().Where(x => x.OwnerId == owner && x.ConversationId == id && x.RunId != null).ToDictionaryAsync(x => x.RunId!.Value, ct);

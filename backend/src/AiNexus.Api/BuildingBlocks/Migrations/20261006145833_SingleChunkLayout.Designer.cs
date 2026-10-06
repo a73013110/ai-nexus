@@ -5,6 +5,7 @@ using Microsoft.Data.SqlTypes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -12,9 +13,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AiNexus.BuildingBlocks.Migrations
 {
     [DbContext(typeof(NexusDbContext))]
-    partial class NexusDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261006145833_SingleChunkLayout")]
+    partial class SingleChunkLayout
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1941,10 +1944,6 @@ namespace AiNexus.BuildingBlocks.Migrations
                     b.Property<Guid>("DocumentId")
                         .HasColumnType("uniqueidentifier")
                         .HasComment("關聯知識文件的識別碼。");
-
-                    b.Property<int>("EndPage")
-                        .HasColumnType("int")
-                        .HasComment("片段結束的原始文件頁碼。");
 
                     b.Property<string>("Excerpt")
                         .IsRequired()

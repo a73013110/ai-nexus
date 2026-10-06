@@ -3573,3 +3573,81 @@ BEGIN
 END;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006145833_SingleChunkLayout'
+)
+BEGIN
+    ALTER TABLE [knowledge].[Chunks] DROP CONSTRAINT [FK_Chunks_EmbeddingProfiles_ProfileId];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006145833_SingleChunkLayout'
+)
+BEGIN
+    DROP INDEX [IX_Chunks_ProfileId_DocumentId] ON [knowledge].[Chunks];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006145833_SingleChunkLayout'
+)
+BEGIN
+    DECLARE @var82 nvarchar(max);
+    SELECT @var82 = QUOTENAME([d].[name])
+    FROM [sys].[default_constraints] [d]
+    INNER JOIN [sys].[columns] [c] ON [d].[parent_column_id] = [c].[column_id] AND [d].[parent_object_id] = [c].[object_id]
+    WHERE ([d].[parent_object_id] = OBJECT_ID(N'[knowledge].[Chunks]') AND [c].[name] = N'ProfileId');
+    IF @var82 IS NOT NULL EXEC(N'ALTER TABLE [knowledge].[Chunks] DROP CONSTRAINT ' + @var82 + ';');
+    ALTER TABLE [knowledge].[Chunks] DROP COLUMN [ProfileId];
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006145833_SingleChunkLayout'
+)
+BEGIN
+    DECLARE @description83 AS sql_variant;
+    EXEC sp_dropextendedproperty 'MS_Description', 'SCHEMA', N'knowledge', 'TABLE', N'Chunks';
+    SET @description83 = N'結構化檢索片段、頁碼與內容指紋；查詢先套用資料 ACL。';
+    EXEC sp_addextendedproperty 'MS_Description', @description83, 'SCHEMA', N'knowledge', 'TABLE', N'Chunks';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006145833_SingleChunkLayout'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261006145833_SingleChunkLayout', N'10.0.12');
+END;
+
+COMMIT;
+GO
+
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006150830_CitationPageRanges'
+)
+BEGIN
+    ALTER TABLE [knowledge].[MessageCitations] ADD [EndPage] int NOT NULL DEFAULT 0;
+    DECLARE @description84 AS sql_variant;
+    SET @description84 = N'片段結束的原始文件頁碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description84, 'SCHEMA', N'knowledge', 'TABLE', N'MessageCitations', 'COLUMN', N'EndPage';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006150830_CitationPageRanges'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261006150830_CitationPageRanges', N'10.0.12');
+END;
+
+COMMIT;
+GO
+

@@ -51,6 +51,4 @@ public sealed class EmbeddingProfiles(NexusDbContext db, IOptions<KnowledgeOptio
         if (snapshot.Version != StructuredChunker.Version) throw new ApiException(409, "chunker_version_unsupported", "此切段器版本已不受支援，請先重建並啟用新 profile。");
         return snapshot;
     }
-    // Each profile owns a stable ordinal namespace, preserving the document/ordinal unique key during parallel rebuilds.
-    public static int Ordinal(int profileId, int index) => checked(profileId * 100000 + index);
 }

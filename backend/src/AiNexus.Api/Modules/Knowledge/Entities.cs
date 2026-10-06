@@ -38,7 +38,6 @@ public sealed class KnowledgeChunk
     public Guid Id { get; set; } = Guid.NewGuid();
     public int SearchId { get; set; }
     public Guid DocumentId { get; set; }
-    public int ProfileId { get; set; }
     public int StartPage { get; set; }
     public int EndPage { get; set; }
     public int Ordinal { get; set; }
@@ -86,6 +85,7 @@ public sealed class MessageCitation
     public int Number { get; set; }
     public Guid DocumentId { get; set; }
     public int PageNumber { get; set; }
+    public int EndPage { get; set; }
     public string Title { get; set; } = "";
     public string Excerpt { get; set; } = "";
 }
@@ -96,7 +96,7 @@ public sealed record TextDocumentRequest(string Title, string Text, int? Expecte
 public sealed record TextDocumentDto(Guid Id, string Title, string Text, int Version);
 public sealed record DocumentPageDto(int PageNumber, string Text, string Extraction, bool NeedsReview);
 public sealed record DocumentJobDto(AiNexus.Modules.Operations.JobDto Job, bool CanControl);
-public sealed record CitationDto(int Number, Guid DocumentId, string Title, int PageNumber, string Excerpt);
+public sealed record CitationDto(int Number, Guid DocumentId, string Title, int PageNumber, string Excerpt, int EndPage = 0);
 public sealed record KnowledgeSelectionDto(IReadOnlyList<Guid> CollectionIds);
 public sealed record AddDocumentRequest(Guid AttachmentId);
 public sealed record KnowledgeSearchRequest(string Query, IReadOnlyList<Guid> CollectionIds);
@@ -123,9 +123,8 @@ public static class KnowledgeConfiguration
         var chunk = model.Entity<KnowledgeChunk>(); chunk.ToTable("Chunks", "knowledge"); chunk.HasKey(x => x.Id); chunk.Property(x => x.Text).HasMaxLength(4000);
         chunk.Property(x => x.HeadingPath).HasMaxLength(400); chunk.Property(x => x.ContentHash).HasColumnType("binary(32)");
         if (sqlite) chunk.Property(x => x.SearchId).ValueGeneratedNever(); else chunk.Property(x => x.SearchId).UseIdentityColumn();
-        chunk.HasIndex(x => x.SearchId).IsUnique(); chunk.HasIndex(x => new { x.ProfileId, x.DocumentId });
+        chunk.HasIndex(x => x.SearchId).IsUnique();
         chunk.HasIndex(x => new { x.DocumentId, x.Ordinal }).IsUnique(); chunk.HasOne<KnowledgeDocument>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Cascade);
-        chunk.HasOne<EmbeddingProfile>().WithMany().HasForeignKey(x => x.ProfileId).OnDelete(DeleteBehavior.Restrict);
         var profile = model.Entity<EmbeddingProfile>(); profile.ToTable("EmbeddingProfiles", "knowledge"); profile.HasKey(x => x.Id);
         profile.Property(x => x.Key).HasMaxLength(200); profile.HasIndex(x => x.Key).IsUnique();
         profile.Property(x => x.Provider).HasMaxLength(32); profile.Property(x => x.Model).HasMaxLength(160); profile.Property(x => x.InputFormat).HasMaxLength(32);
