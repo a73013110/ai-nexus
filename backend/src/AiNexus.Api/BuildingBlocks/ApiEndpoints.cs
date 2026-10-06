@@ -26,6 +26,7 @@ public static class ApiEndpoints
         AiNexus.Modules.Artifacts.ArtifactEndpoints.MapArtifacts(api);
         AiNexus.Modules.Projects.ProjectEndpoints.MapProjects(api);
         AiNexus.Modules.Sharing.ShareEndpoints.MapSharing(api);
+        AiNexus.Modules.Notifications.NotificationEndpoints.MapNotifications(api);
         AiNexus.Modules.Quality.QualityEndpoints.MapQuality(api);
         AiNexus.Modules.Integrations.IntegrationEndpoints.MapIntegrations(api);
         api.MapAdministration();

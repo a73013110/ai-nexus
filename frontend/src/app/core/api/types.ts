@@ -2,12 +2,19 @@ import type { components } from './schema';
 
 type Dto<Name extends keyof components['schemas']> = Required<components['schemas'][Name]>;
 export type Me = Dto<'MeDto'>;
+export type NotificationTarget = Dto<'NotificationTargetDto'>;
+export type NotificationItem = Dto<'NotificationDto'> & { target: NotificationTarget };
+export type NotificationPage = Dto<'NotificationPageDto'> & { items: NotificationItem[] };
 export type LibraryFile = Dto<'LibraryFileDto'> & {
   file: Attachment;
   usages: Dto<'FileUsageDto'>[];
 };
 export type FileLibraryPage = Dto<'FileLibraryPageDto'> & { items: LibraryFile[] };
 export type ReadonlyShare = Dto<'ShareDto'>;
+export type SharedFilePreview = Dto<'SharedFilePreviewDto'> & {
+  file: Attachment;
+  pages: DocumentPage[];
+};
 export type SharedContent = Dto<'SharedContentDto'> & {
   share: ReadonlyShare;
   snapshot: Dto<'ShareSnapshot'> & {
@@ -18,7 +25,9 @@ export type Project = Dto<'ProjectDto'> & { resource: Dto<'ResourceDto'> };
 export type ProjectTemplate = Dto<'ProjectTemplateDto'>;
 export type Preferences = Dto<'PreferencesDto'>;
 export type UserSettings = Dto<'UserSettingsDto'> & { appearance: Preferences };
-export type PersonalUsage = Dto<'PersonalUsageDto'> & { daily: Dto<'UsageDayDto'>[] };
+export type PersonalUsage = Omit<Dto<'PersonalUsageDto'>, 'tokens'> & {
+  tokens?: TokenUsage | null;
+} & { daily: Dto<'UsageDayDto'>[] };
 export type AdminCatalog = Dto<'AdminCatalogDto'>;
 export type AdminRole = Dto<'AdminRoleDto'>;
 export type AdminGroup = Dto<'AdminGroupDto'>;
@@ -106,7 +115,7 @@ export type ConversationSpend = Dto<'ConversationSpendDto'> & {
 };
 export type ModelPrice = Dto<'PriceDto'>;
 export type PriceRequest = Dto<'PriceRequest'>;
-export type Dashboard = Dto<'DashboardDto'> & {
+export type Dashboard = Omit<Dto<'DashboardDto'>, 'tokens'> & { tokens?: TokenUsage | null } & {
   counts: Dto<'DashboardCountsDto'>;
   spend: SpendReport;
   recent: Dto<'RecentWorkDto'>[];
@@ -155,3 +164,13 @@ export type ArtifactDocument = Dto<'ArtifactDto'> & { resource: Resource };
 export type ArtifactRevision = Dto<'ArtifactRevisionDto'>;
 export type TransformResult = Dto<'TransformTextDto'>;
 export const isActive = (state: string) => state === 'queued' || state === 'running';
+
+export type TextDocument = Dto<'TextDocumentDto'>;
+export type RepositoryCommit = Dto<'RepositoryCommitDto'>;
+export type RepositoryReview = Dto<'RepositoryReviewDto'> & { job: Job };
+export type RepositoryReviewDetail = Dto<'RepositoryReviewDetailDto'> & {
+  review: RepositoryReview;
+  sections: Dto<'RepositoryReviewSectionDto'>[];
+};
+
+export type TokenUsage = Dto<'TokenUsageDto'> & { daily: Dto<'TokenDayDto'>[] };

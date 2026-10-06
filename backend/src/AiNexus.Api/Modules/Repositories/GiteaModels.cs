@@ -38,6 +38,7 @@ public sealed record RepositoryEntryDto(string Name, string Path, string Kind, l
 public sealed record RepositoryTreeDto(string Repository, string Commit, string Path, IReadOnlyList<RepositoryEntryDto> Entries);
 public sealed record RepositoryFileDto(string Repository, string Commit, string Path, string Text, string Url);
 public sealed record RepositoryIssueDto(int Number, string Title, string Body, string State, string Url);
+public sealed record RepositoryCommitDto(string Sha, string Message);
 public sealed record RepositoryImportRequest(string Repository, string Commit, string Path, Guid CollectionId);
 public static class RepositoryConfiguration
 {

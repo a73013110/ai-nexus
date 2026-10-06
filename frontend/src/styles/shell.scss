@@ -16,8 +16,9 @@
   height: calc(100dvh - var(--identity-banner-height, 0px));
   overflow: hidden;
 }
-.workbench.sidebar-closed {
-  grid-template-columns: 0 minmax(0, 1fr);
+.workbench:has(.workspace-sidebar.is-compact),
+.feature-layout:has(.workspace-sidebar.is-compact) {
+  grid-template-columns: var(--sidebar-rail-width, 76px) minmax(0, 1fr);
 }
 .main-workspace {
   display: flex;
@@ -116,8 +117,8 @@
 }
 @media (max-width: 859px) {
   .workbench,
-  .workbench.sidebar-closed {
-    grid-template-columns: minmax(0, 1fr);
+  .feature-layout {
+    grid-template-columns: var(--sidebar-rail-width, 76px) minmax(0, 1fr);
   }
   .topbar {
     height: var(--topbar-height);

@@ -1,6 +1,18 @@
 # Gitea 程式庫工作區
 
-第一版提供自己的程式庫清單、固定 commit 的檔案瀏覽、待處理議題、對話草稿與知識庫版本快照。所有遠端操作都是 GET；不建立 issue、commit 或 PR，不推送修改。Gitea 的存取權由各使用者自己的權杖決定，AI Nexus 管理員不會自動取得私人程式庫內容。
+提供程式庫清單、固定 commit 的檔案瀏覽、待處理議題、對話草稿、知識庫快照與背景 AI review。所有 Gitea 遠端操作都是 GET；不建立 issue、commit 或 PR、不推送修改。存取權由各使用者自己的權杖決定，AI Nexus 管理員不會自動取得私人程式庫內容。
+
+## Commit review
+
+「AI Review」選擇單一 commit 或區間，可從最近 30 個 commit 選終點，或貼上完整 40／64 位 SHA。單一 commit 比對父版本，區間為起點與終點的淨變更（兩點比較），不是逐一列出每個 commit。選模型及最多 2,000 字元關注事項後建立背景任務，切換頁面仍繼續，結果深連結 `/repositories?review={id}`，完成／失敗／取消進入[通知](NOTIFICATIONS.md)。
+
+建立時固定主機、SHA、diff、review 指令及模型設定 fingerprint。最多 256,000 bytes diff、60 區段，依檔案及 Context 預算切分，過大要求縮小範圍，不悄悄裁切；二進位列為人工確認，不傳模型。模型逐段提供 P0–P3、檔案／行號、觸發條件、影響、修正及測試建議，輸出上限會標示不完整。這是靜態分析，不執行程式、不代表測試通過，仍須核對上下文。
+
+沿用 BackgroundJobWorker 的租約、取消、checkpoint；完成區段即持久化，失敗／取消最多六次處理，重試只處理未完成區段。每次模型呼叫前後重新驗證 Gitea 及功能權限，模型設定變更拒絕沿用舊任務。共用 ModelTaskService 的額度、用量及價格快照；結果僅 owner 可讀，每次仍確認目前 Gitea 權限，不因保存 diff 繞過撤銷。
+
+API 前綴 `/api/v1`：`GET /repositories/commits?repository={name}`、`GET /repositories/reviews?repository={name}`、`POST /repositories/reviews`、`GET /repositories/reviews/{id}`、`POST /repositories/reviews/{id}/cancel`／`retry`。建立 body `{ repository, commit, baseCommit, modelId, note, idempotencyKey }`，key 為 GUID，owner scoped，同 key 同內容回原任務，不同內容回 409。
+
+使用官方唯讀 API：[單一 commit diff](https://docs.gitea.com/api/operations/repo-download-commit-diff-or-patch/)、[區間比較](https://docs.gitea.com/api/operations/repo-compare-diff/) 的 `?output=diff`。舊版不支援 compare diff 時明確拒絕並提示確認版本，不把 JSON metadata 當程式碼送模型。
 
 ## 管理員設定
 

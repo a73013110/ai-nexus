@@ -1,5 +1,7 @@
 # 資料庫與 schema
 
+`20261006061603_WorkspaceExperience` 為增量升級，新增通知、程式碼 review／結果及純文字來源版本欄位。已存在的資料庫套用新的 `db/migrations.sql` 或由 `Initialize-Database.ps1` 執行待處理 migration，不重新建立基線。EF model 與物件描述同步更新，OpenAPI／前端 schema 一併提交。
+
 業務資料集中在 **AiNexus** SQL Server database。schema 是資料庫內的命名空間，例如 `[access].[Roles]`，不是另一個 database 或另一條連線。按模組分 schema，讓責任、migration 與 SQL 授權容易辨識；跨 schema 外鍵及同一個 EF transaction 仍可使用。
 
 已有 SQL 登入可直接使用，不必另建同名帳號。一般參數在 .local/config/appsettings.Local.json，密碼在 .local/secrets/appsettings.Secrets.json。Initialize-Database.ps1 用既有登入建立不存在的 AiNexus，再套用未完成版本；無建庫／DDL 權限時由 DBA 先建庫及套用 SQL。見 [參數](CONFIGURATION.md)。

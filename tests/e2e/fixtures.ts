@@ -15,7 +15,7 @@ export async function openSettings(page: Page) {
   const account = page.getByRole("button", { name: "登入者選單", exact: true });
   await account.waitFor({ state: "attached" });
   if (!(await account.isVisible()))
-    await page.getByRole("button", { name: "開啟側欄" }).click();
+    await page.getByRole("button", { name: "展開側欄" }).click();
   await account.click();
   await page.getByRole("menuitem", { name: "設定", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "個人設定", exact: true });
@@ -367,6 +367,8 @@ export class ApiFixture {
       }
       return json({ ...this.settings, appearance: this.preferences });
     }
+    if (path === "/notifications")
+      return json({ items: [], unread: 0, hasMore: false });
     if (path === "/settings/usage")
       return json({
         days: 30,

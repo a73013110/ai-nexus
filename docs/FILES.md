@@ -10,6 +10,7 @@
 - 點擊名稱開大型預覽，保留目前頁面、對話草稿、捲動與焦點。圖片預覽不自動啟動 OCR；PDF 有頁碼、縮放、搜尋及原文／文字切換。下載與獨立閱讀頁保留在精簡工具列。
 - 聊天輸入框「從檔案庫加入」重用既有 attachment ID，套用原本的附件數／總大小／OCR／模型限制。
 - 檔案卡片「加入知識庫」選擇有編輯權限的知識庫。確認文字說明成員可閱讀原檔；後端重新檢查權限，並建立獨立索引與引用。
+- 卡片／清單可重新命名，保留副檔名，最多 180 字元，禁止路徑、控制字元及特殊符號。共用名稱視窗保留失敗時的輸入，可修正後重試。
 - 刪除對話或知識來源保留原檔。仍被對話、知識庫、專案或分享引用時，不能刪除原檔；移除引用後明確刪檔才釋放配額。輸入框移除已保存原檔只移除這次草稿引用。
 
 ## 實作邊界
@@ -19,6 +20,8 @@
 `GET /api/v1/files` 是 metadata-only、伺服器篩選與分頁；不讀原檔／擷取全文。回應的 `storage` 包含所有原檔、草稿與待刪容量，列表篩選不影響容量統計。關聯名稱採固定批次查詢並限制筆數；只顯示登入者仍可讀的來源。`POST /files/{id}/retain` 保存獨立上傳；`DELETE /files/{id}` 在使用者 SQL row lock 與 transaction 內檢查所有引用並清理私有閱讀器，再於 commit 後實體刪檔。所有端點檢查 owner 及 chat／knowledge／projects 其中一項功能 grant。
 
 FileLibraryStore 共用於頁面與選取器，搜尋去抖、取消舊請求並檢查 view／登入身分世代。FileBrowser 共用卡片、選取與列表。DocumentViewer 延遲載入，PDF.js 僅在需要 PDF 時下載；關閉預覽取消載入、輪詢及畫布渲染。
+
+`PUT /api/v1/files/{id}/name` body `{ fileName, expectedFileName }`。只允許 owner 的 ready、InLibrary 原檔；conditional update 在 transaction 檢查舊名稱，衝突回 409。只改 metadata 並記錄稽核，不移動實體檔、不改 bytes、StorageKey 或容量。既有分享快照及知識來源保留建立時名稱，分享下載也使用快照檔名。
 
 ## 儲存與初始化
 

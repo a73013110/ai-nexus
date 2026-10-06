@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Inference;
 
-public sealed class RunService(NexusDbContext db, ConversationService conversations, AttachmentService attachments, AttachmentWriteLock attachmentWrites, GenerationScheduler scheduler, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, ModelPresentation presentation, AiNexus.Modules.Administration.ModelPolicyService policies, ModelQuotaLock quotaWrites, AiNexus.Modules.Knowledge.KnowledgeRetrieval knowledge, AiNexus.Modules.Projects.ProjectService projects, AiNexus.Modules.WebSearch.WebSearchService webSearch, BillingService billing)
+public sealed class RunService(NexusDbContext db, ConversationService conversations, AttachmentService attachments, AttachmentWriteLock attachmentWrites, GenerationScheduler scheduler, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, ModelPresentation presentation, AiNexus.Modules.Administration.ModelPolicyService policies, ModelQuotaLock quotaWrites, AiNexus.Modules.Knowledge.KnowledgeRetrieval knowledge, AiNexus.Modules.Projects.ProjectService projects, AiNexus.Modules.WebSearch.WebSearchService webSearch, BillingService billing, AiNexus.Modules.Notifications.NotificationService notifications)
 {
     public async Task<GenerationRun> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
     {
@@ -145,6 +145,10 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
         AddEvent(db, run, "status");
         await conversations.UpdateAnswerAsync(run, ct);
         db.AuditEvents.Add(new AuditEvent { OwnerId = run.OwnerId, Action = "run.finished", ResourceId = run.Id, Result = error ?? status });
+        var title = await db.Conversations.Where(x => x.Id == run.ConversationId).Select(x => x.Title).SingleAsync(ct);
+        await notifications.PublishAsync(run.OwnerId, "run:" + run.Id, "conversation." + status,
+            status == "failed" ? "error" : status == "completed" ? "success" : "info",
+            status == "completed" ? "AI 回答已完成" : status == "failed" ? "AI 回答未完成" : "AI 回答已停止", title, "conversation", run.ConversationId, ct);
         await db.SaveChangesAsync(ct);
     }
 

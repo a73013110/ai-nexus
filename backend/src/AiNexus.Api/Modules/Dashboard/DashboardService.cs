@@ -14,9 +14,9 @@ public sealed record DashboardCountsDto(int Conversations, int Projects, int Col
     int FailedDocuments, int Chunks, int ActiveGenerations, int ActiveJobs, int FailedJobs, int StaleIndexes, int Files);
 public sealed record RecentWorkDto(Guid Id, string Kind, string Title, DateTimeOffset UpdatedAt);
 public sealed record DashboardDto(string Scope, DashboardCountsDto Counts, SpendReportDto Spend, IReadOnlyList<RecentWorkDto> Recent,
-    bool WebSearchAvailable, bool GiteaAvailable, string EmbeddingMode);
+    bool WebSearchAvailable, bool GiteaAvailable, string EmbeddingMode, TokenUsageDto? Tokens = null);
 
-public sealed class DashboardService(NexusDbContext db, SpendReports reports, AccessService access, IEmbeddingProvider embedding,
+public sealed class DashboardService(NexusDbContext db, SpendReports reports, UsageReports usage, AccessService access, IEmbeddingProvider embedding,
     AiNexus.Modules.WebSearch.WebSearchService search, Microsoft.Extensions.Options.IOptions<AiNexus.Modules.Repositories.GiteaOptions> gitea)
 {
     public async Task<DashboardDto> GetAsync(Guid actor, string scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offset, CancellationToken ct)
@@ -42,6 +42,7 @@ public sealed class DashboardService(NexusDbContext db, SpendReports reports, Ac
         var recent = await db.Conversations.AsNoTracking().Where(x => x.OwnerId == actor && !x.IsDeleted)
             .OrderByDescending(x => x.UpdatedAt).Take(5).Select(x => new RecentWorkDto(x.Id, "chat", x.Title, x.UpdatedAt)).ToListAsync(ct);
         if (scope == "platform") { db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = ownerId ?? Guid.Empty, Action = "dashboard.platform.read", Result = "metrics" }); await db.SaveChangesAsync(ct); }
-        return new(scope, counts, spend, recent, search.Status.Available, gitea.Value.Enabled, embedding.Enabled ? "語意向量" : "關鍵字");
+        return new(scope, counts, spend, recent, search.Status.Available, gitea.Value.Enabled, embedding.Enabled ? "語意向量" : "關鍵字",
+            await usage.TokensAsync(owner, spend.From, spend.Until, spend.OffsetMinutes, scope == "platform", ct));
     }
 }

@@ -5,7 +5,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
   selector: 'nx-generation-indicator',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="generation-indicator" [class.is-waiting]="waiting()">
-    <span class="generation-segments" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span class="generation-orbit" aria-hidden="true"><i></i><i></i><i></i><b></b></span>
     <span class="generation-label"
       >{{ label() }}<small>{{ detail() }}</small></span
     >

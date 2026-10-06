@@ -74,22 +74,17 @@
   background: var(--accent-soft);
   border: 0;
 }
-.shared-files {
+.shared-message-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--p-space-2);
-  margin-top: var(--p-space-3);
-}
-.shared-files a {
-  display: inline-flex;
   align-items: center;
-  gap: var(--p-space-2);
-  min-height: 44px;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  padding: var(--p-space-2);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  gap: var(--p-space-3);
+  margin-bottom: var(--p-space-3);
+}
+.shared-user .user-copy {
+  padding: 0;
+  border: 0;
+  background: transparent;
 }
 .share-recipients {
   display: flex;

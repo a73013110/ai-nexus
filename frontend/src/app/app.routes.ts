@@ -87,6 +87,12 @@ export const routes: Routes = [
     loadComponent: () => import('./features/tasks/tasks-page').then((module) => module.TasksPage),
   },
   {
+    path: 'reader/share/:shareId/:id',
+    canActivate: [authenticated],
+    loadComponent: () =>
+      import('./features/knowledge/document-reader').then((module) => module.DocumentReader),
+  },
+  {
     path: 'reader/attachment/:id',
     canActivate: [authenticated],
     loadComponent: () =>

@@ -1,9 +1,6 @@
 .sidebar {
-  width: var(--sidebar-width);
+  width: 100%;
   height: 100%;
-}
-.sidebar-closed .sidebar {
-  visibility: hidden;
 }
 .new-chat {
   display: flex;
@@ -143,21 +140,6 @@
   transform: translateY(-50%);
   border-radius: var(--p-radius-pill);
 }
-.history-edit {
-  opacity: 0;
-  flex: 0 0 var(--button-target);
-  width: var(--button-target);
-  height: var(--button-target);
-  margin-right: var(--p-space-1);
-}
-.history-edit nx-icon {
-  width: 14px;
-  height: 14px;
-}
-.history-row:hover .history-edit,
-.history-row:focus-within .history-edit {
-  opacity: 1;
-}
 .sidebar-note {
   font-size: var(--text-caption);
   line-height: 1.8;
@@ -173,57 +155,18 @@ nx-chat-sidebar {
   display: block;
   min-height: 0;
 }
-.sidebar-backdrop,
-.mobile-sidebar-close {
-  display: none;
+.history-row nx-action-menu {
+  flex: none;
 }
-@media (max-width: 859px) {
-  nx-chat-sidebar {
-    position: absolute;
-    inset: var(--identity-banner-height, 0px) auto 0 0;
-    height: calc(100dvh - var(--identity-banner-height, 0px));
-    z-index: 30;
-    width: var(--sidebar-width);
-    pointer-events: none;
-  }
-  .sidebar {
-    position: fixed;
-    height: calc(100dvh - var(--identity-banner-height, 0px));
-    z-index: 30;
-    left: 0;
-    top: var(--identity-banner-height, 0px);
-    bottom: 0;
-    box-shadow: var(--shadow);
-    transform: translateX(0);
-    transition:
-      transform var(--motion) var(--ease),
-      visibility var(--motion);
-    pointer-events: auto;
-  }
-  .sidebar-closed .sidebar {
-    transform: translateX(-100%);
-    visibility: hidden;
-  }
-  .sidebar-backdrop {
-    display: block;
-    position: fixed;
-    inset: var(--identity-banner-height, 0px) 0 0;
-    background: var(--scrim);
-    z-index: 29;
-  }
-  .history-edit {
-    opacity: 1;
-  }
-  .mobile-sidebar-close {
-    display: flex;
-    position: absolute;
-    right: var(--p-space-3);
-    top: var(--sidebar-padding-top);
-    width: var(--button-target);
-    height: var(--button-target);
-  }
-  .sidebar > nx-workspace-brand {
-    min-height: var(--button-target);
-    padding-right: var(--button-target);
-  }
+.history-row .conversation-actions {
+  gap: 0;
+}
+.history-row .history-state {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin-right: var(--p-space-2);
+}
+.history-row .history-complete {
+  color: var(--signal);
 }

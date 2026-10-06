@@ -2,6 +2,9 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import {
   type IconNode,
   ThumbsUp,
+  Files,
+  Bell,
+  LoaderCircle,
   ThumbsDown,
   Share2,
   Plus,
@@ -64,6 +67,9 @@ import { LucideDynamicIcon } from '@lucide/angular';
 // Import curated SVG data; a single Angular renderer avoids retaining per-icon component metadata.
 const icons: Record<string, IconNode> = {
   image: ImageIcon,
+  files: Files,
+  bell: Bell,
+  loading: LoaderCircle,
   external: ExternalLink,
   'thumb-up': ThumbsUp,
   'thumb-down': ThumbsDown,

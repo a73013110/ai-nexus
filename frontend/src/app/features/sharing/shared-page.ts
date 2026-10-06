@@ -6,12 +6,16 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { FeaturePage } from '../../shared/ui/feature-page';
 import { MarkdownView } from '../../shared/ui/markdown-view';
+import { combineLatest } from 'rxjs';
+import { MessageContent } from '../workspace/message-content';
+import { ReaderOverlay } from '../../shared/browser/reader-overlay';
 import { Icon } from '../../shared/ui/icon';
+import { formatModelId } from '../../shared/browser/format';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { SharingApi } from './sharing-api';
 @Component({
   selector: 'nx-shared-page',
-  imports: [FeaturePage, MarkdownView, Icon, RouterLink, ConfirmDialog],
+  imports: [FeaturePage, MarkdownView, Icon, RouterLink, ConfirmDialog, MessageContent],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
@@ -34,93 +38,90 @@ import { SharingApi } from './sharing-api';
       }
       @if (loading()) {
         <p role="status">正在載入分享…</p>
-      } @else {
-        <div class="share-workspace">
-          <nav class="share-list" aria-label="分享清單">
-            @for (item of list(); track item.id) {
-              <a
-                [routerLink]="['/shared', item.id]"
-                [attr.aria-current]="content()?.share?.id === item.id ? 'page' : null"
-                ><nx-icon [name]="item.kind === 'artifact' ? 'document' : 'lines'" /><span
-                  ><strong>{{ item.title }}</strong
-                  ><small>{{
-                    item.isRevoked
-                      ? '已撤銷'
-                      : expired(item.expiresAt)
-                        ? '已到期'
-                        : item.isOwner
-                          ? '分享給 ' + item.recipients.join('、')
-                          : item.owner + ' 分享給你'
-                  }}</small></span
-                ></a
-              >
-            } @empty {
-              <p class="form-note">目前沒有分享。可以在對話或成果文件建立具名分享。</p>
-            }
-          </nav>
-          @if (content(); as view) {
-            <article class="share-content">
-              <div class="share-heading">
-                <div>
-                  <span class="panel-eyebrow"
-                    >唯讀分享{{
-                      view.snapshot.artifactVersion
-                        ? ' · 版本 ' + view.snapshot.artifactVersion
+      }
+      <div class="share-workspace">
+        <nav class="share-list" aria-label="分享清單">
+          @for (item of list(); track item.id) {
+            <a
+              [routerLink]="['/shared', item.id]"
+              [queryParams]="{ sent: sent() }"
+              [attr.aria-current]="content()?.share?.id === item.id ? 'page' : null"
+              ><nx-icon [name]="item.kind === 'artifact' ? 'document' : 'lines'" /><span
+                ><strong>{{ item.title }}</strong
+                ><small>{{
+                  item.isRevoked
+                    ? '已撤銷'
+                    : expired(item.expiresAt)
+                      ? '已到期'
+                      : item.isOwner
+                        ? '分享給 ' + item.recipients.join('、')
+                        : item.owner + ' 分享給你'
+                }}</small></span
+              ></a
+            >
+          } @empty {
+            <p class="form-note">目前沒有分享。可以在對話或成果文件建立具名分享。</p>
+          }
+        </nav>
+        @if (content(); as view) {
+          <article class="share-content">
+            <div class="share-heading">
+              <div>
+                <span class="panel-eyebrow"
+                  >唯讀分享{{
+                    view.snapshot.artifactVersion ? ' · 版本 ' + view.snapshot.artifactVersion : ''
+                  }}</span
+                >
+                <h2>{{ view.share.title }}</h2>
+                <p>{{ view.share.owner }} · 到期 {{ date(view.share.expiresAt) }}</p>
+              </div>
+              @if (view.share.isOwner) {
+                <button class="danger-button" [disabled]="busy()" (click)="revoke(view.share)">
+                  撤銷分享
+                </button>
+              }
+            </div>
+            @if (view.share.kind === 'artifact') {
+              <nx-markdown-view [content]="view.snapshot.content" />
+            } @else {
+              @for (message of view.snapshot.messages; track $index) {
+                <section class="shared-message" [class.shared-user]="message.role === 'user'">
+                  <span class="message-author"
+                    >{{ message.role === 'user' ? '提問' : 'AI 回答'
+                    }}{{
+                      message.status !== 'completed'
+                        ? ' · ' + (message.status === 'cancelled' ? '已停止' : '未完成')
                         : ''
                     }}</span
                   >
-                  <h2>{{ view.share.title }}</h2>
-                  <p>{{ view.share.owner }} · 到期 {{ date(view.share.expiresAt) }}</p>
-                </div>
-                @if (view.share.isOwner) {
-                  <button class="danger-button" [disabled]="busy()" (click)="revoke(view.share)">
-                    撤銷分享
-                  </button>
-                }
-              </div>
-              @if (view.share.kind === 'artifact') {
-                <nx-markdown-view [content]="view.snapshot.content" />
-              } @else {
-                @for (message of view.snapshot.messages; track $index) {
-                  <section class="shared-message" [class.shared-user]="message.role === 'user'">
-                    <span class="message-author"
-                      >{{ message.role === 'user' ? '提問' : 'AI 回答'
-                      }}{{
-                        message.status !== 'completed'
-                          ? ' · ' + (message.status === 'cancelled' ? '已停止' : '未完成')
-                          : ''
-                      }}</span
-                    ><nx-markdown-view [content]="message.content" />
-                    @if (message.attachments.length) {
-                      <div class="shared-files">
-                        @for (file of message.attachments; track file.id) {
-                          <a
-                            [href]="'/api/v1/shares/' + view.share.id + '/files/' + file.id"
-                            download
-                            ><nx-icon name="paperclip" />{{ file.fileName
-                            }}<nx-icon name="download"
-                          /></a>
-                        }
-                      </div>
+                  <div class="shared-message-meta">
+                    @if (message.modelId) {
+                      <span class="message-model">{{ modelName(message.modelId) }}</span>
                     }
-                  </section>
-                }
+                    <time class="form-note" [attr.datetime]="message.createdAt">{{
+                      date(message.createdAt)
+                    }}</time>
+                  </div>
+                  <nx-message-content [message]="message" [shareId]="view.share.id" />
+                </section>
               }
-            </article>
-          } @else {
-            <section class="artifact-empty">
-              <span class="empty-symbol"><nx-icon name="copy" /></span>
-              <h2>分享當下的成果</h2>
-              <p>只有指定帳號能閱讀。新內容不會自動公開，<br />到期與撤銷會立即停止存取。</p>
-            </section>
-          }
-        </div>
-      }</nx-feature-page
+            }
+          </article>
+        } @else {
+          <section class="artifact-empty">
+            <span class="empty-symbol"><nx-icon name="copy" /></span>
+            <h2>分享當下的成果</h2>
+            <p>只有指定帳號能閱讀。新內容不會自動公開，<br />到期與撤銷會立即停止存取。</p>
+          </section>
+        }
+      </div> </nx-feature-page
     ><nx-confirm-dialog />`,
 })
 export class SharedPage {
+  readonly modelName = formatModelId;
   readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly reader = inject(ReaderOverlay);
   private readonly api = inject(SharingApi);
   readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
@@ -133,7 +134,9 @@ export class SharedPage {
   readonly error = signal('');
   private revision = 0;
   constructor() {
-    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((p) => void this.load(p.get('id')));
+    combineLatest([this.route.paramMap, this.route.queryParamMap])
+      .pipe(takeUntilDestroyed())
+      .subscribe(([p]) => void this.load(p.get('id')));
   }
   date(value: string) {
     return new Intl.DateTimeFormat('zh-TW', { dateStyle: 'medium', timeStyle: 'short' }).format(
@@ -144,9 +147,7 @@ export class SharedPage {
     return new Date(value).getTime() <= Date.now();
   }
   async switchTab(sent: boolean) {
-    this.sent.set(sent);
-    await this.router.navigate(['/shared']);
-    await this.load(null);
+    await this.router.navigate(['/shared'], { queryParams: { sent } });
   }
   async load(id: string | null) {
     const revision = ++this.revision,
@@ -154,26 +155,46 @@ export class SharedPage {
       valid = () => guard() && revision === this.revision;
     this.loading.set(true);
     this.error.set('');
-    this.content.set(null);
+    if (this.content()?.share.id !== id) this.clearContent();
     try {
       await this.session.load();
       if (!valid() || !this.session.me()) return;
       if (!this.session.has('shared')) throw new Error('目前沒有分享功能權限。');
-      const list = await this.api.list(this.sent());
+      const filter = this.route.snapshot.queryParamMap.get('sent');
+      if (filter !== null) this.sent.set(filter === 'true');
+      const [detail, listing] = await Promise.allSettled([
+        id ? this.api.get(id) : Promise.resolve(null),
+        this.api.list(this.sent()),
+      ]);
       if (!valid()) return;
-      this.list.set(list);
-      if (id) {
-        const value = await this.api.get(id);
-        if (valid()) {
-          this.content.set(value);
-          this.watchAccess(id, revision);
-        }
+      if (listing.status === 'fulfilled') this.list.set(listing.value);
+      else this.error.set(this.scope.message(listing.reason));
+      if (detail.status === 'rejected') {
+        this.clearContent();
+        this.error.set(this.scope.message(detail.reason));
+        return;
       }
+      const value = detail.value;
+      if (filter === null && value && value.share.isOwner !== this.sent()) {
+        this.sent.set(value.share.isOwner);
+        const rows = await this.api.list(this.sent());
+        if (!valid()) return;
+        this.list.set(rows);
+      }
+      this.content.set(value);
+      if (value) this.watchAccess(value.share.id, revision);
     } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
+      if (valid()) {
+        this.clearContent();
+        this.error.set(this.scope.message(e));
+      }
     } finally {
       if (valid()) this.loading.set(false);
     }
+  }
+  private clearContent() {
+    if (this.reader.target()?.shareId === this.content()?.share.id) this.reader.close();
+    this.content.set(null);
   }
   private watchAccess(id: string, revision: number) {
     const alive = this.scope.guard();
@@ -183,7 +204,7 @@ export class SharedPage {
       () => {
         if (!valid()) return;
         if (remaining <= 30000 && this.expired(this.content()!.share.expiresAt)) {
-          this.content.set(null);
+          this.clearContent();
           this.error.set('分享已到期，內容已收起。');
           return;
         }
@@ -197,7 +218,7 @@ export class SharedPage {
           })
           .catch((e) => {
             if (valid()) {
-              this.content.set(null);
+              this.clearContent();
               this.error.set(this.scope.message(e));
             }
           });
@@ -222,9 +243,8 @@ export class SharedPage {
     try {
       await this.api.revoke(share.id);
       if (valid()) {
-        this.content.set(null);
-        await this.router.navigate(['/shared']);
-        await this.load(null);
+        this.clearContent();
+        await this.router.navigate(['/shared'], { queryParams: { sent: this.sent() } });
       }
     } catch (e) {
       if (valid()) this.error.set(this.scope.message(e));

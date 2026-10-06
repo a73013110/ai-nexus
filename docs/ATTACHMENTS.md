@@ -7,11 +7,19 @@
 | PNG、JPEG、WebP                                         | 原始圖片，Google `inlineData`／Ollama `images`；模型需啟用 `SupportsImages` |
 | PDF                                                     | PdfPig 逐頁抽取原生文字，掃描頁另經背景 OCR；可在閱讀器核對原始頁面         |
 | Word `.docx`                                            | 主文件段落及表格文字，不讀巨集、外部連結或內嵌圖片                          |
+| Excel `.xlsx` | 工作表名稱、儲存格位置、文字、布林及已保存的公式結果；不計算公式 |
+| PowerPoint `.pptx` | 依投影片編號擷取原生段落／表格文字；圖片、圖表及備註不做 OCR |
 | UTF-8 文字、Markdown、CSV、JSON、log、XML、YAML、程式碼 | 文件內容以使用者訊息附文傳送                                                |
 
 預設每檔 4 MiB（4,194,304 bytes），每則最多 4 個、總共 8 MiB；每位使用者的原檔總容量預設 **5 GB（5,000,000,000 bytes）**。介面容量採十進位 KB／MB／GB 並提供精確 bytes。PDF 最多 40 頁，抽取文字最多 64,000 字元；超限要求拆分，不會悄悄截斷。加密 PDF 需先解密；掃描 PDF 自動進入辨識任務，無法抽出頁面圖片時提示上傳頁面圖片。辨識中不能送出提問，完成後可在閱讀器核對原文。文件計入 Context 預算；圖片每張保守預估 4,096 tokens，此數字不是實際計費用量。Gemma 範本啟用圖片、32,768 Context，輸出預留 2,048；其他 profile 的能力需明確設定。
 
 ## 參數
+
+文字格式另包含 TSV、TOML、INI、HTML／CSS、TSX／JSX、MJS／CJS，全部當 UTF-8 純文字，不執行內容。accept 清單由 `/attachments/policy` 提供，所有入口共用。
+
+Office 採被動 OOXML，不啟動 Office、不執行巨集、公式、嵌入物件或外部連線。XML 禁 DTD／resolver；ZIP 最多 1,500 項、32 MiB 解壓總量、每項 8 MiB，另受擷取字數限制。XLSX 最多 128 個工作表、每表 100,000 個儲存格；PPTX 最多 200 頁。公式只用 cached value，無 cache 明確標示；日期保留原始數值，不套用 Excel 顯示樣式。圖片／圖表不屬於原生文字擷取。
+
+不支援 XLSM／DOCM／PPTM、XLS／DOC／PPT 舊二進位、加密 Office、任意壓縮包及 SVG；需要額外安全解析器／沙箱，請先轉成不含巨集的現代格式或 PDF。偽裝副檔名的巨集也拒絕，解析失敗回 400，超限要求拆分。抽取採專案自有 bounded XML／ZIP reader，無新 Office 依賴。公式限制參考 [Microsoft OOXML 公式與保存值](https://learn.microsoft.com/en-us/office/open-xml/spreadsheet/working-with-formulas)。
 
 一般設定放在 `.local/config/appsettings.Local.json`，不需新增密碼。環境變數可用 `Attachments__MaxFileBytes` 等名稱覆寫。
 
@@ -49,6 +57,6 @@ Host request body 上限 10 MB；一般 JSON 操作為 64 KB。提問／Context 
 
 實際刪檔採 durable outbox：先移除引用並將 metadata 標記 `deleting`，commit 後刪除 `.blob` 及 `.upload`，成功才刪 metadata、釋放容量。檔案不存在視為已刪；磁碟／權限失敗保留記錄及容量並記錄附件 ID，下一週期重試。維運應監控清理警告及磁碟剩餘量；每人上限不等於磁碟總容量。
 
-完整備份必須包含 SQL 與同一時點的附件目錄，操作見 [備份與還原](BACKUP.md)。JSON **文字備份**保存分支、指令、標籤及附件名稱，**不含原始檔**，匯入後須重新上傳附件；「建立對話副本」完整保留附件關聯。本版資料庫以單一 `InitialCreate` 重建，無舊 binary 遷移。操作與權限見 [檔案庫](FILES.md)。
+完整備份必須包含 SQL 與同一時點的附件目錄，操作見 [備份與還原](BACKUP.md)。JSON **文字備份**保存分支、指令、標籤及附件名稱，**不含原始檔**，匯入後須重新上傳附件；「建立對話副本」完整保留附件關聯。資料庫透過增量 migration 升級，原檔不需搬移，操作見 [資料庫](DATABASE.md)。操作與權限見 [檔案庫](FILES.md)。
 
 Google key 僅存在後端。使用 Google 時，本次需要的文字／圖片會傳送到 Google API。格式參考：[Gemma 圖片能力](https://ai.google.dev/gemma/docs/core/gemma_on_gemini_api#image-understanding)、[Google 圖片請求](https://ai.google.dev/gemini-api/docs/image-understanding)、[Ollama Chat API](https://docs.ollama.com/api/chat)、[PdfPig](https://github.com/UglyToad/PdfPig)。

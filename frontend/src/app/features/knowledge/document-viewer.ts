@@ -24,6 +24,7 @@ import { ViewScope } from '../../shared/browser/view-scope';
 import { JobsApi } from '../tasks/jobs-api';
 import { KnowledgeApi } from './knowledge-api';
 import type { ReaderTarget } from '../../shared/browser/reader-overlay';
+import { SharingApi } from '../sharing/sharing-api';
 import { WorkspaceApi } from '../workspace/workspace-api';
 
 @Component({
@@ -35,6 +36,7 @@ import { WorkspaceApi } from '../workspace/workspace-api';
 })
 export class DocumentViewer {
   private readonly api = inject(KnowledgeApi);
+  private readonly shares = inject(SharingApi);
   private readonly jobs = inject(JobsApi);
   private readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
@@ -90,13 +92,16 @@ export class DocumentViewer {
   readonly hasText = computed(() => this.pages().some((page) => page.text.trim()));
   readonly rawImage = signal(false);
   readonly contentUrl = computed(() =>
-    this.rawImage()
-      ? `/api/v1/attachments/${encodeURIComponent(this.target().id)}/content`
-      : `/api/v1/documents/${encodeURIComponent(this.document()?.id || '')}/content`,
+    this.target().shareId
+      ? `/api/v1/shares/${encodeURIComponent(this.target().shareId!)}/files/${encodeURIComponent(this.target().id)}`
+      : this.rawImage()
+        ? `/api/v1/attachments/${encodeURIComponent(this.target().id)}/content`
+        : `/api/v1/documents/${encodeURIComponent(this.document()?.id || '')}/content`,
   );
-  readonly standaloneUrl = computed(
-    () =>
-      `${this.target().attachment ? '/reader/attachment/' : '/reader/'}${encodeURIComponent(this.target().id)}?page=${this.page()}`,
+  readonly standaloneUrl = computed(() =>
+    this.target().shareId
+      ? `/reader/share/${encodeURIComponent(this.target().shareId!)}/${encodeURIComponent(this.target().id)}?page=${this.page()}`
+      : `${this.target().attachment ? '/reader/attachment/' : '/reader/'}${encodeURIComponent(this.target().id)}?page=${this.page()}`,
   );
   private pdf: PDFDocumentProxy | null = null;
   private pdfLoad: PDFDocumentLoadingTask | null = null;
@@ -172,7 +177,7 @@ export class DocumentViewer {
     try {
       await this.session.load();
       if (!valid() || !this.session.me()) return;
-      if (attachment) {
+      if (attachment && !target.shareId) {
         const file = await this.uploads.attachment(id);
         if (!valid()) return;
         // Previewing a raster image does not enqueue OCR or incur a model call.
@@ -190,14 +195,33 @@ export class DocumentViewer {
             jobId: null,
             canEdit: false,
             hasOriginal: true,
+            textVersion: 0,
           });
           this.imageLoading.set(true);
           return;
         }
       }
-      const info = await (attachment
-        ? this.api.readAttachment(id, this.controller.signal)
-        : this.api.document(id, this.controller.signal));
+      const shared = target.shareId
+        ? await this.shares.preview(target.shareId, id, this.controller.signal)
+        : null;
+      const info: DocumentInfo = shared
+        ? {
+            id,
+            fileName: shared.file.fileName,
+            contentType: shared.file.contentType,
+            collectionId: null,
+            status: 'ready',
+            pageCount: shared.pages.length || 1,
+            chunkCount: 0,
+            warning: null,
+            jobId: null,
+            canEdit: false,
+            hasOriginal: true,
+            textVersion: 0,
+          }
+        : await (attachment
+            ? this.api.readAttachment(id, this.controller.signal)
+            : this.api.document(id, this.controller.signal));
       if (!valid()) return;
       this.document.set(info);
       this.imageLoading.set(info.contentType.startsWith('image/'));
@@ -207,9 +231,14 @@ export class DocumentViewer {
           : 'text',
       );
       this.loading.set(false);
-      await this.refresh(info.id, valid);
+      if (shared) {
+        this.pages.set(shared.pages);
+        this.watchShare(target, valid);
+      } else await this.refresh(info.id, valid);
       if (info.contentType === 'application/pdf') {
-        const response = await this.api.original(info.id, this.controller.signal),
+        const response = await (target.shareId
+            ? this.shares.original(target.shareId, id, this.controller.signal)
+            : this.api.original(info.id, this.controller.signal)),
           bytes = await response.arrayBuffer();
         if (!valid()) return;
         const lib = await import('pdfjs-dist');
@@ -239,6 +268,32 @@ export class DocumentViewer {
     } finally {
       if (valid()) this.loading.set(false);
     }
+  }
+  private watchShare(target: ReaderTarget, valid: () => boolean) {
+    this.scope.later(
+      () => {
+        if (!valid() || !target.shareId) return;
+        void this.shares
+          .preview(target.shareId, target.id)
+          .then((value) => {
+            if (valid()) {
+              this.pages.set(value.pages);
+              this.watchShare(target, valid);
+            }
+          })
+          .catch((error) => {
+            if (!valid()) return;
+            this.renderTask?.cancel();
+            void this.pdfLoad?.destroy();
+            this.pdf = null;
+            this.document.set(null);
+            this.pages.set([]);
+            this.error.set(this.scope.message(error));
+          });
+      },
+      30000,
+      'share-preview-access',
+    );
   }
   private async refresh(id: string, valid: () => boolean) {
     try {
@@ -304,7 +359,7 @@ export class DocumentViewer {
   }
   async setMode(mode: string) {
     this.mode.set(mode);
-    if (mode !== 'text' || !this.rawImage() || this.busy()) return;
+    if (this.target().shareId || mode !== 'text' || !this.rawImage() || this.busy()) return;
     const version = this.version,
       guard = this.scope.guard(),
       valid = () => guard() && version === this.version;

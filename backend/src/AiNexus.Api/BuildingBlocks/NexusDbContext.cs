@@ -30,10 +30,12 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         AiNexus.Modules.Administration.AdministrationConfiguration.Configure(model);
         AiNexus.Modules.Collaboration.CollaborationConfiguration.Configure(model);
         BackgroundJobConfiguration.Configure(model);
+        AiNexus.Modules.Notifications.NotificationConfiguration.Configure(model);
         ModelInvocationConfiguration.Configure(model);
         AiNexus.Modules.Billing.BillingConfiguration.Configure(model);
         AiNexus.Modules.WebSearch.WebSearchConfiguration.Configure(model);
         AiNexus.Modules.Repositories.RepositoryConfiguration.Configure(model);
+        AiNexus.Modules.Repositories.RepositoryReviewConfiguration.Configure(model);
         AiNexus.Modules.Knowledge.KnowledgeConfiguration.Configure(model);
         AiNexus.Modules.Artifacts.ArtifactConfiguration.Configure(model);
         AiNexus.Modules.Projects.ProjectConfiguration.Configure(model);

@@ -79,7 +79,7 @@
         </button>
         <button
           [attr.aria-pressed]="mode() === 'text'"
-          [disabled]="busy()"
+          [disabled]="busy() || (!!target().shareId && !hasText())"
           (click)="setMode('text')"
         >
           <nx-icon name="lines" />{{ rawImage() ? '辨識文字' : '擷取文字' }}
@@ -202,7 +202,13 @@
           <pre><nx-text-highlight [text]="text.text" [query]="query()" /></pre>
         } @else {
           <p class="form-note">
-            {{ busy() ? '正在建立文字辨識工作…' : '此頁尚無擷取文字。處理完成後會自動顯示。' }}
+            {{
+              target().shareId
+                ? '這份分享尚無此頁的擷取文字。可預覽原檔或下載。'
+                : busy()
+                  ? '正在建立文字辨識工作…'
+                  : '此頁尚無擷取文字。處理完成後會自動顯示。'
+            }}
           </p>
         }
       </article>

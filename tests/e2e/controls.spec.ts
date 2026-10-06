@@ -182,8 +182,9 @@ test("compact conversation uses readable text and preserves over 70 percent of d
     fullPage: true,
   });
   await page.setViewportSize({ width: 375, height: 812 });
-  const close = page.getByRole("button", { name: "關閉對話導覽" });
-  if (await close.isVisible()) await close.click();
+  await expect(
+    page.getByRole("button", { name: "展開側欄", exact: true }),
+  ).toBeVisible();
   await page.getByLabel(/上下文用量：/).click();
   const panel = await page
     .getByRole("group", { name: "上下文用量", exact: true })
@@ -219,15 +220,15 @@ test("signal motion respects reduced motion and Markdown export follows the visi
     "animation-name",
     "none",
   );
-  await page.getByLabel("對話操作", { exact: true }).click();
+  await page.getByRole("button", { name: "對話操作", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "匯出目前分支為 Markdown" }),
+    page.getByRole("menuitem", { name: "匯出 Markdown" }),
   ).toBeDisabled();
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "停止生成" }).click();
-  await page.getByLabel("對話操作", { exact: true }).click();
+  await page.getByRole("button", { name: "對話操作", exact: true }).click();
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "匯出目前分支為 Markdown" }).click();
+  await page.getByRole("menuitem", { name: "匯出 Markdown" }).click();
   const file = await download;
   expect(file.suggestedFilename()).toMatch(/\.md$/);
   const stream = await file.createReadStream();

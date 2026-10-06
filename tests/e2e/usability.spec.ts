@@ -109,7 +109,9 @@ test("conversation minimap previews a turn and jumps; mobile exposes a direct di
     })
     .toBeLessThan(8);
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.getByRole("button", { name: "關閉對話導覽", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "展開側欄", exact: true }),
+  ).toBeVisible();
   await rail.getByRole("button", { name: "開啟對話目錄" }).click();
   await expect(rail.locator(".outline-entry")).toHaveCount(2);
   await rail.locator(".outline-entry").last().click();

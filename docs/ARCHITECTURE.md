@@ -44,6 +44,8 @@ flowchart LR
 
 BuildingBlocks.ApiEndpoints 組裝模組；BuildingBlocks 管 host、共用錯誤／契約、context 與 migrations，Database 管 SqlClient、markers 與原始 EDoc helpers。模組間使用明確服務，不新增能繞過 owner、ACL 或模型核准的資料入口。
 
+Notifications 提供 owner scoped durable event 與 typed target，和聊天完成、具名分享、任務 terminal update 使用同一 transaction。RepositoryReviewService 在排程前固定 SHA／diff／模型設定，handler 沿用背景 checkpoint／ModelTaskService，結果讀取仍檢查目前 Gitea 權限；細節見 [通知](NOTIFICATIONS.md)、[程式碼 review](GITEA.md)。
+
 ## 三種權限
 
 1. **平台功能**：每次 request 由 SQL 計算有效角色／群組／feature；UI 導覽只是呈現，撤銷影響後續操作。
@@ -70,6 +72,8 @@ BuildingBlocks.ApiEndpoints 組裝模組；BuildingBlocks 管 host、共用錯�
 共享 UI 的 DOM ID 每個實例唯一；浮層使用原生 top layer，避免 dialog／捲動區裁切。管理員元件頁 /design 以正式元件及本機範例檢查主題、鍵盤、停用、確認與有限階段動畫。見 [設計系統](DESIGN_SYSTEM.md)。
 
 `InfoPopover` 統一單次／全對話費用的焦點、Esc 與邊界定位；StorageUsage／RunTimingDisplay 共用容量與耗時呈現；`TrendChart` 使用同一份資料提供 SVG、鍵盤游標與文字表格。Dashboard 的流向圖只呈現真實資源／索引／生成狀態，與後端查詢分離。圖示沿用同一個 Lucide renderer，工作區與快捷指令各有獨立語意。
+
+WorkspaceLayout／WorkspaceSidebar 管所有路由的圖示欄、手機 overlay 與通知入口；NotificationStore 在登入世代切換時清除資料。ConversationActions 共用歷史及工具列操作，MessageContent／AttachmentList／DocumentViewer 共用聊天與唯讀分享呈現。TokenUsageChart 共用日期／模型統計及既有 SVG，不另增圖表依賴。NameDialog 及 TextSourceEditor 保留失敗輸入，服務端仍以 conditional update／concurrency token 防止覆蓋。
 
 ## 生成與背景任務
 

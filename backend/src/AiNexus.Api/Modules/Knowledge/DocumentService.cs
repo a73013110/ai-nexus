@@ -87,7 +87,7 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
         }
         finally { writes.Gate.Release(); }
     }
-    public async Task<DocumentDto> AddAsync(Guid actor, Guid? collection, Guid attachment, CancellationToken ct, Guid? project = null)
+    public async Task<DocumentDto> AddAsync(Guid actor, Guid? collection, Guid attachment, CancellationToken ct, Guid? project = null, TextDocumentRequest? text = null)
     {
         if (collection is Guid collectionId) await access.RequireAsync(actor, collectionId, "knowledge", ct, write: true);
         if (project is Guid projectId) await access.RequireAsync(actor, projectId, "project", ct, write: true);
@@ -113,6 +113,7 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
             }
             var resource = new WorkspaceResource { OwnerId = actor, ParentId = project, Kind = "document", Name = string.Concat(file.FileName.Take(120)) };
             var document = new KnowledgeDocument { Id = resource.Id, AttachmentId = file.Id, CollectionId = collection, FileName = file.FileName, ContentType = file.ContentType };
+            if (text is not null) { document.TextContent = text.Text; document.TextVersion = 1; }
             db.Add(resource); db.Add(document); db.Add(new AttachmentReference { ResourceId = resource.Id, AttachmentId = file.Id });
             if (collection is not null || project is not null)
                 await db.Set<Attachment>().Where(x => x.Id == file.Id && x.OwnerId == actor).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
@@ -199,6 +200,6 @@ public sealed class DocumentService(NexusDbContext db, ResourceAccess access, Ac
         var state = doc.JobId is Guid job ? await db.Set<BackgroundJob>().Where(x => x.Id == job).Select(x => x.Status).SingleOrDefaultAsync(ct) : null;
         return Describe(doc, editable, state);
     }
-    private static DocumentDto Describe(KnowledgeDocument x, bool edit, string? jobStatus = null) => new(x.Id, x.CollectionId, x.FileName, x.ContentType, x.Status == "ready" ? "ready" : jobStatus ?? x.Status, x.PageCount, x.ChunkCount, x.Warning, x.JobId, edit, x.AttachmentId != null);
+    private static DocumentDto Describe(KnowledgeDocument x, bool edit, string? jobStatus = null) => new(x.Id, x.CollectionId, x.FileName, x.ContentType, x.Status == "ready" ? "ready" : jobStatus ?? x.Status, x.PageCount, x.ChunkCount, x.Warning, x.JobId, edit, x.AttachmentId != null, x.TextVersion);
     private static ApiException Missing() => new(404, "document_not_found", "找不到此文件，或你已沒有存取權限。");
 }

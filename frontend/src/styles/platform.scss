@@ -159,8 +159,10 @@
   border-bottom: 2px solid transparent;
   color: var(--secondary);
 }
-.page-tabs button[aria-current='page'] {
+.page-tabs button[aria-current='page'],
+.page-tabs button[aria-pressed='true'] {
   border-color: var(--signal);
+  background: var(--accent-soft);
   color: var(--ink);
   font-weight: 600;
 }
@@ -333,16 +335,6 @@
   border-radius: var(--p-radius-sm);
 }
 @media (max-width: 860px) {
-  .feature-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-  .feature-sidebar {
-    padding: var(--p-space-2) var(--p-space-4);
-    gap: var(--p-space-2);
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
-  }
   .feature-main {
     padding-top: var(--p-space-6);
   }
@@ -366,4 +358,9 @@
   .audit-row time {
     min-width: 100%;
   }
+}
+
+.job-card.current {
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }

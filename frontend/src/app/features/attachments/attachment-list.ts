@@ -14,6 +14,7 @@ import { ReaderLink } from '../../shared/browser/reader-link';
           class="attachment-preview"
           [nxReaderLink]="file.id"
           [readerAttachment]="true"
+          [readerShare]="shareId()"
           [attr.aria-label]="'閱讀附件：' + file.fileName"
           [title]="file.fileName"
         >
@@ -61,9 +62,12 @@ import { ReaderLink } from '../../shared/browser/reader-link';
 export class AttachmentList {
   readonly files = input.required<Attachment[]>();
   readonly editable = input(false);
+  readonly shareId = input<string | null>(null);
   readonly remove = output<string>();
   url(id: string) {
-    return `/api/v1/attachments/${encodeURIComponent(id)}/content`;
+    return this.shareId()
+      ? `/api/v1/shares/${encodeURIComponent(this.shareId()!)}/files/${encodeURIComponent(id)}`
+      : `/api/v1/attachments/${encodeURIComponent(id)}/content`;
   }
   size(bytes: number) {
     return bytes >= 1024 * 1024

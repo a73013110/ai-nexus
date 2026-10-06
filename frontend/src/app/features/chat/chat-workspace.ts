@@ -19,6 +19,7 @@ import {
   readonly as readonlyField,
 } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { WorkspaceLayout } from '../../core/preferences/workspace-layout';
 import { ThemeService } from '../../core/preferences/theme-service';
 import type { Conversation, ConversationSettings } from '../../core/api/types';
 import { Icon } from '../../shared/ui/icon';
@@ -91,8 +92,9 @@ export class ChatWorkspace {
   private readonly returnPosition = signal<ReaderOrigin | null>(null);
   private readonly transfer = inject(ConversationDraftTransfer);
   private navigationSequence = 0;
-  readonly sidebarOpen = signal(window.innerWidth >= 860);
-  readonly narrow = signal(window.innerWidth < 860);
+  readonly layout = inject(WorkspaceLayout);
+  readonly sidebarOpen = computed(() => !this.layout.compact());
+  readonly narrow = this.layout.narrow;
   readonly following = signal(true);
   readonly composing = signal(false);
   readonly findOpen = signal(false);
@@ -112,6 +114,7 @@ export class ChatWorkspace {
     this.paragraph.set(null);
     window.getSelection()?.removeAllRanges();
   }
+  readonly shareTarget = signal<Conversation | null>(null);
   readonly modal = signal<'rename' | 'delete' | null>(null);
   readonly modalTarget = signal<Conversation | null>(null);
   readonly modalBusy = signal(false);
@@ -231,7 +234,6 @@ export class ChatWorkspace {
   private lastScrollTop = 0;
 
   constructor() {
-    const resize = () => this.narrow.set(window.innerWidth < 860);
     const keyboard = (event: KeyboardEvent) => {
       if (event.isComposing || event.repeat) return;
       if (
@@ -253,7 +255,6 @@ export class ChatWorkspace {
         void this.library()?.open();
       }
     };
-    window.addEventListener('resize', resize);
     document.addEventListener('keydown', keyboard);
     this.destroy.onDestroy(() => this.navigationSequence++);
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
@@ -332,7 +333,6 @@ export class ChatWorkspace {
       this.scheduleFollow();
     });
     this.destroy.onDestroy(() => {
-      window.removeEventListener('resize', resize);
       document.removeEventListener('keydown', keyboard);
       cancelAnimationFrame(this.scrollFrame);
     });
@@ -393,11 +393,11 @@ export class ChatWorkspace {
     });
   }
   closeMobileSidebar() {
-    if (this.narrow()) this.sidebarOpen.set(false);
+    this.layout.closeMobile();
   }
   closeSidebar() {
     const previous = document.activeElement;
-    this.sidebarOpen.set(false);
+    this.layout.compact.set(true);
     if (this.narrow())
       requestAnimationFrame(() => {
         const active = document.activeElement;
@@ -459,21 +459,20 @@ export class ChatWorkspace {
     ].join('\n\n');
     downloadFile(content, conversation.title, 'md');
   }
-  toggleSidebar() {
-    this.sidebarOpen.update((value) => !value);
-    if (this.narrow() && this.sidebarOpen())
-      requestAnimationFrame(() =>
-        document.querySelector<HTMLAnchorElement>('.sidebar .brand')?.focus(),
-      );
-  }
   async reload() {
     await this.store.initialize(true);
     if (this.store.ready()) await this.store.select(this.route.snapshot.paramMap.get('id'), true);
   }
   action(action: ConversationAction) {
     const conversation = this.store.selected();
-    if (!conversation) return;
+    if (conversation) this.conversationAction(action, conversation);
+  }
+  conversationAction(action: ConversationAction, conversation: Conversation) {
     switch (action) {
+      case 'share':
+        this.shareTarget.set(conversation);
+        requestAnimationFrame(() => this.shareDialog()?.open());
+        break;
       case 'rename':
       case 'delete':
         this.openDialog(action, conversation);

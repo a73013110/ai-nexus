@@ -8,7 +8,7 @@ SELECT name, description FROM (VALUES
  (N'access', N'角色、功能群組、功能授權及模型政策。'),
  (N'conversations', N'私人對話、訊息分支與分類。'),
  (N'inference', N'模型設定、生成、租約、重播、用量與費用。'),
- (N'operations', N'稽核、背景工作及持久進度。'),
+ (N'operations', N'稽核、通知、背景工作及持久進度。'),
  (N'attachments', N'站外原檔的 metadata、儲存識別、權限與引用關聯；不含原檔 bytes。'),
  (N'library', N'使用者私人提示詞範本。'),
  (N'collaboration', N'資料資源 ACL 與具名分享。'),
@@ -16,7 +16,7 @@ SELECT name, description FROM (VALUES
  (N'content', N'成果文件版本及外部來源參照。'),
  (N'projects', N'專案與共用指令範本。'),
  (N'quality', N'回答回饋、固定評測及人工覆核。'),
- (N'workspace', N'個人程式庫連線與匯入識別。'),
+ (N'workspace', N'個人程式庫連線、固定版本 review 與匯入識別。'),
  (N'dbo', N'EF 資料庫版本記錄。')
 ) descriptions(name, description) WHERE SCHEMA_ID(name) IS NOT NULL;
 OPEN schema_descriptions;

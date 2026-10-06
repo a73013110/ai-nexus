@@ -17,6 +17,7 @@ import { FeaturePage } from '../../shared/ui/feature-page';
 import { Icon } from '../../shared/ui/icon';
 import { SearchField } from '../../shared/ui/search-field';
 import { Select } from '../../shared/ui/select';
+import { NameDialog } from '../../shared/ui/name-dialog';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { WorkspaceApi } from '../workspace/workspace-api';
 import { FilesApi } from './files-api';
@@ -36,6 +37,7 @@ import { StorageUsage } from '../../shared/ui/storage-usage';
     FileBrowser,
     AddToKnowledge,
     ConfirmDialog,
+    NameDialog,
     RouterLink,
     StorageUsage,
   ],
@@ -50,6 +52,7 @@ export class FilesPage {
   private readonly uploads = inject(WorkspaceApi);
   private readonly scope = inject(ViewScope);
   readonly knowledge = viewChild.required(AddToKnowledge);
+  readonly names = viewChild.required(NameDialog);
   private readonly confirm = viewChild.required(ConfirmDialog);
   readonly policy = signal<AttachmentPolicy | null>(null);
   readonly layout = signal('grid');
@@ -164,6 +167,23 @@ export class FilesPage {
     } finally {
       if (valid()) this.busy.set(false);
     }
+  }
+  rename(item: LibraryFile) {
+    if (this.busy()) return;
+    const valid = this.scope.guard();
+    this.names().open({
+      title: '重新命名檔案',
+      value: item.file.fileName,
+      maxLength: 180,
+      description: '副檔名須保留。既有分享與知識庫來源保留當時的名稱。',
+      save: async (name) => {
+        await this.api.rename(item.file.id, name, item.file.fileName);
+        if (valid()) {
+          this.notice.set('檔案名稱已更新。');
+          await this.store.load();
+        }
+      },
+    });
   }
   added() {
     this.notice.set('已加入知識庫。文字辨識與索引會在背景處理。');

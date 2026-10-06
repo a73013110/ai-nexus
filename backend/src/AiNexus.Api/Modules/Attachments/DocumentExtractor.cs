@@ -1,7 +1,4 @@
-using System.IO.Compression;
 using System.Text;
-using System.Xml;
-using System.Xml.Linq;
 using AiNexus.BuildingBlocks;
 using Microsoft.Extensions.Options;
 using UglyToad.PdfPig;
@@ -11,12 +8,12 @@ namespace AiNexus.Modules.Attachments;
 
 public sealed class DocumentExtractor(IOptions<AttachmentOptions> options)
 {
-    public static readonly string[] Extensions = [".png", ".jpg", ".jpeg", ".webp", ".pdf", ".docx", ".txt", ".md", ".csv", ".json", ".log", ".xml", ".yaml", ".yml", ".cs", ".ts", ".js", ".py", ".sql"];
+    public static readonly string[] Extensions = [".png", ".jpg", ".jpeg", ".webp", ".pdf", ".docx", ".xlsx", ".pptx", ".txt", ".md", ".csv", ".tsv", ".json", ".log", ".xml", ".yaml", ".yml", ".toml", ".ini", ".html", ".css", ".cs", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".sql"];
 
     public (string Type, string? Text) Extract(string name, byte[] data, CancellationToken ct)
     {
         var extension = Path.GetExtension(name).ToLowerInvariant();
-        if (!Extensions.Contains(extension)) throw new ApiException(400, "file_type_unsupported", "支援 PNG、JPEG、WebP、PDF、Word 與文字文件。");
+        if (!Extensions.Contains(extension)) throw new ApiException(400, "file_type_unsupported", "支援圖片、PDF、DOCX、XLSX、PPTX 與 UTF-8 文字文件；不支援巨集、舊版 Office 二進位格式與壓縮檔。");
         ct.ThrowIfCancellationRequested();
         if (extension is ".png" or ".jpg" or ".jpeg" or ".webp")
         {
@@ -45,26 +42,25 @@ public sealed class DocumentExtractor(IOptions<AttachmentOptions> options)
                 }
                 text = buffer.ToString();
             }
-            else if (extension == ".docx")
+            else if (extension is ".docx" or ".xlsx" or ".pptx")
             {
-                using var zip = new ZipArchive(new MemoryStream(data), ZipArchiveMode.Read);
-                var entry = zip.GetEntry("word/document.xml") ?? throw new InvalidDataException();
-                if (entry.Length > 2 * 1024 * 1024) throw new ApiException(400, "document_too_large", "Word 解壓後內容過大，請拆分文件。");
-                using var source = entry.Open();
-                using var reader = XmlReader.Create(source, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null, MaxCharactersInDocument = 2 * 1024 * 1024 });
-                var xml = XDocument.Load(reader);
-                XNamespace w = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
-                text = string.Join('\n', xml.Descendants(w + "p").Select(p => string.Concat(p.Descendants(w + "t").Select(t => t.Value))));
+                using var office = new OfficeTextExtractor(data, options.Value.MaxExtractedCharacters, ct);
+                text = office.Extract(extension);
             }
             else text = new UTF8Encoding(false, true).GetString(data).TrimStart('\uFEFF');
             RequireLength(text.Length);
             if (string.IsNullOrWhiteSpace(text) && extension != ".pdf") throw new ApiException(400, "document_has_no_text", "文件沒有可讀文字。");
             if (text.Contains('\0')) throw new InvalidDataException();
-            return (extension == ".pdf" ? "application/pdf" : extension == ".docx" ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "text/plain", text);
+            return (extension switch {
+                ".pdf" => "application/pdf",
+                ".docx" => "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                _ => "text/plain" }, text);
         }
         catch (Exception ex) when (ex is not ApiException && ex is not OperationCanceledException)
         {
-            throw new ApiException(400, "document_unreadable", "無法讀取文件。請使用未加密的 PDF、Word，或 UTF-8 文字檔。");
+            throw new ApiException(400, "document_unreadable", "無法讀取文件。請使用未加密的 PDF、DOCX、XLSX、PPTX，或 UTF-8 文字檔。");
         }
     }
 

@@ -34,6 +34,14 @@ export class ViewScope {
     this.timers.add(timer);
     if (key) this.keyed.set(key, timer);
   }
+  cancel(key: string) {
+    const timer = this.keyed.get(key);
+    if (timer !== undefined) {
+      clearTimeout(timer);
+      this.timers.delete(timer);
+      this.keyed.delete(key);
+    }
+  }
   message(error: unknown) {
     return error instanceof Error ? error.message : '服務暫時無法使用，請重試。';
   }

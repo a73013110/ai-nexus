@@ -2,18 +2,9 @@
   nxWorkspaceSidebar
   class="sidebar"
   aria-label="對話導覽"
-  [attr.inert]="open() ? null : ''"
   [collapsibleNavigation]="true"
   (activated)="navigate.emit()"
 >
-  <button
-    sidebar-controls
-    class="icon-button mobile-sidebar-close"
-    aria-label="關閉對話導覽"
-    (click)="close.emit()"
-  >
-    <nx-icon name="close" />
-  </button>
   @if (store.hasChatAccess()) {
     <a routerLink="/chat" class="new-chat" (click)="navigate.emit()"
       ><nx-icon name="plus" />新對話<span class="new-chat-hint">開始</span></a
@@ -100,15 +91,26 @@
                 (click)="navigate.emit()"
                 [attr.aria-current]="store.selected()?.id === conversation.id ? 'page' : null"
                 [title]="conversation.title"
-                ><span>{{ conversation.title }}</span></a
               >
-              <button
-                class="icon-button history-edit"
-                aria-label="重新命名對話"
-                (click)="rename.emit(conversation)"
+                @if (store.liveRun()?.conversationId === conversation.id) {
+                  <nx-icon class="history-state is-running" name="loading" /><span class="sr-only"
+                    >正在產生回答 ·
+                  </span>
+                } @else if (notifications.completed(conversation.id)) {
+                  <nx-icon class="history-state history-complete" name="check" /><span
+                    class="sr-only"
+                    >回答已完成 ·
+                  </span>
+                }
+                <span>{{ conversation.title }}</span></a
               >
-                <nx-icon name="edit" />
-              </button>
+              <nx-conversation-actions
+                [conversation]="conversation"
+                [compact]="true"
+                [sharing]="store.me()?.access?.features?.some(hasSharing) ?? false"
+                [busy]="store.liveRun()?.conversationId === conversation.id"
+                (action)="action.emit({ conversation, action: $event })"
+              />
             </div>
           }
         </div>

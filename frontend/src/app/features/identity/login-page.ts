@@ -61,7 +61,7 @@ export class LoginPage {
   }
   private returnUrl() {
     const url = this.route.snapshot.queryParamMap.get('returnUrl') ?? WORKSPACE_HOME;
-    return /^\/(?:(?:dashboard|repositories|chat|projects|artifacts|knowledge|tasks|settings|admin|design|quality|integrations|shared)(?:\/[a-z0-9-]+)?|reader(?:\/attachment)?\/[a-z0-9-]+)(?:\?[a-z0-9=&%_-]+)?$/i.test(
+    return /^\/(?:(?:dashboard|repositories|chat|projects|artifacts|knowledge|tasks|settings|admin|design|quality|integrations|shared)(?:\/[a-z0-9-]+)?|reader(?:\/attachment|\/share\/[a-z0-9-]+)?\/[a-z0-9-]+)(?:\?[a-z0-9=&%_-]+)?$/i.test(
       url,
     )
       ? url

@@ -1,3 +1,4 @@
+import { NotificationStore } from '../../core/notifications/notification-store';
 import { computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiError, NexusApi } from '../../core/api/nexus-api';
@@ -30,6 +31,7 @@ import { ProjectsApi } from '../projects/projects-api';
 
 @Injectable({ providedIn: 'root' })
 export class ChatStore {
+  private readonly notifications = inject(NotificationStore);
   private readonly projectsApi = inject(ProjectsApi);
   async assignProject(conversation: Conversation, projectId: string | null) {
     if (this.busy()) return false;
@@ -266,9 +268,18 @@ export class ChatStore {
       await this.refreshHistory();
       if (generation !== this.auth.generation()) return;
       this.ready.set(true);
-      void this.api.webSearchStatus().then(status => {
-        if (generation === this.auth.generation()) this.webSearchStatus.set(status);
-      }).catch(() => { if (generation === this.auth.generation()) this.webSearchStatus.set({ available: false, notice: '暫時無法確認搜尋服務，請重新連線。' }); });
+      void this.api
+        .webSearchStatus()
+        .then((status) => {
+          if (generation === this.auth.generation()) this.webSearchStatus.set(status);
+        })
+        .catch(() => {
+          if (generation === this.auth.generation())
+            this.webSearchStatus.set({
+              available: false,
+              notice: '暫時無法確認搜尋服務，請重新連線。',
+            });
+        });
       const extensions = await Promise.allSettled([
         this.attachments.initialize(),
         this.workspace.labels(),
@@ -348,6 +359,7 @@ export class ChatStore {
       const detail = await this.api.conversation(id);
       if (version !== this.selectionVersion) return;
       this.selected.set(detail.conversation as Conversation);
+      this.notifications.readConversation(id);
       this.messages.set(detail.messages as Message[]);
       if (this.me()?.access.features?.some((x) => x.id === 'knowledge'))
         await this.knowledge.load(id);
@@ -594,8 +606,7 @@ export class ChatStore {
     if (this.liveRun()?.id === run.id) this.liveRun.set(null);
     this.connection.set('connected');
     await this.refreshHistory();
-    if (generation === this.auth.generation() && run.status === 'completed')
-      this.personal.notifyCompleted();
+    if (generation === this.auth.generation()) await this.notifications.refresh();
   }
 
   async rename(id: string, title: string) {

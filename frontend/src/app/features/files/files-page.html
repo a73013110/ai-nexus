@@ -5,7 +5,9 @@
 >
   <div page-actions class="page-actions">
     @if (session.has('knowledge')) {
-      <a routerLink="/knowledge" class="secondary-button"><nx-icon name="library" />{{ session.featureName('knowledge') }}</a>
+      <a routerLink="/knowledge" class="secondary-button"
+        ><nx-icon name="library" />{{ session.featureName('knowledge') }}</a
+      >
     }
     <button
       class="primary-button"
@@ -93,6 +95,7 @@
       [busy]="busy()"
       (addKnowledge)="knowledge().open($event)"
       (remove)="remove($event)"
+      (rename)="rename($event)"
     />
   } @else {
     <div class="files-empty">
@@ -132,5 +135,5 @@
       name="info"
     />檔案庫保存原檔；知識庫管理可檢索的來源與成員權限。移除知識庫來源，原檔仍會保留在這裡。
   </p>
-  <nx-add-to-knowledge (added)="added()" /><nx-confirm-dialog />
+  <nx-add-to-knowledge (added)="added()" /><nx-confirm-dialog /><nx-name-dialog />
 </nx-feature-page>

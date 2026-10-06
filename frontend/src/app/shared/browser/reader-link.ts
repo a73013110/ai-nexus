@@ -16,6 +16,7 @@ export class ReaderLink {
   readonly id = input.required<string>({ alias: 'nxReaderLink' });
   readonly attachment = input(false, { alias: 'readerAttachment' });
   readonly page = input<number | null>(null, { alias: 'readerPage' });
+  readonly shareId = input<string | null>(null, { alias: 'readerShare' });
   private readonly origin = toSignal(
     this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd),
@@ -26,7 +27,11 @@ export class ReaderLink {
   readonly href = computed(() =>
     this.router.serializeUrl(
       this.router.createUrlTree(
-        this.attachment() ? ['/reader/attachment', this.id()] : ['/reader', this.id()],
+        this.shareId()
+          ? ['/reader/share', this.shareId(), this.id()]
+          : this.attachment()
+            ? ['/reader/attachment', this.id()]
+            : ['/reader', this.id()],
         { queryParams: { page: this.page(), returnTo: this.origin() } },
       ),
     ),
@@ -44,6 +49,11 @@ export class ReaderLink {
     )
       return;
     event.preventDefault();
-    this.overlay.open({ id: this.id(), attachment: this.attachment(), page: this.page() });
+    this.overlay.open({
+      id: this.id(),
+      attachment: this.attachment(),
+      page: this.page(),
+      shareId: this.shareId(),
+    });
   }
 }

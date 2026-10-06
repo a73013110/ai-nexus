@@ -4,7 +4,6 @@ import {
   computed,
   DestroyRef,
   inject,
-  input,
   output,
   signal,
 } from '@angular/core';
@@ -12,22 +11,24 @@ import { FormField, form, maxLength } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import type { Conversation } from '../../core/api/types';
 import { Icon } from '../../shared/ui/icon';
+import { NotificationStore } from '../../core/notifications/notification-store';
+import { ConversationActions, type ConversationAction } from '../workspace/conversation-actions';
 import { ChatStore } from './chat-store';
 import { Select } from '../../shared/ui/select';
 import { WorkspaceSidebar } from '../../shared/ui/workspace-sidebar';
 
 @Component({
   selector: 'nx-chat-sidebar',
-  imports: [RouterLink, FormField, Icon, Select, WorkspaceSidebar],
+  imports: [RouterLink, FormField, Icon, Select, WorkspaceSidebar, ConversationActions],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chat-sidebar.html',
 })
 export class ChatSidebar {
+  readonly hasSharing = (feature: { id: string }) => feature.id === 'shared';
   readonly store = inject(ChatStore);
-  readonly open = input(true);
-  readonly close = output<void>();
+  readonly notifications = inject(NotificationStore);
+  readonly action = output<{ conversation: Conversation; action: ConversationAction }>();
   readonly navigate = output<void>();
-  readonly rename = output<Conversation>();
   readonly prompts = output<void>();
   readonly commands = output<void>();
   readonly import = output<File>();

@@ -411,7 +411,7 @@
                 <h2>統計涵蓋範圍</h2>
                 <p>
                   {{ stats.requestsWithUsage }} / {{ stats.requests }} 次請求有完整 token
-                  回報；其餘未計入 token 合計。
+                  回報；統計僅納入已回報的數量。
                 </p>
                 <p class="secondary">
                   {{ stats.failed }} 次失敗 · {{ stats.cancelled }} 次取消 · 累計耗時
@@ -424,23 +424,7 @@
                 <nx-storage-usage [storage]="stats.storage" />
               </section>
               <section class="settings-card">
-                <h2>每日生成</h2>
-                <div class="usage-daily">
-                  @for (day of stats.daily; track day.date) {
-                    <div>
-                      <time>{{ day.date }}</time
-                      ><meter
-                        min="0"
-                        [max]="stats.requests || 1"
-                        [value]="day.requests"
-                        [attr.aria-label]="day.date + ' 生成次數'"
-                      ></meter
-                      ><strong>{{ day.requests }}</strong>
-                    </div>
-                  } @empty {
-                    <p class="secondary">開始對話後，使用紀錄會顯示在這裡。</p>
-                  }
-                </div>
+                <nx-token-usage-chart [usage]="stats.tokens" />
               </section>
             } @else {
               <p class="secondary">

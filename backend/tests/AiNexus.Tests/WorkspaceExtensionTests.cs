@@ -196,7 +196,10 @@ public sealed class WorkspaceExtensionTests
         Assert.Contains("PDF project roadmap", factory.Provider.LastMessages.Last().Content);
         using var bytes = new MemoryStream();
         using (var zip = new ZipArchive(bytes, ZipArchiveMode.Create, true))
+        {
+        using (var types = new StreamWriter(zip.CreateEntry("[Content_Types].xml").Open())) types.Write("<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\" />");
         using (var writer = new StreamWriter(zip.CreateEntry("word/document.xml").Open())) writer.Write("<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>Word roadmap</w:t></w:r></w:p></w:body></w:document>");
+        }
         var wordFile = await Upload(client, "roadmap.docx", bytes.ToArray());
         await Send(client, conversation.Id, wordFile.Id);
         Assert.Contains("Word roadmap", factory.Provider.LastMessages.Last().Content);

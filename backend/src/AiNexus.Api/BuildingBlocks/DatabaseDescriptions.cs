@@ -55,6 +55,9 @@ public static class DatabaseDescriptions
         ["EvaluationSets"] = "評測題庫、固定測試案例與版本。",
         ["EvaluationRuns"] = "評測執行的題庫與模型設定快照、背景工作與狀態。",
         ["EvaluationResults"] = "各案例／模型組合的輸出、指標、用量與人工覆核結果。",
+        ["Notifications"] = "使用者個人通知、版本化導向、閱讀狀態與事件去重鍵。",
+        ["RepositoryReviews"] = "固定 commit 或區間 diff 的私人 review、模型設定指紋與背景任務。",
+        ["RepositoryReviewResults"] = "Review 各區段的持久結果及用量；重試沿用已完成區段。",
         ["RepositoryConnections"] = "使用者個人的 Gitea 連線及 Data Protection 保護的存取 token。",
         ["RepositoryImports"] = "程式庫文件匯入所固定的主機、repository、commit 與檔案路徑。",
     };
@@ -158,6 +161,18 @@ public static class DatabaseDescriptions
         ["BaseUrl"] = "Gitea 連線主機位址。", ["Login"] = "外部服務的使用者登入名稱。",
         ["ProtectedToken"] = "以 ASP.NET Data Protection 保護的外部 token；不可在 API、稽核或日誌回傳。",
         ["ConnectedAt"] = "使用者建立外部服務連線的時間。", ["Repository"] = "Gitea repository 的 owner/name 識別。",
+        ["TextContent"] = "純文字來源的可編輯內容；一般上傳原檔保持空值。",
+        ["TextVersion"] = "純文字內容的樂觀並行版本號。",
+        ["EventKey"] = "通知來源事件的冪等識別碼。",
+        ["Severity"] = "通知呈現層級：info、success 或 error。",
+        ["Body"] = "通知摘要，不包含完整私密原文。",
+        ["TargetKind"] = "已核准的功能導向類型。",
+        ["TargetId"] = "通知所指向的業務識別碼。",
+        ["ReadAt"] = "通知已閱讀的時間；空值代表未讀。",
+        ["DismissedAt"] = "通知移除的時間；空值代表仍可查看。",
+        ["BaseCommit"] = "區間 review 的起點 commit SHA；空值表示單一 commit。",
+        ["ConfigurationFingerprint"] = "固定模型與生成設定的 SHA-256 指紋。",
+        ["ReviewId"] = "關聯私人程式碼 review 的識別碼。",
         ["Commit"] = "匯入當時固定的 commit SHA。", ["Path"] = "repository 內的檔案路徑，不是伺服器路徑。",
     };
 

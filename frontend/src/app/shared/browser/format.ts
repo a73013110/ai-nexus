@@ -25,3 +25,7 @@ export const formatModelName = (model: Model) =>
   model.provider
     ? `${model.displayName} · ${model.provider === 'google' ? 'Google' : model.provider === 'ollama' ? 'Ollama' : model.provider}`
     : model.displayName;
+
+export function formatModelId(id: string) {
+  return id === 'retired-model' ? '已停用的模型' : id.replace(/^model-(\d+)$/, '模型 $1');
+}

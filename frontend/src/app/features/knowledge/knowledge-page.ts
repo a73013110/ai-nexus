@@ -26,6 +26,7 @@ import { KnowledgeApi } from './knowledge-api';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LibraryPicker } from '../files/library-picker';
 import type { LibraryFile } from '../../core/api/types';
+import { TextSourceEditor } from './text-source-editor';
 import { ReaderLink } from '../../shared/browser/reader-link';
 
 @Component({
@@ -40,6 +41,7 @@ import { ReaderLink } from '../../shared/browser/reader-link';
     RouterLink,
     LibraryPicker,
     ReaderLink,
+    TextSourceEditor,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -72,6 +74,7 @@ export class KnowledgePage {
   readonly deleteTarget = signal<{ id: string; name: string; collection: boolean } | null>(null);
   readonly editorDialog = viewChild.required<ElementRef<HTMLDialogElement>>('editorDialog');
   readonly deleteDialog = viewChild.required<ElementRef<HTMLDialogElement>>('deleteDialog');
+  readonly textEditor = viewChild.required(TextSourceEditor);
   readonly sharing = viewChild(ResourceSharing);
   readonly current = computed(() =>
     this.collections().find((x) => x.resource.id === this.selected()),
@@ -322,6 +325,17 @@ export class KnowledgePage {
   }
   actions(document: DocumentInfo): MenuAction[] {
     return [
+      ...(document.textVersion > 0
+        ? [
+            {
+              id: 'text',
+              label: '編輯純文字',
+              icon: 'edit',
+              disabled:
+                !document.canEdit || ['queued', 'running', 'processing'].includes(document.status),
+            },
+          ]
+        : []),
       {
         id: 'reindex',
         label: ['failed', 'cancelled'].includes(document.status) ? '重試索引' : '重新索引',
@@ -333,8 +347,13 @@ export class KnowledgePage {
     ];
   }
   documentAction(action: string, document: DocumentInfo) {
-    if (action === 'delete') this.confirmDelete(document.id, document.fileName);
+    if (action === 'text') void this.textEditor().open(this.selected(), document);
+    else if (action === 'delete') this.confirmDelete(document.id, document.fileName);
     else if (action === 'reindex') void this.reindex(document);
+  }
+  textSaved() {
+    this.notice.set('文字來源已儲存，索引正在背景更新。');
+    void this.load();
   }
   status(value: string) {
     return (

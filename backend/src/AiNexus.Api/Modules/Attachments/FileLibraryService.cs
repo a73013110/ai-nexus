@@ -10,10 +10,29 @@ namespace AiNexus.Modules.Attachments;
 public sealed record FileUsageDto(string Kind, Guid ResourceId, string Name, Guid? DocumentId, string? Status);
 public sealed record LibraryFileDto(AttachmentDto File, DateTimeOffset CreatedAt, IReadOnlyList<FileUsageDto> Usages, bool CanDelete);
 public sealed record FileLibraryPageDto(IReadOnlyList<LibraryFileDto> Items, int Total, AttachmentStorageDto Storage, int Offset, int Limit);
+public sealed record RenameLibraryFileRequest(string FileName, string ExpectedFileName);
 
 /// <summary>The original is stored once. History and knowledge index it through independent references.</summary>
 public sealed class FileLibraryService(NexusDbContext db, AttachmentService files, AttachmentWriteLock writes, ResourceAccess access, AccessService features, AttachmentQuota quota)
 {
+    public async Task<AttachmentDto> RenameAsync(Guid actor, Guid id, RenameLibraryFileRequest request, CancellationToken ct)
+    {
+        var name = request.FileName.Trim();
+        if (name.Length is < 1 or > 180 || name.Any(char.IsControl) || name.IndexOfAny(['/', '\\', ':', '*', '?', '"', '<', '>', '|']) >= 0 || name.EndsWith('.') || name is "." or "..")
+            throw new ApiException(400, "file_name_invalid", "檔名需為 1 至 180 個字元，不可包含路徑、控制字元或特殊符號。");
+        var file = await files.OwnedAsync(actor, id, ct);
+        if (!file.InLibrary) throw new ApiException(404, "file_not_found", "找不到這份檔案。");
+        if (!string.Equals(Path.GetExtension(name), Path.GetExtension(file.FileName), StringComparison.OrdinalIgnoreCase))
+            throw new ApiException(400, "file_extension_changed", "重新命名時請保留原副檔名，以維持正確的預覽與格式識別。");
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var changed = await db.Set<Attachment>().Where(x => x.Id == id && x.OwnerId == actor && x.InLibrary && x.FileName == request.ExpectedFileName && x.StorageState == AttachmentStates.Ready)
+            .ExecuteUpdateAsync(p => p.SetProperty(x => x.FileName, name), ct);
+        if (changed != 1) throw new ApiException(409, "file_name_changed", "檔名已被修改，請重新載入後再試。");
+        db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "file.renamed", Result = "saved" });
+        await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
+        file.FileName = name;
+        return AttachmentService.Describe(file);
+    }
     public async Task RetainAsync(Guid actor, Guid id, CancellationToken ct)
     {
         await writes.Gate.WaitAsync(ct);

@@ -24,12 +24,13 @@ import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
 import { WorkspaceNavigation } from '../../shared/ui/workspace-navigation';
 import { downloadFile } from '../../shared/browser/download';
+import { TokenUsageChart } from '../../shared/ui/token-usage-chart';
 import { StorageUsage } from '../../shared/ui/storage-usage';
 import { formatDuration, formatBytes, formatModelName } from '../../shared/browser/format';
 
 @Component({
   selector: 'nx-settings-page',
-  imports: [RouterLink, Select, Icon, WorkspaceNavigation, StorageUsage],
+  imports: [RouterLink, Select, Icon, WorkspaceNavigation, StorageUsage, TokenUsageChart],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './settings-page.html',
 })

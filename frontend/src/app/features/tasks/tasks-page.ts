@@ -1,21 +1,23 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import type { Job } from '../../core/api/types';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { FeaturePage } from '../../shared/ui/feature-page';
 import { Icon } from '../../shared/ui/icon';
 import { JobProgress } from '../../shared/ui/job-progress';
+import { ResourceTarget } from '../../shared/ui/resource-target';
 import { JobsApi } from './jobs-api';
 
 @Component({
   selector: 'nx-tasks-page',
-  imports: [FeaturePage, Icon, JobProgress, RouterLink],
+  imports: [FeaturePage, Icon, JobProgress, RouterLink, ResourceTarget],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
     [title]="session.featureName('tasks')"
-    description="追蹤文件辨識、索引與評測。離開頁面後任務仍會繼續。"
+    description="追蹤文件辨識、索引、評測與程式碼 review。離開頁面後任務仍會繼續。"
   >
     <button page-actions class="secondary-button" (click)="refresh()">
       <nx-icon name="repeat" />重新整理
@@ -41,13 +43,21 @@ import { JobsApi } from './jobs-api';
         <h2>{{ filter() === 'active' ? '目前沒有處理中的任務' : '這裡尚無任務' }}</h2>
         <p>加入知識庫文件或執行評測後，即可在這裡追蹤。</p>
         @if (session.has('knowledge')) {
-          <a class="secondary-button" routerLink="/knowledge">前往{{ session.featureName('knowledge') }}</a>
+          <a class="secondary-button" routerLink="/knowledge"
+            >前往{{ session.featureName('knowledge') }}</a
+          >
         }
       </div>
     } @else {
       <div class="job-list">
         @for (job of visible(); track job.id) {
-          <article class="job-card" animate.enter="panel-arrive">
+          <article
+            class="job-card"
+            [id]="'job-' + job.id"
+            [class.current]="target() === job.id"
+            [nxResourceTarget]="target() === job.id"
+            animate.enter="panel-arrive"
+          >
             <div class="job-heading">
               <div>
                 <span class="panel-eyebrow">{{ kind(job.kind) }}</span>
@@ -60,6 +70,14 @@ import { JobsApi } from './jobs-api';
               <span class="form-note">{{
                 job.attempt ? '第 ' + job.attempt + ' 次處理' : '尚未開始'
               }}</span>
+              @if (job.kind === 'repository-review' && session.has('repositories')) {
+                <a
+                  class="quiet-button"
+                  routerLink="/repositories"
+                  [queryParams]="{ review: job.subjectId }"
+                  >檢視 review<nx-icon name="chevron"
+                /></a>
+              }
               @if (job.kind === 'document-ingest') {
                 <a class="quiet-button" [routerLink]="['/reader', job.subjectId]"
                   >檢視文件<nx-icon name="chevron"
@@ -94,7 +112,8 @@ export class TasksPage {
   private readonly scope = inject(ViewScope);
   private readonly api = inject(JobsApi);
   readonly jobs = signal<Job[]>([]);
-  readonly filter = signal('active');
+  readonly target = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('job') || '');
+  readonly filter = signal(this.target() ? 'all' : 'active');
   readonly loading = signal(true);
   readonly error = signal('');
   readonly busy = signal<string | null>(null);
@@ -115,7 +134,17 @@ export class TasksPage {
             : x.status === 'completed'),
     ),
   );
+  private revision = 0;
   constructor() {
+    inject(ActivatedRoute)
+      .queryParamMap.pipe(takeUntilDestroyed())
+      .subscribe((params) => {
+        const id = params.get('job') || '';
+        if (id === this.target()) return;
+        this.target.set(id);
+        if (id) this.filter.set('all');
+        if (!this.loading()) void this.refresh();
+      });
     void this.initialize();
   }
   private async initialize() {
@@ -132,10 +161,15 @@ export class TasksPage {
     }
   }
   async refresh() {
-    const valid = this.scope.guard();
+    const revision = ++this.revision,
+      guard = this.scope.guard(),
+      valid = () => guard() && revision === this.revision;
     try {
       const jobs = await this.api.list();
       if (valid()) {
+        if (this.target() && !jobs.some((x) => x.id === this.target()))
+          jobs.push(await this.api.get(this.target()));
+        if (!valid()) return;
         this.jobs.set(jobs);
         this.error.set('');
       }
@@ -172,6 +206,7 @@ export class TasksPage {
         {
           'document-ingest': '文件辨識與索引',
           evaluation: '品質評測',
+          'repository-review': '程式碼 Review',
           'integration-import': '資料來源匯入',
         } as Record<string, string>
       )[value] || '背景處理'

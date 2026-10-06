@@ -8,7 +8,7 @@ AI 工作區：Angular 22、ASP.NET Core 10、MSSQL、AD 與 Google AI／Ollama 
 | -------------- | ------------------------------------------------------------------------------- | --------------------------------- |
 | 總覽           | 空間流程與狀態、日期篩選、每次／全對話／使用者費用、價格版本與 CSV              | [費用](docs/BILLING.md)           |
 | 連網搜尋       | 手動開啟、SearXNG／Brave、來源與時間、配額、搜尋費用                            | [搜尋](docs/WEB_SEARCH.md)        |
-| 程式庫         | 自己的 Gitea 個人存取權杖、唯讀檔案／議題、固定 commit 草稿與知識快照                  | [Gitea](docs/GITEA.md)            |
+| 程式庫         | Gitea 唯讀檔案／議題、固定 commit 快照、單一／區間 commit 的背景 AI review | [Gitea](docs/GITEA.md) |
 | 個人設定       | 當頁設定視窗、主題、12–24px 閱讀／密度、操作、通知、草稿及用量                  | [功能指南](docs/FEATURES.md)      |
 | 平台管理       | 角色／群組／功能、個人／群組逐模型 token 政策、個別用量與唯讀對話、前後差異稽核 | [管理](docs/ADMINISTRATION.md)    |
 | 知識庫／閱讀器 | ACL、索引／OCR、SQL 向量檢索、引用及原文核對                                    | [知識庫](docs/KNOWLEDGE.md)       |
@@ -18,6 +18,7 @@ AI 工作區：Angular 22、ASP.NET Core 10、MSSQL、AD 與 Google AI／Ollama 
 | 分享           | 具名收件人、版本快照、附件授權、到期／撤銷                                      | [分享](docs/SHARING.md)           |
 | 品質評測       | 私人回饋、固定題庫、模型／指令比較、設定指紋、人工評分                          | [品質](docs/QUALITY.md)           |
 | 背景任務       | 持久進度、租約／checkpoint、停止及重試                                          | [知識庫](docs/KNOWLEDGE.md)       |
+| 通知 | 共用通知中心、未讀、進度／分享事件、前往內容、瀏覽器通知 | [規格](docs/NOTIFICATIONS.md) |
 | 資料來源       | 公文／校務唯讀 adapter、歷程、私人成果及聊天草稿                                | [整合](docs/INTEGRATIONS.md)      |
 | 介面元件       | 管理員檢視實際元件、主題、鍵盤／動畫及 tokens 匯出                              | [設計系統](docs/DESIGN_SYSTEM.md) |
 

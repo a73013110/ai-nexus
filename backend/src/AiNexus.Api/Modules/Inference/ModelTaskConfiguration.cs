@@ -24,6 +24,6 @@ public static class ModelTaskConfiguration
     public static void Require(ModelProfile profile, InferenceOptions options, string? expected)
     {
         if (expected is null || !StringComparer.Ordinal.Equals(expected, Capture(profile, options).Fingerprint))
-            throw new ApiException(409, "evaluation_configuration_changed", "模型設定已變更；請建立新的比較，避免混用不同設定的結果。");
+            throw new ApiException(409, "evaluation_configuration_changed", "模型設定已變更；請建立新的任務，避免混用不同設定的結果。");
     }
 }

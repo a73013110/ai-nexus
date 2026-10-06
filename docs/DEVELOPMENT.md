@@ -44,12 +44,15 @@ dotnet dev-certs https --trust
 ./scripts/Build.ps1 -Restore  # restore + Angular build + .NET publish
 ./scripts/Verify.ps1         # build + 後端 + 前端 + Edge 瀏覽器測試
 ./scripts/Verify.ps1 -SkipBrowser
+./scripts/Build.ps1 -OutputDirectory artifacts/verification # 預覽仍運行時使用獨立產物
 ./scripts/Test-Connections.ps1  # 真實外部連線，與自動化測試分開
 ```
 
 瀏覽器測試使用本機已安裝 Edge，測試伺服器在 5180。測試替身僅存在 `backend/tests`、`tests/e2e`，正式程式不接受測試身分 header。Playwright 覆蓋鍵盤、中文組字、版本分支、斷線、Markdown 安全、模型政策、Context、可讀字體與窄螢幕。結果、trace 與畫面全部在 ignored `artifacts`。後端測試使用獨立 SQLite；SQL schema/migrations、AD 與真模型仍由連線檢查／實機驗收驗證。
 
 ## API 與 migration 更新
+
+`Verify.ps1` 使用 `artifacts/verification`，避免覆寫正在運行的 publish DLL。Playwright 繼承 `NEXUS_E2E_PUBLISH_DIRECTORY` 選擇產物；單獨執行 npm 測試預設 publish，可設 `$env:NEXUS_E2E_PUBLISH_DIRECTORY='artifacts/verification'`。手動預覽可指定 `Start-Local.ps1 -SkipBuild -PublishDirectory artifacts/verification -Port 5081`。Build 只接受 workspace artifacts 內的輸出，刪除舊 wwwroot 前驗證絕對路徑及 reparse point。
 
 開啟 Development API 後執行（整合預覽也可）：
 

@@ -357,20 +357,6 @@
   gap: var(--p-space-2);
   color: var(--secondary);
 }
-.usage-daily > div {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-4);
-  min-height: var(--button-target);
-}
-.usage-daily time {
-  font-size: var(--text-caption);
-  flex: none;
-}
-.usage-daily meter {
-  flex: 1;
-  accent-color: var(--signal);
-}
 .shortcut-list {
   margin: 0;
 }

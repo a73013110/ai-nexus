@@ -209,8 +209,13 @@ async function send(page: Page, text = "請分析目前文件") {
   await expect(page.getByRole("table")).toBeVisible();
 }
 async function menu(page: Page, name: string) {
-  await page.getByLabel("對話操作", { exact: true }).click();
-  await page.getByRole("button", { name, exact: true }).click();
+  await page.getByRole("button", { name: "對話操作", exact: true }).click();
+  await page
+    .getByRole("menuitem", {
+      name: name === "匯出目前分支為 Markdown" ? "匯出 Markdown" : name,
+      exact: true,
+    })
+    .click();
 }
 
 test("uploaded documents and images persist on messages and reach the run request", async ({
@@ -485,9 +490,9 @@ test("duplicate and JSON text backup preserve the tree in a separate conversatio
   ).toBeVisible();
   expect(fixture.conversations).toHaveLength(2);
   await expect(page.getByRole("table")).toBeVisible();
-  await page.getByLabel("對話操作", { exact: true }).click();
+  await page.getByRole("button", { name: "對話操作", exact: true }).click();
   const downloaded = page.waitForEvent("download");
-  await page.getByRole("button", { name: "匯出 JSON 文字備份" }).click();
+  await page.getByRole("menuitem", { name: "匯出 JSON 文字備份" }).click();
   const file = await downloaded;
   let content = "";
   for await (const chunk of (await file.createReadStream())!)
@@ -600,7 +605,7 @@ test("mobile uploads settings and palette remain usable with reduced motion", as
     fullPage: true,
   });
   await page.getByRole("button", { name: "關閉對話設定" }).click();
-  await page.getByRole("button", { name: "開啟側欄" }).click();
+  await page.getByRole("button", { name: "展開側欄" }).click();
   await page.getByRole("button", { name: "開啟快捷指令" }).click();
   await expect(page.getByRole("combobox", { name: "快捷指令" })).toBeFocused();
 });

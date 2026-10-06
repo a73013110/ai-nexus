@@ -1709,6 +1709,16 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasColumnType("nvarchar(16)")
                         .HasComment("業務執行狀態。");
 
+                    b.Property<string>("TextContent")
+                        .HasMaxLength(200000)
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("純文字來源的可編輯內容；一般上傳原檔保持空值。");
+
+                    b.Property<int>("TextVersion")
+                        .IsConcurrencyToken()
+                        .HasColumnType("int")
+                        .HasComment("純文字內容的樂觀並行版本號。");
+
                     b.Property<string>("Warning")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)")
@@ -1800,6 +1810,86 @@ namespace AiNexus.BuildingBlocks.Migrations
                     b.ToTable("PromptTemplates", "library", t =>
                         {
                             t.HasComment("使用者私人提示詞範本。");
+                        });
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Notifications.WorkspaceNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("資料的主鍵識別碼。");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(600)
+                        .HasColumnType("nvarchar(600)")
+                        .HasComment("通知摘要，不包含完整私密原文。");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasComment("資料建立時間，採 UTC offset。");
+
+                    b.Property<DateTimeOffset?>("DismissedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasComment("通知移除的時間；空值代表仍可查看。");
+
+                    b.Property<string>("EventKey")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)")
+                        .HasComment("通知來源事件的冪等識別碼。");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。");
+
+                    b.Property<DateTimeOffset?>("ReadAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasComment("通知已閱讀的時間；空值代表未讀。");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasComment("通知呈現層級：info、success 或 error。");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("通知所指向的業務識別碼。");
+
+                    b.Property<string>("TargetKind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("已核准的功能導向類型。");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("nvarchar(180)")
+                        .HasComment("介面顯示標題。");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)")
+                        .HasComment("事件的種類。");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int")
+                        .HasComment("業務版本號，用於歷史或樂觀並行控制。");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "EventKey")
+                        .IsUnique();
+
+                    b.HasIndex("OwnerId", "DismissedAt", "ReadAt", "CreatedAt");
+
+                    b.ToTable("Notifications", "operations", t =>
+                        {
+                            t.HasComment("使用者個人通知、版本化導向、閱讀狀態與事件去重鍵。");
                         });
                 });
 
@@ -2321,6 +2411,139 @@ namespace AiNexus.BuildingBlocks.Migrations
                     b.ToTable("RepositoryImports", "knowledge", t =>
                         {
                             t.HasComment("程式庫文件匯入所固定的主機、repository、commit 與檔案路徑。");
+                        });
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Repositories.RepositoryReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("資料的主鍵識別碼。");
+
+                    b.Property<string>("BaseCommit")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasComment("區間 review 的起點 commit SHA；空值表示單一 commit。");
+
+                    b.Property<string>("BaseUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasComment("Gitea 連線主機位址。");
+
+                    b.Property<string>("Commit")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasComment("匯入當時固定的 commit SHA。");
+
+                    b.Property<string>("ConfigurationFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasComment("固定模型與生成設定的 SHA-256 指紋。");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasComment("資料建立時間，採 UTC offset。");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)")
+                        .HasComment("擁有者範圍內的冪等請求識別，避免重試重複處理。");
+
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("關聯背景工作識別碼。");
+
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)")
+                        .HasComment("核准模型的內部識別碼。");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasComment("使用者提供的補充說明。");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。");
+
+                    b.Property<string>("Repository")
+                        .IsRequired()
+                        .HasMaxLength(201)
+                        .HasColumnType("nvarchar(201)")
+                        .HasComment("Gitea repository 的 owner/name 識別。");
+
+                    b.Property<string>("RequestHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasComment("請求內容指紋，用於辨識冪等識別碼衝突。");
+
+                    b.Property<string>("SnapshotJson")
+                        .IsRequired()
+                        .HasMaxLength(1000000)
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("分享時的固定內容快照；不隨後續編輯變動。");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("OwnerId", "CreatedAt");
+
+                    b.HasIndex("OwnerId", "IdempotencyKey")
+                        .IsUnique();
+
+                    b.ToTable("RepositoryReviews", "workspace", t =>
+                        {
+                            t.HasComment("固定 commit 或區間 diff 的私人 review、模型設定指紋與背景任務。");
+                        });
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Repositories.RepositoryReviewResult", b =>
+                {
+                    b.Property<Guid>("ReviewId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("關聯私人程式碼 review 的識別碼。");
+
+                    b.Property<int>("Ordinal")
+                        .HasColumnType("int")
+                        .HasComment("同一父物件內的呈現順序。");
+
+                    b.Property<long>("ElapsedMs")
+                        .HasColumnType("bigint")
+                        .HasComment("執行耗時，以毫秒計。");
+
+                    b.Property<long?>("InputTokens")
+                        .HasColumnType("bigint")
+                        .HasComment("模型回報的輸入 tokens；未知保持空值。");
+
+                    b.Property<string>("Output")
+                        .IsRequired()
+                        .HasMaxLength(64000)
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("評測模型的實際回答。");
+
+                    b.Property<long?>("OutputTokens")
+                        .HasColumnType("bigint")
+                        .HasComment("模型回報的輸出 tokens；未知保持空值。");
+
+                    b.Property<bool>("Truncated")
+                        .HasColumnType("bit")
+                        .HasComment("評測輸出是否因上限截斷。");
+
+                    b.HasKey("ReviewId", "Ordinal");
+
+                    b.ToTable("RepositoryReviewResults", "workspace", t =>
+                        {
+                            t.HasComment("Review 各區段的持久結果及用量；重試沿用已完成區段。");
                         });
                 });
 
@@ -2961,6 +3184,15 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("AiNexus.Modules.Notifications.WorkspaceNotification", b =>
+                {
+                    b.HasOne("AiNexus.Modules.Identity.NexusUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("AiNexus.Modules.Operations.BackgroundJob", b =>
                 {
                     b.HasOne("AiNexus.Modules.Identity.NexusUser", null)
@@ -3066,6 +3298,30 @@ namespace AiNexus.BuildingBlocks.Migrations
                     b.HasOne("AiNexus.Modules.Knowledge.KnowledgeDocument", null)
                         .WithMany()
                         .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Repositories.RepositoryReview", b =>
+                {
+                    b.HasOne("AiNexus.Modules.Operations.BackgroundJob", null)
+                        .WithMany()
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AiNexus.Modules.Identity.NexusUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AiNexus.Modules.Repositories.RepositoryReviewResult", b =>
+                {
+                    b.HasOne("AiNexus.Modules.Repositories.RepositoryReview", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

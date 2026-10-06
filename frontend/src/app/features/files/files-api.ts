@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { ApiTransport } from '../../core/api/api-transport';
-import type { FileLibraryPage } from '../../core/api/types';
+import type { Attachment, FileLibraryPage } from '../../core/api/types';
 
 export interface FileFilters {
   search: string;
@@ -22,6 +22,11 @@ export class FilesApi {
     });
     return this.http.json<FileLibraryPage>(`/files?${query}`, 'GET', undefined, undefined, signal);
   }
+  rename = (id: string, fileName: string, expectedFileName: string) =>
+    this.http.json<Attachment>(`/files/${encodeURIComponent(id)}/name`, 'PUT', {
+      fileName,
+      expectedFileName,
+    });
   retain = (id: string) => this.http.json<void>(`/files/${encodeURIComponent(id)}/retain`, 'POST');
   remove = (id: string) => this.http.json<void>(`/files/${encodeURIComponent(id)}`, 'DELETE');
 }

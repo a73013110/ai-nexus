@@ -1,0 +1,65 @@
+.notification-center {
+  width: min(38rem, calc(100vw - 2rem));
+}
+.notification-center[open] {
+  display: flex;
+  flex-direction: column;
+}
+.notification-center .dialog-heading,
+.notification-toolbar {
+  flex: none;
+}
+.notification-toolbar {
+  display: flex;
+  gap: var(--p-space-2);
+  align-items: center;
+  flex-wrap: wrap;
+  padding-block: var(--p-space-3);
+  border-block: 1px solid var(--line);
+}
+.notification-toolbar [aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.notification-list {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  max-height: 65dvh;
+  padding-block: var(--p-space-2);
+}
+.notification-row {
+  display: flex;
+  gap: var(--p-space-3);
+  padding: var(--p-space-4);
+  border-radius: var(--p-radius-md);
+}
+.notification-row.is-unread {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 var(--signal);
+}
+.notification-row + .notification-row {
+  margin-top: var(--p-space-2);
+}
+.notification-row > div {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.notification-row p {
+  margin: var(--p-space-1) 0;
+  color: var(--secondary);
+}
+.notification-row time {
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.notification-row[data-severity='error'] > nx-icon {
+  color: var(--error);
+}
+.notification-actions {
+  display: flex;
+  gap: var(--p-space-2);
+  flex-wrap: wrap;
+  margin-top: var(--p-space-2);
+}

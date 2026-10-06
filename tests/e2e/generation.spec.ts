@@ -114,12 +114,12 @@ test("generation follows queue, preparation and content with distinct unobtrusiv
     await expect(indicator.locator(".generation-indicator")).not.toHaveClass(
       /is-waiting/,
     );
-    expect(await activeLoops(indicator)).toBe(3);
+    expect(await activeLoops(indicator)).toBe(4);
     expect(await activeLoops(header)).toBe(2);
     expect(await activeLoops(page.locator(".composer"))).toBe(0);
     await expect(page.locator(".topbar [role='status']")).toHaveCount(1);
     await expect(indicator.locator("[role='status']")).toHaveCount(0);
-    await expect(indicator.locator(".generation-segments")).toHaveAttribute(
+    await expect(indicator.locator(".generation-orbit")).toHaveAttribute(
       "aria-hidden",
       "true",
     );
@@ -133,9 +133,12 @@ test("generation follows queue, preparation and content with distinct unobtrusiv
         width: sample.width,
         height: sample.height,
       });
-      const backdrop = page.locator(".sidebar-backdrop");
+      const backdrop = page.locator(".workspace-backdrop");
       if (sample.width < 860 && (await backdrop.isVisible()))
-        await page.getByRole("button", { name: "關閉對話導覽", exact: true }).click();
+        await page
+          .getByRole("button", { name: "收合側欄", exact: true })
+          .first()
+          .click();
       await page.emulateMedia({ colorScheme: sample.theme });
       await expect(page.locator("html")).toHaveAttribute(
         "data-theme",
@@ -200,7 +203,7 @@ for (const preference of ["system", "personal"] as const) {
     expect(await activeLoops(page.locator(".topbar .inference-status"))).toBe(
       0,
     );
-    await expect(indicator.locator(".generation-segments i").first()).toHaveCSS(
+    await expect(indicator.locator(".generation-orbit i").first()).toHaveCSS(
       "opacity",
       "1",
     );

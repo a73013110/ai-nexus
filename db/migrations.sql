@@ -2882,3 +2882,223 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006061603_WorkspaceExperience'
+)
+BEGIN
+    ALTER TABLE [knowledge].[Documents] ADD [TextContent] nvarchar(max) NULL;
+    DECLARE @description58 AS sql_variant;
+    SET @description58 = N'純文字來源的可編輯內容；一般上傳原檔保持空值。';
+    EXEC sp_addextendedproperty 'MS_Description', @description58, 'SCHEMA', N'knowledge', 'TABLE', N'Documents', 'COLUMN', N'TextContent';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006061603_WorkspaceExperience'
+)
+BEGIN
+    ALTER TABLE [knowledge].[Documents] ADD [TextVersion] int NOT NULL DEFAULT 0;
+    DECLARE @description59 AS sql_variant;
+    SET @description59 = N'純文字內容的樂觀並行版本號。';
+    EXEC sp_addextendedproperty 'MS_Description', @description59, 'SCHEMA', N'knowledge', 'TABLE', N'Documents', 'COLUMN', N'TextVersion';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006061603_WorkspaceExperience'
+)
+BEGIN
+    CREATE TABLE [operations].[Notifications] (
+        [Id] uniqueidentifier NOT NULL,
+        [OwnerId] uniqueidentifier NOT NULL,
+        [Version] int NOT NULL,
+        [EventKey] nvarchar(160) NOT NULL,
+        [Type] nvarchar(80) NOT NULL,
+        [Severity] nvarchar(16) NOT NULL,
+        [Title] nvarchar(180) NOT NULL,
+        [Body] nvarchar(600) NOT NULL,
+        [TargetKind] nvarchar(32) NOT NULL,
+        [TargetId] uniqueidentifier NOT NULL,
+        [CreatedAt] datetimeoffset NOT NULL,
+        [ReadAt] datetimeoffset NULL,
+        [DismissedAt] datetimeoffset NULL,
+        CONSTRAINT [PK_Notifications] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_Notifications_Users_OwnerId] FOREIGN KEY ([OwnerId]) REFERENCES [identity].[Users] ([Id]) ON DELETE NO ACTION
+    );
+    DECLARE @description60 AS sql_variant;
+    SET @description60 = N'使用者個人通知、版本化導向、閱讀狀態與事件去重鍵。';
+    EXEC sp_addextendedproperty 'MS_Description', @description60, 'SCHEMA', N'operations', 'TABLE', N'Notifications';
+    SET @description60 = N'資料的主鍵識別碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description60, 'SCHEMA', N'operations', 'TABLE', N'Notifications', 'COLUMN', N'Id';
+    SET @description60 = N'資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。';
+    EXEC sp_addextendedproperty 'MS_Description', @description60, 'SCHEMA', N'operations', 'TABLE', N'Notifications', 'COLUMN', N'OwnerId';
+    SET @description60 = N'業務版本號，用於歷史或樂觀並行控制。';
+    EXEC sp_addextendedproperty 'MS_Description', @description60, 'SCHEMA', N'operations', 'TABLE', N'Notifications', 'COLUMN', N'Version';
+    SET @description60 = N'通知來源事件的冪等識別碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description60, 'SCHEMA', N'operations', 'TABLE', N'Notifications', 'COLUMN', N'EventKey';
+    SET @description60 = N'事件的種類。';
+    EXEC sp_addextendedproperty 'MS_Description', @description60, 'SCHEMA', N'operations', 'TABLE', N'Notifications', 'COLUMN', N'Type';
+    SET @description60 = N'通知呈現層級：info、success 或 error。';
+    EXEC sp_addextendedproperty 'MS_Description', @description60, 'SCHEMA', N'operations', 'TABLE', N'Notifications', 'COLUMN', N'Severity';
+    SET @description60 = N'介面顯示標題。';
+    EXEC sp_addextendedproperty 'MS_Description', @description60, 'SCHEMA', N'operations', 'TABLE', N'Notifications', 'COLUMN', N'Title';
+    SET @description60 = N'通知摘要，不包含完整私密原文。';
+    EXEC sp_addextendedproperty 'MS_Description', @description60, 'SCHEMA', N'operations', 'TABLE', N'Notifications', 'COLUMN', N'Body';
+    SET @description60 = N'已核准的功能導向類型。';
+    EXEC sp_addextendedproperty 'MS_Description', @description60, 'SCHEMA', N'operations', 'TABLE', N'Notifications', 'COLUMN', N'TargetKind';
+    SET @description60 = N'通知所指向的業務識別碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description60, 'SCHEMA', N'operations', 'TABLE', N'Notifications', 'COLUMN', N'TargetId';
+    SET @description60 = N'資料建立時間，採 UTC offset。';
+    EXEC sp_addextendedproperty 'MS_Description', @description60, 'SCHEMA', N'operations', 'TABLE', N'Notifications', 'COLUMN', N'CreatedAt';
+    SET @description60 = N'通知已閱讀的時間；空值代表未讀。';
+    EXEC sp_addextendedproperty 'MS_Description', @description60, 'SCHEMA', N'operations', 'TABLE', N'Notifications', 'COLUMN', N'ReadAt';
+    SET @description60 = N'通知移除的時間；空值代表仍可查看。';
+    EXEC sp_addextendedproperty 'MS_Description', @description60, 'SCHEMA', N'operations', 'TABLE', N'Notifications', 'COLUMN', N'DismissedAt';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006061603_WorkspaceExperience'
+)
+BEGIN
+    CREATE TABLE [workspace].[RepositoryReviews] (
+        [Id] uniqueidentifier NOT NULL,
+        [OwnerId] uniqueidentifier NOT NULL,
+        [JobId] uniqueidentifier NOT NULL,
+        [BaseUrl] nvarchar(500) NOT NULL,
+        [Repository] nvarchar(201) NOT NULL,
+        [Commit] nvarchar(64) NOT NULL,
+        [BaseCommit] nvarchar(64) NULL,
+        [ModelId] nvarchar(160) NOT NULL,
+        [ConfigurationFingerprint] nvarchar(64) NOT NULL,
+        [Note] nvarchar(2000) NOT NULL,
+        [IdempotencyKey] nvarchar(80) NOT NULL,
+        [RequestHash] nvarchar(64) NOT NULL,
+        [SnapshotJson] nvarchar(max) NOT NULL,
+        [CreatedAt] datetimeoffset NOT NULL,
+        CONSTRAINT [PK_RepositoryReviews] PRIMARY KEY ([Id]),
+        CONSTRAINT [FK_RepositoryReviews_BackgroundJobs_JobId] FOREIGN KEY ([JobId]) REFERENCES [operations].[BackgroundJobs] ([Id]) ON DELETE NO ACTION,
+        CONSTRAINT [FK_RepositoryReviews_Users_OwnerId] FOREIGN KEY ([OwnerId]) REFERENCES [identity].[Users] ([Id]) ON DELETE NO ACTION
+    );
+    DECLARE @description61 AS sql_variant;
+    SET @description61 = N'固定 commit 或區間 diff 的私人 review、模型設定指紋與背景任務。';
+    EXEC sp_addextendedproperty 'MS_Description', @description61, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviews';
+    SET @description61 = N'資料的主鍵識別碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description61, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviews', 'COLUMN', N'Id';
+    SET @description61 = N'資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。';
+    EXEC sp_addextendedproperty 'MS_Description', @description61, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviews', 'COLUMN', N'OwnerId';
+    SET @description61 = N'關聯背景工作識別碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description61, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviews', 'COLUMN', N'JobId';
+    SET @description61 = N'Gitea 連線主機位址。';
+    EXEC sp_addextendedproperty 'MS_Description', @description61, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviews', 'COLUMN', N'BaseUrl';
+    SET @description61 = N'Gitea repository 的 owner/name 識別。';
+    EXEC sp_addextendedproperty 'MS_Description', @description61, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviews', 'COLUMN', N'Repository';
+    SET @description61 = N'匯入當時固定的 commit SHA。';
+    EXEC sp_addextendedproperty 'MS_Description', @description61, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviews', 'COLUMN', N'Commit';
+    SET @description61 = N'區間 review 的起點 commit SHA；空值表示單一 commit。';
+    EXEC sp_addextendedproperty 'MS_Description', @description61, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviews', 'COLUMN', N'BaseCommit';
+    SET @description61 = N'核准模型的內部識別碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description61, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviews', 'COLUMN', N'ModelId';
+    SET @description61 = N'固定模型與生成設定的 SHA-256 指紋。';
+    EXEC sp_addextendedproperty 'MS_Description', @description61, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviews', 'COLUMN', N'ConfigurationFingerprint';
+    SET @description61 = N'使用者提供的補充說明。';
+    EXEC sp_addextendedproperty 'MS_Description', @description61, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviews', 'COLUMN', N'Note';
+    SET @description61 = N'擁有者範圍內的冪等請求識別，避免重試重複處理。';
+    EXEC sp_addextendedproperty 'MS_Description', @description61, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviews', 'COLUMN', N'IdempotencyKey';
+    SET @description61 = N'請求內容指紋，用於辨識冪等識別碼衝突。';
+    EXEC sp_addextendedproperty 'MS_Description', @description61, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviews', 'COLUMN', N'RequestHash';
+    SET @description61 = N'分享時的固定內容快照；不隨後續編輯變動。';
+    EXEC sp_addextendedproperty 'MS_Description', @description61, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviews', 'COLUMN', N'SnapshotJson';
+    SET @description61 = N'資料建立時間，採 UTC offset。';
+    EXEC sp_addextendedproperty 'MS_Description', @description61, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviews', 'COLUMN', N'CreatedAt';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006061603_WorkspaceExperience'
+)
+BEGIN
+    CREATE TABLE [workspace].[RepositoryReviewResults] (
+        [ReviewId] uniqueidentifier NOT NULL,
+        [Ordinal] int NOT NULL,
+        [Output] nvarchar(max) NOT NULL,
+        [Truncated] bit NOT NULL,
+        [InputTokens] bigint NULL,
+        [OutputTokens] bigint NULL,
+        [ElapsedMs] bigint NOT NULL,
+        CONSTRAINT [PK_RepositoryReviewResults] PRIMARY KEY ([ReviewId], [Ordinal]),
+        CONSTRAINT [FK_RepositoryReviewResults_RepositoryReviews_ReviewId] FOREIGN KEY ([ReviewId]) REFERENCES [workspace].[RepositoryReviews] ([Id]) ON DELETE NO ACTION
+    );
+    DECLARE @description62 AS sql_variant;
+    SET @description62 = N'Review 各區段的持久結果及用量；重試沿用已完成區段。';
+    EXEC sp_addextendedproperty 'MS_Description', @description62, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviewResults';
+    SET @description62 = N'關聯私人程式碼 review 的識別碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description62, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviewResults', 'COLUMN', N'ReviewId';
+    SET @description62 = N'同一父物件內的呈現順序。';
+    EXEC sp_addextendedproperty 'MS_Description', @description62, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviewResults', 'COLUMN', N'Ordinal';
+    SET @description62 = N'評測模型的實際回答。';
+    EXEC sp_addextendedproperty 'MS_Description', @description62, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviewResults', 'COLUMN', N'Output';
+    SET @description62 = N'評測輸出是否因上限截斷。';
+    EXEC sp_addextendedproperty 'MS_Description', @description62, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviewResults', 'COLUMN', N'Truncated';
+    SET @description62 = N'模型回報的輸入 tokens；未知保持空值。';
+    EXEC sp_addextendedproperty 'MS_Description', @description62, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviewResults', 'COLUMN', N'InputTokens';
+    SET @description62 = N'模型回報的輸出 tokens；未知保持空值。';
+    EXEC sp_addextendedproperty 'MS_Description', @description62, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviewResults', 'COLUMN', N'OutputTokens';
+    SET @description62 = N'執行耗時，以毫秒計。';
+    EXEC sp_addextendedproperty 'MS_Description', @description62, 'SCHEMA', N'workspace', 'TABLE', N'RepositoryReviewResults', 'COLUMN', N'ElapsedMs';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006061603_WorkspaceExperience'
+)
+BEGIN
+    CREATE INDEX [IX_Notifications_OwnerId_DismissedAt_ReadAt_CreatedAt] ON [operations].[Notifications] ([OwnerId], [DismissedAt], [ReadAt], [CreatedAt]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006061603_WorkspaceExperience'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_Notifications_OwnerId_EventKey] ON [operations].[Notifications] ([OwnerId], [EventKey]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006061603_WorkspaceExperience'
+)
+BEGIN
+    CREATE INDEX [IX_RepositoryReviews_JobId] ON [workspace].[RepositoryReviews] ([JobId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006061603_WorkspaceExperience'
+)
+BEGIN
+    CREATE INDEX [IX_RepositoryReviews_OwnerId_CreatedAt] ON [workspace].[RepositoryReviews] ([OwnerId], [CreatedAt]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006061603_WorkspaceExperience'
+)
+BEGIN
+    CREATE UNIQUE INDEX [IX_RepositoryReviews_OwnerId_IdempotencyKey] ON [workspace].[RepositoryReviews] ([OwnerId], [IdempotencyKey]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261006061603_WorkspaceExperience'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261006061603_WorkspaceExperience', N'10.0.12');
+END;
+
+COMMIT;
+GO
+

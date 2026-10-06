@@ -97,6 +97,15 @@ import { formatBytes, formatDate } from '../../shared/browser/format';
                 <nx-icon name="library" />加入知識庫
               </button>
             }
+            <button
+              class="icon-button"
+              [disabled]="busy()"
+              [attr.aria-label]="'重新命名 ' + item.file.fileName"
+              title="重新命名檔案"
+              (click)="rename.emit(item)"
+            >
+              <nx-icon name="edit" />
+            </button>
             <a
               class="icon-button"
               [href]="url(item.file.id) + '?download=true'"
@@ -129,6 +138,7 @@ export class FileBrowser {
   readonly busy = input(false);
   readonly chosen = output<LibraryFile>();
   readonly addKnowledge = output<LibraryFile>();
+  readonly rename = output<LibraryFile>();
   readonly remove = output<LibraryFile>();
   readonly bytes = formatBytes;
   readonly date = (value: string) => formatDate(value).split(' ')[0];

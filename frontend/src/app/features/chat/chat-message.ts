@@ -1,31 +1,24 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import type { Message } from '../../core/api/types';
-import { generationError } from '../../core/api/generation-error';
 import { Icon } from '../../shared/ui/icon';
-import { MarkdownView } from '../../shared/ui/markdown-view';
 import { CopyFeedback } from '../../shared/browser/copy-feedback';
-import { AttachmentList } from '../attachments/attachment-list';
+import { MessageContent } from '../workspace/message-content';
 import { MessageTree } from './message-tree';
 import { GenerationIndicator } from '../../shared/ui/generation-indicator';
 import { generationStatus } from '../../core/api/generation-status';
-import { ReaderLink } from '../../shared/browser/reader-link';
 import { MessageFeedback } from '../quality/message-feedback';
 import { ChargeLabel } from '../billing/charge-label';
 import { StreamingAnswer } from '../../shared/ui/streaming-answer';
-import { RunTimingDisplay } from '../../shared/ui/run-timing';
 
 @Component({
   selector: 'nx-chat-message',
   imports: [
     Icon,
-    AttachmentList,
+    MessageContent,
     GenerationIndicator,
-    ReaderLink,
-    MarkdownView,
     MessageFeedback,
     ChargeLabel,
     StreamingAnswer,
-    RunTimingDisplay,
   ],
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -51,12 +44,7 @@ import { RunTimingDisplay } from '../../shared/ui/run-timing';
         <span class="message-model">{{ message().modelId }}</span>
       }
     </div>
-    @if (message().role === 'user') {
-      <div class="user-copy">{{ message().content }}</div>
-      @if (message().attachments?.length) {
-        <nx-attachment-list [files]="message().attachments!" />
-      }
-    } @else if (active()) {
+    @if (active() && message().role === 'assistant') {
       @if (streamContent()) {
         <nx-streaming-answer [content]="streamContent()" (rendered)="rendered.emit()" />
       } @else if (generation(); as current) {
@@ -67,55 +55,17 @@ import { RunTimingDisplay } from '../../shared/ui/run-timing';
         />
       }
     } @else {
-      <nx-markdown-view [content]="message().content" animate.enter="answer-settled" />
-    }
-    @if (!active() && message().sources?.length) {
-      <nav class="source-citations" aria-label="回答引用來源">
-        @for (source of message().sources; track source.number) {
-          <a
-            [nxReaderLink]="source.documentId"
-            [readerPage]="source.pageNumber"
-            [title]="source.excerpt"
-            ><strong>[{{ source.number }}]</strong><span>{{ source.title }}</span
-            ><small>第 {{ source.pageNumber }} 頁</small><nx-icon name="document"
-          /></a>
-        }
-      </nav>
-    }
-    @if (message().status === 'cancelled' && !active()) {
-      <p class="message-note">已停止 · 保留部分回答</p>
-    }
-    @if (!active() && message().webSources; as sources) {
-      @if (sources.length) {
-        <nav class="source-citations web-citations" aria-label="網路搜尋來源">
-          @for (source of sources; track source.number) {
-            <a
-              [href]="source.url"
-              target="_blank"
-              rel="noopener noreferrer"
-              [title]="source.excerpt + ' · ' + source.retrievedAt"
-              ><strong>[網路{{ source.number }}]</strong><span>{{ source.title }}</span
-              ><nx-icon name="globe"
-            /></a>
+      <nx-message-content [message]="message()" />
+      @if (message().role === 'assistant') {
+        <div class="message-charges">
+          @if (message().charge; as charge) {
+            <nx-charge-label [charge]="charge" />
           }
-        </nav>
-      } @else {
-        <p class="message-note">這次網路搜尋沒有可引用的摘要。</p>
+          @if (message().webSearchCharge; as charge) {
+            <span>搜尋</span><nx-charge-label [charge]="charge" />
+          }
+        </div>
       }
-    }
-    @if (!active() && message().role === 'assistant') {
-      <nx-run-timing [value]="message().timing" />
-      <div class="message-charges">
-        @if (message().charge; as charge) {
-          <nx-charge-label [charge]="charge" />
-        }
-        @if (message().webSearchCharge; as charge) {
-          <span>搜尋</span><nx-charge-label [charge]="charge" />
-        }
-      </div>
-    }
-    @if (message().status === 'failed' && !active()) {
-      <p class="message-note error-note">{{ failureText() }}，可重新生成。</p>
     }
     @if (!active()) {
       <div class="message-actions">
@@ -212,7 +162,6 @@ export class ChatMessage {
   readonly versionIndex = computed(() =>
     this.versions().findIndex((x) => x.id === this.message().id),
   );
-  readonly failureText = computed(() => generationError(this.message().errorCode));
   async copyAnswer() {
     await this.feedback.copy(this.message().content);
   }

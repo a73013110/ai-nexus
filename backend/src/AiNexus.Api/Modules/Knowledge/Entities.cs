@@ -20,6 +20,8 @@ public sealed class KnowledgeDocument
     public string? Warning { get; set; }
     public bool IsDeleted { get; set; }
     public Guid? JobId { get; set; }
+    public string? TextContent { get; set; }
+    public int TextVersion { get; set; }
 }
 public sealed class DocumentPage
 {
@@ -51,7 +53,9 @@ public sealed class MessageCitation
 }
 public sealed record CollectionDto(ResourceDto Resource, string Description, int Documents, int ReadyDocuments);
 public sealed record CollectionRequest(string Name, string Description);
-public sealed record DocumentDto(Guid Id, Guid? CollectionId, string FileName, string ContentType, string Status, int PageCount, int ChunkCount, string? Warning, Guid? JobId, bool CanEdit, bool HasOriginal);
+public sealed record DocumentDto(Guid Id, Guid? CollectionId, string FileName, string ContentType, string Status, int PageCount, int ChunkCount, string? Warning, Guid? JobId, bool CanEdit, bool HasOriginal, int TextVersion = 0);
+public sealed record TextDocumentRequest(string Title, string Text, int? ExpectedVersion = null);
+public sealed record TextDocumentDto(Guid Id, string Title, string Text, int Version);
 public sealed record DocumentPageDto(int PageNumber, string Text, string Extraction, bool NeedsReview);
 public sealed record DocumentJobDto(AiNexus.Modules.Operations.JobDto Job, bool CanControl);
 public sealed record CitationDto(int Number, Guid DocumentId, string Title, int PageNumber, string Excerpt);
@@ -69,6 +73,7 @@ public static class KnowledgeConfiguration
         collection.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.Id).OnDelete(DeleteBehavior.Restrict);
         var document = model.Entity<KnowledgeDocument>(); document.ToTable("Documents", "knowledge"); document.HasKey(x => x.Id);
         document.Property(x => x.FileName).HasMaxLength(180); document.Property(x => x.ContentType).HasMaxLength(80); document.Property(x => x.Status).HasMaxLength(16); document.Property(x => x.Warning).HasMaxLength(500); document.Property(x => x.EmbeddingProfile).HasMaxLength(200);
+        document.Property(x => x.TextContent).HasMaxLength(200000); document.Property(x => x.TextVersion).IsConcurrencyToken();
         document.HasIndex(x => new { x.CollectionId, x.Status }); document.HasIndex(x => x.AttachmentId);
         document.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.Id).OnDelete(DeleteBehavior.Restrict);
         document.HasOne<KnowledgeCollection>().WithMany().HasForeignKey(x => x.CollectionId).OnDelete(DeleteBehavior.Restrict);

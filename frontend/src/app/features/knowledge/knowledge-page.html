@@ -1,6 +1,13 @@
-<nx-feature-page [title]="session.featureName('knowledge')" description="整理可查核的文件來源，讓 AI 回答附上依據與頁碼。">
+<nx-feature-page
+  [title]="session.featureName('knowledge')"
+  description="整理可查核的文件來源，讓 AI 回答附上依據與頁碼。"
+>
   <div page-actions class="page-actions">
-    @if (session.has('files')) { <a routerLink="/files" class="secondary-button"><nx-icon name="document" />{{ session.featureName('files') }}</a> }
+    @if (session.has('files')) {
+      <a routerLink="/files" class="secondary-button"
+        ><nx-icon name="document" />{{ session.featureName('files') }}</a
+      >
+    }
     <button
       class="primary-button"
       (click)="openEditor()"
@@ -22,7 +29,7 @@
       <span class="empty-symbol"><nx-icon name="library" /></span>
       <h2>給工作一個可靠的資料來源</h2>
       <p>
-        建立知識庫後，直接放入 PDF、Word、圖片或文字文件。<br />可保留為個人資料，也可授權同事或群組閱讀。
+        建立知識庫後，直接放入 PDF、Word、Excel、PowerPoint、圖片或文字文件。<br />可保留為個人資料，也可授權同事或群組閱讀。
       </p>
       <button class="primary-button" (click)="openEditor()">
         建立第一個知識庫<nx-icon name="plus" />
@@ -53,6 +60,13 @@
     }
     @if (collection.resource.canEdit) {
       <div class="knowledge-library-action">
+        <button
+          class="secondary-button"
+          [disabled]="uploading()"
+          (click)="textEditor().open(selected())"
+        >
+          <nx-icon name="edit" />貼上純文字
+        </button>
         <nx-library-picker [disabled]="uploading()" (chosen)="addLibrary($event)" /><span
           class="form-note"
           >重用對話附件與已保存的原檔，無須再次上傳。</span
@@ -64,7 +78,7 @@
           <strong>{{ uploadLabel() || '將文件拖到這裡，或選取檔案' }}</strong
           ><small
             >每份最多 {{ (policy()?.maxFileBytes || 4194304) / 1048576 }} MB · 掃描 PDF
-            與圖片會自動辨識文字</small
+            與圖片會自動辨識文字 · 支援 XLSX、PPTX 與 UTF-8 文字</small
           >
         </div>
         <button class="secondary-button" [disabled]="uploading()" (click)="fileInput.click()">
@@ -172,6 +186,7 @@
       (saved)="notice.set('存取權限已更新，下次操作立即生效。')"
     />
   }
+  <nx-text-source-editor (saved)="textSaved()" />
 </nx-feature-page>
 <dialog #editorDialog class="platform-dialog" (cancel)="cancel($event)">
   <div class="dialog-scroll">

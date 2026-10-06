@@ -1,15 +1,10 @@
 <a class="skip-link" href="#composer" [attr.inert]="narrow() && sidebarOpen() ? '' : null"
   >跳至訊息輸入</a
 >
-<div class="workbench" [class.sidebar-closed]="!sidebarOpen()">
-  @if (sidebarOpen()) {
-    <button class="sidebar-backdrop" aria-label="關閉對話側欄" (click)="closeSidebar()"></button>
-  }
+<div class="workbench">
   <nx-chat-sidebar
-    [open]="sidebarOpen()"
-    (close)="closeSidebar()"
     (navigate)="newChat()"
-    (rename)="openDialog('rename', $event)"
+    (action)="conversationAction($event.action, $event.conversation)"
     (prompts)="library()?.open()"
     (commands)="palette()?.open()"
     (import)="store.importBackup($event)"
@@ -23,14 +18,6 @@
   >
     <header class="topbar">
       <div class="topbar-left">
-        <button
-          class="icon-button sidebar-toggle"
-          (click)="toggleSidebar()"
-          [attr.aria-expanded]="sidebarOpen()"
-          [attr.aria-label]="sidebarOpen() ? '收合側欄' : '開啟側欄'"
-        >
-          <nx-icon name="sidebar" /></button
-        ><span class="topbar-divider"></span>
         <div class="conversation-heading">
           @if (store.selected(); as conversation) {
             <nx-inline-title
@@ -76,7 +63,7 @@
               aria-label="分享此對話"
               title="建立具名唯讀分享"
               [disabled]="store.busy()"
-              (click)="shareDialog()?.open()"
+              (click)="action('share')"
             >
               <nx-icon name="share" />
             </button>
@@ -84,6 +71,7 @@
           <nx-conversation-actions
             [conversation]="conversation"
             [busy]="store.busy()"
+            [sharing]="hasSharing()"
             (action)="action($event)"
           />
         }
@@ -413,12 +401,8 @@
   [modelId]="store.modelId() || null"
   [projectId]="store.selected()?.projectId || null"
 />
-@if (hasSharing() && store.selected(); as selected) {
-  <nx-share-dialog
-    kind="conversation"
-    [sourceId]="store.selected()!.id"
-    [name]="store.selected()!.title"
-  />
+@if (hasSharing() && (shareTarget() || store.selected()); as selected) {
+  <nx-share-dialog kind="conversation" [sourceId]="selected.id" [name]="selected.title" />
 }
 @if (paragraph(); as selected) {
   <div

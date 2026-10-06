@@ -29,6 +29,8 @@ nx-chat-message {
   border-left: 2px solid var(--line);
 }
 .assistant-label {
+  flex: none;
+  white-space: nowrap;
   color: var(--signal);
   background: var(--surface);
   border: 1px solid var(--line);
@@ -43,10 +45,13 @@ nx-chat-message {
   margin-bottom: var(--p-space-2);
 }
 .message-heading strong {
+  flex: none;
+  white-space: nowrap;
   font-size: var(--text-caption);
   font-weight: 600;
 }
 .role-mark {
+  flex: none;
   font-size: var(--text-caption);
   background: var(--hover);
   width: 25px;
@@ -63,6 +68,7 @@ nx-chat-message {
   font-size: var(--text-caption);
 }
 .message-model {
+  min-width: 0;
   font:
     var(--text-caption) ui-monospace,
     'Cascadia Code',
@@ -133,6 +139,15 @@ nx-chat-message {
   }
 }
 @media (max-width: 520px) {
+  .message-heading {
+    flex-wrap: wrap;
+    gap: var(--p-space-2);
+  }
+  .message-heading .message-model {
+    flex-basis: 100%;
+    margin-left: 33px;
+    max-width: calc(100% - 33px);
+  }
   .message-list {
     width: min(var(--reading-width), calc(100% - 2 * var(--workspace-gutter)));
   }

@@ -27,7 +27,7 @@ export function groupFeatures<T extends { id: string }>(features: readonly T[]) 
 }
 
 export const FEATURE_ICONS: Record<string, string> = {
-  files: 'document',
+  files: 'files',
   dashboard: 'dashboard',
   repositories: 'git',
   chat: 'lines',

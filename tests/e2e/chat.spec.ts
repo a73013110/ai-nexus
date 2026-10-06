@@ -99,8 +99,8 @@ test("editing and regenerating preserve versions; history can be renamed and del
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect(page.getByText("修改後的提問", { exact: true })).toBeVisible();
   expect(fixture.messages.some((x) => x.content === "原始提問")).toBe(true);
-  await page.getByLabel("對話操作", { exact: true }).click();
-  await page.getByRole("button", { name: "重新命名目前對話" }).click();
+  await page.getByRole("button", { name: "對話操作", exact: true }).click();
+  await page.getByRole("menuitem", { name: "重新命名目前對話" }).click();
   await page.getByRole("textbox", { name: "對話標題" }).fill("第一版開發紀錄");
   await page.getByRole("button", { name: "儲存標題" }).click();
   await expect(
@@ -111,8 +111,8 @@ test("editing and regenerating preserve versions; history can be renamed and del
     .fill("不存在");
   await expect(page.getByText("沒有符合的對話。")).toBeVisible();
   await page.getByRole("searchbox", { name: "搜尋對話標題與內容" }).fill("");
-  await page.getByLabel("對話操作", { exact: true }).click();
-  await page.getByRole("button", { name: "刪除目前對話" }).click();
+  await page.getByRole("button", { name: "對話操作", exact: true }).click();
+  await page.getByRole("menuitem", { name: "刪除目前對話" }).click();
   await page.getByRole("button", { name: "刪除對話", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "今天，從哪件事開始？" }),
@@ -206,7 +206,9 @@ test("dark theme, reduced motion and narrow viewport remain usable", async ({
     fullPage: true,
   });
   await page.setViewportSize({ width: 375, height: 812 });
-  await page.getByRole("button", { name: "關閉對話導覽" }).click();
+  await expect(
+    page.getByRole("button", { name: "展開側欄", exact: true }),
+  ).toBeVisible();
   await expect(page.locator("main")).not.toHaveAttribute("inert", "");
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("窄畫面測試");
   await expect(page.getByRole("textbox", { name: "傳送訊息" })).toHaveValue(
@@ -224,8 +226,10 @@ test("dark theme, reduced motion and narrow viewport remain usable", async ({
     path: "artifacts/screenshots/mobile-dark-chat.png",
     fullPage: true,
   });
-  await page.getByLabel("對話操作", { exact: true }).click();
-  await page.getByRole("button", { name: "刪除目前對話", exact: true }).click();
+  await page.getByRole("button", { name: "對話操作", exact: true }).click();
+  await page
+    .getByRole("menuitem", { name: "刪除目前對話", exact: true })
+    .click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByRole("button", { name: "取消", exact: true }).click();
 });
@@ -237,7 +241,7 @@ test("mobile drawer supports Escape and restores visible keyboard focus", async 
   const fixture = new ApiFixture();
   await fixture.attach(page);
   await page.goto("/chat");
-  const toggle = page.getByRole("button", { name: "開啟側欄" });
+  const toggle = page.getByRole("button", { name: "展開側欄" });
   await toggle.click();
   await expect(page.locator("main")).toHaveAttribute("inert", "");
   await page.keyboard.press("Escape");

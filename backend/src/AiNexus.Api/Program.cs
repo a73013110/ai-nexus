@@ -113,6 +113,8 @@ builder.Services.AddOptions<AiNexus.Modules.Repositories.GiteaOptions>().BindCon
         && x.TimeoutSeconds is >= 2 and <= 30 && x.MaxFileBytes is >= 1024 and <= 500000, "Invalid Gitea connector settings.").ValidateOnStart();
 builder.Services.AddScoped<AiNexus.Modules.Repositories.IGiteaClient, AiNexus.Modules.Repositories.GiteaClient>();
 builder.Services.AddScoped<AiNexus.Modules.Repositories.RepositoryService>();
+builder.Services.AddScoped<AiNexus.Modules.Repositories.RepositoryReviewService>();
+builder.Services.AddScoped<IBackgroundJobHandler, AiNexus.Modules.Repositories.RepositoryReviewHandler>();
 builder.Services.AddSingleton<AiNexus.Modules.Repositories.RepositoryWriteLock>();
 builder.Services.AddScoped<AiNexus.Modules.Dashboard.DashboardService>();
 builder.Services.AddHttpClient("ControlledTools", client => client.Timeout = Timeout.InfiniteTimeSpan)
@@ -139,10 +141,12 @@ builder.Services.AddSingleton<AiNexus.Modules.Collaboration.ResourceWriteLock>()
 builder.Services.AddScoped<AiNexus.Modules.Collaboration.ResourceAccess>();
 builder.Services.AddScoped<AiNexus.Modules.Collaboration.ResourceLifecycle>();
 builder.Services.AddScoped<JobService>();
+builder.Services.AddScoped<AiNexus.Modules.Notifications.NotificationService>();
 builder.Services.AddOptions<KnowledgeOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Knowledge(c, o))
     .Validate(x => x.TimeoutSeconds is >= 5 and <= 300, "Invalid embedding timeout.")
     .Validate(x => x.EmbeddingProvider is "google" or "ollama" or "none" && x.Dimensions is 768 or 1024 && x.InputFormat is "plain" or "qwen-query" && (x.InputFormat == "plain" || x.EmbeddingProvider == "ollama") && x.QueryInstruction.Length is > 0 and <= 500 && x.Revision.Length <= 64 && x.EmbeddingModel.Length is > 0 and <= 160 && x.EmbeddingModel.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or ':' or '.') && x.MaxDailyEmbeddingRequests is >= 1 and <= 100000 && x.PortableCandidateLimit is >= 100 and <= 10000 && x.MaxCollections is >= 1 and <= 100 && x.MaxDocumentsPerCollection is >= 1 and <= 1000 && x.ChunkCharacters is >= 200 and <= 1600 && x.ChunkOverlap >= 0 && x.ChunkOverlap < x.ChunkCharacters / 2 && x.TopK is >= 1 and <= 10 && x.ContextCharacters is >= 1000 and <= 12000, "Invalid knowledge limits or embedding configuration.").ValidateOnStart();
 builder.Services.AddScoped<DocumentService>();
+builder.Services.AddScoped<TextDocumentService>();
 builder.Services.AddScoped<AiNexus.Modules.Projects.ProjectService>();
 builder.Services.AddScoped<AiNexus.Modules.Sharing.ShareService>();
 builder.Services.AddSingleton<AiNexus.Modules.Sharing.ShareWriteLock>();
@@ -299,6 +303,7 @@ app.Use(async (http, next) =>
     // JSON-escaped UTF-16 characters can occupy six bytes. Keep prompt limits usable for Chinese clients too.
     var bodyLimit = http.Request.Path == "/api/v1/attachments" ? 9 * 1024 * 1024 : http.Request.Path == "/api/v1/conversations/import" ? 8 * 1024 * 1024 :
         http.Request.Path is var inputPath && (inputPath == "/api/v1/runs" || inputPath == "/api/v1/context") ? Math.Max(65536, http.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptions<InferenceOptions>>().Value.MaxInputCharacters * 6 + 8192) :
+        (http.Request.Path.StartsWithSegments("/api/v1/knowledge/collections") || http.Request.Path.StartsWithSegments("/api/v1/documents")) && http.Request.Path.Value!.EndsWith("/text", StringComparison.Ordinal) ? TextDocumentService.MaxCharacters * 6 + 8192 :
         http.Request.Path.StartsWithSegments("/api/v1/prompt-templates") ? 12000 * 6 + 8192 : http.Request.Path.StartsWithSegments("/api/v1/artifacts") ? 64000 * 6 + 8192 : http.Request.Path.StartsWithSegments("/api/v1/quality/sets") ? 224000 * 6 + 8192 : 65536;
     if (http.Request.ContentLength > bodyLimit) throw new ApiException(413, "request_too_large", "上傳內容超過大小上限。");
     var bodySize = http.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();

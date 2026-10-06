@@ -10,6 +10,7 @@ import {
   readerReturnUrl,
 } from '../../shared/browser/reader-navigation';
 import { DocumentViewer } from './document-viewer';
+import { WorkspaceLayout } from '../../core/preferences/workspace-layout';
 
 @Component({
   selector: 'nx-document-reader',
@@ -17,7 +18,12 @@ import { DocumentViewer } from './document-viewer';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="feature-layout">
     <aside nxWorkspaceSidebar class="feature-sidebar" aria-label="工作區導覽"></aside>
-    <main class="reader-page" id="feature-content" tabindex="-1">
+    <main
+      class="reader-page"
+      id="feature-content"
+      tabindex="-1"
+      [attr.inert]="layout.overlay() ? '' : null"
+    >
       <a class="reader-return quiet-button" [href]="returnTo()" (click)="back($event)"
         ><nx-icon name="back" />{{ returnLabel() }}</a
       >
@@ -26,6 +32,7 @@ import { DocumentViewer } from './document-viewer';
   </div>`,
 })
 export class DocumentReader {
+  readonly layout = inject(WorkspaceLayout);
   private readonly route = inject(ActivatedRoute);
   private readonly navigation = inject(ReaderNavigation);
   readonly state = toSignal(
@@ -33,6 +40,7 @@ export class DocumentReader {
       map(([params, query]) => ({
         target: {
           id: params.get('id')!,
+          shareId: params.get('shareId'),
           attachment: this.route.snapshot.routeConfig?.path?.includes('attachment') ?? false,
           page: Number(query.get('page')) || 1,
         },

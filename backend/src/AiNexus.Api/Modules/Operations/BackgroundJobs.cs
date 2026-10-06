@@ -132,10 +132,23 @@ public sealed class BackgroundJobWorker(IServiceScopeFactory scopes, StorageRead
         finally { monitor.Cancel(); try { await heartbeat; } catch (OperationCanceledException) { } }
         // Host shutdown keeps the lease and checkpoint so another process can resume later.
         if (stop.IsCancellationRequested) return true;
-        await db.Set<BackgroundJob>().Where(x => x.Id == id && x.LeaseToken == lease && x.Status == "running")
+        // Only a fenced checkpoint may persist handler changes. Discard unfinished tracked work
+        // before recording the terminal state and its notification in a separate transaction.
+        db.ChangeTracker.Clear();
+        await using var completion = await db.Database.BeginTransactionAsync(CancellationToken.None);
+        var finished = await db.Set<BackgroundJob>().Where(x => x.Id == id && x.LeaseToken == lease && x.Status == "running")
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, x => x.CancelRequested ? "cancelled" : status).SetProperty(x => x.Stage, x => x.CancelRequested ? "已取消" : status == "completed" ? "處理完成" : status == "cancelled" ? "已取消" : "需要重試")
              .SetProperty(x => x.LeaseToken, (Guid?)null).SetProperty(x => x.LeaseUntil, (DateTimeOffset?)null).SetProperty(x => x.ActiveKey, (string?)null)
              .SetProperty(x => x.ErrorCode, code).SetProperty(x => x.ErrorMessage, message).SetProperty(x => x.UpdatedAt, DateTimeOffset.UtcNow), CancellationToken.None);
+        if (finished == 1) {
+            var final = await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(x => x.Id == id);
+            await scope.ServiceProvider.GetRequiredService<AiNexus.Modules.Notifications.NotificationService>().PublishAsync(final.OwnerId,
+                $"job:{id}:{final.Attempt}", "task." + final.Status, final.Status == "failed" ? "error" : final.Status == "completed" ? "success" : "info",
+                final.Status == "completed" ? "背景任務已完成" : final.Status == "failed" ? "背景任務需要重試" : "背景任務已取消",
+                final.Label, final.Kind == "repository-review" ? "repository-review" : "task", final.Kind == "repository-review" ? final.SubjectId : final.Id, CancellationToken.None);
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
+        await completion.CommitAsync(CancellationToken.None);
         return true;
     }
     private async Task MonitorAsync(Guid id, Guid lease, CancellationTokenSource execution, CancellationToken ct)

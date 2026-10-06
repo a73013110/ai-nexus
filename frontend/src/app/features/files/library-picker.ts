@@ -27,7 +27,7 @@ import { SearchField } from '../../shared/ui/search-field';
       [title]="label()"
       (click)="open()"
     >
-      <nx-icon name="library" />
+      <nx-icon name="files" />
       @if (!compact()) {
         {{ label() }}
       }

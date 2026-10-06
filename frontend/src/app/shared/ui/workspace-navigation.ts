@@ -20,7 +20,7 @@ import { groupFeatures, FEATURE_ICONS } from '../../core/feature-groups';
     aria-label="工作區功能"
     [class.collapsible]="collapsible()"
   >
-    @if (collapsible()) {
+    @if (collapsible() && !compact()) {
       <button
         type="button"
         class="workspace-disclosure"
@@ -30,7 +30,7 @@ import { groupFeatures, FEATURE_ICONS } from '../../core/feature-groups';
         <nx-icon name="workspace" /><strong>工作區</strong> <nx-icon name="chevron" />
       </button>
     }
-    @if (!collapsible() || expanded()) {
+    @if (compact() || !collapsible() || expanded()) {
       <div class="workspace-groups">
         @for (group of visibleGroups(); track group.id) {
           <section class="workspace-group" [attr.aria-label]="group.name">
@@ -60,6 +60,7 @@ import { groupFeatures, FEATURE_ICONS } from '../../core/feature-groups';
 export class WorkspaceNavigation {
   private readonly session = inject(WorkspaceSession);
   readonly collapsible = input(false);
+  readonly compact = input(false);
   readonly activated = output<void>();
   readonly expanded = signal(false);
   readonly toggle = (value: boolean) => !value;

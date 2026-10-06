@@ -16,6 +16,28 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
     IOptions<GiteaOptions> options, AttachmentService attachments, DocumentService documents, ResourceAccess access, RepositoryWriteLock writes)
 {
     private string Host => new Uri(options.Value.BaseUrl.TrimEnd('/') + "/").AbsoluteUri;
+    public string BaseUrl => Host;
+    public async Task RequireCommitAsync(Guid owner, string repo, string commit, CancellationToken ct)
+    {
+        Commit(commit);
+        using var metadata = await client.GetAsync(await TokenAsync(owner, ct), RepositoryRoute(repo) + "/git/commits/" + commit, ct);
+    }
+    public async Task<string> DiffAsync(Guid owner, string repo, string head, string? basis, CancellationToken ct)
+    {
+        Commit(head); if (basis is not null) Commit(basis);
+        var route = RepositoryRoute(repo);
+        var path = basis is null ? route + "/git/commits/" + head + ".diff" : route + "/compare/" + basis + ".." + head + "?output=diff";
+        var diff = await client.GetTextAsync(await TokenAsync(owner, ct), path, ct);
+        if (!string.IsNullOrWhiteSpace(diff) && !diff.TrimStart().StartsWith("diff --git ", StringComparison.Ordinal))
+            throw new ApiException(409, "gitea_diff_unsupported", "Gitea 未回傳完整的 diff。區間 review 需要支援 compare output=diff 的 Gitea 版本。");
+        return diff;
+    }
+    public async Task<IReadOnlyList<RepositoryCommitDto>> CommitsAsync(Guid owner, string repo, CancellationToken ct)
+    {
+        using var json = await client.GetAsync(await TokenAsync(owner, ct), RepositoryRoute(repo) + "/commits?limit=30", ct);
+        if (json.RootElement.ValueKind != JsonValueKind.Array) throw new ApiException(502, "gitea_response_invalid", "Gitea 回應格式不正確。");
+        return json.RootElement.EnumerateArray().Take(30).Select(x => new RepositoryCommitDto(Text(x, "sha", 64), Text(x.GetProperty("commit"), "message", 500))).ToArray();
+    }
     private IDataProtector Protector(Guid owner) => protection.CreateProtector("AiNexus.Gitea.UserToken.v1", owner.ToString("N"), Host);
     public async Task<RepositoryStatusDto> StatusAsync(Guid owner, CancellationToken ct)
     {

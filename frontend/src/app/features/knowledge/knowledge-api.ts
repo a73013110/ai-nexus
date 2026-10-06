@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { ApiTransport } from '../../core/api/api-transport';
 import type {
   Collection,
+  TextDocument,
   DocumentInfo,
   DocumentPage,
   DocumentJob,
@@ -29,6 +30,19 @@ export class KnowledgeApi {
       'POST',
       { attachmentId },
     );
+  text = (id: string) => this.http.json<TextDocument>(`/documents/${encodeURIComponent(id)}/text`);
+  createText = (collection: string, title: string, text: string) =>
+    this.http.json<DocumentInfo>(
+      `/knowledge/collections/${encodeURIComponent(collection)}/text`,
+      'POST',
+      { title, text },
+    );
+  updateText = (id: string, title: string, text: string, expectedVersion: number) =>
+    this.http.json<DocumentInfo>(`/documents/${encodeURIComponent(id)}/text`, 'PUT', {
+      title,
+      text,
+      expectedVersion,
+    });
   readAttachment = (id: string, signal?: AbortSignal) =>
     this.http.json<DocumentInfo>(
       `/attachments/${encodeURIComponent(id)}/document`,

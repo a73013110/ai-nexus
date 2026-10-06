@@ -1,0 +1,156 @@
+<details class="review-create" [open]="!detail()">
+  <summary>建立新的背景 review</summary>
+  <h3>讓 AI 檢閱固定版本</h3>
+  <p class="form-note">
+    在背景分析變更並提出問題、修正及測試建議。可切換頁面，完成或失敗時會收到通知。
+  </p>
+  <form class="platform-form" (submit)="create($event)">
+    <nx-select
+      label="檢閱範圍"
+      [options]="[
+        { value: 'commit', label: '單一 commit' },
+        { value: 'range', label: 'Commit 區間' },
+      ]"
+      [value]="mode()"
+      (valueChange)="mode.set($event)"
+    />
+    <div class="review-commit-fields">
+      @if (mode() === 'range') {
+        <label
+          >起點 SHA<input
+            class="form-input"
+            required
+            maxlength="64"
+            [value]="basis()"
+            placeholder="不含起點 commit 的既有變更"
+            (input)="basis.set($any($event.target).value)"
+        /></label>
+      }
+      <label
+        >{{ mode() === 'range' ? '終點 SHA' : 'Commit SHA'
+        }}<input
+          class="form-input"
+          required
+          maxlength="64"
+          [value]="commit()"
+          (input)="commit.set($any($event.target).value)"
+      /></label>
+    </div>
+    @if (commits().length) {
+      <nx-select
+        label="從近期 commit 選擇終點"
+        placeholder="選擇版本"
+        [options]="commitChoices()"
+        [value]="commit()"
+        (valueChange)="commit.set($event)"
+      />
+    }
+    @if (models()?.policy?.allowModelSelection) {
+      <nx-select
+        label="Review 模型"
+        [options]="choices()"
+        [value]="model()"
+        (valueChange)="model.set($event)"
+      />
+    }
+    <label
+      >特別關注的內容（選填）<textarea
+        rows="2"
+        maxlength="2000"
+        [value]="note()"
+        placeholder="例如：權限控制、相容性或交易一致性"
+        (input)="note.set($any($event.target).value)"
+      ></textarea>
+    </label>
+    <p class="form-note">
+      單一 commit 比對父版本；區間比對起點與終點的淨變更。最多 256 KB／60
+      區段，二進位變更會標示為需人工確認。Review 使用目前帳號的模型額度。
+    </p>
+    <button class="primary-button" [disabled]="busy() || loading() || !commit() || !model()">
+      {{ busy() ? '正在安排…' : '建立背景 review' }}
+    </button>
+  </form>
+</details>
+@if (error()) {
+  <p class="error-banner" role="alert">{{ error() }}</p>
+}
+@if (loading()) {
+  <p role="status">正在讀取 review…</p>
+}
+@if (reviews().length) {
+  <nx-select
+    label="歷史 review"
+    [options]="historyChoices()"
+    [value]="detail()?.review?.id || ''"
+    (valueChange)="choose($event)"
+  />
+}
+@if (detail(); as d) {
+  <section class="review-results">
+    <header [nxResourceTarget]="reviewId() === d.review.id">
+      <div>
+        <h3>
+          {{ d.review.baseCommit ? d.review.baseCommit.slice(0, 10) + ' → ' : ''
+          }}{{ d.review.commit.slice(0, 10) }}
+        </h3>
+        <p class="form-note">{{ date(d.review.createdAt) }} · {{ modelName(d.review.modelId) }}</p>
+      </div>
+      <a
+        class="quiet-button"
+        [routerLink]="['/repositories']"
+        [queryParams]="{ review: d.review.id }"
+        >結果連結</a
+      >
+    </header>
+    <nx-job-progress [job]="d.review.job!" />
+    <div class="page-actions">
+      @if (active()) {
+        <button
+          class="secondary-button"
+          [disabled]="busy() || d.review.job!.cancelRequested"
+          (click)="changeJob(false)"
+        >
+          停止 review
+        </button>
+      }
+      @if (['failed', 'cancelled'].includes(d.review.job!.status)) {
+        <button
+          class="secondary-button"
+          [disabled]="busy() || d.review.job!.attempt >= 6"
+          (click)="changeJob(true)"
+        >
+          沿用已完成區段重試
+        </button>
+      }
+      @if (session.has('tasks')) {
+        <a class="quiet-button" routerLink="/tasks" [queryParams]="{ job: d.review.job!.id }"
+          >查看背景任務</a
+        >
+      }
+    </div>
+    @for (section of d.sections; track section.ordinal) {
+      <article class="review-section">
+        <h4>{{ section.label }}</h4>
+        @if (section.output) {
+          <nx-markdown-view [content]="section.output" />
+        } @else {
+          <p class="form-note">{{ active() ? '等待檢閱此區段…' : '此區段尚未完成檢閱。' }}</p>
+        }
+        @if (section.truncated) {
+          <p class="error-banner">這個區段的回答達到模型輸出上限，建議縮小範圍另建 review。</p>
+        }
+        <details>
+          <summary>檢視本區段的固定 diff</summary>
+          <pre><code>{{ section.diff }}</code></pre>
+        </details>
+        @if (section.inputTokens != null || section.outputTokens != null) {
+          <p class="form-note">
+            輸入 {{ section.inputTokens?.toLocaleString() ?? '未回報' }} · 輸出
+            {{ section.outputTokens?.toLocaleString() ?? '未回報' }} tokens
+          </p>
+        }
+      </article>
+    }
+    <p class="form-note">建議來自 diff 的靜態分析；仍需人工核對相關上下文與執行測試。</p>
+  </section>
+}

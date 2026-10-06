@@ -5,6 +5,7 @@ export interface ReaderTarget {
   id: string;
   attachment: boolean;
   page?: number | null;
+  shareId?: string | null;
 }
 
 /** Keeps the origin mounted, including chat drafts, scroll position and active generation. */

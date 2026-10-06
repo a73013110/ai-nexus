@@ -38,6 +38,7 @@ export function readerReturnLabel(url: string) {
   if (/^\/files(?:[/?#]|$)/.test(url)) return '返回檔案庫';
   if (/^\/chat(?:[/?#]|$)/.test(url)) return '返回對話';
   if (/^\/projects(?:[/?#]|$)/.test(url)) return '返回專案';
+  if (/^\/shared(?:[/?#]|$)/.test(url)) return '返回分享';
   if (/^\/knowledge(?:[/?#]|$)/.test(url)) return '返回知識庫';
   if (url === WORKSPACE_HOME) return '前往總覽';
   return '返回上一頁';

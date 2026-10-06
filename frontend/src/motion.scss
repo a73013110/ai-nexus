@@ -50,18 +50,58 @@
   padding: var(--p-space-4) 0 var(--p-space-5);
   color: var(--secondary);
 }
-.generation-segments {
-  --generation-cycle: var(--motion-generation);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
+.generation-orbit {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
   width: var(--generation-indicator-size);
   height: var(--generation-indicator-size);
-  flex: none;
+  color: var(--signal);
+  background: var(--accent-soft);
+  border-radius: 50%;
 }
-.generation-indicator.is-waiting .generation-segments {
-  --generation-cycle: var(--motion-waiting);
+.generation-orbit i {
+  position: absolute;
+  inset: 4px;
+  border: 1.5px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: orbit-turn 2.4s linear infinite;
+}
+.generation-orbit i:nth-child(2) {
+  inset: 9px;
+  border-top-color: transparent;
+  border-right-color: currentColor;
+  animation-direction: reverse;
+  animation-duration: 1.8s;
+  opacity: 0.7;
+}
+.generation-orbit i:nth-child(3) {
+  inset: 14px;
+  border-top-color: transparent;
+  border-bottom-color: currentColor;
+  animation-duration: 3s;
+  opacity: 0.5;
+}
+.generation-orbit b {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: generation-pulse 2.4s ease-in-out infinite;
+}
+.is-waiting .generation-orbit i {
+  animation-duration: 4s;
+}
+@keyframes orbit-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.history-state.is-running {
+  animation: orbit-turn 1.6s linear infinite;
+  color: var(--signal);
 }
 .streaming-answer {
   display: block;
@@ -71,19 +111,6 @@
 }
 .answer-settled {
   animation: content-arrive var(--motion-fast) var(--ease);
-}
-.generation-segments i {
-  width: 7px;
-  height: 3px;
-  border-radius: 3px;
-  background: var(--signal);
-  animation: generation-pulse var(--generation-cycle) ease-in-out infinite;
-}
-.generation-segments i:nth-child(2) {
-  animation-delay: calc(var(--generation-cycle) / -3 * 2);
-}
-.generation-segments i:nth-child(3) {
-  animation-delay: calc(var(--generation-cycle) / -3);
 }
 .generation-label {
   font-size: var(--text-label);
@@ -243,7 +270,10 @@
 @mixin reduced-motion {
   .signal-flow,
   .stream-cursor,
-  .generation-segments i {
+  .generation-orbit,
+  .generation-orbit i,
+  .generation-orbit b,
+  .history-state.is-running {
     animation: none !important;
   }
   *,
