@@ -10,7 +10,7 @@ import { combineLatest } from 'rxjs';
 import { MessageContent } from '../workspace/message-content';
 import { ReaderOverlay } from '../../shared/browser/reader-overlay';
 import { Icon } from '../../shared/ui/icon';
-import { formatModelId } from '../../shared/browser/format';
+import { formatModelDisplayName } from '../../shared/browser/format';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { SharingApi } from './sharing-api';
 @Component({
@@ -96,7 +96,7 @@ import { SharingApi } from './sharing-api';
                   >
                   <div class="shared-message-meta">
                     @if (message.modelId) {
-                      <span class="message-model">{{ modelName(message.modelId) }}</span>
+                      <span class="message-model">{{ modelName(message) }}</span>
                     }
                     <time class="form-note" [attr.datetime]="message.createdAt">{{
                       date(message.createdAt)
@@ -118,7 +118,7 @@ import { SharingApi } from './sharing-api';
     ><nx-confirm-dialog />`,
 })
 export class SharedPage {
-  readonly modelName = formatModelId;
+  readonly modelName = formatModelDisplayName;
   readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly reader = inject(ReaderOverlay);

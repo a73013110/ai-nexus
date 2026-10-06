@@ -30,7 +30,7 @@ public sealed class ShareRecipient { public Guid ShareId { get; set; } public Gu
 public sealed record CreateShareRequest(string Kind, Guid SourceId, IReadOnlyList<Guid> RecipientIds, int Hours = 168, bool IncludeAttachments = false, int? ArtifactVersion = null);
 public sealed record ShareDto(Guid Id, string Kind, string Title, string Owner, bool IsOwner, bool IsRevoked, DateTimeOffset ExpiresAt, DateTimeOffset CreatedAt, IReadOnlyList<string> Recipients, bool IncludeAttachments);
 public sealed record SharedMessageDto(string Role, string Content, string Status, DateTimeOffset CreatedAt, IReadOnlyList<AttachmentDto> Attachments,
-    string? ModelId = null, string? ErrorCode = null, IReadOnlyList<CitationDto>? Sources = null, IReadOnlyList<WebSourceDto>? WebSources = null, RunTimingDto? Timing = null);
+    string? ModelId = null, string? ErrorCode = null, IReadOnlyList<CitationDto>? Sources = null, IReadOnlyList<WebSourceDto>? WebSources = null, RunTimingDto? Timing = null, string? ModelDisplayName = null);
 public sealed record SharedFilePreviewDto(AttachmentDto File, IReadOnlyList<DocumentPageDto> Pages);
 public sealed record ShareSnapshot(string Content, int? ArtifactVersion, IReadOnlyList<SharedMessageDto> Messages);
 public sealed record SharedContentDto(ShareDto Share, ShareSnapshot Snapshot);
@@ -114,7 +114,7 @@ public sealed class ShareService(NexusDbContext db, ResourceAccess access, Acces
     {
         var share = await RequireAsync(actor, id, ct);
         var snapshot = JsonSerializer.Deserialize<ShareSnapshot>(share.SnapshotJson)!;
-        return new(await DescribeAsync(actor, share, ct), snapshot with { Messages = snapshot.Messages.Select(x => x with { ModelId = x.ModelId is null ? null : presentation.PublicId(x.ModelId) }).ToArray() });
+        return new(await DescribeAsync(actor, share, ct), snapshot with { Messages = snapshot.Messages.Select(x => x with { ModelId = x.ModelId is null ? null : presentation.PublicId(x.ModelId), ModelDisplayName = presentation.DisplayName(x.ModelId) }).ToArray() });
     }
     public async Task<Attachment> FileAsync(Guid actor, Guid id, Guid fileId, CancellationToken ct)
     {

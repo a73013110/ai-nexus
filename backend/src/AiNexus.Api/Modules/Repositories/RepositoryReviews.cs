@@ -41,7 +41,7 @@ public sealed class RepositoryReviewResult
     public long ElapsedMs { get; set; }
 }
 public sealed record CreateRepositoryReviewRequest(string Repository, string Commit, string? BaseCommit, string? ModelId, string? Note, string IdempotencyKey, string Purpose = "review");
-public sealed record RepositoryReviewDto(Guid Id, string Repository, string Commit, string? BaseCommit, string ModelId, string Note, DateTimeOffset CreatedAt, JobDto Job, string Purpose = "review");
+public sealed record RepositoryReviewDto(Guid Id, string Repository, string Commit, string? BaseCommit, string ModelId, string Note, DateTimeOffset CreatedAt, JobDto Job, string Purpose = "review", string? ModelDisplayName = null);
 public sealed record RepositoryReviewSectionDto(int Ordinal, string Label, string Diff, bool Binary, string? Output, bool Truncated, long? InputTokens, long? OutputTokens, long? ElapsedMs);
 public sealed record RepositoryReviewReportDto(string Output, bool Truncated, long? InputTokens, long? OutputTokens, long ElapsedMs);
 public sealed record RepositoryReviewDetailDto(RepositoryReviewDto Review, IReadOnlyList<RepositoryReviewSectionDto> Sections, RepositoryReviewReportDto? Report = null, int Version = 1);
@@ -136,7 +136,7 @@ public sealed class RepositoryReviewService(NexusDbContext db, RepositoryService
     private async Task<RepositoryReviewDto> DescribeAsync(RepositoryReview x, CancellationToken ct) =>
         Describe(x, await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(j => j.Id == x.JobId, ct));
     private RepositoryReviewDto Describe(RepositoryReview x, BackgroundJob job) => new(x.Id, x.Repository, x.Commit, x.BaseCommit,
-        presentation.PublicId(x.ModelId), x.Note, x.CreatedAt, JobService.Describe(job), Snapshot(x).Purpose);
+        presentation.PublicId(x.ModelId), x.Note, x.CreatedAt, JobService.Describe(job), Snapshot(x).Purpose, presentation.DisplayName(x.ModelId));
     public static ReviewSnapshot Snapshot(RepositoryReview row) => JsonSerializer.Deserialize<ReviewSnapshot>(row.SnapshotJson) is { Version: 1 or 2 or 3 } snapshot
         ? snapshot : throw new ApiException(409, "review_snapshot_unsupported", "此 review 快照版本目前無法處理，請建立新的 review。");
     public static ReviewSlice[] Split(string diff, int budget)

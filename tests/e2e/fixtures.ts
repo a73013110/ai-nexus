@@ -733,6 +733,9 @@ export class ApiFixture {
         createdAt: now,
         runId: null,
         modelId: request.modelId ?? this.modelPolicy.defaultModelId!,
+        modelDisplayName: this.modelPolicy.showModelNames
+          ? "本機測試模型"
+          : "AI 助理 1",
         attachments: [],
         errorCode: null,
       };
@@ -742,6 +745,7 @@ export class ApiFixture {
         userMessageId: user.id,
         assistantMessageId: assistant.id,
         modelId: request.modelId ?? this.modelPolicy.defaultModelId!,
+        modelDisplayName: assistant.modelDisplayName,
         status: "queued",
         content: "",
         lastSequence: 1,

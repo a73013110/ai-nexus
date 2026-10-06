@@ -13,6 +13,7 @@ describe('token usage reporting', () => {
         {
           date: '2026-10-02',
           modelId: 'a',
+          modelDisplayName: '本地助理',
           requests: 2,
           requestsWithUsage: 1,
           inputTokens: 100,
@@ -21,6 +22,7 @@ describe('token usage reporting', () => {
         {
           date: '2026-10-02',
           modelId: 'b',
+          modelDisplayName: '雲端助理',
           requests: 1,
           requestsWithUsage: 1,
           inputTokens: 200,
@@ -37,6 +39,12 @@ describe('token usage reporting', () => {
       ],
     });
     const chart = fixture.componentInstance;
+    fixture.detectChanges();
+    expect(chart.choices()).toEqual([
+      { value: 'all', label: '所有模型' },
+      { value: 'b', label: '雲端助理' },
+      { value: 'a', label: '本地助理' },
+    ]);
     expect(chart.points()).toEqual([
       { label: '2026-10-02', value: 360 },
       { label: '2026-10-03', value: 0 },

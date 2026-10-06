@@ -1,13 +1,15 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   DestroyRef,
   ElementRef,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
-import type { ModelPrice, PriceRequest } from '../../core/api/types';
+import type { ModelPrice, PriceRequest, PriceTarget } from '../../core/api/types';
+import { formatModelDisplayName } from '../../shared/browser/format';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { Icon } from '../../shared/ui/icon';
 import { Select } from '../../shared/ui/select';
@@ -67,17 +69,15 @@ const emptyPrice = (): PriceRequest => ({
                 label="計費供應商"
                 [options]="providers"
                 [value]="draft().provider"
-                (valueChange)="field('provider', $event)"
+                (valueChange)="setProvider($event)"
             /></label>
             <label
-              >模型 ID<input
-                autofocus
-                required
-                maxlength="160"
-                autocomplete="off"
-                placeholder="供應商的完整模型 ID"
+              >模型或工具<nx-select
+                label="計費模型或工具"
+                [options]="modelChoices()"
                 [value]="draft().modelId"
-                (input)="field('modelId', $any($event.target).value)"
+                [disabled]="loading() || !modelChoices().length"
+                (valueChange)="field('modelId', $event)"
             /></label>
             <label
               >幣別<nx-select
@@ -149,7 +149,7 @@ const emptyPrice = (): PriceRequest => ({
           @for (price of prices(); track price.id) {
             <button type="button" class="price-history-row" (click)="use(price)">
               <span
-                ><strong>{{ price.modelId }}</strong
+                ><strong>{{ modelName(price) }}</strong
                 ><small
                   >{{ price.provider }} · {{ kind(price.kind) }} ·
                   {{ time(price.effectiveAt) }}</small
@@ -175,6 +175,16 @@ export class PriceBook {
   readonly draft = signal(emptyPrice());
   readonly effective = signal('');
   readonly prices = signal<ModelPrice[]>([]);
+  readonly targets = signal<PriceTarget[]>([]);
+  readonly modelName = formatModelDisplayName;
+  readonly modelChoices = computed(() => {
+    const choices = new Map<string, string>();
+    for (const price of this.prices().filter((x) => x.provider === this.draft().provider))
+      choices.set(price.modelId, this.modelName(price));
+    for (const target of this.targets().filter((x) => x.provider === this.draft().provider))
+      choices.set(target.modelId, target.displayName);
+    return [...choices].map(([value, label]) => ({ value, label }));
+  });
   readonly loading = signal(false);
   readonly busy = signal(false);
   readonly error = signal('');
@@ -223,6 +233,10 @@ export class PriceBook {
   field(key: keyof PriceRequest, value: string) {
     this.draft.update((x) => ({ ...x, [key]: value }));
   }
+  setProvider(provider: string) {
+    this.draft.update((x) => ({ ...x, provider, modelId: '' }));
+    this.field('modelId', this.modelChoices()[0]?.value ?? '');
+  }
   rateField(key: string, event: Event) {
     const value = (event.target as HTMLInputElement).valueAsNumber;
     this.draft.update((x) => ({ ...x, [key]: Number.isFinite(value) ? value : 0 }));
@@ -239,7 +253,7 @@ export class PriceBook {
       }));
   }
   use(value: ModelPrice) {
-    const { id: _id, ...price } = value;
+    const { id: _id, modelDisplayName: _label, ...price } = value;
     this.draft.set(price);
     this.effective.set('');
     this.notice.set('已帶入此版本。儲存會建立新版本，歷史價格保持原樣。');
@@ -252,8 +266,12 @@ export class PriceBook {
       sequence = ++this.requestSequence;
     this.loading.set(true);
     try {
-      const rows = await this.api.prices();
-      if (valid() && sequence === this.requestSequence) this.prices.set(rows);
+      const [rows, targets] = await Promise.all([this.api.prices(), this.api.targets()]);
+      if (valid() && sequence === this.requestSequence) {
+        this.prices.set(rows);
+        this.targets.set(targets);
+        if (!this.draft().modelId) this.field('modelId', this.modelChoices()[0]?.value ?? '');
+      }
     } catch (e) {
       if (valid()) this.error.set(this.scope.message(e));
     } finally {

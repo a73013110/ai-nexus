@@ -6,8 +6,14 @@
   (activated)="navigate.emit()"
 >
   @if (store.hasChatAccess()) {
-    <a routerLink="/chat" class="new-chat" (click)="navigate.emit()"
-      ><nx-icon name="plus" />新對話<span class="new-chat-hint">開始</span></a
+    <a
+      routerLink="/chat"
+      class="new-chat"
+      aria-label="新對話"
+      title="新對話"
+      (click)="navigate.emit()"
+      ><nx-icon name="plus" /><span class="new-chat-label">新對話</span
+      ><span class="new-chat-hint">開始</span></a
     >
   }
   @if (store.hasChatAccess()) {

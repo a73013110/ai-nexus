@@ -1,12 +1,20 @@
 using AiNexus.BuildingBlocks;
 using AiNexus.Modules.Inference;
+using AiNexus.Modules.Knowledge;
 using AiNexus.Modules.Operations;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Billing;
 
-public sealed class BillingService(NexusDbContext db)
+public sealed class BillingService(NexusDbContext db, ModelPresentation presentation, IOptions<InferenceOptions> inference, IOptions<KnowledgeOptions> knowledge)
 {
+    public IReadOnlyList<PriceTargetDto> Targets() => inference.Value.Models
+        .Select(x => Target(x.Provider, x.NativeId))
+        .Append(Target(knowledge.Value.EmbeddingProvider, knowledge.Value.EmbeddingModel))
+        .Concat(new[] { "searxng", "brave" }.Select(x => Target(x, "web-search")))
+        .DistinctBy(x => (x.Provider, x.ModelId)).ToArray();
+    private PriceTargetDto Target(string provider, string model) => new(provider, model, presentation.DisplayName(model, administrator: true, provider: provider)!);
     public async Task<ModelCharge> ReserveAsync(Guid callId, Guid owner, Guid? conversation, string provider,
         string model, string operation, DateTimeOffset created, CancellationToken ct)
     {
@@ -58,9 +66,10 @@ public sealed class BillingService(NexusDbContext db)
         var price = new ModelPrice { Provider = body.Provider, ModelId = body.ModelId, Currency = body.Currency, Kind = body.Kind,
             InputPerMillion = body.InputPerMillion, CachedInputPerMillion = body.CachedInputPerMillion, OutputPerMillion = body.OutputPerMillion,
             PerRequest = body.PerRequest, RequestCharge = body.RequestCharge, EffectiveAt = body.EffectiveAt.ToUniversalTime(), Note = body.Note.Trim(), CreatedBy = actor };
-        db.Add(price); db.AuditEvents.Add(new AuditEvent { OwnerId = actor, ResourceId = price.Id, Action = "billing.price.created", Result = body.Provider + ":" + body.ModelId });
+        db.Add(price); db.AuditEvents.Add(new AuditEvent { OwnerId = actor, ResourceId = price.Id, Action = "billing.price.created", Result = "created" });
         await db.SaveChangesAsync(ct); return Describe(price);
     }
-    private static PriceDto Describe(ModelPrice p) => new(p.Id, p.Provider, p.ModelId, p.Currency, p.Kind,
-        p.InputPerMillion, p.CachedInputPerMillion, p.OutputPerMillion, p.PerRequest, p.RequestCharge, p.EffectiveAt, p.Note);
+    private PriceDto Describe(ModelPrice p) => new(p.Id, p.Provider, p.ModelId, p.Currency, p.Kind,
+        p.InputPerMillion, p.CachedInputPerMillion, p.OutputPerMillion, p.PerRequest, p.RequestCharge, p.EffectiveAt, p.Note,
+        presentation.DisplayName(p.ModelId, administrator: true, provider: p.Provider));
 }

@@ -26,7 +26,12 @@ import { WorkspaceNavigation } from '../../shared/ui/workspace-navigation';
 import { downloadFile } from '../../shared/browser/download';
 import { TokenUsageChart } from '../../shared/ui/token-usage-chart';
 import { StorageUsage } from '../../shared/ui/storage-usage';
-import { formatDuration, formatBytes, formatModelName } from '../../shared/browser/format';
+import {
+  formatDuration,
+  formatBytes,
+  formatModelName,
+  formatModelDisplayName,
+} from '../../shared/browser/format';
 
 @Component({
   selector: 'nx-settings-page',
@@ -56,9 +61,7 @@ export class SettingsPage {
   readonly notificationPermission = signal(
     'Notification' in window ? Notification.permission : 'unsupported',
   );
-  modelLabel(id: string) {
-    return this.models()?.models.find((model) => model.id === id)?.displayName || id;
-  }
+  readonly modelLabel = formatModelDisplayName;
   readonly sections = [
     {
       id: 'appearance',

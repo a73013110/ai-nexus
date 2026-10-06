@@ -23,6 +23,8 @@ public sealed class SharingTests
         var response = await PostRun(owner, new(conversation.Id, "test-model", "閱讀附件", null, null, AttachmentIds: [file.Id])); response.EnsureSuccessStatusCode();
         await WaitForTerminal(owner, (await response.Content.ReadFromJsonAsync<RunDto>())!.Id);
         var textOnly = (await (await owner.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", conversation.Id, [user]))).Content.ReadFromJsonAsync<ShareDto>())!;
+        var shared = (await reader.GetFromJsonAsync<SharedContentDto>($"/api/v1/shares/{textOnly.Id}"))!;
+        Assert.Equal("測試模型", shared.Snapshot.Messages.Single(x => x.Role == "assistant").ModelDisplayName);
         Assert.Equal(HttpStatusCode.NotFound, (await reader.GetAsync($"/api/v1/shares/{textOnly.Id}/files/{file.Id}")).StatusCode);
         var withFiles = (await (await owner.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("conversation", conversation.Id, [user], IncludeAttachments: true))).Content.ReadFromJsonAsync<ShareDto>())!;
         Assert.Equal("測試附件", await reader.GetStringAsync($"/api/v1/shares/{withFiles.Id}/files/{file.Id}"));

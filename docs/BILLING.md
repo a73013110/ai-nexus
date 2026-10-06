@@ -6,13 +6,13 @@
 
 總覽與個人設定共用 `TokenUsageChart`，顯示每日輸入／輸出／合計，可篩模型、查看模型分布及完整回報比例。沿用 SVG TrendChart 的鍵盤、深色、窄螢幕、減少動態支援，無新增圖表依賴或 License。
 
-`tokens` 為 `{ from, until, timezoneOffsetMinutes, daily }`，daily 包含 `date, modelId, requests, requestsWithUsage, inputTokens, outputTokens`。從 Runs／ModelInvocations 聚合，含沒有價格快照的舊呼叫及 OCR／評測／review 等背景模型呼叫，不依費用是否可結算決定 Token 數。缺少回報不當成已知零值，合計只加已回報數字，完整回報比例另外呈現；無呼叫日期補零維持連續時間軸。總覽沿用所選時區／owner／區間，個人設定為最近 30 日 UTC，模型識別遵循平台顯示政策。
+`tokens` 為 `{ from, until, timezoneOffsetMinutes, daily }`，daily 包含 `date, modelId, modelDisplayName, requests, requestsWithUsage, inputTokens, outputTokens`。從 Runs／ModelInvocations 聚合，含沒有價格快照的舊呼叫及 OCR／評測／review 等背景模型呼叫，不依費用是否可結算決定 Token 數。缺少回報不當成已知零值，合計只加已回報數字，完整回報比例另外呈現；無呼叫日期補零維持連續時間軸。總覽沿用所選時區／owner／區間，個人設定為最近 30 日 UTC，模型識別遵循平台顯示政策。
 
 管理員在管理頁或總覽開啟「模型與工具價格」，新增價格版本：
 
 | 欄位 | 設定方式 |
 | --- | --- |
-| 供應商／模型 ID | 使用後端實際 ID，如 `ollama`／`qwen3:8b`。搜尋用 `searxng` 或 `brave`／`web-search`；embedding 用自己的模型 ID |
+| 供應商／模型或工具 | 選擇供應商，再以 DisplayName 選取已設定的模型、知識向量模型或網路搜尋；後端保留供應商與原生 ID 作為計費鍵 |
 | 幣別 | USD／TWD 等三碼幣別；同一期間可以有不同幣別的歷史費用 |
 | 費用類型 | `api` 是對外 API 估算；`internal` 是自行制定的本機成本；`free` 明確表示此模型免費 |
 | 輸入／快取輸入／輸出 | 每百萬 tokens 的價格。快取輸入不得高於一般輸入；完全相同價格可不區分快取 |
@@ -55,11 +55,12 @@ Google 的 prompt tokens 包含快取，輸出統計另有 thoughts tokens。本
 | --- | --- |
 | `GET /api/v1/billing/spend` | 已登入，只查自己 |
 | `GET /api/v1/conversations/{id}/spend` | chat 權限且為對話擁有者 |
+| `GET /api/v1/admin/billing/targets` | 平台管理員；已設定的模型與工具及其顯示名稱 |
 | `GET/POST /api/v1/admin/billing/prices` | 平台管理員；新增版本，沒有修改／刪除歷史接口 |
 | `GET /api/v1/admin/billing/spend` | 管理員，選用 ownerId、from、until、offsetMinutes |
 | `GET /api/v1/admin/billing/export` | 管理員，相同條件，完整使用者彙總 CSV |
 | `GET /api/v1/dashboard` | dashboard 功能；platform 範圍額外需要 admin |
 
-普通使用者依模型隱藏政策查看代號；管理報表保留實際模型 ID。平台總覽的最近對話標題仍只顯示管理員自己的工作；查看其他人的對話使用原有管理頁並留下稽核。新增價格、平台報表／總覽讀取和匯出都留稽核。CSV 對文字欄位處理公式開頭，避免開啟檔案時把帳號或名稱視為試算表公式。
+所有網頁模型標籤只顯示 DisplayName，管理報表與價格歷史也遵循此規則。一般使用者仍依模型隱藏政策顯示「AI 助理 N」；已移除模型顯示通用標籤，完整 ID 只作為路由、統計或計費參照。平台總覽的最近對話標題仍只顯示管理員自己的工作；查看其他人的對話使用原有管理頁並留下稽核。新增價格、平台報表／總覽讀取和匯出都留稽核。CSV 對文字欄位處理公式開頭，避免開啟檔案時把帳號或名稱視為試算表公式。
 
 目前估算支援一般／快取輸入、輸出與固定費用。批次 API、階梯用量、長 Context 分段定價、匯率換算及供應商帳單調節尚未實作；不要用單一線性費率冒充這些方案的精確帳單。

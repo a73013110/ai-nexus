@@ -11,7 +11,7 @@ namespace AiNexus.Modules.Administration;
 public sealed record AdminUserDetailDto(AdminUserDto User, PersonalUsageDto Usage, IReadOnlyList<UsageKindDto> Kinds, int Conversations);
 public sealed record AdminConversationDto(Guid Id, string Title, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, bool IsArchived, bool IsDeleted, int Messages);
 public sealed record AdminConversationPageDto(IReadOnlyList<AdminConversationDto> Items, int Total, int Offset);
-public sealed record AdminMessageDto(Guid Id, Guid? ParentId, string Role, string Content, string Status, DateTimeOffset CreatedAt, string? ModelId, IReadOnlyList<AttachmentDto> Attachments, RunTimingDto? Timing = null);
+public sealed record AdminMessageDto(Guid Id, Guid? ParentId, string Role, string Content, string Status, DateTimeOffset CreatedAt, string? ModelId, IReadOnlyList<AttachmentDto> Attachments, RunTimingDto? Timing = null, string? ModelDisplayName = null);
 public sealed record AdminConversationDetailDto(AdminConversationDto Conversation, string OwnerAccount, string OwnerName, string SystemInstruction, IReadOnlyList<AdminMessageDto> Messages, int Offset, int Total);
 
 /// <summary>Explicit, read-only administrative access. Never weakens conversation owner checks.</summary>
@@ -52,7 +52,7 @@ public sealed class AdministrativeReader(NexusDbContext db, CurrentUser current,
         var attachments = await db.Set<MessageAttachment>().AsNoTracking().Where(x => ids.Contains(x.MessageId))
             .Select(x => new { x.MessageId, x.Attachment.Id, x.Attachment.FileName, x.Attachment.ContentType, x.Attachment.Size }).ToListAsync(ct);
         var messages = rows.Select(x => new AdminMessageDto(x.Id, x.ParentId, x.Role, x.Content, x.Status, x.CreatedAt, x.ModelId is { } model ? models.PublicId(model) : null,
-            attachments.Where(a => a.MessageId == x.Id).Select(a => new AttachmentDto(a.Id, a.FileName, a.ContentType, a.Size, a.ContentType.StartsWith("image/"), "reference")).ToArray(), x.RunId is Guid run ? timings.GetValueOrDefault(run) : null)).ToArray();
+            attachments.Where(a => a.MessageId == x.Id).Select(a => new AttachmentDto(a.Id, a.FileName, a.ContentType, a.Size, a.ContentType.StartsWith("image/"), "reference")).ToArray(), x.RunId is Guid run ? timings.GetValueOrDefault(run) : null, models.DisplayName(x.ModelId))).ToArray();
         await AuditAsync("admin.conversation_read", id, new { userId = owner.Id, conversationId = id, offset, count = messages.Length }, ct);
         return new(new(id, value.Title, value.CreatedAt, value.UpdatedAt, value.IsArchived, value.IsDeleted, total), owner.Account, owner.DisplayName, value.SystemInstruction, messages, offset, total);
     }

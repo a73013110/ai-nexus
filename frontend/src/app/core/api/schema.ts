@@ -5175,6 +5175,22 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  '/api/v1/admin/billing/targets': {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations['ListPriceTargets'];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   '/api/v1/admin/billing/prices': {
     parameters: {
       query?: never;
@@ -5583,6 +5599,7 @@ export interface components {
       modelId: null | string;
       attachments: components['schemas']['AttachmentDto'][];
       timing?: null | components['schemas']['RunTimingDto'];
+      modelDisplayName?: null | string;
     };
     AdminRoleDto: {
       id: string;
@@ -6114,6 +6131,7 @@ export interface components {
       modelId: string;
       instruction: string;
       configuration?: null | components['schemas']['ModelTaskSnapshot'];
+      modelDisplayName?: null | string;
     };
     EvaluationVariantRequest: {
       label: string;
@@ -6273,6 +6291,7 @@ export interface components {
       webSources?: null | components['schemas']['WebSourceDto'][];
       webSearchCharge?: null | components['schemas']['ChargeDto'];
       timing?: null | components['schemas']['RunTimingDto'];
+      modelDisplayName?: null | string;
     };
     ModelDto: {
       id: string;
@@ -6333,6 +6352,7 @@ export interface components {
       /** Format: int64 */
       remainingTokens: null | number;
       source: string;
+      modelDisplayName?: null | string;
     };
     MoneyTotalDto: {
       currency: string;
@@ -6425,6 +6445,7 @@ export interface components {
       /** Format: date-time */
       effectiveAt: string;
       note: string;
+      modelDisplayName?: null | string;
     };
     PriceRequest: {
       provider: string;
@@ -6443,6 +6464,11 @@ export interface components {
       /** Format: date-time */
       effectiveAt: string;
       note: string;
+    };
+    PriceTargetDto: {
+      provider: string;
+      modelId: string;
+      displayName: string;
     };
     ProblemDetails: {
       type?: null | string;
@@ -6594,6 +6620,7 @@ export interface components {
       job: components['schemas']['JobDto'];
       /** @default review */
       purpose: string;
+      modelDisplayName?: null | string;
     };
     RepositoryReviewReportDto: {
       output: string;
@@ -6700,6 +6727,7 @@ export interface components {
       /** Format: int64 */
       outputTokens: null | number;
       timing?: null | components['schemas']['RunTimingDto'];
+      modelDisplayName?: null | string;
     };
     RunEventDto: {
       /** Format: int32 */
@@ -6759,6 +6787,7 @@ export interface components {
       sources?: null | components['schemas']['CitationDto'][];
       webSources?: null | components['schemas']['WebSourceDto'][];
       timing?: null | components['schemas']['RunTimingDto'];
+      modelDisplayName?: null | string;
     };
     ShareDto: {
       /** Format: uuid */
@@ -6919,6 +6948,7 @@ export interface components {
       inputTokens: number;
       /** Format: int64 */
       outputTokens: number;
+      modelDisplayName?: null | string;
     };
     TokenUsageDto: {
       /** Format: date-time */
@@ -6973,6 +7003,7 @@ export interface components {
       outputTokens: number;
       /** Format: int64 */
       durationMilliseconds: number;
+      modelDisplayName?: null | string;
     };
     UsageTotalsDto: {
       /** Format: int32 */
@@ -15656,6 +15687,89 @@ export interface operations {
         };
         content: {
           'application/json': components['schemas']['AdminUsageDto'];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Too Many Requests */
+      429: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/problem+json': components['schemas']['ProblemDetails'];
+        };
+      };
+    };
+  };
+  ListPriceTargets: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          'application/json': components['schemas']['PriceTargetDto'][];
         };
       };
       /** @description Bad Request */

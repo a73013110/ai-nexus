@@ -121,6 +121,8 @@ Google 與 Ollama 可同時 Enabled，不再有全域 provider 開關。每個�
 
 `AllowModelSelection=false` 固定系統指定模型，`ShowModelNames=false` 隱藏名稱與 provider。逾時範圍 5–600 秒、排隊容量 1–64、輸入 100–32,000 字元、輸出 4,096–262,144 字元。各 provider 的 `MaxConcurrency` 為 1–8，聊天排程按 provider 分開，OCR／文字工具／評測與聊天共用 provider 容量；Google 與 Ollama 可同時執行。QueueCapacity 是整體待排隊容量，並行容量仍是每個 app 程序的設定，不是跨 IIS 實例的全域 GPU 限制。提示詞與參考文件也佔 Context；Context 使用量為估算，完成後另記錄實際 token 與耗時。
 
+網頁中的模型名稱一律使用設定的 `DisplayName`，不顯示路由或原生 ID，也不自動附加供應商名稱。請為不同用途或供應商設定易辨識的 DisplayName。聊天、分享、評測、review、Token 用量與費用統計共用後端 `ModelPresentation`；價格與計費則依供應商解析原生 ID。未提供名稱或已移除的模型使用通用標籤，前端不以完整 ID 補值。`ShowModelNames=false` 的一般使用者仍顯示匿名助理名稱。
+
 ## 向量設定獨立於對話
 
 | 區塊                  | 參數                                                                                                                                                        |

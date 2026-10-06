@@ -352,7 +352,7 @@
                   @for (model of limits.models; track model.modelId) {
                     <div class="setting-row">
                       <div>
-                        <strong>{{ modelLabel(model.modelId) }}</strong>
+                        <strong>{{ modelLabel(model) }}</strong>
                         <p>
                           已回報 {{ format(model.usedTokens) }} · 預留
                           {{ format(model.reservedTokens) }}
@@ -376,7 +376,7 @@
                         min="0"
                         [max]="model.dailyTokenLimit || 1"
                         [value]="model.usedTokens + model.reservedTokens"
-                        [attr.aria-label]="'今日 token 用量：' + modelLabel(model.modelId)"
+                        [attr.aria-label]="'今日 token 用量：' + modelLabel(model)"
                       ></meter>
                     }
                   }

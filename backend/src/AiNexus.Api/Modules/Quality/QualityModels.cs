@@ -58,7 +58,7 @@ public sealed record EvaluationCase(string Question, string Reference = "", IRea
 public sealed record EvaluationSetRequest(string Name, string Description, IReadOnlyList<EvaluationCase> Cases, int ExpectedVersion = 1);
 public sealed record EvaluationSetDto(ResourceDto Resource, string Description, IReadOnlyList<EvaluationCase> Cases, int Version);
 public sealed record EvaluationVariantRequest(string Label, string? ModelId = null, string Instruction = "");
-public sealed record EvaluationVariant(string Label, string ModelId, string Instruction, ModelTaskSnapshot? Configuration = null);
+public sealed record EvaluationVariant(string Label, string ModelId, string Instruction, ModelTaskSnapshot? Configuration = null, string? ModelDisplayName = null);
 public sealed record EvaluationRunRequest(IReadOnlyList<EvaluationVariantRequest> Variants);
 public sealed record EvaluationRunDto(Guid Id, Guid SetId, string Title, int SetVersion, bool CanControl, DateTimeOffset CreatedAt, JobDto Job);
 public sealed record EvaluationResultDto(int CaseIndex, int VariantIndex, string Output, bool Truncated, int RequiredMatches, int RequiredTotal, int ForbiddenMatches, long ElapsedMs, long? InputTokens, long? OutputTokens, int? ReviewScore, string ReviewNote);

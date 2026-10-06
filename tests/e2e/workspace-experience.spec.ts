@@ -88,6 +88,7 @@ test("sent shares preserve their list and reuse the authorized PDF reader, citat
               createdAt: share.createdAt,
               attachments: [],
               modelId: "fixture:8b",
+              modelDisplayName: "本機測試模型",
               sources: [
                 {
                   number: 1,

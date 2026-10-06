@@ -50,6 +50,8 @@ public sealed class MultiProviderRoutingTests
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
         var charge = await db.Set<ModelCharge>().SingleAsync(x => x.Id == queued.Id);
         Assert.Equal("ollama", charge.Provider); Assert.Equal("test-model", charge.ModelId);
+        var spend = (await bob.GetFromJsonAsync<ConversationSpendDto>($"/api/v1/conversations/{b.Id}/spend"))!;
+        Assert.Equal("Ollama test", Assert.Single(spend.Models).Label);
         (await alice.PostAsync($"/api/v1/runs/{remote.Id}/cancel", null)).EnsureSuccessStatusCode();
     }
 

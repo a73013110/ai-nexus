@@ -1,6 +1,13 @@
 import type { components } from './schema';
 
 type Dto<Name extends keyof components['schemas']> = Required<components['schemas'][Name]>;
+// Older snapshots may omit the label; rendering always uses a safe display-name fallback.
+type ModelReference<Name extends keyof components['schemas']> = Omit<
+  Dto<Name>,
+  'modelDisplayName'
+> & {
+  modelDisplayName?: string | null;
+};
 export type Me = Dto<'MeDto'>;
 export type NotificationTarget = Dto<'NotificationTargetDto'>;
 export type NotificationItem = Dto<'NotificationDto'> & { target: NotificationTarget };
@@ -18,7 +25,7 @@ export type SharedFilePreview = Dto<'SharedFilePreviewDto'> & {
 export type SharedContent = Dto<'SharedContentDto'> & {
   share: ReadonlyShare;
   snapshot: Dto<'ShareSnapshot'> & {
-    messages: (Dto<'SharedMessageDto'> & { attachments: Attachment[] })[];
+    messages: (ModelReference<'SharedMessageDto'> & { attachments: Attachment[] })[];
   };
 };
 export type Project = Dto<'ProjectDto'> & { resource: Dto<'ResourceDto'> };
@@ -52,7 +59,7 @@ export type AdminConversationPage = Dto<'AdminConversationPageDto'> & {
 };
 export type AdminConversationDetail = Dto<'AdminConversationDetailDto'> & {
   conversation: AdminConversation;
-  messages: (Dto<'AdminMessageDto'> & { attachments: Attachment[] })[];
+  messages: (ModelReference<'AdminMessageDto'> & { attachments: Attachment[] })[];
 };
 export type AdminUsers = Dto<'AdminUsersDto'>;
 export type AdminUsage = Dto<'AdminUsageDto'>;
@@ -64,7 +71,7 @@ export type Model = Omit<Dto<'ModelDto'>, 'provider'> &
 export type Models = Dto<'ModelsDto'>;
 export type Conversation = Dto<'ConversationDto'>;
 export type Message = Omit<
-  Dto<'MessageDto'>,
+  ModelReference<'MessageDto'>,
   'sources' | 'feedbackRating' | 'charge' | 'webSources' | 'webSearchCharge' | 'timing'
 > &
   Pick<
@@ -80,7 +87,7 @@ export type SourceDetail = Dto<'SourceDetailDto'> & {
 };
 export type SourceChat = Dto<'SourceChatDto'> & { conversation: Conversation };
 export type EvaluationCase = Dto<'EvaluationCase'>;
-export type EvaluationVariant = Dto<'EvaluationVariant'>;
+export type EvaluationVariant = ModelReference<'EvaluationVariant'>;
 export type EvaluationSet = Dto<'EvaluationSetDto'> & {
   resource: Resource;
   cases: EvaluationCase[];
@@ -94,7 +101,8 @@ export type EvaluationDetail = Dto<'EvaluationDetailDto'> & {
   results: EvaluationResult[];
 };
 export type ConversationDetail = Dto<'ConversationDetailDto'>;
-export type Run = Omit<Dto<'RunDto'>, 'timing'> & Pick<components['schemas']['RunDto'], 'timing'>;
+export type Run = Omit<ModelReference<'RunDto'>, 'timing'> &
+  Pick<components['schemas']['RunDto'], 'timing'>;
 export type RunEvent = Dto<'RunEventDto'>;
 export type CreateRun = Omit<Dto<'CreateRunRequest'>, 'webSearch'> &
   Pick<components['schemas']['CreateRunRequest'], 'webSearch'>;
@@ -113,7 +121,8 @@ export type ConversationSpend = Dto<'ConversationSpendDto'> & {
   totals: MoneyTotal[];
   models: SpendBucket[];
 };
-export type ModelPrice = Dto<'PriceDto'>;
+export type ModelPrice = ModelReference<'PriceDto'>;
+export type PriceTarget = Dto<'PriceTargetDto'>;
 export type PriceRequest = Dto<'PriceRequest'>;
 export type Dashboard = Omit<Dto<'DashboardDto'>, 'tokens'> & { tokens?: TokenUsage | null } & {
   counts: Dto<'DashboardCountsDto'>;
@@ -167,10 +176,10 @@ export const isActive = (state: string) => state === 'queued' || state === 'runn
 
 export type TextDocument = Dto<'TextDocumentDto'>;
 export type RepositoryCommit = Dto<'RepositoryCommitDto'>;
-export type RepositoryReview = Dto<'RepositoryReviewDto'> & { job: Job };
+export type RepositoryReview = ModelReference<'RepositoryReviewDto'> & { job: Job };
 export type RepositoryReviewDetail = Dto<'RepositoryReviewDetailDto'> & {
   review: RepositoryReview;
   sections: Dto<'RepositoryReviewSectionDto'>[];
 };
 
-export type TokenUsage = Dto<'TokenUsageDto'> & { daily: Dto<'TokenDayDto'>[] };
+export type TokenUsage = Dto<'TokenUsageDto'> & { daily: ModelReference<'TokenDayDto'>[] };

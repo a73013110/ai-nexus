@@ -14,27 +14,37 @@
   background: var(--sidebar);
   border-right: 1px solid var(--line);
 }
+.login-intro-layout {
+  position: relative;
+  width: min(100%, 560px);
+  height: 100%;
+  margin-inline-start: auto;
+}
 .login-brand {
   position: absolute;
   top: var(--login-gutter);
   left: var(--login-gutter);
   display: flex;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--p-space-2);
   font-size: var(--p-font-2xl);
   font-weight: 400;
-}
-.login-mark-anchor {
-  width: 36px;
-  height: 44px;
-  flex: none;
 }
 .login-brand small {
   display: block;
   font-size: var(--text-caption);
   letter-spacing: 0.12em;
-  margin-top: 4px;
   color: var(--secondary);
+}
+.login-brand .brand-prefix,
+.login-brand .brand-suffix {
+  opacity: 0;
+  transition: opacity 640ms var(--ease);
+}
+.intro-ready .login-brand .brand-prefix,
+.intro-ready .login-brand .brand-suffix {
+  opacity: 1;
 }
 .login-intro-copy {
   position: absolute;
@@ -61,7 +71,8 @@
   color: var(--secondary);
   font-size: var(--text-ui);
   line-height: 1.9;
-  max-width: 340px;
+  max-width: 26em;
+  text-wrap: pretty;
   margin: 0;
 }
 .login-footnote {
@@ -128,9 +139,10 @@ nx-fourier-mark {
 }
 .login-panel {
   display: grid;
-  place-items: center;
+  align-items: center;
+  justify-items: start;
   min-height: 0;
-  padding: var(--login-gutter);
+  padding: var(--login-gutter) clamp(28px, 5vw, 80px);
   overflow: auto;
 }
 .login-content {
@@ -208,7 +220,7 @@ nx-fourier-mark {
   .login-brand {
     top: 20px;
     font-size: var(--p-font-xl);
-    gap: 12px;
+    gap: var(--p-space-1);
   }
   .login-brand small {
     font-size: var(--text-caption);
@@ -217,7 +229,7 @@ nx-fourier-mark {
   .login-intro-copy {
     top: auto;
     bottom: 12px;
-    left: 72px;
+    left: var(--login-gutter);
     transform: none;
   }
   .login-intro-copy .login-eyebrow {
@@ -234,6 +246,7 @@ nx-fourier-mark {
     bottom: 18px;
   }
   .login-panel {
+    justify-items: center;
     padding: 20px 24px;
   }
   .login-content .login-eyebrow {

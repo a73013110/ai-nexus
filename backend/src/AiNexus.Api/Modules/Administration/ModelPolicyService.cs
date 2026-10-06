@@ -8,7 +8,7 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Modules.Administration;
 
 public sealed record ModelPolicyRequest(IReadOnlyList<string>? AllowedModelIds = null, IReadOnlyDictionary<string, long>? DailyTokenLimits = null);
-public sealed record ModelTokenBudgetDto(string ModelId, long? DailyTokenLimit, long UsedTokens, long ReservedTokens, long? RemainingTokens, string Source);
+public sealed record ModelTokenBudgetDto(string ModelId, long? DailyTokenLimit, long UsedTokens, long ReservedTokens, long? RemainingTokens, string Source, string? ModelDisplayName = null);
 public sealed record EffectiveModelPolicyDto(IReadOnlyList<string>? AllowedModelIds, long? StoredAttachmentLimitBytes, IReadOnlyList<ModelTokenBudgetDto> Models, DateTimeOffset ResetsAt);
 public sealed record AdminUserModelPolicyDto(ModelPolicyRequest Personal, EffectiveModelPolicyDto Effective);
 
@@ -61,7 +61,7 @@ public sealed class ModelPolicyService(NexusDbContext db, AccessService access, 
             var value = usage.GetValueOrDefault(model.Id);
             return new ModelTokenBudgetDto(Id(model.Id), limit, value?.Used ?? 0, value?.Reserved ?? 0,
                 limit is long maximum ? Math.Max(0, maximum - (value?.Used ?? 0) - (value?.Reserved ?? 0)) : null,
-                overrides.ContainsKey(model.Id) ? "personal" : limit is not null ? "group" : "unlimited");
+                overrides.ContainsKey(model.Id) ? "personal" : limit is not null ? "group" : "unlimited", presentation.DisplayName(model.Id, administrator: !publicIds));
         }).ToArray();
         return new(effective.AllowedModelIds?.Select(Id).ToArray(), policies.Select(x => x.StoredAttachmentLimitBytes).Min(), budgets, end);
     }

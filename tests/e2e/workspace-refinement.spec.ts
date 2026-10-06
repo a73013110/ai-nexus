@@ -8,6 +8,55 @@ import {
 } from "./fixtures";
 import { KnowledgeFixture } from "./knowledge-fixture";
 
+test("the shared wordmark has one N and the compact new-chat icon stays centered", async ({
+  page,
+}) => {
+  const core = new ApiFixture();
+  await core.attach(page);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/chat");
+  const sidebar = page.locator(".workspace-sidebar");
+  await expect(sidebar.locator(".brand-wordmark")).toHaveText("AIexus");
+  await expect(sidebar.locator(".brand-symbol svg")).toHaveCount(1);
+  await page
+    .getByRole("textbox", { name: "傳送訊息", exact: true })
+    .fill("名稱顯示測試");
+  await page.getByRole("button", { name: "送出訊息", exact: true }).click();
+  await expect(page.locator(".message-model")).toHaveText("本機測試模型");
+  await expect(page.locator("body")).not.toContainText("fixture:8b");
+  await page.screenshot({
+    path: "artifacts/screenshots/sidebar-wordmark-expanded.png",
+  });
+  for (const width of [1280, 375]) {
+    await page.setViewportSize({ width, height: 812 });
+    const collapse = page.getByRole("button", {
+      name: "收合側欄",
+      exact: true,
+    });
+    if (await collapse.isVisible()) await collapse.click();
+    const button = sidebar.getByRole("link", { name: "新對話", exact: true });
+    const [rail, bounds, icon] = await Promise.all([
+      sidebar.boundingBox(),
+      button.boundingBox(),
+      button.locator("nx-icon").boundingBox(),
+    ]);
+    expect(bounds!.width).toBeGreaterThanOrEqual(44);
+    expect(bounds!.height).toBeGreaterThanOrEqual(44);
+    expect(
+      Math.abs(bounds!.x + bounds!.width / 2 - (icon!.x + icon!.width / 2)),
+    ).toBeLessThan(1);
+    expect(
+      Math.abs(bounds!.y + bounds!.height / 2 - (icon!.y + icon!.height / 2)),
+    ).toBeLessThan(1);
+    expect(
+      Math.abs(bounds!.x + bounds!.width / 2 - (rail!.x + rail!.width / 2)),
+    ).toBeLessThan(1);
+    await page.screenshot({
+      path: `artifacts/screenshots/sidebar-wordmark-${width}.png`,
+    });
+  }
+});
+
 test("one header notification icon exposes the full count and workspace expansion uses the chat sidebar", async ({
   page,
 }) => {

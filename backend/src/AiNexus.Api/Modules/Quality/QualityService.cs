@@ -100,7 +100,7 @@ public sealed class QualityService(NexusDbContext db, ResourceAccess access, Res
     {
         var run = await db.Set<EvaluationRun>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct) ?? throw Missing();
         var resource = await access.RequireAsync(actor, run.SetId, "evaluation", ct); var job = await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(x => x.Id == run.JobId, ct);
-        var variants = Parse<EvaluationVariant>(run.VariantsJson).Select(x => x with { ModelId = presentation.PublicId(x.ModelId) }).ToArray();
+        var variants = Parse<EvaluationVariant>(run.VariantsJson).Select(x => x with { ModelId = presentation.PublicId(x.ModelId), ModelDisplayName = presentation.DisplayName(x.ModelId) }).ToArray();
         var results = await db.Set<EvaluationResult>().AsNoTracking().Where(x => x.RunId == id).OrderBy(x => x.CaseIndex).ThenBy(x => x.VariantIndex).ToListAsync(ct);
         return new(Describe(run, job, actor), Parse<EvaluationCase>(run.CasesJson), variants, results.Select(x => new EvaluationResultDto(x.CaseIndex, x.VariantIndex, x.Output, x.Truncated, x.RequiredMatches, x.RequiredTotal, x.ForbiddenMatches, x.ElapsedMs, x.InputTokens, x.OutputTokens, x.ReviewScore, x.ReviewNote)).ToArray(), await access.CanEditAsync(actor, resource, ct));
     }

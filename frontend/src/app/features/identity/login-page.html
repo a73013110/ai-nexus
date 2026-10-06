@@ -1,18 +1,20 @@
 <main class="login-workspace">
   <section class="login-intro" [class.intro-ready]="introReady()" aria-label="AI Nexus">
-    <div class="login-brand" [attr.aria-hidden]="!introReady()">
-      <span #brandAnchor class="login-mark-anchor" aria-hidden="true"></span>
-      <span class="login-reveal">AI <strong>Nexus</strong><small>INTERNAL WORKSPACE</small></span>
+    <div class="login-intro-layout">
+      <div class="login-brand" [attr.aria-hidden]="!introReady()">
+        <nx-brand-wordmark #brand [markVisible]="introReady()" />
+        <small class="login-reveal">INTERNAL WORKSPACE</small>
+      </div>
+      <div class="login-intro-copy" [attr.aria-hidden]="!introReady()">
+        <span class="login-eyebrow login-reveal">你的工作，從這裡接續</span>
+        <h1 class="login-reveal">讓想法有個<br />專注的空間。</h1>
+        <p class="login-reveal">整理資訊、打磨文字，和 AI 一起推進手上的工作。</p>
+      </div>
+      <span class="login-footnote login-reveal" [attr.aria-hidden]="!introReady()"
+        >公司帳號 · 個人工作區</span
+      >
     </div>
-    <nx-fourier-mark [anchor]="brandAnchor" (finishedChange)="introReady.set($event)" />
-    <div class="login-intro-copy" [attr.aria-hidden]="!introReady()">
-      <span class="login-eyebrow login-reveal">你的工作，從這裡接續</span>
-      <h1 class="login-reveal">讓想法有個<br />專注的空間。</h1>
-      <p class="login-reveal">整理資訊、打磨文字，和 AI 一起推進手上的工作。</p>
-    </div>
-    <span class="login-footnote login-reveal" [attr.aria-hidden]="!introReady()"
-      >公司帳號 · 個人工作區</span
-    >
+    <nx-fourier-mark [anchor]="brand.markElement()" (finishedChange)="introReady.set($event)" />
   </section>
   <section class="login-panel" aria-labelledby="login-heading">
     <div class="login-content">

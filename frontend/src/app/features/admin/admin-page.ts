@@ -32,6 +32,7 @@ import {
   formatBytes,
   formatDuration,
   formatModelName,
+  formatModelDisplayName,
 } from '../../shared/browser/format';
 import { PriceBook } from '../billing/price-book';
 import { FeatureSummary } from '../../shared/ui/feature-summary';
@@ -122,9 +123,7 @@ export class AdminPage {
     { id: 'usage', name: '平台用量' },
   ];
   readonly featureIcons = FEATURE_ICONS;
-  usageModelName(id: string) {
-    return this.catalog()?.models.find((model) => model.id === id)?.displayName || id;
-  }
+  readonly usageModelName = formatModelDisplayName;
   usageKindName(kind: string) {
     return (
       (

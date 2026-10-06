@@ -23,7 +23,7 @@ import type {
   ModelPolicy,
 } from '../../core/api/types';
 import { ViewScope } from '../../shared/browser/view-scope';
-import { formatModelName } from '../../shared/browser/format';
+import { formatModelName, formatModelDisplayName } from '../../shared/browser/format';
 import { downloadFile } from '../../shared/browser/download';
 import { FeaturePage } from '../../shared/ui/feature-page';
 import { Select } from '../../shared/ui/select';
@@ -62,6 +62,7 @@ const blankCase = (): EvaluationCase => ({
   templateUrl: './quality-page.html',
 })
 export class QualityPage {
+  readonly modelName = formatModelDisplayName;
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(QualityApi);
   private readonly nexus = inject(NexusApi);

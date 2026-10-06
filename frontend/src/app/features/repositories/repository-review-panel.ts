@@ -20,7 +20,7 @@ import type {
 import { NexusApi } from '../../core/api/nexus-api';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
-import { formatDate, formatModelId } from '../../shared/browser/format';
+import { formatDate, formatModelDisplayName } from '../../shared/browser/format';
 import { JobProgress } from '../../shared/ui/job-progress';
 import { MarkdownView } from '../../shared/ui/markdown-view';
 import { Select } from '../../shared/ui/select';
@@ -79,7 +79,7 @@ export class RepositoryReviewPanel {
   readonly busy = signal(false);
   readonly error = signal('');
   readonly date = formatDate;
-  readonly modelName = formatModelId;
+  readonly modelName = formatModelDisplayName;
   readonly choices = computed(
     () => this.models()?.models.map((x) => ({ value: x.id, label: x.displayName })) ?? [],
   );

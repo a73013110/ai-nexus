@@ -78,7 +78,10 @@ test("fixed evaluation cases compare instructions, show diagnostic results and r
           },
         },
         cases: set.cases,
-        variants,
+        variants: variants.map((variant: object) => ({
+          ...variant,
+          modelDisplayName: "AI 助理 1",
+        })),
         canReview: true,
         results: variants.map((_: unknown, i: number) => ({
           caseIndex: 0,

@@ -90,8 +90,7 @@ public sealed class SpendReports(NexusDbContext db, ModelPresentation presentati
         }
         return new(count + legacy, pending, legacy, totals, MergePresentedModels(models));
     }
-    private string Label(string provider, string model, bool administrator) => administrator ? provider + " / " + model
-        : provider is "searxng" or "brave" ? "網路搜尋" : presentation.PublicId(model);
+    private string Label(string provider, string model, bool administrator) => presentation.DisplayName(model, administrator, provider)!;
     private static SpendBucketDto Bucket(string label, IEnumerable<ModelCharge> calls) => new(label, calls.First().Currency, calls.First().Kind,
         calls.Sum(x => x.Amount ?? 0), calls.Count(), calls.Count(x => x.Amount == null && x.State != "pending"), calls.Sum(x => x.InputTokens ?? 0), calls.Sum(x => x.OutputTokens ?? 0));
     private IReadOnlyList<SpendBucketDto> ModelBuckets(IEnumerable<ModelCharge> calls, bool administrator) => calls

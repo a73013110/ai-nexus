@@ -65,6 +65,11 @@ public sealed class BillingTests
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var first = new PriceRequest("google", "test-model", "USD", "api", 1, 1, 2, .1m, "completed", DateTimeOffset.UtcNow, "fixture");
         (await alice.PostAsJsonAsync("/api/v1/admin/billing/prices", first)).EnsureSuccessStatusCode();
+        Assert.Equal("測試模型", Assert.Single((await alice.GetFromJsonAsync<PriceDto[]>("/api/v1/admin/billing/prices"))!).ModelDisplayName);
+        var targets = (await alice.GetFromJsonAsync<PriceTargetDto[]>("/api/v1/admin/billing/targets"))!;
+        Assert.Contains(targets, x => x.ModelId == "test-model" && x.DisplayName == "測試模型");
+        Assert.Contains(targets, x => x.ModelId == "web-search" && x.DisplayName == "網路搜尋");
+        Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/v1/admin/billing/targets")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/v1/admin/billing/prices")).StatusCode);
         var conversation = await ChatApiTests.CreateConversation(bob, "費用測試");
         var request = new CreateRunRequest(conversation.Id, "test-model", "第一則提問", null, null); var key = Guid.NewGuid().ToString();
@@ -76,6 +81,7 @@ public sealed class BillingTests
         var next = await Submit(bob, request with { Prompt = "第二則提問", ParentMessageId = run.AssistantMessageId }, Guid.NewGuid().ToString()); await Wait(bob, next.Id);
         var spend = (await bob.GetFromJsonAsync<ConversationSpendDto>($"/api/v1/conversations/{conversation.Id}/spend"))!;
         Assert.Equal(2, spend.Requests); Assert.Equal(9.100270m, Assert.Single(spend.Totals).Amount);
+        Assert.Equal("測試模型", Assert.Single(spend.Models).Label);
         Assert.Equal(HttpStatusCode.NotFound, (await alice.GetAsync($"/api/v1/conversations/{conversation.Id}/spend")).StatusCode);
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
         Assert.Equal(2, await db.Set<ModelCharge>().CountAsync(x => x.ConversationId == conversation.Id));
@@ -99,6 +105,8 @@ public sealed class BillingTests
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/v1/admin/billing/spend?" + parameters)).StatusCode);
         var report = (await alice.GetFromJsonAsync<SpendReportDto>("/api/v1/admin/billing/spend?" + parameters))!;
         Assert.Equal(2, report.Totals.Count); Assert.Equal(2, report.Users.Count); Assert.Equal(2, report.Requests);
+        Assert.All(report.Models, x => Assert.Equal("測試模型", x.Label));
+        Assert.Equal("測試模型", Assert.Single(personal.Models).Label);
         Assert.Equal(HttpStatusCode.BadRequest, (await alice.GetAsync("/api/v1/billing/spend?from=2020-01-01&until=2026-10-01")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/v1/dashboard?scope=platform")).StatusCode);
         var dashboard = (await bob.GetFromJsonAsync<DashboardDto>("/api/v1/dashboard?" + parameters))!; Assert.Equal(1, dashboard.Spend.Requests);

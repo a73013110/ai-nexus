@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import type { TokenUsage } from '../../core/api/types';
-import { formatModelId } from '../browser/format';
+import { formatModelDisplayName } from '../browser/format';
 import { Select } from './select';
 import { TrendChart } from './trend-chart';
 
@@ -62,7 +62,7 @@ import { TrendChart } from './trend-chart';
                         (click)="model.set(row.id)"
                         [attr.aria-pressed]="selectedModel() === row.id"
                       >
-                        {{ modelName(row.id) }}
+                        {{ modelName(row) }}
                       </button>
                     </th>
                     <td>{{ row.input.toLocaleString() }}</td>
@@ -73,7 +73,7 @@ import { TrendChart } from './trend-chart';
                         min="0"
                         [max]="allTokens() || 1"
                         [value]="row.input + row.output"
-                        [attr.aria-label]="modelName(row.id) + ' Token 占比'"
+                        [attr.aria-label]="modelName(row) + ' Token 占比'"
                       ></meter>
                     </td>
                     <td>{{ row.known }} / {{ row.requests }}</td>
@@ -168,7 +168,7 @@ export class TokenUsageChart {
   readonly usage = input<TokenUsage | null | undefined>(null);
   readonly model = signal('all');
   readonly metric = signal('total');
-  readonly modelName = formatModelId;
+  readonly modelName = formatModelDisplayName;
   readonly metrics = [
     { value: 'total', label: '合計 Token' },
     { value: 'input', label: '輸入 Token' },
@@ -180,11 +180,19 @@ export class TokenUsageChart {
   readonly models = computed(() => {
     const map = new Map<
       string,
-      { id: string; input: number; output: number; requests: number; known: number }
+      {
+        id: string;
+        modelDisplayName?: string | null;
+        input: number;
+        output: number;
+        requests: number;
+        known: number;
+      }
     >();
     for (const day of this.usage()?.daily ?? []) {
       const row = map.get(day.modelId) || {
         id: day.modelId,
+        modelDisplayName: day.modelDisplayName,
         input: 0,
         output: 0,
         requests: 0,
@@ -203,7 +211,7 @@ export class TokenUsageChart {
   );
   readonly choices = computed(() => [
     { value: 'all', label: '所有模型' },
-    ...this.models().map((row) => ({ value: row.id, label: this.modelName(row.id) })),
+    ...this.models().map((row) => ({ value: row.id, label: this.modelName(row) })),
   ]);
   readonly selectedModel = computed(() =>
     this.models().some((row) => row.id === this.model()) ? this.model() : 'all',

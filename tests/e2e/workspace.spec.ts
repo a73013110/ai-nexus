@@ -356,12 +356,12 @@ test("draft text and attachment ids restore after refresh and stay per conversat
       ),
     )
     .toBe(true);
-  await page.getByRole("link", { name: /新對話.*開始/ }).click();
+  await page.getByRole("link", { name: "新對話", exact: true }).click();
   await expect(input).toHaveValue("");
   await input.fill("另一段新對話的草稿");
   await page.locator(".history-row a").first().click();
   await expect(input).toHaveValue("這段對話的後續草稿");
-  await page.getByRole("link", { name: /新對話.*開始/ }).click();
+  await page.getByRole("link", { name: "新對話", exact: true }).click();
   await expect(input).toHaveValue("另一段新對話的草稿");
 });
 

@@ -14216,6 +14216,97 @@
         }
       }
     },
+    "/api/v1/admin/billing/targets": {
+      "get": {
+        "tags": ["Billing"],
+        "operationId": "ListPriceTargets",
+        "responses": {
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PriceTargetDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/billing/prices": {
       "get": {
         "tags": ["Billing"],
@@ -16491,6 +16582,9 @@
                 "$ref": "#/components/schemas/RunTimingDto"
               }
             ]
+          },
+          "modelDisplayName": {
+            "type": ["null", "string"]
           }
         }
       },
@@ -18089,6 +18183,9 @@
                 "$ref": "#/components/schemas/ModelTaskSnapshot"
               }
             ]
+          },
+          "modelDisplayName": {
+            "type": ["null", "string"]
           }
         }
       },
@@ -18589,6 +18686,9 @@
                 "$ref": "#/components/schemas/RunTimingDto"
               }
             ]
+          },
+          "modelDisplayName": {
+            "type": ["null", "string"]
           }
         }
       },
@@ -18770,6 +18870,9 @@
           },
           "source": {
             "type": "string"
+          },
+          "modelDisplayName": {
+            "type": ["null", "string"]
           }
         }
       },
@@ -19033,6 +19136,9 @@
           },
           "note": {
             "type": "string"
+          },
+          "modelDisplayName": {
+            "type": ["null", "string"]
           }
         }
       },
@@ -19088,6 +19194,21 @@
             "format": "date-time"
           },
           "note": {
+            "type": "string"
+          }
+        }
+      },
+      "PriceTargetDto": {
+        "required": ["provider", "modelId", "displayName"],
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string"
+          },
+          "modelId": {
+            "type": "string"
+          },
+          "displayName": {
             "type": "string"
           }
         }
@@ -19516,6 +19637,9 @@
           "purpose": {
             "type": "string",
             "default": "review"
+          },
+          "modelDisplayName": {
+            "type": ["null", "string"]
           }
         }
       },
@@ -19844,6 +19968,9 @@
                 "$ref": "#/components/schemas/RunTimingDto"
               }
             ]
+          },
+          "modelDisplayName": {
+            "type": ["null", "string"]
           }
         }
       },
@@ -20032,6 +20159,9 @@
                 "$ref": "#/components/schemas/RunTimingDto"
               }
             ]
+          },
+          "modelDisplayName": {
+            "type": ["null", "string"]
           }
         }
       },
@@ -20528,6 +20658,9 @@
           "outputTokens": {
             "type": "integer",
             "format": "int64"
+          },
+          "modelDisplayName": {
+            "type": ["null", "string"]
           }
         }
       },
@@ -20667,6 +20800,9 @@
           "durationMilliseconds": {
             "type": "integer",
             "format": "int64"
+          },
+          "modelDisplayName": {
+            "type": ["null", "string"]
           }
         }
       },

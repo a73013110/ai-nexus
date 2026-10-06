@@ -37,6 +37,7 @@ public sealed class QualityTests
         Assert.Equal(HttpStatusCode.Conflict, (await owner.PutAsJsonAsync($"/api/v1/quality/sets/{set.Resource.Id}", Sample)).StatusCode);
         await ActivatorUtilities.CreateInstance<BackgroundJobWorker>(f.Services).ProcessNextAsync(CancellationToken.None);
         var detail = (await owner.GetFromJsonAsync<EvaluationDetailDto>($"/api/v1/quality/runs/{run.Id}"))!;
+        Assert.Equal("測試模型", Assert.Single(detail.Variants).ModelDisplayName);
         Assert.Equal("completed", detail.Run.Job.Status); Assert.Equal("整理通知", detail.Cases[0].Question); Assert.Equal(1, detail.Run.SetVersion);
         Assert.DoesNotContain(f.Provider.LastMessages, x => x.Content.Contains("秘密參考答案"));
         var result = Assert.Single(detail.Results); Assert.Equal(1, result.RequiredMatches); Assert.Equal(2, result.RequiredTotal); Assert.Equal(0, result.ForbiddenMatches); Assert.Equal(123, result.InputTokens);

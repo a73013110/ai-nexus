@@ -1,6 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import { auditChanges, auditResource, auditResult, auditRejected } from './audit-presentation';
+import {
+  auditChanges,
+  auditDetails,
+  auditResource,
+  auditResult,
+  auditRejected,
+} from './audit-presentation';
 describe('audit presentation', () => {
+  it('presents model policy arrays, dictionary keys and missing models without exposing IDs', () => {
+    const id = 'ollama/hf.co/provider/private-model:Q3_K_XL';
+    const json = JSON.stringify({
+      before: { allowedModelIds: [id], dailyTokenLimits: { [id]: 100 } },
+      after: { allowedModelIds: ['removed/model'], dailyTokenLimits: { 'removed/model': 200 } },
+    });
+    const names = { [id]: '本地助理' };
+    const changes = auditChanges(json, names);
+    expect(changes.find((x) => x.key === 'allowedModelIds')).toMatchObject({
+      before: '本地助理',
+      after: '已停用的模型',
+    });
+    expect(changes.some((x) => x.label === '每日 token 上限 · 已停用的模型')).toBe(true);
+    const details = auditDetails(json, names);
+    expect(details).toContain('本地助理');
+    expect(details).not.toContain(id);
+    expect(details).not.toContain('removed/model');
+    const legacy = JSON.stringify({
+      before: { Policy: { DailyTokenLimits: { [id]: 100 } } },
+      after: { Policy: { DailyTokenLimits: null } },
+    });
+    expect(auditChanges(legacy, names)).toEqual([
+      expect.objectContaining({ label: '每日 token 上限 · 本地助理', after: '繼承設定' }),
+    ]);
+    expect(auditDetails(legacy, names)).not.toContain(id);
+  });
   it('preserves feature identities for grouped before and after rendering', () => {
     const changes = auditChanges(
       JSON.stringify({

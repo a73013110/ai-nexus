@@ -137,7 +137,7 @@
                   <div class="evaluation-answer-heading">
                     <strong>{{ variant.label }}</strong>
                     @if (policy()?.showModelNames) {
-                      <small>{{ variant.modelId }}</small>
+                      <small>{{ modelName(variant) }}</small>
                     }
                   </div>
                   <details>

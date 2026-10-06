@@ -32,7 +32,7 @@ let sequence = 0;
       <button class="workspace-backdrop" aria-label="收合側欄" (click)="collapse()"></button>
     }
     <div class="workspace-sidebar-heading">
-      <nx-workspace-brand />
+      <nx-workspace-brand [compact]="layout.compact()" />
       <div class="workspace-sidebar-controls">
         <button
           type="button"

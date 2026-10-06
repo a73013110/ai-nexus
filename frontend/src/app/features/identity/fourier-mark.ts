@@ -13,26 +13,10 @@ import {
 } from '@angular/core';
 import { ThemeService } from '../../core/preferences/theme-service';
 import { harmonics, reconstruct, sampleOutline } from '../../shared/graphics/fourier';
+import { nexusOutline } from '../../shared/graphics/nexus-logo';
 import { Icon } from '../../shared/ui/icon';
 
-// An original continuous N outline: two rails joined by a diagonal, with deliberately rounded harmonics.
-const spectrum = harmonics(
-  sampleOutline(
-    [
-      { x: -0.78, y: 0.82 },
-      { x: -0.78, y: -0.82 },
-      { x: -0.46, y: -0.82 },
-      { x: 0.46, y: 0.32 },
-      { x: 0.46, y: -0.82 },
-      { x: 0.78, y: -0.82 },
-      { x: 0.78, y: 0.82 },
-      { x: 0.46, y: 0.82 },
-      { x: -0.46, y: -0.32 },
-      { x: -0.46, y: 0.82 },
-    ],
-    128,
-  ),
-).slice(0, 48);
+const spectrum = harmonics(sampleOutline(nexusOutline, 128)).slice(0, 48);
 const trail = Array.from({ length: 641 }, (_, i) => reconstruct(spectrum, (i / 640) * Math.PI * 2));
 const duration = 4200;
 
@@ -72,7 +56,8 @@ export class FourierMark {
   private signal = '';
   private line = '';
   private visible = true;
-  private destination = { x: 40, y: 40 };
+  private destination = { x: 0, y: 0, unit: 0 };
+  private resize?: ResizeObserver;
   constructor() {
     const destroy = inject(DestroyRef);
     effect(() => {
@@ -80,6 +65,13 @@ export class FourierMark {
       if (this.ctx) {
         if (reduced) this.finish();
         else this.paint(this.elapsed);
+      }
+    });
+    effect(() => {
+      const anchor = this.anchor();
+      if (this.resize) {
+        this.observeAnchor(anchor);
+        this.measure();
       }
     });
     afterNextRender(() => {
@@ -90,23 +82,9 @@ export class FourierMark {
         this.finishedChange.emit(true);
         return;
       }
-      const resize = new ResizeObserver(() => {
-        this.size = Math.min(element.clientWidth, element.clientHeight);
-        const anchor = this.anchor()?.getBoundingClientRect(),
-          bounds = element.getBoundingClientRect();
-        if (anchor)
-          this.destination = {
-            x: anchor.left - bounds.left + anchor.width / 2,
-            y: anchor.top - bounds.top + anchor.height / 2,
-          };
-        const dpr = Math.min(devicePixelRatio || 1, 2);
-        element.width = Math.round(element.clientWidth * dpr);
-        element.height = Math.round(element.clientHeight * dpr);
-        this.ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
-        this.colors();
-        this.paint(this.elapsed);
-      });
-      resize.observe(element);
+      this.resize = new ResizeObserver(() => this.measure());
+      this.observeAnchor(this.anchor());
+      this.measure();
       const theme = new MutationObserver(() => {
         this.colors();
         this.paint(this.elapsed);
@@ -127,11 +105,38 @@ export class FourierMark {
       this.play();
       destroy.onDestroy(() => {
         cancelAnimationFrame(this.frame);
-        resize.disconnect();
+        this.resize?.disconnect();
         theme.disconnect();
         document.removeEventListener('visibilitychange', visibility);
       });
     });
+  }
+  private observeAnchor(anchor: HTMLElement | null) {
+    this.resize?.disconnect();
+    this.resize?.observe(this.canvas().nativeElement);
+    if (anchor) {
+      this.resize?.observe(anchor);
+      // Font metrics can move the N even when the canvas size stays unchanged.
+      if (anchor.parentElement) this.resize?.observe(anchor.parentElement);
+    }
+  }
+  private measure() {
+    const element = this.canvas().nativeElement;
+    this.size = Math.min(element.clientWidth, element.clientHeight);
+    const anchor = this.anchor()?.getBoundingClientRect(),
+      bounds = element.getBoundingClientRect();
+    if (anchor)
+      this.destination = {
+        x: anchor.left - bounds.left + anchor.width / 2,
+        y: anchor.top - bounds.top + anchor.height / 2,
+        unit: Math.min(anchor.width, anchor.height) / 2,
+      };
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    element.width = Math.round(element.clientWidth * dpr);
+    element.height = Math.round(element.clientHeight * dpr);
+    this.ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.colors();
+    this.paint(this.elapsed);
   }
   private colors() {
     const tokens = getComputedStyle(this.canvas().nativeElement);
@@ -172,15 +177,17 @@ export class FourierMark {
     const element = this.canvas().nativeElement,
       w = element.clientWidth,
       h = element.clientHeight;
+    ctx.clearRect(0, 0, w, h);
+    // Hand the completed drawing to the SVG in the wordmark. It stays crisp at every size.
+    if (this.complete()) return;
     const progress = Math.min(1, elapsed / 3100),
       settle = Math.min(1, Math.max(0, (elapsed - 3100) / 1100));
     const eased = settle * settle * (3 - 2 * settle);
     const fade = 1 - eased;
     const destination = this.destination;
-    const unit = this.size * 0.24 * fade + 16 * eased,
+    const unit = this.size * 0.24 * fade + destination.unit * eased,
       cx = (w / 2) * fade + destination.x * eased,
       cy = (h / 2) * fade + destination.y * eased;
-    ctx.clearRect(0, 0, w, h);
     ctx.lineWidth = 1;
     ctx.strokeStyle = this.line;
     ctx.globalAlpha = 0.5 * fade;
@@ -224,16 +231,16 @@ export class FourierMark {
     }
     if (progress === 1) {
       ctx.closePath();
-      ctx.globalAlpha = 0.045 + 0.095 * settle;
+      ctx.globalAlpha = 0.045 + 0.955 * eased;
       ctx.fillStyle = this.ink;
       ctx.fill();
       ctx.globalAlpha = 1;
     }
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2 * fade;
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
     ctx.strokeStyle = this.ink;
-    ctx.stroke();
+    if (fade > 0) ctx.stroke();
     if (progress < 1) {
       ctx.fillStyle = this.signal;
       ctx.beginPath();
@@ -243,8 +250,8 @@ export class FourierMark {
     ctx.globalAlpha = 0.8 * fade;
     ctx.fillStyle = this.signal;
     [
-      [-0.78, -0.82],
-      [0.78, 0.82],
+      [-0.72, -0.9],
+      [0.72, 0.9],
     ].forEach(([dx, dy]) => {
       ctx.beginPath();
       ctx.arc(cx + dx * unit, cy + dy * unit, 3, 0, Math.PI * 2);

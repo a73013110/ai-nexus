@@ -9,6 +9,7 @@ import { generationStatus } from '../../core/api/generation-status';
 import { MessageFeedback } from '../quality/message-feedback';
 import { ChargeLabel } from '../billing/charge-label';
 import { StreamingAnswer } from '../../shared/ui/streaming-answer';
+import { formatModelDisplayName } from '../../shared/browser/format';
 
 @Component({
   selector: 'nx-chat-message',
@@ -41,7 +42,7 @@ import { StreamingAnswer } from '../../shared/ui/streaming-answer';
         <span class="assistant-label">AI 回覆</span>
       }
       @if (showModelNames() && message().modelId) {
-        <span class="message-model">{{ message().modelId }}</span>
+        <span class="message-model">{{ modelName(message()) }}</span>
       }
     </div>
     @if (active() && message().role === 'assistant') {
@@ -138,6 +139,7 @@ import { StreamingAnswer } from '../../shared/ui/streaming-answer';
   </article>`,
 })
 export class ChatMessage {
+  readonly modelName = formatModelDisplayName;
   readonly message = input.required<Message>();
   readonly tree = input.required<MessageTree>();
   readonly matched = input(false);

@@ -59,7 +59,8 @@ public sealed record PriceRequest(string Provider, string ModelId, string Curren
     string RequestCharge, DateTimeOffset EffectiveAt, string Note);
 public sealed record PriceDto(Guid Id, string Provider, string ModelId, string Currency, string Kind,
     decimal InputPerMillion, decimal CachedInputPerMillion, decimal OutputPerMillion, decimal PerRequest,
-    string RequestCharge, DateTimeOffset EffectiveAt, string Note);
+    string RequestCharge, DateTimeOffset EffectiveAt, string Note, string? ModelDisplayName = null);
+public sealed record PriceTargetDto(string Provider, string ModelId, string DisplayName);
 public sealed record ChargeDto(string State, string Kind, string Currency, decimal? Amount, long? InputTokens,
     long? CachedInputTokens, long? OutputTokens, long? ReasoningTokens);
 public sealed record MoneyTotalDto(string Currency, string Kind, decimal Amount, int KnownCalls, int UnknownCalls);

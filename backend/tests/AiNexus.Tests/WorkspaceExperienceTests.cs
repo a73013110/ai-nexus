@@ -174,6 +174,8 @@ public sealed class WorkspaceExperienceTests
         var dashboard = (await owner.GetFromJsonAsync<DashboardDto>("/api/v1/dashboard?scope=personal&from=2026-09-30T00:00:00Z&until=2026-10-02T00:00:00Z&offset=480"))!;
         Assert.NotNull(dashboard.Tokens); Assert.Equal(150, dashboard.Tokens!.Daily.Sum(x => x.InputTokens + x.OutputTokens)); Assert.All(dashboard.Tokens.Daily, x => Assert.Equal("2026-10-01", x.Date));
         Assert.Equal(2, dashboard.Tokens.Daily.Sum(x => x.Requests)); Assert.Equal(1, dashboard.Tokens.Daily.Sum(x => x.RequestsWithUsage));
+        Assert.Equal("測試模型", dashboard.Tokens.Daily.Single(x => x.ModelId == "test-model").ModelDisplayName);
+        Assert.Equal("已停用的模型", dashboard.Tokens.Daily.Single(x => x.ModelId == "another").ModelDisplayName);
     }
     [Fact]
     public async Task ReviewRangesArePinnedIdempotentAndCheckpointRetriesOnlyUnfinishedSections()

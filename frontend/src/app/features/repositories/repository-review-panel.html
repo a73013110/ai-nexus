@@ -137,7 +137,7 @@
           {{ d.review.baseCommit ? d.review.baseCommit.slice(0, 10) + ' → ' : ''
           }}{{ d.review.commit.slice(0, 10) }}
         </h3>
-        <p class="form-note">{{ date(d.review.createdAt) }} · {{ modelName(d.review.modelId) }}</p>
+        <p class="form-note">{{ date(d.review.createdAt) }} · {{ modelName(d.review) }}</p>
       </div>
       <a
         class="quiet-button"

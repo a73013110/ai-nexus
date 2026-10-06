@@ -15,6 +15,7 @@ public static class BillingEndpoints
         root.MapGet("/conversations/{id:guid}/spend", async (Guid id, CurrentUser current, SpendReports reports, CancellationToken ct) =>
             Results.Ok(await reports.ConversationAsync((await current.GetAsync(ct)).Id, id, ct))).RequireAuthorization("feature:chat").WithName("GetConversationSpend").Produces<ConversationSpendDto>();
         var admin = root.MapGroup("/admin/billing").RequireAuthorization(AdministrationConfiguration.Policy).WithTags("Billing");
+        admin.MapGet("/targets", (BillingService service) => Results.Ok(service.Targets())).WithName("ListPriceTargets").Produces<IReadOnlyList<PriceTargetDto>>();
         admin.MapGet("/prices", async (BillingService service, CancellationToken ct) => Results.Ok(await service.PricesAsync(ct))).WithName("ListModelPrices").Produces<IReadOnlyList<PriceDto>>();
         admin.MapPost("/prices", async (PriceRequest body, CurrentUser current, BillingService service, CancellationToken ct) =>
             Results.Ok(await service.AddPriceAsync((await current.GetAsync(ct)).Id, body, ct))).WithName("CreateModelPrice").Produces<PriceDto>();

@@ -10,10 +10,11 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth-service';
 import { WORKSPACE_HOME } from '../../core/workspace-home';
 import { FourierMark } from './fourier-mark';
+import { BrandWordmark } from '../../shared/ui/brand-wordmark';
 
 @Component({
   selector: 'nx-login-page',
-  imports: [FormField, FourierMark],
+  imports: [FormField, FourierMark, BrandWordmark],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login-page.html',
 })

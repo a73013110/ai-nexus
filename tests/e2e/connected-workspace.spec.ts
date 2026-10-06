@@ -18,6 +18,7 @@ function dashboardFixture(fixture: ApiFixture) {
         {
           date: day,
           modelId: "fixture:8b",
+          modelDisplayName: "本機測試模型",
           requests: 2,
           requestsWithUsage: 1,
           inputTokens: 10000,
@@ -26,6 +27,7 @@ function dashboardFixture(fixture: ApiFixture) {
         {
           date: day,
           modelId: "second-model",
+          modelDisplayName: "雲端助理",
           requests: 1,
           requestsWithUsage: 1,
           inputTokens: 200,
@@ -140,7 +142,8 @@ test("dashboard keeps currencies separate, supports node inspection, and fits mo
   await expect(page.locator(".metric-card")).toHaveCount(4);
   const tokens = page.locator("nx-token-usage-chart");
   await expect(tokens).toContainText("2 / 3 次模型呼叫有完整用量回報");
-  await chooseSelect(page, "Token 統計模型", "second-model");
+  await expect(page.locator("body")).not.toContainText("fixture:8b");
+  await chooseSelect(page, "Token 統計模型", "雲端助理");
   await expect(tokens.locator(".token-totals")).toContainText("300");
   await chooseSelect(page, "Token 統計類型", "輸出 Token");
   await expect(tokens.getByRole("slider")).toHaveAccessibleName(
@@ -303,18 +306,14 @@ test("dashboard keeps currencies separate, supports node inspection, and fits mo
     animations: "disabled",
     path: "artifacts/screenshots/dashboard-reports-mobile-dark.png",
   });
-  await page
-    .locator(".flow-map")
-    .screenshot({
-      animations: "disabled",
-      path: "artifacts/screenshots/dashboard-flow-mobile-dark.png",
-    });
-  await page
-    .locator(".flow-inspector")
-    .screenshot({
-      animations: "disabled",
-      path: "artifacts/screenshots/dashboard-inspector-mobile-dark.png",
-    });
+  await page.locator(".flow-map").screenshot({
+    animations: "disabled",
+    path: "artifacts/screenshots/dashboard-flow-mobile-dark.png",
+  });
+  await page.locator(".flow-inspector").screenshot({
+    animations: "disabled",
+    path: "artifacts/screenshots/dashboard-inspector-mobile-dark.png",
+  });
 });
 
 test("custom feature names stay consistent across navigation, overview links and destination headings", async ({
@@ -373,14 +372,27 @@ test("price dialog creates immutable versions and stays within the viewport", as
     }
     return route.fulfill({ json: [] });
   });
+  await page.route("**/api/v1/admin/billing/targets", (route) =>
+    route.fulfill({
+      json: [
+        {
+          provider: "google",
+          modelId: "gemma-private-model-id",
+          displayName: "雲端助理",
+        },
+        { provider: "ollama", modelId: "qwen3:8b", displayName: "本地助理" },
+      ],
+    }),
+  );
   await page.goto("/dashboard");
   await page
     .getByRole("button", { name: "模型與工具價格", exact: true })
     .click();
   const dialog = page.getByRole("dialog", { name: "模型與工具價格版本" });
   await expect(dialog).toBeVisible();
-  await dialog.getByLabel("模型 ID", { exact: true }).fill("qwen3:8b");
   await chooseSelect(page, "計費供應商", "ollama");
+  await chooseSelect(page, "計費模型或工具", "本地助理");
+  await expect(dialog).not.toContainText("qwen3:8b");
   await chooseSelect(page, "費用類型", "內部成本估算");
   await dialog.getByLabel("每次呼叫固定費用", { exact: true }).fill("0.3");
   await dialog

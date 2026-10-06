@@ -27,6 +27,7 @@ const actions: Record<string, string> = {
   'document.reindexed': '重新索引文件',
   'document.deleted': '刪除文件',
   'run.recovered': '處理生成程序中斷',
+  'billing.price.created': '新增價格版本',
 };
 export const auditAction = (action: string) => actions[action] || action;
 const outcomes: Record<string, string> = {
@@ -86,7 +87,11 @@ const labels: Record<string, string> = {
   'policy.storedAttachmentLimitBytes': '附件空間上限（bytes）',
 };
 function flatten(value: unknown, prefix = ''): Record<string, unknown> {
-  if (value == null && ['dailyTokenLimits', 'policy.dailyTokenLimits'].includes(prefix)) return {};
+  if (
+    value == null &&
+    ['dailytokenlimits', 'policy.dailytokenlimits'].includes(prefix.toLowerCase())
+  )
+    return {};
   if (!value || typeof value !== 'object' || Array.isArray(value)) return { [prefix]: value };
   return Object.fromEntries(
     Object.entries(value).flatMap(([key, item]) =>
@@ -104,6 +109,8 @@ const display = (value: unknown) =>
       : Array.isArray(value)
         ? value.join('、') || '無'
         : String(value);
+const resolveModel = (id: unknown, names: Readonly<Record<string, string>>) =>
+  names[String(id)] || '已停用的模型';
 export function auditChanges(
   json: string | null | undefined,
   modelNames: Readonly<Record<string, string>> = {},
@@ -117,7 +124,7 @@ export function auditChanges(
       .filter((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]))
       .map((key) => {
         const tokenPrefix = ['policy.dailyTokenLimits.', 'dailyTokenLimits.'].find((prefix) =>
-          key.startsWith(prefix),
+          key.toLowerCase().startsWith(prefix.toLowerCase()),
         );
         const modelId = tokenPrefix ? key.slice(tokenPrefix.length) : null;
         const tokenValue = (value: unknown) =>
@@ -125,10 +132,12 @@ export function auditChanges(
         return {
           key,
           label: modelId
-            ? '每日 token 上限 · ' + (modelNames[modelId] || modelId)
+            ? '每日 token 上限 · ' + resolveModel(modelId, modelNames)
             : labels[key] || key,
-          before: modelId ? tokenValue(before[key]) : display(before[key]),
-          after: modelId ? tokenValue(after[key]) : display(after[key]),
+          before: modelId
+            ? tokenValue(before[key])
+            : displayModelValue(key, before[key], modelNames),
+          after: modelId ? tokenValue(after[key]) : displayModelValue(key, after[key], modelNames),
           ...(key === 'featureIds'
             ? {
                 featureIds: {
@@ -141,6 +150,41 @@ export function auditChanges(
       });
   } catch {
     return [];
+  }
+}
+function displayModelValue(key: string, value: unknown, names: Readonly<Record<string, string>>) {
+  if (/(^|\.)allowedModelIds$/i.test(key) && Array.isArray(value))
+    return value.map((id) => resolveModel(id, names)).join('、') || '無';
+  if (/(^|\.)(modelId|defaultModelId|providerModelId)$/i.test(key) && value != null)
+    return resolveModel(value, names);
+  return display(value);
+}
+export function auditDetails(
+  json: string | null | undefined,
+  names: Readonly<Record<string, string>>,
+): string {
+  try {
+    const present = (value: unknown, key = ''): unknown => {
+      const field = key.toLowerCase();
+      if (['modelid', 'defaultmodelid', 'providermodelid'].includes(field))
+        return value == null ? value : resolveModel(value, names);
+      if (field === 'allowedmodelids' && Array.isArray(value))
+        return value.map((id) => resolveModel(id, names));
+      if (field === 'dailytokenlimits' && value && typeof value === 'object')
+        return Object.entries(value).map(([id, limit]) => ({
+          model: resolveModel(id, names),
+          limit,
+        }));
+      if (Array.isArray(value)) return value.map((item) => present(item));
+      if (value && typeof value === 'object')
+        return Object.fromEntries(
+          Object.entries(value).map(([name, item]) => [name, present(item, name)]),
+        );
+      return value;
+    };
+    return JSON.stringify(present(JSON.parse(json || '{}')), null, 2);
+  } catch {
+    return '無法解析此稽核內容。';
   }
 }
 export function auditResource(json: string | null | undefined): string {

@@ -19,6 +19,7 @@ import { formatDate, formatModelName } from '../../shared/browser/format';
 import {
   auditAction,
   auditChanges,
+  auditDetails,
   auditResource,
   auditResult,
   auditRejected,
@@ -53,13 +54,14 @@ export class AdminAudit {
       date: formatDate(entry.at),
       action: auditAction(entry.action),
       resource: auditResource(entry.detailsJson),
+      details: auditDetails(entry.detailsJson, this.modelNames()),
       changes: auditChanges(entry.detailsJson, this.modelNames()).map((change) => ({
         ...change,
         featureBefore: change.featureIds ? this.resolveFeatures(change.featureIds.before) : null,
         featureAfter: change.featureIds ? this.resolveFeatures(change.featureIds.after) : null,
       })),
-      result: auditResult(entry.result),
-      rejected: auditRejected(entry.result),
+      result: auditResult(entry.action === 'billing.price.created' ? 'created' : entry.result),
+      rejected: entry.action !== 'billing.price.created' && auditRejected(entry.result),
     })),
   );
   readonly actions = [
@@ -169,8 +171,8 @@ export class AdminAudit {
               row.action,
               row.resourceId,
               auditResource(row.detailsJson),
-              row.result,
-              row.detailsJson,
+              auditResult(row.action === 'billing.price.created' ? 'created' : row.result),
+              auditDetails(row.detailsJson, this.modelNames()),
             ]),
           ]),
         ],

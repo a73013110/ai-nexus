@@ -314,7 +314,7 @@
                 <tbody>
                   @for (model of stats.models; track model.modelId) {
                     <tr>
-                      <td>{{ usageModelName(model.modelId) }}</td>
+                      <td>{{ usageModelName(model) }}</td>
                       <td>{{ format(model.requests) }}</td>
                       <td>{{ format(model.inputTokens) }}</td>
                       <td>{{ format(model.outputTokens) }}</td>

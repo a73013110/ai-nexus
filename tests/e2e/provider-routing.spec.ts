@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
-import { ApiFixture, chooseSelect } from "./fixtures";
+import { ApiFixture } from "./fixtures";
 
-test("same-named models from different providers remain distinct in the picker and request", async ({
+test("same-named models remain distinct routing references while the picker only shows DisplayName", async ({
   page,
 }) => {
   const fixture = new ApiFixture();
@@ -38,12 +38,12 @@ test("same-named models from different providers remain distinct in the picker a
   await page.goto("/chat");
   await expect(
     page.getByRole("combobox", { name: "選擇模型", exact: true }),
-  ).toContainText("同名模型 · Google");
-  await chooseSelect(
-    page,
-    "選擇模型",
-    "同名模型 · Ollama 8,192 Context · 圖片分析",
-  );
+  ).toContainText("同名模型");
+  await page.getByRole("combobox", { name: "選擇模型", exact: true }).click();
+  const choices = page.getByRole("listbox", { name: "選擇模型", exact: true });
+  await expect(choices).not.toContainText("shared-model");
+  await expect(choices).not.toContainText("Ollama");
+  await choices.getByRole("option").nth(1).click();
   await page
     .getByRole("textbox", { name: "傳送訊息", exact: true })
     .fill("使用本機模型");

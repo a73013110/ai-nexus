@@ -21,11 +21,7 @@ export const formatDuration = (milliseconds: number) =>
   milliseconds < 60_000
     ? `${(milliseconds / 1000).toFixed(1)} 秒`
     : `${Math.floor(milliseconds / 60_000)} 分 ${Math.floor((milliseconds % 60_000) / 1000)} 秒`;
-export const formatModelName = (model: Model) =>
-  model.provider
-    ? `${model.displayName} · ${model.provider === 'google' ? 'Google' : model.provider === 'ollama' ? 'Ollama' : model.provider}`
-    : model.displayName;
-
-export function formatModelId(id: string) {
-  return id === 'retired-model' ? '已停用的模型' : id.replace(/^model-(\d+)$/, '模型 $1');
-}
+export const formatModelName = (model: Pick<Model, 'displayName'>) =>
+  model.displayName?.trim() || 'AI 助理';
+export const formatModelDisplayName = (model: { modelDisplayName?: string | null }) =>
+  model.modelDisplayName?.trim() || 'AI 助理';
