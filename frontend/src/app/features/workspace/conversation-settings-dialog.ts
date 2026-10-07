@@ -1,3 +1,4 @@
+import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -18,7 +19,7 @@ import { ChatStore } from '../chat/chat-store';
 
 @Component({
   selector: 'nx-conversation-settings',
-  imports: [Icon, FormField, Select],
+  imports: [IssueCode,Icon, FormField, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <dialog
@@ -71,7 +72,7 @@ import { ChatStore } from '../chat/chat-store';
           <p class="panel-note">變更後立即儲存。加入專案後，後續提問會使用共用指示與參考文件。</p>
         }
         @if (error()) {
-          <p class="inline-error" role="alert">{{ error() }}</p>
+          <p class="inline-error" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
         }
         <div class="dialog-actions">
           <button

@@ -1,0 +1,244 @@
+<nx-feature-page
+  title="系統日誌"
+  description="以查證代碼追查問題，檢視受控診斷與流程關聯。"
+  eyebrow="AI NEXUS · 管理"
+>
+  <div page-actions class="page-actions">
+    <a routerLink="/admin" class="secondary-button">平台管理</a>
+    @if (session.has('logs.export')) {
+      <button
+        class="secondary-button"
+        [disabled]="loading() || exporting() || !page()"
+        (click)="export()"
+      >
+        {{ exporting() ? '匯出中…' : '匯出 CSV' }}
+      </button>
+    }
+  </div>
+  @if (!session.has('logs.query') && session.me()) {
+    <p class="error-banner" role="alert">需要系統日誌查詢權限。</p>
+  }
+  @if (session.has('logs.query')) {
+    <form class="log-filters" (ngSubmit)="search()">
+      <label
+        >起始時間（{{ timezone }}）<input
+          type="datetime-local"
+          name="from"
+          [ngModel]="fromLocal()"
+          (ngModelChange)="fromLocal.set($event)"
+          required
+      /></label>
+      <label
+        >結束時間<input
+          type="datetime-local"
+          name="to"
+          [ngModel]="toLocal()"
+          (ngModelChange)="toLocal.set($event)"
+          required
+      /></label>
+      <label class="issue-filter"
+        >查證代碼<input
+          name="issue"
+          [(ngModel)]="filter.issueCode"
+          placeholder="NX-…"
+          maxlength="35"
+          autocomplete="off"
+      /></label>
+      <label
+        >等級<select name="level" [(ngModel)]="filter.level">
+          <option value="">全部等級</option>
+          @for (
+            level of ['Trace', 'Debug', 'Information', 'Warning', 'Error', 'Critical'];
+            track level
+          ) {
+            <option [value]="level">{{ level }}</option>
+          }
+        </select></label
+      >
+      <details class="advanced-filters">
+        <summary>流程與進階篩選</summary>
+        <div class="log-filters">
+          <label
+            >模組 Category<input name="category" [(ngModel)]="filter.category" maxlength="180"
+          /></label>
+          <label
+            >事件名稱<input name="event" [(ngModel)]="filter.eventName" maxlength="100"
+          /></label>
+          <label>TraceId<input name="trace" [(ngModel)]="filter.traceId" maxlength="32" /></label>
+          <label>JobId<input name="job" [(ngModel)]="filter.jobId" maxlength="36" /></label>
+          <label>RunId<input name="run" [(ngModel)]="filter.runId" maxlength="36" /></label>
+          <label
+            >錯誤碼<input name="errorCode" [(ngModel)]="filter.errorCode" maxlength="80"
+          /></label>
+          <label
+            >執行個體<input name="instance" [(ngModel)]="filter.instance" maxlength="100"
+          /></label>
+          <label
+            >訊息模板文字（限一天）<input name="text" [(ngModel)]="filter.text" maxlength="72"
+          /></label>
+        </div>
+      </details>
+      <div class="filter-actions">
+        <button class="primary-button" type="submit" [disabled]="loading()">
+          {{ loading() ? '查詢中…' : '查詢日誌' }}</button
+        ><span class="form-note">每頁最多 50 筆；儲存時間為 UTC。</span>
+      </div>
+    </form>
+    @if (health(); as state) {
+      <section
+        class="log-health"
+        [class.degraded]="state.status === 'degraded'"
+        aria-label="日誌系統健康狀態"
+      >
+        <strong>{{ state.status === 'degraded' ? '日誌系統降級' : '日誌系統正常' }}</strong
+        ><button class="secondary-button" (click)="refreshHealth()">更新狀態</button>
+        <dl>
+          <div>
+            <dt>佇列</dt>
+            <dd>{{ state.queueDepth }}</dd>
+          </div>
+          <div>
+            <dt>寫入失敗</dt>
+            <dd>{{ state.writeFailures }}</dd>
+          </div>
+          <div>
+            <dt>遺失／損壞</dt>
+            <dd>{{ state.lost }} / {{ state.corrupt }}</dd>
+          </div>
+          <div>
+            <dt>已補送</dt>
+            <dd>{{ state.replayed }}</dd>
+          </div>
+          <div>
+            <dt>暫存／待補送</dt>
+            <dd>{{ bytes(state.diskBytes) }} / {{ bytes(state.pendingBytes) }}</dd>
+          </div>
+          <div>
+            <dt>SQL 最後成功</dt>
+            <dd>{{ state.lastSqlWrite ? date(state.lastSqlWrite) : '尚未寫入' }}</dd>
+          </div>
+        </dl>
+        <p class="form-note">
+          SQL 約 {{ state.estimatedSqlRows }} 筆 · 已採樣略過 {{ state.sampled }} 筆 · 選配匯出失敗
+          {{ state.exportFailures }} 次 · 檔案最後成功：{{
+            state.lastFileWrite ? date(state.lastFileWrite) : '尚未寫入'
+          }}
+        </p>
+        @if (state.failure) {
+          <p class="form-note">診斷狀態：{{ state.failure }}</p>
+        }
+      </section>
+    }
+    @if (error()) {
+      <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+    }
+    @if (loading()) {
+      <p role="status">正在載入日誌…</p>
+    }
+    @if (!loading() && page(); as result) {
+      @if (!result.events.length) {
+        <p class="empty-state">此範圍沒有日誌。請確認時間、查證代碼，或查看補送狀態。</p>
+      } @else {
+        <div class="log-table-scroll">
+          <table>
+            <caption>
+              系統日誌 ·
+              {{
+                timezone
+              }}
+              · 新到舊
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">時間／等級</th>
+                <th scope="col">模組與事件</th>
+                <th scope="col">查證／關聯</th>
+                <th scope="col">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (entry of result.events; track entry.logId) {
+                <tr>
+                  <td>
+                    <time>{{ date(entry.at!) }}</time
+                    ><span class="log-level" [attr.data-level]="entry.level">{{
+                      entry.level
+                    }}</span>
+                  </td>
+                  <td>
+                    <strong>{{ entry.eventName }}</strong
+                    ><small>{{ entry.category }}</small
+                    ><small>{{ entry.messageTemplate }}</small>
+                    @if (entry.untrustedClient) {
+                      <span class="form-note">不可信用戶端事件</span>
+                    }
+                  </td>
+                  <td>
+                    <code>{{ entry.issueCode || '—' }}</code
+                    ><nx-issue-code [message]="entry.issueCode" /><small>{{
+                      entry.errorCode
+                    }}</small
+                    ><small>{{ entry.traceId }}</small>
+                    @if (entry.statusCode) {
+                      <small>HTTP {{ entry.statusCode }}</small>
+                    }
+                  </td>
+                  <td>
+                    @if (session.has('logs.detail')) {
+                      <button class="secondary-button" (click)="inspect(entry)">診斷詳情</button>
+                    } @else {
+                      <span class="form-note">僅可查詢</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (result.nextCursor) {
+          <button
+            class="secondary-button next-page"
+            [disabled]="loading()"
+            (click)="search(result.nextCursor)"
+          >
+            下一頁
+          </button>
+        }
+      }
+    }
+    @if (detailLoading()) {
+      <p role="status">正在載入診斷詳情與關聯流程…</p>
+    }
+    @if (detailError()) {
+      <p class="error-banner" role="alert">
+        {{ detailError() }}<nx-issue-code [message]="detailError()" />
+      </p>
+    }
+    @if (detail(); as selected) {
+      <section class="log-detail" aria-label="遮罩後診斷詳情">
+        <h2>診斷詳情</h2>
+        <p>{{ selected.service }} · {{ selected.environment }} · {{ selected.version }}</p>
+        <p>使用者識別：{{ selected.userId || '未識別' }}</p>
+        <h3>受控屬性</h3>
+        <pre>{{ properties() }}</pre>
+        <h3>例外型別與堆疊</h3>
+        <pre
+          >{{ selected.exceptionType || '無例外' }}
+{{ selected.exceptionDetail || '無例外堆疊' }}</pre
+        >
+        <h3>流程時間順序（此查詢範圍，最多 50 筆）</h3>
+        <ol class="log-timeline">
+          @for (entry of related(); track entry.logId) {
+            <li>
+              <time>{{ date(entry.at!) }}</time
+              ><strong>{{ entry.eventName }}</strong
+              ><span
+                >{{ entry.level }} · {{ entry.errorCode }} · 重試 {{ entry.attempt ?? '—' }}</span
+              ><code>{{ entry.issueCode }}</code>
+            </li>
+          }
+        </ol>
+      </section>
+    }
+  }
+</nx-feature-page>

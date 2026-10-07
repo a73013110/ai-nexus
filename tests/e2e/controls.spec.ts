@@ -64,8 +64,9 @@ test("model list failures show a retry path and recover without losing the draft
       ? route.fulfill({
           status: 503,
           json: {
-            title: "資料庫正在升級，請稍後再試。",
+            title: "Password=fixture-private; internal SQL endpoint",
             code: "migrations_pending",
+            issueCode: "NX-" + "D".repeat(32),
           },
         })
       : route.fallback(),
@@ -74,7 +75,8 @@ test("model list failures show a retry path and recover without losing the draft
   const model = page.getByRole("combobox", { name: "選擇模型" });
   await expect(model).toContainText("模型清單載入失敗");
   await expect(model).toBeDisabled();
-  await expect(page.getByRole("alert")).toContainText("資料庫正在升級");
+  await expect(page.getByRole("alert")).toContainText("操作未完成，請聯絡管理員。查證代碼：NX-");
+  await expect(page.getByRole("alert")).not.toContainText("fixture-private");
   const draft = page.getByRole("textbox", { name: "傳送訊息" });
   await draft.fill("恢復後保留的草稿");
   await page.getByRole("button", { name: "重新連線" }).click();

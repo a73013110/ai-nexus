@@ -564,7 +564,8 @@ test("shared disclosures close outside and permanent authorization errors do not
   ).not.toHaveAttribute("open");
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("權限撤銷");
   await page.getByRole("button", { name: "送出訊息" }).click();
-  await expect(page.getByRole("alert")).toContainText("沒有對話權限");
+  await expect(page.getByRole("alert")).toContainText("沒有存取此資料的權限。");
+  await expect(page.getByRole("alert")).toContainText("查證代碼：NX-");
   await page.waitForTimeout(1000);
   expect(fixture.eventReads).toBe(1);
   expect(fixture.posts).toBe(1);

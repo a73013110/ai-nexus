@@ -145,7 +145,7 @@ public sealed class ConversationService(IEfHelper<INexusDatabase> ef, NexusDbCon
         var message = await ef.Set<Message>().SingleAsync(x => x.Id == run.AssistantMessageId, ct);
         message.Content = run.Content;
         message.Status = run.Status;
-        message.ErrorCode = run.ErrorCode;
+        message.ErrorCode = run.ErrorCode; message.IssueCode = run.IssueCode;
         var conversation = await ef.Set<Conversation>().SingleAsync(x => x.Id == run.ConversationId, ct);
         conversation.UpdatedAt = DateTimeOffset.UtcNow;
     }

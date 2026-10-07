@@ -1,3 +1,4 @@
+import { IssueCode } from './issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -18,7 +19,7 @@ import { Checkbox } from './checkbox';
 
 @Component({
   selector: 'nx-resource-sharing',
-  imports: [Icon, Select, Checkbox],
+  imports: [IssueCode,Icon, Select, Checkbox],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog #dialog class="platform-dialog" (cancel)="cancel($event)">
@@ -37,7 +38,7 @@ import { Checkbox } from './checkbox';
       </button>
     </div>
     @if (error()) {
-      <p role="alert" class="error-banner">{{ error() }}</p>
+      <p role="alert" class="error-banner">{{ error() }}<nx-issue-code [message]="error()" /></p>
     }
     @if (loading()) {
       <p role="status">正在載入授權…</p>

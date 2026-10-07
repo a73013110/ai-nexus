@@ -1,3 +1,5 @@
+import { ClientValidationError } from '../../core/api/safe-errors';
+import { IssueCode } from '../../shared/ui/issue-code';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
@@ -12,7 +14,7 @@ import { IntegrationsApi } from './integrations-api';
 
 @Component({
   selector: 'nx-integrations-page',
-  imports: [FeaturePage, Select, Icon, MarkdownView],
+  imports: [IssueCode,FeaturePage, Select, Icon, MarkdownView],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './integrations-page.html',
@@ -56,7 +58,7 @@ export class IntegrationsPage {
     try {
       await this.session.load();
       if (!valid() || !this.session.me()) return;
-      if (!this.session.has('integrations')) throw new Error('你的帳號目前沒有資料來源功能權限。');
+      if (!this.session.has('integrations')) throw new ClientValidationError('featureAccess');
       const sources = await this.api.list();
       if (!valid()) return;
       this.sources.set(sources);

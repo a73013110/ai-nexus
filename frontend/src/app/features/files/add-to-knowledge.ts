@@ -1,3 +1,4 @@
+import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -17,7 +18,7 @@ import { Select } from '../../shared/ui/select';
 
 @Component({
   selector: 'nx-add-to-knowledge',
-  imports: [Icon, Select, RouterLink],
+  imports: [IssueCode,Icon, Select, RouterLink],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
@@ -47,7 +48,7 @@ import { Select } from '../../shared/ui/select';
         共用原檔並建立檢索索引。加入後，該知識庫的成員可以閱讀原檔與查詢內容。
       </p>
       @if (error()) {
-        <p class="error-banner" role="alert">{{ error() }}</p>
+        <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
       }
       @if (loading()) {
         <p role="status">正在載入可編輯的知識庫…</p>

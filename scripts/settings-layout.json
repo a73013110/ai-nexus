@@ -15,6 +15,7 @@
     "Attachments",
     "Exports",
     "Storage",
+    "Diagnostics",
     "Logging",
     "ConnectionStrings"
   ],
@@ -267,5 +268,31 @@
     "Enabled",
     "MaxTurns",
     "TimeoutSeconds"
+  ],
+  "Diagnostics": [
+    "Directory",
+    "ServiceName",
+    "MinimumLevel",
+    "FrameworkMinimumLevel",
+    "QueueCapacity",
+    "ImportantQueueCapacity",
+    "BatchSize",
+    "FlushIntervalMs",
+    "RetrySeconds",
+    "SqlTimeoutSeconds",
+    "ShutdownSeconds",
+    "FileSizeBytes",
+    "MaxDiskBytes",
+    "MaxSqlRows",
+    "FileRetentionDays",
+    "RetentionDays",
+    "AuditRetentionDays",
+    "CleanupBatchSize",
+    "LowLevelSampleEvery",
+    "MaxQueryDays",
+    "MaxExportRows",
+    "MaxExportDays",
+    "OtlpEnabled",
+    "OtlpEndpoint"
   ]
 }

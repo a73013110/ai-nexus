@@ -1,3 +1,5 @@
+import { ClientValidationError } from '../../core/api/safe-errors';
+import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -36,7 +38,7 @@ import { SearchField } from '../../shared/ui/search-field';
 
 @Component({
   selector: 'nx-projects-page',
-  imports: [
+  imports: [IssueCode,
     FeaturePage,
     Icon,
     RouterLink,
@@ -113,7 +115,7 @@ export class ProjectsPage {
     try {
       await this.session.load();
       if (!valid() || !this.session.me()) return;
-      if (!this.session.has('projects')) throw new Error('你的帳號目前沒有專案功能權限。');
+      if (!this.session.has('projects')) throw new ClientValidationError('featureAccess');
       const [projects, policy] = await Promise.all([
         this.api.list(),
         this.workspace.attachmentPolicy(),

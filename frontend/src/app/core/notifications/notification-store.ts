@@ -1,3 +1,4 @@
+import { safeMessage } from '../api/safe-errors';
 import { DestroyRef, Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiTransport } from '../api/api-transport';
@@ -121,7 +122,7 @@ export class NotificationStore {
       this.error.set('');
     } catch (error) {
       if (valid() && !(error instanceof DOMException && error.name === 'AbortError'))
-        this.error.set(error instanceof Error ? error.message : '通知暫時無法載入。');
+        this.error.set(safeMessage(error));
     } finally {
       if (valid()) this.loading.set(false);
     }
@@ -161,7 +162,7 @@ export class NotificationStore {
       if (unread) this.unread.update((value) => Math.max(0, value - 1));
     } catch (e) {
       if (owner === this.owner && generation === this.session.auth.generation())
-        this.error.set(e instanceof Error ? e.message : '無法更新通知。');
+        this.error.set(safeMessage(e));
       throw e;
     }
   }
@@ -186,7 +187,7 @@ export class NotificationStore {
       if (generation === this.session.auth.generation()) await this.refresh();
     } catch (e) {
       if (generation === this.session.auth.generation())
-        this.error.set(e instanceof Error ? e.message : '無法更新通知。');
+        this.error.set(safeMessage(e));
     }
   }
   async dismiss(item: NotificationItem) {
@@ -196,7 +197,7 @@ export class NotificationStore {
       if (generation === this.session.auth.generation()) await this.refresh();
     } catch (e) {
       if (generation === this.session.auth.generation())
-        this.error.set(e instanceof Error ? e.message : '無法移除通知。');
+        this.error.set(safeMessage(e));
     }
   }
   private browserNotify(item: NotificationItem) {

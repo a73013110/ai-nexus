@@ -42,16 +42,16 @@ public sealed class RetrievalPipeline(NexusDbContext db, RetrievalAuthorization 
         if (requested is not ("hybrid" or "keyword" or "vector")) throw new ApiException(400, "retrieval_mode_invalid", "檢索模式不正確。");
         await authorization.CollectionsAsync(actor, request.CollectionIds, ct);
         var profile = await profiles.ActiveAsync(ct); var actual = profile.Provider == "none" ? "keyword" : requested;
-        if (actual != requested) logger.LogWarning("未啟用向量模型，檢索模式由 {Requested} 改為 keyword。", requested);
+        if (actual != requested) RetrievalDiagnostics.Degraded(logger, requested, actual, "embeddings_disabled", service: "embedding");
         if (request.CollectionIds.Count == 0) return new(actual, []);
         var query = request.Query.Trim(); var skippedRewrite = false; long rewriteMs = 0, embedMs = 0, searchMs = 0, rerankMs = 0;
         var timer = Stopwatch.StartNew();
         if (settings.QueryRewrite.Enabled && history?.Count > 0)
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(settings.QueryRewrite.TimeoutSeconds));
-            try { query = await rewriter.RewriteAsync(actor, query, history.TakeLast(settings.QueryRewrite.MaxTurns * 2).ToArray(), timeout.Token); logger.LogDebug("知識檢索獨立查詢：{Query}", query); }
+            try { query = await rewriter.RewriteAsync(actor, query, history.TakeLast(settings.QueryRewrite.MaxTurns * 2).ToArray(), timeout.Token); }
             catch (Exception error) when (error is ApiException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
-            { ct.ThrowIfCancellationRequested(); skippedRewrite = true; logger.LogWarning("查詢改寫略過，使用原句。原因：{Reason}", error.GetType().Name); }
+            { ct.ThrowIfCancellationRequested(); skippedRewrite = true; RetrievalDiagnostics.Degraded(logger, "rewrite", "original", "rewrite_skipped", error, "model"); }
             rewriteMs = timer.ElapsedMilliseconds; await authorization.CollectionsAsync(actor, request.CollectionIds, ct);
         }
         timer.Restart();
@@ -73,8 +73,8 @@ public sealed class RetrievalPipeline(NexusDbContext db, RetrievalAuthorization 
             catch (Exception error) when (error is ApiException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
             {
                 ct.ThrowIfCancellationRequested();
-                if (settings.Rerank.FailurePolicy == "fail") throw new ApiException(503, "rerank_unavailable", "重排服務無法使用，請稍後重試。");
-                actual += "(rerank-skipped)"; logger.LogWarning("重排略過，沿用召回排名。原因：{Reason}", error.GetType().Name);
+                if (settings.Rerank.FailurePolicy == "fail") throw new ApiException(503, "rerank_unavailable", "重排服務無法使用，請稍後重試。", error);
+                actual += "(rerank-skipped)"; RetrievalDiagnostics.Degraded(logger, "rerank", "recall", "rerank_skipped", error, "rerank");
             }
             rerankMs = timer.ElapsedMilliseconds;
         }

@@ -31,7 +31,7 @@
     <p role="status">正在載入程式庫…</p>
   }
   @if (error()) {
-    <p class="error-banner" role="alert">{{ error() }}</p>
+    <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
   }
   @if (status(); as connection) {
     @if (!connection.available) {

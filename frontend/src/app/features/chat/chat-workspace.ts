@@ -1,3 +1,4 @@
+import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -53,7 +54,7 @@ import { LibraryPicker } from '../files/library-picker';
 
 @Component({
   selector: 'nx-chat-workspace',
-  imports: [
+  imports: [IssueCode,
     FormField,
     RouterLink,
     Icon,

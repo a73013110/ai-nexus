@@ -1,3 +1,5 @@
+import { ApiError, ClientValidationError, issueInMessage } from '../../core/api/safe-errors';
+import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -46,7 +48,7 @@ const blankCase = (): EvaluationCase => ({
 });
 @Component({
   selector: 'nx-quality-page',
-  imports: [
+  imports: [IssueCode,
     FeaturePage,
     SearchField,
     ConfirmDialog,
@@ -139,7 +141,7 @@ export class QualityPage {
     try {
       await this.session.load();
       if (!valid() || !this.session.me()) return;
-      if (!this.session.has('quality')) throw new Error('你的帳號目前沒有品質評測功能權限。');
+      if (!this.session.has('quality')) throw new ClientValidationError('featureAccess');
       const [sets, feedback] = await Promise.all([this.api.sets(), this.api.feedbackList()]);
       if (!valid()) return;
       this.sets.set(sets);
@@ -282,11 +284,13 @@ export class QualityPage {
     if (!file) return;
     const valid = this.guard();
     try {
-      if (file.size > 1400000) throw new Error('題庫檔案最多 1.4 MB。');
-      const data = JSON.parse(await file.text());
+      if (file.size > 1400000) throw new ClientValidationError('evaluationFileSize');
+      let data;
+      try { data = JSON.parse(await file.text()); }
+      catch { throw new ClientValidationError('evaluationFormat'); }
       if (!valid()) return;
       if (
-        data.version !== 1 ||
+        !data || data.version !== 1 ||
         typeof data.name !== 'string' ||
         typeof data.description !== 'string' ||
         !Array.isArray(data.cases) ||
@@ -302,7 +306,7 @@ export class QualityPage {
             [...x.requiredTerms, ...x.forbiddenTerms].some((t) => typeof t !== 'string'),
         )
       )
-        throw new Error('題庫格式不正確，請先匯出一份範本。');
+        throw new ClientValidationError('evaluationFormat');
       this.openSet();
       this.name.set(data.name);
       this.description.set(data.description);
@@ -320,7 +324,7 @@ export class QualityPage {
       const catalog = await this.nexus.models();
       if (!valid()) return;
       if (!catalog.providerAvailable || !catalog.models.length)
-        throw new Error(catalog.notice ?? '目前沒有可用模型。');
+        throw new ApiError(503, 'model_unavailable', undefined, issueInMessage(catalog.notice) ?? undefined);
       this.models.set(catalog.models);
       this.policy.set(catalog.policy);
       this.variants.set([

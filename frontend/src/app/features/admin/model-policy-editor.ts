@@ -1,3 +1,4 @@
+import { ClientValidationError } from '../../core/api/safe-errors';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import type { Model, EffectiveModelPolicy } from '../../core/api/types';
 import type { components } from '../../core/api/schema';
@@ -25,7 +26,7 @@ export function modelPolicyRequest(draft: ModelPolicyDraft): Policy {
     if (text.trim() === '') continue;
     const value = Number(text);
     if (!Number.isSafeInteger(value) || value < 0 || value > 1_000_000_000_000)
-      throw new Error('token 上限需為 0 至 1,000,000,000,000 的整數；留空繼承設定。');
+      throw new ClientValidationError('tokenLimit');
     limits[id] = value;
   }
   return { allowedModelIds: draft.restricted ? draft.modelIds : null, dailyTokenLimits: limits };

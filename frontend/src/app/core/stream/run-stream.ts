@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { ApiError, NexusApi } from '../api/nexus-api';
 import { isActive, Run, RunEvent } from '../api/types';
+import { validIssueCode } from '../api/safe-errors';
 import { SseParser } from './sse-parser';
 import { abortableDelay } from '../../shared/browser/abortable-delay';
 import { FramePublisher } from './frame-publisher';
@@ -41,6 +42,7 @@ export class RunStream {
     let run = initial;
     let cursor = run.lastSequence;
     let content = run.content;
+    let lastError: unknown;
     observer.content(content);
     observer.status(run);
     for (let attempt = 0; attempt < 8 && !signal.aborted; attempt++) {
@@ -57,6 +59,10 @@ export class RunStream {
             const chunk = await reader.read();
             if (chunk.done) break;
             for (const frame of parser.feed(decoder.decode(chunk.value, { stream: true }))) {
+              if (frame.event === 'error') {
+                const problem = JSON.parse(frame.data) as { code?: string; issueCode?: string };
+                throw new ApiError(503, problem.code ?? 'stream_failed', undefined, problem.issueCode);
+              }
               if (frame.event !== 'run') continue;
               const event = JSON.parse(frame.data) as RunEvent;
               if (
@@ -77,6 +83,7 @@ export class RunStream {
                   ...run,
                   status: event.status,
                   errorCode: event.errorCode,
+                  issueCode: validIssueCode(event.issueCode) ? event.issueCode : null,
                   content,
                   lastSequence: cursor,
                 };
@@ -91,6 +98,7 @@ export class RunStream {
         if (!isActive(run.status)) return this.api.run(run.id, signal);
         throw new Error('串流提前結束');
       } catch (error) {
+        lastError = error;
         if (signal.aborted || this.permanent(error)) throw error;
         observer.connection('reconnecting');
         await abortableDelay(Math.min(500 * 2 ** attempt, 6000), signal);
@@ -107,6 +115,7 @@ export class RunStream {
         }
       }
     }
+    if (lastError instanceof ApiError) throw lastError;
     throw new Error('暫時無法恢復事件連線，請按「恢復連線」。生成仍由伺服器管理。');
   }
   private permanent(error: unknown) {

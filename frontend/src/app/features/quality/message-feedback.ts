@@ -1,3 +1,4 @@
+import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -15,7 +16,7 @@ import { QualityApi } from './quality-api';
 
 @Component({
   selector: 'nx-message-feedback',
-  imports: [Icon, Select],
+  imports: [IssueCode,Icon, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="message-feedback">
@@ -72,7 +73,7 @@ import { QualityApi } from './quality-api';
       </div>
     }
     @if (error()) {
-      <p role="alert" class="message-note error-note">{{ error() }}</p>
+      <p role="alert" class="message-note error-note">{{ error() }}<nx-issue-code [message]="error()" /></p>
     }
     @if (notice()) {
       <span class="visually-hidden" role="status">{{ notice() }}</span>

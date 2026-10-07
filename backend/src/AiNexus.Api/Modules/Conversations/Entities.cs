@@ -33,5 +33,6 @@ public sealed class Message
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public Guid? RunId { get; set; }
     public string? ModelId { get; set; }
+    public string? IssueCode { get; set; }
     public string? ErrorCode { get; set; }
 }

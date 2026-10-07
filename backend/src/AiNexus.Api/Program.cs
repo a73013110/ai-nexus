@@ -1,4 +1,5 @@
 using AiNexus.BuildingBlocks;
+using AiNexus.BuildingBlocks.Diagnostics;
 using AiNexus.Modules.Conversations;
 using AiNexus.Modules.Identity;
 using AiNexus.Modules.Inference;
@@ -20,14 +21,16 @@ using AiNexus.Modules.Administration;
 using AiNexus.Modules.Knowledge;
 
 var builder = WebApplication.CreateBuilder(args);
-NexusConfiguration.Load(builder, args);
-LocalDatabaseSettings.Apply(builder.Configuration);
+try { NexusConfiguration.Load(builder, args); LocalDatabaseSettings.Apply(builder.Configuration); }
+catch (Exception ex) { await DiagnosticStartup.RecordAsync(ex, builder.Configuration, builder.Environment); throw; }
+builder.AddNexusDiagnostics();
 var keyRing = builder.Configuration["DataProtection:KeyRingPath"];
 if (keyRing is null && builder.Environment.IsDevelopment()) keyRing = Path.Combine(builder.Configuration["LocalWorkspaceRoot"]!, ".local", "keys");
 var protection = builder.Services.AddDataProtection().SetApplicationName("AiNexus");
 if (keyRing is not null)
 {
-    Directory.CreateDirectory(keyRing);
+    try { Directory.CreateDirectory(keyRing); }
+    catch (Exception ex) { await DiagnosticStartup.RecordAsync(ex, builder.Configuration, builder.Environment); throw; }
     protection.PersistKeysToFileSystem(new DirectoryInfo(keyRing));
     if (OperatingSystem.IsWindows()) protection.ProtectKeysWithDpapi();
 }
@@ -48,13 +51,15 @@ builder.Services.AddAuthentication("NexusSession")
         options.ExpireTimeSpan = TimeSpan.FromHours(8);
         options.SlidingExpiration = true;
         options.Events.OnValidatePrincipal = SessionIdentity.ValidateAsync;
-        options.Events.OnRedirectToLogin = context => Results.Problem(statusCode: 401, title: "請先登入工作區。", extensions: new Dictionary<string, object?> { ["code"] = "authentication_required" }).ExecuteAsync(context.HttpContext);
-        options.Events.OnRedirectToAccessDenied = context => Results.Problem(statusCode: 403, title: "沒有存取此資料的權限。").ExecuteAsync(context.HttpContext);
+        options.Events.OnRedirectToLogin = context => Issues.WriteAsync(context.HttpContext, context.HttpContext.RequestServices.GetRequiredService<Issues>().Problem(new ApiException(401, "authentication_required", "")));
+        options.Events.OnRedirectToAccessDenied = context => Issues.WriteAsync(context.HttpContext, context.HttpContext.RequestServices.GetRequiredService<Issues>().Problem(new ApiException(403, "access_denied", "")));
     });
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("ad-login", http => RateLimitPartition.GetFixedWindowLimiter(http.Connection.RemoteIpAddress?.ToString() ?? "local", _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));
-    options.OnRejected = (context, ct) => new ValueTask(Results.Problem(statusCode: 429, title: "登入嘗試過於頻繁，請稍後再試。", extensions: new Dictionary<string, object?> { ["code"] = "login_rate_limited" }).ExecuteAsync(context.HttpContext));
+    foreach (var (policy, permits) in new[] { ("client-issues", 10), ("diagnostic-query", 60), ("diagnostic-export", 2) })
+        options.AddPolicy(policy, http => RateLimitPartition.GetFixedWindowLimiter(http.User.FindFirst(SessionIdentity.UserId)?.Value ?? http.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions { PermitLimit = permits, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));
+    options.OnRejected = (context, ct) => new ValueTask(Issues.WriteAsync(context.HttpContext, context.HttpContext.RequestServices.GetRequiredService<Issues>().Problem(new ApiException(429, "rate_limited", ""))));
 });
 builder.Services.AddAuthorization(options =>
 {
@@ -63,6 +68,8 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy(AdministrationConfiguration.Policy, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(AdministrationConfiguration.Feature)));
     foreach (var feature in new[] { "files", "knowledge", "tasks", "artifacts", "projects", "shared", "quality", "integrations", "dashboard", "repositories" })
         options.AddPolicy("feature:" + feature, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(feature)));
+    foreach (var feature in new[] { DiagnosticConfiguration.Query, DiagnosticConfiguration.Detail, DiagnosticConfiguration.Export })
+        options.AddPolicy("feature:" + feature, p => p.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(feature)));
     options.AddPolicy("feature:attachments", policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement("files", "chat", "knowledge", "projects")));
     options.AddPolicy("feature:text", policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement("chat", "artifacts")));
 });
@@ -240,8 +247,11 @@ builder.WebHost.ConfigureKestrel(options => { options.AddServerHeader = false; o
 builder.Services.Configure<IISServerOptions>(options => options.MaxRequestBodySize = 10 * 1024 * 1024);
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options => options.MultipartBodyLengthLimit = 9 * 1024 * 1024);
 
-var app = builder.Build();
-_ = app.Services.GetRequiredService<IAttachmentStorage>();
+WebApplication app;
+try { app = builder.Build(); }
+catch (Exception ex) { await DiagnosticStartup.RecordAsync(ex, builder.Configuration, builder.Environment); throw; }
+try { _ = app.Services.GetRequiredService<IAttachmentStorage>(); }
+catch (Exception ex) { await DiagnosticStartup.RecordAsync(ex, builder.Configuration, builder.Environment); await app.DisposeAsync(); throw; }
 if (builder.Configuration.GetValue<bool>("VerifyDeployment"))
 {
     if (!await DeploymentVerifier.VerifyAsync(app.Services, builder.Configuration, builder.Environment, CancellationToken.None)) Environment.ExitCode = 1;
@@ -294,24 +304,7 @@ if (builder.Configuration.GetValue<bool>("VerifyConnections"))
     await app.DisposeAsync();
     return;
 }
-app.Use(async (http, next) =>
-{
-    WebSecurity.Headers(http);
-    try { await next(http); }
-    catch (OperationCanceledException) when (http.RequestAborted.IsCancellationRequested || http.Response.HasStarted) { }
-    catch (Exception ex) when (!http.Response.HasStarted)
-    {
-        var error = ex as ApiException;
-        var status = error?.Status ?? (ex is BadHttpRequestException bad ? bad.StatusCode : ex is AntiforgeryValidationException ? 403 : 503);
-        var code = error?.Code ?? (status == 403 ? "csrf_invalid" : status == 413 ? "request_too_large" : status == 400 ? "invalid_request" : "service_unavailable");
-        var detail = error?.Message ?? (status == 403 ? "安全驗證已失效，請重新載入頁面。" : status == 413 ? "上傳內容超過大小上限，請減少檔案或拆分內容。" : status == 400 ? "請求格式不正確。" : "服務暫時無法使用，請稍後重試。");
-        if (error is null && status == 503)
-        {
-            app.Logger.LogWarning("Request failed ({ErrorType}), trace {TraceId}.", ex.GetType().Name, http.TraceIdentifier);
-        }
-        await Results.Problem(statusCode: status, title: detail, type: $"urn:ai-nexus:problem:{code}", extensions: new Dictionary<string, object?> { ["code"] = code, ["traceId"] = http.TraceIdentifier }).ExecuteAsync(http);
-    }
-});
+app.UseMiddleware<DiagnosticRequestMiddleware>();
 var localHttp = WebSecurity.AllowsLocalHttp(app.Environment, builder.Configuration);
 if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing")) app.UseHsts();
 if (!app.Environment.IsEnvironment("Testing") && !localHttp) app.UseHttpsRedirection();
@@ -320,8 +313,7 @@ app.Use(async (http, next) =>
     if (!http.Request.IsHttps && !app.Environment.IsEnvironment("Testing") &&
         (!localHttp || !WebSecurity.IsLoopback(http.Request, http.Connection.RemoteIpAddress)))
     {
-        await Results.Problem(statusCode: 400, title: "此工作區需要 HTTPS 安全連線。", extensions: new Dictionary<string, object?> { ["code"] = "https_required" }).ExecuteAsync(http);
-        return;
+        throw new ApiException(400, "https_required", "");
     }
     await next(http);
 });
@@ -330,7 +322,7 @@ app.UseStaticFiles();
 app.Use(async (http, next) =>
 {
     // JSON-escaped UTF-16 characters can occupy six bytes. Keep prompt limits usable for Chinese clients too.
-    var bodyLimit = http.Request.Path == "/api/v1/attachments" ? 9 * 1024 * 1024 : http.Request.Path == "/api/v1/conversations/import" ? 8 * 1024 * 1024 :
+    var bodyLimit = http.Request.Path == "/api/v1/client-issues" ? 2048 : http.Request.Path == "/api/v1/attachments" ? 9 * 1024 * 1024 : http.Request.Path == "/api/v1/conversations/import" ? 8 * 1024 * 1024 :
         http.Request.Path is var inputPath && (inputPath == "/api/v1/runs" || inputPath == "/api/v1/context") ? Math.Max(65536, http.RequestServices.GetRequiredService<Microsoft.Extensions.Options.IOptions<InferenceOptions>>().Value.MaxInputCharacters * 6 + 8192) :
         (http.Request.Path.StartsWithSegments("/api/v1/knowledge/collections") || http.Request.Path.StartsWithSegments("/api/v1/documents")) && http.Request.Path.Value!.EndsWith("/text", StringComparison.Ordinal) ? TextDocumentService.MaxCharacters * 6 + 8192 :
         http.Request.Path.StartsWithSegments("/api/v1/prompt-templates") ? 12000 * 6 + 8192 : http.Request.Path.StartsWithSegments("/api/v1/artifacts") ? 64000 * 6 + 8192 : http.Request.Path.StartsWithSegments("/api/v1/quality/sets") ? 224000 * 6 + 8192 : 65536;
@@ -355,9 +347,7 @@ app.Use(async (http, next) =>
         !http.Request.Path.StartsWithSegments("/api/v1/auth"))
     {
         // An operation submitted as the target must never execute under the restored administrator.
-        await Results.Problem(statusCode: 409, title: "測試身分已結束，請重新載入工作區。",
-            extensions: new Dictionary<string, object?> { ["code"] = "identity_changed" }).ExecuteAsync(http);
-        return;
+        throw new ApiException(409, "identity_changed", "");
     }
     await next(http);
 });
@@ -394,6 +384,7 @@ using (var scope = app.Services.CreateScope())
         }
         catch (Exception ex)
         {
+            await DiagnosticStartup.RecordAsync(ex, builder.Configuration, builder.Environment);
             Console.Error.WriteLine(ex is ApiException api ? api.Message : LocalDatabaseSettings.Diagnose(ex));
             Environment.ExitCode = 1;
             await app.DisposeAsync();
@@ -401,5 +392,11 @@ using (var scope = app.Services.CreateScope())
         }
     }
 }
-await app.RunAsync();
+app.Lifetime.ApplicationStarted.Register(() => app.Logger.LogInformation(DiagnosticEvents.Started, "Service started."));
+app.Lifetime.ApplicationStopping.Register(() => app.Logger.LogInformation(DiagnosticEvents.Stopping, "Service stopping."));
+try { await app.RunAsync(); }
+catch (Exception ex) {
+    await DiagnosticStartup.RecordAsync(ex, builder.Configuration, builder.Environment);
+    throw;
+}
 public partial class Program;

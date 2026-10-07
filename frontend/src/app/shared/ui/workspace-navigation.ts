@@ -56,6 +56,6 @@ export class WorkspaceNavigation {
   readonly activated = output<void>();
   readonly expanded = input(false);
   readonly expandedChange = output<boolean>();
-  readonly visibleGroups = computed(() => groupFeatures(this.session.me()?.access.features || []));
+  readonly visibleGroups = computed(() => groupFeatures((this.session.me()?.access.features || []).filter((feature) => !!feature.route)));
   readonly icons = FEATURE_ICONS;
 }

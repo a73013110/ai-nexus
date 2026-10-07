@@ -5,7 +5,7 @@ namespace AiNexus.Modules.Inference;
 
 public sealed record ProviderStatusDto(string Id, bool Available, string? Notice);
 
-public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptions> options, ModelPresentation presentation)
+public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptions> options, ModelPresentation presentation, AiNexus.BuildingBlocks.Diagnostics.Issues issues)
 {
     private readonly SemaphoreSlim gate = new(1, 1);
     private DateTimeOffset checkedAt;
@@ -26,6 +26,7 @@ public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptio
             catch (Exception error) when (error is HttpRequestException or OperationCanceledException or JsonException or IOException or AiNexus.BuildingBlocks.ApiException)
             {
                 ct.ThrowIfCancellationRequested();
+                issues.Report(error, "provider_capability_unavailable", LogLevel.Warning);
                 images = false;
             }
         }
@@ -61,7 +62,8 @@ public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptio
         catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException or JsonException or InvalidOperationException or IOException or AiNexus.BuildingBlocks.ApiException)
         {
             ct.ThrowIfCancellationRequested();
-            return (new(id, false, (exception as AiNexus.BuildingBlocks.ApiException)?.Message ?? "目前無法連線至此模型供應商。"), new HashSet<string>());
+            var issue = issues.Report(exception, "provider_discovery_unavailable", LogLevel.Warning);
+            return (new(id, false, AiNexus.BuildingBlocks.Diagnostics.Issues.Message(issue)), new HashSet<string>());
         }
     }
 

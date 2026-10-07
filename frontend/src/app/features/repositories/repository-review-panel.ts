@@ -1,3 +1,5 @@
+import { ClientValidationError } from '../../core/api/safe-errors';
+import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -31,7 +33,7 @@ import { InferenceSignal } from '../../shared/ui/inference-signal';
 
 @Component({
   selector: 'nx-repository-review',
-  imports: [
+  imports: [IssueCode,
     Select,
     JobProgress,
     MarkdownView,
@@ -227,7 +229,7 @@ export class RepositoryReviewPanel {
     try {
       const detail = await this.api.review(id);
       if (!valid() || sequence !== this.readSequence || repository !== this.repository()) return;
-      if (detail.review.repository !== repository) throw new Error('這份 review 屬於其他程式庫。');
+      if (detail.review.repository !== repository) throw new ClientValidationError('reviewRepository');
       this.show(detail);
       if (poll && !this.active()) {
         const reviews = await this.api.reviews(repository);

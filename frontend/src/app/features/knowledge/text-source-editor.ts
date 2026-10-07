@@ -1,3 +1,4 @@
+import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -14,7 +15,7 @@ import { KnowledgeApi } from './knowledge-api';
 
 @Component({
   selector: 'nx-text-source-editor',
-  imports: [ConfirmDialog],
+  imports: [IssueCode,ConfirmDialog],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
@@ -52,7 +53,7 @@ import { KnowledgeApi } from './knowledge-api';
           {{ text().length.toLocaleString() }} / 64,000 字元 · 原始內容會保留為文字檔
         </p>
         @if (error()) {
-          <p class="error-banner" role="alert">{{ error() }}</p>
+          <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
         }
         <div class="dialog-actions">
           <button type="button" class="secondary-button" [disabled]="busy()" (click)="close()">

@@ -12,7 +12,7 @@
     <p role="status">正在載入介面工作區…</p>
   } @else if (error()) {
     <p class="error-banner" role="alert">
-      {{ error() }}<button type="button" (click)="load()">重新載入</button>
+      {{ error() }}<nx-issue-code [message]="error()" /><button type="button" (click)="load()">重新載入</button>
     </p>
   } @else if (!session.has('admin')) {
     <p class="error-banner" role="alert">介面元件工作區僅提供平台管理員使用。</p>

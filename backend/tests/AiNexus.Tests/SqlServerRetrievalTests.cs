@@ -13,6 +13,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
@@ -110,6 +111,30 @@ public sealed class SqlServerRetrievalTests
             }
             Assert.True(timer.Elapsed < TimeSpan.FromSeconds(90), "全文索引未於 90 秒內完成測試資料 population。");
             var hit = Assert.Single(search!.Hits); Assert.Contains(hit.ChunkId, seed.Chunks.Take(2).Select(x => x.Id)); Assert.Equal(1, hit.FtsRank); Assert.Null(hit.VectorRank);
+        });
+    }
+    [SqlServerFact]
+    public async Task DiagnosticBulkImportIsIdempotentIndependentAndRetentionIsBounded()
+    {
+        await WithDatabase(async (db, _, _) => {
+            var services = new Microsoft.Extensions.DependencyInjection.ServiceCollection();
+            services.AddDbContext<NexusDbContext>(o => o.UseSqlServer(db.Database.GetConnectionString()!));
+            using var provider = services.BuildServiceProvider(); using var health = new AiNexus.BuildingBlocks.Diagnostics.DiagnosticHealth();
+            var options = Options.Create(new AiNexus.BuildingBlocks.Diagnostics.DiagnosticOptions { CleanupBatchSize = 2 });
+            var store = new AiNexus.BuildingBlocks.Diagnostics.DiagnosticStore(provider.GetRequiredService<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>(), options, health);
+            var code = AiNexus.BuildingBlocks.Diagnostics.Issues.NewCode();
+            var row = new AiNexus.BuildingBlocks.Diagnostics.DiagnosticEvent { IssueCode = code, Level = Microsoft.Extensions.Logging.LogLevel.Error, At = DateTimeOffset.UtcNow, TraceId = new string('a', 32) };
+            var user = new NexusUser { Sid = "diagnostic-rollback", Account = "rollback", DisplayName = "fixture" };
+            await using (var transaction = await db.Database.BeginTransactionAsync()) {
+                db.Add(user); await db.SaveChangesAsync(); await store.WriteAsync([row, row], CancellationToken.None); await transaction.RollbackAsync();
+            }
+            await store.WriteAsync([row], CancellationToken.None);
+            Assert.False(await db.Users.AsNoTracking().AnyAsync(x => x.Id == user.Id));
+            Assert.Equal(1, await db.Set<AiNexus.BuildingBlocks.Diagnostics.DiagnosticEvent>().CountAsync(x => x.IssueCode == code));
+            Assert.Equal(row.TraceId, (await db.Set<AiNexus.BuildingBlocks.Diagnostics.DiagnosticEvent>().AsNoTracking().SingleAsync(x => x.LogId == row.LogId)).TraceId);
+            await store.WriteAsync(Enumerable.Range(0, 5).Select(_ => new AiNexus.BuildingBlocks.Diagnostics.DiagnosticEvent { At = DateTimeOffset.UtcNow.AddDays(-31) }).ToArray(), CancellationToken.None);
+            await store.CleanupAsync(CancellationToken.None);
+            Assert.Equal(1, await db.Set<AiNexus.BuildingBlocks.Diagnostics.DiagnosticEvent>().CountAsync());
         });
     }
     private static async Task<(Guid Collection, KnowledgeChunk[] Chunks)> Seed(NexusDbContext db)

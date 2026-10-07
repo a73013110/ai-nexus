@@ -1,3 +1,4 @@
+import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -30,7 +31,7 @@ const emptyPrice = (): PriceRequest => ({
 });
 @Component({
   selector: 'nx-price-book',
-  imports: [Icon, Select],
+  imports: [IssueCode,Icon, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './price-book.scss',
@@ -57,7 +58,7 @@ const emptyPrice = (): PriceRequest => ({
           價格只影響之後的呼叫。依你的方案填寫 API 價格，本機模型可使用內部成本；不同幣別分開統計。
         </p>
         @if (error()) {
-          <p class="error-note" role="alert">{{ error() }}</p>
+          <p class="error-note" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
         }
         @if (notice()) {
           <p class="form-note" role="status">{{ notice() }}</p>

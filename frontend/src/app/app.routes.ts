@@ -105,6 +105,11 @@ export const routes: Routes = [
       import('./features/knowledge/document-reader').then((module) => module.DocumentReader),
   },
   {
+    path: 'admin/logs',
+    canActivate: [authenticated],
+    loadComponent: () => import('./features/admin/logs/system-logs-page').then((m) => m.SystemLogsPage),
+  },
+  {
     path: 'admin',
     canActivate: [authenticated],
     loadComponent: () => import('./features/admin/admin-page').then((module) => module.AdminPage),

@@ -44,7 +44,7 @@
   </button>
 </div>
 @if (error()) {
-  <p class="inline-error" role="alert">{{ error() }}</p>
+  <p class="inline-error" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
 }
 @if (loading()) {
   <p class="form-note" role="status">正在取得稽核紀錄…</p>

@@ -33,10 +33,11 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     private readonly string[] bootstrapAdministrators;
     private readonly bool backgroundJobs;
     private readonly Action<IServiceCollection>? configureServices;
+    private readonly string? webRoot;
     private readonly string databasePath = Path.Combine(Path.GetTempPath(), $"nexus-test-{Guid.NewGuid():N}.db");
     public TestProvider Provider { get; } = new();
     public TestEmbeddings Embeddings { get; } = new();
-    public NexusFactory(Action<NexusDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null, string[]? administrators = null, bool backgroundJobs = true, Action<IServiceCollection>? services = null)
+    public NexusFactory(Action<NexusDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null, string[]? administrators = null, bool backgroundJobs = true, Action<IServiceCollection>? services = null, string? webRoot = null)
     {
         this.ldap = ldap;
         configureInference = inference;
@@ -44,6 +45,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
         bootstrapAdministrators = administrators ?? [];
         this.backgroundJobs = backgroundJobs;
         configureServices = services;
+        this.webRoot = webRoot;
         using var db = new NexusDbContext(new DbContextOptionsBuilder<NexusDbContext>().UseSqlite($"Data Source={databasePath};Default Timeout=10").Options);
         db.Database.EnsureCreated();
         seed?.Invoke(db);
@@ -55,6 +57,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
+        if (webRoot is not null) builder.UseWebRoot(webRoot);
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<DbContextOptions<NexusDbContext>>();
@@ -89,6 +92,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
                     if (model.ProviderModelId.Length == 0) model.ProviderModelId = model.Id;
             });
             services.PostConfigure<AttachmentOptions>(options => { options.StoragePath = databasePath + ".attachments"; configureAttachments?.Invoke(options); });
+            services.PostConfigure<AiNexus.BuildingBlocks.Diagnostics.DiagnosticOptions>(options => { options.Directory = databasePath + ".logs"; options.FlushIntervalMs = 10; options.RetrySeconds = 1; options.OtlpEnabled = false; });
             services.PostConfigure<AiNexus.Modules.Administration.AdministrationOptions>(options => options.BootstrapAdministrators = bootstrapAdministrators);
             configureServices?.Invoke(services);
         });
@@ -117,7 +121,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        if (disposing) { SqliteConnection.ClearAllPools(); File.Delete(databasePath); if (Directory.Exists(databasePath + ".attachments")) Directory.Delete(databasePath + ".attachments", recursive: true); }
+        if (disposing) { SqliteConnection.ClearAllPools(); File.Delete(databasePath); if (Directory.Exists(databasePath + ".attachments")) Directory.Delete(databasePath + ".attachments", recursive: true); if (Directory.Exists(databasePath + ".logs")) Directory.Delete(databasePath + ".logs", recursive: true); }
     }
 }
 

@@ -344,7 +344,7 @@
           </div>
         </form>
         @if (store.attachments.error()) {
-          <p class="context-warning" role="alert">{{ store.attachments.error() }}</p>
+          <p class="context-warning" role="alert">{{ store.attachments.error() }}<nx-issue-code [message]="store.attachments.error()" /></p>
         }
         @if (store.visionNotice()) {
           <p class="context-warning" role="status">{{ store.visionNotice() }}</p>

@@ -30,7 +30,7 @@ public sealed class ShareRecipient { public Guid ShareId { get; set; } public Gu
 public sealed record CreateShareRequest(string Kind, Guid SourceId, IReadOnlyList<Guid> RecipientIds, int Hours = 168, bool IncludeAttachments = false, int? ArtifactVersion = null);
 public sealed record ShareDto(Guid Id, string Kind, string Title, string Owner, bool IsOwner, bool IsRevoked, DateTimeOffset ExpiresAt, DateTimeOffset CreatedAt, IReadOnlyList<string> Recipients, bool IncludeAttachments);
 public sealed record SharedMessageDto(string Role, string Content, string Status, DateTimeOffset CreatedAt, IReadOnlyList<AttachmentDto> Attachments,
-    string? ModelId = null, string? ErrorCode = null, IReadOnlyList<CitationDto>? Sources = null, IReadOnlyList<WebSourceDto>? WebSources = null, RunTimingDto? Timing = null, string? ModelDisplayName = null);
+    string? ModelId = null, string? ErrorCode = null, IReadOnlyList<CitationDto>? Sources = null, IReadOnlyList<WebSourceDto>? WebSources = null, RunTimingDto? Timing = null, string? ModelDisplayName = null, string? IssueCode = null);
 public sealed record SharedFilePreviewDto(AttachmentDto File, IReadOnlyList<DocumentPageDto> Pages);
 public sealed record ShareSnapshot(string Content, int? ArtifactVersion, IReadOnlyList<SharedMessageDto> Messages);
 public sealed record SharedContentDto(ShareDto Share, ShareSnapshot Snapshot);
@@ -101,7 +101,7 @@ public sealed class ShareService(NexusDbContext db, ResourceAccess access, Acces
             links.Where(l => l.MessageId == x.Id).Select(l => new AttachmentDto(l.Id, l.FileName, l.ContentType, l.Size, l.ContentType.StartsWith("image/"), "shared-file")).ToArray(),
             x.ModelId, x.ErrorCode, citations.Where(c => c.MessageId == x.Id).OrderBy(c => c.Number).Select(c => new CitationDto(c.Number, c.DocumentId, c.Title, c.PageNumber, c.Excerpt, c.EndPage)).ToArray(),
             runs.TryGetValue(x.Id, out var run) && searches.Any(s => s.RunId == run.Id) ? searches.Where(s => s.RunId == run.Id).SelectMany(WebSearchService.Sources).ToArray() : null,
-            runs.TryGetValue(x.Id, out var timing) ? RunTiming.Describe(timing) : null)).ToArray();
+            runs.TryGetValue(x.Id, out var timing) ? RunTiming.Describe(timing) : null, IssueCode: x.IssueCode)).ToArray();
         return (conversation.Title, new("", null, messages), links.Select(x => x.Id).Distinct().ToArray());
     }
     public async Task<IReadOnlyList<ShareDto>> ListAsync(Guid actor, bool sent, CancellationToken ct)

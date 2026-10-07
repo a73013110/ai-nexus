@@ -1,6 +1,8 @@
 # 資料庫與 schema
 
-`20261006061603_WorkspaceExperience` 為增量升級，新增通知、程式碼 review／結果及純文字來源版本欄位。已存在的資料庫套用新的 `db/migrations.sql` 或由 `Initialize-Database.ps1` 執行待處理 migration，不重新建立基線。EF model 與物件描述同步更新，OpenAPI／前端 schema 一併提交。
+`20261007040053_SystemDiagnostics` 為增量升級，新增結構化診斷表、Job／Run 的持久關聯、訊息／通知／SSE 查證代碼與稽核關聯，承接 WorkspaceExperience 基線。已存在的資料庫套用新的 `db/migrations.sql` 或由 `Initialize-Database.ps1` 執行待處理 migration，不重新建立基線。EF model、物件描述、OpenAPI／前端 schema 同步更新。
+
+DiagnosticEvents 的 LogId 是非叢集唯一主鍵，`At DESC, LogId DESC` 是叢集索引；等級／Category／EventId／Name 及查證／流程識別有複合索引。查證不依賴中文全文元件。SQL import 使用獨立連線與 transaction；30天診斷與365天稽核各自分批清理，均可配置。應用需要 DiagnosticEvents 的 SELECT／INSERT／受控 retention DELETE，以及既有 AuditEvents 寫入與清理權限；DDL 仍由部署帳號執行。完整政策與容量限制見 [DIAGNOSTICS](DIAGNOSTICS.md)。
 
 業務資料集中在 **AiNexus** SQL Server database。schema 是資料庫內的命名空間，例如 `[access].[Roles]`，不是另一個 database 或另一條連線。按模組分 schema，讓責任、migration 與 SQL 授權容易辨識；跨 schema 外鍵及同一個 EF transaction 仍可使用。
 
@@ -17,7 +19,7 @@
 | inference     | GenerationRuns、RunEvents、ModelProfiles、ModelInvocations                | 執行參數／冪等、SSE replay、能力、OCR／文字／embedding 用量 |
 | inference     | ModelPrices、ModelCharges、WebSearches                                    | 不可變價格版本、呼叫價格／用量快照、搜尋來源與冪等          |
 | workspace     | RepositoryConnections                                                     | 每個人自己的 Gitea 帳號與 Data Protection 加密 token        |
-| operations    | AuditEvents、BackgroundJobs                                               | 同交易稽核、durable 租約／checkpoint／取消／重試            |
+| operations    | AuditEvents、BackgroundJobs、DiagnosticEvents                             | 獨立稽核政策、durable 工作、非業務交易批次診斷保存          |
 | attachments   | Attachments、MessageAttachments、ResourceAttachments                      | 站外原檔 metadata、儲存識別、文字、引用及配額               |
 | library       | PromptTemplates                                                           | 個人提示詞，最多 100 個                                     |
 | collaboration | Resources、ResourceMembers、ResourceGroups                                | 擁有者、具名 viewer／editor、群組唯讀、ParentId 繼承        |

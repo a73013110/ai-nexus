@@ -1,3 +1,5 @@
+import { IssueCode } from '../../shared/ui/issue-code';
+import { safeMessage } from '../../core/api/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -37,7 +39,7 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
 
 @Component({
   selector: 'nx-admin-user-inspector',
-  imports: [
+  imports: [IssueCode,
     Icon,
     SearchField,
     Checkbox,
@@ -261,6 +263,6 @@ export class AdminUserInspector {
     }
   }
   private message(error: unknown) {
-    return error instanceof Error ? error.message : '無法取得資料，請重試。';
+    return safeMessage(error);
   }
 }

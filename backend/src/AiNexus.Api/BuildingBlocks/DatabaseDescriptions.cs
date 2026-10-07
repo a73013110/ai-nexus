@@ -29,6 +29,7 @@ public static class DatabaseDescriptions
         ["ModelPrices"] = "依供應商、模型、幣別及成本類型保存的不可變價格版本。",
         ["ModelCharges"] = "各呼叫當時的價格與用量快照；未知費用保持空值。",
         ["WebSearches"] = "使用者明確啟用的網路搜尋、冪等識別、結果與費用。",
+        ["DiagnosticEvents"] = "共用診斷日誌；只保存受控且已遮罩的事件欄位，LogId 唯一用於補送去重。",
         ["AuditEvents"] = "操作與管理異動稽核；保存實際管理者及有效身分，不記錄密碼或私密內容。",
         ["BackgroundJobs"] = "文件索引與評測等背景工作的租約、進度、重試與取消狀態。",
         ["Attachments"] = "站外附件原檔的 metadata、儲存識別、擷取文字及生命週期；不保存原始 bytes。",
@@ -68,6 +69,29 @@ public static class DatabaseDescriptions
     };
     private static readonly IReadOnlyDictionary<string, string> Columns = new Dictionary<string, string>
     {
+        ["Category"] = "診斷事件的受控 Category 欄位；由集中日誌政策限制大小與遮罩。",
+        ["DurationMs"] = "診斷事件的受控 DurationMs 欄位；由集中日誌政策限制大小與遮罩。",
+        ["Environment"] = "診斷事件的受控 Environment 欄位；由集中日誌政策限制大小與遮罩。",
+        ["EventId"] = "診斷事件的受控 EventId 欄位；由集中日誌政策限制大小與遮罩。",
+        ["EventName"] = "診斷事件的受控 EventName 欄位；由集中日誌政策限制大小與遮罩。",
+        ["ExceptionDetail"] = "省略例外自由文字與路徑的型別、錯誤碼及堆疊。",
+        ["ExceptionType"] = "診斷事件的受控 ExceptionType 欄位；由集中日誌政策限制大小與遮罩。",
+        ["ExternalService"] = "診斷事件的受控 ExternalService 欄位；由集中日誌政策限制大小與遮罩。",
+        ["Instance"] = "診斷事件的受控 Instance 欄位；由集中日誌政策限制大小與遮罩。",
+        ["IssueCode"] = "伺服器產生的不透明問題查證代碼；每個問題個別識別。",
+        ["Level"] = "診斷事件的受控 Level 欄位；由集中日誌政策限制大小與遮罩。",
+        ["LogId"] = "不可重複的日誌識別，SQL 補送去重鍵。",
+        ["MessageTemplate"] = "結構化訊息模板，禁止串接內容與秘密。",
+        ["Method"] = "診斷事件的受控 Method 欄位；由集中日誌政策限制大小與遮罩。",
+        ["OperationId"] = "持久作業識別，跨佇列與重試保持不變。",
+        ["ParentSpanId"] = "排程來源的 W3C span 識別，重試沿用同一 trace。",
+        ["PropertiesJson"] = "白名單純量 metadata，大小及欄位數受限。",
+        ["RequestId"] = "診斷事件的受控 RequestId 欄位；由集中日誌政策限制大小與遮罩。",
+        ["Service"] = "診斷事件的受控 Service 欄位；由集中日誌政策限制大小與遮罩。",
+        ["SpanId"] = "診斷事件的受控 SpanId 欄位；由集中日誌政策限制大小與遮罩。",
+        ["StatusCode"] = "診斷事件的受控 StatusCode 欄位；由集中日誌政策限制大小與遮罩。",
+        ["TraceId"] = "W3C 流程追蹤識別，僅由伺服器建立。",
+        ["UntrustedClient"] = "明確標示不可信用戶端回報。",
         ["InLibrary"] = "是否由個人檔案庫獨立保留原檔；移除對話或知識索引不會刪除保留的檔案。",
         ["Id"] = "資料的主鍵識別碼。", ["Account"] = "登入身分顯示帳號；AD 連結後保存目錄提供的帳號。",
         ["Sid"] = "AD 的不可變 SID；尚未綁定 AD 的手動帳號使用 managed: 識別碼。",
@@ -126,7 +150,7 @@ public static class DatabaseDescriptions
         ["ActiveKey"] = "仍在執行工作的唯一鍵，避免同一業務重複排程。", ["Attempt"] = "背景工作執行／重試次數。",
         ["Stage"] = "背景工作目前階段。", ["CompletedUnits"] = "已完成的真實工作單位數。", ["TotalUnits"] = "已知的總工作單位數；未知不表示百分比。",
         ["CancelRequested"] = "是否收到取消要求；不表示工作已停止。", ["ErrorCode"] = "對外安全的錯誤代碼，不含密碼或完整例外。",
-        ["ErrorMessage"] = "經限制的錯誤說明。", ["Warning"] = "處理過程中的非致命提示。",
+        ["ErrorMessage"] = "固定安全提示與查證代碼；不可保存例外自由文字。", ["Warning"] = "處理過程中的非致命提示。",
         ["CreatedAt"] = "資料建立時間，採 UTC offset。", ["UpdatedAt"] = "資料最後修改時間，採 UTC offset。",
         ["StartedAt"] = "工作開始執行時間。", ["FinishedAt"] = "工作結束時間。", ["At"] = "稽核事件發生時間。",
         ["Action"] = "稽核操作名稱。", ["Result"] = "稽核操作結果或失敗代碼。",
@@ -215,6 +239,16 @@ public static class DatabaseDescriptions
             foreach (var property in entity.GetProperties())
             {
                 if (!Columns.TryGetValue(property.Name, out var description)) throw new InvalidOperationException($"Missing column description: {table}.{property.Name}");
+                if (table == "DiagnosticEvents") description = property.Name switch {
+                    "At" => "診斷事件發生的 UTC 時間，時間與 LogId 為排序及游標分頁鍵。",
+                    "Version" => "應用程式 informational version，用於辨認發版。",
+                    "Route" => "HTTP 路由模板，不含實際路徑值或查詢參數。",
+                    "Level" => "Microsoft.Extensions.Logging 層級值：Trace=0 到 Critical=5。",
+                    "EventId" => "穩定的事件分類識別碼，跨程式版本保持意義一致。",
+                    "EventName" => "穩定的事件名稱，供模組及流程查詢。",
+                    "UserId" => "伺服器解析的受控使用者識別碼；不接受客戶端傳入。",
+                    _ => description
+                };
                 property.SetComment(description);
             }
         }

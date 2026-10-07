@@ -1,3 +1,5 @@
+import { ClientValidationError } from '../../core/api/safe-errors';
+import { IssueCode } from '../../shared/ui/issue-code';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ChangeDetectionStrategy,
@@ -33,7 +35,7 @@ import { RepositoriesApi } from './repositories-api';
 
 @Component({
   selector: 'nx-repositories-page',
-  imports: [
+  imports: [IssueCode,
     FeaturePage,
     Icon,
     Select,
@@ -128,7 +130,7 @@ export class RepositoriesPage {
     try {
       await this.session.load();
       if (!valid()) return;
-      if (!this.session.has('repositories')) throw new Error('目前沒有程式庫功能權限。');
+      if (!this.session.has('repositories')) throw new ClientValidationError('featureAccess');
       const status = await this.api.status();
       if (!valid()) return;
       this.status.set(status);

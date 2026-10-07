@@ -1,3 +1,5 @@
+import { IssueCode } from './issue-code';
+import { safeMessage } from '../../core/api/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -13,7 +15,7 @@ import { Icon } from './icon';
 
 @Component({
   selector: 'nx-identity-banner',
-  imports: [Icon],
+  imports: [IssueCode,Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `@if (auth.session()?.testing; as testing) {
     <div #banner class="identity-banner" role="region" aria-label="管理者測試身分">
@@ -26,7 +28,7 @@ import { Icon } from './icon';
         {{ busy() ? '正在返回…' : '返回管理者' }}
       </button>
       @if (error()) {
-        <p role="alert">{{ error() }}</p>
+        <p role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
       }
     </div>
   }`,
@@ -72,7 +74,7 @@ export class IdentityBanner {
     try {
       await this.auth.endTestIdentity();
     } catch (error) {
-      this.error.set(error instanceof Error ? error.message : '返回未完成，請重新連線後再試。');
+      this.error.set(safeMessage(error));
       this.busy.set(false);
     }
   }

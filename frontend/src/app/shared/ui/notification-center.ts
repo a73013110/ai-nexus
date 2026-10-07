@@ -1,3 +1,6 @@
+import { safeMessage, systemProblem, validIssueCode } from '../../core/api/safe-errors';
+import type { NotificationItem } from '../../core/api/types';
+import { IssueCode } from './issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -13,7 +16,7 @@ import { formatDate } from '../browser/format';
 
 @Component({
   selector: 'nx-notification-center',
-  imports: [Icon],
+  imports: [IssueCode,Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
     #dialog
@@ -63,7 +66,7 @@ import { formatDate } from '../browser/format';
     </div>
     @if (store.error()) {
       <p class="error-banner" role="alert">
-        {{ store.error() }}<button (click)="store.refresh()">重試</button>
+        {{ store.error() }}<nx-issue-code [message]="store.error()" /><button (click)="store.refresh()">重試</button>
       </p>
     }
     <div class="notification-list" [attr.aria-busy]="store.loading()">
@@ -85,7 +88,7 @@ import { formatDate } from '../browser/format';
                 <span class="notification-unread">未讀</span>
               }
             </div>
-            <p>{{ item.body }}</p>
+            <p>{{ body(item) }}<nx-issue-code [message]="body(item)" /></p>
             <time [attr.datetime]="item.createdAt">{{ date(item.createdAt) }}</time>
             <div class="notification-actions">
               @if (url(item.target, item.version)) {
@@ -131,6 +134,7 @@ import { formatDate } from '../browser/format';
   </dialog>`,
 })
 export class NotificationCenter {
+  body(item: NotificationItem) { return item.severity === 'error' ? validIssueCode(item.issueCode) ? systemProblem(item.issueCode) : safeMessage(item) : item.body; }
   readonly store = inject(NotificationStore);
   readonly date = formatDate;
   readonly url = notificationUrl;

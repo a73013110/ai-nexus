@@ -3781,3 +3781,410 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    ALTER TABLE [inference].[RunEvents] ADD [IssueCode] nvarchar(40) NULL;
+    DECLARE @description87 AS sql_variant;
+    SET @description87 = N'伺服器產生的不透明問題查證代碼；每個問題個別識別。';
+    EXEC sp_addextendedproperty 'MS_Description', @description87, 'SCHEMA', N'inference', 'TABLE', N'RunEvents', 'COLUMN', N'IssueCode';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    ALTER TABLE [operations].[Notifications] ADD [IssueCode] nvarchar(40) NULL;
+    DECLARE @description88 AS sql_variant;
+    SET @description88 = N'伺服器產生的不透明問題查證代碼；每個問題個別識別。';
+    EXEC sp_addextendedproperty 'MS_Description', @description88, 'SCHEMA', N'operations', 'TABLE', N'Notifications', 'COLUMN', N'IssueCode';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    ALTER TABLE [conversations].[Messages] ADD [IssueCode] nvarchar(40) NULL;
+    DECLARE @description89 AS sql_variant;
+    SET @description89 = N'伺服器產生的不透明問題查證代碼；每個問題個別識別。';
+    EXEC sp_addextendedproperty 'MS_Description', @description89, 'SCHEMA', N'conversations', 'TABLE', N'Messages', 'COLUMN', N'IssueCode';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    ALTER TABLE [inference].[GenerationRuns] ADD [IssueCode] nvarchar(40) NULL;
+    DECLARE @description90 AS sql_variant;
+    SET @description90 = N'伺服器產生的不透明問題查證代碼；每個問題個別識別。';
+    EXEC sp_addextendedproperty 'MS_Description', @description90, 'SCHEMA', N'inference', 'TABLE', N'GenerationRuns', 'COLUMN', N'IssueCode';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    ALTER TABLE [inference].[GenerationRuns] ADD [OperationId] uniqueidentifier NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
+    DECLARE @description91 AS sql_variant;
+    SET @description91 = N'持久作業識別，跨佇列與重試保持不變。';
+    EXEC sp_addextendedproperty 'MS_Description', @description91, 'SCHEMA', N'inference', 'TABLE', N'GenerationRuns', 'COLUMN', N'OperationId';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    ALTER TABLE [inference].[GenerationRuns] ADD [ParentSpanId] nvarchar(16) NULL;
+    DECLARE @description92 AS sql_variant;
+    SET @description92 = N'排程來源的 W3C span 識別，重試沿用同一 trace。';
+    EXEC sp_addextendedproperty 'MS_Description', @description92, 'SCHEMA', N'inference', 'TABLE', N'GenerationRuns', 'COLUMN', N'ParentSpanId';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    ALTER TABLE [inference].[GenerationRuns] ADD [TraceId] nvarchar(32) NULL;
+    DECLARE @description93 AS sql_variant;
+    SET @description93 = N'W3C 流程追蹤識別，僅由伺服器建立。';
+    EXEC sp_addextendedproperty 'MS_Description', @description93, 'SCHEMA', N'inference', 'TABLE', N'GenerationRuns', 'COLUMN', N'TraceId';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    DECLARE @description94 AS sql_variant;
+    EXEC sp_dropextendedproperty 'MS_Description', 'SCHEMA', N'operations', 'TABLE', N'BackgroundJobs', 'COLUMN', N'ErrorMessage';
+    SET @description94 = N'固定安全提示與查證代碼；不可保存例外自由文字。';
+    EXEC sp_addextendedproperty 'MS_Description', @description94, 'SCHEMA', N'operations', 'TABLE', N'BackgroundJobs', 'COLUMN', N'ErrorMessage';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    ALTER TABLE [operations].[BackgroundJobs] ADD [IssueCode] nvarchar(40) NULL;
+    DECLARE @description95 AS sql_variant;
+    SET @description95 = N'伺服器產生的不透明問題查證代碼；每個問題個別識別。';
+    EXEC sp_addextendedproperty 'MS_Description', @description95, 'SCHEMA', N'operations', 'TABLE', N'BackgroundJobs', 'COLUMN', N'IssueCode';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    ALTER TABLE [operations].[BackgroundJobs] ADD [OperationId] uniqueidentifier NOT NULL DEFAULT '00000000-0000-0000-0000-000000000000';
+    DECLARE @description96 AS sql_variant;
+    SET @description96 = N'持久作業識別，跨佇列與重試保持不變。';
+    EXEC sp_addextendedproperty 'MS_Description', @description96, 'SCHEMA', N'operations', 'TABLE', N'BackgroundJobs', 'COLUMN', N'OperationId';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    ALTER TABLE [operations].[BackgroundJobs] ADD [ParentSpanId] nvarchar(16) NULL;
+    DECLARE @description97 AS sql_variant;
+    SET @description97 = N'排程來源的 W3C span 識別，重試沿用同一 trace。';
+    EXEC sp_addextendedproperty 'MS_Description', @description97, 'SCHEMA', N'operations', 'TABLE', N'BackgroundJobs', 'COLUMN', N'ParentSpanId';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    ALTER TABLE [operations].[BackgroundJobs] ADD [TraceId] nvarchar(32) NULL;
+    DECLARE @description98 AS sql_variant;
+    SET @description98 = N'W3C 流程追蹤識別，僅由伺服器建立。';
+    EXEC sp_addextendedproperty 'MS_Description', @description98, 'SCHEMA', N'operations', 'TABLE', N'BackgroundJobs', 'COLUMN', N'TraceId';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    ALTER TABLE [operations].[AuditEvents] ADD [IssueCode] nvarchar(40) NULL;
+    DECLARE @description99 AS sql_variant;
+    SET @description99 = N'伺服器產生的不透明問題查證代碼；每個問題個別識別。';
+    EXEC sp_addextendedproperty 'MS_Description', @description99, 'SCHEMA', N'operations', 'TABLE', N'AuditEvents', 'COLUMN', N'IssueCode';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    ALTER TABLE [operations].[AuditEvents] ADD [OperationId] uniqueidentifier NULL;
+    DECLARE @description100 AS sql_variant;
+    SET @description100 = N'持久作業識別，跨佇列與重試保持不變。';
+    EXEC sp_addextendedproperty 'MS_Description', @description100, 'SCHEMA', N'operations', 'TABLE', N'AuditEvents', 'COLUMN', N'OperationId';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    ALTER TABLE [operations].[AuditEvents] ADD [TraceId] nvarchar(32) NULL;
+    DECLARE @description101 AS sql_variant;
+    SET @description101 = N'W3C 流程追蹤識別，僅由伺服器建立。';
+    EXEC sp_addextendedproperty 'MS_Description', @description101, 'SCHEMA', N'operations', 'TABLE', N'AuditEvents', 'COLUMN', N'TraceId';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    CREATE TABLE [operations].[DiagnosticEvents] (
+        [LogId] uniqueidentifier NOT NULL,
+        [At] datetimeoffset NOT NULL,
+        [Level] int NOT NULL,
+        [Category] nvarchar(180) NOT NULL,
+        [EventId] int NOT NULL,
+        [EventName] nvarchar(100) NOT NULL,
+        [MessageTemplate] nvarchar(2048) NOT NULL,
+        [PropertiesJson] nvarchar(max) NOT NULL,
+        [Service] nvarchar(80) NOT NULL,
+        [Environment] nvarchar(32) NOT NULL,
+        [Version] nvarchar(80) NOT NULL,
+        [Instance] nvarchar(100) NOT NULL,
+        [IssueCode] nvarchar(40) NULL,
+        [TraceId] nvarchar(32) NULL,
+        [SpanId] nvarchar(16) NULL,
+        [RequestId] nvarchar(40) NULL,
+        [OperationId] uniqueidentifier NULL,
+        [JobId] uniqueidentifier NULL,
+        [RunId] uniqueidentifier NULL,
+        [UserId] uniqueidentifier NULL,
+        [Attempt] int NULL,
+        [Method] nvarchar(10) NULL,
+        [Route] nvarchar(240) NULL,
+        [StatusCode] int NULL,
+        [DurationMs] float NULL,
+        [ExternalService] nvarchar(32) NULL,
+        [ErrorCode] nvarchar(80) NULL,
+        [ExceptionType] nvarchar(180) NULL,
+        [ExceptionDetail] nvarchar(max) NULL,
+        [UntrustedClient] bit NOT NULL,
+        CONSTRAINT [PK_DiagnosticEvents] PRIMARY KEY NONCLUSTERED ([LogId])
+    );
+    DECLARE @description102 AS sql_variant;
+    SET @description102 = N'共用診斷日誌；只保存受控且已遮罩的事件欄位，LogId 唯一用於補送去重。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents';
+    SET @description102 = N'不可重複的日誌識別，SQL 補送去重鍵。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'LogId';
+    SET @description102 = N'診斷事件發生的 UTC 時間，時間與 LogId 為排序及游標分頁鍵。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'At';
+    SET @description102 = N'Microsoft.Extensions.Logging 層級值：Trace=0 到 Critical=5。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'Level';
+    SET @description102 = N'診斷事件的受控 Category 欄位；由集中日誌政策限制大小與遮罩。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'Category';
+    SET @description102 = N'穩定的事件分類識別碼，跨程式版本保持意義一致。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'EventId';
+    SET @description102 = N'穩定的事件名稱，供模組及流程查詢。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'EventName';
+    SET @description102 = N'結構化訊息模板，禁止串接內容與秘密。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'MessageTemplate';
+    SET @description102 = N'白名單純量 metadata，大小及欄位數受限。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'PropertiesJson';
+    SET @description102 = N'診斷事件的受控 Service 欄位；由集中日誌政策限制大小與遮罩。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'Service';
+    SET @description102 = N'診斷事件的受控 Environment 欄位；由集中日誌政策限制大小與遮罩。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'Environment';
+    SET @description102 = N'應用程式 informational version，用於辨認發版。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'Version';
+    SET @description102 = N'診斷事件的受控 Instance 欄位；由集中日誌政策限制大小與遮罩。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'Instance';
+    SET @description102 = N'伺服器產生的不透明問題查證代碼；每個問題個別識別。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'IssueCode';
+    SET @description102 = N'W3C 流程追蹤識別，僅由伺服器建立。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'TraceId';
+    SET @description102 = N'診斷事件的受控 SpanId 欄位；由集中日誌政策限制大小與遮罩。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'SpanId';
+    SET @description102 = N'診斷事件的受控 RequestId 欄位；由集中日誌政策限制大小與遮罩。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'RequestId';
+    SET @description102 = N'持久作業識別，跨佇列與重試保持不變。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'OperationId';
+    SET @description102 = N'關聯背景工作識別碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'JobId';
+    SET @description102 = N'關聯生成或評測執行的識別碼。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'RunId';
+    SET @description102 = N'伺服器解析的受控使用者識別碼；不接受客戶端傳入。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'UserId';
+    SET @description102 = N'背景工作執行／重試次數。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'Attempt';
+    SET @description102 = N'診斷事件的受控 Method 欄位；由集中日誌政策限制大小與遮罩。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'Method';
+    SET @description102 = N'HTTP 路由模板，不含實際路徑值或查詢參數。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'Route';
+    SET @description102 = N'診斷事件的受控 StatusCode 欄位；由集中日誌政策限制大小與遮罩。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'StatusCode';
+    SET @description102 = N'診斷事件的受控 DurationMs 欄位；由集中日誌政策限制大小與遮罩。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'DurationMs';
+    SET @description102 = N'診斷事件的受控 ExternalService 欄位；由集中日誌政策限制大小與遮罩。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'ExternalService';
+    SET @description102 = N'對外安全的錯誤代碼，不含密碼或完整例外。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'ErrorCode';
+    SET @description102 = N'診斷事件的受控 ExceptionType 欄位；由集中日誌政策限制大小與遮罩。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'ExceptionType';
+    SET @description102 = N'省略例外自由文字與路徑的型別、錯誤碼及堆疊。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'ExceptionDetail';
+    SET @description102 = N'明確標示不可信用戶端回報。';
+    EXEC sp_addextendedproperty 'MS_Description', @description102, 'SCHEMA', N'operations', 'TABLE', N'DiagnosticEvents', 'COLUMN', N'UntrustedClient';
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Enabled', N'Name', N'Route', N'SortOrder') AND [object_id] = OBJECT_ID(N'[access].[Features]'))
+        SET IDENTITY_INSERT [access].[Features] ON;
+    EXEC(N'INSERT INTO [access].[Features] ([Id], [Enabled], [Name], [Route], [SortOrder])
+    VALUES (N''logs.detail'', CAST(1 AS bit), N''日誌診斷詳情'', N'''', 111),
+    (N''logs.export'', CAST(1 AS bit), N''日誌匯出'', N'''', 112),
+    (N''logs.query'', CAST(1 AS bit), N''系統日誌'', N''/admin/logs'', 110)');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'Id', N'Enabled', N'Name', N'Route', N'SortOrder') AND [object_id] = OBJECT_ID(N'[access].[Features]'))
+        SET IDENTITY_INSERT [access].[Features] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'FeatureId', N'GroupId') AND [object_id] = OBJECT_ID(N'[access].[RoleGroupFeatures]'))
+        SET IDENTITY_INSERT [access].[RoleGroupFeatures] ON;
+    EXEC(N'INSERT INTO [access].[RoleGroupFeatures] ([FeatureId], [GroupId])
+    VALUES (N''logs.detail'', N''administrators''),
+    (N''logs.export'', N''administrators''),
+    (N''logs.query'', N''administrators'')');
+    IF EXISTS (SELECT * FROM [sys].[identity_columns] WHERE [name] IN (N'FeatureId', N'GroupId') AND [object_id] = OBJECT_ID(N'[access].[RoleGroupFeatures]'))
+        SET IDENTITY_INSERT [access].[RoleGroupFeatures] OFF;
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    CREATE CLUSTERED INDEX [IX_DiagnosticEvents_At_LogId] ON [operations].[DiagnosticEvents] ([At] DESC, [LogId] DESC);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    CREATE INDEX [IX_DiagnosticEvents_Category_At_LogId] ON [operations].[DiagnosticEvents] ([Category], [At], [LogId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    EXEC(N'CREATE INDEX [IX_DiagnosticEvents_ErrorCode_At_LogId] ON [operations].[DiagnosticEvents] ([ErrorCode], [At], [LogId]) WHERE [ErrorCode] IS NOT NULL');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    CREATE INDEX [IX_DiagnosticEvents_EventId_At_LogId] ON [operations].[DiagnosticEvents] ([EventId], [At], [LogId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    CREATE INDEX [IX_DiagnosticEvents_EventName_At_LogId] ON [operations].[DiagnosticEvents] ([EventName], [At], [LogId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    EXEC(N'CREATE INDEX [IX_DiagnosticEvents_Instance_At_LogId] ON [operations].[DiagnosticEvents] ([Instance], [At], [LogId]) WHERE [Instance] IS NOT NULL');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    EXEC(N'CREATE INDEX [IX_DiagnosticEvents_IssueCode_At_LogId] ON [operations].[DiagnosticEvents] ([IssueCode], [At], [LogId]) WHERE [IssueCode] IS NOT NULL');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    EXEC(N'CREATE INDEX [IX_DiagnosticEvents_JobId_At_LogId] ON [operations].[DiagnosticEvents] ([JobId], [At], [LogId]) WHERE [JobId] IS NOT NULL');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    CREATE INDEX [IX_DiagnosticEvents_Level_At_LogId] ON [operations].[DiagnosticEvents] ([Level], [At], [LogId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    EXEC(N'CREATE INDEX [IX_DiagnosticEvents_OperationId_At_LogId] ON [operations].[DiagnosticEvents] ([OperationId], [At], [LogId]) WHERE [OperationId] IS NOT NULL');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    EXEC(N'CREATE INDEX [IX_DiagnosticEvents_RunId_At_LogId] ON [operations].[DiagnosticEvents] ([RunId], [At], [LogId]) WHERE [RunId] IS NOT NULL');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    EXEC(N'CREATE INDEX [IX_DiagnosticEvents_TraceId_At_LogId] ON [operations].[DiagnosticEvents] ([TraceId], [At], [LogId]) WHERE [TraceId] IS NOT NULL');
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261007040053_SystemDiagnostics'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261007040053_SystemDiagnostics', N'10.0.12');
+END;
+
+COMMIT;
+GO
+

@@ -1,3 +1,4 @@
+import { safeMessage } from '../../core/api/safe-errors';
 import { Injectable, inject, signal } from '@angular/core';
 import { AuthService } from '../../core/auth/auth-service';
 import type { Collection } from '../../core/api/types';
@@ -35,7 +36,7 @@ export class KnowledgeSelection {
         this.collections.set(rows);
     } catch (error) {
       if (generation === this.auth.generation() && version === this.version)
-        this.error.set(error instanceof Error ? error.message : '知識來源載入失敗。');
+        this.error.set(safeMessage(error));
     }
   }
   async load(conversation: string | null) {
@@ -56,7 +57,7 @@ export class KnowledgeSelection {
       if (version === this.version && generation === this.auth.generation()) {
         this.loadFailed.set(true);
         this.error.set(
-          error instanceof Error ? error.message : '知識來源載入失敗，請重新載入對話。',
+          safeMessage(error),
         );
       }
     } finally {
@@ -85,7 +86,7 @@ export class KnowledgeSelection {
     } catch (error) {
       if (version === this.version && generation === this.auth.generation()) {
         this.ids.set(before);
-        this.error.set(error instanceof Error ? error.message : '知識來源儲存失敗。');
+        this.error.set(safeMessage(error));
       }
     } finally {
       if (version === this.version && generation === this.auth.generation()) {

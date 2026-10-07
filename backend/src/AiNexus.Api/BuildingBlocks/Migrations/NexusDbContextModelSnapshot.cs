@@ -23,6 +23,199 @@ namespace AiNexus.BuildingBlocks.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("AiNexus.BuildingBlocks.Diagnostics.DiagnosticEvent", b =>
+                {
+                    b.Property<Guid>("LogId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("不可重複的日誌識別，SQL 補送去重鍵。");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("datetimeoffset")
+                        .HasComment("診斷事件發生的 UTC 時間，時間與 LogId 為排序及游標分頁鍵。");
+
+                    b.Property<int?>("Attempt")
+                        .HasColumnType("int")
+                        .HasComment("背景工作執行／重試次數。");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(180)
+                        .HasColumnType("nvarchar(180)")
+                        .HasComment("診斷事件的受控 Category 欄位；由集中日誌政策限制大小與遮罩。");
+
+                    b.Property<double?>("DurationMs")
+                        .HasColumnType("float")
+                        .HasComment("診斷事件的受控 DurationMs 欄位；由集中日誌政策限制大小與遮罩。");
+
+                    b.Property<string>("Environment")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("診斷事件的受控 Environment 欄位；由集中日誌政策限制大小與遮罩。");
+
+                    b.Property<string>("ErrorCode")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)")
+                        .HasComment("對外安全的錯誤代碼，不含密碼或完整例外。");
+
+                    b.Property<int>("EventId")
+                        .HasColumnType("int")
+                        .HasComment("穩定的事件分類識別碼，跨程式版本保持意義一致。");
+
+                    b.Property<string>("EventName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasComment("穩定的事件名稱，供模組及流程查詢。");
+
+                    b.Property<string>("ExceptionDetail")
+                        .HasMaxLength(12000)
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("省略例外自由文字與路徑的型別、錯誤碼及堆疊。");
+
+                    b.Property<string>("ExceptionType")
+                        .HasMaxLength(180)
+                        .HasColumnType("nvarchar(180)")
+                        .HasComment("診斷事件的受控 ExceptionType 欄位；由集中日誌政策限制大小與遮罩。");
+
+                    b.Property<string>("ExternalService")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("診斷事件的受控 ExternalService 欄位；由集中日誌政策限制大小與遮罩。");
+
+                    b.Property<string>("Instance")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasComment("診斷事件的受控 Instance 欄位；由集中日誌政策限制大小與遮罩。");
+
+                    b.Property<string>("IssueCode")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasComment("伺服器產生的不透明問題查證代碼；每個問題個別識別。");
+
+                    b.Property<Guid?>("JobId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("關聯背景工作識別碼。");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("int")
+                        .HasComment("Microsoft.Extensions.Logging 層級值：Trace=0 到 Critical=5。");
+
+                    b.Property<string>("MessageTemplate")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("nvarchar(2048)")
+                        .HasComment("結構化訊息模板，禁止串接內容與秘密。");
+
+                    b.Property<string>("Method")
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)")
+                        .HasComment("診斷事件的受控 Method 欄位；由集中日誌政策限制大小與遮罩。");
+
+                    b.Property<Guid?>("OperationId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("持久作業識別，跨佇列與重試保持不變。");
+
+                    b.Property<string>("PropertiesJson")
+                        .IsRequired()
+                        .HasMaxLength(8192)
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("白名單純量 metadata，大小及欄位數受限。");
+
+                    b.Property<string>("RequestId")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasComment("診斷事件的受控 RequestId 欄位；由集中日誌政策限制大小與遮罩。");
+
+                    b.Property<string>("Route")
+                        .HasMaxLength(240)
+                        .HasColumnType("nvarchar(240)")
+                        .HasComment("HTTP 路由模板，不含實際路徑值或查詢參數。");
+
+                    b.Property<Guid?>("RunId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("關聯生成或評測執行的識別碼。");
+
+                    b.Property<string>("Service")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)")
+                        .HasComment("診斷事件的受控 Service 欄位；由集中日誌政策限制大小與遮罩。");
+
+                    b.Property<string>("SpanId")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasComment("診斷事件的受控 SpanId 欄位；由集中日誌政策限制大小與遮罩。");
+
+                    b.Property<int?>("StatusCode")
+                        .HasColumnType("int")
+                        .HasComment("診斷事件的受控 StatusCode 欄位；由集中日誌政策限制大小與遮罩。");
+
+                    b.Property<string>("TraceId")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("W3C 流程追蹤識別，僅由伺服器建立。");
+
+                    b.Property<bool>("UntrustedClient")
+                        .HasColumnType("bit")
+                        .HasComment("明確標示不可信用戶端回報。");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("伺服器解析的受控使用者識別碼；不接受客戶端傳入。");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)")
+                        .HasComment("應用程式 informational version，用於辨認發版。");
+
+                    b.HasKey("LogId");
+
+                    SqlServerKeyBuilderExtensions.IsClustered(b.HasKey("LogId"), false);
+
+                    b.HasIndex("At", "LogId")
+                        .IsDescending();
+
+                    SqlServerIndexBuilderExtensions.IsClustered(b.HasIndex("At", "LogId"));
+
+                    b.HasIndex("Category", "At", "LogId");
+
+                    b.HasIndex("ErrorCode", "At", "LogId")
+                        .HasFilter("[ErrorCode] IS NOT NULL");
+
+                    b.HasIndex("EventId", "At", "LogId");
+
+                    b.HasIndex("EventName", "At", "LogId");
+
+                    b.HasIndex("Instance", "At", "LogId")
+                        .HasFilter("[Instance] IS NOT NULL");
+
+                    b.HasIndex("IssueCode", "At", "LogId")
+                        .HasFilter("[IssueCode] IS NOT NULL");
+
+                    b.HasIndex("JobId", "At", "LogId")
+                        .HasFilter("[JobId] IS NOT NULL");
+
+                    b.HasIndex("Level", "At", "LogId");
+
+                    b.HasIndex("OperationId", "At", "LogId")
+                        .HasFilter("[OperationId] IS NOT NULL");
+
+                    b.HasIndex("RunId", "At", "LogId")
+                        .HasFilter("[RunId] IS NOT NULL");
+
+                    b.HasIndex("TraceId", "At", "LogId")
+                        .HasFilter("[TraceId] IS NOT NULL");
+
+                    b.ToTable("DiagnosticEvents", "operations", t =>
+                        {
+                            t.HasComment("共用診斷日誌；只保存受控且已遮罩的事件欄位，LogId 唯一用於補送去重。");
+                        });
+                });
+
             modelBuilder.Entity("AiNexus.Modules.AccessControl.Feature", b =>
                 {
                     b.Property<string>("Id")
@@ -58,6 +251,30 @@ namespace AiNexus.BuildingBlocks.Migrations
                         });
 
                     b.HasData(
+                        new
+                        {
+                            Id = "logs.query",
+                            Enabled = true,
+                            Name = "系統日誌",
+                            Route = "/admin/logs",
+                            SortOrder = 110
+                        },
+                        new
+                        {
+                            Id = "logs.detail",
+                            Enabled = true,
+                            Name = "日誌診斷詳情",
+                            Route = "",
+                            SortOrder = 111
+                        },
+                        new
+                        {
+                            Id = "logs.export",
+                            Enabled = true,
+                            Name = "日誌匯出",
+                            Route = "",
+                            SortOrder = 112
+                        },
                         new
                         {
                             Id = "chat",
@@ -254,6 +471,21 @@ namespace AiNexus.BuildingBlocks.Migrations
                         });
 
                     b.HasData(
+                        new
+                        {
+                            GroupId = "administrators",
+                            FeatureId = "logs.query"
+                        },
+                        new
+                        {
+                            GroupId = "administrators",
+                            FeatureId = "logs.detail"
+                        },
+                        new
+                        {
+                            GroupId = "administrators",
+                            FeatureId = "logs.export"
+                        },
                         new
                         {
                             GroupId = "workspace",
@@ -1056,6 +1288,11 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasColumnType("nvarchar(80)")
                         .HasComment("對外安全的錯誤代碼，不含密碼或完整例外。");
 
+                    b.Property<string>("IssueCode")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasComment("伺服器產生的不透明問題查證代碼；每個問題個別識別。");
+
                     b.Property<string>("ModelId")
                         .HasMaxLength(160)
                         .HasColumnType("nvarchar(160)")
@@ -1258,6 +1495,11 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasColumnType("bigint")
                         .HasComment("模型回報的輸入 tokens；未知保持空值。");
 
+                    b.Property<string>("IssueCode")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasComment("伺服器產生的不透明問題查證代碼；每個問題個別識別。");
+
                     b.Property<long>("LastSequence")
                         .HasColumnType("bigint")
                         .HasComment("最後已持久化的生成事件序號。");
@@ -1272,6 +1514,10 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasColumnType("nvarchar(160)")
                         .HasComment("核准模型的內部識別碼。");
 
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("持久作業識別，跨佇列與重試保持不變。");
+
                     b.Property<long?>("OutputTokens")
                         .HasColumnType("bigint")
                         .HasComment("模型回報的輸出 tokens；未知保持空值。");
@@ -1284,6 +1530,11 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)")
                         .HasComment("執行參數的 JSON 快照，不含服務密鑰。");
+
+                    b.Property<string>("ParentSpanId")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasComment("排程來源的 W3C span 識別，重試沿用同一 trace。");
 
                     b.Property<string>("Provider")
                         .IsRequired()
@@ -1316,6 +1567,11 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("nvarchar(16)")
                         .HasComment("業務執行狀態。");
+
+                    b.Property<string>("TraceId")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("W3C 流程追蹤識別，僅由伺服器建立。");
 
                     b.Property<Guid>("UserMessageId")
                         .HasColumnType("uniqueidentifier")
@@ -1480,6 +1736,11 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("nvarchar(80)")
                         .HasComment("對外安全的錯誤代碼，不含密碼或完整例外。");
+
+                    b.Property<string>("IssueCode")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasComment("伺服器產生的不透明問題查證代碼；每個問題個別識別。");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -2036,6 +2297,11 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasColumnType("nvarchar(160)")
                         .HasComment("通知來源事件的冪等識別碼。");
 
+                    b.Property<string>("IssueCode")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasComment("伺服器產生的不透明問題查證代碼；每個問題個別識別。");
+
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uniqueidentifier")
                         .HasComment("資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。");
@@ -2117,6 +2383,15 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasColumnType("nvarchar(max)")
                         .HasComment("稽核前後狀態或操作範圍 JSON；不含密碼、hash、token 或對話內容。");
 
+                    b.Property<string>("IssueCode")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasComment("伺服器產生的不透明問題查證代碼；每個問題個別識別。");
+
+                    b.Property<Guid?>("OperationId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("持久作業識別，跨佇列與重試保持不變。");
+
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uniqueidentifier")
                         .HasComment("資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。");
@@ -2129,6 +2404,11 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("nvarchar(80)")
                         .HasComment("稽核操作結果或失敗代碼。");
+
+                    b.Property<string>("TraceId")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("W3C 流程追蹤識別，僅由伺服器建立。");
 
                     b.HasKey("Id");
 
@@ -2182,7 +2462,12 @@ namespace AiNexus.BuildingBlocks.Migrations
                     b.Property<string>("ErrorMessage")
                         .HasMaxLength(240)
                         .HasColumnType("nvarchar(240)")
-                        .HasComment("經限制的錯誤說明。");
+                        .HasComment("固定安全提示與查證代碼；不可保存例外自由文字。");
+
+                    b.Property<string>("IssueCode")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasComment("伺服器產生的不透明問題查證代碼；每個問題個別識別。");
 
                     b.Property<string>("Kind")
                         .IsRequired()
@@ -2204,9 +2489,18 @@ namespace AiNexus.BuildingBlocks.Migrations
                         .HasColumnType("datetimeoffset")
                         .HasComment("背景工作租約的到期時間。");
 
+                    b.Property<Guid>("OperationId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("持久作業識別，跨佇列與重試保持不變。");
+
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uniqueidentifier")
                         .HasComment("資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。");
+
+                    b.Property<string>("ParentSpanId")
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasComment("排程來源的 W3C span 識別，重試沿用同一 trace。");
 
                     b.Property<Guid?>("ResourceId")
                         .HasColumnType("uniqueidentifier")
@@ -2231,6 +2525,11 @@ namespace AiNexus.BuildingBlocks.Migrations
                     b.Property<int?>("TotalUnits")
                         .HasColumnType("int")
                         .HasComment("已知的總工作單位數；未知不表示百分比。");
+
+                    b.Property<string>("TraceId")
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("W3C 流程追蹤識別，僅由伺服器建立。");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("datetimeoffset")

@@ -1,3 +1,5 @@
+import { IssueCode } from '../../shared/ui/issue-code';
+import { safeMessage } from '../../core/api/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -27,7 +29,7 @@ import {
 
 @Component({
   selector: 'nx-admin-audit',
-  imports: [SearchField, Select, Icon, FeatureSummary],
+  imports: [IssueCode,SearchField, Select, Icon, FeatureSummary],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: ':host { display: block; min-width: 0; }',
   templateUrl: './admin-audit.html',
@@ -141,7 +143,7 @@ export class AdminAudit {
       this.more.set(rows.length === 100);
     } catch (error) {
       if (version === this.version)
-        this.error.set(error instanceof Error ? error.message : '無法載入稽核，請重試。');
+        this.error.set(safeMessage(error));
     } finally {
       if (version === this.version) this.loading.set(false);
     }

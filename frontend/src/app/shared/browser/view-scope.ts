@@ -1,3 +1,4 @@
+import { safeMessage } from '../../core/api/safe-errors';
 import { DestroyRef, Injectable, inject } from '@angular/core';
 import { AuthService } from '../../core/auth/auth-service';
 
@@ -43,6 +44,6 @@ export class ViewScope {
     }
   }
   message(error: unknown) {
-    return error instanceof Error ? error.message : '服務暫時無法使用，請重試。';
+    return safeMessage(error);
   }
 }

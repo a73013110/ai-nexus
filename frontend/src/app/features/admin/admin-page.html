@@ -4,6 +4,7 @@
   eyebrow="AI NEXUS · 管理"
 >
   <div page-actions class="page-actions">
+    @if (session.has('logs.query')) { <a routerLink="/admin/logs" class="secondary-button"><nx-icon name="tasks" />系統日誌</a> }
     @if (session.has('admin')) {
       <a routerLink="/dashboard" [queryParams]="{ scope: 'platform' }" class="secondary-button"
         ><nx-icon name="chart" />用量與費用總覽</a
@@ -16,7 +17,7 @@
     <p role="status">正在載入管理工作區…</p>
   }
   @if (error()) {
-    <p class="error-banner" role="alert">{{ error() }}<button (click)="load()">重新載入</button></p>
+    <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /><button (click)="load()">重新載入</button></p>
   }
   @if (notice()) {
     <p class="form-note" role="status">{{ notice() }}</p>

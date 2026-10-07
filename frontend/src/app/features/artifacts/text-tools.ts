@@ -1,3 +1,4 @@
+import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -20,7 +21,7 @@ import { ArtifactsApi } from './artifacts-api';
 
 @Component({
   selector: 'nx-text-tools',
-  imports: [Icon, Select, InferenceSignal],
+  imports: [IssueCode,Icon, Select, InferenceSignal],
   providers: [ViewScope, CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog #dialog class="platform-dialog text-tools-dialog" (cancel)="cancel($event)">
@@ -32,7 +33,7 @@ import { ArtifactsApi } from './artifacts-api';
         </button>
       </div>
       @if (error()) {
-        <p class="error-banner" role="alert">{{ error() }}</p>
+        <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
       }
       @if (mode() === 'save') {
         <form class="platform-form" (submit)="save($event)">

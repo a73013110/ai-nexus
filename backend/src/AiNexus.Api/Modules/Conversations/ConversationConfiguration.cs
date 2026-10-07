@@ -27,7 +27,7 @@ public static class ConversationConfiguration
         message.Property(x => x.Role).HasMaxLength(16);
         message.Property(x => x.Status).HasMaxLength(16);
         message.Property(x => x.ModelId).HasMaxLength(160);
-        message.Property(x => x.ErrorCode).HasMaxLength(80);
+        message.Property(x => x.ErrorCode).HasMaxLength(80); message.Property(x => x.IssueCode).HasMaxLength(40);
         message.HasIndex(x => new { x.ConversationId, x.CreatedAt });
         message.HasOne<Conversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
         message.HasOne<Message>().WithMany().HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Restrict);

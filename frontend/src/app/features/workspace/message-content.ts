@@ -1,20 +1,21 @@
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, computed } from '@angular/core';
 import type { Message } from '../../core/api/types';
 import { MarkdownView } from '../../shared/ui/markdown-view';
 import { Icon } from '../../shared/ui/icon';
 import { RunTimingDisplay } from '../../shared/ui/run-timing';
 import { ReaderLink } from '../../shared/browser/reader-link';
 import { AttachmentList } from '../attachments/attachment-list';
-import { generationError } from '../../core/api/generation-error';
+import { systemProblem } from '../../core/api/safe-errors';
+import { IssueCode } from '../../shared/ui/issue-code';
 
 export type MessageDisplay = Pick<
   Message,
   'role' | 'content' | 'status' | 'attachments' | 'sources' | 'webSources' | 'timing' | 'errorCode'
->;
+> & { issueCode?: string | null };
 /** The same settled answer, citations and attachments in chat and read-only snapshots. */
 @Component({
   selector: 'nx-message-content',
-  imports: [MarkdownView, Icon, RunTimingDisplay, ReaderLink, AttachmentList],
+  imports: [IssueCode, MarkdownView, Icon, RunTimingDisplay, ReaderLink, AttachmentList],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `@if (message().role === 'user') {
       <div class="user-copy">{{ message().content }}</div>
@@ -72,7 +73,7 @@ export type MessageDisplay = Pick<
       <p class="message-note">已停止 · 保留部分回答</p>
     }
     @if (message().status === 'failed') {
-      <p class="message-note error-note">{{ failure(message().errorCode) }}</p>
+      <p class="message-note error-note">{{ failure() }}<nx-issue-code [message]="failure()" /></p>
     }
     @if (message().role === 'assistant') {
       <nx-run-timing [value]="message().timing" />
@@ -81,5 +82,5 @@ export type MessageDisplay = Pick<
 export class MessageContent {
   readonly message = input.required<MessageDisplay>();
   readonly shareId = input<string | null>(null);
-  readonly failure = generationError;
+  readonly failure = computed(() => systemProblem(this.message().issueCode));
 }

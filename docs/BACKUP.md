@@ -1,5 +1,7 @@
 # SQL 與附件備份、還原
 
+新增診斷後，備份還需包含站外 `Diagnostics.Directory` 的 journal／cursor，以及SQL中的DiagnosticEvents／AuditEvents。SQL離線時尚未補送檔案是唯一保存副本，不能在發版或備份時刪除。已清理的segment無法補回較早SQL復原點；LogId只能去重，不能重建遺失資料。日誌備份權限、期限與恢復步驟見 [DIAGNOSTICS](DIAGNOSTICS.md#部署migration與備份)。
+
 完整備份是一組相同時點的 **AiNexus SQL、站外附件目錄、外部設定與 Data Protection keys**。SQL 只保存附件 metadata、StorageKey、引用、權限及衍生搜尋資料；單獨 SQL `.bak` 無法還原原檔，聊天 JSON 文字備份也不包含原檔。
 
 正式原檔預設 `D:\CoreProject\AiNexus\data\attachments`，以外部 JSON 與 web.config 的最終 `Attachments.StoragePath` 為準。不要只複製 IIS `app`，不要在更新時清空 `data`。備份及包含秘密的 config／keys 限維運身分讀取，另保留於不同磁碟或備份系統。

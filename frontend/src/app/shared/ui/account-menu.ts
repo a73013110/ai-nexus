@@ -1,3 +1,4 @@
+import { IssueCode } from './issue-code';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { SettingsOverlay } from '../../core/preferences/settings-overlay';
@@ -6,7 +7,7 @@ import { Icon } from './icon';
 
 @Component({
   selector: 'nx-account-menu',
-  imports: [ActionMenu, Icon],
+  imports: [IssueCode,ActionMenu, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-action-menu
       [profile]="true"
@@ -22,7 +23,7 @@ import { Icon } from './icon';
       <nx-icon name="more" />
     </nx-action-menu>
     @if (error()) {
-      <p class="form-note" role="alert">{{ error() }}</p>
+      <p class="form-note" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
     }`,
 })
 export class AccountMenu {

@@ -1,3 +1,5 @@
+import { ClientValidationError } from '../../core/api/safe-errors';
+import { IssueCode } from '../../shared/ui/issue-code';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -22,7 +24,7 @@ import { JobsApi } from '../tasks/jobs-api';
 @Component({
   selector: 'nx-retrieval-evaluation',
   host: { class: 'platform-form' },
-  imports: [ReactiveFormsModule, DecimalPipe, Checkbox, Select, JobProgress],
+  imports: [IssueCode,ReactiveFormsModule, DecimalPipe, Checkbox, Select, JobProgress],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './retrieval-evaluation.html',
@@ -70,7 +72,7 @@ export class RetrievalEvaluation {
   async load() {
     const valid = this.scope.guard();
     try {
-      if (!this.session.has('knowledge')) throw new Error('檢索評測需要知識庫功能權限。');
+      if (!this.session.has('knowledge')) throw new ClientValidationError('featureAccess');
       const [collections, runs] = await Promise.all([
         this.knowledge.collections(),
         this.api.json<RetrievalEvaluationRun[]>('/quality/retrieval-evals'),
@@ -123,7 +125,7 @@ export class RetrievalEvaluation {
     try {
       cases = JSON.parse(this.form.controls.corpus.value) as RetrievalEvaluationCase[];
       if (!Array.isArray(cases) || cases.length < 1 || cases.length > 20)
-        throw new Error('驗收集需為含 1 至 20 題的 JSON 陣列。');
+        throw new ClientValidationError('retrievalEvaluationFormat');
     } catch (error) {
       this.error.set(
         error instanceof SyntaxError

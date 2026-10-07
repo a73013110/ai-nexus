@@ -1,3 +1,5 @@
+import { IssueCode } from '../../shared/ui/issue-code';
+import { safeMessage } from '../../core/api/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -35,7 +37,7 @@ import {
 
 @Component({
   selector: 'nx-settings-page',
-  imports: [RouterLink, Select, Icon, WorkspaceNavigation, StorageUsage, TokenUsageChart],
+  imports: [IssueCode,RouterLink, Select, Icon, WorkspaceNavigation, StorageUsage, TokenUsageChart],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './settings-page.html',
 })
@@ -149,7 +151,7 @@ export class SettingsPage {
       if (results[2].status === 'fulfilled') this.policy.set(results[2].value);
     } catch (error) {
       if (this.alive)
-        this.error.set(error instanceof Error ? error.message : '設定載入失敗，請重試。');
+        this.error.set(safeMessage(error));
     } finally {
       if (this.alive) this.loading.set(false);
     }
@@ -187,7 +189,7 @@ export class SettingsPage {
       this.saved.set(structuredClone(value));
       this.notice.set('已儲存，會套用於此帳號的其他裝置。');
     } catch (error) {
-      if (this.alive) this.error.set(error instanceof Error ? error.message : '未儲存，請重試。');
+      if (this.alive) this.error.set(safeMessage(error));
     } finally {
       if (this.alive) this.saving.set(false);
     }

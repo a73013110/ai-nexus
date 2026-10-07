@@ -1,5 +1,7 @@
 # 身分、角色、群組與功能
 
+系統日誌新增 `logs.query`、`logs.detail`、`logs.export` 三個獨立 feature，初始只授予 administrators group；detail／export 同時需要 query。這些 API 使用伺服器 FeatureRequirement，即使猜對查證代碼也不能繞過。`admin` 管理授權本身不替代明確的日誌 feature。查詢／詳情／匯出有獨立持久稽核與限制，見 [DIAGNOSTICS](DIAGNOSTICS.md#權限查詢與稽核可靠性)。
+
 AD 或本地密碼驗證決定「你是誰」，access schema 決定「你可以用哪些功能」，conversation owner 決定「你可讀寫哪筆資料」。兩種登入可綁定同一個平台 UserId；停用或移除使用者會排除所有 grant。取得 chat 功能也只能存取自己的對話，其他人的 ID 一律以 404 回應。
 
 具有 `admin` 功能的管理員可透過獨立、會留下敏感讀取稽核的管理 API 檢視使用者用量及對話。此例外僅提供唯讀內容，沒有放寬一般 conversations 的 owner 檢查或附件下載 ACL；操作方式見 [管理工作區](ADMINISTRATION.md)。

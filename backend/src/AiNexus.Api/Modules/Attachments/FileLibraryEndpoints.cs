@@ -16,6 +16,6 @@ public static class FileLibraryEndpoints
         routes.MapPost("/{id:guid}/retain", async (Guid id, CurrentUser current, FileLibraryService library, CancellationToken ct) =>
         { await library.RetainAsync((await current.GetAsync(ct)).Id, id, ct); return Results.NoContent(); }).WithName("RetainLibraryFile").Produces(204);
         routes.MapDelete("/{id:guid}", async (Guid id, CurrentUser current, AttachmentService files, CancellationToken ct) =>
-        { await files.RemoveDraftAsync((await current.GetAsync(ct)).Id, id, ct, fromLibrary: true); return Results.NoContent(); }).WithName("DeleteLibraryFile").Produces(204).ProducesProblem(409);
+        { await files.RemoveDraftAsync((await current.GetAsync(ct)).Id, id, ct, fromLibrary: true); return Results.NoContent(); }).WithName("DeleteLibraryFile").Produces(204);
     }
 }

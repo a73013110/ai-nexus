@@ -19,13 +19,29 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
 
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
+        PrepareAudits(); return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        PrepareAudits(); return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+    private void PrepareAudits()
+    {
+        foreach (var entry in ChangeTracker.Entries<AuditEvent>().Where(x => x.State == EntityState.Added))
+        {
+            entry.Entity.DetailsJson = Diagnostics.AuditRedactor.Sanitize(entry.Entity.DetailsJson);
+            entry.Entity.Action = Diagnostics.DiagnosticRedactor.Text(entry.Entity.Action, 64);
+            entry.Entity.Result = entry.Entity.Result is null ? null : Diagnostics.DiagnosticRedactor.Text(entry.Entity.Result, 80);
+            entry.Entity.TraceId ??= System.Diagnostics.Activity.Current?.TraceId.ToHexString();
+            entry.Entity.OperationId ??= Guid.TryParse(System.Diagnostics.Activity.Current?.GetTagItem("operation.id")?.ToString(), out var operation) ? operation : null;
+        }
         if (Guid.TryParse(http?.HttpContext?.User.FindFirst(SessionIdentity.ActorId)?.Value, out var actor))
             foreach (var entry in ChangeTracker.Entries<AuditEvent>().Where(x => x.State == EntityState.Added)) entry.Entity.ActorId ??= actor;
-        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
 
     protected override void OnModelCreating(ModelBuilder model)
     {
+        AiNexus.BuildingBlocks.Diagnostics.DiagnosticConfiguration.Configure(model);
         AccessControlConfiguration.Configure(model);
         AiNexus.Modules.Administration.AdministrationConfiguration.Configure(model);
         AiNexus.Modules.Collaboration.CollaborationConfiguration.Configure(model);
@@ -95,6 +111,7 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         run.Property(x => x.Provider).HasMaxLength(32);
         run.Property(x => x.ProviderModelId).HasMaxLength(150);
         run.Property(x => x.Status).HasMaxLength(16);
+        run.Property(x => x.IssueCode).HasMaxLength(40); run.Property(x => x.TraceId).HasMaxLength(32); run.Property(x => x.ParentSpanId).HasMaxLength(16);
         run.Property(x => x.ErrorCode).HasMaxLength(80);
         run.Property(x => x.IdempotencyKey).HasMaxLength(80);
         run.Property(x => x.RequestHash).HasMaxLength(64);
@@ -111,6 +128,7 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         runEvent.HasKey(x => new { x.RunId, x.Sequence });
         runEvent.Property(x => x.Type).HasMaxLength(16);
         runEvent.Property(x => x.Status).HasMaxLength(16);
+        runEvent.Property(x => x.IssueCode).HasMaxLength(40);
         runEvent.Property(x => x.ErrorCode).HasMaxLength(80);
         runEvent.HasOne<GenerationRun>().WithMany().HasForeignKey(x => x.RunId).OnDelete(DeleteBehavior.Cascade);
         var profile = model.Entity<ModelProfile>();
@@ -124,6 +142,7 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         audit.ToTable("AuditEvents", "operations");
         audit.HasKey(x => x.Id);
         audit.Property(x => x.Action).HasMaxLength(64);
+        audit.Property(x => x.TraceId).HasMaxLength(32); audit.Property(x => x.IssueCode).HasMaxLength(40);
         audit.Property(x => x.Result).HasMaxLength(80);
         audit.Property(x => x.DetailsJson).HasMaxLength(40000);
         audit.HasIndex(x => x.At);

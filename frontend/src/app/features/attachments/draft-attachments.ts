@@ -1,3 +1,4 @@
+import { safeMessage, ApiError } from '../../core/api/safe-errors';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import type { Attachment, AttachmentPolicy } from '../../core/api/types';
 import { WorkspaceApi } from '../workspace/workspace-api';
@@ -103,7 +104,7 @@ export class DraftAttachments {
       await this.processScans(version, controller);
     } catch (error) {
       if (!controller.signal.aborted)
-        this.error.set(error instanceof Error ? error.message : '附件上傳失敗，請重試。');
+        this.error.set(safeMessage(error));
     } finally {
       if (version === this.version) {
         this.uploading.set(false);
@@ -129,9 +130,7 @@ export class DraftAttachments {
         if (!this.files().some((x) => x.id === file.id)) continue;
         if (doc.status !== 'ready') {
           const detail = await this.documents.job(doc.id);
-          throw new Error(
-            detail.job.errorMessage || '文字辨識未完成，請點擊附件，在閱讀器內重試處理。',
-          );
+          throw new ApiError(503, detail.job.errorCode ?? 'ocr_failed', undefined, detail.job.issueCode ?? undefined);
         }
         const updated = await this.api.attachment(file.id);
         if (version === this.version)
@@ -139,7 +138,7 @@ export class DraftAttachments {
       }
     } catch (error) {
       if (version === this.version && !controller.signal.aborted)
-        this.error.set(error instanceof Error ? error.message : '文字辨識未完成，請開啟附件查看。');
+        this.error.set(safeMessage(error));
     } finally {
       if (version === this.version) {
         this.processingLabel.set('');
@@ -160,7 +159,7 @@ export class DraftAttachments {
       this.error.set('');
     } catch (error) {
       if (version !== this.version) return;
-      this.error.set(error instanceof Error ? error.message : '無法移除附件。');
+      this.error.set(safeMessage(error));
     }
   }
 }

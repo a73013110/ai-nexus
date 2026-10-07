@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using AiNexus.BuildingBlocks;
+using AiNexus.BuildingBlocks.Diagnostics;
 using AiNexus.Modules.AccessControl;
 using AiNexus.Modules.Administration;
 using Microsoft.AspNetCore.Antiforgery;
@@ -23,7 +24,7 @@ public static class AuthEndpoints
     public const string CookieScheme = "NexusCookie";
     public static void MapNexusAuthentication(this WebApplication app)
     {
-        var auth = app.MapGroup("/api/v1/auth");
+        var auth = app.MapGroup("/api/v1/auth").WithSafeErrors();
         auth.MapGet("/session", (HttpContext http, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf) => Results.Ok(Session(http, options.Value, csrf)))
             .AllowAnonymous().WithName("GetAuthSession").Produces<AuthSessionDto>();
         auth.MapGet("/windows", async (HttpContext http, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, CurrentUser current, CancellationToken ct) =>
@@ -32,7 +33,7 @@ public static class AuthEndpoints
             await current.GetAsync(ct);
             return Results.Ok(Session(http, options.Value, csrf));
         }).RequireAuthorization(new AuthorizationPolicyBuilder(NegotiateDefaults.AuthenticationScheme).RequireAuthenticatedUser().Build())
-            .WithName("WindowsLogin").Produces<AuthSessionDto>().ProducesProblem(401);
+            .WithName("WindowsLogin").Produces<AuthSessionDto>();
         auth.MapPost("/login", async (AdLoginRequest body, HttpContext http, IAdAuthenticator directory, LocalAuthenticator local, CurrentUser current, NexusDbContext db, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, CancellationToken ct) =>
         {
             var previous = http.User;
@@ -52,7 +53,7 @@ public static class AuthEndpoints
             await http.SignInAsync(CookieScheme, principal, new AuthenticationProperties { IsPersistent = false });
             http.User = principal;
             return Results.Ok(Session(http, options.Value, csrf));
-        }).AllowAnonymous().RequireRateLimiting("ad-login").WithName("AdLogin").Produces<AuthSessionDto>().ProducesProblem(401).ProducesProblem(403).ProducesProblem(429).ProducesProblem(503);
+        }).AllowAnonymous().RequireRateLimiting("ad-login").WithName("AdLogin").Produces<AuthSessionDto>();
         auth.MapPost("/logout", async (HttpContext http, NexusDbContext db, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, CancellationToken ct) =>
         {
             await EndExistingTestAsync(http.User, db, "signed_out", ct);

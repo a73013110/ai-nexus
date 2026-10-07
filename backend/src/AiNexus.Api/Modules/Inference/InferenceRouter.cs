@@ -18,6 +18,8 @@ public sealed class InferenceRouter(IServiceProvider services, IOptions<Inferenc
     public async IAsyncEnumerable<InferenceChunk> StreamAsync(string provider, string model, IReadOnlyList<InferenceMessage> messages, GenerationParameters parameters, [EnumeratorCancellation] CancellationToken ct)
     {
         var adapter = For(provider);
+        using var activity = AiNexus.BuildingBlocks.Diagnostics.DiagnosticTrace.Start("model.stream", System.Diagnostics.Activity.Current?.TraceId.ToHexString(), System.Diagnostics.Activity.Current?.SpanId.ToHexString());
+        activity.SetTag("external.service", provider);
         var gate = capacity[provider];
         await gate.WaitAsync(ct);
         try { await foreach (var chunk in adapter.StreamAsync(model, messages, parameters, ct)) yield return chunk; }

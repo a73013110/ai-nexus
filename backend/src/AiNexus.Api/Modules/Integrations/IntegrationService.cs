@@ -95,9 +95,10 @@ public sealed class IntegrationService(NexusDbContext db, AccessService access, 
     }
     private async Task<T> SafeAsync<T>(string source, Func<Task<T>> work, CancellationToken ct)
     {
+        using var scope = logger.BeginScope(new Dictionary<string, object?> { ["ExternalService"] = source });
         try { return await work(); }
-        catch (DbException ex) { logger.LogWarning("Source {Source} query failed ({Type}).", source, ex.GetType().Name); throw new ApiException(503, "source_unavailable", "唯讀來源目前無法查詢，請確認連線、帳號權限與授權 view。"); }
-        catch (OperationCanceledException) { ct.ThrowIfCancellationRequested(); throw new ApiException(504, "source_timeout", "來源查詢逾時，請縮小搜尋範圍。"); }
+        catch (DbException ex) { throw new ApiException(503, "source_unavailable", "唯讀來源目前無法查詢，請確認連線、帳號權限與授權 view。", ex); }
+        catch (OperationCanceledException ex) { ct.ThrowIfCancellationRequested(); throw new ApiException(504, "source_timeout", "來源查詢逾時，請縮小搜尋範圍。", ex); }
     }
     public static string Key(string id) => id switch { "gdweb" => "LegacyGdweb", "meiho" => "LegacyMeiho", _ => throw new ApiException(404, "source_unknown", "找不到此資料來源。") };
 }

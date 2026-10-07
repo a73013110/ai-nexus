@@ -89,7 +89,7 @@
   }
   .workspace-sidebar:not(.is-compact) {
     position: fixed;
-    inset: var(--identity-banner-height, 0px) auto 0 0;
+    inset: calc(var(--identity-banner-height, 0px) + var(--global-issue-height, 0px)) auto 0 0;
     width: var(--sidebar-width);
     z-index: 30;
     overflow: visible;
@@ -98,7 +98,7 @@
   .workspace-backdrop {
     display: block;
     position: fixed;
-    inset: var(--identity-banner-height, 0px) 0 0 var(--sidebar-width);
+    inset: calc(var(--identity-banner-height, 0px) + var(--global-issue-height, 0px)) 0 0 var(--sidebar-width);
     background: var(--scrim);
     z-index: -1;
   }

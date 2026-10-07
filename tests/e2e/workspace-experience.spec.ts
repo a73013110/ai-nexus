@@ -306,7 +306,7 @@ test("file names retain their extension and a rejected edit remains recoverable"
       reject = false;
       return route.fulfill({
         status: 409,
-        json: { title: "檔案名稱已被其他操作更新。" },
+        json: { title: "Password=fixture-private", code: "file_name_changed", issueCode: "NX-" + "D".repeat(32) },
       });
     }
     file.fileName = body.fileName;
@@ -323,7 +323,7 @@ test("file names retain their extension and a rejected edit remains recoverable"
   await dialog.getByLabel("名稱", { exact: true }).fill("新版報告.pdf");
   await dialog.getByRole("button", { name: "儲存名稱", exact: true }).click();
   await expect(dialog.getByRole("alert")).toContainText(
-    "檔案名稱已被其他操作更新",
+    "檔名已被修改，請重新載入後再試。",
   );
   await expect(dialog.getByLabel("名稱", { exact: true })).toHaveValue(
     "新版報告.pdf",
@@ -349,7 +349,7 @@ test("pasted knowledge text is editable and a version conflict preserves the dra
       conflict = false;
       return route.fulfill({
         status: 409,
-        json: { title: "文字來源已有較新版本，請重新讀取後合併修改。" },
+        json: { title: "Password=fixture-private", code: "text_version_changed", issueCode: "NX-" + "D".repeat(32) },
       });
     }
     source = {
@@ -400,7 +400,8 @@ test("pasted knowledge text is editable and a version conflict preserves the dra
   await dialog
     .getByRole("button", { name: "儲存並建立索引", exact: true })
     .click();
-  await expect(dialog.getByRole("alert")).toContainText("較新版本");
+  await expect(dialog.getByRole("alert")).toContainText("來源已被其他人修改");
+  await expect(dialog.getByRole("alert")).not.toContainText("fixture-private");
   await expect(dialog.getByLabel("純文字內容", { exact: true })).toHaveValue(
     "修訂內容",
   );

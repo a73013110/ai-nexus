@@ -1,3 +1,5 @@
+import { ClientValidationError } from '../../core/api/safe-errors';
+import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -26,7 +28,7 @@ import { ShareDialog } from '../sharing/share-dialog';
 
 @Component({
   selector: 'nx-artifacts-page',
-  imports: [
+  imports: [IssueCode,
     FeaturePage,
     Icon,
     Select,
@@ -129,7 +131,7 @@ export class ArtifactsPage {
     try {
       await this.session.load();
       if (!valid() || !this.session.me()) return;
-      if (!this.session.has('artifacts')) throw new Error('你的帳號目前沒有成果文件功能權限。');
+      if (!this.session.has('artifacts')) throw new ClientValidationError('featureAccess');
       const list = await this.api.list();
       if (!valid()) return;
       this.list.set(list);

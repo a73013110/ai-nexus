@@ -1,3 +1,5 @@
+using AiNexus.BuildingBlocks.Diagnostics;
+using System.Diagnostics;
 using AiNexus.BuildingBlocks;
 
 namespace AiNexus.Modules.Inference;
@@ -6,6 +8,9 @@ public sealed class GenerationRun
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid OwnerId { get; set; }
+    public string? TraceId { get; set; }
+    public string? ParentSpanId { get; set; }
+    public Guid OperationId { get; set; }
     // Unique filtered index enforces one active generation per owner, even across requests.
     public Guid? ActiveOwnerId { get; set; }
     public Guid? ExecutorId { get; set; }
@@ -22,6 +27,7 @@ public sealed class GenerationRun
     public string Status { get; set; } = RunStates.Queued;
     public string Content { get; set; } = "";
     public long LastSequence { get; set; }
+    public string? IssueCode { get; set; }
     public string? ErrorCode { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? StartedAt { get; set; }
@@ -40,6 +46,7 @@ public sealed class RunEvent
     public string Type { get; set; } = "status";
     public string Status { get; set; } = RunStates.Queued;
     public string? Delta { get; set; }
+    public string? IssueCode { get; set; }
     public string? ErrorCode { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

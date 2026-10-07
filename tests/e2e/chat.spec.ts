@@ -177,7 +177,7 @@ test("unconfigured server shows an honest error and cannot submit", async ({
   await fixture.attach(page);
   await page.goto("/chat");
   await expect(page.getByRole("alert")).toContainText(
-    "伺服器尚未完成資料庫設定。",
+    "操作未完成，請聯絡管理員。查證代碼：NX-",
   );
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("不能假裝聊天");
   await expect(page.getByRole("button", { name: "送出訊息" })).toBeDisabled();
@@ -265,7 +265,8 @@ test("failed preference save retains editable changes and can be retried", async
   fixture.failPreferencesOnce = true;
   await chooseSelect(page, "主題", "淺色");
   await page.getByRole("button", { name: "儲存變更" }).click();
-  await expect(page.getByRole("alert")).toContainText("偏好設定保存失敗。");
+  await expect(page.getByRole("alert")).toContainText("操作未完成，請聯絡管理員。查證代碼：NX-");
+  await expect(page.getByRole("alert")).not.toContainText("fixture-private");
   expect(fixture.preferences.theme).toBe("dark");
   await expect(
     page.getByRole("combobox", { name: "主題", exact: true }),

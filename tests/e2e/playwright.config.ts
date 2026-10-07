@@ -12,6 +12,7 @@ export default defineConfig({
   reporter: [
     ["list"],
     ["html", { outputFolder: "../../artifacts/browser-report", open: "never" }],
+    ["json", { outputFile: path.resolve(__dirname, "../../artifacts/browser-results.json") }],
   ],
   use: {
     baseURL: "http://localhost:5180",
@@ -32,7 +33,7 @@ export default defineConfig({
   ],
   webServer: {
     command:
-      "pwsh -NoProfile -File scripts/Start-Local.ps1 -SkipBuild -Http -Port 5180",
+      "pwsh -NoProfile -File scripts/Start-BrowserTest.ps1 -Port 5180",
     cwd: path.resolve(__dirname, "../.."),
     url: "http://localhost:5180/health/live",
     timeout: 30000,

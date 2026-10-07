@@ -1,3 +1,5 @@
+import { IssueCode } from './issue-code';
+import { safeMessage } from '../../core/api/safe-errors';
 import { ChangeDetectionStrategy, Component, ElementRef, signal, viewChild } from '@angular/core';
 
 export interface NameRequest {
@@ -8,6 +10,7 @@ export interface NameRequest {
   save: (name: string) => Promise<void>;
 }
 @Component({
+  imports: [IssueCode],
   selector: 'nx-name-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
@@ -31,7 +34,7 @@ export interface NameRequest {
           (input)="name.set($any($event.target).value)"
       /></label>
       @if (error()) {
-        <p class="error-banner" role="alert">{{ error() }}</p>
+        <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
       }
       <div class="dialog-actions">
         <button type="button" class="secondary-button" [disabled]="busy()" (click)="dialog.close()">
@@ -76,7 +79,7 @@ export class NameDialog {
       await request.save(this.name().trim());
       this.dialog().nativeElement.close();
     } catch (e) {
-      this.error.set(e instanceof Error ? e.message : '名稱未儲存，請重試。');
+      this.error.set(safeMessage(e));
     } finally {
       this.busy.set(false);
     }

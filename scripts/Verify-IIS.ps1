@@ -34,6 +34,21 @@ foreach ($taskPair in @(@('LocalConfigPath','..\config\appsettings.Production.js
                 Add-NexusCheck 'Attachments outside app' $taskOutside $taskAttachmentPath
                 Add-NexusCheck 'Attachment directory exists' (Test-Path -LiteralPath $taskAttachmentPath -PathType Container) 'VerifyDeployment additionally tests read/write/delete under the invoking identity; validate IIS ACLs separately'
             }
+            $taskDiagnosticSetting = if ($taskEnv.Diagnostics__Directory) { $taskEnv.Diagnostics__Directory } elseif ($taskSettings.Diagnostics.Directory) { $taskSettings.Diagnostics.Directory } else { Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) 'AiNexus/diagnostics' }
+            $taskDiagnosticAbsolute = [IO.Path]::IsPathFullyQualified([string]$taskDiagnosticSetting) -and !([string]$taskDiagnosticSetting).StartsWith('\\')
+            Add-NexusCheck 'Diagnostics path host-local absolute' $taskDiagnosticAbsolute 'Diagnostics__Directory overrides external JSON; empty uses ProgramData'
+            if ($taskDiagnosticAbsolute) {
+                $taskDiagnosticPath = [IO.Path]::TrimEndingDirectorySeparator([IO.Path]::GetFullPath($taskDiagnosticSetting))
+                $taskAppCanonical = [IO.Path]::TrimEndingDirectorySeparator($taskApp)
+                $taskOutside = !$taskDiagnosticPath.Equals($taskAppCanonical, [StringComparison]::OrdinalIgnoreCase) -and !$taskDiagnosticPath.StartsWith($taskAppCanonical + '\', [StringComparison]::OrdinalIgnoreCase)
+                Add-NexusCheck 'Diagnostics outside app' $taskOutside $taskDiagnosticPath
+                Add-NexusCheck 'Diagnostics directory exists' (Test-Path -LiteralPath $taskDiagnosticPath -PathType Container) 'App-pool Modify ACL and disk capacity require separate verification'
+                $taskPhysical = $true
+                for ($taskDirectory = [IO.DirectoryInfo]::new($taskDiagnosticPath); $null -ne $taskDirectory; $taskDirectory = $taskDirectory.Parent) {
+                    if ($taskDirectory.Exists -and ($taskDirectory.Attributes -band [IO.FileAttributes]::ReparsePoint)) { $taskPhysical = $false; break }
+                }
+                Add-NexusCheck 'Diagnostics physical path' $taskPhysical 'No junction or symlink in the journal path'
+            }
         }
         $taskSettings = $null
     }

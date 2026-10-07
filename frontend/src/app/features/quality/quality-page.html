@@ -14,7 +14,7 @@
     </button>
   </div>
   @if (error()) {
-    <p role="alert" class="error-banner">{{ error() }}</p>
+    <p role="alert" class="error-banner">{{ error() }}<nx-issue-code [message]="error()" /></p>
   }
   @if (notice()) {
     <p role="status" class="form-note">{{ notice() }}</p>
@@ -279,7 +279,7 @@
         </button>
       </div>
       @if (error()) {
-        <p class="error-banner" role="alert">{{ error() }}</p>
+        <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
       }
       <fieldset class="platform-form" [disabled]="busy()">
         @if (form() === 'set') {

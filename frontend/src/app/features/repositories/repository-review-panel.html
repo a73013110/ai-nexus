@@ -1,5 +1,5 @@
 @if (error()) {
-  <p class="error-banner" role="alert">{{ error() }}</p>
+  <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
 }
 <details class="review-create" [open]="!detail()">
   <summary>建立新的背景 review</summary>

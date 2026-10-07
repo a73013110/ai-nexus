@@ -1,3 +1,5 @@
+import { ClientValidationError } from '../../core/api/safe-errors';
+import { IssueCode } from '../../shared/ui/issue-code';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import type { Dashboard, SpendBucket } from '../../core/api/types';
@@ -15,7 +17,7 @@ import { downloadBlob } from '../../shared/browser/download';
 
 @Component({
   selector: 'nx-dashboard-page',
-  imports: [
+  imports: [IssueCode,
     FeaturePage,
     Icon,
     Select,
@@ -116,7 +118,7 @@ export class DashboardPage {
     try {
       await this.session.load();
       if (!valid()) return;
-      if (!this.session.has('dashboard')) throw new Error('目前沒有總覽功能權限。');
+      if (!this.session.has('dashboard')) throw new ClientValidationError('featureAccess');
       if (
         this.route.snapshot.queryParamMap.get('scope') === 'platform' &&
         this.session.has('admin')

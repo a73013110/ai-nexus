@@ -1,6 +1,8 @@
 # AI Nexus：IIS 發版與驗證
 
-此文件對應 `D:\CoreProject\AiNexus\app`、`config`、`keys`、`data/attachments` 的配置。正式環境使用 **Production**，`config/appsettings.Production.json` 的 `Database.TrustServerCertificate=true` 已可使用自簽 SQL 憑證，連線保持加密；不需要 Development 或額外放行參數。
+此文件對應 `D:\CoreProject\AiNexus\app`、`config`、`keys`、`data/attachments`、`data/diagnostics` 的配置。正式環境使用 **Production**，`config/appsettings.Production.json` 的 `Database.TrustServerCertificate=true` 已可使用自簽 SQL 憑證，連線保持加密；不需要 Development 或額外放行參數。
+
+本版需套用 `20261007040053_SystemDiagnostics`，保留 app 外的診斷 journal，不可與 `logs/stdout` 混用。先建立 diagnostics 目錄及 app pool Modify ACL，按組織政策確認30天診斷／14天已補送檔案／365天稽核預設。Windows emergency source 註冊、SQL離線補送、查證代碼驗收與原生日誌查證見 [DIAGNOSTICS](../../docs/DIAGNOSTICS.md)。此日誌機制不改變目前單 worker 的聊天部署限制。
 
 ## 1. 部署目錄與各檔用途
 
@@ -16,6 +18,7 @@ D:\CoreProject\AiNexus\
 │  └─ appsettings.Secrets.json     ← SQL 帳密、AD 服務密碼、Google key
 ├─ keys\                        ← cookie／antiforgery 的 Data Protection 金鑰
 ├─ data\attachments\            ← 原檔持久儲存，不隨 app 發版替換
+├─ data\diagnostics\            ← 每日／大小輪替 JSONL、SQL補送 checkpoint
 ├─ logs\                        ← 暫時開啟的 ANCM 啟動日誌
 └─ app.previous-時間\            ← 選用的上一版檔案，不對外提供
 ```
@@ -35,10 +38,10 @@ D:\CoreProject\AiNexus\
 ```powershell
 Set-Location D:\GitProject\ai-nexus
 pwsh -NoProfile -File scripts/Verify.ps1
-pwsh -NoProfile -File scripts/Publish-IIS.ps1 -SkipBuild
+pwsh -NoProfile -File scripts/Publish-IIS.ps1 -SkipBuild -PublishDirectory artifacts/verification
 ```
 
-套件放 `artifacts/iis/<時間>/`，包含 app／config 範本／空 keys／logs 與 `Verify-IIS.ps1`，不預設攜帶秘密。輸出的 `app` 才是發版成品；已包含前端與後端，IIS 主機不用 Node.js。
+套件放 `artifacts/iis/<時間>/`，包含 app／config 範本／空 keys／logs、`Verify-IIS.ps1`、db migration／描述腳本與 docs／deploy 維運文件，不預設攜帶秘密。輸出的 `app` 才是發版成品；已包含前端與後端，IIS 主機不用 Node.js。`PublishDirectory` 預設仍為 `artifacts/publish`；執行完整 Verify 後應明確封裝其 `artifacts/verification` 產物。
 
 若是在受控環境製作含本機設定的內部移轉套件，可以使用 `-IncludeLocalConfig`；這會複製秘密，套件必須全程受 ACL 保護並在移轉完成後依公司政策清理。預設不複製現有 key ring。`-DestinationPath` 指**全新且空的套件 app 目錄**，不是正在運行的網站；腳本拒絕覆蓋非空目錄。既有 config／keys 也不會被這個封裝流程覆蓋。
 
@@ -52,7 +55,7 @@ pwsh -NoProfile -File scripts/Migrate-Settings.ps1 `
   -SecretsPath 'D:\CoreProject\AiNexus\config\appsettings.Secrets.json'
 ```
 
-遷移工具在原檔旁留受相同 ACL 保護的原版本備份，保留自訂值及秘密。主機未放專案 scripts 時，可從開發機移轉 `Migrate-Settings.ps1`、`Local-Settings.ps1`、`Settings-Schema.ps1`、`settings-layout.json` 到維運工具目錄，再明確指定兩個外部檔案。
+遷移工具在原檔旁留受相同 ACL 保護的原版本備份，保留自訂值及秘密。套件 `scripts/` 已含 `Migrate-Settings.ps1`、`Local-Settings.ps1`、`Settings-Schema.ps1`、`settings-layout.json`；在主機執行時明確指定兩個外部檔案，不使用維運工具目錄的預設 `.local`。
 
 一般檔至少確認：
 
@@ -71,6 +74,7 @@ pwsh -NoProfile -File scripts/Migrate-Settings.ps1 `
 | `Storage.ApplyMigrationsOnStartup`                         | false                                                                                            |
 | `Inference.Providers.<provider>.Enabled`／`MaxConcurrency` | Google／Ollama 可同時啟用，各自並行 1–8；ModelPolicy.DefaultModelId 使用完整 provider/model 路由 |
 | `Attachments.StoragePath`                                  | `D:\CoreProject\AiNexus\data\attachments`，必須在 app 外                                         |
+| `Diagnostics.Directory`                                    | `D:\CoreProject\AiNexus\data\diagnostics`，實體本機目錄、app外、不可映射為網站URL                    |
 | `Attachments.DefaultOwnerLimitBytes`                       | 5000000000（5 GB），個人 override 優先群組與預設                                                 |
 | `Attachments.CleanupIntervalMinutes`／`DraftRetentionDays` | 60 分鐘／14 天；定期回收與失敗刪檔重試                                                           |
 | `Knowledge.Embedding.Provider`                             | 與對話分開設定；離線使用 ollama 或暫用 none                                                      |
@@ -231,6 +235,8 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Api.dll' `
 失敗時先停止新版，回復相符的 app／config／SQL／原檔備份組。舊 binary 架構與本版站外原檔架構不相容，不可只回退 DLL 再指向本版 DB。不要未確認就執行 migration Down，也不要混用不同時點的 SQL 和附件；完整還原程序見 [備份與還原](../../docs/BACKUP.md)。keys 保留原位置與保護身分。
 
 ## 11. 常見錯誤與診斷
+
+一般操作先用前端 NX 查證代碼在「系統日誌」查詢；必要時擴大時間範圍並檢查補送健康狀態。SQL離線可能使授權與查閱稽核無法保存，此時由授權維運者查站外JSONL、Windows Application `AiNexus.Diagnostics` 與SQL ERRORLOG，不能繞過管理授權。`VerifyDeployment`新增 diagnosticStoragePath、diagnosticStorageWritable、diagnosticCapacityBytes、diagnosticMaxSqlRows與diagnosticOtlpEnabled；它只以呼叫shell身分測試短期IO，IIS帳號權限需另驗。
 
 | 現象                    | 檢查                                                                                                                                                              |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -44,7 +44,7 @@ export class UserSettingsService {
       return this.value();
     const generation = this.auth.generation();
     const value = await this.http.json<UserSettings>('/settings');
-    if (generation !== this.auth.generation()) throw new Error('登入身分已變更，請重新載入。');
+    if (generation !== this.auth.generation()) throw new DOMException('Identity changed', 'AbortError');
     this.owner = owner;
     this.generation = generation;
     this.apply(value);
@@ -60,7 +60,7 @@ export class UserSettingsService {
   async save(value: UserSettings) {
     const generation = this.auth.generation();
     const saved = await this.http.json<UserSettings>('/settings', 'PUT', value);
-    if (generation !== this.auth.generation()) throw new Error('登入身分已變更，請重新載入。');
+    if (generation !== this.auth.generation()) throw new DOMException('Identity changed', 'AbortError');
     this.apply(saved);
     return saved;
   }

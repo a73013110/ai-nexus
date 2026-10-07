@@ -1,3 +1,5 @@
+import { IssueCode } from '../../shared/ui/issue-code';
+import { safeMessage } from '../../core/api/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -70,7 +72,7 @@ interface Editor {
 }
 @Component({
   selector: 'nx-admin-page',
-  imports: [
+  imports: [IssueCode,
     FeaturePage,
     Icon,
     RouterLink,
@@ -433,6 +435,6 @@ export class AdminPage {
     }
   }
   private message(error: unknown) {
-    return error instanceof Error ? error.message : '服務暫時無法使用，請重試。';
+    return safeMessage(error);
   }
 }

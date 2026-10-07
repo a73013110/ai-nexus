@@ -6,7 +6,7 @@ export const WORKSPACE_FEATURE_GROUPS = [
     ids: ['dashboard', 'chat', 'files', 'projects', 'knowledge', 'artifacts'],
   },
   { id: 'collaboration', name: '協作與品質', ids: ['shared', 'quality', 'tasks', 'repositories'] },
-  { id: 'system', name: '系統', ids: ['integrations', 'admin'] },
+  { id: 'system', name: '系統', ids: ['integrations', 'admin', 'logs.query', 'logs.detail', 'logs.export'] },
 ] as const;
 
 const membership = new Map<string, string>(
@@ -37,6 +37,9 @@ export const FEATURE_ICONS: Record<string, string> = {
   tasks: 'tasks',
   quality: 'shield',
   admin: 'lock',
+  'logs.query': 'tasks',
+  'logs.detail': 'shield',
+  'logs.export': 'document',
   integrations: 'integrations',
   shared: 'share',
 };

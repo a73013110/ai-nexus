@@ -55,7 +55,7 @@
     }
     @if (error()) {
       <p role="alert" class="error-banner">
-        {{ error() }}<button (click)="load()">重新載入</button>
+        {{ error() }}<nx-issue-code [message]="error()" /><button (click)="load()">重新載入</button>
       </p>
     }
     @if (!loading() && session.me()) {

@@ -61,7 +61,7 @@ public sealed class ConversationOrganization(IEfHelper<INexusDatabase> ef, Conve
             var clone = new Conversation { OwnerId = owner, Title = original.Title[..Math.Min(original.Title.Length, 115)] + " · 副本", SystemInstruction = original.SystemInstruction, ActiveLeafId = original.ActiveLeafId is Guid leaf ? ids[leaf] : null };
             clone.Labels = original.Labels.Select(x => new ConversationLabel { ConversationId = clone.Id, Name = x.Name }).ToList();
             ef.Set<Conversation>().Add(clone);
-            foreach (var message in messages) ef.Set<Message>().Add(new() { Id = ids[message.Id], ConversationId = clone.Id, ParentId = message.ParentId is Guid parent ? ids[parent] : null, Role = message.Role, Content = message.Content, Status = message.Status, ModelId = message.ModelId, ErrorCode = message.ErrorCode, CreatedAt = message.CreatedAt });
+            foreach (var message in messages) ef.Set<Message>().Add(new() { Id = ids[message.Id], ConversationId = clone.Id, ParentId = message.ParentId is Guid parent ? ids[parent] : null, Role = message.Role, Content = message.Content, Status = message.Status, ModelId = message.ModelId, ErrorCode = message.ErrorCode, IssueCode = message.IssueCode, CreatedAt = message.CreatedAt });
             var links = await ef.Set<MessageAttachment>().AsNoTracking().Where(x => ids.Keys.Contains(x.MessageId)).ToListAsync(ct);
             foreach (var link in links) ef.Set<MessageAttachment>().Add(new() { MessageId = ids[link.MessageId], AttachmentId = link.AttachmentId });
             ef.Set<AuditEvent>().Add(new() { OwnerId = owner, Action = "conversation.duplicated", ResourceId = clone.Id });

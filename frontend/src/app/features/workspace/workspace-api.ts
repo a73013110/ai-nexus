@@ -1,3 +1,4 @@
+import { ClientValidationError } from '../../core/api/safe-errors';
 import { inject, Injectable } from '@angular/core';
 import { ApiTransport } from '../../core/api/api-transport';
 import type {
@@ -42,7 +43,7 @@ export class WorkspaceApi {
   async upload(file: File, signal: AbortSignal) {
     const storage = await this.attachmentStorage(signal);
     if (file.size > storage.remainingBytes)
-      throw new Error('附件容量不足，請刪除未引用的檔案，或聯絡管理員調整個人上限。');
+      throw new ClientValidationError('attachmentQuota');
     const body = new FormData();
     body.append('file', file);
     return this.http.json<Attachment>('/attachments', 'POST', body, undefined, signal);

@@ -1,3 +1,5 @@
+import { ClientValidationError } from '../../core/api/safe-errors';
+import { IssueCode } from '../../shared/ui/issue-code';
 import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -15,7 +17,7 @@ import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { SharingApi } from './sharing-api';
 @Component({
   selector: 'nx-shared-page',
-  imports: [FeaturePage, MarkdownView, Icon, RouterLink, ConfirmDialog, MessageContent],
+  imports: [IssueCode,FeaturePage, MarkdownView, Icon, RouterLink, ConfirmDialog, MessageContent],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
@@ -34,7 +36,7 @@ import { SharingApi } from './sharing-api';
         ><button [attr.aria-pressed]="sent()" (click)="switchTab(true)">我分享的</button>
       </div>
       @if (error()) {
-        <p role="alert" class="error-banner">{{ error() }}</p>
+        <p role="alert" class="error-banner">{{ error() }}<nx-issue-code [message]="error()" /></p>
       }
       @if (loading()) {
         <p role="status">正在載入分享…</p>
@@ -159,7 +161,7 @@ export class SharedPage {
     try {
       await this.session.load();
       if (!valid() || !this.session.me()) return;
-      if (!this.session.has('shared')) throw new Error('目前沒有分享功能權限。');
+      if (!this.session.has('shared')) throw new ClientValidationError('featureAccess');
       const filter = this.route.snapshot.queryParamMap.get('sent');
       if (filter !== null) this.sent.set(filter === 'true');
       const [detail, listing] = await Promise.allSettled([

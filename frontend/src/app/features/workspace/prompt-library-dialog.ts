@@ -1,3 +1,5 @@
+import { IssueCode } from '../../shared/ui/issue-code';
+import { safeMessage } from '../../core/api/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -15,7 +17,7 @@ import { WorkspaceApi } from './workspace-api';
 
 @Component({
   selector: 'nx-prompt-library',
-  imports: [Icon, FormField],
+  imports: [IssueCode,Icon, FormField],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <dialog
     #dialog
@@ -34,7 +36,7 @@ import { WorkspaceApi } from './workspace-api';
       </div>
       <p class="panel-note">把常做的工作保存成範本，下次一鍵帶入提問。</p>
       @if (error()) {
-        <p class="inline-error" role="alert">{{ error() }}</p>
+        <p class="inline-error" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
       }
       <div class="library-layout">
         <div class="template-list">
@@ -161,6 +163,6 @@ export class PromptLibraryDialog {
     }
   }
   private report(error: unknown) {
-    this.error.set(error instanceof Error ? error.message : '操作失敗，請稍後重試。');
+    this.error.set(safeMessage(error));
   }
 }

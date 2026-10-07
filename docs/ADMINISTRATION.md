@@ -1,5 +1,7 @@
 # 平台管理與模型政策
 
+「系統日誌」位於 `/admin/logs`，由 `logs.query` grant 控制；`logs.detail`、`logs.export` 分別控制診斷與CSV。可用查證代碼／Trace／Job／Run 與受限時間範圍查詢，游標分頁，顯示使用者時區、關聯流程與保存系統降級狀態。管理員查閱也不會取得未遮罩秘密；操作與權限政策見 [DIAGNOSTICS](DIAGNOSTICS.md)。
+
 管理工作區在 `/admin`，僅有效權限包含 `admin` 的使用者可使用；一般登入不會取得管理權。API 每次查詢與異動皆重新驗證，所有寫入另要求 CSRF。
 
 ## 設定第一位管理員

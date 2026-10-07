@@ -2,16 +2,8 @@ import { inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import type { AuthSession } from './types';
 
-export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: string,
-    message: string,
-    readonly traceId?: string,
-  ) {
-    super(message);
-  }
-}
+export { ApiError } from './safe-errors';
+import { ApiError } from './safe-errors';
 
 /** Shared authenticated transport for JSON, multipart uploads and SSE. */
 @Injectable({ providedIn: 'root' })
@@ -77,7 +69,7 @@ export class ApiTransport {
       const problem = (await response.json().catch(() => ({}))) as {
         code?: string;
         title?: string;
-        traceId?: string;
+        issueCode?: string;
       };
       throw new ApiError(
         response.status,
@@ -86,7 +78,7 @@ export class ApiTransport {
           (response.status === 401
             ? '登入已失效，請重新登入工作區。'
             : '服務暫時無法使用，請稍後重試。'),
-        problem.traceId,
+        problem.issueCode,
       );
     }
     return response;

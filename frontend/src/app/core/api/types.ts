@@ -1,6 +1,6 @@
 import type { components } from './schema';
 
-type Dto<Name extends keyof components['schemas']> = Required<components['schemas'][Name]>;
+type Dto<Name extends keyof components['schemas']> = Omit<Required<components['schemas'][Name]>, 'issueCode'> & { issueCode?: string | null };
 // Older snapshots may omit the label; rendering always uses a safe display-name fallback.
 type ModelReference<Name extends keyof components['schemas']> = Omit<
   Dto<Name>,

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 using AiNexus.BuildingBlocks;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Data.SqlClient;
+using AiNexus.BuildingBlocks.Diagnostics;
 
 namespace AiNexus.Modules.Knowledge;
 
@@ -23,7 +24,7 @@ public sealed class SqlServerRetrievalStore(IDbHelper<INexusDatabase> sql, IOpti
             return await sql.QuerySingleAsync<bool>("SELECT CAST(CASE WHEN SERVERPROPERTY('IsFullTextInstalled') = 1 AND EXISTS (SELECT 1 FROM sys.fulltext_languages WHERE lcid = 1028) AND EXISTS (SELECT 1 FROM sys.fulltext_indexes WHERE object_id = OBJECT_ID('knowledge.Chunks') AND is_enabled = 1) THEN 1 ELSE 0 END AS bit)", commandTimeout: 5, cancellationToken: ct);
         });
         if (!fts && mode == "keyword") throw new ApiException(503, "fulltext_unavailable", "全文索引尚未就緒，請由管理員檢查 SQL 全文元件。");
-        if (!fts && mode == "hybrid") { mode = "vector"; logger.LogWarning("全文索引或 1028 斷詞器無法使用，檢索模式降為 vector。"); }
+        if (!fts && mode == "hybrid") { mode = "vector"; RetrievalDiagnostics.Degraded(logger, "hybrid", "vector", "fulltext_not_ready"); }
         if (collections.Count == 0) return new(mode, []);
         var settings = options.Value;
         var vectorSql = vector is null ? "SELECT CAST(NULL AS uniqueidentifier) AS ChunkId, CAST(NULL AS float) AS VectorScore, CAST(NULL AS bigint) AS VectorRank WHERE 1 = 0" : $"""
@@ -63,9 +64,11 @@ public sealed class SqlServerRetrievalStore(IDbHelper<INexusDatabase> sql, IOpti
         {
             // Installed components can still fail at runtime (word breaker / FDHost).
             cache.Set("knowledge-fulltext-ready", false, TimeSpan.FromSeconds(30));
-            logger.LogWarning("全文查詢失敗（SQL {SqlError}），暫時停用全文召回。", error.Number);
-            if (mode == "hybrid" && vector is not null) return await SearchAsync(collections, profile, query, vector, "vector", ct);
-            throw new ApiException(503, "fulltext_unavailable", "全文搜尋服務目前無法使用，請先使用向量檢索，或由管理員檢查中文斷詞器與全文服務。");
+            if (mode == "hybrid" && vector is not null) {
+                RetrievalDiagnostics.Degraded(logger, "hybrid", "vector", "fulltext_unavailable", error);
+                return await SearchAsync(collections, profile, query, vector, "vector", ct);
+            }
+            throw new ApiException(503, "fulltext_unavailable", "全文搜尋服務目前無法使用。", error);
         }
     }
 }

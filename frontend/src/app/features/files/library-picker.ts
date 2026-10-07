@@ -1,3 +1,4 @@
+import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -16,7 +17,7 @@ import { SearchField } from '../../shared/ui/search-field';
 
 @Component({
   selector: 'nx-library-picker',
-  imports: [FileBrowser, Icon, SearchField],
+  imports: [IssueCode,FileBrowser, Icon, SearchField],
   providers: [ViewScope, FileLibraryStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<button
@@ -50,7 +51,7 @@ import { SearchField } from '../../shared/ui/search-field';
           (valueChange)="store.find($event)"
         />
         @if (store.error()) {
-          <p class="error-banner" role="alert">{{ store.error() }}</p>
+          <p class="error-banner" role="alert">{{ store.error() }}<nx-issue-code [message]="store.error()" /></p>
         }
         @if (store.loading()) {
           <p role="status" class="form-note">正在載入檔案…</p>

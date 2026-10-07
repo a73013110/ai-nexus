@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using AiNexus.BuildingBlocks.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using AiNexus.BuildingBlocks;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Inference;
 
-public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, InferenceRouter router, IOptions<InferenceOptions> options, StorageReadiness storage, ILogger<GenerationWorker> logger) : BackgroundService
+public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, InferenceRouter router, IOptions<InferenceOptions> options, StorageReadiness storage, ILogger<GenerationWorker> logger, Issues issues) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -47,10 +48,13 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
         {
             scheduler.Dequeued();
             scheduler.Started();
+            using var activity = DiagnosticTrace.Start("generation.execute", job.TraceId, job.ParentSpanId, ActivityKind.Consumer);
+            activity.SetTag("operation.id", job.RunId.ToString());
+            using var logging = logger.BeginScope(new Dictionary<string, object?> { ["RunId"] = job.RunId, ["OperationId"] = job.RunId, ["UserId"] = job.OwnerId, ["Provider"] = job.Provider, ["RequestId"] = null });
             try { await GenerateAsync(job, stoppingToken); }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
-                logger.LogError("Run {RunId} persistence failed ({ErrorType}).", job.RunId, ex.GetType().Name);
+                var issue = issues.Report(ex, "generation_persistence_failed");
                 try
                 {
                     await scheduler.StateGate.WaitAsync(CancellationToken.None);
@@ -59,7 +63,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
                         using var scope = scopes.CreateScope();
                         var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
                         var run = await db.Runs.SingleAsync(x => x.Id == job.RunId);
-                        if (RunStates.IsActive(run.Status)) await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, RunStates.Failed, "internal_error", CancellationToken.None);
+                        if (RunStates.IsActive(run.Status)) await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, RunStates.Failed, "internal_error", CancellationToken.None, issue);
                     }
                     finally { scheduler.StateGate.Release(); }
                 }
@@ -71,6 +75,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
 
     private async Task GenerateAsync(GenerationJob job, CancellationToken stoppingToken)
     {
+        logger.LogInformation(DiagnosticEvents.RunStarted, "Generation started.");
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(job.Cancellation.Token, stoppingToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.TimeoutSeconds));
         GenerationParameters parameters;
@@ -118,7 +123,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
         var characters = 0;
         var completed = false;
         string finalStatus = RunStates.Completed;
-        string? error = null;
+        string? error = null, issueCode = null;
         try
         {
             await foreach (var chunk in router.StreamAsync(provider, model, messages, parameters, timeout.Token))
@@ -148,7 +153,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
         {
             finalStatus = RunStates.Failed;
             error = (ex as ApiException)?.Code ?? (ex is HttpRequestException or IOException ? "provider_connection_lost" : "provider_protocol_error");
-            logger.LogWarning("Run {RunId} provider failed: {ErrorCode} ({ErrorType}).", job.RunId, error, ex.GetType().Name);
+            issueCode = issues.Report(ex, error);
         }
         // Request cancellation does not interrupt persistence; partial output survives.
         await FlushAsync(job.RunId, buffer.ToString(), input, output, cached, reasoning, completed, CancellationToken.None);
@@ -158,7 +163,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
             using var scope = scopes.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             var run = await db.Runs.SingleAsync(x => x.Id == job.RunId);
-            if (RunStates.IsActive(run.Status)) await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, finalStatus, error, CancellationToken.None);
+            if (RunStates.IsActive(run.Status)) await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, finalStatus, error, CancellationToken.None, issueCode);
         }
         finally { scheduler.StateGate.Release(); }
     }

@@ -1,3 +1,5 @@
+import { ClientValidationError } from '../../core/api/safe-errors';
+import { IssueCode } from '../../shared/ui/issue-code';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -12,7 +14,7 @@ import { JobsApi } from './jobs-api';
 
 @Component({
   selector: 'nx-tasks-page',
-  imports: [FeaturePage, Icon, JobProgress, RouterLink, ResourceTarget],
+  imports: [IssueCode,FeaturePage, Icon, JobProgress, RouterLink, ResourceTarget],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
@@ -23,7 +25,7 @@ import { JobsApi } from './jobs-api';
       <nx-icon name="repeat" />重新整理
     </button>
     @if (error()) {
-      <p class="error-banner" role="alert">{{ error() }}</p>
+      <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
     }
     <div class="page-tabs" aria-label="任務篩選">
       @for (item of filters; track item.id) {
@@ -152,7 +154,7 @@ export class TasksPage {
     try {
       await this.session.load();
       if (!valid() || !this.session.me()) return;
-      if (!this.session.has('tasks')) throw new Error('你的帳號目前沒有背景任務頁面的權限。');
+      if (!this.session.has('tasks')) throw new ClientValidationError('featureAccess');
       await this.refresh();
     } catch (error) {
       if (valid()) this.error.set(this.scope.message(error));

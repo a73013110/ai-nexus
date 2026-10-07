@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Inference;
 
-public sealed record GenerationJob(Guid RunId, CancellationTokenSource Cancellation);
+public sealed record GenerationJob(Guid RunId, CancellationTokenSource Cancellation, string TraceId, string ParentSpanId, Guid OwnerId, string Provider);
 public sealed record ProviderQueue(ChannelReader<GenerationJob> Reader, int Concurrency);
 
 public sealed class GenerationScheduler
@@ -34,12 +34,12 @@ public sealed class GenerationScheduler
 
     public bool TryReserve() => capacity.Wait(0);
     public void ReleaseReservation() => capacity.Release();
-    public void Enqueue(Guid id, string provider)
+    public void Enqueue(GenerationRun run, string provider)
     {
         var cancellation = new CancellationTokenSource();
-        cancellations[id] = cancellation;
+        cancellations[run.Id] = cancellation;
         Interlocked.Increment(ref count);
-        if (!queues[provider].Writer.TryWrite(new GenerationJob(id, cancellation))) throw new InvalidOperationException("Reserved queue capacity was exceeded.");
+        if (!queues[provider].Writer.TryWrite(new GenerationJob(run.Id, cancellation, run.TraceId!, run.ParentSpanId!, run.OwnerId, provider))) throw new InvalidOperationException("Reserved queue capacity was exceeded.");
     }
     public void Dequeued() => Interlocked.Decrement(ref count);
     public void Started() => Interlocked.Increment(ref active);

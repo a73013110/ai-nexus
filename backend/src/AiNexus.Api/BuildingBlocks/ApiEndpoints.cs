@@ -6,15 +6,15 @@ using AiNexus.Modules.Attachments;
 using AiNexus.Modules.Library;
 using AiNexus.Modules.Administration;
 
+using AiNexus.BuildingBlocks.Diagnostics;
 namespace AiNexus.BuildingBlocks;
 
 public static class ApiEndpoints
 {
     public static void MapNexusApi(this WebApplication app)
     {
-        var api = app.MapGroup("/api/v1").RequireAuthorization();
-        api.ProducesProblem(400).ProducesProblem(401).ProducesProblem(403).ProducesProblem(404)
-            .ProducesProblem(409).ProducesProblem(429).ProducesProblem(503);
+        var api = app.MapGroup("/api/v1").RequireAuthorization().WithSafeErrors();
+        api.MapDiagnostics();
         api.MapIdentity();
         api.MapConversations();
         api.MapInference();

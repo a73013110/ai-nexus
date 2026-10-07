@@ -3,7 +3,7 @@
   description="以你的來源權限查詢公文與校務資料，快速接續閱讀、整理與分析。"
 >
   @if (error()) {
-    <p role="alert" class="error-banner">{{ error() }}</p>
+    <p role="alert" class="error-banner">{{ error() }}<nx-issue-code [message]="error()" /></p>
   }
   @if (notice()) {
     <p role="status" class="form-note">{{ notice() }}</p>

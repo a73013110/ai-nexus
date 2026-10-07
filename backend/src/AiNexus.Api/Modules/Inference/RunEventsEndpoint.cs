@@ -55,7 +55,7 @@ public static class RunEventsEndpoint
             run = await db.Runs.AsNoTracking().SingleAsync(x => x.Id == id, ct);
             if ((events.Count == 0 && run.LastSequence > cursor) || (events.Count > 0 && events[0].Sequence != cursor + 1))
             {
-                var snapshot = new RunEventDto(1, run.LastSequence, run.Id, "snapshot", run.Status, run.Content, run.ErrorCode);
+                var snapshot = new RunEventDto(1, run.LastSequence, run.Id, "snapshot", run.Status, run.Content, run.ErrorCode, run.IssueCode);
                 await SendAsync(http, snapshot, ct);
                 cursor = run.LastSequence;
                 events.Clear();

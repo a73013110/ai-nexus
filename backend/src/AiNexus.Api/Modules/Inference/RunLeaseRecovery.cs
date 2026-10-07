@@ -1,4 +1,5 @@
 using AiNexus.BuildingBlocks;
+using AiNexus.BuildingBlocks.Diagnostics;
 using AiNexus.Modules.Conversations;
 using AiNexus.Modules.Operations;
 using AiNexus.Modules.Billing;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Modules.Inference;
 
 /// <summary>Expiry is checked again in an atomic UPDATE, so a renewed foreign lease cannot be reclaimed.</summary>
-public sealed class RunLeaseRecovery(NexusDbContext db, ConversationService conversations, BillingService billing)
+public sealed class RunLeaseRecovery(NexusDbContext db, ConversationService conversations, BillingService billing, Issues issues, ILogger<RunLeaseRecovery> logger, AiNexus.Modules.Notifications.NotificationService notifications)
 {
     public async Task<int> RecoverAsync(DateTimeOffset now, CancellationToken ct)
     {
@@ -29,12 +30,17 @@ public sealed class RunLeaseRecovery(NexusDbContext db, ConversationService conv
             if (changed == 0) { await transaction.RollbackAsync(ct); continue; }
             var run = await db.Runs.SingleAsync(x => x.Id == id, ct);
             await db.Entry(run).ReloadAsync(ct);
+            using var activity = DiagnosticTrace.Start("generation.recover", run.TraceId, run.ParentSpanId);
+            activity.SetTag("operation.id", run.Id.ToString());
+            using var logging = logger.BeginScope(new Dictionary<string, object?> { ["RunId"] = run.Id, ["OperationId"] = run.Id, ["UserId"] = run.OwnerId, ["RequestId"] = null });
+            run.IssueCode = issues.Report(new ApiException(503, "executor_lost", ""), "executor_lost");
             if (run.StartedAt is null) run.ReservedTokens = 0;
             RunTiming.Finish(run, now);
             await billing.FinishAsync(run.Id, run.Status, ct);
             RunService.AddEvent(db, run, "status");
             await conversations.UpdateAnswerAsync(run, ct);
-            db.AuditEvents.Add(new AuditEvent { OwnerId = run.OwnerId, Action = "run.recovered", ResourceId = id, Result = "executor_lost" });
+            db.AuditEvents.Add(new AuditEvent { OwnerId = run.OwnerId, Action = "run.recovered", ResourceId = id, Result = "executor_lost", IssueCode = run.IssueCode });
+            await notifications.PublishAsync(run.OwnerId, "run:" + run.Id, "conversation.failed", "error", "AI 回答未完成", Issues.Message(run.IssueCode), "conversation", run.ConversationId, ct, run.IssueCode);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
             recovered++;

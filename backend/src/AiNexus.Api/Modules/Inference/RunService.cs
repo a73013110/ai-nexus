@@ -1,4 +1,6 @@
 using System.Security.Cryptography;
+using System.Diagnostics;
+using AiNexus.BuildingBlocks.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using AiNexus.BuildingBlocks;
@@ -11,7 +13,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Modules.Inference;
 
-public sealed class RunService(NexusDbContext db, ConversationService conversations, AttachmentService attachments, AttachmentWriteLock attachmentWrites, GenerationScheduler scheduler, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, ModelPresentation presentation, AiNexus.Modules.Administration.ModelPolicyService policies, ModelQuotaLock quotaWrites, AiNexus.Modules.Knowledge.KnowledgeRetrieval knowledge, AiNexus.Modules.Projects.ProjectService projects, AiNexus.Modules.WebSearch.WebSearchService webSearch, BillingService billing, AiNexus.Modules.Notifications.NotificationService notifications)
+public sealed class RunService(NexusDbContext db, ConversationService conversations, AttachmentService attachments, AttachmentWriteLock attachmentWrites, GenerationScheduler scheduler, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, ModelPresentation presentation, AiNexus.Modules.Administration.ModelPolicyService policies, ModelQuotaLock quotaWrites, AiNexus.Modules.Knowledge.KnowledgeRetrieval knowledge, AiNexus.Modules.Projects.ProjectService projects, AiNexus.Modules.WebSearch.WebSearchService webSearch, BillingService billing, AiNexus.Modules.Notifications.NotificationService notifications, Issues issues, ILogger<RunService> logger)
 {
     public async Task<GenerationRun> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
     {
@@ -85,6 +87,7 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
                 ModelId = profile.Id, Provider = profile.Provider, ProviderModelId = profile.NativeId, IdempotencyKey = key, RequestHash = hash,
                 ParametersJson = JsonSerializer.Serialize(new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, 0.6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, conversation.SystemInstruction) + projectContext + AiNexus.Modules.Knowledge.KnowledgeRetrieval.Prompt(sources) + AiNexus.Modules.WebSearch.WebSearchService.Prompt(search), effort, profile.ReasoningControl, profile.SupportsImages))
             };
+            run.TraceId = Activity.Current?.TraceId.ToHexString() ?? ActivityTraceId.CreateRandom().ToHexString(); run.ParentSpanId = Activity.Current?.SpanId.ToHexString() ?? ActivitySpanId.CreateRandom().ToHexString(); run.OperationId = run.Id;
             await billing.ReserveAsync(run.Id, owner, request.ConversationId, profile.Provider, profile.NativeId, "chat", run.CreatedAt, ct);
             var (user, assistant) = await conversations.PrepareGenerationAsync(owner, request with { ModelId = profile.Id }, run.Id, ct);
             run.UserMessageId = user.Id;
@@ -105,7 +108,7 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
             db.AuditEvents.Add(new AuditEvent { OwnerId = owner, Action = "run.created", ResourceId = run.Id, Result = run.Status });
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
-            scheduler.Enqueue(run.Id, profile.Provider);
+            scheduler.Enqueue(run, profile.Provider);
             reserved = false;
             return presentation.Run(run);
         }
@@ -133,11 +136,18 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
     }
 
     // Called under StateGate, so cancellation and token flushes cannot overwrite each other.
-    public async Task FinishAsync(GenerationRun run, string status, string? error, CancellationToken ct)
+    public async Task FinishAsync(GenerationRun run, string status, string? error, CancellationToken ct, string? issueCode = null)
     {
+        using var correlation = DiagnosticTrace.Start("generation.finish", run.TraceId, run.ParentSpanId);
+        correlation.SetTag("operation.id", run.Id.ToString());
+        using var logging = logger.BeginScope(new Dictionary<string, object?> { ["RunId"] = run.Id, ["OperationId"] = run.Id, ["UserId"] = run.OwnerId });
         if (run.StartedAt is null) run.ReservedTokens = 0;
         run.Status = status;
         run.ErrorCode = error;
+        if (status == RunStates.Failed) {
+            run.IssueCode = issueCode ?? issues.Report(new ApiException(503, error ?? "generation_failed", ""), error ?? "generation_failed");
+        }
+        logger.LogInformation(DiagnosticEvents.RunFinished, "Generation finished with {Stage}.", status);
         run.ActiveOwnerId = null;
         run.LeaseExpiresAt = null;
         RunTiming.Finish(run, DateTimeOffset.UtcNow);
@@ -148,13 +158,13 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
         var title = await db.Conversations.Where(x => x.Id == run.ConversationId).Select(x => x.Title).SingleAsync(ct);
         await notifications.PublishAsync(run.OwnerId, "run:" + run.Id, "conversation." + status,
             status == "failed" ? "error" : status == "completed" ? "success" : "info",
-            status == "completed" ? "AI 回答已完成" : status == "failed" ? "AI 回答未完成" : "AI 回答已停止", title, "conversation", run.ConversationId, ct);
+            status == "completed" ? "AI 回答已完成" : status == "failed" ? "AI 回答未完成" : "AI 回答已停止", status == "failed" ? Issues.Message(run.IssueCode) : title, "conversation", run.ConversationId, ct, run.IssueCode);
         await db.SaveChangesAsync(ct);
     }
 
     public static void AddEvent(NexusDbContext db, GenerationRun run, string type, string? delta = null)
     {
         run.LastSequence++;
-        db.RunEvents.Add(new RunEvent { RunId = run.Id, Sequence = run.LastSequence, Type = type, Status = run.Status, Delta = delta, ErrorCode = run.ErrorCode });
+        db.RunEvents.Add(new RunEvent { RunId = run.Id, Sequence = run.LastSequence, Type = type, Status = run.Status, Delta = delta, ErrorCode = run.ErrorCode, IssueCode = run.IssueCode });
     }
 }

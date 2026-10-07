@@ -132,10 +132,12 @@ test("background tasks show real stages and distinguish cancellation requests fr
   );
   job.status = "failed";
   job.errorCode = "fixture_error";
-  job.errorMessage = "來源服務暫時無法使用。";
+  job.errorMessage = "Password=fixture-private; source service stack trace";
+  job.issueCode = "NX-" + "D".repeat(32);
   await page.getByRole("button", { name: "重新整理", exact: true }).click();
   await page.getByRole("button", { name: "需要處理", exact: true }).click();
-  await expect(page.locator(".job-error")).toContainText("暫時無法使用");
+  await expect(page.locator(".job-error")).toContainText("操作未完成，請聯絡管理員。查證代碼：NX-");
+  await expect(page.locator(".job-error")).not.toContainText("fixture-private");
   await page.getByRole("button", { name: "重試", exact: true }).click();
   expect(job.status).toBe("queued");
 });

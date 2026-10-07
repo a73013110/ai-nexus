@@ -140,8 +140,10 @@ public sealed class AdministrationService(NexusDbContext db, AccessService acces
         if (search?.Length > 120 || action?.Length > 120 || result?.Length > 80 || before is <= 0 || from > until)
             throw new ApiException(400, "invalid_audit_filter", "稽核篩選條件不正確。");
         var query = from entry in db.AuditEvents.AsNoTracking()
-                    join actor in db.Users on (entry.ActorId ?? entry.OwnerId) equals actor.Id
-                    join subject in db.Users on entry.OwnerId equals subject.Id
+                    join actorRecord in db.Users on (entry.ActorId ?? entry.OwnerId) equals actorRecord.Id into actors
+                    from actor in actors.DefaultIfEmpty()
+                    join subjectRecord in db.Users on entry.OwnerId equals subjectRecord.Id into subjects
+                    from subject in subjects.DefaultIfEmpty()
                     select new { entry, actor, subject };
         if (before is { } cursor) query = query.Where(x => x.entry.Id < cursor);
         if (from is { } start) query = query.Where(x => x.entry.At >= start);
@@ -153,11 +155,12 @@ public sealed class AdministrationService(NexusDbContext db, AccessService acces
             : query.Where(x => x.entry.Result == result);
         if (!string.IsNullOrWhiteSpace(search))
         {
-            if (Guid.TryParse(search, out var resource)) query = query.Where(x => x.entry.ResourceId == resource || x.actor.Id == resource || x.subject.Id == resource);
-            else query = query.Where(x => x.actor.Account.Contains(search) || x.actor.DisplayName.Contains(search) || x.subject.Account.Contains(search) || x.entry.Action.Contains(search) || (x.entry.DetailsJson != null && x.entry.DetailsJson.Contains(search)));
+            if (Guid.TryParse(search, out var resource)) query = query.Where(x => x.entry.ResourceId == resource || (x.actor != null && x.actor.Id == resource) || (x.subject != null && x.subject.Id == resource));
+            else query = query.Where(x => (x.actor != null && (x.actor.Account.Contains(search) || x.actor.DisplayName.Contains(search))) || (x.subject != null && x.subject.Account.Contains(search)) || x.entry.Action.Contains(search) || (x.entry.DetailsJson != null && x.entry.DetailsJson.Contains(search)));
         }
-        return await query.OrderByDescending(x => x.entry.Id).Take(100)
-            .Select(x => new AuditDto(x.entry.Id, x.actor.Account, x.entry.Action, x.entry.ResourceId, x.entry.Result, x.entry.At, x.entry.DetailsJson, x.entry.ActorId != null && x.entry.ActorId != x.entry.OwnerId ? x.subject.Account : null)).ToListAsync(ct);
+        var rows = await query.OrderByDescending(x => x.entry.Id).Take(100)
+            .Select(x => new AuditDto(x.entry.Id, x.actor == null ? "system" : x.actor.Account, x.entry.Action, x.entry.ResourceId, x.entry.Result, x.entry.At, x.entry.DetailsJson, x.entry.ActorId != null && x.entry.ActorId != x.entry.OwnerId && x.subject != null ? x.subject.Account : null)).ToListAsync(ct);
+        return rows.Select(row => row with { DetailsJson = AiNexus.BuildingBlocks.Diagnostics.AuditRedactor.Sanitize(row.DetailsJson, historical: true) }).ToArray();
     }
     public async Task<AdminUsageDto> UsageAsync(CancellationToken ct)
     {

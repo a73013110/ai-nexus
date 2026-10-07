@@ -2,6 +2,8 @@
 
 物件／schema／索引／關聯及權限說明在 [docs/DATABASE](../docs/DATABASE.md)，SQL 帳密與 TLS 設定在 [docs/CONFIGURATION](../docs/CONFIGURATION.md)。
 
+本次增量版本 `20261007040053_SystemDiagnostics` 新增日誌表、查證代碼／持久流程欄位、索引與三項管理日誌 feature grants。SQL 查詢儲存與業務 transaction 隔離；站外 journal 的去重補送、保留、稽核政策及部署順序見 [DIAGNOSTICS](../docs/DIAGNOSTICS.md)。
+
 ```powershell
 ./scripts/Initialize-Database.ps1
 ```

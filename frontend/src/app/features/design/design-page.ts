@@ -1,3 +1,4 @@
+import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -39,7 +40,7 @@ const jobStates: SelectOption[] = [
 /** Uses production components; all samples are local and perform no model or database calls. */
 @Component({
   selector: 'nx-design-page',
-  imports: [
+  imports: [IssueCode,
     RouterLink,
     FeaturePage,
     Icon,

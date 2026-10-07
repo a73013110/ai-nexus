@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AiNexus.BuildingBlocks;
+using AiNexus.BuildingBlocks.Diagnostics;
 using AiNexus.Modules.Inference;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -30,17 +31,18 @@ public sealed class RetrievalHttp(IHttpClientFactory clients, ILogger<RetrievalH
                 if (!response.IsSuccessStatusCode)
                 {
                     var transient = response.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500;
-                    if (transient && attempt < 2) { await Delay(attempt, ct); continue; }
+                    if (transient && attempt < 2) { await Delay(attempt, ct, client, (int)response.StatusCode); continue; }
                     throw new ApiException(response.StatusCode == HttpStatusCode.TooManyRequests ? 429 : 503, "retrieval_provider_unavailable", "檢索模型服務目前無法使用，請確認端點、模型與配額。");
                 }
                 return await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
             }
-            catch (HttpRequestException) when (attempt < 2) { await Delay(attempt, ct); }
+            catch (HttpRequestException ex) when (attempt < 2) { await Delay(attempt, ct, client, exception: ex); }
         }
     }
-    private async Task Delay(int attempt, CancellationToken ct)
+    private async Task Delay(int attempt, CancellationToken ct, string service, int? status = null, Exception? exception = null)
     {
-        logger.LogWarning("檢索模型暫時性錯誤，進行第 {Attempt} 次重試。", attempt + 1);
+        using var scope = logger.BeginScope(new Dictionary<string, object?> { ["ExternalService"] = service, ["StatusCode"] = status, ["ErrorCode"] = "retrieval_retry" });
+        logger.LogWarning(new EventId(2002, "retrieval.retry"), exception, "Retrieval provider retry {Attempt} after transient failure.", attempt + 1);
         await Task.Delay(TimeSpan.FromMilliseconds(250 * (1 << attempt) + Random.Shared.Next(100)), ct);
     }
 }

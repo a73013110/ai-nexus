@@ -1,3 +1,4 @@
+import { safeMessage } from '../../core/api/safe-errors';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import {
   FormField,
@@ -55,7 +56,7 @@ export class LoginPage {
       if (!this.methods().includes(this.method())) this.method.set(this.methods()[0] ?? 'ad');
       if (session.authenticated && !switching) await this.router.navigateByUrl(this.returnUrl());
     } catch (error) {
-      this.error.set(error instanceof Error ? error.message : '登入服務暫時無法使用。');
+      this.error.set(safeMessage(error));
     } finally {
       this.loading.set(false);
     }
@@ -77,9 +78,7 @@ export class LoginPage {
       await this.router.navigateByUrl(this.returnUrl());
     } catch (error) {
       this.error.set(
-        error instanceof Error
-          ? error.message
-          : '未取得 Windows 身分，請確認公司網域與瀏覽器設定。',
+        safeMessage(error),
       );
     } finally {
       this.submitting.set(false);
@@ -95,7 +94,7 @@ export class LoginPage {
       await this.auth.login(account.trim(), password, this.method());
       await this.router.navigateByUrl(this.returnUrl());
     } catch (error) {
-      this.error.set(error instanceof Error ? error.message : '登入失敗，請稍後重試。');
+      this.error.set(safeMessage(error));
     } finally {
       this.credentials.update((value) => ({ ...value, password: '' }));
       this.submitting.set(false);

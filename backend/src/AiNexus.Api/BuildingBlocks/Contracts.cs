@@ -6,10 +6,10 @@ public sealed record ModelDto(string Id, string DisplayName, int ContextTokens, 
 public sealed record ModelPolicyDto(bool AllowModelSelection, bool ShowModelNames, string? DefaultModelId, int MaxInputCharacters = 12000);
 public sealed record ModelsDto(IReadOnlyList<ModelDto> Models, bool ProviderAvailable, string? Notice, ModelPolicyDto Policy, IReadOnlyList<AiNexus.Modules.Inference.ProviderStatusDto>? Providers = null);
 public sealed record ConversationDto(Guid Id, string Title, Guid? ActiveLeafId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, bool IsFavorite = false, bool IsArchived = false, string SystemInstruction = "", IReadOnlyList<string>? Labels = null, Guid? ProjectId = null);
-public sealed record MessageDto(Guid Id, Guid? ParentId, string Role, string Content, string Status, DateTimeOffset CreatedAt, Guid? RunId, string? ModelId, IReadOnlyList<AiNexus.Modules.Attachments.AttachmentDto>? Attachments = null, string? ErrorCode = null, IReadOnlyList<AiNexus.Modules.Knowledge.CitationDto>? Sources = null, int FeedbackRating = 0, AiNexus.Modules.Billing.ChargeDto? Charge = null, IReadOnlyList<AiNexus.Modules.WebSearch.WebSourceDto>? WebSources = null, AiNexus.Modules.Billing.ChargeDto? WebSearchCharge = null, AiNexus.Modules.Inference.RunTimingDto? Timing = null, string? ModelDisplayName = null);
+public sealed record MessageDto(Guid Id, Guid? ParentId, string Role, string Content, string Status, DateTimeOffset CreatedAt, Guid? RunId, string? ModelId, IReadOnlyList<AiNexus.Modules.Attachments.AttachmentDto>? Attachments = null, string? ErrorCode = null, IReadOnlyList<AiNexus.Modules.Knowledge.CitationDto>? Sources = null, int FeedbackRating = 0, AiNexus.Modules.Billing.ChargeDto? Charge = null, IReadOnlyList<AiNexus.Modules.WebSearch.WebSourceDto>? WebSources = null, AiNexus.Modules.Billing.ChargeDto? WebSearchCharge = null, AiNexus.Modules.Inference.RunTimingDto? Timing = null, string? ModelDisplayName = null, string? IssueCode = null);
 public sealed record ConversationDetailDto(ConversationDto Conversation, IReadOnlyList<MessageDto> Messages, RunDto? ActiveRun);
-public sealed record RunDto(Guid Id, Guid ConversationId, Guid UserMessageId, Guid AssistantMessageId, string ModelId, string Status, string Content, long LastSequence, string? ErrorCode, DateTimeOffset CreatedAt, DateTimeOffset? StartedAt, DateTimeOffset? FinishedAt, long? InputTokens, long? OutputTokens, AiNexus.Modules.Inference.RunTimingDto? Timing = null, string? ModelDisplayName = null);
-public sealed record RunEventDto(int Version, long Sequence, Guid RunId, string Type, string Status, string? Delta, string? ErrorCode);
+public sealed record RunDto(Guid Id, Guid ConversationId, Guid UserMessageId, Guid AssistantMessageId, string ModelId, string Status, string Content, long LastSequence, string? ErrorCode, DateTimeOffset CreatedAt, DateTimeOffset? StartedAt, DateTimeOffset? FinishedAt, long? InputTokens, long? OutputTokens, AiNexus.Modules.Inference.RunTimingDto? Timing = null, string? ModelDisplayName = null, string? IssueCode = null);
+public sealed record RunEventDto(int Version, long Sequence, Guid RunId, string Type, string Status, string? Delta, string? ErrorCode, string? IssueCode = null);
 public sealed record CreateConversationRequest(string? Title = null);
 public sealed record RenameConversationRequest(string Title);
 public sealed record SelectBranchRequest(Guid LeafId);
@@ -18,7 +18,7 @@ public sealed record ContextPreviewRequest(Guid? ConversationId, Guid? ParentMes
 public sealed record ContextUsageDto(int EstimatedInputTokens, int ContextTokens, int ReservedOutputTokens, int DroppedMessages, bool BudgetExceeded, bool IsEstimate = true, int ReservedKnowledgeTokens = 0, int ReservedWebSearchTokens = 0);
 public sealed record StatusDto(string Storage, string Authentication, int QueueDepth, bool Generating);
 
-public sealed class ApiException(int status, string code, string message) : Exception(message)
+public sealed class ApiException(int status, string code, string message, Exception? inner = null) : Exception(message, inner)
 {
     public int Status { get; } = status;
     public string Code { get; } = code;

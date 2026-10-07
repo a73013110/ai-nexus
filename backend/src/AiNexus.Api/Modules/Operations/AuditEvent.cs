@@ -11,6 +11,9 @@ public sealed class AuditEvent
     public long Id { get; set; }
     public Guid OwnerId { get; set; }
     public Guid? ActorId { get; set; }
+    public string? TraceId { get; set; }
+    public Guid? OperationId { get; set; }
+    public string? IssueCode { get; set; }
     public string Action { get; set; } = "";
     public Guid? ResourceId { get; set; }
     public string? Result { get; set; }

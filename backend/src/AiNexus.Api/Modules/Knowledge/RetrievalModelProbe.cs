@@ -1,4 +1,5 @@
 using AiNexus.BuildingBlocks;
+using AiNexus.BuildingBlocks.Diagnostics;
 using AiNexus.Database;
 using AiNexus.Modules.Inference;
 using Microsoft.EntityFrameworkCore;
@@ -9,7 +10,7 @@ namespace AiNexus.Modules.Knowledge;
 public sealed record RetrievalConnectionDto(string Provider, string Model, string Endpoint, bool? Available, string Notice);
 public sealed record RetrievalCapabilitiesDto(SqlVectorCapabilitiesDto? Sql, bool TestStore, RetrievalConnectionDto Embedding, RetrievalConnectionDto Rerank);
 public sealed class RetrievalModelProbe(IEnumerable<IEmbeddingClient> embeddings, IEnumerable<IRerankClient> rerankers, EmbeddingService embeddingService,
-    RerankService rerankService, IOptions<KnowledgeOptions> options, IOptions<InferenceOptions> inference, ILogger<RetrievalModelProbe> logger)
+    RerankService rerankService, IOptions<KnowledgeOptions> options, IOptions<InferenceOptions> inference, ILogger<RetrievalModelProbe> logger, Issues issues)
 {
     public RetrievalConnectionDto Embedding => new(options.Value.EmbeddingProvider, options.Value.EmbeddingModel,
         options.Value.Endpoint.Length > 0 ? options.Value.Endpoint : options.Value.EmbeddingProvider == "google" ? "https://generativelanguage.googleapis.com" : inference.Value.BaseUrl,
@@ -33,7 +34,8 @@ public sealed class RetrievalModelProbe(IEnumerable<IEmbeddingClient> embeddings
                 embedding = embedding with { Available = true, Notice = $"批次向量化通過，維度 {settings.Dimensions}。" };
             }
             catch (Exception error) when (error is ApiException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
-            { ct.ThrowIfCancellationRequested(); embedding = embedding with { Available = false, Notice = "向量模型或維度驗證未通過，請檢查端點與設定。" }; logger.LogWarning("向量模型驗證未通過：{Reason}", error.GetType().Name); }
+            { ct.ThrowIfCancellationRequested(); using var logging = logger.BeginScope(new Dictionary<string, object?> { ["Stage"] = "embedding-probe", ["ExternalService"] = "embedding" });
+                var issue = issues.Report(error, "embedding_probe_failed", LogLevel.Warning); embedding = embedding with { Available = false, Notice = Issues.Message(issue) }; }
         }
         if (settings.Rerank.Provider != "none")
         {
@@ -49,7 +51,8 @@ public sealed class RetrievalModelProbe(IEnumerable<IEmbeddingClient> embeddings
                 rerank = rerank with { Available = true, Notice = "合成查詢與候選重排通過。" };
             }
             catch (Exception error) when (error is ApiException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
-            { ct.ThrowIfCancellationRequested(); rerank = rerank with { Available = false, Notice = "重排服務驗證未通過，請檢查端點與模型。" }; logger.LogWarning("重排模型驗證未通過：{Reason}", error.GetType().Name); }
+            { ct.ThrowIfCancellationRequested(); using var logging = logger.BeginScope(new Dictionary<string, object?> { ["Stage"] = "rerank-probe", ["ExternalService"] = "rerank" });
+                var issue = issues.Report(error, "rerank_probe_failed", LogLevel.Warning); rerank = rerank with { Available = false, Notice = Issues.Message(issue) }; }
         }
         return (embedding, rerank);
     }

@@ -2,7 +2,7 @@
   <p role="status">正在載入檢索評測…</p>
 }
 @if (error()) {
-  <p role="alert" class="error-banner">{{ error() }}</p>
+  <p role="alert" class="error-banner">{{ error() }}<nx-issue-code [message]="error()" /></p>
 }
 <section class="platform-card">
   <div class="page-toolbar">

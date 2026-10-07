@@ -1,5 +1,7 @@
 # 架構與擴充邊界
 
+診斷入口為 MEL `ILogger`，`BuildingBlocks/Diagnostics` 集中白名單／遮罩、安全錯誤、W3C Activity、站外 durable JSONL、獨立 SQL 批次補送、管理查詢與清理。安全稽核保持獨立交易政策；OpenTelemetry 1.19.1 匯出可選，預設不用外部 collector。模組不依賴檔案／SQL sink。事件規範、擴充範例與維運限制見 [DIAGNOSTICS](DIAGNOSTICS.md)。
+
 AI Nexus 採 ASP.NET Core 模組化單體與 Angular 功能路由。模組各自管理 endpoint、資料模型與服務，共用 scoped NexusDbContext，讓跨模組異動仍在同一個 transaction 完成。需要獨立部署或強制依賴邊界時才拆 assembly；避免只有轉送用途的 service／repository。
 
 ```mermaid

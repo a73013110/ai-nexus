@@ -20,6 +20,12 @@ public static class DeploymentVerifier
             _ = scope.ServiceProvider.GetRequiredService<IOptions<Modules.Administration.AdministrationOptions>>().Value;
             var knowledge = scope.ServiceProvider.GetRequiredService<IOptions<Modules.Knowledge.KnowledgeOptions>>().Value;
             var attachments = scope.ServiceProvider.GetRequiredService<IOptions<Modules.Attachments.AttachmentOptions>>().Value;
+            var diagnostics = scope.ServiceProvider.GetRequiredService<IOptions<Diagnostics.DiagnosticOptions>>().Value;
+            var diagnosticPath = Diagnostics.DiagnosticJournal.Resolve(diagnostics.Directory, environment);
+            Directory.CreateDirectory(diagnosticPath);
+            var diagnosticProbe = Path.Combine(diagnosticPath, ".verify-" + Guid.NewGuid().ToString("N"));
+            try { await File.WriteAllTextAsync(diagnosticProbe, "AiNexus diagnostic storage write probe", ct); }
+            finally { if (File.Exists(diagnosticProbe)) File.Delete(diagnosticProbe); }
             _ = scope.ServiceProvider.GetRequiredService<IOptions<Modules.Artifacts.ExportOptions>>().Value;
             _ = scope.ServiceProvider.GetRequiredService<IOptions<Modules.Integrations.IntegrationsOptions>>().Value;
             var search = scope.ServiceProvider.GetRequiredService<IOptions<Modules.WebSearch.WebSearchOptions>>().Value;
@@ -44,7 +50,8 @@ public static class DeploymentVerifier
                 embeddingProvider = knowledge.EmbeddingProvider, embeddingDimensions = knowledge.Dimensions,
                 embeddingAvailable = retrieval.Embedding.Available, embeddingNotice = retrieval.Embedding.Notice, rerankAvailable = retrieval.Rerank.Available, rerankNotice = retrieval.Rerank.Notice,
                 webSearchEnabled = search.Enabled, giteaEnabled = gitea.Enabled,
-                keyRingPath = config["DataProtection:KeyRingPath"], attachmentStoragePath = attachments.StoragePath, attachmentStorageWritable = true, ready
+                keyRingPath = config["DataProtection:KeyRingPath"], attachmentStoragePath = attachments.StoragePath, attachmentStorageWritable = true,
+                diagnosticStoragePath = diagnosticPath, diagnosticStorageWritable = true, diagnosticCapacityBytes = diagnostics.MaxDiskBytes, diagnosticMaxSqlRows = diagnostics.MaxSqlRows, diagnosticOtlpEnabled = diagnostics.OtlpEnabled, ready
             }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
             return ready;
         }

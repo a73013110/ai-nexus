@@ -1,5 +1,6 @@
 import { expect, type Page, type Route } from "@playwright/test";
 import { randomUUID } from "node:crypto";
+export const fixtureIssueCode = "NX-" + "D".repeat(32);
 export async function chooseSelect(
   page: import("@playwright/test").Page,
   label: string,
@@ -247,8 +248,9 @@ export class ApiFixture {
       if (this.unavailable)
         return json(
           {
-            title: "伺服器尚未完成資料庫設定。",
+            title: "Password=fixture-private; internal database endpoint",
             code: "storage_not_configured",
+            issueCode: fixtureIssueCode,
           },
           503,
         );
@@ -357,7 +359,7 @@ export class ApiFixture {
         if (this.failPreferencesOnce) {
           this.failPreferencesOnce = false;
           return json(
-            { title: "偏好設定保存失敗。", code: "service_unavailable" },
+            { title: "Password=fixture-private", code: "service_unavailable", issueCode: fixtureIssueCode },
             503,
           );
         }
@@ -388,7 +390,7 @@ export class ApiFixture {
       if (this.failPreferencesOnce) {
         this.failPreferencesOnce = false;
         return json(
-          { title: "偏好設定保存失敗。", code: "service_unavailable" },
+          { title: "Password=fixture-private", code: "service_unavailable", issueCode: fixtureIssueCode },
           503,
         );
       }
@@ -816,7 +818,7 @@ export class ApiFixture {
         this.eventReads++;
         if (this.eventsStatus !== 200)
           return json(
-            { title: "沒有對話權限。", code: "feature_denied" },
+            { title: "Password=fixture-private", code: "access_denied", issueCode: fixtureIssueCode },
             this.eventsStatus,
           );
         if (run.status === "queued") {

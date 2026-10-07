@@ -1,3 +1,4 @@
+import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -19,7 +20,7 @@ import { SharingApi } from './sharing-api';
 import { Checkbox } from '../../shared/ui/checkbox';
 @Component({
   selector: 'nx-share-dialog',
-  imports: [Select, Icon, RouterLink, Checkbox],
+  imports: [IssueCode,Select, Icon, RouterLink, Checkbox],
   providers: [ViewScope, CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog #dialog class="platform-dialog" (cancel)="busy() && $event.preventDefault()">
@@ -39,7 +40,7 @@ import { Checkbox } from '../../shared/ui/checkbox';
         </button>
       </div>
       @if (error()) {
-        <p class="error-banner" role="alert">{{ error() }}</p>
+        <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
       }
       @if (created(); as share) {
         <div class="share-created">

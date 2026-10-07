@@ -147,7 +147,7 @@
         <nx-icon name="shield" />檢視行為會寫入稽核。對話包含各分支版本；附件僅提供資訊。
       </p>
       @if (error()) {
-        <p role="alert" class="inline-error">{{ error() }}</p>
+        <p role="alert" class="inline-error">{{ error() }}<nx-issue-code [message]="error()" /></p>
       }
       <div class="inspector-body">
         <aside class="inspector-list" aria-label="使用者對話清單">

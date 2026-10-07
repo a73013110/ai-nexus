@@ -1,3 +1,5 @@
+import { ClientValidationError } from '../../core/api/safe-errors';
+import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -32,7 +34,7 @@ import { RetrievalResults } from '../../shared/ui/retrieval-results';
 
 @Component({
   selector: 'nx-knowledge-page',
-  imports: [
+  imports: [IssueCode,
     FeaturePage,
     Icon,
     Select,
@@ -120,7 +122,7 @@ export class KnowledgePage {
     try {
       await this.session.load();
       if (!valid() || !this.session.me()) return;
-      if (!this.session.has('knowledge')) throw new Error('你的帳號目前沒有知識庫功能權限。');
+      if (!this.session.has('knowledge')) throw new ClientValidationError('featureAccess');
       const rows = await this.api.collections(),
         policy = await this.uploads.attachmentPolicy();
       if (!valid()) return;

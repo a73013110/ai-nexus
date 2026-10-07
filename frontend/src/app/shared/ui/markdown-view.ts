@@ -1,3 +1,4 @@
+import { IssueCode } from './issue-code';
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
 import { CopyFeedback } from '../browser/copy-feedback';
@@ -5,12 +6,13 @@ import { renderMarkdown } from './markdown';
 import { completeStreamingInline } from './streaming-markdown';
 
 @Component({
+  imports: [IssueCode],
   selector: 'nx-markdown-view',
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="markdown" [innerHTML]="html()" (click)="copyCode($event)"></div>
     @if (copy.error()) {
-      <p class="message-note" role="status">{{ copy.error() }}</p>
+      <p class="message-note" role="status">{{ copy.error() }}<nx-issue-code [message]="copy.error()" /></p>
     }`,
 })
 export class MarkdownView {

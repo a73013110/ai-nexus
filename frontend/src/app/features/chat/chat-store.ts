@@ -1,3 +1,4 @@
+import { safeMessage } from '../../core/api/safe-errors';
 import { NotificationStore } from '../../core/notifications/notification-store';
 import { computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
@@ -654,7 +655,7 @@ export class ChatStore {
     await this.preferenceWrite;
   }
   report(error: unknown) {
-    this.error.set(error instanceof Error ? error.message : '操作失敗，請稍後重試。');
+    this.error.set(safeMessage(error));
   }
 
   chooseModel(id: string) {

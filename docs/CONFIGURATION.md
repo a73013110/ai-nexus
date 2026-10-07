@@ -2,6 +2,8 @@
 
 設定只由後端在啟動時讀取。前端呼叫同源 `/api/v1`，不保存 SQL、AD 密碼或 AI key。改檔後須重新啟動後端／回收 IIS application pool。
 
+`Diagnostics` 使用一般設定檔與相同外部載入順序；`scripts/settings-layout.json` 已列入其全部欄位。Production 範本日誌目錄為 `D:\CoreProject\AiNexus\data\diagnostics`，不可位於 app／wwwroot；空值使用 ProgramData。保留、容量、佇列、最低等級、採樣與 OTLP 的預設及限制見 [日誌設定](DIAGNOSTICS.md#設定與容量)。診斷 provider 的等級政策由 Diagnostics 控制；Error／Critical 與有代碼的核心拒絕事件不能被舊 Logging 設定或一般採樣略過。外部 secrets、Production 不讀 `.local` 的規則維持相同。
+
 ## 檔案與載入順序
 
 | 用途                 | 本機開發                                   | IIS                                                       |
