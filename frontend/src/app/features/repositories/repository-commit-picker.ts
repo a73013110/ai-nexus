@@ -1,3 +1,4 @@
+import { Field } from '../../shared/ui/field';
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import type { RepositoryCommit } from '../../core/api/types';
 import { Select } from '../../shared/ui/select';
@@ -5,7 +6,7 @@ import { Select } from '../../shared/ui/select';
 /** The same searchable commit selection and full-SHA escape hatch for either range endpoint. */
 @Component({
   selector: 'nx-repository-commit-picker',
-  imports: [Select],
+  imports: [Field, Select],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -45,7 +46,7 @@ import { Select } from '../../shared/ui/select';
       <summary>貼上完整 SHA</summary>
       <label
         >完整 SHA<input
-          class="form-input"
+          nxField
           [attr.aria-label]="label() + '（完整 SHA）'"
           [disabled]="disabled()"
           maxlength="64"

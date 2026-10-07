@@ -1,3 +1,4 @@
+import { CompactDialog } from './compact-dialog';
 import { safeMessage, systemProblem, validIssueCode } from '../../core/api/safe-errors';
 import type { NotificationItem } from '../../core/api/types';
 import { IssueCode } from './issue-code';
@@ -16,9 +17,10 @@ import { formatDate } from '../browser/format';
 
 @Component({
   selector: 'nx-notification-center',
-  imports: [IssueCode,Icon],
+  imports: [CompactDialog, IssueCode, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
+    nxCompactDialog
     #dialog
     class="platform-dialog notification-center"
     aria-labelledby="notification-title"
@@ -66,7 +68,11 @@ import { formatDate } from '../browser/format';
     </div>
     @if (store.error()) {
       <p class="error-banner" role="alert">
-        {{ store.error() }}<nx-issue-code [message]="store.error()" /><button (click)="store.refresh()">重試</button>
+        {{ store.error() }}<nx-issue-code [message]="store.error()" /><button
+          (click)="store.refresh()"
+        >
+          重試
+        </button>
       </p>
     }
     <div class="notification-list" [attr.aria-busy]="store.loading()">
@@ -134,7 +140,13 @@ import { formatDate } from '../browser/format';
   </dialog>`,
 })
 export class NotificationCenter {
-  body(item: NotificationItem) { return item.severity === 'error' ? validIssueCode(item.issueCode) ? systemProblem(item.issueCode) : safeMessage(item) : item.body; }
+  body(item: NotificationItem) {
+    return item.severity === 'error'
+      ? validIssueCode(item.issueCode)
+        ? systemProblem(item.issueCode)
+        : safeMessage(item)
+      : item.body;
+  }
   readonly store = inject(NotificationStore);
   readonly date = formatDate;
   readonly url = notificationUrl;

@@ -1,3 +1,5 @@
+import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { Field } from '../../shared/ui/field';
 import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
@@ -54,7 +56,10 @@ import { LibraryPicker } from '../files/library-picker';
 
 @Component({
   selector: 'nx-chat-workspace',
-  imports: [IssueCode,
+  imports: [
+    CompactDialog,
+    Field,
+    IssueCode,
     FormField,
     RouterLink,
     Icon,

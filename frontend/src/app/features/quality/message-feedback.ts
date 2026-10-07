@@ -1,3 +1,4 @@
+import { Field } from '../../shared/ui/field';
 import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
@@ -16,7 +17,8 @@ import { QualityApi } from './quality-api';
 
 @Component({
   selector: 'nx-message-feedback',
-  imports: [IssueCode,Icon, Select],
+  host: { class: 'ui-density-compact' },
+  imports: [Field, IssueCode, Icon, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="message-feedback">
@@ -61,6 +63,7 @@ import { QualityApi } from './quality-api';
           (valueChange)="reason.set($event)"
           [disabled]="busy()"
         /><textarea
+          nxField
           aria-label="回饋補充說明"
           placeholder="哪裡需要改善？（選填）"
           rows="2"
@@ -73,7 +76,9 @@ import { QualityApi } from './quality-api';
       </div>
     }
     @if (error()) {
-      <p role="alert" class="message-note error-note">{{ error() }}<nx-issue-code [message]="error()" /></p>
+      <p role="alert" class="message-note error-note">
+        {{ error() }}<nx-issue-code [message]="error()" />
+      </p>
     }
     @if (notice()) {
       <span class="visually-hidden" role="status">{{ notice() }}</span>
@@ -86,13 +91,13 @@ import { QualityApi } from './quality-api';
     .feedback-buttons {
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: var(--p-space-1);
     }
     .feedback-detail {
-      padding: 16px;
+      padding: var(--section-padding);
       border: 1px solid var(--line);
       border-radius: var(--p-radius-md);
-      margin-top: 8px;
+      margin-top: var(--p-space-2);
       max-width: 32rem;
     }
     .feedback-detail textarea {

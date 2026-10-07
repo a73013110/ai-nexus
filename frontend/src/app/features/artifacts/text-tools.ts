@@ -1,3 +1,5 @@
+import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { Field } from '../../shared/ui/field';
 import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
@@ -21,10 +23,15 @@ import { ArtifactsApi } from './artifacts-api';
 
 @Component({
   selector: 'nx-text-tools',
-  imports: [IssueCode,Icon, Select, InferenceSignal],
+  imports: [CompactDialog, Field, IssueCode, Icon, Select, InferenceSignal],
   providers: [ViewScope, CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<dialog #dialog class="platform-dialog text-tools-dialog" (cancel)="cancel($event)">
+  template: `<dialog
+    nxCompactDialog
+    #dialog
+    class="platform-dialog text-tools-dialog"
+    (cancel)="cancel($event)"
+  >
     <div class="dialog-scroll">
       <div class="dialog-heading">
         <h2>{{ mode() === 'save' ? '儲存成果文件' : labels[mode()] }}</h2>
@@ -39,6 +46,7 @@ import { ArtifactsApi } from './artifacts-api';
         <form class="platform-form" (submit)="save($event)">
           <label
             >成果名稱<input
+              nxField
               autofocus
               aria-label="成果名稱"
               maxlength="120"
@@ -47,6 +55,7 @@ import { ArtifactsApi } from './artifacts-api';
               (input)="title.set($any($event.target).value)" /></label
           ><label
             >內容<textarea
+              nxField
               aria-label="成果內容"
               rows="10"
               maxlength="64000"
@@ -90,6 +99,7 @@ import { ArtifactsApi } from './artifacts-api';
         @if (result()) {
           <label class="text-tool-result"
             >處理結果<textarea
+              nxField
               aria-label="段落處理結果"
               rows="10"
               maxlength="64000"

@@ -56,8 +56,8 @@
         <form (submit)="connect($event)">
           <label for="gitea-token">個人存取權杖</label
           ><input
+            nxField
             id="gitea-token"
-            class="form-input"
             type="password"
             minlength="20"
             maxlength="512"
@@ -124,7 +124,7 @@
         </aside>
         <section class="repository-detail platform-card">
           @if (selected(); as repo) {
-            <header class="repository-detail-heading">
+            <header class="resource-heading">
               <div>
                 <h2>{{ repo.fullName }}</h2>
                 <p>{{ repo.description }}</p>
@@ -133,27 +133,16 @@
                 >開啟 Gitea<nx-icon name="chevron"
               /></a>
             </header>
-            <nav class="page-tabs" aria-label="程式庫內容">
-              <button
-                type="button"
-                [attr.aria-current]="tab() === 'files' ? 'page' : null"
-                (click)="tab.set('files')"
-              >
-                檔案</button
-              ><button
-                type="button"
-                [attr.aria-current]="tab() === 'issues' ? 'page' : null"
-                (click)="showIssues()"
-              >
-                待處理議題</button
-              ><button
-                type="button"
-                [attr.aria-current]="tab() === 'review' ? 'page' : null"
-                (click)="tab.set('review')"
-              >
-                AI Review
-              </button>
-            </nav>
+            <nx-view-switch
+              label="程式庫內容"
+              [options]="[
+                { value: 'files', label: '檔案' },
+                { value: 'issues', label: '待處理議題' },
+                { value: 'review', label: 'AI Review' },
+              ]"
+              [value]="tab()"
+              (valueChange)="$event === 'issues' ? showIssues() : tab.set($event)"
+            />
             @if (reading()) {
               <p role="status">正在讀取 Gitea…</p>
             }

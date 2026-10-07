@@ -1,8 +1,9 @@
 .file-library-intro {
   display: flex;
   align-items: center;
-  gap: 18px;
-  padding: 24px;
+  gap: var(--section-gap);
+  padding: var(--section-padding);
+  margin-bottom: var(--section-gap);
   border: 1px solid var(--line);
   border-radius: var(--p-radius-lg);
   background: var(--surface-subtle);
@@ -43,32 +44,13 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
-  margin-top: 28px;
+  margin-top: 0;
   nx-search-field {
     margin-left: auto;
     width: min(300px, 100%);
   }
   > nx-select {
     width: 144px;
-  }
-}
-.file-type-tabs {
-  display: flex;
-  gap: 4px;
-  background: var(--hover);
-  border-radius: var(--p-radius-md);
-  padding: 4px;
-  button {
-    border: 0;
-    border-radius: var(--p-radius-sm);
-    background: transparent;
-    color: var(--secondary);
-    padding: 9px 14px;
-    &[aria-pressed='true'] {
-      background: var(--surface);
-      color: var(--accent);
-      box-shadow: 0 1px 4px #0001;
-    }
   }
 }
 .file-layout-toggle {
@@ -84,12 +66,12 @@
   justify-content: space-between;
   color: var(--secondary);
   font-size: var(--text-caption);
-  margin: 20px 0 12px;
+  margin: 0 0 var(--p-space-2);
 }
 .file-browser {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
-  gap: 20px;
+  gap: var(--section-gap);
 }
 .file-card {
   display: flex;
@@ -105,14 +87,13 @@
   &:hover,
   &:focus-within {
     border-color: color-mix(in srgb, var(--accent) 36%, var(--line));
-    box-shadow: 0 4px 20px color-mix(in srgb, var(--ink) 6%, transparent);
   }
 }
 .file-cover {
   display: grid;
   place-items: center;
   position: relative;
-  height: 170px;
+  height: 8rem;
   background: var(--canvas);
   border-bottom: 1px solid var(--line);
   text-decoration: none;
@@ -166,7 +147,7 @@
 }
 .file-card-body {
   min-width: 0;
-  padding: 16px 16px 12px;
+  padding: var(--section-padding);
   flex: 1;
 }
 .file-name {
@@ -176,7 +157,7 @@
   overflow: hidden;
   color: var(--ink);
   text-decoration: none;
-  font-size: var(--text-body);
+  font-size: var(--text-label);
   font-weight: 500;
   line-height: 1.5;
   overflow-wrap: anywhere;
@@ -245,8 +226,8 @@
     align-items: center;
   }
   .file-cover {
-    width: 72px;
-    height: 84px;
+    width: 3.5rem;
+    height: 4rem;
     flex: none;
     border: 0;
     margin: 12px;
@@ -302,7 +283,7 @@
   font-size: var(--text-caption);
   color: var(--secondary);
   line-height: 1.8;
-  margin-top: 28px;
+  margin-top: 0;
   nx-icon {
     width: 16px;
     flex: none;
@@ -357,7 +338,7 @@
     width: 100%;
   }
   .file-library-toolbar > nx-select {
-    flex: 1;
+    flex: 1 1 144px;
   }
   .file-browser-list .file-card {
     flex-wrap: wrap;

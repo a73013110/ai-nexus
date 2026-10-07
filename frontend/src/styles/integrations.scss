@@ -2,12 +2,12 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--p-space-4);
-  margin-bottom: var(--p-space-6);
+  margin-bottom: var(--section-gap);
 }
 .source-card {
   display: flex;
   text-align: start;
-  padding: var(--p-space-5);
+  padding: var(--section-padding);
   gap: var(--p-space-4);
   align-items: flex-start;
   border: 1px solid var(--line);
@@ -38,20 +38,12 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) 10rem auto;
   gap: var(--p-space-3);
-  margin-bottom: var(--p-space-5);
-}
-.source-search input {
-  width: 100%;
-  min-height: var(--button-target);
-  padding: var(--p-space-3);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  margin-bottom: 0;
 }
 .source-workbench {
   display: grid;
   grid-template-columns: 16rem minmax(0, 1fr);
-  gap: var(--p-space-6);
+  gap: var(--section-gap);
 }
 .source-results {
   display: flex;
@@ -89,7 +81,7 @@
 .source-reading {
   border: 1px solid var(--line);
   background: var(--surface);
-  padding: var(--p-space-6);
+  padding: var(--section-padding);
   border-radius: var(--p-radius-lg);
   min-width: 0;
 }

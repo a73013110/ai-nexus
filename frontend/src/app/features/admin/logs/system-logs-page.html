@@ -104,9 +104,8 @@
       </p>
     }
     <form class="log-filters" (ngSubmit)="search()">
-      <div class="log-filter-heading">
-        <strong><nx-icon name="filter" />篩選</strong>
-        <div class="log-filter-presets">
+      <nx-filter-panel>
+        <div filter-actions class="log-filter-presets">
           <span class="log-zone">{{ timezone }}</span>
           <nx-select
             label="時間範圍"
@@ -123,62 +122,62 @@
             重設
           </button>
         </div>
-      </div>
-      <div class="log-filter-grid">
-        <nx-date-time-picker
-          label="起始時間"
-          [value]="fromLocal()"
-          (valueChange)="setDate('from', $event)"
-        />
-        <nx-date-time-picker
-          label="結束時間"
-          [value]="toLocal()"
-          (valueChange)="setDate('to', $event)"
-        />
-        <label class="ui-field"
-          >查證代碼<input
-            nxField
-            name="issue"
-            [ngModel]="filter().issueCode"
-            (ngModelChange)="setFilter('issueCode', $event)"
-            placeholder="NX-…"
-            maxlength="35"
-            autocomplete="off"
-        /></label>
-        <div class="ui-field">
-          <span>等級</span
-          ><nx-select
-            label="等級"
-            [options]="levelOptions"
-            [value]="filter().level"
-            (valueChange)="setFilter('level', $event)"
+        <div class="log-filter-grid">
+          <nx-date-time-picker
+            label="起始時間"
+            [value]="fromLocal()"
+            (valueChange)="setDate('from', $event)"
           />
+          <nx-date-time-picker
+            label="結束時間"
+            [value]="toLocal()"
+            (valueChange)="setDate('to', $event)"
+          />
+          <label class="ui-field"
+            >查證代碼<input
+              nxField
+              name="issue"
+              [ngModel]="filter().issueCode"
+              (ngModelChange)="setFilter('issueCode', $event)"
+              placeholder="NX-…"
+              maxlength="35"
+              autocomplete="off"
+          /></label>
+          <div class="ui-field">
+            <span>等級</span
+            ><nx-select
+              label="等級"
+              [options]="levelOptions"
+              [value]="filter().level"
+              (valueChange)="setFilter('level', $event)"
+            />
+          </div>
+          <button class="primary-button log-query-button" type="submit" [disabled]="loading()">
+            <nx-icon [name]="loading() ? 'loading' : 'search'" />查詢
+          </button>
         </div>
-        <button class="primary-button log-query-button" type="submit" [disabled]="loading()">
-          <nx-icon [name]="loading() ? 'loading' : 'search'" />查詢
-        </button>
-      </div>
-      <details class="advanced-filters">
-        <summary>
-          <nx-icon name="chevron" />流程與進階篩選
-          @if (advancedCount()) {
-            <span class="log-filter-count ui-count-label">{{ advancedCount() }}</span>
-          }
-        </summary>
-        <div class="log-advanced-grid">
-          @for (field of advancedFields; track field.key) {
-            <label class="ui-field"
-              >{{ field.label
-              }}<input
-                nxField
-                [name]="field.key"
-                [ngModel]="filter()[field.key]"
-                (ngModelChange)="setFilter(field.key, $event)"
-                [maxLength]="field.maxLength"
-            /></label>
-          }
-        </div>
-      </details>
+        <details class="advanced-filters">
+          <summary>
+            <nx-icon name="chevron" />流程與進階篩選
+            @if (advancedCount()) {
+              <span class="log-filter-count ui-count-label">{{ advancedCount() }}</span>
+            }
+          </summary>
+          <div class="log-advanced-grid">
+            @for (field of advancedFields; track field.key) {
+              <label class="ui-field"
+                >{{ field.label
+                }}<input
+                  nxField
+                  [name]="field.key"
+                  [ngModel]="filter()[field.key]"
+                  (ngModelChange)="setFilter(field.key, $event)"
+                  [maxLength]="field.maxLength"
+              /></label>
+            }
+          </div>
+        </details>
+      </nx-filter-panel>
     </form>
     @if (error()) {
       <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>

@@ -1,3 +1,7 @@
+import { StatusBadge } from '../../shared/ui/status-badge';
+import { DataTable } from '../../shared/ui/data-table';
+import { DateTimePicker } from '../../shared/ui/date-time-picker';
+import { FilterPanel } from '../../shared/ui/filter-panel';
 import { ClientValidationError } from '../../core/api/safe-errors';
 import { IssueCode } from '../../shared/ui/issue-code';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
@@ -17,7 +21,12 @@ import { downloadBlob } from '../../shared/browser/download';
 
 @Component({
   selector: 'nx-dashboard-page',
-  imports: [IssueCode,
+  imports: [
+    StatusBadge,
+    DataTable,
+    DateTimePicker,
+    FilterPanel,
+    IssueCode,
     FeaturePage,
     Icon,
     Select,

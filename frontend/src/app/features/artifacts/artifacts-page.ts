@@ -1,3 +1,5 @@
+import { SearchField } from '../../shared/ui/search-field';
+import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
 import { IssueCode } from '../../shared/ui/issue-code';
 import {
@@ -22,13 +24,17 @@ import { ResourceSharing } from '../../shared/ui/resource-sharing';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { MarkdownView } from '../../shared/ui/markdown-view';
 import { downloadBlob } from '../../shared/browser/download';
+import { formatDate } from '../../shared/browser/format';
 import { ArtifactsApi } from './artifacts-api';
 import { TextTools } from './text-tools';
 import { ShareDialog } from '../sharing/share-dialog';
 
 @Component({
   selector: 'nx-artifacts-page',
-  imports: [IssueCode,
+  imports: [
+    SearchField,
+    Field,
+    IssueCode,
     FeaturePage,
     Icon,
     Select,
@@ -36,7 +42,8 @@ import { ShareDialog } from '../sharing/share-dialog';
     ConfirmDialog,
     TextTools,
     RouterLink,
-    MarkdownView, ShareDialog,
+    MarkdownView,
+    ShareDialog,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -86,7 +93,7 @@ export class ArtifactsPage {
     this.revisions().map((x) => ({
       value: String(x.version),
       label: `版本 ${x.version}`,
-      description: `${x.author} · ${new Intl.DateTimeFormat('zh-TW', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(x.createdAt))}`,
+      description: `${x.author} · ${formatDate(x.createdAt)}`,
     })),
   );
   private version = 0;

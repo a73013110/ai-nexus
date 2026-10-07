@@ -1,3 +1,4 @@
+import { CompactDialog } from './compact-dialog';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -19,13 +20,13 @@ export interface Confirmation {
 let sequence = 0;
 @Component({
   selector: 'nx-confirm-dialog',
-  imports: [Icon],
+  imports: [CompactDialog, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
+    [nxCompactDialog]="compact()"
     #dialog
     class="platform-dialog"
     [class.ui-dialog-compact]="compact()"
-    [class.ui-density-compact]="compact()"
     [attr.aria-labelledby]="id + '-title'"
     [attr.aria-describedby]="id + '-message'"
     (cancel)="$event.preventDefault(); answer(false)"

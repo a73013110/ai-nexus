@@ -20,15 +20,16 @@
   display: flex;
   align-items: flex-start;
   flex-wrap: wrap;
-  gap: var(--p-space-4);
-  margin-bottom: var(--p-space-5);
+  gap: var(--section-gap);
+  margin-bottom: var(--section-gap);
 }
 .resource-heading > div:first-child {
   flex: 1;
   min-width: min(100%, 12rem);
 }
 .resource-heading h2 {
-  font-size: var(--p-font-xl);
+  font-size: var(--resource-heading-size);
+  overflow-wrap: anywhere;
   margin: 0 0 var(--p-space-2);
 }
 .resource-heading p {
@@ -52,7 +53,7 @@
 }
 .platform-card {
   min-width: 0;
-  padding: var(--p-space-5);
+  padding: var(--section-padding);
   border: 1px solid var(--line);
   border-radius: var(--p-radius-lg);
   background: var(--surface);
@@ -60,7 +61,7 @@
 .usage-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
-  gap: var(--p-space-4);
+  gap: var(--section-gap);
   margin-top: var(--p-space-4);
 }
 .stat-card {
@@ -68,7 +69,7 @@
   flex-direction: column;
   min-width: 0;
   gap: var(--p-space-3);
-  padding: var(--p-space-6);
+  padding: var(--section-padding);
   border: 1px solid var(--line);
   background: var(--surface);
   border-radius: var(--p-radius-lg);
@@ -127,7 +128,7 @@
   display: flex;
   align-items: center;
   gap: var(--p-space-6);
-  margin-bottom: var(--p-space-5);
+  margin-bottom: var(--section-gap);
 }
 .feature-header > div:first-child {
   flex: 1;
@@ -144,53 +145,13 @@
   margin: 0;
   line-height: 1.65;
 }
-.page-tabs {
-  display: flex;
-  gap: var(--p-space-2);
-  overflow: auto;
-  border-bottom: 1px solid var(--line);
-  margin-bottom: var(--p-space-6);
-}
-.page-tabs button {
-  flex: none;
-  min-height: var(--button-target);
-  padding: var(--p-space-3) var(--p-space-4);
-  font-size: var(--text-ui);
-  border-bottom: 2px solid transparent;
-  color: var(--secondary);
-}
-.page-tabs button[aria-current='page'],
-.page-tabs button[aria-pressed='true'] {
-  border-color: var(--signal);
-  background: var(--accent-soft);
-  color: var(--ink);
-  font-weight: 600;
-}
 .page-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--p-space-4);
+  gap: var(--section-gap);
   flex-wrap: wrap;
-  margin-bottom: var(--p-space-6);
-}
-.page-search {
-  flex: 1;
-  max-width: 30rem;
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  padding: var(--p-space-2) var(--p-space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
-  background: var(--surface);
-}
-.page-search input {
-  border: 0;
-  background: transparent;
-  width: 100%;
-  min-width: 0;
-  min-height: 28px;
+  margin-bottom: var(--section-gap);
 }
 .resource-list {
   border: 1px solid var(--line);
@@ -201,8 +162,8 @@
 .resource-row {
   display: flex;
   align-items: center;
-  gap: var(--p-space-4);
-  padding: var(--p-space-4) var(--p-space-6);
+  gap: var(--section-gap);
+  padding: var(--resource-row-padding-block) var(--resource-row-padding-inline);
   border-top: 1px solid var(--line);
 }
 .resource-row:first-child {
@@ -246,7 +207,7 @@
 }
 .empty-state {
   text-align: center;
-  padding: var(--p-space-12) var(--p-space-6);
+  padding: var(--empty-state-padding) var(--section-padding);
   color: var(--secondary);
 }
 .empty-state h2 {
@@ -257,8 +218,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: var(--p-space-4);
-  margin-top: var(--p-space-6);
+  gap: var(--section-gap);
+  margin-top: var(--section-gap);
   font-size: var(--text-caption);
   color: var(--secondary);
 }
@@ -277,25 +238,14 @@
 .platform-form {
   display: flex;
   flex-direction: column;
-  gap: var(--p-space-4);
+  gap: var(--section-gap);
 }
 .platform-form > label {
   display: flex;
   flex-direction: column;
-  gap: var(--p-space-2);
+  gap: var(--field-label-gap);
+  font-size: var(--field-label-size);
   font-weight: 550;
-}
-.platform-form input:not([type='checkbox']),
-.platform-form textarea,
-.form-input {
-  width: 100%;
-  min-height: var(--button-target);
-  padding: var(--p-space-3);
-  color: var(--ink);
-  background: var(--canvas);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-sm);
-  font-weight: 400;
 }
 .platform-form fieldset {
   border: 1px solid var(--line);

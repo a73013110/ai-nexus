@@ -25,14 +25,12 @@
       [class.list-open]="listOpen()"
     >
       <aside class="artifact-list">
-        <label class="page-search"
-          ><nx-icon name="search" /><input
-            type="search"
-            aria-label="搜尋成果文件"
-            placeholder="尋找成果"
-            [value]="filter()"
-            (input)="filter.set($any($event.target).value)"
-        /></label>
+        <nx-search-field
+          label="搜尋成果文件"
+          placeholder="尋找成果"
+          [value]="filter()"
+          (valueChange)="filter.set($event)"
+        />
         <nav aria-label="成果文件清單">
           @for (item of visible(); track item.resource.id) {
             <a
@@ -59,6 +57,7 @@
             <div>
               @if (mode() !== 'read' && editable()) {
                 <input
+                  nxField
                   aria-label="編輯成果名稱"
                   [disabled]="busy()"
                   maxlength="120"
@@ -176,6 +175,7 @@
           <div class="artifact-body" [class.split]="mode() === 'split'">
             @if (mode() !== 'read' && editable()) {
               <textarea
+                nxField
                 #editor
                 class="artifact-editor"
                 aria-label="編輯成果內容"
@@ -189,7 +189,7 @@
               ></textarea>
             }
             @if (mode() !== 'edit' || !editable()) {
-              <nx-markdown-view class="artifact-preview" [content]="content()" />
+              <nx-markdown-view class="artifact-preview platform-card" [content]="content()" />
             }
           </div>
           <nx-resource-sharing

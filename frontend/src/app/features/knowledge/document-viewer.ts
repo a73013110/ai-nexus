@@ -1,3 +1,4 @@
+import { Field } from '../../shared/ui/field';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -29,7 +30,7 @@ import { WorkspaceApi } from '../workspace/workspace-api';
 
 @Component({
   selector: 'nx-document-viewer',
-  imports: [Icon, Select, TextHighlight, JobProgress],
+  imports: [Field, Icon, Select, TextHighlight, JobProgress],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './document-viewer.html',

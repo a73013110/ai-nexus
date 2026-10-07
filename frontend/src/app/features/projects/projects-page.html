@@ -3,7 +3,11 @@
   description="共用背景、指示與參考文件，讓每次工作都從相同的脈絡開始。"
 >
   <div page-actions class="page-actions">
-    @if (session.has('files')) { <a routerLink="/files" class="secondary-button"><nx-icon name="document" />{{ session.featureName('files') }}</a> }
+    @if (session.has('files')) {
+      <a routerLink="/files" class="secondary-button"
+        ><nx-icon name="document" />{{ session.featureName('files') }}</a
+      >
+    }
     <button
       class="primary-button"
       [disabled]="loading() || busy() || !session.has('projects')"
@@ -106,7 +110,7 @@
               [nxFileDrop]="project.resource.canEdit && !project.isArchived && !busy()"
               (filesDropped)="upload($event)"
             >
-              <div class="section-heading">
+              <div class="ui-section-header">
                 <h3>
                   參考文件 <span>{{ files().length }}</span>
                 </h3>
@@ -156,7 +160,7 @@
               </div>
             </section>
             <section class="platform-card">
-              <div class="section-heading">
+              <div class="ui-section-header">
                 <h3>
                   共用範本 <span>{{ templates().length }}</span>
                 </h3>
@@ -203,7 +207,7 @@
               </div>
             </section>
             <section class="platform-card">
-              <div class="section-heading">
+              <div class="ui-section-header">
                 <h3>
                   我的專案對話 <span>{{ conversations().length }}</span>
                 </h3>
@@ -232,7 +236,7 @@
               </nav>
             </section>
             <section class="platform-card">
-              <div class="section-heading">
+              <div class="ui-section-header">
                 <h3>
                   共用成果 <span>{{ outputs().length }}</span>
                 </h3>
@@ -278,7 +282,7 @@
     </div>
   }
 </nx-feature-page>
-<dialog #dialog class="platform-dialog" (cancel)="close($event)">
+<dialog nxCompactDialog #dialog class="platform-dialog" (cancel)="close($event)">
   <div class="dialog-scroll">
     <div class="dialog-heading">
       <h2>{{ kind() === 'project' ? '專案設定' : '共用範本' }}</h2>
@@ -293,6 +297,7 @@
       <label
         >{{ kind() === 'project' ? '專案名稱' : '範本名稱'
         }}<input
+          nxField
           aria-label="項目名稱"
           autofocus
           required
@@ -304,6 +309,7 @@
       @if (kind() === 'project') {
         <label
           >工作說明<textarea
+            nxField
             aria-label="專案說明"
             maxlength="2000"
             rows="3"
@@ -313,6 +319,7 @@
           ></textarea></label
         ><label
           >共用指示<textarea
+            nxField
             aria-label="專案共用指示"
             maxlength="4000"
             rows="6"
@@ -325,6 +332,7 @@
       } @else {
         <label
           >提問內容<textarea
+            nxField
             aria-label="範本提問內容"
             maxlength="12000"
             rows="8"

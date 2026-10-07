@@ -1,3 +1,4 @@
+import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import type { Model, EffectiveModelPolicy } from '../../core/api/types';
@@ -34,7 +35,7 @@ export function modelPolicyRequest(draft: ModelPolicyDraft): Policy {
 
 @Component({
   selector: 'nx-model-policy-editor',
-  imports: [Checkbox],
+  imports: [Field, Checkbox],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="model-policy-heading">
@@ -77,7 +78,7 @@ export function modelPolicyRequest(draft: ModelPolicyDraft): Policy {
           <label class="model-policy-limit"
             >每日 token 上限
             <input
-              class="form-input"
+              nxField
               type="number"
               min="0"
               max="1000000000000"

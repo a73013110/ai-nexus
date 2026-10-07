@@ -1,3 +1,4 @@
+import { FilterPanel } from '../../../shared/ui/filter-panel';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -73,6 +74,7 @@ const tones: Record<string, BadgeTone> = {
 @Component({
   selector: 'nx-system-logs-page',
   imports: [
+    FilterPanel,
     FeaturePage,
     FormsModule,
     RouterLink,

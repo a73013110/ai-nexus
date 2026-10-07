@@ -1,3 +1,4 @@
+import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
@@ -17,7 +18,7 @@ import { SearchField } from '../../shared/ui/search-field';
 
 @Component({
   selector: 'nx-library-picker',
-  imports: [IssueCode,FileBrowser, Icon, SearchField],
+  imports: [CompactDialog, IssueCode, FileBrowser, Icon, SearchField],
   providers: [ViewScope, FileLibraryStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<button
@@ -33,7 +34,12 @@ import { SearchField } from '../../shared/ui/search-field';
         {{ label() }}
       }
     </button>
-    <dialog #dialog class="platform-dialog file-picker-dialog" aria-label="從檔案庫選取">
+    <dialog
+      nxCompactDialog
+      #dialog
+      class="platform-dialog file-picker-dialog"
+      aria-label="從檔案庫選取"
+    >
       <div class="dialog-scroll">
         <div class="dialog-heading">
           <div>
@@ -51,7 +57,9 @@ import { SearchField } from '../../shared/ui/search-field';
           (valueChange)="store.find($event)"
         />
         @if (store.error()) {
-          <p class="error-banner" role="alert">{{ store.error() }}<nx-issue-code [message]="store.error()" /></p>
+          <p class="error-banner" role="alert">
+            {{ store.error() }}<nx-issue-code [message]="store.error()" />
+          </p>
         }
         @if (store.loading()) {
           <p role="status" class="form-note">正在載入檔案…</p>

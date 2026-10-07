@@ -16,7 +16,7 @@
     [nxFileDrop]="store.canUpload()"
     (filesDropped)="store.attachments.upload($event)"
   >
-    <header class="topbar">
+    <header class="topbar ui-density-compact">
       <div class="topbar-left">
         <div class="conversation-heading">
           @if (store.selected(); as conversation) {
@@ -344,7 +344,9 @@
           </div>
         </form>
         @if (store.attachments.error()) {
-          <p class="context-warning" role="alert">{{ store.attachments.error() }}<nx-issue-code [message]="store.attachments.error()" /></p>
+          <p class="context-warning" role="alert">
+            {{ store.attachments.error() }}<nx-issue-code [message]="store.attachments.error()" />
+          </p>
         }
         @if (store.visionNotice()) {
           <p class="context-warning" role="status">{{ store.visionNotice() }}</p>
@@ -431,7 +433,7 @@
   accept="application/json,.json"
   (change)="importChanged($event)"
 />
-<dialog #dialog class="action-dialog" (close)="modal.set(null)">
+<dialog nxCompactDialog #dialog class="action-dialog" (close)="modal.set(null)">
   <div class="dialog-scroll">
     <form (submit)="confirmDialog($event)">
       <div class="dialog-heading">
@@ -442,7 +444,7 @@
       </div>
       @if (modal() === 'rename') {
         <label for="conversation-title">對話標題</label
-        ><input id="conversation-title" [formField]="renameForm.title" autofocus />
+        ><input nxField id="conversation-title" [formField]="renameForm.title" autofocus />
       } @else {
         <p>
           「{{

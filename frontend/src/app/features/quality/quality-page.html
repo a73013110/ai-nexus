@@ -19,22 +19,16 @@
   @if (notice()) {
     <p role="status" class="form-note">{{ notice() }}</p>
   }
-  <nav class="page-tabs" aria-label="品質功能">
-    <button
-      [attr.aria-current]="tab() === 'retrieval' ? 'page' : null"
-      (click)="tab.set('retrieval')"
-    >
-      檢索評測
-    </button>
-    <button [attr.aria-current]="tab() === 'sets' ? 'page' : null" (click)="tab.set('sets')">
-      評測與比較</button
-    ><button
-      [attr.aria-current]="tab() === 'feedback' ? 'page' : null"
-      (click)="tab.set('feedback')"
-    >
-      我的回饋 <span>{{ feedback().length }}</span>
-    </button>
-  </nav>
+  <nx-view-switch
+    label="品質功能"
+    [options]="[
+      { value: 'retrieval', label: '檢索評測' },
+      { value: 'sets', label: '評測與比較' },
+      { value: 'feedback', label: '我的回饋 ' + feedback().length },
+    ]"
+    [value]="tab()"
+    (valueChange)="tab.set($event)"
+  />
   @if (loading()) {
     <p role="status">正在載入品質評測…</p>
   } @else if (tab() === 'retrieval') {
@@ -244,7 +238,7 @@
     </div>
   }
 </nx-feature-page>
-<dialog #dialog class="platform-dialog quality-dialog" (cancel)="close($event)">
+<dialog nxCompactDialog #dialog class="platform-dialog quality-dialog" (cancel)="close($event)">
   <div class="dialog-scroll">
     <form (submit)="save($event)">
       <div class="dialog-heading">
@@ -285,12 +279,14 @@
         @if (form() === 'set') {
           <label
             >名稱<input
+              nxField
               required
               maxlength="120"
               [value]="name()"
               (input)="name.set($any($event.target).value)" /></label
           ><label
             >說明<textarea
+              nxField
               rows="2"
               maxlength="2000"
               [value]="description()"
@@ -302,6 +298,7 @@
               <legend>第 {{ i + 1 }} 題</legend>
               <label
                 >問題<textarea
+                  nxField
                   required
                   rows="3"
                   maxlength="4000"
@@ -310,6 +307,7 @@
                 ></textarea></label
               ><label
                 >參考答案<textarea
+                  nxField
                   rows="2"
                   maxlength="4000"
                   [value]="test.reference"
@@ -319,10 +317,12 @@
               <div class="quality-field-pair">
                 <label
                   >必要詞（逗號分隔）<input
+                    nxField
                     [value]="test.requiredTerms?.join(', ') || ''"
                     (change)="updateCase(i, 'requiredTerms', $any($event.target).value)" /></label
                 ><label
                   >禁用詞（逗號分隔）<input
+                    nxField
                     [value]="test.forbiddenTerms?.join(', ') || ''"
                     (change)="updateCase(i, 'forbiddenTerms', $any($event.target).value)"
                 /></label>
@@ -351,6 +351,7 @@
               <legend>比較方案 {{ i + 1 }}</legend>
               <label
                 >方案名稱<input
+                  nxField
                   required
                   maxlength="80"
                   [value]="item.label"
@@ -370,6 +371,7 @@
               }
               <label
                 >比較指令<textarea
+                  nxField
                   rows="4"
                   maxlength="4000"
                   placeholder="例如：先寫結論，再列出待確認事項。"
@@ -407,6 +409,7 @@
               [disabled]="busy()" /></label
           ><label
             >判讀說明<textarea
+              nxField
               rows="4"
               maxlength="2000"
               [value]="reviewNote()"

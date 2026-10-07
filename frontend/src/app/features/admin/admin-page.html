@@ -4,7 +4,9 @@
   eyebrow="AI NEXUS · 管理"
 >
   <div page-actions class="page-actions">
-    @if (session.has('logs.query')) { <a routerLink="/admin/logs" class="secondary-button"><nx-icon name="tasks" />系統日誌</a> }
+    @if (session.has('logs.query')) {
+      <a routerLink="/admin/logs" class="secondary-button"><nx-icon name="tasks" />系統日誌</a>
+    }
     @if (session.has('admin')) {
       <a routerLink="/dashboard" [queryParams]="{ scope: 'platform' }" class="secondary-button"
         ><nx-icon name="chart" />用量與費用總覽</a
@@ -17,23 +19,20 @@
     <p role="status">正在載入管理工作區…</p>
   }
   @if (error()) {
-    <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /><button (click)="load()">重新載入</button></p>
+    <p class="error-banner" role="alert">
+      {{ error() }}<nx-issue-code [message]="error()" /><button (click)="load()">重新載入</button>
+    </p>
   }
   @if (notice()) {
     <p class="form-note" role="status">{{ notice() }}</p>
   }
   @if (catalog(); as data) {
-    <nav class="page-tabs" aria-label="管理分類">
-      @for (item of tabs; track item.id) {
-        <button
-          type="button"
-          [attr.aria-current]="tab() === item.id ? 'page' : null"
-          (click)="selectTab(item.id)"
-        >
-          {{ item.name }}
-        </button>
-      }
-    </nav>
+    <nx-view-switch
+      label="管理分類"
+      [options]="viewOptions"
+      [value]="tab()"
+      (valueChange)="selectTab($event)"
+    />
     @switch (tab()) {
       @case ('retrieval') {
         <nx-retrieval-admin />
@@ -303,7 +302,7 @@
           </p>
           <section class="admin-usage-section" aria-label="各模型用量">
             <h2>各模型使用狀況</h2>
-            <div class="admin-usage-table">
+            <nx-data-table label="各模型使用狀況">
               <table>
                 <thead>
                   <tr>
@@ -332,7 +331,7 @@
                   }
                 </tbody>
               </table>
-            </div>
+            </nx-data-table>
           </section>
           <section class="admin-usage-section" aria-label="功能用量">
             <h2>使用來源</h2>
@@ -385,6 +384,7 @@
   (settingsChanged)="loadUsers(users()?.offset || 0)"
 />
 <dialog
+  nxCompactDialog
   #editorDialog
   class="workspace-dialog platform-dialog admin-editor"
   [class.admin-group-editor]="editor()?.kind === 'group'"
@@ -413,23 +413,19 @@
         <p role="alert" class="inline-error">{{ editorError() }}</p>
       }
       @if (e.kind === 'group') {
-        <nav class="page-tabs" aria-label="群組設定分類">
-          @for (section of groupSections; track section.id) {
-            <button
-              type="button"
-              [attr.aria-current]="groupSection() === section.id ? 'page' : null"
-              (click)="groupSection.set(section.id)"
-            >
-              {{ section.name }}
-            </button>
-          }
-        </nav>
+        <nx-view-switch
+          label="群組設定分類"
+          [options]="groupViewOptions"
+          [value]="groupSection()"
+          (valueChange)="groupSection.set($event)"
+        />
       }
       <form class="admin-editor-form" (submit)="save($event)">
         <div class="platform-form admin-editor-fields">
           @if (e.kind === 'user') {
             <label
               >姓名<input
+                nxField
                 aria-label="使用者姓名"
                 required
                 maxlength="120"
@@ -455,6 +451,7 @@
               @if (e.adEnabled) {
                 <label
                   >AD 帳號<input
+                    nxField
                     aria-label="使用者 AD 帳號"
                     required
                     maxlength="64"
@@ -476,6 +473,7 @@
               @if (e.localEnabled) {
                 <label
                   >本地登入帳號<input
+                    nxField
                     aria-label="本地登入帳號"
                     required
                     maxlength="64"
@@ -487,6 +485,7 @@
                 <label
                   >{{ e.hasLocalPassword ? '重設本地密碼' : '初始本地密碼'
                   }}<input
+                    nxField
                     aria-label="設定本地密碼"
                     type="password"
                     autocomplete="new-password"
@@ -508,6 +507,7 @@
             @if (e.isNew) {
               <label
                 >識別碼<input
+                  nxField
                   aria-label="識別碼"
                   required
                   maxlength="64"
@@ -520,6 +520,7 @@
             }
             <label
               >名稱<input
+                nxField
                 aria-label="名稱"
                 required
                 maxlength="120"
@@ -587,6 +588,7 @@
             <h3>每位成員的原檔容量</h3>
             <label
               >群組附件空間上限（GB）<input
+                nxField
                 type="number"
                 aria-label="群組附件空間上限"
                 min="0"
@@ -605,6 +607,7 @@
           @if (e.kind === 'feature') {
             <label
               >顯示順序<input
+                nxField
                 type="number"
                 aria-label="顯示順序"
                 required
@@ -636,6 +639,7 @@
 </dialog>
 <nx-confirm-dialog />
 <dialog
+  nxCompactDialog
   #testDialog
   class="platform-dialog"
   aria-labelledby="test-identity-title"
@@ -665,6 +669,7 @@
     <form class="platform-form" (submit)="startTest($event)">
       <label
         >測試目的<input
+          nxField
           aria-label="測試目的"
           required
           minlength="4"

@@ -1,3 +1,5 @@
+import { FilterPanel } from '../../shared/ui/filter-panel';
+import { ViewSwitch } from '../../shared/ui/view-switch';
 import { ClientValidationError } from '../../core/api/safe-errors';
 import { IssueCode } from '../../shared/ui/issue-code';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
@@ -6,6 +8,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import type { Job } from '../../core/api/types';
 import { ViewScope } from '../../shared/browser/view-scope';
+import { formatDate } from '../../shared/browser/format';
 import { FeaturePage } from '../../shared/ui/feature-page';
 import { Icon } from '../../shared/ui/icon';
 import { JobProgress } from '../../shared/ui/job-progress';
@@ -14,7 +17,16 @@ import { JobsApi } from './jobs-api';
 
 @Component({
   selector: 'nx-tasks-page',
-  imports: [IssueCode,FeaturePage, Icon, JobProgress, RouterLink, ResourceTarget],
+  imports: [
+    FilterPanel,
+    ViewSwitch,
+    IssueCode,
+    FeaturePage,
+    Icon,
+    JobProgress,
+    RouterLink,
+    ResourceTarget,
+  ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
@@ -27,16 +39,13 @@ import { JobsApi } from './jobs-api';
     @if (error()) {
       <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
     }
-    <div class="page-tabs" aria-label="任務篩選">
-      @for (item of filters; track item.id) {
-        <button
-          [attr.aria-current]="filter() === item.id ? 'page' : null"
-          (click)="filter.set(item.id)"
-        >
-          {{ item.name }}
-        </button>
-      }
-    </div>
+    <nx-filter-panel
+      ><nx-view-switch
+        label="任務篩選"
+        [options]="filterOptions"
+        [value]="filter()"
+        (valueChange)="filter.set($event)"
+    /></nx-filter-panel>
     @if (loading()) {
       <p role="status" class="form-note">正在載入任務…</p>
     } @else if (!visible().length) {
@@ -125,6 +134,7 @@ export class TasksPage {
     { id: 'attention', name: '需要處理' },
     { id: 'completed', name: '已完成' },
   ];
+  readonly filterOptions = this.filters.map((item) => ({ value: item.id, label: item.name }));
   readonly visible = computed(() =>
     this.jobs().filter(
       (x) =>
@@ -217,9 +227,5 @@ export class TasksPage {
       )[value] || '背景處理'
     );
   }
-  date(value: string) {
-    return new Intl.DateTimeFormat('zh-TW', { dateStyle: 'short', timeStyle: 'short' }).format(
-      new Date(value),
-    );
-  }
+  readonly date = formatDate;
 }

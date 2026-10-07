@@ -1,3 +1,4 @@
+import { CompactDialog } from '../../shared/ui/compact-dialog';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -14,9 +15,10 @@ import { DocumentViewer } from './document-viewer';
 
 @Component({
   selector: 'nx-reader-dialog',
-  imports: [DocumentViewer],
+  imports: [CompactDialog, DocumentViewer],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
+    nxCompactDialog
     #dialog
     class="reader-dialog"
     aria-label="檔案預覽"

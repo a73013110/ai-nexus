@@ -1,3 +1,6 @@
+import { SearchField } from '../../shared/ui/search-field';
+import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
 import { IssueCode } from '../../shared/ui/issue-code';
 import {
@@ -34,7 +37,11 @@ import { RetrievalResults } from '../../shared/ui/retrieval-results';
 
 @Component({
   selector: 'nx-knowledge-page',
-  imports: [IssueCode,
+  imports: [
+    SearchField,
+    CompactDialog,
+    Field,
+    IssueCode,
     FeaturePage,
     Icon,
     Select,

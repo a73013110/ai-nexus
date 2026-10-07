@@ -39,31 +39,36 @@
           <p class="form-note">完成來源設定及授權後，就能在此搜尋與閱讀。</p>
         </div>
       } @else {
-        <form class="source-search" (submit)="search($event)">
-          <label
-            ><span class="sr-only">搜尋 {{ source.name }}</span
-            ><input
-              type="search"
-              required
-              minlength="2"
-              maxlength="120"
-              [placeholder]="'搜尋' + source.name + '的標題或識別碼…'"
-              [value]="query()"
-              (input)="query.set($any($event.target).value)"
-              [disabled]="searching() || busy()" /></label
-          ><nx-select
-            label="來源資料類型"
-            [options]="kindOptions()"
-            [value]="kind()"
-            (valueChange)="kind.set($event)"
-            [disabled]="searching() || busy()"
-          /><button
-            class="primary-button"
-            type="submit"
-            [disabled]="searching() || busy() || query().trim().length < 2"
+        <form (submit)="search($event)">
+          <nx-filter-panel
+            ><div class="source-search">
+              <label
+                ><span>搜尋 {{ source.name }}</span
+                ><input
+                  nxField
+                  type="search"
+                  required
+                  minlength="2"
+                  maxlength="120"
+                  [placeholder]="'搜尋' + source.name + '的標題或識別碼…'"
+                  [value]="query()"
+                  (input)="query.set($any($event.target).value)"
+                  [disabled]="searching() || busy()" /></label
+              ><nx-select
+                label="來源資料類型"
+                [options]="kindOptions()"
+                [value]="kind()"
+                (valueChange)="kind.set($event)"
+                [disabled]="searching() || busy()"
+              /><button
+                class="primary-button"
+                type="submit"
+                [disabled]="searching() || busy() || query().trim().length < 2"
+              >
+                <nx-icon name="search" />{{ searching() ? '查詢中…' : '查詢' }}
+              </button>
+            </div></nx-filter-panel
           >
-            <nx-icon name="search" />{{ searching() ? '正在搜尋…' : '搜尋' }}
-          </button>
         </form>
         <div class="source-workbench">
           <aside class="source-results" aria-label="查詢結果">

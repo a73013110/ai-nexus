@@ -68,8 +68,8 @@
           <p class="design-reading">
             正文預設 15px、行距 1.2 倍。字級、行距及閱讀寬度可在個人設定調整。
           </p>
-          <p class="design-ui-copy">介面 16px：傳達下一個動作</p>
-          <p class="form-note">輔助資訊 14px：時間、狀態與來源</p>
+          <p class="design-ui-copy">緊湊介面 13px：傳達下一個動作</p>
+          <p class="form-note">輔助資訊 12px：時間、狀態與來源</p>
           <div class="design-spacing" aria-label="間距為 4、8、12、16、24、32 像素">
             @for (space of [4, 8, 12, 16, 24, 32]; track space) {
               <span><i [style.width.px]="space" aria-hidden="true"></i>{{ space }}</span>
@@ -79,7 +79,7 @@
         <section class="platform-card" aria-labelledby="design-actions-title">
           <span class="panel-eyebrow">操作與狀態</span>
           <h2 id="design-actions-title">一致的操作層級</h2>
-          <p class="form-note">主要操作、次要操作及危險操作有清楚的區別，點擊範圍至少 44px。</p>
+          <p class="form-note">操作層級清楚，桌面控制項 34px，手機與觸控操作至少 44px。</p>
           <div class="design-actions">
             <button type="button" class="primary-button" (click)="notice.set('主要操作示範。')">
               主要操作</button
@@ -227,9 +227,26 @@
           <span class="panel-eyebrow">03 / 資料工作區</span>
           <h2 id="design-data-title">緊湊的資訊，熟悉的操作</h2>
           <p class="form-note">資料表保留列表位置，詳情於側欄開啟；窄螢幕自動使用 modal。</p>
-          <label class="ui-field design-data-field"
-            >共用表單欄位<input nxField aria-label="示範資料篩選" placeholder="依事件名稱查詢"
-          /></label>
+          <nx-filter-panel>
+            <div class="ui-filter-grid">
+              <label class="ui-field"
+                >共用表單欄位<input nxField aria-label="示範資料篩選" placeholder="依事件名稱查詢"
+              /></label>
+              <nx-date-time-picker
+                label="選填日期"
+                [withTime]="false"
+                [required]="false"
+                [value]="optionalDate()"
+                (valueChange)="optionalDate.set($event)"
+              />
+            </div>
+          </nx-filter-panel>
+          <nx-view-switch
+            label="資料範例檢視"
+            [options]="dataViews"
+            [value]="dataView()"
+            (valueChange)="dataView.set($event)"
+          />
           <div class="design-calendar-samples">
             <nx-date-time-picker
               label="西元日期時間"
@@ -246,7 +263,7 @@
           <nx-data-table label="共用資料表範例">
             <div table-toolbar class="ui-table-toolbar">
               <h2>事件範例</h2>
-              <span class="ui-count-label">3 筆</span>
+              <span class="ui-count-label">{{ visibleDataRows().length }} 筆</span>
             </div>
             <table>
               <caption class="sr-only">
@@ -260,7 +277,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (entry of dataRows; track entry.event) {
+                @for (entry of visibleDataRows(); track entry.event) {
                   <tr>
                     <td>{{ entry.time }}</td>
                     <td>

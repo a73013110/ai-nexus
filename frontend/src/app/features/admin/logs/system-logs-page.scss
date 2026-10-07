@@ -66,34 +66,10 @@ summary nx-icon {
   border-radius: var(--p-radius-md);
   box-shadow: var(--shadow-floating);
 }
-.log-filters {
-  padding: var(--p-space-3);
-  margin-bottom: var(--p-space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
-  background: var(--surface);
-}
-.log-filter-heading,
 .log-filter-presets {
   display: flex;
   align-items: center;
   gap: var(--p-space-2);
-}
-.log-filter-heading {
-  justify-content: space-between;
-  margin-bottom: var(--p-space-2);
-}
-.log-filter-heading strong {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  font-size: var(--p-font-sm);
-  font-weight: 600;
-}
-.log-filter-heading nx-icon {
-  width: 16px;
-  height: 16px;
-  color: var(--secondary);
 }
 .log-filter-presets nx-select {
   width: 9.5rem;
@@ -214,9 +190,6 @@ code {
   }
 }
 @media (max-width: 640px) {
-  .log-filter-heading {
-    flex-wrap: wrap;
-  }
   .log-filter-presets {
     width: 100%;
   }

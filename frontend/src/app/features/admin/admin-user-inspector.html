@@ -1,4 +1,5 @@
 <dialog
+  nxCompactDialog
   #dialog
   class="platform-dialog admin-inspector"
   aria-labelledby="inspector-title"
@@ -37,24 +38,17 @@
         </div>
       </div>
     }
-    <nav class="page-tabs inspector-tabs" aria-label="使用者活動分類">
-      @for (
-        item of [
-          { id: 'conversations', name: '對話' },
-          { id: 'models', name: 'AI 模型' },
-          { id: 'storage', name: '附件容量' },
-        ];
-        track item.id
-      ) {
-        <button
-          type="button"
-          [attr.aria-current]="tab() === item.id ? 'page' : null"
-          (click)="selectTab(item.id)"
-        >
-          {{ item.name }}
-        </button>
-      }
-    </nav>
+    <nx-view-switch
+      class="inspector-tabs"
+      label="使用者活動分類"
+      [options]="[
+        { value: 'conversations', label: '對話' },
+        { value: 'models', label: 'AI 模型' },
+        { value: 'storage', label: '附件容量' },
+      ]"
+      [value]="tab()"
+      (valueChange)="selectTab($event)"
+    />
     @if (tab() === 'storage') {
       <div class="inspector-settings">
         @if (overview(); as stats) {
@@ -67,7 +61,7 @@
               <label
                 >個人容量上限（GB）
                 <input
-                  class="form-input"
+                  nxField
                   type="number"
                   min="0"
                   max="1000000"

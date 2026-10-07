@@ -43,44 +43,45 @@
   @if (notice()) {
     <p class="success-note" role="status">{{ notice() }}</p>
   }
-  <div class="file-library-toolbar">
-    <div class="file-type-tabs" role="group" aria-label="檔案類型">
-      @for (kind of kinds; track kind.id) {
-        <button [attr.aria-pressed]="store.type() === kind.id" (click)="store.filter(kind.id)">
-          {{ kind.name }}
+  <nx-filter-panel
+    ><div class="file-library-toolbar">
+      <nx-view-switch
+        label="檔案類型"
+        [options]="kindOptions"
+        [value]="store.type()"
+        (valueChange)="store.filter($event)"
+      />
+      <nx-search-field
+        label="搜尋檔案庫"
+        placeholder="搜尋檔案名稱"
+        [value]="store.search()"
+        (valueChange)="store.find($event)"
+      />
+      <nx-select
+        label="檔案來源"
+        [options]="sources"
+        [value]="store.source()"
+        (valueChange)="store.filter(store.type(), $event)"
+      />
+      <div class="file-layout-toggle" role="group" aria-label="檔案排列">
+        <button
+          class="icon-button"
+          aria-label="網格排列"
+          [attr.aria-pressed]="layout() === 'grid'"
+          (click)="layout.set('grid')"
+        >
+          <nx-icon name="dashboard" /></button
+        ><button
+          class="icon-button"
+          aria-label="清單排列"
+          [attr.aria-pressed]="layout() === 'list'"
+          (click)="layout.set('list')"
+        >
+          <nx-icon name="lines" />
         </button>
-      }
+      </div>
     </div>
-    <nx-search-field
-      label="搜尋檔案庫"
-      placeholder="搜尋檔案名稱"
-      [value]="store.search()"
-      (valueChange)="store.find($event)"
-    />
-    <nx-select
-      label="檔案來源"
-      [options]="sources"
-      [value]="store.source()"
-      (valueChange)="store.filter(store.type(), $event)"
-    />
-    <div class="file-layout-toggle" role="group" aria-label="檔案排列">
-      <button
-        class="icon-button"
-        aria-label="網格排列"
-        [attr.aria-pressed]="layout() === 'grid'"
-        (click)="layout.set('grid')"
-      >
-        <nx-icon name="dashboard" /></button
-      ><button
-        class="icon-button"
-        aria-label="清單排列"
-        [attr.aria-pressed]="layout() === 'list'"
-        (click)="layout.set('list')"
-      >
-        <nx-icon name="lines" />
-      </button>
-    </div>
-  </div>
+  </nx-filter-panel>
   <div class="file-library-summary">
     <span>{{ store.total() }} 份檔案</span>
   </div>

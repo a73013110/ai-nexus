@@ -26,13 +26,14 @@
   flex: 1;
   overflow-y: auto;
   max-height: 65dvh;
+  scrollbar-gutter: stable;
   padding-block: var(--p-space-2);
   overscroll-behavior: contain;
 }
 .notification-row {
   display: flex;
   gap: var(--p-space-3);
-  padding: var(--p-space-4);
+  padding: var(--resource-row-padding-block) var(--resource-row-padding-inline);
   border-radius: var(--p-radius-sm);
 }
 .notification-row.is-unread {
@@ -48,6 +49,7 @@
 }
 .notification-row p {
   margin: var(--p-space-1) 0;
+  font-size: var(--text-label);
   color: var(--secondary);
 }
 .notification-title {
@@ -91,5 +93,5 @@
   display: flex;
   gap: var(--p-space-2);
   flex-wrap: wrap;
-  margin-top: var(--p-space-2);
+  margin-top: var(--p-space-1);
 }

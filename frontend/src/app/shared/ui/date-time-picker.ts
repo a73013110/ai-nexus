@@ -40,6 +40,7 @@ export class DateTimePicker {
   readonly calendarSystem = input<CalendarSystem>('gregory');
   readonly withTime = input(true);
   readonly disabled = input(false);
+  readonly required = input(true);
   readonly min = input('');
   readonly max = input('');
   readonly valueChange = output<string>();
@@ -58,14 +59,17 @@ export class DateTimePicker {
       (this.calendarSystem() === 'roc' ? '民國 yyy/MM/dd' : 'yyyy/MM/dd') +
       (this.withTime() ? ' HH:mm:ss' : ''),
   );
+  private readonly parsed = computed(() =>
+    parseCalendarText(this.display(), this.calendarSystem(), this.withTime()),
+  );
+  readonly valid = computed(() => {
+    if (!this.display().trim()) return !this.required();
+    const value = this.parsed();
+    return !!value && this.inBounds(value);
+  });
   readonly error = computed(() => {
-    if (!this.touched()) return '';
-    const value = parseCalendarText(this.display(), this.calendarSystem(), this.withTime());
-    return !value
-      ? '請輸入有效日期，格式：' + this.formatHint()
-      : !this.inBounds(value)
-        ? '日期超出可選範圍。'
-        : '';
+    if (!this.touched() || this.valid()) return '';
+    return !this.parsed() ? '請輸入有效日期，格式：' + this.formatHint() : '日期超出可選範圍。';
   });
   readonly parts = computed(() => parseLocalDateTime(this.draft())!);
   readonly offset = computed(() => (this.calendarSystem() === 'roc' ? 1911 : 0));
@@ -128,7 +132,7 @@ export class DateTimePicker {
   }
   edit(text: string) {
     this.text.set(text);
-    const value = parseCalendarText(text, this.calendarSystem(), this.withTime());
+    const value = this.parsed();
     this.lastEmitted = value && this.inBounds(value) ? value : '';
     this.valueChange.emit(this.lastEmitted);
   }

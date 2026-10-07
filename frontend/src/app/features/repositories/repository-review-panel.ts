@@ -1,3 +1,4 @@
+import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
 import { IssueCode } from '../../shared/ui/issue-code';
 import {
@@ -33,7 +34,9 @@ import { InferenceSignal } from '../../shared/ui/inference-signal';
 
 @Component({
   selector: 'nx-repository-review',
-  imports: [IssueCode,
+  imports: [
+    Field,
+    IssueCode,
     Select,
     JobProgress,
     MarkdownView,
@@ -229,7 +232,8 @@ export class RepositoryReviewPanel {
     try {
       const detail = await this.api.review(id);
       if (!valid() || sequence !== this.readSequence || repository !== this.repository()) return;
-      if (detail.review.repository !== repository) throw new ClientValidationError('reviewRepository');
+      if (detail.review.repository !== repository)
+        throw new ClientValidationError('reviewRepository');
       this.show(detail);
       if (poll && !this.active()) {
         const reviews = await this.api.reviews(repository);

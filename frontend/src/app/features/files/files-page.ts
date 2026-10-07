@@ -1,3 +1,5 @@
+import { FilterPanel } from '../../shared/ui/filter-panel';
+import { ViewSwitch } from '../../shared/ui/view-switch';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -29,6 +31,8 @@ import { StorageUsage } from '../../shared/ui/storage-usage';
 @Component({
   selector: 'nx-files-page',
   imports: [
+    FilterPanel,
+    ViewSwitch,
     FeaturePage,
     Icon,
     SearchField,
@@ -68,6 +72,7 @@ export class FilesPage {
     { id: 'images', name: '圖片' },
     { id: 'documents', name: '文件' },
   ];
+  readonly kindOptions = this.kinds.map((item) => ({ value: item.id, label: item.name }));
   readonly sources = [
     { value: 'all', label: '全部來源' },
     { value: 'chat', label: '對話附件' },

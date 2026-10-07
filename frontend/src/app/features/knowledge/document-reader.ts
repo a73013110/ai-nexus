@@ -19,7 +19,7 @@ import { WorkspaceLayout } from '../../core/preferences/workspace-layout';
   template: `<div class="feature-layout">
     <aside nxWorkspaceSidebar class="feature-sidebar" aria-label="工作區導覽"></aside>
     <main
-      class="reader-page"
+      class="reader-page ui-density-compact"
       id="feature-content"
       tabindex="-1"
       [attr.inert]="layout.overlay() ? '' : null"

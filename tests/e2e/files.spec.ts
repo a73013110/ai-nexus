@@ -83,6 +83,17 @@ test("library files can be searched, previewed, reused in chat and added to know
   await expect(page.locator(".file-browser")).toHaveClass(/file-browser-list/);
   await page.setViewportSize({ width: 375, height: 812 });
   await expectViewportContained(page);
+  const sourceLabel = page
+    .getByRole("combobox", { name: "檔案來源", exact: true })
+    .locator("span");
+  await expect(sourceLabel).toHaveText("全部來源");
+  await expect
+    .poll(() =>
+      sourceLabel.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    )
+    .toBe(true);
   await page.screenshot({
     path: "artifacts/screenshots/file-library-mobile.png",
   });

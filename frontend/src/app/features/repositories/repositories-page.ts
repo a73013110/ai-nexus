@@ -1,3 +1,5 @@
+import { ViewSwitch } from '../../shared/ui/view-switch';
+import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
 import { IssueCode } from '../../shared/ui/issue-code';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -35,7 +37,10 @@ import { RepositoriesApi } from './repositories-api';
 
 @Component({
   selector: 'nx-repositories-page',
-  imports: [IssueCode,
+  imports: [
+    ViewSwitch,
+    Field,
+    IssueCode,
     FeaturePage,
     Icon,
     Select,

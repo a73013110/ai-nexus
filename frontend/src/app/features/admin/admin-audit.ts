@@ -1,3 +1,5 @@
+import { DateTimePicker } from '../../shared/ui/date-time-picker';
+import { FilterPanel } from '../../shared/ui/filter-panel';
 import { IssueCode } from '../../shared/ui/issue-code';
 import { safeMessage } from '../../core/api/safe-errors';
 import {
@@ -8,6 +10,7 @@ import {
   inject,
   input,
   signal,
+  viewChildren,
 } from '@angular/core';
 import { AdminApi } from './admin-api';
 import type { AuditEntry, Feature, Model } from '../../core/api/types';
@@ -15,6 +18,7 @@ import { FeatureSummary } from '../../shared/ui/feature-summary';
 import { SearchField } from '../../shared/ui/search-field';
 import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
+import { StatusBadge } from '../../shared/ui/status-badge';
 import { downloadBlob } from '../../shared/browser/download';
 import { toCsv } from '../../shared/browser/csv';
 import { formatDate, formatModelName } from '../../shared/browser/format';
@@ -29,7 +33,16 @@ import {
 
 @Component({
   selector: 'nx-admin-audit',
-  imports: [IssueCode,SearchField, Select, Icon, FeatureSummary],
+  imports: [
+    DateTimePicker,
+    FilterPanel,
+    IssueCode,
+    SearchField,
+    Select,
+    Icon,
+    FeatureSummary,
+    StatusBadge,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: ':host { display: block; min-width: 0; }',
   templateUrl: './admin-audit.html',
@@ -49,6 +62,8 @@ export class AdminAudit {
   readonly result = signal('');
   readonly from = signal('');
   readonly until = signal('');
+  private readonly dateFilters = viewChildren(DateTimePicker);
+  readonly validDates = computed(() => this.dateFilters().every((picker) => picker.valid()));
   readonly date = formatDate;
   readonly presentedRows = computed(() =>
     this.rows().map((entry) => ({
@@ -123,6 +138,10 @@ export class AdminAudit {
   async load(append = false) {
     if (append && this.loading()) return;
     const version = ++this.version;
+    if (!this.validDates()) {
+      this.loading.set(false);
+      return;
+    }
     this.loading.set(true);
     this.error.set('');
     if (!append) {
@@ -142,8 +161,7 @@ export class AdminAudit {
       this.rows.update((old) => (append ? [...old, ...rows] : rows));
       this.more.set(rows.length === 100);
     } catch (error) {
-      if (version === this.version)
-        this.error.set(safeMessage(error));
+      if (version === this.version) this.error.set(safeMessage(error));
     } finally {
       if (version === this.version) this.loading.set(false);
     }

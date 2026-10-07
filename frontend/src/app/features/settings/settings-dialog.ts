@@ -1,3 +1,4 @@
+import { CompactDialog } from '../../shared/ui/compact-dialog';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -14,9 +15,10 @@ import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 
 @Component({
   selector: 'nx-settings-dialog',
-  imports: [SettingsPage, ConfirmDialog],
+  imports: [CompactDialog, SettingsPage, ConfirmDialog],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
+      nxCompactDialog
       #dialog
       class="platform-dialog settings-dialog"
       aria-label="個人設定"

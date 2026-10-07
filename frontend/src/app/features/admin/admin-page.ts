@@ -1,3 +1,7 @@
+import { DataTable } from '../../shared/ui/data-table';
+import { ViewSwitch } from '../../shared/ui/view-switch';
+import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { Field } from '../../shared/ui/field';
 import { IssueCode } from '../../shared/ui/issue-code';
 import { safeMessage } from '../../core/api/safe-errors';
 import {
@@ -72,7 +76,12 @@ interface Editor {
 }
 @Component({
   selector: 'nx-admin-page',
-  imports: [IssueCode,
+  imports: [
+    DataTable,
+    ViewSwitch,
+    CompactDialog,
+    Field,
+    IssueCode,
     FeaturePage,
     Icon,
     RouterLink,
@@ -108,6 +117,10 @@ export class AdminPage {
     { id: 'models', name: 'AI 模型' },
     { id: 'storage', name: '附件容量' },
   ];
+  readonly groupViewOptions = this.groupSections.map((item) => ({
+    value: item.id,
+    label: item.name,
+  }));
   readonly search = signal('');
   readonly editor = signal<Editor | null>(null);
   readonly saving = signal(false);
@@ -127,6 +140,7 @@ export class AdminPage {
     { id: 'usage', name: '平台用量' },
     { id: 'retrieval', name: '知識檢索' },
   ];
+  readonly viewOptions = this.tabs.map((item) => ({ value: item.id, label: item.name }));
   readonly featureIcons = FEATURE_ICONS;
   readonly usageModelName = formatModelDisplayName;
   usageKindName(kind: string) {

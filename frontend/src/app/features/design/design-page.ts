@@ -34,6 +34,8 @@ import { DetailDrawer } from '../../shared/ui/detail-drawer';
 import { Tabs } from '../../shared/ui/tabs';
 import { CodeBlock } from '../../shared/ui/code-block';
 import { DateTimePicker } from '../../shared/ui/date-time-picker';
+import { FilterPanel } from '../../shared/ui/filter-panel';
+import { ViewSwitch } from '../../shared/ui/view-switch';
 
 const sampleTitle = '把想法，整理成可用的成果';
 const jobStates: SelectOption[] = [
@@ -70,6 +72,8 @@ const jobStates: SelectOption[] = [
     Tabs,
     CodeBlock,
     DateTimePicker,
+    FilterPanel,
+    ViewSwitch,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -90,6 +94,12 @@ export class DesignPage {
   readonly states = jobStates;
   readonly dataTab = signal('overview');
   readonly calendarDate = signal('2026-10-08T14:30:45');
+  readonly optionalDate = signal('');
+  readonly dataView = signal('all');
+  readonly dataViews = [
+    { value: 'all', label: '全部狀態' },
+    { value: 'success', label: '已完成' },
+  ];
   readonly dataTabs = [
     { value: 'overview', label: '概覽' },
     { value: 'properties', label: '屬性' },
@@ -105,6 +115,11 @@ export class DesignPage {
     { event: 'provider.request.retry', time: '10:41:55', status: '重試', tone: 'warning' as const },
   ];
   readonly dataEvent = signal(this.dataRows[0].event);
+  readonly visibleDataRows = computed(() =>
+    this.dataView() === 'all'
+      ? this.dataRows
+      : this.dataRows.filter((row) => row.tone === 'success'),
+  );
   readonly dataProperties = JSON.stringify(
     { service: 'AiNexus.Api', attempts: 2, state: 'completed' },
     null,

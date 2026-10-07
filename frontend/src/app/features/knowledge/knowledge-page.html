@@ -97,14 +97,12 @@
       <section class="knowledge-documents">
         <div class="page-toolbar">
           <h2>來源文件</h2>
-          <label class="page-search"
-            ><nx-icon name="search" /><input
-              type="search"
-              aria-label="篩選來源文件"
-              placeholder="依檔名篩選"
-              [value]="filter()"
-              (input)="filter.set($any($event.target).value)"
-          /></label>
+          <nx-search-field
+            label="篩選來源文件"
+            placeholder="依檔名篩選"
+            [value]="filter()"
+            (valueChange)="filter.set($event)"
+          />
         </div>
         @if (loadingDocuments()) {
           <p role="status">正在載入文件…</p>
@@ -150,6 +148,7 @@
         <form class="platform-form" (submit)="search($event)">
           <label
             >查詢內容<textarea
+              nxField
               aria-label="知識庫查詢內容"
               rows="3"
               maxlength="2000"
@@ -174,7 +173,7 @@
   }
   <nx-text-source-editor (saved)="textSaved()" />
 </nx-feature-page>
-<dialog #editorDialog class="platform-dialog" (cancel)="cancel($event)">
+<dialog nxCompactDialog #editorDialog class="platform-dialog" (cancel)="cancel($event)">
   <div class="dialog-scroll">
     <form class="platform-form" (submit)="save($event)">
       <div class="dialog-heading">
@@ -194,6 +193,7 @@
       }
       <label
         >名稱<input
+          nxField
           aria-label="知識庫名稱"
           autofocus
           required
@@ -202,6 +202,7 @@
           (input)="editorName.set($any($event.target).value)" /></label
       ><label
         >說明<textarea
+          nxField
           aria-label="知識庫說明"
           rows="3"
           maxlength="2000"
@@ -225,7 +226,7 @@
     </form>
   </div>
 </dialog>
-<dialog #deleteDialog class="platform-dialog" (cancel)="cancel($event)">
+<dialog nxCompactDialog #deleteDialog class="platform-dialog" (cancel)="cancel($event)">
   <div class="dialog-scroll">
     @if (editorError()) {
       <p class="error-banner" role="alert">{{ editorError() }}</p>

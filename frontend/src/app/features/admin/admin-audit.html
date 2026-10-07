@@ -1,40 +1,46 @@
-<div class="audit-toolbar">
-  <nx-search-field
-    label="搜尋稽核"
-    placeholder="帳號、動作或資源識別碼"
-    [value]="search()"
-    (valueChange)="searchChanged($event)"
-  />
-  <nx-select
-    label="稽核動作"
-    [options]="actions"
-    [value]="action()"
-    (valueChange)="filter('action', $event)"
-  />
-  <nx-select
-    label="稽核結果"
-    [options]="results"
-    [value]="result()"
-    (valueChange)="filter('result', $event)"
-  />
-  <label class="audit-date"
-    >從<input
-      type="date"
-      aria-label="稽核開始日期"
+<nx-filter-panel
+  ><div class="audit-toolbar">
+    <nx-search-field
+      label="搜尋稽核"
+      placeholder="帳號、動作或資源識別碼"
+      [value]="search()"
+      (valueChange)="searchChanged($event)"
+    />
+    <nx-select
+      label="稽核動作"
+      [options]="actions"
+      [value]="action()"
+      (valueChange)="filter('action', $event)"
+    />
+    <nx-select
+      label="稽核結果"
+      [options]="results"
+      [value]="result()"
+      (valueChange)="filter('result', $event)"
+    />
+    <nx-date-time-picker
+      label="稽核開始日期"
+      [withTime]="false"
+      [required]="false"
       [value]="from()"
-      (change)="filter('from', $any($event.target).value)"
-  /></label>
-  <label class="audit-date"
-    >至<input
-      type="date"
-      aria-label="稽核結束日期"
+      (valueChange)="filter('from', $event)"
+    />
+    <nx-date-time-picker
+      label="稽核結束日期"
+      [withTime]="false"
+      [required]="false"
       [value]="until()"
-      (change)="filter('until', $any($event.target).value)"
-  /></label>
-  <button class="icon-button" aria-label="重新整理稽核" [disabled]="loading()" (click)="load()">
-    <nx-icon name="refresh" />
-  </button>
-</div>
+      (valueChange)="filter('until', $event)"
+    />
+    <button
+      class="icon-button"
+      aria-label="重新整理稽核"
+      [disabled]="loading() || !validDates()"
+      (click)="load()"
+    >
+      <nx-icon name="refresh" />
+    </button></div
+></nx-filter-panel>
 <div class="page-toolbar">
   <p class="form-note">
     授權異動保存前後內容，失敗異動會回復原值；敏感讀取也留下紀錄。時間以台北時區顯示。
@@ -98,7 +104,9 @@
           </details>
         }
       </div>
-      <span class="audit-result" [class.audit-rejected]="row.rejected">{{ row.result }}</span>
+      <nx-status-badge [tone]="row.rejected ? 'warning' : 'neutral'">{{
+        row.result
+      }}</nx-status-badge>
     </article>
   } @empty {
     @if (!loading()) {
@@ -107,5 +115,7 @@
   }
 </div>
 @if (more()) {
-  <button class="quiet-button" [disabled]="loading()" (click)="load(true)">載入更早紀錄</button>
+  <button class="quiet-button" [disabled]="loading() || !validDates()" (click)="load(true)">
+    載入更早紀錄
+  </button>
 }

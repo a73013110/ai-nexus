@@ -45,7 +45,7 @@ let sequence = 0;
     <div
       #panel
       [id]="id"
-      class="action-menu-panel"
+      class="action-menu-panel ui-density-compact"
       popover="auto"
       role="menu"
       [attr.aria-label]="label()"

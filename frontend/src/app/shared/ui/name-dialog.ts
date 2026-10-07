@@ -1,3 +1,5 @@
+import { CompactDialog } from './compact-dialog';
+import { Field } from './field';
 import { IssueCode } from './issue-code';
 import { safeMessage } from '../../core/api/safe-errors';
 import {
@@ -17,14 +19,14 @@ export interface NameRequest {
   save: (name: string) => Promise<void>;
 }
 @Component({
-  imports: [IssueCode],
+  imports: [CompactDialog, Field, IssueCode],
   selector: 'nx-name-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
+    [nxCompactDialog]="compact()"
     #dialog
     class="workspace-dialog"
     [class.ui-dialog-compact]="compact()"
-    [class.ui-density-compact]="compact()"
     [attr.aria-label]="request()?.title"
     (cancel)="cancel($event)"
   >
@@ -35,6 +37,7 @@ export interface NameRequest {
       }
       <label
         >名稱<input
+          nxField
           #field
           required
           [value]="name()"

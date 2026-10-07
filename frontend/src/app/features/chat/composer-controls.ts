@@ -7,6 +7,7 @@ import { formatModelName } from '../../shared/browser/format';
 
 @Component({
   selector: 'nx-composer-controls',
+  host: { class: 'ui-density-compact' },
   imports: [Icon, Disclosure, Select],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="composer-controls">

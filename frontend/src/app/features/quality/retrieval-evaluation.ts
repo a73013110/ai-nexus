@@ -1,3 +1,4 @@
+import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
 import { IssueCode } from '../../shared/ui/issue-code';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
@@ -24,7 +25,7 @@ import { JobsApi } from '../tasks/jobs-api';
 @Component({
   selector: 'nx-retrieval-evaluation',
   host: { class: 'platform-form' },
-  imports: [IssueCode,ReactiveFormsModule, DecimalPipe, Checkbox, Select, JobProgress],
+  imports: [Field, IssueCode, ReactiveFormsModule, DecimalPipe, Checkbox, Select, JobProgress],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './retrieval-evaluation.html',

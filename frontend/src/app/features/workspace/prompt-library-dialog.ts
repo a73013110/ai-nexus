@@ -1,3 +1,5 @@
+import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { Field } from '../../shared/ui/field';
 import { IssueCode } from '../../shared/ui/issue-code';
 import { safeMessage } from '../../core/api/safe-errors';
 import {
@@ -17,9 +19,10 @@ import { WorkspaceApi } from './workspace-api';
 
 @Component({
   selector: 'nx-prompt-library',
-  imports: [IssueCode,Icon, FormField],
+  imports: [CompactDialog, Field, IssueCode, Icon, FormField],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <dialog
+    nxCompactDialog
     #dialog
     class="workspace-dialog library-dialog"
     aria-labelledby="library-title"
@@ -77,10 +80,14 @@ import { WorkspaceApi } from './workspace-api';
         <form class="template-editor" (submit)="save($event)">
           <h3>{{ editingId() ? '編輯範本' : '新增範本' }}</h3>
           <label for="prompt-title">範本名稱</label
-          ><input id="prompt-title" [formField]="fields.title" placeholder="例如：會議摘要" /><label
-            for="prompt-content"
-            >提示詞內容</label
+          ><input
+            nxField
+            id="prompt-title"
+            [formField]="fields.title"
+            placeholder="例如：會議摘要"
+          /><label for="prompt-content">提示詞內容</label
           ><textarea
+            nxField
             id="prompt-content"
             [formField]="fields.content"
             placeholder="說明任務、格式與預期結果…"

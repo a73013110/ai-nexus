@@ -1,3 +1,5 @@
+import { ViewSwitch } from '../../shared/ui/view-switch';
+import { formatDate } from '../../shared/browser/format';
 import { ClientValidationError } from '../../core/api/safe-errors';
 import { IssueCode } from '../../shared/ui/issue-code';
 import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
@@ -17,7 +19,16 @@ import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { SharingApi } from './sharing-api';
 @Component({
   selector: 'nx-shared-page',
-  imports: [IssueCode,FeaturePage, MarkdownView, Icon, RouterLink, ConfirmDialog, MessageContent],
+  imports: [
+    ViewSwitch,
+    IssueCode,
+    FeaturePage,
+    MarkdownView,
+    Icon,
+    RouterLink,
+    ConfirmDialog,
+    MessageContent,
+  ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
@@ -31,10 +42,15 @@ import { SharingApi } from './sharing-api';
       >
         <nx-icon name="repeat" />重新整理
       </button>
-      <div class="page-tabs">
-        <button [attr.aria-pressed]="!sent()" (click)="switchTab(false)">分享給我</button
-        ><button [attr.aria-pressed]="sent()" (click)="switchTab(true)">我分享的</button>
-      </div>
+      <nx-view-switch
+        label="分享分類"
+        [options]="[
+          { value: 'received', label: '分享給我' },
+          { value: 'sent', label: '我分享的' },
+        ]"
+        [value]="sent() ? 'sent' : 'received'"
+        (valueChange)="switchTab($event === 'sent')"
+      />
       @if (error()) {
         <p role="alert" class="error-banner">{{ error() }}<nx-issue-code [message]="error()" /></p>
       }
@@ -140,11 +156,7 @@ export class SharedPage {
       .pipe(takeUntilDestroyed())
       .subscribe(([p]) => void this.load(p.get('id')));
   }
-  date(value: string) {
-    return new Intl.DateTimeFormat('zh-TW', { dateStyle: 'medium', timeStyle: 'short' }).format(
-      new Date(value),
-    );
-  }
+  readonly date = formatDate;
   expired(value: string) {
     return new Date(value).getTime() <= Date.now();
   }

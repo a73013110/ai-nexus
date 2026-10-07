@@ -1,3 +1,4 @@
+import { CompactDialog } from './compact-dialog';
 import { IssueCode } from './issue-code';
 import {
   ChangeDetectionStrategy,
@@ -16,13 +17,14 @@ import { ViewScope } from '../browser/view-scope';
 import { Icon } from './icon';
 import { Select } from './select';
 import { Checkbox } from './checkbox';
+import { SearchField } from './search-field';
 
 @Component({
   selector: 'nx-resource-sharing',
-  imports: [IssueCode,Icon, Select, Checkbox],
+  imports: [CompactDialog, IssueCode, Icon, Select, Checkbox, SearchField],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<dialog #dialog class="platform-dialog" (cancel)="cancel($event)">
+  template: `<dialog nxCompactDialog #dialog class="platform-dialog" (cancel)="cancel($event)">
     <div class="dialog-heading">
       <div>
         <h2>存取權限</h2>
@@ -45,13 +47,11 @@ import { Checkbox } from './checkbox';
     } @else {
       <div class="platform-form">
         <label
-          >加入使用者<input
-            type="search"
-            aria-label="尋找要授權的使用者"
+          >加入使用者<nx-search-field
+            label="尋找要授權的使用者"
             placeholder="輸入至少兩個字，搜尋已登入的 AD 帳號"
-            maxlength="120"
             [value]="search()"
-            (input)="find($any($event.target).value)"
+            (valueChange)="find($event)"
         /></label>
         @if (search().trim().length >= 2) {
           <div class="directory-results" role="region" aria-label="符合的使用者">

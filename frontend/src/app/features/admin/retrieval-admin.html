@@ -3,7 +3,9 @@
 }
 @if (error()) {
   <p class="error-banner" role="alert">
-    {{ error() }}<nx-issue-code [message]="error()" /><button type="button" (click)="load()">重新載入</button>
+    {{ error() }}<nx-issue-code [message]="error()" /><button type="button" (click)="load()">
+      重新載入
+    </button>
   </p>
 }
 @if (notice()) {
@@ -159,6 +161,7 @@
     <nx-checkbox label="使用重排模型" [checked]="rerank()" (checkedChange)="rerank.set($event)" />
     <label
       >查詢內容<textarea
+        nxField
         formControlName="query"
         aria-label="管理端查詢內容"
         rows="3"

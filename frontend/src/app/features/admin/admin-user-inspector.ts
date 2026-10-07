@@ -1,3 +1,6 @@
+import { ViewSwitch } from '../../shared/ui/view-switch';
+import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { Field } from '../../shared/ui/field';
 import { IssueCode } from '../../shared/ui/issue-code';
 import { safeMessage } from '../../core/api/safe-errors';
 import {
@@ -39,7 +42,11 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
 
 @Component({
   selector: 'nx-admin-user-inspector',
-  imports: [IssueCode,
+  imports: [
+    ViewSwitch,
+    CompactDialog,
+    Field,
+    IssueCode,
     Icon,
     SearchField,
     Checkbox,

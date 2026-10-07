@@ -24,9 +24,13 @@ import { WorkspaceLayout } from '../../core/preferences/workspace-layout';
         <div class="feature-content" [class.ui-density-compact]="density() === 'compact'">
           <header class="feature-header">
             <div>
-              <span class="panel-eyebrow">{{ eyebrow() }}</span>
+              @if (eyebrow()) {
+                <span class="panel-eyebrow">{{ eyebrow() }}</span>
+              }
               <h1>{{ title() }}</h1>
-              <p>{{ description() }}</p>
+              @if (description()) {
+                <p>{{ description() }}</p>
+              }
             </div>
             <ng-content select="[page-actions]" />
           </header>
@@ -39,8 +43,8 @@ export class FeaturePage {
   readonly layout = inject(WorkspaceLayout);
   readonly title = input.required<string>();
   readonly description = input('');
-  readonly eyebrow = input('AI NEXUS · 工作區');
-  readonly density = input<'comfortable' | 'compact'>('comfortable');
-  readonly wide = input(false);
+  readonly eyebrow = input('AI NEXUS / 工作區');
+  readonly density = input<'comfortable' | 'compact'>('compact');
+  readonly wide = input(true);
   readonly layoutMode = input<'flow' | 'data'>('flow');
 }

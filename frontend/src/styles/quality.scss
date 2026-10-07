@@ -3,7 +3,7 @@
 }
 .quality-case-form {
   border: 1px solid var(--line);
-  padding: var(--p-space-4);
+  padding: var(--section-padding);
   border-radius: var(--p-radius-lg);
   display: grid;
   gap: var(--p-space-3);
@@ -24,7 +24,7 @@
   gap: var(--p-space-3);
   color: var(--secondary);
   background: var(--sidebar);
-  padding: var(--p-space-4);
+  padding: var(--section-padding);
   border-radius: var(--p-radius-lg);
   margin-block: var(--p-space-5);
   font-size: var(--text-label);
@@ -40,7 +40,7 @@
   align-items: center;
   gap: var(--p-space-4);
   flex-wrap: wrap;
-  margin-block: var(--p-space-6);
+  margin-block: var(--section-gap);
 }
 .quality-progress nx-job-progress {
   flex: 1;
@@ -48,7 +48,7 @@
 }
 .evaluation-cases {
   display: grid;
-  gap: var(--p-space-8);
+  gap: var(--section-gap);
 }
 .evaluation-case {
   min-width: 0;
@@ -86,7 +86,7 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--p-radius-lg);
-  padding: var(--p-space-5);
+  padding: var(--section-padding);
   min-width: 0;
   overflow-wrap: anywhere;
 }
@@ -139,6 +139,6 @@
     grid-template-columns: 1fr;
   }
   .evaluation-answer {
-    padding: var(--p-space-4);
+    padding: var(--section-padding);
   }
 }

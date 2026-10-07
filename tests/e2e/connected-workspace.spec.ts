@@ -233,11 +233,13 @@ test("dashboard keeps currencies separate, supports node inspection, and fits mo
       body: "使用者,費用\n測試,1",
     });
   });
-  await page.getByLabel("費用開始日期", { exact: true }).fill("2025-01-01");
+  await page.getByLabel("費用開始日期", { exact: true }).fill("2025/01/01");
   await page.getByRole("button", { name: "匯出費用", exact: true }).click();
   await expect
     .poll(() => exportedFrom)
-    .toBe(new Date(appliedFrom + "T00:00:00").toISOString());
+    .toBe(
+      new Date(appliedFrom.replaceAll("/", "-") + "T00:00:00").toISOString(),
+    );
   expect(exportedOwner).toBe(fixture.userId);
   await page.getByLabel("費用開始日期", { exact: true }).fill(appliedFrom);
   await page.getByRole("button", { name: "查看所有人", exact: true }).click();
@@ -272,6 +274,24 @@ test("dashboard keeps currencies separate, supports node inspection, and fits mo
     )
     .toBe(true);
   await expectViewportContained(page);
+  for (const label of ["費用開始日期", "費用結束日期"]) {
+    await expect
+      .poll(() =>
+        page.getByLabel(label, { exact: true }).evaluate((element) => {
+          const input = element as HTMLInputElement;
+          const style = getComputedStyle(input);
+          const context = document.createElement("canvas").getContext("2d")!;
+          context.font = style.font;
+          return (
+            context.measureText(input.value).width <=
+            input.clientWidth -
+              parseFloat(style.paddingLeft) -
+              parseFloat(style.paddingRight)
+          );
+        }),
+      )
+      .toBe(true);
+  }
   await expect(page.locator(".flow-pulse")).toHaveCSS("animation-name", "none");
   const nodeBounds = await page.locator(".flow-node").evaluateAll((nodes) =>
     nodes.map((node) => {
@@ -395,6 +415,17 @@ test("price dialog creates immutable versions and stays within the viewport", as
   await expect(dialog).not.toContainText("qwen3:8b");
   await chooseSelect(page, "費用類型", "內部成本估算");
   await dialog.getByLabel("每次呼叫固定費用", { exact: true }).fill("0.3");
+  const effective = dialog.getByRole("textbox", {
+    name: "生效時間",
+    exact: true,
+  });
+  await expect(effective).toHaveValue("");
+  await effective.fill("2026/02/30 14:30:45");
+  await effective.press("Tab");
+  await expect(
+    dialog.getByRole("button", { name: "新增價格版本", exact: true }),
+  ).toBeDisabled();
+  await effective.fill("2026/10/09 14:30:45");
   await dialog
     .getByRole("button", { name: "新增價格版本", exact: true })
     .click();
@@ -407,6 +438,7 @@ test("price dialog creates immutable versions and stays within the viewport", as
     currency: "USD",
     kind: "internal",
     perRequest: 0.3,
+    effectiveAt: "2026-10-09T06:30:45.000Z",
   });
   await page.screenshot({
     animations: "disabled",

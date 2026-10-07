@@ -842,9 +842,11 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
     for (const tab of ["功能", "異動稽核", "平台用量"]) {
       const tabButton = page.getByRole("button", { name: tab, exact: true });
       await tabButton.click();
-      await expect(tabButton).toHaveAttribute("aria-current", "page");
+      await expect(tabButton).toHaveAttribute("aria-pressed", "true");
       const target =
-        tab === "異動稽核" ? ".audit-toolbar" : ".feature-content > .form-note";
+        tab === "異動稽核"
+          ? "nx-admin-audit > nx-filter-panel"
+          : ".feature-content > .form-note";
       await expect(page.locator(target).first()).toBeVisible();
       if (tab === "平台用量")
         await expect(page.locator(".stat-card")).toHaveCount(4);
@@ -1059,6 +1061,53 @@ test("audit shows readable before after differences and server filters", async (
   await expect(page.locator(".audit-row")).toHaveCount(0);
 });
 
+test("audit dates validate input, keep Taipei boundaries and allow clearing optional filters", async ({
+  page,
+}) => {
+  await administration(page);
+  const queries: URL[] = [];
+  await page.route("**/api/v1/admin/audit*", async (route) => {
+    queries.push(new URL(route.request().url()));
+    await route.fallback();
+  });
+  await page.getByRole("button", { name: "異動稽核", exact: true }).click();
+  const start = page.getByRole("textbox", {
+    name: "稽核開始日期",
+    exact: true,
+  });
+  const end = page.getByRole("textbox", { name: "稽核結束日期", exact: true });
+  await start.fill("2026/10/04");
+  await expect
+    .poll(() => queries.at(-1)?.searchParams.get("from"))
+    .toBe("2026-10-04T00:00:00+08:00");
+  await end.fill("2026/10/07");
+  await expect
+    .poll(() => queries.at(-1)?.searchParams.get("until"))
+    .toBe("2026-10-08T00:00:00+08:00");
+  const requests = queries.length;
+  await start.fill("2026/02/30");
+  await start.press("Tab");
+  await expect(start).toHaveAttribute("aria-invalid", "true");
+  await expect(
+    page.getByRole("button", { name: "重新整理稽核", exact: true }),
+  ).toBeDisabled();
+  await chooseSelect(page, "稽核結果", "已檢視");
+  expect(queries.length).toBe(requests);
+  await start.fill("");
+  await start.press("Tab");
+  await expect.poll(() => queries.length).toBeGreaterThan(requests);
+  expect(queries.at(-1)?.searchParams.has("from")).toBe(false);
+  const beforeClear = queries.length;
+  await end.fill("");
+  await end.press("Tab");
+  await expect.poll(() => queries.length).toBeGreaterThan(beforeClear);
+  expect(queries.at(-1)?.searchParams.has("until")).toBe(false);
+  await expect(page.locator(".ui-date-error")).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "重新整理稽核", exact: true }),
+  ).toBeEnabled();
+});
+
 test("a delayed initial conversation list cannot overwrite a newer filter", async ({
   page,
 }) => {
@@ -1147,7 +1196,7 @@ test("personal model budgets share the group editor and keep conversations spaci
     .click();
   await expect(dialog).toContainText("群組設定");
   await expect(
-    dialog.getByRole("navigation", { name: "使用者活動分類" }),
+    dialog.getByRole("group", { name: "使用者活動分類" }),
   ).toBeInViewport();
   await expect(dialog.locator(".inspector-stats")).toBeInViewport();
   await expect(
@@ -1190,7 +1239,7 @@ test("many model policies keep group tabs and save controls reachable on small s
       .getByLabel("每日 token 上限：地端模型 12", { exact: true })
       .fill("50000");
     await expect(
-      dialog.getByRole("navigation", { name: "群組設定分類" }),
+      dialog.getByRole("group", { name: "群組設定分類" }),
     ).toBeInViewport({ ratio: 1 });
     await expect(
       dialog.getByRole("button", { name: "儲存授權", exact: true }),

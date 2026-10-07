@@ -1,3 +1,4 @@
+import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
@@ -18,10 +19,11 @@ import { Select } from '../../shared/ui/select';
 
 @Component({
   selector: 'nx-add-to-knowledge',
-  imports: [IssueCode,Icon, Select, RouterLink],
+  imports: [CompactDialog, IssueCode, Icon, Select, RouterLink],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
+    nxCompactDialog
     #dialog
     class="platform-dialog"
     aria-label="加入知識庫"

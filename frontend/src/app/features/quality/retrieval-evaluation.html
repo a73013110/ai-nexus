@@ -21,6 +21,7 @@
   <form class="platform-form" [formGroup]="form" (submit)="create($event)">
     <label
       >評測名稱<input
+        nxField
         aria-label="檢索評測名稱"
         formControlName="title"
         maxlength="120"
@@ -41,6 +42,7 @@
     </fieldset>
     <label
       >驗收集 JSON（1 至 20 題）<textarea
+        nxField
         aria-label="檢索驗收集 JSON"
         formControlName="corpus"
         rows="9"

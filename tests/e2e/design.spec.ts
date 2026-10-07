@@ -22,20 +22,78 @@ async function gallery(page: Page) {
   return fixture;
 }
 
-test('共用資料工作區在元件頁可操作，保留局部主題與焦點', async ({ page }) => {
+test("共用資料工作區在元件頁可操作，保留局部主題與焦點", async ({ page }) => {
   await gallery(page);
-  await page.getByRole('button', { name: '深色', exact: true }).click();
-  const button = page.getByRole('button', { name: 'knowledge.index.completed', exact: true });
+  await page.getByRole("button", { name: "深色", exact: true }).click();
+  const button = page.getByRole("button", {
+    name: "knowledge.index.completed",
+    exact: true,
+  });
   await button.click();
-  const drawer = page.getByRole('dialog', { name: '資料詳情示範', exact: true });
-  await expect(drawer).toContainText('knowledge.index.completed');
-  await expect(page.locator('nx-detail-drawer')).toHaveAttribute('data-theme', 'dark');
-  await drawer.getByRole('tab', { name: '屬性', exact: true }).click();
-  await expect(drawer.getByRole('tabpanel')).toContainText('attempts');
-  await drawer.getByRole('button', { name: '複製示範屬性 JSON', exact: true }).click();
-  expect(await page.evaluate(() => (window as unknown as { __copied: string }).__copied)).toContain('completed');
-  await drawer.getByRole('button', { name: '關閉資料詳情示範', exact: true }).click();
+  const drawer = page.getByRole("dialog", {
+    name: "資料詳情示範",
+    exact: true,
+  });
+  await expect(drawer).toContainText("knowledge.index.completed");
+  await expect(page.locator("nx-detail-drawer")).toHaveAttribute(
+    "data-theme",
+    "dark",
+  );
+  await drawer.getByRole("tab", { name: "屬性", exact: true }).click();
+  await expect(drawer.getByRole("tabpanel")).toContainText("attempts");
+  await drawer
+    .getByRole("button", { name: "複製示範屬性 JSON", exact: true })
+    .click();
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __copied: string }).__copied,
+    ),
+  ).toContain("completed");
+  await drawer
+    .getByRole("button", { name: "關閉資料詳情示範", exact: true })
+    .click();
   await expect(button).toBeFocused();
+});
+
+test("共用密度、檢視鍵盤與選填日期保留桌面和手機可用性", async ({ page }) => {
+  await gallery(page);
+  await expect(page.locator(".feature-header h1")).toHaveCSS(
+    "font-size",
+    "24px",
+  );
+  await expect(page.locator(".design-reading")).toHaveCSS("font-size", "15px");
+  const field = page.getByRole("textbox", {
+    name: "示範資料篩選",
+    exact: true,
+  });
+  expect((await field.boundingBox())!.height).toBe(34);
+  const views = page.getByRole("group", { name: "資料範例檢視", exact: true });
+  const all = views.getByRole("button", { name: "全部狀態", exact: true });
+  const completed = views.getByRole("button", { name: "已完成", exact: true });
+  await all.focus();
+  await all.press("ArrowRight");
+  await expect(completed).toBeFocused();
+  await expect(completed).toHaveAttribute("aria-pressed", "true");
+  await expect(
+    page.locator(".design-data-workspace nx-data-table tbody tr"),
+  ).toHaveCount(1);
+  await completed.press("Home");
+  await expect(all).toBeFocused();
+  await expect(
+    page.locator(".design-data-workspace nx-data-table tbody tr"),
+  ).toHaveCount(3);
+  const optional = page.getByRole("textbox", { name: "選填日期", exact: true });
+  await optional.fill("2026/02/30");
+  await optional.press("Tab");
+  await expect(optional).toHaveAttribute("aria-invalid", "true");
+  await optional.fill("");
+  await optional.press("Tab");
+  await expect(optional).not.toHaveAttribute("aria-invalid", "true");
+  await expect(page.locator(".ui-date-error")).toHaveCount(0);
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect((await field.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await expect(field).toHaveCSS("font-size", "16px");
+  await expect(page.locator(".design-reading")).toHaveCSS("font-size", "15px");
 });
 
 test("production controls support keyboard selection, disabled options and dialog focus return", async ({

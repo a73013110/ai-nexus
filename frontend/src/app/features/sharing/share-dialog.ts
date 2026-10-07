@@ -1,3 +1,5 @@
+import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { Field } from '../../shared/ui/field';
 import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
@@ -20,10 +22,15 @@ import { SharingApi } from './sharing-api';
 import { Checkbox } from '../../shared/ui/checkbox';
 @Component({
   selector: 'nx-share-dialog',
-  imports: [IssueCode,Select, Icon, RouterLink, Checkbox],
+  imports: [CompactDialog, Field, IssueCode, Select, Icon, RouterLink, Checkbox],
   providers: [ViewScope, CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<dialog #dialog class="platform-dialog" (cancel)="busy() && $event.preventDefault()">
+  template: `<dialog
+    nxCompactDialog
+    #dialog
+    class="platform-dialog"
+    (cancel)="busy() && $event.preventDefault()"
+  >
     <div class="dialog-scroll">
       <div class="dialog-heading">
         <div>
@@ -62,6 +69,7 @@ import { Checkbox } from '../../shared/ui/checkbox';
         <div class="platform-form">
           <label
             >收件者<input
+              nxField
               type="search"
               aria-label="搜尋分享收件者"
               placeholder="輸入至少兩個字，搜尋公司帳號"

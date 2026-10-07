@@ -68,7 +68,11 @@ test("artifact versions preserve edits, restore older content and export a saved
       if (conflict) {
         conflict = false;
         return json(
-          { title: "Password=fixture-private", code: "artifact_version_conflict", issueCode: "NX-" + "D".repeat(32) },
+          {
+            title: "Password=fixture-private",
+            code: "artifact_version_conflict",
+            issueCode: "NX-" + "D".repeat(32),
+          },
           409,
         );
       }
@@ -94,9 +98,13 @@ test("artifact versions preserve edits, restore older content and export a saved
     name: "編輯成果內容",
     exact: true,
   });
+  await expect(editor).toHaveCSS("font-size", "15px");
+  expect((await editor.boundingBox())!.height).toBeGreaterThanOrEqual(320);
   await editor.fill("第二版內容");
   await page.getByRole("button", { name: "儲存新版本" }).click();
-  await expect(page.getByRole("alert")).toContainText("此文件已被更新。你的編輯仍保留");
+  await expect(page.getByRole("alert")).toContainText(
+    "此文件已被更新。你的編輯仍保留",
+  );
   await expect(page.getByRole("alert")).toContainText("查證代碼：NX-");
   await expect(page.getByRole("alert")).not.toContainText("fixture-private");
   await expect(editor).toHaveValue("第二版內容");
