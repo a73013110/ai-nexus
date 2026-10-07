@@ -182,7 +182,8 @@ public sealed class KnowledgeAndJobsTests
         await Process(factory);
         Assert.Equal("ready", (await client.GetFromJsonAsync<DocumentDto>($"/api/v1/documents/{document.Id}"))!.Status);
         var page = Assert.Single((await client.GetFromJsonAsync<DocumentPageDto[]>($"/api/v1/documents/{document.Id}/pages"))!); Assert.Equal("ocr", page.Extraction); Assert.True(page.NeedsReview);
-        Assert.Single(factory.Provider.LastMessages.Single().Images!);
+        Assert.Equal(["system", "user"], factory.Provider.LastMessages.Select(x => x.Role));
+        Assert.Single(factory.Provider.LastMessages.Single(x => x.Role == "user").Images!);
         Assert.Equal("extracted-text", (await client.GetFromJsonAsync<AttachmentDto>($"/api/v1/attachments/{file.Id}"))!.AnalysisMode);
     }
 }

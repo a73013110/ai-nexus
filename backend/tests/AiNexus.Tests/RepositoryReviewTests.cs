@@ -248,13 +248,15 @@ public sealed class RepositoryReviewTests
         public Task<IReadOnlySet<string>> InstalledModelsAsync(CancellationToken ct) => Task.FromResult<IReadOnlySet<string>>(new HashSet<string> { "test-model" });
         public async IAsyncEnumerable<InferenceChunk> StreamAsync(string model, IReadOnlyList<InferenceMessage> messages, GenerationParameters parameters, [EnumeratorCancellation] CancellationToken ct)
         {
-            var prompt = messages.Single().Content; Calls.Add((prompt, parameters)); await Task.Yield(); ct.ThrowIfCancellationRequested();
-            var report = parameters.SystemPrompt.Contains("請產生一份"); var analysis = parameters.SystemPrompt.Contains("一個區段");
+            // Like Ollama, read the instruction only from the message list rather than from provider-specific parameters.
+            var system = messages.Single(x => x.Role == "system").Content;
+            var prompt = messages.Single(x => x.Role == "user").Content; Calls.Add((prompt, parameters)); await Task.Yield(); ct.ThrowIfCancellationRequested();
+            var report = system.Contains("請產生一份"); var analysis = system.Contains("一個區段");
             if (report && FailReportOnce) { FailReportOnce = false; throw new HttpRequestException("Synthetic final report failure."); }
             var files = Regex.Matches(prompt, @"file-\d\.cs").Select(x => x.Value).Distinct().ToArray();
             var output = (report ? "整體結論：" : "分析：") + string.Join(", ", files);
             var truncated = analysis && TruncateAnalysis;
-            if (report && parameters.SystemPrompt.Contains("JSON"))
+            if (report && system.Contains("JSON"))
             {
                 output = JsonSerializer.Serialize(new { conclusion = "已彙整跨檔案變更，未發現明確缺陷。", changes = files.Take(3).Select(x => "變更包含 " + x).ToArray(), findings = Array.Empty<object>(), limitation = "" });
                 if (InvalidReport is { } failure)

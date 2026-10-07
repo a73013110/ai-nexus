@@ -67,7 +67,8 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
         try
         {
             await billing.StartAsync(call.Id, ct); await db.SaveChangesAsync(ct);
-            await foreach (var chunk in router.StreamAsync(profile.Provider, profile.NativeId, [new("user", prompt, images)], parameters, timeout.Token))
+            // Providers such as Ollama only receive the message list, so the task instruction must travel as a system message.
+            await foreach (var chunk in router.StreamAsync(profile.Provider, profile.NativeId, messages, parameters, timeout.Token))
             {
                 text.Append(chunk.Text); done |= chunk.Done;
                 call.InputTokens = chunk.InputTokens ?? call.InputTokens; call.OutputTokens = chunk.OutputTokens ?? call.OutputTokens;
