@@ -127,7 +127,7 @@ $env:AINEXUS_SQLSERVER_TEST = 'Server=localhost;Integrated Security=true;Encrypt
 dotnet test backend/tests/AiNexus.Tests --filter FullyQualifiedName~SqlServerRetrievalTests
 ```
 
-測試驗證原生 768／1024 向量、Dapper 批次與交易回滾、profile 隔離、1028 中文 FREETEXTTABLE、授權範圍先於 TOP；全文非同步填入輪詢上限 90 秒。未提供環境變數時明確 skip，不以 SQLite 代替真實 SQL 驗證。
+測試驗證原生 768／1024 向量、Dapper 批次與交易回滾、profile 隔離、1028 中文 FREETEXTTABLE、授權範圍先於 TOP，以及全文執行錯誤時 hybrid 降為 vector、keyword 回報明確錯誤；全文非同步填入輪詢上限 90 秒。未提供環境變數時明確 skip，不以 SQLite 代替真實 SQL 驗證。
 
 RunEvents 預設保留 24 小時 replay，權威 run 快照仍可恢復；未保存到檔案庫且未被訊息／資源／分享引用的草稿附件依保留期清理。檔案庫原檔需沒有引用後由擁有者明確刪除。分享到期可清理快照，soft-delete 對話、成果、audit 與評測等保存期由部署單位制定，再加入明確 retention。
 

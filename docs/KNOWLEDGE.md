@@ -31,6 +31,8 @@ API 為 `POST /knowledge/collections/{id}/text`、`GET /documents/{id}/text`、`
 
 預設為 Ollama bge-m3、1024 維、plain；embedding 可覆寫獨立端點。完整設定鍵、預設值與範圍見 [CONFIGURATION](CONFIGURATION.md)。搜尋採 vector／keyword／hybrid，全文不足時明確顯示 vector，重排與改寫略過也會在 mode 顯示；知識庫搜尋測試列出模式、分段耗時及排名／分數。
 
+從模型探測、測試文件、三種召回模式到聊天引用、ACL 及固定題庫評測，依 [向量檢索測試與異常復原](RETRIEVAL_TESTING.md) 操作。
+
 OCR 與一般文字生成共用核准模型、群組政策、日生成配額與實際 token 記錄。embedding 與 rerank 共用每人每日 20,000 次上限；查詢改寫走生成 token 配額。失敗的生成保留狀態供用量及問題排查；記錄不保存帳密。
 
 本地 BGE-M3／Qwen 的設定、查詢格式、硬體取捨與可重現比較指令見 [模型比較](EMBEDDING_MODELS.md)。切換 provider、模型、維度、查詢指令或 Revision 後，重新索引目標知識庫；總覽的「需重新索引」統計可協助檢查。

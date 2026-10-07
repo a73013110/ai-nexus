@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
+using System.Reflection;
 using AiNexus.BuildingBlocks;
 using AiNexus.Database;
 using AiNexus.Modules.Collaboration;
@@ -24,6 +25,43 @@ public sealed class SqlServerFactAttribute : FactAttribute
 }
 public sealed class SqlServerRetrievalTests
 {
+    [SqlServerFact]
+    public async Task FullTextRuntimeFailureFallsBackToVectorAndExplainsKeywordUnavailability()
+    {
+        await WithDatabase(async (db, sql, _) => {
+            var seed = await Seed(db);
+            var profile = new EmbeddingProfile { Key = "fixture:fts-failure", Provider = "ollama", Model = "fixture", Dimensions = 1024, Status = "active" };
+            db.Add(profile); await db.SaveChangesAsync();
+            var vector = new float[1024]; vector[0] = 1;
+            var vectors = new EmbeddingVectorStore(db);
+            await vectors.WriteBatchAsync(profile, [new(seed.Chunks[0].Id, seed.Chunks[0].ContentHash, vector)], CancellationToken.None);
+            var failing = DispatchProxy.Create<EDoc.Core.Database.Interfaces.IDbHelper<INexusDatabase>, FullTextFailureProxy>();
+            var proxy = (FullTextFailureProxy)(object)failing; proxy.Inner = sql;
+            using var cache = new MemoryCache(new MemoryCacheOptions());
+            var store = new SqlServerRetrievalStore(failing, Options.Create(new KnowledgeOptions()), cache, NullLogger<SqlServerRetrievalStore>.Instance);
+            var result = await store.SearchAsync([seed.Collection], profile, "採購核准", vector, "hybrid", CancellationToken.None);
+            Assert.Equal("vector", result.Mode); Assert.Equal(seed.Chunks[0].Id, Assert.Single(result.Hits).ChunkId);
+            Assert.Equal(1, proxy.Failures);
+            var error = await Assert.ThrowsAsync<ApiException>(() => store.SearchAsync([seed.Collection], profile, "採購核准", null, "keyword", CancellationToken.None));
+            Assert.Equal("fulltext_unavailable", error.Code); Assert.Equal(1, proxy.Failures);
+        });
+    }
+
+    public class FullTextFailureProxy : DispatchProxy
+    {
+        public EDoc.Core.Database.Interfaces.IDbHelper<INexusDatabase> Inner { get; set; } = null!;
+        public int Failures { get; private set; }
+        protected override object? Invoke(MethodInfo? method, object?[]? args)
+        {
+            if (args?[0] is string statement && statement.Contains("FREETEXTTABLE", StringComparison.Ordinal))
+            {
+                // Raise a real SqlException without depending on a broken server installation.
+                args[0] = "RAISERROR (30053, 16, 1)"; Failures++;
+            }
+            return method!.Invoke(Inner, args);
+        }
+    }
+
     [SqlServerFact]
     public async Task NativeVectorsBatchTransactionsDistanceAndProfileIsolation()
     {

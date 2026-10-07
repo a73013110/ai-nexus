@@ -160,6 +160,7 @@ builder.Services.AddScoped<EmbeddingLifecycle>();
 builder.Services.AddScoped<RetrievalModelProbe>();
 builder.Services.AddScoped<IBackgroundJobHandler, EmbeddingReindexHandler>();
 builder.Services.AddHostedService<EmbeddingBootstrapWorker>();
+builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IRetrievalStore>(s => s.GetRequiredService<NexusDbContext>().Database.IsSqlServer() ? ActivatorUtilities.CreateInstance<SqlServerRetrievalStore>(s) : ActivatorUtilities.CreateInstance<InMemoryRetrievalStore>(s));
 builder.Services.AddScoped<KnowledgeRetrieval>();
 builder.Services.AddScoped<RetrievalAuthorization>();
@@ -169,7 +170,8 @@ builder.Services.AddSingleton<RerankService>();
 builder.Services.AddSingleton<IRerankClient, NoneRerankClient>();
 builder.Services.AddSingleton<IRerankClient, TeiRerankClient>();
 builder.Services.AddSingleton<IRerankClient, OpenAiCompatibleRerankClient>();
-builder.Services.AddSingleton<IQueryRewriter>(s => s.GetRequiredService<Microsoft.Extensions.Options.IOptions<KnowledgeOptions>>().Value.QueryRewrite.Enabled
+// Query rewriting uses ModelTaskService and its scoped database context.
+builder.Services.AddScoped<IQueryRewriter>(s => s.GetRequiredService<Microsoft.Extensions.Options.IOptions<KnowledgeOptions>>().Value.QueryRewrite.Enabled
     ? ActivatorUtilities.CreateInstance<ModelQueryRewriter>(s) : new NoopQueryRewriter());
 builder.Services.AddScoped<AiNexus.Modules.Artifacts.ArtifactService>();
 builder.Services.AddScoped<AiNexus.Modules.Artifacts.TextTransformService>();

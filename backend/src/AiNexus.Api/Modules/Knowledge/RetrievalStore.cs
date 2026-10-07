@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.BuildingBlocks;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Data.SqlClient;
 
 namespace AiNexus.Modules.Knowledge;
 
@@ -52,9 +53,20 @@ public sealed class SqlServerRetrievalStore(IDbHelper<INexusDatabase> sql, IOpti
             FROM Combined r JOIN Authorized a ON a.[ChunkId] = r.[ChunkId]
             ORDER BY r.[RrfScore] DESC, a.[ChunkId]
             """;
-        var rows = await sql.QueryAsync<RetrievalRow>(statement, new { Take = settings.RerankCandidates, Collections = collections, Profile = profile.Id, Vector = JsonSerializer.Serialize(vector), Query = query,
-            settings.VectorCandidates, settings.FtsCandidates, settings.RrfK, settings.VectorWeight, settings.FtsWeight, settings.MinVectorScore }, commandTimeout: 30, cancellationToken: ct);
-        return new(mode, rows.Select(x => x.Hit()).ToArray());
+        try
+        {
+            var rows = await sql.QueryAsync<RetrievalRow>(statement, new { Take = settings.RerankCandidates, Collections = collections, Profile = profile.Id, Vector = JsonSerializer.Serialize(vector), Query = query,
+                settings.VectorCandidates, settings.FtsCandidates, settings.RrfK, settings.VectorWeight, settings.FtsWeight, settings.MinVectorScore }, commandTimeout: 30, cancellationToken: ct);
+            return new(mode, rows.Select(x => x.Hit()).ToArray());
+        }
+        catch (SqlException error) when (fts && error.Number is 30010 or 30046 or 30053)
+        {
+            // Installed components can still fail at runtime (word breaker / FDHost).
+            cache.Set("knowledge-fulltext-ready", false, TimeSpan.FromSeconds(30));
+            logger.LogWarning("全文查詢失敗（SQL {SqlError}），暫時停用全文召回。", error.Number);
+            if (mode == "hybrid" && vector is not null) return await SearchAsync(collections, profile, query, vector, "vector", ct);
+            throw new ApiException(503, "fulltext_unavailable", "全文搜尋服務目前無法使用，請先使用向量檢索，或由管理員檢查中文斷詞器與全文服務。");
+        }
     }
 }
 public sealed partial class InMemoryRetrievalStore(NexusDbContext db, EmbeddingVectorStore vectors, IOptions<KnowledgeOptions> options) : IRetrievalStore
