@@ -4,6 +4,7 @@ import {
   DestroyRef,
   ElementRef,
   inject,
+  input,
   signal,
   viewChild,
 } from '@angular/core';
@@ -23,6 +24,8 @@ let sequence = 0;
   template: `<dialog
     #dialog
     class="platform-dialog"
+    [class.ui-dialog-compact]="compact()"
+    [class.ui-density-compact]="compact()"
     [attr.aria-labelledby]="id + '-title'"
     [attr.aria-describedby]="id + '-message'"
     (cancel)="$event.preventDefault(); answer(false)"
@@ -50,6 +53,7 @@ let sequence = 0;
   </dialog>`,
 })
 export class ConfirmDialog {
+  readonly compact = input(true);
   readonly id = `nx-confirm-${++sequence}`;
   readonly value = signal<Confirmation | null>(null);
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');

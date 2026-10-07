@@ -147,6 +147,13 @@
               "type": "integer",
               "format": "int32"
             }
+          },
+          {
+            "name": "SortDirection",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -728,6 +735,13 @@
             "schema": {
               "type": "integer",
               "format": "int32"
+            }
+          },
+          {
+            "name": "SortDirection",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -31815,7 +31829,8 @@
           "externalService",
           "errorCode",
           "instance",
-          "untrustedClient"
+          "untrustedClient",
+          "message"
         ],
         "type": "object",
         "properties": {
@@ -31938,6 +31953,9 @@
           },
           "untrustedClient": {
             "type": "boolean"
+          },
+          "message": {
+            "type": "string"
           }
         }
       },

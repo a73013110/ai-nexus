@@ -9114,6 +9114,7 @@ export interface components {
             errorCode: null | string;
             instance: string;
             untrustedClient: boolean;
+            message: string;
         };
         DirectoryGroupDto: {
             id: string;
@@ -10437,6 +10438,7 @@ export interface operations {
                 Text?: string;
                 Cursor?: string;
                 Take?: number;
+                SortDirection?: string;
             };
             header?: never;
             path?: never;
@@ -10867,6 +10869,7 @@ export interface operations {
                 Text?: string;
                 Cursor?: string;
                 Take?: number;
+                SortDirection?: string;
             };
             header?: never;
             path?: never;

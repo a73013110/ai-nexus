@@ -8,7 +8,12 @@ import { WorkspaceLayout } from '../../core/preferences/workspace-layout';
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: ':host { display: block; min-width: 0; }',
   template: `<a class="skip-link" href="#feature-content">跳到主要內容</a>
-    <div class="feature-layout">
+    <div
+      class="feature-layout"
+      [class.feature-layout-compact]="density() === 'compact'"
+      [class.feature-layout-wide]="wide()"
+      [class.feature-layout-data]="layoutMode() === 'data'"
+    >
       <aside nxWorkspaceSidebar class="feature-sidebar" aria-label="工作區導覽"></aside>
       <main
         class="feature-main"
@@ -16,7 +21,7 @@ import { WorkspaceLayout } from '../../core/preferences/workspace-layout';
         tabindex="-1"
         [attr.inert]="layout.overlay() ? '' : null"
       >
-        <div class="feature-content">
+        <div class="feature-content" [class.ui-density-compact]="density() === 'compact'">
           <header class="feature-header">
             <div>
               <span class="panel-eyebrow">{{ eyebrow() }}</span>
@@ -35,4 +40,7 @@ export class FeaturePage {
   readonly title = input.required<string>();
   readonly description = input('');
   readonly eyebrow = input('AI NEXUS · 工作區');
+  readonly density = input<'comfortable' | 'compact'>('comfortable');
+  readonly wide = input(false);
+  readonly layoutMode = input<'flow' | 'data'>('flow');
 }

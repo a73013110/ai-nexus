@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { ApiTransport } from '../../../core/api/api-transport';
 import type { components } from '../../../core/api/schema';
+import type { TableSortDirection } from '../../../shared/ui/data-table';
 
 export type LogEntry = components['schemas']['DiagnosticSummary'];
 export type LogHealth = components['schemas']['DiagnosticHealthDto'];
@@ -19,14 +20,16 @@ export interface LogFilter {
   errorCode: string;
   instance: string;
   text: string;
+  take?: number;
+  sortDirection?: TableSortDirection;
 }
 @Injectable({ providedIn: 'root' })
 export class SystemLogsApi {
   private readonly transport = inject(ApiTransport);
   private path(filter: LogFilter, cursor?: string | null) {
     const query = new URLSearchParams();
-    for (const [key, value] of Object.entries(filter)) if (value) query.set(key, value);
-    query.set('take', '50');
+    for (const [key, value] of Object.entries(filter)) if (value) query.set(key, String(value));
+    query.set('take', String(filter.take ?? 50));
     if (cursor) query.set('cursor', cursor);
     return '/admin/logs?' + query;
   }

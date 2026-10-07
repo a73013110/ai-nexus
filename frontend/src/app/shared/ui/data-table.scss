@@ -1,0 +1,33 @@
+.ui-table-columns-trigger {
+  margin-inline-end: var(--p-space-3);
+  font-size: var(--p-font-xs);
+}
+.ui-table-columns-panel {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: var(--p-space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-floating);
+  font-size: var(--p-font-sm);
+}
+.ui-table-columns-panel h3 {
+  margin: 0 0 var(--p-space-2);
+  font-size: var(--p-font-sm);
+}
+.ui-table-columns-panel label {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: 2.125rem;
+  cursor: pointer;
+}
+.ui-table-columns-panel input {
+  accent-color: var(--accent);
+}
+.ui-table-columns-panel .quiet-button {
+  width: 100%;
+}

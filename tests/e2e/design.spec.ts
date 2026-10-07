@@ -22,6 +22,22 @@ async function gallery(page: Page) {
   return fixture;
 }
 
+test('共用資料工作區在元件頁可操作，保留局部主題與焦點', async ({ page }) => {
+  await gallery(page);
+  await page.getByRole('button', { name: '深色', exact: true }).click();
+  const button = page.getByRole('button', { name: 'knowledge.index.completed', exact: true });
+  await button.click();
+  const drawer = page.getByRole('dialog', { name: '資料詳情示範', exact: true });
+  await expect(drawer).toContainText('knowledge.index.completed');
+  await expect(page.locator('nx-detail-drawer')).toHaveAttribute('data-theme', 'dark');
+  await drawer.getByRole('tab', { name: '屬性', exact: true }).click();
+  await expect(drawer.getByRole('tabpanel')).toContainText('attempts');
+  await drawer.getByRole('button', { name: '複製示範屬性 JSON', exact: true }).click();
+  expect(await page.evaluate(() => (window as unknown as { __copied: string }).__copied)).toContain('completed');
+  await drawer.getByRole('button', { name: '關閉資料詳情示範', exact: true }).click();
+  await expect(button).toBeFocused();
+});
+
 test("production controls support keyboard selection, disabled options and dialog focus return", async ({
   page,
 }) => {

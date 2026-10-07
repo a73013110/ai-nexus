@@ -60,6 +60,7 @@ import {
   ExternalLink,
   Filter,
   Play,
+  Calendar,
 } from 'lucide';
 import { LucideDynamicIcon } from '@lucide/angular';
 
@@ -126,6 +127,8 @@ const icons: Record<string, IconNode> = {
   eye: Eye,
   filter: Filter,
   play: Play,
+  calendar: Calendar,
+  columns: SlidersHorizontal,
 };
 @Component({
   selector: 'nx-icon',

@@ -199,6 +199,16 @@
 .design-markdown {
   grid-column: 1 / -1;
 }
+.design-data-workspace {
+  grid-column: 1 / -1;
+}
+.design-data-field {
+  max-width: 24rem;
+  margin-block: var(--p-space-3);
+}
+.design-data-workspace .ui-table-scroll > table {
+  min-width: 32rem;
+}
 .design-markdown .markdown {
   max-width: var(--reading-width);
 }
@@ -220,4 +230,10 @@
   .design-spacing {
     gap: var(--p-space-3);
   }
+}
+.design-calendar-samples {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--p-space-3);
+  margin-block: var(--p-space-3);
 }

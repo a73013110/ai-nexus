@@ -35,6 +35,7 @@ public sealed class DiagnosticExporter : IDisposable
         var processor = new BatchLogRecordExportProcessor(new ObservedLogExporter(options.Value, health), maxQueueSize: 2048, scheduledDelayMilliseconds: 1000, exporterTimeoutMilliseconds: 2000, maxExportBatchSize: 200);
         factory = LoggerFactory.Create(logging => logging.SetMinimumLevel(LogLevel.Trace).AddOpenTelemetry(o => {
             o.IncludeScopes = true;
+            o.IncludeFormattedMessage = true;
             o.SetResourceBuilder(ResourceBuilder.CreateEmpty().AddService(DiagnosticRedactor.Text(options.Value.ServiceName, 80), serviceVersion: DiagnosticRedactor.Text(DiagnosticLoggerProvider.Version, 80)));
             o.AddProcessor(new CorrelationProcessor()); o.AddProcessor(processor);
         }));
@@ -56,8 +57,10 @@ public sealed class DiagnosticExporter : IDisposable
                     ["Method"] = item.Method, ["Route"] = item.Route, ["StatusCode"] = item.StatusCode, ["DurationMs"] = item.DurationMs,
                     ["ExternalService"] = item.ExternalService, ["ErrorCode"] = item.ErrorCode, ["UserId"] = item.UserId?.ToString(), ["Instance"] = item.Instance, ["Environment"] = item.Environment
                 });
+                var rendered = DiagnosticMessage.Render(item, includeProperties: true);
                 logger.Log(item.Level, new EventId(item.EventId, item.EventName),
-                    new[] { new KeyValuePair<string, object?>("{OriginalFormat}", item.MessageTemplate) }, null, static (state, _) => (string)state[0].Value!);
+                    new[] { new KeyValuePair<string, object?>("{OriginalFormat}", item.MessageTemplate),
+                        new KeyValuePair<string, object?>("RenderedMessage", rendered) }, null, (_, _) => rendered);
             }
             catch (Exception) { Interlocked.Increment(ref health.ExportFailures); health.Emergency("otlp_export_failed"); }
         }

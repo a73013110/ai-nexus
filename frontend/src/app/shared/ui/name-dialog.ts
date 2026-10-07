@@ -1,6 +1,13 @@
 import { IssueCode } from './issue-code';
 import { safeMessage } from '../../core/api/safe-errors';
-import { ChangeDetectionStrategy, Component, ElementRef, signal, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  input,
+  signal,
+  viewChild,
+} from '@angular/core';
 
 export interface NameRequest {
   title: string;
@@ -16,6 +23,8 @@ export interface NameRequest {
   template: `<dialog
     #dialog
     class="workspace-dialog"
+    [class.ui-dialog-compact]="compact()"
+    [class.ui-density-compact]="compact()"
     [attr.aria-label]="request()?.title"
     (cancel)="cancel($event)"
   >
@@ -48,6 +57,7 @@ export interface NameRequest {
   </dialog>`,
 })
 export class NameDialog {
+  readonly compact = input(true);
   readonly request = signal<NameRequest | null>(null);
   readonly name = signal('');
   readonly busy = signal(false);

@@ -12,7 +12,9 @@
     <p role="status">正在載入介面工作區…</p>
   } @else if (error()) {
     <p class="error-banner" role="alert">
-      {{ error() }}<nx-issue-code [message]="error()" /><button type="button" (click)="load()">重新載入</button>
+      {{ error() }}<nx-issue-code [message]="error()" /><button type="button" (click)="load()">
+        重新載入
+      </button>
     </p>
   } @else if (!session.has('admin')) {
     <p class="error-banner" role="alert">介面元件工作區僅提供平台管理員使用。</p>
@@ -218,6 +220,67 @@
             </button>
           </div>
         </section>
+        <section
+          class="platform-card design-data-workspace ui-density-compact"
+          aria-labelledby="design-data-title"
+        >
+          <span class="panel-eyebrow">03 / 資料工作區</span>
+          <h2 id="design-data-title">緊湊的資訊，熟悉的操作</h2>
+          <p class="form-note">資料表保留列表位置，詳情於側欄開啟；窄螢幕自動使用 modal。</p>
+          <label class="ui-field design-data-field"
+            >共用表單欄位<input nxField aria-label="示範資料篩選" placeholder="依事件名稱查詢"
+          /></label>
+          <div class="design-calendar-samples">
+            <nx-date-time-picker
+              label="西元日期時間"
+              [value]="calendarDate()"
+              (valueChange)="calendarDate.set($event)"
+            />
+            <nx-date-time-picker
+              label="民國日期時間"
+              calendarSystem="roc"
+              [value]="calendarDate()"
+              (valueChange)="calendarDate.set($event)"
+            />
+          </div>
+          <nx-data-table label="共用資料表範例">
+            <div table-toolbar class="ui-table-toolbar">
+              <h2>事件範例</h2>
+              <span class="ui-count-label">3 筆</span>
+            </div>
+            <table>
+              <caption class="sr-only">
+                共用資料表與狀態標籤範例
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">時間</th>
+                  <th scope="col">事件</th>
+                  <th scope="col">狀態</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (entry of dataRows; track entry.event) {
+                  <tr>
+                    <td>{{ entry.time }}</td>
+                    <td>
+                      <button
+                        type="button"
+                        class="ui-table-link"
+                        (click)="inspectData(entry.event)"
+                      >
+                        {{ entry.event }}
+                      </button>
+                    </td>
+                    <td>
+                      <nx-status-badge [tone]="entry.tone">{{ entry.status }}</nx-status-badge>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </nx-data-table>
+        </section>
         <section class="platform-card design-markdown" aria-labelledby="design-markdown-title">
           <span class="panel-eyebrow">02 / 內容閱讀</span>
           <h2 id="design-markdown-title">長文字也能輕鬆瀏覽</h2>
@@ -228,3 +291,41 @@
     </div>
   }
 </nx-feature-page>
+<nx-detail-drawer title="資料詳情示範" [attr.data-theme]="theme()">
+  <div drawer-summary class="ui-drawer-summary">
+    <h3>{{ dataEvent() }}</h3>
+    <span class="ui-drawer-subtitle">共用詳情面板 · 本地範例</span>
+  </div>
+  <nx-tabs
+    #dataTabsControl
+    drawer-tabs
+    label="資料詳情示範內容"
+    [items]="dataTabs"
+    [value]="dataTab()"
+    (valueChange)="dataTab.set($event)"
+  />
+  <section
+    role="tabpanel"
+    tabindex="0"
+    [id]="dataTabsControl.panelId(dataTab())"
+    [attr.aria-labelledby]="dataTabsControl.tabId(dataTab())"
+  >
+    @if (dataTab() === 'overview') {
+      <h3 class="ui-section-heading">事件</h3>
+      <p class="ui-message-box">{{ dataEvent() }}</p>
+      <h3 class="ui-section-heading">執行資訊</h3>
+      <dl class="ui-description-list">
+        <div>
+          <dt>服務</dt>
+          <dd>AiNexus.Api</dd>
+        </div>
+        <div>
+          <dt>來源</dt>
+          <dd>介面元件範例</dd>
+        </div>
+      </dl>
+    } @else {
+      <nx-code-block label="示範屬性 JSON" [value]="dataProperties" />
+    }
+  </section>
+</nx-detail-drawer>

@@ -70,6 +70,8 @@
   --p-code-string-dark: #aad0b7;
   --p-code-number-dark: #e2bf92;
 
+  --p-font-xs: 0.75rem;
+  --p-font-data: 0.8125rem;
   --p-font-sm: 0.875rem;
   --p-font-label: 0.9375rem;
   --p-font-base: 1rem;
@@ -139,6 +141,17 @@
   --topbar-height: 3.25rem;
   --workspace-gutter: clamp(1rem, 4vw, 3rem);
   --button-target: 2.75rem;
+  --control-height-compact: 2.125rem;
+  --control-font-size: var(--text-ui);
+  --control-padding-block: var(--p-space-2);
+  --control-padding-inline: var(--p-space-3);
+  --button-padding-block: 0.625rem;
+  --button-padding-inline: 1.0625rem;
+  --field-label-size: var(--text-label);
+  --field-label-gap: var(--p-space-2);
+  --table-cell-padding-block: var(--p-space-3);
+  --table-cell-padding-inline: var(--p-space-4);
+  --drawer-width: 36rem;
   --composer-input-min: 2.5rem;
   --composer-input-max: min(12rem, 25dvh);
   --composer-radius: var(--p-radius-lg);

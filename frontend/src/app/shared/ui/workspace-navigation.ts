@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { NavigationEnd, PRIMARY_OUTLET, Router, RouterLink } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter } from 'rxjs';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { Icon } from './icon';
 import { groupFeatures, FEATURE_ICONS } from '../../core/feature-groups';
 @Component({
   selector: 'nx-workspace-navigation',
-  imports: [RouterLink, RouterLinkActive, Icon],
+  imports: [RouterLink, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nav
     class="workspace-navigation"
@@ -31,8 +33,8 @@ import { groupFeatures, FEATURE_ICONS } from '../../core/feature-groups';
               @for (feature of group.features; track feature.id) {
                 <a
                   [routerLink]="feature.route"
-                  routerLinkActive="current"
-                  ariaCurrentWhenActive="page"
+                  [class.current]="activeFeature() === feature.id"
+                  [attr.aria-current]="activeFeature() === feature.id ? 'page' : null"
                   [attr.title]="feature.name"
                   [attr.aria-label]="feature.name"
                   (click)="activated.emit()"
@@ -51,11 +53,41 @@ import { groupFeatures, FEATURE_ICONS } from '../../core/feature-groups';
 })
 export class WorkspaceNavigation {
   private readonly session = inject(WorkspaceSession);
+  private readonly router = inject(Router);
+  private readonly navigation = toSignal(
+    this.router.events.pipe(filter((event) => event instanceof NavigationEnd)),
+  );
   readonly collapsible = input(false);
   readonly compact = input(false);
   readonly activated = output<void>();
   readonly expanded = input(false);
   readonly expandedChange = output<boolean>();
-  readonly visibleGroups = computed(() => groupFeatures((this.session.me()?.access.features || []).filter((feature) => !!feature.route)));
+  readonly visibleGroups = computed(() =>
+    groupFeatures((this.session.me()?.access.features || []).filter((feature) => !!feature.route)),
+  );
+  /** Select the deepest matching feature; its own detail routes still belong to it. */
+  readonly activeFeature = computed(() => {
+    this.navigation();
+    let active: string | null = null;
+    let depth = -1;
+    for (const feature of this.visibleGroups().flatMap((group) => group.features)) {
+      const tree = this.router.parseUrl(feature.route!);
+      if (
+        !this.router.isActive(tree, {
+          paths: 'subset',
+          queryParams: 'ignored',
+          matrixParams: 'ignored',
+          fragment: 'ignored',
+        })
+      )
+        continue;
+      const candidateDepth = tree.root.children[PRIMARY_OUTLET]?.segments.length ?? 0;
+      if (candidateDepth > depth) {
+        active = feature.id;
+        depth = candidateDepth;
+      }
+    }
+    return active;
+  });
   readonly icons = FEATURE_ICONS;
 }

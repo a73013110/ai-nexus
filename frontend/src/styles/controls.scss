@@ -36,7 +36,7 @@ kbd {
   line-height: 1.3;
   min-height: var(--button-target);
   border-radius: var(--p-radius-md);
-  padding: 10px 17px;
+  padding: var(--button-padding-block) var(--button-padding-inline);
   font-size: var(--text-label);
 }
 .primary-button {

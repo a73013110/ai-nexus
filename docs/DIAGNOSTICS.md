@@ -62,6 +62,16 @@ flowchart LR
 
 允許的 metadata 名稱見 `DiagnosticRedactor.Fields`。只接受 ID、有限數值、布林、受控 enum 和核準字串；任意物件替換為 `[OBJECT OMITTED]`，不呼叫其 `ToString()` 或 serializer。截斷在 regex 前開始，限制最差輸入成本；補送時再次套用白名單、字元與 UTF-8 上限。
 
+## 訊息呈現與請求上下文
+
+儲存仍採 MessageTemplate＋受控 PropertiesJson，沒有重複儲存一份展開文字。API 的 Message 在讀取時由共用 DiagnosticMessage 產生；舊 HTTP 模板同樣能帶入 StatusCode／DurationMs。列表只能代入摘要權限已有的欄位，其他參數顯示 [omitted]；特權明細與受控 OTLP 日誌可代入遮罩後的白名單屬性。原模板在明細「受控屬性」分頁保留，可複製。此流程不呼叫原始 ILogger formatter，避免將未核准物件或任意內容帶回日誌。
+
+HTTP scope 補充 ClientAddress、UserAgent、RequestProtocol、RequestScheme；完成事件補充 RequestOutcome、RequestAborted、ResponseStarted。耗時只量測一次並保留至毫秒的小數三位。取消請求合併在完成事件，避免重複記錄。成功的 /admin/logs 查詢、詳情、健康與匯出已有不可省略的稽核紀錄，因此不再寫入相同 HTTP 完成事件；錯誤與取消仍保留。
+
+ClientAddress 只取 host 解析的 Connection.RemoteIpAddress，IPv4-mapped IPv6 會正規化。診斷 middleware 不自行信任 X-Forwarded-For；有反向代理時由部署端設定受信任的代理／網段，否則記錄的可能是代理 IP。User-Agent 是不可信的用戶端提示，限制 240 字元並遮罩；不蒐集完整 header、Cookie、Authorization、完整 URL、query、body、DOM 或瀏覽器指紋。這些資訊只放在 logs.detail 的受控屬性，與既有保存期限及 OTLP 政策共用；歷史日誌不會自動補回未蒐集的資料。
+
+設計依據：[OpenTelemetry HTTP 語意](https://opentelemetry.io/docs/specs/semconv/http/http-spans/)與 [ASP.NET Core 代理信任設定](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/proxy-load-balancer?view=aspnetcore-10.0)。HTTP 狀態、typed error code、例外型別／方法堆疊、RequestId／TraceId／JobId／RunId、重試次數與版本仍是主要診斷依據；IP 與 User-Agent 是補充線索，不能取代錯誤分類與流程關聯。
+
 ## 安全錯誤契約與流程關聯
 
 一般 API 回傳 `application/problem+json`，例如：
@@ -183,9 +193,9 @@ SQL 診斷30天、稽核365天各自分批 autocommit 清理，最大 SQL comman
 
 管理員從角色群組管理明確授予；一般使用者及未登入者即使猜對 code／LogId 也不能存取。query／detail 每人最多60次／分鐘，export每人2次／分鐘，server限制範圍／筆數／timeout。沒有日誌任意修改、刪除或無界匯出 API。有效 FeatureGrant 在每個 request 重新驗證。
 
-查詢預設最近一天，支援 UTC 範圍、Level、Category、EventId／Name、IssueCode、TraceId、JobId／RunId／OperationId、ErrorCode、Instance、模板文字。摘要每頁1–100筆，UI50筆；`At DESC, LogId DESC` keyset cursor 由 Data Protection 保護並綁 actor、全部 filter及固定時間。保留返回的 from／to 供後續cursor使用。索引以時間、等級／模組／事件及相關ID建立，code／trace 查詢不使用 SQL 中文全文檢索。文字 substring 搜尋最多72字且限一天，並有限SQL逾時，避免無界全表掃描。
+查詢預設最近一天，支援 UTC 範圍、Level、Category、EventId／Name、IssueCode、TraceId、JobId／RunId／OperationId、ErrorCode、Instance、模板文字。摘要每頁1–100筆，UI提供25／50／100筆；預設新到舊，SortDirection=asc可依時間由舊到新；時間與LogId同方向排序。keyset cursor 由 Data Protection 保護並綁 actor、全部 filter、固定時間、排序方向及每頁筆數。保留返回的 from／to 供後續cursor使用。索引以時間、等級／模組／事件及相關ID建立，code／trace 查詢不使用 SQL 中文全文檢索。文字 substring 搜尋最多72字且限一天，並有限SQL逾時，避免無界全表掃描。
 
-query、health、detail、export 先直接保存獨立 read audit 再回傳資料；稽核失敗則拒絕操作，不降級為「成功但沒稽核」。既有高權限管理變更稽核與業務 transaction 保持同步，不能使用低可靠性 logger 取代稽核。診斷內部 DB／query／cleanup 用 AsyncLocal suppression，故不會因記錄查詢或自身失敗造成日誌迴圈；request 本身仍有正常 completion event。
+query、health、detail、export 先直接保存獨立 read audit 再回傳資料；稽核失敗則拒絕操作，不降級為「成功但沒稽核」。既有高權限管理變更稽核與業務 transaction 保持同步，不能使用低可靠性 logger 取代稽核。診斷內部 DB／query／cleanup 用 AsyncLocal suppression，故不會因記錄查詢或自身失敗造成日誌迴圈；診斷讀取的成功 request 不再重複寫 completion event；失敗與取消仍會記錄。
 
 一般 SQL表／本地檔案不是不可竄改。SHA-256 journal checksum 只偵測意外損壞；具有 app NTFS／SQL權限的人可以改寫資料及重算 checksum。沒有聲稱 WORM、密碼學鏈或法規合規；若組織需要可信時間戳、法定稽核保留或防竄改，需另設權限分離、備份與外部受控／不可改寫保存。
 
@@ -193,7 +203,7 @@ query、health、detail、export 先直接保存獨立 read audit 再回傳資�
 
 1. 使用者在錯誤提示旁複製 **NX** 代碼；LOCAL 代表尚無伺服器事件，先確認離線／網路與登入。
 2. 有 logs.query 的人開「系統日誌」，設定使用者時區的發生時間，貼上NX，按查詢。跨午夜／數日前問題需擴大時間，最多設定MaxQueryDays。
-3. 確認錯誤分類、模組、HTTP狀態、Job／Run、Trace與實例；有 logs.detail 才能按診斷詳情，讀取遮罩型別、SQL編號與method stack。
+3. 確認錯誤分類、模組、HTTP狀態、Job／Run、Trace與實例；有 logs.detail 才能點選資料列或事件名稱開啟診斷詳情，讀取遮罩型別、SQL編號與method stack。
 4. 同一Trace／Job／Run 的關聯事件以時間順序顯示最多50筆；長流程請用進階filter及cursor繼續查，勿把截取50筆當成全部歷史。
 5. 需要移交時，具export grant的人縮小範圍匯出受控摘要CSV。下載文件也需依組織規範保存。
 

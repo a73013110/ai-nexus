@@ -29,7 +29,8 @@ public static class DiagnosticEndpoints
 {
     public static void MapDiagnostics(this RouteGroupBuilder api)
     {
-        var logs = api.MapGroup("/admin/logs").RequireAuthorization("feature:" + DiagnosticConfiguration.Query).WithTags("System logs").RequireRateLimiting("diagnostic-query");
+        var logs = api.MapGroup("/admin/logs").RequireAuthorization("feature:" + DiagnosticConfiguration.Query).WithTags("System logs").RequireRateLimiting("diagnostic-query")
+            .WithMetadata(new SuppressSuccessfulRequestLog());
         logs.MapGet("", async ([AsParameters] DiagnosticFilter filter, DiagnosticQuery query, CancellationToken ct) => await query.ListAsync(filter, ct)).WithName("QuerySystemLogs").Produces<DiagnosticPage>();
         logs.MapGet("/health", async (DiagnosticQuery query, CancellationToken ct) => await query.HealthAsync(ct)).WithName("GetSystemLogHealth").Produces<DiagnosticHealthDto>();
         logs.MapGet("/{id:guid}", async (Guid id, DiagnosticQuery query, CancellationToken ct) => await query.DetailAsync(id, ct))
