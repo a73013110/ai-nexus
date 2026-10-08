@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Repositories;
 
+/// <summary>Read-only Gitea access with each user's own token, file imports into knowledge, and background code reviews. Each use case has its own file.</summary>
 public sealed class RepositoriesModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)
@@ -15,12 +16,31 @@ public sealed class RepositoriesModule : IFeatureModule
         services.AddScoped<IGiteaClient, GiteaClient>();
         services.AddScoped<RepositoryService>();
         services.AddScoped<RepositoryReviewService>();
+        services.AddScoped<ListRepositoryReviews>();
+        services.AddScoped<CreateRepositoryReview>();
+        services.AddScoped<ReadRepositoryReview>();
+        services.AddScoped<ConnectRepository>();
+        services.AddScoped<ImportRepositoryFile>();
         services.AddScoped<IBackgroundJobHandler, RepositoryReviewHandler>();
         services.AddSingleton<RepositoryWriteLock>();
         services.AddFeaturePolicy(FeatureIds.Repositories);
     }
 
-    public static void MapEndpoints(RouteGroupBuilder api) => RepositoryEndpoints.MapRepositories(api);
+    // Endpoint order is the published OpenAPI order.
+    public static void MapEndpoints(RouteGroupBuilder api)
+    {
+        var routes = api.MapGroup("/repositories").RequireAuthorization(Policies.Repositories).WithTags("Repositories");
+        BrowseRepositories.MapCommits(routes);
+        ListRepositoryReviews.Map(routes);
+        CreateRepositoryReview.Map(routes);
+        ReadRepositoryReview.Map(routes);
+        ChangeRepositoryReviewJob.Map(routes);
+        GetRepositoryConnection.Map(routes);
+        ConnectRepository.Map(routes);
+        DisconnectRepository.Map(routes);
+        BrowseRepositories.Map(routes);
+        ImportRepositoryFile.Map(routes);
+    }
 }
 
 internal sealed class GiteaOptionsValidator : IValidateOptions<GiteaOptions>
