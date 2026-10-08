@@ -12,7 +12,6 @@ namespace AiNexus.Features.Administration;
 public sealed record ModelPolicyRequest(IReadOnlyList<string>? AllowedModelIds = null, IReadOnlyDictionary<string, long>? DailyTokenLimits = null);
 public sealed record ModelTokenBudgetDto(string ModelId, long? DailyTokenLimit, long UsedTokens, long ReservedTokens, long? RemainingTokens, string Source, string? ModelDisplayName = null);
 public sealed record EffectiveModelPolicyDto(IReadOnlyList<string>? AllowedModelIds, long? StoredAttachmentLimitBytes, IReadOnlyList<ModelTokenBudgetDto> Models, DateTimeOffset ResetsAt);
-public sealed record AdminUserModelPolicyDto(ModelPolicyRequest Personal, EffectiveModelPolicyDto Effective);
 
 // The same policy and accounting apply to chat, OCR, transformations and evaluations.
 public sealed class ModelPolicyService(NexusDbContext db, AccessService access, ModelPresentation presentation, IOptions<InferenceOptions> inference)
@@ -22,18 +21,14 @@ public sealed class ModelPolicyService(NexusDbContext db, AccessService access, 
     public static Dictionary<string, long> Limits(string? json) => json is null ? [] : JsonSerializer.Deserialize<Dictionary<string, long>>(json)!;
     public static string? SerializeAllowed(IReadOnlyList<string>? ids) => ids is null ? null : JsonSerializer.Serialize(ids.Order(StringComparer.Ordinal));
     public static string? SerializeLimits(IReadOnlyDictionary<string, long>? limits) => limits is null || limits.Count == 0 ? null : JsonSerializer.Serialize(limits.OrderBy(x => x.Key, StringComparer.Ordinal).ToDictionary());
-    public void Validate(ModelPolicyRequest policy)
+    /// <summary>Configured models only, at most 24 distinct ids and caps, each cap 0 to <see cref="MaximumTokenLimit"/>.</summary>
+    internal Error? Check(ModelPolicyRequest policy)
     {
         var ids = inference.Value.Models.Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
         if (policy.AllowedModelIds is { } allowed && (allowed.Count > 24 || allowed.Distinct(StringComparer.Ordinal).Count() != allowed.Count || allowed.Any(x => !ids.Contains(x))) ||
             policy.DailyTokenLimits is { } limits && (limits.Count > 24 || limits.Any(x => !ids.Contains(x.Key) || x.Value is < 0 or > MaximumTokenLimit)))
-            throw new ApiException(400, "invalid_model_policy", "模型清單或 token 上限不正確。上限需為 0 至 1,000,000,000,000 的整數。");
-    }
-    public async Task<AdminUserModelPolicyDto> AdministrativeAsync(Guid owner, CancellationToken ct)
-    {
-        if (!await db.Users.AnyAsync(x => x.Id == owner && x.DeletedAt == null, ct)) throw new ApiException(404, "admin_resource_not_found", "找不到此使用者。");
-        var personal = await db.Set<UserModelPolicy>().AsNoTracking().SingleOrDefaultAsync(x => x.UserId == owner, ct);
-        return new(new(Allowed(personal?.AllowedModelsJson), Limits(personal?.DailyTokenLimitsJson)), await ForAsync(owner, ct, publicIds: false));
+            return AdministrationErrors.InvalidModelPolicy;
+        return null;
     }
     public async Task<EffectiveModelPolicyDto> ForAsync(Guid owner, CancellationToken ct, bool publicIds = true, DateTimeOffset? asOf = null)
     {

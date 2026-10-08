@@ -1,6 +1,8 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Validation;
+using FluentValidation;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Administration;
@@ -12,16 +14,37 @@ public sealed record UserAuthenticationDto(bool AdEnabled, bool LocalEnabled, st
 public sealed record UserAccountRequest(string DisplayName, bool Enabled, bool AdEnabled, bool LocalEnabled, string? AdAccount, string? LocalAccount, IReadOnlyList<string> RoleIds, string? Password = null);
 public sealed record CreatedUserDto(Guid Id);
 
+/// <summary>
+/// Login account names are checked first, with their own code; the name, roles and login methods are checked
+/// afterwards by <see cref="UserAccountAdministration"/>, in that order.
+/// </summary>
+internal sealed class UserAccountRequestValidator : RequestValidator<UserAccountRequest>
+{
+    public override string ProblemCode => "invalid_account";
+
+    public UserAccountRequestValidator()
+    {
+        RuleFor(x => x.LocalAccount).Must(UserAccounts.IsValid).WithErrorCode("format");
+        RuleFor(x => x.AdAccount).Must(UserAccounts.IsValid).WithErrorCode("format");
+    }
+}
+
 public static class UserAccounts
 {
     public static string? Normalize(string? account)
     {
         if (string.IsNullOrWhiteSpace(account)) return null;
         var value = account.Trim().Normalize(NormalizationForm.FormC);
-        if (!Regex.IsMatch(value, @"^[\p{L}\p{N}][\p{L}\p{N}._-]{0,63}$"))
+        if (!Matches(value))
             throw new ApiException(400, "invalid_account", "登入帳號需為 1–64 個字元，只能使用字母、數字、點、底線與連字號。AD 請填目錄中的帳號，不含網域。");
         return value.ToUpperInvariant();
     }
+
+    /// <summary>Whether <see cref="Normalize"/> accepts <paramref name="account"/>; an empty account means "not set".</summary>
+    internal static bool IsValid(string? account) => string.IsNullOrWhiteSpace(account) || Matches(account.Trim().Normalize(NormalizationForm.FormC));
+
+    private static bool Matches(string value) => Regex.IsMatch(value, @"^[\p{L}\p{N}][\p{L}\p{N}._-]{0,63}$");
+
     public static UserAuthenticationDto Authentication(NexusUser user) => new(user.AdEnabled, user.LocalEnabled, user.AdAccount, user.LocalAccount, user.PasswordHash is not null);
 }
 
