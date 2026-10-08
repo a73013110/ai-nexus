@@ -1,8 +1,8 @@
-using AiNexus.BuildingBlocks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 using Xunit;
+using AiNexus.Features.Persistence;
 using static Microsoft.Playwright.Assertions;
 
 namespace AiNexus.Tests;

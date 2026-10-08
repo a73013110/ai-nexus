@@ -1,9 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.AccessControl;
-using AiNexus.Modules.Inference;
+using AiNexus.Features.Persistence;
+using AiNexus.Features.Conversations;
+using AiNexus.Features.Identity;
+using AiNexus.Features.Inference;
+using AiNexus.Features.AccessControl;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -19,7 +21,7 @@ public sealed class AccessAndPolicyTests
     public async Task EmptyCatalogDistinguishesUnavailableProfilesFromGroupRestrictions(bool profileInstalled)
     {
         await using var factory = new NexusFactory(
-            seed: db => { db.Set<AiNexus.Modules.Administration.GroupModelPolicy>().Add(new() { GroupId = "workspace", AllowedModelsJson = "[\"retired-provider-model\"]" }); db.SaveChanges(); },
+            seed: db => { db.Set<AiNexus.Features.Administration.GroupModelPolicy>().Add(new() { GroupId = "workspace", AllowedModelsJson = "[\"retired-provider-model\"]" }); db.SaveChanges(); },
             inference: options => { if (!profileInstalled) { options.Models[0].Id = "not-installed"; options.DefaultModelId = "not-installed"; } });
         using var client = await factory.SignedInAsync();
         var catalog = (await client.GetFromJsonAsync<ModelsDto>("/api/v1/models"))!;

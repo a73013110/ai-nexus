@@ -3,12 +3,14 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using AiNexus.BuildingBlocks;
-using AiNexus.BuildingBlocks.Diagnostics;
-using AiNexus.Modules.AccessControl;
-using AiNexus.Modules.Inference;
-using AiNexus.Modules.Operations;
-using AiNexus.Modules.Knowledge;
+using AiNexus.Platform.Errors;
+using AiNexus.Features.Persistence;
+using AiNexus.Features.Identity;
+using AiNexus.Features.Inference;
+using AiNexus.Features.Operations;
+using AiNexus.Platform.Diagnostics;
+using AiNexus.Features.Diagnostics;
+using AiNexus.Features.AccessControl;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.FileProviders;
@@ -36,7 +38,7 @@ public sealed class DiagnosticTests
     public void ReviewedPublicHintsStayIdenticalAcrossBackendAndFrontend()
     {
         var root = Path.GetFullPath("../../../../../..", AppContext.BaseDirectory);
-        var backend = File.ReadAllText(Path.Combine(root, "backend/src/AiNexus.Api/BuildingBlocks/Diagnostics/PublicErrorCatalog.cs"));
+        var backend = File.ReadAllText(Path.Combine(root, "backend/src/AiNexus.Platform/Diagnostics/PublicErrorCatalog.cs"));
         var frontend = File.ReadAllText(Path.Combine(root, "frontend/src/app/core/api/public-error-catalog.ts"));
         var expected = System.Text.RegularExpressions.Regex.Matches(backend, "\\[\"(?<key>[a-z0-9_]+)\"\\]\\s*=\\s*\"(?<hint>[^\"\\r\\n]*)\"")
             .ToDictionary(m => m.Groups["key"].Value, m => m.Groups["hint"].Value);

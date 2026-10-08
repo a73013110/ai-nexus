@@ -1,7 +1,6 @@
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.Conversations;
-using AiNexus.Modules.Inference;
-using AiNexus.Modules.Knowledge;
+using AiNexus.Features.Conversations;
+using AiNexus.Features.Inference;
+using AiNexus.Features.Knowledge;
 using Microsoft.Extensions.Options;
 using Xunit;
 

@@ -33,7 +33,7 @@ IP 只取 HttpContext.Connection.RemoteIpAddress，不自行相信 X-Forwarded-F
 
 ## 共用架構與上限
 
-Modules/Monitoring 分離契約、固定詞彙、聚合、採集與 endpoints。RuntimeTrafficMiddleware 包住既有診斷／安全層，沿用身分、錯誤與稽核。TrafficCountingStream 量測實際 IO；TrafficHttpHandler 用 factory defaults 覆蓋所有模組；RuntimeSampler 在 SqlClient 共用邊界觀測。DependencyCatalog 依核准 host／port 或 SQL server／database 分類，只輸出服務名稱。
+`AiNexus.Features/Monitoring` 分離契約、固定詞彙、聚合、採集與 endpoints。RuntimeTrafficMiddleware 包住既有診斷／安全層，沿用身分、錯誤與稽核。TrafficCountingStream 量測實際 IO；TrafficHttpHandler 用 factory defaults 覆蓋所有模組；RuntimeSampler 在 SqlClient 共用邊界觀測。DependencyCatalog 依核准 host／port 或 SQL server／database 分類，只輸出服務名稱。
 
 保留 15 分鐘，最多 91 個 10 秒 buckets、每 bucket 128 個 API aggregates、32 項依賴、120 筆事件，預設 2000 個工作階段。快照回傳最近 200 個並揭露略過數量；滿額拒收新工作階段，既有記錄繼續更新。SQL 執行中追蹤最多 1024 筆，十分鐘清理缺少 terminal event 的記錄。Heartbeat／採集不寫資料庫；特權快照、訂閱與匯出留下持久稽核。
 

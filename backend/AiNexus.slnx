@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AiNexus.Api/AiNexus.Api.csproj" />
+    <Project Path="src/AiNexus.Features/AiNexus.Features.csproj" />
+    <Project Path="src/AiNexus.Platform/AiNexus.Platform.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AiNexus.ArchitectureTests/AiNexus.ArchitectureTests.csproj" />
+    <Project Path="tests/AiNexus.Tests/AiNexus.Tests.csproj" />
+  </Folder>
+</Solution>

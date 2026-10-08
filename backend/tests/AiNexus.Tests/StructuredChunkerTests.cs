@@ -1,5 +1,5 @@
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.Knowledge;
+using AiNexus.Platform.Errors;
+using AiNexus.Features.Knowledge;
 using Microsoft.Extensions.Options;
 using Xunit;
 

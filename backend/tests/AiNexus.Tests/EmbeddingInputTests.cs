@@ -1,4 +1,4 @@
-using AiNexus.Modules.Knowledge;
+using AiNexus.Features.Knowledge;
 using Xunit;
 
 namespace AiNexus.Tests;

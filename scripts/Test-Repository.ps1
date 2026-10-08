@@ -31,8 +31,8 @@ try {
             if (@(Get-NexusSecretValues $taskJson -IncludeUser).Count) { throw "Public configuration must use empty secrets: $taskFile" }
         }
     }
-    if ($WorkingTree) { git -c core.whitespace=-blank-at-eof diff --check -- . ':(exclude)backend/src/AiNexus.Api/Database/EDoc/**' }
-    else { git -c core.whitespace=-blank-at-eof diff --cached --check -- . ':(exclude)backend/src/AiNexus.Api/Database/EDoc/**' }
+    if ($WorkingTree) { git -c core.whitespace=-blank-at-eof diff --check -- . ':(exclude)backend/src/AiNexus.Platform/Data/EDoc/**' }
+    else { git -c core.whitespace=-blank-at-eof diff --cached --check -- . ':(exclude)backend/src/AiNexus.Platform/Data/EDoc/**' }
     if ($LASTEXITCODE -ne 0) { throw 'Staged source has whitespace errors.' }
     $taskScope = if ($WorkingTree) { 'Working-tree' } else { 'Staged' }
     Write-Output "$taskScope repository checks passed: $($taskFiles.Count) files; local/generated paths excluded, public settings empty, no detected live keys or local password/key values."

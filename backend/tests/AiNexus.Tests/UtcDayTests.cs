@@ -1,5 +1,5 @@
 using System.Globalization;
-using AiNexus.BuildingBlocks;
+using AiNexus.Platform.Time;
 using Xunit;
 
 namespace AiNexus.Tests;

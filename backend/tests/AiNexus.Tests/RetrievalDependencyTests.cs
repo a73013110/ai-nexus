@@ -1,5 +1,5 @@
-using AiNexus.Modules.Knowledge;
-using AiNexus.Modules.Operations;
+using AiNexus.Features.Knowledge;
+using AiNexus.Features.Operations;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;

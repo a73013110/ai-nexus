@@ -69,8 +69,8 @@ dotnet dev-certs https --trust
 資料結構修改先更新 entity／mapping，再新增 migration 與 DBA 審閱 SQL：
 
 ```powershell
-dotnet ef migrations add DescriptiveChange --project backend/src/AiNexus.Api --output-dir BuildingBlocks/Migrations
-dotnet ef migrations script --idempotent --project backend/src/AiNexus.Api --output db/migrations.sql
+dotnet ef migrations add DescriptiveChange --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Api --output-dir Persistence/Migrations
+dotnet ef migrations script --idempotent --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Api --output db/migrations.sql
 ./scripts/Initialize-Database.ps1
 ```
 
@@ -80,9 +80,12 @@ migration 在本機驗證後提交 source、designer、snapshot 與 SQL。正式
 
 | 路徑 | 責任 |
 | --- | --- |
-| `backend/src/AiNexus.Api/Modules/<feature>` | 按業務模組的 endpoint、entity、service／policy |
-| `backend/src/AiNexus.Api/BuildingBlocks` | host 組裝、共用契約／錯誤、context 與 migrations |
-| `backend/src/AiNexus.Api/Database` | SqlClient adapter、初始化、原 EDoc helpers |
+| `backend/src/AiNexus.Api` | host：設定載入、middleware 管線、模組組裝（`Program.cs`）與維運指令（`Commands/`） |
+| `backend/src/AiNexus.Features/<Module>` | 業務模組：`<Module>Module.cs` 註冊服務、政策與端點，旁邊是 endpoint、entity、service |
+| `backend/src/AiNexus.Features/Persistence` | 共用 `NexusDbContext`、migrations、資料庫初始化與 schema 檢查 |
+| `backend/src/AiNexus.Platform` | 不依賴業務的共用基礎：錯誤、安全、設定、診斷、HTTP 限制、原 EDoc helpers（`Data/EDoc`） |
+| `backend/tests/AiNexus.Tests` | 整合測試（`WebApplicationFactory`）、OpenAPI 合約與端點慣例 |
+| `backend/tests/AiNexus.ArchitectureTests` | 專案依賴方向與模組邊界（跨模組依賴只能減少） |
 | `frontend/src/app/features` | 按路由功能的 UI 與 store |
 | `frontend/src/app/core` | API、認證、偏好與 SSE 基礎服務 |
 | `frontend/src/app/shared/ui` | 無業務狀態的圖示、Markdown、訊號元件 |
