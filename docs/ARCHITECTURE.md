@@ -1,6 +1,6 @@
 # 架構與擴充邊界
 
-診斷入口為 MEL `ILogger`，`BuildingBlocks/Diagnostics` 集中白名單／遮罩、安全錯誤、W3C Activity、站外 durable JSONL、獨立 SQL 批次補送、管理查詢與清理。安全稽核保持獨立交易政策；OpenTelemetry 1.19.1 匯出可選，預設不用外部 collector。模組不依賴檔案／SQL sink。事件規範、擴充範例與維運限制見 [DIAGNOSTICS](DIAGNOSTICS.md)。
+診斷入口為 MEL `ILogger`，`AiNexus.Platform/Diagnostics` 集中白名單／遮罩、安全錯誤、W3C Activity、站外 durable JSONL、獨立 SQL 批次補送、管理查詢與清理。安全稽核保持獨立交易政策；OpenTelemetry 1.19.1 匯出可選，預設不用外部 collector。模組不依賴檔案／SQL sink。事件規範、擴充範例與維運限制見 [DIAGNOSTICS](DIAGNOSTICS.md)。
 
 AI Nexus 採 ASP.NET Core 模組化單體與 Angular 功能路由。模組各自管理 endpoint、資料模型與服務，共用 scoped NexusDbContext，讓跨模組異動仍在同一個 transaction 完成。需要獨立部署或強制依賴邊界時才拆 assembly；避免只有轉送用途的 service／repository。
 
@@ -44,7 +44,7 @@ flowchart LR
 | Repositories   | 使用者 Gitea token 保護、唯讀 repository／issues／檔案、固定 commit 匯入與來源追溯       |
 | Dashboard      | 組合已授權的資源、任務與費用統計；平台範圍另驗 admin，沒有第二套計量邏輯                 |
 
-BuildingBlocks.ApiEndpoints 組裝模組；BuildingBlocks 管 host、共用錯誤／契約、context 與 migrations，Database 管 SqlClient、markers 與原始 EDoc helpers。模組間使用明確服務，不新增能繞過 owner、ACL 或模型核准的資料入口。
+後端分三個專案，依賴方向固定為 Api → Features → Platform：`AiNexus.Api` 只做 host 組裝與維運指令；`AiNexus.Features` 的每個模組以 `<Module>Module`（`IFeatureModule`）註冊自己的服務、options 驗證、授權政策、rate limit 與端點，`FeatureModules` 是唯一的模組清單，`Persistence` 管共用 context 與 migrations；`AiNexus.Platform` 管錯誤、安全、設定、診斷、HTTP 限制與原始 EDoc helpers，不引用任何業務模組。端點的 body 上限以 `WithRequestBodyLimit` 宣告在端點旁。`AiNexus.ArchitectureTests` 檢查依賴方向，並以基準線確保跨模組依賴只減不增。模組間使用明確服務，不新增能繞過 owner、ACL 或模型核准的資料入口。
 
 Notifications 提供 owner scoped durable event 與 typed target，和聊天完成、具名分享、任務 terminal update 使用同一 transaction。RepositoryReviewService 在排程前固定 SHA／diff／模型設定，handler 沿用背景 checkpoint／ModelTaskService，結果讀取仍檢查目前 Gitea 權限；細節見 [通知](NOTIFICATIONS.md)、[程式碼 review](GITEA.md)。
 
@@ -101,7 +101,7 @@ Gitea 的連線／解除與匯入寫入由本機鎖協調，固定 commit 的成
 
 ## 資料層與新增功能
 
-EF Core 管 mapping、migration、實體關聯與跨模組 transaction。保留 [EDoc helpers](../backend/src/AiNexus.Api/Database/EDoc/README.md)，adapter 讓業務寫入共用 scoped context。Dapper 自有連線不自動加入 EF transaction；原生向量寫入明確使用目前 connection／transaction。來源 adapter 只使用固定 SQL 及參數。見 [資料庫](DATABASE.md)。
+EF Core 管 mapping、migration、實體關聯與跨模組 transaction。保留 [EDoc helpers](../backend/src/AiNexus.Platform/Data/EDoc/README.md)，adapter 讓業務寫入共用 scoped context。Dapper 自有連線不自動加入 EF transaction；原生向量寫入明確使用目前 connection／transaction。來源 adapter 只使用固定 SQL 及參數。見 [資料庫](DATABASE.md)。
 
 新增功能建立 module、資料及授權規則、migration、必要的 feature seed、lazy route、共用元件組合，再更新 OpenAPI／型別與實際邊界測試。不是每個操作都要新建授權 feature；工具可沿用所屬功能政策。新增 job 實作 IBackgroundJobHandler，在 RPC 前後驗授權並以 checkpoint 保存結果。
 

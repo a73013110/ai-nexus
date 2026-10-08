@@ -5,6 +5,7 @@
     <Project Path="src/AiNexus.Platform/AiNexus.Platform.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/AiNexus.ArchitectureTests/AiNexus.ArchitectureTests.csproj" />
     <Project Path="tests/AiNexus.Tests/AiNexus.Tests.csproj" />
   </Folder>
 </Solution>

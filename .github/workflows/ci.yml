@@ -31,6 +31,10 @@ jobs:
         run: dotnet restore backend/AiNexus.slnx --locked-mode
       - name: Build
         run: dotnet build backend/AiNexus.slnx --no-restore -c Release
+      - name: Verify EF model matches migrations
+        run: |
+          dotnet tool restore
+          dotnet ef migrations has-pending-model-changes --no-build --configuration Release --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Api
       - name: Test
         run: dotnet test backend/AiNexus.slnx --no-build -c Release --filter "Category!=Performance&Category!=Browser" --logger "trx" --results-directory artifacts/test-results
       - name: Upload test results

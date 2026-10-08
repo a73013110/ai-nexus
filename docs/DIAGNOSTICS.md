@@ -4,7 +4,7 @@
 
 ## 架構與技術選擇
 
-業務模組只使用 `Microsoft.Extensions.Logging.ILogger`、結構化 message template、`Activity` 與既有稽核服務。`BuildingBlocks/Diagnostics` 集中處理欄位白名單、遮罩、查證代碼、例外分類、佇列、檔案、SQL、查詢與清理，不讓模組依賴儲存目的地。
+業務模組只使用 `Microsoft.Extensions.Logging.ILogger`、結構化 message template、`Activity` 與既有稽核服務。`AiNexus.Platform/Diagnostics` 集中處理欄位白名單、遮罩、查證代碼、例外分類、佇列、檔案、SQL、查詢與清理，不讓模組依賴儲存目的地。
 
 使用既有 .NET 10 logging API 和 OpenTelemetry .NET **1.19.1**，套件版本與 lockfiles 一起維護。Serilog 是可用的成熟選擇，但一般 rolling file sink 並不包含本案所需的 SQL 補送 checkpoint、多執行個體協調和特權讀取稽核。因此採一個 MEL provider、一份同時作為輪替日誌及 durable replay journal 的檔案，避免兩套不同保存結果；沒有為選配匯出引入第二個未遮罩的 application logger。這不是通用可任意序列化的 logging sink；邊界只接受受控 metadata。
 
