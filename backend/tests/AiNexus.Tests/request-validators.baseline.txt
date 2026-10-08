@@ -31,6 +31,4 @@ AiNexus.Features.Knowledge.KnowledgeSelectionDto
 AiNexus.Features.Knowledge.TextDocumentRequest
 AiNexus.Features.Projects.ConversationProjectRequest
 AiNexus.Features.Projects.ProjectConversationRequest
-AiNexus.Features.Projects.ProjectRequest
-AiNexus.Features.Projects.ProjectTemplateRequest
 AiNexus.Features.Repositories.RepositoryImportRequest
