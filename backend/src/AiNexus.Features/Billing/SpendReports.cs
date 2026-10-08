@@ -80,7 +80,7 @@ public sealed class SpendReports(NexusDbContext db, ModelPresentation presentati
     }
     public async Task<Result<ConversationSpendDto>> ConversationAsync(Guid owner, Guid id, CancellationToken ct)
     {
-        if (!await db.Conversations.AnyAsync(x => x.Id == id && x.OwnerId == owner && !x.IsDeleted, ct)) return Error.NotFound("conversation_not_found");
+        if (!await db.Conversations.AnyAsync(x => x.Id == id && x.OwnerId == owner, ct)) return Error.NotFound("conversation_not_found");
         var calls = db.Set<ModelCharge>().AsNoTracking().Where(x => x.OwnerId == owner && x.ConversationId == id);
         var legacy = await db.Runs.CountAsync(x => x.ConversationId == id && !db.Set<ModelCharge>().Any(c => c.Id == x.Id), ct);
         var count = await calls.CountAsync(ct); var pending = await calls.CountAsync(x => x.State == "pending", ct);

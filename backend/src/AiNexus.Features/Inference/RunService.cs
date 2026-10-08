@@ -4,6 +4,7 @@ using AiNexus.Features.Persistence;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Operations;
 using AiNexus.Features.Billing;
+using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Inference;
@@ -47,7 +48,7 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
         AddEvent(db, run, "status");
         await conversations.UpdateAnswerAsync(run, ct);
         db.AuditEvents.Add(new AuditEvent { OwnerId = run.OwnerId, Action = "run.finished", ResourceId = run.Id, Result = error ?? status });
-        var title = await db.Conversations.Where(x => x.Id == run.ConversationId).Select(x => x.Title).SingleAsync(ct);
+        var title = await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.Id == run.ConversationId).Select(x => x.Title).SingleAsync(ct);
         await notifications.PublishAsync(run.OwnerId, "run:" + run.Id, "conversation." + status,
             status == "failed" ? "error" : status == "completed" ? "success" : "info",
             status == "completed" ? "AI 回答已完成" : status == "failed" ? "AI 回答未完成" : "AI 回答已停止", status == "failed" ? Issues.Message(run.IssueCode) : title, "conversation", run.ConversationId, ct, run.IssueCode);

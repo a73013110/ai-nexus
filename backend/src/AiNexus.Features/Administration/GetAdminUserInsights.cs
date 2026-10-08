@@ -3,6 +3,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Administration;
@@ -23,7 +24,7 @@ internal sealed class GetAdminUserInsights(NexusDbContext db, AdministrativeRead
         if (user is null) return AdministrationErrors.NotFound;
         var roles = await db.Set<UserRole>().Where(x => x.UserId == id).Select(x => x.RoleId).ToListAsync(ct);
         var report = await usage.ForOwnerAsync(id, ct);
-        var detail = new AdminUserDetailDto(new(id, user.Account, user.DisplayName, user.LastSeenAt, roles, null, user.Enabled, UserAccounts.Authentication(user), report.Storage), report, await usage.KindsAsync(id, ct), await db.Conversations.CountAsync(x => x.OwnerId == id, ct));
+        var detail = new AdminUserDetailDto(new(id, user.Account, user.DisplayName, user.LastSeenAt, roles, null, user.Enabled, UserAccounts.Authentication(user), report.Storage), report, await usage.KindsAsync(id, ct), await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).CountAsync(x => x.OwnerId == id, ct));
         var audited = await reads.RecordAsync(actor, "admin.user_usage_read", id, new { userId = id }, ct);
         return audited.IsSuccess ? detail : audited.Error;
     }

@@ -4,6 +4,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Features.Operations;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Knowledge;
@@ -32,7 +33,7 @@ internal sealed class DeleteDocument(NexusDbContext db, DocumentAccess documents
             if (!current.IsSuccess) return current.Error;
             var document = current.Value;
             document.IsDeleted = true; document.Status = "deleted"; var attachment = document.AttachmentId; document.AttachmentId = null;
-            (await db.Set<WorkspaceResource>().SingleAsync(x => x.Id == id, ct)).IsDeleted = true;
+            (await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == id, ct)).IsDeleted = true;
             await db.Set<BackgroundJob>().Where(x => x.SubjectId == id && (x.Status == "running" || x.Status == "queued")).ExecuteUpdateAsync(p => p.SetProperty(x => x.CancelRequested, true), ct);
             await db.Set<AttachmentReference>().Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
             await db.Set<KnowledgeChunk>().Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
