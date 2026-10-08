@@ -43,6 +43,13 @@ internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
 - 需要資料庫的規則（重複、配額、擁有權）屬於 handler，不放 validator。
 - `EndpointConventionTests` 以 `request-validators.baseline.txt` 管控尚未有 validator 的 request，新增 request 必須有 validator；補上後刪掉該行。
 
+## 軟刪除
+
+- `Conversation`、`WorkspaceResource` 在各自的 `IEntityTypeConfiguration` 宣告具名 query filter：`HasQueryFilter(SoftDelete.Filter, x => !x.IsDeleted)`（`AiNexus.Platform.Data.SoftDelete`）。一般查詢、join 與子查詢預設不含已刪除列，不必再寫 `!x.IsDeleted`。join 到這兩個 entity 的查詢也會一併濾掉，改寫 join 時要確認語意。
+- 需要看到已刪除列的查詢以名稱退出：`IgnoreQueryFilters([SoftDelete.Filter])`，不要用無參數版本（會連其他 filter 一起關掉）。退出作用於**整個查詢**，同一查詢裡其他有 filter 的 entity 也會看到已刪除列，必要時自行補條件。適用：管理端稽核讀取、容器刪除時清除已刪除子項的連結、背景任務收尾（對話或文件在處理中被刪除）、清理／保留工作。
+- 運算式樹內（`Where(x => ...)` 的子查詢）不能寫集合運算式，先在外面宣告 `var rows = db.Set<T>().IgnoreQueryFilters([SoftDelete.Filter]);` 再引用。
+- `KnowledgeDocument`、`NexusUser.DeletedAt` 沒有 filter，仍明確寫條件：文件與其 `WorkspaceResource` 同步刪除，文件本身的 `IsDeleted` 是判斷依據；刪除的使用者保留供稽核與歷史顯示。Dapper／原生 SQL 不受 filter 影響，必須自行加條件。
+
 ## 授權
 
 - policy 名稱用 `Policies.*` 或模組常數，不要寫字串。`EndpointConventionTests` 檢查每個端點都宣告授權，且每個 policy 都已註冊。

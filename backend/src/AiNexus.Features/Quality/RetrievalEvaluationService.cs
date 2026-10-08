@@ -7,6 +7,7 @@ using AiNexus.Features.Operations;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Knowledge;
+using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -39,7 +40,7 @@ public sealed class RetrievalEvaluationService(NexusDbContext db, RetrievalAutho
     }
     internal async Task<string> FingerprintAsync(EmbeddingProfile profile, IReadOnlyList<Guid> collections, CancellationToken ct)
     {
-        var documents = await (from d in db.Set<KnowledgeDocument>().AsNoTracking() join r in db.Set<WorkspaceResource>().AsNoTracking() on d.Id equals r.Id
+        var documents = await (from d in db.Set<KnowledgeDocument>().AsNoTracking() join r in db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).AsNoTracking() on d.Id equals r.Id
             where !d.IsDeleted && d.CollectionId != null && collections.Contains(d.CollectionId.Value) orderby d.Id select new { d.Id, d.TextVersion, r.UpdatedAt, d.Status }).ToArrayAsync(ct);
         var bytes = JsonSerializer.SerializeToUtf8Bytes(new { profile.Key, Settings = options.Value, Ollama = inference.Value.BaseUrl, Documents = documents }, Json);
         return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();

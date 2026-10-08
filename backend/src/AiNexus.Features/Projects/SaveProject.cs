@@ -44,7 +44,7 @@ internal sealed class SaveProject(NexusDbContext db, ResourceAccess access, Reso
     public async Task<Result<ProjectDto>> CreateAsync(Guid actor, ProjectRequest request, CancellationToken ct)
     {
         if (!ProjectQueries.NameIsValid(request.Name)) return ProjectErrors.InvalidName;
-        if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == Project.Kind && !x.IsDeleted, ct) >= Project.MaxPerOwner) return ProjectErrors.Limit;
+        if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == Project.Kind, ct) >= Project.MaxPerOwner) return ProjectErrors.Limit;
         var resource = new WorkspaceResource { OwnerId = actor, Name = ResourceAccess.Name(request.Name), Kind = Project.Kind };
         db.Add(resource); db.Add(new Project { Id = resource.Id, Description = request.Description.Trim(), Instructions = request.Instructions.Trim() });
         db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource.Id, Action = "project.created", Result = "created" });

@@ -93,7 +93,7 @@ internal sealed class CreateShare(NexusDbContext db, ResourceAccess access, Shar
             if (revision is null) return SharingErrors.Unavailable;
             return new SourceSnapshot(revision.Title, new(revision.Content, revision.Version, []), []);
         }
-        var conversation = await db.Conversations.AsNoTracking().SingleOrDefaultAsync(x => x.Id == request.SourceId && x.OwnerId == actor && !x.IsDeleted, ct);
+        var conversation = await db.Conversations.AsNoTracking().SingleOrDefaultAsync(x => x.Id == request.SourceId && x.OwnerId == actor, ct);
         if (conversation is null) return SharingErrors.Unavailable;
         if (await db.Runs.AnyAsync(x => x.ConversationId == conversation.Id && x.ActiveOwnerId != null, ct)) return SharingErrors.GenerationActive;
         var all = await db.Messages.AsNoTracking().Where(x => x.ConversationId == conversation.Id).ToListAsync(ct);

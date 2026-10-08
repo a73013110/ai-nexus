@@ -44,7 +44,7 @@ internal sealed class CreateArtifact(NexusDbContext db, ResourceAccess access, C
             if (conversation is null) return ArtifactErrors.MessageNotFound;
             await conversations.OwnedAsync(actor, conversation.Value, ct);
         }
-        if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == Artifact.Kind && !x.IsDeleted, ct) >= Artifact.MaxPerOwner) return ArtifactErrors.LimitReached;
+        if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == Artifact.Kind, ct) >= Artifact.MaxPerOwner) return ArtifactErrors.LimitReached;
         if (request.ProjectId is Guid project)
         {
             if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureIds.Projects)) return ArtifactErrors.ProjectAccessRequired;

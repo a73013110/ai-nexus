@@ -2,6 +2,7 @@ using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Operations;
 using AiNexus.Features.Collaboration;
+using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -90,7 +91,7 @@ public sealed class DocumentIndexer(NexusDbContext db, EmbeddingProfiles profile
     private async Task ReadyAsync(JobExecution execution, KnowledgeDocument document, CancellationToken ct)
     {
         document.Status = "ready";
-        (await db.Set<WorkspaceResource>().SingleAsync(x => x.Id == document.Id, ct)).UpdatedAt = DateTimeOffset.UtcNow;
+        (await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == document.Id, ct)).UpdatedAt = DateTimeOffset.UtcNow;
         await execution.CheckpointAsync("使用中索引已完成", document.ChunkCount, document.ChunkCount, ct);
     }
     public async Task IndexCurrentAsync(JobExecution execution, KnowledgeDocument document, CancellationToken ct)
@@ -105,7 +106,7 @@ public sealed class DocumentIndexer(NexusDbContext db, EmbeddingProfiles profile
     public async Task IndexAsync(JobExecution execution, KnowledgeDocument document, EmbeddingProfile target, CancellationToken ct)
     {
         // Reindex uses saved pages, under the source owner's ACL and quota, without reopening OCR.
-        var owner = await db.Set<WorkspaceResource>().Where(x => x.Id == document.Id).Select(x => x.OwnerId).SingleAsync(ct);
+        var owner = await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.Id == document.Id).Select(x => x.OwnerId).SingleAsync(ct);
         await documents.RequireAsync(owner, document.Id, ct, write: true);
         await PrepareAsync(execution, document, ct);
         var active = await profiles.ActiveAsync(ct);

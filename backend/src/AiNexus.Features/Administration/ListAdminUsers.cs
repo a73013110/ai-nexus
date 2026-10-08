@@ -4,6 +4,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Administration;
@@ -27,7 +28,7 @@ internal sealed class ListAdminUsers(NexusDbContext db, UsageReports reports, At
         var total = await query.CountAsync(ct); var rows = await query.OrderBy(x => x.Account).ThenBy(x => x.Id).Skip(offset).Take(100).ToListAsync(ct);
         var ids = rows.Select(x => x.Id).ToArray(); var roles = await db.Set<UserRole>().AsNoTracking().Where(x => ids.Contains(x.UserId)).ToListAsync(ct);
         var usage = (await reports.ByOwnersAsync(ids, ct)).ToDictionary(x => x.OwnerId, x => x.Usage);
-        var conversations = await db.Conversations.Where(x => ids.Contains(x.OwnerId)).GroupBy(x => x.OwnerId).Select(g => new { OwnerId = g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.OwnerId, x => x.Count, ct);
+        var conversations = await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).Where(x => ids.Contains(x.OwnerId)).GroupBy(x => x.OwnerId).Select(g => new { OwnerId = g.Key, Count = g.Count() }).ToDictionaryAsync(x => x.OwnerId, x => x.Count, ct);
         var storage = await quota.ForOwnersAsync(ids, ct);
         return new AdminUsersDto(rows.Select(x => new AdminUserDto(x.Id, x.Account, x.DisplayName, x.LastSeenAt, roles.Where(y => y.UserId == x.Id).Select(y => y.RoleId).ToArray(),
             new(usage.GetValueOrDefault(x.Id) ?? new(0, 0, 0, 0, 0, 0, 0), conversations.GetValueOrDefault(x.Id)), x.Enabled, UserAccounts.Authentication(x), storage[x.Id])).ToArray(), total, offset);

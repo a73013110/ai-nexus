@@ -5,6 +5,7 @@ using AiNexus.Features.Operations;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
+using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Knowledge;
@@ -48,7 +49,7 @@ internal sealed class UpdateTextDocument(NexusDbContext db, DocumentAccess docum
             db.Add(new AttachmentReference { ResourceId = id, AttachmentId = uploaded.Id });
             await db.Set<Attachment>().Where(x => x.Id == uploaded.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
             await db.Set<DocumentPage>().Where(x => x.DocumentId == id).ExecuteDeleteAsync(ct);
-            var resource = await db.Set<WorkspaceResource>().SingleAsync(x => x.Id == id, ct);
+            var resource = await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == id, ct);
             resource.Name = source.Title; resource.UpdatedAt = clock.GetUtcNow();
             document.JobId = jobs.Enqueue(actor, id, id, "document-ingest", document.FileName).Id;
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "document.text.updated", Result = "reindexing" });

@@ -1,6 +1,7 @@
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
+using AiNexus.Platform.Data;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -67,9 +68,9 @@ internal static class ConversationQueries
 
     public static bool TitleIsValid(string? title) => title?.Trim().Length is >= 1 and <= TitleMaxLength;
 
-    /// <summary>The user's own conversation that is not deleted, with its labels; null when there is none.</summary>
+    /// <summary>The user's own conversation that is not deleted (soft-delete filter), with its labels; null when there is none.</summary>
     public static Task<Conversation?> OwnedConversationAsync(this NexusDbContext db, Guid owner, Guid id, CancellationToken ct)
-        => db.Set<Conversation>().Include(x => x.Labels).SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner && !x.IsDeleted, ct);
+        => db.Set<Conversation>().Include(x => x.Labels).SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct);
 
     public static Task<bool> HasActiveRunAsync(this NexusDbContext db, Guid id, CancellationToken ct)
         => db.Set<GenerationRun>().AnyAsync(x => x.ConversationId == id && x.ActiveOwnerId != null, ct);
@@ -103,6 +104,7 @@ internal sealed class ConversationEntityConfiguration : IEntityTypeConfiguration
         conversation.Property(x => x.SystemInstruction).HasMaxLength(ConversationQueries.InstructionMaxLength);
         conversation.HasIndex(x => new { x.OwnerId, x.IsDeleted, x.UpdatedAt });
         conversation.HasIndex(x => new { x.OwnerId, x.IsDeleted, x.IsArchived, x.IsFavorite, x.UpdatedAt });
+        conversation.HasQueryFilter(SoftDelete.Filter, x => !x.IsDeleted);
         conversation.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
         conversation.HasOne<AiNexus.Features.Projects.Project>().WithMany().HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Restrict);
     }

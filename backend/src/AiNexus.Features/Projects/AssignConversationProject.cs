@@ -28,7 +28,7 @@ internal sealed class AssignConversationProject(NexusDbContext db, ResourceAcces
         await scheduler.StateGate.WaitAsync(ct);
         try
         {
-            var conversation = await db.Conversations.Include(x => x.Labels).SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor && !x.IsDeleted, ct);
+            var conversation = await db.Conversations.Include(x => x.Labels).SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor, ct);
             if (conversation is null) return ProjectErrors.ConversationMissing;
             if (await db.Runs.AnyAsync(x => x.ConversationId == id && x.ActiveOwnerId != null, ct)) return ProjectErrors.GenerationActive;
             if (projectId is Guid project)
