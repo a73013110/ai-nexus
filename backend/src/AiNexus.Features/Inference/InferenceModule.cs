@@ -1,3 +1,4 @@
+using AiNexus.Features.AccessControl;
 using AiNexus.Features.Configuration;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
@@ -5,6 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Inference;
 
+/// <summary>Models, context previews and chat runs. Other modules use <see cref="ModelTaskService"/>, <see cref="ModelCatalog"/>, <see cref="ModelPresentation"/> and <see cref="UsageReports"/>; each HTTP use case has its own file.</summary>
 public sealed class InferenceModule : IFeatureModule
 {
     /// <summary>Prompt-bearing requests scale with the configured input limit (never below the default JSON limit).</summary>
@@ -18,6 +20,9 @@ public sealed class InferenceModule : IFeatureModule
         services.AddSingleton<ModelQuotaLock>();
         services.AddScoped<ModelTaskService>();
         services.AddScoped<RunService>();
+        services.AddScoped<PreviewContext>();
+        services.AddScoped<CreateRun>();
+        services.AddScoped<CancelRun>();
         services.AddScoped<RunLeaseRecovery>();
         services.AddScoped<ContextBuilder>();
         services.AddOptions<InferenceOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Inference(c, o)).ValidateOnStart();
@@ -39,7 +44,17 @@ public sealed class InferenceModule : IFeatureModule
         services.AddHostedService<RunRecoveryWorker>();
     }
 
-    public static void MapEndpoints(RouteGroupBuilder api) => api.MapInference();
+    // Endpoint order is the published OpenAPI order.
+    public static void MapEndpoints(RouteGroupBuilder api)
+    {
+        var routes = api.MapGroup("").RequireAuthorization(Policies.Chat).WithTags("Inference");
+        ListModels.Map(routes);
+        PreviewContext.Map(routes);
+        CreateRun.Map(routes);
+        GetRun.Map(routes);
+        CancelRun.Map(routes);
+        RunEventsEndpoint.Map(routes);
+    }
 }
 
 internal sealed class InferenceOptionsValidator : IValidateOptions<InferenceOptions>

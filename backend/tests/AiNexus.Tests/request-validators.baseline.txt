@@ -5,15 +5,10 @@ AiNexus.Features.Administration.ModelPolicyRequest
 AiNexus.Features.Administration.RoleUpdateRequest
 AiNexus.Features.Administration.UserRolesRequest
 AiNexus.Features.Attachments.AttachmentStorageLimitRequest
-AiNexus.Features.Collaboration.ResourceAclRequest
 AiNexus.Features.Conversations.SelectBranchRequest
-AiNexus.Features.Diagnostics.ClientIssueRequest
 AiNexus.Features.Identity.AdLoginRequest
-AiNexus.Features.Inference.ContextPreviewRequest
-AiNexus.Features.Inference.CreateRunRequest
 AiNexus.Features.Knowledge.AddDocumentRequest
 AiNexus.Features.Knowledge.CollectionRequest
-AiNexus.Features.Knowledge.KnowledgeSearchRequest
 AiNexus.Features.Knowledge.KnowledgeSelectionDto
 AiNexus.Features.Knowledge.TextDocumentRequest
 AiNexus.Features.Projects.ConversationProjectRequest

@@ -3,80 +3,16 @@ using System.Diagnostics;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Conversations;
-using AiNexus.Features.Identity;
-using AiNexus.Features.Collaboration;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Operations;
 
-public sealed class BackgroundJob
-{
-    public Guid Id { get; set; } = Guid.NewGuid();
-    public Guid OwnerId { get; set; }
-    public string? TraceId { get; set; }
-    public string? ParentSpanId { get; set; }
-    public Guid OperationId { get; set; }
-    public Guid? ResourceId { get; set; }
-    public Guid SubjectId { get; set; }
-    public string Kind { get; set; } = "";
-    public string Label { get; set; } = "";
-    public string Status { get; set; } = "queued";
-    public string Stage { get; set; } = "等待處理";
-    public string? ActiveKey { get; set; }
-    public Guid? LeaseToken { get; set; }
-    public DateTimeOffset? LeaseUntil { get; set; }
-    public bool CancelRequested { get; set; }
-    public int Attempt { get; set; }
-    public int CompletedUnits { get; set; }
-    public int? TotalUnits { get; set; }
-    public string? IssueCode { get; set; }
-    public string? ErrorCode { get; set; }
-    public string? ErrorMessage { get; set; }
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
-}
-public sealed record JobDto(Guid Id, string Kind, Guid SubjectId, string Label, string Status, string Stage, int Attempt, int CompletedUnits, int? TotalUnits, bool CancelRequested, string? ErrorCode, string? ErrorMessage, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, string? IssueCode = null);
 public interface IBackgroundJobHandler
 {
     string Kind { get; }
     Task ExecuteAsync(JobExecution execution, CancellationToken ct);
     Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct);
 }
-public sealed class JobService(NexusDbContext db, IServiceProvider services)
-{
-    public static JobDto Describe(BackgroundJob x) => new(x.Id, x.Kind, x.SubjectId, x.Label, x.Status, x.Stage, x.Attempt, x.CompletedUnits, x.TotalUnits, x.CancelRequested, x.ErrorCode, x.Status == "failed" ? Issues.Message(x.IssueCode) : null, x.CreatedAt, x.UpdatedAt, x.IssueCode);
-    public BackgroundJob Enqueue(Guid owner, Guid? resource, Guid subject, string kind, string label)
-    {
-        var job = new BackgroundJob { OwnerId = owner, ResourceId = resource, SubjectId = subject, Kind = kind, Label = label, ActiveKey = kind + ":" + subject.ToString("N") };
-        job.TraceId = Activity.Current?.TraceId.ToHexString() ?? ActivityTraceId.CreateRandom().ToHexString(); job.ParentSpanId = Activity.Current?.SpanId.ToHexString() ?? ActivitySpanId.CreateRandom().ToHexString(); job.OperationId = job.Id;
-        db.Add(job); return job; // The caller commits subject and job atomically.
-    }
-    public async Task<IReadOnlyList<JobDto>> ListAsync(Guid owner, CancellationToken ct) => (await db.Set<BackgroundJob>().AsNoTracking().Where(x => x.OwnerId == owner).OrderByDescending(x => x.CreatedAt).Take(100).ToListAsync(ct)).Select(Describe).ToList();
-    public async Task<BackgroundJob> OwnedAsync(Guid owner, Guid id, CancellationToken ct) => await db.Set<BackgroundJob>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct) ?? throw new ApiException(404, "job_not_found", "找不到這個背景任務。");
-    public async Task<JobDto> CancelAsync(Guid owner, Guid id, CancellationToken ct)
-    {
-        await OwnedAsync(owner, id, ct);
-        await db.Set<BackgroundJob>().Where(x => x.Id == id && (x.Status == "queued" || x.Status == "running"))
-            .ExecuteUpdateAsync(p => p.SetProperty(x => x.CancelRequested, true).SetProperty(x => x.UpdatedAt, DateTimeOffset.UtcNow), ct);
-        db.ChangeTracker.Clear(); return Describe(await OwnedAsync(owner, id, ct));
-    }
-    public async Task<JobDto> RetryAsync(Guid owner, Guid id, CancellationToken ct)
-    {
-        var job = await OwnedAsync(owner, id, ct);
-        if (job.Status is not ("failed" or "cancelled")) throw new ApiException(409, "job_not_retryable", "只有失敗或已取消的任務可以重試。");
-        if (job.Attempt >= 6) throw new ApiException(409, "job_retry_limit", "此任務已嘗試六次。請確認設定後重新建立來源。");
-        var handler = services.GetServices<IBackgroundJobHandler>().SingleOrDefault(x => x.Kind == job.Kind) ?? throw new ApiException(409, "job_handler_missing", "此任務類型已停用。");
-        await handler.ValidateRetryAsync(job, ct);
-        var active = job.Kind + ":" + job.SubjectId.ToString("N");
-        if (await db.Set<BackgroundJob>().AnyAsync(x => x.ActiveKey == active && x.Id != id, ct)) throw new ApiException(409, "job_active", "同一來源已有處理中的任務。");
-        var changed = await db.Set<BackgroundJob>().Where(x => x.Id == id && x.Status == job.Status && x.LeaseToken == null).ExecuteUpdateAsync(p =>
-            p.SetProperty(x => x.Status, "queued").SetProperty(x => x.Stage, "等待重試").SetProperty(x => x.ActiveKey, active)
-             .SetProperty(x => x.CancelRequested, false).SetProperty(x => x.ErrorCode, (string?)null).SetProperty(x => x.IssueCode, (string?)null).SetProperty(x => x.ErrorMessage, (string?)null).SetProperty(x => x.UpdatedAt, DateTimeOffset.UtcNow), ct);
-        if (changed != 1) throw new ApiException(409, "job_changed", "任務狀態已改變，請重新載入。");
-        db.ChangeTracker.Clear(); return Describe(await OwnedAsync(owner, id, ct));
-    }
-}
-
 // Every persisted checkpoint is fenced by the current lease in the same transaction.
 public sealed class JobExecution(NexusDbContext db, BackgroundJob job, Guid lease)
 {
@@ -184,18 +120,5 @@ public sealed class BackgroundJobWorker(IServiceScopeFactory scopes, StorageRead
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
         catch (Exception ex) { logger.LogWarning("Job {JobId} lease renewal failed ({ErrorType}).", id, ex.GetType().Name); execution.Cancel(); }
-    }
-}
-public static class BackgroundJobConfiguration
-{
-    public static void Configure(ModelBuilder model)
-    {
-        var job = model.Entity<BackgroundJob>(); job.ToTable("BackgroundJobs", "operations"); job.HasKey(x => x.Id);
-        job.Property(x => x.Kind).HasMaxLength(32); job.Property(x => x.Label).HasMaxLength(180); job.Property(x => x.Status).HasMaxLength(16); job.Property(x => x.Stage).HasMaxLength(120);
-        job.Property(x => x.IssueCode).HasMaxLength(40); job.Property(x => x.TraceId).HasMaxLength(32); job.Property(x => x.ParentSpanId).HasMaxLength(16);
-        job.Property(x => x.ActiveKey).HasMaxLength(100); job.Property(x => x.ErrorCode).HasMaxLength(80); job.Property(x => x.ErrorMessage).HasMaxLength(240);
-        job.HasIndex(x => x.ActiveKey).IsUnique().HasFilter("[ActiveKey] IS NOT NULL"); job.HasIndex(x => new { x.Status, x.LeaseUntil, x.CreatedAt }); job.HasIndex(x => new { x.OwnerId, x.CreatedAt });
-        job.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
-        job.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.ResourceId).OnDelete(DeleteBehavior.Restrict);
     }
 }

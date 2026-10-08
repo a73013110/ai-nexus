@@ -7,7 +7,10 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace AiNexus.Features.Diagnostics;
 
-/// <summary>Persistent diagnostic store, administrator log queries and browser issue intake. Logging itself is a platform concern.</summary>
+/// <summary>
+/// Persistent diagnostic store, administrator log queries and browser issue intake. Logging itself is a platform concern.
+/// Each use case has its own file.
+/// </summary>
 public sealed class DiagnosticsModule : IFeatureModule
 {
     public const string ClientIssueRateLimit = "client-issues", QueryRateLimit = "diagnostic-query", ExportRateLimit = "diagnostic-export";
@@ -28,7 +31,18 @@ public sealed class DiagnosticsModule : IFeatureModule
         });
     }
 
-    public static void MapEndpoints(RouteGroupBuilder api) => api.MapDiagnostics();
+    // Endpoint order is the published OpenAPI order.
+    public static void MapEndpoints(RouteGroupBuilder api)
+    {
+        // Log reads are rate limited and kept out of the request log; each read is audited by DiagnosticQuery.
+        var logs = api.MapGroup("/admin/logs").RequireAuthorization(DiagnosticConfiguration.QueryPolicy).WithTags("System logs").RequireRateLimiting(QueryRateLimit)
+            .WithMetadata(new SuppressSuccessfulRequestLog());
+        QuerySystemLogs.Map(logs);
+        GetSystemLogHealth.Map(logs);
+        GetSystemLogDetail.Map(logs);
+        ExportSystemLogs.Map(logs);
+        ReportClientIssue.Map(api);
+    }
 
     private static string PerUser(HttpContext http)
         => http.User.FindFirst(SessionIdentity.UserId)?.Value ?? http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
