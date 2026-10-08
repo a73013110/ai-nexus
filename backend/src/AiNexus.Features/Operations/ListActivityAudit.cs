@@ -1,29 +1,27 @@
-using AiNexus.Features.AccessControl;
-using AiNexus.Features.Inference;
-using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
+using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Operations;
 
-public sealed record AuditDto(long Id, string Actor, string Action, Guid? ResourceId, string? Result, DateTimeOffset At, string? DetailsJson, string? ActingAs = null,
-    string? Category = null, string? TraceId = null, Guid? OperationId = null, string? IssueCode = null);
-public sealed record AuditCatalogDto(IReadOnlyList<FeatureDto> Features, IReadOnlyList<ModelDto> Models);
-
-/// <summary>Read-only investigations do not depend on account or policy administration.</summary>
-public sealed class ActivityAuditReader(NexusDbContext db, ModelCatalog catalog)
+/// <summary>
+/// The newest 100 audit records matching the filters, before an optional cursor. Actor and subject accounts are joined
+/// in; stored details are redacted again on the way out.
+/// </summary>
+internal sealed class ListActivityAudit(NexusDbContext db)
 {
-    public async Task<AuditCatalogDto> CatalogAsync(CancellationToken ct) => new(
-        await db.Set<Feature>().AsNoTracking().OrderBy(x => x.SortOrder).ThenBy(x => x.Id)
-            .Select(x => new FeatureDto(x.Id, x.Name, x.Route)).ToArrayAsync(ct),
-        (await catalog.ProfilesAsync(ct)).Select(x => x.ToDto()).ToArray());
+    public static void Map(RouteGroupBuilder audit) => audit
+        .MapGet("", async (long? before, string? search, string? action, string? result, DateTimeOffset? from, DateTimeOffset? until, string? category, string? traceId, ListActivityAudit handler, CancellationToken ct) =>
+            (await handler.HandleAsync(before, search, action, result, from, until, category, traceId, ct)).ToHttpResult())
+        .WithName("ListAdminAudit").Produces<IReadOnlyList<AuditDto>>();
 
-    public async Task<IReadOnlyList<AuditDto>> QueryAsync(long? before, CancellationToken ct, string? search = null, string? action = null, string? result = null, DateTimeOffset? from = null, DateTimeOffset? until = null, string? category = null, string? traceId = null)
+    public async Task<Result<IReadOnlyList<AuditDto>>> HandleAsync(long? before, string? search, string? action, string? result, DateTimeOffset? from, DateTimeOffset? until, string? category, string? traceId, CancellationToken ct)
     {
         if (search?.Length > 120 || action?.Length > 120 || result?.Length > 80 || before is <= 0 || from > until ||
             traceId is not null && (traceId.Length != 32 || !traceId.All(char.IsAsciiHexDigit)))
-            throw new ApiException(400, "invalid_audit_filter", "稽核篩選條件不正確。");
+            return OperationsErrors.InvalidAuditFilter;
+        if (!string.IsNullOrEmpty(category) && !AuditCategories.Values.Contains(category)) return OperationsErrors.InvalidAuditFilter;
         var query = from entry in AuditCategories.Filter(db.AuditEvents.AsNoTracking(), category)
                     join actorRecord in db.Users on (entry.ActorId ?? entry.OwnerId) equals actorRecord.Id into actors
                     from actor in actors.DefaultIfEmpty()
@@ -47,6 +45,6 @@ public sealed class ActivityAuditReader(NexusDbContext db, ModelCatalog catalog)
         var rows = await query.OrderByDescending(x => x.entry.Id).Take(100)
             .Select(x => new AuditDto(x.entry.Id, x.actor == null ? x.entry.Action == "identity.login" && x.entry.Result == "failed" ? "未驗證" : "system" : x.actor.Account, x.entry.Action, x.entry.ResourceId, x.entry.Result, x.entry.At, x.entry.DetailsJson, x.entry.ActorId != null && x.entry.ActorId != x.entry.OwnerId && x.subject != null ? x.subject.Account : null,
                 null, x.entry.TraceId, x.entry.OperationId, x.entry.IssueCode)).ToListAsync(ct);
-        return rows.Select(row => row with { Category = AuditCategories.For(row.Action), DetailsJson = AuditRedactor.Sanitize(row.DetailsJson, historical: true) }).ToArray();
+        return Result<IReadOnlyList<AuditDto>>.Ok(rows.Select(row => row with { Category = AuditCategories.For(row.Action), DetailsJson = AuditRedactor.Sanitize(row.DetailsJson, historical: true) }).ToArray());
     }
 }
