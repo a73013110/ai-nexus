@@ -20,5 +20,5 @@ public static class FeaturePolicies
 
     /// <summary>The conventional <c>feature:&lt;id&gt;</c> policy for one platform feature.</summary>
     public static IServiceCollection AddFeaturePolicy(this IServiceCollection services, string feature)
-        => services.AddFeaturePolicy("feature:" + feature, feature);
+        => services.AddFeaturePolicy(Policies.Prefix + feature, feature);
 }

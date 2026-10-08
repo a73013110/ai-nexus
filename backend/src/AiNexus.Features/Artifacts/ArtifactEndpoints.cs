@@ -1,6 +1,7 @@
 using AiNexus.Platform.Http;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
+using AiNexus.Features.AccessControl;
 
 namespace AiNexus.Features.Artifacts;
 
@@ -8,7 +9,7 @@ public static class ArtifactEndpoints
 {
     public static void MapArtifacts(this RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/artifacts").RequireAuthorization("feature:artifacts").WithTags("Artifacts").WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(ArtifactsModule.MaxContentCharacters));
+        var routes = api.MapGroup("/artifacts").RequireAuthorization(Policies.Artifacts).WithTags("Artifacts").WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(ArtifactsModule.MaxContentCharacters));
         routes.MapGet("", async (CurrentUser current, ArtifactService service, CancellationToken ct) => await service.ListAsync((await current.GetAsync(ct)).Id, ct)).WithName("ListArtifacts").Produces<IReadOnlyList<ArtifactSummaryDto>>();
         routes.MapPost("", async (CreateArtifactRequest request, CurrentUser current, ArtifactService service, CancellationToken ct) => await service.CreateAsync((await current.GetAsync(ct)).Id, request, ct)).WithName("CreateArtifact").Produces<ArtifactDto>();
         routes.MapGet("/{id:guid}", async (Guid id, int? version, CurrentUser current, ArtifactService service, CancellationToken ct) => await service.GetAsync((await current.GetAsync(ct)).Id, id, version, ct)).WithName("GetArtifact").Produces<ArtifactDto>();
@@ -24,6 +25,6 @@ public static class ArtifactEndpoints
             await service.GetAsync(actor, id, artifact.Version, ct); http.Response.Headers.CacheControl = "private, no-store";
             return Results.File(output.Data, output.ContentType, artifact.Resource.Name + "." + format);
         }).WithName("ExportArtifact");
-        api.MapPost("/text/transform", async (TransformTextRequest request, CurrentUser current, TextTransformService service, CancellationToken ct) => await service.TransformAsync((await current.GetAsync(ct)).Id, request, ct)).RequireAuthorization("feature:text").WithTags("Artifacts").WithName("TransformText").Produces<TransformTextDto>();
+        api.MapPost("/text/transform", async (TransformTextRequest request, CurrentUser current, TextTransformService service, CancellationToken ct) => await service.TransformAsync((await current.GetAsync(ct)).Id, request, ct)).RequireAuthorization(Policies.Text).WithTags("Artifacts").WithName("TransformText").Produces<TransformTextDto>();
     }
 }

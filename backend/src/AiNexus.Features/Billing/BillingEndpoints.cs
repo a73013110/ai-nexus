@@ -3,6 +3,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Features.Operations;
 using AiNexus.Features.Administration;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.AccessControl;
 
 namespace AiNexus.Features.Billing;
 
@@ -13,7 +14,7 @@ public static class BillingEndpoints
         root.MapGet("/billing/spend", async (DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, CurrentUser current, SpendReports reports, CancellationToken ct) =>
             Results.Ok(await reports.ReportAsync((await current.GetAsync(ct)).Id, from, until, offsetMinutes, false, ct))).WithName("GetPersonalSpend").Produces<SpendReportDto>();
         root.MapGet("/conversations/{id:guid}/spend", async (Guid id, CurrentUser current, SpendReports reports, CancellationToken ct) =>
-            Results.Ok(await reports.ConversationAsync((await current.GetAsync(ct)).Id, id, ct))).RequireAuthorization("feature:chat").WithName("GetConversationSpend").Produces<ConversationSpendDto>();
+            Results.Ok(await reports.ConversationAsync((await current.GetAsync(ct)).Id, id, ct))).RequireAuthorization(Policies.Chat).WithName("GetConversationSpend").Produces<ConversationSpendDto>();
         var admin = root.MapGroup("/admin/billing").RequireAuthorization(AdministrationConfiguration.Policy).WithTags("Billing");
         admin.MapGet("/targets", (BillingService service) => Results.Ok(service.Targets())).WithName("ListPriceTargets").Produces<IReadOnlyList<PriceTargetDto>>();
         admin.MapGet("/prices", async (BillingService service, CancellationToken ct) => Results.Ok(await service.PricesAsync(ct))).WithName("ListModelPrices").Produces<IReadOnlyList<PriceDto>>();

@@ -8,7 +8,7 @@ public static class ConversationEndpoints
 {
     public static void MapConversations(this RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/conversations").RequireAuthorization(BuiltInAccess.ChatPolicy).WithTags("Conversations");
+        var routes = api.MapGroup("/conversations").RequireAuthorization(Policies.Chat).WithTags("Conversations");
         routes.MapGet("", async (string? search, int? offset, string? view, string? label, CurrentUser current, ConversationService service, CancellationToken ct) => Results.Ok(await service.ListAsync((await current.GetAsync(ct)).Id, search, offset ?? 0, ct, view ?? "active", label))).WithName("ListConversations").Produces<IReadOnlyList<ConversationDto>>();
         routes.MapGet("/labels", async (CurrentUser current, ConversationOrganization organization, CancellationToken ct) => Results.Ok(await organization.LabelsAsync((await current.GetAsync(ct)).Id, ct))).WithName("ListConversationLabels").Produces<IReadOnlyList<string>>();
         routes.MapPost("/import", async (ConversationBackup body, CurrentUser current, ConversationOrganization organization, CancellationToken ct) => Results.Ok(await organization.ImportAsync((await current.GetAsync(ct)).Id, body, ct))).WithRequestBodyLimit(ConversationsModule.ImportBodyLimit).WithName("ImportConversation").Produces<ConversationDto>();

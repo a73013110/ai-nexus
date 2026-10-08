@@ -1,5 +1,6 @@
 using AiNexus.Features.Identity;
 using AiNexus.Features.Knowledge;
+using AiNexus.Features.AccessControl;
 
 namespace AiNexus.Features.Repositories;
 
@@ -7,7 +8,7 @@ public static class RepositoryEndpoints
 {
     public static void MapRepositories(this RouteGroupBuilder root)
     {
-        var api = root.MapGroup("/repositories").RequireAuthorization("feature:repositories").WithTags("Repositories");
+        var api = root.MapGroup("/repositories").RequireAuthorization(Policies.Repositories).WithTags("Repositories");
         api.MapGet("/commits", async (string repository, CurrentUser current, RepositoryService service, CancellationToken ct) => await service.CommitsAsync((await current.GetAsync(ct)).Id, repository, ct)).WithName("ListRepositoryCommits").Produces<IReadOnlyList<RepositoryCommitDto>>();
         api.MapGet("/reviews", async (string? repository, CurrentUser current, RepositoryReviewService service, CancellationToken ct) => await service.ListAsync((await current.GetAsync(ct)).Id, repository, ct)).WithName("ListRepositoryReviews").Produces<IReadOnlyList<RepositoryReviewDto>>();
         api.MapPost("/reviews", async (CreateRepositoryReviewRequest body, CurrentUser current, RepositoryReviewService service, CancellationToken ct) => await service.CreateAsync((await current.GetAsync(ct)).Id, body, ct)).WithName("CreateRepositoryReview").Produces<RepositoryReviewDto>();
@@ -22,6 +23,6 @@ public static class RepositoryEndpoints
         api.MapGet("/file", async (string repository, string commit, string path, CurrentUser current, RepositoryService service, CancellationToken ct) => Results.Ok(await service.FileAsync((await current.GetAsync(ct)).Id, repository, commit, path, ct))).WithName("ReadRepositoryFile").Produces<RepositoryFileDto>();
         api.MapGet("/issues", async (string repository, CurrentUser current, RepositoryService service, CancellationToken ct) => Results.Ok(await service.IssuesAsync((await current.GetAsync(ct)).Id, repository, ct))).WithName("ListRepositoryIssues").Produces<IReadOnlyList<RepositoryIssueDto>>();
         api.MapPost("/import", async (RepositoryImportRequest body, CurrentUser current, RepositoryService service, CancellationToken ct) => Results.Ok(await service.ImportAsync((await current.GetAsync(ct)).Id, body, ct)))
-            .RequireAuthorization("feature:knowledge").WithName("ImportRepositoryFile").Produces<DocumentDto>();
+            .RequireAuthorization(Policies.Knowledge).WithName("ImportRepositoryFile").Produces<DocumentDto>();
     }
 }

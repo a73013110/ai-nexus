@@ -12,7 +12,7 @@ public sealed class ConversationsModule : IFeatureModule
     {
         builder.Services.AddScoped<ConversationService>();
         builder.Services.AddScoped<ConversationOrganization>();
-        builder.Services.AddFeaturePolicy(BuiltInAccess.ChatFeature);
+        builder.Services.AddFeaturePolicy(FeatureIds.Chat);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api) => api.MapConversations();

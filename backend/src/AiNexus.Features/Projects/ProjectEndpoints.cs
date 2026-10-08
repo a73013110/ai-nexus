@@ -4,6 +4,7 @@ using AiNexus.Features.Inference;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Knowledge;
+using AiNexus.Features.AccessControl;
 
 namespace AiNexus.Features.Projects;
 
@@ -11,8 +12,8 @@ public static class ProjectEndpoints
 {
     public static void MapProjects(this RouteGroupBuilder api)
     {
-        api.MapPut("/conversations/{id:guid}/project", async (Guid id, ConversationProjectRequest body, CurrentUser u, ProjectService s, AiNexus.Features.Inference.GenerationScheduler scheduler, CancellationToken ct) => Results.Ok(await s.AssignConversationAsync((await u.GetAsync(ct)).Id, id, body.ProjectId, scheduler, ct))).RequireAuthorization(AiNexus.Features.AccessControl.BuiltInAccess.ChatPolicy).Produces<ConversationDto>();
-        var routes = api.MapGroup("/projects").RequireAuthorization("feature:projects").WithTags("Projects");
+        api.MapPut("/conversations/{id:guid}/project", async (Guid id, ConversationProjectRequest body, CurrentUser u, ProjectService s, AiNexus.Features.Inference.GenerationScheduler scheduler, CancellationToken ct) => Results.Ok(await s.AssignConversationAsync((await u.GetAsync(ct)).Id, id, body.ProjectId, scheduler, ct))).RequireAuthorization(Policies.Chat).Produces<ConversationDto>();
+        var routes = api.MapGroup("/projects").RequireAuthorization(Policies.Projects).WithTags("Projects");
         routes.MapGet("", async (CurrentUser u, ProjectService s, CancellationToken ct) => Results.Ok(await s.ListAsync((await u.GetAsync(ct)).Id, ct))).Produces<IReadOnlyList<ProjectDto>>();
         routes.MapPost("", async (ProjectRequest body, CurrentUser u, ProjectService s, CancellationToken ct) => Results.Ok(await s.CreateAsync((await u.GetAsync(ct)).Id, body, ct))).Produces<ProjectDto>();
         routes.MapDelete("/{id:guid}", async (Guid id, CurrentUser u, ResourceLifecycle s, CancellationToken ct) => { await s.DeleteAsync((await u.GetAsync(ct)).Id, id, "project", ct); return Results.NoContent(); });
@@ -28,6 +29,6 @@ public static class ProjectEndpoints
         routes.MapDelete("/{id:guid}/templates/{key:guid}", async (Guid id, Guid key, CurrentUser u, ProjectService s, CancellationToken ct) => { await s.DeleteTemplateAsync((await u.GetAsync(ct)).Id, id, key, ct); return Results.NoContent(); });
         routes.MapGet("/{id:guid}/conversations", async (Guid id, CurrentUser u, ProjectService s, CancellationToken ct) => Results.Ok(await s.ConversationsAsync((await u.GetAsync(ct)).Id, id, ct))).Produces<IReadOnlyList<ConversationDto>>();
         routes.MapPost("/{id:guid}/conversations", async (Guid id, ProjectConversationRequest body, CurrentUser u, ProjectService s, CancellationToken ct) => Results.Ok(await s.StartAsync((await u.GetAsync(ct)).Id, id, body, ct))).Produces<ProjectConversationDto>();
-        routes.MapPost("/{id:guid}/artifacts", async (Guid id, CreateArtifactRequest body, CurrentUser u, ArtifactService s, CancellationToken ct) => Results.Ok(await s.CreateAsync((await u.GetAsync(ct)).Id, body with { ProjectId = id }, ct))).RequireAuthorization("feature:artifacts").Produces<ArtifactDto>();
+        routes.MapPost("/{id:guid}/artifacts", async (Guid id, CreateArtifactRequest body, CurrentUser u, ArtifactService s, CancellationToken ct) => Results.Ok(await s.CreateAsync((await u.GetAsync(ct)).Id, body with { ProjectId = id }, ct))).RequireAuthorization(Policies.Artifacts).Produces<ArtifactDto>();
     }
 }

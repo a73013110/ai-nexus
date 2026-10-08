@@ -10,7 +10,7 @@ public sealed class SharingModule : IFeatureModule
         builder.Services.AddScoped<ShareService>();
         builder.Services.AddSingleton<ShareWriteLock>();
         builder.Services.AddHostedService<ShareCleanupWorker>();
-        builder.Services.AddFeaturePolicy("shared");
+        builder.Services.AddFeaturePolicy(FeatureIds.Shared);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api) => ShareEndpoints.MapSharing(api);

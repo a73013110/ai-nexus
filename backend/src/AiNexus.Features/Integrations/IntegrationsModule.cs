@@ -19,7 +19,7 @@ public sealed class IntegrationsModule : IFeatureModule
         services.AddScoped<IntegrationService>();
         services.AddScoped<IControlledSourceAdapter, GdwebSource>();
         services.AddScoped<IControlledSourceAdapter, MeihoSource>();
-        services.AddFeaturePolicy("integrations");
+        services.AddFeaturePolicy(FeatureIds.Integrations);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api) => IntegrationEndpoints.MapIntegrations(api);

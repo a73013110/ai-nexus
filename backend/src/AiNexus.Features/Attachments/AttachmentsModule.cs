@@ -27,8 +27,8 @@ public sealed class AttachmentsModule : IFeatureModule
             })
             .ValidateOnStart();
         services.AddSingleton<IValidateOptions<AttachmentOptions>, AttachmentOptionsValidator>();
-        services.AddFeaturePolicy("files");
-        services.AddFeaturePolicy("feature:attachments", "files", BuiltInAccess.ChatFeature, "knowledge", "projects");
+        services.AddFeaturePolicy(FeatureIds.Files);
+        services.AddFeaturePolicy(Policies.Attachments, FeatureIds.Files, FeatureIds.Chat, FeatureIds.Knowledge, FeatureIds.Projects);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api) => api.MapAttachments();

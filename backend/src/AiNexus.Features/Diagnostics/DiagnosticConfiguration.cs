@@ -7,6 +7,7 @@ namespace AiNexus.Features.Diagnostics;
 public static class DiagnosticConfiguration
 {
     public const string Query = "logs.query", Detail = "logs.detail", Export = "logs.export";
+    public const string QueryPolicy = Policies.Prefix + Query, DetailPolicy = Policies.Prefix + Detail, ExportPolicy = Policies.Prefix + Export;
     public static void Configure(ModelBuilder model)
     {
         var log = model.Entity<DiagnosticEvent>();

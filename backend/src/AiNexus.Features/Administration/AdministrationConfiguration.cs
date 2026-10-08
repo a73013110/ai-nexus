@@ -28,7 +28,7 @@ public sealed class UserModelPolicy
 
 public static class AdministrationConfiguration
 {
-    public const string Role = "administrator", Group = "administrators", Feature = "admin", Policy = "feature:admin";
+    public const string Role = "administrator", Group = "administrators", Feature = "admin", Policy = Policies.Prefix + Feature;
     public static void Configure(ModelBuilder model)
     {
         model.Entity<AccessControl.Role>().HasData(new AccessControl.Role { Id = Role, Name = "平台管理員" });
