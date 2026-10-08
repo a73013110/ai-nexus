@@ -11,7 +11,6 @@ AiNexus.Features.Diagnostics.ClientIssueRequest
 AiNexus.Features.Identity.AdLoginRequest
 AiNexus.Features.Knowledge.AddDocumentRequest
 AiNexus.Features.Knowledge.CollectionRequest
-AiNexus.Features.Knowledge.KnowledgeSearchRequest
 AiNexus.Features.Knowledge.KnowledgeSelectionDto
 AiNexus.Features.Knowledge.TextDocumentRequest
 AiNexus.Features.Projects.ConversationProjectRequest
