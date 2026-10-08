@@ -2,6 +2,7 @@
   nxCompactDialog
   #dialog
   class="platform-dialog admin-inspector"
+  [class.inspector-policy-view]="tab() !== 'conversations'"
   aria-labelledby="inspector-title"
   (close)="closed.emit()"
 >

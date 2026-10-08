@@ -9,6 +9,7 @@ import {
   DestroyRef,
   ElementRef,
   inject,
+  input,
   signal,
   viewChild,
 } from '@angular/core';
@@ -42,9 +43,11 @@ const emptyPrice = (): PriceRequest => ({
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './price-book.scss',
-  template: `<button class="secondary-button" type="button" (click)="open()">
-      <nx-icon name="money" />模型與工具價格
-    </button>
+  template: `@if (showTrigger()) {
+      <button class="secondary-button" type="button" (click)="open()">
+        <nx-icon name="money" />模型與工具價格
+      </button>
+    }
     <dialog
       nxCompactDialog
       #dialog
@@ -184,6 +187,7 @@ const emptyPrice = (): PriceRequest => ({
     </dialog>`,
 })
 export class PriceBook {
+  readonly showTrigger = input(true);
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   readonly draft = signal(emptyPrice());
   readonly effective = signal('');

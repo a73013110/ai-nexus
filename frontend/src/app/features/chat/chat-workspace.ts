@@ -1,5 +1,6 @@
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
+import { Card } from '../../shared/ui/card';
 import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
@@ -57,6 +58,7 @@ import { LibraryPicker } from '../files/library-picker';
 @Component({
   selector: 'nx-chat-workspace',
   imports: [
+    Card,
     CompactDialog,
     Field,
     IssueCode,
@@ -90,6 +92,9 @@ import { LibraryPicker } from '../files/library-picker';
 })
 export class ChatWorkspace {
   readonly store = inject(ChatStore);
+  readonly starting = computed(
+    () => !this.store.visibleMessages().length && !this.store.loadingConversation(),
+  );
   readonly themes = inject(ThemeService);
   private readonly destroy = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);

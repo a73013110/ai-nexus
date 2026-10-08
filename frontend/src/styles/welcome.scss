@@ -1,175 +1,67 @@
-.empty-state {
-  width: min(700px, calc(100% - 80px));
+.chat-starting .chat-surface {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+}
+.chat-starting .conversation-body {
+  flex: none;
+  margin-block-start: auto;
+}
+.chat-starting .conversation-viewport {
+  flex: none;
+  overflow: visible;
+  scrollbar-gutter: auto;
+}
+.chat-starting .composer-region {
+  margin-block-end: auto;
+  padding-block-start: 0;
+}
+.chat-start {
+  width: min(var(--composer-width), calc(100% - 2 * var(--workspace-gutter)));
   margin: 0 auto;
-  padding: clamp(48px, 11vh, 118px) 0 28px;
+  padding-block: var(--p-space-6) var(--section-gap);
 }
-.empty-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--muted);
-  font-size: var(--text-caption);
-  letter-spacing: 1px;
-  margin-bottom: 20px;
+.chat-start-heading .panel-eyebrow {
+  margin-bottom: var(--p-space-1);
 }
-.tiny-rule {
-  display: inline-block;
-  width: 21px;
-  height: 1px;
-  background: var(--muted);
+.chat-start-heading h2 {
+  margin: 0 0 var(--p-space-2);
+  font-size: var(--p-font-2xl);
+  line-height: var(--line-ui);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
 }
-.empty-state h2 {
-  font-size: var(--text-display);
-  line-height: 1.5;
-  font-weight: 500;
-  letter-spacing: -0.7px;
-  margin: 0 0 16px;
-}
-.empty-state > p {
+.chat-start-heading p {
+  margin: 0;
   color: var(--secondary);
-  font-size: var(--text-label);
-  line-height: 1.95;
-  margin: 0 0 38px;
 }
-.suggestions {
-  max-width: 480px;
-  border-top: 1px solid var(--line);
-}
-.suggestions > button {
-  display: flex;
-  align-items: center;
-  gap: 17px;
-  width: 100%;
-  padding: 18px 6px;
-  border-bottom: 1px solid var(--line);
-  text-align: left;
-  color: var(--ink);
-  font-size: var(--text-caption);
-}
-.suggestion-index {
-  color: var(--muted);
-  font:
-    var(--text-caption) ui-monospace,
-    'Cascadia Code',
-    monospace;
-}
-.suggestions nx-icon {
-  width: 17px;
-  height: 17px;
-  color: var(--accent);
-}
-.suggestions nx-icon:last-child {
-  margin-left: auto;
-  width: 14px;
-  color: var(--muted);
-}
-.empty-footnote {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--muted);
-  margin-top: 38px;
-  font-size: var(--text-caption);
-  letter-spacing: 0.3px;
-}
-.empty-footnote .tiny-rule {
-  width: 12px;
-}
-@media (max-width: 859px) {
-  .empty-state {
-    width: min(700px, calc(100% - 64px));
-    padding-top: 60px;
-  }
-}
-@media (max-width: 520px) {
-  .empty-state {
-    width: calc(100% - 48px);
-    padding-top: 39px;
-  }
-  .empty-eyebrow {
-    font-size: var(--text-caption);
-    gap: 9px;
-    margin-bottom: 17px;
-  }
-  .empty-state h2 {
-    font-size: var(--p-font-2xl);
-    letter-spacing: -0.8px;
-  }
-  .empty-state > p {
-    font-size: var(--text-caption);
-    margin-bottom: 29px;
-  }
-  .suggestions > button {
-    padding: 15px 3px;
-    gap: 13px;
-    min-height: 48px;
-    font-size: var(--text-caption);
-  }
-  .empty-footnote {
-    margin-top: 29px;
-    font-size: var(--text-caption);
-  }
-}
-.empty-state {
-  width: min(var(--welcome-width), calc(100% - 2 * var(--workspace-gutter)));
-  padding-top: clamp(2.5rem, 8dvh, 6rem);
-}
-.empty-heading {
-  position: relative;
-  min-height: 2.5rem;
-}
-.nexus-emblem {
-  width: 5rem;
-  height: 5rem;
-  position: absolute;
-  right: 0;
-  top: -0.75rem;
-}
-.emblem-orbit {
-  stroke: var(--line);
-  stroke-dasharray: 3 6;
-  stroke-width: 1;
-}
-.emblem-link {
-  stroke: var(--accent);
-  stroke-width: 1.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.emblem-node {
-  fill: var(--surface);
-  stroke: var(--accent);
-  stroke-width: 1.5;
-}
-.emblem-point {
-  fill: var(--signal);
-}
-.empty-state > p {
-  margin-bottom: var(--p-space-6);
-  font-size: var(--text-ui);
-}
-.empty-state h2 {
-  font-weight: 500;
-  letter-spacing: -0.045em;
-  margin-bottom: var(--p-space-3);
-  padding-right: 5rem;
-}
-.suggestions {
-  max-width: none;
-  border: 0;
+.chat-start-suggestions {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--section-gap);
+  margin-block-start: var(--section-gap);
+}
+.chat-start-suggestions > button {
+  display: flex;
+  align-items: center;
   gap: var(--p-space-2);
+  text-align: start;
+  min-height: var(--button-target);
+  color: var(--ink);
+  transition:
+    border-color var(--motion),
+    background-color var(--motion);
 }
-.suggestions > button {
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
-  padding: var(--p-space-4);
-  background: var(--surface);
-  gap: var(--p-space-3);
-}
-.suggestions > button:hover {
-  background: var(--canvas);
+.chat-start-suggestions > button:hover {
+  background: var(--surface-subtle);
   border-color: var(--accent);
+}
+.chat-start-suggestions nx-icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: var(--secondary);
 }
 .suggestion-copy {
   min-width: 0;
@@ -177,34 +69,21 @@
 }
 .suggestion-copy strong {
   display: block;
-  font-weight: 500;
   font-size: var(--text-ui);
+  font-weight: 600;
 }
 .suggestion-copy small {
   display: block;
+  margin-top: var(--p-space-1);
   color: var(--secondary);
   font-size: var(--text-caption);
-  margin-top: var(--p-space-1);
 }
-.empty-footnote {
-  margin-top: var(--p-space-6);
-}
-@media (max-width: 520px) {
-  .nexus-emblem {
-    width: 3.75rem;
-    height: 3.75rem;
-    top: 0;
+@media (max-width: 640px) {
+  .chat-start {
+    padding-block-start: var(--p-space-4);
   }
-  .empty-state h2 {
-    padding-right: 0;
-  }
-  .empty-eyebrow {
-    padding-right: 3.75rem;
-  }
-  .suggestions > button {
-    padding: var(--p-space-3);
-  }
-  .suggestion-index {
-    display: none;
+  .chat-start-suggestions {
+    grid-template-columns: 1fr;
+    gap: var(--p-space-2);
   }
 }

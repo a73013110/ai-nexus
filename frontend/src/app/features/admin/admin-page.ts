@@ -1,6 +1,12 @@
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
-import { DataTable } from '../../shared/ui/data-table';
+import {
+  DataTable,
+  DataTableColumn,
+  DataTableRow,
+  TablePagination,
+  type TableColumn,
+} from '../../shared/ui/data-table';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
@@ -18,7 +24,7 @@ import {
 } from '@angular/core';
 import { FeaturePage } from '../../shared/ui/feature-page';
 import { Icon } from '../../shared/ui/icon';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import type {
   AdminCatalog,
@@ -48,6 +54,7 @@ import { FeatureSummary } from '../../shared/ui/feature-summary';
 import { groupFeatures, FEATURE_ICONS } from '../../core/feature-groups';
 import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
+import { StatusBadge } from '../../shared/ui/status-badge';
 
 import {
   ModelPolicyEditor,
@@ -82,6 +89,10 @@ interface Editor {
     Card,
     EmptyState,
     DataTable,
+    DataTableColumn,
+    DataTableRow,
+    TablePagination,
+    StatusBadge,
     ViewSwitch,
     CompactDialog,
     Field,
@@ -106,8 +117,12 @@ interface Editor {
 export class AdminPage {
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(AdminApi);
+  private readonly router = inject(Router);
+  private readonly prices = viewChild.required(PriceBook);
   readonly catalog = signal<AdminCatalog | null>(null);
   readonly users = signal<AdminUsers | null>(null);
+  readonly loadingUsers = signal(false);
+  private readonly userTable = viewChild<DataTable>('userTable');
   readonly inspected = signal<AdminUser | null>(null);
   readonly usage = signal<AdminUsage | null>(null);
   readonly loading = signal(true);
@@ -144,7 +159,46 @@ export class AdminPage {
     { id: 'usage', name: '平台用量' },
     { id: 'retrieval', name: '知識檢索' },
   ];
-  readonly viewOptions = this.tabs.map((item) => ({ value: item.id, label: item.name }));
+  readonly navigationGroups = [
+    { label: '帳號與授權', ids: ['users', 'roles', 'groups', 'features'] },
+    { label: '運作與紀錄', ids: ['usage', 'audit', 'retrieval'] },
+  ].map((group) => ({
+    label: group.label,
+    options: this.tabs
+      .filter((tab) => group.ids.includes(tab.id))
+      .map((tab) => ({ value: tab.id, label: tab.name })),
+  }));
+  readonly managementTools = computed<MenuAction[]>(() => [
+    ...(this.session.has('logs.query') ? [{ id: 'logs', label: '系統日誌', icon: 'tasks' }] : []),
+    ...(this.session.has('admin')
+      ? [
+          { id: 'dashboard', label: '用量與費用總覽', icon: 'chart' },
+          { id: 'prices', label: '模型與工具價格', icon: 'money' },
+          { id: 'design', label: '介面元件', icon: 'sliders' },
+        ]
+      : []),
+  ]);
+  managementAction(action: string) {
+    if (!this.managementTools().some((item) => item.id === action)) return;
+    if (action === 'prices') this.prices().open();
+    else
+      void this.router.navigateByUrl(
+        (
+          {
+            logs: '/admin/logs',
+            dashboard: '/dashboard?scope=platform',
+            design: '/design',
+          } as Record<string, string>
+        )[action],
+      );
+  }
+  readonly userColumns: TableColumn[] = [
+    { id: 'name', label: '使用者', hideable: false },
+    { id: 'authentication', label: '登入與狀態' },
+    { id: 'roles', label: '角色' },
+    { id: 'usage', label: '30 天用量' },
+    { id: 'storage', label: '原檔容量' },
+  ];
   readonly featureIcons = FEATURE_ICONS;
   readonly usageModelName = formatModelDisplayName;
   usageKindName(kind: string) {
@@ -237,15 +291,23 @@ export class AdminPage {
   }
   async loadUsers(offset = 0) {
     const version = ++this.version;
+    this.loadingUsers.set(true);
     try {
       const users = await this.api.users(this.search(), offset);
-      if (this.alive && version === this.version) this.users.set(users);
+      if (this.alive && version === this.version) {
+        this.users.set(users);
+        this.userTable()?.resetScroll();
+      }
     } catch (error) {
       if (this.alive && version === this.version) this.error.set(this.message(error));
+    } finally {
+      if (this.alive && version === this.version) this.loadingUsers.set(false);
     }
   }
   searchChanged(value: string) {
     this.search.set(value);
+    ++this.version;
+    this.loadingUsers.set(true);
     clearTimeout(this.timer);
     this.timer = setTimeout(() => void this.loadUsers(), 250);
   }

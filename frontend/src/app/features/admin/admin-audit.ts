@@ -5,12 +5,14 @@ import { IssueCode } from '../../shared/ui/issue-code';
 import { safeMessage } from '../../core/api/safe-errors';
 import {
   ChangeDetectionStrategy,
+  afterNextRender,
   Component,
   DestroyRef,
   computed,
   inject,
   input,
   signal,
+  viewChild,
   viewChildren,
 } from '@angular/core';
 import { AdminApi } from './admin-api';
@@ -19,6 +21,14 @@ import { FeatureSummary } from '../../shared/ui/feature-summary';
 import { SearchField } from '../../shared/ui/search-field';
 import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
+import {
+  DataTable,
+  DataTableColumn,
+  DataTableRow,
+  TablePagination,
+  type TableColumn,
+} from '../../shared/ui/data-table';
+import { DetailDrawer } from '../../shared/ui/detail-drawer';
 import { StatusBadge } from '../../shared/ui/status-badge';
 import { downloadBlob } from '../../shared/browser/download';
 import { toCsv } from '../../shared/browser/csv';
@@ -44,6 +54,11 @@ import {
     Icon,
     FeatureSummary,
     StatusBadge,
+    DataTable,
+    DataTableColumn,
+    DataTableRow,
+    TablePagination,
+    DetailDrawer,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: ':host { display: block; min-width: 0; }',
@@ -56,6 +71,20 @@ export class AdminAudit {
     Object.fromEntries(this.models().map((model) => [model.id, formatModelName(model)])),
   );
   readonly rows = signal<AuditEntry[]>([]);
+  readonly pageIndex = signal(0);
+  readonly loadedCount = signal(0);
+  private readonly pages = signal<AuditEntry[][]>([]);
+  readonly hasNext = computed(() => this.pageIndex() < this.pages().length - 1 || this.more());
+  readonly selectedId = signal<number | null>(null);
+  readonly drawer = viewChild.required(DetailDrawer);
+  private readonly table = viewChild.required(DataTable);
+  readonly columns: TableColumn[] = [
+    { id: 'time', label: '時間', hideable: false },
+    { id: 'actor', label: '操作者' },
+    { id: 'action', label: '動作', hideable: false },
+    { id: 'resource', label: '資源' },
+    { id: 'result', label: '結果' },
+  ];
   readonly loading = signal(false);
   readonly more = signal(false);
   readonly error = signal('');
@@ -105,6 +134,34 @@ export class AdminAudit {
     { value: 'integration.', label: '外部資料查閱' },
     { value: 'resource.acl', label: '資源授權' },
   ];
+  readonly selectedIndex = computed(() =>
+    this.presentedRows().findIndex((row) => row.entry.id === this.selectedId()),
+  );
+  readonly selected = computed(() => this.presentedRows()[this.selectedIndex()] ?? null);
+  openDetails(id: number) {
+    this.selectedId.set(id);
+    this.drawer().open();
+  }
+  adjacent(direction: -1 | 1) {
+    const row = this.presentedRows()[this.selectedIndex() + direction];
+    if (row) this.openDetails(row.entry.id);
+  }
+  private resetDetails() {
+    this.drawer().close();
+    this.selectedId.set(null);
+    this.table().resetScroll();
+  }
+  async changePage(direction: -1 | 1) {
+    if (this.loading() || !this.validDates()) return;
+    const index = this.pageIndex() + direction;
+    if (index < 0) return;
+    const page = this.pages()[index];
+    if (page) {
+      this.resetDetails();
+      this.pageIndex.set(index);
+      this.rows.set(page);
+    } else if (direction === 1 && this.more()) await this.load(true);
+  }
   private resolveFeatures(ids: string[]): Feature[] {
     const catalog = new Map(this.features().map((feature) => [feature.id, feature]));
     return ids.map((id) => catalog.get(id) ?? { id, name: id, route: '' });
@@ -120,7 +177,7 @@ export class AdminAudit {
   private version = 0;
   private timer?: ReturnType<typeof setTimeout>;
   constructor() {
-    void this.load();
+    afterNextRender(() => void this.load());
     inject(DestroyRef).onDestroy(() => {
       ++this.version;
       clearTimeout(this.timer);
@@ -129,6 +186,7 @@ export class AdminAudit {
   searchChanged(value: string) {
     this.search.set(value);
     ++this.version;
+    this.loading.set(true);
     clearTimeout(this.timer);
     this.timer = setTimeout(() => void this.load(), 250);
   }
@@ -147,6 +205,10 @@ export class AdminAudit {
     this.loading.set(true);
     this.error.set('');
     if (!append) {
+      this.resetDetails();
+      this.pages.set([]);
+      this.pageIndex.set(0);
+      this.loadedCount.set(0);
       this.rows.set([]);
       this.more.set(false);
     }
@@ -160,8 +222,18 @@ export class AdminAudit {
       };
       const rows = await this.api.audit(append ? this.rows().at(-1)?.id : undefined, filters);
       if (version !== this.version) return;
-      this.rows.update((old) => (append ? [...old, ...rows] : rows));
       this.more.set(rows.length === 100);
+      if (append && !rows.length) return;
+      if (append) {
+        this.resetDetails();
+        this.pages.update((pages) => [...pages, rows]);
+        this.pageIndex.set(this.pages().length - 1);
+        this.loadedCount.update((count) => count + rows.length);
+      } else {
+        this.pages.set([rows]);
+        this.loadedCount.set(rows.length);
+      }
+      this.rows.set(rows);
     } catch (error) {
       if (version === this.version) this.error.set(safeMessage(error));
     } finally {
@@ -169,7 +241,7 @@ export class AdminAudit {
     }
   }
   export() {
-    const rows = this.rows();
+    const rows = this.pages().flat();
     downloadBlob(
       new Blob(
         [

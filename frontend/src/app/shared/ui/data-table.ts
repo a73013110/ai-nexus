@@ -3,6 +3,7 @@ import {
   Component,
   Directive,
   ElementRef,
+  computed,
   effect,
   inject,
   input,
@@ -265,13 +266,17 @@ export class DataTableRow {
   imports: [Icon, Select],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'ui-table-pagination' },
-  template: `<nx-select
-      label="每頁筆數"
-      [options]="sizes"
-      [value]="pageSize().toString()"
-      [disabled]="busy()"
-      (valueChange)="pageSizeChange.emit(+$event)"
-    />
+  template: `@if (pageSizes().length > 1) {
+      <nx-select
+        label="每頁筆數"
+        [options]="sizes()"
+        [value]="pageSize().toString()"
+        [disabled]="busy()"
+        (valueChange)="pageSizeChange.emit(+$event)"
+      />
+    } @else {
+      <span>每頁最多 {{ pageSize() }} 筆</span>
+    }
     <span role="status">第 {{ pageIndex() + 1 }} 頁 · 本頁 {{ count() }} 筆</span>
     <button
       type="button"
@@ -297,13 +302,16 @@ export class DataTableRow {
 export class TablePagination {
   readonly pageIndex = input(0);
   readonly pageSize = input(50);
+  readonly pageSizes = input<readonly number[]>([25, 50, 100]);
   readonly count = input(0);
   readonly hasNext = input(false);
   readonly busy = input(false);
   readonly pageChange = output<-1 | 1>();
   readonly pageSizeChange = output<number>();
-  readonly sizes = [25, 50, 100].map((size) => ({
-    value: String(size),
-    label: '每頁 ' + size + ' 筆',
-  }));
+  readonly sizes = computed(() =>
+    this.pageSizes().map((size) => ({
+      value: String(size),
+      label: '每頁 ' + size + ' 筆',
+    })),
+  );
 }

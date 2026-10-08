@@ -4,6 +4,7 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 import type { Model, EffectiveModelPolicy } from '../../core/api/types';
 import type { components } from '../../core/api/schema';
 import { Checkbox } from '../../shared/ui/checkbox';
+import { DataTable } from '../../shared/ui/data-table';
 import { formatModelName, formatNumber } from '../../shared/browser/format';
 
 type Policy = components['schemas']['ModelPolicyRequest'];
@@ -35,7 +36,7 @@ export function modelPolicyRequest(draft: ModelPolicyDraft): Policy {
 
 @Component({
   selector: 'nx-model-policy-editor',
-  imports: [Field, Checkbox],
+  imports: [Field, Checkbox, DataTable],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="model-policy-heading">
@@ -59,74 +60,89 @@ export function modelPolicyRequest(draft: ModelPolicyDraft): Policy {
         (checkedChange)="change({ restricted: $event })"
       />
     </div>
-    <div class="model-policy-list">
-      @for (model of models(); track model.id) {
-        <div class="model-policy-row">
-          <div class="model-policy-name">
-            @if (value().restricted) {
-              <nx-checkbox
-                [label]="name(model)"
-                [checked]="value().modelIds.includes(model.id)"
-                [disabled]="disabled()"
-                (checkedChange)="allow(model.id, $event)"
-              />
-            } @else {
-              <strong>{{ name(model) }}</strong>
-            }
-            <small>{{ model.supportsImages ? '文字與圖片' : '文字' }}</small>
-          </div>
-          <label class="model-policy-limit"
-            >每日 token 上限
-            <input
-              nxField
-              type="number"
-              min="0"
-              max="1000000000000"
-              step="1"
-              [attr.aria-label]="'每日 token 上限：' + name(model)"
-              [placeholder]="personal() ? '繼承群組' : '不限制'"
-              [value]="value().tokenLimits[model.id] ?? ''"
-              [readOnly]="disabled()"
-              (input)="limit(model.id, $any($event.target).value)"
-            />
-          </label>
-          @if (budget(model.id); as current) {
-            <div class="model-policy-effective">
-              <span
-                >目前生效：{{
-                  current.dailyTokenLimit == null
-                    ? '不限制'
-                    : format(current.dailyTokenLimit) + ' tokens / 日'
-                }}
-                ·
-                {{
-                  current.source === 'personal'
-                    ? '個人設定'
-                    : current.source === 'group'
-                      ? '群組設定'
-                      : '平台預設'
-                }}</span
-              >
-              <small
-                >已回報 {{ format(current.usedTokens) }} · 預留
-                {{ format(current.reservedTokens) }} · 剩餘
-                {{
-                  current.remainingTokens == null ? '不限' : format(current.remainingTokens)
-                }}</small
-              >
-              @if (
-                effective()?.allowedModelIds != null &&
-                !effective()!.allowedModelIds!.includes(model.id)
-              ) {
-                <small>目前授權未允許此模型</small>
-              }
-            </div>
+    <nx-data-table class="model-policy-table" label="模型授權與額度">
+      <table>
+        <colgroup>
+          <col />
+          <col class="model-policy-limit-column" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col">模型與目前生效政策</th>
+            <th scope="col">每日 token 上限</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (model of models(); track model.id) {
+            <tr>
+              <td>
+                <div class="model-policy-name">
+                  @if (value().restricted) {
+                    <nx-checkbox
+                      [label]="name(model)"
+                      [checked]="value().modelIds.includes(model.id)"
+                      [disabled]="disabled()"
+                      (checkedChange)="allow(model.id, $event)"
+                    />
+                  } @else {
+                    <strong>{{ name(model) }}</strong>
+                  }
+                  <small>{{ model.supportsImages ? '文字與圖片' : '文字' }}</small>
+                  @if (budget(model.id); as current) {
+                    <small
+                      >目前生效：{{
+                        current.dailyTokenLimit == null
+                          ? '不限制'
+                          : format(current.dailyTokenLimit) + ' tokens / 日'
+                      }}
+                      ·
+                      {{
+                        current.source === 'personal'
+                          ? '個人設定'
+                          : current.source === 'group'
+                            ? '群組設定'
+                            : '平台預設'
+                      }}</small
+                    >
+                    <small
+                      >已回報 {{ format(current.usedTokens) }} · 預留
+                      {{ format(current.reservedTokens) }} · 剩餘
+                      {{
+                        current.remainingTokens == null ? '不限' : format(current.remainingTokens)
+                      }}</small
+                    >
+                    @if (
+                      effective()?.allowedModelIds != null &&
+                      !effective()!.allowedModelIds!.includes(model.id)
+                    ) {
+                      <small>目前授權未允許此模型</small>
+                    }
+                  }
+                </div>
+              </td>
+              <td>
+                <input
+                  nxField
+                  type="number"
+                  min="0"
+                  max="1000000000000"
+                  step="1"
+                  [attr.aria-label]="'每日 token 上限：' + name(model)"
+                  [placeholder]="personal() ? '繼承群組' : '不限制'"
+                  [value]="value().tokenLimits[model.id] ?? ''"
+                  [readOnly]="disabled()"
+                  (input)="limit(model.id, $any($event.target).value)"
+                />
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="2">目前沒有設定模型，請先設定地端模型供應商。</td>
+            </tr>
           }
-        </div>
-      } @empty {
-        <p class="form-note">目前沒有設定模型，請先設定地端模型供應商。</p>
-      }
-    </div>
+        </tbody>
+      </table>
+    </nx-data-table>
     @if (value().restricted && !value().modelIds.length) {
       <p class="inline-error">
         {{

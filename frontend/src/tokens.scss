@@ -80,10 +80,6 @@
   --p-font-xl: 1.25rem;
   --p-font-2xl: 1.5rem;
   --p-font-3xl: 2rem;
-  --p-font-display-min: 1.625rem;
-  --p-font-display-max: 2.125rem;
-  --p-font-hero-min: 2.25rem;
-  --p-font-hero-max: 3.625rem;
   --p-space-1: 0.25rem;
   --p-space-2: 0.5rem;
   --p-space-3: 0.75rem;
@@ -110,8 +106,6 @@
   --text-ui: var(--p-font-base);
   --text-body: var(--p-font-reading);
   --text-heading: var(--p-font-lg);
-  --text-display: clamp(var(--p-font-display-min), 2.4vw, var(--p-font-display-max));
-  --text-hero: clamp(var(--p-font-hero-min), 4vw, var(--p-font-hero-max));
   --line-ui: 1.5;
   --line-reading: 1.2;
   --motion-fast: 120ms;
@@ -122,7 +116,6 @@
   --motion-waiting: 2800ms;
   --motion-stagger: 70ms;
   --motion-panel: 240ms;
-  --motion-draw: 900ms;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
 
@@ -170,7 +163,6 @@
   --settings-sidebar-width: 17rem;
   --settings-content-width: 48rem;
   --platform-content-width: 72rem;
-  --welcome-width: 42rem;
   --menu-width: 17rem;
   --dialog-width: 34rem;
   --library-width: 52rem;

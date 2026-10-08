@@ -233,6 +233,215 @@ test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", as
   }
 });
 
+test("稽核表格保留捲動與欄位偏好，抽屜支援逐筆檢視和手機焦點返回", async ({
+  page,
+}) => {
+  const { audit } = await administration(page);
+  for (let id = 1; id <= 205; id++)
+    audit.push({
+      id,
+      actor: "AD\\admin",
+      action: "admin.feature",
+      resourceId: "chat",
+      result: "saved",
+      at: "2026-10-04T00:00:00Z",
+      detailsJson: JSON.stringify({
+        resourceKey: "chat",
+        before: { name: "原名稱 " + id },
+        after: { name: "新名稱 " + id },
+        note: '<img src=x onerror="window.__auditInjected=true">',
+      }),
+    });
+  const cursors: string[] = [];
+  page.on("request", (request) => {
+    const url = new URL(request.url());
+    if (url.pathname.endsWith("/admin/audit") && url.searchParams.has("before"))
+      cursors.push(url.searchParams.get("before")!);
+  });
+  await page.getByRole("button", { name: "異動稽核", exact: true }).click();
+  const table = page.locator("nx-admin-audit nx-data-table"),
+    scroll = table.getByRole("region", { name: "異動稽核列表" });
+  await expect(table.locator(".audit-row")).toHaveCount(100);
+  await expect(table.locator(".audit-row").first()).toHaveCSS(
+    "font-size",
+    "13px",
+  );
+  expect(
+    (await table.locator(".audit-row").first().boundingBox())!.height,
+  ).toBeLessThanOrEqual(64);
+  await table.getByRole("button", { name: "顯示欄位", exact: true }).click();
+  const columns = page.getByRole("dialog", { name: "顯示欄位", exact: true });
+  await columns
+    .getByRole("checkbox", { name: "操作者", exact: true })
+    .uncheck();
+  await columns.press("Escape");
+  await expect(
+    table.getByRole("columnheader", { name: "操作者", exact: true }),
+  ).toHaveCount(0);
+  await scroll.evaluate((el) => {
+    el.scrollTop = 250;
+  });
+  const first = table.getByRole("button", {
+    name: "檢視稽核：#197",
+    exact: true,
+  });
+  await first.focus();
+  const before = await scroll.evaluate((el) => el.scrollTop);
+  await first.press("Enter");
+  const drawer = page.getByRole("dialog", { name: "稽核詳情", exact: true });
+  await expect(drawer).toBeVisible();
+  await expect(drawer).not.toHaveAttribute("aria-modal", "true");
+  await expect(drawer).toContainText("新名稱 197");
+  expect(await scroll.evaluate((el) => el.scrollTop)).toBe(before);
+  await drawer.getByRole("button", { name: "下一筆稽核", exact: true }).click();
+  await expect(drawer).toContainText("新名稱 196");
+  await table.locator(".audit-row").nth(9).locator("td").first().click();
+  await expect(drawer).toContainText("新名稱 196");
+  await expect(drawer.locator("img")).toHaveCount(0);
+  expect(
+    await page.evaluate(() => Boolean((window as any).__auditInjected)),
+  ).toBe(false);
+  await page.screenshot({
+    path: "artifacts/screenshots/admin-audit-table-drawer.png",
+    animations: "disabled",
+  });
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(drawer).toHaveAttribute("aria-modal", "true");
+  await expectViewportContained(page);
+  await page.screenshot({
+    path: "artifacts/screenshots/admin-audit-drawer-mobile.png",
+    animations: "disabled",
+  });
+  await drawer.press("Escape");
+  await expect(drawer).not.toBeVisible();
+  await expect(first).toBeFocused();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const nextPage = table.getByRole("button", { name: "下一頁", exact: true }),
+    previousPage = table.getByRole("button", { name: "上一頁", exact: true });
+  await nextPage.click();
+  await expect(table.locator(".audit-row")).toHaveCount(100);
+  await expect(table.locator(".audit-row").first()).toContainText("#105");
+  await previousPage.click();
+  await expect(table.locator(".audit-row").first()).toContainText("#205");
+  await nextPage.click();
+  await expect(table.locator(".audit-row").first()).toContainText("#105");
+  expect(cursors).toEqual(["106"]);
+  await nextPage.click();
+  await expect(table.locator(".audit-row")).toHaveCount(5);
+  await expect(table.locator(".audit-row").first()).toContainText("#5");
+  expect(cursors).toEqual(["106", "6"]);
+  await expect(nextPage).toBeDisabled();
+  const download = page.waitForEvent("download");
+  await table
+    .getByRole("button", { name: "匯出已載入 205 筆", exact: true })
+    .click();
+  expect((await download).suggestedFilename()).toMatch(/-205筆\.csv$/);
+  await previousPage.click();
+  await previousPage.click();
+  await expect(table.locator(".audit-row").first()).toContainText("#205");
+  await page.getByRole("combobox", { name: "稽核動作", exact: true }).click();
+  await page.getByRole("option", { name: "AI 生成", exact: true }).click();
+  await expect(table.locator(".audit-row")).toHaveCount(0);
+  await expect(nextPage).toBeDisabled();
+  await page.reload();
+  await page.getByRole("button", { name: "異動稽核", exact: true }).click();
+  await expect(
+    table.getByRole("columnheader", { name: "操作者", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("管理工具集中、分類分組，使用者分頁及功能短表單保持緊湊", async ({
+  page,
+}) => {
+  const state = await administration(page);
+  for (let index = 0; index < 104; index++)
+    state.managedUsers.push({
+      ...state.bob,
+      id: randomUUID(),
+      displayName: "同事 " + index,
+      account: "AD\\colleague" + index,
+    });
+  await page.reload();
+  const users = page.locator(".admin-users-table");
+  await expect(users.locator("tbody tr")).toHaveCount(100);
+  await users.getByRole("button", { name: "下一頁", exact: true }).click();
+  await expect(users.locator("tbody tr")).toHaveCount(6);
+  await expect(users).toContainText("101–106 / 106");
+  await users.getByRole("button", { name: "上一頁", exact: true }).click();
+  await expect(users.locator("tbody tr")).toHaveCount(100);
+  await expect(
+    page.getByRole("navigation", { name: "管理分類" }).getByRole("group"),
+  ).toHaveCount(2);
+  await expect(
+    page.locator(".feature-header .page-actions button:visible"),
+  ).toHaveCount(1);
+  await page.screenshot({
+    path: "artifacts/screenshots/admin-users-table.png",
+    animations: "disabled",
+  });
+  await page.route("**/api/v1/admin/billing/prices", (route) =>
+    route.fulfill({ json: [] }),
+  );
+  await page.route("**/api/v1/admin/billing/targets", (route) =>
+    route.fulfill({ json: [] }),
+  );
+  const tools = page.getByRole("button", { name: "管理工具", exact: true });
+  await tools.click();
+  const menu = page.getByRole("menu", { name: "管理工具", exact: true });
+  for (const name of ["用量與費用總覽", "模型與工具價格", "介面元件"])
+    await expect(
+      menu.getByRole("menuitem", { name, exact: true }),
+    ).toBeVisible();
+  await menu
+    .getByRole("menuitem", { name: "模型與工具價格", exact: true })
+    .click();
+  const prices = page.getByRole("dialog", { name: "模型與工具價格版本" });
+  await expect(prices).toBeVisible();
+  await prices
+    .getByRole("button", { name: "關閉價格設定", exact: true })
+    .click();
+  await expect(tools).toBeFocused();
+  await page.getByRole("button", { name: "功能", exact: true }).click();
+  const features = page.locator(".admin-features-table");
+  await expect(
+    features.getByRole("region", { name: "功能配置列表" }),
+  ).toBeVisible();
+  await features
+    .getByRole("button", { name: "編輯功能：對話", exact: true })
+    .click();
+  const editor = page.locator('dialog[aria-labelledby="admin-editor-title"]');
+  expect((await editor.boundingBox())!.width).toBeLessThanOrEqual(450);
+  expect((await editor.boundingBox())!.height).toBeLessThan(440);
+  await page.route("**/api/v1/admin/features/chat", async (route) => {
+    const body = route.request().postDataJSON();
+    expect(body).toMatchObject({
+      name: "AI 對話",
+      sortOrder: 7,
+      enabled: true,
+    });
+    Object.assign(
+      state.catalog.features.find((feature) => feature.id === "chat")!,
+      body,
+    );
+    await route.fulfill({ status: 204 });
+  });
+  await editor.getByLabel("名稱", { exact: true }).fill("AI 對話");
+  await editor.getByLabel("顯示順序", { exact: true }).fill("7");
+  await page.screenshot({
+    path: "artifacts/screenshots/admin-feature-compact-form.png",
+    animations: "disabled",
+  });
+  await editor.getByRole("button", { name: "儲存功能", exact: true }).click();
+  await expect(editor).not.toBeVisible();
+  await expect(features).toContainText("AI 對話");
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expectViewportContained(page);
+  await page.screenshot({
+    path: "artifacts/screenshots/admin-features-table-mobile.png",
+    animations: "disabled",
+  });
+});
+
 async function administration(page: Page) {
   const fixture = new ApiFixture();
   fixture.adminAccess = true;
@@ -412,7 +621,12 @@ async function administration(page: Page) {
       const users = managedUsers.filter((x) =>
         (x.displayName + x.account).includes(search),
       );
-      return json({ users, total: users.length, offset: 0 });
+      const offset = Number(url.searchParams.get("offset") || 0);
+      return json({
+        users: users.slice(offset, offset + 100),
+        total: users.length,
+        offset,
+      });
     }
     if (/^\/users\/[^/]+$/.test(path)) {
       const index = managedUsers.findIndex(
@@ -539,13 +753,18 @@ async function administration(page: Page) {
     }
     if (path === "/audit")
       return json(
-        audit.filter(
-          (x) =>
-            (!url.searchParams.get("action") ||
-              x.action.startsWith(url.searchParams.get("action")!)) &&
-            (!url.searchParams.get("result") ||
-              x.result === url.searchParams.get("result")),
-        ),
+        audit
+          .filter(
+            (x) =>
+              (!url.searchParams.get("action") ||
+                x.action.startsWith(url.searchParams.get("action")!)) &&
+              (!url.searchParams.get("result") ||
+                x.result === url.searchParams.get("result")) &&
+              (!url.searchParams.get("before") ||
+                x.id < Number(url.searchParams.get("before"))),
+          )
+          .sort((a, b) => b.id - a.id)
+          .slice(0, 100),
       );
     if (path === "/usage")
       return json({
@@ -653,10 +872,13 @@ test("administrators edit roles with effective access preview and an audit trail
   expect(state.bob.roleIds).toContain("administrator");
   await page.getByRole("button", { name: "異動稽核", exact: true }).click();
   await expect(page.getByText("調整使用者角色", { exact: true })).toBeVisible();
-  await page.getByText("查看紀錄資訊", { exact: true }).click();
-  await expect(page.locator(".audit-details pre")).toContainText(
-    "administrator",
-  );
+  await page
+    .getByRole("button", { name: /^檢視稽核：#/ })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "稽核詳情" }).locator("pre"),
+  ).toContainText("administrator");
   await settleEntrance(page);
   await expectCompactWorkspace(page);
   await page.screenshot({
@@ -1059,7 +1281,7 @@ test("audit shows readable before after differences and server filters", async (
     }),
   });
   await page.getByRole("button", { name: "異動稽核", exact: true }).click();
-  await page.getByText("查看前後差異", { exact: true }).click();
+  await page.getByRole("button", { name: "檢視稽核：#1", exact: true }).click();
   await expect(page.locator(".audit-changes")).toContainText("資深分析人員");
   await expect(page.locator(".audit-before").first()).toContainText("分析人員");
   await expect(page.locator(".audit-changes")).toContainText(
@@ -1069,6 +1291,9 @@ test("audit shows readable before after differences and server filters", async (
   await expect(page.locator(".audit-changes")).toContainText("150,000 tokens");
   await chooseSelect(page, "稽核結果", "已檢視");
   await expect(page.locator(".audit-row")).toHaveCount(0);
+  await expect(
+    page.getByRole("dialog", { name: "稽核詳情" }),
+  ).not.toBeVisible();
 });
 
 test("audit dates validate input, keep Taipei boundaries and allow clearing optional filters", async ({
@@ -1181,6 +1406,16 @@ test("personal model budgets share the group editor and keep conversations spaci
   expect(content!.height).toBeGreaterThan(400);
   await dialog.getByRole("button", { name: "AI 模型", exact: true }).click();
   await expect(dialog).toContainText("100,000 tokens / 日");
+  await expect(
+    dialog.getByRole("region", { name: "模型授權與額度" }),
+  ).toBeVisible();
+  expect(
+    (await dialog
+      .locator(".model-policy-table tbody tr")
+      .first()
+      .boundingBox())!.height,
+  ).toBeLessThan(110);
+  expect((await dialog.boundingBox())!.height).toBeLessThan(700);
   await dialog
     .getByLabel("每日 token 上限：測試模型", { exact: true })
     .fill("150000");

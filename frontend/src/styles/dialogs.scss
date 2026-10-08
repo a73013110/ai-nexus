@@ -135,7 +135,7 @@
   padding: var(--p-space-3);
   font-size: var(--text-label);
 }
-.workspace-dialog label:not(.selection-control) {
+.workspace-dialog :where(label:not(.selection-control)) {
   display: block;
   color: var(--ink);
   font-size: var(--text-label);

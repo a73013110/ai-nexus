@@ -20,15 +20,14 @@
 
 根字級採瀏覽器預設 16px，不固定 html px，讓使用者縮放與偏好生效。UI 使用 Segoe UI／微軟正黑體；程式碼使用 Cascadia Code／系統 monospace，不依賴外部字型請求。
 
-| 用途                         | Token                           | 預設（16px root）                        |
-| ---------------------------- | ------------------------------- | ---------------------------------------- |
-| 附註／工具列／模型與 Context | `--text-caption`                | 14px，介面輔助字級                       |
-| 標籤／清單／標題輔助         | `--text-label`                  | 15px                                     |
-| 一般 UI／表單                | `--text-ui`                     | 16px                                     |
-| 對話正文／訊息輸入           | `--text-body`                   | 15px，1.2 行高                           |
-| 小標題                       | `--text-heading`                | 18px                                     |
-| 主要標題                     | font xl／2xl／3xl               | 20／24／32px                             |
-| 工作區開場／登入主標         | `--text-display`／`--text-hero` | 26–34／36–58px 流動字級，使用 rem 上下限 |
+| 用途                         | Token             | 預設（16px root）  |
+| ---------------------------- | ----------------- | ------------------ |
+| 附註／工具列／模型與 Context | `--text-caption`  | 14px，介面輔助字級 |
+| 標籤／清單／標題輔助         | `--text-label`    | 15px               |
+| 一般 UI／表單                | `--text-ui`       | 16px               |
+| 對話正文／訊息輸入           | `--text-body`     | 15px，1.2 行高     |
+| 小標題                       | `--text-heading`  | 18px               |
+| 主要標題                     | font xl／2xl／3xl | 20／24／32px       |
 
 上表是根層尺度；FeaturePage 預設 compact 與 wide，介面／標籤 13px、輔助字 12px、章節標題 16px、頁首 24px、區塊內距與間距 12px。緊湊 scope 必須同時設定實際字級與 tokens，讓未指定樣式的內容也繼承同一尺度。桌面控制項 34px；640px 以下與觸控指標改為至少 44px，輸入字級至少 16px。彈窗、通知、設定、對話工具列與閱讀器操作區共用這些密度 tokens；Markdown、文件正文及評測答案明確使用閱讀 tokens，保留個人偏好。
 
@@ -40,7 +39,7 @@
 
 ## 對話的空間分配
 
-頂列 `--topbar-height=52px`，不重複頁面分類。正文寬 `--reading-width=52rem`，輸入區 `--composer-width=54rem`；gutter 在 16–48px 間響應調整。輸入框從單行自動增高，上限 min(192px, 25dvh)，長草稿在框內捲動。短草稿與正常狀態的 1280×768 桌面，對話 viewport 保留至少 70% 高度，瀏覽器測試檢查。
+頂列 `--topbar-height=52px`，不重複頁面分類。正文寬 `--reading-width=52rem`，輸入區 `--composer-width=54rem`；gutter 在 16–48px 間響應調整。輸入框從單行自動增高，上限 min(192px, 25dvh)，長草稿在框內捲動。已有訊息、短草稿的 1280×768 桌面，對話 viewport 保留至少 70% 高度，瀏覽器測試檢查。新對話的標題、輸入框與起點依此順序在主區域置中，起點放在輸入框下方，開始對話後輸入框固定底部。版面依實際內容高度調整；小尺寸、長草稿或附件超出可用高度時，由內容區捲動，不將輸入框硬設在固定座標。
 
 模型、思考、Context 在 composer 底部，送出／停止靠右。鎖定模型呈現系統政策；隱藏名稱時不在標頭或歷史補出實際模型。Context 展開顯示預估／輸出預留／裁切資訊，支援鍵盤與 Escape 返回焦點。手機 Context 只保留可點擊圓環，選項保留在輸入區，避免頂列擠壓對話。
 
@@ -50,16 +49,16 @@
 
 提問泡泡的寬度、底色與邊框使用 `--message-user-width`、`--user-bubble`、`--user-bubble-border`；AI 正文保留左側閱讀線與角色標籤。對話定位使用 `--outline-space`，桌面預留側邊空間，手機將目錄入口放在閱讀區右下。摘要卡以實際觸發元素及閱讀區邊界定位，支援 hover 與 focus，跳轉遵循減少動態設定。
 
-| Token                                     | 預設                        | 使用                                 |
-| ----------------------------------------- | --------------------------- | ------------------------------------ |
-| `--motion-fast`                           | 120ms                       | 快速提示                             |
-| `--motion`                                | 200ms                       | hover／焦點／drawer／訊息進場        |
-| `--motion-enter`                          | 320ms                       | 空白工作區淡入                       |
-| `--motion-signal`                         | 1800ms                      | 生成訊號流／串流游標呼吸             |
-| `--motion-generation`／`--motion-waiting` | 2100／2800ms                | 準備回答／排隊的三節短線淡亮         |
-| `--motion-panel`                          | 240ms                       | dialog／選單與附件進場               |
-| `--motion-stagger`／`--motion-draw`       | 70／900ms                   | 建議卡片分段進場／SVG Nexus 線條繪製 |
-| `--ease`                                  | cubic-bezier(0.2,0.8,0.2,1) | 一般進場／過渡                       |
+| Token                                     | 預設                        | 使用                          |
+| ----------------------------------------- | --------------------------- | ----------------------------- |
+| `--motion-fast`                           | 120ms                       | 快速提示                      |
+| `--motion`                                | 200ms                       | hover／焦點／drawer／訊息進場 |
+| `--motion-enter`                          | 320ms                       | 空白工作區淡入                |
+| `--motion-signal`                         | 1800ms                      | 生成訊號流／串流游標呼吸      |
+| `--motion-generation`／`--motion-waiting` | 2100／2800ms                | 準備回答／排隊的三節短線淡亮  |
+| `--motion-panel`                          | 240ms                       | dialog／選單與附件進場        |
+| `--motion-stagger`                        | 70ms                        | 浮層選項分段進場              |
+| `--ease`                                  | cubic-bezier(0.2,0.8,0.2,1) | 一般進場／過渡                |
 
 生成時上方使用較小、較淡的 SVG 雙軌訊號流動，訊息等待區使用三節短線依序淡亮（尺寸由 `--generation-indicator-size` 控制），兩者共用 signal 色與圓角筆畫但動態不同。composer 僅維持靜態狀態邊框，收到內容後移除等待訊號並顯示文字尾端游標，工作結束即停止。禁止未知進度的假百分比、會干擾閱讀的持續整頁動畫。串流沿用安全 Markdown 渲染，保留完成段落、僅更新尾段，維持輸入與捲動回應。
 
@@ -73,7 +72,7 @@
 
 `styles.scss` 只管理載入順序；`tokens.scss`／`base.scss` 管全域，`styles/` 依責任拆分 controls、shell、sidebar、welcome、messages、markdown、composer、dialogs、tools、attachments。每個檔案包含自身的響應規則；`login.scss` 管登入頁，`composer-controls.scss` 管模型／思考／Context，`motion.scss` 統一動效。UI 元件不複製 token，也不維持第二份桌面／手機對話選單。
 
-工作區、dialog、範本、快捷指令、附件縮圖與列表高度使用 component tokens：`--welcome-width`、`--dialog-width`、`--library-width`、`--command-width`、`--attachment-thumb`、`--attachment-list-max`。側欄、送出／停止與手機 controls 維持 44px 最小目標，其他控制項依密度 token；輸入自動增高讀取 CSS token 上下限，無需同步修改 JavaScript 常數。
+工作區、dialog、範本、快捷指令、附件縮圖與列表高度使用 component tokens：`--composer-width`、`--dialog-width`、`--library-width`、`--command-width`、`--attachment-thumb`、`--attachment-list-max`。對話起點共用輸入區寬度；短表單使用 `.ui-dialog-compact`，可收縮的彈窗採內容高度，上限由 viewport 決定。側欄、送出／停止與手機 controls 維持 44px 最小目標，其他控制項依密度 token；輸入自動增高讀取 CSS token 上下限，無需同步修改 JavaScript 常數。
 
 改 token 後用 `scripts/Verify.ps1` 並看 artifacts screenshots，至少檢查 light／dark、375px 手機、1280×768、長回答／長草稿、Context popover、減少動態與鍵盤。瀏覽器測試檢查字級、對話可用高度、橫向溢出、隱藏模型、Context 與匯出行為；新視覺需人工檢查，不以 build 成功取代視覺驗收。
 
@@ -87,7 +86,7 @@
 
 數量預設是裝飾，由父按鈕的名稱／描述提供「125 則未讀通知」等完整脈絡；獨立使用可傳 `label` 作文字替代。共用 badge 不自帶 live region，各功能只在一個 contextual status 播報更新。側欄鈴鐺使用 info 表示未讀數量，事件 success／error 在通知中心分別對應 success／danger，不用清單單頁的嚴重性推測全通知匣。`/design` 可檢查各語意色、零值、超量及 dot／overlay。
 
-平台管理頁右上方「介面元件」開啟 `/design`。此頁組合正式元件，提供淺色／深色局部預覽及目前 semantic tokens 的 JSON 匯出；不修改個人偏好，不呼叫模型或建立公司資料。只有具 admin 功能者顯示工作區，範例不含敏感資訊。
+平台管理頁右上方「管理工具」選單的「介面元件」開啟 `/design`。此頁組合正式元件，提供淺色／深色局部預覽及目前 semantic tokens 的 JSON 匯出；不修改個人偏好，不呼叫模型或建立公司資料。只有具 admin 功能者顯示工作區，範例不含敏感資訊。
 
 | 元件                                               | 使用與互動                                                                                       |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------ |

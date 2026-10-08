@@ -1,26 +1,82 @@
-.admin-user-usage {
+.admin-navigation {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: flex-start;
-  border: 0;
-  border-radius: var(--p-radius-sm);
-  padding: 8px 12px;
-  background: transparent;
-  color: var(--ink);
-  text-align: left;
-  min-height: var(--button-target);
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--section-gap) var(--p-space-6);
+  margin-bottom: var(--section-gap);
 }
-.admin-user-usage:hover {
-  background: var(--canvas);
+.admin-navigation > div {
+  min-width: 0;
+  max-width: 100%;
 }
-.admin-user-usage strong {
+.admin-navigation > div > span {
+  display: block;
+  margin-bottom: var(--p-space-1);
   font-size: var(--text-caption);
-  font-weight: 500;
+  color: var(--secondary);
 }
-.admin-user-usage small {
+.admin-navigation .ui-view-switch {
+  margin: 0;
+  flex-wrap: wrap;
+  overflow: visible;
+}
+.admin-users-table,
+.admin-audit-table,
+.admin-features-table {
+  --table-max-height: min(60dvh, 42rem);
+}
+.admin-audit-table {
+  margin-top: var(--section-gap);
+}
+.admin-users-table table,
+.admin-audit-table table,
+.admin-features-table table {
+  table-layout: fixed;
+  min-width: 52rem;
+}
+.admin-users-table .page-actions {
+  flex-wrap: nowrap;
+}
+.admin-row-action-column {
+  width: 3.25rem;
+}
+.admin-user-actions-column {
+  width: 6.5rem;
+}
+.admin-auth-column,
+.audit-result-column,
+.admin-order-column {
+  width: 6.5rem;
+}
+.audit-time-column {
+  width: 11rem;
+}
+.admin-table-name {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+}
+.admin-table-name nx-icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: var(--secondary);
+}
+.admin-features-table .admin-feature-section th {
+  background: var(--surface-subtle);
   color: var(--secondary);
   font-size: var(--text-caption);
+}
+.platform-dialog.admin-inspector.inspector-policy-view {
+  --dialog-width: 52rem;
+  height: fit-content;
+  max-height: min(860px, calc(100dvh - 3rem));
+}
+.inspector-policy-view .inspector-content,
+.inspector-policy-view .inspector-settings,
+.inspector-policy-view .inspector-model-form,
+.inspector-policy-view .inspector-model-fields {
+  flex: 0 1 auto;
 }
 .platform-dialog.admin-inspector {
   --dialog-width: 72rem;
@@ -265,21 +321,15 @@
 .audit-toolbar nx-select {
   width: 160px;
 }
-.audit-row .resource-summary {
-  min-width: 0;
-}
-.audit-details {
-  margin-top: 8px;
-}
-.audit-details summary {
-  width: fit-content;
-  cursor: pointer;
-  padding: 8px 0;
+.audit-detail-text {
+  margin: var(--p-space-2) 0 var(--section-gap);
+  padding: var(--section-padding);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  background: var(--surface-subtle);
   font-size: var(--text-caption);
-}
-.audit-details pre {
-  max-height: 180px;
-  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .audit-changes {
   display: grid;
@@ -362,18 +412,6 @@
     min-width: 130px;
   }
 }
-.admin-feature-section {
-  margin-block: var(--p-space-5);
-}
-.feature-section-heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--p-space-3);
-  font-size: var(--text-heading);
-  margin: 0 0 var(--p-space-3);
-}
-.feature-section-heading small,
 .feature-category-label {
   color: var(--secondary);
   font-size: var(--text-caption);
@@ -410,10 +448,7 @@
   color: var(--secondary);
 }
 
-.admin-editor {
-  --dialog-width: 44rem;
-}
-.admin-editor.admin-group-editor {
+.admin-editor.admin-editor-wide {
   --dialog-width: 64rem;
 }
 .admin-editor .dialog-scroll {
@@ -422,7 +457,7 @@
   overflow: hidden;
 }
 .admin-group-editor .dialog-scroll {
-  height: min(700px, calc(100dvh - 4rem));
+  max-height: min(700px, calc(100dvh - 4rem));
 }
 .admin-editor .dialog-heading,
 .admin-editor .ui-view-switch,
@@ -439,7 +474,7 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 0 8px 16px 0;
+  padding: 0 var(--p-space-2) var(--p-space-2) 0;
   overscroll-behavior: contain;
 }
 .platform-dialog.admin-editor .dialog-actions {
@@ -456,7 +491,7 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 4px 8px 16px 0;
+  padding: var(--p-space-1) var(--p-space-2) var(--p-space-2) 0;
 }
 .inspector-model-settings {
   display: flex;
@@ -488,68 +523,20 @@
   font-size: var(--text-heading);
 }
 .model-policy-heading {
-  margin-bottom: 20px;
+  margin-bottom: var(--section-gap);
 }
-.model-policy-list {
-  display: grid;
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
-  overflow: hidden;
+.model-policy-table table {
+  table-layout: fixed;
 }
-.model-policy-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(160px, 240px);
-  gap: var(--section-gap) var(--p-space-6);
-  padding: var(--section-padding);
-}
-.model-policy-row + .model-policy-row {
-  border-top: 1px solid var(--line);
+.model-policy-limit-column {
+  width: 35%;
 }
 .model-policy-name {
-  display: grid;
-  align-content: center;
-  gap: 6px;
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.model-policy-name small,
-.model-policy-effective {
-  color: var(--secondary);
-  font-size: var(--text-caption);
-}
-.model-policy-limit {
-  display: grid;
-  gap: 8px;
-  font-size: var(--text-caption);
-}
-.model-policy-effective {
-  grid-column: 1 / -1;
-  display: grid;
-  gap: 6px;
-}
-.model-policy-effective small {
-  font-size: inherit;
-}
-.admin-feature-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-.admin-feature-card .resource-summary {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  width: 100%;
-}
-.admin-feature-card .resource-summary > div {
-  min-width: 0;
-}
-.admin-feature-card small {
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-.admin-feature-card .icon-button {
-  float: right;
+.model-policy-name .selection-control {
+  padding: 0;
 }
 .admin-usage-section {
   margin-top: var(--section-gap);
@@ -566,15 +553,7 @@
   font-size: var(--text-caption);
   color: var(--secondary);
 }
-@media (max-width: 1100px) {
-  .admin-feature-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
 @media (max-width: 760px) {
-  .admin-feature-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .admin-group-editor .ui-view-switch {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -585,10 +564,6 @@
     white-space: normal;
     font-size: var(--text-caption);
     min-width: 0;
-  }
-  .model-policy-row {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--section-gap);
   }
 }
 @media (max-height: 600px) {

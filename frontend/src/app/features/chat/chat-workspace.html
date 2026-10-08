@@ -11,6 +11,7 @@
   />
   <main
     class="main-workspace"
+    [class.chat-starting]="starting()"
     id="main"
     [attr.inert]="narrow() && sidebarOpen() ? '' : null"
     [nxFileDrop]="store.canUpload()"
@@ -102,286 +103,286 @@
         }
       </div>
     }
-    <div class="conversation-body">
-      <div
-        class="conversation-viewport"
-        #viewport
-        nxTextSelection
-        (textSelected)="paragraph.set($event)"
-        (scroll)="onScroll()"
-      >
-        @if (store.loadingConversation()) {
-          <div class="conversation-loading" role="status">正在開啟對話…</div>
-        } @else if (!store.visibleMessages().length) {
-          <section class="empty-state" animate.enter="empty-enter">
-            <div class="empty-heading">
-              <div class="empty-eyebrow"><span class="tiny-rule"></span>你的 AI 工作區</div>
-              <svg class="nexus-emblem" viewBox="0 0 80 80" fill="none" aria-hidden="true">
-                <circle class="emblem-orbit" cx="40" cy="40" r="32" />
-                <path class="emblem-link" d="M20 56V24l40 32V24M12 24h8M60 56h8M20 40h40" />
-                <circle class="emblem-node" cx="20" cy="24" r="3" />
-                <circle class="emblem-node" cx="60" cy="56" r="3" />
-                <circle class="emblem-point" cx="40" cy="40" r="4" />
-              </svg>
+    <div class="chat-surface">
+      <div class="conversation-body">
+        <div
+          class="conversation-viewport"
+          #viewport
+          nxTextSelection
+          (textSelected)="paragraph.set($event)"
+          (scroll)="onScroll()"
+        >
+          @if (store.loadingConversation()) {
+            <div class="conversation-loading" role="status">正在開啟對話…</div>
+          } @else if (!store.visibleMessages().length) {
+            <section
+              class="chat-start ui-density-compact"
+              aria-labelledby="chat-start-title"
+              animate.enter="empty-enter"
+            >
+              <div class="chat-start-heading">
+                <span class="panel-eyebrow">AI NEXUS / 對話</span>
+                <h2 id="chat-start-title">今天，從哪件事開始？</h2>
+                <p>輸入訊息，或選擇一個起點。可加入文件、圖片與知識庫來源。</p>
+              </div>
+            </section>
+          } @else {
+            <section class="message-list" aria-label="目前對話訊息">
+              @for (message of store.visibleMessages(); track message.id) {
+                <nx-chat-message
+                  [message]="message"
+                  [tree]="store.tree()"
+                  [matched]="matches().includes(message.id)"
+                  [currentMatch]="currentMatch() === message.id"
+                  [active]="store.liveRun()?.assistantMessageId === message.id"
+                  [streamContent]="
+                    store.liveRun()?.assistantMessageId === message.id ? store.streamingText() : ''
+                  "
+                  [status]="store.liveRun()?.status || ''"
+                  (rendered)="scheduleFollow()"
+                  [busy]="store.busy()"
+                  [showModelNames]="store.policy().showModelNames"
+                  [allowArtifacts]="store.hasArtifactsAccess()"
+                  (saveArtifact)="textTools()?.open($event.content, 'save', $event.id)"
+                  (rated)="store.rateMessage($event)"
+                  (edit)="store.edit($event); editMessageFocus()"
+                  (regenerate)="store.regenerate($event)"
+                  (version)="store.selectVersion(message, $event)"
+                />
+              }
+            </section>
+          }
+        </div>
+        <nx-conversation-outline
+          [messages]="store.visibleMessages()"
+          [viewport]="viewport"
+          (navigated)="pauseFollowing()"
+        />
+      </div>
+      <div class="composer-region">
+        @if (!following() && store.visibleMessages().length) {
+          <button class="latest-button" (click)="scrollLatest()">
+            <nx-icon name="down" />回到最新
+          </button>
+        }
+        <div class="composer-container">
+          @if (store.webSearchEnabled()) {
+            <p class="web-search-notice">
+              <nx-icon name="globe" />會將這次提問送往搜尋服務；附件與歷史對話不會送出。
+            </p>
+          }
+          @if (store.modelNotice(); as notice) {
+            <p class="model-notice"><nx-icon name="info" />{{ notice }}</p>
+          }
+          @if (store.liveRun(); as run) {
+            @if (run.conversationId !== store.selected()?.id) {
+              <p class="other-run">
+                另有對話正在生成。<a [routerLink]="['/chat', run.conversationId]">回到該對話</a>
+              </p>
+            }
+          }
+          @if (store.selected()?.isArchived) {
+            <div class="archive-notice">
+              <nx-icon name="archive" /><span>這段對話已封存，還原後即可繼續。</span
+              ><button type="button" (click)="action('archive')">還原對話</button>
             </div>
-            <h2>今天，從哪件事開始？</h2>
-            <p>把想法放在這裡，讓下一步逐漸清晰。<br />也可以加入文件或圖片，一起看得更深入。</p>
-            <div class="suggestions">
-              @for (suggestion of suggestions; track suggestion.title; let index = $index) {
+          }
+          @if (store.editing()) {
+            <div class="editing-notice">
+              <nx-icon name="edit" /><span>編輯提問 · 送出後建立新分支，原始內容保留</span
+              ><button class="icon-button" aria-label="取消編輯" (click)="store.cancelEdit()">
+                <nx-icon name="close" />
+              </button>
+            </div>
+          }
+          <form
+            class="composer"
+            [class.is-busy]="store.busy()"
+            [class.has-attachments]="store.attachments.files().length"
+            (submit)="send($event)"
+          >
+            <button
+              type="button"
+              class="icon-button composer-expand"
+              aria-label="展開訊息輸入"
+              title="展開訊息輸入"
+              (click)="focusComposer().open()"
+            >
+              <nx-icon name="maximize" />
+            </button>
+            @if (store.attachments.files().length) {
+              <nx-attachment-list
+                [files]="store.attachments.files()"
+                [editable]="!store.busy()"
+                (remove)="store.removeAttachment($event)"
+              />
+            }
+            @if (store.attachments.uploading()) {
+              <div class="upload-status" role="status">
+                <nx-inference-signal [active]="true" />{{
+                  store.attachments.processingLabel() || '正在上傳與讀取附件…'
+                }}
+              </div>
+            }
+            @if (store.knowledge.loadFailed()) {
+              <div class="source-load-error" role="alert">
+                <span>知識來源尚未載入，重新載入後即可送出訊息。</span>
                 <button
-                  (click)="pickSuggestion(suggestion.text)"
-                  [disabled]="store.busy()"
-                  [style.--item-index]="index"
+                  type="button"
+                  class="quiet-button"
+                  [disabled]="store.knowledge.saving()"
+                  (click)="store.knowledge.reload()"
                 >
-                  <span class="suggestion-index">0{{ index + 1 }}</span
-                  ><nx-icon [name]="suggestion.icon" /><span class="suggestion-copy"
-                    ><strong>{{ suggestion.title }}</strong
-                    ><small>{{ suggestion.detail }}</small></span
-                  ><nx-icon name="chevron" />
+                  <nx-icon name="repeat" />重新載入來源
+                </button>
+              </div>
+            }
+            <label class="sr-only" for="composer">{{
+              store.editing() ? '修改你的提問' : '傳送訊息'
+            }}</label
+            ><textarea
+              #composer
+              id="composer"
+              aria-describedby="composer-hint"
+              placeholder="輸入訊息…"
+              [formField]="composerForm.text"
+              [nxAutosize]="store.draft().text"
+              (keydown)="keydown($event)"
+              (compositionstart)="composing.set(true)"
+              (compositionend)="composing.set(false)"
+              rows="1"
+            ></textarea>
+            <div class="composer-bottom">
+              <!-- Keep upload unavailable during the initial DOM creation, before readiness binds. -->
+              <button
+                type="button"
+                class="icon-button attach-button"
+                aria-label="加入文件或圖片"
+                title="加入附件，也可以拖放或貼上圖片"
+                disabled
+                [disabled]="!store.canUpload()"
+                (click)="fileInput.click()"
+              >
+                <nx-icon name="paperclip" /></button
+              ><input
+                #fileInput
+                type="file"
+                class="sr-only"
+                multiple
+                [accept]="store.attachments.accept()"
+                (change)="uploadChanged($event)"
+              />
+              <nx-library-picker
+                [compact]="true"
+                [disabled]="!store.canUpload()"
+                (chosen)="store.attachments.use($event.file)"
+              />
+              <nx-composer-controls
+                [models]="store.models()"
+                [policy]="store.policy()"
+                [modelId]="store.modelId()"
+                [effort]="store.reasoningEffort()"
+                [disabled]="store.busy()"
+                [loading]="store.loading()"
+                [loadFailed]="!store.ready() && !!store.error()"
+                [usage]="store.contextUsage()"
+                [webSearch]="store.webSearchEnabled()"
+                [webSearchAvailable]="store.webSearchStatus().available"
+                [webSearchNotice]="store.webSearchStatus().notice"
+                (webSearchChange)="store.webSearchEnabled.set($event)"
+                (modelChange)="selectModel($event)"
+                (effortChange)="store.reasoningEffort.set($event)"
+              />
+              @if (store.hasKnowledgeAccess()) {
+                <nx-knowledge-picker
+                  [disabled]="
+                    store.busy() || store.loadingConversation() || !!store.selected()?.isArchived
+                  "
+                />
+              }
+              @if (store.liveRun()) {
+                <button
+                  class="send-button stop-button"
+                  type="button"
+                  (click)="store.stop()"
+                  aria-label="停止生成"
+                  [disabled]="store.stopping()"
+                >
+                  <nx-icon name="stop" />
+                </button>
+              } @else {
+                <button
+                  class="send-button"
+                  type="submit"
+                  aria-label="送出訊息"
+                  [disabled]="
+                    !store.canSend() || !store.draft().text.trim() || composerForm.text().invalid()
+                  "
+                >
+                  <nx-icon name="arrow" />
                 </button>
               }
             </div>
-            <div class="empty-footnote">
-              <span class="tiny-rule"></span>你的對話與範本，都在你的工作區。
-            </div>
-          </section>
-        } @else {
-          <section class="message-list" aria-label="目前對話訊息">
-            @for (message of store.visibleMessages(); track message.id) {
-              <nx-chat-message
-                [message]="message"
-                [tree]="store.tree()"
-                [matched]="matches().includes(message.id)"
-                [currentMatch]="currentMatch() === message.id"
-                [active]="store.liveRun()?.assistantMessageId === message.id"
-                [streamContent]="
-                  store.liveRun()?.assistantMessageId === message.id ? store.streamingText() : ''
-                "
-                [status]="store.liveRun()?.status || ''"
-                (rendered)="scheduleFollow()"
-                [busy]="store.busy()"
-                [showModelNames]="store.policy().showModelNames"
-                [allowArtifacts]="store.hasArtifactsAccess()"
-                (saveArtifact)="textTools()?.open($event.content, 'save', $event.id)"
-                (rated)="store.rateMessage($event)"
-                (edit)="store.edit($event); editMessageFocus()"
-                (regenerate)="store.regenerate($event)"
-                (version)="store.selectVersion(message, $event)"
-              />
-            }
-          </section>
-        }
-      </div>
-      <nx-conversation-outline
-        [messages]="store.visibleMessages()"
-        [viewport]="viewport"
-        (navigated)="pauseFollowing()"
-      />
-    </div>
-    <div class="composer-region">
-      @if (!following() && store.visibleMessages().length) {
-        <button class="latest-button" (click)="scrollLatest()">
-          <nx-icon name="down" />回到最新
-        </button>
-      }
-      <div class="composer-container">
-        @if (store.webSearchEnabled()) {
-          <p class="web-search-notice">
-            <nx-icon name="globe" />會將這次提問送往搜尋服務；附件與歷史對話不會送出。
-          </p>
-        }
-        @if (store.modelNotice(); as notice) {
-          <p class="model-notice"><nx-icon name="info" />{{ notice }}</p>
-        }
-        @if (store.liveRun(); as run) {
-          @if (run.conversationId !== store.selected()?.id) {
-            <p class="other-run">
-              另有對話正在生成。<a [routerLink]="['/chat', run.conversationId]">回到該對話</a>
+          </form>
+          @if (store.attachments.error()) {
+            <p class="context-warning" role="alert">
+              {{ store.attachments.error() }}<nx-issue-code [message]="store.attachments.error()" />
             </p>
           }
-        }
-        @if (store.selected()?.isArchived) {
-          <div class="archive-notice">
-            <nx-icon name="archive" /><span>這段對話已封存，還原後即可繼續。</span
-            ><button type="button" (click)="action('archive')">還原對話</button>
-          </div>
-        }
-        @if (store.editing()) {
-          <div class="editing-notice">
-            <nx-icon name="edit" /><span>編輯提問 · 送出後建立新分支，原始內容保留</span
-            ><button class="icon-button" aria-label="取消編輯" (click)="store.cancelEdit()">
-              <nx-icon name="close" />
-            </button>
-          </div>
-        }
-        <form
-          class="composer"
-          [class.is-busy]="store.busy()"
-          [class.has-attachments]="store.attachments.files().length"
-          (submit)="send($event)"
-        >
-          <button
-            type="button"
-            class="icon-button composer-expand"
-            aria-label="展開訊息輸入"
-            title="展開訊息輸入"
-            (click)="focusComposer().open()"
-          >
-            <nx-icon name="maximize" />
-          </button>
-          @if (store.attachments.files().length) {
-            <nx-attachment-list
-              [files]="store.attachments.files()"
-              [editable]="!store.busy()"
-              (remove)="store.removeAttachment($event)"
-            />
+          @if (store.visionNotice()) {
+            <p class="context-warning" role="status">{{ store.visionNotice() }}</p>
           }
-          @if (store.attachments.uploading()) {
-            <div class="upload-status" role="status">
-              <nx-inference-signal [active]="true" />{{
-                store.attachments.processingLabel() || '正在上傳與讀取附件…'
-              }}
-            </div>
+          @if (store.contextUsage()?.budgetExceeded) {
+            <p class="context-warning" role="status">
+              本次提問與附件超出 Context 預算，請縮短內容或減少附件。
+            </p>
           }
-          @if (store.knowledge.loadFailed()) {
-            <div class="source-load-error" role="alert">
-              <span>知識來源尚未載入，重新載入後即可送出訊息。</span>
-              <button
-                type="button"
-                class="quiet-button"
-                [disabled]="store.knowledge.saving()"
-                (click)="store.knowledge.reload()"
-              >
-                <nx-icon name="repeat" />重新載入來源
-              </button>
-            </div>
+          @if (store.draft().text.length > store.policy().maxInputCharacters) {
+            <p class="context-warning" role="status">
+              訊息超過系統允許的 {{ store.policy().maxInputCharacters }} 個字元，請拆分內容。
+            </p>
           }
-          <label class="sr-only" for="composer">{{
-            store.editing() ? '修改你的提問' : '傳送訊息'
-          }}</label
-          ><textarea
-            #composer
-            id="composer"
-            aria-describedby="composer-hint"
-            placeholder="輸入訊息，或加入文件與圖片…"
-            [formField]="composerForm.text"
-            [nxAutosize]="store.draft().text"
-            (keydown)="keydown($event)"
-            (compositionstart)="composing.set(true)"
-            (compositionend)="composing.set(false)"
-            rows="1"
-          ></textarea>
-          <div class="composer-bottom">
-            <!-- Keep upload unavailable during the initial DOM creation, before readiness binds. -->
-            <button
-              type="button"
-              class="icon-button attach-button"
-              aria-label="加入文件或圖片"
-              title="加入附件，也可以拖放或貼上圖片"
-              disabled
-              [disabled]="!store.canUpload()"
-              (click)="fileInput.click()"
-            >
-              <nx-icon name="paperclip" /></button
-            ><input
-              #fileInput
-              type="file"
-              class="sr-only"
-              multiple
-              [accept]="store.attachments.accept()"
-              (change)="uploadChanged($event)"
-            />
-            <nx-library-picker
-              [compact]="true"
-              [disabled]="!store.canUpload()"
-              (chosen)="store.attachments.use($event.file)"
-            />
-            <nx-composer-controls
-              [models]="store.models()"
-              [policy]="store.policy()"
-              [modelId]="store.modelId()"
-              [effort]="store.reasoningEffort()"
-              [disabled]="store.busy()"
-              [loading]="store.loading()"
-              [loadFailed]="!store.ready() && !!store.error()"
-              [usage]="store.contextUsage()"
-              [webSearch]="store.webSearchEnabled()"
-              [webSearchAvailable]="store.webSearchStatus().available"
-              [webSearchNotice]="store.webSearchStatus().notice"
-              (webSearchChange)="store.webSearchEnabled.set($event)"
-              (modelChange)="selectModel($event)"
-              (effortChange)="store.reasoningEffort.set($event)"
-            />
-            @if (store.hasKnowledgeAccess()) {
-              <nx-knowledge-picker
-                [disabled]="
-                  store.busy() || store.loadingConversation() || !!store.selected()?.isArchived
-                "
-              />
-            }
-            @if (store.liveRun()) {
-              <button
-                class="send-button stop-button"
-                type="button"
-                (click)="store.stop()"
-                aria-label="停止生成"
-                [disabled]="store.stopping()"
-              >
-                <nx-icon name="stop" />
-              </button>
-            } @else {
-              <button
-                class="send-button"
-                type="submit"
-                aria-label="送出訊息"
-                [disabled]="
-                  !store.canSend() || !store.draft().text.trim() || composerForm.text().invalid()
-                "
-              >
-                <nx-icon name="arrow" />
-              </button>
-            }
+          @if (store.contextNotice(); as notice) {
+            <p class="context-warning">{{ notice }}</p>
+          }
+          <div class="composer-hint" id="composer-hint">
+            <span>
+              @if (store.draft().text.trim() && !store.editing()) {
+                <span class="draft-saved">{{
+                  !store.personal.value().saveLocalDrafts
+                    ? '草稿只保留在目前畫面'
+                    : store.drafts.available()
+                      ? '草稿自動保存'
+                      : '此瀏覽器無法保存草稿'
+                }}</span>
+              } @else {
+                {{
+                  store.personal.value().enterToSend
+                    ? 'Enter 送出 · Shift + Enter 換行'
+                    : 'Ctrl / ⌘ + Enter 送出 · Enter 換行'
+                }}
+              }</span
+            ><span>AI 回答可能有誤，請確認重要資訊。</span>
           </div>
-        </form>
-        @if (store.attachments.error()) {
-          <p class="context-warning" role="alert">
-            {{ store.attachments.error() }}<nx-issue-code [message]="store.attachments.error()" />
-          </p>
-        }
-        @if (store.visionNotice()) {
-          <p class="context-warning" role="status">{{ store.visionNotice() }}</p>
-        }
-        @if (store.contextUsage()?.budgetExceeded) {
-          <p class="context-warning" role="status">
-            本次提問與附件超出 Context 預算，請縮短內容或減少附件。
-          </p>
-        }
-        @if (store.draft().text.length > store.policy().maxInputCharacters) {
-          <p class="context-warning" role="status">
-            訊息超過系統允許的 {{ store.policy().maxInputCharacters }} 個字元，請拆分內容。
-          </p>
-        }
-        @if (store.contextNotice(); as notice) {
-          <p class="context-warning">{{ notice }}</p>
-        }
-        <div class="composer-hint" id="composer-hint">
-          <span>
-            @if (store.draft().text.trim() && !store.editing()) {
-              <span class="draft-saved">{{
-                !store.personal.value().saveLocalDrafts
-                  ? '草稿只保留在目前畫面'
-                  : store.drafts.available()
-                    ? '草稿自動保存'
-                    : '此瀏覽器無法保存草稿'
-              }}</span>
-            } @else {
-              {{
-                store.personal.value().enterToSend
-                  ? 'Enter 送出 · Shift + Enter 換行'
-                  : 'Ctrl / ⌘ + Enter 送出 · Enter 換行'
-              }}
-            }</span
-          ><span>AI 回答可能有誤，請確認重要資訊。</span>
+          @if (starting()) {
+            <section class="chat-start-suggestions ui-density-compact" aria-label="對話起點">
+              @for (suggestion of suggestions; track suggestion.title) {
+                <button
+                  nxCard
+                  type="button"
+                  (click)="pickSuggestion(suggestion.text)"
+                  [disabled]="store.busy()"
+                >
+                  <nx-icon [name]="suggestion.icon" />
+                  <span class="suggestion-copy"
+                    ><strong>{{ suggestion.title }}</strong
+                    ><small>{{ suggestion.detail }}</small></span
+                  >
+                  <nx-icon name="chevron" />
+                </button>
+              }
+            </section>
+          }
         </div>
       </div>
     </div>

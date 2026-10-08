@@ -95,6 +95,13 @@
   overscroll-behavior: contain;
   scroll-padding: 30px;
 }
+.chat-surface {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
 .conversation-body {
   position: relative;
   display: flex;
