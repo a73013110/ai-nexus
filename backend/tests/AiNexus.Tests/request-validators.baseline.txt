@@ -41,4 +41,3 @@ AiNexus.Features.Quality.ReviewRequest
 AiNexus.Features.Repositories.ConnectRepositoryRequest
 AiNexus.Features.Repositories.CreateRepositoryReviewRequest
 AiNexus.Features.Repositories.RepositoryImportRequest
-AiNexus.Features.Sharing.CreateShareRequest
