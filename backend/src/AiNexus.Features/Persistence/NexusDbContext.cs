@@ -50,7 +50,7 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         model.ApplyConfiguration(new AiNexus.Features.Notifications.WorkspaceNotificationConfiguration());
         ModelInvocationConfiguration.Configure(model);
         AiNexus.Features.Billing.BillingConfiguration.Configure(model);
-        AiNexus.Features.WebSearch.WebSearchConfiguration.Configure(model);
+        model.ApplyConfiguration(new AiNexus.Features.WebSearch.WebSearchRecordConfiguration());
         AiNexus.Features.Repositories.RepositoryConfiguration.Configure(model);
         AiNexus.Features.Repositories.RepositoryReviewConfiguration.Configure(model);
         AiNexus.Features.Knowledge.KnowledgeConfiguration.Configure(model, Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite");
