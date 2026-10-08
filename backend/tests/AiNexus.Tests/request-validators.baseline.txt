@@ -25,7 +25,6 @@ AiNexus.Features.Identity.UserAccountRequest
 AiNexus.Features.Identity.UserSettingsDto
 AiNexus.Features.Inference.ContextPreviewRequest
 AiNexus.Features.Inference.CreateRunRequest
-AiNexus.Features.Integrations.SourceImportRequest
 AiNexus.Features.Knowledge.AddDocumentRequest
 AiNexus.Features.Knowledge.CollectionRequest
 AiNexus.Features.Knowledge.KnowledgeSearchRequest
