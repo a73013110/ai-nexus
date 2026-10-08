@@ -38,7 +38,7 @@ DiagnosticEvents 的 LogId 是非叢集唯一主鍵，`At DESC, LogId DESC` 是�
 
 ## 物件描述與版本維護
 
-`BuildingBlocks/DatabaseDescriptions.cs` 是資料表及欄位描述的唯一模型來源；新增映射物件漏寫說明會在建立模型時被攔下。EF migration 將其寫入 SQL Server `MS_Description`。`db/object-descriptions.sql` 可重跑，補上 schema、實體索引、主鍵／外鍵／唯一／預設／檢核約束、原生向量欄位及 EF 版本表說明；不變更業務資料。明確執行初始化時會重套用此內嵌 SQL，涵蓋後續新增的索引與約束，一般啟動不執行 DDL。新增物件的 migration 應同步更新其描述。執行 `scripts/Test-DatabaseDescriptions.ps1` 可唯讀檢查部署後是否有遺漏；初始化也會自動檢查。
+`AiNexus.Features/Persistence/DatabaseDescriptions.cs` 是資料表及欄位描述的唯一模型來源；新增映射物件漏寫說明會在建立模型時被攔下。EF migration 將其寫入 SQL Server `MS_Description`。`db/object-descriptions.sql` 可重跑，補上 schema、實體索引、主鍵／外鍵／唯一／預設／檢核約束、原生向量欄位及 EF 版本表說明；不變更業務資料。明確執行初始化時會重套用此內嵌 SQL，涵蓋後續新增的索引與約束，一般啟動不執行 DDL。新增物件的 migration 應同步更新其描述。執行 `scripts/Test-DatabaseDescriptions.ps1` 可唯讀檢查部署後是否有遺漏；初始化也會自動檢查。
 
 InitialCreate 包含目前登入政策、Argon2id 雜湊、登入撤銷版本、測試身分稽核、物件描述及全部功能種子。基本群組名稱為「基本工作區」，本地登入須由管理者明確設定。
 
@@ -97,7 +97,7 @@ content.SourceReferences 保存明確匯入的個人成果之 SourceId／Externa
 
 ## EDoc、初始化及 SQL 權限
 
-保留 [EDoc 原始 helper](../backend/src/AiNexus.Api/Database/EDoc/README.md)。EF Core／IEfHelper 管 mapping、migration、業務寫入及共用 scoped context。Dapper IDbHelper 用於固定參數化 SELECT、狀態及建庫；自有連線不自動參與 EF transaction。值用 parameters，物件名稱只取程式固定清單。
+保留 [EDoc 原始 helper](../backend/src/AiNexus.Platform/Data/EDoc/README.md)。EF Core／IEfHelper 管 mapping、migration、業務寫入及共用 scoped context。Dapper IDbHelper 用於固定參數化 SELECT、狀態及建庫；自有連線不自動參與 EF transaction。值用 parameters，物件名稱只取程式固定清單。
 
 NexusConnectionFactory 以 marker 對應 AiNexus、CLI 專用 master，以及 LegacyGdweb／LegacyMeiho。來源連線加密及唯讀意圖不取代 SQL 的 view-only 權限。
 
@@ -105,11 +105,11 @@ NexusConnectionFactory 以 marker 對應 AiNexus、CLI 專用 master，以及 Le
 ./scripts/Initialize-Database.ps1
 ```
 
-工具只在 AiNexus 不存在時建庫，適用空資料庫或相同基線的未完成版本。DBA 可先建空 AiNexus，再執行 [idempotent SQL](../db/migrations.sql)，其中沒有 CREATE LOGIN／DATABASE 或秘密。source、designer、snapshot 位於 BuildingBlocks/Migrations，包含 InitialCreate 與後續增量版本。正式 DDL 使用獨立部署帳號。
+工具只在 AiNexus 不存在時建庫，適用空資料庫或相同基線的未完成版本。DBA 可先建空 AiNexus，再執行 [idempotent SQL](../db/migrations.sql)，其中沒有 CREATE LOGIN／DATABASE 或秘密。source、designer、snapshot 位於 backend/src/AiNexus.Features/Persistence/Migrations，包含 InitialCreate 與後續增量版本。正式 DDL 使用獨立部署帳號。
 
 ```powershell
-dotnet ef migrations list --project backend/src/AiNexus.Api
-dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Api
+dotnet ef migrations list --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Api
+dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Api
 ```
 
 初始 migration 保持原樣，後續升級追加四個版本：20261006144804_VectorRetrievalProfiles、20261006145833_SingleChunkLayout、20261006150830_CitationPageRanges、20261006155137_RetrievalEvaluationReports。第一個清空舊片段、標記知識文件 reindex，原始附件與 DocumentPages 保留；後續建立單一布局、引用頁碼範圍及評測表。沒有舊索引兼容查詢；本次更新尚須在部署環境套用 migration 並重新上傳或重建。初始化及正常啟動檢查模型與 snapshot 一致。
