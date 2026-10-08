@@ -46,10 +46,19 @@ public sealed class IdentityModule : IFeatureModule
         services.AddScoped<LocalAuthenticator>();
         services.AddScoped<AuthenticationAudit>();
         services.AddScoped<UserAccountAdministration>();
-        services.AddScoped<PersonalSettingsService>();
+        services.AddScoped<UpdatePreferences>();
+        services.AddScoped<SaveUserSettings>();
     }
 
-    public static void MapEndpoints(RouteGroupBuilder api) => api.MapIdentity();
+    /// <summary>Endpoint order is the published OpenAPI order.</summary>
+    public static void MapEndpoints(RouteGroupBuilder api)
+    {
+        GetMe.Map(api);
+        UpdatePreferences.Map(api);
+        GetUserSettings.Map(api);
+        SaveUserSettings.Map(api);
+        GetPersonalUsage.Map(api);
+    }
 
     public static void MapPublicEndpoints(IEndpointRouteBuilder app) => app.MapNexusAuthentication();
 

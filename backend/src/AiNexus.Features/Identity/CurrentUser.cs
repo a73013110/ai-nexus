@@ -6,7 +6,6 @@ using System.Security.Principal;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Inference;
 using AiNexus.Features.Operations;
 using AiNexus.Features.AccessControl;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +17,7 @@ public sealed class IdentityWriteLock
     public SemaphoreSlim Gate { get; } = new(1, 1);
 }
 
-public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, ModelPresentation models, AiNexus.Features.Administration.AdminBootstrap bootstrap) : IRequestUser, ICurrentUser
+public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, AiNexus.Features.Administration.AdminBootstrap bootstrap) : IRequestUser, ICurrentUser
 {
     private static readonly ConcurrentDictionary<string, (string Name, DateTimeOffset At)> DisplayNames = new();
     private NexusUser? resolved;
@@ -80,18 +79,6 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
             return resolved = user;
         }
         finally { writeLock.Gate.Release(); }
-    }
-
-    public async Task<PreferencesDto> UpdatePreferencesAsync(PreferencesDto value, CancellationToken ct, bool persist = true)
-    {
-        if (value.Theme is not ("light" or "dark" or "system")) throw new ApiException(400, "invalid_theme", "請選擇淺色、深色或跟隨系統。");
-        if (value.DefaultModelId?.Length > 160) throw new ApiException(400, "invalid_model", "模型識別碼過長。");
-        var user = await GetAsync(ct);
-        user.Preferences.Theme = value.Theme;
-        user.Preferences.ReducedMotion = value.ReducedMotion;
-        user.Preferences.DefaultModelId = value.DefaultModelId is null ? null : models.InternalId(value.DefaultModelId) ?? throw new ApiException(400, "model_not_allowed", "偏好的模型未經伺服器核准。");
-        if (persist) await db.SaveChangesAsync(ct);
-        return models.Preferences(user.Preferences);
     }
 
     private static string ResolveName(string sid, string account)
