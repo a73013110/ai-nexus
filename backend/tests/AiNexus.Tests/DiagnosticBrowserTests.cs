@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using AiNexus.BuildingBlocks;
-using AiNexus.BuildingBlocks.Diagnostics;
+using AiNexus.Features.Persistence;
+using AiNexus.Platform.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;

@@ -1,10 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.AccessControl;
-using AiNexus.Modules.Administration;
-using AiNexus.Modules.Identity;
-using AiNexus.Modules.Projects;
+using AiNexus.Platform.Errors;
+using AiNexus.Features.Persistence;
+using AiNexus.Features.Identity;
+using AiNexus.Features.AccessControl;
+using AiNexus.Features.Administration;
+using AiNexus.Features.Projects;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;

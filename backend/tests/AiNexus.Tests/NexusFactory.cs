@@ -3,8 +3,11 @@ using System.Net.Http.Json;
 using System.Runtime.CompilerServices;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.Inference;
+using AiNexus.Platform.Errors;
+using AiNexus.Features.Persistence;
+using AiNexus.Features.Identity;
+using AiNexus.Features.Inference;
+using AiNexus.Features.Operations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -15,9 +18,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using AiNexus.Database;
-using AiNexus.Modules.Identity;
-using AiNexus.Modules.Attachments;
+using AiNexus.Features.Attachments;
 using EDoc.Core.Database.Interfaces;
 using EDoc.Core.Database.Markers;
 using System.Data.Common;
@@ -50,7 +51,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
         db.Database.EnsureCreated();
         seed?.Invoke(db);
         foreach (var user in db.Users.AsNoTracking().ToList())
-            if (!db.Set<AiNexus.Modules.AccessControl.UserRole>().Any(x => x.UserId == user.Id)) db.Set<AiNexus.Modules.AccessControl.UserRole>().Add(new() { UserId = user.Id, RoleId = AiNexus.Modules.AccessControl.BuiltInAccess.MemberRole });
+            if (!db.Set<AiNexus.Features.AccessControl.UserRole>().Any(x => x.UserId == user.Id)) db.Set<AiNexus.Features.AccessControl.UserRole>().Add(new() { UserId = user.Id, RoleId = AiNexus.Features.AccessControl.BuiltInAccess.MemberRole });
         db.SaveChanges();
     }
 
@@ -75,10 +76,10 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
             services.RemoveAllKeyed<IInferenceProvider>("ollama");
             services.AddKeyedSingleton<IInferenceProvider>("google", Provider);
             services.AddKeyedSingleton<IInferenceProvider>("ollama", Provider);
-            services.RemoveAll<AiNexus.Modules.Knowledge.IEmbeddingClient>();
-            services.AddSingleton<AiNexus.Modules.Knowledge.IEmbeddingClient>(Embeddings);
-            services.PostConfigure<AiNexus.Modules.Knowledge.KnowledgeOptions>(x => { x.EmbeddingProvider = "ollama"; x.Dimensions = 768; });
-            if (!backgroundJobs) services.Remove(services.Single(x => x.ServiceType == typeof(IHostedService) && x.ImplementationType == typeof(AiNexus.Modules.Operations.BackgroundJobWorker)));
+            services.RemoveAll<AiNexus.Features.Knowledge.IEmbeddingClient>();
+            services.AddSingleton<AiNexus.Features.Knowledge.IEmbeddingClient>(Embeddings);
+            services.PostConfigure<AiNexus.Features.Knowledge.KnowledgeOptions>(x => { x.EmbeddingProvider = "ollama"; x.Dimensions = 768; });
+            if (!backgroundJobs) services.Remove(services.Single(x => x.ServiceType == typeof(IHostedService) && x.ImplementationType == typeof(AiNexus.Features.Operations.BackgroundJobWorker)));
             services.PostConfigure<InferenceOptions>(options =>
             {
                 options.QueueCapacity = 2;
@@ -92,8 +93,8 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
                     if (model.ProviderModelId.Length == 0) model.ProviderModelId = model.Id;
             });
             services.PostConfigure<AttachmentOptions>(options => { options.StoragePath = databasePath + ".attachments"; configureAttachments?.Invoke(options); });
-            services.PostConfigure<AiNexus.BuildingBlocks.Diagnostics.DiagnosticOptions>(options => { options.Directory = databasePath + ".logs"; options.FlushIntervalMs = 10; options.RetrySeconds = 1; options.OtlpEnabled = false; });
-            services.PostConfigure<AiNexus.Modules.Administration.AdministrationOptions>(options => options.BootstrapAdministrators = bootstrapAdministrators);
+            services.PostConfigure<AiNexus.Platform.Diagnostics.DiagnosticOptions>(options => { options.Directory = databasePath + ".logs"; options.FlushIntervalMs = 10; options.RetrySeconds = 1; options.OtlpEnabled = false; });
+            services.PostConfigure<AiNexus.Features.Administration.AdministrationOptions>(options => options.BootstrapAdministrators = bootstrapAdministrators);
             configureServices?.Invoke(services);
         });
     }
@@ -125,7 +126,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     }
 }
 
-public sealed class TestEmbeddings : AiNexus.Modules.Knowledge.IEmbeddingClient
+public sealed class TestEmbeddings : AiNexus.Features.Knowledge.IEmbeddingClient
 {
     public string Provider => "ollama";
     public bool Enabled { get; set; } = true;
@@ -135,7 +136,7 @@ public sealed class TestEmbeddings : AiNexus.Modules.Knowledge.IEmbeddingClient
     public int LastProfileId { get; private set; }
     public int Calls;
     public int DelayMs { get; set; }
-    public async Task<AiNexus.Modules.Knowledge.EmbeddingBatchResult> EmbedBatchAsync(IReadOnlyList<string> inputs, AiNexus.Modules.Knowledge.EmbeddingPurpose purpose, AiNexus.Modules.Knowledge.EmbeddingProfile profile, CancellationToken ct)
+    public async Task<AiNexus.Features.Knowledge.EmbeddingBatchResult> EmbedBatchAsync(IReadOnlyList<string> inputs, AiNexus.Features.Knowledge.EmbeddingPurpose purpose, AiNexus.Features.Knowledge.EmbeddingProfile profile, CancellationToken ct)
     {
         var call = Interlocked.Increment(ref Calls); LastProfileId = profile.Id; await Task.Delay(DelayMs, ct);
         if (Fail || FailProfileId == profile.Id || FailOnCall == call) throw new ApiException(503, "fixture_embedding_failed", "測試索引服務暫停。");

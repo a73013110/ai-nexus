@@ -1,4 +1,4 @@
-using AiNexus.Modules.Administration;
+using AiNexus.Features.Administration;
 using Xunit;
 
 namespace AiNexus.Tests;

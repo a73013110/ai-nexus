@@ -1,10 +1,12 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.Inference;
-using AiNexus.Modules.Repositories;
-using AiNexus.Modules.WebSearch;
+using AiNexus.Platform.Errors;
+using AiNexus.Platform.Http;
+using AiNexus.Features.Conversations;
+using AiNexus.Features.Inference;
+using AiNexus.Features.Repositories;
+using AiNexus.Features.WebSearch;
 using Microsoft.Extensions.Options;
 using Xunit;
 

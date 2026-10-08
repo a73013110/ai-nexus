@@ -1,11 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.Artifacts;
-using AiNexus.Modules.Collaboration;
-using AiNexus.Modules.Projects;
-using AiNexus.Modules.Attachments;
-using AiNexus.Modules.Knowledge;
+using AiNexus.Features.Conversations;
+using AiNexus.Features.Identity;
+using AiNexus.Features.Artifacts;
+using AiNexus.Features.Collaboration;
+using AiNexus.Features.Projects;
 using Xunit;
 using static AiNexus.Tests.ChatApiTests;
 namespace AiNexus.Tests;

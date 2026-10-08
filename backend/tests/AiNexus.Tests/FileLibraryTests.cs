@@ -1,10 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.Attachments;
-using AiNexus.Modules.Knowledge;
-using AiNexus.Modules.Operations;
+using AiNexus.Features.Persistence;
+using AiNexus.Features.Inference;
+using AiNexus.Features.Operations;
+using AiNexus.Features.Attachments;
+using AiNexus.Features.Knowledge;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
