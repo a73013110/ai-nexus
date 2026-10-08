@@ -1,6 +1,7 @@
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Billing;
 
@@ -74,17 +75,26 @@ public sealed record SpendReportDto(DateTimeOffset From, DateTimeOffset Until, i
 public sealed record ConversationSpendDto(int Requests, int PendingCalls, int LegacyCalls, IReadOnlyList<MoneyTotalDto> Totals,
     IReadOnlyList<SpendBucketDto> Models);
 
-public static class BillingConfiguration
+internal sealed class ModelPriceConfiguration : IEntityTypeConfiguration<ModelPrice>
 {
-    public static void Configure(ModelBuilder model)
+    public void Configure(EntityTypeBuilder<ModelPrice> price)
     {
-        var price = model.Entity<ModelPrice>(); price.ToTable("ModelPrices", "inference"); price.HasKey(x => x.Id);
+        price.ToTable("ModelPrices", "inference"); price.HasKey(x => x.Id);
         price.HasIndex(x => new { x.Provider, x.ModelId, x.EffectiveAt }).IsUnique();
         price.Property(x => x.Provider).HasMaxLength(32); price.Property(x => x.ModelId).HasMaxLength(160);
         price.Property(x => x.Currency).HasMaxLength(3); price.Property(x => x.Kind).HasMaxLength(16);
         price.Property(x => x.RequestCharge).HasMaxLength(16); price.Property(x => x.Note).HasMaxLength(500);
         price.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.CreatedBy).OnDelete(DeleteBehavior.Restrict);
-        var charge = model.Entity<ModelCharge>(); charge.ToTable("ModelCharges", "inference"); charge.HasKey(x => x.Id);
+        price.Property(x => x.InputPerMillion).HasPrecision(20, 8); price.Property(x => x.CachedInputPerMillion).HasPrecision(20, 8);
+        price.Property(x => x.OutputPerMillion).HasPrecision(20, 8); price.Property(x => x.PerRequest).HasPrecision(20, 8);
+    }
+}
+
+internal sealed class ModelChargeConfiguration : IEntityTypeConfiguration<ModelCharge>
+{
+    public void Configure(EntityTypeBuilder<ModelCharge> charge)
+    {
+        charge.ToTable("ModelCharges", "inference"); charge.HasKey(x => x.Id);
         charge.HasIndex(x => new { x.OwnerId, x.CreatedAt }); charge.HasIndex(x => x.CreatedAt); charge.HasIndex(x => x.ConversationId);
         charge.Property(x => x.Provider).HasMaxLength(32); charge.Property(x => x.ModelId).HasMaxLength(160);
         charge.Property(x => x.Operation).HasMaxLength(32); charge.Property(x => x.Currency).HasMaxLength(3);
@@ -93,9 +103,8 @@ public static class BillingConfiguration
         charge.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
         charge.HasOne<Conversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
         charge.HasOne<ModelPrice>().WithMany().HasForeignKey(x => x.PriceId).OnDelete(DeleteBehavior.Restrict);
-        foreach (var entity in new[] { typeof(ModelPrice), typeof(ModelCharge) })
-            foreach (var name in new[] { "InputPerMillion", "CachedInputPerMillion", "OutputPerMillion", "PerRequest" })
-                model.Entity(entity).Property<decimal>(name).HasPrecision(20, 8);
+        charge.Property(x => x.InputPerMillion).HasPrecision(20, 8); charge.Property(x => x.CachedInputPerMillion).HasPrecision(20, 8);
+        charge.Property(x => x.OutputPerMillion).HasPrecision(20, 8); charge.Property(x => x.PerRequest).HasPrecision(20, 8);
         charge.Property(x => x.Amount).HasPrecision(20, 8);
     }
 }

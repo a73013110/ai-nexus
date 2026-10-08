@@ -1,3 +1,5 @@
+using AiNexus.Features.Administration;
+using AiNexus.Features.Identity;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Inference;
@@ -17,13 +19,21 @@ public sealed record RecentWorkDto(Guid Id, string Kind, string Title, DateTimeO
 public sealed record DashboardDto(string Scope, DashboardCountsDto Counts, SpendReportDto Spend, IReadOnlyList<RecentWorkDto> Recent,
     bool WebSearchAvailable, bool GiteaAvailable, string EmbeddingMode, TokenUsageDto? Tokens = null);
 
-public sealed class DashboardService(NexusDbContext db, SpendReports reports, UsageReports usage, AccessService access, EmbeddingService embedding,
-    AiNexus.Features.WebSearch.WebSearchService search, Microsoft.Extensions.Options.IOptions<AiNexus.Features.Repositories.GiteaOptions> gitea)
+/// <summary>Personal overview, or the platform-wide one for administrators (audited).</summary>
+internal sealed class GetDashboard(NexusDbContext db, SpendReports reports, UsageReports usage, AccessService access, EmbeddingService embedding,
+    AiNexus.Features.WebSearch.WebSearchService search, Microsoft.Extensions.Options.IOptions<AiNexus.Features.Repositories.GiteaOptions> gitea, TimeProvider clock)
 {
-    public async Task<DashboardDto> GetAsync(Guid actor, string scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offset, CancellationToken ct)
+    public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
+        .MapGet("/dashboard", async (string? scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, GetDashboard handler, CancellationToken ct) =>
+            (await handler.HandleAsync(user.Id, scope ?? "personal", ownerId, from, until, offsetMinutes, ct)).ToHttpResult())
+        .RequireAuthorization(Policies.Dashboard).WithName("GetDashboard").Produces<DashboardDto>();
+
+    public async Task<Result<DashboardDto>> HandleAsync(Guid actor, string scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offset, CancellationToken ct)
     {
-        if (scope is not ("personal" or "platform") || (scope == "personal" && ownerId != null)) throw new ApiException(400, "invalid_dashboard_scope", "檢視範圍不正確。");
-        if (scope == "platform" && !(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "admin")) throw new ApiException(403, "dashboard_access_denied", "只有管理員可檢視平台總覽。");
+        if (scope is not ("personal" or "platform") || (scope == "personal" && ownerId != null)) return Error.Invalid("invalid_dashboard_scope");
+        if (scope == "platform" && !(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == AdministrationConfiguration.Feature)) return Error.Forbidden("dashboard_access_denied");
+        var period = SpendPeriod.Create(from, until, offset, clock.GetUtcNow());
+        if (!period.IsSuccess) return period.Error;
         Guid? owner = scope == "personal" ? actor : ownerId;
         var resources = db.Set<WorkspaceResource>().AsNoTracking().Where(x => !x.IsDeleted && (owner == null || x.OwnerId == owner));
         var docs = db.Set<KnowledgeDocument>().AsNoTracking().Where(d => !d.IsDeleted && resources.Any(x => x.Id == d.Id));
@@ -38,12 +48,12 @@ public sealed class DashboardService(NexusDbContext db, SpendReports reports, Us
             embedding.Enabled ? await docs.CountAsync(d => d.CollectionId != null && d.Status != "ready", ct) : 0,
             // Originals are counted once, independently of document readers and collection indexes.
             await db.Set<Attachment>().CountAsync(x => x.InLibrary && x.StorageState == AttachmentStates.Ready && (owner == null || x.OwnerId == owner), ct));
-        var spend = await reports.ReportAsync(owner, from, until, offset, scope == "platform", ct);
+        var spend = await reports.ReportAsync(owner, period.Value, scope == "platform", ct);
         // Recent titles always belong to the current user, including in the platform scope.
         var recent = await db.Conversations.AsNoTracking().Where(x => x.OwnerId == actor && !x.IsDeleted)
             .OrderByDescending(x => x.UpdatedAt).Take(5).Select(x => new RecentWorkDto(x.Id, "chat", x.Title, x.UpdatedAt)).ToListAsync(ct);
         if (scope == "platform") { db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = ownerId ?? Guid.Empty, Action = "dashboard.platform.read", Result = "metrics" }); await db.SaveChangesAsync(ct); }
-        return new(scope, counts, spend, recent, search.Status.Available, gitea.Value.Enabled, embedding.Enabled ? "語意向量" : "關鍵字",
+        return new DashboardDto(scope, counts, spend, recent, search.Status.Available, gitea.Value.Enabled, embedding.Enabled ? "語意向量" : "關鍵字",
             await usage.TokensAsync(owner, spend.From, spend.Until, spend.OffsetMinutes, scope == "platform", ct));
     }
 }

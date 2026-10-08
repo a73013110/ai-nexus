@@ -1,4 +1,3 @@
-using AiNexus.Features.AccessControl;
 using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
 
@@ -14,9 +13,7 @@ public sealed class WebSearchModule : IFeatureModule
         builder.Services.AddScoped<IWebSearchProvider, WebSearchProvider>();
     }
 
-    public static void MapEndpoints(RouteGroupBuilder api)
-        => api.MapGet("/tools/web-search", (WebSearchService service) => Results.Ok(service.Status))
-            .RequireAuthorization(Policies.Chat).WithName("GetWebSearchStatus").Produces<WebSearchStatusDto>();
+    public static void MapEndpoints(RouteGroupBuilder api) => GetWebSearchStatus.Map(api);
 }
 
 internal sealed class WebSearchOptionsValidator : IValidateOptions<WebSearchOptions>

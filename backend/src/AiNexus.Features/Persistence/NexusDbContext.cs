@@ -47,10 +47,11 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         AiNexus.Features.Administration.AdministrationConfiguration.Configure(model);
         AiNexus.Features.Collaboration.CollaborationConfiguration.Configure(model);
         BackgroundJobConfiguration.Configure(model);
-        AiNexus.Features.Notifications.NotificationConfiguration.Configure(model);
+        model.ApplyConfiguration(new AiNexus.Features.Notifications.WorkspaceNotificationConfiguration());
         ModelInvocationConfiguration.Configure(model);
-        AiNexus.Features.Billing.BillingConfiguration.Configure(model);
-        AiNexus.Features.WebSearch.WebSearchConfiguration.Configure(model);
+        model.ApplyConfiguration(new AiNexus.Features.Billing.ModelPriceConfiguration());
+        model.ApplyConfiguration(new AiNexus.Features.Billing.ModelChargeConfiguration());
+        model.ApplyConfiguration(new AiNexus.Features.WebSearch.WebSearchRecordConfiguration());
         AiNexus.Features.Repositories.RepositoryConfiguration.Configure(model);
         AiNexus.Features.Repositories.RepositoryReviewConfiguration.Configure(model);
         AiNexus.Features.Knowledge.KnowledgeConfiguration.Configure(model, Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite");
@@ -58,7 +59,7 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         AiNexus.Features.Projects.ProjectConfiguration.Configure(model);
         AiNexus.Features.Sharing.SharingConfiguration.Configure(model);
         AiNexus.Features.Quality.QualityConfiguration.Configure(model);
-        AiNexus.Features.Integrations.IntegrationConfiguration.Configure(model);
+        model.ApplyConfiguration(new AiNexus.Features.Integrations.ImportedSourceReferenceConfiguration());
         PlatformFeatures.Add(model, "integrations", "資料來源", "/integrations", 80, administratorsOnly: true);
         PlatformFeatures.Add(model, "quality", "品質評測", "/quality", 60);
         PlatformFeatures.Add(model, "shared", "分享", "/shared", 50);
