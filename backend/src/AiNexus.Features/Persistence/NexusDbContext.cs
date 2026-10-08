@@ -47,7 +47,7 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         AiNexus.Features.Administration.AdministrationConfiguration.Configure(model);
         AiNexus.Features.Collaboration.CollaborationConfiguration.Configure(model);
         BackgroundJobConfiguration.Configure(model);
-        AiNexus.Features.Notifications.NotificationConfiguration.Configure(model);
+        model.ApplyConfiguration(new AiNexus.Features.Notifications.WorkspaceNotificationConfiguration());
         ModelInvocationConfiguration.Configure(model);
         AiNexus.Features.Billing.BillingConfiguration.Configure(model);
         AiNexus.Features.WebSearch.WebSearchConfiguration.Configure(model);
