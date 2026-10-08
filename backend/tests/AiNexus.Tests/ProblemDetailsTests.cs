@@ -1,7 +1,9 @@
 using System.Net;
+using System.Net.Http.Json;
 using System.Text.Json;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
+using AiNexus.Features.Library;
 using Xunit;
 
 namespace AiNexus.Tests;
@@ -42,5 +44,21 @@ public sealed class ProblemDetailsTests
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal("not_found", body.RootElement.GetProperty("code").GetString());
         Assert.False(body.RootElement.TryGetProperty("traceId", out _));
+    }
+
+    [Fact]
+    public async Task InvalidRequestsNameTheFieldsWithoutEchoingInput()
+    {
+        await using var factory = new NexusFactory();
+        using var client = await factory.SignedInAsync();
+        using var response = await client.PostAsJsonAsync("/api/v1/prompt-templates", new SavePromptRequest("   ", "fixture-secret-content"));
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var text = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("fixture-secret-content", text);
+        using var body = JsonDocument.Parse(text);
+        Assert.Equal("invalid_prompt_template", body.RootElement.GetProperty("code").GetString());
+        var errors = body.RootElement.GetProperty("errors");
+        Assert.Equal(["title"], errors.EnumerateObject().Select(p => p.Name));
+        Assert.Equal(["length"], errors.GetProperty("title").EnumerateArray().Select(e => e.GetString()));
     }
 }

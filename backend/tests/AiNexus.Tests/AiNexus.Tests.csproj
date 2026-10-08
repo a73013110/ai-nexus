@@ -8,4 +8,5 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.12" />
   </ItemGroup>
   <ItemGroup><ProjectReference Include="../../src/AiNexus.Api/AiNexus.Api.csproj" /></ItemGroup>
+  <ItemGroup><None Update="request-validators.baseline.txt" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
 </Project>

@@ -18,11 +18,13 @@ public sealed class IdentityWriteLock
     public SemaphoreSlim Gate { get; } = new(1, 1);
 }
 
-public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, ModelPresentation models, AiNexus.Features.Administration.AdminBootstrap bootstrap) : IRequestUser
+public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, ModelPresentation models, AiNexus.Features.Administration.AdminBootstrap bootstrap) : IRequestUser, ICurrentUser
 {
     private static readonly ConcurrentDictionary<string, (string Name, DateTimeOffset At)> DisplayNames = new();
     private NexusUser? resolved;
     public Guid? ResolvedId => resolved?.Id;
+    Guid ICurrentUser.Id => ((ICurrentUser)this).User.Id;
+    NexusUser ICurrentUser.User => resolved ?? throw new InvalidOperationException("ICurrentUser is resolved by the /api/v1 endpoint filter; declare it as a handler parameter.");
 
     public async Task<NexusUser> GetAsync(CancellationToken ct = default)
     {

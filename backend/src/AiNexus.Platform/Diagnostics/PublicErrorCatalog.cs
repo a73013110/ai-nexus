@@ -251,6 +251,7 @@ public static class PublicErrorCatalog
         ["unknown_access_id"] = "清單包含不存在的角色、群組或功能。",
         ["unknown_resource_member"] = "清單包含未登入過的帳號或停用的群組。",
         ["user_not_found"] = "找不到可測試的使用者。",
+        ["validation_failed"] = "輸入內容不正確，請檢查標示的欄位後再試。",
         ["vision_not_supported"] = "目前模型不支援圖片，請切換支援圖片的模型，或移除圖片附件。",
         ["web_query_too_long"] = "網路搜尋提問最多 2000 個字元，請簡化查詢。",
         ["web_search_daily_quota"] = "今日網路搜尋已達上限。",
