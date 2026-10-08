@@ -1,7 +1,8 @@
-using System.Diagnostics;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Inference;
 
+/// <summary>One chat answer being generated. Its EF mapping lives in <c>NexusDbContext</c>.</summary>
 public sealed class GenerationRun
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -49,38 +50,28 @@ public sealed class RunEvent
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
-public sealed class ModelProfile
-{
-    public string Id { get; set; } = "";
-    public string Provider { get; set; } = "google";
-    public string ProviderModelId { get; set; } = "";
-    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
-    public string NativeId => ProviderModelId;
-    public string DisplayName { get; set; } = "";
-    public int ContextTokens { get; set; } = 8192;
-    public int MaxOutputTokens { get; set; } = 2048;
-    public bool SupportsStreaming { get; set; } = true;
-    public bool SupportsUsage { get; set; } = true;
-    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
-    public bool SupportsImages { get; set; }
-    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
-    public bool? ImageCapabilityOverride { get; set; }
-    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
-    public string ReasoningControl { get; set; } = "none";
-    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
-    public List<string> ReasoningEfforts { get; set; } = [];
-    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
-    public string DefaultReasoningEffort { get; set; } = "auto";
+public sealed record RunDto(Guid Id, Guid ConversationId, Guid UserMessageId, Guid AssistantMessageId, string ModelId, string Status, string Content, long LastSequence, string? ErrorCode, DateTimeOffset CreatedAt, DateTimeOffset? StartedAt, DateTimeOffset? FinishedAt, long? InputTokens, long? OutputTokens, AiNexus.Features.Inference.RunTimingDto? Timing = null, string? ModelDisplayName = null, string? IssueCode = null);
+public sealed record RunEventDto(int Version, long Sequence, Guid RunId, string Type, string Status, string? Delta, string? ErrorCode, string? IssueCode = null);
 
-    public bool ValidReasoning(string provider)
-    {
-        if (ReasoningControl == "none") return ReasoningEfforts.Count == 0 && DefaultReasoningEffort == "auto";
-        string[] allowed = ReasoningControl switch {
-            "google-level" when provider == "google" => ["minimal", "low", "medium", "high"],
-            "ollama-toggle" when provider == "ollama" => ["minimal", "high"],
-            "ollama-level" when provider == "ollama" => ["low", "medium", "high"],
-            _ => []
-        };
-        return ReasoningEfforts.Count > 0 && ReasoningEfforts.Distinct().Count() == ReasoningEfforts.Count && ReasoningEfforts.All(x => allowed.Contains(x)) && (DefaultReasoningEffort == "auto" || ReasoningEfforts.Contains(DefaultReasoningEffort));
-    }
+public static class RunStates
+{
+    public const string Queued = "queued";
+    public const string Running = "running";
+    public const string Completed = "completed";
+    public const string Cancelled = "cancelled";
+    public const string Failed = "failed";
+    public static bool IsActive(string status) => status is Queued or Running;
+}
+
+internal static class InferenceErrors
+{
+    public const string InputTooLongCode = "input_too_long";
+    public static readonly Error RunNotFound = Error.NotFound("run_not_found");
+    public static readonly Error IdempotencyKeyRequired = Error.Invalid("idempotency_key_required");
+    public static readonly Error IdempotencyConflict = Error.Conflict("idempotency_conflict");
+    public static readonly Error GenerationActive = Error.Conflict("generation_active");
+    public static readonly Error QueueFull = new(ErrorKind.RateLimited, "queue_full");
+    public static readonly Error KnowledgeSelectionChanged = Error.Conflict("knowledge_selection_changed");
+    /// <summary>A regeneration reuses the original prompt's attachments.</summary>
+    public static readonly Error RegenerateWithAttachments = Error.Invalid("invalid_request");
 }
