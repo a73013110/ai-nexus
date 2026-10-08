@@ -31,7 +31,6 @@ AiNexus.Features.Knowledge.CollectionRequest
 AiNexus.Features.Knowledge.KnowledgeSearchRequest
 AiNexus.Features.Knowledge.KnowledgeSelectionDto
 AiNexus.Features.Knowledge.TextDocumentRequest
-AiNexus.Features.Notifications.ReadNotificationsRequest
 AiNexus.Features.Projects.ConversationProjectRequest
 AiNexus.Features.Projects.ProjectConversationRequest
 AiNexus.Features.Projects.ProjectRequest
