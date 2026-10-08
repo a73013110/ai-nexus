@@ -2,13 +2,19 @@ using System.Data;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Operations;
-using AiNexus.Features.Artifacts;
+using AiNexus.Platform.Events;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Collaboration;
 
+/// <summary>
+/// Raised when a project or evaluation set is soft-deleted, inside its serializable transaction. Subscribers detach their
+/// own records from the container before the save (Artifacts: a project's artifacts).
+/// </summary>
+public sealed record ContainerDeleted(string Kind, Guid ContainerId, Guid ActorId) : IDomainEvent;
+
 /// <summary>Remove a container without destroying private conversations, owned files or audit evidence.</summary>
-public sealed class ResourceLifecycle(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes)
+public sealed class ResourceLifecycle(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, DomainEvents events)
 {
     public async Task DeleteAsync(Guid actor, Guid id, string kind, CancellationToken ct)
     {
@@ -26,12 +32,12 @@ public sealed class ResourceLifecycle(NexusDbContext db, ResourceAccess access, 
                 if (await (from r in db.Runs join c in db.Conversations on r.ConversationId equals c.Id where c.ProjectId == id && r.ActiveOwnerId != null select r.Id).AnyAsync(ct))
                     throw new ApiException(409, "generation_active", "專案仍有正在生成的回答，請先完成或停止，再刪除。");
                 await db.Conversations.Where(x => x.ProjectId == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ProjectId, (Guid?)null), ct);
-                await db.Set<Artifact>().Where(x => x.ProjectId == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ProjectId, (Guid?)null), ct);
                 // Direct ACLs and ownership survive. Inherited project access stops with the container.
                 await db.Set<WorkspaceResource>().Where(x => x.ParentId == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ParentId, (Guid?)null), ct);
             }
             resource.IsDeleted = true;
             resource.UpdatedAt = DateTimeOffset.UtcNow;
+            events.Raise(new ContainerDeleted(kind, id, actor));
             db.AuditEvents.Add(new() { OwnerId = actor, Action = kind + ".deleted", ResourceId = id, Result = "soft_deleted" });
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);

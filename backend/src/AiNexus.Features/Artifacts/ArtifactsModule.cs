@@ -1,4 +1,6 @@
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.Collaboration;
+using AiNexus.Platform.Events;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
@@ -26,6 +28,7 @@ public sealed class ArtifactsModule : IFeatureModule
         services.AddSingleton<IValidateOptions<ExportOptions>, ExportOptionsValidator>();
         services.AddFeaturePolicy(FeatureIds.Artifacts);
         services.AddFeaturePolicy(Policies.Text, FeatureIds.Chat, FeatureIds.Artifacts);
+        services.AddDomainEventHandler<ContainerDeleted, DetachDeletedProjectArtifacts>();
     }
 
     // Endpoint order is the published OpenAPI order.
