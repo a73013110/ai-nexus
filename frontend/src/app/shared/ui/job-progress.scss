@@ -44,9 +44,3 @@
 .job-progress[data-status='completed'] .job-stage {
   color: var(--signal);
 }
-.job-error {
-  color: var(--error);
-  font-size: var(--text-label);
-  line-height: var(--line-ui);
-  margin: var(--p-space-2) 0 0;
-}

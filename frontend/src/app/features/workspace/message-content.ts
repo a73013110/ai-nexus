@@ -1,3 +1,4 @@
+import { Notice } from '../../shared/ui/notice';
 import { ChangeDetectionStrategy, Component, input, computed } from '@angular/core';
 import type { Message } from '../../core/api/types';
 import { MarkdownView } from '../../shared/ui/markdown-view';
@@ -6,7 +7,6 @@ import { RunTimingDisplay } from '../../shared/ui/run-timing';
 import { ReaderLink } from '../../shared/browser/reader-link';
 import { AttachmentList } from '../attachments/attachment-list';
 import { systemProblem } from '../../core/api/safe-errors';
-import { IssueCode } from '../../shared/ui/issue-code';
 
 export type MessageDisplay = Pick<
   Message,
@@ -15,7 +15,7 @@ export type MessageDisplay = Pick<
 /** The same settled answer, citations and attachments in chat and read-only snapshots. */
 @Component({
   selector: 'nx-message-content',
-  imports: [IssueCode, MarkdownView, Icon, RunTimingDisplay, ReaderLink, AttachmentList],
+  imports: [Notice, MarkdownView, Icon, RunTimingDisplay, ReaderLink, AttachmentList],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `@if (message().role === 'user') {
       <div class="user-copy">{{ message().content }}</div>
@@ -66,14 +66,14 @@ export type MessageDisplay = Pick<
           }
         </nav>
       } @else {
-        <p class="message-note">這次網路搜尋沒有可引用的摘要。</p>
+        <nx-notice tone="info" message="這次網路搜尋沒有可引用的摘要。" />
       }
     }
     @if (message().status === 'cancelled') {
-      <p class="message-note">已停止 · 保留部分回答</p>
+      <nx-notice tone="info" message="已停止 · 保留部分回答" />
     }
     @if (message().status === 'failed') {
-      <p class="message-note error-note">{{ failure() }}<nx-issue-code [message]="failure()" /></p>
+      <nx-notice tone="danger" [message]="failure()" />
     }
     @if (message().role === 'assistant') {
       <nx-run-timing [value]="message().timing" />

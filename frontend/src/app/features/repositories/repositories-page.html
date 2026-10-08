@@ -31,7 +31,7 @@
     <p role="status">正在載入程式庫…</p>
   }
   @if (error()) {
-    <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+    <nx-notice tone="danger" [message]="error()" />
   }
   @if (status(); as connection) {
     @if (!connection.available) {
@@ -278,12 +278,11 @@
             </nx-empty-state>
           }
           @if (notice()) {
-            <p class="form-note" role="status">
-              {{ notice() }}
+            <nx-notice tone="success" [message]="notice()">
               @if (importedId()) {
-                <a [routerLink]="['/reader', importedId()]">檢視文件</a>
+                <a notice-actions [routerLink]="['/reader', importedId()]">檢視文件</a>
               }
-            </p>
+            </nx-notice>
           }
         </section>
       </div>

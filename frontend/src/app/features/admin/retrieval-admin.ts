@@ -1,6 +1,6 @@
+import { Notice } from '../../shared/ui/notice';
 import { Card } from '../../shared/ui/card';
 import { Field } from '../../shared/ui/field';
-import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -31,9 +31,9 @@ import { RetrievalResults } from '../../shared/ui/retrieval-results';
 @Component({
   selector: 'nx-retrieval-admin',
   imports: [
+    Notice,
     Card,
     Field,
-    IssueCode,
     ReactiveFormsModule,
     Select,
     Checkbox,

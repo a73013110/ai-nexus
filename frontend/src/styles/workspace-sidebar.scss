@@ -40,9 +40,17 @@
   display: none;
 }
 .workspace-sidebar.is-compact {
-  width: var(--sidebar-rail-width, 76px);
-  padding-inline: var(--p-space-2);
-  gap: var(--p-space-3);
+  width: var(--sidebar-rail-width);
+  padding-inline: var(--p-space-1);
+  gap: var(--p-space-2);
+}
+.workspace-sidebar.is-compact > nx-workspace-navigation {
+  flex: 1;
+}
+.is-compact .icon-button,
+.is-compact .workspace-icons a {
+  width: 100%;
+  min-height: 2.75rem;
 }
 .is-compact .workspace-sidebar-heading {
   flex-direction: column;
@@ -90,23 +98,25 @@
 @media (max-width: 859px) {
   .workspace-sidebar {
     --control-height-compact: 2.75rem;
-  }
-  :root {
-    --sidebar-rail-width: 64px;
-  }
-  .workspace-sidebar:not(.is-compact) {
     position: fixed;
     inset: calc(var(--identity-banner-height, 0px) + var(--global-issue-height, 0px)) auto 0 0;
-    width: var(--sidebar-width);
+    width: var(--sidebar-drawer-width);
     z-index: 30;
     overflow: visible;
     box-shadow: var(--shadow);
+    visibility: hidden;
+    transform: translateX(-100%);
+    transition: transform var(--motion-panel) var(--ease);
+  }
+  .workspace-sidebar.is-open {
+    visibility: visible;
+    transform: translateX(0);
   }
   .workspace-backdrop {
     display: block;
-    position: fixed;
-    inset: calc(var(--identity-banner-height, 0px) + var(--global-issue-height, 0px)) 0 0
-      var(--sidebar-width);
+    position: absolute;
+    inset: 0 auto 0 100%;
+    width: calc(100vw - var(--sidebar-drawer-width));
     background: var(--scrim);
     z-index: -1;
   }
@@ -115,8 +125,6 @@
   min-width: 0;
   min-height: 0;
   flex: 0 1 auto;
-  overflow: auto;
-  overscroll-behavior: contain;
 }
 .workspace-sidebar-content {
   display: flex;
@@ -180,4 +188,26 @@
   flex: none;
   order: -2;
   overflow: visible;
+}
+
+@media (max-width: 859px) {
+  .workspace-menu-button {
+    flex: none;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+  .feature-header > nx-workspace-menu-button + div {
+    flex: 1;
+    min-width: 0;
+  }
+}
+.reader-navigation {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+}
+@media (prefers-reduced-motion: reduce) {
+  .workspace-sidebar {
+    transition: none;
+  }
 }

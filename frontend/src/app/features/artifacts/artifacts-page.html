@@ -11,10 +11,10 @@
     <nx-icon name="plus" />新增成果
   </button>
   @if (error()) {
-    <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+    <nx-notice tone="danger" [message]="error()" />
   }
   @if (notice()) {
-    <p class="success-note" role="status">{{ notice() }}</p>
+    <nx-notice tone="success" [message]="notice()" />
   }
   @if (loading()) {
     <p role="status">正在載入成果文件…</p>
@@ -87,12 +87,14 @@
             />
           </div>
           @if (doc.version !== doc.currentVersion && !restoring()) {
-            <p class="source-warning">
+            <nx-notice tone="warning">
               正在檢視舊版本 {{ doc.version }}，最新是版本 {{ doc.currentVersion }}。
               @if (doc.resource.canEdit) {
-                <button class="quiet-button" (click)="restore()">將此版帶入編輯</button>
+                <button notice-actions class="quiet-button" (click)="restore()">
+                  將此版帶入編輯
+                </button>
               }
-            </p>
+            </nx-notice>
           }
           <div class="artifact-toolbar">
             @if (doc.resource.isOwner && session.has('shared')) {

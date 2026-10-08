@@ -11,13 +11,11 @@
   @if (loading()) {
     <p role="status">正在載入介面工作區…</p>
   } @else if (error()) {
-    <p class="error-banner" role="alert">
-      {{ error() }}<nx-issue-code [message]="error()" /><button type="button" (click)="load()">
-        重新載入
-      </button>
-    </p>
+    <nx-notice [message]="error()"
+      ><button notice-actions type="button" (click)="load()">重新載入</button>
+    </nx-notice>
   } @else if (!session.has('admin')) {
-    <p class="error-banner" role="alert">介面元件工作區僅提供平台管理員使用。</p>
+    <nx-notice tone="danger">介面元件工作區僅提供平台管理員使用。</nx-notice>
   } @else {
     <div class="design-intro">
       <div>
@@ -82,9 +80,7 @@
             ><button type="button" class="danger-button" (click)="reset()">重設示範</button
             ><button type="button" class="secondary-button" disabled>停用操作</button>
           </div>
-          <p class="design-notice" role="status">
-            {{ notice() || '選取操作後，回饋會出現在這裡。' }}
-          </p>
+          <nx-notice tone="info" [message]="notice() || '選取操作後，回饋會出現在這裡。'" />
         </section>
         <section nxCard aria-labelledby="design-selection-title">
           <span class="panel-eyebrow">選擇與選單</span>
@@ -169,6 +165,23 @@
               [detail]="current.detail"
             />
           }
+        </section>
+        <section nxCard aria-labelledby="design-notices-title">
+          <span class="panel-eyebrow">操作回饋</span>
+          <h2 id="design-notices-title">緊湊提示，同一套共用元件</h2>
+          <nx-notice tone="info" message="可加入文件、圖片或知識庫來源，提供更多背景。" />
+          <nx-notice tone="success" message="變更已儲存，可以繼續工作。" />
+          <nx-notice tone="warning" message="內容接近模型的 Context 上限，請精簡背景資料。" />
+          <nx-notice message="操作未完成，請確認連線後重試。">
+            <button
+              notice-actions
+              type="button"
+              class="quiet-button"
+              (click)="notice.set('已示範重試操作。')"
+            >
+              重試
+            </button>
+          </nx-notice>
         </section>
         <section nxCard aria-labelledby="design-badges-title">
           <span class="panel-eyebrow">數量與提醒</span>

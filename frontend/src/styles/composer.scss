@@ -139,24 +139,6 @@
   margin: var(--p-space-1) var(--p-space-1) 0;
   line-height: 1.6;
 }
-.model-notice,
-.other-run {
-  color: var(--secondary);
-  display: flex;
-  gap: 7px;
-  align-items: center;
-  font-size: var(--text-caption);
-  line-height: 1.6;
-  margin: 0 0 12px;
-}
-.model-notice nx-icon {
-  width: 14px;
-  height: 14px;
-}
-.other-run a {
-  text-decoration: underline;
-  color: var(--accent);
-}
 .latest-button {
   display: flex;
   align-items: center;
@@ -177,47 +159,11 @@
   width: 14px;
   height: 14px;
 }
-.editing-notice {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  margin: 0 0 10px;
-  color: var(--accent);
-  font-size: var(--text-caption);
-  background: var(--accent-soft);
-  border-radius: var(--p-radius-sm);
-}
-.editing-notice > nx-icon {
-  width: 14px;
-  height: 14px;
-}
-.editing-notice .icon-button {
-  margin-left: auto;
-  width: 28px;
-  height: 28px;
-}
 @media (max-width: 520px) {
   .composer-hint {
     flex-wrap: wrap;
     gap: var(--p-space-1);
   }
-}
-.archive-notice {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  font-size: var(--text-caption);
-  color: var(--secondary);
-  padding-block: var(--p-space-2);
-}
-.archive-notice > span {
-  flex: 1;
-}
-.archive-notice > button {
-  color: var(--accent);
-  min-height: var(--button-target);
-  padding-inline: var(--p-space-2);
 }
 .draft-saved {
   color: var(--secondary);

@@ -1,24 +1,21 @@
-import { IssueCode } from './issue-code';
+import { Notice } from './notice';
 import { safeMessage } from '../../core/api/safe-errors';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  DestroyRef,
-  ElementRef,
-  effect,
-  inject,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { AuthService } from '../../core/auth/auth-service';
 import { Icon } from './icon';
+import { ViewportInset } from '../browser/viewport-inset';
 
 @Component({
   selector: 'nx-identity-banner',
-  imports: [IssueCode,Icon],
+  imports: [Notice, Icon, ViewportInset],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `@if (auth.session()?.testing; as testing) {
-    <div #banner class="identity-banner" role="region" aria-label="管理者測試身分">
+    <div
+      nxViewportInset="--identity-banner-height"
+      class="identity-banner"
+      role="region"
+      aria-label="管理者測試身分"
+    >
       <nx-icon name="shield" />
       <span
         ><strong>測試身分：{{ auth.session()?.displayName || auth.session()?.account }}</strong>
@@ -28,7 +25,7 @@ import { Icon } from './icon';
         {{ busy() ? '正在返回…' : '返回管理者' }}
       </button>
       @if (error()) {
-        <p role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+        <nx-notice [message]="error()" />
       }
     </div>
   }`,
@@ -37,7 +34,6 @@ export class IdentityBanner {
   readonly auth = inject(AuthService);
   readonly busy = signal(false);
   readonly error = signal('');
-  private readonly banner = viewChild<ElementRef<HTMLElement>>('banner');
   constructor() {
     effect((onCleanup) => {
       const test = this.auth.session()?.testing;
@@ -51,21 +47,6 @@ export class IdentityBanner {
       );
       onCleanup(() => clearTimeout(timer));
     });
-    effect((onCleanup) => {
-      const element = this.banner()?.nativeElement;
-      if (!element) return;
-      const observer = new ResizeObserver((entries) =>
-        document.documentElement.style.setProperty(
-          '--identity-banner-height',
-          entries[0].borderBoxSize[0].blockSize + 'px',
-        ),
-      );
-      observer.observe(element);
-      onCleanup(() => observer.disconnect());
-    });
-    inject(DestroyRef).onDestroy(() =>
-      document.documentElement.style.removeProperty('--identity-banner-height'),
-    );
   }
   async restore() {
     if (this.busy()) return;

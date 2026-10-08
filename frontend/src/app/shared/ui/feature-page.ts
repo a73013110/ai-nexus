@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { WorkspaceSidebar } from './workspace-sidebar';
 import { WorkspaceLayout } from '../../core/preferences/workspace-layout';
+import { WorkspaceMenuButton } from './workspace-menu-button';
 
 @Component({
   selector: 'nx-feature-page',
-  imports: [WorkspaceSidebar],
+  imports: [WorkspaceSidebar, WorkspaceMenuButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: ':host { display: block; min-width: 0; }',
   template: `<a class="skip-link" href="#feature-content">跳到主要內容</a>
@@ -23,6 +24,7 @@ import { WorkspaceLayout } from '../../core/preferences/workspace-layout';
       >
         <div class="feature-content" [class.ui-density-compact]="density() === 'compact'">
           <header class="feature-header">
+            <nx-workspace-menu-button />
             <div>
               @if (eyebrow()) {
                 <span class="panel-eyebrow">{{ eyebrow() }}</span>

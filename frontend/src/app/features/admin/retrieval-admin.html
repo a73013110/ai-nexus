@@ -2,14 +2,12 @@
   <p role="status">正在載入知識檢索設定…</p>
 }
 @if (error()) {
-  <p class="error-banner" role="alert">
-    {{ error() }}<nx-issue-code [message]="error()" /><button type="button" (click)="load()">
-      重新載入
-    </button>
-  </p>
+  <nx-notice [message]="error()"
+    ><button notice-actions type="button" (click)="load()">重新載入</button>
+  </nx-notice>
 }
 @if (notice()) {
-  <p class="form-note" role="status">{{ notice() }}</p>
+  <nx-notice tone="info" [message]="notice()" />
 }
 <section nxCard>
   <div class="page-toolbar">

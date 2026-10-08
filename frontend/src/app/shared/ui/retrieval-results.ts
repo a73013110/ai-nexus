@@ -1,3 +1,4 @@
+import { Notice } from './notice';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import type { KnowledgeSearch } from '../../core/api/types';
 import { ReaderLink } from '../browser/reader-link';
@@ -6,7 +7,7 @@ import { Card } from './card';
 
 @Component({
   selector: 'nx-retrieval-results',
-  imports: [ReaderLink, Icon, Card],
+  imports: [Notice, ReaderLink, Icon, Card],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <p class="form-note" role="status">
@@ -40,7 +41,9 @@ import { Card } from './card';
           <p>{{ hit.text }}</p>
         </a>
       } @empty {
-        <p class="source-warning">資料不足：目前沒有符合門檻的來源。請調整查詢或確認索引已完成。</p>
+        <nx-notice tone="warning"
+          >資料不足：目前沒有符合門檻的來源。請調整查詢或確認索引已完成。</nx-notice
+        >
       }
     </div>
   `,

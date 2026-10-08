@@ -1,5 +1,11 @@
 .workspace-navigation {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.workspace-navigation > nx-scroll-area {
+  flex: 1;
 }
 .workspace-groups {
   display: flex;

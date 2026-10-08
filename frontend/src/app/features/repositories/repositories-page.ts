@@ -1,9 +1,9 @@
+import { Notice } from '../../shared/ui/notice';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
-import { IssueCode } from '../../shared/ui/issue-code';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ChangeDetectionStrategy,
@@ -40,11 +40,11 @@ import { RepositoriesApi } from './repositories-api';
 @Component({
   selector: 'nx-repositories-page',
   imports: [
+    Notice,
     EmptyState,
     Card,
     ViewSwitch,
     Field,
-    IssueCode,
     FeaturePage,
     Icon,
     Select,

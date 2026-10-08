@@ -1,3 +1,4 @@
+import { Notice } from '../../shared/ui/notice';
 import { Card } from '../../shared/ui/card';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { FilterPanel } from '../../shared/ui/filter-panel';
@@ -33,6 +34,7 @@ import { StorageUsage } from '../../shared/ui/storage-usage';
 @Component({
   selector: 'nx-files-page',
   imports: [
+    Notice,
     Card,
     EmptyState,
     FilterPanel,

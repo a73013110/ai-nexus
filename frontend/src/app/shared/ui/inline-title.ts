@@ -51,7 +51,7 @@ let sequence = 0;
         <span
           [id]="id + '-help'"
           class="inline-title-help"
-          [class.inline-error]="error()"
+          [class.ui-error-text]="error()"
           role="status"
           >{{ error() || (saving() ? '正在儲存…' : 'Enter 儲存 · Esc 取消') }}</span
         >

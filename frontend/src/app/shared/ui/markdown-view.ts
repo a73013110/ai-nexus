@@ -1,4 +1,4 @@
-import { IssueCode } from './issue-code';
+import { Notice } from './notice';
 import {
   afterRenderEffect,
   ChangeDetectionStrategy,
@@ -9,6 +9,7 @@ import {
   inject,
   Injector,
   input,
+  signal,
   viewChild,
 } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
@@ -17,15 +18,16 @@ import { renderMarkdownWithDiagrams } from './markdown';
 import { completeStreamingInline } from './streaming-markdown';
 
 @Component({
-  imports: [IssueCode],
+  imports: [Notice],
   selector: 'nx-markdown-view',
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div #body class="markdown" [innerHTML]="html()" (click)="copyCode($event)"></div>
+    @if (widgetError()) {
+      <nx-notice tone="warning" message="圖表元件未能載入，以下保留 Mermaid 原始碼。" />
+    }
     @if (copy.error()) {
-      <p class="message-note" role="status">
-        {{ copy.error() }}<nx-issue-code [message]="copy.error()" />
-      </p>
+      <nx-notice [message]="copy.error()" />
     }`,
 })
 export class MarkdownView {
@@ -37,6 +39,7 @@ export class MarkdownView {
   private clearWidgets: () => void = () => undefined;
   private revision = 0;
   readonly copy = inject(CopyFeedback);
+  readonly widgetError = signal(false);
   private readonly rendered = computed(() =>
     renderMarkdownWithDiagrams(
       this.streaming() ? completeStreamingInline(this.content()) : this.content(),
@@ -49,6 +52,7 @@ export class MarkdownView {
       const { diagrams } = this.rendered();
       const host = this.body().nativeElement;
       const revision = ++this.revision;
+      this.widgetError.set(false);
       this.clearWidgets();
       if (diagrams.length) void this.mountDiagrams(host, diagrams, revision);
     });
@@ -65,15 +69,13 @@ export class MarkdownView {
       this.clearWidgets = mountMarkdownDiagrams(host, diagrams, this.injector);
     } catch {
       if (revision !== this.revision) return;
+      this.widgetError.set(true);
       for (const slot of slots) {
-        const note = document.createElement('p');
-        note.textContent = '圖表元件未能載入，以下保留 Mermaid 原始碼。';
-        note.setAttribute('role', 'status');
         const pre = document.createElement('pre');
         const code = document.createElement('code');
         code.textContent = diagrams[Number(slot.dataset['diagramIndex'])] || '';
         pre.append(code);
-        slot.replaceChildren(note, pre);
+        slot.replaceChildren(pre);
       }
     }
   }

@@ -2,7 +2,7 @@
 
 視覺、尺寸、字級與 motion 的維護規範見 [DESIGN_SYSTEM](DESIGN_SYSTEM.md)。
 
-Chat、功能頁及閱讀器共用 `WorkspaceSidebar`／`WorkspaceLayout`。Toggle 在側欄頂部右側；桌面收合為 76px 圖示欄、手機為 64px，保留功能、通知與帳號。手機展開 overlay，背景 inert、Tab 焦點留在側欄、Escape 返回 toggle。桌面收合跨路由維持，進入手機時回到圖示欄。Active tabs 使用背景及內部下邊線，focus outline 內縮，避免被捲動容器裁切。
+Chat、功能頁及閱讀器共用 `WorkspaceSidebar`／`WorkspaceLayout`。Toggle 在側欄頂部右側；桌面收合為 52px 圖示欄，保留功能、通知與帳號。手機收合時主內容使用完整寬度，展開為 overlay，背景 inert、Tab 焦點留在側欄、Escape 返回 toggle；桌面收合狀態跨路由及手機斷點維持。功能導覽使用共用 `ScrollArea`，隱藏捲軸且以實際位置控制漸層箭頭，保留方向按鈕、鍵盤、觸控、高對比與減少動態效果。Active tabs 使用背景及內部下邊線，focus outline 內縮，避免被捲動容器裁切。詳見 [共用介面模式](UI_PATTERNS.md)。
 
 對話每列「…」與右上工具列共用 `ConversationActions`／top-layer ActionMenu，提供分享、命名、收藏、封存、刪除。生成中顯示 spinner，禁止破壞生成狀態的操作；切換後仍持續，完成圖示沿用未讀通知。準備回答採三層軌道與中心脈衝，減少動態時保持靜態可讀。
 

@@ -28,7 +28,7 @@ import { Icon } from './icon';
 })
 export class IssueCode {
   readonly message = input<string | null | undefined>();
-  readonly compact = input(false);
+  readonly compact = input(true);
   private readonly feedback = inject(CopyFeedback);
   readonly code = computed(() => issueInMessage(this.message()));
   readonly copied = this.feedback.copied;

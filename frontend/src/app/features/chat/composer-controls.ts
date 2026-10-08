@@ -1,3 +1,4 @@
+import { Notice } from '../../shared/ui/notice';
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import type { ContextUsage, Model, ModelPolicy } from '../../core/api/types';
 import { Icon } from '../../shared/ui/icon';
@@ -8,7 +9,7 @@ import { formatModelName } from '../../shared/browser/format';
 @Component({
   selector: 'nx-composer-controls',
   host: { class: 'ui-density-compact' },
-  imports: [Icon, Disclosure, Select],
+  imports: [Notice, Icon, Disclosure, Select],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="composer-controls">
     @if (policy().allowModelSelection) {
@@ -117,7 +118,7 @@ import { formatModelName } from '../../shared/browser/format';
               <p>這次會略過最早 {{ context.droppedMessages }} 則上文；原始歷史仍保留。</p>
             }
             @if (context.budgetExceeded) {
-              <p class="error-note">本次提問超出可用預算，請縮短內容。</p>
+              <nx-notice tone="danger">本次提問超出可用預算，請縮短內容。</nx-notice>
             }
             <p class="context-explanation">
               包含系統指令、目前分支與草稿，以保守 UTF-8 預算估算；實際 token 數依模型而異。

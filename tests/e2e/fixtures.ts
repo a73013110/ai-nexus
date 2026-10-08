@@ -14,9 +14,10 @@ export async function chooseSelect(
 }
 export async function openSettings(page: Page) {
   const account = page.getByRole("button", { name: "登入者選單", exact: true });
-  await account.waitFor({ state: "attached" });
-  if (!(await account.isVisible()))
-    await page.getByRole("button", { name: "展開側欄" }).click();
+  const sidebar = page.locator(".workspace-sidebar");
+  await sidebar.waitFor({ state: "attached" });
+  if ((await sidebar.getAttribute("aria-hidden")) === "true")
+    await page.locator(".workspace-menu-button").click();
   await account.click();
   await page.getByRole("menuitem", { name: "設定", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "個人設定", exact: true });
@@ -78,6 +79,10 @@ export const richAnswer =
 // Capture final surfaces, while allowing intentional inference loops to keep running.
 export async function settleEntrance(page: Page) {
   await page.evaluate(async () => {
+    // Include CSS and after-render animations scheduled for the next painted frame.
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
     const finished = Promise.all(
       document
         .getAnimations()
@@ -201,6 +206,7 @@ export class ApiFixture {
   loginMethod = "ad";
   chatAccess = true;
   adminAccess = false;
+  auditAccess = false;
   extraFeatures: { id: string; name: string; route: string }[] = [];
   modelPolicy: ModelPolicy = {
     allowModelSelection: true,
@@ -233,6 +239,10 @@ export class ApiFixture {
         contentType: "application/json",
         body: JSON.stringify(body),
       });
+    if (path === "/presence")
+      return json({ enabled: true, heartbeatSeconds: 25 });
+    if (path.startsWith("/presence/") && method === "DELETE")
+      return route.fulfill({ status: 204 });
     if (
       path === "/auth/session" ||
       path === "/auth/windows" ||
@@ -303,6 +313,9 @@ export class ApiFixture {
               : []),
             ...(this.adminAccess
               ? [{ id: "admin", name: "平台管理", route: "/admin" }]
+              : []),
+            ...(this.auditAccess
+              ? [{ id: "audit", name: "活動稽核", route: "/admin/audit" }]
               : []),
           ],
         },

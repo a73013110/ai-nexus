@@ -120,6 +120,8 @@
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
 
   --sidebar-width: min(15rem, calc(100vw - var(--button-target)));
+  --sidebar-rail-width: 3.25rem;
+  --sidebar-drawer-width: min(20rem, calc(100vw - 3rem));
   --count-badge-size: 1.25rem;
   --count-badge-font-size: 0.75rem;
   --count-badge-padding: 0.3125rem;

@@ -19,11 +19,13 @@ using AiNexus.Modules.Attachments;
 using AiNexus.Modules.Library;
 using AiNexus.Modules.Administration;
 using AiNexus.Modules.Knowledge;
+using AiNexus.Modules.Monitoring;
 
 var builder = WebApplication.CreateBuilder(args);
 try { NexusConfiguration.Load(builder, args); LocalDatabaseSettings.Apply(builder.Configuration); }
 catch (Exception ex) { await DiagnosticStartup.RecordAsync(ex, builder.Configuration, builder.Environment); throw; }
 builder.AddNexusDiagnostics();
+builder.Services.AddMonitoring();
 var keyRing = builder.Configuration["DataProtection:KeyRingPath"];
 if (keyRing is null && builder.Environment.IsDevelopment()) keyRing = Path.Combine(builder.Configuration["LocalWorkspaceRoot"]!, ".local", "keys");
 var protection = builder.Services.AddDataProtection().SetApplicationName("AiNexus");
@@ -57,7 +59,7 @@ builder.Services.AddAuthentication("NexusSession")
 builder.Services.AddRateLimiter(options =>
 {
     options.AddPolicy("ad-login", http => RateLimitPartition.GetFixedWindowLimiter(http.Connection.RemoteIpAddress?.ToString() ?? "local", _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));
-    foreach (var (policy, permits) in new[] { ("client-issues", 10), ("diagnostic-query", 60), ("diagnostic-export", 2) })
+    foreach (var (policy, permits) in new[] { ("client-issues", 10), ("diagnostic-query", 60), ("diagnostic-export", 2), ("presence", 120) })
         options.AddPolicy(policy, http => RateLimitPartition.GetFixedWindowLimiter(http.User.FindFirst(SessionIdentity.UserId)?.Value ?? http.Connection.RemoteIpAddress?.ToString() ?? "unknown", _ => new FixedWindowRateLimiterOptions { PermitLimit = permits, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));
     options.OnRejected = (context, ct) => new ValueTask(Issues.WriteAsync(context.HttpContext, context.HttpContext.RequestServices.GetRequiredService<Issues>().Problem(new ApiException(429, "rate_limited", ""))));
 });
@@ -66,7 +68,7 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
     options.AddPolicy(BuiltInAccess.ChatPolicy, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(BuiltInAccess.ChatFeature)));
     options.AddPolicy(AdministrationConfiguration.Policy, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(AdministrationConfiguration.Feature)));
-    foreach (var feature in new[] { "files", "knowledge", "tasks", "artifacts", "projects", "shared", "quality", "integrations", "dashboard", "repositories" })
+    foreach (var feature in new[] { "files", "knowledge", "tasks", "artifacts", "projects", "shared", "quality", "integrations", "dashboard", "repositories", MonitoringEndpoints.Feature, ActivityAuditEndpoints.Feature })
         options.AddPolicy("feature:" + feature, policy => policy.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(feature)));
     foreach (var feature in new[] { DiagnosticConfiguration.Query, DiagnosticConfiguration.Detail, DiagnosticConfiguration.Export })
         options.AddPolicy("feature:" + feature, p => p.RequireAuthenticatedUser().AddRequirements(new FeatureRequirement(feature)));
@@ -91,7 +93,9 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     options.SerializerOptions.RespectRequiredConstructorParameters = true;
     options.SerializerOptions.MaxDepth = 32;
 });
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) => {
+    document.Servers = [new() { Url = "/" }]; return Task.CompletedTask;
+}));
 builder.Services.AddDbContext<NexusDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("Nexus") ?? ""));
 builder.Services.AddSingleton<IDbConnectionFactory, NexusConnectionFactory>();
 builder.Services.AddScoped<IDbHelper<INexusDatabase>, DbHelper<INexusDatabase>>();
@@ -131,6 +135,7 @@ builder.Services.AddOptions<AdministrationOptions>().BindConfiguration("Administ
     .Validate(x => x.BootstrapAdministrators.Length <= 20 && x.BootstrapAdministrators.All(a => a.Length is > 0 and <= 64 && a.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-' or '.')), "Invalid bootstrap administrator accounts.").ValidateOnStart();
 builder.Services.AddScoped<AdminBootstrap>();
 builder.Services.AddScoped<AdministrationService>();
+builder.Services.AddScoped<ActivityAuditReader>();
 builder.Services.AddScoped<AdministrativeAudit>();
 builder.Services.AddScoped<AdministrativeReader>();
 builder.Services.AddScoped<ModelPolicyService>();
@@ -305,6 +310,7 @@ if (builder.Configuration.GetValue<bool>("VerifyConnections"))
     await app.DisposeAsync();
     return;
 }
+app.UseMiddleware<RuntimeTrafficMiddleware>();
 app.UseMiddleware<DiagnosticRequestMiddleware>();
 var localHttp = WebSecurity.AllowsLocalHttp(app.Environment, builder.Configuration);
 if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing")) app.UseHsts();

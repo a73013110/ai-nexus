@@ -21,6 +21,7 @@ public static class ApiEndpoints
         api.MapAttachments();
         api.MapPromptLibrary();
         api.MapOperations();
+        api.MapActivityAudit();
         api.MapJobs();
         AiNexus.Modules.Knowledge.KnowledgeEndpoints.MapKnowledge(api);
         AiNexus.Modules.Artifacts.ArtifactEndpoints.MapArtifacts(api);
@@ -37,5 +38,6 @@ public static class ApiEndpoints
             .RequireAuthorization("feature:dashboard").WithName("GetDashboard").Produces<AiNexus.Modules.Dashboard.DashboardDto>();
         api.MapGet("/tools/web-search", (AiNexus.Modules.WebSearch.WebSearchService service) => Results.Ok(service.Status))
             .RequireAuthorization("feature:chat").WithName("GetWebSearchStatus").Produces<AiNexus.Modules.WebSearch.WebSearchStatusDto>();
+        AiNexus.Modules.Monitoring.MonitoringEndpoints.MapMonitoring(api);
     }
 }

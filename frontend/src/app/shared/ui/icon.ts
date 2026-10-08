@@ -45,6 +45,12 @@ import {
   Check,
   FileText,
   MessageSquare,
+  MessageSquareText,
+  ClipboardList,
+  ScrollText,
+  ChevronUp,
+  ChevronDown,
+  CircleHelp,
   Lightbulb,
   Info,
   Trash2,
@@ -68,12 +74,14 @@ import {
   Filter,
   Play,
   Calendar,
+  Activity,
 } from 'lucide';
 import { LucideDynamicIcon } from '@lucide/angular';
 
 // Semantic names keep business templates independent of the icon vendor.
 // Import curated SVG data; a single Angular renderer avoids retaining per-icon component metadata.
 const icons: Record<string, IconNode> = {
+  activity: Activity,
   image: ImageIcon,
   files: Files,
   bell: Bell,
@@ -114,6 +122,12 @@ const icons: Record<string, IconNode> = {
   check: Check,
   document: FileText,
   lines: MessageSquare,
+  chat: MessageSquareText,
+  audit: ClipboardList,
+  logs: ScrollText,
+  'chevron-up': ChevronUp,
+  'chevron-down': ChevronDown,
+  tour: CircleHelp,
   idea: Lightbulb,
   info: Info,
   trash: Trash2,

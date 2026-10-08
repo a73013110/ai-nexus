@@ -3,10 +3,10 @@
   description="以你的來源權限查詢公文與校務資料，快速接續閱讀、整理與分析。"
 >
   @if (error()) {
-    <p role="alert" class="error-banner">{{ error() }}<nx-issue-code [message]="error()" /></p>
+    <nx-notice tone="danger" [message]="error()" />
   }
   @if (notice()) {
-    <p role="status" class="form-note">{{ notice() }}</p>
+    <nx-notice tone="success" [message]="notice()" />
   }
   @if (loading()) {
     <p role="status">正在載入資料來源…</p>

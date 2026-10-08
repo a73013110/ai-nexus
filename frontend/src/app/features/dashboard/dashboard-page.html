@@ -80,11 +80,9 @@
     ></nx-filter-panel>
   </form>
   @if (error()) {
-    <p class="error-banner" role="alert">
-      {{ error() }}<nx-issue-code [message]="error()" /><button type="button" (click)="load()">
-        重試
-      </button>
-    </p>
+    <nx-notice [message]="error()"
+      ><button notice-actions type="button" (click)="load()">重試</button>
+    </nx-notice>
   }
   @if (loading() && !data()) {
     <div class="dashboard-skeleton" aria-label="正在載入總覽" role="status">

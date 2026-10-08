@@ -81,6 +81,7 @@ class LogFixture {
   }));
   async attach(page: Page, detail = true) {
     this.api.adminAccess = true;
+    this.api.auditAccess = true;
     this.api.extraFeatures = [
       { id: "dashboard", name: "總覽", route: "/dashboard" },
       { id: "projects", name: "專案", route: "/projects" },

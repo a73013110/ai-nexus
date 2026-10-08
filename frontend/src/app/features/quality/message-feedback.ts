@@ -1,5 +1,5 @@
+import { Notice } from '../../shared/ui/notice';
 import { Field } from '../../shared/ui/field';
-import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -18,7 +18,7 @@ import { QualityApi } from './quality-api';
 @Component({
   selector: 'nx-message-feedback',
   host: { class: 'ui-density-compact' },
-  imports: [Field, IssueCode, Icon, Select],
+  imports: [Notice, Field, Icon, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="message-feedback">
@@ -76,9 +76,7 @@ import { QualityApi } from './quality-api';
       </div>
     }
     @if (error()) {
-      <p role="alert" class="message-note error-note">
-        {{ error() }}<nx-issue-code [message]="error()" />
-      </p>
+      <nx-notice tone="danger" [message]="error()" />
     }
     @if (notice()) {
       <span class="visually-hidden" role="status">{{ notice() }}</span>

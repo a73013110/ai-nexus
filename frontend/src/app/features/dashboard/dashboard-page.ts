@@ -1,10 +1,10 @@
+import { Notice } from '../../shared/ui/notice';
 import { Card } from '../../shared/ui/card';
 import { StatusBadge } from '../../shared/ui/status-badge';
 import { DataTable } from '../../shared/ui/data-table';
 import { DateTimePicker } from '../../shared/ui/date-time-picker';
 import { FilterPanel } from '../../shared/ui/filter-panel';
 import { ClientValidationError } from '../../core/api/safe-errors';
-import { IssueCode } from '../../shared/ui/issue-code';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import type { Dashboard, SpendBucket } from '../../core/api/types';
@@ -23,12 +23,12 @@ import { downloadBlob } from '../../shared/browser/download';
 @Component({
   selector: 'nx-dashboard-page',
   imports: [
+    Notice,
     Card,
     StatusBadge,
     DataTable,
     DateTimePicker,
     FilterPanel,
-    IssueCode,
     FeaturePage,
     Icon,
     Select,

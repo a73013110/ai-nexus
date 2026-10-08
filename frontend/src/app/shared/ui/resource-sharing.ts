@@ -1,5 +1,5 @@
+import { Notice } from './notice';
 import { CompactDialog } from './compact-dialog';
-import { IssueCode } from './issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -21,7 +21,7 @@ import { SearchField } from './search-field';
 
 @Component({
   selector: 'nx-resource-sharing',
-  imports: [CompactDialog, IssueCode, Icon, Select, Checkbox, SearchField],
+  imports: [Notice, CompactDialog, Icon, Select, Checkbox, SearchField],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog nxCompactDialog #dialog class="platform-dialog" (cancel)="cancel($event)">
@@ -40,7 +40,7 @@ import { SearchField } from './search-field';
       </button>
     </div>
     @if (error()) {
-      <p role="alert" class="error-banner">{{ error() }}<nx-issue-code [message]="error()" /></p>
+      <nx-notice tone="danger" [message]="error()" />
     }
     @if (loading()) {
       <p role="status">正在載入授權…</p>

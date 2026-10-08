@@ -17,10 +17,10 @@
     </button>
   </div>
   @if (error()) {
-    <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+    <nx-notice tone="danger" [message]="error()" />
   }
   @if (notice()) {
-    <p class="success-note" role="status">{{ notice() }}</p>
+    <nx-notice tone="success" [message]="notice()" />
   }
   @if (loading()) {
     <p role="status">正在載入知識庫…</p>
@@ -196,7 +196,7 @@
         </button>
       </div>
       @if (editorError()) {
-        <p class="error-banner" role="alert">{{ editorError() }}</p>
+        <nx-notice tone="danger" [message]="editorError()" />
       }
       <label
         >名稱<input
@@ -236,7 +236,7 @@
 <dialog nxCompactDialog #deleteDialog class="platform-dialog" (cancel)="cancel($event)">
   <div class="dialog-scroll">
     @if (editorError()) {
-      <p class="error-banner" role="alert">{{ editorError() }}</p>
+      <nx-notice tone="danger" [message]="editorError()" />
     }
     <div class="dialog-heading">
       <h2>移除{{ deleteTarget()?.collection ? '知識庫' : '文件' }}</h2>

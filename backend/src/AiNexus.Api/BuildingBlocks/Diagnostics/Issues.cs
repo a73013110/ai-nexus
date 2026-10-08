@@ -84,6 +84,7 @@ public sealed class DiagnosticRequestMiddleware(RequestDelegate next)
         var previous = Activity.Current;
         Activity.Current = null;
         using var activity = DiagnosticTrace.Start("http.request", kind: ActivityKind.Server);
+        http.Items["Nexus.TraceId"] = activity.TraceId.ToHexString();
         var watch = Stopwatch.StartNew();
         var operation = Guid.NewGuid(); http.TraceIdentifier = Guid.NewGuid().ToString("N");
         activity.SetTag("operation.id", operation.ToString());
@@ -117,7 +118,7 @@ public sealed class DiagnosticRequestMiddleware(RequestDelegate next)
             if (!http.Response.HasStarted) { http.Response.Clear(); WebSecurity.Headers(http); await Issues.WriteAsync(http, problem); }
             else if (http.Response.ContentType?.StartsWith("text/event-stream", StringComparison.OrdinalIgnoreCase) == true && !http.RequestAborted.IsCancellationRequested)
             {
-                await http.Response.WriteAsync("event: error\ndata: " + System.Text.Json.JsonSerializer.Serialize(new { code = problem.Code, message = problem.Status >= 500 ? Issues.Message(problem.IssueCode) : problem.Title, issueCode = problem.IssueCode }) + "\n\n", http.RequestAborted);
+                await http.Response.WriteAsync("event: error\ndata: " + System.Text.Json.JsonSerializer.Serialize(new { status = problem.Status, code = problem.Code, message = problem.Status >= 500 ? Issues.Message(problem.IssueCode) : problem.Title, issueCode = problem.IssueCode }) + "\n\n", http.RequestAborted);
             }
             else http.Abort();
         }

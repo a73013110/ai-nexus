@@ -1,3 +1,4 @@
+import { Notice } from '../../shared/ui/notice';
 import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
@@ -36,7 +37,7 @@ export function modelPolicyRequest(draft: ModelPolicyDraft): Policy {
 
 @Component({
   selector: 'nx-model-policy-editor',
-  imports: [Field, Checkbox, DataTable],
+  imports: [Notice, Field, Checkbox, DataTable],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="model-policy-heading">
@@ -144,13 +145,14 @@ export function modelPolicyRequest(draft: ModelPolicyDraft): Policy {
       </table>
     </nx-data-table>
     @if (value().restricted && !value().modelIds.length) {
-      <p class="inline-error">
-        {{
+      <nx-notice
+        tone="danger"
+        [message]="
           personal()
             ? '尚未勾選模型；儲存後將禁止此帳號使用所有模型。'
             : '尚未勾選模型；此群組不授予模型，使用者仍可由其他群組取得授權。'
-        }}
-      </p>
+        "
+      />
     }
     <p class="form-note">
       {{

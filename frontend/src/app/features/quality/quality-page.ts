@@ -1,10 +1,10 @@
+import { Notice } from '../../shared/ui/notice';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
 import { ApiError, ClientValidationError, issueInMessage } from '../../core/api/safe-errors';
-import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -54,12 +54,12 @@ const blankCase = (): EvaluationCase => ({
 @Component({
   selector: 'nx-quality-page',
   imports: [
+    Notice,
     EmptyState,
     Card,
     ViewSwitch,
     CompactDialog,
     Field,
-    IssueCode,
     FeaturePage,
     SearchField,
     ConfirmDialog,

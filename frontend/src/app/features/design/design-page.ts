@@ -1,5 +1,5 @@
+import { Notice } from '../../shared/ui/notice';
 import { Card } from '../../shared/ui/card';
-import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -51,8 +51,8 @@ const jobStates: SelectOption[] = [
 @Component({
   selector: 'nx-design-page',
   imports: [
+    Notice,
     Card,
-    IssueCode,
     RouterLink,
     FeaturePage,
     Icon,

@@ -4,6 +4,7 @@ using System.Text.Json;
 using AiNexus.BuildingBlocks;
 using AiNexus.Modules.AccessControl;
 using AiNexus.Modules.Administration;
+using AiNexus.Modules.Operations;
 using AiNexus.Modules.Conversations;
 using AiNexus.Modules.Inference;
 using Microsoft.EntityFrameworkCore;

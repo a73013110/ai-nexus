@@ -156,10 +156,11 @@ test("background tasks show real stages and distinguish cancellation requests fr
   job.issueCode = "NX-" + "D".repeat(32);
   await page.getByRole("button", { name: "重新整理", exact: true }).click();
   await page.getByRole("button", { name: "需要處理", exact: true }).click();
-  await expect(page.locator(".job-error")).toContainText(
+  const failure = page.locator("nx-job-progress").getByRole("alert");
+  await expect(failure).toContainText(
     "操作未完成，請聯絡管理員。查證代碼：NX-",
   );
-  await expect(page.locator(".job-error")).not.toContainText("fixture-private");
+  await expect(failure).not.toContainText("fixture-private");
   await page.getByRole("button", { name: "重試", exact: true }).click();
   expect(job.status).toBe("queued");
 });
@@ -192,7 +193,10 @@ test("failed conversation source loading blocks submission until an explicit suc
       : route.fallback(),
   );
   await page.reload();
-  await expect(page.locator(".source-load-error")).toBeVisible();
+  const sourceError = page
+    .getByRole("alert")
+    .filter({ hasText: "知識來源尚未載入" });
+  await expect(sourceError).toBeVisible();
   await page
     .getByRole("textbox", { name: "傳送訊息", exact: true })
     .fill("要有來源的下一題");
@@ -201,7 +205,7 @@ test("failed conversation source loading blocks submission until an explicit suc
   ).toBeDisabled();
   failing = false;
   await page.getByRole("button", { name: "重新載入來源", exact: true }).click();
-  await expect(page.locator(".source-load-error")).toHaveCount(0);
+  await expect(sourceError).toHaveCount(0);
   await expect(
     page.getByRole("button", { name: "選取對話知識來源" }),
   ).toContainText("來源 1");

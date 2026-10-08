@@ -52,9 +52,9 @@
       <p role="status" class="form-note">正在載入你的設定…</p>
     }
     @if (error()) {
-      <p role="alert" class="error-banner">
-        {{ error() }}<nx-issue-code [message]="error()" /><button (click)="load()">重新載入</button>
-      </p>
+      <nx-notice [message]="error()"
+        ><button notice-actions (click)="load()">重新載入</button>
+      </nx-notice>
     }
     @if (!loading() && session.me()) {
       <div class="settings-content" [nxViewMotion]="section()">

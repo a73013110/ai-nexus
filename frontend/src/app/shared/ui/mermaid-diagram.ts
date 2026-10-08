@@ -16,6 +16,7 @@ import {
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { CopyFeedback } from '../browser/copy-feedback';
+import { Notice } from './notice';
 import { downloadBlob } from '../browser/download';
 import { CompactDialog } from './compact-dialog';
 import { Icon, EXTRA_ICONS } from './icon';
@@ -142,7 +143,7 @@ export class DiagramCanvas {
 
 @Component({
   selector: 'nx-mermaid-diagram',
-  imports: [Icon, ViewSwitch, CompactDialog, DiagramCanvas, NgTemplateOutlet],
+  imports: [Icon, ViewSwitch, CompactDialog, DiagramCanvas, NgTemplateOutlet, Notice],
   providers: [
     CopyFeedback,
     {
@@ -205,12 +206,11 @@ export class DiagramCanvas {
         <p class="mermaid-status" role="status"><nx-icon name="loading" />正在繪製圖表…</p>
       }
       @if (error()) {
-        <div class="mermaid-error" role="status">
-          <nx-icon name="info" /><span>{{ error() }}</span>
-          <button class="quiet-button" type="button" (click)="retry()">
+        <nx-notice tone="warning" [message]="error()">
+          <button notice-actions class="quiet-button" type="button" (click)="retry()">
             <nx-icon name="repeat" />重試
           </button>
-        </div>
+        </nx-notice>
       }
       @if (view() === 'source') {
         <pre class="mermaid-source"><code>{{ source() }}</code></pre>
@@ -223,7 +223,7 @@ export class DiagramCanvas {
         />
       }
       @if (copy.error()) {
-        <p class="mermaid-error" role="status">{{ copy.error() }}</p>
+        <nx-notice [message]="copy.error()" />
       }
     </figure>
     <ng-template #zoomTools>

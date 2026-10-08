@@ -1,3 +1,4 @@
+import { Notice } from '../../shared/ui/notice';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { SearchField } from '../../shared/ui/search-field';
 import { ViewSwitch } from '../../shared/ui/view-switch';
@@ -32,7 +33,7 @@ import { WorkspaceApi } from '../workspace/workspace-api';
 
 @Component({
   selector: 'nx-document-viewer',
-  imports: [EmptyState, SearchField, ViewSwitch, Icon, Select, TextHighlight, JobProgress],
+  imports: [Notice, EmptyState, SearchField, ViewSwitch, Icon, Select, TextHighlight, JobProgress],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './document-viewer.html',

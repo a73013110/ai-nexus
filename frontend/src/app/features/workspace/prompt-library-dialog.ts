@@ -1,6 +1,6 @@
+import { Notice } from '../../shared/ui/notice';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
-import { IssueCode } from '../../shared/ui/issue-code';
 import { safeMessage } from '../../core/api/safe-errors';
 import {
   ChangeDetectionStrategy,
@@ -19,7 +19,7 @@ import { WorkspaceApi } from './workspace-api';
 
 @Component({
   selector: 'nx-prompt-library',
-  imports: [CompactDialog, Field, IssueCode, Icon, FormField],
+  imports: [Notice, CompactDialog, Field, Icon, FormField],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <dialog
     nxCompactDialog
@@ -39,7 +39,7 @@ import { WorkspaceApi } from './workspace-api';
       </div>
       <p class="panel-note">把常做的工作保存成範本，下次一鍵帶入提問。</p>
       @if (error()) {
-        <p class="inline-error" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+        <nx-notice tone="danger" [message]="error()" />
       }
       <div class="library-layout">
         <div class="template-list">

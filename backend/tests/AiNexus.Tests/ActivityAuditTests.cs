@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using AiNexus.BuildingBlocks;
 using AiNexus.BuildingBlocks.Diagnostics;
 using AiNexus.Modules.Administration;
+using AiNexus.Modules.AccessControl;
 using AiNexus.Modules.Identity;
 using AiNexus.Modules.Operations;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,34 @@ namespace AiNexus.Tests;
 
 public sealed class ActivityAuditTests
 {
+    [Fact]
+    public async Task AuditorsCanInvestigateWithoutManagingAccountsAndRevocationAppliesImmediately()
+    {
+        await using var factory = new NexusFactory(administrators: ["alice"]);
+        using var admin = await factory.SignedInAsync();
+        using var auditor = await factory.SignedInAsync("bob");
+        var target = (await auditor.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
+        Assert.Equal(HttpStatusCode.Forbidden, (await auditor.GetAsync("/api/v1/admin/audit")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await auditor.GetAsync("/api/v1/admin/audit/catalog")).StatusCode);
+        (await admin.PutAsJsonAsync("/api/v1/admin/groups/auditors", new GroupUpdateRequest("稽核查閱", true, ["audit"]))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync("/api/v1/admin/roles/auditor", new RoleUpdateRequest("稽核人員", true, ["auditors"]))).EnsureSuccessStatusCode();
+        (await admin.PutAsJsonAsync($"/api/v1/admin/users/{target.Id}/roles", new UserRolesRequest(["member", "auditor"]))).EnsureSuccessStatusCode();
+        var me = (await auditor.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
+        Assert.Contains(me.Access.Features, feature => feature.Id == "audit" && feature.Route == "/admin/audit");
+        Assert.DoesNotContain(me.Access.Features, feature => feature.Id == "admin");
+        var catalog = (await auditor.GetFromJsonAsync<AuditCatalogDto>("/api/v1/admin/audit/catalog"))!;
+        Assert.Contains(catalog.Features, feature => feature.Id == "audit");
+        Assert.NotEmpty(catalog.Models);
+        var rows = (await auditor.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?category=administration"))!;
+        Assert.Contains(rows, row => row.Action == "admin.user_roles" && row.ResourceId == target.Id);
+        Assert.Equal(HttpStatusCode.Forbidden, (await auditor.GetAsync("/api/v1/admin/catalog")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await auditor.GetAsync("/api/v1/admin/users")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await auditor.PutAsJsonAsync($"/api/v1/admin/users/{target.Id}/roles", new UserRolesRequest(["administrator"]))).StatusCode);
+        (await admin.PutAsJsonAsync("/api/v1/admin/groups/auditors", new GroupUpdateRequest("稽核查閱", true, []))).EnsureSuccessStatusCode();
+        Assert.Equal(HttpStatusCode.Forbidden, (await auditor.GetAsync("/api/v1/admin/audit")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await auditor.GetAsync("/api/v1/admin/audit/catalog")).StatusCode);
+    }
+
     [Fact]
     public async Task WindowsHandshakeChallengesAreNotLoginFailuresButExplicitLoginAndWorkspaceDenialAreAudited()
     {

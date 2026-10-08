@@ -18,12 +18,12 @@
     <p role="status">正在載入管理工作區…</p>
   }
   @if (error()) {
-    <p class="error-banner" role="alert">
-      {{ error() }}<nx-issue-code [message]="error()" /><button (click)="load()">重新載入</button>
-    </p>
+    <nx-notice [message]="error()"
+      ><button notice-actions (click)="load()">重新載入</button>
+    </nx-notice>
   }
   @if (notice()) {
-    <p class="form-note" role="status">{{ notice() }}</p>
+    <nx-notice tone="info" [message]="notice()" />
   }
   @if (catalog(); as data) {
     <nav class="admin-navigation" aria-label="管理分類">
@@ -339,9 +339,6 @@
           </table>
         </nx-data-table>
       }
-      @case ('audit') {
-        <nx-admin-audit [features]="catalog()?.features || []" [models]="catalog()?.models || []" />
-      }
       @case ('usage') {
         @if (usage(); as stats) {
           <div class="page-toolbar">
@@ -522,7 +519,7 @@
         </button>
       </div>
       @if (editorError()) {
-        <p role="alert" class="inline-error">{{ editorError() }}</p>
+        <nx-notice tone="danger" [message]="editorError()" />
       }
       @if (e.kind === 'group') {
         <nx-view-switch
@@ -778,7 +775,7 @@
       分鐘後返回原管理者，亦可隨時提前返回。
     </p>
     @if (testError()) {
-      <p class="inline-error" role="alert">{{ testError() }}</p>
+      <nx-notice tone="danger" [message]="testError()" />
     }
     <form class="platform-form" (submit)="startTest($event)">
       <label

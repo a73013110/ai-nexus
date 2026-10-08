@@ -3,7 +3,6 @@ using AiNexus.BuildingBlocks;
 using AiNexus.Modules.AccessControl;
 using AiNexus.Modules.Identity;
 using AiNexus.Modules.Inference;
-using AiNexus.Modules.Operations;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Modules.Attachments;
 
@@ -21,8 +20,6 @@ public sealed record RoleUpdateRequest(string Name, bool Enabled, IReadOnlyList<
 public sealed record GroupPolicyRequest(IReadOnlyList<string>? AllowedModelIds = null, IReadOnlyDictionary<string, long>? DailyTokenLimits = null, long? StoredAttachmentLimitBytes = null);
 public sealed record GroupUpdateRequest(string Name, bool Enabled, IReadOnlyList<string> FeatureIds, GroupPolicyRequest? Policy = null);
 public sealed record FeatureUpdateRequest(string Name, int SortOrder, bool Enabled);
-public sealed record AuditDto(long Id, string Actor, string Action, Guid? ResourceId, string? Result, DateTimeOffset At, string? DetailsJson, string? ActingAs = null,
-    string? Category = null, string? TraceId = null, Guid? OperationId = null, string? IssueCode = null);
 public sealed record AdminUsageDto(int Users, int Requests, int Completed, long InputTokens, long OutputTokens, int RequestsWithUsage, long TotalDurationMilliseconds, int TimedRequests,
     int ActiveUsers, int Failed, int Cancelled, long StoredBytes, int StoredFiles, IReadOnlyList<UsageModelDto> Models, IReadOnlyList<UsageKindDto> Kinds,
     IReadOnlyList<ProviderStatusDto> Providers, AiNexus.Modules.WebSearch.WebSearchStatusDto WebSearch, DateTimeOffset Since, DateTimeOffset Until);
@@ -136,36 +133,6 @@ public sealed class AdministrationService(NexusDbContext db, AccessService acces
         }, ct);
     }
     public async Task<AccessDto> EffectiveAsync(Guid id, CancellationToken ct) { if (!await db.Users.AnyAsync(x => x.Id == id, ct)) throw Missing(); return await access.ForUserAsync(id, ct); }
-    public async Task<IReadOnlyList<AuditDto>> AuditAsync(long? before, CancellationToken ct, string? search = null, string? action = null, string? result = null, DateTimeOffset? from = null, DateTimeOffset? until = null, string? category = null, string? traceId = null)
-    {
-        if (search?.Length > 120 || action?.Length > 120 || result?.Length > 80 || before is <= 0 || from > until ||
-            traceId is not null && (traceId.Length != 32 || !traceId.All(char.IsAsciiHexDigit)))
-            throw new ApiException(400, "invalid_audit_filter", "稽核篩選條件不正確。");
-        var query = from entry in AuditCategories.Filter(db.AuditEvents.AsNoTracking(), category)
-                    join actorRecord in db.Users on (entry.ActorId ?? entry.OwnerId) equals actorRecord.Id into actors
-                    from actor in actors.DefaultIfEmpty()
-                    join subjectRecord in db.Users on entry.OwnerId equals subjectRecord.Id into subjects
-                    from subject in subjects.DefaultIfEmpty()
-                    select new { entry, actor, subject };
-        if (before is { } cursor) query = query.Where(x => x.entry.Id < cursor);
-        if (from is { } start) query = query.Where(x => x.entry.At >= start);
-        if (until is { } end) query = query.Where(x => x.entry.At < end);
-        if (traceId is not null) query = query.Where(x => x.entry.TraceId == traceId.ToLower());
-        if (!string.IsNullOrWhiteSpace(action)) query = query.Where(x => x.entry.Action.StartsWith(action));
-        if (!string.IsNullOrWhiteSpace(result)) query = result == "failed"
-            ? query.Where(x => x.entry.Result != null && !AuditOutcomes.Accepted.Contains(x.entry.Result))
-            : result == "success" ? query.Where(x => x.entry.Result != null && AuditOutcomes.Accepted.Contains(x.entry.Result))
-            : query.Where(x => x.entry.Result == result);
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            if (Guid.TryParse(search, out var resource)) query = query.Where(x => x.entry.ResourceId == resource || (x.actor != null && x.actor.Id == resource) || (x.subject != null && x.subject.Id == resource));
-            else query = query.Where(x => (x.actor != null && (x.actor.Account.Contains(search) || x.actor.DisplayName.Contains(search))) || (x.subject != null && x.subject.Account.Contains(search)) || x.entry.Action.Contains(search) || x.entry.TraceId == search || x.entry.IssueCode == search || (x.entry.DetailsJson != null && x.entry.DetailsJson.Contains(search)));
-        }
-        var rows = await query.OrderByDescending(x => x.entry.Id).Take(100)
-            .Select(x => new AuditDto(x.entry.Id, x.actor == null ? x.entry.Action == "identity.login" && x.entry.Result == "failed" ? "未驗證" : "system" : x.actor.Account, x.entry.Action, x.entry.ResourceId, x.entry.Result, x.entry.At, x.entry.DetailsJson, x.entry.ActorId != null && x.entry.ActorId != x.entry.OwnerId && x.subject != null ? x.subject.Account : null,
-                null, x.entry.TraceId, x.entry.OperationId, x.entry.IssueCode)).ToListAsync(ct);
-        return rows.Select(row => row with { Category = AuditCategories.For(row.Action), DetailsJson = AiNexus.BuildingBlocks.Diagnostics.AuditRedactor.Sanitize(row.DetailsJson, historical: true) }).ToArray();
-    }
     public async Task<AdminUsageDto> UsageAsync(CancellationToken ct)
     {
         var totals = await reports.AllAsync(ct);

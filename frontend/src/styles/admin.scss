@@ -21,15 +21,10 @@
   overflow: visible;
 }
 .admin-users-table,
-.admin-audit-table,
 .admin-features-table {
   --table-max-height: min(60dvh, 42rem);
 }
-.admin-audit-table {
-  margin-top: var(--section-gap);
-}
 .admin-users-table table,
-.admin-audit-table table,
 .admin-features-table table {
   table-layout: fixed;
   min-width: 52rem;
@@ -44,12 +39,8 @@
   width: 6.5rem;
 }
 .admin-auth-column,
-.audit-result-column,
 .admin-order-column {
   width: 6.5rem;
-}
-.audit-time-column {
-  width: 11rem;
 }
 .admin-table-name {
   display: flex;
@@ -66,75 +57,6 @@
   background: var(--surface-subtle);
   color: var(--secondary);
   font-size: var(--text-caption);
-}
-.audit-toolbar {
-  display: flex;
-  gap: var(--p-space-3);
-  align-items: end;
-  flex-wrap: wrap;
-  margin-bottom: 0;
-}
-.audit-toolbar nx-search-field {
-  flex: 1;
-  min-width: 220px;
-}
-.audit-toolbar nx-select {
-  width: 160px;
-}
-.audit-detail-text {
-  margin: var(--p-space-2) 0 var(--section-gap);
-  padding: var(--section-padding);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
-  background: var(--surface-subtle);
-  font-size: var(--text-caption);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-.audit-changes {
-  display: grid;
-  gap: 8px;
-  margin: 8px 0;
-}
-.audit-changes > div {
-  display: grid;
-  grid-template-columns: 130px minmax(0, 1fr);
-  gap: 12px;
-  padding: 10px 12px;
-  background: var(--canvas);
-  border-radius: var(--p-radius-sm);
-}
-.audit-changes dt {
-  font-size: var(--text-caption);
-  color: var(--secondary);
-}
-.audit-changes dd {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  font-size: var(--text-caption);
-  overflow-wrap: anywhere;
-}
-.audit-changes strong {
-  font-weight: 550;
-}
-.audit-before {
-  color: var(--secondary);
-}
-@media (max-width: 760px) {
-  .audit-changes > div {
-    grid-template-columns: 1fr;
-    gap: 4px;
-  }
-  .audit-toolbar nx-search-field {
-    flex-basis: 100%;
-  }
-  .audit-toolbar nx-select {
-    flex: 1;
-    min-width: 130px;
-  }
 }
 .feature-category-label {
   color: var(--secondary);
@@ -161,18 +83,6 @@
   color: var(--secondary);
   font-size: var(--text-caption);
 }
-.audit-changes dd.audit-feature-change {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
-  gap: var(--p-space-4);
-}
-.audit-feature-change > div {
-  min-width: 0;
-}
-.audit-feature-change small {
-  color: var(--secondary);
-}
-
 .admin-editor.admin-editor-wide {
   --dialog-width: 64rem;
 }
@@ -186,7 +96,7 @@
 }
 .admin-editor .dialog-heading,
 .admin-editor .ui-view-switch,
-.admin-editor .inline-error {
+.admin-editor nx-notice {
   flex: none;
 }
 .admin-editor-form {

@@ -245,6 +245,9 @@ select:where(.ui-input) {
   font: inherit;
   color: inherit;
 }
+.ui-table-numeric {
+  font-variant-numeric: tabular-nums;
+}
 .ui-table-row {
   cursor: pointer;
 }
@@ -515,7 +518,7 @@ select:where(.ui-input) {
 .ui-data-table td time {
   font-variant-numeric: tabular-nums;
 }
-.ui-data-table td small {
+:where(.ui-table-scroll) td small {
   display: block;
   color: var(--secondary);
   font-size: var(--p-font-xs);
@@ -526,4 +529,11 @@ select:where(.ui-input) {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.ui-table-code {
+  font-family: var(--font-code);
+}
+.ui-error-text {
+  color: var(--danger);
 }

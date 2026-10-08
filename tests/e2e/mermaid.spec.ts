@@ -54,6 +54,46 @@ async function answer(page: Page, text = markdown) {
   return core;
 }
 
+test("browser ESM renders Gantt and architecture diagrams with their bundled layouts", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await answer(
+    page,
+    [
+      fence(`gantt
+      title Project schedule
+      dateFormat YYYY-MM-DD
+      axisFormat %m/%d
+      section Release
+      Design :done, design, 2026-10-01, 3d
+      Build :active, build, after design, 4d
+      Ship :milestone, after build, 0d`),
+      fence(`architecture-beta
+      group api(cloud)[API]
+      service db(database)[Database] in api
+      service app(server)[Server] in api
+      db:R --> L:app`),
+    ].join("\n\n"),
+  );
+  const frames = page.locator(".mermaid-frame");
+  await expect(frames).toHaveCount(2);
+  for (const frame of await frames.all()) {
+    const image = frame.getByRole("img");
+    await expect(image).toBeVisible();
+    await expect
+      .poll(() =>
+        image.evaluate(
+          (img: HTMLImageElement) => img.complete && img.naturalWidth > 0,
+        ),
+      )
+      .toBe(true);
+    await expect(frame.locator("nx-notice")).toHaveCount(0);
+  }
+  expect(errors).toEqual([]);
+});
+
 test("shared Mermaid reader renders Chinese flowcharts and nested sequences with source, zoom, export and stable themes", async ({
   page,
 }) => {
@@ -403,13 +443,12 @@ test("long permission flowcharts retain all SVG bounds and scroll to the right a
       .click();
     await expect
       .poll(() =>
-        canvas.evaluate(
-          (el) =>
-            el.scrollHeight <= el.clientHeight + 2 &&
-            el.scrollWidth <= el.clientWidth + 2,
-        ),
+        canvas.evaluate((el) => ({
+          overflowY: Math.max(0, el.scrollHeight - el.clientHeight - 2),
+          overflowX: Math.max(0, el.scrollWidth - el.clientWidth - 2),
+        })),
       )
-      .toBe(true);
+      .toEqual({ overflowY: 0, overflowX: 0 });
     await expectViewportContained(page);
   }
   await figure.getByRole("button", { name: "展開圖表", exact: true }).click();

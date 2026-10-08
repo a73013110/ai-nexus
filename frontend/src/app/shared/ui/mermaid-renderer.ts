@@ -2,7 +2,7 @@ import type { MermaidConfig } from 'mermaid';
 import { measureDiagramBounds, sanitizeDiagramSvg } from './mermaid-svg';
 import type { DiagramSemantics } from './mermaid-theme';
 
-let library: Promise<typeof import('mermaid')> | undefined;
+let library: Promise<{ default: typeof import('mermaid').default }> | undefined;
 let queue: Promise<unknown> = Promise.resolve();
 let sequence = 0;
 
@@ -18,7 +18,9 @@ export function renderDiagram(
     .then(async () => {
       if (!active()) return null;
       if (source.length > 50000) throw new Error('Diagram exceeds the supported size');
-      library ||= import('mermaid').catch((error) => {
+      // Official browser ESM distribution keeps upstream CommonJS internals prebundled,
+      // with every diagram type available and no bundler-specific dependency exceptions.
+      library ||= import('mermaid/dist/mermaid.esm.min.mjs').catch((error) => {
         library = undefined;
         throw error;
       });

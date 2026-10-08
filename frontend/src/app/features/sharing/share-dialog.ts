@@ -1,6 +1,6 @@
+import { Notice } from '../../shared/ui/notice';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
-import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -22,7 +22,7 @@ import { SharingApi } from './sharing-api';
 import { Checkbox } from '../../shared/ui/checkbox';
 @Component({
   selector: 'nx-share-dialog',
-  imports: [CompactDialog, Field, IssueCode, Select, Icon, RouterLink, Checkbox],
+  imports: [Notice, CompactDialog, Field, Select, Icon, RouterLink, Checkbox],
   providers: [ViewScope, CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
@@ -47,7 +47,7 @@ import { Checkbox } from '../../shared/ui/checkbox';
         </button>
       </div>
       @if (error()) {
-        <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+        <nx-notice tone="danger" [message]="error()" />
       }
       @if (created(); as share) {
         <div class="share-created">
@@ -61,11 +61,11 @@ import { Checkbox } from '../../shared/ui/checkbox';
           >
         </div>
       } @else {
-        <p class="source-warning">
+        <nx-notice tone="warning">
           {{
             kind() === 'artifact' ? '分享選取的已儲存成果版本' : '分享目前可見的對話分支'
           }}。收件者只能閱讀，無法修改原始內容；需要更新時請建立新的分享。
-        </p>
+        </nx-notice>
         <div class="platform-form">
           <label
             >收件者<input

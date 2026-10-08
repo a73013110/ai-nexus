@@ -258,8 +258,8 @@ test("稽核表格保留捲動與欄位偏好，抽屜支援逐筆檢視和手�
     if (url.pathname.endsWith("/admin/audit") && url.searchParams.has("before"))
       cursors.push(url.searchParams.get("before")!);
   });
-  await page.getByRole("button", { name: "活動稽核", exact: true }).click();
-  const table = page.locator("nx-admin-audit nx-data-table"),
+  await page.goto("/admin/audit");
+  const table = page.locator("nx-activity-audit-page nx-data-table"),
     scroll = table.getByRole("region", { name: "活動稽核列表" });
   await expect(table.locator(".audit-row")).toHaveCount(100);
   await expect(table.locator(".audit-row").first()).toHaveCSS(
@@ -344,7 +344,7 @@ test("稽核表格保留捲動與欄位偏好，抽屜支援逐筆檢視和手�
   await expect(table.locator(".audit-row")).toHaveCount(0);
   await expect(nextPage).toBeDisabled();
   await page.reload();
-  await page.getByRole("button", { name: "活動稽核", exact: true }).click();
+  await page.goto("/admin/audit");
   await expect(
     table.getByRole("columnheader", { name: "操作者", exact: true }),
   ).toHaveCount(0);
@@ -445,6 +445,7 @@ test("管理工具集中、分類分組，使用者分頁及功能短表單保�
 async function administration(page: Page) {
   const fixture = new ApiFixture();
   fixture.adminAccess = true;
+  fixture.auditAccess = true;
   await fixture.attach(page);
   const bob = {
     id: randomUUID(),
@@ -499,7 +500,7 @@ async function administration(page: Page) {
         id: "administrators",
         name: "平台管理",
         enabled: true,
-        featureIds: ["admin"],
+        featureIds: ["admin", "audit"],
         policy: null,
       },
     ],
@@ -523,6 +524,13 @@ async function administration(page: Page) {
         name: "平台管理",
         route: "/admin",
         sortOrder: 90,
+        enabled: true,
+      },
+      {
+        id: "audit",
+        name: "活動稽核",
+        route: "/admin/audit",
+        sortOrder: 92,
         enabled: true,
       },
     ],
@@ -567,6 +575,8 @@ async function administration(page: Page) {
         body: JSON.stringify(data),
       });
     if (path === "/catalog") return json(catalog);
+    if (path === "/audit/catalog")
+      return json({ features: catalog.features, models: catalog.models });
     if (path.endsWith("/model-policy")) {
       if (method === "PUT") {
         personalPolicy = route.request().postDataJSON();
@@ -874,7 +884,7 @@ test("administrators edit roles with effective access preview and an audit trail
   await dialog.getByRole("button", { name: "儲存授權" }).click();
   await expect(dialog).not.toBeVisible();
   expect(state.bob.roleIds).toContain("administrator");
-  await page.getByRole("button", { name: "活動稽核", exact: true }).click();
+  await page.goto("/admin/audit");
   await expect(page.getByText("調整使用者角色", { exact: true })).toBeVisible();
   await page
     .getByRole("button", { name: /^檢視稽核：#/ })
@@ -1072,13 +1082,17 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
   });
   for (const width of [1920, 1440, 860, 375]) {
     await page.setViewportSize({ width, height: 900 });
-    for (const tab of ["功能", "活動稽核", "平台用量"]) {
+    for (const tab of ["功能", "平台用量", "活動稽核"]) {
+      if (tab === "活動稽核") await page.goto("/admin/audit");
+      else await page.goto("/admin");
       const tabButton = page.getByRole("button", { name: tab, exact: true });
-      await tabButton.click();
-      await expect(tabButton).toHaveAttribute("aria-pressed", "true");
+      if (tab !== "活動稽核") {
+        await tabButton.click();
+        await expect(tabButton).toHaveAttribute("aria-pressed", "true");
+      }
       const target =
         tab === "活動稽核"
-          ? "nx-admin-audit > nx-filter-panel"
+          ? "nx-filter-panel"
           : ".feature-content > .form-note";
       await expect(page.locator(target).first()).toBeVisible();
       if (tab === "平台用量")
@@ -1249,7 +1263,7 @@ test("administrators inspect user usage and deleted conversations through an aud
   await dialog
     .getByRole("button", { name: "關閉使用者活動", exact: true })
     .click();
-  await page.getByRole("button", { name: "活動稽核", exact: true }).click();
+  await page.goto("/admin/audit");
   await chooseSelect(page, "稽核動作", "對話內容檢視");
   await expect(page.locator(".audit-row")).toHaveCount(1);
   const download = page.waitForEvent("download");
@@ -1284,7 +1298,7 @@ test("audit shows readable before after differences and server filters", async (
       },
     }),
   });
-  await page.getByRole("button", { name: "活動稽核", exact: true }).click();
+  await page.goto("/admin/audit");
   await page.getByRole("button", { name: "檢視稽核：#1", exact: true }).click();
   await expect(page.locator(".audit-changes")).toContainText("資深分析人員");
   await expect(page.locator(".audit-before").first()).toContainText("分析人員");
@@ -1309,7 +1323,7 @@ test("audit dates validate input, keep Taipei boundaries and allow clearing opti
     queries.push(new URL(route.request().url()));
     await route.fallback();
   });
-  await page.getByRole("button", { name: "活動稽核", exact: true }).click();
+  await page.goto("/admin/audit");
   const start = page.getByRole("textbox", {
     name: "稽核開始日期",
     exact: true,
@@ -1581,7 +1595,7 @@ test("activity audit separates sign-ins and opens a historical trace in system l
     });
   });
   await page.goto("/admin?tab=audit&category=authentication");
-  const audit = page.locator("nx-admin-audit");
+  const audit = page.locator("nx-activity-audit-page");
   await expect(audit.locator(".audit-row")).toHaveCount(1);
   await audit
     .getByRole("button", { name: "檢視稽核：#400", exact: true })
@@ -1605,7 +1619,10 @@ test("activity audit separates sign-ins and opens a historical trace in system l
   expect(Date.parse(logQueries[0].searchParams.get("to")!)).toBe(
     Date.parse(at) + 300_000,
   );
-  await page.getByRole("link", { name: "活動稽核", exact: true }).click();
+  await page
+    .locator(".feature-header")
+    .getByRole("link", { name: "活動稽核", exact: true })
+    .click();
   await expect(audit.locator(".audit-row")).toHaveCount(state.audit.length);
   await audit.getByRole("button", { name: "登入與身分", exact: true }).click();
   await expect(audit.locator(".audit-row")).toHaveCount(1);
@@ -1628,21 +1645,23 @@ test("dialog tabs animate their content and necessary frame changes, preserve fo
     exact: true,
   });
   await models.click();
-  expect(
-    await inspector
-      .locator(".inspector-panel")
-      .evaluate((el) =>
-        el
-          .getAnimations()
-          .some(
-            (a) =>
-              a.effect instanceof KeyframeEffect &&
-              a.effect
-                .getKeyframes()
-                .some((frame) => frame.transform?.includes("scale")),
-          ),
-      ),
-  ).toBe(true);
+  await expect
+    .poll(() =>
+      inspector
+        .locator(".inspector-panel")
+        .evaluate((el) =>
+          el
+            .getAnimations()
+            .some(
+              (a) =>
+                a.effect instanceof KeyframeEffect &&
+                a.effect
+                  .getKeyframes()
+                  .some((frame) => frame.transform?.includes("scale")),
+            ),
+        ),
+    )
+    .toBe(true);
   await expect(models).toBeFocused();
   await settleEntrance(page);
   const after = (await inspector.boundingBox())!;
@@ -1672,17 +1691,19 @@ test("dialog tabs animate their content and necessary frame changes, preserve fo
   await group.getByRole("button", { name: "基本資料", exact: true }).click();
   await settleEntrance(page);
   await group.getByRole("button", { name: "功能授權", exact: true }).click();
-  expect(
-    await group.evaluate((el) =>
-      el
-        .getAnimations()
-        .some(
-          (a) =>
-            a.effect instanceof KeyframeEffect &&
-            a.effect.getKeyframes().some((frame) => !!frame.width),
-        ),
-    ),
-  ).toBe(true);
+  await expect
+    .poll(() =>
+      group.evaluate((el) =>
+        el
+          .getAnimations()
+          .some(
+            (a) =>
+              a.effect instanceof KeyframeEffect &&
+              a.effect.getKeyframes().some((frame) => !!frame.width),
+          ),
+      ),
+    )
+    .toBe(true);
   for (const name of ["AI 模型", "基本資料", "附件容量", "功能授權"])
     await group.getByRole("button", { name, exact: true }).click();
   await settleEntrance(page);

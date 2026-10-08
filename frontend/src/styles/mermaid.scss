@@ -42,6 +42,7 @@
 }
 .mermaid-canvas {
   overflow: auto;
+  scrollbar-gutter: stable;
   cursor: grab;
   overscroll-behavior: contain;
   background-color: var(--surface);
@@ -71,8 +72,7 @@
   border-radius: 0;
   background: var(--code);
 }
-.mermaid-status,
-.mermaid-error {
+.mermaid-status {
   display: flex;
   align-items: center;
   flex-wrap: wrap;

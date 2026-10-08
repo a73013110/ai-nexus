@@ -1,9 +1,9 @@
+import { Notice } from '../../shared/ui/notice';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
 import { FilterPanel } from '../../shared/ui/filter-panel';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { ClientValidationError } from '../../core/api/safe-errors';
-import { IssueCode } from '../../shared/ui/issue-code';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -20,11 +20,11 @@ import { JobsApi } from './jobs-api';
 @Component({
   selector: 'nx-tasks-page',
   imports: [
+    Notice,
     Card,
     EmptyState,
     FilterPanel,
     ViewSwitch,
-    IssueCode,
     FeaturePage,
     Icon,
     JobProgress,
@@ -41,7 +41,7 @@ import { JobsApi } from './jobs-api';
       <nx-icon name="repeat" />重新整理
     </button>
     @if (error()) {
-      <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+      <nx-notice tone="danger" [message]="error()" />
     }
     <nx-filter-panel
       ><nx-view-switch

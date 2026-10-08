@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using AiNexus.BuildingBlocks;
 using AiNexus.Modules.AccessControl;
 using AiNexus.Modules.Administration;
+using AiNexus.Modules.Operations;
 using AiNexus.Modules.Identity;
 using AiNexus.Modules.Projects;
 using Microsoft.AspNetCore.Authentication;

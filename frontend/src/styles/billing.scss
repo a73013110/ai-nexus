@@ -6,7 +6,6 @@
 .search-toggle { display: inline-flex; align-items: center; justify-content: center; gap: .3rem; min-width: var(--button-target); min-height: var(--button-target); padding: .25rem .45rem; border-radius: var(--p-radius-md); color: var(--secondary); white-space: nowrap; font-size: var(--text-caption); }
 .search-toggle[aria-pressed='true'] { color: var(--signal); background: var(--accent-soft); }
 .search-toggle nx-icon { width: 17px; height: 17px; }
-.web-search-notice { margin: .2rem 0 .4rem; padding-inline: .3rem; font-size: var(--text-caption); color: var(--secondary); }
 .web-citations a { max-width: 18rem; }
 .web-citations a span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 620px) { .search-toggle span { display: none; } }

@@ -1,9 +1,9 @@
+import { Notice } from '../../shared/ui/notice';
 import { Card } from '../../shared/ui/card';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { FilterPanel } from '../../shared/ui/filter-panel';
 import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
-import { IssueCode } from '../../shared/ui/issue-code';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
@@ -19,17 +19,7 @@ import { IntegrationsApi } from './integrations-api';
 
 @Component({
   selector: 'nx-integrations-page',
-  imports: [
-    Card,
-    EmptyState,
-    FilterPanel,
-    Field,
-    IssueCode,
-    FeaturePage,
-    Select,
-    Icon,
-    MarkdownView,
-  ],
+  imports: [Notice, Card, EmptyState, FilterPanel, Field, FeaturePage, Select, Icon, MarkdownView],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './integrations-page.html',

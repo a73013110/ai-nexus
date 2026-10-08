@@ -117,6 +117,6 @@ public static class DiagnosticRegistration
             t.SetResourceBuilder(Resource()).AddSource(DiagnosticTrace.SourceName).SetSampler(new AlwaysOnSampler());
             if (configuration.OtlpEnabled) t.AddOtlpExporter(o => { o.Endpoint = new Uri(configuration.OtlpEndpoint.TrimEnd('/') + "/v1/traces"); o.Protocol = OtlpExportProtocol.HttpProtobuf; o.TimeoutMilliseconds = 2000; });
         });
-        telemetry.WithMetrics(m => { m.SetResourceBuilder(Resource()).AddMeter("AiNexus.Diagnostics"); if (configuration.OtlpEnabled) m.AddOtlpExporter(o => { o.Endpoint = new Uri(configuration.OtlpEndpoint.TrimEnd('/') + "/v1/metrics"); o.Protocol = OtlpExportProtocol.HttpProtobuf; o.TimeoutMilliseconds = 2000; }); });
+        telemetry.WithMetrics(m => { m.SetResourceBuilder(Resource()).AddMeter("AiNexus.Diagnostics", "AiNexus.Runtime"); if (configuration.OtlpEnabled) m.AddOtlpExporter(o => { o.Endpoint = new Uri(configuration.OtlpEndpoint.TrimEnd('/') + "/v1/metrics"); o.Protocol = OtlpExportProtocol.HttpProtobuf; o.TimeoutMilliseconds = 2000; }); });
     }
 }

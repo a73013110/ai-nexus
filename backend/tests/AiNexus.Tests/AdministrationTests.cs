@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using AiNexus.BuildingBlocks;
 using AiNexus.Modules.AccessControl;
 using AiNexus.Modules.Administration;
+using AiNexus.Modules.Operations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;

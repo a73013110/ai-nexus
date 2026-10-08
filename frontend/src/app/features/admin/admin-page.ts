@@ -1,3 +1,4 @@
+import { Notice } from '../../shared/ui/notice';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
 import {
@@ -11,7 +12,6 @@ import { ViewSwitch } from '../../shared/ui/view-switch';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { DialogMotion, ViewMotion } from '../../shared/ui/view-motion';
 import { Field } from '../../shared/ui/field';
-import { IssueCode } from '../../shared/ui/issue-code';
 import { safeMessage } from '../../core/api/safe-errors';
 import {
   ChangeDetectionStrategy,
@@ -41,7 +41,6 @@ import { AdminApi } from './admin-api';
 import { Checkbox } from '../../shared/ui/checkbox';
 import { SearchField } from '../../shared/ui/search-field';
 import { AdminUserInspector } from './admin-user-inspector';
-import { AdminAudit } from './admin-audit';
 import { RetrievalAdmin } from './retrieval-admin';
 import {
   formatDate,
@@ -88,6 +87,7 @@ interface Editor {
 @Component({
   selector: 'nx-admin-page',
   imports: [
+    Notice,
     Card,
     EmptyState,
     DataTable,
@@ -100,14 +100,12 @@ interface Editor {
     DialogMotion,
     ViewMotion,
     Field,
-    IssueCode,
     FeaturePage,
     Icon,
     RouterLink,
     Checkbox,
     SearchField,
     AdminUserInspector,
-    AdminAudit,
     RetrievalAdmin,
     PriceBook,
     FeatureSummary,
@@ -159,13 +157,12 @@ export class AdminPage {
     { id: 'roles', name: '角色' },
     { id: 'groups', name: '功能群組與模型' },
     { id: 'features', name: '功能' },
-    { id: 'audit', name: '活動稽核' },
     { id: 'usage', name: '平台用量' },
     { id: 'retrieval', name: '知識檢索' },
   ];
   readonly navigationGroups = [
     { label: '帳號與授權', ids: ['users', 'roles', 'groups', 'features'] },
-    { label: '運作與紀錄', ids: ['usage', 'audit', 'retrieval'] },
+    { label: '用量與檢索', ids: ['usage', 'retrieval'] },
   ].map((group) => ({
     label: group.label,
     options: this.tabs
@@ -173,7 +170,15 @@ export class AdminPage {
       .map((tab) => ({ value: tab.id, label: tab.name })),
   }));
   readonly managementTools = computed<MenuAction[]>(() => [
-    ...(this.session.has('logs.query') ? [{ id: 'logs', label: '系統日誌', icon: 'tasks' }] : []),
+    ...(this.session.has('audit')
+      ? [{ id: 'audit', label: this.session.featureName('audit'), icon: 'audit' }]
+      : []),
+    ...(this.session.has('monitoring')
+      ? [{ id: 'monitoring', label: this.session.featureName('monitoring'), icon: 'activity' }]
+      : []),
+    ...(this.session.has('logs.query')
+      ? [{ id: 'logs', label: this.session.featureName('logs.query'), icon: 'logs' }]
+      : []),
     ...(this.session.has('admin')
       ? [
           { id: 'dashboard', label: '用量與費用總覽', icon: 'chart' },
@@ -189,6 +194,8 @@ export class AdminPage {
       void this.router.navigateByUrl(
         (
           {
+            audit: '/admin/audit',
+            monitoring: '/admin/monitoring',
             logs: '/admin/logs',
             dashboard: '/dashboard?scope=platform',
             design: '/design',

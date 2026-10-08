@@ -1,10 +1,3 @@
-.feature-layout {
-  display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  height: calc(100dvh - var(--identity-banner-height, 0px) - var(--global-issue-height, 0px));
-  overflow: hidden;
-}
 .page-actions {
   display: flex;
   align-items: center;
@@ -35,21 +28,6 @@
 .resource-heading p {
   margin: 0;
   color: var(--secondary);
-}
-.source-load-error {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--p-space-2);
-  padding: var(--p-space-2) var(--p-space-3);
-  margin-bottom: var(--p-space-2);
-  border-radius: var(--p-radius-md);
-  background: var(--error-bg);
-  color: var(--error);
-  font-size: var(--text-label);
-}
-.source-load-error .quiet-button {
-  color: inherit;
 }
 .usage-grid {
   display: grid;

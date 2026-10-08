@@ -1,5 +1,5 @@
+import { Notice } from '../../shared/ui/notice';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
-import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -19,7 +19,7 @@ import { Select } from '../../shared/ui/select';
 
 @Component({
   selector: 'nx-add-to-knowledge',
-  imports: [CompactDialog, IssueCode, Icon, Select, RouterLink],
+  imports: [Notice, CompactDialog, Icon, Select, RouterLink],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
@@ -50,7 +50,7 @@ import { Select } from '../../shared/ui/select';
         共用原檔並建立檢索索引。加入後，該知識庫的成員可以閱讀原檔與查詢內容。
       </p>
       @if (error()) {
-        <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+        <nx-notice tone="danger" [message]="error()" />
       }
       @if (loading()) {
         <p role="status">正在載入可編輯的知識庫…</p>

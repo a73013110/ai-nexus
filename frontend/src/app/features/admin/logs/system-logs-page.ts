@@ -1,3 +1,4 @@
+import { Notice } from '../../../shared/ui/notice';
 import { EmptyState } from '../../../shared/ui/empty-state';
 import { ViewMotion } from '../../../shared/ui/view-motion';
 import { FilterPanel } from '../../../shared/ui/filter-panel';
@@ -76,6 +77,7 @@ const tones: Record<string, BadgeTone> = {
 @Component({
   selector: 'nx-system-logs-page',
   imports: [
+    Notice,
     EmptyState,
     ViewMotion,
     FilterPanel,

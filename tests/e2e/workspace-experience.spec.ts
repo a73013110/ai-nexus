@@ -231,7 +231,7 @@ test("icon rail, notification filtering and typed task navigation work across pa
   await page.goto("/files");
   await page.getByRole("button", { name: "收合側欄", exact: true }).click();
   const sidebar = page.locator(".workspace-sidebar");
-  expect((await sidebar.boundingBox())!.width).toBe(76);
+  expect((await sidebar.boundingBox())!.width).toBe(52);
   await expect(
     sidebar.getByRole("link", { name: "知識庫", exact: true }),
   ).toBeVisible();
@@ -302,7 +302,7 @@ test("icon rail, notification filtering and typed task navigation work across pa
     path: "artifacts/screenshots/tasks-compact-mobile.png",
     animations: "disabled",
   });
-  expect((await sidebar.boundingBox())!.width).toBe(64);
+  await expect(sidebar).not.toBeVisible();
   await page.getByRole("button", { name: "展開側欄", exact: true }).click();
   await expect(page.locator(".feature-main")).toHaveAttribute("inert", "");
   await page.getByRole("button", { name: "通知", exact: true }).click();
@@ -313,8 +313,9 @@ test("icon rail, notification filtering and typed task navigation work across pa
     .filter({ hasText: "文件索引完成" })
     .getByRole("button", { name: "查看內容" })
     .click();
-  await expect(sidebar).toHaveClass(/is-compact/);
+  await expect(sidebar).not.toBeVisible();
   await expect(page.locator(".feature-main")).not.toHaveAttribute("inert", "");
+  await page.getByRole("button", { name: "展開側欄", exact: true }).click();
   await page.getByRole("button", { name: "通知", exact: true }).click();
   for (let i = 0; i < 20; i++)
     items.push({

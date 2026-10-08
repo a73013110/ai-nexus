@@ -128,13 +128,6 @@
   line-height: var(--line-reading);
   margin: var(--p-space-2) 0 var(--p-space-4);
 }
-.inline-error {
-  color: var(--error);
-  background: var(--error-bg);
-  border-radius: var(--p-radius-md);
-  padding: var(--p-space-3);
-  font-size: var(--text-label);
-}
 .workspace-dialog :where(label:not(.selection-control)) {
   display: block;
   color: var(--ink);

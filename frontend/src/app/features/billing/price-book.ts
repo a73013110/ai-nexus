@@ -1,7 +1,7 @@
+import { Notice } from '../../shared/ui/notice';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
 import { DateTimePicker } from '../../shared/ui/date-time-picker';
-import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -39,7 +39,7 @@ const emptyPrice = (): PriceRequest => ({
 });
 @Component({
   selector: 'nx-price-book',
-  imports: [CompactDialog, Field, DateTimePicker, IssueCode, Icon, Select],
+  imports: [Notice, CompactDialog, Field, DateTimePicker, Icon, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './price-book.scss',
@@ -69,10 +69,10 @@ const emptyPrice = (): PriceRequest => ({
           價格只影響之後的呼叫。依你的方案填寫 API 價格，本機模型可使用內部成本；不同幣別分開統計。
         </p>
         @if (error()) {
-          <p class="error-note" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+          <nx-notice tone="danger" [message]="error()" />
         }
         @if (notice()) {
-          <p class="form-note" role="status">{{ notice() }}</p>
+          <nx-notice tone="info" [message]="notice()" />
         }
         <form (submit)="save($event)" class="platform-form price-form">
           <div class="price-fields">

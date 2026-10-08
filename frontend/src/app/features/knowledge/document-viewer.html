@@ -151,7 +151,7 @@
   }
 }
 @if (error() || renderError()) {
-  <p role="alert" class="viewer-error">{{ error() || renderError() }}</p>
+  <nx-notice tone="danger" [message]="error() || renderError()" />
 }
 <div
   class="viewer-stage"

@@ -186,18 +186,6 @@ nx-fourier-mark {
   margin-top: 14px;
   min-height: 46px;
 }
-.login-notice,
-.login-error {
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
-  padding: 12px;
-  font-size: var(--text-caption);
-  line-height: 1.6;
-}
-.login-error {
-  color: var(--error);
-  background: var(--error-bg);
-}
 .login-privacy {
   margin: 24px 0 0;
   padding-top: 18px;

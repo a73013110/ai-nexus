@@ -44,7 +44,9 @@ let sequence = 0;
         <span>{{ points()[0].label }}</span
         ><span>{{ points()[points().length - 1].label }}</span>
       </div>
-      <label class="sr-only" [for]="id + '-range'">逐日檢視{{ label() }}</label>
+      <label class="sr-only" [for]="id + '-range'"
+        >{{ granularity() === 'daily' ? '逐日' : '逐點' }}檢視{{ label() }}</label
+      >
       <input
         class="trend-scrubber"
         type="range"
@@ -69,7 +71,7 @@ let sequence = 0;
           </caption>
           <thead>
             <tr>
-              <th scope="col">日期</th>
+              <th scope="col">{{ granularity() === 'daily' ? '日期' : '時間' }}</th>
               <th scope="col">數值</th>
             </tr>
           </thead>
@@ -92,6 +94,8 @@ export class TrendChart {
   readonly points = input.required<TrendPoint[]>();
   readonly label = input.required<string>();
   readonly currency = input('');
+  readonly unit = input('');
+  readonly granularity = input<'daily' | 'interval'>('daily');
   readonly id = 'nx-trend-' + ++sequence;
   readonly Math = Math;
   readonly active = signal<number | null>(null);
@@ -135,6 +139,6 @@ export class TrendChart {
       ),
   );
   format(value: number) {
-    return this.formatter().format(value);
+    return this.formatter().format(value) + (this.unit() ? ' ' + this.unit() : '');
   }
 }

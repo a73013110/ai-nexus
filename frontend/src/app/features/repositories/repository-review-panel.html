@@ -1,5 +1,5 @@
 @if (error()) {
-  <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+  <nx-notice tone="danger" [message]="error()" />
 }
 <details class="review-create" [open]="!detail()">
   <summary>建立新的背景 review</summary>
@@ -50,10 +50,12 @@
     @if (commitsLoading()) {
       <p class="form-note" role="status">正在取得近期 commit…也可直接貼上完整 SHA。</p>
     } @else if (commitsError()) {
-      <p class="source-load-error" role="alert">
+      <nx-notice tone="danger">
         {{ commitsError() }} 可直接貼上完整 SHA。
-        <button type="button" class="quiet-button" (click)="loadCommits()">重新載入</button>
-      </p>
+        <button notice-actions type="button" class="quiet-button" (click)="loadCommits()">
+          重新載入
+        </button>
+      </nx-notice>
     } @else if (!commits().length) {
       <p class="form-note">
         目前沒有近期 commit 可選。若有固定版本，可展開「貼上完整 SHA」直接輸入。
@@ -73,12 +75,14 @@
     @if (modelsLoading()) {
       <p class="form-note" role="status">正在取得可用模型…</p>
     } @else if (modelsError()) {
-      <p class="source-load-error" role="alert">
+      <nx-notice tone="danger">
         {{ modelsError() }}
-        <button type="button" class="quiet-button" (click)="loadModels()">重新載入</button>
-      </p>
+        <button notice-actions type="button" class="quiet-button" (click)="loadModels()">
+          重新載入
+        </button>
+      </nx-notice>
     } @else if (models()?.notice) {
-      <p class="form-note">{{ models()!.notice }}</p>
+      <nx-notice tone="info" [message]="models()!.notice" />
     }
     <label
       >特別關注的內容（選填）<textarea
@@ -110,10 +114,12 @@
 @if (historyLoading()) {
   <p class="form-note" role="status">正在載入歷史 review…</p>
 } @else if (historyError()) {
-  <p class="source-load-error" role="alert">
+  <nx-notice tone="danger">
     {{ historyError() }}
-    <button type="button" class="quiet-button" (click)="loadHistory()">重新載入</button>
-  </p>
+    <button notice-actions type="button" class="quiet-button" (click)="loadHistory()">
+      重新載入
+    </button>
+  </nx-notice>
 }
 @if (reviews().length) {
   <nx-select
@@ -204,9 +210,9 @@
           </button>
         }
         @if (report.truncated) {
-          <p class="error-banner">
+          <nx-notice tone="warning">
             部分分析或整體報告達到模型輸出上限，結果不完整。請縮小範圍或改用其他模型重新檢閱。
-          </p>
+          </nx-notice>
         }
       } @else {
         <p class="form-note" role="status">
@@ -220,9 +226,9 @@
         </p>
       }
       @if (binarySections().length) {
-        <p class="source-warning">
+        <nx-notice tone="warning">
           包含 {{ binarySections().length }} 個二進位區段，需人工確認原檔；可在下方固定 diff 查核。
-        </p>
+        </nx-notice>
       }
     </article>
     <details class="review-evidence" (toggle)="evidenceExpanded.set($any($event.target).open)">
@@ -250,7 +256,7 @@
                 </p>
               }
               @if (section.truncated) {
-                <p class="error-banner">這個區段的分析達到模型輸出上限，結果不完整。</p>
+                <nx-notice tone="warning">這個區段的分析達到模型輸出上限，結果不完整。</nx-notice>
               }
               <pre><code>{{ section.diff }}</code></pre>
               @if (section.inputTokens != null || section.outputTokens != null) {

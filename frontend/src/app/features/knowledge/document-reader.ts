@@ -11,10 +11,11 @@ import {
 } from '../../shared/browser/reader-navigation';
 import { DocumentViewer } from './document-viewer';
 import { WorkspaceLayout } from '../../core/preferences/workspace-layout';
+import { WorkspaceMenuButton } from '../../shared/ui/workspace-menu-button';
 
 @Component({
   selector: 'nx-document-reader',
-  imports: [WorkspaceSidebar, Icon, DocumentViewer],
+  imports: [WorkspaceSidebar, WorkspaceMenuButton, Icon, DocumentViewer],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="feature-layout">
     <aside nxWorkspaceSidebar class="feature-sidebar" aria-label="工作區導覽"></aside>
@@ -24,9 +25,12 @@ import { WorkspaceLayout } from '../../core/preferences/workspace-layout';
       tabindex="-1"
       [attr.inert]="layout.overlay() ? '' : null"
     >
-      <a class="reader-return quiet-button" [href]="returnTo()" (click)="back($event)"
-        ><nx-icon name="back" />{{ returnLabel() }}</a
-      >
+      <div class="reader-navigation">
+        <nx-workspace-menu-button />
+        <a class="reader-return quiet-button" [href]="returnTo()" (click)="back($event)"
+          ><nx-icon name="back" />{{ returnLabel() }}</a
+        >
+      </div>
       <nx-document-viewer [target]="state().target" />
     </main>
   </div>`,

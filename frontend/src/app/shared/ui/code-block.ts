@@ -1,10 +1,11 @@
+import { Notice } from './notice';
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { CopyFeedback } from '../browser/copy-feedback';
 import { Icon } from './icon';
 
 @Component({
   selector: 'nx-code-block',
-  imports: [Icon],
+  imports: [Notice, Icon],
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
@@ -60,7 +61,7 @@ import { Icon } from './icon';
     </header>
     <pre><code>{{ value() }}</code></pre>
     @if (feedback.error()) {
-      <p class="error" role="alert">{{ feedback.error() }}</p>
+      <nx-notice tone="danger" [message]="feedback.error()" />
     }`,
 })
 export class CodeBlock {

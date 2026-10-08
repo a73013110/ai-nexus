@@ -10,14 +10,14 @@
       <span class="panel-eyebrow">使用者活動與政策 · 對話唯讀</span>
       <h2 id="inspector-title">{{ user()?.displayName }}</h2>
       <p>{{ user()?.account }}</p>
-      @if (user(); as account) {
+      @if (session.has('audit') && user(); as account) {
         <a
           class="quiet-button"
-          routerLink="/admin"
-          [queryParams]="{ tab: 'audit', search: account.id }"
+          routerLink="/admin/audit"
+          [queryParams]="{ search: account.id }"
           (click)="close()"
         >
-          <nx-icon name="shield" />查閱活動稽核
+          <nx-icon name="audit" />查閱活動稽核
         </a>
       }
     </div>
@@ -96,10 +96,10 @@
                   GB。降低上限會阻止超額上傳，既有檔案仍保留。
                 </p>
                 @if (storageError()) {
-                  <p class="inline-error" role="alert">{{ storageError() }}</p>
+                  <nx-notice tone="danger" [message]="storageError()" />
                 }
                 @if (storageNotice()) {
-                  <p class="success-note" role="status">{{ storageNotice() }}</p>
+                  <nx-notice tone="success" [message]="storageNotice()" />
                 }
               </form>
             </section>
@@ -115,10 +115,10 @@
             <form class="inspector-model-form" (submit)="saveModels($event)">
               <div class="inspector-model-fields">
                 @if (modelError()) {
-                  <p class="inline-error" role="alert">{{ modelError() }}</p>
+                  <nx-notice tone="danger" [message]="modelError()" />
                 }
                 @if (modelNotice()) {
-                  <p class="success-note" role="status">{{ modelNotice() }}</p>
+                  <nx-notice tone="success" [message]="modelNotice()" />
                 }
                 <nx-model-policy-editor
                   [models]="models()"
@@ -141,7 +141,7 @@
             </form>
           } @else if (!loadingModels()) {
             @if (modelError()) {
-              <p class="inline-error" role="alert">{{ modelError() }}</p>
+              <nx-notice tone="danger" [message]="modelError()" />
             }
             <button class="secondary-button" (click)="loadModels()">重新載入模型政策</button>
           }
@@ -152,9 +152,7 @@
           <nx-icon name="shield" />檢視行為會寫入稽核。對話包含各分支版本；附件僅提供資訊。
         </p>
         @if (error()) {
-          <p role="alert" class="inline-error">
-            {{ error() }}<nx-issue-code [message]="error()" />
-          </p>
+          <nx-notice tone="danger" [message]="error()" />
         }
         <div class="inspector-body">
           <aside class="inspector-list" aria-label="使用者對話清單">
@@ -226,7 +224,7 @@
             [attr.aria-busy]="reading()"
           >
             @if (readError()) {
-              <p class="inline-error" role="alert">{{ readError() }}</p>
+              <nx-notice tone="danger" [message]="readError()" />
             }
             @if (detail(); as data) {
               <header class="inspector-conversation-heading">

@@ -1,5 +1,5 @@
 <nx-feature-page
-  title="系統日誌"
+  [title]="session.featureName('logs.query')"
   description="查證錯誤、耗時與技術流程；登入、操作及授權紀錄請查看活動稽核。"
   eyebrow="AI NEXUS / 系統"
   density="compact"
@@ -7,9 +7,9 @@
   [wide]="true"
 >
   <div page-actions class="page-actions">
-    @if (session.has('admin')) {
-      <a routerLink="/admin" [queryParams]="{ tab: 'audit' }" class="secondary-button"
-        ><nx-icon name="shield" />活動稽核</a
+    @if (session.has('audit')) {
+      <a routerLink="/admin/audit" class="secondary-button"
+        ><nx-icon name="audit" />{{ session.featureName('audit') }}</a
       >
     }
     @if (session.has('logs.export')) {
@@ -26,7 +26,7 @@
     }
   </div>
   @if (!session.has('logs.query') && session.me()) {
-    <p class="error-banner" role="alert">需要系統日誌查詢權限。</p>
+    <nx-notice tone="danger">需要系統日誌查詢權限。</nx-notice>
   }
   @if (session.has('logs.query')) {
     @if (health(); as state) {
@@ -103,9 +103,7 @@
       </section>
     }
     @if (healthError()) {
-      <p class="error-banner" role="alert">
-        {{ healthError() }}<nx-issue-code [message]="healthError()" />
-      </p>
+      <nx-notice tone="danger" [message]="healthError()" />
     }
     <form class="log-filters" (ngSubmit)="search()">
       <nx-filter-panel>
@@ -184,7 +182,7 @@
       </nx-filter-panel>
     </form>
     @if (error()) {
-      <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+      <nx-notice tone="danger" [message]="error()" />
     }
     <nx-data-table
       label="系統日誌資料表，可捲動查看更多事件"
@@ -435,27 +433,28 @@
       <p class="ui-panel-note" role="status">正在載入診斷詳情…</p>
     }
     @if (detailError()) {
-      <div class="error-banner" role="alert">
-        {{ detailError() }}<nx-issue-code [message]="detailError()" /><button
+      <nx-notice [message]="detailError()"
+        ><button
+          notice-actions
           type="button"
           class="secondary-button"
           (click)="inspect(selectedEntry()!)"
         >
           重新載入詳情
         </button>
-      </div>
+      </nx-notice>
     }
     @if (detail(); as selected) {
       @switch (detailTab()) {
         @case ('overview') {
           <h3 class="ui-section-heading">事件訊息</h3>
-          @if (selected.event.traceId && session.has('admin')) {
+          @if (selected.event.traceId && session.has('audit')) {
             <a
-              routerLink="/admin"
-              [queryParams]="{ tab: 'audit', traceId: selected.event.traceId }"
+              routerLink="/admin/audit"
+              [queryParams]="{ traceId: selected.event.traceId }"
               class="quiet-button"
             >
-              <nx-icon name="shield" />查閱同一流程的活動稽核
+              <nx-icon name="audit" />查閱同一流程的活動稽核
             </a>
           }
           <p class="ui-message-box">{{ selected.event.message }}</p>
@@ -629,9 +628,7 @@
         <p role="status">正在載入關聯流程…</p>
       }
       @if (relatedError()) {
-        <p class="error-banner" role="alert">
-          {{ relatedError() }}<nx-issue-code [message]="relatedError()" />
-        </p>
+        <nx-notice tone="danger" [message]="relatedError()" />
       }
       <ol class="ui-timeline">
         @for (entry of related(); track entry.logId) {

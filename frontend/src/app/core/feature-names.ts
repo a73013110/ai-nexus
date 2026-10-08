@@ -12,4 +12,9 @@ export const FEATURE_NAMES: Readonly<Record<string, string>> = {
   tasks: '背景任務',
   integrations: '資料來源',
   admin: '平台管理',
+  monitoring: '即時監控',
+  audit: '活動稽核',
+  'logs.query': '系統日誌',
+  'logs.detail': '日誌診斷詳情',
+  'logs.export': '日誌匯出',
 };

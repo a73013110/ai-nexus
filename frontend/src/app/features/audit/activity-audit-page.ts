@@ -1,10 +1,13 @@
+import { Notice } from '../../shared/ui/notice';
 import { DateTimePicker } from '../../shared/ui/date-time-picker';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { FilterPanel } from '../../shared/ui/filter-panel';
-import { IssueCode } from '../../shared/ui/issue-code';
 import { safeMessage } from '../../core/api/safe-errors';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
+import { FEATURE_NAMES } from '../../core/feature-names';
+import { FeaturePage } from '../../shared/ui/feature-page';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { Disclosure } from '../../shared/ui/disclosure';
 import { AUDIT_CATEGORIES, auditLogQuery } from './audit-navigation';
@@ -15,12 +18,11 @@ import {
   DestroyRef,
   computed,
   inject,
-  input,
   signal,
   viewChild,
   viewChildren,
 } from '@angular/core';
-import { AdminApi } from './admin-api';
+import { ActivityAuditApi } from './activity-audit-api';
 import type { AuditEntry, Feature, Model } from '../../core/api/types';
 import { FeatureSummary } from '../../shared/ui/feature-summary';
 import { SearchField } from '../../shared/ui/search-field';
@@ -49,12 +51,13 @@ import {
 } from './audit-presentation';
 
 @Component({
-  selector: 'nx-admin-audit',
+  selector: 'nx-activity-audit-page',
   imports: [
+    FeaturePage,
+    Notice,
     EmptyState,
     DateTimePicker,
     FilterPanel,
-    IssueCode,
     SearchField,
     Select,
     Icon,
@@ -71,15 +74,16 @@ import {
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: ':host { display: block; min-width: 0; }',
-  templateUrl: './admin-audit.html',
+  styleUrl: './activity-audit-page.scss',
+  templateUrl: './activity-audit-page.html',
 })
-export class AdminAudit {
+export class ActivityAuditPage {
   readonly session = inject(WorkspaceSession);
   readonly categories = AUDIT_CATEGORIES;
   readonly category = signal('');
   readonly traceId = signal('');
-  readonly features = input<readonly Feature[]>([]);
-  readonly models = input<readonly Model[]>([]);
+  readonly features = signal<readonly Feature[]>([]);
+  readonly models = signal<readonly Model[]>([]);
   readonly modelNames = computed(() =>
     Object.fromEntries(this.models().map((model) => [model.id, formatModelName(model)])),
   );
@@ -90,7 +94,7 @@ export class AdminAudit {
   readonly hasNext = computed(() => this.pageIndex() < this.pages().length - 1 || this.more());
   readonly selectedId = signal<number | null>(null);
   readonly drawer = viewChild.required(DetailDrawer);
-  private readonly table = viewChild.required(DataTable);
+  private readonly table = viewChild(DataTable);
   readonly columns: TableColumn[] = [
     { id: 'time', label: '時間', hideable: false },
     { id: 'actor', label: '操作者' },
@@ -98,7 +102,7 @@ export class AdminAudit {
     { id: 'resource', label: '資源' },
     { id: 'result', label: '結果' },
   ];
-  readonly loading = signal(false);
+  readonly loading = signal(true);
   readonly more = signal(false);
   readonly error = signal('');
   readonly search = signal('');
@@ -177,7 +181,7 @@ export class AdminAudit {
   private resetDetails() {
     this.drawer().close();
     this.selectedId.set(null);
-    this.table().resetScroll();
+    this.table()?.resetScroll();
   }
   async changePage(direction: -1 | 1) {
     if (this.loading() || !this.validDates()) return;
@@ -192,7 +196,7 @@ export class AdminAudit {
   }
   private resolveFeatures(ids: string[]): Feature[] {
     const catalog = new Map(this.features().map((feature) => [feature.id, feature]));
-    return ids.map((id) => catalog.get(id) ?? { id, name: id, route: '' });
+    return ids.map((id) => catalog.get(id) ?? { id, name: FEATURE_NAMES[id] || id, route: '' });
   }
   readonly results = [
     { value: '', label: '所有結果' },
@@ -201,21 +205,63 @@ export class AdminAudit {
     { value: 'read', label: '已檢視' },
     { value: 'failed', label: '未完成／拒絕' },
   ];
-  private readonly api = inject(AdminApi);
+  private readonly api = inject(ActivityAuditApi);
+  private readonly route = inject(ActivatedRoute);
+  private readonly destroy = inject(DestroyRef);
+  private catalogLoaded = false;
   private version = 0;
   private timer?: ReturnType<typeof setTimeout>;
   constructor() {
-    const params = inject(ActivatedRoute).snapshot.queryParamMap;
-    const category = params.get('category') || '';
-    if (AUDIT_CATEGORIES.some((item) => item.value === category)) this.category.set(category);
-    this.search.set((params.get('search') || '').slice(0, 120));
-    const traceId = params.get('traceId');
-    if (traceId && /^[a-f\d]{32}$/i.test(traceId)) this.traceId.set(traceId.toLowerCase());
-    afterNextRender(() => void this.load());
-    inject(DestroyRef).onDestroy(() => {
+    afterNextRender(() => void this.initialize());
+    this.destroy.onDestroy(() => {
       ++this.version;
       clearTimeout(this.timer);
     });
+  }
+  private async initialize() {
+    try {
+      await this.session.load();
+      if (this.destroy.destroyed) return;
+      if (!this.session.has('audit')) {
+        this.loading.set(false);
+        return;
+      }
+      const catalog = await this.api.catalog();
+      if (this.destroy.destroyed) return;
+      this.features.set(catalog.features);
+      this.models.set(catalog.models);
+      this.catalogLoaded = true;
+      this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroy)).subscribe((params) => {
+        clearTimeout(this.timer);
+        const category = params.get('category') || '';
+        this.category.set(AUDIT_CATEGORIES.some((item) => item.value === category) ? category : '');
+        this.search.set((params.get('search') || '').slice(0, 120));
+        const traceId = params.get('traceId') || '';
+        this.traceId.set(/^[a-f\d]{32}$/i.test(traceId) ? traceId.toLowerCase() : '');
+        this.action.set(
+          this.actions.some((item) => item.value === params.get('action'))
+            ? params.get('action')!
+            : '',
+        );
+        this.result.set(
+          this.results.some((item) => item.value === params.get('result'))
+            ? params.get('result')!
+            : '',
+        );
+        this.from.set(params.get('from') || '');
+        this.until.set(params.get('until') || '');
+        void this.load();
+      });
+    } catch (error) {
+      if (!this.destroy.destroyed) {
+        this.error.set(safeMessage(error));
+        this.loading.set(false);
+      }
+    }
+  }
+  reload() {
+    if (this.catalogLoaded) void this.load();
+    else void this.initialize();
   }
   searchChanged(value: string) {
     this.search.set(value);
@@ -230,6 +276,7 @@ export class AdminAudit {
     void this.load();
   }
   async load(append = false) {
+    if (!this.session.has('audit') || this.destroy.destroyed) return;
     if (append && this.loading()) return;
     const version = ++this.version;
     if (!this.validDates()) {
@@ -256,7 +303,7 @@ export class AdminAudit {
         from: this.from() ? this.from() + 'T00:00:00+08:00' : '',
         until: this.until() ? this.nextDay(this.until()) + 'T00:00:00+08:00' : '',
       };
-      const rows = await this.api.audit(append ? this.rows().at(-1)?.id : undefined, filters);
+      const rows = await this.api.query(append ? this.rows().at(-1)?.id : undefined, filters);
       if (version !== this.version) return;
       this.more.set(rows.length === 100);
       if (append && !rows.length) return;

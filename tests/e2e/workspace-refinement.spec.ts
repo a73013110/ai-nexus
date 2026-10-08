@@ -111,9 +111,7 @@ test("compact chat keeps more history and controls visible while touch menus rem
   });
   for (const width of [859, 375]) {
     await page.setViewportSize({ width, height: 812 });
-    await sidebar
-      .getByRole("button", { name: "展開側欄", exact: true })
-      .click();
+    await page.getByRole("button", { name: "展開側欄", exact: true }).click();
     for (const control of [
       sidebar.getByRole("link", { name: "新對話", exact: true }),
       workspace,
@@ -163,6 +161,15 @@ test("the shared wordmark has one N and the compact new-chat icon stays centered
   });
   for (const width of [1280, 375]) {
     await page.setViewportSize({ width, height: 812 });
+    if (width === 375) {
+      await expect(sidebar).not.toBeVisible();
+      await expect(page.locator(".workspace-menu-button")).toBeVisible();
+      await expectViewportContained(page);
+      await page.screenshot({
+        path: `artifacts/screenshots/sidebar-wordmark-${width}.png`,
+      });
+      continue;
+    }
     const collapse = page.getByRole("button", {
       name: "收合側欄",
       exact: true,
@@ -259,8 +266,14 @@ test("one header notification icon exposes the full count and workspace expansio
   await expect(sidebar.locator(".history-search")).toBeVisible();
   unread = 0;
   await bell.click();
+  const notificationDialog = page.getByRole("dialog", {
+    name: "通知",
+    exact: true,
+  });
+  await expect(notificationDialog).toBeVisible();
   await expect(bell.locator("nx-count-badge")).not.toBeVisible();
   await page.keyboard.press("Escape");
+  await expect(notificationDialog).not.toBeVisible();
   await expect(bell).toBeFocused();
   await page.setViewportSize({ width: 375, height: 667 });
   await page.getByRole("button", { name: "展開側欄", exact: true }).click();
@@ -270,18 +283,17 @@ test("one header notification icon exposes the full count and workspace expansio
     sidebar.getByRole("link", { name: "背景任務", exact: true }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
-  const compactBell = await bell.boundingBox();
-  const compactToggle = sidebar.getByRole("button", {
+  await expect(sidebar).not.toBeVisible();
+  const mobileToggle = page.getByRole("button", {
     name: "展開側欄",
     exact: true,
   });
-  const compactToggleBounds = await compactToggle.boundingBox();
-  expect(compactBell!.y + compactBell!.height).toBeLessThanOrEqual(
-    compactToggleBounds!.y,
-  );
+  await expect(mobileToggle).toBeFocused();
+  await mobileToggle.click();
   await bell.focus();
   await bell.press("Tab");
-  await expect(compactToggle).toBeFocused();
+  await expect(sidebar.locator(".sidebar-toggle")).toBeFocused();
+  await page.keyboard.press("Escape");
   await expectViewportContained(page);
 });
 
@@ -556,7 +568,7 @@ test("review stays usable while commits load and presents one expandable overall
   );
   await page.getByRole("button", { name: "展開完整報告", exact: true }).click();
   await expect(body).toHaveCSS("max-height", "none");
-  await expect(page.locator(".review-report .error-banner")).toContainText(
+  await expect(page.locator(".review-report nx-notice")).toContainText(
     "結果不完整",
   );
   await page.locator(".review-evidence > summary").click();

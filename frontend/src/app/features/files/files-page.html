@@ -39,10 +39,10 @@
     <span class="file-library-private"><nx-icon name="lock" />個人檔案庫</span>
   </section>
   @if (error() || store.error()) {
-    <p class="error-banner" role="alert">{{ error() || store.error() }}</p>
+    <nx-notice tone="danger" [message]="error() || store.error()" />
   }
   @if (notice()) {
-    <p class="success-note" role="status">{{ notice() }}</p>
+    <nx-notice tone="success" [message]="notice()" />
   }
   <nx-filter-panel
     ><div class="file-library-toolbar">

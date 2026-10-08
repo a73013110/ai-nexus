@@ -17,10 +17,10 @@
     </button>
   </div>
   @if (error()) {
-    <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+    <nx-notice tone="danger" [message]="error()" />
   }
   @if (notice()) {
-    <p class="success-note" role="status">{{ notice() }}</p>
+    <nx-notice tone="success" [message]="notice()" />
   }
   @if (loading()) {
     <p role="status">正在載入專案…</p>
@@ -291,7 +291,7 @@
       </button>
     </div>
     @if (error()) {
-      <p role="alert" class="error-banner">{{ error() }}<nx-issue-code [message]="error()" /></p>
+      <nx-notice tone="danger" [message]="error()" />
     }
     <form class="platform-form" (submit)="save($event)">
       <label

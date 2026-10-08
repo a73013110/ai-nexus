@@ -142,13 +142,6 @@ nx-document-viewer {
     margin-top: 12px;
   }
 }
-.viewer-error {
-  padding: var(--section-padding);
-  margin: 0;
-  color: var(--error);
-  background: var(--surface);
-  flex: none;
-}
 .viewer-stage {
   flex: 1;
   min-height: 0;

@@ -181,21 +181,6 @@
     border-color: var(--signal);
   }
 }
-.source-warning {
-  display: flex;
-  align-items: start;
-  gap: var(--p-space-3);
-  color: var(--secondary);
-  background: var(--accent-soft);
-  border-radius: var(--p-radius-md);
-  padding: var(--p-space-4);
-  line-height: 1.7;
-  font-size: var(--text-label);
-  nx-icon {
-    flex-shrink: 0;
-    margin-top: 2px;
-  }
-}
 .job-list {
   display: grid;
   gap: var(--section-gap);

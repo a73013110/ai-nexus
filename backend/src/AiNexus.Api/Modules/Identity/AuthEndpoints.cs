@@ -73,12 +73,13 @@ public static class AuthEndpoints
             http.User = principal;
             return Results.Ok(Session(http, options.Value, csrf));
         }).AllowAnonymous().RequireRateLimiting("ad-login").WithName("AdLogin").Produces<AuthSessionDto>();
-        auth.MapPost("/logout", async (HttpContext http, NexusDbContext db, CurrentUser current, AuthenticationAudit audit, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, CancellationToken ct) =>
+        auth.MapPost("/logout", async (HttpContext http, NexusDbContext db, CurrentUser current, AuthenticationAudit audit, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, AiNexus.Modules.Monitoring.RuntimeTraffic traffic, CancellationToken ct) =>
         {
             var user = await current.GetAsync(ct);
             await EndExistingTestAsync(http.User, db, "signed_out", ct);
             await audit.WriteAsync("identity.logout", user.Id, user.Account, http.User.FindFirstValue(SessionIdentity.Method) ?? "windows", "completed", ct);
             await http.SignOutAsync(CookieScheme);
+            if (Guid.TryParse(http.Request.Headers["X-Nexus-Session"], out var sessionId)) traffic.Leave(user.Id, sessionId);
             http.User = new ClaimsPrincipal(new ClaimsIdentity());
             return Results.Ok(Session(http, options.Value, csrf));
         }).RequireAuthorization().WithName("AdLogout").Produces<AuthSessionDto>();

@@ -1,9 +1,9 @@
+import { Notice } from '../../shared/ui/notice';
 import { Card } from '../../shared/ui/card';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { formatDate } from '../../shared/browser/format';
 import { ClientValidationError } from '../../core/api/safe-errors';
-import { IssueCode } from '../../shared/ui/issue-code';
 import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -22,10 +22,10 @@ import { SharingApi } from './sharing-api';
 @Component({
   selector: 'nx-shared-page',
   imports: [
+    Notice,
     Card,
     EmptyState,
     ViewSwitch,
-    IssueCode,
     FeaturePage,
     MarkdownView,
     Icon,
@@ -56,7 +56,7 @@ import { SharingApi } from './sharing-api';
         (valueChange)="switchTab($event === 'sent')"
       />
       @if (error()) {
-        <p role="alert" class="error-banner">{{ error() }}<nx-issue-code [message]="error()" /></p>
+        <nx-notice tone="danger" [message]="error()" />
       }
       @if (loading()) {
         <p role="status">正在載入分享…</p>

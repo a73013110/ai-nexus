@@ -4,11 +4,13 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { Icon } from './icon';
+import { ScrollArea } from './scroll-area';
 import { groupFeatures, FEATURE_ICONS } from '../../core/feature-groups';
 @Component({
   selector: 'nx-workspace-navigation',
-  imports: [RouterLink, Icon],
+  imports: [RouterLink, Icon, ScrollArea],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: ':host { display: flex; flex-direction: column; min-height: 0; }',
   template: `<nav
     class="workspace-navigation"
     aria-label="工作區功能"
@@ -25,29 +27,31 @@ import { groupFeatures, FEATURE_ICONS } from '../../core/feature-groups';
       </button>
     }
     @if (compact() || !collapsible() || expanded()) {
-      <div class="workspace-groups">
-        @for (group of visibleGroups(); track group.id) {
-          <section class="workspace-group" [attr.aria-label]="group.name">
-            <h3>{{ group.name }}</h3>
-            <div class="workspace-icons">
-              @for (feature of group.features; track feature.id) {
-                <a
-                  [routerLink]="feature.route"
-                  [class.current]="activeFeature() === feature.id"
-                  [attr.aria-current]="activeFeature() === feature.id ? 'page' : null"
-                  [attr.title]="feature.name"
-                  [attr.aria-label]="feature.name"
-                  (click)="activated.emit()"
-                >
-                  <nx-icon [name]="icons[feature.id] || 'document'" /><span>{{
-                    feature.name
-                  }}</span>
-                </a>
-              }
-            </div>
-          </section>
-        }
-      </div>
+      <nx-scroll-area label="工作區功能">
+        <div class="workspace-groups">
+          @for (group of visibleGroups(); track group.id) {
+            <section class="workspace-group" [attr.aria-label]="group.name">
+              <h3>{{ group.name }}</h3>
+              <div class="workspace-icons">
+                @for (feature of group.features; track feature.id) {
+                  <a
+                    [routerLink]="feature.route"
+                    [class.current]="activeFeature() === feature.id"
+                    [attr.aria-current]="activeFeature() === feature.id ? 'page' : null"
+                    [attr.title]="feature.name"
+                    [attr.aria-label]="feature.name"
+                    (click)="activated.emit()"
+                  >
+                    <nx-icon [name]="icons[feature.id] || 'document'" /><span>{{
+                      feature.name
+                    }}</span>
+                  </a>
+                }
+              </div>
+            </section>
+          }
+        </div>
+      </nx-scroll-area>
     }
   </nav>`,
 })

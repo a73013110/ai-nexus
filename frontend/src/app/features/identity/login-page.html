@@ -46,16 +46,16 @@
       @if (loading()) {
         <p role="status">正在確認登入設定…</p>
       } @else if (method() === 'windows') {
-        <p class="login-notice" role="status">
+        <nx-notice tone="info">
           尚未取得 Windows 身分。請使用公司網域電腦，並確認瀏覽器與 IIS 的 Windows 驗證設定。
-        </p>
+        </nx-notice>
       } @else if (auth.session() && !auth.session()?.configured) {
-        <p class="login-notice" role="status">
+        <nx-notice tone="info">
           AD 登入尚未完成設定。請在後端本機設定填入服務帳號的 DnPass，再重新啟動。
-        </p>
+        </nx-notice>
       }
       @if (error(); as message) {
-        <p class="login-error" role="alert">{{ message }}</p>
+        <nx-notice tone="danger" [message]="message" />
       }
       @if (method() !== 'windows') {
         <form (submit)="submit($event)">

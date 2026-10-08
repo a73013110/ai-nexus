@@ -1,10 +1,10 @@
+import { Notice } from '../../shared/ui/notice';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
 import { SearchField } from '../../shared/ui/search-field';
 import { Field } from '../../shared/ui/field';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { ClientValidationError } from '../../core/api/safe-errors';
-import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -36,12 +36,12 @@ import { ShareDialog } from '../sharing/share-dialog';
 @Component({
   selector: 'nx-artifacts-page',
   imports: [
+    Notice,
     ViewSwitch,
     EmptyState,
     Card,
     SearchField,
     Field,
-    IssueCode,
     FeaturePage,
     Icon,
     Select,

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using AiNexus.BuildingBlocks;
 using AiNexus.Modules.Administration;
+using AiNexus.Modules.Operations;
 using AiNexus.Modules.AccessControl;
 using AiNexus.Modules.Inference;
 using Microsoft.EntityFrameworkCore;

@@ -1,6 +1,6 @@
+import { Notice } from '../../shared/ui/notice';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
-import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -17,7 +17,7 @@ import { KnowledgeApi } from './knowledge-api';
 
 @Component({
   selector: 'nx-text-source-editor',
-  imports: [CompactDialog, Field, IssueCode, ConfirmDialog],
+  imports: [Notice, CompactDialog, Field, ConfirmDialog],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
@@ -58,9 +58,7 @@ import { KnowledgeApi } from './knowledge-api';
           {{ text().length.toLocaleString() }} / 64,000 字元 · 原始內容會保留為文字檔
         </p>
         @if (error()) {
-          <p class="error-banner" role="alert">
-            {{ error() }}<nx-issue-code [message]="error()" />
-          </p>
+          <nx-notice tone="danger" [message]="error()" />
         }
         <div class="dialog-actions">
           <button type="button" class="secondary-button" [disabled]="busy()" (click)="close()">

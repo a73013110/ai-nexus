@@ -14,10 +14,10 @@
     </button>
   </div>
   @if (error()) {
-    <p role="alert" class="error-banner">{{ error() }}<nx-issue-code [message]="error()" /></p>
+    <nx-notice tone="danger" [message]="error()" />
   }
   @if (notice()) {
-    <p role="status" class="form-note">{{ notice() }}</p>
+    <nx-notice tone="success" [message]="notice()" />
   }
   <nx-view-switch
     label="品質功能"
@@ -165,7 +165,7 @@
                       ><span>{{ answer.outputTokens ?? '—' }} output tokens</span>
                     </div>
                     @if (answer.truncated) {
-                      <p class="error-banner">輸出達到模型上限，內容可能未完成。</p>
+                      <nx-notice tone="warning">輸出達到模型上限，內容可能未完成。</nx-notice>
                     }
                     <nx-markdown-view [content]="answer.output" />
                     <footer>
@@ -273,7 +273,7 @@
         </button>
       </div>
       @if (error()) {
-        <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+        <nx-notice tone="danger" [message]="error()" />
       }
       <fieldset class="platform-form" [disabled]="busy()">
         @if (form() === 'set') {

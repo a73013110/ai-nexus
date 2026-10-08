@@ -1,14 +1,14 @@
+import { Notice } from './notice';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import type { Job } from '../../core/api/types';
 import { newLocalIssue, systemProblem, validIssueCode } from '../../core/api/safe-errors';
-import { IssueCode } from './issue-code';
 import { InferenceSignal } from './inference-signal';
 import { StatusBadge } from './status-badge';
 import type { BadgeTone } from './count-badge';
 
 @Component({
   selector: 'nx-job-progress',
-  imports: [InferenceSignal, IssueCode, StatusBadge],
+  imports: [Notice, InferenceSignal, StatusBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './job-progress.scss',
   template: `<div class="job-progress" [attr.data-status]="job().status">
@@ -41,7 +41,7 @@ import type { BadgeTone } from './count-badge';
       <p class="form-note" role="status">已提出停止要求，正在結束目前的步驟。</p>
     }
     @if (job().errorMessage) {
-      <p class="job-error">{{ failure() }}<nx-issue-code [message]="failure()" /></p>
+      <nx-notice tone="danger" [message]="failure()" />
     }
   </div>`,
 })

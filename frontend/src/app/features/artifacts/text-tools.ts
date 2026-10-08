@@ -1,8 +1,8 @@
+import { Notice } from '../../shared/ui/notice';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { DialogMotion, ViewMotion } from '../../shared/ui/view-motion';
 import { MarkdownEditor } from '../../shared/ui/markdown-editor';
 import { Field } from '../../shared/ui/field';
-import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   afterRenderEffect,
@@ -28,12 +28,12 @@ import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
 @Component({
   selector: 'nx-text-tools',
   imports: [
+    Notice,
     CompactDialog,
     DialogMotion,
     ViewMotion,
     MarkdownEditor,
     Field,
-    IssueCode,
     Icon,
     ViewSwitch,
     InferenceSignal,
@@ -67,7 +67,7 @@ import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
         </div>
       </div>
       @if (error()) {
-        <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+        <nx-notice tone="danger" [message]="error()" />
       }
       @if (surface.opened()) {
         @if (mode() === 'save') {
@@ -132,9 +132,9 @@ import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
               <p class="form-note text-tools-placeholder">選擇語言或開始處理，結果會顯示在這裡。</p>
             }
             @if (truncated()) {
-              <p class="source-warning">
+              <nx-notice tone="warning">
                 模型輸出已達上限，結果可能不完整；請核對或縮小選取範圍後重試。
-              </p>
+              </nx-notice>
             }
             <div class="dialog-actions">
               <button class="secondary-button" [disabled]="busy() || saving()" (click)="generate()">
