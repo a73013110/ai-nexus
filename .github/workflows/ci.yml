@@ -1,9 +1,7 @@
 name: CI
 
+# Manual only for now: pull requests are verified locally (see docs/DEVELOPMENT.md).
 on:
-  push:
-    branches: [master]
-  pull_request:
   workflow_dispatch:
 
 permissions:
