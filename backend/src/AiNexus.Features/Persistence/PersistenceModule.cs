@@ -1,6 +1,7 @@
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Events;
 using AiNexus.Platform.Modules;
 using EDoc.Core.Database.Implementations;
 using EDoc.Core.Database.Interfaces;
@@ -14,6 +15,8 @@ public sealed class PersistenceModule : IFeatureModule
     {
         var services = builder.Services;
         services.AddDbContext<NexusDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("Nexus") ?? ""));
+        // Constructor-injected into NexusDbContext, so it applies however the context options are registered.
+        services.AddDomainEvents();
         services.AddSingleton<IDbConnectionFactory, NexusConnectionFactory>();
         services.AddScoped<IDbHelper<INexusDatabase>, DbHelper<INexusDatabase>>();
         services.AddScoped<IEfHelper<INexusDatabase>>(sp => new EfHelper<INexusDatabase>(sp.GetRequiredService<NexusDbContext>()));
