@@ -20,12 +20,12 @@ public sealed record ExportFile(byte[] Data, string ContentType);
 public sealed class ArtifactExport(PdfExportRenderer pdf)
 {
     private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder().UsePipeTables().DisableHtml().Build();
-    public async Task<ExportFile> ExportAsync(ArtifactDto document, string format, CancellationToken ct) => format switch
+    internal async Task<Result<ExportFile>> ExportAsync(ArtifactDto document, string format, CancellationToken ct) => format switch
     {
-        "md" => new(Encoding.UTF8.GetBytes(document.Content), "text/markdown; charset=utf-8"),
-        "docx" => new(Word(document.Resource.Name, document.Content), "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
-        "pdf" => new(await pdf.RenderAsync(Html(document.Resource.Name, document.Content), ct), "application/pdf"),
-        _ => throw new ApiException(400, "export_format_invalid", "支援 Word、PDF 或 Markdown 匯出。"),
+        "md" => new ExportFile(Encoding.UTF8.GetBytes(document.Content), "text/markdown; charset=utf-8"),
+        "docx" => new ExportFile(Word(document.Resource.Name, document.Content), "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+        "pdf" => new ExportFile(await pdf.RenderAsync(Html(document.Resource.Name, document.Content), ct), "application/pdf"),
+        _ => ArtifactErrors.ExportFormatInvalid,
     };
     public static string Html(string title, string content)
     {

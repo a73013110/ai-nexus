@@ -5,9 +5,6 @@ AiNexus.Features.Administration.GroupUpdateRequest
 AiNexus.Features.Administration.ModelPolicyRequest
 AiNexus.Features.Administration.RoleUpdateRequest
 AiNexus.Features.Administration.UserRolesRequest
-AiNexus.Features.Artifacts.CreateArtifactRequest
-AiNexus.Features.Artifacts.SaveArtifactRequest
-AiNexus.Features.Artifacts.TransformTextRequest
 AiNexus.Features.Attachments.AttachmentStorageLimitRequest
 AiNexus.Features.Attachments.RenameLibraryFileRequest
 AiNexus.Features.Collaboration.ResourceAclRequest
@@ -31,6 +28,4 @@ AiNexus.Features.Knowledge.KnowledgeSelectionDto
 AiNexus.Features.Knowledge.TextDocumentRequest
 AiNexus.Features.Projects.ConversationProjectRequest
 AiNexus.Features.Projects.ProjectConversationRequest
-AiNexus.Features.Projects.ProjectRequest
-AiNexus.Features.Projects.ProjectTemplateRequest
 AiNexus.Features.Repositories.RepositoryImportRequest
