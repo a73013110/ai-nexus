@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
+using AiNexus.Platform.Validation;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Features.AccessControl;
@@ -26,7 +27,7 @@ public static class AuthEndpoints
     public const string CookieScheme = "NexusCookie";
     public static void MapNexusAuthentication(this IEndpointRouteBuilder app)
     {
-        var auth = app.MapGroup("/api/v1/auth").WithSafeErrors();
+        var auth = app.MapGroup("/api/v1/auth").WithSafeErrors().WithRequestValidation();
         auth.MapGet("/session", (HttpContext http, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf) => Results.Ok(Session(http, options.Value, csrf)))
             .AllowAnonymous().WithName("GetAuthSession").Produces<AuthSessionDto>();
         auth.MapGet("/windows", async (HttpContext http, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, CurrentUser current, CancellationToken ct) =>

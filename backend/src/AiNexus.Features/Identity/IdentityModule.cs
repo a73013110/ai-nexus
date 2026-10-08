@@ -41,6 +41,7 @@ public sealed class IdentityModule : IFeatureModule
         services.AddSingleton<IdentityWriteLock>();
         services.AddScoped<CurrentUser>();
         services.AddScoped<IRequestUser>(sp => sp.GetRequiredService<CurrentUser>());
+        services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<CurrentUser>());
         services.AddSingleton<Argon2Passwords>();
         services.AddScoped<LocalAuthenticator>();
         services.AddScoped<UserAccountAdministration>();

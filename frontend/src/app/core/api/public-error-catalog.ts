@@ -6,6 +6,7 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   access_denied: '沒有存取此資料的權限。',
   not_found: '找不到資料。',
   invalid_request: '請求格式不正確。',
+  validation_failed: '輸入內容不正確，請檢查標示的欄位後再試。',
   csrf_invalid: '安全驗證已失效，請重新載入頁面。',
   rate_limited: '操作過於頻繁，請稍後再試。',
   log_filter_invalid: '日誌篩選格式或範圍超過限制。',

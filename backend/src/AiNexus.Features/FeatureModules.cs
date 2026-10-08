@@ -22,6 +22,8 @@ using AiNexus.Features.Sharing;
 using AiNexus.Features.WebSearch;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Modules;
+using AiNexus.Platform.Validation;
+using FluentValidation;
 
 namespace AiNexus.Features;
 
@@ -52,13 +54,15 @@ public static class FeatureModules
         Add<LibraryModule>(builder);
         Add<AttachmentsModule>(builder);
         Add<InferenceModule>(builder);
+        builder.Services.AddValidatorsFromAssembly(typeof(FeatureModules).Assembly, includeInternalTypes: true);
         return builder;
     }
 
     /// <summary>Endpoint order is the published OpenAPI order; keep it stable.</summary>
     public static WebApplication MapFeatures(this WebApplication app)
     {
-        var api = app.MapGroup("/api/v1").RequireAuthorization().WithSafeErrors();
+        // Filters run in this order: resolve the user (authentication outcome), then validate the request.
+        var api = app.MapGroup("/api/v1").RequireAuthorization().WithSafeErrors().WithCurrentUser().WithRequestValidation();
         Map<DiagnosticsModule>(api);
         Map<IdentityModule>(api);
         Map<ConversationsModule>(api);

@@ -71,7 +71,7 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         PlatformFeatures.Add(model, "artifacts", "成果文件", "/artifacts", 40);
         ConversationConfiguration.Configure(model);
         AiNexus.Features.Attachments.AttachmentConfiguration.Configure(model);
-        AiNexus.Features.Library.LibraryConfiguration.Configure(model);
+        model.ApplyConfiguration(new AiNexus.Features.Library.PromptTemplateConfiguration());
         var user = model.Entity<NexusUser>();
         user.ToTable("Users", "identity", table => table.HasCheckConstraint("CK_Users_AttachmentLimitBytes", "[AttachmentLimitBytes] IS NULL OR [AttachmentLimitBytes] BETWEEN 0 AND 1000000000000000"));
         user.HasKey(x => x.Id);

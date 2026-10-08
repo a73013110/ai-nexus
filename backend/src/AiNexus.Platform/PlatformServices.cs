@@ -5,6 +5,7 @@ using AiNexus.Platform.Http;
 using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace AiNexus.Platform;
 
@@ -17,6 +18,7 @@ public static class PlatformServices
         builder.AddKeyRing();
         var services = builder.Services;
         services.AddHttpContextAccessor();
+        services.TryAddSingleton(TimeProvider.System);
         services.AddMemoryCache();
         services.AddCsrfProtection(builder.Environment, builder.Configuration);
         // Deny by default: endpoints opt into anonymous access explicitly.
