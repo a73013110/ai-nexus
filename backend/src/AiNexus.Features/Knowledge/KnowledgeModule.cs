@@ -9,6 +9,10 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Knowledge;
 
+/// <summary>
+/// Knowledge collections, documents and retrieval. Other modules use <see cref="DocumentService"/>,
+/// <see cref="KnowledgeRetrieval"/> and <see cref="RetrievalAuthorization"/>; each endpoint use case has its own file.
+/// </summary>
 public sealed class KnowledgeModule : IFeatureModule
 {
     public const string RetrievalModelsClient = "RetrievalModels";
@@ -18,8 +22,16 @@ public sealed class KnowledgeModule : IFeatureModule
         var services = builder.Services;
         services.AddOptions<KnowledgeOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Knowledge(c, o))
             .Validate(KnowledgeOptions.Valid, "知識檢索設定的維度、範圍或端點不正確。").ValidateOnStart();
-        services.AddScoped<DocumentService>();
-        services.AddScoped<TextDocumentService>();
+        services.AddScoped<DocumentAccess>();
+        services.AddScoped<AddKnowledgeDocument>();
+        services.AddScoped(provider => new DocumentService(provider.GetRequiredService<DocumentAccess>(), provider.GetRequiredService<AddKnowledgeDocument>()));
+        services.AddScoped<CreateTextDocument>();
+        services.AddScoped<UpdateTextDocument>();
+        services.AddScoped<SaveKnowledgeCollection>();
+        services.AddScoped<DeleteKnowledgeCollection>();
+        services.AddScoped<SaveConversationKnowledge>();
+        services.AddScoped<DeleteDocument>();
+        services.AddScoped<ReindexDocument>();
         services.AddSingleton<KnowledgeWriteLock>();
         services.AddScoped<EmbeddingProfiles>();
         services.AddScoped<EmbeddingVectorStore>();
@@ -56,5 +68,37 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddFeaturePolicy(FeatureIds.Knowledge);
     }
 
-    public static void MapEndpoints(RouteGroupBuilder api) => KnowledgeEndpoints.MapKnowledge(api);
+    // Endpoint order is the published OpenAPI order.
+    public static void MapEndpoints(RouteGroupBuilder api)
+    {
+        var routes = api.MapGroup("/knowledge").RequireAuthorization(Policies.Knowledge).WithTags("Knowledge");
+        CreateTextDocument.Map(routes);
+        ListKnowledgeCollections.Map(routes);
+        SaveKnowledgeCollection.MapCreate(routes);
+        SaveKnowledgeCollection.MapUpdate(routes);
+        DeleteKnowledgeCollection.Map(routes);
+        ListKnowledgeDocuments.Map(routes);
+        AddKnowledgeDocument.MapCollection(routes);
+        ReadKnowledgeAccess.Map(routes);
+        SaveKnowledgeAccess.Map(routes);
+        SearchKnowledge.Map(routes);
+
+        var selection = api.MapGroup("/conversations/{id:guid}/knowledge").RequireAuthorization(Policies.Knowledge).RequireAuthorization(Policies.Chat).WithTags("Knowledge");
+        GetConversationKnowledge.Map(selection);
+        SaveConversationKnowledge.Map(selection);
+
+        var documents = api.MapGroup("/documents").WithTags("Documents");
+        ReadTextDocument.Map(documents);
+        UpdateTextDocument.Map(documents);
+        GetDocument.Map(documents);
+        ListDocumentPages.Map(documents);
+        GetDocumentJob.Map(documents);
+        DownloadDocumentOriginal.Map(documents);
+        DeleteDocument.Map(documents);
+        ReindexDocument.Map(documents);
+
+        AddKnowledgeDocument.MapAttachment(api);
+        SearchDirectory.MapUsers(api);
+        SearchDirectory.MapGroups(api);
+    }
 }
