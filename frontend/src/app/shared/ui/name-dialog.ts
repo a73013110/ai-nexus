@@ -1,6 +1,15 @@
-import { IssueCode } from './issue-code';
+import { Notice } from './notice';
+import { CompactDialog } from './compact-dialog';
+import { Field } from './field';
 import { safeMessage } from '../../core/api/safe-errors';
-import { ChangeDetectionStrategy, Component, ElementRef, signal, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  input,
+  signal,
+  viewChild,
+} from '@angular/core';
 
 export interface NameRequest {
   title: string;
@@ -10,12 +19,14 @@ export interface NameRequest {
   save: (name: string) => Promise<void>;
 }
 @Component({
-  imports: [IssueCode],
+  imports: [Notice, CompactDialog, Field],
   selector: 'nx-name-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
+    [nxCompactDialog]="compact()"
     #dialog
     class="workspace-dialog"
+    [class.ui-dialog-compact]="compact()"
     [attr.aria-label]="request()?.title"
     (cancel)="cancel($event)"
   >
@@ -26,6 +37,7 @@ export interface NameRequest {
       }
       <label
         >名稱<input
+          nxField
           #field
           required
           [value]="name()"
@@ -34,7 +46,7 @@ export interface NameRequest {
           (input)="name.set($any($event.target).value)"
       /></label>
       @if (error()) {
-        <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+        <nx-notice tone="danger" [message]="error()" />
       }
       <div class="dialog-actions">
         <button type="button" class="secondary-button" [disabled]="busy()" (click)="dialog.close()">
@@ -48,6 +60,7 @@ export interface NameRequest {
   </dialog>`,
 })
 export class NameDialog {
+  readonly compact = input(true);
   readonly request = signal<NameRequest | null>(null);
   readonly name = signal('');
   readonly busy = signal(false);

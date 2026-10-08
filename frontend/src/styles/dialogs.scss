@@ -15,7 +15,7 @@
   width: min(var(--dialog-width), calc(100vw - 2rem));
   max-width: none;
   max-height: var(--dialog-max-height);
-  padding: var(--p-space-6);
+  padding: var(--dialog-padding);
   margin: auto;
   overflow: hidden;
   overscroll-behavior: contain;
@@ -33,7 +33,7 @@
   animation: panel-arrive var(--motion-panel) var(--ease);
 }
 .platform-dialog .dialog-heading {
-  margin-bottom: var(--p-space-5);
+  margin-bottom: var(--p-space-3);
 }
 .platform-dialog .dialog-actions {
   position: sticky;
@@ -48,8 +48,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 15px;
-  margin-bottom: 24px;
+  gap: var(--p-space-3);
+  margin-bottom: var(--p-space-3);
 }
 .dialog-heading h2 {
   font-size: var(--text-heading);
@@ -66,15 +66,8 @@
 .action-dialog label {
   display: block;
   font-size: var(--text-caption);
-  margin-bottom: 9px;
+  margin-bottom: var(--field-label-gap);
   color: var(--secondary);
-}
-.action-dialog input {
-  border: 1px solid var(--line);
-  padding: 12px;
-  border-radius: var(--p-radius-sm);
-  background: var(--canvas);
-  width: 100%;
 }
 .action-dialog p {
   font-size: var(--text-caption);
@@ -84,13 +77,13 @@
 .dialog-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 9px;
-  margin-top: 25px;
+  gap: var(--p-space-2);
+  margin-top: var(--section-gap);
 }
 .workspace-dialog,
 .command-dialog {
   --dialog-max-height: min(85dvh, 52rem);
-  padding: var(--p-space-6);
+  padding: var(--dialog-padding);
   width: min(var(--dialog-width), calc(100% - 2rem));
   max-height: var(--dialog-max-height);
   overflow: hidden;
@@ -120,7 +113,7 @@
   background: var(--scrim);
 }
 .workspace-dialog .dialog-heading {
-  margin-bottom: var(--p-space-4);
+  margin-bottom: var(--section-gap);
 }
 .panel-eyebrow {
   display: block;
@@ -135,29 +128,12 @@
   line-height: var(--line-reading);
   margin: var(--p-space-2) 0 var(--p-space-4);
 }
-.inline-error {
-  color: var(--error);
-  background: var(--error-bg);
-  border-radius: var(--p-radius-md);
-  padding: var(--p-space-3);
-  font-size: var(--text-label);
-}
-.workspace-dialog label:not(.selection-control) {
+.workspace-dialog :where(label:not(.selection-control)) {
   display: block;
   color: var(--ink);
   font-size: var(--text-label);
   font-weight: 500;
-  margin: var(--p-space-4) 0 var(--p-space-2);
-}
-.workspace-dialog input:not([type='checkbox']),
-.workspace-dialog textarea {
-  width: 100%;
-  background: var(--canvas);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
-  padding: var(--p-space-3);
-  font-size: var(--text-ui);
-  line-height: var(--line-ui);
+  margin: var(--section-gap) 0 var(--field-label-gap);
 }
 .workspace-dialog textarea {
   resize: vertical;
@@ -175,7 +151,7 @@
 .library-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--p-space-6);
+  gap: var(--section-gap);
 }
 .template-list {
   min-width: 0;
@@ -259,7 +235,7 @@
   border: 0;
   background: transparent;
   min-height: var(--button-target);
-  font-size: var(--text-ui);
+  font-size: var(--control-font-size);
 }
 .command-results {
   padding: var(--p-space-2);
@@ -273,7 +249,7 @@
   align-items: center;
   gap: var(--p-space-3);
   text-align: left;
-  padding: var(--p-space-3);
+  padding: var(--resource-row-padding-block) var(--resource-row-padding-inline);
   border-radius: var(--p-radius-md);
 }
 .command-results > button[aria-selected='true'] {

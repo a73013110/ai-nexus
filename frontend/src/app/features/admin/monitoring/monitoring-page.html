@@ -1,0 +1,348 @@
+<nx-feature-page
+  [title]="session.featureName('monitoring')"
+  eyebrow="AI NEXUS / 營運"
+  description="掌握此執行個體的在線使用者、操作動態與服務負載。"
+>
+  @if (ready() && session.has('monitoring')) {
+    <div page-actions class="monitor-actions">
+      <nx-select
+        label="監控時間範圍"
+        [options]="windows"
+        [value]="store.minutes().toString()"
+        (valueChange)="store.setWindow($event)"
+      />
+      <button
+        type="button"
+        class="secondary-button"
+        (click)="store.toggle()"
+        [attr.aria-pressed]="store.paused()"
+      >
+        <nx-icon [name]="store.paused() ? 'play' : 'stop'" />{{
+          store.paused() ? '繼續更新' : '暫停更新'
+        }}
+      </button>
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="重新連線監控"
+        title="重新連線監控"
+        (click)="store.refresh()"
+      >
+        <nx-icon name="refresh" />
+      </button>
+      <button
+        type="button"
+        class="quiet-button"
+        [disabled]="exporting() || !store.snapshot()"
+        (click)="export()"
+      >
+        <nx-icon name="download" />匯出快照
+      </button>
+    </div>
+  }
+  @if (actionError()) {
+    <nx-notice tone="danger" [message]="actionError()" />
+  }
+  @if (ready() && !session.has('monitoring')) {
+    <nx-empty-state
+      ><nx-icon name="lock" />
+      <h2>需要即時監控權限</h2>
+      <p>請由平台管理員在角色群組中授予「即時監控」功能。</p></nx-empty-state
+    >
+  } @else if (store.snapshot(); as data) {
+    <div class="monitor-dashboard" [class.is-stale]="stale()">
+      <div class="monitor-statusbar">
+        <nx-status-badge [tone]="data.enabled && !stale() ? 'success' : 'warning'" role="status">
+          {{ data.enabled ? statusText() : '採集已停用' }}
+        </nx-status-badge>
+        <span>更新於 {{ time(data.at) }} · 每 {{ data.refreshSeconds }} 秒</span>
+        <span class="instance-label"><nx-icon name="server" />{{ data.instance }}</span>
+      </div>
+      @if (!data.enabled) {
+        <nx-notice tone="warning"
+          >監控採集目前已停用，請啟用 Monitoring.Enabled 後重新啟動服務。</nx-notice
+        >
+      }
+      @if (store.error()) {
+        <nx-notice tone="warning">{{ store.error() }} 保留最近快照，正在恢復連線。</nx-notice>
+      }
+      @if (data.omittedSessions || data.droppedSessions) {
+        <nx-notice tone="warning">
+          清單顯示最近 200 個工作階段，另有 {{ data.omittedSessions }} 個未列出；容量滿時累計略過
+          {{ data.droppedSessions }} 次新連線心跳。
+        </nx-notice>
+      }
+      <section class="monitor-metrics" aria-label="即時營運指標">
+        <article nxCard class="monitor-stat">
+          <span><nx-icon name="user" />在線使用者</span
+          ><strong>{{ data.onlineUsers.toLocaleString('zh-TW') }}<small>人</small></strong>
+          <p>{{ data.onlineSessions }} 個工作階段 · {{ data.activeSessions }} 使用中</p>
+        </article>
+        <article nxCard class="monitor-stat">
+          <span><nx-icon name="activity" />API 請求速率</span
+          ><strong>{{ data.traffic.requestsPerSecond.toFixed(2) }}<small>次／秒</small></strong>
+          <p>
+            已完成 {{ data.traffic.requests.toLocaleString('zh-TW') }} 次 ·
+            {{ data.inFlightRequests }} 處理中
+          </p>
+        </article>
+        <article nxCard class="monitor-stat">
+          <span><nx-icon name="history" />P95 回應時間</span
+          ><strong
+            >{{ data.traffic.p95Ms == null ? '—' : data.traffic.p95Ms.toLocaleString('zh-TW')
+            }}<small>ms</small></strong
+          >
+          <p>直方圖估計上界 · 平均 {{ latency(data.traffic.averageMs) }}</p>
+        </article>
+        <article nxCard class="monitor-stat" [class.stat-alert]="data.traffic.errors > 0">
+          <span><nx-icon name="shield" />錯誤比例</span
+          ><strong>{{ data.traffic.errorPercent.toFixed(2) }}<small>%</small></strong>
+          <p>
+            {{ data.traffic.errors }} 次 4xx／5xx · {{ data.traffic.serverErrors }} 次伺服器錯誤
+          </p>
+        </article>
+      </section>
+      <section nxCard class="monitor-panel topology-panel" aria-labelledby="topology-title">
+        <header class="ui-section-header">
+          <div>
+            <span class="panel-eyebrow">CONNECTION MAP</span>
+            <h2 id="topology-title">連線拓樸</h2>
+          </div>
+          <span class="monitor-caption">使用者 → AI Nexus → 周邊服務</span>
+        </header>
+        <nx-runtime-topology
+          [snapshot]="data"
+          [moving]="!stale() && !theme.reducedMotion()"
+          (sessionSelected)="showSession($event)"
+          (dependencySelected)="showDependency($event)"
+        />
+        <details class="monitor-scope">
+          <summary>
+            <nx-icon name="network" />檢視所有周邊服務（{{ data.dependencies.length }}）
+          </summary>
+          <div class="ui-table-scroll">
+            <table class="dependency-table">
+              <caption class="sr-only">
+                此執行個體的所有周邊服務呼叫指標
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">服務</th>
+                  <th scope="col">觀測狀態</th>
+                  <th scope="col">呼叫數</th>
+                  <th scope="col">平均耗時</th>
+                  <th scope="col">失敗／中止</th>
+                  <th scope="col">執行中</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (d of data.dependencies; track d.id) {
+                  <tr>
+                    <td>
+                      <button type="button" class="ui-table-link" (click)="showDependency(d)">
+                        <strong>{{ d.name }}</strong
+                        ><small>{{ d.kind === 'database' ? 'SQL 資料庫' : 'HTTP 服務' }}</small>
+                      </button>
+                    </td>
+                    <td>
+                      <nx-status-badge
+                        [tone]="d.status === 'healthy' ? 'success' : 'neutral'"
+                        >{{ dependencyStatus(d.status) }}</nx-status-badge
+                      >
+                    </td>
+                    <td class="ui-table-numeric">{{ d.metrics.requests }}</td>
+                    <td class="ui-table-numeric">{{ latency(d.metrics.averageMs) }}</td>
+                    <td class="ui-table-numeric" [class.ui-error-text]="d.metrics.errors > 0">
+                      {{ d.metrics.errors }} / {{ d.metrics.cancelled }}
+                    </td>
+                    <td class="ui-table-numeric">{{ d.inFlight }}</td>
+                  </tr>
+                } @empty {
+                  <tr>
+                    <td colspan="6" class="monitor-empty">尚無設定或觀測到的周邊服務</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </section>
+      <div class="monitor-resources" aria-label="此應用程式的資源與傳輸量">
+        <span
+          ><nx-icon name="server" />程序 CPU
+          <strong>{{
+            data.resources.cpuPercent == null
+              ? '採集中'
+              : data.resources.cpuPercent.toFixed(1) + '%'
+          }}</strong></span
+        >
+        <span
+          >工作集記憶體 <strong>{{ bytes(data.resources.workingSetBytes) }}</strong></span
+        >
+        <span
+          >HTTP 接收 <strong>{{ bytes(data.traffic.receivedBytes) }}</strong></span
+        >
+        <span
+          >HTTP 傳送 <strong>{{ bytes(data.traffic.sentBytes) }}</strong></span
+        >
+        <span
+          >串流連線 <strong>{{ data.openStreams }}</strong></span
+        >
+      </div>
+      <div class="monitor-chart-grid">
+        <section nxCard class="monitor-panel trend-panel" aria-label="流量趨勢">
+          <header class="ui-section-header">
+            <div>
+              <span class="panel-eyebrow">TRAFFIC OVER TIME</span>
+              <h2>流量趨勢</h2>
+            </div>
+            <nx-select
+              label="趨勢指標"
+              [options]="metrics"
+              [value]="metric()"
+              (valueChange)="metric.set($event)"
+            />
+          </header>
+          <nx-trend-chart
+            [label]="chartTitle()"
+            [points]="chartPoints()"
+            [unit]="chartUnit()"
+            granularity="interval"
+          />
+          <p class="monitor-caption">
+            每點 10 秒；僅包含已完成區間。串流不納入回應延遲。{{
+              metric() === 'latency' ? '無請求的區間以 0 顯示。' : ''
+            }}
+          </p>
+        </section>
+        <section nxCard class="monitor-panel module-panel" aria-labelledby="module-title">
+          <header class="ui-section-header">
+            <div>
+              <span class="panel-eyebrow">WORKSPACE ACTIVITY</span>
+              <h2 id="module-title">使用中的功能</h2>
+            </div>
+            <nx-icon name="workspace" />
+          </header>
+          @for (module of moduleCounts(); track module.feature) {
+            <button type="button" class="module-row" (click)="featureFilter.set(module.feature)">
+              <span
+                >{{ featureName(module.feature) }}<strong>{{ module.count }} 工作階段</strong></span
+              ><span class="module-track"><i [style.width.%]="module.percent"></i></span>
+            </button>
+          } @empty {
+            <p class="monitor-empty">等待工作階段心跳</p>
+          }
+          <p class="monitor-caption">依已列出的工作階段目前頁面分類；點選可篩選連線。</p>
+        </section>
+      </div>
+      <nx-monitoring-sessions
+        [sessions]="data.sessions"
+        [timeoutSeconds]="data.sessionTimeoutSeconds"
+        [(feature)]="featureFilter"
+        (selected)="showSession($event)"
+      />
+      <div class="monitor-bottom-grid">
+        <section nxCard class="monitor-panel" aria-labelledby="activity-title">
+          <header class="ui-section-header">
+            <div>
+              <span class="panel-eyebrow">RECENT OPERATIONS</span>
+              <h2 id="activity-title">操作動態</h2>
+            </div>
+            <span class="monitor-caption">最近 {{ data.activities.length }} 筆</span>
+          </header>
+          <div class="activity-list">
+            @for (a of data.activities.slice(0, 20); track a.sequence) {
+              <article class="activity-row">
+                <span class="activity-marker" [class.error]="a.outcome === 'error'"
+                  ><nx-icon [name]="a.outcome === 'error' ? 'shield' : 'activity'"
+                /></span>
+                <div>
+                  <p>
+                    <strong>{{ a.displayName }}</strong> · {{ a.action }}
+                  </p>
+                  <small
+                    >{{ time(a.at) }} · {{ a.method }} · {{ a.statusCode }} ·
+                    {{ latency(a.durationMs)
+                    }}{{ a.outcome === 'cancelled' ? ' · 已中止' : '' }}</small
+                  >
+                  @if (a.traceId && session.has('logs.query')) {
+                    <a [routerLink]="'/admin/logs'" [queryParams]="{ traceId: a.traceId }"
+                      >追查流程 <nx-icon name="external"
+                    /></a>
+                  }
+                </div>
+              </article>
+            } @empty {
+              <p class="monitor-empty">此期間沒有異動、錯誤或中止事件。</p>
+            }
+          </div>
+        </section>
+        <section nxCard class="monitor-panel" aria-labelledby="endpoints-title">
+          <header class="ui-section-header">
+            <div>
+              <span class="panel-eyebrow">TOP API ENDPOINTS</span>
+              <h2 id="endpoints-title">熱門 API</h2>
+            </div>
+            <nx-icon name="activity" />
+          </header>
+          <div class="endpoint-list">
+            @for (e of data.endpoints; track e.method + e.route) {
+              <article class="endpoint-row">
+                <div>
+                  <span class="method-tag">{{ e.method }}</span
+                  ><code>{{ e.route }}</code
+                  ><small
+                    >{{ featureName(e.feature) }} · 平均 {{ latency(e.metrics.averageMs) }}</small
+                  >
+                </div>
+                <strong>{{ e.metrics.requests }}<small>次請求</small></strong>
+              </article>
+            } @empty {
+              <p class="monitor-empty">等待第一個完整的 10 秒觀測區間。</p>
+            }
+          </div>
+        </section>
+      </div>
+      <details class="monitor-scope">
+        <summary><nx-icon name="info" />觀測範圍與資料定義</summary>
+        <p>
+          此頁呈現單一應用程式執行個體，資料保留最近 15
+          分鐘，重啟後重新採集。在線狀態以瀏覽器心跳判定；工作階段可來自同一電腦的不同分頁，IP
+          可能是代理位址，裝置與頁面分類是瀏覽器提供的提示。
+        </p>
+        <p>
+          HTTP 流量為應用程式實際讀寫的內容位元組，不包含封包、TLS 或整台電腦的流量。SQL
+          與外部服務顯示呼叫次數、耗時、失敗與執行中數量；HTTP
+          耗時量至回應標頭。尚無觀測不代表故障。採集不保存聊天、文件、SQL
+          指令或查詢字串；監控本身的心跳與訂閱不納入數據。
+        </p>
+        <p>
+          CPU 為此程序占所有核心的比例；記憶體為此程序工作集。工作階段請求數從首次心跳開始累計；API
+          指標依上方時間範圍計算。P95 為固定直方圖區間上界，超過 600 秒或無非串流樣本時顯示 —。
+        </p>
+      </details>
+    </div>
+  } @else if (ready() && store.connection() === 'denied') {
+    <nx-empty-state
+      ><nx-icon name="lock" />
+      <h2>監控權限已失效</h2>
+      <p>{{ store.error() }}</p></nx-empty-state
+    >
+  } @else {
+    <div class="monitor-loading" role="status">
+      <nx-icon name="loading" /><strong>正在建立監控連線</strong>
+      <p>等待此執行個體的第一份快照。</p>
+      @if (store.error()) {
+        <p>{{ store.error() }}</p>
+        <button type="button" class="secondary-button" (click)="store.refresh()">重新連線</button>
+      }
+    </div>
+  }
+</nx-feature-page>
+<nx-detail-drawer [title]="selectedSession() ? '工作階段詳情' : '周邊服務詳情'">
+  <nx-monitoring-inspector
+    [selectedSession]="selectedSession()"
+    [liveSession]="liveSession()"
+    [liveDependency]="liveDependency()"
+  />
+</nx-detail-drawer>

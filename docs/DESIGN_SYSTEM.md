@@ -6,11 +6,13 @@
 
 ## 三層 token
 
-| 層        | 例子                                                     | 修改原則                                           |
-| --------- | -------------------------------------------------------- | -------------------------------------------------- |
-| Primitive | `--p-stone-50`、`--p-font-reading`、`--p-space-4`        | 原始色階、rem 字級、4px 間距、圓角基礎             |
-| Semantic  | `--canvas`、`--ink`、`--signal`、`--text-body`           | 指定用途；light／dark 重新映射，不在元件寫主題條件 |
-| Component | `--topbar-height`、`--composer-width`、`--button-target` | 維持各元件與版面的可讀性及操作面積                 |
+全站沿用系統日誌的資料工作區、密度與詳情面板規範，見 [共用資料工作區](UI_DATA_WORKSPACE.md)。`/design` 包含正式元件的 FilterPanel、ViewSwitch、選填日期、緊湊表單、資料表、狀態標籤、Tabs、CodeBlock 與 DetailDrawer 範例。
+
+| 層        | 例子                                                    | 修改原則                                           |
+| --------- | ------------------------------------------------------- | -------------------------------------------------- |
+| Primitive | `--p-stone-50`、`--p-font-reading`、`--p-space-4`       | 原始色階、rem 字級、4px 間距、圓角基礎             |
+| Semantic  | `--canvas`、`--ink`、`--signal`、`--text-body`          | 指定用途；light／dark 重新映射，不在元件寫主題條件 |
+| Component | `--topbar-height`、`--reading-width`、`--button-target` | 維持各元件與版面的可讀性及操作面積                 |
 
 元件樣式使用 semantic／component 值。新增顏色先建立用途，才選 primitive；不要在各頁直接寫 hex 或重複字級。更換品牌色調整 `--accent`／`--accent-soft`／`--focus`／`--signal` 的 light 與 dark 映射。全站文字變大調整 font primitives；單一區域密度則調 component tokens。
 
@@ -18,25 +20,28 @@
 
 根字級採瀏覽器預設 16px，不固定 html px，讓使用者縮放與偏好生效。UI 使用 Segoe UI／微軟正黑體；程式碼使用 Cascadia Code／系統 monospace，不依賴外部字型請求。
 
-| 用途                         | Token                           | 預設（16px root）                        |
-| ---------------------------- | ------------------------------- | ---------------------------------------- |
-| 附註／工具列／模型與 Context | `--text-caption`                | 14px，介面輔助字級                       |
-| 標籤／清單／標題輔助         | `--text-label`                  | 15px                                     |
-| 一般 UI／表單                | `--text-ui`                     | 16px                                     |
-| 對話正文／訊息輸入           | `--text-body`                   | 15px，1.2 行高                           |
-| 小標題                       | `--text-heading`                | 18px                                     |
-| 主要標題                     | font xl／2xl／3xl               | 20／24／32px                             |
-| 工作區開場／登入主標         | `--text-display`／`--text-hero` | 26–34／36–58px 流動字級，使用 rem 上下限 |
+| 用途                         | Token             | 預設（16px root）  |
+| ---------------------------- | ----------------- | ------------------ |
+| 附註／工具列／模型與 Context | `--text-caption`  | 14px，介面輔助字級 |
+| 標籤／清單／標題輔助         | `--text-label`    | 15px               |
+| 一般 UI／表單                | `--text-ui`       | 16px               |
+| 對話正文／訊息輸入           | `--text-body`     | 15px，1.2 行高     |
+| 小標題                       | `--text-heading`  | 18px               |
+| 主要標題                     | font xl／2xl／3xl | 20／24／32px       |
+
+上表是根層尺度；FeaturePage 預設 compact 與 wide，介面／標籤 13px、輔助字 12px、章節標題 16px、頁首 24px、區塊內距與間距 12px。緊湊 scope 必須同時設定實際字級與 tokens，讓未指定樣式的內容也繼承同一尺度。桌面控制項 34px；640px 以下與觸控指標改為至少 44px，輸入字級至少 16px。彈窗、通知、設定、對話工具列與閱讀器操作區共用這些密度 tokens；Markdown、文件正文及評測答案明確使用閱讀 tokens，保留個人偏好。
+
+`--density-text-size`／`--density-caption-size` 可調整共用緊湊控制項的字級，不需複製樣式。側欄採 14px／13px，使對話歷史、工作區開關及帳號與功能導覽的 14px 文字協調；高度與留白仍使用原有密度 tokens。品牌與工作區分組不繼承緊湊字級。
 
 正文色使用 ink，輔助文字使用 secondary／muted，不能以低對比淡字承載操作與狀態。配色以一般文字 WCAG AA 4.5:1 為驗證目標；focus 有 2px 可見輪廓。新文字／背景組合仍需實測對比，不能因 token 有色值就視為全部合格。
 
-個人閱讀偏好可將 `--text-body` 調至 12–24px、`--line-reading` 調至 1–2.2；不縮小其他 UI token。彈出視窗統一以 `--dialog-width` 設定理想寬度，並受 viewport 邊界限制，不使用瀏覽器預設粗框或由內容推算的窄寬度。按鈕／圖示使用 inline-flex 對齊；勾選的 20px 指示器與文字同行，整列至少 44px 可操作。
+個人閱讀偏好可將 `--text-body` 調至 12–24px、`--line-reading` 調至 1–2.2；不縮小其他 UI token。彈出視窗統一以 `--dialog-width` 設定理想寬度，並受 viewport 邊界限制，不使用瀏覽器預設粗框或由內容推算的窄寬度。按鈕／圖示使用 inline-flex 對齊；勾選的 20px 指示器與文字同行，操作面積依共用密度調整。
 
 `Icon` 使用 Lucide 1.52.0：語意名稱對應精選 SVG 資料，再由單一 Angular renderer 繪製，避免匯入整套圖示或保留每個圖示的 Angular component metadata。新增圖示只更新此對照；品牌、傅立葉畫布及資料圖表保留自身圖形語彙。
 
 ## 對話的空間分配
 
-頂列 `--topbar-height=52px`，不重複頁面分類。正文寬 `--reading-width=52rem`，輸入區 `--composer-width=54rem`；gutter 在 16–48px 間響應調整。輸入框從單行自動增高，上限 min(192px, 25dvh)，長草稿在框內捲動。短草稿與正常狀態的 1280×768 桌面，對話 viewport 保留至少 70% 高度，瀏覽器測試檢查。
+頂列 `--topbar-height=48px`，不重複頁面分類。聊天欄寬統一由 `--reading-width` 決定，專注／標準／寬廣為 44／52／64rem；訊息、開場、輸入區、附件及提示共用 `.chat-column`，移除獨立的輸入區固定寬度。`.chat-gutter` 統一 16–48px 側邊留白及捲軸保留空間，在可用寬度小於設定值時維持對齊；新對話的外層捲動區保留捲軸空間，內層不重複保留。放大的長文輸入視窗沿用選定寬度及共用 dialog 邊界，增加可編輯高度。輸入框從單行自動增高，上限 min(192px, 25dvh)，長草稿在框內捲動。已有訊息、短草稿的 1280×768 桌面，對話 viewport 保留至少 70% 高度，瀏覽器測試檢查。新對話的標題、輸入框與起點依此順序在主區域置中，起點放在輸入框下方，開始對話後輸入框固定底部。版面依實際內容高度調整；小尺寸、長草稿或附件超出可用高度時，由內容區捲動，不將輸入框硬設在固定座標。
 
 模型、思考、Context 在 composer 底部，送出／停止靠右。鎖定模型呈現系統政策；隱藏名稱時不在標頭或歷史補出實際模型。Context 展開顯示預估／輸出預留／裁切資訊，支援鍵盤與 Escape 返回焦點。手機 Context 只保留可點擊圓環，選項保留在輸入區，避免頂列擠壓對話。
 
@@ -46,16 +51,16 @@
 
 提問泡泡的寬度、底色與邊框使用 `--message-user-width`、`--user-bubble`、`--user-bubble-border`；AI 正文保留左側閱讀線與角色標籤。對話定位使用 `--outline-space`，桌面預留側邊空間，手機將目錄入口放在閱讀區右下。摘要卡以實際觸發元素及閱讀區邊界定位，支援 hover 與 focus，跳轉遵循減少動態設定。
 
-| Token                               | 預設                        | 使用                                 |
-| ----------------------------------- | --------------------------- | ------------------------------------ |
-| `--motion-fast`                     | 120ms                       | 快速提示                             |
-| `--motion`                          | 200ms                       | hover／焦點／drawer／訊息進場        |
-| `--motion-enter`                    | 320ms                       | 空白工作區淡入                       |
-| `--motion-signal`                   | 1800ms                      | 生成訊號流／串流游標呼吸             |
-| `--motion-generation`／`--motion-waiting` | 2100／2800ms               | 準備回答／排隊的三節短線淡亮         |
-| `--motion-panel`                    | 240ms                       | dialog／選單與附件進場               |
-| `--motion-stagger`／`--motion-draw` | 70／900ms                   | 建議卡片分段進場／SVG Nexus 線條繪製 |
-| `--ease`                            | cubic-bezier(0.2,0.8,0.2,1) | 一般進場／過渡                       |
+| Token                                     | 預設                        | 使用                          |
+| ----------------------------------------- | --------------------------- | ----------------------------- |
+| `--motion-fast`                           | 120ms                       | 快速提示                      |
+| `--motion`                                | 200ms                       | hover／焦點／drawer／訊息進場 |
+| `--motion-enter`                          | 320ms                       | 空白工作區淡入                |
+| `--motion-signal`                         | 1800ms                      | 生成訊號流／串流游標呼吸      |
+| `--motion-generation`／`--motion-waiting` | 2100／2800ms                | 準備回答／排隊的三節短線淡亮  |
+| `--motion-panel`                          | 240ms                       | dialog／選單與附件進場        |
+| `--motion-stagger`                        | 70ms                        | 浮層選項分段進場              |
+| `--ease`                                  | cubic-bezier(0.2,0.8,0.2,1) | 一般進場／過渡                |
 
 生成時上方使用較小、較淡的 SVG 雙軌訊號流動，訊息等待區使用三節短線依序淡亮（尺寸由 `--generation-indicator-size` 控制），兩者共用 signal 色與圓角筆畫但動態不同。composer 僅維持靜態狀態邊框，收到內容後移除等待訊號並顯示文字尾端游標，工作結束即停止。禁止未知進度的假百分比、會干擾閱讀的持續整頁動畫。串流沿用安全 Markdown 渲染，保留完成段落、僅更新尾段，維持輸入與捲動回應。
 
@@ -69,7 +74,7 @@
 
 `styles.scss` 只管理載入順序；`tokens.scss`／`base.scss` 管全域，`styles/` 依責任拆分 controls、shell、sidebar、welcome、messages、markdown、composer、dialogs、tools、attachments。每個檔案包含自身的響應規則；`login.scss` 管登入頁，`composer-controls.scss` 管模型／思考／Context，`motion.scss` 統一動效。UI 元件不複製 token，也不維持第二份桌面／手機對話選單。
 
-工作區、dialog、範本、快捷指令、附件縮圖與列表高度使用 component tokens：`--welcome-width`、`--dialog-width`、`--library-width`、`--command-width`、`--attachment-thumb`、`--attachment-list-max`。主要 controls 維持 44px 最小目標；輸入自動增高讀取 CSS token 上下限，無需同步修改 JavaScript 常數。
+工作區、dialog、範本、快捷指令、附件縮圖與列表高度使用 component tokens：`--reading-width`、`--dialog-width`、`--library-width`、`--command-width`、`--attachment-thumb`、`--attachment-list-max`。對話起點共用輸入區寬度；短表單使用 `.ui-dialog-compact`，可收縮的彈窗採內容高度，上限由 viewport 決定。聊天與側欄操作沿用桌面 34px／觸控 44px 尺度；品牌控制項與收合圖示欄維持 44px，手機側欄 overlay 亦維持 44px。`--sidebar-avatar-size` 為 28px，帳號名稱／帳號兩行文字不因縮圖省略。輸入自動增高讀取 CSS token 上下限，無需同步修改 JavaScript 常數；最小高度 32px，訊息間距正常 16px／緊湊 12px，閱讀字級及行距不變。
 
 改 token 後用 `scripts/Verify.ps1` 並看 artifacts screenshots，至少檢查 light／dark、375px 手機、1280×768、長回答／長草稿、Context popover、減少動態與鍵盤。瀏覽器測試檢查字級、對話可用高度、橫向溢出、隱藏模型、Context 與匯出行為；新視覺需人工檢查，不以 build 成功取代視覺驗收。
 
@@ -83,27 +88,32 @@
 
 數量預設是裝飾，由父按鈕的名稱／描述提供「125 則未讀通知」等完整脈絡；獨立使用可傳 `label` 作文字替代。共用 badge 不自帶 live region，各功能只在一個 contextual status 播報更新。側欄鈴鐺使用 info 表示未讀數量，事件 success／error 在通知中心分別對應 success／danger，不用清單單頁的嚴重性推測全通知匣。`/design` 可檢查各語意色、零值、超量及 dot／overlay。
 
-平台管理頁右上方「介面元件」開啟 `/design`。此頁組合正式元件，提供淺色／深色局部預覽及目前 semantic tokens 的 JSON 匯出；不修改個人偏好，不呼叫模型或建立公司資料。只有具 admin 功能者顯示工作區，範例不含敏感資訊。
+平台管理頁右上方「管理工具」選單的「介面元件」開啟 `/design`。此頁組合正式元件，提供淺色／深色局部預覽及目前 semantic tokens 的 JSON 匯出；不修改個人偏好，不呼叫模型或建立公司資料。只有具 admin 功能者顯示工作區，範例不含敏感資訊。
 
-| 元件                             | 使用與互動                                                                                 |
-| -------------------------------- | ------------------------------------------------------------------------------------------ |
-| Select                           | 單選 combobox／listbox、方向鍵／Home／End／typeahead、搜尋、單行名稱、Enter 套用、Esc 關閉 |
-| ActionMenu                       | 動作 menu、上下移動跳過停用、Esc 返回 trigger；危險操作仍進入確認                          |
-| ConfirmDialog                    | 原生 modal、清楚名稱及描述、初始焦點放取消、Esc／關閉取消，結束返回先前焦點                |
-| InlineTitle                      | 雙擊／F2／Enter 編輯，Enter／離開儲存、Esc 取消；版本 guard 與每個實例唯一 ID              |
-| MarkdownView                     | 共用文字／表格／程式碼渲染及複製；HTML／外部圖片與危險 URL 受限                            |
-| StreamingAnswer | 沿用 MarkdownView 的安全邊界；保留完成段落 DOM、僅解析尾段，短暫緩衝突發文字，減少動態時直接更新 |
-| FileBrowser／LibraryPicker | 個人原檔卡片／列表、來源關聯、選取、伺服器分頁與可見的存取說明 |
-| DocumentViewer／ReaderDialog | 共用原圖／PDF／文字預覽；精簡工具列、桌面近全螢幕、手機全螢幕、Esc 與焦點返回 |
-| JobProgress／InferenceSignal     | 真實階段及完成單位、未知總量的不定進度、取消要求與完成分開、減少動態仍保留文字             |
-| Checkbox／SearchField            | 原生語意、整列勾選、停用與焦點狀態、搜尋圖示與清除；管理／分享／來源共用                   |
-| FeaturePage／WorkspaceSidebar／WorkspaceNavigation | 所有頁面共用側欄外框、品牌、分類四欄入口與帳號列；聊天投影操作與歷史，底部導覽預設收合 |
-| AccountMenu／SettingsDialog      | 共用登入者選單；設定在當頁開啟，延遲載入、未儲存確認、焦點返回                             |
-| GenerationIndicator／FocusComposer | 三節短線與可覆寫的狀態文字、可放大編輯的同步草稿；減少動態與 IME 規則共用                  |
-| InfoPopover                      | 費用與用量資訊的原生 top layer；可見名稱、鍵盤開啟／Esc、邊界翻轉與焦點返回 |
-| TrendChart                       | SVG 趨勢、滑鼠／鍵盤共用游標、Home／End、文字資料表；不依賴顏色辨識數值 |
+| 元件                                               | 使用與互動                                                                                         |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Select                                             | 單選 combobox／listbox、方向鍵／Home／End／typeahead、搜尋、單行名稱、Enter 套用、Esc 關閉         |
+| ActionMenu                                         | 動作 menu、上下移動跳過停用、Esc 返回 trigger；危險操作仍進入確認                                  |
+| ConfirmDialog                                      | 原生 modal、清楚名稱及描述、初始焦點放取消、Esc／關閉取消，結束返回先前焦點                        |
+| InlineTitle                                        | 雙擊／F2／Enter 編輯，Enter／離開儲存、Esc 取消；版本 guard 與每個實例唯一 ID                      |
+| MarkdownView                                       | 共用文字／表格／程式碼、Mermaid 圖表與複製；HTML／外部圖片與危險 URL 受限                          |
+| MermaidDiagram／DiagramCanvas                      | 延遲載入 Neo／ELK、站點 token／字型、原始碼、縮放、拖曳、展開及清理後的 SVG 下載                   |
+| ViewSwitch／TextTools                              | 線型／分段單選共用鍵盤及 aria-pressed；段落操作共用圖示、解釋與翻譯語言快捷選擇                    |
+| MarkdownEditor                                     | 同一份文件的閱讀／編輯模式，預設安全 Markdown 預覽、獨立捲動與原始文字編輯；段落結果及另存成果共用 |
+| ViewMotion／DialogMotion                           | keyed 內容過渡；必要時平順調整 native dialog 外框，沿用 motion token、減少動態與取消／清理規則     |
+| StreamingAnswer                                    | 沿用 MarkdownView 的安全邊界；保留完成段落 DOM、僅解析尾段，短暫緩衝突發文字，減少動態時直接更新   |
+| FileBrowser／LibraryPicker                         | 個人原檔卡片／列表、來源關聯、選取、伺服器分頁與可見的存取說明                                     |
+| DocumentViewer／ReaderDialog                       | 共用原圖／PDF／文字預覽；精簡工具列、桌面近全螢幕、手機全螢幕、Esc 與焦點返回                      |
+| Card／EmptyState                                   | 原生卡片語意、共用表面與間距；空白／載入的圖示、文字及投影操作                                     |
+| JobProgress／InferenceSignal                       | 共用狀態標籤、真實階段及完成單位、未知總量的不定進度、取消要求與完成分開、減少動態仍保留文字       |
+| Checkbox／SearchField                              | 原生語意、整列勾選、停用與焦點狀態、搜尋圖示與清除；管理／分享／來源共用                           |
+| FeaturePage／WorkspaceSidebar／WorkspaceNavigation | 所有頁面共用側欄外框、品牌、分類四欄入口與帳號列；聊天投影操作與歷史，底部導覽預設收合             |
+| AccountMenu／SettingsDialog                        | 共用登入者選單；設定在當頁開啟，延遲載入、未儲存確認、焦點返回                                     |
+| GenerationIndicator／FocusComposer                 | 三節短線與可覆寫的狀態文字、可放大編輯的同步草稿；減少動態與 IME 規則共用                          |
+| InfoPopover                                        | 費用與用量資訊的原生 top layer；可見名稱、鍵盤開啟／Esc、邊界翻轉與焦點返回                        |
+| TrendChart                                         | SVG 趨勢、滑鼠／鍵盤共用游標、Home／End、文字資料表；不依賴顏色辨識數值                            |
 
-主題 zone 使用 `[data-theme='light'|'dark']` 重新映射同一組 semantic tokens，避免元件複製 dark 條件。危險按鈕使用 `--danger-surface`／`--danger-text`，與錯誤文字 `--error` 分開，讓深色的提示色不會變成低對比按鈕。主要／次要操作與 quiet labels 為 15px，icon button 及歷史操作保留 44px 範圍。sr-only／visually-hidden 供螢幕閱讀器，儲存回饋不佔用對話版面。
+主題 zone 使用 `[data-theme='light'|'dark']` 重新映射同一組 semantic tokens，避免元件複製 dark 條件。危險按鈕使用 `--danger-surface`／`--danger-text`，與錯誤文字 `--error` 分開，讓深色的提示色不會變成低對比按鈕。根層主要／次要操作與 quiet labels 為 15px，緊湊操作沿用所在 scope 的字級；聊天圖示及歷史操作使用桌面 34px／觸控 44px 範圍。sr-only／visually-hidden 供螢幕閱讀器，儲存回饋不佔用對話版面。
 
 改元件後至少在此頁檢查：light／dark 文字及按鈕對比、390px 捲動與浮層、Tab／方向鍵／Esc、確認視窗焦點返回、停用狀態及減少動態。Edge 測試會檢查已選定的文字／背景組合 ≥4.5:1、控制面積及頁面無橫向溢出；仍需人工檢視實際頁面，不能推定所有可能 token 組合都通過。
 
@@ -127,6 +137,6 @@ Playwright 保留捲軸顯示，排除 headless 預設的 `--hide-scrollbars`，
 
 稽核清單的文字、資源識別與異動內容由 computed presentation 在資料變更時建立，避免每次模板更新重複解析 JSON。共用 TrendChart 的數值 formatter 依幣別快取，滑鼠／鍵盤檢查資料點時不重建 Intl.NumberFormat；切換幣別後自動更新。
 
-總覽採四張指標卡、可檢查節點的資料流向圖、費用趨勢與模型／使用者分布，使用既有 platform-card、form-input 與語意色。流向圖的位置表達文件→向量→回答的關係；只有真實 activeJobs／activeGenerations 會觸發訊號動畫，減少動態時靜態保留狀態。桌面多欄、手機單欄，使用主內容捲動，不放假即時數據或與工作無關的 3D 場景。
+總覽採四張指標卡、可檢查節點的資料流向圖、費用趨勢與模型／使用者分布，使用共用 nxCard、nxField 與語意色。流向圖的位置表達文件→向量→回答的關係；只有真實 activeJobs／activeGenerations 會觸發訊號動畫，減少動態時靜態保留狀態。桌面多欄、手機單欄，使用主內容捲動，不放假即時數據或與工作無關的 3D 場景。
 
 費用數字最多顯示小數八位，保持 token 單價的可讀性；不同幣別與成本類型分開呈現。空資料、未定價、尚未取得 usage、載入、錯誤都有明確文字，沒有把未知金額顯示為零。模型分布使用相同報表資料，總覽及聊天不另外計算費用。

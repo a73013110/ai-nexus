@@ -1,12 +1,14 @@
+import { Notice } from './notice';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import type { Job } from '../../core/api/types';
 import { newLocalIssue, systemProblem, validIssueCode } from '../../core/api/safe-errors';
-import { IssueCode } from './issue-code';
 import { InferenceSignal } from './inference-signal';
+import { StatusBadge } from './status-badge';
+import type { BadgeTone } from './count-badge';
 
 @Component({
   selector: 'nx-job-progress',
-  imports: [InferenceSignal, IssueCode],
+  imports: [Notice, InferenceSignal, StatusBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './job-progress.scss',
   template: `<div class="job-progress" [attr.data-status]="job().status">
@@ -17,9 +19,12 @@ import { InferenceSignal } from './inference-signal';
         }
         <span>{{ job().stage }}</span></span
       >
-      @if (job().totalUnits; as total) {
-        <span>{{ job().completedUnits }} / {{ total }}</span>
-      }
+      <div class="job-stage-meta">
+        <nx-status-badge [tone]="status().tone">{{ status().label }}</nx-status-badge>
+        @if (job().totalUnits; as total) {
+          <span>{{ job().completedUnits }} / {{ total }}</span>
+        }
+      </div>
     </div>
     @if (active()) {
       @if (job().totalUnits; as total) {
@@ -36,7 +41,7 @@ import { InferenceSignal } from './inference-signal';
       <p class="form-note" role="status">已提出停止要求，正在結束目前的步驟。</p>
     }
     @if (job().errorMessage) {
-      <p class="job-error">{{ failure() }}<nx-issue-code [message]="failure()" /></p>
+      <nx-notice tone="danger" [message]="failure()" />
     }
   </div>`,
 })
@@ -54,4 +59,14 @@ export class JobProgress {
   });
   readonly job = input.required<Job>();
   readonly active = computed(() => ['queued', 'running'].includes(this.job().status));
+  readonly status = computed(() => {
+    const statuses: Record<string, { label: string; tone: BadgeTone }> = {
+      queued: { label: '排隊中', tone: 'neutral' },
+      running: { label: '處理中', tone: 'info' },
+      completed: { label: '已完成', tone: 'success' },
+      failed: { label: '處理失敗', tone: 'danger' },
+      cancelled: { label: '已停止', tone: 'neutral' },
+    };
+    return statuses[this.job().status] ?? { label: '背景處理', tone: 'neutral' as BadgeTone };
+  });
 }

@@ -15,6 +15,7 @@
 @use './styles/platform';
 @use './styles/admin';
 @use './styles/navigation';
+@use './styles/action-menu';
 @use './styles/knowledge';
 @use './styles/document-reader';
 @use './styles/files';
@@ -28,6 +29,7 @@
 @use './styles/markdown';
 @use './styles/composer';
 @use './styles/dialogs';
+@use './styles/data-workspace';
 @use './styles/tools';
 @use './styles/attachments';
 @use './styles/billing';

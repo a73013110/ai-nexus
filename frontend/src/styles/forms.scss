@@ -8,7 +8,7 @@ nx-checkbox {
   gap: var(--p-space-3);
   min-height: var(--button-target);
   margin: 0;
-  padding: var(--p-space-3);
+  padding: var(--control-padding-block) var(--control-padding-inline);
   border: 1px solid transparent;
   border-radius: var(--p-radius-md);
   cursor: pointer;
@@ -119,7 +119,7 @@ nx-search-field {
   min-width: 0;
   padding: 0;
   min-height: var(--button-target);
-  font-size: var(--text-ui);
+  font-size: var(--control-font-size);
 }
 .search-field input::-webkit-search-cancel-button {
   display: none;

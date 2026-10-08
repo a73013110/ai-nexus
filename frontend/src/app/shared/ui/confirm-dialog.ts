@@ -1,9 +1,11 @@
+import { CompactDialog } from './compact-dialog';
 import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
   ElementRef,
   inject,
+  input,
   signal,
   viewChild,
 } from '@angular/core';
@@ -18,11 +20,13 @@ export interface Confirmation {
 let sequence = 0;
 @Component({
   selector: 'nx-confirm-dialog',
-  imports: [Icon],
+  imports: [CompactDialog, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
+    [nxCompactDialog]="compact()"
     #dialog
     class="platform-dialog"
+    [class.ui-dialog-compact]="compact()"
     [attr.aria-labelledby]="id + '-title'"
     [attr.aria-describedby]="id + '-message'"
     (cancel)="$event.preventDefault(); answer(false)"
@@ -50,6 +54,7 @@ let sequence = 0;
   </dialog>`,
 })
 export class ConfirmDialog {
+  readonly compact = input(true);
   readonly id = `nx-confirm-${++sequence}`;
   readonly value = signal<Confirmation | null>(null);
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');

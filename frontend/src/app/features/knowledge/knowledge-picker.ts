@@ -1,4 +1,4 @@
-import { IssueCode } from '../../shared/ui/issue-code';
+import { Notice } from '../../shared/ui/notice';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -19,7 +19,7 @@ import { SearchField } from '../../shared/ui/search-field';
 
 @Component({
   selector: 'nx-knowledge-picker',
-  imports: [IssueCode,Icon, RouterLink, Checkbox, SearchField],
+  imports: [Notice, Icon, RouterLink, Checkbox, SearchField],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<button
       #trigger
@@ -38,7 +38,7 @@ import { SearchField } from '../../shared/ui/search-field';
     </button>
     <div
       #panel
-      class="knowledge-picker-panel"
+      class="knowledge-picker-panel ui-density-compact"
       popover="auto"
       role="dialog"
       aria-label="對話知識來源"
@@ -52,7 +52,7 @@ import { SearchField } from '../../shared/ui/search-field';
         (valueChange)="query.set($event)"
       />
       @if (selection.error()) {
-        <p class="error-note" role="alert">{{ selection.error() }}<nx-issue-code [message]="selection.error()" /></p>
+        <nx-notice tone="danger" [message]="selection.error()" />
       }
       @if (selection.loadFailed()) {
         <button

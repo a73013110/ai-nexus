@@ -30,37 +30,59 @@ public static class AuthEndpoints
         var auth = app.MapGroup("/api/v1/auth").WithSafeErrors().WithRequestValidation();
         auth.MapGet("/session", (HttpContext http, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf) => Results.Ok(Session(http, options.Value, csrf)))
             .AllowAnonymous().WithName("GetAuthSession").Produces<AuthSessionDto>();
-        auth.MapGet("/windows", async (HttpContext http, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, CurrentUser current, CancellationToken ct) =>
+        auth.MapGet("/windows", async (HttpContext http, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, CurrentUser current, AuthenticationAudit audit, Issues issues, CancellationToken ct) =>
         {
             if (options.Value.Mode != "Windows") throw new ApiException(400, "authentication_mode", "此工作區未使用 Windows 整合驗證。");
-            await current.GetAsync(ct);
+            NexusUser user;
+            try { user = await current.GetAsync(ct); }
+            catch (Exception error) when (!ct.IsCancellationRequested)
+            {
+                var problem = issues.Problem(error);
+                await audit.WriteAsync("identity.login", null, http.User.Identity?.Name, "windows", "failed", ct, problem.Code, problem.IssueCode);
+                throw;
+            }
+            await audit.WriteAsync("identity.login", user.Id, user.Account, "windows", "success", ct);
             return Results.Ok(Session(http, options.Value, csrf));
         }).RequireAuthorization(new AuthorizationPolicyBuilder(NegotiateDefaults.AuthenticationScheme).RequireAuthenticatedUser().Build())
             .WithName("WindowsLogin").Produces<AuthSessionDto>();
-        auth.MapPost("/login", async (AdLoginRequest body, HttpContext http, IAdAuthenticator directory, LocalAuthenticator local, CurrentUser current, NexusDbContext db, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, CancellationToken ct) =>
+        auth.MapPost("/login", async (AdLoginRequest body, HttpContext http, IAdAuthenticator directory, LocalAuthenticator local, CurrentUser current, NexusDbContext db, AuthenticationAudit audit, Issues issues, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, CancellationToken ct) =>
         {
             var previous = http.User;
-            if (string.IsNullOrWhiteSpace(body.Account) || body.Account.Length > 256 || body.Password is null || body.Password.Length is < 1 or > 1024)
-                throw new ApiException(401, "invalid_credentials", "帳號、密碼或登入方式不正確，或帳號暫時無法登入。");
             NexusUser user;
-            if (body.Method == "local") user = await local.AuthenticateAsync(body.Account, body.Password, ct);
-            else if (body.Method == "ad" && options.Value.Mode == "Ldap")
+            try
             {
-                var identity = await directory.AuthenticateAsync(body.Account.Trim(), body.Password, ct);
-                http.User = new(new ClaimsIdentity([new(ClaimTypes.PrimarySid, identity.Sid), new(ClaimTypes.Name, identity.Account), new("display_name", identity.DisplayName)], CookieScheme));
-                user = await current.GetAsync(ct);
+                if (string.IsNullOrWhiteSpace(body.Account) || body.Account.Length > 256 || body.Password is null || body.Password.Length is < 1 or > 1024)
+                    throw new ApiException(401, "invalid_credentials", "帳號、密碼或登入方式不正確，或帳號暫時無法登入。");
+                if (body.Method == "local") user = await local.AuthenticateAsync(body.Account, body.Password, ct);
+                else if (body.Method == "ad" && options.Value.Mode == "Ldap")
+                {
+                    var identity = await directory.AuthenticateAsync(body.Account.Trim(), body.Password, ct);
+                    http.User = new(new ClaimsIdentity([new(ClaimTypes.PrimarySid, identity.Sid), new(ClaimTypes.Name, identity.Account), new("display_name", identity.DisplayName)], CookieScheme));
+                    user = await current.GetAsync(ct);
+                }
+                else throw new ApiException(400, "authentication_mode", "請選擇此部署支援的登入方式。");
             }
-            else throw new ApiException(400, "authentication_mode", "請選擇此部署支援的登入方式。");
+            catch (Exception error) when (!ct.IsCancellationRequested)
+            {
+                http.User = previous;
+                var problem = issues.Problem(error);
+                await audit.WriteAsync("identity.login", null, body.Account, body.Method, "failed", ct, problem.Code, problem.IssueCode);
+                throw;
+            }
             await EndExistingTestAsync(previous, db, "signed_in", ct);
+            await audit.WriteAsync("identity.login", user.Id, user.Account, body.Method, "success", ct);
             var principal = SessionIdentity.Principal(user, body.Method);
             await http.SignInAsync(CookieScheme, principal, new AuthenticationProperties { IsPersistent = false });
             http.User = principal;
             return Results.Ok(Session(http, options.Value, csrf));
         }).AllowAnonymous().RequireRateLimiting(IdentityModule.LoginRateLimit).WithName("AdLogin").Produces<AuthSessionDto>();
-        auth.MapPost("/logout", async (HttpContext http, NexusDbContext db, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, CancellationToken ct) =>
+        auth.MapPost("/logout", async (HttpContext http, NexusDbContext db, CurrentUser current, AuthenticationAudit audit, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, AiNexus.Features.Monitoring.RuntimeTraffic traffic, CancellationToken ct) =>
         {
+            var user = await current.GetAsync(ct);
             await EndExistingTestAsync(http.User, db, "signed_out", ct);
+            await audit.WriteAsync("identity.logout", user.Id, user.Account, http.User.FindFirstValue(SessionIdentity.Method) ?? "windows", "completed", ct);
             await http.SignOutAsync(CookieScheme);
+            if (Guid.TryParse(http.Request.Headers["X-Nexus-Session"], out var sessionId)) traffic.Leave(user.Id, sessionId);
             http.User = new ClaimsPrincipal(new ClaimsIdentity());
             return Results.Ok(Session(http, options.Value, csrf));
         }).RequireAuthorization().WithName("AdLogout").Produces<AuthSessionDto>();

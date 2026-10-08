@@ -337,6 +337,22 @@ namespace AiNexus.Features.Persistence.Migrations
                         },
                         new
                         {
+                            Id = "monitoring",
+                            Enabled = true,
+                            Name = "即時監控",
+                            Route = "/admin/monitoring",
+                            SortOrder = 91
+                        },
+                        new
+                        {
+                            Id = "audit",
+                            Enabled = true,
+                            Name = "活動稽核",
+                            Route = "/admin/audit",
+                            SortOrder = 92
+                        },
+                        new
+                        {
                             Id = "repositories",
                             Enabled = true,
                             Name = "程式庫",
@@ -524,6 +540,16 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             GroupId = "workspace",
                             FeatureId = "dashboard"
+                        },
+                        new
+                        {
+                            GroupId = "administrators",
+                            FeatureId = "monitoring"
+                        },
+                        new
+                        {
+                            GroupId = "administrators",
+                            FeatureId = "audit"
                         },
                         new
                         {

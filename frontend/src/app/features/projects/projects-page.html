@@ -3,7 +3,11 @@
   description="共用背景、指示與參考文件，讓每次工作都從相同的脈絡開始。"
 >
   <div page-actions class="page-actions">
-    @if (session.has('files')) { <a routerLink="/files" class="secondary-button"><nx-icon name="document" />{{ session.featureName('files') }}</a> }
+    @if (session.has('files')) {
+      <a routerLink="/files" class="secondary-button"
+        ><nx-icon name="document" />{{ session.featureName('files') }}</a
+      >
+    }
     <button
       class="primary-button"
       [disabled]="loading() || busy() || !session.has('projects')"
@@ -13,10 +17,10 @@
     </button>
   </div>
   @if (error()) {
-    <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+    <nx-notice tone="danger" [message]="error()" />
   }
   @if (notice()) {
-    <p class="success-note" role="status">{{ notice() }}</p>
+    <nx-notice tone="success" [message]="notice()" />
   }
   @if (loading()) {
     <p role="status">正在載入專案…</p>
@@ -102,11 +106,11 @@
           </details>
           <div class="project-grid">
             <section
-              class="platform-card"
+              nxCard
               [nxFileDrop]="project.resource.canEdit && !project.isArchived && !busy()"
               (filesDropped)="upload($event)"
             >
-              <div class="section-heading">
+              <div class="ui-section-header">
                 <h3>
                   參考文件 <span>{{ files().length }}</span>
                 </h3>
@@ -155,8 +159,8 @@
                 }
               </div>
             </section>
-            <section class="platform-card">
-              <div class="section-heading">
+            <section nxCard>
+              <div class="ui-section-header">
                 <h3>
                   共用範本 <span>{{ templates().length }}</span>
                 </h3>
@@ -202,8 +206,8 @@
                 }
               </div>
             </section>
-            <section class="platform-card">
-              <div class="section-heading">
+            <section nxCard>
+              <div class="ui-section-header">
                 <h3>
                   我的專案對話 <span>{{ conversations().length }}</span>
                 </h3>
@@ -231,8 +235,8 @@
                 }
               </nav>
             </section>
-            <section class="platform-card">
-              <div class="section-heading">
+            <section nxCard>
+              <div class="ui-section-header">
                 <h3>
                   共用成果 <span>{{ outputs().length }}</span>
                 </h3>
@@ -267,18 +271,18 @@
           />
         </section>
       } @else {
-        <section class="artifact-empty">
+        <nx-empty-state>
           <span class="empty-symbol"><nx-icon name="archive" /></span>
           <h2>把工作放進同一個脈絡</h2>
           <p>
             建立專案，集中共用指示、參考文件、範本與成果。<br />成員能從相同的背景開始，各自保留提問紀錄。
           </p>
-        </section>
+        </nx-empty-state>
       }
     </div>
   }
 </nx-feature-page>
-<dialog #dialog class="platform-dialog" (cancel)="close($event)">
+<dialog nxCompactDialog #dialog class="platform-dialog" (cancel)="close($event)">
   <div class="dialog-scroll">
     <div class="dialog-heading">
       <h2>{{ kind() === 'project' ? '專案設定' : '共用範本' }}</h2>
@@ -287,12 +291,13 @@
       </button>
     </div>
     @if (error()) {
-      <p role="alert" class="error-banner">{{ error() }}<nx-issue-code [message]="error()" /></p>
+      <nx-notice tone="danger" [message]="error()" />
     }
     <form class="platform-form" (submit)="save($event)">
       <label
         >{{ kind() === 'project' ? '專案名稱' : '範本名稱'
         }}<input
+          nxField
           aria-label="項目名稱"
           autofocus
           required
@@ -304,6 +309,7 @@
       @if (kind() === 'project') {
         <label
           >工作說明<textarea
+            nxField
             aria-label="專案說明"
             maxlength="2000"
             rows="3"
@@ -313,6 +319,7 @@
           ></textarea></label
         ><label
           >共用指示<textarea
+            nxField
             aria-label="專案共用指示"
             maxlength="4000"
             rows="6"
@@ -325,6 +332,7 @@
       } @else {
         <label
           >提問內容<textarea
+            nxField
             aria-label="範本提問內容"
             maxlength="12000"
             rows="8"

@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import type { Message } from '../../core/api/types';
 import { Icon } from '../../shared/ui/icon';
+import { Notice } from '../../shared/ui/notice';
 import { CopyFeedback } from '../../shared/browser/copy-feedback';
 import { MessageContent } from '../workspace/message-content';
 import { MessageTree } from './message-tree';
@@ -15,6 +16,7 @@ import { formatModelDisplayName } from '../../shared/browser/format';
   selector: 'nx-chat-message',
   imports: [
     Icon,
+    Notice,
     MessageContent,
     GenerationIndicator,
     MessageFeedback,
@@ -131,7 +133,7 @@ import { formatModelDisplayName } from '../../shared/browser/format';
       </div>
     }
     @if (copyError()) {
-      <p role="status" class="message-note">{{ copyError() }}</p>
+      <nx-notice [message]="copyError()" />
     }
     @if (!active() && message().role === 'assistant' && message().content) {
       <nx-message-feedback [message]="message()" (rated)="rated.emit($event)" />

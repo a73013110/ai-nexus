@@ -1,5 +1,9 @@
+import { Notice } from '../../shared/ui/notice';
+import { Card } from '../../shared/ui/card';
+import { EmptyState } from '../../shared/ui/empty-state';
+import { ViewSwitch } from '../../shared/ui/view-switch';
+import { formatDate } from '../../shared/browser/format';
 import { ClientValidationError } from '../../core/api/safe-errors';
-import { IssueCode } from '../../shared/ui/issue-code';
 import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -17,7 +21,18 @@ import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { SharingApi } from './sharing-api';
 @Component({
   selector: 'nx-shared-page',
-  imports: [IssueCode,FeaturePage, MarkdownView, Icon, RouterLink, ConfirmDialog, MessageContent],
+  imports: [
+    Notice,
+    Card,
+    EmptyState,
+    ViewSwitch,
+    FeaturePage,
+    MarkdownView,
+    Icon,
+    RouterLink,
+    ConfirmDialog,
+    MessageContent,
+  ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
@@ -31,12 +46,17 @@ import { SharingApi } from './sharing-api';
       >
         <nx-icon name="repeat" />重新整理
       </button>
-      <div class="page-tabs">
-        <button [attr.aria-pressed]="!sent()" (click)="switchTab(false)">分享給我</button
-        ><button [attr.aria-pressed]="sent()" (click)="switchTab(true)">我分享的</button>
-      </div>
+      <nx-view-switch
+        label="分享分類"
+        [options]="[
+          { value: 'received', label: '分享給我' },
+          { value: 'sent', label: '我分享的' },
+        ]"
+        [value]="sent() ? 'sent' : 'received'"
+        (valueChange)="switchTab($event === 'sent')"
+      />
       @if (error()) {
-        <p role="alert" class="error-banner">{{ error() }}<nx-issue-code [message]="error()" /></p>
+        <nx-notice tone="danger" [message]="error()" />
       }
       @if (loading()) {
         <p role="status">正在載入分享…</p>
@@ -66,7 +86,7 @@ import { SharingApi } from './sharing-api';
           }
         </nav>
         @if (content(); as view) {
-          <article class="share-content">
+          <article nxCard class="share-content">
             <div class="share-heading">
               <div>
                 <span class="panel-eyebrow"
@@ -110,11 +130,11 @@ import { SharingApi } from './sharing-api';
             }
           </article>
         } @else {
-          <section class="artifact-empty">
+          <nx-empty-state>
             <span class="empty-symbol"><nx-icon name="copy" /></span>
             <h2>分享當下的成果</h2>
             <p>只有指定帳號能閱讀。新內容不會自動公開，<br />到期與撤銷會立即停止存取。</p>
-          </section>
+          </nx-empty-state>
         }
       </div> </nx-feature-page
     ><nx-confirm-dialog />`,
@@ -140,11 +160,7 @@ export class SharedPage {
       .pipe(takeUntilDestroyed())
       .subscribe(([p]) => void this.load(p.get('id')));
   }
-  date(value: string) {
-    return new Intl.DateTimeFormat('zh-TW', { dateStyle: 'medium', timeStyle: 'short' }).format(
-      new Date(value),
-    );
-  }
+  readonly date = formatDate;
   expired(value: string) {
     return new Date(value).getTime() <= Date.now();
   }

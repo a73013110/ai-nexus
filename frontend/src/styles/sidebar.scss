@@ -1,13 +1,9 @@
-.sidebar {
-  width: 100%;
-  height: 100%;
-}
 .new-chat {
   display: flex;
   align-items: center;
   gap: var(--p-space-2);
   min-height: var(--button-target);
-  padding: var(--p-space-2) var(--p-space-3);
+  padding: var(--control-padding-block) var(--p-space-3);
   background: var(--accent);
   color: var(--accent-text);
   border-radius: var(--p-radius-md);
@@ -34,7 +30,7 @@
   gap: var(--p-space-2);
   flex: 1;
   min-height: var(--button-target);
-  padding: var(--p-space-2);
+  padding: var(--control-padding-block) var(--p-space-2);
   font-size: var(--text-caption);
   color: var(--secondary);
   border-radius: var(--p-radius-md);
@@ -46,9 +42,9 @@
   display: flex;
   align-items: center;
   gap: var(--p-space-2);
-  min-height: var(--button-target);
+  min-height: max(var(--button-target), var(--sidebar-search-height));
   border-bottom: 1px solid var(--line);
-  padding: var(--p-space-2);
+  padding: var(--control-padding-block) var(--p-space-2);
   color: var(--secondary);
 }
 .history-search nx-icon {
@@ -95,7 +91,7 @@
   overscroll-behavior: contain;
 }
 .history-group h2 {
-  margin: var(--p-space-3) var(--p-space-2) var(--p-space-1);
+  margin: var(--p-space-2) var(--p-space-2) var(--p-space-1);
   color: var(--muted);
   font-size: var(--text-caption);
   font-weight: 500;
@@ -107,14 +103,14 @@
   display: flex;
   align-items: center;
   border-radius: var(--p-radius-sm);
-  margin-bottom: var(--p-space-1);
+  margin-bottom: 0.125rem;
   position: relative;
 }
 .history-row > a {
   display: flex;
   align-items: center;
   min-height: var(--button-target);
-  padding: var(--p-space-2);
+  padding: var(--control-padding-block) var(--p-space-2);
   font-size: var(--text-label);
   min-width: 0;
   flex: 1;
@@ -150,10 +146,6 @@
   width: 100%;
   margin-top: var(--p-space-3);
   justify-content: center;
-}
-nx-chat-sidebar {
-  display: block;
-  min-height: 0;
 }
 .history-row nx-action-menu {
   flex: none;

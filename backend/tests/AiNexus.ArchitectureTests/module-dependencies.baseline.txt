@@ -63,6 +63,7 @@ Identity -> AccessControl
 Identity -> Administration
 Identity -> Attachments
 Identity -> Inference
+Identity -> Monitoring
 Identity -> Operations
 Inference -> AccessControl
 Inference -> Administration
@@ -92,6 +93,9 @@ Knowledge -> Identity
 Knowledge -> Inference
 Knowledge -> Operations
 Library -> Identity
+Monitoring -> AccessControl
+Monitoring -> Identity
+Monitoring -> Operations
 Notifications -> Identity
 Operations -> AccessControl
 Operations -> Collaboration

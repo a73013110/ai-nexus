@@ -16,6 +16,7 @@
     "Exports",
     "Storage",
     "Diagnostics",
+    "Monitoring",
     "Logging",
     "ConnectionStrings"
   ],
@@ -230,6 +231,12 @@
   ],
   "Storage": [
     "ApplyMigrationsOnStartup"
+  ],
+  "Monitoring": [
+    "Enabled",
+    "MaxSessions",
+    "SessionTimeoutSeconds",
+    "RefreshSeconds"
   ],
   "Logging": [
     "LogLevel"

@@ -22,26 +22,6 @@
   font-size: var(--text-label);
   line-height: 1.65;
 }
-.design-theme {
-  display: flex;
-  padding: var(--p-space-1);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-pill);
-  background: var(--sidebar);
-}
-.design-theme button {
-  min-width: 4rem;
-  min-height: var(--button-target);
-  padding: var(--p-space-2);
-  border-radius: var(--p-radius-pill);
-  font-size: var(--text-label);
-}
-.design-theme button[aria-pressed='true'] {
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  color: var(--accent);
-  font-weight: 600;
-}
 .design-preview {
   padding: clamp(16px, 2vw, 32px);
   border: 1px solid var(--line);
@@ -129,12 +109,6 @@
   gap: var(--p-space-2);
   margin-top: var(--p-space-4);
 }
-.design-notice {
-  font-size: var(--text-label);
-  color: var(--secondary);
-  min-height: 1.5em;
-  margin-bottom: 0;
-}
 .design-select-row {
   display: flex;
   align-items: center;
@@ -199,6 +173,12 @@
 .design-markdown {
   grid-column: 1 / -1;
 }
+.design-data-workspace {
+  grid-column: 1 / -1;
+}
+.design-data-workspace .ui-table-scroll > table {
+  min-width: 32rem;
+}
 .design-markdown .markdown {
   max-width: var(--reading-width);
 }
@@ -220,4 +200,10 @@
   .design-spacing {
     gap: var(--p-space-3);
   }
+}
+.design-calendar-samples {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--p-space-3);
+  margin-block: var(--p-space-3);
 }

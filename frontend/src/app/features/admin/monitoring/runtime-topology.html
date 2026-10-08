@@ -1,0 +1,94 @@
+<div
+  class="topology"
+  [class.motion-paused]="!moving()"
+  aria-label="目前執行個體的使用者與服務連線拓樸"
+>
+  <div class="topology-columns" aria-hidden="true">
+    <span>在線使用者</span><span>應用程式</span><span>周邊服務</span>
+  </div>
+  <div class="topology-stage">
+    <svg
+      viewBox="0 0 1000 420"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+      class="topology-wires"
+    >
+      @for (client of clients(); track client.session.userId; let i = $index) {
+        <path
+          class="wire wire-client"
+          [class.wire-live]="client.session.state === 'active'"
+          [attr.d]="clientPath(i)"
+        />
+      }
+      @for (dep of dependencies(); track dep.id; let i = $index) {
+        <path
+          class="wire"
+          [class.wire-danger]="dep.status === 'failing'"
+          [class.wire-live]="dep.inFlight > 0"
+          [attr.d]="dependencyPath(i)"
+        />
+      }
+    </svg>
+    <div class="topology-core">
+      <span class="core-orbit" aria-hidden="true"></span>
+      <span class="core-mark"><nx-icon name="network" /></span>
+      <strong>AI NEXUS</strong
+      ><span>{{ snapshot().inFlightRequests }} 處理中 · {{ snapshot().openStreams }} 串流</span>
+    </div>
+    <div class="client-nodes">
+      @for (client of clients(); track client.session.userId; let i = $index) {
+        <button
+          type="button"
+          nxGraphNode
+          class="topology-node client-node"
+          [label]="client.session.displayName"
+          [detail]="client.count + ' 工作階段 · ' + client.session.device"
+          [avatar]="initial(client.session.displayName)"
+          [tone]="client.session.state === 'active' ? 'success' : 'neutral'"
+          [statusLabel]="state(client.session.state)"
+          [style.top.%]="y(i, clients().length)"
+          (click)="sessionSelected.emit(client.session)"
+          [attr.aria-label]="
+            '檢視 ' + client.session.displayName + ' 的連線，' + state(client.session.state)
+          "
+        ></button>
+      } @empty {
+        <div class="topology-empty"><nx-icon name="monitor" /><span>等待使用者連線</span></div>
+      }
+    </div>
+    <div class="dependency-nodes">
+      @for (dep of dependencies(); track dep.id; let i = $index) {
+        <button
+          type="button"
+          nxGraphNode
+          class="topology-node dependency-node"
+          [label]="dep.name"
+          [detail]="dep.metrics.requestsPerSecond.toFixed(2) + ' 次／秒 · ' + status(dep.status)"
+          [icon]="dep.kind === 'database' ? 'database' : 'server'"
+          [tone]="
+            dep.status === 'failing'
+              ? 'danger'
+              : dep.status === 'degraded'
+                ? 'warning'
+                : dep.status === 'unobserved'
+                  ? 'neutral'
+                  : 'success'
+          "
+          [statusLabel]="status(dep.status)"
+          [style.top.%]="y(i, dependencies().length)"
+          (click)="dependencySelected.emit(dep)"
+          [attr.aria-label]="'檢視 ' + dep.name + '，' + status(dep.status)"
+        ></button>
+      } @empty {
+        <div class="topology-empty"><nx-icon name="server" /><span>尚無周邊服務觀測</span></div>
+      }
+    </div>
+  </div>
+  <div class="topology-footer">
+    <span><i class="legend-presence"></i>在線狀態</span
+    ><span><i class="legend-call"></i>執行中的呼叫</span><span>點選節點查看詳情</span>
+    @if (snapshot().onlineUsers > clients().length) {
+      <span>另有 {{ snapshot().onlineUsers - clients().length }} 位使用者，請見下方清單</span>
+    }
+  </div>
+</div>

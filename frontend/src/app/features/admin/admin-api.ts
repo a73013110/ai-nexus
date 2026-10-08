@@ -5,7 +5,6 @@ import type {
   AdminUsers,
   AdminUsage,
   Access,
-  AuditEntry,
   AdminUserDetail,
   AdminConversationPage,
   AdminConversationDetail,
@@ -21,11 +20,6 @@ export class AdminApi {
       `/admin/users?${new URLSearchParams({ search, offset: String(offset) })}`,
     );
   access = (id: string) => this.http.json<Access>(`/admin/users/${encodeURIComponent(id)}/access`);
-  audit = (before?: number, filters: Record<string, string> = {}) => {
-    const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value));
-    if (before) query.set('before', String(before));
-    return this.http.json<AuditEntry[]>(`/admin/audit?${query}`);
-  };
   insights = (id: string) =>
     this.http.json<AdminUserDetail>(`/admin/users/${encodeURIComponent(id)}/insights`);
   conversations = (id: string, search: string, includeDeleted: boolean, offset = 0) =>

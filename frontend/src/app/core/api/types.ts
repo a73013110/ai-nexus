@@ -36,6 +36,7 @@ export type PersonalUsage = Omit<Dto<'PersonalUsageDto'>, 'tokens'> & {
   tokens?: TokenUsage | null;
 } & { daily: Dto<'UsageDayDto'>[] };
 export type AdminCatalog = Dto<'AdminCatalogDto'>;
+export type AuditCatalog = Dto<'AuditCatalogDto'>;
 export type AdminRole = Dto<'AdminRoleDto'>;
 export type AdminGroup = Dto<'AdminGroupDto'>;
 export type AdminFeature = Dto<'AdminFeatureDto'>;

@@ -3,15 +3,16 @@ import { RouterLink } from '@angular/router';
 import type { LibraryFile } from '../../core/api/types';
 import { ReaderLink } from '../../shared/browser/reader-link';
 import { Icon } from '../../shared/ui/icon';
+import { Card } from '../../shared/ui/card';
 import { formatBytes, formatDate } from '../../shared/browser/format';
 
 @Component({
   selector: 'nx-file-browser',
-  imports: [ReaderLink, RouterLink, Icon],
+  imports: [ReaderLink, RouterLink, Icon, Card],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="file-browser" [class.file-browser-list]="layout() === 'list'">
     @for (item of items(); track item.file.id) {
-      <article class="file-card">
+      <article nxCard class="file-card">
         <a
           class="file-cover"
           [nxReaderLink]="item.file.id"

@@ -1,5 +1,11 @@
+import { Notice } from '../../shared/ui/notice';
+import { Card } from '../../shared/ui/card';
+import { StatusBadge } from '../../shared/ui/status-badge';
+import { EmptyState } from '../../shared/ui/empty-state';
+import { SearchField } from '../../shared/ui/search-field';
+import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
-import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -34,7 +40,14 @@ import { RetrievalResults } from '../../shared/ui/retrieval-results';
 
 @Component({
   selector: 'nx-knowledge-page',
-  imports: [IssueCode,
+  imports: [
+    Notice,
+    StatusBadge,
+    Card,
+    EmptyState,
+    SearchField,
+    CompactDialog,
+    Field,
     FeaturePage,
     Icon,
     Select,

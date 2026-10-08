@@ -1,4 +1,10 @@
-import { IssueCode } from '../../shared/ui/issue-code';
+import { Notice } from '../../shared/ui/notice';
+import { EmptyState } from '../../shared/ui/empty-state';
+import { ViewSwitch } from '../../shared/ui/view-switch';
+import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { ViewMotion } from '../../shared/ui/view-motion';
+import { RouterLink } from '@angular/router';
+import { Field } from '../../shared/ui/field';
 import { safeMessage } from '../../core/api/safe-errors';
 import {
   ChangeDetectionStrategy,
@@ -11,6 +17,7 @@ import {
   output,
   signal,
   viewChild,
+  ViewEncapsulation,
 } from '@angular/core';
 import type {
   AdminUser,
@@ -39,7 +46,14 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
 
 @Component({
   selector: 'nx-admin-user-inspector',
-  imports: [IssueCode,
+  imports: [
+    Notice,
+    EmptyState,
+    ViewSwitch,
+    CompactDialog,
+    ViewMotion,
+    RouterLink,
+    Field,
     Icon,
     SearchField,
     Checkbox,
@@ -50,6 +64,11 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-user-inspector.html',
+  styleUrls: [
+    '../../../styles/admin-inspector.scss',
+    '../../../styles/admin-inspector-reading.scss',
+  ],
+  encapsulation: ViewEncapsulation.None,
 })
 export class AdminUserInspector {
   readonly user = input<AdminUser | null>(null);

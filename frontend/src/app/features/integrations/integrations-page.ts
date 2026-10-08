@@ -1,5 +1,9 @@
+import { Notice } from '../../shared/ui/notice';
+import { Card } from '../../shared/ui/card';
+import { EmptyState } from '../../shared/ui/empty-state';
+import { FilterPanel } from '../../shared/ui/filter-panel';
+import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
-import { IssueCode } from '../../shared/ui/issue-code';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
@@ -10,11 +14,12 @@ import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
 import { MarkdownView } from '../../shared/ui/markdown-view';
 import { ViewScope } from '../../shared/browser/view-scope';
+import { formatDate } from '../../shared/browser/format';
 import { IntegrationsApi } from './integrations-api';
 
 @Component({
   selector: 'nx-integrations-page',
-  imports: [IssueCode,FeaturePage, Select, Icon, MarkdownView],
+  imports: [Notice, Card, EmptyState, FilterPanel, Field, FeaturePage, Select, Icon, MarkdownView],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './integrations-page.html',
@@ -192,7 +197,5 @@ export class IntegrationsPage {
     };
     return names[kind] ?? kind;
   }
-  date(value: string) {
-    return new Date(value).toLocaleString('zh-TW');
-  }
+  readonly date = formatDate;
 }

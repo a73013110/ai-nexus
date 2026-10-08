@@ -1,4 +1,7 @@
-import { IssueCode } from '../../shared/ui/issue-code';
+import { Notice } from '../../shared/ui/notice';
+import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { Field } from '../../shared/ui/field';
+import { Card } from '../../shared/ui/card';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -44,6 +47,7 @@ import { ConversationOutline } from './conversation-outline';
 import { KnowledgePicker } from '../knowledge/knowledge-picker';
 import { TextSelection, type SelectedText } from '../../shared/browser/text-selection';
 import { TextTools } from '../artifacts/text-tools';
+import { TextSelectionToolbar } from '../artifacts/text-selection-toolbar';
 import { ShareDialog } from '../sharing/share-dialog';
 import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
 import { FocusComposer } from './focus-composer';
@@ -51,10 +55,18 @@ import { isSubmitKey } from '../../shared/browser/submit-key';
 import { ConversationSpendView } from '../billing/conversation-spend';
 import { ReaderNavigation, type ReaderOrigin } from '../../shared/browser/reader-navigation';
 import { LibraryPicker } from '../files/library-picker';
+import { WorkspaceMenuButton } from '../../shared/ui/workspace-menu-button';
+import { ProductTourButton } from '../../shared/ui/product-tour-button';
+import { ProductTour } from '../../shared/ui/product-tour';
+import { chatTour } from './chat-tour';
 
 @Component({
   selector: 'nx-chat-workspace',
-  imports: [IssueCode,
+  imports: [
+    Notice,
+    Card,
+    CompactDialog,
+    Field,
     FormField,
     RouterLink,
     Icon,
@@ -75,16 +87,22 @@ import { LibraryPicker } from '../files/library-picker';
     KnowledgePicker,
     TextSelection,
     TextTools,
+    TextSelectionToolbar,
     ShareDialog,
     FocusComposer,
     ConversationSpendView,
     LibraryPicker,
+    WorkspaceMenuButton,
+    ProductTourButton,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chat-workspace.html',
 })
 export class ChatWorkspace {
   readonly store = inject(ChatStore);
+  readonly starting = computed(
+    () => !this.store.visibleMessages().length && !this.store.loadingConversation(),
+  );
   readonly themes = inject(ThemeService);
   private readonly destroy = inject(DestroyRef);
   private readonly route = inject(ActivatedRoute);
@@ -94,8 +112,10 @@ export class ChatWorkspace {
   private readonly transfer = inject(ConversationDraftTransfer);
   private navigationSequence = 0;
   readonly layout = inject(WorkspaceLayout);
-  readonly sidebarOpen = computed(() => !this.layout.compact());
+  readonly tours = inject(ProductTour);
+  readonly sidebarOpen = this.layout.expanded;
   readonly narrow = this.layout.narrow;
+  readonly tour = computed(() => chatTour(this.narrow(), this.store.hasKnowledgeAccess()));
   readonly following = signal(true);
   readonly composing = signal(false);
   readonly findOpen = signal(false);
@@ -236,14 +256,7 @@ export class ChatWorkspace {
 
   constructor() {
     const keyboard = (event: KeyboardEvent) => {
-      if (event.isComposing || event.repeat) return;
-      if (
-        event.key === 'Escape' &&
-        this.narrow() &&
-        this.sidebarOpen() &&
-        !document.querySelector('dialog[open]')
-      )
-        this.closeSidebar();
+      if (event.isComposing || event.repeat || this.tours.active() || this.tours.loading()) return;
       if (!(event.ctrlKey || event.metaKey) || document.querySelector('dialog[open]')) return;
       if (event.key.toLowerCase() === 'k') {
         event.preventDefault();
@@ -395,16 +408,6 @@ export class ChatWorkspace {
   }
   closeMobileSidebar() {
     this.layout.closeMobile();
-  }
-  closeSidebar() {
-    const previous = document.activeElement;
-    this.layout.compact.set(true);
-    if (this.narrow())
-      requestAnimationFrame(() => {
-        const active = document.activeElement;
-        if (active === previous || active === document.body || active?.closest('.sidebar'))
-          document.querySelector<HTMLButtonElement>('.sidebar-toggle')?.focus();
-      });
   }
   newChat() {
     this.closeMobileSidebar();

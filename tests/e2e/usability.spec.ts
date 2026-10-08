@@ -105,7 +105,7 @@ test("conversation minimap previews a turn and jumps; mobile exposes a direct di
       const viewport = await page
         .locator(".conversation-viewport")
         .boundingBox();
-      return Math.abs(question!.y - viewport!.y - 30);
+      return Math.abs(question!.y - viewport!.y - 16);
     })
     .toBeLessThan(8);
   await page.setViewportSize({ width: 375, height: 812 });

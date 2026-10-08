@@ -1,0 +1,170 @@
+<label class="ui-field" [for]="id">{{ label() }}</label>
+<div #control class="ui-date-control" [class.is-invalid]="error()">
+  <input
+    #editor
+    [id]="id"
+    type="text"
+    [required]="required()"
+    autocomplete="off"
+    [value]="display()"
+    [placeholder]="formatHint()"
+    [disabled]="disabled()"
+    [attr.aria-invalid]="error() ? true : null"
+    [attr.aria-describedby]="id + '-hint' + (error() ? ' ' + id + '-error' : '')"
+    (input)="edit($any($event.target).value)"
+    (blur)="blur()"
+    (keydown)="inputKey($event)"
+  />
+  <button
+    type="button"
+    class="icon-button"
+    [attr.aria-label]="label() + '選擇日期'"
+    [attr.aria-expanded]="opened()"
+    aria-haspopup="dialog"
+    [attr.aria-controls]="id + '-panel'"
+    [disabled]="disabled()"
+    (click)="toggle()"
+  >
+    <nx-icon name="calendar" />
+  </button>
+</div>
+<span class="sr-only" [id]="id + '-hint'"
+  >{{ formatHint() }}，24 小時制。Alt 加向下鍵開啟日曆。</span
+>
+@if (error()) {
+  <span class="ui-date-error" [id]="id + '-error'" role="alert">{{ error() }}</span>
+}
+<div
+  #panel
+  popover="auto"
+  class="ui-date-panel ui-density-compact"
+  role="dialog"
+  [id]="id + '-panel'"
+  [attr.aria-label]="label() + '日期選擇'"
+  (toggle)="toggled($event)"
+  (keydown)="panelKey($event)"
+>
+  <div class="ui-calendar-heading">
+    <button type="button" class="icon-button" aria-label="上個月" (click)="shiftMonth(-1)">
+      <nx-icon name="left" />
+    </button>
+    <div class="ui-calendar-month">
+      <label class="sr-only" [for]="id + '-year'">{{
+        calendarSystem() === 'roc' ? '民國年' : '西元年'
+      }}</label>
+      <input
+        nxField
+        [id]="id + '-year'"
+        type="number"
+        min="1"
+        [max]="9999 - offset()"
+        [value]="year()"
+        (change)="changeYear($any($event.target).value)"
+      /><span>年</span>
+      <nx-select
+        label="月份"
+        [options]="monthOptions"
+        [value]="view().month.toString()"
+        (valueChange)="changeMonth($event)"
+      />
+    </div>
+    <button type="button" class="icon-button" aria-label="下個月" (click)="shiftMonth(1)">
+      <nx-icon name="chevron" />
+    </button>
+  </div>
+  <span class="sr-only" [id]="id + '-month'" aria-live="polite">{{ monthLabel() }}</span>
+  <table
+    class="ui-calendar"
+    role="grid"
+    [attr.aria-labelledby]="id + '-month'"
+    (keydown)="calendarKey($event)"
+  >
+    <thead>
+      <tr>
+        @for (day of weekdays; track day) {
+          <th scope="col" [abbr]="'星期' + day">{{ day }}</th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (week of weeks(); track $index) {
+        <tr>
+          @for (day of week; track day.value) {
+            <td [attr.aria-selected]="day.value === draft().slice(0, 10)">
+              <button
+                type="button"
+                [attr.data-date]="day.value"
+                [attr.aria-label]="dayLabel(day.value)"
+                [attr.aria-current]="day.value === today() ? 'date' : null"
+                [attr.tabindex]="day.value === focused() ? 0 : -1"
+                [disabled]="day.disabled"
+                [class.is-outside]="day.outside"
+                [class.is-selected]="day.value === draft().slice(0, 10)"
+                (click)="chooseDay(day.value)"
+              >
+                {{ day.day }}
+              </button>
+            </td>
+          }
+        </tr>
+      }
+    </tbody>
+  </table>
+  @if (withTime()) {
+    <div class="ui-calendar-time">
+      <span>時間</span>
+      <div>
+        <input
+          nxField
+          type="number"
+          aria-label="時"
+          min="0"
+          max="23"
+          [value]="parts().hour.toString().padStart(2, '0')"
+          (input)="setTime('hour', $any($event.target).value)"
+        /><span>:</span>
+        <input
+          nxField
+          type="number"
+          aria-label="分"
+          min="0"
+          max="59"
+          [value]="parts().minute.toString().padStart(2, '0')"
+          (input)="setTime('minute', $any($event.target).value)"
+        /><span>:</span>
+        <input
+          nxField
+          type="number"
+          aria-label="秒"
+          min="0"
+          max="59"
+          [value]="parts().second.toString().padStart(2, '0')"
+          (input)="setTime('second', $any($event.target).value)"
+        />
+      </div>
+      <small>24 小時制</small>
+    </div>
+  }
+  @if (invalidTimeFields().length) {
+    <p class="ui-date-error" role="alert">時須介於 00–23，分與秒須介於 00–59。</p>
+  }
+  <p class="ui-calendar-help">方向鍵移動 · Page Up／Down 換月</p>
+  <div class="ui-calendar-footer">
+    <button
+      type="button"
+      class="quiet-button"
+      [disabled]="!dayAvailable(today())"
+      (click)="useToday()"
+    >
+      今天
+    </button>
+    <div>
+      <button type="button" class="secondary-button" (click)="close()">取消</button>
+      @if (withTime()) {
+        <button type="button" class="primary-button" [disabled]="!draftValid()" (click)="apply()">
+          套用
+        </button>
+      }
+    </div>
+  </div>
+</div>

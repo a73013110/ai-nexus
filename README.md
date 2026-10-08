@@ -12,7 +12,10 @@ AI 工作區：Angular 22、ASP.NET Core 10、MSSQL、AD 與 Google AI／Ollama 
 | 連網搜尋       | 手動開啟、SearXNG／Brave、來源與時間、配額、搜尋費用                            | [搜尋](docs/WEB_SEARCH.md)        |
 | 程式庫         | Gitea 唯讀檔案／議題、固定 commit 快照、單一／區間 commit 的背景 AI review | [Gitea](docs/GITEA.md) |
 | 個人設定       | 當頁設定視窗、主題、12–24px 閱讀／密度、操作、通知、草稿及用量                  | [功能指南](docs/FEATURES.md)      |
-| 平台管理       | 角色／群組／功能、個人／群組逐模型 token 政策、個別用量與唯讀對話、前後差異稽核 | [管理](docs/ADMINISTRATION.md)    |
+| 平台管理       | 角色／群組／功能、個人／群組逐模型 token 政策、個別用量與唯讀對話 | [管理](docs/ADMINISTRATION.md)    |
+| 活動稽核       | 獨立授權的登入／活動／存取紀錄、前後差異、篩選與查證代碼串聯 | [活動稽核](docs/ACTIVITY_AUDIT.md) |
+| 系統日誌       | 錯誤、耗時與技術流程查證，查詢／診斷／匯出分別授權 | [日誌](docs/DIAGNOSTICS.md) |
+| 即時監控 | 在線人員／工作階段、動畫拓樸、API／SQL／HTTP 負載、操作時間軸及快照 | [監控](docs/MONITORING.md) |
 | 知識庫／閱讀器 | ACL、索引／OCR、SQL 向量檢索、引用及原文核對                                    | [知識庫](docs/KNOWLEDGE.md)       |
 | 檔案庫         | 對話／知識／專案原檔、自動保存、搜尋篩選、重用與大型預覽                        | [檔案庫](docs/FILES.md)           |
 | 成果文件       | 共用編輯、不可變版本、段落工具、Word／PDF                                       | [成果](docs/ARTIFACTS.md)         |

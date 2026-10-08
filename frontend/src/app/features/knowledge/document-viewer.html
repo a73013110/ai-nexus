@@ -73,18 +73,12 @@
       </div>
     }
     @if (isPdf() || isImage()) {
-      <div class="reader-mode" role="group" aria-label="文件檢視方式">
-        <button [attr.aria-pressed]="mode() === 'original'" (click)="setMode('original')">
-          <nx-icon name="eye" />{{ isImage() ? '原始圖片' : '原始頁面' }}
-        </button>
-        <button
-          [attr.aria-pressed]="mode() === 'text'"
-          [disabled]="busy() || (!!target().shareId && !hasText())"
-          (click)="setMode('text')"
-        >
-          <nx-icon name="lines" />{{ rawImage() ? '辨識文字' : '擷取文字' }}
-        </button>
-      </div>
+      <nx-view-switch
+        label="文件檢視方式"
+        [options]="modeOptions()"
+        [value]="mode()"
+        (valueChange)="setMode($event)"
+      />
     }
     @if (isPdf() && mode() === 'original') {
       <nx-select
@@ -106,15 +100,14 @@
       />
     }
     @if (hasText()) {
-      <label class="viewer-search"
-        ><nx-icon name="search" /><input
-          type="search"
-          aria-label="搜尋文件文字"
-          placeholder="搜尋文字"
-          maxlength="200"
-          [value]="query()"
-          (input)="query.set($any($event.target).value)"
-      /></label>
+      <nx-search-field
+        class="viewer-search"
+        label="搜尋文件文字"
+        placeholder="搜尋文字"
+        [maxLength]="200"
+        [value]="query()"
+        (valueChange)="query.set($event)"
+      />
     }
   </div>
   @if (query().trim()) {
@@ -158,7 +151,7 @@
   }
 }
 @if (error() || renderError()) {
-  <p role="alert" class="viewer-error">{{ error() || renderError() }}</p>
+  <nx-notice tone="danger" [message]="error() || renderError()" />
 }
 <div
   class="viewer-stage"
@@ -167,7 +160,7 @@
   [attr.aria-busy]="loading() || rendering() || imageLoading()"
 >
   @if (loading()) {
-    <p class="reader-loading" role="status">正在開啟文件…</p>
+    <nx-empty-state><p>正在開啟文件…</p></nx-empty-state>
   } @else if (document(); as info) {
     @if (mode() === 'original' && (isPdf() || isImage())) {
       <div class="reader-original">

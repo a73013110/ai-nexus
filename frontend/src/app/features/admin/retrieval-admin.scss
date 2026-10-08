@@ -1,6 +1,6 @@
 :host {
   display: grid;
-  gap: var(--p-space-5);
+  gap: var(--section-gap);
 }
 .retrieval-profile {
   align-items: start;
@@ -25,6 +25,20 @@ progress {
   height: 0.5rem;
   accent-color: var(--accent);
 }
+.usage-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-2);
+}
+.usage-stat-card strong {
+  font-size: var(--resource-heading-size);
+  font-weight: 550;
+  line-height: var(--line-ui);
+  overflow-wrap: anywhere;
+}
+.usage-stat-card > span,
 .usage-stat-card small {
+  color: var(--secondary);
+  font-size: var(--text-caption);
   overflow-wrap: anywhere;
 }

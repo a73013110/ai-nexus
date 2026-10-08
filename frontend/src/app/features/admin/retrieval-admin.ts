@@ -1,4 +1,6 @@
-import { IssueCode } from '../../shared/ui/issue-code';
+import { Notice } from '../../shared/ui/notice';
+import { Card } from '../../shared/ui/card';
+import { Field } from '../../shared/ui/field';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -28,7 +30,17 @@ import { RetrievalResults } from '../../shared/ui/retrieval-results';
 
 @Component({
   selector: 'nx-retrieval-admin',
-  imports: [IssueCode,ReactiveFormsModule, Select, Checkbox, JobProgress, ConfirmDialog, RetrievalResults],
+  imports: [
+    Notice,
+    Card,
+    Field,
+    ReactiveFormsModule,
+    Select,
+    Checkbox,
+    JobProgress,
+    ConfirmDialog,
+    RetrievalResults,
+  ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './retrieval-admin.html',

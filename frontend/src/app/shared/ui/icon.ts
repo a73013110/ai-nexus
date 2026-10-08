@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  InjectionToken,
+  input,
+} from '@angular/core';
 import {
   type IconNode,
   ThumbsUp,
@@ -38,6 +45,12 @@ import {
   Check,
   FileText,
   MessageSquare,
+  MessageSquareText,
+  ClipboardList,
+  ScrollText,
+  ChevronUp,
+  ChevronDown,
+  CircleHelp,
   Lightbulb,
   Info,
   Trash2,
@@ -60,12 +73,15 @@ import {
   ExternalLink,
   Filter,
   Play,
+  Calendar,
+  Activity,
 } from 'lucide';
 import { LucideDynamicIcon } from '@lucide/angular';
 
 // Semantic names keep business templates independent of the icon vendor.
 // Import curated SVG data; a single Angular renderer avoids retaining per-icon component metadata.
 const icons: Record<string, IconNode> = {
+  activity: Activity,
   image: ImageIcon,
   files: Files,
   bell: Bell,
@@ -106,6 +122,12 @@ const icons: Record<string, IconNode> = {
   check: Check,
   document: FileText,
   lines: MessageSquare,
+  chat: MessageSquareText,
+  audit: ClipboardList,
+  logs: ScrollText,
+  'chevron-up': ChevronUp,
+  'chevron-down': ChevronDown,
+  tour: CircleHelp,
   idea: Lightbulb,
   info: Info,
   trash: Trash2,
@@ -126,7 +148,11 @@ const icons: Record<string, IconNode> = {
   eye: Eye,
   filter: Filter,
   play: Play,
+  calendar: Calendar,
+  columns: SlidersHorizontal,
 };
+/** Optional feature icons stay in their lazy feature bundle. */
+export const EXTRA_ICONS = new InjectionToken<Readonly<Record<string, IconNode>>>('Feature icons');
 @Component({
   selector: 'nx-icon',
   imports: [LucideDynamicIcon],
@@ -136,6 +162,10 @@ const icons: Record<string, IconNode> = {
     ':host{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;flex:none;line-height:0;vertical-align:middle}svg{display:block;width:100%;height:100%}',
 })
 export class Icon {
+  private readonly extra = inject(EXTRA_ICONS, { optional: true });
   readonly name = input.required<string>();
-  readonly icon = computed(() => ({ name: this.name(), node: icons[this.name()] ?? Info }));
+  readonly icon = computed(() => ({
+    name: this.name(),
+    node: this.extra?.[this.name()] ?? icons[this.name()] ?? Info,
+  }));
 }

@@ -1,4 +1,7 @@
-import { IssueCode } from '../../shared/ui/issue-code';
+import { Notice } from '../../shared/ui/notice';
+import { Card } from '../../shared/ui/card';
+import { ViewMotion } from '../../shared/ui/view-motion';
+import { SearchField } from '../../shared/ui/search-field';
 import { safeMessage } from '../../core/api/safe-errors';
 import {
   ChangeDetectionStrategy,
@@ -37,7 +40,18 @@ import {
 
 @Component({
   selector: 'nx-settings-page',
-  imports: [IssueCode,RouterLink, Select, Icon, WorkspaceNavigation, StorageUsage, TokenUsageChart],
+  imports: [
+    Notice,
+    ViewMotion,
+    Card,
+    SearchField,
+    RouterLink,
+    Select,
+    Icon,
+    WorkspaceNavigation,
+    StorageUsage,
+    TokenUsageChart,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './settings-page.html',
 })
@@ -150,8 +164,7 @@ export class SettingsPage {
       if (results[1].status === 'fulfilled') this.models.set(results[1].value);
       if (results[2].status === 'fulfilled') this.policy.set(results[2].value);
     } catch (error) {
-      if (this.alive)
-        this.error.set(safeMessage(error));
+      if (this.alive) this.error.set(safeMessage(error));
     } finally {
       if (this.alive) this.loading.set(false);
     }

@@ -1,4 +1,17 @@
-import { IssueCode } from '../../shared/ui/issue-code';
+import { Notice } from '../../shared/ui/notice';
+import { EmptyState } from '../../shared/ui/empty-state';
+import { Card } from '../../shared/ui/card';
+import {
+  DataTable,
+  DataTableColumn,
+  DataTableRow,
+  TablePagination,
+  type TableColumn,
+} from '../../shared/ui/data-table';
+import { ViewSwitch } from '../../shared/ui/view-switch';
+import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { DialogMotion, ViewMotion } from '../../shared/ui/view-motion';
+import { Field } from '../../shared/ui/field';
 import { safeMessage } from '../../core/api/safe-errors';
 import {
   ChangeDetectionStrategy,
@@ -12,7 +25,8 @@ import {
 } from '@angular/core';
 import { FeaturePage } from '../../shared/ui/feature-page';
 import { Icon } from '../../shared/ui/icon';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import type {
   AdminCatalog,
@@ -27,7 +41,6 @@ import { AdminApi } from './admin-api';
 import { Checkbox } from '../../shared/ui/checkbox';
 import { SearchField } from '../../shared/ui/search-field';
 import { AdminUserInspector } from './admin-user-inspector';
-import { AdminAudit } from './admin-audit';
 import { RetrievalAdmin } from './retrieval-admin';
 import {
   formatDate,
@@ -42,6 +55,7 @@ import { FeatureSummary } from '../../shared/ui/feature-summary';
 import { groupFeatures, FEATURE_ICONS } from '../../core/feature-groups';
 import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
+import { StatusBadge } from '../../shared/ui/status-badge';
 
 import {
   ModelPolicyEditor,
@@ -72,14 +86,26 @@ interface Editor {
 }
 @Component({
   selector: 'nx-admin-page',
-  imports: [IssueCode,
+  imports: [
+    Notice,
+    Card,
+    EmptyState,
+    DataTable,
+    DataTableColumn,
+    DataTableRow,
+    TablePagination,
+    StatusBadge,
+    ViewSwitch,
+    CompactDialog,
+    DialogMotion,
+    ViewMotion,
+    Field,
     FeaturePage,
     Icon,
     RouterLink,
     Checkbox,
     SearchField,
     AdminUserInspector,
-    AdminAudit,
     RetrievalAdmin,
     PriceBook,
     FeatureSummary,
@@ -93,8 +119,12 @@ interface Editor {
 export class AdminPage {
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(AdminApi);
+  private readonly router = inject(Router);
+  private readonly prices = viewChild.required(PriceBook);
   readonly catalog = signal<AdminCatalog | null>(null);
   readonly users = signal<AdminUsers | null>(null);
+  readonly loadingUsers = signal(false);
+  private readonly userTable = viewChild<DataTable>('userTable');
   readonly inspected = signal<AdminUser | null>(null);
   readonly usage = signal<AdminUsage | null>(null);
   readonly loading = signal(true);
@@ -108,6 +138,10 @@ export class AdminPage {
     { id: 'models', name: 'AI 模型' },
     { id: 'storage', name: '附件容量' },
   ];
+  readonly groupViewOptions = this.groupSections.map((item) => ({
+    value: item.id,
+    label: item.name,
+  }));
   readonly search = signal('');
   readonly editor = signal<Editor | null>(null);
   readonly saving = signal(false);
@@ -123,9 +157,58 @@ export class AdminPage {
     { id: 'roles', name: '角色' },
     { id: 'groups', name: '功能群組與模型' },
     { id: 'features', name: '功能' },
-    { id: 'audit', name: '異動稽核' },
     { id: 'usage', name: '平台用量' },
     { id: 'retrieval', name: '知識檢索' },
+  ];
+  readonly navigationGroups = [
+    { label: '帳號與授權', ids: ['users', 'roles', 'groups', 'features'] },
+    { label: '用量與檢索', ids: ['usage', 'retrieval'] },
+  ].map((group) => ({
+    label: group.label,
+    options: this.tabs
+      .filter((tab) => group.ids.includes(tab.id))
+      .map((tab) => ({ value: tab.id, label: tab.name })),
+  }));
+  readonly managementTools = computed<MenuAction[]>(() => [
+    ...(this.session.has('audit')
+      ? [{ id: 'audit', label: this.session.featureName('audit'), icon: 'audit' }]
+      : []),
+    ...(this.session.has('monitoring')
+      ? [{ id: 'monitoring', label: this.session.featureName('monitoring'), icon: 'activity' }]
+      : []),
+    ...(this.session.has('logs.query')
+      ? [{ id: 'logs', label: this.session.featureName('logs.query'), icon: 'logs' }]
+      : []),
+    ...(this.session.has('admin')
+      ? [
+          { id: 'dashboard', label: '用量與費用總覽', icon: 'chart' },
+          { id: 'prices', label: '模型與工具價格', icon: 'money' },
+          { id: 'design', label: '介面元件', icon: 'sliders' },
+        ]
+      : []),
+  ]);
+  managementAction(action: string) {
+    if (!this.managementTools().some((item) => item.id === action)) return;
+    if (action === 'prices') this.prices().open();
+    else
+      void this.router.navigateByUrl(
+        (
+          {
+            audit: '/admin/audit',
+            monitoring: '/admin/monitoring',
+            logs: '/admin/logs',
+            dashboard: '/dashboard?scope=platform',
+            design: '/design',
+          } as Record<string, string>
+        )[action],
+      );
+  }
+  readonly userColumns: TableColumn[] = [
+    { id: 'name', label: '使用者', hideable: false },
+    { id: 'authentication', label: '登入與狀態' },
+    { id: 'roles', label: '角色' },
+    { id: 'usage', label: '30 天用量' },
+    { id: 'storage', label: '原檔容量' },
   ];
   readonly featureIcons = FEATURE_ICONS;
   readonly usageModelName = formatModelDisplayName;
@@ -178,6 +261,13 @@ export class AdminPage {
   private alive = true;
   private timer?: ReturnType<typeof setTimeout>;
   constructor() {
+    inject(ActivatedRoute)
+      .queryParamMap.pipe(takeUntilDestroyed())
+      .subscribe((params) => {
+        const tab = params.get('tab') || 'users';
+        if (this.tabs.some((item) => item.id === tab) && tab !== this.tab())
+          void this.selectTab(tab, false);
+      });
     void this.load();
     inject(DestroyRef).onDestroy(() => {
       this.alive = false;
@@ -205,8 +295,13 @@ export class AdminPage {
       if (this.alive) this.loading.set(false);
     }
   }
-  async selectTab(id: string) {
+  async selectTab(id: string, updateRoute = true) {
     this.tab.set(id);
+    if (updateRoute)
+      void this.router.navigate([], {
+        queryParams: { tab: id, category: null, traceId: null, search: null },
+        queryParamsHandling: 'merge',
+      });
     this.error.set('');
     try {
       if (id === 'usage') {
@@ -219,15 +314,23 @@ export class AdminPage {
   }
   async loadUsers(offset = 0) {
     const version = ++this.version;
+    this.loadingUsers.set(true);
     try {
       const users = await this.api.users(this.search(), offset);
-      if (this.alive && version === this.version) this.users.set(users);
+      if (this.alive && version === this.version) {
+        this.users.set(users);
+        this.userTable()?.resetScroll();
+      }
     } catch (error) {
       if (this.alive && version === this.version) this.error.set(this.message(error));
+    } finally {
+      if (this.alive && version === this.version) this.loadingUsers.set(false);
     }
   }
   searchChanged(value: string) {
     this.search.set(value);
+    ++this.version;
+    this.loadingUsers.set(true);
     clearTimeout(this.timer);
     this.timer = setTimeout(() => void this.loadUsers(), 250);
   }

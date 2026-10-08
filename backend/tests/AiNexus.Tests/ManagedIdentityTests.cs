@@ -6,6 +6,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Administration;
 using AiNexus.Features.Projects;
+using AiNexus.Features.Operations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;

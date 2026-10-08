@@ -1,4 +1,6 @@
-import { IssueCode } from '../../shared/ui/issue-code';
+import { Notice } from '../../shared/ui/notice';
+import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { EmptyState } from '../../shared/ui/empty-state';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -17,7 +19,7 @@ import { SearchField } from '../../shared/ui/search-field';
 
 @Component({
   selector: 'nx-library-picker',
-  imports: [IssueCode,FileBrowser, Icon, SearchField],
+  imports: [Notice, CompactDialog, FileBrowser, Icon, SearchField, EmptyState],
   providers: [ViewScope, FileLibraryStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<button
@@ -33,7 +35,12 @@ import { SearchField } from '../../shared/ui/search-field';
         {{ label() }}
       }
     </button>
-    <dialog #dialog class="platform-dialog file-picker-dialog" aria-label="從檔案庫選取">
+    <dialog
+      nxCompactDialog
+      #dialog
+      class="platform-dialog file-picker-dialog"
+      aria-label="從檔案庫選取"
+    >
       <div class="dialog-scroll">
         <div class="dialog-heading">
           <div>
@@ -51,14 +58,16 @@ import { SearchField } from '../../shared/ui/search-field';
           (valueChange)="store.find($event)"
         />
         @if (store.error()) {
-          <p class="error-banner" role="alert">{{ store.error() }}<nx-issue-code [message]="store.error()" /></p>
+          <nx-notice tone="danger" [message]="store.error()" />
         }
         @if (store.loading()) {
           <p role="status" class="form-note">正在載入檔案…</p>
         } @else if (!store.items().length) {
-          <p class="empty-state">
-            沒有符合的檔案。已送出的對話附件與上傳至知識庫的原檔都會保存在這裡。
-          </p>
+          <nx-empty-state
+            ><p>
+              沒有符合的檔案。已送出的對話附件與上傳至知識庫的原檔都會保存在這裡。
+            </p></nx-empty-state
+          >
         } @else {
           <nx-file-browser
             [items]="store.items()"

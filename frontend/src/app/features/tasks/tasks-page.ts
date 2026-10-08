@@ -1,11 +1,16 @@
+import { Notice } from '../../shared/ui/notice';
+import { EmptyState } from '../../shared/ui/empty-state';
+import { Card } from '../../shared/ui/card';
+import { FilterPanel } from '../../shared/ui/filter-panel';
+import { ViewSwitch } from '../../shared/ui/view-switch';
 import { ClientValidationError } from '../../core/api/safe-errors';
-import { IssueCode } from '../../shared/ui/issue-code';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import type { Job } from '../../core/api/types';
 import { ViewScope } from '../../shared/browser/view-scope';
+import { formatDate } from '../../shared/browser/format';
 import { FeaturePage } from '../../shared/ui/feature-page';
 import { Icon } from '../../shared/ui/icon';
 import { JobProgress } from '../../shared/ui/job-progress';
@@ -14,7 +19,18 @@ import { JobsApi } from './jobs-api';
 
 @Component({
   selector: 'nx-tasks-page',
-  imports: [IssueCode,FeaturePage, Icon, JobProgress, RouterLink, ResourceTarget],
+  imports: [
+    Notice,
+    Card,
+    EmptyState,
+    FilterPanel,
+    ViewSwitch,
+    FeaturePage,
+    Icon,
+    JobProgress,
+    RouterLink,
+    ResourceTarget,
+  ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<nx-feature-page
@@ -25,22 +41,19 @@ import { JobsApi } from './jobs-api';
       <nx-icon name="repeat" />重新整理
     </button>
     @if (error()) {
-      <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+      <nx-notice tone="danger" [message]="error()" />
     }
-    <div class="page-tabs" aria-label="任務篩選">
-      @for (item of filters; track item.id) {
-        <button
-          [attr.aria-current]="filter() === item.id ? 'page' : null"
-          (click)="filter.set(item.id)"
-        >
-          {{ item.name }}
-        </button>
-      }
-    </div>
+    <nx-filter-panel
+      ><nx-view-switch
+        label="任務篩選"
+        [options]="filterOptions"
+        [value]="filter()"
+        (valueChange)="filter.set($event)"
+    /></nx-filter-panel>
     @if (loading()) {
       <p role="status" class="form-note">正在載入任務…</p>
     } @else if (!visible().length) {
-      <div class="empty-state">
+      <nx-empty-state>
         <nx-icon name="check" />
         <h2>{{ filter() === 'active' ? '目前沒有處理中的任務' : '這裡尚無任務' }}</h2>
         <p>加入知識庫文件或執行評測後，即可在這裡追蹤。</p>
@@ -49,11 +62,12 @@ import { JobsApi } from './jobs-api';
             >前往{{ session.featureName('knowledge') }}</a
           >
         }
-      </div>
+      </nx-empty-state>
     } @else {
       <div class="job-list">
         @for (job of visible(); track job.id) {
           <article
+            nxCard
             class="job-card"
             [id]="'job-' + job.id"
             [class.current]="target() === job.id"
@@ -125,6 +139,7 @@ export class TasksPage {
     { id: 'attention', name: '需要處理' },
     { id: 'completed', name: '已完成' },
   ];
+  readonly filterOptions = this.filters.map((item) => ({ value: item.id, label: item.name }));
   readonly visible = computed(() =>
     this.jobs().filter(
       (x) =>
@@ -217,9 +232,5 @@ export class TasksPage {
       )[value] || '背景處理'
     );
   }
-  date(value: string) {
-    return new Intl.DateTimeFormat('zh-TW', { dateStyle: 'short', timeStyle: 'short' }).format(
-      new Date(value),
-    );
-  }
+  readonly date = formatDate;
 }

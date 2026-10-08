@@ -1,5 +1,10 @@
+import { Notice } from '../../shared/ui/notice';
+import { EmptyState } from '../../shared/ui/empty-state';
+import { Card } from '../../shared/ui/card';
+import { SearchField } from '../../shared/ui/search-field';
+import { Field } from '../../shared/ui/field';
+import { ViewSwitch } from '../../shared/ui/view-switch';
 import { ClientValidationError } from '../../core/api/safe-errors';
-import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -22,13 +27,21 @@ import { ResourceSharing } from '../../shared/ui/resource-sharing';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { MarkdownView } from '../../shared/ui/markdown-view';
 import { downloadBlob } from '../../shared/browser/download';
+import { formatDate } from '../../shared/browser/format';
 import { ArtifactsApi } from './artifacts-api';
 import { TextTools } from './text-tools';
+import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
 import { ShareDialog } from '../sharing/share-dialog';
 
 @Component({
   selector: 'nx-artifacts-page',
-  imports: [IssueCode,
+  imports: [
+    Notice,
+    ViewSwitch,
+    EmptyState,
+    Card,
+    SearchField,
+    Field,
     FeaturePage,
     Icon,
     Select,
@@ -36,13 +49,15 @@ import { ShareDialog } from '../sharing/share-dialog';
     ConfirmDialog,
     TextTools,
     RouterLink,
-    MarkdownView, ShareDialog,
+    MarkdownView,
+    ShareDialog,
   ],
-  providers: [ViewScope],
+  providers: [ViewScope, TEXT_ACTION_ICON_PROVIDER],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './artifacts-page.html',
 })
 export class ArtifactsPage {
+  readonly textActions = TEXT_ACTIONS;
   private readonly api = inject(ArtifactsApi);
   private readonly scope = inject(ViewScope);
   private readonly route = inject(ActivatedRoute);
@@ -82,11 +97,20 @@ export class ArtifactsPage {
       this.document()?.resource.canEdit &&
       (this.document()?.version === this.document()?.currentVersion || this.restoring()),
   );
+  readonly modeOptions = computed(() => [
+    { value: 'read', label: '閱讀' },
+    ...(this.editable()
+      ? [
+          { value: 'edit', label: '編輯' },
+          { value: 'split', label: '並排預覽' },
+        ]
+      : []),
+  ]);
   readonly choices = computed(() =>
     this.revisions().map((x) => ({
       value: String(x.version),
       label: `版本 ${x.version}`,
-      description: `${x.author} · ${new Intl.DateTimeFormat('zh-TW', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(x.createdAt))}`,
+      description: `${x.author} · ${formatDate(x.createdAt)}`,
     })),
   );
   private version = 0;

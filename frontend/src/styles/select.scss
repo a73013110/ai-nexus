@@ -9,13 +9,13 @@ nx-select {
   gap: var(--p-space-3);
   width: 100%;
   min-height: var(--button-target);
-  padding: var(--p-space-2) var(--p-space-3);
+  padding: var(--control-padding-block) var(--control-padding-inline);
   border: 1px solid var(--line);
   border-radius: var(--p-radius-md);
   background: var(--surface);
   color: var(--ink);
   text-align: left;
-  font-size: var(--text-ui);
+  font-size: var(--control-font-size);
 }
 .select-trigger > span {
   overflow: hidden;
@@ -58,7 +58,7 @@ nx-select {
   width: 100%;
   min-height: var(--button-target);
   text-align: left;
-  padding: var(--p-space-2) var(--p-space-3);
+  padding: var(--control-padding-block) var(--control-padding-inline);
   border-radius: var(--p-radius-sm);
   color: var(--ink);
 }
@@ -75,7 +75,7 @@ nx-select {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-weight: 500;
-  font-size: var(--text-ui);
+  font-size: var(--control-font-size);
 }
 .select-option > span {
   min-width: 0;

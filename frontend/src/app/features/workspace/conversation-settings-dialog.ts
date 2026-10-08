@@ -1,4 +1,6 @@
-import { IssueCode } from '../../shared/ui/issue-code';
+import { Notice } from '../../shared/ui/notice';
+import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { Field } from '../../shared/ui/field';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -19,10 +21,11 @@ import { ChatStore } from '../chat/chat-store';
 
 @Component({
   selector: 'nx-conversation-settings',
-  imports: [IssueCode,Icon, FormField, Select],
+  imports: [Notice, CompactDialog, Field, Icon, FormField, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <dialog
+    nxCompactDialog
     #dialog
     class="workspace-dialog settings-dialog"
     aria-labelledby="settings-title"
@@ -47,6 +50,7 @@ import { ChatStore } from '../chat/chat-store';
         </div>
         <label for="conversation-instruction">對話指令</label
         ><textarea
+          nxField
           id="conversation-instruction"
           [formField]="fields.instruction"
           rows="5"
@@ -55,6 +59,7 @@ import { ChatStore } from '../chat/chat-store';
         <p class="panel-note">套用至這段對話後續的提問；已生成的回答與其他對話保留原樣。</p>
         <label for="conversation-labels">標籤</label
         ><input
+          nxField
           id="conversation-labels"
           [formField]="fields.labels"
           placeholder="工作, 企劃, 會議"
@@ -72,7 +77,7 @@ import { ChatStore } from '../chat/chat-store';
           <p class="panel-note">變更後立即儲存。加入專案後，後續提問會使用共用指示與參考文件。</p>
         }
         @if (error()) {
-          <p class="inline-error" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+          <nx-notice tone="danger" [message]="error()" />
         }
         <div class="dialog-actions">
           <button
