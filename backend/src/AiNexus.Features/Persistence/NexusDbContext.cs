@@ -49,7 +49,8 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         BackgroundJobConfiguration.Configure(model);
         model.ApplyConfiguration(new AiNexus.Features.Notifications.WorkspaceNotificationConfiguration());
         ModelInvocationConfiguration.Configure(model);
-        AiNexus.Features.Billing.BillingConfiguration.Configure(model);
+        model.ApplyConfiguration(new AiNexus.Features.Billing.ModelPriceConfiguration());
+        model.ApplyConfiguration(new AiNexus.Features.Billing.ModelChargeConfiguration());
         model.ApplyConfiguration(new AiNexus.Features.WebSearch.WebSearchRecordConfiguration());
         AiNexus.Features.Repositories.RepositoryConfiguration.Configure(model);
         AiNexus.Features.Repositories.RepositoryReviewConfiguration.Configure(model);

@@ -10,7 +10,6 @@ AiNexus.Features.Artifacts.SaveArtifactRequest
 AiNexus.Features.Artifacts.TransformTextRequest
 AiNexus.Features.Attachments.AttachmentStorageLimitRequest
 AiNexus.Features.Attachments.RenameLibraryFileRequest
-AiNexus.Features.Billing.PriceRequest
 AiNexus.Features.Collaboration.ResourceAclRequest
 AiNexus.Features.Conversations.ConversationBackup
 AiNexus.Features.Conversations.ConversationSettingsRequest

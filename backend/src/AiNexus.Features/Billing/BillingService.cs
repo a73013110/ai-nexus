@@ -48,29 +48,7 @@ public sealed class BillingService(NexusDbContext db, ModelPresentation presenta
         if (charge is null) return;
         charge.FinishedAt ??= DateTimeOffset.UtcNow; ChargeCalculator.Finalize(charge, outcome);
     }
-    public async Task<IReadOnlyList<PriceDto>> PricesAsync(CancellationToken ct) =>
-        (await db.Set<ModelPrice>().AsNoTracking().OrderByDescending(x => x.EffectiveAt).Take(500).ToListAsync(ct)).Select(Describe).ToArray();
-    public async Task<PriceDto> AddPriceAsync(Guid actor, PriceRequest body, CancellationToken ct)
-    {
-        var now = DateTimeOffset.UtcNow;
-        if (body.Provider is not ("google" or "ollama" or "searxng" or "brave")
-            || string.IsNullOrEmpty(body.ModelId) || body.ModelId.Length > 160 || body.ModelId.Any(c => !char.IsAsciiLetterOrDigit(c) && c is not '-' and not '_' and not ':' and not '.' and not '/')
-            || body.Currency is null || body.Currency.Length != 3 || !body.Currency.All(char.IsAsciiLetterUpper) || body.Kind is not ("api" or "internal" or "free")
-            || body.RequestCharge is not ("completed" or "attempted") || body.Note is null || body.Note.Length > 500
-            || body.EffectiveAt < now.AddMinutes(-5) || body.EffectiveAt > now.AddDays(366)
-            || new[] { body.InputPerMillion, body.CachedInputPerMillion, body.OutputPerMillion, body.PerRequest }.Any(x => x < 0 || x > 100000 || decimal.Round(x, 8) != x)
-            || body.CachedInputPerMillion > body.InputPerMillion
-            || (body.Kind == "free" && new[] { body.InputPerMillion, body.CachedInputPerMillion, body.OutputPerMillion, body.PerRequest }.Any(x => x != 0)))
-            throw new ApiException(400, "invalid_price", "請檢查模型與工具價格、幣別、生效時間與計費方式。新價格只能由現在起生效。");
-        if (await db.Set<ModelPrice>().AnyAsync(x => x.Provider == body.Provider && x.ModelId == body.ModelId && x.EffectiveAt == body.EffectiveAt, ct))
-            throw new ApiException(409, "price_exists", "此生效時間已有價格版本，請選擇新的時間。");
-        var price = new ModelPrice { Provider = body.Provider, ModelId = body.ModelId, Currency = body.Currency, Kind = body.Kind,
-            InputPerMillion = body.InputPerMillion, CachedInputPerMillion = body.CachedInputPerMillion, OutputPerMillion = body.OutputPerMillion,
-            PerRequest = body.PerRequest, RequestCharge = body.RequestCharge, EffectiveAt = body.EffectiveAt.ToUniversalTime(), Note = body.Note.Trim(), CreatedBy = actor };
-        db.Add(price); db.AuditEvents.Add(new AuditEvent { OwnerId = actor, ResourceId = price.Id, Action = "billing.price.created", Result = "created" });
-        await db.SaveChangesAsync(ct); return Describe(price);
-    }
-    private PriceDto Describe(ModelPrice p) => new(p.Id, p.Provider, p.ModelId, p.Currency, p.Kind,
+    public PriceDto Describe(ModelPrice p) => new(p.Id, p.Provider, p.ModelId, p.Currency, p.Kind,
         p.InputPerMillion, p.CachedInputPerMillion, p.OutputPerMillion, p.PerRequest, p.RequestCharge, p.EffectiveAt, p.Note,
         presentation.DisplayName(p.ModelId, administrator: true, provider: p.Provider));
 }
