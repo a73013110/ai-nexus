@@ -35,6 +35,11 @@ public static class RunEventsEndpoint
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
+    // The server-sent event stream keeps its original mapping; it resolves the user itself.
+    public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
+        .MapGet("/runs/{id:guid}/events", async (Guid id, long? after, HttpContext http, CurrentUser current, RunService service, NexusDbContext db, SubscriptionLimits limits, CancellationToken ct) =>
+            await StreamAsync(http, (await current.GetAsync(ct)).Id, id, after, service, db, limits, ct)).WithName("RunEvents").Produces<RunEventDto>(200, "text/event-stream");
+
     public static async Task StreamAsync(HttpContext http, Guid owner, Guid id, long? after, RunService runs, NexusDbContext db, SubscriptionLimits limits, CancellationToken ct)
     {
         var run = await runs.OwnedAsync(owner, id, ct);

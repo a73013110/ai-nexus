@@ -1,33 +1,18 @@
 using System.Text;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Administration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Inference;
 
-public sealed class ModelInvocation
-{
-    public Guid Id { get; set; } = Guid.NewGuid();
-    public Guid OwnerId { get; set; }
-    public string Kind { get; set; } = "";
-    public string ModelId { get; set; } = "";
-    public string Provider { get; set; } = "google";
-    public long? DurationMilliseconds { get; set; }
-    public string Status { get; set; } = "running";
-    public long ReservedTokens { get; set; }
-    public long? InputTokens { get; set; }
-    public long? OutputTokens { get; set; }
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-}
 public sealed class ModelQuotaLock { public SemaphoreSlim Gate { get; } = new(1, 1); }
 public sealed record ModelTaskResult(string Text, bool Truncated, long? InputTokens, long? OutputTokens);
 
 // OCR, paragraph transformations and evaluations share approval, quota and usage accounting.
 // Database locks are released before the provider request starts.
-public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog catalog, InferenceRouter router, ModelQuotaLock writes, IOptions<InferenceOptions> options)
+public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog catalog, InferenceRouter router, ModelQuotaLock writes, IOptions<InferenceOptions> options, TimeProvider clock)
 {
     public const int MaxPromptCharacters = 16000;
     public const int FramingTokenReserve = 160;
@@ -46,7 +31,7 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
         // Reject invalid input before reserving quota or recording a model invocation.
         if (Encoding.UTF8.GetByteCount(prompt + instruction) + (images?.Sum(x => x.EstimatedTokens) ?? 0) + outputBudget + FramingTokenReserve > profile.ContextTokens)
             throw new ApiException(400, "context_budget_exceeded", "此段內容超過模型上下文，請縮小範圍或調整系統模型。");
-        var call = new ModelInvocation { OwnerId = owner, Kind = kind, ModelId = profile.Id, Provider = profile.Provider };
+        var call = new ModelInvocation { OwnerId = owner, Kind = kind, ModelId = profile.Id, Provider = profile.Provider, CreatedAt = clock.GetUtcNow() };
         var parameters = new GenerationParameters(profile.ContextTokens, outputBudget, ModelTaskConfiguration.Temperature, instruction, profile.DefaultReasoningEffort, profile.ReasoningControl, profile.SupportsImages);
         var messages = new[] { new InferenceMessage("system", instruction), new InferenceMessage("user", prompt, images) };
         var inputEstimate = ContextBuilder.Estimate(messages);
@@ -84,16 +69,6 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { call.Status = "cancelled"; throw; }
         catch (OperationCanceledException) { call.Status = "failed"; throw new ApiException(504, "model_timeout", "模型處理逾時，請稍後重試。"); }
         catch { call.Status = "failed"; throw; }
-        finally { call.DurationMilliseconds = RunTiming.Milliseconds(call.CreatedAt, DateTimeOffset.UtcNow); await billing.FinishAsync(call.Id, call.Status, CancellationToken.None); await db.SaveChangesAsync(CancellationToken.None); }
-    }
-}
-public static class ModelInvocationConfiguration
-{
-    public static void Configure(ModelBuilder model)
-    {
-        var item = model.Entity<ModelInvocation>(); item.ToTable("ModelInvocations", "inference"); item.HasKey(x => x.Id);
-        item.Property(x => x.Kind).HasMaxLength(32); item.Property(x => x.ModelId).HasMaxLength(160); item.Property(x => x.Status).HasMaxLength(16);
-        item.Property(x => x.Provider).HasMaxLength(32);
-        item.HasIndex(x => new { x.OwnerId, x.CreatedAt }); item.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
+        finally { call.DurationMilliseconds = RunTiming.Milliseconds(call.CreatedAt, clock.GetUtcNow()); await billing.FinishAsync(call.Id, call.Status, CancellationToken.None); await db.SaveChangesAsync(CancellationToken.None); }
     }
 }
