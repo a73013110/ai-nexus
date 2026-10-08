@@ -10050,6 +10050,9 @@ export interface components {
             status: number;
             code: string;
             issueCode: string;
+            errors?: null | {
+                [key: string]: string[];
+            };
         };
         SaveArtifactRequest: {
             title: string;

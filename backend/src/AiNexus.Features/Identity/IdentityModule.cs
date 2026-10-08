@@ -1,5 +1,4 @@
 using System.Threading.RateLimiting;
-using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Security;
@@ -53,5 +52,5 @@ public sealed class IdentityModule : IFeatureModule
     public static void MapPublicEndpoints(IEndpointRouteBuilder app) => app.MapNexusAuthentication();
 
     private static Task Problem(HttpContext http, int status, string code)
-        => Issues.WriteAsync(http, http.RequestServices.GetRequiredService<Issues>().Problem(new ApiException(status, code, "")));
+        => Problems.WriteAsync(http, status, code);
 }

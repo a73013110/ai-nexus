@@ -21,8 +21,8 @@ public static class PlatformServices
         services.AddCsrfProtection(builder.Environment, builder.Configuration);
         // Deny by default: endpoints opt into anonymous access explicitly.
         services.AddAuthorization(options => options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
-        services.AddRateLimiter(options => options.OnRejected = (context, _) =>
-            new ValueTask(Issues.WriteAsync(context.HttpContext, context.HttpContext.RequestServices.GetRequiredService<Issues>().Problem(new ApiException(429, "rate_limited", "")))));
+        services.AddNexusProblemDetails();
+        services.AddRateLimiter(options => options.OnRejected = (context, _) => new ValueTask(Problems.WriteAsync(context.HttpContext, 429, "rate_limited")));
         services.ConfigureHttpJsonOptions(options =>
         {
             options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict;

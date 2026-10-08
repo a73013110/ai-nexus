@@ -33,6 +33,7 @@ catch (Exception ex)
 if (await HostCommands.TryRunAsync(app)) return;
 
 app.UseMiddleware<DiagnosticRequestMiddleware>();
+app.UseStatusCodePages();
 app.UseTransportSecurity();
 app.UseDefaultFiles();
 app.UseStaticFiles();
