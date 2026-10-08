@@ -1,16 +1,17 @@
 using AiNexus.Platform.Http;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
+using AiNexus.Features.AccessControl;
 
 namespace AiNexus.Features.Quality;
 public static class QualityEndpoints
 {
     public static void MapQuality(this RouteGroupBuilder api)
     {
-        api.MapGet("/messages/{id:guid}/feedback", async (Guid id, CurrentUser u, QualityService s, CancellationToken ct) => Results.Ok(await s.FeedbackForAsync((await u.GetAsync(ct)).Id, id, ct))).RequireAuthorization("feature:chat").WithTags("Quality").Produces<FeedbackDto>();
-        api.MapPut("/messages/{id:guid}/feedback", async (Guid id, FeedbackRequest body, CurrentUser u, QualityService s, CancellationToken ct) => Results.Ok(await s.FeedbackAsync((await u.GetAsync(ct)).Id, id, body, ct))).RequireAuthorization("feature:chat").WithTags("Quality").Produces<FeedbackDto>();
+        api.MapGet("/messages/{id:guid}/feedback", async (Guid id, CurrentUser u, QualityService s, CancellationToken ct) => Results.Ok(await s.FeedbackForAsync((await u.GetAsync(ct)).Id, id, ct))).RequireAuthorization(Policies.Chat).WithTags("Quality").Produces<FeedbackDto>();
+        api.MapPut("/messages/{id:guid}/feedback", async (Guid id, FeedbackRequest body, CurrentUser u, QualityService s, CancellationToken ct) => Results.Ok(await s.FeedbackAsync((await u.GetAsync(ct)).Id, id, body, ct))).RequireAuthorization(Policies.Chat).WithTags("Quality").Produces<FeedbackDto>();
         var setLimit = RequestBodyLimits.ForJsonCharacters(QualityModule.MaxSetCharacters);
-        var routes = api.MapGroup("/quality").RequireAuthorization("feature:quality").WithTags("Quality");
+        var routes = api.MapGroup("/quality").RequireAuthorization(Policies.Quality).WithTags("Quality");
         routes.MapGet("/retrieval-evals", async (CurrentUser u, RetrievalEvaluationService s, HttpContext http, CancellationToken ct) => { http.Response.Headers.CacheControl = "private, no-store"; return Results.Ok(await s.ListAsync((await u.GetAsync(ct)).Id, ct)); }).Produces<IReadOnlyList<RetrievalEvaluationDto>>();
         routes.MapPost("/retrieval-evals", async (RetrievalEvaluationRequest body, CurrentUser u, RetrievalEvaluationService s, CancellationToken ct) => Results.Ok(await s.CreateAsync((await u.GetAsync(ct)).Id, body, ct))).Produces<RetrievalEvaluationDto>();
         routes.MapGet("/retrieval-evals/{id:guid}", async (Guid id, CurrentUser u, RetrievalEvaluationService s, HttpContext http, CancellationToken ct) => { http.Response.Headers.CacheControl = "private, no-store"; return Results.Ok(await s.ReportAsync((await u.GetAsync(ct)).Id, id, ct)); }).Produces<RetrievalReportDto>();

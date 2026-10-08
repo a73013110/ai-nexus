@@ -46,7 +46,7 @@ public static class BuiltInAccess
     public const string MemberRole = "member";
     public const string WorkspaceGroup = "workspace";
     public const string ChatFeature = "chat";
-    public const string ChatPolicy = "feature:chat";
+    public const string ChatPolicy = Policies.Prefix + ChatFeature;
 }
 
 public sealed record AccessItemDto(string Id, string Name);

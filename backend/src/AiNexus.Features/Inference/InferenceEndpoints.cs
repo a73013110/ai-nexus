@@ -13,7 +13,7 @@ public static class InferenceEndpoints
 {
     public static void MapInference(this RouteGroupBuilder root)
     {
-        var api = root.MapGroup("").RequireAuthorization(BuiltInAccess.ChatPolicy).WithTags("Inference");
+        var api = root.MapGroup("").RequireAuthorization(Policies.Chat).WithTags("Inference");
         api.MapGet("/models", async (ModelCatalog models, CurrentUser current, AiNexus.Features.Administration.ModelPolicyService policies, CancellationToken ct) =>
         {
             var catalog = await models.GetAsync(ct);

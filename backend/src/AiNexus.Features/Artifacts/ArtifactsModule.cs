@@ -18,8 +18,8 @@ public sealed class ArtifactsModule : IFeatureModule
         services.AddSingleton<PdfExportRenderer>();
         services.AddOptions<ExportOptions>().BindConfiguration("Exports").ValidateOnStart();
         services.AddSingleton<IValidateOptions<ExportOptions>, ExportOptionsValidator>();
-        services.AddFeaturePolicy("artifacts");
-        services.AddFeaturePolicy("feature:text", BuiltInAccess.ChatFeature, "artifacts");
+        services.AddFeaturePolicy(FeatureIds.Artifacts);
+        services.AddFeaturePolicy(Policies.Text, FeatureIds.Chat, FeatureIds.Artifacts);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api) => ArtifactEndpoints.MapArtifacts(api);

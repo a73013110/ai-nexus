@@ -17,7 +17,7 @@ public sealed class QualityModule : IFeatureModule
         services.AddScoped<RetrievalEvaluationService>();
         services.AddScoped<IBackgroundJobHandler, RetrievalEvaluationHandler>();
         services.AddScoped<IBackgroundJobHandler, EvaluationHandler>();
-        services.AddFeaturePolicy("quality");
+        services.AddFeaturePolicy(FeatureIds.Quality);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api) => QualityEndpoints.MapQuality(api);

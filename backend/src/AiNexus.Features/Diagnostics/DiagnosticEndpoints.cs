@@ -32,15 +32,15 @@ public static class DiagnosticEndpoints
 {
     public static void MapDiagnostics(this RouteGroupBuilder api)
     {
-        var logs = api.MapGroup("/admin/logs").RequireAuthorization("feature:" + DiagnosticConfiguration.Query).WithTags("System logs").RequireRateLimiting(DiagnosticsModule.QueryRateLimit);
+        var logs = api.MapGroup("/admin/logs").RequireAuthorization(DiagnosticConfiguration.QueryPolicy).WithTags("System logs").RequireRateLimiting(DiagnosticsModule.QueryRateLimit);
         logs.MapGet("", async ([AsParameters] DiagnosticFilter filter, DiagnosticQuery query, CancellationToken ct) => await query.ListAsync(filter, ct)).WithName("QuerySystemLogs").Produces<DiagnosticPage>();
         logs.MapGet("/health", async (DiagnosticQuery query, CancellationToken ct) => await query.HealthAsync(ct)).WithName("GetSystemLogHealth").Produces<DiagnosticHealthDto>();
         logs.MapGet("/{id:guid}", async (Guid id, DiagnosticQuery query, CancellationToken ct) => await query.DetailAsync(id, ct))
-            .RequireAuthorization("feature:" + DiagnosticConfiguration.Detail).WithName("GetSystemLogDetail").Produces<DiagnosticDetail>();
+            .RequireAuthorization(DiagnosticConfiguration.DetailPolicy).WithName("GetSystemLogDetail").Produces<DiagnosticDetail>();
         logs.MapGet("/export", async ([AsParameters] DiagnosticFilter filter, DiagnosticQuery query, HttpContext http, CancellationToken ct) => {
             http.Response.Headers.CacheControl = "no-store";
             return Results.File(Encoding.UTF8.GetBytes(await query.ExportAsync(filter, ct)), "text/csv; charset=utf-8", "ai-nexus-logs.csv");
-        }).RequireAuthorization("feature:" + DiagnosticConfiguration.Export).RequireRateLimiting(DiagnosticsModule.ExportRateLimit).WithName("ExportSystemLogs");
+        }).RequireAuthorization(DiagnosticConfiguration.ExportPolicy).RequireRateLimiting(DiagnosticsModule.ExportRateLimit).WithName("ExportSystemLogs");
         api.MapPost("/client-issues", async (ClientIssueRequest request, CurrentUser current, ClientIssueDeduplication dedup, ILogger<ClientIssueDeduplication> logger, CancellationToken ct) => {
             if (request.Kind is not ("exception" or "rejection") || request.Fingerprint is not { Length: 64 } || !request.Fingerprint.All(char.IsAsciiHexDigit))
                 throw new ApiException(400, "client_issue_invalid", "問題回報格式不正確。");

@@ -23,6 +23,19 @@ public sealed class EndpointConventionTests
         Assert.True(undeclared.Count == 0, "Endpoints without an explicit authorization decision: " + string.Join(", ", undeclared));
     }
 
+    // A misspelled policy name fails only at request time; catch it at build time instead.
+    [Fact]
+    public async Task EveryReferencedPolicyIsRegistered()
+    {
+        await using var factory = new NexusFactory();
+        _ = factory.CreateClient();
+        var provider = factory.Services.GetRequiredService<IAuthorizationPolicyProvider>();
+        var names = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints
+            .SelectMany(e => e.Metadata.GetOrderedMetadata<IAuthorizeData>()).Select(a => a.Policy).OfType<string>().Distinct().ToList();
+        Assert.NotEmpty(names);
+        foreach (var name in names) Assert.True(await provider.GetPolicyAsync(name) is not null, "Unregistered authorization policy: " + name);
+    }
+
     [Fact]
     public async Task OperationIdsAreUnique()
     {

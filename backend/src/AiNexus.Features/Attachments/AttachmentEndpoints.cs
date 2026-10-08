@@ -2,6 +2,7 @@ using AiNexus.Platform.Http;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
 using AiNexus.Features.Identity;
+using AiNexus.Features.AccessControl;
 
 namespace AiNexus.Features.Attachments;
 
@@ -10,7 +11,7 @@ public static class AttachmentEndpoints
     public static void MapAttachments(this RouteGroupBuilder api)
     {
         FileLibraryEndpoints.MapFileLibrary(api);
-        var routes = api.MapGroup("/attachments").RequireAuthorization("feature:attachments").WithTags("Attachments");
+        var routes = api.MapGroup("/attachments").RequireAuthorization(Policies.Attachments).WithTags("Attachments");
         routes.MapGet("/policy", (AttachmentService files) => Results.Ok(files.Policy)).WithName("AttachmentPolicy").Produces<AttachmentPolicyDto>();
         routes.MapGet("/storage", async (CurrentUser current, AttachmentQuota quota, CancellationToken ct) => Results.Ok(await quota.ForAsync((await current.GetAsync(ct)).Id, ct))).WithName("GetAttachmentStorage").Produces<AttachmentStorageDto>();
         // The application's header-based antiforgery middleware validates this upload as well.

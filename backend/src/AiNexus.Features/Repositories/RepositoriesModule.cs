@@ -17,7 +17,7 @@ public sealed class RepositoriesModule : IFeatureModule
         services.AddScoped<RepositoryReviewService>();
         services.AddScoped<IBackgroundJobHandler, RepositoryReviewHandler>();
         services.AddSingleton<RepositoryWriteLock>();
-        services.AddFeaturePolicy("repositories");
+        services.AddFeaturePolicy(FeatureIds.Repositories);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api) => RepositoryEndpoints.MapRepositories(api);

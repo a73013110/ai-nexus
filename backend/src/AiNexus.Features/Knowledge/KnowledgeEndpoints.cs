@@ -12,7 +12,7 @@ public static class KnowledgeEndpoints
 {
     public static void MapKnowledge(this RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/knowledge").RequireAuthorization("feature:knowledge").WithTags("Knowledge");
+        var routes = api.MapGroup("/knowledge").RequireAuthorization(Policies.Knowledge).WithTags("Knowledge");
         routes.MapPost("/collections/{id:guid}/text", async (Guid id, TextDocumentRequest body, CurrentUser current, TextDocumentService service, CancellationToken ct) =>
             await service.CreateAsync((await current.GetAsync(ct)).Id, id, body, ct)).WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocumentService.MaxCharacters)).WithName("CreateTextDocument").Produces<DocumentDto>();
         routes.MapGet("/collections", async (CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.CollectionsAsync((await current.GetAsync(ct)).Id, ct)).WithName("ListKnowledgeCollections").Produces<IReadOnlyList<CollectionDto>>();
@@ -24,7 +24,7 @@ public static class KnowledgeEndpoints
         routes.MapGet("/collections/{id:guid}/access", async (Guid id, CurrentUser current, ResourceAccess access, CancellationToken ct) => await access.AclAsync((await current.GetAsync(ct)).Id, id, "knowledge", ct)).WithName("GetKnowledgeAccess").Produces<ResourceAclDto>();
         routes.MapPut("/collections/{id:guid}/access", async (Guid id, ResourceAclRequest request, CurrentUser current, ResourceAccess access, CancellationToken ct) => { await access.SetAclAsync((await current.GetAsync(ct)).Id, id, "knowledge", request, ct); return Results.NoContent(); }).WithName("SaveKnowledgeAccess").Produces(204);
         routes.MapPost("/search", async (KnowledgeSearchRequest request, CurrentUser current, KnowledgeRetrieval search, CancellationToken ct) => await search.SearchAsync((await current.GetAsync(ct)).Id, request, ct)).WithName("SearchKnowledge").Produces<KnowledgeSearchDto>();
-        var selection = api.MapGroup("/conversations/{id:guid}/knowledge").RequireAuthorization("feature:knowledge").RequireAuthorization(BuiltInAccess.ChatPolicy).WithTags("Knowledge");
+        var selection = api.MapGroup("/conversations/{id:guid}/knowledge").RequireAuthorization(Policies.Knowledge).RequireAuthorization(Policies.Chat).WithTags("Knowledge");
         selection.MapGet("", async (Guid id, CurrentUser current, KnowledgeRetrieval search, CancellationToken ct) => await search.SelectionAsync((await current.GetAsync(ct)).Id, id, ct)).WithName("ConversationKnowledge").Produces<KnowledgeSelectionDto>();
         selection.MapPut("", async (Guid id, KnowledgeSelectionDto request, CurrentUser current, KnowledgeRetrieval search, CancellationToken ct) => { await search.SetSelectionAsync((await current.GetAsync(ct)).Id, id, request, ct); return Results.NoContent(); }).WithName("SaveConversationKnowledge").Produces(204);
         var documents = api.MapGroup("/documents").WithTags("Documents");
@@ -42,7 +42,7 @@ public static class KnowledgeEndpoints
         }).WithName("DocumentOriginal");
         documents.MapDelete("/{id:guid}", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => { await docs.DeleteAsync((await current.GetAsync(ct)).Id, id, ct); return Results.NoContent(); }).WithName("DeleteDocument").Produces(204);
         documents.MapPost("/{id:guid}/reindex", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.ReindexAsync((await current.GetAsync(ct)).Id, id, ct)).WithName("ReindexDocument").Produces<DocumentDto>();
-        api.MapPost("/attachments/{id:guid}/document", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.AddAsync((await current.GetAsync(ct)).Id, null, id, ct)).RequireAuthorization("feature:attachments").WithName("ReadAttachmentDocument").Produces<DocumentDto>();
+        api.MapPost("/attachments/{id:guid}/document", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.AddAsync((await current.GetAsync(ct)).Id, null, id, ct)).RequireAuthorization(Policies.Attachments).WithName("ReadAttachmentDocument").Produces<DocumentDto>();
         api.MapGet("/directory", async (string search, CurrentUser current, NexusDbContext db, CancellationToken ct) =>
         {
             await current.GetAsync(ct);

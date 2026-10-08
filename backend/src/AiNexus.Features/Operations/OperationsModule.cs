@@ -10,7 +10,7 @@ public sealed class OperationsModule : IFeatureModule
         builder.Services.AddScoped<JobService>();
         builder.Services.AddHostedService<BackgroundJobWorker>();
         builder.Services.AddHostedService<EventRetentionWorker>();
-        builder.Services.AddFeaturePolicy("tasks");
+        builder.Services.AddFeaturePolicy(FeatureIds.Tasks);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)

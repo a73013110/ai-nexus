@@ -13,7 +13,7 @@ public sealed class LibraryModule : IFeatureModule
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/prompt-templates").RequireAuthorization(BuiltInAccess.ChatPolicy).WithTags("PromptLibrary")
+        var routes = api.MapGroup("/prompt-templates").RequireAuthorization(Policies.Chat).WithTags("PromptLibrary")
             .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(MaxTemplateCharacters));
         ListPromptTemplates.Map(routes);
         SavePromptTemplate.Map(routes);

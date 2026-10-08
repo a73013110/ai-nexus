@@ -1,11 +1,12 @@
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Security;
+using AiNexus.Features.AccessControl;
 namespace AiNexus.Features.Sharing;
 public static class ShareEndpoints
 {
     public static void MapSharing(this RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/shares").RequireAuthorization("feature:shared").WithTags("Sharing");
+        var routes = api.MapGroup("/shares").RequireAuthorization(Policies.Shared).WithTags("Sharing");
         routes.MapGet("", async (bool? sent, CurrentUser u, ShareService s, CancellationToken ct) => Results.Ok(await s.ListAsync((await u.GetAsync(ct)).Id, sent ?? false, ct))).Produces<IReadOnlyList<ShareDto>>();
         routes.MapPost("", async (CreateShareRequest body, CurrentUser u, ShareService s, CancellationToken ct) => Results.Ok(await s.CreateAsync((await u.GetAsync(ct)).Id, body, ct))).Produces<ShareDto>();
         routes.MapGet("/{id:guid}", async (Guid id, CurrentUser u, ShareService s, CancellationToken ct) => Results.Ok(await s.ReadAsync((await u.GetAsync(ct)).Id, id, ct))).Produces<SharedContentDto>();

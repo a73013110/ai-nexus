@@ -53,7 +53,7 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddControlledHttpClient(RetrievalModelsClient);
         services.AddScoped<IBackgroundJobHandler, DocumentIngestHandler>();
         services.AddScoped<IBackgroundJobHandler, DocumentEmbeddingHandler>();
-        services.AddFeaturePolicy("knowledge");
+        services.AddFeaturePolicy(FeatureIds.Knowledge);
     }
 
     public static void MapEndpoints(RouteGroupBuilder api) => KnowledgeEndpoints.MapKnowledge(api);

@@ -16,7 +16,7 @@ public sealed class WebSearchModule : IFeatureModule
 
     public static void MapEndpoints(RouteGroupBuilder api)
         => api.MapGet("/tools/web-search", (WebSearchService service) => Results.Ok(service.Status))
-            .RequireAuthorization(BuiltInAccess.ChatPolicy).WithName("GetWebSearchStatus").Produces<WebSearchStatusDto>();
+            .RequireAuthorization(Policies.Chat).WithName("GetWebSearchStatus").Produces<WebSearchStatusDto>();
 }
 
 internal sealed class WebSearchOptionsValidator : IValidateOptions<WebSearchOptions>
