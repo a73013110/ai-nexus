@@ -1,3 +1,4 @@
+using AiNexus.Platform.Http;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.AccessControl;
@@ -13,7 +14,7 @@ public static class KnowledgeEndpoints
     {
         var routes = api.MapGroup("/knowledge").RequireAuthorization("feature:knowledge").WithTags("Knowledge");
         routes.MapPost("/collections/{id:guid}/text", async (Guid id, TextDocumentRequest body, CurrentUser current, TextDocumentService service, CancellationToken ct) =>
-            await service.CreateAsync((await current.GetAsync(ct)).Id, id, body, ct)).WithName("CreateTextDocument").Produces<DocumentDto>();
+            await service.CreateAsync((await current.GetAsync(ct)).Id, id, body, ct)).WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocumentService.MaxCharacters)).WithName("CreateTextDocument").Produces<DocumentDto>();
         routes.MapGet("/collections", async (CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.CollectionsAsync((await current.GetAsync(ct)).Id, ct)).WithName("ListKnowledgeCollections").Produces<IReadOnlyList<CollectionDto>>();
         routes.MapPost("/collections", async (CollectionRequest request, CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.CreateCollectionAsync((await current.GetAsync(ct)).Id, request, ct)).WithName("CreateKnowledgeCollection").Produces<CollectionDto>();
         routes.MapPut("/collections/{id:guid}", async (Guid id, CollectionRequest request, CurrentUser current, DocumentService docs, CancellationToken ct) => { await docs.UpdateCollectionAsync((await current.GetAsync(ct)).Id, id, request, ct); return Results.NoContent(); }).WithName("UpdateKnowledgeCollection").Produces(204);
@@ -28,9 +29,9 @@ public static class KnowledgeEndpoints
         selection.MapPut("", async (Guid id, KnowledgeSelectionDto request, CurrentUser current, KnowledgeRetrieval search, CancellationToken ct) => { await search.SetSelectionAsync((await current.GetAsync(ct)).Id, id, request, ct); return Results.NoContent(); }).WithName("SaveConversationKnowledge").Produces(204);
         var documents = api.MapGroup("/documents").WithTags("Documents");
         documents.MapGet("/{id:guid}/text", async (Guid id, CurrentUser current, TextDocumentService service, CancellationToken ct) =>
-            await service.ReadAsync((await current.GetAsync(ct)).Id, id, ct)).WithName("ReadTextDocument").Produces<TextDocumentDto>();
+            await service.ReadAsync((await current.GetAsync(ct)).Id, id, ct)).WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocumentService.MaxCharacters)).WithName("ReadTextDocument").Produces<TextDocumentDto>();
         documents.MapPut("/{id:guid}/text", async (Guid id, TextDocumentRequest body, CurrentUser current, TextDocumentService service, CancellationToken ct) =>
-            await service.UpdateAsync((await current.GetAsync(ct)).Id, id, body, ct)).WithName("UpdateTextDocument").Produces<DocumentDto>();
+            await service.UpdateAsync((await current.GetAsync(ct)).Id, id, body, ct)).WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocumentService.MaxCharacters)).WithName("UpdateTextDocument").Produces<DocumentDto>();
         documents.MapGet("/{id:guid}", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.DetailAsync((await current.GetAsync(ct)).Id, id, ct)).WithName("GetDocument").Produces<DocumentDto>();
         documents.MapGet("/{id:guid}/pages", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.PagesAsync((await current.GetAsync(ct)).Id, id, ct)).WithName("DocumentPages").Produces<IReadOnlyList<DocumentPageDto>>();
         documents.MapGet("/{id:guid}/job", async (Guid id, CurrentUser current, DocumentService docs, CancellationToken ct) => await docs.JobAsync((await current.GetAsync(ct)).Id, id, ct)).WithName("DocumentJob").Produces<DocumentJobDto>();

@@ -1,3 +1,4 @@
+using AiNexus.Platform.Http;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
 
@@ -7,7 +8,7 @@ public static class ArtifactEndpoints
 {
     public static void MapArtifacts(this RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/artifacts").RequireAuthorization("feature:artifacts").WithTags("Artifacts");
+        var routes = api.MapGroup("/artifacts").RequireAuthorization("feature:artifacts").WithTags("Artifacts").WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(ArtifactsModule.MaxContentCharacters));
         routes.MapGet("", async (CurrentUser current, ArtifactService service, CancellationToken ct) => await service.ListAsync((await current.GetAsync(ct)).Id, ct)).WithName("ListArtifacts").Produces<IReadOnlyList<ArtifactSummaryDto>>();
         routes.MapPost("", async (CreateArtifactRequest request, CurrentUser current, ArtifactService service, CancellationToken ct) => await service.CreateAsync((await current.GetAsync(ct)).Id, request, ct)).WithName("CreateArtifact").Produces<ArtifactDto>();
         routes.MapGet("/{id:guid}", async (Guid id, int? version, CurrentUser current, ArtifactService service, CancellationToken ct) => await service.GetAsync((await current.GetAsync(ct)).Id, id, version, ct)).WithName("GetArtifact").Produces<ArtifactDto>();

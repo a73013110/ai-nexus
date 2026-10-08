@@ -45,7 +45,7 @@ public sealed class TeiRerankClient(RetrievalHttp http, IOptions<KnowledgeOption
     public string Provider => "tei";
     public async Task<IReadOnlyList<RerankScore>> RerankAsync(string query, IReadOnlyList<string> candidates, CancellationToken ct)
     {
-        using var json = await http.PostAsync("RetrievalModels", options.Value.Rerank.Endpoint.TrimEnd('/') + "/rerank", new { query, texts = candidates, truncate = false, raw_scores = false, return_text = false }, ct);
+        using var json = await http.PostAsync(KnowledgeModule.RetrievalModelsClient, options.Value.Rerank.Endpoint.TrimEnd('/') + "/rerank", new { query, texts = candidates, truncate = false, raw_scores = false, return_text = false }, ct);
         return RerankPayload.Parse(json.RootElement, "score");
     }
 }
@@ -54,7 +54,7 @@ public sealed class OpenAiCompatibleRerankClient(RetrievalHttp http, IOptions<Kn
     public string Provider => "openai-compatible";
     public async Task<IReadOnlyList<RerankScore>> RerankAsync(string query, IReadOnlyList<string> candidates, CancellationToken ct)
     {
-        using var json = await http.PostAsync("RetrievalModels", options.Value.Rerank.Endpoint.TrimEnd('/') + "/v1/rerank", new { model = options.Value.Rerank.Model, query, documents = candidates, top_n = candidates.Count }, ct);
+        using var json = await http.PostAsync(KnowledgeModule.RetrievalModelsClient, options.Value.Rerank.Endpoint.TrimEnd('/') + "/v1/rerank", new { model = options.Value.Rerank.Model, query, documents = candidates, top_n = candidates.Count }, ct);
         if (json.RootElement.ValueKind != JsonValueKind.Object || !json.RootElement.TryGetProperty("results", out var results)) throw RerankPayload.Invalid();
         return RerankPayload.Parse(results, "relevance_score");
     }

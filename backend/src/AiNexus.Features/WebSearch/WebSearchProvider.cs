@@ -24,7 +24,7 @@ public sealed partial class WebSearchProvider(IHttpClientFactory clients, IOptio
         if (o.Provider == "brave") request.Headers.Add("X-Subscription-Token", o.ApiKey);
         try
         {
-            using var response = await clients.CreateClient("ControlledTools").SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+            using var response = await clients.CreateClient(ControlledHttpClients.Tools).SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             if (!response.IsSuccessStatusCode) throw new ApiException(response.StatusCode == HttpStatusCode.TooManyRequests ? 429 : 503, "web_search_unavailable", "網路搜尋服務無法使用，請確認服務設定或稍後重試。");
             using var json = await BoundedHttpJson.ReadAsync(response, 1024 * 1024, timeout.Token);
             JsonElement rows;
