@@ -14,6 +14,7 @@
     <div class="source-catalog" role="group" aria-label="資料來源">
       @for (source of sources(); track source.id) {
         <button
+          nxCard
           class="source-card"
           [class.current]="current()?.id === source.id"
           [attr.aria-pressed]="current()?.id === source.id"
@@ -32,12 +33,12 @@
     </div>
     @if (current(); as source) {
       @if (!source.canQuery) {
-        <div class="empty-state">
+        <nx-empty-state>
           <nx-icon name="lock" />
           <h2>{{ source.name }}尚未可用</h2>
           <p>{{ source.notice }}</p>
           <p class="form-note">完成來源設定及授權後，就能在此搜尋與閱讀。</p>
-        </div>
+        </nx-empty-state>
       } @else {
         <form (submit)="search($event)">
           <nx-filter-panel
@@ -93,7 +94,7 @@
               <p class="form-note">依更新時間排序；搜尋範圍由來源權限決定。</p>
             }
           </aside>
-          <section class="source-reading" aria-label="來源內容">
+          <section nxCard class="source-reading" aria-label="來源內容">
             @if (reading()) {
               <p role="status">正在取得最新資料與授權…</p>
             } @else if (detail(); as view) {
@@ -152,11 +153,11 @@
                 }
               </section>
             } @else {
-              <div class="empty-state">
+              <nx-empty-state>
                 <nx-icon name="document" />
                 <h2>選擇一筆資料開始閱讀</h2>
                 <p>來源授權會在每次讀取及匯入時重新確認。</p>
-              </div>
+              </nx-empty-state>
             }
           </section>
         </div>

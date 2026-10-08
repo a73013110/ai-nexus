@@ -1,3 +1,5 @@
+import { EmptyState } from '../../shared/ui/empty-state';
+import { Card } from '../../shared/ui/card';
 import { FilterPanel } from '../../shared/ui/filter-panel';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { ClientValidationError } from '../../core/api/safe-errors';
@@ -18,6 +20,8 @@ import { JobsApi } from './jobs-api';
 @Component({
   selector: 'nx-tasks-page',
   imports: [
+    Card,
+    EmptyState,
     FilterPanel,
     ViewSwitch,
     IssueCode,
@@ -49,7 +53,7 @@ import { JobsApi } from './jobs-api';
     @if (loading()) {
       <p role="status" class="form-note">正在載入任務…</p>
     } @else if (!visible().length) {
-      <div class="empty-state">
+      <nx-empty-state>
         <nx-icon name="check" />
         <h2>{{ filter() === 'active' ? '目前沒有處理中的任務' : '這裡尚無任務' }}</h2>
         <p>加入知識庫文件或執行評測後，即可在這裡追蹤。</p>
@@ -58,11 +62,12 @@ import { JobsApi } from './jobs-api';
             >前往{{ session.featureName('knowledge') }}</a
           >
         }
-      </div>
+      </nx-empty-state>
     } @else {
       <div class="job-list">
         @for (job of visible(); track job.id) {
           <article
+            nxCard
             class="job-card"
             [id]="'job-' + job.id"
             [class.current]="target() === job.id"

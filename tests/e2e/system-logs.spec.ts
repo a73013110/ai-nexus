@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import {
+  expectCompactWorkspace,
   ApiFixture,
   chooseSelect,
   expectViewportContained,
@@ -220,6 +221,7 @@ test("日誌導覽唯一選取，桌面密度與固定表頭", async ({ page }) 
   expect(density.visible).toBeGreaterThanOrEqual(9);
   expect(Math.max(...density.rows)).toBeLessThanOrEqual(68);
   await settleEntrance(page);
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/system-logs-light.png",
     animations: "disabled",
@@ -418,6 +420,7 @@ test("深色、窄螢幕、進階篩選與查詢權限", async ({ page }) => {
     fixture.events.filter((entry) => entry.level === "Warning").length,
   );
   await expectViewportContained(page);
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/system-logs-mobile.png",
     animations: "disabled",

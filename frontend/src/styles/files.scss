@@ -2,11 +2,8 @@
   display: flex;
   align-items: center;
   gap: var(--section-gap);
-  padding: var(--section-padding);
   margin-bottom: var(--section-gap);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
-  background: var(--surface-subtle);
+  --card-background: var(--surface-subtle);
   p {
     margin: 6px 0 0;
     color: var(--secondary);
@@ -53,13 +50,8 @@
     width: 144px;
   }
 }
-.file-layout-toggle {
-  display: flex;
-  gap: 2px;
-  .icon-button[aria-pressed='true'] {
-    color: var(--accent);
-    background: var(--accent-soft);
-  }
+.file-library-toolbar > nx-view-switch {
+  margin-bottom: 0;
 }
 .file-library-summary {
   display: flex;
@@ -74,13 +66,10 @@
   gap: var(--section-gap);
 }
 .file-card {
+  --card-padding: 0;
   display: flex;
   flex-direction: column;
-  min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
-  background: var(--surface);
   transition:
     border-color var(--motion) var(--ease),
     box-shadow var(--motion) var(--ease);
@@ -303,32 +292,10 @@
     color: var(--accent);
   }
 }
-.files-empty,
-.file-loading {
-  display: grid;
-  justify-items: center;
-  text-align: center;
-  padding: 64px 20px;
-  color: var(--secondary);
-  nx-icon {
-    width: 40px;
-    height: 40px;
-    margin-bottom: 20px;
-    color: var(--accent);
-  }
-  h2 {
-    color: var(--ink);
-    font-size: 1.25rem;
-    margin: 0 0 12px;
-  }
-  p {
-    line-height: 1.8;
-  }
-}
 @media (max-width: 680px) {
   .file-library-intro {
-    padding: 18px;
-    gap: 12px;
+    padding: var(--section-padding);
+    gap: var(--section-gap);
   }
   .file-library-private {
     display: none;

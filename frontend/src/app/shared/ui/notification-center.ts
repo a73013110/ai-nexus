@@ -1,3 +1,4 @@
+import { EmptyState } from './empty-state';
 import { CompactDialog } from './compact-dialog';
 import { safeMessage, systemProblem, validIssueCode } from '../../core/api/safe-errors';
 import type { NotificationItem } from '../../core/api/types';
@@ -17,7 +18,7 @@ import { formatDate } from '../browser/format';
 
 @Component({
   selector: 'nx-notification-center',
-  imports: [CompactDialog, IssueCode, Icon],
+  imports: [EmptyState, CompactDialog, IssueCode, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
     nxCompactDialog
@@ -95,8 +96,8 @@ import { formatDate } from '../browser/format';
               }
             </div>
             <p>{{ body(item) }}<nx-issue-code [message]="body(item)" /></p>
-            <time [attr.datetime]="item.createdAt">{{ date(item.createdAt) }}</time>
             <div class="notification-actions">
+              <time [attr.datetime]="item.createdAt">{{ date(item.createdAt) }}</time>
               @if (url(item.target, item.version)) {
                 <button class="quiet-button" (click)="store.activate(item)">
                   查看內容<nx-icon name="chevron" />
@@ -118,7 +119,7 @@ import { formatDate } from '../browser/format';
           </button>
         </article>
       } @empty {
-        <div class="empty-state" role="status">
+        <nx-empty-state role="status">
           <nx-icon name="bell" />
           <p>
             {{
@@ -129,7 +130,7 @@ import { formatDate } from '../browser/format';
                   : '新的工作進度會出現在這裡'
             }}
           </p>
-        </div>
+        </nx-empty-state>
       }
       @if (store.hasMore()) {
         <button class="secondary-button" [disabled]="store.loading()" (click)="store.refresh(true)">

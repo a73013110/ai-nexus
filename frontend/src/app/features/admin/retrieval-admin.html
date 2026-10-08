@@ -11,7 +11,7 @@
 @if (notice()) {
   <p class="form-note" role="status">{{ notice() }}</p>
 }
-<section class="platform-card">
+<section nxCard>
   <div class="page-toolbar">
     <h2>檢索索引</h2>
     <button type="button" class="secondary-button" [disabled]="working()" (click)="load()">
@@ -90,7 +90,7 @@
   </div>
 </section>
 @if (capabilities(); as capabilities) {
-  <section class="platform-card">
+  <section nxCard>
     <div class="page-toolbar">
       <h2>服務能力</h2>
       <button
@@ -104,7 +104,7 @@
     </div>
     <p class="form-note">模型驗證只傳送合成資料，會計入檢索模型呼叫配額。</p>
     <div class="usage-grid">
-      <div class="usage-stat-card">
+      <div nxCard class="usage-stat-card">
         <span>SQL 原生向量</span
         ><strong>{{
           capabilities.sql?.nativeVector
@@ -114,7 +114,7 @@
               : '無法使用'
         }}</strong>
       </div>
-      <div class="usage-stat-card">
+      <div nxCard class="usage-stat-card">
         <span>全文／1028 斷詞器／索引</span
         ><strong
           >{{ capabilities.sql?.fullTextInstalled ? '可用' : '未安裝' }} /
@@ -122,12 +122,12 @@
           {{ capabilities.sql?.fullTextIndex ? '已建立' : '未建立' }}</strong
         >
       </div>
-      <div class="usage-stat-card">
+      <div nxCard class="usage-stat-card">
         <span>向量模型 {{ capabilities.embedding.model }}</span
         ><strong>{{ capabilities.embedding.notice }}</strong
         ><small>{{ capabilities.embedding.endpoint }}</small>
       </div>
-      <div class="usage-stat-card">
+      <div nxCard class="usage-stat-card">
         <span>重排模型 {{ capabilities.rerank.model }}</span
         ><strong>{{ capabilities.rerank.notice }}</strong
         ><small>{{ capabilities.rerank.endpoint }}</small>
@@ -135,7 +135,7 @@
     </div>
   </section>
 }
-<section class="platform-card">
+<section nxCard>
   <h2>檢索測試台</h2>
   <p class="form-note">選擇最多三個有權限的知識庫。每次測試會使用目前 active 索引。</p>
   <div class="usage-grid">

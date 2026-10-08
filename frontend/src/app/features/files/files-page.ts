@@ -1,3 +1,5 @@
+import { Card } from '../../shared/ui/card';
+import { EmptyState } from '../../shared/ui/empty-state';
 import { FilterPanel } from '../../shared/ui/filter-panel';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import {
@@ -31,6 +33,8 @@ import { StorageUsage } from '../../shared/ui/storage-usage';
 @Component({
   selector: 'nx-files-page',
   imports: [
+    Card,
+    EmptyState,
     FilterPanel,
     ViewSwitch,
     FeaturePage,
@@ -73,6 +77,10 @@ export class FilesPage {
     { id: 'documents', name: '文件' },
   ];
   readonly kindOptions = this.kinds.map((item) => ({ value: item.id, label: item.name }));
+  readonly layoutOptions = [
+    { value: 'grid', label: '網格排列', icon: 'dashboard' },
+    { value: 'list', label: '清單排列', icon: 'lines' },
+  ];
   readonly sources = [
     { value: 'all', label: '全部來源' },
     { value: 'chat', label: '對話附件' },

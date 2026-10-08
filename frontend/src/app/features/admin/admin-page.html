@@ -119,10 +119,10 @@
               />
             </div>
           } @empty {
-            <div class="empty-state">
+            <nx-empty-state>
               <h2>沒有符合的使用者</h2>
               <p>可手動建立使用者，或在第一次 AD 登入時自動建立。</p>
-            </div>
+            </nx-empty-state>
           }
         </div>
         <div class="pagination">
@@ -226,7 +226,7 @@
             </h2>
             <div class="admin-feature-grid">
               @for (feature of section.features; track feature.id) {
-                <article class="admin-feature-card">
+                <article nxCard class="admin-feature-card">
                   <button class="resource-summary" (click)="open('feature', feature)">
                     <nx-icon [name]="featureIcons[feature.id] || 'document'" />
                     <div>
@@ -269,25 +269,25 @@
             請開啟「用量與費用總覽」。
           </p>
           <div class="usage-grid">
-            <div class="stat-card">
+            <div nxCard class="stat-card">
               <span>啟用帳號</span><strong>{{ format(stats.users) }}</strong
               ><small>{{ format(stats.activeUsers) }} 位在區間內使用 AI</small>
             </div>
-            <div class="stat-card">
+            <div nxCard class="stat-card">
               <span>生成次數</span><strong>{{ format(stats.requests) }}</strong
               ><small
                 >{{ format(stats.completed) }} 完成 · {{ format(stats.failed) }} 失敗 ·
                 {{ format(stats.cancelled) }} 取消</small
               >
             </div>
-            <div class="stat-card">
+            <div nxCard class="stat-card">
               <span>回報 tokens</span
               ><strong>{{ format(stats.inputTokens + stats.outputTokens) }}</strong
               ><small
                 >輸入 {{ format(stats.inputTokens) }} · 輸出 {{ format(stats.outputTokens) }}</small
               >
             </div>
-            <div class="stat-card">
+            <div nxCard class="stat-card">
               <span>原檔容量</span><strong>{{ bytes(stats.storedBytes) }}</strong
               ><small>{{ format(stats.storedFiles) }} 份原檔 · 所有期間，重複引用不重複計算</small>
             </div>
@@ -347,7 +347,7 @@
             <h2>服務狀態</h2>
             <div class="admin-service-grid">
               @for (provider of stats.providers; track provider.id) {
-                <article class="admin-service-card">
+                <article nxCard class="admin-service-card">
                   <strong
                     >{{
                       provider.id === 'ollama'
@@ -363,7 +363,7 @@
                   </p>
                 </article>
               }
-              <article class="admin-service-card">
+              <article nxCard class="admin-service-card">
                 <strong>網路搜尋 · {{ stats.webSearch.available ? '已設定' : '尚未啟用' }}</strong>
                 <p>{{ stats.webSearch.notice }}</p>
                 <p>地端部署可搭配公司自架 SearXNG；模型本身不會自動連網。</p>

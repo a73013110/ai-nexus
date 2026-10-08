@@ -1,3 +1,4 @@
+import { EmptyState } from '../../shared/ui/empty-state';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
@@ -43,6 +44,7 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
 @Component({
   selector: 'nx-admin-user-inspector',
   imports: [
+    EmptyState,
     ViewSwitch,
     CompactDialog,
     Field,

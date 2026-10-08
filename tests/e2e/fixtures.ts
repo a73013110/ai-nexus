@@ -1,4 +1,4 @@
-import { expect, type Page, type Route } from "@playwright/test";
+import { expect, type Locator, type Page, type Route } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 export const fixtureIssueCode = "NX-" + "D".repeat(32);
 export async function chooseSelect(
@@ -33,6 +33,31 @@ export async function expectViewportContained(page: Page) {
       })),
     )
     .toEqual({ vertical: true, horizontal: true });
+}
+
+// A visual contract checked on populated feature pages, in addition to their workflow tests.
+export async function expectCompactWorkspace(page: Page) {
+  const workspace = page.locator(".feature-content").first();
+  await expectCompactSurfaces(workspace);
+  await expect(workspace.locator(".feature-header h1")).toHaveCSS(
+    "font-size",
+    "24px",
+  );
+}
+
+export async function expectCompactSurfaces(workspace: Locator) {
+  await expect(workspace).toHaveCSS("font-size", "13px");
+  await expect(workspace.locator("[nxCard]:not(.ui-card)")).toHaveCount(0);
+  const surfaces = await workspace.locator(".ui-card").evaluateAll((cards) =>
+    cards
+      .filter((card) => card.getClientRects().length)
+      .map((card) => ({
+        padding: getComputedStyle(card).paddingTop,
+        gallery: card.classList.contains("file-card"),
+      })),
+  );
+  for (const surface of surfaces)
+    expect(surface.padding).toBe(surface.gallery ? "0px" : "12px");
 }
 import type {
   Conversation,
@@ -359,7 +384,11 @@ export class ApiFixture {
         if (this.failPreferencesOnce) {
           this.failPreferencesOnce = false;
           return json(
-            { title: "Password=fixture-private", code: "service_unavailable", issueCode: fixtureIssueCode },
+            {
+              title: "Password=fixture-private",
+              code: "service_unavailable",
+              issueCode: fixtureIssueCode,
+            },
             503,
           );
         }
@@ -390,7 +419,11 @@ export class ApiFixture {
       if (this.failPreferencesOnce) {
         this.failPreferencesOnce = false;
         return json(
-          { title: "Password=fixture-private", code: "service_unavailable", issueCode: fixtureIssueCode },
+          {
+            title: "Password=fixture-private",
+            code: "service_unavailable",
+            issueCode: fixtureIssueCode,
+          },
           503,
         );
       }
@@ -818,7 +851,11 @@ export class ApiFixture {
         this.eventReads++;
         if (this.eventsStatus !== 200)
           return json(
-            { title: "Password=fixture-private", code: "access_denied", issueCode: fixtureIssueCode },
+            {
+              title: "Password=fixture-private",
+              code: "access_denied",
+              issueCode: fixtureIssueCode,
+            },
             this.eventsStatus,
           );
         if (run.status === "queued") {

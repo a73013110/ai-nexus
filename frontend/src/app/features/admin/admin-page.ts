@@ -1,3 +1,5 @@
+import { EmptyState } from '../../shared/ui/empty-state';
+import { Card } from '../../shared/ui/card';
 import { DataTable } from '../../shared/ui/data-table';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
@@ -77,6 +79,8 @@ interface Editor {
 @Component({
   selector: 'nx-admin-page',
   imports: [
+    Card,
+    EmptyState,
     DataTable,
     ViewSwitch,
     CompactDialog,

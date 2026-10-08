@@ -1,4 +1,5 @@
 import { DateTimePicker } from '../../shared/ui/date-time-picker';
+import { EmptyState } from '../../shared/ui/empty-state';
 import { FilterPanel } from '../../shared/ui/filter-panel';
 import { IssueCode } from '../../shared/ui/issue-code';
 import { safeMessage } from '../../core/api/safe-errors';
@@ -34,6 +35,7 @@ import {
 @Component({
   selector: 'nx-admin-audit',
   imports: [
+    EmptyState,
     DateTimePicker,
     FilterPanel,
     IssueCode,

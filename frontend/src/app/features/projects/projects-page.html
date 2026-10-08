@@ -106,7 +106,7 @@
           </details>
           <div class="project-grid">
             <section
-              class="platform-card"
+              nxCard
               [nxFileDrop]="project.resource.canEdit && !project.isArchived && !busy()"
               (filesDropped)="upload($event)"
             >
@@ -159,7 +159,7 @@
                 }
               </div>
             </section>
-            <section class="platform-card">
+            <section nxCard>
               <div class="ui-section-header">
                 <h3>
                   共用範本 <span>{{ templates().length }}</span>
@@ -206,7 +206,7 @@
                 }
               </div>
             </section>
-            <section class="platform-card">
+            <section nxCard>
               <div class="ui-section-header">
                 <h3>
                   我的專案對話 <span>{{ conversations().length }}</span>
@@ -235,7 +235,7 @@
                 }
               </nav>
             </section>
-            <section class="platform-card">
+            <section nxCard>
               <div class="ui-section-header">
                 <h3>
                   共用成果 <span>{{ outputs().length }}</span>
@@ -271,13 +271,13 @@
           />
         </section>
       } @else {
-        <section class="artifact-empty">
+        <nx-empty-state>
           <span class="empty-symbol"><nx-icon name="archive" /></span>
           <h2>把工作放進同一個脈絡</h2>
           <p>
             建立專案，集中共用指示、參考文件、範本與成果。<br />成員能從相同的背景開始，各自保留提問紀錄。
           </p>
-        </section>
+        </nx-empty-state>
       }
     </div>
   }

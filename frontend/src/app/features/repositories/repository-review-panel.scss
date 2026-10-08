@@ -3,8 +3,8 @@
   min-width: 0;
 }
 .review-create {
-  padding-bottom: 1.5rem;
-  margin-bottom: 1rem;
+  padding-bottom: var(--section-gap);
+  margin-bottom: var(--section-gap);
   border-bottom: 1px solid var(--line);
 }
 .review-create > summary {
@@ -21,7 +21,7 @@
 }
 .review-commit-fields {
   display: flex;
-  gap: 0.8rem;
+  gap: var(--section-gap);
   flex-wrap: wrap;
 }
 .review-commit-fields nx-repository-commit-picker {
@@ -31,12 +31,9 @@
 .review-loading {
   display: flex;
   align-items: center;
-  gap: var(--p-space-4);
-  padding: var(--p-space-6);
-  margin-block: var(--p-space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
-  background: var(--surface-subtle);
+  gap: var(--section-gap);
+  margin-block: var(--section-gap);
+  --card-background: var(--surface-subtle);
   h3,
   p {
     margin: 0;
@@ -47,12 +44,7 @@
   }
 }
 .review-report {
-  padding: var(--p-space-5);
-  margin-block: var(--p-space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
-  background: var(--surface);
-  min-width: 0;
+  margin-block: var(--section-gap);
   overflow-wrap: anywhere;
 }
 .review-report-body {
@@ -69,7 +61,7 @@
   color: var(--secondary);
 }
 .review-results {
-  margin-top: 1.5rem;
+  margin-top: var(--section-gap);
 }
 .review-results header {
   display: flex;
@@ -79,7 +71,7 @@
 }
 .review-section {
   border-top: 1px solid var(--line);
-  padding: 1rem 0;
+  padding: var(--section-gap) 0;
   overflow-wrap: anywhere;
 }
 .review-section summary {

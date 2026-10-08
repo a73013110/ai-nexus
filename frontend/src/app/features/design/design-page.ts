@@ -1,3 +1,4 @@
+import { Card } from '../../shared/ui/card';
 import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
@@ -50,6 +51,7 @@ const jobStates: SelectOption[] = [
 @Component({
   selector: 'nx-design-page',
   imports: [
+    Card,
     IssueCode,
     RouterLink,
     FeaturePage,
@@ -85,6 +87,10 @@ export class DesignPage {
   readonly loading = signal(true);
   readonly error = signal('');
   readonly theme = signal<'light' | 'dark'>('light');
+  readonly previewThemes = [
+    { value: 'light', label: '淺色' },
+    { value: 'dark', label: '深色' },
+  ];
   readonly title = signal(sampleTitle);
   readonly titleVersion = signal(0);
   readonly selection = signal('standard');

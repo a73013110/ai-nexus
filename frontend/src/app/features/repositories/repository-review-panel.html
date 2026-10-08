@@ -125,7 +125,7 @@
   />
 }
 @if (detailLoading()) {
-  <div class="review-loading" role="status">
+  <div nxCard class="review-loading" role="status">
     <nx-inference-signal [active]="true" />
     <p>正在載入整體報告與檢閱進度…</p>
   </div>
@@ -173,7 +173,7 @@
         >
       }
     </div>
-    <article class="review-report" aria-label="整體報告">
+    <article nxCard class="review-report" aria-label="整體報告">
       <h3>
         整體{{
           d.review.purpose === 'summary'

@@ -72,7 +72,7 @@ public sealed partial class DiagnosticBrowserTests
         var noIssue = Issues.NewCode();
         await page.GetByLabel("查證代碼", new() { Exact = true }).FillAsync(noIssue);
         await page.GetByRole(AriaRole.Button, new() { Name = "查詢", Exact = true }).ClickAsync();
-        await Expect(page.Locator(".empty-state")).ToContainTextAsync("此範圍沒有日誌");
+        await Expect(page.GetByRole(AriaRole.Status).Filter(new() { HasText = "此範圍沒有日誌" })).ToBeVisibleAsync();
         var injection = new DiagnosticEvent { IssueCode = Issues.NewCode(), Level = Microsoft.Extensions.Logging.LogLevel.Warning, MessageTemplate = "<img src=x onerror=\"globalThis.__logInjected=true\">", Category = "=HYPERLINK(\"evil\")", EventName = "fixture.injection" };
         db.Add(injection); await db.SaveChangesAsync(); // Deliberately bypass producer redaction to test the UI/CSV boundary.
         await page.GetByLabel("查證代碼", new() { Exact = true }).FillAsync(injection.IssueCode!);

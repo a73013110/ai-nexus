@@ -30,7 +30,7 @@
 | 主要標題                     | font xl／2xl／3xl               | 20／24／32px                             |
 | 工作區開場／登入主標         | `--text-display`／`--text-hero` | 26–34／36–58px 流動字級，使用 rem 上下限 |
 
-上表是根層尺度；FeaturePage 預設 compact 與 wide，介面／標籤 13px、輔助字 12px、頁首 24px、區塊內距與間距 12px。桌面控制項 34px；640px 以下與觸控指標改為至少 44px，輸入字級至少 16px。彈窗、通知、設定、對話工具列與閱讀器操作區共用這些密度 tokens，側欄和閱讀正文維持各自尺度。
+上表是根層尺度；FeaturePage 預設 compact 與 wide，介面／標籤 13px、輔助字 12px、章節標題 16px、頁首 24px、區塊內距與間距 12px。緊湊 scope 必須同時設定實際字級與 tokens，讓未指定樣式的內容也繼承同一尺度。桌面控制項 34px；640px 以下與觸控指標改為至少 44px，輸入字級至少 16px。彈窗、通知、設定、對話工具列與閱讀器操作區共用這些密度 tokens；Markdown、文件正文及評測答案明確使用閱讀 tokens，保留個人偏好。
 
 正文色使用 ink，輔助文字使用 secondary／muted，不能以低對比淡字承載操作與狀態。配色以一般文字 WCAG AA 4.5:1 為驗證目標；focus 有 2px 可見輪廓。新文字／背景組合仍需實測對比，不能因 token 有色值就視為全部合格。
 
@@ -99,7 +99,8 @@
 | StreamingAnswer                                    | 沿用 MarkdownView 的安全邊界；保留完成段落 DOM、僅解析尾段，短暫緩衝突發文字，減少動態時直接更新 |
 | FileBrowser／LibraryPicker                         | 個人原檔卡片／列表、來源關聯、選取、伺服器分頁與可見的存取說明                                   |
 | DocumentViewer／ReaderDialog                       | 共用原圖／PDF／文字預覽；精簡工具列、桌面近全螢幕、手機全螢幕、Esc 與焦點返回                    |
-| JobProgress／InferenceSignal                       | 真實階段及完成單位、未知總量的不定進度、取消要求與完成分開、減少動態仍保留文字                   |
+| Card／EmptyState                                   | 原生卡片語意、共用表面與間距；空白／載入的圖示、文字及投影操作                                   |
+| JobProgress／InferenceSignal                       | 共用狀態標籤、真實階段及完成單位、未知總量的不定進度、取消要求與完成分開、減少動態仍保留文字     |
 | Checkbox／SearchField                              | 原生語意、整列勾選、停用與焦點狀態、搜尋圖示與清除；管理／分享／來源共用                         |
 | FeaturePage／WorkspaceSidebar／WorkspaceNavigation | 所有頁面共用側欄外框、品牌、分類四欄入口與帳號列；聊天投影操作與歷史，底部導覽預設收合           |
 | AccountMenu／SettingsDialog                        | 共用登入者選單；設定在當頁開啟，延遲載入、未儲存確認、焦點返回                                   |
@@ -131,6 +132,6 @@ Playwright 保留捲軸顯示，排除 headless 預設的 `--hide-scrollbars`，
 
 稽核清單的文字、資源識別與異動內容由 computed presentation 在資料變更時建立，避免每次模板更新重複解析 JSON。共用 TrendChart 的數值 formatter 依幣別快取，滑鼠／鍵盤檢查資料點時不重建 Intl.NumberFormat；切換幣別後自動更新。
 
-總覽採四張指標卡、可檢查節點的資料流向圖、費用趨勢與模型／使用者分布，使用既有 platform-card、form-input 與語意色。流向圖的位置表達文件→向量→回答的關係；只有真實 activeJobs／activeGenerations 會觸發訊號動畫，減少動態時靜態保留狀態。桌面多欄、手機單欄，使用主內容捲動，不放假即時數據或與工作無關的 3D 場景。
+總覽採四張指標卡、可檢查節點的資料流向圖、費用趨勢與模型／使用者分布，使用共用 nxCard、nxField 與語意色。流向圖的位置表達文件→向量→回答的關係；只有真實 activeJobs／activeGenerations 會觸發訊號動畫，減少動態時靜態保留狀態。桌面多欄、手機單欄，使用主內容捲動，不放假即時數據或與工作無關的 3D 場景。
 
 費用數字最多顯示小數八位，保持 token 單價的可讀性；不同幣別與成本類型分開呈現。空資料、未定價、尚未取得 usage、載入、錯誤都有明確文字，沒有把未知金額顯示為零。模型分布使用相同報表資料，總覽及聊天不另外計算費用。

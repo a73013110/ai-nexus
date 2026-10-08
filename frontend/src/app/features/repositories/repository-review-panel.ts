@@ -1,3 +1,4 @@
+import { Card } from '../../shared/ui/card';
 import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
 import { IssueCode } from '../../shared/ui/issue-code';
@@ -35,6 +36,7 @@ import { InferenceSignal } from '../../shared/ui/inference-signal';
 @Component({
   selector: 'nx-repository-review',
   imports: [
+    Card,
     Field,
     IssueCode,
     Select,

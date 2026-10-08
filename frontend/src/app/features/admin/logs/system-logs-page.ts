@@ -1,3 +1,4 @@
+import { EmptyState } from '../../../shared/ui/empty-state';
 import { FilterPanel } from '../../../shared/ui/filter-panel';
 import {
   ChangeDetectionStrategy,
@@ -74,6 +75,7 @@ const tones: Record<string, BadgeTone> = {
 @Component({
   selector: 'nx-system-logs-page',
   imports: [
+    EmptyState,
     FilterPanel,
     FeaturePage,
     FormsModule,

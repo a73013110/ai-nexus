@@ -22,26 +22,6 @@
   font-size: var(--text-label);
   line-height: 1.65;
 }
-.design-theme {
-  display: flex;
-  padding: var(--p-space-1);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-pill);
-  background: var(--sidebar);
-}
-.design-theme button {
-  min-width: 4rem;
-  min-height: var(--button-target);
-  padding: var(--p-space-2);
-  border-radius: var(--p-radius-pill);
-  font-size: var(--text-label);
-}
-.design-theme button[aria-pressed='true'] {
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  color: var(--accent);
-  font-weight: 600;
-}
 .design-preview {
   padding: clamp(16px, 2vw, 32px);
   border: 1px solid var(--line);

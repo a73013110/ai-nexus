@@ -25,7 +25,7 @@
   @if (loading()) {
     <p role="status">正在載入知識庫…</p>
   } @else if (!collections().length && session.has('knowledge')) {
-    <div class="knowledge-empty">
+    <nx-empty-state>
       <span class="empty-symbol"><nx-icon name="library" /></span>
       <h2>給工作一個可靠的資料來源</h2>
       <p>
@@ -34,7 +34,7 @@
       <button class="primary-button" (click)="openEditor()">
         建立第一個知識庫<nx-icon name="plus" />
       </button>
-    </div>
+    </nx-empty-state>
   } @else if (current(); as collection) {
     <div class="knowledge-heading">
       <nx-select
@@ -119,9 +119,16 @@
                       document.chunkCount ? document.chunkCount + ' 段索引' : '點擊閱讀原檔與文字'
                     }}</small
                   ></a
-                ><span class="resource-status" [attr.data-status]="document.status">{{
-                  status(document.status)
-                }}</span>
+                ><nx-status-badge
+                  [tone]="
+                    document.status === 'ready'
+                      ? 'success'
+                      : document.status === 'failed'
+                        ? 'danger'
+                        : 'neutral'
+                  "
+                  >{{ status(document.status) }}</nx-status-badge
+                >
                 @if (document.canEdit) {
                   <nx-action-menu
                     [label]="'文件操作：' + document.fileName"
@@ -131,15 +138,15 @@
                 }
               </div>
             } @empty {
-              <div class="empty-state">
+              <nx-empty-state>
                 <h3>尚無符合的文件</h3>
                 <p>上傳文件後即可閱讀、索引及查詢。</p>
-              </div>
+              </nx-empty-state>
             }
           </div>
         }
       </section>
-      <section class="knowledge-test">
+      <section nxCard class="knowledge-test">
         <span class="panel-eyebrow">先核對，再帶入對話</span>
         <h2>查詢這個知識庫</h2>
         <p class="form-note">

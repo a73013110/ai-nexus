@@ -1,3 +1,4 @@
+import { Card } from '../../shared/ui/card';
 import { StatusBadge } from '../../shared/ui/status-badge';
 import { DataTable } from '../../shared/ui/data-table';
 import { DateTimePicker } from '../../shared/ui/date-time-picker';
@@ -22,6 +23,7 @@ import { downloadBlob } from '../../shared/browser/download';
 @Component({
   selector: 'nx-dashboard-page',
   imports: [
+    Card,
     StatusBadge,
     DataTable,
     DateTimePicker,

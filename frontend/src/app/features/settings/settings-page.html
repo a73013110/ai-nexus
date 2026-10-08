@@ -49,7 +49,7 @@
       <p>讓工作區符合你的閱讀與工作習慣。</p>
     </header>
     @if (loading()) {
-      <p role="status" class="loading-state">正在載入你的設定…</p>
+      <p role="status" class="form-note">正在載入你的設定…</p>
     }
     @if (error()) {
       <p role="alert" class="error-banner">
@@ -60,7 +60,7 @@
       <div class="settings-content">
         @switch (section()) {
           @case ('appearance') {
-            <section class="settings-card platform-card">
+            <section nxCard class="settings-card">
               <h2>工作區外觀</h2>
               <div class="setting-row">
                 <div>
@@ -90,7 +90,7 @@
                 </button>
               </div>
             </section>
-            <section class="settings-card platform-card">
+            <section nxCard class="settings-card">
               <h2>閱讀與版面</h2>
               <div class="setting-row">
                 <div>
@@ -164,7 +164,7 @@
             </section>
           }
           @case ('conversation') {
-            <section class="settings-card platform-card">
+            <section nxCard class="settings-card">
               <h2>輸入與瀏覽</h2>
               <div class="setting-row">
                 <div>
@@ -203,7 +203,7 @@
                 </button>
               </div>
             </section>
-            <section class="settings-card platform-card">
+            <section nxCard class="settings-card">
               <h2>對話預設</h2>
               @if (models()?.policy?.allowModelSelection) {
                 <div class="setting-row">
@@ -236,7 +236,7 @@
             </section>
           }
           @case ('notifications') {
-            <section class="settings-card platform-card">
+            <section nxCard class="settings-card">
               <h2>回覆完成</h2>
               <div class="setting-row">
                 <div>
@@ -270,7 +270,7 @@
             </section>
           }
           @case ('data') {
-            <section class="settings-card platform-card">
+            <section nxCard class="settings-card">
               <h2>此瀏覽器的草稿</h2>
               <div class="setting-row">
                 <div>
@@ -293,7 +293,7 @@
                 <button class="danger-button" (click)="clearDrafts()">清除此帳號的本機草稿</button>
               </details>
             </section>
-            <section class="settings-card platform-card">
+            <section nxCard class="settings-card">
               <h2>匯出與備份</h2>
               <div class="setting-row">
                 <div>
@@ -314,7 +314,7 @@
             </section>
           }
           @case ('account') {
-            <section class="settings-card platform-card">
+            <section nxCard class="settings-card">
               <h2>公司身分</h2>
               <div class="account-identity">
                 <span class="avatar">{{ session.me()?.displayName?.slice(0, 1) }}</span>
@@ -325,7 +325,7 @@
               </div>
               <p class="secondary">姓名與帳號由公司 AD 提供。需要異動時請聯絡資訊管理人員。</p>
             </section>
-            <section class="settings-card platform-card">
+            <section nxCard class="settings-card">
               <h2>角色與可用功能</h2>
               <div class="access-summary">
                 @for (role of session.me()?.access?.roles || []; track role.id) {
@@ -345,7 +345,7 @@
             @if (usage(); as stats) {
               <p class="secondary">最近 {{ stats.days }} 天 · 依 UTC 日期統計</p>
               @if (policy(); as limits) {
-                <section class="settings-card platform-card">
+                <section nxCard class="settings-card">
                   <h2>各模型今日 token 預算</h2>
                   @for (model of limits.models; track model.modelId) {
                     <div class="setting-row">
@@ -390,20 +390,20 @@
                 </section>
               }
               <div class="usage-grid">
-                <div class="stat-card">
+                <div nxCard class="stat-card">
                   <span>生成次數</span><strong>{{ format(stats.requests) }}</strong
                   ><small>{{ stats.completed }} 次完成</small>
                 </div>
-                <div class="stat-card">
+                <div nxCard class="stat-card">
                   <span>輸入 tokens</span><strong>{{ format(stats.inputTokens) }}</strong
                   ><small>模型回報的實際數量</small>
                 </div>
-                <div class="stat-card">
+                <div nxCard class="stat-card">
                   <span>輸出 tokens</span><strong>{{ format(stats.outputTokens) }}</strong
                   ><small>模型回報的實際數量</small>
                 </div>
               </div>
-              <section class="settings-card platform-card">
+              <section nxCard class="settings-card">
                 <h2>統計涵蓋範圍</h2>
                 <p>
                   {{ stats.requestsWithUsage }} / {{ stats.requests }} 次請求有完整 token
@@ -415,11 +415,11 @@
                   次有耗時紀錄）
                 </p>
               </section>
-              <section class="settings-card platform-card">
+              <section nxCard class="settings-card">
                 <h2>原檔容量</h2>
                 <nx-storage-usage [storage]="stats.storage" />
               </section>
-              <section class="settings-card platform-card">
+              <section nxCard class="settings-card">
                 <nx-token-usage-chart [usage]="stats.tokens" />
               </section>
             } @else {
@@ -431,7 +431,7 @@
             }
           }
           @case ('shortcuts') {
-            <section class="settings-card platform-card">
+            <section nxCard class="settings-card">
               <h2>更快完成日常操作</h2>
               <dl class="shortcut-list">
                 <div>

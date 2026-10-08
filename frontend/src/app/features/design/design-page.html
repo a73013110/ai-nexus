@@ -24,18 +24,12 @@
         <h2>清楚、有層次，也保留一點科技感。</h2>
         <p>所有範例僅在此頁示範，不會呼叫 AI 或修改資料。預覽主題不會改動你的個人設定。</p>
       </div>
-      <div class="design-theme" role="group" aria-label="預覽主題">
-        <button
-          type="button"
-          [attr.aria-pressed]="theme() === 'light'"
-          (click)="theme.set('light')"
-        >
-          淺色
-        </button>
-        <button type="button" [attr.aria-pressed]="theme() === 'dark'" (click)="theme.set('dark')">
-          深色
-        </button>
-      </div>
+      <nx-view-switch
+        label="預覽主題"
+        [options]="previewThemes"
+        [value]="theme()"
+        (valueChange)="theme.set($event === 'dark' ? 'dark' : 'light')"
+      />
     </div>
     <div #preview class="design-preview" [attr.data-theme]="theme()">
       <div class="design-preview-heading">
@@ -62,7 +56,7 @@
         }
       </div>
       <div class="design-grid">
-        <section class="platform-card design-type" aria-labelledby="design-type-title">
+        <section nxCard class="design-type" aria-labelledby="design-type-title">
           <span class="panel-eyebrow">字級與閱讀</span>
           <h2 id="design-type-title">先讓資訊看得清楚</h2>
           <p class="design-reading">
@@ -76,7 +70,7 @@
             }
           </div>
         </section>
-        <section class="platform-card" aria-labelledby="design-actions-title">
+        <section nxCard aria-labelledby="design-actions-title">
           <span class="panel-eyebrow">操作與狀態</span>
           <h2 id="design-actions-title">一致的操作層級</h2>
           <p class="form-note">操作層級清楚，桌面控制項 34px，手機與觸控操作至少 44px。</p>
@@ -92,7 +86,7 @@
             {{ notice() || '選取操作後，回饋會出現在這裡。' }}
           </p>
         </section>
-        <section class="platform-card" aria-labelledby="design-selection-title">
+        <section nxCard aria-labelledby="design-selection-title">
           <span class="panel-eyebrow">選擇與選單</span>
           <h2 id="design-selection-title">熟悉，而且容易操作</h2>
           <p class="form-note">Tab 移動焦點，方向鍵選取，Enter 套用，Esc 關閉。</p>
@@ -106,7 +100,7 @@
           </div>
           <p class="form-note">彈出層可跨越捲動區及確認視窗，提供停用狀態與目前選項。</p>
         </section>
-        <section class="platform-card" aria-labelledby="design-form-heading">
+        <section nxCard aria-labelledby="design-form-heading">
           <span class="panel-eyebrow">表單與選取</span>
           <h2 id="design-form-heading">看得清楚，也容易點選</h2>
           <nx-search-field
@@ -123,7 +117,7 @@
           />
           <nx-checkbox label="目前無法調整" description="停用狀態" [disabled]="true" />
         </section>
-        <section class="platform-card" aria-labelledby="design-title-heading">
+        <section nxCard aria-labelledby="design-title-heading">
           <span class="panel-eyebrow">直接編輯</span>
           <h2 id="design-title-heading">在看到的地方修改</h2>
           <p class="form-note">雙擊標題或按 F2／Enter，即可直接編輯；Esc 取消。</p>
@@ -135,7 +129,7 @@
             />
           </div>
         </section>
-        <section class="platform-card design-status" aria-labelledby="design-status-title">
+        <section nxCard class="design-status" aria-labelledby="design-status-title">
           <div class="resource-heading">
             <div>
               <span class="panel-eyebrow">動態與回饋</span>
@@ -176,7 +170,7 @@
             />
           }
         </section>
-        <section class="platform-card" aria-labelledby="design-badges-title">
+        <section nxCard aria-labelledby="design-badges-title">
           <span class="panel-eyebrow">數量與提醒</span>
           <h2 id="design-badges-title">小標示，共用同一套語意</h2>
           <p class="form-note">
@@ -221,7 +215,8 @@
           </div>
         </section>
         <section
-          class="platform-card design-data-workspace ui-density-compact"
+          nxCard
+          class="design-data-workspace ui-density-compact"
           aria-labelledby="design-data-title"
         >
           <span class="panel-eyebrow">03 / 資料工作區</span>
@@ -298,7 +293,7 @@
             </table>
           </nx-data-table>
         </section>
-        <section class="platform-card design-markdown" aria-labelledby="design-markdown-title">
+        <section nxCard class="design-markdown" aria-labelledby="design-markdown-title">
           <span class="panel-eyebrow">02 / 內容閱讀</span>
           <h2 id="design-markdown-title">長文字也能輕鬆瀏覽</h2>
           <nx-markdown-view [content]="markdown" />

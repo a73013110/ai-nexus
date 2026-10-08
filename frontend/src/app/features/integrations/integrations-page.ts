@@ -1,3 +1,5 @@
+import { Card } from '../../shared/ui/card';
+import { EmptyState } from '../../shared/ui/empty-state';
 import { FilterPanel } from '../../shared/ui/filter-panel';
 import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
@@ -17,7 +19,17 @@ import { IntegrationsApi } from './integrations-api';
 
 @Component({
   selector: 'nx-integrations-page',
-  imports: [FilterPanel, Field, IssueCode, FeaturePage, Select, Icon, MarkdownView],
+  imports: [
+    Card,
+    EmptyState,
+    FilterPanel,
+    Field,
+    IssueCode,
+    FeaturePage,
+    Select,
+    Icon,
+    MarkdownView,
+  ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './integrations-page.html',

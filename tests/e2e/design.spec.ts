@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { ApiFixture, settleEntrance } from "./fixtures";
+import { ApiFixture, expectCompactWorkspace, settleEntrance } from "./fixtures";
 
 const features = [
   { id: "projects", name: "專案", route: "/projects" },
@@ -57,15 +57,13 @@ test("共用資料工作區在元件頁可操作，保留局部主題與焦點",
 
 test("共用密度、檢視鍵盤與選填日期保留桌面和手機可用性", async ({ page }) => {
   await gallery(page);
-  await expect(page.locator(".feature-header h1")).toHaveCSS(
-    "font-size",
-    "24px",
-  );
+  await expectCompactWorkspace(page);
   await expect(page.locator(".design-reading")).toHaveCSS("font-size", "15px");
   const field = page.getByRole("textbox", {
     name: "示範資料篩選",
     exact: true,
   });
+  await expect(field).toHaveCSS("font-size", "13px");
   expect((await field.boundingBox())!.height).toBe(34);
   const views = page.getByRole("group", { name: "資料範例檢視", exact: true });
   const all = views.getByRole("button", { name: "全部狀態", exact: true });
@@ -91,6 +89,7 @@ test("共用密度、檢視鍵盤與選填日期保留桌面和手機可用性",
   await expect(optional).not.toHaveAttribute("aria-invalid", "true");
   await expect(page.locator(".ui-date-error")).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 });
+  await expectCompactWorkspace(page);
   expect((await field.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await expect(field).toHaveCSS("font-size", "16px");
   await expect(page.locator(".design-reading")).toHaveCSS("font-size", "15px");

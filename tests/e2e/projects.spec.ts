@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { ApiFixture, settleEntrance } from "./fixtures";
+import { expectCompactWorkspace, ApiFixture, settleEntrance } from "./fixtures";
 import type {
   Project,
   ProjectTemplate,
@@ -93,6 +93,7 @@ test("project settings, shared templates and private conversations work directly
   ).toBeVisible();
   await expect(page.getByText("這裡顯示你的提問紀錄。")).toBeVisible();
   await settleEntrance(page);
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/projects-desktop.png",
     fullPage: true,

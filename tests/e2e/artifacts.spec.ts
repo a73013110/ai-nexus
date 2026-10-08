@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import {
+  expectCompactWorkspace,
   ApiFixture,
   richAnswer,
   chooseSelect,
@@ -93,7 +94,13 @@ test("artifact versions preserve edits, restore older content and export a saved
   });
   await page.goto(`/artifacts/${id}`);
   await expect(page.getByRole("table")).toBeVisible();
-  await page.getByRole("button", { name: "並排預覽", exact: true }).click();
+  await expectCompactWorkspace(page);
+  const reading = page.getByRole("button", { name: "閱讀", exact: true });
+  const split = page.getByRole("button", { name: "並排預覽", exact: true });
+  await reading.focus();
+  await reading.press("End");
+  await expect(split).toBeFocused();
+  await expect(split).toHaveAttribute("aria-pressed", "true");
   const editor = page.getByRole("textbox", {
     name: "編輯成果內容",
     exact: true,
@@ -115,6 +122,9 @@ test("artifact versions preserve edits, restore older content and export a saved
   await page.getByRole("combobox", { name: "成果版本" }).click();
   await page.getByRole("option", { name: /^版本 1 / }).click();
   await expect(page.getByText("正在檢視舊版本")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "編輯", exact: true }),
+  ).toHaveCount(0);
   await expect(page.getByRole("table")).toBeVisible();
   await page.getByRole("button", { name: "將此版帶入編輯" }).click();
   await page.getByRole("button", { name: "儲存新版本" }).click();
@@ -132,11 +142,13 @@ test("artifact versions preserve edits, restore older content and export a saved
   await page.getByRole("button", { name: "取消", exact: true }).click();
   await expect(editor).toHaveValue("尚未儲存");
   await settleEntrance(page);
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/artifacts-desktop.png",
     fullPage: true,
   });
   await page.setViewportSize({ width: 375, height: 812 });
+  expect((await reading.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

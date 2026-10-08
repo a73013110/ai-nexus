@@ -1,14 +1,15 @@
 // Shared desktop density. The sidebar and reading surfaces retain their own scale.
 .ui-density-compact {
   --button-target: var(--control-height-compact);
-  --text-label: var(--p-font-sm);
-  --text-ui: var(--p-font-sm);
+  --text-label: var(--p-font-data);
+  --text-ui: var(--p-font-data);
+  --text-heading: var(--resource-heading-size);
   --text-caption: var(--p-font-xs);
-  --control-font-size: var(--p-font-sm);
+  --control-font-size: var(--p-font-data);
   --control-padding-block: var(--p-space-1);
   --button-padding-block: var(--p-space-1);
   --button-padding-inline: var(--p-space-3);
-  --field-label-size: var(--p-font-sm);
+  --field-label-size: var(--p-font-data);
   --field-label-gap: var(--p-space-1);
   --table-cell-padding-block: var(--p-space-1);
   --table-cell-padding-inline: var(--p-space-3);
@@ -19,6 +20,12 @@
   --resource-heading-size: var(--p-font-base);
   --empty-state-padding: var(--p-space-6);
   --dialog-padding: var(--p-space-4);
+  font-size: var(--text-ui);
+  line-height: var(--line-ui);
+}
+:where(.ui-density-compact) :where(h2, h3) {
+  font-size: var(--resource-heading-size);
+  margin-block: 0 var(--p-space-2);
 }
 .ui-section-header,
 .ui-filter-heading {
@@ -28,6 +35,13 @@
   flex-wrap: wrap;
   gap: var(--p-space-2) var(--p-space-3);
   margin-bottom: var(--section-gap);
+}
+.ui-card {
+  min-width: 0;
+  padding: var(--card-padding, var(--section-padding));
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-lg);
+  background: var(--card-background, var(--surface));
 }
 .ui-section-header h2,
 .ui-section-header h3 {
@@ -48,7 +62,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--p-space-2);
-  font-size: var(--p-font-sm);
+  font-size: var(--text-label);
   font-weight: 600;
 }
 .ui-filter-grid {
@@ -68,6 +82,10 @@
   border-bottom: 1px solid var(--line);
 }
 .ui-view-switch button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--p-space-2);
   flex: none;
   min-height: var(--button-target);
   padding: var(--p-space-1) var(--p-space-3);
@@ -79,6 +97,17 @@
   color: var(--accent);
   border-bottom-color: var(--accent);
   font-weight: 600;
+}
+.ui-view-switch-icons {
+  border-bottom: 0;
+}
+.ui-view-switch-icons button {
+  padding: var(--p-space-1);
+  border: 0;
+  border-radius: var(--p-radius-md);
+}
+.ui-view-switch-icons button[aria-pressed='true'] {
+  background: var(--accent-soft);
 }
 .ui-filter-heading .ui-view-switch,
 .ui-filter-panel > .ui-view-switch {
@@ -112,7 +141,7 @@
   margin-block: 0 var(--p-space-1);
 }
 .feature-layout-compact .feature-header p {
-  font-size: var(--p-font-sm);
+  font-size: var(--text-ui);
   line-height: var(--line-ui);
 }
 .feature-layout-compact .panel-eyebrow {

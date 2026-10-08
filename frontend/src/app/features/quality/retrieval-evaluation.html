@@ -4,7 +4,7 @@
 @if (error()) {
   <p role="alert" class="error-banner">{{ error() }}<nx-issue-code [message]="error()" /></p>
 }
-<section class="platform-card">
+<section nxCard>
   <div class="page-toolbar">
     <h2>建立檢索驗收集</h2>
     <label class="upload-label secondary-button"
@@ -72,7 +72,7 @@
   </form>
 </section>
 @if (runs().length) {
-  <section class="platform-card">
+  <section nxCard>
     <div class="page-toolbar">
       <h2>評測報告</h2>
       <button type="button" class="secondary-button" (click)="load()" [disabled]="busy()">
@@ -113,7 +113,7 @@
       </p>
       <div class="platform-grid">
         @for (metric of report.summary; track metric.mode) {
-          <article class="platform-card">
+          <article nxCard>
             <h3>{{ metric.mode }}</h3>
             <p class="form-note">
               完成 {{ metric.completed }} 次 · 無法評測 {{ metric.unavailable }} 次

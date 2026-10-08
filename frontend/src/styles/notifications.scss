@@ -59,6 +59,7 @@
   gap: var(--p-space-2);
 }
 .notification-title strong {
+  font-size: var(--text-label);
   font-weight: 550;
 }
 .notification-unread {
@@ -94,4 +95,8 @@
   gap: var(--p-space-2);
   flex-wrap: wrap;
   margin-top: var(--p-space-1);
+  align-items: center;
+}
+.notification-actions time {
+  margin-right: auto;
 }

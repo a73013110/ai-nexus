@@ -1,5 +1,8 @@
+import { EmptyState } from '../../shared/ui/empty-state';
+import { Card } from '../../shared/ui/card';
 import { SearchField } from '../../shared/ui/search-field';
 import { Field } from '../../shared/ui/field';
+import { ViewSwitch } from '../../shared/ui/view-switch';
 import { ClientValidationError } from '../../core/api/safe-errors';
 import { IssueCode } from '../../shared/ui/issue-code';
 import {
@@ -32,6 +35,9 @@ import { ShareDialog } from '../sharing/share-dialog';
 @Component({
   selector: 'nx-artifacts-page',
   imports: [
+    ViewSwitch,
+    EmptyState,
+    Card,
     SearchField,
     Field,
     IssueCode,
@@ -89,6 +95,15 @@ export class ArtifactsPage {
       this.document()?.resource.canEdit &&
       (this.document()?.version === this.document()?.currentVersion || this.restoring()),
   );
+  readonly modeOptions = computed(() => [
+    { value: 'read', label: '閱讀' },
+    ...(this.editable()
+      ? [
+          { value: 'edit', label: '編輯' },
+          { value: 'split', label: '並排預覽' },
+        ]
+      : []),
+  ]);
   readonly choices = computed(() =>
     this.revisions().map((x) => ({
       value: String(x.version),

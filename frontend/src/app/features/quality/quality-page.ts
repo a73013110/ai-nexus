@@ -1,3 +1,5 @@
+import { EmptyState } from '../../shared/ui/empty-state';
+import { Card } from '../../shared/ui/card';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
@@ -52,6 +54,8 @@ const blankCase = (): EvaluationCase => ({
 @Component({
   selector: 'nx-quality-page',
   imports: [
+    EmptyState,
+    Card,
     ViewSwitch,
     CompactDialog,
     Field,

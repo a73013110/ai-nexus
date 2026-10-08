@@ -129,9 +129,6 @@
     grid-template-columns: minmax(0, 1fr);
     gap: var(--p-space-3);
   }
-  .metric-card {
-    padding: var(--p-space-4);
-  }
   .metric-card > strong {
     font-size: 1.65rem;
   }

@@ -1,3 +1,5 @@
+import { Card } from '../../shared/ui/card';
+import { EmptyState } from '../../shared/ui/empty-state';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { formatDate } from '../../shared/browser/format';
 import { ClientValidationError } from '../../core/api/safe-errors';
@@ -20,6 +22,8 @@ import { SharingApi } from './sharing-api';
 @Component({
   selector: 'nx-shared-page',
   imports: [
+    Card,
+    EmptyState,
     ViewSwitch,
     IssueCode,
     FeaturePage,
@@ -82,7 +86,7 @@ import { SharingApi } from './sharing-api';
           }
         </nav>
         @if (content(); as view) {
-          <article class="share-content">
+          <article nxCard class="share-content">
             <div class="share-heading">
               <div>
                 <span class="panel-eyebrow"
@@ -126,11 +130,11 @@ import { SharingApi } from './sharing-api';
             }
           </article>
         } @else {
-          <section class="artifact-empty">
+          <nx-empty-state>
             <span class="empty-symbol"><nx-icon name="copy" /></span>
             <h2>分享當下的成果</h2>
             <p>只有指定帳號能閱讀。新內容不會自動公開，<br />到期與撤銷會立即停止存取。</p>
-          </section>
+          </nx-empty-state>
         }
       </div> </nx-feature-page
     ><nx-confirm-dialog />`,

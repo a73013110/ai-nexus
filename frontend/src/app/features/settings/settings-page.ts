@@ -1,3 +1,4 @@
+import { Card } from '../../shared/ui/card';
 import { SearchField } from '../../shared/ui/search-field';
 import { IssueCode } from '../../shared/ui/issue-code';
 import { safeMessage } from '../../core/api/safe-errors';
@@ -39,6 +40,7 @@ import {
 @Component({
   selector: 'nx-settings-page',
   imports: [
+    Card,
     SearchField,
     IssueCode,
     RouterLink,

@@ -1,3 +1,4 @@
+import { Card } from '../../shared/ui/card';
 import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
 import { IssueCode } from '../../shared/ui/issue-code';
@@ -25,7 +26,16 @@ import { JobsApi } from '../tasks/jobs-api';
 @Component({
   selector: 'nx-retrieval-evaluation',
   host: { class: 'platform-form' },
-  imports: [Field, IssueCode, ReactiveFormsModule, DecimalPipe, Checkbox, Select, JobProgress],
+  imports: [
+    Card,
+    Field,
+    IssueCode,
+    ReactiveFormsModule,
+    DecimalPipe,
+    Checkbox,
+    Select,
+    JobProgress,
+  ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './retrieval-evaluation.html',

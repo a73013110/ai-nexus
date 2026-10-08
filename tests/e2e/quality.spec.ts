@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { ApiFixture, chooseSelect, settleEntrance } from "./fixtures";
+import {
+  expectCompactWorkspace,
+  ApiFixture,
+  chooseSelect,
+  settleEntrance,
+} from "./fixtures";
 import type {
   EvaluationSet,
   EvaluationDetail,
@@ -156,6 +161,7 @@ test("檢索評測固定驗收集並顯示四模式指標及降級原因", async
       .getByRole("textbox", { name: "檢索評測名稱" })
       .boundingBox();
     expect(input!.width).toBeGreaterThan(width === 375 ? 170 : 500);
+    await expectCompactWorkspace(page);
     await page.screenshot({
       path: `artifacts/screenshots/retrieval-evaluation-${width}.png`,
       fullPage: true,
@@ -291,6 +297,7 @@ test("fixed evaluation cases compare instructions, show diagnostic results and r
   await expect(page.getByText("人工評分：4 / 5")).toBeVisible();
   await expect(page.getByText("需要確認期限，但格式清楚。")).toBeVisible();
   await settleEntrance(page);
+  await expectCompactWorkspace(page);
   await page.screenshot({ path: "artifacts/screenshots/quality-desktop.png" });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator(".evaluation-answer").first()).toBeVisible();
@@ -299,6 +306,7 @@ test("fixed evaluation cases compare instructions, show diagnostic results and r
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBeTruthy();
+  await expectCompactWorkspace(page);
   await page.screenshot({ path: "artifacts/screenshots/quality-mobile.png" });
 });
 

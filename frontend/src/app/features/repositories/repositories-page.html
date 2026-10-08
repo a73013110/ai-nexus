@@ -35,14 +35,14 @@
   }
   @if (status(); as connection) {
     @if (!connection.available) {
-      <section class="platform-card repository-connect">
+      <section nxCard class="repository-connect">
         <nx-icon name="git" />
         <h2>連接你的 Gitea</h2>
         <p>{{ connection.notice }}</p>
         <p class="form-note">請洽管理員啟用程式庫連線。授權只需要讀取，不需要寫入權限。</p>
       </section>
     } @else if (!connection.connected || reconnect()) {
-      <section class="platform-card repository-connect">
+      <section nxCard class="repository-connect">
         <nx-icon name="git" />
         <h2>{{ connection.connected ? '更新 Gitea 授權' : '連接你的 Gitea' }}</h2>
         <p>使用你自己的權限瀏覽程式庫。只需 read:user、read:repository 與 read:issue。</p>
@@ -75,7 +75,7 @@
     } @else {
       <p class="repository-scope-note"><nx-icon name="lock" />{{ connection.notice }}</p>
       <div class="repository-layout">
-        <aside class="repository-list platform-card">
+        <aside nxCard class="repository-list">
           <nx-search-field
             label="搜尋這一頁的程式庫"
             placeholder="尋找程式庫"
@@ -122,7 +122,7 @@
             </button>
           </div>
         </aside>
-        <section class="repository-detail platform-card">
+        <section nxCard class="repository-detail">
           @if (selected(); as repo) {
             <header class="resource-heading">
               <div>
@@ -271,11 +271,11 @@
               </div>
             }
           } @else {
-            <div class="repository-empty">
+            <nx-empty-state>
               <nx-icon name="git" />
               <h2>選擇程式庫，開始理解工作</h2>
               <p>從文件、原始碼或議題取得脈絡，再選擇帶入對話。</p>
-            </div>
+            </nx-empty-state>
           }
           @if (notice()) {
             <p class="form-note" role="status">

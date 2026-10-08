@@ -182,25 +182,6 @@
 .repository-issues details[open] summary nx-icon {
   transform: rotate(90deg);
 }
-.repository-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  min-height: 15rem;
-  color: var(--secondary);
-}
-.repository-empty > nx-icon {
-  width: 2.5rem;
-  height: 2.5rem;
-  color: var(--signal);
-}
-.repository-empty h2 {
-  font-size: var(--resource-heading-size);
-  font-weight: 500;
-  color: var(--ink);
-}
 @media (max-width: 1100px) {
   .repository-layout {
     grid-template-columns: 14rem minmax(0, 1fr);

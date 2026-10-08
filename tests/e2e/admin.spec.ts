@@ -1,6 +1,7 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import {
+  expectCompactWorkspace,
   ApiFixture,
   settleEntrance,
   chooseSelect,
@@ -219,6 +220,11 @@ test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", as
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    await expectCompactWorkspace(page);
+    await expect(page.locator(".usage-stat-card strong").first()).toHaveCSS(
+      "font-size",
+      "16px",
+    );
     await page.screenshot({
       path: `artifacts/screenshots/retrieval-admin-${theme}.png`,
       fullPage: true,
@@ -652,6 +658,7 @@ test("administrators edit roles with effective access preview and an audit trail
     "administrator",
   );
   await settleEntrance(page);
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/admin-audit.png",
     fullPage: true,
@@ -850,6 +857,7 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
       await expect(page.locator(target).first()).toBeVisible();
       if (tab === "平台用量")
         await expect(page.locator(".stat-card")).toHaveCount(4);
+      await expectCompactWorkspace(page);
       const header = await page.locator(".feature-header").boundingBox();
       const content = await page.locator(target).first().boundingBox();
       expect(Math.abs(header!.x - content!.x)).toBeLessThan(1);
@@ -917,6 +925,7 @@ test("group model limits and self-lockout errors work on desktop and mobile", as
     ),
   ).toBe(true);
   await settleEntrance(page);
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/admin-mobile.png",
     fullPage: true,
@@ -986,6 +995,7 @@ test("administrators inspect user usage and deleted conversations through an aud
     ),
   ).toBe(true);
   await settleEntrance(page);
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/admin-user-insights.png",
     fullPage: true,
@@ -1179,6 +1189,7 @@ test("personal model budgets share the group editor and keep conversations spaci
     .click();
   await expect(dialog).toContainText("150,000 tokens / 日");
   await expect(dialog).toContainText("個人設定");
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/admin-user-model-policy.png",
     animations: "disabled",

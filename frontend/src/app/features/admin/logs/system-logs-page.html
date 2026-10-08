@@ -335,7 +335,7 @@
         </tbody>
       </table>
       @if (!loading() && !page()?.events?.length) {
-        <div table-state class="ui-table-state empty-state">
+        <nx-empty-state table-state class="ui-table-state">
           <nx-icon name="search" /><strong>{{
             error() ? '無法載入日誌' : '此範圍沒有日誌'
           }}</strong>
@@ -346,7 +346,7 @@
                 : '試著擴大時間範圍，或調整查證代碼與篩選條件。'
             }}
           </p>
-        </div>
+        </nx-empty-state>
       }
       @if (loading() && !page()) {
         <div table-state class="ui-table-state">

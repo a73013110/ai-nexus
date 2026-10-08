@@ -1,7 +1,7 @@
 .share-workspace {
   display: grid;
   grid-template-columns: 15rem minmax(0, 1fr);
-  gap: var(--p-space-8);
+  gap: var(--section-gap);
 }
 .share-list {
   display: grid;
@@ -31,11 +31,7 @@
   margin-top: var(--p-space-1);
 }
 .share-content {
-  min-width: 0;
-  padding: var(--section-padding);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  border-radius: var(--p-radius-lg);
+  overflow-wrap: anywhere;
 }
 .share-heading {
   display: flex;
@@ -96,7 +92,7 @@
   align-items: center;
   gap: var(--p-space-2);
   padding: var(--p-space-2) var(--p-space-3);
-  min-height: 44px;
+  min-height: var(--button-target);
   background: var(--accent-soft);
   border-radius: var(--p-radius-pill);
 }
@@ -127,9 +123,6 @@
   }
   .share-list a {
     min-width: 200px;
-  }
-  .share-content {
-    padding: var(--p-space-4);
   }
   .share-heading {
     flex-direction: column;

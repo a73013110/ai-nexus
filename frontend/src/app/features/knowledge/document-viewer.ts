@@ -1,4 +1,6 @@
-import { Field } from '../../shared/ui/field';
+import { EmptyState } from '../../shared/ui/empty-state';
+import { SearchField } from '../../shared/ui/search-field';
+import { ViewSwitch } from '../../shared/ui/view-switch';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -30,7 +32,7 @@ import { WorkspaceApi } from '../workspace/workspace-api';
 
 @Component({
   selector: 'nx-document-viewer',
-  imports: [Field, Icon, Select, TextHighlight, JobProgress],
+  imports: [EmptyState, SearchField, ViewSwitch, Icon, Select, TextHighlight, JobProgress],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './document-viewer.html',
@@ -92,6 +94,15 @@ export class DocumentViewer {
   readonly imageZoomOptions = [{ value: 'fit', label: '符合視窗' }, ...this.zoomOptions];
   readonly hasText = computed(() => this.pages().some((page) => page.text.trim()));
   readonly rawImage = signal(false);
+  readonly modeOptions = computed(() => [
+    { value: 'original', label: this.isImage() ? '原始圖片' : '原始頁面', icon: 'eye' },
+    {
+      value: 'text',
+      label: this.rawImage() ? '辨識文字' : '擷取文字',
+      icon: 'lines',
+      disabled: this.busy() || (!!this.target().shareId && !this.hasText()),
+    },
+  ]);
   readonly contentUrl = computed(() =>
     this.target().shareId
       ? `/api/v1/shares/${encodeURIComponent(this.target().shareId!)}/files/${encodeURIComponent(this.target().id)}`

@@ -51,8 +51,6 @@
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow-floating);
-  font-size: var(--p-font-sm);
-  --button-target: 2.125rem;
 }
 .ui-calendar-heading,
 .ui-calendar-month,
@@ -72,19 +70,15 @@
   gap: var(--p-space-1);
 }
 .ui-calendar-month input,
-.ui-calendar-month select,
 .ui-calendar-time input {
-  padding: var(--p-space-1);
-  min-height: 2.125rem;
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-sm);
-  font: inherit;
+  padding-inline: var(--p-space-1);
   font-variant-numeric: tabular-nums;
 }
 .ui-calendar-month input {
-  width: 4.75rem;
+  width: 4.5rem;
+}
+.ui-calendar-month nx-select {
+  width: 5.75rem;
 }
 .ui-calendar {
   width: 100%;
@@ -105,7 +99,7 @@
 }
 .ui-calendar td button {
   width: 100%;
-  min-height: 2.25rem;
+  min-height: max(2.25rem, var(--button-target));
   padding: 0;
   color: var(--ink);
   border: 1px solid transparent;
@@ -156,15 +150,4 @@
 .ui-calendar-footer {
   border-top: 1px solid var(--line);
   padding-top: var(--p-space-2);
-}
-@media (pointer: coarse) {
-  .ui-date-panel {
-    --button-target: 2.75rem;
-  }
-  .ui-calendar td button {
-    min-height: 2.75rem;
-  }
-  .ui-date-control input {
-    font-size: max(1rem, var(--control-font-size));
-  }
 }

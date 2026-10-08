@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import {
+  expectCompactWorkspace,
   ApiFixture,
   chooseSelect,
   expectViewportContained,
@@ -250,6 +251,7 @@ test("dashboard keeps currencies separate, supports node inspection, and fits mo
   await page
     .locator(".feature-main")
     .evaluate((el) => el.scrollTo({ top: 0, behavior: "instant" }));
+  await expectCompactWorkspace(page);
   await page.screenshot({
     animations: "disabled",
     path: "artifacts/screenshots/dashboard-light.png",
@@ -313,6 +315,7 @@ test("dashboard keeps currencies separate, supports node inspection, and fits mo
   await page
     .locator(".feature-main")
     .evaluate((el) => el.scrollTo({ top: 0, behavior: "instant" }));
+  await expectCompactWorkspace(page);
   await page.screenshot({
     animations: "disabled",
     path: "artifacts/screenshots/dashboard-mobile-dark.png",

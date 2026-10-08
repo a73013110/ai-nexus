@@ -1,3 +1,5 @@
+import { EmptyState } from '../../shared/ui/empty-state';
+import { Card } from '../../shared/ui/card';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
@@ -38,6 +40,8 @@ import { RepositoriesApi } from './repositories-api';
 @Component({
   selector: 'nx-repositories-page',
   imports: [
+    EmptyState,
+    Card,
     ViewSwitch,
     Field,
     IssueCode,

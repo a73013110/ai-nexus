@@ -31,7 +31,7 @@
   position: sticky;
   top: 0;
   z-index: 2;
-  margin-bottom: var(--p-space-5);
+  margin-bottom: var(--section-gap);
   padding-top: var(--p-space-6);
   padding-right: var(--button-target);
   padding-bottom: var(--p-space-3);
@@ -51,12 +51,6 @@
 }
 .settings-dialog .settings-page-header h1 {
   font-size: var(--p-font-2xl);
-}
-.settings-dialog .settings-card {
-  padding: var(--p-space-4);
-}
-.settings-dialog .settings-content {
-  gap: var(--p-space-4);
 }
 .settings-loading {
   padding: var(--section-padding);
@@ -198,7 +192,7 @@
   animation: panel-arrive var(--motion-panel) var(--ease) both;
 }
 .settings-card h2 {
-  margin: 0 0 var(--p-space-4);
+  margin: 0 0 var(--p-space-2);
   font-size: var(--resource-heading-size);
   font-weight: 600;
 }

@@ -37,7 +37,7 @@
 <div
   #panel
   popover="auto"
-  class="ui-date-panel"
+  class="ui-date-panel ui-density-compact"
   role="dialog"
   [id]="id + '-panel'"
   [attr.aria-label]="label() + '日期選擇'"
@@ -53,6 +53,7 @@
         calendarSystem() === 'roc' ? '民國年' : '西元年'
       }}</label>
       <input
+        nxField
         [id]="id + '-year'"
         type="number"
         min="1"
@@ -60,15 +61,12 @@
         [value]="year()"
         (change)="changeYear($any($event.target).value)"
       /><span>年</span>
-      <select
-        aria-label="月份"
-        [value]="view().month"
-        (change)="changeMonth($any($event.target).value)"
-      >
-        @for (month of months; track month) {
-          <option [value]="month">{{ month }} 月</option>
-        }
-      </select>
+      <nx-select
+        label="月份"
+        [options]="monthOptions"
+        [value]="view().month.toString()"
+        (valueChange)="changeMonth($event)"
+      />
     </div>
     <button type="button" class="icon-button" aria-label="下個月" (click)="shiftMonth(1)">
       <nx-icon name="chevron" />
@@ -117,6 +115,7 @@
       <span>時間</span>
       <div>
         <input
+          nxField
           type="number"
           aria-label="時"
           min="0"
@@ -125,6 +124,7 @@
           (input)="setTime('hour', $any($event.target).value)"
         /><span>:</span>
         <input
+          nxField
           type="number"
           aria-label="分"
           min="0"
@@ -133,6 +133,7 @@
           (input)="setTime('minute', $any($event.target).value)"
         /><span>:</span>
         <input
+          nxField
           type="number"
           aria-label="秒"
           min="0"

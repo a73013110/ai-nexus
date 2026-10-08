@@ -13,6 +13,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { Icon } from './icon';
+import { Field } from './field';
+import { Select } from './select';
 import { positionPopover } from '../browser/popover-position';
 import { formatDateTimeInput } from '../browser/format';
 import {
@@ -29,7 +31,7 @@ let sequence = 0;
 /** ISO Gregorian wall-clock values at the boundary; calendar/locale affect display only. */
 @Component({
   selector: 'nx-date-time-picker',
-  imports: [Icon],
+  imports: [Icon, Field, Select],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './date-time-picker.html',
   styleUrl: './date-time-picker.scss',
@@ -83,6 +85,10 @@ export class DateTimePicker {
       ' 月',
   );
   readonly months = Array.from({ length: 12 }, (_, i) => i + 1);
+  readonly monthOptions = this.months.map((month) => ({
+    value: String(month),
+    label: `${month} 月`,
+  }));
   readonly weekdays = ['日', '一', '二', '三', '四', '五', '六'];
   readonly today = () => formatDateTimeInput(new Date()).slice(0, 10);
   readonly weeks = computed(() => {

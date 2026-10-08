@@ -97,7 +97,7 @@
   @if (data(); as d) {
     <div class="dashboard-content" [attr.aria-busy]="loading()" [class.is-refreshing]="loading()">
       <div class="dashboard-metrics">
-        <article class="platform-card metric-card">
+        <article nxCard class="metric-card">
           <span><nx-icon name="money" />區間已知費用</span
           ><strong>{{
             total()?.knownCalls ? money(total()!.amount, total()!.currency) : '尚無已知金額'
@@ -109,12 +109,12 @@
             }
           </small>
         </article>
-        <article class="platform-card metric-card">
+        <article nxCard class="metric-card">
           <span><nx-icon name="chart" />模型與工具呼叫</span
           ><strong>{{ d.spend.requests.toLocaleString() }}<em>次</em></strong
           ><small>{{ d.spend.pendingCalls }} 次待結算 · 包含搜尋、OCR、索引與評測</small>
         </article>
-        <article class="platform-card metric-card">
+        <article nxCard class="metric-card">
           <span><nx-icon name="database" />Token 使用量</span
           ><strong>{{ (tokenTotals().input + tokenTotals().output).toLocaleString() }}</strong
           ><small
@@ -122,7 +122,7 @@
             {{ tokenTotals().output.toLocaleString() }}</small
           >
         </article>
-        <article class="platform-card metric-card">
+        <article nxCard class="metric-card">
           <span><nx-icon name="tasks" />處理中工作</span
           ><strong>{{ d.counts.activeJobs + d.counts.activeGenerations }}<em>件</em></strong
           ><small
@@ -135,7 +135,7 @@
         統計範圍：{{ scopeLabel() }}。費用、呼叫與 Token
         使用量依查詢期間統計；工作狀態與資源數量顯示目前狀況。
       </p>
-      <section class="operations-overview platform-card">
+      <section nxCard class="operations-overview">
         <header class="ui-section-header">
           <div>
             <span class="panel-eyebrow">WORKSPACE FLOW</span>
@@ -159,7 +159,7 @@
         />
       </section>
       <div class="dashboard-charts">
-        <section class="platform-card">
+        <section nxCard>
           <nx-trend-chart
             [points]="trend()"
             label="每日已知費用"
@@ -170,10 +170,10 @@
             未知費用未納入金額，不同幣別與費用類型不相加。
           </p>
         </section>
-        <section class="platform-card"><nx-token-usage-chart [usage]="d.tokens" /></section>
+        <section nxCard><nx-token-usage-chart [usage]="d.tokens" /></section>
       </div>
       <div class="dashboard-lower">
-        <section class="platform-card">
+        <section nxCard>
           <header class="ui-section-header">
             <h2>模型與工具費用分布</h2>
             <span>{{ total()?.currency ?? '' }}</span>
@@ -202,7 +202,7 @@
             <p class="form-note">價格設定完成後，新的呼叫會呈現在這裡。</p>
           }
         </section>
-        <section class="platform-card">
+        <section nxCard>
           <header class="ui-section-header">
             <h2>繼續工作</h2>
             <a routerLink="/chat" class="quiet-button">新對話<nx-icon name="plus" /></a>
@@ -219,7 +219,7 @@
         </section>
       </div>
       @if (scope() === 'platform') {
-        <section class="platform-card dashboard-users">
+        <section nxCard class="dashboard-users">
           <header class="ui-section-header">
             <div>
               <h2>使用者區間費用</h2>

@@ -1,6 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { KnowledgeFixture } from "./knowledge-fixture";
-import { chooseSelect, settleEntrance } from "./fixtures";
+import {
+  expectCompactWorkspace,
+  chooseSelect,
+  settleEntrance,
+} from "./fixtures";
 
 test("knowledge upload, source query and named reader permissions are direct and themed", async ({
   page,
@@ -38,6 +42,7 @@ test("knowledge upload, source query and named reader permissions are direct and
   expect(fixture.acl.members[0].role).toBe("editor");
   expect(fixture.acl.groupIds).toEqual(["workspace"]);
   await settleEntrance(page);
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/knowledge-desktop.png",
     fullPage: true,
@@ -67,7 +72,12 @@ test("PDF reader renders real pages, searches extracted text and treats text as 
   await expect(canvas).toHaveAttribute("width", /[1-9]\d+/);
   await expect(canvas).toHaveAttribute("aria-label", /第 2 頁/);
   await chooseSelect(page, "文件縮放", "125%");
-  await page.getByRole("button", { name: "擷取文字", exact: true }).click();
+  const original = page.getByRole("button", { name: "原始頁面", exact: true });
+  const extracted = page.getByRole("button", { name: "擷取文字", exact: true });
+  await original.focus();
+  await original.press("ArrowRight");
+  await expect(extracted).toBeFocused();
+  await expect(extracted).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".reader-text")).toContainText("AI 文字辨識");
   await expect(page.locator(".reader-text img")).toHaveCount(0);
   await expect(page.locator(".reader-text")).toContainText(
@@ -77,7 +87,17 @@ test("PDF reader renders real pages, searches extracted text and treats text as 
   await expect(page.locator(".reader-text mark")).toHaveCount(1);
   await page.getByRole("button", { name: "第 1 頁", exact: true }).click();
   await expect(page.locator(".reader-text")).toContainText("第一頁");
+  await expect(page.locator(".reader-text pre")).toHaveCSS("font-size", "15px");
+  await expect(page.getByRole("searchbox", { name: "搜尋文件文字" })).toHaveCSS(
+    "font-size",
+    "13px",
+  );
   await page.setViewportSize({ width: 375, height: 812 });
+  await expect(page.getByRole("searchbox", { name: "搜尋文件文字" })).toHaveCSS(
+    "font-size",
+    "16px",
+  );
+  await expect(page.locator(".reader-text pre")).toHaveCSS("font-size", "15px");
   await settleEntrance(page);
   expect(
     await page.evaluate(
@@ -136,7 +156,9 @@ test("background tasks show real stages and distinguish cancellation requests fr
   job.issueCode = "NX-" + "D".repeat(32);
   await page.getByRole("button", { name: "重新整理", exact: true }).click();
   await page.getByRole("button", { name: "需要處理", exact: true }).click();
-  await expect(page.locator(".job-error")).toContainText("操作未完成，請聯絡管理員。查證代碼：NX-");
+  await expect(page.locator(".job-error")).toContainText(
+    "操作未完成，請聯絡管理員。查證代碼：NX-",
+  );
   await expect(page.locator(".job-error")).not.toContainText("fixture-private");
   await page.getByRole("button", { name: "重試", exact: true }).click();
   expect(job.status).toBe("queued");

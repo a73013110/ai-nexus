@@ -1,3 +1,6 @@
+import { Card } from '../../shared/ui/card';
+import { StatusBadge } from '../../shared/ui/status-badge';
+import { EmptyState } from '../../shared/ui/empty-state';
 import { SearchField } from '../../shared/ui/search-field';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
@@ -38,6 +41,9 @@ import { RetrievalResults } from '../../shared/ui/retrieval-results';
 @Component({
   selector: 'nx-knowledge-page',
   imports: [
+    StatusBadge,
+    Card,
+    EmptyState,
     SearchField,
     CompactDialog,
     Field,

@@ -535,13 +535,6 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
-.admin-feature-card {
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
-  padding: 16px;
-  background: var(--surface);
-  min-width: 0;
-}
 .admin-feature-card .resource-summary {
   display: flex;
   align-items: flex-start;
@@ -559,7 +552,7 @@
   float: right;
 }
 .admin-usage-section {
-  margin-top: 28px;
+  margin-top: var(--section-gap);
 }
 .admin-usage-section h2 {
   font-size: var(--text-heading);
@@ -568,11 +561,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 12px;
-}
-.admin-service-card {
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
-  padding: 16px;
 }
 .admin-service-card p {
   font-size: var(--text-caption);

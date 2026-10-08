@@ -267,10 +267,10 @@
               </button>
             }
           } @else {
-            <div class="inspector-empty">
+            <nx-empty-state class="inspector-empty">
               <nx-icon name="lines" />
               <p>{{ reading() ? '正在讀取對話…' : '選取左側對話，查看完整內容。' }}</p>
-            </div>
+            </nx-empty-state>
           }
         </section>
       </div>

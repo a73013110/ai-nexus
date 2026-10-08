@@ -26,6 +26,7 @@
     />
   </div>
   <section
+    nxCard
     class="file-library-intro"
     [nxFileDrop]="!uploading() && !!policy()"
     (filesDropped)="upload($event)"
@@ -63,23 +64,13 @@
         [value]="store.source()"
         (valueChange)="store.filter(store.type(), $event)"
       />
-      <div class="file-layout-toggle" role="group" aria-label="檔案排列">
-        <button
-          class="icon-button"
-          aria-label="網格排列"
-          [attr.aria-pressed]="layout() === 'grid'"
-          (click)="layout.set('grid')"
-        >
-          <nx-icon name="dashboard" /></button
-        ><button
-          class="icon-button"
-          aria-label="清單排列"
-          [attr.aria-pressed]="layout() === 'list'"
-          (click)="layout.set('list')"
-        >
-          <nx-icon name="lines" />
-        </button>
-      </div>
+      <nx-view-switch
+        label="檔案排列"
+        [iconOnly]="true"
+        [options]="layoutOptions"
+        [value]="layout()"
+        (valueChange)="layout.set($event)"
+      />
     </div>
   </nx-filter-panel>
   <div class="file-library-summary">
@@ -87,7 +78,7 @@
   </div>
   <nx-storage-usage [storage]="store.result()?.storage" />
   @if (store.loading()) {
-    <div class="file-loading" role="status"><nx-icon name="document" />正在載入檔案…</div>
+    <nx-empty-state role="status"><nx-icon name="document" />正在載入檔案…</nx-empty-state>
   } @else if (store.items().length) {
     <nx-file-browser
       [items]="store.items()"
@@ -99,7 +90,7 @@
       (rename)="rename($event)"
     />
   } @else {
-    <div class="files-empty">
+    <nx-empty-state>
       <nx-icon name="document" />
       <h2>
         {{
@@ -111,7 +102,7 @@
       <p>
         上傳圖片或文件，或在對話中傳送附件。<br />加入知識庫後，即可讓 AI 在回答時檢索並引用它。
       </p>
-    </div>
+    </nx-empty-state>
   }
   @if (store.total() > 40) {
     <div class="file-pagination">

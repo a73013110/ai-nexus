@@ -104,18 +104,12 @@
                 <nx-icon name="share" />唯讀分享
               </button>
             }
-            <div class="reader-mode">
-              <button [attr.aria-pressed]="mode() === 'read'" (click)="mode.set('read')">
-                閱讀
-              </button>
-              @if (editable()) {
-                <button [attr.aria-pressed]="mode() === 'edit'" (click)="mode.set('edit')">
-                  編輯</button
-                ><button [attr.aria-pressed]="mode() === 'split'" (click)="mode.set('split')">
-                  並排預覽
-                </button>
-              }
-            </div>
+            <nx-view-switch
+              label="成果檢視方式"
+              [options]="modeOptions()"
+              [value]="mode()"
+              (valueChange)="mode.set($event)"
+            />
             <div class="artifact-export">
               <button class="quiet-button" [disabled]="busy()" (click)="export('docx')">
                 Word<nx-icon name="download" /></button
@@ -189,7 +183,7 @@
               ></textarea>
             }
             @if (mode() !== 'edit' || !editable()) {
-              <nx-markdown-view class="artifact-preview platform-card" [content]="content()" />
+              <nx-markdown-view nxCard class="artifact-preview" [content]="content()" />
             }
           </div>
           <nx-resource-sharing
@@ -200,14 +194,14 @@
           />
         </section>
       } @else {
-        <section class="artifact-empty">
+        <nx-empty-state>
           <span class="empty-symbol"><nx-icon name="document" /></span>
           <h2>從思考到成果</h2>
           <p>
             在 AI 回答選取段落，可以改寫、摘要、翻譯或儲存成果。<br />每個版本都能獨立檢視與匯出。
           </p>
           <a routerLink="/chat" class="secondary-button">開始對話<nx-icon name="chevron" /></a>
-        </section>
+        </nx-empty-state>
       }
     </div>
   }

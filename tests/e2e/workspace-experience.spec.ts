@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import {
+  expectCompactWorkspace,
   ApiFixture,
   chooseSelect,
   expectViewportContained,
@@ -24,6 +25,7 @@ test("sent shares preserve their list and reuse the authorized PDF reader, citat
     isImage: false,
     analysisMode: "shared-file",
   };
+  let previewText = true;
   const share = {
     id,
     kind: "conversation",
@@ -46,20 +48,22 @@ test("sent shares preserve their list and reuse the authorized PDF reader, citat
       return route.fulfill({
         json: {
           file,
-          pages: [
-            {
-              pageNumber: 1,
-              text: "第一頁摘要",
-              extraction: "native",
-              needsReview: false,
-            },
-            {
-              pageNumber: 2,
-              text: "第二頁摘要",
-              extraction: "native",
-              needsReview: false,
-            },
-          ],
+          pages: previewText
+            ? [
+                {
+                  pageNumber: 1,
+                  text: "第一頁摘要",
+                  extraction: "native",
+                  needsReview: false,
+                },
+                {
+                  pageNumber: 2,
+                  text: "第二頁摘要",
+                  extraction: "native",
+                  needsReview: false,
+                },
+              ]
+            : [],
         },
       });
     if (url.pathname.includes("/files/"))
@@ -145,6 +149,22 @@ test("sent shares preserve their list and reuse the authorized PDF reader, citat
   await reader.getByRole("button", { name: "擷取文字", exact: true }).click();
   await expect(reader).toContainText("第二頁摘要");
   await page.keyboard.press("Escape");
+  previewText = false;
+  await page.getByRole("link", { name: "閱讀附件：分享報告.pdf" }).click();
+  await expect(reader.locator("canvas")).toHaveAttribute("width", /[1-9]\d+/);
+  const original = reader.getByRole("button", {
+    name: "原始頁面",
+    exact: true,
+  });
+  await expect(
+    reader.getByRole("button", { name: "擷取文字", exact: true }),
+  ).toBeDisabled();
+  await original.focus();
+  await original.press("End");
+  await expect(original).toBeFocused();
+  await expect(original).toHaveAttribute("aria-pressed", "true");
+  await expect(reader.locator("canvas")).toBeVisible();
+  await page.keyboard.press("Escape");
   await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/shared-rich-content.png",
@@ -220,6 +240,18 @@ test("icon rail, notification filtering and typed task navigation work across pa
   await page.getByRole("button", { name: "通知", exact: true }).click();
   let dialog = page.getByRole("dialog", { name: "通知", exact: true });
   await expect(dialog.locator(".notification-row")).toHaveCount(2);
+  await expect(dialog).toHaveCSS("font-size", "13px");
+  await expect(dialog.locator(".notification-title strong").first()).toHaveCSS(
+    "font-size",
+    "13px",
+  );
+  await expect(dialog.locator(".notification-row time").first()).toHaveCSS(
+    "font-size",
+    "12px",
+  );
+  expect(
+    (await dialog.locator(".notification-row").first().boundingBox())!.height,
+  ).toBeLessThanOrEqual(120);
   await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/notifications-light.png",
@@ -250,8 +282,26 @@ test("icon rail, notification filtering and typed task navigation work across pa
   await expect(page).toHaveURL(new RegExp(`/tasks\\?job=${job.id}$`));
   await expect(page.locator(".job-card.current")).toContainText(job.label);
   await expect(page.locator(".job-card.current")).toBeFocused();
+  await expect(page.locator(".job-card.current")).toHaveCSS("padding", "12px");
+  await expect(page.locator(".job-card.current .job-heading h2")).toHaveCSS(
+    "font-size",
+    "16px",
+  );
+  await expect(page.locator(".job-card.current nx-status-badge")).toHaveText(
+    "已完成",
+  );
+  await expectCompactWorkspace(page);
+  await page.screenshot({
+    path: "artifacts/screenshots/tasks-compact-desktop.png",
+    animations: "disabled",
+  });
   await page.setViewportSize({ width: 375, height: 812 });
   await expectViewportContained(page);
+  await expectCompactWorkspace(page);
+  await page.screenshot({
+    path: "artifacts/screenshots/tasks-compact-mobile.png",
+    animations: "disabled",
+  });
   expect((await sidebar.boundingBox())!.width).toBe(64);
   await page.getByRole("button", { name: "展開側欄", exact: true }).click();
   await expect(page.locator(".feature-main")).toHaveAttribute("inert", "");
@@ -306,7 +356,11 @@ test("file names retain their extension and a rejected edit remains recoverable"
       reject = false;
       return route.fulfill({
         status: 409,
-        json: { title: "Password=fixture-private", code: "file_name_changed", issueCode: "NX-" + "D".repeat(32) },
+        json: {
+          title: "Password=fixture-private",
+          code: "file_name_changed",
+          issueCode: "NX-" + "D".repeat(32),
+        },
       });
     }
     file.fileName = body.fileName;
@@ -349,7 +403,11 @@ test("pasted knowledge text is editable and a version conflict preserves the dra
       conflict = false;
       return route.fulfill({
         status: 409,
-        json: { title: "Password=fixture-private", code: "text_version_changed", issueCode: "NX-" + "D".repeat(32) },
+        json: {
+          title: "Password=fixture-private",
+          code: "text_version_changed",
+          issueCode: "NX-" + "D".repeat(32),
+        },
       });
     }
     source = {
@@ -576,6 +634,7 @@ test("repository range review creates a fixed background task and opens the same
         .evaluate((element) => element.scrollHeight - element.clientHeight),
     )
     .toBeLessThanOrEqual(1);
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/repository-review.png",
   });
@@ -586,6 +645,7 @@ test("repository range review creates a fixed background task and opens the same
   );
   await expectViewportContained(page);
   await expect(page.locator(".review-results > header")).toBeInViewport();
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/repository-review-mobile.png",
   });

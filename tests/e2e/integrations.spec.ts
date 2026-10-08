@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { ApiFixture, settleEntrance } from "./fixtures";
+import { expectCompactWorkspace, ApiFixture, settleEntrance } from "./fixtures";
 import type {
   SourceDetail,
   Conversation,
@@ -106,6 +106,7 @@ test("controlled source search opens authorized status and history, then hands a
   ).toBeVisible();
   await expect(page.getByText("核對並完成本次簽核")).toBeVisible();
   await settleEntrance(page);
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/integrations-desktop.png",
   });
@@ -115,6 +116,7 @@ test("controlled source search opens authorized status and history, then hands a
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBeTruthy();
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/integrations-mobile.png",
   });

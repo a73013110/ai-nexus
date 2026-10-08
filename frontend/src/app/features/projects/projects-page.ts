@@ -1,3 +1,5 @@
+import { EmptyState } from '../../shared/ui/empty-state';
+import { Card } from '../../shared/ui/card';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
@@ -41,6 +43,8 @@ import { SearchField } from '../../shared/ui/search-field';
 @Component({
   selector: 'nx-projects-page',
   imports: [
+    EmptyState,
+    Card,
     CompactDialog,
     Field,
     IssueCode,
