@@ -33,6 +33,4 @@ AiNexus.Features.Projects.ConversationProjectRequest
 AiNexus.Features.Projects.ProjectConversationRequest
 AiNexus.Features.Projects.ProjectRequest
 AiNexus.Features.Projects.ProjectTemplateRequest
-AiNexus.Features.Repositories.ConnectRepositoryRequest
-AiNexus.Features.Repositories.CreateRepositoryReviewRequest
 AiNexus.Features.Repositories.RepositoryImportRequest
