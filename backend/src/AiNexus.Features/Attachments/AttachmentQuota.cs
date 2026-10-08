@@ -7,6 +7,9 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Attachments;
 
+/// <summary>A personal storage limit set by an administrator; <c>null</c> falls back to the group or default limit.</summary>
+public sealed record AttachmentStorageLimitRequest(long? LimitBytes);
+
 public sealed class AttachmentQuota(NexusDbContext db, AccessService access, IOptions<AttachmentOptions> options)
 {
     // Personal overrides deliberately take precedence over inherited limits, including group caps.

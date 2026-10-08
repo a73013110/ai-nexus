@@ -3,6 +3,7 @@ using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Conversations;
 
+/// <summary>The user's own conversations: list, organize, back up, branch and delete. Other modules use <see cref="ConversationService"/>; each use case has its own file.</summary>
 public sealed class ConversationsModule : IFeatureModule
 {
     /// <summary>Conversation backups may carry a whole message tree.</summary>
@@ -10,10 +11,32 @@ public sealed class ConversationsModule : IFeatureModule
 
     public static void AddServices(IHostApplicationBuilder builder)
     {
-        builder.Services.AddScoped<ConversationService>();
-        builder.Services.AddScoped<ConversationOrganization>();
-        builder.Services.AddFeaturePolicy(FeatureIds.Chat);
+        var services = builder.Services;
+        services.AddScoped<ConversationService>();
+        services.AddScoped<GetConversation>();
+        services.AddScoped<ImportConversation>();
+        services.AddScoped<RenameConversation>();
+        services.AddScoped<UpdateConversationSettings>();
+        services.AddScoped<DuplicateConversation>();
+        services.AddScoped<SelectBranch>();
+        services.AddScoped<DeleteConversation>();
+        services.AddFeaturePolicy(FeatureIds.Chat);
     }
 
-    public static void MapEndpoints(RouteGroupBuilder api) => api.MapConversations();
+    // Endpoint order is the published OpenAPI order.
+    public static void MapEndpoints(RouteGroupBuilder api)
+    {
+        var routes = api.MapGroup("/conversations").RequireAuthorization(Policies.Chat).WithTags("Conversations");
+        ListConversations.Map(routes);
+        ListConversationLabels.Map(routes);
+        ImportConversation.Map(routes);
+        CreateConversation.Map(routes);
+        GetConversation.Map(routes);
+        RenameConversation.Map(routes);
+        UpdateConversationSettings.Map(routes);
+        DuplicateConversation.Map(routes);
+        ExportConversation.Map(routes);
+        SelectBranch.Map(routes);
+        DeleteConversation.Map(routes);
+    }
 }

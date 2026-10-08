@@ -1,8 +1,9 @@
-using AiNexus.Platform.Errors;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Collaboration;
+using AiNexus.Features.Identity;
 using AiNexus.Features.Knowledge;
+using AiNexus.Features.Persistence;
+using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Attachments;
@@ -10,50 +11,22 @@ namespace AiNexus.Features.Attachments;
 public sealed record FileUsageDto(string Kind, Guid ResourceId, string Name, Guid? DocumentId, string? Status);
 public sealed record LibraryFileDto(AttachmentDto File, DateTimeOffset CreatedAt, IReadOnlyList<FileUsageDto> Usages, bool CanDelete);
 public sealed record FileLibraryPageDto(IReadOnlyList<LibraryFileDto> Items, int Total, AttachmentStorageDto Storage, int Offset, int Limit);
-public sealed record RenameLibraryFileRequest(string FileName, string ExpectedFileName);
 
-/// <summary>The original is stored once. History and knowledge index it through independent references.</summary>
-public sealed class FileLibraryService(NexusDbContext db, AttachmentService files, AttachmentWriteLock writes, ResourceAccess access, AccessService features, AttachmentQuota quota)
+/// <summary>
+/// The caller's library files with where each is used. The original is stored once; history and knowledge index it
+/// through independent references, and only usages the caller can still open are listed.
+/// </summary>
+internal sealed class ListLibraryFiles(NexusDbContext db, ResourceAccess access, AccessService features, AttachmentQuota quota)
 {
-    public async Task<AttachmentDto> RenameAsync(Guid actor, Guid id, RenameLibraryFileRequest request, CancellationToken ct)
-    {
-        var name = request.FileName.Trim();
-        if (name.Length is < 1 or > 180 || name.Any(char.IsControl) || name.IndexOfAny(['/', '\\', ':', '*', '?', '"', '<', '>', '|']) >= 0 || name.EndsWith('.') || name is "." or "..")
-            throw new ApiException(400, "file_name_invalid", "檔名需為 1 至 180 個字元，不可包含路徑、控制字元或特殊符號。");
-        var file = await files.OwnedAsync(actor, id, ct);
-        if (!file.InLibrary) throw new ApiException(404, "file_not_found", "找不到這份檔案。");
-        if (!string.Equals(Path.GetExtension(name), Path.GetExtension(file.FileName), StringComparison.OrdinalIgnoreCase))
-            throw new ApiException(400, "file_extension_changed", "重新命名時請保留原副檔名，以維持正確的預覽與格式識別。");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var changed = await db.Set<Attachment>().Where(x => x.Id == id && x.OwnerId == actor && x.InLibrary && x.FileName == request.ExpectedFileName && x.StorageState == AttachmentStates.Ready)
-            .ExecuteUpdateAsync(p => p.SetProperty(x => x.FileName, name), ct);
-        if (changed != 1) throw new ApiException(409, "file_name_changed", "檔名已被修改，請重新載入後再試。");
-        db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "file.renamed", Result = "saved" });
-        await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
-        file.FileName = name;
-        return AttachmentService.Describe(file);
-    }
-    public async Task RetainAsync(Guid actor, Guid id, CancellationToken ct)
-    {
-        await writes.Gate.WaitAsync(ct);
-        try
-        {
-            await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            await quota.LockOwnerAsync(actor, ct);
-            var file = await files.OwnedAsync(actor, id, ct);
-            if (file.InLibrary) return;
-            await db.Set<Attachment>().Where(x => x.Id == id && x.OwnerId == actor).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
-            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "file.retained", Result = "saved" });
-            await db.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
-        }
-        finally { writes.Gate.Release(); }
-    }
+    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
+        .MapGet("", async (string? search, string? type, string? source, int? offset, int? limit, ICurrentUser user, ListLibraryFiles handler, CancellationToken ct) =>
+            (await handler.HandleAsync(user.Id, search, type ?? "all", source ?? "all", offset ?? 0, limit ?? 40, ct)).ToHttpResult())
+        .WithName("ListLibraryFiles").Produces<FileLibraryPageDto>();
 
-    public async Task<FileLibraryPageDto> ListAsync(Guid actor, string? search, string type, string source, int offset, int limit, CancellationToken ct)
+    public async Task<Result<FileLibraryPageDto>> HandleAsync(Guid actor, string? search, string type, string source, int offset, int limit, CancellationToken ct)
     {
         if (search?.Length > 180 || type is not ("all" or "images" or "documents") || source is not ("all" or "chat" or "knowledge" or "projects" or "library") || offset is < 0 or > 100000 || limit is < 1 or > 60)
-            throw new ApiException(400, "file_filter_invalid", "檔案查詢條件不正確。");
+            return AttachmentErrors.FilterInvalid;
         var grants = (await features.ForUserAsync(actor, ct)).Features.Select(x => x.Id).ToHashSet();
         var collections = grants.Contains("knowledge") ? (await access.QueryAsync(actor, "knowledge", ct)).Select(x => x.Id) : db.Set<WorkspaceResource>().Where(x => false).Select(x => x.Id);
         var projects = grants.Contains("projects") ? (await access.QueryAsync(actor, "project", ct)).Select(x => x.Id) : db.Set<WorkspaceResource>().Where(x => false).Select(x => x.Id);
@@ -95,7 +68,7 @@ public sealed class FileLibraryService(NexusDbContext db, AttachmentService file
             where ids.Contains(link.AttachmentId) orderby resource.Name select new { link.AttachmentId, resource.Id, resource.Name, link.DocumentId, link.Status }).Take(500).ToListAsync(ct);
         usage.AddRange(project.Select(x => (x.AttachmentId, new FileUsageDto("projects", x.Id, x.Name, x.DocumentId, x.Status))));
         var byFile = usage.ToLookup(x => x.FileId, x => x.Value);
-        return new(rows.Select(x => new LibraryFileDto(new(x.Id, x.FileName, x.ContentType, x.Size, x.ContentType.StartsWith("image/"),
+        return new FileLibraryPageDto(rows.Select(x => new LibraryFileDto(new(x.Id, x.FileName, x.ContentType, x.Size, x.ContentType.StartsWith("image/"),
             x.ContentType == "application/pdf" && !x.HasText ? "ocr-required" : x.ContentType.StartsWith("image/") && !x.HasText ? "vision" : "extracted-text"), x.CreatedAt, byFile[x.Id].Take(8).ToArray(), x.CanDelete)).ToArray(), total, storage, offset, limit);
     }
 }

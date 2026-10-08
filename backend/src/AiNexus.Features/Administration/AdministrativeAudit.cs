@@ -12,47 +12,66 @@ namespace AiNexus.Features.Administration;
 public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, AccessService access, AdministrativeWriteLock writes)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    /// <summary>Runs a mutation written by another module; its expected failures, and this module's, are exceptions.</summary>
     public async Task MutateAsync(string action, Guid? resource, string key, Func<Task> mutation, CancellationToken ct)
+    {
+        var result = await TryMutateAsync(action, resource, key, async () => { await mutation(); return Result.Success; }, ct);
+        if (!result.IsSuccess) throw result.Error.ToException();
+    }
+
+    /// <summary>
+    /// Under the administrative write lock and one serializable transaction: the actor must still be an administrator,
+    /// the before snapshot is taken, the mutation runs and is saved, the actor must keep administrator access, and the
+    /// after snapshot is audited. Any expected failure, returned or thrown, rolls back and is audited with its code.
+    /// </summary>
+    internal async Task<Result> TryMutateAsync(string action, Guid? resource, string key, Func<Task<Result>> mutation, CancellationToken ct)
     {
         var actor = (await current.GetAsync(ct)).Id;
         await writes.Gate.WaitAsync(ct);
         object? before = null;
         try
         {
-            try
-            {
-                await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-                await RequireAsync(actor, ct);
-                before = await SnapshotAsync(action, resource, key, ct);
-                await mutation(); await db.SaveChangesAsync(ct);
-                if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == AdministrationConfiguration.Feature))
-                    throw new ApiException(409, "admin_lockout", "此變更會撤銷你的管理權限。請先由另一位管理員處理。");
-                var after = await SnapshotAsync(action, resource, key, ct);
-                db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource, Action = action, Result = "saved", DetailsJson = JsonSerializer.Serialize(new { resourceKey = key, before, after }, Json) });
-                await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
-            }
-            catch (ApiException error)
-            {
-                // The failed transaction is already disposed. Do not accidentally save pending grants.
-                db.ChangeTracker.Clear();
-                db.AuditEvents.Add(new()
-                {
-                    OwnerId = actor,
-                    ResourceId = resource,
-                    Action = action,
-                    Result = error.Code,
-                    DetailsJson = JsonSerializer.Serialize(new { resourceKey = key[..Math.Min(key.Length, 64)], before, failureCode = error.Code }, Json)
-                });
-                await db.SaveChangesAsync(ct); throw;
-            }
+            Error? failure;
+            try { failure = await CommitAsync(); }
+            catch (ApiException error) { await RecordFailureAsync(error.Code); throw; }
+            if (failure is null) return Result.Success;
+            await RecordFailureAsync(failure.Code);
+            return failure;
         }
         finally { writes.Gate.Release(); }
+
+        async Task<Error?> CommitAsync()
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            if (!await IsAdministratorAsync(actor, ct)) return AdministrationErrors.AdminRequired;
+            before = await SnapshotAsync(action, resource, key, ct);
+            var outcome = await mutation();
+            if (!outcome.IsSuccess) return outcome.Error;
+            await db.SaveChangesAsync(ct);
+            if (!await IsAdministratorAsync(actor, ct)) return AdministrationErrors.Lockout;
+            var after = await SnapshotAsync(action, resource, key, ct);
+            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource, Action = action, Result = "saved", DetailsJson = JsonSerializer.Serialize(new { resourceKey = key, before, after }, Json) });
+            await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
+            return null;
+        }
+
+        // Runs after the failed transaction is disposed. Do not accidentally save pending grants.
+        async Task RecordFailureAsync(string code)
+        {
+            db.ChangeTracker.Clear();
+            db.AuditEvents.Add(new()
+            {
+                OwnerId = actor,
+                ResourceId = resource,
+                Action = action,
+                Result = code,
+                DetailsJson = JsonSerializer.Serialize(new { resourceKey = key[..Math.Min(key.Length, 64)], before, failureCode = code }, Json)
+            });
+            await db.SaveChangesAsync(ct);
+        }
     }
-    private async Task RequireAsync(Guid actor, CancellationToken ct)
-    {
-        if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == AdministrationConfiguration.Feature))
-            throw new ApiException(403, "admin_required", "需要平台管理權限。");
-    }
+    private async Task<bool> IsAdministratorAsync(Guid actor, CancellationToken ct)
+        => (await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == AdministrationConfiguration.Feature);
     private async Task<object?> SnapshotAsync(string action, Guid? resource, string key, CancellationToken ct)
     {
         if (action.StartsWith("admin.embedding_", StringComparison.Ordinal) && int.TryParse(key, out var profile)) return new {
