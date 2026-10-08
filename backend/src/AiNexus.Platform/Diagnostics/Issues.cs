@@ -31,7 +31,9 @@ public static class DiagnosticTrace
 }
 
 public sealed record PublicProblem(int Status, string Code, string Title, string IssueCode);
-public sealed record SafeProblemDetails(string Type, string Title, int Status, string Code, string IssueCode);
+public sealed record SafeProblemDetails(string Type, string Title, int Status, string Code, string IssueCode,
+    [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    IReadOnlyDictionary<string, string[]>? Errors = null);
 public static class SafeErrorMetadata
 {
     public static RouteGroupBuilder WithSafeErrors(this RouteGroupBuilder group)
@@ -71,8 +73,10 @@ public sealed class Issues(ILogger<Issues> logger, ILoggerFactory? factory = nul
         var issue = Report(exception, code, status >= 500 ? LogLevel.Error : LogLevel.Information, status >= 500 ? DiagnosticEvents.Failure : DiagnosticEvents.Rejection);
         return new(status, code, status < 500 ? PublicErrorCatalog.Message(code, status) : Message(issue), issue);
     }
-    public static Task WriteAsync(HttpContext http, PublicProblem problem) => Results.Json(new SafeProblemDetails("urn:ai-nexus:problem:" + problem.Code, problem.Title, problem.Status, problem.Code, problem.IssueCode),
-        statusCode: problem.Status, contentType: "application/problem+json").ExecuteAsync(http);
+    // Only Problems' writer calls this; everything else goes through IProblemDetailsService.
+    internal static Task WriteAsync(HttpContext http, PublicProblem problem, IReadOnlyDictionary<string, string[]>? errors = null)
+        => Results.Json(new SafeProblemDetails("urn:ai-nexus:problem:" + problem.Code, problem.Title, problem.Status, problem.Code, problem.IssueCode, errors),
+            statusCode: problem.Status, contentType: "application/problem+json").ExecuteAsync(http);
 }
 
 public sealed class DiagnosticRequestMiddleware(RequestDelegate next)
@@ -89,23 +93,18 @@ public sealed class DiagnosticRequestMiddleware(RequestDelegate next)
         using var scope = logger.BeginScope(new Dictionary<string, object?> { ["RequestId"] = http.TraceIdentifier, ["OperationId"] = operation });
         try
         {
+            // Empty framework failures (challenge, forbid, unmatched route) get their body from UseStatusCodePages.
             await next(http);
-            // Includes framework binding/authorization failures that do not throw.
-            if (http.Response.StatusCode >= 400 && !http.Response.HasStarted && http.Response.ContentLength is null or 0)
-            {
-                var code = http.Response.StatusCode switch { 401 => "authentication_required", 403 => "access_denied", 404 => "not_found", 429 => "rate_limited", _ => "invalid_request" };
-                await Issues.WriteAsync(http, issues.Problem(new ApiException(http.Response.StatusCode, code, "")));
-            }
         }
         catch (OperationCanceledException) when (http.RequestAborted.IsCancellationRequested) { logger.LogInformation("Request cancelled by caller."); }
         catch (Exception exception)
         {
             using var failureScope = logger.BeginScope(new Dictionary<string, object?> { ["Method"] = http.Request.Method,
                 ["Route"] = (http.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText, ["StatusCode"] = exception is ApiException api ? api.Status : 503 });
-            var problem = issues.Problem(exception);
-            if (!http.Response.HasStarted) { http.Response.Clear(); WebSecurity.Headers(http); await Issues.WriteAsync(http, problem); }
+            if (!http.Response.HasStarted) { http.Response.Clear(); WebSecurity.Headers(http); await Problems.WriteAsync(http, exception); }
             else if (http.Response.ContentType?.StartsWith("text/event-stream", StringComparison.OrdinalIgnoreCase) == true && !http.RequestAborted.IsCancellationRequested)
             {
+                var problem = issues.Problem(exception);
                 await http.Response.WriteAsync("event: error\ndata: " + System.Text.Json.JsonSerializer.Serialize(new { code = problem.Code, message = problem.Status >= 500 ? Issues.Message(problem.IssueCode) : problem.Title, issueCode = problem.IssueCode }) + "\n\n", http.RequestAborted);
             }
             else http.Abort();
