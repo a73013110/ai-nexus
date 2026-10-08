@@ -1,5 +1,6 @@
 using AiNexus.Features.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.WebSearch;
 
@@ -27,11 +28,11 @@ public sealed class WebSearchRecord
 }
 public sealed record WebSourceDto(int Number, string Title, string Url, string Excerpt, DateTimeOffset RetrievedAt);
 public sealed record WebSearchStatusDto(bool Available, string Notice);
-public static class WebSearchConfiguration
+internal sealed class WebSearchRecordConfiguration : IEntityTypeConfiguration<WebSearchRecord>
 {
-    public static void Configure(ModelBuilder model)
+    public void Configure(EntityTypeBuilder<WebSearchRecord> item)
     {
-        var item = model.Entity<WebSearchRecord>(); item.ToTable("WebSearches", "inference"); item.HasKey(x => x.Id);
+        item.ToTable("WebSearches", "inference"); item.HasKey(x => x.Id);
         item.Property(x => x.IdempotencyKey).HasMaxLength(80); item.Property(x => x.RequestHash).HasMaxLength(64);
         item.Property(x => x.Status).HasMaxLength(16); item.HasIndex(x => new { x.OwnerId, x.IdempotencyKey }).IsUnique();
         item.HasIndex(x => x.RunId); item.HasIndex(x => new { x.OwnerId, x.CreatedAt });

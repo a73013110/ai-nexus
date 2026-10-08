@@ -7,18 +7,29 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Billing;
 
+/// <summary>A validated reporting window: 1 to 366 days, with the viewer's UTC offset for day buckets.</summary>
+public sealed record SpendPeriod(DateTimeOffset From, DateTimeOffset Until, int Offset)
+{
+    public static Result<SpendPeriod> Create(DateTimeOffset? from, DateTimeOffset? until, int? offset, DateTimeOffset now)
+    {
+        var end = until ?? now; var start = from ?? end.AddDays(-30); var zone = offset ?? 480;
+        if (start >= end || end - start > TimeSpan.FromDays(366) || zone is < -840 or > 840) return Error.Invalid("invalid_spend_period");
+        return new SpendPeriod(start.ToUniversalTime(), end.ToUniversalTime(), zone);
+    }
+}
+
 public sealed class SpendReports(NexusDbContext db, ModelPresentation presentation)
 {
-    public static (DateTimeOffset From, DateTimeOffset Until, int Offset) Period(DateTimeOffset? from, DateTimeOffset? until, int? offset)
+    /// <summary>For callers outside this module that still report invalid periods by exception.</summary>
+    public static SpendPeriod Period(DateTimeOffset? from, DateTimeOffset? until, int? offset)
     {
-        var end = until ?? DateTimeOffset.UtcNow; var start = from ?? end.AddDays(-30); var zone = offset ?? 480;
-        if (start >= end || end - start > TimeSpan.FromDays(366) || zone is < -840 or > 840)
-            throw new ApiException(400, "invalid_spend_period", "查詢期間需為 1 至 366 天，並提供有效的時區。");
-        return (start.ToUniversalTime(), end.ToUniversalTime(), zone);
+        var period = SpendPeriod.Create(from, until, offset, DateTimeOffset.UtcNow);
+        return period.IsSuccess ? period.Value : throw new ApiException(400, period.Error.Code, "");
     }
-    public async Task<SpendReportDto> ReportAsync(Guid? owner, DateTimeOffset? from, DateTimeOffset? until, int? offset, bool administrator, CancellationToken ct)
+    public Task<SpendReportDto> ReportAsync(Guid? owner, DateTimeOffset? from, DateTimeOffset? until, int? offset, bool administrator, CancellationToken ct)
+        => ReportAsync(owner, Period(from, until, offset), administrator, ct);
+    public async Task<SpendReportDto> ReportAsync(Guid? owner, SpendPeriod p, bool administrator, CancellationToken ct)
     {
-        var p = Period(from, until, offset);
         var query = db.Set<ModelCharge>().AsNoTracking().Where(x => x.CreatedAt >= p.From && x.CreatedAt < p.Until);
         if (owner is Guid id) query = query.Where(x => x.OwnerId == id);
         // Aggregates stay in SQL. SQLite is used only by the isolated test host.
@@ -67,9 +78,9 @@ public sealed class SpendReports(NexusDbContext db, ModelPresentation presentati
             + await db.Set<ModelInvocation>().CountAsync(x => (owner == null || x.OwnerId == owner) && x.CreatedAt >= p.From && x.CreatedAt < p.Until && !db.Set<ModelCharge>().Any(c => c.Id == x.Id), ct);
         return new(p.From, p.Until, p.Offset, requests + legacy, pending, legacy, input, output, totals, daily, MergePresentedModels(models), users);
     }
-    public async Task<ConversationSpendDto> ConversationAsync(Guid owner, Guid id, CancellationToken ct)
+    public async Task<Result<ConversationSpendDto>> ConversationAsync(Guid owner, Guid id, CancellationToken ct)
     {
-        if (!await db.Conversations.AnyAsync(x => x.Id == id && x.OwnerId == owner && !x.IsDeleted, ct)) throw new ApiException(404, "conversation_not_found", "找不到這個對話。");
+        if (!await db.Conversations.AnyAsync(x => x.Id == id && x.OwnerId == owner && !x.IsDeleted, ct)) return Error.NotFound("conversation_not_found");
         var calls = db.Set<ModelCharge>().AsNoTracking().Where(x => x.OwnerId == owner && x.ConversationId == id);
         var legacy = await db.Runs.CountAsync(x => x.ConversationId == id && !db.Set<ModelCharge>().Any(c => c.Id == x.Id), ct);
         var count = await calls.CountAsync(ct); var pending = await calls.CountAsync(x => x.State == "pending", ct);
@@ -87,7 +98,7 @@ public sealed class SpendReports(NexusDbContext db, ModelPresentation presentati
                 Input = g.Sum(x => x.InputTokens ?? 0), Output = g.Sum(x => x.OutputTokens ?? 0) }).ToListAsync(ct))
                 .Select(x => new SpendBucketDto(Label(x.Provider, x.ModelId, false), x.Currency, x.Kind, x.Amount, x.Requests, x.Unknown, x.Input, x.Output)).ToArray();
         }
-        return new(count + legacy, pending, legacy, totals, MergePresentedModels(models));
+        return new ConversationSpendDto(count + legacy, pending, legacy, totals, MergePresentedModels(models));
     }
     private string Label(string provider, string model, bool administrator) => presentation.DisplayName(model, administrator, provider)!;
     private static SpendBucketDto Bucket(string label, IEnumerable<ModelCharge> calls) => new(label, calls.First().Currency, calls.First().Kind,

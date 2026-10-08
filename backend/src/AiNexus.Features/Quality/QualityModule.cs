@@ -1,23 +1,67 @@
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Operations;
+using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
+using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Quality;
 
+/// <summary>Answer feedback, model comparison sets and runs, and retrieval evaluations. Each use case has its own file.</summary>
 public sealed class QualityModule : IFeatureModule
 {
     /// <summary>Evaluation sets carry up to 224,000 characters of questions and references.</summary>
     public const int MaxSetCharacters = 224000;
 
+    /// <summary>Applied to each /quality/sets endpoint; a nested route group would reorder the published OpenAPI document.</summary>
+    internal static readonly long SetBodyLimit = RequestBodyLimits.ForJsonCharacters(MaxSetCharacters);
+
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddScoped<QualityService>();
+        services.AddScoped<SaveMessageFeedback>();
         services.AddScoped<RetrievalEvaluationService>();
+        services.AddScoped<CreateRetrievalEvaluation>();
+        services.AddScoped<GetRetrievalReport>();
+        services.AddScoped<SaveEvaluationSet>();
+        services.AddScoped<StartEvaluationRun>();
+        services.AddScoped<BrowseEvaluationRuns>();
+        services.AddScoped<ReviewEvaluationResult>();
         services.AddScoped<IBackgroundJobHandler, RetrievalEvaluationHandler>();
         services.AddScoped<IBackgroundJobHandler, EvaluationHandler>();
         services.AddFeaturePolicy(FeatureIds.Quality);
     }
 
-    public static void MapEndpoints(RouteGroupBuilder api) => QualityEndpoints.MapQuality(api);
+    public static void MapEndpoints(RouteGroupBuilder api)
+    {
+        ReadFeedback.MapForMessage(api);
+        SaveMessageFeedback.Map(api);
+        var routes = api.MapGroup("/quality").RequireAuthorization(Policies.Quality).WithTags("Quality");
+        ListRetrievalEvaluations.Map(routes);
+        CreateRetrievalEvaluation.Map(routes);
+        GetRetrievalReport.Map(routes);
+        ReadFeedback.MapList(routes);
+        BrowseEvaluationSets.MapList(routes);
+        SaveEvaluationSet.MapCreate(routes);
+        DeleteEvaluationSet.Map(routes);
+        BrowseEvaluationSets.MapGet(routes);
+        SaveEvaluationSet.MapUpdate(routes);
+        ShareEvaluationSet.Map(routes);
+        StartEvaluationRun.Map(routes);
+        BrowseEvaluationRuns.Map(routes);
+        ReviewEvaluationResult.Map(routes);
+    }
+}
+
+/// <summary>The module's tables, applied by <c>NexusDbContext</c>.</summary>
+public static class QualityConfiguration
+{
+    public static void Configure(ModelBuilder model)
+    {
+        model.ApplyConfiguration(new RetrievalEvaluationConfiguration());
+        model.ApplyConfiguration(new RetrievalEvaluationResultConfiguration());
+        model.ApplyConfiguration(new MessageFeedbackConfiguration());
+        model.ApplyConfiguration(new EvaluationSetConfiguration());
+        model.ApplyConfiguration(new EvaluationRunConfiguration());
+        model.ApplyConfiguration(new EvaluationResultConfiguration());
+    }
 }
