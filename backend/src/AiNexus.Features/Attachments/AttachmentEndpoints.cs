@@ -1,3 +1,4 @@
+using AiNexus.Platform.Http;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
 using AiNexus.Features.Identity;
@@ -19,7 +20,7 @@ public static class AttachmentEndpoints
             var form = await http.Request.ReadFormAsync(ct);
             if (form.Files.Count != 1) throw new ApiException(400, "file_required", "每次上傳請提供一個檔案。");
             return Results.Ok(await files.UploadAsync((await current.GetAsync(ct)).Id, form.Files[0], ct));
-        }).WithName("UploadAttachment").Produces<AttachmentDto>();
+        }).WithRequestBodyLimit(AttachmentsModule.UploadBodyLimit).WithName("UploadAttachment").Produces<AttachmentDto>();
         routes.MapGet("/{id:guid}", async (Guid id, CurrentUser current, AttachmentService files, CancellationToken ct) => Results.Ok(AttachmentService.Describe(await files.OwnedAsync((await current.GetAsync(ct)).Id, id, ct)))).WithName("GetAttachment").Produces<AttachmentDto>();
         routes.MapGet("/{id:guid}/content", async (Guid id, bool? download, HttpContext http, CurrentUser current, AttachmentService files, CancellationToken ct) =>
         {

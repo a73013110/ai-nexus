@@ -4,6 +4,7 @@ using Microsoft.Extensions.Caching.Memory;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Http;
 
 namespace AiNexus.Features.Diagnostics;
 
@@ -31,7 +32,7 @@ public static class DiagnosticEndpoints
 {
     public static void MapDiagnostics(this RouteGroupBuilder api)
     {
-        var logs = api.MapGroup("/admin/logs").RequireAuthorization("feature:" + DiagnosticConfiguration.Query).WithTags("System logs").RequireRateLimiting("diagnostic-query");
+        var logs = api.MapGroup("/admin/logs").RequireAuthorization("feature:" + DiagnosticConfiguration.Query).WithTags("System logs").RequireRateLimiting(DiagnosticsModule.QueryRateLimit);
         logs.MapGet("", async ([AsParameters] DiagnosticFilter filter, DiagnosticQuery query, CancellationToken ct) => await query.ListAsync(filter, ct)).WithName("QuerySystemLogs").Produces<DiagnosticPage>();
         logs.MapGet("/health", async (DiagnosticQuery query, CancellationToken ct) => await query.HealthAsync(ct)).WithName("GetSystemLogHealth").Produces<DiagnosticHealthDto>();
         logs.MapGet("/{id:guid}", async (Guid id, DiagnosticQuery query, CancellationToken ct) => await query.DetailAsync(id, ct))
@@ -39,7 +40,7 @@ public static class DiagnosticEndpoints
         logs.MapGet("/export", async ([AsParameters] DiagnosticFilter filter, DiagnosticQuery query, HttpContext http, CancellationToken ct) => {
             http.Response.Headers.CacheControl = "no-store";
             return Results.File(Encoding.UTF8.GetBytes(await query.ExportAsync(filter, ct)), "text/csv; charset=utf-8", "ai-nexus-logs.csv");
-        }).RequireAuthorization("feature:" + DiagnosticConfiguration.Export).RequireRateLimiting("diagnostic-export").WithName("ExportSystemLogs");
+        }).RequireAuthorization("feature:" + DiagnosticConfiguration.Export).RequireRateLimiting(DiagnosticsModule.ExportRateLimit).WithName("ExportSystemLogs");
         api.MapPost("/client-issues", async (ClientIssueRequest request, CurrentUser current, ClientIssueDeduplication dedup, ILogger<ClientIssueDeduplication> logger, CancellationToken ct) => {
             if (request.Kind is not ("exception" or "rejection") || request.Fingerprint is not { Length: 64 } || !request.Fingerprint.All(char.IsAsciiHexDigit))
                 throw new ApiException(400, "client_issue_invalid", "問題回報格式不正確。");
@@ -52,6 +53,6 @@ public static class DiagnosticEndpoints
                 // Queue admission is not a synchronous durable-storage acknowledgement.
                 return receipt.Accepted;
             });
-        }).RequireRateLimiting("client-issues").WithName("ReportClientIssue").Produces<ClientIssueResponse>();
+        }).RequireRateLimiting(DiagnosticsModule.ClientIssueRateLimit).WithRequestBodyLimit(2048).WithName("ReportClientIssue").Produces<ClientIssueResponse>();
     }
 }

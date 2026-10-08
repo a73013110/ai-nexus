@@ -1,3 +1,4 @@
+using AiNexus.Platform.Http;
 using AiNexus.Features.Identity;
 using AiNexus.Features.AccessControl;
 
@@ -10,7 +11,7 @@ public static class ConversationEndpoints
         var routes = api.MapGroup("/conversations").RequireAuthorization(BuiltInAccess.ChatPolicy).WithTags("Conversations");
         routes.MapGet("", async (string? search, int? offset, string? view, string? label, CurrentUser current, ConversationService service, CancellationToken ct) => Results.Ok(await service.ListAsync((await current.GetAsync(ct)).Id, search, offset ?? 0, ct, view ?? "active", label))).WithName("ListConversations").Produces<IReadOnlyList<ConversationDto>>();
         routes.MapGet("/labels", async (CurrentUser current, ConversationOrganization organization, CancellationToken ct) => Results.Ok(await organization.LabelsAsync((await current.GetAsync(ct)).Id, ct))).WithName("ListConversationLabels").Produces<IReadOnlyList<string>>();
-        routes.MapPost("/import", async (ConversationBackup body, CurrentUser current, ConversationOrganization organization, CancellationToken ct) => Results.Ok(await organization.ImportAsync((await current.GetAsync(ct)).Id, body, ct))).WithName("ImportConversation").Produces<ConversationDto>();
+        routes.MapPost("/import", async (ConversationBackup body, CurrentUser current, ConversationOrganization organization, CancellationToken ct) => Results.Ok(await organization.ImportAsync((await current.GetAsync(ct)).Id, body, ct))).WithRequestBodyLimit(ConversationsModule.ImportBodyLimit).WithName("ImportConversation").Produces<ConversationDto>();
         routes.MapPost("", async (CreateConversationRequest body, CurrentUser current, ConversationService service, CancellationToken ct) =>
         {
             var created = await service.CreateAsync((await current.GetAsync(ct)).Id, body.Title, ct);

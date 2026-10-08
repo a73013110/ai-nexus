@@ -1,3 +1,4 @@
+using AiNexus.Platform.Http;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Conversations;
@@ -34,12 +35,12 @@ public static class InferenceEndpoints
             var reserved = body.ConversationId is Guid cid ? await knowledge.ReservedContextAsync(owner, cid, ct) : 0;
             var webReserved = body.WebSearch ? AiNexus.Features.WebSearch.WebSearchService.ReservedTokens : 0;
             return Results.Ok((await context.PreviewAsync(body.ConversationId, body.ParentMessageId, body.Prompt, new(model.ContextTokens, model.MaxOutputTokens, .6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, instruction) + project + new string(' ', reserved + webReserved), SupportsImages: model.SupportsImages), ct, files)) with { ReservedKnowledgeTokens = reserved, ReservedWebSearchTokens = webReserved });
-        }).WithName("PreviewContext").Produces<ContextUsageDto>();
+        }).WithRequestBodyLimit(InferenceModule.PromptBodyLimit).WithName("PreviewContext").Produces<ContextUsageDto>();
         api.MapPost("/runs", async (CreateRunRequest body, HttpContext http, CurrentUser current, RunService service, CancellationToken ct) =>
         {
             var run = await service.CreateAsync((await current.GetAsync(ct)).Id, body, http.Request.Headers["Idempotency-Key"].ToString(), ct);
             return Results.Accepted($"/api/v1/runs/{run.Id}", run);
-        }).WithName("CreateRun").Produces<RunDto>(202);
+        }).WithRequestBodyLimit(InferenceModule.PromptBodyLimit).WithName("CreateRun").Produces<RunDto>(202);
         api.MapGet("/runs/{id:guid}", async (Guid id, CurrentUser current, RunService service, ModelPresentation models, CancellationToken ct) => Results.Ok(models.Run(await service.OwnedAsync((await current.GetAsync(ct)).Id, id, ct)))).WithName("GetRun").Produces<RunDto>();
         api.MapPost("/runs/{id:guid}/cancel", async (Guid id, CurrentUser current, RunService service, CancellationToken ct) => Results.Ok(await service.CancelAsync((await current.GetAsync(ct)).Id, id, ct))).WithName("CancelRun").Produces<RunDto>();
         api.MapGet("/runs/{id:guid}/events", async (Guid id, long? after, HttpContext http, CurrentUser current, RunService service, NexusDbContext db, SubscriptionLimits limits, CancellationToken ct) =>

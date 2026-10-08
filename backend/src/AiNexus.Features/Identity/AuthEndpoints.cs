@@ -24,7 +24,7 @@ public sealed record TestIdentityRequest(Guid UserId, string Reason);
 public static class AuthEndpoints
 {
     public const string CookieScheme = "NexusCookie";
-    public static void MapNexusAuthentication(this WebApplication app)
+    public static void MapNexusAuthentication(this IEndpointRouteBuilder app)
     {
         var auth = app.MapGroup("/api/v1/auth").WithSafeErrors();
         auth.MapGet("/session", (HttpContext http, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf) => Results.Ok(Session(http, options.Value, csrf)))
@@ -55,7 +55,7 @@ public static class AuthEndpoints
             await http.SignInAsync(CookieScheme, principal, new AuthenticationProperties { IsPersistent = false });
             http.User = principal;
             return Results.Ok(Session(http, options.Value, csrf));
-        }).AllowAnonymous().RequireRateLimiting("ad-login").WithName("AdLogin").Produces<AuthSessionDto>();
+        }).AllowAnonymous().RequireRateLimiting(IdentityModule.LoginRateLimit).WithName("AdLogin").Produces<AuthSessionDto>();
         auth.MapPost("/logout", async (HttpContext http, NexusDbContext db, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, CancellationToken ct) =>
         {
             await EndExistingTestAsync(http.User, db, "signed_out", ct);

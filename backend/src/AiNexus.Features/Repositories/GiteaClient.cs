@@ -41,7 +41,7 @@ public sealed class GiteaClient(IHttpClientFactory clients, IOptions<GiteaOption
         using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(new Uri(options.Value.BaseUrl.TrimEnd('/') + "/"), path));
         request.Headers.Authorization = new AuthenticationHeaderValue("token", token); request.Headers.Accept.ParseAdd(accept);
         try {
-            var response = await clients.CreateClient("ControlledTools").SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+            var response = await clients.CreateClient(ControlledHttpClients.Tools).SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             if (response.IsSuccessStatusCode) return response;
             var status = response.StatusCode; response.Dispose();
             throw new ApiException(status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden ? 403 : status == HttpStatusCode.NotFound ? 404 : 503,

@@ -1,3 +1,4 @@
+using AiNexus.Platform.Http;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Identity;
@@ -69,7 +70,7 @@ public static class PromptLibraryEndpoints
 {
     public static void MapPromptLibrary(this RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/prompt-templates").RequireAuthorization(BuiltInAccess.ChatPolicy).WithTags("PromptLibrary");
+        var routes = api.MapGroup("/prompt-templates").RequireAuthorization(BuiltInAccess.ChatPolicy).WithTags("PromptLibrary").WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(LibraryModule.MaxTemplateCharacters));
         routes.MapGet("", async (CurrentUser current, PromptLibraryService library, CancellationToken ct) => Results.Ok(await library.ListAsync((await current.GetAsync(ct)).Id, ct))).WithName("ListPromptTemplates").Produces<IReadOnlyList<PromptTemplateDto>>();
         routes.MapPost("", async (SavePromptRequest body, CurrentUser current, PromptLibraryService library, CancellationToken ct) => Results.Ok(await library.SaveAsync((await current.GetAsync(ct)).Id, null, body, ct))).WithName("CreatePromptTemplate").Produces<PromptTemplateDto>();
         routes.MapPut("/{id:guid}", async (Guid id, SavePromptRequest body, CurrentUser current, PromptLibraryService library, CancellationToken ct) => Results.Ok(await library.SaveAsync((await current.GetAsync(ct)).Id, id, body, ct))).WithName("UpdatePromptTemplate").Produces<PromptTemplateDto>();
