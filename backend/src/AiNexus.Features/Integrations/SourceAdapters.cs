@@ -10,7 +10,8 @@ public sealed class IntegrationsOptions
 {
     public SourceOptions Gdweb { get; set; } = new();
     public SourceOptions Meiho { get; set; } = new();
-    public SourceOptions For(string id) => id switch { "gdweb" => Gdweb, "meiho" => Meiho, _ => throw new ApiException(404, "source_unknown", "找不到此資料來源。") };
+    public SourceOptions For(string id) => id switch { "gdweb" => Gdweb, "meiho" => Meiho, _ => throw new ArgumentOutOfRangeException(nameof(id), id, "Unknown source.") };
+    public static string ConnectionKey(string id) => id switch { "gdweb" => "LegacyGdweb", "meiho" => "LegacyMeiho", _ => throw new ArgumentOutOfRangeException(nameof(id), id, "Unknown source.") };
 }
 public sealed class SourceOptions
 {

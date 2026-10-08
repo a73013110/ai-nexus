@@ -29,6 +29,9 @@ public readonly record struct Result<T>
     [MemberNotNullWhen(false, nameof(Error))]
     public bool IsSuccess => Error is null;
 
-    public static implicit operator Result<T>(T value) => new(value ?? throw new ArgumentNullException(nameof(value)), null);
+    /// <summary>Success. Needed where <typeparamref name="T"/> is an interface, which C# never converts implicitly.</summary>
+    public static Result<T> Ok(T value) => new(value ?? throw new ArgumentNullException(nameof(value)), null);
+
+    public static implicit operator Result<T>(T value) => Ok(value);
     public static implicit operator Result<T>(Error error) => new(default, error ?? throw new ArgumentNullException(nameof(error)));
 }

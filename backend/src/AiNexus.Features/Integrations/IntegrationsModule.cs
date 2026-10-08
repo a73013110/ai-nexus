@@ -16,13 +16,21 @@ public sealed class IntegrationsModule : IFeatureModule
         services.AddScoped<IDbHelper<ILegacyMeihoDatabase>, DbHelper<ILegacyMeihoDatabase>>();
         services.AddOptions<IntegrationsOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Integrations(c, o)).ValidateOnStart();
         services.AddSingleton<IValidateOptions<IntegrationsOptions>, IntegrationsOptionsValidator>();
-        services.AddScoped<IntegrationService>();
+        services.AddScoped<SourceGateway>();
+        services.AddScoped<ImportSourceRecord>();
+        services.AddScoped<StartSourceChat>();
         services.AddScoped<IControlledSourceAdapter, GdwebSource>();
         services.AddScoped<IControlledSourceAdapter, MeihoSource>();
         services.AddFeaturePolicy(FeatureIds.Integrations);
     }
 
-    public static void MapEndpoints(RouteGroupBuilder api) => IntegrationEndpoints.MapIntegrations(api);
+    public static void MapEndpoints(RouteGroupBuilder api)
+    {
+        var routes = api.MapGroup("/integrations").RequireAuthorization(Policies.Integrations).WithTags("Integrations");
+        BrowseSources.Map(routes);
+        ImportSourceRecord.Map(routes);
+        StartSourceChat.Map(routes);
+    }
 }
 
 internal sealed class IntegrationsOptionsValidator : IValidateOptions<IntegrationsOptions>
