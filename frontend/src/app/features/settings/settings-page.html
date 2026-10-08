@@ -57,7 +57,7 @@
       </p>
     }
     @if (!loading() && session.me()) {
-      <div class="settings-content">
+      <div class="settings-content" [nxViewMotion]="section()">
         @switch (section()) {
           @case ('appearance') {
             <section nxCard class="settings-card">
@@ -119,7 +119,7 @@
               <div class="setting-row">
                 <div>
                   <strong>內容寬度</strong>
-                  <p>窄版適合專注閱讀，寬版適合表格。</p>
+                  <p>對話與輸入區同步調整。窄版適合專注閱讀，寬版適合表格。</p>
                 </div>
                 <nx-select
                   label="內容寬度"

@@ -8771,6 +8771,11 @@ export interface components {
             at: string;
             detailsJson: null | string;
             actingAs?: null | string;
+            category?: null | string;
+            traceId?: null | string;
+            /** Format: uuid */
+            operationId?: null | string;
+            issueCode?: null | string;
         };
         AuthSessionDto: {
             mode: string;
@@ -25964,6 +25969,8 @@ export interface operations {
                 result?: string;
                 from?: string;
                 until?: string;
+                category?: string;
+                traceId?: string;
             };
             header?: never;
             path?: never;

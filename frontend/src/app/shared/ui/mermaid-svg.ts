@@ -1,8 +1,14 @@
 import DOMPurify from 'dompurify';
 import { applyDiagramContrast } from './mermaid-colors';
+import { applyDiagramSemantics, type DiagramSemantics } from './mermaid-theme';
 
 /** SVGs are displayed as inert images, never inserted as active Markdown HTML. */
-export function sanitizeDiagramSvg(source: string, ink: string, background: string) {
+export function sanitizeDiagramSvg(
+  source: string,
+  ink: string,
+  background: string,
+  semantics?: DiagramSemantics,
+) {
   const clean = DOMPurify.sanitize(source, {
     USE_PROFILES: { svg: true, svgFilters: true, mathMl: true },
     ADD_TAGS: ['foreignObject', 'div', 'span'],
@@ -33,6 +39,7 @@ export function sanitizeDiagramSvg(source: string, ink: string, background: stri
       if (externalReference(attribute.value)) element.removeAttribute(attribute.name);
     }
   }
+  if (semantics) applyDiagramSemantics(svg, semantics);
   applyDiagramContrast(svg, ink, background);
   const [, , width, height] = (svg.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0)
@@ -43,6 +50,30 @@ export function sanitizeDiagramSvg(source: string, ink: string, background: stri
   svg.setAttribute('height', String(height));
   svg.removeAttribute('style');
   return { svg: new XMLSerializer().serializeToString(svg), width, height, title, description };
+}
+
+/** Measure the sanitized SVG once, while fonts and all layout transforms are available. */
+export function measureDiagramBounds(
+  diagram: ReturnType<typeof sanitizeDiagramSvg>,
+  container: HTMLElement,
+) {
+  container.innerHTML = diagram.svg;
+  const svg = container.querySelector<SVGSVGElement>('svg')!;
+  const bounds = svg.getBBox();
+  const current = svg.viewBox.baseVal;
+  const padding = 16;
+  const x = Math.min(current.x, bounds.x - padding),
+    y = Math.min(current.y, bounds.y - padding);
+  const right = Math.max(current.x + current.width, bounds.x + bounds.width + padding);
+  const bottom = Math.max(current.y + current.height, bounds.y + bounds.height + padding);
+  const width = right - x,
+    height = bottom - y;
+  if (![x, y, width, height].every(Number.isFinite) || width <= 0 || height <= 0)
+    throw new Error('Invalid measured diagram dimensions');
+  svg.setAttribute('viewBox', `${x} ${y} ${width} ${height}`);
+  svg.setAttribute('width', String(width));
+  svg.setAttribute('height', String(height));
+  return { ...diagram, svg: new XMLSerializer().serializeToString(svg), width, height };
 }
 
 function externalReference(value: string) {

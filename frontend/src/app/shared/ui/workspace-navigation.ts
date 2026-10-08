@@ -17,7 +17,7 @@ import { groupFeatures, FEATURE_ICONS } from '../../core/feature-groups';
     @if (collapsible() && !compact()) {
       <button
         type="button"
-        class="workspace-disclosure"
+        class="workspace-disclosure ui-density-compact"
         [attr.aria-expanded]="expanded()"
         (click)="expandedChange.emit(!expanded())"
       >

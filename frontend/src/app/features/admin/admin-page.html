@@ -492,6 +492,7 @@
   nxCompactDialog
   #editorDialog
   class="workspace-dialog platform-dialog admin-editor"
+  [nxDialogView]="groupSection()"
   [class.admin-group-editor]="editor()?.kind === 'group'"
   [class.admin-editor-wide]="
     editor()?.kind === 'group' && (groupSection() === 'models' || groupSection() === 'features')
@@ -532,7 +533,7 @@
         />
       }
       <form class="admin-editor-form" (submit)="save($event)">
-        <div class="platform-form admin-editor-fields">
+        <div class="platform-form admin-editor-fields" [nxViewMotion]="groupSection()">
           @if (e.kind === 'user') {
             <label
               >姓名<input

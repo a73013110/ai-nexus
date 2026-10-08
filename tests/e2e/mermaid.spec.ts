@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
+import { permissionFlowchart } from "./mermaid-fixtures";
 import {
   ApiFixture,
   expectViewportContained,
@@ -201,6 +202,7 @@ test("selection actions share icons and Explain, with one-click language segment
   page,
 }) => {
   await answer(page, "這裡說明 **API 與 RPA 的關係**，以及資料交換的方式。");
+  await expect(page.locator("nx-text-tools nx-markdown-editor")).toHaveCount(0);
   const transforms: {
     action: string;
     text: string;
@@ -214,7 +216,9 @@ test("selection actions share icons and Explain, with one-click language segment
       json: {
         text:
           request.action === "explain"
-            ? "API 是軟體交換資訊的介面；RPA 會透過介面處理重複工作。"
+            ? "## 概念解釋\n\nAPI 是軟體交換資訊的介面；RPA 會透過介面處理重複工作。\n\n- **API**：交換資料\n- **RPA**：執行流程\n\n" +
+              "這是補充說明，協助理解系統流程。\n\n".repeat(50) +
+              "### 說明結束\n\n請核對實際的資料流程。"
             : "API and RPA",
         truncated: false,
       },
@@ -244,14 +248,43 @@ test("selection actions share icons and Explain, with one-click language segment
   await toolbar.getByRole("button", { name: "解釋", exact: true }).click();
   const tools = page.getByRole("dialog", { name: "解釋段落", exact: true });
   await expect(
-    tools.getByRole("textbox", { name: "段落處理結果" }),
-  ).toHaveValue(/API 是/);
+    tools.getByRole("region", { name: "段落處理結果預覽" }),
+  ).toContainText(/API 是/);
+  await expect(tools.getByRole("heading", { name: "概念解釋" })).toBeVisible();
+  await expect(tools.locator(".markdown ul li")).toHaveCount(2);
+  const preview = tools.getByRole("region", { name: "段落處理結果預覽" });
+  expect(
+    await preview.evaluate((el) => el.scrollHeight > el.clientHeight),
+  ).toBe(true);
+  const originalSize = (await tools.boundingBox())!;
+  await page.screenshot({
+    path: "artifacts/screenshots/text-tools-markdown-reading.png",
+    animations: "disabled",
+  });
+  await tools.getByRole("button", { name: "展開段落工具" }).click();
+  await settleEntrance(page);
+  expect((await tools.boundingBox())!.width).toBeGreaterThan(
+    originalSize.width,
+  );
+  await tools.getByRole("button", { name: "編輯", exact: true }).click();
+  await tools
+    .getByRole("textbox", { name: "段落處理結果", exact: true })
+    .fill("## 已編輯的解釋\n\n**重點**：保留修改後的內容。");
+  await tools.getByRole("button", { name: "閱讀", exact: true }).click();
+  await expect(
+    tools.getByRole("heading", { name: "已編輯的解釋" }),
+  ).toBeVisible();
+  await tools.getByRole("button", { name: "複製結果", exact: true }).click();
+  await expect
+    .poll(() => page.evaluate(() => (window as any).__copied))
+    .toContain("## 已編輯的解釋");
   expect(transforms[0]).toMatchObject({
     action: "explain",
     text: "API 與 RPA 的關係",
     modelId: "fixture:8b",
   });
   await tools.getByRole("button", { name: "關閉段落工具" }).click();
+  await expect(page.locator("nx-text-tools nx-markdown-editor")).toHaveCount(0);
   await select();
   await toolbar.getByRole("button", { name: "翻譯", exact: true }).click();
   const translated = page.getByRole("dialog", {
@@ -269,8 +302,8 @@ test("selection actions share icons and Explain, with one-click language segment
     .getByRole("button", { name: "開始處理", exact: true })
     .click();
   await expect(
-    translated.getByRole("textbox", { name: "段落處理結果" }),
-  ).toHaveValue("API and RPA");
+    translated.getByRole("region", { name: "段落處理結果預覽" }),
+  ).toContainText("API and RPA");
   expect(transforms[1]).toMatchObject({
     action: "translate",
     language: "日本語",
@@ -306,6 +339,92 @@ test("selection actions share icons and Explain, with one-click language segment
   ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(toolbar).not.toBeVisible();
+});
+
+test("long permission flowcharts retain all SVG bounds and scroll to the right and bottom at every zoom", async ({
+  page,
+}) => {
+  await answer(page, fence(permissionFlowchart));
+  const figure = page.locator(".mermaid-frame"),
+    image = figure.getByRole("img");
+  await expect(image).toBeVisible();
+  const downloadEvent = page.waitForEvent("download");
+  await figure
+    .getByRole("button", { name: "下載 SVG 圖表", exact: true })
+    .click();
+  const svg = await readFile((await (await downloadEvent).path())!, "utf8");
+  expect(svg).toContain("看不到案件");
+  const bounds = await page.evaluate((source) => {
+    const parent = document.createElement("div");
+    parent.style.cssText = "position:fixed;visibility:hidden";
+    parent.innerHTML = source;
+    document.body.append(parent);
+    const svg = parent.querySelector<SVGSVGElement>("svg")!,
+      view = svg.viewBox.baseVal,
+      box = svg.getBBox();
+    const result = {
+      left: box.x - view.x,
+      top: box.y - view.y,
+      right: view.x + view.width - box.x - box.width,
+      bottom: view.y + view.height - box.y - box.height,
+    };
+    parent.remove();
+    return result;
+  }, svg);
+  for (const space of Object.values(bounds))
+    expect(space).toBeGreaterThanOrEqual(15);
+  const canvas = figure.getByRole("region", { name: /^圖表畫布/ });
+  for (const width of [1440, 375]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await figure.getByRole("button", { name: "適合寬度", exact: true }).click();
+    await canvas.focus();
+    await canvas.press("+");
+    await canvas.press("+");
+    await expect
+      .poll(() =>
+        canvas.evaluate((el) => {
+          el.scrollTop = el.scrollHeight;
+          el.scrollLeft = el.scrollWidth;
+          const box = el.getBoundingClientRect(),
+            img = el.querySelector("img")!.getBoundingClientRect();
+          return (
+            img.bottom <= box.top + el.clientHeight - 15 &&
+            img.right <= box.left + el.clientWidth - 15
+          );
+        }),
+      )
+      .toBe(true);
+    await page.screenshot({
+      path: `artifacts/screenshots/mermaid-permission-bottom-${width}.png`,
+      animations: "disabled",
+    });
+    await figure
+      .getByRole("button", { name: "顯示完整圖表", exact: true })
+      .click();
+    await expect
+      .poll(() =>
+        canvas.evaluate(
+          (el) =>
+            el.scrollHeight <= el.clientHeight + 2 &&
+            el.scrollWidth <= el.clientWidth + 2,
+        ),
+      )
+      .toBe(true);
+    await expectViewportContained(page);
+  }
+  await figure.getByRole("button", { name: "展開圖表", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "展開 Mermaid 圖表" });
+  await expect(dialog).toBeVisible();
+  await dialog
+    .getByRole("button", { name: "顯示完整圖表", exact: true })
+    .click();
+  await expect
+    .poll(() =>
+      dialog
+        .locator(".mermaid-canvas")
+        .evaluate((el) => el.scrollHeight <= el.clientHeight + 2),
+    )
+    .toBe(true);
 });
 
 test("artifact preview uses the same Mermaid reader as chat", async ({
@@ -352,7 +471,7 @@ test("artifact preview uses the same Mermaid reader as chat", async ({
   await expectViewportContained(page);
 });
 
-test("authored node colors keep readable labels in dark and light themes", async ({
+test("semantic nodes use the workspace palette and keep readable labels in dark and light themes", async ({
   page,
 }) => {
   await page.emulateMedia({ colorScheme: "dark" });
@@ -390,10 +509,12 @@ test("authored node colors keep readable labels in dark and light themes", async
         }),
       );
     }, svg);
-    expect(colors.map((color) => color.fill)).toEqual([
+    expect(colors.map((color) => color.fill)).not.toEqual([
       "rgb(225, 245, 254)",
       "rgb(24, 43, 53)",
     ]);
+    expect(svg).toContain('rx="7"');
+    expect(svg).not.toMatch(/filter:\s*drop-shadow/i);
     for (const color of colors) {
       const ratio = await page.evaluate(({ fill, text }) => {
         const canvas = document.createElement("canvas");

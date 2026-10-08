@@ -1,13 +1,17 @@
 <nx-feature-page
   title="系統日誌"
-  description="查詢事件、追蹤問題與檢視診斷流程。"
+  description="查證錯誤、耗時與技術流程；登入、操作及授權紀錄請查看活動稽核。"
   eyebrow="AI NEXUS / 系統"
   density="compact"
   layoutMode="data"
   [wide]="true"
 >
   <div page-actions class="page-actions">
-    <a routerLink="/admin" class="secondary-button"><nx-icon name="lock" />平台管理</a>
+    @if (session.has('admin')) {
+      <a routerLink="/admin" [queryParams]="{ tab: 'audit' }" class="secondary-button"
+        ><nx-icon name="shield" />活動稽核</a
+      >
+    }
     @if (session.has('logs.export')) {
       <button
         type="button"
@@ -422,6 +426,7 @@
   />
   <section
     role="tabpanel"
+    [nxViewMotion]="detailTab()"
     tabindex="0"
     [id]="detailTabs.panelId(detailTab())"
     [attr.aria-labelledby]="detailTabs.tabId(detailTab())"
@@ -444,6 +449,15 @@
       @switch (detailTab()) {
         @case ('overview') {
           <h3 class="ui-section-heading">事件訊息</h3>
+          @if (selected.event.traceId && session.has('admin')) {
+            <a
+              routerLink="/admin"
+              [queryParams]="{ tab: 'audit', traceId: selected.event.traceId }"
+              class="quiet-button"
+            >
+              <nx-icon name="shield" />查閱同一流程的活動稽核
+            </a>
+          }
           <p class="ui-message-box">{{ selected.event.message }}</p>
           @if (selected.exceptionType) {
             <button type="button" class="ui-notice-link" (click)="selectTab('exception')">

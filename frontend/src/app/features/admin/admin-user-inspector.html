@@ -10,6 +10,16 @@
       <span class="panel-eyebrow">使用者活動與政策 · 對話唯讀</span>
       <h2 id="inspector-title">{{ user()?.displayName }}</h2>
       <p>{{ user()?.account }}</p>
+      @if (user(); as account) {
+        <a
+          class="quiet-button"
+          routerLink="/admin"
+          [queryParams]="{ tab: 'audit', search: account.id }"
+          (click)="close()"
+        >
+          <nx-icon name="shield" />查閱活動稽核
+        </a>
+      }
     </div>
 
     @if (overview(); as stats) {
@@ -49,231 +59,239 @@
       [value]="tab()"
       (valueChange)="selectTab($event)"
     />
-    @if (tab() === 'storage') {
-      <div class="inspector-settings">
-        @if (overview(); as stats) {
-          <section class="inspector-storage" aria-label="原檔容量管理">
-            <div>
-              <h3>原檔容量</h3>
-              <nx-storage-usage [storage]="stats.user.storage" />
-            </div>
-            <form class="inspector-storage-editor" (submit)="saveStorage($event)">
-              <label
-                >個人容量上限（GB）
-                <input
-                  nxField
-                  type="number"
-                  min="0"
-                  max="1000000"
-                  step="0.000000001"
-                  aria-label="個人容量上限（GB）"
-                  placeholder="使用群組或預設容量"
-                  [value]="storageLimit()"
-                  [readOnly]="savingStorage()"
-                  (input)="storageLimit.set($any($event.target).value)"
-                />
-              </label>
-              <button
-                class="secondary-button"
-                type="submit"
-                [disabled]="savingStorage() || !!session.auth.session()?.testing"
-              >
-                {{ savingStorage() ? '儲存中…' : '儲存容量上限' }}
-              </button>
-              <p class="form-note">
-                1 GB = 1,000,000,000 bytes。個人設定優先於群組；留空套用群組或預設 5
-                GB。降低上限會阻止超額上傳，既有檔案仍保留。
-              </p>
-              @if (storageError()) {
-                <p class="inline-error" role="alert">{{ storageError() }}</p>
-              }
-              @if (storageNotice()) {
-                <p class="success-note" role="status">{{ storageNotice() }}</p>
-              }
-            </form>
-          </section>
-        }
-      </div>
-    }
-    @if (tab() === 'models') {
-      <div class="inspector-settings inspector-model-settings">
-        @if (loadingModels()) {
-          <p class="form-note" role="status">正在載入模型政策…</p>
-        }
-        @if (modelPolicy(); as policy) {
-          <form class="inspector-model-form" (submit)="saveModels($event)">
-            <div class="inspector-model-fields">
-              @if (modelError()) {
-                <p class="inline-error" role="alert">{{ modelError() }}</p>
-              }
-              @if (modelNotice()) {
-                <p class="success-note" role="status">{{ modelNotice() }}</p>
-              }
-              <nx-model-policy-editor
-                [models]="models()"
-                [value]="modelDraft()"
-                [effective]="policy.effective"
-                [personal]="true"
-                [disabled]="savingModels() || !!session.auth.session()?.testing"
-                (valueChange)="modelDraft.set($event)"
-              />
-            </div>
-            <div class="dialog-actions">
-              <button
-                type="submit"
-                class="primary-button"
-                [disabled]="savingModels() || !!session.auth.session()?.testing"
-              >
-                {{ savingModels() ? '儲存中…' : '儲存模型政策' }}
-              </button>
-            </div>
-          </form>
-        } @else if (!loadingModels()) {
-          @if (modelError()) {
-            <p class="inline-error" role="alert">{{ modelError() }}</p>
+    <div class="inspector-panel" [nxViewMotion]="tab()">
+      @if (tab() === 'storage') {
+        <div class="inspector-settings">
+          @if (overview(); as stats) {
+            <section class="inspector-storage" aria-label="原檔容量管理">
+              <div>
+                <h3>原檔容量</h3>
+                <nx-storage-usage [storage]="stats.user.storage" />
+              </div>
+              <form class="inspector-storage-editor" (submit)="saveStorage($event)">
+                <label
+                  >個人容量上限（GB）
+                  <input
+                    nxField
+                    type="number"
+                    min="0"
+                    max="1000000"
+                    step="0.000000001"
+                    aria-label="個人容量上限（GB）"
+                    placeholder="使用群組或預設容量"
+                    [value]="storageLimit()"
+                    [readOnly]="savingStorage()"
+                    (input)="storageLimit.set($any($event.target).value)"
+                  />
+                </label>
+                <button
+                  class="secondary-button"
+                  type="submit"
+                  [disabled]="savingStorage() || !!session.auth.session()?.testing"
+                >
+                  {{ savingStorage() ? '儲存中…' : '儲存容量上限' }}
+                </button>
+                <p class="form-note">
+                  1 GB = 1,000,000,000 bytes。個人設定優先於群組；留空套用群組或預設 5
+                  GB。降低上限會阻止超額上傳，既有檔案仍保留。
+                </p>
+                @if (storageError()) {
+                  <p class="inline-error" role="alert">{{ storageError() }}</p>
+                }
+                @if (storageNotice()) {
+                  <p class="success-note" role="status">{{ storageNotice() }}</p>
+                }
+              </form>
+            </section>
           }
-          <button class="secondary-button" (click)="loadModels()">重新載入模型政策</button>
-        }
-      </div>
-    }
-    @if (tab() === 'conversations') {
-      <p class="inspector-audit-note">
-        <nx-icon name="shield" />檢視行為會寫入稽核。對話包含各分支版本；附件僅提供資訊。
-      </p>
-      @if (error()) {
-        <p role="alert" class="inline-error">{{ error() }}<nx-issue-code [message]="error()" /></p>
+        </div>
       }
-      <div class="inspector-body">
-        <aside class="inspector-list" aria-label="使用者對話清單">
-          <nx-search-field
-            label="搜尋使用者對話"
-            placeholder="搜尋標題與對話內容"
-            [value]="search()"
-            (valueChange)="searchChanged($event)"
-          />
-          <nx-checkbox
-            label="包含已刪除對話"
-            [checked]="includeDeleted()"
-            (checkedChange)="deletedChanged($event)"
-          />
-          @if (loading()) {
-            <p role="status" class="form-note">正在取得對話…</p>
+      @if (tab() === 'models') {
+        <div class="inspector-settings inspector-model-settings">
+          @if (loadingModels()) {
+            <p class="form-note" role="status">正在載入模型政策…</p>
           }
-          <div class="inspector-conversations">
-            @for (conversation of conversations()?.items || []; track conversation.id) {
-              <button
-                class="inspector-conversation"
-                [attr.aria-current]="detail()?.conversation?.id === conversation.id ? 'true' : null"
-                [attr.aria-label]="'檢視對話：' + conversation.title"
-                (click)="read(conversation.id)"
-              >
-                <strong>{{ conversation.title }}</strong
-                ><small>{{ date(conversation.updatedAt) }} · {{ conversation.messages }} 則</small>
-                @if (conversation.isDeleted || conversation.isArchived) {
-                  <span>{{ conversation.isDeleted ? '已刪除' : '已封存' }}</span>
+          @if (modelPolicy(); as policy) {
+            <form class="inspector-model-form" (submit)="saveModels($event)">
+              <div class="inspector-model-fields">
+                @if (modelError()) {
+                  <p class="inline-error" role="alert">{{ modelError() }}</p>
                 }
-              </button>
-            } @empty {
-              @if (!loading()) {
-                <p class="form-note">沒有符合的對話。</p>
-              }
+                @if (modelNotice()) {
+                  <p class="success-note" role="status">{{ modelNotice() }}</p>
+                }
+                <nx-model-policy-editor
+                  [models]="models()"
+                  [value]="modelDraft()"
+                  [effective]="policy.effective"
+                  [personal]="true"
+                  [disabled]="savingModels() || !!session.auth.session()?.testing"
+                  (valueChange)="modelDraft.set($event)"
+                />
+              </div>
+              <div class="dialog-actions">
+                <button
+                  type="submit"
+                  class="primary-button"
+                  [disabled]="savingModels() || !!session.auth.session()?.testing"
+                >
+                  {{ savingModels() ? '儲存中…' : '儲存模型政策' }}
+                </button>
+              </div>
+            </form>
+          } @else if (!loadingModels()) {
+            @if (modelError()) {
+              <p class="inline-error" role="alert">{{ modelError() }}</p>
             }
-          </div>
-          @if (conversations(); as list) {
-            <div class="inspector-pagination">
-              <button
-                class="icon-button"
-                aria-label="上一頁對話"
-                [disabled]="loading() || !list.offset"
-                (click)="loadList(list.offset - 50)"
-              >
-                <nx-icon name="left" /></button
-              ><span
-                >{{ list.total ? list.offset + 1 : 0 }}–{{ list.offset + list.items.length }} /
-                {{ list.total }}</span
-              ><button
-                class="icon-button"
-                aria-label="下一頁對話"
-                [disabled]="loading() || list.offset + 50 >= list.total"
-                (click)="loadList(list.offset + 50)"
-              >
-                <nx-icon name="chevron" />
-              </button>
-            </div>
+            <button class="secondary-button" (click)="loadModels()">重新載入模型政策</button>
           }
-        </aside>
-        <section
-          class="inspector-reading"
-          aria-label="唯讀對話內容"
-          aria-live="polite"
-          [attr.aria-busy]="reading()"
-        >
-          @if (readError()) {
-            <p class="inline-error" role="alert">{{ readError() }}</p>
-          }
-          @if (detail(); as data) {
-            <header class="inspector-conversation-heading">
-              <h3>{{ data.conversation.title }}</h3>
-              <small>{{ data.ownerName }} · 共 {{ data.total }} 則 · 所有版本按時間排列</small>
-            </header>
-            @if (data.systemInstruction) {
-              <details class="inspector-instructions">
-                <summary>對話指示</summary>
-                <p>{{ data.systemInstruction }}</p>
-              </details>
+        </div>
+      }
+      @if (tab() === 'conversations') {
+        <p class="inspector-audit-note">
+          <nx-icon name="shield" />檢視行為會寫入稽核。對話包含各分支版本；附件僅提供資訊。
+        </p>
+        @if (error()) {
+          <p role="alert" class="inline-error">
+            {{ error() }}<nx-issue-code [message]="error()" />
+          </p>
+        }
+        <div class="inspector-body">
+          <aside class="inspector-list" aria-label="使用者對話清單">
+            <nx-search-field
+              label="搜尋使用者對話"
+              placeholder="搜尋標題與對話內容"
+              [value]="search()"
+              (valueChange)="searchChanged($event)"
+            />
+            <nx-checkbox
+              label="包含已刪除對話"
+              [checked]="includeDeleted()"
+              (checkedChange)="deletedChanged($event)"
+            />
+            @if (loading()) {
+              <p role="status" class="form-note">正在取得對話…</p>
             }
-            @for (message of data.messages; track message.id) {
-              <article
-                class="inspector-message"
-                [class.inspector-user-message]="message.role === 'user'"
-              >
-                <header>
-                  <strong>{{
-                    message.role === 'user' ? data.ownerName + ' 的提問' : 'AI 回覆'
-                  }}</strong
-                  ><small>{{ date(message.createdAt) }} · {{ message.status }}</small>
-                </header>
-                <nx-run-timing [value]="message.timing" />
-                @if (message.role === 'user') {
-                  <p class="inspector-input">{{ message.content }}</p>
-                } @else {
-                  <nx-markdown-view [content]="message.content" />
-                }
-                @if (message.attachments.length) {
-                  <div class="inspector-attachments">
-                    @for (file of message.attachments; track file.id) {
-                      <span
-                        ><nx-icon name="paperclip" />{{ file.fileName }} ·
-                        {{ bytes(file.size) }}</span
-                      >
-                    }
-                  </div>
-                }
-                <small class="inspector-version"
-                  >訊息 {{ message.id.slice(0, 8) }}
-                  @if (message.parentId) {
-                    · 上一則 {{ message.parentId.slice(0, 8) }}
+            <div class="inspector-conversations">
+              @for (conversation of conversations()?.items || []; track conversation.id) {
+                <button
+                  class="inspector-conversation"
+                  [attr.aria-current]="
+                    detail()?.conversation?.id === conversation.id ? 'true' : null
+                  "
+                  [attr.aria-label]="'檢視對話：' + conversation.title"
+                  (click)="read(conversation.id)"
+                >
+                  <strong>{{ conversation.title }}</strong
+                  ><small
+                    >{{ date(conversation.updatedAt) }} · {{ conversation.messages }} 則</small
+                  >
+                  @if (conversation.isDeleted || conversation.isArchived) {
+                    <span>{{ conversation.isDeleted ? '已刪除' : '已封存' }}</span>
                   }
-                </small>
-              </article>
+                </button>
+              } @empty {
+                @if (!loading()) {
+                  <p class="form-note">沒有符合的對話。</p>
+                }
+              }
+            </div>
+            @if (conversations(); as list) {
+              <div class="inspector-pagination">
+                <button
+                  class="icon-button"
+                  aria-label="上一頁對話"
+                  [disabled]="loading() || !list.offset"
+                  (click)="loadList(list.offset - 50)"
+                >
+                  <nx-icon name="left" /></button
+                ><span
+                  >{{ list.total ? list.offset + 1 : 0 }}–{{ list.offset + list.items.length }} /
+                  {{ list.total }}</span
+                ><button
+                  class="icon-button"
+                  aria-label="下一頁對話"
+                  [disabled]="loading() || list.offset + 50 >= list.total"
+                  (click)="loadList(list.offset + 50)"
+                >
+                  <nx-icon name="chevron" />
+                </button>
+              </div>
             }
-            @if (data.messages.length < data.total) {
-              <button
-                class="secondary-button"
-                [disabled]="reading()"
-                (click)="read(data.conversation.id, true)"
-              >
-                {{ reading() ? '載入中…' : '載入後續訊息' }}
-              </button>
+          </aside>
+          <section
+            class="inspector-reading"
+            aria-label="唯讀對話內容"
+            aria-live="polite"
+            [attr.aria-busy]="reading()"
+          >
+            @if (readError()) {
+              <p class="inline-error" role="alert">{{ readError() }}</p>
             }
-          } @else {
-            <nx-empty-state class="inspector-empty">
-              <nx-icon name="lines" />
-              <p>{{ reading() ? '正在讀取對話…' : '選取左側對話，查看完整內容。' }}</p>
-            </nx-empty-state>
-          }
-        </section>
-      </div>
-    }
+            @if (detail(); as data) {
+              <header class="inspector-conversation-heading">
+                <h3>{{ data.conversation.title }}</h3>
+                <small>{{ data.ownerName }} · 共 {{ data.total }} 則 · 所有版本按時間排列</small>
+              </header>
+              @if (data.systemInstruction) {
+                <details class="inspector-instructions">
+                  <summary>對話指示</summary>
+                  <p>{{ data.systemInstruction }}</p>
+                </details>
+              }
+              @for (message of data.messages; track message.id) {
+                <article
+                  class="inspector-message"
+                  [class.inspector-user-message]="message.role === 'user'"
+                >
+                  <header>
+                    <strong>{{
+                      message.role === 'user' ? data.ownerName + ' 的提問' : 'AI 回覆'
+                    }}</strong
+                    ><small>{{ date(message.createdAt) }} · {{ message.status }}</small>
+                  </header>
+                  <nx-run-timing [value]="message.timing" />
+                  @if (message.role === 'user') {
+                    <p class="inspector-input">{{ message.content }}</p>
+                  } @else {
+                    <nx-markdown-view [content]="message.content" />
+                  }
+                  @if (message.attachments.length) {
+                    <div class="inspector-attachments">
+                      @for (file of message.attachments; track file.id) {
+                        <span
+                          ><nx-icon name="paperclip" />{{ file.fileName }} ·
+                          {{ bytes(file.size) }}</span
+                        >
+                      }
+                    </div>
+                  }
+                  <small class="inspector-version"
+                    >訊息 {{ message.id.slice(0, 8) }}
+                    @if (message.parentId) {
+                      · 上一則 {{ message.parentId.slice(0, 8) }}
+                    }
+                  </small>
+                </article>
+              }
+              @if (data.messages.length < data.total) {
+                <button
+                  class="secondary-button"
+                  [disabled]="reading()"
+                  (click)="read(data.conversation.id, true)"
+                >
+                  {{ reading() ? '載入中…' : '載入後續訊息' }}
+                </button>
+              }
+            } @else {
+              <nx-empty-state class="inspector-empty">
+                <nx-icon name="lines" />
+                <p>{{ reading() ? '正在讀取對話…' : '選取左側對話，查看完整內容。' }}</p>
+              </nx-empty-state>
+            }
+          </section>
+        </div>
+      }
+    </div>
   </div>
 </dialog>

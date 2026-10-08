@@ -2,6 +2,25 @@
 
 此功能可在既有 .NET 10／Angular 22、Windows IIS 與 SQL Server 環境運作。診斷資料存入站外 JSONL，背景批次匯入 `operations.DiagnosticEvents`；管理員使用 `/admin/logs` 查詢。安全稽核仍在 `operations.AuditEvents`，採獨立權限與保存政策。本文件中的主機指令是部署人員的操作指南；repository 驗證沒有操作正式 IIS、升級 SQL Server 或部署。
 
+## 管理者查詢入口與用途
+
+| 入口                                   | 管理問題                                         | 資料及權限                                               |
+| -------------------------------------- | ------------------------------------------------ | -------------------------------------------------------- |
+| 平台管理 → 活動稽核 `/admin?tab=audit` | 誰在何時登入、操作、變更授權或查閱資料，結果如何 | `AuditEvents`，既有平台管理權限；不經診斷採樣            |
+| 系統日誌 `/admin/logs`                 | 為何失敗、HTTP 狀態與耗時、例外及執行流程        | `DiagnosticEvents`，既有 logs.query／detail／export 權限 |
+
+活動稽核取代介面的「異動稽核」名稱，保留原 API、tab id 與歷史紀錄。共用後端分類 expression 同時用於 SQL 篩選與 DTO，依既有 action 分成登入與身分、管理異動、查閱與匯出、功能操作；讀取對話、報表及日誌不混入管理設定異動。既有功能的業務事件繼續由其服務記錄，不以 HTTP 200、開啟頁面或每筆背景輪詢推測使用者成功操作，也不複製整份 HTTP log 到稽核。
+
+新增 `identity.login`（成功／失敗）及 `identity.logout`：AD／本地登入與明確的 Windows 登入入口記錄語意事件，例行 session／me 查詢及 Negotiate 401 challenge 不視為新的登入。只保存核準的帳號、登入方式、連線來源 IP、失敗代碼及追蹤識別；不保存密碼、cookie、token、任意 header 或聊天內容。失敗登入的帳號尚未驗證，actor 使用空識別碼，介面顯示「未驗證」與嘗試帳號，避免錯誤歸到既有登入 cookie。登入稽核使用獨立 DbContext，不受失敗憑證更新污染，成功寫入後才簽發 cookie；失敗事件與對外 problem 共用同一查證代碼。
+
+稽核 DTO 現在提供既有 TraceId／OperationId／IssueCode。詳情抽屜的「查證相關日誌」帶入 trace（缺少 trace 時用 issue）及事件前後五分鐘，而不是今天的預設範圍；日誌詳情可反查同一 trace 的活動。連結依既有權限顯示，API 仍重新驗證授權。使用者活動視窗可直接查找該使用者的稽核。分類、結果、帳號／資源／Trace ID／查證代碼搜尋及 cursor 分頁可組合；CSV 僅匯出已載入頁面，包含分類與關聯識別。
+
+舊資料依既有 action 分類，但未記錄的歷史登入不由 URL 偽造回填；未保存 trace 的歷史紀錄依事件時間人工查證。新登入記錄從此版本運作後開始。分類與 DTO 使用既有資料欄位，不增加重複儲存或要求 schema migration。
+
+新建立且由業務交易提交的稽核事件，未指定更精確結果時使用 `completed`；既有儲存的空結果仍保留原值。成功篩選包含既有讀取、匯出、排程與設定結果值，避免將已成功執行的操作誤歸為拒絕。介面顯示登入成功／登入未完成／已登出等語意，保留完整紀錄中的原始結果及失敗代碼供查證。
+
+採用 [OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html) 的行為／結果與 interaction identifier 原則，以及 Microsoft Entra 將 [登入紀錄](https://learn.microsoft.com/en-us/entra/identity/monitoring-health/concept-sign-ins) 和 [活動稽核](https://learn.microsoft.com/en-us/entra/identity/monitoring-health/concept-audit-logs) 分開查詢、列表選取詳情的模式。彈窗過渡遵循 [Fluent 2 motion](https://fluent2.microsoft.design/motion) 的功能性與一致性原則。
+
 ## 架構與技術選擇
 
 業務模組只使用 `Microsoft.Extensions.Logging.ILogger`、結構化 message template、`Activity` 與既有稽核服務。`BuildingBlocks/Diagnostics` 集中處理欄位白名單、遮罩、查證代碼、例外分類、佇列、檔案、SQL、查詢與清理，不讓模組依賴儲存目的地。
@@ -29,36 +48,36 @@ flowchart LR
 
 每筆事件都有隨機唯一 LogId、UTC `At`、Level、Category、EventId／EventName、MessageTemplate、PropertiesJson、Service、Environment、Version、Instance。IssueCode、TraceId／SpanId、RequestId、OperationId、JobId、RunId、Attempt、UserId、Method、Route、StatusCode、DurationMs、ExternalService、ErrorCode、ExceptionType／ExceptionDetail 依事件加入。Instance 包含主機、process ID 與每次啟動的隨機識別。
 
-| 等級 | 使用情境與政策 |
-| --- | --- |
-| Trace | 開發／短期深度追查；仍受遮罩及大小限制 |
-| Debug | 演算法與狀態診斷，不記查詢、聊天或文件文字 |
+| 等級        | 使用情境與政策                                                 |
+| ----------- | -------------------------------------------------------------- |
+| Trace       | 開發／短期深度追查；仍受遮罩及大小限制                         |
+| Debug       | 演算法與狀態診斷，不記查詢、聊天或文件文字                     |
 | Information | 正常操作、request 完成、背景工作生命週期、預期拒絕及使用者取消 |
-| Warning | 降級、重試、部分功能不可用、受控不可信前端回報 |
-| Error | 作業、生成、API 內部操作失敗；不可被一般採樣略過 |
-| Critical | 啟動失敗或重大服務失效；不可被一般採樣略過 |
+| Warning     | 降級、重試、部分功能不可用、受控不可信前端回報                 |
+| Error       | 作業、生成、API 內部操作失敗；不可被一般採樣略過               |
+| Critical    | 啟動失敗或重大服務失效；不可被一般採樣略過                     |
 
 有查證代碼的驗證／授權拒絕也不被採樣，核心 `http.rejected` 不受最低等級過濾。一般驗證不是 Error；使用者取消不是系統故障。安全稽核完全不經診斷採樣佇列。
 
-| EventId | EventName |
-| --- | --- |
-| 1000 / 1001 / 1002 | `http.completed` / `operation.failed` / `http.rejected` |
-| 2001 / 2002 | `retrieval.degraded` / `retrieval.retry` |
-| 3000 / 3001 | `job.started` / `job.finished` |
-| 3100 / 3101 | `generation.started` / `generation.finished` |
-| 4001 | `client.unhandled` |
+| EventId            | EventName                                                         |
+| ------------------ | ----------------------------------------------------------------- |
+| 1000 / 1001 / 1002 | `http.completed` / `operation.failed` / `http.rejected`           |
+| 2001 / 2002        | `retrieval.degraded` / `retrieval.retry`                          |
+| 3000 / 3001        | `job.started` / `job.finished`                                    |
+| 3100 / 3101        | `generation.started` / `generation.finished`                      |
+| 4001               | `client.unhandled`                                                |
 | 5000 / 5001 / 5002 | `service.started` / `service.stopping` / `service.startup.failed` |
 
 新增業務事件使用固定 EventId／EventName。既有無 EventId 的 ILogger 呼叫以 Category＋固定模板的 SHA-256 產生穩定整數 ID；它不是不可碰撞的業務識別，追查時同時使用 Category／EventName。修改模板會改變 fallback ID，因此新功能應明確定義事件。若同一例外跨層拋出，`Issues.Report` 在例外 Data 記錄已分配代碼，避免再次保存同一問題；呼叫端不應先記 Error 再重新拋出讓最外層重複記錄。
 
-| 欄位 | 上限 |
-| --- | --- |
-| Category / EventName / Service / Environment / Version / Instance | 180 / 100 / 80 / 32 / 80 / 100 字元 |
-| MessageTemplate / PropertiesJson | 2,048 / 8,192 字元 |
-| TraceId / SpanId / RequestId / Method / Route | 32 / 16 / 40 / 10 / 240 字元 |
-| ErrorCode / ExternalService / ExceptionType / ExceptionDetail | 80 / 32 / 180 / 12,000 字元 |
-| 結構化屬性 | 最多 32 個受核準 scalar；字串每值 240 字元 |
-| journal envelope | UTF-8 每筆最多 65,536 bytes，包含 checksum |
+| 欄位                                                              | 上限                                       |
+| ----------------------------------------------------------------- | ------------------------------------------ |
+| Category / EventName / Service / Environment / Version / Instance | 180 / 100 / 80 / 32 / 80 / 100 字元        |
+| MessageTemplate / PropertiesJson                                  | 2,048 / 8,192 字元                         |
+| TraceId / SpanId / RequestId / Method / Route                     | 32 / 16 / 40 / 10 / 240 字元               |
+| ErrorCode / ExternalService / ExceptionType / ExceptionDetail     | 80 / 32 / 180 / 12,000 字元                |
+| 結構化屬性                                                        | 最多 32 個受核準 scalar；字串每值 240 字元 |
+| journal envelope                                                  | UTF-8 每筆最多 65,536 bytes，包含 checksum |
 
 允許的 metadata 名稱見 `DiagnosticRedactor.Fields`。只接受 ID、有限數值、布林、受控 enum 和核準字串；任意物件替換為 `[OBJECT OMITTED]`，不呼叫其 `ToString()` 或 serializer。截斷在 regex 前開始，限制最差輸入成本；補送時再次套用白名單、字元與 UTF-8 上限。
 
@@ -131,17 +150,17 @@ data\diagnostics\
 
 每個 host／process 有自己的 segment，仍有同主機 root 的容量鎖；SQL 永遠不持有容量鎖。活躍 owner 的檔案不會被另一個 importer 接管；退出後由任一取得 owner lease 的 importer 補送。不同主機各有本機目錄，SQL 以唯一 LogId 協調去重。本功能可處理日誌的多實例／重疊回收，不改變目前聊天排程單 worker 的部署限制。
 
-| 狀況 | 實際行為 |
-| --- | --- |
-| 正常 | request 非阻塞 TryWrite；背景批次 fsync，再異步 SQL 匯入 |
-| 一般佇列滿 | 拒絕入列，Lost／WriteFailures 增加；重要佇列有獨立預留容量 |
-| 重要佇列滿 | 同樣不阻塞 request；可見遺失計數，緊急記錄可帶不敏感 IssueCode |
-| SQL 離線／逾時／容量上限 | 檔案仍保存、cursor 不前進、有限時間重試；恢復依 LogId 補送 |
-| 磁碟滿／容量上限／無權限 | 保留當前待寫 batch，有限重試；佇列逐漸滿後會遺失並計數；業務不無限等待 |
-| 損壞／checksum 不符／封存檔截斷 | 該筆計 Corrupt＋Lost，緊急記錄；跳過該筆繼續有效資料，不默默當成成功 |
-| 活躍檔末尾未完成 | 不前進 checkpoint，等後續完整資料；程序退出後按封存截斷規則處理 |
-| 正常 shutdown／IIS 回收 | 診斷 worker 最後停止，在 host deadline 內以 ShutdownSeconds budget 補寫 RAM；不等待 SQL 完全補送 |
-| 強制終止／斷電 | 已 fsync 檔案可重送；尚在 RAM 及未完整寫入的 batch 可能遺失；不能保證零遺失 |
+| 狀況                            | 實際行為                                                                                         |
+| ------------------------------- | ------------------------------------------------------------------------------------------------ |
+| 正常                            | request 非阻塞 TryWrite；背景批次 fsync，再異步 SQL 匯入                                         |
+| 一般佇列滿                      | 拒絕入列，Lost／WriteFailures 增加；重要佇列有獨立預留容量                                       |
+| 重要佇列滿                      | 同樣不阻塞 request；可見遺失計數，緊急記錄可帶不敏感 IssueCode                                   |
+| SQL 離線／逾時／容量上限        | 檔案仍保存、cursor 不前進、有限時間重試；恢復依 LogId 補送                                       |
+| 磁碟滿／容量上限／無權限        | 保留當前待寫 batch，有限重試；佇列逐漸滿後會遺失並計數；業務不無限等待                           |
+| 損壞／checksum 不符／封存檔截斷 | 該筆計 Corrupt＋Lost，緊急記錄；跳過該筆繼續有效資料，不默默當成成功                             |
+| 活躍檔末尾未完成                | 不前進 checkpoint，等後續完整資料；程序退出後按封存截斷規則處理                                  |
+| 正常 shutdown／IIS 回收         | 診斷 worker 最後停止，在 host deadline 內以 ShutdownSeconds budget 補寫 RAM；不等待 SQL 完全補送 |
+| 強制終止／斷電                  | 已 fsync 檔案可重送；尚在 RAM 及未完整寫入的 batch 可能遺失；不能保證零遺失                      |
 
 若 batch 部分 segment 已 fsync 而後續寫入失敗，重試可能讓同一 LogId 在檔案重複；SQL仍去重。檔案 flush 的作業系統／硬體 IO 不能在所有故障下強制即刻取消，IIS host deadline 可能終止程序。shutdown 未完成會計入可能遺失並使用獨立 emergency channel；已停止的 journal 不允許重新取得 capacity lock。
 
@@ -160,20 +179,20 @@ if (-not [Diagnostics.EventLog]::SourceExists('AiNexus.Diagnostics')) {
 
 `Diagnostics` 是一般設定區塊，由 `scripts/settings-layout.json` 統一欄位順序；載入優先順序與外部 Production 規則仍見 [CONFIGURATION](CONFIGURATION.md)。Production 不讀 repository `.local`；修改需重啟 host。runtime 在啟動驗證型別、範圍、endpoint 與站外目錄；錯誤停止啟動並嘗試保存 Critical。最低等級以 Diagnostics 為準，不由舊 `Logging.LogLevel` 偷偷覆蓋重要事件政策。
 
-| 設定 | 預設 | 用途／限制 |
-| --- | --- | --- |
-| Directory / ServiceName | 空字串／AiNexus | 空目錄採 ProgramData；服務名稱 ≤80 |
-| MinimumLevel / FrameworkMinimumLevel | Information／Warning | Trace–Critical；Error／Critical 強制保留 |
-| QueueCapacity / ImportantQueueCapacity | 8192／2048 | 1–100000／1–20000；以 record 數計 |
-| BatchSize / FlushIntervalMs | 200／1000 | 1–1000／10–10000ms |
-| RetrySeconds / SqlTimeoutSeconds / ShutdownSeconds | 10／5／10 | 1–300／1–30／1–30 秒 |
-| FileSizeBytes / MaxDiskBytes | 16 MiB／2 GiB | 單檔 64 KiB–256 MiB；root cap ≤1 TiB |
-| MaxSqlRows | 5,000,000 | 1,000–1,000,000,000；近似 soft limit |
-| FileRetentionDays / RetentionDays / AuditRetentionDays | 14／30／365 | 1–365／1–3650／30–36500 天 |
-| CleanupBatchSize | 1000 | 1–10000；每次 SQL 最多100個短批次，亦有限總時間 |
-| LowLevelSampleEvery | 1 | 1–1000；每 N 筆保留1筆，略過數可見；Warning+與有代碼事件不採樣 |
-| MaxQueryDays / MaxExportDays / MaxExportRows | 31／7／5000 | 查詢 ≤366天；匯出 ≤31天／10000筆 |
-| OtlpEnabled / OtlpEndpoint | false／http://localhost:4318 | HTTP protobuf；不能含 userinfo、query、fragment |
+| 設定                                                   | 預設                         | 用途／限制                                                     |
+| ------------------------------------------------------ | ---------------------------- | -------------------------------------------------------------- |
+| Directory / ServiceName                                | 空字串／AiNexus              | 空目錄採 ProgramData；服務名稱 ≤80                             |
+| MinimumLevel / FrameworkMinimumLevel                   | Information／Warning         | Trace–Critical；Error／Critical 強制保留                       |
+| QueueCapacity / ImportantQueueCapacity                 | 8192／2048                   | 1–100000／1–20000；以 record 數計                              |
+| BatchSize / FlushIntervalMs                            | 200／1000                    | 1–1000／10–10000ms                                             |
+| RetrySeconds / SqlTimeoutSeconds / ShutdownSeconds     | 10／5／10                    | 1–300／1–30／1–30 秒                                           |
+| FileSizeBytes / MaxDiskBytes                           | 16 MiB／2 GiB                | 單檔 64 KiB–256 MiB；root cap ≤1 TiB                           |
+| MaxSqlRows                                             | 5,000,000                    | 1,000–1,000,000,000；近似 soft limit                           |
+| FileRetentionDays / RetentionDays / AuditRetentionDays | 14／30／365                  | 1–365／1–3650／30–36500 天                                     |
+| CleanupBatchSize                                       | 1000                         | 1–10000；每次 SQL 最多100個短批次，亦有限總時間                |
+| LowLevelSampleEvery                                    | 1                            | 1–1000；每 N 筆保留1筆，略過數可見；Warning+與有代碼事件不採樣 |
+| MaxQueryDays / MaxExportDays / MaxExportRows           | 31／7／5000                  | 查詢 ≤366天；匯出 ≤31天／10000筆                               |
+| OtlpEnabled / OtlpEndpoint                             | false／http://localhost:4318 | HTTP protobuf；不能含 userinfo、query、fragment                |
 
 SQL row count 由 metadata 估算，避免對長期大量資料每批 COUNT 全表；多個 importer 的 concurrent batch／metadata 估算可能超過 soft limit。重送已存在的 LogId 可在 cap 以上確認 checkpoint。到容量上限不會提前清除尚未過期資料；需調整容量／已核準保留政策，監控 SQL data／log 檔空間和索引成本。RAM 上限取決於設定 record 數與實際大小，不能把 10,000 個最大 64 KiB record 當成廉價容量。
 
@@ -185,11 +204,11 @@ SQL 診斷30天、稽核365天各自分批 autocommit 清理，最大 SQL comman
 
 ## 權限、查詢與稽核可靠性
 
-| Feature grant | 伺服器要求 |
-| --- | --- |
-| `logs.query` | 查詢摘要、健康資訊；初始只授予 administrators group |
+| Feature grant | 伺服器要求                                             |
+| ------------- | ------------------------------------------------------ |
+| `logs.query`  | 查詢摘要、健康資訊；初始只授予 administrators group    |
 | `logs.detail` | 與 logs.query 一起，才能看受控屬性、UserId、例外與堆疊 |
-| `logs.export` | 與 logs.query 一起，才能匯出摘要 CSV |
+| `logs.export` | 與 logs.query 一起，才能匯出摘要 CSV                   |
 
 管理員從角色群組管理明確授予；一般使用者及未登入者即使猜對 code／LogId 也不能存取。query／detail 每人最多60次／分鐘，export每人2次／分鐘，server限制範圍／筆數／timeout。沒有日誌任意修改、刪除或無界匯出 API。有效 FeatureGrant 在每個 request 重新驗證。
 
@@ -211,16 +230,16 @@ SQL30053等全文索引問題：hybrid fallback 記 Warning `2001/retrieval.degr
 
 ## 日誌系統故障與原生日誌查證
 
-| 現象 | 查證順序 |
-| --- | --- |
-| NX暫時查不到 | 時區／範圍 → pending bytes／最後SQL寫入 → 外部設定Directory → 檔案同代碼 → SQL匯入失敗／容量；入列到SQL有非同步延遲 |
-| `sql_import_failed_*` | 保留journal／cursor；查SQL服務、TLS、帳號、migration及空間。恢復後觀察pending下降、Replayed及LastSqlWrite。不要刪cursor「修復」；刪除會重播但SQL去重 |
-| `journal_access_denied` | 用真正app pool身分確認站外目錄Modify ACL與父目錄，不能只用管理員shell可寫作為證明 |
-| `journal_disk_full`／`journal_capacity_exhausted` | 先看磁碟free與MaxDiskBytes、未補送大小；修復SQL或核準擴容。不可刪未確認檔／縮短稽核期來假裝恢復 |
-| `important_queue_full`／Lost增加 | 查IO／SQL積壓、峰值頻率與設定；可採樣低等級，但重要事件仍不得採樣。事件可能已丟失，緊急code不能保證有同筆完整事件 |
-| `journal_corrupt_record` | 保存原檔供人工鑑識／備份比對；恢復仍會繼續有效資料；不要把checksum稱為防竄改 |
-| IIS500.30／啟動失敗 | Windows Application/ANCM事件 →啟動Critical檔案／NX → 外部Production JSON/ACL/migration/options；managed日誌可能尚未能啟動 |
-| 500.31／500.19／502.5／程序崩潰 | Hosting Bundle/runtime、web.config/ANCM、WAS、.NET Runtime、Application Error、必要crash dump；應用不能捕捉managed入口之前的失敗或所有native crash |
+| 現象                                              | 查證順序                                                                                                                                             |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NX暫時查不到                                      | 時區／範圍 → pending bytes／最後SQL寫入 → 外部設定Directory → 檔案同代碼 → SQL匯入失敗／容量；入列到SQL有非同步延遲                                  |
+| `sql_import_failed_*`                             | 保留journal／cursor；查SQL服務、TLS、帳號、migration及空間。恢復後觀察pending下降、Replayed及LastSqlWrite。不要刪cursor「修復」；刪除會重播但SQL去重 |
+| `journal_access_denied`                           | 用真正app pool身分確認站外目錄Modify ACL與父目錄，不能只用管理員shell可寫作為證明                                                                    |
+| `journal_disk_full`／`journal_capacity_exhausted` | 先看磁碟free與MaxDiskBytes、未補送大小；修復SQL或核準擴容。不可刪未確認檔／縮短稽核期來假裝恢復                                                      |
+| `important_queue_full`／Lost增加                  | 查IO／SQL積壓、峰值頻率與設定；可採樣低等級，但重要事件仍不得採樣。事件可能已丟失，緊急code不能保證有同筆完整事件                                    |
+| `journal_corrupt_record`                          | 保存原檔供人工鑑識／備份比對；恢復仍會繼續有效資料；不要把checksum稱為防竄改                                                                         |
+| IIS500.30／啟動失敗                               | Windows Application/ANCM事件 →啟動Critical檔案／NX → 外部Production JSON/ACL/migration/options；managed日誌可能尚未能啟動                            |
+| 500.31／500.19／502.5／程序崩潰                   | Hosting Bundle/runtime、web.config/ANCM、WAS、.NET Runtime、Application Error、必要crash dump；應用不能捕捉managed入口之前的失敗或所有native crash   |
 
 Windows／IIS access logs（含status/substatus/win32）、WAS、ANCM stdout、.NET Runtime／Application Error／Windows Application、SQL Server ERRORLOG／Windows SQL service事件與按需Extended Events仍需另查。IIS stdout預設關閉，按受控維運流程只在啟動診斷短期啟用後關閉；原生日誌可能含路徑與第三方原始例外，依組織權限／保留規範管理。應用不能聲稱收集了主機上的所有事件。
 

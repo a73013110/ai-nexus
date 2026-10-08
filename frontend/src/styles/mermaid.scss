@@ -54,15 +54,13 @@
 .mermaid-paper {
   display: grid;
   place-items: center;
-  width: max-content;
-  min-width: 100%;
-  min-height: 100%;
   box-sizing: border-box;
   padding: var(--p-space-4);
 }
 .mermaid-paper img {
   display: block;
   max-width: none;
+  max-height: none;
   flex: none;
   user-select: none;
 }

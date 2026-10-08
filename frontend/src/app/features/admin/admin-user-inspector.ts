@@ -1,6 +1,8 @@
 import { EmptyState } from '../../shared/ui/empty-state';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { ViewMotion } from '../../shared/ui/view-motion';
+import { RouterLink } from '@angular/router';
 import { Field } from '../../shared/ui/field';
 import { IssueCode } from '../../shared/ui/issue-code';
 import { safeMessage } from '../../core/api/safe-errors';
@@ -48,6 +50,8 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
     EmptyState,
     ViewSwitch,
     CompactDialog,
+    ViewMotion,
+    RouterLink,
     Field,
     IssueCode,
     Icon,

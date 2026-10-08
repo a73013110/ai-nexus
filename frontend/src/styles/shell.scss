@@ -31,7 +31,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
+  gap: var(--p-space-3);
   height: var(--topbar-height);
   padding: 0 35px;
   flex: none;
@@ -41,7 +41,7 @@
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 17px;
+  gap: var(--p-space-2);
   min-width: 0;
 }
 .topbar-actions {
@@ -91,9 +91,17 @@
   min-height: 0;
   overflow: auto;
   overflow-anchor: none;
-  scrollbar-gutter: stable both-edges;
   overscroll-behavior: contain;
-  scroll-padding: 30px;
+  scroll-padding: var(--p-space-4);
+}
+.chat-gutter {
+  padding-inline: var(--workspace-gutter);
+  scrollbar-gutter: stable both-edges;
+}
+.chat-column {
+  width: min(var(--reading-width), 100%);
+  min-width: 0;
+  margin-inline: auto;
 }
 .chat-surface {
   display: flex;

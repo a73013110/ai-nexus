@@ -3,6 +3,11 @@ import { EmptyState } from '../../shared/ui/empty-state';
 import { FilterPanel } from '../../shared/ui/filter-panel';
 import { IssueCode } from '../../shared/ui/issue-code';
 import { safeMessage } from '../../core/api/safe-errors';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { WorkspaceSession } from '../../core/auth/workspace-session';
+import { ViewSwitch } from '../../shared/ui/view-switch';
+import { Disclosure } from '../../shared/ui/disclosure';
+import { AUDIT_CATEGORIES, auditLogQuery } from './audit-navigation';
 import {
   ChangeDetectionStrategy,
   afterNextRender,
@@ -40,6 +45,7 @@ import {
   auditResource,
   auditResult,
   auditRejected,
+  auditContext,
 } from './audit-presentation';
 
 @Component({
@@ -59,12 +65,19 @@ import {
     DataTableRow,
     TablePagination,
     DetailDrawer,
+    RouterLink,
+    ViewSwitch,
+    Disclosure,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: ':host { display: block; min-width: 0; }',
   templateUrl: './admin-audit.html',
 })
 export class AdminAudit {
+  readonly session = inject(WorkspaceSession);
+  readonly categories = AUDIT_CATEGORIES;
+  readonly category = signal('');
+  readonly traceId = signal('');
   readonly features = input<readonly Feature[]>([]);
   readonly models = input<readonly Model[]>([]);
   readonly modelNames = computed(() =>
@@ -101,6 +114,9 @@ export class AdminAudit {
       entry,
       date: formatDate(entry.at),
       action: auditAction(entry.action),
+      category: AUDIT_CATEGORIES.find((item) => item.value === entry.category)?.label || '功能操作',
+      context: auditContext(entry.detailsJson),
+      logs: auditLogQuery(entry),
       resource: auditResource(entry.detailsJson),
       details: auditDetails(entry.detailsJson, this.modelNames()),
       changes: auditChanges(entry.detailsJson, this.modelNames()).map((change) => ({
@@ -108,13 +124,19 @@ export class AdminAudit {
         featureBefore: change.featureIds ? this.resolveFeatures(change.featureIds.before) : null,
         featureAfter: change.featureIds ? this.resolveFeatures(change.featureIds.after) : null,
       })),
-      result: auditResult(entry.action === 'billing.price.created' ? 'created' : entry.result),
+      result: auditResult(
+        entry.action === 'billing.price.created' ? 'created' : entry.result,
+        entry.action,
+      ),
       rejected: entry.action !== 'billing.price.created' && auditRejected(entry.result),
     })),
   );
   readonly actions = [
     { value: '', label: '所有動作' },
     { value: 'admin.', label: '平台管理' },
+    { value: 'identity.login', label: '登入' },
+    { value: 'identity.logout', label: '登出' },
+    { value: 'logs.', label: '日誌查閱／匯出' },
     { value: 'admin.user', label: '使用者設定' },
     { value: 'identity.test_', label: '測試身分' },
     { value: 'admin.user_roles', label: '使用者角色' },
@@ -126,6 +148,12 @@ export class AdminAudit {
     { value: 'admin.conversation_read', label: '對話內容檢視' },
     { value: 'admin.user_usage_read', label: '使用者用量檢視' },
     { value: 'project.', label: '專案與範本' },
+    { value: 'conversation.', label: '對話管理' },
+    { value: 'artifact.', label: '成果文件' },
+    { value: 'file.', label: '檔案庫' },
+    { value: 'share.', label: '分享' },
+    { value: 'repository.', label: '程式庫' },
+    { value: 'web.search', label: '網路搜尋' },
     { value: 'knowledge.', label: '知識庫' },
     { value: 'document.', label: '文件與索引' },
     { value: 'evaluation.', label: '評測資源' },
@@ -177,6 +205,12 @@ export class AdminAudit {
   private version = 0;
   private timer?: ReturnType<typeof setTimeout>;
   constructor() {
+    const params = inject(ActivatedRoute).snapshot.queryParamMap;
+    const category = params.get('category') || '';
+    if (AUDIT_CATEGORIES.some((item) => item.value === category)) this.category.set(category);
+    this.search.set((params.get('search') || '').slice(0, 120));
+    const traceId = params.get('traceId');
+    if (traceId && /^[a-f\d]{32}$/i.test(traceId)) this.traceId.set(traceId.toLowerCase());
     afterNextRender(() => void this.load());
     inject(DestroyRef).onDestroy(() => {
       ++this.version;
@@ -190,7 +224,7 @@ export class AdminAudit {
     clearTimeout(this.timer);
     this.timer = setTimeout(() => void this.load(), 250);
   }
-  filter(key: 'action' | 'result' | 'from' | 'until', value: string) {
+  filter(key: 'category' | 'action' | 'result' | 'from' | 'until', value: string) {
     this[key].set(value);
     clearTimeout(this.timer);
     void this.load();
@@ -217,6 +251,8 @@ export class AdminAudit {
         search: this.search(),
         action: this.action(),
         result: this.result(),
+        category: this.category(),
+        ...(this.traceId() ? { traceId: this.traceId() } : {}),
         from: this.from() ? this.from() + 'T00:00:00+08:00' : '',
         until: this.until() ? this.nextDay(this.until()) + 'T00:00:00+08:00' : '',
       };
@@ -256,6 +292,10 @@ export class AdminAudit {
               '資源識別碼',
               '結果',
               '異動資訊',
+              '分類',
+              'Trace ID',
+              'Operation ID',
+              '查證代碼',
             ],
             ...rows.map((row) => [
               row.id,
@@ -265,8 +305,15 @@ export class AdminAudit {
               row.action,
               row.resourceId,
               auditResource(row.detailsJson),
-              auditResult(row.action === 'billing.price.created' ? 'created' : row.result),
+              auditResult(
+                row.action === 'billing.price.created' ? 'created' : row.result,
+                row.action,
+              ),
               auditDetails(row.detailsJson, this.modelNames()),
+              AUDIT_CATEGORIES.find((item) => item.value === row.category)?.label || '功能操作',
+              row.traceId || '',
+              row.operationId || '',
+              row.issueCode || '',
             ]),
           ]),
         ],

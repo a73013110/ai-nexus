@@ -1,8 +1,26 @@
+<div class="page-toolbar">
+  <p class="form-note">誰在何時登入、變更設定或查閱資料；選取紀錄檢視詳情，再連到日誌查證。</p>
+  @if (session.has('logs.query')) {
+    <a routerLink="/admin/logs" class="quiet-button"><nx-icon name="tasks" />系統日誌</a>
+  }
+</div>
 <nx-filter-panel>
+  <nx-view-switch
+    label="活動稽核分類"
+    [options]="categories"
+    [value]="category()"
+    (valueChange)="filter('category', $event)"
+  />
+  @if (traceId()) {
+    <div class="page-toolbar">
+      <p class="form-note">正在查詢同一流程：{{ traceId() }}</p>
+      <button class="quiet-button" (click)="traceId.set(''); load()">清除流程條件</button>
+    </div>
+  }
   <div class="audit-toolbar">
     <nx-search-field
       label="搜尋稽核"
-      placeholder="帳號、動作或資源識別碼"
+      placeholder="帳號、動作、資源、Trace ID 或查證代碼"
       [value]="search()"
       (valueChange)="searchChanged($event)"
     />
@@ -47,14 +65,14 @@
 }
 <nx-data-table
   class="admin-audit-table"
-  label="異動稽核列表"
+  label="活動稽核列表"
   [busy]="loading()"
   [columns]="columns"
   preferenceKey="admin-audit"
 >
   <div table-toolbar class="ui-table-toolbar">
     <h2>
-      異動紀錄 <span class="ui-count-label">本頁 {{ rows().length }} 筆</span>
+      活動紀錄 <span class="ui-count-label">本頁 {{ rows().length }} 筆</span>
     </h2>
     <div class="page-actions">
       <span class="form-note">Asia/Taipei · 新到舊</span>
@@ -96,6 +114,9 @@
           </td>
           <td nxTableColumn="actor">
             <span class="ui-truncate" [title]="row.entry.actor">{{ row.entry.actor }}</span>
+            @if (row.entry.actor === '未驗證' && row.context.length) {
+              <small class="ui-truncate">{{ row.context[0].value }}</small>
+            }
             @if (row.entry.actingAs) {
               <small class="ui-truncate" [title]="row.entry.actingAs"
                 >測試：{{ row.entry.actingAs }}</small
@@ -104,7 +125,9 @@
           </td>
           <td nxTableColumn="action">
             <strong class="ui-truncate" [title]="row.action">{{ row.action }}</strong
-            ><small class="ui-truncate" [title]="row.entry.action">{{ row.entry.action }}</small>
+            ><small class="ui-truncate" [title]="row.entry.action"
+              >{{ row.category }} · {{ row.entry.action }}</small
+            >
           </td>
           <td nxTableColumn="resource">
             <span class="ui-truncate" [title]="row.resource || row.entry.resourceId || ''">{{
@@ -212,6 +235,16 @@
           <dd>{{ row.entry.action }}</dd>
         </div>
         <div>
+          <dt>分類</dt>
+          <dd>{{ row.category }}</dd>
+        </div>
+        @for (field of row.context; track field.label) {
+          <div>
+            <dt>{{ field.label }}</dt>
+            <dd>{{ field.value }}</dd>
+          </div>
+        }
+        <div>
           <dt>資源識別碼</dt>
           <dd>{{ row.resource || row.entry.resourceId || '—' }}</dd>
         </div>
@@ -222,6 +255,34 @@
           </div>
         }
       </dl>
+      @if (row.logs && session.has('logs.query')) {
+        <a routerLink="/admin/logs" [queryParams]="row.logs" class="secondary-button">
+          <nx-icon name="search" />查證相關日誌
+        </a>
+      }
+      @if (row.entry.traceId || row.entry.operationId || row.entry.issueCode) {
+        <h3 class="ui-section-heading">流程關聯</h3>
+        <dl class="ui-description-list">
+          @if (row.entry.traceId) {
+            <div class="ui-description-wide">
+              <dt>Trace ID</dt>
+              <dd>{{ row.entry.traceId }}</dd>
+            </div>
+          }
+          @if (row.entry.operationId) {
+            <div class="ui-description-wide">
+              <dt>Operation ID</dt>
+              <dd>{{ row.entry.operationId }}</dd>
+            </div>
+          }
+          @if (row.entry.issueCode) {
+            <div class="ui-description-wide">
+              <dt>查證代碼</dt>
+              <dd>{{ row.entry.issueCode }}</dd>
+            </div>
+          }
+        </dl>
+      }
       @if (row.changes.length) {
         <h3 class="ui-section-heading">前後差異</h3>
         <dl class="audit-changes">
@@ -246,10 +307,14 @@
         </dl>
       }
       @if (row.entry.detailsJson) {
-        <h3 class="ui-section-heading">完整紀錄資訊</h3>
-        <pre class="audit-detail-text">{{ row.details }}</pre>
+        <details nxDisclosure class="audit-record-details">
+          <summary>完整紀錄資訊<nx-icon name="chevron" /></summary>
+          <pre class="audit-detail-text">{{ row.details }}</pre>
+        </details>
       }
-      <p class="form-note">授權異動保存前後內容，失敗異動會回復原值；敏感讀取也留下紀錄。</p>
+      <p class="form-note">
+        稽核記錄行為與結果；系統日誌查詢錯誤、耗時與技術流程。歷史紀錄若未保存關聯識別碼，請用事件時間查證。
+      </p>
     </section>
   }
 </nx-detail-drawer>

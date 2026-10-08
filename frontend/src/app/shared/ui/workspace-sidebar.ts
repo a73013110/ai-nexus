@@ -73,7 +73,7 @@ let sequence = 0;
       (activated)="layout.closeMobile(); activated.emit()"
     />
     <div
-      class="workspace-sidebar-content"
+      class="workspace-sidebar-content ui-density-compact"
       [hidden]="collapsibleNavigation() && navigationExpanded() && !layout.compact()"
     >
       <ng-content />

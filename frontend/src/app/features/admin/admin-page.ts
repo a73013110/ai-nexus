@@ -9,6 +9,7 @@ import {
 } from '../../shared/ui/data-table';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { DialogMotion, ViewMotion } from '../../shared/ui/view-motion';
 import { Field } from '../../shared/ui/field';
 import { IssueCode } from '../../shared/ui/issue-code';
 import { safeMessage } from '../../core/api/safe-errors';
@@ -24,7 +25,8 @@ import {
 } from '@angular/core';
 import { FeaturePage } from '../../shared/ui/feature-page';
 import { Icon } from '../../shared/ui/icon';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import type {
   AdminCatalog,
@@ -95,6 +97,8 @@ interface Editor {
     StatusBadge,
     ViewSwitch,
     CompactDialog,
+    DialogMotion,
+    ViewMotion,
     Field,
     IssueCode,
     FeaturePage,
@@ -155,7 +159,7 @@ export class AdminPage {
     { id: 'roles', name: '角色' },
     { id: 'groups', name: '功能群組與模型' },
     { id: 'features', name: '功能' },
-    { id: 'audit', name: '異動稽核' },
+    { id: 'audit', name: '活動稽核' },
     { id: 'usage', name: '平台用量' },
     { id: 'retrieval', name: '知識檢索' },
   ];
@@ -250,6 +254,13 @@ export class AdminPage {
   private alive = true;
   private timer?: ReturnType<typeof setTimeout>;
   constructor() {
+    inject(ActivatedRoute)
+      .queryParamMap.pipe(takeUntilDestroyed())
+      .subscribe((params) => {
+        const tab = params.get('tab') || 'users';
+        if (this.tabs.some((item) => item.id === tab) && tab !== this.tab())
+          void this.selectTab(tab, false);
+      });
     void this.load();
     inject(DestroyRef).onDestroy(() => {
       this.alive = false;
@@ -277,8 +288,13 @@ export class AdminPage {
       if (this.alive) this.loading.set(false);
     }
   }
-  async selectTab(id: string) {
+  async selectTab(id: string, updateRoute = true) {
     this.tab.set(id);
+    if (updateRoute)
+      void this.router.navigate([], {
+        queryParams: { tab: id, category: null, traceId: null, search: null },
+        queryParamsHandling: 'merge',
+      });
     this.error.set('');
     try {
       if (id === 'usage') {

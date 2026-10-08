@@ -105,6 +105,7 @@ builder.Services.AddSingleton<IdentityWriteLock>();
 builder.Services.AddScoped<CurrentUser>();
 builder.Services.AddSingleton<Argon2Passwords>();
 builder.Services.AddScoped<LocalAuthenticator>();
+builder.Services.AddScoped<AuthenticationAudit>();
 builder.Services.AddScoped<UserAccountAdministration>();
 builder.Services.AddScoped<PersonalSettingsService>();
 builder.Services.AddScoped<UsageReports>();

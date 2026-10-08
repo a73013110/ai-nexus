@@ -154,6 +154,7 @@
 }
 .feature-choice-group {
   display: grid;
+  align-content: start;
   gap: var(--p-space-1);
 }
 .feature-choice-group legend {

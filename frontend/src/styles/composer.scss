@@ -1,20 +1,15 @@
 .composer-region {
   flex: none;
-  padding: var(--p-space-2) var(--workspace-gutter)
-    max(var(--p-space-3), env(safe-area-inset-bottom));
-  position: relative;
+  padding-block: var(--p-space-2) max(var(--p-space-3), env(safe-area-inset-bottom));
+  overflow: hidden;
   background: var(--canvas);
-}
-.composer-container {
-  max-width: var(--composer-width);
-  margin: 0 auto;
 }
 .composer {
   position: relative;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--composer-radius);
-  padding: var(--p-space-3) var(--p-space-3) var(--p-space-2);
+  padding: var(--p-space-2) var(--p-space-3);
   box-shadow: var(--shadow);
   transition:
     border-color var(--motion),
@@ -27,10 +22,14 @@
 .composer.is-busy {
   border-color: var(--signal);
 }
+.composer-input {
+  position: relative;
+  min-height: var(--button-target);
+}
 .composer textarea {
   display: block;
   border: 0;
-  padding: 0 44px 0 0;
+  padding: 0 var(--button-target) 0 0;
   margin: 0;
   width: 100%;
   resize: none;
@@ -47,8 +46,8 @@
 }
 .composer-expand {
   position: absolute;
-  right: var(--p-space-2);
-  top: var(--p-space-1);
+  right: 0;
+  top: 0;
   color: var(--muted);
 }
 .composer-expand nx-icon {
@@ -56,7 +55,7 @@
   height: 15px;
 }
 .platform-dialog.focus-composer-dialog {
-  --dialog-width: 60rem;
+  --dialog-width: calc(var(--reading-width) + 2 * var(--dialog-padding) + 2px);
   display: none;
   height: min(720px, calc(100dvh - 3rem));
   overflow: hidden;
@@ -102,8 +101,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 5px;
+  gap: var(--p-space-1);
+  margin-top: var(--p-space-1);
 }
 .send-button {
   width: var(--button-target);
@@ -164,7 +163,7 @@
   gap: 7px;
   font-size: var(--text-caption);
   position: absolute;
-  bottom: calc(100% + 4px);
+  bottom: var(--p-space-2);
   left: 50%;
   transform: translateX(-50%);
   z-index: 2;
@@ -198,28 +197,10 @@
   width: 28px;
   height: 28px;
 }
-@media (max-width: 859px) {
-  .composer-region {
-    padding: var(--p-space-2) var(--workspace-gutter)
-      max(var(--p-space-3), env(safe-area-inset-bottom));
-  }
-}
 @media (max-width: 520px) {
-  .composer-region {
-    padding: var(--p-space-2) var(--workspace-gutter)
-      max(var(--p-space-3), env(safe-area-inset-bottom));
-  }
-  .composer {
-    padding: var(--p-space-3) var(--p-space-3) var(--p-space-2);
-  }
-  .composer textarea {
-    font-size: var(--text-body);
-  }
   .composer-hint {
-    font-size: var(--text-caption);
     flex-wrap: wrap;
-    gap: 4px;
-    margin: var(--p-space-1) var(--p-space-1) 0;
+    gap: var(--p-space-1);
   }
 }
 .archive-notice {
@@ -237,9 +218,6 @@
   color: var(--accent);
   min-height: var(--button-target);
   padding-inline: var(--p-space-2);
-}
-.composer-bottom {
-  gap: var(--p-space-1);
 }
 .draft-saved {
   color: var(--secondary);

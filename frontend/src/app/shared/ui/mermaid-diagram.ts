@@ -11,6 +11,7 @@ import {
   signal,
   untracked,
   viewChild,
+  viewChildren,
   ViewEncapsulation,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
@@ -21,6 +22,7 @@ import { Icon, EXTRA_ICONS } from './icon';
 import { SquareCode, ZoomIn, ZoomOut, Scan } from 'lucide';
 import { ViewSwitch } from './view-switch';
 import { renderDiagram } from './mermaid-renderer';
+import { diagramTheme } from './mermaid-theme';
 import type { sanitizeDiagramSvg } from './mermaid-svg';
 
 type Diagram = ReturnType<typeof sanitizeDiagramSvg>;
@@ -43,7 +45,7 @@ type Diagram = ReturnType<typeof sanitizeDiagramSvg>;
     (pointercancel)="panEnd()"
     (lostpointercapture)="panEnd()"
   >
-    <div class="mermaid-paper">
+    <div class="mermaid-paper" [style.width.px]="paperWidth()" [style.height.px]="paperHeight()">
       <img
         [src]="url()"
         [alt]="diagram().title + (diagram().description ? '：' + diagram().description : '')"
@@ -62,6 +64,13 @@ export class DiagramCanvas {
   readonly zoomChange = output<number>();
   private readonly canvas = viewChild.required<ElementRef<HTMLElement>>('canvas');
   private readonly width = signal(640);
+  private readonly height = signal(420);
+  readonly paperWidth = computed(() =>
+    Math.max(this.width(), this.diagram().width * this.scale() + 32),
+  );
+  readonly paperHeight = computed(() =>
+    Math.max(this.height(), this.diagram().height * this.scale() + 32),
+  );
   readonly scale = computed(
     () => Math.min(1, Math.max(1, this.width() - 32) / this.diagram().width) * this.zoom(),
   );
@@ -74,6 +83,7 @@ export class DiagramCanvas {
       const canvas = this.canvas().nativeElement;
       const observer = new ResizeObserver(() => {
         if (canvas.clientWidth) this.width.set(canvas.clientWidth);
+        if (canvas.clientHeight) this.height.set(canvas.clientHeight);
       });
       observer.observe(canvas);
       cleanup(() => observer.disconnect());
@@ -116,6 +126,17 @@ export class DiagramCanvas {
   panEnd() {
     this.drag = undefined;
     this.canvas().nativeElement.classList.remove('is-panning');
+  }
+  fitZoom() {
+    const canvas = this.canvas().nativeElement;
+    const base = this.scale() / this.zoom();
+    return (
+      Math.min(
+        (canvas.clientWidth - 32) / this.diagram().width,
+        (canvas.clientHeight - 32) / this.diagram().height,
+        1,
+      ) / base
+    );
   }
 }
 
@@ -212,7 +233,7 @@ export class DiagramCanvas {
           type="button"
           title="縮小圖表"
           aria-label="縮小圖表"
-          [disabled]="zoom() <= 0.25"
+          [disabled]="zoom() <= 0.05"
           (click)="setZoom(zoom() / 1.25)"
         >
           <nx-icon name="zoom-out" />
@@ -236,6 +257,9 @@ export class DiagramCanvas {
           (click)="setZoom(1)"
         >
           <nx-icon name="fit" />
+        </button>
+        <button class="quiet-button" type="button" aria-label="顯示完整圖表" (click)="fitAll()">
+          全圖
         </button>
       </div>
     </ng-template>
@@ -290,6 +314,7 @@ export class MermaidDiagram {
   readonly copy = inject(CopyFeedback);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+  private readonly canvases = viewChildren(DiagramCanvas);
   private readonly refresh = signal(0);
   private revision = 0;
   constructor() {
@@ -313,7 +338,13 @@ export class MermaidDiagram {
     this.refresh.update((value) => value + 1);
   }
   setZoom(value: number) {
-    this.zoom.set(Math.max(0.25, Math.min(4, value)));
+    this.zoom.set(Math.max(0.05, Math.min(4, value)));
+  }
+  fitAll() {
+    const canvas = this.canvases().find(
+      (item) => item.expanded() === this.dialog().nativeElement.open,
+    );
+    if (canvas) this.setZoom(canvas.fitZoom());
   }
   expand() {
     this.dialog().nativeElement.showModal();
@@ -331,63 +362,11 @@ export class MermaidDiagram {
     const revision = ++this.revision;
     const active = () => revision === this.revision;
     const style = getComputedStyle(this.host.nativeElement);
-    const color = (token: string) => style.getPropertyValue(token).trim();
-    const ink = color('--ink'),
-      line = color('--line'),
-      surface = color('--surface');
+    const { config, semantics } = diagramTheme(style);
     this.loading.set(true);
     this.error.set('');
     try {
-      const result = await renderDiagram(
-        source,
-        {
-          theme: 'base',
-          look: 'neo',
-          layout: 'elk',
-          fontFamily: color('--font-ui'),
-          flowchart: {
-            htmlLabels: false,
-            curve: 'basis',
-            nodeSpacing: 36,
-            rankSpacing: 48,
-            padding: 14,
-          },
-          themeVariables: {
-            darkMode: style.colorScheme === 'dark',
-            fontFamily: color('--font-ui'),
-            fontSize: style.fontSize,
-            background: surface,
-            primaryColor: color('--accent-soft'),
-            primaryTextColor: ink,
-            primaryBorderColor: line,
-            nodeBorder: line,
-            secondaryColor: surface,
-            tertiaryColor: color('--canvas'),
-            secondaryTextColor: ink,
-            tertiaryTextColor: ink,
-            secondaryBorderColor: line,
-            tertiaryBorderColor: line,
-            lineColor: color('--secondary'),
-            textColor: ink,
-            nodeTextColor: ink,
-            clusterBkg: color('--canvas'),
-            clusterBorder: line,
-            edgeLabelBackground: surface,
-            actorBkg: color('--accent-soft'),
-            actorBorder: line,
-            actorTextColor: ink,
-            actorLineColor: line,
-            signalColor: color('--secondary'),
-            signalTextColor: ink,
-            noteBkgColor: color('--canvas'),
-            noteTextColor: ink,
-            noteBorderColor: line,
-            labelTextColor: ink,
-            useGradient: false,
-          },
-        },
-        active,
-      );
+      const result = await renderDiagram(source, config, active, semantics);
       if (!active() || !result) return;
       const previous = this.url();
       this.diagram.set(result);

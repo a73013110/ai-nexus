@@ -29,7 +29,8 @@
   grid-column: 3;
   grid-row: 1;
 }
-.inspector-content {
+.inspector-content,
+.inspector-panel {
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -39,8 +40,8 @@
   overscroll-behavior: contain;
 }
 .inspector-content > .inspector-tabs,
-.inspector-content > .inspector-audit-note,
-.inspector-content > .inline-error {
+.inspector-panel > .inspector-audit-note,
+.inspector-panel > .inline-error {
   flex: none;
 }
 .inspector-storage {

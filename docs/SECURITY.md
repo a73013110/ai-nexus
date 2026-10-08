@@ -13,6 +13,7 @@
 - 原檔必須經 owner 或知識／專案／分享 ACL。只有 PDF／PNG／JPEG／WebP 可 inline 顯示；文字、XML、Markdown、Word 等作為附件下載。原檔回應使用獨立 `default-src 'none'; sandbox` CSP，防止上傳內容取得網站的執行能力。檔名不成為檔案系統路徑，binary 不在 wwwroot。
 - 上傳沿用格式 allowlist、標記驗證、大小／頁數／擷取上限、owner quota 及寫入鎖；拒絕 SVG 與巨集文件。讀檔、文件頁面、背景任務及檔案庫關聯均重新驗證權限。
 - Markdown 包含串流尾段，先關閉 raw HTML，再通過同一個 DOMPurify allowlist。外部連結僅 HTTP(S)，帶 noopener／noreferrer；圖片語法只顯示說明文字，不發起任意外部請求。
-- Mermaid 只接受完成的程式碼區塊。渲染使用 strict 模式與站點固定的設定；圖表圖片節點在量測前拒絕。輸出的 SVG 移除 active HTML／事件／圖片／連結及外部 CSS resource，只透過惰性 Blob 圖片呈現，不直接注入 active SVG，不啟用圖表的 click handler。下載沿用同一份清理後的 SVG。
+- Mermaid 只接受完成的程式碼區塊。渲染使用 strict 模式與站點固定的設定；圖表圖片節點在量測前拒絕。輸出的 SVG 移除 active HTML／事件／圖片／連結及外部 CSS resource；清理完成後在隱藏量測容器確認完整圖形邊界，容器於 finally 移除。閱讀畫面只透過惰性 Blob 圖片呈現，不啟用圖表的 click handler；下載沿用同一份清理與邊界修正後的 SVG。
+- 登入／登出活動稽核保存語意結果，失敗帳號保持未驗證，不歸到既有 cookie 身分；密碼、token 與完整請求不進入稽核。帳號、登入方式及來源 IP 使用核準的欄位與長度；來源只取 server connection，不信任任意 forwarded header。稽核與對外查證代碼、HTTP trace 可互查，但兩個查詢入口各自重新驗證原有權限。見 [管理者查證流程](DIAGNOSTICS.md)。
 
 以上是應用程式基線，依 [Microsoft HTTPS](https://learn.microsoft.com/en-us/aspnet/core/security/enforcing-ssl?view=aspnetcore-10.0)、[OWASP 安全標頭](https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html) 與 [檔案上傳](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html) 建議維護。正式憑證、網路入口、SQL／AD 權限、持續更新及備份還原仍屬部署與維運驗收；單次程式調整不構成全面安全認證。

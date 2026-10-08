@@ -7,8 +7,9 @@ import { Icon } from './icon';
 
 @Component({
   selector: 'nx-account-menu',
-  imports: [IssueCode,ActionMenu, Icon],
+  imports: [IssueCode, ActionMenu, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { class: 'ui-density-compact' },
   template: `<nx-action-menu
       [profile]="true"
       label="登入者選單"

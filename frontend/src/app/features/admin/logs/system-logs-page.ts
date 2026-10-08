@@ -1,4 +1,5 @@
 import { EmptyState } from '../../../shared/ui/empty-state';
+import { ViewMotion } from '../../../shared/ui/view-motion';
 import { FilterPanel } from '../../../shared/ui/filter-panel';
 import {
   ChangeDetectionStrategy,
@@ -10,7 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FeaturePage } from '../../../shared/ui/feature-page';
 import { WorkspaceSession } from '../../../core/auth/workspace-session';
 import { ViewScope } from '../../../shared/browser/view-scope';
@@ -76,6 +77,7 @@ const tones: Record<string, BadgeTone> = {
   selector: 'nx-system-logs-page',
   imports: [
     EmptyState,
+    ViewMotion,
     FilterPanel,
     FeaturePage,
     FormsModule,
@@ -237,6 +239,23 @@ export class SystemLogsPage {
   private detailVersion = 0;
 
   constructor() {
+    const params = inject(ActivatedRoute).snapshot.queryParamMap;
+    const traceId = params.get('traceId'),
+      issueCode = params.get('issueCode');
+    if (traceId && /^[a-f\d]{32}$/i.test(traceId)) this.setFilter('traceId', traceId.toLowerCase());
+    if (issueCode && /^NX-[a-f\d]{32}$/i.test(issueCode)) this.setFilter('issueCode', issueCode);
+    const from = Date.parse(params.get('from') || ''),
+      to = Date.parse(params.get('to') || '');
+    if (
+      Number.isFinite(from) &&
+      Number.isFinite(to) &&
+      from < to &&
+      to - from <= 24 * 60 * 60_000
+    ) {
+      this.fromLocal.set(formatDateTimeInput(new Date(from)));
+      this.toLocal.set(formatDateTimeInput(new Date(to)));
+      this.range.set('custom');
+    }
     inject(DestroyRef).onDestroy(() => {
       this.controller?.abort();
       this.detailController?.abort();

@@ -10,14 +10,14 @@
     (import)="store.importBackup($event)"
   />
   <main
-    class="main-workspace"
+    class="main-workspace ui-density-compact"
     [class.chat-starting]="starting()"
     id="main"
     [attr.inert]="narrow() && sidebarOpen() ? '' : null"
     [nxFileDrop]="store.canUpload()"
     (filesDropped)="store.attachments.upload($event)"
   >
-    <header class="topbar ui-density-compact">
+    <header class="topbar">
       <div class="topbar-left">
         <div class="conversation-heading">
           @if (store.selected(); as conversation) {
@@ -106,7 +106,7 @@
     <div class="chat-surface">
       <div class="conversation-body">
         <div
-          class="conversation-viewport"
+          class="conversation-viewport chat-gutter"
           #viewport
           nxTextSelection
           (textSelected)="paragraph.set($event)"
@@ -116,7 +116,7 @@
             <div class="conversation-loading" role="status">正在開啟對話…</div>
           } @else if (!store.visibleMessages().length) {
             <section
-              class="chat-start ui-density-compact"
+              class="chat-start chat-column"
               aria-labelledby="chat-start-title"
               animate.enter="empty-enter"
             >
@@ -127,7 +127,7 @@
               </div>
             </section>
           } @else {
-            <section class="message-list" aria-label="目前對話訊息">
+            <section class="message-list chat-column" aria-label="目前對話訊息">
               @for (message of store.visibleMessages(); track message.id) {
                 <nx-chat-message
                   [message]="message"
@@ -158,14 +158,14 @@
           [viewport]="viewport"
           (navigated)="pauseFollowing()"
         />
-      </div>
-      <div class="composer-region">
         @if (!following() && store.visibleMessages().length) {
           <button class="latest-button" (click)="scrollLatest()">
             <nx-icon name="down" />回到最新
           </button>
         }
-        <div class="composer-container">
+      </div>
+      <div class="composer-region chat-gutter">
+        <div class="composer-container chat-column">
           @if (store.webSearchEnabled()) {
             <p class="web-search-notice">
               <nx-icon name="globe" />會將這次提問送往搜尋服務；附件與歷史對話不會送出。
@@ -201,15 +201,6 @@
             [class.has-attachments]="store.attachments.files().length"
             (submit)="send($event)"
           >
-            <button
-              type="button"
-              class="icon-button composer-expand"
-              aria-label="展開訊息輸入"
-              title="展開訊息輸入"
-              (click)="focusComposer().open()"
-            >
-              <nx-icon name="maximize" />
-            </button>
             @if (store.attachments.files().length) {
               <nx-attachment-list
                 [files]="store.attachments.files()"
@@ -237,21 +228,32 @@
                 </button>
               </div>
             }
-            <label class="sr-only" for="composer">{{
-              store.editing() ? '修改你的提問' : '傳送訊息'
-            }}</label
-            ><textarea
-              #composer
-              id="composer"
-              aria-describedby="composer-hint"
-              placeholder="輸入訊息…"
-              [formField]="composerForm.text"
-              [nxAutosize]="store.draft().text"
-              (keydown)="keydown($event)"
-              (compositionstart)="composing.set(true)"
-              (compositionend)="composing.set(false)"
-              rows="1"
-            ></textarea>
+            <div class="composer-input">
+              <label class="sr-only" for="composer">{{
+                store.editing() ? '修改你的提問' : '傳送訊息'
+              }}</label
+              ><textarea
+                #composer
+                id="composer"
+                aria-describedby="composer-hint"
+                placeholder="輸入訊息…"
+                [formField]="composerForm.text"
+                [nxAutosize]="store.draft().text"
+                (keydown)="keydown($event)"
+                (compositionstart)="composing.set(true)"
+                (compositionend)="composing.set(false)"
+                rows="1"
+              ></textarea>
+              <button
+                type="button"
+                class="icon-button composer-expand"
+                aria-label="展開訊息輸入"
+                title="展開訊息輸入"
+                (click)="focusComposer().open()"
+              >
+                <nx-icon name="maximize" />
+              </button>
+            </div>
             <div class="composer-bottom">
               <!-- Keep upload unavailable during the initial DOM creation, before readiness binds. -->
               <button
@@ -365,7 +367,7 @@
             ><span>AI 回答可能有誤，請確認重要資訊。</span>
           </div>
           @if (starting()) {
-            <section class="chat-start-suggestions ui-density-compact" aria-label="對話起點">
+            <section class="chat-start-suggestions" aria-label="對話起點">
               @for (suggestion of suggestions; track suggestion.title) {
                 <button
                   nxCard

@@ -1,15 +1,15 @@
-// Shared desktop density. The sidebar and reading surfaces retain their own scale.
+// Shared control density. Reading typography remains controlled by personal settings.
 .ui-density-compact {
   --button-target: var(--control-height-compact);
-  --text-label: var(--p-font-data);
-  --text-ui: var(--p-font-data);
+  --text-label: var(--density-text-size, var(--p-font-data));
+  --text-ui: var(--density-text-size, var(--p-font-data));
   --text-heading: var(--resource-heading-size);
-  --text-caption: var(--p-font-xs);
-  --control-font-size: var(--p-font-data);
+  --text-caption: var(--density-caption-size, var(--p-font-xs));
+  --control-font-size: var(--text-ui);
   --control-padding-block: var(--p-space-1);
   --button-padding-block: var(--p-space-1);
   --button-padding-inline: var(--p-space-3);
-  --field-label-size: var(--p-font-data);
+  --field-label-size: var(--text-label);
   --field-label-gap: var(--p-space-1);
   --table-cell-padding-block: var(--p-space-1);
   --table-cell-padding-inline: var(--p-space-3);

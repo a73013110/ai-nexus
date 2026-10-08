@@ -1,12 +1,18 @@
 import type { MermaidConfig } from 'mermaid';
-import { sanitizeDiagramSvg } from './mermaid-svg';
+import { measureDiagramBounds, sanitizeDiagramSvg } from './mermaid-svg';
+import type { DiagramSemantics } from './mermaid-theme';
 
 let library: Promise<typeof import('mermaid')> | undefined;
 let queue: Promise<unknown> = Promise.resolve();
 let sequence = 0;
 
 /** Mermaid owns global configuration; serialize rendering to keep themes and IDs isolated. */
-export function renderDiagram(source: string, config: MermaidConfig, active: () => boolean) {
+export function renderDiagram(
+  source: string,
+  config: MermaidConfig,
+  active: () => boolean,
+  semantics?: DiagramSemantics,
+) {
   const render = queue
     .catch(() => undefined)
     .then(async () => {
@@ -57,10 +63,14 @@ export function renderDiagram(source: string, config: MermaidConfig, active: () 
       try {
         const result = await mermaid.render(`nx-mermaid-${++sequence}`, source, container);
         return active()
-          ? sanitizeDiagramSvg(
-              result.svg,
-              config.themeVariables?.primaryTextColor || '#000000',
-              config.themeVariables?.background || '#ffffff',
+          ? measureDiagramBounds(
+              sanitizeDiagramSvg(
+                result.svg,
+                config.themeVariables?.primaryTextColor || '#000000',
+                config.themeVariables?.background || '#ffffff',
+                parsed.type.startsWith('flowchart') ? semantics : undefined,
+              ),
+              container,
             )
           : null;
       } finally {

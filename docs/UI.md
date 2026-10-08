@@ -6,6 +6,12 @@ Chat、功能頁及閱讀器共用 `WorkspaceSidebar`／`WorkspaceLayout`。Togg
 
 對話每列「…」與右上工具列共用 `ConversationActions`／top-layer ActionMenu，提供分享、命名、收藏、封存、刪除。生成中顯示 spinner，禁止破壞生成狀態的操作；切換後仍持續，完成圖示沿用未讀通知。準備回答採三層軌道與中心脈衝，減少動態時保持靜態可讀。
 
+側欄的對話操作、搜尋、篩選、歷史清單、工作區開關與帳號選單沿用 `ui-density-compact`；品牌區與工作區功能分組保留既有尺度。側欄以 `--density-text-size`／`--density-caption-size` 使用 14px 主文字、13px 輔助文字，與功能導覽的 14px 尺度一致；桌面列高 34px、歷史列間距 2px、搜尋列 40px，側欄 overlay／觸控維持 44px。品牌下方保留 12px 間距，其他外框間距 4px，移除工作區按鈕與帳號之間的冗餘留白。帳號使用 28px 頭像及兩行省略文字，共用 `ActionMenu` 樣式集中於 `styles/action-menu.scss`，選單移除列間空隙但保留完整鍵盤／焦點操作。聊天操作區亦共用緊湊尺度，正文仍使用個人閱讀設定；48px 頁首、32px 最小輸入高度與 16px／12px 訊息間距減少冗餘留白，長草稿依內容自動增高。新對話的標題、輸入與建議仍在畫面中央，已有訊息時輸入區固定於底部。
+
+密度與一致間距參考 [Fluent 2 layout](https://fluent2.microsoft.design/layout)；桌面操作尺寸遵循 [WCAG 2.2 target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum)，手機維持較大的觸控範圍。
+
+設定中的「內容寬度」同步控制訊息、開場、輸入框、附件預覽、狀態與下方提示，透過同一個 `--reading-width` 與 `.chat-column` 配置，不再維持另一份固定輸入寬度。共用 `.chat-gutter` 同時處理留白與捲軸保留空間，避免寬廣模式或小視窗出現邊緣不對齊。設定預覽、取消、儲存與重新載入沿用同一偏好流程；手機以可用寬度為上限。共用附件列表以 container query 適應實際欄寬，窄容器採 32px 縮圖及精簡間距，檔名與資訊保持單行並省略，完整檔名保留在可見工具提示與閱讀／下載／移除的名稱中，觸控操作仍為 44px。展開按鈕定位在文字輸入列，避免與附件操作重疊；放大的長文輸入視窗也沿用選定欄寬，保留同步草稿與較大的編輯高度。「回到最新」屬於閱讀區浮動操作，不受輸入區邊界裁切。
+
 聊天附件卡片將閱讀、下載與移除分開，使用主題邊框、輕陰影及獨立的 hover／焦點回饋；手機維持可觸控尺寸。附件、回答引用、知識庫與專案文件共用 `ReaderLink`，在 URL 保存來源位置、同分頁的 history state 保存閱讀位置。閱讀頁依來源顯示「返回對話」「返回專案」或「返回知識庫」；返回聊天時保留對話、草稿、捲動位置與原附件焦點，也支援瀏覽器上一頁。重新整理或新分頁開啟仍保留來源 URL，只接受本站工作區路徑；未知來源顯示前往總覽，知識庫文件可回知識庫。閱讀頁共用文件面板、縮放／頁碼／檢視方式、原始圖片載入與錯誤回饋，遵循深色與減少動態設定。
 
 聊天 lazy-loaded，Signal Forms、zoneless 與 OnPush。IME composition／229 Enter 不送出，Shift+Enter 換行；草稿自動增高，讀取歷史時保持捲動位置並提供「回到最新」。手機 drawer 有關閉、Escape、inert 與焦點返回。
@@ -22,9 +28,15 @@ Chat、功能頁及閱讀器共用 `WorkspaceSidebar`／`WorkspaceLayout`。Togg
 
 Markdown 禁 raw HTML、external images、危險 URL；解析後經 DOMPurify tag／attribute allowlist，才進入 Angular trusted HTML boundary，以保留 code-copy button。不得把其他 HTML 傳到該 boundary。串流保留已完成區塊，只重新解析尾段；不完整的 Mermaid fence 顯示原始碼，區塊完成後才繪圖，避免每 token 重算整份內容。
 
-`MarkdownView` 在安全解析後，將完成的 Mermaid fenced block 掛載到 renderer 自己產生的插槽；清單及引用中的圖表保留原有結構。對話、成果文件、使用者活動、分享與其他 Markdown 閱讀介面沿用同一元件。Mermaid 12.1.0、ELK 及圖表元件／樣式／專用圖示均延遲載入，沒有圖表便不下載引擎。使用 Neo 外觀、專案設計 token、系統字型與閱讀字級，支援深色、圖表／原始碼切換、縮放、滑鼠拖曳、鍵盤縮放、展開和 SVG 下載。長圖表在自身畫布捲動，避免撐寬頁面；錯誤保留原始碼，串流未完成的 fence 不提早繪圖。
+`MarkdownView` 在安全解析後，將完成的 Mermaid fenced block 掛載到 renderer 自己產生的插槽；清單及引用中的圖表保留原有結構。對話、成果文件、使用者活動、分享與其他 Markdown 閱讀介面沿用同一元件。Mermaid 12.1.0、ELK 及圖表元件／樣式／專用圖示均延遲載入，沒有圖表便不下載引擎。使用 Neo 外觀、專案設計 token、系統字型與統一圖表字級，支援深色、圖表／原始碼切換、縮放、滑鼠拖曳、鍵盤縮放、展開和 SVG 下載。長圖表在自身畫布捲動，避免撐寬頁面；錯誤保留原始碼，串流未完成的 fence 不提早繪圖。
 
-模型透過 classDef 指定的節點實色背景仍保留；共用 SVG 處理器依背景與站點文字色計算對比，達到 4.5:1 時沿用站點文字色，否則選擇對比足夠的黑色或白色標籤。此規則涵蓋 SVG 文字與下載結果，避免深色主題在淺色節點上顯示淡色文字；透明填色先與圖表底色合成。參考 [WCAG 文字對比](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)。
+Mermaid 外觀集中在 `mermaid-theme.ts`，所有閱讀入口共用 Neo／ELK、14px 系統字體、細線與無陰影節點；一般矩形使用圓角，保留菱形判斷與特殊節點形狀。常用 classDef 名稱 `process`／`decision`／`error`／`result` 對應網站語意 token，避免模型輸出的亮黃、厚描邊與陰影破壞全站風格；其他自訂類別保留來源配色，原始碼不改寫。共用 SVG 處理器依背景與站點文字色計算 4.5:1 對比，不足時改用可讀的黑／白標籤，下載沿用相同結果。參考 [WCAG 文字對比](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)。
+
+長圖在自己的畫布捲動，紙面明確包含縮放後尺寸及四邊留白，避免 grid 置中造成不可到達的下緣／右緣。字體就緒後只量測一次清理後的 SVG，將實際圖形邊界納入 viewBox。支援「適合寬度」與「全圖」：前者優先閱讀，後者查看完整關係；縮放範圍 5–400%，滑鼠拖曳、鍵盤與 SVG 下載共用同一尺寸資訊。
+
+段落改寫、摘要、解釋、翻譯與另存成果共用 `MarkdownEditor`，預設呈現可閱讀的 Markdown，明確切換至原始文字編輯，保留複製、套用與儲存流程。段落工具使用可展開的固定閱讀區、折疊原文與固定操作區，長結果在內容區捲動；沿用 MarkdownView 的表格、程式碼、Mermaid 與安全邊界。`CompactDialog.opened` 提供原生視窗的共用生命週期，段落工具只在開啟時建立閱讀／編輯內容，關閉時銷毀閱讀器、圖表與 Blob URL，避免隱藏視窗持續渲染。
+
+`ViewMotion` 以頁籤／檢視 key 觸發內容的淡入、位移與輕微縮放，使用者活動視窗維持固定外框。群組編輯等需要不同尺寸的 native dialog 使用 `DialogMotion`，只在檢視切換時量測並過渡寬高，避免每次輸入與載入都改變外框。快速連續切換取消舊動畫，關閉／銷毀會清理；作業系統或帳號偏好的減少動態設定立即停用動畫。焦點與 Escape 仍由原生 dialog 和共用檢視控制負責。
 
 引擎渲染序列化，防止共用設定與主題互相覆蓋；版本檢查及 destroy 清理阻擋遲到結果，Blob URL 在替換與離開時釋放。strict 模式停用 authored click callbacks，所有 init／frontmatter 設定由站點固定；禁止圖表圖片節點在量測時發出請求。SVG 再經獨立 DOMPurify SVG allowlist 與 CSS resource 清理，以 Blob 圖片顯示，沒有第二個 active SVG trusted HTML boundary。CSP 只為圖片加上 `blob:`，script／connect／font／worker 仍限制同源。技術與外觀參考 [Mermaid 12.1.0](https://github.com/mermaid-js/mermaid/releases/tag/mermaid%4012.1.0)、[官方 API](https://mermaid.js.org/config/usage.html) 與 [主題配置](https://mermaid.js.org/config/theming.html)。
 

@@ -1,4 +1,27 @@
 const actions: Record<string, string> = {
+  'conversation.created': '建立對話',
+  'conversation.renamed': '重新命名對話',
+  'conversation.deleted': '刪除對話',
+  'conversation.organized': '整理對話',
+  'conversation.imported': '匯入對話',
+  'file.renamed': '重新命名檔案',
+  'file.retained': '保留檔案',
+  'share.created': '建立分享',
+  'share.revoked': '撤銷分享',
+  'repository.connected': '連結程式庫',
+  'repository.disconnected': '中斷程式庫連結',
+  'repository.review.created': '建立程式碼檢查',
+  'web.search': '執行網路搜尋',
+  'identity.login': '登入工作區',
+  'identity.logout': '登出工作區',
+  'identity.first_seen': '首次建立身分',
+  'logs.query': '查詢系統日誌',
+  'logs.detail': '查閱日誌詳情',
+  'logs.export': '匯出系統日誌',
+  'logs.health': '檢視日誌健康狀態',
+  'billing.report.read': '檢視費用報表',
+  'billing.report.export': '匯出費用報表',
+  'dashboard.platform.read': '檢視平台用量',
   'admin.bootstrap': '初始化管理員',
   'admin.user_roles': '調整使用者角色',
   'admin.user_model_policy': '設定個人模型政策',
@@ -31,6 +54,13 @@ const actions: Record<string, string> = {
 };
 export const auditAction = (action: string) => actions[action] || action;
 const outcomes: Record<string, string> = {
+  activated: '已啟用',
+  cleared: '已清除',
+  connected: '已連線',
+  csv: '已匯出',
+  metrics: '已檢視',
+  reindexing: '重新索引中',
+  snapshot: '已建立快照',
   saved: '已儲存',
   started: '已開始',
   restored: '已返回',
@@ -51,10 +81,58 @@ const outcomes: Record<string, string> = {
   'read-only': '已檢視',
   private: '已儲存私人快照',
 };
-export const auditResult = (result: string | null | undefined) =>
-  result ? outcomes[result] || result : '未記錄';
+export const auditResult = (result: string | null | undefined, action?: string) => {
+  if (action === 'identity.login')
+    return result === 'success' ? '登入成功' : result === 'failed' ? '登入未完成' : '未記錄';
+  if (action === 'identity.logout' && result === 'completed') return '已登出';
+  return result === 'failed'
+    ? '未完成'
+    : result === 'executor_lost'
+      ? '執行程序中斷'
+      : result
+        ? outcomes[result] || result
+        : '未記錄';
+};
 export const auditRejected = (result: string | null | undefined) =>
   !!result && !Object.hasOwn(outcomes, result);
+
+export function auditContext(json: string | null | undefined) {
+  try {
+    const details = JSON.parse(json || '{}');
+    const methods: Record<string, string> = {
+      local: '本地帳號',
+      ad: 'AD 驗證',
+      windows: 'Windows 整合驗證',
+      test: '測試身分',
+      unknown: '未識別',
+    };
+    return [
+      { label: '嘗試／登入帳號', value: details.account },
+      { label: '登入方式', value: methods[details.authentication] },
+      { label: '來源 IP', value: details.clientAddress },
+      {
+        label: '拒絕／失敗原因',
+        value:
+          typeof details.failureCode === 'string'
+            ? (
+                {
+                  invalid_credentials: '帳號、密碼或登入方式不正確，或帳號暫時無法登入',
+                  ad_invalid_credentials: 'AD 帳號或密碼不正確，或帳號無法登入',
+                  login_method_disabled: '帳號已停用，或未允許此登入方式',
+                  authentication_mode: '部署未支援所選登入方式',
+                  service_unavailable: '登入服務暫時無法使用',
+                } as Record<string, string>
+              )[details.failureCode] || details.failureCode
+            : null,
+      },
+    ].filter(
+      (field): field is { label: string; value: string } =>
+        typeof field.value === 'string' && !!field.value,
+    );
+  } catch {
+    return [];
+  }
+}
 export interface AuditChange {
   key: string;
   label: string;
