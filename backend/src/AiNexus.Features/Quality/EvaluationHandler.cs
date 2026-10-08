@@ -32,12 +32,12 @@ public sealed class EvaluationHandler(NexusDbContext db, ResourceAccess access, 
     public async Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct)
     {
         var run = await RequireAsync(job, ct);
-        foreach (var variant in QualityService.Parse<EvaluationVariant>(run.VariantsJson))
+        foreach (var variant in EvaluationJson.Parse<EvaluationVariant>(run.VariantsJson))
             ModelTaskConfiguration.Require(await catalog.RequireAsync(presentation.PublicId(variant.ModelId), ct), inference.Value, variant.Configuration?.Fingerprint);
     }
     public async Task ExecuteAsync(JobExecution execution, CancellationToken ct)
     {
-        var run = await RequireAsync(execution.Job, ct); var cases = QualityService.Parse<EvaluationCase>(run.CasesJson); var variants = QualityService.Parse<EvaluationVariant>(run.VariantsJson);
+        var run = await RequireAsync(execution.Job, ct); var cases = EvaluationJson.Parse<EvaluationCase>(run.CasesJson); var variants = EvaluationJson.Parse<EvaluationVariant>(run.VariantsJson);
         var existing = await db.Set<EvaluationResult>().AsNoTracking().Where(x => x.RunId == run.Id).Select(x => new { x.CaseIndex, x.VariantIndex }).ToListAsync(ct);
         var completed = existing.Count; var total = cases.Length * variants.Length;
         for (var c = 0; c < cases.Length; c++)

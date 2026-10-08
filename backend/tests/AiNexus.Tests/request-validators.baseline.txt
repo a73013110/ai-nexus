@@ -33,11 +33,6 @@ AiNexus.Features.Projects.ConversationProjectRequest
 AiNexus.Features.Projects.ProjectConversationRequest
 AiNexus.Features.Projects.ProjectRequest
 AiNexus.Features.Projects.ProjectTemplateRequest
-AiNexus.Features.Quality.EvaluationRunRequest
-AiNexus.Features.Quality.EvaluationSetRequest
-AiNexus.Features.Quality.FeedbackRequest
-AiNexus.Features.Quality.RetrievalEvaluationRequest
-AiNexus.Features.Quality.ReviewRequest
 AiNexus.Features.Repositories.ConnectRepositoryRequest
 AiNexus.Features.Repositories.CreateRepositoryReviewRequest
 AiNexus.Features.Repositories.RepositoryImportRequest
