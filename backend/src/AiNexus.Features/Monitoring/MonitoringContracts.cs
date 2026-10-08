@@ -1,6 +1,3 @@
-using AiNexus.Platform.Validation;
-using FluentValidation;
-
 namespace AiNexus.Features.Monitoring;
 
 public sealed class MonitoringOptions
@@ -12,20 +9,6 @@ public sealed class MonitoringOptions
     public bool Valid() => MaxSessions is >= 100 and <= 10000 && SessionTimeoutSeconds is >= 60 and <= 300 && RefreshSeconds is >= 2 and <= 15;
 }
 
-public sealed record PresenceRequest(Guid SessionId, string Feature, string State);
-
-internal sealed class PresenceRequestValidator : RequestValidator<PresenceRequest>
-{
-    public override string ProblemCode => "invalid_request";
-
-    public PresenceRequestValidator()
-    {
-        RuleFor(x => x.SessionId).NotEmpty();
-        RuleFor(x => x.Feature).Must(MonitoringVocabulary.ValidFeature).WithErrorCode("unknown");
-        RuleFor(x => x.State).Must(x => x is "active" or "idle" or "background").WithErrorCode("unknown");
-    }
-}
-public sealed record PresenceReceipt(bool Enabled, int HeartbeatSeconds);
 public sealed record TrafficMetrics(long Requests, long Errors, long ServerErrors, long Cancelled, long ReceivedBytes, long SentBytes,
     double RequestsPerSecond, double ErrorPercent, double? AverageMs, double? P95Ms);
 public sealed record TrafficPoint(DateTimeOffset At, double RequestsPerSecond, double ErrorPercent, double? AverageMs, long ReceivedBytes, long SentBytes);
