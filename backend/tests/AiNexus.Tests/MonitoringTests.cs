@@ -1,16 +1,16 @@
 using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.AccessControl;
-using AiNexus.Modules.Identity;
-using AiNexus.Modules.Monitoring;
+using AiNexus.Features.AccessControl;
+using AiNexus.Features.Identity;
+using AiNexus.Features.Monitoring;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 using Xunit;
+using AiNexus.Features.Persistence;
 
 namespace AiNexus.Tests;
 

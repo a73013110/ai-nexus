@@ -1,8 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.Knowledge;
-using AiNexus.Modules.Operations;
+using AiNexus.Platform.Errors;
+using AiNexus.Features.Persistence;
+using AiNexus.Features.Identity;
+using AiNexus.Features.Operations;
+using AiNexus.Features.Knowledge;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -98,7 +100,7 @@ public sealed class RetrievalPipelineTests
         });
         using var client = await factory.SignedInAsync(); var seed = await SeedAsync(factory, client);
         rerank.BeforeReturn = async () => { using var other = factory.Services.CreateScope(); var db = other.ServiceProvider.GetRequiredService<NexusDbContext>();
-            await db.Set<AiNexus.Modules.AccessControl.UserRole>().Where(x => x.UserId == seed.Actor).ExecuteDeleteAsync(); };
+            await db.Set<AiNexus.Features.AccessControl.UserRole>().Where(x => x.UserId == seed.Actor).ExecuteDeleteAsync(); };
         using var response = await client.PostAsJsonAsync("/api/v1/knowledge/search", new KnowledgeSearchRequest("採購", [seed.Collection]));
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode); Assert.DoesNotContain("主管簽署", await response.Content.ReadAsStringAsync());
     }

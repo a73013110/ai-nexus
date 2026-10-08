@@ -2,10 +2,11 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.Conversations;
-using AiNexus.Modules.Identity;
-using AiNexus.Modules.Inference;
+using AiNexus.Platform.Errors;
+using AiNexus.Features.Persistence;
+using AiNexus.Features.Conversations;
+using AiNexus.Features.Identity;
+using AiNexus.Features.Inference;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -88,7 +89,7 @@ public sealed class ProviderAndRecoveryTests
         using var client = await factory.SignedInAsync();
         var run = (await client.GetFromJsonAsync<RunDto>($"/api/v1/runs/{interruptedId}"))!;
         Assert.Equal(RunStates.Failed, run.Status); Assert.Equal("executor_lost", run.ErrorCode); Assert.Equal("既有部分回答", run.Content); Assert.Equal(0, factory.Provider.Calls); Assert.NotNull(run.Timing);
-        var budget = Assert.Single((await client.GetFromJsonAsync<AiNexus.Modules.Administration.EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
+        var budget = Assert.Single((await client.GetFromJsonAsync<AiNexus.Features.Administration.EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
         Assert.Equal(500, budget.ReservedTokens);
     }
 
@@ -103,7 +104,7 @@ public sealed class ProviderAndRecoveryTests
         (await bob.PostAsync($"/api/v1/runs/{second.Id}/cancel", null)).EnsureSuccessStatusCode();
         (await alice.PostAsync($"/api/v1/runs/{first.Id}/cancel", null)).EnsureSuccessStatusCode();
         Assert.Equal(RunStates.Cancelled, (await ChatApiTests.WaitForTerminal(bob, second.Id)).Status);
-        var budget = Assert.Single((await bob.GetFromJsonAsync<AiNexus.Modules.Administration.EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
+        var budget = Assert.Single((await bob.GetFromJsonAsync<AiNexus.Features.Administration.EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
         Assert.Equal(0, budget.ReservedTokens);
         await Task.Delay(100); Assert.True(factory.Provider.Calls <= 1);
     }

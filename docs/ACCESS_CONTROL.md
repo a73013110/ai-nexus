@@ -31,7 +31,7 @@ AD login → Users（SID）→ UserRoles → Roles
 ## 擴充功能
 
 1. 在新 migration 加入穩定 Feature ID（例如 `reports`）、名稱、route 與 SortOrder，及管理員希望使用的 RoleGroupFeatures 關聯。
-2. 新增 `Modules/Reports`，在 host 註冊需要的服務與 `FeatureRequirement("reports")` policy，endpoint 明確 RequireAuthorization。
+2. 新增 `Features/Reports`，在 `ReportsModule` 註冊服務與 `services.AddFeaturePolicy("reports")`，加入 `FeatureModules` 清單，endpoint 明確 RequireAuthorization。
 3. 前端新增 lazy route／feature，根據 `/me` 的 features 顯示入口；UI 判斷只改善體驗，API policy 仍是實際權限邊界。
 4. 以至少兩個角色驗沒有 grant 的 403、資料 owner 的 404 與停用／撤銷。更新 migration SQL、OpenAPI、文件。
 

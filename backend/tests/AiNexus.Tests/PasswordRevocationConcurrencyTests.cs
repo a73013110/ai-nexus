@@ -1,5 +1,5 @@
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.Identity;
+using AiNexus.Features.Persistence;
+using AiNexus.Features.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;

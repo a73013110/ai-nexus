@@ -1,9 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.BuildingBlocks;
-using AiNexus.Database;
-using AiNexus.Modules.Conversations;
-using AiNexus.Modules.Identity;
+using AiNexus.Features.Persistence;
+using AiNexus.Features.Conversations;
+using AiNexus.Features.Identity;
+using AiNexus.Platform.Data;
 using EDoc.Core.Database.Interfaces;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.SqlClient;
