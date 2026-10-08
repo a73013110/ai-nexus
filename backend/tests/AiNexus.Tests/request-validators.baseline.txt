@@ -5,6 +5,7 @@ AiNexus.Features.Administration.GroupUpdateRequest
 AiNexus.Features.Administration.ModelPolicyRequest
 AiNexus.Features.Administration.RoleUpdateRequest
 AiNexus.Features.Administration.UserRolesRequest
+AiNexus.Features.Attachments.AttachmentStorageLimitRequest
 AiNexus.Features.Collaboration.ResourceAclRequest
 AiNexus.Features.Conversations.ConversationBackup
 AiNexus.Features.Conversations.ConversationSettingsRequest

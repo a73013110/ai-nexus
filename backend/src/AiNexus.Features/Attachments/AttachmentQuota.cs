@@ -2,8 +2,6 @@ using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Administration;
 using AiNexus.Features.AccessControl;
-using AiNexus.Platform.Validation;
-using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -11,16 +9,6 @@ namespace AiNexus.Features.Attachments;
 
 /// <summary>A personal storage limit set by an administrator; <c>null</c> falls back to the group or default limit.</summary>
 public sealed record AttachmentStorageLimitRequest(long? LimitBytes);
-
-internal sealed class AttachmentStorageLimitRequestValidator : RequestValidator<AttachmentStorageLimitRequest>
-{
-    public override string ProblemCode => AttachmentErrors.StorageLimitInvalidCode;
-
-    public AttachmentStorageLimitRequestValidator()
-    {
-        RuleFor(x => x.LimitBytes).Must(x => x is not (< 0 or > AttachmentOptions.MaximumLimitBytes)).WithErrorCode("range");
-    }
-}
 
 public sealed class AttachmentQuota(NexusDbContext db, AccessService access, IOptions<AttachmentOptions> options)
 {
