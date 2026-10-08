@@ -8,30 +8,13 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Knowledge;
 
-public sealed class KnowledgeRetrieval(NexusDbContext db, ConversationService conversations, RetrievalPipeline pipeline, RetrievalAuthorization authorization, IOptions<KnowledgeOptions> options, GenerationScheduler scheduler)
+/// <summary>
+/// The module's retrieval contract for generation: the conversation's selected collections, permission-checked sources
+/// for a run, the reserved context and citations. The module's own endpoints are the slices next to this file.
+/// </summary>
+public sealed class KnowledgeRetrieval(NexusDbContext db, ConversationService conversations, RetrievalPipeline pipeline, RetrievalAuthorization authorization, IOptions<KnowledgeOptions> options)
 {
-    public async Task<KnowledgeSelectionDto> SelectionAsync(Guid actor, Guid conversation, CancellationToken ct)
-    {
-        await conversations.OwnedAsync(actor, conversation, ct);
-        return new(await db.Set<ConversationKnowledge>().Where(x => x.ConversationId == conversation).Select(x => x.CollectionId).ToListAsync(ct));
-    }
-    public async Task SetSelectionAsync(Guid actor, Guid conversation, KnowledgeSelectionDto request, CancellationToken ct)
-    {
-        await scheduler.StateGate.WaitAsync(ct);
-        try
-        {
-            await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            await db.Users.Where(x => x.Id == actor).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
-            await conversations.OwnedAsync(actor, conversation, ct);
-            await authorization.CollectionsAsync(actor, request.CollectionIds, ct);
-            if (await db.Runs.AnyAsync(x => x.ConversationId == conversation && x.ActiveOwnerId != null, ct)) throw new ApiException(409, "generation_active", "請先停止生成，再調整知識來源。");
-            var existing = await db.Set<ConversationKnowledge>().Where(x => x.ConversationId == conversation).ToListAsync(ct);
-            db.RemoveRange(existing.Where(x => !request.CollectionIds.Contains(x.CollectionId)));
-            db.AddRange(request.CollectionIds.Except(existing.Select(x => x.CollectionId)).Select(x => new ConversationKnowledge { ConversationId = conversation, CollectionId = x }));
-            await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
-        }
-        finally { scheduler.StateGate.Release(); }
-    }
+    public Task<KnowledgeSelectionDto> SelectionAsync(Guid actor, Guid conversation, CancellationToken ct) => GetConversationKnowledge.HandleAsync(db, conversations, actor, conversation, ct);
     public async Task<int> ReservedContextAsync(Guid actor, Guid conversation, CancellationToken ct)
     {
         var selection = await SelectionAsync(actor, conversation, ct);
@@ -42,7 +25,6 @@ public sealed class KnowledgeRetrieval(NexusDbContext db, ConversationService co
             select chunk.Id).CountAsync(ct);
         return count == 0 ? 0 : Math.Min(options.Value.ContextTokens, Math.Min(count, options.Value.TopK) * (options.Value.ChunkMaxTokens + 100)) + TokenEstimator.Estimate(Prompt([new(Guid.Empty, "參考資料", 1, "", 0, Guid.Empty)]));
     }
-    public Task<KnowledgeSearchDto> SearchAsync(Guid actor, KnowledgeSearchRequest request, CancellationToken ct) => pipeline.SearchAsync(actor, request, ct);
     public async Task<IReadOnlyList<KnowledgeHitDto>> ForRunAsync(Guid actor, CreateRunRequest request, CancellationToken ct, IReadOnlyList<Guid>? collections = null)
     {
         var selection = collections is null ? await SelectionAsync(actor, request.ConversationId, ct) : new KnowledgeSelectionDto(collections);
