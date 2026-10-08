@@ -1,8 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.WebSearch;
+using AiNexus.Platform.Errors;
+using AiNexus.Features.Persistence;
+using AiNexus.Features.Conversations;
+using AiNexus.Features.Inference;
+using AiNexus.Features.WebSearch;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;

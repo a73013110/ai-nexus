@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.Identity;
+using AiNexus.Features.Identity;
 using Xunit;
 
 namespace AiNexus.Tests;

@@ -1,10 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Reflection;
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.AccessControl;
-using AiNexus.Modules.Artifacts;
-using AiNexus.Modules.Integrations;
+using AiNexus.Features.Conversations;
+using AiNexus.Features.Identity;
+using AiNexus.Features.AccessControl;
+using AiNexus.Features.Artifacts;
+using AiNexus.Features.Integrations;
 using EDoc.Core.Database.Interfaces;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;

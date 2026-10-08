@@ -1,27 +1,34 @@
-using AiNexus.BuildingBlocks;
-using AiNexus.BuildingBlocks.Diagnostics;
-using AiNexus.Modules.Conversations;
-using AiNexus.Modules.Identity;
-using AiNexus.Modules.Inference;
-using AiNexus.Modules.Operations;
+using AiNexus.Api.Commands;
+using AiNexus.Platform.Errors;
+using AiNexus.Platform.Security;
+using AiNexus.Platform.Configuration;
+using AiNexus.Features;
+using AiNexus.Features.Persistence;
+using AiNexus.Features.Configuration;
+using AiNexus.Features.Conversations;
+using AiNexus.Features.Identity;
+using AiNexus.Features.Inference;
+using AiNexus.Features.Operations;
+using AiNexus.Platform.Diagnostics;
+using AiNexus.Features.Diagnostics;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using AiNexus.Database;
+using AiNexus.Platform.Data;
 using EDoc.Core.Database.Interfaces;
 using EDoc.Core.Database.Implementations;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using System.Threading.RateLimiting;
-using AiNexus.Modules.AccessControl;
+using AiNexus.Features.AccessControl;
 using Microsoft.AspNetCore.DataProtection;
-using AiNexus.Modules.Attachments;
-using AiNexus.Modules.Library;
-using AiNexus.Modules.Administration;
-using AiNexus.Modules.Knowledge;
+using AiNexus.Features.Attachments;
+using AiNexus.Features.Library;
+using AiNexus.Features.Administration;
+using AiNexus.Features.Knowledge;
 
 var builder = WebApplication.CreateBuilder(args);
-try { NexusConfiguration.Load(builder, args); LocalDatabaseSettings.Apply(builder.Configuration); }
+try { NexusConfiguration.Load(builder, args, NexusSettings.SourceConnections); LocalDatabaseSettings.Apply(builder.Configuration); }
 catch (Exception ex) { await DiagnosticStartup.RecordAsync(ex, builder.Configuration, builder.Environment); throw; }
 builder.AddNexusDiagnostics();
 var keyRing = builder.Configuration["DataProtection:KeyRingPath"];
@@ -103,27 +110,31 @@ builder.Services.AddScoped<SqlVectorCapabilities>();
 builder.Services.AddSingleton<StorageReadiness>();
 builder.Services.AddSingleton<IdentityWriteLock>();
 builder.Services.AddScoped<CurrentUser>();
+builder.Services.AddScoped<IRequestUser>(sp => sp.GetRequiredService<CurrentUser>());
+builder.Services.AddSingleton<IDiagnosticStore, AiNexus.Features.Diagnostics.DiagnosticStore>();
+builder.Services.AddScoped<AiNexus.Features.Diagnostics.DiagnosticQuery>();
+builder.Services.AddSingleton<AiNexus.Features.Diagnostics.ClientIssueDeduplication>();
 builder.Services.AddSingleton<Argon2Passwords>();
 builder.Services.AddScoped<LocalAuthenticator>();
 builder.Services.AddScoped<UserAccountAdministration>();
 builder.Services.AddScoped<PersonalSettingsService>();
 builder.Services.AddScoped<UsageReports>();
-builder.Services.AddScoped<AiNexus.Modules.Billing.BillingService>();
-builder.Services.AddScoped<AiNexus.Modules.Billing.SpendReports>();
-builder.Services.AddOptions<AiNexus.Modules.WebSearch.WebSearchOptions>().BindConfiguration("Tools:WebSearch")
+builder.Services.AddScoped<AiNexus.Features.Billing.BillingService>();
+builder.Services.AddScoped<AiNexus.Features.Billing.SpendReports>();
+builder.Services.AddOptions<AiNexus.Features.WebSearch.WebSearchOptions>().BindConfiguration("Tools:WebSearch")
     .Validate(x => x.Provider is "searxng" or "brave" && x.TimeoutSeconds is >= 2 and <= 30 && x.MaxResults is >= 1 and <= 8 && x.MaxDailyRequests is >= 1 and <= 10000
         && Uri.TryCreate(x.Endpoint, UriKind.Absolute, out var uri) && uri.Scheme is "http" or "https" && uri.UserInfo.Length == 0 && uri.Query.Length == 0 && uri.Fragment.Length == 0, "Invalid web search settings.").ValidateOnStart();
-builder.Services.AddScoped<AiNexus.Modules.WebSearch.WebSearchService>();
-builder.Services.AddScoped<AiNexus.Modules.WebSearch.IWebSearchProvider, AiNexus.Modules.WebSearch.WebSearchProvider>();
-builder.Services.AddOptions<AiNexus.Modules.Repositories.GiteaOptions>().BindConfiguration("Integrations:Connectors:Gitea")
+builder.Services.AddScoped<AiNexus.Features.WebSearch.WebSearchService>();
+builder.Services.AddScoped<AiNexus.Features.WebSearch.IWebSearchProvider, AiNexus.Features.WebSearch.WebSearchProvider>();
+builder.Services.AddOptions<AiNexus.Features.Repositories.GiteaOptions>().BindConfiguration("Integrations:Connectors:Gitea")
     .Validate(x => Uri.TryCreate(x.BaseUrl, UriKind.Absolute, out var uri) && (uri.Scheme == "https" || uri.Scheme == "http" && uri.IsLoopback) && uri.UserInfo.Length == 0 && uri.Query.Length == 0 && uri.Fragment.Length == 0
         && x.TimeoutSeconds is >= 2 and <= 30 && x.MaxFileBytes is >= 1024 and <= 500000, "Invalid Gitea connector settings.").ValidateOnStart();
-builder.Services.AddScoped<AiNexus.Modules.Repositories.IGiteaClient, AiNexus.Modules.Repositories.GiteaClient>();
-builder.Services.AddScoped<AiNexus.Modules.Repositories.RepositoryService>();
-builder.Services.AddScoped<AiNexus.Modules.Repositories.RepositoryReviewService>();
-builder.Services.AddScoped<IBackgroundJobHandler, AiNexus.Modules.Repositories.RepositoryReviewHandler>();
-builder.Services.AddSingleton<AiNexus.Modules.Repositories.RepositoryWriteLock>();
-builder.Services.AddScoped<AiNexus.Modules.Dashboard.DashboardService>();
+builder.Services.AddScoped<AiNexus.Features.Repositories.IGiteaClient, AiNexus.Features.Repositories.GiteaClient>();
+builder.Services.AddScoped<AiNexus.Features.Repositories.RepositoryService>();
+builder.Services.AddScoped<AiNexus.Features.Repositories.RepositoryReviewService>();
+builder.Services.AddScoped<IBackgroundJobHandler, AiNexus.Features.Repositories.RepositoryReviewHandler>();
+builder.Services.AddSingleton<AiNexus.Features.Repositories.RepositoryWriteLock>();
+builder.Services.AddScoped<AiNexus.Features.Dashboard.DashboardService>();
 builder.Services.AddHttpClient("ControlledTools", client => client.Timeout = Timeout.InfiniteTimeSpan)
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false }).RemoveAllLoggers();
 builder.Services.AddOptions<AdministrationOptions>().BindConfiguration("Administration")
@@ -135,30 +146,30 @@ builder.Services.AddScoped<AdministrativeReader>();
 builder.Services.AddScoped<ModelPolicyService>();
 builder.Services.AddSingleton<ModelQuotaLock>();
 builder.Services.AddScoped<ModelTaskService>();
-builder.Services.AddScoped<AiNexus.Modules.Quality.QualityService>();
-builder.Services.AddScoped<AiNexus.Modules.Quality.RetrievalEvaluationService>();
-builder.Services.AddScoped<IBackgroundJobHandler, AiNexus.Modules.Quality.RetrievalEvaluationHandler>();
-builder.Services.AddScoped<IBackgroundJobHandler, AiNexus.Modules.Quality.EvaluationHandler>();
-builder.Services.AddScoped<IDbHelper<AiNexus.Modules.Integrations.ILegacyGdwebDatabase>, DbHelper<AiNexus.Modules.Integrations.ILegacyGdwebDatabase>>();
-builder.Services.AddScoped<IDbHelper<AiNexus.Modules.Integrations.ILegacyMeihoDatabase>, DbHelper<AiNexus.Modules.Integrations.ILegacyMeihoDatabase>>();
-builder.Services.AddOptions<AiNexus.Modules.Integrations.IntegrationsOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Integrations(c, o))
+builder.Services.AddScoped<AiNexus.Features.Quality.QualityService>();
+builder.Services.AddScoped<AiNexus.Features.Quality.RetrievalEvaluationService>();
+builder.Services.AddScoped<IBackgroundJobHandler, AiNexus.Features.Quality.RetrievalEvaluationHandler>();
+builder.Services.AddScoped<IBackgroundJobHandler, AiNexus.Features.Quality.EvaluationHandler>();
+builder.Services.AddScoped<IDbHelper<AiNexus.Features.Integrations.ILegacyGdwebDatabase>, DbHelper<AiNexus.Features.Integrations.ILegacyGdwebDatabase>>();
+builder.Services.AddScoped<IDbHelper<AiNexus.Features.Integrations.ILegacyMeihoDatabase>, DbHelper<AiNexus.Features.Integrations.ILegacyMeihoDatabase>>();
+builder.Services.AddOptions<AiNexus.Features.Integrations.IntegrationsOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Integrations(c, o))
     .Validate(x => new[] { x.Gdweb, x.Meiho }.All(s => s.CommandTimeoutSeconds is >= 2 and <= 30 && s.MaxResults is >= 1 and <= 50 && s.AllowedGroupIds.Length <= 20 && s.AllowedGroupIds.All(g => g.Length is >= 1 and <= 64 && g.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.'))), "Invalid read-only source limits.").ValidateOnStart();
-builder.Services.AddScoped<AiNexus.Modules.Integrations.IntegrationService>();
-builder.Services.AddScoped<AiNexus.Modules.Integrations.IControlledSourceAdapter, AiNexus.Modules.Integrations.GdwebSource>();
-builder.Services.AddScoped<AiNexus.Modules.Integrations.IControlledSourceAdapter, AiNexus.Modules.Integrations.MeihoSource>();
-builder.Services.AddSingleton<AiNexus.Modules.Collaboration.ResourceWriteLock>();
-builder.Services.AddScoped<AiNexus.Modules.Collaboration.ResourceAccess>();
-builder.Services.AddScoped<AiNexus.Modules.Collaboration.ResourceLifecycle>();
+builder.Services.AddScoped<AiNexus.Features.Integrations.IntegrationService>();
+builder.Services.AddScoped<AiNexus.Features.Integrations.IControlledSourceAdapter, AiNexus.Features.Integrations.GdwebSource>();
+builder.Services.AddScoped<AiNexus.Features.Integrations.IControlledSourceAdapter, AiNexus.Features.Integrations.MeihoSource>();
+builder.Services.AddSingleton<AiNexus.Features.Collaboration.ResourceWriteLock>();
+builder.Services.AddScoped<AiNexus.Features.Collaboration.ResourceAccess>();
+builder.Services.AddScoped<AiNexus.Features.Collaboration.ResourceLifecycle>();
 builder.Services.AddScoped<JobService>();
-builder.Services.AddScoped<AiNexus.Modules.Notifications.NotificationService>();
+builder.Services.AddScoped<AiNexus.Features.Notifications.NotificationService>();
 builder.Services.AddOptions<KnowledgeOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Knowledge(c, o))
     .Validate(KnowledgeOptions.Valid, "知識檢索設定的維度、範圍或端點不正確。").ValidateOnStart();
 builder.Services.AddScoped<DocumentService>();
 builder.Services.AddScoped<TextDocumentService>();
-builder.Services.AddScoped<AiNexus.Modules.Projects.ProjectService>();
-builder.Services.AddScoped<AiNexus.Modules.Sharing.ShareService>();
-builder.Services.AddSingleton<AiNexus.Modules.Sharing.ShareWriteLock>();
-builder.Services.AddHostedService<AiNexus.Modules.Sharing.ShareCleanupWorker>();
+builder.Services.AddScoped<AiNexus.Features.Projects.ProjectService>();
+builder.Services.AddScoped<AiNexus.Features.Sharing.ShareService>();
+builder.Services.AddSingleton<AiNexus.Features.Sharing.ShareWriteLock>();
+builder.Services.AddHostedService<AiNexus.Features.Sharing.ShareCleanupWorker>();
 builder.Services.AddSingleton<KnowledgeWriteLock>();
 builder.Services.AddScoped<EmbeddingProfiles>();
 builder.Services.AddScoped<EmbeddingVectorStore>();
@@ -180,11 +191,11 @@ builder.Services.AddSingleton<IRerankClient, OpenAiCompatibleRerankClient>();
 // Query rewriting uses ModelTaskService and its scoped database context.
 builder.Services.AddScoped<IQueryRewriter>(s => s.GetRequiredService<Microsoft.Extensions.Options.IOptions<KnowledgeOptions>>().Value.QueryRewrite.Enabled
     ? ActivatorUtilities.CreateInstance<ModelQueryRewriter>(s) : new NoopQueryRewriter());
-builder.Services.AddScoped<AiNexus.Modules.Artifacts.ArtifactService>();
-builder.Services.AddScoped<AiNexus.Modules.Artifacts.TextTransformService>();
-builder.Services.AddScoped<AiNexus.Modules.Artifacts.ArtifactExport>();
-builder.Services.AddSingleton<AiNexus.Modules.Artifacts.PdfExportRenderer>();
-builder.Services.AddOptions<AiNexus.Modules.Artifacts.ExportOptions>().BindConfiguration("Exports").Validate(x => x.BrowserChannel is "msedge" or "chrome" or "chromium" && x.TimeoutSeconds is >= 5 and <= 120, "Invalid document export browser settings.").ValidateOnStart();
+builder.Services.AddScoped<AiNexus.Features.Artifacts.ArtifactService>();
+builder.Services.AddScoped<AiNexus.Features.Artifacts.TextTransformService>();
+builder.Services.AddScoped<AiNexus.Features.Artifacts.ArtifactExport>();
+builder.Services.AddSingleton<AiNexus.Features.Artifacts.PdfExportRenderer>();
+builder.Services.AddOptions<AiNexus.Features.Artifacts.ExportOptions>().BindConfiguration("Exports").Validate(x => x.BrowserChannel is "msedge" or "chrome" or "chromium" && x.TimeoutSeconds is >= 5 and <= 120, "Invalid document export browser settings.").ValidateOnStart();
 builder.Services.AddSingleton<RetrievalHttp>();
 builder.Services.AddSingleton<RetrievalInvocation>();
 builder.Services.AddSingleton<EmbeddingBatchScheduler>();

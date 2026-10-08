@@ -1,7 +1,8 @@
 using System.Net;
 using System.Text.Json;
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.Inference;
+using AiNexus.Platform.Errors;
+using AiNexus.Features.Conversations;
+using AiNexus.Features.Inference;
 using Microsoft.Extensions.Options;
 using Xunit;
 

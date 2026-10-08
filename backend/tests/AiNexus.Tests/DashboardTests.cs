@@ -1,10 +1,10 @@
 using System.Net.Http.Json;
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.Attachments;
-using AiNexus.Modules.Collaboration;
-using AiNexus.Modules.Dashboard;
-using AiNexus.Modules.Inference;
-using AiNexus.Modules.Knowledge;
+using AiNexus.Features.Persistence;
+using AiNexus.Features.Identity;
+using AiNexus.Features.Attachments;
+using AiNexus.Features.Collaboration;
+using AiNexus.Features.Dashboard;
+using AiNexus.Features.Knowledge;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 

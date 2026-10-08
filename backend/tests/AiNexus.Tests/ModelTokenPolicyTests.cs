@@ -1,9 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.Administration;
-using AiNexus.Modules.AccessControl;
-using AiNexus.Modules.Inference;
+using AiNexus.Platform.Errors;
+using AiNexus.Platform.Time;
+using AiNexus.Features.Persistence;
+using AiNexus.Features.Identity;
+using AiNexus.Features.Inference;
+using AiNexus.Features.Administration;
+using AiNexus.Features.AccessControl;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;

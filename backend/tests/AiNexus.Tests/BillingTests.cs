@@ -1,9 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.BuildingBlocks;
-using AiNexus.Modules.Billing;
-using AiNexus.Modules.Dashboard;
-using AiNexus.Modules.Inference;
+using AiNexus.Features.Persistence;
+using AiNexus.Features.Conversations;
+using AiNexus.Features.Identity;
+using AiNexus.Features.Inference;
+using AiNexus.Features.Billing;
+using AiNexus.Features.Dashboard;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
@@ -120,7 +122,7 @@ public sealed class BillingTests
         {
             for (var i = 0; i < 250; i++)
             {
-                var user = new AiNexus.Modules.Identity.NexusUser { Sid = "fixture-cost-" + i, Account = "account-" + i, DisplayName = "user-" + i };
+                var user = new AiNexus.Features.Identity.NexusUser { Sid = "fixture-cost-" + i, Account = "account-" + i, DisplayName = "user-" + i };
                 db.Add(user); db.Add(new ModelCharge { Id = Guid.NewGuid(), OwnerId = user.Id, Currency = "USD", Kind = "api", Amount = 1m, State = "metered", CreatedAt = DateTimeOffset.UtcNow, ModelId = "test-model", Provider = "google" });
             }
             db.SaveChanges();
