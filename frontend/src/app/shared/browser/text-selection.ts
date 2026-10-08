@@ -4,6 +4,7 @@ export interface SelectedText {
   text: string;
   sourceId: string;
   top: number;
+  bottom: number;
   left: number;
 }
 @Directive({ selector: '[nxTextSelection]' })
@@ -37,11 +38,9 @@ export class TextSelection {
     this.textSelected.emit({
       text,
       sourceId: start.dataset['messageId']!,
-      left: Math.max(12, Math.min(rect.left, innerWidth - 300)),
-      top: Math.max(
-        12,
-        Math.min(rect.top < 64 ? rect.bottom + 8 : rect.top - 52, innerHeight - 60),
-      ),
+      left: rect.left,
+      top: rect.top,
+      bottom: rect.bottom,
     });
   }
 }

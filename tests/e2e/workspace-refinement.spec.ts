@@ -8,6 +8,138 @@ import {
 } from "./fixtures";
 import { KnowledgeFixture } from "./knowledge-fixture";
 
+test("compact chat keeps more history and controls visible while touch menus remain accessible", async ({
+  page,
+}) => {
+  const core = new ApiFixture();
+  core.ldap = true;
+  core.authenticated = true;
+  for (let index = 0; index < 30; index++) {
+    core.conversations.push({
+      id: randomUUID(),
+      title: `工作紀錄 ${index + 1}：需要保留完整標題的長對話`,
+      activeLeafId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      isFavorite: index === 0,
+      isArchived: false,
+      systemInstruction: "",
+      labels: [],
+      projectId: null,
+    });
+  }
+  await core.attach(page);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/chat");
+  const sidebar = page.locator(".workspace-sidebar");
+  const history = sidebar.getByRole("navigation", { name: "對話歷史" });
+  await expect(history.locator(".history-row")).toHaveCount(30);
+  await expect(history.locator(".history-row > a").first()).toHaveCSS(
+    "font-size",
+    "14px",
+  );
+  await expect(sidebar.locator(".history-group h2").first()).toHaveCSS(
+    "font-size",
+    "13px",
+  );
+  expect(
+    (await sidebar.locator(".history-search").boundingBox())!.height,
+  ).toBeGreaterThanOrEqual(40);
+  const visibleRows = await history.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return [...element.querySelectorAll(".history-row")].filter((row) => {
+      const rectangle = row.getBoundingClientRect();
+      return rectangle.top >= bounds.top && rectangle.bottom <= bounds.bottom;
+    }).length;
+  });
+  expect(visibleRows).toBeGreaterThanOrEqual(14);
+  const composer = page.locator("form.composer");
+  expect((await composer.boundingBox())!.height).toBeLessThanOrEqual(92);
+  await expect(
+    page.getByRole("textbox", { name: "傳送訊息", exact: true }),
+  ).toHaveCSS("font-size", "15px");
+  const account = sidebar.getByRole("button", {
+    name: "登入者選單",
+    exact: true,
+  });
+  const workspace = sidebar.getByRole("button", {
+    name: "工作區",
+    exact: true,
+  });
+  await expect(account).toBeInViewport();
+  await expect(workspace).toBeInViewport();
+  const [workspaceBounds, accountBounds] = await Promise.all([
+    workspace.boundingBox(),
+    account.boundingBox(),
+  ]);
+  expect(
+    accountBounds!.y - (workspaceBounds!.y + workspaceBounds!.height),
+  ).toBeLessThanOrEqual(9);
+  await account.press("ArrowDown");
+  const menu = page.getByRole("menu", { name: "登入者選單", exact: true });
+  await expect(
+    menu.getByRole("menuitem", { name: "設定", exact: true }),
+  ).toBeFocused();
+  await settleEntrance(page);
+  const desktopRow = await menu.getByRole("menuitem").first().boundingBox();
+  expect(desktopRow!.height).toBeGreaterThanOrEqual(34);
+  expect(desktopRow!.height).toBeLessThanOrEqual(36);
+  await menu.getByRole("menuitem").first().press("End");
+  await expect(menu.getByRole("menuitem").last()).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(account).toBeFocused();
+  await settleEntrance(page);
+  await page.screenshot({
+    path: "artifacts/screenshots/chat-density-desktop.png",
+  });
+
+  const row = history.locator(".history-row").first();
+  await row.getByRole("link").click();
+  await page
+    .getByRole("textbox", { name: "傳送訊息", exact: true })
+    .fill("確認緊湊聊天操作");
+  await page.getByRole("button", { name: "送出訊息", exact: true }).click();
+  await expect(
+    page
+      .getByRole("article", { name: "AI 回覆", exact: true })
+      .getByRole("button", { name: "複製訊息", exact: true }),
+  ).toBeVisible();
+  await expectViewportContained(page);
+  await settleEntrance(page);
+  await page.screenshot({
+    path: "artifacts/screenshots/chat-density-conversation.png",
+  });
+  for (const width of [859, 375]) {
+    await page.setViewportSize({ width, height: 812 });
+    await page.getByRole("button", { name: "展開側欄", exact: true }).click();
+    for (const control of [
+      sidebar.getByRole("link", { name: "新對話", exact: true }),
+      workspace,
+      account,
+    ]) {
+      await expect(control).toBeInViewport();
+      expect((await control.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    }
+    await account.click();
+    await settleEntrance(page);
+    expect(
+      (await menu.getByRole("menuitem").first().boundingBox())!.height,
+    ).toBeGreaterThanOrEqual(44);
+    await expect(menu).toBeInViewport();
+    await page.keyboard.press("Escape");
+    await expect(account).toBeFocused();
+    await sidebar.locator(".sidebar-toggle").click();
+    await expect(
+      page.getByRole("button", { name: "送出訊息", exact: true }),
+    ).toBeInViewport();
+    await expectViewportContained(page);
+    await settleEntrance(page);
+    await page.screenshot({
+      path: `artifacts/screenshots/chat-density-${width}.png`,
+    });
+  }
+});
+
 test("the shared wordmark has one N and the compact new-chat icon stays centered", async ({
   page,
 }) => {
@@ -29,6 +161,15 @@ test("the shared wordmark has one N and the compact new-chat icon stays centered
   });
   for (const width of [1280, 375]) {
     await page.setViewportSize({ width, height: 812 });
+    if (width === 375) {
+      await expect(sidebar).not.toBeVisible();
+      await expect(page.locator(".workspace-menu-button")).toBeVisible();
+      await expectViewportContained(page);
+      await page.screenshot({
+        path: `artifacts/screenshots/sidebar-wordmark-${width}.png`,
+      });
+      continue;
+    }
     const collapse = page.getByRole("button", {
       name: "收合側欄",
       exact: true,
@@ -125,8 +266,14 @@ test("one header notification icon exposes the full count and workspace expansio
   await expect(sidebar.locator(".history-search")).toBeVisible();
   unread = 0;
   await bell.click();
+  const notificationDialog = page.getByRole("dialog", {
+    name: "通知",
+    exact: true,
+  });
+  await expect(notificationDialog).toBeVisible();
   await expect(bell.locator("nx-count-badge")).not.toBeVisible();
   await page.keyboard.press("Escape");
+  await expect(notificationDialog).not.toBeVisible();
   await expect(bell).toBeFocused();
   await page.setViewportSize({ width: 375, height: 667 });
   await page.getByRole("button", { name: "展開側欄", exact: true }).click();
@@ -136,18 +283,17 @@ test("one header notification icon exposes the full count and workspace expansio
     sidebar.getByRole("link", { name: "背景任務", exact: true }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
-  const compactBell = await bell.boundingBox();
-  const compactToggle = sidebar.getByRole("button", {
+  await expect(sidebar).not.toBeVisible();
+  const mobileToggle = page.getByRole("button", {
     name: "展開側欄",
     exact: true,
   });
-  const compactToggleBounds = await compactToggle.boundingBox();
-  expect(compactBell!.y + compactBell!.height).toBeLessThanOrEqual(
-    compactToggleBounds!.y,
-  );
+  await expect(mobileToggle).toBeFocused();
+  await mobileToggle.click();
   await bell.focus();
   await bell.press("Tab");
-  await expect(compactToggle).toBeFocused();
+  await expect(sidebar.locator(".sidebar-toggle")).toBeFocused();
+  await page.keyboard.press("Escape");
   await expectViewportContained(page);
 });
 
@@ -422,7 +568,7 @@ test("review stays usable while commits load and presents one expandable overall
   );
   await page.getByRole("button", { name: "展開完整報告", exact: true }).click();
   await expect(body).toHaveCSS("max-height", "none");
-  await expect(page.locator(".review-report .error-banner")).toContainText(
+  await expect(page.locator(".review-report nx-notice")).toContainText(
     "結果不完整",
   );
   await page.locator(".review-evidence > summary").click();

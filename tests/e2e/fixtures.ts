@@ -1,4 +1,4 @@
-import { expect, type Page, type Route } from "@playwright/test";
+import { expect, type Locator, type Page, type Route } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 export const fixtureIssueCode = "NX-" + "D".repeat(32);
 export async function chooseSelect(
@@ -14,9 +14,10 @@ export async function chooseSelect(
 }
 export async function openSettings(page: Page) {
   const account = page.getByRole("button", { name: "登入者選單", exact: true });
-  await account.waitFor({ state: "attached" });
-  if (!(await account.isVisible()))
-    await page.getByRole("button", { name: "展開側欄" }).click();
+  const sidebar = page.locator(".workspace-sidebar");
+  await sidebar.waitFor({ state: "attached" });
+  if ((await sidebar.getAttribute("aria-hidden")) === "true")
+    await page.locator(".workspace-menu-button").click();
   await account.click();
   await page.getByRole("menuitem", { name: "設定", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "個人設定", exact: true });
@@ -33,6 +34,31 @@ export async function expectViewportContained(page: Page) {
       })),
     )
     .toEqual({ vertical: true, horizontal: true });
+}
+
+// A visual contract checked on populated feature pages, in addition to their workflow tests.
+export async function expectCompactWorkspace(page: Page) {
+  const workspace = page.locator(".feature-content").first();
+  await expectCompactSurfaces(workspace);
+  await expect(workspace.locator(".feature-header h1")).toHaveCSS(
+    "font-size",
+    "24px",
+  );
+}
+
+export async function expectCompactSurfaces(workspace: Locator) {
+  await expect(workspace).toHaveCSS("font-size", "13px");
+  await expect(workspace.locator("[nxCard]:not(.ui-card)")).toHaveCount(0);
+  const surfaces = await workspace.locator(".ui-card").evaluateAll((cards) =>
+    cards
+      .filter((card) => card.getClientRects().length)
+      .map((card) => ({
+        padding: getComputedStyle(card).paddingTop,
+        gallery: card.classList.contains("file-card"),
+      })),
+  );
+  for (const surface of surfaces)
+    expect(surface.padding).toBe(surface.gallery ? "0px" : "12px");
 }
 import type {
   Conversation,
@@ -53,6 +79,10 @@ export const richAnswer =
 // Capture final surfaces, while allowing intentional inference loops to keep running.
 export async function settleEntrance(page: Page) {
   await page.evaluate(async () => {
+    // Include CSS and after-render animations scheduled for the next painted frame.
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
     const finished = Promise.all(
       document
         .getAnimations()
@@ -176,6 +206,7 @@ export class ApiFixture {
   loginMethod = "ad";
   chatAccess = true;
   adminAccess = false;
+  auditAccess = false;
   extraFeatures: { id: string; name: string; route: string }[] = [];
   modelPolicy: ModelPolicy = {
     allowModelSelection: true,
@@ -208,6 +239,10 @@ export class ApiFixture {
         contentType: "application/json",
         body: JSON.stringify(body),
       });
+    if (path === "/presence")
+      return json({ enabled: true, heartbeatSeconds: 25 });
+    if (path.startsWith("/presence/") && method === "DELETE")
+      return route.fulfill({ status: 204 });
     if (
       path === "/auth/session" ||
       path === "/auth/windows" ||
@@ -278,6 +313,9 @@ export class ApiFixture {
               : []),
             ...(this.adminAccess
               ? [{ id: "admin", name: "平台管理", route: "/admin" }]
+              : []),
+            ...(this.auditAccess
+              ? [{ id: "audit", name: "活動稽核", route: "/admin/audit" }]
               : []),
           ],
         },
@@ -359,7 +397,11 @@ export class ApiFixture {
         if (this.failPreferencesOnce) {
           this.failPreferencesOnce = false;
           return json(
-            { title: "Password=fixture-private", code: "service_unavailable", issueCode: fixtureIssueCode },
+            {
+              title: "Password=fixture-private",
+              code: "service_unavailable",
+              issueCode: fixtureIssueCode,
+            },
             503,
           );
         }
@@ -390,7 +432,11 @@ export class ApiFixture {
       if (this.failPreferencesOnce) {
         this.failPreferencesOnce = false;
         return json(
-          { title: "Password=fixture-private", code: "service_unavailable", issueCode: fixtureIssueCode },
+          {
+            title: "Password=fixture-private",
+            code: "service_unavailable",
+            issueCode: fixtureIssueCode,
+          },
           503,
         );
       }
@@ -818,7 +864,11 @@ export class ApiFixture {
         this.eventReads++;
         if (this.eventsStatus !== 200)
           return json(
-            { title: "Password=fixture-private", code: "access_denied", issueCode: fixtureIssueCode },
+            {
+              title: "Password=fixture-private",
+              code: "access_denied",
+              issueCode: fixtureIssueCode,
+            },
             this.eventsStatus,
           );
         if (run.status === "queued") {

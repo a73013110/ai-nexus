@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { ApiFixture, settleEntrance } from "./fixtures";
+import { expectCompactWorkspace, ApiFixture, settleEntrance } from "./fixtures";
 import type {
   SourceDetail,
   Conversation,
@@ -100,12 +100,13 @@ test("controlled source search opens authorized status and history, then hands a
   });
   await page.goto("/integrations");
   await page.getByPlaceholder("搜尋公文系統的標題或識別碼…").fill("通知");
-  await page.getByRole("button", { name: "搜尋", exact: true }).click();
+  await page.getByRole("button", { name: "查詢", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "例行作業通知", exact: true }),
   ).toBeVisible();
   await expect(page.getByText("核對並完成本次簽核")).toBeVisible();
   await settleEntrance(page);
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/integrations-desktop.png",
   });
@@ -115,6 +116,7 @@ test("controlled source search opens authorized status and history, then hands a
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBeTruthy();
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/integrations-mobile.png",
   });

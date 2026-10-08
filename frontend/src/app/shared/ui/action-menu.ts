@@ -27,7 +27,8 @@ let sequence = 0;
   template: `<button
       #trigger
       type="button"
-      class="icon-button"
+      [class.icon-button]="!triggerLabel()"
+      [class.secondary-button]="!!triggerLabel()"
       [class.profile-trigger]="profile()"
       [attr.aria-label]="label()"
       aria-haspopup="menu"
@@ -39,13 +40,16 @@ let sequence = 0;
       @if (profile()) {
         <ng-content />
       } @else {
-        <nx-icon name="more" />
+        <nx-icon [name]="icon()" />
+        @if (triggerLabel()) {
+          <span>{{ triggerLabel() }}</span>
+        }
       }
     </button>
     <div
       #panel
       [id]="id"
-      class="action-menu-panel"
+      class="action-menu-panel ui-density-compact"
       popover="auto"
       role="menu"
       [attr.aria-label]="label()"
@@ -66,6 +70,8 @@ let sequence = 0;
     </div>`,
 })
 export class ActionMenu {
+  readonly triggerLabel = input('');
+  readonly icon = input('more');
   readonly profile = input(false);
   readonly label = input('更多操作');
   readonly items = input.required<MenuAction[]>();

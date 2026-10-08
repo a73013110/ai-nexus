@@ -25,6 +25,11 @@ markdown.renderer.rules['link_open'] = (tokens, index, options, _env, self) => {
 markdown.renderer.rules['fence'] = (tokens, index, _options, env) => {
   const token = tokens[index];
   const language = token.info.trim().split(/\s+/)[0].toLowerCase();
+  const diagrams = env?.['diagrams'] as string[] | undefined;
+  if (language === 'mermaid' && diagrams && !env?.['streaming']) {
+    const index = diagrams.push(token.content) - 1;
+    return `<div class="markdown-diagram-slot" data-diagram-index="${index}"></div>`;
+  }
   const label = /^[\w#+-]{1,24}$/.test(language) ? language : 'text';
   const code =
     !env?.['streaming'] && hljs.getLanguage(language)
@@ -41,7 +46,17 @@ export const markdownBlockStarts = (content: string): number[] =>
     .map((token) => token.map![0]);
 
 export const renderMarkdown = (content: string, streaming = false): string =>
-  DOMPurify.sanitize(markdown.render(content, { streaming }), {
+  sanitizeMarkdown(markdown.render(content, { streaming }));
+
+/** Fences keep their original nesting; only renderer-owned slots host Angular widgets. */
+export function renderMarkdownWithDiagrams(content: string, streaming = false) {
+  const diagrams: string[] = [];
+  const html = sanitizeMarkdown(markdown.render(content, { streaming, diagrams }));
+  return { html, diagrams };
+}
+
+const sanitizeMarkdown = (html: string): string =>
+  DOMPurify.sanitize(html, {
     ALLOWED_TAGS: [
       'p',
       'br',
@@ -83,9 +98,18 @@ export const renderMarkdown = (content: string, streaming = false): string =>
       'start',
       'colspan',
       'rowspan',
+      'data-diagram-index',
     ],
     ALLOW_DATA_ATTR: false,
-    ADD_URI_SAFE_ATTR: ['target', 'rel', 'type', 'start', 'colspan', 'rowspan'],
+    ADD_URI_SAFE_ATTR: [
+      'target',
+      'rel',
+      'type',
+      'start',
+      'colspan',
+      'rowspan',
+      'data-diagram-index',
+    ],
     ALLOWED_URI_REGEXP: /^(?:https?:\/\/|#[\w-]*$)/i,
     RETURN_TRUSTED_TYPE: false,
   });

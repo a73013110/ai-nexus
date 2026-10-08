@@ -13,6 +13,7 @@ import { Icon } from '../../shared/ui/icon';
 
 @Component({
   selector: 'nx-conversation-find',
+  host: { class: 'ui-density-compact' },
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <div class="conversation-find" role="search" aria-label="搜尋目前對話">

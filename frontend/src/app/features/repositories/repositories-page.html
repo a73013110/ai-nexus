@@ -31,18 +31,18 @@
     <p role="status">正在載入程式庫…</p>
   }
   @if (error()) {
-    <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+    <nx-notice tone="danger" [message]="error()" />
   }
   @if (status(); as connection) {
     @if (!connection.available) {
-      <section class="platform-card repository-connect">
+      <section nxCard class="repository-connect">
         <nx-icon name="git" />
         <h2>連接你的 Gitea</h2>
         <p>{{ connection.notice }}</p>
         <p class="form-note">請洽管理員啟用程式庫連線。授權只需要讀取，不需要寫入權限。</p>
       </section>
     } @else if (!connection.connected || reconnect()) {
-      <section class="platform-card repository-connect">
+      <section nxCard class="repository-connect">
         <nx-icon name="git" />
         <h2>{{ connection.connected ? '更新 Gitea 授權' : '連接你的 Gitea' }}</h2>
         <p>使用你自己的權限瀏覽程式庫。只需 read:user、read:repository 與 read:issue。</p>
@@ -56,8 +56,8 @@
         <form (submit)="connect($event)">
           <label for="gitea-token">個人存取權杖</label
           ><input
+            nxField
             id="gitea-token"
-            class="form-input"
             type="password"
             minlength="20"
             maxlength="512"
@@ -75,7 +75,7 @@
     } @else {
       <p class="repository-scope-note"><nx-icon name="lock" />{{ connection.notice }}</p>
       <div class="repository-layout">
-        <aside class="repository-list platform-card">
+        <aside nxCard class="repository-list">
           <nx-search-field
             label="搜尋這一頁的程式庫"
             placeholder="尋找程式庫"
@@ -122,9 +122,9 @@
             </button>
           </div>
         </aside>
-        <section class="repository-detail platform-card">
+        <section nxCard class="repository-detail">
           @if (selected(); as repo) {
-            <header class="repository-detail-heading">
+            <header class="resource-heading">
               <div>
                 <h2>{{ repo.fullName }}</h2>
                 <p>{{ repo.description }}</p>
@@ -133,27 +133,16 @@
                 >開啟 Gitea<nx-icon name="chevron"
               /></a>
             </header>
-            <nav class="page-tabs" aria-label="程式庫內容">
-              <button
-                type="button"
-                [attr.aria-current]="tab() === 'files' ? 'page' : null"
-                (click)="tab.set('files')"
-              >
-                檔案</button
-              ><button
-                type="button"
-                [attr.aria-current]="tab() === 'issues' ? 'page' : null"
-                (click)="showIssues()"
-              >
-                待處理議題</button
-              ><button
-                type="button"
-                [attr.aria-current]="tab() === 'review' ? 'page' : null"
-                (click)="tab.set('review')"
-              >
-                AI Review
-              </button>
-            </nav>
+            <nx-view-switch
+              label="程式庫內容"
+              [options]="[
+                { value: 'files', label: '檔案' },
+                { value: 'issues', label: '待處理議題' },
+                { value: 'review', label: 'AI Review' },
+              ]"
+              [value]="tab()"
+              (valueChange)="$event === 'issues' ? showIssues() : tab.set($event)"
+            />
             @if (reading()) {
               <p role="status">正在讀取 Gitea…</p>
             }
@@ -282,19 +271,18 @@
               </div>
             }
           } @else {
-            <div class="repository-empty">
+            <nx-empty-state>
               <nx-icon name="git" />
               <h2>選擇程式庫，開始理解工作</h2>
               <p>從文件、原始碼或議題取得脈絡，再選擇帶入對話。</p>
-            </div>
+            </nx-empty-state>
           }
           @if (notice()) {
-            <p class="form-note" role="status">
-              {{ notice() }}
+            <nx-notice tone="success" [message]="notice()">
               @if (importedId()) {
-                <a [routerLink]="['/reader', importedId()]">檢視文件</a>
+                <a notice-actions [routerLink]="['/reader', importedId()]">檢視文件</a>
               }
-            </p>
+            </nx-notice>
           }
         </section>
       </div>

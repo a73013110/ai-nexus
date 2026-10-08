@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authenticated } from './core/auth/auth-guard';
 import { pendingChanges } from './shared/browser/pending-changes';
 import { WORKSPACE_HOME } from './core/workspace-home';
+import { redirectLegacyAdminAudit } from './core/legacy-admin-route';
 
 export const routes: Routes = [
   {
@@ -105,13 +106,26 @@ export const routes: Routes = [
       import('./features/knowledge/document-reader').then((module) => module.DocumentReader),
   },
   {
+    path: 'admin/monitoring',
+    canActivate: [authenticated],
+    loadComponent: () =>
+      import('./features/admin/monitoring/monitoring-page').then((m) => m.MonitoringPage),
+  },
+  {
     path: 'admin/logs',
     canActivate: [authenticated],
-    loadComponent: () => import('./features/admin/logs/system-logs-page').then((m) => m.SystemLogsPage),
+    loadComponent: () =>
+      import('./features/admin/logs/system-logs-page').then((m) => m.SystemLogsPage),
+  },
+  {
+    path: 'admin/audit',
+    canActivate: [authenticated],
+    loadComponent: () =>
+      import('./features/audit/activity-audit-page').then((m) => m.ActivityAuditPage),
   },
   {
     path: 'admin',
-    canActivate: [authenticated],
+    canActivate: [authenticated, redirectLegacyAdminAudit],
     loadComponent: () => import('./features/admin/admin-page').then((module) => module.AdminPage),
   },
   {

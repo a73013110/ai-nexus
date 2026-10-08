@@ -34,6 +34,10 @@ public sealed class WebSecurityTests
         Assert.Equal("nosniff", me.Headers.GetValues("X-Content-Type-Options").Single());
         Assert.Equal("same-origin", me.Headers.GetValues("Cross-Origin-Resource-Policy").Single());
         Assert.Contains("frame-ancestors 'none'", me.Headers.GetValues("Content-Security-Policy").Single());
+        var csp = me.Headers.GetValues("Content-Security-Policy").Single();
+        Assert.Contains("img-src 'self' blob:;", csp);
+        Assert.Contains("script-src 'self';", csp);
+        Assert.DoesNotContain("img-src *", csp);
         using var missing = await client.GetAsync("/api/v1/not-a-real-api"); Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode); AssertNoStore(missing);
         Assert.DoesNotContain(logs.Events, entry => entry.Category == "Microsoft.AspNetCore.Antiforgery.DefaultAntiforgery" && entry.Id == 8);
     }

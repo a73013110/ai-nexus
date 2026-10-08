@@ -44,7 +44,8 @@ export class UserSettingsService {
       return this.value();
     const generation = this.auth.generation();
     const value = await this.http.json<UserSettings>('/settings');
-    if (generation !== this.auth.generation()) throw new DOMException('Identity changed', 'AbortError');
+    if (generation !== this.auth.generation())
+      throw new DOMException('Identity changed', 'AbortError');
     this.owner = owner;
     this.generation = generation;
     this.apply(value);
@@ -60,7 +61,8 @@ export class UserSettingsService {
   async save(value: UserSettings) {
     const generation = this.auth.generation();
     const saved = await this.http.json<UserSettings>('/settings', 'PUT', value);
-    if (generation !== this.auth.generation()) throw new DOMException('Identity changed', 'AbortError');
+    if (generation !== this.auth.generation())
+      throw new DOMException('Identity changed', 'AbortError');
     this.apply(saved);
     return saved;
   }
@@ -86,7 +88,7 @@ export class UserSettingsService {
       '--reading-width',
       value.readingWidth === 'narrow' ? '44rem' : value.readingWidth === 'wide' ? '64rem' : '52rem',
     );
-    root.style.setProperty('--message-gap', value.density === 'compact' ? '1rem' : '1.5rem');
+    root.style.setProperty('--message-gap', value.density === 'compact' ? '0.75rem' : '1rem');
     root.dataset['density'] = value.density;
   }
 }

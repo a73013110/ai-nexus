@@ -450,7 +450,9 @@ test("favorite and archive views retain the ability to restore conversations", a
   await page.getByRole("button", { name: "封存", exact: true }).click();
   await expect(page.locator(".history-row")).toHaveCount(1);
   await page.getByRole("button", { name: "還原對話", exact: true }).click();
-  await expect(page.locator(".archive-notice")).toHaveCount(0);
+  await expect(
+    page.getByRole("status").filter({ hasText: "這段對話已封存" }),
+  ).toHaveCount(0);
   await page.getByRole("button", { name: "近期", exact: true }).click();
   await expect(page.locator(".history-row")).toHaveCount(1);
 });

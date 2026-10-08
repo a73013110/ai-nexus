@@ -1,4 +1,7 @@
-import { IssueCode } from '../../shared/ui/issue-code';
+import { Notice } from '../../shared/ui/notice';
+import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { Field } from '../../shared/ui/field';
+import { DateTimePicker } from '../../shared/ui/date-time-picker';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -6,11 +9,16 @@ import {
   DestroyRef,
   ElementRef,
   inject,
+  input,
   signal,
   viewChild,
 } from '@angular/core';
 import type { ModelPrice, PriceRequest, PriceTarget } from '../../core/api/types';
-import { formatModelDisplayName } from '../../shared/browser/format';
+import {
+  formatDate,
+  formatModelDisplayName,
+  parseDateTimeInput,
+} from '../../shared/browser/format';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { Icon } from '../../shared/ui/icon';
 import { Select } from '../../shared/ui/select';
@@ -31,14 +39,17 @@ const emptyPrice = (): PriceRequest => ({
 });
 @Component({
   selector: 'nx-price-book',
-  imports: [IssueCode,Icon, Select],
+  imports: [Notice, CompactDialog, Field, DateTimePicker, Icon, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './price-book.scss',
-  template: `<button class="secondary-button" type="button" (click)="open()">
-      <nx-icon name="money" />模型與工具價格
-    </button>
+  template: `@if (showTrigger()) {
+      <button class="secondary-button" type="button" (click)="open()">
+        <nx-icon name="money" />模型與工具價格
+      </button>
+    }
     <dialog
+      nxCompactDialog
       #dialog
       class="platform-dialog price-dialog"
       aria-labelledby="price-title"
@@ -58,10 +69,10 @@ const emptyPrice = (): PriceRequest => ({
           價格只影響之後的呼叫。依你的方案填寫 API 價格，本機模型可使用內部成本；不同幣別分開統計。
         </p>
         @if (error()) {
-          <p class="error-note" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+          <nx-notice tone="danger" [message]="error()" />
         }
         @if (notice()) {
-          <p class="form-note" role="status">{{ notice() }}</p>
+          <nx-notice tone="info" [message]="notice()" />
         }
         <form (submit)="save($event)" class="platform-form price-form">
           <div class="price-fields">
@@ -98,6 +109,7 @@ const emptyPrice = (): PriceRequest => ({
               <label
                 >{{ rate.label
                 }}<input
+                  nxField
                   type="number"
                   min="0"
                   max="100000"
@@ -115,16 +127,19 @@ const emptyPrice = (): PriceRequest => ({
                 [value]="draft().requestCharge"
                 (valueChange)="field('requestCharge', $event)"
             /></label>
-            <label
-              >生效時間<input
-                type="datetime-local"
+            <div class="ui-field">
+              <nx-date-time-picker
+                #effectiveDate
+                label="生效時間"
+                [required]="false"
                 [value]="effective()"
-                (input)="effective.set($any($event.target).value)"
-              /><small>留空即儲存時生效。</small></label
-            >
+                (valueChange)="effective.set($event)"
+              /><small>台北時區；留空即儲存時生效。</small>
+            </div>
           </div>
           <label
             >價格依據或備註<textarea
+              nxField
               maxlength="500"
               rows="2"
               [value]="draft().note"
@@ -136,7 +151,7 @@ const emptyPrice = (): PriceRequest => ({
             <button
               class="primary-button"
               type="submit"
-              [disabled]="busy() || loading() || !draft().modelId.trim()"
+              [disabled]="busy() || loading() || !draft().modelId.trim() || !effectiveDate.valid()"
             >
               {{ busy() ? '儲存中…' : '新增價格版本' }}
             </button>
@@ -172,9 +187,11 @@ const emptyPrice = (): PriceRequest => ({
     </dialog>`,
 })
 export class PriceBook {
+  readonly showTrigger = input(true);
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   readonly draft = signal(emptyPrice());
   readonly effective = signal('');
+  private readonly effectivePicker = viewChild.required(DateTimePicker);
   readonly prices = signal<ModelPrice[]>([]);
   readonly targets = signal<PriceTarget[]>([]);
   readonly modelName = formatModelDisplayName;
@@ -259,9 +276,7 @@ export class PriceBook {
     this.effective.set('');
     this.notice.set('已帶入此版本。儲存會建立新版本，歷史價格保持原樣。');
   }
-  time(value: string) {
-    return new Date(value).toLocaleString('zh-TW');
-  }
+  readonly time = formatDate;
   async load() {
     const valid = this.scope.guard(),
       sequence = ++this.requestSequence;
@@ -281,13 +296,13 @@ export class PriceBook {
   }
   async save(event: Event) {
     event.preventDefault();
-    if (this.busy()) return;
+    if (this.busy() || !this.effectivePicker().valid()) return;
     const valid = this.scope.guard();
     this.busy.set(true);
     this.error.set('');
     try {
       const effectiveAt = (
-        this.effective() ? new Date(this.effective()) : new Date()
+        this.effective() ? parseDateTimeInput(this.effective()) : new Date()
       ).toISOString();
       await this.api.addPrice({
         ...this.draft(),

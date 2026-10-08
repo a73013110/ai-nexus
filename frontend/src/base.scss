@@ -61,7 +61,7 @@ nx-identity-banner {
   color: var(--secondary);
   font-size: var(--text-caption);
 }
-.identity-banner p {
+.identity-banner nx-notice {
   flex-basis: 100%;
   margin: 0;
 }

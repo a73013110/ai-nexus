@@ -373,6 +373,88 @@ public sealed class DiagnosticTests
         if (Environment.GetEnvironmentVariable("NEXUS_OPENAPI_OUTPUT") is { Length: > 0 } path) await File.WriteAllTextAsync(path, contract);
     }
 
+    [Fact]
+    public void SafeMessagesRenderHistoricalTemplatesWithoutExposingDetailOnlyProperties()
+    {
+        var item = new DiagnosticEvent {
+            MessageTemplate = "HTTP {StatusCode} in {DurationMs:0.###} ms; client {ClientAddress}; count {Count}; {{literal}}.",
+            StatusCode = 200, DurationMs = 12.626123,
+            PropertiesJson = JsonSerializer.Serialize(new { ClientAddress = "203.0.113.8", Count = 3, Password = Secret })
+        };
+        var summary = DiagnosticQuery.Describe(item);
+        Assert.Equal("HTTP 200 in 12.626 ms; client [omitted]; count [omitted]; {literal}.", summary.Message);
+        Assert.DoesNotContain("203.0.113.8", summary.Message);
+        var detail = DiagnosticQuery.Describe(item, detail: true);
+        Assert.Contains("client 203.0.113.8; count 3", detail.Message); Assert.DoesNotContain(Secret, detail.Message);
+        item.MessageTemplate = "Count {Count:invalid}"; item.PropertiesJson = "{";
+        Assert.Equal("Count [omitted]", DiagnosticMessage.Render(item, includeProperties: true));
+        item.MessageTemplate = "Duration {DurationMs:N999999999}";
+        Assert.Equal("Duration [invalid format]", DiagnosticMessage.Render(item));
+    }
+
+    [Fact]
+    public async Task RequestContextUsesConnectionAddressMasksHeadersAndRecordsCancellationOnce()
+    {
+        using var health = new DiagnosticHealth(); var options = Options.Create(new DiagnosticOptions());
+        var buffer = new DiagnosticBuffer(options, health); using var provider = new DiagnosticLoggerProvider(buffer, options, new EnvironmentFixture());
+        using var services = new ServiceCollection().AddLogging(x => x.AddProvider(provider)).AddSingleton<Issues>().BuildServiceProvider();
+        var http = new DefaultHttpContext { RequestServices = services };
+        http.Connection.RemoteIpAddress = IPAddress.Parse("::ffff:203.0.113.8");
+        http.Request.Headers["X-Forwarded-For"] = "198.51.100.99";
+        http.Request.Headers.UserAgent = "FixtureBrowser/1 token=" + Secret;
+        http.Request.Headers.Cookie = "Session=" + Secret;
+        http.Request.Protocol = "HTTP/2"; http.Request.Scheme = "https";
+        using var cancelled = new CancellationTokenSource(); cancelled.Cancel(); http.RequestAborted = cancelled.Token;
+        await new DiagnosticRequestMiddleware(_ => throw new OperationCanceledException(cancelled.Token))
+            .InvokeAsync(http, services.GetRequiredService<Issues>(), services.GetRequiredService<ILogger<DiagnosticRequestMiddleware>>());
+        var row = Assert.Single(buffer.Drain());
+        using var properties = JsonDocument.Parse(row.PropertiesJson);
+        Assert.Equal("203.0.113.8", properties.RootElement.GetProperty("ClientAddress").GetString());
+        Assert.Equal("cancelled", properties.RootElement.GetProperty("RequestOutcome").GetString());
+        Assert.True(properties.RootElement.GetProperty("RequestAborted").GetBoolean());
+        Assert.Equal("HTTP/2", properties.RootElement.GetProperty("RequestProtocol").GetString());
+        Assert.DoesNotContain(Secret, row.PropertiesJson); Assert.DoesNotContain("198.51.100.99", row.PropertiesJson);
+        Assert.DoesNotContain("{StatusCode}", DiagnosticQuery.Describe(row).Message);
+    }
+
+    [Theory]
+    [InlineData("asc")]
+    [InlineData("desc")]
+    public async Task CursorSortAndPageSizeAreBoundAndTimestampTiesHaveNoGaps(string direction)
+    {
+        await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
+        var code = Issues.NewCode(); using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        var at = DateTimeOffset.UtcNow.AddMinutes(-2);
+        db.AddRange(Enumerable.Range(0, 8).Select(i => new DiagnosticEvent { IssueCode = code, At = at.AddSeconds(i / 2), Level = LogLevel.Error }));
+        await db.SaveChangesAsync();
+        var query = "/api/v1/admin/logs?" + Range() + "&issueCode=" + code + "&take=3&sortDirection=" + direction;
+        var first = (await client.GetFromJsonAsync<DiagnosticPage>(query))!;
+        var token = Uri.EscapeDataString(first.NextCursor!);
+        var second = (await client.GetFromJsonAsync<DiagnosticPage>(query + "&cursor=" + token))!;
+        var third = (await client.GetFromJsonAsync<DiagnosticPage>(query + "&cursor=" + Uri.EscapeDataString(second.NextCursor!)))!;
+        var all = first.Events.Concat(second.Events).Concat(third.Events).ToArray();
+        Assert.Equal(8, all.Length); Assert.Equal(8, all.Select(x => x.LogId).Distinct().Count()); Assert.Null(third.NextCursor);
+        Assert.Equal(direction == "asc" ? all.Select(x => x.At).Order() : all.Select(x => x.At).OrderDescending(), all.Select(x => x.At));
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync(query.Replace("take=3", "take=4") + "&cursor=" + token)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync(query.Replace("sortDirection=" + direction, "sortDirection=" + (direction == "asc" ? "desc" : "asc")) + "&cursor=" + token)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync(query.Replace("sortDirection=" + direction, "sortDirection=invalid"))).StatusCode);
+    }
+
+    [Theory]
+    [InlineData(200, false)]
+    [InlineData(403, true)]
+    public async Task DiagnosticReadMetadataSuppressesOnlySuccessfulRequestNoise(int status, bool logged)
+    {
+        using var health = new DiagnosticHealth(); var options = Options.Create(new DiagnosticOptions());
+        var buffer = new DiagnosticBuffer(options, health); using var provider = new DiagnosticLoggerProvider(buffer, options, new EnvironmentFixture());
+        using var services = new ServiceCollection().AddLogging(x => x.AddProvider(provider)).AddSingleton<Issues>().BuildServiceProvider();
+        var http = new DefaultHttpContext { RequestServices = services };
+        http.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new SuppressSuccessfulRequestLog()), "diagnostic-read"));
+        await new DiagnosticRequestMiddleware(context => { context.Response.StatusCode = status; context.Response.ContentLength = 1; return Task.CompletedTask; })
+            .InvokeAsync(http, services.GetRequiredService<Issues>(), services.GetRequiredService<ILogger<DiagnosticRequestMiddleware>>());
+        Assert.Equal(logged, buffer.Drain().Any(x => x.EventId == DiagnosticEvents.Request.Id));
+    }
+
     private static string Range() => "from=" + Uri.EscapeDataString(DateTimeOffset.UtcNow.AddHours(-1).ToString("O")) + "&to=" + Uri.EscapeDataString(DateTimeOffset.UtcNow.AddMinutes(1).ToString("O"));
     private static async Task<int> CountIssue(NexusFactory factory, string code) { using var scope = factory.Services.CreateScope(); return await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<DiagnosticEvent>().CountAsync(x => x.IssueCode == code); }
     internal static async Task<DiagnosticEvent> WaitForIssue(NexusFactory factory, string code)

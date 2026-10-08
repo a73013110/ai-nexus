@@ -2,9 +2,9 @@
   <p role="status">正在載入檢索評測…</p>
 }
 @if (error()) {
-  <p role="alert" class="error-banner">{{ error() }}<nx-issue-code [message]="error()" /></p>
+  <nx-notice tone="danger" [message]="error()" />
 }
-<section class="platform-card">
+<section nxCard>
   <div class="page-toolbar">
     <h2>建立檢索驗收集</h2>
     <label class="upload-label secondary-button"
@@ -21,6 +21,7 @@
   <form class="platform-form" [formGroup]="form" (submit)="create($event)">
     <label
       >評測名稱<input
+        nxField
         aria-label="檢索評測名稱"
         formControlName="title"
         maxlength="120"
@@ -41,6 +42,7 @@
     </fieldset>
     <label
       >驗收集 JSON（1 至 20 題）<textarea
+        nxField
         aria-label="檢索驗收集 JSON"
         formControlName="corpus"
         rows="9"
@@ -70,7 +72,7 @@
   </form>
 </section>
 @if (runs().length) {
-  <section class="platform-card">
+  <section nxCard>
     <div class="page-toolbar">
       <h2>評測報告</h2>
       <button type="button" class="secondary-button" (click)="load()" [disabled]="busy()">
@@ -111,7 +113,7 @@
       </p>
       <div class="platform-grid">
         @for (metric of report.summary; track metric.mode) {
-          <article class="platform-card">
+          <article nxCard>
             <h3>{{ metric.mode }}</h3>
             <p class="form-note">
               完成 {{ metric.completed }} 次 · 無法評測 {{ metric.unavailable }} 次

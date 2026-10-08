@@ -1,6 +1,8 @@
 import { test, expect } from "@playwright/test";
 import {
   ApiFixture,
+  expectCompactSurfaces,
+  expectViewportContained,
   chooseSelect,
   settleEntrance,
   openSettings,
@@ -16,6 +18,11 @@ test("personal settings preview, cancel, save and reload account preferences", a
   await expect(
     page.getByRole("heading", { name: "外觀與閱讀", exact: true }),
   ).toBeVisible();
+  await expectCompactSurfaces(page.locator(".settings-layout"));
+  await expect(page.locator(".settings-card h2").first()).toHaveCSS(
+    "font-size",
+    "16px",
+  );
   await page.locator(".reading-preview").scrollIntoViewIfNeeded();
   await settleEntrance(page);
   await page.screenshot({
@@ -113,6 +120,7 @@ test("custom dropdown supports keyboard, light dismissal and mobile layout", asy
   await page.getByRole("heading", { name: "外觀與閱讀", exact: true }).click();
   await expect(theme).toHaveAttribute("aria-expanded", "false");
   await page.setViewportSize({ width: 375, height: 812 });
+  await expectCompactSurfaces(page.locator(".settings-layout"));
   await chooseSelect(page, "對話字級", "18 px");
   expect(
     await page.evaluate(
@@ -129,4 +137,40 @@ test("custom dropdown supports keyboard, light dismissal and mobile layout", asy
   await expect(
     page.getByRole("heading", { name: "使用狀況", exact: true }),
   ).toBeVisible();
+});
+
+test("每個設定分類共用緊湊卡片，閱讀偏好不放大操作介面", async ({ page }) => {
+  const fixture = new ApiFixture();
+  fixture.settings.readingFontSize = 20;
+  await fixture.attach(page);
+  await page.goto("/settings");
+  const dialog = page.getByRole("dialog", { name: "個人設定", exact: true });
+  const sections = [
+    "外觀與閱讀",
+    "對話",
+    "通知",
+    "資料與草稿",
+    "帳號與權限",
+    "使用狀況",
+    "鍵盤快捷鍵",
+  ];
+  for (const width of [1440, 375]) {
+    await page.setViewportSize({ width, height: width === 375 ? 812 : 1000 });
+    for (const [index, section] of sections.entries()) {
+      await dialog.getByRole("button", { name: section, exact: true }).click();
+      await expect(
+        dialog.getByRole("heading", { name: section, exact: true }),
+      ).toBeVisible();
+      await expectCompactSurfaces(dialog.locator(".settings-layout"));
+      await expect(dialog.locator(".settings-page-header h1")).toHaveCSS(
+        "font-size",
+        "24px",
+      );
+      await expectViewportContained(page);
+      await settleEntrance(page);
+      await page.screenshot({
+        path: `artifacts/screenshots/settings-section-${index}-${width}.png`,
+      });
+    }
+  }
 });

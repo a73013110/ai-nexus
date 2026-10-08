@@ -1,4 +1,6 @@
-import { IssueCode } from '../../shared/ui/issue-code';
+import { Notice } from '../../shared/ui/notice';
+import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { Field } from '../../shared/ui/field';
 import { safeMessage } from '../../core/api/safe-errors';
 import {
   ChangeDetectionStrategy,
@@ -17,9 +19,10 @@ import { WorkspaceApi } from './workspace-api';
 
 @Component({
   selector: 'nx-prompt-library',
-  imports: [IssueCode,Icon, FormField],
+  imports: [Notice, CompactDialog, Field, Icon, FormField],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: ` <dialog
+    nxCompactDialog
     #dialog
     class="workspace-dialog library-dialog"
     aria-labelledby="library-title"
@@ -36,7 +39,7 @@ import { WorkspaceApi } from './workspace-api';
       </div>
       <p class="panel-note">把常做的工作保存成範本，下次一鍵帶入提問。</p>
       @if (error()) {
-        <p class="inline-error" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+        <nx-notice tone="danger" [message]="error()" />
       }
       <div class="library-layout">
         <div class="template-list">
@@ -77,10 +80,14 @@ import { WorkspaceApi } from './workspace-api';
         <form class="template-editor" (submit)="save($event)">
           <h3>{{ editingId() ? '編輯範本' : '新增範本' }}</h3>
           <label for="prompt-title">範本名稱</label
-          ><input id="prompt-title" [formField]="fields.title" placeholder="例如：會議摘要" /><label
-            for="prompt-content"
-            >提示詞內容</label
+          ><input
+            nxField
+            id="prompt-title"
+            [formField]="fields.title"
+            placeholder="例如：會議摘要"
+          /><label for="prompt-content">提示詞內容</label
           ><textarea
+            nxField
             id="prompt-content"
             [formField]="fields.content"
             placeholder="說明任務、格式與預期結果…"

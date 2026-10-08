@@ -7,6 +7,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Administration;
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.Operations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;

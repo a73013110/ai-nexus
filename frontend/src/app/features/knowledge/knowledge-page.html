@@ -17,15 +17,15 @@
     </button>
   </div>
   @if (error()) {
-    <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+    <nx-notice tone="danger" [message]="error()" />
   }
   @if (notice()) {
-    <p class="success-note" role="status">{{ notice() }}</p>
+    <nx-notice tone="success" [message]="notice()" />
   }
   @if (loading()) {
     <p role="status">正在載入知識庫…</p>
   } @else if (!collections().length && session.has('knowledge')) {
-    <div class="knowledge-empty">
+    <nx-empty-state>
       <span class="empty-symbol"><nx-icon name="library" /></span>
       <h2>給工作一個可靠的資料來源</h2>
       <p>
@@ -34,7 +34,7 @@
       <button class="primary-button" (click)="openEditor()">
         建立第一個知識庫<nx-icon name="plus" />
       </button>
-    </div>
+    </nx-empty-state>
   } @else if (current(); as collection) {
     <div class="knowledge-heading">
       <nx-select
@@ -97,14 +97,12 @@
       <section class="knowledge-documents">
         <div class="page-toolbar">
           <h2>來源文件</h2>
-          <label class="page-search"
-            ><nx-icon name="search" /><input
-              type="search"
-              aria-label="篩選來源文件"
-              placeholder="依檔名篩選"
-              [value]="filter()"
-              (input)="filter.set($any($event.target).value)"
-          /></label>
+          <nx-search-field
+            label="篩選來源文件"
+            placeholder="依檔名篩選"
+            [value]="filter()"
+            (valueChange)="filter.set($event)"
+          />
         </div>
         @if (loadingDocuments()) {
           <p role="status">正在載入文件…</p>
@@ -121,9 +119,16 @@
                       document.chunkCount ? document.chunkCount + ' 段索引' : '點擊閱讀原檔與文字'
                     }}</small
                   ></a
-                ><span class="resource-status" [attr.data-status]="document.status">{{
-                  status(document.status)
-                }}</span>
+                ><nx-status-badge
+                  [tone]="
+                    document.status === 'ready'
+                      ? 'success'
+                      : document.status === 'failed'
+                        ? 'danger'
+                        : 'neutral'
+                  "
+                  >{{ status(document.status) }}</nx-status-badge
+                >
                 @if (document.canEdit) {
                   <nx-action-menu
                     [label]="'文件操作：' + document.fileName"
@@ -133,15 +138,15 @@
                 }
               </div>
             } @empty {
-              <div class="empty-state">
+              <nx-empty-state>
                 <h3>尚無符合的文件</h3>
                 <p>上傳文件後即可閱讀、索引及查詢。</p>
-              </div>
+              </nx-empty-state>
             }
           </div>
         }
       </section>
-      <section class="knowledge-test">
+      <section nxCard class="knowledge-test">
         <span class="panel-eyebrow">先核對，再帶入對話</span>
         <h2>查詢這個知識庫</h2>
         <p class="form-note">
@@ -150,6 +155,7 @@
         <form class="platform-form" (submit)="search($event)">
           <label
             >查詢內容<textarea
+              nxField
               aria-label="知識庫查詢內容"
               rows="3"
               maxlength="2000"
@@ -174,7 +180,7 @@
   }
   <nx-text-source-editor (saved)="textSaved()" />
 </nx-feature-page>
-<dialog #editorDialog class="platform-dialog" (cancel)="cancel($event)">
+<dialog nxCompactDialog #editorDialog class="platform-dialog" (cancel)="cancel($event)">
   <div class="dialog-scroll">
     <form class="platform-form" (submit)="save($event)">
       <div class="dialog-heading">
@@ -190,10 +196,11 @@
         </button>
       </div>
       @if (editorError()) {
-        <p class="error-banner" role="alert">{{ editorError() }}</p>
+        <nx-notice tone="danger" [message]="editorError()" />
       }
       <label
         >名稱<input
+          nxField
           aria-label="知識庫名稱"
           autofocus
           required
@@ -202,6 +209,7 @@
           (input)="editorName.set($any($event.target).value)" /></label
       ><label
         >說明<textarea
+          nxField
           aria-label="知識庫說明"
           rows="3"
           maxlength="2000"
@@ -225,10 +233,10 @@
     </form>
   </div>
 </dialog>
-<dialog #deleteDialog class="platform-dialog" (cancel)="cancel($event)">
+<dialog nxCompactDialog #deleteDialog class="platform-dialog" (cancel)="cancel($event)">
   <div class="dialog-scroll">
     @if (editorError()) {
-      <p class="error-banner" role="alert">{{ editorError() }}</p>
+      <nx-notice tone="danger" [message]="editorError()" />
     }
     <div class="dialog-heading">
       <h2>移除{{ deleteTarget()?.collection ? '知識庫' : '文件' }}</h2>

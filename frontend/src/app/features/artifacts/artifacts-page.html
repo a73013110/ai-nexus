@@ -11,10 +11,10 @@
     <nx-icon name="plus" />新增成果
   </button>
   @if (error()) {
-    <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+    <nx-notice tone="danger" [message]="error()" />
   }
   @if (notice()) {
-    <p class="success-note" role="status">{{ notice() }}</p>
+    <nx-notice tone="success" [message]="notice()" />
   }
   @if (loading()) {
     <p role="status">正在載入成果文件…</p>
@@ -25,14 +25,12 @@
       [class.list-open]="listOpen()"
     >
       <aside class="artifact-list">
-        <label class="page-search"
-          ><nx-icon name="search" /><input
-            type="search"
-            aria-label="搜尋成果文件"
-            placeholder="尋找成果"
-            [value]="filter()"
-            (input)="filter.set($any($event.target).value)"
-        /></label>
+        <nx-search-field
+          label="搜尋成果文件"
+          placeholder="尋找成果"
+          [value]="filter()"
+          (valueChange)="filter.set($event)"
+        />
         <nav aria-label="成果文件清單">
           @for (item of visible(); track item.resource.id) {
             <a
@@ -59,6 +57,7 @@
             <div>
               @if (mode() !== 'read' && editable()) {
                 <input
+                  nxField
                   aria-label="編輯成果名稱"
                   [disabled]="busy()"
                   maxlength="120"
@@ -88,12 +87,14 @@
             />
           </div>
           @if (doc.version !== doc.currentVersion && !restoring()) {
-            <p class="source-warning">
+            <nx-notice tone="warning">
               正在檢視舊版本 {{ doc.version }}，最新是版本 {{ doc.currentVersion }}。
               @if (doc.resource.canEdit) {
-                <button class="quiet-button" (click)="restore()">將此版帶入編輯</button>
+                <button notice-actions class="quiet-button" (click)="restore()">
+                  將此版帶入編輯
+                </button>
               }
-            </p>
+            </nx-notice>
           }
           <div class="artifact-toolbar">
             @if (doc.resource.isOwner && session.has('shared')) {
@@ -105,18 +106,12 @@
                 <nx-icon name="share" />唯讀分享
               </button>
             }
-            <div class="reader-mode">
-              <button [attr.aria-pressed]="mode() === 'read'" (click)="mode.set('read')">
-                閱讀
-              </button>
-              @if (editable()) {
-                <button [attr.aria-pressed]="mode() === 'edit'" (click)="mode.set('edit')">
-                  編輯</button
-                ><button [attr.aria-pressed]="mode() === 'split'" (click)="mode.set('split')">
-                  並排預覽
-                </button>
-              }
-            </div>
+            <nx-view-switch
+              label="成果檢視方式"
+              [options]="modeOptions()"
+              [value]="mode()"
+              (valueChange)="mode.set($event)"
+            />
             <div class="artifact-export">
               <button class="quiet-button" [disabled]="busy()" (click)="export('docx')">
                 Word<nx-icon name="download" /></button
@@ -162,13 +157,13 @@
           @if (selection(); as selected) {
             <div class="paragraph-toolbar" aria-label="選取段落操作">
               <span>已選取 {{ selected.text.length }} 字元</span>
-              @for (item of ['rewrite', 'summarize', 'translate']; track item) {
+              @for (item of textActions; track item.value) {
                 <button
                   class="quiet-button"
                   [disabled]="selected.text.length > 8000 || busy()"
-                  (click)="transform(item)"
+                  (click)="transform(item.value)"
                 >
-                  {{ item === 'rewrite' ? '改寫' : item === 'summarize' ? '摘要' : '翻譯' }}
+                  <nx-icon [name]="item.icon" />{{ item.label }}
                 </button>
               }
             </div>
@@ -176,6 +171,7 @@
           <div class="artifact-body" [class.split]="mode() === 'split'">
             @if (mode() !== 'read' && editable()) {
               <textarea
+                nxField
                 #editor
                 class="artifact-editor"
                 aria-label="編輯成果內容"
@@ -189,7 +185,7 @@
               ></textarea>
             }
             @if (mode() !== 'edit' || !editable()) {
-              <nx-markdown-view class="artifact-preview" [content]="content()" />
+              <nx-markdown-view nxCard class="artifact-preview" [content]="content()" />
             }
           </div>
           <nx-resource-sharing
@@ -200,14 +196,14 @@
           />
         </section>
       } @else {
-        <section class="artifact-empty">
+        <nx-empty-state>
           <span class="empty-symbol"><nx-icon name="document" /></span>
           <h2>從思考到成果</h2>
           <p>
-            在 AI 回答選取段落，可以改寫、摘要、翻譯或儲存成果。<br />每個版本都能獨立檢視與匯出。
+            在 AI 回答選取段落，可以改寫、摘要、解釋、翻譯或儲存成果。<br />每個版本都能獨立檢視與匯出。
           </p>
           <a routerLink="/chat" class="secondary-button">開始對話<nx-icon name="chevron" /></a>
-        </section>
+        </nx-empty-state>
       }
     </div>
   }

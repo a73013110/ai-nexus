@@ -12,6 +12,7 @@ using AiNexus.Features.Inference;
 using AiNexus.Features.Integrations;
 using AiNexus.Features.Knowledge;
 using AiNexus.Features.Library;
+using AiNexus.Features.Monitoring;
 using AiNexus.Features.Notifications;
 using AiNexus.Features.Operations;
 using AiNexus.Features.Persistence;
@@ -54,6 +55,7 @@ public static class FeatureModules
         Add<LibraryModule>(builder);
         Add<AttachmentsModule>(builder);
         Add<InferenceModule>(builder);
+        Add<MonitoringModule>(builder);
         builder.Services.AddValidatorsFromAssembly(typeof(FeatureModules).Assembly, includeInternalTypes: true);
         return builder;
     }
@@ -82,6 +84,7 @@ public static class FeatureModules
         Map<RepositoriesModule>(api);
         Map<DashboardModule>(api);
         Map<WebSearchModule>(api);
+        Map<MonitoringModule>(api);
         IdentityModule.MapPublicEndpoints(app);
         return app;
     }

@@ -1,5 +1,7 @@
 # 架構與擴充邊界
 
+`AiNexus.Features/Monitoring` 在共用 request stream、HttpClientFactory 與 SqlClient 邊界量測，不逐業務方法插入追蹤。Presence 與 15 分鐘聚合均有容量上限；沿用 SSE／權限／稽核，並透過既有 OpenTelemetry 匯出。多執行個體需另外實作分散式 adapter，見 [監控](MONITORING.md)。
+
 診斷入口為 MEL `ILogger`，`AiNexus.Platform/Diagnostics` 集中白名單／遮罩、安全錯誤、W3C Activity、站外 durable JSONL、獨立 SQL 批次補送、管理查詢與清理。安全稽核保持獨立交易政策；OpenTelemetry 1.19.1 匯出可選，預設不用外部 collector。模組不依賴檔案／SQL sink。事件規範、擴充範例與維運限制見 [DIAGNOSTICS](DIAGNOSTICS.md)。
 
 AI Nexus 採 ASP.NET Core 模組化單體與 Angular 功能路由。模組各自管理 endpoint、資料模型與服務，共用 scoped NexusDbContext，讓跨模組異動仍在同一個 transaction 完成。需要獨立部署或強制依賴邊界時才拆 assembly；避免只有轉送用途的 service／repository。
@@ -27,10 +29,10 @@ flowchart LR
 | -------------- | ---------------------------------------------------------------------------------------- |
 | Identity       | AD／Windows、SID 映射、cookie／CSRF、帳號偏好；不保存個人密碼                            |
 | AccessControl  | 使用者→角色→群組→功能的有效授權及 server-side policy                                     |
-| Administration | 一次性管理員 bootstrap、授權、群組模型／配額、稽核與用量                                 |
+| Administration | 一次性管理員 bootstrap、授權、群組模型／配額、管理異動記錄與用量                         |
 | Conversations  | 私人訊息樹／分支、標題、收藏／封存／標籤、搜尋與文字備份                                 |
 | Inference      | provider、模型呈現政策、Context、聊天排程／SSE、共用模型任務                             |
-| Operations     | 健康狀態、audit、事件清理、durable jobs、租約及 fenced checkpoint                        |
+| Operations     | 健康狀態、活動稽核查詢與寫入、事件清理、durable jobs、租約及 fenced checkpoint            |
 | Attachments    | 格式及大小驗證、原始檔／文字、配額、下載授權與保留引用                                   |
 | Library        | 個人提示詞範本及容量限制                                                                 |
 | Collaboration  | 私有資源、具名 viewer／editor、群組唯讀 ACL、具名到期分享                                |

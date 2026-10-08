@@ -1,3 +1,4 @@
+import { CompactDialog } from '../../shared/ui/compact-dialog';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -12,9 +13,10 @@ import { isSubmitKey } from '../../shared/browser/submit-key';
 
 @Component({
   selector: 'nx-focus-composer',
-  imports: [Icon],
+  imports: [CompactDialog, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
+    nxCompactDialog
     #dialog
     class="platform-dialog focus-composer-dialog"
     aria-labelledby="focus-composer-title"

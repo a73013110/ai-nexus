@@ -1,0 +1,90 @@
+.ui-notice {
+  --notice-color: var(--error);
+  --notice-background: var(--error-bg);
+  --button-target: 1.75rem;
+  --text-caption: var(--p-font-xs);
+  --text-ui: var(--p-font-data);
+  --button-padding-block: var(--p-space-1);
+  --button-padding-inline: var(--p-space-2);
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  flex: none;
+  min-width: 0;
+  margin-block: var(--p-space-2);
+  padding: var(--p-space-1) var(--p-space-3);
+  border: 1px solid color-mix(in srgb, var(--notice-color) 18%, var(--line));
+  border-radius: var(--p-radius-md);
+  background: var(--notice-background);
+  color: var(--notice-color);
+  font-size: var(--p-font-data);
+  line-height: var(--line-ui);
+  overflow-wrap: anywhere;
+}
+.ui-notice[data-tone='info'],
+.ui-notice[data-tone='neutral'] {
+  --notice-color: var(--secondary);
+  --notice-background: var(--surface-subtle);
+}
+.ui-notice[data-tone='warning'] {
+  --notice-color: var(--warning);
+  --notice-background: color-mix(in srgb, var(--warning) 7%, var(--surface));
+}
+.ui-notice[data-tone='success'] {
+  --notice-color: var(--signal);
+  --notice-background: color-mix(in srgb, var(--signal) 7%, var(--surface));
+}
+.ui-notice-icon {
+  --icon-size: 1rem;
+  flex: none;
+}
+.ui-notice-content {
+  flex: 1;
+  min-width: 0;
+}
+.ui-notice-content > span {
+  overflow-wrap: anywhere;
+}
+.ui-notice-content a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ui-notice-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  flex: none;
+}
+.ui-notice-actions:empty {
+  display: none;
+}
+.ui-notice button {
+  min-height: var(--button-target);
+  font-size: var(--p-font-xs);
+  color: inherit;
+}
+.ui-notice .secondary-button {
+  border: 0;
+  background: transparent;
+}
+.ui-notice nx-issue-code {
+  flex: none;
+}
+.ui-notice.global-notice {
+  margin: 0;
+  border-radius: 0;
+  border-inline: 0;
+  border-top: 0;
+  max-height: 40dvh;
+  overflow: auto;
+}
+@media (pointer: coarse) {
+  .ui-notice {
+    --button-target: 2.75rem;
+    flex-wrap: wrap;
+  }
+  .ui-notice .icon-button {
+    width: var(--button-target);
+    height: var(--button-target);
+  }
+}

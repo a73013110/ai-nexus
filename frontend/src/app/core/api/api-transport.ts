@@ -1,6 +1,7 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import type { AuthSession } from './types';
+import { BrowserSession } from '../monitoring/browser-session';
 
 export { ApiError } from './safe-errors';
 import { ApiError } from './safe-errors';
@@ -9,6 +10,7 @@ import { ApiError } from './safe-errors';
 @Injectable({ providedIn: 'root' })
 export class ApiTransport {
   private readonly router = inject(Router);
+  private readonly browserSession = inject(BrowserSession);
   private csrf = '';
   private identity: string | null = null;
   readonly expired = signal(0);
@@ -39,6 +41,7 @@ export class ApiTransport {
         signal,
         headers: {
           Accept: 'application/json',
+          'X-Nexus-Session': this.browserSession.id,
           ...(body !== undefined && !multipart ? { 'Content-Type': 'application/json' } : {}),
           ...(method !== 'GET' ? { 'X-Nexus-CSRF': this.csrf } : {}),
           ...extra,

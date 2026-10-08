@@ -25,6 +25,11 @@
             "inlineStyleLanguage": "scss",
             "assets": [
               {
+                "glob": "driver.css",
+                "input": "node_modules/driver.js/dist",
+                "output": "vendor/driver"
+              },
+              {
                 "glob": "**/*",
                 "input": "public"
               },

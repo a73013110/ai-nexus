@@ -1,5 +1,10 @@
+import { Notice } from '../../shared/ui/notice';
+import { EmptyState } from '../../shared/ui/empty-state';
+import { Card } from '../../shared/ui/card';
+import { ViewSwitch } from '../../shared/ui/view-switch';
+import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { Field } from '../../shared/ui/field';
 import { ApiError, ClientValidationError, issueInMessage } from '../../core/api/safe-errors';
-import { IssueCode } from '../../shared/ui/issue-code';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -25,7 +30,7 @@ import type {
   ModelPolicy,
 } from '../../core/api/types';
 import { ViewScope } from '../../shared/browser/view-scope';
-import { formatModelName, formatModelDisplayName } from '../../shared/browser/format';
+import { formatDate, formatModelName, formatModelDisplayName } from '../../shared/browser/format';
 import { downloadFile } from '../../shared/browser/download';
 import { FeaturePage } from '../../shared/ui/feature-page';
 import { Select } from '../../shared/ui/select';
@@ -48,7 +53,13 @@ const blankCase = (): EvaluationCase => ({
 });
 @Component({
   selector: 'nx-quality-page',
-  imports: [IssueCode,
+  imports: [
+    Notice,
+    EmptyState,
+    Card,
+    ViewSwitch,
+    CompactDialog,
+    Field,
     FeaturePage,
     SearchField,
     ConfirmDialog,
@@ -286,11 +297,15 @@ export class QualityPage {
     try {
       if (file.size > 1400000) throw new ClientValidationError('evaluationFileSize');
       let data;
-      try { data = JSON.parse(await file.text()); }
-      catch { throw new ClientValidationError('evaluationFormat'); }
+      try {
+        data = JSON.parse(await file.text());
+      } catch {
+        throw new ClientValidationError('evaluationFormat');
+      }
       if (!valid()) return;
       if (
-        !data || data.version !== 1 ||
+        !data ||
+        data.version !== 1 ||
         typeof data.name !== 'string' ||
         typeof data.description !== 'string' ||
         !Array.isArray(data.cases) ||
@@ -324,7 +339,12 @@ export class QualityPage {
       const catalog = await this.nexus.models();
       if (!valid()) return;
       if (!catalog.providerAvailable || !catalog.models.length)
-        throw new ApiError(503, 'model_unavailable', undefined, issueInMessage(catalog.notice) ?? undefined);
+        throw new ApiError(
+          503,
+          'model_unavailable',
+          undefined,
+          issueInMessage(catalog.notice) ?? undefined,
+        );
       this.models.set(catalog.models);
       this.policy.set(catalog.policy);
       this.variants.set([
@@ -437,12 +457,5 @@ export class QualityPage {
       if (valid()) this.busy.set(false);
     }
   }
-  date(value: string) {
-    return new Date(value).toLocaleString('zh-TW', {
-      month: 'numeric',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
+  readonly date = formatDate;
 }

@@ -15,6 +15,9 @@ public static class DiagnosticEvents
         Started = new(5000, "service.started"), Stopping = new(5001, "service.stopping"), Configuration = new(5002, "service.startup.failed");
 }
 
+/// <summary>Successful observability reads are already audited; do not feed them back into their own log list.</summary>
+public sealed class SuppressSuccessfulRequestLog;
+
 public static class DiagnosticTrace
 {
     public const string SourceName = "AiNexus";
@@ -87,36 +90,54 @@ public sealed class DiagnosticRequestMiddleware(RequestDelegate next)
         var previous = Activity.Current;
         Activity.Current = null;
         using var activity = DiagnosticTrace.Start("http.request", kind: ActivityKind.Server);
+        http.Items["Nexus.TraceId"] = activity.TraceId.ToHexString();
         var watch = Stopwatch.StartNew();
         var operation = Guid.NewGuid(); http.TraceIdentifier = Guid.NewGuid().ToString("N");
         activity.SetTag("operation.id", operation.ToString());
-        using var scope = logger.BeginScope(new Dictionary<string, object?> { ["RequestId"] = http.TraceIdentifier, ["OperationId"] = operation });
+        var address = http.Connection.RemoteIpAddress;
+        if (address?.IsIPv4MappedToIPv6 == true) address = address.MapToIPv4();
+        // Connection metadata may have been resolved by the host's trusted proxy middleware.
+        // Do not parse caller-controlled X-Forwarded-For here.
+        using var scope = logger.BeginScope(new Dictionary<string, object?> {
+            ["RequestId"] = http.TraceIdentifier, ["OperationId"] = operation, ["Method"] = http.Request.Method,
+            ["ClientAddress"] = address?.ToString(), ["UserAgent"] = DiagnosticRedactor.Text(http.Request.Headers.UserAgent.ToString(), 240),
+            ["RequestProtocol"] = http.Request.Protocol, ["RequestScheme"] = http.Request.Scheme
+        });
+        var outcome = "completed";
         try
         {
             // Empty framework failures (challenge, forbid, unmatched route) get their body from UseStatusCodePages.
             await next(http);
         }
-        catch (OperationCanceledException) when (http.RequestAborted.IsCancellationRequested) { logger.LogInformation("Request cancelled by caller."); }
+        catch (OperationCanceledException) when (http.RequestAborted.IsCancellationRequested) { outcome = "cancelled"; }
         catch (Exception exception)
         {
+            outcome = "failed";
             using var failureScope = logger.BeginScope(new Dictionary<string, object?> { ["Method"] = http.Request.Method,
                 ["Route"] = (http.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText, ["StatusCode"] = exception is ApiException api ? api.Status : 503 });
             if (!http.Response.HasStarted) { http.Response.Clear(); WebSecurity.Headers(http); await Problems.WriteAsync(http, exception); }
             else if (http.Response.ContentType?.StartsWith("text/event-stream", StringComparison.OrdinalIgnoreCase) == true && !http.RequestAborted.IsCancellationRequested)
             {
                 var problem = issues.Problem(exception);
-                await http.Response.WriteAsync("event: error\ndata: " + System.Text.Json.JsonSerializer.Serialize(new { code = problem.Code, message = problem.Status >= 500 ? Issues.Message(problem.IssueCode) : problem.Title, issueCode = problem.IssueCode }) + "\n\n", http.RequestAborted);
+                await http.Response.WriteAsync("event: error\ndata: " + System.Text.Json.JsonSerializer.Serialize(new { status = problem.Status, code = problem.Code, message = problem.Status >= 500 ? Issues.Message(problem.IssueCode) : problem.Title, issueCode = problem.IssueCode }) + "\n\n", http.RequestAborted);
             }
             else http.Abort();
         }
         finally
         {
+            watch.Stop();
+            var duration = Math.Round(watch.Elapsed.TotalMilliseconds, 3);
             var route = (http.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText;
             activity.SetTag("http.route", route); activity.SetTag("http.request.method", http.Request.Method); activity.SetTag("http.response.status_code", http.Response.StatusCode);
+            activity.SetTag("client.address", address?.ToString()); activity.SetTag("network.protocol.version", http.Request.Protocol.Replace("HTTP/", "", StringComparison.OrdinalIgnoreCase));
+            if (outcome == "failed" || http.Response.StatusCode >= 500) activity.SetStatus(ActivityStatusCode.Error);
             var user = http.RequestServices.GetService<AiNexus.Platform.Security.IRequestUser>()?.ResolvedId;
             using var completionScope = logger.BeginScope(new Dictionary<string, object?> { ["Method"] = http.Request.Method, ["Route"] = route,
-                ["StatusCode"] = http.Response.StatusCode, ["DurationMs"] = watch.Elapsed.TotalMilliseconds, ["UserId"] = user });
-            logger.LogInformation(DiagnosticEvents.Request, "HTTP request completed with {StatusCode} in {DurationMs} ms.", http.Response.StatusCode, watch.Elapsed.TotalMilliseconds);
+                ["StatusCode"] = http.Response.StatusCode, ["DurationMs"] = duration, ["UserId"] = user,
+                ["RequestOutcome"] = outcome, ["RequestAborted"] = http.RequestAborted.IsCancellationRequested, ["ResponseStarted"] = http.Response.HasStarted });
+            if (outcome != "completed" || http.Response.StatusCode >= 400 ||
+                http.GetEndpoint()?.Metadata.GetMetadata<SuppressSuccessfulRequestLog>() is null)
+                logger.LogInformation(DiagnosticEvents.Request, "HTTP request finished with {StatusCode} in {DurationMs:0.###} ms.", http.Response.StatusCode, duration);
             Activity.Current = previous;
         }
     }

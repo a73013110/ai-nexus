@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import { ApiFixture, chooseSelect, settleEntrance } from "./fixtures";
+import {
+  expectCompactWorkspace,
+  ApiFixture,
+  chooseSelect,
+  settleEntrance,
+} from "./fixtures";
 import type { ReadonlyShare } from "../../frontend/src/app/core/api/types";
 
 test("named read-only sharing is created beside a conversation and can be revoked from its reader", async ({
@@ -89,6 +94,7 @@ test("named read-only sharing is created beside a conversation and can be revoke
   await expect(page.locator(".shared-message")).toHaveCount(2);
   await expect(page.locator(".shared-user")).toContainText("請摘要這份工作");
   await settleEntrance(page);
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/sharing-desktop.png",
     fullPage: true,

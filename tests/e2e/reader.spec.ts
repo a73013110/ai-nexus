@@ -108,6 +108,10 @@ test("attachment modals preserve the live conversation, draft, scroll and focus 
     path: "artifacts/screenshots/reader-modal-desktop.png",
   });
   await page.setViewportSize({ width: 375, height: 812 });
+  expect(
+    (await dialog.getByRole("button", { name: "關閉檔案預覽" }).boundingBox())!
+      .height,
+  ).toBeGreaterThanOrEqual(44);
   await expectViewportContained(page);
   await page.screenshot({
     path: "artifacts/screenshots/reader-modal-mobile.png",

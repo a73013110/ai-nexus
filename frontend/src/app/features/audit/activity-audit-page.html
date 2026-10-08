@@ -1,0 +1,336 @@
+<nx-feature-page
+  [title]="session.featureName('audit')"
+  description="追蹤登入、功能操作、授權異動與資料查閱；選取活動檢視結果，再查證相關系統日誌。"
+  eyebrow="AI NEXUS / 系統"
+  layoutMode="data"
+>
+  <div page-actions class="page-actions">
+    @if (session.has('logs.query')) {
+      <a routerLink="/admin/logs" class="secondary-button"
+        ><nx-icon name="logs" />{{ session.featureName('logs.query') }}</a
+      >
+    }
+  </div>
+  @if (!session.has('audit') && session.me()) {
+    <nx-notice tone="danger">需要活動稽核查閱權限。</nx-notice>
+  }
+  @if (error()) {
+    <nx-notice tone="danger" [message]="error()"
+      ><button notice-actions type="button" (click)="reload()">重新載入</button></nx-notice
+    >
+  }
+  @if (session.has('audit')) {
+    <nx-filter-panel>
+      <nx-view-switch
+        label="活動稽核分類"
+        [options]="categories"
+        [value]="category()"
+        (valueChange)="filter('category', $event)"
+      />
+      @if (traceId()) {
+        <div class="page-toolbar">
+          <p class="form-note">正在查詢同一流程：{{ traceId() }}</p>
+          <button class="quiet-button" (click)="traceId.set(''); load()">清除流程條件</button>
+        </div>
+      }
+      <div class="audit-toolbar">
+        <nx-search-field
+          label="搜尋稽核"
+          placeholder="帳號、動作、資源、Trace ID 或查證代碼"
+          [value]="search()"
+          (valueChange)="searchChanged($event)"
+        />
+        <nx-select
+          label="稽核動作"
+          [options]="actions"
+          [value]="action()"
+          (valueChange)="filter('action', $event)"
+        />
+        <nx-select
+          label="稽核結果"
+          [options]="results"
+          [value]="result()"
+          (valueChange)="filter('result', $event)"
+        />
+        <nx-date-time-picker
+          label="稽核開始日期"
+          [withTime]="false"
+          [required]="false"
+          [value]="from()"
+          (valueChange)="filter('from', $event)"
+        />
+        <nx-date-time-picker
+          label="稽核結束日期"
+          [withTime]="false"
+          [required]="false"
+          [value]="until()"
+          (valueChange)="filter('until', $event)"
+        />
+        <button
+          class="icon-button"
+          aria-label="重新整理稽核"
+          [disabled]="loading() || !validDates()"
+          (click)="load()"
+        >
+          <nx-icon name="refresh" />
+        </button>
+      </div>
+    </nx-filter-panel>
+    <nx-data-table
+      class="activity-audit-table"
+      label="活動稽核列表"
+      [busy]="loading()"
+      [columns]="columns"
+      preferenceKey="admin-audit"
+    >
+      <div table-toolbar class="ui-table-toolbar">
+        <h2>
+          活動紀錄 <span class="ui-count-label">本頁 {{ rows().length }} 筆</span>
+        </h2>
+        <div class="page-actions">
+          <span class="form-note">Asia/Taipei · 新到舊</span>
+          <button class="quiet-button" [disabled]="!loadedCount() || loading()" (click)="export()">
+            <nx-icon name="download" />匯出已載入 {{ loadedCount() }} 筆
+          </button>
+        </div>
+      </div>
+      <table>
+        <colgroup>
+          <col nxTableColumn="time" class="audit-time-column" />
+          <col nxTableColumn="actor" />
+          <col nxTableColumn="action" />
+          <col nxTableColumn="resource" />
+          <col nxTableColumn="result" class="audit-result-column" />
+          <col class="admin-row-action-column" />
+        </colgroup>
+        <thead>
+          <tr>
+            <th scope="col" nxTableColumn="time">時間</th>
+            <th scope="col" nxTableColumn="actor">操作者</th>
+            <th scope="col" nxTableColumn="action">動作</th>
+            <th scope="col" nxTableColumn="resource">資源</th>
+            <th scope="col" nxTableColumn="result">結果</th>
+            <th scope="col"><span class="sr-only">詳情</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of presentedRows(); track row.entry.id) {
+            <tr
+              nxTableRow
+              class="audit-row"
+              [class.is-selected]="selectedId() === row.entry.id"
+              (rowActivate)="openDetails(row.entry.id)"
+            >
+              <td nxTableColumn="time">
+                <time>{{ row.date }}</time
+                ><small>#{{ row.entry.id }}</small>
+              </td>
+              <td nxTableColumn="actor">
+                <span class="ui-truncate" [title]="row.entry.actor">{{ row.entry.actor }}</span>
+                @if (row.entry.actor === '未驗證' && row.context.length) {
+                  <small class="ui-truncate">{{ row.context[0].value }}</small>
+                }
+                @if (row.entry.actingAs) {
+                  <small class="ui-truncate" [title]="row.entry.actingAs"
+                    >測試：{{ row.entry.actingAs }}</small
+                  >
+                }
+              </td>
+              <td nxTableColumn="action">
+                <strong class="ui-truncate" [title]="row.action">{{ row.action }}</strong
+                ><small class="ui-truncate" [title]="row.entry.action"
+                  >{{ row.category }} · {{ row.entry.action }}</small
+                >
+              </td>
+              <td nxTableColumn="resource">
+                <span class="ui-truncate" [title]="row.resource || row.entry.resourceId || ''">{{
+                  row.resource || row.entry.resourceId || '—'
+                }}</span>
+              </td>
+              <td nxTableColumn="result">
+                <nx-status-badge [tone]="row.rejected ? 'warning' : 'neutral'">{{
+                  row.result
+                }}</nx-status-badge>
+              </td>
+              <td>
+                <button
+                  class="icon-button"
+                  data-row-action
+                  [attr.aria-label]="'檢視稽核：#' + row.entry.id"
+                  [attr.aria-controls]="drawer().id"
+                  [attr.aria-expanded]="selectedId() === row.entry.id"
+                  (click)="openDetails(row.entry.id)"
+                >
+                  <nx-icon name="chevron" />
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (!rows().length) {
+        <nx-empty-state table-state
+          ><p>
+            {{
+              loading()
+                ? '正在取得稽核紀錄…'
+                : error()
+                  ? '無法取得稽核紀錄，請重新整理。'
+                  : '沒有符合條件的稽核紀錄。'
+            }}
+          </p></nx-empty-state
+        >
+      }
+      <div table-footer class="ui-table-footer">
+        <span>選取紀錄檢視前後差異與完整資訊</span>
+        <nx-table-pagination
+          [pageIndex]="pageIndex()"
+          [pageSize]="100"
+          [pageSizes]="[100]"
+          [count]="rows().length"
+          [hasNext]="hasNext()"
+          [busy]="loading() || !validDates()"
+          (pageChange)="changePage($event)"
+        />
+      </div>
+    </nx-data-table>
+    <nx-detail-drawer title="稽核詳情" (closed)="selectedId.set(null)">
+      <div drawer-actions class="page-actions">
+        <button
+          class="icon-button"
+          aria-label="上一筆稽核"
+          [disabled]="selectedIndex() <= 0"
+          (click)="adjacent(-1)"
+        >
+          <nx-icon name="left" />
+        </button>
+        <button
+          class="icon-button"
+          aria-label="下一筆稽核"
+          [disabled]="selectedIndex() < 0 || selectedIndex() >= rows().length - 1"
+          (click)="adjacent(1)"
+        >
+          <nx-icon name="chevron" />
+        </button>
+      </div>
+      @if (selected(); as row) {
+        <section aria-label="稽核紀錄資訊">
+          <h3 class="ui-section-heading">{{ row.action }}</h3>
+          <dl class="ui-description-list">
+            <div>
+              <dt>紀錄 ID</dt>
+              <dd>#{{ row.entry.id }}</dd>
+            </div>
+            <div>
+              <dt>時間（台北）</dt>
+              <dd>{{ row.date }}</dd>
+            </div>
+            <div>
+              <dt>操作者</dt>
+              <dd>{{ row.entry.actor }}</dd>
+            </div>
+            <div>
+              <dt>結果</dt>
+              <dd>
+                <nx-status-badge [tone]="row.rejected ? 'warning' : 'neutral'">{{
+                  row.result
+                }}</nx-status-badge>
+              </dd>
+            </div>
+            @if (row.entry.actingAs) {
+              <div class="ui-description-wide">
+                <dt>測試身分</dt>
+                <dd>{{ row.entry.actingAs }}</dd>
+              </div>
+            }
+            <div>
+              <dt>動作</dt>
+              <dd>{{ row.entry.action }}</dd>
+            </div>
+            <div>
+              <dt>分類</dt>
+              <dd>{{ row.category }}</dd>
+            </div>
+            @for (field of row.context; track field.label) {
+              <div>
+                <dt>{{ field.label }}</dt>
+                <dd>{{ field.value }}</dd>
+              </div>
+            }
+            <div>
+              <dt>資源識別碼</dt>
+              <dd>{{ row.resource || row.entry.resourceId || '—' }}</dd>
+            </div>
+            @if (row.entry.resourceId && row.resource) {
+              <div class="ui-description-wide">
+                <dt>資源 ID</dt>
+                <dd>{{ row.entry.resourceId }}</dd>
+              </div>
+            }
+          </dl>
+          @if (row.logs && session.has('logs.query')) {
+            <a routerLink="/admin/logs" [queryParams]="row.logs" class="secondary-button">
+              <nx-icon name="search" />查證相關日誌
+            </a>
+          }
+          @if (row.entry.traceId || row.entry.operationId || row.entry.issueCode) {
+            <h3 class="ui-section-heading">流程關聯</h3>
+            <dl class="ui-description-list">
+              @if (row.entry.traceId) {
+                <div class="ui-description-wide">
+                  <dt>Trace ID</dt>
+                  <dd>{{ row.entry.traceId }}</dd>
+                </div>
+              }
+              @if (row.entry.operationId) {
+                <div class="ui-description-wide">
+                  <dt>Operation ID</dt>
+                  <dd>{{ row.entry.operationId }}</dd>
+                </div>
+              }
+              @if (row.entry.issueCode) {
+                <div class="ui-description-wide">
+                  <dt>查證代碼</dt>
+                  <dd>{{ row.entry.issueCode }}</dd>
+                </div>
+              }
+            </dl>
+          }
+          @if (row.changes.length) {
+            <h3 class="ui-section-heading">前後差異</h3>
+            <dl class="audit-changes">
+              @for (change of row.changes; track change.key) {
+                <div>
+                  <dt>{{ change.label }}</dt>
+                  <dd [class.audit-feature-change]="change.featureBefore !== null">
+                    @if (change.featureBefore && change.featureAfter) {
+                      <div>
+                        <small>異動前</small
+                        ><nx-feature-summary [features]="change.featureBefore" />
+                      </div>
+                      <div>
+                        <small>異動後</small><nx-feature-summary [features]="change.featureAfter" />
+                      </div>
+                    } @else {
+                      <span class="audit-before">{{ change.before }}</span
+                      ><nx-icon name="chevron" /><strong>{{ change.after }}</strong>
+                    }
+                  </dd>
+                </div>
+              }
+            </dl>
+          }
+          @if (row.entry.detailsJson) {
+            <details nxDisclosure class="audit-record-details">
+              <summary>完整紀錄資訊<nx-icon name="chevron" /></summary>
+              <pre class="audit-detail-text">{{ row.details }}</pre>
+            </details>
+          }
+          <p class="form-note">
+            稽核記錄行為與結果；系統日誌查詢錯誤、耗時與技術流程。歷史紀錄若未保存關聯識別碼，請用事件時間查證。
+          </p>
+        </section>
+      }
+    </nx-detail-drawer>
+  }
+</nx-feature-page>

@@ -1,0 +1,33 @@
+.action-menu-panel {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: var(--p-space-1);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-lg);
+  box-shadow: var(--shadow-floating);
+  overflow: auto;
+  font-size: var(--text-ui);
+  &:popover-open {
+    display: grid;
+    animation: panel-arrive var(--motion) var(--ease);
+  }
+  button {
+    display: flex;
+    align-items: center;
+    gap: var(--p-space-2);
+    text-align: left;
+    min-height: var(--button-target);
+    padding: var(--control-padding-block) var(--control-padding-inline);
+    border-radius: var(--p-radius-md);
+  }
+  button:hover,
+  button:focus-visible {
+    background: var(--hover);
+  }
+}
+.danger-text {
+  color: var(--error);
+}

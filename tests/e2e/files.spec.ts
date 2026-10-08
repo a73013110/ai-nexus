@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { KnowledgeFixture } from "./knowledge-fixture";
 import {
+  expectCompactWorkspace,
   chooseSelect,
   expectViewportContained,
   settleEntrance,
@@ -76,13 +77,31 @@ test("library files can be searched, previewed, reused in chat and added to know
     .fill("");
   await expect(page.locator(".file-card")).toHaveCount(2);
   await settleEntrance(page);
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/file-library-desktop.png",
   });
-  await page.getByRole("button", { name: "清單排列" }).click();
+  const grid = page.getByRole("button", { name: "網格排列", exact: true });
+  const list = page.getByRole("button", { name: "清單排列", exact: true });
+  await grid.focus();
+  await grid.press("ArrowRight");
+  await expect(list).toBeFocused();
+  await expect(list).toHaveAttribute("aria-pressed", "true");
   await expect(page.locator(".file-browser")).toHaveClass(/file-browser-list/);
   await page.setViewportSize({ width: 375, height: 812 });
   await expectViewportContained(page);
+  const sourceLabel = page
+    .getByRole("combobox", { name: "檔案來源", exact: true })
+    .locator("span");
+  await expect(sourceLabel).toHaveText("全部來源");
+  await expect
+    .poll(() =>
+      sourceLabel.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth,
+      ),
+    )
+    .toBe(true);
+  await expectCompactWorkspace(page);
   await page.screenshot({
     path: "artifacts/screenshots/file-library-mobile.png",
   });

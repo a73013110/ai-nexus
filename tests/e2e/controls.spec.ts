@@ -75,7 +75,9 @@ test("model list failures show a retry path and recover without losing the draft
   const model = page.getByRole("combobox", { name: "選擇模型" });
   await expect(model).toContainText("模型清單載入失敗");
   await expect(model).toBeDisabled();
-  await expect(page.getByRole("alert")).toContainText("操作未完成，請聯絡管理員。查證代碼：NX-");
+  await expect(page.getByRole("alert")).toContainText(
+    "操作未完成，請聯絡管理員。查證代碼：NX-",
+  );
   await expect(page.getByRole("alert")).not.toContainText("fixture-private");
   const draft = page.getByRole("textbox", { name: "傳送訊息" });
   await draft.fill("恢復後保留的草稿");
@@ -177,7 +179,7 @@ test("compact conversation uses readable text and preserves over 70 percent of d
   const viewport = await page.locator(".conversation-viewport").boundingBox();
   expect(viewport!.height).toBeGreaterThanOrEqual(768 * 0.7);
   await expect(page.locator(".markdown")).toHaveCSS("font-size", "15px");
-  await expect(page.locator(".topbar")).toHaveCSS("height", "52px");
+  await expect(page.locator(".topbar")).toHaveCSS("height", "48px");
   await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/compact-desktop-chat.png",

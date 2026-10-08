@@ -1,0 +1,125 @@
+<section nxCard class="monitor-panel" aria-labelledby="sessions-title">
+  <header class="ui-section-header">
+    <div>
+      <span class="panel-eyebrow">CONNECTED SESSIONS</span>
+      <h2 id="sessions-title">
+        在線工作階段
+        <nx-count-badge
+          [count]="filtered().length"
+          [showZero]="true"
+          [label]="filtered().length + ' 個在線工作階段'"
+        />
+      </h2>
+    </div>
+    <span class="form-note">{{ timeoutSeconds() }} 秒未收到心跳即離線</span>
+  </header>
+  <div class="ui-filter-grid">
+    <nx-search-field
+      label="搜尋在線使用者、IP 或裝置"
+      placeholder="搜尋使用者、IP 或裝置…"
+      [value]="query()"
+      (valueChange)="setFilter('query', $event)"
+    />
+    <nx-select
+      label="在線狀態"
+      [options]="states"
+      [value]="state()"
+      (valueChange)="setFilter('state', $event)"
+    /><nx-select
+      label="目前功能"
+      [options]="featureOptions()"
+      [value]="feature()"
+      (valueChange)="setFilter('feature', $event)"
+    />
+  </div>
+  <div class="ui-table-scroll">
+    <table class="monitor-table">
+      <caption class="sr-only">
+        可篩選與排序的在線瀏覽器工作階段
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col" [attr.aria-sort]="sort() === 'name' ? 'ascending' : 'none'">
+            <button type="button" class="ui-table-sort" (click)="sort.set('name')">
+              使用者 <nx-icon name="chevron" />
+            </button>
+          </th>
+          <th scope="col">裝置／連線位址</th>
+          <th scope="col">目前功能</th>
+          <th scope="col">狀態</th>
+          <th scope="col" [attr.aria-sort]="sort() === 'requests' ? 'descending' : 'none'">
+            <button type="button" class="ui-table-sort" (click)="sort.set('requests')">
+              請求數 <nx-icon name="chevron" />
+            </button>
+          </th>
+          <th scope="col">最近操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (s of visible(); track s.id) {
+          <tr>
+            <td>
+              <button type="button" class="ui-table-link" (click)="showSession(s)">
+                <strong>{{ s.displayName }}</strong
+                ><small>{{ s.account }}{{ s.testingIdentity ? ' · 測試身分' : '' }}</small>
+              </button>
+            </td>
+            <td>
+              <span>{{ s.device }} · {{ s.browser }}</span
+              ><small class="ui-table-code">{{ s.address }}</small>
+            </td>
+            <td>{{ featureName(s.feature) }}</td>
+            <td>
+              <nx-status-badge [tone]="s.state === 'active' ? 'success' : 'neutral'">{{
+                stateName(s.state)
+              }}</nx-status-badge>
+            </td>
+            <td class="ui-table-numeric">
+              {{ s.requests }}
+              @if (s.errors) {
+                <small class="ui-error-text">{{ s.errors }} 錯誤</small>
+              }
+            </td>
+            <td>
+              <span>{{ s.lastAction || '等待操作' }}</span
+              ><small>{{ s.lastActionAt ? time(s.lastActionAt) : '—' }}</small>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="ui-table-state">
+              {{
+                query() || state() !== 'all' || feature() !== 'all'
+                  ? '沒有符合篩選的連線'
+                  : '目前沒有在線工作階段'
+              }}
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+  <footer class="ui-table-footer">
+    <span>{{ filtered().length }} 個工作階段 · 每頁 10 筆</span>
+    <div class="ui-table-pagination">
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="上一頁連線"
+        [disabled]="currentPage() === 0"
+        (click)="page.set(currentPage() - 1)"
+      >
+        <nx-icon name="back" /></button
+      ><span>{{ currentPage() + 1 }} / {{ lastPage() + 1 }}</span
+      ><button
+        type="button"
+        class="icon-button"
+        aria-label="下一頁連線"
+        [disabled]="currentPage() >= lastPage()"
+        (click)="page.set(currentPage() + 1)"
+      >
+        <nx-icon name="chevron" />
+      </button>
+    </div>
+  </footer>
+</section>

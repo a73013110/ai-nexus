@@ -7,6 +7,67 @@ import {
 } from "./fixtures";
 import { openSettings } from "./fixtures";
 
+test("對話開場沿用共用卡片與操作密度，手機及深色保留閱讀設定", async ({
+  page,
+}) => {
+  const fixture = new ApiFixture();
+  fixture.settings.readingFontSize = 20;
+  fixture.preferences.theme = "system";
+  await fixture.attach(page);
+  await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  await page.goto("/chat");
+  const start = page.locator(".chat-start");
+  const suggestions = page.getByRole("region", {
+    name: "對話起點",
+    exact: true,
+  });
+  await expect(start).toHaveCSS("font-size", "13px");
+  await expect(suggestions).toHaveCSS("font-size", "13px");
+  await expect(page.locator("#composer")).toHaveCSS("font-size", "20px");
+  for (const viewport of [
+    { width: 1280, height: 768 },
+    { width: 375, height: 812 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await expect(start.getByRole("heading")).toHaveCSS("font-size", "24px");
+    expect((await start.boundingBox())!.height).toBeLessThan(
+      viewport.width === 375 ? 400 : 220,
+    );
+    const starters = await suggestions.boundingBox();
+    const composer = await page.locator(".composer").boundingBox();
+    expect(starters!.y).toBeGreaterThan(composer!.y + composer!.height);
+    const surface = (await page.locator(".chat-surface").boundingBox())!;
+    if (viewport.width > 640) {
+      expect(
+        Math.abs(
+          composer!.y + composer!.height / 2 - (surface.y + surface.height / 2),
+        ),
+      ).toBeLessThan(surface.height * 0.1);
+    } else {
+      expect(composer!.y + composer!.height / 2).toBeGreaterThan(
+        viewport.height * 0.35,
+      );
+    }
+    for (const button of await suggestions.locator("button.ui-card").all())
+      expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(
+        viewport.width === 375 ? 44 : 34,
+      );
+    await page.screenshot({
+      path: "artifacts/screenshots/chat-start-dark-" + viewport.width + ".png",
+      animations: "disabled",
+    });
+  }
+  await suggestions.getByRole("button", { name: /整理思緒/ }).click();
+  await expect(page.locator("#composer")).toBeFocused();
+  await expect(page.locator("#composer")).toHaveValue(/幫我整理/);
+  await page.emulateMedia({ colorScheme: "light" });
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
+  await page.screenshot({
+    path: "artifacts/screenshots/chat-start-mobile.png",
+    animations: "disabled",
+  });
+});
+
 test("blank desktop workspace, real forms, keyboard and Markdown copy", async ({
   page,
 }) => {
@@ -19,6 +80,26 @@ test("blank desktop workspace, real forms, keyboard and Markdown copy", async ({
   await expect(page.locator(".workbench")).toHaveCSS("display", "grid");
   await expect(page.locator(".sidebar")).toHaveCSS("width", "240px");
   await expect(page.getByRole("button", { name: "送出訊息" })).toBeDisabled();
+  const start = page.locator(".chat-start");
+  await expect(start).toHaveCSS("font-size", "13px");
+  await expect(start.getByRole("heading")).toHaveCSS("font-size", "24px");
+  const suggestions = page.getByRole("region", {
+    name: "對話起點",
+    exact: true,
+  });
+  await expect(suggestions.locator("button.ui-card")).toHaveCount(3);
+  const layout = await suggestions.evaluate(
+    (el) => getComputedStyle(el).gridTemplateColumns.split(" ").length,
+  );
+  expect(layout).toBe(3);
+  expect((await start.boundingBox())!.height).toBeLessThan(220);
+  const composer = (await page.locator(".composer").boundingBox())!,
+    surface = (await page.locator(".chat-surface").boundingBox())!;
+  expect(
+    Math.abs(
+      composer.y + composer.height / 2 - (surface.y + surface.height / 2),
+    ),
+  ).toBeLessThan(surface.height * 0.1);
   await settleEntrance(page);
   await page.screenshot({
     path: "artifacts/screenshots/desktop-empty.png",
@@ -265,7 +346,9 @@ test("failed preference save retains editable changes and can be retried", async
   fixture.failPreferencesOnce = true;
   await chooseSelect(page, "主題", "淺色");
   await page.getByRole("button", { name: "儲存變更" }).click();
-  await expect(page.getByRole("alert")).toContainText("操作未完成，請聯絡管理員。查證代碼：NX-");
+  await expect(page.getByRole("alert")).toContainText(
+    "操作未完成，請聯絡管理員。查證代碼：NX-",
+  );
   await expect(page.getByRole("alert")).not.toContainText("fixture-private");
   expect(fixture.preferences.theme).toBe("dark");
   await expect(

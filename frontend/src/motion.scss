@@ -138,24 +138,9 @@
   animation: panel-arrive var(--motion-panel) var(--ease);
 }
 .conversation-menu[open] .floating-menu,
-.context-details[open] .context-panel,
-.empty-enter .suggestions > button {
+.context-details[open] .context-panel {
   animation: suggestion-arrive var(--motion-enter) var(--ease) both;
   animation-delay: calc(var(--item-index) * var(--motion-stagger));
-}
-.empty-enter .emblem-link {
-  stroke-dasharray: 150;
-  stroke-dashoffset: 150;
-  animation: emblem-draw var(--motion-draw) var(--ease) both;
-}
-.empty-enter .emblem-point {
-  transform-origin: 40px 40px;
-  animation: point-arrive var(--motion-draw) var(--ease) both;
-}
-.suggestions > button {
-  transition:
-    border-color var(--motion),
-    background-color var(--motion);
 }
 .send-button:not(:disabled):active {
   transform: scale(0.94);
@@ -194,22 +179,6 @@
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-@keyframes emblem-draw {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-@keyframes point-arrive {
-  0%,
-  50% {
-    opacity: 0;
-    transform: scale(0.5);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
   }
 }
 .stream-cursor {

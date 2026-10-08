@@ -1,5 +1,7 @@
 # AI Nexus：IIS 發版與驗證
 
+即時監控須套用 `20261008072048_RuntimeMonitoring`，只新增功能與管理群組 grant。依原流程先停止舊 host 再升級；啟動後由管理員確認 `/admin/monitoring` 的 SSE、工作階段心跳與 SQL 呼叫。每個 IIS app 保持單 worker，監控呈現此程序的資料；範圍與設定見 [監控](../../docs/MONITORING.md)。
+
 此文件對應 `D:\CoreProject\AiNexus\app`、`config`、`keys`、`data/attachments`、`data/diagnostics` 的配置。正式環境使用 **Production**，`config/appsettings.Production.json` 的 `Database.TrustServerCertificate=true` 已可使用自簽 SQL 憑證，連線保持加密；不需要 Development 或額外放行參數。
 
 本版需套用 `20261007040053_SystemDiagnostics`，保留 app 外的診斷 journal，不可與 `logs/stdout` 混用。先建立 diagnostics 目錄及 app pool Modify ACL，按組織政策確認30天診斷／14天已補送檔案／365天稽核預設。Windows emergency source 註冊、SQL離線補送、查證代碼驗收與原生日誌查證見 [DIAGNOSTICS](../../docs/DIAGNOSTICS.md)。此日誌機制不改變目前單 worker 的聊天部署限制。

@@ -1,0 +1,217 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.topology {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--p-radius-lg);
+  background:
+    radial-gradient(
+      ellipse at center,
+      color-mix(in srgb, var(--signal) 8%, transparent),
+      transparent 65%
+    ),
+    var(--surface-subtle);
+}
+.topology-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  padding: 1.1rem 1.25rem 0;
+  text-align: center;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  letter-spacing: 0.04em;
+}
+.topology-stage {
+  position: relative;
+  height: 27rem;
+  background-image: radial-gradient(var(--line) 0.7px, transparent 0.7px);
+  background-size: 20px 20px;
+}
+.topology-wires {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.wire {
+  stroke: var(--line);
+  stroke-width: 1.5;
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+.wire-live {
+  stroke: var(--signal);
+  stroke-dasharray: 5 10;
+  animation: traffic-flow 2.4s linear infinite;
+}
+.wire-client.wire-live {
+  opacity: 0.6;
+  animation-duration: 5s;
+}
+.wire-danger {
+  stroke: var(--danger);
+  stroke-dasharray: 3 6;
+}
+.topology-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: 28%;
+  text-align: center;
+}
+.core-mark {
+  display: grid;
+  place-items: center;
+  width: 5rem;
+  height: 5rem;
+  border: 1px solid var(--signal);
+  border-radius: 24px;
+  color: var(--signal);
+  background: var(--surface);
+  box-shadow: 0 0 45px color-mix(in srgb, var(--signal) 12%, transparent);
+}
+.core-mark nx-icon {
+  --icon-size: 2rem;
+}
+.core-orbit {
+  position: absolute;
+  top: -1.5rem;
+  width: 8rem;
+  height: 8rem;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--signal) 18%, transparent);
+  animation: presence-pulse 4s ease-in-out infinite;
+  pointer-events: none;
+}
+.topology-core strong {
+  font-size: 1.05rem;
+  letter-spacing: 0.14em;
+}
+.topology-core > span:last-child {
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.client-nodes,
+.dependency-nodes {
+  position: absolute;
+  inset: 0 auto 0 2%;
+  width: 22%;
+}
+.dependency-nodes {
+  left: auto;
+  right: 2%;
+}
+.topology-node {
+  position: absolute;
+  width: 100%;
+  transform: translateY(-50%);
+}
+.topology-empty {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  color: var(--secondary);
+}
+.topology-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 1.25rem;
+  padding: 0.75rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.75rem;
+  color: var(--secondary);
+}
+.topology-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.legend-presence,
+.legend-call {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--signal);
+}
+.legend-call {
+  width: 18px;
+  height: 0;
+  border-radius: 0;
+  border-top: 2px dashed var(--signal);
+  background: transparent;
+}
+.motion-paused .wire,
+.motion-paused .core-orbit {
+  animation: none;
+}
+@keyframes traffic-flow {
+  to {
+    stroke-dashoffset: -60;
+  }
+}
+@keyframes presence-pulse {
+  50% {
+    opacity: 0.4;
+    transform: scale(1.06);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wire,
+  .core-orbit {
+    animation: none;
+  }
+}
+@media (max-width: 767px) {
+  .topology-columns {
+    display: none;
+  }
+  .topology-stage {
+    height: auto;
+    display: grid;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  .topology-wires,
+  .core-orbit {
+    display: none;
+  }
+  .topology-core {
+    position: static;
+    transform: none;
+    width: 100%;
+    padding: 0.75rem;
+    order: -1;
+  }
+  .core-mark {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 16px;
+  }
+  .client-nodes,
+  .dependency-nodes {
+    position: static;
+    width: 100%;
+    display: grid;
+    gap: 0.5rem;
+  }
+  .topology-node,
+  .topology-empty {
+    position: static;
+    transform: none;
+    min-height: 3.5rem;
+  }
+}

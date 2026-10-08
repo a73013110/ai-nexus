@@ -6,6 +6,7 @@ import {
   input,
   output,
   signal,
+  afterRenderEffect,
 } from '@angular/core';
 import { WorkspaceBrand } from './workspace-brand';
 import { WorkspaceNavigation } from './workspace-navigation';
@@ -23,10 +24,16 @@ let sequence = 0;
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'workspace-sidebar',
+    id: 'workspace-sidebar',
     '[class.is-compact]': 'layout.compact()',
+    '[class.is-open]': 'layout.overlay()',
+    '[attr.inert]': 'layout.narrow() && !layout.overlay() ? "" : null',
+    '[attr.aria-hidden]': 'layout.narrow() && !layout.overlay() ? "true" : null',
+    '[attr.role]': 'layout.overlay() ? "dialog" : null',
+    '[attr.aria-modal]': 'layout.overlay() ? "true" : null',
     '[class.has-expanded-navigation]':
       'collapsibleNavigation() && navigationExpanded() && !layout.compact()',
-    '(keydown)': 'key($event)',
+    '(document:keydown)': 'key($event)',
   },
   template: `@if (layout.overlay()) {
       <button class="workspace-backdrop" aria-label="收合側欄" (click)="collapse()"></button>
@@ -52,9 +59,9 @@ let sequence = 0;
         <button
           class="icon-button sidebar-toggle"
           type="button"
-          [attr.aria-expanded]="!layout.compact()"
-          [attr.aria-label]="layout.compact() ? '展開側欄' : '收合側欄'"
-          [title]="layout.compact() ? '展開側欄' : '收合側欄'"
+          [attr.aria-expanded]="layout.expanded()"
+          [attr.aria-label]="layout.expanded() ? '收合側欄' : '展開側欄'"
+          [title]="layout.expanded() ? '收合側欄' : '展開側欄'"
           (click)="layout.toggle()"
         >
           <nx-icon name="sidebar" />
@@ -73,7 +80,7 @@ let sequence = 0;
       (activated)="layout.closeMobile(); activated.emit()"
     />
     <div
-      class="workspace-sidebar-content"
+      class="workspace-sidebar-content ui-density-compact"
       [hidden]="collapsibleNavigation() && navigationExpanded() && !layout.compact()"
     >
       <ng-content />
@@ -88,12 +95,24 @@ export class WorkspaceSidebar {
   readonly navigationExpanded = signal(false);
   readonly notificationStatusId = `sidebar-notification-status-${++sequence}`;
   readonly activated = output<void>();
+  constructor() {
+    afterRenderEffect((onCleanup) => {
+      if (!this.layout.overlay()) return;
+      const frame = requestAnimationFrame(() => {
+        if (this.layout.overlay())
+          this.element.nativeElement
+            .querySelector<HTMLButtonElement>('.sidebar-toggle')
+            ?.focus({ preventScroll: true });
+      });
+      onCleanup(() => cancelAnimationFrame(frame));
+    });
+  }
   collapse() {
-    this.layout.compact.set(true);
-    this.element.nativeElement.querySelector<HTMLButtonElement>('.sidebar-toggle')?.focus();
+    this.layout.closeMobile();
   }
   key(event: KeyboardEvent) {
-    if (!this.layout.overlay() || document.querySelector('dialog[open]')) return;
+    if (event.defaultPrevented || !this.layout.overlay() || document.querySelector('dialog[open]'))
+      return;
     if (event.key === 'Escape') {
       event.preventDefault();
       this.collapse();
@@ -103,12 +122,19 @@ export class WorkspaceSidebar {
         ...this.element.nativeElement.querySelectorAll<HTMLElement>(
           'a[href], button:enabled, input, select, [tabindex="0"]',
         ),
-      ].filter((x) => x.getClientRects().length && !x.classList.contains('workspace-backdrop'));
+      ].filter(
+        (x) =>
+          x.tabIndex >= 0 &&
+          x.getClientRects().length &&
+          getComputedStyle(x).visibility === 'visible' &&
+          !x.classList.contains('workspace-backdrop'),
+      );
       const first = controls[0],
         last = controls.at(-1);
       if (
         (event.shiftKey && document.activeElement === first) ||
-        (!event.shiftKey && document.activeElement === last)
+        (!event.shiftKey && document.activeElement === last) ||
+        !controls.includes(document.activeElement as HTMLElement)
       ) {
         event.preventDefault();
         (event.shiftKey ? last : first)?.focus();

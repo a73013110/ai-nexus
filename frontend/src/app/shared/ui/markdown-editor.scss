@@ -1,0 +1,49 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-2);
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.markdown-editor-toolbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+  strong {
+    font-size: var(--text-label);
+    font-weight: 500;
+    margin-right: auto;
+  }
+}
+.markdown-editor-panel {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  background: var(--surface);
+}
+.markdown-editor-preview,
+textarea {
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: var(--p-space-4);
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+textarea {
+  border: 0;
+  resize: none;
+  font-size: var(--text-body);
+  line-height: 1.6;
+  font-family: var(--font-code);
+}

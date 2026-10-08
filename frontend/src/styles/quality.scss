@@ -2,12 +2,8 @@
   --dialog-width: 48rem;
 }
 .quality-case-form {
-  border: 1px solid var(--line);
-  padding: var(--p-space-4);
-  border-radius: var(--p-radius-lg);
   display: grid;
   gap: var(--p-space-3);
-  min-width: 0;
 }
 .quality-case-form legend {
   color: var(--secondary);
@@ -24,23 +20,23 @@
   gap: var(--p-space-3);
   color: var(--secondary);
   background: var(--sidebar);
-  padding: var(--p-space-4);
+  padding: var(--section-padding);
   border-radius: var(--p-radius-lg);
-  margin-block: var(--p-space-5);
+  margin-block: var(--section-gap);
   font-size: var(--text-label);
 }
 .quality-run-picker {
   display: grid;
   gap: var(--p-space-2);
   max-width: 30rem;
-  margin-block: var(--p-space-4);
+  margin-block: var(--section-gap);
 }
 .quality-progress {
   display: flex;
   align-items: center;
-  gap: var(--p-space-4);
+  gap: var(--section-gap);
   flex-wrap: wrap;
-  margin-block: var(--p-space-6);
+  margin-block: var(--section-gap);
 }
 .quality-progress nx-job-progress {
   flex: 1;
@@ -48,7 +44,7 @@
 }
 .evaluation-cases {
   display: grid;
-  gap: var(--p-space-8);
+  gap: var(--section-gap);
 }
 .evaluation-case {
   min-width: 0;
@@ -79,15 +75,10 @@
 .evaluation-comparison {
   display: grid;
   grid-template-columns: repeat(var(--variant-count, 1), minmax(0, 1fr));
-  gap: var(--p-space-4);
-  margin-top: var(--p-space-4);
+  gap: var(--section-gap);
+  margin-top: var(--section-gap);
 }
 .evaluation-answer {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
-  padding: var(--p-space-5);
-  min-width: 0;
   overflow-wrap: anywhere;
 }
 .evaluation-answer-heading {
@@ -107,7 +98,7 @@
   gap: var(--p-space-3);
   justify-content: space-between;
   border-top: 1px solid var(--line);
-  margin-top: var(--p-space-4);
+  margin-top: var(--section-gap);
   padding-top: var(--p-space-3);
   font-size: var(--text-label);
 }
@@ -122,6 +113,8 @@
   color: var(--secondary);
 }
 .plain-copy {
+  font-size: var(--text-body);
+  line-height: var(--line-reading);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -139,6 +132,6 @@
     grid-template-columns: 1fr;
   }
   .evaluation-answer {
-    padding: var(--p-space-4);
+    padding: var(--section-padding);
   }
 }

@@ -14,27 +14,21 @@
     </button>
   </div>
   @if (error()) {
-    <p role="alert" class="error-banner">{{ error() }}<nx-issue-code [message]="error()" /></p>
+    <nx-notice tone="danger" [message]="error()" />
   }
   @if (notice()) {
-    <p role="status" class="form-note">{{ notice() }}</p>
+    <nx-notice tone="success" [message]="notice()" />
   }
-  <nav class="page-tabs" aria-label="品質功能">
-    <button
-      [attr.aria-current]="tab() === 'retrieval' ? 'page' : null"
-      (click)="tab.set('retrieval')"
-    >
-      檢索評測
-    </button>
-    <button [attr.aria-current]="tab() === 'sets' ? 'page' : null" (click)="tab.set('sets')">
-      評測與比較</button
-    ><button
-      [attr.aria-current]="tab() === 'feedback' ? 'page' : null"
-      (click)="tab.set('feedback')"
-    >
-      我的回饋 <span>{{ feedback().length }}</span>
-    </button>
-  </nav>
+  <nx-view-switch
+    label="品質功能"
+    [options]="[
+      { value: 'retrieval', label: '檢索評測' },
+      { value: 'sets', label: '評測與比較' },
+      { value: 'feedback', label: '我的回饋 ' + feedback().length },
+    ]"
+    [value]="tab()"
+    (valueChange)="tab.set($event)"
+  />
   @if (loading()) {
     <p role="status">正在載入品質評測…</p>
   } @else if (tab() === 'retrieval') {
@@ -42,7 +36,7 @@
   } @else if (tab() === 'feedback') {
     <div class="platform-grid">
       @for (item of feedback(); track item.messageId) {
-        <a class="platform-card" [routerLink]="['/chat', item.conversationId]"
+        <a nxCard [routerLink]="['/chat', item.conversationId]"
           ><span class="panel-eyebrow"
             >{{ item.rating === 1 ? '有幫助' : '待改善' }} · {{ date(item.updatedAt) }}</span
           >
@@ -51,12 +45,12 @@
           <span class="card-link">回到對話<nx-icon name="chevron" /></span
         ></a>
       } @empty {
-        <div class="empty-state">
+        <nx-empty-state>
           <nx-icon name="check" />
           <h2>回饋從回答旁開始</h2>
           <p>在 AI 回覆下方按讚或標示待改善，就會保存在這裡。</p>
           <a routerLink="/chat" class="secondary-button">前往{{ session.featureName('chat') }}</a>
-        </div>
+        </nx-empty-state>
       }
     </div>
   } @else if (current(); as set) {
@@ -141,7 +135,7 @@
             </header>
             <div class="evaluation-comparison" [style.--variant-count]="view.variants.length">
               @for (variant of view.variants; track $index; let v = $index) {
-                <article class="evaluation-answer">
+                <article nxCard class="evaluation-answer">
                   <div class="evaluation-answer-heading">
                     <strong>{{ variant.label }}</strong>
                     @if (policy()?.showModelNames) {
@@ -171,7 +165,7 @@
                       ><span>{{ answer.outputTokens ?? '—' }} output tokens</span>
                     </div>
                     @if (answer.truncated) {
-                      <p class="error-banner">輸出達到模型上限，內容可能未完成。</p>
+                      <nx-notice tone="warning">輸出達到模型上限，內容可能未完成。</nx-notice>
                     }
                     <nx-markdown-view [content]="answer.output" />
                     <footer>
@@ -205,14 +199,14 @@
         }
       </div>
     } @else {
-      <div class="empty-state">
+      <nx-empty-state>
         <nx-icon name="lines" />
         <h2>建立第一份比較紀錄</h2>
         <p>每次可比较 1–3 個模型／指令方案，會依題數計入模型用量。</p>
         <button class="secondary-button" (click)="openRun()" [disabled]="busy()">
           設定比較方案
         </button>
-      </div>
+      </nx-empty-state>
     }
     <nx-resource-sharing
       [path]="'/quality/sets/' + set.resource.id + '/access'"
@@ -227,24 +221,24 @@
     />
     <div class="platform-grid">
       @for (set of visible(); track set.resource.id) {
-        <a class="platform-card" [routerLink]="['/quality', set.resource.id]"
+        <a nxCard [routerLink]="['/quality', set.resource.id]"
           ><span class="panel-eyebrow">{{ set.cases.length }} 題 · v{{ set.version }}</span>
           <h2>{{ set.resource.name }}</h2>
           <p>{{ set.description || '固定題庫，可比較不同模型與提示詞。' }}</p>
           <span class="card-link">檢視比較<nx-icon name="chevron" /></span
         ></a>
       } @empty {
-        <div class="empty-state">
+        <nx-empty-state>
           <nx-icon name="lines" />
           <h2>把好答案變成可重現的標準</h2>
           <p>建立少量代表題目、參考答案與檢核詞，再比較模型或指令。</p>
           <button class="secondary-button" (click)="openSet()">建立第一個評測集</button>
-        </div>
+        </nx-empty-state>
       }
     </div>
   }
 </nx-feature-page>
-<dialog #dialog class="platform-dialog quality-dialog" (cancel)="close($event)">
+<dialog nxCompactDialog #dialog class="platform-dialog quality-dialog" (cancel)="close($event)">
   <div class="dialog-scroll">
     <form (submit)="save($event)">
       <div class="dialog-heading">
@@ -279,18 +273,20 @@
         </button>
       </div>
       @if (error()) {
-        <p class="error-banner" role="alert">{{ error() }}<nx-issue-code [message]="error()" /></p>
+        <nx-notice tone="danger" [message]="error()" />
       }
       <fieldset class="platform-form" [disabled]="busy()">
         @if (form() === 'set') {
           <label
             >名稱<input
+              nxField
               required
               maxlength="120"
               [value]="name()"
               (input)="name.set($any($event.target).value)" /></label
           ><label
             >說明<textarea
+              nxField
               rows="2"
               maxlength="2000"
               [value]="description()"
@@ -298,10 +294,11 @@
             ></textarea>
           </label>
           @for (test of cases(); track $index; let i = $index) {
-            <fieldset class="quality-case-form">
+            <fieldset nxCard class="quality-case-form">
               <legend>第 {{ i + 1 }} 題</legend>
               <label
                 >問題<textarea
+                  nxField
                   required
                   rows="3"
                   maxlength="4000"
@@ -310,6 +307,7 @@
                 ></textarea></label
               ><label
                 >參考答案<textarea
+                  nxField
                   rows="2"
                   maxlength="4000"
                   [value]="test.reference"
@@ -319,10 +317,12 @@
               <div class="quality-field-pair">
                 <label
                   >必要詞（逗號分隔）<input
+                    nxField
                     [value]="test.requiredTerms?.join(', ') || ''"
                     (change)="updateCase(i, 'requiredTerms', $any($event.target).value)" /></label
                 ><label
                   >禁用詞（逗號分隔）<input
+                    nxField
                     [value]="test.forbiddenTerms?.join(', ') || ''"
                     (change)="updateCase(i, 'forbiddenTerms', $any($event.target).value)"
                 /></label>
@@ -347,10 +347,11 @@
           </button>
         } @else if (form() === 'run') {
           @for (item of variants(); track $index; let i = $index) {
-            <fieldset class="quality-case-form">
+            <fieldset nxCard class="quality-case-form">
               <legend>比較方案 {{ i + 1 }}</legend>
               <label
                 >方案名稱<input
+                  nxField
                   required
                   maxlength="80"
                   [value]="item.label"
@@ -370,6 +371,7 @@
               }
               <label
                 >比較指令<textarea
+                  nxField
                   rows="4"
                   maxlength="4000"
                   placeholder="例如：先寫結論，再列出待確認事項。"
@@ -407,6 +409,7 @@
               [disabled]="busy()" /></label
           ><label
             >判讀說明<textarea
+              nxField
               rows="4"
               maxlength="2000"
               [value]="reviewNote()"

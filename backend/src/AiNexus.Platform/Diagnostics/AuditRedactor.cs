@@ -10,7 +10,7 @@ public static class AuditRedactor
         "resourceKey", "before", "after", "failureCode", "kind", "recipients", "expiresAt", "includeAttachments", "users", "groupIds", "source", "count", "externalId", "revision",
         "testId", "administratorId", "userId", "reason", "caseIndex", "variantIndex", "score", "id", "version", "conversationId", "offset", "profiles", "status", "activatedAt", "retiredAt", "vectors",
         "allowedModelIds", "dailyTokenLimits", "storedAttachmentLimitBytes", "attachmentLimitBytes", "enabled", "account", "displayName", "deletedAt", "securityVersion", "authentication",
-        "roleIds", "name", "policy", "featureIds", "sortOrder", "adAccount", "adEnabled", "localAccount", "localEnabled", "hasLocalPassword", "from", "to", "issueCode", "traceId", "jobId", "runId", "permission",
+        "roleIds", "name", "policy", "featureIds", "sortOrder", "adAccount", "adEnabled", "localAccount", "localEnabled", "hasLocalPassword", "from", "to", "issueCode", "traceId", "jobId", "runId", "permission", "clientAddress",
         "fingerprint", "retentionDays", "auditRetentionDays", "fileRetentionDays", "queueCapacity", "importantQueueCapacity", "batchSize", "maxDiskBytes", "maxSqlRows", "minimumLevel", "frameworkMinimumLevel", "lowLevelSampleEvery", "otlpEnabled",
         "fileSizeBytes", "flushIntervalMs", "retrySeconds", "sqlTimeoutSeconds", "shutdownSeconds", "maxQueryDays", "maxExportDays", "maxExportRows", "serviceName", "cleanupBatchSize", "locationFingerprint"
     };

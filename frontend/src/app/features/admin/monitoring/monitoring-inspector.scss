@@ -1,0 +1,52 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.inspector-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.5rem 0 1.5rem;
+}
+.inspector-heading h3,
+.inspector-heading p {
+  margin: 0;
+}
+.inspector-heading p {
+  color: var(--secondary);
+  margin-top: 0.25rem;
+}
+.inspector-heading > nx-status-badge {
+  margin-left: auto;
+}
+.monitor-details {
+  margin: 0;
+}
+.monitor-details > div {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.monitor-details dt {
+  color: var(--secondary);
+}
+.monitor-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.session-key {
+  font-size: 0.75rem;
+}
+
+.monitor-caption,
+.monitor-empty {
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+}
+@media (max-width: 767px) {
+  .monitor-details > div {
+    grid-template-columns: 6rem minmax(0, 1fr);
+  }
+}

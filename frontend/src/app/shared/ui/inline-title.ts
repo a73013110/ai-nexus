@@ -8,16 +8,18 @@ import {
   viewChild,
 } from '@angular/core';
 import { Icon } from './icon';
+import { Field } from './field';
 
 let sequence = 0;
 @Component({
   selector: 'nx-inline-title',
-  imports: [Icon],
+  imports: [Icon, Field],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `@if (editing()) {
       <div class="inline-title-editor" #editor (focusout)="leave($event)">
         <label class="sr-only" [for]="id">目前對話名稱</label>
         <input
+          nxField
           #field
           [id]="id"
           [value]="draft()"
@@ -49,7 +51,7 @@ let sequence = 0;
         <span
           [id]="id + '-help'"
           class="inline-title-help"
-          [class.inline-error]="error()"
+          [class.ui-error-text]="error()"
           role="status"
           >{{ error() || (saving() ? '正在儲存…' : 'Enter 儲存 · Esc 取消') }}</span
         >

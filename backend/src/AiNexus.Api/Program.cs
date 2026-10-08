@@ -3,6 +3,7 @@ using AiNexus.Api.Commands;
 using AiNexus.Features;
 using AiNexus.Features.Configuration;
 using AiNexus.Features.Identity;
+using AiNexus.Features.Monitoring;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform;
 using AiNexus.Platform.Configuration;
@@ -19,7 +20,11 @@ try
     LocalDatabaseSettings.Apply(builder.Configuration);
     builder.AddPlatform();
     builder.AddFeatures();
-    builder.Services.AddOpenApi();
+    builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
+    {
+        document.Servers = [new() { Url = "/" }];
+        return Task.CompletedTask;
+    }));
     builder.ConfigureServerLimits();
     app = builder.Build();
     FeatureModules.VerifyStartup(app.Services);
@@ -32,6 +37,7 @@ catch (Exception ex)
 
 if (await HostCommands.TryRunAsync(app)) return;
 
+app.UseRuntimeTraffic();
 app.UseMiddleware<DiagnosticRequestMiddleware>();
 app.UseStatusCodePages();
 app.UseTransportSecurity();

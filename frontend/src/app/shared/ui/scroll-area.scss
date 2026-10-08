@@ -1,0 +1,84 @@
+:host {
+  --scroll-area-surface: var(--sidebar);
+  --scroll-area-edge-size: 1.5rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.scroll-area-viewport {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  scroll-padding-block: calc(var(--scroll-area-edge-size) + 4px);
+}
+.scroll-area-viewport::-webkit-scrollbar {
+  display: none;
+}
+.scroll-area-content {
+  display: flow-root;
+  min-width: 0;
+}
+.scroll-area-edge {
+  position: absolute;
+  inset-inline: 0;
+  height: var(--scroll-area-edge-size);
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: var(--secondary);
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--motion-fast) var(--ease);
+}
+.scroll-area-edge.is-available,
+.scroll-area-edge:focus {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+.scroll-area-edge.scroll-area-start {
+  top: 0;
+  background: linear-gradient(to bottom, var(--scroll-area-surface) 30%, transparent);
+}
+.scroll-area-edge.scroll-area-end {
+  bottom: 0;
+  background: linear-gradient(to top, var(--scroll-area-surface) 30%, transparent);
+}
+.scroll-area-edge nx-icon {
+  width: 16px;
+  height: 16px;
+  background: var(--scroll-area-surface);
+  border-radius: var(--p-radius-pill);
+}
+.scroll-area-edge:hover {
+  color: var(--ink);
+}
+.scroll-area-edge[aria-disabled='true'] nx-icon {
+  opacity: 0.45;
+}
+@media (pointer: coarse) {
+  :host {
+    --scroll-area-edge-size: 2.75rem;
+  }
+}
+@media (forced-colors: active) {
+  .scroll-area-viewport {
+    scrollbar-width: auto;
+    scrollbar-gutter: stable;
+  }
+  .scroll-area-viewport::-webkit-scrollbar {
+    display: revert;
+  }
+  .scroll-area-edge.scroll-area-start,
+  .scroll-area-edge.scroll-area-end {
+    background: Canvas;
+    color: ButtonText;
+    border: 1px solid ButtonText;
+  }
+}

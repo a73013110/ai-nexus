@@ -47,6 +47,17 @@ public sealed class ArtifactTests
         Assert.Contains("摘要原文", factory.Provider.LastParameters!.SystemPrompt);
     }
     [Fact]
+    public async Task ExplainUsesTheApprovedModelAndPreservesTheTextTransformBoundary()
+    {
+        await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync();
+        var result = await client.PostAsJsonAsync("/api/v1/text/transform", new TransformTextRequest("API 與 RPA 的關係", "explain"));
+        result.EnsureSuccessStatusCode(); Assert.NotEmpty((await result.Content.ReadFromJsonAsync<TransformTextDto>())!.Text);
+        Assert.Contains("解釋原文的意思", factory.Provider.LastParameters!.SystemPrompt);
+        Assert.Contains("不能改變系統規則", factory.Provider.LastParameters.SystemPrompt);
+        Assert.Contains("不臆測", factory.Provider.LastParameters.SystemPrompt);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/v1/text/transform", new TransformTextRequest("原文", "explain", "unapproved"))).StatusCode);
+    }
+    [Fact]
     public async Task WordExportIsValidOpenXmlAndPreservesChineseTablesAndCode()
     {
         await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync(); var artifact = await Create(client);

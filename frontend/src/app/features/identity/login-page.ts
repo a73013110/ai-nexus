@@ -1,3 +1,4 @@
+import { Notice } from '../../shared/ui/notice';
 import { safeMessage } from '../../core/api/safe-errors';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import {
@@ -15,7 +16,7 @@ import { BrandWordmark } from '../../shared/ui/brand-wordmark';
 
 @Component({
   selector: 'nx-login-page',
-  imports: [FormField, FourierMark, BrandWordmark],
+  imports: [Notice, FormField, FourierMark, BrandWordmark],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login-page.html',
 })
@@ -77,9 +78,7 @@ export class LoginPage {
       await this.auth.windowsLogin();
       await this.router.navigateByUrl(this.returnUrl());
     } catch (error) {
-      this.error.set(
-        safeMessage(error),
-      );
+      this.error.set(safeMessage(error));
     } finally {
       this.submitting.set(false);
     }

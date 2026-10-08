@@ -9,6 +9,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Icon } from './icon';
+import { CompactDialog } from './compact-dialog';
 
 export interface Command {
   id: string;
@@ -19,9 +20,10 @@ export interface Command {
 }
 @Component({
   selector: 'nx-command-palette',
-  imports: [Icon],
+  imports: [Icon, CompactDialog],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
+    nxCompactDialog
     #dialog
     class="command-dialog"
     aria-labelledby="command-title"
