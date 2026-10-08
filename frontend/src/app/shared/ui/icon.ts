@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  InjectionToken,
+  input,
+} from '@angular/core';
 import {
   type IconNode,
   ThumbsUp,
@@ -130,6 +137,8 @@ const icons: Record<string, IconNode> = {
   calendar: Calendar,
   columns: SlidersHorizontal,
 };
+/** Optional feature icons stay in their lazy feature bundle. */
+export const EXTRA_ICONS = new InjectionToken<Readonly<Record<string, IconNode>>>('Feature icons');
 @Component({
   selector: 'nx-icon',
   imports: [LucideDynamicIcon],
@@ -139,6 +148,10 @@ const icons: Record<string, IconNode> = {
     ':host{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;flex:none;line-height:0;vertical-align:middle}svg{display:block;width:100%;height:100%}',
 })
 export class Icon {
+  private readonly extra = inject(EXTRA_ICONS, { optional: true });
   readonly name = input.required<string>();
-  readonly icon = computed(() => ({ name: this.name(), node: icons[this.name()] ?? Info }));
+  readonly icon = computed(() => ({
+    name: this.name(),
+    node: this.extra?.[this.name()] ?? icons[this.name()] ?? Info,
+  }));
 }

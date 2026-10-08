@@ -155,13 +155,13 @@
           @if (selection(); as selected) {
             <div class="paragraph-toolbar" aria-label="選取段落操作">
               <span>已選取 {{ selected.text.length }} 字元</span>
-              @for (item of ['rewrite', 'summarize', 'translate']; track item) {
+              @for (item of textActions; track item.value) {
                 <button
                   class="quiet-button"
                   [disabled]="selected.text.length > 8000 || busy()"
-                  (click)="transform(item)"
+                  (click)="transform(item.value)"
                 >
-                  {{ item === 'rewrite' ? '改寫' : item === 'summarize' ? '摘要' : '翻譯' }}
+                  <nx-icon [name]="item.icon" />{{ item.label }}
                 </button>
               }
             </div>
@@ -198,7 +198,7 @@
           <span class="empty-symbol"><nx-icon name="document" /></span>
           <h2>從思考到成果</h2>
           <p>
-            在 AI 回答選取段落，可以改寫、摘要、翻譯或儲存成果。<br />每個版本都能獨立檢視與匯出。
+            在 AI 回答選取段落，可以改寫、摘要、解釋、翻譯或儲存成果。<br />每個版本都能獨立檢視與匯出。
           </p>
           <a routerLink="/chat" class="secondary-button">開始對話<nx-icon name="chevron" /></a>
         </nx-empty-state>

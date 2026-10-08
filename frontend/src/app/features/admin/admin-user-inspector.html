@@ -2,22 +2,16 @@
   nxCompactDialog
   #dialog
   class="platform-dialog admin-inspector"
-  [class.inspector-policy-view]="tab() !== 'conversations'"
   aria-labelledby="inspector-title"
   (close)="closed.emit()"
 >
-  <header class="dialog-heading">
-    <div>
+  <header class="dialog-heading inspector-heading">
+    <div class="inspector-identity">
       <span class="panel-eyebrow">使用者活動與政策 · 對話唯讀</span>
       <h2 id="inspector-title">{{ user()?.displayName }}</h2>
       <p>{{ user()?.account }}</p>
     </div>
 
-    <button class="icon-button" aria-label="關閉使用者活動" (click)="close()">
-      <nx-icon name="close" />
-    </button>
-  </header>
-  <div class="inspector-content">
     @if (overview(); as stats) {
       <div class="inspector-stats" aria-label="最近三十天 AI 用量">
         <div>
@@ -39,6 +33,11 @@
         </div>
       </div>
     }
+    <button class="icon-button inspector-close" aria-label="關閉使用者活動" (click)="close()">
+      <nx-icon name="close" />
+    </button>
+  </header>
+  <div class="inspector-content">
     <nx-view-switch
       class="inspector-tabs"
       label="使用者活動分類"

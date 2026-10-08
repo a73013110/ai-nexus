@@ -109,6 +109,23 @@
 .ui-view-switch-icons button[aria-pressed='true'] {
   background: var(--accent-soft);
 }
+.ui-view-switch-segment {
+  width: fit-content;
+  flex-wrap: wrap;
+  overflow: visible;
+  margin-bottom: 0;
+  padding: var(--p-space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  background: var(--surface-subtle);
+}
+.ui-view-switch-segment button {
+  border: 0;
+  border-radius: var(--p-radius-sm);
+}
+.ui-view-switch-segment button[aria-pressed='true'] {
+  background: var(--accent-soft);
+}
 .ui-filter-heading .ui-view-switch,
 .ui-filter-panel > .ui-view-switch {
   margin-bottom: 0;

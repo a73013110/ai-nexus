@@ -47,6 +47,7 @@ import { ConversationOutline } from './conversation-outline';
 import { KnowledgePicker } from '../knowledge/knowledge-picker';
 import { TextSelection, type SelectedText } from '../../shared/browser/text-selection';
 import { TextTools } from '../artifacts/text-tools';
+import { TextSelectionToolbar } from '../artifacts/text-selection-toolbar';
 import { ShareDialog } from '../sharing/share-dialog';
 import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
 import { FocusComposer } from './focus-composer';
@@ -82,6 +83,7 @@ import { LibraryPicker } from '../files/library-picker';
     KnowledgePicker,
     TextSelection,
     TextTools,
+    TextSelectionToolbar,
     ShareDialog,
     FocusComposer,
     ConversationSpendView,

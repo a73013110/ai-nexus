@@ -17,14 +17,15 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { CopyFeedback } from '../../shared/browser/copy-feedback';
 import { Icon } from '../../shared/ui/icon';
-import { Select } from '../../shared/ui/select';
+import { ViewSwitch } from '../../shared/ui/view-switch';
 import { InferenceSignal } from '../../shared/ui/inference-signal';
 import { ArtifactsApi } from './artifacts-api';
+import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
 
 @Component({
   selector: 'nx-text-tools',
-  imports: [CompactDialog, Field, IssueCode, Icon, Select, InferenceSignal],
-  providers: [ViewScope, CopyFeedback],
+  imports: [CompactDialog, Field, IssueCode, Icon, ViewSwitch, InferenceSignal],
+  providers: [ViewScope, CopyFeedback, TEXT_ACTION_ICON_PROVIDER],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
     nxCompactDialog
@@ -78,8 +79,9 @@ import { ArtifactsApi } from './artifacts-api';
       } @else {
         <p class="text-tool-source">{{ source() }}</p>
         @if (mode() === 'translate') {
-          <nx-select
+          <nx-view-switch
             label="翻譯語言"
+            appearance="segment"
             [value]="language()"
             [options]="languages"
             [disabled]="busy()"
@@ -155,11 +157,9 @@ export class TextTools {
   readonly busy = signal(false);
   readonly saving = signal(false);
   readonly error = signal('');
-  readonly labels: Record<string, string> = {
-    rewrite: '改寫段落',
-    summarize: '摘要段落',
-    translate: '翻譯段落',
-  };
+  readonly labels: Record<string, string> = Object.fromEntries(
+    TEXT_ACTIONS.map((action) => [action.value, `${action.label}段落`]),
+  );
   readonly languages = ['English', '繁體中文', '日本語', '简体中文'].map((value) => ({
     value,
     label:

@@ -30,6 +30,7 @@ import { downloadBlob } from '../../shared/browser/download';
 import { formatDate } from '../../shared/browser/format';
 import { ArtifactsApi } from './artifacts-api';
 import { TextTools } from './text-tools';
+import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
 import { ShareDialog } from '../sharing/share-dialog';
 
 @Component({
@@ -51,11 +52,12 @@ import { ShareDialog } from '../sharing/share-dialog';
     MarkdownView,
     ShareDialog,
   ],
-  providers: [ViewScope],
+  providers: [ViewScope, TEXT_ACTION_ICON_PROVIDER],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './artifacts-page.html',
 })
 export class ArtifactsPage {
+  readonly textActions = TEXT_ACTIONS;
   private readonly api = inject(ArtifactsApi);
   private readonly scope = inject(ViewScope);
   private readonly route = inject(ActivatedRoute);

@@ -1,0 +1,199 @@
+.platform-dialog.admin-inspector {
+  --dialog-width: 72rem;
+  height: min(860px, calc(100dvh - 48px));
+  max-width: calc(100vw - 32px);
+  overflow: hidden;
+}
+.admin-inspector[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.platform-dialog.admin-inspector .dialog-heading {
+  margin-bottom: 0;
+  flex: none;
+}
+.platform-dialog.admin-inspector .inspector-heading {
+  display: grid;
+  grid-template-columns: minmax(12rem, 0.9fr) minmax(0, 2fr) auto;
+  align-items: start;
+  gap: var(--p-space-4);
+  padding-bottom: var(--p-space-3);
+  border-bottom: 1px solid var(--line);
+}
+.inspector-identity {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.inspector-close {
+  grid-column: 3;
+  grid-row: 1;
+}
+.inspector-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overscroll-behavior: contain;
+}
+.inspector-content > .inspector-tabs,
+.inspector-content > .inspector-audit-note,
+.inspector-content > .inline-error {
+  flex: none;
+}
+.inspector-storage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 20px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+}
+.inspector-storage h3 {
+  margin: 0 0 8px;
+  font-size: var(--text-ui);
+}
+.inspector-storage-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px 12px;
+}
+.inspector-storage-editor label {
+  display: grid;
+  gap: 4px;
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.inspector-storage-editor p {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.inspector-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+  padding-left: var(--p-space-4);
+  border-left: 1px solid var(--line);
+}
+.inspector-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.inspector-stats span,
+.inspector-stats small {
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.inspector-stats strong {
+  font-size: var(--p-font-2xl);
+  line-height: 1.25;
+  letter-spacing: -0.035em;
+}
+.inspector-audit-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin: 0;
+  border-radius: var(--p-radius-sm);
+  font-size: var(--text-caption);
+  background: var(--canvas);
+  color: var(--secondary);
+}
+.inspector-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr);
+  gap: 20px;
+}
+.inspector-tabs {
+  flex: none;
+  margin: 0;
+}
+.inspector-settings {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--p-space-1) var(--p-space-2) var(--p-space-2) 0;
+}
+.inspector-model-settings {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+}
+.inspector-model-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.inspector-model-fields {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 8px 16px 0;
+  overscroll-behavior: contain;
+}
+.platform-dialog.admin-inspector .dialog-actions {
+  flex: none;
+  position: static;
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 760px) {
+  .platform-dialog.admin-inspector {
+    height: calc(100dvh - 24px);
+    padding: 16px;
+  }
+  .platform-dialog.admin-inspector .inspector-heading {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--p-space-3);
+  }
+  .inspector-close {
+    grid-column: 2;
+  }
+  .inspector-storage {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .inspector-storage-editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .inspector-body {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: auto;
+    flex: 1;
+  }
+  .inspector-stats {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    padding-left: 0;
+    border-left: 0;
+    gap: 8px;
+  }
+  .inspector-stats strong {
+    font-size: 22px;
+  }
+  .inspector-audit-note {
+    align-items: flex-start;
+  }
+}
+
+@media (max-height: 600px) {
+  .inspector-stats {
+    padding: 6px 0;
+  }
+  .inspector-stats small {
+    display: none;
+  }
+}

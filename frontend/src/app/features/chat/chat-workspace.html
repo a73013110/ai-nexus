@@ -408,24 +408,12 @@
   <nx-share-dialog kind="conversation" [sourceId]="selected.id" [name]="selected.title" />
 }
 @if (paragraph(); as selected) {
-  <div
-    class="paragraph-float"
-    role="toolbar"
-    aria-label="選取文字操作"
-    [style.left.px]="selected.left"
-    [style.top.px]="selected.top"
-    (pointerdown)="$event.preventDefault()"
-  >
-    <button (click)="paragraphAction('rewrite')">改寫</button
-    ><button (click)="paragraphAction('summarize')">摘要</button
-    ><button (click)="paragraphAction('translate')">翻譯</button>
-    @if (store.hasArtifactsAccess()) {
-      <button (click)="paragraphAction('save')">儲存成果</button>
-    }
-    <button class="icon-button" aria-label="關閉選取文字操作" (click)="paragraph.set(null)">
-      <nx-icon name="close" />
-    </button>
-  </div>
+  <nx-text-selection-toolbar
+    [selection]="selected"
+    [canSave]="store.hasArtifactsAccess()"
+    (selected)="paragraphAction($event)"
+    (dismissed)="paragraph.set(null)"
+  />
 }
 <input
   #importInput

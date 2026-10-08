@@ -3,6 +3,17 @@
   line-height: var(--line-reading);
   overflow-wrap: anywhere;
 }
+.markdown-diagram-slot {
+  display: block;
+  min-width: 0;
+  margin-block: var(--p-space-4);
+}
+.markdown-diagram-slot:empty {
+  min-height: 14rem;
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  background: var(--surface-subtle);
+}
 .markdown > :first-child {
   margin-top: 0;
 }

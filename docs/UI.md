@@ -10,16 +10,26 @@ Chat、功能頁及閱讀器共用 `WorkspaceSidebar`／`WorkspaceLayout`。Togg
 
 聊天 lazy-loaded，Signal Forms、zoneless 與 OnPush。IME composition／229 Enter 不送出，Shift+Enter 換行；草稿自動增高，讀取歷史時保持捲動位置並提供「回到最新」。手機 drawer 有關閉、Escape、inert 與焦點返回。
 
-串流增量透過共用 `FramePublisher` 合併為每 32ms 最多一次更新，terminal status 前立即 flush。`StreamingAnswer` 在畫面以約 30fps 平滑追上突發文字，只保留固定的兩個文字 span、避免半個 UTF-16 surrogate；完成／停止後改用伺服器完整 Markdown。等待狀態沿用軌道動態，準備回答採多層旋轉與中心脈衝，不顯示虛構思考內容。捲動跟隨每 frame 只排一次，使用者閱讀歷史時維持原行為。減少動態模式直接呈現最新文字。
+串流增量透過共用 `FramePublisher` 合併為每 32ms 最多一次更新，terminal status 前立即 flush。`StreamingAnswer` 以約 20fps 平滑追上突發文字，保留已完成 Markdown 區塊的 DOM，只重新解析尚在生成的尾段，避免半個 UTF-16 surrogate；完成／停止後改用伺服器完整 Markdown。等待狀態沿用軌道動態，準備回答採多層旋轉與中心脈衝，不顯示虛構思考內容。捲動跟隨每 frame 只排一次，使用者閱讀歷史時維持原行為。減少動態模式直接呈現最新文字。
 
 登入頁延續工作區 token：桌面雙欄、手機單欄；自有傅立葉標誌動畫可跳過／重播，遵循減少動態，表單全程可用。提交後清除個人密碼，返回位置只接受列入白名單的本站功能／閱讀器路徑；登入／登出重設 ChatStore。SQL、AD 服務密碼與 Google key 在後端。
 
 登入動畫先於中央描繪 N，完成後縮合至固定品牌錨點，最後依序顯示品牌文字、標題、說明與頁尾。畫布覆蓋品牌欄，不參與高度計算；常見桌面、375×667 與 320×568 手機保持一頁。低高度／大幅文字縮放仍允許必要的表單捲動以維持可操作性。
 
-導覽、帳號選單、圖示、搜尋與勾選都由共用元件提供。設定視窗在 app 根層延遲載入，保留當前路由與內容；正常開關維持閱讀位置，實際變更字級時允許瀏覽器依新高度重排。標題與關閉按鈕固定在視窗頂部，捲動長設定清單仍可直接關閉。直接造訪舊 `/settings` 連結會於聊天背景開啟設定，維持書籤相容。管理員的使用者活動採原生 modal，對話保留寬版閱讀區、政策表單依內容收縮。稽核沿用系統日誌的共用 DataTable 與 DetailDrawer，桌面保留列表操作，窄螢幕轉為 modal；表單、細邊框與密度沿用相同共用元件。
+導覽、帳號選單、圖示、搜尋與勾選都由共用元件提供。設定視窗在 app 根層延遲載入，保留當前路由與內容；正常開關維持閱讀位置，實際變更字級時允許瀏覽器依新高度重排。標題與關閉按鈕固定在視窗頂部，捲動長設定清單仍可直接關閉。直接造訪舊 `/settings` 連結會於聊天背景開啟設定，維持書籤相容。管理員的使用者活動採原生 modal，所有頁籤維持相同寬高，姓名與 Mail 右側整合使用統計，窄螢幕將統計移到身分下方；長內容在固定閱讀區內捲動。群組編輯表單仍依內容使用適合的尺寸。稽核沿用系統日誌的共用 DataTable 與 DetailDrawer，桌面保留列表操作，窄螢幕轉為 modal；表單、細邊框與密度沿用相同共用元件。
 
 對話輪次浮層以實際橫槓／輪次入口定位，限制在閱讀區及螢幕範圍；桌面在閱讀區右側中央，手機入口放在閱讀區右下，避開提問角色標籤。使用原生 popover top layer，Escape、點外部或離開預覽可關閉；動態文字以純文字摘要呈現。
 
-Markdown 禁 raw HTML、external images、危險 URL；解析後經 DOMPurify tag／attribute allowlist，才進入 Angular trusted HTML boundary，以保留 code-copy button。不得把其他 HTML 傳到該 boundary。串流時先顯示純文字，完成／取消後渲染 Markdown，避免每 token 重算。
+Markdown 禁 raw HTML、external images、危險 URL；解析後經 DOMPurify tag／attribute allowlist，才進入 Angular trusted HTML boundary，以保留 code-copy button。不得把其他 HTML 傳到該 boundary。串流保留已完成區塊，只重新解析尾段；不完整的 Mermaid fence 顯示原始碼，區塊完成後才繪圖，避免每 token 重算整份內容。
+
+`MarkdownView` 在安全解析後，將完成的 Mermaid fenced block 掛載到 renderer 自己產生的插槽；清單及引用中的圖表保留原有結構。對話、成果文件、使用者活動、分享與其他 Markdown 閱讀介面沿用同一元件。Mermaid 12.1.0、ELK 及圖表元件／樣式／專用圖示均延遲載入，沒有圖表便不下載引擎。使用 Neo 外觀、專案設計 token、系統字型與閱讀字級，支援深色、圖表／原始碼切換、縮放、滑鼠拖曳、鍵盤縮放、展開和 SVG 下載。長圖表在自身畫布捲動，避免撐寬頁面；錯誤保留原始碼，串流未完成的 fence 不提早繪圖。
+
+模型透過 classDef 指定的節點實色背景仍保留；共用 SVG 處理器依背景與站點文字色計算對比，達到 4.5:1 時沿用站點文字色，否則選擇對比足夠的黑色或白色標籤。此規則涵蓋 SVG 文字與下載結果，避免深色主題在淺色節點上顯示淡色文字；透明填色先與圖表底色合成。參考 [WCAG 文字對比](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)。
+
+引擎渲染序列化，防止共用設定與主題互相覆蓋；版本檢查及 destroy 清理阻擋遲到結果，Blob URL 在替換與離開時釋放。strict 模式停用 authored click callbacks，所有 init／frontmatter 設定由站點固定；禁止圖表圖片節點在量測時發出請求。SVG 再經獨立 DOMPurify SVG allowlist 與 CSS resource 清理，以 Blob 圖片顯示，沒有第二個 active SVG trusted HTML boundary。CSP 只為圖片加上 `blob:`，script／connect／font／worker 仍限制同源。技術與外觀參考 [Mermaid 12.1.0](https://github.com/mermaid-js/mermaid/releases/tag/mermaid%4012.1.0)、[官方 API](https://mermaid.js.org/config/usage.html) 與 [主題配置](https://mermaid.js.org/config/theming.html)。
+
+Mermaid 的 KaTeX npm 間接依賴透過有範圍的 override 固定為官方已修正的 0.18.2，處理套件依賴中的 [GHSA-238p-pmpm-9mq7](https://github.com/advisories/GHSA-238p-pmpm-9mq7)。此 override 不替換 Mermaid 發行檔內已打包的數學引擎；更新 Mermaid 時仍須檢查其發行檔與依賴，能由上游解決時移除 override。保留 Mermaid 12.1.0，不採用 npm audit 建議的舊版降級。時序圖的數學標籤使用瀏覽器原生 MathML，清理後只允許承載 MathML 的 foreignObject，沒有額外 CDN 或字型請求。
+
+文字選取操作由 `TEXT_ACTIONS` 共用改寫、摘要、解釋、翻譯的名稱與語意圖示；聊天浮動工具依實際尺寸定位，窄螢幕換列並限制於可視範圍，支援方向鍵與 Esc。成果編輯器使用相同操作及 `TextTools`。解釋走既有模型授權、用量、取消與文字轉換端點，以淺白文字說明詞義及關係，未知背景不得臆測。翻譯使用 `ViewSwitch` 的 segment 外觀直接選四個語言，不使用選單；共用 aria-pressed、方向鍵及觸控目標。
 
 CSP 禁 inline script；build 關閉 inlineCritical 避免 CSS loader 的 inline onload 被擋。瀏覽器測試同時檢查互動、實際 grid／字級／尺寸、隱藏模型與 motion。artifacts/screenshots 的聊天畫面使用明確的測試使用者；正式執行不填入測試身分或回答。

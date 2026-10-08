@@ -25,6 +25,7 @@ export interface ViewOption {
     role: 'group',
     '[attr.aria-label]': 'label()',
     '[class.ui-view-switch-icons]': 'iconOnly()',
+    '[class.ui-view-switch-segment]': "appearance() === 'segment'",
   },
   template: `@for (option of options(); track option.value) {
     <button
@@ -52,6 +53,7 @@ export class ViewSwitch {
   readonly value = input.required<string>();
   readonly disabled = input(false);
   readonly iconOnly = input(false);
+  readonly appearance = input<'line' | 'segment'>('line');
   readonly valueChange = output<string>();
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   key(event: KeyboardEvent, index: number) {

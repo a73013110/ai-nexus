@@ -149,6 +149,7 @@
   z-index: 30;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   padding: var(--p-space-1);
   border: 1px solid var(--line);
   border-radius: var(--p-radius-lg);
@@ -158,6 +159,10 @@
   max-width: calc(100vw - 24px);
   animation: panel-arrive var(--motion-fast) var(--ease);
   > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--p-space-2);
     min-height: var(--button-target);
     padding-inline: var(--p-space-3);
     font-size: var(--text-caption);

@@ -1402,6 +1402,17 @@ test("personal model budgets share the group editor and keep conversations spaci
     .click();
   const dialog = page.getByRole("dialog", { name: "王小明", exact: true });
   await expect(dialog.getByLabel("個人容量上限（GB）")).toHaveCount(0);
+  await expect(dialog.locator(".inspector-stats")).toBeVisible();
+  await settleEntrance(page);
+  const originalBounds = (await dialog.boundingBox())!;
+  const identity = (await dialog.locator(".inspector-identity").boundingBox())!;
+  const stats = (await dialog.locator(".inspector-stats").boundingBox())!;
+  expect(stats.x).toBeGreaterThan(identity.x + identity.width);
+  expect(Math.abs(stats.y - identity.y)).toBeLessThan(2);
+  await page.screenshot({
+    path: "artifacts/screenshots/admin-inspector-compact-header.png",
+    animations: "disabled",
+  });
   const content = await dialog.locator(".inspector-body").boundingBox();
   expect(content!.height).toBeGreaterThan(400);
   await dialog.getByRole("button", { name: "AI 模型", exact: true }).click();
@@ -1415,7 +1426,14 @@ test("personal model budgets share the group editor and keep conversations spaci
       .first()
       .boundingBox())!.height,
   ).toBeLessThan(110);
-  expect((await dialog.boundingBox())!.height).toBeLessThan(700);
+  expect(await dialog.boundingBox()).toEqual(originalBounds);
+  await dialog.getByRole("button", { name: "附件容量", exact: true }).click();
+  await expect(dialog.getByLabel("個人容量上限（GB）")).toBeVisible();
+  expect(await dialog.boundingBox()).toEqual(originalBounds);
+  await dialog.getByRole("button", { name: "對話", exact: true }).click();
+  await expect(dialog.locator(".inspector-body")).toBeVisible();
+  expect(await dialog.boundingBox()).toEqual(originalBounds);
+  await dialog.getByRole("button", { name: "AI 模型", exact: true }).click();
   await dialog
     .getByLabel("每日 token 上限：測試模型", { exact: true })
     .fill("150000");

@@ -15,6 +15,7 @@ import {
   output,
   signal,
   viewChild,
+  ViewEncapsulation,
 } from '@angular/core';
 import type {
   AdminUser,
@@ -59,6 +60,11 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-user-inspector.html',
+  styleUrls: [
+    '../../../styles/admin-inspector.scss',
+    '../../../styles/admin-inspector-reading.scss',
+  ],
+  encapsulation: ViewEncapsulation.None,
 })
 export class AdminUserInspector {
   readonly user = input<AdminUser | null>(null);

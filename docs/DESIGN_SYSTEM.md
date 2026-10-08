@@ -94,7 +94,9 @@
 | ActionMenu                                         | 動作 menu、上下移動跳過停用、Esc 返回 trigger；危險操作仍進入確認                                |
 | ConfirmDialog                                      | 原生 modal、清楚名稱及描述、初始焦點放取消、Esc／關閉取消，結束返回先前焦點                      |
 | InlineTitle                                        | 雙擊／F2／Enter 編輯，Enter／離開儲存、Esc 取消；版本 guard 與每個實例唯一 ID                    |
-| MarkdownView                                       | 共用文字／表格／程式碼渲染及複製；HTML／外部圖片與危險 URL 受限                                  |
+| MarkdownView                                       | 共用文字／表格／程式碼、Mermaid 圖表與複製；HTML／外部圖片與危險 URL 受限                        |
+| MermaidDiagram／DiagramCanvas                      | 延遲載入 Neo／ELK、站點 token／字型、原始碼、縮放、拖曳、展開及清理後的 SVG 下載                 |
+| ViewSwitch／TextTools                              | 線型／分段單選共用鍵盤及 aria-pressed；段落操作共用圖示、解釋與翻譯語言快捷選擇                  |
 | StreamingAnswer                                    | 沿用 MarkdownView 的安全邊界；保留完成段落 DOM、僅解析尾段，短暫緩衝突發文字，減少動態時直接更新 |
 | FileBrowser／LibraryPicker                         | 個人原檔卡片／列表、來源關聯、選取、伺服器分頁與可見的存取說明                                   |
 | DocumentViewer／ReaderDialog                       | 共用原圖／PDF／文字預覽；精簡工具列、桌面近全螢幕、手機全螢幕、Esc 與焦點返回                    |
