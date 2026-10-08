@@ -64,7 +64,6 @@ public sealed record AttachmentStorageDto(long UsedBytes, long LimitBytes, long 
 internal static class AttachmentErrors
 {
     public const string FileNameInvalidCode = "file_name_invalid";
-    public const string StorageLimitInvalidCode = "invalid_storage_limit";
 
     public static readonly Error NotFound = Error.NotFound("attachment_not_found");
     public static readonly Error InUse = Error.Conflict("attachment_in_use");
