@@ -32,6 +32,37 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
             (x.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == x.Id && m.UserId == actor && m.Role == "editor")), ct);
     public async Task<ResourceDto> DescribeAsync(Guid actor, WorkspaceResource value, CancellationToken ct) => new(value.Id, value.Name, value.Kind,
         await CanEditAsync(actor, value, ct), value.OwnerId == actor, value.UpdatedAt);
+
+    /// <summary>Every resource the actor reads by <see cref="QueryAsync"/>, or the error of <see cref="RequireAsync"/>; one query for the whole list.</summary>
+    public async Task RequireAllAsync(Guid actor, IReadOnlyCollection<Guid> ids, string kind, CancellationToken ct)
+    {
+        if (ids.Count == 0) return;
+        var readable = await (await QueryAsync(actor, kind, ct)).Where(x => ids.Contains(x.Id)).Select(x => x.Id).ToListAsync(ct);
+        if (ids.Any(id => !readable.Contains(id))) throw Missing();
+    }
+
+    /// <summary>The ids among <paramref name="values"/> that <see cref="CanEditAsync"/> allows, in at most two queries.</summary>
+    public async Task<IReadOnlySet<Guid>> EditableAsync(Guid actor, IReadOnlyCollection<WorkspaceResource> values, CancellationToken ct)
+    {
+        var editable = values.Where(x => x.OwnerId == actor).Select(x => x.Id).ToHashSet();
+        var rest = values.Where(x => !editable.Contains(x.Id)).ToArray();
+        if (rest.Length == 0) return editable;
+        var ids = rest.Select(x => x.Id).Distinct().ToArray();
+        var named = await db.Set<ResourceMember>().Where(x => ids.Contains(x.ResourceId) && x.UserId == actor && x.Role == "editor").Select(x => x.ResourceId).ToListAsync(ct);
+        var parents = rest.Where(x => x.ParentId != null).Select(x => x.ParentId!.Value).Distinct().ToArray();
+        var projects = parents.Length == 0 ? [] : await db.Set<WorkspaceResource>().Where(x => parents.Contains(x.Id) && x.Kind == "project" &&
+            (x.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == x.Id && m.UserId == actor && m.Role == "editor"))).Select(x => x.Id).ToListAsync(ct);
+        foreach (var value in rest)
+            if (named.Contains(value.Id) || value.ParentId is Guid parent && projects.Contains(parent)) editable.Add(value.Id);
+        return editable;
+    }
+
+    /// <summary><see cref="DescribeAsync"/> for a list, in the list's order.</summary>
+    public async Task<IReadOnlyList<ResourceDto>> DescribeAllAsync(Guid actor, IReadOnlyCollection<WorkspaceResource> values, CancellationToken ct)
+    {
+        var editable = await EditableAsync(actor, values, ct);
+        return values.Select(value => new ResourceDto(value.Id, value.Name, value.Kind, editable.Contains(value.Id), value.OwnerId == actor, value.UpdatedAt)).ToArray();
+    }
     public async Task<ResourceAclDto> AclAsync(Guid actor, Guid id, string kind, CancellationToken ct)
     {
         await OwnerAsync(actor, id, kind, ct);
@@ -77,5 +108,5 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
         if (value.Length is < 1 or > 120 || value.Any(char.IsControl)) throw new ApiException(400, "invalid_resource_name", "名稱需為 1 至 120 個字元。");
         return value;
     }
-    private static ApiException Missing() => new(404, "resource_not_found", "找不到此項目，或你已沒有存取權限。");
+    internal static ApiException Missing() => new(404, "resource_not_found", "找不到此項目，或你已沒有存取權限。");
 }

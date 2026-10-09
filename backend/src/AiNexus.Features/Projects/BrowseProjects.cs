@@ -21,8 +21,6 @@ internal static class BrowseProjects
         var resources = await (await access.QueryAsync(actor, Project.Kind, ct)).AsNoTracking().OrderByDescending(x => x.UpdatedAt).Take(100).ToListAsync(ct);
         var ids = resources.Select(x => x.Id).ToArray();
         var rows = await db.Set<Project>().AsNoTracking().Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
-        var result = new List<ProjectDto>();
-        foreach (var resource in resources) result.Add(rows[resource.Id].ToDto(await access.DescribeAsync(actor, resource, ct)));
-        return result;
+        return (await access.DescribeAllAsync(actor, resources, ct)).Select(resource => rows[resource.Id].ToDto(resource)).ToArray();
     }
 }
