@@ -1,8 +1,10 @@
 using System.Threading.RateLimiting;
+using AiNexus.Features.AccessControl;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Authentication.Negotiate;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Identity;
@@ -43,22 +45,11 @@ public sealed class IdentityModule : IFeatureModule
         services.AddScoped<CurrentUser>();
         services.AddScoped<IRequestUser>(sp => sp.GetRequiredService<CurrentUser>());
         services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<CurrentUser>());
+        services.AddScoped<IAuthorizationHandler, FeatureAuthorizationHandler>();
+        services.AddScoped<IActiveUsers, ActiveUsers>();
         services.AddSingleton<Argon2Passwords>();
         services.AddScoped<LocalAuthenticator>();
         services.AddScoped<AuthenticationAudit>();
-        services.AddScoped<UserAccountAdministration>();
-        services.AddScoped<UpdatePreferences>();
-        services.AddScoped<SaveUserSettings>();
-    }
-
-    /// <summary>Endpoint order is the published OpenAPI order.</summary>
-    public static void MapEndpoints(RouteGroupBuilder api)
-    {
-        GetMe.Map(api);
-        UpdatePreferences.Map(api);
-        GetUserSettings.Map(api);
-        SaveUserSettings.Map(api);
-        GetPersonalUsage.Map(api);
     }
 
     public static void MapPublicEndpoints(IEndpointRouteBuilder app) => app.MapNexusAuthentication();

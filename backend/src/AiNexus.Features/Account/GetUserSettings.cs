@@ -1,6 +1,7 @@
 using AiNexus.Features.Inference;
+using AiNexus.Features.Identity;
 
-namespace AiNexus.Features.Identity;
+namespace AiNexus.Features.Account;
 
 internal static class GetUserSettings
 {

@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Inference;
 
-/// <summary>Models, context previews and chat runs. Other modules use <see cref="ModelTaskService"/>, <see cref="ModelCatalog"/>, <see cref="ModelPresentation"/> and <see cref="UsageReports"/>; each HTTP use case has its own file.</summary>
+/// <summary>Models, context previews and chat runs. Other modules use <see cref="ModelTaskService"/>, <see cref="ModelCatalog"/> and <see cref="ModelPresentation"/>; each HTTP use case has its own file.</summary>
 public sealed class InferenceModule : IFeatureModule
 {
     /// <summary>Prompt-bearing requests scale with the configured input limit (never below the default JSON limit).</summary>
@@ -16,7 +16,7 @@ public sealed class InferenceModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddScoped<UsageReports>();
+        services.AddScoped<ModelPolicyService>();
         services.AddScoped<ModelTaskService>();
         services.AddScoped<RunService>();
         services.AddScoped<PreviewContext>();

@@ -1,5 +1,6 @@
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Attachments;
+using AiNexus.Features.Billing;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;

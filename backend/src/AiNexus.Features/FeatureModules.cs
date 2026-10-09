@@ -1,4 +1,5 @@
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.Account;
 using AiNexus.Features.Administration;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Attachments;
@@ -36,6 +37,7 @@ public static class FeatureModules
         Add<PersistenceModule>(builder);
         Add<AccessControlModule>(builder);
         Add<IdentityModule>(builder);
+        Add<AccountModule>(builder);
         Add<DiagnosticsModule>(builder);
         Add<BillingModule>(builder);
         Add<WebSearchModule>(builder);
@@ -66,7 +68,7 @@ public static class FeatureModules
         // Filters run in this order: resolve the user (authentication outcome), then validate the request.
         var api = app.MapGroup("/api/v1").RequireAuthorization().WithSafeErrors().WithCurrentUser().WithRequestValidation();
         Map<DiagnosticsModule>(api);
-        Map<IdentityModule>(api);
+        Map<AccountModule>(api);
         Map<ConversationsModule>(api);
         Map<InferenceModule>(api);
         Map<AttachmentsModule>(api);

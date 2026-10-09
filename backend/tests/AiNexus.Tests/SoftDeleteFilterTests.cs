@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using AiNexus.Features.Account;
 using AiNexus.Features.Administration;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Collaboration;

@@ -1,20 +1,20 @@
-using AiNexus.Platform.Time;
+using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Identity;
-using AiNexus.Features.Attachments;
+using AiNexus.Platform.Time;
 using Microsoft.EntityFrameworkCore;
 
-namespace AiNexus.Features.Inference;
+namespace AiNexus.Features.Billing;
 
 public sealed record UsageTotalsDto(int Requests, int Completed, int Failed, int Cancelled, long InputTokens, long OutputTokens, int RequestsWithUsage, long TotalDurationMilliseconds = 0, int TimedRequests = 0);
 public sealed record UsageKindDto(string Kind, int Requests, long InputTokens, long OutputTokens);
 public sealed record UsageModelDto(string ModelId, int Requests, int Failed, int RequestsWithUsage, long InputTokens, long OutputTokens, long DurationMilliseconds, string? ModelDisplayName = null);
 public sealed record OwnerUsageDto(Guid OwnerId, UsageTotalsDto Usage);
 public sealed record TokenDayDto(string Date, string ModelId, int Requests, int RequestsWithUsage, long InputTokens, long OutputTokens, string? ModelDisplayName = null);
+public sealed record UsageDayDto(DateOnly Date, int Requests, long InputTokens, long OutputTokens);
 public sealed record TokenUsageDto(DateTimeOffset From, DateTimeOffset Until, int TimezoneOffsetMinutes, IReadOnlyList<TokenDayDto> Daily);
 
 /// <summary>One accounting query for personal and authorized administrative reports. Callers own authorization.</summary>
-public sealed class UsageReports(NexusDbContext db, AttachmentQuota quota, ModelPresentation presentation)
+public sealed class UsageReports(NexusDbContext db, ModelPresentation presentation)
 {
     public static DateTimeOffset Since => UtcDay.Today.AddDays(-29);
     private sealed class Entry
@@ -46,23 +46,18 @@ public sealed class UsageReports(NexusDbContext db, AttachmentQuota quota, Model
         .Select(x => x with { ModelDisplayName = presentation.DisplayName(x.ModelId, administrator: true) }).ToArray();
     public async Task<IReadOnlyList<UsageKindDto>> PlatformKindsAsync(CancellationToken ct) => await Entries().GroupBy(x => x.Kind).OrderBy(g => g.Key)
         .Select(g => new UsageKindDto(g.Key, g.Count(), g.Sum(x => x.InputTokens ?? 0), g.Sum(x => x.OutputTokens ?? 0))).ToListAsync(ct);
-    public async Task<PersonalUsageDto> ForOwnerAsync(Guid owner, CancellationToken ct)
+    public async Task<IReadOnlyList<UsageDayDto>> DailyAsync(Guid owner, CancellationToken ct)
     {
         var query = Entries().Where(x => x.OwnerId == owner);
         // SQL aggregates dates; SQLite's test-only offset converter requires grouping its tiny fixtures in memory.
-        IReadOnlyList<UsageDayDto> daily;
-        if (db.Database.IsSqlServer()) daily = await query.GroupBy(x => x.CreatedAt.Date).OrderBy(g => g.Key)
+        if (db.Database.IsSqlServer()) return await query.GroupBy(x => x.CreatedAt.Date).OrderBy(g => g.Key)
             .Select(g => new UsageDayDto(DateOnly.FromDateTime(g.Key), g.Count(), g.Sum(x => x.InputTokens ?? 0), g.Sum(x => x.OutputTokens ?? 0))).ToListAsync(ct);
-        else daily = (await query.ToListAsync(ct)).GroupBy(x => DateOnly.FromDateTime(x.CreatedAt.UtcDateTime)).OrderBy(g => g.Key)
+        return (await query.ToListAsync(ct)).GroupBy(x => DateOnly.FromDateTime(x.CreatedAt.UtcDateTime)).OrderBy(g => g.Key)
             .Select(g => new UsageDayDto(g.Key, g.Count(), g.Sum(x => x.InputTokens ?? 0), g.Sum(x => x.OutputTokens ?? 0))).ToArray();
-        var totals = (await ByOwnersAsync([owner], ct)).FirstOrDefault()?.Usage ?? new(0, 0, 0, 0, 0, 0, 0);
-        var storage = await quota.ForAsync(owner, ct);
-        return new(30, totals.Requests, totals.Completed, totals.Failed, totals.Cancelled, totals.InputTokens, totals.OutputTokens, totals.RequestsWithUsage, daily, storage, totals.TotalDurationMilliseconds, totals.TimedRequests,
-            await TokensAsync(owner, Since, DateTimeOffset.UtcNow, 0, false, ct));
     }
     public async Task<TokenUsageDto> TokensAsync(Guid? owner, DateTimeOffset? from, DateTimeOffset? until, int? offset, bool administrator, CancellationToken ct)
     {
-        var period = AiNexus.Features.Billing.SpendReports.Period(from, until, offset);
+        var period = SpendReports.Period(from, until, offset);
         var query = Entries(period.From, period.Until).Where(x => owner == null || x.OwnerId == owner);
         IReadOnlyList<TokenDayDto> rows;
         if (db.Database.IsSqlServer()) rows = (await query.GroupBy(x => new { Day = x.CreatedAt.AddMinutes(period.Offset).Date, x.ModelId })

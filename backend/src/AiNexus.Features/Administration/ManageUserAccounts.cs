@@ -2,7 +2,7 @@ using AiNexus.Features.Identity;
 
 namespace AiNexus.Features.Administration;
 
-/// <summary>Creates, edits and deletes accounts through Identity's <see cref="UserAccountAdministration"/>, which audits each change.</summary>
+/// <summary>Creates, edits and deletes accounts through <see cref="UserAccountAdministration"/>, which audits each change.</summary>
 internal static class ManageUserAccounts
 {
     public static void MapCreate(RouteGroupBuilder routes) => routes

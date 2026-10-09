@@ -6,15 +6,14 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Administration;
 
-public sealed class AdminBootstrap(NexusDbContext db, AccessService access, IOptions<AdministrationOptions> options)
+/// <summary>Grants the administrator role once to the accounts listed in <see cref="AdministrationOptions.BootstrapAdministrators"/>.</summary>
+public sealed class AdminBootstrap(NexusDbContext db, AccessService access, IOptions<AdministrationOptions> options) : ISignInGrant
 {
-    public static string AccountName(string account) => account.Trim().Split('\\').Last().Split('@')[0];
-    private bool Applies(string account) => options.Value.BootstrapAdministrators.Contains(AccountName(account), StringComparer.OrdinalIgnoreCase);
+    private bool Applies(string account) => options.Value.BootstrapAdministrators.Contains(UserAccounts.AccountName(account), StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Whether <see cref="ApplyAsync"/> would grant anything, so sign-in must take the identity write gate.</summary>
     public async Task<bool> PendingAsync(NexusUser user, CancellationToken ct)
         => Applies(user.Account) && !await db.Set<AdministratorBootstrap>().AnyAsync(x => x.UserId == user.Id, ct);
-    // Called under the identity write gate. A durable marker prevents a revoked grant from reappearing on login.
+    // A durable marker prevents a revoked grant from reappearing on login.
     public async Task ApplyAsync(NexusUser user, CancellationToken ct)
     {
         if (!Applies(user.Account) ||

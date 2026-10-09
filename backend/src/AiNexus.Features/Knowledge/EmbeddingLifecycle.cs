@@ -118,7 +118,7 @@ public sealed class EmbeddingReindexHandler(NexusDbContext db, EmbeddingLifecycl
     public string Kind => "embedding-reindex";
     public async Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct)
     {
-        if (!(await access.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == AdministrationConfiguration.Feature)) throw new ApiException(403, "admin_required", "重建全量索引需要管理權限。");
+        if (!(await access.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == FeatureIds.Admin)) throw new ApiException(403, "admin_required", "重建全量索引需要管理權限。");
         if ((await lifecycle.RequireAsync(EmbeddingJobs.Profile(job.SubjectId), ct)).Status == "retired") throw new ApiException(409, "profile_retired", "索引已退役，請建立新的重建工作。");
     }
     public async Task ExecuteAsync(JobExecution execution, CancellationToken ct)

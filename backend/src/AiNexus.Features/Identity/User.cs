@@ -46,9 +46,6 @@ public sealed class UserPreferences
 
 internal static class IdentityErrors
 {
-    public static readonly Error InvalidTheme = Error.Invalid("invalid_theme");
-    public static readonly Error InvalidModel = Error.Invalid("invalid_model");
-    public static readonly Error ModelNotAllowed = Error.Invalid("model_not_allowed");
     public static readonly Error WindowsModeRequired = Error.Invalid("authentication_mode");
     public static readonly Error TestIdentityNested = Error.Conflict("test_identity_nested");
     public static readonly Error TestReasonRequired = Error.Invalid("test_reason_required");

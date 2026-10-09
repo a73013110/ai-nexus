@@ -2,12 +2,11 @@ using System.Text.Json;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Time;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Inference;
 using AiNexus.Features.AccessControl;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace AiNexus.Features.Administration;
+namespace AiNexus.Features.Inference;
 
 public sealed record ModelPolicyRequest(IReadOnlyList<string>? AllowedModelIds = null, IReadOnlyDictionary<string, long>? DailyTokenLimits = null);
 public sealed record ModelTokenBudgetDto(string ModelId, long? DailyTokenLimit, long UsedTokens, long ReservedTokens, long? RemainingTokens, string Source, string? ModelDisplayName = null);
@@ -27,7 +26,7 @@ public sealed class ModelPolicyService(NexusDbContext db, AccessService access, 
         var ids = inference.Value.Models.Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
         if (policy.AllowedModelIds is { } allowed && (allowed.Count > 24 || allowed.Distinct(StringComparer.Ordinal).Count() != allowed.Count || allowed.Any(x => !ids.Contains(x))) ||
             policy.DailyTokenLimits is { } limits && (limits.Count > 24 || limits.Any(x => !ids.Contains(x.Key) || x.Value is < 0 or > MaximumTokenLimit)))
-            return AdministrationErrors.InvalidModelPolicy;
+            return InferenceErrors.InvalidModelPolicy;
         return null;
     }
     public async Task<EffectiveModelPolicyDto> ForAsync(Guid owner, CancellationToken ct, bool publicIds = true, DateTimeOffset? asOf = null)

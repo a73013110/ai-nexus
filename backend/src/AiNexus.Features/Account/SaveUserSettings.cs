@@ -3,8 +3,9 @@ using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
+using AiNexus.Features.Identity;
 
-namespace AiNexus.Features.Identity;
+namespace AiNexus.Features.Account;
 
 /// <summary>Reading and layout settings. The nested appearance is checked afterwards by the handler, with its own codes.</summary>
 internal sealed class UserSettingsValidator : RequestValidator<UserSettingsDto>

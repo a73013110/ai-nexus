@@ -1,9 +1,7 @@
-using AiNexus.Features.AccessControl;
-using AiNexus.Features.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace AiNexus.Features.Administration;
+namespace AiNexus.Features.AccessControl;
 
 /// <summary>A group's model whitelist, daily token caps and attachment capacity. Groups grant additively.</summary>
 public sealed class GroupModelPolicy
