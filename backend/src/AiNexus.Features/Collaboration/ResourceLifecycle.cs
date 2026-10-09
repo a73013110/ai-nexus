@@ -2,9 +2,9 @@ using System.Data;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Data;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Operations;
 using AiNexus.Platform.Events;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Collaboration;
 

@@ -13,7 +13,7 @@ public sealed class ModuleBoundaryTests
     private const string Root = "AiNexus.Features.";
 
     // Shared infrastructure of the Features assembly, not business modules.
-    private static readonly HashSet<string> Infrastructure = ["Persistence", "Configuration"];
+    private static readonly HashSet<string> Infrastructure = ["Persistence"];
 
     [Fact]
     public void Module_dependencies_have_no_cycles()

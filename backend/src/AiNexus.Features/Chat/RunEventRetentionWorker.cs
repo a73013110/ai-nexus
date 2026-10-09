@@ -1,10 +1,10 @@
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace AiNexus.Features.Operations;
+namespace AiNexus.Features.Chat;
 
 // Only replay events expire here. Conversation retention is an explicit deployment policy.
-public sealed partial class EventRetentionWorker(IServiceScopeFactory scopes, StorageReadiness storage, ILogger<EventRetentionWorker> logger) : BackgroundService
+public sealed partial class RunEventRetentionWorker(IServiceScopeFactory scopes, StorageReadiness storage, ILogger<RunEventRetentionWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

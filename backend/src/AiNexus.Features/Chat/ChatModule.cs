@@ -34,6 +34,7 @@ public sealed class ChatModule : IFeatureModule
         services.AddSingleton<RunSignals>();
         services.AddHostedService<GenerationWorker>();
         services.AddHostedService<RunRecoveryWorker>();
+        services.AddHostedService<RunEventRetentionWorker>();
         services.AddRateLimiter(options => options.AddPerUserLimit(SendRateLimit, SendsPerMinute));
     }
 

@@ -1,11 +1,12 @@
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Operations;
 using AiNexus.Features.AccessControl;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Events;
+using AiNexus.Features.Jobs;
+using AiNexus.Features.Audit;
 
 namespace AiNexus.Features.Persistence;
 
@@ -82,7 +83,7 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         PlatformFeatures.Add(model, "projects", "專案", "/projects", 20);
         PlatformFeatures.Add(model, "dashboard", "總覽", "/dashboard", 5);
         PlatformFeatures.Add(model, "monitoring", "即時監控", "/admin/monitoring", 91, administratorsOnly: true);
-        PlatformFeatures.Add(model, ActivityAuditEndpoints.Feature, "活動稽核", "/admin/audit", 92, administratorsOnly: true);
+        PlatformFeatures.Add(model, AuditModule.Feature, "活動稽核", "/admin/audit", 92, administratorsOnly: true);
         PlatformFeatures.Add(model, "repositories", "程式庫", "/repositories", 65);
         AiNexus.Features.Attachments.AttachmentReferenceConfiguration.Configure(model);
         PlatformFeatures.Add(model, "knowledge", "知識庫", "/knowledge", 30);

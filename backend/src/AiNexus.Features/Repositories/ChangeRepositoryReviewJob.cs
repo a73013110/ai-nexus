@@ -1,6 +1,6 @@
 using AiNexus.Features.Identity;
-using AiNexus.Features.Operations;
 using AiNexus.Platform.Errors;
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Repositories;
 

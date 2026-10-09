@@ -1,7 +1,7 @@
 using AiNexus.Features.Inference;
-using AiNexus.Features.Operations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Quality;
 

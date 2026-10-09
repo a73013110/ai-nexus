@@ -5,7 +5,6 @@ using AiNexus.Features.Account;
 using AiNexus.Features.Chat;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Knowledge;
@@ -15,6 +14,7 @@ using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Writer;
 using Xunit;
 using static AiNexus.Tests.ChatApiTests;
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Tests;
 

@@ -16,7 +16,6 @@ using AiNexus.Features.Knowledge;
 using AiNexus.Features.Library;
 using AiNexus.Features.Monitoring;
 using AiNexus.Features.Notifications;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Projects;
 using AiNexus.Features.Quality;
@@ -27,6 +26,8 @@ using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
+using AiNexus.Features.Jobs;
+using AiNexus.Features.Audit;
 
 namespace AiNexus.Features;
 
@@ -53,7 +54,8 @@ public static class FeatureModules
         Add<SharingModule>(builder);
         Add<KnowledgeModule>(builder);
         Add<ArtifactsModule>(builder);
-        Add<OperationsModule>(builder);
+        Add<JobsModule>(builder);
+        Add<AuditModule>(builder);
         Add<ConversationsModule>(builder);
         Add<LibraryModule>(builder);
         Add<AttachmentsModule>(builder);
@@ -76,7 +78,8 @@ public static class FeatureModules
         Map<ChatModule>(api);
         Map<AttachmentsModule>(api);
         Map<LibraryModule>(api);
-        Map<OperationsModule>(api);
+        Map<AuditModule>(api);
+        Map<JobsModule>(api);
         Map<KnowledgeModule>(api);
         Map<ArtifactsModule>(api);
         Map<ProjectsModule>(api);

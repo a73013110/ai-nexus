@@ -3,7 +3,7 @@ using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 
-namespace AiNexus.Features.Operations;
+namespace AiNexus.Features.Jobs;
 
 /// <summary>Background jobs as other modules use them: enqueue with their subject, describe, cancel and retry.</summary>
 public sealed class JobService(NexusDbContext db, IServiceProvider services)

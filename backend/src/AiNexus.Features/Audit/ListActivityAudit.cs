@@ -3,7 +3,10 @@ using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
-namespace AiNexus.Features.Operations;
+namespace AiNexus.Features.Audit;
+
+public sealed record AuditDto(long Id, string Actor, string Action, Guid? ResourceId, string? Result, DateTimeOffset At, string? DetailsJson, string? ActingAs = null,
+    string? Category = null, string? TraceId = null, Guid? OperationId = null, string? IssueCode = null);
 
 /// <summary>
 /// The newest 100 audit records matching the filters, before an optional cursor. Actor and subject accounts are joined
@@ -20,8 +23,8 @@ internal sealed class ListActivityAudit(NexusDbContext db)
     {
         if (search?.Length > 120 || action?.Length > 120 || result?.Length > 80 || before is <= 0 || from > until ||
             traceId is not null && (traceId.Length != 32 || !traceId.All(char.IsAsciiHexDigit)))
-            return OperationsErrors.InvalidAuditFilter;
-        if (!string.IsNullOrEmpty(category) && !AuditCategories.Values.Contains(category)) return OperationsErrors.InvalidAuditFilter;
+            return AuditErrors.InvalidFilter;
+        if (!string.IsNullOrEmpty(category) && !AuditCategories.Values.Contains(category)) return AuditErrors.InvalidFilter;
         var query = from entry in AuditCategories.Filter(db.AuditEvents.AsNoTracking(), category)
                     join actorRecord in db.Users on (entry.ActorId ?? entry.OwnerId) equals actorRecord.Id into actors
                     from actor in actors.DefaultIfEmpty()

@@ -2,7 +2,7 @@ using System.Linq.Expressions;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 
-namespace AiNexus.Features.Operations;
+namespace AiNexus.Features.Audit;
 
 /// <summary>One classification expression serves SQL filtering and historical record presentation.</summary>
 public static class AuditCategories

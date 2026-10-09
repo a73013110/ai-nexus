@@ -2,13 +2,13 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Repositories;
 

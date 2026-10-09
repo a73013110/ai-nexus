@@ -1,12 +1,12 @@
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Knowledge;
 

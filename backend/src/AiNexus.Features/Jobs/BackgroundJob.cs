@@ -1,10 +1,7 @@
-using AiNexus.Features.Persistence;
-using AiNexus.Platform.Diagnostics;
-using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace AiNexus.Features.Operations;
+namespace AiNexus.Features.Jobs;
 
 public sealed class BackgroundJob
 {
@@ -31,38 +28,6 @@ public sealed class BackgroundJob
     public string? ErrorMessage { get; set; }
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
-}
-public sealed record JobDto(Guid Id, string Kind, Guid SubjectId, string Label, string Status, string Stage, int Attempt, int CompletedUnits, int? TotalUnits, bool CancelRequested, string? ErrorCode, string? ErrorMessage, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, string? IssueCode = null);
-
-internal static class OperationsErrors
-{
-    public static readonly Error JobNotFound = Error.NotFound("job_not_found");
-    public static readonly Error JobNotRetryable = Error.Conflict("job_not_retryable");
-    public static readonly Error JobRetryLimit = Error.Conflict("job_retry_limit");
-    public static readonly Error JobHandlerMissing = Error.Conflict("job_handler_missing");
-    public static readonly Error JobActive = Error.Conflict("job_active");
-    public static readonly Error JobChanged = Error.Conflict("job_changed");
-    public static readonly Error InvalidAuditFilter = Error.Invalid("invalid_audit_filter");
-
-    /// <summary>For <see cref="JobService"/>, whose callers in other modules can only fail by exception.</summary>
-    public static ApiException ToException(this Error error)
-    {
-        var status = Problems.Status(error.Kind);
-        return new(status, error.Code, PublicErrorCatalog.Message(error.Code, status));
-    }
-}
-
-internal static class BackgroundJobQueries
-{
-    public static IQueryable<BackgroundJob> OwnedBy(this IQueryable<BackgroundJob> jobs, Guid owner) => jobs.Where(x => x.OwnerId == owner);
-
-    /// <summary>Re-reads a job after a bulk update; tracked entities are discarded first.</summary>
-    public static async Task<Result<JobDto>> ReloadJobAsync(this NexusDbContext db, Guid owner, Guid id, CancellationToken ct)
-    {
-        db.ChangeTracker.Clear();
-        var job = await db.Set<BackgroundJob>().OwnedBy(owner).SingleOrDefaultAsync(x => x.Id == id, ct);
-        return job is null ? OperationsErrors.JobNotFound : JobService.Describe(job);
-    }
 }
 
 internal sealed class BackgroundJobEntityConfiguration : IEntityTypeConfiguration<BackgroundJob>
