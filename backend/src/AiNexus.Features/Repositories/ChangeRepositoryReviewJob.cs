@@ -22,6 +22,6 @@ internal static class ChangeRepositoryReviewJob
         var review = await reviews.FindAsync(owner, id, ct);
         if (!review.IsSuccess) return review.Error.ToProblem();
         var job = review.Value.JobId;
-        return TypedResults.Ok(retry ? await jobs.RetryAsync(owner, job, ct) : await jobs.CancelAsync(owner, job, ct));
+        return (retry ? await jobs.RetryAsync(owner, job, ct) : await jobs.CancelAsync(owner, job, ct)).ToHttpResult();
     }
 }

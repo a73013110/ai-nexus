@@ -27,21 +27,21 @@ public sealed class RepositoryReviewHandler(NexusDbContext db, RepositoryReviewS
         ModelTaskConfiguration.Require(await catalog.RequireAsync(presentation.PublicId(row.ModelId), ct), inference.Value, row.ConfigurationFingerprint);
         return row;
     }
-    public async Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => await RequireCurrentAsync(job, ct);
-    public async Task ExecuteAsync(JobExecution execution, CancellationToken ct)
+    public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) { await RequireCurrentAsync(job, ct); return Result.Success; }
+    public async Task<Result> ExecuteAsync(JobExecution execution, CancellationToken ct)
     {
         var row = await RequireCurrentAsync(execution.Job, ct); var snapshot = RepositoryReviewService.Snapshot(row); var slices = snapshot.Slices;
         var results = await db.Set<RepositoryReviewResult>().AsNoTracking().Where(x => x.ReviewId == row.Id).ToDictionaryAsync(x => x.Ordinal, ct);
         var modern = snapshot.Version >= 2;
         if (modern && (snapshot.Direct || slices.All(x => x.Binary)))
         {
-            if (results.ContainsKey(RepositoryReviewPlan.ReportOrdinal)) return;
+            if (results.ContainsKey(RepositoryReviewPlan.ReportOrdinal)) return Result.Success;
             await execution.CheckpointAsync("正在分析整體變更", 0, 1, ct);
             var binary = slices.All(x => x.Binary);
             await GenerateAsync(execution, row, snapshot, RepositoryReviewPlan.ReportOrdinal, RepositoryReviewPlan.Source(slices), snapshot.ReportInstruction!,
                 "untrusted_diff", "整體報告已完成", 1, 1, ct, maxOutputTokens: snapshot.ReportOutputTokens,
                 answer: binary ? new("此變更只有二進位內容，需人工確認原檔。" + (snapshot.Version < 3 ? "\n" + RepositoryReviewPlan.Source(slices) : ""), false, null, null) : null);
-            return;
+            return Result.Success;
         }
         var completed = results.Keys.Count(x => x >= 0 && x < slices.Length);
         var total = slices.Length + (modern ? 1 : 0);
@@ -55,7 +55,7 @@ public sealed class RepositoryReviewHandler(NexusDbContext db, RepositoryReviewS
                 maxOutputTokens: modern ? snapshot.AnalysisOutputTokens : null,
                 answer: slice.Binary ? new("二進位變更未送交文字模型檢閱，請人工確認原檔。", false, null, null) : null);
         }
-        if (!modern || results.ContainsKey(RepositoryReviewPlan.ReportOrdinal)) return;
+        if (!modern || results.ContainsKey(RepositoryReviewPlan.ReportOrdinal)) return Result.Success;
 
         // Intermediate reductions have deterministic ordinals after the source slices, so retries reuse their checkpoints too.
         var evidence = slices.Select((x, i) => $"來源區段 {i + 1}：{x.Label}\n{results[i].Output}" +
@@ -82,6 +82,7 @@ public sealed class RepositoryReviewHandler(NexusDbContext db, RepositoryReviewS
         await execution.CheckpointAsync("正在產生整體報告", completed, total, ct);
         await GenerateAsync(execution, row, snapshot, RepositoryReviewPlan.ReportOrdinal, batches.Single(), snapshot.ReportInstruction!, "untrusted_analysis",
             "整體報告已完成", total, total, ct, maxOutputTokens: snapshot.ReportOutputTokens, truncated: truncated);
+        return Result.Success;
     }
 
     private async Task<RepositoryReviewResult> GenerateAsync(JobExecution execution, RepositoryReview row, ReviewSnapshot snapshot, int ordinal, string text, string instruction,

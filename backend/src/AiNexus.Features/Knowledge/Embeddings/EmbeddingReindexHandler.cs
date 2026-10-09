@@ -13,12 +13,13 @@ public sealed class EmbeddingReindexHandler(NexusDbContext db, EmbeddingLifecycl
     AccessService access, IOptions<KnowledgeOptions> options, KnowledgeWriteLock writes) : IBackgroundJobHandler
 {
     public string Kind => "embedding-reindex";
-    public async Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct)
+    public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct)
     {
         if (!(await access.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == FeatureIds.Admin)) throw new ApiException(403, "admin_required", "重建全量索引需要管理權限。");
         if ((await lifecycle.RequireAsync(EmbeddingJobs.Profile(job.SubjectId), ct)).Status == "retired") throw new ApiException(409, "profile_retired", "索引已退役，請建立新的重建工作。");
+        return Result.Success;
     }
-    public async Task ExecuteAsync(JobExecution execution, CancellationToken ct)
+    public async Task<Result> ExecuteAsync(JobExecution execution, CancellationToken ct)
     {
         await ValidateRetryAsync(execution.Job, ct);
         var profile = await lifecycle.RequireAsync(EmbeddingJobs.Profile(execution.Job.SubjectId), ct);
@@ -48,6 +49,7 @@ public sealed class EmbeddingReindexHandler(NexusDbContext db, EmbeddingLifecycl
                 }, isolation: System.Data.IsolationLevel.Serializable);
             } finally { writes.Gate.Release(); }
         }
+        return Result.Success;
     }
     private async Task<bool> VectorsCompleteAsync(KnowledgeDocument doc, EmbeddingProfile profile, CancellationToken ct)
     {

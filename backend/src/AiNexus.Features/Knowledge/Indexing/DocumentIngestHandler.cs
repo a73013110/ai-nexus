@@ -15,8 +15,8 @@ namespace AiNexus.Features.Knowledge.Indexing;
 public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskService model, DocumentIndexer indexer, IOptions<AttachmentOptions> limits, AttachmentService attachments) : IBackgroundJobHandler
 {
     public string Kind => "document-ingest";
-    public async Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => _ = await documents.RequireAsync(job.OwnerId, job.SubjectId, ct, write: true);
-    public async Task ExecuteAsync(JobExecution execution, CancellationToken ct)
+    public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) { _ = await documents.RequireAsync(job.OwnerId, job.SubjectId, ct, write: true); return Result.Success; }
+    public async Task<Result> ExecuteAsync(JobExecution execution, CancellationToken ct)
     {
         var db = execution.Database; var actor = execution.Job.OwnerId;
         var document = await documents.RequireAsync(actor, execution.Job.SubjectId, ct, write: true);
@@ -71,10 +71,11 @@ public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskSe
         if (document.CollectionId is not null)
         {
             await indexer.QueueAsync(execution, document, ct);
-            return;
+            return Result.Success;
         }
         document.Status = "ready";
         (await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == document.Id, ct)).UpdatedAt = DateTimeOffset.UtcNow;
         await execution.CheckpointAsync("處理完成", document.CollectionId is null ? total : document.ChunkCount, document.CollectionId is null ? total : document.ChunkCount, ct);
+        return Result.Success;
     }
 }

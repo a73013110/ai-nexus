@@ -13,8 +13,6 @@ public sealed class JobsModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         builder.Services.AddScoped<JobService>();
-        builder.Services.AddScoped<CancelJob>();
-        builder.Services.AddScoped<RetryJob>();
         builder.Services.AddHostedService<BackgroundJobWorker>();
         builder.Services.AddFeaturePolicy(FeatureIds.Tasks);
     }

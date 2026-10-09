@@ -10,8 +10,8 @@ namespace AiNexus.Features.Quality.RetrievalEvaluations;
 public sealed class RetrievalEvaluationHandler(NexusDbContext db, RetrievalEvaluationService evaluations, RetrievalPipeline pipeline) : IBackgroundJobHandler
 {
     public string Kind => "retrieval-eval";
-    public async Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => await evaluations.RequireAsync(job.OwnerId, job.SubjectId, ct, unchanged: true);
-    public async Task ExecuteAsync(JobExecution execution, CancellationToken ct)
+    public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) { await evaluations.RequireAsync(job.OwnerId, job.SubjectId, ct, unchanged: true); return Result.Success; }
+    public async Task<Result> ExecuteAsync(JobExecution execution, CancellationToken ct)
     {
         var run = await evaluations.RequireAsync(execution.Job.OwnerId, execution.Job.SubjectId, ct, unchanged: true);
         var cases = RetrievalEvaluationService.Parse<RetrievalEvaluationCase>(run.CasesJson); var collections = RetrievalEvaluationService.Parse<Guid>(run.CollectionsJson);
@@ -37,5 +37,6 @@ public sealed class RetrievalEvaluationHandler(NexusDbContext db, RetrievalEvalu
                 db.Add(result);
                 await execution.CheckpointAsync($"完成 {completed + 1} / {total} 次檢索", ++completed, total, ct);
             }
+        return Result.Success;
     }
 }

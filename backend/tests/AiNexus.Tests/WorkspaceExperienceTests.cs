@@ -30,8 +30,8 @@ public sealed class WorkspaceExperienceTests
     private sealed class UnfinishedHandler : IBackgroundJobHandler
     {
         public string Kind => "unfinished-test";
-        public Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => Task.CompletedTask;
-        public async Task ExecuteAsync(JobExecution execution, CancellationToken ct)
+        public Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => Task.FromResult(Result.Success);
+        public async Task<Result> ExecuteAsync(JobExecution execution, CancellationToken ct)
         {
             var user = await execution.Database.Users.SingleAsync(x => x.Id == execution.Job.OwnerId, ct);
             user.DisplayName = "Uncheckpointed mutation";

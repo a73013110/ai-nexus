@@ -18,9 +18,8 @@ public sealed class DatabaseSchemaTests
         await using var db = Context(connection);
         var schema = new DatabaseSchema(db);
         Assert.Equal(db.Database.GetMigrations(), await schema.PendingMigrationsAsync(CancellationToken.None));
-        var error = await Assert.ThrowsAsync<ApiException>(() => schema.RequireCurrentAsync(CancellationToken.None));
-        Assert.Equal("migrations_pending", error.Code);
-        Assert.Equal(503, error.Status);
+        var error = await Assert.ThrowsAsync<ExternalServiceException>(() => schema.RequireCurrentAsync(CancellationToken.None));
+        Assert.Equal(Error.Unavailable("migrations_pending"), error.Error);
         Assert.Equal(0, await TableCountAsync(db));
     }
 
@@ -37,7 +36,7 @@ public sealed class DatabaseSchemaTests
         await RecordHistoryAsync(db, []);
         var schema = new DatabaseSchema(db);
         Assert.Equal(missing, await schema.PendingMigrationsAsync(CancellationToken.None));
-        var error = await Assert.ThrowsAsync<ApiException>(() => schema.RequireCurrentAsync(CancellationToken.None));
+        var error = await Assert.ThrowsAsync<ExternalServiceException>(() => schema.RequireCurrentAsync(CancellationToken.None));
         Assert.All(missing, id => Assert.Contains(id, error.Message));
         Assert.Contains("InitialCreate", error.Message);
         Assert.Contains("scripts/Initialize-Database.ps1", error.Message);

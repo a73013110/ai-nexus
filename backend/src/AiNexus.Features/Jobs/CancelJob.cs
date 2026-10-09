@@ -9,8 +9,8 @@ namespace AiNexus.Features.Jobs;
 internal sealed class CancelJob(NexusDbContext db, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("/{id:guid}/cancel", async (Guid id, ICurrentUser user, CancelJob handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
-        .WithName("CancelJob").Produces<JobDto>();
+        .MapPost("/{id:guid}/cancel", (Guid id, ICurrentUser user, CancelJob handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .WithName("CancelJob");
 
     public async Task<Result<JobDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)
     {

@@ -349,8 +349,8 @@ public sealed class DiagnosticTests
     public sealed class FailingJob : IBackgroundJobHandler
     {
         public string Kind => "diagnostic-fixture";
-        public Task ExecuteAsync(JobExecution execution, CancellationToken ct) => throw new ApiException(503, "fixture_failed", Secret);
-        public Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => Task.CompletedTask;
+        public Task<Result> ExecuteAsync(JobExecution execution, CancellationToken ct) => throw new ExternalServiceException(Error.Unavailable("fixture_failed"), Secret);
+        public Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => Task.FromResult(Result.Success);
     }
 
     [Fact]
