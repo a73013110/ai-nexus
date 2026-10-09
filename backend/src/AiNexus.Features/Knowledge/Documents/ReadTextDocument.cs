@@ -4,6 +4,8 @@ using AiNexus.Platform.Http;
 
 namespace AiNexus.Features.Knowledge.Documents;
 
+public sealed record TextDocumentDto(Guid Id, string Title, string Text, int Version);
+
 /// <summary>The editable text and version of a plain-text source the user may read.</summary>
 internal static class ReadTextDocument
 {
@@ -20,5 +22,3 @@ internal static class ReadTextDocument
         return new TextDocumentDto(id, Path.GetFileNameWithoutExtension(document.Value.FileName), document.Value.TextContent, document.Value.TextVersion);
     }
 }
-
-public sealed record TextDocumentDto(Guid Id, string Title, string Text, int Version);
