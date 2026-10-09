@@ -12,6 +12,7 @@
 | 後端 slice、錯誤、驗證、domain event、軟刪除 | `docs/BACKEND_CONVENTIONS.md` |
 | 模組邊界、跨模組依賴 | `docs/MODULE_BOUNDARIES.md` |
 | 推論、背景工作 | `docs/ARCHITECTURE.md` |
+| 後端測試、`NexusFactory` | `docs/BACKEND_TESTING.md` |
 | 日誌事件、EventId | `docs/LOG_EVENTS.md` |
 | 資料表、migration | `docs/DATABASE.md`、`docs/DEVELOPMENT.md` 的 migration 段 |
 | 設定、秘密 | `docs/CONFIGURATION.md` |
@@ -25,7 +26,7 @@
 ```powershell
 ./scripts/Verify.ps1 -SkipBrowser        # 送 PR 前必跑：build＋後端＋前端 lint／測試
 dotnet build backend/AiNexus.slnx         # 0 warning（warning 即錯誤）
-dotnet test backend/AiNexus.slnx --no-build --filter "FullyQualifiedName~<Module>"
+dotnet test --solution backend/AiNexus.slnx --no-build --filter "FullyQualifiedName~<Module>"
 dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Api
 ./scripts/Export-Contracts.ps1 -BaseUrl https://localhost:5080   # API 有變動時重產 openapi.json 與 schema.ts
 ```
