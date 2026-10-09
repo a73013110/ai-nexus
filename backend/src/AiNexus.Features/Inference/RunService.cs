@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Inference;
 
 /// <summary>Run lookup and finishing shared by the run slices, the event stream and the generation worker.</summary>
-public sealed class RunService(NexusDbContext db, ConversationService conversations, BillingService billing, AiNexus.Features.Notifications.NotificationService notifications, Issues issues, ILogger<RunService> logger, TimeProvider clock)
+public sealed class RunService(NexusDbContext db, RunSignals signals, ConversationService conversations, BillingService billing, AiNexus.Features.Notifications.NotificationService notifications, Issues issues, ILogger<RunService> logger, TimeProvider clock)
 {
     /// <summary>Throwing form of <see cref="FindOwnedAsync"/>, used by the event stream.</summary>
     public async Task<GenerationRun> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
@@ -57,6 +57,7 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
             status == "failed" ? "error" : status == "completed" ? "success" : "info",
             status == "completed" ? "AI 回答已完成" : status == "failed" ? "AI 回答未完成" : "AI 回答已停止", status == "failed" ? Issues.Message(run.IssueCode) : title, "conversation", run.ConversationId, ct, run.IssueCode);
         await db.SaveChangesAsync(ct);
+        signals.Notify(run.Id);
     }
 
     public static void AddEvent(NexusDbContext db, GenerationRun run, string type, string? delta = null)

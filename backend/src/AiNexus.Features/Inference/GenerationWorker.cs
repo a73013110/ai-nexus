@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Inference;
 
-public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, InferenceRouter router, IOptions<InferenceOptions> options, StorageReadiness storage, ILogger<GenerationWorker> logger, Issues issues) : BackgroundService
+public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, RunSignals signals, InferenceRouter router, IOptions<InferenceOptions> options, StorageReadiness storage, ILogger<GenerationWorker> logger, Issues issues) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -117,6 +117,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
             provider = run.Provider;
             progress = new RunProgress(run.LastSequence, run.AssistantMessageId);
         }
+        signals.Notify(job.RunId);
         var buffer = new StringBuilder();
         var elapsed = Stopwatch.StartNew();
         long? input = null, output = null, cached = null, reasoning = null;
@@ -212,6 +213,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
             await scope.ServiceProvider.GetRequiredService<ConversationService>().AppendAnswerAsync(progress.Answer, job.ConversationId, delta, ct);
             await transaction.CommitAsync(ct);
         }
+        signals.Notify(job.RunId);
         progress.Sequence = expected + (delta.Length > 0 ? 1 : 0);
         progress.Input = input ?? progress.Input; progress.Output = output ?? progress.Output;
         progress.Cached = cached ?? progress.Cached; progress.Reasoning = reasoning ?? progress.Reasoning;
