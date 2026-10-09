@@ -20,12 +20,7 @@
 @use './styles/document-reader';
 @use './styles/files';
 @use './styles/artifacts';
-@use './styles/projects';
-@use './styles/sharing';
 @use './styles/notifications';
-@use './styles/quality';
-@use './styles/integrations';
-@use './styles/design';
 @use './styles/markdown';
 @use './styles/composer';
 @use './styles/dialogs';
@@ -33,6 +28,5 @@
 @use './styles/tools';
 @use './styles/attachments';
 @use './styles/billing';
-@use './login';
 @use './composer-controls';
 @use './motion';

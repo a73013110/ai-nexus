@@ -4,7 +4,14 @@ import { EmptyState } from '../../shared/ui/empty-state';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { formatDate } from '../../shared/browser/format';
 import { ClientValidationError } from '../../core/api/safe-errors';
-import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  signal,
+  viewChild,
+  ViewEncapsulation,
+} from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { ReadonlyShare, SharedContent } from '../../core/api/types';
@@ -21,6 +28,9 @@ import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { SharingApi } from './sharing-api';
 @Component({
   selector: 'nx-shared-page',
+  // Page-only rules load with this lazy route instead of the initial stylesheet.
+  encapsulation: ViewEncapsulation.None,
+  styleUrl: '../../../styles/sharing.scss',
   imports: [
     Notice,
     Card,

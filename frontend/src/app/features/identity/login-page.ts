@@ -1,6 +1,13 @@
 import { Notice } from '../../shared/ui/notice';
 import { safeMessage } from '../../core/api/safe-errors';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+  ViewEncapsulation,
+} from '@angular/core';
 import {
   FormField,
   form,
@@ -11,12 +18,14 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth-service';
 import { WORKSPACE_HOME } from '../../core/workspace-home';
-import { FourierMark } from './fourier-mark';
-import { BrandWordmark } from '../../shared/ui/brand-wordmark';
+import { LoginIntro } from './login-intro';
 
 @Component({
   selector: 'nx-login-page',
-  imports: [Notice, FormField, FourierMark, BrandWordmark],
+  // Page-only rules load with this lazy route instead of the initial stylesheet.
+  encapsulation: ViewEncapsulation.None,
+  styleUrl: '../../../login.scss',
+  imports: [Notice, FormField, LoginIntro],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login-page.html',
 })
@@ -42,7 +51,6 @@ export class LoginPage {
     maxLength(schema.password, 1024);
   });
   readonly error = signal<string | null>(null);
-  readonly introReady = signal(false);
   constructor() {
     void this.initialize();
   }

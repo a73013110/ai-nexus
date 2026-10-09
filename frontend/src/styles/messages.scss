@@ -149,3 +149,7 @@ nx-chat-message:not(:last-child) {
 .message.search-current {
   box-shadow: -3px 0 0 var(--accent);
 }
+.feedback-active {
+  color: var(--signal);
+  background: var(--accent-soft);
+}
