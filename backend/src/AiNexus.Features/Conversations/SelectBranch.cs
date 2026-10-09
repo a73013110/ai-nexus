@@ -15,7 +15,7 @@ internal sealed class SelectBranch(NexusDbContext db, GenerationScheduler schedu
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPatch("/{id:guid}/branch", async (Guid id, SelectBranchRequest body, ICurrentUser user, SelectBranch handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, body.LeafId, ct)).ToHttpResult())
-        .WithName("SelectBranch").Produces(204);
+        .WithName("SelectBranch");
 
     public async Task<Result> HandleAsync(Guid owner, Guid id, Guid leaf, CancellationToken ct)
     {

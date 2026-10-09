@@ -3,6 +3,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Knowledge.Collections;
 
@@ -16,7 +17,7 @@ internal static class GetConversationKnowledge
 
     public static async Task<KnowledgeSelectionDto> HandleAsync(NexusDbContext db, ConversationService conversations, Guid actor, Guid conversation, CancellationToken ct)
     {
-        await conversations.OwnedAsync(actor, conversation, ct);
+        (await conversations.OwnedAsync(actor, conversation, ct)).OrThrow();
         return new(await db.Set<ConversationKnowledge>().Where(x => x.ConversationId == conversation).Select(x => x.CollectionId).ToListAsync(ct));
     }
 }

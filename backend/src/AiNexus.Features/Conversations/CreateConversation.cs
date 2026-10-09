@@ -18,17 +18,14 @@ internal sealed class CreateConversationRequestValidator : RequestValidator<Crea
 }
 
 /// <summary>Starts an empty conversation owned by the user. Other modules reach it through <see cref="ConversationService.CreateAsync"/>.</summary>
-internal static class CreateConversation
+internal sealed class CreateConversation(NexusDbContext db, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("", async (CreateConversationRequest body, ICurrentUser user, NexusDbContext db, TimeProvider clock, CancellationToken ct) =>
-        {
-            var created = await HandleAsync(db, clock, user.Id, body.Title, ct);
-            return created.IsSuccess ? Results.Created($"/api/v1/conversations/{created.Value.Id}", created.Value) : created.Error.ToProblem();
-        })
-        .WithName("CreateConversation").Produces<ConversationDto>(201);
+        .MapPost("", (CreateConversationRequest body, ICurrentUser user, CreateConversation handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, body.Title, ct).ToHttpResultAsync(created => TypedResults.Created($"/api/v1/conversations/{created.Id}", created)))
+        .WithName("CreateConversation");
 
-    public static async Task<Result<ConversationDto>> HandleAsync(NexusDbContext db, TimeProvider clock, Guid owner, string? title, CancellationToken ct)
+    public async Task<Result<ConversationDto>> HandleAsync(Guid owner, string? title, CancellationToken ct)
     {
         title = (title ?? "新對話").Trim();
         if (!ConversationQueries.TitleIsValid(title)) return ConversationsErrors.InvalidTitle;

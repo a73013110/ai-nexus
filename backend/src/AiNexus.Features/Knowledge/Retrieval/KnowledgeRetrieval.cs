@@ -32,7 +32,7 @@ public sealed class KnowledgeRetrieval(NexusDbContext db, ConversationService co
     {
         var selection = collections is null ? await SelectionAsync(actor, request.ConversationId, ct) : new KnowledgeSelectionDto(collections);
         if (selection.CollectionIds.Count == 0) return [];
-        await conversations.OwnedAsync(actor, request.ConversationId, ct);
+        (await conversations.OwnedAsync(actor, request.ConversationId, ct)).OrThrow();
         var query = request.Prompt; var parent = request.ParentMessageId;
         if (request.RegenerateUserMessageId is Guid user)
         {
