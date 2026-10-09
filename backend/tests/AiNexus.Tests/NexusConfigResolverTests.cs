@@ -14,7 +14,7 @@ public sealed class NexusConfigResolverTests
     public void DevelopmentFindsRepositoryAndKeepsSecretsOutsideApp()
     {
         var root = Root;
-        var app = Path.Combine(root, "backend", "src", "AiNexus.Api");
+        var app = Path.Combine(root, "backend", "src", "AiNexus.Host");
         var files = new HashSet<string> { Path.Combine(root, "global.json"), Path.Combine(root, ".local", "config", "appsettings.Local.json"), Path.Combine(root, ".local", "secrets", "appsettings.Secrets.json") };
         var paths = NexusConfigResolver.Resolve(app, "Development", fileExists: files.Contains);
         Assert.Equal(root, paths.WorkspaceRoot);

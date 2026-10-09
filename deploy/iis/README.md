@@ -11,7 +11,7 @@
 ```text
 D:\CoreProject\AiNexus\
 ├─ app\                         ← IIS 網站實體路徑，只指這一層
-│  ├─ AiNexus.Api.dll / deps.json / runtimeconfig.json / 依賴套件
+│  ├─ AiNexus.Host.dll / deps.json / runtimeconfig.json / 依賴套件
 │  ├─ appsettings.json          ← 發版預設值，不放真實帳密
 │  ├─ web.config                ← ANCM、Production、外部設定位置
 │  └─ wwwroot\                  ← 已編譯 Angular；不需在主機啟動 npm
@@ -87,10 +87,10 @@ pwsh -NoProfile -File scripts/Migrate-Settings.ps1 `
 
 ## 5. web.config 的完整定位
 
-以版本庫 `backend/src/AiNexus.Api/web.config` 為唯一範本，發版 SDK 會帶到 app。關鍵內容：
+以版本庫 `backend/src/AiNexus.Host/web.config` 為唯一範本，發版 SDK 會帶到 app。關鍵內容：
 
 ```xml
-<aspNetCore processPath="dotnet" arguments=".\AiNexus.Api.dll"
+<aspNetCore processPath="dotnet" arguments=".\AiNexus.Host.dll"
             hostingModel="inprocess" stdoutLogEnabled="false"
             stdoutLogFile="..\logs\stdout">
   <environmentVariables>
@@ -170,7 +170,7 @@ icacls 'D:\CoreProject\AiNexus\data\attachments' /inheritance:r `
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Production'
-dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Api.dll' `
+dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Host.dll' `
   --contentRoot 'D:\CoreProject\AiNexus\app' `
   --LocalConfigPath '..\config\appsettings.Production.json' `
   --SecretsConfigPath '..\config\appsettings.Secrets.json' `
@@ -198,7 +198,7 @@ pwsh -NoProfile -File 'D:\Packages\AiNexus\Verify-IIS.ps1' `
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Production'
-dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Api.dll' `
+dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Host.dll' `
   --contentRoot 'D:\CoreProject\AiNexus\app' `
   --LocalConfigPath '..\config\appsettings.Production.json' `
   --SecretsConfigPath '..\config\appsettings.Secrets.json' `

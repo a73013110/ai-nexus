@@ -2,7 +2,7 @@ using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 
-namespace AiNexus.Api.Commands;
+namespace AiNexus.Host.Commands;
 
 /// <summary>
 /// Operational one-shot modes (<c>--InitializeDatabase true</c>, …) used by the deployment scripts. Each runs against the

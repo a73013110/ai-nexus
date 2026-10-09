@@ -8,7 +8,7 @@ $taskRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $taskPublish = [IO.Path]::GetFullPath($PublishDirectory, $taskRoot)
 $taskArtifacts = Join-Path $taskRoot 'artifacts'
 if (!$taskPublish.StartsWith($taskArtifacts + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'Browser-test publish directory must be inside workspace artifacts/.' }
-$taskDll = Join-Path $taskPublish 'AiNexus.Api.dll'
+$taskDll = Join-Path $taskPublish 'AiNexus.Host.dll'
 if (!(Test-Path -LiteralPath $taskDll)) { throw 'Run scripts/Build.ps1 before browser tests.' }
 # Explicit isolated paths prevent discovery of machine .local or external Production credentials.
 # Development retains the existing loopback-only HTTP policy; API data is provided by test fixtures.

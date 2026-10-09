@@ -14,7 +14,7 @@ $taskRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $taskPublish = [IO.Path]::GetFullPath($PublishDirectory, $taskRoot)
 if (!$taskPublish.StartsWith((Join-Path $taskRoot 'artifacts') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) { throw 'PublishDirectory must be inside workspace artifacts/.' }
 if (!$SkipBuild) { & (Join-Path $PSScriptRoot 'Build.ps1') -OutputDirectory $taskPublish }
-if (!(Test-Path -LiteralPath (Join-Path $taskPublish 'AiNexus.Api.dll'))) { throw 'Run Build.ps1 first.' }
+if (!(Test-Path -LiteralPath (Join-Path $taskPublish 'AiNexus.Host.dll'))) { throw 'Run Build.ps1 first.' }
 if (!$DestinationPath) { $DestinationPath = Join-Path $taskRoot ('artifacts/iis/' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '/app') }
 $taskApp = [IO.Path]::GetFullPath($DestinationPath)
 if ((Test-Path -LiteralPath $taskApp) -and @(Get-ChildItem -LiteralPath $taskApp -Force).Count) {
@@ -33,8 +33,8 @@ if ($IncludeLocalConfig) {
     if (!(Test-Path -LiteralPath $taskSettings)) { Copy-Item -LiteralPath $taskLocal.Settings -Destination $taskSettings }
     if (!(Test-Path -LiteralPath $taskSecrets)) { Copy-Item -LiteralPath $taskLocal.Secrets -Destination $taskSecrets; Protect-NexusSecrets $taskSecrets }
 } else {
-    if (!(Test-Path -LiteralPath $taskSettings)) { Copy-Item -LiteralPath (Join-Path $taskRoot 'backend/src/AiNexus.Api/appsettings.Production.example.json') -Destination $taskSettings }
-    if (!(Test-Path -LiteralPath $taskSecrets)) { Copy-Item -LiteralPath (Join-Path $taskRoot 'backend/src/AiNexus.Api/appsettings.Secrets.example.json') -Destination $taskSecrets; Protect-NexusSecrets $taskSecrets }
+    if (!(Test-Path -LiteralPath $taskSettings)) { Copy-Item -LiteralPath (Join-Path $taskRoot 'backend/src/AiNexus.Host/appsettings.Production.example.json') -Destination $taskSettings }
+    if (!(Test-Path -LiteralPath $taskSecrets)) { Copy-Item -LiteralPath (Join-Path $taskRoot 'backend/src/AiNexus.Host/appsettings.Secrets.example.json') -Destination $taskSecrets; Protect-NexusSecrets $taskSecrets }
 }
 $taskValue = [IO.File]::ReadAllText($taskSettings) | ConvertFrom-Json -AsHashtable
 if ([string]::IsNullOrWhiteSpace([string]$taskValue.Attachments.StoragePath)) {

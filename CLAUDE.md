@@ -27,7 +27,7 @@
 ./scripts/Verify.ps1 -SkipBrowser        # 送 PR 前必跑：build＋後端＋前端 lint／測試
 dotnet build backend/AiNexus.slnx         # 0 warning（warning 即錯誤）
 dotnet test --solution backend/AiNexus.slnx --no-build --filter "FullyQualifiedName~<Module>"
-dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Api
+dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host
 ./scripts/Export-Contracts.ps1 -BaseUrl https://localhost:5080   # API 有變動時重產 openapi.json 與 schema.ts
 ```
 
