@@ -11,7 +11,7 @@ flowchart LR
     UI[Angular 功能頁面] --> API[同源 API／SSE]
     API --> Gates[AD 身分／功能政策／資源 ACL]
     Gates --> Modules[聊天／專案／知識／成果／分享／評測]
-    Modules --> EF[EF Core／scoped EDoc EfHelper]
+    Modules --> EF[EF Core NexusDbContext]
     EF --> SQL[(AiNexus SQL Server)]
     Modules --> Storage[IAttachmentStorage／opaque key]
     Storage --> Files[(站外原檔目錄)]

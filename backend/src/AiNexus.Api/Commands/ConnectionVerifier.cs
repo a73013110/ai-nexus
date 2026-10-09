@@ -35,7 +35,7 @@ public static class ConnectionVerifier
                 || !await db.Set<RoleGroupFeature>().AnyAsync(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == BuiltInAccess.ChatFeature, ct))
                 throw new ApiException(503, "default_access_missing", "預設角色、群組與 chat 功能關聯尚未完成。");
             var members = await db.Set<UserRole>().CountAsync(x => x.RoleId == BuiltInAccess.MemberRole, ct);
-            return $"SQL migrations、EfHelper／DbHelper CRUD 與清理通過；預設 chat 授權完整，member 對應 {members} 位使用者";
+            return $"SQL migrations、EF Core／DbHelper CRUD 與清理通過；預設 chat 授權完整，member 對應 {members} 位使用者";
         });
         await Check("AD", async () => { await services.GetRequiredService<IAdAuthenticator>().VerifyServiceAsync(ct); return "服務帳號加密 LDAP bind 成功；個人登入仍需實際帳號驗收"; });
         await Check("Inference", async () =>
@@ -89,18 +89,18 @@ public static class ConnectionVerifier
 
     private static async Task VerifyPersistenceAsync(IServiceProvider services, CancellationToken ct)
     {
-        var ef = services.GetRequiredService<IEfHelper<INexusDatabase>>();
+        var db = services.GetRequiredService<NexusDbContext>();
         var sql = services.GetRequiredService<IDbHelper<INexusDatabase>>();
         var probe = new AuditEvent { OwnerId = Guid.Empty, ResourceId = Guid.NewGuid(), Action = "connection_check", Result = "ef_insert" };
         try
         {
-            ef.Set<AuditEvent>().Add(probe);
-            await ef.SaveChangesAsync(ct);
+            db.AuditEvents.Add(probe);
+            await db.SaveChangesAsync(ct);
             var row = new { probe.Id, probe.ResourceId };
             if (await sql.QuerySingleAsync<string>("SELECT [Result] FROM [operations].[AuditEvents] WHERE [Id] = @Id AND [ResourceId] = @ResourceId", row, commandTimeout: 5, cancellationToken: ct) != "ef_insert")
                 throw new InvalidDataException("Committed EF write could not be read from a separate Dapper connection.");
             var changed = await sql.ExecuteAsync("UPDATE [operations].[AuditEvents] SET [Result] = @Result WHERE [Id] = @Id AND [ResourceId] = @ResourceId", new { probe.Id, probe.ResourceId, Result = "dapper_update" }, commandTimeout: 5, cancellationToken: ct);
-            var result = await ef.Set<AuditEvent>().AsNoTracking().Where(x => x.Id == probe.Id).Select(x => x.Result).SingleAsync(ct);
+            var result = await db.AuditEvents.AsNoTracking().Where(x => x.Id == probe.Id).Select(x => x.Result).SingleAsync(ct);
             if (changed != 1 || result != "dapper_update") throw new InvalidDataException("Dapper update could not be read by EF.");
         }
         finally

@@ -19,7 +19,6 @@ public sealed class PersistenceModule : IFeatureModule
         services.AddDomainEvents();
         services.AddSingleton<IDbConnectionFactory, NexusConnectionFactory>();
         services.AddScoped<IDbHelper<INexusDatabase>, DbHelper<INexusDatabase>>();
-        services.AddScoped<IEfHelper<INexusDatabase>>(sp => new EfHelper<INexusDatabase>(sp.GetRequiredService<NexusDbContext>()));
         services.AddScoped<IDbHelper<INexusBootstrapDatabase>, DbHelper<INexusBootstrapDatabase>>();
         services.AddScoped<DatabaseInitializer>();
         services.AddScoped<DatabaseSchema>();
