@@ -16,6 +16,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Sharing;
 
+public sealed record SharedMessageDto(string Role, string Content, string Status, DateTimeOffset CreatedAt, IReadOnlyList<AttachmentDto> Attachments,
+    string? ModelId = null, string? ErrorCode = null, IReadOnlyList<CitationDto>? Sources = null, IReadOnlyList<WebSourceDto>? WebSources = null, RunTimingDto? Timing = null, string? ModelDisplayName = null, string? IssueCode = null);
+
 public sealed record CreateShareRequest(string Kind, Guid SourceId, IReadOnlyList<Guid> RecipientIds, int Hours = 168, bool IncludeAttachments = false, int? ArtifactVersion = null);
 
 internal sealed class CreateShareRequestValidator : RequestValidator<CreateShareRequest>

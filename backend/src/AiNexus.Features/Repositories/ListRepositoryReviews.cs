@@ -16,7 +16,7 @@ internal sealed class ListRepositoryReviews(NexusDbContext db, RepositoryService
 
     public async Task<Result<IReadOnlyList<RepositoryReviewDto>>> HandleAsync(Guid owner, string? repository, CancellationToken ct)
     {
-        if (repository is not null && !RepositoryService.IsRepository(repository)) return RepositoryErrors.InvalidRepository;
+        if (repository is not null && !RepositoryService.IsRepository(repository)) return RepositoriesErrors.InvalidRepository;
         var rows = await db.Set<RepositoryReview>().AsNoTracking().Where(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl && (repository == null || x.Repository == repository))
             .OrderByDescending(x => x.CreatedAt).Take(30)
             .Join(db.Set<BackgroundJob>().AsNoTracking(), x => x.JobId, job => job.Id, (review, job) => new { Review = review, Job = job }).ToListAsync(ct);

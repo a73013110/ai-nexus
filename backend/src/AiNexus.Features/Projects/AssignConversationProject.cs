@@ -29,11 +29,11 @@ internal sealed class AssignConversationProject(NexusDbContext db, ResourceAcces
         try
         {
             var conversation = await db.Conversations.Include(x => x.Labels).SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor, ct);
-            if (conversation is null) return ProjectErrors.ConversationMissing;
-            if (await db.Runs.AnyAsync(x => x.ConversationId == id && x.ActiveOwnerId != null, ct)) return ProjectErrors.GenerationActive;
+            if (conversation is null) return ProjectsErrors.ConversationMissing;
+            if (await db.Runs.AnyAsync(x => x.ConversationId == id && x.ActiveOwnerId != null, ct)) return ProjectsErrors.GenerationActive;
             if (projectId is Guid project)
             {
-                if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "projects")) return ProjectErrors.AccessRequired;
+                if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "projects")) return ProjectsErrors.AccessRequired;
                 var active = await access.RequireActiveAsync(db, actor, project, write: false, ct);
                 if (!active.IsSuccess) return active.Error;
             }

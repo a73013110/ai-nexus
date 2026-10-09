@@ -23,9 +23,9 @@ internal sealed class SelectBranch(NexusDbContext db, GenerationScheduler schedu
         try
         {
             var conversation = await db.OwnedConversationAsync(owner, id, ct);
-            if (conversation is null) return ConversationErrors.NotFound;
-            if (await db.HasActiveRunAsync(id, ct)) return ConversationErrors.GenerationActive;
-            if (!await db.Set<Message>().AnyAsync(x => x.Id == leaf && x.ConversationId == id, ct)) return ConversationErrors.MessageNotFound;
+            if (conversation is null) return ConversationsErrors.NotFound;
+            if (await db.HasActiveRunAsync(id, ct)) return ConversationsErrors.GenerationActive;
+            if (!await db.Set<Message>().AnyAsync(x => x.Id == leaf && x.ConversationId == id, ct)) return ConversationsErrors.MessageNotFound;
             conversation.ActiveLeafId = leaf;
             conversation.UpdatedAt = clock.GetUtcNow();
             await db.SaveChangesAsync(ct);

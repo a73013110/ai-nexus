@@ -3,28 +3,6 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Integrations;
 
-public sealed class IntegrationsOptions
-{
-    public SourceOptions Gdweb { get; set; } = new();
-    public SourceOptions Meiho { get; set; } = new();
-    public SourceOptions For(string id) => id switch { "gdweb" => Gdweb, "meiho" => Meiho, _ => throw new ArgumentOutOfRangeException(nameof(id), id, "Unknown source.") };
-    public static string ConnectionKey(string id) => id switch { "gdweb" => "LegacyGdweb", "meiho" => "LegacyMeiho", _ => throw new ArgumentOutOfRangeException(nameof(id), id, "Unknown source.") };
-}
-public sealed class SourceOptions
-{
-    public string Transport { get; set; } = "sql";
-    public bool Enabled { get; set; }
-    public bool AclContractConfirmed { get; set; }
-    public string[] AllowedGroupIds { get; set; } = [];
-    public int CommandTimeoutSeconds { get; set; } = 10;
-    public int MaxResults { get; set; } = 30;
-}
-public sealed record SourceActor(string Sid, string Account);
-public sealed record SourceSearchRequest(string Query, string Kind = "all");
-public sealed record SourceDto(string Id, string Name, string Description, string Status, string Notice, bool CanQuery, IReadOnlyList<string> Kinds);
-public sealed record SourceRecordDto(string Id, string Kind, string Title, string Status, string Revision, DateTimeOffset ModifiedAt);
-public sealed record SourceHistoryDto(DateTimeOffset At, string Kind, string Actor, string Description, string Revision);
-public sealed record SourceDetailDto(string SourceId, SourceRecordDto Record, string Body, IReadOnlyList<SourceHistoryDto> History, bool HistoryLimited);
 public sealed class SourceRow
 {
     public string RecordId { get; set; } = "";
@@ -35,12 +13,6 @@ public sealed class SourceRow
     public DateTimeOffset ModifiedAt { get; set; }
     public string? Body { get; set; }
     public SourceRecordDto Describe() => new(RecordId, RecordKind, Title, Status, Revision, ModifiedAt);
-}
-public interface IControlledSourceAdapter
-{
-    string Id { get; }
-    Task<IReadOnlyList<SourceRecordDto>> SearchAsync(SourceActor actor, SourceSearchRequest request, int take, int timeout, CancellationToken ct);
-    Task<SourceDetailDto?> ReadAsync(SourceActor actor, string id, int timeout, CancellationToken ct);
 }
 
 // SQL is fixed in code. Only the source-side authorized views are readable by the SQL login.
@@ -88,5 +60,3 @@ public abstract class AuthorizedSqlSource<TDatabase>(ISqlDatabase<TDatabase> db)
         return new(Id, row.Describe(), row.Body, history.Take(100).ToArray(), history.Length > 100);
     }
 }
-public sealed class GdwebSource(ISqlDatabase<LegacyGdwebDatabase> db) : AuthorizedSqlSource<LegacyGdwebDatabase>(db) { public override string Id => "gdweb"; }
-public sealed class MeihoSource(ISqlDatabase<LegacyMeihoDatabase> db) : AuthorizedSqlSource<LegacyMeihoDatabase>(db) { public override string Id => "meiho"; }

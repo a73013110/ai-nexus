@@ -15,7 +15,7 @@ public sealed record SaveArtifactRequest(string Title, string Content, int Expec
 /// <summary>Content only. An invalid title is reported first, with its own code, by the handler.</summary>
 internal sealed class SaveArtifactRequestValidator : RequestValidator<SaveArtifactRequest>
 {
-    public override string ProblemCode => ArtifactErrors.ContentInvalidCode;
+    public override string ProblemCode => ArtifactsErrors.ContentInvalidCode;
 
     public SaveArtifactRequestValidator()
     {
@@ -33,14 +33,14 @@ internal sealed class SaveArtifact(NexusDbContext db, ResourceAccess access, Res
 
     public async Task<Result<ArtifactDto>> HandleAsync(Guid actor, Guid id, SaveArtifactRequest request, CancellationToken ct)
     {
-        if (!Artifact.TitleIsValid(request.Title)) return ArtifactErrors.InvalidName;
-        if (request.ExpectedVersion is < 1 or >= Artifact.MaxVersions) return ArtifactErrors.VersionLimit;
+        if (!Artifact.TitleIsValid(request.Title)) return ArtifactsErrors.InvalidName;
+        if (request.ExpectedVersion is < 1 or >= Artifact.MaxVersions) return ArtifactsErrors.VersionLimit;
         using (await writes.AcquireAsync(id, ct))
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             var resource = await access.RequireAsync(actor, id, Artifact.Kind, ct, write: true);
             var changed = await db.Set<Artifact>().Where(x => x.Id == id && x.Version == request.ExpectedVersion).ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1), ct);
-            if (changed != 1) return ArtifactErrors.VersionConflict;
+            if (changed != 1) return ArtifactsErrors.VersionConflict;
             var now = clock.GetUtcNow();
             resource.Name = request.Title.Trim(); resource.UpdatedAt = now;
             db.Add(new ArtifactRevision { ArtifactId = id, Version = request.ExpectedVersion + 1, AuthorId = actor, Title = resource.Name, Content = request.Content, CreatedAt = now });

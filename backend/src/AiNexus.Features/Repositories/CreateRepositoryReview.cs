@@ -43,13 +43,13 @@ internal sealed class CreateRepositoryReview(NexusDbContext db, RepositoryServic
 
     public async Task<Result<RepositoryReviewDto>> HandleAsync(Guid owner, CreateRepositoryReviewRequest request, CancellationToken ct)
     {
-        if (!RepositoryService.IsRepository(request.Repository)) return RepositoryErrors.InvalidRepository;
-        if (!RepositoryService.IsCommit(request.Commit)) return RepositoryErrors.InvalidCommit;
+        if (!RepositoryService.IsRepository(request.Repository)) return RepositoriesErrors.InvalidRepository;
+        if (!RepositoryService.IsCommit(request.Commit)) return RepositoriesErrors.InvalidCommit;
         var basis = string.IsNullOrWhiteSpace(request.BaseCommit) ? null : request.BaseCommit.ToLowerInvariant();
-        if (basis is not null && !RepositoryService.IsCommit(basis)) return RepositoryErrors.InvalidCommit;
+        if (basis is not null && !RepositoryService.IsCommit(basis)) return RepositoriesErrors.InvalidCommit;
         var head = request.Commit.ToLowerInvariant();
-        if (basis == head) return RepositoryErrors.ReviewEmptyRange;
-        if (!RepositoryReviewPlan.IsPurpose(request.Purpose)) return RepositoryErrors.ReviewPurposeInvalid;
+        if (basis == head) return RepositoriesErrors.ReviewEmptyRange;
+        if (!RepositoryReviewPlan.IsPurpose(request.Purpose)) return RepositoriesErrors.ReviewPurposeInvalid;
         var note = request.Note?.Trim() ?? "";
         var purpose = request.Purpose;
         var hash = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new { request.Repository, head, basis, request.ModelId, note, purpose })));
@@ -62,7 +62,7 @@ internal sealed class CreateRepositoryReview(NexusDbContext db, RepositoryServic
             var existing = await db.Set<RepositoryReview>().AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == request.IdempotencyKey, ct);
             if (existing is not null)
             {
-                if (!SameRequest(existing)) return RepositoryErrors.IdempotencyConflict;
+                if (!SameRequest(existing)) return RepositoriesErrors.IdempotencyConflict;
                 var source = await reviews.CheckSourceAsync(owner, existing, ct);
                 if (!source.IsSuccess) return source.Error;
                 return await reviews.DescribeAsync(existing, ct);
@@ -88,7 +88,7 @@ internal sealed class CreateRepositoryReview(NexusDbContext db, RepositoryServic
             var duplicate = await db.Set<RepositoryReview>().AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == request.IdempotencyKey, ct);
             if (duplicate is not null)
             {
-                if (!SameRequest(duplicate)) return RepositoryErrors.IdempotencyConflict;
+                if (!SameRequest(duplicate)) return RepositoriesErrors.IdempotencyConflict;
                 return await reviews.DescribeAsync(duplicate, ct);
             }
             row.JobId = jobs.Enqueue(owner, null, row.Id, "repository-review", request.Repository + " · " + head[..10]).Id;

@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Artifacts;
 
+public sealed record ArtifactRevisionDto(int Version, string Title, string Author, DateTimeOffset CreatedAt);
+
 /// <summary>Revision history, newest first, of an artifact the user may read.</summary>
 internal static class ListArtifactVersions
 {

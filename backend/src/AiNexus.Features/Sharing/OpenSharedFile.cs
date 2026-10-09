@@ -9,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Sharing;
 
+public sealed record SharedFilePreviewDto(AttachmentDto File, IReadOnlyList<DocumentPageDto> Pages);
+
 /// <summary>
 /// Preview and download of a file the owner explicitly included. The grant is the share's own reference, never the
 /// recipient's access to the original attachment; the name shown is the one frozen in the snapshot.

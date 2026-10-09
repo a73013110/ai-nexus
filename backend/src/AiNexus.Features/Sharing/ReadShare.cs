@@ -2,8 +2,11 @@ using System.Text.Json;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Platform.Errors;
+using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Sharing;
+
+public sealed record SharedContentDto(ShareDto Share, ShareSnapshot Snapshot);
 
 /// <summary>The frozen snapshot, with model ids shown as they are presented today.</summary>
 internal static class ReadShare

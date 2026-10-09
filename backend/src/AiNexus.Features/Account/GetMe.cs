@@ -8,6 +8,8 @@ using AiNexus.Features.Identity;
 
 namespace AiNexus.Features.Account;
 
+public sealed record MeDto(Guid Id, string Account, string DisplayName, PreferencesDto Preferences, string CsrfToken, Guid? ActiveRunId, AccessDto Access);
+
 /// <summary>The signed-in user, their appearance preferences, a fresh CSRF token, their active run and their access.</summary>
 internal static class GetMe
 {
