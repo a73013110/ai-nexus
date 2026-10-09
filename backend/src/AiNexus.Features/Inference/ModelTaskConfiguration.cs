@@ -21,9 +21,7 @@ public static class ModelTaskConfiguration
         });
         return new(profile.ContextTokens, profile.MaxOutputTokens, Temperature, profile.DefaultReasoningEffort, Convert.ToHexString(SHA256.HashData(serialized)));
     }
-    public static void Require(ModelProfile profile, InferenceOptions options, string? expected)
-    {
-        if (expected is null || !StringComparer.Ordinal.Equals(expected, Capture(profile, options).Fingerprint))
-            throw new ApiException(409, "evaluation_configuration_changed", "模型設定已變更；請建立新的任務，避免混用不同設定的結果。");
-    }
+    /// <summary>A queued evaluation or review runs only with the model configuration it was created with.</summary>
+    public static Result Require(ModelProfile profile, InferenceOptions options, string? expected)
+        => expected is not null && StringComparer.Ordinal.Equals(expected, Capture(profile, options).Fingerprint) ? Result.Success : InferenceErrors.ConfigurationChanged;
 }

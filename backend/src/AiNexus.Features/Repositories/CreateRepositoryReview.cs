@@ -67,8 +67,8 @@ internal sealed class CreateRepositoryReview(NexusDbContext db, RepositoryServic
                 if (!source.IsSuccess) return source.Error;
                 return await reviews.DescribeAsync(existing, ct);
             }
-            var model = await catalog.RequireAsync(request.ModelId, ct);
-            await policy.RequireAsync(owner, model.Id, ct);
+            var model = (await catalog.RequireAsync(request.ModelId, ct)).OrThrow();
+            (await policy.RequireAsync(owner, model.Id, ct)).OrThrow();
             var headExists = await gitea.RequireCommitAsync(owner, request.Repository, head, ct);
             if (!headExists.IsSuccess) return headExists.Error;
             if (basis is not null)

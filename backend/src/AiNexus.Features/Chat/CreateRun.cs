@@ -63,10 +63,10 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
         }
         // Everything that needs no mutual exclusion runs before the locks: provider discovery, policy, retrieval, search
         // and the context. The locked section re-checks what can change, then only reserves and saves.
-        var profile = await models.RequireAsync(request.ModelId, ct);
-        var effort = ModelCatalog.RequireReasoning(profile, request.ReasoningEffort);
+        var profile = (await models.RequireAsync(request.ModelId, ct)).OrThrow();
+        var effort = ModelCatalog.RequireReasoning(profile, request.ReasoningEffort).OrThrow();
         // Fails fast; BudgetAsync enforces model approval and quota again under the owner row lock.
-        await policies.RequireAsync(owner, profile.Id, ct);
+        (await policies.RequireAsync(owner, profile.Id, ct)).OrThrow();
         var knowledgeSelection = await knowledge.SelectionAsync(owner, request.ConversationId, ct);
         var turn = new ConversationTurn(request.ConversationId, request.Prompt, request.ParentMessageId, request.RegenerateUserMessageId);
         var sources = await knowledge.ForRunAsync(owner, turn, ct, knowledgeSelection.CollectionIds);
@@ -149,7 +149,7 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
                 ?? await context.PrepareAsync(request.ConversationId, request.ParentMessageId, request.RegenerateUserMessageId, request.Prompt, files, parameters, ct);
             await context.RequireImagesAsync(messages, ct);
             var inputEstimate = MessageCost.Estimate(messages);
-            parameters = await policies.BudgetAsync(owner, profile.Id, parameters, inputEstimate, run.CreatedAt, ct);
+            parameters = (await policies.BudgetAsync(owner, profile.Id, parameters, inputEstimate, run.CreatedAt, ct)).OrThrow();
             run.ReservedTokens = inputEstimate + parameters.MaxOutputTokens;
             run.ParametersJson = JsonSerializer.Serialize(parameters);
             db.Runs.Add(run);

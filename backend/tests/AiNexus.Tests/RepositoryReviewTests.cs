@@ -216,7 +216,7 @@ public sealed class RepositoryReviewTests
         using var client = await factory.SignedInAsync(); using var scope = factory.Services.CreateScope();
         var owner = await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Users.Select(x => x.Id).SingleAsync();
         var result = await scope.ServiceProvider.GetRequiredService<ModelTaskService>().GenerateAsync(owner, "test-task", new string('x', 4000), "精簡回答。", CancellationToken.None, maxOutputTokens: 128);
-        Assert.False(result.Truncated); Assert.Equal(128, factory.Provider.LastParameters!.MaxOutputTokens);
+        Assert.False(result.Value!.Truncated); Assert.Equal(128, factory.Provider.LastParameters!.MaxOutputTokens);
     }
 
     [Fact]
