@@ -59,15 +59,13 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
                 var issue = issues.Report(ex, "generation_persistence_failed");
                 try
                 {
-                    await scheduler.StateGate.WaitAsync(CancellationToken.None);
-                    try
+                    using (await scheduler.LockConversationAsync(job.ConversationId, CancellationToken.None))
                     {
                         using var scope = scopes.CreateScope();
                         var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
                         var run = await db.Runs.SingleAsync(x => x.Id == job.RunId);
                         if (RunStates.IsActive(run.Status)) await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, RunStates.Failed, "internal_error", CancellationToken.None, issue);
                     }
-                    finally { scheduler.StateGate.Release(); }
                 }
                 catch (Exception recovery) { logger.LogWarning("Run {RunId} awaits orphan recovery ({ErrorType}).", job.RunId, recovery.GetType().Name); }
             }
@@ -84,8 +82,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
         IReadOnlyList<InferenceMessage> messages;
         string model;
         string provider;
-        await scheduler.StateGate.WaitAsync(stoppingToken);
-        try
+        using (await scheduler.LockConversationAsync(job.ConversationId, stoppingToken))
         {
             using var scope = scopes.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
@@ -118,7 +115,6 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
             model = run.ProviderModelId;
             provider = run.Provider;
         }
-        finally { scheduler.StateGate.Release(); }
         var buffer = new StringBuilder();
         var elapsed = Stopwatch.StartNew();
         long? input = null, output = null, cached = null, reasoning = null;
@@ -139,7 +135,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
                 cached = chunk.CachedInputTokens ?? cached; reasoning = chunk.ReasoningTokens ?? reasoning;
                 if (elapsed.ElapsedMilliseconds >= 80 || buffer.Length >= 512 || chunk.Done)
                 {
-                    await FlushAsync(job.RunId, buffer.ToString(), input, output, cached, reasoning, completed, stoppingToken);
+                    await FlushAsync(job, buffer.ToString(), input, output, cached, reasoning, completed, stoppingToken);
                     buffer.Clear();
                     elapsed.Restart();
                 }
@@ -158,23 +154,21 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
             issueCode = issues.Report(ex, error);
         }
         // Request cancellation does not interrupt persistence; partial output survives.
-        await FlushAsync(job.RunId, buffer.ToString(), input, output, cached, reasoning, completed, CancellationToken.None);
-        await scheduler.StateGate.WaitAsync(CancellationToken.None);
-        try
+        await FlushAsync(job, buffer.ToString(), input, output, cached, reasoning, completed, CancellationToken.None);
+        using (await scheduler.LockConversationAsync(job.ConversationId, CancellationToken.None))
         {
             using var scope = scopes.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             var run = await db.Runs.SingleAsync(x => x.Id == job.RunId);
             if (RunStates.IsActive(run.Status)) await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, finalStatus, error, CancellationToken.None, issueCode);
         }
-        finally { scheduler.StateGate.Release(); }
     }
 
-    private async Task FlushAsync(Guid id, string delta, long? input, long? output, long? cached, long? reasoning, bool complete, CancellationToken ct)
+    private async Task FlushAsync(GenerationJob job, string delta, long? input, long? output, long? cached, long? reasoning, bool complete, CancellationToken ct)
     {
         if (delta.Length == 0 && input is null && output is null) return;
-        await scheduler.StateGate.WaitAsync(ct);
-        try
+        var id = job.RunId;
+        using (await scheduler.LockConversationAsync(job.ConversationId, ct))
         {
             using var scope = scopes.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
@@ -188,6 +182,5 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
             await scope.ServiceProvider.GetRequiredService<ConversationService>().UpdateAnswerAsync(run, ct);
             await db.SaveChangesAsync(ct);
         }
-        finally { scheduler.StateGate.Release(); }
     }
 }

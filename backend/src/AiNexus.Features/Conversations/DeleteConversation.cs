@@ -12,7 +12,7 @@ namespace AiNexus.Features.Conversations;
 public sealed record ConversationDeleted(Guid ConversationId, Guid OwnerId) : IDomainEvent;
 
 /// <summary>
-/// Soft-deletes one of the user's own idle conversations: under the generation state gate and the attachment write lock,
+/// Soft-deletes one of the user's own idle conversations: under the conversation's generation lock and the attachment write lock,
 /// in a transaction holding the owner's quota lock, it unlinks the message attachments, raises <see cref="ConversationDeleted"/>
 /// (its shares are revoked before the save) and marks files no longer used. Files pending deletion are removed after the
 /// locks are released.
@@ -25,7 +25,7 @@ internal sealed class DeleteConversation(NexusDbContext db, GenerationScheduler 
 
     public async Task<Result> HandleAsync(Guid owner, Guid id, CancellationToken ct)
     {
-        await scheduler.StateGate.WaitAsync(ct);
+        var conversationLock = await scheduler.LockConversationAsync(id, ct);
         try
         {
             await attachmentWrites.Gate.WaitAsync(ct);
@@ -48,7 +48,7 @@ internal sealed class DeleteConversation(NexusDbContext db, GenerationScheduler 
             }
             finally { attachmentWrites.Gate.Release(); }
         }
-        finally { scheduler.StateGate.Release(); }
+        finally { conversationLock.Dispose(); }
         await lifecycle.DeletePendingAsync(ct);
         return Result.Success;
     }

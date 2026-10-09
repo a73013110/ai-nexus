@@ -11,11 +11,11 @@ internal sealed class CancelRun(GenerationScheduler scheduler, RunService runs, 
             (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
         .WithName("CancelRun").Produces<RunDto>();
 
-    // The state gate keeps cancellation and the worker's token flushes from overwriting each other.
+    // The conversation's generation lock keeps cancellation and the worker's token flushes from overwriting each other.
     public async Task<Result<RunDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)
     {
-        await scheduler.StateGate.WaitAsync(ct);
-        try
+        if (await runs.ConversationOfAsync(owner, id, ct) is not Guid conversation) return InferenceErrors.RunNotFound;
+        using (await scheduler.LockConversationAsync(conversation, ct))
         {
             var found = await runs.FindOwnedAsync(owner, id, ct);
             if (!found.IsSuccess) return found.Error;
@@ -25,6 +25,5 @@ internal sealed class CancelRun(GenerationScheduler scheduler, RunService runs, 
             await runs.FinishAsync(run, RunStates.Cancelled, null, ct);
             return presentation.Run(run);
         }
-        finally { scheduler.StateGate.Release(); }
     }
 }
