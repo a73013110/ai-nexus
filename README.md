@@ -41,7 +41,7 @@ dotnet dev-certs https --trust
 ./scripts/Start-Local.ps1
 ```
 
-開啟 [本機工作區](https://localhost:5080/)，預設進入總覽。Configure 以遮蔽輸入保存既有 SQL 登入、AD 服務密碼及 Google key。Initialize 只在 AiNexus 不存在時建庫；InitialCreate 針對空庫，後續增量 migrations 依版本升級；不會刪除現有 DB。升級先停止舊 host，再套用 migrations。模型與 snapshot、物件描述均會檢查。HTTPS 憑證只需在開發機首次建立與信任。
+開啟 [本機工作區](https://localhost:5080/)，預設進入總覽。Configure 以遮蔽輸入保存既有 SQL 登入、AD 服務密碼及 Google key。Initialize 只在 AiNexus 不存在時建庫；InitialCreate 針對空庫，後續增量 migrations 依版本升級；不會刪除現有 DB。升級先停止舊 host，再套用 migrations。模型與 snapshot 會一併檢查。HTTPS 憑證只需在開發機首次建立與信任。
 
 **整合預覽只執行一個 ASP.NET 程序**，同時提供 Angular 產物與 API；已有 build 用 `./scripts/Start-Local.ps1 -SkipBuild`。熱更新用 `./scripts/Start-Dev.ps1`，管理 Angular 4200／API 5080，以 Ctrl+C 一起停止。見 [開發與執行](docs/DEVELOPMENT.md)。
 
@@ -76,7 +76,7 @@ dotnet dev-certs https --trust
 | [開發](docs/DEVELOPMENT.md)                | 啟動、build／驗證、契約、migration、版控                       |
 | [功能](docs/FEATURES.md)                   | 工作區、聊天操作、快捷鍵及保存                                 |
 | [附件](docs/ATTACHMENTS.md)                | 格式、OCR、配額及檔案生命週期                                  |
-| [資料庫](docs/DATABASE.md)                 | 13 個 schema、物件／關聯、初始化、SQL 權限                     |
+| [資料庫](docs/DATABASE.md)                 | 每模組一個 schema、migration、初始化、SQL 權限                 |
 | [授權](docs/ACCESS_CONTROL.md)             | 功能 grant、預設角色、撤銷及擴充                               |
 | [網站安全](docs/SECURITY.md)               | HTTPS／Cookie、CSRF、安全標頭、檔案隔離與部署驗收              |
 | [架構](docs/ARCHITECTURE.md)               | 模組、共用邊界、隔離、推論與 durable jobs                      |

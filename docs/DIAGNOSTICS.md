@@ -1,6 +1,6 @@
 # 系統日誌、查證代碼與維運
 
-此功能可在既有 .NET 10／Angular 22、Windows IIS 與 SQL Server 環境運作。診斷資料存入站外 JSONL，背景批次匯入 `operations.DiagnosticEvents`；管理員使用 `/admin/logs` 查詢。安全稽核仍在 `operations.AuditEvents`，採獨立權限與保存政策。本文件中的主機指令是部署人員的操作指南；repository 驗證沒有操作正式 IIS、升級 SQL Server 或部署。
+此功能可在既有 .NET 10／Angular 22、Windows IIS 與 SQL Server 環境運作。診斷資料存入站外 JSONL，背景批次匯入 `diagnostics.DiagnosticEvents`；管理員使用 `/admin/logs` 查詢。安全稽核仍在 `audit.AuditEvents`，採獨立權限與保存政策。本文件中的主機指令是部署人員的操作指南；repository 驗證沒有操作正式 IIS、升級 SQL Server 或部署。
 
 ## 管理者查詢入口與用途
 
@@ -238,7 +238,7 @@ SQL完全離線時管理查詢可能因授權／audit失敗無法打開。可在
 
 ## 部署、Migration與備份
 
-新增 EF migration `20261007040053_SystemDiagnostics`、相同基線的 idempotent `db/migrations.sql`、模型snapshot和資料庫描述。先在受控部署窗口停止舊host，備份既有SQL與附件、設定／keys，再由部署帳號套用遷移。開機schema gate仍要求最新版本；runtime預設不自動migrate。新Job／Run／Message／RunEvent／Notification有nullable issue與流程欄位，舊歷史不會憑空產生問題代碼。詳見 [DATABASE](DATABASE.md)。
+診斷表 `diagnostics.DiagnosticEvents` 與 Job／Run／Message／RunEvent／Notification 的 nullable 查證與流程欄位都在 `InitialCreate` 內。開機 schema gate 要求最新版本；runtime 預設不自動 migrate。詳見 [DATABASE](DATABASE.md)。
 
 外部Production檔加入Diagnostics區塊，保留既有local設定與secrets載入規則。建立站外diagnostics，給app pool Modify、維運只讀等組織核準權限，不給網站匿名存取。`Publish-Iis.ps1`產生新套件並提醒保留data/diagnostics；package的logs/只供ANCMstdout，不能與應用journal混用。`--VerifyDeployment true`也檢查diagnostics外部路徑及短期寫入probe，但以shell身分執行，仍需實際IIS帳號驗證。升級不刪除app外journal；回收後觀察補送。
 

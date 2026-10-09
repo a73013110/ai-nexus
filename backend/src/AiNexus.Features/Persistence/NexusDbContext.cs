@@ -22,9 +22,6 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : D
     public DbSet<ModelProfile> ModelProfiles => Set<ModelProfile>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
-    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
-        => configurationBuilder.Conventions.Add(_ => new DatabaseDescriptions());
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(NexusDbContext).Assembly);

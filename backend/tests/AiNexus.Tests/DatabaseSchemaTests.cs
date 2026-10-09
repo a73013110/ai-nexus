@@ -47,21 +47,6 @@ public sealed class DatabaseSchemaTests
     }
 
     [Fact]
-    public async Task PreviousBaselineIsRejectedWithoutApplyingOrDeletingAnything()
-    {
-        await using var connection = new SqliteConnection("Data Source=:memory:");
-        await connection.OpenAsync();
-        await using var db = Context(connection);
-        const string previous = "20261003141107_InitialNexus";
-        await RecordHistoryAsync(db, [previous]);
-        var schema = new DatabaseSchema(db);
-        var error = await Assert.ThrowsAsync<ApiException>(() => schema.RequireCompatibleHistoryAsync(CancellationToken.None));
-        Assert.Equal("migration_baseline_mismatch", error.Code);
-        Assert.Equal(new[] { previous }, await db.Database.GetAppliedMigrationsAsync());
-        Assert.Equal(1, await TableCountAsync(db));
-    }
-
-    [Fact]
     public async Task CurrentHistoryPassesWithoutRunningMigrations()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");

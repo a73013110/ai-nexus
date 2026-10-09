@@ -4,7 +4,14 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace AiNexus.Features.Knowledge.Collections;
 
 /// <summary>A collection the owner of a conversation selected for its answers (at most three).</summary>
-public sealed class ConversationKnowledge { public Guid ConversationId { get; set; } public Guid CollectionId { get; set; } }
+[Comment("對話選定的知識庫來源關聯。")]
+public sealed class ConversationKnowledge
+{
+    [Comment("關聯對話的識別碼。")]
+    public Guid ConversationId { get; set; }
+    [Comment("關聯知識庫的識別碼。")]
+    public Guid CollectionId { get; set; }
+}
 
 internal sealed class ConversationKnowledgeConfiguration : IEntityTypeConfiguration<ConversationKnowledge>
 {
