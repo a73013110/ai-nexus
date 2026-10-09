@@ -1,10 +1,11 @@
-# Generated dependencies, builds, and reports
+# Tool output: dependencies, builds, test reports. Safe to delete at any time.
 node_modules/
 .angular/
 .cache/
 __pycache__/
 *.py[cod]
 dist/
+coverage/
 bin/
 obj/
 TestResults/
@@ -29,15 +30,16 @@ appsettings.*.json.*.bak
 *.private.key
 *.log
 
-# Editor/user metadata
+# Editor and OS metadata
 .vs/
+.vscode/
 .idea/
 *.user
 *.suo
-/.agents/
-/.codex/
 Thumbs.db
 .DS_Store
 
-# Claude Code agent worktrees
+# Local state of AI coding agents
+/.agents/
+/.codex/
 .claude/worktrees/
