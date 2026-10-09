@@ -16,11 +16,9 @@ public sealed class JobService(NexusDbContext db, IServiceProvider services)
         db.Add(job); return job; // The caller commits subject and job atomically.
     }
 
-    /// <summary>See <see cref="CancelJob"/>. Expected failures are exceptions for callers in other modules.</summary>
-    public async Task<JobDto> CancelAsync(Guid owner, Guid id, CancellationToken ct) => Unwrap(await services.GetRequiredService<CancelJob>().HandleAsync(owner, id, ct));
+    /// <summary>See <see cref="CancelJob"/>.</summary>
+    public Task<Result<JobDto>> CancelAsync(Guid owner, Guid id, CancellationToken ct) => services.GetRequiredService<CancelJob>().HandleAsync(owner, id, ct);
 
-    /// <summary>See <see cref="RetryJob"/>. Expected failures are exceptions for callers in other modules.</summary>
-    public async Task<JobDto> RetryAsync(Guid owner, Guid id, CancellationToken ct) => Unwrap(await services.GetRequiredService<RetryJob>().HandleAsync(owner, id, ct));
-
-    private static JobDto Unwrap(Result<JobDto> result) => result.IsSuccess ? result.Value : throw result.Error.ToException();
+    /// <summary>See <see cref="RetryJob"/>.</summary>
+    public Task<Result<JobDto>> RetryAsync(Guid owner, Guid id, CancellationToken ct) => services.GetRequiredService<RetryJob>().HandleAsync(owner, id, ct);
 }
