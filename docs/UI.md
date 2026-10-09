@@ -16,7 +16,7 @@ Chat、功能頁及閱讀器共用 `WorkspaceSidebar`／`WorkspaceLayout`。Togg
 
 聊天 lazy-loaded，Signal Forms、zoneless 與 OnPush。IME composition／229 Enter 不送出，Shift+Enter 換行；草稿自動增高，讀取歷史時保持捲動位置並提供「回到最新」。手機 drawer 有關閉、Escape、inert 與焦點返回。
 
-串流增量透過共用 `FramePublisher` 合併為每 32ms 最多一次更新，terminal status 前立即 flush。`StreamingAnswer` 以約 20fps 平滑追上突發文字，保留已完成 Markdown 區塊的 DOM，只重新解析尚在生成的尾段，避免半個 UTF-16 surrogate；完成／停止後改用伺服器完整 Markdown。等待狀態沿用軌道動態，準備回答採多層旋轉與中心脈衝，不顯示虛構思考內容。捲動跟隨每 frame 只排一次，使用者閱讀歷史時維持原行為。減少動態模式直接呈現最新文字。
+串流增量透過共用 `FramePublisher` 合併為每 32ms 最多一次更新，terminal status 前立即 flush。`StreamingAnswer` 以約 20fps 平滑追上突發文字，避免半個 UTF-16 surrogate；Markdown 如何分段重算見 [聊天渲染](CHAT_RENDERING.md)；完成／停止後改用伺服器完整 Markdown。等待狀態沿用軌道動態，準備回答採多層旋轉與中心脈衝，不顯示虛構思考內容。捲動跟隨每 frame 只排一次，使用者閱讀歷史時維持原行為。減少動態模式直接呈現最新文字。
 
 登入頁延續工作區 token：桌面雙欄、手機單欄；自有傅立葉標誌動畫可跳過／重播，遵循減少動態，表單全程可用。提交後清除個人密碼，返回位置只接受列入白名單的本站功能／閱讀器路徑；登入／登出重設 ChatStore。SQL、AD 服務密碼與 Google key 在後端。
 
@@ -26,7 +26,7 @@ Chat、功能頁及閱讀器共用 `WorkspaceSidebar`／`WorkspaceLayout`。Togg
 
 對話輪次浮層以實際橫槓／輪次入口定位，限制在閱讀區及螢幕範圍；桌面在閱讀區右側中央，手機入口放在閱讀區右下，避開提問角色標籤。使用原生 popover top layer，Escape、點外部或離開預覽可關閉；動態文字以純文字摘要呈現。
 
-Markdown 禁 raw HTML、external images、危險 URL；解析後經 DOMPurify tag／attribute allowlist，才進入 Angular trusted HTML boundary，以保留 code-copy button。不得把其他 HTML 傳到該 boundary。串流保留已完成區塊，只重新解析尾段；不完整的 Mermaid fence 顯示原始碼，區塊完成後才繪圖，避免每 token 重算整份內容。
+長對話、程式碼高亮、Markdown 安全邊界與啟動請求的規則見 [聊天渲染](CHAT_RENDERING.md)。
 
 `MarkdownView` 在安全解析後，將完成的 Mermaid fenced block 掛載到 renderer 自己產生的插槽；清單及引用中的圖表保留原有結構。對話、成果文件、使用者活動、分享與其他 Markdown 閱讀介面沿用同一元件。Mermaid 12.1.0、ELK 及圖表元件／樣式／專用圖示均延遲載入，沒有圖表便不下載引擎。使用 Neo 外觀、專案設計 token、系統字型與統一圖表字級，支援深色、圖表／原始碼切換、縮放、滑鼠拖曳、鍵盤縮放、展開和 SVG 下載。長圖表在自身畫布捲動，避免撐寬頁面；錯誤保留原始碼，串流未完成的 fence 不提早繪圖。
 
