@@ -4,6 +4,8 @@ import { NexusApi } from '../api/nexus-api';
 import type { AuthSession } from '../api/types';
 import { ApiTransport } from '../api/api-transport';
 
+const RECENT_SESSION_MS = 5000;
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api = inject(NexusApi);
@@ -11,6 +13,7 @@ export class AuthService {
   readonly session = signal<AuthSession | null>(null);
   readonly generation = signal(0);
   private pending: Promise<AuthSession> | null = null;
+  private confirmedAt = 0;
   private readonly channel =
     typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('nexus-identity');
   constructor() {
@@ -36,6 +39,7 @@ export class AuthService {
       )
         this.generation.update((value) => value + 1);
       this.session.set(session);
+      this.confirmedAt = session.authenticated ? Date.now() : 0;
       return session;
     });
     try {
@@ -44,7 +48,10 @@ export class AuthService {
       this.pending = null;
     }
   }
+  /** The route guard has just confirmed the session; a page loading right after reuses it. */
   async requireLogin(): Promise<boolean> {
+    if (this.session()?.authenticated && Date.now() - this.confirmedAt < RECENT_SESSION_MS)
+      return true;
     const session = await this.load();
     if (session.authenticated) return true;
     await this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });

@@ -6,6 +6,9 @@ import { BrowserSession } from '../monitoring/browser-session';
 export { ApiError } from './safe-errors';
 import { ApiError } from './safe-errors';
 
+const REFERENCE_MAX_AGE_MS = 30_000;
+const parse = <T>(body: string): T => (body ? JSON.parse(body) : undefined) as T;
+
 /** Shared authenticated transport for JSON, multipart uploads and SSE. */
 @Injectable({ providedIn: 'root' })
 export class ApiTransport {
@@ -13,12 +16,16 @@ export class ApiTransport {
   private readonly browserSession = inject(BrowserSession);
   private csrf = '';
   private identity: string | null = null;
+  private readonly reads = new Map<string, Promise<string>>();
+  private readonly references = new Map<string, { at: number; body: Promise<string> }>();
   readonly expired = signal(0);
   session(value: AuthSession) {
     this.csrf = value.csrfToken;
-    this.identity = value.userId
+    const identity = value.userId
       ? value.userId + ':' + (value.testing?.administratorId ?? '')
       : null;
+    if (identity !== this.identity) this.references.clear();
+    this.identity = identity;
   }
   token(value: string) {
     this.csrf = value;
@@ -65,6 +72,7 @@ export class ApiTransport {
     if (!response.ok) {
       if (response.status === 401 && !path.startsWith('/auth/')) {
         this.csrf = '';
+        this.references.clear();
         this.expired.update((value) => value + 1);
         if (!this.router.url.startsWith('/login'))
           void this.router.navigate(['/login'], { queryParams: { returnUrl: this.router.url } });
@@ -84,6 +92,8 @@ export class ApiTransport {
         problem.issueCode,
       );
     }
+    // Any change made from this browser may affect reference data, so it is read again.
+    if (method !== 'GET') this.references.clear();
     return response;
   }
 
@@ -94,7 +104,37 @@ export class ApiTransport {
     extra?: Record<string, string>,
     signal?: AbortSignal,
   ): Promise<T> {
+    // Identical reads in flight share one request; every caller parses its own copy.
+    if (method === 'GET' && body === undefined && !extra && !signal) {
+      let read = this.reads.get(path);
+      if (!read) {
+        read = this.text(path).finally(() => this.reads.delete(path));
+        this.reads.set(path, read);
+      }
+      return parse<T>(await read);
+    }
     const response = await this.response(path, method, body, extra, signal);
     return response.status === 204 ? (undefined as T) : (response.json() as Promise<T>);
+  }
+
+  /**
+   * Slow-changing reference data (model catalog, policies) is reused for a short time. It is
+   * dropped when the identity changes or after any change request from this browser.
+   */
+  async reference<T>(path: string, maxAge = REFERENCE_MAX_AGE_MS): Promise<T> {
+    const cached = this.references.get(path);
+    if (cached && Date.now() - cached.at < maxAge) return parse<T>(await cached.body);
+    const body = this.text(path);
+    const entry = { at: Date.now(), body };
+    this.references.set(path, entry);
+    body.catch(() => {
+      if (this.references.get(path) === entry) this.references.delete(path);
+    });
+    return parse<T>(await body);
+  }
+
+  private async text(path: string) {
+    const response = await this.response(path);
+    return response.status === 204 ? '' : response.text();
   }
 }

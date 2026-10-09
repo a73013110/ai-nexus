@@ -39,14 +39,17 @@ export class UserSettingsService {
         });
     });
   }
-  async load(owner: string, refresh = false) {
-    if (!refresh && this.owner === owner && this.generation === this.auth.generation())
-      return this.value();
+  /** `owner` may still be loading, so the account and its settings are fetched together. */
+  async load(owner: string | Promise<string>, refresh = false) {
+    // Within one sign-in generation the owner cannot change.
+    if (!refresh && this.owner && this.generation === this.auth.generation()) {
+      if ((await owner) === this.owner) return this.value();
+    }
     const generation = this.auth.generation();
-    const value = await this.http.json<UserSettings>('/settings');
+    const [id, value] = await Promise.all([owner, this.http.json<UserSettings>('/settings')]);
     if (generation !== this.auth.generation())
       throw new DOMException('Identity changed', 'AbortError');
-    this.owner = owner;
+    this.owner = id;
     this.generation = generation;
     this.apply(value);
     return value;

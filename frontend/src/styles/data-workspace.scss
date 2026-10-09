@@ -537,3 +537,8 @@ select:where(.ui-input) {
 .ui-error-text {
   color: var(--danger);
 }
+.ui-section-header h3 span {
+  color: var(--muted);
+  margin-left: var(--p-space-2);
+  font-size: var(--text-caption);
+}

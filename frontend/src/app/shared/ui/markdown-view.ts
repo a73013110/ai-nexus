@@ -16,13 +16,16 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { CopyFeedback } from '../browser/copy-feedback';
 import { renderMarkdownWithDiagrams } from './markdown';
 import { completeStreamingInline } from './streaming-markdown';
+import { highlightWhenVisible } from './code-highlighting';
 
 @Component({
   imports: [Notice],
   selector: 'nx-markdown-view',
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<div #body class="markdown" [innerHTML]="html()" (click)="copyCode($event)"></div>
+  // Copy buttons inside the rendered Markdown are real buttons; the click is delegated.
+  template: `<!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus, @angular-eslint/template/click-events-have-key-events -->
+    <div #body class="markdown" [innerHTML]="html()" (click)="copyCode($event)"></div>
     @if (widgetError()) {
       <nx-notice tone="warning" message="圖表元件未能載入，以下保留 Mermaid 原始碼。" />
     }
@@ -37,6 +40,7 @@ export class MarkdownView {
   private readonly injector = inject(Injector);
   private readonly body = viewChild.required<ElementRef<HTMLElement>>('body');
   private clearWidgets: () => void = () => undefined;
+  private clearHighlight: () => void = () => undefined;
   private revision = 0;
   readonly copy = inject(CopyFeedback);
   readonly widgetError = signal(false);
@@ -54,11 +58,14 @@ export class MarkdownView {
       const revision = ++this.revision;
       this.widgetError.set(false);
       this.clearWidgets();
+      this.clearHighlight();
+      this.clearHighlight = highlightWhenVisible(host);
       if (diagrams.length) void this.mountDiagrams(host, diagrams, revision);
     });
     inject(DestroyRef).onDestroy(() => {
       ++this.revision;
       this.clearWidgets();
+      this.clearHighlight();
     });
   }
   private async mountDiagrams(host: HTMLElement, diagrams: readonly string[], revision: number) {

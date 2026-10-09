@@ -128,7 +128,7 @@
   line-height: var(--line-reading);
   margin: var(--p-space-2) 0 var(--p-space-4);
 }
-.workspace-dialog :where(label:not(.selection-control)) {
+.workspace-dialog :where(label:not(.selection-control), .field-label) {
   display: block;
   color: var(--ink);
   font-size: var(--text-label);
@@ -315,4 +315,35 @@
   .command-results kbd {
     display: none;
   }
+}
+.share-recipients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+}
+.share-recipient {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  padding: var(--p-space-2) var(--p-space-3);
+  min-height: var(--button-target);
+  background: var(--accent-soft);
+  border-radius: var(--p-radius-pill);
+}
+.share-created {
+  text-align: center;
+  padding: var(--p-space-5);
+}
+.share-created > nx-icon {
+  color: var(--signal);
+  width: 40px;
+  height: 40px;
+}
+.share-created p {
+  color: var(--secondary);
+  line-height: var(--line-reading);
+}
+.share-created button,
+.share-created a {
+  margin: var(--p-space-2);
 }
