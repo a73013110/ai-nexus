@@ -76,9 +76,11 @@ public sealed class AttachmentLifecycle(NexusDbContext db, IAttachmentStorage st
         await DeletePendingAsync(ct, cleanupId);
     }
 
-    public async Task DeletePendingAsync(CancellationToken ct, Guid? id = null)
+    public Task DeletePendingAsync(CancellationToken ct, Guid? id = null) => DeletePendingAsync(id is Guid one ? [one] : null, ct);
+
+    private async Task DeletePendingAsync(IReadOnlyCollection<Guid>? ids, CancellationToken ct)
     {
-        var rows = await db.Set<Attachment>().AsNoTracking().Where(x => x.StorageState == AttachmentStates.Deleting && (id == null || x.Id == id))
+        var rows = await db.Set<Attachment>().AsNoTracking().Where(x => x.StorageState == AttachmentStates.Deleting && (ids == null || ids.Contains(x.Id)))
             .OrderBy(x => x.CreatedAt).Take(100).Select(x => new { x.Id, x.StorageKey }).ToListAsync(ct);
         foreach (var file in rows)
         {
@@ -92,23 +94,31 @@ public sealed class AttachmentLifecycle(NexusDbContext db, IAttachmentStorage st
         }
     }
 
-    public async Task ReclaimAsync(CancellationToken ct)
+    /// <summary>
+    /// Reclaims up to 100 expired drafts. The scheduled worker reclaims everyone's; an upload passes its <paramref name="owner"/>
+    /// so the owner's expired drafts stop counting against the quota it is about to check, and only their bytes are deleted inline.
+    /// </summary>
+    public async Task ReclaimAsync(CancellationToken ct, Guid? owner = null)
     {
         var cutoff = DateTimeOffset.UtcNow.AddDays(-options.Value.DraftRetentionDays);
         var interrupted = DateTimeOffset.UtcNow.AddHours(-1);
-        var candidates = await ExpiredDrafts(cutoff, interrupted).AsNoTracking()
+        var candidates = await ExpiredDrafts(cutoff, interrupted).AsNoTracking().Where(x => owner == null || x.OwnerId == owner)
             .OrderBy(x => x.CreatedAt).Take(100).Select(x => new { x.Id, x.OwnerId }).ToListAsync(ct);
-        foreach (var owner in candidates.GroupBy(x => x.OwnerId))
+        if (owner is not null && candidates.Count == 0) return;
+        var reclaimed = new List<Guid>();
+        foreach (var group in candidates.GroupBy(x => x.OwnerId))
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            await quota.LockOwnerAsync(owner.Key, ct);
-            var ids = owner.Select(x => x.Id).ToArray();
+            await quota.LockOwnerAsync(group.Key, ct);
+            var ids = group.Select(x => x.Id).ToArray();
             var expired = await ExpiredDrafts(cutoff, interrupted).Where(x => ids.Contains(x.Id)).Select(x => x.Id).ToArrayAsync(ct);
-            await RemovePrivateReadersAsync(owner.Key, expired, ct);
+            await RemovePrivateReadersAsync(group.Key, expired, ct);
             await MarkUnusedAsync(expired, ct);
             await transaction.CommitAsync(ct);
+            reclaimed.AddRange(expired);
         }
-        await DeletePendingAsync(ct);
+        if (owner is null) await DeletePendingAsync(null, ct);
+        else if (reclaimed.Count > 0) await DeletePendingAsync(reclaimed, ct);
     }
 
     // Reconcile only in the scheduled worker, not on each upload. A grace period protects

@@ -34,7 +34,8 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<Atta
         if (data.Length == 0 || data.Length != file.Length) throw new ApiException(400, "file_size_mismatch", "上傳檔案內容不完整，請重新上傳。");
         var bytes = data.ToArray();
         var (type, text) = extractor.Extract(name, bytes, ct);
-        await lifecycle.ReclaimAsync(ct);
+        // Only this owner's expired drafts: they must not count against the quota checked below. Everyone else's are the cleanup worker's.
+        await lifecycle.ReclaimAsync(ct, owner);
         var attachment = new Attachment { OwnerId = owner, FileName = name, ContentType = type, Size = bytes.Length, ExtractedText = text, StorageState = AttachmentStates.Pending, CreatedAt = clock.GetUtcNow() };
         await writes.Gate.WaitAsync(ct);
         try
