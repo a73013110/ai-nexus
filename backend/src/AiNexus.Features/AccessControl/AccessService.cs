@@ -19,7 +19,6 @@ public sealed class AccessService(NexusDbContext db, IHttpContextAccessor http, 
     /// <summary>Forgets grants read so far in this request; call after a write that may change them, or before a re-check that must see SQL.</summary>
     public void Invalidate() => grants.Clear();
 
-
     public IQueryable<UserGroupGrant> GroupMemberships(IReadOnlyList<Guid> users) =>
         (from user in db.Users join assignment in db.Set<UserRole>() on user.Id equals assignment.UserId
          join role in db.Set<Role>() on assignment.RoleId equals role.Id
