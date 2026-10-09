@@ -164,7 +164,7 @@ icacls 'D:\CoreProject\AiNexus\data\attachments' /inheritance:r `
 
 ## 8. 空資料庫初始化
 
-本版 migrations 已合併為單一 `20261005171400_InitialCreate`，包含全部 schema、種子、索引、描述、原檔 metadata／配額、provider 與耗時欄位。只適用全新空資料庫；無舊版 binary 遷移或舊 DB 相容。既有其他基線的 history 會被拒絕，初始化不會 DROP、清空資料或重寫 history。日後新增 migration 應延續此基線。
+migration 基線是單一 `InitialCreate`（2026-10-09 重建），包含全部 schema、種子、索引與資料表／欄位說明。2026-10-09 以前建立的資料庫無法升級，必須刪除後重新初始化；初始化不會 DROP、清空資料或重寫 history。日後新增 migration 延續此基線，細節見 [資料庫](../../docs/DATABASE.md)。
 
 先停止所有共用此 DB 的 host，確認 DBA 準備的 AiNexus 是空庫或不存在。使用有建庫／DDL 權限的維運身分，在主機 PowerShell 7 執行：
 
@@ -178,9 +178,9 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Host.dll' `
 if ($LASTEXITCODE -ne 0) { throw '資料庫初始化未完成，先不要啟動網站。' }
 ```
 
-工具只建立不存在的 AiNexus，套用 InitialCreate 並檢查模型／snapshot 一致與物件描述。同一基線重跑不會重建；DBA 亦可審閱套用 `db/migrations.sql`。完成後移除 runtime 身分的 DDL 權限。SQL Server 2025 額外建立 VECTOR(768)／VECTOR(1024)，舊 SQL 使用 portable 路徑。
+工具只建立不存在的 AiNexus，套用 InitialCreate 並檢查模型／snapshot 一致。重跑不會重建；DBA 亦可審閱套用 `db/migrations.sql`。完成後移除 runtime 身分的 DDL 權限。SQL Server 2025 額外建立 VECTOR(768)／VECTOR(1024)，舊 SQL 使用 portable 路徑。
 
-runtime 需要 13 個業務 schema 的 DML 與 history 的 SELECT。每個 app 使用一個程序；provider 可各自多個推論 worker，MaxConcurrency 只限制本程序的聊天／模型任務，沒有跨主機全域 GPU 限制。生成租約每 15 秒續期、兩分鐘有效，主機時鐘須同步。
+runtime 需要所有業務 schema（每模組一個，清單見 [資料庫](../../docs/DATABASE.md)）的 DML 與 history 的 SELECT。每個 app 使用一個程序；provider 可各自多個推論 worker，MaxConcurrency 只限制本程序的聊天／模型任務，沒有跨主機全域 GPU 限制。生成租約每 15 秒續期、兩分鐘有效，主機時鐘須同步。
 
 ## 9. 分層驗收：確定設定正確
 

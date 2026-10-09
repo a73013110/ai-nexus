@@ -45,7 +45,7 @@ BaseUrl 支援 Gitea 在子路徑部署；使用 HTTPS，HTTP 僅允許 loopback
 
 在 Gitea 的「設定 → 應用程式」建立個人權杖，優先只授予 `read:user`、`read:repository`、`read:issue`，將權杖填入 AI Nexus「程式庫」連線視窗。不同 Gitea 版本的 scope／repo 範圍介面可能不同，以你主機的 `/api/swagger` 與 `/swagger.v1.json` 為準；不用發送權杖到聊天。[Gitea API 驗證與 scope](https://docs.gitea.com/development/api-usage/)
 
-後端用權杖驗證 `/api/v1/user`，以 ASP.NET Data Protection 加密後存於 `workspace.RepositoryConnections`。保護目的同時綁定使用者 ID 與 Gitea BaseUrl；不同使用者／不同主機設定不能混用。畫面不會回傳權杖，不放在瀏覽器 localStorage，HttpClient 也不記錄授權標頭、不跟隨重新導向。IIS 的 `keys/` 同時保護登入 cookie 與 連線權杖，更新 app 必須保留；DPAPI 身分或 key ring 改變後可能需要重新連線。
+後端用權杖驗證 `/api/v1/user`，以 ASP.NET Data Protection 加密後存於 `repositories.RepositoryConnections`。保護目的同時綁定使用者 ID 與 Gitea BaseUrl；不同使用者／不同主機設定不能混用。畫面不會回傳權杖，不放在瀏覽器 localStorage，HttpClient 也不記錄授權標頭、不跟隨重新導向。IIS 的 `keys/` 同時保護登入 cookie 與 連線權杖，更新 app 必須保留；DPAPI 身分或 key ring 改變後可能需要重新連線。
 
 「更新授權」替換加密權杖；「中斷連線」刪除自己的連線。Gitea 撤銷權杖後新讀取失敗，沒有自動切換共用帳號。連線、解除連線及匯入均留稽核。
 
@@ -59,7 +59,7 @@ BaseUrl 支援 Gitea 在子路徑部署；使用 HTTPS，HTTP 僅允許 loopback
 
 「匯入版本快照」只可選擇能編輯的知識庫，由後端重讀固定版本、沿用附件驗證與文件索引工作。相同使用者／知識庫／來源／commit／path 的重複匯入會重用未刪除的文件，同一 app 內以寫入鎖防止並行重複。IIS 使用一個 worker；未來部署多個 app 實例前，應改成跨實例的匯入唯一性／資料庫協調，不依賴記憶體鎖。
 
-快照匯入後是 AiNexus 的獨立資料，依目的知識庫 ACL 保存，**不會同步 Gitea 的後續撤權、修改或刪除**。分享前須確認內容適合目的成員；中斷程式庫連線不會刪除已匯入的文件。來源識別存在 `knowledge.RepositoryImports`，文件仍有 commit／URL 可核對。
+快照匯入後是 AiNexus 的獨立資料，依目的知識庫 ACL 保存，**不會同步 Gitea 的後續撤權、修改或刪除**。分享前須確認內容適合目的成員；中斷程式庫連線不會刪除已匯入的文件。來源識別存在 `repositories.RepositoryImports`，文件仍有 commit／URL 可核對。
 
 ## 後續可用的延伸
 

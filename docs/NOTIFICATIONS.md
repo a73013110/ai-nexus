@@ -1,6 +1,6 @@
 # 工作區通知規格 v1
 
-通知屬於登入者，獨立於功能頁。側欄鈴鐺、未讀數、通知中心與瀏覽器通知共用 `NotificationStore`；事件保存於 `operations.Notifications`，重新整理或重新登入後仍可閱讀。通知不是授權，目標 API 必須重新檢查功能、owner、來源 ACL、分享期限或 Gitea 存取權。
+通知屬於登入者，獨立於功能頁。側欄鈴鐺、未讀數、通知中心與瀏覽器通知共用 `NotificationStore`；事件保存於 `notifications.Notifications`，重新整理或重新登入後仍可閱讀。通知不是授權，目標 API 必須重新檢查功能、owner、來源 ACL、分享期限或 Gitea 存取權。
 
 所有側欄只有 heading 的鈴鐺入口，位於 sidebar-toggle 左側；未讀使用共用 CountBadge 的 info 色與 overlay，0 隱藏，超過 99 顯示 99+。按鈕保留「通知」名稱並描述完整數量，單一 atomic status 播報更新。未讀數來自 API 的全通知匣 `unread`，不從最近 50 筆估算嚴重性；事件的 info／success／error 在通知中心分別使用 info／success／danger 語意色。
 

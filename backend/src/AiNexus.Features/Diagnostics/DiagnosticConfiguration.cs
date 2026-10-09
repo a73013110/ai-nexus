@@ -19,7 +19,7 @@ internal sealed class DiagnosticEventConfiguration : IEntityTypeConfiguration<Di
 {
     public void Configure(EntityTypeBuilder<DiagnosticEvent> log)
     {
-        log.ToTable("DiagnosticEvents", "operations"); log.HasKey(x => x.LogId).IsClustered(false);
+        log.ToTable("DiagnosticEvents", "diagnostics"); log.HasKey(x => x.LogId).IsClustered(false);
         log.Property(x => x.Category).HasMaxLength(180); log.Property(x => x.EventName).HasMaxLength(100);
         log.Property(x => x.MessageTemplate).HasMaxLength(2048); log.Property(x => x.PropertiesJson).HasMaxLength(8192);
         log.Property(x => x.Service).HasMaxLength(80); log.Property(x => x.Environment).HasMaxLength(32);

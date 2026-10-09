@@ -14,13 +14,7 @@ public sealed class DatabaseInitializer(IConfiguration configuration, ISqlDataba
         if (target != "AiNexus") throw new ApiException(400, "database_name", "本初始化指令只允許建立或更新 AiNexus 專用資料庫。");
         var exists = await master.QuerySingleAsync<int>("SELECT COUNT(*) FROM sys.databases WHERE name = @Name", new { Name = target }, commandTimeout: 5, cancellationToken: ct);
         if (exists == 0) await master.ExecuteAsync("CREATE DATABASE [AiNexus]", commandTimeout: 30, cancellationToken: ct);
-        await schema.RequireCompatibleHistoryAsync(ct);
         await db.Database.MigrateAsync(ct);
         await schema.RequireCurrentAsync(ct);
-        // Explicit initialization refreshes descriptions for indexes/constraints added by future migrations.
-        using var descriptions = typeof(DatabaseInitializer).Assembly.GetManifestResourceStream("AiNexus.Database.ObjectDescriptions.sql")
-            ?? throw new InvalidOperationException("Database descriptions resource is missing.");
-        using var reader = new StreamReader(descriptions);
-        await db.Database.ExecuteSqlRawAsync(await reader.ReadToEndAsync(ct), ct);
     }
 }

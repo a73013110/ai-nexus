@@ -42,8 +42,8 @@ AD login → Users（SID）→ UserRoles → Roles
 ```sql
 SELECT u.[Id], u.[Account], r.[Id] AS [RoleId], r.[Name], r.[Enabled]
 FROM [identity].[Users] u
-LEFT JOIN [access].[UserRoles] ur ON ur.[UserId] = u.[Id]
-LEFT JOIN [access].[Roles] r ON r.[Id] = ur.[RoleId];
+LEFT JOIN [accesscontrol].[UserRoles] ur ON ur.[UserId] = u.[Id]
+LEFT JOIN [accesscontrol].[Roles] r ON r.[Id] = ur.[RoleId];
 ```
 
 管理時使用 UserId／RoleId／GroupId／FeatureId，避免依顯示名稱相連。Bridge tables 的外鍵與複合主鍵防孤兒／重複關聯。新增多筆授權與 audit 應同一 transaction 提交；資料庫物件說明見 [DATABASE](DATABASE.md)。

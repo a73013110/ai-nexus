@@ -12,4 +12,4 @@
 
 `GET /shares/{id}/files/{fileId}/preview` 提供分享專用 metadata／已完成擷取頁，原檔讀取使用同一 grant。獨立連結為 `/reader/share/{shareId}/{fileId}`。不建立新 OCR／索引、不呼叫 owner-only 附件 API。圖片／PDF 可安全 inline，其他格式保持 attachment disposition，由閱讀器呈現已擷取文字。每次 API 重新授權；開啟畫面每 30 秒及到期時清除失效內容。建立分享同一 transaction 發送 `share.received`，見 [通知](NOTIFICATIONS.md)。
 
-`collaboration.ShareLinks` 保存快照、擁有者、來源識別與期限；`ShareRecipients` 保存具名帳號授權。附件沿用 `AttachmentReferences` 保留參照，撤銷／到期會移除分享參照。分享建立、撤銷及來源刪除均保留稽核。
+`sharing.ShareLinks` 保存快照、擁有者、來源識別與期限；`ShareRecipients` 保存具名帳號授權。附件沿用 `AttachmentReferences` 保留參照，撤銷／到期會移除分享參照。分享建立、撤銷及來源刪除均保留稽核。
