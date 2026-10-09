@@ -7,10 +7,3 @@ public static class DiagnosticSuppression
     public static IDisposable Enter() { Depth.Value++; return new Exit(); }
     private sealed class Exit : IDisposable { public void Dispose() => Depth.Value--; }
 }
-
-public interface IDiagnosticStore
-{
-    Task WriteAsync(IReadOnlyList<DiagnosticEvent> events, CancellationToken ct);
-    Task CleanupAsync(CancellationToken ct);
-}
-

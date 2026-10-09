@@ -35,7 +35,7 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 
 ## 必須遵守
 
-- 一個 use case 一個檔案（handler＋endpoint＋validator），放在 `AiNexus.Features/<Module>/`。
+- 一個 use case 一個檔案（handler＋endpoint＋validator），放在 `AiNexus.Features/<Module>/`（大模組依能力分子資料夾）；namespace＝資料夾。
 - 預期內的失敗回傳 `Result<T>`，錯誤定義在 `<Module>Errors`；不要為此 throw。
 - request body 要有 `RequestValidator<T>`；時間用 `TimeProvider`；使用者用 `ICurrentUser`。
 - 日誌用 `[LoggerMessage]`，EventId 固定且唯一；NuGet 版本只寫在 `backend/Directory.Packages.props`。

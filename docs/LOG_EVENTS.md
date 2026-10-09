@@ -16,11 +16,11 @@
 | EventId | EventName | 位置 |
 | --- | --- | --- |
 | 1000 / 1001 / 1002 | `http.completed` / `operation.failed` / `http.rejected` | `Platform/Diagnostics/Issues.cs` |
-| 2001 / 2002 | `retrieval.degraded` / `retrieval.retry` | `Knowledge/RetrievalDiagnostics.cs`、`EmbeddingClients.cs` |
-| 2003 | `embedding.bootstrap_deferred` | `Knowledge/EmbeddingLifecycle.cs` |
-| 3000 / 3001 | `job.started` / `job.finished` | `Operations/BackgroundJobs.cs` |
+| 2001 / 2002 | `retrieval.degraded` / `retrieval.retry` | `Knowledge/Retrieval/RetrievalDiagnostics.cs`、`Knowledge/Embeddings/RetrievalHttp.cs` |
+| 2003 | `embedding.bootstrap_deferred` | `Knowledge/Embeddings/EmbeddingBootstrapWorker.cs` |
+| 3000 / 3001 | `job.started` / `job.finished` | `Jobs/BackgroundJobWorker.cs` |
 | 3002 / 3003 | `job.queue_unavailable` / `job.lease_renewal_failed` | 同上 |
-| 3004 | `replay.cleanup_failed` | `Operations/EventRetentionWorker.cs` |
+| 3004 | `replay.cleanup_failed` | `Chat/RunEventRetentionWorker.cs` |
 | 3100 / 3101 | `generation.started` / `generation.finished` | `Chat/GenerationWorker.cs`、`RunService.cs` |
 | 3102 / 3103 / 3104 | `generation.disabled` / `generation.storage_unavailable` / `generation.startup_failed` | `Chat/GenerationWorker.cs` |
 | 3105 / 3106 | `generation.recovery_pending` / `generation.recovery_postponed` | `GenerationWorker.cs`、`RunRecoveryWorker.cs` |
