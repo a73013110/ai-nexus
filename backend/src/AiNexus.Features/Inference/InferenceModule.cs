@@ -40,6 +40,7 @@ public sealed class InferenceModule : IFeatureModule
         services.AddSingleton<ModelPresentation>();
         services.AddSingleton<GenerationScheduler>();
         services.AddSingleton<SubscriptionLimits>();
+        services.AddSingleton<RunSignals>();
         services.AddHostedService<GenerationWorker>();
         services.AddHostedService<RunRecoveryWorker>();
     }

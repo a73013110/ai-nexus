@@ -12,7 +12,7 @@ namespace AiNexus.Features.Inference;
 /// Expiry is checked again in an atomic UPDATE, so a renewed foreign lease cannot be reclaimed. Each run is recovered
 /// under its conversation's generation lock, so a local flush or cancellation of the same run cannot interleave.
 /// </summary>
-public sealed class RunLeaseRecovery(NexusDbContext db, GenerationScheduler scheduler, ConversationService conversations, BillingService billing, Issues issues, ILogger<RunLeaseRecovery> logger, AiNexus.Features.Notifications.NotificationService notifications)
+public sealed class RunLeaseRecovery(NexusDbContext db, GenerationScheduler scheduler, RunSignals signals, ConversationService conversations, BillingService billing, Issues issues, ILogger<RunLeaseRecovery> logger, AiNexus.Features.Notifications.NotificationService notifications)
 {
     public async Task<int> RecoverAsync(DateTimeOffset now, CancellationToken ct)
     {
@@ -48,6 +48,7 @@ public sealed class RunLeaseRecovery(NexusDbContext db, GenerationScheduler sche
             await notifications.PublishAsync(run.OwnerId, "run:" + run.Id, "conversation.failed", "error", "AI 回答未完成", Issues.Message(run.IssueCode), "conversation", run.ConversationId, ct, run.IssueCode);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
+            signals.Notify(id);
             recovered++;
         }
         return recovered;
