@@ -20,18 +20,7 @@ public sealed class Conversation
     public List<ConversationLabel> Labels { get; set; } = [];
 }
 
-/// <summary>Entry point kept for <c>NexusDbContext</c>.</summary>
-public static class ConversationConfiguration
-{
-    public static void Configure(ModelBuilder model)
-    {
-        model.ApplyConfiguration(new ConversationEntityConfiguration());
-        model.ApplyConfiguration(new ConversationLabelConfiguration());
-        model.ApplyConfiguration(new MessageConfiguration());
-    }
-}
-
-internal sealed class ConversationEntityConfiguration : IEntityTypeConfiguration<Conversation>
+internal sealed class ConversationConfiguration : IEntityTypeConfiguration<Conversation>
 {
     public void Configure(EntityTypeBuilder<Conversation> conversation)
     {

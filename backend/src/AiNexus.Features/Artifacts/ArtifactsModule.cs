@@ -55,3 +55,5 @@ internal sealed class ExportOptionsValidator : IValidateOptions<ExportOptions>
            && (string.IsNullOrWhiteSpace(x.BrowserExecutablePath) || Path.IsPathFullyQualified(x.BrowserExecutablePath))
             ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail("Invalid document export browser settings.");
 }
+
+internal sealed class ArtifactsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Artifacts, "成果文件", "/artifacts", 40));

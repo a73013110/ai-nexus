@@ -30,7 +30,7 @@ public sealed class BackgroundJob
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
-internal sealed class BackgroundJobEntityConfiguration : IEntityTypeConfiguration<BackgroundJob>
+internal sealed class BackgroundJobConfiguration : IEntityTypeConfiguration<BackgroundJob>
 {
     public void Configure(EntityTypeBuilder<BackgroundJob> job)
     {
@@ -41,10 +41,4 @@ internal sealed class BackgroundJobEntityConfiguration : IEntityTypeConfiguratio
         job.HasIndex(x => x.ActiveKey).IsUnique().HasFilter("[ActiveKey] IS NOT NULL"); job.HasIndex(x => new { x.Status, x.LeaseUntil, x.CreatedAt }); job.HasIndex(x => new { x.OwnerId, x.CreatedAt });
         job.HasIndex(x => x.SubjectId); // Active work on a document or embedding profile.
     }
-}
-
-/// <summary>The module's table, applied by <c>NexusDbContext</c>.</summary>
-public static class BackgroundJobConfiguration
-{
-    public static void Configure(ModelBuilder model) => model.ApplyConfiguration(new BackgroundJobEntityConfiguration());
 }

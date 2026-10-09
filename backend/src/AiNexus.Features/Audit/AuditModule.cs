@@ -26,3 +26,5 @@ public sealed class AuditModule : IFeatureModule
         GetAuditCatalog.Map(audit);
     }
 }
+
+internal sealed class AuditFeatures() : FeatureSeed(new PlatformFeature(AuditModule.Feature, "活動稽核", "/admin/audit", 92, AdministratorsOnly: true));

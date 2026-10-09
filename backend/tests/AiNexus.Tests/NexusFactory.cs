@@ -72,7 +72,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
         {
             services.RemoveAll<DbContextOptions<NexusDbContext>>();
             services.RemoveAll<Microsoft.EntityFrameworkCore.Infrastructure.IDbContextOptionsConfiguration<NexusDbContext>>();
-            services.AddDbContext<NexusDbContext>(options => options.UseSqlite(ConnectionString(databasePath)));
+            services.AddDbContext<NexusDbContext>((scope, options) => options.UseSqlite(ConnectionString(databasePath)).AddNexusInterceptors(scope));
             services.AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, TestIdentityHandler>("Test", _ => { });
             services.PostConfigure<AuthenticationOptions>(options => { options.DefaultAuthenticateScheme = ldap ? AuthEndpoints.CookieScheme : "Test"; options.DefaultChallengeScheme = ldap ? AuthEndpoints.CookieScheme : "Test"; });
             services.AddSingleton<IAuthenticationSchemeProvider, TestSchemeProvider>();

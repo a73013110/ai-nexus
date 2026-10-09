@@ -10,3 +10,5 @@ public sealed class ChunkEmbedding768
     public byte[] ContentHash { get; set; } = [];
     public SqlVector<float> Vector { get; set; }
 }
+
+internal sealed class ChunkEmbedding768Configuration() : ChunkEmbeddingConfiguration<ChunkEmbedding768>("ChunkEmbeddings768", 768);

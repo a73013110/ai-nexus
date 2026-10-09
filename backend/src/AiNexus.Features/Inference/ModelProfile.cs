@@ -1,6 +1,9 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
 namespace AiNexus.Features.Inference;
 
-/// <summary>A configured model. Its EF mapping lives in <c>NexusDbContext</c>.</summary>
+/// <summary>A configured model.</summary>
 public sealed class ModelProfile
 {
     public string Id { get; set; } = "";
@@ -40,3 +43,16 @@ public sealed class ModelProfile
 public sealed record ModelDto(string Id, string DisplayName, int ContextTokens, int MaxOutputTokens, bool SupportsStreaming, bool SupportsUsage, IReadOnlyList<string> ReasoningEfforts, string DefaultReasoningEffort, bool SupportsImages = false, string? Provider = null);
 public sealed record ModelPolicyDto(bool AllowModelSelection, bool ShowModelNames, string? DefaultModelId, int MaxInputCharacters = 12000);
 public sealed record ModelsDto(IReadOnlyList<ModelDto> Models, bool ProviderAvailable, string? Notice, ModelPolicyDto Policy, IReadOnlyList<AiNexus.Features.Inference.ProviderStatusDto>? Providers = null);
+
+internal sealed class ModelProfileConfiguration : IEntityTypeConfiguration<ModelProfile>
+{
+    public void Configure(EntityTypeBuilder<ModelProfile> profile)
+    {
+        profile.ToTable("ModelProfiles", "inference");
+        profile.HasKey(x => x.Id);
+        profile.Property(x => x.Id).HasMaxLength(160);
+        profile.Property(x => x.DisplayName).HasMaxLength(120);
+        profile.Property(x => x.Provider).HasMaxLength(32);
+        profile.Property(x => x.ProviderModelId).HasMaxLength(150);
+    }
+}
