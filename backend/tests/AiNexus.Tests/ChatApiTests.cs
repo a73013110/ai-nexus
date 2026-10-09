@@ -10,6 +10,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 
 namespace AiNexus.Tests;
@@ -192,9 +193,8 @@ public sealed class ChatApiTests
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client);
         var run = await CreateRun(client, conversation.Id, "取消測試");
-        RunDto current = run;
-        for (var i = 0; i < 100 && current.Content.Length == 0; i++) { await Task.Delay(20); current = (await client.GetFromJsonAsync<RunDto>($"/api/v1/runs/{run.Id}"))!; }
-        Assert.NotEmpty(current.Content);
+        await WaitForFirstDelta(client, run.Id);
+        Assert.NotEmpty((await client.GetFromJsonAsync<RunDto>($"/api/v1/runs/{run.Id}"))!.Content);
         var response = await client.PostAsync($"/api/v1/runs/{run.Id}/cancel", null);
         response.EnsureSuccessStatusCode();
         var cancelled = (await response.Content.ReadFromJsonAsync<RunDto>())!;
@@ -211,7 +211,8 @@ public sealed class ChatApiTests
     [Fact]
     public async Task ProviderFailureAndTimeoutBecomeTerminalAndAllowRetry()
     {
-        await using var factory = new NexusFactory();
+        var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        await using var factory = new NexusFactory(clock: clock);
         using var client = await factory.SignedInAsync();
         var conversation = await CreateConversation(client);
         factory.Provider.Fail = true;
@@ -221,6 +222,8 @@ public sealed class ChatApiTests
         factory.Provider.Fail = false;
         factory.Provider.NeverFinish = true;
         var second = await CreateRun(client, conversation.Id, "逾時");
+        await WaitForFirstDelta(client, second.Id);
+        clock.Advance(TimeSpan.FromSeconds(5));
         var timedOut = await WaitForTerminal(client, second.Id);
         Assert.Equal("generation_timeout", timedOut.ErrorCode);
         Assert.NotEmpty(timedOut.Content);
@@ -261,14 +264,31 @@ public sealed class ChatApiTests
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<RunDto>())!;
     }
+    /// <summary>Reads the run's event stream until the first streamed text has been saved and sent.</summary>
+    internal static async Task WaitForFirstDelta(HttpClient client, Guid id)
+    {
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(10));
+        using var events = await client.GetAsync($"/api/v1/runs/{id}/events", HttpCompletionOption.ResponseHeadersRead, timeout.Token);
+        events.EnsureSuccessStatusCode();
+        using var reader = new StreamReader(await events.Content.ReadAsStreamAsync(timeout.Token));
+        while (await reader.ReadLineAsync(timeout.Token) is { } line)
+            if (line.StartsWith("data: ", StringComparison.Ordinal) && line.Contains("\"type\":\"delta\"", StringComparison.Ordinal)) return;
+        Assert.Fail($"Run {id} ended without streaming any text.");
+    }
+
+    /// <summary>Follows the run's event stream, which the server ends once the run is terminal and every event is sent.</summary>
     internal static async Task<RunDto> WaitForTerminal(HttpClient client, Guid id)
     {
-        for (var i = 0; i < 400; i++)
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        timeout.CancelAfter(TimeSpan.FromSeconds(10));
+        using (var events = await client.GetAsync($"/api/v1/runs/{id}/events", HttpCompletionOption.ResponseHeadersRead, timeout.Token))
         {
-            var run = (await client.GetFromJsonAsync<RunDto>($"/api/v1/runs/{id}"))!;
-            if (!RunStates.IsActive(run.Status)) return run;
-            await Task.Delay(20);
+            events.EnsureSuccessStatusCode();
+            await (await events.Content.ReadAsStreamAsync(timeout.Token)).CopyToAsync(Stream.Null, timeout.Token);
         }
-        throw new TimeoutException("Run did not finish.");
+        var run = (await client.GetFromJsonAsync<RunDto>($"/api/v1/runs/{id}", timeout.Token))!;
+        Assert.False(RunStates.IsActive(run.Status), $"Run {id} is still {run.Status} after its event stream ended.");
+        return run;
     }
 }
