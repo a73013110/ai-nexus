@@ -2,7 +2,6 @@ using AiNexus.Host;
 using AiNexus.Host.Commands;
 using AiNexus.Features;
 using AiNexus.Features.Integrations;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Monitoring;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform;
@@ -12,6 +11,7 @@ using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Health;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Security;
+using AiNexus.Features.Identity.Sessions;
 
 var builder = WebApplication.CreateBuilder(args);
 WebApplication app;

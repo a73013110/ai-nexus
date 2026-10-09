@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
+using AiNexus.Features.Identity.Sessions;
 
 namespace AiNexus.Features.Identity;
 

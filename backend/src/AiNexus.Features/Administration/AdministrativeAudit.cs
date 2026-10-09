@@ -6,6 +6,8 @@ using AiNexus.Features.Persistence;
 using AiNexus.Features.Identity;
 using AiNexus.Features.AccessControl;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Administration.Roles;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Administration;
 

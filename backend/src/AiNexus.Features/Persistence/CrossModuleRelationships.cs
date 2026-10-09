@@ -5,13 +5,11 @@ using AiNexus.Features.Attachments;
 using AiNexus.Features.Billing;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Conversations;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Integrations;
 using AiNexus.Features.Library;
 using AiNexus.Features.Notifications;
 using AiNexus.Features.Projects;
-using AiNexus.Features.Quality;
 using AiNexus.Features.Repositories;
 using AiNexus.Features.Sharing;
 using AiNexus.Features.WebSearch;
@@ -20,6 +18,10 @@ using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge.Collections;
 using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Features.Identity.Users;
+using AiNexus.Features.Quality.Feedback;
+using AiNexus.Features.Quality.Evaluations;
+using AiNexus.Features.Quality.RetrievalEvaluations;
 
 namespace AiNexus.Features.Persistence;
 

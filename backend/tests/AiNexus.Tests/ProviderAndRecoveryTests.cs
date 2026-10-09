@@ -5,11 +5,11 @@ using AiNexus.Features.Chat;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Conversations;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Tests;
 

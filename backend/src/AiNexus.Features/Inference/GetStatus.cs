@@ -1,7 +1,7 @@
-using AiNexus.Features.Identity;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data.Sql;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.Identity.Authentication;
 
 namespace AiNexus.Features.Inference;
 

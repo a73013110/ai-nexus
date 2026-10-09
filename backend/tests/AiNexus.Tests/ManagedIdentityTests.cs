@@ -5,7 +5,6 @@ using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Identity;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Administration;
 using AiNexus.Features.Projects;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -15,6 +14,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Xunit;
 using AiNexus.Features.Audit;
+using AiNexus.Features.Administration.Users;
+using AiNexus.Features.Administration.Roles;
+using AiNexus.Features.Identity.Authentication;
+using AiNexus.Features.Identity.Sessions;
 
 namespace AiNexus.Tests;
 

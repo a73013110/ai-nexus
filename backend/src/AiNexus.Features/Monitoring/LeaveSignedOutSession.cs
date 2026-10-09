@@ -1,5 +1,5 @@
-using AiNexus.Features.Identity;
 using AiNexus.Platform.Events;
+using AiNexus.Features.Identity.Sessions;
 
 namespace AiNexus.Features.Monitoring;
 

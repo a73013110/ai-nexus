@@ -5,6 +5,7 @@ using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Conversations;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Chat;
 
@@ -31,7 +32,7 @@ internal sealed class GetConversation(NexusDbContext db, ModelPresentation prese
         var attachments = links.ToLookup(x => x.MessageId, x => new AttachmentDto(x.Id, x.FileName, x.ContentType, x.Size, x.ContentType.StartsWith("image/", StringComparison.Ordinal), x.HasText ? "extracted-text" : "vision"));
         var citations = (await db.Set<AiNexus.Features.Knowledge.Retrieval.MessageCitation>().AsNoTracking().Where(x => messages.Select(m => m.Id).Contains(x.MessageId)).OrderBy(x => x.Number).ToListAsync(ct))
             .ToLookup(x => x.MessageId, x => new AiNexus.Features.Knowledge.Retrieval.CitationDto(x.Number, x.DocumentId, x.Title, x.PageNumber, x.Excerpt, x.EndPage));
-        var ratings = await db.Set<AiNexus.Features.Quality.MessageFeedback>().AsNoTracking().Where(x => x.OwnerId == owner && messages.Select(m => m.Id).Contains(x.MessageId)).ToDictionaryAsync(x => x.MessageId, x => x.Rating, ct);
+        var ratings = await db.Set<AiNexus.Features.Quality.Feedback.MessageFeedback>().AsNoTracking().Where(x => x.OwnerId == owner && messages.Select(m => m.Id).Contains(x.MessageId)).ToDictionaryAsync(x => x.MessageId, x => x.Rating, ct);
         var charges = await db.Set<AiNexus.Features.Billing.ModelCharge>().AsNoTracking().Where(x => x.OwnerId == owner && x.ConversationId == id).ToDictionaryAsync(x => x.Id, ct);
         var searches = await db.Set<AiNexus.Features.WebSearch.WebSearchRecord>().AsNoTracking().Where(x => x.OwnerId == owner && x.ConversationId == id && x.RunId != null).ToDictionaryAsync(x => x.RunId!.Value, ct);
         var timings = await RunTiming.ReadAsync(db, messages.Where(x => x.RunId != null).Select(x => x.RunId!.Value).Distinct().ToArray(), ct);

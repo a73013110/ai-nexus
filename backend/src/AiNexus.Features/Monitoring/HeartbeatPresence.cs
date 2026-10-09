@@ -3,6 +3,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Validation;
 using FluentValidation;
+using AiNexus.Features.Identity.Sessions;
 
 namespace AiNexus.Features.Monitoring;
 

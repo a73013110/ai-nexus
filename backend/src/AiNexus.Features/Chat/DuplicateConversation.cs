@@ -5,6 +5,7 @@ using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Conversations;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Chat;
 

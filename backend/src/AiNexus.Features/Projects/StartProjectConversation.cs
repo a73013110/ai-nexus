@@ -5,6 +5,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Projects;
 

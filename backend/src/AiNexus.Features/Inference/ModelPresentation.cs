@@ -1,5 +1,5 @@
-using AiNexus.Features.Identity;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Inference;
 
