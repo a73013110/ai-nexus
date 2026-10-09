@@ -59,4 +59,17 @@ public sealed class ConversationService(NexusDbContext db, TimeProvider clock)
         var conversation = await db.Set<Conversation>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == run.ConversationId, ct);
         conversation.UpdatedAt = clock.GetUtcNow();
     }
+
+    /// <summary>
+    /// Streaming form of <see cref="UpdateAnswerAsync"/> while the answer's status does not change: appends the delta in SQL
+    /// (the stored text is neither read nor resent) and touches the conversation. Runs immediately, so call it inside the
+    /// caller's transaction.
+    /// </summary>
+    public async Task AppendAnswerAsync(Guid answer, Guid conversation, string delta, CancellationToken ct)
+    {
+        if (delta.Length > 0)
+            await db.Set<Message>().Where(x => x.Id == answer).ExecuteUpdateAsync(p => p.SetProperty(x => x.Content, x => x.Content + delta), ct);
+        var now = clock.GetUtcNow();
+        await db.Set<Conversation>().IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.Id == conversation).ExecuteUpdateAsync(p => p.SetProperty(x => x.UpdatedAt, now), ct);
+    }
 }

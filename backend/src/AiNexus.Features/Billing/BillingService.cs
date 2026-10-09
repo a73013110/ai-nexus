@@ -42,6 +42,22 @@ public sealed class BillingService(NexusDbContext db, ModelPresentation presenta
         charge.CachedInputTokens = cached ?? charge.CachedInputTokens; charge.ReasoningTokens = reasoning ?? charge.ReasoningTokens;
         charge.UsageComplete |= complete;
     }
+    /// <summary>
+    /// <see cref="MeterAsync"/> as one UPDATE for streaming callers, without loading the charge: a null keeps the stored
+    /// value and completion only ever turns on. Runs immediately, so call it inside the caller's transaction.
+    /// </summary>
+    public async Task MeterInPlaceAsync(Guid id, long? input, long? output, long? cached, long? reasoning, bool complete, CancellationToken ct)
+    {
+        if (input is null && output is null && cached is null && reasoning is null && !complete) return;
+        await db.Set<ModelCharge>().Where(x => x.Id == id).ExecuteUpdateAsync(p =>
+        {
+            if (input is long i) p.SetProperty(x => x.InputTokens, i);
+            if (output is long o) p.SetProperty(x => x.OutputTokens, o);
+            if (cached is long c) p.SetProperty(x => x.CachedInputTokens, c);
+            if (reasoning is long r) p.SetProperty(x => x.ReasoningTokens, r);
+            if (complete) p.SetProperty(x => x.UsageComplete, true);
+        }, ct);
+    }
     public async Task FinishAsync(Guid id, string outcome, CancellationToken ct)
     {
         var charge = await db.Set<ModelCharge>().FindAsync([id], ct);
