@@ -99,9 +99,9 @@ public static class ConnectionVerifier
             db.AuditEvents.Add(probe);
             await db.SaveChangesAsync(ct);
             var row = new { probe.Id, probe.ResourceId };
-            if (await sql.QuerySingleAsync<string>("SELECT [Result] FROM [operations].[AuditEvents] WHERE [Id] = @Id AND [ResourceId] = @ResourceId", row, commandTimeout: 5, cancellationToken: ct) != "ef_insert")
+            if (await sql.QuerySingleAsync<string>("SELECT [Result] FROM [audit].[AuditEvents] WHERE [Id] = @Id AND [ResourceId] = @ResourceId", row, commandTimeout: 5, cancellationToken: ct) != "ef_insert")
                 throw new InvalidDataException("Committed EF write could not be read through Dapper.");
-            var changed = await sql.ExecuteAsync("UPDATE [operations].[AuditEvents] SET [Result] = @Result WHERE [Id] = @Id AND [ResourceId] = @ResourceId", new { probe.Id, probe.ResourceId, Result = "dapper_update" }, commandTimeout: 5, cancellationToken: ct);
+            var changed = await sql.ExecuteAsync("UPDATE [audit].[AuditEvents] SET [Result] = @Result WHERE [Id] = @Id AND [ResourceId] = @ResourceId", new { probe.Id, probe.ResourceId, Result = "dapper_update" }, commandTimeout: 5, cancellationToken: ct);
             var result = await db.AuditEvents.AsNoTracking().Where(x => x.Id == probe.Id).Select(x => x.Result).SingleAsync(ct);
             if (changed != 1 || result != "dapper_update") throw new InvalidDataException("Dapper update could not be read by EF.");
         }
@@ -110,8 +110,8 @@ public static class ConnectionVerifier
             if (probe.Id != 0)
             {
                 // This CLI-only probe has no user identity and touches only its own random resource.
-                await sql.ExecuteAsync("DELETE FROM [operations].[AuditEvents] WHERE [Id] = @Id AND [ResourceId] = @ResourceId AND [Action] = @Action", new { probe.Id, probe.ResourceId, probe.Action }, commandTimeout: 5, cancellationToken: CancellationToken.None);
-                removed = await sql.QuerySingleAsync<int>("SELECT COUNT(*) FROM [operations].[AuditEvents] WHERE [Id] = @Id AND [ResourceId] = @ResourceId", new { probe.Id, probe.ResourceId }, commandTimeout: 5, cancellationToken: CancellationToken.None) == 0;
+                await sql.ExecuteAsync("DELETE FROM [audit].[AuditEvents] WHERE [Id] = @Id AND [ResourceId] = @ResourceId AND [Action] = @Action", new { probe.Id, probe.ResourceId, probe.Action }, commandTimeout: 5, cancellationToken: CancellationToken.None);
+                removed = await sql.QuerySingleAsync<int>("SELECT COUNT(*) FROM [audit].[AuditEvents] WHERE [Id] = @Id AND [ResourceId] = @ResourceId", new { probe.Id, probe.ResourceId }, commandTimeout: 5, cancellationToken: CancellationToken.None) == 0;
             }
         }
         // Reported only after a successful check; a failed check keeps its own exception.

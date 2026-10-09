@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using Microsoft.Data.SqlTypes;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -14,16 +15,19 @@ namespace AiNexus.Features.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.EnsureSchema(
-                name: "access");
+                name: "administration");
 
             migrationBuilder.EnsureSchema(
-                name: "content");
+                name: "artifacts");
 
             migrationBuilder.EnsureSchema(
                 name: "attachments");
 
             migrationBuilder.EnsureSchema(
-                name: "operations");
+                name: "audit");
+
+            migrationBuilder.EnsureSchema(
+                name: "jobs");
 
             migrationBuilder.EnsureSchema(
                 name: "knowledge");
@@ -32,10 +36,22 @@ namespace AiNexus.Features.Persistence.Migrations
                 name: "conversations");
 
             migrationBuilder.EnsureSchema(
+                name: "diagnostics");
+
+            migrationBuilder.EnsureSchema(
                 name: "quality");
 
             migrationBuilder.EnsureSchema(
+                name: "accesscontrol");
+
+            migrationBuilder.EnsureSchema(
                 name: "inference");
+
+            migrationBuilder.EnsureSchema(
+                name: "billing");
+
+            migrationBuilder.EnsureSchema(
+                name: "notifications");
 
             migrationBuilder.EnsureSchema(
                 name: "projects");
@@ -44,25 +60,37 @@ namespace AiNexus.Features.Persistence.Migrations
                 name: "library");
 
             migrationBuilder.EnsureSchema(
-                name: "workspace");
+                name: "repositories");
 
             migrationBuilder.EnsureSchema(
                 name: "collaboration");
 
             migrationBuilder.EnsureSchema(
+                name: "sharing");
+
+            migrationBuilder.EnsureSchema(
+                name: "integrations");
+
+            migrationBuilder.EnsureSchema(
                 name: "identity");
+
+            migrationBuilder.EnsureSchema(
+                name: "websearch");
 
             migrationBuilder.CreateTable(
                 name: "AuditEvents",
-                schema: "operations",
+                schema: "audit",
                 columns: table => new
                 {
                     Id = table.Column<long>(type: "bigint", nullable: false, comment: "資料的主鍵識別碼。")
                         .Annotation("SqlServer:Identity", "1, 1"),
                     OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。"),
                     ActorId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "身分測試時實際發起操作的管理者；空值表示與 OwnerId 相同。"),
+                    TraceId = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: true, comment: "W3C 流程追蹤識別，僅由伺服器建立。"),
+                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "持久作業識別，跨佇列與重試保持不變。"),
+                    IssueCode = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: true, comment: "伺服器產生的不透明問題查證代碼；每個問題個別識別。"),
                     Action = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false, comment: "稽核操作名稱。"),
-                    ResourceId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "關聯或稽核對象的業務資源識別碼。"),
+                    ResourceId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "稽核對象的業務資源識別碼。"),
                     Result = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: true, comment: "稽核操作結果或失敗代碼。"),
                     DetailsJson = table.Column<string>(type: "nvarchar(max)", maxLength: 40000, nullable: true, comment: "稽核前後狀態或操作範圍 JSON；不含密碼、hash、token 或對話內容。"),
                     At = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "稽核事件發生時間。")
@@ -74,8 +102,77 @@ namespace AiNexus.Features.Persistence.Migrations
                 comment: "操作與管理異動稽核；保存實際管理者及有效身分，不記錄密碼或私密內容。");
 
             migrationBuilder.CreateTable(
+                name: "DiagnosticEvents",
+                schema: "diagnostics",
+                columns: table => new
+                {
+                    LogId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "不可重複的日誌識別，SQL 補送去重鍵。"),
+                    At = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "診斷事件發生的 UTC 時間，時間與 LogId 為排序及游標分頁鍵。"),
+                    Level = table.Column<int>(type: "int", nullable: false, comment: "Microsoft.Extensions.Logging 層級值：Trace=0 到 Critical=5。"),
+                    Category = table.Column<string>(type: "nvarchar(180)", maxLength: 180, nullable: false, comment: "診斷事件的受控 Category 欄位；由集中日誌政策限制大小與遮罩。"),
+                    EventId = table.Column<int>(type: "int", nullable: false, comment: "穩定的事件分類識別碼，跨程式版本保持意義一致。"),
+                    EventName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false, comment: "穩定的事件名稱，供模組及流程查詢。"),
+                    MessageTemplate = table.Column<string>(type: "nvarchar(2048)", maxLength: 2048, nullable: false, comment: "結構化訊息模板，禁止串接內容與秘密。"),
+                    PropertiesJson = table.Column<string>(type: "nvarchar(max)", maxLength: 8192, nullable: false, comment: "白名單純量 metadata，大小及欄位數受限。"),
+                    Service = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: false, comment: "診斷事件的受控 Service 欄位；由集中日誌政策限制大小與遮罩。"),
+                    Environment = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false, comment: "診斷事件的受控 Environment 欄位；由集中日誌政策限制大小與遮罩。"),
+                    Version = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: false, comment: "應用程式 informational version，用於辨認發版。"),
+                    Instance = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false, comment: "診斷事件的受控 Instance 欄位；由集中日誌政策限制大小與遮罩。"),
+                    IssueCode = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: true, comment: "伺服器產生的不透明問題查證代碼；每個問題個別識別。"),
+                    TraceId = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: true, comment: "W3C 流程追蹤識別，僅由伺服器建立。"),
+                    SpanId = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: true, comment: "診斷事件的受控 SpanId 欄位；由集中日誌政策限制大小與遮罩。"),
+                    RequestId = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: true, comment: "診斷事件的受控 RequestId 欄位；由集中日誌政策限制大小與遮罩。"),
+                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "持久作業識別，跨佇列與重試保持不變。"),
+                    JobId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "關聯背景工作識別碼。"),
+                    RunId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "關聯生成或評測執行的識別碼。"),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "伺服器解析的受控使用者識別碼；不接受客戶端傳入。"),
+                    Attempt = table.Column<int>(type: "int", nullable: true, comment: "背景工作執行／重試次數。"),
+                    Method = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true, comment: "診斷事件的受控 Method 欄位；由集中日誌政策限制大小與遮罩。"),
+                    Route = table.Column<string>(type: "nvarchar(240)", maxLength: 240, nullable: true, comment: "HTTP 路由模板，不含實際路徑值或查詢參數。"),
+                    StatusCode = table.Column<int>(type: "int", nullable: true, comment: "診斷事件的受控 StatusCode 欄位；由集中日誌政策限制大小與遮罩。"),
+                    DurationMs = table.Column<double>(type: "float", nullable: true, comment: "診斷事件的受控 DurationMs 欄位；由集中日誌政策限制大小與遮罩。"),
+                    ExternalService = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: true, comment: "診斷事件的受控 ExternalService 欄位；由集中日誌政策限制大小與遮罩。"),
+                    ErrorCode = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: true, comment: "對外安全的錯誤代碼，不含密碼或完整例外。"),
+                    ExceptionType = table.Column<string>(type: "nvarchar(180)", maxLength: 180, nullable: true, comment: "診斷事件的受控 ExceptionType 欄位；由集中日誌政策限制大小與遮罩。"),
+                    ExceptionDetail = table.Column<string>(type: "nvarchar(max)", maxLength: 12000, nullable: true, comment: "省略例外自由文字與路徑的型別、錯誤碼及堆疊。"),
+                    UntrustedClient = table.Column<bool>(type: "bit", nullable: false, comment: "明確標示不可信用戶端回報。")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_DiagnosticEvents", x => x.LogId)
+                        .Annotation("SqlServer:Clustered", false);
+                },
+                comment: "共用診斷日誌；只保存受控且已遮罩的事件欄位，LogId 唯一用於補送去重。");
+
+            migrationBuilder.CreateTable(
+                name: "EmbeddingProfiles",
+                schema: "knowledge",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false, comment: "資料的主鍵識別碼。")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    Key = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false, comment: "供應商、模型、維度及輸入／切段規則的唯一指紋。"),
+                    Provider = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false, comment: "模型或搜尋服務供應商識別碼。"),
+                    Model = table.Column<string>(type: "nvarchar(160)", maxLength: 160, nullable: false, comment: "建立此向量空間時的模型識別碼。"),
+                    Dimensions = table.Column<int>(type: "int", nullable: false, comment: "向量維度，限已建立資料表的 allowlist。"),
+                    InputFormat = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false, comment: "查詢輸入格式 plain 或 qwen-query。"),
+                    QueryInstruction = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false, comment: "qwen-query 的檢索任務指令快照。"),
+                    Revision = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false, comment: "外部來源或 repository 的固定版本識別。"),
+                    ChunkerConfiguration = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false, comment: "切段器版本及 token／重疊參數快照；重建期間保留舊版本。"),
+                    Status = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, comment: "業務執行狀態。"),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料建立時間，採 UTC offset。"),
+                    ActivatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true, comment: "此 profile 完整覆蓋並切換為 active 的 UTC 時間。"),
+                    RetiredAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true, comment: "此 profile 退役的 UTC 時間；作為保留期清理依據。")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_EmbeddingProfiles", x => x.Id);
+                },
+                comment: "向量空間及切段規則的不可變快照；同時最多一個 active。");
+
+            migrationBuilder.CreateTable(
                 name: "Features",
-                schema: "access",
+                schema: "accesscontrol",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false, comment: "資料的主鍵識別碼。"),
@@ -98,7 +195,7 @@ namespace AiNexus.Features.Persistence.Migrations
                     Id = table.Column<string>(type: "nvarchar(160)", maxLength: 160, nullable: false, comment: "資料的主鍵識別碼。"),
                     Provider = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false, comment: "模型或搜尋服務供應商識別碼。"),
                     ProviderModelId = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false, comment: "送往指定供應商的原生模型識別碼，與核准路由識別碼分開保存。"),
-                    DisplayName = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false, comment: "使用者或模型的介面顯示名稱。"),
+                    DisplayName = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false, comment: "模型的介面顯示名稱。"),
                     ContextTokens = table.Column<int>(type: "int", nullable: false, comment: "模型上下文容量，以 tokens 計。"),
                     MaxOutputTokens = table.Column<int>(type: "int", nullable: false, comment: "模型核准的最大輸出 tokens。"),
                     SupportsStreaming = table.Column<bool>(type: "bit", nullable: false, comment: "模型是否支援串流輸出。"),
@@ -112,7 +209,7 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "RoleGroups",
-                schema: "access",
+                schema: "accesscontrol",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false, comment: "資料的主鍵識別碼。"),
@@ -127,7 +224,7 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "Roles",
-                schema: "access",
+                schema: "accesscontrol",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false, comment: "資料的主鍵識別碼。"),
@@ -148,7 +245,7 @@ namespace AiNexus.Features.Persistence.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
                     Sid = table.Column<string>(type: "nvarchar(184)", maxLength: 184, nullable: false, comment: "AD 的不可變 SID；尚未綁定 AD 的手動帳號使用 managed: 識別碼。"),
                     Account = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false, comment: "登入身分顯示帳號；AD 連結後保存目錄提供的帳號。"),
-                    DisplayName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false, comment: "使用者或模型的介面顯示名稱。"),
+                    DisplayName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: false, comment: "使用者的介面顯示名稱。"),
                     Enabled = table.Column<bool>(type: "bit", nullable: false, defaultValue: true, comment: "是否啟用；停用不刪除歷史資料。"),
                     AttachmentLimitBytes = table.Column<long>(type: "bigint", nullable: true, comment: "管理者設定的個人容量上限 bytes；優先於群組，空值使用群組或預設 5 GB。"),
                     DeletedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true, comment: "登入身分刪除時間；保留關聯與歷史資料。"),
@@ -172,12 +269,12 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "GroupModelPolicies",
-                schema: "access",
+                schema: "accesscontrol",
                 columns: table => new
                 {
                     GroupId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false, comment: "關聯功能群組的識別碼。"),
-                    AllowedModelsJson = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: true, comment: "模型白名單 JSON；空值不增加限制，空陣列禁止生成。"),
-                    DailyRequestLimit = table.Column<int>(type: "int", nullable: true, comment: "每日生成次數上限；群組限制取最低值，UTC 午夜重設。"),
+                    AllowedModelsJson = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: true, comment: "模型白名單 JSON；群組取聯集，空值授予全部、空陣列不授權；個人白名單再限縮。"),
+                    DailyTokenLimitsJson = table.Column<string>(type: "nvarchar(max)", maxLength: 8000, nullable: true, comment: "各模型每日輸入加輸出 token 上限 JSON；授權群組取最高值、留空不限，個人覆寫優先，UTC 午夜重設。"),
                     StoredAttachmentLimitBytes = table.Column<long>(type: "bigint", nullable: true, comment: "個人附件儲存上限，以 bytes 計；群組限制取最低值。")
                 },
                 constraints: table =>
@@ -186,16 +283,16 @@ namespace AiNexus.Features.Persistence.Migrations
                     table.ForeignKey(
                         name: "FK_GroupModelPolicies_RoleGroups_GroupId",
                         column: x => x.GroupId,
-                        principalSchema: "access",
+                        principalSchema: "accesscontrol",
                         principalTable: "RoleGroups",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 },
-                comment: "功能群組的模型白名單、每日生成及附件空間限制。");
+                comment: "功能群組的模型白名單、各模型每日 token 及附件空間限制。");
 
             migrationBuilder.CreateTable(
                 name: "RoleGroupFeatures",
-                schema: "access",
+                schema: "accesscontrol",
                 columns: table => new
                 {
                     GroupId = table.Column<string>(type: "nvarchar(64)", nullable: false, comment: "關聯功能群組的識別碼。"),
@@ -207,14 +304,14 @@ namespace AiNexus.Features.Persistence.Migrations
                     table.ForeignKey(
                         name: "FK_RoleGroupFeatures_Features_FeatureId",
                         column: x => x.FeatureId,
-                        principalSchema: "access",
+                        principalSchema: "accesscontrol",
                         principalTable: "Features",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_RoleGroupFeatures_RoleGroups_GroupId",
                         column: x => x.GroupId,
-                        principalSchema: "access",
+                        principalSchema: "accesscontrol",
                         principalTable: "RoleGroups",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -223,7 +320,7 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "RoleGroupRoles",
-                schema: "access",
+                schema: "accesscontrol",
                 columns: table => new
                 {
                     RoleId = table.Column<string>(type: "nvarchar(64)", nullable: false, comment: "關聯角色的識別碼。"),
@@ -235,14 +332,14 @@ namespace AiNexus.Features.Persistence.Migrations
                     table.ForeignKey(
                         name: "FK_RoleGroupRoles_RoleGroups_GroupId",
                         column: x => x.GroupId,
-                        principalSchema: "access",
+                        principalSchema: "accesscontrol",
                         principalTable: "RoleGroups",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_RoleGroupRoles_Roles_RoleId",
                         column: x => x.RoleId,
-                        principalSchema: "access",
+                        principalSchema: "accesscontrol",
                         principalTable: "Roles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -251,7 +348,7 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "AdministratorBootstraps",
-                schema: "access",
+                schema: "administration",
                 columns: table => new
                 {
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯使用者的 Users 主鍵。"),
@@ -308,11 +405,12 @@ namespace AiNexus.Features.Persistence.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
                     OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。"),
-                    Kind = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false, comment: "業務操作、資源或成本的種類。"),
+                    Kind = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false, comment: "模型呼叫種類。"),
                     ModelId = table.Column<string>(type: "nvarchar(160)", maxLength: 160, nullable: false, comment: "核准模型的內部識別碼。"),
                     Provider = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false, comment: "模型或搜尋服務供應商識別碼。"),
                     DurationMilliseconds = table.Column<long>(type: "bigint", nullable: true, comment: "從請求建立至終止的總耗時毫秒；包括排隊、生成、取消與失敗。"),
                     Status = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, comment: "業務執行狀態。"),
+                    ReservedTokens = table.Column<long>(type: "bigint", nullable: false, comment: "生成預留的保守輸入加最大輸出 token；執行中或缺失 usage 時占用配額，未執行即取消釋放。"),
                     InputTokens = table.Column<long>(type: "bigint", nullable: true, comment: "模型回報的輸入 tokens；未知保持空值。"),
                     OutputTokens = table.Column<long>(type: "bigint", nullable: true, comment: "模型回報的輸出 tokens；未知保持空值。"),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料建立時間，採 UTC offset。")
@@ -332,14 +430,14 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "ModelPrices",
-                schema: "inference",
+                schema: "billing",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
                     Provider = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false, comment: "模型或搜尋服務供應商識別碼。"),
                     ModelId = table.Column<string>(type: "nvarchar(160)", maxLength: 160, nullable: false, comment: "核准模型的內部識別碼。"),
                     Currency = table.Column<string>(type: "nvarchar(3)", maxLength: 3, nullable: false, comment: "費用幣別代碼；不同幣別不可直接合計。"),
-                    Kind = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, comment: "業務操作、資源或成本的種類。"),
+                    Kind = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, comment: "成本類型。"),
                     InputPerMillion = table.Column<decimal>(type: "decimal(20,8)", precision: 20, scale: 8, nullable: false, comment: "每百萬輸入 tokens 的單價。"),
                     CachedInputPerMillion = table.Column<decimal>(type: "decimal(20,8)", precision: 20, scale: 8, nullable: false, comment: "每百萬快取輸入 tokens 的單價。"),
                     OutputPerMillion = table.Column<decimal>(type: "decimal(20,8)", precision: 20, scale: 8, nullable: false, comment: "每百萬輸出 tokens 的單價。"),
@@ -364,6 +462,39 @@ namespace AiNexus.Features.Persistence.Migrations
                 comment: "依供應商、模型、幣別及成本類型保存的不可變價格版本。");
 
             migrationBuilder.CreateTable(
+                name: "Notifications",
+                schema: "notifications",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
+                    OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。"),
+                    Version = table.Column<int>(type: "int", nullable: false, comment: "業務版本號，用於歷史或樂觀並行控制。"),
+                    EventKey = table.Column<string>(type: "nvarchar(160)", maxLength: 160, nullable: false, comment: "通知來源事件的冪等識別碼。"),
+                    Type = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: false, comment: "事件的種類。"),
+                    Severity = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, comment: "通知呈現層級：info、success 或 error。"),
+                    IssueCode = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: true, comment: "伺服器產生的不透明問題查證代碼；每個問題個別識別。"),
+                    Title = table.Column<string>(type: "nvarchar(180)", maxLength: 180, nullable: false, comment: "介面顯示標題。"),
+                    Body = table.Column<string>(type: "nvarchar(600)", maxLength: 600, nullable: false, comment: "通知摘要，不包含完整私密原文。"),
+                    TargetKind = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false, comment: "已核准的功能導向類型。"),
+                    TargetId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "通知所指向的業務識別碼。"),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料建立時間，採 UTC offset。"),
+                    ReadAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true, comment: "通知已閱讀的時間；空值代表未讀。"),
+                    DismissedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true, comment: "通知移除的時間；空值代表仍可查看。")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Notifications", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Notifications_Users_OwnerId",
+                        column: x => x.OwnerId,
+                        principalSchema: "identity",
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                },
+                comment: "使用者個人通知、版本化導向、閱讀狀態與事件去重鍵。");
+
+            migrationBuilder.CreateTable(
                 name: "PromptTemplates",
                 schema: "library",
                 columns: table => new
@@ -371,7 +502,7 @@ namespace AiNexus.Features.Persistence.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
                     OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。"),
                     Title = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: false, comment: "介面顯示標題。"),
-                    Content = table.Column<string>(type: "nvarchar(max)", maxLength: 12000, nullable: false, comment: "訊息、版本或生成的文字內容。"),
+                    Content = table.Column<string>(type: "nvarchar(max)", maxLength: 12000, nullable: false, comment: "提示詞內容。"),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料最後修改時間，採 UTC offset。")
                 },
                 constraints: table =>
@@ -389,7 +520,7 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "RepositoryConnections",
-                schema: "workspace",
+                schema: "repositories",
                 columns: table => new
                 {
                     OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。"),
@@ -418,9 +549,9 @@ namespace AiNexus.Features.Persistence.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
                     OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。"),
-                    Kind = table.Column<string>(type: "nvarchar(24)", maxLength: 24, nullable: false, comment: "業務操作、資源或成本的種類。"),
+                    Kind = table.Column<string>(type: "nvarchar(24)", maxLength: 24, nullable: false, comment: "資源種類。"),
                     Name = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false, comment: "業務物件的顯示名稱。"),
-                    ParentId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "父訊息或父資源識別碼，用於分支或階層繼承。"),
+                    ParentId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "父資源識別碼；子資源繼承父資源的 ACL。"),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false, comment: "是否邏輯刪除；不自動刪除歷史紀錄。"),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料建立時間，採 UTC offset。"),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料最後修改時間，採 UTC offset。")
@@ -446,18 +577,40 @@ namespace AiNexus.Features.Persistence.Migrations
                 comment: "共用資源的擁有者、種類、階層及版本；作為資料 ACL 邊界。");
 
             migrationBuilder.CreateTable(
+                name: "UserModelPolicies",
+                schema: "accesscontrol",
+                columns: table => new
+                {
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯使用者的 Users 主鍵。"),
+                    AllowedModelsJson = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: true, comment: "模型白名單 JSON；群組取聯集，空值授予全部、空陣列不授權；個人白名單再限縮。"),
+                    DailyTokenLimitsJson = table.Column<string>(type: "nvarchar(max)", maxLength: 8000, nullable: true, comment: "各模型每日輸入加輸出 token 上限 JSON；授權群組取最高值、留空不限，個人覆寫優先，UTC 午夜重設。")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserModelPolicies", x => x.UserId);
+                    table.ForeignKey(
+                        name: "FK_UserModelPolicies_Users_UserId",
+                        column: x => x.UserId,
+                        principalSchema: "identity",
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                },
+                comment: "使用者的模型白名單與各模型每日 token 覆寫政策。");
+
+            migrationBuilder.CreateTable(
                 name: "UserPreferences",
                 schema: "identity",
                 columns: table => new
                 {
-                    NexusUserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "個人偏好對應使用者的主鍵與外鍵。"),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "偏好所屬使用者的 Users 主鍵。"),
                     Theme = table.Column<string>(type: "nvarchar(12)", maxLength: 12, nullable: false, comment: "外觀偏好：system、light 或 dark。"),
                     ReducedMotion = table.Column<bool>(type: "bit", nullable: false, comment: "是否減少動畫與動態效果。"),
                     DefaultModelId = table.Column<string>(type: "nvarchar(160)", maxLength: 160, nullable: true, comment: "偏好的核准模型識別碼；空值使用伺服器預設。"),
-                    ReadingFontSize = table.Column<int>(type: "int", nullable: false, defaultValue: 17, comment: "對話文字大小，以 CSS px 的偏好值記錄。"),
-                    ReadingLineHeight = table.Column<double>(type: "float", nullable: false, defaultValue: 1.8, comment: "對話閱讀行高倍率。"),
+                    ReadingFontSize = table.Column<int>(type: "int", nullable: false, defaultValue: 15, comment: "對話文字大小，以 CSS px 的偏好值記錄。"),
+                    ReadingLineHeight = table.Column<double>(type: "float", nullable: false, defaultValue: 1.2, comment: "對話閱讀行高倍率。"),
                     Density = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, defaultValue: "comfortable", comment: "介面密度偏好。"),
-                    SidebarWidth = table.Column<int>(type: "int", nullable: false, defaultValue: 264, comment: "側欄寬度偏好。"),
+                    SidebarWidth = table.Column<int>(type: "int", nullable: false, defaultValue: 240, comment: "側欄寬度偏好。"),
                     ReadingWidth = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, defaultValue: "standard", comment: "閱讀區寬度偏好。"),
                     EnterToSend = table.Column<bool>(type: "bit", nullable: false, defaultValue: true, comment: "是否以 Enter 送出提問；IME 組字不送出。"),
                     AutoFollow = table.Column<bool>(type: "bit", nullable: false, defaultValue: true, comment: "生成時是否跟隨最新回答。"),
@@ -467,10 +620,10 @@ namespace AiNexus.Features.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_UserPreferences", x => x.NexusUserId);
+                    table.PrimaryKey("PK_UserPreferences", x => x.UserId);
                     table.ForeignKey(
-                        name: "FK_UserPreferences_Users_NexusUserId",
-                        column: x => x.NexusUserId,
+                        name: "FK_UserPreferences_Users_UserId",
+                        column: x => x.UserId,
                         principalSchema: "identity",
                         principalTable: "Users",
                         principalColumn: "Id",
@@ -480,7 +633,7 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "UserRoles",
-                schema: "access",
+                schema: "accesscontrol",
                 columns: table => new
                 {
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯使用者的 Users 主鍵。"),
@@ -492,7 +645,7 @@ namespace AiNexus.Features.Persistence.Migrations
                     table.ForeignKey(
                         name: "FK_UserRoles_Roles_RoleId",
                         column: x => x.RoleId,
-                        principalSchema: "access",
+                        principalSchema: "accesscontrol",
                         principalTable: "Roles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -508,7 +661,7 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "WebSearches",
-                schema: "inference",
+                schema: "websearch",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
@@ -519,7 +672,7 @@ namespace AiNexus.Features.Persistence.Migrations
                     Status = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, comment: "業務執行狀態。"),
                     ResultsJson = table.Column<string>(type: "nvarchar(max)", nullable: false, comment: "搜尋結果的 JSON 快照。"),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料建立時間，採 UTC offset。"),
-                    RunId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "關聯生成或評測執行的識別碼。")
+                    RunId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "觸發搜尋的 GenerationRuns 識別碼。")
                 },
                 constraints: table =>
                 {
@@ -536,14 +689,17 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "BackgroundJobs",
-                schema: "operations",
+                schema: "jobs",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
                     OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。"),
-                    ResourceId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "關聯或稽核對象的業務資源識別碼。"),
+                    TraceId = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: true, comment: "W3C 流程追蹤識別，僅由伺服器建立。"),
+                    ParentSpanId = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: true, comment: "排程來源的 W3C span 識別，重試沿用同一 trace。"),
+                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "持久作業識別，跨佇列與重試保持不變。"),
+                    ResourceId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "工作處理的業務資源識別碼。"),
                     SubjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "操作所關聯的業務對象識別碼。"),
-                    Kind = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false, comment: "業務操作、資源或成本的種類。"),
+                    Kind = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: false, comment: "背景工作種類。"),
                     Label = table.Column<string>(type: "nvarchar(180)", maxLength: 180, nullable: false, comment: "分類標籤或階段的顯示文字。"),
                     Status = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, comment: "業務執行狀態。"),
                     Stage = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false, comment: "背景工作目前階段。"),
@@ -554,8 +710,9 @@ namespace AiNexus.Features.Persistence.Migrations
                     Attempt = table.Column<int>(type: "int", nullable: false, comment: "背景工作執行／重試次數。"),
                     CompletedUnits = table.Column<int>(type: "int", nullable: false, comment: "已完成的真實工作單位數。"),
                     TotalUnits = table.Column<int>(type: "int", nullable: true, comment: "已知的總工作單位數；未知不表示百分比。"),
+                    IssueCode = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: true, comment: "伺服器產生的不透明問題查證代碼；每個問題個別識別。"),
                     ErrorCode = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: true, comment: "對外安全的錯誤代碼，不含密碼或完整例外。"),
-                    ErrorMessage = table.Column<string>(type: "nvarchar(240)", maxLength: 240, nullable: true, comment: "經限制的錯誤說明。"),
+                    ErrorMessage = table.Column<string>(type: "nvarchar(240)", maxLength: 240, nullable: true, comment: "固定安全提示與查證代碼；不可保存例外自由文字。"),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料建立時間，採 UTC offset。"),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料最後修改時間，採 UTC offset。")
                 },
@@ -652,7 +809,7 @@ namespace AiNexus.Features.Persistence.Migrations
                 schema: "attachments",
                 columns: table => new
                 {
-                    ResourceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯或稽核對象的業務資源識別碼。"),
+                    ResourceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯 Resources 的識別碼。"),
                     AttachmentId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "引用的附件識別碼。")
                 },
                 constraints: table =>
@@ -680,7 +837,7 @@ namespace AiNexus.Features.Persistence.Migrations
                 schema: "collaboration",
                 columns: table => new
                 {
-                    ResourceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯或稽核對象的業務資源識別碼。"),
+                    ResourceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯 Resources 的識別碼。"),
                     GroupId = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false, comment: "關聯功能群組的識別碼。")
                 },
                 constraints: table =>
@@ -696,7 +853,7 @@ namespace AiNexus.Features.Persistence.Migrations
                     table.ForeignKey(
                         name: "FK_ResourceGroups_RoleGroups_GroupId",
                         column: x => x.GroupId,
-                        principalSchema: "access",
+                        principalSchema: "accesscontrol",
                         principalTable: "RoleGroups",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -708,9 +865,9 @@ namespace AiNexus.Features.Persistence.Migrations
                 schema: "collaboration",
                 columns: table => new
                 {
-                    ResourceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯或稽核對象的業務資源識別碼。"),
+                    ResourceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯 Resources 的識別碼。"),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯使用者的 Users 主鍵。"),
-                    Role = table.Column<string>(type: "nvarchar(12)", maxLength: 12, nullable: false, comment: "訊息角色（user／assistant）或資源成員的閱讀／編輯權限。")
+                    Role = table.Column<string>(type: "nvarchar(12)", maxLength: 12, nullable: false, comment: "具名成員的權限：viewer 或 editor。")
                 },
                 constraints: table =>
                 {
@@ -734,19 +891,19 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "ShareLinks",
-                schema: "collaboration",
+                schema: "sharing",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
                     OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。"),
                     SourceId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "外部資料來源識別碼。"),
-                    Kind = table.Column<string>(type: "nvarchar(24)", maxLength: 24, nullable: false, comment: "業務操作、資源或成本的種類。"),
+                    Kind = table.Column<string>(type: "nvarchar(24)", maxLength: 24, nullable: false, comment: "分享內容的種類。"),
                     Title = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false, comment: "介面顯示標題。"),
                     SnapshotJson = table.Column<string>(type: "nvarchar(max)", nullable: false, comment: "分享時的固定內容快照；不隨後續編輯變動。"),
                     IncludeAttachments = table.Column<bool>(type: "bit", nullable: false, comment: "是否明確允許分享附件。"),
                     IsRevoked = table.Column<bool>(type: "bit", nullable: false, comment: "分享是否已撤銷。"),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料建立時間，採 UTC offset。"),
-                    ExpiresAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "分享或授權到期時間。")
+                    ExpiresAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "分享到期時間。")
                 },
                 constraints: table =>
                 {
@@ -769,6 +926,82 @@ namespace AiNexus.Features.Persistence.Migrations
                 comment: "分享版本快照、有效期限、附件選項及撤銷狀態。");
 
             migrationBuilder.CreateTable(
+                name: "RepositoryReviews",
+                schema: "repositories",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
+                    OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。"),
+                    JobId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯背景工作識別碼。"),
+                    BaseUrl = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false, comment: "Gitea 連線主機位址。"),
+                    Repository = table.Column<string>(type: "nvarchar(201)", maxLength: 201, nullable: false, comment: "Gitea repository 的 owner/name 識別。"),
+                    Commit = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false, comment: "匯入當時固定的 commit SHA。"),
+                    BaseCommit = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: true, comment: "區間 review 的起點 commit SHA；空值表示單一 commit。"),
+                    ModelId = table.Column<string>(type: "nvarchar(160)", maxLength: 160, nullable: false, comment: "核准模型的內部識別碼。"),
+                    ConfigurationFingerprint = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false, comment: "固定模型與生成設定的 SHA-256 指紋。"),
+                    Note = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false, comment: "使用者提供的補充說明。"),
+                    IdempotencyKey = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: false, comment: "擁有者範圍內的冪等請求識別，避免重試重複處理。"),
+                    RequestHash = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false, comment: "請求內容指紋，用於辨識冪等識別碼衝突。"),
+                    SnapshotJson = table.Column<string>(type: "nvarchar(max)", maxLength: 1000000, nullable: false, comment: "分享時的固定內容快照；不隨後續編輯變動。"),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料建立時間，採 UTC offset。")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RepositoryReviews", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RepositoryReviews_BackgroundJobs_JobId",
+                        column: x => x.JobId,
+                        principalSchema: "jobs",
+                        principalTable: "BackgroundJobs",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RepositoryReviews_Users_OwnerId",
+                        column: x => x.OwnerId,
+                        principalSchema: "identity",
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                },
+                comment: "固定 commit 或區間 diff 的私人 review、模型設定指紋與背景任務。");
+
+            migrationBuilder.CreateTable(
+                name: "RetrievalEvaluations",
+                schema: "quality",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
+                    OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。"),
+                    JobId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯背景工作識別碼。"),
+                    Title = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false, comment: "介面顯示標題。"),
+                    CollectionsJson = table.Column<string>(type: "nvarchar(max)", nullable: false, comment: "評測所使用的知識庫識別碼陣列；執行與讀取時重新檢查授權。"),
+                    CasesJson = table.Column<string>(type: "nvarchar(max)", nullable: false, comment: "固定評測案例的 JSON 快照。"),
+                    ConfigurationFingerprint = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false, comment: "固定模型與生成設定的 SHA-256 指紋。"),
+                    ProfileKey = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false, comment: "評測所固定的向量空間及切段規則識別。"),
+                    TopK = table.Column<int>(type: "int", nullable: false, comment: "評測所固定的最大檢索結果數。"),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料建立時間，採 UTC offset。")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RetrievalEvaluations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RetrievalEvaluations_BackgroundJobs_JobId",
+                        column: x => x.JobId,
+                        principalSchema: "jobs",
+                        principalTable: "BackgroundJobs",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_RetrievalEvaluations_Users_OwnerId",
+                        column: x => x.OwnerId,
+                        principalSchema: "identity",
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                },
+                comment: "檢索驗收集、授權知識庫、索引與設定指紋及可續跑背景工作；不保存檢索來源原文。");
+
+            migrationBuilder.CreateTable(
                 name: "Documents",
                 schema: "knowledge",
                 columns: table => new
@@ -781,10 +1014,11 @@ namespace AiNexus.Features.Persistence.Migrations
                     Status = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, comment: "業務執行狀態。"),
                     PageCount = table.Column<int>(type: "int", nullable: false, comment: "文件總頁數。"),
                     ChunkCount = table.Column<int>(type: "int", nullable: false, comment: "文件已建立的檢索片段數。"),
-                    EmbeddingProfile = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true, comment: "向量模型、維度與前處理的版本指紋；不混用不同 profile。"),
                     Warning = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true, comment: "處理過程中的非致命提示。"),
                     IsDeleted = table.Column<bool>(type: "bit", nullable: false, comment: "是否邏輯刪除；不自動刪除歷史紀錄。"),
-                    JobId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "關聯背景工作識別碼。")
+                    JobId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "關聯背景工作識別碼。"),
+                    TextContent = table.Column<string>(type: "nvarchar(max)", maxLength: 200000, nullable: true, comment: "純文字來源的可編輯內容；一般上傳原檔保持空值。"),
+                    TextVersion = table.Column<int>(type: "int", nullable: false, comment: "純文字內容的樂觀並行版本號。")
                 },
                 constraints: table =>
                 {
@@ -834,7 +1068,7 @@ namespace AiNexus.Features.Persistence.Migrations
                     table.ForeignKey(
                         name: "FK_EvaluationRuns_BackgroundJobs_JobId",
                         column: x => x.JobId,
-                        principalSchema: "operations",
+                        principalSchema: "jobs",
                         principalTable: "BackgroundJobs",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -900,7 +1134,7 @@ namespace AiNexus.Features.Persistence.Migrations
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
                     ProjectId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯專案的識別碼。"),
                     Title = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: false, comment: "介面顯示標題。"),
-                    Content = table.Column<string>(type: "nvarchar(max)", maxLength: 12000, nullable: false, comment: "訊息、版本或生成的文字內容。")
+                    Content = table.Column<string>(type: "nvarchar(max)", maxLength: 12000, nullable: false, comment: "範本的開場提示內容。")
                 },
                 constraints: table =>
                 {
@@ -917,7 +1151,7 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "ShareRecipients",
-                schema: "collaboration",
+                schema: "sharing",
                 columns: table => new
                 {
                     ShareId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯分享的識別碼。"),
@@ -929,7 +1163,7 @@ namespace AiNexus.Features.Persistence.Migrations
                     table.ForeignKey(
                         name: "FK_ShareRecipients_ShareLinks_ShareId",
                         column: x => x.ShareId,
-                        principalSchema: "collaboration",
+                        principalSchema: "sharing",
                         principalTable: "ShareLinks",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -944,17 +1178,80 @@ namespace AiNexus.Features.Persistence.Migrations
                 comment: "分享的具名收件人；與原資源 ACL 分開判定。");
 
             migrationBuilder.CreateTable(
+                name: "RepositoryReviewResults",
+                schema: "repositories",
+                columns: table => new
+                {
+                    ReviewId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯私人程式碼 review 的識別碼。"),
+                    Ordinal = table.Column<int>(type: "int", nullable: false, comment: "同一父物件內的呈現順序。"),
+                    Output = table.Column<string>(type: "nvarchar(max)", maxLength: 64000, nullable: false, comment: "評測模型的實際回答。"),
+                    Truncated = table.Column<bool>(type: "bit", nullable: false, comment: "評測輸出是否因上限截斷。"),
+                    InputTokens = table.Column<long>(type: "bigint", nullable: true, comment: "模型回報的輸入 tokens；未知保持空值。"),
+                    OutputTokens = table.Column<long>(type: "bigint", nullable: true, comment: "模型回報的輸出 tokens；未知保持空值。"),
+                    ElapsedMs = table.Column<long>(type: "bigint", nullable: false, comment: "執行耗時，以毫秒計。")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RepositoryReviewResults", x => new { x.ReviewId, x.Ordinal });
+                    table.ForeignKey(
+                        name: "FK_RepositoryReviewResults_RepositoryReviews_ReviewId",
+                        column: x => x.ReviewId,
+                        principalSchema: "repositories",
+                        principalTable: "RepositoryReviews",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                },
+                comment: "Review 各區段的持久結果及用量；重試沿用已完成區段。");
+
+            migrationBuilder.CreateTable(
+                name: "RetrievalEvaluationResults",
+                schema: "quality",
+                columns: table => new
+                {
+                    RunId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯 RetrievalEvaluations 的識別碼。"),
+                    CaseIndex = table.Column<int>(type: "int", nullable: false, comment: "評測案例的從零開始索引。"),
+                    Mode = table.Column<string>(type: "nvarchar(24)", maxLength: 24, nullable: false, comment: "請求的檢索比較模式。"),
+                    ActualMode = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false, comment: "實際檢索模式，包含略過或降級標記。"),
+                    Unavailable = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: true, comment: "此模式無法評測的錯誤代碼；空值表示已完成。"),
+                    Recall = table.Column<double>(type: "float", nullable: true, comment: "前 K 筆命中的相關文件比例；無答案題保持空值。"),
+                    ReciprocalRank = table.Column<double>(type: "float", nullable: true, comment: "第一筆相關命中的排名倒數；無答案題保持空值。"),
+                    Ndcg = table.Column<double>(type: "float", nullable: true, comment: "前 K 筆依相關性分級計算的正規化折損累積增益。"),
+                    Refused = table.Column<bool>(type: "bit", nullable: true, comment: "無答案題是否未提供來源；有答案題保持空值。"),
+                    RewriteMs = table.Column<long>(type: "bigint", nullable: false, comment: "查詢改寫耗時，單位毫秒。"),
+                    EmbedMs = table.Column<long>(type: "bigint", nullable: false, comment: "查詢向量化含快取耗時，單位毫秒。"),
+                    SearchMs = table.Column<long>(type: "bigint", nullable: false, comment: "授權候選召回耗時，單位毫秒。"),
+                    RerankMs = table.Column<long>(type: "bigint", nullable: false, comment: "重排耗時，單位毫秒。"),
+                    ElapsedMs = table.Column<long>(type: "bigint", nullable: false, comment: "執行耗時，以毫秒計。")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RetrievalEvaluationResults", x => new { x.RunId, x.CaseIndex, x.Mode });
+                    table.ForeignKey(
+                        name: "FK_RetrievalEvaluationResults_RetrievalEvaluations_RunId",
+                        column: x => x.RunId,
+                        principalSchema: "quality",
+                        principalTable: "RetrievalEvaluations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                },
+                comment: "四種檢索模式的相關性、無來源拒答與延遲指標；不保存查詢或檢索來源原文。");
+
+            migrationBuilder.CreateTable(
                 name: "Chunks",
                 schema: "knowledge",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
+                    SearchId = table.Column<int>(type: "int", nullable: false, comment: "全文索引使用的整數唯一鍵；保留未來 ANN 映射。")
+                        .Annotation("SqlServer:Identity", "1, 1"),
                     DocumentId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯知識文件的識別碼。"),
-                    PageNumber = table.Column<int>(type: "int", nullable: false, comment: "文件頁碼，從 1 開始。"),
+                    StartPage = table.Column<int>(type: "int", nullable: false, comment: "片段開始的原始文件頁碼。"),
+                    EndPage = table.Column<int>(type: "int", nullable: false, comment: "片段結束的原始文件頁碼。"),
                     Ordinal = table.Column<int>(type: "int", nullable: false, comment: "同一父物件內的呈現順序。"),
-                    Text = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false, comment: "文件頁面／片段的擷取文字。"),
-                    EmbeddingJson = table.Column<string>(type: "nvarchar(max)", nullable: true, comment: "正規化向量的 JSON 表示；與 embedding profile 一起判斷相容性。"),
-                    EmbeddingProfile = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true, comment: "向量模型、維度與前處理的版本指紋；不混用不同 profile。")
+                    HeadingPath = table.Column<string>(type: "nvarchar(400)", maxLength: 400, nullable: false, comment: "由標題階層組成的結構路徑。"),
+                    Text = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: false, comment: "文件頁面／片段的擷取文字。"),
+                    ContentHash = table.Column<byte[]>(type: "binary(32)", nullable: false, comment: "實際向量輸入（文件名稱、標題路徑與本文）的 SHA-256。"),
+                    TokenEstimate = table.Column<int>(type: "int", nullable: false, comment: "依 CJK 與其他字元比例估算的片段 token 數。")
                 },
                 constraints: table =>
                 {
@@ -967,7 +1264,7 @@ namespace AiNexus.Features.Persistence.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 },
-                comment: "知識檢索片段、頁碼、摘要與向量；查詢先套用資料 ACL。");
+                comment: "結構化檢索片段、頁碼與內容指紋；查詢先套用資料 ACL。");
 
             migrationBuilder.CreateTable(
                 name: "DocumentPages",
@@ -995,7 +1292,7 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "RepositoryImports",
-                schema: "knowledge",
+                schema: "repositories",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
@@ -1025,7 +1322,7 @@ namespace AiNexus.Features.Persistence.Migrations
                 schema: "quality",
                 columns: table => new
                 {
-                    RunId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯生成或評測執行的識別碼。"),
+                    RunId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯 EvaluationRuns 的識別碼。"),
                     CaseIndex = table.Column<int>(type: "int", nullable: false, comment: "評測案例的從零開始索引。"),
                     VariantIndex = table.Column<int>(type: "int", nullable: false, comment: "評測模型／參數組合的從零開始索引。"),
                     Output = table.Column<string>(type: "nvarchar(max)", nullable: false, comment: "評測模型的實際回答。"),
@@ -1116,13 +1413,14 @@ namespace AiNexus.Features.Persistence.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
                     ConversationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯對話的識別碼。"),
-                    ParentId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "父訊息或父資源識別碼，用於分支或階層繼承。"),
-                    Role = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, comment: "訊息角色（user／assistant）或資源成員的閱讀／編輯權限。"),
-                    Content = table.Column<string>(type: "nvarchar(max)", nullable: false, comment: "訊息、版本或生成的文字內容。"),
+                    ParentId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "父訊息識別碼；編輯與重新生成形成分支樹。"),
+                    Role = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, comment: "訊息角色：user 或 assistant。"),
+                    Content = table.Column<string>(type: "nvarchar(max)", nullable: false, comment: "訊息文字內容。"),
                     Status = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, comment: "業務執行狀態。"),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料建立時間，採 UTC offset。"),
-                    RunId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "關聯生成或評測執行的識別碼。"),
+                    RunId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "產生此訊息的 GenerationRuns 識別碼。"),
                     ModelId = table.Column<string>(type: "nvarchar(160)", maxLength: 160, nullable: true, comment: "核准模型的內部識別碼。"),
+                    IssueCode = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: true, comment: "伺服器產生的不透明問題查證代碼；每個問題個別識別。"),
                     ErrorCode = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: true, comment: "對外安全的錯誤代碼，不含密碼或完整例外。")
                 },
                 constraints: table =>
@@ -1147,7 +1445,7 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "ModelCharges",
-                schema: "inference",
+                schema: "billing",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
@@ -1161,7 +1459,7 @@ namespace AiNexus.Features.Persistence.Migrations
                     FinishedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true, comment: "工作結束時間。"),
                     PriceId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "此呼叫採用的不可變價格版本。"),
                     Currency = table.Column<string>(type: "nvarchar(3)", maxLength: 3, nullable: false, comment: "費用幣別代碼；不同幣別不可直接合計。"),
-                    Kind = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, comment: "業務操作、資源或成本的種類。"),
+                    Kind = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, comment: "成本類型。"),
                     InputPerMillion = table.Column<decimal>(type: "decimal(20,8)", precision: 20, scale: 8, nullable: false, comment: "每百萬輸入 tokens 的單價。"),
                     CachedInputPerMillion = table.Column<decimal>(type: "decimal(20,8)", precision: 20, scale: 8, nullable: false, comment: "每百萬快取輸入 tokens 的單價。"),
                     OutputPerMillion = table.Column<decimal>(type: "decimal(20,8)", precision: 20, scale: 8, nullable: false, comment: "每百萬輸出 tokens 的單價。"),
@@ -1189,7 +1487,7 @@ namespace AiNexus.Features.Persistence.Migrations
                     table.ForeignKey(
                         name: "FK_ModelCharges_ModelPrices_PriceId",
                         column: x => x.PriceId,
-                        principalSchema: "inference",
+                        principalSchema: "billing",
                         principalTable: "ModelPrices",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
@@ -1204,8 +1502,74 @@ namespace AiNexus.Features.Persistence.Migrations
                 comment: "各呼叫當時的價格與用量快照；未知費用保持空值。");
 
             migrationBuilder.CreateTable(
+                name: "ChunkEmbeddings1024",
+                schema: "knowledge",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false, comment: "資料的主鍵識別碼。")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ChunkId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "向量對應的結構化片段 Guid 識別碼。"),
+                    ProfileId = table.Column<int>(type: "int", nullable: false, comment: "向量空間及切段版本的 EmbeddingProfiles 外鍵。"),
+                    ContentHash = table.Column<byte[]>(type: "binary(32)", nullable: false, comment: "實際向量輸入（文件名稱、標題路徑與本文）的 SHA-256。"),
+                    Vector = table.Column<SqlVector<float>>(type: "vector(1024)", nullable: false, comment: "L2 正規化的 float32 向量；SQL Server 使用 VECTOR 型別。")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ChunkEmbeddings1024", x => x.Id)
+                        .Annotation("SqlServer:Clustered", true);
+                    table.ForeignKey(
+                        name: "FK_ChunkEmbeddings1024_Chunks_ChunkId",
+                        column: x => x.ChunkId,
+                        principalSchema: "knowledge",
+                        principalTable: "Chunks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ChunkEmbeddings1024_EmbeddingProfiles_ProfileId",
+                        column: x => x.ProfileId,
+                        principalSchema: "knowledge",
+                        principalTable: "EmbeddingProfiles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                },
+                comment: "1024 維原生向量、片段關聯與 profile 內容快取。");
+
+            migrationBuilder.CreateTable(
+                name: "ChunkEmbeddings768",
+                schema: "knowledge",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false, comment: "資料的主鍵識別碼。")
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ChunkId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "向量對應的結構化片段 Guid 識別碼。"),
+                    ProfileId = table.Column<int>(type: "int", nullable: false, comment: "向量空間及切段版本的 EmbeddingProfiles 外鍵。"),
+                    ContentHash = table.Column<byte[]>(type: "binary(32)", nullable: false, comment: "實際向量輸入（文件名稱、標題路徑與本文）的 SHA-256。"),
+                    Vector = table.Column<SqlVector<float>>(type: "vector(768)", nullable: false, comment: "L2 正規化的 float32 向量；SQL Server 使用 VECTOR 型別。")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ChunkEmbeddings768", x => x.Id)
+                        .Annotation("SqlServer:Clustered", true);
+                    table.ForeignKey(
+                        name: "FK_ChunkEmbeddings768_Chunks_ChunkId",
+                        column: x => x.ChunkId,
+                        principalSchema: "knowledge",
+                        principalTable: "Chunks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ChunkEmbeddings768_EmbeddingProfiles_ProfileId",
+                        column: x => x.ProfileId,
+                        principalSchema: "knowledge",
+                        principalTable: "EmbeddingProfiles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                },
+                comment: "768 維原生向量、片段關聯與 profile 內容快取。");
+
+            migrationBuilder.CreateTable(
                 name: "Artifacts",
-                schema: "content",
+                schema: "artifacts",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
@@ -1247,6 +1611,9 @@ namespace AiNexus.Features.Persistence.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料的主鍵識別碼。"),
                     OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。"),
+                    TraceId = table.Column<string>(type: "nvarchar(32)", maxLength: 32, nullable: true, comment: "W3C 流程追蹤識別，僅由伺服器建立。"),
+                    ParentSpanId = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: true, comment: "排程來源的 W3C span 識別，重試沿用同一 trace。"),
+                    OperationId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "持久作業識別，跨佇列與重試保持不變。"),
                     ActiveOwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "仍在執行的擁有者；filtered unique index 限制每人一個生成。"),
                     ExecutorId = table.Column<Guid>(type: "uniqueidentifier", nullable: true, comment: "處理此次生成的伺服器程序識別碼。"),
                     LeaseExpiresAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true, comment: "生成 executor 租約的到期時間。"),
@@ -1260,12 +1627,14 @@ namespace AiNexus.Features.Persistence.Migrations
                     IdempotencyKey = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: false, comment: "擁有者範圍內的冪等請求識別，避免重試重複處理。"),
                     RequestHash = table.Column<string>(type: "nvarchar(64)", maxLength: 64, nullable: false, comment: "請求內容指紋，用於辨識冪等識別碼衝突。"),
                     Status = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, comment: "業務執行狀態。"),
-                    Content = table.Column<string>(type: "nvarchar(max)", nullable: false, comment: "訊息、版本或生成的文字內容。"),
+                    Content = table.Column<string>(type: "nvarchar(max)", nullable: false, comment: "生成中或已完成的回答文字快照。"),
                     LastSequence = table.Column<long>(type: "bigint", nullable: false, comment: "最後已持久化的生成事件序號。"),
+                    IssueCode = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: true, comment: "伺服器產生的不透明問題查證代碼；每個問題個別識別。"),
                     ErrorCode = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: true, comment: "對外安全的錯誤代碼，不含密碼或完整例外。"),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料建立時間，採 UTC offset。"),
                     StartedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true, comment: "工作開始執行時間。"),
                     FinishedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true, comment: "工作結束時間。"),
+                    ReservedTokens = table.Column<long>(type: "bigint", nullable: false, comment: "生成預留的保守輸入加最大輸出 token；執行中或缺失 usage 時占用配額，未執行即取消釋放。"),
                     InputTokens = table.Column<long>(type: "bigint", nullable: true, comment: "模型回報的輸入 tokens；未知保持空值。"),
                     OutputTokens = table.Column<long>(type: "bigint", nullable: true, comment: "模型回報的輸出 tokens；未知保持空值。"),
                     DurationMilliseconds = table.Column<long>(type: "bigint", nullable: true, comment: "從請求建立至終止的總耗時毫秒；包括排隊、生成、取消與失敗。"),
@@ -1342,6 +1711,7 @@ namespace AiNexus.Features.Persistence.Migrations
                     Number = table.Column<int>(type: "int", nullable: false, comment: "回答引用的順序編號。"),
                     DocumentId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯知識文件的識別碼。"),
                     PageNumber = table.Column<int>(type: "int", nullable: false, comment: "文件頁碼，從 1 開始。"),
+                    EndPage = table.Column<int>(type: "int", nullable: false, comment: "片段結束的原始文件頁碼。"),
                     Title = table.Column<string>(type: "nvarchar(180)", maxLength: 180, nullable: false, comment: "介面顯示標題。"),
                     Excerpt = table.Column<string>(type: "nvarchar(800)", maxLength: 800, nullable: false, comment: "檢索或引用時保存的文字摘要。")
                 },
@@ -1373,7 +1743,7 @@ namespace AiNexus.Features.Persistence.Migrations
                     MessageId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯訊息的識別碼。"),
                     OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。"),
                     Rating = table.Column<int>(type: "int", nullable: false, comment: "使用者對回答的評分。"),
-                    Reason = table.Column<string>(type: "nvarchar(24)", maxLength: 24, nullable: false, comment: "回饋或操作理由。"),
+                    Reason = table.Column<string>(type: "nvarchar(24)", maxLength: 24, nullable: false, comment: "回饋理由。"),
                     Note = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false, comment: "使用者提供的補充說明。"),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料最後修改時間，採 UTC offset。")
                 },
@@ -1399,14 +1769,14 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "ArtifactRevisions",
-                schema: "content",
+                schema: "artifacts",
                 columns: table => new
                 {
                     ArtifactId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯成果文件的識別碼。"),
                     Version = table.Column<int>(type: "int", nullable: false, comment: "業務版本號，用於歷史或樂觀並行控制。"),
                     AuthorId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "建立此版本的使用者識別碼。"),
                     Title = table.Column<string>(type: "nvarchar(120)", maxLength: 120, nullable: false, comment: "介面顯示標題。"),
-                    Content = table.Column<string>(type: "nvarchar(max)", maxLength: 64000, nullable: false, comment: "訊息、版本或生成的文字內容。"),
+                    Content = table.Column<string>(type: "nvarchar(max)", maxLength: 64000, nullable: false, comment: "此版本的成果內容。"),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料建立時間，採 UTC offset。")
                 },
                 constraints: table =>
@@ -1415,7 +1785,7 @@ namespace AiNexus.Features.Persistence.Migrations
                     table.ForeignKey(
                         name: "FK_ArtifactRevisions_Artifacts_ArtifactId",
                         column: x => x.ArtifactId,
-                        principalSchema: "content",
+                        principalSchema: "artifacts",
                         principalTable: "Artifacts",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -1431,7 +1801,7 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateTable(
                 name: "SourceReferences",
-                schema: "content",
+                schema: "integrations",
                 columns: table => new
                 {
                     ArtifactId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯成果文件的識別碼。"),
@@ -1446,7 +1816,7 @@ namespace AiNexus.Features.Persistence.Migrations
                     table.ForeignKey(
                         name: "FK_SourceReferences_Artifacts_ArtifactId",
                         column: x => x.ArtifactId,
-                        principalSchema: "content",
+                        principalSchema: "artifacts",
                         principalTable: "Artifacts",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
@@ -1458,11 +1828,12 @@ namespace AiNexus.Features.Persistence.Migrations
                 schema: "inference",
                 columns: table => new
                 {
-                    RunId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯生成或評測執行的識別碼。"),
+                    RunId = table.Column<Guid>(type: "uniqueidentifier", nullable: false, comment: "關聯 GenerationRuns 的識別碼。"),
                     Sequence = table.Column<long>(type: "bigint", nullable: false, comment: "事件在同一生成中的遞增序號。"),
                     Type = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, comment: "事件的種類。"),
                     Status = table.Column<string>(type: "nvarchar(16)", maxLength: 16, nullable: false, comment: "業務執行狀態。"),
                     Delta = table.Column<string>(type: "nvarchar(max)", nullable: true, comment: "生成文字增量或完整快照。"),
+                    IssueCode = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: true, comment: "伺服器產生的不透明問題查證代碼；每個問題個別識別。"),
                     ErrorCode = table.Column<string>(type: "nvarchar(80)", maxLength: 80, nullable: true, comment: "對外安全的錯誤代碼，不含密碼或完整例外。"),
                     CreatedAt = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false, comment: "資料建立時間，採 UTC offset。")
                 },
@@ -1480,17 +1851,23 @@ namespace AiNexus.Features.Persistence.Migrations
                 comment: "生成事件的有序 SSE 重播紀錄；完整生成狀態以 GenerationRuns 為準。");
 
             migrationBuilder.InsertData(
-                schema: "access",
+                schema: "accesscontrol",
                 table: "Features",
                 columns: new[] { "Id", "Enabled", "Name", "Route", "SortOrder" },
                 values: new object[,]
                 {
-                    { "admin", true, "管理", "/admin", 90 },
+                    { "admin", true, "平台管理", "/admin", 90 },
                     { "artifacts", true, "成果文件", "/artifacts", 40 },
-                    { "chat", true, "AI 對話", "/chat", 10 },
+                    { "audit", true, "活動稽核", "/admin/audit", 92 },
+                    { "chat", true, "對話", "/chat", 10 },
                     { "dashboard", true, "總覽", "/dashboard", 5 },
-                    { "integrations", true, "系統整合", "/integrations", 80 },
+                    { "files", true, "檔案庫", "/files", 15 },
+                    { "integrations", true, "資料來源", "/integrations", 80 },
                     { "knowledge", true, "知識庫", "/knowledge", 30 },
+                    { "logs.detail", true, "日誌診斷詳情", "", 111 },
+                    { "logs.export", true, "日誌匯出", "", 112 },
+                    { "logs.query", true, "系統日誌", "/admin/logs", 110 },
+                    { "monitoring", true, "即時監控", "/admin/monitoring", 91 },
                     { "projects", true, "專案", "/projects", 20 },
                     { "quality", true, "品質評測", "/quality", 60 },
                     { "repositories", true, "程式庫", "/repositories", 65 },
@@ -1499,7 +1876,7 @@ namespace AiNexus.Features.Persistence.Migrations
                 });
 
             migrationBuilder.InsertData(
-                schema: "access",
+                schema: "accesscontrol",
                 table: "RoleGroups",
                 columns: new[] { "Id", "Enabled", "Name" },
                 values: new object[,]
@@ -1509,7 +1886,7 @@ namespace AiNexus.Features.Persistence.Migrations
                 });
 
             migrationBuilder.InsertData(
-                schema: "access",
+                schema: "accesscontrol",
                 table: "Roles",
                 columns: new[] { "Id", "Enabled", "Name" },
                 values: new object[,]
@@ -1519,16 +1896,22 @@ namespace AiNexus.Features.Persistence.Migrations
                 });
 
             migrationBuilder.InsertData(
-                schema: "access",
+                schema: "accesscontrol",
                 table: "RoleGroupFeatures",
                 columns: new[] { "FeatureId", "GroupId" },
                 values: new object[,]
                 {
                     { "admin", "administrators" },
+                    { "audit", "administrators" },
                     { "integrations", "administrators" },
+                    { "logs.detail", "administrators" },
+                    { "logs.export", "administrators" },
+                    { "logs.query", "administrators" },
+                    { "monitoring", "administrators" },
                     { "artifacts", "workspace" },
                     { "chat", "workspace" },
                     { "dashboard", "workspace" },
+                    { "files", "workspace" },
                     { "knowledge", "workspace" },
                     { "projects", "workspace" },
                     { "quality", "workspace" },
@@ -1538,7 +1921,7 @@ namespace AiNexus.Features.Persistence.Migrations
                 });
 
             migrationBuilder.InsertData(
-                schema: "access",
+                schema: "accesscontrol",
                 table: "RoleGroupRoles",
                 columns: new[] { "GroupId", "RoleId" },
                 values: new object[,]
@@ -1549,19 +1932,19 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_ArtifactRevisions_AuthorId",
-                schema: "content",
+                schema: "artifacts",
                 table: "ArtifactRevisions",
                 column: "AuthorId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Artifacts_ProjectId",
-                schema: "content",
+                schema: "artifacts",
                 table: "Artifacts",
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Artifacts_SourceMessageId",
-                schema: "content",
+                schema: "artifacts",
                 table: "Artifacts",
                 column: "SourceMessageId");
 
@@ -1592,31 +1975,31 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditEvents_Action_Id",
-                schema: "operations",
+                schema: "audit",
                 table: "AuditEvents",
                 columns: new[] { "Action", "Id" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditEvents_ActorId_Id",
-                schema: "operations",
+                schema: "audit",
                 table: "AuditEvents",
                 columns: new[] { "ActorId", "Id" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditEvents_At",
-                schema: "operations",
+                schema: "audit",
                 table: "AuditEvents",
                 column: "At");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditEvents_ResourceId_Id",
-                schema: "operations",
+                schema: "audit",
                 table: "AuditEvents",
                 columns: new[] { "ResourceId", "Id" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_BackgroundJobs_ActiveKey",
-                schema: "operations",
+                schema: "jobs",
                 table: "BackgroundJobs",
                 column: "ActiveKey",
                 unique: true,
@@ -1624,27 +2007,78 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_BackgroundJobs_OwnerId_CreatedAt",
-                schema: "operations",
+                schema: "jobs",
                 table: "BackgroundJobs",
                 columns: new[] { "OwnerId", "CreatedAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_BackgroundJobs_ResourceId",
-                schema: "operations",
+                schema: "jobs",
                 table: "BackgroundJobs",
                 column: "ResourceId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_BackgroundJobs_Status_LeaseUntil_CreatedAt",
-                schema: "operations",
+                schema: "jobs",
                 table: "BackgroundJobs",
                 columns: new[] { "Status", "LeaseUntil", "CreatedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_BackgroundJobs_SubjectId",
+                schema: "jobs",
+                table: "BackgroundJobs",
+                column: "SubjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChunkEmbeddings1024_ChunkId",
+                schema: "knowledge",
+                table: "ChunkEmbeddings1024",
+                column: "ChunkId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChunkEmbeddings1024_ProfileId_ChunkId",
+                schema: "knowledge",
+                table: "ChunkEmbeddings1024",
+                columns: new[] { "ProfileId", "ChunkId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChunkEmbeddings1024_ProfileId_ContentHash",
+                schema: "knowledge",
+                table: "ChunkEmbeddings1024",
+                columns: new[] { "ProfileId", "ContentHash" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChunkEmbeddings768_ChunkId",
+                schema: "knowledge",
+                table: "ChunkEmbeddings768",
+                column: "ChunkId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChunkEmbeddings768_ProfileId_ChunkId",
+                schema: "knowledge",
+                table: "ChunkEmbeddings768",
+                columns: new[] { "ProfileId", "ChunkId" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ChunkEmbeddings768_ProfileId_ContentHash",
+                schema: "knowledge",
+                table: "ChunkEmbeddings768",
+                columns: new[] { "ProfileId", "ContentHash" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Chunks_DocumentId_Ordinal",
                 schema: "knowledge",
                 table: "Chunks",
                 columns: new[] { "DocumentId", "Ordinal" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Chunks_SearchId",
+                schema: "knowledge",
+                table: "Chunks",
+                column: "SearchId",
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -1672,16 +2106,113 @@ namespace AiNexus.Features.Persistence.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_DiagnosticEvents_At_LogId",
+                schema: "diagnostics",
+                table: "DiagnosticEvents",
+                columns: new[] { "At", "LogId" },
+                descending: new bool[0])
+                .Annotation("SqlServer:Clustered", true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DiagnosticEvents_Category_At_LogId",
+                schema: "diagnostics",
+                table: "DiagnosticEvents",
+                columns: new[] { "Category", "At", "LogId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DiagnosticEvents_ErrorCode_At_LogId",
+                schema: "diagnostics",
+                table: "DiagnosticEvents",
+                columns: new[] { "ErrorCode", "At", "LogId" },
+                filter: "[ErrorCode] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DiagnosticEvents_EventId_At_LogId",
+                schema: "diagnostics",
+                table: "DiagnosticEvents",
+                columns: new[] { "EventId", "At", "LogId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DiagnosticEvents_EventName_At_LogId",
+                schema: "diagnostics",
+                table: "DiagnosticEvents",
+                columns: new[] { "EventName", "At", "LogId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DiagnosticEvents_Instance_At_LogId",
+                schema: "diagnostics",
+                table: "DiagnosticEvents",
+                columns: new[] { "Instance", "At", "LogId" },
+                filter: "[Instance] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DiagnosticEvents_IssueCode_At_LogId",
+                schema: "diagnostics",
+                table: "DiagnosticEvents",
+                columns: new[] { "IssueCode", "At", "LogId" },
+                filter: "[IssueCode] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DiagnosticEvents_JobId_At_LogId",
+                schema: "diagnostics",
+                table: "DiagnosticEvents",
+                columns: new[] { "JobId", "At", "LogId" },
+                filter: "[JobId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DiagnosticEvents_Level_At_LogId",
+                schema: "diagnostics",
+                table: "DiagnosticEvents",
+                columns: new[] { "Level", "At", "LogId" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DiagnosticEvents_OperationId_At_LogId",
+                schema: "diagnostics",
+                table: "DiagnosticEvents",
+                columns: new[] { "OperationId", "At", "LogId" },
+                filter: "[OperationId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DiagnosticEvents_RunId_At_LogId",
+                schema: "diagnostics",
+                table: "DiagnosticEvents",
+                columns: new[] { "RunId", "At", "LogId" },
+                filter: "[RunId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_DiagnosticEvents_TraceId_At_LogId",
+                schema: "diagnostics",
+                table: "DiagnosticEvents",
+                columns: new[] { "TraceId", "At", "LogId" },
+                filter: "[TraceId] IS NOT NULL");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Documents_AttachmentId",
                 schema: "knowledge",
                 table: "Documents",
                 column: "AttachmentId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Documents_CollectionId_Status",
+                name: "IX_Documents_CollectionId_Status_IsDeleted",
                 schema: "knowledge",
                 table: "Documents",
-                columns: new[] { "CollectionId", "Status" });
+                columns: new[] { "CollectionId", "Status", "IsDeleted" })
+                .Annotation("SqlServer:Include", new[] { "Id", "FileName", "ChunkCount" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EmbeddingProfiles_Key",
+                schema: "knowledge",
+                table: "EmbeddingProfiles",
+                column: "Key",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_EmbeddingProfiles_Status",
+                schema: "knowledge",
+                table: "EmbeddingProfiles",
+                column: "Status",
+                unique: true,
+                filter: "[Status] = 'active'");
 
             migrationBuilder.CreateIndex(
                 name: "IX_EvaluationResults_ReviewerId",
@@ -1735,6 +2266,12 @@ namespace AiNexus.Features.Persistence.Migrations
                 columns: new[] { "ConversationId", "CreatedAt" });
 
             migrationBuilder.CreateIndex(
+                name: "IX_GenerationRuns_OwnerId_CreatedAt",
+                schema: "inference",
+                table: "GenerationRuns",
+                columns: new[] { "OwnerId", "CreatedAt" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_GenerationRuns_OwnerId_IdempotencyKey",
                 schema: "inference",
                 table: "GenerationRuns",
@@ -1779,25 +2316,25 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_ModelCharges_ConversationId",
-                schema: "inference",
+                schema: "billing",
                 table: "ModelCharges",
                 column: "ConversationId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ModelCharges_CreatedAt",
-                schema: "inference",
+                schema: "billing",
                 table: "ModelCharges",
                 column: "CreatedAt");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ModelCharges_OwnerId_CreatedAt",
-                schema: "inference",
+                schema: "billing",
                 table: "ModelCharges",
                 columns: new[] { "OwnerId", "CreatedAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ModelCharges_PriceId",
-                schema: "inference",
+                schema: "billing",
                 table: "ModelCharges",
                 column: "PriceId");
 
@@ -1809,15 +2346,28 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_ModelPrices_CreatedBy",
-                schema: "inference",
+                schema: "billing",
                 table: "ModelPrices",
                 column: "CreatedBy");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ModelPrices_Provider_ModelId_EffectiveAt",
-                schema: "inference",
+                schema: "billing",
                 table: "ModelPrices",
                 columns: new[] { "Provider", "ModelId", "EffectiveAt" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Notifications_OwnerId_DismissedAt_ReadAt_CreatedAt",
+                schema: "notifications",
+                table: "Notifications",
+                columns: new[] { "OwnerId", "DismissedAt", "ReadAt", "CreatedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Notifications_OwnerId_EventKey",
+                schema: "notifications",
+                table: "Notifications",
+                columns: new[] { "OwnerId", "EventKey" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -1834,15 +2384,34 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_RepositoryImports_DocumentId",
-                schema: "knowledge",
+                schema: "repositories",
                 table: "RepositoryImports",
                 column: "DocumentId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RepositoryImports_OwnerId_CollectionId_Repository_Commit_Path",
-                schema: "knowledge",
+                schema: "repositories",
                 table: "RepositoryImports",
                 columns: new[] { "OwnerId", "CollectionId", "Repository", "Commit", "Path" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RepositoryReviews_JobId",
+                schema: "repositories",
+                table: "RepositoryReviews",
+                column: "JobId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RepositoryReviews_OwnerId_CreatedAt",
+                schema: "repositories",
+                table: "RepositoryReviews",
+                columns: new[] { "OwnerId", "CreatedAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RepositoryReviews_OwnerId_IdempotencyKey",
+                schema: "repositories",
+                table: "RepositoryReviews",
+                columns: new[] { "OwnerId", "IdempotencyKey" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_ResourceAttachments_AttachmentId",
@@ -1875,44 +2444,57 @@ namespace AiNexus.Features.Persistence.Migrations
                 column: "ParentId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_RetrievalEvaluations_JobId",
+                schema: "quality",
+                table: "RetrievalEvaluations",
+                column: "JobId",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RetrievalEvaluations_OwnerId_CreatedAt",
+                schema: "quality",
+                table: "RetrievalEvaluations",
+                columns: new[] { "OwnerId", "CreatedAt" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RoleGroupFeatures_FeatureId",
-                schema: "access",
+                schema: "accesscontrol",
                 table: "RoleGroupFeatures",
                 column: "FeatureId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RoleGroupRoles_GroupId",
-                schema: "access",
+                schema: "accesscontrol",
                 table: "RoleGroupRoles",
                 column: "GroupId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ShareLinks_ExpiresAt",
-                schema: "collaboration",
+                schema: "sharing",
                 table: "ShareLinks",
                 column: "ExpiresAt");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ShareLinks_OwnerId_CreatedAt",
-                schema: "collaboration",
+                schema: "sharing",
                 table: "ShareLinks",
                 columns: new[] { "OwnerId", "CreatedAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_ShareRecipients_UserId_ShareId",
-                schema: "collaboration",
+                schema: "sharing",
                 table: "ShareRecipients",
                 columns: new[] { "UserId", "ShareId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_SourceReferences_SourceId_ExternalId",
-                schema: "content",
+                schema: "integrations",
                 table: "SourceReferences",
                 columns: new[] { "SourceId", "ExternalId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_UserRoles_RoleId",
-                schema: "access",
+                schema: "accesscontrol",
                 table: "UserRoles",
                 column: "RoleId");
 
@@ -1941,131 +2523,62 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.CreateIndex(
                 name: "IX_WebSearches_OwnerId_CreatedAt",
-                schema: "inference",
+                schema: "websearch",
                 table: "WebSearches",
                 columns: new[] { "OwnerId", "CreatedAt" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_WebSearches_OwnerId_IdempotencyKey",
-                schema: "inference",
+                schema: "websearch",
                 table: "WebSearches",
                 columns: new[] { "OwnerId", "IdempotencyKey" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_WebSearches_RunId",
-                schema: "inference",
+                schema: "websearch",
                 table: "WebSearches",
                 column: "RunId");
 
-            if (ActiveProvider == "Microsoft.EntityFrameworkCore.SqlServer")
-            {
-                migrationBuilder.Sql("IF CONVERT(int,SERVERPROPERTY('ProductMajorVersion')) >= 17 EXEC(N'ALTER TABLE [knowledge].[Chunks] ADD [EmbeddingVector] VECTOR(768) NULL, [EmbeddingVector1024] VECTOR(1024) NULL');");
-                // Freeze this baseline's descriptions so direct DBA execution matches initialization.
-                migrationBuilder.Sql(
-                    """
-                    -- Re-runnable descriptions for schema, physical indexes/constraints and non-EF columns.
-                    -- Table/column MS_Description is maintained by the EF model and its migrations.
-                    SET NOCOUNT ON;
-                    DECLARE @nxDescschema sysname, @nxDesctable sysname, @nxDescname sysname, @nxDesckind varchar(20), @nxDescdescription nvarchar(3750);
-                    DECLARE schema_descriptions CURSOR LOCAL FAST_FORWARD FOR
-                    SELECT name, description FROM (VALUES
-                     (N'identity', N'使用者身分、登入政策、密碼雜湊與個人偏好。'),
-                     (N'access', N'角色、功能群組、功能授權及模型政策。'),
-                     (N'conversations', N'私人對話、訊息分支與分類。'),
-                     (N'inference', N'模型設定、生成、租約、重播、用量與費用。'),
-                     (N'operations', N'稽核、背景工作及持久進度。'),
-                     (N'attachments', N'站外原檔的 metadata、儲存識別、權限與引用關聯；不含原檔 bytes。'),
-                     (N'library', N'使用者私人提示詞範本。'),
-                     (N'collaboration', N'資料資源 ACL 與具名分享。'),
-                     (N'knowledge', N'知識文件、分頁、片段、向量與引用。'),
-                     (N'content', N'成果文件版本及外部來源參照。'),
-                     (N'projects', N'專案與共用指令範本。'),
-                     (N'quality', N'回答回饋、固定評測及人工覆核。'),
-                     (N'workspace', N'個人程式庫連線與匯入識別。'),
-                     (N'dbo', N'EF 資料庫版本記錄。')
-                    ) descriptions(name, description) WHERE SCHEMA_ID(name) IS NOT NULL;
-                    OPEN schema_descriptions;
-                    FETCH NEXT FROM schema_descriptions INTO @nxDescschema, @nxDescdescription;
-                    WHILE @@FETCH_STATUS = 0
-                    BEGIN
-                     IF EXISTS (SELECT 1 FROM sys.extended_properties WHERE class = 3 AND major_id = SCHEMA_ID(@nxDescschema) AND name = N'MS_Description')
-                      EXEC sys.sp_updateextendedproperty @name=N'MS_Description', @value=@nxDescdescription, @level0type=N'SCHEMA', @level0name=@nxDescschema;
-                     ELSE EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=@nxDescdescription, @level0type=N'SCHEMA', @level0name=@nxDescschema;
-                     FETCH NEXT FROM schema_descriptions INTO @nxDescschema, @nxDescdescription;
-                    END;
-                    CLOSE schema_descriptions; DEALLOCATE schema_descriptions;
-
-                    DECLARE object_descriptions CURSOR LOCAL FAST_FORWARD FOR
-                    SELECT s.name, t.name, 'INDEX', i.name,
-                     LEFT(CONCAT(CASE WHEN i.is_unique = 1 THEN N'唯一索引；避免重複組合：' ELSE N'查詢索引；加速依下列欄位篩選及排序：' END,
-                      STRING_AGG(CONVERT(nvarchar(max), c.name + CASE WHEN ic.is_descending_key = 1 THEN N' DESC' ELSE N'' END), N'、') WITHIN GROUP (ORDER BY ic.key_ordinal),
-                      CASE WHEN i.has_filter = 1 THEN N'；篩選條件：' + i.filter_definition ELSE N'' END), 3750) COLLATE DATABASE_DEFAULT
-                    FROM sys.indexes i JOIN sys.tables t ON i.object_id=t.object_id JOIN sys.schemas s ON t.schema_id=s.schema_id
-                    JOIN sys.index_columns ic ON i.object_id=ic.object_id AND i.index_id=ic.index_id AND ic.key_ordinal > 0
-                    JOIN sys.columns c ON c.object_id=ic.object_id AND c.column_id=ic.column_id
-                    WHERE s.name IN (N'identity',N'access',N'conversations',N'inference',N'operations',N'attachments',N'library',N'collaboration',N'knowledge',N'content',N'projects',N'quality',N'workspace',N'dbo')
-                     AND i.is_primary_key=0 AND i.is_unique_constraint=0
-                    GROUP BY s.name,t.name,i.name,i.is_unique,i.has_filter,i.filter_definition
-                    UNION ALL
-                    SELECT s.name,t.name,'CONSTRAINT',k.name,CONCAT(CASE WHEN k.type='PK' THEN N'主鍵；唯一識別 ' ELSE N'唯一約束；防止重複 ' END,s.name,N'.',t.name,N' 的資料。') COLLATE DATABASE_DEFAULT
-                    FROM sys.key_constraints k JOIN sys.tables t ON k.parent_object_id=t.object_id JOIN sys.schemas s ON t.schema_id=s.schema_id
-                    WHERE s.name IN (N'identity',N'access',N'conversations',N'inference',N'operations',N'attachments',N'library',N'collaboration',N'knowledge',N'content',N'projects',N'quality',N'workspace',N'dbo')
-                    UNION ALL
-                    SELECT s.name,t.name,'CONSTRAINT',f.name,LEFT(CONCAT(N'外鍵；關聯 ',OBJECT_SCHEMA_NAME(f.referenced_object_id),N'.',OBJECT_NAME(f.referenced_object_id),N'；刪除策略：',f.delete_referential_action_desc,N'；更新策略：',f.update_referential_action_desc),3750) COLLATE DATABASE_DEFAULT
-                    FROM sys.foreign_keys f JOIN sys.tables t ON f.parent_object_id=t.object_id JOIN sys.schemas s ON t.schema_id=s.schema_id
-                    WHERE s.name IN (N'identity',N'access',N'conversations',N'inference',N'operations',N'attachments',N'library',N'collaboration',N'knowledge',N'content',N'projects',N'quality',N'workspace')
-                    UNION ALL
-                    SELECT s.name,t.name,'CONSTRAINT',d.name,LEFT(CONCAT(N'預設約束；欄位 ',COL_NAME(d.parent_object_id,d.parent_column_id),N' 未指定值時使用 ',d.definition),3750) COLLATE DATABASE_DEFAULT
-                    FROM sys.default_constraints d JOIN sys.tables t ON d.parent_object_id=t.object_id JOIN sys.schemas s ON t.schema_id=s.schema_id
-                    WHERE s.name IN (N'identity',N'access',N'conversations',N'inference',N'operations',N'attachments',N'library',N'collaboration',N'knowledge',N'content',N'projects',N'quality',N'workspace')
-                    UNION ALL
-                    SELECT s.name,t.name,'CONSTRAINT',c.name,LEFT(CONCAT(N'檢核約束；資料需符合 ',c.definition),3750) COLLATE DATABASE_DEFAULT
-                    FROM sys.check_constraints c JOIN sys.tables t ON c.parent_object_id=t.object_id JOIN sys.schemas s ON t.schema_id=s.schema_id
-                    WHERE s.name IN (N'identity',N'access',N'conversations',N'inference',N'operations',N'attachments',N'library',N'collaboration',N'knowledge',N'content',N'projects',N'quality',N'workspace')
-                    UNION ALL
-                    SELECT s.name,t.name,'COLUMN',c.name,
-                     CASE WHEN c.name LIKE N'%1024%' THEN N'原生 VECTOR(1024) embedding；SQL Server 2025 支援時建立，須先套用來源 ACL 與相容 profile。'
-                     ELSE N'原生 VECTOR(768) embedding；SQL Server 2025 支援時建立，須先套用來源 ACL 與相容 profile。' END COLLATE DATABASE_DEFAULT
-                    FROM sys.columns c JOIN sys.tables t ON c.object_id=t.object_id JOIN sys.schemas s ON t.schema_id=s.schema_id
-                    WHERE s.name=N'knowledge' AND t.name=N'Chunks' AND c.name LIKE N'EmbeddingVector%'
-                    UNION ALL
-                    SELECT N'dbo',N'__EFMigrationsHistory',NULL,NULL,N'EF 已套用版本記錄；不可手動刪除以重跑 migration。' WHERE OBJECT_ID(N'dbo.__EFMigrationsHistory') IS NOT NULL
-                    UNION ALL
-                    SELECT N'dbo',N'__EFMigrationsHistory','COLUMN',N'MigrationId',N'已套用的 migration 版本識別碼。' WHERE OBJECT_ID(N'dbo.__EFMigrationsHistory') IS NOT NULL
-                    UNION ALL
-                    SELECT N'dbo',N'__EFMigrationsHistory','COLUMN',N'ProductVersion',N'套用 migration 的 Entity Framework Core 版本。' WHERE OBJECT_ID(N'dbo.__EFMigrationsHistory') IS NOT NULL;
-                    OPEN object_descriptions;
-                    FETCH NEXT FROM object_descriptions INTO @nxDescschema,@nxDesctable,@nxDesckind,@nxDescname,@nxDescdescription;
-                    WHILE @@FETCH_STATUS = 0
-                    BEGIN
-                     IF EXISTS (SELECT 1 FROM sys.fn_listextendedproperty(N'MS_Description',N'SCHEMA',@nxDescschema,N'TABLE',@nxDesctable,@nxDesckind,@nxDescname))
-                      EXEC sys.sp_updateextendedproperty @name=N'MS_Description',@value=@nxDescdescription,@level0type=N'SCHEMA',@level0name=@nxDescschema,@level1type=N'TABLE',@level1name=@nxDesctable,@level2type=@nxDesckind,@level2name=@nxDescname;
-                     ELSE EXEC sys.sp_addextendedproperty @name=N'MS_Description',@value=@nxDescdescription,@level0type=N'SCHEMA',@level0name=@nxDescschema,@level1type=N'TABLE',@level1name=@nxDesctable,@level2type=@nxDesckind,@level2name=@nxDescname;
-                     FETCH NEXT FROM object_descriptions INTO @nxDescschema,@nxDesctable,@nxDesckind,@nxDescname,@nxDescdescription;
-                    END;
-                    CLOSE object_descriptions; DEALLOCATE object_descriptions;
-                    """);
-            }
+            // Full-text search is optional: without the component or the 1028 word breaker, retrieval reports vector mode.
+            // CREATE FULLTEXT CATALOG/INDEX cannot run inside a transaction.
+            migrationBuilder.Sql("""
+                IF CONVERT(int, SERVERPROPERTY('IsFullTextInstalled')) = 1
+                    AND EXISTS (SELECT 1 FROM sys.fulltext_languages WHERE lcid = 1028)
+                BEGIN
+                    IF NOT EXISTS (SELECT 1 FROM sys.fulltext_catalogs WHERE name = 'KnowledgeSearch')
+                        EXEC('CREATE FULLTEXT CATALOG [KnowledgeSearch]');
+                    IF NOT EXISTS (SELECT 1 FROM sys.fulltext_indexes WHERE object_id = OBJECT_ID('knowledge.Chunks'))
+                        EXEC('CREATE FULLTEXT INDEX ON [knowledge].[Chunks] ([Text] LANGUAGE 1028, [HeadingPath] LANGUAGE 1028) KEY INDEX [IX_Chunks_SearchId] ON [KnowledgeSearch] WITH CHANGE_TRACKING AUTO');
+                END
+                ELSE RAISERROR(N'知識全文索引未建立：未安裝全文元件或繁體中文 1028 斷詞器；執行期會明確回報 vector 模式。', 10, 1) WITH NOWAIT;
+                """, suppressTransaction: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql("IF EXISTS (SELECT 1 FROM sys.fulltext_indexes WHERE object_id = OBJECT_ID('knowledge.Chunks')) DROP FULLTEXT INDEX ON [knowledge].[Chunks];", suppressTransaction: true);
+            migrationBuilder.Sql("IF EXISTS (SELECT 1 FROM sys.fulltext_catalogs WHERE name = 'KnowledgeSearch') DROP FULLTEXT CATALOG [KnowledgeSearch];", suppressTransaction: true);
+
             migrationBuilder.DropTable(
                 name: "AdministratorBootstraps",
-                schema: "access");
+                schema: "administration");
 
             migrationBuilder.DropTable(
                 name: "ArtifactRevisions",
-                schema: "content");
+                schema: "artifacts");
 
             migrationBuilder.DropTable(
                 name: "AuditEvents",
-                schema: "operations");
+                schema: "audit");
 
             migrationBuilder.DropTable(
-                name: "Chunks",
+                name: "ChunkEmbeddings1024",
+                schema: "knowledge");
+
+            migrationBuilder.DropTable(
+                name: "ChunkEmbeddings768",
                 schema: "knowledge");
 
             migrationBuilder.DropTable(
@@ -2077,6 +2590,10 @@ namespace AiNexus.Features.Persistence.Migrations
                 schema: "conversations");
 
             migrationBuilder.DropTable(
+                name: "DiagnosticEvents",
+                schema: "diagnostics");
+
+            migrationBuilder.DropTable(
                 name: "DocumentPages",
                 schema: "knowledge");
 
@@ -2086,7 +2603,7 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "GroupModelPolicies",
-                schema: "access");
+                schema: "accesscontrol");
 
             migrationBuilder.DropTable(
                 name: "MessageAttachments",
@@ -2102,7 +2619,7 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "ModelCharges",
-                schema: "inference");
+                schema: "billing");
 
             migrationBuilder.DropTable(
                 name: "ModelInvocations",
@@ -2111,6 +2628,10 @@ namespace AiNexus.Features.Persistence.Migrations
             migrationBuilder.DropTable(
                 name: "ModelProfiles",
                 schema: "inference");
+
+            migrationBuilder.DropTable(
+                name: "Notifications",
+                schema: "notifications");
 
             migrationBuilder.DropTable(
                 name: "ProjectTemplates",
@@ -2122,11 +2643,15 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "RepositoryConnections",
-                schema: "workspace");
+                schema: "repositories");
 
             migrationBuilder.DropTable(
                 name: "RepositoryImports",
-                schema: "knowledge");
+                schema: "repositories");
+
+            migrationBuilder.DropTable(
+                name: "RepositoryReviewResults",
+                schema: "repositories");
 
             migrationBuilder.DropTable(
                 name: "ResourceAttachments",
@@ -2141,12 +2666,16 @@ namespace AiNexus.Features.Persistence.Migrations
                 schema: "collaboration");
 
             migrationBuilder.DropTable(
+                name: "RetrievalEvaluationResults",
+                schema: "quality");
+
+            migrationBuilder.DropTable(
                 name: "RoleGroupFeatures",
-                schema: "access");
+                schema: "accesscontrol");
 
             migrationBuilder.DropTable(
                 name: "RoleGroupRoles",
-                schema: "access");
+                schema: "accesscontrol");
 
             migrationBuilder.DropTable(
                 name: "RunEvents",
@@ -2154,11 +2683,15 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "ShareRecipients",
-                schema: "collaboration");
+                schema: "sharing");
 
             migrationBuilder.DropTable(
                 name: "SourceReferences",
-                schema: "content");
+                schema: "integrations");
+
+            migrationBuilder.DropTable(
+                name: "UserModelPolicies",
+                schema: "accesscontrol");
 
             migrationBuilder.DropTable(
                 name: "UserPreferences",
@@ -2166,11 +2699,19 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "UserRoles",
-                schema: "access");
+                schema: "accesscontrol");
 
             migrationBuilder.DropTable(
                 name: "WebSearches",
-                schema: "inference");
+                schema: "websearch");
+
+            migrationBuilder.DropTable(
+                name: "Chunks",
+                schema: "knowledge");
+
+            migrationBuilder.DropTable(
+                name: "EmbeddingProfiles",
+                schema: "knowledge");
 
             migrationBuilder.DropTable(
                 name: "EvaluationRuns",
@@ -2178,19 +2719,23 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "ModelPrices",
-                schema: "inference");
+                schema: "billing");
 
             migrationBuilder.DropTable(
-                name: "Documents",
-                schema: "knowledge");
+                name: "RepositoryReviews",
+                schema: "repositories");
+
+            migrationBuilder.DropTable(
+                name: "RetrievalEvaluations",
+                schema: "quality");
 
             migrationBuilder.DropTable(
                 name: "Features",
-                schema: "access");
+                schema: "accesscontrol");
 
             migrationBuilder.DropTable(
                 name: "RoleGroups",
-                schema: "access");
+                schema: "accesscontrol");
 
             migrationBuilder.DropTable(
                 name: "GenerationRuns",
@@ -2198,23 +2743,31 @@ namespace AiNexus.Features.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "ShareLinks",
-                schema: "collaboration");
+                schema: "sharing");
 
             migrationBuilder.DropTable(
                 name: "Artifacts",
-                schema: "content");
+                schema: "artifacts");
 
             migrationBuilder.DropTable(
                 name: "Roles",
-                schema: "access");
+                schema: "accesscontrol");
 
             migrationBuilder.DropTable(
-                name: "BackgroundJobs",
-                schema: "operations");
+                name: "Documents",
+                schema: "knowledge");
 
             migrationBuilder.DropTable(
                 name: "EvaluationSets",
                 schema: "quality");
+
+            migrationBuilder.DropTable(
+                name: "BackgroundJobs",
+                schema: "jobs");
+
+            migrationBuilder.DropTable(
+                name: "Messages",
+                schema: "conversations");
 
             migrationBuilder.DropTable(
                 name: "Attachments",
@@ -2223,10 +2776,6 @@ namespace AiNexus.Features.Persistence.Migrations
             migrationBuilder.DropTable(
                 name: "Collections",
                 schema: "knowledge");
-
-            migrationBuilder.DropTable(
-                name: "Messages",
-                schema: "conversations");
 
             migrationBuilder.DropTable(
                 name: "Conversations",

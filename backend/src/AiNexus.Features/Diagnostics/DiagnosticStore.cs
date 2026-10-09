@@ -38,13 +38,13 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
         await using var connection = new SqlConnection(connectionString); await connection.OpenAsync(ct);
         // Metadata row count avoids COUNT(*) on a growing table. Capacity is an approximate soft limit
         // (concurrent import batches and SQL metadata estimates can overshoot); no early retention purge.
-        await using (var count = new SqlCommand("SELECT COALESCE(SUM([rows]),0) FROM sys.partitions WHERE [object_id]=OBJECT_ID(N'operations.DiagnosticEvents') AND [index_id] IN (0,1);", connection) { CommandTimeout = settings.SqlTimeoutSeconds })
+        await using (var count = new SqlCommand("SELECT COALESCE(SUM([rows]),0) FROM sys.partitions WHERE [object_id]=OBJECT_ID(N'diagnostics.DiagnosticEvents') AND [index_id] IN (0,1);", connection) { CommandTimeout = settings.SqlTimeoutSeconds })
         {
             var rows = Convert.ToInt64(await count.ExecuteScalarAsync(ct), CultureInfo.InvariantCulture); Interlocked.Exchange(ref health.EstimatedSqlRows, rows);
             if (rows + events.Count > settings.MaxSqlRows)
             {
                 var ids = events.Select(x => x.LogId).Distinct().ToArray();
-                await using var exists = new SqlCommand("SELECT COUNT(*) FROM [operations].[DiagnosticEvents] WHERE [LogId] IN (" + string.Join(',', ids.Select((_, i) => "@id" + i)) + ");", connection) { CommandTimeout = settings.SqlTimeoutSeconds };
+                await using var exists = new SqlCommand("SELECT COUNT(*) FROM [diagnostics].[DiagnosticEvents] WHERE [LogId] IN (" + string.Join(',', ids.Select((_, i) => "@id" + i)) + ");", connection) { CommandTimeout = settings.SqlTimeoutSeconds };
                 for (var i = 0; i < ids.Length; i++) exists.Parameters.AddWithValue("@id" + i, ids[i]);
                 var existing = Convert.ToInt64(await exists.ExecuteScalarAsync(ct), CultureInfo.InvariantCulture);
                 if (ids.Length > existing && rows + ids.Length - existing > settings.MaxSqlRows) throw new DiagnosticCapacityException();
@@ -52,7 +52,7 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
         }
         await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(System.Data.IsolationLevel.Serializable, ct);
         var columns = string.Join(",", Columns.Select(x => "[" + x.Name + "]"));
-        await using (var create = new SqlCommand("SELECT TOP (0) " + columns + " INTO #LogBatch FROM [operations].[DiagnosticEvents];", connection, transaction) { CommandTimeout = settings.SqlTimeoutSeconds })
+        await using (var create = new SqlCommand("SELECT TOP (0) " + columns + " INTO #LogBatch FROM [diagnostics].[DiagnosticEvents];", connection, transaction) { CommandTimeout = settings.SqlTimeoutSeconds })
             await create.ExecuteNonQueryAsync(ct);
         var table = new DataTable();
         foreach (var column in Columns) table.Columns.Add(column.Name, column.PropertyType == typeof(LogLevel) ? typeof(int) : Nullable.GetUnderlyingType(column.PropertyType) ?? column.PropertyType);
@@ -62,8 +62,8 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
             foreach (var column in Columns) bulk.ColumnMappings.Add(column.Name, column.Name);
             await bulk.WriteToServerAsync(table, ct);
         }
-        await using (var insert = new SqlCommand("INSERT INTO [operations].[DiagnosticEvents] (" + columns + ") SELECT " + string.Join(",", Columns.Select(x => "b.[" + x.Name + "]")) +
-            " FROM #LogBatch b WHERE NOT EXISTS (SELECT 1 FROM [operations].[DiagnosticEvents] d WITH (UPDLOCK,HOLDLOCK) WHERE d.[LogId]=b.[LogId]);", connection, transaction) { CommandTimeout = settings.SqlTimeoutSeconds })
+        await using (var insert = new SqlCommand("INSERT INTO [diagnostics].[DiagnosticEvents] (" + columns + ") SELECT " + string.Join(",", Columns.Select(x => "b.[" + x.Name + "]")) +
+            " FROM #LogBatch b WHERE NOT EXISTS (SELECT 1 FROM [diagnostics].[DiagnosticEvents] d WITH (UPDLOCK,HOLDLOCK) WHERE d.[LogId]=b.[LogId]);", connection, transaction) { CommandTimeout = settings.SqlTimeoutSeconds })
             await insert.ExecuteNonQueryAsync(ct);
         await transaction.CommitAsync(ct);
     }

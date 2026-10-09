@@ -3,16 +3,22 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Library;
 
+[Comment("使用者私人提示詞範本。")]
 public sealed class PromptTemplate
 {
     public const int TitleMaxLength = 80;
     public const int ContentMaxLength = LibraryModule.MaxTemplateCharacters;
     public const int MaxPerOwner = 100;
 
+    [Comment("資料的主鍵識別碼。")]
     public Guid Id { get; private set; } = Guid.NewGuid();
+    [Comment("資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。")]
     public Guid OwnerId { get; private set; }
+    [Comment("介面顯示標題。")]
     public string Title { get; private set; } = "";
+    [Comment("提示詞內容。")]
     public string Content { get; private set; } = "";
+    [Comment("資料最後修改時間，採 UTC offset。")]
     public DateTimeOffset UpdatedAt { get; private set; }
 
     public static PromptTemplate Create(Guid owner) => new() { OwnerId = owner };

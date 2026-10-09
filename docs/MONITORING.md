@@ -41,7 +41,7 @@ IP 只取 HttpContext.Connection.RemoteIpAddress，不自行相信 X-Forwarded-F
 
 ## 權限、設定與升級
 
-Migration 只新增 access.Features.monitoring 與 administrators grant，沒有遙測資料表。一般成員只能報送自己的 presence；監控讀取需明確 grant，admin 不隱含 monitoring。保留 CSRF／身分版本驗證。SSE 每十五秒以新 scope 重驗帳號與有效 grant，測試身分也驗來源管理員、期限與撤銷；每人最多三條，單條十分鐘後重連重新驗 cookie。SQL 不可用時暫停傳送並重連，安全錯誤不含原始例外。AsyncLocal suppression 排除觀測者自己的 HTTP／SQL／外部呼叫。
+Migration 只新增 accesscontrol.Features.monitoring 與 administrators grant，沒有遙測資料表。一般成員只能報送自己的 presence；監控讀取需明確 grant，admin 不隱含 monitoring。保留 CSRF／身分版本驗證。SSE 每十五秒以新 scope 重驗帳號與有效 grant，測試身分也驗來源管理員、期限與撤銷；每人最多三條，單條十分鐘後重連重新驗 cookie。SQL 不可用時暫停傳送並重連，安全錯誤不含原始例外。AsyncLocal suppression 排除觀測者自己的 HTTP／SQL／外部呼叫。
 
 | 設定 | 預設 | 範圍 |
 | --- | --- | --- |

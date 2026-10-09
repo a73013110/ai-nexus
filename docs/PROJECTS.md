@@ -8,4 +8,4 @@
 
 專案封存後保留文件與歷史，停止新增對話／範本／附件。共用指示採版本條件更新，衝突保留表單文字。成果保留原本的不可變版本策略。
 
-`projects.Projects` 保存共用指示、說明、版本與封存狀態，`projects.ProjectTemplates` 保存常用提問；`collaboration.Resources.ParentId` 僅允許受控服務建立一層專案子項目。`conversations.Conversations.ProjectId` 關聯私人對話，`content.Artifacts.ProjectId` 關聯共用成果。文件仍使用 knowledge 文件／頁面與同一套背景任務。
+`projects.Projects` 保存共用指示、說明、版本與封存狀態，`projects.ProjectTemplates` 保存常用提問；`collaboration.Resources.ParentId` 僅允許受控服務建立一層專案子項目。`conversations.Conversations.ProjectId` 關聯私人對話，`artifacts.Artifacts.ProjectId` 關聯共用成果。文件仍使用 knowledge 文件／頁面與同一套背景任務。

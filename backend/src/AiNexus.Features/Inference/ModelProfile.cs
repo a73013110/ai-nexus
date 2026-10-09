@@ -4,17 +4,26 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace AiNexus.Features.Inference;
 
 /// <summary>A configured model.</summary>
+[Comment("核准模型的能力、上下文與輸出限制。")]
 public sealed class ModelProfile
 {
+    [Comment("資料的主鍵識別碼。")]
     public string Id { get; set; } = "";
+    [Comment("模型或搜尋服務供應商識別碼。")]
     public string Provider { get; set; } = "google";
+    [Comment("送往指定供應商的原生模型識別碼，與核准路由識別碼分開保存。")]
     public string ProviderModelId { get; set; } = "";
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public string NativeId => ProviderModelId;
+    [Comment("模型的介面顯示名稱。")]
     public string DisplayName { get; set; } = "";
+    [Comment("模型上下文容量，以 tokens 計。")]
     public int ContextTokens { get; set; } = 8192;
+    [Comment("模型核准的最大輸出 tokens。")]
     public int MaxOutputTokens { get; set; } = 2048;
+    [Comment("模型是否支援串流輸出。")]
     public bool SupportsStreaming { get; set; } = true;
+    [Comment("模型是否會回報實際用量。")]
     public bool SupportsUsage { get; set; } = true;
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public bool SupportsImages { get; set; }

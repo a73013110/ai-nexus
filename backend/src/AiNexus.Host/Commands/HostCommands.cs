@@ -18,11 +18,8 @@ public static class HostCommands
         ("InitializeDatabase", app => InScopeAsync(app, async services =>
         {
             await services.GetRequiredService<DatabaseInitializer>().InitializeAsync(CancellationToken.None);
-            await DatabaseDescriptionVerifier.VerifyAsync(services.GetRequiredService<NexusDbContext>(), CancellationToken.None);
             Console.WriteLine("AiNexus 資料庫與 migrations 初始化完成。");
         })),
-        ("VerifyDatabaseDescriptions", app => InScopeAsync(app, services =>
-            DatabaseDescriptionVerifier.VerifyAsync(services.GetRequiredService<NexusDbContext>(), CancellationToken.None))),
         ("VerifySqlCapabilities", app => InScopeAsync(app, services =>
             services.GetRequiredService<SqlVectorCapabilities>().VerifyAsync(app.Configuration["VerificationOutput"] ?? "sql-capabilities.json", CancellationToken.None))),
         ("VerifyConnections", async app =>
