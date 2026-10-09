@@ -97,7 +97,7 @@ content.SourceReferences 保存明確匯入的個人成果之 SourceId／Externa
 
 ## EDoc、初始化及 SQL 權限
 
-保留 [EDoc 原始 helper](../backend/src/AiNexus.Platform/Data/EDoc/README.md)。EF Core／IEfHelper 管 mapping、migration、業務寫入及共用 scoped context。Dapper IDbHelper 用於固定參數化 SELECT、狀態及建庫；自有連線不自動參與 EF transaction。值用 parameters，物件名稱只取程式固定清單。
+保留 [EDoc 原始 helper](../backend/src/AiNexus.Platform/Data/EDoc/README.md)。EF Core（直接注入 `NexusDbContext`）管 mapping、migration、業務寫入及共用 scoped context。Dapper IDbHelper 用於固定參數化 SELECT、狀態及建庫；自有連線不自動參與 EF transaction。值用 parameters，物件名稱只取程式固定清單。
 
 NexusConnectionFactory 以 marker 對應 AiNexus、CLI 專用 master，以及 LegacyGdweb／LegacyMeiho。來源連線加密及唯讀意圖不取代 SQL 的 view-only 權限。
 

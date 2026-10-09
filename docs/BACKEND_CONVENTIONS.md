@@ -26,7 +26,7 @@ internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
 - handler 有相依時寫成類別並在模組註冊為 scoped；只有幾行時可直接寫在 `Map` 的 lambda（注入 `NexusDbContext`）。
 - 使用者一律用 `ICurrentUser`（同步 `Id`），不要在新程式呼叫 `CurrentUser.GetAsync`。
 - 時間一律用注入的 `TimeProvider`，不要直接呼叫 `DateTimeOffset.UtcNow`。
-- 直接使用 `NexusDbContext`；不要新增 repository 或只轉送呼叫的 service。新程式不要使用 `IEfHelper`。
+- 直接使用 `NexusDbContext`；不要新增 repository 或只轉送呼叫的 service。
 - lambda 回傳 `IResult`（`Results.*` 或 `ToHttpResult()`），回應型別以 `.Produces<T>()` 宣告。
 
 ## 錯誤

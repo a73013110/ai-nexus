@@ -74,9 +74,6 @@ public sealed class AuthenticationAndDatabaseTests
         await helper.ExecuteAsync("CREATE TABLE HelperProbe (Value TEXT NOT NULL)");
         using (var transaction = await helper.BeginTransactionAsync()) await transaction.ExecuteAsync("INSERT INTO HelperProbe VALUES (@Value)", new { Value = "rollback" });
         Assert.Equal(0, await helper.QuerySingleAsync<int>("SELECT COUNT(*) FROM HelperProbe"));
-        var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-        var ef = scope.ServiceProvider.GetRequiredService<IEfHelper<INexusDatabase>>();
-        Assert.Same(db.Conversations, ef.Set<Conversation>());
     }
 
     [Fact]

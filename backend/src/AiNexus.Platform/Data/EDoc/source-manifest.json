@@ -35,11 +35,6 @@
     "sha256": "8414F4C96A18EB71A2E7779B5AF730C9062E8FA8262F5C307CC138F12A5A3529"
   },
   {
-    "source": "EDoc_HL/src/EDoc.Core/Database/Interfaces/IEfHelper.cs",
-    "file": "Interfaces/IEfHelper.cs",
-    "sha256": "421877B092509D19EF1B225CF1CFA89C6E4DB1D87CD8044A895BB4F3EF0F7112"
-  },
-  {
     "source": "EDoc_HL/src/EDoc.Core/Database/Markers/IDbMarker.cs",
     "file": "Markers/IDbMarker.cs",
     "sha256": "10C68804F3A6132D70DD82E54DED2E01A9CBF985431B9542815D1534754A200A"
