@@ -9,6 +9,7 @@ using FluentValidation;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Chat;
 
@@ -37,8 +38,8 @@ internal sealed class PreviewContext(ConversationService conversations, Attachme
         var instruction = body.ConversationId is Guid id ? (await conversations.OwnedAsync(owner, id, ct)).SystemInstruction : "";
         var project = body.ConversationId is Guid projectConversation ? await projects.ContextAsync(owner, (await conversations.OwnedAsync(owner, projectConversation, ct)).ProjectId, ct) : "";
         var files = await attachments.RequireAsync(owner, body.AttachmentIds, ct);
-        var model = await models.RequireAsync(body.ModelId, ct);
-        await policies.RequireAsync(owner, model.Id, ct, checkQuota: false);
+        var model = (await models.RequireAsync(body.ModelId, ct)).OrThrow();
+        (await policies.RequireAsync(owner, model.Id, ct, checkQuota: false)).OrThrow();
         var reserved = body.ConversationId is Guid cid ? await knowledge.ReservedContextAsync(owner, cid, ct) : 0;
         var webReserved = body.WebSearch ? WebSearchService.ReservedTokens : 0;
         return (await context.PreviewAsync(body.ConversationId, body.ParentMessageId, body.Prompt, new(model.ContextTokens, model.MaxOutputTokens, .6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, instruction) + project + new string(' ', reserved + webReserved), SupportsImages: model.SupportsImages), ct, files)) with { ReservedKnowledgeTokens = reserved, ReservedWebSearchTokens = webReserved };

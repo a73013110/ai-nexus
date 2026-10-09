@@ -11,7 +11,7 @@ public sealed class InferenceRouter(IServiceProvider services, IOptions<Inferenc
     public IInferenceProvider For(string provider)
     {
         if (!options.Value.ProviderConcurrency.ContainsKey(provider))
-            throw new ApiException(503, "provider_disabled", "此模型供應商已停用，請選擇其他模型。");
+            throw new ExternalServiceException(Error.Unavailable("provider_disabled"), "此模型供應商已停用，請選擇其他模型。");
         return services.GetRequiredKeyedService<IInferenceProvider>(provider);
     }
 

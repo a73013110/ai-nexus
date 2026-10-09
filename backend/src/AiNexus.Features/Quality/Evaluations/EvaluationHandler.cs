@@ -33,7 +33,7 @@ public sealed class EvaluationHandler(NexusDbContext db, ResourceAccess access, 
     {
         var run = await RequireAsync(job, ct);
         foreach (var variant in EvaluationJson.Parse<EvaluationVariant>(run.VariantsJson))
-            ModelTaskConfiguration.Require(await catalog.RequireAsync(presentation.PublicId(variant.ModelId), ct), inference.Value, variant.Configuration?.Fingerprint);
+            ModelTaskConfiguration.Require((await catalog.RequireAsync(presentation.PublicId(variant.ModelId), ct)).OrThrow(), inference.Value, variant.Configuration?.Fingerprint).OrThrow();
         return Result.Success;
     }
     public async Task<Result> ExecuteAsync(JobExecution execution, CancellationToken ct)
@@ -49,7 +49,7 @@ public sealed class EvaluationHandler(NexusDbContext db, ResourceAccess access, 
                 await execution.CheckpointAsync($"第 {c + 1} 題 · {variants[v].Label}", completed, total, ct);
                 var timer = Stopwatch.StartNew();
                 // The reference answer and check terms are withheld from the model.
-                var answer = await model.GenerateAsync(run.OwnerId, "evaluation", cases[c].Question, variants[v].Instruction, ct, presentation.PublicId(variants[v].ModelId), expectedConfiguration: variants[v].Configuration?.Fingerprint);
+                var answer = (await model.GenerateAsync(run.OwnerId, "evaluation", cases[c].Question, variants[v].Instruction, ct, presentation.PublicId(variants[v].ModelId), expectedConfiguration: variants[v].Configuration?.Fingerprint)).OrThrow();
                 await RequireAsync(execution.Job, ct); var metrics = EvaluationMetrics.Measure(answer.Text, cases[c]);
                 db.Add(new EvaluationResult { RunId = run.Id, CaseIndex = c, VariantIndex = v, Output = answer.Text, Truncated = answer.Truncated, RequiredMatches = metrics.Matches, RequiredTotal = metrics.Total, ForbiddenMatches = metrics.Forbidden, ElapsedMs = timer.ElapsedMilliseconds, InputTokens = answer.InputTokens, OutputTokens = answer.OutputTokens });
                 await execution.CheckpointAsync($"完成 {completed + 1} / {total} 次回答", ++completed, total, ct);

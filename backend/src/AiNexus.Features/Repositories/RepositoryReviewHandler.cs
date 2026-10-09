@@ -24,7 +24,7 @@ public sealed class RepositoryReviewHandler(NexusDbContext db, RepositoryReviewS
     private async Task<RepositoryReview> RequireCurrentAsync(BackgroundJob job, CancellationToken ct)
     {
         var row = await RequireAsync(job, ct);
-        ModelTaskConfiguration.Require(await catalog.RequireAsync(presentation.PublicId(row.ModelId), ct), inference.Value, row.ConfigurationFingerprint);
+        ModelTaskConfiguration.Require((await catalog.RequireAsync(presentation.PublicId(row.ModelId), ct)).OrThrow(), inference.Value, row.ConfigurationFingerprint).OrThrow();
         return row;
     }
     public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) { await RequireCurrentAsync(job, ct); return Result.Success; }
@@ -117,8 +117,8 @@ public sealed class RepositoryReviewHandler(NexusDbContext db, RepositoryReviewS
         await execution.CheckpointAsync(stage, completed, total, ct);
         return result;
 
-        Task<ModelTaskResult> GenerateModelAsync(string source) => model.GenerateAsync(row.OwnerId, Kind, source,
-            instruction, ct, presentation.PublicId(row.ModelId), expectedConfiguration: row.ConfigurationFingerprint, maxOutputTokens: maxOutputTokens);
+        async Task<ModelTaskResult> GenerateModelAsync(string source) => (await model.GenerateAsync(row.OwnerId, Kind, source,
+            instruction, ct, presentation.PublicId(row.ModelId), expectedConfiguration: row.ConfigurationFingerprint, maxOutputTokens: maxOutputTokens)).OrThrow();
         static long? Sum(long? first, long? second) => first is null || second is null ? null : first + second;
     }
 }

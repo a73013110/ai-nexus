@@ -48,7 +48,7 @@ internal sealed class StartEvaluationRun(NexusDbContext db, ResourceAccess acces
         var variants = new List<EvaluationVariant>();
         foreach (var variant in request.Variants)
         {
-            var model = await models.RequireAsync(variant.ModelId, ct); await policy.RequireAsync(actor, model.Id, ct);
+            var model = (await models.RequireAsync(variant.ModelId, ct)).OrThrow(); (await policy.RequireAsync(actor, model.Id, ct)).OrThrow();
             variants.Add(new(variant.Label.Trim(), model.Id, variant.Instruction.Trim(), ModelTaskConfiguration.Capture(model, inference.Value)));
         }
         // The owner's one active evaluation and run limit, then the set (always in this order).

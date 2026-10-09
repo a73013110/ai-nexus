@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Billing;
 using AiNexus.Features.Chat;
-using AiNexus.Platform.Errors;
 using AiNexus.Platform.Time;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Inference;
@@ -45,12 +44,12 @@ public sealed class ModelTokenPolicyTests
         accepted.EnsureSuccessStatusCode();
         await WaitForTerminal(admin, (await accepted.Content.ReadFromJsonAsync<RunDto>())!.Id);
         var task = await factory.Services.GetRequiredService<ModelTaskService>().GenerateAsync(owner, "transform", "短文", "改寫", CancellationToken.None, model: "test-model");
-        Assert.NotEmpty(task.Text);
+        Assert.NotEmpty(task.Value!.Text);
         (await admin.PutAsJsonAsync($"/api/v1/admin/users/{owner}/model-policy", new ModelPolicyRequest(["test-model"], new Dictionary<string, long> { ["test-model"] = 0 }))).EnsureSuccessStatusCode();
         Assert.Equal("test-model", Assert.Single((await admin.GetFromJsonAsync<ModelsDto>("/api/v1/models"))!.Models).Id);
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsJsonAsync("/api/v1/context", new ContextPreviewRequest(null, null, "禁止", "not-approved"))).StatusCode);
-        var quota = await Assert.ThrowsAsync<ApiException>(() => factory.Services.GetRequiredService<ModelTaskService>().GenerateAsync(owner, "ocr", "短文", "辨識", CancellationToken.None));
-        Assert.Equal("model_token_quota", quota.Code);
+        var quota = await factory.Services.GetRequiredService<ModelTaskService>().GenerateAsync(owner, "ocr", "短文", "辨識", CancellationToken.None);
+        Assert.Equal("model_token_quota", quota.Error?.Code);
     }
 
     [Fact]
@@ -85,8 +84,8 @@ public sealed class ModelTokenPolicyTests
         Assert.Equal(1000, effective.Models.Single(x => x.ModelId == "test-model").DailyTokenLimit);
         Assert.Equal("test-model", Assert.Single((await bob.GetFromJsonAsync<ModelsDto>("/api/v1/models"))!.Models).Id);
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.PostAsJsonAsync("/api/v1/context", new ContextPreviewRequest(null, null, "禁止", "not-approved"))).StatusCode);
-        var denied = await Assert.ThrowsAsync<ApiException>(() => factory.Services.GetRequiredService<ModelTaskService>().GenerateAsync(owner, "transform", "短文", "改寫", CancellationToken.None, model: "not-approved"));
-        Assert.Equal("model_group_forbidden", denied.Code);
+        var denied = await factory.Services.GetRequiredService<ModelTaskService>().GenerateAsync(owner, "transform", "短文", "改寫", CancellationToken.None, model: "not-approved");
+        Assert.Equal("model_group_forbidden", denied.Error?.Code);
     }
 
     [Fact]
@@ -125,8 +124,8 @@ public sealed class ModelTokenPolicyTests
         Assert.Equal(500, budget.ReservedTokens); Assert.Equal(0, budget.RemainingTokens);
         Assert.True(factory.Provider.LastParameters!.MaxOutputTokens < 512);
         var tasks = factory.Services.GetRequiredService<ModelTaskService>();
-        var error = await Assert.ThrowsAsync<ApiException>(() => tasks.GenerateAsync(owner, "transform", "短文", "改寫", CancellationToken.None));
-        Assert.Equal("model_token_quota", error.Code);
+        var error = await tasks.GenerateAsync(owner, "transform", "短文", "改寫", CancellationToken.None);
+        Assert.Equal("model_token_quota", error.Error?.Code);
         (await bob.PostAsync($"/api/v1/runs/{run.Id}/cancel", null)).EnsureSuccessStatusCode();
         budget = Assert.Single((await bob.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
         Assert.Equal(500, budget.ReservedTokens); Assert.Equal(0, budget.UsedTokens);
