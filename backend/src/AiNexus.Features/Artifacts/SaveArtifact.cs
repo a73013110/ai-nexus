@@ -35,8 +35,7 @@ internal sealed class SaveArtifact(NexusDbContext db, ResourceAccess access, Res
     {
         if (!Artifact.TitleIsValid(request.Title)) return ArtifactErrors.InvalidName;
         if (request.ExpectedVersion is < 1 or >= Artifact.MaxVersions) return ArtifactErrors.VersionLimit;
-        await writes.Gate.WaitAsync(ct);
-        try
+        using (await writes.AcquireAsync(id, ct))
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             var resource = await access.RequireAsync(actor, id, Artifact.Kind, ct, write: true);
@@ -49,6 +48,5 @@ internal sealed class SaveArtifact(NexusDbContext db, ResourceAccess access, Res
             await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
             return await reader.HandleAsync(actor, id, null, ct);
         }
-        finally { writes.Gate.Release(); }
     }
 }

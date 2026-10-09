@@ -45,8 +45,8 @@ internal sealed class SaveMessageFeedback(NexusDbContext db, ResourceWriteLock w
         var source = await (from m in db.Messages join c in db.Conversations on m.ConversationId equals c.Id where m.Id == message && m.Role == "assistant" && c.OwnerId == actor select new { Message = m, Conversation = c }).SingleOrDefaultAsync(ct);
         if (source is null) return QualityErrors.ItemMissing;
         if (RunStates.IsActive(source.Message.Status)) return QualityErrors.AnswerPending;
-        await writes.Gate.WaitAsync(ct);
-        try
+        // One row per message: concurrent saves of the same answer must not both insert.
+        using (await writes.AcquireAsync("feedback", message, ct))
         {
             var row = await db.Set<MessageFeedback>().FindAsync([message], ct);
             if (request.Rating == 0) { if (row is not null) db.Remove(row); await db.SaveChangesAsync(ct); return new Outcome(null); }
@@ -55,6 +55,5 @@ internal sealed class SaveMessageFeedback(NexusDbContext db, ResourceWriteLock w
             await db.SaveChangesAsync(ct);
             return new Outcome(new(message, source.Conversation.Id, source.Conversation.Title, row.Rating, row.Reason, row.Note, row.UpdatedAt));
         }
-        finally { writes.Gate.Release(); }
     }
 }

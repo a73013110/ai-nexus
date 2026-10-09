@@ -58,8 +58,8 @@ internal sealed class SaveEvaluationSet(NexusDbContext db, ResourceAccess access
     public async Task<Result<EvaluationSetDto>> HandleAsync(Guid actor, Guid? id, EvaluationSetRequest request, CancellationToken ct)
     {
         if (!NameIsValid(request.Name)) return QualityErrors.InvalidName;
-        await writes.Gate.WaitAsync(ct);
-        try
+        // An update is per set; a create checks the owner's set limit.
+        using (await (id is Guid key ? writes.AcquireAsync(key, ct) : writes.AcquireAsync("evaluation-sets", actor, ct)))
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct); WorkspaceResource resource;
             if (id is Guid existing)
@@ -79,6 +79,5 @@ internal sealed class SaveEvaluationSet(NexusDbContext db, ResourceAccess access
             await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
             return await access.LoadSetAsync(db, actor, resource.Id, ct);
         }
-        finally { writes.Gate.Release(); }
     }
 }

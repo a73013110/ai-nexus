@@ -20,8 +20,7 @@ public sealed class ResourceLifecycle(NexusDbContext db, ResourceAccess access, 
     public async Task DeleteAsync(Guid actor, Guid id, string kind, CancellationToken ct)
     {
         if (kind is not ("project" or "evaluation")) throw new InvalidOperationException("Unsupported container lifecycle.");
-        await writes.Gate.WaitAsync(ct);
-        try
+        using (await writes.AcquireAsync(id, ct))
         {
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
             var resource = await access.OwnerAsync(actor, id, kind, ct);
@@ -44,6 +43,5 @@ public sealed class ResourceLifecycle(NexusDbContext db, ResourceAccess access, 
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
         }
-        finally { writes.Gate.Release(); }
     }
 }

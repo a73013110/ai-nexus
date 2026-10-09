@@ -1,3 +1,4 @@
+using AiNexus.Platform.Concurrency;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.AccessControl;
@@ -5,7 +6,20 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Collaboration;
 
-public sealed class ResourceWriteLock { public SemaphoreSlim Gate { get; } = new(1, 1); }
+/// <summary>
+/// Serializes writes in this process per resource (versioned saves, ACL changes, deletion) or per other id-scoped invariant;
+/// writes to different resources do not wait for each other. Callers taking two keys take the owner-scoped key first.
+/// </summary>
+public sealed class ResourceWriteLock
+{
+    private readonly KeyedLock<(string Scope, Guid Id)> keys = new();
+
+    /// <summary>The write lock of one resource.</summary>
+    public Task<IDisposable> AcquireAsync(Guid resource, CancellationToken ct) => keys.AcquireAsync(("resource", resource), ct);
+
+    /// <summary>The lock of another per-id invariant, such as one owner's limit or one message's feedback.</summary>
+    public Task<IDisposable> AcquireAsync(string scope, Guid id, CancellationToken ct) => keys.AcquireAsync((scope, id), ct);
+}
 
 public sealed class ResourceAccess(NexusDbContext db, AccessService access, ResourceWriteLock writes)
 {
@@ -74,8 +88,7 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
     {
         if (request.Members.Count > 50 || request.GroupIds.Count > 20 || request.Members.Select(x => x.UserId).Distinct().Count() != request.Members.Count || request.GroupIds.Distinct().Count() != request.GroupIds.Count || request.Members.Any(x => x.Role is not ("viewer" or "editor")))
             throw new ApiException(400, "invalid_resource_acl", "成員清單重複、過長或角色不正確。");
-        await writes.Gate.WaitAsync(ct);
-        try
+        using (await writes.AcquireAsync(id, ct))
         {
             var resource = await OwnerAsync(actor, id, kind, ct);
             if (request.Members.Any(x => x.UserId == resource.OwnerId)) throw new ApiException(400, "owner_is_implicit", "擁有者已具有完整權限，不需加入成員清單。");
@@ -98,7 +111,6 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "resource.acl", Result = "saved", DetailsJson = System.Text.Json.JsonSerializer.Serialize(new { kind, users, request.GroupIds }) });
             await db.SaveChangesAsync(ct);
         }
-        finally { writes.Gate.Release(); }
     }
     public async Task<WorkspaceResource> OwnerAsync(Guid actor, Guid id, string kind, CancellationToken ct)
         => await db.Set<WorkspaceResource>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor && x.Kind == kind, ct) ?? throw Missing();
