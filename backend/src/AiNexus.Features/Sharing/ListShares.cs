@@ -20,9 +20,6 @@ internal static class ListShares
         var rows = await db.Set<ShareLink>().AsNoTracking()
             .Where(x => sent ? x.OwnerId == actor : !x.IsRevoked && x.ExpiresAt > now && db.Set<ShareRecipient>().Any(r => r.ShareId == x.Id && r.UserId == actor))
             .OrderByDescending(x => x.CreatedAt).Take(PageSize).ToListAsync(ct);
-        var result = new List<ShareDto>();
-        foreach (var row in rows)
-            if (sent || await shares.SourceExistsAsync(row, ct)) result.Add(await shares.DescribeAsync(actor, row, ct));
-        return result;
+        return await shares.DescribeAllAsync(actor, sent ? rows : await shares.WithSourcesAsync(rows, ct), ct);
     }
 }
