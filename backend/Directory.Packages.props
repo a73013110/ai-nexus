@@ -14,7 +14,7 @@
     <PackageVersion Include="System.DirectoryServices.Protocols" Version="10.0.12" />
   </ItemGroup>
   <ItemGroup Label="Application">
-    <PackageVersion Include="Dapper" Version="2.1.66" />
+    <PackageVersion Include="Dapper" Version="2.1.89" />
     <PackageVersion Include="DocumentFormat.OpenXml" Version="3.5.1" />
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
