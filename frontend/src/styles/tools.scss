@@ -50,6 +50,15 @@
 .danger-text {
   color: var(--error);
 }
+.project-chat-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  color: var(--secondary);
+  padding: var(--p-space-2);
+  font-size: var(--text-caption);
+  min-height: var(--button-target);
+}
 .archive-badge {
   flex: none;
   font-size: var(--text-caption);
