@@ -106,6 +106,52 @@ internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, A
         return await DescribeAsync(actor, document.Value, ct);
     }
 
+    /// <summary>
+    /// <see cref="DetailAsync"/> for a list, in the list's order and with the same checks and failures, in a fixed number
+    /// of queries: the first document that fails fails the list.
+    /// </summary>
+    public async Task<Result<IReadOnlyList<DocumentDto>>> DetailsAsync(Guid actor, IReadOnlyList<Guid> ids, CancellationToken ct)
+    {
+        if (ids.Count == 0) return Array.Empty<DocumentDto>();
+        var docs = await db.Set<KnowledgeDocument>().AsNoTracking().Where(x => ids.Contains(x.Id) && !x.IsDeleted).ToDictionaryAsync(x => x.Id, ct);
+        var granted = (await features.ForUserAsync(actor, ct)).Features.Select(x => x.Id).ToHashSet(StringComparer.Ordinal);
+        var collections = docs.Values.Where(x => x.CollectionId != null).Select(x => x.CollectionId!.Value).Distinct().ToArray();
+        var standalone = docs.Values.Where(x => x.CollectionId == null).Select(x => x.Id).ToArray();
+        // The resources DescribeAsync reports on: the collection, or the standalone document itself.
+        var readable = new Dictionary<Guid, WorkspaceResource>();
+        if (collections.Length > 0)
+            foreach (var item in await (await access.QueryAsync(actor, KnowledgeCollection.Kind, ct)).AsNoTracking().Where(x => collections.Contains(x.Id)).ToListAsync(ct)) readable[item.Id] = item;
+        if (standalone.Length > 0)
+            foreach (var item in await (await access.QueryAsync(actor, KnowledgeDocument.Kind, ct)).AsNoTracking().Where(x => standalone.Contains(x.Id)).ToListAsync(ct)) readable[item.Id] = item;
+        var parents = readable.Values.Where(x => x.Kind == KnowledgeDocument.Kind && x.ParentId != null).Select(x => x.ParentId!.Value).Distinct().ToArray();
+        var projects = parents.Length == 0 ? [] : await (await access.QueryAsync(actor, "project", ct)).Where(x => parents.Contains(x.Id)).Select(x => x.Id).ToListAsync(ct);
+        var resources = new List<WorkspaceResource>(ids.Count);
+        foreach (var id in ids)
+        {
+            if (!docs.TryGetValue(id, out var doc)) return KnowledgeErrors.DocumentNotFound;
+            if (doc.CollectionId is Guid collection)
+            {
+                if (!granted.Contains("knowledge")) return KnowledgeErrors.DocumentNotFound;
+                resources.Add(readable.GetValueOrDefault(collection) ?? throw ResourceAccess.Missing());
+            }
+            else
+            {
+                if (!granted.Contains("chat") && !granted.Contains("knowledge") && !granted.Contains("projects")) return KnowledgeErrors.DocumentNotFound;
+                var resource = readable.GetValueOrDefault(doc.Id) ?? throw ResourceAccess.Missing();
+                if (resource.ParentId is Guid parent)
+                {
+                    if (!granted.Contains("projects")) return KnowledgeErrors.DocumentNotFound;
+                    if (!projects.Contains(parent)) throw ResourceAccess.Missing();
+                }
+                resources.Add(resource);
+            }
+        }
+        var editable = await access.EditableAsync(actor, resources.DistinctBy(x => x.Id).ToArray(), ct);
+        var jobs = docs.Values.Where(x => x.JobId != null).Select(x => x.JobId!.Value).Distinct().ToArray();
+        var states = jobs.Length == 0 ? [] : await db.Set<BackgroundJob>().Where(x => jobs.Contains(x.Id)).ToDictionaryAsync(x => x.Id, x => x.Status, ct);
+        return ids.Select((id, index) => Describe(docs[id], editable.Contains(resources[index].Id), docs[id].JobId is Guid job ? states.GetValueOrDefault(job) : null)).ToArray();
+    }
+
     /// <summary>The stored original of a document the actor may read.</summary>
     public async Task<Result<Attachment>> OriginalAsync(Guid actor, Guid id, CancellationToken ct)
     {
