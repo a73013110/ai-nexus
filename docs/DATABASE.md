@@ -126,7 +126,7 @@ dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Fea
 
 ```powershell
 $env:AINEXUS_SQLSERVER_TEST = 'Server=localhost;Integrated Security=true;Encrypt=true;TrustServerCertificate=true'
-dotnet test backend/tests/AiNexus.Tests --filter FullyQualifiedName~SqlServerRetrievalTests
+dotnet test --project backend/tests/AiNexus.Tests --filter FullyQualifiedName~SqlServerRetrievalTests
 ```
 
 測試驗證原生 768／1024 向量、Dapper 批次與交易回滾、profile 隔離、1028 中文 FREETEXTTABLE、授權範圍先於 TOP，以及全文執行錯誤時 hybrid 降為 vector、keyword 回報明確錯誤；全文非同步填入輪詢上限 90 秒。未提供環境變數時明確 skip，不以 SQLite 代替真實 SQL 驗證。

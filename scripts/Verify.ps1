@@ -7,7 +7,7 @@ Push-Location -LiteralPath $taskRoot
 try {
     & (Join-Path $PSScriptRoot 'Test-Settings.ps1')
     & (Join-Path $PSScriptRoot 'Build.ps1') -OutputDirectory 'artifacts/verification'
-    dotnet test backend/tests/AiNexus.Tests/AiNexus.Tests.csproj --no-restore --filter 'Category!=Performance&Category!=Browser' --logger 'trx;LogFileName=backend.trx' --results-directory artifacts/test-results
+    dotnet test --solution backend/AiNexus.slnx --no-restore --filter 'Category!=Performance&Category!=Browser' --report-xunit-trx --results-directory artifacts/test-results
     if ($LASTEXITCODE -ne 0) { throw 'Backend tests failed.' }
     npm --prefix frontend run lint
     if ($LASTEXITCODE -ne 0) { throw 'Frontend lint failed.' }
