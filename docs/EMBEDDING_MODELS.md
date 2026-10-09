@@ -44,4 +44,4 @@ llama-server -m 'D:\Models\bge-reranker-v2-m3.gguf' `
 
 兩種服務的**尖峰 VRAM、冷啟動、聊天競爭及延遲均需實測**，不能以模型檔案大小保證可同時載入。預設 Provider=none、TimeoutSeconds=10、MinScore=0、FailurePolicy=skip；啟用後先保持其他參數固定，測 rerank 是否改善 nDCG，再校準各模型門檻，避免提高拒答率卻降低有答案召回。
 
-調參順序：確認擷取／頁碼 → 標註驗收集 → 切段 token 與表格 → 候選40／40 → RRF k60／權重1 → rerank30／門檻 → TopK6／每文件3／Context3500。每次改一項並保存指標，這些預設是起點，實際品質尚須使用你的資料驗收。GPU 分工與探測見 [本機 AI](LOCAL-AI.md)。
+調參順序：確認擷取／頁碼 → 標註驗收集 → 切段 token 與表格 → 候選40／40 → RRF k60／權重1 → rerank30／門檻 → TopK6／每文件3／Context3500。每次改一項並保存指標，這些預設是起點，實際品質尚須使用你的資料驗收。GPU 分工與探測見 [本機 AI](LOCAL_AI.md)。
