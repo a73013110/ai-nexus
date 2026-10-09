@@ -1,4 +1,5 @@
 using AiNexus.Features.Identity;
+using AiNexus.Features.Inference;
 
 namespace AiNexus.Features.Administration;
 

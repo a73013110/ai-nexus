@@ -6,6 +6,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Conversations;
 
+/// <summary>A question for the model: a new prompt below <paramref name="ParentMessageId"/>, or another answer to an earlier question.</summary>
+public sealed record ConversationTurn(Guid ConversationId, string? Prompt, Guid? ParentMessageId, Guid? RegenerateUserMessageId);
+
 /// <summary>
 /// The module's contract for other modules (generation, knowledge, artifacts, source chats). Failures are thrown as
 /// <see cref="ApiException"/> for callers that cannot return a result; the module's own endpoints are the slices next to this file.
@@ -22,8 +25,8 @@ public sealed class ConversationService(NexusDbContext db, TimeProvider clock)
         return created.IsSuccess ? created.Value : throw created.Error.ToException();
     }
 
-    // The inference module changes conversation history through this module's contract.
-    public async Task<(Message User, Message Assistant)> PrepareGenerationAsync(Guid owner, CreateRunRequest request, Guid runId, CancellationToken ct)
+    // The chat module changes conversation history through this module's contract.
+    public async Task<(Message User, Message Assistant)> PrepareGenerationAsync(Guid owner, ConversationTurn request, string modelId, Guid runId, CancellationToken ct)
     {
         var conversation = await OwnedAsync(owner, request.ConversationId, ct);
         if (conversation.IsArchived) throw new ApiException(409, "conversation_archived", "請先還原封存對話，再繼續提問。");
@@ -43,7 +46,7 @@ public sealed class ConversationService(NexusDbContext db, TimeProvider clock)
             db.Set<Message>().Add(user);
             if (conversation.ActiveLeafId is null && conversation.Title == "新對話") conversation.Title = string.Concat(user.Content.Replace('\n', ' ').Take(36));
         }
-        var assistant = new Message { ConversationId = conversation.Id, ParentId = user.Id, Role = "assistant", Status = RunStates.Queued, RunId = runId, ModelId = request.ModelId };
+        var assistant = new Message { ConversationId = conversation.Id, ParentId = user.Id, Role = "assistant", Status = RunStates.Queued, RunId = runId, ModelId = modelId };
         db.Set<Message>().Add(assistant);
         conversation.ActiveLeafId = assistant.Id;
         conversation.UpdatedAt = clock.GetUtcNow();

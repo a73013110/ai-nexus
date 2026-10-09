@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Diagnostics;
+using AiNexus.Platform.Events;
 using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
 
@@ -19,6 +20,7 @@ public sealed class MonitoringModule : IFeatureModule
         services.AddOptions<MonitoringOptions>().BindConfiguration("Monitoring").ValidateOnStart();
         services.AddSingleton<IValidateOptions<MonitoringOptions>, MonitoringOptionsValidator>();
         services.AddSingleton<RuntimeTraffic>();
+        services.AddDomainEventHandler<UserSignedOut, LeaveSignedOutSession>();
         services.AddSingleton<DependencyCatalog>();
         services.AddSingleton<MonitoringStreams>();
         services.AddTransient<TrafficHttpHandler>();

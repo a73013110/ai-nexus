@@ -1,5 +1,4 @@
 using AiNexus.Features.Collaboration;
-using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -68,8 +67,6 @@ internal sealed class ArtifactEntityConfiguration : IEntityTypeConfiguration<Art
     public void Configure(EntityTypeBuilder<Artifact> item)
     {
         item.ToTable("Artifacts", "content"); item.HasKey(x => x.Id);
-        item.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.Id).OnDelete(DeleteBehavior.Restrict);
-        item.HasOne<Message>().WithMany().HasForeignKey(x => x.SourceMessageId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -80,7 +77,6 @@ internal sealed class ArtifactRevisionConfiguration : IEntityTypeConfiguration<A
         revision.ToTable("ArtifactRevisions", "content"); revision.HasKey(x => new { x.ArtifactId, x.Version });
         revision.Property(x => x.Title).HasMaxLength(Artifact.TitleMaxLength); revision.Property(x => x.Content).HasMaxLength(Artifact.ContentMaxLength);
         revision.HasOne<Artifact>().WithMany().HasForeignKey(x => x.ArtifactId).OnDelete(DeleteBehavior.Cascade);
-        revision.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.AuthorId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

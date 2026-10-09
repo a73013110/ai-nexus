@@ -1,5 +1,7 @@
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.Attachments;
 using AiNexus.Features.Configuration;
+using AiNexus.Features.Inference;
 using AiNexus.Features.Operations;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Http;
@@ -17,12 +19,18 @@ public sealed class KnowledgeModule : IFeatureModule
 {
     public const string RetrievalModelsClient = "RetrievalModels";
 
+    /// <summary>The configured embedding model, named in usage reports and price lists.</summary>
+    public static ServiceModel EmbeddingModel(KnowledgeOptions options) => new(options.EmbeddingProvider, options.EmbeddingModel, "知識向量模型", "embedding-model");
+
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
         services.AddOptions<KnowledgeOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Knowledge(c, o))
             .Validate(KnowledgeOptions.Valid, "知識檢索設定的維度、範圍或端點不正確。").ValidateOnStart();
+        services.AddSingleton(sp => EmbeddingModel(sp.GetRequiredService<IOptions<KnowledgeOptions>>().Value));
         services.AddScoped<DocumentAccess>();
+        services.AddScoped<IPrivateReaders, PrivateReaders>();
+        services.AddScoped<ListLibraryFiles>();
         services.AddScoped<AddKnowledgeDocument>();
         services.AddScoped(provider => new DocumentService(provider.GetRequiredService<DocumentAccess>(), provider.GetRequiredService<AddKnowledgeDocument>()));
         services.AddScoped<CreateTextDocument>();
@@ -100,5 +108,7 @@ public sealed class KnowledgeModule : IFeatureModule
         AddKnowledgeDocument.MapAttachment(api);
         SearchDirectory.MapUsers(api);
         SearchDirectory.MapGroups(api);
+
+        ListLibraryFiles.Map(api.MapGroup("/files").RequireAuthorization(Policies.Files).WithTags("File library"));
     }
 }

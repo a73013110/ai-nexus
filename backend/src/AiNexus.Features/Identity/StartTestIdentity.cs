@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Administration;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
@@ -43,7 +42,7 @@ internal static class StartTestIdentity
     public static RouteHandlerBuilder Map(RouteGroupBuilder auth) => auth
         .MapPost("/test-identity", (TestIdentityRequest body, HttpContext http, CurrentUser current, NexusDbContext db, AccessService access, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, TimeProvider clock, CancellationToken ct) =>
             HandleAsync(body, http, current, db, access, options.Value, csrf, clock, ct))
-        .RequireAuthorization(AdministrationConfiguration.Policy).WithName("StartTestIdentity").Produces<AuthSessionDto>();
+        .RequireAuthorization(Policies.Admin).WithName("StartTestIdentity").Produces<AuthSessionDto>();
 
     public static bool IsTestIdentity(ClaimsPrincipal? user) => user?.HasClaim(x => x.Type == SessionIdentity.ActorId) == true;
 
@@ -52,7 +51,7 @@ internal static class StartTestIdentity
     {
         if (IsTestIdentity(http.User)) return IdentityErrors.TestIdentityNested.ToProblem();
         var actor = await current.GetAsync(ct);
-        if (!(await access.ForUserAsync(actor.Id, ct)).Features.Any(x => x.Id == AdministrationConfiguration.Feature)) return IdentityErrors.AdminRequired.ToProblem();
+        if (!(await access.ForUserAsync(actor.Id, ct)).Features.Any(x => x.Id == FeatureIds.Admin)) return IdentityErrors.AdminRequired.ToProblem();
         var target = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == body.UserId && x.Enabled && x.DeletedAt == null, ct);
         if (target is null) return IdentityErrors.TestUserNotFound.ToProblem();
         if (target.Id == actor.Id) return IdentityErrors.TestIdentitySame.ToProblem();

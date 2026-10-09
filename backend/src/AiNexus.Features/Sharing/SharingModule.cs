@@ -1,6 +1,6 @@
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Artifacts;
-using AiNexus.Features.Conversations;
+using AiNexus.Features.Chat;
 using AiNexus.Platform.Events;
 using AiNexus.Platform.Modules;
 

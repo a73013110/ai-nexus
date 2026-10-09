@@ -87,7 +87,7 @@ migration 在本機驗證後提交 source、designer、snapshot 與 SQL。正式
 | `backend/src/AiNexus.Features/Persistence` | 共用 `NexusDbContext`、migrations、資料庫初始化與 schema 檢查 |
 | `backend/src/AiNexus.Platform` | 不依賴業務的共用基礎：錯誤、安全、設定、診斷、HTTP 限制、原 EDoc helpers（`Data/EDoc`） |
 | `backend/tests/AiNexus.Tests` | 整合測試（`WebApplicationFactory`）、OpenAPI 合約與端點慣例 |
-| `backend/tests/AiNexus.ArchitectureTests` | 專案依賴方向與模組邊界（跨模組依賴只能減少） |
+| `backend/tests/AiNexus.ArchitectureTests` | 專案依賴方向與模組邊界（模組之間不可有循環） |
 | `frontend/src/app/features` | 按路由功能的 UI 與 store |
 | `frontend/src/app/core` | API、認證、偏好與 SSE 基礎服務 |
 | `frontend/src/app/shared/ui` | 無業務狀態的圖示、Markdown、訊號元件 |

@@ -1,4 +1,3 @@
-using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Operations;
 using Microsoft.EntityFrameworkCore;
@@ -51,8 +50,6 @@ internal sealed class EvaluationRunConfiguration : IEntityTypeConfiguration<Eval
     {
         r.ToTable("EvaluationRuns", "quality"); r.HasKey(x => x.Id); r.Property(x => x.SetTitle).HasMaxLength(120); r.HasIndex(x => new { x.SetId, x.CreatedAt }); r.HasIndex(x => x.JobId).IsUnique();
         r.HasOne<EvaluationSet>().WithMany().HasForeignKey(x => x.SetId).OnDelete(DeleteBehavior.Restrict);
-        r.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
-        r.HasOne<BackgroundJob>().WithMany().HasForeignKey(x => x.JobId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -62,6 +59,5 @@ internal sealed class EvaluationResultConfiguration : IEntityTypeConfiguration<E
     {
         v.ToTable("EvaluationResults", "quality"); v.HasKey(x => new { x.RunId, x.CaseIndex, x.VariantIndex }); v.Property(x => x.ReviewNote).HasMaxLength(2000);
         v.HasOne<EvaluationRun>().WithMany().HasForeignKey(x => x.RunId).OnDelete(DeleteBehavior.Cascade);
-        v.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.ReviewerId).OnDelete(DeleteBehavior.Restrict);
     }
 }

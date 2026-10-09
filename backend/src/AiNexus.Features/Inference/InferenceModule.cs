@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Inference;
 
-/// <summary>Models, context previews and chat runs. Other modules use <see cref="ModelTaskService"/>, <see cref="ModelCatalog"/>, <see cref="ModelPresentation"/> and <see cref="UsageReports"/>; each HTTP use case has its own file.</summary>
+/// <summary>Model providers, catalog, policies and the generation queue. Other modules use <see cref="ModelTaskService"/>, <see cref="ModelCatalog"/> and <see cref="ModelPresentation"/>; each HTTP use case has its own file.</summary>
 public sealed class InferenceModule : IFeatureModule
 {
     /// <summary>Prompt-bearing requests scale with the configured input limit (never below the default JSON limit).</summary>
@@ -16,14 +16,8 @@ public sealed class InferenceModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddScoped<UsageReports>();
+        services.AddScoped<ModelPolicyService>();
         services.AddScoped<ModelTaskService>();
-        services.AddScoped<RunService>();
-        services.AddScoped<PreviewContext>();
-        services.AddScoped<CreateRun>();
-        services.AddScoped<CancelRun>();
-        services.AddScoped<RunLeaseRecovery>();
-        services.AddScoped<ContextBuilder>();
         services.AddOptions<InferenceOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Inference(c, o)).ValidateOnStart();
         services.AddSingleton<IValidateOptions<InferenceOptions>, InferenceOptionsValidator>();
         services.AddHttpClient("Ollama", (sp, client) =>
@@ -38,22 +32,12 @@ public sealed class InferenceModule : IFeatureModule
         services.AddSingleton<ModelCatalog>();
         services.AddSingleton<ModelPresentation>();
         services.AddSingleton<GenerationScheduler>();
-        services.AddSingleton<SubscriptionLimits>();
-        services.AddSingleton<RunSignals>();
-        services.AddHostedService<GenerationWorker>();
-        services.AddHostedService<RunRecoveryWorker>();
     }
 
     // Endpoint order is the published OpenAPI order.
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("").RequireAuthorization(Policies.Chat).WithTags("Inference");
-        ListModels.Map(routes);
-        PreviewContext.Map(routes);
-        CreateRun.Map(routes);
-        GetRun.Map(routes);
-        CancelRun.Map(routes);
-        RunEventsEndpoint.Map(routes);
+        ListModels.Map(api.MapGroup("").RequireAuthorization(Policies.Chat).WithTags("Inference"));
     }
 }
 

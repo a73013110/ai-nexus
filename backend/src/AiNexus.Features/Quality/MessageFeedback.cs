@@ -1,4 +1,3 @@
-using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -24,7 +23,5 @@ internal sealed class MessageFeedbackConfiguration : IEntityTypeConfiguration<Me
     {
         f.ToTable("MessageFeedback", "quality"); f.HasKey(x => x.MessageId);
         f.Property(x => x.Reason).HasMaxLength(24); f.Property(x => x.Note).HasMaxLength(2000); f.HasIndex(x => new { x.OwnerId, x.UpdatedAt });
-        f.HasOne<Message>().WithMany().HasForeignKey(x => x.MessageId).OnDelete(DeleteBehavior.Restrict);
-        f.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
     }
 }

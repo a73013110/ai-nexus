@@ -1,4 +1,3 @@
-using AiNexus.Features.Identity;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -51,6 +50,5 @@ internal sealed class PromptTemplateConfiguration : IEntityTypeConfiguration<Pro
         prompt.Property(x => x.Title).HasMaxLength(PromptTemplate.TitleMaxLength);
         prompt.Property(x => x.Content).HasMaxLength(PromptTemplate.ContentMaxLength);
         prompt.HasIndex(x => new { x.OwnerId, x.UpdatedAt });
-        prompt.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
     }
 }

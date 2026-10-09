@@ -1,3 +1,4 @@
+using AiNexus.Features.Chat;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Knowledge;
@@ -18,7 +19,7 @@ public sealed class ModelPresentationTests
         {
             ShowModelNames = visible,
             Models = [new() { Id = id, Provider = "ollama", ProviderModelId = "native-private-model", DisplayName = "本地助理" }]
-        }), Options.Create(new KnowledgeOptions { EmbeddingModel = "private-embedding-id" }));
+        }), [KnowledgeModule.EmbeddingModel(new KnowledgeOptions { EmbeddingModel = "private-embedding-id" })]);
         var reference = presentation.PublicId(id);
         Assert.Equal(id, presentation.InternalId(reference));
         Assert.Equal(label, presentation.Model(new() { Id = id }).DisplayName);

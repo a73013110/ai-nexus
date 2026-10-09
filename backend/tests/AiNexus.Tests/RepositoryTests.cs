@@ -3,16 +3,15 @@ using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using AiNexus.Features.Account;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Knowledge;
 using AiNexus.Features.Repositories;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace AiNexus.Tests;

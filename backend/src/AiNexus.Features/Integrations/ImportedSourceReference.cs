@@ -1,4 +1,3 @@
-using AiNexus.Features.Artifacts;
 using AiNexus.Features.Conversations;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -44,6 +43,5 @@ internal sealed class ImportedSourceReferenceConfiguration : IEntityTypeConfigur
         r.ToTable("SourceReferences", "content"); r.HasKey(x => x.ArtifactId);
         r.Property(x => x.SourceId).HasMaxLength(32); r.Property(x => x.ExternalId).HasMaxLength(160); r.Property(x => x.Revision).HasMaxLength(160);
         r.HasIndex(x => new { x.SourceId, x.ExternalId });
-        r.HasOne<Artifact>().WithMany().HasForeignKey(x => x.ArtifactId).OnDelete(DeleteBehavior.Cascade);
     }
 }

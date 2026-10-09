@@ -1,4 +1,3 @@
-using AiNexus.Features.Identity;
 using AiNexus.Features.Operations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -51,8 +50,6 @@ internal sealed class RetrievalEvaluationConfiguration : IEntityTypeConfiguratio
         r.ToTable("RetrievalEvaluations", "quality"); r.HasKey(x => x.Id);
         r.Property(x => x.Title).HasMaxLength(120); r.Property(x => x.ProfileKey).HasMaxLength(200); r.Property(x => x.ConfigurationFingerprint).HasMaxLength(64);
         r.HasIndex(x => new { x.OwnerId, x.CreatedAt }); r.HasIndex(x => x.JobId).IsUnique();
-        r.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
-        r.HasOne<BackgroundJob>().WithMany().HasForeignKey(x => x.JobId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

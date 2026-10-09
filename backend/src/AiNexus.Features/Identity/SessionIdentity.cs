@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Administration;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
@@ -68,7 +67,7 @@ public static class SessionIdentity
             var actor = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == actorId, context.HttpContext.RequestAborted);
             var access = context.HttpContext.RequestServices.GetRequiredService<AccessService>();
             if (actor is null || !Allows(actor, principal.FindFirstValue(ActorMethod)) || !MatchesVersion(actor, principal.FindFirstValue(ActorVersion)) ||
-                !(await access.ForUserAsync(actorId, context.HttpContext.RequestAborted)).Features.Any(x => x.Id == AdministrationConfiguration.Feature))
+                !(await access.ForUserAsync(actorId, context.HttpContext.RequestAborted)).Features.Any(x => x.Id == FeatureIds.Admin))
             { context.RejectPrincipal(); await context.HttpContext.SignOutAsync(AuthEndpoints.CookieScheme); return; }
             if (!Guid.TryParse(principal.FindFirstValue(TestId), out var testId))
             { context.RejectPrincipal(); await context.HttpContext.SignOutAsync(AuthEndpoints.CookieScheme); return; }

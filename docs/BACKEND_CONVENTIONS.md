@@ -26,7 +26,7 @@ internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
 - handler 有相依時寫成類別並在模組註冊為 scoped；只有幾行時可直接寫在 `Map` 的 lambda（注入 `NexusDbContext`）。
 - 使用者一律用 `ICurrentUser`（同步 `Id`），不要在新程式呼叫 `CurrentUser.GetAsync`。
 - 時間一律用注入的 `TimeProvider`，不要直接呼叫 `DateTimeOffset.UtcNow`。
-- 直接使用 `NexusDbContext`；不要新增 repository 或只轉送呼叫的 service。新程式不要使用 `IEfHelper`。
+- 直接使用 `NexusDbContext`；不要新增 repository 或只轉送呼叫的 service。
 - lambda 回傳 `IResult`（`Results.*` 或 `ToHttpResult()`），回應型別以 `.Produces<T>()` 宣告。
 
 ## 錯誤
@@ -56,13 +56,13 @@ internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
 
 ## 跨模組
 
-- 只透過對方模組的 `public` 服務或 DTO。`module-dependencies.baseline.txt` 只能減少；新的跨模組依賴要改用合約或事件。
+- 只透過對方模組的 `public` 服務或 DTO。模組之間不可有循環依賴；造成循環時的處理順序見 [模組邊界](MODULE_BOUNDARIES.md)。
 
 ### 直接呼叫或 domain event
 
 - **直接呼叫**：需要對方的回傳值、要依結果決定 HTTP 回應或是否繼續（查詢、授權、配額、排程任務、計費預約），或是對方的檢查必須在自己寫入之前完成。
-- **domain event**：「A 發生後 B 要跟著處理」，A 不需要知道結果，B 的寫入要和 A 同一個交易，例如刪除對話／成果時撤銷分享、刪除專案時解除成果的專案連結。只有在依賴方向能因此反轉、讓基準線少一行時才改；如果呼叫端仍為了查詢依賴對方，改成事件沒有好處。
-- 事件是發布模組裡過去式命名的 `public sealed record`，實作 `IDomainEvent`，放在引發它的 slice 檔（如 `DeleteConversation.cs` 的 `ConversationDeleted`）。訂閱模組實作 `IDomainEventHandler<T>`，在自己的 `AddServices` 以 `AddDomainEventHandler<TEvent, THandler>()` 註冊；訂閱方引用發布方，不可反過來，也不可為此新增基準線沒有的依賴。
+- **domain event**：「A 發生後 B 要跟著處理」，A 不需要知道結果，B 的寫入要和 A 同一個交易，例如刪除對話／成果時撤銷分享、刪除專案時解除成果的專案連結。只有在依賴方向能因此反轉、避免循環時才改；如果呼叫端仍為了查詢依賴對方，改成事件沒有好處。
+- 事件是發布模組裡過去式命名的 `public sealed record`，實作 `IDomainEvent`，放在引發它的 slice 檔（如 `DeleteConversation.cs` 的 `ConversationDeleted`）。訂閱模組實作 `IDomainEventHandler<T>`，在自己的 `AddServices` 以 `AddDomainEventHandler<TEvent, THandler>()` 註冊；訂閱方引用發布方，不可反過來，也不可因此形成循環。
 - 發布端注入 scoped `DomainEvents`，在呼叫 `SaveChangesAsync` 前 `Raise(...)`。`NexusDbContext.SaveChangesAsync` 先分派所有待處理事件（handler 再引發的事件也會處理，最多 `DomainEvents.MaxRounds` 輪），再整理稽核列並寫入，所以 handler 新增的 entity 和稽核列與發布端一起儲存。沒有交易時會自動開一個交易包住分派與寫入。
 - handler 在同一個 `NexusDbContext` 與交易內、發布端的變更寫入之前執行：可以追蹤 entity、使用 `ExecuteUpdate`／`ExecuteDelete`（立即在目前交易執行），但不可呼叫 `SaveChanges` 或自行開關交易。handler 不保證先後順序，彼此不可依賴。
 - `Raise` 之後到 `SaveChangesAsync` 之間不要提早 return；分派失敗會清掉待處理事件。同步的 `SaveChanges` 遇到待處理事件會丟例外。

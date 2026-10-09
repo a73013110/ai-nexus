@@ -1,9 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
+using AiNexus.Features.Account;
+using AiNexus.Features.Billing;
+using AiNexus.Features.Chat;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Time;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Administration;
 using AiNexus.Features.AccessControl;

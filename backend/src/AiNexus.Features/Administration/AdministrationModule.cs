@@ -1,4 +1,5 @@
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.Identity;
 using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
 
@@ -15,16 +16,16 @@ public sealed class AdministrationModule : IFeatureModule
         var services = builder.Services;
         services.AddOptions<AdministrationOptions>().BindConfiguration("Administration").ValidateOnStart();
         services.AddSingleton<IValidateOptions<AdministrationOptions>, AdministrationOptionsValidator>();
-        services.AddScoped<AdminBootstrap>();
+        services.AddScoped<ISignInGrant, AdminBootstrap>();
         services.AddScoped<AdministrativeAudit>();
         services.AddScoped<AdministrativeReadAudit>();
-        services.AddScoped<ModelPolicyService>();
         services.AddSingleton<AdministrativeWriteLock>();
         services.AddScoped<GetAdminCatalog>();
         services.AddScoped<ListAdminUsers>();
         services.AddScoped<GetAdminUserInsights>();
         services.AddScoped<ListAdminUserConversations>();
         services.AddScoped<ReadAdminConversation>();
+        services.AddScoped<UserAccountAdministration>();
         services.AddScoped<SetUserRoles>();
         services.AddScoped<SetUserAttachmentStorage>();
         services.AddScoped<GetUserModelPolicy>();
@@ -34,6 +35,7 @@ public sealed class AdministrationModule : IFeatureModule
         services.AddScoped<SaveRoleGroup>();
         services.AddScoped<SaveFeature>();
         services.AddScoped<GetAdminUsage>();
+        services.AddScoped<ManageEmbeddingProfiles>();
         services.AddFeaturePolicy(AdministrationConfiguration.Policy, AdministrationConfiguration.Feature);
     }
 

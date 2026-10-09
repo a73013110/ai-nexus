@@ -1,6 +1,5 @@
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Conversations;
 using AiNexus.Features.Inference;
 using AiNexus.Platform.Diagnostics;
 using Microsoft.EntityFrameworkCore;
