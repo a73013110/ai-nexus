@@ -43,11 +43,14 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
         async Task<Error?> CommitAsync()
         {
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
+            // Both checks read SQL inside this transaction, not the grants the request authorized with.
+            access.Invalidate();
             if (!await IsAdministratorAsync(actor, ct)) return AdministrationErrors.AdminRequired;
             before = await SnapshotAsync(action, resource, key, ct);
             var outcome = await mutation();
             if (!outcome.IsSuccess) return outcome.Error;
             await db.SaveChangesAsync(ct);
+            access.Invalidate();
             if (!await IsAdministratorAsync(actor, ct)) return AdministrationErrors.Lockout;
             var after = await SnapshotAsync(action, resource, key, ct);
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource, Action = action, Result = "saved", DetailsJson = JsonSerializer.Serialize(new { resourceKey = key, before, after }, Json) });
@@ -58,7 +61,7 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
         // Runs after the failed transaction is disposed. Do not accidentally save pending grants.
         async Task RecordFailureAsync(string code)
         {
-            db.ChangeTracker.Clear();
+            db.ChangeTracker.Clear(); access.Invalidate();
             db.AuditEvents.Add(new()
             {
                 OwnerId = actor,

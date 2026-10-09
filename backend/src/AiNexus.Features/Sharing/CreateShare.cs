@@ -51,7 +51,7 @@ internal sealed class CreateShare(NexusDbContext db, ResourceAccess access, Shar
         await writes.Gate.WaitAsync(ct);
         try
         {
-            await scheduler.StateGate.WaitAsync(ct);
+            var conversationLock = await scheduler.LockConversationAsync(request.SourceId, ct);
             try
             {
                 await attachmentWrites.Gate.WaitAsync(ct);
@@ -77,7 +77,7 @@ internal sealed class CreateShare(NexusDbContext db, ResourceAccess access, Shar
                 }
                 finally { attachmentWrites.Gate.Release(); }
             }
-            finally { scheduler.StateGate.Release(); }
+            finally { conversationLock.Dispose(); }
         }
         finally { writes.Gate.Release(); }
     }

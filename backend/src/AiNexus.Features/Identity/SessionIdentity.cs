@@ -19,6 +19,10 @@ public static class SessionIdentity
     public const string TestExpires = "nexus_test_expires";
     public const string TestId = "nexus_test_id";
     public const string Restored = "Nexus.IdentityRestored";
+    private const string Validated = "Nexus.ValidatedUser";
+
+    /// <summary>The untracked user row this request's cookie was validated against, when it is still the signed-in user.</summary>
+    internal static NexusUser? ValidatedUser(HttpContext http, Guid id) => http.Items[Validated] is NexusUser user && user.Id == id ? user : null;
 
     public static ClaimsPrincipal Principal(NexusUser user, string method, NexusUser? actor = null, string? actorMethod = null, DateTimeOffset? testExpires = null, Guid? testId = null)
     {
@@ -82,10 +86,13 @@ public static class SessionIdentity
                     db.AuditEvents.Add(new() { OwnerId = actorId, ResourceId = testId, Action = "identity.test_end", Result = "restored", DetailsJson = System.Text.Json.JsonSerializer.Serialize(new { testId, userId = id, reason = expired ? "expired" : "target_changed" }) });
                     await db.SaveChangesAsync(context.HttpContext.RequestAborted);
                 }
+                return;
             }
+            context.HttpContext.Items[Validated] = user;
             return;
         }
         if (user is null || !Allows(user, principal.FindFirstValue(Method)) || !MatchesVersion(user, principal.FindFirstValue(Version)))
-        { context.RejectPrincipal(); await context.HttpContext.SignOutAsync(AuthEndpoints.CookieScheme); }
+        { context.RejectPrincipal(); await context.HttpContext.SignOutAsync(AuthEndpoints.CookieScheme); return; }
+        context.HttpContext.Items[Validated] = user;
     }
 }

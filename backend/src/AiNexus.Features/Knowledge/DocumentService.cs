@@ -25,6 +25,9 @@ public sealed class DocumentService
 
     public async Task<DocumentDto> DetailAsync(Guid actor, Guid id, CancellationToken ct) => Value(await documents.DetailAsync(actor, id, ct));
 
+    /// <summary><see cref="DetailAsync"/> for a list, in its order, in a fixed number of queries.</summary>
+    public async Task<IReadOnlyList<DocumentDto>> DetailsAsync(Guid actor, IReadOnlyList<Guid> ids, CancellationToken ct) => Value(await documents.DetailsAsync(actor, ids, ct));
+
     public async Task<Attachment> OriginalAsync(Guid actor, Guid id, CancellationToken ct) => Value(await documents.OriginalAsync(actor, id, ct));
 
     private static T Value<T>(Result<T> result) => result.IsSuccess ? result.Value : throw result.Error.ToException();

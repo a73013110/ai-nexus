@@ -9,7 +9,7 @@ namespace AiNexus.Features.Conversations;
 // Every check needs the database (the leaf must be a message of this conversation), so this request has no validator.
 public sealed record SelectBranchRequest(Guid LeafId);
 
-/// <summary>Shows another version (leaf message) of one of the user's own idle conversations. Runs under the generation state gate.</summary>
+/// <summary>Shows another version (leaf message) of one of the user's own idle conversations. Runs under the conversation's generation lock.</summary>
 internal sealed class SelectBranch(NexusDbContext db, GenerationScheduler scheduler, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
@@ -19,7 +19,7 @@ internal sealed class SelectBranch(NexusDbContext db, GenerationScheduler schedu
 
     public async Task<Result> HandleAsync(Guid owner, Guid id, Guid leaf, CancellationToken ct)
     {
-        await scheduler.StateGate.WaitAsync(ct);
+        var conversationLock = await scheduler.LockConversationAsync(id, ct);
         try
         {
             var conversation = await db.OwnedConversationAsync(owner, id, ct);
@@ -31,6 +31,6 @@ internal sealed class SelectBranch(NexusDbContext db, GenerationScheduler schedu
             await db.SaveChangesAsync(ct);
             return Result.Success;
         }
-        finally { scheduler.StateGate.Release(); }
+        finally { conversationLock.Dispose(); }
     }
 }

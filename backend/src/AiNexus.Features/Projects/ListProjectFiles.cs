@@ -18,8 +18,6 @@ internal static class ListProjectFiles
     {
         await access.RequireAsync(actor, id, Project.Kind, ct);
         var ids = await db.Set<WorkspaceResource>().Where(x => x.ParentId == id && x.Kind == "document").Select(x => x.Id).Take(Project.MaxFiles).ToListAsync(ct);
-        var result = new List<DocumentDto>();
-        foreach (var key in ids) result.Add(await documents.DetailAsync(actor, key, ct));
-        return result;
+        return await documents.DetailsAsync(actor, ids, ct);
     }
 }

@@ -17,9 +17,32 @@ public sealed class IdentityWriteLock
     public SemaphoreSlim Gate { get; } = new(1, 1);
 }
 
-public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, AiNexus.Features.Administration.AdminBootstrap bootstrap) : IRequestUser, ICurrentUser
+/// <summary>Directory display names by SID for an hour, bounded so a host's lifetime cannot grow it without limit.</summary>
+public sealed class DisplayNameCache(TimeProvider clock)
 {
-    private static readonly ConcurrentDictionary<string, (string Name, DateTimeOffset At)> DisplayNames = new();
+    private const int Capacity = 4096;
+    private static readonly TimeSpan Lifetime = TimeSpan.FromHours(1);
+    private readonly ConcurrentDictionary<string, (string Name, DateTimeOffset At)> names = new(StringComparer.Ordinal);
+
+    public string GetOrAdd(string sid, Func<string> resolve)
+    {
+        var now = clock.GetUtcNow();
+        if (names.TryGetValue(sid, out var cached) && now - cached.At < Lifetime) return cached.Name;
+        var name = resolve();
+        if (names.Count >= Capacity)
+        {
+            foreach (var entry in names) if (now - entry.Value.At >= Lifetime) names.TryRemove(entry);
+            if (names.Count >= Capacity) names.Clear();
+        }
+        names[sid] = (name, now);
+        return name;
+    }
+}
+
+public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, AiNexus.Features.Administration.AdminBootstrap bootstrap,
+    DisplayNameCache names, TimeProvider clock) : IRequestUser, ICurrentUser
+{
+    private static readonly TimeSpan SeenInterval = TimeSpan.FromMinutes(5);
     private NexusUser? resolved;
     public Guid? ResolvedId => resolved?.Id;
     Guid ICurrentUser.Id => ((ICurrentUser)this).User.Id;
@@ -33,7 +56,8 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
         if (principal.Identity?.IsAuthenticated != true) throw new ApiException(401, "authentication_required", "AD 驗證未完成。");
         if (Guid.TryParse(principal.FindFirstValue(SessionIdentity.UserId), out var userId))
         {
-            var linked = await db.Users.SingleOrDefaultAsync(x => x.Id == userId, ct);
+            // Cookie validation has just read this row; track that copy instead of reading it again.
+            var linked = Track(SessionIdentity.ValidatedUser(accessor.HttpContext!, userId)) ?? await db.Users.SingleOrDefaultAsync(x => x.Id == userId, ct);
             var testing = principal.HasClaim(x => x.Type == SessionIdentity.ActorId);
             if (linked is null || !SessionIdentity.Available(linked) || !SessionIdentity.MatchesVersion(linked, principal.FindFirstValue(SessionIdentity.Version)) ||
                 !testing && !SessionIdentity.Allows(linked, principal.FindFirstValue(SessionIdentity.Method)))
@@ -44,7 +68,14 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
         if (sid is null && OperatingSystem.IsWindows() && principal.Identity is WindowsIdentity windows) sid = windows.User?.Value;
         if (string.IsNullOrWhiteSpace(sid)) throw new ApiException(403, "windows_sid_required", "無法取得 AD SID，請確認登入設定。");
         var account = principal.Identity.Name ?? throw new ApiException(403, "windows_account_required", "Windows 帳號資料不完整。");
-        var displayName = principal.FindFirstValue("display_name") ?? ResolveName(sid, account);
+        var displayName = principal.FindFirstValue("display_name") ?? names.GetOrAdd(sid, () => ResolveName(sid, account));
+        // Most requests only read an existing mapping. The global gate is taken only to create, bind or refresh a user,
+        // or to apply a bootstrap grant: binding goes by account across SIDs, and local sign-in writes the same rows.
+        var existing = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Sid == sid, ct);
+        if (existing is not null && !SessionIdentity.Allows(existing, "ad"))
+            throw new ApiException(403, "login_method_disabled", "此使用者已停用，或未允許 AD 驗證。");
+        if (existing is not null && !Stale(existing, displayName) && !await bootstrap.PendingAsync(existing, ct))
+            return resolved = Track(existing)!;
         await writeLock.Gate.WaitAsync(ct);
         try
         {
@@ -62,17 +93,17 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
                 throw new ApiException(403, "login_method_disabled", "此使用者已停用，或未允許 AD 驗證。");
             if (user is null)
             {
-                user = new NexusUser { Sid = sid, Account = account, DisplayName = displayName, LastSeenAt = DateTimeOffset.UtcNow };
+                user = new NexusUser { Sid = sid, Account = account, DisplayName = displayName, LastSeenAt = clock.GetUtcNow() };
                 db.Users.Add(user);
                 db.Set<UserRole>().Add(new UserRole { UserId = user.Id, RoleId = BuiltInAccess.MemberRole });
                 db.AuditEvents.Add(new AuditEvent { OwnerId = user.Id, Action = "identity.first_seen", ResourceId = user.Id });
                 await db.SaveChangesAsync(ct);
             }
-            else if (DateTimeOffset.UtcNow - user.LastSeenAt > TimeSpan.FromMinutes(5) || !user.ProfileManaged && user.DisplayName != displayName || db.Entry(user).State == EntityState.Modified)
+            else if (Stale(user, displayName) || db.Entry(user).State == EntityState.Modified)
             {
                 user.Account = account;
                 if (!user.ProfileManaged) user.DisplayName = displayName;
-                user.LastSeenAt = DateTimeOffset.UtcNow;
+                user.LastSeenAt = clock.GetUtcNow();
                 await db.SaveChangesAsync(ct);
             }
             await bootstrap.ApplyAsync(user, ct);
@@ -81,12 +112,22 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
         finally { writeLock.Gate.Release(); }
     }
 
+    private bool Stale(NexusUser user, string displayName) => clock.GetUtcNow() - user.LastSeenAt > SeenInterval || !user.ProfileManaged && user.DisplayName != displayName;
+
+    /// <summary>The request's tracked copy of a user read without tracking; handlers may change and save it.</summary>
+    private NexusUser? Track(NexusUser? user)
+    {
+        if (user is null) return null;
+        var tracked = db.ChangeTracker.Entries<NexusUser>().FirstOrDefault(x => x.Entity.Id == user.Id);
+        if (tracked is not null) return tracked.Entity;
+        db.Attach(user);
+        return user;
+    }
+
     private static string ResolveName(string sid, string account)
     {
-        if (DisplayNames.TryGetValue(sid, out var cached) && DateTimeOffset.UtcNow - cached.At < TimeSpan.FromHours(1)) return cached.Name;
         var name = account.Split('\\').Last();
         if (OperatingSystem.IsWindows()) name = ResolveWindowsName(sid) ?? name;
-        DisplayNames[sid] = (name, DateTimeOffset.UtcNow);
         return name;
     }
 

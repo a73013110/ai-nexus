@@ -22,8 +22,6 @@ internal static class BrowseEvaluationSets
         var resources = await (await access.QueryAsync(actor, EvaluationSet.Kind, ct)).AsNoTracking().OrderByDescending(x => x.UpdatedAt).Take(100).ToListAsync(ct);
         var ids = resources.Select(x => x.Id).ToArray();
         var sets = await db.Set<EvaluationSet>().AsNoTracking().Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
-        var result = new List<EvaluationSetDto>();
-        foreach (var resource in resources) result.Add(sets[resource.Id].ToDto(await access.DescribeAsync(actor, resource, ct)));
-        return result;
+        return (await access.DescribeAllAsync(actor, resources, ct)).Select(resource => sets[resource.Id].ToDto(resource)).ToArray();
     }
 }

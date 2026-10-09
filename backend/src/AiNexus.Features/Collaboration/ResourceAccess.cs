@@ -1,3 +1,4 @@
+using AiNexus.Platform.Threading;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.AccessControl;
@@ -5,7 +6,20 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Collaboration;
 
-public sealed class ResourceWriteLock { public SemaphoreSlim Gate { get; } = new(1, 1); }
+/// <summary>
+/// Serializes writes in this process per resource (versioned saves, ACL changes, deletion) or per other id-scoped invariant;
+/// writes to different resources do not wait for each other. Callers taking two keys take the owner-scoped key first.
+/// </summary>
+public sealed class ResourceWriteLock
+{
+    private readonly KeyedAsyncLock<(string Scope, Guid Id)> keys = new();
+
+    /// <summary>The write lock of one resource.</summary>
+    public Task<IDisposable> AcquireAsync(Guid resource, CancellationToken ct) => keys.AcquireAsync(("resource", resource), ct);
+
+    /// <summary>The lock of another per-id invariant, such as one owner's limit or one message's feedback.</summary>
+    public Task<IDisposable> AcquireAsync(string scope, Guid id, CancellationToken ct) => keys.AcquireAsync((scope, id), ct);
+}
 
 public sealed class ResourceAccess(NexusDbContext db, AccessService access, ResourceWriteLock writes)
 {
@@ -32,6 +46,37 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
             (x.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == x.Id && m.UserId == actor && m.Role == "editor")), ct);
     public async Task<ResourceDto> DescribeAsync(Guid actor, WorkspaceResource value, CancellationToken ct) => new(value.Id, value.Name, value.Kind,
         await CanEditAsync(actor, value, ct), value.OwnerId == actor, value.UpdatedAt);
+
+    /// <summary>Every resource the actor reads by <see cref="QueryAsync"/>, or the error of <see cref="RequireAsync"/>; one query for the whole list.</summary>
+    public async Task RequireAllAsync(Guid actor, IReadOnlyCollection<Guid> ids, string kind, CancellationToken ct)
+    {
+        if (ids.Count == 0) return;
+        var readable = await (await QueryAsync(actor, kind, ct)).Where(x => ids.Contains(x.Id)).Select(x => x.Id).ToListAsync(ct);
+        if (ids.Any(id => !readable.Contains(id))) throw Missing();
+    }
+
+    /// <summary>The ids among <paramref name="values"/> that <see cref="CanEditAsync"/> allows, in at most two queries.</summary>
+    public async Task<IReadOnlySet<Guid>> EditableAsync(Guid actor, IReadOnlyCollection<WorkspaceResource> values, CancellationToken ct)
+    {
+        var editable = values.Where(x => x.OwnerId == actor).Select(x => x.Id).ToHashSet();
+        var rest = values.Where(x => !editable.Contains(x.Id)).ToArray();
+        if (rest.Length == 0) return editable;
+        var ids = rest.Select(x => x.Id).Distinct().ToArray();
+        var named = await db.Set<ResourceMember>().Where(x => ids.Contains(x.ResourceId) && x.UserId == actor && x.Role == "editor").Select(x => x.ResourceId).ToListAsync(ct);
+        var parents = rest.Where(x => x.ParentId != null).Select(x => x.ParentId!.Value).Distinct().ToArray();
+        var projects = parents.Length == 0 ? [] : await db.Set<WorkspaceResource>().Where(x => parents.Contains(x.Id) && x.Kind == "project" &&
+            (x.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == x.Id && m.UserId == actor && m.Role == "editor"))).Select(x => x.Id).ToListAsync(ct);
+        foreach (var value in rest)
+            if (named.Contains(value.Id) || value.ParentId is Guid parent && projects.Contains(parent)) editable.Add(value.Id);
+        return editable;
+    }
+
+    /// <summary><see cref="DescribeAsync"/> for a list, in the list's order.</summary>
+    public async Task<IReadOnlyList<ResourceDto>> DescribeAllAsync(Guid actor, IReadOnlyCollection<WorkspaceResource> values, CancellationToken ct)
+    {
+        var editable = await EditableAsync(actor, values, ct);
+        return values.Select(value => new ResourceDto(value.Id, value.Name, value.Kind, editable.Contains(value.Id), value.OwnerId == actor, value.UpdatedAt)).ToArray();
+    }
     public async Task<ResourceAclDto> AclAsync(Guid actor, Guid id, string kind, CancellationToken ct)
     {
         await OwnerAsync(actor, id, kind, ct);
@@ -43,8 +88,7 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
     {
         if (request.Members.Count > 50 || request.GroupIds.Count > 20 || request.Members.Select(x => x.UserId).Distinct().Count() != request.Members.Count || request.GroupIds.Distinct().Count() != request.GroupIds.Count || request.Members.Any(x => x.Role is not ("viewer" or "editor")))
             throw new ApiException(400, "invalid_resource_acl", "成員清單重複、過長或角色不正確。");
-        await writes.Gate.WaitAsync(ct);
-        try
+        using (await writes.AcquireAsync(id, ct))
         {
             var resource = await OwnerAsync(actor, id, kind, ct);
             if (request.Members.Any(x => x.UserId == resource.OwnerId)) throw new ApiException(400, "owner_is_implicit", "擁有者已具有完整權限，不需加入成員清單。");
@@ -67,7 +111,6 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "resource.acl", Result = "saved", DetailsJson = System.Text.Json.JsonSerializer.Serialize(new { kind, users, request.GroupIds }) });
             await db.SaveChangesAsync(ct);
         }
-        finally { writes.Gate.Release(); }
     }
     public async Task<WorkspaceResource> OwnerAsync(Guid actor, Guid id, string kind, CancellationToken ct)
         => await db.Set<WorkspaceResource>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor && x.Kind == kind, ct) ?? throw Missing();
@@ -77,5 +120,5 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
         if (value.Length is < 1 or > 120 || value.Any(char.IsControl)) throw new ApiException(400, "invalid_resource_name", "名稱需為 1 至 120 個字元。");
         return value;
     }
-    private static ApiException Missing() => new(404, "resource_not_found", "找不到此項目，或你已沒有存取權限。");
+    internal static ApiException Missing() => new(404, "resource_not_found", "找不到此項目，或你已沒有存取權限。");
 }

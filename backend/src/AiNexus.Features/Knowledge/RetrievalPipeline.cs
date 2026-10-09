@@ -53,17 +53,20 @@ public sealed class RetrievalPipeline(NexusDbContext db, RetrievalAuthorization 
             try { query = await rewriter.RewriteAsync(actor, query, history.TakeLast(settings.QueryRewrite.MaxTurns * 2).ToArray(), timeout.Token); }
             catch (Exception error) when (error is ApiException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
             { ct.ThrowIfCancellationRequested(); skippedRewrite = true; RetrievalDiagnostics.Degraded(logger, "rewrite", "original", "rewrite_skipped", error, "model"); }
-            rewriteMs = timer.ElapsedMilliseconds; await authorization.CollectionsAsync(actor, request.CollectionIds, ct);
+            rewriteMs = timer.ElapsedMilliseconds;
         }
         timer.Restart();
         var vector = actual == "keyword" ? null : await cache.GetAsync(actor, profile, query, ct);
-        embedMs = timer.ElapsedMilliseconds; await authorization.CollectionsAsync(actor, request.CollectionIds, ct);
+        embedMs = timer.ElapsedMilliseconds;
         timer.Restart(); var result = await store.SearchAsync(request.CollectionIds, profile, query, vector, actual, ct); searchMs = timer.ElapsedMilliseconds;
-        await authorization.HitsAsync(actor, result.Hits, ct);
+        // Collection access is read once per search, then again only after a remote call and before any source text leaves:
+        // before reranking sends it out, and before the result is returned.
+        await authorization.HitsAsync(actor, result.Hits, ct, request.CollectionIds);
         var hits = result.Hits; actual = result.Mode;
         if (rerank ?? settings.Rerank.Provider != "none")
         {
             timer.Restart();
+            if (settings.Rerank.Provider != "none" && hits.Count > 0) await authorization.CollectionsAsync(actor, request.CollectionIds, ct, fresh: true);
             try
             {
                 if (settings.Rerank.Provider == "none") throw new ApiException(503, "rerank_disabled", "尚未啟用重排模型。");
@@ -80,7 +83,7 @@ public sealed class RetrievalPipeline(NexusDbContext db, RetrievalAuthorization 
             rerankMs = timer.ElapsedMilliseconds;
         }
         if (skippedRewrite) actual += "(rewrite-skipped)";
-        await authorization.CollectionsAsync(actor, request.CollectionIds, ct); await authorization.HitsAsync(actor, hits, ct);
+        await authorization.CollectionsAsync(actor, request.CollectionIds, ct, fresh: true); await authorization.HitsAsync(actor, hits, ct, request.CollectionIds);
         if (!await db.Set<EmbeddingProfile>().AsNoTracking().AnyAsync(x => x.Id == profile.Id && x.Status == "active", ct))
             throw new ApiException(409, "embedding_profile_changed", "檢索索引已切換，請重新送出提問。");
         return new(actual, RetrievalRanking.Context(hits, settings), rewriteMs, embedMs, searchMs, rerankMs);

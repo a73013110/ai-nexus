@@ -22,8 +22,7 @@ internal static class DeleteArtifact
 
     public static async Task HandleAsync(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, DomainEvents events, Guid actor, Guid id, CancellationToken ct)
     {
-        await writes.Gate.WaitAsync(ct);
-        try
+        using (await writes.AcquireAsync(id, ct))
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             var resource = await access.OwnerAsync(actor, id, Artifact.Kind, ct);
@@ -33,6 +32,5 @@ internal static class DeleteArtifact
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "artifact.deleted", Result = "deleted" });
             await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         }
-        finally { writes.Gate.Release(); }
     }
 }

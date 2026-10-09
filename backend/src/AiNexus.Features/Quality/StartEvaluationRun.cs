@@ -51,8 +51,9 @@ internal sealed class StartEvaluationRun(NexusDbContext db, ResourceAccess acces
             var model = await models.RequireAsync(variant.ModelId, ct); await policy.RequireAsync(actor, model.Id, ct);
             variants.Add(new(variant.Label.Trim(), model.Id, variant.Instruction.Trim(), ModelTaskConfiguration.Capture(model, inference.Value)));
         }
-        await writes.Gate.WaitAsync(ct);
-        try
+        // The owner's one active evaluation and run limit, then the set (always in this order).
+        using (await writes.AcquireAsync("evaluation-runs", actor, ct))
+        using (await writes.AcquireAsync(setId, ct))
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             var resource = await access.RequireAsync(actor, setId, EvaluationSet.Kind, ct);
@@ -65,6 +66,5 @@ internal sealed class StartEvaluationRun(NexusDbContext db, ResourceAccess acces
             await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
             return run.ToDto(job, actor);
         }
-        finally { writes.Gate.Release(); }
     }
 }

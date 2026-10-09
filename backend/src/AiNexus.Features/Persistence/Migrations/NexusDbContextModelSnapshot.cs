@@ -1621,6 +1621,8 @@ namespace AiNexus.Features.Persistence.Migrations
 
                     b.HasIndex("ConversationId", "CreatedAt");
 
+                    b.HasIndex("OwnerId", "CreatedAt");
+
                     b.HasIndex("OwnerId", "IdempotencyKey")
                         .IsUnique();
 
@@ -2572,6 +2574,8 @@ namespace AiNexus.Features.Persistence.Migrations
                         .HasFilter("[ActiveKey] IS NOT NULL");
 
                     b.HasIndex("ResourceId");
+
+                    b.HasIndex("SubjectId");
 
                     b.HasIndex("OwnerId", "CreatedAt");
 

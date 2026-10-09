@@ -39,13 +39,20 @@ internal sealed class GetDashboard(NexusDbContext db, SpendReports reports, Usag
         var docs = db.Set<KnowledgeDocument>().AsNoTracking().Where(d => !d.IsDeleted && resources.Any(x => x.Id == d.Id));
         var chunks = db.Set<KnowledgeChunk>().AsNoTracking().Where(x => docs.Any(d => d.Id == x.DocumentId));
         var jobs = db.Set<BackgroundJob>().AsNoTracking().Where(x => owner == null || x.OwnerId == owner);
+        // One query per table: conditional counts share a scan. An empty table yields no group, which reads as zeros.
+        var resourceCounts = await resources.Where(x => x.Kind == "project" || x.Kind == "knowledge").GroupBy(x => 1)
+            .Select(g => new { Projects = g.Count(x => x.Kind == "project"), Collections = g.Count(x => x.Kind == "knowledge") }).SingleOrDefaultAsync(ct);
+        var docCounts = await docs.GroupBy(x => 1).Select(g => new { All = g.Count(), Ready = g.Count(x => x.Status == "ready"), Failed = g.Count(x => x.Status == "failed"),
+            Stale = g.Count(d => d.CollectionId != null && d.Status != "ready") }).SingleOrDefaultAsync(ct);
+        var jobCounts = await jobs.Where(x => x.Status == "queued" || x.Status == "running" || x.Status == "failed").GroupBy(x => 1)
+            .Select(g => new { Active = g.Count(x => x.Status == "queued" || x.Status == "running"), Failed = g.Count(x => x.Status == "failed") }).SingleOrDefaultAsync(ct);
         var counts = new DashboardCountsDto(
             await db.Conversations.CountAsync(x => owner == null || x.OwnerId == owner, ct),
-            await resources.CountAsync(x => x.Kind == "project", ct), await resources.CountAsync(x => x.Kind == "knowledge", ct),
-            await docs.CountAsync(ct), await docs.CountAsync(x => x.Status == "ready", ct), await docs.CountAsync(x => x.Status == "failed", ct), await chunks.CountAsync(ct),
+            resourceCounts?.Projects ?? 0, resourceCounts?.Collections ?? 0,
+            docCounts?.All ?? 0, docCounts?.Ready ?? 0, docCounts?.Failed ?? 0, await chunks.CountAsync(ct),
             await db.Runs.CountAsync(x => x.ActiveOwnerId != null && (owner == null || x.OwnerId == owner), ct),
-            await jobs.CountAsync(x => x.Status == "queued" || x.Status == "running", ct), await jobs.CountAsync(x => x.Status == "failed", ct),
-            embedding.Enabled ? await docs.CountAsync(d => d.CollectionId != null && d.Status != "ready", ct) : 0,
+            jobCounts?.Active ?? 0, jobCounts?.Failed ?? 0,
+            embedding.Enabled ? docCounts?.Stale ?? 0 : 0,
             // Originals are counted once, independently of document readers and collection indexes.
             await db.Set<Attachment>().CountAsync(x => x.InLibrary && x.StorageState == AttachmentStates.Ready && (owner == null || x.OwnerId == owner), ct));
         var spend = await reports.ReportAsync(owner, period.Value, scope == "platform", ct);
