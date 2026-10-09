@@ -1,5 +1,4 @@
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;

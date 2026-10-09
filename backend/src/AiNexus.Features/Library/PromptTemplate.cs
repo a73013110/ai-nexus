@@ -1,4 +1,3 @@
-using AiNexus.Features.Identity;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;

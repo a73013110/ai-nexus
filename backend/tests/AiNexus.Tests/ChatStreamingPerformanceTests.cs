@@ -5,7 +5,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using AiNexus.Features.Chat;
-using AiNexus.Features.Conversations;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;

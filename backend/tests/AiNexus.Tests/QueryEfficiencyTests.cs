@@ -8,7 +8,6 @@ using AiNexus.Features.Account;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;
-using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Knowledge;
 using AiNexus.Features.Persistence;

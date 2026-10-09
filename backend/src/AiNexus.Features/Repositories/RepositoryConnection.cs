@@ -1,4 +1,3 @@
-using AiNexus.Features.Identity;
 using AiNexus.Features.Knowledge;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;

@@ -4,7 +4,6 @@ using AiNexus.Platform.Data;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Operations;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Attachments;
 using EDoc.Core.Database.Interfaces;

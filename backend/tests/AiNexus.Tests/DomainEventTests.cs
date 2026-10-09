@@ -4,7 +4,6 @@ using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Projects;
 using AiNexus.Features.Sharing;

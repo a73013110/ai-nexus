@@ -1,4 +1,3 @@
-using AiNexus.Features.Artifacts;
 using AiNexus.Features.Conversations;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;

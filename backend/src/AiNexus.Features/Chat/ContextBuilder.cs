@@ -1,7 +1,6 @@
 using System.Text;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Conversations;
 using AiNexus.Features.Attachments;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;

@@ -8,7 +8,6 @@ using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Operations;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
