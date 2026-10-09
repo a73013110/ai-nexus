@@ -3,13 +3,14 @@ using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
+using AiNexus.Features.Identity;
 
-namespace AiNexus.Features.Identity;
+namespace AiNexus.Features.Account;
 
 /// <summary>The theme is checked first; the model id length and server approval are checked by the handler, in that order.</summary>
 internal sealed class PreferencesValidator : RequestValidator<PreferencesDto>
 {
-    public override string ProblemCode => IdentityErrors.InvalidTheme.Code;
+    public override string ProblemCode => AccountErrors.InvalidTheme.Code;
 
     public PreferencesValidator() => RuleFor(x => x.Theme).Must(UpdatePreferences.ValidTheme).WithErrorCode("unknown");
 }
@@ -37,10 +38,10 @@ internal sealed class UpdatePreferences(NexusDbContext db, ModelPresentation mod
     /// <summary>Checks and applies <paramref name="value"/> to the tracked user without saving; nothing changes on failure.</summary>
     public static Result<PreferencesDto> Apply(NexusUser user, PreferencesDto value, ModelPresentation models)
     {
-        if (!ValidTheme(value.Theme)) return IdentityErrors.InvalidTheme;
-        if (value.DefaultModelId?.Length > MaxModelIdLength) return IdentityErrors.InvalidModel;
+        if (!ValidTheme(value.Theme)) return AccountErrors.InvalidTheme;
+        if (value.DefaultModelId?.Length > MaxModelIdLength) return AccountErrors.InvalidModel;
         string? model = null;
-        if (value.DefaultModelId is not null && (model = models.InternalId(value.DefaultModelId)) is null) return IdentityErrors.ModelNotAllowed;
+        if (value.DefaultModelId is not null && (model = models.InternalId(value.DefaultModelId)) is null) return AccountErrors.ModelNotAllowed;
         user.Preferences.Theme = value.Theme;
         user.Preferences.ReducedMotion = value.ReducedMotion;
         user.Preferences.DefaultModelId = model;

@@ -19,7 +19,7 @@ public sealed class AdministratorBootstrap
 /// <summary>The administrator role, group and feature, and the module's tables. <see cref="Configure"/> is the entry point kept for <c>NexusDbContext</c>.</summary>
 public static class AdministrationConfiguration
 {
-    public const string Role = "administrator", Group = "administrators", Feature = "admin", Policy = Policies.Prefix + Feature;
+    public const string Role = "administrator", Group = "administrators", Feature = FeatureIds.Admin, Policy = Policies.Admin;
     public static void Configure(ModelBuilder model)
     {
         model.Entity<AccessControl.Role>().HasData(new AccessControl.Role { Id = Role, Name = "平台管理員" });
@@ -28,8 +28,6 @@ public static class AdministrationConfiguration
         model.Entity<RoleGroupRole>().HasData(new RoleGroupRole { RoleId = Role, GroupId = Group });
         model.Entity<RoleGroupFeature>().HasData(new RoleGroupFeature { GroupId = Group, FeatureId = Feature });
         model.ApplyConfiguration(new AdministratorBootstrapConfiguration());
-        model.ApplyConfiguration(new GroupModelPolicyConfiguration());
-        model.ApplyConfiguration(new UserModelPolicyConfiguration());
     }
 }
 
@@ -48,7 +46,6 @@ internal static class AdministrationErrors
     public static readonly Error NotFound = Error.NotFound("admin_resource_not_found");
     public static readonly Error InvalidSearch = Error.Invalid("invalid_search");
     public static readonly Error InvalidStorageLimit = Error.Invalid("invalid_storage_limit");
-    public static readonly Error InvalidModelPolicy = Error.Invalid("invalid_model_policy");
     public static readonly Error InvalidAccessId = Error.Invalid("invalid_access_id");
     public static readonly Error InvalidAccessIds = Error.Invalid("invalid_access_ids");
     public static readonly Error InvalidAccessName = Error.Invalid("invalid_access_name");

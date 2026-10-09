@@ -1,5 +1,6 @@
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Attachments;
+using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -24,7 +25,7 @@ internal sealed class SaveRoleGroup(NexusDbContext db, AdministrativeAudit audit
         if (request.Policy is { } policy)
         {
             if (policies.Check(new(policy.AllowedModelIds, policy.DailyTokenLimits)) is { } rejected) return rejected;
-            if (policy.StoredAttachmentLimitBytes is < 0 or > AttachmentOptions.MaximumLimitBytes) return AdministrationErrors.InvalidModelPolicy;
+            if (policy.StoredAttachmentLimitBytes is < 0 or > AttachmentOptions.MaximumLimitBytes) return InferenceErrors.InvalidModelPolicy;
         }
         if (await AccessRules.ExistingAsync(db.Set<Feature>().Select(x => x.Id), request.FeatureIds, ct) is { } unknown) return unknown;
         var group = await db.Set<RoleGroup>().FindAsync([id], ct);

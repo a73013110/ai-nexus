@@ -31,7 +31,7 @@ internal sealed class GetDashboard(NexusDbContext db, SpendReports reports, Usag
     public async Task<Result<DashboardDto>> HandleAsync(Guid actor, string scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offset, CancellationToken ct)
     {
         if (scope is not ("personal" or "platform") || (scope == "personal" && ownerId != null)) return Error.Invalid("invalid_dashboard_scope");
-        if (scope == "platform" && !(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == AdministrationConfiguration.Feature)) return Error.Forbidden("dashboard_access_denied");
+        if (scope == "platform" && !(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureIds.Admin)) return Error.Forbidden("dashboard_access_denied");
         var period = SpendPeriod.Create(from, until, offset, clock.GetUtcNow());
         if (!period.IsSuccess) return period.Error;
         Guid? owner = scope == "personal" ? actor : ownerId;

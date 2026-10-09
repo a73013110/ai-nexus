@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using AiNexus.Features.Account;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;

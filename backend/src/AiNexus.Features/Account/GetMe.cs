@@ -4,8 +4,9 @@ using AiNexus.Features.Persistence;
 using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Identity;
 
-namespace AiNexus.Features.Identity;
+namespace AiNexus.Features.Account;
 
 /// <summary>The signed-in user, their appearance preferences, a fresh CSRF token, their active run and their access.</summary>
 internal static class GetMe

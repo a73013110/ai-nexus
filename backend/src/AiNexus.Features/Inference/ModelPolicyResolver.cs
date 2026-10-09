@@ -1,4 +1,4 @@
-namespace AiNexus.Features.Administration;
+namespace AiNexus.Features.Inference;
 
 public sealed record ResolvedModelPolicy(IReadOnlyList<string>? AllowedModelIds, IReadOnlyDictionary<string, long> DailyTokenLimits);
 

@@ -1,5 +1,6 @@
 using System.Data;
 using System.Text.Json;
+using AiNexus.Features.Inference;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Identity;

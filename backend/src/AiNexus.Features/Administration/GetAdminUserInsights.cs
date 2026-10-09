@@ -1,4 +1,6 @@
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.Account;
+using AiNexus.Features.Billing;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
@@ -11,7 +13,7 @@ namespace AiNexus.Features.Administration;
 public sealed record AdminUserDetailDto(AdminUserDto User, PersonalUsageDto Usage, IReadOnlyList<UsageKindDto> Kinds, int Conversations);
 
 /// <summary>One user's account, roles, usage and storage. The read is audited.</summary>
-internal sealed class GetAdminUserInsights(NexusDbContext db, AdministrativeReadAudit reads, UsageReports usage)
+internal sealed class GetAdminUserInsights(NexusDbContext db, AdministrativeReadAudit reads, UsageReports usage, PersonalUsage personal)
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/users/{id:guid}/insights", async (Guid id, ICurrentUser user, GetAdminUserInsights handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
@@ -23,7 +25,7 @@ internal sealed class GetAdminUserInsights(NexusDbContext db, AdministrativeRead
         var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (user is null) return AdministrationErrors.NotFound;
         var roles = await db.Set<UserRole>().Where(x => x.UserId == id).Select(x => x.RoleId).ToListAsync(ct);
-        var report = await usage.ForOwnerAsync(id, ct);
+        var report = await personal.ForOwnerAsync(id, ct);
         var detail = new AdminUserDetailDto(new(id, user.Account, user.DisplayName, user.LastSeenAt, roles, null, user.Enabled, UserAccounts.Authentication(user), report.Storage), report, await usage.KindsAsync(id, ct), await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).CountAsync(x => x.OwnerId == id, ct));
         var audited = await reads.RecordAsync(actor, "admin.user_usage_read", id, new { userId = id }, ct);
         return audited.IsSuccess ? detail : audited.Error;

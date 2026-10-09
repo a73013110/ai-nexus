@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.Account;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;

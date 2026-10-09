@@ -24,7 +24,7 @@ public sealed class ContextBuilder(NexusDbContext db, IOptions<AttachmentOptions
     /// <summary>
     /// The context of a prompt that is not saved yet (or of the saved prompt being regenerated), without image bytes.
     /// History is immutable once answered, so the result equals what <see cref="BuildAsync"/> returns after the prompt is
-    /// saved, for any parameters with the same history budget (<see cref="Administration.ModelPolicyService.BudgetAsync"/> keeps it).
+    /// saved, for any parameters with the same history budget (<see cref="ModelPolicyService.BudgetAsync"/> keeps it).
     /// </summary>
     public async Task<IReadOnlyList<InferenceMessage>> PrepareAsync(Guid conversation, Guid? parent, Guid? regenerate, string? prompt, IReadOnlyList<Attachment> files, GenerationParameters parameters, CancellationToken ct)
         => Finish(regenerate is Guid user

@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using AiNexus.Features.Account;
+using AiNexus.Features.Billing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Time;
 using AiNexus.Features.Persistence;

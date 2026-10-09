@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using AiNexus.Features.Account;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Conversations;

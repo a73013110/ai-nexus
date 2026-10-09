@@ -1,5 +1,4 @@
 using AiNexus.Platform.Modules;
-using Microsoft.AspNetCore.Authorization;
 
 namespace AiNexus.Features.AccessControl;
 
@@ -8,7 +7,6 @@ public sealed class AccessControlModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         builder.Services.AddScoped<AccessService>();
-        builder.Services.AddScoped<IAuthorizationHandler, FeatureAuthorizationHandler>();
     }
 }
 
