@@ -1,13 +1,19 @@
+# One grouped pull request per ecosystem each month keeps update noise low for a single maintainer.
+# Security updates, when enabled in the repository settings, do not follow this schedule.
 version: 2
 updates:
   - package-ecosystem: nuget
     directory: /backend
-    schedule: { interval: weekly }
-    open-pull-requests-limit: 5
+    schedule: { interval: monthly }
+    groups:
+      nuget: { patterns: ["*"] }
   - package-ecosystem: npm
     directory: /frontend
-    schedule: { interval: weekly }
-    open-pull-requests-limit: 5
+    schedule: { interval: monthly }
+    groups:
+      npm: { patterns: ["*"] }
   - package-ecosystem: github-actions
     directory: /
-    schedule: { interval: weekly }
+    schedule: { interval: monthly }
+    groups:
+      github-actions: { patterns: ["*"] }

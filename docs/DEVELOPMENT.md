@@ -94,13 +94,13 @@ migration 在本機驗證後提交 source、designer、snapshot 與 SQL。正式
 | `frontend/src/app/core` | API、認證、偏好與 SSE 基礎服務 |
 | `frontend/src/app/shared/ui` | 無業務狀態的圖示、Markdown、訊號元件 |
 | `frontend/src/*.scss` | 三層 tokens、base、分區樣式與 motion |
-| `contracts`／`db`／`deploy` | 可審閱的 API、資料庫、部署產物與說明 |
-| `scripts`／`tooling`／`tests` | 可重現的操作、契約工具與測試 |
+
+頂層資料夾各自的用途見 README 的[資料夾地圖](../README.md#資料夾地圖)。
 
 ## 什麼文件進 Git
 
-`README` 是入口；`docs` 放會隨程式維護的操作、架構、資料庫、授權與設計文件。`deploy` 放交付步驟，`db` 放 migration SQL 與說明。具體開發機環境、排查過程、進度與臨時計畫放 `.local/notes`。本機設定、key ring、logs 放 `.local`；所有 build／報告／screenshots 放 `artifacts`。兩個資料夾整體忽略，不逐一列例外。
+`README` 是入口；`docs` 放會隨程式維護的操作、架構、資料庫、授權與設計文件。本機設定、秘密、日誌與個人筆記放 `.local`，建置與測試輸出放 `artifacts`，兩者都不進 Git，各子資料夾的用途見 [本機產生的資料夾](development/LOCAL_FOLDERS.md)。
 
-提交前看 `git status`／`git diff --cached`，確認只包含 source、public defaults／examples、lockfiles、generated contracts/migrations 與長期文件。`.gitignore` 不是秘密掃描器，不以 `git add -f` 強制加入本機資料。需要分享測試證據時審閱後獨立提供，不取消 artifacts ignore。
+提交前看 `git status`／`git diff --cached`，確認只包含 source、public defaults／examples、lockfiles、generated contracts/migrations 與長期文件。`.gitignore` 不是秘密掃描器，不以 `git add -f` 強制加入本機資料。
 
 先 stage 預計提交的檔案，再執行 `./scripts/Test-Repository.ps1`。它檢查 index 中的本機／產物路徑、public config 的空白秘密欄位、常見 live key 與本機秘密值、source whitespace；只輸出檔名／結果，不輸出秘密。這是針對此專案的檢查，不能取代內容審閱或組織秘密掃描服務。
