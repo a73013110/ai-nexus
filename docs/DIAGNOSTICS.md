@@ -59,16 +59,7 @@ flowchart LR
 
 有查證代碼的驗證／授權拒絕也不被採樣，核心 `http.rejected` 不受最低等級過濾。一般驗證不是 Error；使用者取消不是系統故障。安全稽核完全不經診斷採樣佇列。
 
-| EventId            | EventName                                                         |
-| ------------------ | ----------------------------------------------------------------- |
-| 1000 / 1001 / 1002 | `http.completed` / `operation.failed` / `http.rejected`           |
-| 2001 / 2002        | `retrieval.degraded` / `retrieval.retry`                          |
-| 3000 / 3001        | `job.started` / `job.finished`                                    |
-| 3100 / 3101        | `generation.started` / `generation.finished`                      |
-| 4001               | `client.unhandled`                                                |
-| 5000 / 5001 / 5002 | `service.started` / `service.stopping` / `service.startup.failed` |
-
-新增業務事件使用固定 EventId／EventName。既有無 EventId 的 ILogger 呼叫以 Category＋固定模板的 SHA-256 產生穩定整數 ID；它不是不可碰撞的業務識別，追查時同時使用 Category／EventName。修改模板會改變 fallback ID，因此新功能應明確定義事件。若同一例外跨層拋出，`Issues.Report` 在例外 Data 記錄已分配代碼，避免再次保存同一問題；呼叫端不應先記 Error 再重新拋出讓最外層重複記錄。
+EventId／EventName 的規則與完整清單見 [LOG_EVENTS](LOG_EVENTS.md)。若同一例外跨層拋出，`Issues.Report` 在例外 Data 記錄已分配代碼，避免再次保存同一問題；呼叫端不應先記 Error 再重新拋出讓最外層重複記錄。
 
 | 欄位                                                              | 上限                                       |
 | ----------------------------------------------------------------- | ------------------------------------------ |
@@ -200,7 +191,7 @@ SQL 診斷30天、稽核365天各自分批 autocommit 清理，最大 SQL comman
 
 日誌設定的安全 snapshot／位置指紋變更保存為 `system.diagnostics.configuration` audit；不保存路徑或 exporter URL。SQL 不可用時重試至可保存，不能宣稱即時審計主機上每個改檔者；主機設定檔的 ACL／變更管理需另行治理。
 
-選配 OTLP 向 `/v1/logs`、`/v1/traces`、`/v1/metrics` 匯出，僅使用 AiNexus 明確建立的 spans 和受控 metrics，未啟用會攜帶 SQL／URL 的自動 instrumentation。log processor 將保存的原始 TraceId／SpanId 對應回標準欄位，避免另建不相關 export span。私有 sanitized logger 不接受業務原始 ILogger state。log queue滿及 exporter失敗有計數；trace／metric exporter 自身診斷也應監控 collector／SDK。OTLP 匯出不另存 durable outbox，collector 故障時不保證日後補送至 collector，檔案及 SQL 主保存流程仍可繼續；本機 durable replay 只針對 SQL。
+選配 OTLP 向 `/v1/logs`、`/v1/traces`、`/v1/metrics` 匯出。Traces 只有 AiNexus 明確建立的 spans，未啟用會攜帶 SQL／URL 的自動 tracing instrumentation。Metrics 除自訂 meters 外，也收 ASP.NET Core、Kestrel、rate limiter、授權、HttpClient、EF Core 與 runtime 的內建 meters（清單在 `DiagnosticRegistration.Meters`）；它們的標籤是路由範本、狀態碼、方法、目標主機等低基數值，不含 SQL、完整 URL、使用者或 IP。log processor 將保存的原始 TraceId／SpanId 對應回標準欄位，避免另建不相關 export span。私有 sanitized logger 不接受業務原始 ILogger state。log queue滿及 exporter失敗有計數；trace／metric exporter 自身診斷也應監控 collector／SDK。OTLP 匯出不另存 durable outbox，collector 故障時不保證日後補送至 collector，檔案及 SQL 主保存流程仍可繼續；本機 durable replay 只針對 SQL。
 
 ## 權限、查詢與稽核可靠性
 
@@ -255,24 +246,7 @@ SQL完全離線時管理查詢可能因授權／audit失敗無法打開。可在
 
 ## 新模組加入方式
 
-以下可在現有 module service 使用，不需引用檔案或SQLsink：
-
-```csharp
-private static readonly EventId ExternalRetry = new(6201, "connector.retry");
-
-// ID來自已授權的業務物件；不要使用使用者傳入的身分或trace值。
-using var scope = logger.BeginScope(new Dictionary<string, object?> {
-    ["ResourceId"] = authorizedResource.Id,
-    ["ExternalService"] = "approved-connector",
-    ["Attempt"] = attempt
-});
-logger.LogWarning(ExternalRetry, transientException,
-    "External operation will retry at attempt {Attempt}.", attempt);
-```
-
-RPC重試／降級catch後成功時，記一次Warning並保留穩定typed reason。最終失敗直接throw給共用HTTP／job／run邊界，不在每層重複Error。`IBackgroundJobHandler`自動獲得持久Job／Attempt關聯；不要攜帶request scope至佇列。若新增子Activity，使用標準ActivitySource並僅使用核準標籤；顯式共享Source或`DiagnosticTrace.Start`的可信parent。新增metadata先更新白名單、欄位界限及敏感資料測試。新增公開code的安全4xx提示同步更新backend／frontendcatalog及契約；例外Message不能當提示。
-
-涉及授權、管理設定或特權資料讀取時使用現有交易AuditEvent；記錄安全before／after而非任意物件，保存失敗必須取消高權限操作。logger不能代替此audit。診斷查詢與cleanup用共用服務，禁止另建每request同步INSERT sink。
+見 [LOG_EVENTS](LOG_EVENTS.md#新模組加入方式)。
 
 ## 驗收與待確認政策
 

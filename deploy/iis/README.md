@@ -215,7 +215,7 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Api.dll' `
 2. AD 登入後能開對話，重新整理仍登入；登出後私人 URL 再次要求登入。
 3. 短回答與「圖解傅立葉轉換」能串流到完成；停止／重新生成都保留歷史。
 4. 上傳合成文字檔及圖片，實際模型能力正確；文字模型不應允許圖片。
-5. 網路面板 `/api/v1/status` 是 ready；`/health/live` 只有存活，不代表 SQL 或模型就緒。
+5. 網路面板 `/api/v1/status` 是 ready；匿名的 `/health/ready` 回 200（資料庫可連線，SQL 停止時回 503），`/health/live` 只代表程序存活。負載平衡或監控探測用 `/health/ready`；它不檢查模型服務。
 6. 一般帳號不可開管理 API；管理員查看對話會留稽核。專案／知識權限隔離正常。
 7. 回收集區後重新登入／生成可用；config／keys／logs／data 的 URL 無法讀取。
 8. 啟用 Google 與 Ollama 時，兩個使用者可同時使用不同 provider；停用其中一台服務仍可選其餘模型，沒有自動 provider fallback。
