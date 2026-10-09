@@ -286,6 +286,6 @@ RPC重試／降級catch後成功時，記一次Warning並保留穩定typed reaso
 ./scripts/Test-Repository.ps1 -WorkingTree
 ```
 
-真實瀏覽器驗收使用已編譯Angular、loopback Kestrel、隔離SQLite與test assembly內identity/provider：觸發受控模型錯誤 → 頁面取得並實際複製NX → 管理頁查到同筆遮罩後的HttpRequestException、TraceId／RunId與timeline；不使用正式憑證。結果、截圖、TRX、吞吐／p95／記憶體報告在artifacts。詳見 [DIAGNOSTICS-VERIFICATION](DIAGNOSTICS-VERIFICATION.md)，明確區分實測與尚未實機驗證事項。
+真實瀏覽器驗收使用已編譯Angular、loopback Kestrel、隔離SQLite與test assembly內identity/provider：觸發受控模型錯誤 → 頁面取得並實際複製NX → 管理頁查到同筆遮罩後的HttpRequestException、TraceId／RunId與timeline；不使用正式憑證。結果、截圖、TRX、吞吐／p95／記憶體報告在artifacts。詳見 [DIAGNOSTICS_VERIFICATION](DIAGNOSTICS_VERIFICATION.md)，明確區分實測與尚未實機驗證事項。
 
 資安保存期限尚未提供。30天診斷／14天已補送文件／365天稽核只是可設定預設，待確認：組織保存／法定保留與legal hold、哪些角色可query/detail/export、使用者識別保存政策、備份期限、磁碟／SQL容量與告警門檻、external collector的TLS／身分與保存邊界、設定檔變更管理、是否需要WORM及主機crash收集。只有完成日誌功能不代表符合所有資安法規或組織政策。
