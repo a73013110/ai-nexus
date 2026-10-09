@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Features.Quality.RetrievalEvaluations;

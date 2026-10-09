@@ -1,5 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-
 namespace AiNexus.Features.Conversations;
 
 public sealed record ConversationDto(Guid Id, string Title, Guid? ActiveLeafId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, bool IsFavorite = false, bool IsArchived = false, string SystemInstruction = "", IReadOnlyList<string>? Labels = null, Guid? ProjectId = null);

@@ -1,5 +1,4 @@
 using AiNexus.Features.Inference;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Knowledge.Embeddings;
