@@ -16,7 +16,18 @@ using MarkdownCell = Markdig.Extensions.Tables.TableCell;
 
 namespace AiNexus.Features.Artifacts;
 
-public sealed class ExportOptions { public string BrowserChannel { get; set; } = "msedge"; public int TimeoutSeconds { get; set; } = 30; }
+public sealed class ExportOptions
+{
+    /// <summary>Installed browser channel (<c>msedge</c>, <c>chrome</c>) or <c>chromium</c> for the Playwright-managed build.</summary>
+    public string BrowserChannel { get; set; } = "msedge";
+    /// <summary>Absolute path to a Chromium-based browser executable; when set it replaces <see cref="BrowserChannel"/>.</summary>
+    public string? BrowserExecutablePath { get; set; }
+    public int TimeoutSeconds { get; set; } = 30;
+
+    internal BrowserTypeLaunchOptions LaunchOptions() => string.IsNullOrWhiteSpace(BrowserExecutablePath)
+        ? new() { Channel = BrowserChannel == "chromium" ? null : BrowserChannel, Headless = true, Timeout = TimeoutSeconds * 1000 }
+        : new() { ExecutablePath = BrowserExecutablePath, Headless = true, Timeout = TimeoutSeconds * 1000 };
+}
 public sealed record ExportFile(byte[] Data, string ContentType);
 public sealed class ArtifactExport(PdfExportRenderer pdf)
 {
@@ -105,7 +116,7 @@ public sealed class PdfExportRenderer(IOptions<ExportOptions> options) : IAsyncD
         try
         {
             await startup.WaitAsync(ct);
-            try { if (browser?.IsConnected != true) { driver ??= await Playwright.CreateAsync(); browser = await driver.Chromium.LaunchAsync(new() { Channel = options.Value.BrowserChannel == "chromium" ? null : options.Value.BrowserChannel, Headless = true, Timeout = options.Value.TimeoutSeconds * 1000 }); } ct.ThrowIfCancellationRequested(); }
+            try { if (browser?.IsConnected != true) { driver ??= await Playwright.CreateAsync(); browser = await driver.Chromium.LaunchAsync(options.Value.LaunchOptions()); } ct.ThrowIfCancellationRequested(); }
             finally { startup.Release(); }
             context = await browser.NewContextAsync(new() { JavaScriptEnabled = false, ServiceWorkers = ServiceWorkerPolicy.Block, AcceptDownloads = false }); ct.ThrowIfCancellationRequested();
             await context.RouteAsync("**/*", route => route.AbortAsync());

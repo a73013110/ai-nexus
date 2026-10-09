@@ -159,4 +159,4 @@ Embedding 支援 google／ollama／none，Mode 支援 hybrid／vector／keyword�
 
 `Attachments.StoragePath` 必須為網站目錄外的絕對路徑，正式外部 JSON 設為 `D:\CoreProject\AiNexus\data\attachments`；web.config 可加 `Attachments__StoragePath` 環境變數覆寫。`DefaultOwnerLimitBytes=5000000000` 為預設容量，個人設定優先於群組與預設。`CleanupIntervalMinutes=60` 與 `DraftRetentionDays=14` 控制定期回收。其餘檔案驗證見 [附件](ATTACHMENTS.md)；部署 ACL 及一致性備份見 [IIS](../deploy/iis/README.md)、[備份](BACKUP.md)。
 
-`Exports` 管理 PDF 匯出瀏覽器及逾時。`AllowedHosts` 是 IIS 接受的實際 Host 名稱（不含 scheme／port）。`Security.DisableHttpsRedirection` 預設 false；停用轉址不會停用 Production 的 Secure cookie。`Logging.LogLevel` 控制日誌，不記錄密碼、key、完整提問或回答。
+`Exports` 管理 PDF 匯出瀏覽器（`BrowserChannel` 或 `BrowserExecutablePath`）及逾時，見 [成果文件](ARTIFACTS.md)。`AllowedHosts` 是 IIS 接受的實際 Host 名稱（不含 scheme／port）。`Security.DisableHttpsRedirection` 預設 false；停用轉址不會停用 Production 的 Secure cookie。`Logging.LogLevel` 控制日誌，不記錄密碼、key、完整提問或回答。

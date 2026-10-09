@@ -10,10 +10,6 @@ using static Microsoft.Playwright.Assertions;
 
 namespace AiNexus.Tests;
 
-public sealed class DiagnosticBrowserFactAttribute : FactAttribute
-{
-    public DiagnosticBrowserFactAttribute() { if (Environment.GetEnvironmentVariable("NEXUS_DIAGNOSTIC_BROWSER") != "1") Skip = "Run scripts/Test-Diagnostics.ps1 -Browser with a built frontend and local Microsoft Edge."; }
-}
 [CollectionDefinition("Diagnostic browser", DisableParallelization = true)]
 public sealed class DiagnosticBrowserCollection;
 
@@ -22,7 +18,7 @@ public sealed partial class DiagnosticBrowserTests
 {
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 
-    [DiagnosticBrowserFact, Trait("Category", "Browser")]
+    [BrowserFact, Trait("Category", "Browser")]
     public async Task RealFrontendCopiesIssueAndAdministratorFindsMaskedCause()
     {
         var root = Path.GetFullPath("../../../../../..", AppContext.BaseDirectory);
@@ -32,7 +28,7 @@ public sealed partial class DiagnosticBrowserTests
         factory.Provider.Fail = true; factory.UseKestrel(0);
         using var client = await factory.SignedInAsync();
         using var playwright = await Playwright.CreateAsync();
-        await using var browser = await playwright.Chromium.LaunchAsync(new() { Channel = "msedge", Headless = true });
+        await using var browser = await playwright.Chromium.LaunchAsync(TestBrowser.LaunchOptions());
         await using var context = await browser.NewContextAsync(new() {
             BaseURL = client.BaseAddress!.ToString(), ViewportSize = new() { Width = 1440, Height = 1000 },
             ExtraHTTPHeaders = new Dictionary<string, string> { ["X-Test-User"] = "alice" }, Permissions = ["clipboard-read", "clipboard-write"]
@@ -42,7 +38,7 @@ public sealed partial class DiagnosticBrowserTests
         await page.GotoAsync("/chat");
         await page.GetByRole(AriaRole.Textbox, new() { Name = "傳送訊息" }).FillAsync("受控日誌驗收：觸發模型服務失敗");
         await page.GetByRole(AriaRole.Button, new() { Name = "送出訊息", Exact = true }).ClickAsync();
-        var failure = page.Locator(".error-note").First;
+        var failure = page.Locator("article[aria-label='AI 回覆']").GetByRole(AriaRole.Alert).First;
         await Expect(failure).ToContainTextAsync("查證代碼：NX-", new() { Timeout = 15000 });
         var text = await failure.InnerTextAsync(); var issue = Code().Match(text).Value; Assert.True(Issues.ValidCode(issue));
         Assert.DoesNotContain("fixture failure", await page.Locator("body").InnerTextAsync());
@@ -92,7 +88,7 @@ public sealed partial class DiagnosticBrowserTests
         await Expect(page.Locator(".log-health")).ToContainTextAsync("日誌系統降級");
         await page.RouteAsync("**/api/v1/admin/logs?*", route => route.FulfillAsync(new() { Status = 503, ContentType = "application/problem+json", Body = JsonSerializer.Serialize(new { code = "service_unavailable", title = "Password=fixture-ui-secret https://private.test/provider", issueCode = issue }) }));
         await page.GetByRole(AriaRole.Button, new() { Name = "查詢", Exact = true }).ClickAsync();
-        await Expect(page.Locator(".error-banner")).ToContainTextAsync("操作未完成，請聯絡管理員");
+        await Expect(page.GetByRole(AriaRole.Alert).Filter(new() { HasText = "操作未完成，請聯絡管理員" })).ToBeVisibleAsync();
         Assert.DoesNotContain("fixture-ui-secret", await page.Locator("body").InnerTextAsync());
         await page.ScreenshotAsync(new() { Path = Path.Combine(evidence, "query-failure-and-degraded.png"), FullPage = true });
         await page.UnrouteAsync("**/api/v1/admin/logs?*");
