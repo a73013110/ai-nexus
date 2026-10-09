@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Chat;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Billing;
 using AiNexus.Features.Dashboard;
@@ -148,7 +147,7 @@ public sealed class BillingTests
             await db.SaveChangesAsync();
         }
         var body = await client.GetStringAsync($"/api/v1/conversations/{conversation.Id}/spend"); Assert.DoesNotContain("retired-private", body);
-        var spend = System.Text.Json.JsonSerializer.Deserialize<ConversationSpendDto>(body, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web))!;
+        var spend = System.Text.Json.JsonSerializer.Deserialize<ConversationSpendDto>(body, System.Text.Json.JsonSerializerOptions.Web)!;
         Assert.Equal(2, Assert.Single(spend.Models).Requests); Assert.Equal(2m, spend.Models[0].Amount);
     }
 

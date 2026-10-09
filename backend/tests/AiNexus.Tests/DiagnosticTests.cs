@@ -453,7 +453,7 @@ public sealed class DiagnosticTests
         http.SetEndpoint(new Endpoint(_ => Task.CompletedTask, new EndpointMetadataCollection(new SuppressSuccessfulRequestLog()), "diagnostic-read"));
         await new DiagnosticRequestMiddleware(context => { context.Response.StatusCode = status; context.Response.ContentLength = 1; return Task.CompletedTask; })
             .InvokeAsync(http, services.GetRequiredService<Issues>(), services.GetRequiredService<ILogger<DiagnosticRequestMiddleware>>());
-        Assert.Equal(logged, buffer.Drain().Any(x => x.EventId == DiagnosticEvents.Request.Id));
+        Assert.Equal(logged, buffer.Drain().Any(x => x.EventId == DiagnosticEvents.Request));
     }
 
     private static string Range() => "from=" + Uri.EscapeDataString(DateTimeOffset.UtcNow.AddHours(-1).ToString("O")) + "&to=" + Uri.EscapeDataString(DateTimeOffset.UtcNow.AddMinutes(1).ToString("O"));

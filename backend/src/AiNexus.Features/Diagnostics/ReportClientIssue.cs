@@ -25,7 +25,7 @@ internal sealed class ClientIssueRequestValidator : RequestValidator<ClientIssue
 /// An untrusted browser report of an unhandled exception or rejection, logged once per user and fingerprint a minute.
 /// Only the kind and a hash reach the log; the issue code is accepted when the diagnostic queue admits the event.
 /// </summary>
-internal static class ReportClientIssue
+internal static partial class ReportClientIssue
 {
     public static void Map(RouteGroupBuilder api) => api
         .MapPost("/client-issues", (ClientIssueRequest request, ICurrentUser user, ClientIssueDeduplication dedup, ILogger<ClientIssueDeduplication> logger) =>
@@ -36,10 +36,13 @@ internal static class ReportClientIssue
     {
         var receipt = new DiagnosticDelivery();
         using var scope = logger.BeginScope(new Dictionary<string, object?> { ["NexusDelivery"] = receipt, ["IssueCode"] = code, ["UserId"] = user, ["UntrustedClient"] = true, ["ClientKind"] = request.Kind, ["ClientFingerprint"] = request.Fingerprint });
-        logger.LogWarning(DiagnosticEvents.Client, "Untrusted client reported {ClientKind}; fingerprint {ClientFingerprint}.", request.Kind, request.Fingerprint);
+        LogClientIssue(logger, request.Kind, request.Fingerprint);
         // Queue admission is not a synchronous durable-storage acknowledgement.
         return receipt.Accepted;
     }
+
+    [LoggerMessage(EventId = 4001, EventName = "client.unhandled", Level = LogLevel.Warning, Message = "Untrusted client reported {ClientKind}; fingerprint {ClientFingerprint}.")]
+    private static partial void LogClientIssue(ILogger logger, string clientKind, string clientFingerprint);
 }
 
 public sealed class ClientIssueDeduplication : IDisposable

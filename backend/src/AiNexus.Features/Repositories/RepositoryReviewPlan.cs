@@ -81,7 +81,7 @@ public static class RepositoryReviewPlan
     /// <summary>Bound complete Unicode characters and prefer line boundaries; never silently drop source or evidence.</summary>
     public static IEnumerable<string> Chunks(string text, int budget)
     {
-        if (budget < 4) throw new ArgumentOutOfRangeException(nameof(budget));
+        ArgumentOutOfRangeException.ThrowIfLessThan(budget, 4);
         for (var start = 0; start < text.Length;)
         {
             var length = 0; var bytes = 0;

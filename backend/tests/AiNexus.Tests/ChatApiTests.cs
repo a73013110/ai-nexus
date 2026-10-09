@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -200,7 +201,7 @@ public sealed class ChatApiTests
         Assert.Equal(RunStates.Cancelled, cancelled.Status);
         Assert.NotEmpty(cancelled.Content);
         var events = await client.GetStringAsync($"/api/v1/runs/{run.Id}/events?after=0");
-        var ids = events.Split('\n').Where(x => x.StartsWith("id: ")).Select(x => long.Parse(x[4..])).ToList();
+        var ids = events.Split('\n').Where(x => x.StartsWith("id: ", StringComparison.Ordinal)).Select(x => long.Parse(x[4..], CultureInfo.InvariantCulture)).ToList();
         Assert.Equal(ids.Distinct().Order(), ids);
         Assert.Contains("cancelled", events);
         var resumed = await client.GetStringAsync($"/api/v1/runs/{run.Id}/events?after={ids[0]}");
@@ -238,8 +239,8 @@ public sealed class ChatApiTests
         await db.RunEvents.Where(x => x.RunId == run.Id).ExecuteDeleteAsync();
         var events = await client.GetStringAsync($"/api/v1/runs/{run.Id}/events?after=0");
         Assert.Contains("snapshot", events);
-        var data = events.Split('\n').Single(x => x.StartsWith("data: "))[6..];
-        Assert.Equal(completed.Content, JsonSerializer.Deserialize<RunEventDto>(data, new JsonSerializerOptions(JsonSerializerDefaults.Web))!.Delta);
+        var data = events.Split('\n').Single(x => x.StartsWith("data: ", StringComparison.Ordinal))[6..];
+        Assert.Equal(completed.Content, JsonSerializer.Deserialize<RunEventDto>(data, JsonSerializerOptions.Web)!.Delta);
     }
 
     internal static async Task<ConversationDto> CreateConversation(HttpClient client, string? title = null)

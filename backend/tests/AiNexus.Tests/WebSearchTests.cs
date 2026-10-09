@@ -4,7 +4,6 @@ using System.Text.Json;
 using AiNexus.Features.Chat;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Inference;
 using AiNexus.Features.WebSearch;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;

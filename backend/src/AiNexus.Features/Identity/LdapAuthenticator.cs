@@ -26,6 +26,7 @@ public interface IAdAuthenticator
     Task VerifyServiceAsync(CancellationToken ct);
 }
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1001:Types that own disposable fields should be disposable", Justification = "SemaphoreSlim without AvailableWaitHandle holds nothing to release; disposing a shared gate would throw in work still releasing it during shutdown.")]
 public sealed class LdapAuthenticator(IOptions<AdAuthenticationOptions> options) : IAdAuthenticator
 {
     private readonly SemaphoreSlim gate = new(4, 4);

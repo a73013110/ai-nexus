@@ -112,7 +112,7 @@ internal sealed class CreateShare(NexusDbContext db, ResourceAccess access, Shar
         var runIds = runs.Values.Select(x => x.Id).ToArray();
         var searches = await db.Set<WebSearchRecord>().AsNoTracking().Where(x => x.RunId != null && runIds.Contains(x.RunId.Value)).ToListAsync(ct);
         var messages = branch.Select(x => new SharedMessageDto(x.Role, x.Content, x.Status, x.CreatedAt,
-            links.Where(l => l.MessageId == x.Id).Select(l => new AttachmentDto(l.Id, l.FileName, l.ContentType, l.Size, l.ContentType.StartsWith("image/"), "shared-file")).ToArray(),
+            links.Where(l => l.MessageId == x.Id).Select(l => new AttachmentDto(l.Id, l.FileName, l.ContentType, l.Size, l.ContentType.StartsWith("image/", StringComparison.Ordinal), "shared-file")).ToArray(),
             x.ModelId, x.ErrorCode, citations.Where(c => c.MessageId == x.Id).OrderBy(c => c.Number).Select(c => new CitationDto(c.Number, c.DocumentId, c.Title, c.PageNumber, c.Excerpt, c.EndPage)).ToArray(),
             runs.TryGetValue(x.Id, out var run) && searches.Any(s => s.RunId == run.Id) ? searches.Where(s => s.RunId == run.Id).SelectMany(WebSearchService.Sources).ToArray() : null,
             runs.TryGetValue(x.Id, out var timing) ? RunTiming.Describe(timing) : null, IssueCode: x.IssueCode)).ToArray();

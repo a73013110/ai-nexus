@@ -1,3 +1,4 @@
+using System.Globalization;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Time;
@@ -62,8 +63,8 @@ public sealed class UsageReports(NexusDbContext db, ModelPresentation presentati
         IReadOnlyList<TokenDayDto> rows;
         if (db.Database.IsSqlServer()) rows = (await query.GroupBy(x => new { Day = x.CreatedAt.AddMinutes(period.Offset).Date, x.ModelId })
             .Select(g => new { g.Key.Day, g.Key.ModelId, Requests = g.Count(), Known = g.Count(x => x.InputTokens != null && x.OutputTokens != null), Input = g.Sum(x => x.InputTokens ?? 0), Output = g.Sum(x => x.OutputTokens ?? 0) }).ToListAsync(ct))
-            .Select(x => new TokenDayDto(x.Day.ToString("yyyy-MM-dd"), x.ModelId, x.Requests, x.Known, x.Input, x.Output)).ToArray();
-        else rows = (await query.ToListAsync(ct)).GroupBy(x => new { Day = x.CreatedAt.ToOffset(TimeSpan.FromMinutes(period.Offset)).ToString("yyyy-MM-dd"), x.ModelId })
+            .Select(x => new TokenDayDto(x.Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), x.ModelId, x.Requests, x.Known, x.Input, x.Output)).ToArray();
+        else rows = (await query.ToListAsync(ct)).GroupBy(x => new { Day = x.CreatedAt.ToOffset(TimeSpan.FromMinutes(period.Offset)).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), x.ModelId })
             .Select(g => new TokenDayDto(g.Key.Day, g.Key.ModelId, g.Count(), g.Count(x => x.InputTokens != null && x.OutputTokens != null), g.Sum(x => x.InputTokens ?? 0), g.Sum(x => x.OutputTokens ?? 0))).ToArray();
         // Merge aliases after presentation so hidden model identifiers never enter personal reports.
         var presented = rows.GroupBy(x => new { x.Date, Model = administrator ? x.ModelId : presentation.PublicId(x.ModelId) })

@@ -145,7 +145,7 @@ public sealed class EmbeddingReindexHandler(NexusDbContext db, EmbeddingLifecycl
         return chunks == embeddings;
     }
 }
-public sealed class EmbeddingBootstrapWorker(IServiceScopeFactory scopes, StorageReadiness readiness, IHostEnvironment environment, ILogger<EmbeddingBootstrapWorker> logger) : BackgroundService
+public sealed partial class EmbeddingBootstrapWorker(IServiceScopeFactory scopes, StorageReadiness readiness, IHostEnvironment environment, ILogger<EmbeddingBootstrapWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -176,8 +176,11 @@ public sealed class EmbeddingBootstrapWorker(IServiceScopeFactory scopes, Storag
                 }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
-            catch (Exception error) { logger.LogWarning("索引啟動或保留期限工作未完成。原因：{Reason}", error.GetType().Name); }
+            catch (Exception error) { LogDeferred(logger, error.GetType().Name); }
             await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
         }
     }
+
+    [LoggerMessage(EventId = 2003, EventName = "embedding.bootstrap_deferred", Level = LogLevel.Warning, Message = "索引啟動或保留期限工作未完成。原因：{Reason}")]
+    private static partial void LogDeferred(ILogger logger, string reason);
 }

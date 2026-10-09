@@ -1,9 +1,7 @@
-using System.Threading.RateLimiting;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Modules;
-using Microsoft.AspNetCore.RateLimiting;
 
 namespace AiNexus.Features.Diagnostics;
 
@@ -23,12 +21,7 @@ public sealed class DiagnosticsModule : IFeatureModule
         services.AddSingleton<ClientIssueDeduplication>();
         foreach (var feature in new[] { DiagnosticConfiguration.Query, DiagnosticConfiguration.Detail, DiagnosticConfiguration.Export })
             services.AddFeaturePolicy(feature);
-        services.AddRateLimiter(options =>
-        {
-            foreach (var (policy, permits) in new[] { (ClientIssueRateLimit, 10), (QueryRateLimit, 60), (ExportRateLimit, 2) })
-                options.AddPolicy(policy, http => RateLimitPartition.GetFixedWindowLimiter(PerUser(http),
-                    _ => new FixedWindowRateLimiterOptions { PermitLimit = permits, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true }));
-        });
+        services.AddRateLimiter(options => options.AddPerUserLimit(ClientIssueRateLimit, 10).AddPerUserLimit(QueryRateLimit, 60).AddPerUserLimit(ExportRateLimit, 2));
     }
 
     // Endpoint order is the published OpenAPI order.
@@ -43,7 +36,4 @@ public sealed class DiagnosticsModule : IFeatureModule
         ExportSystemLogs.Map(logs);
         ReportClientIssue.Map(api);
     }
-
-    private static string PerUser(HttpContext http)
-        => http.User.FindFirst(SessionIdentity.UserId)?.Value ?? http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 }

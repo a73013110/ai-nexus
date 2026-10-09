@@ -4,7 +4,7 @@ using AiNexus.Features.Inference;
 
 namespace AiNexus.Features.Chat;
 
-public sealed class RunRecoveryWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, StorageReadiness storage, ILogger<RunRecoveryWorker> logger) : BackgroundService
+public sealed partial class RunRecoveryWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, StorageReadiness storage, ILogger<RunRecoveryWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -30,9 +30,12 @@ public sealed class RunRecoveryWorker(IServiceScopeFactory scopes, GenerationSch
                     }
                     await scope.ServiceProvider.GetRequiredService<RunLeaseRecovery>().RecoverAsync(now, stoppingToken);
                 }
-                catch (Exception ex) when (!stoppingToken.IsCancellationRequested) { logger.LogWarning("Orphan recovery postponed ({ErrorType}).", ex.GetType().Name); }
+                catch (Exception ex) when (!stoppingToken.IsCancellationRequested) { LogPostponed(logger, ex.GetType().Name); }
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
     }
+
+    [LoggerMessage(EventId = 3106, EventName = "generation.recovery_postponed", Level = LogLevel.Warning, Message = "Orphan recovery postponed ({ErrorType}).")]
+    private static partial void LogPostponed(ILogger logger, string errorType);
 }
