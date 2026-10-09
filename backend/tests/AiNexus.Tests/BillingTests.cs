@@ -122,7 +122,7 @@ public sealed class BillingTests
         {
             for (var i = 0; i < 250; i++)
             {
-                var user = new AiNexus.Features.Identity.NexusUser { Sid = "fixture-cost-" + i, Account = "account-" + i, DisplayName = "user-" + i };
+                var user = new AiNexus.Features.Identity.Users.NexusUser { Sid = "fixture-cost-" + i, Account = "account-" + i, DisplayName = "user-" + i };
                 db.Add(user); db.Add(new ModelCharge { Id = Guid.NewGuid(), OwnerId = user.Id, Currency = "USD", Kind = "api", Amount = 1m, State = "metered", CreatedAt = DateTimeOffset.UtcNow, ModelId = "test-model", Provider = "google" });
             }
             db.SaveChanges();

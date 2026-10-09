@@ -5,6 +5,7 @@ using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Identity;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Account;
 

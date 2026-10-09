@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using AiNexus.Features.Identity;
+using AiNexus.Features.Identity.Sessions;
 
 namespace AiNexus.Features.Monitoring;
 

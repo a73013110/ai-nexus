@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Artifacts;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Projects;
 using AiNexus.Features.Sharing;
@@ -11,6 +10,7 @@ using AiNexus.Platform.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Tests;
 

@@ -6,6 +6,7 @@ using AiNexus.Features.Identity;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Inference;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Chat;
 

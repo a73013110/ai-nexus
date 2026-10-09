@@ -14,6 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using static AiNexus.Tests.ChatApiTests;
 using AiNexus.Features.Audit;
+using AiNexus.Features.Administration.Roles;
 
 namespace AiNexus.Tests;
 

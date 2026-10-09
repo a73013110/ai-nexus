@@ -5,7 +5,6 @@ using System.Text;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Knowledge;
 using Dapper;
@@ -21,6 +20,7 @@ using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Knowledge.Indexing;
 using AiNexus.Features.Knowledge.Embeddings;
 using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Tests;
 

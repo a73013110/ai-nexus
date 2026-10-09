@@ -89,7 +89,7 @@ public sealed class EmbeddingLifecycleTests
     {
         await using var factory = new NexusFactory(administrators: ["alice"], services: services => services.PostConfigure<KnowledgeOptions>(x => x.EmbeddingProvider = "none"));
         using var client = await factory.SignedInAsync(); var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
-        using var search = await client.PostAsJsonAsync("/api/v1/admin/knowledge/search", new AiNexus.Features.Administration.AdminRetrievalSearchRequest("採購", [seed.Collection], "vector")); search.EnsureSuccessStatusCode();
+        using var search = await client.PostAsJsonAsync("/api/v1/admin/knowledge/search", new AiNexus.Features.Administration.Retrieval.AdminRetrievalSearchRequest("採購", [seed.Collection], "vector")); search.EnsureSuccessStatusCode();
         Assert.Equal("keyword", (await search.Content.ReadFromJsonAsync<KnowledgeSearchDto>())!.Mode); Assert.Equal(0, factory.Embeddings.Calls);
         factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.EmbeddingProvider = "ollama";
         using var probe = await client.PostAsync("/api/v1/admin/knowledge/capabilities/probe", null); probe.EnsureSuccessStatusCode();

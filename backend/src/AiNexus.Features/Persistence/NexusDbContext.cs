@@ -1,5 +1,4 @@
 using AiNexus.Features.Conversations;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.AccessControl;
 using Microsoft.EntityFrameworkCore;
@@ -7,6 +6,8 @@ using AiNexus.Platform.Errors;
 using AiNexus.Platform.Events;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Audit;
+using AiNexus.Features.Identity.Sessions;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Persistence;
 

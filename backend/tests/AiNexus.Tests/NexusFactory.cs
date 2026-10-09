@@ -20,6 +20,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Attachments;
 using Xunit;
+using AiNexus.Features.Identity.Authentication;
 
 namespace AiNexus.Tests;
 

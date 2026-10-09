@@ -1,4 +1,3 @@
-using System.Collections.Concurrent;
 using System.DirectoryServices.AccountManagement;
 using System.Runtime.Versioning;
 using System.Security.Claims;
@@ -8,35 +7,11 @@ using AiNexus.Platform.Security;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.AccessControl;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Identity.Authentication;
+using AiNexus.Features.Identity.Sessions;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Identity;
-
-public sealed class IdentityWriteLock
-{
-    public SemaphoreSlim Gate { get; } = new(1, 1);
-}
-
-/// <summary>Directory display names by SID for an hour, bounded so a host's lifetime cannot grow it without limit.</summary>
-public sealed class DisplayNameCache(TimeProvider clock)
-{
-    private const int Capacity = 4096;
-    private static readonly TimeSpan Lifetime = TimeSpan.FromHours(1);
-    private readonly ConcurrentDictionary<string, (string Name, DateTimeOffset At)> names = new(StringComparer.Ordinal);
-
-    public string GetOrAdd(string sid, Func<string> resolve)
-    {
-        var now = clock.GetUtcNow();
-        if (names.TryGetValue(sid, out var cached) && now - cached.At < Lifetime) return cached.Name;
-        var name = resolve();
-        if (names.Count >= Capacity)
-        {
-            foreach (var entry in names) if (now - entry.Value.At >= Lifetime) names.TryRemove(entry);
-            if (names.Count >= Capacity) names.Clear();
-        }
-        names[sid] = (name, now);
-        return name;
-    }
-}
 
 public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, IEnumerable<ISignInGrant> grants,
     DisplayNameCache names, TimeProvider clock) : IRequestUser, ICurrentUser

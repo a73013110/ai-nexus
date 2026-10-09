@@ -5,12 +5,13 @@ using AiNexus.Features.Account;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Inference;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Administration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using static AiNexus.Tests.ChatApiTests;
 using AiNexus.Features.Audit;
+using AiNexus.Features.Administration.Users;
+using AiNexus.Features.Administration.Roles;
 
 namespace AiNexus.Tests;
 

@@ -11,7 +11,6 @@ using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Projects;
-using AiNexus.Features.Quality;
 using AiNexus.Features.Sharing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -21,6 +20,10 @@ using Xunit;
 using static AiNexus.Tests.ChatApiTests;
 using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Features.Identity.Authentication;
+using AiNexus.Features.Identity.Sessions;
+using AiNexus.Features.Identity.Users;
+using AiNexus.Features.Quality.Evaluations;
 
 namespace AiNexus.Tests;
 
@@ -105,7 +108,7 @@ public sealed class QueryEfficiencyTests
         using var alice = await factory.SignedInAsync();
         var me = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         // The request authorized with administrator grants; removing them must still be detected after the write.
-        Assert.Equal(HttpStatusCode.Conflict, (await alice.PutAsJsonAsync($"/api/v1/admin/users/{me.Id}/roles", new AiNexus.Features.Administration.UserRolesRequest(["member"]))).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await alice.PutAsJsonAsync($"/api/v1/admin/users/{me.Id}/roles", new AiNexus.Features.Administration.Users.UserRolesRequest(["member"]))).StatusCode);
         Assert.Contains((await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == "admin");
     }
 

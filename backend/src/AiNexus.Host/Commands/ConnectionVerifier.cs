@@ -3,13 +3,13 @@ using System.Text.Json;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Attachments;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Platform.Errors;
+using AiNexus.Features.Identity.Authentication;
 
 namespace AiNexus.Host.Commands;
 
