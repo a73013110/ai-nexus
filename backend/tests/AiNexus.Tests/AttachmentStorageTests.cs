@@ -211,8 +211,22 @@ public sealed class AttachmentStorageTests
     [Fact]
     public void StorageRejectsWebsitePathsAndRelativePaths()
     {
-        Assert.Throws<InvalidOperationException>(() => FileAttachmentStorage.ValidateRoot("data", @"D:\site"));
-        Assert.Throws<InvalidOperationException>(() => FileAttachmentStorage.ValidateRoot(@"D:\site\wwwroot\files", @"D:\site"));
+        var root = Path.Combine(Path.GetTempPath(), "nexus-storage-root");
+        var site = Path.Combine(root, "site");
+        var attachments = Path.Combine(root, "data", "attachments");
+        Assert.Throws<InvalidOperationException>(() => FileAttachmentStorage.ValidateRoot("data", site));
+        Assert.Throws<InvalidOperationException>(() => FileAttachmentStorage.ValidateRoot(site, site));
+        Assert.Throws<InvalidOperationException>(() => FileAttachmentStorage.ValidateRoot(Path.Combine(site, "wwwroot", "files"), site));
+        Assert.Throws<InvalidOperationException>(() => FileAttachmentStorage.ValidateRoot(Path.Combine(root, "data", "..", "site", "files"), site));
+        Assert.Equal(attachments, FileAttachmentStorage.ValidateRoot(attachments + Path.DirectorySeparatorChar, site));
+        Assert.Equal(site + "-data", FileAttachmentStorage.ValidateRoot(site + "-data", site));
+    }
+
+    [WindowsFact]
+    public void StorageComparesWindowsPathsWithoutCaseAndRejectsDriveRelativePaths()
+    {
+        Assert.Throws<InvalidOperationException>(() => FileAttachmentStorage.ValidateRoot(@"D:data\attachments", @"D:\site"));
+        Assert.Throws<InvalidOperationException>(() => FileAttachmentStorage.ValidateRoot(@"d:\SITE\wwwroot\files", @"D:\site"));
         Assert.Equal(@"D:\CoreProject\AiNexus\data\attachments", FileAttachmentStorage.ValidateRoot(@"D:\CoreProject\AiNexus\data\attachments", @"D:\CoreProject\AiNexus\site"));
     }
 
