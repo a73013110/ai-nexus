@@ -46,14 +46,14 @@ import { Icon } from '../../shared/ui/icon';
       (click)="move(1)"
     >
       <nx-icon name="chevron" /></button
-    ><button type="button" class="icon-button" aria-label="關閉訊息搜尋" (click)="close.emit()">
+    ><button type="button" class="icon-button" aria-label="關閉訊息搜尋" (click)="closed.emit()">
       <nx-icon name="close" />
     </button>
   </div>`,
 })
 export class ConversationFind {
   readonly messages = input.required<Message[]>();
-  readonly close = output<void>();
+  readonly closed = output<void>();
   readonly found = output<{ ids: string[]; active: string | null }>();
   readonly query = signal('');
   readonly index = signal(0);
@@ -74,7 +74,7 @@ export class ConversationFind {
   }
   keydown(event: KeyboardEvent) {
     if (event.isComposing) return;
-    if (event.key === 'Escape') this.close.emit();
+    if (event.key === 'Escape') this.closed.emit();
     else if (event.key === 'Enter') {
       event.preventDefault();
       this.move(event.shiftKey ? -1 : 1);

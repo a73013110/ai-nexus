@@ -18,33 +18,35 @@ import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
   imports: [Icon],
   providers: [TEXT_ACTION_ICON_PROVIDER],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<div
-    #panel
-    class="paragraph-float"
-    role="toolbar"
-    aria-label="選取文字操作"
-    (pointerdown)="$event.preventDefault()"
-    (keydown)="key($event)"
-  >
-    @for (action of actions; track action.value) {
-      <button type="button" (click)="selected.emit(action.value)">
-        <nx-icon [name]="action.icon" />{{ action.label }}
-      </button>
-    }
-    @if (canSave()) {
-      <button type="button" (click)="selected.emit('save')">
-        <nx-icon name="document" />儲存成果
-      </button>
-    }
-    <button
-      type="button"
-      class="icon-button"
-      aria-label="關閉選取文字操作"
-      (click)="dismissed.emit()"
+  // Focus moves between the toolbar buttons; the container only routes arrow keys.
+  template: `<!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
+    <div
+      #panel
+      class="paragraph-float"
+      role="toolbar"
+      aria-label="選取文字操作"
+      (pointerdown)="$event.preventDefault()"
+      (keydown)="key($event)"
     >
-      <nx-icon name="close" />
-    </button>
-  </div>`,
+      @for (action of actions; track action.value) {
+        <button type="button" (click)="selected.emit(action.value)">
+          <nx-icon [name]="action.icon" />{{ action.label }}
+        </button>
+      }
+      @if (canSave()) {
+        <button type="button" (click)="selected.emit('save')">
+          <nx-icon name="document" />儲存成果
+        </button>
+      }
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="關閉選取文字操作"
+        (click)="dismissed.emit()"
+      >
+        <nx-icon name="close" />
+      </button>
+    </div>`,
 })
 export class TextSelectionToolbar {
   readonly selection = input.required<SelectedText>();

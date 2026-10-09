@@ -16,6 +16,7 @@ import { NotificationCenter } from './shared/ui/notification-center';
     ReaderDialog,
     NotificationCenter,
   ],
+  // eslint-disable-next-line @angular-eslint/component-selector -- index.html bootstrap element
   selector: 'app-root',
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './app.html',

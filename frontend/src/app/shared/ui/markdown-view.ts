@@ -23,7 +23,9 @@ import { highlightWhenVisible } from './code-highlighting';
   selector: 'nx-markdown-view',
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<div #body class="markdown" [innerHTML]="html()" (click)="copyCode($event)"></div>
+  // Copy buttons inside the rendered Markdown are real buttons; the click is delegated.
+  template: `<!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus, @angular-eslint/template/click-events-have-key-events -->
+    <div #body class="markdown" [innerHTML]="html()" (click)="copyCode($event)"></div>
     @if (widgetError()) {
       <nx-notice tone="warning" message="圖表元件未能載入，以下保留 Mermaid 原始碼。" />
     }

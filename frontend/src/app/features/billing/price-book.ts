@@ -271,7 +271,7 @@ export class PriceBook {
       }));
   }
   use(value: ModelPrice) {
-    const { id: _id, modelDisplayName: _label, ...price } = value;
+    const { id, modelDisplayName, ...price } = value;
     this.draft.set(price);
     this.effective.set('');
     this.notice.set('已帶入此版本。儲存會建立新版本，歷史價格保持原樣。');

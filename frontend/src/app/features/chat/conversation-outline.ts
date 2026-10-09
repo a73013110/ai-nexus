@@ -21,6 +21,8 @@ import { positionSidePopover } from '../../shared/browser/side-popover-position'
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `@if (turns().length) {
+    <!-- Hover preview only; every turn is reachable through its own button. -->
+    <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
     <nav
       class="conversation-outline"
       aria-label="對話定位"
