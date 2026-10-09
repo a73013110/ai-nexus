@@ -55,8 +55,7 @@ internal sealed class SaveProject(NexusDbContext db, ResourceAccess access, Reso
     public async Task<Result<ProjectDto>> UpdateAsync(Guid actor, Guid id, ProjectRequest request, CancellationToken ct)
     {
         if (!ProjectQueries.NameIsValid(request.Name)) return ProjectErrors.InvalidName;
-        await writes.Gate.WaitAsync(ct);
-        try
+        using (await writes.AcquireAsync(id, ct))
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             var resource = await access.RequireAsync(actor, id, Project.Kind, ct, write: true);
@@ -67,6 +66,5 @@ internal sealed class SaveProject(NexusDbContext db, ResourceAccess access, Reso
             await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
             return await access.LoadProjectAsync(db, actor, id, ct);
         }
-        finally { writes.Gate.Release(); }
     }
 }
