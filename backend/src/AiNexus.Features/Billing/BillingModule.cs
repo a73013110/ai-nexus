@@ -1,4 +1,5 @@
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.Inference;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Billing;
@@ -12,6 +13,7 @@ public sealed class BillingModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         builder.Services.AddScoped<BillingService>();
+        builder.Services.AddScoped<IModelCallMeter>(sp => sp.GetRequiredService<BillingService>());
         builder.Services.AddScoped<SpendReports>();
         builder.Services.AddScoped<UsageReports>();
         builder.Services.AddScoped<ManagePrices>();

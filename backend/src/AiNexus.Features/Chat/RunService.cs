@@ -6,8 +6,9 @@ using AiNexus.Features.Operations;
 using AiNexus.Features.Billing;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Inference;
 
-namespace AiNexus.Features.Inference;
+namespace AiNexus.Features.Chat;
 
 /// <summary>Run lookup and finishing shared by the run slices, the event stream and the generation worker.</summary>
 public sealed class RunService(NexusDbContext db, RunSignals signals, ConversationService conversations, BillingService billing, AiNexus.Features.Notifications.NotificationService notifications, Issues issues, ILogger<RunService> logger, TimeProvider clock)

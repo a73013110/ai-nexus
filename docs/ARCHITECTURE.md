@@ -27,26 +27,28 @@ flowchart LR
 
 | 模組           | 責任與邊界                                                                               |
 | -------------- | ---------------------------------------------------------------------------------------- |
-| Identity       | AD／Windows、SID 映射、cookie／CSRF、帳號偏好；不保存個人密碼                            |
-| AccessControl  | 使用者→角色→群組→功能的有效授權及 server-side policy                                     |
-| Administration | 一次性管理員 bootstrap、授權、群組模型／配額、管理異動記錄與用量                         |
-| Conversations  | 私人訊息樹／分支、標題、收藏／封存／標籤、搜尋與文字備份                                 |
-| Inference      | provider、模型呈現政策、Context、聊天排程／SSE、共用模型任務                             |
+| Identity       | AD／Windows、SID 映射、cookie／CSRF、功能授權判斷；不保存個人密碼                        |
+| Account        | 登入者本人的資料、外觀偏好、閱讀設定與個人用量                                           |
+| AccessControl  | 使用者→角色→群組→功能的有效授權、群組／個人模型政策資料及 server-side policy             |
+| Administration | 一次性管理員 bootstrap、帳號與授權、群組模型／配額、管理異動記錄與用量                   |
+| Conversations  | 私人訊息樹／分支、標題、收藏／封存／標籤、搜尋與文字備份匯入                             |
+| Inference      | provider、模型呈現與政策、聊天排程佇列、共用模型任務                                     |
+| Chat           | 組合對話、附件、專案、知識與網路搜尋：Context、聊天執行／SSE，整段對話讀取／匯出／複製／刪除 |
 | Operations     | 健康狀態、活動稽核查詢與寫入、事件清理、durable jobs、租約及 fenced checkpoint            |
 | Attachments    | 格式及大小驗證、原始檔／文字、配額、下載授權與保留引用                                   |
 | Library        | 個人提示詞範本及容量限制                                                                 |
 | Collaboration  | 私有資源、具名 viewer／editor、群組唯讀 ACL、具名到期分享                                |
-| Knowledge      | 逐頁閱讀、OCR／索引、獨立 embedding、授權檢索及引用快照                                  |
+| Knowledge      | 逐頁閱讀、OCR／索引、獨立 embedding、授權檢索、引用快照及檔案庫清單                      |
 | Artifacts      | 不可變版本、樂觀衝突檢查、段落工具及 Word／PDF                                           |
 | Projects       | 共用指示／文件／範本／成果；提問仍屬個人                                                 |
 | Quality        | 私人回饋、固定評測、方案／設定快照、逐題結果及人工評分                                   |
 | Integrations   | 來源政策、固定授權 view、唯讀搜尋／歷程、明確匯入與聊天草稿                              |
-| Billing        | 追加價格版本、呼叫價格快照、實際用量計費、區間 SQL 彙總與 CSV；不以 Context 預估冒充帳單 |
+| Billing        | 追加價格版本、呼叫價格快照、實際用量計費、用量報表、區間 SQL 彙總與 CSV；不以 Context 預估冒充帳單 |
 | WebSearch      | 可控搜尋 provider、本人配額與冪等搜尋紀錄、可核對來源；不爬取結果網站                    |
 | Repositories   | 使用者 Gitea token 保護、唯讀 repository／issues／檔案、固定 commit 匯入與來源追溯       |
 | Dashboard      | 組合已授權的資源、任務與費用統計；平台範圍另驗 admin，沒有第二套計量邏輯                 |
 
-後端分三個專案，依賴方向固定為 Api → Features → Platform：`AiNexus.Api` 只做 host 組裝與維運指令；`AiNexus.Features` 的每個模組以 `<Module>Module`（`IFeatureModule`）註冊自己的服務、options 驗證、授權政策、rate limit 與端點，`FeatureModules` 是唯一的模組清單，`Persistence` 管共用 context 與 migrations；`AiNexus.Platform` 管錯誤、安全、設定、診斷、HTTP 限制、domain event 分派與原始 EDoc helpers，不引用任何業務模組。端點的 body 上限以 `WithRequestBodyLimit` 宣告在端點旁。`AiNexus.ArchitectureTests` 檢查依賴方向，並以基準線確保跨模組依賴只減不增。slice、錯誤、驗證與授權的寫法見 [後端撰寫慣例](BACKEND_CONVENTIONS.md)。模組間使用明確服務，不新增能繞過 owner、ACL 或模型核准的資料入口。「A 發生後 B 跟著處理」的副作用改用同交易的 domain event（`AiNexus.Platform.Events`）：發布模組 `Raise` 過去式事件，`NexusDbContext.SaveChangesAsync` 在寫入前於同一交易分派給訂閱模組的 handler，一起提交或回復；例如刪除對話／成果撤銷分享、刪除專案解除成果連結。
+後端分三個專案，依賴方向固定為 Api → Features → Platform：`AiNexus.Api` 只做 host 組裝與維運指令；`AiNexus.Features` 的每個模組以 `<Module>Module`（`IFeatureModule`）註冊自己的服務、options 驗證、授權政策、rate limit 與端點，`FeatureModules` 是唯一的模組清單，`Persistence` 管共用 context 與 migrations；`AiNexus.Platform` 管錯誤、安全、設定、診斷、HTTP 限制、domain event 分派與原始 EDoc helpers，不引用任何業務模組。端點的 body 上限以 `WithRequestBodyLimit` 宣告在端點旁。`AiNexus.ArchitectureTests` 檢查專案依賴方向，並禁止模組之間形成循環；分層與切斷循環的做法見 [模組邊界](MODULE_BOUNDARIES.md)。slice、錯誤、驗證與授權的寫法見 [後端撰寫慣例](BACKEND_CONVENTIONS.md)。模組間使用明確服務，不新增能繞過 owner、ACL 或模型核准的資料入口。「A 發生後 B 跟著處理」的副作用改用同交易的 domain event（`AiNexus.Platform.Events`）：發布模組 `Raise` 過去式事件，`NexusDbContext.SaveChangesAsync` 在寫入前於同一交易分派給訂閱模組的 handler，一起提交或回復；例如刪除對話／成果撤銷分享、刪除專案解除成果連結。
 
 Notifications 提供 owner scoped durable event 與 typed target，和聊天完成、具名分享、任務 terminal update 使用同一 transaction。RepositoryReviewService 在排程前固定 SHA／diff／模型設定，handler 沿用背景 checkpoint／ModelTaskService，結果讀取仍檢查目前 Gitea 權限；細節見 [通知](NOTIFICATIONS.md)、[程式碼 review](GITEA.md)。
 

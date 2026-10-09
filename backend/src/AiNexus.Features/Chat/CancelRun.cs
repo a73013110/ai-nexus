@@ -1,7 +1,8 @@
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Errors;
+using AiNexus.Features.Inference;
 
-namespace AiNexus.Features.Inference;
+namespace AiNexus.Features.Chat;
 
 /// <summary>Stops a queued or running answer. A finished run is returned unchanged.</summary>
 internal sealed class CancelRun(GenerationScheduler scheduler, RunService runs, ModelPresentation presentation)

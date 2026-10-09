@@ -5,8 +5,9 @@ using AiNexus.Features.Operations;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Features.Billing;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Inference;
 
-namespace AiNexus.Features.Inference;
+namespace AiNexus.Features.Chat;
 
 /// <summary>
 /// Expiry is checked again in an atomic UPDATE, so a renewed foreign lease cannot be reclaimed. Each run is recovered

@@ -4,7 +4,7 @@
 
 DiagnosticEvents 的 LogId 是非叢集唯一主鍵，`At DESC, LogId DESC` 是叢集索引；等級／Category／EventId／Name 及查證／流程識別有複合索引。查證不依賴中文全文元件。SQL import 使用獨立連線與 transaction；30天診斷與365天稽核各自分批清理，均可配置。應用需要 DiagnosticEvents 的 SELECT／INSERT／受控 retention DELETE，以及既有 AuditEvents 寫入與清理權限；DDL 仍由部署帳號執行。完整政策與容量限制見 [DIAGNOSTICS](DIAGNOSTICS.md)。
 
-業務資料集中在 **AiNexus** SQL Server database。schema 是資料庫內的命名空間，例如 `[access].[Roles]`，不是另一個 database 或另一條連線。按模組分 schema，讓責任、migration 與 SQL 授權容易辨識；跨 schema 外鍵及同一個 EF transaction 仍可使用。
+業務資料集中在 **AiNexus** SQL Server database。schema 是資料庫內的命名空間，例如 `[access].[Roles]`，不是另一個 database 或另一條連線。按模組分 schema，讓責任、migration 與 SQL 授權容易辨識；跨 schema 外鍵及同一個 EF transaction 仍可使用。模組的實體設定只參照自己的實體，兩端分屬不同模組的外鍵設定集中在 `Persistence/CrossModuleRelationships.cs`。
 
 已有 SQL 登入可直接使用，不必另建同名帳號。一般參數在 .local/config/appsettings.Local.json，密碼在 .local/secrets/appsettings.Secrets.json。Initialize-Database.ps1 用既有登入建立不存在的 AiNexus，再套用未完成版本；無建庫／DDL 權限時由 DBA 先建庫及套用 SQL。見 [參數](CONFIGURATION.md)。
 

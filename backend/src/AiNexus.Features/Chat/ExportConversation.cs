@@ -1,7 +1,8 @@
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Errors;
+using AiNexus.Features.Conversations;
 
-namespace AiNexus.Features.Conversations;
+namespace AiNexus.Features.Chat;
 
 /// <summary>A version 1 backup of one of the user's own idle conversations; attachments are listed by name only.</summary>
 internal static class ExportConversation

@@ -5,8 +5,9 @@ using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Inference;
 
-namespace AiNexus.Features.Inference;
+namespace AiNexus.Features.Chat;
 
 public sealed class SubscriptionLimits
 {

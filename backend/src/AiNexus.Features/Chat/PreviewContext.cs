@@ -9,8 +9,9 @@ using AiNexus.Platform.Http;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.Inference;
 
-namespace AiNexus.Features.Inference;
+namespace AiNexus.Features.Chat;
 
 public sealed record ContextPreviewRequest(Guid? ConversationId, Guid? ParentMessageId, string? Prompt, string? ModelId, IReadOnlyList<Guid>? AttachmentIds = null, [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)] bool WebSearch = false);
 public sealed record ContextUsageDto(int EstimatedInputTokens, int ContextTokens, int ReservedOutputTokens, int DroppedMessages, bool BudgetExceeded, bool IsEstimate = true, int ReservedKnowledgeTokens = 0, int ReservedWebSearchTokens = 0);

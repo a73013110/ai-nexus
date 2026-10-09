@@ -5,8 +5,9 @@ using AiNexus.Features.Conversations;
 using AiNexus.Features.Attachments;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.Inference;
 
-namespace AiNexus.Features.Inference;
+namespace AiNexus.Features.Chat;
 
 /// <summary>
 /// Builds the model context of one branch: the newest complete rounds that fit the budget, oldest rounds dropped first.
@@ -80,7 +81,7 @@ public sealed class ContextBuilder(NexusDbContext db, IOptions<AttachmentOptions
     private async Task<Composed> ComposeAsync(Guid? conversation, Guid? leaf, InferenceMessage? added, GenerationParameters parameters, CancellationToken ct)
     {
         var history = conversation is Guid id && leaf is Guid last
-            ? await HistoryAsync(id, last, Budget(parameters) - (added is null ? 0 : Cost(added)), keepNewest: added is null, ct)
+            ? await HistoryAsync(id, last, Budget(parameters) - (added is null ? 0 : MessageCost.Of(added)), keepNewest: added is null, ct)
             : new Composed([], 0);
         if (added is not null) history.Messages.Add(added);
         return history;
@@ -149,25 +150,22 @@ public sealed class ContextBuilder(NexusDbContext db, IOptions<AttachmentOptions
 
     // A conservative UTF-8 byte budget avoids assuming English token ratios for Chinese.
     // No server tokenizer is required; actual usage is recorded when supported.
-    private static long Budget(GenerationParameters parameters) => parameters.ContextTokens - parameters.MaxOutputTokens - (Cost(parameters.SystemPrompt) + 128);
+    private static long Budget(GenerationParameters parameters) => parameters.ContextTokens - parameters.MaxOutputTokens - (MessageCost.Of(parameters.SystemPrompt) + 128);
 
     private static ContextUsageDto Trim(Composed composed, GenerationParameters parameters)
     {
         var chain = composed.Messages;
-        var system = Cost(parameters.SystemPrompt) + 128;
+        var system = MessageCost.Of(parameters.SystemPrompt) + 128;
         var budget = Budget(parameters);
-        var exceeded = budget < 0 || (chain.Count > 0 && Cost(chain[^1]) > budget);
+        var exceeded = budget < 0 || (chain.Count > 0 && MessageCost.Of(chain[^1]) > budget);
         var count = chain.Count;
-        var cost = chain.Sum(x => Cost(x));
+        var cost = chain.Sum(MessageCost.Of);
         while (cost > budget && chain.Count > 1)
         {
-            cost -= Cost(chain[0]);
+            cost -= MessageCost.Of(chain[0]);
             chain.RemoveAt(0);
-            while (chain.Count > 1 && chain[0].Role != "user") { cost -= Cost(chain[0]); chain.RemoveAt(0); }
+            while (chain.Count > 1 && chain[0].Role != "user") { cost -= MessageCost.Of(chain[0]); chain.RemoveAt(0); }
         }
         return new((int)Math.Min(int.MaxValue, cost + system), parameters.ContextTokens, parameters.MaxOutputTokens, composed.Omitted + count - chain.Count, exceeded);
     }
-    public static long Estimate(IReadOnlyList<InferenceMessage> messages) => messages.Sum(Cost) + 128;
-    private static long Cost(InferenceMessage message) => Cost(message.Content) + (message.Images ?? []).Sum(x => (long)x.EstimatedTokens);
-    private static int Cost(string value) => Encoding.UTF8.GetByteCount(value) + 32;
 }

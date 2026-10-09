@@ -4,8 +4,9 @@ using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Conversations;
 
-namespace AiNexus.Features.Conversations;
+namespace AiNexus.Features.Chat;
 
 /// <summary>
 /// Copies one of the user's own idle conversations with its whole message tree, labels and attachment links. Runs under

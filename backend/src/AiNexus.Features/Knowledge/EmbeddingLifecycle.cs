@@ -4,7 +4,6 @@ using AiNexus.Features.Persistence;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Operations;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Administration;
 using AiNexus.Features.Collaboration;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
@@ -25,7 +24,7 @@ public static class EmbeddingJobs
     public static int Profile(Guid subject) => int.Parse(subject.ToString("N")[..8], NumberStyles.HexNumber, CultureInfo.InvariantCulture);
 }
 public sealed class EmbeddingLifecycle(NexusDbContext db, EmbeddingProfiles profiles, EmbeddingVectorStore vectors, KnowledgeWriteLock writes,
-    AdministrativeAudit audit, CurrentUser current, JobService jobs, IOptions<KnowledgeOptions> options)
+    JobService jobs, IOptions<KnowledgeOptions> options)
 {
     private IQueryable<KnowledgeDocument> Documents => db.Set<KnowledgeDocument>().Where(x => x.CollectionId != null && !x.IsDeleted);
     public async Task<EmbeddingCoverageDto> CoverageAsync(EmbeddingProfile profile, CancellationToken ct)
@@ -45,30 +44,19 @@ public sealed class EmbeddingLifecycle(NexusDbContext db, EmbeddingProfiles prof
             await CoverageAsync(p, ct), tasks.FirstOrDefault(x => x.SubjectId == EmbeddingJobs.Subject(p.Id)) is { } job ? JobService.Describe(job) : null));
         return result;
     }
-    public async Task<JobDto> StartAsync(int id, CancellationToken ct)
+    /// <summary>
+    /// Queues a rebuild of the profile, or returns the one already running. Like the other administrative changes below,
+    /// the caller holds <see cref="KnowledgeWriteLock"/> and audits it; nothing is saved here.
+    /// </summary>
+    public async Task<BackgroundJob> QueueRebuildAsync(Guid actor, int id, CancellationToken ct)
     {
-        var actor = (await current.GetAsync(ct)).Id; BackgroundJob? job = null;
-        await writes.Gate.WaitAsync(ct);
-        try
-        {
-            await audit.MutateAsync("admin.embedding_rebuild", null, id.ToString(CultureInfo.InvariantCulture), async () => {
-                var profile = await RequireAsync(id, ct);
-                if (profile.Status == "retired") throw new ApiException(409, "profile_retired", "已退役的索引無法重建。");
-                var subject = EmbeddingJobs.Subject(id);
-                job = await db.Set<BackgroundJob>().SingleOrDefaultAsync(x => x.Kind == "embedding-reindex" && x.SubjectId == subject && x.ActiveKey != null, ct)
-                    ?? jobs.Enqueue(actor, null, subject, "embedding-reindex", $"重建 {profile.Model} 檢索索引");
-            }, ct);
-        }
-        finally { writes.Gate.Release(); }
-        return JobService.Describe(job!);
+        var profile = await RequireAsync(id, ct);
+        if (profile.Status == "retired") throw new ApiException(409, "profile_retired", "已退役的索引無法重建。");
+        var subject = EmbeddingJobs.Subject(id);
+        return await db.Set<BackgroundJob>().SingleOrDefaultAsync(x => x.Kind == "embedding-reindex" && x.SubjectId == subject && x.ActiveKey != null, ct)
+            ?? jobs.Enqueue(actor, null, subject, "embedding-reindex", $"重建 {profile.Model} 檢索索引");
     }
-    public async Task ActivateAsync(int id, CancellationToken ct)
-    {
-        await writes.Gate.WaitAsync(ct);
-        try { await audit.MutateAsync("admin.embedding_activate", null, id.ToString(CultureInfo.InvariantCulture), () => ActivateCoreAsync(id, ct), ct); }
-        finally { writes.Gate.Release(); }
-    }
-    internal async Task ActivateCoreAsync(int id, CancellationToken ct)
+    public async Task ActivateCoreAsync(int id, CancellationToken ct)
     {
         var profile = await RequireAsync(id, ct);
         if (profile.Status == "active") return;
@@ -78,13 +66,7 @@ public sealed class EmbeddingLifecycle(NexusDbContext db, EmbeddingProfiles prof
         await db.Set<EmbeddingProfile>().Where(x => x.Status == "active").ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, "retired").SetProperty(x => x.RetiredAt, now), ct);
         await db.Set<EmbeddingProfile>().Where(x => x.Id == id && x.Status == "building").ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, "active").SetProperty(x => x.ActivatedAt, now).SetProperty(x => x.RetiredAt, (DateTimeOffset?)null), ct);
     }
-    public async Task ClearAsync(int id, CancellationToken ct)
-    {
-        await writes.Gate.WaitAsync(ct);
-        try { await audit.MutateAsync("admin.embedding_clear", null, id.ToString(CultureInfo.InvariantCulture), () => ClearCoreAsync(id, ct), ct); }
-        finally { writes.Gate.Release(); }
-    }
-    private async Task ClearCoreAsync(int id, CancellationToken ct)
+    public async Task ClearCoreAsync(int id, CancellationToken ct)
     {
         if ((await RequireAsync(id, ct)).Status != "retired") throw new ApiException(409, "profile_not_retired", "只能清除已退役索引的向量。");
         await db.Set<ChunkEmbedding768>().Where(x => x.ProfileId == id).ExecuteDeleteAsync(ct);

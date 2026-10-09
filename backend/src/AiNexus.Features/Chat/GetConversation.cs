@@ -4,8 +4,9 @@ using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Conversations;
 
-namespace AiNexus.Features.Conversations;
+namespace AiNexus.Features.Chat;
 
 public sealed record ConversationDetailDto(ConversationDto Conversation, IReadOnlyList<MessageDto> Messages, RunDto? ActiveRun);
 

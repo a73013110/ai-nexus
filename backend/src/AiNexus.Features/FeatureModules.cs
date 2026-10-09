@@ -3,6 +3,7 @@ using AiNexus.Features.Account;
 using AiNexus.Features.Administration;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Attachments;
+using AiNexus.Features.Chat;
 using AiNexus.Features.Billing;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Conversations;
@@ -57,6 +58,7 @@ public static class FeatureModules
         Add<LibraryModule>(builder);
         Add<AttachmentsModule>(builder);
         Add<InferenceModule>(builder);
+        Add<ChatModule>(builder);
         Add<MonitoringModule>(builder);
         builder.Services.AddValidatorsFromAssembly(typeof(FeatureModules).Assembly, includeInternalTypes: true);
         return builder;
@@ -71,6 +73,7 @@ public static class FeatureModules
         Map<AccountModule>(api);
         Map<ConversationsModule>(api);
         Map<InferenceModule>(api);
+        Map<ChatModule>(api);
         Map<AttachmentsModule>(api);
         Map<LibraryModule>(api);
         Map<OperationsModule>(api);

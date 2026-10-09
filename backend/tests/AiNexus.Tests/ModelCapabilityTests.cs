@@ -20,7 +20,7 @@ public sealed class ModelCapabilityTests
         var provider = new CapabilityProvider(vision);
         var services = new ServiceCollection(); services.AddKeyedSingleton<IInferenceProvider>("ollama", provider);
         using var container = services.BuildServiceProvider();
-        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, Options.Create(new KnowledgeOptions())), new AiNexus.Platform.Diagnostics.Issues(Microsoft.Extensions.Logging.Abstractions.NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance));
+        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]), new AiNexus.Platform.Diagnostics.Issues(Microsoft.Extensions.Logging.Abstractions.NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance));
         var dto = Assert.Single((await catalog.GetAsync(CancellationToken.None)).Models);
         Assert.Equal(expected, dto.SupportsImages); Assert.Equal("model-1", dto.Id); Assert.Equal("AI 助理 1", dto.DisplayName);
         Assert.Equal(expected, (await catalog.RequireAsync("model-1", CancellationToken.None)).SupportsImages);
@@ -38,7 +38,7 @@ public sealed class ModelCapabilityTests
         var services = new ServiceCollection(); services.AddKeyedSingleton<IInferenceProvider>("ollama", provider);
         using var container = services.BuildServiceProvider();
         var clock = new ManualClock();
-        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, Options.Create(new KnowledgeOptions())), new AiNexus.Platform.Diagnostics.Issues(Microsoft.Extensions.Logging.Abstractions.NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance), clock);
+        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]), new AiNexus.Platform.Diagnostics.Issues(Microsoft.Extensions.Logging.Abstractions.NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance), clock);
         Assert.Single((await catalog.GetAsync(CancellationToken.None)).Models);
         Assert.Equal(1, provider.Calls);
         clock.Now += ModelCatalog.FreshFor + TimeSpan.FromSeconds(1);

@@ -1,15 +1,12 @@
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Operations;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using AiNexus.Features.Knowledge;
-using AiNexus.Features.Collaboration;
 
 namespace AiNexus.Features.Attachments;
 
 /// <summary>Deleting is a durable outbox state. Metadata and quota survive until physical deletion succeeds.</summary>
-public sealed class AttachmentLifecycle(NexusDbContext db, IAttachmentStorage storage, AttachmentQuota quota, IOptions<AttachmentOptions> options, ILogger<AttachmentLifecycle> logger)
+public sealed class AttachmentLifecycle(NexusDbContext db, IAttachmentStorage storage, AttachmentQuota quota, IPrivateReaders readers, IOptions<AttachmentOptions> options, ILogger<AttachmentLifecycle> logger)
 {
     private IQueryable<Attachment> Unreferenced() => db.Set<Attachment>().Where(x =>
         !db.Set<MessageAttachment>().Any(l => l.AttachmentId == x.Id) && !db.Set<AttachmentReference>().Any(l => l.AttachmentId == x.Id));
@@ -26,30 +23,18 @@ public sealed class AttachmentLifecycle(NexusDbContext db, IAttachmentStorage st
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.StorageState, AttachmentStates.Deleting), ct);
     }
 
-    /// <summary>The owner's standalone documents (readers), deleted or not; their resources are read past the soft-delete filter.</summary>
-    public IQueryable<Guid> PrivateReaders(Guid owner) => from doc in db.Set<KnowledgeDocument>() join resource in db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]) on doc.Id equals resource.Id
-        where doc.CollectionId == null && resource.ParentId == null && resource.OwnerId == owner select doc.Id;
+    /// <summary>The owner's standalone documents (readers), deleted or not.</summary>
+    public IQueryable<Guid> PrivateReaders(Guid owner) => readers.All.Where(x => x.OwnerId == owner).Select(x => x.Id);
 
-    public async Task RemovePrivateReadersAsync(Guid owner, IReadOnlyList<Guid> files, CancellationToken ct)
-    {
-        var ids = await db.Set<KnowledgeDocument>().Where(x => files.Contains(x.AttachmentId ?? Guid.Empty) && PrivateReaders(owner).Contains(x.Id)).Select(x => x.Id).ToArrayAsync(ct);
-        await db.Set<KnowledgeDocument>().Where(x => ids.Contains(x.Id)).ExecuteUpdateAsync(p => p.SetProperty(x => x.IsDeleted, true).SetProperty(x => x.Status, "deleted").SetProperty(x => x.AttachmentId, (Guid?)null), ct);
-        await db.Set<WorkspaceResource>().Where(x => ids.Contains(x.Id)).ExecuteUpdateAsync(p => p.SetProperty(x => x.IsDeleted, true), ct);
-        await db.Set<BackgroundJob>().Where(x => ids.Contains(x.SubjectId) && x.ActiveKey != null).ExecuteUpdateAsync(p => p.SetProperty(x => x.CancelRequested, true), ct);
-        await db.Set<KnowledgeChunk>().Where(x => ids.Contains(x.DocumentId)).ExecuteDeleteAsync(ct);
-        await db.Set<DocumentPage>().Where(x => ids.Contains(x.DocumentId)).ExecuteDeleteAsync(ct);
-        await db.Set<AttachmentReference>().Where(x => ids.Contains(x.ResourceId)).ExecuteDeleteAsync(ct);
-    }
+    public Task RemovePrivateReadersAsync(Guid owner, IReadOnlyList<Guid> files, CancellationToken ct) => readers.RemoveAsync(owner, files, ct);
 
     private IQueryable<Attachment> ExpiredDrafts(DateTimeOffset cutoff, DateTimeOffset interrupted)
     {
-        // A private reader keeps its resource whether or not it is deleted; the document's own state is not part of this rule.
-        var resources = db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]);
+        // A file read only by its owner's private readers is still a draft.
         return db.Set<Attachment>().Where(x => !x.InLibrary &&
             (x.StorageState == AttachmentStates.Ready && x.CreatedAt < cutoff || x.StorageState == AttachmentStates.Pending && x.CreatedAt < interrupted) &&
             !db.Set<MessageAttachment>().Any(l => l.AttachmentId == x.Id) &&
-            !db.Set<AttachmentReference>().Any(l => l.AttachmentId == x.Id && !(from doc in db.Set<KnowledgeDocument>() join resource in resources on doc.Id equals resource.Id
-                where doc.Id == l.ResourceId && doc.CollectionId == null && resource.ParentId == null && resource.OwnerId == x.OwnerId select doc.Id).Any()));
+            !db.Set<AttachmentReference>().Any(l => l.AttachmentId == x.Id && !readers.All.Any(r => r.Id == l.ResourceId && r.OwnerId == x.OwnerId)));
     }
 
     public async Task AbortUploadAsync(Attachment upload, CancellationToken ct)

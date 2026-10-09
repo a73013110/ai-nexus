@@ -1,7 +1,8 @@
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Errors;
+using AiNexus.Features.Inference;
 
-namespace AiNexus.Features.Inference;
+namespace AiNexus.Features.Chat;
 
 /// <summary>One of the user's own runs, while its conversation is still theirs.</summary>
 internal static class GetRun

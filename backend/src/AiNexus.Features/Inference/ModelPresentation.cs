@@ -1,12 +1,16 @@
-using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Knowledge;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Inference;
 
+/// <summary>
+/// A model a platform service calls on its own rather than for chat, such as the knowledge embedding model. The owning
+/// module registers it so reports and prices can name it.
+/// </summary>
+public sealed record ServiceModel(string Provider, string Id, string DisplayName, string PublicId);
+
 // IDs are references only. Every browser-facing label is resolved here, never from an ID.
-public sealed class ModelPresentation(IOptions<InferenceOptions> options, IOptions<KnowledgeOptions> knowledge)
+public sealed class ModelPresentation(IOptions<InferenceOptions> options, IEnumerable<ServiceModel> services)
 {
     public string? DisplayName(string? id, bool administrator = false, string? provider = null)
     {
@@ -19,8 +23,7 @@ public sealed class ModelPresentation(IOptions<InferenceOptions> options, IOptio
             var name = options.Value.Models[index].DisplayName?.Trim();
             return !string.IsNullOrEmpty(name) ? name : $"AI 助理 {index + 1}";
         }
-        if (id == knowledge.Value.EmbeddingModel && (provider is null || provider == knowledge.Value.EmbeddingProvider)) return "知識向量模型";
-        return "已停用的模型";
+        return services.FirstOrDefault(x => x.Id == id && (provider is null || provider == x.Provider))?.DisplayName ?? "已停用的模型";
     }
     public string PublicId(string id)
     {
@@ -28,7 +31,7 @@ public sealed class ModelPresentation(IOptions<InferenceOptions> options, IOptio
         var index = options.Value.Models.FindIndex(x => x.Id == id);
         if (index >= 0) return $"model-{index + 1}";
         if (id == "web-search") return "web-search";
-        return id == knowledge.Value.EmbeddingModel ? "embedding-model" : "retired-model";
+        return services.FirstOrDefault(x => x.Id == id)?.PublicId ?? "retired-model";
     }
 
     public string? DefaultId => options.Value.DefaultModelId ?? options.Value.Models.FirstOrDefault()?.Id;
@@ -36,6 +39,5 @@ public sealed class ModelPresentation(IOptions<InferenceOptions> options, IOptio
     public ModelPolicyDto Policy => new(options.Value.AllowModelSelection, options.Value.ShowModelNames, DefaultId is { } id ? PublicId(id) : null, options.Value.MaxInputCharacters);
     public ModelDto Model(ModelProfile model) => model.ToDto() with { Id = PublicId(model.Id), DisplayName = DisplayName(model.Id)!, Provider = options.Value.ShowModelNames ? model.Provider : null };
     public RunDto Run(GenerationRun run) => run.ToDto() with { ModelId = PublicId(run.ModelId), ModelDisplayName = DisplayName(run.ModelId) };
-    public MessageDto Message(Message message) => message.ToDto() with { ModelId = message.ModelId is { } id ? PublicId(id) : null, ModelDisplayName = DisplayName(message.ModelId) };
     public PreferencesDto Preferences(UserPreferences value) => value.ToDto() with { DefaultModelId = options.Value.AllowModelSelection && value.DefaultModelId is { } id ? PublicId(id) : null };
 }
