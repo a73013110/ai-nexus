@@ -13,7 +13,7 @@ public sealed class RunRecoveryWorker(IServiceScopeFactory scopes, GenerationSch
             while (await timer.WaitForNextTickAsync(stoppingToken))
             {
                 if (!storage.Configured || !scheduler.Ready) continue;
-                await scheduler.StateGate.WaitAsync(stoppingToken);
+                // Lease renewal and the cancel check are single atomic statements; recovery locks each run's conversation itself.
                 try
                 {
                     using var scope = scopes.CreateScope();
@@ -30,7 +30,6 @@ public sealed class RunRecoveryWorker(IServiceScopeFactory scopes, GenerationSch
                     await scope.ServiceProvider.GetRequiredService<RunLeaseRecovery>().RecoverAsync(now, stoppingToken);
                 }
                 catch (Exception ex) when (!stoppingToken.IsCancellationRequested) { logger.LogWarning("Orphan recovery postponed ({ErrorType}).", ex.GetType().Name); }
-                finally { scheduler.StateGate.Release(); }
             }
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }

@@ -39,6 +39,7 @@ public sealed class IdentityModule : IFeatureModule
             http.Connection.RemoteIpAddress?.ToString() ?? "local",
             _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true })));
         services.AddSingleton<IdentityWriteLock>();
+        services.AddSingleton<DisplayNameCache>();
         services.AddScoped<CurrentUser>();
         services.AddScoped<IRequestUser>(sp => sp.GetRequiredService<CurrentUser>());
         services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<CurrentUser>());

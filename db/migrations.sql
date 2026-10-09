@@ -4280,3 +4280,32 @@ END;
 COMMIT;
 GO
 
+BEGIN TRANSACTION;
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261009013735_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_GenerationRuns_OwnerId_CreatedAt] ON [inference].[GenerationRuns] ([OwnerId], [CreatedAt]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261009013735_AddPerformanceIndexes'
+)
+BEGIN
+    CREATE INDEX [IX_BackgroundJobs_SubjectId] ON [operations].[BackgroundJobs] ([SubjectId]);
+END;
+
+IF NOT EXISTS (
+    SELECT * FROM [__EFMigrationsHistory]
+    WHERE [MigrationId] = N'20261009013735_AddPerformanceIndexes'
+)
+BEGIN
+    INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+    VALUES (N'20261009013735_AddPerformanceIndexes', N'10.0.12');
+END;
+
+COMMIT;
+GO
+

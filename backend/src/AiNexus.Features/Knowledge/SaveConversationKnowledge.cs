@@ -9,7 +9,7 @@ namespace AiNexus.Features.Knowledge;
 
 /// <summary>
 /// Replaces the collections (at most three the user may read) used by one of the user's own idle conversations. Runs
-/// under the generation state gate so a starting answer never sees a half-changed selection.
+/// under the conversation's generation lock so a starting answer never sees a half-changed selection.
 /// </summary>
 internal sealed class SaveConversationKnowledge(NexusDbContext db, ConversationService conversations, RetrievalAuthorization authorization, GenerationScheduler scheduler)
 {
@@ -20,7 +20,7 @@ internal sealed class SaveConversationKnowledge(NexusDbContext db, ConversationS
 
     public async Task<Result> HandleAsync(Guid actor, Guid conversation, KnowledgeSelectionDto request, CancellationToken ct)
     {
-        await scheduler.StateGate.WaitAsync(ct);
+        var conversationLock = await scheduler.LockConversationAsync(conversation, ct);
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
@@ -34,6 +34,6 @@ internal sealed class SaveConversationKnowledge(NexusDbContext db, ConversationS
             await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
             return Result.Success;
         }
-        finally { scheduler.StateGate.Release(); }
+        finally { conversationLock.Dispose(); }
     }
 }

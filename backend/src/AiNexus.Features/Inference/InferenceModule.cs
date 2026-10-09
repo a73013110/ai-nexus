@@ -17,7 +17,6 @@ public sealed class InferenceModule : IFeatureModule
     {
         var services = builder.Services;
         services.AddScoped<UsageReports>();
-        services.AddSingleton<ModelQuotaLock>();
         services.AddScoped<ModelTaskService>();
         services.AddScoped<RunService>();
         services.AddScoped<PreviewContext>();
@@ -40,6 +39,7 @@ public sealed class InferenceModule : IFeatureModule
         services.AddSingleton<ModelPresentation>();
         services.AddSingleton<GenerationScheduler>();
         services.AddSingleton<SubscriptionLimits>();
+        services.AddSingleton<RunSignals>();
         services.AddHostedService<GenerationWorker>();
         services.AddHostedService<RunRecoveryWorker>();
     }

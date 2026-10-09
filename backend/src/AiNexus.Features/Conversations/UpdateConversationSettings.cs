@@ -19,7 +19,7 @@ internal sealed class ConversationSettingsRequestValidator : RequestValidator<Co
 
 /// <summary>
 /// Favorite, archive, instruction and labels of one of the user's own conversations; only the given fields change.
-/// Runs under the generation state gate, and a conversation cannot be archived while an answer is being generated.
+/// Runs under the conversation's generation lock, and a conversation cannot be archived while an answer is being generated.
 /// </summary>
 internal sealed class UpdateConversationSettings(NexusDbContext db, GenerationScheduler scheduler)
 {
@@ -30,7 +30,7 @@ internal sealed class UpdateConversationSettings(NexusDbContext db, GenerationSc
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, Guid id, ConversationSettingsRequest request, CancellationToken ct)
     {
-        await scheduler.StateGate.WaitAsync(ct);
+        var conversationLock = await scheduler.LockConversationAsync(id, ct);
         try
         {
             var conversation = await db.OwnedConversationAsync(owner, id, ct);
@@ -53,6 +53,6 @@ internal sealed class UpdateConversationSettings(NexusDbContext db, GenerationSc
             await db.SaveChangesAsync(ct);
             return conversation.ToDto();
         }
-        finally { scheduler.StateGate.Release(); }
+        finally { conversationLock.Dispose(); }
     }
 }

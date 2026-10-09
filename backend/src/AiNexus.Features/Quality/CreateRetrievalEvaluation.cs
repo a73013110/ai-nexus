@@ -49,8 +49,8 @@ internal sealed class CreateRetrievalEvaluation(NexusDbContext db, RetrievalEval
         var pages = await db.Set<DocumentPage>().AsNoTracking().Where(x => ids.Contains(x.DocumentId)).Select(x => new { x.DocumentId, x.PageNumber }).ToListAsync(ct);
         if (request.Cases.SelectMany(x => x.Relevant).Any(x => x.Pages.Any(p => !pages.Any(page => page.DocumentId == x.DocumentId && page.PageNumber == p)))) return QualityErrors.PagesInvalid;
         await profiles.ActiveAsync(ct);
-        await writes.Gate.WaitAsync(ct);
-        try
+        // The owner's one active retrieval evaluation and run limit.
+        using (await writes.AcquireAsync("retrieval-evaluations", actor, ct))
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             await evaluations.RequireAccessAsync(actor, request.CollectionIds, ct);
@@ -65,7 +65,6 @@ internal sealed class CreateRetrievalEvaluation(NexusDbContext db, RetrievalEval
             await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
             return RetrievalEvaluationService.Describe(run, job);
         }
-        finally { writes.Gate.Release(); }
     }
 
     // Unique case ids and bounded queries; answerable cases name graded documents with positive, distinct pages; no-answer cases name none.

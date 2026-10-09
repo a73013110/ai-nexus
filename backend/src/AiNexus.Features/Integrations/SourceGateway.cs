@@ -51,7 +51,7 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
         var rows = await SafeAsync(source, () => target.Value.Adapter.SearchAsync(target.Value.Actor, request, target.Value.Options.MaxResults, target.Value.Options.CommandTimeoutSeconds, ct), ct);
         if (rows.Count > target.Value.Options.MaxResults || rows.Any(x => !item.Kinds.Contains(x.Kind) || string.IsNullOrWhiteSpace(x.Id) || x.Id.Length > 160 || string.IsNullOrWhiteSpace(x.Title) || x.Title.Length > 120))
             return IntegrationErrors.ContractInvalid;
-        var still = await AuthorizeAsync(actor, source, ct);
+        var still = await AuthorizeAsync(actor, source, ct, fresh: true);
         if (!still.IsSuccess) return still.Error;
         db.AuditEvents.Add(new() { OwnerId = actor, Action = "integration.searched", Result = "read-only", DetailsJson = JsonSerializer.Serialize(new { source, count = rows.Count }) });
         await db.SaveChangesAsync(ct);
@@ -67,16 +67,18 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
         if (row is null) return IntegrationErrors.RecordMissing;
         if (row.Body.Length > 16000 || row.Record.Title.Length is < 1 or > 120 || row.Record.Revision.Length is < 1 or > 160 || row.Record.Id != id || row.SourceId != source || !Catalog.Single(x => x.Id == source).Kinds.Contains(row.Record.Kind))
             return IntegrationErrors.ContractInvalid;
-        var still = await AuthorizeAsync(actor, source, ct);
+        var still = await AuthorizeAsync(actor, source, ct, fresh: true);
         if (!still.IsSuccess) return still.Error;
         db.AuditEvents.Add(new() { OwnerId = actor, Action = "integration.record.read", Result = "read-only", DetailsJson = JsonSerializer.Serialize(new { source, externalId = id, row.Record.Revision }) });
         await db.SaveChangesAsync(ct);
         return row;
     }
 
-    private async Task<Result<Target>> AuthorizeAsync(Guid actor, string source, CancellationToken ct)
+    // A re-check after the source call is fresh: grants read earlier in this request may have been revoked meanwhile.
+    private async Task<Result<Target>> AuthorizeAsync(Guid actor, string source, CancellationToken ct, bool fresh = false)
     {
         if (!Catalog.Any(x => x.Id == source)) return IntegrationErrors.UnknownSource;
+        if (fresh) access.Invalidate();
         var grants = await access.ForUserAsync(actor, ct);
         if (!grants.Features.Any(x => x.Id == FeatureIds.Integrations)) return IntegrationErrors.FeatureRevoked;
         var value = options.Value.For(source);

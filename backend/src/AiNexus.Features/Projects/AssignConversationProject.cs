@@ -14,7 +14,7 @@ public sealed record ConversationProjectRequest(Guid? ProjectId);
 
 /// <summary>
 /// Moves one of the user's own conversations into an active project they may read, or out of its project. Runs under the
-/// generation state gate so it cannot race a starting answer.
+/// conversation's generation lock so it cannot race a starting answer.
 /// </summary>
 internal sealed class AssignConversationProject(NexusDbContext db, ResourceAccess access, AccessService features, GenerationScheduler scheduler, TimeProvider clock)
 {
@@ -25,7 +25,7 @@ internal sealed class AssignConversationProject(NexusDbContext db, ResourceAcces
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid actor, Guid id, Guid? projectId, CancellationToken ct)
     {
-        await scheduler.StateGate.WaitAsync(ct);
+        var conversationLock = await scheduler.LockConversationAsync(id, ct);
         try
         {
             var conversation = await db.Conversations.Include(x => x.Labels).SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor, ct);
@@ -42,6 +42,6 @@ internal sealed class AssignConversationProject(NexusDbContext db, ResourceAcces
             await db.SaveChangesAsync(ct);
             return conversation.ToDto();
         }
-        finally { scheduler.StateGate.Release(); }
+        finally { conversationLock.Dispose(); }
     }
 }

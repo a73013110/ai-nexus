@@ -8,18 +8,22 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Inference;
 
-/// <summary>Expiry is checked again in an atomic UPDATE, so a renewed foreign lease cannot be reclaimed.</summary>
-public sealed class RunLeaseRecovery(NexusDbContext db, ConversationService conversations, BillingService billing, Issues issues, ILogger<RunLeaseRecovery> logger, AiNexus.Features.Notifications.NotificationService notifications)
+/// <summary>
+/// Expiry is checked again in an atomic UPDATE, so a renewed foreign lease cannot be reclaimed. Each run is recovered
+/// under its conversation's generation lock, so a local flush or cancellation of the same run cannot interleave.
+/// </summary>
+public sealed class RunLeaseRecovery(NexusDbContext db, GenerationScheduler scheduler, RunSignals signals, ConversationService conversations, BillingService billing, Issues issues, ILogger<RunLeaseRecovery> logger, AiNexus.Features.Notifications.NotificationService notifications)
 {
     public async Task<int> RecoverAsync(DateTimeOffset now, CancellationToken ct)
     {
         var expired = await db.Runs.AsNoTracking()
             .Where(x => x.ActiveOwnerId != null && (x.LeaseExpiresAt == null || x.LeaseExpiresAt <= now))
             .OrderBy(x => x.LeaseExpiresAt).ThenBy(x => x.Id)
-            .Select(x => x.Id).Take(100).ToArrayAsync(ct);
+            .Select(x => new { x.Id, x.ConversationId }).Take(100).ToArrayAsync(ct);
         var recovered = 0;
-        foreach (var id in expired)
+        foreach (var (id, conversation) in expired.Select(x => (x.Id, x.ConversationId)))
         {
+            using var conversationLock = await scheduler.LockConversationAsync(conversation, ct);
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             var changed = await db.Runs
                 .Where(x => x.Id == id && x.ActiveOwnerId != null && (x.LeaseExpiresAt == null || x.LeaseExpiresAt <= now))
@@ -44,6 +48,7 @@ public sealed class RunLeaseRecovery(NexusDbContext db, ConversationService conv
             await notifications.PublishAsync(run.OwnerId, "run:" + run.Id, "conversation.failed", "error", "AI 回答未完成", Issues.Message(run.IssueCode), "conversation", run.ConversationId, ct, run.IssueCode);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
+            signals.Notify(id);
             recovered++;
         }
         return recovered;

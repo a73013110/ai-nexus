@@ -9,7 +9,7 @@ namespace AiNexus.Features.Conversations;
 
 /// <summary>
 /// Copies one of the user's own idle conversations with its whole message tree, labels and attachment links. Runs under
-/// the generation state gate, in a transaction that holds the owner's attachment quota lock.
+/// the conversation's generation lock, in a transaction that holds the owner's attachment quota lock.
 /// </summary>
 internal sealed class DuplicateConversation(NexusDbContext db, GenerationScheduler scheduler, AttachmentQuota quota, TimeProvider clock)
 {
@@ -19,7 +19,7 @@ internal sealed class DuplicateConversation(NexusDbContext db, GenerationSchedul
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)
     {
-        await scheduler.StateGate.WaitAsync(ct);
+        var conversationLock = await scheduler.LockConversationAsync(id, ct);
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
@@ -41,6 +41,6 @@ internal sealed class DuplicateConversation(NexusDbContext db, GenerationSchedul
             await transaction.CommitAsync(ct);
             return clone.ToDto();
         }
-        finally { scheduler.StateGate.Release(); }
+        finally { conversationLock.Dispose(); }
     }
 }
