@@ -1,4 +1,4 @@
-using AiNexus.Features.Knowledge;
+using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Features.Quality;
 

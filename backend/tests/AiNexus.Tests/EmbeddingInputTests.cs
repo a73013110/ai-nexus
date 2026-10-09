@@ -1,5 +1,6 @@
 using AiNexus.Features.Knowledge;
 using Xunit;
+using AiNexus.Features.Knowledge.Embeddings;
 
 namespace AiNexus.Tests;
 

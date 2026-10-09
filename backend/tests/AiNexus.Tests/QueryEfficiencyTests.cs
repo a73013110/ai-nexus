@@ -9,7 +9,6 @@ using AiNexus.Features.Artifacts;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Knowledge;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Projects;
 using AiNexus.Features.Quality;
@@ -20,6 +19,8 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using static AiNexus.Tests.ChatApiTests;
+using AiNexus.Features.Knowledge.Documents;
+using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Tests;
 

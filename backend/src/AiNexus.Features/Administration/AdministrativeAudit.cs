@@ -79,8 +79,8 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
     private async Task<object?> SnapshotAsync(string action, Guid? resource, string key, CancellationToken ct)
     {
         if (action.StartsWith("admin.embedding_", StringComparison.Ordinal) && int.TryParse(key, out var profile)) return new {
-            profiles = await db.Set<AiNexus.Features.Knowledge.EmbeddingProfile>().AsNoTracking().Select(x => new { x.Id, x.Status, x.ActivatedAt, x.RetiredAt }).ToArrayAsync(ct),
-            vectors = await db.Set<AiNexus.Features.Knowledge.ChunkEmbedding768>().CountAsync(x => x.ProfileId == profile, ct) + await db.Set<AiNexus.Features.Knowledge.ChunkEmbedding1024>().CountAsync(x => x.ProfileId == profile, ct)
+            profiles = await db.Set<AiNexus.Features.Knowledge.Embeddings.EmbeddingProfile>().AsNoTracking().Select(x => new { x.Id, x.Status, x.ActivatedAt, x.RetiredAt }).ToArrayAsync(ct),
+            vectors = await db.Set<AiNexus.Features.Knowledge.Embeddings.ChunkEmbedding768>().CountAsync(x => x.ProfileId == profile, ct) + await db.Set<AiNexus.Features.Knowledge.Embeddings.ChunkEmbedding1024>().CountAsync(x => x.ProfileId == profile, ct)
         };
         if (action == "admin.user_model_policy")
         {

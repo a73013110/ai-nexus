@@ -16,6 +16,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Xunit;
+using AiNexus.Features.Knowledge.Collections;
+using AiNexus.Features.Knowledge.Documents;
+using AiNexus.Features.Knowledge.Indexing;
+using AiNexus.Features.Knowledge.Embeddings;
+using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Tests;
 

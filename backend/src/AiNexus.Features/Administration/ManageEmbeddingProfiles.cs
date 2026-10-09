@@ -2,6 +2,7 @@ using System.Globalization;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Knowledge;
 using AiNexus.Features.Jobs;
+using AiNexus.Features.Knowledge.Embeddings;
 
 namespace AiNexus.Features.Administration;
 

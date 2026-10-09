@@ -7,6 +7,11 @@ using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Jobs;
+using AiNexus.Features.Knowledge.Collections;
+using AiNexus.Features.Knowledge.Documents;
+using AiNexus.Features.Knowledge.Indexing;
+using AiNexus.Features.Knowledge.Embeddings;
+using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Features.Knowledge;
 
