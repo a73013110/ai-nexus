@@ -8,7 +8,6 @@ using System.Text.Json;
 using AiNexus.Features.Chat;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;

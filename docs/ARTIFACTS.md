@@ -12,7 +12,7 @@ AI 回答旁的「儲存成果」可直接將回答建立為文件。在對話�
 - Word：使用 Open XML SDK 建立 DOCX，保留中文、標題、清單、表格與程式區塊。
 - PDF：使用隔離的無 JavaScript Chromium 頁面以 A4 排版，保留中文字；每次匯出只輸出目前選取的**已儲存版本**。
 
-匯出不載入外部圖片或遠端資源，原始 HTML 視為文字。部署主機必須安裝 `Exports.BrowserChannel` 指定的 Edge（`msedge`，預設）、Chrome（`chrome`），或部署 Playwright 對應的 `chromium`。另需安裝可涵蓋繁體中文的字型；Windows 使用 Microsoft JhengHei。無可用瀏覽器時 PDF 會顯示可處理的錯誤，Word／Markdown 仍可使用。
+匯出不載入外部圖片或遠端資源，原始 HTML 視為文字。部署主機必須安裝 `Exports.BrowserChannel` 指定的 Edge（`msedge`，預設）、Chrome（`chrome`），或部署 Playwright 對應的 `chromium`；也可用 `Exports.BrowserExecutablePath` 指定 Chromium 系瀏覽器執行檔的絕對路徑，設定後取代 `BrowserChannel`。另需安裝可涵蓋繁體中文的字型；Windows 使用 Microsoft JhengHei。無可用瀏覽器時 PDF 會顯示可處理的錯誤，Word／Markdown 仍可使用。
 
 `Exports.TimeoutSeconds` 預設 30；同時最多兩次 PDF 匯出。Render 完成後會再次檢查使用者權限，才傳回私人、不快取的檔案。
 

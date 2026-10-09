@@ -227,6 +227,7 @@
   ],
   "Exports": [
     "BrowserChannel",
+    "BrowserExecutablePath",
     "TimeoutSeconds"
   ],
   "Storage": [

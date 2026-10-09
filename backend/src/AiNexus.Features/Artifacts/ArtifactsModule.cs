@@ -52,5 +52,6 @@ internal sealed class ExportOptionsValidator : IValidateOptions<ExportOptions>
 {
     public ValidateOptionsResult Validate(string? name, ExportOptions x)
         => x.BrowserChannel is "msedge" or "chrome" or "chromium" && x.TimeoutSeconds is >= 5 and <= 120
+           && (string.IsNullOrWhiteSpace(x.BrowserExecutablePath) || Path.IsPathFullyQualified(x.BrowserExecutablePath))
             ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail("Invalid document export browser settings.");
 }
