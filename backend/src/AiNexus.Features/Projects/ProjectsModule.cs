@@ -41,3 +41,5 @@ public sealed class ProjectsModule : IFeatureModule
         CreateProjectArtifact.Map(routes);
     }
 }
+
+internal sealed class ProjectsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Projects, "專案", "/projects", 20));

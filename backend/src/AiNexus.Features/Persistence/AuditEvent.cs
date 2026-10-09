@@ -1,3 +1,6 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
 namespace AiNexus.Features.Persistence;
 
 public static class AuditOutcomes
@@ -20,4 +23,21 @@ public sealed class AuditEvent
     public string? Result { get; set; } = "completed";
     public string? DetailsJson { get; set; }
     public DateTimeOffset At { get; set; } = DateTimeOffset.UtcNow;
+}
+
+internal sealed class AuditEventConfiguration : IEntityTypeConfiguration<AuditEvent>
+{
+    public void Configure(EntityTypeBuilder<AuditEvent> audit)
+    {
+        audit.ToTable("AuditEvents", "operations");
+        audit.HasKey(x => x.Id);
+        audit.Property(x => x.Action).HasMaxLength(64);
+        audit.Property(x => x.TraceId).HasMaxLength(32); audit.Property(x => x.IssueCode).HasMaxLength(40);
+        audit.Property(x => x.Result).HasMaxLength(80);
+        audit.Property(x => x.DetailsJson).HasMaxLength(40000);
+        audit.HasIndex(x => x.At);
+        audit.HasIndex(x => new { x.Action, x.Id });
+        audit.HasIndex(x => new { x.ResourceId, x.Id });
+        audit.HasIndex(x => new { x.ActorId, x.Id });
+    }
 }

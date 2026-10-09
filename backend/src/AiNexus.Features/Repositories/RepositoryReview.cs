@@ -39,17 +39,7 @@ public sealed record RepositoryReviewSectionDto(int Ordinal, string Label, strin
 public sealed record RepositoryReviewReportDto(string Output, bool Truncated, long? InputTokens, long? OutputTokens, long ElapsedMs);
 public sealed record RepositoryReviewDetailDto(RepositoryReviewDto Review, IReadOnlyList<RepositoryReviewSectionDto> Sections, RepositoryReviewReportDto? Report = null, int Version = 1);
 
-/// <summary>Entry point kept for <c>NexusDbContext</c>.</summary>
-public static class RepositoryReviewConfiguration
-{
-    public static void Configure(ModelBuilder model)
-    {
-        model.ApplyConfiguration(new RepositoryReviewEntityConfiguration());
-        model.ApplyConfiguration(new RepositoryReviewResultConfiguration());
-    }
-}
-
-internal sealed class RepositoryReviewEntityConfiguration : IEntityTypeConfiguration<RepositoryReview>
+internal sealed class RepositoryReviewConfiguration : IEntityTypeConfiguration<RepositoryReview>
 {
     public void Configure(EntityTypeBuilder<RepositoryReview> r)
     {

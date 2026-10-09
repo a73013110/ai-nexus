@@ -1,4 +1,3 @@
-using AiNexus.Features.AccessControl;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -20,7 +19,7 @@ public sealed class Attachment
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
-internal sealed class AttachmentEntityConfiguration : IEntityTypeConfiguration<Attachment>
+internal sealed class AttachmentConfiguration : IEntityTypeConfiguration<Attachment>
 {
     public void Configure(EntityTypeBuilder<Attachment> file)
     {
@@ -38,16 +37,5 @@ internal sealed class AttachmentEntityConfiguration : IEntityTypeConfiguration<A
         file.HasIndex(x => new { x.StorageState, x.CreatedAt });
         file.HasIndex(x => new { x.OwnerId, x.CreatedAt });
         file.HasIndex(x => new { x.OwnerId, x.InLibrary, x.CreatedAt, x.Id });
-    }
-}
-
-/// <summary>Entry point kept for <c>NexusDbContext</c>.</summary>
-public static class AttachmentConfiguration
-{
-    public static void Configure(ModelBuilder model)
-    {
-        PlatformFeatures.Add(model, "files", "檔案庫", "/files", 15);
-        model.ApplyConfiguration(new AttachmentEntityConfiguration());
-        model.ApplyConfiguration(new MessageAttachmentConfiguration());
     }
 }

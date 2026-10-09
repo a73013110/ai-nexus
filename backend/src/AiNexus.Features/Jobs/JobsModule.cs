@@ -29,3 +29,5 @@ public sealed class JobsModule : IFeatureModule
         RetryJob.Map(jobs);
     }
 }
+
+internal sealed class JobsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Tasks, "背景任務", "/tasks", 70));

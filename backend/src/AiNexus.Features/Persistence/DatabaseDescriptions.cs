@@ -1,9 +1,14 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Microsoft.EntityFrameworkCore.Metadata.Conventions;
 
 namespace AiNexus.Features.Persistence;
 
-/// <summary>Schema documentation is model metadata, checked at build/test time and deployed by EF.</summary>
-public static class DatabaseDescriptions
+/// <summary>
+/// Schema documentation is model metadata, checked at build/test time and deployed by EF. A model-finalizing convention,
+/// so it sees every table and column whichever configuration added them.
+/// </summary>
+internal sealed class DatabaseDescriptions : IModelFinalizingConvention
 {
     private static readonly IReadOnlyDictionary<string, string> Tables = new Dictionary<string, string>
     {
@@ -228,9 +233,9 @@ public static class DatabaseDescriptions
         ["Commit"] = "匯入當時固定的 commit SHA。", ["Path"] = "repository 內的檔案路徑，不是伺服器路徑。",
     };
 
-    public static void Configure(ModelBuilder model)
+    public void ProcessModelFinalizing(IConventionModelBuilder modelBuilder, IConventionContext<IConventionModelBuilder> context)
     {
-        foreach (var entity in model.Model.GetEntityTypes())
+        foreach (var entity in modelBuilder.Metadata.GetEntityTypes())
         {
             var table = entity.GetTableName() ?? throw new InvalidOperationException("Every entity must map to a documented table.");
             if (!Tables.TryGetValue(table, out var purpose)) throw new InvalidOperationException($"Missing table description: {table}");

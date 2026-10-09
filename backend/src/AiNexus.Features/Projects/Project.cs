@@ -20,17 +20,7 @@ public sealed class Project
     public ProjectDto ToDto(ResourceDto resource) => new(resource, Description, Instructions, Version, IsArchived);
 }
 
-/// <summary>Entry point kept for <c>NexusDbContext</c>.</summary>
-public static class ProjectConfiguration
-{
-    public static void Configure(ModelBuilder model)
-    {
-        model.ApplyConfiguration(new ProjectEntityConfiguration());
-        model.ApplyConfiguration(new ProjectTemplateConfiguration());
-    }
-}
-
-internal sealed class ProjectEntityConfiguration : IEntityTypeConfiguration<Project>
+internal sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
 {
     public void Configure(EntityTypeBuilder<Project> row)
     {
