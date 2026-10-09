@@ -10,7 +10,7 @@ namespace AiNexus.Tests;
 [Collection("Diagnostic browser")]
 public sealed class MonitoringBrowserTests
 {
-    [DiagnosticBrowserFact, Trait("Category", "Browser")]
+    [BrowserFact, Trait("Category", "Browser")]
     public async Task RealBrowserHeartbeatAndOperationReachLiveDashboard()
     {
         var root = Path.GetFullPath("../../../../../..", AppContext.BaseDirectory);
@@ -18,7 +18,7 @@ public sealed class MonitoringBrowserTests
         await using var factory = new NexusFactory(administrators: ["alice"], backgroundJobs: false, webRoot: webRoot);
         factory.UseKestrel(0); using var client = await factory.SignedInAsync();
         using var playwright = await Playwright.CreateAsync();
-        await using var browser = await playwright.Chromium.LaunchAsync(new() { Channel = "msedge", Headless = true });
+        await using var browser = await playwright.Chromium.LaunchAsync(TestBrowser.LaunchOptions());
         await using var context = await browser.NewContextAsync(new() {
             BaseURL = client.BaseAddress!.ToString(), ViewportSize = new() { Width = 1440, Height = 1000 },
             ExtraHTTPHeaders = new Dictionary<string, string> { ["X-Test-User"] = "alice" }
@@ -33,10 +33,10 @@ public sealed class MonitoringBrowserTests
         await Expect(page.GetByText("即時連線", new() { Exact = true })).ToBeVisibleAsync();
         await Expect(page.Locator(".monitor-table")).ToContainTextAsync("alice");
         await Expect(page.Locator(".activity-list")).ToContainTextAsync("執行對話", new() { Timeout = 15000 });
-        await page.GetByRole(AriaRole.Button, new() { Name = "檢視 alice 的連線", Exact = true }).ClickAsync();
+        await page.GetByRole(AriaRole.Button, new() { Name = "檢視 alice 的連線" }).ClickAsync();
         var inspector = page.GetByRole(AriaRole.Dialog, new() { Name = "工作階段詳情", Exact = true });
         await Expect(inspector).ToContainTextAsync("Active Directory");
-        await Expect(inspector).ToContainTextAsync("Edge");
+        await Expect(inspector).ToContainTextAsync((await page.EvaluateAsync<string>("navigator.userAgent")).Contains(" Edg/", StringComparison.Ordinal) ? "Edge" : "Chrome");
         await page.GetByRole(AriaRole.Button, new() { Name = "關閉工作階段詳情", Exact = true }).ClickAsync();
         await page.GetByRole(AriaRole.Button, new() { Name = "暫停更新", Exact = true }).ClickAsync();
         await Expect(page.GetByText("已暫停", new() { Exact = true })).ToBeVisibleAsync();
