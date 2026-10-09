@@ -9,17 +9,13 @@ import {
   isActive,
   Me,
   Message,
-  Model,
   Preferences,
   Run,
-  ModelPolicy,
   ContextPreview,
   ContextUsage,
 } from '../../core/api/types';
 import { ThemeService } from '../../core/preferences/theme-service';
-import { RunStream } from '../../core/stream/run-stream';
 import { AuthService } from '../../core/auth/auth-service';
-import { DraftRepository } from '../../core/preferences/draft-repository';
 import { DraftAttachments } from '../attachments/draft-attachments';
 import { WorkspaceApi } from '../workspace/workspace-api';
 import { MessageTree } from './message-tree';
@@ -29,7 +25,16 @@ import { UserSettingsService } from '../../core/preferences/user-settings';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { KnowledgeSelection } from '../knowledge/knowledge-selection';
 import { ProjectsApi } from '../projects/projects-api';
+import { ChatDraft } from './chat-draft';
+import { ChatHistory } from './chat-history';
+import { ChatModels } from './chat-models';
+import { ChatRun } from './chat-run';
 
+/**
+ * Orchestrates the chat page: bootstrap, conversation selection and submission. State with its
+ * own lifecycle lives in ChatModels, ChatRun, ChatDraft and ChatHistory; the aliases below keep
+ * one surface for templates.
+ */
 @Injectable({ providedIn: 'root' })
 export class ChatStore {
   private readonly notifications = inject(NotificationStore);
@@ -49,18 +54,21 @@ export class ChatStore {
     }
   }
   private readonly api = inject(NexusApi);
-  private readonly stream = inject(RunStream);
   private readonly router = inject(Router);
   private readonly themes = inject(ThemeService);
   readonly attachments = inject(DraftAttachments);
   readonly knowledge = inject(KnowledgeSelection);
-  readonly drafts = inject(DraftRepository);
   private readonly workspace = inject(WorkspaceApi);
   readonly auth = inject(AuthService);
   readonly personal = inject(UserSettingsService);
   private readonly session = inject(WorkspaceSession);
+  readonly model = inject(ChatModels);
+  readonly run = inject(ChatRun);
+  readonly composer = inject(ChatDraft);
+  readonly history = inject(ChatHistory);
+  readonly drafts = this.composer.repository;
   readonly me = signal<Me | null>(null);
-  readonly conversations = signal<Conversation[]>([]);
+  readonly conversations = this.history.conversations;
   readonly selected = signal<Conversation | null>(null);
   readonly messages = signal<Message[]>([]);
   rateMessage(value: { id: string; rating: number }) {
@@ -68,17 +76,13 @@ export class ChatStore {
       items.map((x) => (x.id === value.id ? { ...x, feedbackRating: value.rating } : x)),
     );
   }
-  readonly models = signal<Model[]>([]);
-  readonly modelId = signal('');
-  readonly policy = signal<ModelPolicy>({
-    allowModelSelection: true,
-    showModelNames: true,
-    defaultModelId: null,
-    maxInputCharacters: 12000,
-  });
-  readonly reasoningEffort = signal('auto');
-  readonly webSearchEnabled = signal(false);
-  readonly webSearchStatus = signal({ available: false, notice: '正在確認網路搜尋設定…' });
+  readonly models = this.model.models;
+  readonly modelId = this.model.modelId;
+  readonly policy = this.model.policy;
+  readonly reasoningEffort = this.model.reasoningEffort;
+  readonly webSearchEnabled = this.model.webSearchEnabled;
+  readonly webSearchStatus = this.model.webSearchStatus;
+  readonly modelNotice = this.model.notice;
   readonly contextUsage = signal<ContextUsage | null>(null);
   readonly contextNotice = signal<string | null>(null);
   readonly hasChatAccess = computed(
@@ -90,28 +94,26 @@ export class ChatStore {
   readonly hasArtifactsAccess = computed(
     () => this.me()?.access.features?.some((x) => x.id === 'artifacts') ?? false,
   );
-  readonly modelNotice = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly ready = signal(false);
   readonly loading = signal(true);
   readonly loadingConversation = signal(false);
   readonly submitting = signal(false);
-  readonly stopping = signal(false);
-  readonly liveRun = signal<Run | null>(null);
-  readonly streamingText = signal('');
-  readonly connection = signal<'connected' | 'reconnecting' | 'disconnected'>('connected');
+  readonly stopping = this.run.stopping;
+  readonly liveRun = this.run.live;
+  readonly streamingText = this.run.text;
+  readonly connection = this.run.connection;
   readonly pendingSubmission = signal(false);
-  readonly hasMore = signal(false);
-  readonly search = signal('');
-  readonly historyView = signal('active');
-  readonly historyLabel = signal('');
-  readonly labels = signal<string[]>([]);
-  readonly editing = signal<Message | null>(null);
-  readonly draft = signal({ text: '' });
+  readonly hasMore = this.history.hasMore;
+  readonly search = this.history.search;
+  readonly historyView = this.history.view;
+  readonly historyLabel = this.history.label;
+  readonly labels = this.history.labels;
+  readonly editing = this.composer.editing;
+  readonly draft = this.composer.content;
   readonly tree = computed(() => new MessageTree(this.messages()));
   readonly visionNotice = computed(() =>
-    this.attachments.files().some((x) => x.isImage) &&
-    !this.models().find((x) => x.id === this.modelId())?.supportsImages
+    this.attachments.files().some((x) => x.isImage) && !this.model.current()?.supportsImages
       ? '目前模型不支援圖片，請切換模型或移除圖片。'
       : '',
   );
@@ -147,9 +149,7 @@ export class ChatStore {
   );
   readonly visibleMessages = computed(() => this.tree().branch(this.selected()?.activeLeafId));
   private initialized: Promise<void> | null = null;
-  private subscription: AbortController | null = null;
   private selectionVersion = 0;
-  private searchVersion = 0;
   private pending: {
     body: CreateRun;
     key: string;
@@ -158,7 +158,6 @@ export class ChatStore {
   } | null = null;
   private preferenceWrite: Promise<void> = Promise.resolve();
   private preferenceVersion = 0;
-  private restoringDraft = false;
   private authGeneration = -1;
 
   constructor() {
@@ -181,37 +180,18 @@ export class ChatStore {
     inject(DestroyRef).onDestroy(() => {
       save();
       window.removeEventListener('pagehide', save);
-      this.subscription?.abort();
+      this.run.reset();
     });
   }
 
   private persistDraft() {
     const user = this.me();
-    if (
-      user &&
-      this.ready() &&
-      !this.loadingConversation() &&
-      !this.editing() &&
-      this.personal.value().saveLocalDrafts &&
-      !this.restoringDraft
-    )
-      this.drafts.save(
-        user.id,
-        this.selected()?.id ?? null,
-        this.draft().text,
-        this.attachments.files().map((file) => file.id),
-      );
+    if (user && this.ready() && !this.loadingConversation())
+      this.composer.save(user.id, this.selected()?.id ?? null);
   }
   private async restoreDraft(id: string | null) {
     const user = this.me();
-    if (!user || !this.personal.value().saveLocalDrafts) return;
-    const saved = this.drafts.load(user.id, id);
-    this.restoringDraft = true;
-    if (saved) {
-      this.draft.set({ text: saved.text });
-      await this.attachments.restore(saved.attachmentIds);
-    }
-    this.restoringDraft = false;
+    if (user) await this.composer.restore(user.id, id);
   }
 
   initialize(retry = false): Promise<void> {
@@ -229,13 +209,10 @@ export class ChatStore {
     this.loading.set(true);
     this.error.set(null);
     try {
-      if (!(await this.auth.requireLogin())) return;
-      const me = await this.api.me();
-      if (generation !== this.auth.generation()) return;
+      // Account and settings load together; the account is always fresh here for its active run.
+      const me = await this.session.load(true);
+      if (!me || generation !== this.auth.generation()) return;
       this.me.set(me);
-      this.session.adopt(me);
-      await this.personal.load(me.id, true);
-      if (generation !== this.auth.generation()) return;
       this.themes.apply({
         theme: me.preferences.theme ?? 'system',
         reducedMotion: me.preferences.reducedMotion ?? false,
@@ -246,51 +223,27 @@ export class ChatStore {
         this.error.set('你的角色目前沒有對話功能，請聯絡管理員。');
         return;
       }
-      const catalog = await this.api.models();
-      if (generation !== this.auth.generation()) return;
-      this.models.set(catalog.models as Model[]);
-      this.policy.set(catalog.policy as ModelPolicy);
-      this.modelNotice.set(catalog.notice ?? null);
-      this.modelId.set(
-        catalog.policy.allowModelSelection &&
-          catalog.models.some((x) => x.id === me.preferences.defaultModelId)
-          ? me.preferences.defaultModelId!
-          : catalog.models.some((x) => x.id === catalog.policy.defaultModelId)
-            ? catalog.policy.defaultModelId!
-            : (catalog.models[0]?.id ?? ''),
-      );
-      this.reasoningEffort.set(
-        this.models()
-          .find((x) => x.id === this.modelId())
-          ?.reasoningEfforts.includes(this.personal.value().defaultReasoningEffort)
-          ? this.personal.value().defaultReasoningEffort
-          : (this.models().find((x) => x.id === this.modelId())?.defaultReasoningEffort ?? 'auto'),
-      );
-      await this.refreshHistory();
-      if (generation !== this.auth.generation()) return;
-      this.ready.set(true);
-      void this.api
-        .webSearchStatus()
-        .then((status) => {
-          if (generation === this.auth.generation()) this.webSearchStatus.set(status);
-        })
-        .catch(() => {
-          if (generation === this.auth.generation())
-            this.webSearchStatus.set({
-              available: false,
-              notice: '暫時無法確認搜尋服務，請重新連線。',
-            });
-        });
-      const extensions = await Promise.allSettled([
+      // Optional services never block the composer, so they start alongside models and history.
+      const extensions = Promise.allSettled([
         this.attachments.initialize(),
         this.workspace.labels(),
-        ...(this.me()?.access.features?.some((x) => x.id === 'knowledge')
+        ...(me.access.features?.some((x) => x.id === 'knowledge')
           ? [this.knowledge.initialize()]
           : []),
       ]);
+      const [catalog] = await Promise.all([this.api.models(), this.refreshHistory()]);
       if (generation !== this.auth.generation()) return;
-      if (extensions[1].status === 'fulfilled') this.labels.set(extensions[1].value);
-      if (extensions[0].status === 'rejected')
+      this.model.adopt(
+        catalog,
+        me.preferences.defaultModelId,
+        this.personal.value().defaultReasoningEffort,
+      );
+      this.ready.set(true);
+      void this.model.loadWebSearch();
+      const [attachments, labels] = await extensions;
+      if (generation !== this.auth.generation()) return;
+      if (labels.status === 'fulfilled') this.labels.set(labels.value);
+      if (attachments.status === 'rejected')
         this.attachments.error.set('附件服務尚未就緒，請重新連線。');
       if (!this.selected() && !this.draft().text) await this.restoreDraft(null);
       if (me.activeRunId && !this.liveRun()) {
@@ -308,17 +261,8 @@ export class ChatStore {
     }
   }
 
-  async refreshHistory(more = false) {
-    const version = ++this.searchVersion;
-    const rows = await this.api.conversations(
-      this.search(),
-      more ? this.conversations().length : 0,
-      this.historyView(),
-      this.historyLabel(),
-    );
-    if (version !== this.searchVersion) return;
-    this.conversations.update((current) => (more ? [...current, ...rows] : rows));
-    this.hasMore.set(rows.length === 100);
+  refreshHistory(more = false) {
+    return this.history.refresh(more);
   }
   async searchHistory(value: string) {
     this.search.set(value);
@@ -340,8 +284,7 @@ export class ChatStore {
     }
     const version = ++this.selectionVersion;
     this.persistDraft();
-    this.editing.set(null);
-    this.draft.set({ text: '' });
+    this.composer.clear();
     this.attachments.reset();
     if (!id) {
       await this.knowledge.load(null);
@@ -447,9 +390,8 @@ export class ChatStore {
       this.drafts.clear(this.me()!.id, run.conversationId);
     }
     if (this.selected()?.id === run.conversationId && pending.mode !== 'regenerate') {
-      this.draft.set({ text: '' });
+      this.composer.clear();
       this.attachments.reset();
-      this.editing.set(null);
       if (pending.mode === 'edit') await this.restoreDraft(run.conversationId);
     }
     if (generation !== this.auth.generation()) return;
@@ -515,8 +457,7 @@ export class ChatStore {
     }
   }
   cancelEdit() {
-    this.editing.set(null);
-    this.draft.set({ text: '' });
+    this.composer.clear();
     this.attachments.reset();
     void this.restoreDraft(this.selected()?.id ?? null);
   }
@@ -542,8 +483,7 @@ export class ChatStore {
     try {
       const final = await this.api.cancel(run.id);
       if (generation !== this.auth.generation()) return;
-      this.subscription?.abort();
-      this.streamingText.set(final.content);
+      this.run.stopped(final);
       await this.finish(final);
     } catch (error) {
       if (generation === this.auth.generation()) this.report(error);
@@ -566,31 +506,11 @@ export class ChatStore {
   }
 
   private async follow(run: Run) {
-    this.subscription?.abort();
-    const controller = (this.subscription = new AbortController());
-    this.liveRun.set(run);
     try {
-      const terminal = await this.stream.follow(run, controller.signal, {
-        content: (content) => {
-          if (!controller.signal.aborted) this.streamingText.set(content);
-        },
-        status: (current) => {
-          if (!controller.signal.aborted) this.liveRun.set(current);
-        },
-        connection: (state) => {
-          if (!controller.signal.aborted) this.connection.set(state);
-        },
-      });
-      if (!controller.signal.aborted) await this.finish(terminal);
+      await this.run.follow(run, (terminal) => this.finish(terminal));
     } catch (error) {
-      if (!controller.signal.aborted) {
-        this.connection.set('disconnected');
-        if (error instanceof ApiError && [401, 403, 404].includes(error.status)) {
-          this.liveRun.set(null);
-          if (error.status !== 404) this.ready.set(false);
-        }
-        this.report(error);
-      }
+      if (error instanceof ApiError && [401, 403].includes(error.status)) this.ready.set(false);
+      this.report(error);
     }
   }
 
@@ -604,8 +524,7 @@ export class ChatStore {
         this.messages.set(detail.messages as Message[]);
       }
     }
-    if (this.liveRun()?.id === run.id) this.liveRun.set(null);
-    this.connection.set('connected');
+    this.run.settle(run);
     await this.refreshHistory();
     if (generation === this.auth.generation()) await this.notifications.refresh();
   }
@@ -659,12 +578,7 @@ export class ChatStore {
   }
 
   chooseModel(id: string) {
-    if (!this.policy().allowModelSelection || this.busy()) return;
-    const model = this.models().find((x) => x.id === id);
-    if (!model) return;
-    this.modelId.set(id);
-    this.reasoningEffort.set(model.defaultReasoningEffort);
-    this.contextUsage.set(null);
+    if (!this.busy() && this.model.choose(id)) this.contextUsage.set(null);
   }
 
   async previewContext(body: ContextPreview, signal: AbortSignal) {
@@ -770,37 +684,25 @@ export class ChatStore {
   }
   private resetSession() {
     this.knowledge.reset();
-    this.webSearchEnabled.set(false);
-    this.webSearchStatus.set({ available: false, notice: '正在確認網路搜尋設定…' });
     this.persistDraft();
-    this.subscription?.abort();
+    this.model.reset();
+    this.run.reset();
+    this.composer.reset();
+    this.history.reset();
     this.initialized = null;
     this.pending = null;
     this.pendingSubmission.set(false);
     this.submitting.set(false);
-    this.stopping.set(false);
     this.loadingConversation.set(false);
-    this.restoringDraft = false;
     this.me.set(null);
     this.ready.set(false);
     this.selected.set(null);
-    this.conversations.set([]);
     this.messages.set([]);
-    this.models.set([]);
-    this.liveRun.set(null);
-    this.streamingText.set('');
-    this.draft.set({ text: '' });
     this.contextUsage.set(null);
     this.contextNotice.set(null);
     this.attachments.reset();
-    this.labels.set([]);
-    this.editing.set(null);
-    this.historyView.set('active');
-    this.historyLabel.set('');
-    this.search.set('');
     this.error.set(null);
     this.selectionVersion++;
-    this.searchVersion++;
     this.preferenceVersion++;
     this.authGeneration = this.auth.generation();
   }

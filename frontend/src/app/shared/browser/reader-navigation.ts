@@ -20,6 +20,7 @@ export function readerReturnUrl(value: unknown): string | null {
     !value.startsWith('/') ||
     value.startsWith('//') ||
     value.includes('\\') ||
+    // eslint-disable-next-line no-control-regex -- rejects control characters in return URLs
     /[\u0000-\u001f\u007f]/.test(value)
   )
     return null;

@@ -46,7 +46,7 @@ dotnet dev-certs https --trust
 
 ```powershell
 ./scripts/Build.ps1 -Restore  # restore + Angular build + .NET publish
-./scripts/Verify.ps1         # build + 後端 + 前端 + Edge 瀏覽器測試
+./scripts/Verify.ps1         # build + 後端 + 前端 lint／測試 + Edge 瀏覽器測試
 ./scripts/Verify.ps1 -SkipBrowser
 ./scripts/Build.ps1 -OutputDirectory artifacts/verification # 預覽仍運行時使用獨立產物
 ./scripts/Test-Connections.ps1  # 真實外部連線，與自動化測試分開

@@ -66,7 +66,7 @@ import { ChatStore } from '../chat/chat-store';
         />
         <p class="panel-note">以逗號分隔，最多 5 個標籤，每個最多 24 字元。</p>
         @if (session.has('projects') || projectId()) {
-          <label>所屬專案</label
+          <span class="field-label" aria-hidden="true">所屬專案</span
           ><nx-select
             label="對話所屬專案"
             [value]="projectId()"

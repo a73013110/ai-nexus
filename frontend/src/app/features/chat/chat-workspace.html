@@ -84,7 +84,7 @@
       <nx-conversation-find
         [messages]="store.visibleMessages()"
         (found)="find($event)"
-        (close)="closeFind()"
+        (closed)="closeFind()"
       />
     }
     @if (store.error(); as error) {

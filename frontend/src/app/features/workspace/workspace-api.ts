@@ -36,14 +36,13 @@ export class WorkspaceApi {
     );
   deletePrompt = (id: string) =>
     this.http.json<void>(`/prompt-templates/${encodeURIComponent(id)}`, 'DELETE');
-  attachmentPolicy = () => this.http.json<AttachmentPolicy>('/attachments/policy');
+  attachmentPolicy = () => this.http.reference<AttachmentPolicy>('/attachments/policy');
   attachmentStorage = (signal?: AbortSignal) =>
     this.http.json<AttachmentStorage>('/attachments/storage', 'GET', undefined, undefined, signal);
   attachment = (id: string) => this.http.json<Attachment>(`/attachments/${encodeURIComponent(id)}`);
   async upload(file: File, signal: AbortSignal) {
     const storage = await this.attachmentStorage(signal);
-    if (file.size > storage.remainingBytes)
-      throw new ClientValidationError('attachmentQuota');
+    if (file.size > storage.remainingBytes) throw new ClientValidationError('attachmentQuota');
     const body = new FormData();
     body.append('file', file);
     return this.http.json<Attachment>('/attachments', 'POST', body, undefined, signal);

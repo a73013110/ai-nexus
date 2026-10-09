@@ -16,12 +16,13 @@
 | 設定、秘密 | `docs/CONFIGURATION.md` |
 | 授權、功能 grant | `docs/ACCESS_CONTROL.md` |
 | 前端 UI、樣式 | `docs/UI_PATTERNS.md`、`docs/DESIGN_SYSTEM.md` |
+| 聊天渲染、串流 Markdown、前端請求與快取 | `docs/CHAT_RENDERING.md` |
 | 單一功能 | `README.md` 功能表連到的那一份 |
 
 ## 指令
 
 ```powershell
-./scripts/Verify.ps1 -SkipBrowser        # 送 PR 前必跑：build＋後端＋前端測試
+./scripts/Verify.ps1 -SkipBrowser        # 送 PR 前必跑：build＋後端＋前端 lint／測試
 dotnet build backend/AiNexus.slnx         # 0 warning（warning 即錯誤）
 dotnet test backend/AiNexus.slnx --no-build --filter "FullyQualifiedName~<Module>"
 dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Api
