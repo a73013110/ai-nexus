@@ -23,7 +23,7 @@ public sealed class DiagnosticFailureTests
     public async Task JournalPermissionOrDiskFailureDoesNotRecurseOrBlockBusiness(bool permission)
     {
         var journal = new FailedJournal(permission);
-        await using var factory = new NexusFactory(services: services => { services.RemoveAll<IDiagnosticJournal>(); services.AddSingleton<IDiagnosticJournal>(journal); });
+        await using var factory = new NexusFactory(workers: [typeof(DiagnosticWorker)], services: services => { services.RemoveAll<IDiagnosticJournal>(); services.AddSingleton<IDiagnosticJournal>(journal); });
         using var client = await factory.SignedInAsync(); var watch = Stopwatch.StartNew();
         for (var i = 0; i < 20; i++) (await client.GetAsync("/api/v1/me")).EnsureSuccessStatusCode();
         Assert.True(watch.Elapsed < TimeSpan.FromSeconds(10));
@@ -46,7 +46,7 @@ public sealed class DiagnosticFailureTests
     public async Task Sql30053HybridReturns200AndPersistsCorrelatedDegradationWarning()
     {
         var sql = DispatchProxy.Create<IDbHelper<INexusDatabase>, FulltextProxy>();
-        await using var factory = new NexusFactory(backgroundJobs: false, services: services => {
+        await using var factory = new NexusFactory(workers: [typeof(DiagnosticWorker)], services: services => {
             services.RemoveAll<IRetrievalStore>(); services.AddScoped<IRetrievalStore, SqlServerRetrievalStore>();
             services.RemoveAll<IDbHelper<INexusDatabase>>(); services.AddSingleton(sql);
         });

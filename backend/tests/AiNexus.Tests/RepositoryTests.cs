@@ -22,7 +22,7 @@ public sealed class RepositoryTests
     public async Task TokensAreEncryptedAndIsolatedWithPinnedReadOnlyImports()
     {
         var source = new FixtureGitea();
-        await using var factory = new NexusFactory(backgroundJobs: false, services: services => { services.RemoveAll<IGiteaClient>(); services.AddSingleton<IGiteaClient>(source); services.PostConfigure<GiteaOptions>(o => o.Enabled = true); });
+        await using var factory = new NexusFactory(services: services => { services.RemoveAll<IGiteaClient>(); services.AddSingleton<IGiteaClient>(source); services.PostConfigure<GiteaOptions>(o => o.Enabled = true); });
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var owner = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id; const string token = "fixtureOnlyReadTokenForGitea00001";
         var response = await alice.PostAsJsonAsync("/api/v1/repositories/connection", new ConnectRepositoryRequest(token)); response.EnsureSuccessStatusCode();

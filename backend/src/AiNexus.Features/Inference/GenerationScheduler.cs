@@ -21,7 +21,15 @@ public sealed class GenerationScheduler
     public static readonly TimeSpan LeaseDuration = TimeSpan.FromMinutes(2);
     public Guid[] TrackedRuns => cancellations.Keys.ToArray();
     private readonly KeyedAsyncLock<Guid> conversations = new();
-    public bool Ready { get; set; }
+    private readonly TaskCompletionSource firstReady = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    private volatile bool ready;
+    public bool Ready
+    {
+        get => ready;
+        set { ready = value; if (value) firstReady.TrySetResult(); }
+    }
+    /// <summary>Completes once the worker has recovered leases and synchronised model profiles; it never completes if that fails.</summary>
+    public Task WhenFirstReady => firstReady.Task;
     public bool Generating => Volatile.Read(ref active) > 0;
     public int QueueDepth => Volatile.Read(ref count);
     public IReadOnlyList<ProviderQueue> Workers { get; }

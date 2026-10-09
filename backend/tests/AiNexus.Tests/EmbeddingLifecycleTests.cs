@@ -21,7 +21,7 @@ public sealed class EmbeddingLifecycleTests
     [Fact]
     public async Task BuildingRebuildActivateAndRetiredCleanupAreFencedAuditedAndProfileIsolated()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false, administrators: ["alice"]); using var client = await factory.SignedInAsync();
+        await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/v1/admin/knowledge/profiles")).StatusCode);
         var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
@@ -46,7 +46,7 @@ public sealed class EmbeddingLifecycleTests
     [Fact]
     public async Task EditingIdenticalContentReusesVectorsAcrossDurableJobs()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false); using var client = await factory.SignedInAsync();
+        await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync();
         var seed = await RetrievalPipelineTests.SeedAsync(factory, client); var calls = factory.Embeddings.Calls;
         var edited = await client.PutAsJsonAsync($"/api/v1/documents/{seed.Document.Id}/text", new TextDocumentRequest("採購規範", "採購應先核准。主管簽署後才可付款。", 1)); edited.EnsureSuccessStatusCode();
         await Drain(factory); Assert.Equal(calls, factory.Embeddings.Calls);
@@ -55,7 +55,7 @@ public sealed class EmbeddingLifecycleTests
     [Fact]
     public async Task ActiveIndexCanBecomeReadyWhileBuildingIndexFailsAndRetryResumes()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false, administrators: ["alice"]); using var client = await factory.SignedInAsync();
+        await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
         await Profiles(client); factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.Revision = "next";
         var target = (await Profiles(client)).Single(x => x.Status == "building"); factory.Embeddings.FailProfileId = target.Id;
         var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
@@ -67,7 +67,7 @@ public sealed class EmbeddingLifecycleTests
     [Fact]
     public async Task PartialReindexResumesCompletedBatchesWithoutRepeatingEmbedding()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false, administrators: ["alice"], services: services => services.PostConfigure<KnowledgeOptions>(x => {
+        await using var factory = new NexusFactory(administrators: ["alice"], services: services => services.PostConfigure<KnowledgeOptions>(x => {
             x.BatchSize = 1; x.ChunkTargetTokens = 80; x.ChunkMaxTokens = 100; x.ChunkMinTokens = 20; x.ChunkOverlapRatio = 0;
         }));
         using var client = await factory.SignedInAsync(); var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
@@ -84,7 +84,7 @@ public sealed class EmbeddingLifecycleTests
     [Fact]
     public async Task NoneEmbeddingForcesKeywordAndModelProbeChecksRealBatchShape()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false, administrators: ["alice"], services: services => services.PostConfigure<KnowledgeOptions>(x => x.EmbeddingProvider = "none"));
+        await using var factory = new NexusFactory(administrators: ["alice"], services: services => services.PostConfigure<KnowledgeOptions>(x => x.EmbeddingProvider = "none"));
         using var client = await factory.SignedInAsync(); var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
         using var search = await client.PostAsJsonAsync("/api/v1/admin/knowledge/search", new AiNexus.Features.Administration.AdminRetrievalSearchRequest("採購", [seed.Collection], "vector")); search.EnsureSuccessStatusCode();
         Assert.Equal("keyword", (await search.Content.ReadFromJsonAsync<KnowledgeSearchDto>())!.Mode); Assert.Equal(0, factory.Embeddings.Calls);
@@ -95,7 +95,7 @@ public sealed class EmbeddingLifecycleTests
     [Fact]
     public async Task OpenApiIncludesRetrievalContracts()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false); using var client = factory.CreateClient();
+        await using var factory = new NexusFactory(); using var client = factory.CreateClient();
         using var result = await client.GetAsync("/openapi/v1.json"); result.EnsureSuccessStatusCode();
         var json = await result.Content.ReadAsStringAsync(); Assert.Contains("EmbeddingProfileDto", json); Assert.Contains("rewriteMs", json);
     }

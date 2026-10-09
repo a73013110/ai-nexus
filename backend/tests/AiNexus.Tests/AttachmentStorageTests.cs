@@ -122,7 +122,7 @@ public sealed class AttachmentStorageTests
     [Fact]
     public async Task ScheduledCleanupReclaimsReaderDraftsAndInterruptedUploadsWithoutNewRequests()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         using var client = await factory.SignedInAsync();
         var first = await Upload(client); first.EnsureSuccessStatusCode(); var draft = (await first.Content.ReadFromJsonAsync<AttachmentDto>())!;
         var readerResponse = await client.PostAsync($"/api/v1/attachments/{draft.Id}/document", null);

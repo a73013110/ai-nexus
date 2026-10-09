@@ -80,7 +80,7 @@ public sealed class QueryEfficiencyTests
     [Fact]
     public async Task GrantsAreReadOncePerRequestAndRevocationAppliesOnTheNextRequest()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false, services: RequestQueries.Register);
+        await using var factory = new NexusFactory(services: RequestQueries.Register);
         using var client = await factory.SignedInAsync();
         var project = await CreateProject(client, "授權快取");
         await AddProjectFile(client, project.Resource.Id, "a.txt");
@@ -111,7 +111,7 @@ public sealed class QueryEfficiencyTests
     [Fact]
     public async Task ProjectFilesMatchEachDocumentDetailForOwnerViewerAndEditorInFixedQueries()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false, services: RequestQueries.Register);
+        await using var factory = new NexusFactory(services: RequestQueries.Register);
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var bobId = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
@@ -146,7 +146,7 @@ public sealed class QueryEfficiencyTests
     [Fact]
     public async Task ProjectAndEvaluationSetListsMatchEachItemAndMarkOnlyEditableItems()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false, services: RequestQueries.Register);
+        await using var factory = new NexusFactory(services: RequestQueries.Register);
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         using var carol = await factory.SignedInAsync("carol");
@@ -192,7 +192,7 @@ public sealed class QueryEfficiencyTests
     [Fact]
     public async Task ShareListsKeepSenderRecipientAndMissingSourceRules()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         using var carol = await factory.SignedInAsync("carol");
@@ -234,7 +234,7 @@ public sealed class QueryEfficiencyTests
     [Fact]
     public async Task SearchReadsCollectionAccessOnceBeforeRemoteWorkAndOnceBeforeReturning()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false, services: RequestQueries.Register);
+        await using var factory = new NexusFactory(services: RequestQueries.Register);
         using var client = await factory.SignedInAsync(); var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
         var queries = factory.Services.GetRequiredService<RequestQueries>(); queries.Clear();
         using var response = await client.PostAsJsonAsync("/api/v1/knowledge/search", new KnowledgeSearchRequest("採購", [seed.Collection]));
@@ -248,7 +248,7 @@ public sealed class QueryEfficiencyTests
     [Fact]
     public async Task ExistingWindowsUsersAreResolvedWithoutTheIdentityWriteGate()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         using var client = await factory.SignedInAsync();
         var gate = factory.Services.GetRequiredService<IdentityWriteLock>().Gate;
         await gate.WaitAsync();

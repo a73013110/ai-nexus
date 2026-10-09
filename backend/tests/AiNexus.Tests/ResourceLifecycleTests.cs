@@ -20,7 +20,7 @@ public sealed class ResourceLifecycleTests
     [Fact]
     public async Task DeletingProjectIsOwnerOnlyAndPreservesPrivateWorkWithoutInheritedGrants()
     {
-        await using var f = new NexusFactory(backgroundJobs: false); using var owner = await f.SignedInAsync(); using var editor = await f.SignedInAsync("bob");
+        await using var f = new NexusFactory(); using var owner = await f.SignedInAsync(); using var editor = await f.SignedInAsync("bob");
         var project = (await (await owner.PostAsJsonAsync("/api/v1/projects", new ProjectRequest("container"))).Content.ReadFromJsonAsync<ProjectDto>())!;
         var id = project.Resource.Id;
         var bob = (await editor.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
@@ -48,7 +48,7 @@ public sealed class ResourceLifecycleTests
     [Fact]
     public async Task EvaluationDeletionRejectsActiveJobsAndRetainsItsFrozenResults()
     {
-        await using var f = new NexusFactory(backgroundJobs: false); using var owner = await f.SignedInAsync();
+        await using var f = new NexusFactory(); using var owner = await f.SignedInAsync();
         var set = (await (await owner.PostAsJsonAsync("/api/v1/quality/sets", new EvaluationSetRequest("fixture", "", [new("question")]))).Content.ReadFromJsonAsync<EvaluationSetDto>())!;
         var run = (await (await owner.PostAsJsonAsync($"/api/v1/quality/sets/{set.Resource.Id}/runs", new EvaluationRunRequest([new("default", "test-model", "")]))).Content.ReadFromJsonAsync<EvaluationRunDto>())!;
         Assert.Equal(HttpStatusCode.Conflict, (await owner.DeleteAsync($"/api/v1/quality/sets/{set.Resource.Id}")).StatusCode);

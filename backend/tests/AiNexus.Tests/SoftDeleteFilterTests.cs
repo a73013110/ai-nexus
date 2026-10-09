@@ -68,7 +68,7 @@ public sealed class SoftDeleteFilterTests
     [Fact]
     public async Task DeletedResourceIsHiddenByDefaultAndProjectDeletionStillDetachesDeletedRows()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         using var owner = await factory.SignedInAsync();
         var me = (await owner.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         var artifact = (await (await owner.PostAsJsonAsync("/api/v1/artifacts", new CreateArtifactRequest("gone", "body"))).Content.ReadFromJsonAsync<ArtifactDto>())!;

@@ -25,30 +25,40 @@ using System.Data.Common;
 
 namespace AiNexus.Tests;
 
-// These substitutions are confined to the test assembly. Production has no fake-user header.
+/// <summary>
+/// One application host per test, on its own SQLite file copied from a schema template. Only the generation worker runs;
+/// other hosted workers are opt-in through <c>workers</c>, and tests drive periodic work by calling it directly.
+/// These substitutions are confined to the test assembly. Production has no fake-user header.
+/// </summary>
 public sealed class NexusFactory : WebApplicationFactory<Program>
 {
+    /// <summary>Far below production work, so password tests do not spend their time hashing.</summary>
+    public static readonly Argon2Cost PasswordCost = new(1024, 1);
+    private static readonly Lazy<string> Template = new(CreateTemplate);
     private readonly bool ldap;
     private readonly Action<InferenceOptions>? configureInference;
     private readonly Action<AttachmentOptions>? configureAttachments;
     private readonly string[] bootstrapAdministrators;
-    private readonly bool backgroundJobs;
+    private readonly Type[] workers;
+    private readonly TimeProvider? clock;
     private readonly Action<IServiceCollection>? configureServices;
     private readonly string? webRoot;
     private readonly string databasePath = Path.Combine(Path.GetTempPath(), $"nexus-test-{Guid.NewGuid():N}.db");
     public TestProvider Provider { get; } = new();
     public TestEmbeddings Embeddings { get; } = new();
-    public NexusFactory(Action<NexusDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null, string[]? administrators = null, bool backgroundJobs = true, Action<IServiceCollection>? services = null, string? webRoot = null)
+    public NexusFactory(Action<NexusDbContext>? seed = null, bool ldap = false, Action<InferenceOptions>? inference = null, Action<AttachmentOptions>? attachments = null, string[]? administrators = null,
+        Type[]? workers = null, TimeProvider? clock = null, Action<IServiceCollection>? services = null, string? webRoot = null)
     {
         this.ldap = ldap;
         configureInference = inference;
         configureAttachments = attachments;
         bootstrapAdministrators = administrators ?? [];
-        this.backgroundJobs = backgroundJobs;
+        this.workers = [typeof(AiNexus.Features.Chat.GenerationWorker), .. workers ?? []];
+        this.clock = clock;
         configureServices = services;
         this.webRoot = webRoot;
-        using var db = new NexusDbContext(new DbContextOptionsBuilder<NexusDbContext>().UseSqlite($"Data Source={databasePath};Default Timeout=10").Options);
-        db.Database.EnsureCreated();
+        File.Copy(Template.Value, databasePath);
+        using var db = new NexusDbContext(DatabaseOptions(databasePath));
         seed?.Invoke(db);
         foreach (var user in db.Users.AsNoTracking().ToList())
             if (!db.Set<AiNexus.Features.AccessControl.UserRole>().Any(x => x.UserId == user.Id)) db.Set<AiNexus.Features.AccessControl.UserRole>().Add(new() { UserId = user.Id, RoleId = AiNexus.Features.AccessControl.BuiltInAccess.MemberRole });
@@ -63,9 +73,9 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
         {
             services.RemoveAll<DbContextOptions<NexusDbContext>>();
             services.RemoveAll<Microsoft.EntityFrameworkCore.Infrastructure.IDbContextOptionsConfiguration<NexusDbContext>>();
-            services.AddDbContext<NexusDbContext>(options => options.UseSqlite($"Data Source={databasePath};Default Timeout=10"));
+            services.AddDbContext<NexusDbContext>(options => options.UseSqlite(ConnectionString(databasePath)));
             services.RemoveAll<IDbConnectionFactory>();
-            services.AddSingleton<IDbConnectionFactory>(new TestConnectionFactory(databasePath));
+            services.AddSingleton<IDbConnectionFactory>(new TestConnectionFactory(ConnectionString(databasePath)));
             services.AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, TestIdentityHandler>("Test", _ => { });
             services.PostConfigure<AuthenticationOptions>(options => { options.DefaultAuthenticateScheme = ldap ? AuthEndpoints.CookieScheme : "Test"; options.DefaultChallengeScheme = ldap ? AuthEndpoints.CookieScheme : "Test"; });
             services.AddSingleton<IAuthenticationSchemeProvider, TestSchemeProvider>();
@@ -79,7 +89,10 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
             services.RemoveAll<AiNexus.Features.Knowledge.IEmbeddingClient>();
             services.AddSingleton<AiNexus.Features.Knowledge.IEmbeddingClient>(Embeddings);
             services.PostConfigure<AiNexus.Features.Knowledge.KnowledgeOptions>(x => { x.EmbeddingProvider = "ollama"; x.Dimensions = 768; });
-            if (!backgroundJobs) services.Remove(services.Single(x => x.ServiceType == typeof(IHostedService) && x.ImplementationType == typeof(AiNexus.Features.Operations.BackgroundJobWorker)));
+            foreach (var worker in services.Where(x => x.ServiceType == typeof(IHostedService) && x.ImplementationType?.Assembly.GetName().Name?.StartsWith("AiNexus.", StringComparison.Ordinal) == true
+                && !workers.Contains(x.ImplementationType)).ToList()) services.Remove(worker);
+            services.Replace(ServiceDescriptor.Singleton(PasswordCost));
+            if (clock is not null) services.Replace(ServiceDescriptor.Singleton(clock));
             services.PostConfigure<InferenceOptions>(options =>
             {
                 options.QueueCapacity = 2;
@@ -102,7 +115,6 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     protected override IHost CreateHost(IHostBuilder builder)
     {
         var host = builder.Build();
-        using (var scope = host.Services.CreateScope()) scope.ServiceProvider.GetRequiredService<NexusDbContext>().Database.EnsureCreated();
         host.Start();
         return host;
     }
@@ -115,8 +127,20 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
         response.EnsureSuccessStatusCode();
         var me = await response.Content.ReadFromJsonAsync<MeDto>();
         client.DefaultRequestHeaders.Add("X-Nexus-CSRF", me!.CsrfToken);
-        for (var attempt = 0; attempt < 100 && !Services.GetRequiredService<GenerationScheduler>().Ready; attempt++) await Task.Delay(10);
+        await Services.GetRequiredService<GenerationScheduler>().WhenFirstReady.WaitAsync(TimeSpan.FromSeconds(10));
         return client;
+    }
+
+    private static string ConnectionString(string path) => $"Data Source={path};Default Timeout=10";
+    private static DbContextOptions<NexusDbContext> DatabaseOptions(string path) => new DbContextOptionsBuilder<NexusDbContext>().UseSqlite(ConnectionString(path)).Options;
+
+    private static string CreateTemplate()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"nexus-template-{Guid.NewGuid():N}.db");
+        using (var db = new NexusDbContext(DatabaseOptions(path))) db.Database.EnsureCreated();
+        SqliteConnection.ClearAllPools();
+        AppDomain.CurrentDomain.ProcessExit += (_, _) => File.Delete(path);
+        return path;
     }
 
     protected override void Dispose(bool disposing)
@@ -144,11 +168,11 @@ public sealed class TestEmbeddings : AiNexus.Features.Knowledge.IEmbeddingClient
     }
 }
 
-public sealed class TestConnectionFactory(string path) : IDbConnectionFactory
+public sealed class TestConnectionFactory(string connectionString) : IDbConnectionFactory
 {
-    public DbConnection CreateConnection<TDb>() where TDb : IDbMarker => new SqliteConnection($"Data Source={path};Default Timeout=10");
+    public DbConnection CreateConnection<TDb>() where TDb : IDbMarker => new SqliteConnection(connectionString);
     public DbContextOptions<TContext> CreateDbContextOptions<TDb, TContext>() where TDb : IDbMarker where TContext : DbContext
-        => new DbContextOptionsBuilder<TContext>().UseSqlite($"Data Source={path};Default Timeout=10").Options;
+        => new DbContextOptionsBuilder<TContext>().UseSqlite(connectionString).Options;
 }
 
 public sealed class FixtureAdAuthenticator : IAdAuthenticator

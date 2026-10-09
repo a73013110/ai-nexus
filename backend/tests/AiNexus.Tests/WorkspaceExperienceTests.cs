@@ -40,7 +40,7 @@ public sealed class WorkspaceExperienceTests
     [Fact]
     public async Task TerminalNotificationDoesNotCommitUncheckpointedHandlerChanges()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false, services: services => services.AddScoped<IBackgroundJobHandler, UnfinishedHandler>());
+        await using var factory = new NexusFactory(services: services => services.AddScoped<IBackgroundJobHandler, UnfinishedHandler>());
         using var client = await factory.SignedInAsync();
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Guid id;
@@ -69,7 +69,7 @@ public sealed class WorkspaceExperienceTests
     [Fact]
     public async Task NotificationPagingHandlesEqualTimestampsAndReadThroughNeverCrossesAccountsOrNewEvents()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var owner = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var other = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
@@ -138,7 +138,7 @@ public sealed class WorkspaceExperienceTests
     [Fact]
     public async Task TextBodyLimitAcceptsEscapedChineseAndValidatesTheActualCharacterLimit()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false); using var client = await factory.SignedInAsync();
+        await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync();
         var collection = (await (await client.PostAsJsonAsync("/api/v1/knowledge/collections", new CollectionRequest("長篇筆記", ""))).Content.ReadFromJsonAsync<CollectionDto>())!;
         var text = new string('字', 20000);
         var response = await client.PostAsJsonAsync($"/api/v1/knowledge/collections/{collection.Resource.Id}/text", new TextDocumentRequest("長篇文字", text)); response.EnsureSuccessStatusCode();
@@ -149,7 +149,7 @@ public sealed class WorkspaceExperienceTests
     [Fact]
     public async Task EditableTextUsesCollectionAclVersionChecksAndRebuildsIndexWithANewOriginal()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false); using var owner = await factory.SignedInAsync(); using var reader = await factory.SignedInAsync("bob");
+        await using var factory = new NexusFactory(); using var owner = await factory.SignedInAsync(); using var reader = await factory.SignedInAsync("bob");
         var created = await owner.PostAsJsonAsync("/api/v1/knowledge/collections", new CollectionRequest("文字來源", "")); created.EnsureSuccessStatusCode(); var collection = (await created.Content.ReadFromJsonAsync<CollectionDto>())!;
         var response = await owner.PostAsJsonAsync($"/api/v1/knowledge/collections/{collection.Resource.Id}/text", new TextDocumentRequest("文字筆記", "版本一的原始文字")); response.EnsureSuccessStatusCode(); var document = (await response.Content.ReadFromJsonAsync<DocumentDto>())!;
         Assert.Equal(1, document.TextVersion);
@@ -169,7 +169,7 @@ public sealed class WorkspaceExperienceTests
     [Fact]
     public async Task TokenReportsIncludeLegacyAndBackgroundUsagePerModelAndRespectTimezoneAndOwner()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false); using var owner = await factory.SignedInAsync(); using var other = await factory.SignedInAsync("bob");
+        await using var factory = new NexusFactory(); using var owner = await factory.SignedInAsync(); using var other = await factory.SignedInAsync("bob");
         var id = (await owner.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id; var otherId = (await other.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var at = DateTimeOffset.Parse("2026-09-30T18:00:00Z", CultureInfo.InvariantCulture);
         using (var scope = factory.Services.CreateScope()) { var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
@@ -184,7 +184,7 @@ public sealed class WorkspaceExperienceTests
     public async Task ReviewRangesArePinnedIdempotentAndCheckpointRetriesOnlyUnfinishedSections()
     {
         var source = new FixtureGitea { Diff = "diff --git a/a.cs b/a.cs\n@@ -1 +1 @@\n-a\n+" + new string('x', 6000) + "\ndiff --git a/b.cs b/b.cs\n@@ -1 +1 @@\n-c\n+d\n" };
-        await using var factory = new NexusFactory(backgroundJobs: false, services: services => { services.RemoveAll<IGiteaClient>(); services.AddSingleton<IGiteaClient>(source); services.PostConfigure<GiteaOptions>(o => o.Enabled = true); });
+        await using var factory = new NexusFactory(services: services => { services.RemoveAll<IGiteaClient>(); services.AddSingleton<IGiteaClient>(source); services.PostConfigure<GiteaOptions>(o => o.Enabled = true); });
         using var owner = await factory.SignedInAsync(); using var other = await factory.SignedInAsync("bob");
         (await owner.PostAsJsonAsync("/api/v1/repositories/connection", new ConnectRepositoryRequest("fixtureOnlyReadTokenForGitea00001"))).EnsureSuccessStatusCode();
         var request = new CreateRepositoryReviewRequest("hanglong/nexus", new string('a', 40), new string('b', 40), "test-model", "權限", Guid.NewGuid().ToString());
