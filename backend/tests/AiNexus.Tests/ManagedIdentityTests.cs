@@ -38,7 +38,7 @@ public sealed class ManagedIdentityTests
         using (var scope = f.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-            Assert.StartsWith("$argon2id$v=19$m=65536,t=3,p=1$", (await db.Users.SingleAsync(x => x.Id == id)).PasswordHash);
+            Assert.StartsWith($"$argon2id$v=19$m={NexusFactory.PasswordCost.MemoryKiB},t={NexusFactory.PasswordCost.Iterations},p=1$", (await db.Users.SingleAsync(x => x.Id == id)).PasswordHash);
             Assert.DoesNotContain(Password, (await db.AuditEvents.SingleAsync(x => x.Action == "admin.user")).DetailsJson);
         }
         (await admin.PutAsJsonAsync($"/api/v1/admin/users/{id}", Account() with { DisplayName = "更新姓名", Password = "a replacement password 99!" })).EnsureSuccessStatusCode();
@@ -258,11 +258,14 @@ public sealed class ManagedIdentityTests
     [Fact]
     public async Task Argon2UsesRandomSaltRejectsWrongPasswordAndBoundsUntrustedParameters()
     {
-        using var hash = new Argon2Passwords();
+        using var hash = new Argon2Passwords(new Argon2Cost(1024, 1));
         var first = await hash.HashAsync(Password, default); var second = await hash.HashAsync(Password, default);
         Assert.NotEqual(first, second); Assert.True((await hash.VerifyAsync(Password, first, default)).Valid);
         Assert.False((await hash.VerifyAsync("wrong", first, default)).Valid);
-        Assert.False((await hash.VerifyAsync(Password, first.Replace("m=65536", "m=999999999"), default)).Valid);
+        Assert.False((await hash.VerifyAsync(Password, first.Replace("m=1024", "m=999999999"), default)).Valid);
+        // Production rejects stored hashes below the OWASP minimum before doing any work.
+        using var production = new Argon2Passwords(Argon2Cost.Recommended);
+        Assert.False((await production.VerifyAsync(Password, first, default)).Valid);
         Assert.Throws<ApiException>(() => Argon2Passwords.Validate("short"));
     }
 

@@ -47,7 +47,7 @@ public sealed class KnowledgeAndJobsTests
     [Fact]
     public async Task CollectionAclPrefiltersSearchAndOriginalsAndRevocationStopsLaterRetrieval()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var collection = await Collection(alice); var document = await Document(alice, collection.Resource.Id, "Only approved staff may view this company policy."); await Process(factory);
         var request = new KnowledgeSearchRequest("company policy", [collection.Resource.Id]);
@@ -72,7 +72,7 @@ public sealed class KnowledgeAndJobsTests
     [Fact]
     public async Task RemovingDraftAlsoRemovesItsPrivateReaderButRetainsCollectionReferences()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         using var client = await factory.SignedInAsync();
         var attachment = await Upload(client, "draft.txt", Encoding.UTF8.GetBytes("Private draft to discard."));
         var reader = (await (await client.PostAsync($"/api/v1/attachments/{attachment.Id}/document", null)).Content.ReadFromJsonAsync<DocumentDto>())!;
@@ -89,7 +89,7 @@ public sealed class KnowledgeAndJobsTests
     [Fact]
     public async Task DeletingCollectionPurgesIndexAndUnlinksSourcesButRetainsLibraryOriginal()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         using var client = await factory.SignedInAsync(); var collection = await Collection(client);
         var doc = await Document(client, collection.Resource.Id, "Content removed with the collection."); await Process(factory);
         var conversation = await CreateConversation(client);
@@ -105,7 +105,7 @@ public sealed class KnowledgeAndJobsTests
     [Fact]
     public async Task RetrievedSourceIsSnapshottedWithPageCitationForGeneration()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         using var client = await factory.SignedInAsync();
         var collection = await Collection(client); var document = await Document(client, collection.Resource.Id, "Travel budget approval requires manager signature."); await Process(factory);
         var conversation = await CreateConversation(client);
@@ -119,7 +119,7 @@ public sealed class KnowledgeAndJobsTests
     [Fact]
     public async Task FailedIndexResumesPersistedPagesAndExpiredLeaseCannotDoubleProcess()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         using var client = await factory.SignedInAsync(); var collection = await Collection(client);
         var document = await Document(client, collection.Resource.Id, new string('文', 1300));
         factory.Embeddings.Fail = true; await Process(factory);
@@ -145,7 +145,7 @@ public sealed class KnowledgeAndJobsTests
     [Fact]
     public async Task JobsAreOwnerScopedCancellationIsDurableAndRetryRequiresCsrf()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var collection = await Collection(alice); var document = await Document(alice, collection.Resource.Id, "Cancellation sample document.");
         Assert.Equal(HttpStatusCode.NotFound, (await bob.PostAsync($"/api/v1/jobs/{document.JobId}/cancel", null)).StatusCode);
@@ -158,7 +158,7 @@ public sealed class KnowledgeAndJobsTests
     [Fact]
     public async Task ReaderPinsOriginalAfterConversationDeletionAndOwnerDeleteReclaimsIt()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         using var client = await factory.SignedInAsync();
         var file = await Upload(client, "retained.txt", Encoding.UTF8.GetBytes("A document retained independently of chat history."));
         var response = await client.PostAsync($"/api/v1/attachments/{file.Id}/document", null); response.EnsureSuccessStatusCode(); var document = (await response.Content.ReadFromJsonAsync<DocumentDto>())!;
@@ -175,7 +175,7 @@ public sealed class KnowledgeAndJobsTests
     [Fact]
     public async Task ScannedPdfUsesVisionOcrBeforeItCanEnterChatContext()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false, inference: x => x.Models[0].SupportsImages = true);
+        await using var factory = new NexusFactory(inference: x => x.Models[0].SupportsImages = true);
         using var client = await factory.SignedInAsync();
         var builder = new PdfDocumentBuilder(); builder.AddPage(300, 400).AddPng(Png, new PdfRectangle(0, 0, 300, 400));
         var file = await Upload(client, "scan.pdf", builder.Build()); Assert.Equal("ocr-required", file.AnalysisMode);

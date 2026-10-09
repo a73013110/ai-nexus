@@ -122,7 +122,7 @@ public sealed class AttachmentStorageTests
     [Fact]
     public async Task ScheduledCleanupReclaimsReaderDraftsAndInterruptedUploadsWithoutNewRequests()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         using var client = await factory.SignedInAsync();
         var first = await Upload(client); first.EnsureSuccessStatusCode(); var draft = (await first.Content.ReadFromJsonAsync<AttachmentDto>())!;
         var readerResponse = await client.PostAsync($"/api/v1/attachments/{draft.Id}/document", null);
@@ -222,9 +222,10 @@ public sealed class AttachmentStorageTests
         Assert.Equal(site + "-data", FileAttachmentStorage.ValidateRoot(site + "-data", site));
     }
 
-    [WindowsFact]
+    [Fact]
     public void StorageComparesWindowsPathsWithoutCaseAndRejectsDriveRelativePaths()
     {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "只在 Windows 驗證磁碟機路徑語意。");
         Assert.Throws<InvalidOperationException>(() => FileAttachmentStorage.ValidateRoot(@"D:data\attachments", @"D:\site"));
         Assert.Throws<InvalidOperationException>(() => FileAttachmentStorage.ValidateRoot(@"d:\SITE\wwwroot\files", @"D:\site"));
         Assert.Equal(@"D:\CoreProject\AiNexus\data\attachments", FileAttachmentStorage.ValidateRoot(@"D:\CoreProject\AiNexus\data\attachments", @"D:\CoreProject\AiNexus\site"));

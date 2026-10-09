@@ -39,7 +39,7 @@ public sealed class LocalAuthenticator(NexusDbContext db, Argon2Passwords passwo
         var user = normalized is null ? null : await db.Users.SingleOrDefaultAsync(x => x.LocalAccount == normalized, ct);
         var checkedHash = user?.PasswordHash;
         var checkedVersion = user?.SecurityVersion;
-        var result = await passwords.VerifyAsync(password, checkedHash ?? Argon2Passwords.DummyHash, ct);
+        var result = await passwords.VerifyAsync(password, checkedHash ?? passwords.DummyHash, ct);
         await writes.Gate.WaitAsync(ct);
         try
         {

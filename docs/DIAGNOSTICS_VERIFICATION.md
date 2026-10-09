@@ -86,8 +86,8 @@ SQL 30053 測試注入 SqlClient typed exception 到既有 DbHelper adapter，�
 原始數值與環境在 [diagnostics-performance.json](../artifacts/diagnostics-performance.json)。重跑方式：
 
 ```powershell
-dotnet test backend/tests/AiNexus.Tests/AiNexus.Tests.csproj --no-restore -c Release `
-  --filter 'Category=Performance' --logger 'trx;LogFileName=diagnostic-performance.trx' `
+dotnet test --project backend/tests/AiNexus.Tests/AiNexus.Tests.csproj --no-restore -c Release `
+  --filter 'Category=Performance' --report-xunit-trx --report-xunit-trx-filename diagnostic-performance.trx `
   --results-directory artifacts/test-results
 ./scripts/Test-Diagnostics.ps1 -Browser
 ./scripts/Verify.ps1

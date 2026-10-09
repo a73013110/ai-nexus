@@ -18,9 +18,10 @@ public sealed partial class DiagnosticBrowserTests
 {
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 
-    [BrowserFact, Trait("Category", "Browser")]
+    [Fact, Trait("Category", "Browser")]
     public async Task RealFrontendCopiesIssueAndAdministratorFindsMaskedCause()
     {
+        TestBrowser.SkipUnlessConfigured();
         var root = Path.GetFullPath("../../../../../..", AppContext.BaseDirectory);
         var webRoot = Environment.GetEnvironmentVariable("NEXUS_DIAGNOSTIC_WEBROOT") ?? Path.Combine(root, "artifacts", "verification", "wwwroot");
         Assert.True(File.Exists(Path.Combine(webRoot, "index.html")), "Build the frontend before real browser acceptance.");

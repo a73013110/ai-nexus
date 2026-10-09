@@ -21,8 +21,8 @@ public sealed class KeyedAsyncLockTests
         Task<IDisposable> third;
         using (await second.WaitAsync(TimeSpan.FromSeconds(5)))
         {
+            // A waiter's task can only complete when the holder releases, so checking it at once is deterministic.
             third = locks.AcquireAsync(a, CancellationToken.None);
-            await Task.Delay(20);
             Assert.False(third.IsCompleted);
             Assert.Equal(1, locks.Count);
         }

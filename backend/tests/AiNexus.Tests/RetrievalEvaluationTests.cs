@@ -67,7 +67,7 @@ public sealed class RetrievalEvaluationTests
     [Fact]
     public async Task FourModesPersistOnlyMetricsAndExposeFallbackAndOwnerAcl()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false); using var client = await factory.SignedInAsync(); var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
+        await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync(); var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
         var run = await Create(client, Request(seed.Collection, seed.Document.Id)); await Drain(factory);
         var report = (await client.GetFromJsonAsync<RetrievalReportDto>($"/api/v1/quality/retrieval-evals/{run.Id}"))!;
         Assert.Equal("completed", report.Run.Job.Status); Assert.Equal(8, report.Results.Count); Assert.Equal(4, report.Summary.Count);
@@ -86,7 +86,7 @@ public sealed class RetrievalEvaluationTests
     [Fact]
     public async Task InterruptedEvaluationResumesCheckpointsAndRejectsChangedSettings()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false, services: services => services.PostConfigure<KnowledgeOptions>(x => x.QueryCacheMinutes = 0));
+        await using var factory = new NexusFactory(services: services => services.PostConfigure<KnowledgeOptions>(x => x.QueryCacheMinutes = 0));
         using var client = await factory.SignedInAsync(); var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
         var run = await Create(client, Request(seed.Collection, seed.Document.Id)); factory.Embeddings.FailOnCall = factory.Embeddings.Calls + 2; await Drain(factory);
         var failed = (await client.GetFromJsonAsync<RetrievalReportDto>($"/api/v1/quality/retrieval-evals/{run.Id}"))!; Assert.Equal("failed", failed.Run.Job.Status); Assert.Equal(2, failed.Results.Count);
@@ -100,7 +100,7 @@ public sealed class RetrievalEvaluationTests
     [Fact]
     public async Task CorpusValidatesPagesScopeAndNoAnswerAnnotationsBeforeEnqueue()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false); using var client = await factory.SignedInAsync(); var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
+        await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync(); var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
         foreach (var relevance in new[] { new RetrievalRelevance(seed.Document.Id, [2]), new RetrievalRelevance(Guid.NewGuid(), [1]) })
             Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/v1/quality/retrieval-evals", new RetrievalEvaluationRequest("錯誤驗收集", [seed.Collection], [new("一", "查詢", [relevance])]))).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/v1/quality/retrieval-evals", new RetrievalEvaluationRequest("錯誤驗收集", [seed.Collection], [new("一", "查詢", [new(seed.Document.Id, [])], true)]))).StatusCode);

@@ -40,6 +40,9 @@ dotnet_diagnostic.CA1859.severity = none
 [backend/tests/**.cs]
 dotnet_diagnostic.CA1861.severity = none
 dotnet_diagnostic.CA2201.severity = none
+# Hundreds of short HttpClient calls would all carry TestContext.Current.CancellationToken; the helpers that wait
+# on something (run events, background work, diagnostics) take it explicitly, so a cancelled run still stops promptly.
+dotnet_diagnostic.xUnit1051.severity = none
 
 # Logging goes through [LoggerMessage] methods: fixed event ids, no per-call boxing or template parsing.
 [backend/src/**.cs]
