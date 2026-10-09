@@ -9,6 +9,11 @@
 - entity、DTO、`<Module>Errors`、查詢擴充方法與 `IEntityTypeConfiguration<T>` 放在以 entity 命名的檔案（如 `PromptTemplate.cs`）。
 - slice 類別預設 `internal`；只有其他模組要用的服務（如 `NotificationService.PublishAsync`）才是 `public`，這就是模組的對外合約。
 
+## 建置規則
+
+- `AnalysisLevel=latest-recommended`＋`EnforceCodeStyleInBuild`，warning 即錯誤。整體關掉的規則與原因集中在根目錄 `.editorconfig`；單一型別的例外用寫明 `Justification` 的 `[SuppressMessage]`，不用 `#pragma`。
+- NuGet 版本只寫在 `backend/Directory.Packages.props`，`PackageReference` 不帶版本；改版本後 restore 更新各專案的 `packages.lock.json`。
+
 ## 端點與 handler
 
 ```csharp
@@ -28,6 +33,8 @@ internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
 - 時間一律用注入的 `TimeProvider`，不要直接呼叫 `DateTimeOffset.UtcNow`。
 - 直接使用 `NexusDbContext`；不要新增 repository 或只轉送呼叫的 service。
 - lambda 回傳 `IResult`（`Results.*` 或 `ToHttpResult()`），回應型別以 `.Produces<T>()` 宣告。
+- 一個使用者能放大成本的端點（送出、上傳、外部呼叫、匯出）在模組 `AddServices` 用 `options.AddPerUserLimit(名稱, 每分鐘次數)` 註冊，端點加 `.RequireRateLimiting(名稱)`。
+- 日誌寫成 `[LoggerMessage]` 方法，EventId 固定且唯一，見 [LOG_EVENTS](LOG_EVENTS.md)；直接呼叫 `LogWarning` 等會編譯失敗。
 
 ## 錯誤
 
