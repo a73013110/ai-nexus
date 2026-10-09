@@ -45,9 +45,30 @@ dotnet dev-certs https --trust
 
 **整合預覽只執行一個 ASP.NET 程序**，同時提供 Angular 產物與 API；已有 build 用 `./scripts/Start-Local.ps1 -SkipBuild`。熱更新用 `./scripts/Start-Dev.ps1`，管理 Angular 4200／API 5080，以 Ctrl+C 一起停止。見 [開發與執行](docs/DEVELOPMENT.md)。
 
+## 資料夾地圖
+
+| 項目 | 用途 |
+| --- | --- |
+| `backend/` | 後端方案 `AiNexus.slnx`：`src/` 有主機 `AiNexus.Api`、業務模組 `AiNexus.Features`、共用基礎 `AiNexus.Platform`，`tests/` 有整合與架構測試；NuGet 版本集中在 `Directory.Packages.props` |
+| `frontend/` | Angular 前端；`npm` 指令在這裡執行，`src/app` 分為 `core`、`shared`、`features` |
+| `tests/e2e/` | Playwright 端到端測試，對發布後的網站執行 |
+| `contracts/` | 由後端產生的 API 合約 `openapi.json`（前端型別來源、合約測試比對）與串流事件說明 `SSE.md` |
+| `db/` | 發布用的 migration SQL、資料表說明腳本、外部來源的授權 view |
+| `deploy/` | IIS 部署說明 |
+| `docs/` | 長期文件；改哪類程式該讀哪份，見 `CLAUDE.md` 的表格 |
+| `scripts/` | PowerShell 入口：還原、建置、啟動、驗證、發布，見 [開發](docs/DEVELOPMENT.md) |
+| `tooling/` | 非建置必需的工具：`contracts/` 由 OpenAPI 產生前端 `schema.ts`，`embeddings/` 比較 embedding 模型 |
+| `.github/` | 手動觸發的 CI，以及每月一次、依生態系合併成一個 PR 的 Dependabot |
+| `.config/dotnet-tools.json` | 固定 `dotnet-ef` 版本（`dotnet tool restore`） |
+| `global.json` | 固定 .NET SDK 版本與測試執行器 |
+| `package.json`、`package-lock.json`、`.node-version` | 安裝 `tests/e2e` 用的 Playwright，固定 Node 版本 |
+| `.editorconfig`、`.gitattributes`、`.gitignore` | 縮排與分析器規則、換行正規化、不進 Git 的檔案 |
+| `CLAUDE.md` | 給 AI 程式助手的規則、指令與文件索引 |
+| `.local/`、`artifacts/` | 本機產生、不進 Git：本機設定與秘密、建置與測試輸出，見 [本機產生的資料夾](docs/development/LOCAL_FOLDERS.md) |
+
 ## 設定與結構
 
-一般參數在 .local/config/appsettings.Local.json，秘密在 .local/secrets/appsettings.Secrets.json，修改後重啟。.local／artifacts 整體忽略，進度／排查放 .local/notes。Git 保存 source、public defaults／examples、lockfiles、contracts、migrations 及長期文件。
+一般參數在 .local/config/appsettings.Local.json，秘密在 .local/secrets/appsettings.Secrets.json，修改後重啟。Git 保存 source、public defaults／examples、lockfiles、contracts、migrations 及長期文件。
 
 | 文件                                       | 內容                                                           |
 | ------------------------------------------ | -------------------------------------------------------------- |
