@@ -142,6 +142,25 @@ public sealed class ChatApiTests
     }
 
     [Fact]
+    public async Task LongHistorySendsOnlyTheNewestCompleteRoundsThatFit()
+    {
+        await using var factory = new NexusFactory(inference: options => { options.Models[0].ContextTokens = 1024; options.Models[0].MaxOutputTokens = 256; });
+        using var client = await factory.SignedInAsync();
+        var conversation = await CreateConversation(client);
+        Guid? parent = null;
+        for (var round = 1; round <= 5; round++)
+        {
+            // About 270 budget units per round: with the system prompt and the new prompt, only one earlier round fits.
+            var run = await WaitForTerminal(client, (await CreateRun(client, conversation.Id, new string('中', 60) + round, parent)).Id);
+            parent = run.AssistantMessageId;
+        }
+        Assert.Equal(new[] { "system", "user", "assistant", "user" }, factory.Provider.LastMessages.Select(x => x.Role));
+        Assert.Equal(new[] { new string('中', 60) + 4, new string('中', 60) + 5 }, factory.Provider.LastMessages.Where(x => x.Role == "user").Select(x => x.Content));
+        var preview = await client.PostAsJsonAsync("/api/v1/context", new ContextPreviewRequest(conversation.Id, parent, new string('中', 60) + 6, "test-model"));
+        Assert.Equal(8, (await preview.Content.ReadFromJsonAsync<ContextUsageDto>())!.DroppedMessages);
+    }
+
+    [Fact]
     public async Task QueueIsBoundedAndOnlyOneProviderCallRunsAtATime()
     {
         await using var factory = new NexusFactory();
