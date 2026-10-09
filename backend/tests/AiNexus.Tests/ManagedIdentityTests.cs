@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
-using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Identity;
 using AiNexus.Features.AccessControl;
@@ -269,7 +268,7 @@ public sealed class ManagedIdentityTests
         // Production rejects stored hashes below the OWASP minimum before doing any work.
         using var production = new Argon2Passwords(Argon2Cost.Recommended);
         Assert.False((await production.VerifyAsync(Password, first, default)).Valid);
-        Assert.Throws<ApiException>(() => Argon2Passwords.Validate("short"));
+        Assert.False(Argon2Passwords.IsAcceptable("short"));
     }
 
     [Fact]

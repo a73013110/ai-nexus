@@ -1,5 +1,5 @@
 using AiNexus.Features.AccessControl;
-using AiNexus.Platform.Errors;
+using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Authorization;
 using AiNexus.Features.Identity.Sessions;
 
@@ -14,11 +14,15 @@ public sealed class FeatureAuthorizationHandler(CurrentUser current, AccessServi
         if (context.User.Identity?.IsAuthenticated != true) return;
         if (requirement.FeatureIds.Contains(FeatureIds.Admin) && context.User.HasClaim(x => x.Type == SessionIdentity.ActorId) &&
             http.HttpContext?.Request.Method is not ("GET" or "HEAD" or "OPTIONS"))
-            throw new ApiException(403, "test_admin_read_only", "測試身分期間只能檢視管理功能；請先返回管理者再異動帳號與授權。");
+        {
+            context.Fail(new ErrorFailureReason(this, IdentityErrors.TestAdminReadOnly));
+            return;
+        }
         var ct = http.HttpContext?.RequestAborted ?? CancellationToken.None;
         var user = await current.GetAsync(ct);
-        var grants = await access.ForUserAsync(user.Id, ct);
+        if (!user.IsSuccess) { context.Fail(new ErrorFailureReason(this, user.Error)); return; }
+        var grants = await access.ForUserAsync(user.Value.Id, ct);
         if (grants.Features.Any(x => requirement.FeatureIds.Contains(x.Id))) context.Succeed(requirement);
-        else throw new ApiException(403, "feature_forbidden", "你的角色目前沒有使用此功能的權限，請聯絡管理員。");
+        else context.Fail(new ErrorFailureReason(this, IdentityErrors.FeatureForbidden));
     }
 }

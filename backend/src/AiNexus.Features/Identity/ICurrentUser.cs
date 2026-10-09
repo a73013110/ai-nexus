@@ -1,3 +1,4 @@
+using AiNexus.Platform.Errors;
 using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Identity;
@@ -19,7 +20,7 @@ public static class CurrentUserResolution
     public static RouteGroupBuilder WithCurrentUser(this RouteGroupBuilder group) => group.AddEndpointFilterFactory((context, next) =>
         !context.MethodInfo.GetParameters().Any(parameter => parameter.ParameterType == typeof(ICurrentUser)) ? next : async invocation =>
         {
-            await invocation.HttpContext.RequestServices.GetRequiredService<CurrentUser>().GetAsync(invocation.HttpContext.RequestAborted);
-            return await next(invocation);
+            var user = await invocation.HttpContext.RequestServices.GetRequiredService<CurrentUser>().GetAsync(invocation.HttpContext.RequestAborted);
+            return user.IsSuccess ? await next(invocation) : user.Error.ToProblem();
         });
 }

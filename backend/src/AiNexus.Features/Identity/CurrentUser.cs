@@ -22,12 +22,12 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
     Guid ICurrentUser.Id => ((ICurrentUser)this).User.Id;
     NexusUser ICurrentUser.User => resolved ?? throw new InvalidOperationException("ICurrentUser is resolved by the /api/v1 endpoint filter; declare it as a handler parameter.");
 
-    public async Task<NexusUser> GetAsync(CancellationToken ct = default)
+    public async Task<Result<NexusUser>> GetAsync(CancellationToken ct = default)
     {
         if (resolved is not null) return resolved;
         storage.RequireConfigured();
-        var principal = accessor.HttpContext?.User ?? throw new ApiException(401, "authentication_required", "請使用公司 Windows 帳號登入。");
-        if (principal.Identity?.IsAuthenticated != true) throw new ApiException(401, "authentication_required", "AD 驗證未完成。");
+        var principal = accessor.HttpContext?.User;
+        if (principal?.Identity?.IsAuthenticated != true) return IdentityErrors.AuthenticationRequired;
         if (Guid.TryParse(principal.FindFirstValue(SessionIdentity.UserId), out var userId))
         {
             // Cookie validation has just read this row; track that copy instead of reading it again.
@@ -35,19 +35,18 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
             var testing = principal.HasClaim(x => x.Type == SessionIdentity.ActorId);
             if (linked is null || !SessionIdentity.Available(linked) || !SessionIdentity.MatchesVersion(linked, principal.FindFirstValue(SessionIdentity.Version)) ||
                 !testing && !SessionIdentity.Allows(linked, principal.FindFirstValue(SessionIdentity.Method)))
-                throw new ApiException(401, "session_revoked", "登入已失效，請重新登入工作區。");
+                return IdentityErrors.SessionRevoked;
             return resolved = linked;
         }
         var sid = principal.FindFirstValue(ClaimTypes.PrimarySid);
         if (sid is null && OperatingSystem.IsWindows() && principal.Identity is WindowsIdentity windows) sid = windows.User?.Value;
-        if (string.IsNullOrWhiteSpace(sid)) throw new ApiException(403, "windows_sid_required", "無法取得 AD SID，請確認登入設定。");
-        var account = principal.Identity.Name ?? throw new ApiException(403, "windows_account_required", "Windows 帳號資料不完整。");
+        if (string.IsNullOrWhiteSpace(sid)) return IdentityErrors.WindowsSidRequired;
+        if (principal.Identity.Name is not { } account) return IdentityErrors.WindowsAccountRequired;
         var displayName = principal.FindFirstValue("display_name") ?? names.GetOrAdd(sid, () => ResolveName(sid, account));
         // Most requests only read an existing mapping. The global gate is taken only to create, bind or refresh a user,
         // or to apply a bootstrap grant: binding goes by account across SIDs, and local sign-in writes the same rows.
         var existing = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Sid == sid, ct);
-        if (existing is not null && !SessionIdentity.Allows(existing, "ad"))
-            throw new ApiException(403, "login_method_disabled", "此使用者已停用，或未允許 AD 驗證。");
+        if (existing is not null && !SessionIdentity.Allows(existing, "ad")) return IdentityErrors.LoginMethodDisabled;
         if (existing is not null && !Stale(existing, displayName) && !await PendingGrantAsync(existing, ct))
             return resolved = Track(existing)!;
         await writeLock.Gate.WaitAsync(ct);
@@ -56,15 +55,15 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
             var user = await db.Users.SingleOrDefaultAsync(x => x.Sid == sid, ct);
             if (user is null)
             {
-                var adAccount = UserAccounts.Normalize(UserAccounts.AccountName(account));
+                var name = UserAccounts.AccountName(account);
+                if (!UserAccounts.IsValid(name)) return IdentityErrors.InvalidAccount;
+                var adAccount = UserAccounts.Normalize(name);
                 user = await db.Users.SingleOrDefaultAsync(x => x.AdAccount == adAccount, ct);
                 if (user is not null && user.Sid.StartsWith("managed:", StringComparison.Ordinal))
                 { user.Sid = sid; user.Account = account; }
-                else if (user is not null)
-                    throw new ApiException(403, "ad_binding_conflict", "AD 身分與已連結帳號不一致，請聯絡管理員。");
+                else if (user is not null) return IdentityErrors.AdBindingConflict;
             }
-            if (user is not null && !SessionIdentity.Allows(user, "ad"))
-                throw new ApiException(403, "login_method_disabled", "此使用者已停用，或未允許 AD 驗證。");
+            if (user is not null && !SessionIdentity.Allows(user, "ad")) return IdentityErrors.LoginMethodDisabled;
             if (user is null)
             {
                 user = new NexusUser { Sid = sid, Account = account, DisplayName = displayName, LastSeenAt = clock.GetUtcNow() };

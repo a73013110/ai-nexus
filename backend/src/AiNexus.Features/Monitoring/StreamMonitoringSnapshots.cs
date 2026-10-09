@@ -51,7 +51,7 @@ internal static class StreamMonitoringSnapshots
                 {
                     // Fresh scopes re-read account versions and grants; a long-lived stream must honor revocation.
                     await using var scope = scopes.CreateAsyncScope();
-                    var identity = await scope.ServiceProvider.GetRequiredService<CurrentUser>().GetAsync(ct);
+                    var identity = (await scope.ServiceProvider.GetRequiredService<CurrentUser>().GetAsync(ct)).OrThrow();
                     var access = scope.ServiceProvider.GetRequiredService<AccessService>();
                     if (!(await access.ForUserAsync(identity.Id, ct)).Features.Any(x => x.Id == MonitoringModule.Feature))
                         throw new ApiException(403, "feature_forbidden", "");

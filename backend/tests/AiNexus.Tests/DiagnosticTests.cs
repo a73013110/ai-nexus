@@ -79,7 +79,7 @@ public sealed class DiagnosticTests
     [Fact]
     public async Task AuditBoundaryFailsClosedMasksLegacyAndShowsSystemConfiguration()
     {
-        Assert.Throws<ApiException>(() => AuditRedactor.Sanitize("{"));
+        Assert.Throws<InvalidOperationException>(() => AuditRedactor.Sanitize("{"));
         var safe = AuditRedactor.Sanitize(JsonSerializer.Serialize(new { password = Secret, after = new { enabled = true, token = Secret }, reason = Secret }));
         Assert.DoesNotContain(Secret, safe); Assert.Contains("enabled", safe); Assert.Contains("OMITTED", safe);
         await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();

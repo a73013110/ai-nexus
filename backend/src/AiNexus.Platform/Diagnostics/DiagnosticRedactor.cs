@@ -53,7 +53,7 @@ public static partial class DiagnosticRedactor
         var parts = new List<string>();
         for (var e = exception; e is not null && parts.Count < 6; e = e.InnerException)
         {
-            var code = e is SqlException sql ? $" SQL number={sql.Number}, state={sql.State}, class={sql.Class}" : e is ApiException api ? " code=" + Text(api.Code, 80) : "";
+            var code = e is SqlException sql ? $" SQL number={sql.Number}, state={sql.State}, class={sql.Class}" : e is ExternalServiceException external ? " code=" + Text(external.Error.Code, 80) : e is ApiException api ? " code=" + Text(api.Code, 80) : "";
             var frames = new StackTrace(e, false).GetFrames()?.Take(30).Select(f => {
                 var method = f.GetMethod(); return Text(method?.DeclaringType?.FullName + "." + method?.Name, 240);
             }) ?? [];
