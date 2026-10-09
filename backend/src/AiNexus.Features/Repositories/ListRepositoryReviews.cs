@@ -1,8 +1,8 @@
 using AiNexus.Features.Identity;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Repositories;
 

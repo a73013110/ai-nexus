@@ -1,8 +1,8 @@
 using AiNexus.Features.Knowledge;
-using AiNexus.Features.Operations;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Tests;
 

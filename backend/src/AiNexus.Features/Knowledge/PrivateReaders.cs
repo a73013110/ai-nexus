@@ -1,9 +1,9 @@
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Knowledge;
 

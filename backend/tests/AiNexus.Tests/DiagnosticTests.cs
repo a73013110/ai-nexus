@@ -7,7 +7,6 @@ using AiNexus.Features.Chat;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Operations;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Features.Diagnostics;
 using AiNexus.Features.AccessControl;
@@ -25,6 +24,7 @@ using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Xunit;
 using static AiNexus.Tests.ChatApiTests;
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Tests;
 

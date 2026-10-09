@@ -1,6 +1,5 @@
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;
 using AiNexus.Platform.Data;
@@ -8,6 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Knowledge;
 

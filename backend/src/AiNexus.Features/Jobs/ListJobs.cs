@@ -2,7 +2,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace AiNexus.Features.Operations;
+namespace AiNexus.Features.Jobs;
 
 /// <summary>The user's 100 newest background jobs.</summary>
 internal static class ListJobs

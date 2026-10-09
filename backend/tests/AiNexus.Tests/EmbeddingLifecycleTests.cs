@@ -1,12 +1,12 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Knowledge;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Xunit;
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Tests;
 

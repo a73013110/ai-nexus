@@ -5,7 +5,6 @@ using AiNexus.Features.Chat;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Quality;
 using AiNexus.Features.Collaboration;
 using Microsoft.EntityFrameworkCore;
@@ -13,6 +12,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Xunit;
 using static AiNexus.Tests.ChatApiTests;
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Tests;
 public sealed class QualityTests

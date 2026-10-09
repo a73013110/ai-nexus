@@ -6,11 +6,11 @@ using AiNexus.Features.Persistence;
 using AiNexus.Features.Inference;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Administration;
-using AiNexus.Features.Operations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using static AiNexus.Tests.ChatApiTests;
+using AiNexus.Features.Audit;
 
 namespace AiNexus.Tests;
 

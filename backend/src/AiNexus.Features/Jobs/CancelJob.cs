@@ -3,7 +3,7 @@ using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
-namespace AiNexus.Features.Operations;
+namespace AiNexus.Features.Jobs;
 
 /// <summary>Asks a queued or running job of the user to stop; the worker finishes it as cancelled.</summary>
 internal sealed class CancelJob(NexusDbContext db, TimeProvider clock)
@@ -14,7 +14,7 @@ internal sealed class CancelJob(NexusDbContext db, TimeProvider clock)
 
     public async Task<Result<JobDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)
     {
-        if (await db.Set<BackgroundJob>().OwnedBy(owner).SingleOrDefaultAsync(x => x.Id == id, ct) is null) return OperationsErrors.JobNotFound;
+        if (await db.Set<BackgroundJob>().OwnedBy(owner).SingleOrDefaultAsync(x => x.Id == id, ct) is null) return JobsErrors.JobNotFound;
         await db.Set<BackgroundJob>().Where(x => x.Id == id && (x.Status == "queued" || x.Status == "running"))
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.CancelRequested, true).SetProperty(x => x.UpdatedAt, clock.GetUtcNow()), ct);
         return await db.ReloadJobAsync(owner, id, ct);

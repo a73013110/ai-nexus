@@ -1,10 +1,9 @@
 using AiNexus.Features.Identity;
-using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data.Sql;
 using Microsoft.Extensions.Options;
 
-namespace AiNexus.Features.Operations;
+namespace AiNexus.Features.Inference;
 
 public sealed record StatusDto(string Storage, string Authentication, int QueueDepth, bool Generating);
 

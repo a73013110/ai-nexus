@@ -3,7 +3,7 @@ using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace AiNexus.Features.Operations;
+namespace AiNexus.Features.Audit;
 
 public sealed record AuditCatalogDto(IReadOnlyList<FeatureDto> Features, IReadOnlyList<ModelDto> Models);
 

@@ -2,11 +2,11 @@ using System.Diagnostics;
 using System.Text;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Repositories;
 

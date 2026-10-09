@@ -1,7 +1,7 @@
 using AiNexus.Host;
 using AiNexus.Host.Commands;
 using AiNexus.Features;
-using AiNexus.Features.Configuration;
+using AiNexus.Features.Integrations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Monitoring;
 using AiNexus.Features.Persistence;
@@ -17,7 +17,7 @@ var builder = WebApplication.CreateBuilder(args);
 WebApplication app;
 try
 {
-    NexusConfiguration.Load(builder, args, NexusSettings.SourceConnections);
+    NexusConfiguration.Load(builder, args, IntegrationsSettings.SourceConnections);
     LocalDatabaseSettings.Apply(builder.Configuration);
     builder.AddPlatform();
     builder.AddFeatures();

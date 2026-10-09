@@ -11,13 +11,13 @@ using AiNexus.Features.Integrations;
 using AiNexus.Features.Knowledge;
 using AiNexus.Features.Library;
 using AiNexus.Features.Notifications;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Projects;
 using AiNexus.Features.Quality;
 using AiNexus.Features.Repositories;
 using AiNexus.Features.Sharing;
 using AiNexus.Features.WebSearch;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Persistence;
 

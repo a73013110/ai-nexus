@@ -3,13 +3,13 @@ using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Administration;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Operations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
+using AiNexus.Features.Audit;
 
 namespace AiNexus.Tests;
 

@@ -1,4 +1,5 @@
-using AiNexus.Features.Operations;
+
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Knowledge;
 
