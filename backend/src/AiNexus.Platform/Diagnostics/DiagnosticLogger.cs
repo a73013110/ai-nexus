@@ -52,7 +52,7 @@ public sealed class DiagnosticLoggerProvider(DiagnosticBuffer buffer, IOptions<D
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => provider.scopes.Push(state);
         public void Log<TState>(LogLevel level, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
-            if ((!IsEnabled(level) && eventId.Id != DiagnosticEvents.Rejection.Id) || DiagnosticSuppression.Active) return;
+            if ((!IsEnabled(level) && eventId.Id != DiagnosticEvents.Rejection) || DiagnosticSuppression.Active) return;
             var values = new List<KeyValuePair<string, object?>>();
             provider.scopes.ForEachScope((scope, list) => { if (scope is IEnumerable<KeyValuePair<string, object?>> items) list.AddRange(items.Take(64)); }, values);
             string template = "Unstructured event [text omitted]";

@@ -7,10 +7,12 @@ namespace AiNexus.Features.Billing;
 
 public sealed class BillingService(NexusDbContext db, ModelPresentation presentation, IOptions<InferenceOptions> inference, IEnumerable<ServiceModel> services) : IModelCallMeter
 {
+    private static readonly string[] WebSearchProviders = ["searxng", "brave"];
+
     public IReadOnlyList<PriceTargetDto> Targets() => inference.Value.Models
         .Select(x => Target(x.Provider, x.NativeId))
         .Concat(services.Select(x => Target(x.Provider, x.Id)))
-        .Concat(new[] { "searxng", "brave" }.Select(x => Target(x, "web-search")))
+        .Concat(WebSearchProviders.Select(x => Target(x, "web-search")))
         .DistinctBy(x => (x.Provider, x.ModelId)).ToArray();
     private PriceTargetDto Target(string provider, string model) => new(provider, model, presentation.DisplayName(model, administrator: true, provider: provider)!);
     public async Task<ModelCharge> ReserveAsync(Guid callId, Guid owner, Guid? conversation, string provider,

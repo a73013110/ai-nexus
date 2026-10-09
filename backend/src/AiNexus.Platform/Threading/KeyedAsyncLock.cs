@@ -39,6 +39,7 @@ public sealed class KeyedAsyncLock<TKey> where TKey : notnull
         }
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1001:Types that own disposable fields should be disposable", Justification = "SemaphoreSlim without AvailableWaitHandle holds nothing to release; disposing a shared gate would throw in work still releasing it during shutdown.")]
     private sealed class Entry
     {
         public readonly SemaphoreSlim Gate = new(1, 1);

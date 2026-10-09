@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text;
 using AiNexus.Platform.Errors;
@@ -59,7 +60,7 @@ public sealed class ArtifactExport(PdfExportRenderer pdf)
                 if (rows.Any(x => x.Count > 16)) { foreach (var row in rows) parent.Append(TextParagraph(string.Join(" | ", row.OfType<MarkdownCell>().Select(Plain)))); continue; }
                 var borders = new W.TableBorders { TopBorder = new() { Val = W.BorderValues.Single, Size = 4U }, LeftBorder = new() { Val = W.BorderValues.Single, Size = 4U }, BottomBorder = new() { Val = W.BorderValues.Single, Size = 4U }, RightBorder = new() { Val = W.BorderValues.Single, Size = 4U }, InsideHorizontalBorder = new() { Val = W.BorderValues.Single, Size = 4U }, InsideVerticalBorder = new() { Val = W.BorderValues.Single, Size = 4U } };
                 var columns = Math.Max(1, rows.Max(x => x.Count));
-                var output = new W.Table(new W.TableProperties(new W.TableWidth { Width = "5000", Type = W.TableWidthUnitValues.Pct }, borders), new W.TableGrid(Enumerable.Range(0, columns).Select(_ => new W.GridColumn { Width = (9866 / columns).ToString() })));
+                var output = new W.Table(new W.TableProperties(new W.TableWidth { Width = "5000", Type = W.TableWidthUnitValues.Pct }, borders), new W.TableGrid(Enumerable.Range(0, columns).Select(_ => new W.GridColumn { Width = (9866 / columns).ToString(CultureInfo.InvariantCulture) })));
                 foreach (var row in rows) { var target = new W.TableRow(); foreach (var cell in row.OfType<MarkdownCell>()) { var value = new W.TableCell(); AppendBlocks(value, cell); if (!value.Elements<W.Paragraph>().Any()) value.Append(new W.Paragraph()); target.Append(value); } output.Append(target); }
                 parent.Append(output); parent.Append(new W.Paragraph());
             }
@@ -67,7 +68,7 @@ public sealed class ArtifactExport(PdfExportRenderer pdf)
             else if (block is LeafBlock leaf)
             {
                 var paragraph = new W.Paragraph(); if (block is HeadingBlock heading) paragraph.ParagraphProperties = new(new W.KeepNext(), new W.SpacingBetweenLines { Before = "240", After = "120" });
-                var properties = block is HeadingBlock h ? new W.RunProperties(new W.Bold(), new W.FontSize { Val = (h.Level == 1 ? 32 : h.Level == 2 ? 28 : 24).ToString() }) : new W.RunProperties();
+                var properties = block is HeadingBlock h ? new W.RunProperties(new W.Bold(), new W.FontSize { Val = (h.Level == 1 ? 32 : h.Level == 2 ? 28 : 24).ToString(CultureInfo.InvariantCulture) }) : new W.RunProperties();
                 if (prefix is not null) paragraph.Append(new W.Run(new W.Text(prefix)));
                 if (leaf.Inline is not null) Inline(paragraph, leaf.Inline, properties); else paragraph.Append(new W.Run(new W.Text(leaf.Lines.ToString()) { Space = SpaceProcessingModeValues.Preserve }));
                 parent.Append(paragraph);

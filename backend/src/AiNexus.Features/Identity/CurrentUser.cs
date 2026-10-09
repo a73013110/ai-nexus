@@ -83,7 +83,7 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
             {
                 var adAccount = UserAccounts.Normalize(UserAccounts.AccountName(account));
                 user = await db.Users.SingleOrDefaultAsync(x => x.AdAccount == adAccount, ct);
-                if (user is not null && user.Sid.StartsWith("managed:"))
+                if (user is not null && user.Sid.StartsWith("managed:", StringComparison.Ordinal))
                 { user.Sid = sid; user.Account = account; }
                 else if (user is not null)
                     throw new ApiException(403, "ad_binding_conflict", "AD 身分與已連結帳號不一致，請聯絡管理員。");

@@ -15,6 +15,8 @@ namespace AiNexus.Api.Commands;
 
 public static class ConnectionVerifier
 {
+    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
+
     public static async Task<bool> VerifyAsync(IServiceProvider services, IConfiguration configuration, string contentRoot, CancellationToken ct)
     {
         var results = new List<object>();
@@ -82,7 +84,7 @@ public static class ConnectionVerifier
             return result.Embedding.Notice + " " + result.Rerank.Notice;
         });
         var destination = configuration["VerificationOutput"] ?? Path.Combine(contentRoot, "connection-checks.json");
-        await File.WriteAllTextAsync(destination, JsonSerializer.Serialize(new { checkedAt = DateTimeOffset.UtcNow, results }, new JsonSerializerOptions { WriteIndented = true }), ct);
+        await File.WriteAllTextAsync(destination, JsonSerializer.Serialize(new { checkedAt = DateTimeOffset.UtcNow, results }, Indented), ct);
         return passed;
     }
 
@@ -91,6 +93,7 @@ public static class ConnectionVerifier
         var db = services.GetRequiredService<NexusDbContext>();
         var sql = services.GetRequiredService<IDbHelper<INexusDatabase>>();
         var probe = new AuditEvent { OwnerId = Guid.Empty, ResourceId = Guid.NewGuid(), Action = "connection_check", Result = "ef_insert" };
+        var removed = true;
         try
         {
             db.AuditEvents.Add(probe);
@@ -108,9 +111,10 @@ public static class ConnectionVerifier
             {
                 // This CLI-only probe has no user identity and touches only its own random resource.
                 await sql.ExecuteAsync("DELETE FROM [operations].[AuditEvents] WHERE [Id] = @Id AND [ResourceId] = @ResourceId AND [Action] = @Action", new { probe.Id, probe.ResourceId, probe.Action }, commandTimeout: 5, cancellationToken: CancellationToken.None);
-                if (await sql.QuerySingleAsync<int>("SELECT COUNT(*) FROM [operations].[AuditEvents] WHERE [Id] = @Id AND [ResourceId] = @ResourceId", new { probe.Id, probe.ResourceId }, commandTimeout: 5, cancellationToken: CancellationToken.None) != 0)
-                    throw new InvalidDataException("Connection-check cleanup did not complete.");
+                removed = await sql.QuerySingleAsync<int>("SELECT COUNT(*) FROM [operations].[AuditEvents] WHERE [Id] = @Id AND [ResourceId] = @ResourceId", new { probe.Id, probe.ResourceId }, commandTimeout: 5, cancellationToken: CancellationToken.None) == 0;
             }
         }
+        // Reported only after a successful check; a failed check keeps its own exception.
+        if (!removed) throw new InvalidDataException("Connection-check cleanup did not complete.");
     }
 }

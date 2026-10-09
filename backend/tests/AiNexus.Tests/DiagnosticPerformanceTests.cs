@@ -14,6 +14,8 @@ namespace AiNexus.Tests;
 [Collection("Diagnostic integration")]
 public sealed class DiagnosticPerformanceTests
 {
+    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
+
     [Fact, Trait("Category", "Performance")]
     public async Task MeasureRequestThroughputLatencyAndMemoryWithBoundedPersistence()
     {
@@ -26,7 +28,7 @@ public sealed class DiagnosticPerformanceTests
             limitations = "Single process local development measurement. Baseline disables the provider on the same code path. Does not establish IIS/SQL Server network or production capacity."
         };
         var path = Path.GetFullPath("../../../../../../artifacts/diagnostics-performance.json", AppContext.BaseDirectory); Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(report, new JsonSerializerOptions { WriteIndented = true }));
+        await File.WriteAllTextAsync(path, JsonSerializer.Serialize(report, Indented));
         Assert.Equal(0, logging.Lost); Assert.True(logging.PersistedEvents > 0); Assert.True(logging.P95Ms < 500, "Local fixture should remain responsive; see measured report rather than a production performance claim.");
     }
     private sealed record Measurement(double RequestsPerSecond, double P50Ms, double P95Ms, double P99Ms, long AllocatedBytes, long ManagedBytesBefore, long ManagedBytesAfter, long WorkingSetBytes, long FileEvents, long PersistedEvents, long Lost);

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Data;
 using System.Reflection;
 using System.Transactions;
@@ -39,13 +40,13 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
         // (concurrent import batches and SQL metadata estimates can overshoot); no early retention purge.
         await using (var count = new SqlCommand("SELECT COALESCE(SUM([rows]),0) FROM sys.partitions WHERE [object_id]=OBJECT_ID(N'operations.DiagnosticEvents') AND [index_id] IN (0,1);", connection) { CommandTimeout = settings.SqlTimeoutSeconds })
         {
-            var rows = Convert.ToInt64(await count.ExecuteScalarAsync(ct)); Interlocked.Exchange(ref health.EstimatedSqlRows, rows);
+            var rows = Convert.ToInt64(await count.ExecuteScalarAsync(ct), CultureInfo.InvariantCulture); Interlocked.Exchange(ref health.EstimatedSqlRows, rows);
             if (rows + events.Count > settings.MaxSqlRows)
             {
                 var ids = events.Select(x => x.LogId).Distinct().ToArray();
                 await using var exists = new SqlCommand("SELECT COUNT(*) FROM [operations].[DiagnosticEvents] WHERE [LogId] IN (" + string.Join(',', ids.Select((_, i) => "@id" + i)) + ");", connection) { CommandTimeout = settings.SqlTimeoutSeconds };
                 for (var i = 0; i < ids.Length; i++) exists.Parameters.AddWithValue("@id" + i, ids[i]);
-                var existing = Convert.ToInt64(await exists.ExecuteScalarAsync(ct));
+                var existing = Convert.ToInt64(await exists.ExecuteScalarAsync(ct), CultureInfo.InvariantCulture);
                 if (ids.Length > existing && rows + ids.Length - existing > settings.MaxSqlRows) throw new DiagnosticCapacityException();
             }
         }

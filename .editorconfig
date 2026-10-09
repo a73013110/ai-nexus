@@ -14,7 +14,37 @@ indent_size = 4
 [*.md]
 trim_trailing_whitespace = false
 
-# The imported EDoc helpers are tracked verbatim.
-[backend/src/AiNexus.Api/Database/EDoc/**]
+# The imported EDoc helpers are tracked verbatim, including their XML doc examples.
+[backend/src/AiNexus.Platform/Data/EDoc/**]
 trim_trailing_whitespace = false
 insert_final_newline = unset
+
+[backend/src/AiNexus.Platform/Data/EDoc/**.cs]
+dotnet_diagnostic.CS1570.severity = none
+
+[backend/**.cs]
+dotnet_diagnostic.IDE0005.severity = warning
+# AnalysisLevel latest-recommended (backend/Directory.Build.props). This is an application, not a reusable library, so
+# the public-API naming and shape rules that contradict its conventions are off:
+# Result<T> static factories, Interlocked counters as fields, test method names, domain names such as
+# KnowledgeCollection, the Error type, `ct` for cancellation tokens, read-only interfaces in signatures.
+dotnet_diagnostic.CA1000.severity = none
+dotnet_diagnostic.CA1051.severity = none
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA1711.severity = none
+dotnet_diagnostic.CA1716.severity = none
+dotnet_diagnostic.CA1725.severity = none
+dotnet_diagnostic.CA1859.severity = none
+
+# Tests spell expected values inline and throw arbitrary exceptions on purpose.
+[backend/tests/**.cs]
+dotnet_diagnostic.CA1861.severity = none
+dotnet_diagnostic.CA2201.severity = none
+
+# Logging goes through [LoggerMessage] methods: fixed event ids, no per-call boxing or template parsing.
+[backend/src/**.cs]
+dotnet_diagnostic.CA1848.severity = warning
+
+# EF Core migrations are generated and never edited by hand.
+[backend/src/AiNexus.Features/Persistence/Migrations/**.cs]
+generated_code = true

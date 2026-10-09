@@ -1,4 +1,5 @@
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.Identity;
 using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
 
@@ -13,6 +14,10 @@ public sealed class AttachmentsModule : IFeatureModule
 {
     /// <summary>Multipart upload ceiling: one file at the largest configurable size plus form overhead.</summary>
     public const long UploadBodyLimit = 9 * 1024 * 1024;
+
+    /// <summary>Each upload reads, sniffs, extracts and stores a file of up to <see cref="UploadBodyLimit"/>.</summary>
+    public const string UploadRateLimit = "attachment-upload";
+    public const int UploadsPerMinute = 30;
 
     public static void AddServices(IHostApplicationBuilder builder)
     {
@@ -34,6 +39,7 @@ public sealed class AttachmentsModule : IFeatureModule
             })
             .ValidateOnStart();
         services.AddSingleton<IValidateOptions<AttachmentOptions>, AttachmentOptionsValidator>();
+        services.AddRateLimiter(options => options.AddPerUserLimit(UploadRateLimit, UploadsPerMinute));
         services.AddFeaturePolicy(FeatureIds.Files);
         services.AddFeaturePolicy(Policies.Attachments, FeatureIds.Files, FeatureIds.Chat, FeatureIds.Knowledge, FeatureIds.Projects);
     }

@@ -9,6 +9,7 @@ namespace AiNexus.Features.Inference;
 public sealed record GenerationJob(Guid RunId, Guid ConversationId, CancellationTokenSource Cancellation, string TraceId, string ParentSpanId, Guid OwnerId, string Provider, IReadOnlyList<InferenceMessage>? Context = null);
 public sealed record ProviderQueue(ChannelReader<GenerationJob> Reader, int Concurrency);
 
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1001:Types that own disposable fields should be disposable", Justification = "SemaphoreSlim without AvailableWaitHandle holds nothing to release; disposing a shared gate would throw in work still releasing it during shutdown.")]
 public sealed class GenerationScheduler
 {
     private readonly Dictionary<string, Channel<GenerationJob>> queues = new(StringComparer.Ordinal);

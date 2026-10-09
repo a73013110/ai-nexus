@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
@@ -145,7 +146,7 @@ public sealed class SqlServerRetrievalTests
         var docs = new[] { new WorkspaceResource { OwnerId = actor.Id, Kind = "document", Name = "授權文件", ParentId = allowed.Id }, new WorkspaceResource { OwnerId = actor.Id, Kind = "document", Name = "範圍外文件", ParentId = denied.Id } };
         db.AddRange(docs);
         for (var i = 0; i < docs.Length; i++) db.Add(new KnowledgeDocument { Id = docs[i].Id, CollectionId = i == 0 ? allowed.Id : denied.Id, FileName = docs[i].Name, ContentType = "text/plain", Status = "ready", PageCount = 1, ChunkCount = i == 0 ? 2 : 50 });
-        var chunks = Enumerable.Range(0, 52).Select(i => new KnowledgeChunk { DocumentId = i < 2 ? docs[0].Id : docs[1].Id, Ordinal = i < 2 ? i : i - 2, StartPage = 1, EndPage = 1, HeadingPath = "第三章 › 採購核准", Text = i < 2 ? "採購核准後，由主管簽署再付款。" : string.Join('。', Enumerable.Repeat("採購核准採購核准", 15)), ContentHash = SHA256.HashData(Encoding.UTF8.GetBytes(i.ToString())), TokenEstimate = 30 }).ToArray();
+        var chunks = Enumerable.Range(0, 52).Select(i => new KnowledgeChunk { DocumentId = i < 2 ? docs[0].Id : docs[1].Id, Ordinal = i < 2 ? i : i - 2, StartPage = 1, EndPage = 1, HeadingPath = "第三章 › 採購核准", Text = i < 2 ? "採購核准後，由主管簽署再付款。" : string.Join('。', Enumerable.Repeat("採購核准採購核准", 15)), ContentHash = SHA256.HashData(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), TokenEstimate = 30 }).ToArray();
         db.AddRange(chunks); await db.SaveChangesAsync(); return (allowed.Id, chunks);
     }
     private static async Task WithDatabase(Func<NexusDbContext, EDoc.Core.Database.Interfaces.IDbHelper<INexusDatabase>, SqlServerRetrievalStore, Task> test)

@@ -29,7 +29,7 @@ internal static class EndTestIdentity
         if (actor is null || !SessionIdentity.Allows(actor, method) || !SessionIdentity.MatchesVersion(actor, http.User.FindFirstValue(SessionIdentity.ActorVersion)) ||
             !(await access.ForUserAsync(actorId, ct)).Features.Any(x => x.Id == FeatureIds.Admin))
             return IdentityErrors.TestSourceRevoked.ToProblem();
-        Guid.TryParse(http.User.FindFirstValue(SessionIdentity.UserId), out var targetId);
+        _ = Guid.TryParse(http.User.FindFirstValue(SessionIdentity.UserId), out var targetId);
         if (!Guid.TryParse(http.User.FindFirstValue(SessionIdentity.TestId), out var testId)) return IdentityErrors.TestSessionInvalid.ToProblem();
         db.AuditEvents.Add(new() { OwnerId = actorId, ResourceId = testId, Action = "identity.test_end", Result = "restored", DetailsJson = JsonSerializer.Serialize(new { testId, userId = targetId, reason = "returned" }) });
         await db.SaveChangesAsync(ct);
