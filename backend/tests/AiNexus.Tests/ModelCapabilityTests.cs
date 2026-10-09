@@ -45,7 +45,7 @@ public sealed class ModelCapabilityTests
         provider.Pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
         // Discovery now hangs; callers still get the cached models immediately, and only one refresh is started.
         for (var i = 0; i < 3; i++) Assert.Single((await catalog.GetAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5))).Models);
-        for (var i = 0; i < 200 && provider.Calls < 2; i++) await Task.Delay(10);
+        await provider.SecondCall.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         Assert.Equal(2, provider.Calls);
         provider.Pending.SetResult(new HashSet<string>());
         for (var i = 0; i < 200 && (await catalog.GetAsync(CancellationToken.None)).Models.Count > 0; i++) await Task.Delay(10);
@@ -61,9 +61,10 @@ public sealed class ModelCapabilityTests
     {
         public int Calls;
         public TaskCompletionSource<IReadOnlySet<string>>? Pending;
+        public TaskCompletionSource SecondCall { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public Task<IReadOnlySet<string>> InstalledModelsAsync(CancellationToken ct)
         {
-            Interlocked.Increment(ref Calls);
+            if (Interlocked.Increment(ref Calls) == 2) SecondCall.TrySetResult();
             return Pending?.Task ?? Task.FromResult<IReadOnlySet<string>>(new HashSet<string> { "test-model" });
         }
         public IAsyncEnumerable<InferenceChunk> StreamAsync(string model, IReadOnlyList<InferenceMessage> messages, GenerationParameters parameters, CancellationToken ct) => throw new NotSupportedException();

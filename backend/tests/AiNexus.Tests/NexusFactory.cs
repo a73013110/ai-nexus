@@ -22,6 +22,7 @@ using AiNexus.Features.Attachments;
 using EDoc.Core.Database.Interfaces;
 using EDoc.Core.Database.Markers;
 using System.Data.Common;
+using Xunit;
 
 namespace AiNexus.Tests;
 
@@ -214,13 +215,29 @@ public sealed class TestProvider : IInferenceProvider
     public int Calls;
     public int Concurrent;
     public int MaxConcurrent;
+    private readonly List<(int Calls, TaskCompletionSource Signal)> callWaiters = [];
     public IReadOnlyList<InferenceMessage> LastMessages { get; private set; } = [];
+
+    /// <summary>Completes once the provider has been called <paramref name="calls"/> times, so tests need not poll <see cref="Calls"/>.</summary>
+    public Task WhenCalledAsync(int calls = 1)
+    {
+        lock (callWaiters)
+        {
+            if (Volatile.Read(ref Calls) >= calls) return Task.CompletedTask;
+            var signal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            callWaiters.Add((calls, signal));
+            return signal.Task.WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
+        }
+    }
+
     public GenerationParameters? LastParameters { get; private set; }
     public string? LastModel { get; private set; }
     public Task<IReadOnlySet<string>> InstalledModelsAsync(CancellationToken ct) => DiscoveryFail ? throw new HttpRequestException("fixture discovery failure") : Task.FromResult<IReadOnlySet<string>>(new HashSet<string> { "test-model", "not-approved" });
     public async IAsyncEnumerable<InferenceChunk> StreamAsync(string model, IReadOnlyList<InferenceMessage> messages, GenerationParameters parameters, [EnumeratorCancellation] CancellationToken ct)
     {
-        Interlocked.Increment(ref Calls);
+        var calls = Interlocked.Increment(ref Calls);
+        lock (callWaiters)
+            foreach (var waiter in callWaiters.Where(x => x.Calls <= calls).ToList()) { callWaiters.Remove(waiter); waiter.Signal.TrySetResult(); }
         var concurrent = Interlocked.Increment(ref Concurrent);
         MaxConcurrent = Math.Max(MaxConcurrent, concurrent);
         LastMessages = messages;

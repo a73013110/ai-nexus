@@ -118,7 +118,7 @@ public sealed class ModelTokenPolicyTests
         (await admin.PutAsJsonAsync($"/api/v1/admin/users/{owner}/model-policy", new ModelPolicyRequest(DailyTokenLimits: new Dictionary<string, long> { ["test-model"] = 500 }))).EnsureSuccessStatusCode();
         factory.Provider.NeverFinish = true;
         var conversation = await CreateConversation(bob); var run = await CreateRun(bob, conversation.Id, "保留額度");
-        for (var i = 0; factory.Provider.Calls == 0 && i < 100; i++) await Task.Delay(20);
+        await factory.Provider.WhenCalledAsync();
         Assert.Equal(1, factory.Provider.Calls);
         var budget = Assert.Single((await bob.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
         Assert.Equal(500, budget.ReservedTokens); Assert.Equal(0, budget.RemainingTokens);

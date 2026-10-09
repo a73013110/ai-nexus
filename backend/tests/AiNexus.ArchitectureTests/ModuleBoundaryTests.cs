@@ -30,11 +30,13 @@ public sealed class ModuleBoundaryTests
             .Select(t => t.Namespace).OfType<string>().Where(ns => ns.StartsWith(Root, StringComparison.Ordinal))
             .Select(ns => ns[Root.Length..].Split('.')[0]).Where(m => !Infrastructure.Contains(m)).ToHashSet(StringComparer.Ordinal);
         var edges = new Dictionary<(string, string), IReadOnlyList<string>>();
+        // Read the assembly once; every pair query filters the same type list.
+        var types = Types.InAssembly(Assemblies.Features);
         foreach (var from in modules)
         {
             foreach (var to in modules.Where(m => m != from))
             {
-                var result = Types.InAssembly(Assemblies.Features).That().ResideInNamespace(Root + from)
+                var result = types.That().ResideInNamespace(Root + from)
                     .ShouldNot().HaveDependencyOnAny(Root + to).GetResult();
                 if (!result.IsSuccessful) edges[(from, to)] = result.FailingTypes?.Select(t => TopLevelName(t.FullName)).Distinct().Order(StringComparer.Ordinal).ToList() ?? [];
             }

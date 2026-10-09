@@ -40,7 +40,7 @@ public sealed class MultiProviderRoutingTests
         Assert.Equal(2, catalog.Models.Count); Assert.All(catalog.Providers!, p => Assert.True(p.Available));
         var remoteResponse = await PostRun(alice, new(a.Id, "google/test-model", "remote", null, null));
         remoteResponse.EnsureSuccessStatusCode(); var remote = (await remoteResponse.Content.ReadFromJsonAsync<RunDto>())!;
-        for (var i = 0; i < 100 && factory.Provider.Calls == 0; i++) await Task.Delay(10);
+        await factory.Provider.WhenCalledAsync();
         Assert.Equal(1, factory.Provider.Calls);
         var localResponse = await PostRun(bob, new(b.Id, "ollama/test-model", "local", null, null));
         localResponse.EnsureSuccessStatusCode(); var queued = (await localResponse.Content.ReadFromJsonAsync<RunDto>())!;
