@@ -1,9 +1,12 @@
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.Artifacts;
+using AiNexus.Features.Conversations;
+using AiNexus.Platform.Events;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Sharing;
 
-/// <summary>Account-bound snapshots of conversations and artifacts. Other modules revoke shares through <see cref="ShareService"/>.</summary>
+/// <summary>Account-bound snapshots of conversations and artifacts. Deleting a source revokes its shares through domain events.</summary>
 public sealed class SharingModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)
@@ -15,6 +18,8 @@ public sealed class SharingModule : IFeatureModule
         builder.Services.AddSingleton<ShareWriteLock>();
         builder.Services.AddHostedService<ShareCleanupWorker>();
         builder.Services.AddFeaturePolicy(FeatureIds.Shared);
+        builder.Services.AddDomainEventHandler<ConversationDeleted, RevokeDeletedSourceShares>();
+        builder.Services.AddDomainEventHandler<ArtifactDeleted, RevokeDeletedSourceShares>();
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)

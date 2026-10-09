@@ -15,7 +15,6 @@ Artifacts -> Conversations
 Artifacts -> Identity
 Artifacts -> Inference
 Artifacts -> Operations
-Artifacts -> Sharing
 Attachments -> AccessControl
 Attachments -> Administration
 Attachments -> Collaboration
@@ -29,7 +28,6 @@ Billing -> Inference
 Billing -> Knowledge
 Billing -> Operations
 Collaboration -> AccessControl
-Collaboration -> Artifacts
 Collaboration -> Conversations
 Collaboration -> Identity
 Collaboration -> Inference
@@ -43,7 +41,6 @@ Conversations -> Knowledge
 Conversations -> Operations
 Conversations -> Projects
 Conversations -> Quality
-Conversations -> Sharing
 Conversations -> WebSearch
 Dashboard -> AccessControl
 Dashboard -> Attachments

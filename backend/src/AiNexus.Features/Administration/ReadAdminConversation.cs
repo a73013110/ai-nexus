@@ -4,6 +4,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Administration;
@@ -22,7 +23,7 @@ internal sealed class ReadAdminConversation(NexusDbContext db, AdministrativeRea
     {
         if (!await reads.AllowedAsync(actor, ct)) return AdministrationErrors.AdminRequired;
         if (!AdministrativeReadAudit.ValidPage(null, offset)) return AdministrationErrors.InvalidSearch;
-        var value = await db.Conversations.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
+        var value = await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (value is null) return AdministrationErrors.NotFound;
         var owner = await db.Users.AsNoTracking().SingleAsync(x => x.Id == value.OwnerId, ct);
         var query = db.Messages.AsNoTracking().Where(x => x.ConversationId == id);

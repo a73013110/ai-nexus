@@ -1,5 +1,6 @@
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Identity;
+using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -40,6 +41,7 @@ internal sealed class WorkspaceResourceConfiguration : IEntityTypeConfiguration<
         resource.ToTable("Resources", "collaboration"); resource.HasKey(x => x.Id);
         resource.Property(x => x.Kind).HasMaxLength(24); resource.Property(x => x.Name).HasMaxLength(120);
         resource.HasIndex(x => new { x.OwnerId, x.Kind, x.UpdatedAt });
+        resource.HasQueryFilter(SoftDelete.Filter, x => !x.IsDeleted);
         resource.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
         resource.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Restrict);
     }

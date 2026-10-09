@@ -17,7 +17,7 @@ internal static class ListProjectFiles
     private static async Task<IReadOnlyList<DocumentDto>> HandleAsync(NexusDbContext db, ResourceAccess access, DocumentService documents, Guid actor, Guid id, CancellationToken ct)
     {
         await access.RequireAsync(actor, id, Project.Kind, ct);
-        var ids = await db.Set<WorkspaceResource>().Where(x => x.ParentId == id && x.Kind == "document" && !x.IsDeleted).Select(x => x.Id).Take(Project.MaxFiles).ToListAsync(ct);
+        var ids = await db.Set<WorkspaceResource>().Where(x => x.ParentId == id && x.Kind == "document").Select(x => x.Id).Take(Project.MaxFiles).ToListAsync(ct);
         var result = new List<DocumentDto>();
         foreach (var key in ids) result.Add(await documents.DetailAsync(actor, key, ct));
         return result;

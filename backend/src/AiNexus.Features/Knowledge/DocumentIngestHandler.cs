@@ -5,6 +5,7 @@ using AiNexus.Features.Inference;
 using AiNexus.Features.Operations;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;
+using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using UglyToad.PdfPig;
@@ -74,7 +75,7 @@ public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskSe
             return;
         }
         document.Status = "ready";
-        (await db.Set<WorkspaceResource>().SingleAsync(x => x.Id == document.Id, ct)).UpdatedAt = DateTimeOffset.UtcNow;
+        (await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == document.Id, ct)).UpdatedAt = DateTimeOffset.UtcNow;
         await execution.CheckpointAsync("處理完成", document.CollectionId is null ? total : document.ChunkCount, document.CollectionId is null ? total : document.ChunkCount, ct);
     }
 }

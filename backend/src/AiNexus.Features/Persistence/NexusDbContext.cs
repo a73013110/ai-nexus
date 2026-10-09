@@ -5,10 +5,16 @@ using AiNexus.Features.Operations;
 using AiNexus.Features.AccessControl;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Events;
 
 namespace AiNexus.Features.Persistence;
 
-public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHttpContextAccessor? http = null) : DbContext(options)
+/// <remarks>
+/// <paramref name="events"/> is the request scope's domain-event collector (absent for design-time and fixture contexts
+/// built by hand). SaveChangesAsync dispatches pending events first, so their handlers' writes share this transaction and
+/// the audit rows they add are prepared like any other.
+/// </remarks>
+public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHttpContextAccessor? http = null, DomainEvents? events = null) : DbContext(options)
 {
     public DbSet<NexusUser> Users => Set<NexusUser>();
     public DbSet<Conversation> Conversations => Set<Conversation>();
@@ -18,12 +24,22 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
     public DbSet<ModelProfile> ModelProfiles => Set<ModelProfile>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
 
-    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    public override async Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
-        PrepareAudits(); return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+        if (events is { HasPending: true } && Database.CurrentTransaction is null)
+        {
+            // Handlers may run ExecuteUpdate/ExecuteDelete, which commit on their own outside a transaction.
+            await using var transaction = await Database.BeginTransactionAsync(cancellationToken);
+            var saved = await SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return saved;
+        }
+        if (events is not null) await events.DispatchAsync(cancellationToken);
+        PrepareAudits(); return await base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
+        events?.ThrowIfPending();
         PrepareAudits(); return base.SaveChanges(acceptAllChangesOnSuccess);
     }
     private void PrepareAudits()

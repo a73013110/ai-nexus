@@ -42,7 +42,7 @@ internal sealed class SaveMessageFeedback(NexusDbContext db, ResourceWriteLock w
 
     public async Task<Result<Outcome>> HandleAsync(Guid actor, Guid message, FeedbackRequest request, CancellationToken ct)
     {
-        var source = await (from m in db.Messages join c in db.Conversations on m.ConversationId equals c.Id where m.Id == message && m.Role == "assistant" && c.OwnerId == actor && !c.IsDeleted select new { Message = m, Conversation = c }).SingleOrDefaultAsync(ct);
+        var source = await (from m in db.Messages join c in db.Conversations on m.ConversationId equals c.Id where m.Id == message && m.Role == "assistant" && c.OwnerId == actor select new { Message = m, Conversation = c }).SingleOrDefaultAsync(ct);
         if (source is null) return QualityErrors.ItemMissing;
         if (RunStates.IsActive(source.Message.Status)) return QualityErrors.AnswerPending;
         await writes.Gate.WaitAsync(ct);

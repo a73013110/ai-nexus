@@ -2,18 +2,22 @@ using AiNexus.Features.Attachments;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Sharing;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Events;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Conversations;
 
+/// <summary>Raised in the deleting transaction; subscribers (Sharing revokes the conversation's shares) run before it is saved.</summary>
+public sealed record ConversationDeleted(Guid ConversationId, Guid OwnerId) : IDomainEvent;
+
 /// <summary>
 /// Soft-deletes one of the user's own idle conversations: under the generation state gate and the attachment write lock,
-/// in a transaction holding the owner's quota lock, it unlinks the message attachments, revokes the conversation's share
-/// links and marks files no longer used. Files pending deletion are removed after the locks are released.
+/// in a transaction holding the owner's quota lock, it unlinks the message attachments, raises <see cref="ConversationDeleted"/>
+/// (its shares are revoked before the save) and marks files no longer used. Files pending deletion are removed after the
+/// locks are released.
 /// </summary>
-internal sealed class DeleteConversation(NexusDbContext db, GenerationScheduler scheduler, AttachmentWriteLock attachmentWrites, ShareService shares, AttachmentLifecycle lifecycle, AttachmentQuota quota)
+internal sealed class DeleteConversation(NexusDbContext db, GenerationScheduler scheduler, AttachmentWriteLock attachmentWrites, DomainEvents events, AttachmentLifecycle lifecycle, AttachmentQuota quota)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, DeleteConversation handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
@@ -36,7 +40,7 @@ internal sealed class DeleteConversation(NexusDbContext db, GenerationScheduler 
                 var fileIds = links.Select(x => x.AttachmentId).Distinct().ToList();
                 db.Set<MessageAttachment>().RemoveRange(links);
                 conversation.IsDeleted = true;
-                await shares.RevokeSourceAsync("conversation", id, ct);
+                events.Raise(new ConversationDeleted(id, owner));
                 db.AuditEvents.Add(new() { OwnerId = owner, Action = "conversation.deleted", ResourceId = id });
                 await db.SaveChangesAsync(ct);
                 await lifecycle.MarkUnusedAsync(fileIds, ct);

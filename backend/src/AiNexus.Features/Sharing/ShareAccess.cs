@@ -23,8 +23,8 @@ internal sealed class ShareAccess(NexusDbContext db, AccessService features, Tim
     }
 
     public async Task<bool> SourceExistsAsync(ShareLink row, CancellationToken ct) => row.Kind == "conversation"
-        ? await db.Conversations.AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId && !x.IsDeleted, ct)
-        : await db.Set<WorkspaceResource>().AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId && x.Kind == "artifact" && !x.IsDeleted, ct);
+        ? await db.Conversations.AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId, ct)
+        : await db.Set<WorkspaceResource>().AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId && x.Kind == "artifact", ct);
 
     public async Task<bool> HasSourceFeatureAsync(Guid user, string kind, CancellationToken ct)
         => (await features.ForUserAsync(user, ct)).Features.Any(x => x.Id == (kind == "conversation" ? FeatureIds.Chat : FeatureIds.Artifacts));

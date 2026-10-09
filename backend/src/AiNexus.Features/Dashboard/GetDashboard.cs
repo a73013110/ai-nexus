@@ -35,12 +35,12 @@ internal sealed class GetDashboard(NexusDbContext db, SpendReports reports, Usag
         var period = SpendPeriod.Create(from, until, offset, clock.GetUtcNow());
         if (!period.IsSuccess) return period.Error;
         Guid? owner = scope == "personal" ? actor : ownerId;
-        var resources = db.Set<WorkspaceResource>().AsNoTracking().Where(x => !x.IsDeleted && (owner == null || x.OwnerId == owner));
+        var resources = db.Set<WorkspaceResource>().AsNoTracking().Where(x => owner == null || x.OwnerId == owner);
         var docs = db.Set<KnowledgeDocument>().AsNoTracking().Where(d => !d.IsDeleted && resources.Any(x => x.Id == d.Id));
         var chunks = db.Set<KnowledgeChunk>().AsNoTracking().Where(x => docs.Any(d => d.Id == x.DocumentId));
         var jobs = db.Set<BackgroundJob>().AsNoTracking().Where(x => owner == null || x.OwnerId == owner);
         var counts = new DashboardCountsDto(
-            await db.Conversations.CountAsync(x => !x.IsDeleted && (owner == null || x.OwnerId == owner), ct),
+            await db.Conversations.CountAsync(x => owner == null || x.OwnerId == owner, ct),
             await resources.CountAsync(x => x.Kind == "project", ct), await resources.CountAsync(x => x.Kind == "knowledge", ct),
             await docs.CountAsync(ct), await docs.CountAsync(x => x.Status == "ready", ct), await docs.CountAsync(x => x.Status == "failed", ct), await chunks.CountAsync(ct),
             await db.Runs.CountAsync(x => x.ActiveOwnerId != null && (owner == null || x.OwnerId == owner), ct),
@@ -50,7 +50,7 @@ internal sealed class GetDashboard(NexusDbContext db, SpendReports reports, Usag
             await db.Set<Attachment>().CountAsync(x => x.InLibrary && x.StorageState == AttachmentStates.Ready && (owner == null || x.OwnerId == owner), ct));
         var spend = await reports.ReportAsync(owner, period.Value, scope == "platform", ct);
         // Recent titles always belong to the current user, including in the platform scope.
-        var recent = await db.Conversations.AsNoTracking().Where(x => x.OwnerId == actor && !x.IsDeleted)
+        var recent = await db.Conversations.AsNoTracking().Where(x => x.OwnerId == actor)
             .OrderByDescending(x => x.UpdatedAt).Take(5).Select(x => new RecentWorkDto(x.Id, "chat", x.Title, x.UpdatedAt)).ToListAsync(ct);
         if (scope == "platform") { db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = ownerId ?? Guid.Empty, Action = "dashboard.platform.read", Result = "metrics" }); await db.SaveChangesAsync(ct); }
         return new DashboardDto(scope, counts, spend, recent, search.Status.Available, gitea.Value.Enabled, embedding.Enabled ? "語意向量" : "關鍵字",

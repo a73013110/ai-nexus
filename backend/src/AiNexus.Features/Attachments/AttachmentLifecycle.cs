@@ -1,5 +1,6 @@
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Operations;
+using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Knowledge;
@@ -25,7 +26,8 @@ public sealed class AttachmentLifecycle(NexusDbContext db, IAttachmentStorage st
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.StorageState, AttachmentStates.Deleting), ct);
     }
 
-    public IQueryable<Guid> PrivateReaders(Guid owner) => from doc in db.Set<KnowledgeDocument>() join resource in db.Set<WorkspaceResource>() on doc.Id equals resource.Id
+    /// <summary>The owner's standalone documents (readers), deleted or not; their resources are read past the soft-delete filter.</summary>
+    public IQueryable<Guid> PrivateReaders(Guid owner) => from doc in db.Set<KnowledgeDocument>() join resource in db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]) on doc.Id equals resource.Id
         where doc.CollectionId == null && resource.ParentId == null && resource.OwnerId == owner select doc.Id;
 
     public async Task RemovePrivateReadersAsync(Guid owner, IReadOnlyList<Guid> files, CancellationToken ct)
@@ -39,11 +41,16 @@ public sealed class AttachmentLifecycle(NexusDbContext db, IAttachmentStorage st
         await db.Set<AttachmentReference>().Where(x => ids.Contains(x.ResourceId)).ExecuteDeleteAsync(ct);
     }
 
-    private IQueryable<Attachment> ExpiredDrafts(DateTimeOffset cutoff, DateTimeOffset interrupted) => db.Set<Attachment>().Where(x => !x.InLibrary &&
-        (x.StorageState == AttachmentStates.Ready && x.CreatedAt < cutoff || x.StorageState == AttachmentStates.Pending && x.CreatedAt < interrupted) &&
-        !db.Set<MessageAttachment>().Any(l => l.AttachmentId == x.Id) &&
-        !db.Set<AttachmentReference>().Any(l => l.AttachmentId == x.Id && !(from doc in db.Set<KnowledgeDocument>() join resource in db.Set<WorkspaceResource>() on doc.Id equals resource.Id
-            where doc.Id == l.ResourceId && doc.CollectionId == null && resource.ParentId == null && resource.OwnerId == x.OwnerId select doc.Id).Any()));
+    private IQueryable<Attachment> ExpiredDrafts(DateTimeOffset cutoff, DateTimeOffset interrupted)
+    {
+        // A private reader keeps its resource whether or not it is deleted; the document's own state is not part of this rule.
+        var resources = db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]);
+        return db.Set<Attachment>().Where(x => !x.InLibrary &&
+            (x.StorageState == AttachmentStates.Ready && x.CreatedAt < cutoff || x.StorageState == AttachmentStates.Pending && x.CreatedAt < interrupted) &&
+            !db.Set<MessageAttachment>().Any(l => l.AttachmentId == x.Id) &&
+            !db.Set<AttachmentReference>().Any(l => l.AttachmentId == x.Id && !(from doc in db.Set<KnowledgeDocument>() join resource in resources on doc.Id equals resource.Id
+                where doc.Id == l.ResourceId && doc.CollectionId == null && resource.ParentId == null && resource.OwnerId == x.OwnerId select doc.Id).Any()));
+    }
 
     public async Task AbortUploadAsync(Attachment upload, CancellationToken ct)
     {

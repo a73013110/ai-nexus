@@ -12,5 +12,5 @@ internal static class ListConversationLabels
         .WithName("ListConversationLabels").Produces<IReadOnlyList<string>>();
 
     private static async Task<IReadOnlyList<string>> HandleAsync(NexusDbContext db, Guid owner, CancellationToken ct)
-        => await (from label in db.Set<ConversationLabel>() join conversation in db.Set<Conversation>() on label.ConversationId equals conversation.Id where conversation.OwnerId == owner && !conversation.IsDeleted select label.Name).Distinct().OrderBy(x => x).ToListAsync(ct);
+        => await (from label in db.Set<ConversationLabel>() join conversation in db.Set<Conversation>() on label.ConversationId equals conversation.Id where conversation.OwnerId == owner select label.Name).Distinct().OrderBy(x => x).ToListAsync(ct);
 }

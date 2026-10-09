@@ -6,6 +6,7 @@ using AiNexus.Features.Operations;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Administration;
 using AiNexus.Features.Collaboration;
+using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -178,7 +179,7 @@ public sealed class EmbeddingBootstrapWorker(IServiceScopeFactory scopes, Storag
                     using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
                     var target = await scope.ServiceProvider.GetRequiredService<EmbeddingProfiles>().TargetAsync(stoppingToken);
                     var jobs = scope.ServiceProvider.GetRequiredService<JobService>();
-                    var pending = await (from d in db.Set<KnowledgeDocument>() join r in db.Set<WorkspaceResource>() on d.Id equals r.Id
+                    var pending = await (from d in db.Set<KnowledgeDocument>() join r in db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]) on d.Id equals r.Id
                         where !d.IsDeleted && d.CollectionId != null && d.Status == "reindex" && !db.Set<BackgroundJob>().Any(j => j.SubjectId == d.Id && j.ActiveKey != null)
                         select new { Document = d, r.OwnerId }).ToListAsync(stoppingToken);
                     foreach (var item in pending) { item.Document.Status = "indexing"; item.Document.JobId = jobs.Enqueue(item.OwnerId, item.Document.Id, item.Document.Id, "document-embedding", item.Document.FileName).Id; }

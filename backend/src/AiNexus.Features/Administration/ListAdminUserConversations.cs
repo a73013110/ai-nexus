@@ -1,6 +1,7 @@
 using AiNexus.Features.Identity;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Administration;
@@ -21,7 +22,7 @@ internal sealed class ListAdminUserConversations(NexusDbContext db, Administrati
         if (!await reads.AllowedAsync(actor, ct)) return AdministrationErrors.AdminRequired;
         if (!AdministrativeReadAudit.ValidPage(search, offset)) return AdministrationErrors.InvalidSearch;
         if (!await db.Users.AnyAsync(x => x.Id == owner, ct)) return AdministrationErrors.NotFound;
-        var query = db.Conversations.AsNoTracking().Where(x => x.OwnerId == owner && (includeDeleted || !x.IsDeleted));
+        var query = db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).AsNoTracking().Where(x => x.OwnerId == owner && (includeDeleted || !x.IsDeleted));
         if (!string.IsNullOrWhiteSpace(search)) query = query.Where(x => x.Title.Contains(search) || db.Messages.Any(m => m.ConversationId == x.Id && m.Content.Contains(search)));
         var total = await query.CountAsync(ct);
         var rows = await query.OrderByDescending(x => x.UpdatedAt).ThenBy(x => x.Id).Skip(offset).Take(50)
