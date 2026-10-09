@@ -12,6 +12,10 @@ updates:
     schedule: { interval: monthly }
     groups:
       npm: { patterns: ["*"] }
+    # Angular pins the supported TypeScript range; upgrade TypeScript together with Angular instead.
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: monthly }
