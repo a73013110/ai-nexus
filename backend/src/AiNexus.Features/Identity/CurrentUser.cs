@@ -20,7 +20,7 @@ public sealed class IdentityWriteLock
 /// <summary>Directory display names by SID for an hour, bounded so a host's lifetime cannot grow it without limit.</summary>
 public sealed class DisplayNameCache(TimeProvider clock)
 {
-    internal const int Capacity = 4096;
+    private const int Capacity = 4096;
     private static readonly TimeSpan Lifetime = TimeSpan.FromHours(1);
     private readonly ConcurrentDictionary<string, (string Name, DateTimeOffset At)> names = new(StringComparer.Ordinal);
 
