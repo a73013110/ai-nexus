@@ -7,7 +7,6 @@ using AiNexus.Features.Persistence;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;
-using AiNexus.Features.Knowledge;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using UglyToad.PdfPig.Core;
@@ -15,6 +14,10 @@ using UglyToad.PdfPig.Writer;
 using Xunit;
 using static AiNexus.Tests.ChatApiTests;
 using AiNexus.Features.Jobs;
+using AiNexus.Features.Knowledge.Collections;
+using AiNexus.Features.Knowledge.Documents;
+using AiNexus.Features.Knowledge.Indexing;
+using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Tests;
 

@@ -42,7 +42,7 @@ public static class DeploymentVerifier
             var providerConfigured = !inference.ProviderConcurrency.ContainsKey("google") || !string.IsNullOrWhiteSpace(inference.GoogleApiKey);
             var catalog = await scope.ServiceProvider.GetRequiredService<ModelCatalog>().GetAsync(ct);
             await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Attachments.IAttachmentStorage>().VerifyAsync(ct);
-            var retrieval = await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Knowledge.RetrievalModelProbe>().CheckAsync(null, ct);
+            var retrieval = await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Knowledge.Retrieval.RetrievalModelProbe>().CheckAsync(null, ct);
             var ready = connected && pending?.Count == 0 && catalog.ProviderAvailable && catalog.Models.Count > 0 && providerConfigured && (ad.Mode == "Windows" || ad.Configured) && retrieval.Embedding.Available == true && retrieval.Rerank.Available == true;
             Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new {
                 environment = environment.EnvironmentName, configurationVersion = config.GetValue("ConfigurationVersion", 1),

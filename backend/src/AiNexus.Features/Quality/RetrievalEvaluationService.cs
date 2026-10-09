@@ -10,6 +10,9 @@ using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Jobs;
+using AiNexus.Features.Knowledge.Documents;
+using AiNexus.Features.Knowledge.Embeddings;
+using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Features.Quality;
 

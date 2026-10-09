@@ -1,7 +1,7 @@
 using AiNexus.Features.Identity;
-using AiNexus.Features.Knowledge;
 using AiNexus.Platform.Validation;
 using FluentValidation;
+using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Features.Administration;
 

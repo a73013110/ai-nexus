@@ -9,6 +9,8 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Jobs;
+using AiNexus.Features.Knowledge.Documents;
+using AiNexus.Features.Knowledge.Embeddings;
 
 namespace AiNexus.Features.Quality;
 

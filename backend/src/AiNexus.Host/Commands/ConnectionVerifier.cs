@@ -79,7 +79,7 @@ public static class ConnectionVerifier
             return images.Length > 0 ? "真實模型已辨識合成文件代碼及紅色 PNG 圖片；未傳送私人資料" : "真實模型已辨識合成文件代碼；此 profile 未啟用圖片能力";
         });
         await Check("RetrievalModels", async () => {
-            var result = await services.GetRequiredService<AiNexus.Features.Knowledge.RetrievalModelProbe>().CheckAsync(null, ct);
+            var result = await services.GetRequiredService<AiNexus.Features.Knowledge.Retrieval.RetrievalModelProbe>().CheckAsync(null, ct);
             if (result.Embedding.Available != true || result.Rerank.Available != true) throw new ApiException(503, "retrieval_models_unavailable", result.Embedding.Notice + " " + result.Rerank.Notice);
             return result.Embedding.Notice + " " + result.Rerank.Notice;
         });

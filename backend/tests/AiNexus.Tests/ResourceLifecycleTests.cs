@@ -7,11 +7,11 @@ using AiNexus.Features.Artifacts;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Projects;
 using AiNexus.Features.Attachments;
-using AiNexus.Features.Knowledge;
 using AiNexus.Features.Quality;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using AiNexus.Features.Knowledge.Documents;
 
 namespace AiNexus.Tests;
 

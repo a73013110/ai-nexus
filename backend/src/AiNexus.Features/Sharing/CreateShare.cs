@@ -5,7 +5,6 @@ using AiNexus.Features.Collaboration;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Knowledge;
 using AiNexus.Features.Notifications;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.WebSearch;
@@ -13,6 +12,7 @@ using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Features.Sharing;
 

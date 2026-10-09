@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Knowledge;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Jobs;
+using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Features.Quality;
 

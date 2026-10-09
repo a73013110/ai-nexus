@@ -8,7 +8,6 @@ using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Integrations;
-using AiNexus.Features.Knowledge;
 using AiNexus.Features.Library;
 using AiNexus.Features.Notifications;
 using AiNexus.Features.Projects;
@@ -18,6 +17,9 @@ using AiNexus.Features.Sharing;
 using AiNexus.Features.WebSearch;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Jobs;
+using AiNexus.Features.Knowledge.Collections;
+using AiNexus.Features.Knowledge.Documents;
+using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Features.Persistence;
 

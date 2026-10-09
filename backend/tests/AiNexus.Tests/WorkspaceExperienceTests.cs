@@ -10,7 +10,6 @@ using AiNexus.Features.Inference;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Dashboard;
-using AiNexus.Features.Knowledge;
 using AiNexus.Features.Notifications;
 using AiNexus.Features.Repositories;
 using AiNexus.Features.Sharing;
@@ -21,6 +20,8 @@ using Microsoft.Extensions.Options;
 using Xunit;
 using static AiNexus.Tests.ChatApiTests;
 using AiNexus.Features.Jobs;
+using AiNexus.Features.Knowledge.Collections;
+using AiNexus.Features.Knowledge.Documents;
 
 namespace AiNexus.Tests;
 

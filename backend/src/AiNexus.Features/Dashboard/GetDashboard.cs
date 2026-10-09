@@ -5,9 +5,11 @@ using AiNexus.Features.AccessControl;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Billing;
 using AiNexus.Features.Collaboration;
-using AiNexus.Features.Knowledge;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Jobs;
+using AiNexus.Features.Knowledge.Documents;
+using AiNexus.Features.Knowledge.Indexing;
+using AiNexus.Features.Knowledge.Embeddings;
 
 namespace AiNexus.Features.Dashboard;
 

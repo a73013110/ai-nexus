@@ -1,7 +1,7 @@
 using AiNexus.Features.Identity;
-using AiNexus.Features.Knowledge;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Features.Administration;
 

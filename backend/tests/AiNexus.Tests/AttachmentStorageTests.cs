@@ -126,14 +126,14 @@ public sealed class AttachmentStorageTests
         using var client = await factory.SignedInAsync();
         var first = await Upload(client); first.EnsureSuccessStatusCode(); var draft = (await first.Content.ReadFromJsonAsync<AttachmentDto>())!;
         var readerResponse = await client.PostAsync($"/api/v1/attachments/{draft.Id}/document", null);
-        readerResponse.EnsureSuccessStatusCode(); var reader = (await readerResponse.Content.ReadFromJsonAsync<AiNexus.Features.Knowledge.DocumentDto>())!;
+        readerResponse.EnsureSuccessStatusCode(); var reader = (await readerResponse.Content.ReadFromJsonAsync<AiNexus.Features.Knowledge.Documents.DocumentDto>())!;
         var second = await Upload(client); second.EnsureSuccessStatusCode(); var interrupted = (await second.Content.ReadFromJsonAsync<AttachmentDto>())!;
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
         await db.Set<Attachment>().Where(x => x.Id == draft.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow.AddDays(-15)));
         await db.Set<Attachment>().Where(x => x.Id == interrupted.Id).ExecuteUpdateAsync(p => p.SetProperty(x => x.StorageState, AttachmentStates.Pending).SetProperty(x => x.CreatedAt, DateTimeOffset.UtcNow.AddHours(-2)));
         await scope.ServiceProvider.GetRequiredService<AttachmentLifecycle>().ReclaimAsync(CancellationToken.None);
         Assert.Empty(await db.Set<Attachment>().ToListAsync());
-        var document = await db.Set<AiNexus.Features.Knowledge.KnowledgeDocument>().SingleAsync(x => x.Id == reader.Id);
+        var document = await db.Set<AiNexus.Features.Knowledge.Documents.KnowledgeDocument>().SingleAsync(x => x.Id == reader.Id);
         Assert.True(document.IsDeleted); Assert.Null(document.AttachmentId);
         Assert.Equal(0, (await client.GetFromJsonAsync<AttachmentStorageDto>("/api/v1/attachments/storage"))!.UsedBytes);
         var root = scope.ServiceProvider.GetRequiredService<IOptions<AttachmentOptions>>().Value.StoragePath;

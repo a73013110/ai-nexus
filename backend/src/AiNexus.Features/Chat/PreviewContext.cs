@@ -1,7 +1,6 @@
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Knowledge;
 using AiNexus.Features.Projects;
 using AiNexus.Features.WebSearch;
 using AiNexus.Platform.Http;
@@ -9,6 +8,7 @@ using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Inference;
+using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Features.Chat;
 
