@@ -138,6 +138,7 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         run.HasIndex(x => new { x.OwnerId, x.IdempotencyKey }).IsUnique();
         run.HasIndex(x => x.ActiveOwnerId).IsUnique().HasFilter("[ActiveOwnerId] IS NOT NULL");
         run.HasIndex(x => new { x.ConversationId, x.CreatedAt });
+        run.HasIndex(x => new { x.OwnerId, x.CreatedAt }); // Daily token budgets and personal usage reports.
         run.HasIndex(x => new { x.ActiveOwnerId, x.LeaseExpiresAt });
         run.HasOne<Conversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
         run.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
