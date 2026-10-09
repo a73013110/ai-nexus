@@ -24,7 +24,6 @@ internal sealed class KnowledgeCollectionConfiguration : IEntityTypeConfiguratio
     public void Configure(EntityTypeBuilder<KnowledgeCollection> collection)
     {
         collection.ToTable("Collections", "knowledge"); collection.HasKey(x => x.Id); collection.Property(x => x.Description).HasMaxLength(KnowledgeCollection.DescriptionMaxLength);
-        collection.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.Id).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

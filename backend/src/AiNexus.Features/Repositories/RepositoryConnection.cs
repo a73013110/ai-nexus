@@ -101,7 +101,6 @@ internal sealed class RepositoryConnectionConfiguration : IEntityTypeConfigurati
     {
         c.ToTable("RepositoryConnections", "workspace"); c.HasKey(x => x.OwnerId);
         c.Property(x => x.BaseUrl).HasMaxLength(500); c.Property(x => x.Login).HasMaxLength(100); c.Property(x => x.ProtectedToken).HasMaxLength(4096);
-        c.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -112,6 +111,5 @@ internal sealed class RepositoryImportConfiguration : IEntityTypeConfiguration<R
         i.ToTable("RepositoryImports", "knowledge"); i.HasKey(x => x.Id);
         i.Property(x => x.Repository).HasMaxLength(201); i.Property(x => x.Path).HasMaxLength(500); i.Property(x => x.Commit).HasMaxLength(64); i.Property(x => x.BaseUrl).HasMaxLength(500);
         i.HasIndex(x => new { x.OwnerId, x.CollectionId, x.Repository, x.Commit, x.Path });
-        i.HasOne<KnowledgeDocument>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Restrict);
     }
 }

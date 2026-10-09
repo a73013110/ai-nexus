@@ -49,6 +49,5 @@ internal sealed class WorkspaceNotificationConfiguration : IEntityTypeConfigurat
         n.Property(x => x.IssueCode).HasMaxLength(40); n.Property(x => x.EventKey).HasMaxLength(160); n.Property(x => x.Type).HasMaxLength(80); n.Property(x => x.Severity).HasMaxLength(16);
         n.Property(x => x.Title).HasMaxLength(180); n.Property(x => x.Body).HasMaxLength(600); n.Property(x => x.TargetKind).HasMaxLength(32);
         n.HasIndex(x => new { x.OwnerId, x.EventKey }).IsUnique(); n.HasIndex(x => new { x.OwnerId, x.DismissedAt, x.ReadAt, x.CreatedAt });
-        n.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
     }
 }

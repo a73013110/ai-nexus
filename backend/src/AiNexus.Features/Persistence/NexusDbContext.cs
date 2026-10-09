@@ -170,6 +170,7 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, IHt
         audit.HasIndex(x => new { x.Action, x.Id });
         audit.HasIndex(x => new { x.ResourceId, x.Id });
         audit.HasIndex(x => new { x.ActorId, x.Id });
+        CrossModuleRelationships.Configure(model);
         DatabaseDescriptions.Configure(model);
         // SQLite is used only by relational integration tests; it lacks native offset ordering.
         if (Database.ProviderName == "Microsoft.EntityFrameworkCore.Sqlite")

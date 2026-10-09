@@ -38,7 +38,6 @@ internal sealed class AdministratorBootstrapConfiguration : IEntityTypeConfigura
     public void Configure(EntityTypeBuilder<AdministratorBootstrap> bootstrap)
     {
         bootstrap.ToTable("AdministratorBootstraps", "access"); bootstrap.HasKey(x => x.UserId);
-        bootstrap.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 

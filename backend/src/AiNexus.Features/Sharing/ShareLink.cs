@@ -64,8 +64,6 @@ internal sealed class ShareLinkConfiguration : IEntityTypeConfiguration<ShareLin
         link.ToTable("ShareLinks", "collaboration"); link.HasKey(x => x.Id);
         link.Property(x => x.Kind).HasMaxLength(24); link.Property(x => x.Title).HasMaxLength(120);
         link.HasIndex(x => new { x.OwnerId, x.CreatedAt }); link.HasIndex(x => x.ExpiresAt);
-        link.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.Id).OnDelete(DeleteBehavior.Restrict);
-        link.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -76,7 +74,6 @@ internal sealed class ShareRecipientConfiguration : IEntityTypeConfiguration<Sha
         recipient.ToTable("ShareRecipients", "collaboration"); recipient.HasKey(x => new { x.ShareId, x.UserId });
         recipient.HasIndex(x => new { x.UserId, x.ShareId });
         recipient.HasOne<ShareLink>().WithMany().HasForeignKey(x => x.ShareId).OnDelete(DeleteBehavior.Cascade);
-        recipient.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

@@ -59,8 +59,6 @@ internal sealed class RepositoryReviewEntityConfiguration : IEntityTypeConfigura
         r.Property(x => x.ModelId).HasMaxLength(160); r.Property(x => x.ConfigurationFingerprint).HasMaxLength(64); r.Property(x => x.Note).HasMaxLength(RepositoryReview.NoteMaxLength);
         r.Property(x => x.IdempotencyKey).HasMaxLength(80); r.Property(x => x.RequestHash).HasMaxLength(64); r.Property(x => x.SnapshotJson).HasMaxLength(1000000);
         r.HasIndex(x => new { x.OwnerId, x.IdempotencyKey }).IsUnique(); r.HasIndex(x => new { x.OwnerId, x.CreatedAt });
-        r.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
-        r.HasOne<BackgroundJob>().WithMany().HasForeignKey(x => x.JobId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

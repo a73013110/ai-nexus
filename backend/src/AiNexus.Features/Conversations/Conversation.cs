@@ -105,8 +105,6 @@ internal sealed class ConversationEntityConfiguration : IEntityTypeConfiguration
         conversation.HasIndex(x => new { x.OwnerId, x.IsDeleted, x.UpdatedAt });
         conversation.HasIndex(x => new { x.OwnerId, x.IsDeleted, x.IsArchived, x.IsFavorite, x.UpdatedAt });
         conversation.HasQueryFilter(SoftDelete.Filter, x => !x.IsDeleted);
-        conversation.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
-        conversation.HasOne<AiNexus.Features.Projects.Project>().WithMany().HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

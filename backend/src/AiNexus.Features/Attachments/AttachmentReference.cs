@@ -16,7 +16,6 @@ internal sealed class AttachmentReferenceEntityConfiguration : IEntityTypeConfig
     public void Configure(EntityTypeBuilder<AttachmentReference> link)
     {
         link.ToTable("ResourceAttachments", "attachments"); link.HasKey(x => new { x.ResourceId, x.AttachmentId });
-        link.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.ResourceId).OnDelete(DeleteBehavior.Restrict);
         link.HasOne<Attachment>().WithMany().HasForeignKey(x => x.AttachmentId).OnDelete(DeleteBehavior.Restrict);
     }
 }
