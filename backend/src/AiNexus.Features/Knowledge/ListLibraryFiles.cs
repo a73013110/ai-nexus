@@ -26,7 +26,7 @@ internal sealed class ListLibraryFiles(NexusDbContext db, ResourceAccess access,
     public async Task<Result<FileLibraryPageDto>> HandleAsync(Guid actor, string? search, string type, string source, int offset, int limit, CancellationToken ct)
     {
         if (search?.Length > 180 || type is not ("all" or "images" or "documents") || source is not ("all" or "chat" or "knowledge" or "projects" or "library") || offset is < 0 or > 100000 || limit is < 1 or > 60)
-            return AttachmentErrors.FilterInvalid;
+            return AttachmentsErrors.FilterInvalid;
         var grants = (await features.ForUserAsync(actor, ct)).Features.Select(x => x.Id).ToHashSet();
         var collections = grants.Contains("knowledge") ? (await access.QueryAsync(actor, "knowledge", ct)).Select(x => x.Id) : db.Set<WorkspaceResource>().Where(x => false).Select(x => x.Id);
         var projects = grants.Contains("projects") ? (await access.QueryAsync(actor, "project", ct)).Select(x => x.Id) : db.Set<WorkspaceResource>().Where(x => false).Select(x => x.Id);

@@ -1,4 +1,3 @@
-
 namespace AiNexus.Features.Jobs;
 
 public interface IBackgroundJobHandler

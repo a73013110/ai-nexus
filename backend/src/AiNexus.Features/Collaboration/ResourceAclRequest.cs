@@ -3,9 +3,8 @@ using FluentValidation;
 
 namespace AiNexus.Features.Collaboration;
 
-public sealed record ResourceMemberDto(Guid UserId, string Account, string DisplayName, string Role);
-public sealed record ResourceAclDto(IReadOnlyList<ResourceMemberDto> Members, IReadOnlyList<string> GroupIds);
 public sealed record ResourceAclRequest(IReadOnlyList<ResourceMemberUpdate> Members, IReadOnlyList<string> GroupIds);
+
 public sealed record ResourceMemberUpdate(Guid UserId, string Role);
 
 /// <summary>

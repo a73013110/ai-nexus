@@ -10,7 +10,7 @@ public sealed record RenameConversationRequest(string Title);
 
 internal sealed class RenameConversationRequestValidator : RequestValidator<RenameConversationRequest>
 {
-    public override string ProblemCode => ConversationErrors.InvalidTitleCode;
+    public override string ProblemCode => ConversationsErrors.InvalidTitleCode;
 
     public RenameConversationRequestValidator() => RuleFor(x => x.Title).Must(ConversationQueries.TitleIsValid).WithErrorCode("length");
 }
@@ -26,7 +26,7 @@ internal sealed class RenameConversation(NexusDbContext db, TimeProvider clock)
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, Guid id, string title, CancellationToken ct)
     {
         var conversation = await db.OwnedConversationAsync(owner, id, ct);
-        if (conversation is null) return ConversationErrors.NotFound;
+        if (conversation is null) return ConversationsErrors.NotFound;
         conversation.Title = title.Trim();
         conversation.UpdatedAt = clock.GetUtcNow();
         db.AuditEvents.Add(new() { OwnerId = owner, Action = "conversation.renamed", ResourceId = id });

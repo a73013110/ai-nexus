@@ -94,10 +94,10 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<Atta
     internal async Task<Result<Attachment>> FindOwnedAsync(Guid owner, Guid id, CancellationToken ct)
     {
         var file = await db.Set<Attachment>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner && x.StorageState == AttachmentStates.Ready, ct);
-        if (file is null) return AttachmentErrors.NotFound;
+        if (file is null) return AttachmentsErrors.NotFound;
         if (!file.InLibrary && !await db.Set<AttachmentReference>().AnyAsync(x => x.AttachmentId == id, ct) && await db.Set<MessageAttachment>().AnyAsync(x => x.AttachmentId == id, ct) &&
             !await (from link in db.Set<MessageAttachment>() join message in db.Set<Message>() on link.MessageId equals message.Id join conversation in db.Set<Conversation>() on message.ConversationId equals conversation.Id where link.AttachmentId == id && conversation.OwnerId == owner select link).AnyAsync(ct))
-            return AttachmentErrors.NotFound;
+            return AttachmentsErrors.NotFound;
         return file;
     }
 

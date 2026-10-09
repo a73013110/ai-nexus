@@ -23,7 +23,7 @@ internal sealed class GetConversation(NexusDbContext db, ModelPresentation prese
     public async Task<Result<ConversationDetailDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)
     {
         var conversation = await db.OwnedConversationAsync(owner, id, ct);
-        if (conversation is null) return ConversationErrors.NotFound;
+        if (conversation is null) return ConversationsErrors.NotFound;
         var messages = await db.Set<Message>().AsNoTracking().Where(x => x.ConversationId == id).OrderBy(x => x.CreatedAt).ToListAsync(ct);
         var run = await db.Set<GenerationRun>().AsNoTracking().SingleOrDefaultAsync(x => x.ConversationId == id && x.ActiveOwnerId == owner, ct);
         var links = await db.Set<MessageAttachment>().AsNoTracking().Where(x => messages.Select(m => m.Id).Contains(x.MessageId))

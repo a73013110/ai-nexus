@@ -37,7 +37,7 @@ public sealed class ArtifactExport(PdfExportRenderer pdf)
         "md" => new ExportFile(Encoding.UTF8.GetBytes(document.Content), "text/markdown; charset=utf-8"),
         "docx" => new ExportFile(Word(document.Resource.Name, document.Content), "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
         "pdf" => new ExportFile(await pdf.RenderAsync(Html(document.Resource.Name, document.Content), ct), "application/pdf"),
-        _ => ArtifactErrors.ExportFormatInvalid,
+        _ => ArtifactsErrors.ExportFormatInvalid,
     };
     public static string Html(string title, string content)
     {

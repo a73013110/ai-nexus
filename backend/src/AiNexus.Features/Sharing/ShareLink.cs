@@ -1,8 +1,3 @@
-using AiNexus.Features.Attachments;
-using AiNexus.Features.Inference;
-using AiNexus.Features.Knowledge;
-using AiNexus.Features.WebSearch;
-using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -29,32 +24,6 @@ public sealed class ShareLink
     public DateTimeOffset ExpiresAt { get; set; }
 }
 
-public sealed class ShareRecipient { public Guid ShareId { get; set; } public Guid UserId { get; set; } }
-
-public sealed record ShareDto(Guid Id, string Kind, string Title, string Owner, bool IsOwner, bool IsRevoked, DateTimeOffset ExpiresAt, DateTimeOffset CreatedAt, IReadOnlyList<string> Recipients, bool IncludeAttachments);
-public sealed record SharedMessageDto(string Role, string Content, string Status, DateTimeOffset CreatedAt, IReadOnlyList<AttachmentDto> Attachments,
-    string? ModelId = null, string? ErrorCode = null, IReadOnlyList<CitationDto>? Sources = null, IReadOnlyList<WebSourceDto>? WebSources = null, RunTimingDto? Timing = null, string? ModelDisplayName = null, string? IssueCode = null);
-public sealed record SharedFilePreviewDto(AttachmentDto File, IReadOnlyList<DocumentPageDto> Pages);
-public sealed record ShareSnapshot(string Content, int? ArtifactVersion, IReadOnlyList<SharedMessageDto> Messages);
-public sealed record SharedContentDto(ShareDto Share, ShareSnapshot Snapshot);
-
-/// <summary>Serializes share creation and revocation in this process.</summary>
-public sealed class ShareWriteLock { public SemaphoreSlim Gate { get; } = new(1, 1); }
-
-internal static class SharingErrors
-{
-    public const string InvalidCode = "share_invalid";
-    public static readonly Error RecipientUnknown = Error.Invalid("share_recipient_unknown");
-    public static readonly Error LimitReached = Error.Conflict("share_limit");
-    public static readonly Error GenerationActive = Error.Conflict("share_generation_active");
-    public static readonly Error HistoryInvalid = Error.Conflict("share_history_invalid");
-    public static readonly Error HistoryLimit = Error.Conflict("share_history_limit");
-    public static readonly Error ContentLimit = Error.Conflict("share_content_limit");
-
-    /// <summary>One answer for missing, expired, revoked and not-addressed-to-you, so recipients cannot probe other shares.</summary>
-    public static readonly Error Unavailable = Error.NotFound("share_unavailable");
-}
-
 internal sealed class ShareLinkConfiguration : IEntityTypeConfiguration<ShareLink>
 {
     public void Configure(EntityTypeBuilder<ShareLink> link)
@@ -62,16 +31,6 @@ internal sealed class ShareLinkConfiguration : IEntityTypeConfiguration<ShareLin
         link.ToTable("ShareLinks", "collaboration"); link.HasKey(x => x.Id);
         link.Property(x => x.Kind).HasMaxLength(24); link.Property(x => x.Title).HasMaxLength(120);
         link.HasIndex(x => new { x.OwnerId, x.CreatedAt }); link.HasIndex(x => x.ExpiresAt);
-    }
-}
-
-internal sealed class ShareRecipientConfiguration : IEntityTypeConfiguration<ShareRecipient>
-{
-    public void Configure(EntityTypeBuilder<ShareRecipient> recipient)
-    {
-        recipient.ToTable("ShareRecipients", "collaboration"); recipient.HasKey(x => new { x.ShareId, x.UserId });
-        recipient.HasIndex(x => new { x.UserId, x.ShareId });
-        recipient.HasOne<ShareLink>().WithMany().HasForeignKey(x => x.ShareId).OnDelete(DeleteBehavior.Cascade);
     }
 }
 

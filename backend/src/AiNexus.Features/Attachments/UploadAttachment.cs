@@ -14,9 +14,9 @@ internal static class UploadAttachment
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("", async (HttpContext http, ICurrentUser user, AttachmentService files, CancellationToken ct) =>
         {
-            if (!http.Request.HasFormContentType) return AttachmentErrors.MultipartRequired.ToProblem();
+            if (!http.Request.HasFormContentType) return AttachmentsErrors.MultipartRequired.ToProblem();
             var form = await http.Request.ReadFormAsync(ct);
-            if (form.Files.Count != 1) return AttachmentErrors.FileRequired.ToProblem();
+            if (form.Files.Count != 1) return AttachmentsErrors.FileRequired.ToProblem();
             return Results.Ok(await files.UploadAsync(user.Id, form.Files[0], ct));
         })
         .WithRequestBodyLimit(AttachmentsModule.UploadBodyLimit).RequireRateLimiting(AttachmentsModule.UploadRateLimit).WithName("UploadAttachment").Produces<AttachmentDto>();

@@ -19,7 +19,7 @@ internal sealed class ConversationBackupValidator : RequestValidator<Conversatio
     public const int MaxMessages = 400;
     public const long MaxContentCharacters = 1_000_000;
 
-    public override string ProblemCode => ConversationErrors.InvalidBackupCode;
+    public override string ProblemCode => ConversationsErrors.InvalidBackupCode;
 
     public ConversationBackupValidator()
     {
@@ -44,11 +44,11 @@ internal sealed class ImportConversation(NexusDbContext db, TimeProvider clock)
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, ConversationBackup backup, CancellationToken ct)
     {
         var labels = ConversationQueries.CleanLabels(backup.Labels);
-        if (labels is null) return ConversationErrors.InvalidLabels;
+        if (labels is null) return ConversationsErrors.InvalidLabels;
         var lookup = new Dictionary<Guid, BackupMessage>();
         foreach (var message in backup.Messages)
         {
-            if (message.Id == Guid.Empty || !lookup.TryAdd(message.Id, message) || message.Content.Length > 65536 || message.Role is not ("user" or "assistant") || message.Status is not ("completed" or "failed" or "cancelled")) return ConversationErrors.InvalidBackup;
+            if (message.Id == Guid.Empty || !lookup.TryAdd(message.Id, message) || message.Content.Length > 65536 || message.Role is not ("user" or "assistant") || message.Status is not ("completed" or "failed" or "cancelled")) return ConversationsErrors.InvalidBackup;
         }
         foreach (var message in backup.Messages)
         {
@@ -56,14 +56,14 @@ internal sealed class ImportConversation(NexusDbContext db, TimeProvider clock)
             BackupMessage? next = message;
             while (next is not null)
             {
-                if (!seen.Add(next.Id)) return ConversationErrors.InvalidBackup;
-                if (next.ParentId is not Guid parent) { if (next.Role != "user") return ConversationErrors.InvalidBackup; break; }
-                if (!lookup.TryGetValue(parent, out var ancestor) || ancestor.Role == next.Role) return ConversationErrors.InvalidBackup;
+                if (!seen.Add(next.Id)) return ConversationsErrors.InvalidBackup;
+                if (next.ParentId is not Guid parent) { if (next.Role != "user") return ConversationsErrors.InvalidBackup; break; }
+                if (!lookup.TryGetValue(parent, out var ancestor) || ancestor.Role == next.Role) return ConversationsErrors.InvalidBackup;
                 next = ancestor;
             }
         }
-        if (backup.ActiveLeafId is Guid leaf && (!lookup.TryGetValue(leaf, out var activeMessage) || activeMessage.Role != "assistant")) return ConversationErrors.InvalidBackup;
-        if (lookup.Count > 0 && backup.ActiveLeafId is null) return ConversationErrors.InvalidBackup;
+        if (backup.ActiveLeafId is Guid leaf && (!lookup.TryGetValue(leaf, out var activeMessage) || activeMessage.Role != "assistant")) return ConversationsErrors.InvalidBackup;
+        if (lookup.Count > 0 && backup.ActiveLeafId is null) return ConversationsErrors.InvalidBackup;
         var ids = lookup.Keys.ToDictionary(x => x, _ => Guid.NewGuid());
         var now = clock.GetUtcNow();
         var conversation = new Conversation { OwnerId = owner, Title = backup.Title.Trim(), SystemInstruction = backup.SystemInstruction.Trim(), ActiveLeafId = backup.ActiveLeafId is Guid active ? ids[active] : null, CreatedAt = now, UpdatedAt = now };
