@@ -74,7 +74,7 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
         var existing = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Sid == sid, ct);
         if (existing is not null && !SessionIdentity.Allows(existing, "ad"))
             throw new ApiException(403, "login_method_disabled", "此使用者已停用，或未允許 AD 驗證。");
-        if (existing is not null && !Stale(existing, displayName) && !bootstrap.Applies(existing.Account) && !bootstrap.Applies(account))
+        if (existing is not null && !Stale(existing, displayName) && !await bootstrap.PendingAsync(existing, ct))
             return resolved = Track(existing)!;
         await writeLock.Gate.WaitAsync(ct);
         try

@@ -9,8 +9,11 @@ namespace AiNexus.Features.Administration;
 public sealed class AdminBootstrap(NexusDbContext db, AccessService access, IOptions<AdministrationOptions> options)
 {
     public static string AccountName(string account) => account.Trim().Split('\\').Last().Split('@')[0];
-    /// <summary>Whether sign-in must call <see cref="ApplyAsync"/> under the identity write gate for this account.</summary>
-    public bool Applies(string account) => options.Value.BootstrapAdministrators.Contains(AccountName(account), StringComparer.OrdinalIgnoreCase);
+    private bool Applies(string account) => options.Value.BootstrapAdministrators.Contains(AccountName(account), StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Whether <see cref="ApplyAsync"/> would grant anything, so sign-in must take the identity write gate.</summary>
+    public async Task<bool> PendingAsync(NexusUser user, CancellationToken ct)
+        => Applies(user.Account) && !await db.Set<AdministratorBootstrap>().AnyAsync(x => x.UserId == user.Id, ct);
     // Called under the identity write gate. A durable marker prevents a revoked grant from reappearing on login.
     public async Task ApplyAsync(NexusUser user, CancellationToken ct)
     {
