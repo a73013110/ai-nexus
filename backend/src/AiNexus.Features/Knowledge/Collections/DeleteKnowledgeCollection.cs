@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Knowledge.Indexing;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Knowledge.Collections;
 
@@ -25,12 +26,12 @@ internal sealed class DeleteKnowledgeCollection(NexusDbContext db, ResourceAcces
 
     public async Task HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
-        await access.OwnerAsync(actor, id, KnowledgeCollection.Kind, ct); await writes.Gate.WaitAsync(ct);
+        (await access.OwnerAsync(actor, id, KnowledgeCollection.Kind, ct)).OrThrow(); await writes.Gate.WaitAsync(ct);
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await attachments.LockOwnerAsync(actor, ct);
-            var resource = await access.OwnerAsync(actor, id, KnowledgeCollection.Kind, ct);
+            var resource = (await access.OwnerAsync(actor, id, KnowledgeCollection.Kind, ct)).OrThrow();
             var docs = await db.Set<KnowledgeDocument>().Where(x => x.CollectionId == id && !x.IsDeleted).ToListAsync(ct);
             var documentIds = docs.Select(x => x.Id).ToArray(); var files = docs.Where(x => x.AttachmentId != null).Select(x => x.AttachmentId!.Value).Distinct().ToArray();
             foreach (var doc in docs) { doc.IsDeleted = true; doc.AttachmentId = null; doc.Status = "deleted"; }

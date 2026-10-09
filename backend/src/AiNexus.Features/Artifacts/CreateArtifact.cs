@@ -48,7 +48,7 @@ internal sealed class CreateArtifact(NexusDbContext db, ResourceAccess access, C
         if (request.ProjectId is Guid project)
         {
             if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureIds.Projects)) return ArtifactsErrors.ProjectAccessRequired;
-            await access.RequireAsync(actor, project, "project", ct, write: true);
+            (await access.RequireAsync(actor, project, "project", ct, write: true)).OrThrow();
         }
         var now = clock.GetUtcNow();
         var resource = new WorkspaceResource { OwnerId = actor, ParentId = request.ProjectId, Kind = Artifact.Kind, Name = request.Title.Trim(), CreatedAt = now, UpdatedAt = now };

@@ -3,6 +3,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Events;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Artifacts;
 
@@ -25,7 +26,7 @@ internal static class DeleteArtifact
         using (await writes.AcquireAsync(id, ct))
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            var resource = await access.OwnerAsync(actor, id, Artifact.Kind, ct);
+            var resource = (await access.OwnerAsync(actor, id, Artifact.Kind, ct)).OrThrow();
             resource.IsDeleted = true;
             events.Raise(new ArtifactDeleted(id, actor));
             await db.Set<ArtifactRevision>().Where(x => x.ArtifactId == id).ExecuteDeleteAsync(ct);

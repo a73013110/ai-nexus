@@ -13,7 +13,7 @@ internal static class TextDocuments
     /// <summary>The request with its trimmed title, or the first broken rule.</summary>
     public static Result<TextDocumentRequest> Clean(TextDocumentRequest request)
     {
-        var title = ResourceAccess.Name(request.Title);
+        var title = ResourceAccess.Name(request.Title).OrThrow();
         if (title.IndexOfAny(['/', '\\', ':', '*', '?', '"', '<', '>', '|']) >= 0 || title.Any(char.IsControl))
             return KnowledgeErrors.TextTitleInvalid;
         // text_content_invalid has no reviewed public hint in PublicErrorCatalog, so it stays an exception; the public

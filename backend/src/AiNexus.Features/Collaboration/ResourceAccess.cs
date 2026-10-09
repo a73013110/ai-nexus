@@ -33,11 +33,11 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
         return db.Set<WorkspaceResource>().Where(x => x.Kind == kind &&
             (direct.Any(r => r.Id == x.Id) || inheritProjects && direct.Any(r => r.Kind == "project" && r.Id == x.ParentId)));
     }
-    public async Task<WorkspaceResource> RequireAsync(Guid actor, Guid id, string kind, CancellationToken ct, bool write = false)
+    public async Task<Result<WorkspaceResource>> RequireAsync(Guid actor, Guid id, string kind, CancellationToken ct, bool write = false)
     {
-        var resource = await (await QueryAsync(actor, kind, ct)).SingleOrDefaultAsync(x => x.Id == id, ct) ?? throw Missing();
-        if (write && !await CanEditAsync(actor, resource, ct))
-            throw new ApiException(403, "resource_read_only", "此項目目前只有檢視權限。");
+        var resource = await (await QueryAsync(actor, kind, ct)).SingleOrDefaultAsync(x => x.Id == id, ct);
+        if (resource is null) return CollaborationErrors.ResourceNotFound;
+        if (write && !await CanEditAsync(actor, resource, ct)) return CollaborationErrors.ResourceReadOnly;
         return resource;
     }
     public async Task<bool> CanEditAsync(Guid actor, WorkspaceResource value, CancellationToken ct) => value.OwnerId == actor ||
@@ -48,11 +48,11 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
         await CanEditAsync(actor, value, ct), value.OwnerId == actor, value.UpdatedAt);
 
     /// <summary>Every resource the actor reads by <see cref="QueryAsync"/>, or the error of <see cref="RequireAsync"/>; one query for the whole list.</summary>
-    public async Task RequireAllAsync(Guid actor, IReadOnlyCollection<Guid> ids, string kind, CancellationToken ct)
+    public async Task<Result> RequireAllAsync(Guid actor, IReadOnlyCollection<Guid> ids, string kind, CancellationToken ct)
     {
-        if (ids.Count == 0) return;
+        if (ids.Count == 0) return Result.Success;
         var readable = await (await QueryAsync(actor, kind, ct)).Where(x => ids.Contains(x.Id)).Select(x => x.Id).ToListAsync(ct);
-        if (ids.Any(id => !readable.Contains(id))) throw Missing();
+        return ids.All(readable.Contains) ? Result.Success : CollaborationErrors.ResourceNotFound;
     }
 
     /// <summary>The ids among <paramref name="values"/> that <see cref="CanEditAsync"/> allows, in at most two queries.</summary>
@@ -77,24 +77,25 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
         var editable = await EditableAsync(actor, values, ct);
         return values.Select(value => new ResourceDto(value.Id, value.Name, value.Kind, editable.Contains(value.Id), value.OwnerId == actor, value.UpdatedAt)).ToArray();
     }
-    public async Task<ResourceAclDto> AclAsync(Guid actor, Guid id, string kind, CancellationToken ct)
+    public async Task<Result<ResourceAclDto>> AclAsync(Guid actor, Guid id, string kind, CancellationToken ct)
     {
-        await OwnerAsync(actor, id, kind, ct);
+        var owned = await OwnerAsync(actor, id, kind, ct);
+        if (!owned.IsSuccess) return owned.Error;
         var members = await (from link in db.Set<ResourceMember>() join user in db.Users on link.UserId equals user.Id where link.ResourceId == id
             select new ResourceMemberDto(user.Id, user.Account, user.DisplayName, link.Role)).ToListAsync(ct);
-        return new(members, await db.Set<ResourceGroup>().Where(x => x.ResourceId == id).Select(x => x.GroupId).ToListAsync(ct));
+        return new ResourceAclDto(members, await db.Set<ResourceGroup>().Where(x => x.ResourceId == id).Select(x => x.GroupId).ToListAsync(ct));
     }
-    public async Task SetAclAsync(Guid actor, Guid id, string kind, ResourceAclRequest request, CancellationToken ct)
+    public async Task<Result> SetAclAsync(Guid actor, Guid id, string kind, ResourceAclRequest request, CancellationToken ct)
     {
-        if (request.Members.Count > 50 || request.GroupIds.Count > 20 || request.Members.Select(x => x.UserId).Distinct().Count() != request.Members.Count || request.GroupIds.Distinct().Count() != request.GroupIds.Count || request.Members.Any(x => x.Role is not ("viewer" or "editor")))
-            throw new ApiException(400, "invalid_resource_acl", "成員清單重複、過長或角色不正確。");
         using (await writes.AcquireAsync(id, ct))
         {
-            var resource = await OwnerAsync(actor, id, kind, ct);
-            if (request.Members.Any(x => x.UserId == resource.OwnerId)) throw new ApiException(400, "owner_is_implicit", "擁有者已具有完整權限，不需加入成員清單。");
+            var owned = await OwnerAsync(actor, id, kind, ct);
+            if (!owned.IsSuccess) return owned.Error;
+            var resource = owned.Value;
+            if (request.Members.Any(x => x.UserId == resource.OwnerId)) return CollaborationErrors.OwnerIsImplicit;
             var users = request.Members.Select(x => x.UserId).ToArray();
             if (await db.Users.CountAsync(x => users.Contains(x.Id), ct) != users.Length || await db.Set<RoleGroup>().CountAsync(x => x.Enabled && request.GroupIds.Contains(x.Id), ct) != request.GroupIds.Count)
-                throw new ApiException(400, "unknown_resource_member", "清單包含未登入過的帳號或停用的群組。");
+                return CollaborationErrors.UnknownMember;
             // Group grants are intentionally read-only; editors must be named members.
             var oldMembers = await db.Set<ResourceMember>().Where(x => x.ResourceId == id).ToListAsync(ct);
             db.RemoveRange(oldMembers.Where(x => !users.Contains(x.UserId)));
@@ -111,14 +112,14 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "resource.acl", Result = "saved", DetailsJson = System.Text.Json.JsonSerializer.Serialize(new { kind, users, request.GroupIds }) });
             await db.SaveChangesAsync(ct);
         }
+        return Result.Success;
     }
-    public async Task<WorkspaceResource> OwnerAsync(Guid actor, Guid id, string kind, CancellationToken ct)
-        => await db.Set<WorkspaceResource>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor && x.Kind == kind, ct) ?? throw Missing();
-    public static string Name(string value)
-    {
-        value = value.Trim();
-        if (value.Length is < 1 or > 120 || value.Any(char.IsControl)) throw new ApiException(400, "invalid_resource_name", "名稱需為 1 至 120 個字元。");
-        return value;
-    }
-    internal static ApiException Missing() => new(404, "resource_not_found", "找不到此項目，或你已沒有存取權限。");
+    public async Task<Result<WorkspaceResource>> OwnerAsync(Guid actor, Guid id, string kind, CancellationToken ct)
+        => await db.Set<WorkspaceResource>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor && x.Kind == kind, ct) is { } resource
+            ? resource : CollaborationErrors.ResourceNotFound;
+
+    /// <summary>A resource name: trimmed, 1 to 120 characters, no control characters.</summary>
+    public static bool IsValidName(string? value) => value?.Trim() is { Length: >= 1 and <= 120 } trimmed && !trimmed.Any(char.IsControl);
+
+    public static Result<string> Name(string value) => IsValidName(value) ? value.Trim() : CollaborationErrors.InvalidName;
 }

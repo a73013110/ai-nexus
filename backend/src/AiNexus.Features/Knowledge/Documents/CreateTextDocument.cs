@@ -17,7 +17,7 @@ internal sealed class CreateTextDocument(ResourceAccess access, AttachmentServic
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid collection, TextDocumentRequest request, CancellationToken ct)
     {
-        await access.RequireAsync(actor, collection, KnowledgeCollection.Kind, ct, write: true);
+        (await access.RequireAsync(actor, collection, KnowledgeCollection.Kind, ct, write: true)).OrThrow();
         var source = TextDocuments.Clean(request);
         if (!source.IsSuccess) return source.Error;
         var file = await TextDocuments.UploadAsync(attachments, actor, source.Value, ct);

@@ -2,6 +2,7 @@ using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Projects;
 
@@ -15,7 +16,7 @@ internal static class ListProjectTemplates
 
     private static async Task<IReadOnlyList<ProjectTemplateDto>> HandleAsync(NexusDbContext db, ResourceAccess access, Guid actor, Guid id, CancellationToken ct)
     {
-        await access.RequireAsync(actor, id, Project.Kind, ct);
+        (await access.RequireAsync(actor, id, Project.Kind, ct)).OrThrow();
         return await db.Set<ProjectTemplate>().Where(x => x.ProjectId == id).OrderBy(x => x.Title).Select(x => new ProjectTemplateDto(x.Id, x.Title, x.Content)).ToListAsync(ct);
     }
 }

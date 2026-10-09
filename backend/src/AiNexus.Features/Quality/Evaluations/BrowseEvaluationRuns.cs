@@ -29,7 +29,7 @@ internal sealed class BrowseEvaluationRuns(NexusDbContext db, ResourceAccess acc
 
     public async Task<IReadOnlyList<EvaluationRunDto>> ListAsync(Guid actor, Guid setId, CancellationToken ct)
     {
-        await access.RequireAsync(actor, setId, EvaluationSet.Kind, ct);
+        (await access.RequireAsync(actor, setId, EvaluationSet.Kind, ct)).OrThrow();
         var rows = await (from r in db.Set<EvaluationRun>() join j in db.Set<BackgroundJob>() on r.JobId equals j.Id where r.SetId == setId orderby r.CreatedAt descending select new { r, j }).Take(100).ToListAsync(ct);
         return rows.Select(x => x.r.ToDto(x.j, actor)).ToList();
     }
@@ -38,7 +38,7 @@ internal sealed class BrowseEvaluationRuns(NexusDbContext db, ResourceAccess acc
     {
         var run = await db.Set<EvaluationRun>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (run is null) return QualityErrors.ItemMissing;
-        var resource = await access.RequireAsync(actor, run.SetId, EvaluationSet.Kind, ct);
+        var resource = (await access.RequireAsync(actor, run.SetId, EvaluationSet.Kind, ct)).OrThrow();
         var job = await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(x => x.Id == run.JobId, ct);
         var variants = EvaluationJson.Parse<EvaluationVariant>(run.VariantsJson).Select(x => x with { ModelId = presentation.PublicId(x.ModelId), ModelDisplayName = presentation.DisplayName(x.ModelId) }).ToArray();
         var results = await db.Set<EvaluationResult>().AsNoTracking().Where(x => x.RunId == id).OrderBy(x => x.CaseIndex).ThenBy(x => x.VariantIndex).ToListAsync(ct);

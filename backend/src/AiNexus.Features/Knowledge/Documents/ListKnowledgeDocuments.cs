@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge.Collections;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Knowledge.Documents;
 
@@ -18,7 +19,7 @@ internal static class ListKnowledgeDocuments
 
     private static async Task<IReadOnlyList<DocumentDto>> HandleAsync(NexusDbContext db, ResourceAccess access, KnowledgeOptions options, Guid actor, Guid collection, CancellationToken ct)
     {
-        var resource = await access.RequireAsync(actor, collection, KnowledgeCollection.Kind, ct);
+        var resource = (await access.RequireAsync(actor, collection, KnowledgeCollection.Kind, ct)).OrThrow();
         var editable = (await access.DescribeAsync(actor, resource, ct)).CanEdit;
         var docs = await db.Set<KnowledgeDocument>().AsNoTracking().Where(x => x.CollectionId == collection && !x.IsDeleted).OrderBy(x => x.FileName).Take(options.MaxDocumentsPerCollection).ToListAsync(ct);
         var ids = docs.Select(x => x.JobId).ToArray();

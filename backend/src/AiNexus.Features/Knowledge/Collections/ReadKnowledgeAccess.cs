@@ -1,5 +1,6 @@
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Knowledge.Collections;
 
@@ -8,6 +9,6 @@ internal static class ReadKnowledgeAccess
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/collections/{id:guid}/access", async (Guid id, ICurrentUser user, ResourceAccess access, CancellationToken ct) =>
-            Results.Ok(await access.AclAsync(user.Id, id, KnowledgeCollection.Kind, ct)))
+            Results.Ok((await access.AclAsync(user.Id, id, KnowledgeCollection.Kind, ct)).OrThrow()))
         .WithName("GetKnowledgeAccess").Produces<ResourceAclDto>();
 }

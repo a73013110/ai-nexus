@@ -2,6 +2,7 @@ using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Artifacts;
 
@@ -17,7 +18,7 @@ internal static class ListArtifactVersions
 
     public static async Task<IReadOnlyList<ArtifactRevisionDto>> HandleAsync(NexusDbContext db, ResourceAccess access, Guid actor, Guid id, CancellationToken ct)
     {
-        await access.RequireAsync(actor, id, Artifact.Kind, ct);
+        (await access.RequireAsync(actor, id, Artifact.Kind, ct)).OrThrow();
         return await (from revision in db.Set<ArtifactRevision>().AsNoTracking() join author in db.Users on revision.AuthorId equals author.Id
             where revision.ArtifactId == id orderby revision.Version descending
             select new ArtifactRevisionDto(revision.Version, revision.Title, author.DisplayName, revision.CreatedAt)).Take(Artifact.MaxVersions).ToListAsync(ct);

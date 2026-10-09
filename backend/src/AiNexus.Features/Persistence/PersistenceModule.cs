@@ -59,7 +59,7 @@ public static class DatabaseStartup
         catch (Exception ex)
         {
             await DiagnosticStartup.RecordAsync(ex, app.Configuration, app.Environment);
-            Console.Error.WriteLine(ex is ApiException api ? api.Message : LocalDatabaseSettings.Diagnose(ex));
+            Console.Error.WriteLine(ex is ExternalServiceException external ? external.Message : LocalDatabaseSettings.Diagnose(ex));
             return false;
         }
     }

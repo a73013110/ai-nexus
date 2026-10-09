@@ -27,7 +27,7 @@ internal sealed class ImportRepositoryFile(NexusDbContext db, RepositoryService 
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid owner, RepositoryImportRequest body, CancellationToken ct)
     {
-        await access.RequireAsync(owner, body.CollectionId, "knowledge", ct, write: true);
+        (await access.RequireAsync(owner, body.CollectionId, "knowledge", ct, write: true)).OrThrow();
         // Read at the pinned commit again: browser content is never trusted as a source snapshot.
         var read = await gitea.FileAsync(owner, body.Repository, body.Commit, body.Path, ct);
         if (!read.IsSuccess) return read.Error;

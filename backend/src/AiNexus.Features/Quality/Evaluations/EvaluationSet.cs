@@ -2,6 +2,7 @@ using AiNexus.Features.Collaboration;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Quality.Evaluations;
 
@@ -28,7 +29,7 @@ internal static class EvaluationSetQueries
     /// <summary>The set as the actor may see it. Access failures stay exceptions of <see cref="ResourceAccess"/>.</summary>
     public static async Task<EvaluationSetDto> LoadSetAsync(this ResourceAccess access, NexusDbContext db, Guid actor, Guid id, CancellationToken ct)
     {
-        var resource = await access.RequireAsync(actor, id, EvaluationSet.Kind, ct);
+        var resource = (await access.RequireAsync(actor, id, EvaluationSet.Kind, ct)).OrThrow();
         var set = await db.Set<EvaluationSet>().AsNoTracking().SingleAsync(x => x.Id == id, ct);
         return set.ToDto(await access.DescribeAsync(actor, resource, ct));
     }
