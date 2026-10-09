@@ -78,8 +78,6 @@ public static class ProjectConfiguration
     {
         model.ApplyConfiguration(new ProjectEntityConfiguration());
         model.ApplyConfiguration(new ProjectTemplateConfiguration());
-        // An artifact may belong to a project; ResourceLifecycle detaches artifacts before a project is deleted.
-        model.Entity<Artifact>().HasOne<Project>().WithMany().HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -89,6 +87,5 @@ internal sealed class ProjectEntityConfiguration : IEntityTypeConfiguration<Proj
     {
         row.ToTable("Projects", "projects"); row.HasKey(x => x.Id);
         row.Property(x => x.Description).HasMaxLength(2000); row.Property(x => x.Instructions).HasMaxLength(4000);
-        row.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.Id).OnDelete(DeleteBehavior.Restrict);
     }
 }

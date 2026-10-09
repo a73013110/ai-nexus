@@ -1,4 +1,4 @@
-namespace AiNexus.Features.Operations;
+namespace AiNexus.Features.Persistence;
 
 public static class AuditOutcomes
 {

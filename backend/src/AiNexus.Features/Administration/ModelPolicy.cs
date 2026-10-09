@@ -38,6 +38,5 @@ internal sealed class UserModelPolicyConfiguration : IEntityTypeConfiguration<Us
     {
         personal.ToTable("UserModelPolicies", "access"); personal.HasKey(x => x.UserId);
         personal.Property(x => x.AllowedModelsJson).HasMaxLength(4000); personal.Property(x => x.DailyTokenLimitsJson).HasMaxLength(8000);
-        personal.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
     }
 }

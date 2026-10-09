@@ -32,7 +32,6 @@ public static class AccessControlConfiguration
         var userRole = model.Entity<UserRole>();
         userRole.ToTable("UserRoles", "access");
         userRole.HasKey(x => new { x.UserId, x.RoleId });
-        userRole.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         userRole.HasOne<Role>().WithMany().HasForeignKey(x => x.RoleId).OnDelete(DeleteBehavior.Restrict);
 
         var membership = model.Entity<RoleGroupRole>();

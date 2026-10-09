@@ -32,6 +32,6 @@ internal sealed class ModelInvocationEntityConfiguration : IEntityTypeConfigurat
         item.ToTable("ModelInvocations", "inference"); item.HasKey(x => x.Id);
         item.Property(x => x.Kind).HasMaxLength(32); item.Property(x => x.ModelId).HasMaxLength(160); item.Property(x => x.Status).HasMaxLength(16);
         item.Property(x => x.Provider).HasMaxLength(32);
-        item.HasIndex(x => new { x.OwnerId, x.CreatedAt }); item.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
+        item.HasIndex(x => new { x.OwnerId, x.CreatedAt });
     }
 }

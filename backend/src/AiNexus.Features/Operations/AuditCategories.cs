@@ -1,4 +1,5 @@
 using System.Linq.Expressions;
+using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Operations;
