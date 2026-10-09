@@ -25,7 +25,7 @@ internal sealed class RenameLibraryFile(NexusDbContext db, AttachmentService fil
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}/name", async (Guid id, RenameLibraryFileRequest body, ICurrentUser user, RenameLibraryFile handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
-        .WithName("RenameLibraryFile").Produces<AttachmentDto>();
+        .WithName("RenameLibraryFile");
 
     /// <summary>1 to 180 characters, no path, control or reserved characters, and not ending with a dot.</summary>
     internal static bool NameIsValid(string name) => name.Length is >= 1 and <= Attachment.FileNameMaxLength && !name.Any(char.IsControl)
@@ -34,7 +34,7 @@ internal sealed class RenameLibraryFile(NexusDbContext db, AttachmentService fil
     public async Task<Result<AttachmentDto>> HandleAsync(Guid actor, Guid id, RenameLibraryFileRequest request, CancellationToken ct)
     {
         var name = request.FileName.Trim();
-        var found = await files.FindOwnedAsync(actor, id, ct);
+        var found = await files.OwnedAsync(actor, id, ct);
         if (!found.IsSuccess) return found.Error;
         var file = found.Value;
         if (!file.InLibrary) return AttachmentsErrors.LibraryFileNotFound;

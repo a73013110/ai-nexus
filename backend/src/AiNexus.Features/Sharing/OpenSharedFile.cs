@@ -15,20 +15,22 @@ public sealed record SharedFilePreviewDto(AttachmentDto File, IReadOnlyList<Docu
 /// Preview and download of a file the owner explicitly included. The grant is the share's own reference, never the
 /// recipient's access to the original attachment; the name shown is the one frozen in the snapshot.
 /// </summary>
-internal sealed class OpenSharedFile(NexusDbContext db, ShareAccess shares)
+internal sealed class OpenSharedFile(NexusDbContext db, ShareAccess shares, AttachmentService files)
 {
     public static void Map(RouteGroupBuilder routes)
     {
         routes.MapGet("/{id:guid}/files/{file:guid}/preview", async (Guid id, Guid file, ICurrentUser user, OpenSharedFile handler, CancellationToken ct) =>
                 (await handler.PreviewAsync(user.Id, id, file, ct)).ToHttpResult())
-            .WithName("PreviewSharedFile").Produces<SharedFilePreviewDto>();
-        routes.MapGet("/{id:guid}/files/{file:guid}", async (Guid id, Guid file, bool? download, ICurrentUser user, OpenSharedFile handler, AttachmentService files, HttpContext http, CancellationToken ct) =>
-        {
-            var found = await handler.FindAsync(user.Id, id, file, ct);
-            if (!found.IsSuccess) return found.Error.ToProblem();
-            var data = found.Value;
-            return WebSecurity.File(http, await files.OpenAsync(data, ct), data.ContentType, data.FileName, download == true);
-        });
+            .WithName("PreviewSharedFile");
+        routes.MapGet("/{id:guid}/files/{file:guid}", (Guid id, Guid file, bool? download, ICurrentUser user, OpenSharedFile handler, HttpContext http, CancellationToken ct) =>
+            handler.OpenAsync(user.Id, id, file, ct).ToHttpResultAsync(x => WebSecurity.File(http, x.Content, x.File.ContentType, x.File.FileName, download == true)));
+    }
+
+    public async Task<Result<(Attachment File, Stream Content)>> OpenAsync(Guid actor, Guid id, Guid fileId, CancellationToken ct)
+    {
+        var found = await FindAsync(actor, id, fileId, ct);
+        if (!found.IsSuccess) return found.Error;
+        return (found.Value, await files.OpenAsync(found.Value, ct));
     }
 
     public async Task<Result<Attachment>> FindAsync(Guid actor, Guid id, Guid fileId, CancellationToken ct)

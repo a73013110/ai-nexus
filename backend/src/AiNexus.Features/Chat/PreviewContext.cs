@@ -37,7 +37,7 @@ internal sealed class PreviewContext(ConversationService conversations, Attachme
     {
         var instruction = body.ConversationId is Guid id ? ((await conversations.OwnedAsync(owner, id, ct)).OrThrow()).SystemInstruction : "";
         var project = body.ConversationId is Guid projectConversation ? await projects.ContextAsync(owner, ((await conversations.OwnedAsync(owner, projectConversation, ct)).OrThrow()).ProjectId, ct) : "";
-        var files = await attachments.RequireAsync(owner, body.AttachmentIds, ct);
+        var files = (await attachments.RequireAsync(owner, body.AttachmentIds, ct)).OrThrow();
         var model = (await models.RequireAsync(body.ModelId, ct)).OrThrow();
         (await policies.RequireAsync(owner, model.Id, ct, checkQuota: false)).OrThrow();
         var reserved = body.ConversationId is Guid cid ? await knowledge.ReservedContextAsync(owner, cid, ct) : 0;

@@ -125,7 +125,7 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             if (!currentSelection.CollectionIds.Order().SequenceEqual(knowledgeSelection.CollectionIds.Order())) return InferenceErrors.KnowledgeSelectionChanged;
             await knowledge.ValidateHitsAsync(owner, sources, ct);
             if (request.RegenerateUserMessageId is not null && request.AttachmentIds?.Count > 0) return InferenceErrors.RegenerateWithAttachments;
-            var files = await attachments.RequireAsync(owner, request.AttachmentIds, ct);
+            var files = (await attachments.RequireAsync(owner, request.AttachmentIds, ct)).OrThrow();
             var now = clock.GetUtcNow();
             var parameters = new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, 0.6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, conversation.SystemInstruction) + projectContext + KnowledgeRetrieval.Prompt(sources) + WebSearchService.Prompt(search), effort, profile.ReasoningControl, profile.SupportsImages);
             var run = new GenerationRun
@@ -183,7 +183,7 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
                 .Select(x => new { x.ProjectId, x.SystemInstruction }).SingleOrDefaultAsync(ct);
             if (conversation is null) return null;
             var projectContext = await projects.ContextAsync(owner, conversation.ProjectId, ct);
-            var files = await attachments.RequireAsync(owner, request.AttachmentIds, ct);
+            var files = (await attachments.RequireAsync(owner, request.AttachmentIds, ct)).OrThrow();
             var systemPrompt = ContextBuilder.SystemPrompt(options.Value.SystemPrompt, conversation.SystemInstruction) + projectContext + KnowledgeRetrieval.Prompt(sources) + WebSearchService.Prompt(search);
             var parameters = new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, 0.6, systemPrompt, SupportsImages: profile.SupportsImages);
             try { return new(conversation.ProjectId, projectContext, systemPrompt, files, await context.PrepareAsync(request.ConversationId, request.ParentMessageId, request.RegenerateUserMessageId, request.Prompt, files, parameters, ct), null); }

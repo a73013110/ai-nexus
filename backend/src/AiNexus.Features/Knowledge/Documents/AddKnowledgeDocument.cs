@@ -45,7 +45,7 @@ internal sealed class AddKnowledgeDocument(NexusDbContext db, ResourceAccess acc
             await attachments.LockOwnerAsync(actor, ct);
             if (collection is Guid currentCollection) (await access.RequireAsync(actor, currentCollection, KnowledgeCollection.Kind, ct, write: true)).OrThrow();
             if (project is Guid currentProject) (await access.RequireAsync(actor, currentProject, "project", ct, write: true)).OrThrow();
-            var file = await attachments.OwnedAsync(actor, attachment, ct);
+            var file = (await attachments.OwnedAsync(actor, attachment, ct)).OrThrow();
             if (collection is null)
             {
                 var existing = await (from doc in db.Set<KnowledgeDocument>() join ownerResource in db.Set<WorkspaceResource>() on doc.Id equals ownerResource.Id where doc.AttachmentId == attachment && doc.CollectionId == null && !doc.IsDeleted && ownerResource.OwnerId == actor && ownerResource.ParentId == project select doc).FirstOrDefaultAsync(ct);
