@@ -24,7 +24,7 @@
 
 ## 計算與歷史
 
-呼叫建立時將適用價格複製到 `inference.ModelCharges`，價格更新、中途換模型、重新生成及切換分支都不會重算舊紀錄。呼叫 ID 同時是費用紀錄主鍵，重送同一 Idempotency-Key 不會再計費。
+呼叫建立時將適用價格複製到 `billing.ModelCharges`，價格更新、中途換模型、重新生成及切換分支都不會重算舊紀錄。呼叫 ID 同時是費用紀錄主鍵，重送同一 Idempotency-Key 不會再計費。
 
 ```text
 金額 = (輸入 tokens − 快取 tokens) × 輸入單價 / 1,000,000

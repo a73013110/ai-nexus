@@ -18,4 +18,4 @@ AI 回答旁的「儲存成果」可直接將回答建立為文件。在對話�
 
 ## 資料物件
 
-`collaboration.Resources` 保存名稱、擁有者、ACL 所屬項目及刪除狀態。`content.Artifacts` 保存最新版本號、可選的來源訊息／專案連結；`content.ArtifactRevisions` 以 `(ArtifactId, Version)` 為主鍵，保存每次標題、內容、作者及時間。原始對話不因成果編輯而改變。
+`collaboration.Resources` 保存名稱、擁有者、ACL 所屬項目及刪除狀態。`artifacts.Artifacts` 保存最新版本號、可選的來源訊息／專案連結；`artifacts.ArtifactRevisions` 以 `(ArtifactId, Version)` 為主鍵，保存每次標題、內容、作者及時間。原始對話不因成果編輯而改變。
