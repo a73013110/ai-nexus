@@ -7,12 +7,11 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Inference;
 
-public sealed class ModelQuotaLock { public SemaphoreSlim Gate { get; } = new(1, 1); }
 public sealed record ModelTaskResult(string Text, bool Truncated, long? InputTokens, long? OutputTokens);
 
 // OCR, paragraph transformations and evaluations share approval, quota and usage accounting.
 // Database locks are released before the provider request starts.
-public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog catalog, InferenceRouter router, ModelQuotaLock writes, IOptions<InferenceOptions> options, TimeProvider clock)
+public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog catalog, InferenceRouter router, IOptions<InferenceOptions> options, TimeProvider clock)
 {
     public const int MaxPromptCharacters = 16000;
     public const int FramingTokenReserve = 160;
@@ -35,8 +34,7 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
         var parameters = new GenerationParameters(profile.ContextTokens, outputBudget, ModelTaskConfiguration.Temperature, instruction, profile.DefaultReasoningEffort, profile.ReasoningControl, profile.SupportsImages);
         var messages = new[] { new InferenceMessage("system", instruction), new InferenceMessage("user", prompt, images) };
         var inputEstimate = ContextBuilder.Estimate(messages);
-        await writes.Gate.WaitAsync(ct);
-        try
+        // The owner row lock taken first in this transaction serializes the reservation; it ends before the provider call.
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             // A harmless update serializes reservations for this account across application hosts.
@@ -46,7 +44,6 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
             await billing.ReserveAsync(call.Id, owner, null, profile.Provider, profile.NativeId, kind, call.CreatedAt, ct);
             db.Add(call); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         }
-        finally { writes.Gate.Release(); }
         var text = new StringBuilder(); var done = false; string? finish = null;
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.TimeoutSeconds));

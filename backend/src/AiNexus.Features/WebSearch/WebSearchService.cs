@@ -11,7 +11,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.WebSearch;
 
-public sealed class WebSearchService(NexusDbContext db, IWebSearchProvider provider, BillingService billing, ModelQuotaLock writes, IOptions<WebSearchOptions> options)
+public sealed class WebSearchService(NexusDbContext db, IWebSearchProvider provider, BillingService billing, IOptions<WebSearchOptions> options)
 {
     public const int ReservedTokens = 3600;
     public WebSearchStatusDto Status => new(options.Value.Enabled && (options.Value.Provider != "brave" || options.Value.ApiKey.Length > 0),
@@ -25,8 +25,7 @@ public sealed class WebSearchService(NexusDbContext db, IWebSearchProvider provi
         if (options.Value.Provider == "brave" && (query.Length > 600 || query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length > 75))
             throw new ApiException(400, "web_query_too_long", "Brave Search 的提問最多 600 個字元或 75 個單字，請簡化查詢。");
         WebSearchRecord record; ModelInvocation call;
-        await writes.Gate.WaitAsync(ct);
-        try
+        // The owner row lock taken first in this transaction serializes the reservation; it ends before the provider call.
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
@@ -45,7 +44,6 @@ public sealed class WebSearchService(NexusDbContext db, IWebSearchProvider provi
             await billing.ReserveAsync(call.Id, owner, conversation, options.Value.Provider, call.ModelId, call.Kind, call.CreatedAt, ct);
             db.Add(record); db.Add(call); await billing.StartAsync(call.Id, ct); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         }
-        finally { writes.Gate.Release(); }
         try { record.ResultsJson = JsonSerializer.Serialize(await provider.SearchAsync(query.Trim(), ct)); record.Status = call.Status = "completed"; call.InputTokens = call.OutputTokens = 0; }
         catch { record.Status = call.Status = "failed"; throw; }
         finally
