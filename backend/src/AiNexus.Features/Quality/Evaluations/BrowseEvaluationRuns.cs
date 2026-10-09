@@ -9,6 +9,10 @@ using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Quality.Evaluations;
 
+public sealed record EvaluationResultDto(int CaseIndex, int VariantIndex, string Output, bool Truncated, int RequiredMatches, int RequiredTotal, int ForbiddenMatches, long ElapsedMs, long? InputTokens, long? OutputTokens, int? ReviewScore, string ReviewNote);
+
+public sealed record EvaluationDetailDto(EvaluationRunDto Run, IReadOnlyList<EvaluationCase> Cases, IReadOnlyList<EvaluationVariant> Variants, IReadOnlyList<EvaluationResultDto> Results, bool CanReview);
+
 /// <summary>A set's latest 100 runs, and one run with its frozen cases, variants and results. Both require read access to the set.</summary>
 internal sealed class BrowseEvaluationRuns(NexusDbContext db, ResourceAccess access, ModelPresentation presentation)
 {
@@ -43,7 +47,3 @@ internal sealed class BrowseEvaluationRuns(NexusDbContext db, ResourceAccess acc
             await access.CanEditAsync(actor, resource, ct));
     }
 }
-
-public sealed record EvaluationResultDto(int CaseIndex, int VariantIndex, string Output, bool Truncated, int RequiredMatches, int RequiredTotal, int ForbiddenMatches, long ElapsedMs, long? InputTokens, long? OutputTokens, int? ReviewScore, string ReviewNote);
-
-public sealed record EvaluationDetailDto(EvaluationRunDto Run, IReadOnlyList<EvaluationCase> Cases, IReadOnlyList<EvaluationVariant> Variants, IReadOnlyList<EvaluationResultDto> Results, bool CanReview);

@@ -6,6 +6,8 @@ using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Knowledge.Documents;
 
+public sealed record DocumentJobDto(JobDto Job, bool CanControl);
+
 /// <summary>The current processing job of a document the user may read; only its owner who may still edit the document controls it.</summary>
 internal static class GetDocumentJob
 {
@@ -24,5 +26,3 @@ internal static class GetDocumentJob
         return new DocumentJobDto(JobService.Describe(job), job.OwnerId == actor && info.CanEdit);
     }
 }
-
-public sealed record DocumentJobDto(JobDto Job, bool CanControl);
