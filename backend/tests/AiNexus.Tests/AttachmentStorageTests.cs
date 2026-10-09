@@ -222,9 +222,10 @@ public sealed class AttachmentStorageTests
         Assert.Equal(site + "-data", FileAttachmentStorage.ValidateRoot(site + "-data", site));
     }
 
-    [WindowsFact]
+    [Fact]
     public void StorageComparesWindowsPathsWithoutCaseAndRejectsDriveRelativePaths()
     {
+        Assert.SkipUnless(OperatingSystem.IsWindows(), "只在 Windows 驗證磁碟機路徑語意。");
         Assert.Throws<InvalidOperationException>(() => FileAttachmentStorage.ValidateRoot(@"D:data\attachments", @"D:\site"));
         Assert.Throws<InvalidOperationException>(() => FileAttachmentStorage.ValidateRoot(@"d:\SITE\wwwroot\files", @"D:\site"));
         Assert.Equal(@"D:\CoreProject\AiNexus\data\attachments", FileAttachmentStorage.ValidateRoot(@"D:\CoreProject\AiNexus\data\attachments", @"D:\CoreProject\AiNexus\site"));

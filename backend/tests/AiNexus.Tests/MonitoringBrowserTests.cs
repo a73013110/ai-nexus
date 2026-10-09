@@ -10,9 +10,10 @@ namespace AiNexus.Tests;
 [Collection("Diagnostic browser")]
 public sealed class MonitoringBrowserTests
 {
-    [BrowserFact, Trait("Category", "Browser")]
+    [Fact, Trait("Category", "Browser")]
     public async Task RealBrowserHeartbeatAndOperationReachLiveDashboard()
     {
+        TestBrowser.SkipUnlessConfigured();
         var root = Path.GetFullPath("../../../../../..", AppContext.BaseDirectory);
         var webRoot = Environment.GetEnvironmentVariable("NEXUS_DIAGNOSTIC_WEBROOT") ?? Path.Combine(root, "artifacts", "verification", "wwwroot");
         await using var factory = new NexusFactory(administrators: ["alice"], webRoot: webRoot);
