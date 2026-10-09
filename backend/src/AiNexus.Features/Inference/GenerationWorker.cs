@@ -110,7 +110,9 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
             await scope.ServiceProvider.GetRequiredService<ConversationService>().UpdateAnswerAsync(run, stoppingToken);
             await db.SaveChangesAsync(stoppingToken);
             parameters = JsonSerializer.Deserialize<GenerationParameters>(run.ParametersJson)!;
-            messages = await scope.ServiceProvider.GetRequiredService<ContextBuilder>().BuildAsync(run.ConversationId, run.UserMessageId, parameters, stoppingToken);
+            var contexts = scope.ServiceProvider.GetRequiredService<ContextBuilder>();
+            // Answered history does not change, so the context CreateRun reserved for is sent as is; only image bytes are read now.
+            messages = job.Context is { } prepared ? await contexts.WithImagesAsync(prepared, stoppingToken) : await contexts.BuildAsync(run.ConversationId, run.UserMessageId, parameters, stoppingToken);
             await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Billing.BillingService>().StartAsync(run.Id, stoppingToken);
             await db.SaveChangesAsync(stoppingToken);
             model = run.ProviderModelId;

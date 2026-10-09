@@ -85,15 +85,14 @@ public sealed class NoneEmbeddingClient : IEmbeddingClient
     public Task<EmbeddingBatchResult> EmbedBatchAsync(IReadOnlyList<string> inputs, EmbeddingPurpose purpose, EmbeddingProfile profile, CancellationToken ct)
         => throw new ApiException(409, "embeddings_disabled", "目前採用全文檢索，未啟用語意向量。");
 }
-public sealed class RetrievalInvocation(IServiceScopeFactory scopes, ModelQuotaLock writes, IOptions<KnowledgeOptions> options)
+public sealed class RetrievalInvocation(IServiceScopeFactory scopes, IOptions<KnowledgeOptions> options)
 {
     public async Task<T> RunAsync<T>(Guid owner, string kind, string provider, string model, Func<Task<(T Value, long? Tokens)>> action, CancellationToken ct)
     {
         using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
         var billing = scope.ServiceProvider.GetRequiredService<AiNexus.Features.Billing.BillingService>();
         var call = new ModelInvocation { OwnerId = owner, Kind = kind, Provider = provider, ModelId = model };
-        await writes.Gate.WaitAsync(ct);
-        try
+        // The owner row lock taken first in this transaction serializes the reservation; it ends before the provider call.
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
@@ -103,7 +102,6 @@ public sealed class RetrievalInvocation(IServiceScopeFactory scopes, ModelQuotaL
             await billing.ReserveAsync(call.Id, owner, null, provider, model, kind, call.CreatedAt, ct);
             db.Add(call); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         }
-        finally { writes.Gate.Release(); }
         try
         {
             await billing.StartAsync(call.Id, ct); await db.SaveChangesAsync(ct);

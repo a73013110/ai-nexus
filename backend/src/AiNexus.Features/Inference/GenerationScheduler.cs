@@ -5,7 +5,8 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Inference;
 
-public sealed record GenerationJob(Guid RunId, Guid ConversationId, CancellationTokenSource Cancellation, string TraceId, string ParentSpanId, Guid OwnerId, string Provider);
+/// <summary>A queued run. <c>Context</c> is the model context CreateRun built and reserved for (no image bytes yet); null means rebuild it.</summary>
+public sealed record GenerationJob(Guid RunId, Guid ConversationId, CancellationTokenSource Cancellation, string TraceId, string ParentSpanId, Guid OwnerId, string Provider, IReadOnlyList<InferenceMessage>? Context = null);
 public sealed record ProviderQueue(ChannelReader<GenerationJob> Reader, int Concurrency);
 
 public sealed class GenerationScheduler
@@ -45,12 +46,12 @@ public sealed class GenerationScheduler
 
     public bool TryReserve() => capacity.Wait(0);
     public void ReleaseReservation() => capacity.Release();
-    public void Enqueue(GenerationRun run, string provider)
+    public void Enqueue(GenerationRun run, string provider, IReadOnlyList<InferenceMessage>? context = null)
     {
         var cancellation = new CancellationTokenSource();
         cancellations[run.Id] = cancellation;
         Interlocked.Increment(ref count);
-        if (!queues[provider].Writer.TryWrite(new GenerationJob(run.Id, run.ConversationId, cancellation, run.TraceId!, run.ParentSpanId!, run.OwnerId, provider))) throw new InvalidOperationException("Reserved queue capacity was exceeded.");
+        if (!queues[provider].Writer.TryWrite(new GenerationJob(run.Id, run.ConversationId, cancellation, run.TraceId!, run.ParentSpanId!, run.OwnerId, provider, context))) throw new InvalidOperationException("Reserved queue capacity was exceeded.");
     }
     public void Dequeued() => Interlocked.Decrement(ref count);
     public void Started() => Interlocked.Increment(ref active);
