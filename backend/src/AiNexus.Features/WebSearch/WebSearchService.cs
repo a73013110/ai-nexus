@@ -4,7 +4,6 @@ using AiNexus.Platform.Errors;
 using AiNexus.Platform.Time;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Billing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;

@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Chat;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.AccessControl;

@@ -1,4 +1,3 @@
-using AiNexus.Features.Identity;
 using AiNexus.Features.Operations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;

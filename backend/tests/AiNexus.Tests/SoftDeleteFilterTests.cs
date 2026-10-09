@@ -5,7 +5,6 @@ using AiNexus.Features.Administration;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Conversations;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Knowledge;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Projects;

@@ -1,4 +1,3 @@
-using AiNexus.Features.Conversations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

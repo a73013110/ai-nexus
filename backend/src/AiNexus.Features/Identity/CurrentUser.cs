@@ -6,7 +6,6 @@ using System.Security.Principal;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Operations;
 using AiNexus.Features.AccessControl;
 using Microsoft.EntityFrameworkCore;
 

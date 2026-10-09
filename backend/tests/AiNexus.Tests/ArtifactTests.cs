@@ -1,8 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Account;
 using AiNexus.Features.Artifacts;
-using AiNexus.Features.Chat;
 using AiNexus.Features.Collaboration;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Validation;

@@ -2,7 +2,6 @@ using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Conversations;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Billing;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;

@@ -1,9 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
-using AiNexus.Features.Chat;
 using AiNexus.Features.Conversations;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Projects;

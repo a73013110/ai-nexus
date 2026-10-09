@@ -1,5 +1,4 @@
 using AiNexus.Features.Attachments;
-using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Knowledge;

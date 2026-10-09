@@ -1,4 +1,3 @@
-using AiNexus.Features.Artifacts;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
