@@ -4,7 +4,7 @@ using AiNexus.Features.Account;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Data;
-using EDoc.Core.Database.Interfaces;
+using AiNexus.Platform.Data.Sql;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -65,15 +65,21 @@ public sealed class AuthenticationAndDatabaseTests
         => Assert.Equal(@"a\2a\29\28\5cb\00", LdapAuthenticator.EscapeFilter("a*)(\\b\0"));
 
     [Fact]
-    public async Task OriginalDbHelperBindsParametersAndRollsBackUncommittedTransactions()
+    public async Task SqlBindsParametersAndJoinsTheEfTransaction()
     {
-        await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync();
+        await using var factory = new NexusFactory();
         using var scope = factory.Services.CreateScope();
-        var helper = scope.ServiceProvider.GetRequiredService<IDbHelper<INexusDatabase>>();
-        Assert.Equal("'; DROP TABLE Users;--", await helper.QuerySingleAsync<string>("SELECT @Value", new { Value = "'; DROP TABLE Users;--" }));
-        await helper.ExecuteAsync("CREATE TABLE HelperProbe (Value TEXT NOT NULL)");
-        using (var transaction = await helper.BeginTransactionAsync()) await transaction.ExecuteAsync("INSERT INTO HelperProbe VALUES (@Value)", new { Value = "rollback" });
-        Assert.Equal(0, await helper.QuerySingleAsync<int>("SELECT COUNT(*) FROM HelperProbe"));
+        var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        var sql = scope.ServiceProvider.GetRequiredService<ISqlDatabase<NexusDbContext>>();
+        Assert.Equal("'; DROP TABLE Users;--", await sql.QuerySingleAsync<string>("SELECT @Value", new { Value = "'; DROP TABLE Users;--" }));
+        await sql.ExecuteAsync("CREATE TABLE SqlProbe (Value TEXT NOT NULL)");
+        await using (var transaction = await db.Database.BeginTransactionAsync())
+        {
+            Assert.Equal(1, await sql.ExecuteAsync("INSERT INTO SqlProbe VALUES (@Value)", new { Value = "rollback" }));
+            Assert.Equal(["rollback"], await sql.QueryAsync<string>("SELECT Value FROM SqlProbe"));
+        }
+        Assert.Equal(0, await sql.QuerySingleAsync<int>("SELECT COUNT(*) FROM SqlProbe"));
+        Assert.Null(await sql.QuerySingleOrDefaultAsync<string>("SELECT Value FROM SqlProbe"));
     }
 
     [Fact]

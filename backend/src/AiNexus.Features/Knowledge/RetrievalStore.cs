@@ -1,9 +1,9 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using AiNexus.Features.Persistence;
-using EDoc.Core.Database.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Data.SqlClient;
@@ -14,7 +14,7 @@ public interface IRetrievalStore
 {
     Task<KnowledgeSearchDto> SearchAsync(IReadOnlyList<Guid> collections, EmbeddingProfile profile, string query, float[]? vector, string mode, CancellationToken ct);
 }
-public sealed class SqlServerRetrievalStore(IDbHelper<INexusDatabase> sql, IOptions<KnowledgeOptions> options, IMemoryCache cache, ILogger<SqlServerRetrievalStore> logger) : IRetrievalStore
+public sealed class SqlServerRetrievalStore(ISqlDatabase<NexusDbContext> sql, IOptions<KnowledgeOptions> options, IMemoryCache cache, ILogger<SqlServerRetrievalStore> logger) : IRetrievalStore
 {
     public async Task<KnowledgeSearchDto> SearchAsync(IReadOnlyList<Guid> collections, EmbeddingProfile profile, string query, float[]? vector, string mode, CancellationToken ct)
     {

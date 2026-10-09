@@ -1,8 +1,7 @@
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Configuration;
+using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Modules;
-using EDoc.Core.Database.Implementations;
-using EDoc.Core.Database.Interfaces;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Integrations;
@@ -12,8 +11,8 @@ public sealed class IntegrationsModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddScoped<IDbHelper<ILegacyGdwebDatabase>, DbHelper<ILegacyGdwebDatabase>>();
-        services.AddScoped<IDbHelper<ILegacyMeihoDatabase>, DbHelper<ILegacyMeihoDatabase>>();
+        services.AddSqlDatabase<LegacyGdwebDatabase>();
+        services.AddSqlDatabase<LegacyMeihoDatabase>();
         services.AddOptions<IntegrationsOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Integrations(c, o)).ValidateOnStart();
         services.AddSingleton<IValidateOptions<IntegrationsOptions>, IntegrationsOptionsValidator>();
         services.AddScoped<SourceGateway>();
