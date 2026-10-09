@@ -2,18 +2,16 @@ using System.Globalization;
 using System.Diagnostics;
 using System.Security.Cryptography;
 using System.Text;
-using System.Reflection;
+using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Knowledge;
 using Dapper;
-using EDoc.Core.Database.Implementations;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
@@ -31,32 +29,35 @@ public sealed class SqlServerRetrievalTests
             var profile = new EmbeddingProfile { Key = "fixture:fts-failure", Provider = "ollama", Model = "fixture", Dimensions = 1024, Status = "active" };
             db.Add(profile); await db.SaveChangesAsync();
             var vector = new float[1024]; vector[0] = 1;
-            var vectors = new EmbeddingVectorStore(db);
+            var vectors = new EmbeddingVectorStore(db, sql);
             await vectors.WriteBatchAsync(profile, [new(seed.Chunks[0].Id, seed.Chunks[0].ContentHash, vector)], CancellationToken.None);
-            var failing = DispatchProxy.Create<EDoc.Core.Database.Interfaces.IDbHelper<INexusDatabase>, FullTextFailureProxy>();
-            var proxy = (FullTextFailureProxy)(object)failing; proxy.Inner = sql;
+            var failing = new FullTextFailure(sql);
             using var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new SqlServerRetrievalStore(failing, Options.Create(new KnowledgeOptions()), cache, NullLogger<SqlServerRetrievalStore>.Instance);
             var result = await store.SearchAsync([seed.Collection], profile, "採購核准", vector, "hybrid", CancellationToken.None);
             Assert.Equal("vector", result.Mode); Assert.Equal(seed.Chunks[0].Id, Assert.Single(result.Hits).ChunkId);
-            Assert.Equal(1, proxy.Failures);
+            Assert.Equal(1, failing.Failures);
             var error = await Assert.ThrowsAsync<ApiException>(() => store.SearchAsync([seed.Collection], profile, "採購核准", null, "keyword", CancellationToken.None));
-            Assert.Equal("fulltext_unavailable", error.Code); Assert.Equal(1, proxy.Failures);
+            Assert.Equal("fulltext_unavailable", error.Code); Assert.Equal(1, failing.Failures);
         });
     }
 
-    public class FullTextFailureProxy : DispatchProxy
+    private sealed class FullTextFailure(ISqlDatabase<NexusDbContext> inner) : ISqlDatabase<NexusDbContext>
     {
-        public EDoc.Core.Database.Interfaces.IDbHelper<INexusDatabase> Inner { get; set; } = null!;
         public int Failures { get; private set; }
-        protected override object? Invoke(MethodInfo? method, object?[]? args)
+        public Task<IReadOnlyList<T>> QueryAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
+            => inner.QueryAsync<T>(Rewrite(sql), parameters, commandTimeout, cancellationToken);
+        public Task<T> QuerySingleAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
+            => inner.QuerySingleAsync<T>(Rewrite(sql), parameters, commandTimeout, cancellationToken);
+        public Task<T?> QuerySingleOrDefaultAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
+            => inner.QuerySingleOrDefaultAsync<T>(Rewrite(sql), parameters, commandTimeout, cancellationToken);
+        public Task<int> ExecuteAsync(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
+            => inner.ExecuteAsync(Rewrite(sql), parameters, commandTimeout, cancellationToken);
+        private string Rewrite(string sql)
         {
-            if (args?[0] is string statement && statement.Contains("FREETEXTTABLE", StringComparison.Ordinal))
-            {
-                // Raise a real SqlException without depending on a broken server installation.
-                args[0] = "RAISERROR (30053, 16, 1)"; Failures++;
-            }
-            return method!.Invoke(Inner, args);
+            if (!sql.Contains("FREETEXTTABLE", StringComparison.Ordinal)) return sql;
+            // Raise a real SqlException without depending on a broken server installation.
+            Failures++; return "RAISERROR (30053, 16, 1)";
         }
     }
 
@@ -69,7 +70,7 @@ public sealed class SqlServerRetrievalTests
             {
                 var active = new EmbeddingProfile { Key = $"fixture:{dimensions}:active", Provider = "ollama", Model = "fixture", Dimensions = dimensions, Status = "building" };
                 var building = new EmbeddingProfile { Key = $"fixture:{dimensions}:building", Provider = "ollama", Model = "fixture", Dimensions = dimensions, Status = "building" };
-                db.AddRange(active, building); await db.SaveChangesAsync(); var vectors = new EmbeddingVectorStore(db);
+                db.AddRange(active, building); await db.SaveChangesAsync(); var vectors = new EmbeddingVectorStore(db, sql);
                 float[] Vector(float a, float b) { var v = new float[dimensions]; v[0] = a; v[1] = b; return v; }
                 var values = seed.Chunks.Select((x, i) => new EmbeddingWrite(x.Id, x.ContentHash, i == 0 ? Vector(.8f, .6f) : i == 1 ? Vector(0, 1) : Vector(1, 0))).ToArray();
                 await using (var tx = await db.Database.BeginTransactionAsync()) { await vectors.WriteBatchAsync(active, values, CancellationToken.None); await tx.RollbackAsync(); }
@@ -145,7 +146,7 @@ public sealed class SqlServerRetrievalTests
         var chunks = Enumerable.Range(0, 52).Select(i => new KnowledgeChunk { DocumentId = i < 2 ? docs[0].Id : docs[1].Id, Ordinal = i < 2 ? i : i - 2, StartPage = 1, EndPage = 1, HeadingPath = "第三章 › 採購核准", Text = i < 2 ? "採購核准後，由主管簽署再付款。" : string.Join('。', Enumerable.Repeat("採購核准採購核准", 15)), ContentHash = SHA256.HashData(Encoding.UTF8.GetBytes(i.ToString(CultureInfo.InvariantCulture))), TokenEstimate = 30 }).ToArray();
         db.AddRange(chunks); await db.SaveChangesAsync(); return (allowed.Id, chunks);
     }
-    private static async Task WithDatabase(Func<NexusDbContext, EDoc.Core.Database.Interfaces.IDbHelper<INexusDatabase>, SqlServerRetrievalStore, Task> test)
+    private static async Task WithDatabase(Func<NexusDbContext, ISqlDatabase<NexusDbContext>, SqlServerRetrievalStore, Task> test)
     {
         var connection = Environment.GetEnvironmentVariable("AINEXUS_SQLSERVER_TEST");
         Assert.SkipWhen(string.IsNullOrWhiteSpace(connection), "未設定 AINEXUS_SQLSERVER_TEST，略過真實 SQL Server 2025 整合測試。");
@@ -157,8 +158,7 @@ public sealed class SqlServerRetrievalTests
             await master.ExecuteAsync($"CREATE DATABASE [{name}]"); created = true; settings.InitialCatalog = name;
             await using var db = new NexusDbContext(new DbContextOptionsBuilder<NexusDbContext>().UseSqlServer(settings.ConnectionString).Options);
             await db.Database.MigrateAsync();
-            var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Nexus"] = settings.ConnectionString }).Build();
-            var sql = new DbHelper<INexusDatabase>(new NexusConnectionFactory(config)); using var cache = new MemoryCache(new MemoryCacheOptions());
+            var sql = new DbContextSqlDatabase<NexusDbContext>(db); using var cache = new MemoryCache(new MemoryCacheOptions());
             var store = new SqlServerRetrievalStore(sql, Options.Create(new KnowledgeOptions { VectorCandidates = 1, FtsCandidates = 1, RerankCandidates = 1, TopK = 1 }), cache, NullLogger<SqlServerRetrievalStore>.Instance);
             await test(db, sql, store);
         }

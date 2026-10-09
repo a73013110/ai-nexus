@@ -1,11 +1,11 @@
 using System.Text.Json;
-using EDoc.Core.Database.Interfaces;
+using AiNexus.Platform.Data.Sql;
 
 namespace AiNexus.Features.Persistence;
 
 public sealed record SqlVectorCapabilitiesDto(string Version, string Edition, int MajorVersion, bool NativeVector, bool ExactDistance,
     bool FullTextInstalled = false, bool TraditionalChineseWordBreaker = false, bool FullTextIndex = false);
-public sealed class SqlVectorCapabilities(IDbHelper<INexusDatabase> sql)
+public sealed class SqlVectorCapabilities(ISqlDatabase<NexusDbContext> sql)
 {
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 

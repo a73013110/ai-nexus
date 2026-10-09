@@ -19,7 +19,7 @@ flowchart LR
     Jobs --> Tasks[Inference 共用配額與模型任務]
     Tasks --> Models[Google AI／Ollama]
     Modules --> Sources[Integrations 來源政策]
-    Sources --> Dapper[EDoc DbHelper／固定參數化 SELECT]
+    Sources --> Dapper[ISqlDatabase／固定參數化 SELECT]
     Dapper --> Legacy[(獨立公文／校務授權 view)]
 ```
 
@@ -48,7 +48,7 @@ flowchart LR
 | Repositories   | 使用者 Gitea token 保護、唯讀 repository／issues／檔案、固定 commit 匯入與來源追溯       |
 | Dashboard      | 組合已授權的資源、任務與費用統計；平台範圍另驗 admin，沒有第二套計量邏輯                 |
 
-後端分三個專案，依賴方向固定為 Api → Features → Platform：`AiNexus.Api` 只做 host 組裝與維運指令；`AiNexus.Features` 的每個模組以 `<Module>Module`（`IFeatureModule`）註冊自己的服務、options 驗證、授權政策、rate limit 與端點，`FeatureModules` 是唯一的模組清單，`Persistence` 管共用 context 與 migrations；`AiNexus.Platform` 管錯誤、安全、設定、診斷、HTTP 限制、domain event 分派與原始 EDoc helpers，不引用任何業務模組。端點的 body 上限以 `WithRequestBodyLimit` 宣告在端點旁。`AiNexus.ArchitectureTests` 檢查專案依賴方向，並禁止模組之間形成循環；分層與切斷循環的做法見 [模組邊界](MODULE_BOUNDARIES.md)。slice、錯誤、驗證與授權的寫法見 [後端撰寫慣例](BACKEND_CONVENTIONS.md)。模組間使用明確服務，不新增能繞過 owner、ACL 或模型核准的資料入口。「A 發生後 B 跟著處理」的副作用改用同交易的 domain event（`AiNexus.Platform.Events`）：發布模組 `Raise` 過去式事件，`NexusDbContext.SaveChangesAsync` 在寫入前於同一交易分派給訂閱模組的 handler，一起提交或回復；例如刪除對話／成果撤銷分享、刪除專案解除成果連結。
+後端分三個專案，依賴方向固定為 Api → Features → Platform：`AiNexus.Api` 只做 host 組裝與維運指令；`AiNexus.Features` 的每個模組以 `<Module>Module`（`IFeatureModule`）註冊自己的服務、options 驗證、授權政策、rate limit 與端點，`FeatureModules` 是唯一的模組清單，`Persistence` 管共用 context 與 migrations；`AiNexus.Platform` 管錯誤、安全、設定、診斷、HTTP 限制、domain event 分派與手寫 SQL 存取（`Data/Sql`），不引用任何業務模組。端點的 body 上限以 `WithRequestBodyLimit` 宣告在端點旁。`AiNexus.ArchitectureTests` 檢查專案依賴方向，並禁止模組之間形成循環；分層與切斷循環的做法見 [模組邊界](MODULE_BOUNDARIES.md)。slice、錯誤、驗證與授權的寫法見 [後端撰寫慣例](BACKEND_CONVENTIONS.md)。模組間使用明確服務，不新增能繞過 owner、ACL 或模型核准的資料入口。「A 發生後 B 跟著處理」的副作用改用同交易的 domain event（`AiNexus.Platform.Events`）：發布模組 `Raise` 過去式事件，`NexusDbContext.SaveChangesAsync` 在寫入前於同一交易分派給訂閱模組的 handler，一起提交或回復；例如刪除對話／成果撤銷分享、刪除專案解除成果連結。
 
 Notifications 提供 owner scoped durable event 與 typed target，和聊天完成、具名分享、任務 terminal update 使用同一 transaction。RepositoryReviewService 在排程前固定 SHA／diff／模型設定，handler 沿用背景 checkpoint／ModelTaskService，結果讀取仍檢查目前 Gitea 權限；細節見 [通知](NOTIFICATIONS.md)、[程式碼 review](GITEA.md)。
 
@@ -105,7 +105,7 @@ Gitea 的連線／解除與匯入寫入由本機鎖協調，固定 commit 的成
 
 ## 資料層與新增功能
 
-EF Core 管 mapping、migration、實體關聯與跨模組 transaction。保留 [EDoc helpers](../backend/src/AiNexus.Platform/Data/EDoc/README.md)，adapter 讓業務寫入共用 scoped context。Dapper 自有連線不自動加入 EF transaction；原生向量寫入明確使用目前 connection／transaction。來源 adapter 只使用固定 SQL 及參數。見 [資料庫](DATABASE.md)。
+EF Core 管 mapping、migration、實體關聯與跨模組 transaction。EF 表達不了的 SQL（全文檢索、原生向量、伺服器狀態）用 `ISqlDatabase<NexusDbContext>`，走 EF 的連線並加入目前的 transaction；來源 adapter 只使用固定 SQL 及參數。見 [資料庫](DATABASE.md)。
 
 新增功能建立 module、資料及授權規則、migration、必要的 feature seed、lazy route、共用元件組合，再更新 OpenAPI／型別與實際邊界測試。不是每個操作都要新建授權 feature；工具可沿用所屬功能政策。新增 job 實作 IBackgroundJobHandler，在 RPC 前後驗授權並以 checkpoint 保存結果。
 

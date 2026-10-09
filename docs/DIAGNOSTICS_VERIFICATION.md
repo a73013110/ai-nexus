@@ -47,7 +47,7 @@ Windows 10.0.26200 x64；AMD Ryzen 7 PRO 5850U（16 個 logical processors），
 
 日誌測試實際操作暫存目錄、輪替、checksum、cursor 與 SQLite，並模擬 store outage／程序重新開啟 journal；驗證 commit 後 checkpoint 遺失重播不重複匯入、未補送檔不清理、損壞及封存截斷可見計數、兩個 live journal 共用容量，以及已 Dispose 的 journal 不重開鎖。無寫入權限／磁碟 IO 失敗由注入 journal 實作拋出，並另外驗證實際不合法／不可作目錄的路徑與容量不足；沒有對正式 NTFS ACL 改權限，也沒有實際填滿主機磁碟或強制殺 IIS。
 
-SQL 30053 測試注入 SqlClient typed exception 到既有 DbHelper adapter，走產品的 SqlServerRetrievalStore／RetrievalPipeline／HTTP／journal／query store：HTTP 200、實際 mode vector，管理持久表仍有 Warning、30053、hybrid／vector、NX、RequestId 與 TraceId。這證明應用 fallback 分支；沒有重現正式 SQL 引擎故障或證明 CU 修復效果。
+SQL 30053 測試注入 SqlClient typed exception 到 `ISqlDatabase<NexusDbContext>`，走產品的 SqlServerRetrievalStore／RetrievalPipeline／HTTP／journal／query store：HTTP 200、實際 mode vector，管理持久表仍有 Warning、30053、hybrid／vector、NX、RequestId 與 TraceId。這證明應用 fallback 分支；沒有重現正式 SQL 引擎故障或證明 CU 修復效果。
 
 權限測試涵蓋未登入、一般使用者、只有 query，以及撤銷 detail／export 的獨立授權；cursor 綁 actor／filter／固定時間且無重複。高權限讀取先保存 audit，格式不合法的稽核 fail closed。例外／巢狀例外、API、SSE、通知、既有 audit 與管理細節皆驗證不含測試秘密；任意物件不會被序列化或執行 ToString。管理表格的 HTML payload 被呈現為文字，匯出前導公式加單引號。
 

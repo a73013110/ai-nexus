@@ -1,6 +1,6 @@
 # 公文與校務系統唯讀整合
 
-本版提供公文／校務兩個 Dapper adapter、資料來源狀態、參數化搜尋、逐筆本文／狀態／版本／簽核歷程，以及帶入聊天草稿與匯入個人成果快照。呼叫使用既有 EDoc `IDbHelper<TDb>`／`DbHelper<TDb>`；外部 SQL 與 AI Nexus EF 寫入分開，不持有資料庫交易等待外部查詢。
+本版提供公文／校務兩個 Dapper adapter、資料來源狀態、參數化搜尋、逐筆本文／狀態／版本／簽核歷程，以及帶入聊天草稿與匯入個人成果快照。呼叫使用 `ISqlDatabase<LegacyGdwebDatabase>`／`ISqlDatabase<LegacyMeihoDatabase>`（每次呼叫自開連線）；外部 SQL 與 AI Nexus EF 寫入分開，不持有資料庫交易等待外部查詢。
 
 **目前未設定兩套來源連線，也未宣稱已完成正式連線驗證。** 預設停用且沒有來源群組授權。程式、關係式權限測試、SQL 參數邊界與瀏覽器操作使用測試資料驗證；實際來源 view 需原系統管理員確認，不能從登入／選單權限推定所有資料都可公開。
 

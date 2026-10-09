@@ -5,7 +5,7 @@ using System.Net.Http.Json;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Features.Knowledge;
-using EDoc.Core.Database.Interfaces;
+using AiNexus.Platform.Data.Sql;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -45,10 +45,9 @@ public sealed class DiagnosticFailureTests
     [Fact]
     public async Task Sql30053HybridReturns200AndPersistsCorrelatedDegradationWarning()
     {
-        var sql = DispatchProxy.Create<IDbHelper<INexusDatabase>, FulltextProxy>();
         await using var factory = new NexusFactory(workers: [typeof(DiagnosticWorker)], services: services => {
             services.RemoveAll<IRetrievalStore>(); services.AddScoped<IRetrievalStore, SqlServerRetrievalStore>();
-            services.RemoveAll<IDbHelper<INexusDatabase>>(); services.AddSingleton(sql);
+            services.RemoveAll<ISqlDatabase<NexusDbContext>>(); services.AddSingleton<ISqlDatabase<NexusDbContext>>(new FullTextFailure());
         });
         using var client = await factory.SignedInAsync(); var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
         using var response = await client.PostAsJsonAsync("/api/v1/knowledge/search", new KnowledgeSearchRequest("採購", [seed.Collection]));
@@ -69,18 +68,15 @@ public sealed class DiagnosticFailureTests
         Assert.True(completed);
     }
 
-    // SQL failure is injected at the existing DbHelper adapter, exercising the production retrieval/fallback branch.
-    public class FulltextProxy : DispatchProxy
+    // SQL failure is injected at the SQL seam, exercising the production retrieval/fallback branch.
+    private sealed class FullTextFailure : ISqlDatabase<NexusDbContext>
     {
-        protected override object? Invoke(MethodInfo? method, object?[]? args)
-        {
-            if (method!.Name == "QuerySingleAsync" && method.GetGenericArguments().Single() == typeof(bool)) return Task.FromResult(true);
-            if (method.Name == "QueryAsync") {
-                if (((string)args![0]!).Contains("FREETEXTTABLE", StringComparison.Ordinal)) throw SqlFailure();
-                return Task.FromResult<IEnumerable<RetrievalRow>>([]);
-            }
-            throw new InvalidOperationException("Unexpected helper call: " + method.Name);
-        }
+        public Task<T> QuerySingleAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
+            => typeof(T) == typeof(bool) ? Task.FromResult((T)(object)true) : throw new InvalidOperationException("Unexpected SQL: " + sql);
+        public Task<IReadOnlyList<T>> QueryAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
+            => sql.Contains("FREETEXTTABLE", StringComparison.Ordinal) ? throw SqlFailure() : Task.FromResult<IReadOnlyList<T>>([]);
+        public Task<T?> QuerySingleOrDefaultAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected SQL: " + sql);
+        public Task<int> ExecuteAsync(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new InvalidOperationException("Unexpected SQL: " + sql);
     }
     private static SqlException SqlFailure()
     {

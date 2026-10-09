@@ -1,12 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Reflection;
 using AiNexus.Features.Account;
 using AiNexus.Features.Chat;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Integrations;
-using EDoc.Core.Database.Interfaces;
+using AiNexus.Platform.Data.Sql;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,7 +53,7 @@ public sealed class IntegrationTests
     [Fact]
     public async Task SqlAdapterKeepsSearchValuesInParametersAndRechecksGrantAfterHistory()
     {
-        var helper = DispatchProxy.Create<IDbHelper<ILegacyGdwebDatabase>, QueryProbe>(); var probe = (QueryProbe)(object)helper; var adapter = new GdwebSource(helper);
+        var probe = new QueryProbe(); var adapter = new GdwebSource(probe);
         await adapter.SearchAsync(new("sid-123", "DOMAIN\\actor"), new("' OR 1=1 --%_"), 30, 10, CancellationToken.None);
         Assert.DoesNotContain("OR 1=1", probe.Sql); Assert.Contains("ActorSid = @ActorSid", probe.Sql); Assert.Equal("%' OR 1=1 --~%~_%", probe.Args!.GetType().GetProperty("Pattern")!.GetValue(probe.Args));
         Assert.Equal(30, probe.Args.GetType().GetProperty("Take")!.GetValue(probe.Args));
@@ -69,14 +68,18 @@ public sealed class IntegrationTests
         private static SourceRecordDto Record() => new("doc-1", "document", "測試通知", "核准", "v2", DateTimeOffset.UtcNow);
     }
 }
-public class QueryProbe : DispatchProxy
+public sealed class QueryProbe : ISqlDatabase<LegacyGdwebDatabase>
 {
     public string Sql = ""; public object? Args; public bool RevokeOnRecheck; public int SingleReads;
-    protected override object? Invoke(MethodInfo? target, object?[]? args)
+    public Task<IReadOnlyList<T>> QueryAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
     {
-        Sql = (string)args![0]!; Args = args[1];
-        if (target!.Name == "QueryAsync" && target.GetGenericArguments()[0] == typeof(SourceRow)) return Task.FromResult<IEnumerable<SourceRow>>([]);
-        if (target.Name == "QueryAsync") return Task.FromResult<IEnumerable<SourceHistoryDto>>([]);
-        SingleReads++; return Task.FromResult<SourceRow?>(RevokeOnRecheck && SingleReads > 1 ? null : new SourceRow { RecordId = "doc-1", Title = "測試", Body = "測試資料", Revision = "v1" });
+        Sql = sql; Args = parameters; return Task.FromResult<IReadOnlyList<T>>([]);
     }
+    public Task<T?> QuerySingleOrDefaultAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)
+    {
+        Sql = sql; Args = parameters; SingleReads++;
+        return Task.FromResult((T?)(object?)(RevokeOnRecheck && SingleReads > 1 ? null : new SourceRow { RecordId = "doc-1", Title = "測試", Body = "測試資料", Revision = "v1" }));
+    }
+    public Task<T> QuerySingleAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
+    public Task<int> ExecuteAsync(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default) => throw new NotSupportedException();
 }
