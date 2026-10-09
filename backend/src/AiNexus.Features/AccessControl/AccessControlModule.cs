@@ -10,6 +10,8 @@ public sealed class AccessControlModule : IFeatureModule
     }
 }
 
+internal sealed class AccessControlFeatures() : FeatureSeed(new PlatformFeature(BuiltInAccess.ChatFeature, "對話", "/chat", 10));
+
 public static class FeaturePolicies
 {
     /// <summary>Signed-in users holding any of <paramref name="features"/>; evaluated against current grants on every request.</summary>

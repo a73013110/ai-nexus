@@ -53,3 +53,5 @@ public sealed class QualityModule : IFeatureModule
         ReviewEvaluationResult.Map(routes);
     }
 }
+
+internal sealed class QualityFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Quality, "品質評測", "/quality", 60));

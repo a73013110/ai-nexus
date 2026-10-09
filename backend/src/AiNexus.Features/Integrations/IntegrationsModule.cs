@@ -38,3 +38,5 @@ internal sealed class IntegrationsOptionsValidator : IValidateOptions<Integratio
                && s.AllowedGroupIds.All(g => g.Length is >= 1 and <= 64 && g.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.')))
             ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail("Invalid read-only source limits.");
 }
+
+internal sealed class IntegrationsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Integrations, "資料來源", "/integrations", 80, AdministratorsOnly: true));

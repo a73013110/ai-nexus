@@ -61,14 +61,3 @@ internal sealed class ResourceGroupConfiguration : IEntityTypeConfiguration<Reso
         group.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.ResourceId).OnDelete(DeleteBehavior.Cascade);
     }
 }
-
-/// <summary>The module's tables, applied by <c>NexusDbContext</c>.</summary>
-public static class CollaborationConfiguration
-{
-    public static void Configure(ModelBuilder model)
-    {
-        model.ApplyConfiguration(new WorkspaceResourceConfiguration());
-        model.ApplyConfiguration(new ResourceMemberConfiguration());
-        model.ApplyConfiguration(new ResourceGroupConfiguration());
-    }
-}

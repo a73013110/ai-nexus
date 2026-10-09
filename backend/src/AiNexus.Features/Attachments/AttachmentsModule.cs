@@ -75,3 +75,5 @@ internal sealed class AttachmentOptionsValidator : IValidateOptions<AttachmentOp
            && Path.IsPathFullyQualified(x.StoragePath)
             ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail("Invalid attachment storage or limits.");
 }
+
+internal sealed class AttachmentsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Files, "檔案庫", "/files", 15));

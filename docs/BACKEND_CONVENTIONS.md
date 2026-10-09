@@ -5,8 +5,9 @@
 ## 檔案與命名
 
 - 一個 use case 一個檔案，檔名是動詞片語：`SavePromptTemplate.cs`、`ListNotifications.cs`。同一資源、共用大量邏輯的唯讀查詢可以放在同一檔（如 `BrowseSources.cs`）。
-- 模組根目錄的 `<Module>Module.cs` 建立路由群組（授權、tags、body 上限），再依序呼叫各 slice 的 `Map`。端點順序就是 OpenAPI 順序，不要任意調整。
+- 模組根目錄的 `<Module>Module.cs` 建立路由群組（授權、tags、body 上限），再依序呼叫各 slice 的 `Map`。端點順序就是 OpenAPI 順序，不要任意調整。模組的功能入口也在這個檔案宣告成 `FeatureSeed` 子類別。
 - 檔名＝檔內主要型別名，namespace＝資料夾（`SourceLayoutTests` 檢查）。entity 與它的 `IEntityTypeConfiguration<T>`、查詢擴充方法同檔（如 `PromptTemplate.cs`）。
+- 組態類別要有無參數建構子，`NexusDbContext` 以 `ApplyConfigurationsFromAssembly` 自動套用，新增實體只要加這一個檔案。種子資料用該模組組態的 `HasData`；另一端在別的模組的外鍵寫在 `Persistence/CrossModuleRelationships.cs`，只有 SQLite 才需要的差異寫在 `Persistence/SqliteModel.cs`。
 - DTO 只有一個 use case 用就寫在該 use case 檔的開頭；多個檔案共用才獨立成 `<Dto>.cs`。
 - 模組的預期失敗集中在根目錄的 `<Module>Errors.cs`（`ModuleBoundaryTests` 檢查）。
 - 超過約 20 個檔案的模組依能力分子資料夾（如 `Knowledge/Documents`、`Identity/Sessions`）；`<Module>Module.cs`、`<Module>Errors.cs`、options 與跨子資料夾共用的型別留在模組根目錄。
@@ -73,7 +74,7 @@ internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
 - **直接呼叫**：需要對方的回傳值、要依結果決定 HTTP 回應或是否繼續（查詢、授權、配額、排程任務、計費預約），或是對方的檢查必須在自己寫入之前完成。
 - **domain event**：「A 發生後 B 要跟著處理」，A 不需要知道結果，B 的寫入要和 A 同一個交易，例如刪除對話／成果時撤銷分享、刪除專案時解除成果的專案連結。只有在依賴方向能因此反轉、避免循環時才改；如果呼叫端仍為了查詢依賴對方，改成事件沒有好處。
 - 事件是發布模組裡過去式命名的 `public sealed record`，實作 `IDomainEvent`，放在引發它的 slice 檔（如 `DeleteConversation.cs` 的 `ConversationDeleted`）。訂閱模組實作 `IDomainEventHandler<T>`，在自己的 `AddServices` 以 `AddDomainEventHandler<TEvent, THandler>()` 註冊；訂閱方引用發布方，不可反過來，也不可因此形成循環。
-- 發布端注入 scoped `DomainEvents`，在呼叫 `SaveChangesAsync` 前 `Raise(...)`。`NexusDbContext.SaveChangesAsync` 先分派所有待處理事件（handler 再引發的事件也會處理，最多 `DomainEvents.MaxRounds` 輪），再整理稽核列並寫入，所以 handler 新增的 entity 和稽核列與發布端一起儲存。沒有交易時會自動開一個交易包住分派與寫入。
+- 發布端注入 scoped `DomainEvents`，在呼叫 `SaveChangesAsync` 前 `Raise(...)`。`SaveChangesAsync` 寫入前，`DomainEventInterceptor` 先分派所有待處理事件（handler 再引發的事件也會處理，最多 `DomainEvents.MaxRounds` 輪），`AuditEventInterceptor` 再整理稽核列，所以 handler 新增的 entity 和稽核列與發布端一起儲存。沒有交易時會自動開一個交易包住分派與寫入。
 - handler 在同一個 `NexusDbContext` 與交易內、發布端的變更寫入之前執行：可以追蹤 entity、使用 `ExecuteUpdate`／`ExecuteDelete`（立即在目前交易執行），但不可呼叫 `SaveChanges` 或自行開關交易。handler 不保證先後順序，彼此不可依賴。
 - `Raise` 之後到 `SaveChangesAsync` 之間不要提早 return；分派失敗會清掉待處理事件。同步的 `SaveChanges` 遇到待處理事件會丟例外。
 - 需要在交易提交後非同步處理的副作用（外部呼叫、檔案刪除）不用 domain event，交給既有的 durable job。

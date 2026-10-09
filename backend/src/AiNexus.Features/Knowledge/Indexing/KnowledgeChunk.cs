@@ -19,13 +19,13 @@ public sealed class KnowledgeChunk
     public int TokenEstimate { get; set; }
 }
 
-internal sealed class KnowledgeChunkConfiguration(bool sqlite) : IEntityTypeConfiguration<KnowledgeChunk>
+internal sealed class KnowledgeChunkConfiguration : IEntityTypeConfiguration<KnowledgeChunk>
 {
     public void Configure(EntityTypeBuilder<KnowledgeChunk> chunk)
     {
         chunk.ToTable("Chunks", "knowledge"); chunk.HasKey(x => x.Id); chunk.Property(x => x.Text).HasMaxLength(4000);
         chunk.Property(x => x.HeadingPath).HasMaxLength(400); chunk.Property(x => x.ContentHash).HasColumnType("binary(32)");
-        if (sqlite) chunk.Property(x => x.SearchId).ValueGeneratedNever(); else chunk.Property(x => x.SearchId).UseIdentityColumn();
+        chunk.Property(x => x.SearchId).UseIdentityColumn();
         chunk.HasIndex(x => x.SearchId).IsUnique();
         chunk.HasIndex(x => new { x.DocumentId, x.Ordinal }).IsUnique(); chunk.HasOne<KnowledgeDocument>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Cascade);
     }

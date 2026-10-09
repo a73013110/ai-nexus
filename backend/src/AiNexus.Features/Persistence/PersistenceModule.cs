@@ -14,9 +14,8 @@ public sealed class PersistenceModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddDbContext<NexusDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("Nexus") ?? ""));
-        // Constructor-injected into NexusDbContext, so it applies however the context options are registered.
         services.AddDomainEvents();
+        services.AddDbContext<NexusDbContext>((scope, options) => options.UseSqlServer(builder.Configuration.GetConnectionString("Nexus") ?? "").AddNexusInterceptors(scope));
         services.AddDbContextSqlDatabase<NexusDbContext>();
         services.AddSqlDatabase<NexusMasterDatabase>();
         services.AddScoped<DatabaseInitializer>();

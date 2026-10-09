@@ -19,12 +19,7 @@ public sealed class ModelInvocation
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
-public static class ModelInvocationConfiguration
-{
-    public static void Configure(ModelBuilder model) => model.ApplyConfiguration(new ModelInvocationEntityConfiguration());
-}
-
-internal sealed class ModelInvocationEntityConfiguration : IEntityTypeConfiguration<ModelInvocation>
+internal sealed class ModelInvocationConfiguration : IEntityTypeConfiguration<ModelInvocation>
 {
     public void Configure(EntityTypeBuilder<ModelInvocation> item)
     {

@@ -32,3 +32,5 @@ public sealed class SharingModule : IFeatureModule
         OpenSharedFile.Map(routes);
     }
 }
+
+internal sealed class SharingFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Shared, "分享", "/shared", 50));

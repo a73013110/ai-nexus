@@ -5,18 +5,14 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Diagnostics;
 
-public static class DiagnosticConfiguration
+/// <summary>The system-log features, seeded with <c>HasData</c>, and their policy names.</summary>
+public sealed class DiagnosticConfiguration() : FeatureSeed(
+    new PlatformFeature(Query, "系統日誌", "/admin/logs", 110, AdministratorsOnly: true),
+    new PlatformFeature(Detail, "日誌診斷詳情", "", 111, AdministratorsOnly: true),
+    new PlatformFeature(Export, "日誌匯出", "", 112, AdministratorsOnly: true))
 {
     public const string Query = "logs.query", Detail = "logs.detail", Export = "logs.export";
     public const string QueryPolicy = Policies.Prefix + Query, DetailPolicy = Policies.Prefix + Detail, ExportPolicy = Policies.Prefix + Export;
-    /// <summary>The module's table and features, applied by <c>NexusDbContext</c>.</summary>
-    public static void Configure(ModelBuilder model)
-    {
-        model.ApplyConfiguration(new DiagnosticEventConfiguration());
-        PlatformFeatures.Add(model, Query, "系統日誌", "/admin/logs", 110, administratorsOnly: true);
-        PlatformFeatures.Add(model, Detail, "日誌診斷詳情", "", 111, administratorsOnly: true);
-        PlatformFeatures.Add(model, Export, "日誌匯出", "", 112, administratorsOnly: true);
-    }
 }
 
 internal sealed class DiagnosticEventConfiguration : IEntityTypeConfiguration<DiagnosticEvent>
