@@ -52,8 +52,8 @@ public sealed class ConnectedProviderTests
     public async Task RemoteJsonWithoutContentLengthIsStillBounded()
     {
         using var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(new MemoryStream(Encoding.UTF8.GetBytes("{\"text\":\"" + new string('x', 20000) + "\"}"))) };
-        var error = await Assert.ThrowsAsync<ApiException>(() => BoundedHttpJson.ReadAsync(response, 1000, CancellationToken.None));
-        Assert.Equal("remote_response_too_large", error.Code);
+        var error = await Assert.ThrowsAsync<ExternalServiceException>(() => BoundedHttpJson.ReadAsync(response, 1000, CancellationToken.None));
+        Assert.Equal("remote_response_too_large", error.Error.Code);
     }
 
     [Fact]

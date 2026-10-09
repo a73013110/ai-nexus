@@ -34,12 +34,14 @@ public sealed class UserAccountAdministration(NexusDbContext db, CurrentUser cur
 {
     public async Task<Guid> SaveAsync(Guid? id, UserAccountRequest request, CancellationToken ct)
     {
-        var actor = await current.GetAsync(ct);
+        var actor = (await current.GetAsync(ct)).OrThrow();
         var local = UserAccounts.Normalize(request.LocalAccount); var ad = UserAccounts.Normalize(request.AdAccount);
         if (string.IsNullOrWhiteSpace(request.DisplayName) || request.DisplayName.Trim().Length > 120 || request.RoleIds is null || request.RoleIds.Count > 100 || request.RoleIds.Distinct().Count() != request.RoleIds.Count)
             throw new ApiException(400, "invalid_user", "請輸入姓名與有效角色。");
         if (!request.AdEnabled && !request.LocalEnabled || request.AdEnabled && ad is null || request.LocalEnabled && local is null)
             throw new ApiException(400, "invalid_login_methods", "請至少設定一種登入方式，並填寫對應的登入帳號。");
+        if (request.Password is { Length: > 0 } candidate && !Argon2Passwords.IsAcceptable(candidate))
+            throw new ApiException(400, "invalid_password", "本地密碼需為 12–128 個字元，可使用長句與密碼管理器。");
         var hash = request.Password is { Length: > 0 } password ? await passwords.HashAsync(password, ct) : null;
         var key = id ?? Guid.NewGuid();
         await audit.MutateAsync("admin.user", key, key.ToString(), async () =>

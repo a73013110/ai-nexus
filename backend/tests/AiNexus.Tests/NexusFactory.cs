@@ -168,10 +168,10 @@ public sealed class TestEmbeddings : AiNexus.Features.Knowledge.Embeddings.IEmbe
 public sealed class FixtureAdAuthenticator : IAdAuthenticator
 {
     public Task VerifyServiceAsync(CancellationToken ct) => Task.CompletedTask;
-    public Task<AdIdentity> AuthenticateAsync(string account, string password, CancellationToken ct)
-        => password == "fixture-password" && account is "alice" or "bob"
-            ? Task.FromResult(new AdIdentity($"S-1-5-21-fixture-{account}", $"{account}@fixture.test", account))
-            : throw new ApiException(401, "ad_invalid_credentials", "AD 帳號或密碼不正確。");
+    public Task<Result<AdIdentity>> AuthenticateAsync(string account, string password, CancellationToken ct)
+        => Task.FromResult(password == "fixture-password" && account is "alice" or "bob"
+            ? Result<AdIdentity>.Ok(new AdIdentity($"S-1-5-21-fixture-{account}", $"{account}@fixture.test", account))
+            : Error.Unauthenticated("ad_invalid_credentials"));
 }
 
 public sealed class TestSchemeProvider : AuthenticationSchemeProvider

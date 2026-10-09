@@ -27,7 +27,11 @@ public static class RequestBodyLimits
     public static IApplicationBuilder UseRequestBodyLimits(this IApplicationBuilder app) => app.Use(async (http, next) =>
     {
         var limit = http.GetEndpoint()?.Metadata.GetMetadata<RequestBodyLimitMetadata>()?.Resolve(http.RequestServices) ?? Default;
-        if (http.Request.ContentLength > limit) throw new ApiException(413, "request_too_large", "上傳內容超過大小上限。");
+        if (http.Request.ContentLength > limit)
+        {
+            await Problems.WriteAsync(http, StatusCodes.Status413PayloadTooLarge, "request_too_large");
+            return;
+        }
         var bodySize = http.Features.Get<IHttpMaxRequestBodySizeFeature>();
         if (bodySize is { IsReadOnly: false }) bodySize.MaxRequestBodySize = limit;
         await next(http);

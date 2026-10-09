@@ -1,4 +1,5 @@
 using AiNexus.Platform.Diagnostics;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 
 namespace AiNexus.Platform.Errors;
@@ -10,7 +11,7 @@ namespace AiNexus.Platform.Errors;
 /// </summary>
 public static class Problems
 {
-    internal const string CodeKey = "code", ErrorsKey = "errors";
+    internal const string CodeKey = "code", ErrorsKey = "errors", IssueKey = "issueCode";
 
     public static int Status(ErrorKind kind) => kind switch
     {
@@ -34,12 +35,35 @@ public static class Problems
         401 => "authentication_required", 403 => "access_denied", 404 => "not_found", 429 => "rate_limited", _ => "invalid_request",
     };
 
-    public static IResult ToProblem(this Error error, IReadOnlyDictionary<string, string[]>? errors = null)
+    public static ProblemHttpResult ToProblem(this Error error, IReadOnlyDictionary<string, string[]>? errors = null)
         => TypedResults.Problem(Details(Status(error.Kind), error.Code, errors));
 
-    public static IResult ToHttpResult<T>(this Result<T> result) => result.IsSuccess ? TypedResults.Ok(result.Value) : result.Error.ToProblem();
+    /// <summary>For a failure already recorded with <see cref="Issues.Report(Error)"/>, for example to audit it: the response reuses that issue code.</summary>
+    public static ProblemHttpResult ToProblem(this Error error, string issueCode)
+    {
+        var details = Details(Status(error.Kind), error.Code, null);
+        details.Extensions[IssueKey] = issueCode;
+        return TypedResults.Problem(details);
+    }
 
-    public static IResult ToHttpResult(this Result result) => result.IsSuccess ? TypedResults.NoContent() : result.Error.ToProblem();
+    public static Results<Ok<T>, ProblemHttpResult> ToHttpResult<T>(this Result<T> result)
+        => result.IsSuccess ? TypedResults.Ok(result.Value) : result.Error.ToProblem();
+
+    public static Results<NoContent, ProblemHttpResult> ToHttpResult(this Result result)
+        => result.IsSuccess ? TypedResults.NoContent() : result.Error.ToProblem();
+
+    /// <summary>For a success that is not <c>200 OK</c> with the value as JSON (a file, a redirect, <c>201 Created</c>).</summary>
+    public static Results<TSuccess, ProblemHttpResult> ToHttpResult<T, TSuccess>(this Result<T> result, Func<T, TSuccess> success)
+        where TSuccess : IResult => result.IsSuccess ? success(result.Value) : result.Error.ToProblem();
+
+    public static async Task<Results<Ok<T>, ProblemHttpResult>> ToHttpResultAsync<T>(this Task<Result<T>> result)
+        => (await result).ToHttpResult();
+
+    public static async Task<Results<NoContent, ProblemHttpResult>> ToHttpResultAsync(this Task<Result> result)
+        => (await result).ToHttpResult();
+
+    public static async Task<Results<TSuccess, ProblemHttpResult>> ToHttpResultAsync<T, TSuccess>(this Task<Result<T>> result, Func<T, TSuccess> success)
+        where TSuccess : IResult => (await result).ToHttpResult(success);
 
     /// <summary>Writes a problem from middleware that runs outside endpoint execution.</summary>
     public static Task WriteAsync(HttpContext http, int status, string code)
@@ -76,8 +100,9 @@ internal sealed class NexusProblemWriter(Issues issues) : IProblemDetailsWriter
         var http = context.HttpContext;
         var details = context.ProblemDetails;
         var status = details.Status ?? http.Response.StatusCode;
-        var problem = issues.Problem(context.Exception ?? new ApiException(status,
-            details.Extensions.TryGetValue(Problems.CodeKey, out var code) && code is string value ? value : Problems.DefaultCode(status), ""));
+        var code = details.Extensions.TryGetValue(Problems.CodeKey, out var named) && named is string value ? value : Problems.DefaultCode(status);
+        var problem = context.Exception is { } exception ? issues.Problem(exception)
+            : issues.Problem(status, code, details.Extensions.TryGetValue(Problems.IssueKey, out var recorded) ? recorded as string : null);
         var errors = details.Extensions.TryGetValue(Problems.ErrorsKey, out var fields) ? fields as IReadOnlyDictionary<string, string[]> : null;
         return new(Issues.WriteAsync(http, problem, errors));
     }

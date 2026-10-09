@@ -78,7 +78,7 @@ public sealed class DiagnosticQuery(NexusDbContext db, CurrentUser current, IDat
     public async Task<DiagnosticPage> ListAsync(DiagnosticFilter filter, CancellationToken ct)
     {
         using var suppress = DiagnosticSuppression.Enter();
-        var (from, to) = Validate(filter); var actor = (await current.GetAsync(ct)).Id;
+        var (from, to) = Validate(filter); var actor = (await current.GetAsync(ct)).OrThrow().Id;
         await AuditAsync(actor, "logs.query", null, filter, ct);
         var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { from, to, filter.Level, filter.Category, filter.EventId, filter.EventName, filter.IssueCode, filter.TraceId, filter.JobId, filter.RunId, filter.OperationId, filter.ErrorCode, filter.Instance, filter.Text, sortDirection = filter.SortDirection ?? "desc", take = filter.Take ?? 50 }))));
         var query = Filter(filter, from, to); db.Database.SetCommandTimeout(options.Value.SqlTimeoutSeconds);
@@ -107,7 +107,7 @@ public sealed class DiagnosticQuery(NexusDbContext db, CurrentUser current, IDat
         direction == "asc" ? query.OrderBy(x => x.At).ThenBy(x => x.LogId) : query.OrderByDescending(x => x.At).ThenByDescending(x => x.LogId);
     public async Task<DiagnosticDetail> DetailAsync(Guid id, CancellationToken ct)
     {
-        using var suppress = DiagnosticSuppression.Enter(); await AuditAsync((await current.GetAsync(ct)).Id, "logs.detail", id, null, ct);
+        using var suppress = DiagnosticSuppression.Enter(); await AuditAsync((await current.GetAsync(ct)).OrThrow().Id, "logs.detail", id, null, ct);
         db.Database.SetCommandTimeout(options.Value.SqlTimeoutSeconds);
         var item = await db.Set<DiagnosticEvent>().AsNoTracking().SingleOrDefaultAsync(x => x.LogId == id, ct) ?? throw new ApiException(404, "log_not_found", "找不到此日誌。");
         return new(Describe(item, detail: true), item.Service, item.Environment, item.Version, item.UserId, item.PropertiesJson, item.ExceptionType, item.ExceptionDetail);
@@ -115,13 +115,13 @@ public sealed class DiagnosticQuery(NexusDbContext db, CurrentUser current, IDat
     public async Task<DiagnosticHealthDto> HealthAsync(CancellationToken ct)
     {
         using var suppress = DiagnosticSuppression.Enter();
-        await AuditAsync((await current.GetAsync(ct)).Id, "logs.health", null, null, ct); return health.Snapshot();
+        await AuditAsync((await current.GetAsync(ct)).OrThrow().Id, "logs.health", null, null, ct); return health.Snapshot();
     }
     public async Task<string> ExportAsync(DiagnosticFilter filter, CancellationToken ct)
     {
         using var suppress = DiagnosticSuppression.Enter(); var (from, to) = Validate(filter, export: true);
         if (filter.Cursor is { Length: > 0 }) throw new ApiException(400, "log_export_cursor", "匯出請使用完整時間範圍。");
-        await AuditAsync((await current.GetAsync(ct)).Id, "logs.export", null, filter, ct);
+        await AuditAsync((await current.GetAsync(ct)).OrThrow().Id, "logs.export", null, filter, ct);
         db.Database.SetCommandTimeout(options.Value.SqlTimeoutSeconds);
         var rows = await Order(Filter(filter, from, to), filter.SortDirection)
             .Select(x => new { x.LogId, x.At, x.Level, x.Category, x.EventName, x.IssueCode, x.TraceId, x.JobId, x.RunId, x.ErrorCode, x.Instance })

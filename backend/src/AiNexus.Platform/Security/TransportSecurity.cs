@@ -14,7 +14,10 @@ public static class TransportSecurity
         app.Use(async (http, next) =>
         {
             if (!http.Request.IsHttps && !testing && (!localHttp || !WebSecurity.IsLoopback(http.Request, http.Connection.RemoteIpAddress)))
-                throw new ApiException(400, "https_required", "");
+            {
+                await Problems.WriteAsync(http, StatusCodes.Status400BadRequest, "https_required");
+                return;
+            }
             await next(http);
         });
         return app;

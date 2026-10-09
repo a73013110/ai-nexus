@@ -29,7 +29,7 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
     /// </summary>
     internal async Task<Result> TryMutateAsync(string action, Guid? resource, string key, Func<Task<Result>> mutation, CancellationToken ct)
     {
-        var actor = (await current.GetAsync(ct)).Id;
+        var actor = (await current.GetAsync(ct)).OrThrow().Id;
         await writes.Gate.WaitAsync(ct);
         object? before = null;
         try
