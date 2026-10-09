@@ -21,8 +21,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
       - name: Restore
@@ -37,7 +37,7 @@ jobs:
         run: dotnet test --solution backend/AiNexus.slnx --no-build -c Release --filter "Category!=Performance&Category!=Browser" --report-xunit-trx --results-directory artifacts/test-results
       - name: Upload test results
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: backend-test-results
           path: artifacts/test-results
@@ -50,8 +50,8 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
           cache: npm
