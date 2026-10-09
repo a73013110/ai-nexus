@@ -9,12 +9,21 @@
     <ProjectReference Include="../AiNexus.Features/AiNexus.Features.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.12" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
+  <!--
+    XML docs are generated for the build's unused-using check, not for the API: they are written for maintainers and must
+    not become OpenAPI descriptions, so the OpenAPI XML-comment generator is removed.
+  -->
+  <Target Name="ExcludeXmlDocsFromOpenApi" BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <Analyzer Remove="@(Analyzer)" Condition="'%(Filename)' == 'Microsoft.AspNetCore.OpenApi.SourceGenerators'" />
+    </ItemGroup>
+  </Target>
   <ItemGroup>
     <Content Update="appsettings.Local.json" CopyToPublishDirectory="Never" />
     <Content Update="appsettings.Secrets.json" CopyToPublishDirectory="Never" />

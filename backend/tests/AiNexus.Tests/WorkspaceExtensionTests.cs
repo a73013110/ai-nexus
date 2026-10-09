@@ -50,11 +50,11 @@ public sealed class WorkspaceExtensionTests
         var conversation = await CreateConversation(client);
         var file = await Upload(client, "notes.md", Encoding.UTF8.GetBytes("測試文件的重要內容"));
         var first = await Send(client, conversation.Id, file.Id);
-        Assert.Contains("測試文件的重要內容", factory.Provider.LastMessages.Last().Content);
+        Assert.Contains("測試文件的重要內容", factory.Provider.LastMessages[^1].Content);
         var detail = (await client.GetFromJsonAsync<ConversationDetailDto>($"/api/v1/conversations/{conversation.Id}"))!;
         Assert.Equal(file.Id, Assert.Single(detail.Messages.Single(x => x.Role == "user").Attachments!).Id);
         await Send(client, conversation.Id, file.Id, first.UserMessageId);
-        Assert.Contains("測試文件的重要內容", factory.Provider.LastMessages.Last().Content);
+        Assert.Contains("測試文件的重要內容", factory.Provider.LastMessages[^1].Content);
         Assert.Equal(HttpStatusCode.NoContent, (await client.DeleteAsync($"/api/v1/attachments/{file.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, (await client.DeleteAsync($"/api/v1/files/{file.Id}")).StatusCode);
     }
@@ -70,7 +70,7 @@ public sealed class WorkspaceExtensionTests
         preview.EnsureSuccessStatusCode();
         Assert.True((await preview.Content.ReadFromJsonAsync<ContextUsageDto>())!.EstimatedInputTokens >= 4096);
         await Send(client, conversation.Id, file.Id);
-        Assert.Equal(Png, Assert.Single(factory.Provider.LastMessages.Last().Images!).Data);
+        Assert.Equal(Png, Assert.Single(factory.Provider.LastMessages[^1].Images!).Data);
         Assert.Equal(Png, await client.GetByteArrayAsync($"/api/v1/attachments/{file.Id}/content"));
     }
 
@@ -195,7 +195,7 @@ public sealed class WorkspaceExtensionTests
         pdf.AddPage(PageSize.A4).AddText("PDF project roadmap", 12, new PdfPoint(40, 700), font);
         var pdfFile = await Upload(client, "roadmap.pdf", pdf.Build());
         await Send(client, conversation.Id, pdfFile.Id);
-        Assert.Contains("PDF project roadmap", factory.Provider.LastMessages.Last().Content);
+        Assert.Contains("PDF project roadmap", factory.Provider.LastMessages[^1].Content);
         using var bytes = new MemoryStream();
         using (var zip = new ZipArchive(bytes, ZipArchiveMode.Create, true))
         {
@@ -204,7 +204,7 @@ public sealed class WorkspaceExtensionTests
         }
         var wordFile = await Upload(client, "roadmap.docx", bytes.ToArray());
         await Send(client, conversation.Id, wordFile.Id);
-        Assert.Contains("Word roadmap", factory.Provider.LastMessages.Last().Content);
+        Assert.Contains("Word roadmap", factory.Provider.LastMessages[^1].Content);
     }
 
     [Fact]

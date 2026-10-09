@@ -31,7 +31,7 @@ internal sealed class ListActivityAudit(NexusDbContext db)
         if (before is { } cursor) query = query.Where(x => x.entry.Id < cursor);
         if (from is { } start) query = query.Where(x => x.entry.At >= start);
         if (until is { } end) query = query.Where(x => x.entry.At < end);
-        if (traceId is not null) query = query.Where(x => x.entry.TraceId == traceId.ToLower());
+        if (traceId?.ToLowerInvariant() is { } trace) query = query.Where(x => x.entry.TraceId == trace);
         if (!string.IsNullOrWhiteSpace(action)) query = query.Where(x => x.entry.Action.StartsWith(action));
         if (!string.IsNullOrWhiteSpace(result)) query = result == "failed"
             ? query.Where(x => x.entry.Result != null && !AuditOutcomes.Accepted.Contains(x.entry.Result))

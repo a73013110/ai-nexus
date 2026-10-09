@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Attachments;
 
 /// <summary>Deleting is a durable outbox state. Metadata and quota survive until physical deletion succeeds.</summary>
-public sealed class AttachmentLifecycle(NexusDbContext db, IAttachmentStorage storage, AttachmentQuota quota, IPrivateReaders readers, IOptions<AttachmentOptions> options, ILogger<AttachmentLifecycle> logger)
+public sealed partial class AttachmentLifecycle(NexusDbContext db, IAttachmentStorage storage, AttachmentQuota quota, IPrivateReaders readers, IOptions<AttachmentOptions> options, ILogger<AttachmentLifecycle> logger)
 {
     private IQueryable<Attachment> Unreferenced() => db.Set<Attachment>().Where(x =>
         !db.Set<MessageAttachment>().Any(l => l.AttachmentId == x.Id) && !db.Set<AttachmentReference>().Any(l => l.AttachmentId == x.Id));
@@ -74,7 +74,7 @@ public sealed class AttachmentLifecycle(NexusDbContext db, IAttachmentStorage st
                 await db.Set<Attachment>().Where(x => x.Id == file.Id && x.StorageState == AttachmentStates.Deleting).ExecuteDeleteAsync(ct);
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            { logger.LogWarning("Attachment {AttachmentId} deletion awaits retry ({ErrorType}).", file.Id, ex.GetType().Name); }
+            { LogDeletionDeferred(logger, file.Id, ex.GetType().Name); }
         }
     }
 
@@ -127,12 +127,18 @@ public sealed class AttachmentLifecycle(NexusDbContext db, IAttachmentStorage st
         {
             try { await storage.DeleteAsync(key, ct); }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            { logger.LogWarning("Untracked attachment {StorageKey} deletion awaits retry ({ErrorType}).", key, ex.GetType().Name); }
+            { LogUntrackedDeletionDeferred(logger, key, ex.GetType().Name); }
         }
     }
+
+    [LoggerMessage(EventId = 6001, EventName = "attachment.delete_deferred", Level = LogLevel.Warning, Message = "Attachment {AttachmentId} deletion awaits retry ({ErrorType}).")]
+    private static partial void LogDeletionDeferred(ILogger logger, Guid attachmentId, string errorType);
+
+    [LoggerMessage(EventId = 6002, EventName = "attachment.untracked_delete_deferred", Level = LogLevel.Warning, Message = "Untracked attachment {StorageKey} deletion awaits retry ({ErrorType}).")]
+    private static partial void LogUntrackedDeletionDeferred(ILogger logger, string storageKey, string errorType);
 }
 
-public sealed class AttachmentCleanupWorker(IServiceScopeFactory scopes, IOptions<AttachmentOptions> options, StorageReadiness readiness, ILogger<AttachmentCleanupWorker> logger) : BackgroundService
+public sealed partial class AttachmentCleanupWorker(IServiceScopeFactory scopes, IOptions<AttachmentOptions> options, StorageReadiness readiness, ILogger<AttachmentCleanupWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -148,7 +154,10 @@ public sealed class AttachmentCleanupWorker(IServiceScopeFactory scopes, IOption
                 await lifecycle.ReconcileAsync(stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }
-            catch (Exception ex) { logger.LogWarning("Attachment cleanup awaits retry ({ErrorType}).", ex.GetType().Name); }
+            catch (Exception ex) { LogCleanupDeferred(logger, ex.GetType().Name); }
         } while (await timer.WaitForNextTickAsync(stoppingToken));
     }
+
+    [LoggerMessage(EventId = 6003, EventName = "attachment.cleanup_deferred", Level = LogLevel.Warning, Message = "Attachment cleanup awaits retry ({ErrorType}).")]
+    private static partial void LogCleanupDeferred(ILogger logger, string errorType);
 }

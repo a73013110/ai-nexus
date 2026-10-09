@@ -38,7 +38,7 @@ public sealed class Argon2Passwords : IDisposable
             var parts = encoded.Split('$');
             if (parts.Length != 6 || parts[1] != "argon2id" || parts[2] != "v=19") return (false, false);
             var costs = parts[3].Split(',');
-            if (costs.Length != 3 || !costs[0].StartsWith("m=") || !costs[1].StartsWith("t=") || !costs[2].StartsWith("p=")) return (false, false);
+            if (costs.Length != 3 || !costs[0].StartsWith("m=", StringComparison.Ordinal) || !costs[1].StartsWith("t=", StringComparison.Ordinal) || !costs[2].StartsWith("p=", StringComparison.Ordinal)) return (false, false);
             var memory = int.Parse(costs[0][2..], CultureInfo.InvariantCulture);
             var iterations = int.Parse(costs[1][2..], CultureInfo.InvariantCulture);
             var parallelism = int.Parse(costs[2][2..], CultureInfo.InvariantCulture);

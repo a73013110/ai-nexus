@@ -1,4 +1,5 @@
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.Identity;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Chat;
@@ -10,6 +11,13 @@ namespace AiNexus.Features.Chat;
 /// </summary>
 public sealed class ChatModule : IFeatureModule
 {
+    /// <summary>
+    /// Sending (including regenerate, edit and web search, which are runs too). Above any human pace; it stops scripts
+    /// from turning one user's quota checks, context building and provider queue into a load on everyone.
+    /// </summary>
+    public const string SendRateLimit = "chat-send";
+    public const int SendsPerMinute = 30;
+
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
@@ -26,6 +34,7 @@ public sealed class ChatModule : IFeatureModule
         services.AddSingleton<RunSignals>();
         services.AddHostedService<GenerationWorker>();
         services.AddHostedService<RunRecoveryWorker>();
+        services.AddRateLimiter(options => options.AddPerUserLimit(SendRateLimit, SendsPerMinute));
     }
 
     // Endpoint order is the published OpenAPI order; the endpoints keep the tags of the API sections they belong to.

@@ -1,5 +1,4 @@
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Time;
@@ -18,7 +17,7 @@ public interface IEmbeddingClient
     Task<EmbeddingBatchResult> EmbedBatchAsync(IReadOnlyList<string> inputs, EmbeddingPurpose purpose, EmbeddingProfile profile, CancellationToken ct);
 }
 // All retrieval model endpoints share transport, bounded retries and invocation accounting.
-public sealed class RetrievalHttp(IHttpClientFactory clients, ILogger<RetrievalHttp> logger)
+public sealed partial class RetrievalHttp(IHttpClientFactory clients, ILogger<RetrievalHttp> logger)
 {
     public async Task<JsonDocument> PostAsync(string client, string url, object payload, CancellationToken ct, string? apiKey = null)
     {
@@ -32,20 +31,23 @@ public sealed class RetrievalHttp(IHttpClientFactory clients, ILogger<RetrievalH
                 if (!response.IsSuccessStatusCode)
                 {
                     var transient = response.StatusCode is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests || (int)response.StatusCode >= 500;
-                    if (transient && attempt < 2) { await Delay(attempt, ct, client, (int)response.StatusCode); continue; }
+                    if (transient && attempt < 2) { await Delay(attempt, client, (int)response.StatusCode, null, ct); continue; }
                     throw new ApiException(response.StatusCode == HttpStatusCode.TooManyRequests ? 429 : 503, "retrieval_provider_unavailable", "檢索模型服務目前無法使用，請確認端點、模型與配額。");
                 }
                 return await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync(ct), cancellationToken: ct);
             }
-            catch (HttpRequestException ex) when (attempt < 2) { await Delay(attempt, ct, client, exception: ex); }
+            catch (HttpRequestException ex) when (attempt < 2) { await Delay(attempt, client, null, ex, ct); }
         }
     }
-    private async Task Delay(int attempt, CancellationToken ct, string service, int? status = null, Exception? exception = null)
+    private async Task Delay(int attempt, string service, int? status, Exception? exception, CancellationToken ct)
     {
         using var scope = logger.BeginScope(new Dictionary<string, object?> { ["ExternalService"] = service, ["StatusCode"] = status, ["ErrorCode"] = "retrieval_retry" });
-        logger.LogWarning(new EventId(2002, "retrieval.retry"), exception, "Retrieval provider retry {Attempt} after transient failure.", attempt + 1);
+        LogRetry(logger, exception, attempt + 1);
         await Task.Delay(TimeSpan.FromMilliseconds(250 * (1 << attempt) + Random.Shared.Next(100)), ct);
     }
+
+    [LoggerMessage(EventId = 2002, EventName = "retrieval.retry", Level = LogLevel.Warning, Message = "Retrieval provider retry {Attempt} after transient failure.")]
+    private static partial void LogRetry(ILogger logger, Exception? exception, int attempt);
 }
 public sealed class OllamaEmbeddingClient(RetrievalHttp http, IOptions<KnowledgeOptions> options, IOptions<InferenceOptions> inference) : IEmbeddingClient
 {
@@ -117,6 +119,7 @@ public sealed class RetrievalInvocation(IServiceScopeFactory scopes, IOptions<Kn
         }
     }
 }
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1001:Types that own disposable fields should be disposable", Justification = "SemaphoreSlim without AvailableWaitHandle holds nothing to release; disposing a shared gate would throw in work still releasing it during shutdown.")]
 public sealed class EmbeddingBatchScheduler(IOptions<KnowledgeOptions> options, GenerationScheduler generation)
 {
     private readonly SemaphoreSlim gate = new(options.Value.MaxConcurrentBatches);

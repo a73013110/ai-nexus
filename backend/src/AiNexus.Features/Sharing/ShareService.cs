@@ -27,12 +27,15 @@ public sealed class ShareService(NexusDbContext db, TimeProvider clock)
     }
 }
 
-public sealed class ShareCleanupWorker(IServiceScopeFactory scopes, StorageReadiness storage, ILogger<ShareCleanupWorker> logger) : BackgroundService
+public sealed partial class ShareCleanupWorker(IServiceScopeFactory scopes, StorageReadiness storage, ILogger<ShareCleanupWorker> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         if (!storage.Configured) return;
         using var timer = new PeriodicTimer(TimeSpan.FromMinutes(20));
-        do { try { using var scope = scopes.CreateScope(); await scope.ServiceProvider.GetRequiredService<ShareService>().PurgeExpiredAsync(ct); } catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; } catch (Exception ex) { logger.LogWarning("Share cleanup deferred ({ErrorType}).", ex.GetType().Name); } } while (await timer.WaitForNextTickAsync(ct));
+        do { try { using var scope = scopes.CreateScope(); await scope.ServiceProvider.GetRequiredService<ShareService>().PurgeExpiredAsync(ct); } catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; } catch (Exception ex) { LogDeferred(logger, ex.GetType().Name); } } while (await timer.WaitForNextTickAsync(ct));
     }
+
+    [LoggerMessage(EventId = 6101, EventName = "share.cleanup_deferred", Level = LogLevel.Warning, Message = "Share cleanup deferred ({ErrorType}).")]
+    private static partial void LogDeferred(ILogger logger, string errorType);
 }

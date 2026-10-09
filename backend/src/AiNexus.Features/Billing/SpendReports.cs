@@ -44,7 +44,7 @@ public sealed class SpendReports(NexusDbContext db, ModelPresentation presentati
         {
             var rows = await query.ToListAsync(ct);
             totals = Totals(rows);
-            daily = rows.GroupBy(x => new { Day = x.CreatedAt.ToOffset(TimeSpan.FromMinutes(p.Offset)).ToString("yyyy-MM-dd"), x.Currency, x.Kind })
+            daily = rows.GroupBy(x => new { Day = x.CreatedAt.ToOffset(TimeSpan.FromMinutes(p.Offset)).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), x.Currency, x.Kind })
                 .OrderBy(g => g.Key.Day).Select(g => Bucket(g.Key.Day, g)).ToArray();
             models = ModelBuckets(rows, administrator);
             input = rows.Sum(x => x.InputTokens ?? 0); output = rows.Sum(x => x.OutputTokens ?? 0);
@@ -62,7 +62,7 @@ public sealed class SpendReports(NexusDbContext db, ModelPresentation presentati
             daily = (await query.GroupBy(x => new { Day = x.CreatedAt.AddMinutes(p.Offset).Date, x.Currency, x.Kind })
                 .Select(g => new { g.Key.Day, g.Key.Currency, g.Key.Kind, Amount = g.Sum(x => x.Amount ?? 0), Requests = g.Count(),
                     Unknown = g.Count(x => x.Amount == null && x.State != "pending"), Input = g.Sum(x => x.InputTokens ?? 0), Output = g.Sum(x => x.OutputTokens ?? 0) })
-                .OrderBy(x => x.Day).ToListAsync(ct)).Select(x => new SpendBucketDto(x.Day.ToString("yyyy-MM-dd"), x.Currency, x.Kind, x.Amount, x.Requests, x.Unknown, x.Input, x.Output)).ToArray();
+                .OrderBy(x => x.Day).ToListAsync(ct)).Select(x => new SpendBucketDto(x.Day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), x.Currency, x.Kind, x.Amount, x.Requests, x.Unknown, x.Input, x.Output)).ToArray();
             models = (await query.GroupBy(x => new { x.Provider, x.ModelId, x.Currency, x.Kind }).Select(g => new { g.Key.Provider, g.Key.ModelId,
                 g.Key.Currency, g.Key.Kind, Amount = g.Sum(x => x.Amount ?? 0), Requests = g.Count(), Unknown = g.Count(x => x.Amount == null && x.State != "pending"),
                 Input = g.Sum(x => x.InputTokens ?? 0), Output = g.Sum(x => x.OutputTokens ?? 0) }).OrderByDescending(x => x.Requests).ToListAsync(ct))
@@ -117,7 +117,7 @@ public sealed class SpendReports(NexusDbContext db, ModelPresentation presentati
         var csv = new StringBuilder("\uFEFF使用者,帳號,幣別,計費類型,已知金額,呼叫次數,未知費用次數\r\n");
         foreach (var user in report.Users)
             csv.AppendLine(string.Join(',', new[] { Cell(user.DisplayName), Cell(user.Account), Cell(user.Currency), Cell(user.Kind),
-                user.Amount.ToString(CultureInfo.InvariantCulture), user.Requests.ToString(), user.UnknownCalls.ToString() }));
+                user.Amount.ToString(CultureInfo.InvariantCulture), user.Requests.ToString(CultureInfo.InvariantCulture), user.UnknownCalls.ToString(CultureInfo.InvariantCulture) }));
         return Encoding.UTF8.GetBytes(csv.ToString());
     }
     private static string Cell(string text) => "\"" + (text.TrimStart().StartsWithAny('=', '+', '-', '@', '\t', '\r') ? "'" : "") + text.Replace("\"", "\"\"") + "\"";

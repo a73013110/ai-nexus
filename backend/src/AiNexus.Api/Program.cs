@@ -9,6 +9,7 @@ using AiNexus.Platform;
 using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Diagnostics;
+using AiNexus.Platform.Health;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Security;
 
@@ -52,6 +53,7 @@ app.UseStorageReadiness();
 app.UseCsrfProtection();
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "alive" })).AllowAnonymous();
+app.MapReadinessCheck();
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing")) app.MapOpenApi().AllowAnonymous();
 app.MapFeatures();
 // Unknown API paths must never return the SPA's HTML document.
@@ -64,8 +66,8 @@ if (!await app.EnsureDatabaseReadyAsync())
     await app.DisposeAsync();
     return;
 }
-app.Lifetime.ApplicationStarted.Register(() => app.Logger.LogInformation(DiagnosticEvents.Started, "Service started."));
-app.Lifetime.ApplicationStopping.Register(() => app.Logger.LogInformation(DiagnosticEvents.Stopping, "Service stopping."));
+app.Lifetime.ApplicationStarted.Register(() => LogStarted(app.Logger));
+app.Lifetime.ApplicationStopping.Register(() => LogStopping(app.Logger));
 try { await app.RunAsync(); }
 catch (Exception ex)
 {
@@ -73,4 +75,11 @@ catch (Exception ex)
     throw;
 }
 
-public partial class Program;
+public partial class Program
+{
+    [LoggerMessage(EventId = 5000, EventName = "service.started", Level = LogLevel.Information, Message = "Service started.")]
+    private static partial void LogStarted(ILogger logger);
+
+    [LoggerMessage(EventId = 5001, EventName = "service.stopping", Level = LogLevel.Information, Message = "Service stopping.")]
+    private static partial void LogStopping(ILogger logger);
+}

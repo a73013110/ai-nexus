@@ -58,9 +58,10 @@ public sealed class DiagnosticExporter : IDisposable
                     ["ExternalService"] = item.ExternalService, ["ErrorCode"] = item.ErrorCode, ["UserId"] = item.UserId?.ToString(), ["Instance"] = item.Instance, ["Environment"] = item.Environment
                 });
                 var rendered = DiagnosticMessage.Render(item, includeProperties: true);
-                logger.Log(item.Level, new EventId(item.EventId, item.EventName),
-                    new[] { new KeyValuePair<string, object?>("{OriginalFormat}", item.MessageTemplate),
-                        new KeyValuePair<string, object?>("RenderedMessage", rendered) }, null, (_, _) => rendered);
+                if (logger.IsEnabled(item.Level))
+                    logger.Log(item.Level, new EventId(item.EventId, item.EventName),
+                        new[] { new KeyValuePair<string, object?>("{OriginalFormat}", item.MessageTemplate),
+                            new KeyValuePair<string, object?>("RenderedMessage", rendered) }, null, (_, _) => rendered);
             }
             catch (Exception) { Interlocked.Increment(ref health.ExportFailures); health.Emergency("otlp_export_failed"); }
         }
@@ -95,6 +96,20 @@ public sealed class DiagnosticExporter : IDisposable
 
 public static class DiagnosticRegistration
 {
+    /// <summary>
+    /// Our own meters plus the framework's built-in ones (request duration by route template, Kestrel connections,
+    /// rate-limiter and authorization outcomes, outgoing HTTP by host, EF Core query and SaveChanges counts, GC and
+    /// thread pool). Their tags never carry SQL text, full URLs, users or client addresses, unlike the automatic
+    /// tracing instrumentations, which stay off.
+    /// </summary>
+    public static readonly string[] Meters =
+    [
+        "AiNexus.Diagnostics", "AiNexus.Runtime",
+        "Microsoft.AspNetCore.Hosting", "Microsoft.AspNetCore.Server.Kestrel", "Microsoft.AspNetCore.Routing",
+        "Microsoft.AspNetCore.Diagnostics", "Microsoft.AspNetCore.RateLimiting", "Microsoft.AspNetCore.Authentication",
+        "Microsoft.AspNetCore.Authorization", "System.Net.Http", "Microsoft.EntityFrameworkCore", "System.Runtime",
+    ];
+
     public static void AddNexusDiagnostics(this WebApplicationBuilder builder)
     {
         builder.Services.AddOptions<DiagnosticOptions>().BindConfiguration("Diagnostics").Validate(x => x.Valid(), "Invalid diagnostics limits or OTLP endpoint.").ValidateOnStart();
@@ -116,6 +131,6 @@ public static class DiagnosticRegistration
             t.SetResourceBuilder(Resource()).AddSource(DiagnosticTrace.SourceName).SetSampler(new AlwaysOnSampler());
             if (configuration.OtlpEnabled) t.AddOtlpExporter(o => { o.Endpoint = new Uri(configuration.OtlpEndpoint.TrimEnd('/') + "/v1/traces"); o.Protocol = OtlpExportProtocol.HttpProtobuf; o.TimeoutMilliseconds = 2000; });
         });
-        telemetry.WithMetrics(m => { m.SetResourceBuilder(Resource()).AddMeter("AiNexus.Diagnostics", "AiNexus.Runtime"); if (configuration.OtlpEnabled) m.AddOtlpExporter(o => { o.Endpoint = new Uri(configuration.OtlpEndpoint.TrimEnd('/') + "/v1/metrics"); o.Protocol = OtlpExportProtocol.HttpProtobuf; o.TimeoutMilliseconds = 2000; }); });
+        telemetry.WithMetrics(m => { m.SetResourceBuilder(Resource()).AddMeter(Meters); if (configuration.OtlpEnabled) m.AddOtlpExporter(o => { o.Endpoint = new Uri(configuration.OtlpEndpoint.TrimEnd('/') + "/v1/metrics"); o.Protocol = OtlpExportProtocol.HttpProtobuf; o.TimeoutMilliseconds = 2000; }); });
     }
 }

@@ -1,4 +1,3 @@
-using System.Threading.RateLimiting;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Diagnostics;
@@ -27,9 +26,7 @@ public sealed class MonitoringModule : IFeatureModule
         services.ConfigureHttpClientDefaults(client => client.AddHttpMessageHandler<TrafficHttpHandler>());
         services.AddHostedService<RuntimeSampler>();
         services.AddFeaturePolicy(Feature);
-        services.AddRateLimiter(options => options.AddPolicy(PresenceRateLimit, http => RateLimitPartition.GetFixedWindowLimiter(
-            http.User.FindFirst(SessionIdentity.UserId)?.Value ?? http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-            _ => new FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0, AutoReplenishment = true })));
+        services.AddRateLimiter(options => options.AddPerUserLimit(PresenceRateLimit, 120));
     }
 
     // Endpoint order is the published OpenAPI order.

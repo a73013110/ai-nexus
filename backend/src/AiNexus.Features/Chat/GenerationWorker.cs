@@ -12,16 +12,16 @@ using AiNexus.Features.Inference;
 
 namespace AiNexus.Features.Chat;
 
-public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, RunSignals signals, InferenceRouter router, IOptions<InferenceOptions> options, StorageReadiness storage, ILogger<GenerationWorker> logger, Issues issues) : BackgroundService
+public sealed partial class GenerationWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, RunSignals signals, InferenceRouter router, IOptions<InferenceOptions> options, StorageReadiness storage, ILogger<GenerationWorker> logger, Issues issues) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!storage.Configured) { logger.LogWarning("Generation disabled: storage is not configured."); return; }
+        if (!storage.Configured) { LogStorageNotConfigured(logger); return; }
         try
         {
             using var startup = scopes.CreateScope();
             var db = startup.ServiceProvider.GetRequiredService<NexusDbContext>();
-            if (!await db.Database.CanConnectAsync(stoppingToken)) { logger.LogWarning("Generation disabled: storage is unavailable."); return; }
+            if (!await db.Database.CanConnectAsync(stoppingToken)) { LogStorageUnavailable(logger); return; }
             await startup.ServiceProvider.GetRequiredService<RunLeaseRecovery>().RecoverAsync(DateTimeOffset.UtcNow, stoppingToken);
             foreach (var profile in options.Value.Models)
             {
@@ -34,7 +34,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
         }
         catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
         {
-            logger.LogWarning("Generation disabled during startup ({ErrorType}). Check storage and migrations.", ex.GetType().Name);
+            LogStartupFailed(logger, ex.GetType().Name);
             return;
         }
         try
@@ -64,11 +64,11 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
                     {
                         using var scope = scopes.CreateScope();
                         var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-                        var run = await db.Runs.SingleAsync(x => x.Id == job.RunId);
+                        var run = await db.Runs.SingleAsync(x => x.Id == job.RunId, CancellationToken.None);
                         if (RunStates.IsActive(run.Status)) await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, RunStates.Failed, "internal_error", CancellationToken.None, issue);
                     }
                 }
-                catch (Exception recovery) { logger.LogWarning("Run {RunId} awaits orphan recovery ({ErrorType}).", job.RunId, recovery.GetType().Name); }
+                catch (Exception recovery) { LogRecoveryPending(logger, job.RunId, recovery.GetType().Name); }
             }
             finally { scheduler.Stopped(); scheduler.Finish(job); }
         }
@@ -76,7 +76,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
 
     private async Task GenerateAsync(GenerationJob job, CancellationToken stoppingToken)
     {
-        logger.LogInformation(DiagnosticEvents.RunStarted, "Generation started.");
+        LogStarted(logger);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(job.Cancellation.Token, stoppingToken);
         timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.TimeoutSeconds));
         GenerationParameters parameters;
@@ -165,7 +165,7 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
         {
             using var scope = scopes.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-            var run = await db.Runs.SingleAsync(x => x.Id == job.RunId);
+            var run = await db.Runs.SingleAsync(x => x.Id == job.RunId, CancellationToken.None);
             if (RunStates.IsActive(run.Status)) await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, finalStatus, error, CancellationToken.None, issueCode);
         }
     }
@@ -232,4 +232,19 @@ public sealed class GenerationWorker(IServiceScopeFactory scopes, GenerationSche
                 if (input is long inputTokens) setters.SetProperty(x => x.InputTokens, inputTokens);
                 if (output is long outputTokens) setters.SetProperty(x => x.OutputTokens, outputTokens);
             }, ct);
+
+    [LoggerMessage(EventId = 3100, EventName = "generation.started", Level = LogLevel.Information, Message = "Generation started.")]
+    private static partial void LogStarted(ILogger logger);
+
+    [LoggerMessage(EventId = 3102, EventName = "generation.disabled", Level = LogLevel.Warning, Message = "Generation disabled: storage is not configured.")]
+    private static partial void LogStorageNotConfigured(ILogger logger);
+
+    [LoggerMessage(EventId = 3103, EventName = "generation.storage_unavailable", Level = LogLevel.Warning, Message = "Generation disabled: storage is unavailable.")]
+    private static partial void LogStorageUnavailable(ILogger logger);
+
+    [LoggerMessage(EventId = 3104, EventName = "generation.startup_failed", Level = LogLevel.Warning, Message = "Generation disabled during startup ({ErrorType}). Check storage and migrations.")]
+    private static partial void LogStartupFailed(ILogger logger, string errorType);
+
+    [LoggerMessage(EventId = 3105, EventName = "generation.recovery_pending", Level = LogLevel.Warning, Message = "Run {RunId} awaits orphan recovery ({ErrorType}).")]
+    private static partial void LogRecoveryPending(ILogger logger, Guid runId, string errorType);
 }

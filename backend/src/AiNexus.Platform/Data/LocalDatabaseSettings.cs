@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Data.SqlClient;
 
 namespace AiNexus.Platform.Data;
@@ -12,7 +13,7 @@ public static class LocalDatabaseSettings
             18456 => "SQL 帳號或密碼不正確，或 SQL 帳密登入未啟用。",
             4060 => "SQL 登入成功，但無法開啟指定資料庫。請初始化 AiNexus 或確認權限。",
             262 or 229 or 916 => "SQL 帳號缺少建庫／DDL 或資料讀寫權限。請由 DBA 使用管理帳號初始化。",
-            _ => $"SQL 連線／初始化失敗（{exception.GetType().Name}，代碼 {sql?.Number.ToString() ?? "unknown"}）。請確認伺服器、instance、TCP 連線與權限。"
+            _ => $"SQL 連線／初始化失敗（{exception.GetType().Name}，代碼 {sql?.Number.ToString(CultureInfo.InvariantCulture) ?? "unknown"}）。請確認伺服器、instance、TCP 連線與權限。"
         };
     }
     public static void Apply(ConfigurationManager configuration)

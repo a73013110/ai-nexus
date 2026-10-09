@@ -1,5 +1,3 @@
-using System.Text;
-using System.Text.Json;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Operations;
@@ -37,7 +35,7 @@ public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskSe
             if (existing.ContainsKey(number)) continue;
             var text = pdf is null ? file.ExtractedText ?? "" : ContentOrderTextExtractor.GetText(pdf.GetPage(number));
             var extraction = "native"; var review = false;
-            if (file.ContentType.StartsWith("image/") || (pdf is not null && text.Trim().Length < 40))
+            if (file.ContentType.StartsWith("image/", StringComparison.Ordinal) || (pdf is not null && text.Trim().Length < 40))
             {
                 await execution.CheckpointAsync($"辨識第 {number} 頁文字", number - 1, total, ct);
                 var images = new List<InferenceImage>();

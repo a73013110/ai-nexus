@@ -7,6 +7,8 @@ public sealed record SqlVectorCapabilitiesDto(string Version, string Edition, in
     bool FullTextInstalled = false, bool TraditionalChineseWordBreaker = false, bool FullTextIndex = false);
 public sealed class SqlVectorCapabilities(IDbHelper<INexusDatabase> sql)
 {
+    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
+
     public async Task<SqlVectorCapabilitiesDto> ReadAsync(CancellationToken ct)
     {
         var info = await sql.QuerySingleAsync<ServerInfo>("SELECT CONVERT(nvarchar(128),SERVERPROPERTY('ProductVersion')) AS Version, CONVERT(nvarchar(128),SERVERPROPERTY('Edition')) AS Edition, CONVERT(int,SERVERPROPERTY('ProductMajorVersion')) AS MajorVersion", commandTimeout: 5, cancellationToken: ct);
@@ -26,7 +28,7 @@ public sealed class SqlVectorCapabilities(IDbHelper<INexusDatabase> sql)
     public async Task VerifyAsync(string output, CancellationToken ct)
     {
         var result = await ReadAsync(ct);
-        await File.WriteAllTextAsync(output, JsonSerializer.Serialize(result, new JsonSerializerOptions { WriteIndented = true }), ct);
+        await File.WriteAllTextAsync(output, JsonSerializer.Serialize(result, Indented), ct);
         Console.WriteLine($"SQL {result.Version} · {result.Edition} · 原生向量／精確距離：{(result.ExactDistance ? "通過" : "無法使用；需要 SQL Server 2025")}");
         Console.WriteLine($"全文元件：{result.FullTextInstalled} · 繁中 1028 斷詞器：{result.TraditionalChineseWordBreaker} · 知識全文索引：{result.FullTextIndex}");
     }

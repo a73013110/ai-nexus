@@ -119,8 +119,8 @@ public sealed class ProviderAndRecoveryTests
         await db.RunEvents.Where(x => x.RunId == run.Id && x.Sequence <= 2).ExecuteDeleteAsync();
         var events = await client.GetStringAsync($"/api/v1/runs/{run.Id}/events?after=0");
         Assert.Contains("snapshot", events);
-        var data = events.Split('\n').Single(x => x.StartsWith("data: "))[6..];
-        Assert.Equal(complete.Content, JsonSerializer.Deserialize<RunEventDto>(data, new JsonSerializerOptions(JsonSerializerDefaults.Web))!.Delta);
+        var data = events.Split('\n').Single(x => x.StartsWith("data: ", StringComparison.Ordinal))[6..];
+        Assert.Equal(complete.Content, JsonSerializer.Deserialize<RunEventDto>(data, JsonSerializerOptions.Web)!.Delta);
     }
 
     [Fact]

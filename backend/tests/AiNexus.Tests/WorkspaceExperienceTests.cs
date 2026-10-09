@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Json;
@@ -81,7 +82,7 @@ public sealed class WorkspaceExperienceTests
         }
         var page = (await alice.GetFromJsonAsync<NotificationPageDto>("/api/v1/notifications"))!;
         Assert.Equal(50, page.Items.Count); Assert.Equal(55, page.Unread); Assert.True(page.HasMore);
-        var next = (await alice.GetFromJsonAsync<NotificationPageDto>($"/api/v1/notifications?before={page.Items.Last().Id}"))!;
+        var next = (await alice.GetFromJsonAsync<NotificationPageDto>($"/api/v1/notifications?before={page.Items[^1].Id}"))!;
         Assert.Equal(5, next.Items.Count); Assert.False(next.HasMore); Assert.Equal(55, page.Items.Concat(next.Items).Select(x => x.Id).Distinct().Count());
         Assert.Equal(HttpStatusCode.BadRequest, (await bob.GetAsync($"/api/v1/notifications?before={page.Items[0].Id}")).StatusCode);
         (await bob.PostAsync($"/api/v1/notifications/{page.Items[0].Id}/read", null)).EnsureSuccessStatusCode();
@@ -130,7 +131,7 @@ public sealed class WorkspaceExperienceTests
         using var inline = await reader.GetAsync($"/api/v1/shares/{share.Id}/files/{file.Id}"); inline.EnsureSuccessStatusCode(); Assert.Equal("attachment", inline.Content.Headers.ContentDisposition!.DispositionType);
         Assert.Equal("附件原始文字", await inline.Content.ReadAsStringAsync());
         var snapshot = (await reader.GetFromJsonAsync<SharedContentDto>($"/api/v1/shares/{share.Id}"))!;
-        Assert.NotNull(snapshot.Snapshot.Messages.Last().Timing); Assert.Equal(123, snapshot.Snapshot.Messages.Last().Timing!.InputTokens);
+        Assert.NotNull(snapshot.Snapshot.Messages[^1].Timing); Assert.Equal(123, snapshot.Snapshot.Messages[^1].Timing!.InputTokens);
         (await owner.DeleteAsync($"/api/v1/shares/{share.Id}")).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.NotFound, (await reader.GetAsync($"/api/v1/shares/{share.Id}/files/{file.Id}/preview")).StatusCode);
     }
@@ -170,7 +171,7 @@ public sealed class WorkspaceExperienceTests
     {
         await using var factory = new NexusFactory(backgroundJobs: false); using var owner = await factory.SignedInAsync(); using var other = await factory.SignedInAsync("bob");
         var id = (await owner.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id; var otherId = (await other.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
-        var at = DateTimeOffset.Parse("2026-09-30T18:00:00Z");
+        var at = DateTimeOffset.Parse("2026-09-30T18:00:00Z", CultureInfo.InvariantCulture);
         using (var scope = factory.Services.CreateScope()) { var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             db.AddRange(new ModelInvocation { OwnerId = id, Kind = "repository-review", ModelId = "test-model", Status = "completed", InputTokens = 120, OutputTokens = 30, CreatedAt = at }, new ModelInvocation { OwnerId = id, Kind = "ocr", ModelId = "another", Status = "failed", CreatedAt = at }, new ModelInvocation { OwnerId = otherId, ModelId = "test-model", InputTokens = 999, OutputTokens = 999, CreatedAt = at }); await db.SaveChangesAsync(); }
         var dashboard = (await owner.GetFromJsonAsync<DashboardDto>("/api/v1/dashboard?scope=personal&from=2026-09-30T00:00:00Z&until=2026-10-02T00:00:00Z&offset=480"))!;
@@ -190,7 +191,7 @@ public sealed class WorkspaceExperienceTests
         var response = await owner.PostAsJsonAsync("/api/v1/repositories/reviews", request); response.EnsureSuccessStatusCode(); var review = (await response.Content.ReadFromJsonAsync<RepositoryReviewDto>())!;
         Assert.Equal("queued", review.Job.Status); Assert.Equal("repository-review", review.Job.Kind);
         var again = await owner.PostAsJsonAsync("/api/v1/repositories/reviews", request); again.EnsureSuccessStatusCode(); Assert.Equal(review.Id, (await again.Content.ReadFromJsonAsync<RepositoryReviewDto>())!.Id);
-        Assert.Contains(source.Requests, x => x.EndsWith("/compare/" + request.BaseCommit + ".." + request.Commit + "?output=diff"));
+        Assert.Contains(source.Requests, x => x.EndsWith("/compare/" + request.BaseCommit + ".." + request.Commit + "?output=diff", StringComparison.Ordinal));
         Assert.Equal(HttpStatusCode.Conflict, (await owner.PostAsJsonAsync("/api/v1/repositories/reviews", request with { Note = "不同重點" })).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/v1/repositories/reviews/{review.Id}")).StatusCode);
         using (var scope = factory.Services.CreateScope()) { var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();

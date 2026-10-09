@@ -10,7 +10,7 @@ using AiNexus.Features.Inference;
 namespace AiNexus.Features.Chat;
 
 /// <summary>Run lookup and finishing shared by the run slices, the event stream and the generation worker.</summary>
-public sealed class RunService(NexusDbContext db, RunSignals signals, ConversationService conversations, BillingService billing, AiNexus.Features.Notifications.NotificationService notifications, Issues issues, ILogger<RunService> logger, TimeProvider clock)
+public sealed partial class RunService(NexusDbContext db, RunSignals signals, ConversationService conversations, BillingService billing, AiNexus.Features.Notifications.NotificationService notifications, Issues issues, ILogger<RunService> logger, TimeProvider clock)
 {
     /// <summary>Throwing form of <see cref="FindOwnedAsync"/>, used by the event stream.</summary>
     public async Task<GenerationRun> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
@@ -44,7 +44,7 @@ public sealed class RunService(NexusDbContext db, RunSignals signals, Conversati
         if (status == RunStates.Failed) {
             run.IssueCode = issueCode ?? issues.Report(new ApiException(503, error ?? "generation_failed", ""), error ?? "generation_failed");
         }
-        logger.LogInformation(DiagnosticEvents.RunFinished, "Generation finished with {Stage}.", status);
+        LogFinished(logger, status);
         run.ActiveOwnerId = null;
         run.LeaseExpiresAt = null;
         RunTiming.Finish(run, clock.GetUtcNow());
@@ -65,4 +65,7 @@ public sealed class RunService(NexusDbContext db, RunSignals signals, Conversati
         run.LastSequence++;
         db.RunEvents.Add(new RunEvent { RunId = run.Id, Sequence = run.LastSequence, Type = type, Status = run.Status, Delta = delta, ErrorCode = run.ErrorCode, IssueCode = run.IssueCode });
     }
+
+    [LoggerMessage(EventId = 3101, EventName = "generation.finished", Level = LogLevel.Information, Message = "Generation finished with {Stage}.")]
+    private static partial void LogFinished(ILogger logger, string stage);
 }

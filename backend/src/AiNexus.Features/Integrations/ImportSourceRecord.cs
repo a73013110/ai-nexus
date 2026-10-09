@@ -23,6 +23,8 @@ internal sealed class SourceImportRequestValidator : RequestValidator<SourceImpo
 /// <summary>Copies a record into a private artifact. The snapshot grants nobody access to the live source.</summary>
 internal sealed class ImportSourceRecord(NexusDbContext db, AccessService access, SourceGateway gateway, ArtifactService artifacts, TimeProvider clock)
 {
+    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
+
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/{source}/import", async (string source, SourceImportRequest body, ICurrentUser user, ImportSourceRecord handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, source, body, ct)).ToHttpResult())
@@ -35,7 +37,7 @@ internal sealed class ImportSourceRecord(NexusDbContext db, AccessService access
         if (!read.IsSuccess) return read.Error;
         var detail = read.Value;
         if (detail.Record.Revision != request.ExpectedRevision) return IntegrationErrors.Changed;
-        var provenance = JsonSerializer.Serialize(new { source, id = detail.Record.Id, version = detail.Record.Revision, modifiedAt = detail.Record.ModifiedAt, importedAt = clock.GetUtcNow() }, new JsonSerializerOptions { WriteIndented = true });
+        var provenance = JsonSerializer.Serialize(new { source, id = detail.Record.Id, version = detail.Record.Revision, modifiedAt = detail.Record.ModifiedAt, importedAt = clock.GetUtcNow() }, Indented);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var artifact = await artifacts.CreateAsync(actor, new(detail.Record.Title, detail.Body + "\n\n---\n\n### 匯入來源（當時快照）\n\n```json\n" + provenance + "\n```"), ct);
         db.Add(new ImportedSourceReference { ArtifactId = artifact.Resource.Id, SourceId = source, ExternalId = detail.Record.Id, Revision = detail.Record.Revision, ImportedAt = clock.GetUtcNow() });

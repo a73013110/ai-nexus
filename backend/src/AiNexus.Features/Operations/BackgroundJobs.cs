@@ -30,7 +30,7 @@ public sealed class JobExecution(NexusDbContext db, BackgroundJob job, Guid leas
     }
 }
 
-public sealed class BackgroundJobWorker(IServiceScopeFactory scopes, StorageReadiness readiness, ILogger<BackgroundJobWorker> logger, Issues issues) : BackgroundService
+public sealed partial class BackgroundJobWorker(IServiceScopeFactory scopes, StorageReadiness readiness, ILogger<BackgroundJobWorker> logger, Issues issues) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -41,7 +41,7 @@ public sealed class BackgroundJobWorker(IServiceScopeFactory scopes, StorageRead
                 if (!readiness.Configured || !await ProcessNextAsync(stoppingToken)) await Task.Delay(1000, stoppingToken);
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }
-            catch (Exception ex) { logger.LogWarning("Background queue unavailable ({ErrorType}).", ex.GetType().Name); await Task.Delay(3000, stoppingToken); }
+            catch (Exception ex) { LogQueueUnavailable(logger, ex.GetType().Name); await Task.Delay(3000, stoppingToken); }
         }
     }
     public async Task<bool> ProcessNextAsync(CancellationToken stop)
@@ -63,7 +63,7 @@ public sealed class BackgroundJobWorker(IServiceScopeFactory scopes, StorageRead
         using var activity = DiagnosticTrace.Start("job.execute", job.TraceId, job.ParentSpanId, ActivityKind.Consumer);
         activity.SetTag("operation.id", job.OperationId.ToString());
         using var logging = logger.BeginScope(new Dictionary<string, object?> { ["JobId"] = id, ["OperationId"] = job.OperationId, ["UserId"] = job.OwnerId, ["Attempt"] = job.Attempt, ["Kind"] = job.Kind, ["RequestId"] = null });
-        logger.LogInformation(DiagnosticEvents.JobStarted, "Background job started; attempt {Attempt}.", job.Attempt);
+        LogStarted(logger, job.Attempt);
         using var execution = CancellationTokenSource.CreateLinkedTokenSource(stop);
         using var monitor = CancellationTokenSource.CreateLinkedTokenSource(stop);
         var heartbeat = MonitorAsync(id, lease, execution, monitor.Token);
@@ -93,7 +93,7 @@ public sealed class BackgroundJobWorker(IServiceScopeFactory scopes, StorageRead
              .SetProperty(x => x.LeaseToken, (Guid?)null).SetProperty(x => x.LeaseUntil, (DateTimeOffset?)null).SetProperty(x => x.ActiveKey, (string?)null)
              .SetProperty(x => x.ErrorCode, code).SetProperty(x => x.IssueCode, issue).SetProperty(x => x.ErrorMessage, message).SetProperty(x => x.UpdatedAt, DateTimeOffset.UtcNow), CancellationToken.None);
         if (finished == 1) {
-            var final = await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(x => x.Id == id);
+            var final = await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(x => x.Id == id, CancellationToken.None);
             await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Notifications.NotificationService>().PublishAsync(final.OwnerId,
                 $"job:{id}:{final.Attempt}", "task." + final.Status, final.Status == "failed" ? "error" : final.Status == "completed" ? "success" : "info",
                 final.Status == "completed" ? "背景任務已完成" : final.Status == "failed" ? "背景任務需要重試" : "背景任務已取消",
@@ -101,7 +101,7 @@ public sealed class BackgroundJobWorker(IServiceScopeFactory scopes, StorageRead
             await db.SaveChangesAsync(CancellationToken.None);
         }
         await completion.CommitAsync(CancellationToken.None);
-        logger.LogInformation(DiagnosticEvents.JobFinished, "Background job finished with {Stage}.", status);
+        LogFinished(logger, status);
         return true;
     }
     private async Task MonitorAsync(Guid id, Guid lease, CancellationTokenSource execution, CancellationToken ct)
@@ -118,6 +118,18 @@ public sealed class BackgroundJobWorker(IServiceScopeFactory scopes, StorageRead
             }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
-        catch (Exception ex) { logger.LogWarning("Job {JobId} lease renewal failed ({ErrorType}).", id, ex.GetType().Name); execution.Cancel(); }
+        catch (Exception ex) { LogLeaseRenewalFailed(logger, id, ex.GetType().Name); execution.Cancel(); }
     }
+
+    [LoggerMessage(EventId = 3000, EventName = "job.started", Level = LogLevel.Information, Message = "Background job started; attempt {Attempt}.")]
+    private static partial void LogStarted(ILogger logger, int attempt);
+
+    [LoggerMessage(EventId = 3001, EventName = "job.finished", Level = LogLevel.Information, Message = "Background job finished with {Stage}.")]
+    private static partial void LogFinished(ILogger logger, string stage);
+
+    [LoggerMessage(EventId = 3002, EventName = "job.queue_unavailable", Level = LogLevel.Warning, Message = "Background queue unavailable ({ErrorType}).")]
+    private static partial void LogQueueUnavailable(ILogger logger, string errorType);
+
+    [LoggerMessage(EventId = 3003, EventName = "job.lease_renewal_failed", Level = LogLevel.Warning, Message = "Job {JobId} lease renewal failed ({ErrorType}).")]
+    private static partial void LogLeaseRenewalFailed(ILogger logger, Guid jobId, string errorType);
 }

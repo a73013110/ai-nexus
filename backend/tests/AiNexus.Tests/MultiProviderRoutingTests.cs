@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Chat;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Billing;
 using Microsoft.EntityFrameworkCore;
