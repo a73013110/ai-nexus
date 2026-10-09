@@ -16,7 +16,7 @@ describe('Markdown security', () => {
   });
   it('renders tables and escapes unrecognized code language labels', () => {
     const html = renderMarkdown(
-      '|欄位|內容|\n|---|---|\n|A|B|\n\n```html\" onclick=\"alert(1)\n<script>evil()</script>\n```',
+      '|欄位|內容|\n|---|---|\n|A|B|\n\n```html" onclick="alert(1)\n<script>evil()</script>\n```',
     );
     expect(html).toContain('<table>');
     expect(html).not.toContain('onclick=');

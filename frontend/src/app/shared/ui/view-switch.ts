@@ -82,8 +82,7 @@ export class ViewSwitch {
     }
     event.preventDefault();
     this.valueChange.emit(this.options()[enabled[next]].value);
-    this.element.nativeElement
-      .querySelectorAll<HTMLButtonElement>('button')
-      [enabled[next]]?.focus();
+    const buttons = this.element.nativeElement.querySelectorAll<HTMLButtonElement>('button');
+    buttons[enabled[next]]?.focus();
   }
 }

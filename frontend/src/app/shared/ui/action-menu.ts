@@ -46,6 +46,8 @@ let sequence = 0;
         }
       }
     </button>
+    <!-- Focus moves between the menu items; the panel only routes arrow keys. -->
+    <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
     <div
       #panel
       [id]="id"
