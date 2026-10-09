@@ -20,7 +20,7 @@ public sealed class MessageCitation
 }
 
 // Also the request body of SaveConversationKnowledge. Its limit (at most three distinct collections) is checked only
-// after the conversation is found, inside the generation state gate, so this request has no validator.
+// after the conversation is found, inside the conversation's generation lock, so this request has no validator.
 public sealed record KnowledgeSelectionDto(IReadOnlyList<Guid> CollectionIds);
 public sealed record CitationDto(int Number, Guid DocumentId, string Title, int PageNumber, string Excerpt, int EndPage = 0);
 

@@ -28,7 +28,11 @@ public sealed class RunService(NexusDbContext db, ConversationService conversati
         return run;
     }
 
-    // Called under StateGate, so cancellation and token flushes cannot overwrite each other.
+    /// <summary>The conversation of the owner's run, read without its content, so callers can take the conversation's lock first.</summary>
+    internal async Task<Guid?> ConversationOfAsync(Guid owner, Guid id, CancellationToken ct)
+        => await db.Runs.Where(x => x.Id == id && x.OwnerId == owner).Select(x => (Guid?)x.ConversationId).SingleOrDefaultAsync(ct);
+
+    // Called under the conversation's generation lock, so cancellation and token flushes cannot overwrite each other.
     public async Task FinishAsync(GenerationRun run, string status, string? error, CancellationToken ct, string? issueCode = null)
     {
         using var correlation = DiagnosticTrace.Start("generation.finish", run.TraceId, run.ParentSpanId);

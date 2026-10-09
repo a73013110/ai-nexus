@@ -1,10 +1,11 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
+using AiNexus.Platform.Threading;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Inference;
 
-public sealed record GenerationJob(Guid RunId, CancellationTokenSource Cancellation, string TraceId, string ParentSpanId, Guid OwnerId, string Provider);
+public sealed record GenerationJob(Guid RunId, Guid ConversationId, CancellationTokenSource Cancellation, string TraceId, string ParentSpanId, Guid OwnerId, string Provider);
 public sealed record ProviderQueue(ChannelReader<GenerationJob> Reader, int Concurrency);
 
 public sealed class GenerationScheduler
@@ -17,7 +18,7 @@ public sealed class GenerationScheduler
     public Guid InstanceId { get; } = Guid.NewGuid();
     public static readonly TimeSpan LeaseDuration = TimeSpan.FromMinutes(2);
     public Guid[] TrackedRuns => cancellations.Keys.ToArray();
-    public SemaphoreSlim StateGate { get; } = new(1, 1);
+    private readonly KeyedAsyncLock<Guid> conversations = new();
     public bool Ready { get; set; }
     public bool Generating => Volatile.Read(ref active) > 0;
     public int QueueDepth => Volatile.Read(ref count);
@@ -32,6 +33,16 @@ public sealed class GenerationScheduler
         Workers = options.Value.ProviderConcurrency.Select(x => new ProviderQueue(queues[x.Key].Reader, x.Value)).ToArray();
     }
 
+    /// <summary>
+    /// Serializes the state of one conversation: its runs (create, start, flush, cancel, finish, recovery: each reads and
+    /// rewrites the run row, its event sequence and the answer message) and the conversation changes that require no
+    /// active run (branch, archive, project, knowledge, duplicate, delete, share). Different conversations never wait
+    /// for each other. One active run per owner and quota reservations are enforced in SQL (unique index, owner row lock).
+    /// </summary>
+    public Task<IDisposable> LockConversationAsync(Guid conversationId, CancellationToken ct) => conversations.AcquireAsync(conversationId, ct);
+    /// <summary>Conversations currently locked or awaited (diagnostics and tests).</summary>
+    public int LockedConversations => conversations.Count;
+
     public bool TryReserve() => capacity.Wait(0);
     public void ReleaseReservation() => capacity.Release();
     public void Enqueue(GenerationRun run, string provider)
@@ -39,7 +50,7 @@ public sealed class GenerationScheduler
         var cancellation = new CancellationTokenSource();
         cancellations[run.Id] = cancellation;
         Interlocked.Increment(ref count);
-        if (!queues[provider].Writer.TryWrite(new GenerationJob(run.Id, cancellation, run.TraceId!, run.ParentSpanId!, run.OwnerId, provider))) throw new InvalidOperationException("Reserved queue capacity was exceeded.");
+        if (!queues[provider].Writer.TryWrite(new GenerationJob(run.Id, run.ConversationId, cancellation, run.TraceId!, run.ParentSpanId!, run.OwnerId, provider))) throw new InvalidOperationException("Reserved queue capacity was exceeded.");
     }
     public void Dequeued() => Interlocked.Decrement(ref count);
     public void Started() => Interlocked.Increment(ref active);

@@ -38,7 +38,7 @@ internal sealed class CreateRunRequestValidator : RequestValidator<CreateRunRequ
 /// <summary>
 /// Queues an answer for a new or regenerated prompt. The Idempotency-Key makes retries return the same run; one owner
 /// has at most one active run. Ownership, model policy, budget and attachment binding are rechecked under the
-/// scheduler's state gate, the quota lock and the attachment write lock, inside one transaction.
+/// conversation's generation lock, the owner row lock and the attachment write lock, inside one transaction.
 /// </summary>
 internal sealed class CreateRun(NexusDbContext db, ConversationService conversations, AttachmentService attachments, AttachmentWriteLock attachmentWrites, GenerationScheduler scheduler, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, ModelPresentation presentation, ModelPolicyService policies, ModelQuotaLock quotaWrites, KnowledgeRetrieval knowledge, ProjectService projects, WebSearchService webSearch, BillingService billing, TimeProvider clock)
 {
@@ -61,7 +61,7 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             if (previous.RequestHash != hash) return InferenceErrors.IdempotencyConflict;
             return presentation.Run(previous);
         }
-        // Provider discovery can take seconds. Never hold the cancellation/state gate over it.
+        // Provider discovery can take seconds. Never hold the conversation's generation lock over it.
         var profile = await models.RequireAsync(request.ModelId, ct);
         var effort = ModelCatalog.RequireReasoning(profile, request.ReasoningEffort);
         var knowledgeSelection = await knowledge.SelectionAsync(owner, request.ConversationId, ct);
@@ -76,7 +76,7 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             var query = request.RegenerateUserMessageId is Guid old ? await db.Messages.Where(x => x.Id == old && x.ConversationId == request.ConversationId && x.Role == "user").Select(x => x.Content).SingleOrDefaultAsync(ct) : request.Prompt;
             search = await webSearch.SearchAsync(owner, request.ConversationId, key, hash, query ?? "", ct);
         }
-        await scheduler.StateGate.WaitAsync(ct);
+        using var conversationLock = await scheduler.LockConversationAsync(request.ConversationId, ct);
         var reserved = false;
         var attachmentsLocked = false;
         var quotaLocked = false;
@@ -98,6 +98,15 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             attachmentsLocked = true;
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
+            // The conversation lock does not cover the owner's other conversations: under the owner row lock, a request
+            // that raced in another conversation has committed, so its run is visible here.
+            if (await db.Runs.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct) is { } raced)
+            {
+                await conversations.OwnedAsync(owner, raced.ConversationId, ct);
+                if (raced.RequestHash != hash) return InferenceErrors.IdempotencyConflict;
+                return presentation.Run(raced);
+            }
+            if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) return InferenceErrors.GenerationActive;
             await policies.RequireAsync(owner, profile.Id, ct);
             var conversation = await conversations.OwnedAsync(owner, request.ConversationId, ct);
             var projectContext = await projects.ContextAsync(owner, conversation.ProjectId, ct);
@@ -144,7 +153,6 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             if (reserved) scheduler.ReleaseReservation();
             if (attachmentsLocked) attachmentWrites.Gate.Release();
             if (quotaLocked) quotaWrites.Gate.Release();
-            scheduler.StateGate.Release();
         }
     }
 }
