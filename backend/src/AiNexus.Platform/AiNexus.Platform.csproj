@@ -13,8 +13,4 @@
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="Data/EDoc/README.md" />
-    <None Include="Data/EDoc/source-manifest.json" />
-  </ItemGroup>
 </Project>

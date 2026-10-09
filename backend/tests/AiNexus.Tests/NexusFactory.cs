@@ -19,9 +19,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Attachments;
-using EDoc.Core.Database.Interfaces;
-using EDoc.Core.Database.Markers;
-using System.Data.Common;
 using Xunit;
 
 namespace AiNexus.Tests;
@@ -75,8 +72,6 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
             services.RemoveAll<DbContextOptions<NexusDbContext>>();
             services.RemoveAll<Microsoft.EntityFrameworkCore.Infrastructure.IDbContextOptionsConfiguration<NexusDbContext>>();
             services.AddDbContext<NexusDbContext>(options => options.UseSqlite(ConnectionString(databasePath)));
-            services.RemoveAll<IDbConnectionFactory>();
-            services.AddSingleton<IDbConnectionFactory>(new TestConnectionFactory(ConnectionString(databasePath)));
             services.AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, TestIdentityHandler>("Test", _ => { });
             services.PostConfigure<AuthenticationOptions>(options => { options.DefaultAuthenticateScheme = ldap ? AuthEndpoints.CookieScheme : "Test"; options.DefaultChallengeScheme = ldap ? AuthEndpoints.CookieScheme : "Test"; });
             services.AddSingleton<IAuthenticationSchemeProvider, TestSchemeProvider>();
@@ -167,13 +162,6 @@ public sealed class TestEmbeddings : AiNexus.Features.Knowledge.IEmbeddingClient
         if (Fail || FailProfileId == profile.Id || FailOnCall == call) throw new ApiException(503, "fixture_embedding_failed", "測試索引服務暫停。");
         return new(inputs.Select(_ => { var value = new float[profile.Dimensions]; value[0] = 1; return value; }).ToArray());
     }
-}
-
-public sealed class TestConnectionFactory(string connectionString) : IDbConnectionFactory
-{
-    public DbConnection CreateConnection<TDb>() where TDb : IDbMarker => new SqliteConnection(connectionString);
-    public DbContextOptions<TContext> CreateDbContextOptions<TDb, TContext>() where TDb : IDbMarker where TContext : DbContext
-        => new DbContextOptionsBuilder<TContext>().UseSqlite(connectionString).Options;
 }
 
 public sealed class FixtureAdAuthenticator : IAdAuthenticator

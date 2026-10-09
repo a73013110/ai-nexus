@@ -95,11 +95,15 @@ UsageReports 共用 GenerationRuns／ModelInvocations 的 SQL 聚合查詢，提
 
 content.SourceReferences 保存明確匯入的個人成果之 SourceId／ExternalId／Revision／ImportedAt。公文／校務仍為獨立來源庫，透過 nexus.AuthorizedRecords／AuthorizedRecordHistory view 與來源專用唯讀登入，以完整 SID／account 取得資料。來源版本變更要求重新讀取；已明確保存的個人副本不因來源撤權自動遠端抹除。AiNexus migration 不在外部庫建物件，DBA 範本在 db/integrations。見 [來源契約](INTEGRATIONS.md)。
 
-## EDoc、初始化及 SQL 權限
+## 手寫 SQL、初始化及 SQL 權限
 
-保留 [EDoc 原始 helper](../backend/src/AiNexus.Platform/Data/EDoc/README.md)。EF Core（直接注入 `NexusDbContext`）管 mapping、migration、業務寫入及共用 scoped context。Dapper IDbHelper 用於固定參數化 SELECT、狀態及建庫；自有連線不自動參與 EF transaction。值用 parameters，物件名稱只取程式固定清單。
+EF Core（直接注入 `NexusDbContext`）管 mapping、migration 與業務寫入。EF 表達不了的 SQL 一律透過 `ISqlDatabase<T>`（`AiNexus.Platform/Data/Sql`，Dapper，只有非同步的查詢與執行）；值用 parameters，物件名稱只取程式固定清單。
 
-NexusConnectionFactory 以 marker 對應 AiNexus、CLI 專用 master，以及 LegacyGdweb／LegacyMeiho。來源連線加密及唯讀意圖不取代 SQL 的 view-only 權限。
+- `ISqlDatabase<NexusDbContext>`：主資料庫。使用 `NexusDbContext` 的連線並加入目前的 transaction，與同一請求的 EF 寫入一起提交或回復。
+- `ISqlDatabase<NexusMasterDatabase>`：只給初始化指令建庫用的 master。
+- `ISqlDatabase<LegacyGdwebDatabase>`／`ISqlDatabase<LegacyMeihoDatabase>`：外部來源，每次呼叫自開連線，連線字串強制唯讀意圖與加密；這不取代 SQL 端的 view-only 權限。
+
+新增外部資料庫時，在擁有它的模組加一個實作 `ISqlDatabaseDefinition` 的類別（決定連線字串），再以 `AddSqlDatabase<T>()` 註冊。
 
 ```powershell
 ./scripts/Initialize-Database.ps1

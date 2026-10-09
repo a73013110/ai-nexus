@@ -14,14 +14,6 @@ indent_size = 4
 [*.md]
 trim_trailing_whitespace = false
 
-# The imported EDoc helpers are tracked verbatim, including their XML doc examples.
-[backend/src/AiNexus.Platform/Data/EDoc/**]
-trim_trailing_whitespace = false
-insert_final_newline = unset
-
-[backend/src/AiNexus.Platform/Data/EDoc/**.cs]
-dotnet_diagnostic.CS1570.severity = none
-
 [backend/**.cs]
 dotnet_diagnostic.IDE0005.severity = warning
 # AnalysisLevel latest-recommended (backend/Directory.Build.props). This is an application, not a reusable library, so

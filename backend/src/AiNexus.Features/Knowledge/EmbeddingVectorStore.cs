@@ -1,9 +1,9 @@
 using System.Text.Json;
 using AiNexus.Features.Persistence;
+using AiNexus.Platform.Data.Sql;
 using Dapper;
 using Microsoft.Data.SqlTypes;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 
 namespace AiNexus.Features.Knowledge;
 
@@ -14,7 +14,7 @@ public sealed class EmbeddingRow
     public SqlVector<float> Vector { get; set; }
 }
 public sealed record EmbeddingWrite(Guid ChunkId, byte[] ContentHash, float[] Vector);
-public sealed class EmbeddingVectorStore(NexusDbContext db)
+public sealed class EmbeddingVectorStore(NexusDbContext db, ISqlDatabase<NexusDbContext> sql)
 {
     public IQueryable<EmbeddingRow> Rows(EmbeddingProfile profile) => profile.Dimensions switch
     {
@@ -50,7 +50,7 @@ public sealed class EmbeddingVectorStore(NexusDbContext db)
             }
             var table = VectorDimensions.Table(profile.Dimensions);
             var command = $"INSERT INTO {table} ([ChunkId], [ProfileId], [ContentHash], [Vector]) SELECT v.[ChunkId], @Profile, v.[Hash], v.[Vector] FROM (VALUES {string.Join(',', rows)}) v([ChunkId], [Hash], [Vector]) WHERE NOT EXISTS (SELECT 1 FROM {table} e WITH (UPDLOCK, HOLDLOCK) WHERE e.[ProfileId] = @Profile AND e.[ChunkId] = v.[ChunkId])";
-            await db.Database.GetDbConnection().ExecuteAsync(new CommandDefinition(command, parameters, db.Database.CurrentTransaction?.GetDbTransaction(), commandTimeout: 30, cancellationToken: ct));
+            await sql.ExecuteAsync(command, parameters, commandTimeout: 30, cancellationToken: ct);
         }
         else
         {
