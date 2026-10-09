@@ -5,7 +5,6 @@ using AiNexus.Features.Collaboration;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Knowledge;
 using AiNexus.Features.Notifications;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.WebSearch;
@@ -13,8 +12,12 @@ using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Features.Sharing;
+
+public sealed record SharedMessageDto(string Role, string Content, string Status, DateTimeOffset CreatedAt, IReadOnlyList<AttachmentDto> Attachments,
+    string? ModelId = null, string? ErrorCode = null, IReadOnlyList<CitationDto>? Sources = null, IReadOnlyList<WebSourceDto>? WebSources = null, RunTimingDto? Timing = null, string? ModelDisplayName = null, string? IssueCode = null);
 
 public sealed record CreateShareRequest(string Kind, Guid SourceId, IReadOnlyList<Guid> RecipientIds, int Hours = 168, bool IncludeAttachments = false, int? ArtifactVersion = null);
 

@@ -1,13 +1,15 @@
 using System.Text.Json;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Knowledge;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Knowledge.Documents;
 
 namespace AiNexus.Features.Sharing;
+
+public sealed record SharedFilePreviewDto(AttachmentDto File, IReadOnlyList<DocumentPageDto> Pages);
 
 /// <summary>
 /// Preview and download of a file the owner explicitly included. The grant is the share's own reference, never the

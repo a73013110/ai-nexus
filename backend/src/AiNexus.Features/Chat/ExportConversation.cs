@@ -16,7 +16,7 @@ internal static class ExportConversation
         var found = await conversations.HandleAsync(owner, id, ct);
         if (!found.IsSuccess) return found.Error;
         var detail = found.Value;
-        if (detail.ActiveRun is not null) return ConversationErrors.GenerationActive;
+        if (detail.ActiveRun is not null) return ConversationsErrors.GenerationActive;
         return new ConversationBackup(1, detail.Conversation.Title, detail.Conversation.SystemInstruction, detail.Conversation.Labels ?? [], detail.Conversation.ActiveLeafId,
             detail.Messages.Select(x => new BackupMessage(x.Id, x.ParentId, x.Role, x.Content, x.Status, x.CreatedAt, x.Attachments?.Select(f => f.FileName).ToList() ?? [])).ToList());
     }

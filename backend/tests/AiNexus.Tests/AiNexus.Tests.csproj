@@ -6,6 +6,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
   </ItemGroup>
-  <ItemGroup><ProjectReference Include="../../src/AiNexus.Api/AiNexus.Api.csproj" /></ItemGroup>
+  <ItemGroup><ProjectReference Include="../../src/AiNexus.Host/AiNexus.Host.csproj" /></ItemGroup>
   <ItemGroup><None Update="request-validators.baseline.txt" CopyToOutputDirectory="PreserveNewest" /></ItemGroup>
 </Project>

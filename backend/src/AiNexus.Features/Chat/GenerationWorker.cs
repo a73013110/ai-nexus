@@ -95,8 +95,8 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
                 var grants = await scope.ServiceProvider.GetRequiredService<AiNexus.Features.AccessControl.AccessService>().ForUserAsync(run.OwnerId, stoppingToken);
                 if (!grants.Features.Any(x => x.Id == "chat")) throw new ApiException(403, "chat_access_revoked", "對話功能權限已撤銷。");
                 await scope.ServiceProvider.GetRequiredService<ModelPolicyService>().RequireAsync(run.OwnerId, run.ModelId, stoppingToken, checkQuota: false);
-                var sources = await db.Set<AiNexus.Features.Knowledge.MessageCitation>().Where(x => x.MessageId == run.AssistantMessageId).Select(x => new AiNexus.Features.Knowledge.KnowledgeHitDto(x.DocumentId, x.Title, x.PageNumber, x.Excerpt, 0, Guid.Empty, x.EndPage)).ToListAsync(stoppingToken);
-                await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Knowledge.KnowledgeRetrieval>().ValidateHitsAsync(run.OwnerId, sources, stoppingToken);
+                var sources = await db.Set<AiNexus.Features.Knowledge.Retrieval.MessageCitation>().Where(x => x.MessageId == run.AssistantMessageId).Select(x => new AiNexus.Features.Knowledge.Retrieval.KnowledgeHitDto(x.DocumentId, x.Title, x.PageNumber, x.Excerpt, 0, Guid.Empty, x.EndPage)).ToListAsync(stoppingToken);
+                await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Knowledge.Retrieval.KnowledgeRetrieval>().ValidateHitsAsync(run.OwnerId, sources, stoppingToken);
                 var projectId = await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.Id == run.ConversationId).Select(x => x.ProjectId).SingleAsync(stoppingToken);
                 await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Projects.ProjectService>().ContextAsync(run.OwnerId, projectId, stoppingToken);
             }

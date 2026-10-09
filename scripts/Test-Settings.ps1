@@ -30,7 +30,7 @@ if ($taskGeneral.Knowledge.Indexing.ChunkTargetTokens -ne 300 -or $taskGeneral.K
 $taskBefore = [IO.File]::ReadAllText($taskGeneralPath) + [IO.File]::ReadAllText($taskSecretsPath)
 & (Join-Path $PSScriptRoot 'Migrate-Settings.ps1') -SettingsPath $taskGeneralPath -SecretsPath $taskSecretsPath
 if ($taskBefore -cne ([IO.File]::ReadAllText($taskGeneralPath) + [IO.File]::ReadAllText($taskSecretsPath))) { throw 'Migration is not idempotent.' }
-foreach ($taskFile in @(Get-ChildItem -LiteralPath (Join-Path $taskRoot 'backend/src/AiNexus.Api') -Filter 'appsettings*.json' | Where-Object { $_.Name -eq 'appsettings.json' -or $_.Name -like '*.example.json' })) {
+foreach ($taskFile in @(Get-ChildItem -LiteralPath (Join-Path $taskRoot 'backend/src/AiNexus.Host') -Filter 'appsettings*.json' | Where-Object { $_.Name -eq 'appsettings.json' -or $_.Name -like '*.example.json' })) {
     $taskSettings = [IO.File]::ReadAllText($taskFile.FullName) | ConvertFrom-Json -AsHashtable
     if (@(Get-NexusSecretValues $taskSettings -IncludeUser).Count) { throw 'A public settings template contains a non-empty secret.' }
     $taskFormatted = ConvertTo-NexusOrdered $taskSettings

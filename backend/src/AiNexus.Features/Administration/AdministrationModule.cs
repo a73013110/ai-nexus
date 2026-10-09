@@ -1,7 +1,11 @@
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Identity;
 using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.Administration.Users;
+using AiNexus.Features.Administration.Roles;
+using AiNexus.Features.Administration.ModelPolicies;
+using AiNexus.Features.Administration.Retrieval;
+using AiNexus.Features.Identity.Authentication;
 
 namespace AiNexus.Features.Administration;
 
@@ -70,11 +74,4 @@ public sealed class AdministrationModule : IFeatureModule
         GetAdminUsage.Map(api);
         GetEffectiveModelPolicy.Map(root);
     }
-}
-
-internal sealed class AdministrationOptionsValidator : IValidateOptions<AdministrationOptions>
-{
-    public ValidateOptionsResult Validate(string? name, AdministrationOptions x)
-        => x.BootstrapAdministrators.Length <= 20 && x.BootstrapAdministrators.All(a => a.Length is > 0 and <= 64 && a.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-' or '.'))
-            ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail("Invalid bootstrap administrator accounts.");
 }

@@ -13,7 +13,7 @@ public sealed record SpendPeriod(DateTimeOffset From, DateTimeOffset Until, int 
     public static Result<SpendPeriod> Create(DateTimeOffset? from, DateTimeOffset? until, int? offset, DateTimeOffset now)
     {
         var end = until ?? now; var start = from ?? end.AddDays(-30); var zone = offset ?? 480;
-        if (start >= end || end - start > TimeSpan.FromDays(366) || zone is < -840 or > 840) return Error.Invalid("invalid_spend_period");
+        if (start >= end || end - start > TimeSpan.FromDays(366) || zone is < -840 or > 840) return BillingErrors.InvalidSpendPeriod;
         return new SpendPeriod(start.ToUniversalTime(), end.ToUniversalTime(), zone);
     }
 }
@@ -80,7 +80,7 @@ public sealed class SpendReports(NexusDbContext db, ModelPresentation presentati
     }
     public async Task<Result<ConversationSpendDto>> ConversationAsync(Guid owner, Guid id, CancellationToken ct)
     {
-        if (!await db.Conversations.AnyAsync(x => x.Id == id && x.OwnerId == owner, ct)) return Error.NotFound("conversation_not_found");
+        if (!await db.Conversations.AnyAsync(x => x.Id == id && x.OwnerId == owner, ct)) return BillingErrors.ConversationNotFound;
         var calls = db.Set<ModelCharge>().AsNoTracking().Where(x => x.OwnerId == owner && x.ConversationId == id);
         var legacy = await db.Runs.CountAsync(x => x.ConversationId == id && !db.Set<ModelCharge>().Any(c => c.Id == x.Id), ct);
         var count = await calls.CountAsync(ct); var pending = await calls.CountAsync(x => x.State == "pending", ct);

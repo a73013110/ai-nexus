@@ -32,11 +32,11 @@ internal sealed class ImportSourceRecord(NexusDbContext db, AccessService access
 
     public async Task<Result<ArtifactDto>> HandleAsync(Guid actor, string source, SourceImportRequest request, CancellationToken ct)
     {
-        if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureIds.Artifacts)) return IntegrationErrors.ArtifactFeatureRequired;
+        if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureIds.Artifacts)) return IntegrationsErrors.ArtifactFeatureRequired;
         var read = await gateway.ReadAsync(actor, source, request.RecordId, ct);
         if (!read.IsSuccess) return read.Error;
         var detail = read.Value;
-        if (detail.Record.Revision != request.ExpectedRevision) return IntegrationErrors.Changed;
+        if (detail.Record.Revision != request.ExpectedRevision) return IntegrationsErrors.Changed;
         var provenance = JsonSerializer.Serialize(new { source, id = detail.Record.Id, version = detail.Record.Revision, modifiedAt = detail.Record.ModifiedAt, importedAt = clock.GetUtcNow() }, Indented);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var artifact = await artifacts.CreateAsync(actor, new(detail.Record.Title, detail.Body + "\n\n---\n\n### 匯入來源（當時快照）\n\n```json\n" + provenance + "\n```"), ct);

@@ -2,8 +2,8 @@ using AiNexus.Features.Attachments;
 using AiNexus.Features.Billing;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Knowledge;
 using AiNexus.Features.WebSearch;
+using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Features.Chat;
 

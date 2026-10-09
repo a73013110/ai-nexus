@@ -6,12 +6,12 @@ using AiNexus.Features.Account;
 using AiNexus.Features.Chat;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Conversations;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Tests;
 

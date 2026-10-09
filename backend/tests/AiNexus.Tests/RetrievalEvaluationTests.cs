@@ -3,14 +3,15 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Operations;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Knowledge;
-using AiNexus.Features.Quality;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Xunit;
+using AiNexus.Features.Jobs;
+using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Features.Quality.RetrievalEvaluations;
 
 namespace AiNexus.Tests;
 

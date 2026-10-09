@@ -4,9 +4,9 @@ using AiNexus.Features.Persistence;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Dashboard;
-using AiNexus.Features.Knowledge;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using AiNexus.Features.Knowledge.Documents;
 
 namespace AiNexus.Tests;
 

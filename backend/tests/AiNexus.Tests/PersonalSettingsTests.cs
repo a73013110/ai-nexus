@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
-using AiNexus.Features.Identity;
 using Xunit;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Tests;
 

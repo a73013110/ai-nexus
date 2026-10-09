@@ -1,5 +1,4 @@
 using AiNexus.Features.AccessControl;
-using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -21,58 +20,6 @@ public sealed class Attachment
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
-public sealed class MessageAttachment
-{
-    public Guid MessageId { get; set; }
-    public Guid AttachmentId { get; set; }
-    public Attachment Attachment { get; set; } = null!;
-}
-
-public sealed record AttachmentDto(Guid Id, string FileName, string ContentType, long Size, bool IsImage, string AnalysisMode);
-public sealed record AttachmentPolicyDto(long MaxFileBytes, int MaxFilesPerMessage, long MaxMessageBytes, string[] Extensions);
-
-public sealed class AttachmentOptions
-{
-    public int MaxFileBytes { get; set; } = 4 * 1024 * 1024;
-    public int MaxFilesPerMessage { get; set; } = 4;
-    public int MaxMessageBytes { get; set; } = 8 * 1024 * 1024;
-    public const long DefaultLimitBytes = 5_000_000_000;
-    public const long MaximumLimitBytes = 1_000_000_000_000_000;
-    public long DefaultOwnerLimitBytes { get; set; } = DefaultLimitBytes;
-    public string StoragePath { get; set; } = "";
-    public int CleanupIntervalMinutes { get; set; } = 60;
-    public int MaxExtractedCharacters { get; set; } = 64000;
-    public int MaxPdfPages { get; set; } = 40;
-    public int ImageTokenEstimate { get; set; } = 4096;
-    public int DraftRetentionDays { get; set; } = 14;
-}
-
-// Serializes quota checks and attachment writes; provider calls never hold this gate.
-public sealed class AttachmentWriteLock { public SemaphoreSlim Gate { get; } = new(1, 1); }
-
-public static class AttachmentStates
-{
-    public const string Pending = "pending";
-    public const string Ready = "ready";
-    public const string Deleting = "deleting";
-}
-
-public sealed record AttachmentStorageDto(long UsedBytes, long LimitBytes, long RemainingBytes, long? PersonalLimitBytes, long? GroupLimitBytes, long DefaultLimitBytes, string LimitSource);
-
-internal static class AttachmentErrors
-{
-    public const string FileNameInvalidCode = "file_name_invalid";
-
-    public static readonly Error NotFound = Error.NotFound("attachment_not_found");
-    public static readonly Error InUse = Error.Conflict("attachment_in_use");
-    public static readonly Error MultipartRequired = Error.Invalid("multipart_required");
-    public static readonly Error FileRequired = Error.Invalid("file_required");
-    public static readonly Error LibraryFileNotFound = Error.NotFound("file_not_found");
-    public static readonly Error ExtensionChanged = Error.Invalid("file_extension_changed");
-    public static readonly Error FileNameChanged = Error.Conflict("file_name_changed");
-    public static readonly Error FilterInvalid = Error.Invalid("file_filter_invalid");
-}
-
 internal sealed class AttachmentEntityConfiguration : IEntityTypeConfiguration<Attachment>
 {
     public void Configure(EntityTypeBuilder<Attachment> file)
@@ -91,16 +38,6 @@ internal sealed class AttachmentEntityConfiguration : IEntityTypeConfiguration<A
         file.HasIndex(x => new { x.StorageState, x.CreatedAt });
         file.HasIndex(x => new { x.OwnerId, x.CreatedAt });
         file.HasIndex(x => new { x.OwnerId, x.InLibrary, x.CreatedAt, x.Id });
-    }
-}
-
-internal sealed class MessageAttachmentConfiguration : IEntityTypeConfiguration<MessageAttachment>
-{
-    public void Configure(EntityTypeBuilder<MessageAttachment> link)
-    {
-        link.ToTable("MessageAttachments", "attachments");
-        link.HasKey(x => new { x.MessageId, x.AttachmentId });
-        link.HasOne(x => x.Attachment).WithMany().HasForeignKey(x => x.AttachmentId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

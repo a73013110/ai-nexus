@@ -1,6 +1,7 @@
 using AiNexus.Features.AccessControl;
 using AiNexus.Platform.Errors;
 using Microsoft.AspNetCore.Authorization;
+using AiNexus.Features.Identity.Sessions;
 
 namespace AiNexus.Features.Identity;
 

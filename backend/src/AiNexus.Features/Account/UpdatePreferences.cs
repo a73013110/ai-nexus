@@ -4,6 +4,7 @@ using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using AiNexus.Features.Identity;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Account;
 

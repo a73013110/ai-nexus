@@ -1,4 +1,3 @@
-using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -21,16 +20,6 @@ public sealed class WorkspaceNotification
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? ReadAt { get; set; }
     public DateTimeOffset? DismissedAt { get; set; }
-}
-
-public sealed record NotificationTargetDto(string Kind, Guid Id);
-public sealed record NotificationDto(Guid Id, int Version, string Type, string Severity, string Title, string Body,
-    NotificationTargetDto Target, DateTimeOffset CreatedAt, DateTimeOffset? ReadAt, string? IssueCode = null);
-public sealed record NotificationPageDto(IReadOnlyList<NotificationDto> Items, int Unread, bool HasMore);
-
-internal static class NotificationErrors
-{
-    public static readonly Error CursorInvalid = Error.Invalid("notification_cursor_invalid");
 }
 
 internal static class NotificationQueries

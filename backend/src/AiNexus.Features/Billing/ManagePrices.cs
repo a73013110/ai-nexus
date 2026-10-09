@@ -7,6 +7,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Billing;
 
+public sealed record PriceRequest(string Provider, string ModelId, string Currency, string Kind,
+    decimal InputPerMillion, decimal CachedInputPerMillion, decimal OutputPerMillion, decimal PerRequest,
+    string RequestCharge, DateTimeOffset EffectiveAt, string Note);
+
 internal sealed class PriceRequestValidator : RequestValidator<PriceRequest>
 {
     public override string ProblemCode => "invalid_price";
@@ -47,7 +51,7 @@ internal sealed class ManagePrices(NexusDbContext db, BillingService billing)
     public async Task<Result<PriceDto>> CreateAsync(Guid actor, PriceRequest body, CancellationToken ct)
     {
         if (await db.Set<ModelPrice>().AnyAsync(x => x.Provider == body.Provider && x.ModelId == body.ModelId && x.EffectiveAt == body.EffectiveAt, ct))
-            return Error.Conflict("price_exists");
+            return BillingErrors.PriceExists;
         var price = new ModelPrice { Provider = body.Provider, ModelId = body.ModelId, Currency = body.Currency, Kind = body.Kind,
             InputPerMillion = body.InputPerMillion, CachedInputPerMillion = body.CachedInputPerMillion, OutputPerMillion = body.OutputPerMillion,
             PerRequest = body.PerRequest, RequestCharge = body.RequestCharge, EffectiveAt = body.EffectiveAt.ToUniversalTime(), Note = body.Note.Trim(), CreatedBy = actor };

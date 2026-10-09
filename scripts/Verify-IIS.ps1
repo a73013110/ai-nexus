@@ -4,7 +4,7 @@ $ErrorActionPreference = 'Stop'
 $taskApp = [IO.Path]::GetFullPath($AppPath)
 $taskChecks = [Collections.Generic.List[object]]::new()
 function Add-NexusCheck([string]$Name, [bool]$Passed, [string]$Detail) { $taskChecks.Add([pscustomobject]@{ Check = $Name; Passed = $Passed; Detail = $Detail }) }
-foreach ($taskFile in @('AiNexus.Api.dll','AiNexus.Api.runtimeconfig.json','appsettings.json','web.config','wwwroot/index.html')) {
+foreach ($taskFile in @('AiNexus.Host.dll','AiNexus.Host.runtimeconfig.json','appsettings.json','web.config','wwwroot/index.html')) {
     Add-NexusCheck $taskFile (Test-Path -LiteralPath (Join-Path $taskApp $taskFile) -PathType Leaf) 'Required published file'
 }
 if (!(Test-Path -LiteralPath (Join-Path $taskApp 'web.config'))) { $taskChecks | Format-Table -AutoSize; exit 1 }

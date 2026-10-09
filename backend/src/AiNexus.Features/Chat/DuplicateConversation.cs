@@ -5,6 +5,7 @@ using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Conversations;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Chat;
 
@@ -26,8 +27,8 @@ internal sealed class DuplicateConversation(NexusDbContext db, GenerationSchedul
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await quota.LockOwnerAsync(owner, ct);
             var original = await db.OwnedConversationAsync(owner, id, ct);
-            if (original is null) return ConversationErrors.NotFound;
-            if (await db.HasActiveRunAsync(id, ct)) return ConversationErrors.GenerationActive;
+            if (original is null) return ConversationsErrors.NotFound;
+            if (await db.HasActiveRunAsync(id, ct)) return ConversationsErrors.GenerationActive;
             var messages = await db.Set<Message>().AsNoTracking().Where(x => x.ConversationId == id).OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).ToListAsync(ct);
             var ids = messages.ToDictionary(x => x.Id, _ => Guid.NewGuid());
             var now = clock.GetUtcNow();

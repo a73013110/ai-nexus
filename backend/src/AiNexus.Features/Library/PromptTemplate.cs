@@ -1,4 +1,3 @@
-using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -26,14 +25,6 @@ public sealed class PromptTemplate
     }
 
     public PromptTemplateDto ToDto() => new(Id, Title, Content, UpdatedAt);
-}
-
-public sealed record PromptTemplateDto(Guid Id, string Title, string Content, DateTimeOffset UpdatedAt);
-
-internal static class LibraryErrors
-{
-    public static readonly Error NotFound = Error.NotFound("template_not_found");
-    public static readonly Error LimitReached = Error.Invalid("template_limit");
 }
 
 internal static class PromptTemplateQueries

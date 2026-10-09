@@ -1,5 +1,7 @@
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Validation;
+using AiNexus.Features.Identity.Authentication;
+using AiNexus.Features.Identity.Sessions;
 
 namespace AiNexus.Features.Identity;
 

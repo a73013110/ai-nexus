@@ -1,9 +1,9 @@
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Knowledge;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Knowledge.Documents;
 
 namespace AiNexus.Features.Projects;
 
@@ -19,7 +19,7 @@ internal sealed class AddProjectFile(NexusDbContext db, ResourceAccess access, D
     {
         var active = await access.RequireActiveAsync(db, actor, id, write: true, ct);
         if (!active.IsSuccess) return active.Error;
-        if (await db.Set<WorkspaceResource>().CountAsync(x => x.ParentId == id && x.Kind == "document", ct) >= Project.MaxFiles) return ProjectErrors.FileLimit;
+        if (await db.Set<WorkspaceResource>().CountAsync(x => x.ParentId == id && x.Kind == "document", ct) >= Project.MaxFiles) return ProjectsErrors.FileLimit;
         return await documents.AddAsync(actor, null, attachment, ct, id);
     }
 }

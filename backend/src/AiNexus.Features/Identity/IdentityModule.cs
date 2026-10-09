@@ -6,6 +6,9 @@ using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Authentication.Negotiate;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.Identity.Authentication;
+using AiNexus.Features.Identity.Sessions;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Identity;
 

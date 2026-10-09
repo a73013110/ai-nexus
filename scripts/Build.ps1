@@ -14,7 +14,7 @@ try {
     }
     npm --prefix frontend run build
     if ($LASTEXITCODE -ne 0) { throw 'Frontend build failed.' }
-    dotnet publish backend/src/AiNexus.Api/AiNexus.Api.csproj --no-restore -c Release -o $taskPublish
+    dotnet publish backend/src/AiNexus.Host/AiNexus.Host.csproj --no-restore -c Release -o $taskPublish
     if ($LASTEXITCODE -ne 0) { throw 'Backend publish failed.' }
     $taskWebRoot = Join-Path $taskPublish 'wwwroot'
     if (Test-Path -LiteralPath $taskWebRoot) {

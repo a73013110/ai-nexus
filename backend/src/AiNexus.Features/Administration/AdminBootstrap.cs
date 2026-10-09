@@ -1,8 +1,9 @@
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Identity;
 using AiNexus.Features.AccessControl;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.Identity.Authentication;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Administration;
 

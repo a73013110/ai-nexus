@@ -2,6 +2,8 @@ using AiNexus.Platform.Errors;
 using AiNexus.Features.Knowledge;
 using Microsoft.Extensions.Options;
 using Xunit;
+using AiNexus.Features.Knowledge.Indexing;
+using AiNexus.Features.Knowledge.Embeddings;
 
 namespace AiNexus.Tests;
 

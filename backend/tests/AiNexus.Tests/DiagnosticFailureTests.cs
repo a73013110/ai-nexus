@@ -4,13 +4,13 @@ using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
-using AiNexus.Features.Knowledge;
 using AiNexus.Platform.Data.Sql;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Tests;
 

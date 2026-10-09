@@ -5,6 +5,7 @@ using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Conversations;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Chat;
 
@@ -23,15 +24,15 @@ internal sealed class GetConversation(NexusDbContext db, ModelPresentation prese
     public async Task<Result<ConversationDetailDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)
     {
         var conversation = await db.OwnedConversationAsync(owner, id, ct);
-        if (conversation is null) return ConversationErrors.NotFound;
+        if (conversation is null) return ConversationsErrors.NotFound;
         var messages = await db.Set<Message>().AsNoTracking().Where(x => x.ConversationId == id).OrderBy(x => x.CreatedAt).ToListAsync(ct);
         var run = await db.Set<GenerationRun>().AsNoTracking().SingleOrDefaultAsync(x => x.ConversationId == id && x.ActiveOwnerId == owner, ct);
         var links = await db.Set<MessageAttachment>().AsNoTracking().Where(x => messages.Select(m => m.Id).Contains(x.MessageId))
             .Select(x => new { x.MessageId, x.Attachment.Id, x.Attachment.FileName, x.Attachment.ContentType, x.Attachment.Size, HasText = x.Attachment.ExtractedText != null }).ToListAsync(ct);
         var attachments = links.ToLookup(x => x.MessageId, x => new AttachmentDto(x.Id, x.FileName, x.ContentType, x.Size, x.ContentType.StartsWith("image/", StringComparison.Ordinal), x.HasText ? "extracted-text" : "vision"));
-        var citations = (await db.Set<AiNexus.Features.Knowledge.MessageCitation>().AsNoTracking().Where(x => messages.Select(m => m.Id).Contains(x.MessageId)).OrderBy(x => x.Number).ToListAsync(ct))
-            .ToLookup(x => x.MessageId, x => new AiNexus.Features.Knowledge.CitationDto(x.Number, x.DocumentId, x.Title, x.PageNumber, x.Excerpt, x.EndPage));
-        var ratings = await db.Set<AiNexus.Features.Quality.MessageFeedback>().AsNoTracking().Where(x => x.OwnerId == owner && messages.Select(m => m.Id).Contains(x.MessageId)).ToDictionaryAsync(x => x.MessageId, x => x.Rating, ct);
+        var citations = (await db.Set<AiNexus.Features.Knowledge.Retrieval.MessageCitation>().AsNoTracking().Where(x => messages.Select(m => m.Id).Contains(x.MessageId)).OrderBy(x => x.Number).ToListAsync(ct))
+            .ToLookup(x => x.MessageId, x => new AiNexus.Features.Knowledge.Retrieval.CitationDto(x.Number, x.DocumentId, x.Title, x.PageNumber, x.Excerpt, x.EndPage));
+        var ratings = await db.Set<AiNexus.Features.Quality.Feedback.MessageFeedback>().AsNoTracking().Where(x => x.OwnerId == owner && messages.Select(m => m.Id).Contains(x.MessageId)).ToDictionaryAsync(x => x.MessageId, x => x.Rating, ct);
         var charges = await db.Set<AiNexus.Features.Billing.ModelCharge>().AsNoTracking().Where(x => x.OwnerId == owner && x.ConversationId == id).ToDictionaryAsync(x => x.Id, ct);
         var searches = await db.Set<AiNexus.Features.WebSearch.WebSearchRecord>().AsNoTracking().Where(x => x.OwnerId == owner && x.ConversationId == id && x.RunId != null).ToDictionaryAsync(x => x.RunId!.Value, ct);
         var timings = await RunTiming.ReadAsync(db, messages.Where(x => x.RunId != null).Select(x => x.RunId!.Value).Distinct().ToArray(), ct);

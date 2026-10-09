@@ -6,6 +6,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Notifications;
 
+public sealed record NotificationTargetDto(string Kind, Guid Id);
+
+public sealed record NotificationDto(Guid Id, int Version, string Type, string Severity, string Title, string Body,
+    NotificationTargetDto Target, DateTimeOffset CreatedAt, DateTimeOffset? ReadAt, string? IssueCode = null);
+
+public sealed record NotificationPageDto(IReadOnlyList<NotificationDto> Items, int Unread, bool HasMore);
+
 internal static class ListNotifications
 {
     private const int PageSize = 50;
@@ -24,7 +31,7 @@ internal static class ListNotifications
         if (before is { } cursor)
         {
             var previous = await inbox.SingleOrDefaultAsync(x => x.Id == cursor, ct);
-            if (previous is null) return NotificationErrors.CursorInvalid;
+            if (previous is null) return NotificationsErrors.CursorInvalid;
             query = query.Where(x => x.CreatedAt < previous.CreatedAt || (x.CreatedAt == previous.CreatedAt && x.Id.CompareTo(cursor) < 0));
         }
         // Failure details are never stored for display; the fixed message and issue code replace them.

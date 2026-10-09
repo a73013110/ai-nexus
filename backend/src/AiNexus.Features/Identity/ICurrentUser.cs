@@ -1,3 +1,5 @@
+using AiNexus.Features.Identity.Users;
+
 namespace AiNexus.Features.Identity;
 
 /// <summary>

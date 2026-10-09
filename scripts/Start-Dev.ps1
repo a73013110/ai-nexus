@@ -55,7 +55,7 @@ function Start-NexusDevChild([string]$Name, [string]$Executable, [string]$Direct
 }
 
 try {
-    Start-NexusDevChild 'backend' $taskDotnet $taskRoot @('watch', '--project', 'backend/src/AiNexus.Api/AiNexus.Api.csproj', 'run', '--no-launch-profile', '--', '--urls', "${taskScheme}://localhost:$BackendPort", '--Security:AllowInsecureLocalhost', "$($Http.IsPresent)", '--LocalConfigPath', $taskPaths.Settings, '--SecretsConfigPath', $taskPaths.Secrets)
+    Start-NexusDevChild 'backend' $taskDotnet $taskRoot @('watch', '--project', 'backend/src/AiNexus.Host/AiNexus.Host.csproj', 'run', '--no-launch-profile', '--', '--urls', "${taskScheme}://localhost:$BackendPort", '--Security:AllowInsecureLocalhost', "$($Http.IsPresent)", '--LocalConfigPath', $taskPaths.Settings, '--SecretsConfigPath', $taskPaths.Secrets)
     Start-NexusDevChild 'frontend' $taskNode (Join-Path $taskRoot 'frontend') (@($taskNg, 'serve', '--host', 'localhost', '--port', "$FrontendPort", '--proxy-config', $taskProxy) + $taskSslArguments)
     Write-Output "開發模式：${taskScheme}://localhost:$FrontendPort/chat（Angular + API）。儲存原始碼後自動更新。"
     Write-Output "啟動與錯誤紀錄：$taskLogs。Ctrl+C 同時停止兩個服務。"

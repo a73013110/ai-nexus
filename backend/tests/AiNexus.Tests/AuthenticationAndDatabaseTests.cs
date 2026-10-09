@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Identity;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Data.Sql;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -11,6 +10,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using AiNexus.Features.Identity.Authentication;
+using AiNexus.Features.Identity.Sessions;
 
 namespace AiNexus.Tests;
 

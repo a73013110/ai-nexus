@@ -112,8 +112,8 @@ EF Core（直接注入 `NexusDbContext`）管 mapping、migration 與業務寫�
 工具只在 AiNexus 不存在時建庫，適用空資料庫或相同基線的未完成版本。DBA 可先建空 AiNexus，再執行 [idempotent SQL](../db/migrations.sql)，其中沒有 CREATE LOGIN／DATABASE 或秘密。source、designer、snapshot 位於 backend/src/AiNexus.Features/Persistence/Migrations，包含 InitialCreate 與後續增量版本。正式 DDL 使用獨立部署帳號。
 
 ```powershell
-dotnet ef migrations list --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Api
-dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Api
+dotnet ef migrations list --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host
+dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host
 ```
 
 初始 migration 保持原樣，後續升級追加四個版本：20261006144804_VectorRetrievalProfiles、20261006145833_SingleChunkLayout、20261006150830_CitationPageRanges、20261006155137_RetrievalEvaluationReports。第一個清空舊片段、標記知識文件 reindex，原始附件與 DocumentPages 保留；後續建立單一布局、引用頁碼範圍及評測表。沒有舊索引兼容查詢；本次更新尚須在部署環境套用 migration 並重新上傳或重建。初始化及正常啟動檢查模型與 snapshot 一致。

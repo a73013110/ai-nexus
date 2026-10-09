@@ -1,10 +1,10 @@
 using System.Text.Json;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Collaboration;
-using AiNexus.Features.Knowledge;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Knowledge.Documents;
 
 namespace AiNexus.Features.Projects;
 

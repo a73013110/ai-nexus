@@ -2,6 +2,8 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Attachments;
 
+public sealed record AttachmentPolicyDto(long MaxFileBytes, int MaxFilesPerMessage, long MaxMessageBytes, string[] Extensions);
+
 /// <summary>Upload limits and accepted extensions for the composer.</summary>
 internal static class GetAttachmentPolicy
 {

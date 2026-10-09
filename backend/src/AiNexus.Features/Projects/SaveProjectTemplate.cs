@@ -42,11 +42,11 @@ internal sealed class SaveProjectTemplate(NexusDbContext db, ResourceAccess acce
         if (key is Guid existing)
         {
             row = await db.Set<ProjectTemplate>().SingleOrDefaultAsync(x => x.Id == existing && x.ProjectId == id, ct);
-            if (row is null) return ProjectErrors.TemplateMissing;
+            if (row is null) return ProjectsErrors.TemplateMissing;
         }
         else
         {
-            if (await db.Set<ProjectTemplate>().CountAsync(x => x.ProjectId == id, ct) >= ProjectTemplate.MaxPerProject) return ProjectErrors.TemplateLimit;
+            if (await db.Set<ProjectTemplate>().CountAsync(x => x.ProjectId == id, ct) >= ProjectTemplate.MaxPerProject) return ProjectsErrors.TemplateLimit;
             row = new() { ProjectId = id }; db.Add(row);
         }
         row.Title = request.Title.Trim(); row.Content = request.Content.Trim();
