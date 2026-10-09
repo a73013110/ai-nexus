@@ -1,6 +1,6 @@
 # 開發、執行與文件管理
 
-日誌與安全錯誤變更須執行 `scripts/Test-Diagnostics.ps1 -Browser -Performance`；完整 Verify 包含實際 Angular＋Kestrel 查證流程、原有 UI 回歸及隔離效能量測。report／TRX／screenshots 在 artifacts，見 [驗收文件](DIAGNOSTICS-VERIFICATION.md)。`Test-Repository.ps1 -WorkingTree` 可在不改 Git index 的情況檢查追蹤與未忽略的新檔；預設仍檢查 staged。應用日誌位於站外 Diagnostics.Directory，與 `.local`／ANCM stdout 分開。
+日誌與安全錯誤變更須執行 `scripts/Test-Diagnostics.ps1 -Browser -Performance`；完整 Verify 包含實際 Angular＋Kestrel 查證流程、原有 UI 回歸及隔離效能量測。report／TRX／screenshots 在 artifacts，見 [驗收文件](DIAGNOSTICS_VERIFICATION.md)。`Test-Repository.ps1 -WorkingTree` 可在不改 Git index 的情況檢查追蹤與未忽略的新檔；預設仍檢查 staged。應用日誌位於站外 Diagnostics.Directory，與 `.local`／ANCM stdout 分開。
 
 既有 Playwright UI 回歸由 `Start-BrowserTest.ps1` 啟動編譯好的網站，使用 artifacts 下明確指定的空設定／秘密檔與獨立附件、金鑰、診斷目錄，不載入開發機 `.local`。API fixture 回歸與使用隔離 SQLite 的真實診斷端到端測試分開；前者的 SQL 匯入降級是刻意未配置資料庫，不能當成 SQL Server 效能或功能驗證。
 

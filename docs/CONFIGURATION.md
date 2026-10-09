@@ -141,7 +141,7 @@ Embedding 支援 google／ollama／none，Mode 支援 hybrid／vector／keyword�
 
 啟動驗證維度只允許 768／1024、批次 1–128、併發 1–8、候選 1–200、TopK 1–20 且不超過重排候選、重疊 0–0.3、ContextTokens 100–16000、快取 0–60 分鐘（0 停用），並檢查最小／目標／最大 token 次序及有限分數。MinVectorScore=0 表示不過濾。QueryRewrite 在既有 Knowledge.QueryRewrite 區塊綁定，只在有歷史時用本機核准模型，非額外一般設定頁功能。
 
-模型／維度／前處理／Revision 或切段設定變更需重建 profile；管理端完整覆蓋後切換。設定鏈含正式 appsettings、兩個 example、settings-layout／schema／遷移腳本；Migrate-Settings 將舊字元切段及 context 近似換成 token、移除 PortableCandidateLimit／UseNativeVector。它只轉設定，不提供舊索引查詢。既有本機設定會保留明確值，不會因新預設而自動改成 Ollama。完整流程見 [架構](VECTOR_ARCHITECTURE.md)、[模型](EMBEDDING_MODELS.md)、[本機 AI](LOCAL-AI.md)。
+模型／維度／前處理／Revision 或切段設定變更需重建 profile；管理端完整覆蓋後切換。設定鏈含正式 appsettings、兩個 example、settings-layout／schema／遷移腳本；Migrate-Settings 將舊字元切段及 context 近似換成 token、移除 PortableCandidateLimit／UseNativeVector。它只轉設定，不提供舊索引查詢。既有本機設定會保留明確值，不會因新預設而自動改成 Ollama。完整流程見 [架構](VECTOR_ARCHITECTURE.md)、[模型](EMBEDDING_MODELS.md)、[本機 AI](LOCAL_AI.md)。
 
 ## 工具與程式庫 connector
 

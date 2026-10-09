@@ -2,7 +2,7 @@
 
 AI 工作區：Angular 22、ASP.NET Core 10、MSSQL、AD 與 Google AI／Ollama 多供應商路由。模組化單體與前端 lazy routes 維持清楚結構，資料層保留 EDoc 的 Dapper DbHelper／scoped EfHelper，風格集中於三層 tokens。
 
-全系統使用結構化日誌、安全錯誤提示與查證代碼。管理員可在「系統日誌」查詢關聯流程；站外 JSONL 在 SQL 故障時仍保存並於恢復後去重補送。查詢、診斷與匯出權限分開，安全稽核採獨立政策。見 [日誌架構與維運](docs/DIAGNOSTICS.md)、[驗收與效能結果](docs/DIAGNOSTICS-VERIFICATION.md)。
+全系統使用結構化日誌、安全錯誤提示與查證代碼。管理員可在「系統日誌」查詢關聯流程；站外 JSONL 在 SQL 故障時仍保存並於恢復後去重補送。查詢、診斷與匯出權限分開，安全稽核採獨立政策。見 [日誌架構與維運](docs/DIAGNOSTICS.md)、[驗收與效能結果](docs/DIAGNOSTICS_VERIFICATION.md)。
 
 聊天包含文件／圖片分析、掃描 PDF OCR、Markdown／程式碼、訊息分支、停止／斷線恢復、範本、搜尋、收藏／封存／標籤、本機草稿、文字備份與快捷指令。模型、思考與 Context 位於輸入區，支援鎖定模型與隱藏名稱；標題可雙擊修改，角色及問答定位清楚區分。
 
@@ -61,7 +61,7 @@ dotnet dev-certs https --trust
 | [架構](docs/ARCHITECTURE.md)               | 模組、共用邊界、隔離、推論與 durable jobs                      |
 | [設計](docs/DESIGN_SYSTEM.md)              | tokens、字級、主題、共用元件及動畫                             |
 | [向量](docs/VECTOR_ARCHITECTURE.md)        | 實作路徑、公文／校務資料、ACL 與 ANN 評估                      |
-| [本地 AI](docs/LOCAL-AI.md)                | Ollama、16 GB GPU 的模型規劃與向量化優先順序                   |
+| [本地 AI](docs/LOCAL_AI.md)                | Ollama、16 GB GPU 的模型規劃與向量化優先順序                   |
 | [Embedding 比較](docs/EMBEDDING_MODELS.md) | BGE-M3／Qwen、768／1024、query profile 與本地 Recall／MRR 工具 |
 | [資源操作](docs/FEATURE_LIFECYCLE.md)      | 各功能的增刪修、歷史保存及操作權限                             |
 | [IIS](deploy/iis/README.md)                | 單程序部署、AD、秘密、SSE 與驗收                               |
