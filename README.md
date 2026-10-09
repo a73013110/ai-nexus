@@ -1,6 +1,6 @@
 # AI Nexus
 
-AI 工作區：Angular 22、ASP.NET Core 10、MSSQL、AD 與 Google AI／Ollama 多供應商路由。模組化單體與前端 lazy routes 維持清楚結構，資料層保留 EDoc 的 Dapper DbHelper／scoped EfHelper，風格集中於三層 tokens。
+AI 工作區：Angular 22、ASP.NET Core 10、MSSQL、AD 與 Google AI／Ollama 多供應商路由。模組化單體與前端 lazy routes 維持清楚結構，資料層為 EF Core 加 EDoc 的 Dapper DbHelper，風格集中於三層 tokens。
 
 全系統使用結構化日誌、安全錯誤提示與查證代碼。管理員可在「系統日誌」查詢關聯流程；站外 JSONL 在 SQL 故障時仍保存並於恢復後去重補送。查詢、診斷與匯出權限分開，安全稽核採獨立政策。見 [日誌架構與維運](docs/DIAGNOSTICS.md)、[驗收與效能結果](docs/DIAGNOSTICS_VERIFICATION.md)。
 

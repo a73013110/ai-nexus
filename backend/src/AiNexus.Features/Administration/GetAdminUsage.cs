@@ -1,4 +1,5 @@
 using AiNexus.Features.Attachments;
+using AiNexus.Features.Billing;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.WebSearch;

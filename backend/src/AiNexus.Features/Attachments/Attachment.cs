@@ -1,5 +1,4 @@
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
@@ -93,7 +92,6 @@ internal sealed class AttachmentEntityConfiguration : IEntityTypeConfiguration<A
         file.HasIndex(x => new { x.StorageState, x.CreatedAt });
         file.HasIndex(x => new { x.OwnerId, x.CreatedAt });
         file.HasIndex(x => new { x.OwnerId, x.InLibrary, x.CreatedAt, x.Id });
-        file.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -103,7 +101,6 @@ internal sealed class MessageAttachmentConfiguration : IEntityTypeConfiguration<
     {
         link.ToTable("MessageAttachments", "attachments");
         link.HasKey(x => new { x.MessageId, x.AttachmentId });
-        link.HasOne<Message>().WithMany().HasForeignKey(x => x.MessageId).OnDelete(DeleteBehavior.Restrict);
         link.HasOne(x => x.Attachment).WithMany().HasForeignKey(x => x.AttachmentId).OnDelete(DeleteBehavior.Restrict);
     }
 }

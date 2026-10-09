@@ -6,7 +6,6 @@ using System.Security.Principal;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Operations;
 using AiNexus.Features.AccessControl;
 using Microsoft.EntityFrameworkCore;
 
@@ -39,7 +38,7 @@ public sealed class DisplayNameCache(TimeProvider clock)
     }
 }
 
-public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, AiNexus.Features.Administration.AdminBootstrap bootstrap,
+public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, IEnumerable<ISignInGrant> grants,
     DisplayNameCache names, TimeProvider clock) : IRequestUser, ICurrentUser
 {
     private static readonly TimeSpan SeenInterval = TimeSpan.FromMinutes(5);
@@ -74,7 +73,7 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
         var existing = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Sid == sid, ct);
         if (existing is not null && !SessionIdentity.Allows(existing, "ad"))
             throw new ApiException(403, "login_method_disabled", "此使用者已停用，或未允許 AD 驗證。");
-        if (existing is not null && !Stale(existing, displayName) && !await bootstrap.PendingAsync(existing, ct))
+        if (existing is not null && !Stale(existing, displayName) && !await PendingGrantAsync(existing, ct))
             return resolved = Track(existing)!;
         await writeLock.Gate.WaitAsync(ct);
         try
@@ -82,7 +81,7 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
             var user = await db.Users.SingleOrDefaultAsync(x => x.Sid == sid, ct);
             if (user is null)
             {
-                var adAccount = UserAccounts.Normalize(AiNexus.Features.Administration.AdminBootstrap.AccountName(account));
+                var adAccount = UserAccounts.Normalize(UserAccounts.AccountName(account));
                 user = await db.Users.SingleOrDefaultAsync(x => x.AdAccount == adAccount, ct);
                 if (user is not null && user.Sid.StartsWith("managed:"))
                 { user.Sid = sid; user.Account = account; }
@@ -106,10 +105,17 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
                 user.LastSeenAt = clock.GetUtcNow();
                 await db.SaveChangesAsync(ct);
             }
-            await bootstrap.ApplyAsync(user, ct);
+            foreach (var grant in grants) await grant.ApplyAsync(user, ct);
             return resolved = user;
         }
         finally { writeLock.Gate.Release(); }
+    }
+
+    private async Task<bool> PendingGrantAsync(NexusUser user, CancellationToken ct)
+    {
+        foreach (var grant in grants)
+            if (await grant.PendingAsync(user, ct)) return true;
+        return false;
     }
 
     private bool Stale(NexusUser user, string displayName) => clock.GetUtcNow() - user.LastSeenAt > SeenInterval || !user.ProfileManaged && user.DisplayName != displayName;

@@ -3,7 +3,6 @@ using System.Net.Http.Headers;
 using System.Text;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
-using AiNexus.Features.Conversations;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Repositories;
 using AiNexus.Features.WebSearch;

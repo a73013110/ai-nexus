@@ -1,5 +1,5 @@
-using AiNexus.Features.Administration;
 using Xunit;
+using AiNexus.Features.Inference;
 
 namespace AiNexus.Tests;
 

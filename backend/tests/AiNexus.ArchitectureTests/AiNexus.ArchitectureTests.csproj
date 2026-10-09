@@ -11,7 +11,4 @@
     <ProjectReference Include="../../src/AiNexus.Features/AiNexus.Features.csproj" />
     <ProjectReference Include="../../src/AiNexus.Platform/AiNexus.Platform.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <None Update="module-dependencies.baseline.txt" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
 </Project>

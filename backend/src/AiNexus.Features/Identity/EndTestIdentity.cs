@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Administration;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.AspNetCore.Antiforgery;
@@ -28,7 +27,7 @@ internal static class EndTestIdentity
         var actor = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == actorId, ct);
         var method = http.User.FindFirstValue(SessionIdentity.ActorMethod);
         if (actor is null || !SessionIdentity.Allows(actor, method) || !SessionIdentity.MatchesVersion(actor, http.User.FindFirstValue(SessionIdentity.ActorVersion)) ||
-            !(await access.ForUserAsync(actorId, ct)).Features.Any(x => x.Id == AdministrationConfiguration.Feature))
+            !(await access.ForUserAsync(actorId, ct)).Features.Any(x => x.Id == FeatureIds.Admin))
             return IdentityErrors.TestSourceRevoked.ToProblem();
         Guid.TryParse(http.User.FindFirstValue(SessionIdentity.UserId), out var targetId);
         if (!Guid.TryParse(http.User.FindFirstValue(SessionIdentity.TestId), out var testId)) return IdentityErrors.TestSessionInvalid.ToProblem();

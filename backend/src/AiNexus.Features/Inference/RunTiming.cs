@@ -1,5 +1,4 @@
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Conversations;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Inference;

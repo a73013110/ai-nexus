@@ -1,5 +1,4 @@
 using AiNexus.Features.Identity;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 

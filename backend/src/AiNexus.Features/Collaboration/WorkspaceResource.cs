@@ -1,4 +1,3 @@
-using AiNexus.Features.AccessControl;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
@@ -42,7 +41,6 @@ internal sealed class WorkspaceResourceConfiguration : IEntityTypeConfiguration<
         resource.Property(x => x.Kind).HasMaxLength(24); resource.Property(x => x.Name).HasMaxLength(120);
         resource.HasIndex(x => new { x.OwnerId, x.Kind, x.UpdatedAt });
         resource.HasQueryFilter(SoftDelete.Filter, x => !x.IsDeleted);
-        resource.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
         resource.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Restrict);
     }
 }
@@ -53,7 +51,6 @@ internal sealed class ResourceMemberConfiguration : IEntityTypeConfiguration<Res
     {
         member.ToTable("ResourceMembers", "collaboration"); member.HasKey(x => new { x.ResourceId, x.UserId }); member.Property(x => x.Role).HasMaxLength(12);
         member.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.ResourceId).OnDelete(DeleteBehavior.Cascade);
-        member.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 
@@ -63,7 +60,6 @@ internal sealed class ResourceGroupConfiguration : IEntityTypeConfiguration<Reso
     {
         group.ToTable("ResourceGroups", "collaboration"); group.HasKey(x => new { x.ResourceId, x.GroupId }); group.Property(x => x.GroupId).HasMaxLength(64);
         group.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.ResourceId).OnDelete(DeleteBehavior.Cascade);
-        group.HasOne<RoleGroup>().WithMany().HasForeignKey(x => x.GroupId).OnDelete(DeleteBehavior.Restrict);
     }
 }
 

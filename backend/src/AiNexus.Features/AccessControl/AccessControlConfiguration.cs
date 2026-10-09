@@ -1,4 +1,3 @@
-using AiNexus.Features.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.AccessControl;
@@ -32,7 +31,6 @@ public static class AccessControlConfiguration
         var userRole = model.Entity<UserRole>();
         userRole.ToTable("UserRoles", "access");
         userRole.HasKey(x => new { x.UserId, x.RoleId });
-        userRole.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         userRole.HasOne<Role>().WithMany().HasForeignKey(x => x.RoleId).OnDelete(DeleteBehavior.Restrict);
 
         var membership = model.Entity<RoleGroupRole>();
@@ -48,5 +46,8 @@ public static class AccessControlConfiguration
         grant.HasOne<RoleGroup>().WithMany().HasForeignKey(x => x.GroupId).OnDelete(DeleteBehavior.Cascade);
         grant.HasOne<Feature>().WithMany().HasForeignKey(x => x.FeatureId).OnDelete(DeleteBehavior.Restrict);
         grant.HasData(new RoleGroupFeature { GroupId = BuiltInAccess.WorkspaceGroup, FeatureId = BuiltInAccess.ChatFeature });
+
+        model.ApplyConfiguration(new GroupModelPolicyConfiguration());
+        model.ApplyConfiguration(new UserModelPolicyConfiguration());
     }
 }

@@ -19,7 +19,6 @@ public sealed class AttachmentsModule : IFeatureModule
         var services = builder.Services;
         services.AddScoped<AttachmentService>();
         services.AddScoped<RenameLibraryFile>();
-        services.AddScoped<ListLibraryFiles>();
         services.AddScoped<RetainLibraryFile>();
         services.AddScoped<RemoveAttachment>();
         services.AddScoped<DocumentExtractor>();
@@ -39,12 +38,12 @@ public sealed class AttachmentsModule : IFeatureModule
         services.AddFeaturePolicy(Policies.Attachments, FeatureIds.Files, FeatureIds.Chat, FeatureIds.Knowledge, FeatureIds.Projects);
     }
 
-    // Endpoint order is the published OpenAPI order: the file library first, then attachments.
+    // Endpoint order is the published OpenAPI order: the file library first, then attachments. Knowledge lists the
+    // library, since a file's usages include documents.
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         var library = api.MapGroup("/files").RequireAuthorization(Policies.Files).WithTags("File library");
         RenameLibraryFile.Map(library);
-        ListLibraryFiles.Map(library);
         RetainLibraryFile.Map(library);
         RemoveAttachment.MapLibrary(library);
 

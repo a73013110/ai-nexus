@@ -1,3 +1,4 @@
+using AiNexus.Features.Chat;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Inference;
 using Microsoft.EntityFrameworkCore;

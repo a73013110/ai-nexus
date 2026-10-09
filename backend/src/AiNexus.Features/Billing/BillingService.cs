@@ -1,18 +1,15 @@
-using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Operations;
-using AiNexus.Features.Knowledge;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Billing;
 
-public sealed class BillingService(NexusDbContext db, ModelPresentation presentation, IOptions<InferenceOptions> inference, IOptions<KnowledgeOptions> knowledge)
+public sealed class BillingService(NexusDbContext db, ModelPresentation presentation, IOptions<InferenceOptions> inference, IEnumerable<ServiceModel> services) : IModelCallMeter
 {
     public IReadOnlyList<PriceTargetDto> Targets() => inference.Value.Models
         .Select(x => Target(x.Provider, x.NativeId))
-        .Append(Target(knowledge.Value.EmbeddingProvider, knowledge.Value.EmbeddingModel))
+        .Concat(services.Select(x => Target(x.Provider, x.Id)))
         .Concat(new[] { "searxng", "brave" }.Select(x => Target(x, "web-search")))
         .DistinctBy(x => (x.Provider, x.ModelId)).ToArray();
     private PriceTargetDto Target(string provider, string model) => new(provider, model, presentation.DisplayName(model, administrator: true, provider: provider)!);
@@ -64,6 +61,8 @@ public sealed class BillingService(NexusDbContext db, ModelPresentation presenta
         if (charge is null) return;
         charge.FinishedAt ??= DateTimeOffset.UtcNow; ChargeCalculator.Finalize(charge, outcome);
     }
+    Task IModelCallMeter.ReserveAsync(Guid callId, Guid owner, Guid? conversation, string provider, string model, string operation, DateTimeOffset created, CancellationToken ct)
+        => ReserveAsync(callId, owner, conversation, provider, model, operation, created, ct);
     public PriceDto Describe(ModelPrice p) => new(p.Id, p.Provider, p.ModelId, p.Currency, p.Kind,
         p.InputPerMillion, p.CachedInputPerMillion, p.OutputPerMillion, p.PerRequest, p.RequestCharge, p.EffectiveAt, p.Note,
         presentation.DisplayName(p.ModelId, administrator: true, provider: p.Provider));

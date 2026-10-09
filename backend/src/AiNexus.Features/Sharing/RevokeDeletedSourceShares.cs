@@ -1,5 +1,5 @@
 using AiNexus.Features.Artifacts;
-using AiNexus.Features.Conversations;
+using AiNexus.Features.Chat;
 using AiNexus.Platform.Events;
 
 namespace AiNexus.Features.Sharing;

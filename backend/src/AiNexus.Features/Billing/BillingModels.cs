@@ -1,4 +1,3 @@
-using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -84,7 +83,6 @@ internal sealed class ModelPriceConfiguration : IEntityTypeConfiguration<ModelPr
         price.Property(x => x.Provider).HasMaxLength(32); price.Property(x => x.ModelId).HasMaxLength(160);
         price.Property(x => x.Currency).HasMaxLength(3); price.Property(x => x.Kind).HasMaxLength(16);
         price.Property(x => x.RequestCharge).HasMaxLength(16); price.Property(x => x.Note).HasMaxLength(500);
-        price.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.CreatedBy).OnDelete(DeleteBehavior.Restrict);
         price.Property(x => x.InputPerMillion).HasPrecision(20, 8); price.Property(x => x.CachedInputPerMillion).HasPrecision(20, 8);
         price.Property(x => x.OutputPerMillion).HasPrecision(20, 8); price.Property(x => x.PerRequest).HasPrecision(20, 8);
     }
@@ -100,8 +98,6 @@ internal sealed class ModelChargeConfiguration : IEntityTypeConfiguration<ModelC
         charge.Property(x => x.Operation).HasMaxLength(32); charge.Property(x => x.Currency).HasMaxLength(3);
         charge.Property(x => x.Kind).HasMaxLength(16); charge.Property(x => x.RequestCharge).HasMaxLength(16);
         charge.Property(x => x.State).HasMaxLength(24); charge.Property(x => x.Outcome).HasMaxLength(16);
-        charge.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
-        charge.HasOne<Conversation>().WithMany().HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Restrict);
         charge.HasOne<ModelPrice>().WithMany().HasForeignKey(x => x.PriceId).OnDelete(DeleteBehavior.Restrict);
         charge.Property(x => x.InputPerMillion).HasPrecision(20, 8); charge.Property(x => x.CachedInputPerMillion).HasPrecision(20, 8);
         charge.Property(x => x.OutputPerMillion).HasPrecision(20, 8); charge.Property(x => x.PerRequest).HasPrecision(20, 8);

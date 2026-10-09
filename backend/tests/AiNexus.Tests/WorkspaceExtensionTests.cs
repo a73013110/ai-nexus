@@ -2,6 +2,7 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
+using AiNexus.Features.Chat;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Inference;

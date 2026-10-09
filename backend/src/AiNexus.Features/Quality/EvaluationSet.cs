@@ -61,6 +61,5 @@ internal sealed class EvaluationSetConfiguration : IEntityTypeConfiguration<Eval
     public void Configure(EntityTypeBuilder<EvaluationSet> s)
     {
         s.ToTable("EvaluationSets", "quality"); s.HasKey(x => x.Id); s.Property(x => x.Description).HasMaxLength(2000);
-        s.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.Id).OnDelete(DeleteBehavior.Restrict);
     }
 }

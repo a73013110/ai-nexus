@@ -1,9 +1,14 @@
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.Collaboration;
+using AiNexus.Platform.Events;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Conversations;
 
-/// <summary>The user's own conversations: list, organize, back up, branch and delete. Other modules use <see cref="ConversationService"/>; each use case has its own file.</summary>
+/// <summary>
+/// The user's own conversations and messages: list, create, organize, import and branch. Other modules use
+/// <see cref="ConversationService"/>; each use case has its own file.
+/// </summary>
 public sealed class ConversationsModule : IFeatureModule
 {
     /// <summary>Conversation backups may carry a whole message tree.</summary>
@@ -13,13 +18,11 @@ public sealed class ConversationsModule : IFeatureModule
     {
         var services = builder.Services;
         services.AddScoped<ConversationService>();
-        services.AddScoped<GetConversation>();
         services.AddScoped<ImportConversation>();
         services.AddScoped<RenameConversation>();
         services.AddScoped<UpdateConversationSettings>();
-        services.AddScoped<DuplicateConversation>();
         services.AddScoped<SelectBranch>();
-        services.AddScoped<DeleteConversation>();
+        services.AddDomainEventHandler<ContainerDeleted, DetachDeletedProjectConversations>();
         services.AddFeaturePolicy(FeatureIds.Chat);
     }
 
@@ -31,12 +34,8 @@ public sealed class ConversationsModule : IFeatureModule
         ListConversationLabels.Map(routes);
         ImportConversation.Map(routes);
         CreateConversation.Map(routes);
-        GetConversation.Map(routes);
         RenameConversation.Map(routes);
         UpdateConversationSettings.Map(routes);
-        DuplicateConversation.Map(routes);
-        ExportConversation.Map(routes);
         SelectBranch.Map(routes);
-        DeleteConversation.Map(routes);
     }
 }

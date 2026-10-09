@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using AiNexus.Features.Chat;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Billing;
@@ -93,7 +93,7 @@ public sealed class MultiProviderRoutingTests
         Assert.Equal(timing, detail.Messages.Single(x => x.Id == completed.AssistantMessageId).Timing);
         var admin = (await client.GetFromJsonAsync<AiNexus.Features.Administration.AdminConversationDetailDto>($"/api/v1/admin/conversations/{conversation.Id}"))!;
         Assert.Equal(timing, admin.Messages.Single(x => x.Id == completed.AssistantMessageId).Timing);
-        var usage = (await client.GetFromJsonAsync<AiNexus.Features.Identity.PersonalUsageDto>("/api/v1/settings/usage"))!;
+        var usage = (await client.GetFromJsonAsync<AiNexus.Features.Account.PersonalUsageDto>("/api/v1/settings/usage"))!;
         Assert.Equal(timing.TotalMilliseconds, usage.TotalDurationMilliseconds); Assert.Equal(1, usage.TimedRequests);
         factory.Provider.NeverFinish = true;
         var next = await CreateRun(client, conversation.Id, "cancel", completed.AssistantMessageId);

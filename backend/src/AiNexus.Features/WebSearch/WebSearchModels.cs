@@ -1,4 +1,3 @@
-using AiNexus.Features.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -36,6 +35,5 @@ internal sealed class WebSearchRecordConfiguration : IEntityTypeConfiguration<We
         item.Property(x => x.IdempotencyKey).HasMaxLength(80); item.Property(x => x.RequestHash).HasMaxLength(64);
         item.Property(x => x.Status).HasMaxLength(16); item.HasIndex(x => new { x.OwnerId, x.IdempotencyKey }).IsUnique();
         item.HasIndex(x => x.RunId); item.HasIndex(x => new { x.OwnerId, x.CreatedAt });
-        item.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
     }
 }
