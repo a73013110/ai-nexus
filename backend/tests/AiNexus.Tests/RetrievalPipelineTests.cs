@@ -52,7 +52,7 @@ public sealed class RetrievalPipelineTests
     [Fact]
     public async Task HybridUsesBothRanksAndQueryCacheAvoidsDuplicateInvocation()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false); using var client = await factory.SignedInAsync(); var seed = await SeedAsync(factory, client);
+        await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync(); var seed = await SeedAsync(factory, client);
         var before = factory.Embeddings.Calls;
         foreach (var query in new[] { "  採購   核准  ", "採購 核准" })
         {
@@ -67,7 +67,7 @@ public sealed class RetrievalPipelineTests
     [InlineData("fail", HttpStatusCode.ServiceUnavailable, null)]
     public async Task RerankFailurePolicyIsExplicit(string policy, HttpStatusCode status, string? mode)
     {
-        await using var factory = new NexusFactory(backgroundJobs: false, services: services => {
+        await using var factory = new NexusFactory(services: services => {
             services.PostConfigure<KnowledgeOptions>(x => x.Rerank = new() { Provider = "tei", Endpoint = "http://fixture", FailurePolicy = policy });
             services.RemoveAll<IRerankClient>(); services.AddSingleton<IRerankClient>(new FixtureReranker { Fail = true });
         });
@@ -80,7 +80,7 @@ public sealed class RetrievalPipelineTests
     public async Task FailedRewriteUsesOriginalAndSuccessfulRerankAppliesRefusalThreshold()
     {
         var rerank = new FixtureReranker();
-        await using var factory = new NexusFactory(backgroundJobs: false, services: services => {
+        await using var factory = new NexusFactory(services: services => {
             services.PostConfigure<KnowledgeOptions>(x => x.Rerank = new() { Provider = "tei", Endpoint = "http://fixture", MinScore = .9 });
             services.RemoveAll<IRerankClient>(); services.AddSingleton<IRerankClient>(rerank);
             services.RemoveAll<IQueryRewriter>(); services.AddSingleton<IQueryRewriter>(new FixtureRewriter { Fail = true });
@@ -94,7 +94,7 @@ public sealed class RetrievalPipelineTests
     public async Task AclRevokedDuringRerankCannotReturnSourceText()
     {
         var rerank = new FixtureReranker();
-        await using var factory = new NexusFactory(backgroundJobs: false, services: services => {
+        await using var factory = new NexusFactory(services: services => {
             services.PostConfigure<KnowledgeOptions>(x => x.Rerank = new() { Provider = "tei", Endpoint = "http://fixture" });
             services.RemoveAll<IRerankClient>(); services.AddSingleton<IRerankClient>(rerank);
         });

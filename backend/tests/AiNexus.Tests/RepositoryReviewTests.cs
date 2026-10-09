@@ -18,7 +18,7 @@ namespace AiNexus.Tests;
 
 public sealed class RepositoryReviewTests
 {
-    private static NexusFactory Factory(FixtureGitea source, ReviewProvider provider) => new(backgroundJobs: false, services: services =>
+    private static NexusFactory Factory(FixtureGitea source, ReviewProvider provider) => new(services: services =>
     {
         services.RemoveAll<IGiteaClient>(); services.AddSingleton<IGiteaClient>(source);
         services.PostConfigure<GiteaOptions>(o => o.Enabled = true);
@@ -212,7 +212,7 @@ public sealed class RepositoryReviewTests
     [Fact]
     public async Task BoundedModelTasksReserveTheRequestedOutputInsteadOfTheFullModelLimit()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false, inference: o => o.Models[0].MaxOutputTokens = 7000);
+        await using var factory = new NexusFactory(inference: o => o.Models[0].MaxOutputTokens = 7000);
         using var client = await factory.SignedInAsync(); using var scope = factory.Services.CreateScope();
         var owner = await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Users.Select(x => x.Id).SingleAsync();
         var result = await scope.ServiceProvider.GetRequiredService<ModelTaskService>().GenerateAsync(owner, "test-task", new string('x', 4000), "精簡回答。", CancellationToken.None, maxOutputTokens: 128);

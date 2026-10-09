@@ -15,7 +15,7 @@ public sealed class DashboardTests
     [Fact]
     public async Task SavedOriginalsAreSeparateFromDocumentRecordsAndRespectOwnerScope()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"], backgroundJobs: false);
+        await using var factory = new NexusFactory(administrators: ["alice"]);
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var a = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;

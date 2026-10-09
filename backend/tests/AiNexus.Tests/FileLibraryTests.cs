@@ -24,7 +24,7 @@ public sealed class FileLibraryTests
     [Fact]
     public async Task LibraryUnifiesOwnedChatAndKnowledgeFilesWithoutLeakingOtherUsersOrDuplicatingOriginals()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
         var privateFile = await Upload(alice, "私人筆記.txt", "Private library original");
         (await alice.PostAsync($"/api/v1/files/{privateFile.Id}/retain", null)).EnsureSuccessStatusCode();
@@ -58,7 +58,7 @@ public sealed class FileLibraryTests
     [Fact]
     public async Task ReusingACompletedReaderCopiesPagesAndRemovingIndexLeavesTheLibraryOriginal()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         using var client = await factory.SignedInAsync();
         var file = await Upload(client, "report.txt", "An immutable source with searchable text.");
         (await client.PostAsync($"/api/v1/files/{file.Id}/retain", null)).EnsureSuccessStatusCode();
@@ -77,7 +77,7 @@ public sealed class FileLibraryTests
     [Fact]
     public async Task LibraryMutationsRequireCsrfAndPaginationIsBounded()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false); using var client = await factory.SignedInAsync();
+        await using var factory = new NexusFactory(); using var client = await factory.SignedInAsync();
         var file = await Upload(client, "safe.txt", "Untrusted upload");
         client.DefaultRequestHeaders.Remove("X-Nexus-CSRF");
         Assert.Equal(HttpStatusCode.Forbidden, (await client.PostAsync($"/api/v1/files/{file.Id}/retain", null)).StatusCode);

@@ -116,7 +116,7 @@ public sealed class MonitoringTests
     public async Task FactoryClientsShareDependencyObservationAndSuppressObserverCalls()
     {
         var clock = new Clock();
-        await using var factory = new NexusFactory(backgroundJobs: false, services: services => {
+        await using var factory = new NexusFactory(services: services => {
             services.RemoveAll<TimeProvider>(); services.AddSingleton<TimeProvider>(clock);
             services.AddHttpClient("monitoring-probe").ConfigurePrimaryHttpMessageHandler(() => new ProbeHandler());
         });
@@ -147,7 +147,7 @@ public sealed class MonitoringTests
     [Fact]
     public async Task PresenceIsAuthenticatedCsrfProtectedAndMonitorIsSeparatelyGranted()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"], backgroundJobs: false);
+        await using var factory = new NexusFactory(administrators: ["alice"]);
         using var anonymous = factory.CreateClient();
         Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.PostAsJsonAsync("/api/v1/presence", new PresenceRequest(Guid.NewGuid(), "chat", "active"))).StatusCode);
         using var bob = await factory.SignedInAsync("bob"); using var alice = await factory.SignedInAsync();
@@ -164,7 +164,7 @@ public sealed class MonitoringTests
     public async Task SharedPipelineCountsRealPayloadAndExcludesMonitoringTraffic()
     {
         var clock = new Clock();
-        await using var factory = new NexusFactory(administrators: ["alice"], backgroundJobs: false, services: services => {
+        await using var factory = new NexusFactory(administrators: ["alice"], services: services => {
             services.RemoveAll<TimeProvider>(); services.AddSingleton<TimeProvider>(clock);
         });
         using var alice = await factory.SignedInAsync();
@@ -183,7 +183,7 @@ public sealed class MonitoringTests
     [Fact]
     public async Task ExportIsAuditedAndDisabledTelemetryRemainsEmpty()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"], backgroundJobs: false, services: services => services.PostConfigure<MonitoringOptions>(x => x.Enabled = false));
+        await using var factory = new NexusFactory(administrators: ["alice"], services: services => services.PostConfigure<MonitoringOptions>(x => x.Enabled = false));
         using var alice = await factory.SignedInAsync();
         await alice.PostAsJsonAsync("/api/v1/presence", new PresenceRequest(Guid.NewGuid(), "chat", "active"));
         var export = await alice.GetAsync("/api/v1/admin/monitoring/export?minutes=15"); export.EnsureSuccessStatusCode();
@@ -195,7 +195,7 @@ public sealed class MonitoringTests
     [Fact]
     public async Task RevokedGrantTerminatesExistingStream()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"], backgroundJobs: false);
+        await using var factory = new NexusFactory(administrators: ["alice"]);
         using var alice = await factory.SignedInAsync(); using var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(25));
         using var response = await alice.GetAsync("/api/v1/admin/monitoring/events", HttpCompletionOption.ResponseHeadersRead, cancel.Token);
         response.EnsureSuccessStatusCode();

@@ -119,7 +119,7 @@ public sealed class AdministrativeInspectionTests
     [Fact]
     public async Task AuditFailureFilterExcludesAcceptedLifecycleAndLegacyOperations()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"], backgroundJobs: false);
+        await using var factory = new NexusFactory(administrators: ["alice"]);
         using var admin = await factory.SignedInAsync();
         var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         using (var scope = factory.Services.CreateScope())

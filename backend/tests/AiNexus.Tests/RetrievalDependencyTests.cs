@@ -11,7 +11,7 @@ public sealed class RetrievalDependencyTests
     [Fact]
     public async Task SqlServerRetrievalStoreResolvesWithProductionDependencies()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         using var scope = factory.Services.CreateScope();
         // Exercise the production constructor even though this host uses SQLite.
         Assert.IsType<SqlServerRetrievalStore>(ActivatorUtilities.CreateInstance<SqlServerRetrievalStore>(scope.ServiceProvider));
@@ -20,7 +20,7 @@ public sealed class RetrievalDependencyTests
     [Fact]
     public async Task QueryRewriterAndBackgroundHandlersResolveWithScopeValidation()
     {
-        await using var factory = new NexusFactory(backgroundJobs: false);
+        await using var factory = new NexusFactory();
         await using var app = factory.WithWebHostBuilder(builder => builder.UseDefaultServiceProvider(options => {
             options.ValidateScopes = true;
             options.ValidateOnBuild = true;
