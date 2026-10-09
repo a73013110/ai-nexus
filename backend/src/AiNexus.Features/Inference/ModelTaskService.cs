@@ -1,7 +1,6 @@
 using System.Text;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Administration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -20,7 +19,7 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
         var policy = scope.ServiceProvider.GetRequiredService<ModelPolicyService>();
-        var billing = scope.ServiceProvider.GetRequiredService<AiNexus.Features.Billing.BillingService>();
+        var billing = scope.ServiceProvider.GetRequiredService<IModelCallMeter>();
         if (prompt.Length > MaxPromptCharacters || instruction.Length > 24000) throw new ApiException(400, "task_input_too_long", "處理內容過長，請縮小選取範圍。");
         var profile = await catalog.RequireAsync(model, ct);
         if (maxOutputTokens is <= 0) throw new ArgumentOutOfRangeException(nameof(maxOutputTokens));
@@ -33,7 +32,7 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
         var call = new ModelInvocation { OwnerId = owner, Kind = kind, ModelId = profile.Id, Provider = profile.Provider, CreatedAt = clock.GetUtcNow() };
         var parameters = new GenerationParameters(profile.ContextTokens, outputBudget, ModelTaskConfiguration.Temperature, instruction, profile.DefaultReasoningEffort, profile.ReasoningControl, profile.SupportsImages);
         var messages = new[] { new InferenceMessage("system", instruction), new InferenceMessage("user", prompt, images) };
-        var inputEstimate = ContextBuilder.Estimate(messages);
+        var inputEstimate = MessageCost.Estimate(messages);
         // The owner row lock taken first in this transaction serializes the reservation; it ends before the provider call.
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);

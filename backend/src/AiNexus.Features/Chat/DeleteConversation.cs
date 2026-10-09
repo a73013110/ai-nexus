@@ -5,8 +5,9 @@ using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Events;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Conversations;
 
-namespace AiNexus.Features.Conversations;
+namespace AiNexus.Features.Chat;
 
 /// <summary>Raised in the deleting transaction; subscribers (Sharing revokes the conversation's shares) run before it is saved.</summary>
 public sealed record ConversationDeleted(Guid ConversationId, Guid OwnerId) : IDomainEvent;

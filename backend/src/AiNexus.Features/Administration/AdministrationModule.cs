@@ -36,6 +36,7 @@ public sealed class AdministrationModule : IFeatureModule
         services.AddScoped<SaveRoleGroup>();
         services.AddScoped<SaveFeature>();
         services.AddScoped<GetAdminUsage>();
+        services.AddScoped<ManageEmbeddingProfiles>();
         services.AddFeaturePolicy(AdministrationConfiguration.Policy, AdministrationConfiguration.Feature);
     }
 

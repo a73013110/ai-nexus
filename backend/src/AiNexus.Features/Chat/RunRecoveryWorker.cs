@@ -1,7 +1,8 @@
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Inference;
 
-namespace AiNexus.Features.Inference;
+namespace AiNexus.Features.Chat;
 
 public sealed class RunRecoveryWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, StorageReadiness storage, ILogger<RunRecoveryWorker> logger) : BackgroundService
 {

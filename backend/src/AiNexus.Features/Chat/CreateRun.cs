@@ -19,8 +19,9 @@ using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.Inference;
 
-namespace AiNexus.Features.Inference;
+namespace AiNexus.Features.Chat;
 
 public sealed record CreateRunRequest(Guid ConversationId, string? ModelId, string? Prompt, Guid? ParentMessageId, Guid? RegenerateUserMessageId, [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? ReasoningEffort = null, IReadOnlyList<Guid>? AttachmentIds = null, [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)] bool WebSearch = false);
 
@@ -69,7 +70,8 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
         // Fails fast; BudgetAsync enforces model approval and quota again under the owner row lock.
         await policies.RequireAsync(owner, profile.Id, ct);
         var knowledgeSelection = await knowledge.SelectionAsync(owner, request.ConversationId, ct);
-        var sources = await knowledge.ForRunAsync(owner, request, ct, knowledgeSelection.CollectionIds);
+        var turn = new ConversationTurn(request.ConversationId, request.Prompt, request.ParentMessageId, request.RegenerateUserMessageId);
+        var sources = await knowledge.ForRunAsync(owner, turn, ct, knowledgeSelection.CollectionIds);
         WebSearchRecord? search = null;
         if (request.WebSearch)
         {
@@ -137,7 +139,7 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             };
             run.TraceId = Activity.Current?.TraceId.ToHexString() ?? ActivityTraceId.CreateRandom().ToHexString(); run.ParentSpanId = Activity.Current?.SpanId.ToHexString() ?? ActivitySpanId.CreateRandom().ToHexString(); run.OperationId = run.Id;
             await billing.ReserveAsync(run.Id, owner, request.ConversationId, profile.Provider, profile.NativeId, "chat", run.CreatedAt, ct);
-            var (user, assistant) = await conversations.PrepareGenerationAsync(owner, request with { ModelId = profile.Id }, run.Id, ct);
+            var (user, assistant) = await conversations.PrepareGenerationAsync(owner, turn, profile.Id, run.Id, ct);
             run.UserMessageId = user.Id;
             run.AssistantMessageId = assistant.Id;
             if (search is not null) search.RunId = run.Id;
@@ -148,7 +150,7 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             var messages = prepared?.ContextFor(parameters.SystemPrompt, files)
                 ?? await context.PrepareAsync(request.ConversationId, request.ParentMessageId, request.RegenerateUserMessageId, request.Prompt, files, parameters, ct);
             await context.RequireImagesAsync(messages, ct);
-            var inputEstimate = ContextBuilder.Estimate(messages);
+            var inputEstimate = MessageCost.Estimate(messages);
             parameters = await policies.BudgetAsync(owner, profile.Id, parameters, inputEstimate, run.CreatedAt, ct);
             run.ReservedTokens = inputEstimate + parameters.MaxOutputTokens;
             run.ParametersJson = JsonSerializer.Serialize(parameters);

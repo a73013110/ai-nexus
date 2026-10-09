@@ -1,4 +1,4 @@
-namespace AiNexus.Features.Inference;
+namespace AiNexus.Features.Chat;
 
 /// <summary>
 /// In-process wake-ups for run event subscribers. Writers call <see cref="Notify"/> after committing new events; a
