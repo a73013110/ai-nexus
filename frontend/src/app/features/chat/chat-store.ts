@@ -229,13 +229,10 @@ export class ChatStore {
     this.loading.set(true);
     this.error.set(null);
     try {
-      if (!(await this.auth.requireLogin())) return;
-      const me = await this.api.me();
-      if (generation !== this.auth.generation()) return;
+      // Account and settings load together; the account is always fresh here for its active run.
+      const me = await this.session.load(true);
+      if (!me || generation !== this.auth.generation()) return;
       this.me.set(me);
-      this.session.adopt(me);
-      await this.personal.load(me.id, true);
-      if (generation !== this.auth.generation()) return;
       this.themes.apply({
         theme: me.preferences.theme ?? 'system',
         reducedMotion: me.preferences.reducedMotion ?? false,
@@ -246,7 +243,15 @@ export class ChatStore {
         this.error.set('你的角色目前沒有對話功能，請聯絡管理員。');
         return;
       }
-      const catalog = await this.api.models();
+      // Optional services never block the composer, so they start alongside models and history.
+      const extensions = Promise.allSettled([
+        this.attachments.initialize(),
+        this.workspace.labels(),
+        ...(me.access.features?.some((x) => x.id === 'knowledge')
+          ? [this.knowledge.initialize()]
+          : []),
+      ]);
+      const [catalog] = await Promise.all([this.api.models(), this.refreshHistory()]);
       if (generation !== this.auth.generation()) return;
       this.models.set(catalog.models as Model[]);
       this.policy.set(catalog.policy as ModelPolicy);
@@ -266,8 +271,6 @@ export class ChatStore {
           ? this.personal.value().defaultReasoningEffort
           : (this.models().find((x) => x.id === this.modelId())?.defaultReasoningEffort ?? 'auto'),
       );
-      await this.refreshHistory();
-      if (generation !== this.auth.generation()) return;
       this.ready.set(true);
       void this.api
         .webSearchStatus()
@@ -281,16 +284,10 @@ export class ChatStore {
               notice: '暫時無法確認搜尋服務，請重新連線。',
             });
         });
-      const extensions = await Promise.allSettled([
-        this.attachments.initialize(),
-        this.workspace.labels(),
-        ...(this.me()?.access.features?.some((x) => x.id === 'knowledge')
-          ? [this.knowledge.initialize()]
-          : []),
-      ]);
+      const [attachments, labels] = await extensions;
       if (generation !== this.auth.generation()) return;
-      if (extensions[1].status === 'fulfilled') this.labels.set(extensions[1].value);
-      if (extensions[0].status === 'rejected')
+      if (labels.status === 'fulfilled') this.labels.set(labels.value);
+      if (attachments.status === 'rejected')
         this.attachments.error.set('附件服務尚未就緒，請重新連線。');
       if (!this.selected() && !this.draft().text) await this.restoreDraft(null);
       if (me.activeRunId && !this.liveRun()) {

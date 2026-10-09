@@ -27,10 +27,16 @@ export class WorkspaceSession {
     if (!refresh && this.me() && this.generation === this.auth.generation()) return this.me();
     const generation = this.auth.generation();
     if (!(await this.auth.requireLogin())) return null;
-    const me = await this.api.me();
+    const request = this.api.me();
+    const [me] = await Promise.all([
+      request,
+      this.settings.load(
+        request.then((value) => value.id),
+        refresh,
+      ),
+    ]);
     if (generation !== this.auth.generation()) return null;
     this.adopt(me);
-    await this.settings.load(me.id);
     return me;
   }
   has(id: string) {

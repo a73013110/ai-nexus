@@ -60,8 +60,8 @@ export class NexusApi {
     this.http.token(me.csrfToken);
     return me;
   }
-  models = () => this.http.json<Models>('/models');
-  webSearchStatus = () => this.http.json<WebSearchStatus>('/tools/web-search');
+  models = () => this.http.reference<Models>('/models');
+  webSearchStatus = () => this.http.reference<WebSearchStatus>('/tools/web-search');
   context = (body: ContextPreview, signal: AbortSignal) =>
     this.http.json<ContextUsage>('/context', 'POST', body, undefined, signal);
   conversations = (search = '', offset = 0, view = 'active', label = '') =>
