@@ -24,7 +24,7 @@ public sealed partial class RunService(NexusDbContext db, RunSignals signals, Co
     {
         var run = await db.Runs.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct);
         if (run is null) return InferenceErrors.RunNotFound;
-        await conversations.OwnedAsync(owner, run.ConversationId, ct);
+        (await conversations.OwnedAsync(owner, run.ConversationId, ct)).OrThrow();
         return run;
     }
 

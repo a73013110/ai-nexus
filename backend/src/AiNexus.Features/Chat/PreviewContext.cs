@@ -35,8 +35,8 @@ internal sealed class PreviewContext(ConversationService conversations, Attachme
 
     public async Task<ContextUsageDto> HandleAsync(Guid owner, ContextPreviewRequest body, CancellationToken ct)
     {
-        var instruction = body.ConversationId is Guid id ? (await conversations.OwnedAsync(owner, id, ct)).SystemInstruction : "";
-        var project = body.ConversationId is Guid projectConversation ? await projects.ContextAsync(owner, (await conversations.OwnedAsync(owner, projectConversation, ct)).ProjectId, ct) : "";
+        var instruction = body.ConversationId is Guid id ? ((await conversations.OwnedAsync(owner, id, ct)).OrThrow()).SystemInstruction : "";
+        var project = body.ConversationId is Guid projectConversation ? await projects.ContextAsync(owner, ((await conversations.OwnedAsync(owner, projectConversation, ct)).OrThrow()).ProjectId, ct) : "";
         var files = await attachments.RequireAsync(owner, body.AttachmentIds, ct);
         var model = (await models.RequireAsync(body.ModelId, ct)).OrThrow();
         (await policies.RequireAsync(owner, model.Id, ct, checkQuota: false)).OrThrow();

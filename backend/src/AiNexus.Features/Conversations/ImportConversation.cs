@@ -39,7 +39,7 @@ internal sealed class ImportConversation(NexusDbContext db, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/import", async (ConversationBackup body, ICurrentUser user, ImportConversation handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, body, ct)).ToHttpResult())
-        .WithRequestBodyLimit(ConversationsModule.ImportBodyLimit).WithName("ImportConversation").Produces<ConversationDto>();
+        .WithRequestBodyLimit(ConversationsModule.ImportBodyLimit).WithName("ImportConversation");
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, ConversationBackup backup, CancellationToken ct)
     {
