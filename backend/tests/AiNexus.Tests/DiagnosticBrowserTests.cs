@@ -25,7 +25,7 @@ public sealed partial class DiagnosticBrowserTests
         var root = Path.GetFullPath("../../../../../..", AppContext.BaseDirectory);
         var webRoot = Environment.GetEnvironmentVariable("NEXUS_DIAGNOSTIC_WEBROOT") ?? Path.Combine(root, "artifacts", "verification", "wwwroot");
         Assert.True(File.Exists(Path.Combine(webRoot, "index.html")), "Build the frontend before real browser acceptance.");
-        await using var factory = new NexusFactory(administrators: ["alice"], webRoot: webRoot);
+        await using var factory = new NexusFactory(workers: [typeof(DiagnosticWorker)], administrators: ["alice"], webRoot: webRoot);
         factory.Provider.Fail = true; factory.UseKestrel(0);
         using var client = await factory.SignedInAsync();
         using var playwright = await Playwright.CreateAsync();

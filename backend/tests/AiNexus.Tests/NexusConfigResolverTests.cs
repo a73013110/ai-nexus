@@ -75,8 +75,7 @@ public sealed class NexusConfigResolverTests
             ["Integrations:Sources:Gdweb:Database:ConnectTimeoutSeconds"] = "7"
         });
         NexusSettings.SourceConnections(config);
-        using var connection = new AiNexus.Features.Persistence.NexusConnectionFactory(config).CreateConnection<AiNexus.Features.Integrations.ILegacyGdwebDatabase>();
-        var sql = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(connection.ConnectionString);
+        var sql = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(AiNexus.Features.Integrations.LegacyGdwebDatabase.ConnectionString(config));
         Assert.Equal(Microsoft.Data.SqlClient.SqlConnectionEncryptOption.Mandatory, sql.Encrypt);
         Assert.True(sql.TrustServerCertificate); Assert.Equal(7, sql.ConnectTimeout);
         Assert.Equal(Microsoft.Data.SqlClient.ApplicationIntent.ReadOnly, sql.ApplicationIntent);
