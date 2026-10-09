@@ -25,7 +25,7 @@
 | 3102 / 3103 / 3104 | `generation.disabled` / `generation.storage_unavailable` / `generation.startup_failed` | `Chat/GenerationWorker.cs` |
 | 3105 / 3106 | `generation.recovery_pending` / `generation.recovery_postponed` | `GenerationWorker.cs`、`RunRecoveryWorker.cs` |
 | 4001 | `client.unhandled` | `Diagnostics/ReportClientIssue.cs` |
-| 5000 / 5001 / 5002 | `service.started` / `service.stopping` / `service.startup.failed` | `Api/Program.cs`、`DiagnosticStartup.cs` |
+| 5000 / 5001 / 5002 | `service.started` / `service.stopping` / `service.startup.failed` | `Host/Program.cs`、`DiagnosticStartup.cs` |
 | 6001 / 6002 / 6003 | `attachment.delete_deferred` / `attachment.untracked_delete_deferred` / `attachment.cleanup_deferred` | `Attachments/AttachmentLifecycle.cs` |
 | 6101 | `share.cleanup_deferred` | `Sharing/ShareService.cs` |
 

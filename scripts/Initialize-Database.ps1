@@ -1,7 +1,7 @@
 #requires -Version 7.4
 $ErrorActionPreference = 'Stop'
 $taskRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$taskProject = Join-Path $taskRoot 'backend/src/AiNexus.Api/AiNexus.Api.csproj'
+$taskProject = Join-Path $taskRoot 'backend/src/AiNexus.Host/AiNexus.Host.csproj'
 . (Join-Path $PSScriptRoot 'Local-Settings.ps1')
 Initialize-NexusLocalSettings
 $taskLocal = Get-NexusLocalPaths

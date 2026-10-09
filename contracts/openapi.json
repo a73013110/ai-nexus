@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.1",
   "info": {
-    "title": "AiNexus.Api | v1",
+    "title": "AiNexus.Host | v1",
     "version": "1.0.0"
   },
   "servers": [
@@ -13,7 +13,7 @@
     "/health/live": {
       "get": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "responses": {
           "200": {
@@ -882,7 +882,7 @@
     "/api/v1/client-issues": {
       "post": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "ReportClientIssue",
         "requestBody": {
@@ -1042,7 +1042,7 @@
     "/api/v1/me": {
       "get": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "GetMe",
         "responses": {
@@ -1192,7 +1192,7 @@
     "/api/v1/preferences": {
       "put": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "UpdatePreferences",
         "requestBody": {
@@ -1352,7 +1352,7 @@
     "/api/v1/settings": {
       "get": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "GetUserSettings",
         "responses": {
@@ -1500,7 +1500,7 @@
       },
       "put": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "SaveUserSettings",
         "requestBody": {
@@ -1660,7 +1660,7 @@
     "/api/v1/settings/usage": {
       "get": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "GetPersonalUsage",
         "responses": {
@@ -1960,7 +1960,7 @@
     "/api/v1/attachments/{id}/document": {
       "post": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "ReadAttachmentDocument",
         "parameters": [
@@ -2121,7 +2121,7 @@
     "/api/v1/directory": {
       "get": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "SearchUserDirectory",
         "parameters": [
@@ -2284,7 +2284,7 @@
     "/api/v1/directory/groups": {
       "get": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "ListDirectoryGroups",
         "responses": {
@@ -2597,7 +2597,7 @@
     "/api/v1/conversations/{id}/project": {
       "put": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "parameters": [
           {
@@ -3095,7 +3095,7 @@
     "/api/v1/settings/model-policy": {
       "get": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "GetEffectiveModelPolicy",
         "responses": {
@@ -3245,7 +3245,7 @@
     "/api/v1/billing/spend": {
       "get": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "GetPersonalSpend",
         "parameters": [
@@ -3421,7 +3421,7 @@
     "/api/v1/conversations/{id}/spend": {
       "get": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "GetConversationSpend",
         "parameters": [
@@ -3582,7 +3582,7 @@
     "/api/v1/dashboard": {
       "get": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "GetDashboard",
         "parameters": [
@@ -3773,7 +3773,7 @@
     "/api/v1/tools/web-search": {
       "get": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "GetWebSearchStatus",
         "responses": {
@@ -3923,7 +3923,7 @@
     "/api/v1/presence": {
       "post": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "HeartbeatPresence",
         "requestBody": {
@@ -4083,7 +4083,7 @@
     "/api/v1/presence/{sessionId}": {
       "delete": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "LeavePresence",
         "parameters": [
@@ -29820,7 +29820,7 @@
     "/api/v1/auth/session": {
       "get": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "GetAuthSession",
         "responses": {
@@ -29970,7 +29970,7 @@
     "/api/v1/auth/windows": {
       "get": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "WindowsLogin",
         "responses": {
@@ -30120,7 +30120,7 @@
     "/api/v1/auth/login": {
       "post": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "AdLogin",
         "requestBody": {
@@ -30280,7 +30280,7 @@
     "/api/v1/auth/logout": {
       "post": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "AdLogout",
         "responses": {
@@ -30430,7 +30430,7 @@
     "/api/v1/auth/test-identity": {
       "post": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "StartTestIdentity",
         "requestBody": {
@@ -30590,7 +30590,7 @@
     "/api/v1/auth/test-identity/end": {
       "post": {
         "tags": [
-          "AiNexus.Api"
+          "AiNexus.Host"
         ],
         "operationId": "EndTestIdentity",
         "responses": {
@@ -37934,7 +37934,7 @@
   },
   "tags": [
     {
-      "name": "AiNexus.Api"
+      "name": "AiNexus.Host"
     },
     {
       "name": "System logs"

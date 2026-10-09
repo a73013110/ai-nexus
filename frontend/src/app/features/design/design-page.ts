@@ -131,7 +131,7 @@ export class DesignPage {
       : this.dataRows.filter((row) => row.tone === 'success'),
   );
   readonly dataProperties = JSON.stringify(
-    { service: 'AiNexus.Api', attempts: 2, state: 'completed' },
+    { service: 'AiNexus.Host', attempts: 2, state: 'completed' },
     null,
     2,
   );

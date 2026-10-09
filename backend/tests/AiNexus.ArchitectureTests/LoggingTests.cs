@@ -10,7 +10,7 @@ namespace AiNexus.ArchitectureTests;
 /// </summary>
 public sealed class LoggingTests
 {
-    private static readonly List<(string Method, LoggerMessageAttribute Event)> Events = [.. new[] { Assemblies.Platform, Assemblies.Features, Assemblies.Api }
+    private static readonly List<(string Method, LoggerMessageAttribute Event)> Events = [.. new[] { Assemblies.Platform, Assemblies.Features, Assemblies.Host }
         .SelectMany(assembly => assembly.GetTypes())
         .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly))
         .Select(method => (Method: method.DeclaringType!.Name + "." + method.Name, Event: method.GetCustomAttribute<LoggerMessageAttribute>()!))

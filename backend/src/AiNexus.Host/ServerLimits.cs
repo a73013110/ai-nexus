@@ -1,4 +1,4 @@
-namespace AiNexus.Api;
+namespace AiNexus.Host;
 
 internal static class ServerLimits
 {

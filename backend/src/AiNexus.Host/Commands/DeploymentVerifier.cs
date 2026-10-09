@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using AiNexus.Platform.Errors;
 
-namespace AiNexus.Api.Commands;
+namespace AiNexus.Host.Commands;
 
 public static class DeploymentVerifier
 {

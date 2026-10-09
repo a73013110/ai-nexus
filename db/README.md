@@ -15,9 +15,9 @@
 產生 SQL：
 
 ```powershell
-dotnet ef migrations script --idempotent --project backend/src/AiNexus.Api --output db/migrations.sql
+dotnet ef migrations script --idempotent --project backend/src/AiNexus.Host --output db/migrations.sql
 ```
 
-不要手改 migration history、把帳密放 SQL、或在正式資料上以 EnsureCreated 取代 migrations。來源 migration／designer／snapshot 位於 backend/src/AiNexus.Api/BuildingBlocks/Migrations。
+不要手改 migration history、把帳密放 SQL、或在正式資料上以 EnsureCreated 取代 migrations。來源 migration／designer／snapshot 位於 backend/src/AiNexus.Host/BuildingBlocks/Migrations。
 
-初始化與 SQL Server startup 也驗證模型與 snapshot 一致；可另執行 `dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Api`。原檔不在 DB，完整備份需同一時點的 SQL＋站外附件目錄，見 [BACKUP](../docs/BACKUP.md)。
+初始化與 SQL Server startup 也驗證模型與 snapshot 一致；可另執行 `dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Host`。原檔不在 DB，完整備份需同一時點的 SQL＋站外附件目錄，見 [BACKUP](../docs/BACKUP.md)。

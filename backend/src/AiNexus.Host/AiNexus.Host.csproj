@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <!-- Host only: configuration, middleware pipeline, module composition and operational commands. -->
   <PropertyGroup>
-    <RootNamespace>AiNexus.Api</RootNamespace>
+    <RootNamespace>AiNexus.Host</RootNamespace>
     <UserSecretsId>ai-nexus-api-v1-local</UserSecretsId>
   </PropertyGroup>
   <ItemGroup>

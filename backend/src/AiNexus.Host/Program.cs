@@ -1,5 +1,5 @@
-using AiNexus.Api;
-using AiNexus.Api.Commands;
+using AiNexus.Host;
+using AiNexus.Host.Commands;
 using AiNexus.Features;
 using AiNexus.Features.Configuration;
 using AiNexus.Features.Identity;

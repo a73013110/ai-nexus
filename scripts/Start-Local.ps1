@@ -9,7 +9,7 @@ Initialize-NexusLocalSettings
 $taskLocal = Get-NexusLocalPaths
 if (!$SkipBuild) { & (Join-Path $PSScriptRoot 'Build.ps1') -OutputDirectory $PublishDirectory; if ($LASTEXITCODE -ne 0) { throw 'Build failed.' } }
 $taskPublish = [System.IO.Path]::GetFullPath($PublishDirectory, $taskRoot)
-$taskDll = Join-Path $taskPublish 'AiNexus.Api.dll'
+$taskDll = Join-Path $taskPublish 'AiNexus.Host.dll'
 if (!(Test-Path -LiteralPath $taskDll)) { throw 'Run scripts/Build.ps1 first.' }
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
 $taskScheme = if ($Http) { 'http' } else { 'https' }
