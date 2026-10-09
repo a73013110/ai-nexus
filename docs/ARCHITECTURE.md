@@ -91,7 +91,7 @@ AttachmentQuota 統一個人／群組／預設容量及 SQL owner lock；Attachm
 
 OCR、段落工具與評測共用 ModelTaskService 的核准、配額及用量；保留配額以使用者 SQL row lock 序列化，RPC 不持有 transaction。評測凍結題庫、指令及模型設定指紋，設定變更阻擋執行／重試，已完成結果保留。來源文字以不可信資料封裝，授權在遠端呼叫前後再檢查。
 
-聊天排程仍在程序內，**每個 IIS app 使用一個 worker**，不開 web garden 或重疊 recycle。GenerationRuns 保存 ExecutorId 與兩分鐘的 LeaseExpiresAt，worker 每 15 秒續約；其他實例只處理已到期的租約，避免 local 與 IIS 共用資料庫時互相中止生成。取消先更新 SQL，原 executor 在續約時偵測並停止。這並未提供全域持久佇列或跨程序的模型容量限制；擴展前仍需補上。首次升級租約版本必須先停止所有舊 host，詳見 [IIS 文件](../deploy/iis/README.md)。
+聊天排程仍在程序內，**每個 IIS app 使用一個 worker**，不開 web garden 或重疊 recycle。GenerationRuns 保存 ExecutorId 與兩分鐘的 LeaseExpiresAt，worker 每 15 秒續約；其他實例只處理已到期的租約，避免 local 與 IIS 共用資料庫時互相中止生成。取消先更新 SQL，原 executor 在續約時偵測並停止。這並未提供全域持久佇列或跨程序的模型容量限制；擴展前仍需補上。同一程序內的互斥用 `KeyedAsyncLock` 依鍵分開：生成狀態依對話、資源寫入依資源，不同對話或資源互不等待；每人一個進行中的生成與配額由 Users 列鎖在交易內保證。改成多台伺服器同時運行時，這些程序內鎖要改為資料庫併發控制（rowversion 或條件更新）。首次升級租約版本必須先停止所有舊 host，詳見 [IIS 文件](../deploy/iis/README.md)。
 
 ## 費用與外部連線
 

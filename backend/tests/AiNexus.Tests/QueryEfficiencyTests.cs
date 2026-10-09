@@ -14,7 +14,6 @@ using AiNexus.Features.Persistence;
 using AiNexus.Features.Projects;
 using AiNexus.Features.Quality;
 using AiNexus.Features.Sharing;
-using AiNexus.Platform.Concurrency;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -299,21 +298,5 @@ public sealed class QueryEfficiencyTests
         Assert.Equal(2, calls);
         for (var i = 0; i < 5000; i++) first.GetOrAdd($"S-{i}", () => "名");
         Assert.Equal("名", first.GetOrAdd("S-4999", () => throw new InvalidOperationException("cached")));
-    }
-
-    [Fact]
-    public async Task KeyedLockSerializesOneKeyOnly()
-    {
-        var locks = new KeyedLock<Guid>();
-        var a = Guid.NewGuid(); var b = Guid.NewGuid();
-        var held = await locks.AcquireAsync(a, CancellationToken.None);
-        using (await locks.AcquireAsync(b, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5))) { }
-        var waiting = locks.AcquireAsync(a, CancellationToken.None);
-        using var cancel = new CancellationTokenSource(50);
-        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => locks.AcquireAsync(a, cancel.Token));
-        Assert.False(waiting.IsCompleted);
-        held.Dispose(); held.Dispose();
-        using (await waiting.WaitAsync(TimeSpan.FromSeconds(5))) { }
-        using (await locks.AcquireAsync(a, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5))) { }
     }
 }

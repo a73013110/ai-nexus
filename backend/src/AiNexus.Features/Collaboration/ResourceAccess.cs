@@ -1,4 +1,4 @@
-using AiNexus.Platform.Concurrency;
+using AiNexus.Platform.Threading;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.AccessControl;
@@ -12,7 +12,7 @@ namespace AiNexus.Features.Collaboration;
 /// </summary>
 public sealed class ResourceWriteLock
 {
-    private readonly KeyedLock<(string Scope, Guid Id)> keys = new();
+    private readonly KeyedAsyncLock<(string Scope, Guid Id)> keys = new();
 
     /// <summary>The write lock of one resource.</summary>
     public Task<IDisposable> AcquireAsync(Guid resource, CancellationToken ct) => keys.AcquireAsync(("resource", resource), ct);
