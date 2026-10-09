@@ -9,7 +9,6 @@ using EDoc.Core.Database.Interfaces;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
-using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 
@@ -56,7 +55,7 @@ public sealed class DiagnosticFailureTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode); var result = await response.Content.ReadFromJsonAsync<KnowledgeSearchDto>(); Assert.Equal("vector", result!.Mode);
         DiagnosticEvent? warning = null;
         for (var i = 0; i < 200; i++) {
-            using var scope = factory.Services.CreateScope(); warning = await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<DiagnosticEvent>().AsNoTracking().FirstOrDefaultAsync(x => x.EventId == DiagnosticEvents.Degraded.Id);
+            using var scope = factory.Services.CreateScope(); warning = await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<DiagnosticEvent>().AsNoTracking().FirstOrDefaultAsync(x => x.EventId == DiagnosticEvents.Degraded);
             if (warning is not null) break; await Task.Delay(25);
         }
         Assert.NotNull(warning); Assert.Equal(Microsoft.Extensions.Logging.LogLevel.Warning, warning.Level); Assert.True(Issues.ValidCode(warning.IssueCode));

@@ -1,18 +1,19 @@
 using System.Diagnostics;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Antiforgery;
-using Microsoft.AspNetCore.Routing;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Security;
 
 namespace AiNexus.Platform.Diagnostics;
 
+/// <summary>
+/// Ids of the core events that code outside their <c>[LoggerMessage]</c> declaration refers to. Every event id and
+/// name is listed in docs/LOG_EVENTS.md.
+/// </summary>
 public static class DiagnosticEvents
 {
-    public static readonly EventId Request = new(1000, "http.completed"), Failure = new(1001, "operation.failed"), Rejection = new(1002, "http.rejected"),
-        Degraded = new(2001, "retrieval.degraded"), JobStarted = new(3000, "job.started"), JobFinished = new(3001, "job.finished"),
-        RunStarted = new(3100, "generation.started"), RunFinished = new(3101, "generation.finished"), Client = new(4001, "client.unhandled"),
-        Started = new(5000, "service.started"), Stopping = new(5001, "service.stopping"), Configuration = new(5002, "service.startup.failed");
+    public const int Request = 1000, Failure = 1001, Rejection = 1002, Degraded = 2001, Configuration = 5002;
+    public const string ConfigurationName = "service.startup.failed";
 }
 
 /// <summary>Successful observability reads are already audited; do not feed them back into their own log list.</summary>
@@ -47,13 +48,15 @@ public static class SafeErrorMetadata
     }
 }
 
-public sealed class Issues(ILogger<Issues> logger, ILoggerFactory? factory = null)
+public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? factory = null)
 {
     private const string Key = "AiNexus.IssueCode";
     public static string NewCode() => "NX-" + Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
     public static bool ValidCode(string? code) => code is { Length: 35 } && code.StartsWith("NX-", StringComparison.Ordinal) && code[3..].All(char.IsAsciiHexDigit);
     public static string Message(string? issue) => "操作未完成，請聯絡管理員。查證代碼：" + (ValidCode(issue) ? issue : "無法取得");
-    public string Report(Exception exception, string code, LogLevel level = LogLevel.Error, EventId? eventId = null)
+    public string Report(Exception exception, string code, LogLevel level = LogLevel.Error) => Report(exception, code, level, rejection: false);
+
+    private string Report(Exception exception, string code, LogLevel level, bool rejection)
     {
         // An exception crossing layers is recorded once. Each distinct exception receives its own opaque code.
         lock (exception.Data)
@@ -64,7 +67,8 @@ public sealed class Issues(ILogger<Issues> logger, ILoggerFactory? factory = nul
             var category = origin is null ? null : string.Join('.', origin.Split('.').Take(3));
             var target = category is null ? logger : factory?.CreateLogger(category) ?? logger;
             using var scope = target.BeginScope(new Dictionary<string, object?> { ["IssueCode"] = issue, ["ErrorCode"] = code });
-            target.Log(level, eventId ?? DiagnosticEvents.Failure, exception, "Operation failed with {ErrorCode}; issue {IssueCode}.", code, issue);
+            if (rejection) LogRejection(target, level, exception, code, issue);
+            else LogFailure(target, level, exception, code, issue);
             Activity.Current?.SetStatus(ActivityStatusCode.Error, DiagnosticRedactor.Text(code, 80));
             return issue;
         }
@@ -73,16 +77,23 @@ public sealed class Issues(ILogger<Issues> logger, ILoggerFactory? factory = nul
     {
         var status = exception is ApiException api ? api.Status : exception is BadHttpRequestException bad ? bad.StatusCode : exception is AntiforgeryValidationException ? 403 : 503;
         var code = exception is ApiException a ? a.Code : status == 403 ? "csrf_invalid" : status == 413 ? "request_too_large" : status == 400 ? "invalid_request" : "service_unavailable";
-        var issue = Report(exception, code, status >= 500 ? LogLevel.Error : LogLevel.Information, status >= 500 ? DiagnosticEvents.Failure : DiagnosticEvents.Rejection);
+        var issue = Report(exception, code, status >= 500 ? LogLevel.Error : LogLevel.Information, rejection: status < 500);
         return new(status, code, status < 500 ? PublicErrorCatalog.Message(code, status) : Message(issue), issue);
     }
+    [LoggerMessage(EventId = DiagnosticEvents.Failure, EventName = "operation.failed", Message = "Operation failed with {ErrorCode}; issue {IssueCode}.")]
+    private static partial void LogFailure(ILogger logger, LogLevel level, Exception exception, string errorCode, string issueCode);
+
+    // The diagnostic provider keeps rejections below its minimum level, so the generated enabled check must not drop them.
+    [LoggerMessage(EventId = DiagnosticEvents.Rejection, EventName = "http.rejected", Message = "Operation failed with {ErrorCode}; issue {IssueCode}.", SkipEnabledCheck = true)]
+    private static partial void LogRejection(ILogger logger, LogLevel level, Exception exception, string errorCode, string issueCode);
+
     // Only Problems' writer calls this; everything else goes through IProblemDetailsService.
     internal static Task WriteAsync(HttpContext http, PublicProblem problem, IReadOnlyDictionary<string, string[]>? errors = null)
         => Results.Json(new SafeProblemDetails("urn:ai-nexus:problem:" + problem.Code, problem.Title, problem.Status, problem.Code, problem.IssueCode, errors),
             statusCode: problem.Status, contentType: "application/problem+json").ExecuteAsync(http);
 }
 
-public sealed class DiagnosticRequestMiddleware(RequestDelegate next)
+public sealed partial class DiagnosticRequestMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext http, Issues issues, ILogger<DiagnosticRequestMiddleware> logger)
     {
@@ -137,8 +148,11 @@ public sealed class DiagnosticRequestMiddleware(RequestDelegate next)
                 ["RequestOutcome"] = outcome, ["RequestAborted"] = http.RequestAborted.IsCancellationRequested, ["ResponseStarted"] = http.Response.HasStarted });
             if (outcome != "completed" || http.Response.StatusCode >= 400 ||
                 http.GetEndpoint()?.Metadata.GetMetadata<SuppressSuccessfulRequestLog>() is null)
-                logger.LogInformation(DiagnosticEvents.Request, "HTTP request finished with {StatusCode} in {DurationMs:0.###} ms.", http.Response.StatusCode, duration);
+                LogRequestFinished(logger, http.Response.StatusCode, duration);
             Activity.Current = previous;
         }
     }
+
+    [LoggerMessage(EventId = DiagnosticEvents.Request, EventName = "http.completed", Level = LogLevel.Information, Message = "HTTP request finished with {StatusCode} in {DurationMs:0.###} ms.")]
+    private static partial void LogRequestFinished(ILogger logger, int statusCode, double durationMs);
 }

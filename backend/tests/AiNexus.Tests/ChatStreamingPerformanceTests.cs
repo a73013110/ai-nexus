@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Data.Common;
 using System.Diagnostics;
 using System.Net.Http.Json;
@@ -65,7 +66,7 @@ public sealed class ChatStreamingPerformanceTests(ITestOutputHelper output)
             // The replayed deltas rebuild exactly the persisted answer, and the message holds the same text.
             var stream = await clients[i].GetStringAsync($"/api/v1/runs/{runs[i].Id}/events?after=0");
             var deltas = stream.Split('\n').Where(x => x.StartsWith("data: ", StringComparison.Ordinal))
-                .Select(x => JsonSerializer.Deserialize<RunEventDto>(x[6..], new JsonSerializerOptions(JsonSerializerDefaults.Web))!)
+                .Select(x => JsonSerializer.Deserialize<RunEventDto>(x[6..], JsonSerializerOptions.Web)!)
                 .Where(x => x.Type == "delta").Select(x => x.Delta).ToList();
             Assert.Equal(expected, string.Concat(deltas));
             var detail = (await clients[i].GetFromJsonAsync<ConversationDetailDto>($"/api/v1/conversations/{conversations[i]}"))!;
@@ -125,7 +126,7 @@ public sealed class ChatStreamingPerformanceTests(ITestOutputHelper output)
         public static readonly string Answer = AnswerOf(Chunks);
         private int concurrent;
         public int MaxConcurrent;
-        private static string Chunk(int index) => new StringBuilder(ChunkSize).Append((char)('一' + index), ChunkSize - 4).Append($"{index:D4}").ToString();
+        private static string Chunk(int index) => new StringBuilder(ChunkSize).Append((char)('一' + index), ChunkSize - 4).Append(CultureInfo.InvariantCulture, $"{index:D4}").ToString();
         public Task<IReadOnlySet<string>> InstalledModelsAsync(CancellationToken ct) => Task.FromResult<IReadOnlySet<string>>(new HashSet<string> { "test-model" });
         public async IAsyncEnumerable<InferenceChunk> StreamAsync(string model, IReadOnlyList<InferenceMessage> messages, GenerationParameters parameters, [EnumeratorCancellation] CancellationToken ct)
         {

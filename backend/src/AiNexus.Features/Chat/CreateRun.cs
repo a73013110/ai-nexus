@@ -48,7 +48,7 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             var run = await handler.HandleAsync(user.Id, body, http.Request.Headers["Idempotency-Key"].ToString(), ct);
             return run.IsSuccess ? Results.Accepted($"/api/v1/runs/{run.Value.Id}", run.Value) : run.Error.ToProblem();
         })
-        .WithRequestBodyLimit(InferenceModule.PromptBodyLimit).WithName("CreateRun").Produces<RunDto>(202);
+        .WithRequestBodyLimit(InferenceModule.PromptBodyLimit).RequireRateLimiting(ChatModule.SendRateLimit).WithName("CreateRun").Produces<RunDto>(202);
 
     public async Task<Result<RunDto>> HandleAsync(Guid owner, CreateRunRequest request, string key, CancellationToken ct)
     {

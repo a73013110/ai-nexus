@@ -20,6 +20,8 @@ public sealed class DiagnosticBrowserCollection;
 [Collection("Diagnostic browser")]
 public sealed partial class DiagnosticBrowserTests
 {
+    private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
+
     [DiagnosticBrowserFact, Trait("Category", "Browser")]
     public async Task RealFrontendCopiesIssueAndAdministratorFindsMaskedCause()
     {
@@ -99,7 +101,7 @@ public sealed partial class DiagnosticBrowserTests
             copied = true, masked = true, emptyState = true, loadingState = true, queryFailureSafe = true, healthDegradedState = true, xssSafe = true, csvFormulaSafe = true,
             browser = browser.Version, viewport = "1440x1000;375x900", pageErrors = errors,
             environment = "Loopback Kestrel + real built Angular + isolated SQLite + test-only identity/model provider; no production credentials or deployment."
-        }, new JsonSerializerOptions { WriteIndented = true }));
+        }, Indented));
         Assert.Empty(errors);
     }
     [GeneratedRegex("NX-[0-9A-F]{32}")] private static partial Regex Code();

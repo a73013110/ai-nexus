@@ -65,8 +65,8 @@ public sealed class ModuleBoundaryTests
             stack.Push(node); onStack.Add(node);
             foreach (var to in next.GetValueOrDefault(node) ?? [])
             {
-                if (!index.ContainsKey(to)) { Visit(to); low[node] = Math.Min(low[node], low[to]); }
-                else if (onStack.Contains(to)) low[node] = Math.Min(low[node], index[to]);
+                if (!index.TryGetValue(to, out var visited)) { Visit(to); low[node] = Math.Min(low[node], low[to]); }
+                else if (onStack.Contains(to)) low[node] = Math.Min(low[node], visited);
             }
             if (low[node] != index[node]) return;
             var component = new List<string>();

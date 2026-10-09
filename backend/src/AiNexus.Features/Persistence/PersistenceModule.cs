@@ -2,6 +2,7 @@ using AiNexus.Platform.Data;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Events;
+using AiNexus.Platform.Health;
 using AiNexus.Platform.Modules;
 using EDoc.Core.Database.Implementations;
 using EDoc.Core.Database.Interfaces;
@@ -24,6 +25,8 @@ public sealed class PersistenceModule : IFeatureModule
         services.AddScoped<DatabaseSchema>();
         services.AddScoped<SqlVectorCapabilities>();
         services.AddSingleton<StorageReadiness>();
+        services.AddSingleton<DatabaseHealthCheck>();
+        services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database", tags: [HealthEndpoints.ReadyTag]);
     }
 }
 

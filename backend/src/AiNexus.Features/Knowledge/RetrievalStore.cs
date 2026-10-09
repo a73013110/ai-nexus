@@ -102,7 +102,7 @@ public sealed partial class InMemoryRetrievalStore(NexusDbContext db, EmbeddingV
             for (var i = 0; i < part.Length - 1; i++) words.Add(part.Substring(i, 2));
         return words.Distinct().Take(128).ToArray();
     }
-    public static double Lexical(string[] terms, string text) => terms.Sum(term => Regex.Matches(text, Regex.Escape(term), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant).Count);
+    public static double Lexical(string[] terms, string text) => terms.Sum(term => Regex.Count(text, Regex.Escape(term), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant));
     [GeneratedRegex(@"[\p{L}\p{N}_]{2,}", RegexOptions.CultureInvariant)] private static partial Regex WordPattern();
     [GeneratedRegex(@"[\p{IsCJKUnifiedIdeographs}]{2,}", RegexOptions.CultureInvariant)] private static partial Regex HanPattern();
 }

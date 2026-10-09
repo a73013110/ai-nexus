@@ -12,6 +12,7 @@
 | 後端 slice、錯誤、驗證、domain event、軟刪除 | `docs/BACKEND_CONVENTIONS.md` |
 | 模組邊界、跨模組依賴 | `docs/MODULE_BOUNDARIES.md` |
 | 推論、背景工作 | `docs/ARCHITECTURE.md` |
+| 日誌事件、EventId | `docs/LOG_EVENTS.md` |
 | 資料表、migration | `docs/DATABASE.md`、`docs/DEVELOPMENT.md` 的 migration 段 |
 | 設定、秘密 | `docs/CONFIGURATION.md` |
 | 授權、功能 grant | `docs/ACCESS_CONTROL.md` |
@@ -36,6 +37,7 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 - 一個 use case 一個檔案（handler＋endpoint＋validator），放在 `AiNexus.Features/<Module>/`。
 - 預期內的失敗回傳 `Result<T>`，錯誤定義在 `<Module>Errors`；不要為此 throw。
 - request body 要有 `RequestValidator<T>`；時間用 `TimeProvider`；使用者用 `ICurrentUser`。
+- 日誌用 `[LoggerMessage]`，EventId 固定且唯一；NuGet 版本只寫在 `backend/Directory.Packages.props`。
 - 跨模組的副作用用 domain event；跨模組讀取只透過對方的 `public` 服務。
 - 模組之間不可有循環依賴（`ModuleBoundaryTests`）；`request-validators.baseline.txt` 只能減少。
 - 不手改 `contracts/openapi.json`、`frontend/src/app/core/api/schema.ts`、migrations。

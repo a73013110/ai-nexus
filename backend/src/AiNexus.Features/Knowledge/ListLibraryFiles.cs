@@ -68,7 +68,7 @@ internal sealed class ListLibraryFiles(NexusDbContext db, ResourceAccess access,
             where ids.Contains(link.AttachmentId) orderby resource.Name select new { link.AttachmentId, resource.Id, resource.Name, link.DocumentId, link.Status }).Take(500).ToListAsync(ct);
         usage.AddRange(project.Select(x => (x.AttachmentId, new FileUsageDto("projects", x.Id, x.Name, x.DocumentId, x.Status))));
         var byFile = usage.ToLookup(x => x.FileId, x => x.Value);
-        return new FileLibraryPageDto(rows.Select(x => new LibraryFileDto(new(x.Id, x.FileName, x.ContentType, x.Size, x.ContentType.StartsWith("image/"),
-            x.ContentType == "application/pdf" && !x.HasText ? "ocr-required" : x.ContentType.StartsWith("image/") && !x.HasText ? "vision" : "extracted-text"), x.CreatedAt, byFile[x.Id].Take(8).ToArray(), x.CanDelete)).ToArray(), total, storage, offset, limit);
+        return new FileLibraryPageDto(rows.Select(x => new LibraryFileDto(new(x.Id, x.FileName, x.ContentType, x.Size, x.ContentType.StartsWith("image/", StringComparison.Ordinal),
+            x.ContentType == "application/pdf" && !x.HasText ? "ocr-required" : x.ContentType.StartsWith("image/", StringComparison.Ordinal) && !x.HasText ? "vision" : "extracted-text"), x.CreatedAt, byFile[x.Id].Take(8).ToArray(), x.CanDelete)).ToArray(), total, storage, offset, limit);
     }
 }

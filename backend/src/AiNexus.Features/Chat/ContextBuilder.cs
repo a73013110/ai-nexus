@@ -140,7 +140,7 @@ public sealed class ContextBuilder(NexusDbContext db, IOptions<AttachmentOptions
     {
         var text = new StringBuilder(content);
         foreach (var file in files.Where(x => x.ExtractedText is not null)) text.Append("\n\n--- 文件：").Append(file.FileName).Append(" ---\n").Append(file.ExtractedText).Append("\n--- 文件結束 ---");
-        return new(role, text.ToString(), files.Where(x => x.ContentType.StartsWith("image/")).Select(x => new InferenceImage(x.Id, x.ContentType, null, attachments.Value.ImageTokenEstimate)).ToArray());
+        return new(role, text.ToString(), files.Where(x => x.ContentType.StartsWith("image/", StringComparison.Ordinal)).Select(x => new InferenceImage(x.Id, x.ContentType, null, attachments.Value.ImageTokenEstimate)).ToArray());
     }
     private static void RequireVision(List<InferenceMessage> chain, GenerationParameters parameters)
     {

@@ -55,7 +55,7 @@ public sealed class UserAccountAdministration(NexusDbContext db, CurrentUser cur
                 var accounts = await db.Users.AsNoTracking().Where(x => x.Id != key && x.AdAccount == null && !x.Sid.StartsWith("managed:")).Select(x => x.Account).ToListAsync(ct);
                 if (accounts.Any(x => string.Equals(UserAccounts.AccountName(x), ad, StringComparison.OrdinalIgnoreCase)))
                     throw new ApiException(409, "account_exists", "此 AD 帳號已有使用者，請直接編輯既有使用者。");
-                if (!user.Sid.StartsWith("managed:") && !string.Equals(UserAccounts.AccountName(user.Account), ad, StringComparison.OrdinalIgnoreCase))
+                if (!user.Sid.StartsWith("managed:", StringComparison.Ordinal) && !string.Equals(UserAccounts.AccountName(user.Account), ad, StringComparison.OrdinalIgnoreCase))
                     throw new ApiException(409, "ad_binding_immutable", "已連結的 AD 身分不能換綁其他帳號；請建立另一位使用者。");
             }
             var validRoles = await db.Set<Role>().CountAsync(x => request.RoleIds.Contains(x.Id), ct);
@@ -66,7 +66,7 @@ public sealed class UserAccountAdministration(NexusDbContext db, CurrentUser cur
             user.DisplayName = request.DisplayName.Trim(); user.ProfileManaged = true;
             user.Enabled = request.Enabled; user.AdEnabled = request.AdEnabled; user.LocalEnabled = request.LocalEnabled;
             user.AdAccount = ad; user.LocalAccount = local;
-            if (user.Sid.StartsWith("managed:")) user.Account = local ?? ad!;
+            if (user.Sid.StartsWith("managed:", StringComparison.Ordinal)) user.Account = local ?? ad!;
             if (hash is not null) { user.PasswordHash = hash; user.FailedLogins = 0; user.LockedUntil = null; }
             var roles = await db.Set<UserRole>().Where(x => x.UserId == key).ToListAsync(ct);
             db.RemoveRange(roles.Where(x => !request.RoleIds.Contains(x.RoleId)));

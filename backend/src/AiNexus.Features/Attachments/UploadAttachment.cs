@@ -19,5 +19,5 @@ internal static class UploadAttachment
             if (form.Files.Count != 1) return AttachmentErrors.FileRequired.ToProblem();
             return Results.Ok(await files.UploadAsync(user.Id, form.Files[0], ct));
         })
-        .WithRequestBodyLimit(AttachmentsModule.UploadBodyLimit).WithName("UploadAttachment").Produces<AttachmentDto>();
+        .WithRequestBodyLimit(AttachmentsModule.UploadBodyLimit).RequireRateLimiting(AttachmentsModule.UploadRateLimit).WithName("UploadAttachment").Produces<AttachmentDto>();
 }

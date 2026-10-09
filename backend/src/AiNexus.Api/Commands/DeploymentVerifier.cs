@@ -11,6 +11,8 @@ namespace AiNexus.Api.Commands;
 
 public static class DeploymentVerifier
 {
+    private static readonly System.Text.Json.JsonSerializerOptions Indented = new() { WriteIndented = true };
+
     // Read-only SQL checks, synthetic embedding/rerank requests and a transient attachment IO probe.
     public static async Task<bool> VerifyAsync(IServiceProvider services, IConfiguration config, IHostEnvironment environment, CancellationToken ct)
     {
@@ -54,7 +56,7 @@ public static class DeploymentVerifier
                 webSearchEnabled = search.Enabled, giteaEnabled = gitea.Enabled,
                 keyRingPath = config["DataProtection:KeyRingPath"], attachmentStoragePath = attachments.StoragePath, attachmentStorageWritable = true,
                 diagnosticStoragePath = diagnosticPath, diagnosticStorageWritable = true, diagnosticCapacityBytes = diagnostics.MaxDiskBytes, diagnosticMaxSqlRows = diagnostics.MaxSqlRows, diagnosticOtlpEnabled = diagnostics.OtlpEnabled, ready
-            }, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+            }, Indented));
             return ready;
         }
         catch (Exception ex)

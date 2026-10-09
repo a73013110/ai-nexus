@@ -119,7 +119,7 @@ public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptio
         var providers = snapshot.Providers;
         var allowed = options.Value.Models.Select(x => Current(x, snapshot)).Where(x => snapshot.Installed.Contains(x.Id) && (options.Value.AllowModelSelection || x.Id == presentation.DefaultId)).Select(presentation.Model).ToList();
         var available = providers.Any(x => x.Available);
-        return new(allowed, available, !available ? providers.FirstOrDefault()?.Notice ?? "目前無法連線至模型服務，請稍後重試。" : allowed.Count == 0 ? "系統指定的模型尚未就緒，請由管理員確認模型設定。" : providers.Any(x => !x.Available) ? "部分模型供應商暫時無法使用，其餘模型可正常使用。" : null, presentation.Policy,
+        return new(allowed, available, !available ? (providers.Count > 0 ? providers[0].Notice : null) ?? "目前無法連線至模型服務，請稍後重試。" : allowed.Count == 0 ? "系統指定的模型尚未就緒，請由管理員確認模型設定。" : providers.Any(x => !x.Available) ? "部分模型供應商暫時無法使用，其餘模型可正常使用。" : null, presentation.Policy,
             options.Value.ShowModelNames ? providers : []);
     }
 

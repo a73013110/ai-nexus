@@ -3,7 +3,6 @@ using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Platform.Security;
 using AiNexus.Features.Identity;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
@@ -28,7 +27,7 @@ public sealed class WebSecurityTests
         client.DefaultRequestHeaders.Add("X-Nexus-CSRF", (await bootstrap.Content.ReadFromJsonAsync<AuthSessionDto>())!.CsrfToken);
         using var login = await client.PostAsJsonAsync("/api/v1/auth/login", new AdLoginRequest("alice", "fixture-password"));
         login.EnsureSuccessStatusCode(); AssertNoStore(login);
-        Assert.Contains(login.Headers.GetValues("Set-Cookie"), value => value.StartsWith("Nexus.Session=") && value.Contains("secure", StringComparison.OrdinalIgnoreCase));
+        Assert.Contains(login.Headers.GetValues("Set-Cookie"), value => value.StartsWith("Nexus.Session=", StringComparison.Ordinal) && value.Contains("secure", StringComparison.OrdinalIgnoreCase));
         using var me = await client.GetAsync("/api/v1/me"); me.EnsureSuccessStatusCode(); AssertNoStore(me);
         Assert.Equal("DENY", me.Headers.GetValues("X-Frame-Options").Single());
         Assert.Equal("nosniff", me.Headers.GetValues("X-Content-Type-Options").Single());

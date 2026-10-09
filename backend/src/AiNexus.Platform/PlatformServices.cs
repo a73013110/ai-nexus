@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
@@ -24,7 +26,13 @@ public static class PlatformServices
         // Deny by default: endpoints opt into anonymous access explicitly.
         services.AddAuthorization(options => options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
         services.AddNexusProblemDetails();
-        services.AddRateLimiter(options => options.OnRejected = (context, _) => new ValueTask(Problems.WriteAsync(context.HttpContext, 429, "rate_limited")));
+        services.AddHealthChecks();
+        services.AddRateLimiter(options => options.OnRejected = (context, _) =>
+        {
+            if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+                context.HttpContext.Response.Headers.RetryAfter = Math.Max(1, (int)Math.Ceiling(retryAfter.TotalSeconds)).ToString(CultureInfo.InvariantCulture);
+            return new ValueTask(Problems.WriteAsync(context.HttpContext, 429, "rate_limited"));
+        });
         services.ConfigureHttpJsonOptions(options =>
         {
             options.SerializerOptions.NumberHandling = JsonNumberHandling.Strict;
