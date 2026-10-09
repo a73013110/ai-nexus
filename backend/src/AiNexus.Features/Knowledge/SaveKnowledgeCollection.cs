@@ -28,7 +28,7 @@ internal sealed class SaveKnowledgeCollection(NexusDbContext db, ResourceAccess 
     {
         var name = ResourceAccess.Name(request.Name);
         if (request.Description.Length > KnowledgeCollection.DescriptionMaxLength) return KnowledgeErrors.DescriptionTooLong;
-        if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == KnowledgeCollection.Kind && !x.IsDeleted, ct) >= options.Value.MaxCollections)
+        if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == KnowledgeCollection.Kind, ct) >= options.Value.MaxCollections)
             return KnowledgeErrors.CollectionLimit;
         var now = clock.GetUtcNow();
         var resource = new WorkspaceResource { OwnerId = actor, Kind = KnowledgeCollection.Kind, Name = name, CreatedAt = now, UpdatedAt = now };

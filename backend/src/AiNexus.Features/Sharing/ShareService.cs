@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Sharing;
 
-/// <summary>The module's contract for other modules: shares of a deleted source stop working immediately.</summary>
+/// <summary>Share revocation and expiry purge; shares of a deleted source stop working immediately.</summary>
 public sealed class ShareService(NexusDbContext db, TimeProvider clock)
 {
     /// <summary>Revokes every share of a source and drops its file grants. Caller owns the transaction.</summary>
-    public async Task RevokeSourceAsync(string kind, Guid id, CancellationToken ct)
+    internal async Task RevokeSourceAsync(string kind, Guid id, CancellationToken ct)
     {
         var ids = db.Set<ShareLink>().Where(x => x.Kind == kind && x.SourceId == id).Select(x => x.Id);
         await db.Set<AttachmentReference>().Where(x => ids.Contains(x.ResourceId)).ExecuteDeleteAsync(ct);

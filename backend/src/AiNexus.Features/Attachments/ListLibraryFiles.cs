@@ -32,15 +32,15 @@ internal sealed class ListLibraryFiles(NexusDbContext db, ResourceAccess access,
         var projects = grants.Contains("projects") ? (await access.QueryAsync(actor, "project", ct)).Select(x => x.Id) : db.Set<WorkspaceResource>().Where(x => false).Select(x => x.Id);
         var chatFiles = from link in db.Set<MessageAttachment>() join message in db.Messages on link.MessageId equals message.Id
             join conversation in db.Conversations on message.ConversationId equals conversation.Id
-            where conversation.OwnerId == actor && !conversation.IsDeleted && grants.Contains("chat")
+            where conversation.OwnerId == actor && grants.Contains("chat")
             select new { link.AttachmentId, conversation.Id, conversation.Title };
         var resourceFiles = from doc in db.Set<KnowledgeDocument>() join resource in db.Set<WorkspaceResource>() on doc.Id equals resource.Id
-            where !doc.IsDeleted && !resource.IsDeleted && doc.AttachmentId != null
+            where !doc.IsDeleted && doc.AttachmentId != null
             select new { AttachmentId = doc.AttachmentId!.Value, doc.CollectionId, resource.ParentId, DocumentId = doc.Id, doc.Status };
         var knowledgeFiles = resourceFiles.Where(x => x.CollectionId != null && collections.Contains(x.CollectionId.Value));
         var projectFiles = resourceFiles.Where(x => x.ParentId != null && projects.Contains(x.ParentId.Value));
         var privateReaders = from doc in db.Set<KnowledgeDocument>() join resource in db.Set<WorkspaceResource>() on doc.Id equals resource.Id
-            where !doc.IsDeleted && !resource.IsDeleted && doc.CollectionId == null && resource.ParentId == null && resource.OwnerId == actor select doc.Id;
+            where !doc.IsDeleted && doc.CollectionId == null && resource.ParentId == null && resource.OwnerId == actor select doc.Id;
         var owned = db.Set<Attachment>().AsNoTracking().Where(x => x.OwnerId == actor && x.InLibrary && x.StorageState == AttachmentStates.Ready);
         var storage = await quota.ForAsync(actor, ct);
         var query = owned;

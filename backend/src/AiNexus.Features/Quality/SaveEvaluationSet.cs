@@ -71,7 +71,7 @@ internal sealed class SaveEvaluationSet(NexusDbContext db, ResourceAccess access
             }
             else
             {
-                if (await db.Set<WorkspaceResource>().CountAsync(x => x.Kind == EvaluationSet.Kind && x.OwnerId == actor && !x.IsDeleted, ct) >= 100) return QualityErrors.SetLimit;
+                if (await db.Set<WorkspaceResource>().CountAsync(x => x.Kind == EvaluationSet.Kind && x.OwnerId == actor, ct) >= 100) return QualityErrors.SetLimit;
                 resource = new() { OwnerId = actor, Kind = EvaluationSet.Kind, Name = ResourceAccess.Name(request.Name) }; db.Add(resource);
                 db.Add(new EvaluationSet { Id = resource.Id, Description = request.Description.Trim(), CasesJson = JsonSerializer.Serialize(request.Cases) });
             }

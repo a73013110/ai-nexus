@@ -14,9 +14,9 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
         var effective = await access.ForUserAsync(actor, ct);
         var groups = effective.Groups.Select(x => x.Id).ToArray();
         var inheritProjects = effective.Features.Any(x => x.Id == "projects");
-        var direct = db.Set<WorkspaceResource>().Where(x => !x.IsDeleted &&
-            (x.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == x.Id && m.UserId == actor) || db.Set<ResourceGroup>().Any(g => g.ResourceId == x.Id && groups.Contains(g.GroupId))));
-        return db.Set<WorkspaceResource>().Where(x => !x.IsDeleted && x.Kind == kind &&
+        var direct = db.Set<WorkspaceResource>().Where(x =>
+            x.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == x.Id && m.UserId == actor) || db.Set<ResourceGroup>().Any(g => g.ResourceId == x.Id && groups.Contains(g.GroupId)));
+        return db.Set<WorkspaceResource>().Where(x => x.Kind == kind &&
             (direct.Any(r => r.Id == x.Id) || inheritProjects && direct.Any(r => r.Kind == "project" && r.Id == x.ParentId)));
     }
     public async Task<WorkspaceResource> RequireAsync(Guid actor, Guid id, string kind, CancellationToken ct, bool write = false)
@@ -28,7 +28,7 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
     }
     public async Task<bool> CanEditAsync(Guid actor, WorkspaceResource value, CancellationToken ct) => value.OwnerId == actor ||
         await db.Set<ResourceMember>().AnyAsync(x => x.ResourceId == value.Id && x.UserId == actor && x.Role == "editor", ct) ||
-        await db.Set<WorkspaceResource>().AnyAsync(x => x.Id == value.ParentId && x.Kind == "project" && !x.IsDeleted &&
+        await db.Set<WorkspaceResource>().AnyAsync(x => x.Id == value.ParentId && x.Kind == "project" &&
             (x.OwnerId == actor || db.Set<ResourceMember>().Any(m => m.ResourceId == x.Id && m.UserId == actor && m.Role == "editor")), ct);
     public async Task<ResourceDto> DescribeAsync(Guid actor, WorkspaceResource value, CancellationToken ct) => new(value.Id, value.Name, value.Kind,
         await CanEditAsync(actor, value, ct), value.OwnerId == actor, value.UpdatedAt);
@@ -70,7 +70,7 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
         finally { writes.Gate.Release(); }
     }
     public async Task<WorkspaceResource> OwnerAsync(Guid actor, Guid id, string kind, CancellationToken ct)
-        => await db.Set<WorkspaceResource>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor && x.Kind == kind && !x.IsDeleted, ct) ?? throw Missing();
+        => await db.Set<WorkspaceResource>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor && x.Kind == kind, ct) ?? throw Missing();
     public static string Name(string value)
     {
         value = value.Trim();
