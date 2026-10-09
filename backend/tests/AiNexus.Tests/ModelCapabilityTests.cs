@@ -29,6 +29,45 @@ public sealed class ModelCapabilityTests
         options.Value.Models[0].MaxOutputTokens = 128;
         Assert.Equal(128, (await catalog.RequireAsync("model-1", CancellationToken.None)).MaxOutputTokens);
     }
+    [Fact]
+    public async Task StaleCatalogIsServedAtOnceWhileOneBackgroundRefreshRuns()
+    {
+        var options = Options.Create(new InferenceOptions { ProviderConcurrency = new() { ["ollama"] = 1 }, ShowModelNames = false,
+            Models = [new() { Id = "ollama/test-model", Provider = "ollama", ProviderModelId = "test-model" }] });
+        var provider = new SlowDiscovery();
+        var services = new ServiceCollection(); services.AddKeyedSingleton<IInferenceProvider>("ollama", provider);
+        using var container = services.BuildServiceProvider();
+        var clock = new ManualClock();
+        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, Options.Create(new KnowledgeOptions())), new AiNexus.Platform.Diagnostics.Issues(Microsoft.Extensions.Logging.Abstractions.NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance), clock);
+        Assert.Single((await catalog.GetAsync(CancellationToken.None)).Models);
+        Assert.Equal(1, provider.Calls);
+        clock.Now += ModelCatalog.FreshFor + TimeSpan.FromSeconds(1);
+        provider.Pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        // Discovery now hangs; callers still get the cached models immediately, and only one refresh is started.
+        for (var i = 0; i < 3; i++) Assert.Single((await catalog.GetAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5))).Models);
+        for (var i = 0; i < 200 && provider.Calls < 2; i++) await Task.Delay(10);
+        Assert.Equal(2, provider.Calls);
+        provider.Pending.SetResult(new HashSet<string>());
+        for (var i = 0; i < 200 && (await catalog.GetAsync(CancellationToken.None)).Models.Count > 0; i++) await Task.Delay(10);
+        Assert.Empty((await catalog.GetAsync(CancellationToken.None)).Models);
+        Assert.Equal(2, provider.Calls);
+    }
+    private sealed class ManualClock : TimeProvider
+    {
+        public DateTimeOffset Now = new(2026, 10, 9, 0, 0, 0, TimeSpan.Zero);
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
+    private sealed class SlowDiscovery : IInferenceProvider
+    {
+        public int Calls;
+        public TaskCompletionSource<IReadOnlySet<string>>? Pending;
+        public Task<IReadOnlySet<string>> InstalledModelsAsync(CancellationToken ct)
+        {
+            Interlocked.Increment(ref Calls);
+            return Pending?.Task ?? Task.FromResult<IReadOnlySet<string>>(new HashSet<string> { "test-model" });
+        }
+        public IAsyncEnumerable<InferenceChunk> StreamAsync(string model, IReadOnlyList<InferenceMessage> messages, GenerationParameters parameters, CancellationToken ct) => throw new NotSupportedException();
+    }
     private sealed class CapabilityProvider(bool vision) : IInferenceProvider
     {
         public int Checks;
