@@ -67,7 +67,7 @@ public sealed class DomainEventTests
         public async Task HandleAsync(Saving e, CancellationToken ct) => await db.SaveChangesAsync(ct);
     }
 
-    private static NexusFactory Factory(Recorder recorder) => new(backgroundJobs: false, services: services =>
+    private static NexusFactory Factory(Recorder recorder) => new(services: services =>
     {
         services.AddSingleton(recorder);
         services.AddDomainEventHandler<Probe, ProbeHandler>();
@@ -190,7 +190,7 @@ public sealed class DomainEventTests
     [Fact]
     public async Task DeletingAnArtifactRevokesItsSharesInTheSameTransaction()
     {
-        await using var f = new NexusFactory(backgroundJobs: false); using var alice = await f.SignedInAsync(); using var bob = await f.SignedInAsync("bob");
+        await using var f = new NexusFactory(); using var alice = await f.SignedInAsync(); using var bob = await f.SignedInAsync("bob");
         var bobId = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var source = (await (await alice.PostAsJsonAsync("/api/v1/artifacts", new CreateArtifactRequest("成果", "內容"))).Content.ReadFromJsonAsync<ArtifactDto>())!;
         var share = (await (await alice.PostAsJsonAsync("/api/v1/shares", new CreateShareRequest("artifact", source.Resource.Id, [bobId]))).Content.ReadFromJsonAsync<ShareDto>())!;
@@ -207,7 +207,7 @@ public sealed class DomainEventTests
     [Fact]
     public async Task DeletingAProjectDetachesItsArtifacts()
     {
-        await using var f = new NexusFactory(backgroundJobs: false); using var owner = await f.SignedInAsync();
+        await using var f = new NexusFactory(); using var owner = await f.SignedInAsync();
         var project = (await (await owner.PostAsJsonAsync("/api/v1/projects", new ProjectRequest("container"))).Content.ReadFromJsonAsync<ProjectDto>())!;
         var artifact = (await (await owner.PostAsJsonAsync($"/api/v1/projects/{project.Resource.Id}/artifacts", new CreateArtifactRequest("kept", "body"))).Content.ReadFromJsonAsync<ArtifactDto>())!;
         using (var scope = f.Services.CreateScope())

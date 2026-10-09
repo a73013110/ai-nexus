@@ -158,7 +158,6 @@ public sealed class BillingTests
     }
     internal static async Task Wait(HttpClient client, Guid id)
     {
-        for (var i = 0; i < 200; i++) { var run = (await client.GetFromJsonAsync<RunDto>($"/api/v1/runs/{id}"))!; if (!RunStates.IsActive(run.Status)) { Assert.Equal("completed", run.Status); return; } await Task.Delay(20); }
-        Assert.Fail("Fixture generation did not finish.");
+        Assert.Equal(RunStates.Completed, (await ChatApiTests.WaitForTerminal(client, id)).Status);
     }
 }

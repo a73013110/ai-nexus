@@ -33,7 +33,7 @@ public sealed class QualityTests
     [Fact]
     public async Task FrozenCasesRunThroughDurableQueueAndResultsRequireSetAccess()
     {
-        await using var f = new NexusFactory(backgroundJobs: false); using var owner = await f.SignedInAsync(); using var viewer = await f.SignedInAsync("viewer");
+        await using var f = new NexusFactory(); using var owner = await f.SignedInAsync(); using var viewer = await f.SignedInAsync("viewer");
         var set = (await (await owner.PostAsJsonAsync("/api/v1/quality/sets", Sample)).Content.ReadFromJsonAsync<EvaluationSetDto>())!;
         var response = await owner.PostAsJsonAsync($"/api/v1/quality/sets/{set.Resource.Id}/runs", new EvaluationRunRequest([new("原始方案", "test-model", "保持精簡")])); response.EnsureSuccessStatusCode(); var run = (await response.Content.ReadFromJsonAsync<EvaluationRunDto>())!;
         (await owner.PutAsJsonAsync($"/api/v1/quality/sets/{set.Resource.Id}", Sample with { Cases = [new("新問題")], ExpectedVersion = 1 })).EnsureSuccessStatusCode();
@@ -55,7 +55,7 @@ public sealed class QualityTests
     [Fact]
     public async Task CancelledEvaluationResumesCompletedCheckpointsAndOversizedInputConsumesNoQuota()
     {
-        await using var f = new NexusFactory(backgroundJobs: false); using var owner = await f.SignedInAsync();
+        await using var f = new NexusFactory(); using var owner = await f.SignedInAsync();
         var set = (await (await owner.PostAsJsonAsync("/api/v1/quality/sets", Sample with { Cases = [new("第一題"), new("第二題")] })).Content.ReadFromJsonAsync<EvaluationSetDto>())!;
         var run = (await (await owner.PostAsJsonAsync($"/api/v1/quality/sets/{set.Resource.Id}/runs", new EvaluationRunRequest([new("測試方案")]))).Content.ReadFromJsonAsync<EvaluationRunDto>())!;
         using (var scope = f.Services.CreateScope())
@@ -76,7 +76,7 @@ public sealed class QualityTests
     [Fact]
     public async Task ChangedModelSettingsBlockQueuedComparisonAndRetryBeforeConsumingQuota()
     {
-        await using var f = new NexusFactory(backgroundJobs: false); using var owner = await f.SignedInAsync();
+        await using var f = new NexusFactory(); using var owner = await f.SignedInAsync();
         var set = (await (await owner.PostAsJsonAsync("/api/v1/quality/sets", Sample)).Content.ReadFromJsonAsync<EvaluationSetDto>())!;
         var run = (await (await owner.PostAsJsonAsync($"/api/v1/quality/sets/{set.Resource.Id}/runs", new EvaluationRunRequest([new("固定設定")]))).Content.ReadFromJsonAsync<EvaluationRunDto>())!;
         var config = (await owner.GetFromJsonAsync<EvaluationDetailDto>($"/api/v1/quality/runs/{run.Id}"))!.Variants[0].Configuration!;

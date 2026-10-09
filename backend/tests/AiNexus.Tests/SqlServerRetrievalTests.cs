@@ -21,13 +21,9 @@ using Xunit;
 
 namespace AiNexus.Tests;
 
-public sealed class SqlServerFactAttribute : FactAttribute
-{
-    public SqlServerFactAttribute() { if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AINEXUS_SQLSERVER_TEST"))) Skip = "未設定 AINEXUS_SQLSERVER_TEST，略過真實 SQL Server 2025 整合測試。"; }
-}
 public sealed class SqlServerRetrievalTests
 {
-    [SqlServerFact]
+    [Fact]
     public async Task FullTextRuntimeFailureFallsBackToVectorAndExplainsKeywordUnavailability()
     {
         await WithDatabase(async (db, sql, _) => {
@@ -64,7 +60,7 @@ public sealed class SqlServerRetrievalTests
         }
     }
 
-    [SqlServerFact]
+    [Fact]
     public async Task NativeVectorsBatchTransactionsDistanceAndProfileIsolation()
     {
         await WithDatabase(async (db, sql, store) => {
@@ -95,7 +91,7 @@ public sealed class SqlServerRetrievalTests
             Assert.Equal(17, await sql.QuerySingleAsync<int>("SELECT CAST(SERVERPROPERTY('ProductMajorVersion') AS int)"));
         });
     }
-    [SqlServerFact]
+    [Fact]
     public async Task TraditionalChineseFullTextPopulationAndAclBeforeTop()
     {
         await WithDatabase(async (db, sql, store) => {
@@ -114,7 +110,7 @@ public sealed class SqlServerRetrievalTests
             var hit = Assert.Single(search!.Hits); Assert.Contains(hit.ChunkId, seed.Chunks.Take(2).Select(x => x.Id)); Assert.Equal(1, hit.FtsRank); Assert.Null(hit.VectorRank);
         });
     }
-    [SqlServerFact]
+    [Fact]
     public async Task DiagnosticBulkImportIsIdempotentIndependentAndRetentionIsBounded()
     {
         await WithDatabase(async (db, _, _) => {
@@ -151,7 +147,9 @@ public sealed class SqlServerRetrievalTests
     }
     private static async Task WithDatabase(Func<NexusDbContext, EDoc.Core.Database.Interfaces.IDbHelper<INexusDatabase>, SqlServerRetrievalStore, Task> test)
     {
-        var settings = new SqlConnectionStringBuilder(Environment.GetEnvironmentVariable("AINEXUS_SQLSERVER_TEST")!) { InitialCatalog = "master" };
+        var connection = Environment.GetEnvironmentVariable("AINEXUS_SQLSERVER_TEST");
+        Assert.SkipWhen(string.IsNullOrWhiteSpace(connection), "未設定 AINEXUS_SQLSERVER_TEST，略過真實 SQL Server 2025 整合測試。");
+        var settings = new SqlConnectionStringBuilder(connection) { InitialCatalog = "master" };
         var name = "AINexus_Retrieval_Test_" + Guid.NewGuid().ToString("N"); var created = false;
         await using var master = new SqlConnection(settings.ConnectionString); await master.OpenAsync();
         try

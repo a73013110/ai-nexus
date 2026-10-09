@@ -12,7 +12,7 @@ using AiNexus.Features.Inference;
 
 namespace AiNexus.Features.Chat;
 
-public sealed partial class GenerationWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, RunSignals signals, InferenceRouter router, IOptions<InferenceOptions> options, StorageReadiness storage, ILogger<GenerationWorker> logger, Issues issues) : BackgroundService
+public sealed partial class GenerationWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, RunSignals signals, InferenceRouter router, IOptions<InferenceOptions> options, StorageReadiness storage, ILogger<GenerationWorker> logger, Issues issues, TimeProvider clock) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -22,7 +22,7 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
             using var startup = scopes.CreateScope();
             var db = startup.ServiceProvider.GetRequiredService<NexusDbContext>();
             if (!await db.Database.CanConnectAsync(stoppingToken)) { LogStorageUnavailable(logger); return; }
-            await startup.ServiceProvider.GetRequiredService<RunLeaseRecovery>().RecoverAsync(DateTimeOffset.UtcNow, stoppingToken);
+            await startup.ServiceProvider.GetRequiredService<RunLeaseRecovery>().RecoverAsync(clock.GetUtcNow(), stoppingToken);
             foreach (var profile in options.Value.Models)
             {
                 var existing = await db.ModelProfiles.FindAsync([profile.Id], stoppingToken);
@@ -77,8 +77,8 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
     private async Task GenerateAsync(GenerationJob job, CancellationToken stoppingToken)
     {
         LogStarted(logger);
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(job.Cancellation.Token, stoppingToken);
-        timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.TimeoutSeconds));
+        using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(options.Value.TimeoutSeconds), clock);
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(job.Cancellation.Token, stoppingToken, deadline.Token);
         GenerationParameters parameters;
         IReadOnlyList<InferenceMessage> messages;
         string model;
@@ -106,7 +106,7 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
                 return;
             }
             run.Status = RunStates.Running;
-            run.StartedAt = DateTimeOffset.UtcNow;
+            run.StartedAt = clock.GetUtcNow();
             RunService.AddEvent(db, run, "status");
             await scope.ServiceProvider.GetRequiredService<ConversationService>().UpdateAnswerAsync(run, stoppingToken);
             await db.SaveChangesAsync(stoppingToken);

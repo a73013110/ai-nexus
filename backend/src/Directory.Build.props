@@ -1,5 +1,9 @@
 <Project>
   <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+  <PropertyGroup>
+    <!-- Minimal API request delegates are generated at compile time instead of compiled from expression trees when each host starts. -->
+    <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>
+  </PropertyGroup>
   <!-- Class libraries share the ASP.NET Core implicit usings that the web host gets from Microsoft.NET.Sdk.Web. -->
   <ItemGroup Condition="'$(UsingMicrosoftNETSdkWeb)' != 'true'">
     <Using Include="System.Net.Http.Json" />

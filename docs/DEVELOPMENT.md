@@ -52,6 +52,8 @@ dotnet dev-certs https --trust
 ./scripts/Test-Connections.ps1  # 真實外部連線，與自動化測試分開
 ```
 
+後端測試的執行方式與 `NexusFactory` 的寫法見 [後端測試](BACKEND_TESTING.md)。
+
 GitHub Actions 的 CI 目前只能手動觸發（Actions 頁面的 Run workflow），不會在 push 或 PR 時自動執行。送 PR 前請在本機跑 `Verify.ps1 -SkipBrowser`，並確認 `dotnet ef migrations has-pending-model-changes` 沒有待產生的 migration。
 
 瀏覽器測試使用本機已安裝 Edge，測試伺服器在 5180。後端的真實瀏覽器測試（`Category=Browser`：PDF 匯出、診斷與監控頁）只在設定 `AINEXUS_TEST_BROWSER` 時執行，其值為 channel（`msedge`、`chrome`）或瀏覽器執行檔絕對路徑；`Test-Diagnostics.ps1 -Browser` 會設定它，Linux 以 `-BrowserTarget /opt/pw-browsers/chromium` 指定 Playwright 的 Chromium。測試替身僅存在 `backend/tests`、`tests/e2e`，正式程式不接受測試身分 header。Playwright 覆蓋鍵盤、中文組字、版本分支、斷線、Markdown 安全、模型政策、Context、可讀字體與窄螢幕。結果、trace 與畫面全部在 ignored `artifacts`。後端測試使用獨立 SQLite；SQL schema/migrations、AD 與真模型仍由連線檢查／實機驗收驗證。

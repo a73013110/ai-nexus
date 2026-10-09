@@ -8,6 +8,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Time.Testing;
 using Xunit;
 using AiNexus.Features.Persistence;
 
@@ -116,7 +117,7 @@ public sealed class MonitoringTests
     public async Task FactoryClientsShareDependencyObservationAndSuppressObserverCalls()
     {
         var clock = new Clock();
-        await using var factory = new NexusFactory(backgroundJobs: false, services: services => {
+        await using var factory = new NexusFactory(services: services => {
             services.RemoveAll<TimeProvider>(); services.AddSingleton<TimeProvider>(clock);
             services.AddHttpClient("monitoring-probe").ConfigurePrimaryHttpMessageHandler(() => new ProbeHandler());
         });
@@ -147,7 +148,7 @@ public sealed class MonitoringTests
     [Fact]
     public async Task PresenceIsAuthenticatedCsrfProtectedAndMonitorIsSeparatelyGranted()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"], backgroundJobs: false);
+        await using var factory = new NexusFactory(administrators: ["alice"]);
         using var anonymous = factory.CreateClient();
         Assert.Equal(HttpStatusCode.Unauthorized, (await anonymous.PostAsJsonAsync("/api/v1/presence", new PresenceRequest(Guid.NewGuid(), "chat", "active"))).StatusCode);
         using var bob = await factory.SignedInAsync("bob"); using var alice = await factory.SignedInAsync();
@@ -164,7 +165,7 @@ public sealed class MonitoringTests
     public async Task SharedPipelineCountsRealPayloadAndExcludesMonitoringTraffic()
     {
         var clock = new Clock();
-        await using var factory = new NexusFactory(administrators: ["alice"], backgroundJobs: false, services: services => {
+        await using var factory = new NexusFactory(administrators: ["alice"], services: services => {
             services.RemoveAll<TimeProvider>(); services.AddSingleton<TimeProvider>(clock);
         });
         using var alice = await factory.SignedInAsync();
@@ -183,7 +184,7 @@ public sealed class MonitoringTests
     [Fact]
     public async Task ExportIsAuditedAndDisabledTelemetryRemainsEmpty()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"], backgroundJobs: false, services: services => services.PostConfigure<MonitoringOptions>(x => x.Enabled = false));
+        await using var factory = new NexusFactory(administrators: ["alice"], services: services => services.PostConfigure<MonitoringOptions>(x => x.Enabled = false));
         using var alice = await factory.SignedInAsync();
         await alice.PostAsJsonAsync("/api/v1/presence", new PresenceRequest(Guid.NewGuid(), "chat", "active"));
         var export = await alice.GetAsync("/api/v1/admin/monitoring/export?minutes=15"); export.EnsureSuccessStatusCode();
@@ -195,8 +196,10 @@ public sealed class MonitoringTests
     [Fact]
     public async Task RevokedGrantTerminatesExistingStream()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"], backgroundJobs: false);
-        using var alice = await factory.SignedInAsync(); using var cancel = new CancellationTokenSource(TimeSpan.FromSeconds(25));
+        var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        await using var factory = new NexusFactory(administrators: ["alice"], clock: clock);
+        using var alice = await factory.SignedInAsync(); using var cancel = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cancel.CancelAfter(TimeSpan.FromSeconds(10));
         using var response = await alice.GetAsync("/api/v1/admin/monitoring/events", HttpCompletionOption.ResponseHeadersRead, cancel.Token);
         response.EnsureSuccessStatusCode();
         using var reader = new StreamReader(await response.Content.ReadAsStreamAsync(cancel.Token));
@@ -205,6 +208,8 @@ public sealed class MonitoringTests
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             db.Remove(db.Set<RoleGroupFeature>().Single(x => x.FeatureId == "monitoring" && x.GroupId == "administrators")); await db.SaveChangesAsync(cancel.Token);
         }
+        // Grants are re-checked every 15 seconds of stream time.
+        clock.Advance(TimeSpan.FromSeconds(15));
         var ended = false;
         while (!cancel.IsCancellationRequested) {
             var line = await reader.ReadLineAsync(cancel.Token);

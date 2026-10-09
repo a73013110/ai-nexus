@@ -6,14 +6,22 @@ using Konscious.Security.Cryptography;
 
 namespace AiNexus.Features.Identity;
 
-/// <summary>Versioned PHC hashes; bounded memory/work and constant-time verification.</summary>
-public sealed class Argon2Passwords : IDisposable
+/// <summary>Argon2id work for new hashes. Production always uses <see cref="Recommended"/>; only tests register a cheaper cost.</summary>
+public sealed record Argon2Cost(int MemoryKiB, int Iterations)
 {
-    public const int MemoryKiB = 65536;
-    public const int Iterations = 3;
+    public static readonly Argon2Cost Recommended = new(65536, 3);
+}
+
+/// <summary>Versioned PHC hashes; bounded memory/work and constant-time verification.</summary>
+public sealed class Argon2Passwords(Argon2Cost cost) : IDisposable
+{
+    // Stored hashes below the OWASP minimum (19 MiB, 2 passes) are rejected unless the configured cost is itself lower.
+    private readonly int minimumMemoryKiB = Math.Min(19456, cost.MemoryKiB);
+    private readonly int minimumIterations = Math.Min(2, cost.Iterations);
     private readonly SemaphoreSlim gate = new(2, 2);
-    // Invalid accounts still perform the same work without allocating a hash per request.
-    public static readonly string DummyHash = $"$argon2id$v=19$m={MemoryKiB},t={Iterations},p=1${Encode(new byte[16])}${Encode(new byte[32])}";
+
+    /// <summary>Invalid accounts still perform the same work without allocating a hash per request.</summary>
+    public string DummyHash { get; } = $"$argon2id$v=19$m={cost.MemoryKiB},t={cost.Iterations},p=1${Encode(new byte[16])}${Encode(new byte[32])}";
 
     public static void Validate(string password)
     {
@@ -25,8 +33,8 @@ public sealed class Argon2Passwords : IDisposable
     {
         Validate(password);
         var salt = RandomNumberGenerator.GetBytes(16);
-        var hash = await DeriveAsync(password, salt, MemoryKiB, Iterations, 1, ct);
-        try { return $"$argon2id$v=19$m={MemoryKiB},t={Iterations},p=1${Encode(salt)}${Encode(hash)}"; }
+        var hash = await DeriveAsync(password, salt, cost.MemoryKiB, cost.Iterations, 1, ct);
+        try { return $"$argon2id$v=19$m={cost.MemoryKiB},t={cost.Iterations},p=1${Encode(salt)}${Encode(hash)}"; }
         finally { CryptographicOperations.ZeroMemory(hash); }
     }
 
@@ -42,13 +50,13 @@ public sealed class Argon2Passwords : IDisposable
             var memory = int.Parse(costs[0][2..], CultureInfo.InvariantCulture);
             var iterations = int.Parse(costs[1][2..], CultureInfo.InvariantCulture);
             var parallelism = int.Parse(costs[2][2..], CultureInfo.InvariantCulture);
-            if (memory is < 19456 or > 131072 || iterations is < 2 or > 8 || parallelism is < 1 or > 4) return (false, false);
+            if (memory < minimumMemoryKiB || memory > 131072 || iterations < minimumIterations || iterations > 8 || parallelism is < 1 or > 4) return (false, false);
             var salt = Decode(parts[4]); var expected = Decode(parts[5]);
             if (salt.Length is < 16 or > 64 || expected.Length != 32) return (false, false);
             var actual = await DeriveAsync(password, salt, memory, iterations, parallelism, ct);
             var valid = CryptographicOperations.FixedTimeEquals(actual, expected);
             CryptographicOperations.ZeroMemory(actual);
-            return (valid, valid && (memory < MemoryKiB || iterations < Iterations));
+            return (valid, valid && (memory < cost.MemoryKiB || iterations < cost.Iterations));
         }
         catch (FormatException) { return (false, false); }
         catch (OverflowException) { return (false, false); }
