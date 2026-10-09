@@ -50,3 +50,5 @@ internal sealed class GiteaOptionsValidator : IValidateOptions<GiteaOptions>
            && x.TimeoutSeconds is >= 2 and <= 30 && x.MaxFileBytes is >= 1024 and <= 500000
             ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail("Invalid Gitea connector settings.");
 }
+
+internal sealed class RepositoriesFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Repositories, "程式庫", "/repositories", 65));

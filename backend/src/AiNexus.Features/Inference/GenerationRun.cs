@@ -1,6 +1,9 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
+
 namespace AiNexus.Features.Inference;
 
-/// <summary>One chat answer being generated. Its EF mapping lives in <c>NexusDbContext</c>.</summary>
+/// <summary>One chat answer being generated.</summary>
 public sealed class GenerationRun
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -34,4 +37,27 @@ public sealed class GenerationRun
     public long? OutputTokens { get; set; }
     public long? DurationMilliseconds { get; set; }
     public long? GenerationMilliseconds { get; set; }
+}
+
+/// <remarks>Foreign keys to conversations, messages and users are in <c>CrossModuleRelationships</c>.</remarks>
+internal sealed class GenerationRunConfiguration : IEntityTypeConfiguration<GenerationRun>
+{
+    public void Configure(EntityTypeBuilder<GenerationRun> run)
+    {
+        run.ToTable("GenerationRuns", "inference");
+        run.HasKey(x => x.Id);
+        run.Property(x => x.ModelId).HasMaxLength(160);
+        run.Property(x => x.Provider).HasMaxLength(32);
+        run.Property(x => x.ProviderModelId).HasMaxLength(150);
+        run.Property(x => x.Status).HasMaxLength(16);
+        run.Property(x => x.IssueCode).HasMaxLength(40); run.Property(x => x.TraceId).HasMaxLength(32); run.Property(x => x.ParentSpanId).HasMaxLength(16);
+        run.Property(x => x.ErrorCode).HasMaxLength(80);
+        run.Property(x => x.IdempotencyKey).HasMaxLength(80);
+        run.Property(x => x.RequestHash).HasMaxLength(64);
+        run.HasIndex(x => new { x.OwnerId, x.IdempotencyKey }).IsUnique();
+        run.HasIndex(x => x.ActiveOwnerId).IsUnique().HasFilter("[ActiveOwnerId] IS NOT NULL");
+        run.HasIndex(x => new { x.ConversationId, x.CreatedAt });
+        run.HasIndex(x => new { x.OwnerId, x.CreatedAt }); // Daily token budgets and personal usage reports.
+        run.HasIndex(x => new { x.ActiveOwnerId, x.LeaseExpiresAt });
+    }
 }

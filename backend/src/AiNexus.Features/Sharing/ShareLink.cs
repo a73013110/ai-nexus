@@ -33,13 +33,3 @@ internal sealed class ShareLinkConfiguration : IEntityTypeConfiguration<ShareLin
         link.HasIndex(x => new { x.OwnerId, x.CreatedAt }); link.HasIndex(x => x.ExpiresAt);
     }
 }
-
-/// <summary>Entry point used by <c>NexusDbContext</c>.</summary>
-public static class SharingConfiguration
-{
-    public static void Configure(ModelBuilder model)
-    {
-        model.ApplyConfiguration(new ShareLinkConfiguration());
-        model.ApplyConfiguration(new ShareRecipientConfiguration());
-    }
-}

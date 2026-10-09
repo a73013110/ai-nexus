@@ -10,17 +10,11 @@ public sealed class AttachmentReference
     public Guid AttachmentId { get; set; }
 }
 
-internal sealed class AttachmentReferenceEntityConfiguration : IEntityTypeConfiguration<AttachmentReference>
+internal sealed class AttachmentReferenceConfiguration : IEntityTypeConfiguration<AttachmentReference>
 {
     public void Configure(EntityTypeBuilder<AttachmentReference> link)
     {
         link.ToTable("ResourceAttachments", "attachments"); link.HasKey(x => new { x.ResourceId, x.AttachmentId });
         link.HasOne<Attachment>().WithMany().HasForeignKey(x => x.AttachmentId).OnDelete(DeleteBehavior.Restrict);
     }
-}
-
-/// <summary>Entry point kept for <c>NexusDbContext</c>.</summary>
-public static class AttachmentReferenceConfiguration
-{
-    public static void Configure(ModelBuilder model) => model.ApplyConfiguration(new AttachmentReferenceEntityConfiguration());
 }

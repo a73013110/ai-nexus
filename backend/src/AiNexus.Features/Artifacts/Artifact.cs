@@ -29,20 +29,10 @@ public sealed class Artifact
         && !content.Any(x => char.IsControl(x) && x is not ('\n' or '\r' or '\t'));
 }
 
-internal sealed class ArtifactEntityConfiguration : IEntityTypeConfiguration<Artifact>
+internal sealed class ArtifactConfiguration : IEntityTypeConfiguration<Artifact>
 {
     public void Configure(EntityTypeBuilder<Artifact> item)
     {
         item.ToTable("Artifacts", "content"); item.HasKey(x => x.Id);
-    }
-}
-
-/// <summary>Entry point kept for <c>NexusDbContext</c>.</summary>
-public static class ArtifactConfiguration
-{
-    public static void Configure(ModelBuilder model)
-    {
-        model.ApplyConfiguration(new ArtifactEntityConfiguration());
-        model.ApplyConfiguration(new ArtifactRevisionConfiguration());
     }
 }

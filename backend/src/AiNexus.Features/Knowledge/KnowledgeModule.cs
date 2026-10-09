@@ -116,3 +116,5 @@ public sealed class KnowledgeModule : IFeatureModule
         ListLibraryFiles.Map(api.MapGroup("/files").RequireAuthorization(Policies.Files).WithTags("File library"));
     }
 }
+
+internal sealed class KnowledgeFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Knowledge, "知識庫", "/knowledge", 30));

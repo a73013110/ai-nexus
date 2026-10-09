@@ -13,16 +13,6 @@ public sealed class RepositoryConnection
     public DateTimeOffset ConnectedAt { get; set; } = DateTimeOffset.UtcNow;
 }
 
-/// <summary>Entry point kept for <c>NexusDbContext</c>.</summary>
-public static class RepositoryConfiguration
-{
-    public static void Configure(ModelBuilder model)
-    {
-        model.ApplyConfiguration(new RepositoryConnectionConfiguration());
-        model.ApplyConfiguration(new RepositoryImportConfiguration());
-    }
-}
-
 internal sealed class RepositoryConnectionConfiguration : IEntityTypeConfiguration<RepositoryConnection>
 {
     public void Configure(EntityTypeBuilder<RepositoryConnection> c)

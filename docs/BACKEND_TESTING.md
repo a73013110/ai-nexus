@@ -19,7 +19,7 @@ dotnet test --project backend/tests/AiNexus.Tests --filter "FullyQualifiedName~C
 
 ## `NexusFactory` 的取捨
 
-- **資料庫**：schema 每個測試程序只建一次範本檔，每個 host 複製一份。不要在測試裡呼叫 `EnsureCreated`。
+- **資料庫**：schema 每個測試程序只建一次範本檔，每個 host 複製一份。不要在測試裡呼叫 `EnsureCreated`。換掉 provider 時要像 `NexusFactory` 一樣呼叫 `AddNexusInterceptors(scope)`，否則 domain event 不會分派、稽核列不會補值。
 - **背景工作**：只有生成 worker 會跑。其他 hosted worker 用 `workers: [typeof(DiagnosticWorker)]` 選用；週期性工作（背景工作、清理）由測試直接呼叫，例如 `ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services).ProcessNextAsync(...)`。原因：背景工作和測試搶同一個 SQLite 檔的寫入鎖，會造成偶發失敗。
 - **時間**：需要逾時或週期的測試傳 `clock: new FakeTimeProvider(DateTimeOffset.UtcNow)` 再 `Advance`；正式程式碼的計時器、`CancellationTokenSource` 逾時都要吃 `TimeProvider` 才能這樣測。
 - **密碼**：Argon2 用 `NexusFactory.PasswordCost`（1 MiB、1 次）；正式環境固定 `Argon2Cost.Recommended`。

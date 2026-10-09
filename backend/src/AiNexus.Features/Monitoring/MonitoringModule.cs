@@ -55,3 +55,5 @@ internal sealed class MonitoringOptionsValidator : IValidateOptions<MonitoringOp
     public ValidateOptionsResult Validate(string? name, MonitoringOptions options)
         => options.Valid() ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail("Invalid monitoring capacity or timing.");
 }
+
+internal sealed class MonitoringFeatures() : FeatureSeed(new PlatformFeature(MonitoringModule.Feature, "即時監控", "/admin/monitoring", 91, AdministratorsOnly: true));
