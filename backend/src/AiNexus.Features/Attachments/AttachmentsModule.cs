@@ -23,9 +23,6 @@ public sealed class AttachmentsModule : IFeatureModule
     {
         var services = builder.Services;
         services.AddScoped<AttachmentService>();
-        services.AddScoped<RenameLibraryFile>();
-        services.AddScoped<RetainLibraryFile>();
-        services.AddScoped<RemoveAttachment>();
         services.AddScoped<DocumentExtractor>();
         services.AddSingleton<AttachmentWriteLock>();
         services.AddSingleton<IAttachmentStorage, FileAttachmentStorage>();

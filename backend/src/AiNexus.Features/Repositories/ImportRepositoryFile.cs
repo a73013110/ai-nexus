@@ -41,7 +41,7 @@ internal sealed class ImportRepositoryFile(NexusDbContext db, RepositoryService 
             var text = $"Gitea: {file.Repository}\nPath: {file.Path}\nCommit: {file.Commit}\nSource: {file.Url}\n\n{file.Text}";
             var bytes = Encoding.UTF8.GetBytes(text); using var stream = new MemoryStream(bytes);
             var upload = new FormFile(stream, 0, bytes.Length, "file", string.Concat((file.Repository.Replace('/', '_') + "_" + Path.GetFileName(file.Path)).Take(170)) + ".txt") { Headers = new HeaderDictionary(), ContentType = "text/plain" };
-            var attachment = await attachments.UploadAsync(owner, upload, ct);
+            var attachment = (await attachments.UploadAsync(owner, upload, ct)).OrThrow();
             var document = await documents.AddAsync(owner, body.CollectionId, attachment.Id, ct);
             db.Add(new RepositoryImport { OwnerId = owner, CollectionId = body.CollectionId, DocumentId = document.Id, Repository = file.Repository, Commit = file.Commit, Path = file.Path, BaseUrl = gitea.BaseUrl });
             db.AuditEvents.Add(new AuditEvent { OwnerId = owner, ResourceId = document.Id, Action = "repository.imported", Result = "snapshot" });

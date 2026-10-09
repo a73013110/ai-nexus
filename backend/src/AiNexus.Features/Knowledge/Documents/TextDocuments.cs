@@ -28,6 +28,6 @@ internal static class TextDocuments
         var bytes = Encoding.UTF8.GetBytes(request.Text);
         using var stream = new MemoryStream(bytes);
         var file = new FormFile(stream, 0, bytes.Length, "file", request.Title + ".txt") { Headers = new HeaderDictionary(), ContentType = "text/plain" };
-        return await attachments.UploadAsync(actor, file, ct);
+        return (await attachments.UploadAsync(actor, file, ct)).OrThrow();
     }
 }

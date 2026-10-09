@@ -1,4 +1,5 @@
 using System.Net;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace AiNexus.Platform.Security;
 
@@ -41,15 +42,15 @@ public static class WebSecurity
         address is not null && IPAddress.IsLoopback(address) &&
         request.Host.Host is "localhost" or "127.0.0.1" or "::1" or "[::1]";
 
-    public static IResult File(HttpContext http, byte[] bytes, string contentType, string name, bool download)
+    public static FileStreamHttpResult File(HttpContext http, byte[] bytes, string contentType, string name, bool download)
         => File(http, new MemoryStream(bytes, writable: false), contentType, name, download);
 
-    public static IResult File(HttpContext http, Stream stream, string contentType, string name, bool download)
+    public static FileStreamHttpResult File(HttpContext http, Stream stream, string contentType, string name, bool download)
     {
         NoStore(http.Response);
         // Uploaded data never inherits the application's scripting privileges when opened directly.
         http.Response.Headers["Content-Security-Policy"] = "default-src 'none'; sandbox; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
         var inline = !download && (contentType is "application/pdf" or "image/png" or "image/jpeg" or "image/webp");
-        return Results.File(stream, contentType, fileDownloadName: inline ? null : name);
+        return TypedResults.File(stream, contentType, fileDownloadName: inline ? null : name);
     }
 }

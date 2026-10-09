@@ -69,8 +69,8 @@ public sealed class FileAttachmentStorage : IAttachmentStorage
     {
         ct.ThrowIfCancellationRequested();
         try { return Task.FromResult<Stream>(new FileStream(PathFor(key), FileMode.Open, FileAccess.Read, FileShare.Read | FileShare.Delete, 65536, FileOptions.Asynchronous | FileOptions.SequentialScan)); }
-        catch (FileNotFoundException) { throw new ApiException(503, "attachment_content_missing", "附件原檔暫時無法讀取，請聯絡管理員檢查儲存與備份。"); }
-        catch (DirectoryNotFoundException) { throw new ApiException(503, "attachment_content_missing", "附件原檔暫時無法讀取，請聯絡管理員檢查儲存與備份。"); }
+        catch (FileNotFoundException) { throw new ExternalServiceException(AttachmentsErrors.ContentMissing, "附件原檔暫時無法讀取，請聯絡管理員檢查儲存與備份。"); }
+        catch (DirectoryNotFoundException) { throw new ExternalServiceException(AttachmentsErrors.ContentMissing, "附件原檔暫時無法讀取，請聯絡管理員檢查儲存與備份。"); }
     }
 
     public Task DeleteAsync(string key, CancellationToken ct)
