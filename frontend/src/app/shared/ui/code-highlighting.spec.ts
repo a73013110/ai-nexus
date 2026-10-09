@@ -15,11 +15,14 @@ describe('deferred code highlighting', () => {
     expect(plain.hasAttribute('data-language')).toBe(false);
 
     highlightWhenVisible(host);
-    await vi.waitFor(() => expect(known.innerHTML).toContain('hljs-keyword'));
+    // Blocks are highlighted in time slices, so a slow machine may reach the unknown block later.
+    await vi.waitFor(() => {
+      expect(known.innerHTML).toContain('hljs-keyword');
+      expect(unknown.hasAttribute('data-language')).toBe(false);
+    });
     expect(known.textContent).toBe('const x = "<b>";\n');
     expect(known.querySelector('b')).toBeNull();
     expect(unknown.innerHTML).toBe('plain\n');
-    expect(unknown.hasAttribute('data-language')).toBe(false);
     host.remove();
   });
 });
