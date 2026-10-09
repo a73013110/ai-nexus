@@ -24,7 +24,10 @@ module.exports = tseslint.config(
         'error',
         { type: 'attribute', prefix: 'nx', style: 'camelCase' },
       ],
-      '@typescript-eslint/no-unused-vars': ['error', { ignoreRestSiblings: true }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { ignoreRestSiblings: true, argsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/no-unused-expressions': ['error', { allowTernary: true }],
       'no-empty': ['error', { allowEmptyCatch: true }],
       '@angular-eslint/prefer-on-push-component-change-detection': 'error',
