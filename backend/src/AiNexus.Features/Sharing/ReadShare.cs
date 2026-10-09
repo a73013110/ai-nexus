@@ -2,7 +2,6 @@ using System.Text.Json;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Platform.Errors;
-using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Sharing;
 

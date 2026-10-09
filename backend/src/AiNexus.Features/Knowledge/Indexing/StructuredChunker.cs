@@ -2,7 +2,6 @@ using System.Text.RegularExpressions;
 using AiNexus.Platform.Errors;
 using Microsoft.Extensions.Options;
 using System.Data;
-using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Knowledge.Documents;
 
 namespace AiNexus.Features.Knowledge.Indexing;

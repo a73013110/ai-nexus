@@ -5,7 +5,6 @@ using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Platform.Errors;
 using Microsoft.Extensions.Options;
-using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Integrations;
 

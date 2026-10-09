@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Options;
-using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Attachments;
 

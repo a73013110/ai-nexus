@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace AiNexus.Features.Monitoring;
 
 /// <summary>Counts application body bytes at the shared boundary, including streamed writes. It never retains content.</summary>

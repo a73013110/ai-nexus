@@ -1,5 +1,4 @@
 using AiNexus.Platform.Errors;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Knowledge.Embeddings;

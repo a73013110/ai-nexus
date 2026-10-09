@@ -1,7 +1,6 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using AiNexus.Platform.Errors;
-using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Identity.Users;
 

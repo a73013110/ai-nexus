@@ -1,5 +1,4 @@
 using System.Data.Common;
-using System.Diagnostics;
 using Microsoft.Data.SqlClient;
 
 namespace AiNexus.Features.Monitoring;
