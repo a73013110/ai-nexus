@@ -15,7 +15,7 @@ flowchart LR
     EF --> SQL[(AiNexus SQL Server)]
     Modules --> Storage[IAttachmentStorage／opaque key]
     Storage --> Files[(站外原檔目錄)]
-    Modules --> Jobs[Operations durable 任務]
+    Modules --> Jobs[Jobs durable 任務]
     Jobs --> Tasks[Inference 共用配額與模型任務]
     Tasks --> Models[Google AI／Ollama]
     Modules --> Sources[Integrations 來源政策]
@@ -32,9 +32,10 @@ flowchart LR
 | AccessControl  | 使用者→角色→群組→功能的有效授權、群組／個人模型政策資料及 server-side policy             |
 | Administration | 一次性管理員 bootstrap、帳號與授權、群組模型／配額、管理異動記錄與用量                   |
 | Conversations  | 私人訊息樹／分支、標題、收藏／封存／標籤、搜尋與文字備份匯入                             |
-| Inference      | provider、模型呈現與政策、聊天排程佇列、共用模型任務                                     |
-| Chat           | 組合對話、附件、專案、知識與網路搜尋：Context、聊天執行／SSE，整段對話讀取／匯出／複製／刪除 |
-| Operations     | 健康狀態、活動稽核查詢與寫入、事件清理、durable jobs、租約及 fenced checkpoint            |
+| Inference      | provider、模型呈現與政策、聊天排程佇列與服務狀態（`/status`）、共用模型任務               |
+| Chat           | 組合對話、附件、專案、知識與網路搜尋：Context、聊天執行／SSE、重播事件清理，整段對話讀取／匯出／複製／刪除 |
+| Jobs           | durable jobs、租約及 fenced checkpoint、任務查詢／取消／重試                              |
+| Audit          | 活動稽核查詢、分類與篩選目錄（寫入由各模組在同一交易加入 `AuditEvent`）                   |
 | Attachments    | 格式及大小驗證、原始檔／文字、配額、下載授權與保留引用                                   |
 | Library        | 個人提示詞範本及容量限制                                                                 |
 | Collaboration  | 私有資源、具名 viewer／editor、群組唯讀 ACL、具名到期分享                                |

@@ -6,7 +6,10 @@
 
 - 一個 use case 一個檔案，檔名是動詞片語：`SavePromptTemplate.cs`、`ListNotifications.cs`。同一資源、共用大量邏輯的唯讀查詢可以放在同一檔（如 `BrowseSources.cs`）。
 - 模組根目錄的 `<Module>Module.cs` 建立路由群組（授權、tags、body 上限），再依序呼叫各 slice 的 `Map`。端點順序就是 OpenAPI 順序，不要任意調整。
-- entity、DTO、`<Module>Errors`、查詢擴充方法與 `IEntityTypeConfiguration<T>` 放在以 entity 命名的檔案（如 `PromptTemplate.cs`）。
+- 檔名＝檔內主要型別名，namespace＝資料夾（`SourceLayoutTests` 檢查）。entity 與它的 `IEntityTypeConfiguration<T>`、查詢擴充方法同檔（如 `PromptTemplate.cs`）。
+- DTO 只有一個 use case 用就寫在該 use case 檔的開頭；多個檔案共用才獨立成 `<Dto>.cs`。
+- 模組的預期失敗集中在根目錄的 `<Module>Errors.cs`（`ModuleBoundaryTests` 檢查）。
+- 超過約 20 個檔案的模組依能力分子資料夾（如 `Knowledge/Documents`、`Identity/Sessions`）；`<Module>Module.cs`、`<Module>Errors.cs`、options 與跨子資料夾共用的型別留在模組根目錄。
 - slice 類別預設 `internal`；只有其他模組要用的服務（如 `NotificationService.PublishAsync`）才是 `public`，這就是模組的對外合約。
 
 ## 建置規則

@@ -1,3 +1,5 @@
+using System.Reflection;
+using AiNexus.Platform.Errors;
 using NetArchTest.Rules;
 using Xunit;
 
@@ -21,6 +23,34 @@ public sealed class ModuleBoundaryTests
         var edges = Edges();
         var cycles = Components(edges).Where(x => x.Count > 1).Select(x => Describe(Cycle(x, edges), edges)).ToList();
         Assert.True(cycles.Count == 0, "Module dependency cycles (each line: the types that create the dependency):\n" + string.Join("\n\n", cycles));
+    }
+
+    /// <summary>A module is a folder of the Features project; its root holds <c>&lt;Module&gt;Module.cs</c>, the one place it is registered.</summary>
+    [Fact]
+    public void Every_module_has_a_module_class_at_its_root()
+    {
+        var folders = Directory.EnumerateDirectories(Path.Combine(SourceTree.Root, "backend", "src", "AiNexus.Features"))
+            .Select(Path.GetFileName).OfType<string>().Where(x => x is not ("bin" or "obj") && !Infrastructure.Contains(x)).ToList();
+        Assert.NotEmpty(folders);
+        var missing = folders.Where(module => Assemblies.Features.GetType(Root + module + "." + module + "Module") is null
+            || !File.Exists(Path.Combine(SourceTree.Root, "backend", "src", "AiNexus.Features", module, module + "Module.cs"))).ToList();
+        Assert.True(missing.Count == 0, "Modules without <Module>/<Module>Module.cs declaring <Module>Module: " + string.Join(", ", missing));
+    }
+
+    /// <summary>A module's expected failures are listed in one place, <c>&lt;Module&gt;Errors</c> at the module root.</summary>
+    [Fact]
+    public void Errors_are_declared_in_the_module_errors_class()
+    {
+        var misplaced = Assemblies.Features.GetTypes()
+            .SelectMany(t => t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.DeclaredOnly))
+            .Where(f => f.FieldType == typeof(Error) && f.DeclaringType!.Namespace?.StartsWith(Root, StringComparison.Ordinal) == true)
+            .Where(f =>
+            {
+                var module = f.DeclaringType!.Namespace![Root.Length..].Split('.')[0];
+                return f.DeclaringType.FullName != Root + module + "." + module + "Errors";
+            })
+            .Select(f => f.DeclaringType!.FullName + "." + f.Name).Order(StringComparer.Ordinal).ToList();
+        Assert.True(misplaced.Count == 0, "Move these errors to <Module>Errors:\n" + string.Join("\n", misplaced));
     }
 
     /// <summary>Each module-to-module dependency with the types of the depending module that cause it.</summary>

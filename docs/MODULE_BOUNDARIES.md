@@ -2,7 +2,8 @@
 
 - 模組之間可以互相依賴，但**不可形成循環**。目標是能由下往上讀懂、測試與修改，不是零依賴。
 - `ModuleBoundaryTests.Module_dependencies_have_no_cycles` 以 NetArchTest 計算 `AiNexus.Features` 各模組命名空間之間的依賴；出現循環時列出最短路徑，以及每一段由哪些型別造成。
-- `Persistence`、`Configuration` 是共用基礎設施，不算模組：`NexusDbContext` 會引用所有模組的實體設定，各模組也都使用它。
+- `Persistence` 是共用基礎設施，不算模組：`NexusDbContext` 會引用所有模組的實體設定，各模組也都使用它。設定的繫結（`InferenceSettings` 等）放在擁有該設定的模組。
+- 每個模組資料夾的根目錄有 `<Module>Module.cs`（唯一的註冊點）；有預期失敗時也有 `<Module>Errors.cs`。兩者都由 `ModuleBoundaryTests` 檢查。
 
 ## 目前的分層
 
@@ -12,12 +13,14 @@
 | --- | --- | --- |
 | 身分 | AccessControl、Identity | 授權資料與登入；不依賴其他業務模組 |
 | 基礎能力 | Inference、Notifications、Monitoring、Diagnostics、Library | 模型、通知、監控；Inference 只依賴身分與授權 |
-| 共用資料 | Operations、Collaboration、Conversations | 背景任務、資源 ACL、對話與訊息 |
+| 共用資料 | Jobs、Audit、Collaboration、Conversations | 背景任務、稽核查詢、資源 ACL、對話與訊息 |
 | 資料延伸 | Attachments、Billing、WebSearch、Artifacts | 掛在對話或資源上的檔案、計費、搜尋、成果 |
 | 內容 | Knowledge、Projects、Quality、Repositories、Integrations | 組合上述資料的功能 |
 | 組合 | Chat、Sharing、Account、Administration、Dashboard | 一次用到多個模組的工作流程與管理介面 |
 
-`Chat` 負責把對話、附件、專案、知識與網路搜尋組成一次提問（Context、執行、SSE），也負責整段對話的讀取、匯出、複製與刪除；這些端點沿用 `Inference`、`Conversations` 的 OpenAPI tag。`Account` 是登入者本人的資料、偏好、設定與用量。
+`Chat` 負責把對話、附件、專案、知識與網路搜尋組成一次提問（Context、執行、SSE），也負責整段對話的讀取、匯出、複製與刪除；這些端點沿用 `Inference`、`Conversations` 的 OpenAPI tag。
+
+整段對話的四個端點刻意不放在 `Conversations`：讀取的 `MessageDto` 帶有附件、引用、計費與網路來源（分屬 Attachments、Knowledge、Billing、WebSearch），刪除與複製要處理附件連結與配額鎖，而這些模組都依賴 `Conversations` 的實體。放進 `Conversations` 會形成循環，用介面反轉也得改動 API 合約或把其他模組的 DTO 搬進來。`Conversations` 只管對話本身（建立、列表、改名、標籤、分支、設定、匯入）。`Account` 是登入者本人的資料、偏好、設定與用量。
 
 ## 新增依賴造成循環時
 
