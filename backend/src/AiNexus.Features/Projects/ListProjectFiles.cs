@@ -3,6 +3,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Knowledge.Documents;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Projects;
 
@@ -16,7 +17,7 @@ internal static class ListProjectFiles
 
     private static async Task<IReadOnlyList<DocumentDto>> HandleAsync(NexusDbContext db, ResourceAccess access, DocumentService documents, Guid actor, Guid id, CancellationToken ct)
     {
-        await access.RequireAsync(actor, id, Project.Kind, ct);
+        (await access.RequireAsync(actor, id, Project.Kind, ct)).OrThrow();
         var ids = await db.Set<WorkspaceResource>().Where(x => x.ParentId == id && x.Kind == "document").Select(x => x.Id).Take(Project.MaxFiles).ToListAsync(ct);
         return await documents.DetailsAsync(actor, ids, ct);
     }

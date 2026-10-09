@@ -1,6 +1,7 @@
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Http;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Quality.Evaluations;
 
@@ -9,11 +10,11 @@ internal static class ShareEvaluationSet
 {
     public static void Map(RouteGroupBuilder routes)
     {
-        routes.MapGet("/sets/{id:guid}/access", async (Guid id, ICurrentUser user, ResourceAccess access, CancellationToken ct) => Results.Ok(await access.AclAsync(user.Id, id, EvaluationSet.Kind, ct)))
+        routes.MapGet("/sets/{id:guid}/access", async (Guid id, ICurrentUser user, ResourceAccess access, CancellationToken ct) => Results.Ok((await access.AclAsync(user.Id, id, EvaluationSet.Kind, ct)).OrThrow()))
             .Produces<ResourceAclDto>().WithRequestBodyLimit(QualityModule.SetBodyLimit);
         routes.MapPut("/sets/{id:guid}/access", async (Guid id, ResourceAclRequest body, ICurrentUser user, ResourceAccess access, CancellationToken ct) =>
         {
-            await access.SetAclAsync(user.Id, id, EvaluationSet.Kind, body, ct);
+            (await access.SetAclAsync(user.Id, id, EvaluationSet.Kind, body, ct)).OrThrow();
             return Results.NoContent();
         }).WithRequestBodyLimit(QualityModule.SetBodyLimit);
     }

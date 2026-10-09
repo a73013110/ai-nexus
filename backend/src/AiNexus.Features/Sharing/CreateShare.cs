@@ -89,7 +89,7 @@ internal sealed class CreateShare(NexusDbContext db, ResourceAccess access, Shar
     {
         if (request.Kind == "artifact")
         {
-            var source = await access.OwnerAsync(actor, request.SourceId, "artifact", ct);
+            var source = (await access.OwnerAsync(actor, request.SourceId, "artifact", ct)).OrThrow();
             var item = await db.Set<Artifact>().AsNoTracking().SingleAsync(x => x.Id == source.Id, ct);
             var version = request.ArtifactVersion ?? item.Version;
             var revision = await db.Set<ArtifactRevision>().AsNoTracking().SingleOrDefaultAsync(x => x.ArtifactId == item.Id && x.Version == version, ct);

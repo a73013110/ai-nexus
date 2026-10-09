@@ -4,6 +4,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Identity.Users;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Projects;
 
@@ -17,7 +18,7 @@ internal static class ListProjectConversations
 
     private static async Task<IReadOnlyList<ConversationDto>> HandleAsync(NexusDbContext db, ResourceAccess access, Guid actor, Guid id, CancellationToken ct)
     {
-        await access.RequireAsync(actor, id, Project.Kind, ct);
+        (await access.RequireAsync(actor, id, Project.Kind, ct)).OrThrow();
         return (await db.Conversations.Include(x => x.Labels).AsNoTracking().Where(x => x.OwnerId == actor && x.ProjectId == id).OrderByDescending(x => x.UpdatedAt).Take(100).ToListAsync(ct)).Select(x => x.ToDto()).ToList();
     }
 }

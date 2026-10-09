@@ -9,7 +9,7 @@ public sealed record ResourceMemberUpdate(Guid UserId, string Role);
 
 /// <summary>
 /// The access list's shape, for every module's access endpoint. Known accounts, enabled groups and the implicit owner
-/// need the database and stay in <see cref="ResourceAccess.SetAclAsync"/>, which also repeats these rules for direct callers.
+/// need the database and stay in <see cref="ResourceAccess.SetAclAsync"/>.
 /// </summary>
 internal sealed class ResourceAclRequestValidator : RequestValidator<ResourceAclRequest>
 {

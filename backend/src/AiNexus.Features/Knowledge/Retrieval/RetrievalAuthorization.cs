@@ -19,7 +19,7 @@ public sealed class RetrievalAuthorization(NexusDbContext db, ResourceAccess acc
         if (ids.Count == 0) return;
         if (fresh) features.Invalidate();
         if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "knowledge")) throw new ApiException(403, "knowledge_access_revoked", "知識庫功能權限已撤銷，請重新載入對話。");
-        await access.RequireAllAsync(actor, ids, "knowledge", ct);
+        (await access.RequireAllAsync(actor, ids, "knowledge", ct)).OrThrow();
     }
 
     /// <summary>

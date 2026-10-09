@@ -64,15 +64,15 @@ internal sealed class SaveEvaluationSet(NexusDbContext db, ResourceAccess access
             await using var tx = await db.Database.BeginTransactionAsync(ct); WorkspaceResource resource;
             if (id is Guid existing)
             {
-                resource = await access.RequireAsync(actor, existing, EvaluationSet.Kind, ct, write: true);
+                resource = (await access.RequireAsync(actor, existing, EvaluationSet.Kind, ct, write: true)).OrThrow();
                 var changed = await db.Set<EvaluationSet>().Where(x => x.Id == existing && x.Version == request.ExpectedVersion).ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1).SetProperty(x => x.Description, request.Description.Trim()).SetProperty(x => x.CasesJson, JsonSerializer.Serialize(request.Cases, (JsonSerializerOptions?)null)), ct);
                 if (changed != 1) return QualityErrors.SetConflict;
-                resource.Name = ResourceAccess.Name(request.Name); resource.UpdatedAt = clock.GetUtcNow();
+                resource.Name = ResourceAccess.Name(request.Name).OrThrow(); resource.UpdatedAt = clock.GetUtcNow();
             }
             else
             {
                 if (await db.Set<WorkspaceResource>().CountAsync(x => x.Kind == EvaluationSet.Kind && x.OwnerId == actor, ct) >= 100) return QualityErrors.SetLimit;
-                resource = new() { OwnerId = actor, Kind = EvaluationSet.Kind, Name = ResourceAccess.Name(request.Name) }; db.Add(resource);
+                resource = new() { OwnerId = actor, Kind = EvaluationSet.Kind, Name = ResourceAccess.Name(request.Name).OrThrow() }; db.Add(resource);
                 db.Add(new EvaluationSet { Id = resource.Id, Description = request.Description.Trim(), CasesJson = JsonSerializer.Serialize(request.Cases) });
             }
             db.AuditEvents.Add(new() { OwnerId = actor, Action = "quality.set.saved", ResourceId = resource.Id, Result = "saved" });

@@ -18,17 +18,19 @@ public sealed record ContainerDeleted(string Kind, Guid ContainerId, Guid ActorI
 /// <summary>Remove a container without destroying private conversations, owned files or audit evidence.</summary>
 public sealed class ResourceLifecycle(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, DomainEvents events)
 {
-    public async Task DeleteAsync(Guid actor, Guid id, string kind, CancellationToken ct)
+    public async Task<Result> DeleteAsync(Guid actor, Guid id, string kind, CancellationToken ct)
     {
         if (kind is not ("project" or "evaluation")) throw new InvalidOperationException("Unsupported container lifecycle.");
         using (await writes.AcquireAsync(id, ct))
         {
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
-            var resource = await access.OwnerAsync(actor, id, kind, ct);
+            var owned = await access.OwnerAsync(actor, id, kind, ct);
+            if (!owned.IsSuccess) return owned.Error;
+            var resource = owned.Value;
             // Deleted children count too: their active work blocks deletion and their links are cleared.
             var children = db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.ParentId == id).Select(x => x.Id);
             if (await db.Set<BackgroundJob>().AnyAsync(x => (x.ResourceId == id || children.Contains(x.ResourceId ?? Guid.Empty)) && x.ActiveKey != null, ct))
-                throw new ApiException(409, "resource_tasks_active", "此項目仍有背景任務，請先完成或取消，再刪除。");
+                return CollaborationErrors.TasksActive;
             if (kind == "project")
             {
                 // Direct ACLs and ownership survive. Inherited project access stops with the container.
@@ -41,5 +43,6 @@ public sealed class ResourceLifecycle(NexusDbContext db, ResourceAccess access, 
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
         }
+        return Result.Success;
     }
 }

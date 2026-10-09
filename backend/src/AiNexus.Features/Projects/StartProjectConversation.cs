@@ -34,7 +34,7 @@ internal sealed class StartProjectConversation(NexusDbContext db, ResourceAccess
             title = template.Title; prompt = template.Content;
         }
         if (!ProjectQueries.NameIsValid(title)) return ProjectsErrors.InvalidName;
-        var row = new Conversation { OwnerId = actor, ProjectId = id, Title = ResourceAccess.Name(title) };
+        var row = new Conversation { OwnerId = actor, ProjectId = id, Title = ResourceAccess.Name(title).OrThrow() };
         db.Add(row); await db.SaveChangesAsync(ct);
         return new ProjectConversationDto(row.ToDto(), prompt);
     }

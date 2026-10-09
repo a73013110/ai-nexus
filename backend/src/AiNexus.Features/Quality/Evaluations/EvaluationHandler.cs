@@ -27,7 +27,7 @@ public sealed class EvaluationHandler(NexusDbContext db, ResourceAccess access, 
     {
         if (!(await features.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == "quality")) throw new ApiException(403, "evaluation_access_revoked", "你的品質評測功能已停用。");
         var run = await db.Set<EvaluationRun>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == job.SubjectId && x.OwnerId == job.OwnerId, ct) ?? throw new ApiException(404, "evaluation_run_missing", "找不到原始評測。");
-        await access.RequireAsync(job.OwnerId, run.SetId, "evaluation", ct); return run;
+        (await access.RequireAsync(job.OwnerId, run.SetId, "evaluation", ct)).OrThrow(); return run;
     }
     public async Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct)
     {

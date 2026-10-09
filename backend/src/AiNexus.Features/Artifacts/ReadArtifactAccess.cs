@@ -1,5 +1,6 @@
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Artifacts;
 
@@ -8,6 +9,6 @@ internal static class ReadArtifactAccess
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}/access", async (Guid id, ICurrentUser user, ResourceAccess access, CancellationToken ct) =>
-            Results.Ok(await access.AclAsync(user.Id, id, Artifact.Kind, ct)))
+            Results.Ok((await access.AclAsync(user.Id, id, Artifact.Kind, ct)).OrThrow()))
         .WithName("ArtifactAccess").Produces<ResourceAclDto>();
 }

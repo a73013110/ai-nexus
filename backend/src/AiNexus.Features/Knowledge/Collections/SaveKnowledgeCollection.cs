@@ -26,7 +26,7 @@ internal sealed class SaveKnowledgeCollection(NexusDbContext db, ResourceAccess 
 
     public async Task<Result<CollectionDto>> CreateAsync(Guid actor, CollectionRequest request, CancellationToken ct)
     {
-        var name = ResourceAccess.Name(request.Name);
+        var name = ResourceAccess.Name(request.Name).OrThrow();
         if (request.Description.Length > KnowledgeCollection.DescriptionMaxLength) return KnowledgeErrors.DescriptionTooLong;
         if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == KnowledgeCollection.Kind, ct) >= options.Value.MaxCollections)
             return KnowledgeErrors.CollectionLimit;
@@ -40,8 +40,8 @@ internal sealed class SaveKnowledgeCollection(NexusDbContext db, ResourceAccess 
 
     public async Task<Result> UpdateAsync(Guid actor, Guid id, CollectionRequest request, CancellationToken ct)
     {
-        var resource = await access.RequireAsync(actor, id, KnowledgeCollection.Kind, ct, write: true);
-        resource.Name = ResourceAccess.Name(request.Name);
+        var resource = (await access.RequireAsync(actor, id, KnowledgeCollection.Kind, ct, write: true)).OrThrow();
+        resource.Name = ResourceAccess.Name(request.Name).OrThrow();
         if (request.Description.Length > KnowledgeCollection.DescriptionMaxLength) return KnowledgeErrors.DescriptionTooLong;
         (await db.Set<KnowledgeCollection>().SingleAsync(x => x.Id == id, ct)).Description = request.Description.Trim(); resource.UpdatedAt = clock.GetUtcNow();
         db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "knowledge.updated", Result = "saved" });

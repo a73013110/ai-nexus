@@ -38,7 +38,7 @@ internal sealed class SaveArtifact(NexusDbContext db, ResourceAccess access, Res
         using (await writes.AcquireAsync(id, ct))
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            var resource = await access.RequireAsync(actor, id, Artifact.Kind, ct, write: true);
+            var resource = (await access.RequireAsync(actor, id, Artifact.Kind, ct, write: true)).OrThrow();
             var changed = await db.Set<Artifact>().Where(x => x.Id == id && x.Version == request.ExpectedVersion).ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1), ct);
             if (changed != 1) return ArtifactsErrors.VersionConflict;
             var now = clock.GetUtcNow();

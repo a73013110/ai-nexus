@@ -25,16 +25,16 @@ internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, A
         if (doc.CollectionId is Guid collection)
         {
             if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "knowledge")) return KnowledgeErrors.DocumentNotFound;
-            await access.RequireAsync(actor, collection, KnowledgeCollection.Kind, ct, write);
+            (await access.RequireAsync(actor, collection, KnowledgeCollection.Kind, ct, write)).OrThrow();
         }
         else
         {
             if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id is "chat" or "knowledge" or "projects")) return KnowledgeErrors.DocumentNotFound;
-            var resource = await access.RequireAsync(actor, doc.Id, KnowledgeDocument.Kind, ct, write);
+            var resource = (await access.RequireAsync(actor, doc.Id, KnowledgeDocument.Kind, ct, write)).OrThrow();
             if (resource.ParentId is Guid parent)
             {
                 if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "projects")) return KnowledgeErrors.DocumentNotFound;
-                await access.RequireAsync(actor, parent, "project", ct, write);
+                (await access.RequireAsync(actor, parent, "project", ct, write)).OrThrow();
             }
         }
         return doc;
@@ -73,16 +73,16 @@ internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, A
             if (doc.CollectionId is Guid collection)
             {
                 if (!granted.Contains("knowledge")) return KnowledgeErrors.DocumentNotFound;
-                resources.Add(readable.GetValueOrDefault(collection) ?? throw ResourceAccess.Missing());
+                resources.Add(readable.GetValueOrDefault(collection) ?? throw CollaborationErrors.ResourceNotFound.Throwable());
             }
             else
             {
                 if (!granted.Contains("chat") && !granted.Contains("knowledge") && !granted.Contains("projects")) return KnowledgeErrors.DocumentNotFound;
-                var resource = readable.GetValueOrDefault(doc.Id) ?? throw ResourceAccess.Missing();
+                var resource = readable.GetValueOrDefault(doc.Id) ?? throw CollaborationErrors.ResourceNotFound.Throwable();
                 if (resource.ParentId is Guid parent)
                 {
                     if (!granted.Contains("projects")) return KnowledgeErrors.DocumentNotFound;
-                    if (!projects.Contains(parent)) throw ResourceAccess.Missing();
+                    if (!projects.Contains(parent)) throw CollaborationErrors.ResourceNotFound.Throwable();
                 }
                 resources.Add(resource);
             }
@@ -106,7 +106,7 @@ internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, A
 
     public async Task<DocumentDto> DescribeAsync(Guid actor, KnowledgeDocument doc, CancellationToken ct)
     {
-        var resource = doc.CollectionId is Guid collection ? await access.RequireAsync(actor, collection, KnowledgeCollection.Kind, ct) : await access.RequireAsync(actor, doc.Id, KnowledgeDocument.Kind, ct);
+        var resource = doc.CollectionId is Guid collection ? (await access.RequireAsync(actor, collection, KnowledgeCollection.Kind, ct)).OrThrow() : (await access.RequireAsync(actor, doc.Id, KnowledgeDocument.Kind, ct)).OrThrow();
         var editable = (await access.DescribeAsync(actor, resource, ct)).CanEdit;
         var state = doc.JobId is Guid job ? await db.Set<BackgroundJob>().Where(x => x.Id == job).Select(x => x.Status).SingleOrDefaultAsync(ct) : null;
         return Describe(doc, editable, state);

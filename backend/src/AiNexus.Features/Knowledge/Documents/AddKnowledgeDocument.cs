@@ -36,15 +36,15 @@ internal sealed class AddKnowledgeDocument(NexusDbContext db, ResourceAccess acc
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid? collection, Guid attachment, CancellationToken ct, Guid? project = null, TextDocumentRequest? text = null)
     {
-        if (collection is Guid collectionId) await access.RequireAsync(actor, collectionId, KnowledgeCollection.Kind, ct, write: true);
-        if (project is Guid projectId) await access.RequireAsync(actor, projectId, "project", ct, write: true);
+        if (collection is Guid collectionId) (await access.RequireAsync(actor, collectionId, KnowledgeCollection.Kind, ct, write: true)).OrThrow();
+        if (project is Guid projectId) (await access.RequireAsync(actor, projectId, "project", ct, write: true)).OrThrow();
         await writes.Gate.WaitAsync(ct);
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await attachments.LockOwnerAsync(actor, ct);
-            if (collection is Guid currentCollection) await access.RequireAsync(actor, currentCollection, KnowledgeCollection.Kind, ct, write: true);
-            if (project is Guid currentProject) await access.RequireAsync(actor, currentProject, "project", ct, write: true);
+            if (collection is Guid currentCollection) (await access.RequireAsync(actor, currentCollection, KnowledgeCollection.Kind, ct, write: true)).OrThrow();
+            if (project is Guid currentProject) (await access.RequireAsync(actor, currentProject, "project", ct, write: true)).OrThrow();
             var file = await attachments.OwnedAsync(actor, attachment, ct);
             if (collection is null)
             {

@@ -13,7 +13,7 @@ internal static class ProjectQueries
     /// <summary>The project as the actor may see it. Access failures stay exceptions of <see cref="ResourceAccess"/>.</summary>
     public static async Task<ProjectDto> LoadProjectAsync(this ResourceAccess access, NexusDbContext db, Guid actor, Guid id, CancellationToken ct)
     {
-        var resource = await access.RequireAsync(actor, id, Project.Kind, ct);
+        var resource = (await access.RequireAsync(actor, id, Project.Kind, ct)).OrThrow();
         var project = await db.Set<Project>().AsNoTracking().SingleAsync(x => x.Id == id, ct);
         return project.ToDto(await access.DescribeAsync(actor, resource, ct));
     }
@@ -21,7 +21,7 @@ internal static class ProjectQueries
     /// <summary>Read (or edit) access first, then the project must not be archived. Access failures stay exceptions.</summary>
     public static async Task<Result<Project>> RequireActiveAsync(this ResourceAccess access, NexusDbContext db, Guid actor, Guid id, bool write, CancellationToken ct)
     {
-        await access.RequireAsync(actor, id, Project.Kind, ct, write);
+        (await access.RequireAsync(actor, id, Project.Kind, ct, write)).OrThrow();
         var row = await db.Set<Project>().AsNoTracking().SingleAsync(x => x.Id == id, ct);
         if (row.IsArchived) return ProjectsErrors.Archived;
         return row;

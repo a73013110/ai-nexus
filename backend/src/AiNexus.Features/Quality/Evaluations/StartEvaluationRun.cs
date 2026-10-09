@@ -56,7 +56,7 @@ internal sealed class StartEvaluationRun(NexusDbContext db, ResourceAccess acces
         using (await writes.AcquireAsync(setId, ct))
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
-            var resource = await access.RequireAsync(actor, setId, EvaluationSet.Kind, ct);
+            var resource = (await access.RequireAsync(actor, setId, EvaluationSet.Kind, ct)).OrThrow();
             if (await db.Set<BackgroundJob>().AnyAsync(x => x.OwnerId == actor && x.Kind == "evaluation" && x.ActiveKey != null, ct)) return QualityErrors.EvaluationActive;
             if (await db.Set<EvaluationRun>().CountAsync(x => x.OwnerId == actor, ct) >= 500) return QualityErrors.RunLimit;
             var set = await db.Set<EvaluationSet>().AsNoTracking().SingleAsync(x => x.Id == setId, ct);

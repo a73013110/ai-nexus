@@ -34,6 +34,6 @@ public sealed class StorageReadiness(IConfiguration configuration, IHostEnvironm
     public bool Configured => environment.IsEnvironment("Testing") || !string.IsNullOrWhiteSpace(configuration.GetConnectionString("Nexus"));
     public void RequireConfigured()
     {
-        if (!Configured) throw new ApiException(503, "storage_not_configured", "伺服器尚未完成資料庫設定。請由管理員設定 SQL 連線。");
+        if (!Configured) throw new ExternalServiceException(Error.Unavailable("storage_not_configured"), "伺服器尚未完成資料庫設定。請由管理員設定 SQL 連線。");
     }
 }

@@ -24,7 +24,7 @@ public static class ConnectionVerifier
         async Task Check(string name, Func<Task<string>> action)
         {
             try { var detail = await action(); results.Add(new { name, passed = true, detail }); Console.WriteLine($"{name}: PASS · {detail}"); }
-            catch (Exception ex) { passed = false; var detail = ex is ApiException api ? api.Message : name == "SQL" ? LocalDatabaseSettings.Diagnose(ex) : $"連線未通過（{ex.GetType().Name}）。"; results.Add(new { name, passed = false, detail }); Console.WriteLine($"{name}: FAIL · {detail}"); }
+            catch (Exception ex) { passed = false; var detail = ex is ExternalServiceException external ? external.Message : name == "SQL" ? LocalDatabaseSettings.Diagnose(ex) : $"連線未通過（{ex.GetType().Name}）。"; results.Add(new { name, passed = false, detail }); Console.WriteLine($"{name}: FAIL · {detail}"); }
         }
         await Check("SQL", async () =>
         {
@@ -34,7 +34,7 @@ public static class ConnectionVerifier
             var db = services.GetRequiredService<NexusDbContext>();
             if (!await db.Set<RoleGroupRole>().AnyAsync(x => x.RoleId == BuiltInAccess.MemberRole && x.GroupId == BuiltInAccess.WorkspaceGroup, ct)
                 || !await db.Set<RoleGroupFeature>().AnyAsync(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == BuiltInAccess.ChatFeature, ct))
-                throw new ApiException(503, "default_access_missing", "預設角色、群組與 chat 功能關聯尚未完成。");
+                throw new ExternalServiceException(Error.Unavailable("default_access_missing"), "預設角色、群組與 chat 功能關聯尚未完成。");
             var members = await db.Set<UserRole>().CountAsync(x => x.RoleId == BuiltInAccess.MemberRole, ct);
             return $"SQL migrations、EF Core／Dapper CRUD 與清理通過；預設 chat 授權完整，member 對應 {members} 位使用者";
         });
@@ -44,10 +44,10 @@ public static class ConnectionVerifier
             var router = services.GetRequiredService<InferenceRouter>();
             var options = services.GetRequiredService<IOptions<InferenceOptions>>().Value;
             var profile = options.Models.FirstOrDefault(x => x.Id == (options.DefaultModelId ?? options.Models.FirstOrDefault()?.Id))
-                ?? throw new ApiException(503, "model_not_configured", "請設定預設模型。");
+                ?? throw new ExternalServiceException(Error.Unavailable("model_not_configured"), "請設定預設模型。");
             var provider = router.For(profile.Provider);
             var models = await provider.InstalledModelsAsync(ct);
-            if (!models.Contains(profile.NativeId)) throw new ApiException(503, "model_unavailable", "目前的模型服務無法使用系統預設模型。");
+            if (!models.Contains(profile.NativeId)) throw new ExternalServiceException(Error.Unavailable("model_unavailable"), "目前的模型服務無法使用系統預設模型。");
             var efforts = profile.ReasoningEfforts.Count > 0 ? profile.ReasoningEfforts : ["auto"];
             var counts = new List<string>();
             foreach (var effort in efforts)
@@ -65,7 +65,7 @@ public static class ConnectionVerifier
             var options = services.GetRequiredService<IOptions<InferenceOptions>>().Value;
             var profiles = await services.GetRequiredService<ModelCatalog>().ProfilesAsync(ct);
             var profile = profiles.FirstOrDefault(x => x.Id == (options.DefaultModelId ?? options.Models.FirstOrDefault()?.Id))
-                ?? throw new ApiException(503, "model_not_configured", "請設定預設模型。");
+                ?? throw new ExternalServiceException(Error.Unavailable("model_not_configured"), "請設定預設模型。");
             // Synthetic content only: no personal files, prompt history or identity credentials.
             var (_, document) = services.GetRequiredService<DocumentExtractor>().Extract("connection-check.txt", Encoding.UTF8.GetBytes("Project verification code: NEXUSCHECK42"), ct);
             var images = profile.SupportsImages ? new[] { new InferenceImage(Guid.NewGuid(), "image/png", Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAIAAABMXPacAAABWklEQVR4nO3OQQ0AMBAEofVv+iqDxzRBALvtg/wgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vzg2h4gaMOyHY2XLAAAAABJRU5ErkJggg=="), 4096) } : [];
@@ -75,12 +75,12 @@ public static class ConnectionVerifier
             var parameters = new GenerationParameters(profile.ContextTokens, Math.Min(profile.MaxOutputTokens, 512), .2, "Answer concisely in English.", profile.DefaultReasoningEffort, profile.ReasoningControl, profile.SupportsImages);
             await foreach (var chunk in services.GetRequiredService<InferenceRouter>().For(profile.Provider).StreamAsync(profile.NativeId, [new("user", prompt, images)], parameters, timeout.Token)) { text.Append(chunk.Text); done |= chunk.Done; }
             if (!done || !text.ToString().Contains("NEXUSCHECK42", StringComparison.OrdinalIgnoreCase) || (images.Length > 0 && !text.ToString().Contains("red", StringComparison.OrdinalIgnoreCase)))
-                throw new ApiException(503, "attachment_probe_failed", "模型未正確識別合成文件或圖片，請檢查模型能力設定。");
+                throw new ExternalServiceException(Error.Unavailable("attachment_probe_failed"), "模型未正確識別合成文件或圖片，請檢查模型能力設定。");
             return images.Length > 0 ? "真實模型已辨識合成文件代碼及紅色 PNG 圖片；未傳送私人資料" : "真實模型已辨識合成文件代碼；此 profile 未啟用圖片能力";
         });
         await Check("RetrievalModels", async () => {
             var result = await services.GetRequiredService<AiNexus.Features.Knowledge.Retrieval.RetrievalModelProbe>().CheckAsync(null, ct);
-            if (result.Embedding.Available != true || result.Rerank.Available != true) throw new ApiException(503, "retrieval_models_unavailable", result.Embedding.Notice + " " + result.Rerank.Notice);
+            if (result.Embedding.Available != true || result.Rerank.Available != true) throw new ExternalServiceException(Error.Unavailable("retrieval_models_unavailable"), result.Embedding.Notice + " " + result.Rerank.Notice);
             return result.Embedding.Notice + " " + result.Rerank.Notice;
         });
         var destination = configuration["VerificationOutput"] ?? Path.Combine(contentRoot, "connection-checks.json");

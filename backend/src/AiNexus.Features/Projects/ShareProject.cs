@@ -1,5 +1,6 @@
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Projects;
 
@@ -8,11 +9,11 @@ internal static class ShareProject
 {
     public static void Map(RouteGroupBuilder routes)
     {
-        routes.MapGet("/{id:guid}/access", async (Guid id, ICurrentUser user, ResourceAccess access, CancellationToken ct) => Results.Ok(await access.AclAsync(user.Id, id, Project.Kind, ct)))
+        routes.MapGet("/{id:guid}/access", async (Guid id, ICurrentUser user, ResourceAccess access, CancellationToken ct) => Results.Ok((await access.AclAsync(user.Id, id, Project.Kind, ct)).OrThrow()))
             .Produces<ResourceAclDto>();
         routes.MapPut("/{id:guid}/access", async (Guid id, ResourceAclRequest body, ICurrentUser user, ResourceAccess access, CancellationToken ct) =>
         {
-            await access.SetAclAsync(user.Id, id, Project.Kind, body, ct);
+            (await access.SetAclAsync(user.Id, id, Project.Kind, body, ct)).OrThrow();
             return Results.NoContent();
         });
     }
