@@ -16,6 +16,7 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { CopyFeedback } from '../browser/copy-feedback';
 import { renderMarkdownWithDiagrams } from './markdown';
 import { completeStreamingInline } from './streaming-markdown';
+import { highlightWhenVisible } from './code-highlighting';
 
 @Component({
   imports: [Notice],
@@ -37,6 +38,7 @@ export class MarkdownView {
   private readonly injector = inject(Injector);
   private readonly body = viewChild.required<ElementRef<HTMLElement>>('body');
   private clearWidgets: () => void = () => undefined;
+  private clearHighlight: () => void = () => undefined;
   private revision = 0;
   readonly copy = inject(CopyFeedback);
   readonly widgetError = signal(false);
@@ -54,11 +56,14 @@ export class MarkdownView {
       const revision = ++this.revision;
       this.widgetError.set(false);
       this.clearWidgets();
+      this.clearHighlight();
+      this.clearHighlight = highlightWhenVisible(host);
       if (diagrams.length) void this.mountDiagrams(host, diagrams, revision);
     });
     inject(DestroyRef).onDestroy(() => {
       ++this.revision;
       this.clearWidgets();
+      this.clearHighlight();
     });
   }
   private async mountDiagrams(host: HTMLElement, diagrams: readonly string[], revision: number) {

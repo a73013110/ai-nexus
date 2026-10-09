@@ -11,28 +11,60 @@ import {
 } from '@angular/core';
 import { ThemeService } from '../../core/preferences/theme-service';
 import { MarkdownView } from './markdown-view';
-import { StreamingMarkdown } from './streaming-markdown';
+import { CopyFeedback } from '../browser/copy-feedback';
+import { Notice } from './notice';
+import { StreamingMarkdown, type StreamingBlock, type StreamingFence } from './streaming-markdown';
 
 /** Presentation smoothing only. The stream/store remains the authoritative full text. */
 @Component({
   selector: 'nx-streaming-answer',
-  imports: [MarkdownView],
+  imports: [MarkdownView, Notice],
+  providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'streaming-answer' },
   template: `<div class="streaming-copy" aria-live="off">
     @for (block of blocks(); track block.id) {
-      <nx-markdown-view class="stream-committed" [content]="block.content" />
+      <nx-markdown-view
+        class="stream-committed"
+        [class.stream-continues]="block.continues"
+        [content]="block.content"
+      />
     }
-    <nx-markdown-view class="stream-frontier" [content]="tail()" [streaming]="true" />
+    @if (fence(); as fence) {
+      <div class="markdown stream-frontier">
+        <div class="code-block">
+          <div class="code-toolbar">
+            <span>{{ fence.language }}</span
+            ><button
+              type="button"
+              class="code-copy"
+              title="複製程式碼"
+              aria-label="複製程式碼"
+              (click)="copyFence($event)"
+            >
+              複製程式碼
+            </button>
+          </div>
+          <pre><code>@for (chunk of fence.chunks; track chunk.id) {<span>{{ chunk.text }}</span>}{{ fence.tail }}</code></pre>
+        </div>
+      </div>
+    } @else {
+      <nx-markdown-view class="stream-frontier" [content]="tail()" [streaming]="true" />
+    }
     <span class="stream-cursor" aria-hidden="true"></span>
+    @if (copy.error()) {
+      <nx-notice [message]="copy.error()" />
+    }
   </div>`,
 })
 export class StreamingAnswer {
   readonly content = input.required<string>();
   readonly rendered = output<void>();
   readonly shown = signal('');
-  readonly blocks = signal<{ id: number; content: string }[]>([]);
+  readonly blocks = signal<StreamingBlock[]>([]);
   readonly tail = signal('');
+  readonly fence = signal<StreamingFence | null>(null);
+  readonly copy = inject(CopyFeedback);
   private readonly markdown = new StreamingMarkdown();
   private readonly themes = inject(ThemeService);
   private frame = 0;
@@ -77,7 +109,16 @@ export class StreamingAnswer {
     const parsed = this.markdown.update(value);
     this.blocks.set(parsed.blocks);
     this.tail.set(parsed.tail);
+    this.fence.set(parsed.fence);
     this.rendered.emit();
+  }
+  copyFence(event: MouseEvent) {
+    const fence = this.fence();
+    if (fence)
+      void this.copy.copy(
+        fence.chunks.map((chunk) => chunk.text).join('') + fence.tail,
+        event.currentTarget as Element,
+      );
   }
   private boundary(end: number) {
     // Never display half a surrogate pair (emoji/non-BMP text).

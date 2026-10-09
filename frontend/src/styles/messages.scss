@@ -4,6 +4,14 @@
 nx-chat-message {
   display: block;
 }
+// Long conversations: off-screen turns skip layout and paint. The inline padding keeps focus
+// rings inside the paint containment; the live (last) turn always renders.
+nx-chat-message:not(:last-child) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+  margin-inline: calc(-1 * var(--p-space-2));
+  padding-inline: var(--p-space-2);
+}
 .message {
   position: relative;
   padding: 0 0 var(--message-gap);
@@ -93,6 +101,9 @@ nx-chat-message {
   }
   .stream-committed {
     margin-bottom: 16px;
+  }
+  .stream-continues {
+    margin-bottom: 0;
   }
 }
 .message-actions {
