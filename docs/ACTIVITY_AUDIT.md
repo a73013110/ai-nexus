@@ -4,7 +4,7 @@
 
 新安裝預設將 `audit` 授予 administrators 群組。`IndependentActivityAudit` migration 為既有 `admin` 群組補上稽核授權，保留升級前的查閱能力；後續可單獨授權或撤銷。持有 `admin` 不再隱含 `audit`。每次 API 請求重新驗證有效 grant，稽核人員不需要帳號管理權限。
 
-舊書籤 `/admin?tab=audit` 在建立管理頁之前轉到 `/admin/audit`，保留搜尋、分類、Trace ID、日期、動作、結果及 fragment。管理頁移除原稽核分頁，管理工具及使用者活動視窗提供前往獨立頁面的連結。原 `GET /api/v1/admin/audit` URL、DTO、SQL 查詢、游標與資料遮罩沿用；查詢責任移至 Operations 的 `ActivityAuditReader`，使用明確的 `feature:audit` policy。
+舊書籤 `/admin?tab=audit` 在建立管理頁之前轉到 `/admin/audit`，保留搜尋、分類、Trace ID、日期、動作、結果及 fragment。管理頁移除原稽核分頁，管理工具及使用者活動視窗提供前往獨立頁面的連結。原 `GET /api/v1/admin/audit` URL、DTO、SQL 查詢、游標與資料遮罩沿用；查詢由 `Audit` 模組的 `ListActivityAudit` 負責，使用明確的 `feature:audit` policy。
 
 `GET /api/v1/admin/audit/catalog` 僅提供解讀異動所需的功能及模型名稱，不回傳角色、群組、帳號清單或管理政策。前端頁面、API 及呈現工具位於 `features/audit`，依路由延後載入，不依賴管理頁或管理目錄。
 

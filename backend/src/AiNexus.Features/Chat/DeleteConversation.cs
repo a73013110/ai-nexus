@@ -33,8 +33,8 @@ internal sealed class DeleteConversation(NexusDbContext db, GenerationScheduler 
             try
             {
                 var conversation = await db.OwnedConversationAsync(owner, id, ct);
-                if (conversation is null) return ConversationErrors.NotFound;
-                if (await db.HasActiveRunAsync(id, ct)) return ConversationErrors.GenerationActive;
+                if (conversation is null) return ConversationsErrors.NotFound;
+                if (await db.HasActiveRunAsync(id, ct)) return ConversationsErrors.GenerationActive;
                 await using var transaction = await db.Database.BeginTransactionAsync(ct);
                 await quota.LockOwnerAsync(owner, ct);
                 var links = await db.Set<MessageAttachment>().Where(x => db.Set<Message>().Any(m => m.Id == x.MessageId && m.ConversationId == id)).ToListAsync(ct);

@@ -5,8 +5,11 @@ using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Identity;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Account;
+
+public sealed record MeDto(Guid Id, string Account, string DisplayName, PreferencesDto Preferences, string CsrfToken, Guid? ActiveRunId, AccessDto Access);
 
 /// <summary>The signed-in user, their appearance preferences, a fresh CSRF token, their active run and their access.</summary>
 internal static class GetMe

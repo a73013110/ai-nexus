@@ -1,16 +1,16 @@
 # Request body types still validated inside services. Remove a line once its RequestValidator<T> exists.
-AiNexus.Features.Administration.FeatureUpdateRequest
-AiNexus.Features.Administration.GroupUpdateRequest
-AiNexus.Features.Administration.RoleUpdateRequest
-AiNexus.Features.Administration.UserRolesRequest
+AiNexus.Features.Administration.Roles.FeatureUpdateRequest
+AiNexus.Features.Administration.Roles.GroupUpdateRequest
+AiNexus.Features.Administration.Roles.RoleUpdateRequest
+AiNexus.Features.Administration.Users.UserRolesRequest
 AiNexus.Features.Attachments.AttachmentStorageLimitRequest
 AiNexus.Features.Conversations.SelectBranchRequest
-AiNexus.Features.Identity.AdLoginRequest
+AiNexus.Features.Identity.Authentication.AdLoginRequest
 AiNexus.Features.Inference.ModelPolicyRequest
-AiNexus.Features.Knowledge.AddDocumentRequest
-AiNexus.Features.Knowledge.CollectionRequest
-AiNexus.Features.Knowledge.KnowledgeSelectionDto
-AiNexus.Features.Knowledge.TextDocumentRequest
+AiNexus.Features.Knowledge.Collections.CollectionRequest
+AiNexus.Features.Knowledge.Collections.KnowledgeSelectionDto
+AiNexus.Features.Knowledge.Documents.AddDocumentRequest
+AiNexus.Features.Knowledge.Documents.TextDocumentRequest
 AiNexus.Features.Projects.ConversationProjectRequest
 AiNexus.Features.Projects.ProjectConversationRequest
 AiNexus.Features.Repositories.RepositoryImportRequest

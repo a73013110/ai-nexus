@@ -5,7 +5,7 @@
     <PackageReference Include="NetArchTest.eNhancedEdition" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../../src/AiNexus.Api/AiNexus.Api.csproj" />
+    <ProjectReference Include="../../src/AiNexus.Host/AiNexus.Host.csproj" />
     <ProjectReference Include="../../src/AiNexus.Features/AiNexus.Features.csproj" />
     <ProjectReference Include="../../src/AiNexus.Platform/AiNexus.Platform.csproj" />
   </ItemGroup>

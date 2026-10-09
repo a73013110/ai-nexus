@@ -21,7 +21,7 @@ function Protect-NexusSecrets([string]$Path) {
 function Initialize-NexusLocalSettings {
     $taskPaths = Get-NexusLocalPaths
     foreach ($taskDirectory in @((Split-Path $taskPaths.Settings), (Split-Path $taskPaths.Secrets))) { New-Item -ItemType Directory -Path $taskDirectory -Force | Out-Null }
-    $taskLegacy = Join-Path $taskPaths.Root 'backend/src/AiNexus.Api/appsettings.Local.json'
+    $taskLegacy = Join-Path $taskPaths.Root 'backend/src/AiNexus.Host/appsettings.Local.json'
     if (Test-Path -LiteralPath $taskLegacy) {
         $taskValues = [System.IO.File]::ReadAllText($taskLegacy) | ConvertFrom-Json -AsHashtable
         $taskPrivate = @{ Database = @{ User = $taskValues.Database.User; Password = $taskValues.Database.Password }; AdAuthentication = @{ DnPass = $taskValues.AdAuthentication.DnPass }; Inference = @{ GoogleApiKey = $taskValues.Inference.GoogleApiKey } }
@@ -45,7 +45,7 @@ function Initialize-NexusLocalSettings {
         Write-Output '舊本機設定已拆分到 .local/config 與 .local/secrets；秘密值未輸出。'
     }
     foreach ($taskTemplate in @(@{ Path = $taskPaths.Settings; Example = 'appsettings.Local.example.json' }, @{ Path = $taskPaths.Secrets; Example = 'appsettings.Secrets.example.json' })) {
-        if (!(Test-Path -LiteralPath $taskTemplate.Path)) { Copy-Item -LiteralPath (Join-Path $taskPaths.Root ('backend/src/AiNexus.Api/' + $taskTemplate.Example)) -Destination $taskTemplate.Path }
+        if (!(Test-Path -LiteralPath $taskTemplate.Path)) { Copy-Item -LiteralPath (Join-Path $taskPaths.Root ('backend/src/AiNexus.Host/' + $taskTemplate.Example)) -Destination $taskTemplate.Path }
     }
     Protect-NexusSecrets $taskPaths.Secrets
     & (Join-Path $PSScriptRoot 'Migrate-Settings.ps1') -SettingsPath $taskPaths.Settings -SecretsPath $taskPaths.Secrets

@@ -1,5 +1,4 @@
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Configuration;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
@@ -18,7 +17,7 @@ public sealed class InferenceModule : IFeatureModule
         var services = builder.Services;
         services.AddScoped<ModelPolicyService>();
         services.AddScoped<ModelTaskService>();
-        services.AddOptions<InferenceOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Inference(c, o)).ValidateOnStart();
+        services.AddOptions<InferenceOptions>().Configure<IConfiguration>((o, c) => InferenceSettings.Bind(c, o)).ValidateOnStart();
         services.AddSingleton<IValidateOptions<InferenceOptions>, InferenceOptionsValidator>();
         services.AddHttpClient("Ollama", (sp, client) =>
         {
@@ -38,6 +37,7 @@ public sealed class InferenceModule : IFeatureModule
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         ListModels.Map(api.MapGroup("").RequireAuthorization(Policies.Chat).WithTags("Inference"));
+        GetStatus.Map(api);
     }
 }
 

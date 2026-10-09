@@ -43,14 +43,14 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
     public async Task<Result<IReadOnlyList<SourceRecordDto>>> SearchAsync(Guid actor, string source, SourceSearchRequest request, CancellationToken ct)
     {
         var item = Catalog.SingleOrDefault(x => x.Id == source);
-        if (item.Id is null) return IntegrationErrors.UnknownSource;
+        if (item.Id is null) return IntegrationsErrors.UnknownSource;
         if (request.Query.Trim().Length is < 2 or > 120 || request.Query.Any(char.IsControl) || request.Kind != "all" && !item.Kinds.Contains(request.Kind))
-            return IntegrationErrors.SearchInvalid;
+            return IntegrationsErrors.SearchInvalid;
         var target = await AuthorizeAsync(actor, source, ct);
         if (!target.IsSuccess) return target.Error;
         var rows = await SafeAsync(source, () => target.Value.Adapter.SearchAsync(target.Value.Actor, request, target.Value.Options.MaxResults, target.Value.Options.CommandTimeoutSeconds, ct), ct);
         if (rows.Count > target.Value.Options.MaxResults || rows.Any(x => !item.Kinds.Contains(x.Kind) || string.IsNullOrWhiteSpace(x.Id) || x.Id.Length > 160 || string.IsNullOrWhiteSpace(x.Title) || x.Title.Length > 120))
-            return IntegrationErrors.ContractInvalid;
+            return IntegrationsErrors.ContractInvalid;
         var still = await AuthorizeAsync(actor, source, ct, fresh: true);
         if (!still.IsSuccess) return still.Error;
         db.AuditEvents.Add(new() { OwnerId = actor, Action = "integration.searched", Result = "read-only", DetailsJson = JsonSerializer.Serialize(new { source, count = rows.Count }) });
@@ -60,13 +60,13 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
 
     public async Task<Result<SourceDetailDto>> ReadAsync(Guid actor, string source, string id, CancellationToken ct)
     {
-        if (!ValidRecordId(id)) return IntegrationErrors.RecordIdInvalid;
+        if (!ValidRecordId(id)) return IntegrationsErrors.RecordIdInvalid;
         var target = await AuthorizeAsync(actor, source, ct);
         if (!target.IsSuccess) return target.Error;
         var row = await SafeAsync(source, () => target.Value.Adapter.ReadAsync(target.Value.Actor, id, target.Value.Options.CommandTimeoutSeconds, ct), ct);
-        if (row is null) return IntegrationErrors.RecordMissing;
+        if (row is null) return IntegrationsErrors.RecordMissing;
         if (row.Body.Length > 16000 || row.Record.Title.Length is < 1 or > 120 || row.Record.Revision.Length is < 1 or > 160 || row.Record.Id != id || row.SourceId != source || !Catalog.Single(x => x.Id == source).Kinds.Contains(row.Record.Kind))
-            return IntegrationErrors.ContractInvalid;
+            return IntegrationsErrors.ContractInvalid;
         var still = await AuthorizeAsync(actor, source, ct, fresh: true);
         if (!still.IsSuccess) return still.Error;
         db.AuditEvents.Add(new() { OwnerId = actor, Action = "integration.record.read", Result = "read-only", DetailsJson = JsonSerializer.Serialize(new { source, externalId = id, row.Record.Revision }) });
@@ -77,16 +77,16 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
     // A re-check after the source call is fresh: grants read earlier in this request may have been revoked meanwhile.
     private async Task<Result<Target>> AuthorizeAsync(Guid actor, string source, CancellationToken ct, bool fresh = false)
     {
-        if (!Catalog.Any(x => x.Id == source)) return IntegrationErrors.UnknownSource;
+        if (!Catalog.Any(x => x.Id == source)) return IntegrationsErrors.UnknownSource;
         if (fresh) access.Invalidate();
         var grants = await access.ForUserAsync(actor, ct);
-        if (!grants.Features.Any(x => x.Id == FeatureIds.Integrations)) return IntegrationErrors.FeatureRevoked;
+        if (!grants.Features.Any(x => x.Id == FeatureIds.Integrations)) return IntegrationsErrors.FeatureRevoked;
         var value = options.Value.For(source);
-        if (value.Transport != "sql") return IntegrationErrors.TransportUnsupported;
-        if (!value.Enabled || !value.AclContractConfirmed || string.IsNullOrWhiteSpace(config.GetConnectionString(IntegrationsOptions.ConnectionKey(source)))) return IntegrationErrors.NotConfigured;
-        if (!value.AllowedGroupIds.Any(id => grants.Groups.Any(g => g.Id == id))) return IntegrationErrors.SourceForbidden;
+        if (value.Transport != "sql") return IntegrationsErrors.TransportUnsupported;
+        if (!value.Enabled || !value.AclContractConfirmed || string.IsNullOrWhiteSpace(config.GetConnectionString(IntegrationsOptions.ConnectionKey(source)))) return IntegrationsErrors.NotConfigured;
+        if (!value.AllowedGroupIds.Any(id => grants.Groups.Any(g => g.Id == id))) return IntegrationsErrors.SourceForbidden;
         var user = await db.Users.AsNoTracking().SingleAsync(x => x.Id == actor, ct);
-        if (string.IsNullOrWhiteSpace(user.Sid) || string.IsNullOrWhiteSpace(user.Account)) return IntegrationErrors.IdentityMissing;
+        if (string.IsNullOrWhiteSpace(user.Sid) || string.IsNullOrWhiteSpace(user.Account)) return IntegrationsErrors.IdentityMissing;
         return new Target(adapters.Single(x => x.Id == source), value, new(user.Sid, user.Account));
     }
 

@@ -15,7 +15,7 @@ public sealed record CreateArtifactRequest(string Title, string Content, Guid? S
 /// <summary>Content only. An invalid title is reported first, with its own code, by the handler.</summary>
 internal sealed class CreateArtifactRequestValidator : RequestValidator<CreateArtifactRequest>
 {
-    public override string ProblemCode => ArtifactErrors.ContentInvalidCode;
+    public override string ProblemCode => ArtifactsErrors.ContentInvalidCode;
 
     public CreateArtifactRequestValidator()
     {
@@ -36,18 +36,18 @@ internal sealed class CreateArtifact(NexusDbContext db, ResourceAccess access, C
 
     public async Task<Result<ArtifactDto>> HandleAsync(Guid actor, CreateArtifactRequest request, CancellationToken ct)
     {
-        if (!Artifact.TitleIsValid(request.Title)) return ArtifactErrors.InvalidName;
-        if (!Artifact.ContentIsValid(request.Content)) return ArtifactErrors.ContentInvalid;
+        if (!Artifact.TitleIsValid(request.Title)) return ArtifactsErrors.InvalidName;
+        if (!Artifact.ContentIsValid(request.Content)) return ArtifactsErrors.ContentInvalid;
         if (request.SourceMessageId is Guid message)
         {
             var conversation = await db.Messages.Where(x => x.Id == message).Select(x => (Guid?)x.ConversationId).SingleOrDefaultAsync(ct);
-            if (conversation is null) return ArtifactErrors.MessageNotFound;
+            if (conversation is null) return ArtifactsErrors.MessageNotFound;
             await conversations.OwnedAsync(actor, conversation.Value, ct);
         }
-        if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == Artifact.Kind, ct) >= Artifact.MaxPerOwner) return ArtifactErrors.LimitReached;
+        if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == Artifact.Kind, ct) >= Artifact.MaxPerOwner) return ArtifactsErrors.LimitReached;
         if (request.ProjectId is Guid project)
         {
-            if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureIds.Projects)) return ArtifactErrors.ProjectAccessRequired;
+            if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureIds.Projects)) return ArtifactsErrors.ProjectAccessRequired;
             await access.RequireAsync(actor, project, "project", ct, write: true);
         }
         var now = clock.GetUtcNow();

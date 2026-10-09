@@ -73,8 +73,8 @@ GitHub Actions 的 CI 目前只能手動觸發（Actions 頁面的 Run workflow�
 資料結構修改先更新 entity／mapping，再新增 migration 與 DBA 審閱 SQL：
 
 ```powershell
-dotnet ef migrations add DescriptiveChange --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Api --output-dir Persistence/Migrations
-dotnet ef migrations script --idempotent --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Api --output db/migrations.sql
+dotnet ef migrations add DescriptiveChange --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host --output-dir Persistence/Migrations
+dotnet ef migrations script --idempotent --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host --output db/migrations.sql
 ./scripts/Initialize-Database.ps1
 ```
 
@@ -84,7 +84,7 @@ migration 在本機驗證後提交 source、designer、snapshot 與 SQL。正式
 
 | 路徑 | 責任 |
 | --- | --- |
-| `backend/src/AiNexus.Api` | host：設定載入、middleware 管線、模組組裝（`Program.cs`）與維運指令（`Commands/`） |
+| `backend/src/AiNexus.Host` | host：設定載入、middleware 管線、模組組裝（`Program.cs`）與維運指令（`Commands/`） |
 | `backend/src/AiNexus.Features/<Module>` | 業務模組：`<Module>Module.cs` 註冊服務、政策與端點，旁邊是 endpoint、entity、service |
 | `backend/src/AiNexus.Features/Persistence` | 共用 `NexusDbContext`、migrations、資料庫初始化與 schema 檢查 |
 | `backend/src/AiNexus.Platform` | 不依賴業務的共用基礎：錯誤、安全、設定、診斷、HTTP 限制、手寫 SQL 存取（`Data/Sql`） |

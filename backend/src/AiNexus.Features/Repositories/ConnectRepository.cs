@@ -29,7 +29,7 @@ internal sealed class ConnectRepository(NexusDbContext db, RepositoryService git
 
     public async Task<Result<RepositoryStatusDto>> HandleAsync(Guid owner, string token, CancellationToken ct)
     {
-        if (!gitea.Enabled) return RepositoryErrors.Disabled;
+        if (!gitea.Enabled) return RepositoriesErrors.Disabled;
         using var identity = await client.GetAsync(token, "api/v1/user", ct);
         var login = RepositoryService.Text(identity.RootElement, "login", 100);
         if (login.Length == 0) throw new ApiException(502, "gitea_identity_invalid", "Gitea 未回傳帳號資訊。");

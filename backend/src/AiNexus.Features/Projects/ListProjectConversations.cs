@@ -3,6 +3,7 @@ using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Projects;
 

@@ -5,6 +5,8 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Sharing;
 
+public sealed record SharedContentDto(ShareDto Share, ShareSnapshot Snapshot);
+
 /// <summary>The frozen snapshot, with model ids shown as they are presented today.</summary>
 internal static class ReadShare
 {

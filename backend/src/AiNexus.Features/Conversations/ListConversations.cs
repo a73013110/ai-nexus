@@ -18,7 +18,7 @@ internal static class ListConversations
 
     private static async Task<Result<IReadOnlyList<ConversationDto>>> HandleAsync(NexusDbContext db, Guid owner, string? search, int offset, string view, string? label, CancellationToken ct)
     {
-        if (search?.Length > 120 || label?.Length > 24 || view is not ("active" or "archived" or "favorites" or "all") || offset < 0 || offset > 100000) return ConversationErrors.InvalidQuery;
+        if (search?.Length > 120 || label?.Length > 24 || view is not ("active" or "archived" or "favorites" or "all") || offset < 0 || offset > 100000) return ConversationsErrors.InvalidQuery;
         var query = db.Set<Conversation>().Include(x => x.Labels).AsNoTracking().Where(x => x.OwnerId == owner);
         if (view != "all") query = query.Where(x => x.IsArchived == (view == "archived"));
         if (view == "favorites") query = query.Where(x => x.IsFavorite);

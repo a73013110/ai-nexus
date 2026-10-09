@@ -5,6 +5,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Artifacts;
 
+public sealed record ArtifactSummaryDto(ResourceDto Resource, int Version, Guid? ProjectId);
+
 /// <summary>The 200 most recently updated artifacts the user may read, with whether each one is editable.</summary>
 internal static class ListArtifacts
 {

@@ -12,7 +12,7 @@ public sealed record ConversationSettingsRequest(bool? IsFavorite = null, bool? 
 /// <summary>The instruction length. Invalid labels have their own code and are reported by the handler.</summary>
 internal sealed class ConversationSettingsRequestValidator : RequestValidator<ConversationSettingsRequest>
 {
-    public override string ProblemCode => ConversationErrors.InstructionTooLongCode;
+    public override string ProblemCode => ConversationsErrors.InstructionTooLongCode;
 
     public ConversationSettingsRequestValidator() => RuleFor(x => x.SystemInstruction).MaximumLength(ConversationQueries.InstructionMaxLength);
 }
@@ -34,15 +34,15 @@ internal sealed class UpdateConversationSettings(NexusDbContext db, GenerationSc
         try
         {
             var conversation = await db.OwnedConversationAsync(owner, id, ct);
-            if (conversation is null) return ConversationErrors.NotFound;
-            if (request.IsArchived == true && await db.HasActiveRunAsync(id, ct)) return ConversationErrors.GenerationActive;
+            if (conversation is null) return ConversationsErrors.NotFound;
+            if (request.IsArchived == true && await db.HasActiveRunAsync(id, ct)) return ConversationsErrors.GenerationActive;
             if (request.SystemInstruction is { } instruction) conversation.SystemInstruction = instruction.Trim();
             if (request.IsFavorite is bool favorite) conversation.IsFavorite = favorite;
             if (request.IsArchived is bool archived) conversation.IsArchived = archived;
             if (request.Labels is { } requested)
             {
                 var names = ConversationQueries.CleanLabels(requested);
-                if (names is null) return ConversationErrors.InvalidLabels;
+                if (names is null) return ConversationsErrors.InvalidLabels;
                 // Keep unchanged tracked keys; removing and adding the same key breaks EF identity tracking.
                 var removed = conversation.Labels.Where(x => !names.Contains(x.Name, StringComparer.Ordinal)).ToList();
                 db.Set<ConversationLabel>().RemoveRange(removed);

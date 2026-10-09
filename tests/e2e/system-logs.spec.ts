@@ -135,7 +135,7 @@ class LogFixture {
         )!;
         const detail: LogDetail = {
           event,
-          service: "AiNexus.Api",
+          service: "AiNexus.Host",
           environment: "Production",
           version: "1.2.0",
           userId: this.api.userId,

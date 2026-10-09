@@ -4,6 +4,7 @@ using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Events;
 using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.Identity.Sessions;
 
 namespace AiNexus.Features.Monitoring;
 

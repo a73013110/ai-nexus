@@ -1,13 +1,17 @@
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Attachments;
-using AiNexus.Features.Configuration;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.Jobs;
+using AiNexus.Features.Knowledge.Collections;
+using AiNexus.Features.Knowledge.Documents;
+using AiNexus.Features.Knowledge.Indexing;
+using AiNexus.Features.Knowledge.Embeddings;
+using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Features.Knowledge;
 
@@ -25,7 +29,7 @@ public sealed class KnowledgeModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddOptions<KnowledgeOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Knowledge(c, o))
+        services.AddOptions<KnowledgeOptions>().Configure<IConfiguration>((o, c) => KnowledgeSettings.Bind(c, o))
             .Validate(KnowledgeOptions.Valid, "知識檢索設定的維度、範圍或端點不正確。").ValidateOnStart();
         services.AddSingleton(sp => EmbeddingModel(sp.GetRequiredService<IOptions<KnowledgeOptions>>().Value));
         services.AddScoped<DocumentAccess>();

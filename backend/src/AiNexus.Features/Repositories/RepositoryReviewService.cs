@@ -1,10 +1,10 @@
 using System.Text;
 using System.Text.Json;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Repositories;
 
@@ -16,14 +16,14 @@ public sealed class RepositoryReviewService(NexusDbContext db, RepositoryService
 {
     public async Task<Result<RepositoryReview>> FindAsync(Guid owner, Guid id, CancellationToken ct)
         => await db.Set<RepositoryReview>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct) is { } row
-            ? row : RepositoryErrors.ReviewNotFound;
+            ? row : RepositoriesErrors.ReviewNotFound;
 
     public async Task<RepositoryReview> OwnedAsync(Guid owner, Guid id, CancellationToken ct) => (await FindAsync(owner, id, ct)).OrThrow();
 
     /// <summary>The user can still read both pinned commits on the host the review was created on.</summary>
     public async Task<Result> CheckSourceAsync(Guid owner, RepositoryReview row, CancellationToken ct)
     {
-        if (row.BaseUrl != repositories.BaseUrl) return RepositoryErrors.ReviewHostChanged;
+        if (row.BaseUrl != repositories.BaseUrl) return RepositoriesErrors.ReviewHostChanged;
         var head = await repositories.RequireCommitAsync(owner, row.Repository, row.Commit, ct);
         if (!head.IsSuccess || row.BaseCommit is null) return head;
         return await repositories.RequireCommitAsync(owner, row.Repository, row.BaseCommit, ct);

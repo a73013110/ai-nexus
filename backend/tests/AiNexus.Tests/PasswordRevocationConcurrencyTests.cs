@@ -1,8 +1,8 @@
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Tests;
 

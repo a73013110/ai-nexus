@@ -11,7 +11,7 @@ public sealed record RenameLibraryFileRequest(string FileName, string ExpectedFi
 
 internal sealed class RenameLibraryFileRequestValidator : RequestValidator<RenameLibraryFileRequest>
 {
-    public override string ProblemCode => AttachmentErrors.FileNameInvalidCode;
+    public override string ProblemCode => AttachmentsErrors.FileNameInvalidCode;
 
     public RenameLibraryFileRequestValidator()
     {
@@ -37,12 +37,12 @@ internal sealed class RenameLibraryFile(NexusDbContext db, AttachmentService fil
         var found = await files.FindOwnedAsync(actor, id, ct);
         if (!found.IsSuccess) return found.Error;
         var file = found.Value;
-        if (!file.InLibrary) return AttachmentErrors.LibraryFileNotFound;
-        if (!string.Equals(Path.GetExtension(name), Path.GetExtension(file.FileName), StringComparison.OrdinalIgnoreCase)) return AttachmentErrors.ExtensionChanged;
+        if (!file.InLibrary) return AttachmentsErrors.LibraryFileNotFound;
+        if (!string.Equals(Path.GetExtension(name), Path.GetExtension(file.FileName), StringComparison.OrdinalIgnoreCase)) return AttachmentsErrors.ExtensionChanged;
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var changed = await db.Set<Attachment>().Where(x => x.Id == id && x.OwnerId == actor && x.InLibrary && x.FileName == request.ExpectedFileName && x.StorageState == AttachmentStates.Ready)
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.FileName, name), ct);
-        if (changed != 1) return AttachmentErrors.FileNameChanged;
+        if (changed != 1) return AttachmentsErrors.FileNameChanged;
         db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "file.renamed", Result = "saved" });
         await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
         file.FileName = name;

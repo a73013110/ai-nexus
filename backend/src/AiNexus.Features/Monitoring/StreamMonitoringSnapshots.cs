@@ -6,6 +6,7 @@ using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.Identity.Sessions;
 
 namespace AiNexus.Features.Monitoring;
 

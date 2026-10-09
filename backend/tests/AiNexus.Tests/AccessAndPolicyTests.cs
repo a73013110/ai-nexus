@@ -4,13 +4,13 @@ using System.Text.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Chat;
 using AiNexus.Features.Persistence;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.AccessControl;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using static AiNexus.Tests.ChatApiTests;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Tests;
 

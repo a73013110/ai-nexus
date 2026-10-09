@@ -20,6 +20,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Attachments;
 using Xunit;
+using AiNexus.Features.Identity.Authentication;
 
 namespace AiNexus.Tests;
 
@@ -82,8 +83,8 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
             services.RemoveAllKeyed<IInferenceProvider>("ollama");
             services.AddKeyedSingleton<IInferenceProvider>("google", Provider);
             services.AddKeyedSingleton<IInferenceProvider>("ollama", Provider);
-            services.RemoveAll<AiNexus.Features.Knowledge.IEmbeddingClient>();
-            services.AddSingleton<AiNexus.Features.Knowledge.IEmbeddingClient>(Embeddings);
+            services.RemoveAll<AiNexus.Features.Knowledge.Embeddings.IEmbeddingClient>();
+            services.AddSingleton<AiNexus.Features.Knowledge.Embeddings.IEmbeddingClient>(Embeddings);
             services.PostConfigure<AiNexus.Features.Knowledge.KnowledgeOptions>(x => { x.EmbeddingProvider = "ollama"; x.Dimensions = 768; });
             foreach (var worker in services.Where(x => x.ServiceType == typeof(IHostedService) && x.ImplementationType?.Assembly.GetName().Name?.StartsWith("AiNexus.", StringComparison.Ordinal) == true
                 && !workers.Contains(x.ImplementationType)).ToList()) services.Remove(worker);
@@ -146,7 +147,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     }
 }
 
-public sealed class TestEmbeddings : AiNexus.Features.Knowledge.IEmbeddingClient
+public sealed class TestEmbeddings : AiNexus.Features.Knowledge.Embeddings.IEmbeddingClient
 {
     public string Provider => "ollama";
     public bool Enabled { get; set; } = true;
@@ -156,7 +157,7 @@ public sealed class TestEmbeddings : AiNexus.Features.Knowledge.IEmbeddingClient
     public int LastProfileId { get; private set; }
     public int Calls;
     public int DelayMs { get; set; }
-    public async Task<AiNexus.Features.Knowledge.EmbeddingBatchResult> EmbedBatchAsync(IReadOnlyList<string> inputs, AiNexus.Features.Knowledge.EmbeddingPurpose purpose, AiNexus.Features.Knowledge.EmbeddingProfile profile, CancellationToken ct)
+    public async Task<AiNexus.Features.Knowledge.Embeddings.EmbeddingBatchResult> EmbedBatchAsync(IReadOnlyList<string> inputs, AiNexus.Features.Knowledge.Embeddings.EmbeddingPurpose purpose, AiNexus.Features.Knowledge.Embeddings.EmbeddingProfile profile, CancellationToken ct)
     {
         var call = Interlocked.Increment(ref Calls); LastProfileId = profile.Id; await Task.Delay(DelayMs, ct);
         if (Fail || FailProfileId == profile.Id || FailOnCall == call) throw new ApiException(503, "fixture_embedding_failed", "測試索引服務暫停。");

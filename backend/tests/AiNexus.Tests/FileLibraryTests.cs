@@ -3,13 +3,14 @@ using System.Net.Http.Json;
 using System.Text;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Operations;
 using AiNexus.Features.Attachments;
-using AiNexus.Features.Knowledge;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using static AiNexus.Tests.ChatApiTests;
+using AiNexus.Features.Jobs;
+using AiNexus.Features.Knowledge.Collections;
+using AiNexus.Features.Knowledge.Documents;
 
 namespace AiNexus.Tests;
 

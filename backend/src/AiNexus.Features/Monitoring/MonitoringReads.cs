@@ -1,12 +1,6 @@
 using AiNexus.Features.Persistence;
-using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Monitoring;
-
-internal static class MonitoringErrors
-{
-    public static readonly Error InvalidWindow = Error.Invalid("invalid_request");
-}
 
 /// <summary>What the administrator reads of live monitoring: a window <see cref="RuntimeTraffic"/> keeps, audited before release.</summary>
 internal static class MonitoringReads

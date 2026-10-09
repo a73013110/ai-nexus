@@ -15,7 +15,7 @@ flowchart LR
     EF --> SQL[(AiNexus SQL Server)]
     Modules --> Storage[IAttachmentStorage／opaque key]
     Storage --> Files[(站外原檔目錄)]
-    Modules --> Jobs[Operations durable 任務]
+    Modules --> Jobs[Jobs durable 任務]
     Jobs --> Tasks[Inference 共用配額與模型任務]
     Tasks --> Models[Google AI／Ollama]
     Modules --> Sources[Integrations 來源政策]
@@ -32,9 +32,10 @@ flowchart LR
 | AccessControl  | 使用者→角色→群組→功能的有效授權、群組／個人模型政策資料及 server-side policy             |
 | Administration | 一次性管理員 bootstrap、帳號與授權、群組模型／配額、管理異動記錄與用量                   |
 | Conversations  | 私人訊息樹／分支、標題、收藏／封存／標籤、搜尋與文字備份匯入                             |
-| Inference      | provider、模型呈現與政策、聊天排程佇列、共用模型任務                                     |
-| Chat           | 組合對話、附件、專案、知識與網路搜尋：Context、聊天執行／SSE，整段對話讀取／匯出／複製／刪除 |
-| Operations     | 健康狀態、活動稽核查詢與寫入、事件清理、durable jobs、租約及 fenced checkpoint            |
+| Inference      | provider、模型呈現與政策、聊天排程佇列與服務狀態（`/status`）、共用模型任務               |
+| Chat           | 組合對話、附件、專案、知識與網路搜尋：Context、聊天執行／SSE、重播事件清理，整段對話讀取／匯出／複製／刪除 |
+| Jobs           | durable jobs、租約及 fenced checkpoint、任務查詢／取消／重試                              |
+| Audit          | 活動稽核查詢、分類與篩選目錄（寫入由各模組在同一交易加入 `AuditEvent`）                   |
 | Attachments    | 格式及大小驗證、原始檔／文字、配額、下載授權與保留引用                                   |
 | Library        | 個人提示詞範本及容量限制                                                                 |
 | Collaboration  | 私有資源、具名 viewer／editor、群組唯讀 ACL、具名到期分享                                |
@@ -48,7 +49,7 @@ flowchart LR
 | Repositories   | 使用者 Gitea token 保護、唯讀 repository／issues／檔案、固定 commit 匯入與來源追溯       |
 | Dashboard      | 組合已授權的資源、任務與費用統計；平台範圍另驗 admin，沒有第二套計量邏輯                 |
 
-後端分三個專案，依賴方向固定為 Api → Features → Platform：`AiNexus.Api` 只做 host 組裝與維運指令；`AiNexus.Features` 的每個模組以 `<Module>Module`（`IFeatureModule`）註冊自己的服務、options 驗證、授權政策、rate limit 與端點，`FeatureModules` 是唯一的模組清單，`Persistence` 管共用 context 與 migrations；`AiNexus.Platform` 管錯誤、安全、設定、診斷、HTTP 限制、domain event 分派與手寫 SQL 存取（`Data/Sql`），不引用任何業務模組。端點的 body 上限以 `WithRequestBodyLimit` 宣告在端點旁。`AiNexus.ArchitectureTests` 檢查專案依賴方向，並禁止模組之間形成循環；分層與切斷循環的做法見 [模組邊界](MODULE_BOUNDARIES.md)。slice、錯誤、驗證與授權的寫法見 [後端撰寫慣例](BACKEND_CONVENTIONS.md)。模組間使用明確服務，不新增能繞過 owner、ACL 或模型核准的資料入口。「A 發生後 B 跟著處理」的副作用改用同交易的 domain event（`AiNexus.Platform.Events`）：發布模組 `Raise` 過去式事件，`NexusDbContext.SaveChangesAsync` 在寫入前於同一交易分派給訂閱模組的 handler，一起提交或回復；例如刪除對話／成果撤銷分享、刪除專案解除成果連結。
+後端分三個專案，依賴方向固定為 Host → Features → Platform：`AiNexus.Host` 只做 host 組裝與維運指令；`AiNexus.Features` 的每個模組以 `<Module>Module`（`IFeatureModule`）註冊自己的服務、options 驗證、授權政策、rate limit 與端點，`FeatureModules` 是唯一的模組清單，`Persistence` 管共用 context 與 migrations；`AiNexus.Platform` 管錯誤、安全、設定、診斷、HTTP 限制、domain event 分派與手寫 SQL 存取（`Data/Sql`），不引用任何業務模組。端點的 body 上限以 `WithRequestBodyLimit` 宣告在端點旁。`AiNexus.ArchitectureTests` 檢查專案依賴方向，並禁止模組之間形成循環；分層與切斷循環的做法見 [模組邊界](MODULE_BOUNDARIES.md)。slice、錯誤、驗證與授權的寫法見 [後端撰寫慣例](BACKEND_CONVENTIONS.md)。模組間使用明確服務，不新增能繞過 owner、ACL 或模型核准的資料入口。「A 發生後 B 跟著處理」的副作用改用同交易的 domain event（`AiNexus.Platform.Events`）：發布模組 `Raise` 過去式事件，`NexusDbContext.SaveChangesAsync` 在寫入前於同一交易分派給訂閱模組的 handler，一起提交或回復；例如刪除對話／成果撤銷分享、刪除專案解除成果連結。
 
 Notifications 提供 owner scoped durable event 與 typed target，和聊天完成、具名分享、任務 terminal update 使用同一 transaction。RepositoryReviewService 在排程前固定 SHA／diff／模型設定，handler 沿用背景 checkpoint／ModelTaskService，結果讀取仍檢查目前 Gitea 權限；細節見 [通知](NOTIFICATIONS.md)、[程式碼 review](GITEA.md)。
 

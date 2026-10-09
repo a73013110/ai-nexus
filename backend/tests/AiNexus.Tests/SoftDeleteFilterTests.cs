@@ -1,11 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
-using AiNexus.Features.Administration;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Conversations;
-using AiNexus.Features.Knowledge;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Projects;
 using AiNexus.Platform.Data;
@@ -15,6 +13,8 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using static AiNexus.Tests.ChatApiTests;
+using AiNexus.Features.Knowledge.Documents;
+using AiNexus.Features.Administration.Users;
 
 namespace AiNexus.Tests;
 

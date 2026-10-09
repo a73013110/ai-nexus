@@ -10,7 +10,7 @@
 
 | 用途                 | 本機開發                                   | IIS                                                       |
 | -------------------- | ------------------------------------------ | --------------------------------------------------------- |
-| 版控的公開預設值     | `backend/src/AiNexus.Api/appsettings.json` | `app/appsettings.json`（來自發版）                        |
+| 版控的公開預設值     | `backend/src/AiNexus.Host/appsettings.json` | `app/appsettings.json`（來自發版）                        |
 | 此環境的一般設定     | `.local/config/appsettings.Local.json`     | `config/appsettings.Production.json`                      |
 | 密碼與連線秘密       | `.local/secrets/appsettings.Secrets.json`  | `config/appsettings.Secrets.json`                         |
 | 登入 cookie 加密金鑰 | `.local/keys`                              | `keys`（保留，不隨發版覆蓋）                              |

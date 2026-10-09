@@ -34,24 +34,24 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
 
     public async Task<Result> RequireCommitAsync(Guid owner, string repo, string commit, CancellationToken ct)
     {
-        if (!IsCommit(commit)) return RepositoryErrors.InvalidCommit;
+        if (!IsCommit(commit)) return RepositoriesErrors.InvalidCommit;
         var token = await TokenAsync(owner, ct);
         if (!token.IsSuccess) return token.Error;
-        if (!IsRepository(repo)) return RepositoryErrors.InvalidRepository;
+        if (!IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         using var metadata = await client.GetAsync(token.Value, Route(repo) + "/git/commits/" + commit, ct);
         return Result.Success;
     }
 
     public async Task<Result<string>> DiffAsync(Guid owner, string repo, string head, string? basis, CancellationToken ct)
     {
-        if (!IsCommit(head) || (basis is not null && !IsCommit(basis))) return RepositoryErrors.InvalidCommit;
-        if (!IsRepository(repo)) return RepositoryErrors.InvalidRepository;
+        if (!IsCommit(head) || (basis is not null && !IsCommit(basis))) return RepositoriesErrors.InvalidCommit;
+        if (!IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         var route = Route(repo);
         var path = basis is null ? route + "/git/commits/" + head + ".diff" : route + "/compare/" + basis + ".." + head + "?output=diff";
         var token = await TokenAsync(owner, ct);
         if (!token.IsSuccess) return token.Error;
         var diff = await client.GetTextAsync(token.Value, path, ct);
-        if (!string.IsNullOrWhiteSpace(diff) && !diff.TrimStart().StartsWith("diff --git ", StringComparison.Ordinal)) return RepositoryErrors.DiffUnsupported;
+        if (!string.IsNullOrWhiteSpace(diff) && !diff.TrimStart().StartsWith("diff --git ", StringComparison.Ordinal)) return RepositoriesErrors.DiffUnsupported;
         return diff;
     }
 
@@ -59,7 +59,7 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
     {
         var token = await TokenAsync(owner, ct);
         if (!token.IsSuccess) return token.Error;
-        if (!IsRepository(repo)) return RepositoryErrors.InvalidRepository;
+        if (!IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         using var json = await client.GetAsync(token.Value, Route(repo) + "/commits?limit=30", ct);
         if (json.RootElement.ValueKind != JsonValueKind.Array) throw ResponseInvalid();
         return Result<IReadOnlyList<RepositoryCommitDto>>.Ok(json.RootElement.EnumerateArray().Take(30)
@@ -68,7 +68,7 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
 
     public async Task<Result<RepositoryPageDto>> ListAsync(Guid owner, int page, CancellationToken ct)
     {
-        if (page is < 1 or > 1000) return RepositoryErrors.InvalidPage;
+        if (page is < 1 or > 1000) return RepositoriesErrors.InvalidPage;
         var token = await TokenAsync(owner, ct);
         if (!token.IsSuccess) return token.Error;
         using var json = await client.GetAsync(token.Value, $"api/v1/user/repos?page={page}&limit=20", ct);
@@ -80,23 +80,23 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
 
     public async Task<Result<RepositoryTreeDto>> TreeAsync(Guid owner, string repo, string? commit, string? path, CancellationToken ct)
     {
-        if (!IsRepository(repo)) return RepositoryErrors.InvalidRepository;
+        if (!IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         var route = Route(repo);
         var token = await TokenAsync(owner, ct);
         if (!token.IsSuccess) return token.Error;
         var folder = path ?? "";
-        if (!IsFilePath(folder, true)) return RepositoryErrors.InvalidPath;
+        if (!IsFilePath(folder, true)) return RepositoriesErrors.InvalidPath;
         if (string.IsNullOrEmpty(commit))
         {
             using var metadata = await client.GetAsync(token.Value, route, ct);
             var branch = Text(metadata.RootElement, "default_branch", 160);
-            if (branch.Length == 0) return RepositoryErrors.Empty;
+            if (branch.Length == 0) return RepositoriesErrors.Empty;
             using var latest = await client.GetAsync(token.Value, route + "/branches/" + Uri.EscapeDataString(branch), ct);
             commit = Text(latest.RootElement.GetProperty("commit"), "id", 64);
         }
-        if (!IsCommit(commit)) return RepositoryErrors.InvalidCommit;
+        if (!IsCommit(commit)) return RepositoriesErrors.InvalidCommit;
         using var json = await client.GetAsync(token.Value, route + "/contents" + (folder.Length == 0 ? "" : "/" + EncodePath(folder)) + "?ref=" + commit, ct);
-        if (json.RootElement.ValueKind != JsonValueKind.Array) return RepositoryErrors.NotDirectory;
+        if (json.RootElement.ValueKind != JsonValueKind.Array) return RepositoriesErrors.NotDirectory;
         var entries = json.RootElement.EnumerateArray().Take(500).Select(x => new RepositoryEntryDto(Text(x, "name", 180), Text(x, "path", 500), Text(x, "type", 16),
             x.TryGetProperty("size", out var size) ? size.GetInt64() : 0)).OrderBy(x => x.Kind == "dir" ? 0 : 1).ThenBy(x => x.Name).ToArray();
         return new RepositoryTreeDto(repo, commit, folder, entries);
@@ -105,29 +105,29 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
     /// <summary>Reads a text file at a pinned commit. Imports call this again: browser content is never a trusted snapshot.</summary>
     public async Task<Result<RepositoryFileDto>> FileAsync(Guid owner, string repo, string commit, string path, CancellationToken ct)
     {
-        if (!IsRepository(repo)) return RepositoryErrors.InvalidRepository;
-        if (!IsCommit(commit)) return RepositoryErrors.InvalidCommit;
-        if (!IsFilePath(path, false)) return RepositoryErrors.InvalidPath;
+        if (!IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
+        if (!IsCommit(commit)) return RepositoriesErrors.InvalidCommit;
+        if (!IsFilePath(path, false)) return RepositoriesErrors.InvalidPath;
         var token = await TokenAsync(owner, ct);
         if (!token.IsSuccess) return token.Error;
         using var json = await client.GetAsync(token.Value, Route(repo) + "/contents/" + EncodePath(path) + "?ref=" + commit, ct);
         var root = json.RootElement;
         if (Text(root, "type", 16) != "file" || Text(root, "encoding", 20) != "base64" || !root.TryGetProperty("size", out var size) || size.GetInt64() > options.Value.MaxFileBytes)
-            return RepositoryErrors.FileLimit;
+            return RepositoriesErrors.FileLimit;
         byte[] bytes;
         try { bytes = Convert.FromBase64String(root.GetProperty("content").GetString() ?? ""); }
-        catch (FormatException) { return RepositoryErrors.NotText; }
-        if (bytes.Length > options.Value.MaxFileBytes) return RepositoryErrors.FileLimit;
+        catch (FormatException) { return RepositoriesErrors.NotText; }
+        if (bytes.Length > options.Value.MaxFileBytes) return RepositoriesErrors.FileLimit;
         string text;
         try { text = new UTF8Encoding(false, true).GetString(bytes); }
-        catch (DecoderFallbackException) { return RepositoryErrors.NotText; }
-        if (text.Contains('\0')) return RepositoryErrors.NotText;
+        catch (DecoderFallbackException) { return RepositoriesErrors.NotText; }
+        if (text.Contains('\0')) return RepositoriesErrors.NotText;
         return new RepositoryFileDto(repo, commit, path, text.TrimStart('﻿'), Link(repo) + "/src/commit/" + commit + "/" + EncodePath(path));
     }
 
     public async Task<Result<IReadOnlyList<RepositoryIssueDto>>> IssuesAsync(Guid owner, string repo, CancellationToken ct)
     {
-        if (!IsRepository(repo)) return RepositoryErrors.InvalidRepository;
+        if (!IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         var token = await TokenAsync(owner, ct);
         if (!token.IsSuccess) return token.Error;
         using var json = await client.GetAsync(token.Value, Route(repo) + "/issues?state=open&type=issues&limit=30", ct);
@@ -138,11 +138,11 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
 
     private async Task<Result<string>> TokenAsync(Guid owner, CancellationToken ct)
     {
-        if (!options.Value.Enabled) return RepositoryErrors.Disabled;
+        if (!options.Value.Enabled) return RepositoriesErrors.Disabled;
         var connection = await db.Set<RepositoryConnection>().AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.BaseUrl == Host, ct);
-        if (connection is null) return RepositoryErrors.NotConnected;
+        if (connection is null) return RepositoriesErrors.NotConnected;
         try { return Protector(owner).Unprotect(connection.ProtectedToken); }
-        catch (CryptographicException) { return RepositoryErrors.ReconnectRequired; }
+        catch (CryptographicException) { return RepositoriesErrors.ReconnectRequired; }
     }
 
     private IDataProtector Protector(Guid owner) => protection.CreateProtector("AiNexus.Gitea.UserToken.v1", owner.ToString("N"), Host);
@@ -158,9 +158,9 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
         !value.Contains('\\') && !value.Any(char.IsControl) && (value.Length == 0 || value.Split('/').All(p => p.Length > 0 && p is not ("." or "..")));
 
     /// <summary>Throwing form of <see cref="IsRepository"/>: the controlled Gitea API path for a repository.</summary>
-    public static string RepositoryRoute(string repo) => IsRepository(repo) ? Route(repo) : throw RepositoryErrors.InvalidRepository.ToException();
-    public static void Commit(string value) { if (!IsCommit(value)) throw RepositoryErrors.InvalidCommit.ToException(); }
-    public static string FilePath(string value, bool directory) => IsFilePath(value, directory) ? value : throw RepositoryErrors.InvalidPath.ToException();
+    public static string RepositoryRoute(string repo) => IsRepository(repo) ? Route(repo) : throw RepositoriesErrors.InvalidRepository.ToException();
+    public static void Commit(string value) { if (!IsCommit(value)) throw RepositoriesErrors.InvalidCommit.ToException(); }
+    public static string FilePath(string value, bool directory) => IsFilePath(value, directory) ? value : throw RepositoriesErrors.InvalidPath.ToException();
 
     private static string Route(string repo) => "api/v1/repos/" + string.Join('/', repo.Split('/').Select(Uri.EscapeDataString));
     private static string EncodePath(string path) => string.Join('/', path.Split('/').Select(Uri.EscapeDataString));

@@ -795,14 +795,6 @@
           "xunit.v3.runner.common": "[4.0.1]"
         }
       },
-      "ainexus.api": {
-        "type": "Project",
-        "dependencies": {
-          "AiNexus.Features": "[1.0.0, )",
-          "AiNexus.Platform": "[1.0.0, )",
-          "Microsoft.AspNetCore.OpenApi": "[10.0.12, )"
-        }
-      },
       "ainexus.features": {
         "type": "Project",
         "dependencies": {
@@ -817,6 +809,14 @@
           "PdfPig": "[0.1.16, )",
           "System.DirectoryServices.AccountManagement": "[10.0.12, )",
           "System.DirectoryServices.Protocols": "[10.0.12, )"
+        }
+      },
+      "ainexus.host": {
+        "type": "Project",
+        "dependencies": {
+          "AiNexus.Features": "[1.0.0, )",
+          "AiNexus.Platform": "[1.0.0, )",
+          "Microsoft.AspNetCore.OpenApi": "[10.0.12, )"
         }
       },
       "ainexus.platform": {

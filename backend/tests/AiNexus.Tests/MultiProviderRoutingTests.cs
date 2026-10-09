@@ -90,7 +90,7 @@ public sealed class MultiProviderRoutingTests
         Assert.Equal(123, timing.InputTokens); Assert.Equal(6, timing.OutputTokens);
         var detail = (await client.GetFromJsonAsync<ConversationDetailDto>($"/api/v1/conversations/{conversation.Id}"))!;
         Assert.Equal(timing, detail.Messages.Single(x => x.Id == completed.AssistantMessageId).Timing);
-        var admin = (await client.GetFromJsonAsync<AiNexus.Features.Administration.AdminConversationDetailDto>($"/api/v1/admin/conversations/{conversation.Id}"))!;
+        var admin = (await client.GetFromJsonAsync<AiNexus.Features.Administration.Users.AdminConversationDetailDto>($"/api/v1/admin/conversations/{conversation.Id}"))!;
         Assert.Equal(timing, admin.Messages.Single(x => x.Id == completed.AssistantMessageId).Timing);
         var usage = (await client.GetFromJsonAsync<AiNexus.Features.Account.PersonalUsageDto>("/api/v1/settings/usage"))!;
         Assert.Equal(timing.TotalMilliseconds, usage.TotalDurationMilliseconds); Assert.Equal(1, usage.TimedRequests);

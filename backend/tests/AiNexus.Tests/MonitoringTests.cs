@@ -1,7 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Identity;
 using AiNexus.Features.Monitoring;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
@@ -11,6 +10,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 using Xunit;
 using AiNexus.Features.Persistence;
+using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Tests;
 

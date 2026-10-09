@@ -1,5 +1,4 @@
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Configuration;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
@@ -13,7 +12,7 @@ public sealed class IntegrationsModule : IFeatureModule
         var services = builder.Services;
         services.AddSqlDatabase<LegacyGdwebDatabase>();
         services.AddSqlDatabase<LegacyMeihoDatabase>();
-        services.AddOptions<IntegrationsOptions>().Configure<IConfiguration>((o, c) => NexusSettings.Integrations(c, o)).ValidateOnStart();
+        services.AddOptions<IntegrationsOptions>().Configure<IConfiguration>((o, c) => IntegrationsSettings.Bind(c, o)).ValidateOnStart();
         services.AddSingleton<IValidateOptions<IntegrationsOptions>, IntegrationsOptionsValidator>();
         services.AddScoped<SourceGateway>();
         services.AddScoped<ImportSourceRecord>();

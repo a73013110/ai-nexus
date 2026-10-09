@@ -1,6 +1,6 @@
 using AiNexus.Platform.Configuration;
-using AiNexus.Features.Configuration;
 using AiNexus.Features.Inference;
+using AiNexus.Features.Integrations;
 using AiNexus.Features.Knowledge;
 using Microsoft.Extensions.Configuration;
 using Xunit;
@@ -14,7 +14,7 @@ public sealed class NexusConfigResolverTests
     public void DevelopmentFindsRepositoryAndKeepsSecretsOutsideApp()
     {
         var root = Root;
-        var app = Path.Combine(root, "backend", "src", "AiNexus.Api");
+        var app = Path.Combine(root, "backend", "src", "AiNexus.Host");
         var files = new HashSet<string> { Path.Combine(root, "global.json"), Path.Combine(root, ".local", "config", "appsettings.Local.json"), Path.Combine(root, ".local", "secrets", "appsettings.Secrets.json") };
         var paths = NexusConfigResolver.Resolve(app, "Development", fileExists: files.Contains);
         Assert.Equal(root, paths.WorkspaceRoot);
@@ -56,7 +56,7 @@ public sealed class NexusConfigResolverTests
             ["Knowledge:Retrieval:TopK"] = "4"
         });
         var inference = new InferenceOptions(); var knowledge = new KnowledgeOptions();
-        NexusSettings.Inference(config, inference); NexusSettings.Knowledge(config, knowledge);
+        InferenceSettings.Bind(config, inference); KnowledgeSettings.Bind(config, knowledge);
         Assert.Equal("ollama/qwen3:8b", Assert.Single(inference.Models).Id); Assert.Equal("qwen3:8b", inference.Models[0].NativeId); Assert.Equal("ollama", inference.Models[0].Provider); Assert.Equal("fixture", inference.GoogleApiKey);
         Assert.Equal("http://local-ai:11434/", inference.BaseUrl); Assert.False(inference.ShowModelNames);
         Assert.Equal(300, inference.TimeoutSeconds); Assert.Equal("local instruction", inference.SystemPrompt);
@@ -74,7 +74,7 @@ public sealed class NexusConfigResolverTests
             ["Integrations:Sources:Gdweb:Database:TrustServerCertificate"] = "true",
             ["Integrations:Sources:Gdweb:Database:ConnectTimeoutSeconds"] = "7"
         });
-        NexusSettings.SourceConnections(config);
+        IntegrationsSettings.SourceConnections(config);
         var sql = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(AiNexus.Features.Integrations.LegacyGdwebDatabase.ConnectionString(config));
         Assert.Equal(Microsoft.Data.SqlClient.SqlConnectionEncryptOption.Mandatory, sql.Encrypt);
         Assert.True(sql.TrustServerCertificate); Assert.Equal(7, sql.ConnectTimeout);
