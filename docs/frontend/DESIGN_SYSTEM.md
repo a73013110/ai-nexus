@@ -76,7 +76,7 @@
 
 工作區、dialog、範本、快捷指令、附件縮圖與列表高度使用 component tokens：`--reading-width`、`--dialog-width`、`--library-width`、`--command-width`、`--attachment-thumb`、`--attachment-list-max`。對話起點共用輸入區寬度；短表單使用 `.ui-dialog-compact`，可收縮的彈窗採內容高度，上限由 viewport 決定。聊天與側欄操作沿用桌面 34px／觸控 44px 尺度；品牌控制項與收合圖示欄維持 44px，手機側欄 overlay 亦維持 44px。`--sidebar-avatar-size` 為 28px，帳號名稱／帳號兩行文字不因縮圖省略。輸入自動增高讀取 CSS token 上下限，無需同步修改 JavaScript 常數；最小高度 32px，訊息間距正常 16px／緊湊 12px，閱讀字級及行距不變。
 
-改 token 後用 `scripts/Verify.ps1` 並看 artifacts screenshots，至少檢查 light／dark、375px 手機、1280×768、長回答／長草稿、Context popover、減少動態與鍵盤。瀏覽器測試檢查字級、對話可用高度、橫向溢出、隱藏模型、Context 與匯出行為；新視覺需人工檢查，不以 build 成功取代視覺驗收。
+改 token 後用 `scripts/Verify.ps1 -Browser` 並人工檢視畫面，至少檢查 light／dark、375px 手機、1280×768、長回答／長草稿、Context popover、減少動態與鍵盤。瀏覽器測試檢查字級、對話可用高度、橫向溢出、隱藏模型、Context 與匯出行為；新視覺需人工檢查，不以 build 成功取代視覺驗收。
 
 登入頁與側欄共用 `BrandWordmark`，以 N 向量標誌取代 Nexus 的字首；shared/graphics 的同一輪廓供 SVG 與傅立葉動畫使用。動畫依字形實際位置及尺寸縮回，再交由靜態 SVG 顯示，支援螢幕與字級變動。等弧長取樣與一次性 DFT，逐幀只繪製預算內的圓與軌跡；4.2 秒後完全停止。保留跳過／重播、背景分頁暫停、DPR 上限 2、ResizeObserver、淺／深色及減少動畫偏好，表單全程可用。登入頁兩側內容有寬度上限，寬螢幕向中央靠攏，手機採單欄。
 

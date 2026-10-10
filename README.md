@@ -21,8 +21,7 @@ dotnet dev-certs https --trust     # 開發機首次
 | 項目 | 用途 |
 | --- | --- |
 | `backend/` | 後端方案 `AiNexus.slnx`：`src/` 有主機 `AiNexus.Host`、業務模組 `AiNexus.Features`、共用基礎 `AiNexus.Platform`，`tests/` 有單元、整合與架構測試；NuGet 版本集中在 `Directory.Packages.props` |
-| `frontend/` | Angular 前端；`npm` 指令在這裡執行，`src/app` 分為 `core`、`shared`、`features` |
-| `tests/e2e/` | Playwright 端到端測試，對發布後的網站執行 |
+| `frontend/` | Angular 前端，唯一的 npm 根目錄（Node 版本寫在 `package.json` 的 `engines`）；`src/app` 分為 `core`、`shared`、`features`，`e2e/` 是對發布後網站執行的 Playwright 測試 |
 | `contracts/` | 由後端產生的 API 合約 `openapi.json`（前端型別來源、合約測試比對） |
 | `deploy/` | 部署素材：`sql/` 是交給外部來源 DBA 的授權 view 範本；部署步驟在 `docs/operations/` |
 | `docs/` | 長期文件，依讀者分子資料夾（見下方文件地圖） |
@@ -31,7 +30,6 @@ dotnet dev-certs https --trust     # 開發機首次
 | `.github/` | 手動觸發的 CI，以及每月一次、依生態系合併成一個 PR 的 Dependabot |
 | `.config/dotnet-tools.json` | 固定 `dotnet-ef` 版本（`dotnet tool restore`） |
 | `global.json` | 固定 .NET SDK 版本與測試執行器 |
-| `package.json`、`package-lock.json`、`.node-version` | 安裝 `tests/e2e` 用的 Playwright，固定 Node 版本 |
 | `.editorconfig`、`.gitattributes`、`.gitignore` | 縮排與分析器規則、換行正規化、不進 Git 的檔案 |
 | `CLAUDE.md` | 給 AI 程式助手的規則、指令與「改什麼讀哪份」索引 |
 | `.local/`、`artifacts/` | 本機產生、不進 Git：本機設定與秘密、建置與測試輸出，見 [本機產生的資料夾](docs/development/LOCAL_FOLDERS.md) |

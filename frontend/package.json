@@ -7,7 +7,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test --watch=false",
     "lint": "eslint src",
-    "test:e2e": "npm --prefix .. run test:e2e",
+    "test:e2e": "playwright test --config e2e/playwright.config.ts",
     "contracts": "openapi-typescript ../contracts/openapi.json -o src/app/core/api/schema.ts --root-types --root-types-no-schema-prefix",
     "contracts:check": "openapi-typescript ../contracts/openapi.json -o src/app/core/api/schema.ts --root-types --root-types-no-schema-prefix --check"
   },
@@ -48,6 +48,7 @@
     "@angular/cli": "22.2.1",
     "@angular/compiler-cli": "22.2.1",
     "@eslint/js": "10.0.1",
+    "@playwright/test": "1.63.0",
     "@types/markdown-it": "14.2.0",
     "angular-eslint": "22.5.0",
     "eslint": "10.12.0",

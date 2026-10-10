@@ -25,9 +25,8 @@
 | `publish/` | Angular＋.NET 發布產物，整合預覽從這裡執行 | `Build.ps1`、`Start-Local.ps1` |
 | `verification/` | 驗證用的獨立產物，不覆寫正在執行的 `publish/` | `Verify.ps1` |
 | `test-results/` | 後端測試的 TRX | `Verify.ps1`、CI |
-| `browser-results/`、`browser-report/`、`browser-results.json` | Playwright 的失敗截圖與 trace、HTML 報告、JSON 結果 | `tests/e2e/playwright.config.ts` |
+| `browser-results/`、`browser-report/`、`browser-results.json` | Playwright 的失敗截圖與 trace、HTML 報告、JSON 結果 | `frontend/e2e/playwright.config.ts` |
 | `browser-server-*/` | e2e 測試伺服器專用的空設定、金鑰、附件與日誌 | `Start-BrowserTest.ps1` |
-| `screenshots/`、`monitoring-*.png` | e2e 測試內手動留存的畫面 | `tests/e2e/*.spec.ts` |
 | `diagnostic-acceptance/`、`monitoring-acceptance/`、`diagnostics-performance.json` | 後端真實瀏覽器與效能測試的畫面和結果 | `Category=Browser`／`Performance` 測試 |
 | `iis/<時間>/` | IIS 部署套件 | `Publish-IIS.ps1` |
 | `connection-checks.json`、`sql-capabilities.json` | 實際 AD／SQL／模型連線與 SQL 能力的報告 | `Test-Environment.ps1` |
