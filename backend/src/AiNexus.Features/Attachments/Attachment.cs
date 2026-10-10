@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -27,13 +28,14 @@ public sealed class Attachment
     [Comment("是否由個人檔案庫獨立保留原檔；移除對話或知識索引不會刪除保留的檔案。")]
     public bool InLibrary { get; set; }
     [Comment("資料建立時間，採 UTC offset。")]
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
 }
 
 internal sealed class AttachmentConfiguration : IEntityTypeConfiguration<Attachment>
 {
     public void Configure(EntityTypeBuilder<Attachment> file)
     {
+        file.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
         file.ToTable("Attachments", "attachments", table =>
         {
             table.HasCheckConstraint("CK_Attachments_Size", "[Size] > 0");

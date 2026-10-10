@@ -37,7 +37,7 @@ internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
 - lambda 直接回傳 `ToHttpResultAsync()` 時不要加 `async`，否則回傳型別變成 `Task<Task<…>>`，OpenAPI 產生錯誤的 schema。
 - SSE 端點用 `ToStreamResultAsync(http)`：串流開始前的失敗回 problem，開始後改寫一個 `error` 事件。
 - 使用者一律用 `ICurrentUser`（同步 `Id`），不要在新程式呼叫 `CurrentUser.GetAsync`。
-- 時間一律用注入的 `TimeProvider`，不要直接呼叫 `DateTimeOffset.UtcNow`。
+- 時間一律用注入的 `TimeProvider`；`DateTimeOffset.UtcNow`、`DateTime.Now` 等由 BannedApiAnalyzers 擋下（清單在 `backend/src/BannedSymbols.txt`）。實體的建立時間在 `Add` 時由 `CreationTime` 從 `NexusDbContext.Clock` 補上；`Add` 之前就要讀取時間的程式自行設定。
 - 直接使用 `NexusDbContext`；不要新增 repository 或只轉送呼叫的 service。
 - 一個使用者能放大成本的端點（送出、上傳、外部呼叫、匯出）在模組 `AddServices` 用 `options.AddPerUserLimit(名稱, 每分鐘次數)` 註冊，端點加 `.RequireRateLimiting(名稱)`。
 - 日誌寫成 `[LoggerMessage]` 方法，EventId 固定且唯一，見 [LOG_EVENTS](LOG_EVENTS.md)；直接呼叫 `LogWarning` 等會編譯失敗。

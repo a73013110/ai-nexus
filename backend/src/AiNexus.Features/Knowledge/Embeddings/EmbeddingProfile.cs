@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -27,7 +28,7 @@ public sealed class EmbeddingProfile
     [Comment("業務執行狀態。")]
     public string Status { get; set; } = "building";
     [Comment("資料建立時間，採 UTC offset。")]
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
     [Comment("此 profile 完整覆蓋並切換為 active 的 UTC 時間。")]
     public DateTimeOffset? ActivatedAt { get; set; }
     [Comment("此 profile 退役的 UTC 時間；作為保留期清理依據。")]
@@ -38,6 +39,7 @@ internal sealed class EmbeddingProfileConfiguration : IEntityTypeConfiguration<E
 {
     public void Configure(EntityTypeBuilder<EmbeddingProfile> profile)
     {
+        profile.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
         profile.ToTable("EmbeddingProfiles", "knowledge"); profile.HasKey(x => x.Id);
         profile.Property(x => x.Key).HasMaxLength(200); profile.HasIndex(x => x.Key).IsUnique();
         profile.Property(x => x.Provider).HasMaxLength(32); profile.Property(x => x.Model).HasMaxLength(160); profile.Property(x => x.InputFormat).HasMaxLength(32);

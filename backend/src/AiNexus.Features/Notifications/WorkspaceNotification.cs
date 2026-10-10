@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -30,7 +31,7 @@ public sealed class WorkspaceNotification
     [Comment("通知所指向的業務識別碼。")]
     public Guid TargetId { get; set; }
     [Comment("資料建立時間，採 UTC offset。")]
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
     [Comment("通知已閱讀的時間；空值代表未讀。")]
     public DateTimeOffset? ReadAt { get; set; }
     [Comment("通知移除的時間；空值代表仍可查看。")]
@@ -48,6 +49,7 @@ internal sealed class WorkspaceNotificationConfiguration : IEntityTypeConfigurat
 {
     public void Configure(EntityTypeBuilder<WorkspaceNotification> n)
     {
+        n.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
         n.ToTable("Notifications", "notifications"); n.HasKey(x => x.Id);
         n.Property(x => x.IssueCode).HasMaxLength(40); n.Property(x => x.EventKey).HasMaxLength(160); n.Property(x => x.Type).HasMaxLength(80); n.Property(x => x.Severity).HasMaxLength(16);
         n.Property(x => x.Title).HasMaxLength(180); n.Property(x => x.Body).HasMaxLength(600); n.Property(x => x.TargetKind).HasMaxLength(32);

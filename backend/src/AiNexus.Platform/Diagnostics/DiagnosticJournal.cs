@@ -16,12 +16,13 @@ public interface IDiagnosticJournal
 public sealed class DiagnosticCapacityException() : IOException("Diagnostic capacity exhausted.");
 
 /// <summary>Append-only daily/size segments, fsync before SQL, atomic byte checkpoints after SQL commit.</summary>
-public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, DiagnosticHealth health, IHostEnvironment environment) : IDiagnosticJournal, IDisposable
+public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, DiagnosticHealth health, IHostEnvironment environment, TimeProvider? clock = null) : IDiagnosticJournal, IDisposable
 {
     private const int MaximumRecordBytes = 65536;
     private static readonly JsonSerializerOptions Json = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping, MaxDepth = 8 };
     private readonly string root = Resolve(options.Value.Directory, environment);
     private readonly string session = Guid.NewGuid().ToString("N");
+    private readonly TimeProvider clock = clock ?? TimeProvider.System;
     private FileStream? owner, writer;
     private string? currentFile;
     private DateOnly currentDate;
@@ -113,7 +114,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
         await using var capacity = await CapacityLeaseAsync(ct);
         MeasureUsage();
         if (Interlocked.Read(ref health.DiskBytes) + bytes > options.Value.MaxDiskBytes) throw new DiagnosticCapacityException();
-        var day = DateOnly.FromDateTime(DateTime.UtcNow); var index = 0;
+        var day = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime); var index = 0;
         while (index < records.Length)
         {
             if (writer is null || day != currentDate || writer.Length + records[index].Length > options.Value.FileSizeBytes)
@@ -131,7 +132,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
             }
             catch { try { writer.SetLength(position); writer.Position = position; } catch (IOException) { } throw; }
             Interlocked.Add(ref health.DiskBytes, writer.Position - position); Interlocked.Add(ref health.PendingBytes, writer.Position - position);
-            Interlocked.Add(ref health.Written, count); health.LastFileWrite = DateTimeOffset.UtcNow;
+            Interlocked.Add(ref health.Written, count); health.LastFileWrite = clock.GetUtcNow();
         }
     }
     private static long Cursor(string path)
@@ -168,7 +169,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
                         var result = await ReadAsync(file, offset, !own || file != currentFile, ct);
                         if (result.Events.Count > 0)
                         {
-                            await store.WriteAsync(result.Events, ct); Interlocked.Add(ref health.Replayed, result.Events.Count); health.LastSqlWrite = DateTimeOffset.UtcNow;
+                            await store.WriteAsync(result.Events, ct); Interlocked.Add(ref health.Replayed, result.Events.Count); health.LastSqlWrite = clock.GetUtcNow();
                         }
                         if (result.Offset <= offset) break;
                         var temporary = file + ".cursor.tmp";
@@ -243,7 +244,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
                         if (file == currentFile) continue;
                         var info = new FileInfo(file);
                         // Unacknowledged data is never removed to meet a retention/capacity target.
-                        if (info.LastWriteTimeUtc < DateTime.UtcNow.AddDays(-options.Value.FileRetentionDays) && Cursor(file) == info.Length)
+                        if (info.LastWriteTimeUtc < clock.GetUtcNow().UtcDateTime.AddDays(-options.Value.FileRetentionDays) && Cursor(file) == info.Length)
                         { File.Delete(file); File.Delete(file + ".cursor"); File.Delete(file + ".cursor.tmp"); remaining--; }
                     }
                 }

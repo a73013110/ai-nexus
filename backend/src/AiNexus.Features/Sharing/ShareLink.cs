@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -30,7 +31,7 @@ public sealed class ShareLink
     [Comment("分享是否已撤銷。")]
     public bool IsRevoked { get; set; }
     [Comment("資料建立時間，採 UTC offset。")]
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
     [Comment("分享到期時間。")]
     public DateTimeOffset ExpiresAt { get; set; }
 }
@@ -39,6 +40,7 @@ internal sealed class ShareLinkConfiguration : IEntityTypeConfiguration<ShareLin
 {
     public void Configure(EntityTypeBuilder<ShareLink> link)
     {
+        link.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
         link.ToTable("ShareLinks", "sharing"); link.HasKey(x => x.Id);
         link.Property(x => x.Kind).HasMaxLength(24); link.Property(x => x.Title).HasMaxLength(120);
         link.HasIndex(x => new { x.OwnerId, x.CreatedAt }); link.HasIndex(x => x.ExpiresAt);

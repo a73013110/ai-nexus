@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -30,9 +31,9 @@ public sealed class ModelPrice
     [Comment("使用者提供的補充說明。")]
     public string Note { get; set; } = "";
     [Comment("此價格版本開始生效的時間。")]
-    public DateTimeOffset EffectiveAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset EffectiveAt { get; set; }
     [Comment("資料建立時間，採 UTC offset。")]
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
     [Comment("建立紀錄的使用者識別碼。")]
     public Guid CreatedBy { get; set; }
 }
@@ -41,6 +42,8 @@ internal sealed class ModelPriceConfiguration : IEntityTypeConfiguration<ModelPr
 {
     public void Configure(EntityTypeBuilder<ModelPrice> price)
     {
+        price.Property(x => x.EffectiveAt).HasValueGenerator<CreationTime>();
+        price.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
         price.ToTable("ModelPrices", "billing"); price.HasKey(x => x.Id);
         price.HasIndex(x => new { x.Provider, x.ModelId, x.EffectiveAt }).IsUnique();
         price.Property(x => x.Provider).HasMaxLength(32); price.Property(x => x.ModelId).HasMaxLength(160);

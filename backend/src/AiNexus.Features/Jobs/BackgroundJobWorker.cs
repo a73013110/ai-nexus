@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Jobs;
 
-public sealed partial class BackgroundJobWorker(IServiceScopeFactory scopes, StorageReadiness readiness, ILogger<BackgroundJobWorker> logger, Issues issues) : BackgroundService
+public sealed partial class BackgroundJobWorker(IServiceScopeFactory scopes, StorageReadiness readiness, ILogger<BackgroundJobWorker> logger, Issues issues, TimeProvider clock) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -23,7 +23,7 @@ public sealed partial class BackgroundJobWorker(IServiceScopeFactory scopes, Sto
     public async Task<bool> ProcessNextAsync(CancellationToken stop)
     {
         using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         var candidate = await db.Set<BackgroundJob>().AsNoTracking().Where(x => x.Status == "queued" || (x.Status == "running" && x.LeaseUntil < now)).OrderBy(x => x.CreatedAt).Select(x => (Guid?)x.Id).FirstOrDefaultAsync(stop);
         if (candidate is not Guid id) return false;
         var lease = Guid.NewGuid();
@@ -72,7 +72,7 @@ public sealed partial class BackgroundJobWorker(IServiceScopeFactory scopes, Sto
         var finished = await db.Set<BackgroundJob>().Where(x => x.Id == id && x.LeaseToken == lease && x.Status == "running")
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, x => x.CancelRequested ? "cancelled" : status).SetProperty(x => x.Stage, x => x.CancelRequested ? "已取消" : status == "completed" ? "處理完成" : status == "cancelled" ? "已取消" : "需要重試")
              .SetProperty(x => x.LeaseToken, (Guid?)null).SetProperty(x => x.LeaseUntil, (DateTimeOffset?)null).SetProperty(x => x.ActiveKey, (string?)null)
-             .SetProperty(x => x.ErrorCode, code).SetProperty(x => x.IssueCode, issue).SetProperty(x => x.ErrorMessage, message).SetProperty(x => x.UpdatedAt, DateTimeOffset.UtcNow), CancellationToken.None);
+             .SetProperty(x => x.ErrorCode, code).SetProperty(x => x.IssueCode, issue).SetProperty(x => x.ErrorMessage, message).SetProperty(x => x.UpdatedAt, clock.GetUtcNow()), CancellationToken.None);
         if (finished == 1) {
             var final = await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(x => x.Id == id, CancellationToken.None);
             await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Notifications.NotificationService>().PublishAsync(final.OwnerId,
@@ -94,7 +94,7 @@ public sealed partial class BackgroundJobWorker(IServiceScopeFactory scopes, Sto
                 await Task.Delay(2000, ct);
                 using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
                 var count = await db.Set<BackgroundJob>().Where(x => x.Id == id && x.LeaseToken == lease && x.Status == "running" && !x.CancelRequested)
-                    .ExecuteUpdateAsync(p => p.SetProperty(x => x.LeaseUntil, DateTimeOffset.UtcNow.AddSeconds(60)), ct);
+                    .ExecuteUpdateAsync(p => p.SetProperty(x => x.LeaseUntil, clock.GetUtcNow().AddSeconds(60)), ct);
                 if (count == 0) { execution.Cancel(); return; }
             }
         }

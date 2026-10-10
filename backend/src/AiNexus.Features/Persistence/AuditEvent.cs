@@ -34,13 +34,14 @@ public sealed class AuditEvent
     [Comment("稽核前後狀態或操作範圍 JSON；不含密碼、hash、token 或對話內容。")]
     public string? DetailsJson { get; set; }
     [Comment("稽核事件發生時間。")]
-    public DateTimeOffset At { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset At { get; set; }
 }
 
 internal sealed class AuditEventConfiguration : IEntityTypeConfiguration<AuditEvent>
 {
     public void Configure(EntityTypeBuilder<AuditEvent> audit)
     {
+        audit.Property(x => x.At).HasValueGenerator<CreationTime>();
         audit.ToTable("AuditEvents", "audit");
         audit.HasKey(x => x.Id);
         audit.Property(x => x.Action).HasMaxLength(64);

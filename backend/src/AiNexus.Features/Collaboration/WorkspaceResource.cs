@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -21,9 +22,9 @@ public sealed class WorkspaceResource
     [Comment("是否邏輯刪除；不自動刪除歷史紀錄。")]
     public bool IsDeleted { get; set; }
     [Comment("資料建立時間，採 UTC offset。")]
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
     [Comment("資料最後修改時間，採 UTC offset。")]
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; set; }
 }
 [Comment("資源對具名使用者授予的閱讀或編輯權限。")]
 public sealed class ResourceMember
@@ -52,6 +53,8 @@ internal sealed class WorkspaceResourceConfiguration : IEntityTypeConfiguration<
 {
     public void Configure(EntityTypeBuilder<WorkspaceResource> resource)
     {
+        resource.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
+        resource.Property(x => x.UpdatedAt).HasValueGenerator<CreationTime>();
         resource.ToTable("Resources", "collaboration"); resource.HasKey(x => x.Id);
         resource.Property(x => x.Kind).HasMaxLength(24); resource.Property(x => x.Name).HasMaxLength(120);
         resource.HasIndex(x => new { x.OwnerId, x.Kind, x.UpdatedAt });
