@@ -65,6 +65,20 @@ public static class Problems
     public static async Task<Results<TSuccess, ProblemHttpResult>> ToHttpResultAsync<T, TSuccess>(this Task<Result<T>> result, Func<T, TSuccess> success)
         where TSuccess : IResult => (await result).ToHttpResult(success);
 
+    /// <summary>
+    /// For a server-sent event stream: a failure before the stream started is a problem response; after it started, the
+    /// stream ends with an <c>error</c> event carrying the same public problem.
+    /// </summary>
+    public static async Task<Results<EmptyHttpResult, ProblemHttpResult>> ToStreamResultAsync(this Task<Result> result, HttpContext http)
+    {
+        var outcome = await result;
+        if (outcome.IsSuccess) return TypedResults.Empty;
+        if (!http.Response.HasStarted) return outcome.Error.ToProblem();
+        if (!http.RequestAborted.IsCancellationRequested)
+            await Issues.WriteEventAsync(http, http.RequestServices.GetRequiredService<Issues>().Problem(Status(outcome.Error.Kind), outcome.Error.Code));
+        return TypedResults.Empty;
+    }
+
     /// <summary>Writes a problem from middleware that runs outside endpoint execution.</summary>
     public static Task WriteAsync(HttpContext http, int status, string code)
         => http.RequestServices.GetRequiredService<IProblemDetailsService>()

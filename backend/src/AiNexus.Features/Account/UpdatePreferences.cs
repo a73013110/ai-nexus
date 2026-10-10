@@ -24,7 +24,7 @@ internal sealed class UpdatePreferences(NexusDbContext db, ModelPresentation mod
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/preferences", async (PreferencesDto body, ICurrentUser user, UpdatePreferences handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.User, body, ct)).ToHttpResult())
-        .WithName("UpdatePreferences").Produces<PreferencesDto>();
+        .WithName("UpdatePreferences");
 
     public async Task<Result<PreferencesDto>> HandleAsync(NexusUser user, PreferencesDto value, CancellationToken ct)
     {

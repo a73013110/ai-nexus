@@ -118,6 +118,10 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
     private static partial void LogRejection(ILogger logger, LogLevel level, Exception? exception, string errorCode, string issueCode);
 
     // Only Problems' writer calls this; everything else goes through IProblemDetailsService.
+    /// <summary>The problem as the final <c>error</c> event of a server-sent event stream that has already started.</summary>
+    internal static Task WriteEventAsync(HttpContext http, PublicProblem problem)
+        => http.Response.WriteAsync("event: error\ndata: " + System.Text.Json.JsonSerializer.Serialize(new { status = problem.Status, code = problem.Code, message = problem.Status >= 500 ? Message(problem.IssueCode) : problem.Title, issueCode = problem.IssueCode }) + "\n\n", http.RequestAborted);
+
     internal static Task WriteAsync(HttpContext http, PublicProblem problem, IReadOnlyDictionary<string, string[]>? errors = null)
         => Results.Json(new SafeProblemDetails("urn:ai-nexus:problem:" + problem.Code, problem.Title, problem.Status, problem.Code, problem.IssueCode, errors),
             statusCode: problem.Status, contentType: "application/problem+json").ExecuteAsync(http);
@@ -158,10 +162,7 @@ public sealed partial class DiagnosticRequestMiddleware(RequestDelegate next)
                 ["Route"] = (http.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText, ["StatusCode"] = Issues.Classify(exception).Status });
             if (!http.Response.HasStarted) { http.Response.Clear(); WebSecurity.Headers(http); await Problems.WriteAsync(http, exception); }
             else if (http.Response.ContentType?.StartsWith("text/event-stream", StringComparison.OrdinalIgnoreCase) == true && !http.RequestAborted.IsCancellationRequested)
-            {
-                var problem = issues.Problem(exception);
-                await http.Response.WriteAsync("event: error\ndata: " + System.Text.Json.JsonSerializer.Serialize(new { status = problem.Status, code = problem.Code, message = problem.Status >= 500 ? Issues.Message(problem.IssueCode) : problem.Title, issueCode = problem.IssueCode }) + "\n\n", http.RequestAborted);
-            }
+                await Issues.WriteEventAsync(http, issues.Problem(exception));
             else http.Abort();
         }
         finally

@@ -26,7 +26,7 @@ internal sealed class GetDashboard(NexusDbContext db, SpendReports reports, Usag
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
         .MapGet("/dashboard", async (string? scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, GetDashboard handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, scope ?? "personal", ownerId, from, until, offsetMinutes, ct)).ToHttpResult())
-        .RequireAuthorization(Policies.Dashboard).WithName("GetDashboard").Produces<DashboardDto>();
+        .RequireAuthorization(Policies.Dashboard).WithName("GetDashboard");
 
     public async Task<Result<DashboardDto>> HandleAsync(Guid actor, string scope, Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offset, CancellationToken ct)
     {

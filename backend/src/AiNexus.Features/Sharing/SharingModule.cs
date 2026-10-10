@@ -13,8 +13,6 @@ public sealed class SharingModule : IFeatureModule
     {
         builder.Services.AddScoped<ShareService>();
         builder.Services.AddScoped<ShareAccess>();
-        builder.Services.AddScoped<CreateShare>();
-        builder.Services.AddScoped<OpenSharedFile>();
         builder.Services.AddSingleton<ShareWriteLock>();
         builder.Services.AddHostedService<ShareCleanupWorker>();
         builder.Services.AddFeaturePolicy(FeatureIds.Shared);

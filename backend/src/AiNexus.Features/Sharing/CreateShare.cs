@@ -43,8 +43,7 @@ internal sealed class CreateShare(NexusDbContext db, ResourceAccess access, Shar
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("", async (CreateShareRequest body, ICurrentUser user, CreateShare handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, body, ct)).ToHttpResult())
-        .Produces<ShareDto>();
+            (await handler.HandleAsync(user.Id, body, ct)).ToHttpResult());
 
     private sealed record SourceSnapshot(string Title, ShareSnapshot Snapshot, Guid[] Files);
 
@@ -89,8 +88,9 @@ internal sealed class CreateShare(NexusDbContext db, ResourceAccess access, Shar
     {
         if (request.Kind == "artifact")
         {
-            var source = (await access.OwnerAsync(actor, request.SourceId, "artifact", ct)).OrThrow();
-            var item = await db.Set<Artifact>().AsNoTracking().SingleAsync(x => x.Id == source.Id, ct);
+            var source = await access.OwnerAsync(actor, request.SourceId, "artifact", ct);
+            if (!source.IsSuccess) return source.Error;
+            var item = await db.Set<Artifact>().AsNoTracking().SingleAsync(x => x.Id == source.Value.Id, ct);
             var version = request.ArtifactVersion ?? item.Version;
             var revision = await db.Set<ArtifactRevision>().AsNoTracking().SingleOrDefaultAsync(x => x.ArtifactId == item.Id && x.Version == version, ct);
             if (revision is null) return SharingErrors.Unavailable;

@@ -23,23 +23,23 @@ public sealed class MonitoringStreams
 
 /// <summary>
 /// Server-sent snapshots for up to ten minutes, at most three streams per user. The view is audited once; every 15 seconds
-/// a fresh scope re-checks the monitoring grant and a testing identity's administrator, so revocation ends the stream.
-/// Failures after the stream starts can only end it, so they stay exceptions.
+/// a fresh scope re-checks the monitoring grant and a testing identity's administrator, so revocation ends the stream
+/// with an error event.
 /// </summary>
-internal static class StreamMonitoringSnapshots
+internal sealed class StreamMonitoringSnapshots(RuntimeTraffic traffic, MonitoringStreams streams, NexusDbContext db, IServiceScopeFactory scopes, IOptions<MonitoringOptions> options, TimeProvider clock)
 {
-    // A method group, unlike the other slices' lambdas; the published contract was generated from it.
     public static void Map(RouteGroupBuilder monitor) => monitor
-        .MapGet("/events", StreamAsync).WithName("StreamMonitoringSnapshots").Produces<MonitoringSnapshot>(200, "text/event-stream");
+        .MapGet("/events", (int? minutes, HttpContext http, ICurrentUser user, StreamMonitoringSnapshots handler, CancellationToken ct) =>
+            handler.HandleAsync(http, user.Id, minutes ?? 5, ct).ToStreamResultAsync(http))
+        .WithName("StreamMonitoringSnapshots").Produces<MonitoringSnapshot>(200, "text/event-stream");
 
-    private static async Task StreamAsync(int? minutes, HttpContext http, RuntimeTraffic traffic, MonitoringStreams streams,
-        ICurrentUser user, NexusDbContext db, IServiceScopeFactory scopes, IOptions<MonitoringOptions> options, TimeProvider clock, CancellationToken ct)
+    public async Task<Result> HandleAsync(HttpContext http, Guid user, int window, CancellationToken ct)
     {
-        var window = minutes ?? 5; traffic.Snapshot(window); // Validate before sending headers.
-        if (!streams.Enter(user.Id)) throw new ApiException(429, "rate_limited", "");
+        if (!MonitoringReads.ValidWindow(window)) return MonitoringErrors.InvalidWindow;
+        if (!streams.Enter(user)) return MonitoringErrors.StreamLimit;
         try
         {
-            await MonitoringReads.AuditAsync(db, user.Id, "monitoring.view", ct);
+            await MonitoringReads.AuditAsync(db, user, "monitoring.view", ct);
             http.Response.ContentType = "text/event-stream";
             http.Response.Headers.CacheControl = "no-store"; http.Response.Headers["X-Accel-Buffering"] = "no";
             http.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpResponseBodyFeature>()?.DisableBuffering();
@@ -51,27 +51,29 @@ internal static class StreamMonitoringSnapshots
                 {
                     // Fresh scopes re-read account versions and grants; a long-lived stream must honor revocation.
                     await using var scope = scopes.CreateAsyncScope();
-                    var identity = (await scope.ServiceProvider.GetRequiredService<CurrentUser>().GetAsync(ct)).OrThrow();
+                    var identity = await scope.ServiceProvider.GetRequiredService<CurrentUser>().GetAsync(ct);
+                    if (!identity.IsSuccess) return identity.Error;
                     var access = scope.ServiceProvider.GetRequiredService<AccessService>();
-                    if (!(await access.ForUserAsync(identity.Id, ct)).Features.Any(x => x.Id == MonitoringModule.Feature))
-                        throw new ApiException(403, "feature_forbidden", "");
+                    if (!(await access.ForUserAsync(identity.Value.Id, ct)).Features.Any(x => x.Id == MonitoringModule.Feature))
+                        return MonitoringErrors.FeatureForbidden;
                     if (Guid.TryParse(http.User.FindFirstValue(SessionIdentity.ActorId), out var actorId))
                     {
                         var actor = await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == actorId, ct);
                         if (actor is null || !SessionIdentity.Allows(actor, http.User.FindFirstValue(SessionIdentity.ActorMethod)) || !SessionIdentity.MatchesVersion(actor, http.User.FindFirstValue(SessionIdentity.ActorVersion)))
-                            throw new ApiException(401, "session_revoked", "");
+                            return MonitoringErrors.SessionRevoked;
                         if (!long.TryParse(http.User.FindFirstValue(SessionIdentity.TestExpires), out var testExpires) || testExpires <= clock.GetUtcNow().ToUnixTimeSeconds() ||
                             !Guid.TryParse(http.User.FindFirstValue(SessionIdentity.TestId), out var testId) ||
                             await scope.ServiceProvider.GetRequiredService<NexusDbContext>().AuditEvents.AsNoTracking().AnyAsync(x => x.ResourceId == testId && x.OwnerId == actorId && x.Action == "identity.test_end", ct) ||
                             !(await access.ForUserAsync(actorId, ct)).Features.Any(x => x.Id == "admin"))
-                            throw new ApiException(401, "session_revoked", "");
+                            return MonitoringErrors.SessionRevoked;
                     }
                     nextCheck = clock.GetUtcNow().AddSeconds(15);
                 }
                 await http.Response.WriteAsync("event: snapshot\ndata: " + JsonSerializer.Serialize(traffic.Snapshot(window), JsonSerializerOptions.Web) + "\n\n", ct);
                 await http.Response.Body.FlushAsync(ct);
             } while (clock.GetUtcNow() < expires && await timer.WaitForNextTickAsync(ct));
+            return Result.Success;
         }
-        finally { streams.Exit(user.Id); }
+        finally { streams.Exit(user); }
     }
 }
