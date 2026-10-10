@@ -56,8 +56,8 @@ dotnet dev-certs https --trust
 | `db/` | 發布用的 migration SQL、資料表說明腳本、外部來源的授權 view |
 | `deploy/` | IIS 部署說明 |
 | `docs/` | 長期文件；改哪類程式該讀哪份，見 `CLAUDE.md` 的表格 |
-| `scripts/` | PowerShell 入口：還原、建置、啟動、驗證、發布，見 [開發](docs/DEVELOPMENT.md) |
-| `tooling/` | 非建置必需的工具：`contracts/` 由 OpenAPI 產生前端 `schema.ts`，`embeddings/` 比較 embedding 模型 |
+| `scripts/` | PowerShell 入口：還原、建置、啟動、驗證、發布；共用函式在 `AiNexus/` 模組，腳本測試在 `tests/`，見 [開發](docs/DEVELOPMENT.md) |
+| `tooling/` | 非建置必需的工具：`contracts/` 由 OpenAPI 產生前端 `schema.ts`，`embeddings/` 比較 embedding 模型與實測本地 Ollama |
 | `.github/` | 手動觸發的 CI，以及每月一次、依生態系合併成一個 PR 的 Dependabot |
 | `.config/dotnet-tools.json` | 固定 `dotnet-ef` 版本（`dotnet tool restore`） |
 | `global.json` | 固定 .NET SDK 版本與測試執行器 |
@@ -93,10 +93,9 @@ Google 與 Ollama 可同時啟用，各自排程、容量與故障隔離；預�
 
 ```powershell
 ./scripts/Verify.ps1
-./scripts/Test-Connections.ps1
-./scripts/Test-SqlCapabilities.ps1
+./scripts/Test-Environment.ps1
 ```
 
-Verify 使用獨立資料庫、test provider 與 Edge fixtures；真實 AD／SQL／模型另用 Test-Connections，會使用模型配額。Test-SqlCapabilities 檢查實際 SQL、原生向量及精確 cosine。報告／截圖在 artifacts，提交前 stage 後執行 `./scripts/Test-Repository.ps1`。
+Verify 使用獨立資料庫與 test provider；`-Browser` 加跑 Edge 瀏覽器測試。真實 AD／SQL／模型另用 Test-Environment（SQL 能力、原生向量及精確 cosine，再實測連線），會使用模型配額。報告／截圖在 artifacts，提交前 stage 後執行 `./scripts/Test-Repository.ps1`。每支腳本的參數用 `Get-Help ./scripts/<名稱>.ps1 -Detailed` 查看。
 
 每個 IIS app 使用一個 worker；聊天 executor 租約避免共用 SQL 的實例互相中止生成，但排程與模型容量仍在各程序內。首次升級須停止所有舊 host。文件及評測已有 durable 租約／checkpoint。原檔存站外，預設每人 5 GB，個人 override 優先於群組。完成回答顯示並保存耗時與 tokens。JSON 文字備份不含原檔，完整備份須包含同一時點的 SQL 與附件目錄，見 [備份與還原](docs/BACKUP.md)。公文／校務 adapter 與授權 view 契約已準備，實際連線／view 仍需設定；正式 IIS、來源 ACL、區網隔離、效能及備份還原需實機驗收。

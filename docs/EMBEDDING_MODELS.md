@@ -10,11 +10,11 @@ Google provider 保留 batch embedding API，使用 Inference 的 Google key；n
 
 從品質 → 檢索評測選最多三個授權知識庫、匯入 1–20 題驗收集，四模式執行 vector／keyword／hybrid／hybrid+rerank，計算 Recall@K、MRR、分級 nDCG@K、無來源拒答率與各階段 p50／p95。範例格式與報告定義見 [QUALITY](QUALITY.md)。應涵蓋文號、日期、單位、中文條文、同義詞、跨頁與無答案；以固定文件與設定比較，分開記錄冷啟動／快取效應。未啟用重排或降級的結果有明確模式，不能當成完整四方案比較。
 
-原有 `scripts/Compare-Embeddings.ps1` 可做模型的獨立 dense cosine 比較：
+`tooling/embeddings/Compare-Embeddings.ps1` 可做模型的獨立 dense cosine 比較：
 
 ```powershell
-./scripts/Compare-Embeddings.ps1 -ValidateOnly
-./scripts/Compare-Embeddings.ps1 -Endpoint 'http://localhost:11434/' -TopK 3
+./tooling/embeddings/Compare-Embeddings.ps1 -ValidateOnly
+./tooling/embeddings/Compare-Embeddings.ps1 -Endpoint 'http://localhost:11434/' -TopK 3
 ```
 
 使用 `tooling/embeddings/profiles.json` 與合成 corpus，真實資料放 .local，以 -ProfilesPath／-CorpusPath 指定。舊工具 corpus 是 documents[{id,text}] + queries[{id,text,relevantDocumentIds}]，只比較固定片段的 embedding；品質頁 corpus 使用已入庫文件 UUID／頁碼，能測實際切段、FTS、ACL 與重排。兩者不宣稱是生成回答正確率。

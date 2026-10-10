@@ -1,37 +1,53 @@
 #requires -Version 7.4
+
+<#
+.SYNOPSIS
+互動輸入本機的 SQL、AD 與 Google AI 設定。
+
+.DESCRIPTION
+一般參數寫入 .local/config/appsettings.Local.json，密碼與 key 以遮蔽輸入寫入 .local/secrets/appsettings.Secrets.json
+（只有目前使用者可讀）。每一項按 Enter 保留現有值。其餘設定直接編輯這兩個檔案，見 docs/CONFIGURATION.md。
+
+.EXAMPLE
+./scripts/Configure-Local.ps1
+#>
+[CmdletBinding()]
+param()
+Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot 'Local-Settings.ps1')
-Initialize-NexusLocalSettings
-$taskPaths = Get-NexusLocalPaths
-$taskConfig = [System.IO.File]::ReadAllText($taskPaths.Settings) | ConvertFrom-Json -AsHashtable
-$taskSecrets = [System.IO.File]::ReadAllText($taskPaths.Secrets) | ConvertFrom-Json -AsHashtable
-function Read-NexusSecret([string]$Prompt) {
-    $taskSecure = Read-Host $Prompt -AsSecureString
-    try { return [System.Net.NetworkCredential]::new('', $taskSecure).Password }
-    finally { $taskSecure.Dispose() }
+Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
+
+function Read-Secret([string]$Prompt) {
+    $secure = Read-Host $Prompt -AsSecureString
+    try { [Net.NetworkCredential]::new('', $secure).Password }
+    finally { $secure.Dispose() }
 }
+
+$local = Initialize-NexusLocalSettings
+$settings = Read-NexusJson $local.Settings
+$secrets = Read-NexusJson $local.Secrets
 Write-Output 'Enter 保留現有值。密碼與 key 以遮蔽輸入，儲存於 .local/secrets。'
-foreach ($taskField in @(
-    @{ Section = 'Database'; Name = 'Server'; Prompt = 'SQL server／instance' },
-    @{ Section = 'Database'; Name = 'Name'; Prompt = '專用資料庫名稱' },
-    @{ Section = 'Identity.ActiveDirectory'; Name = 'Url'; Prompt = 'AD LDAP URL 與 Base DN' },
-    @{ Section = 'Identity.ActiveDirectory'; Name = 'DnUser'; Prompt = 'AD 服務帳號 DN' },
-    @{ Section = 'Identity.ActiveDirectory'; Name = 'Domain'; Prompt = 'AD 網域名稱' }
+foreach ($field in @(
+    @{ Path = 'Database.Server'; Prompt = 'SQL server／instance' },
+    @{ Path = 'Database.Name'; Prompt = '專用資料庫名稱' },
+    @{ Path = 'Identity.ActiveDirectory.Url'; Prompt = 'AD LDAP URL 與 Base DN' },
+    @{ Path = 'Identity.ActiveDirectory.DnUser'; Prompt = 'AD 服務帳號 DN' },
+    @{ Path = 'Identity.ActiveDirectory.Domain'; Prompt = 'AD 網域名稱' }
 )) {
-    $taskValue = Read-Host ($taskField.Prompt + '（Enter 保留）')
-    if ($taskValue) { Set-NexusSetting $taskConfig ($taskField.Section + '.' + $taskField.Name) $taskValue.Trim() }
+    $value = Read-Host "$($field.Prompt)（Enter 保留）"
+    if ($value) { Set-NexusSetting $settings $field.Path $value.Trim() }
 }
-foreach ($taskField in @(
-    @{ Section = 'Database'; Name = 'User'; Prompt = '既有 SQL 登入帳號' },
-    @{ Section = 'Database'; Name = 'Password'; Prompt = 'SQL 密碼' },
-    @{ Section = 'Identity.ActiveDirectory'; Name = 'DnPass'; Prompt = 'AD 服務帳號密碼' },
-    @{ Section = 'Inference.Providers.Google'; Name = 'ApiKey'; Prompt = 'Google AI API key' }
+foreach ($field in @(
+    @{ Path = 'Database.User'; Prompt = '既有 SQL 登入帳號' },
+    @{ Path = 'Database.Password'; Prompt = 'SQL 密碼' },
+    @{ Path = 'Identity.ActiveDirectory.DnPass'; Prompt = 'AD 服務帳號密碼' },
+    @{ Path = 'Inference.Providers.Google.ApiKey'; Prompt = 'Google AI API key' }
 )) {
-    $taskValue = Read-NexusSecret ($taskField.Prompt + '（遮蔽輸入，Enter 保留）')
-    if ($taskValue) { Set-NexusSetting $taskSecrets ($taskField.Section + '.' + $taskField.Name) $taskValue }
+    $value = Read-Secret "$($field.Prompt)（遮蔽輸入，Enter 保留）"
+    if ($value) { Set-NexusSetting $secrets $field.Path $value }
 }
-Save-NexusJson $taskPaths.Settings $taskConfig
-Save-NexusJson $taskPaths.Secrets $taskSecrets
-Protect-NexusSecrets $taskPaths.Secrets
-$taskValue = $taskSecrets = $null
+Save-NexusJson $local.Settings $settings
+Save-NexusJson $local.Secrets $secrets
+Protect-NexusSecrets $local.Secrets
+$value = $secrets = $null
 Write-Output '設定已保存。執行 scripts/Initialize-Database.ps1 初始化資料庫，再重新啟動專案。'

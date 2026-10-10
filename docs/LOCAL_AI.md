@@ -7,13 +7,13 @@
 先套用 [資料庫升級](DATABASE.md)，重啟 API，再重新上傳資料。管理 → 知識檢索顯示 SQL 原生向量、全文元件、1028 斷詞器及端點，按「探測模型」使用合成資料檢查實際 batch 數量／維度／rerank 格式；會計入操作人的模型呼叫配額。
 
 ```powershell
-./scripts/Test-LocalAI.ps1 -Endpoint 'http://localhost:11434/' `
+./tooling/embeddings/Test-LocalAI.ps1 -Endpoint 'http://localhost:11434/' `
   -EmbeddingModel bge-m3 -Dimensions 1024
-./scripts/Test-SqlCapabilities.ps1
+./scripts/Test-Environment.ps1 -SqlOnly
 ollama ps
 ```
 
-Test-LocalAI 同時檢查預設聊天模型 qwen3:8b、批次 embedding、短生成、載入與輸出速度；聊天不同時加 -ChatModel。資料僅為合成測試，不送私人原文，不代表多人吞吐或檢索品質。ConnectionVerifier／DeploymentVerifier 也檢查真實合成 embedding 及已啟用 rerank，會有模型運算／載入成本。
+Test-LocalAI 同時檢查預設聊天模型 qwen3:8b、批次 embedding、短生成、載入與輸出速度；聊天不同時加 -ChatModel。資料僅為合成測試，不送私人原文，不代表多人吞吐或檢索品質。主機指令 `verify connections`／`verify deployment` 也檢查真實合成 embedding 及已啟用 rerank，會有模型運算／載入成本。
 
 Ollama 主機與 IIS 分開時，Inference.Providers.Ollama.Endpoint 改成可連的主機位址；只移 embedding 可填 Knowledge.Embedding.Endpoint，空值沿用 Ollama 端點。模型服務位址由伺服器設定，限制可連的應用主機。none 會強制 SQL keyword，需要全文元件，沒有舊 substring／JSON fallback。
 
