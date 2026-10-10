@@ -12,19 +12,12 @@ namespace AiNexus.Features.Chat;
 /// <summary>Run lookup and finishing shared by the run slices, the event stream and the generation worker.</summary>
 public sealed partial class RunService(NexusDbContext db, RunSignals signals, ConversationService conversations, BillingService billing, AiNexus.Features.Notifications.NotificationService notifications, Issues issues, ILogger<RunService> logger, TimeProvider clock)
 {
-    /// <summary>Throwing form of <see cref="FindOwnedAsync"/>, used by the event stream.</summary>
-    public async Task<GenerationRun> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
-    {
-        var run = await FindOwnedAsync(owner, id, ct);
-        return run.IsSuccess ? run.Value : throw new ApiException(404, "run_not_found", "找不到這次生成。");
-    }
-
-    /// <summary>The owner's run. Its conversation must still be theirs; otherwise <see cref="ConversationService.OwnedAsync"/> throws.</summary>
-    internal async Task<Result<GenerationRun>> FindOwnedAsync(Guid owner, Guid id, CancellationToken ct)
+    /// <summary>The owner's run, while its conversation is still theirs.</summary>
+    internal async Task<Result<GenerationRun>> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
     {
         var run = await db.Runs.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct);
         if (run is null) return InferenceErrors.RunNotFound;
-        (await conversations.OwnedAsync(owner, run.ConversationId, ct)).OrThrow();
+        if (await conversations.OwnedAsync(owner, run.ConversationId, ct) is { IsSuccess: false } denied) return denied.Error;
         return run;
     }
 
@@ -42,7 +35,7 @@ public sealed partial class RunService(NexusDbContext db, RunSignals signals, Co
         run.Status = status;
         run.ErrorCode = error;
         if (status == RunStates.Failed) {
-            run.IssueCode = issueCode ?? issues.Report(new ApiException(503, error ?? "generation_failed", ""), error ?? "generation_failed");
+            run.IssueCode = issueCode ?? issues.Report(Error.Unavailable(error ?? "generation_failed"));
         }
         LogFinished(logger, status);
         run.ActiveOwnerId = null;

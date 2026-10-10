@@ -22,7 +22,7 @@ internal sealed class DeleteConversation(NexusDbContext db, GenerationScheduler 
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, DeleteConversation handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
-        .WithName("DeleteConversation").Produces(204);
+        .WithName("DeleteConversation");
 
     public async Task<Result> HandleAsync(Guid owner, Guid id, CancellationToken ct)
     {

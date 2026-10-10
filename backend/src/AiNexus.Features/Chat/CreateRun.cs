@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Runtime.ExceptionServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -46,9 +45,9 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
         .MapPost("/runs", async (CreateRunRequest body, HttpContext http, ICurrentUser user, CreateRun handler, CancellationToken ct) =>
         {
             var run = await handler.HandleAsync(user.Id, body, http.Request.Headers["Idempotency-Key"].ToString(), ct);
-            return run.IsSuccess ? Results.Accepted($"/api/v1/runs/{run.Value.Id}", run.Value) : run.Error.ToProblem();
+            return run.ToHttpResult(created => TypedResults.Accepted($"/api/v1/runs/{created.Id}", created));
         })
-        .WithRequestBodyLimit(InferenceModule.PromptBodyLimit).RequireRateLimiting(ChatModule.SendRateLimit).WithName("CreateRun").Produces<RunDto>(202);
+        .WithRequestBodyLimit(InferenceModule.PromptBodyLimit).RequireRateLimiting(ChatModule.SendRateLimit).WithName("CreateRun");
 
     public async Task<Result<RunDto>> HandleAsync(Guid owner, CreateRunRequest request, string key, CancellationToken ct)
     {
@@ -57,32 +56,40 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
         var previous = await db.Runs.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct);
         if (previous is not null)
         {
-            (await conversations.OwnedAsync(owner, previous.ConversationId, ct)).OrThrow();
+            if (await conversations.OwnedAsync(owner, previous.ConversationId, ct) is { IsSuccess: false } denied) return denied.Error;
             if (previous.RequestHash != hash) return InferenceErrors.IdempotencyConflict;
             return presentation.Run(previous);
         }
         // Everything that needs no mutual exclusion runs before the locks: provider discovery, policy, retrieval, search
         // and the context. The locked section re-checks what can change, then only reserves and saves.
-        var profile = (await models.RequireAsync(request.ModelId, ct)).OrThrow();
-        var effort = ModelCatalog.RequireReasoning(profile, request.ReasoningEffort).OrThrow();
+        var found = await models.RequireAsync(request.ModelId, ct);
+        if (!found.IsSuccess) return found.Error;
+        var profile = found.Value;
+        var effort = ModelCatalog.RequireReasoning(profile, request.ReasoningEffort);
+        if (!effort.IsSuccess) return effort.Error;
         // Fails fast; BudgetAsync enforces model approval and quota again under the owner row lock.
-        (await policies.RequireAsync(owner, profile.Id, ct)).OrThrow();
-        var knowledgeSelection = (await knowledge.SelectionAsync(owner, request.ConversationId, ct)).OrThrow();
+        if (await policies.RequireAsync(owner, profile.Id, ct) is { IsSuccess: false } refused) return refused.Error;
+        var knowledgeSelection = await knowledge.SelectionAsync(owner, request.ConversationId, ct);
+        if (!knowledgeSelection.IsSuccess) return knowledgeSelection.Error;
         var turn = new ConversationTurn(request.ConversationId, request.Prompt, request.ParentMessageId, request.RegenerateUserMessageId);
-        var sources = (await knowledge.ForRunAsync(owner, turn, ct, knowledgeSelection.CollectionIds)).OrThrow();
+        var retrieved = await knowledge.ForRunAsync(owner, turn, ct, knowledgeSelection.Value.CollectionIds);
+        if (!retrieved.IsSuccess) return retrieved.Error;
+        var sources = retrieved.Value;
         WebSearchRecord? search = null;
         if (request.WebSearch)
         {
-            (await conversations.OwnedAsync(owner, request.ConversationId, ct)).OrThrow();
-            if (!scheduler.Ready) throw new ApiException(503, "scheduler_unavailable", "生成服務尚未就緒。");
+            if (await conversations.OwnedAsync(owner, request.ConversationId, ct) is { IsSuccess: false } missing) return missing.Error;
+            if (!scheduler.Ready) return ChatErrors.SchedulerUnavailable;
             if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) return InferenceErrors.GenerationActive;
             var query = request.RegenerateUserMessageId is Guid old ? await db.Messages.Where(x => x.Id == old && x.ConversationId == request.ConversationId && x.Role == "user").Select(x => x.Content).SingleOrDefaultAsync(ct) : request.Prompt;
-            search = (await webSearch.SearchAsync(owner, request.ConversationId, key, hash, query ?? "", ct)).OrThrow();
+            var searched = await webSearch.SearchAsync(owner, request.ConversationId, key, hash, query ?? "", ct);
+            if (!searched.IsSuccess) return searched.Error;
+            search = searched.Value;
         }
         else
         {
             // Cheap early outs before the context is built; both are checked again under the locks.
-            if (!scheduler.Ready) throw new ApiException(503, "scheduler_unavailable", "生成服務尚未就緒，請稍後重試。");
+            if (!scheduler.Ready) return ChatErrors.SchedulerUnavailable;
             if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) return InferenceErrors.GenerationActive;
         }
         var prepared = await PrepareAsync(owner, request, profile, sources, search, ct);
@@ -94,11 +101,11 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             var existing = await db.Runs.SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct);
             if (existing is not null)
             {
-                (await conversations.OwnedAsync(owner, existing.ConversationId, ct)).OrThrow();
+                if (await conversations.OwnedAsync(owner, existing.ConversationId, ct) is { IsSuccess: false } denied) return denied.Error;
                 if (existing.RequestHash != hash) return InferenceErrors.IdempotencyConflict;
                 return presentation.Run(existing);
             }
-            if (!scheduler.Ready) throw new ApiException(503, "scheduler_unavailable", "生成服務尚未就緒，請稍後重試。");
+            if (!scheduler.Ready) return ChatErrors.SchedulerUnavailable;
             if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) return InferenceErrors.GenerationActive;
             if (!(reserved = scheduler.TryReserve())) return InferenceErrors.QueueFull;
             // Keep unbound file removal and binding in the same short critical section; without files nothing is bound.
@@ -114,20 +121,26 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             // that raced in another conversation has committed, so its run is visible here.
             if (await db.Runs.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct) is { } raced)
             {
-                (await conversations.OwnedAsync(owner, raced.ConversationId, ct)).OrThrow();
+                if (await conversations.OwnedAsync(owner, raced.ConversationId, ct) is { IsSuccess: false } denied) return denied.Error;
                 if (raced.RequestHash != hash) return InferenceErrors.IdempotencyConflict;
                 return presentation.Run(raced);
             }
             if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) return InferenceErrors.GenerationActive;
-            var conversation = (await conversations.OwnedAsync(owner, request.ConversationId, ct)).OrThrow();
-            var projectContext = prepared is not null && prepared.ProjectId == conversation.ProjectId ? prepared.ProjectContext : (await projects.ContextAsync(owner, conversation.ProjectId, ct)).OrThrow();
-            var currentSelection = (await knowledge.SelectionAsync(owner, request.ConversationId, ct)).OrThrow();
-            if (!currentSelection.CollectionIds.Order().SequenceEqual(knowledgeSelection.CollectionIds.Order())) return InferenceErrors.KnowledgeSelectionChanged;
-            (await knowledge.ValidateHitsAsync(owner, sources, ct)).OrThrow();
+            var owned = await conversations.OwnedAsync(owner, request.ConversationId, ct);
+            if (!owned.IsSuccess) return owned.Error;
+            var conversation = owned.Value;
+            var projectContext = prepared is not null && prepared.ProjectId == conversation.ProjectId ? prepared.ProjectContext : await projects.ContextAsync(owner, conversation.ProjectId, ct);
+            if (!projectContext.IsSuccess) return projectContext.Error;
+            var currentSelection = await knowledge.SelectionAsync(owner, request.ConversationId, ct);
+            if (!currentSelection.IsSuccess) return currentSelection.Error;
+            if (!currentSelection.Value.CollectionIds.Order().SequenceEqual(knowledgeSelection.Value.CollectionIds.Order())) return InferenceErrors.KnowledgeSelectionChanged;
+            if (await knowledge.ValidateHitsAsync(owner, sources, ct) is { IsSuccess: false } revoked) return revoked.Error;
             if (request.RegenerateUserMessageId is not null && request.AttachmentIds?.Count > 0) return InferenceErrors.RegenerateWithAttachments;
-            var files = (await attachments.RequireAsync(owner, request.AttachmentIds, ct)).OrThrow();
+            var bound = await attachments.RequireAsync(owner, request.AttachmentIds, ct);
+            if (!bound.IsSuccess) return bound.Error;
+            var files = bound.Value;
             var now = clock.GetUtcNow();
-            var parameters = new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, 0.6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, conversation.SystemInstruction) + projectContext + KnowledgeRetrieval.Prompt(sources) + WebSearchService.Prompt(search), effort, profile.ReasoningControl, profile.SupportsImages);
+            var parameters = new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, 0.6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, conversation.SystemInstruction) + projectContext.Value + KnowledgeRetrieval.Prompt(sources) + WebSearchService.Prompt(search), effort.Value, profile.ReasoningControl, profile.SupportsImages);
             var run = new GenerationRun
             {
                 OwnerId = owner, ActiveOwnerId = owner, ConversationId = request.ConversationId, CreatedAt = now,
@@ -137,7 +150,9 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             };
             run.TraceId = Activity.Current?.TraceId.ToHexString() ?? ActivityTraceId.CreateRandom().ToHexString(); run.ParentSpanId = Activity.Current?.SpanId.ToHexString() ?? ActivitySpanId.CreateRandom().ToHexString(); run.OperationId = run.Id;
             await billing.ReserveAsync(run.Id, owner, request.ConversationId, profile.Provider, profile.NativeId, "chat", run.CreatedAt, ct);
-            var (user, assistant) = (await conversations.PrepareGenerationAsync(owner, turn, profile.Id, run.Id, ct)).OrThrow();
+            var saved = await conversations.PrepareGenerationAsync(owner, turn, profile.Id, run.Id, ct);
+            if (!saved.IsSuccess) return saved.Error;
+            var (user, assistant) = saved.Value;
             run.UserMessageId = user.Id;
             run.AssistantMessageId = assistant.Id;
             if (search is not null) search.RunId = run.Id;
@@ -145,11 +160,15 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             foreach (var file in files) db.Set<MessageAttachment>().Add(new() { MessageId = user.Id, AttachmentId = file.Id });
             var fileIds = files.Select(x => x.Id).ToArray();
             if (fileIds.Length > 0) await db.Set<Attachment>().Where(x => fileIds.Contains(x.Id) && x.OwnerId == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);
-            var messages = prepared?.ContextFor(parameters.SystemPrompt, files)
+            var built = prepared?.ContextFor(parameters.SystemPrompt, files)
                 ?? await context.PrepareAsync(request.ConversationId, request.ParentMessageId, request.RegenerateUserMessageId, request.Prompt, files, parameters, ct);
-            await context.RequireImagesAsync(messages, ct);
+            if (!built.IsSuccess) return built.Error;
+            var messages = built.Value;
+            if (await context.RequireImagesAsync(messages, ct) is { IsSuccess: false } unavailable) return unavailable.Error;
             var inputEstimate = MessageCost.Estimate(messages);
-            parameters = (await policies.BudgetAsync(owner, profile.Id, parameters, inputEstimate, run.CreatedAt, ct)).OrThrow();
+            var budget = await policies.BudgetAsync(owner, profile.Id, parameters, inputEstimate, run.CreatedAt, ct);
+            if (!budget.IsSuccess) return budget.Error;
+            parameters = budget.Value;
             run.ReservedTokens = inputEstimate + parameters.MaxOutputTokens;
             run.ParametersJson = JsonSerializer.Serialize(parameters);
             db.Runs.Add(run);
@@ -176,30 +195,26 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
     /// </summary>
     private async Task<PreparedContext?> PrepareAsync(Guid owner, CreateRunRequest request, ModelProfile profile, IReadOnlyList<KnowledgeHitDto> sources, WebSearchRecord? search, CancellationToken ct)
     {
-        try
-        {
-            // Not tracked: the locked section must load the conversation fresh to re-check it.
-            var conversation = await db.Conversations.AsNoTracking().Where(x => x.Id == request.ConversationId && x.OwnerId == owner)
-                .Select(x => new { x.ProjectId, x.SystemInstruction }).SingleOrDefaultAsync(ct);
-            if (conversation is null) return null;
-            var projectContext = (await projects.ContextAsync(owner, conversation.ProjectId, ct)).OrThrow();
-            var files = (await attachments.RequireAsync(owner, request.AttachmentIds, ct)).OrThrow();
-            var systemPrompt = ContextBuilder.SystemPrompt(options.Value.SystemPrompt, conversation.SystemInstruction) + projectContext + KnowledgeRetrieval.Prompt(sources) + WebSearchService.Prompt(search);
-            var parameters = new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, 0.6, systemPrompt, SupportsImages: profile.SupportsImages);
-            try { return new(conversation.ProjectId, projectContext, systemPrompt, files, await context.PrepareAsync(request.ConversationId, request.ParentMessageId, request.RegenerateUserMessageId, request.Prompt, files, parameters, ct), null); }
-            catch (ApiException error) { return new(conversation.ProjectId, projectContext, systemPrompt, files, null, ExceptionDispatchInfo.Capture(error)); }
-        }
-        catch (ApiException) { return null; }
+        // Not tracked: the locked section must load the conversation fresh to re-check it.
+        var conversation = await db.Conversations.AsNoTracking().Where(x => x.Id == request.ConversationId && x.OwnerId == owner)
+            .Select(x => new { x.ProjectId, x.SystemInstruction }).SingleOrDefaultAsync(ct);
+        if (conversation is null) return null;
+        var projectContext = await projects.ContextAsync(owner, conversation.ProjectId, ct);
+        if (!projectContext.IsSuccess) return null;
+        var files = await attachments.RequireAsync(owner, request.AttachmentIds, ct);
+        if (!files.IsSuccess) return null;
+        var systemPrompt = ContextBuilder.SystemPrompt(options.Value.SystemPrompt, conversation.SystemInstruction) + projectContext.Value + KnowledgeRetrieval.Prompt(sources) + WebSearchService.Prompt(search);
+        var parameters = new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, 0.6, systemPrompt, SupportsImages: profile.SupportsImages);
+        return new(conversation.ProjectId, projectContext.Value, systemPrompt, files.Value, await context.PrepareAsync(request.ConversationId, request.ParentMessageId, request.RegenerateUserMessageId, request.Prompt, files.Value, parameters, ct));
     }
 
-    private sealed record PreparedContext(Guid? ProjectId, string ProjectContext, string SystemPrompt, IReadOnlyList<Attachment> Files, IReadOnlyList<InferenceMessage>? Messages, ExceptionDispatchInfo? Failure)
+    private sealed record PreparedContext(Guid? ProjectId, string ProjectContext, string SystemPrompt, IReadOnlyList<Attachment> Files, Result<IReadOnlyList<InferenceMessage>> Messages)
     {
-        /// <summary>The prepared context (or its failure, rethrown) when it was built from the same inputs; otherwise null.</summary>
-        public IReadOnlyList<InferenceMessage>? ContextFor(string systemPrompt, IReadOnlyList<Attachment> files)
+        /// <summary>The prepared context (or its failure) when it was built from the same inputs; otherwise null.</summary>
+        public Result<IReadOnlyList<InferenceMessage>>? ContextFor(string systemPrompt, IReadOnlyList<Attachment> files)
         {
             static (Guid, string, string, string?) Key(Attachment x) => (x.Id, x.FileName, x.ContentType, x.ExtractedText);
             if (systemPrompt != SystemPrompt || !files.Select(Key).SequenceEqual(Files.Select(Key))) return null;
-            Failure?.Throw();
             return Messages;
         }
     }
