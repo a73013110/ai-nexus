@@ -11,7 +11,7 @@ public interface IWebSearchProvider
 {
     Task<IReadOnlyList<WebSourceDto>> SearchAsync(string query, CancellationToken ct);
 }
-public sealed partial class WebSearchProvider(IHttpClientFactory clients, IOptions<WebSearchOptions> options) : IWebSearchProvider
+public sealed partial class WebSearchProvider(IHttpClientFactory clients, IOptions<WebSearchOptions> options, TimeProvider clock) : IWebSearchProvider
 {
     public async Task<IReadOnlyList<WebSourceDto>> SearchAsync(string query, CancellationToken ct)
     {
@@ -31,7 +31,7 @@ public sealed partial class WebSearchProvider(IHttpClientFactory clients, IOptio
             if (o.Provider == "brave") { if (!json.RootElement.TryGetProperty("web", out var web) || !web.TryGetProperty("results", out rows)) return []; }
             else if (!json.RootElement.TryGetProperty("results", out rows)) return [];
             if (rows.ValueKind != JsonValueKind.Array) throw new JsonException();
-            var hits = new List<WebSourceDto>(); var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase); var time = DateTimeOffset.UtcNow;
+            var hits = new List<WebSourceDto>(); var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase); var time = clock.GetUtcNow();
             foreach (var row in rows.EnumerateArray().Take(50))
             {
                 if (!row.TryGetProperty("url", out var url) || SafeUrl(url.GetString()) is not { } link || !seen.Add(link)) continue;

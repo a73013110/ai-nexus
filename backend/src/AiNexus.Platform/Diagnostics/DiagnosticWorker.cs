@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Platform.Diagnostics;
 
 /// <summary>Filesystem and SQL run independently, so a slow/offline SQL sink cannot stall journal writes.</summary>
-public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal journal, IDiagnosticStore store, DiagnosticHealth health, IOptions<DiagnosticOptions> options, DiagnosticExporter exporter) : BackgroundService
+public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal journal, IDiagnosticStore store, DiagnosticHealth health, IOptions<DiagnosticOptions> options, DiagnosticExporter exporter, TimeProvider clock) : BackgroundService
 {
     private List<DiagnosticEvent> pending = [];
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -40,12 +40,12 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
             catch (Exception e) { health.Emergency(e is DiagnosticCapacityException ? "sql_capacity_exhausted" : e is Microsoft.Data.SqlClient.SqlException sql ? "sql_import_failed_" + sql.Number : "sql_import_failed"); delay = options.Value.RetrySeconds * 1000; }
             // Cleanup must run even when the importer is blocked at its capacity limit.
-            if (!ct.IsCancellationRequested && cleanupAt < DateTimeOffset.UtcNow)
+            if (!ct.IsCancellationRequested && cleanupAt < clock.GetUtcNow())
             {
                 try { using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.SqlTimeoutSeconds * 4));
-                    await store.CleanupAsync(timeout.Token); journal.Cleanup(); health.Recovered("cleanup"); cleanupAt = DateTimeOffset.UtcNow.AddMinutes(5); }
+                    await store.CleanupAsync(timeout.Token); journal.Cleanup(); health.Recovered("cleanup"); cleanupAt = clock.GetUtcNow().AddMinutes(5); }
                 catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; }
-                catch (Exception) { health.Emergency("sql_cleanup_failed"); cleanupAt = DateTimeOffset.UtcNow.AddSeconds(options.Value.RetrySeconds); }
+                catch (Exception) { health.Emergency("sql_cleanup_failed"); cleanupAt = clock.GetUtcNow().AddSeconds(options.Value.RetrySeconds); }
             }
             await Task.Delay(delay, ct);
         }

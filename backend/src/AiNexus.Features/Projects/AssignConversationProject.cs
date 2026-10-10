@@ -1,3 +1,4 @@
+using AiNexus.Platform.Validation;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Conversations;
@@ -11,6 +12,7 @@ using AiNexus.Features.Identity.Users;
 namespace AiNexus.Features.Projects;
 
 /// <summary>A null <c>ProjectId</c> removes the conversation from its project.</summary>
+[ValidatedInHandler("Every check needs the database: the project must be active and readable.")]
 public sealed record ConversationProjectRequest(Guid? ProjectId);
 
 /// <summary>

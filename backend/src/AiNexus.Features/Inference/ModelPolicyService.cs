@@ -1,3 +1,4 @@
+using AiNexus.Platform.Validation;
 using System.Text.Json;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Time;
@@ -8,12 +9,13 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Inference;
 
+[ValidatedInHandler("The rules are checked inside the audited administrative transaction (ModelPolicyService.Check).")]
 public sealed record ModelPolicyRequest(IReadOnlyList<string>? AllowedModelIds = null, IReadOnlyDictionary<string, long>? DailyTokenLimits = null);
 public sealed record ModelTokenBudgetDto(string ModelId, long? DailyTokenLimit, long UsedTokens, long ReservedTokens, long? RemainingTokens, string Source, string? ModelDisplayName = null);
 public sealed record EffectiveModelPolicyDto(IReadOnlyList<string>? AllowedModelIds, long? StoredAttachmentLimitBytes, IReadOnlyList<ModelTokenBudgetDto> Models, DateTimeOffset ResetsAt);
 
 // The same policy and accounting apply to chat, OCR, transformations and evaluations.
-public sealed class ModelPolicyService(NexusDbContext db, AccessService access, ModelPresentation presentation, IOptions<InferenceOptions> inference)
+public sealed class ModelPolicyService(NexusDbContext db, AccessService access, ModelPresentation presentation, IOptions<InferenceOptions> inference, TimeProvider clock)
 {
     public const long MaximumTokenLimit = 1_000_000_000_000;
     public static string[]? Allowed(string? json) => json is null ? null : JsonSerializer.Deserialize<string[]>(json);
@@ -39,7 +41,7 @@ public sealed class ModelPolicyService(NexusDbContext db, AccessService access, 
         var effective = ModelPolicyResolver.Resolve(groups.Select(id => byGroup.TryGetValue(id, out var policy)
             ? new ModelPolicyRequest(Allowed(policy.AllowedModelsJson), Limits(policy.DailyTokenLimitsJson)) : new()).ToArray(),
             new(Allowed(personal?.AllowedModelsJson), overrides));
-        var start = UtcDay.Start(asOf ?? DateTimeOffset.UtcNow); var end = start.AddDays(1);
+        var start = UtcDay.Start(asOf ?? clock.GetUtcNow()); var end = start.AddDays(1);
         var usage = await db.Runs.AsNoTracking().Where(x => x.OwnerId == owner && x.CreatedAt >= start && x.CreatedAt < end)
             .Select(x => new { x.ModelId, x.InputTokens, x.OutputTokens, x.ReservedTokens, Active = x.ActiveOwnerId != null })
             .Concat(db.Set<ModelInvocation>().AsNoTracking().Where(x => x.OwnerId == owner && x.CreatedAt >= start && x.CreatedAt < end && x.Kind != "embedding" && x.Kind != "web-search")

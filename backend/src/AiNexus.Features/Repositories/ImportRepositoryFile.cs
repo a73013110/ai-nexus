@@ -1,3 +1,4 @@
+using AiNexus.Platform.Validation;
 using System.Text;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Attachments;
@@ -10,10 +11,7 @@ using AiNexus.Features.Knowledge.Documents;
 
 namespace AiNexus.Features.Repositories;
 
-/// <summary>
-/// Repository, commit and path are checked by <see cref="RepositoryService.FileAsync"/> with the same public codes as
-/// <c>GET /repositories/file</c>, so this body has no separate validator.
-/// </summary>
+[ValidatedInHandler("RepositoryService.FileAsync checks repository, commit and path with the same public codes as GET /repositories/file.")]
 public sealed record RepositoryImportRequest(string Repository, string Commit, string Path, Guid CollectionId);
 
 /// <summary>Imports one file at a pinned commit into a knowledge collection as an independent snapshot. Re-importing returns the existing document.</summary>

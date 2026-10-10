@@ -14,7 +14,7 @@ using AiNexus.Platform.Diagnostics;
 namespace AiNexus.Features.Diagnostics;
 
 /// <summary>New connection/transaction, never the caller's business DbContext or transaction.</summary>
-public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<DiagnosticOptions> options, DiagnosticHealth health) : IDiagnosticStore
+public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<DiagnosticOptions> options, DiagnosticHealth health, TimeProvider clock) : IDiagnosticStore
 {
     private static readonly PropertyInfo[] Columns = typeof(DiagnosticEvent).GetProperties();
     private bool configurationRecorded;
@@ -100,8 +100,8 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
             }
             configurationRecorded = true;
         }
-        var diagnosticBefore = DateTimeOffset.UtcNow.AddDays(-options.Value.RetentionDays);
-        var auditBefore = DateTimeOffset.UtcNow.AddDays(-options.Value.AuditRetentionDays);
+        var diagnosticBefore = clock.GetUtcNow().AddDays(-options.Value.RetentionDays);
+        var auditBefore = clock.GetUtcNow().AddDays(-options.Value.AuditRetentionDays);
         // Separate autocommit batches; cancellation/timeout bounds total work, no long purge transaction.
         for (var batch = 0; batch < 100; batch++)
         {

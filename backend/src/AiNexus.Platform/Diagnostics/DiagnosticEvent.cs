@@ -8,7 +8,7 @@ public sealed class DiagnosticEvent
     [Comment("不可重複的日誌識別，SQL 補送去重鍵。")]
     public Guid LogId { get; set; } = Guid.NewGuid();
     [Comment("診斷事件發生的 UTC 時間，時間與 LogId 為排序及游標分頁鍵。")]
-    public DateTimeOffset At { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset At { get; set; }
     [Comment("Microsoft.Extensions.Logging 層級值：Trace=0 到 Critical=5。")]
     public LogLevel Level { get; set; }
     [Comment("診斷事件的受控 Category 欄位；由集中日誌政策限制大小與遮罩。")]

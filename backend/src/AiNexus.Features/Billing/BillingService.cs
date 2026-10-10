@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Billing;
 
-public sealed class BillingService(NexusDbContext db, ModelPresentation presentation, IOptions<InferenceOptions> inference, IEnumerable<ServiceModel> services) : IModelCallMeter
+public sealed class BillingService(NexusDbContext db, ModelPresentation presentation, IOptions<InferenceOptions> inference, IEnumerable<ServiceModel> services, TimeProvider clock) : IModelCallMeter
 {
     private static readonly string[] WebSearchProviders = ["searxng", "brave"];
 
@@ -31,7 +31,7 @@ public sealed class BillingService(NexusDbContext db, ModelPresentation presenta
     {
         var charge = await db.Set<ModelCharge>().FindAsync([id], ct);
         if (charge is null) return; // Calls made before the billing migration have no invented price.
-        charge.StartedAt ??= DateTimeOffset.UtcNow; charge.Outcome = "running";
+        charge.StartedAt ??= clock.GetUtcNow(); charge.Outcome = "running";
     }
     public async Task MeterAsync(Guid id, long? input, long? output, long? cached, long? reasoning, CancellationToken ct, bool complete = false)
     {
@@ -61,7 +61,7 @@ public sealed class BillingService(NexusDbContext db, ModelPresentation presenta
     {
         var charge = await db.Set<ModelCharge>().FindAsync([id], ct);
         if (charge is null) return;
-        charge.FinishedAt ??= DateTimeOffset.UtcNow; ChargeCalculator.Finalize(charge, outcome);
+        charge.FinishedAt ??= clock.GetUtcNow(); ChargeCalculator.Finalize(charge, outcome);
     }
     Task IModelCallMeter.ReserveAsync(Guid callId, Guid owner, Guid? conversation, string provider, string model, string operation, DateTimeOffset created, CancellationToken ct)
         => ReserveAsync(callId, owner, conversation, provider, model, operation, created, ct);

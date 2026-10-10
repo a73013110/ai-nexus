@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -9,13 +10,14 @@ public sealed class AdministratorBootstrap
     [Comment("關聯使用者的 Users 主鍵。")]
     public Guid UserId { get; set; }
     [Comment("角色或資源授權建立時間。")]
-    public DateTimeOffset GrantedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset GrantedAt { get; set; }
 }
 
 internal sealed class AdministratorBootstrapConfiguration : IEntityTypeConfiguration<AdministratorBootstrap>
 {
     public void Configure(EntityTypeBuilder<AdministratorBootstrap> bootstrap)
     {
+        bootstrap.Property(x => x.GrantedAt).HasValueGenerator<CreationTime>();
         bootstrap.ToTable("AdministratorBootstraps", "administration"); bootstrap.HasKey(x => x.UserId);
     }
 }

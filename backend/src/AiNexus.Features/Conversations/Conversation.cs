@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -18,9 +19,9 @@ public sealed class Conversation
     [Comment("對話目前顯示分支的最後訊息識別碼。")]
     public Guid? ActiveLeafId { get; set; }
     [Comment("資料建立時間，採 UTC offset。")]
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
     [Comment("資料最後修改時間，採 UTC offset。")]
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; set; }
     [Comment("是否邏輯刪除；不自動刪除歷史紀錄。")]
     public bool IsDeleted { get; set; }
     [Comment("是否標記收藏。")]
@@ -36,6 +37,8 @@ internal sealed class ConversationConfiguration : IEntityTypeConfiguration<Conve
 {
     public void Configure(EntityTypeBuilder<Conversation> conversation)
     {
+        conversation.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
+        conversation.Property(x => x.UpdatedAt).HasValueGenerator<CreationTime>();
         conversation.ToTable("Conversations", "conversations");
         conversation.HasKey(x => x.Id);
         conversation.Property(x => x.Title).HasMaxLength(ConversationQueries.TitleMaxLength);

@@ -1,3 +1,4 @@
+using AiNexus.Platform.Validation;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;
@@ -11,8 +12,7 @@ using AiNexus.Features.Knowledge.Collections;
 
 namespace AiNexus.Features.Knowledge.Documents;
 
-// Every check needs the database (collection access first, then the caller's own attachment), and the project files
-// endpoint takes the same body, so this request has no validator.
+[ValidatedInHandler("Every check needs the database (collection access first, then the caller's own attachment); the project files endpoint shares the body.")]
 public sealed record AddDocumentRequest(Guid AttachmentId);
 
 /// <summary>

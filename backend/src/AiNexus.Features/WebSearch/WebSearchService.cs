@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.WebSearch;
 
-public sealed class WebSearchService(NexusDbContext db, IWebSearchProvider provider, BillingService billing, IOptions<WebSearchOptions> options)
+public sealed class WebSearchService(NexusDbContext db, IWebSearchProvider provider, BillingService billing, IOptions<WebSearchOptions> options, TimeProvider clock)
 {
     public const int ReservedTokens = 3600;
     public WebSearchStatusDto Status => new(options.Value.Enabled && (options.Value.Provider != "brave" || options.Value.ApiKey.Length > 0),
@@ -35,7 +35,7 @@ public sealed class WebSearchService(NexusDbContext db, IWebSearchProvider provi
                 if (previous.Status != "completed") return WebSearchErrors.PendingOrFailed;
                 return previous;
             }
-            record = new() { OwnerId = owner, ConversationId = conversation, IdempotencyKey = key, RequestHash = hash };
+            record = new() { OwnerId = owner, ConversationId = conversation, IdempotencyKey = key, RequestHash = hash, CreatedAt = clock.GetUtcNow() };
             var since = UtcDay.Start(record.CreatedAt); var until = since.AddDays(1);
             if (await db.Set<WebSearchRecord>().CountAsync(x => x.OwnerId == owner && x.CreatedAt >= since && x.CreatedAt < until, ct) >= options.Value.MaxDailyRequests)
                 return WebSearchErrors.DailyQuota;

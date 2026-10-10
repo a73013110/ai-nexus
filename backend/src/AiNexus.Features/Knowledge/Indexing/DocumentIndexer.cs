@@ -101,7 +101,7 @@ public sealed class DocumentIndexer(NexusDbContext db, EmbeddingProfiles profile
     private async Task ReadyAsync(JobExecution execution, KnowledgeDocument document, CancellationToken ct)
     {
         document.Status = "ready";
-        (await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == document.Id, ct)).UpdatedAt = DateTimeOffset.UtcNow;
+        (await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == document.Id, ct)).UpdatedAt = db.Clock.GetUtcNow();
         await execution.CheckpointAsync("使用中索引已完成", document.ChunkCount, document.ChunkCount, ct);
     }
     public async Task<Result> IndexCurrentAsync(JobExecution execution, KnowledgeDocument document, CancellationToken ct)

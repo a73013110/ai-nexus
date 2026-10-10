@@ -76,7 +76,7 @@ public sealed class DocumentIngestHandler(DocumentService documents, ModelTaskSe
         await execution.CheckpointAsync("文件文字已完成", total, total, ct);
         if (document.CollectionId is not null) return await indexer.QueueAsync(execution, document, ct);
         document.Status = "ready";
-        (await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == document.Id, ct)).UpdatedAt = DateTimeOffset.UtcNow;
+        (await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == document.Id, ct)).UpdatedAt = db.Clock.GetUtcNow();
         await execution.CheckpointAsync("處理完成", document.CollectionId is null ? total : document.ChunkCount, document.CollectionId is null ? total : document.ChunkCount, ct);
         return Result.Success;
     }

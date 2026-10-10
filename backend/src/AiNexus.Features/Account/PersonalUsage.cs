@@ -12,6 +12,6 @@ public sealed class PersonalUsage(UsageReports usage, AttachmentQuota quota, Tim
         var totals = await usage.ByOwnersAsync([owner], ct) is [var mine, ..] ? mine.Usage : new(0, 0, 0, 0, 0, 0, 0);
         var storage = await quota.ForAsync(owner, ct);
         return new(30, totals.Requests, totals.Completed, totals.Failed, totals.Cancelled, totals.InputTokens, totals.OutputTokens, totals.RequestsWithUsage, daily, storage, totals.TotalDurationMilliseconds, totals.TimedRequests,
-            await usage.TokensAsync(owner, new SpendPeriod(UsageReports.Since, clock.GetUtcNow(), 0), false, ct));
+            await usage.TokensAsync(owner, new SpendPeriod(usage.Since, clock.GetUtcNow(), 0), false, ct));
     }
 }

@@ -124,7 +124,7 @@ public sealed class SqlServerRetrievalTests
             services.AddDbContext<NexusDbContext>(o => o.UseSqlServer(db.Database.GetConnectionString()!));
             using var provider = services.BuildServiceProvider(); using var health = new AiNexus.Platform.Diagnostics.DiagnosticHealth();
             var options = Options.Create(new AiNexus.Platform.Diagnostics.DiagnosticOptions { CleanupBatchSize = 2 });
-            var store = new AiNexus.Features.Diagnostics.DiagnosticStore(provider.GetRequiredService<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>(), options, health);
+            var store = new AiNexus.Features.Diagnostics.DiagnosticStore(provider.GetRequiredService<Microsoft.Extensions.DependencyInjection.IServiceScopeFactory>(), options, health, TimeProvider.System);
             var code = AiNexus.Platform.Diagnostics.Issues.NewCode();
             var row = new AiNexus.Platform.Diagnostics.DiagnosticEvent { IssueCode = code, Level = Microsoft.Extensions.Logging.LogLevel.Error, At = DateTimeOffset.UtcNow, TraceId = new string('a', 32) };
             var user = new NexusUser { Sid = "diagnostic-rollback", Account = "rollback", DisplayName = "fixture" };

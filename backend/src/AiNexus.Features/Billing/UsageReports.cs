@@ -15,9 +15,9 @@ public sealed record UsageDayDto(DateOnly Date, int Requests, long InputTokens, 
 public sealed record TokenUsageDto(DateTimeOffset From, DateTimeOffset Until, int TimezoneOffsetMinutes, IReadOnlyList<TokenDayDto> Daily);
 
 /// <summary>One accounting query for personal and authorized administrative reports. Callers own authorization.</summary>
-public sealed class UsageReports(NexusDbContext db, ModelPresentation presentation)
+public sealed class UsageReports(NexusDbContext db, ModelPresentation presentation, TimeProvider clock)
 {
-    public static DateTimeOffset Since => UtcDay.Today.AddDays(-29);
+    public DateTimeOffset Since => UtcDay.Start(clock.GetUtcNow()).AddDays(-29);
     private sealed class Entry
     {
         public Guid OwnerId { get; init; }

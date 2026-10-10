@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -21,7 +22,7 @@ public sealed class WebSearchRecord
     [Comment("搜尋結果的 JSON 快照。")]
     public string ResultsJson { get; set; } = "[]";
     [Comment("資料建立時間，採 UTC offset。")]
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
     [Comment("觸發搜尋的 GenerationRuns 識別碼。")]
     public Guid? RunId { get; set; }
 }
@@ -30,6 +31,7 @@ internal sealed class WebSearchRecordConfiguration : IEntityTypeConfiguration<We
 {
     public void Configure(EntityTypeBuilder<WebSearchRecord> item)
     {
+        item.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
         item.ToTable("WebSearches", "websearch"); item.HasKey(x => x.Id);
         item.Property(x => x.IdempotencyKey).HasMaxLength(80); item.Property(x => x.RequestHash).HasMaxLength(64);
         item.Property(x => x.Status).HasMaxLength(16); item.HasIndex(x => new { x.OwnerId, x.IdempotencyKey }).IsUnique();

@@ -1,10 +1,11 @@
+using AiNexus.Platform.Validation;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Administration.Roles;
 
-/// <summary>Not a request validator: format failures are audited inside the administrative transaction (see <see cref="AccessRules"/>).</summary>
+[ValidatedInHandler("Format failures are audited inside the administrative transaction (AccessRules).")]
 public sealed record FeatureUpdateRequest(string Name, int SortOrder, bool Enabled);
 
 /// <summary>Renames, reorders, enables or disables an existing feature. Audited; refused when it would remove the actor's own administrator access.</summary>

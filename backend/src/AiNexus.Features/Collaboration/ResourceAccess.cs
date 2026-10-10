@@ -21,7 +21,7 @@ public sealed class ResourceWriteLock
     public Task<IDisposable> AcquireAsync(string scope, Guid id, CancellationToken ct) => keys.AcquireAsync((scope, id), ct);
 }
 
-public sealed class ResourceAccess(NexusDbContext db, AccessService access, ResourceWriteLock writes)
+public sealed class ResourceAccess(NexusDbContext db, AccessService access, ResourceWriteLock writes, TimeProvider clock)
 {
     public async Task<IQueryable<WorkspaceResource>> QueryAsync(Guid actor, string kind, CancellationToken ct)
     {
@@ -108,7 +108,7 @@ public sealed class ResourceAccess(NexusDbContext db, AccessService access, Reso
             var oldGroups = await db.Set<ResourceGroup>().Where(x => x.ResourceId == id).ToListAsync(ct);
             db.RemoveRange(oldGroups.Where(x => !request.GroupIds.Contains(x.GroupId)));
             db.AddRange(request.GroupIds.Except(oldGroups.Select(x => x.GroupId)).Select(x => new ResourceGroup { ResourceId = id, GroupId = x }));
-            resource.UpdatedAt = DateTimeOffset.UtcNow;
+            resource.UpdatedAt = clock.GetUtcNow();
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "resource.acl", Result = "saved", DetailsJson = System.Text.Json.JsonSerializer.Serialize(new { kind, users, request.GroupIds }) });
             await db.SaveChangesAsync(ct);
         }

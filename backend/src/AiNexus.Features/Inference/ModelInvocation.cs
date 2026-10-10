@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -28,13 +29,14 @@ public sealed class ModelInvocation
     [Comment("模型回報的輸出 tokens；未知保持空值。")]
     public long? OutputTokens { get; set; }
     [Comment("資料建立時間，採 UTC offset。")]
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
 }
 
 internal sealed class ModelInvocationConfiguration : IEntityTypeConfiguration<ModelInvocation>
 {
     public void Configure(EntityTypeBuilder<ModelInvocation> item)
     {
+        item.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
         item.ToTable("ModelInvocations", "inference"); item.HasKey(x => x.Id);
         item.Property(x => x.Kind).HasMaxLength(32); item.Property(x => x.ModelId).HasMaxLength(160); item.Property(x => x.Status).HasMaxLength(16);
         item.Property(x => x.Provider).HasMaxLength(32);
