@@ -70,7 +70,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
             services.AddSingleton<IAuthenticationSchemeProvider, TestSchemeProvider>();
             services.RemoveAll<IAdAuthenticator>();
             services.AddSingleton<IAdAuthenticator, FixtureAdAuthenticator>();
-            services.PostConfigure<AdAuthenticationOptions>(options => { options.Mode = ldap ? "Ldap" : "Windows"; options.DnPass = "fixture-only"; });
+            services.PostConfigure<AdAuthenticationOptions>(options => { options.Mode = ldap ? "Ldap" : "Windows"; options.Domain = "fixture.internal"; options.BindUser = "fixture"; options.BindPassword = "fixture-only"; });
             services.RemoveAllKeyed<IInferenceProvider>("google");
             services.RemoveAllKeyed<IInferenceProvider>("ollama");
             services.AddKeyedSingleton<IInferenceProvider>("google", Provider);

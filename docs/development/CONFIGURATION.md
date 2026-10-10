@@ -25,7 +25,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 | 區段 | Options 類別 | 秘密欄位 |
 | --- | --- | --- |
 | `Database`、`ConnectionStrings` | 啟動時組成連線字串：[`LocalDatabaseSettings`](../../backend/src/AiNexus.Platform/Data/LocalDatabaseSettings.cs) | `User`、`Password`、`ConnectionStrings.*` |
-| `Identity.ActiveDirectory` | [`AdAuthenticationOptions`](../../backend/src/AiNexus.Features/Identity/Authentication/AdAuthenticationOptions.cs) | `DnPass` |
+| `Identity.ActiveDirectory` | [`AdAuthenticationOptions`](../../backend/src/AiNexus.Features/Identity/Authentication/AdAuthenticationOptions.cs) | `BindPassword` |
 | `Administration` | [`AdministrationOptions`](../../backend/src/AiNexus.Features/Administration/AdministrationOptions.cs) | — |
 | `Inference` | [`InferenceOptions`](../../backend/src/AiNexus.Features/Inference/InferenceOptions.cs) | `Providers.Google.ApiKey` |
 | `Knowledge` | [`KnowledgeOptions`](../../backend/src/AiNexus.Features/Knowledge/KnowledgeOptions.cs) | — |

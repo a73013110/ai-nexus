@@ -65,7 +65,7 @@ Describe 'Get-NexusSecretValues' {
         $settings = [ordered]@{
             ConnectionStrings = [ordered]@{ Nexus = 'Server=x;Password=y' }
             Database = [ordered]@{ Server = 'sql'; User = 'login'; Password = 'secret-1' }
-            Identity = [ordered]@{ ActiveDirectory = [ordered]@{ DnUser = 'CN=reader'; DnPass = 'secret-2' } }
+            Identity = [ordered]@{ ActiveDirectory = [ordered]@{ BindUser = 'reader'; BindPassword = 'secret-2' } }
             Inference = [ordered]@{ Providers = [ordered]@{ Google = [ordered]@{ ApiKey = 'secret-3' }; Ollama = [ordered]@{ ApiKey = '' } } }
         }
     }

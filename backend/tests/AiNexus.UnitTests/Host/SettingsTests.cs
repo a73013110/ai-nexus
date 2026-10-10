@@ -135,7 +135,7 @@ public sealed class SettingsTests
                 var next = path.Length == 0 ? key : path + ":" + key;
                 if (value is JsonObject) foreach (var secret in Secrets(value, next)) yield return secret;
                 else if (value is JsonValue v && v.TryGetValue<string>(out var text) && text.Length > 0
-                    && (key is "Password" or "DnPass" or "ApiKey" || key == "User" && path.EndsWith("Database", StringComparison.Ordinal) || path == "ConnectionStrings"))
+                    && (key is "Password" or "BindPassword" or "ApiKey" || key == "User" && path.EndsWith("Database", StringComparison.Ordinal) || path == "ConnectionStrings"))
                     yield return (next, text);
             }
         }

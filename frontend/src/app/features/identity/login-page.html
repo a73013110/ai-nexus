@@ -35,7 +35,7 @@
         </nx-notice>
       } @else if (auth.session() && !auth.session()?.configured) {
         <nx-notice tone="info">
-          AD 登入尚未完成設定。請在後端本機設定填入服務帳號的 DnPass，再重新啟動。
+          AD 登入尚未完成設定。請在後端秘密檔填入服務帳號的 BindPassword，再重新啟動。
         </nx-notice>
       }
       @if (error(); as message) {
