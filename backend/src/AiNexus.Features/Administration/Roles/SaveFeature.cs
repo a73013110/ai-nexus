@@ -14,7 +14,7 @@ internal sealed class SaveFeature(NexusDbContext db, AdministrativeAudit audit)
         .MapPut("/features/{id}", async (string id, FeatureUpdateRequest body, SaveFeature handler, CancellationToken ct) => (await handler.HandleAsync(id, body, ct)).ToHttpResult())
         .WithName("SaveFeature");
 
-    public Task<Result> HandleAsync(string id, FeatureUpdateRequest request, CancellationToken ct) => audit.TryMutateAsync("admin.feature", null, id, async () =>
+    public Task<Result> HandleAsync(string id, FeatureUpdateRequest request, CancellationToken ct) => audit.MutateAsync("admin.feature", null, id, async () =>
     {
         if ((AccessRules.Key(id) ?? AccessRules.Name(request.Name)) is { } invalid) return invalid;
         if (request.SortOrder is < 0 or > 10000) return AdministrationErrors.InvalidOrder;

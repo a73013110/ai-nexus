@@ -13,7 +13,7 @@ internal sealed class GetUserModelPolicy(NexusDbContext db, ModelPolicyService p
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/users/{id:guid}/model-policy", async (Guid id, GetUserModelPolicy handler, CancellationToken ct) => (await handler.HandleAsync(id, ct)).ToHttpResult())
-        .WithName("GetUserModelPolicy").Produces<AdminUserModelPolicyDto>();
+        .WithName("GetUserModelPolicy");
 
     public async Task<Result<AdminUserModelPolicyDto>> HandleAsync(Guid owner, CancellationToken ct)
     {

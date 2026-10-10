@@ -20,7 +20,7 @@ internal sealed class ListAdminUsers(NexusDbContext db, UsageReports reports, At
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/users", async (string? search, int? offset, ListAdminUsers handler, CancellationToken ct) => (await handler.HandleAsync(search, offset ?? 0, ct)).ToHttpResult())
-        .WithName("ListAdminUsers").Produces<AdminUsersDto>();
+        .WithName("ListAdminUsers");
 
     public async Task<Result<AdminUsersDto>> HandleAsync(string? search, int offset, CancellationToken ct)
     {

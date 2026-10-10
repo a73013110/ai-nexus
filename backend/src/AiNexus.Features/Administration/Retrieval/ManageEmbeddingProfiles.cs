@@ -51,7 +51,7 @@ internal sealed class ManageEmbeddingProfiles(EmbeddingLifecycle lifecycle, Know
     private async Task<Result> LockedAsync(string action, int id, Func<Task<Result>> mutation, CancellationToken ct)
     {
         await writes.Gate.WaitAsync(ct);
-        try { return await audit.TryMutateAsync(action, null, id.ToString(CultureInfo.InvariantCulture), mutation, ct); }
+        try { return await audit.MutateAsync(action, null, id.ToString(CultureInfo.InvariantCulture), mutation, ct); }
         finally { writes.Gate.Release(); }
     }
 }

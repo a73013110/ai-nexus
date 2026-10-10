@@ -81,7 +81,6 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
     public static (int Status, string Code) Classify(Exception exception) => exception switch
     {
         ExternalServiceException external => (Problems.Status(external.Error.Kind), external.Error.Code),
-        ApiException api => (api.Status, api.Code),
         BadHttpRequestException bad => (bad.StatusCode, bad.StatusCode switch { 413 => "request_too_large", 400 => "invalid_request", _ => "service_unavailable" }),
         AntiforgeryValidationException => (403, "csrf_invalid"),
         _ => (503, "service_unavailable"),

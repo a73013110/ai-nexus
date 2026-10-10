@@ -17,7 +17,7 @@ internal sealed class GetAdminUserInsights(NexusDbContext db, AdministrativeRead
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/users/{id:guid}/insights", async (Guid id, ICurrentUser user, GetAdminUserInsights handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
-        .WithName("GetAdminUserInsights").Produces<AdminUserDetailDto>();
+        .WithName("GetAdminUserInsights");
 
     public async Task<Result<AdminUserDetailDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
