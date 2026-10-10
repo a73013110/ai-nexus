@@ -2,6 +2,7 @@ using AiNexus.Features.AccessControl;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
+using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
@@ -24,13 +25,12 @@ public sealed class KnowledgeModule : IFeatureModule
     public const string RetrievalModelsClient = "RetrievalModels";
 
     /// <summary>The configured embedding model, named in usage reports and price lists.</summary>
-    public static ServiceModel EmbeddingModel(KnowledgeOptions options) => new(options.EmbeddingProvider, options.EmbeddingModel, "知識向量模型", "embedding-model");
+    public static ServiceModel EmbeddingModel(KnowledgeOptions options) => new(options.Embedding.Provider, options.Embedding.Model, "知識向量模型", "embedding-model");
 
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddOptions<KnowledgeOptions>().Configure<IConfiguration>((o, c) => KnowledgeSettings.Bind(c, o))
-            .Validate(KnowledgeOptions.Valid, "知識檢索設定的維度、範圍或端點不正確。").ValidateOnStart();
+        services.AddSettings<KnowledgeOptions, KnowledgeOptionsValidator>(KnowledgeOptions.Section);
         services.AddSingleton(sp => EmbeddingModel(sp.GetRequiredService<IOptions<KnowledgeOptions>>().Value));
         services.AddScoped<DocumentAccess>();
         services.AddScoped<IPrivateReaders, PrivateReaders>();

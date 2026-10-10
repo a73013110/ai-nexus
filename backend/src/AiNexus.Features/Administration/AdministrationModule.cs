@@ -1,11 +1,11 @@
 using AiNexus.Features.AccessControl;
 using AiNexus.Platform.Modules;
-using Microsoft.Extensions.Options;
 using AiNexus.Features.Administration.Users;
 using AiNexus.Features.Administration.Roles;
 using AiNexus.Features.Administration.ModelPolicies;
 using AiNexus.Features.Administration.Retrieval;
 using AiNexus.Features.Identity.Authentication;
+using AiNexus.Platform.Configuration;
 
 namespace AiNexus.Features.Administration;
 
@@ -18,8 +18,7 @@ public sealed class AdministrationModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddOptions<AdministrationOptions>().BindConfiguration("Administration").ValidateOnStart();
-        services.AddSingleton<IValidateOptions<AdministrationOptions>, AdministrationOptionsValidator>();
+        services.AddSettings<AdministrationOptions, AdministrationOptionsValidator>(AdministrationOptions.Section);
         services.AddScoped<ISignInGrant, AdminBootstrap>();
         services.AddScoped<AdministrativeAudit>();
         services.AddScoped<AdministrativeReadAudit>();

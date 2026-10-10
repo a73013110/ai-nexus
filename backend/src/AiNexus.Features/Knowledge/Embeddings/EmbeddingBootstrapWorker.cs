@@ -29,7 +29,7 @@ public sealed partial class EmbeddingBootstrapWorker(IServiceScopeFactory scopes
                         select new { Document = d, r.OwnerId }).ToListAsync(stoppingToken);
                     foreach (var item in pending) { item.Document.Status = "indexing"; item.Document.JobId = jobs.Enqueue(item.OwnerId, item.Document.Id, item.Document.Id, "document-embedding", item.Document.FileName).Id; }
                     var settings = scope.ServiceProvider.GetRequiredService<IOptions<KnowledgeOptions>>().Value;
-                    if (settings.AutoActivate && target.Status == "building")
+                    if (settings.Embedding.AutoActivate && target.Status == "building")
                     {
                         var actor = await db.Set<UserRole>().Where(x => x.RoleId == "administrator").Select(x => (Guid?)x.UserId).FirstOrDefaultAsync(stoppingToken);
                         var subject = EmbeddingJobs.Subject(target.Id);

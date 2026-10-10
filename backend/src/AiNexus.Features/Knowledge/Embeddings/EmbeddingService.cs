@@ -5,13 +5,13 @@ namespace AiNexus.Features.Knowledge.Embeddings;
 
 public sealed class EmbeddingService(IEnumerable<IEmbeddingClient> clients, RetrievalInvocation invocations, EmbeddingBatchScheduler scheduler, IOptions<KnowledgeOptions> options)
 {
-    public bool Enabled => options.Value.EmbeddingProvider != "none";
+    public bool Enabled => options.Value.Embedding.Provider != "none";
     public string Profile => EmbeddingInput.Profile(options.Value);
     public async Task<IReadOnlyList<float[]>> EmbedBatchAsync(Guid owner, EmbeddingProfile profile, IReadOnlyList<string> inputs, EmbeddingPurpose purpose, CancellationToken ct)
     {
         if (inputs.Count == 0) return [];
         using var lease = purpose == EmbeddingPurpose.Document && profile.Provider == "ollama" ? await scheduler.EnterAsync(ct) : null;
-        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.TimeoutSeconds));
+        using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.Embedding.TimeoutSeconds));
         try
         {
             return await invocations.RunAsync(owner, "embedding", profile.Provider, profile.Model, async () => {

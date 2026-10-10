@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using Microsoft.Extensions.Options;
+using AiNexus.Platform.Configuration;
 using OpenTelemetry;
 using OpenTelemetry.Logs;
 using OpenTelemetry.Exporter;
@@ -112,7 +113,7 @@ public static class DiagnosticRegistration
 
     public static void AddNexusDiagnostics(this WebApplicationBuilder builder)
     {
-        builder.Services.AddOptions<DiagnosticOptions>().BindConfiguration("Diagnostics").Validate(x => x.Valid(), "Invalid diagnostics limits or OTLP endpoint.").ValidateOnStart();
+        builder.Services.AddSettings<DiagnosticOptions, DiagnosticOptionsValidator>(DiagnosticOptions.Section);
         builder.Services.AddSingleton<DiagnosticHealth>(); builder.Services.AddSingleton<DiagnosticBuffer>();
         builder.Services.AddSingleton<DiagnosticLoggerProvider>();
         builder.Logging.ClearProviders(); builder.Services.AddSingleton<ILoggerProvider>(sp => sp.GetRequiredService<DiagnosticLoggerProvider>());
@@ -122,9 +123,7 @@ public static class DiagnosticRegistration
         builder.Services.AddSingleton<DiagnosticExporter>(); builder.Services.AddSingleton<Issues>();
         // Registered first so this worker stops last, after business workers have emitted terminal events.
         builder.Services.AddHostedService<DiagnosticWorker>();
-        DiagnosticOptions configuration;
-        try { configuration = builder.Configuration.GetSection("Diagnostics").Get<DiagnosticOptions>() ?? new(); if (!configuration.Valid()) configuration = new(); }
-        catch (Exception) { configuration = new(); } // Options validation reports malformed configuration at startup.
+        var configuration = DiagnosticOptions.Read(builder.Configuration);
         ResourceBuilder Resource() => ResourceBuilder.CreateEmpty().AddService(DiagnosticRedactor.Text(configuration.ServiceName, 80), serviceVersion: DiagnosticRedactor.Text(DiagnosticLoggerProvider.Version, 80));
         var telemetry = builder.Services.AddOpenTelemetry();
         telemetry.WithTracing(t => {

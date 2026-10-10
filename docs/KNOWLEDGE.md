@@ -29,7 +29,7 @@ API 為 `POST /knowledge/collections/{id}/text`、`GET /documents/{id}/text`、`
 
 一般設定放 `.local/config/appsettings.Local.json`；Google key 共用 `.local/secrets/appsettings.Secrets.json` 的 `Inference.Providers.Google.ApiKey`，只由後端使用。聊天與向量模型各自選擇 provider；完全本地運行請參閱 [本地 AI 與向量化](LOCAL_AI.md)。
 
-預設為 Ollama bge-m3、1024 維、plain；embedding 可覆寫獨立端點。完整設定鍵、預設值與範圍見 [CONFIGURATION](CONFIGURATION.md)。搜尋採 vector／keyword／hybrid，全文不足時明確顯示 vector，重排與改寫略過也會在 mode 顯示；知識庫搜尋測試列出模式、分段耗時及排名／分數。
+預設為 Ollama bge-m3、1024 維、plain；embedding 可覆寫獨立端點。設定鍵、預設值與範圍見 [`KnowledgeOptions`](../backend/src/AiNexus.Features/Knowledge/KnowledgeOptions.cs)，設定檔規則見 [CONFIGURATION](CONFIGURATION.md)。搜尋採 vector／keyword／hybrid，全文不足時明確顯示 vector，重排與改寫略過也會在 mode 顯示；知識庫搜尋測試列出模式、分段耗時及排名／分數。
 
 從模型探測、測試文件、三種召回模式到聊天引用、ACL 及固定題庫評測，依 [向量檢索測試與異常復原](RETRIEVAL_TESTING.md) 操作。
 

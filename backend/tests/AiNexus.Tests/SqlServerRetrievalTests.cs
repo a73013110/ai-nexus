@@ -164,7 +164,7 @@ public sealed class SqlServerRetrievalTests
             await using var db = new NexusDbContext(new DbContextOptionsBuilder<NexusDbContext>().UseSqlServer(settings.ConnectionString).Options);
             await db.Database.MigrateAsync();
             var sql = new DbContextSqlDatabase<NexusDbContext>(db); using var cache = new MemoryCache(new MemoryCacheOptions());
-            var store = new SqlServerRetrievalStore(sql, Options.Create(new KnowledgeOptions { VectorCandidates = 1, FtsCandidates = 1, RerankCandidates = 1, TopK = 1 }), cache, NullLogger<SqlServerRetrievalStore>.Instance);
+            var store = new SqlServerRetrievalStore(sql, Options.Create(new KnowledgeOptions { Retrieval = new() { VectorCandidates = 1, FtsCandidates = 1, RerankCandidates = 1, TopK = 1 } }), cache, NullLogger<SqlServerRetrievalStore>.Instance);
             await test(db, sql, store);
         }
         finally

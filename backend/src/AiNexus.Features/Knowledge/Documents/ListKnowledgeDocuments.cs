@@ -21,7 +21,7 @@ internal sealed class ListKnowledgeDocuments(NexusDbContext db, ResourceAccess a
         var resource = await access.RequireAsync(actor, collection, KnowledgeCollection.Kind, ct);
         if (!resource.IsSuccess) return resource.Error;
         var editable = (await access.DescribeAsync(actor, resource.Value, ct)).CanEdit;
-        var docs = await db.Set<KnowledgeDocument>().AsNoTracking().Where(x => x.CollectionId == collection && !x.IsDeleted).OrderBy(x => x.FileName).Take(options.Value.MaxDocumentsPerCollection).ToListAsync(ct);
+        var docs = await db.Set<KnowledgeDocument>().AsNoTracking().Where(x => x.CollectionId == collection && !x.IsDeleted).OrderBy(x => x.FileName).Take(options.Value.Indexing.MaxDocumentsPerCollection).ToListAsync(ct);
         var ids = docs.Select(x => x.JobId).ToArray();
         var states = await db.Set<BackgroundJob>().AsNoTracking().Where(x => ids.Contains(x.Id)).ToDictionaryAsync(x => x.Id, x => x.Status, ct);
         return docs.Select(x => DocumentAccess.Describe(x, editable, x.JobId is Guid job && states.TryGetValue(job, out var state) ? state : null)).ToList();

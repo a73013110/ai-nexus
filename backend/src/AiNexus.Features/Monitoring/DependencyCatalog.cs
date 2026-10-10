@@ -13,8 +13,8 @@ public sealed class DependencyCatalog
         AddHttp(config["Inference:Providers:Ollama:Endpoint"], "ollama", "Ollama");
         AddHttp(config["Knowledge:Embedding:Endpoint"], "embedding", "向量模型服務");
         AddHttp(config["Knowledge:Rerank:Endpoint"], "rerank", "重排序服務");
-        AddHttp(config["Tools:WebSearch:Endpoint"], "search", "連網搜尋");
-        AddHttp(config["Integrations:Connectors:Gitea:BaseUrl"], "gitea", "Gitea 程式庫");
+        AddHttp(config["WebSearch:Endpoint"], "search", "連網搜尋");
+        AddHttp(config["Repositories:Gitea:BaseUrl"], "gitea", "Gitea 程式庫");
         foreach (var (key, id, name) in new[] { ("Nexus", "sql.nexus", "主資料庫"), ("LegacyGdweb", "sql.gdweb", "公文資料庫"), ("LegacyMeiho", "sql.meiho", "校務資料庫") })
         {
             var connection = config.GetConnectionString(key);

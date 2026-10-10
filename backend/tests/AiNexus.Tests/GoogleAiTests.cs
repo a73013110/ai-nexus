@@ -9,7 +9,7 @@ namespace AiNexus.Tests;
 
 public sealed class GoogleAiTests
 {
-    private static GoogleAiProvider Provider(HttpMessageHandler handler) => new(new HttpClient(handler) { BaseAddress = new Uri("https://fixture.test/v1beta/") }, Options.Create(new InferenceOptions { GoogleApiKey = "fixture-only-key" }));
+    private static GoogleAiProvider Provider(HttpMessageHandler handler) => new(new HttpClient(handler) { BaseAddress = new Uri("https://fixture.test/v1beta/") }, Options.Create(new InferenceOptions { Providers = { Google = { ApiKey = "fixture-only-key" } } }));
     [Fact]
     public async Task GoogleDiscoveryUsesAuthenticatedCatalogAndOnlyContentModels()
     {

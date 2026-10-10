@@ -50,8 +50,8 @@ public sealed class SqlServerRetrievalStore(ISqlDatabase<NexusDbContext> sql, IO
             """;
         try
         {
-            var rows = await sql.QueryAsync<RetrievalRow>(statement, new { Take = settings.RerankCandidates, Collections = collections, Profile = profile.Id, Vector = JsonSerializer.Serialize(vector), Query = query,
-                settings.VectorCandidates, settings.FtsCandidates, settings.RrfK, settings.VectorWeight, settings.FtsWeight, settings.MinVectorScore }, commandTimeout: 30, cancellationToken: ct);
+            var rows = await sql.QueryAsync<RetrievalRow>(statement, new { Take = settings.Retrieval.RerankCandidates, Collections = collections, Profile = profile.Id, Vector = JsonSerializer.Serialize(vector), Query = query,
+                settings.Retrieval.VectorCandidates, settings.Retrieval.FtsCandidates, settings.Retrieval.RrfK, settings.Retrieval.VectorWeight, settings.Retrieval.FtsWeight, settings.Retrieval.MinVectorScore }, commandTimeout: 30, cancellationToken: ct);
             return new(mode, rows.Select(x => x.Hit()).ToArray());
         }
         catch (SqlException error) when (fts && error.Number is 30010 or 30046 or 30053)

@@ -1,4 +1,5 @@
 using AiNexus.Features.AccessControl;
+using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
 using Microsoft.Extensions.Options;
@@ -17,11 +18,10 @@ public sealed class InferenceModule : IFeatureModule
         var services = builder.Services;
         services.AddScoped<ModelPolicyService>();
         services.AddScoped<ModelTaskService>();
-        services.AddOptions<InferenceOptions>().Configure<IConfiguration>((o, c) => InferenceSettings.Bind(c, o)).ValidateOnStart();
-        services.AddSingleton<IValidateOptions<InferenceOptions>, InferenceOptionsValidator>();
+        services.AddSettings<InferenceOptions, InferenceOptionsValidator>(InferenceOptions.Section).Configure(x => x.RouteProviders());
         services.AddHttpClient("Ollama", (sp, client) =>
         {
-            client.BaseAddress = new Uri(sp.GetRequiredService<IOptions<InferenceOptions>>().Value.BaseUrl);
+            client.BaseAddress = new Uri(sp.GetRequiredService<IOptions<InferenceOptions>>().Value.Providers.Ollama.Endpoint);
             client.Timeout = Timeout.InfiniteTimeSpan;
         });
         services.AddHttpClient("GoogleAI", client => { client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/v1beta/"); client.Timeout = Timeout.InfiniteTimeSpan; });
@@ -38,27 +38,5 @@ public sealed class InferenceModule : IFeatureModule
     {
         ListModels.Map(api.MapGroup("").RequireAuthorization(Policies.Chat).WithTags("Inference"));
         GetStatus.Map(api);
-    }
-}
-
-internal sealed class InferenceOptionsValidator : IValidateOptions<InferenceOptions>
-{
-    public ValidateOptionsResult Validate(string? name, InferenceOptions x)
-    {
-        List<string> failures = [];
-        if (!(x.ProviderConcurrency.Count > 0 && x.ProviderConcurrency.All(p => p.Key is "google" or "ollama" && p.Value is >= 1 and <= 8)))
-            failures.Add("Invalid enabled inference providers or concurrency.");
-        if (!((x.DefaultModelId is null || x.Models.Any(m => m.Id == x.DefaultModelId)) && x.Models.All(m => x.ProviderConcurrency.ContainsKey(m.Provider) && m.ValidReasoning(m.Provider))))
-            failures.Add("Invalid default model or reasoning capabilities.");
-        if (!(Uri.TryCreate(x.BaseUrl, UriKind.Absolute, out var url) && (url.Scheme is "http" or "https") && string.IsNullOrEmpty(url.UserInfo)))
-            failures.Add("Inference BaseUrl must be a server-controlled HTTP endpoint.");
-        if (!(x.QueueCapacity is >= 1 and <= 64 && x.TimeoutSeconds is >= 5 and <= 600 && x.MaxInputCharacters is >= 100 and <= 32000 && x.MaxOutputCharacters is >= 4096 and <= 262144))
-            failures.Add("Invalid inference capacity or limits.");
-        if (!(x.Models.Count > 0 && x.Models.Select(m => m.Id).Distinct(StringComparer.Ordinal).Count() == x.Models.Count
-              && x.Models.All(m => !string.IsNullOrWhiteSpace(m.Id) && m.Id.Length <= 160 && m.NativeId.Length is > 0 and <= 150
-                  && m.NativeId.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or ':' or '.' or '/') && m.ContextTokens is >= 1024 and <= 32768
-                  && m.MaxOutputTokens >= 128 && m.MaxOutputTokens < m.ContextTokens && m.SupportsStreaming)))
-            failures.Add("Invalid model profiles.");
-        return failures.Count == 0 ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail(failures);
     }
 }

@@ -87,12 +87,12 @@ public sealed class RetrievalEvaluationTests
     [Fact]
     public async Task InterruptedEvaluationResumesCheckpointsAndRejectsChangedSettings()
     {
-        await using var factory = new NexusFactory(services: services => services.PostConfigure<KnowledgeOptions>(x => x.QueryCacheMinutes = 0));
+        await using var factory = new NexusFactory(services: services => services.PostConfigure<KnowledgeOptions>(x => x.Retrieval.QueryCacheMinutes = 0));
         using var client = await factory.SignedInAsync(); var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
         var run = await Create(client, Request(seed.Collection, seed.Document.Id)); factory.Embeddings.FailOnCall = factory.Embeddings.Calls + 2; await Drain(factory);
         var failed = (await client.GetFromJsonAsync<RetrievalReportDto>($"/api/v1/quality/retrieval-evals/{run.Id}"))!; Assert.Equal("failed", failed.Run.Job.Status); Assert.Equal(2, failed.Results.Count);
-        var settings = factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value; settings.RrfK++;
-        Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsync($"/api/v1/jobs/{run.Job.Id}/retry", null)).StatusCode); settings.RrfK--;
+        var settings = factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value; settings.Retrieval.RrfK++;
+        Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsync($"/api/v1/jobs/{run.Job.Id}/retry", null)).StatusCode); settings.Retrieval.RrfK--;
         factory.Embeddings.FailOnCall = null; (await client.PostAsync($"/api/v1/jobs/{run.Job.Id}/retry", null)).EnsureSuccessStatusCode(); await Drain(factory);
         var complete = (await client.GetFromJsonAsync<RetrievalReportDto>($"/api/v1/quality/retrieval-evals/{run.Id}"))!;
         Assert.Equal("completed", complete.Run.Job.Status); Assert.Equal(8, complete.Results.Count);

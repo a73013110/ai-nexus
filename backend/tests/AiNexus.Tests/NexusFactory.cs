@@ -85,7 +85,7 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
             services.AddKeyedSingleton<IInferenceProvider>("ollama", Provider);
             services.RemoveAll<AiNexus.Features.Knowledge.Embeddings.IEmbeddingClient>();
             services.AddSingleton<AiNexus.Features.Knowledge.Embeddings.IEmbeddingClient>(Embeddings);
-            services.PostConfigure<AiNexus.Features.Knowledge.KnowledgeOptions>(x => { x.EmbeddingProvider = "ollama"; x.Dimensions = 768; });
+            services.PostConfigure<AiNexus.Features.Knowledge.KnowledgeOptions>(x => { x.Embedding.Provider = "ollama"; x.Embedding.Dimensions = 768; });
             foreach (var worker in services.Where(x => x.ServiceType == typeof(IHostedService) && x.ImplementationType?.Assembly.GetName().Name?.StartsWith("AiNexus.", StringComparison.Ordinal) == true
                 && !workers.Contains(x.ImplementationType)).ToList()) services.Remove(worker);
             services.Replace(ServiceDescriptor.Singleton(PasswordCost));

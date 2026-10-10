@@ -27,7 +27,8 @@ public sealed class ModelProfile
     public bool SupportsUsage { get; set; } = true;
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public bool SupportsImages { get; set; }
-    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    /// <summary>The configured <c>SupportsImages</c> as written: null lets Ollama's reported capabilities decide.</summary>
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped, ConfigurationKeyName("SupportsImages")]
     public bool? ImageCapabilityOverride { get; set; }
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public string ReasoningControl { get; set; } = "none";
@@ -35,6 +36,16 @@ public sealed class ModelProfile
     public List<string> ReasoningEfforts { get; set; } = [];
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public string DefaultReasoningEffort { get; set; } = "auto";
+
+    internal ModelProfile Route(string provider)
+    {
+        var routed = (ModelProfile)MemberwiseClone();
+        routed.Provider = provider;
+        routed.ProviderModelId = Id;
+        routed.Id = provider + "/" + Id;
+        routed.ReasoningEfforts = [.. ReasoningEfforts];
+        return routed;
+    }
 
     public bool ValidReasoning(string provider)
     {

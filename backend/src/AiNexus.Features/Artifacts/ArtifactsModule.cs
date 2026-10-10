@@ -3,7 +3,7 @@ using AiNexus.Features.Collaboration;
 using AiNexus.Platform.Events;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
-using Microsoft.Extensions.Options;
+using AiNexus.Platform.Configuration;
 
 namespace AiNexus.Features.Artifacts;
 
@@ -20,8 +20,7 @@ public sealed class ArtifactsModule : IFeatureModule
         services.AddScoped(provider => new ArtifactService(provider.GetRequiredService<CreateArtifact>()));
         services.AddScoped<ArtifactExport>();
         services.AddSingleton<PdfExportRenderer>();
-        services.AddOptions<ExportOptions>().BindConfiguration("Exports").ValidateOnStart();
-        services.AddSingleton<IValidateOptions<ExportOptions>, ExportOptionsValidator>();
+        services.AddSettings<ExportOptions, ExportOptionsValidator>(ExportOptions.Section);
         services.AddFeaturePolicy(FeatureIds.Artifacts);
         services.AddFeaturePolicy(Policies.Text, FeatureIds.Chat, FeatureIds.Artifacts);
         services.AddDomainEventHandler<ContainerDeleted, DetachDeletedProjectArtifacts>();
@@ -42,14 +41,6 @@ public sealed class ArtifactsModule : IFeatureModule
         ExportArtifact.Map(routes);
         TransformText.Map(api);
     }
-}
-
-internal sealed class ExportOptionsValidator : IValidateOptions<ExportOptions>
-{
-    public ValidateOptionsResult Validate(string? name, ExportOptions x)
-        => x.BrowserChannel is "msedge" or "chrome" or "chromium" && x.TimeoutSeconds is >= 5 and <= 120
-           && (string.IsNullOrWhiteSpace(x.BrowserExecutablePath) || Path.IsPathFullyQualified(x.BrowserExecutablePath))
-            ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail("Invalid document export browser settings.");
 }
 
 internal sealed class ArtifactsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Artifacts, "成果文件", "/artifacts", 40));

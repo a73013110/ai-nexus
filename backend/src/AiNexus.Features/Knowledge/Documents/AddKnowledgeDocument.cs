@@ -55,7 +55,7 @@ internal sealed class AddKnowledgeDocument(NexusDbContext db, ResourceAccess acc
             {
                 var existing = await db.Set<KnowledgeDocument>().SingleOrDefaultAsync(x => x.CollectionId == collection && x.AttachmentId == attachment && !x.IsDeleted, ct);
                 if (existing is not null) return await documents.DescribeAsync(actor, existing, ct);
-                if (await db.Set<KnowledgeDocument>().CountAsync(x => x.CollectionId == collection && !x.IsDeleted, ct) >= options.Value.MaxDocumentsPerCollection)
+                if (await db.Set<KnowledgeDocument>().CountAsync(x => x.CollectionId == collection && !x.IsDeleted, ct) >= options.Value.Indexing.MaxDocumentsPerCollection)
                     return KnowledgeErrors.DocumentLimit;
             }
             var now = clock.GetUtcNow();

@@ -47,7 +47,7 @@ public static class DatabaseStartup
         using var scope = app.Services.CreateScope();
         var storage = scope.ServiceProvider.GetRequiredService<StorageReadiness>();
         var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-        var migrate = app.Configuration.GetValue<bool>("Storage:ApplyMigrationsOnStartup");
+        var migrate = app.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup");
         if (migrate) storage.RequireConfigured();
         if (!storage.Configured || !db.Database.IsSqlServer()) return true;
         try
