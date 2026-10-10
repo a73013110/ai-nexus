@@ -1,3 +1,4 @@
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { Card } from '../../shared/ui/card';
 import { ViewMotion } from '../../shared/ui/view-motion';
@@ -13,6 +14,7 @@ import {
   output,
   effect,
   signal,
+  linkedSignal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
@@ -64,17 +66,36 @@ export class SettingsPage {
   readonly service = inject(UserSettingsService);
   private readonly api = inject(NexusApi);
   private readonly drafts = inject(DraftRepository);
-  readonly draft = signal<UserSettingsDto>(defaultSettings());
-  readonly saved = signal<UserSettingsDto>(defaultSettings());
-  readonly loading = signal(true);
+  /** The settings are read fresh with the account, never from another device's cache. */
+  private readonly settingsRead = apiResource({
+    freshAccount: true,
+    loader: () => this.service.load(this.session.me()!.id, true),
+  });
+  private readonly usageRead = apiResource({ loader: () => this.service.usage() });
+  private readonly modelsRead = apiResource({
+    loader: () => (this.session.has('chat') ? this.api.models() : Promise.resolve(null)),
+  });
+  private readonly policyRead = apiResource({ loader: () => this.service.policy() });
+  /** What the server holds; the draft starts from it and is compared against it. */
+  readonly saved = linkedSignal<UserSettingsDto>(() =>
+    structuredClone(this.settingsRead.value() ?? defaultSettings()),
+  );
+  readonly draft = linkedSignal<UserSettingsDto>(() => structuredClone(this.saved()));
+  readonly loading = this.settingsRead.loading;
   readonly saving = signal(false);
-  readonly error = signal('');
+  readonly saveError = signal('');
+  readonly error = computed(
+    () =>
+      this.saveError() ||
+      this.settingsRead.error() ||
+      (this.usageRead.error() ? '使用統計暫時無法取得，其他偏好仍可設定。' : ''),
+  );
   readonly notice = signal('');
   readonly search = signal('');
   readonly section = signal('appearance');
-  readonly usage = signal<PersonalUsageDto | null>(null);
-  readonly models = signal<ModelsDto | null>(null);
-  readonly policy = signal<EffectiveModelPolicyDto | null>(null);
+  readonly usage = computed<PersonalUsageDto | null>(() => this.usageRead.value() ?? null);
+  readonly models = computed<ModelsDto | null>(() => this.modelsRead.value() ?? null);
+  readonly policy = computed<EffectiveModelPolicyDto | null>(() => this.policyRead.value() ?? null);
   readonly notificationPermission = signal(
     'Notification' in window ? Notification.permission : 'unsupported',
   );
@@ -138,37 +159,17 @@ export class SettingsPage {
   private alive = true;
   constructor() {
     effect(() => this.stateChange.emit({ changed: this.changed(), saving: this.saving() }));
-    void this.load();
     inject(DestroyRef).onDestroy(() => {
       this.alive = false;
       this.service.restore();
     });
   }
-  async load() {
-    this.loading.set(true);
-    this.error.set('');
-    try {
-      const me = await this.session.load(true);
-      if (!me || !this.alive) return;
-      const value = await this.service.load(me.id, true);
-      if (!this.alive) return;
-      this.draft.set(structuredClone(value));
-      this.saved.set(structuredClone(value));
-      const results = await Promise.allSettled([
-        this.service.usage(),
-        this.session.has('chat') ? this.api.models() : Promise.resolve(null),
-        this.service.policy(),
-      ]);
-      if (!this.alive) return;
-      if (results[0].status === 'fulfilled') this.usage.set(results[0].value);
-      else this.error.set('使用統計暫時無法取得，其他偏好仍可設定。');
-      if (results[1].status === 'fulfilled') this.models.set(results[1].value);
-      if (results[2].status === 'fulfilled') this.policy.set(results[2].value);
-    } catch (error) {
-      if (this.alive) this.error.set(safeMessage(error));
-    } finally {
-      if (this.alive) this.loading.set(false);
-    }
+  load() {
+    this.saveError.set('');
+    this.settingsRead.reload();
+    this.usageRead.reload();
+    this.modelsRead.reload();
+    this.policyRead.reload();
   }
   update<K extends keyof UserSettingsDto>(key: K, value: UserSettingsDto[K]) {
     this.draft.update((current) => ({ ...current, [key]: value }));
@@ -195,15 +196,14 @@ export class SettingsPage {
   }
   async save() {
     this.saving.set(true);
-    this.error.set('');
+    this.saveError.set('');
     try {
       const value = await this.service.save(this.draft());
       if (!this.alive) return;
-      this.draft.set(structuredClone(value));
       this.saved.set(structuredClone(value));
       this.notice.set('已儲存，會套用於此帳號的其他裝置。');
     } catch (error) {
-      if (this.alive) this.error.set(safeMessage(error));
+      if (this.alive) this.saveError.set(safeMessage(error));
     } finally {
       if (this.alive) this.saving.set(false);
     }

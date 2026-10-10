@@ -1,3 +1,4 @@
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
@@ -9,6 +10,7 @@ import {
   inject,
   signal,
   viewChild,
+  computed,
 } from '@angular/core';
 import { FormField, form, maxLength } from '@angular/forms/signals';
 import type { ConversationDto, ConversationSettingsRequest } from '../../core/api/schema';
@@ -17,8 +19,8 @@ import { Select } from '../../shared/ui/select';
 import { ProjectsApi } from '../projects/projects-api';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
-import { ChatStore } from '../chat/chat-store';
 
+import { ChatConversations } from '../chat/chat-conversations';
 @Component({
   selector: 'nx-conversation-settings',
   imports: [Notice, CompactDialog, Field, Icon, FormField, Select],
@@ -99,10 +101,21 @@ import { ChatStore } from '../chat/chat-store';
 export class ConversationSettingsDialog {
   readonly session = inject(WorkspaceSession);
   private readonly projects = inject(ProjectsApi);
-  private readonly store = inject(ChatStore);
+  private readonly conversations = inject(ChatConversations);
   private readonly scope = inject(ViewScope);
   readonly projectId = signal('');
-  readonly projectOptions = signal([{ value: '', label: '個人對話' }]);
+  /** The conversation being edited; each opening reads the projects it can move to. */
+  private readonly target = signal<ConversationDto | null>(null);
+  private readonly projectsRead = apiResource({
+    params: () => (this.target() && this.session.has('projects') ? this.target() : undefined),
+    loader: () => this.projects.list(),
+  });
+  readonly projectOptions = computed(() => [
+    { value: '', label: '個人對話' },
+    ...(this.projectsRead.value() ?? [])
+      .filter((x) => !x.isArchived || x.resource.id === this.target()?.projectId)
+      .map((x) => ({ value: x.resource.id, label: x.resource.name })),
+  ]);
   readonly save =
     input.required<
       (conversation: ConversationDto, settings: ConversationSettingsRequest) => Promise<boolean>
@@ -113,29 +126,13 @@ export class ConversationSettingsDialog {
     maxLength(schema.labels, 150);
   });
   readonly busy = signal(false);
-  readonly error = signal('');
-  private target: ConversationDto | null = null;
+  readonly actionError = signal('');
+  readonly error = computed(() => this.actionError() || this.projectsRead.error());
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
   open(conversation: ConversationDto) {
-    this.target = conversation;
-    this.error.set('');
+    this.target.set(conversation);
+    this.actionError.set('');
     this.projectId.set(conversation.projectId ?? '');
-    const valid = this.scope.guard();
-    if (this.session.has('projects'))
-      void this.projects
-        .list()
-        .then((all) => {
-          if (valid() && this.target?.id === conversation.id)
-            this.projectOptions.set([
-              { value: '', label: '個人對話' },
-              ...all
-                .filter((x) => !x.isArchived || x.resource.id === conversation.projectId)
-                .map((x) => ({ value: x.resource.id, label: x.resource.name })),
-            ]);
-        })
-        .catch((e) => {
-          if (valid()) this.error.set(this.scope.message(e));
-        });
     this.model.set({
       instruction: conversation.systemInstruction,
       labels: (conversation.labels ?? []).join(', '),
@@ -143,37 +140,38 @@ export class ConversationSettingsDialog {
     this.dialog()?.nativeElement.showModal();
   }
   async assignProject(value: string) {
-    if (!this.target || this.busy()) return;
-    const target = this.target,
-      valid = this.scope.guard();
+    const target = this.target();
+    if (!target || this.busy()) return;
+    const valid = this.scope.guard();
     this.busy.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
-      if (await this.store.assignProject(target, value || null)) {
+      if (await this.conversations.assignProject(target, value || null)) {
         if (valid()) this.projectId.set(value);
       } else if (valid())
-        this.error.set('未能變更專案，請確認沒有正在生成的回答，並檢查專案權限。');
+        this.actionError.set('未能變更專案，請確認沒有正在生成的回答，並檢查專案權限。');
     } finally {
       if (valid()) this.busy.set(false);
     }
   }
   async submit(event: Event) {
     event.preventDefault();
-    if (this.busy() || !this.target || this.fields().invalid()) return;
+    const target = this.target();
+    if (this.busy() || !target || this.fields().invalid()) return;
     const labels = this.model()
       .labels.split(/[,，]/)
       .map((label) => label.trim())
       .filter(Boolean);
     if (labels.length > 5 || labels.some((label) => label.length > 24)) {
-      this.error.set('最多 5 個標籤，每個最多 24 字元。');
+      this.actionError.set('最多 5 個標籤，每個最多 24 字元。');
       return;
     }
     this.busy.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
-      if (await this.save()(this.target, { systemInstruction: this.model().instruction, labels }))
+      if (await this.save()(target, { systemInstruction: this.model().instruction, labels }))
         this.dialog()?.nativeElement.close();
-      else this.error.set('未能儲存設定，請確認連線後重試。');
+      else this.actionError.set('未能儲存設定，請確認連線後重試。');
     } finally {
       this.busy.set(false);
     }

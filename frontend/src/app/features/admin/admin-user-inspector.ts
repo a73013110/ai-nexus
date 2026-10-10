@@ -1,3 +1,5 @@
+import { ViewScope } from '../../shared/browser/view-scope';
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { ViewSwitch } from '../../shared/ui/view-switch';
@@ -9,7 +11,6 @@ import { safeMessage } from '../../core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   ElementRef,
   effect,
   inject,
@@ -17,6 +18,9 @@ import {
   output,
   signal,
   viewChild,
+  linkedSignal,
+  untracked,
+  computed,
 } from '@angular/core';
 import type {
   AdminConversationDetailDto,
@@ -61,6 +65,7 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
     RunTimingDisplay,
     ModelPolicyEditor,
   ],
+  providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-user-inspector.html',
   styleUrls: ['./admin-user-inspector.scss', './admin-user-inspector-reading.scss'],
@@ -70,100 +75,132 @@ export class AdminUserInspector {
   readonly closed = output<void>();
   readonly settingsChanged = output<void>();
   readonly models = input<ModelDto[]>([]);
-  readonly tab = signal('conversations');
-  readonly modelPolicy = signal<AdminUserModelPolicyDto | null>(null);
-  readonly modelDraft = signal<ModelPolicyDraft>(modelPolicyDraft());
-  readonly savingModels = signal(false);
-  readonly modelError = signal('');
-  readonly modelNotice = signal('');
-  readonly loadingModels = signal(false);
-  readonly storageLimit = signal('');
+  readonly session = inject(WorkspaceSession);
+  private readonly api = inject(AdminApi);
+  private readonly scope = inject(ViewScope);
+  private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+  private readonly userId = computed(() => this.user()?.id);
+  readonly tab = linkedSignal(() => (this.userId(), 'conversations'));
+  private readonly overviewRead = apiResource({
+    params: () => this.userId(),
+    loader: async (id) => ({ id, data: await this.api.insights(id) }),
+  });
+  readonly overview = computed<AdminUserDetailDto | null>(() => {
+    const loaded = this.overviewRead.value();
+    return loaded && loaded.id === this.userId() ? loaded.data : null;
+  });
+  readonly storageLimit = linkedSignal(() =>
+    storageLimitGb(this.overview()?.user.storage?.personalLimitBytes),
+  );
   readonly savingStorage = signal(false);
   readonly storageError = signal('');
   readonly storageNotice = signal('');
-  readonly session = inject(WorkspaceSession);
-  readonly overview = signal<AdminUserDetailDto | null>(null);
-  readonly conversations = signal<AdminConversationPageDto | null>(null);
-  readonly detail = signal<AdminConversationDetailDto | null>(null);
-  readonly search = signal('');
-  readonly includeDeleted = signal(true);
-  readonly loading = signal(false);
-  readonly reading = signal(false);
-  readonly error = signal('');
-  readonly readError = signal('');
+  /** The model policy is read the first time its tab is opened for this user. */
+  private readonly modelsWanted = linkedSignal(() => (this.userId(), false));
+  private readonly modelsRead = apiResource({
+    params: () => (this.modelsWanted() ? this.userId() : undefined),
+    loader: async (id) => ({ id, data: await this.api.modelPolicy(id) }),
+  });
+  readonly modelPolicy = computed<AdminUserModelPolicyDto | null>(() => {
+    const loaded = this.modelsRead.value();
+    return loaded && loaded.id === this.userId() ? loaded.data : null;
+  });
+  readonly modelDraft = linkedSignal<ModelPolicyDraft>(() =>
+    modelPolicyDraft(this.modelPolicy()?.personal),
+  );
+  readonly loadingModels = this.modelsRead.loading;
+  readonly savingModels = signal(false);
+  readonly saveModelError = signal('');
+  readonly modelError = computed(() => this.saveModelError() || this.modelsRead.error());
+  readonly modelNotice = signal('');
+  readonly search = linkedSignal(() => (this.userId(), ''));
+  private readonly query = linkedSignal(() => (this.userId(), ''));
+  private readonly typing = signal(false);
+  readonly includeDeleted = linkedSignal(() => (this.userId(), true));
+  private readonly offset = linkedSignal(() => (this.userId(), 0));
+  private readonly listRead = apiResource({
+    params: () => {
+      const id = this.userId();
+      return id
+        ? { id, search: this.query(), includeDeleted: this.includeDeleted(), offset: this.offset() }
+        : undefined;
+    },
+    loader: async (request) => ({
+      id: request.id,
+      data: await this.api.conversations(
+        request.id,
+        request.search,
+        request.includeDeleted,
+        request.offset,
+      ),
+    }),
+  });
+  readonly conversations = computed<AdminConversationPageDto | null>(() => {
+    const loaded = this.listRead.value();
+    return loaded && loaded.id === this.userId() ? loaded.data : null;
+  });
+  readonly loading = computed(() => this.typing() || this.listRead.refreshing());
+  readonly error = computed(() => this.overviewRead.error() || this.listRead.error());
+  /** The conversation being read and how many of its messages are already shown. */
+  private readonly opened = linkedSignal<string | undefined, { id: string; offset: number } | null>(
+    { source: this.userId, computation: () => null },
+  );
+  private readonly detailRead = apiResource({
+    params: () => this.opened() ?? undefined,
+    loader: async (request) => ({
+      request,
+      data: await this.api.conversation(request.id, request.offset),
+    }),
+  });
+  readonly detail = linkedSignal<
+    {
+      request: { id: string; offset: number } | null;
+      loaded?: { request: { id: string; offset: number }; data: AdminConversationDetailDto };
+    },
+    AdminConversationDetailDto | null
+  >({
+    source: () => ({ request: this.opened(), loaded: this.detailRead.value() }),
+    computation: ({ request, loaded }, previous) => {
+      if (!request) return null;
+      const shown = request.offset ? (previous?.value ?? null) : null;
+      if (loaded?.request !== request) return shown;
+      return shown
+        ? { ...loaded.data, offset: 0, messages: [...shown.messages, ...loaded.data.messages] }
+        : loaded.data;
+    },
+  });
+  readonly reading = this.detailRead.refreshing;
+  readonly readError = this.detailRead.error;
   readonly date = formatDate;
   readonly format = formatNumber;
   readonly bytes = formatBytes;
-  private readonly api = inject(AdminApi);
-  private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
-  private version = 0;
-  private listVersion = 0;
-  private readVersion = 0;
-  private timer?: ReturnType<typeof setTimeout>;
   constructor() {
     effect(() => {
       const user = this.user(),
         dialog = this.dialog().nativeElement;
-      ++this.version;
-      ++this.listVersion;
-      ++this.readVersion;
-      clearTimeout(this.timer);
-      this.overview.set(null);
-      this.conversations.set(null);
-      this.detail.set(null);
-      this.search.set('');
-      this.includeDeleted.set(true);
-      this.error.set('');
-      this.readError.set('');
-      this.reading.set(false);
-      this.storageError.set('');
-      this.storageNotice.set('');
-      this.savingStorage.set(false);
-      this.storageLimit.set('');
-      this.tab.set('conversations');
-      this.modelPolicy.set(null);
-      this.modelDraft.set(modelPolicyDraft());
-      this.modelError.set('');
-      this.modelNotice.set('');
-      this.loadingModels.set(false);
-      this.savingModels.set(false);
+      untracked(() => {
+        this.scope.cancel('inspector-search');
+        this.typing.set(false);
+        this.storageError.set('');
+        this.storageNotice.set('');
+        this.savingStorage.set(false);
+        this.saveModelError.set('');
+        this.modelNotice.set('');
+        this.savingModels.set(false);
+      });
       if (user) {
         if (!dialog.open) dialog.showModal();
-        void this.load(user.id, this.version);
       } else if (dialog.open) dialog.close();
-    });
-    inject(DestroyRef).onDestroy(() => {
-      ++this.version;
-      ++this.listVersion;
-      ++this.readVersion;
-      clearTimeout(this.timer);
     });
   }
   close() {
     this.dialog().nativeElement.close();
   }
-  private async load(id: string, version: number) {
-    const listVersion = this.listVersion;
-    this.loading.set(true);
-    try {
-      const [overview, conversations] = await Promise.all([
-        this.api.insights(id),
-        this.api.conversations(id, '', true),
-      ]);
-      if (version !== this.version) return;
-      this.overview.set(overview);
-      this.storageLimit.set(storageLimitGb(overview.user.storage?.personalLimitBytes));
-      if (listVersion === this.listVersion) this.conversations.set(conversations);
-    } catch (error) {
-      if (version === this.version) this.error.set(this.message(error));
-    } finally {
-      if (version === this.version && listVersion === this.listVersion) this.loading.set(false);
-    }
-  }
   async saveStorage(event: Event) {
     event.preventDefault();
     const user = this.user(),
-      version = this.version;
+      alive = this.scope.guard(),
+      valid = () => alive() && this.userId() === user?.id;
     if (!user || this.savingStorage()) return;
     this.storageError.set('');
     this.storageNotice.set('');
@@ -171,112 +208,72 @@ export class AdminUserInspector {
     try {
       const bytes = parseStorageLimitGb(this.storageLimit());
       await this.api.storage(user.id, bytes);
-      const overview = await this.api.insights(user.id);
-      if (version !== this.version) return;
-      this.overview.set(overview);
+      if (!valid()) return;
+      this.overviewRead.reload();
       this.storageNotice.set('個人容量上限已更新。');
       this.settingsChanged.emit();
     } catch (error) {
-      if (version === this.version) this.storageError.set(this.message(error));
+      if (valid()) this.storageError.set(safeMessage(error));
     } finally {
-      if (version === this.version) this.savingStorage.set(false);
+      if (valid()) this.savingStorage.set(false);
     }
   }
-  async selectTab(tab: string) {
+  selectTab(tab: string) {
     this.tab.set(tab);
-    if (tab !== 'models' || this.modelPolicy() || this.loadingModels()) return;
-    await this.loadModels();
+    if (tab === 'models') this.modelsWanted.set(true);
   }
-  async loadModels() {
-    const user = this.user(),
-      version = this.version;
-    if (!user) return;
-    this.loadingModels.set(true);
-    this.modelError.set('');
-    try {
-      const policy = await this.api.modelPolicy(user.id);
-      if (version !== this.version) return;
-      this.modelPolicy.set(policy);
-      this.modelDraft.set(modelPolicyDraft(policy.personal));
-    } catch (error) {
-      if (version === this.version) this.modelError.set(this.message(error));
-    } finally {
-      if (version === this.version) this.loadingModels.set(false);
-    }
+  loadModels() {
+    this.saveModelError.set('');
+    this.modelsRead.reload();
   }
   async saveModels(event: Event) {
     event.preventDefault();
     const user = this.user(),
-      version = this.version;
+      alive = this.scope.guard(),
+      valid = () => alive() && this.userId() === user?.id;
     if (!user || this.savingModels()) return;
     this.savingModels.set(true);
-    this.modelError.set('');
+    this.saveModelError.set('');
     this.modelNotice.set('');
     try {
       await this.api.saveModelPolicy(user.id, modelPolicyRequest(this.modelDraft()));
-      const policy = await this.api.modelPolicy(user.id);
-      if (version !== this.version) return;
-      this.modelPolicy.set(policy);
-      this.modelDraft.set(modelPolicyDraft(policy.personal));
+      if (!valid()) return;
+      this.modelsRead.reload();
       this.modelNotice.set('個人模型政策已儲存，下次生成生效。');
       this.settingsChanged.emit();
     } catch (error) {
-      if (version === this.version) this.modelError.set(this.message(error));
+      if (valid()) this.saveModelError.set(safeMessage(error));
     } finally {
-      if (version === this.version) this.savingModels.set(false);
+      if (valid()) this.savingModels.set(false);
     }
   }
   searchChanged(value: string) {
     this.search.set(value);
-    clearTimeout(this.timer);
-    ++this.listVersion;
-    this.timer = setTimeout(() => void this.loadList(), 250);
+    this.typing.set(true);
+    this.scope.later(
+      () => {
+        this.typing.set(false);
+        this.offset.set(0);
+        this.query.set(value);
+      },
+      250,
+      'inspector-search',
+    );
   }
   deletedChanged(value: boolean) {
+    this.typing.set(false);
+    this.scope.cancel('inspector-search');
+    this.query.set(this.search());
+    this.offset.set(0);
     this.includeDeleted.set(value);
-    clearTimeout(this.timer);
-    void this.loadList();
   }
-  async loadList(offset = 0) {
-    const user = this.user();
-    if (!user) return;
-    const version = ++this.listVersion;
-    this.error.set('');
-    this.loading.set(true);
-    try {
-      const rows = await this.api.conversations(
-        user.id,
-        this.search(),
-        this.includeDeleted(),
-        offset,
-      );
-      if (version === this.listVersion) this.conversations.set(rows);
-    } catch (error) {
-      if (version === this.listVersion) this.error.set(this.message(error));
-    } finally {
-      if (version === this.listVersion) this.loading.set(false);
-    }
+  loadList(offset = 0) {
+    this.offset.set(offset);
   }
-  async read(id: string, more = false) {
-    if (this.reading() && more) return;
-    const version = ++this.readVersion;
-    const old = more ? this.detail() : null;
-    if (!more) this.detail.set(null);
-    this.reading.set(true);
-    this.readError.set('');
-    try {
-      const detail = await this.api.conversation(id, old?.messages.length || 0);
-      if (version === this.readVersion)
-        this.detail.set(
-          old ? { ...detail, offset: 0, messages: [...old.messages, ...detail.messages] } : detail,
-        );
-    } catch (error) {
-      if (version === this.readVersion) this.readError.set(this.message(error));
-    } finally {
-      if (version === this.readVersion) this.reading.set(false);
-    }
-  }
-  private message(error: unknown) {
-    return safeMessage(error);
+  read(id: string, more = false) {
+    if (more) {
+      if (this.reading()) return;
+      this.opened.set({ id, offset: this.detail()?.messages.length || 0 });
+    } else this.opened.set({ id, offset: 0 });
   }
 }

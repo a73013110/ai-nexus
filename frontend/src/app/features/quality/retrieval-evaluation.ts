@@ -1,8 +1,16 @@
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { Card } from '../../shared/ui/card';
 import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/errors/safe-errors';
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  signal,
+  linkedSignal,
+  computed,
+} from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import type {
@@ -38,15 +46,44 @@ export class RetrievalEvaluation {
   private readonly jobs = inject(JobsApi);
   private readonly scope = inject(ViewScope);
   readonly session = inject(WorkspaceSession);
-  readonly collections = signal<CollectionDto[]>([]);
+  private readonly collectionsRead = apiResource({
+    feature: 'knowledge',
+    loader: () => this.knowledge.collections(),
+  });
+  private readonly runsRead = apiResource({
+    feature: 'knowledge',
+    loader: () => this.api.retrievalEvaluations(),
+  });
+  readonly collections = computed<CollectionDto[]>(() => this.collectionsRead.value() ?? []);
   readonly selected = signal<string[]>([]);
-  readonly runs = signal<RetrievalEvaluationDto[]>([]);
-  readonly report = signal<RetrievalReportDto | null>(null);
-  readonly error = signal('');
+  readonly runs = computed<RetrievalEvaluationDto[]>(() => this.runsRead.value() ?? []);
+  /** The report on screen: the newest run until the user picks another. */
+  private readonly reportId = linkedSignal<RetrievalEvaluationDto[], string>({
+    source: this.runs,
+    computation: (runs, previous) => previous?.value || runs[0]?.id || '',
+  });
+  /** A running evaluation is read again every 2 seconds. */
+  private readonly reportRead = apiResource({
+    feature: 'knowledge',
+    params: () => this.reportId() || undefined,
+    loader: (id) => this.api.retrievalEvaluation(id),
+    poll: (report) => (report && isActive(report.run.job.status) ? 2000 : null),
+  });
+  readonly report = computed<RetrievalReportDto | null>(() => {
+    const value = this.reportRead.value();
+    return value?.run.id === this.reportId() ? value : null;
+  });
+  readonly actionError = signal('');
+  readonly error = computed(
+    () =>
+      this.actionError() ||
+      this.collectionsRead.error() ||
+      this.runsRead.error() ||
+      this.reportRead.error(),
+  );
   readonly busy = signal(false);
-  readonly loading = signal(true);
+  readonly loading = computed(() => this.collectionsRead.loading() || this.runsRead.loading());
   readonly date = formatDate;
-  private sequence = 0;
   readonly form = new FormGroup({
     title: new FormControl('', {
       nonNullable: true,
@@ -69,26 +106,10 @@ export class RetrievalEvaluation {
     null,
     2,
   );
-  constructor() {
-    void this.load();
-  }
-  async load() {
-    const valid = this.scope.guard();
-    try {
-      if (!this.session.has('knowledge')) throw new ClientValidationError('featureAccess');
-      const [collections, runs] = await Promise.all([
-        this.knowledge.collections(),
-        this.api.retrievalEvaluations(),
-      ]);
-      if (!valid()) return;
-      this.collections.set(collections);
-      this.runs.set(runs);
-      if (!this.report() && runs[0]) await this.select(runs[0].id);
-    } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.loading.set(false);
-    }
+  load() {
+    this.actionError.set('');
+    this.collectionsRead.reload();
+    this.runsRead.reload();
   }
   options() {
     return this.runs().map((x) => ({
@@ -100,37 +121,23 @@ export class RetrievalEvaluation {
   choose(id: string, checked: boolean) {
     this.selected.update((ids) => (checked ? [...ids, id] : ids.filter((x) => x !== id)));
   }
-  async select(id: string) {
-    const generation = ++this.sequence,
-      alive = this.scope.guard();
-    const valid = () => alive() && generation === this.sequence;
-    this.scope.cancel('retrieval-eval');
-    this.error.set('');
-    try {
-      const report = await this.api.retrievalEvaluation(id);
-      if (!valid()) return;
-      this.report.set(report);
-      if (isActive(report.run.job.status))
-        this.scope.later(() => void this.select(id), 2000, 'retrieval-eval');
-    } catch (error) {
-      if (valid()) {
-        this.report.set(null);
-        this.error.set(this.scope.message(error));
-      }
-    }
+  select(id: string) {
+    this.actionError.set('');
+    if (id === this.reportId()) this.reportRead.reload();
+    else this.reportId.set(id);
   }
   async create(event: Event) {
     event.preventDefault();
     if (this.busy() || this.form.invalid || !this.selected().length) return;
     const valid = this.scope.guard();
-    this.error.set('');
+    this.actionError.set('');
     let cases: RetrievalEvaluationCase[];
     try {
       cases = JSON.parse(this.form.controls.corpus.value) as RetrievalEvaluationCase[];
       if (!Array.isArray(cases) || cases.length < 1 || cases.length > 20)
         throw new ClientValidationError('retrievalEvaluationFormat');
     } catch (error) {
-      this.error.set(
+      this.actionError.set(
         error instanceof SyntaxError
           ? 'JSON 格式不正確，請依範例修正後再執行。'
           : this.scope.message(error),
@@ -145,10 +152,10 @@ export class RetrievalEvaluation {
         cases,
       });
       if (!valid()) return;
-      this.runs.update((runs) => [run, ...runs]);
-      await this.select(run.id);
+      this.runsRead.value.update((runs) => [run, ...(runs ?? [])]);
+      this.select(run.id);
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -160,17 +167,17 @@ export class RetrievalEvaluation {
     input.value = '';
     if (!file) return;
     if (file.size > 1000000) {
-      this.error.set('驗收集檔案最多 1 MB。');
+      this.actionError.set('驗收集檔案最多 1 MB。');
       return;
     }
     try {
       const text = await file.text();
       if (valid()) {
         this.form.controls.corpus.setValue(text);
-        this.error.set('');
+        this.actionError.set('');
       }
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.actionError.set(this.scope.message(error));
     }
   }
   async control(action: 'cancel' | 'retry') {
@@ -178,13 +185,13 @@ export class RetrievalEvaluation {
       valid = this.scope.guard();
     if (!report || this.busy()) return;
     this.busy.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
       if (action === 'cancel') await this.jobs.cancel(report.run.job.id);
       else await this.jobs.retry(report.run.job.id);
-      if (valid()) await this.select(report.run.id);
+      if (valid()) this.select(report.run.id);
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -194,12 +201,12 @@ export class RetrievalEvaluation {
       valid = this.scope.guard();
     if (!report || this.busy()) return;
     this.busy.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
       const latest = await this.api.retrievalReport(report.run.id);
       if (valid()) downloadFile(JSON.stringify(latest, null, 2), report.run.title, 'json');
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }

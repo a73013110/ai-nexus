@@ -13,8 +13,7 @@
   </div>
   @if (!session.has('audit') && session.me()) {
     <nx-notice tone="danger">需要活動稽核查閱權限。</nx-notice>
-  }
-  @if (error()) {
+  } @else if (error()) {
     <nx-notice tone="danger" [message]="error()"
       ><button notice-actions type="button" (click)="reload()">重新載入</button></nx-notice
     >
@@ -157,7 +156,7 @@
                   class="icon-button"
                   data-row-action
                   [attr.aria-label]="'檢視稽核：#' + row.entry.id"
-                  [attr.aria-controls]="drawer().id"
+                  [attr.aria-controls]="drawer()?.id"
                   [attr.aria-expanded]="selectedId() === row.entry.id"
                   (click)="openDetails(row.entry.id)"
                 >
