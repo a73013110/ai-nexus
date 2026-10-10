@@ -5,16 +5,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Library;
 
-internal static class DeletePromptTemplate
+internal sealed class DeletePromptTemplate(NexusDbContext db)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/{id:guid}", HandleAsync)
-        .WithName("DeletePromptTemplate")
-        .Produces(StatusCodes.Status204NoContent);
+        .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeletePromptTemplate handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .WithName("DeletePromptTemplate");
 
-    private static async Task<IResult> HandleAsync(Guid id, ICurrentUser user, NexusDbContext db, CancellationToken ct)
+    public async Task<Result> HandleAsync(Guid owner, Guid id, CancellationToken ct)
     {
-        var deleted = await db.Set<PromptTemplate>().OwnedBy(user.Id).Where(x => x.Id == id).ExecuteDeleteAsync(ct);
-        return deleted == 0 ? LibraryErrors.NotFound.ToProblem() : TypedResults.NoContent();
+        var deleted = await db.Set<PromptTemplate>().OwnedBy(owner).Where(x => x.Id == id).ExecuteDeleteAsync(ct);
+        return deleted == 0 ? LibraryErrors.NotFound : Result.Success;
     }
 }

@@ -30,7 +30,7 @@ internal sealed class SaveUserSettings(NexusDbContext db, ModelPresentation mode
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/settings", async (UserSettingsDto body, ICurrentUser user, SaveUserSettings handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.User, body, ct)).ToHttpResult())
-        .WithName("SaveUserSettings").Produces<UserSettingsDto>();
+        .WithName("SaveUserSettings");
 
     public async Task<Result<UserSettingsDto>> HandleAsync(NexusUser user, UserSettingsDto value, CancellationToken ct)
     {

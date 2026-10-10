@@ -13,17 +13,15 @@ public sealed record NotificationDto(Guid Id, int Version, string Type, string S
 
 public sealed record NotificationPageDto(IReadOnlyList<NotificationDto> Items, int Unread, bool HasMore);
 
-internal static class ListNotifications
+internal sealed class ListNotifications(NexusDbContext db)
 {
     private const int PageSize = 50;
 
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("", async (bool? unread, Guid? before, ICurrentUser user, NexusDbContext db, CancellationToken ct) =>
-            (await HandleAsync(db, user.Id, unread ?? false, before, ct)).ToHttpResult())
-        .WithName("ListNotifications")
-        .Produces<NotificationPageDto>();
+        .MapGet("", (bool? unread, Guid? before, ICurrentUser user, ListNotifications handler, CancellationToken ct) => handler.HandleAsync(user.Id, unread ?? false, before, ct).ToHttpResultAsync())
+        .WithName("ListNotifications");
 
-    public static async Task<Result<NotificationPageDto>> HandleAsync(NexusDbContext db, Guid owner, bool unread, Guid? before, CancellationToken ct)
+    public async Task<Result<NotificationPageDto>> HandleAsync(Guid owner, bool unread, Guid? before, CancellationToken ct)
     {
         var inbox = db.Set<WorkspaceNotification>().AsNoTracking().Inbox(owner);
         var count = await inbox.CountAsync(x => x.ReadAt == null, ct);

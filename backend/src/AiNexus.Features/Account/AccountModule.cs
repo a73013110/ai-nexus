@@ -5,13 +5,7 @@ namespace AiNexus.Features.Account;
 /// <summary>The signed-in user's own profile, preferences, settings and usage. Each use case has its own file.</summary>
 public sealed class AccountModule : IFeatureModule
 {
-    public static void AddServices(IHostApplicationBuilder builder)
-    {
-        var services = builder.Services;
-        services.AddScoped<PersonalUsage>();
-        services.AddScoped<UpdatePreferences>();
-        services.AddScoped<SaveUserSettings>();
-    }
+    public static void AddServices(IHostApplicationBuilder builder) => builder.Services.AddScoped<PersonalUsage>();
 
     /// <summary>Endpoint order is the published OpenAPI order.</summary>
     public static void MapEndpoints(RouteGroupBuilder api)

@@ -25,10 +25,10 @@ internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes)
     {
-        routes.MapPost("", (SavePromptRequest body, ICurrentUser user, SavePromptTemplate handler, CancellationToken ct) => Respond(handler.HandleAsync(user.Id, null, body, ct)))
-            .WithName("CreatePromptTemplate").Produces<PromptTemplateDto>();
-        routes.MapPut("/{id:guid}", (Guid id, SavePromptRequest body, ICurrentUser user, SavePromptTemplate handler, CancellationToken ct) => Respond(handler.HandleAsync(user.Id, id, body, ct)))
-            .WithName("UpdatePromptTemplate").Produces<PromptTemplateDto>();
+        routes.MapPost("", (SavePromptRequest body, ICurrentUser user, SavePromptTemplate handler, CancellationToken ct) => handler.HandleAsync(user.Id, null, body, ct).ToHttpResultAsync())
+            .WithName("CreatePromptTemplate");
+        routes.MapPut("/{id:guid}", (Guid id, SavePromptRequest body, ICurrentUser user, SavePromptTemplate handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync())
+            .WithName("UpdatePromptTemplate");
     }
 
     public async Task<Result<PromptTemplateDto>> HandleAsync(Guid owner, Guid? id, SavePromptRequest request, CancellationToken ct)
@@ -50,6 +50,4 @@ internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
         await db.SaveChangesAsync(ct);
         return template.ToDto();
     }
-
-    private static async Task<IResult> Respond(Task<Result<PromptTemplateDto>> result) => (await result).ToHttpResult();
 }

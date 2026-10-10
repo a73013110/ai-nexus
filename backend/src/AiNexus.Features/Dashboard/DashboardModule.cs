@@ -7,7 +7,6 @@ public sealed class DashboardModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)
     {
-        builder.Services.AddScoped<GetDashboard>();
         builder.Services.AddFeaturePolicy(FeatureIds.Dashboard);
     }
 

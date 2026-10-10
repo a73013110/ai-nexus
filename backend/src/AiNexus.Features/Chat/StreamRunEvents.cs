@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Http.HttpResults;
 using System.Text.Json;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
@@ -25,11 +24,8 @@ internal sealed class StreamRunEvents(RunService runs, NexusDbContext db, Subscr
 
     // A failure is answered as a problem before the stream starts; once it has started, the response is the stream.
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
-        .MapGet("/runs/{id:guid}/events", async Task<Results<EmptyHttpResult, ProblemHttpResult>> (Guid id, long? after, HttpContext http, ICurrentUser user, StreamRunEvents handler, CancellationToken ct) =>
-        {
-            var streamed = await handler.HandleAsync(http, user.Id, id, after, ct);
-            return streamed.IsSuccess ? TypedResults.Empty : streamed.Error.ToProblem();
-        })
+        .MapGet("/runs/{id:guid}/events", (Guid id, long? after, HttpContext http, ICurrentUser user, StreamRunEvents handler, CancellationToken ct) =>
+            handler.HandleAsync(http, user.Id, id, after, ct).ToStreamResultAsync(http))
         .WithName("RunEvents").Produces<RunEventDto>(200, "text/event-stream");
 
     public async Task<Result> HandleAsync(HttpContext http, Guid owner, Guid id, long? after, CancellationToken ct)

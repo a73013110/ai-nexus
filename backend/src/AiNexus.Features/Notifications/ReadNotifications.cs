@@ -16,21 +16,26 @@ internal sealed class ReadNotificationsRequestValidator : RequestValidator<ReadN
     public ReadNotificationsRequestValidator() => RuleFor(x => x.Through).NotEmpty();
 }
 
-internal static class ReadNotifications
+/// <summary>Marks the user's notifications read, all of them up to a time or one by id.</summary>
+internal sealed class ReadNotifications(NexusDbContext db, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes)
     {
-        routes.MapPost("/read", async (ReadNotificationsRequest body, ICurrentUser user, NexusDbContext db, TimeProvider clock, CancellationToken ct) =>
+        routes.MapPost("/read", async (ReadNotificationsRequest body, ICurrentUser user, ReadNotifications handler, CancellationToken ct) =>
         {
-            await Unread(db, user.Id).Where(x => x.CreatedAt <= body.Through).ExecuteUpdateAsync(p => p.SetProperty(x => x.ReadAt, clock.GetUtcNow()), ct);
+            await handler.ThroughAsync(user.Id, body.Through, ct);
             return TypedResults.NoContent();
         }).WithName("ReadNotifications");
-        routes.MapPost("/{id:guid}/read", async (Guid id, ICurrentUser user, NexusDbContext db, TimeProvider clock, CancellationToken ct) =>
+        routes.MapPost("/{id:guid}/read", async (Guid id, ICurrentUser user, ReadNotifications handler, CancellationToken ct) =>
         {
-            await Unread(db, user.Id).Where(x => x.Id == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ReadAt, clock.GetUtcNow()), ct);
+            await handler.OneAsync(user.Id, id, ct);
             return TypedResults.NoContent();
         }).WithName("ReadNotification");
     }
 
-    private static IQueryable<WorkspaceNotification> Unread(NexusDbContext db, Guid owner) => db.Set<WorkspaceNotification>().Inbox(owner).Where(x => x.ReadAt == null);
+    public Task ThroughAsync(Guid owner, DateTimeOffset through, CancellationToken ct) => Unread(owner).Where(x => x.CreatedAt <= through).ExecuteUpdateAsync(p => p.SetProperty(x => x.ReadAt, clock.GetUtcNow()), ct);
+
+    public Task OneAsync(Guid owner, Guid id, CancellationToken ct) => Unread(owner).Where(x => x.Id == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ReadAt, clock.GetUtcNow()), ct);
+
+    private IQueryable<WorkspaceNotification> Unread(Guid owner) => db.Set<WorkspaceNotification>().Inbox(owner).Where(x => x.ReadAt == null);
 }
