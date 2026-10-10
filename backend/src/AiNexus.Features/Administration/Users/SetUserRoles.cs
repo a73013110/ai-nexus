@@ -1,3 +1,4 @@
+using AiNexus.Platform.Validation;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
@@ -6,7 +7,7 @@ using AiNexus.Features.Administration.Roles;
 
 namespace AiNexus.Features.Administration.Users;
 
-/// <summary>Not a request validator: format failures are audited inside the administrative transaction (see <see cref="AccessRules"/>).</summary>
+[ValidatedInHandler("Format failures are audited inside the administrative transaction (AccessRules).")]
 public sealed record UserRolesRequest(IReadOnlyList<string> RoleIds);
 
 /// <summary>Replaces a user's roles. Audited; refused when it would remove the actor's own administrator access.</summary>

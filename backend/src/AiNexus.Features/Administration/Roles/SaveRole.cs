@@ -1,3 +1,4 @@
+using AiNexus.Platform.Validation;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
@@ -5,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Administration.Roles;
 
-/// <summary>Not a request validator: format failures are audited inside the administrative transaction (see <see cref="AccessRules"/>).</summary>
+[ValidatedInHandler("Format failures are audited inside the administrative transaction (AccessRules).")]
 public sealed record RoleUpdateRequest(string Name, bool Enabled, IReadOnlyList<string> GroupIds);
 
 /// <summary>Creates or updates a role and its groups. Audited; refused when it would remove the actor's own administrator access.</summary>

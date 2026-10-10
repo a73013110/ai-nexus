@@ -1,3 +1,4 @@
+using AiNexus.Platform.Validation;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
@@ -6,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Conversations;
 
-// Every check needs the database (the leaf must be a message of this conversation), so this request has no validator.
+[ValidatedInHandler("Every check needs the database: the leaf must be a message of this conversation.")]
 public sealed record SelectBranchRequest(Guid LeafId);
 
 /// <summary>Shows another version (leaf message) of one of the user's own idle conversations. Runs under the conversation's generation lock.</summary>

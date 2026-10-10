@@ -1,3 +1,4 @@
+using AiNexus.Platform.Validation;
 using System.Text.Json;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Time;
@@ -8,6 +9,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Inference;
 
+[ValidatedInHandler("The rules are checked inside the audited administrative transaction (ModelPolicyService.Check).")]
 public sealed record ModelPolicyRequest(IReadOnlyList<string>? AllowedModelIds = null, IReadOnlyDictionary<string, long>? DailyTokenLimits = null);
 public sealed record ModelTokenBudgetDto(string ModelId, long? DailyTokenLimit, long UsedTokens, long ReservedTokens, long? RemainingTokens, string Source, string? ModelDisplayName = null);
 public sealed record EffectiveModelPolicyDto(IReadOnlyList<string>? AllowedModelIds, long? StoredAttachmentLimitBytes, IReadOnlyList<ModelTokenBudgetDto> Models, DateTimeOffset ResetsAt);

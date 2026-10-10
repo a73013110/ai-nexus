@@ -56,7 +56,7 @@ internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
 - request body 的格式規則寫成 `RequestValidator<T>`，與 request record 放在同一個 slice 檔。驗證 filter 已掛在 `/api/v1` 群組，handler 不必再檢查。
 - 要保留模組既有的錯誤代碼時覆寫 `ProblemCode`；欄位規則代碼用 `WithErrorCode("snake_case")`。回應的 `errors` 只列欄位與規則代碼，不含輸入內容。
 - 需要資料庫的規則（重複、配額、擁有權）屬於 handler，不放 validator。
-- `EndpointConventionTests` 以 `request-validators.baseline.txt` 管控尚未有 validator 的 request，新增 request 必須有 validator；補上後刪掉該行。
+- 刻意交給 handler 驗證的 request（失敗要寫稽核、登入失敗不可分辨、404／403 先於 400）不寫 validator，改標 `[ValidatedInHandler("原因")]`；兩者擇一（`EndpointConventionTests`）。
 
 ## 軟刪除
 

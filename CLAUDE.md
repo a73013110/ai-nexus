@@ -37,10 +37,10 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 
 - 一個 use case 一個檔案（handler＋endpoint＋validator），放在 `AiNexus.Features/<Module>/`（大模組依能力分子資料夾）；namespace＝資料夾。
 - 預期內的失敗回傳 `Result<T>`，錯誤定義在 `<Module>Errors`；不要為此 throw。
-- request body 要有 `RequestValidator<T>`；時間用 `TimeProvider`；使用者用 `ICurrentUser`。
+- request body 要有 `RequestValidator<T>`，刻意交給 handler 驗證的標 `[ValidatedInHandler(原因)]`；時間用 `TimeProvider`；使用者用 `ICurrentUser`。
 - 日誌用 `[LoggerMessage]`，EventId 固定且唯一；NuGet 版本只寫在 `backend/Directory.Packages.props`。
 - 跨模組的副作用用 domain event；跨模組讀取只透過對方的 `public` 服務。
-- 模組之間不可有循環依賴（`ModuleBoundaryTests`）；`request-validators.baseline.txt` 只能減少。
+- 模組之間不可有循環依賴（`ModuleBoundaryTests`）。
 - 不手改 `contracts/openapi.json`、`frontend/src/app/core/api/schema.ts`、migrations。
 - 不提交 `.local/`、`artifacts/`、秘密；不跳過或停用測試。
 

@@ -1,3 +1,4 @@
+using AiNexus.Platform.Validation;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http.Metadata;
@@ -46,23 +47,22 @@ public sealed class EndpointConventionTests
         Assert.Equal(names.Count, names.Distinct(StringComparer.Ordinal).Count());
     }
 
-    // Request bodies move from ad-hoc checks in services to validators module by module; this list may only shrink.
+    // Every request body has a RequestValidator<T>, or states why its rules stay in the handler.
     [Fact]
-    public async Task RequestBodiesWithoutValidatorsNeverGrow()
+    public async Task EveryRequestBodyHasAValidatorOrAStatedReason()
     {
         await using var factory = new NexusFactory();
         _ = factory.CreateClient();
         var registered = factory.Services.GetRequiredService<IServiceProviderIsService>();
-        var actual = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints
+        var bodies = factory.Services.GetRequiredService<EndpointDataSource>().Endpoints
             .Select(e => e.Metadata.GetMetadata<IAcceptsMetadata>()?.RequestType).OfType<Type>()
-            .Where(t => t.Namespace?.StartsWith("AiNexus.", StringComparison.Ordinal) == true)
-            .Where(t => !registered.IsService(typeof(IValidator<>).MakeGenericType(t)))
-            .Select(t => t.FullName!).ToHashSet(StringComparer.Ordinal);
-        var baseline = File.ReadAllLines(Path.Combine(AppContext.BaseDirectory, "request-validators.baseline.txt"))
-            .Select(x => x.Trim()).Where(x => x.Length > 0 && !x.StartsWith('#')).ToHashSet(StringComparer.Ordinal);
-        var added = actual.Except(baseline).Order(StringComparer.Ordinal).ToList();
-        var removed = baseline.Except(actual).Order(StringComparer.Ordinal).ToList();
-        Assert.True(added.Count == 0, "New request bodies need a RequestValidator<T>:\n" + string.Join('\n', added));
-        Assert.True(removed.Count == 0, "These request bodies are validated now; delete them from request-validators.baseline.txt:\n" + string.Join('\n', removed));
+            .Where(t => t.Namespace?.StartsWith("AiNexus.", StringComparison.Ordinal) == true).Distinct().ToList();
+        Assert.NotEmpty(bodies);
+        var validated = bodies.ToDictionary(t => t, t => registered.IsService(typeof(IValidator<>).MakeGenericType(t)));
+        var reasons = bodies.ToDictionary(t => t, t => t.GetCustomAttributes(typeof(ValidatedInHandlerAttribute), false).OfType<ValidatedInHandlerAttribute>().SingleOrDefault()?.Reason);
+        var missing = bodies.Where(t => !validated[t] && string.IsNullOrWhiteSpace(reasons[t])).Select(t => t.FullName).Order(StringComparer.Ordinal).ToList();
+        var both = bodies.Where(t => validated[t] && reasons[t] is not null).Select(t => t.FullName).Order(StringComparer.Ordinal).ToList();
+        Assert.True(missing.Count == 0, "Request bodies need a RequestValidator<T> or [ValidatedInHandler(reason)]:\n" + string.Join('\n', missing));
+        Assert.True(both.Count == 0, "Request bodies with a validator must not also be marked [ValidatedInHandler]:\n" + string.Join('\n', both));
     }
 }

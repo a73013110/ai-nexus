@@ -1,3 +1,4 @@
+using AiNexus.Platform.Validation;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Inference;
@@ -9,7 +10,7 @@ namespace AiNexus.Features.Administration.Roles;
 
 public sealed record GroupPolicyRequest(IReadOnlyList<string>? AllowedModelIds = null, IReadOnlyDictionary<string, long>? DailyTokenLimits = null, long? StoredAttachmentLimitBytes = null);
 
-/// <summary>Not a request validator: format failures are audited inside the administrative transaction (see <see cref="AccessRules"/>).</summary>
+[ValidatedInHandler("Format failures are audited inside the administrative transaction (AccessRules).")]
 public sealed record GroupUpdateRequest(string Name, bool Enabled, IReadOnlyList<string> FeatureIds, GroupPolicyRequest? Policy = null);
 
 /// <summary>Creates or updates a group, its features and its model policy. Audited; refused when it would remove the actor's own administrator access.</summary>
