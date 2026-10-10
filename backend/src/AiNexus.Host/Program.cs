@@ -13,11 +13,19 @@ using AiNexus.Platform.Http;
 using AiNexus.Platform.Security;
 using AiNexus.Features.Identity.Sessions;
 
-var builder = WebApplication.CreateBuilder(args);
+var command = HostCommand.Parse(args);
+if (command.Help || command.Error is not null)
+{
+    if (command.Error is not null) Console.Error.WriteLine(command.Error);
+    Console.WriteLine(HostCommand.Usage);
+    return command.Error is null ? 0 : HostCommand.UsageError;
+}
+
+var builder = WebApplication.CreateBuilder(command.HostArguments);
 WebApplication app;
 try
 {
-    NexusConfiguration.Load(builder, args, IntegrationsSettings.SourceConnections);
+    NexusConfiguration.Load(builder, command.HostArguments, IntegrationsSettings.SourceConnections);
     LocalDatabaseSettings.Apply(builder.Configuration);
     builder.AddPlatform();
     builder.AddFeatures();
@@ -36,7 +44,7 @@ catch (Exception ex)
     throw;
 }
 
-if (await HostCommands.TryRunAsync(app)) return;
+if (command.Name is not null) return await command.RunAsync(app);
 
 app.UseRuntimeTraffic();
 app.UseMiddleware<DiagnosticRequestMiddleware>();
@@ -62,9 +70,8 @@ app.MapFallbackToFile("index.html").AllowAnonymous();
 
 if (!await app.EnsureDatabaseReadyAsync())
 {
-    Environment.ExitCode = 1;
     await app.DisposeAsync();
-    return;
+    return 1;
 }
 app.Lifetime.ApplicationStarted.Register(() => LogStarted(app.Logger));
 app.Lifetime.ApplicationStopping.Register(() => LogStopping(app.Logger));
@@ -74,6 +81,7 @@ catch (Exception ex)
     await DiagnosticStartup.RecordAsync(ex, builder.Configuration, builder.Environment);
     throw;
 }
+return 0;
 
 public partial class Program
 {

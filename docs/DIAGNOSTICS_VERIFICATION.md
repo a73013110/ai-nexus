@@ -89,8 +89,7 @@ SQL 30053 測試注入 SqlClient typed exception 到 `ISqlDatabase<NexusDbContex
 dotnet test --project backend/tests/AiNexus.Tests/AiNexus.Tests.csproj --no-restore -c Release `
   --filter 'Category=Performance' --report-xunit-trx --report-xunit-trx-filename diagnostic-performance.trx `
   --results-directory artifacts/test-results
-./scripts/Test-Diagnostics.ps1 -Browser
-./scripts/Verify.ps1
+./scripts/Verify.ps1 -Browser
 ```
 
 ## 尚需環境／政策驗收

@@ -58,7 +58,7 @@ SELECT * FROM sys.fulltext_languages WHERE lcid = 1028;
 SELECT * FROM sys.fulltext_indexes WHERE object_id = OBJECT_ID('knowledge.Chunks');
 ```
 
-執行 `scripts/Test-SqlCapabilities.ps1` 或管理 → 知識檢索查看狀態；安裝後若 catalog 尚未建立，由 DBA 依 migration 的全文 DDL 建立 catalog/index，勿改 migration history。已登記的 migration 不會因重跑 idempotent script 而再執行。
+執行 `scripts/Test-Environment.ps1 -SqlOnly` 或管理 → 知識檢索查看狀態；安裝後若 catalog 尚未建立，由 DBA 依 migration 的全文 DDL 建立 catalog/index，勿改 migration history。已登記的 migration 不會因重跑 idempotent script 而再執行。
 
 新增維度：新增 EF vector entity／`ConfigureVector` 映射及對應表 migration；在單一 `VectorDimensions` allowlist／Table 映射加入維度，擴充 store、coverage、SQLite converter 與設定驗證／腳本。補齊 DatabaseDescriptions 與真實 SQL 測試，再生成 migration SQL、契約，建立新 profile 重建驗證。不能任意拼接使用者提供的表名或維度。
 
