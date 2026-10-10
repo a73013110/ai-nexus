@@ -36,6 +36,11 @@
   color: var(--secondary);
   border-radius: var(--p-radius-md);
 }
+// The shared rail keeps 44px targets while compact, including the mobile drawer.
+.is-compact .icon-button {
+  width: 100%;
+  min-height: 2.75rem;
+}
 .sidebar-tools > .icon-button {
   width: var(--button-target);
 }
