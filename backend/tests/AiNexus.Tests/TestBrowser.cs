@@ -12,7 +12,7 @@ public static class TestBrowser
 {
     public static string? Target => Environment.GetEnvironmentVariable("AINEXUS_TEST_BROWSER") is { Length: > 0 } value ? value : null;
 
-    public static void SkipUnlessConfigured() => Assert.SkipWhen(Target is null, "未設定 AINEXUS_TEST_BROWSER，略過真實瀏覽器測試；請用 scripts/Test-Diagnostics.ps1 -Browser 執行。");
+    public static void SkipUnlessConfigured() => Assert.SkipWhen(Target is null, "未設定 AINEXUS_TEST_BROWSER，略過真實瀏覽器測試；請用 scripts/Verify.ps1 -Browser 執行。");
 
     private static string RequiredTarget => Target ?? throw new InvalidOperationException("AINEXUS_TEST_BROWSER is not set.");
     private static bool IsExecutable => Path.IsPathFullyQualified(RequiredTarget);

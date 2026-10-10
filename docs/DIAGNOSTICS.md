@@ -240,7 +240,7 @@ SQL完全離線時管理查詢可能因授權／audit失敗無法打開。可在
 
 診斷表 `diagnostics.DiagnosticEvents` 與 Job／Run／Message／RunEvent／Notification 的 nullable 查證與流程欄位都在 `InitialCreate` 內。開機 schema gate 要求最新版本；runtime 預設不自動 migrate。詳見 [DATABASE](DATABASE.md)。
 
-外部Production檔加入Diagnostics區塊，保留既有local設定與secrets載入規則。建立站外diagnostics，給app pool Modify、維運只讀等組織核準權限，不給網站匿名存取。`Publish-Iis.ps1`產生新套件並提醒保留data/diagnostics；package的logs/只供ANCMstdout，不能與應用journal混用。`--VerifyDeployment true`也檢查diagnostics外部路徑及短期寫入probe，但以shell身分執行，仍需實際IIS帳號驗證。升級不刪除app外journal；回收後觀察補送。
+外部Production檔加入Diagnostics區塊，保留既有local設定與secrets載入規則。建立站外diagnostics，給app pool Modify、維運只讀等組織核準權限，不給網站匿名存取。`Publish-IIS.ps1`產生新套件並提醒保留data/diagnostics；package的logs/只供ANCMstdout，不能與應用journal混用。主機指令`verify deployment`也檢查diagnostics外部路徑及短期寫入probe，但以shell身分執行，仍需實際IIS帳號驗證。升級不刪除app外journal；回收後觀察補送。
 
 備份應包含SQL（含AuditEvents/DiagnosticEvents）、尚未補送journal及cursor、外部config與keys；敏感備份依組織權限與期限保存。復原SQL到較早時間時，仍存在journal可以補回保留窗口內資料，LogId防重；但已清理的本機segment不能補回。不要宣稱日誌備份可取代既有SQL＋附件一致性備份流程。Down會刪除新診斷表和欄位，不作為日常回退策略。
 
@@ -253,9 +253,8 @@ SQL完全離線時管理查詢可能因授權／audit失敗無法打開。可在
 可重複執行：
 
 ```powershell
-./scripts/Test-Diagnostics.ps1 -Browser -Performance
-# 全項目：build/publish、backend、frontend與既有瀏覽器回歸
-./scripts/Verify.ps1
+# 全項目：build/publish、backend、frontend，加上真實瀏覽器、既有瀏覽器回歸與效能量測
+./scripts/Verify.ps1 -Browser -Performance
 # 無需stage即可檢查此次working tree（預設仍檢查staged）
 ./scripts/Test-Repository.ps1 -WorkingTree
 ```

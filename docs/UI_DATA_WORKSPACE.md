@@ -108,4 +108,4 @@ ViewSwitch 同時支援文字、圖示與個別停用選項；方向鍵會跳過
 
 `expectCompactWorkspace` 在有資料的各功能流程中檢查實際繼承字級、頁首、可見卡片的內距及 nxCard 指令是否已生效，涵蓋總覽、檔案、專案、知識庫、成果、分享、品質、程式庫 Review、背景任務、來源、管理、日誌與元件工作臺；手機與桌面沿用同一份密度契約。`settings.spec.ts` 檢查七個設定分類及閱讀偏好不影響操作尺度；`admin.spec.ts` 另檢查無效日期、清除條件與台北日界；`connected-workspace.spec.ts` 檢查費率與查詢快照；`files.spec.ts` 檢查手機來源選項；`artifacts.spec.ts` 檢查長文編輯器的閱讀字級與高度。其餘功能沿用各入口的流程、權限、彈窗與響應版面回歸測試，並檢視實際截圖。
 
-真實 Angular／API／SQLite 的診斷遮罩、稽核及匯出驗收沿用 `scripts/Test-Diagnostics.ps1 -Browser -Performance`。
+真實 Angular／API／SQLite 的診斷遮罩、稽核及匯出驗收沿用 `scripts/Verify.ps1 -Browser -Performance`。

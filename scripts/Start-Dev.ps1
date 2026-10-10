@@ -1,75 +1,119 @@
 #requires -Version 7.4
-param([switch]$Restore, [switch]$Http, [ValidateRange(1024,65535)][int]$BackendPort = 5080, [ValidateRange(1024,65535)][int]$FrontendPort = 4200)
+
+<#
+.SYNOPSIS
+開發模式：同時啟動 dotnet watch（API）與 Angular dev server，存檔後自動更新。
+
+.DESCRIPTION
+Angular 的 /api、/health 代理到後端，同源 cookie 與 CSRF 照常運作。兩個程序的輸出寫在 .local/logs/，
+Ctrl+C 會一起停止；任一程序結束時另一個也會停止。
+
+.PARAMETER Restore
+先執行 Restore.ps1。
+
+.PARAMETER Http
+改用 HTTP；只在 localhost 有效。
+
+.PARAMETER BackendPort
+API 埠號。
+
+.PARAMETER FrontendPort
+Angular dev server 埠號，開這個網址。
+
+.EXAMPLE
+./scripts/Start-Dev.ps1
+
+.EXAMPLE
+./scripts/Start-Dev.ps1 -BackendPort 5081 -FrontendPort 4201
+#>
+[CmdletBinding()]
+param(
+    [switch]$Restore,
+    [switch]$Http,
+    [ValidateRange(1024, 65535)][int]$BackendPort = 5080,
+    [ValidateRange(1024, 65535)][int]$FrontendPort = 4200
+)
+Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$taskRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-. (Join-Path $PSScriptRoot 'Local-Settings.ps1')
-. (Join-Path $PSScriptRoot 'Local-Https.ps1')
+Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
+
+$root = Get-NexusRoot
+if ($BackendPort -eq $FrontendPort) { throw 'FrontendPort 與 BackendPort 不可相同。' }
 if (!$Http) { Assert-NexusHttpsCertificate }
-Initialize-NexusLocalSettings
-$taskPaths = Get-NexusLocalPaths
+$local = Initialize-NexusLocalSettings
 if ($Restore) { & (Join-Path $PSScriptRoot 'Restore.ps1') }
-if ($BackendPort -eq $FrontendPort) { throw 'FrontendPort and BackendPort must differ.' }
-$taskListeners = [System.Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners()
-foreach ($taskPort in @($BackendPort, $FrontendPort)) {
-    if ($taskListeners.Port -contains $taskPort) { throw "Port $taskPort is in use. Stop the existing preview or choose another port." }
+$listeners = [Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners()
+foreach ($port in @($BackendPort, $FrontendPort)) {
+    if ($listeners.Port -contains $port) { throw "埠號 $port 已被使用；請先停止既有的預覽或改用其他埠號。" }
 }
-$taskNode = (Get-Command node -CommandType Application | Select-Object -First 1).Source
-$taskDotnet = (Get-Command dotnet -CommandType Application | Select-Object -First 1).Source
-$taskNg = Join-Path $taskRoot 'frontend/node_modules/@angular/cli/bin/ng.js'
-if (!(Test-Path -LiteralPath $taskNg)) { throw 'Run scripts/Restore.ps1 first.' }
-$taskProxy = Join-Path $taskRoot '.local/config/dev-proxy.json'
-$taskScheme = if ($Http) { 'http' } else { 'https' }
-Save-NexusJson $taskProxy @{ '/api' = @{ target = "${taskScheme}://localhost:$BackendPort"; secure = $true; changeOrigin = $false }; '/health' = @{ target = "${taskScheme}://localhost:$BackendPort"; secure = $true; changeOrigin = $false } }
-$taskSslArguments = @()
+$node = (Get-Command node -CommandType Application | Select-Object -First 1).Source
+$dotnet = (Get-Command dotnet -CommandType Application | Select-Object -First 1).Source
+$ng = Join-Path $root 'frontend/node_modules/@angular/cli/bin/ng.js'
+if (!(Test-Path -LiteralPath $ng)) { throw '找不到 Angular CLI；請先執行 scripts/Restore.ps1。' }
+
+$scheme = if ($Http) { 'http' } else { 'https' }
+$proxy = Join-Path $root '.local/config/dev-proxy.json'
+$backend = @{ target = "${scheme}://localhost:$BackendPort"; secure = $true; changeOrigin = $false }
+Save-NexusJson $proxy @{ '/api' = $backend; '/health' = $backend }
+$certificate = $null
+$sslArguments = @()
 if (!$Http) {
-    $taskCertDirectory = Join-Path $taskRoot '.local/certs'
-    New-Item -ItemType Directory -Path $taskCertDirectory -Force | Out-Null
-    $taskCert = Join-Path $taskCertDirectory 'nexus-dev.pem'
-    dotnet dev-certs https --export-path $taskCert --format PEM --no-password --quiet
+    $certificates = Join-Path $root '.local/certs'
+    New-Item -ItemType Directory -Path $certificates -Force | Out-Null
+    $certificate = Join-Path $certificates 'nexus-dev.pem'
+    dotnet dev-certs https --export-path $certificate --format PEM --no-password --quiet
     if ($LASTEXITCODE -ne 0) { throw '匯出本機 HTTPS 憑證失敗。' }
-    $taskSslArguments = @('--ssl', '--ssl-cert', $taskCert, '--ssl-key', (Join-Path $taskCertDirectory 'nexus-dev.key'))
+    $sslArguments = @('--ssl', '--ssl-cert', $certificate, '--ssl-key', (Join-Path $certificates 'nexus-dev.key'))
 }
-$taskLogs = Join-Path $taskRoot '.local/logs'
-New-Item -ItemType Directory -Path $taskLogs -Force | Out-Null
-$taskChildren = [System.Collections.Generic.List[object]]::new()
+$logs = Join-Path $root '.local/logs'
+New-Item -ItemType Directory -Path $logs -Force | Out-Null
 
-function Start-NexusDevChild([string]$Name, [string]$Executable, [string]$Directory, [string[]]$Arguments) {
-    $taskInfo = [System.Diagnostics.ProcessStartInfo]::new($Executable)
-    $taskInfo.WorkingDirectory = $Directory
-    $taskInfo.UseShellExecute = $false
-    $taskInfo.CreateNoWindow = $true
-    $taskInfo.RedirectStandardOutput = $true
-    $taskInfo.RedirectStandardError = $true
-    $taskInfo.Environment['ASPNETCORE_ENVIRONMENT'] = 'Development'
-    $taskInfo.Environment['NG_CLI_ANALYTICS'] = 'false'
-    $taskInfo.Environment['DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER'] = '1'
-    $taskInfo.Environment['DOTNET_WATCH_SUPPRESS_EMOJIS'] = '1'
-    if (!$Http) { $taskInfo.Environment['NODE_EXTRA_CA_CERTS'] = $taskCert }
-    foreach ($taskArgument in $Arguments) { $taskInfo.ArgumentList.Add($taskArgument) }
-    $taskChild = [System.Diagnostics.Process]::new()
-    $taskChild.StartInfo = $taskInfo
-    if (!$taskChild.Start()) { throw "Cannot start $Name." }
-    $taskOut = [System.IO.File]::Open((Join-Path $taskLogs "$Name.log"), 'Create', 'Write', 'ReadWrite')
-    $taskErr = [System.IO.File]::Open((Join-Path $taskLogs "$Name.error.log"), 'Create', 'Write', 'ReadWrite')
-    $taskChildren.Add(@{ Process = $taskChild; Out = $taskOut; Err = $taskErr; CopyOut = $taskChild.StandardOutput.BaseStream.CopyToAsync($taskOut); CopyErr = $taskChild.StandardError.BaseStream.CopyToAsync($taskErr); Name = $Name })
+function Start-Child([string]$Name, [string]$Executable, [string]$Directory, [string[]]$Arguments) {
+    $info = [Diagnostics.ProcessStartInfo]::new($Executable)
+    $info.WorkingDirectory = $Directory
+    $info.UseShellExecute = $false
+    $info.CreateNoWindow = $true
+    $info.RedirectStandardOutput = $true
+    $info.RedirectStandardError = $true
+    $info.Environment['ASPNETCORE_ENVIRONMENT'] = 'Development'
+    $info.Environment['NG_CLI_ANALYTICS'] = 'false'
+    $info.Environment['DOTNET_WATCH_SUPPRESS_LAUNCH_BROWSER'] = '1'
+    $info.Environment['DOTNET_WATCH_SUPPRESS_EMOJIS'] = '1'
+    if ($certificate) { $info.Environment['NODE_EXTRA_CA_CERTS'] = $certificate }
+    foreach ($argument in $Arguments) { $info.ArgumentList.Add($argument) }
+    $process = [Diagnostics.Process]::new()
+    $process.StartInfo = $info
+    if (!$process.Start()) { throw "無法啟動 $Name。" }
+    $out = [IO.File]::Open((Join-Path $logs "$Name.log"), 'Create', 'Write', 'ReadWrite')
+    $err = [IO.File]::Open((Join-Path $logs "$Name.error.log"), 'Create', 'Write', 'ReadWrite')
+    @{
+        Name = $Name; Process = $process; Out = $out; Err = $err
+        CopyOut = $process.StandardOutput.BaseStream.CopyToAsync($out)
+        CopyErr = $process.StandardError.BaseStream.CopyToAsync($err)
+    }
 }
 
+$children = [Collections.Generic.List[hashtable]]::new()
 try {
-    Start-NexusDevChild 'backend' $taskDotnet $taskRoot @('watch', '--project', 'backend/src/AiNexus.Host/AiNexus.Host.csproj', 'run', '--no-launch-profile', '--', '--urls', "${taskScheme}://localhost:$BackendPort", '--Security:AllowInsecureLocalhost', "$($Http.IsPresent)", '--LocalConfigPath', $taskPaths.Settings, '--SecretsConfigPath', $taskPaths.Secrets)
-    Start-NexusDevChild 'frontend' $taskNode (Join-Path $taskRoot 'frontend') (@($taskNg, 'serve', '--host', 'localhost', '--port', "$FrontendPort", '--proxy-config', $taskProxy) + $taskSslArguments)
-    Write-Output "開發模式：${taskScheme}://localhost:$FrontendPort/chat（Angular + API）。儲存原始碼後自動更新。"
-    Write-Output "啟動與錯誤紀錄：$taskLogs。Ctrl+C 同時停止兩個服務。"
+    $children.Add((Start-Child 'backend' $dotnet $root @(
+        'watch', '--project', 'backend/src/AiNexus.Host/AiNexus.Host.csproj', 'run', '--no-launch-profile', '--',
+        '--urls', "${scheme}://localhost:$BackendPort", '--Security:AllowInsecureLocalhost', "$($Http.IsPresent)",
+        '--LocalConfigPath', $local.Settings, '--SecretsConfigPath', $local.Secrets)))
+    $children.Add((Start-Child 'frontend' $node (Join-Path $root 'frontend') (@(
+        $ng, 'serve', '--host', 'localhost', '--port', "$FrontendPort", '--proxy-config', $proxy) + $sslArguments)))
+    Write-Output "開發模式：${scheme}://localhost:$FrontendPort/chat（Angular + API）。儲存原始碼後自動更新。"
+    Write-Output "啟動與錯誤紀錄：$logs。Ctrl+C 同時停止兩個服務。"
     while ($true) {
-        foreach ($taskChild in $taskChildren) {
-            if ($taskChild.Process.HasExited) { throw "$($taskChild.Name) exited ($($taskChild.Process.ExitCode)). Inspect .local/logs/$($taskChild.Name).error.log and .log." }
+        foreach ($child in $children) {
+            if ($child.Process.HasExited) { throw "$($child.Name) 已結束（$($child.Process.ExitCode)）；請查看 .local/logs/$($child.Name).error.log 與 .log。" }
         }
         Start-Sleep -Milliseconds 500
     }
 } finally {
-    foreach ($taskChild in $taskChildren) {
-        if (!$taskChild.Process.HasExited) { $taskChild.Process.Kill($true) }
-        $taskChild.Process.WaitForExit()
-        try { [System.Threading.Tasks.Task]::WaitAll(@($taskChild.CopyOut, $taskChild.CopyErr), 3000) | Out-Null }
-        finally { $taskChild.Out.Dispose(); $taskChild.Err.Dispose(); $taskChild.Process.Dispose() }
+    foreach ($child in $children) {
+        if (!$child.Process.HasExited) { $child.Process.Kill($true) }
+        $child.Process.WaitForExit()
+        try { [Threading.Tasks.Task]::WaitAll(@($child.CopyOut, $child.CopyErr), 3000) | Out-Null }
+        finally { $child.Out.Dispose(); $child.Err.Dispose(); $child.Process.Dispose() }
     }
 }

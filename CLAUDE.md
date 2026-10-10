@@ -24,7 +24,7 @@
 ## 指令
 
 ```powershell
-./scripts/Verify.ps1 -SkipBrowser        # 送 PR 前必跑：build＋後端＋前端 lint／測試
+./scripts/Verify.ps1                     # 送 PR 前必跑：腳本測試＋build＋後端＋前端 lint／測試
 dotnet build backend/AiNexus.slnx         # 0 warning（warning 即錯誤）
 dotnet test --solution backend/AiNexus.slnx --no-build --filter "FullyQualifiedName~<Module>"
 dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host
@@ -43,6 +43,7 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 - 跨模組的副作用用 domain event；跨模組讀取只透過對方的 `public` 服務。
 - 模組之間不可有循環依賴（`ModuleBoundaryTests`）。
 - 不手改 `contracts/openapi.json`、`frontend/src/app/core/api/schema.ts`、migrations。
+- PowerShell 入口腳本要有 `[CmdletBinding()]`、`Set-StrictMode -Version Latest` 與 comment-based help（`scripts/tests` 檢查）。
 - 不提交 `.local/`、`artifacts/`、秘密；不跳過或停用測試。
 
 ## 命名規範
@@ -64,7 +65,7 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 | Angular 檔名 | 小寫 kebab-case，不加 `.component` | `chat-workspace.ts` |
 | Angular 類別、signal | PascalCase 類別；signal 用名詞，不加 `$` | `ChatStore`、`messages` |
 | CSS class | kebab-case | `message-row` |
-| PowerShell 腳本 | 入口腳本用動詞-名詞或單一動詞；被 dot-source 的共用檔用名詞-名詞 | `Start-Local.ps1`、`Build.ps1`、`Local-Settings.ps1` |
+| PowerShell 腳本 | `scripts/` 只放入口，動詞-名詞或單一動詞；共用函式放 `scripts/AiNexus` 模組，名稱含 `-Nexus` | `Start-Local.ps1`、`Build.ps1`、`Get-NexusLocalPaths` |
 | 文件 | `docs/` 下 UPPER_SNAKE_CASE.md；`README.md`、`CLAUDE.md` 固定大寫 | `BACKEND_CONVENTIONS.md` |
 | commit | Conventional Commits，說明用繁體中文 | `perf(inference): 串流只寫入增量` |
 
