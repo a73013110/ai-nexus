@@ -46,33 +46,35 @@ internal sealed class SaveEvaluationSet(NexusDbContext db, ResourceAccess access
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
         .MapPost("/sets", async (EvaluationSetRequest body, ICurrentUser user, SaveEvaluationSet handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, null, body, ct)).ToHttpResult())
-        .Produces<EvaluationSetDto>().WithRequestBodyLimit(QualityModule.SetBodyLimit);
+        .WithRequestBodyLimit(QualityModule.SetBodyLimit);
 
     public static RouteHandlerBuilder MapUpdate(RouteGroupBuilder routes) => routes
         .MapPut("/sets/{id:guid}", async (Guid id, EvaluationSetRequest body, ICurrentUser user, SaveEvaluationSet handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
-        .Produces<EvaluationSetDto>().WithRequestBodyLimit(QualityModule.SetBodyLimit);
+        .WithRequestBodyLimit(QualityModule.SetBodyLimit);
 
     /// <summary>The rule of <see cref="ResourceAccess.Name"/>.</summary>
     internal static bool NameIsValid(string? name) => name?.Trim() is { Length: >= 1 and <= 120 } trimmed && !trimmed.Any(char.IsControl);
 
     public async Task<Result<EvaluationSetDto>> HandleAsync(Guid actor, Guid? id, EvaluationSetRequest request, CancellationToken ct)
     {
-        if (!NameIsValid(request.Name)) return QualityErrors.InvalidName;
+        if (ResourceAccess.Name(request.Name) is not { IsSuccess: true } name) return QualityErrors.InvalidName;
         // An update is per set; a create checks the owner's set limit.
         using (await (id is Guid key ? writes.AcquireAsync(key, ct) : writes.AcquireAsync("evaluation-sets", actor, ct)))
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct); WorkspaceResource resource;
             if (id is Guid existing)
             {
-                resource = (await access.RequireAsync(actor, existing, EvaluationSet.Kind, ct, write: true)).OrThrow();
+                var allowed = await access.RequireAsync(actor, existing, EvaluationSet.Kind, ct, write: true);
+                if (!allowed.IsSuccess) return allowed.Error;
+                resource = allowed.Value;
                 var changed = await db.Set<EvaluationSet>().Where(x => x.Id == existing && x.Version == request.ExpectedVersion).ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1).SetProperty(x => x.Description, request.Description.Trim()).SetProperty(x => x.CasesJson, JsonSerializer.Serialize(request.Cases, (JsonSerializerOptions?)null)), ct);
                 if (changed != 1) return QualityErrors.SetConflict;
-                resource.Name = ResourceAccess.Name(request.Name).OrThrow(); resource.UpdatedAt = clock.GetUtcNow();
+                resource.Name = name.Value; resource.UpdatedAt = clock.GetUtcNow();
             }
             else
             {
                 if (await db.Set<WorkspaceResource>().CountAsync(x => x.Kind == EvaluationSet.Kind && x.OwnerId == actor, ct) >= 100) return QualityErrors.SetLimit;
-                resource = new() { OwnerId = actor, Kind = EvaluationSet.Kind, Name = ResourceAccess.Name(request.Name).OrThrow() }; db.Add(resource);
+                resource = new() { OwnerId = actor, Kind = EvaluationSet.Kind, Name = name.Value }; db.Add(resource);
                 db.Add(new EvaluationSet { Id = resource.Id, Description = request.Description.Trim(), CasesJson = JsonSerializer.Serialize(request.Cases) });
             }
             db.AuditEvents.Add(new() { OwnerId = actor, Action = "quality.set.saved", ResourceId = resource.Id, Result = "saved" });

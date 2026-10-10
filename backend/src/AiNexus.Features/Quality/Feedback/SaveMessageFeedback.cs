@@ -29,18 +29,12 @@ internal sealed class FeedbackRequestValidator : RequestValidator<FeedbackReques
 internal sealed class SaveMessageFeedback(NexusDbContext db, ResourceWriteLock writes, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
-        .MapPut("/messages/{id:guid}/feedback", async (Guid id, FeedbackRequest body, ICurrentUser user, SaveMessageFeedback handler, CancellationToken ct) =>
-        {
-            var saved = await handler.HandleAsync(user.Id, id, body, ct);
-            // A cleared rating answers 200 without a body.
-            return saved.IsSuccess ? Results.Ok(saved.Value.Feedback) : saved.Error.ToProblem();
-        })
-        .RequireAuthorization(Policies.Chat).WithTags("Quality").Produces<FeedbackDto>();
+        .MapPut("/messages/{id:guid}/feedback", (Guid id, FeedbackRequest body, ICurrentUser user, SaveMessageFeedback handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, body, ct).ToHttpResultAsync(saved => TypedResults.Ok(saved.Feedback)))
+        .RequireAuthorization(Policies.Chat).WithTags("Quality");
 
-    /// <summary><c>Feedback</c> is null when the rating was cleared.</summary>
-    public sealed record Outcome(FeedbackDto? Feedback);
-
-    public async Task<Result<Outcome>> HandleAsync(Guid actor, Guid message, FeedbackRequest request, CancellationToken ct)
+    /// <summary>A rating of 0 clears it.</summary>
+    public async Task<Result<FeedbackOutcome>> HandleAsync(Guid actor, Guid message, FeedbackRequest request, CancellationToken ct)
     {
         var source = await (from m in db.Messages join c in db.Conversations on m.ConversationId equals c.Id where m.Id == message && m.Role == "assistant" && c.OwnerId == actor select new { Message = m, Conversation = c }).SingleOrDefaultAsync(ct);
         if (source is null) return QualityErrors.ItemMissing;
@@ -49,11 +43,11 @@ internal sealed class SaveMessageFeedback(NexusDbContext db, ResourceWriteLock w
         using (await writes.AcquireAsync("feedback", message, ct))
         {
             var row = await db.Set<MessageFeedback>().FindAsync([message], ct);
-            if (request.Rating == 0) { if (row is not null) db.Remove(row); await db.SaveChangesAsync(ct); return new Outcome(null); }
+            if (request.Rating == 0) { if (row is not null) db.Remove(row); await db.SaveChangesAsync(ct); return new FeedbackOutcome(null); }
             if (row is null) { row = new() { MessageId = message, OwnerId = actor }; db.Add(row); }
             row.Rating = request.Rating; row.Reason = request.Reason; row.Note = request.Note.Trim(); row.UpdatedAt = clock.GetUtcNow();
             await db.SaveChangesAsync(ct);
-            return new Outcome(new(message, source.Conversation.Id, source.Conversation.Title, row.Rating, row.Reason, row.Note, row.UpdatedAt));
+            return new FeedbackOutcome(new(message, source.Conversation.Id, source.Conversation.Title, row.Rating, row.Reason, row.Note, row.UpdatedAt));
         }
     }
 }

@@ -46,17 +46,17 @@ public abstract class AuthorizedSqlSource<TDatabase>(ISqlDatabase<TDatabase> db)
         var rows = await db.QueryAsync<SourceRow>(SearchSql, new { ActorSid = actor.Sid, ActorAccount = actor.Account, Kind = request.Kind, Pattern = pattern, Take = take }, commandTimeout: timeout, cancellationToken: ct);
         return rows.Select(x => x.Describe()).ToArray();
     }
-    public async Task<SourceDetailDto?> ReadAsync(SourceActor actor, string id, int timeout, CancellationToken ct)
+    public async Task<Result<SourceDetailDto>> ReadAsync(SourceActor actor, string id, int timeout, CancellationToken ct)
     {
         var args = new { ActorSid = actor.Sid, ActorAccount = actor.Account, RecordId = id };
         var row = await db.QuerySingleOrDefaultAsync<SourceRow>(ReadSql, args, commandTimeout: timeout, cancellationToken: ct);
-        if (row is null) return null;
-        if (row.Body is null) throw new ApiException(409, "source_body_too_large", "來源內容未公開或超過 16,000 字元，請至原系統閱讀完整內容。");
+        if (row is null) return IntegrationsErrors.RecordMissing;
+        if (row.Body is null) return IntegrationsErrors.BodyTooLarge;
         var history = (await db.QueryAsync<SourceHistoryDto>(HistorySql, args, commandTimeout: timeout, cancellationToken: ct)).ToArray();
         // Recheck the primary grant after retrieving child history as revocation can happen between calls.
         var confirmed = await db.QuerySingleOrDefaultAsync<SourceRow>(ReadSql, args, commandTimeout: timeout, cancellationToken: ct);
-        if (confirmed is null) return null;
-        if (confirmed.Revision != row.Revision) throw new ApiException(409, "source_changed", "來源版本剛更新，請重新載入後再使用。");
-        return new(Id, row.Describe(), row.Body, history.Take(100).ToArray(), history.Length > 100);
+        if (confirmed is null) return IntegrationsErrors.RecordMissing;
+        if (confirmed.Revision != row.Revision) return IntegrationsErrors.Changed;
+        return new SourceDetailDto(Id, row.Describe(), row.Body, history.Take(100).ToArray(), history.Length > 100);
     }
 }

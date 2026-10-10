@@ -15,6 +15,7 @@ internal static class IntegrationsErrors
     public static readonly Error RecordMissing = Error.NotFound("source_record_missing");
     public static readonly Error ContractInvalid = new(ErrorKind.Upstream, "source_contract_invalid");
     public static readonly Error Changed = Error.Conflict("source_changed");
+    public static readonly Error BodyTooLarge = Error.Conflict("source_body_too_large");
     public static readonly Error ArtifactFeatureRequired = Error.Forbidden("artifact_feature_required");
     public static readonly Error ChatFeatureRequired = Error.Forbidden("chat_feature_required");
     public static readonly Error ChatTooLong = Error.Conflict("source_chat_too_long");

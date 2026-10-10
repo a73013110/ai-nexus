@@ -34,7 +34,7 @@ internal sealed class ReviewEvaluationResult(NexusDbContext db, ResourceAccess a
     {
         var run = await db.Set<EvaluationRun>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (run is null) return QualityErrors.ItemMissing;
-        (await access.RequireAsync(actor, run.SetId, EvaluationSet.Kind, ct, write: true)).OrThrow();
+        if (await access.RequireAsync(actor, run.SetId, EvaluationSet.Kind, ct, write: true) is { IsSuccess: false } denied) return denied.Error;
         var result = await db.Set<EvaluationResult>().SingleOrDefaultAsync(x => x.RunId == id && x.CaseIndex == caseIndex && x.VariantIndex == variantIndex, ct);
         if (result is null) return QualityErrors.ItemMissing;
         result.ReviewScore = request.Score; result.ReviewNote = request.Note.Trim(); result.ReviewerId = actor;
