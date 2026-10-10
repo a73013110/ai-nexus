@@ -26,13 +26,11 @@ internal sealed class SaveProjectTemplate(NexusDbContext db, ResourceAccess acce
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/templates", async (Guid id, ProjectTemplateRequest body, ICurrentUser user, SaveProjectTemplate handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, null, body, ct)).ToHttpResult())
-        .Produces<ProjectTemplateDto>();
+            (await handler.HandleAsync(user.Id, id, null, body, ct)).ToHttpResult());
 
     public static RouteHandlerBuilder MapUpdate(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}/templates/{key:guid}", async (Guid id, Guid key, ProjectTemplateRequest body, ICurrentUser user, SaveProjectTemplate handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, key, body, ct)).ToHttpResult())
-        .Produces<ProjectTemplateDto>();
+            (await handler.HandleAsync(user.Id, id, key, body, ct)).ToHttpResult());
 
     public async Task<Result<ProjectTemplateDto>> HandleAsync(Guid actor, Guid id, Guid? key, ProjectTemplateRequest request, CancellationToken ct)
     {

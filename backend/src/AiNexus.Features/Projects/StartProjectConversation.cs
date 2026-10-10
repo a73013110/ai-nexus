@@ -18,8 +18,7 @@ internal sealed class StartProjectConversation(NexusDbContext db, ResourceAccess
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/conversations", async (Guid id, ProjectConversationRequest body, ICurrentUser user, StartProjectConversation handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
-        .Produces<ProjectConversationDto>();
+            (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult());
 
     public async Task<Result<ProjectConversationDto>> HandleAsync(Guid actor, Guid id, ProjectConversationRequest request, CancellationToken ct)
     {
@@ -33,8 +32,8 @@ internal sealed class StartProjectConversation(NexusDbContext db, ResourceAccess
             if (template is null) return ProjectsErrors.TemplateMissing;
             title = template.Title; prompt = template.Content;
         }
-        if (!ProjectQueries.NameIsValid(title)) return ProjectsErrors.InvalidName;
-        var row = new Conversation { OwnerId = actor, ProjectId = id, Title = ResourceAccess.Name(title).OrThrow() };
+        if (ResourceAccess.Name(title) is not { IsSuccess: true } name) return ProjectsErrors.InvalidName;
+        var row = new Conversation { OwnerId = actor, ProjectId = id, Title = name.Value };
         db.Add(row); await db.SaveChangesAsync(ct);
         return new ProjectConversationDto(row.ToDto(), prompt);
     }

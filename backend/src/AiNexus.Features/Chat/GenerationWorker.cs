@@ -98,7 +98,7 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
                 var sources = await db.Set<AiNexus.Features.Knowledge.Retrieval.MessageCitation>().Where(x => x.MessageId == run.AssistantMessageId).Select(x => new AiNexus.Features.Knowledge.Retrieval.KnowledgeHitDto(x.DocumentId, x.Title, x.PageNumber, x.Excerpt, 0, Guid.Empty, x.EndPage)).ToListAsync(stoppingToken);
                 (await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Knowledge.Retrieval.KnowledgeRetrieval>().ValidateHitsAsync(run.OwnerId, sources, stoppingToken)).OrThrow();
                 var projectId = await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.Id == run.ConversationId).Select(x => x.ProjectId).SingleAsync(stoppingToken);
-                await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Projects.ProjectService>().ContextAsync(run.OwnerId, projectId, stoppingToken);
+                (await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Projects.ProjectService>().ContextAsync(run.OwnerId, projectId, stoppingToken)).OrThrow();
             }
             catch (ApiException revoked)
             {

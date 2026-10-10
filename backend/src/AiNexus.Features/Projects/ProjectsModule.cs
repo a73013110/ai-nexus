@@ -10,12 +10,6 @@ public sealed class ProjectsModule : IFeatureModule
     {
         var services = builder.Services;
         services.AddScoped<ProjectService>();
-        services.AddScoped<AssignConversationProject>();
-        services.AddScoped<SaveProject>();
-        services.AddScoped<AddProjectFile>();
-        services.AddScoped<SaveProjectTemplate>();
-        services.AddScoped<DeleteProjectTemplate>();
-        services.AddScoped<StartProjectConversation>();
         services.AddFeaturePolicy(FeatureIds.Projects);
     }
 
