@@ -1,7 +1,7 @@
 # 0004 模組可以互相依賴，但不可有循環
 
 - **狀態**：採用（2026-10）
-- **決定**：模組之間的目標是「沒有循環」，不是零依賴。`ModuleBoundaryTests.Module_dependencies_have_no_cycles` 直接禁止循環；跨模組讀取只透過對方的 `public` 服務，「A 發生後 B 跟著處理」的副作用用同交易的 domain event。
+- **決定**：模組之間的目標是「沒有循環」，不是零依賴。`ModuleBoundaryTests.ModuleDependenciesHaveNoCycles` 直接禁止循環；跨模組讀取只透過對方的 `public` 服務，「A 發生後 B 跟著處理」的副作用用同交易的 domain event。
 
 ## 原因
 

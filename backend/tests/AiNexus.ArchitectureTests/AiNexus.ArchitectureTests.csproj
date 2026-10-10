@@ -1,7 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>Exe</OutputType><IsTestProject>true</IsTestProject><IsPackable>false</IsPackable></PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="xunit.v3" />
     <PackageReference Include="NetArchTest.eNhancedEdition" />
   </ItemGroup>
   <ItemGroup>

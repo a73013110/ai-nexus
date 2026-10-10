@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tests that start the application host (NexusFactory) or use a real database or browser. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
+  </ItemGroup>
+  <ItemGroup><ProjectReference Include="../../src/AiNexus.Host/AiNexus.Host.csproj" /></ItemGroup>
+  <ItemGroup><Using Include="AiNexus.IntegrationTests.Support" /></ItemGroup>
+</Project>

@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Xunit;
 
 namespace AiNexus.ArchitectureTests;
 
@@ -10,7 +9,7 @@ namespace AiNexus.ArchitectureTests;
 public sealed class EntityConfigurationTests
 {
     [Fact]
-    public void Entity_configurations_have_a_parameterless_constructor()
+    public void EntityConfigurationsHaveAParameterlessConstructor()
     {
         var configurations = Assemblies.Features.GetTypes()
             .Where(t => t is { IsClass: true, IsAbstract: false, IsGenericTypeDefinition: false })
