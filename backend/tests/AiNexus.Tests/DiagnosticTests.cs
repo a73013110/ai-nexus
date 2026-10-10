@@ -71,7 +71,7 @@ public sealed class DiagnosticTests
         using var factory = LoggerFactory.Create(x => x.SetMinimumLevel(LogLevel.Trace).AddProvider(provider));
         using var trace = DiagnosticTrace.Start("validation.fixture");
         var issues = new Issues(factory.CreateLogger<Issues>(), factory);
-        var problem = issues.Problem(new ApiException(400, "invalid_request", Secret));
+        var problem = issues.Problem(new ExternalServiceException(Error.Invalid("invalid_request"), Secret));
         var row = Assert.Single(buffer.Drain()); Assert.Equal(problem.IssueCode, row.IssueCode); Assert.Equal(LogLevel.Information, row.Level);
         Assert.Equal(trace.TraceId.ToHexString(), row.TraceId); Assert.Equal(0, health.Sampled); Assert.DoesNotContain(Secret, problem.Title);
     }

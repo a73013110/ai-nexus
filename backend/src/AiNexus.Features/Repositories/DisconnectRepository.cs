@@ -5,22 +5,25 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Repositories;
 
 /// <summary>Deletes the stored token. Imported snapshots and reviews stay; reading their source needs a new connection.</summary>
-internal static class DisconnectRepository
+internal sealed class DisconnectRepository(NexusDbContext db, RepositoryWriteLock writes)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/connection", HandleAsync)
+        .MapDelete("/connection", async (ICurrentUser user, DisconnectRepository handler, CancellationToken ct) =>
+        {
+            await handler.HandleAsync(user.Id, ct);
+            return TypedResults.NoContent();
+        })
         .WithName("DisconnectRepository");
 
-    private static async Task<IResult> HandleAsync(ICurrentUser user, NexusDbContext db, RepositoryWriteLock writes, CancellationToken ct)
+    public async Task HandleAsync(Guid owner, CancellationToken ct)
     {
         await writes.Gate.WaitAsync(ct);
         try
         {
-            await db.Set<RepositoryConnection>().Where(x => x.OwnerId == user.Id).ExecuteDeleteAsync(ct);
-            db.AuditEvents.Add(new AuditEvent { OwnerId = user.Id, ResourceId = user.Id, Action = "repository.disconnected", Result = "deleted" });
+            await db.Set<RepositoryConnection>().Where(x => x.OwnerId == owner).ExecuteDeleteAsync(ct);
+            db.AuditEvents.Add(new AuditEvent { OwnerId = owner, ResourceId = owner, Action = "repository.disconnected", Result = "deleted" });
             await db.SaveChangesAsync(ct);
         }
         finally { writes.Gate.Release(); }
-        return Results.NoContent();
     }
 }

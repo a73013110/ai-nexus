@@ -50,25 +50,25 @@ public sealed class RepositoryTests
     [InlineData("../private")]
     [InlineData("hanglong/../../private")]
     [InlineData("hanglong/nexus?token=bad")]
-    public void RepositoryPathsCannotEscapeTheControlledHost(string repository) => Assert.Throws<ApiException>(() => RepositoryService.RepositoryRoute(repository));
+    public void RepositoryPathsCannotEscapeTheControlledHost(string repository) => Assert.False(RepositoryService.IsRepository(repository));
     [Theory]
     [InlineData("../secrets")]
     [InlineData("a/../../secret")]
     [InlineData("/absolute")]
     [InlineData("folder\\file")]
-    public void FilePathsRejectTraversal(string path) => Assert.Throws<ApiException>(() => RepositoryService.FilePath(path, false));
+    public void FilePathsRejectTraversal(string path) => Assert.False(RepositoryService.IsFilePath(path, false));
     [Fact]
-    public void BranchNamesCannotMasqueradeAsPinnedCommits() => Assert.Throws<ApiException>(() => RepositoryService.Commit("main"));
+    public void BranchNamesCannotMasqueradeAsPinnedCommits() => Assert.False(RepositoryService.IsCommit("main"));
 }
 internal sealed class FixtureGitea : IGiteaClient
 {
     public List<string> Requests { get; } = [];
     public bool Revoked { get; set; }
     public string Diff { get; set; } = "diff --git a/app.cs b/app.cs\n--- a/app.cs\n+++ b/app.cs\n@@ -1 +1 @@\n-old\n+new\n";
-    public Task<string> GetTextAsync(string token, string path, CancellationToken ct) { Requests.Add(path); if (Revoked) throw new ApiException(403, "gitea_read_failed", "Revoked."); return Task.FromResult(Diff); }
+    public Task<string> GetTextAsync(string token, string path, CancellationToken ct) { Requests.Add(path); if (Revoked) throw new ExternalServiceException(Error.Forbidden("gitea_read_failed"), "Revoked."); return Task.FromResult(Diff); }
     public Task<JsonDocument> GetAsync(string token, string path, CancellationToken ct)
     {
-        Requests.Add(path); if (Revoked) throw new ApiException(403, "gitea_read_failed", "Revoked."); object response = path switch {
+        Requests.Add(path); if (Revoked) throw new ExternalServiceException(Error.Forbidden("gitea_read_failed"), "Revoked."); object response = path switch {
             "api/v1/user" => new { login = "fixture-user" },
             var p when p.StartsWith("api/v1/user/repos?", StringComparison.Ordinal) => new[] { new { full_name = "hanglong/nexus", description = "內部文件", @private = true, default_branch = "main" } },
             var p when p.Contains("/git/commits/") => new { sha = p.Split('/').Last() },
@@ -77,7 +77,7 @@ internal sealed class FixtureGitea : IGiteaClient
             "api/v1/repos/hanglong/nexus/branches/main" => new { commit = new { id = new string('a', 40) } },
             var p when p.StartsWith("api/v1/repos/hanglong/nexus/contents?", StringComparison.Ordinal) => new[] { new { name = "README.md", path = "README.md", type = "file", size = 20 } },
             var p when p.StartsWith("api/v1/repos/hanglong/nexus/contents/README.md?", StringComparison.Ordinal) => new { type = "file", encoding = "base64", size = 20, content = Convert.ToBase64String(Encoding.UTF8.GetBytes("# 技術文件\n唯讀內容")) },
-            _ => throw new ApiException(404, "fixture_not_found", "Fixture path missing.") };
+            _ => throw new ExternalServiceException(Error.NotFound("fixture_not_found"), "Fixture path missing.") };
         return Task.FromResult(JsonDocument.Parse(JsonSerializer.Serialize(response)));
     }
 }

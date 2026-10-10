@@ -211,10 +211,10 @@ public sealed class WorkspaceExperienceTests
     public void DiffSplittingPreservesAllTextAndBoundsLargeOrBinaryChanges()
     {
         var diff = "diff --git a/long.cs b/long.cs\n@@ -1 +1 @@\n+" + new string('x', 8000) + "\n";
-        var slices = RepositoryReviewService.Split(diff, 512); Assert.Equal(diff, string.Concat(slices.Select(x => x.Diff))); Assert.All(slices, x => Assert.InRange(x.Diff.Length, 1, 512));
-        Assert.True(Assert.Single(RepositoryReviewService.Split("diff --git a/a.png b/a.png\nBinary files a/a.png and b/a.png differ\n", 1000)).Binary);
-        Assert.Throws<ApiException>(() => RepositoryReviewService.Split("", 1000));
-        Assert.Throws<ApiException>(() => RepositoryReviewService.Split("diff --git a/a b/a\n" + new string('x', 257000), 12000));
+        var slices = RepositoryReviewService.Split(diff, 512).Value!; Assert.Equal(diff, string.Concat(slices.Select(x => x.Diff))); Assert.All(slices, x => Assert.InRange(x.Diff.Length, 1, 512));
+        Assert.True(Assert.Single(RepositoryReviewService.Split("diff --git a/a.png b/a.png\nBinary files a/a.png and b/a.png differ\n", 1000).Value!).Binary);
+        Assert.Equal("review_no_changes", RepositoryReviewService.Split("", 1000).Error?.Code);
+        Assert.Equal("repository_diff_limit", RepositoryReviewService.Split("diff --git a/a b/a\n" + new string('x', 257000), 12000).Error?.Code);
     }
     [Fact]
     public void OfficeExtractionReadsWorksheetsCachedFormulasAndSlidesAndRejectsMacrosOrXmlEntities()
