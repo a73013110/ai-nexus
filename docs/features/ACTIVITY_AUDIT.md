@@ -28,4 +28,4 @@
 
 ## 驗證
 
-授權、游標、日期、匯出、關聯查證、舊書籤與權限不足由 `ActivityAuditTests`、`admin.spec.ts`、`navigation-audit.spec.ts`、`system-logs.spec.ts` 檢查。設計參考 [OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html) 與 Microsoft Entra 將 [登入紀錄](https://learn.microsoft.com/en-us/entra/identity/monitoring-health/concept-sign-ins) 和 [稽核紀錄](https://learn.microsoft.com/en-us/entra/identity/monitoring-health/concept-audit-logs) 分開查詢的做法。
+授權、游標、日期、匯出、關聯查證、舊書籤與權限不足由 `ListActivityAuditTests`、`LoginAuditTests`、`admin.spec.ts`、`navigation-audit.spec.ts`、`system-logs.spec.ts` 檢查。設計參考 [OWASP Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html) 與 Microsoft Entra 將 [登入紀錄](https://learn.microsoft.com/en-us/entra/identity/monitoring-health/concept-sign-ins) 和 [稽核紀錄](https://learn.microsoft.com/en-us/entra/identity/monitoring-health/concept-audit-logs) 分開查詢的做法。

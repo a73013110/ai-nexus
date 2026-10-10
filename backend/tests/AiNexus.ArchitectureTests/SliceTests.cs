@@ -1,5 +1,4 @@
 using AiNexus.Platform.Modules;
-using Xunit;
 
 namespace AiNexus.ArchitectureTests;
 
@@ -7,7 +6,7 @@ namespace AiNexus.ArchitectureTests;
 public sealed class SliceTests
 {
     [Fact]
-    public void Every_slice_is_an_internal_sealed_class()
+    public void EverySliceIsAnInternalSealedClass()
     {
         var slices = EndpointHandlers.Slices(Assemblies.Features).ToList();
         Assert.NotEmpty(slices);

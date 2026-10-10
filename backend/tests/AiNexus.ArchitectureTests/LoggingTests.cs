@@ -1,6 +1,5 @@
 using System.Reflection;
 using Microsoft.Extensions.Logging;
-using Xunit;
 
 namespace AiNexus.ArchitectureTests;
 
@@ -17,14 +16,14 @@ public sealed class LoggingTests
         .Where(x => x.Event is not null)];
 
     [Fact]
-    public void Every_log_event_has_a_fixed_id_and_dotted_name()
+    public void EveryLogEventHasAFixedIdAndDottedName()
     {
         Assert.NotEmpty(Events);
         Assert.All(Events, x => Assert.True(x.Event.EventId > 0 && x.Event.EventName?.Contains('.', StringComparison.Ordinal) == true, x.Method + " needs EventId and a dotted EventName."));
     }
 
     [Fact]
-    public void Log_event_ids_and_names_are_unique()
+    public void LogEventIdsAndNamesAreUnique()
     {
         var ids = Events.GroupBy(x => x.Event.EventId).Where(g => g.Count() > 1).Select(g => g.Key + ": " + string.Join(", ", g.Select(x => x.Method)));
         var names = Events.GroupBy(x => x.Event.EventName).Where(g => g.Count() > 1).Select(g => g.Key + ": " + string.Join(", ", g.Select(x => x.Method)));

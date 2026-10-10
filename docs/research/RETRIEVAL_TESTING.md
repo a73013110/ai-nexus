@@ -87,7 +87,7 @@ PDF 可在上述測試通過後另測：確認擷取文字、頁碼與原檔一�
 ## 自動化回歸
 
 ```powershell
-dotnet test --project backend/tests/AiNexus.Tests --filter 'FullyQualifiedName~RetrievalDependencyTests|FullyQualifiedName~KnowledgeAndJobsTests|FullyQualifiedName~EmbeddingLifecycleTests|FullyQualifiedName~RetrievalPipelineTests|FullyQualifiedName~RetrievalEvaluationTests'
+dotnet test --solution backend/AiNexus.slnx --filter 'FullyQualifiedName~.Knowledge.|FullyQualifiedName~.Quality.|FullyQualifiedName~JobLifecycleTests'
 ```
 
 `RetrievalDependencyTests` 驗證正式 SQL 檢索服務所需依賴，並啟用 DI scope validation，確認實際改寫器與全部背景處理器可正確建立。其餘測試使用 SQLite 與替代模型，驗證工作續跑、profile、ACL、快取與評測流程；不代表真實 Ollama 或 SQL 原生向量已通過。
