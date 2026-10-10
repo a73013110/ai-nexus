@@ -6,7 +6,8 @@
 
 .DESCRIPTION
 依序執行：腳本測試（Pester，scripts/tests）、Build.ps1（輸出到 artifacts/verification，不覆寫正在執行的 publish）、
-後端測試、前端 lint 與單元測試。真實瀏覽器與效能測試需另外加參數。TRX 寫在 artifacts/test-results。
+後端 build、EF 模型與 migration 一致性、後端測試、前端 lint 與單元測試。真實瀏覽器與效能測試需另外加參數。
+TRX 寫在 artifacts/test-results。需先執行 Restore.ps1；.github/workflows/ci.yml 也是 Restore.ps1 加上這支腳本。
 
 .PARAMETER Browser
 加跑後端真實瀏覽器測試（Category=Browser：PDF 匯出、診斷與監控頁）與 Playwright e2e。
@@ -51,6 +52,8 @@ try {
     & (Join-Path $PSScriptRoot 'Build.ps1') -OutputDirectory $verification
     dotnet build backend/AiNexus.slnx --no-restore -c Release
     if ($LASTEXITCODE -ne 0) { throw '後端 build 失敗。' }
+    dotnet ef migrations has-pending-model-changes --no-build --configuration Release --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host
+    if ($LASTEXITCODE -ne 0) { throw 'EF 模型有尚未產生的 migration。' }
     Invoke-BackendTests 'Category!=Performance&Category!=Browser' 'backend.trx'
     npm --prefix frontend run lint
     if ($LASTEXITCODE -ne 0) { throw '前端 lint 失敗。' }

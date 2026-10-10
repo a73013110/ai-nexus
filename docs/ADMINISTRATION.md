@@ -87,7 +87,7 @@
 - 相同 idempotency key 重送可取得原結果，即使目前配額耗盡仍可讀取。供應商回報若超過保守估計，實際用量仍完整保存並阻擋後續請求；上限依供應商是否遵守輸出限制及圖片估計精度。
 - 附件容量依個人覆寫、有效群組最低值、網站預設 5 GB 決定。原檔包含草稿、pending 預約與 deleting 重試，多處引用只計一次，實體刪檔成功才釋放容量。
 
-升級前停止舊 host，再套用 `PerModelTokenBudgets` migration（或 DBA 審閱 `db/migrations.sql`）。既有每日請求次數不能換算成 token，升級後需按模型設定 token 預算；既有模型白名單、容量與使用紀錄保留。migration 只更新原始預設功能名稱，管理者自訂名稱保留。
+升級前停止舊 host，再套用 `PerModelTokenBudgets` migration（或 DBA 審閱發布套件的 `migrations.sql`）。既有每日請求次數不能換算成 token，升級後需按模型設定 token 預算；既有模型白名單、容量與使用紀錄保留。migration 只更新原始預設功能名稱，管理者自訂名稱保留。
 
 `AdditiveModelGrants` migration 更新模型白名單與 token 政策的資料庫欄位說明，不改寫既有政策或用量。程式升級後，模型授權與額度依上述累加規則重新計算；例如「基本工作區」僅授予 Qwen、「平台管理」未限制模型與額度，同時加入兩者的帳號可使用所有平台可用模型且繼承無上限額度。若要限制特定帳號，使用個人模型清單與逐模型額度。
 
