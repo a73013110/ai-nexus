@@ -1,7 +1,6 @@
 using System.Reflection;
 using AiNexus.Platform.Errors;
 using NetArchTest.Rules;
-using Xunit;
 
 namespace AiNexus.ArchitectureTests;
 
@@ -18,7 +17,7 @@ public sealed class ModuleBoundaryTests
     private static readonly HashSet<string> Infrastructure = ["Persistence"];
 
     [Fact]
-    public void Module_dependencies_have_no_cycles()
+    public void ModuleDependenciesHaveNoCycles()
     {
         var edges = Edges();
         var cycles = Components(edges).Where(x => x.Count > 1).Select(x => Describe(Cycle(x, edges), edges)).ToList();
@@ -27,7 +26,7 @@ public sealed class ModuleBoundaryTests
 
     /// <summary>A module is a folder of the Features project; its root holds <c>&lt;Module&gt;Module.cs</c>, the one place it is registered.</summary>
     [Fact]
-    public void Every_module_has_a_module_class_at_its_root()
+    public void EveryModuleHasAModuleClassAtItsRoot()
     {
         var folders = Directory.EnumerateDirectories(Path.Combine(SourceTree.Root, "backend", "src", "AiNexus.Features"))
             .Select(Path.GetFileName).OfType<string>().Where(x => x is not ("bin" or "obj") && !Infrastructure.Contains(x)).ToList();
@@ -39,7 +38,7 @@ public sealed class ModuleBoundaryTests
 
     /// <summary>A module's expected failures are listed in one place, <c>&lt;Module&gt;Errors</c> at the module root.</summary>
     [Fact]
-    public void Errors_are_declared_in_the_module_errors_class()
+    public void ErrorsAreDeclaredInTheModuleErrorsClass()
     {
         var misplaced = Assemblies.Features.GetTypes()
             .SelectMany(t => t.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.DeclaredOnly))

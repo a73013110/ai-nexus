@@ -20,7 +20,7 @@ dotnet dev-certs https --trust     # 開發機首次
 
 | 項目 | 用途 |
 | --- | --- |
-| `backend/` | 後端方案 `AiNexus.slnx`：`src/` 有主機 `AiNexus.Host`、業務模組 `AiNexus.Features`、共用基礎 `AiNexus.Platform`，`tests/` 有整合與架構測試；NuGet 版本集中在 `Directory.Packages.props` |
+| `backend/` | 後端方案 `AiNexus.slnx`：`src/` 有主機 `AiNexus.Host`、業務模組 `AiNexus.Features`、共用基礎 `AiNexus.Platform`，`tests/` 有單元、整合與架構測試；NuGet 版本集中在 `Directory.Packages.props` |
 | `frontend/` | Angular 前端；`npm` 指令在這裡執行，`src/app` 分為 `core`、`shared`、`features` |
 | `tests/e2e/` | Playwright 端到端測試，對發布後的網站執行 |
 | `contracts/` | 由後端產生的 API 合約 `openapi.json`（前端型別來源、合約測試比對） |
