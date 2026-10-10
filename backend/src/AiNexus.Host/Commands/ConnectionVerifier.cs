@@ -84,7 +84,7 @@ public static class ConnectionVerifier
             return result.Embedding.Notice + " " + result.Rerank.Notice;
         });
         var destination = configuration["VerificationOutput"] ?? Path.Combine(contentRoot, "connection-checks.json");
-        await File.WriteAllTextAsync(destination, JsonSerializer.Serialize(new { checkedAt = DateTimeOffset.UtcNow, results }, Indented), ct);
+        await File.WriteAllTextAsync(destination, JsonSerializer.Serialize(new { checkedAt = services.GetRequiredService<TimeProvider>().GetUtcNow(), results }, Indented), ct);
         return passed;
     }
 

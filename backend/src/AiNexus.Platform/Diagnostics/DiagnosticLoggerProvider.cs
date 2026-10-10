@@ -6,12 +6,13 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Platform.Diagnostics;
 
-public sealed class DiagnosticLoggerProvider(DiagnosticBuffer buffer, IOptions<DiagnosticOptions> options, IHostEnvironment environment, IHttpContextAccessor? http = null) : ILoggerProvider, ISupportExternalScope
+public sealed class DiagnosticLoggerProvider(DiagnosticBuffer buffer, IOptions<DiagnosticOptions> options, IHostEnvironment environment, IHttpContextAccessor? http = null, TimeProvider? clock = null) : ILoggerProvider, ISupportExternalScope
 {
     private readonly DiagnosticBuffer buffer = buffer;
     private readonly IOptions<DiagnosticOptions> options = options;
     private readonly IHostEnvironment environment = environment;
     private readonly IHttpContextAccessor? http = http;
+    private readonly TimeProvider clock = clock ?? TimeProvider.System;
     private IExternalScopeProvider scopes = new LoggerExternalScopeProvider();
     public string Instance { get; } = System.Environment.MachineName + "-" + System.Environment.ProcessId + "-" + Guid.NewGuid().ToString("N")[..8];
     public static string Version { get; } = typeof(DiagnosticLoggerProvider).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "unknown";
@@ -48,7 +49,7 @@ public sealed class DiagnosticLoggerProvider(DiagnosticBuffer buffer, IOptions<D
                 userId = context.RequestServices.GetService<AiNexus.Platform.Security.IRequestUser>()?.ResolvedId;
             var accepted = provider.buffer.Enqueue(new()
             {
-                Level = level, Category = DiagnosticRedactor.Text(category, 180), EventId = stableId,
+                At = provider.clock.GetUtcNow(), Level = level, Category = DiagnosticRedactor.Text(category, 180), EventId = stableId,
                 EventName = DiagnosticRedactor.Text(eventId.Name ?? "event." + stableId, 100), MessageTemplate = template,
                 PropertiesJson = DiagnosticRedactor.Json(properties), Service = DiagnosticRedactor.Text(provider.options.Value.ServiceName, 80),
                 Environment = DiagnosticRedactor.Text(provider.environment.EnvironmentName, 32), Version = DiagnosticRedactor.Text(Version, 80), Instance = provider.Instance,

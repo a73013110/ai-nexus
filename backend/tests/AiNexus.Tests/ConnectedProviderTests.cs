@@ -28,7 +28,7 @@ public sealed class ConnectedProviderTests
             var results = "[{\"url\":\"http://192.168.2.95/private\",\"title\":\"private\",\"content\":\"no\",\"description\":\"no\"},{\"url\":\"https://example.org/source\",\"title\":\"<b>來源</b>\",\"content\":\"摘要 &amp; 內容\",\"description\":\"摘要 &amp; 內容\"},{\"url\":\"https://example.org/source\",\"content\":\"duplicate\",\"description\":\"duplicate\"}]";
             return Json(provider == "brave" ? "{\"web\":{\"results\":" + results + "}}" : "{\"results\":" + results + "}");
         }));
-        var search = new WebSearchProvider(new Factory(client), Options.Create(new WebSearchOptions { Provider = provider, ApiKey = "fixture-search-key", Endpoint = "https://search.fixture/" }));
+        var search = new WebSearchProvider(new Factory(client), Options.Create(new WebSearchOptions { Provider = provider, ApiKey = "fixture-search-key", Endpoint = "https://search.fixture/" }), TimeProvider.System);
         var hit = Assert.Single(await search.SearchAsync("公文", CancellationToken.None));
         Assert.Equal("來源", hit.Title); Assert.Equal("摘要 & 內容", hit.Excerpt); Assert.Equal(1, hit.Number); Assert.Equal("https://example.org/source", hit.Url);
     }

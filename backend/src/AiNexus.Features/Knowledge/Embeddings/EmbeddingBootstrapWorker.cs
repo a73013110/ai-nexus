@@ -9,7 +9,7 @@ using AiNexus.Features.Knowledge.Documents;
 
 namespace AiNexus.Features.Knowledge.Embeddings;
 
-public sealed partial class EmbeddingBootstrapWorker(IServiceScopeFactory scopes, StorageReadiness readiness, IHostEnvironment environment, ILogger<EmbeddingBootstrapWorker> logger) : BackgroundService
+public sealed partial class EmbeddingBootstrapWorker(IServiceScopeFactory scopes, StorageReadiness readiness, IHostEnvironment environment, ILogger<EmbeddingBootstrapWorker> logger, TimeProvider clock) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -36,7 +36,7 @@ public sealed partial class EmbeddingBootstrapWorker(IServiceScopeFactory scopes
                         if (actor is Guid owner && !await db.Set<BackgroundJob>().AnyAsync(x => x.Kind == "embedding-reindex" && x.SubjectId == subject, stoppingToken)) jobs.Enqueue(owner, null, subject, "embedding-reindex", $"重建 {target.Model} 檢索索引");
                     }
                     await db.SaveChangesAsync(stoppingToken);
-                    if (DateTimeOffset.UtcNow - cleanedAt > TimeSpan.FromHours(1)) { await scope.ServiceProvider.GetRequiredService<EmbeddingLifecycle>().CleanupExpiredAsync(stoppingToken); cleanedAt = DateTimeOffset.UtcNow; }
+                    if (clock.GetUtcNow() - cleanedAt > TimeSpan.FromHours(1)) { await scope.ServiceProvider.GetRequiredService<EmbeddingLifecycle>().CleanupExpiredAsync(stoppingToken); cleanedAt = clock.GetUtcNow(); }
                 }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { break; }

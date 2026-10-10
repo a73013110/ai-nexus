@@ -74,7 +74,7 @@ public static class SessionIdentity
             { context.RejectPrincipal(); await context.HttpContext.SignOutAsync(AuthEndpoints.CookieScheme); return; }
             // Reuse the indexed audit resource key for session revocation, without parsing/scanning JSON.
             var ended = await db.AuditEvents.AsNoTracking().AnyAsync(x => x.ResourceId == testId && x.OwnerId == actorId && x.Action == "identity.test_end", context.HttpContext.RequestAborted);
-            var expired = !long.TryParse(principal.FindFirstValue(TestExpires), out var seconds) || seconds <= DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+            var expired = !long.TryParse(principal.FindFirstValue(TestExpires), out var seconds) || seconds <= context.HttpContext.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().ToUnixTimeSeconds();
             if (ended || expired || user is null || !Available(user) || !MatchesVersion(user, principal.FindFirstValue(Version)))
             {
                 // Restore only the still-authorized source administrator, never extend the test.

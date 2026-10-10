@@ -4,7 +4,7 @@ using AiNexus.Features.Inference;
 
 namespace AiNexus.Features.Chat;
 
-public sealed partial class RunRecoveryWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, StorageReadiness storage, ILogger<RunRecoveryWorker> logger) : BackgroundService
+public sealed partial class RunRecoveryWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, StorageReadiness storage, ILogger<RunRecoveryWorker> logger, TimeProvider clock) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -19,7 +19,7 @@ public sealed partial class RunRecoveryWorker(IServiceScopeFactory scopes, Gener
                 {
                     using var scope = scopes.CreateScope();
                     var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-                    var now = DateTimeOffset.UtcNow;
+                    var now = clock.GetUtcNow();
                     var tracked = scheduler.TrackedRuns;
                     if (tracked.Length > 0)
                     {

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Attachments;
 
 /// <summary>Deleting is a durable outbox state. Metadata and quota survive until physical deletion succeeds.</summary>
-public sealed partial class AttachmentLifecycle(NexusDbContext db, IAttachmentStorage storage, AttachmentQuota quota, IPrivateReaders readers, IOptions<AttachmentOptions> options, ILogger<AttachmentLifecycle> logger)
+public sealed partial class AttachmentLifecycle(NexusDbContext db, IAttachmentStorage storage, AttachmentQuota quota, IPrivateReaders readers, IOptions<AttachmentOptions> options, ILogger<AttachmentLifecycle> logger, TimeProvider clock)
 {
     private IQueryable<Attachment> Unreferenced() => db.Set<Attachment>().Where(x =>
         !db.Set<MessageAttachment>().Any(l => l.AttachmentId == x.Id) && !db.Set<AttachmentReference>().Any(l => l.AttachmentId == x.Id));
@@ -84,8 +84,9 @@ public sealed partial class AttachmentLifecycle(NexusDbContext db, IAttachmentSt
     /// </summary>
     public async Task ReclaimAsync(CancellationToken ct, Guid? owner = null)
     {
-        var cutoff = DateTimeOffset.UtcNow.AddDays(-options.Value.DraftRetentionDays);
-        var interrupted = DateTimeOffset.UtcNow.AddHours(-1);
+        var now = clock.GetUtcNow();
+        var cutoff = now.AddDays(-options.Value.DraftRetentionDays);
+        var interrupted = now.AddHours(-1);
         var candidates = await ExpiredDrafts(cutoff, interrupted).AsNoTracking().Where(x => owner == null || x.OwnerId == owner)
             .OrderBy(x => x.CreatedAt).Take(100).Select(x => new { x.Id, x.OwnerId }).ToListAsync(ct);
         if (owner is not null && candidates.Count == 0) return;
@@ -110,7 +111,7 @@ public sealed partial class AttachmentLifecycle(NexusDbContext db, IAttachmentSt
     public async Task ReconcileAsync(CancellationToken ct)
     {
         var keys = new HashSet<string>(StringComparer.Ordinal);
-        await foreach (var key in storage.StaleKeysAsync(DateTimeOffset.UtcNow.AddDays(-1), ct))
+        await foreach (var key in storage.StaleKeysAsync(clock.GetUtcNow().AddDays(-1), ct))
         {
             keys.Add(key);
             if (keys.Count < 100) continue;

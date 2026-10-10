@@ -10,10 +10,13 @@ namespace AiNexus.Features.Persistence;
 /// The application's single DbContext. Mappings are <c>IEntityTypeConfiguration&lt;T&gt;</c> classes next to each entity,
 /// cross-module foreign keys are in <see cref="CrossModuleRelationships"/> and SQLite-only differences in
 /// <see cref="SqliteModel"/>. Save-time behavior comes from the interceptors added by
-/// <see cref="NexusDbContextOptions.AddNexusInterceptors"/>.
+/// <see cref="NexusDbContextOptions.AddNexusInterceptors"/>. Creation timestamps come from <see cref="Clock"/>
+/// through <see cref="CreationTime"/>.
 /// </summary>
-public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options) : DbContext(options)
+public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, TimeProvider? clock = null) : DbContext(options)
 {
+    public TimeProvider Clock { get; } = clock ?? TimeProvider.System;
+
     public DbSet<NexusUser> Users => Set<NexusUser>();
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<Message> Messages => Set<Message>();

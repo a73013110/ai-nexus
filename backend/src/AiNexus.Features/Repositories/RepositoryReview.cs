@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using AiNexus.Features.Jobs;
@@ -37,7 +38,7 @@ public sealed class RepositoryReview
     [Comment("分享時的固定內容快照；不隨後續編輯變動。")]
     public string SnapshotJson { get; set; } = "";
     [Comment("資料建立時間，採 UTC offset。")]
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
 }
 [Comment("Review 各區段的持久結果及用量；重試沿用已完成區段。")]
 public sealed class RepositoryReviewResult
@@ -66,6 +67,7 @@ internal sealed class RepositoryReviewConfiguration : IEntityTypeConfiguration<R
 {
     public void Configure(EntityTypeBuilder<RepositoryReview> r)
     {
+        r.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
         r.ToTable("RepositoryReviews", "repositories"); r.HasKey(x => x.Id);
         r.Property(x => x.BaseUrl).HasMaxLength(500); r.Property(x => x.Repository).HasMaxLength(201); r.Property(x => x.Commit).HasMaxLength(64); r.Property(x => x.BaseCommit).HasMaxLength(64);
         r.Property(x => x.ModelId).HasMaxLength(160); r.Property(x => x.ConfigurationFingerprint).HasMaxLength(64); r.Property(x => x.Note).HasMaxLength(RepositoryReview.NoteMaxLength);

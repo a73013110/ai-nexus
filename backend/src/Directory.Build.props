@@ -4,6 +4,11 @@
     <!-- Minimal API request delegates are generated at compile time instead of compiled from expression trees when each host starts. -->
     <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>
   </PropertyGroup>
+  <!-- Time comes from the injected TimeProvider; BannedSymbols.txt lists the clock APIs that fail the build. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" PrivateAssets="all" />
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)BannedSymbols.txt" />
+  </ItemGroup>
   <!-- Class libraries share the ASP.NET Core implicit usings that the web host gets from Microsoft.NET.Sdk.Web. -->
   <ItemGroup Condition="'$(UsingMicrosoftNETSdkWeb)' != 'true'">
     <Using Include="System.Net.Http.Json" />

@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -21,13 +22,14 @@ public sealed class RunEvent
     [Comment("對外安全的錯誤代碼，不含密碼或完整例外。")]
     public string? ErrorCode { get; set; }
     [Comment("資料建立時間，採 UTC offset。")]
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
 }
 
 internal sealed class RunEventConfiguration : IEntityTypeConfiguration<RunEvent>
 {
     public void Configure(EntityTypeBuilder<RunEvent> runEvent)
     {
+        runEvent.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
         runEvent.ToTable("RunEvents", "inference");
         runEvent.HasKey(x => new { x.RunId, x.Sequence });
         runEvent.Property(x => x.Type).HasMaxLength(16);

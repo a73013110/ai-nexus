@@ -22,7 +22,7 @@ public static class EmbeddingJobs
 }
 
 public sealed class EmbeddingLifecycle(NexusDbContext db, EmbeddingProfiles profiles, EmbeddingVectorStore vectors, KnowledgeWriteLock writes,
-    JobService jobs, IOptions<KnowledgeOptions> options)
+    JobService jobs, IOptions<KnowledgeOptions> options, TimeProvider clock)
 {
     private IQueryable<KnowledgeDocument> Documents => db.Set<KnowledgeDocument>().Where(x => x.CollectionId != null && !x.IsDeleted);
     public async Task<EmbeddingCoverageDto> CoverageAsync(EmbeddingProfile profile, CancellationToken ct)
@@ -64,7 +64,7 @@ public sealed class EmbeddingLifecycle(NexusDbContext db, EmbeddingProfiles prof
         if (profile.Status == "active") return Result.Success;
         if (profile.Status != "building") return KnowledgeErrors.ProfileNotBuilding;
         if (!(await CoverageAsync(profile, ct)).Complete) return KnowledgeErrors.ProfileIncomplete;
-        var now = DateTimeOffset.UtcNow;
+        var now = clock.GetUtcNow();
         await db.Set<EmbeddingProfile>().Where(x => x.Status == "active").ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, "retired").SetProperty(x => x.RetiredAt, now), ct);
         await db.Set<EmbeddingProfile>().Where(x => x.Id == id && x.Status == "building").ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, "active").SetProperty(x => x.ActivatedAt, now).SetProperty(x => x.RetiredAt, (DateTimeOffset?)null), ct);
         return Result.Success;
@@ -81,7 +81,7 @@ public sealed class EmbeddingLifecycle(NexusDbContext db, EmbeddingProfiles prof
     internal async Task CleanupExpiredAsync(CancellationToken ct)
     {
         var expired = (await db.Set<EmbeddingProfile>().AsNoTracking().Where(x => x.Status == "retired" && x.RetiredAt != null).ToListAsync(ct))
-            .Where(x => x.RetiredAt < DateTimeOffset.UtcNow.AddDays(-options.Value.RetiredRetentionDays)).ToArray();
+            .Where(x => x.RetiredAt < clock.GetUtcNow().AddDays(-options.Value.RetiredRetentionDays)).ToArray();
         if (expired.Length == 0) return;
         await writes.Gate.WaitAsync(ct);
         try

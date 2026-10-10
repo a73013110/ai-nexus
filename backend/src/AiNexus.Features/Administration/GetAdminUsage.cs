@@ -25,6 +25,6 @@ internal sealed class GetAdminUsage(NexusDbContext db, UsageReports reports, Mod
         var providers = await catalog.ProviderStatusesAsync(ct);
         return new(await db.Users.CountAsync(x => x.Enabled && x.DeletedAt == null, ct), totals.Requests, totals.Completed, totals.InputTokens, totals.OutputTokens, totals.RequestsWithUsage, totals.TotalDurationMilliseconds, totals.TimedRequests,
             await reports.ActiveOwnersAsync(ct), totals.Failed, totals.Cancelled, await db.Set<Attachment>().SumAsync(x => x.Size, ct), await db.Set<Attachment>().CountAsync(ct),
-            models, await reports.PlatformKindsAsync(ct), providers, search.Status, UsageReports.Since, clock.GetUtcNow());
+            models, await reports.PlatformKindsAsync(ct), providers, search.Status, reports.Since, clock.GetUtcNow());
     }
 }
