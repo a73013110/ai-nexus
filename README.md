@@ -1,49 +1,20 @@
 # AI Nexus
 
-AI 工作區：Angular 22、ASP.NET Core 10、MSSQL、AD 與 Google AI／Ollama 多供應商路由。模組化單體與前端 lazy routes 維持清楚結構，資料層為 EF Core，手寫 SQL 走 Dapper（`ISqlDatabase<T>`），風格集中於三層 tokens。
-
-全系統使用結構化日誌、安全錯誤提示與查證代碼。管理員可在「系統日誌」查詢關聯流程；站外 JSONL 在 SQL 故障時仍保存並於恢復後去重補送。查詢、診斷與匯出權限分開，安全稽核採獨立政策。見 [日誌架構與維運](docs/DIAGNOSTICS.md)、[驗收與效能結果](docs/DIAGNOSTICS_VERIFICATION.md)。
-
-聊天包含文件／圖片分析、掃描 PDF OCR、Markdown／程式碼、訊息分支、停止／斷線恢復、範本、搜尋、收藏／封存／標籤、本機草稿、文字備份與快捷指令。模型、思考與 Context 位於輸入區，支援鎖定模型與隱藏名稱；標題可雙擊修改，角色及問答定位清楚區分。
-
-| 工作區         | 能力                                                                            | 文件                              |
-| -------------- | ------------------------------------------------------------------------------- | --------------------------------- |
-| 總覽           | 空間流程與狀態、日期篩選、每次／全對話／使用者費用、價格版本與 CSV              | [費用](docs/BILLING.md)           |
-| 連網搜尋       | 手動開啟、SearXNG／Brave、來源與時間、配額、搜尋費用                            | [搜尋](docs/WEB_SEARCH.md)        |
-| 程式庫         | Gitea 唯讀檔案／議題、固定 commit 快照、單一／區間 commit 的背景 AI review | [Gitea](docs/GITEA.md) |
-| 個人設定       | 當頁設定視窗、主題、12–24px 閱讀／密度、操作、通知、草稿及用量                  | [功能指南](docs/FEATURES.md)      |
-| 平台管理       | 角色／群組／功能、個人／群組逐模型 token 政策、個別用量與唯讀對話 | [管理](docs/ADMINISTRATION.md)    |
-| 活動稽核       | 獨立授權的登入／活動／存取紀錄、前後差異、篩選與查證代碼串聯 | [活動稽核](docs/ACTIVITY_AUDIT.md) |
-| 系統日誌       | 錯誤、耗時與技術流程查證，查詢／診斷／匯出分別授權 | [日誌](docs/DIAGNOSTICS.md) |
-| 即時監控 | 在線人員／工作階段、動畫拓樸、API／SQL／HTTP 負載、操作時間軸及快照 | [監控](docs/MONITORING.md) |
-| 知識庫／閱讀器 | ACL、索引／OCR、SQL 向量檢索、引用及原文核對                                    | [知識庫](docs/KNOWLEDGE.md)       |
-| 檔案庫         | 對話／知識／專案原檔、自動保存、搜尋篩選、重用與大型預覽                        | [檔案庫](docs/FILES.md)           |
-| 成果文件       | 共用編輯、不可變版本、段落工具、Word／PDF                                       | [成果](docs/ARTIFACTS.md)         |
-| 專案           | 共用指示、文件、範本及成果，提問仍屬個人                                        | [專案](docs/PROJECTS.md)          |
-| 分享           | 具名收件人、版本快照、附件授權、到期／撤銷                                      | [分享](docs/SHARING.md)           |
-| 品質評測       | 私人回饋、固定題庫、模型／指令比較、設定指紋、人工評分                          | [品質](docs/QUALITY.md)           |
-| 背景任務       | 持久進度、租約／checkpoint、停止及重試                                          | [知識庫](docs/KNOWLEDGE.md)       |
-| 通知 | 共用通知中心、未讀、進度／分享事件、前往內容、瀏覽器通知 | [規格](docs/NOTIFICATIONS.md) |
-| 資料來源       | 公文／校務唯讀 adapter、歷程、私人成果及聊天草稿                                | [整合](docs/INTEGRATIONS.md)      |
-| 介面元件       | 管理員檢視實際元件、主題、鍵盤／動畫及 tokens 匯出                              | [設計系統](docs/DESIGN_SYSTEM.md) |
-
-介面與統計的共同定義見 [工作區名詞](docs/TERMINOLOGY.md)。
+校內 AI 工作平台：私人對話、知識庫、專案、成果文件與分享，模型可同時路由到 Google AI 與地端 Ollama。後端是 ASP.NET Core 10 模組化單體（Minimal API、vertical slice、EF Core／SQL Server），前端是 Angular 22，部署在單一 IIS 網站，以 AD 登入。
 
 ## 快速啟動
 
-需要 Node 26.5.0、npm 11.6.1、.NET SDK 10.0.401、PowerShell 7.4+，在專案根目錄執行：
+需要 Node 26.5.0、npm 11.6.1、.NET SDK 10.0.401、PowerShell 7.4 以上。在專案根目錄執行：
 
 ```powershell
 ./scripts/Restore.ps1
-./scripts/Configure-Local.ps1
-./scripts/Initialize-Database.ps1
-dotnet dev-certs https --trust
-./scripts/Start-Local.ps1
+./scripts/Configure-Local.ps1      # 建立 .local 設定，遮蔽輸入 SQL／AD 密碼與 Google key
+./scripts/Initialize-Database.ps1  # 只在資料庫不存在時建庫，再套用 migration
+dotnet dev-certs https --trust     # 開發機首次
+./scripts/Start-Local.ps1          # 一個程序同時提供前端與 API
 ```
 
-開啟 [本機工作區](https://localhost:5080/)，預設進入總覽。Configure 以遮蔽輸入保存既有 SQL 登入、AD 服務密碼及 Google key。Initialize 只在 AiNexus 不存在時建庫；InitialCreate 針對空庫，後續增量 migrations 依版本升級；不會刪除現有 DB。升級先停止舊 host，再套用 migrations。模型與 snapshot 會一併檢查。HTTPS 憑證只需在開發機首次建立與信任。
-
-**整合預覽只執行一個 ASP.NET 程序**，同時提供 Angular 產物與 API；已有 build 用 `./scripts/Start-Local.ps1 -SkipBuild`。熱更新用 `./scripts/Start-Dev.ps1`，管理 Angular 4200／API 5080，以 Ctrl+C 一起停止。見 [開發與執行](docs/DEVELOPMENT.md)。
+開啟 https://localhost:5080/ 。熱更新用 `./scripts/Start-Dev.ps1`（Angular 4200＋API 5080）；送 PR 前跑 `./scripts/Verify.ps1`。每支腳本的參數用 `Get-Help ./scripts/<名稱>.ps1 -Detailed` 查看。詳見 [開發與執行](docs/development/DEVELOPMENT.md)。
 
 ## 資料夾地圖
 
@@ -52,49 +23,52 @@ dotnet dev-certs https --trust
 | `backend/` | 後端方案 `AiNexus.slnx`：`src/` 有主機 `AiNexus.Host`、業務模組 `AiNexus.Features`、共用基礎 `AiNexus.Platform`，`tests/` 有整合與架構測試；NuGet 版本集中在 `Directory.Packages.props` |
 | `frontend/` | Angular 前端；`npm` 指令在這裡執行，`src/app` 分為 `core`、`shared`、`features` |
 | `tests/e2e/` | Playwright 端到端測試，對發布後的網站執行 |
-| `contracts/` | 由後端產生的 API 合約 `openapi.json`（前端型別來源、合約測試比對）與串流事件說明 `SSE.md` |
-| `deploy/` | IIS 部署說明；`sql/` 是交給外部來源 DBA 的授權 view 範本 |
-| `docs/` | 長期文件；改哪類程式該讀哪份，見 `CLAUDE.md` 的表格 |
-| `scripts/` | PowerShell 入口：還原、建置、啟動、驗證、發布；共用函式在 `AiNexus/` 模組，腳本測試在 `tests/`，見 [開發](docs/DEVELOPMENT.md) |
+| `contracts/` | 由後端產生的 API 合約 `openapi.json`（前端型別來源、合約測試比對） |
+| `deploy/` | 部署素材：`sql/` 是交給外部來源 DBA 的授權 view 範本；部署步驟在 `docs/operations/` |
+| `docs/` | 長期文件，依讀者分子資料夾（見下方文件地圖） |
+| `scripts/` | PowerShell 入口：還原、建置、啟動、驗證、發布；共用函式在 `AiNexus/` 模組，腳本與文件檢查在 `tests/` |
 | `tooling/` | 非建置必需的工具：`contracts/` 由 OpenAPI 產生前端 `schema.ts`，`embeddings/` 比較 embedding 模型與實測本地 Ollama |
 | `.github/` | 手動觸發的 CI，以及每月一次、依生態系合併成一個 PR 的 Dependabot |
 | `.config/dotnet-tools.json` | 固定 `dotnet-ef` 版本（`dotnet tool restore`） |
 | `global.json` | 固定 .NET SDK 版本與測試執行器 |
 | `package.json`、`package-lock.json`、`.node-version` | 安裝 `tests/e2e` 用的 Playwright，固定 Node 版本 |
 | `.editorconfig`、`.gitattributes`、`.gitignore` | 縮排與分析器規則、換行正規化、不進 Git 的檔案 |
-| `CLAUDE.md` | 給 AI 程式助手的規則、指令與文件索引 |
+| `CLAUDE.md` | 給 AI 程式助手的規則、指令與「改什麼讀哪份」索引 |
 | `.local/`、`artifacts/` | 本機產生、不進 Git：本機設定與秘密、建置與測試輸出，見 [本機產生的資料夾](docs/development/LOCAL_FOLDERS.md) |
 
-## 設定與結構
+## 文件地圖
 
-一般參數在 .local/config/appsettings.Local.json，秘密在 .local/secrets/appsettings.Secrets.json，修改後重啟。Git 保存 source、public defaults／examples、lockfiles、contracts、migrations 及長期文件。
+| 資料夾 | 讀者與內容 |
+| --- | --- |
+| [`docs/architecture/`](docs/architecture/ARCHITECTURE.md) | 改後端的人：架構總覽、模組邊界、撰寫慣例、資料庫、授權、安全、錯誤與日誌、生成與背景任務、SSE |
+| [`docs/development/`](docs/development/DEVELOPMENT.md) | 開發者：啟動與驗證、設定與秘密、測試、本機資料夾 |
+| [`docs/operations/`](docs/operations/IIS_DEPLOYMENT.md) | 維運：IIS 部署、設定、驗收、更新、備份還原、診斷日誌 |
+| `docs/features/` | 使用者與管理員：各功能的操作與規則（見下方功能表） |
+| `docs/decisions/` | 長期有效的架構決定與原因（ADR），例如 [單一 IIS 與程序內鎖](docs/decisions/0001-single-iis-in-process-locks.md)、[vertical slice 與單一 Features 專案](docs/decisions/0002-vertical-slice-single-features-project.md) |
+| `docs/research/` | 研究與評估：[向量架構](docs/research/VECTOR_ARCHITECTURE.md)、[embedding 比較](docs/research/EMBEDDING_MODELS.md)、[本地 AI](docs/research/LOCAL_AI.md)、[檢索驗收](docs/research/RETRIEVAL_TESTING.md) |
+| `docs/frontend/` | 前端 UI、樣式與聊天渲染（前端重整時再合併） |
 
-| 文件                                       | 內容                                                           |
-| ------------------------------------------ | -------------------------------------------------------------- |
-| [參數](docs/CONFIGURATION.md)              | 設定檔與載入順序、區段對應模組、啟動驗證、秘密                 |
-| [開發](docs/DEVELOPMENT.md)                | 啟動、build／驗證、契約、migration、版控                       |
-| [功能](docs/FEATURES.md)                   | 工作區、聊天操作、快捷鍵及保存                                 |
-| [附件](docs/ATTACHMENTS.md)                | 格式、OCR、配額及檔案生命週期                                  |
-| [資料庫](docs/DATABASE.md)                 | 每模組一個 schema、migration、初始化、SQL 權限                 |
-| [授權](docs/ACCESS_CONTROL.md)             | 功能 grant、預設角色、撤銷及擴充                               |
-| [網站安全](docs/SECURITY.md)               | HTTPS／Cookie、CSRF、安全標頭、檔案隔離與部署驗收              |
-| [架構](docs/ARCHITECTURE.md)               | 模組、共用邊界、隔離、推論與 durable jobs                      |
-| [設計](docs/DESIGN_SYSTEM.md)              | tokens、字級、主題、共用元件及動畫                             |
-| [向量](docs/VECTOR_ARCHITECTURE.md)        | 實作路徑、公文／校務資料、ACL 與 ANN 評估                      |
-| [本地 AI](docs/LOCAL_AI.md)                | Ollama、16 GB GPU 的模型規劃與向量化優先順序                   |
-| [Embedding 比較](docs/EMBEDDING_MODELS.md) | BGE-M3／Qwen、768／1024、query profile 與本地 Recall／MRR 工具 |
-| [資源操作](docs/FEATURE_LIFECYCLE.md)      | 各功能的增刪修、歷史保存及操作權限                             |
-| [IIS](deploy/iis/README.md)                | 單程序部署、AD、秘密、SSE 與驗收                               |
+## 功能
 
-Google 與 Ollama 可同時啟用，各自排程、容量與故障隔離；預設路由為 google/gemma-4-26b-a4b-it，key 只在後端。Google 模式將此次需要的文字／圖片／上下文送往 Google，embedding 與聊天模型獨立。登入頁的傅立葉動畫使用自有 N 輪廓與 DFT，支援跳過／重播、手機及減少動態，表單全程可用。
+| 工作區 | 能力 | 文件 |
+| --- | --- | --- |
+| 總覽 | 空間流程與狀態、日期篩選、每次／全對話／使用者費用、價格版本與 CSV | [費用](docs/features/BILLING.md)、[名詞與統計](docs/features/TERMINOLOGY.md) |
+| 對話 | 文件／圖片分析、分支、停止與斷線恢復、範本、搜尋、收藏／封存／標籤、草稿、文字備份、快捷指令 | [對話](docs/features/CHAT.md)、[文件與圖片](docs/features/ATTACHMENTS.md) |
+| 個人設定 | 當頁設定視窗、主題、閱讀與密度、通知、草稿、用量、快捷鍵 | [個人設定](docs/features/SETTINGS.md) |
+| 檔案庫 | 對話／知識／專案原檔、搜尋篩選、重用、容量 | [檔案庫](docs/features/FILES.md)、[附件保存](docs/features/ATTACHMENT_STORAGE.md) |
+| 知識庫 | ACL、OCR 與索引、SQL 向量檢索、引用與原文核對、背景任務 | [知識庫](docs/features/KNOWLEDGE.md) |
+| 專案 | 共用指示、文件、範本與成果，提問仍屬個人 | [專案](docs/features/PROJECTS.md) |
+| 成果文件 | 共用編輯、不可變版本、段落工具、Word／PDF | [成果](docs/features/ARTIFACTS.md) |
+| 分享 | 具名收件人、版本快照、附件授權、到期與撤銷 | [分享](docs/features/SHARING.md) |
+| 品質評測 | 私人回饋、固定題庫、模型與指令比較、人工評分 | [品質](docs/features/QUALITY.md) |
+| 程式庫 | Gitea 唯讀檔案與議題、固定 commit 快照、背景 AI review | [Gitea](docs/features/GITEA.md)、[程式碼 review](docs/features/CODE_REVIEW.md) |
+| 連網搜尋 | 手動開啟、SearXNG／Brave、來源與時間、配額 | [網路搜尋](docs/features/WEB_SEARCH.md) |
+| 資料來源 | 公文／校務唯讀 adapter、歷程、私人成果與聊天草稿 | [資料來源](docs/features/INTEGRATIONS.md) |
+| 通知 | 共用通知中心、未讀、進度與分享事件、瀏覽器通知 | [通知](docs/features/NOTIFICATIONS.md) |
+| 平台管理 | 帳號、角色／群組／功能、模型政策與配額、測試身分、用量與唯讀對話 | [管理](docs/features/ADMINISTRATION.md)、[模型政策](docs/features/MODEL_POLICY.md)、[測試身分](docs/features/TEST_IDENTITY.md) |
+| 活動稽核 | 登入、異動與查閱紀錄、前後差異、與日誌互查 | [活動稽核](docs/features/ACTIVITY_AUDIT.md) |
+| 系統日誌 | 查證代碼、錯誤與耗時、關聯流程；查詢／詳情／匯出分別授權 | [系統日誌](docs/features/SYSTEM_LOGS.md) |
+| 即時監控 | 在線人員與工作階段、API／SQL／HTTP 負載、操作時間軸 | [監控](docs/features/MONITORING.md) |
+| 介面元件 | 管理員檢視實際元件、主題、鍵盤與動畫 | [設計系統](docs/frontend/DESIGN_SYSTEM.md) |
 
-## 驗證與部署邊界
-
-```powershell
-./scripts/Verify.ps1
-./scripts/Test-Environment.ps1
-```
-
-Verify 使用獨立資料庫與 test provider；`-Browser` 加跑 Edge 瀏覽器測試。真實 AD／SQL／模型另用 Test-Environment（SQL 能力、原生向量及精確 cosine，再實測連線），會使用模型配額。報告／截圖在 artifacts，提交前 stage 後執行 `./scripts/Test-Repository.ps1`。每支腳本的參數用 `Get-Help ./scripts/<名稱>.ps1 -Detailed` 查看。
-
-每個 IIS app 使用一個 worker；聊天 executor 租約避免共用 SQL 的實例互相中止生成，但排程與模型容量仍在各程序內。首次升級須停止所有舊 host。文件及評測已有 durable 租約／checkpoint。原檔存站外，預設每人 5 GB，個人 override 優先於群組。完成回答顯示並保存耗時與 tokens。JSON 文字備份不含原檔，完整備份須包含同一時點的 SQL 與附件目錄，見 [備份與還原](docs/BACKUP.md)。公文／校務 adapter 與授權 view 契約已準備，實際連線／view 仍需設定；正式 IIS、來源 ACL、區網隔離、效能及備份還原需實機驗收。
+各功能的新增、刪除、保存與權限對照見 [資源操作](docs/features/FEATURE_LIFECYCLE.md)。
