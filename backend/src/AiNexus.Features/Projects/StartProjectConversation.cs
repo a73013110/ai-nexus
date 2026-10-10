@@ -1,3 +1,4 @@
+using AiNexus.Platform.Validation;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Conversations;
@@ -10,6 +11,7 @@ using AiNexus.Features.Identity.Users;
 namespace AiNexus.Features.Projects;
 
 /// <summary>A template's title replaces <c>Title</c>, and its content is returned as the prompt to prefill.</summary>
+[ValidatedInHandler("The title is checked after project access, and a template's title replaces it.")]
 public sealed record ProjectConversationRequest(string? Title = null, Guid? TemplateId = null);
 public sealed record ProjectConversationDto(ConversationDto Conversation, string Prompt);
 

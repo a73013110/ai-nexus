@@ -1,3 +1,4 @@
+using AiNexus.Platform.Validation;
 using System.Security.Claims;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
@@ -11,10 +12,7 @@ using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Identity.Authentication;
 
-/// <summary>
-/// Deliberately has no request validator: an empty or oversized account or password answers 401
-/// <c>invalid_credentials</c> and is audited exactly like wrong credentials, so the two cannot be told apart.
-/// </summary>
+[ValidatedInHandler("An empty or oversized account or password answers 401 invalid_credentials and is audited like wrong credentials, so the two cannot be told apart.")]
 public sealed record AdLoginRequest(string Account, string Password, string Method = "ad");
 
 /// <summary>Local or LDAP password sign-in. Every failure is audited with the issue code its response carries.</summary>

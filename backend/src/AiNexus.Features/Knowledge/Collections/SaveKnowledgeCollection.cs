@@ -1,3 +1,4 @@
+using AiNexus.Platform.Validation;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Persistence;
@@ -7,8 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Knowledge.Collections;
 
-// An edit checks the body only after collection access (a 404/403 must win over a 400), and create and edit share this
-// body, so it has no validator. The handler keeps the established order: name, then description.
+[ValidatedInHandler("An edit checks the body only after collection access (a 404/403 must win over a 400), and create shares the body; the order is name, then description.")]
 public sealed record CollectionRequest(string Name, string Description);
 
 /// <summary>Creates a personal collection (up to the configured limit), or renames and describes one the user may edit.</summary>
