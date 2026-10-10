@@ -12,7 +12,7 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
 {
     private HttpRequestMessage Request(HttpMethod method, string path)
     {
-        var key = options.Value.GoogleApiKey;
+        var key = options.Value.Providers.Google.ApiKey;
         if (string.IsNullOrWhiteSpace(key)) throw new ExternalServiceException(Error.Unavailable("google_api_key_missing"), "尚未設定後端 Google AI API key。");
         var request = new HttpRequestMessage(method, path);
         request.Headers.Add("x-goog-api-key", key);

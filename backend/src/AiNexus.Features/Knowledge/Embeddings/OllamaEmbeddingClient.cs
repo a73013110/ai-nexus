@@ -8,7 +8,7 @@ public sealed class OllamaEmbeddingClient(RetrievalHttp http, IOptions<Knowledge
     public string Provider => "ollama";
     public async Task<EmbeddingBatchResult> EmbedBatchAsync(IReadOnlyList<string> inputs, EmbeddingPurpose purpose, EmbeddingProfile profile, CancellationToken ct)
     {
-        var endpoint = options.Value.Endpoint.Length > 0 ? options.Value.Endpoint : inference.Value.BaseUrl;
+        var endpoint = options.Value.Embedding.Endpoint.Length > 0 ? options.Value.Embedding.Endpoint : inference.Value.Providers.Ollama.Endpoint;
         using var json = await http.PostAsync(KnowledgeModule.RetrievalModelsClient, endpoint.TrimEnd('/') + "/api/embed", new {
             model = profile.Model, input = inputs.Select(x => EmbeddingInput.Format(profile, x, purpose)).ToArray(), dimensions = profile.Dimensions, truncate = false
         }, ct);

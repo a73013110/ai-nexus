@@ -39,19 +39,19 @@ public static class DeploymentVerifier
             var connected = await db.Database.CanConnectAsync(ct);
             if (connected) await scope.ServiceProvider.GetRequiredService<DatabaseSchema>().RequireCurrentAsync(ct);
             var pending = connected ? await scope.ServiceProvider.GetRequiredService<DatabaseSchema>().PendingMigrationsAsync(ct) : null;
-            var providerConfigured = !inference.ProviderConcurrency.ContainsKey("google") || !string.IsNullOrWhiteSpace(inference.GoogleApiKey);
+            var providerConfigured = !inference.ProviderConcurrency.ContainsKey("google") || !string.IsNullOrWhiteSpace(inference.Providers.Google.ApiKey);
             var catalog = await scope.ServiceProvider.GetRequiredService<ModelCatalog>().GetAsync(ct);
             await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Attachments.IAttachmentStorage>().VerifyAsync(ct);
             var retrieval = await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Knowledge.Retrieval.RetrievalModelProbe>().CheckAsync(null, ct);
             var ready = connected && pending?.Count == 0 && catalog.ProviderAvailable && catalog.Models.Count > 0 && providerConfigured && (ad.Mode == "Windows" || ad.Configured) && retrieval.Embedding.Available == true && retrieval.Rerank.Available == true;
             Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new {
-                environment = environment.EnvironmentName, configurationVersion = config.GetValue("ConfigurationVersion", 1),
+                environment = environment.EnvironmentName,
                 sqlConnected = connected, pendingMigrations = pending?.Count ?? -1, pendingMigrationIds = pending,
                 sqlEncrypted = sql.Encrypt != SqlConnectionEncryptOption.Optional,
                 trustsSqlCertificate = sql.TrustServerCertificate, authMode = ad.Mode, adConfigured = ad.Mode == "Windows" || ad.Configured,
                 providers = catalog.Providers, providerConfigured, configuredModelCount = inference.Models.Count,
                 providerAvailable = catalog.ProviderAvailable, availableModelCount = catalog.Models.Count, modelNotice = catalog.Notice,
-                embeddingProvider = knowledge.EmbeddingProvider, embeddingDimensions = knowledge.Dimensions,
+                embeddingProvider = knowledge.Embedding.Provider, embeddingDimensions = knowledge.Embedding.Dimensions,
                 embeddingAvailable = retrieval.Embedding.Available, embeddingNotice = retrieval.Embedding.Notice, rerankAvailable = retrieval.Rerank.Available, rerankNotice = retrieval.Rerank.Notice,
                 webSearchEnabled = search.Enabled, giteaEnabled = gitea.Enabled,
                 keyRingPath = config["DataProtection:KeyRingPath"], attachmentStoragePath = attachments.StoragePath, attachmentStorageWritable = true,

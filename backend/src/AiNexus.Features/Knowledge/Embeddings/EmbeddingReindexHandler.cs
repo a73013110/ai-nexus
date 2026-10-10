@@ -46,7 +46,7 @@ public sealed class EmbeddingReindexHandler(NexusDbContext db, EmbeddingLifecycl
         var coverage = await lifecycle.CoverageAsync(profile, ct);
         await execution.CheckpointAsync("索引片段覆蓋率", coverage.CompletedChunks, coverage.TotalChunks, ct);
         if (!coverage.Complete) return KnowledgeErrors.ProfileIncomplete;
-        if (options.Value.AutoActivate && profile.Status == "building")
+        if (options.Value.Embedding.AutoActivate && profile.Status == "building")
         {
             await writes.Gate.WaitAsync(ct);
             Error? failure = null;

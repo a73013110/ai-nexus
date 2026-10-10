@@ -31,7 +31,6 @@
 | `diagnostic-acceptance/`、`monitoring-acceptance/`、`diagnostics-performance.json` | 後端真實瀏覽器與效能測試的畫面和結果 | `Category=Browser`／`Performance` 測試 |
 | `iis/<時間>/` | IIS 部署套件 | `Publish-IIS.ps1` |
 | `connection-checks.json`、`sql-capabilities.json` | 實際 AD／SQL／模型連線與 SQL 能力的報告 | `Test-Connections.ps1`、`Test-SqlCapabilities.ps1` |
-| `settings-test/` | 設定腳本測試的暫存檔 | `Test-Settings.ps1` |
 | `embeddings/` | embedding 模型比較結果 | `tooling/embeddings/compare.py` |
 
 新增會產生檔案的腳本或測試時，輸出放在 `artifacts/` 的子資料夾，並在上表加一行。`Build.ps1`、`Publish-IIS.ps1`、`Start-BrowserTest.ps1` 只接受 `artifacts/` 內的輸出路徑。

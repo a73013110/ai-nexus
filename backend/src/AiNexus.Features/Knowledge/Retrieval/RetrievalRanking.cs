@@ -4,7 +4,7 @@ namespace AiNexus.Features.Knowledge.Retrieval;
 
 public static class RetrievalRanking
 {
-    public static IReadOnlyList<KnowledgeHitDto> Fuse(IReadOnlyList<KnowledgeHitDto> vector, IReadOnlyList<KnowledgeHitDto> keyword, KnowledgeOptions options)
+    public static IReadOnlyList<KnowledgeHitDto> Fuse(IReadOnlyList<KnowledgeHitDto> vector, IReadOnlyList<KnowledgeHitDto> keyword, RetrievalOptions options)
     {
         var hits = new Dictionary<Guid, KnowledgeHitDto>();
         foreach (var (hit, index) in vector.Select((x, i) => (x, i))) hits[hit.ChunkId] = hit with { VectorRank = index + 1, RrfScore = options.VectorWeight / (options.RrfK + index + 1) };
@@ -15,7 +15,7 @@ public static class RetrievalRanking
         }
         return hits.Values.OrderByDescending(x => x.RrfScore).ThenBy(x => x.ChunkId).Take(options.RerankCandidates).Select(x => x with { Score = x.RrfScore ?? 0 }).ToArray();
     }
-    public static IReadOnlyList<KnowledgeHitDto> Context(IReadOnlyList<KnowledgeHitDto> ranked, KnowledgeOptions options)
+    public static IReadOnlyList<KnowledgeHitDto> Context(IReadOnlyList<KnowledgeHitDto> ranked, RetrievalOptions options)
     {
         var counts = new Dictionary<Guid, int>(); var selected = new List<KnowledgeHitDto>();
         foreach (var hit in ranked.DistinctBy(x => x.ChunkId))

@@ -1,7 +1,7 @@
 using AiNexus.Features.AccessControl;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Modules;
-using Microsoft.Extensions.Options;
+using AiNexus.Platform.Configuration;
 
 namespace AiNexus.Features.Integrations;
 
@@ -12,8 +12,7 @@ public sealed class IntegrationsModule : IFeatureModule
         var services = builder.Services;
         services.AddSqlDatabase<LegacyGdwebDatabase>();
         services.AddSqlDatabase<LegacyMeihoDatabase>();
-        services.AddOptions<IntegrationsOptions>().Configure<IConfiguration>((o, c) => IntegrationsSettings.Bind(c, o)).ValidateOnStart();
-        services.AddSingleton<IValidateOptions<IntegrationsOptions>, IntegrationsOptionsValidator>();
+        services.AddSettings<IntegrationsOptions, IntegrationsOptionsValidator>(IntegrationsOptions.Section);
         services.AddScoped<SourceGateway>();
         services.AddScoped<IControlledSourceAdapter, GdwebSource>();
         services.AddScoped<IControlledSourceAdapter, MeihoSource>();
@@ -27,14 +26,6 @@ public sealed class IntegrationsModule : IFeatureModule
         ImportSourceRecord.Map(routes);
         StartSourceChat.Map(routes);
     }
-}
-
-internal sealed class IntegrationsOptionsValidator : IValidateOptions<IntegrationsOptions>
-{
-    public ValidateOptionsResult Validate(string? name, IntegrationsOptions x)
-        => new[] { x.Gdweb, x.Meiho }.All(s => s.CommandTimeoutSeconds is >= 2 and <= 30 && s.MaxResults is >= 1 and <= 50 && s.AllowedGroupIds.Length <= 20
-               && s.AllowedGroupIds.All(g => g.Length is >= 1 and <= 64 && g.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.')))
-            ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail("Invalid read-only source limits.");
 }
 
 internal sealed class IntegrationsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Integrations, "資料來源", "/integrations", 80, AdministratorsOnly: true));

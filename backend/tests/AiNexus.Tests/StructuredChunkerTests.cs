@@ -9,7 +9,7 @@ namespace AiNexus.Tests;
 public sealed class StructuredChunkerTests
 {
     private static ITextChunker Chunker(int target = 450, int max = 700, int min = 80, double overlap = .12) =>
-        new StructuredChunker(Options.Create(new KnowledgeOptions { ChunkTargetTokens = target, ChunkMaxTokens = max, ChunkMinTokens = min, ChunkOverlapRatio = overlap }));
+        new StructuredChunker(Options.Create(new KnowledgeOptions { Indexing = new() { ChunkTargetTokens = target, ChunkMaxTokens = max, ChunkMinTokens = min, ChunkOverlapRatio = overlap } }));
     [Fact]
     public void ChineseStructureAndCrossPageRangesAreRetained()
     {
@@ -51,15 +51,17 @@ public sealed class StructuredChunkerTests
     public void ChunkingAndInputChangesProduceDifferentProfiles()
     {
         var options = new KnowledgeOptions(); var profile = EmbeddingInput.Profile(options);
-        options.ChunkTargetTokens++; Assert.NotEqual(profile, EmbeddingInput.Profile(options));
+        options.Indexing.ChunkTargetTokens++; Assert.NotEqual(profile, EmbeddingInput.Profile(options));
         var hash = EmbeddingInput.Hash(EmbeddingInput.Document("規範", "第三章", "本文"));
         Assert.NotEqual(hash, EmbeddingInput.Hash(EmbeddingInput.Document("規範", "第四章", "本文")));
     }
     [Fact]
     public void SettingsRejectUnsupportedDimensionsAndMissingRerankEndpoint()
     {
-        Assert.True(KnowledgeOptions.Valid(new())); Assert.False(KnowledgeOptions.Valid(new() { Dimensions = 512 }));
-        Assert.False(KnowledgeOptions.Valid(new() { Rerank = new() { Provider = "tei" } }));
-        Assert.False(KnowledgeOptions.Valid(new() { ChunkOverlapRatio = double.NaN }));
+        var validator = new KnowledgeOptionsValidator();
+        Assert.True(validator.Validate(null, new()).Succeeded);
+        Assert.Contains("Dimensions", validator.Validate(null, new() { Embedding = new() { Dimensions = 512 } }).FailureMessage);
+        Assert.Contains("Endpoint", validator.Validate(null, new() { Rerank = new() { Provider = "tei" } }).FailureMessage);
+        Assert.Contains("ChunkOverlapRatio", validator.Validate(null, new() { Indexing = new() { ChunkOverlapRatio = double.NaN } }).FailureMessage);
     }
 }

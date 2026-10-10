@@ -29,7 +29,7 @@ public sealed class KnowledgeRetrieval(NexusDbContext db, ConversationService co
         var count = await (from chunk in db.Set<KnowledgeChunk>() join doc in db.Set<KnowledgeDocument>() on chunk.DocumentId equals doc.Id
             where doc.CollectionId != null && selection.CollectionIds.Contains(doc.CollectionId.Value) && doc.Status == "ready" && !doc.IsDeleted
             select chunk.Id).CountAsync(ct);
-        return count == 0 ? 0 : Math.Min(options.Value.ContextTokens, Math.Min(count, options.Value.TopK) * (options.Value.ChunkMaxTokens + 100)) + TokenEstimator.Estimate(Prompt([new(Guid.Empty, "參考資料", 1, "", 0, Guid.Empty)]));
+        return count == 0 ? 0 : Math.Min(options.Value.Retrieval.ContextTokens, Math.Min(count, options.Value.Retrieval.TopK) * (options.Value.Indexing.ChunkMaxTokens + 100)) + TokenEstimator.Estimate(Prompt([new(Guid.Empty, "參考資料", 1, "", 0, Guid.Empty)]));
     }
     public async Task<Result<IReadOnlyList<KnowledgeHitDto>>> ForRunAsync(Guid actor, ConversationTurn request, CancellationToken ct, IReadOnlyList<Guid>? collections = null)
     {

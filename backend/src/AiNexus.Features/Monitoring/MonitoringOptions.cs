@@ -1,10 +1,17 @@
+using System.ComponentModel.DataAnnotations;
+using Microsoft.Extensions.Options;
+
 namespace AiNexus.Features.Monitoring;
 
 public sealed class MonitoringOptions
 {
+    public const string Section = "Monitoring";
+
     public bool Enabled { get; set; } = true;
-    public int MaxSessions { get; set; } = 2000;
-    public int SessionTimeoutSeconds { get; set; } = 90;
-    public int RefreshSeconds { get; set; } = 3;
-    public bool Valid() => MaxSessions is >= 100 and <= 10000 && SessionTimeoutSeconds is >= 60 and <= 300 && RefreshSeconds is >= 2 and <= 15;
+    [Range(100, 10000)] public int MaxSessions { get; set; } = 2000;
+    [Range(60, 300)] public int SessionTimeoutSeconds { get; set; } = 90;
+    [Range(2, 15)] public int RefreshSeconds { get; set; } = 3;
 }
+
+[OptionsValidator]
+public sealed partial class MonitoringOptionsValidator : IValidateOptions<MonitoringOptions>;

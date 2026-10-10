@@ -81,7 +81,7 @@ public sealed class EmbeddingLifecycle(NexusDbContext db, EmbeddingProfiles prof
     internal async Task CleanupExpiredAsync(CancellationToken ct)
     {
         var expired = (await db.Set<EmbeddingProfile>().AsNoTracking().Where(x => x.Status == "retired" && x.RetiredAt != null).ToListAsync(ct))
-            .Where(x => x.RetiredAt < clock.GetUtcNow().AddDays(-options.Value.RetiredRetentionDays)).ToArray();
+            .Where(x => x.RetiredAt < clock.GetUtcNow().AddDays(-options.Value.Embedding.RetiredRetentionDays)).ToArray();
         if (expired.Length == 0) return;
         await writes.Gate.WaitAsync(ct);
         try

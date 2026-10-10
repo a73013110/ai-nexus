@@ -29,7 +29,7 @@ public sealed class EmbeddingLifecycleTests
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/v1/admin/knowledge/profiles")).StatusCode);
         var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
         var original = Assert.Single(await Profiles(client));
-        factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.Dimensions = 1024;
+        factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.Embedding.Dimensions = 1024;
         var target = (await Profiles(client)).Single(x => x.Status == "building");
         Assert.False(target.Coverage.Complete); Assert.Equal(0, target.Coverage.CompletedChunks);
         Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsync($"/api/v1/admin/knowledge/profiles/{target.Id}/activate", null)).StatusCode);
@@ -59,7 +59,7 @@ public sealed class EmbeddingLifecycleTests
     public async Task ActiveIndexCanBecomeReadyWhileBuildingIndexFailsAndRetryResumes()
     {
         await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
-        await Profiles(client); factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.Revision = "next";
+        await Profiles(client); factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.Embedding.Revision = "next";
         var target = (await Profiles(client)).Single(x => x.Status == "building"); factory.Embeddings.FailProfileId = target.Id;
         var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
         var document = (await client.GetFromJsonAsync<DocumentDto>($"/api/v1/documents/{seed.Document.Id}"))!;
@@ -71,12 +71,12 @@ public sealed class EmbeddingLifecycleTests
     public async Task PartialReindexResumesCompletedBatchesWithoutRepeatingEmbedding()
     {
         await using var factory = new NexusFactory(administrators: ["alice"], services: services => services.PostConfigure<KnowledgeOptions>(x => {
-            x.BatchSize = 1; x.ChunkTargetTokens = 80; x.ChunkMaxTokens = 100; x.ChunkMinTokens = 20; x.ChunkOverlapRatio = 0;
+            x.Embedding.BatchSize = 1; x.Indexing.ChunkTargetTokens = 80; x.Indexing.ChunkMaxTokens = 100; x.Indexing.ChunkMinTokens = 20; x.Indexing.ChunkOverlapRatio = 0;
         }));
         using var client = await factory.SignedInAsync(); var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
         var updated = await client.PutAsJsonAsync($"/api/v1/documents/{seed.Document.Id}/text", new TextDocumentRequest("採購規範", new string('甲', 90) + "。\n\n" + new string('乙', 90) + "。\n\n" + new string('丙', 90) + "。", 1)); updated.EnsureSuccessStatusCode(); await Drain(factory);
         var before = factory.Embeddings.Calls;
-        factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.Revision = "next"; var target = (await Profiles(client)).Single(x => x.Status == "building");
+        factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.Embedding.Revision = "next"; var target = (await Profiles(client)).Single(x => x.Status == "building");
         factory.Embeddings.FailOnCall = before + 2;
         using var response = await client.PostAsync($"/api/v1/admin/knowledge/profiles/{target.Id}/rebuild", null); response.EnsureSuccessStatusCode(); var job = (await response.Content.ReadFromJsonAsync<JobDto>())!;
         await Drain(factory); Assert.Equal(1, (await Profiles(client)).Single(x => x.Id == target.Id).Coverage.CompletedChunks);
@@ -87,11 +87,11 @@ public sealed class EmbeddingLifecycleTests
     [Fact]
     public async Task NoneEmbeddingForcesKeywordAndModelProbeChecksRealBatchShape()
     {
-        await using var factory = new NexusFactory(administrators: ["alice"], services: services => services.PostConfigure<KnowledgeOptions>(x => x.EmbeddingProvider = "none"));
+        await using var factory = new NexusFactory(administrators: ["alice"], services: services => services.PostConfigure<KnowledgeOptions>(x => x.Embedding.Provider = "none"));
         using var client = await factory.SignedInAsync(); var seed = await RetrievalPipelineTests.SeedAsync(factory, client);
         using var search = await client.PostAsJsonAsync("/api/v1/admin/knowledge/search", new AiNexus.Features.Administration.Retrieval.AdminRetrievalSearchRequest("採購", [seed.Collection], "vector")); search.EnsureSuccessStatusCode();
         Assert.Equal("keyword", (await search.Content.ReadFromJsonAsync<KnowledgeSearchDto>())!.Mode); Assert.Equal(0, factory.Embeddings.Calls);
-        factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.EmbeddingProvider = "ollama";
+        factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.Embedding.Provider = "ollama";
         using var probe = await client.PostAsync("/api/v1/admin/knowledge/capabilities/probe", null); probe.EnsureSuccessStatusCode();
         Assert.True((await probe.Content.ReadFromJsonAsync<RetrievalCapabilitiesDto>())!.Embedding.Available); Assert.Equal(1, factory.Embeddings.Calls);
     }

@@ -60,7 +60,7 @@ internal sealed class CreateRetrievalEvaluation(NexusDbContext db, RetrievalEval
             var profile = await profiles.ActiveAsync(ct);
             var json = RetrievalEvaluationService.Json;
             var run = new RetrievalEvaluation { OwnerId = actor, Title = request.Title.Trim(), CollectionsJson = JsonSerializer.Serialize(request.CollectionIds, json), CasesJson = JsonSerializer.Serialize(request.Cases, json),
-                TopK = options.Value.TopK, ProfileKey = profile.Key, ConfigurationFingerprint = await evaluations.FingerprintAsync(profile, request.CollectionIds, ct), CreatedAt = clock.GetUtcNow() };
+                TopK = options.Value.Retrieval.TopK, ProfileKey = profile.Key, ConfigurationFingerprint = await evaluations.FingerprintAsync(profile, request.CollectionIds, ct), CreatedAt = clock.GetUtcNow() };
             var job = jobs.Enqueue(actor, null, run.Id, "retrieval-eval", "檢索評測 · " + run.Title); run.JobId = job.Id; db.Add(run);
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = run.Id, Action = "quality.retrieval.queued", Result = "queued" });
             await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);

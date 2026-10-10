@@ -45,7 +45,6 @@ if ([string]::IsNullOrWhiteSpace([string]$taskValue.Diagnostics.Directory)) {
 }
 if ($AllowUntrustedSql) { Set-NexusSetting $taskValue 'Database.TrustServerCertificate' $true }
 Save-NexusJson $taskSettings $taskValue
-Save-NexusJson $taskSecrets ([IO.File]::ReadAllText($taskSecrets) | ConvertFrom-Json -AsHashtable)
 $taskValue = $null
 [xml]$taskWeb = [IO.File]::ReadAllText((Join-Path $taskApp 'web.config'))
 $taskWeb.SelectSingleNode("//environmentVariable[@name='ASPNETCORE_ENVIRONMENT']").SetAttribute('value', $Environment)
@@ -56,11 +55,6 @@ foreach ($taskDirectory in @('db', 'docs', 'deploy/iis', 'contracts')) {
     $taskTarget = Join-Path $taskPackage $taskDirectory
     New-Item -ItemType Directory -Path $taskTarget -Force | Out-Null
     Get-ChildItem -LiteralPath (Join-Path $taskRoot $taskDirectory) -File | Copy-Item -Destination $taskTarget
-}
-$taskTools = Join-Path $taskPackage 'scripts'
-New-Item -ItemType Directory -Path $taskTools -Force | Out-Null
-foreach ($taskTool in @('Migrate-Settings.ps1', 'Local-Settings.ps1', 'Settings-Schema.ps1', 'settings-layout.json', 'Verify-IIS.ps1')) {
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot $taskTool) -Destination $taskTools
 }
 # Copy bounded verification evidence only, never machine logs, credentials or test databases.
 $taskEvidence = Join-Path $taskPackage 'artifacts'

@@ -11,26 +11,26 @@ public sealed record RetrievalConnectionDto(string Provider, string Model, strin
 public sealed class RetrievalModelProbe(IEnumerable<IEmbeddingClient> embeddings, IEnumerable<IRerankClient> rerankers, EmbeddingService embeddingService,
     RerankService rerankService, IOptions<KnowledgeOptions> options, IOptions<InferenceOptions> inference, ILogger<RetrievalModelProbe> logger, Issues issues)
 {
-    public RetrievalConnectionDto Embedding => new(options.Value.EmbeddingProvider, options.Value.EmbeddingModel,
-        options.Value.Endpoint.Length > 0 ? options.Value.Endpoint : options.Value.EmbeddingProvider == "google" ? "https://generativelanguage.googleapis.com" : inference.Value.BaseUrl,
-        options.Value.EmbeddingProvider == "none" ? true : null, options.Value.EmbeddingProvider == "none" ? "未啟用向量，採用全文檢索。" : "尚未驗證模型與維度。");
+    public RetrievalConnectionDto Embedding => new(options.Value.Embedding.Provider, options.Value.Embedding.Model,
+        options.Value.Embedding.Endpoint.Length > 0 ? options.Value.Embedding.Endpoint : options.Value.Embedding.Provider == "google" ? "https://generativelanguage.googleapis.com" : inference.Value.Providers.Ollama.Endpoint,
+        options.Value.Embedding.Provider == "none" ? true : null, options.Value.Embedding.Provider == "none" ? "未啟用向量，採用全文檢索。" : "尚未驗證模型與維度。");
     public RetrievalConnectionDto Rerank => new(options.Value.Rerank.Provider, options.Value.Rerank.Model, options.Value.Rerank.Endpoint,
         options.Value.Rerank.Provider == "none" ? true : null, options.Value.Rerank.Provider == "none" ? "未啟用重排。" : "尚未驗證重排服務。");
     public async Task<(RetrievalConnectionDto Embedding, RetrievalConnectionDto Rerank)> CheckAsync(Guid? actor, CancellationToken ct)
     {
         var settings = options.Value; var embedding = Embedding; var rerank = Rerank;
-        if (settings.EmbeddingProvider != "none")
+        if (settings.Embedding.Provider != "none")
         {
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(settings.TimeoutSeconds));
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(settings.Embedding.TimeoutSeconds));
             try
             {
-                var profile = new EmbeddingProfile { Provider = settings.EmbeddingProvider, Model = settings.EmbeddingModel, Dimensions = settings.Dimensions, InputFormat = settings.InputFormat, QueryInstruction = settings.QueryInstruction };
+                var profile = new EmbeddingProfile { Provider = settings.Embedding.Provider, Model = settings.Embedding.Model, Dimensions = settings.Embedding.Dimensions, InputFormat = settings.Embedding.InputFormat, QueryInstruction = settings.Embedding.QueryInstruction };
                 string[] input = ["合成索引測試 › 採購\n主管核准後辦理採購。", "合成索引測試 › 請假\n請假申請應完成簽核。"];
                 var vectors = actor is Guid owner ? await embeddingService.EmbedBatchAsync(owner, profile, input, EmbeddingPurpose.Query, timeout.Token)
                     : (await embeddings.Single(x => x.Provider == profile.Provider).EmbedBatchAsync(input, EmbeddingPurpose.Query, profile, timeout.Token)).Vectors;
-                if (vectors.Count != input.Length || vectors.Any(x => x.Length != settings.Dimensions || x.Any(v => !float.IsFinite(v)) || x.All(v => v == 0)))
+                if (vectors.Count != input.Length || vectors.Any(x => x.Length != settings.Embedding.Dimensions || x.Any(v => !float.IsFinite(v)) || x.All(v => v == 0)))
                     throw new ExternalServiceException(Error.Upstream("embedding_probe_invalid"), "向量數量、維度或數值不符合設定。");
-                embedding = embedding with { Available = true, Notice = $"批次向量化通過，維度 {settings.Dimensions}。" };
+                embedding = embedding with { Available = true, Notice = $"批次向量化通過，維度 {settings.Embedding.Dimensions}。" };
             }
             catch (Exception error) when (error is ExternalServiceException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
             { ct.ThrowIfCancellationRequested(); using var logging = logger.BeginScope(new Dictionary<string, object?> { ["Stage"] = "embedding-probe", ["ExternalService"] = "embedding" });

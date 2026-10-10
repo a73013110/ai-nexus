@@ -1,7 +1,5 @@
 using AiNexus.Platform.Configuration;
-using AiNexus.Features.Inference;
 using AiNexus.Features.Integrations;
-using AiNexus.Features.Knowledge;
 using Microsoft.Extensions.Configuration;
 using Xunit;
 
@@ -44,35 +42,16 @@ public sealed class NexusConfigResolverTests
         Assert.Equal(Path.Combine(Root, "keys"), paths.KeyRingPath);
     }
     [Fact]
-    public void ProviderCatalogsAndSecretsAreIndependentFromEmbeddingSelection()
-    {
-        var config = new ConfigurationManager();
-        config.AddInMemoryCollection(new Dictionary<string, string?> {
-            ["Inference:Providers:Ollama:Enabled"] = "true", ["Inference:Providers:Ollama:Endpoint"] = "http://local-ai:11434/",
-            ["Inference:ModelPolicy:DefaultModelId"] = "ollama/qwen3:8b", ["Inference:Providers:Ollama:Models:default:Id"] = "qwen3:8b",
-            ["Inference:Providers:Google:Models:default:Id"] = "google-only", ["Inference:Providers:Google:ApiKey"] = "fixture",
-            ["Inference:Execution:TimeoutSeconds"] = "300", ["Inference:ModelPolicy:ShowModelNames"] = "false",
-            ["Prompts:DefaultSystemInstruction"] = "local instruction", ["Knowledge:Embedding:Provider"] = "none",
-            ["Knowledge:Retrieval:TopK"] = "4"
-        });
-        var inference = new InferenceOptions(); var knowledge = new KnowledgeOptions();
-        InferenceSettings.Bind(config, inference); KnowledgeSettings.Bind(config, knowledge);
-        Assert.Equal("ollama/qwen3:8b", Assert.Single(inference.Models).Id); Assert.Equal("qwen3:8b", inference.Models[0].NativeId); Assert.Equal("ollama", inference.Models[0].Provider); Assert.Equal("fixture", inference.GoogleApiKey);
-        Assert.Equal("http://local-ai:11434/", inference.BaseUrl); Assert.False(inference.ShowModelNames);
-        Assert.Equal(300, inference.TimeoutSeconds); Assert.Equal("local instruction", inference.SystemPrompt);
-        Assert.Equal("none", knowledge.EmbeddingProvider); Assert.Equal(4, knowledge.TopK);
-    }
-    [Fact]
     public void SourceSqlSettingsPreserveEncryptionTrustAndTimeoutWithoutLeakingIntoNexus()
     {
         var config = new ConfigurationManager();
         config.AddInMemoryCollection(new Dictionary<string, string?> {
-            ["Integrations:Sources:Gdweb:Database:Server"] = "fixture",
-            ["Integrations:Sources:Gdweb:Database:Name"] = "source",
-            ["Integrations:Sources:Gdweb:Database:User"] = "reader",
-            ["Integrations:Sources:Gdweb:Database:Password"] = "fixture",
-            ["Integrations:Sources:Gdweb:Database:TrustServerCertificate"] = "true",
-            ["Integrations:Sources:Gdweb:Database:ConnectTimeoutSeconds"] = "7"
+            ["Integrations:Gdweb:Database:Server"] = "fixture",
+            ["Integrations:Gdweb:Database:Name"] = "source",
+            ["Integrations:Gdweb:Database:User"] = "reader",
+            ["Integrations:Gdweb:Database:Password"] = "fixture",
+            ["Integrations:Gdweb:Database:TrustServerCertificate"] = "true",
+            ["Integrations:Gdweb:Database:ConnectTimeoutSeconds"] = "7"
         });
         IntegrationsSettings.SourceConnections(config);
         var sql = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(AiNexus.Features.Integrations.LegacyGdwebDatabase.ConnectionString(config));

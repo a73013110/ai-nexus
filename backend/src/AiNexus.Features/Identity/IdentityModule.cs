@@ -9,6 +9,7 @@ using Microsoft.Extensions.Options;
 using AiNexus.Features.Identity.Authentication;
 using AiNexus.Features.Identity.Sessions;
 using AiNexus.Features.Identity.Users;
+using AiNexus.Platform.Configuration;
 
 namespace AiNexus.Features.Identity;
 
@@ -19,8 +20,7 @@ public sealed class IdentityModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddOptions<AdAuthenticationOptions>().BindConfiguration("AdAuthentication")
-            .Validate(x => x.Mode is "Ldap" or "Windows", "AD Mode must be Ldap or Windows.").ValidateOnStart();
+        services.AddSettings<AdAuthenticationOptions, AdAuthenticationOptionsValidator>(AdAuthenticationOptions.Section);
         services.AddSingleton<IAdAuthenticator, LdapAuthenticator>();
         services.AddAuthentication("NexusSession")
             // An existing session cookie wins; otherwise the configured directory mode picks cookie (LDAP) or Negotiate.
