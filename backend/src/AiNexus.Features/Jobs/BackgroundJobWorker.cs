@@ -59,7 +59,7 @@ public sealed partial class BackgroundJobWorker(IServiceScopeFactory scopes, Sto
         catch (OperationCanceledException) { status = "cancelled"; }
         catch (Exception ex)
         {
-            status = "failed"; code = ex switch { ExternalServiceException external => external.Error.Code, ApiException api => api.Code, _ => "job_processing_failed" };
+            status = "failed"; code = ex switch { ExternalServiceException external => external.Error.Code, _ => "job_processing_failed" };
             issue = issues.Report(ex, code); message = Issues.Message(issue);
         }
         finally { monitor.Cancel(); try { await heartbeat; } catch (OperationCanceledException) { } }

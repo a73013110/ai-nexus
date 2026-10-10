@@ -17,7 +17,7 @@ internal sealed class ReadAdminConversation(NexusDbContext db, AdministrativeRea
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapGet("/conversations/{id:guid}", async (Guid id, int? offset, ICurrentUser user, ReadAdminConversation handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, offset ?? 0, ct)).ToHttpResult())
-        .WithName("ReadAdminConversation").Produces<AdminConversationDetailDto>();
+        .WithName("ReadAdminConversation");
 
     public async Task<Result<AdminConversationDetailDto>> HandleAsync(Guid actor, Guid id, int offset, CancellationToken ct)
     {

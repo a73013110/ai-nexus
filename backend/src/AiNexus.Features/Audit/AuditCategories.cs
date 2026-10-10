@@ -1,6 +1,5 @@
 using System.Linq.Expressions;
 using AiNexus.Features.Persistence;
-using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Audit;
 
@@ -17,10 +16,11 @@ public static class AuditCategories
         entry.Action == "billing.price.created" || entry.Action == "system.diagnostics.configuration" ? "administration" : "activity";
     private static readonly Func<AuditEvent, string> Classify = Category.Compile();
     public static string For(string action) => Classify(new() { Action = action });
+    /// <summary>The caller checks <paramref name="category"/> against <see cref="Values"/> and reports its own error.</summary>
     public static IQueryable<AuditEvent> Filter(IQueryable<AuditEvent> query, string? category)
     {
         if (string.IsNullOrEmpty(category)) return query;
-        if (!Values.Contains(category)) throw new ApiException(400, "invalid_audit_filter", "稽核分類不正確。");
+        if (!Values.Contains(category)) throw new ArgumentOutOfRangeException(nameof(category));
         return query.Where(Expression.Lambda<Func<AuditEvent, bool>>(
             Expression.Equal(Category.Body, Expression.Constant(category)), Category.Parameters));
     }

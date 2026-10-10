@@ -17,8 +17,8 @@ public sealed record AdminCatalogDto(IReadOnlyList<AdminRoleDto> Roles, IReadOnl
 internal sealed class GetAdminCatalog(NexusDbContext db, ModelCatalog catalog)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/catalog", async (GetAdminCatalog handler, CancellationToken ct) => Results.Ok(await handler.HandleAsync(ct)))
-        .WithName("GetAdminCatalog").Produces<AdminCatalogDto>();
+        .MapGet("/catalog", async (GetAdminCatalog handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(ct)))
+        .WithName("GetAdminCatalog");
 
     public async Task<AdminCatalogDto> HandleAsync(CancellationToken ct)
     {

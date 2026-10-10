@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Administration.Roles;
 
 /// <summary>
-/// Format rules for role, group and feature edits. They run inside <see cref="AdministrativeAudit.TryMutateAsync"/>, after
+/// Format rules for role, group and feature edits. They run inside <see cref="AdministrativeAudit.MutateAsync"/>, after
 /// the administrator check, so a rejected edit is still audited with its code; that is why they are not request validators.
 /// </summary>
 internal static class AccessRules

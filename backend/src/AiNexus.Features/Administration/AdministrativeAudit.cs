@@ -15,28 +15,24 @@ namespace AiNexus.Features.Administration;
 public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, AccessService access, AdministrativeWriteLock writes)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
-    /// <summary>Runs a mutation written by another module; its expected failures, and this module's, are exceptions.</summary>
-    public async Task MutateAsync(string action, Guid? resource, string key, Func<Task> mutation, CancellationToken ct)
-    {
-        var result = await TryMutateAsync(action, resource, key, async () => { await mutation(); return Result.Success; }, ct);
-        if (!result.IsSuccess) throw result.Error.ToException();
-    }
-
     /// <summary>
     /// Under the administrative write lock and one serializable transaction: the actor must still be an administrator,
     /// the before snapshot is taken, the mutation runs and is saved, the actor must keep administrator access, and the
-    /// after snapshot is audited. Any expected failure, returned or thrown, rolls back and is audited with its code.
+    /// after snapshot is audited. Any failure, returned or an <see cref="ExternalServiceException"/>, rolls back and is
+    /// audited with its code.
     /// </summary>
-    internal async Task<Result> TryMutateAsync(string action, Guid? resource, string key, Func<Task<Result>> mutation, CancellationToken ct)
+    internal async Task<Result> MutateAsync(string action, Guid? resource, string key, Func<Task<Result>> mutation, CancellationToken ct)
     {
-        var actor = (await current.GetAsync(ct)).OrThrow().Id;
+        var signedIn = await current.GetAsync(ct);
+        if (!signedIn.IsSuccess) return signedIn.Error;
+        var actor = signedIn.Value.Id;
         await writes.Gate.WaitAsync(ct);
         object? before = null;
         try
         {
             Error? failure;
             try { failure = await CommitAsync(); }
-            catch (ApiException error) { await RecordFailureAsync(error.Code); throw; }
+            catch (ExternalServiceException error) { await RecordFailureAsync(error.Error.Code); throw; }
             if (failure is null) return Result.Success;
             await RecordFailureAsync(failure.Code);
             return failure;
