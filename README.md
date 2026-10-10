@@ -53,8 +53,7 @@ dotnet dev-certs https --trust
 | `frontend/` | Angular 前端；`npm` 指令在這裡執行，`src/app` 分為 `core`、`shared`、`features` |
 | `tests/e2e/` | Playwright 端到端測試，對發布後的網站執行 |
 | `contracts/` | 由後端產生的 API 合約 `openapi.json`（前端型別來源、合約測試比對）與串流事件說明 `SSE.md` |
-| `db/` | 發布用的 migration SQL、資料表說明腳本、外部來源的授權 view |
-| `deploy/` | IIS 部署說明 |
+| `deploy/` | IIS 部署說明；`sql/` 是交給外部來源 DBA 的授權 view 範本 |
 | `docs/` | 長期文件；改哪類程式該讀哪份，見 `CLAUDE.md` 的表格 |
 | `scripts/` | PowerShell 入口：還原、建置、啟動、驗證、發布；共用函式在 `AiNexus/` 模組，腳本測試在 `tests/`，見 [開發](docs/DEVELOPMENT.md) |
 | `tooling/` | 非建置必需的工具：`contracts/` 由 OpenAPI 產生前端 `schema.ts`，`embeddings/` 比較 embedding 模型與實測本地 Ollama |

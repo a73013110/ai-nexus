@@ -56,7 +56,7 @@ dotnet dev-certs https --trust
 
 後端測試的執行方式與 `NexusFactory` 的寫法見 [後端測試](BACKEND_TESTING.md)。
 
-GitHub Actions 的 CI 目前只能手動觸發（Actions 頁面的 Run workflow），不會在 push 或 PR 時自動執行。送 PR 前請在本機跑 `Verify.ps1`，並確認 `dotnet ef migrations has-pending-model-changes` 沒有待產生的 migration。
+GitHub Actions 的 CI 目前只能手動觸發（Actions 頁面的 Run workflow），不會在 push 或 PR 時自動執行；它在 Windows 上執行 `Restore.ps1` 與 `Verify.ps1`，和本機驗證是同一組步驟。送 PR 前請在本機跑 `Verify.ps1`（含 `has-pending-model-changes`，模型有未產生的 migration 就失敗）。
 
 瀏覽器測試使用本機已安裝 Edge，測試伺服器在 5180。後端的真實瀏覽器測試（`Category=Browser`：PDF 匯出、診斷與監控頁）只在設定 `AINEXUS_TEST_BROWSER` 時執行，其值為 channel（`msedge`、`chrome`）或瀏覽器執行檔絕對路徑；`Verify.ps1 -Browser` 會設定它，Linux 以 `-BrowserTarget /opt/pw-browsers/chromium` 指定 Playwright 的 Chromium。測試替身僅存在 `backend/tests`、`tests/e2e`，正式程式不接受測試身分 header。Playwright 覆蓋鍵盤、中文組字、版本分支、斷線、Markdown 安全、模型政策、Context、可讀字體與窄螢幕。結果、trace 與畫面全部在 ignored `artifacts`。後端測試使用獨立 SQLite；SQL schema/migrations、AD 與真模型仍由連線檢查／實機驗收驗證。
 
@@ -72,15 +72,14 @@ GitHub Actions 的 CI 目前只能手動觸發（Actions 頁面的 Run workflow�
 
 一起提交 `contracts/openapi.json` 與自動產生的 `frontend/src/app/core/api/schema.ts`，不手改 generated 型別。JSON／SSE 的額外規範在 [contracts/SSE](../contracts/SSE.md)。工具的 TypeScript 5 獨立於 Angular 的 TypeScript 6。
 
-資料結構修改先更新 entity／mapping，再新增 migration 與 DBA 審閱 SQL：
+資料結構修改先更新 entity／mapping，再新增 migration：
 
 ```powershell
 dotnet ef migrations add DescriptiveChange --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host --output-dir Persistence/Migrations
-dotnet ef migrations script --idempotent --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host --output db/migrations.sql
 ./scripts/Initialize-Database.ps1
 ```
 
-migration 在本機驗證後提交 source、designer、snapshot 與 SQL。正式環境以受控部署帳號執行；不要用正式資料測 `EnsureCreated`、migration rollback 或測試身分。工具由 `.config/dotnet-tools.json` 固定版本。
+migration 在本機驗證後提交 source、designer 與 snapshot；給 DBA 的 SQL 由 `Publish-IIS.ps1` 在發布時產生，不進版控。正式環境以受控部署帳號執行；不要用正式資料測 `EnsureCreated`、migration rollback 或測試身分。工具由 `.config/dotnet-tools.json` 固定版本。
 
 ## 資料夾的責任
 

@@ -22,7 +22,7 @@
 
 ## 設定步驟
 
-1. 原系統 DBA 準備兩個 `nexus` view，契約見 [authorized-views.sql](../db/integrations/authorized-views.sql)。範本故意不回傳任何列；先根據原系統資料列授權替換內容並驗證撤權、代理、停用、機密、學生範圍等案例。
+1. 原系統 DBA 準備兩個 `nexus` view，契約見 [authorized-views.sql](../deploy/sql/authorized-views.sql)。範本故意不回傳任何列；先根據原系統資料列授權替換內容並驗證撤權、代理、停用、機密、學生範圍等案例。
 2. 建立專用唯讀 SQL login/user，只給 `nexus_reader` 對兩個 view 的 SELECT。不給來源全庫 `db_datareader`、原始表 SELECT、寫入或簽核 procedure 權限。`ApplicationIntent=ReadOnly` 只是連線意圖，不能取代真正的 SQL 權限。
 3. 在 `.local/config/appsettings.Local.json` 的 `Integrations.Gdweb.Database`／`Meiho.Database` 設定 Server、Name、TrustServerCertificate、ConnectTimeoutSeconds；帳密在 `.local/secrets/appsettings.Secrets.json` 的相同位置填 User／Password。進階使用者仍可在秘密檔填 `ConnectionStrings.LegacyGdweb`／`LegacyMeiho` 完整 SqlClient 字串，非空時優先於分項設定。
 4. 在一般設定的 `Integrations.Gdweb`／`Meiho` 設定 `Transport=sql`、`Enabled=true`、`AclContractConfirmed=true`、`AllowedGroupIds`、`CommandTimeoutSeconds`（2–30 秒）及 `MaxResults`（1–50）。空群組不會授權任何人，平台管理員也不能繞過。未來 API adapter 可沿用來源識別與 ACL 契約；目前設定其他 transport 會明確顯示未支援。

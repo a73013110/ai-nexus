@@ -43,7 +43,7 @@ pwsh -NoProfile -File scripts/Verify.ps1
 pwsh -NoProfile -File scripts/Publish-IIS.ps1 -DataRoot 'D:\CoreProject\AiNexus\data' -SkipBuild -PublishDirectory artifacts/verification
 ```
 
-套件放 `artifacts/iis/<時間>/`，包含 app／config 範本／空 keys／logs、`Verify-IIS.ps1`、db migration／描述腳本與 docs／deploy 維運文件，不預設攜帶秘密。`-DataRoot` 是正式主機的站外資料根目錄（必填），套件 config 的 `Attachments.StoragePath`、`Diagnostics.Directory` 會設為其下的 `attachments`、`diagnostics`。輸出的 `app` 才是發版成品；已包含前端與後端，IIS 主機不用 Node.js。`PublishDirectory` 預設仍為 `artifacts/publish`；執行完整 Verify 後應明確封裝其 `artifacts/verification` 產物。
+套件放 `artifacts/iis/<時間>/`，只含部署需要的東西：app／config 範本／空 keys／logs、`Verify-IIS.ps1`，以及發布當下產生的 `migrations.sql`（idempotent，給 DBA 審閱；與 app 出自同一份原始碼），不預設攜帶秘密。文件不打包，請看 repo。`-DataRoot` 是正式主機的站外資料根目錄（必填），套件 config 的 `Attachments.StoragePath`、`Diagnostics.Directory` 會設為其下的 `attachments`、`diagnostics`。輸出的 `app` 才是發版成品；已包含前端與後端，IIS 主機不用 Node.js。`PublishDirectory` 預設仍為 `artifacts/publish`；執行完整 Verify 後應明確封裝其 `artifacts/verification` 產物。
 
 若是在受控環境製作含本機設定的內部移轉套件，可以使用 `-IncludeLocalConfig`；這會複製秘密，套件必須全程受 ACL 保護並在移轉完成後依公司政策清理。預設不複製現有 key ring。`-DestinationPath` 指**全新且空的套件 app 目錄**，不是正在運行的網站；腳本拒絕覆蓋非空目錄。既有 config／keys 也不會被這個封裝流程覆蓋。
 
@@ -166,7 +166,7 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Host.dll' `
 if ($LASTEXITCODE -ne 0) { throw '資料庫初始化未完成，先不要啟動網站。' }
 ```
 
-工具只建立不存在的 AiNexus，套用 InitialCreate 並檢查模型／snapshot 一致。重跑不會重建；DBA 亦可審閱套用 `db/migrations.sql`。完成後移除 runtime 身分的 DDL 權限。SQL Server 2025 額外建立 VECTOR(768)／VECTOR(1024)，舊 SQL 使用 portable 路徑。
+工具只建立不存在的 AiNexus，套用 InitialCreate 並檢查模型／snapshot 一致。重跑不會重建；DBA 亦可審閱套用套件的 `migrations.sql`。完成後移除 runtime 身分的 DDL 權限。SQL Server 2025 額外建立 VECTOR(768)／VECTOR(1024)，舊 SQL 使用 portable 路徑。
 
 runtime 需要所有業務 schema（每模組一個，清單見 [資料庫](../../docs/DATABASE.md)）的 DML 與 history 的 SELECT。每個 app 使用一個程序；provider 可各自多個推論 worker，MaxConcurrency 只限制本程序的聊天／模型任務，沒有跨主機全域 GPU 限制。生成租約每 15 秒續期、兩分鐘有效，主機時鐘須同步。
 
