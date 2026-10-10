@@ -1,7 +1,6 @@
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
-using AiNexus.Platform.Errors;
 using Konscious.Security.Cryptography;
 
 namespace AiNexus.Features.Identity.Authentication;
@@ -23,15 +22,12 @@ public sealed class Argon2Passwords(Argon2Cost cost) : IDisposable
     /// <summary>Invalid accounts still perform the same work without allocating a hash per request.</summary>
     public string DummyHash { get; } = $"$argon2id$v=19$m={cost.MemoryKiB},t={cost.Iterations},p=1${Encode(new byte[16])}${Encode(new byte[32])}";
 
-    public static void Validate(string password)
-    {
-        if (password.Length is < 12 or > 128 || password.All(char.IsWhiteSpace))
-            throw new ApiException(400, "invalid_password", "本地密碼需為 12–128 個字元，可使用長句與密碼管理器。");
-    }
+    /// <summary>The local password policy (<c>invalid_password</c> when refused); <see cref="HashAsync"/> requires it.</summary>
+    public static bool IsAcceptable(string password) => password.Length is >= 12 and <= 128 && !password.All(char.IsWhiteSpace);
 
     public async Task<string> HashAsync(string password, CancellationToken ct)
     {
-        Validate(password);
+        if (!IsAcceptable(password)) throw new ArgumentException("Validate the password with IsAcceptable first.", nameof(password));
         var salt = RandomNumberGenerator.GetBytes(16);
         var hash = await DeriveAsync(password, salt, cost.MemoryKiB, cost.Iterations, 1, ct);
         try { return $"$argon2id$v=19$m={cost.MemoryKiB},t={cost.Iterations},p=1${Encode(salt)}${Encode(hash)}"; }

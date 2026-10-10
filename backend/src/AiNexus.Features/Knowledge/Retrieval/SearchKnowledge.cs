@@ -1,4 +1,5 @@
 using AiNexus.Features.Identity;
+using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 
@@ -21,10 +22,11 @@ internal sealed class KnowledgeSearchRequestValidator : RequestValidator<Knowled
 }
 
 /// <summary>Searches up to three collections the user may read, through the full retrieval pipeline.</summary>
-internal static class SearchKnowledge
+internal sealed class SearchKnowledge(RetrievalPipeline pipeline)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("/search", async (KnowledgeSearchRequest request, ICurrentUser user, RetrievalPipeline pipeline, CancellationToken ct) =>
-            Results.Ok(await pipeline.SearchAsync(user.Id, request, ct)))
-        .WithName("SearchKnowledge").Produces<KnowledgeSearchDto>();
+        .MapPost("/search", (KnowledgeSearchRequest request, ICurrentUser user, SearchKnowledge handler, CancellationToken ct) => handler.HandleAsync(user.Id, request, ct).ToHttpResultAsync())
+        .WithName("SearchKnowledge");
+
+    public Task<Result<KnowledgeSearchDto>> HandleAsync(Guid actor, KnowledgeSearchRequest request, CancellationToken ct) => pipeline.SearchAsync(actor, request, ct);
 }

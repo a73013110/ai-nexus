@@ -14,7 +14,6 @@ public sealed class AuditModule : IFeatureModule
 
     public static void AddServices(IHostApplicationBuilder builder)
     {
-        builder.Services.AddScoped<ListActivityAudit>();
         builder.Services.AddFeaturePolicy(Feature);
     }
 

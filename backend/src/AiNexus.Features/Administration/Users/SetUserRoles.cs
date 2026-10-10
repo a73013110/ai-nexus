@@ -16,7 +16,7 @@ internal sealed class SetUserRoles(NexusDbContext db, AdministrativeAudit audit)
         .MapPut("/users/{id:guid}/roles", async (Guid id, UserRolesRequest body, SetUserRoles handler, CancellationToken ct) => (await handler.HandleAsync(id, body, ct)).ToHttpResult())
         .WithName("SetUserRoles");
 
-    public Task<Result> HandleAsync(Guid id, UserRolesRequest request, CancellationToken ct) => audit.TryMutateAsync("admin.user_roles", id, id.ToString(), async () =>
+    public Task<Result> HandleAsync(Guid id, UserRolesRequest request, CancellationToken ct) => audit.MutateAsync("admin.user_roles", id, id.ToString(), async () =>
     {
         if (AccessRules.Keys(request.RoleIds) is { } invalid) return invalid;
         if (!await db.Users.AnyAsync(x => x.Id == id, ct)) return AdministrationErrors.NotFound;

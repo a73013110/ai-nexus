@@ -4,14 +4,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Notifications;
 
-internal static class DismissNotification
+/// <summary>Hides one of the user's notifications; dismissing a missing one succeeds.</summary>
+internal sealed class DismissNotification(NexusDbContext db, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, NexusDbContext db, TimeProvider clock, CancellationToken ct) =>
+        .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, DismissNotification handler, CancellationToken ct) =>
         {
-            await db.Set<WorkspaceNotification>().Where(x => x.Id == id && x.OwnerId == user.Id)
-                .ExecuteUpdateAsync(p => p.SetProperty(x => x.DismissedAt, clock.GetUtcNow()), ct);
+            await handler.HandleAsync(user.Id, id, ct);
             return TypedResults.NoContent();
         })
         .WithName("DismissNotification");
+
+    public Task HandleAsync(Guid owner, Guid id, CancellationToken ct) => db.Set<WorkspaceNotification>().Where(x => x.Id == id && x.OwnerId == owner)
+        .ExecuteUpdateAsync(p => p.SetProperty(x => x.DismissedAt, clock.GetUtcNow()), ct);
 }

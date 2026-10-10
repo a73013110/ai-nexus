@@ -17,7 +17,7 @@ internal sealed class SaveConversationKnowledge(NexusDbContext db, ConversationS
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("", async (Guid id, KnowledgeSelectionDto request, ICurrentUser user, SaveConversationKnowledge handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, request, ct)).ToHttpResult())
-        .WithName("SaveConversationKnowledge").Produces(204);
+        .WithName("SaveConversationKnowledge");
 
     public async Task<Result> HandleAsync(Guid actor, Guid conversation, KnowledgeSelectionDto request, CancellationToken ct)
     {
@@ -26,8 +26,10 @@ internal sealed class SaveConversationKnowledge(NexusDbContext db, ConversationS
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await db.Users.Where(x => x.Id == actor).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
-            await conversations.OwnedAsync(actor, conversation, ct);
-            await authorization.CollectionsAsync(actor, request.CollectionIds, ct);
+            var owned = await conversations.OwnedAsync(actor, conversation, ct);
+            if (!owned.IsSuccess) return owned.Error;
+            var allowed = await authorization.CollectionsAsync(actor, request.CollectionIds, ct);
+            if (!allowed.IsSuccess) return allowed.Error;
             if (await db.Runs.AnyAsync(x => x.ConversationId == conversation && x.ActiveOwnerId != null, ct)) return KnowledgeErrors.GenerationActive;
             var existing = await db.Set<ConversationKnowledge>().Where(x => x.ConversationId == conversation).ToListAsync(ct);
             db.RemoveRange(existing.Where(x => !request.CollectionIds.Contains(x.CollectionId)));

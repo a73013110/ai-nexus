@@ -71,7 +71,7 @@ public sealed class DiagnosticTests
         using var factory = LoggerFactory.Create(x => x.SetMinimumLevel(LogLevel.Trace).AddProvider(provider));
         using var trace = DiagnosticTrace.Start("validation.fixture");
         var issues = new Issues(factory.CreateLogger<Issues>(), factory);
-        var problem = issues.Problem(new ApiException(400, "invalid_request", Secret));
+        var problem = issues.Problem(new ExternalServiceException(Error.Invalid("invalid_request"), Secret));
         var row = Assert.Single(buffer.Drain()); Assert.Equal(problem.IssueCode, row.IssueCode); Assert.Equal(LogLevel.Information, row.Level);
         Assert.Equal(trace.TraceId.ToHexString(), row.TraceId); Assert.Equal(0, health.Sampled); Assert.DoesNotContain(Secret, problem.Title);
     }
@@ -79,7 +79,7 @@ public sealed class DiagnosticTests
     [Fact]
     public async Task AuditBoundaryFailsClosedMasksLegacyAndShowsSystemConfiguration()
     {
-        Assert.Throws<ApiException>(() => AuditRedactor.Sanitize("{"));
+        Assert.Throws<InvalidOperationException>(() => AuditRedactor.Sanitize("{"));
         var safe = AuditRedactor.Sanitize(JsonSerializer.Serialize(new { password = Secret, after = new { enabled = true, token = Secret }, reason = Secret }));
         Assert.DoesNotContain(Secret, safe); Assert.Contains("enabled", safe); Assert.Contains("OMITTED", safe);
         await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
@@ -349,8 +349,8 @@ public sealed class DiagnosticTests
     public sealed class FailingJob : IBackgroundJobHandler
     {
         public string Kind => "diagnostic-fixture";
-        public Task ExecuteAsync(JobExecution execution, CancellationToken ct) => throw new ApiException(503, "fixture_failed", Secret);
-        public Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => Task.CompletedTask;
+        public Task<Result> ExecuteAsync(JobExecution execution, CancellationToken ct) => throw new ExternalServiceException(Error.Unavailable("fixture_failed"), Secret);
+        public Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => Task.FromResult(Result.Success);
     }
 
     [Fact]

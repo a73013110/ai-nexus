@@ -56,6 +56,9 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
     public static string Message(string? issue) => "操作未完成，請聯絡管理員。查證代碼：" + (ValidCode(issue) ? issue : "無法取得");
     public string Report(Exception exception, string code, LogLevel level = LogLevel.Error) => Report(exception, code, level, rejection: false);
 
+    /// <summary>Records an expected failure that has no exception, such as a background job that returned an <see cref="Error"/>.</summary>
+    public string Report(Error error) => Record(Problems.Status(error.Kind), error.Code);
+
     private string Report(Exception exception, string code, LogLevel level, bool rejection)
     {
         // An exception crossing layers is recorded once. Each distinct exception receives its own opaque code.
@@ -73,21 +76,51 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
             return issue;
         }
     }
+
+    /// <summary>The public status and code of an exception that escaped a request.</summary>
+    public static (int Status, string Code) Classify(Exception exception) => exception switch
+    {
+        ExternalServiceException external => (Problems.Status(external.Error.Kind), external.Error.Code),
+        BadHttpRequestException bad => (bad.StatusCode, bad.StatusCode switch { 413 => "request_too_large", 400 => "invalid_request", _ => "service_unavailable" }),
+        AntiforgeryValidationException => (403, "csrf_invalid"),
+        _ => (503, "service_unavailable"),
+    };
+
     public PublicProblem Problem(Exception exception)
     {
-        var status = exception is ApiException api ? api.Status : exception is BadHttpRequestException bad ? bad.StatusCode : exception is AntiforgeryValidationException ? 403 : 503;
-        var code = exception is ApiException a ? a.Code : status == 403 ? "csrf_invalid" : status == 413 ? "request_too_large" : status == 400 ? "invalid_request" : "service_unavailable";
+        var (status, code) = Classify(exception);
         var issue = Report(exception, code, status >= 500 ? LogLevel.Error : LogLevel.Information, rejection: status < 500);
-        return new(status, code, status < 500 ? PublicErrorCatalog.Message(code, status) : Message(issue), issue);
+        return Public(status, code, issue);
     }
+
+    /// <summary>A failure written without an exception: an <see cref="Error"/> result, validation, or an empty framework status.</summary>
+    public PublicProblem Problem(int status, string code, string? recordedIssue = null) => Public(status, code, recordedIssue ?? Record(status, code));
+
+    private string Record(int status, string code)
+    {
+        var issue = NewCode();
+        using var scope = logger.BeginScope(new Dictionary<string, object?> { ["IssueCode"] = issue, ["ErrorCode"] = code });
+        if (status < 500) LogRejection(logger, LogLevel.Information, null, code, issue);
+        else LogFailure(logger, LogLevel.Error, null, code, issue);
+        Activity.Current?.SetStatus(ActivityStatusCode.Error, DiagnosticRedactor.Text(code, 80));
+        return issue;
+    }
+
+    private static PublicProblem Public(int status, string code, string issue)
+        => new(status, code, status < 500 ? PublicErrorCatalog.Message(code, status) : Message(issue), issue);
+
     [LoggerMessage(EventId = DiagnosticEvents.Failure, EventName = "operation.failed", Message = "Operation failed with {ErrorCode}; issue {IssueCode}.")]
-    private static partial void LogFailure(ILogger logger, LogLevel level, Exception exception, string errorCode, string issueCode);
+    private static partial void LogFailure(ILogger logger, LogLevel level, Exception? exception, string errorCode, string issueCode);
 
     // The diagnostic provider keeps rejections below its minimum level, so the generated enabled check must not drop them.
     [LoggerMessage(EventId = DiagnosticEvents.Rejection, EventName = "http.rejected", Message = "Operation failed with {ErrorCode}; issue {IssueCode}.", SkipEnabledCheck = true)]
-    private static partial void LogRejection(ILogger logger, LogLevel level, Exception exception, string errorCode, string issueCode);
+    private static partial void LogRejection(ILogger logger, LogLevel level, Exception? exception, string errorCode, string issueCode);
 
     // Only Problems' writer calls this; everything else goes through IProblemDetailsService.
+    /// <summary>The problem as the final <c>error</c> event of a server-sent event stream that has already started.</summary>
+    internal static Task WriteEventAsync(HttpContext http, PublicProblem problem)
+        => http.Response.WriteAsync("event: error\ndata: " + System.Text.Json.JsonSerializer.Serialize(new { status = problem.Status, code = problem.Code, message = problem.Status >= 500 ? Message(problem.IssueCode) : problem.Title, issueCode = problem.IssueCode }) + "\n\n", http.RequestAborted);
+
     internal static Task WriteAsync(HttpContext http, PublicProblem problem, IReadOnlyDictionary<string, string[]>? errors = null)
         => Results.Json(new SafeProblemDetails("urn:ai-nexus:problem:" + problem.Code, problem.Title, problem.Status, problem.Code, problem.IssueCode, errors),
             statusCode: problem.Status, contentType: "application/problem+json").ExecuteAsync(http);
@@ -125,13 +158,10 @@ public sealed partial class DiagnosticRequestMiddleware(RequestDelegate next)
         {
             outcome = "failed";
             using var failureScope = logger.BeginScope(new Dictionary<string, object?> { ["Method"] = http.Request.Method,
-                ["Route"] = (http.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText, ["StatusCode"] = exception is ApiException api ? api.Status : 503 });
+                ["Route"] = (http.GetEndpoint() as RouteEndpoint)?.RoutePattern.RawText, ["StatusCode"] = Issues.Classify(exception).Status });
             if (!http.Response.HasStarted) { http.Response.Clear(); WebSecurity.Headers(http); await Problems.WriteAsync(http, exception); }
             else if (http.Response.ContentType?.StartsWith("text/event-stream", StringComparison.OrdinalIgnoreCase) == true && !http.RequestAborted.IsCancellationRequested)
-            {
-                var problem = issues.Problem(exception);
-                await http.Response.WriteAsync("event: error\ndata: " + System.Text.Json.JsonSerializer.Serialize(new { status = problem.Status, code = problem.Code, message = problem.Status >= 500 ? Issues.Message(problem.IssueCode) : problem.Title, issueCode = problem.IssueCode }) + "\n\n", http.RequestAborted);
-            }
+                await Issues.WriteEventAsync(http, issues.Problem(exception));
             else http.Abort();
         }
         finally

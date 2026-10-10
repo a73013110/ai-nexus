@@ -5,13 +5,13 @@ using AiNexus.Features.Conversations;
 namespace AiNexus.Features.Chat;
 
 /// <summary>A version 1 backup of one of the user's own idle conversations; attachments are listed by name only.</summary>
-internal static class ExportConversation
+internal sealed class ExportConversation(GetConversation conversations)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}/export", async (Guid id, ICurrentUser user, GetConversation conversations, CancellationToken ct) => (await HandleAsync(conversations, user.Id, id, ct)).ToHttpResult())
-        .WithName("ExportConversation").Produces<ConversationBackup>();
+        .MapGet("/{id:guid}/export", (Guid id, ICurrentUser user, ExportConversation handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .WithName("ExportConversation");
 
-    private static async Task<Result<ConversationBackup>> HandleAsync(GetConversation conversations, Guid owner, Guid id, CancellationToken ct)
+    public async Task<Result<ConversationBackup>> HandleAsync(Guid owner, Guid id, CancellationToken ct)
     {
         var found = await conversations.HandleAsync(owner, id, ct);
         if (!found.IsSuccess) return found.Error;

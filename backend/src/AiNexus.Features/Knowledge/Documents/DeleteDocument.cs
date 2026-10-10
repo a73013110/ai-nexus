@@ -19,7 +19,7 @@ internal sealed class DeleteDocument(NexusDbContext db, DocumentAccess documents
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, DeleteDocument handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
-        .WithName("DeleteDocument").Produces(204);
+        .WithName("DeleteDocument");
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {

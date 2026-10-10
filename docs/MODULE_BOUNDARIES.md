@@ -41,6 +41,16 @@
 - 兩端分屬不同模組的外鍵設定放在 `Persistence/CrossModuleRelationships.cs`；模組自己的實體設定只參照自己的實體。資料庫約束不變。
 - 共用的識別字放在下層模組，例如管理功能的 `FeatureIds.Admin`／`Policies.Admin` 在 AccessControl，`AdministrationConfiguration` 引用它。編譯期常數不會產生依賴，但放在下層才不會誤導讀者。
 
+## 直接呼叫或 domain event
+
+- **直接呼叫**：需要對方的回傳值、要依結果決定 HTTP 回應或是否繼續（查詢、授權、配額、排程任務、計費預約），或是對方的檢查必須在自己寫入之前完成。
+- **domain event**：「A 發生後 B 要跟著處理」，A 不需要知道結果，B 的寫入要和 A 同一個交易，例如刪除對話／成果時撤銷分享、刪除專案時解除成果的專案連結。只有在依賴方向能因此反轉、避免循環時才改；如果呼叫端仍為了查詢依賴對方，改成事件沒有好處。
+- 事件是發布模組裡過去式命名的 `public sealed record`，實作 `IDomainEvent`，放在引發它的 slice 檔（如 `DeleteConversation.cs` 的 `ConversationDeleted`）。訂閱模組實作 `IDomainEventHandler<T>`，在自己的 `AddServices` 以 `AddDomainEventHandler<TEvent, THandler>()` 註冊；訂閱方引用發布方，不可反過來，也不可因此形成循環。
+- 發布端注入 scoped `DomainEvents`，在呼叫 `SaveChangesAsync` 前 `Raise(...)`。`SaveChangesAsync` 寫入前，`DomainEventInterceptor` 先分派所有待處理事件（handler 再引發的事件也會處理，最多 `DomainEvents.MaxRounds` 輪），`AuditEventInterceptor` 再整理稽核列，所以 handler 新增的 entity 和稽核列與發布端一起儲存。沒有交易時會自動開一個交易包住分派與寫入。
+- handler 在同一個 `NexusDbContext` 與交易內、發布端的變更寫入之前執行：可以追蹤 entity、使用 `ExecuteUpdate`／`ExecuteDelete`（立即在目前交易執行），但不可呼叫 `SaveChanges` 或自行開關交易。handler 不保證先後順序，彼此不可依賴。
+- `Raise` 之後到 `SaveChangesAsync` 之間不要提早 return；分派失敗會清掉待處理事件。同步的 `SaveChanges` 遇到待處理事件會丟例外。
+- 需要在交易提交後非同步處理的副作用（外部呼叫、檔案刪除）不用 domain event，交給既有的 durable job。
+
 ## 不要做的事
 
 - 不要為了通過測試把型別搬進 `Persistence` 或 Platform。`Persistence` 只放 `NexusDbContext` 本身就要處理的東西（例如它對應並遮罩的 `AuditEvent`）。

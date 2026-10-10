@@ -61,7 +61,7 @@ public static class DeploymentVerifier
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine(ex is ApiException api ? api.Message : ex is Microsoft.Extensions.Options.OptionsValidationException ? "Deployment configuration validation failed. Check model, authentication, tool, connector and limit settings." : LocalDatabaseSettings.Diagnose(ex));
+            Console.Error.WriteLine(ex is ExternalServiceException external ? external.Message : ex is Microsoft.Extensions.Options.OptionsValidationException ? "Deployment configuration validation failed. Check model, authentication, tool, connector and limit settings." : LocalDatabaseSettings.Diagnose(ex));
             return false;
         }
     }

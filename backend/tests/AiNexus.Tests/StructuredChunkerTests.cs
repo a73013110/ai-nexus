@@ -1,4 +1,3 @@
-using AiNexus.Platform.Errors;
 using AiNexus.Features.Knowledge;
 using Microsoft.Extensions.Options;
 using Xunit;
@@ -14,7 +13,7 @@ public sealed class StructuredChunkerTests
     [Fact]
     public void ChineseStructureAndCrossPageRangesAreRetained()
     {
-        var chunks = Chunker().Chunk([new() { PageNumber = 1, Text = "第三章 採購規範\n第12條 核准流程\n承辦人應提出申請。" }, new() { PageNumber = 2, Text = "主管核准後始得採購。" }]);
+        var chunks = Chunker().Chunk([new() { PageNumber = 1, Text = "第三章 採購規範\n第12條 核准流程\n承辦人應提出申請。" }, new() { PageNumber = 2, Text = "主管核准後始得採購。" }]).Value!;
         var chunk = Assert.Single(chunks); Assert.Equal(1, chunk.StartPage); Assert.Equal(2, chunk.EndPage);
         Assert.Contains("第三章", chunk.HeadingPath); Assert.Contains("第12條", chunk.Text);
     }
@@ -22,25 +21,25 @@ public sealed class StructuredChunkerTests
     public void TableRowsRemainWholeAndLongRowsFailExplicitly()
     {
         var row = "| 核准人 | 主管與承辦 |";
-        var chunks = Chunker(80, 100, 20).Chunk([new() { PageNumber = 1, Text = string.Join('\n', Enumerable.Repeat(row, 30)) }]);
+        var chunks = Chunker(80, 100, 20).Chunk([new() { PageNumber = 1, Text = string.Join('\n', Enumerable.Repeat(row, 30)) }]).Value!;
         Assert.All(chunks, chunk => Assert.All(chunk.Text.Split('\n'), line => Assert.Equal(row, line)));
-        Assert.Throws<ApiException>(() => Chunker(80, 100).Chunk([new() { PageNumber = 1, Text = "|" + new string('文', 120) + "|" }]));
+        Assert.Equal("table_row_too_long", Chunker(80, 100).Chunk([new() { PageNumber = 1, Text = "|" + new string('文', 120) + "|" }]).Error?.Code);
     }
     [Fact]
     public void HardSplitNeverBreaksSurrogatePairsOrLosesText()
     {
         var text = string.Concat(Enumerable.Repeat("中文😀", 500));
-        var chunks = Chunker(80, 100, 20, 0).Chunk([new() { PageNumber = 1, Text = text }]);
+        var chunks = Chunker(80, 100, 20, 0).Chunk([new() { PageNumber = 1, Text = text }]).Value!;
         Assert.Equal(text, string.Concat(chunks.Select(x => x.Text)));
         Assert.All(chunks, chunk => { Assert.True(chunk.TokenEstimate <= 100); Assert.False(char.IsLowSurrogate(chunk.Text[0])); Assert.False(char.IsHighSurrogate(chunk.Text[^1])); });
     }
     [Fact]
     public void ShortParagraphsMergeAndOverlapUsesWholeSentences()
     {
-        var shortChunks = Chunker(100, 150, 30).Chunk([new() { PageNumber = 1, Text = "甲。\n\n乙。\n\n丙。" }]);
+        var shortChunks = Chunker(100, 150, 30).Chunk([new() { PageNumber = 1, Text = "甲。\n\n乙。\n\n丙。" }]).Value!;
         Assert.Single(shortChunks);
         var sentences = Enumerable.Range(0, 12).Select(i => i + new string('文', 19) + "。").ToArray();
-        var chunks = Chunker(80, 120, 10, .3).Chunk([new() { PageNumber = 1, Text = string.Concat(sentences) }]);
+        var chunks = Chunker(80, 120, 10, .3).Chunk([new() { PageNumber = 1, Text = string.Concat(sentences) }]).Value!;
         Assert.True(chunks.Count > 1);
         Assert.All(chunks, x => Assert.EndsWith("。", x.Text));
         Assert.Contains(sentences[3], chunks[0].Text); Assert.StartsWith(sentences[3], chunks[1].Text);

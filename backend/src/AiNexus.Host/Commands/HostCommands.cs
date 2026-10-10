@@ -52,7 +52,7 @@ public static class HostCommands
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine(ex is ApiException api ? api.Message : LocalDatabaseSettings.Diagnose(ex));
+            Console.Error.WriteLine(ex is ExternalServiceException external ? external.Message : LocalDatabaseSettings.Diagnose(ex));
             return false;
         }
     }

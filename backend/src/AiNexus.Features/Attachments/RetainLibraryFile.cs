@@ -11,7 +11,7 @@ internal sealed class RetainLibraryFile(NexusDbContext db, AttachmentService fil
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/retain", async (Guid id, ICurrentUser user, RetainLibraryFile handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
-        .WithName("RetainLibraryFile").Produces(204);
+        .WithName("RetainLibraryFile");
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
@@ -20,7 +20,7 @@ internal sealed class RetainLibraryFile(NexusDbContext db, AttachmentService fil
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await quota.LockOwnerAsync(actor, ct);
-            var file = await files.FindOwnedAsync(actor, id, ct);
+            var file = await files.OwnedAsync(actor, id, ct);
             if (!file.IsSuccess) return file.Error;
             if (file.Value.InLibrary) return Result.Success;
             await db.Set<Attachment>().Where(x => x.Id == id && x.OwnerId == actor).ExecuteUpdateAsync(p => p.SetProperty(x => x.InLibrary, true), ct);

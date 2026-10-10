@@ -16,11 +16,6 @@ public sealed class RepositoriesModule : IFeatureModule
         services.AddScoped<IGiteaClient, GiteaClient>();
         services.AddScoped<RepositoryService>();
         services.AddScoped<RepositoryReviewService>();
-        services.AddScoped<ListRepositoryReviews>();
-        services.AddScoped<CreateRepositoryReview>();
-        services.AddScoped<ReadRepositoryReview>();
-        services.AddScoped<ConnectRepository>();
-        services.AddScoped<ImportRepositoryFile>();
         services.AddScoped<IBackgroundJobHandler, RepositoryReviewHandler>();
         services.AddSingleton<RepositoryWriteLock>();
         services.AddFeaturePolicy(FeatureIds.Repositories);

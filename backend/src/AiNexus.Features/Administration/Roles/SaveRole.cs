@@ -15,7 +15,7 @@ internal sealed class SaveRole(NexusDbContext db, AdministrativeAudit audit)
         .MapPut("/roles/{id}", async (string id, RoleUpdateRequest body, SaveRole handler, CancellationToken ct) => (await handler.HandleAsync(id, body, ct)).ToHttpResult())
         .WithName("SaveRole");
 
-    public Task<Result> HandleAsync(string id, RoleUpdateRequest request, CancellationToken ct) => audit.TryMutateAsync("admin.role", null, id, async () =>
+    public Task<Result> HandleAsync(string id, RoleUpdateRequest request, CancellationToken ct) => audit.MutateAsync("admin.role", null, id, async () =>
     {
         if ((AccessRules.Key(id) ?? AccessRules.Name(request.Name) ?? AccessRules.Keys(request.GroupIds)) is { } invalid) return invalid;
         if (await AccessRules.ExistingAsync(db.Set<RoleGroup>().Select(x => x.Id), request.GroupIds, ct) is { } unknown) return unknown;

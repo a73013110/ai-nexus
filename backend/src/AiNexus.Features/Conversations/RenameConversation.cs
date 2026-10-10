@@ -21,7 +21,7 @@ internal sealed class RenameConversation(NexusDbContext db, TimeProvider clock)
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPatch("/{id:guid}", async (Guid id, RenameConversationRequest body, ICurrentUser user, RenameConversation handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, body.Title, ct)).ToHttpResult())
-        .WithName("RenameConversation").Produces<ConversationDto>();
+        .WithName("RenameConversation");
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, Guid id, string title, CancellationToken ct)
     {

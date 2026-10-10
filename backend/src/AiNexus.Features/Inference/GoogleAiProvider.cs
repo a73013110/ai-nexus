@@ -13,7 +13,7 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
     private HttpRequestMessage Request(HttpMethod method, string path)
     {
         var key = options.Value.GoogleApiKey;
-        if (string.IsNullOrWhiteSpace(key)) throw new ApiException(503, "google_api_key_missing", "尚未設定後端 Google AI API key。");
+        if (string.IsNullOrWhiteSpace(key)) throw new ExternalServiceException(Error.Unavailable("google_api_key_missing"), "尚未設定後端 Google AI API key。");
         var request = new HttpRequestMessage(method, path);
         request.Headers.Add("x-goog-api-key", key);
         return request;
@@ -57,7 +57,7 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
         });
         using var response = await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
         RequireSuccess(response);
-        if (response.Content.Headers.ContentType?.MediaType != "text/event-stream") throw new ApiException(502, "provider_protocol_error", "模型服務未回傳預期的串流格式。");
+        if (response.Content.Headers.ContentType?.MediaType != "text/event-stream") throw new ExternalServiceException(Error.Upstream("provider_protocol_error"), "模型服務未回傳預期的串流格式。");
         using var reader = new StreamReader(await response.Content.ReadAsStreamAsync(ct));
         var frame = new StringBuilder();
         var completed = false;
@@ -73,7 +73,7 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
                     using var json = JsonDocument.Parse(frame.ToString());
                     frame.Clear();
                     var root = json.RootElement;
-                    if (root.TryGetProperty("error", out _)) throw new ApiException(502, "google_stream_error", "Google AI 串流失敗，請重新生成。");
+                    if (root.TryGetProperty("error", out _)) throw new ExternalServiceException(Error.Upstream("google_stream_error"), "Google AI 串流失敗，請重新生成。");
                     if (root.TryGetProperty("promptFeedback", out var feedback) && feedback.TryGetProperty("blockReason", out _)) throw Blocked();
                     if (root.TryGetProperty("usageMetadata", out var usage))
                     {
@@ -100,10 +100,10 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
                 if (line is null) break;
                 continue;
             }
-            if (line.Length > 262144 || frame.Length + line.Length > 262144) throw new ApiException(502, "provider_frame_too_large", "模型回傳的單筆串流資料超過限制。");
+            if (line.Length > 262144 || frame.Length + line.Length > 262144) throw new ExternalServiceException(Error.Upstream("provider_frame_too_large"), "模型回傳的單筆串流資料超過限制。");
             if (line.StartsWith("data:", StringComparison.Ordinal)) frame.AppendLine(line[5..].TrimStart(' '));
         }
-        if (!completed) throw new ApiException(502, "provider_stream_incomplete", "模型串流提前中斷，已保留收到的內容。");
+        if (!completed) throw new ExternalServiceException(Error.Upstream("provider_stream_incomplete"), "模型串流提前中斷，已保留收到的內容。");
         yield return new InferenceChunk("", true, input, output, finishReason, cached, reasoning);
     }
 
@@ -114,16 +114,16 @@ public sealed class GoogleAiProvider(HttpClient client, IOptions<InferenceOption
         parts.Add(new { text = message.Content });
         return parts;
     }
-    private static ApiException Blocked() => new(422, "google_response_blocked", "Google AI 未完成此回答，請調整提問後重試。");
+    private static ExternalServiceException Blocked() => new(Error.Unprocessable("google_response_blocked"), "Google AI 未完成此回答，請調整提問後重試。");
     private static void RequireSuccess(HttpResponseMessage response)
     {
         if (response.IsSuccessStatusCode) return;
         throw response.StatusCode switch
         {
-            HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => new ApiException(503, "google_key_rejected", "Google AI API key 權限無效，請確認後端設定。"),
-            HttpStatusCode.TooManyRequests => new ApiException(429, "google_quota_exceeded", "Google AI 額度或速率受限，請稍後重試。"),
-            HttpStatusCode.NotFound => new ApiException(503, "google_model_unavailable", "此 Google AI 模型目前無法使用。"),
-            _ => new ApiException(503, "google_service_unavailable", "Google AI 服務暫時無法使用，請稍後重試。")
+            HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden => new ExternalServiceException(Error.Unavailable("google_key_rejected"), "Google AI API key 權限無效，請確認後端設定。"),
+            HttpStatusCode.TooManyRequests => new ExternalServiceException(Error.RateLimited("google_quota_exceeded"), "Google AI 額度或速率受限，請稍後重試。"),
+            HttpStatusCode.NotFound => new ExternalServiceException(Error.Unavailable("google_model_unavailable"), "此 Google AI 模型目前無法使用。"),
+            _ => new ExternalServiceException(Error.Unavailable("google_service_unavailable"), "Google AI 服務暫時無法使用，請稍後重試。")
         };
     }
 }

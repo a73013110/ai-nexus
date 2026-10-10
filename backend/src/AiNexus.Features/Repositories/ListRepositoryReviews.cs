@@ -12,7 +12,7 @@ internal sealed class ListRepositoryReviews(NexusDbContext db, RepositoryService
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/reviews", async (string? repository, ICurrentUser user, ListRepositoryReviews handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, repository, ct)).ToHttpResult())
-        .WithName("ListRepositoryReviews").Produces<IReadOnlyList<RepositoryReviewDto>>();
+        .WithName("ListRepositoryReviews");
 
     public async Task<Result<IReadOnlyList<RepositoryReviewDto>>> HandleAsync(Guid owner, string? repository, CancellationToken ct)
     {

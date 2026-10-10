@@ -47,14 +47,19 @@ public sealed partial class BackgroundJobWorker(IServiceScopeFactory scopes, Sto
         try
         {
             if (job.CancelRequested) { execution.Cancel(); execution.Token.ThrowIfCancellationRequested(); }
-            if (job.Attempt > 6) throw new ApiException(409, "job_retry_limit", "任務重試次數已達上限。");
-            var handler = scope.ServiceProvider.GetServices<IBackgroundJobHandler>().SingleOrDefault(x => x.Kind == job.Kind) ?? throw new ApiException(409, "job_handler_missing", "任務類型目前無法處理。");
-            await handler.ExecuteAsync(new(db, job, lease), execution.Token);
+            var handler = scope.ServiceProvider.GetServices<IBackgroundJobHandler>().SingleOrDefault(x => x.Kind == job.Kind);
+            var outcome = job.Attempt > 6 ? JobsErrors.JobRetryLimit : handler is null ? JobsErrors.JobHandlerMissing
+                : await handler.ExecuteAsync(new(db, job, lease), execution.Token);
+            if (!outcome.IsSuccess)
+            {
+                status = "failed"; code = outcome.Error.Code;
+                issue = issues.Report(outcome.Error); message = Issues.Message(issue);
+            }
         }
         catch (OperationCanceledException) { status = "cancelled"; }
         catch (Exception ex)
         {
-            status = "failed"; code = (ex as ApiException)?.Code ?? "job_processing_failed";
+            status = "failed"; code = ex switch { ExternalServiceException external => external.Error.Code, _ => "job_processing_failed" };
             issue = issues.Report(ex, code); message = Issues.Message(issue);
         }
         finally { monitor.Cancel(); try { await heartbeat; } catch (OperationCanceledException) { } }

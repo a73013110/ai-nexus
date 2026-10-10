@@ -18,28 +18,30 @@ namespace AiNexus.Features.Quality.RetrievalEvaluations;
 
 /// <summary>
 /// Access and comparability checks shared by the retrieval evaluation slices and <see cref="RetrievalEvaluationHandler"/>.
-/// The checks re-run between job steps, so their failures stay exceptions that fail the job with the same code.
+/// The checks re-run between job steps; a failure fails the job with its code.
 /// </summary>
 public sealed class RetrievalEvaluationService(NexusDbContext db, RetrievalAuthorization authorization, AccessService features,
     EmbeddingProfiles profiles, IOptions<KnowledgeOptions> options, IOptions<InferenceOptions> inference)
 {
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
-    public async Task<RetrievalEvaluation> RequireAsync(Guid actor, Guid id, CancellationToken ct, bool unchanged = false)
+    public async Task<Result<RetrievalEvaluation>> RequireAsync(Guid actor, Guid id, CancellationToken ct, bool unchanged = false)
     {
-        var run = await db.Set<RetrievalEvaluation>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor, ct) ?? throw new ApiException(404, "retrieval_evaluation_missing", "找不到此檢索評測。");
-        var collections = Parse<Guid>(run.CollectionsJson); await RequireAccessAsync(actor, collections, ct);
+        var run = await db.Set<RetrievalEvaluation>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor, ct);
+        if (run is null) return QualityErrors.RetrievalMissing;
+        var collections = Parse<Guid>(run.CollectionsJson);
+        if (await RequireAccessAsync(actor, collections, ct) is { IsSuccess: false } denied) return denied.Error;
         if (unchanged)
         {
             var profile = await profiles.ActiveAsync(ct);
-            if (run.ConfigurationFingerprint != await FingerprintAsync(profile, collections, ct)) throw new ApiException(409, "retrieval_evaluation_changed", "索引、文件版本或檢索設定已變更，請重新建立評測以取得可比較結果。");
+            if (run.ConfigurationFingerprint != await FingerprintAsync(profile, collections, ct)) return QualityErrors.RetrievalChanged;
         }
         return run;
     }
-    internal async Task RequireAccessAsync(Guid actor, IReadOnlyList<Guid> collections, CancellationToken ct)
+    internal async Task<Result> RequireAccessAsync(Guid actor, IReadOnlyList<Guid> collections, CancellationToken ct)
     {
-        if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "quality")) throw new ApiException(403, "evaluation_access_revoked", "品質評測功能權限已停用。");
-        await authorization.CollectionsAsync(actor, collections, ct);
+        if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "quality")) return QualityErrors.AccessRevoked;
+        return await authorization.CollectionsAsync(actor, collections, ct);
     }
     internal async Task<string> FingerprintAsync(EmbeddingProfile profile, IReadOnlyList<Guid> collections, CancellationToken ct)
     {

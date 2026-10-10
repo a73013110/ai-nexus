@@ -23,7 +23,8 @@ public static class IdentityConsistency
             !http.Request.Path.StartsWithSegments("/api/v1/auth"))
         {
             // An operation submitted as the target must never execute under the restored administrator.
-            throw new ApiException(409, "identity_changed", "");
+            await Problems.WriteAsync(http, Problems.Status(IdentityErrors.IdentityChanged.Kind), IdentityErrors.IdentityChanged.Code);
+            return;
         }
         await next(http);
     });

@@ -24,19 +24,21 @@
 internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("", async (SavePromptRequest body, ICurrentUser user, SavePromptTemplate handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, null, body, ct)).ToHttpResult())
-        .WithName("CreatePromptTemplate").Produces<PromptTemplateDto>();
+        .MapPost("", (SavePromptRequest body, ICurrentUser user, SavePromptTemplate handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, null, body, ct).ToHttpResultAsync())
+        .WithName("CreatePromptTemplate");
 
     public async Task<Result<PromptTemplateDto>> HandleAsync(...) { ... }
 }
 ```
 
-- handler 有相依時寫成類別並在模組註冊為 scoped；只有幾行時可直接寫在 `Map` 的 lambda（注入 `NexusDbContext`）。
+- 每個 use case 都是 `internal sealed class`：靜態 `Map*(RouteGroupBuilder)` 宣告端點，實例 `HandleAsync`（同步時 `Handle`）做事，相依由建構子注入。`EndpointHandlers` 依這個形狀自動註冊為 scoped，模組的 `AddServices` 只註冊共用服務（`SliceTests` 檢查形狀）。同一資源有多個端點時用多個 `Map*` 與具名方法（如 `BrowseRepositories`）。
+- lambda 回傳 `TypedResults`：`Result` 用 `ToHttpResultAsync()`（成功 200／204，失敗 problem）；成功不是 200 時傳 mapper，如 `ToHttpResultAsync(x => TypedResults.Accepted(...))`。回應型別由回傳型別進入 OpenAPI，不寫 `.Produces<T>()`；只有 SSE（`text/event-stream`）與自行寫入回應的下載例外。
+- lambda 直接回傳 `ToHttpResultAsync()` 時不要加 `async`，否則回傳型別變成 `Task<Task<…>>`，OpenAPI 產生錯誤的 schema。
+- SSE 端點用 `ToStreamResultAsync(http)`：串流開始前的失敗回 problem，開始後改寫一個 `error` 事件。
 - 使用者一律用 `ICurrentUser`（同步 `Id`），不要在新程式呼叫 `CurrentUser.GetAsync`。
 - 時間一律用注入的 `TimeProvider`，不要直接呼叫 `DateTimeOffset.UtcNow`。
 - 直接使用 `NexusDbContext`；不要新增 repository 或只轉送呼叫的 service。
-- lambda 回傳 `IResult`（`Results.*` 或 `ToHttpResult()`），回應型別以 `.Produces<T>()` 宣告。
 - 一個使用者能放大成本的端點（送出、上傳、外部呼叫、匯出）在模組 `AddServices` 用 `options.AddPerUserLimit(名稱, 每分鐘次數)` 註冊，端點加 `.RequireRateLimiting(名稱)`。
 - 日誌寫成 `[LoggerMessage]` 方法，EventId 固定且唯一，見 [LOG_EVENTS](LOG_EVENTS.md)；直接呼叫 `LogWarning` 等會編譯失敗。
 
@@ -44,7 +46,9 @@ internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
 
 - 預期內的失敗（找不到、衝突、無權限、配額）回傳 `Result<T>`／`Result`，錯誤定義在 `<Module>Errors`：`Error.NotFound("template_not_found")`。代碼必須存在於 `PublicErrorCatalog`，前後端提示由 `DiagnosticTests` 檢查一致。
 - HTTP 狀態碼只由 `Problems.Status(ErrorKind)` 決定。
-- 外部系統或基礎設施故障（資料庫連線、逾時）仍然丟例外，由診斷 middleware 記錄並回傳 issue code。
+- 不要為預期內的失敗丟例外。呼叫端傳遞失敗：`if (await X(...) is { IsSuccess: false } failed) return failed.Error;`；背景工作的 `ExecuteAsync` 回傳的錯誤會記錄成任務的錯誤代碼。
+- 外部系統故障或拒絕（模型供應商、Gitea、外部資料庫）發生在無法回傳 `Result` 的位置（HTTP client、串流中途、探測）時，丟 `ExternalServiceException(Error, detail)`：狀態碼依 `Error.Kind`，`detail` 只進日誌。
+- 其他例外（資料庫連線、程式錯誤）由診斷 middleware 記錄並回 503 與 issue code。
 - `T` 是介面時用 `Result<T>.Ok(value)`（C# 不允許介面的隱含轉換）。
 
 ## 請求驗證
@@ -67,14 +71,4 @@ internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
 
 ## 跨模組
 
-- 只透過對方模組的 `public` 服務或 DTO。模組之間不可有循環依賴；造成循環時的處理順序見 [模組邊界](MODULE_BOUNDARIES.md)。
-
-### 直接呼叫或 domain event
-
-- **直接呼叫**：需要對方的回傳值、要依結果決定 HTTP 回應或是否繼續（查詢、授權、配額、排程任務、計費預約），或是對方的檢查必須在自己寫入之前完成。
-- **domain event**：「A 發生後 B 要跟著處理」，A 不需要知道結果，B 的寫入要和 A 同一個交易，例如刪除對話／成果時撤銷分享、刪除專案時解除成果的專案連結。只有在依賴方向能因此反轉、避免循環時才改；如果呼叫端仍為了查詢依賴對方，改成事件沒有好處。
-- 事件是發布模組裡過去式命名的 `public sealed record`，實作 `IDomainEvent`，放在引發它的 slice 檔（如 `DeleteConversation.cs` 的 `ConversationDeleted`）。訂閱模組實作 `IDomainEventHandler<T>`，在自己的 `AddServices` 以 `AddDomainEventHandler<TEvent, THandler>()` 註冊；訂閱方引用發布方，不可反過來，也不可因此形成循環。
-- 發布端注入 scoped `DomainEvents`，在呼叫 `SaveChangesAsync` 前 `Raise(...)`。`SaveChangesAsync` 寫入前，`DomainEventInterceptor` 先分派所有待處理事件（handler 再引發的事件也會處理，最多 `DomainEvents.MaxRounds` 輪），`AuditEventInterceptor` 再整理稽核列，所以 handler 新增的 entity 和稽核列與發布端一起儲存。沒有交易時會自動開一個交易包住分派與寫入。
-- handler 在同一個 `NexusDbContext` 與交易內、發布端的變更寫入之前執行：可以追蹤 entity、使用 `ExecuteUpdate`／`ExecuteDelete`（立即在目前交易執行），但不可呼叫 `SaveChanges` 或自行開關交易。handler 不保證先後順序，彼此不可依賴。
-- `Raise` 之後到 `SaveChangesAsync` 之間不要提早 return；分派失敗會清掉待處理事件。同步的 `SaveChanges` 遇到待處理事件會丟例外。
-- 需要在交易提交後非同步處理的副作用（外部呼叫、檔案刪除）不用 domain event，交給既有的 durable job。
+- 只透過對方模組的 `public` 服務或 DTO。模組之間不可有循環依賴；造成循環時的處理順序，以及何時直接呼叫、何時用 domain event，見 [模組邊界](MODULE_BOUNDARIES.md)。

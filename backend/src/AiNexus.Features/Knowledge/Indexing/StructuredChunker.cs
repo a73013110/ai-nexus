@@ -12,7 +12,7 @@ public sealed partial class StructuredChunker(IOptions<KnowledgeOptions> options
 {
     public const int Version = 1;
     private sealed record Block(int Page, string Heading, string Text, bool Boundary, bool Table);
-    public IReadOnlyList<StructuredChunk> Chunk(IReadOnlyList<DocumentPage> pages, ChunkerSnapshot? configuration = null)
+    public Result<IReadOnlyList<StructuredChunk>> Chunk(IReadOnlyList<DocumentPage> pages, ChunkerSnapshot? configuration = null)
     {
         var settings = configuration?.Options() ?? options.Value; var blocks = new List<Block>(); var headings = new SortedDictionary<int, string>();
         foreach (var page in pages.OrderBy(x => x.PageNumber))
@@ -31,7 +31,7 @@ public sealed partial class StructuredChunker(IOptions<KnowledgeOptions> options
                 if (path.Length > 400) path = SafePrefix(path, 400);
                 var table = line.Contains('|') || line.Contains('\t');
                 if (table && (TokenEstimator.Estimate(line) > settings.ChunkMaxTokens || line.Length > 4000))
-                    throw new ApiException(422, "table_row_too_long", "表格單列超過片段上限，請先拆分表格欄位。");
+                    return KnowledgeErrors.TableRowTooLong;
                 var parts = table ? [line] : Sentences().Matches(line).Select(x => x.Value.Trim()).Where(x => x.Length > 0).ToArray();
                 foreach (var part in parts)
                 {
@@ -85,7 +85,7 @@ public sealed partial class StructuredChunker(IOptions<KnowledgeOptions> options
             }
             Flush(false);
         }
-        return result;
+        return Result<IReadOnlyList<StructuredChunk>>.Ok(result);
     }
     private static string SafePrefix(string text, int length)
     {

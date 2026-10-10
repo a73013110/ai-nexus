@@ -122,7 +122,8 @@ public sealed class RuntimeTraffic : IDisposable
     public void SampleResources(RuntimeResources sample) { lock (gate) resources = sample; }
     public MonitoringSnapshot Snapshot(int minutes)
     {
-        if (minutes is not (1 or 5 or 15)) throw new AiNexus.Platform.Errors.ApiException(400, "invalid_request", "");
+        // Callers validate the window with MonitoringReads.ValidWindow.
+        if (!MonitoringReads.ValidWindow(minutes)) throw new ArgumentOutOfRangeException(nameof(minutes));
         lock (gate)
         {
             var now = clock.GetUtcNow(); Prune(now);

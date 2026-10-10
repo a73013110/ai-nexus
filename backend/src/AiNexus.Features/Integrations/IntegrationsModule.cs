@@ -15,8 +15,6 @@ public sealed class IntegrationsModule : IFeatureModule
         services.AddOptions<IntegrationsOptions>().Configure<IConfiguration>((o, c) => IntegrationsSettings.Bind(c, o)).ValidateOnStart();
         services.AddSingleton<IValidateOptions<IntegrationsOptions>, IntegrationsOptionsValidator>();
         services.AddScoped<SourceGateway>();
-        services.AddScoped<ImportSourceRecord>();
-        services.AddScoped<StartSourceChat>();
         services.AddScoped<IControlledSourceAdapter, GdwebSource>();
         services.AddScoped<IControlledSourceAdapter, MeihoSource>();
         services.AddFeaturePolicy(FeatureIds.Integrations);

@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using AiNexus.Features.Identity;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -38,24 +37,25 @@ public sealed record DiagnosticSummary(Guid LogId, DateTimeOffset At, string Lev
 public sealed record DiagnosticPage(IReadOnlyList<DiagnosticSummary> Events, string? NextCursor, DateTimeOffset From, DateTimeOffset To, DiagnosticHealthDto Health);
 public sealed record DiagnosticDetail(DiagnosticSummary Event, string Service, string Environment, string Version, Guid? UserId, string PropertiesJson, string? ExceptionType, string? ExceptionDetail);
 
-public sealed class DiagnosticQuery(NexusDbContext db, CurrentUser current, IDataProtectionProvider protection, IOptions<DiagnosticOptions> options, DiagnosticHealth health)
+/// <summary>Validated, audited reads of the stored diagnostic events for the log slices.</summary>
+public sealed class DiagnosticQuery(NexusDbContext db, IDataProtectionProvider protection, IOptions<DiagnosticOptions> options, DiagnosticHealth health, TimeProvider clock)
 {
     private readonly IDataProtector cursorProtector = protection.CreateProtector("AiNexus.Diagnostics.Cursor.v1");
     private sealed record CursorData(DateTimeOffset At, Guid LogId, string Fingerprint, Guid UserId);
     public static DiagnosticSummary Describe(DiagnosticEvent x, bool detail = false) => new(x.LogId, x.At, x.Level.ToString(), x.Category, x.EventId, x.EventName, x.MessageTemplate,
         x.IssueCode, x.TraceId, x.SpanId, x.RequestId, x.OperationId, x.JobId, x.RunId, x.Attempt, x.Method, x.Route, x.StatusCode, x.DurationMs, x.ExternalService, x.ErrorCode, x.Instance, x.UntrustedClient, DiagnosticMessage.Render(x, detail));
-    private (DateTimeOffset From, DateTimeOffset To) Validate(DiagnosticFilter filter, bool export = false)
+    private Result<(DateTimeOffset From, DateTimeOffset To)> Validate(DiagnosticFilter filter, bool export = false)
     {
-        var to = (filter.To ?? DateTimeOffset.UtcNow).ToUniversalTime(); var from = (filter.From ?? to.AddDays(-1)).ToUniversalTime();
+        var to = (filter.To ?? clock.GetUtcNow()).ToUniversalTime(); var from = (filter.From ?? to.AddDays(-1)).ToUniversalTime();
         if (from >= to || to - from > TimeSpan.FromDays(export ? options.Value.MaxExportDays : options.Value.MaxQueryDays)
             || filter.Take is < 1 or > 100 || filter.Level is < LogLevel.Trace or > LogLevel.Critical || filter.EventId < 0
             || filter.Category?.Length > 180 || filter.EventName?.Length > 100 || filter.ErrorCode?.Length > 80 || filter.Instance?.Length > 100
             || filter.SortDirection is not (null or "asc" or "desc")
             || filter.Text?.Length > 72 || filter.Cursor?.Length > 2048 || filter.IssueCode is not null && !Issues.ValidCode(filter.IssueCode)
             || filter.TraceId is not null && (filter.TraceId.Length != 32 || !filter.TraceId.All(char.IsAsciiHexDigit)))
-            throw new ApiException(400, "log_filter_invalid", "日誌篩選格式或範圍超過限制。");
+            return DiagnosticsErrors.FilterInvalid;
         // Text scans have an explicit narrow time bound; exact correlation lookups use ordinary indexes.
-        if (!string.IsNullOrWhiteSpace(filter.Text) && to - from > TimeSpan.FromDays(1)) throw new ApiException(400, "log_text_range", "文字搜尋限一天內。");
+        if (!string.IsNullOrWhiteSpace(filter.Text) && to - from > TimeSpan.FromDays(1)) return DiagnosticsErrors.TextRange;
         return (from, to);
     }
     private IQueryable<DiagnosticEvent> Filter(DiagnosticFilter f, DateTimeOffset from, DateTimeOffset to)
@@ -75,10 +75,12 @@ public sealed class DiagnosticQuery(NexusDbContext db, CurrentUser current, IDat
         if (f.Text is { Length: > 0 } text) query = query.Where(x => x.MessageTemplate.Contains(text));
         return query;
     }
-    public async Task<DiagnosticPage> ListAsync(DiagnosticFilter filter, CancellationToken ct)
+    public async Task<Result<DiagnosticPage>> ListAsync(Guid actor, DiagnosticFilter filter, CancellationToken ct)
     {
         using var suppress = DiagnosticSuppression.Enter();
-        var (from, to) = Validate(filter); var actor = (await current.GetAsync(ct)).Id;
+        var range = Validate(filter);
+        if (!range.IsSuccess) return range.Error;
+        var (from, to) = range.Value;
         await AuditAsync(actor, "logs.query", null, filter, ct);
         var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { from, to, filter.Level, filter.Category, filter.EventId, filter.EventName, filter.IssueCode, filter.TraceId, filter.JobId, filter.RunId, filter.OperationId, filter.ErrorCode, filter.Instance, filter.Text, sortDirection = filter.SortDirection ?? "desc", take = filter.Take ?? 50 }))));
         var query = Filter(filter, from, to); db.Database.SetCommandTimeout(options.Value.SqlTimeoutSeconds);
@@ -86,8 +88,8 @@ public sealed class DiagnosticQuery(NexusDbContext db, CurrentUser current, IDat
         {
             CursorData cursor;
             try { cursor = JsonSerializer.Deserialize<CursorData>(cursorProtector.Unprotect(token)) ?? throw new JsonException(); }
-            catch (Exception e) when (e is CryptographicException or JsonException or FormatException) { throw new ApiException(400, "log_cursor_invalid", "分頁已失效，請重新查詢。"); }
-            if (cursor.UserId != actor || cursor.Fingerprint != fingerprint) throw new ApiException(400, "log_cursor_invalid", "分頁與查詢條件不同，請重新查詢。");
+            catch (Exception e) when (e is CryptographicException or JsonException or FormatException) { return DiagnosticsErrors.CursorInvalid; }
+            if (cursor.UserId != actor || cursor.Fingerprint != fingerprint) return DiagnosticsErrors.CursorInvalid;
             query = filter.SortDirection == "asc"
                 ? query.Where(x => x.At > cursor.At || x.At == cursor.At && x.LogId.CompareTo(cursor.LogId) > 0)
                 : query.Where(x => x.At < cursor.At || x.At == cursor.At && x.LogId.CompareTo(cursor.LogId) < 0);
@@ -101,32 +103,36 @@ public sealed class DiagnosticQuery(NexusDbContext db, CurrentUser current, IDat
             Method = x.Method, Route = x.Route, StatusCode = x.StatusCode, DurationMs = x.DurationMs, ExternalService = x.ExternalService, ErrorCode = x.ErrorCode, Instance = x.Instance, UntrustedClient = x.UntrustedClient
         }).Take(take + 1).ToArrayAsync(ct);
         var last = rows.Take(take).LastOrDefault();
-        return new(rows.Take(take).Select(x => Describe(x)).ToArray(), rows.Length > take && last is not null ? cursorProtector.Protect(JsonSerializer.Serialize(new CursorData(last.At, last.LogId, fingerprint, actor))) : null, from, to, health.Snapshot());
+        return new DiagnosticPage(rows.Take(take).Select(x => Describe(x)).ToArray(), rows.Length > take && last is not null ? cursorProtector.Protect(JsonSerializer.Serialize(new CursorData(last.At, last.LogId, fingerprint, actor))) : null, from, to, health.Snapshot());
     }
     private static IOrderedQueryable<DiagnosticEvent> Order(IQueryable<DiagnosticEvent> query, string? direction) =>
         direction == "asc" ? query.OrderBy(x => x.At).ThenBy(x => x.LogId) : query.OrderByDescending(x => x.At).ThenByDescending(x => x.LogId);
-    public async Task<DiagnosticDetail> DetailAsync(Guid id, CancellationToken ct)
+    public async Task<Result<DiagnosticDetail>> DetailAsync(Guid actor, Guid id, CancellationToken ct)
     {
-        using var suppress = DiagnosticSuppression.Enter(); await AuditAsync((await current.GetAsync(ct)).Id, "logs.detail", id, null, ct);
+        using var suppress = DiagnosticSuppression.Enter(); await AuditAsync(actor, "logs.detail", id, null, ct);
         db.Database.SetCommandTimeout(options.Value.SqlTimeoutSeconds);
-        var item = await db.Set<DiagnosticEvent>().AsNoTracking().SingleOrDefaultAsync(x => x.LogId == id, ct) ?? throw new ApiException(404, "log_not_found", "找不到此日誌。");
-        return new(Describe(item, detail: true), item.Service, item.Environment, item.Version, item.UserId, item.PropertiesJson, item.ExceptionType, item.ExceptionDetail);
+        var item = await db.Set<DiagnosticEvent>().AsNoTracking().SingleOrDefaultAsync(x => x.LogId == id, ct);
+        if (item is null) return DiagnosticsErrors.NotFound;
+        return new DiagnosticDetail(Describe(item, detail: true), item.Service, item.Environment, item.Version, item.UserId, item.PropertiesJson, item.ExceptionType, item.ExceptionDetail);
     }
-    public async Task<DiagnosticHealthDto> HealthAsync(CancellationToken ct)
+    public async Task<DiagnosticHealthDto> HealthAsync(Guid actor, CancellationToken ct)
     {
         using var suppress = DiagnosticSuppression.Enter();
-        await AuditAsync((await current.GetAsync(ct)).Id, "logs.health", null, null, ct); return health.Snapshot();
+        await AuditAsync(actor, "logs.health", null, null, ct); return health.Snapshot();
     }
-    public async Task<string> ExportAsync(DiagnosticFilter filter, CancellationToken ct)
+    public async Task<Result<string>> ExportAsync(Guid actor, DiagnosticFilter filter, CancellationToken ct)
     {
-        using var suppress = DiagnosticSuppression.Enter(); var (from, to) = Validate(filter, export: true);
-        if (filter.Cursor is { Length: > 0 }) throw new ApiException(400, "log_export_cursor", "匯出請使用完整時間範圍。");
-        await AuditAsync((await current.GetAsync(ct)).Id, "logs.export", null, filter, ct);
+        using var suppress = DiagnosticSuppression.Enter();
+        var range = Validate(filter, export: true);
+        if (!range.IsSuccess) return range.Error;
+        var (from, to) = range.Value;
+        if (filter.Cursor is { Length: > 0 }) return DiagnosticsErrors.ExportCursor;
+        await AuditAsync(actor, "logs.export", null, filter, ct);
         db.Database.SetCommandTimeout(options.Value.SqlTimeoutSeconds);
         var rows = await Order(Filter(filter, from, to), filter.SortDirection)
             .Select(x => new { x.LogId, x.At, x.Level, x.Category, x.EventName, x.IssueCode, x.TraceId, x.JobId, x.RunId, x.ErrorCode, x.Instance })
             .Take(options.Value.MaxExportRows + 1).ToArrayAsync(ct);
-        if (rows.Length > options.Value.MaxExportRows) throw new ApiException(400, "log_export_limit", "匯出資料量超過限制，請縮小範圍。");
+        if (rows.Length > options.Value.MaxExportRows) return DiagnosticsErrors.ExportLimit;
         var csv = new StringBuilder("\uFEFFLogId,UTC,Level,Category,Event,IssueCode,TraceId,JobId,RunId,ErrorCode,Instance\r\n");
         foreach (var row in rows) csv.AppendLine(string.Join(",", new object?[] { row.LogId, row.At.ToUniversalTime().ToString("O"), row.Level, row.Category, row.EventName, row.IssueCode, row.TraceId, row.JobId, row.RunId, row.ErrorCode, row.Instance }.Select(Csv)));
         return csv.ToString();

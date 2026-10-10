@@ -26,7 +26,7 @@ internal sealed class UpdateConversationSettings(NexusDbContext db, GenerationSc
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPatch("/{id:guid}/settings", async (Guid id, ConversationSettingsRequest body, ICurrentUser user, UpdateConversationSettings handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
-        .WithName("UpdateConversationSettings").Produces<ConversationDto>();
+        .WithName("UpdateConversationSettings");
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, Guid id, ConversationSettingsRequest request, CancellationToken ct)
     {

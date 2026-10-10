@@ -17,7 +17,7 @@ internal sealed class ListActivityAudit(NexusDbContext db)
     public static void Map(RouteGroupBuilder audit) => audit
         .MapGet("", async (long? before, string? search, string? action, string? result, DateTimeOffset? from, DateTimeOffset? until, string? category, string? traceId, ListActivityAudit handler, CancellationToken ct) =>
             (await handler.HandleAsync(before, search, action, result, from, until, category, traceId, ct)).ToHttpResult())
-        .WithName("ListAdminAudit").Produces<IReadOnlyList<AuditDto>>();
+        .WithName("ListAdminAudit");
 
     public async Task<Result<IReadOnlyList<AuditDto>>> HandleAsync(long? before, string? search, string? action, string? result, DateTimeOffset? from, DateTimeOffset? until, string? category, string? traceId, CancellationToken ct)
     {

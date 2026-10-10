@@ -25,12 +25,13 @@ internal sealed class ClientIssueRequestValidator : RequestValidator<ClientIssue
 /// An untrusted browser report of an unhandled exception or rejection, logged once per user and fingerprint a minute.
 /// Only the kind and a hash reach the log; the issue code is accepted when the diagnostic queue admits the event.
 /// </summary>
-internal static partial class ReportClientIssue
+internal sealed partial class ReportClientIssue(ClientIssueDeduplication dedup, ILogger<ClientIssueDeduplication> logger)
 {
     public static void Map(RouteGroupBuilder api) => api
-        .MapPost("/client-issues", (ClientIssueRequest request, ICurrentUser user, ClientIssueDeduplication dedup, ILogger<ClientIssueDeduplication> logger) =>
-            Results.Ok(dedup.Record(user.Id, request.Kind + request.Fingerprint, code => Log(logger, user.Id, request, code))))
-        .RequireRateLimiting(DiagnosticsModule.ClientIssueRateLimit).WithRequestBodyLimit(2048).WithName("ReportClientIssue").Produces<ClientIssueResponse>();
+        .MapPost("/client-issues", (ClientIssueRequest request, ICurrentUser user, ReportClientIssue handler) => TypedResults.Ok(handler.Handle(user.Id, request)))
+        .RequireRateLimiting(DiagnosticsModule.ClientIssueRateLimit).WithRequestBodyLimit(2048).WithName("ReportClientIssue");
+
+    public ClientIssueResponse Handle(Guid user, ClientIssueRequest request) => dedup.Record(user, request.Kind + request.Fingerprint, code => Log(logger, user, request, code));
 
     private static bool Log(ILogger logger, Guid user, ClientIssueRequest request, string code)
     {

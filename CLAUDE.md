@@ -9,8 +9,8 @@
 
 | 修改內容 | 先讀 |
 |---|---|
-| 後端 slice、錯誤、驗證、domain event、軟刪除 | `docs/BACKEND_CONVENTIONS.md` |
-| 模組邊界、跨模組依賴 | `docs/MODULE_BOUNDARIES.md` |
+| 後端 slice、錯誤、驗證、軟刪除 | `docs/BACKEND_CONVENTIONS.md` |
+| 模組邊界、跨模組依賴、domain event | `docs/MODULE_BOUNDARIES.md` |
 | 推論、背景工作 | `docs/ARCHITECTURE.md` |
 | 後端測試、`NexusFactory` | `docs/BACKEND_TESTING.md` |
 | 日誌事件、EventId | `docs/LOG_EVENTS.md` |

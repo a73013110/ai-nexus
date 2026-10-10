@@ -50,16 +50,16 @@ public sealed class GoogleAiTests
     public async Task GoogleErrorsAreActionableAndNeverEchoThePrivateResponse(int status, string code)
     {
         var provider = Provider(new Handler(_ => new((HttpStatusCode)status) { Content = new StringContent("private server detail with fixture-only-key") }));
-        var error = await Assert.ThrowsAsync<ApiException>(() => provider.InstalledModelsAsync(CancellationToken.None));
-        Assert.Equal(code, error.Code); Assert.DoesNotContain("fixture-only-key", error.Message);
+        var error = await Assert.ThrowsAsync<ExternalServiceException>(() => provider.InstalledModelsAsync(CancellationToken.None));
+        Assert.Equal(code, error.Error.Code); Assert.DoesNotContain("fixture-only-key", error.Message);
     }
 
     [Fact]
     public async Task TruncatedGoogleStreamCannotPretendCompletion()
     {
         var provider = Provider(new Handler(_ => { var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"partial\"}]}}]}\n\n") }; response.Content.Headers.ContentType = new("text/event-stream"); return response; }));
-        var error = await Assert.ThrowsAsync<ApiException>(async () => { await foreach (var chunk in provider.StreamAsync("gemma-4-26b-a4b-it", [new("user", "test")], new(8192, 512, .6, "system"), CancellationToken.None)) { } });
-        Assert.Equal("provider_stream_incomplete", error.Code);
+        var error = await Assert.ThrowsAsync<ExternalServiceException>(async () => { await foreach (var chunk in provider.StreamAsync("gemma-4-26b-a4b-it", [new("user", "test")], new(8192, 512, .6, "system"), CancellationToken.None)) { } });
+        Assert.Equal("provider_stream_incomplete", error.Error.Code);
     }
 
     [Theory]

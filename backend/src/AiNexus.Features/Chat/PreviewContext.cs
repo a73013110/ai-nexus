@@ -9,6 +9,7 @@ using FluentValidation;
 using Microsoft.Extensions.Options;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Chat;
 
@@ -28,19 +29,37 @@ internal sealed class ContextPreviewRequestValidator : RequestValidator<ContextP
 internal sealed class PreviewContext(ConversationService conversations, AttachmentService attachments, ModelCatalog models, ContextBuilder context, IOptions<InferenceOptions> options, ModelPolicyService policies, KnowledgeRetrieval knowledge, ProjectService projects)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPost("/context", async (ContextPreviewRequest body, ICurrentUser user, PreviewContext handler, CancellationToken ct) =>
-            Results.Ok(await handler.HandleAsync(user.Id, body, ct)))
-        .WithRequestBodyLimit(InferenceModule.PromptBodyLimit).WithName("PreviewContext").Produces<ContextUsageDto>();
+        .MapPost("/context", (ContextPreviewRequest body, ICurrentUser user, PreviewContext handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
+        .WithRequestBodyLimit(InferenceModule.PromptBodyLimit).WithName("PreviewContext");
 
-    public async Task<ContextUsageDto> HandleAsync(Guid owner, ContextPreviewRequest body, CancellationToken ct)
+    public async Task<Result<ContextUsageDto>> HandleAsync(Guid owner, ContextPreviewRequest body, CancellationToken ct)
     {
-        var instruction = body.ConversationId is Guid id ? (await conversations.OwnedAsync(owner, id, ct)).SystemInstruction : "";
-        var project = body.ConversationId is Guid projectConversation ? await projects.ContextAsync(owner, (await conversations.OwnedAsync(owner, projectConversation, ct)).ProjectId, ct) : "";
+        var instruction = "";
+        var project = "";
+        if (body.ConversationId is Guid id)
+        {
+            var conversation = await conversations.OwnedAsync(owner, id, ct);
+            if (!conversation.IsSuccess) return conversation.Error;
+            instruction = conversation.Value.SystemInstruction;
+            var projectContext = await projects.ContextAsync(owner, conversation.Value.ProjectId, ct);
+            if (!projectContext.IsSuccess) return projectContext.Error;
+            project = projectContext.Value;
+        }
         var files = await attachments.RequireAsync(owner, body.AttachmentIds, ct);
+        if (!files.IsSuccess) return files.Error;
         var model = await models.RequireAsync(body.ModelId, ct);
-        await policies.RequireAsync(owner, model.Id, ct, checkQuota: false);
-        var reserved = body.ConversationId is Guid cid ? await knowledge.ReservedContextAsync(owner, cid, ct) : 0;
+        if (!model.IsSuccess) return model.Error;
+        if (await policies.RequireAsync(owner, model.Value.Id, ct, checkQuota: false) is { IsSuccess: false } refused) return refused.Error;
+        var reserved = 0;
+        if (body.ConversationId is Guid cid)
+        {
+            var knowledgeTokens = await knowledge.ReservedContextAsync(owner, cid, ct);
+            if (!knowledgeTokens.IsSuccess) return knowledgeTokens.Error;
+            reserved = knowledgeTokens.Value;
+        }
         var webReserved = body.WebSearch ? WebSearchService.ReservedTokens : 0;
-        return (await context.PreviewAsync(body.ConversationId, body.ParentMessageId, body.Prompt, new(model.ContextTokens, model.MaxOutputTokens, .6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, instruction) + project + new string(' ', reserved + webReserved), SupportsImages: model.SupportsImages), ct, files)) with { ReservedKnowledgeTokens = reserved, ReservedWebSearchTokens = webReserved };
+        var usage = await context.PreviewAsync(body.ConversationId, body.ParentMessageId, body.Prompt, new(model.Value.ContextTokens, model.Value.MaxOutputTokens, .6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, instruction) + project + new string(' ', reserved + webReserved), SupportsImages: model.Value.SupportsImages), ct, files.Value);
+        return usage.IsSuccess ? usage.Value with { ReservedKnowledgeTokens = reserved, ReservedWebSearchTokens = webReserved } : usage;
     }
 }

@@ -14,9 +14,9 @@ internal sealed class SetUserModelPolicy(NexusDbContext db, AdministrativeAudit 
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPut("/users/{id:guid}/model-policy", async (Guid id, ModelPolicyRequest body, SetUserModelPolicy handler, CancellationToken ct) => (await handler.HandleAsync(id, body, ct)).ToHttpResult())
-        .WithName("SetUserModelPolicy").Produces(204);
+        .WithName("SetUserModelPolicy");
 
-    public Task<Result> HandleAsync(Guid id, ModelPolicyRequest request, CancellationToken ct) => audit.TryMutateAsync("admin.user_model_policy", id, id.ToString(), async () =>
+    public Task<Result> HandleAsync(Guid id, ModelPolicyRequest request, CancellationToken ct) => audit.MutateAsync("admin.user_model_policy", id, id.ToString(), async () =>
     {
         if (policies.Check(request) is { } invalid) return invalid;
         // Takes the user's row lock and confirms the user is not deleted.

@@ -63,8 +63,9 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
         if (!ValidRecordId(id)) return IntegrationsErrors.RecordIdInvalid;
         var target = await AuthorizeAsync(actor, source, ct);
         if (!target.IsSuccess) return target.Error;
-        var row = await SafeAsync(source, () => target.Value.Adapter.ReadAsync(target.Value.Actor, id, target.Value.Options.CommandTimeoutSeconds, ct), ct);
-        if (row is null) return IntegrationsErrors.RecordMissing;
+        var read = await SafeAsync(source, () => target.Value.Adapter.ReadAsync(target.Value.Actor, id, target.Value.Options.CommandTimeoutSeconds, ct), ct);
+        if (!read.IsSuccess) return read.Error;
+        var row = read.Value;
         if (row.Body.Length > 16000 || row.Record.Title.Length is < 1 or > 120 || row.Record.Revision.Length is < 1 or > 160 || row.Record.Id != id || row.SourceId != source || !Catalog.Single(x => x.Id == source).Kinds.Contains(row.Record.Kind))
             return IntegrationsErrors.ContractInvalid;
         var still = await AuthorizeAsync(actor, source, ct, fresh: true);
@@ -95,7 +96,7 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
     {
         using var scope = logger.BeginScope(new Dictionary<string, object?> { ["ExternalService"] = source });
         try { return await work(); }
-        catch (DbException ex) { throw new ApiException(503, "source_unavailable", "唯讀來源目前無法查詢，請確認連線、帳號權限與授權 view。", ex); }
-        catch (OperationCanceledException ex) { ct.ThrowIfCancellationRequested(); throw new ApiException(504, "source_timeout", "來源查詢逾時，請縮小搜尋範圍。", ex); }
+        catch (DbException ex) { throw new ExternalServiceException(Error.Unavailable("source_unavailable"), "唯讀來源目前無法查詢，請確認連線、帳號權限與授權 view。", ex); }
+        catch (OperationCanceledException ex) { ct.ThrowIfCancellationRequested(); throw new ExternalServiceException(Error.Timeout("source_timeout"), "來源查詢逾時，請縮小搜尋範圍。", ex); }
     }
 }

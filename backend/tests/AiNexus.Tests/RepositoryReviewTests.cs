@@ -4,7 +4,6 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
-using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Repositories;
@@ -123,7 +122,7 @@ public sealed class RepositoryReviewTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>(); var row = await db.Set<RepositoryReview>().SingleAsync(x => x.Id == review.Id);
-            row.SnapshotJson = JsonSerializer.Serialize(new ReviewSnapshot(1, "舊版固定檢閱指令", RepositoryReviewService.Split(source.Diff, 1000)));
+            row.SnapshotJson = JsonSerializer.Serialize(new ReviewSnapshot(1, "舊版固定檢閱指令", RepositoryReviewService.Split(source.Diff, 1000).Value!));
             db.Add(new RepositoryReviewResult { ReviewId = review.Id, Ordinal = 0, Output = "已完成的舊版區段" }); await db.SaveChangesAsync();
         }
         await Process(factory);
@@ -137,13 +136,13 @@ public sealed class RepositoryReviewTests
     {
         var text = string.Concat(Enumerable.Repeat("+中文🙂保留整行內容\n", 300));
         var diff = "diff --git a/中文.cs b/中文.cs\n" + text;
-        var slices = RepositoryReviewService.Split(diff, 512);
+        var slices = RepositoryReviewService.Split(diff, 512).Value!;
         Assert.Equal(diff, string.Concat(slices.Select(x => x.Diff)));
         var strict = new UTF8Encoding(false, true);
         Assert.All(slices, x => Assert.InRange(strict.GetByteCount(x.Diff), 1, 512));
         var batches = RepositoryReviewPlan.Batches([text], 512);
         Assert.Equal(text, string.Concat(batches)); Assert.All(batches, x => Assert.InRange(strict.GetByteCount(x), 1, 512));
-        Assert.Throws<ApiException>(() => RepositoryReviewService.Split(diff, 8));
+        Assert.Equal("review_segment_limit", RepositoryReviewService.Split(diff, 8).Error?.Code);
     }
 
     [Fact]
@@ -187,7 +186,7 @@ public sealed class RepositoryReviewTests
     public void ManySmallFilesShareAnalysisCallsWithoutLosingSource()
     {
         var diff = Diff(20, 100);
-        var snapshot = RepositoryReviewPlan.Create(diff, new() { ContextTokens = 12000, MaxOutputTokens = 10000 }, "team/repo", new string('a', 40), null, "", "review");
+        var snapshot = RepositoryReviewPlan.Create(diff, new() { ContextTokens = 12000, MaxOutputTokens = 10000 }, "team/repo", new string('a', 40), null, "", "review").Value!;
         Assert.True(snapshot.Slices.Length < 20); Assert.Equal(diff, RepositoryReviewPlan.Source(snapshot.Slices));
         Assert.All(snapshot.Slices, x => Assert.InRange(Encoding.UTF8.GetByteCount(x.Diff), 1, snapshot.InputBudget));
     }
@@ -196,7 +195,7 @@ public sealed class RepositoryReviewTests
     public void MaximumFocusNoteStillLeavesRoomForFramingAndCorrection()
     {
         var note = new string('x', 2000); var head = new string('a', 40);
-        var snapshot = RepositoryReviewPlan.Create(Diff(3, 9000), new() { ContextTokens = 32768, MaxOutputTokens = 4096 }, "team/repo", head, null, note, "review");
+        var snapshot = RepositoryReviewPlan.Create(Diff(3, 9000), new() { ContextTokens = 32768, MaxOutputTokens = 4096 }, "team/repo", head, null, note, "review").Value!;
         var context = RepositoryReviewPlan.Context("team/repo", head, null, note);
         Assert.All(snapshot.Slices, slice => Assert.True(context.Length + slice.Label.Length + slice.Diff.Length + 1024 < ModelTaskService.MaxPromptCharacters));
         Assert.Equal(Diff(3, 9000), RepositoryReviewPlan.Source(snapshot.Slices));
@@ -216,7 +215,7 @@ public sealed class RepositoryReviewTests
         using var client = await factory.SignedInAsync(); using var scope = factory.Services.CreateScope();
         var owner = await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Users.Select(x => x.Id).SingleAsync();
         var result = await scope.ServiceProvider.GetRequiredService<ModelTaskService>().GenerateAsync(owner, "test-task", new string('x', 4000), "精簡回答。", CancellationToken.None, maxOutputTokens: 128);
-        Assert.False(result.Truncated); Assert.Equal(128, factory.Provider.LastParameters!.MaxOutputTokens);
+        Assert.False(result.Value!.Truncated); Assert.Equal(128, factory.Provider.LastParameters!.MaxOutputTokens);
     }
 
     [Fact]
@@ -227,7 +226,7 @@ public sealed class RepositoryReviewTests
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>(); var row = await db.Set<RepositoryReview>().SingleAsync(x => x.Id == review.Id);
-            var snapshot = RepositoryReviewService.Snapshot(row);
+            var snapshot = RepositoryReviewService.Snapshot(row).Value!;
             row.SnapshotJson = JsonSerializer.Serialize(snapshot with { Version = 2, ReportInstruction = "請產生一份舊版固定 Markdown 報告。" });
             await db.SaveChangesAsync();
         }

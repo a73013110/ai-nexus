@@ -14,12 +14,12 @@ internal sealed class RemoveAttachment(NexusDbContext db, AttachmentService file
     public static void MapDraft(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, RemoveAttachment handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, fromLibrary: false, ct)).ToHttpResult())
-        .WithName("RemoveDraftAttachment").Produces(204);
+        .WithName("RemoveDraftAttachment");
 
     public static void MapLibrary(RouteGroupBuilder routes) => routes
         .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, RemoveAttachment handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, fromLibrary: true, ct)).ToHttpResult())
-        .WithName("DeleteLibraryFile").Produces(204);
+        .WithName("DeleteLibraryFile");
 
     public async Task<Result> HandleAsync(Guid owner, Guid id, bool fromLibrary, CancellationToken ct)
     {
@@ -28,7 +28,7 @@ internal sealed class RemoveAttachment(NexusDbContext db, AttachmentService file
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await quota.LockOwnerAsync(owner, ct);
-            var file = await files.FindOwnedAsync(owner, id, ct);
+            var file = await files.OwnedAsync(owner, id, ct);
             if (!file.IsSuccess) return file.Error;
             // Removing a reused file from the composer must never delete its library original.
             if (file.Value.InLibrary && !fromLibrary) return Result.Success;

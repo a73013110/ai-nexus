@@ -18,9 +18,6 @@ public static class RepositoryReviewPlan
 
     public static bool IsPurpose(string? value) => value is "review" or "summary" or "typos";
 
-    public static string Purpose(string value) => IsPurpose(value) ? value :
-        throw new ApiException(400, "review_purpose_invalid", "請選擇整體檢閱、變更摘要或內容誤植。");
-
     private static string Focus(string purpose) => purpose switch
     {
         "summary" => "目的是理解整體變更。整理改了什麼、目的與主要影響；不進行逐檔缺陷清單或擴充成一般程式碼審查。",
@@ -28,9 +25,9 @@ public static class RepositoryReviewPlan
         _ => "目的是快速的整體程式碼檢閱。只找變更直接引入、有證據的重大缺陷與跨檔案不一致；依 P1/P2 排序。忽略格式、命名偏好、一般最佳實踐、假設性的風險與缺少上下文才能確認的問題。",
     };
 
-    public static ReviewSnapshot Create(string diff, ModelProfile model, string repository, string head, string? basis, string note, string purpose)
+    public static Result<ReviewSnapshot> Create(string diff, ModelProfile model, string repository, string head, string? basis, string note, string purpose)
     {
-        Purpose(purpose);
+        if (!IsPurpose(purpose)) return RepositoriesErrors.ReviewPurposeInvalid;
         var focus = Focus(purpose);
         var analysis = Safety + focus + "這是大型變更的一個區段。只保留本區段變更事實與有證據的問題：檔案、可確認的行號、觸發條件與影響。" +
             "使用 Markdown，全部中間筆記限 140 字，至多 3 點；沒有問題以一句話說明。不重複範本、通用建議或程式碼。";
@@ -45,9 +42,11 @@ public static class RepositoryReviewPlan
             model.ContextTokens - Math.Min(model.MaxOutputTokens, 1400) - ModelTaskService.FramingTokenReserve - 2048 -
             new[] { analysis, report, reduction }.Max(x => Encoding.UTF8.GetByteCount(x)) -
             Encoding.UTF8.GetByteCount(context));
-        if (budget < 1024) throw new ApiException(400, "review_model_context_small", "此模型的上下文不足以檢閱並彙整變更，請選擇更大的模型或減少補充重點。");
-        var slices = Pack(RepositoryReviewService.Split(diff, budget), budget);
-        return new(3, analysis, slices, purpose, report, reduction, budget, Encoding.UTF8.GetByteCount(Source(slices)) <= budget,
+        if (budget < 1024) return RepositoriesErrors.ModelContextSmall;
+        var split = RepositoryReviewService.Split(diff, budget);
+        if (!split.IsSuccess) return split.Error;
+        var slices = Pack(split.Value, budget);
+        return new ReviewSnapshot(3, analysis, slices, purpose, report, reduction, budget, Encoding.UTF8.GetByteCount(Source(slices)) <= budget,
             ReportOutputTokens: 1400, AnalysisOutputTokens: 384);
     }
 

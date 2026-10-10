@@ -37,10 +37,10 @@ public sealed class AttachmentQuota(NexusDbContext db, AccessService access, IOp
     public Task<int> LockOwnerAsync(Guid owner, CancellationToken ct) => db.Users.Where(x => x.Id == owner)
         .ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
 
-    public async Task ReserveAsync(Guid owner, long bytes, CancellationToken ct)
+    public async Task<Result> ReserveAsync(Guid owner, long bytes, CancellationToken ct)
     {
         await LockOwnerAsync(owner, ct);
         var quota = await ForAsync(owner, ct);
-        if (bytes > quota.RemainingBytes) throw new ApiException(413, "attachment_quota", "附件容量不足，請刪除未引用的檔案，或聯絡管理員調整個人容量上限。");
+        return bytes > quota.RemainingBytes ? AttachmentsErrors.Quota : Result.Success;
     }
 }
