@@ -77,7 +77,7 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             if (!scheduler.Ready) throw new ApiException(503, "scheduler_unavailable", "生成服務尚未就緒。");
             if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) return InferenceErrors.GenerationActive;
             var query = request.RegenerateUserMessageId is Guid old ? await db.Messages.Where(x => x.Id == old && x.ConversationId == request.ConversationId && x.Role == "user").Select(x => x.Content).SingleOrDefaultAsync(ct) : request.Prompt;
-            search = await webSearch.SearchAsync(owner, request.ConversationId, key, hash, query ?? "", ct);
+            search = (await webSearch.SearchAsync(owner, request.ConversationId, key, hash, query ?? "", ct)).OrThrow();
         }
         else
         {

@@ -56,9 +56,8 @@ public sealed class UsageReports(NexusDbContext db, ModelPresentation presentati
         return (await query.ToListAsync(ct)).GroupBy(x => DateOnly.FromDateTime(x.CreatedAt.UtcDateTime)).OrderBy(g => g.Key)
             .Select(g => new UsageDayDto(g.Key, g.Count(), g.Sum(x => x.InputTokens ?? 0), g.Sum(x => x.OutputTokens ?? 0))).ToArray();
     }
-    public async Task<TokenUsageDto> TokensAsync(Guid? owner, DateTimeOffset? from, DateTimeOffset? until, int? offset, bool administrator, CancellationToken ct)
+    public async Task<TokenUsageDto> TokensAsync(Guid? owner, SpendPeriod period, bool administrator, CancellationToken ct)
     {
-        var period = SpendReports.Period(from, until, offset);
         var query = Entries(period.From, period.Until).Where(x => owner == null || x.OwnerId == owner);
         IReadOnlyList<TokenDayDto> rows;
         if (db.Database.IsSqlServer()) rows = (await query.GroupBy(x => new { Day = x.CreatedAt.AddMinutes(period.Offset).Date, x.ModelId })

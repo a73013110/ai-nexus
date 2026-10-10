@@ -39,11 +39,13 @@ internal sealed class ManagePrices(NexusDbContext db, BillingService billing)
 {
     public static void Map(RouteGroupBuilder admin)
     {
-        admin.MapGet("/targets", (BillingService service) => Results.Ok(service.Targets())).WithName("ListPriceTargets").Produces<IReadOnlyList<PriceTargetDto>>();
-        admin.MapGet("/prices", async (ManagePrices handler, CancellationToken ct) => Results.Ok(await handler.ListAsync(ct))).WithName("ListModelPrices").Produces<IReadOnlyList<PriceDto>>();
-        admin.MapPost("/prices", async (PriceRequest body, ICurrentUser user, ManagePrices handler, CancellationToken ct) => (await handler.CreateAsync(user.Id, body, ct)).ToHttpResult())
-            .WithName("CreateModelPrice").Produces<PriceDto>();
+        admin.MapGet("/targets", (ManagePrices handler) => TypedResults.Ok(handler.Targets())).WithName("ListPriceTargets");
+        admin.MapGet("/prices", async (ManagePrices handler, CancellationToken ct) => TypedResults.Ok(await handler.ListAsync(ct))).WithName("ListModelPrices");
+        admin.MapPost("/prices", (PriceRequest body, ICurrentUser user, ManagePrices handler, CancellationToken ct) => handler.CreateAsync(user.Id, body, ct).ToHttpResultAsync())
+            .WithName("CreateModelPrice");
     }
+
+    public IReadOnlyList<PriceTargetDto> Targets() => billing.Targets();
 
     public async Task<IReadOnlyList<PriceDto>> ListAsync(CancellationToken ct)
         => (await db.Set<ModelPrice>().AsNoTracking().OrderByDescending(x => x.EffectiveAt).Take(500).ToListAsync(ct)).Select(billing.Describe).ToArray();

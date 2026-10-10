@@ -6,43 +6,44 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.Features.Billing;
 
 /// <summary>Spend reports: personal, per conversation, and platform-wide (administrators, audited).</summary>
-internal static class ReportSpend
+internal sealed class ReportSpend(NexusDbContext db, SpendReports reports, TimeProvider clock)
 {
     public static void MapPersonal(RouteGroupBuilder api)
     {
-        api.MapGet("/billing/spend", async (DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, SpendReports reports, TimeProvider clock, CancellationToken ct) =>
-        {
-            var period = SpendPeriod.Create(from, until, offsetMinutes, clock.GetUtcNow());
-            return period.IsSuccess ? Results.Ok(await reports.ReportAsync(user.Id, period.Value, false, ct)) : period.Error.ToProblem();
-        }).WithName("GetPersonalSpend").Produces<SpendReportDto>();
-        api.MapGet("/conversations/{id:guid}/spend", async (Guid id, ICurrentUser user, SpendReports reports, CancellationToken ct) =>
-            (await reports.ConversationAsync(user.Id, id, ct)).ToHttpResult())
-            .RequireAuthorization(Policies.Chat).WithName("GetConversationSpend").Produces<ConversationSpendDto>();
+        api.MapGet("/billing/spend", (DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, ReportSpend handler, CancellationToken ct) =>
+            handler.PersonalAsync(user.Id, from, until, offsetMinutes, ct).ToHttpResultAsync()).WithName("GetPersonalSpend");
+        api.MapGet("/conversations/{id:guid}/spend", (Guid id, ICurrentUser user, ReportSpend handler, CancellationToken ct) =>
+            handler.ConversationAsync(user.Id, id, ct).ToHttpResultAsync())
+            .RequireAuthorization(Policies.Chat).WithName("GetConversationSpend");
     }
 
     public static void MapAdministrative(RouteGroupBuilder admin)
     {
-        admin.MapGet("/spend", async (Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, NexusDbContext db, SpendReports reports, TimeProvider clock, CancellationToken ct) =>
-        {
-            var period = SpendPeriod.Create(from, until, offsetMinutes, clock.GetUtcNow());
-            if (!period.IsSuccess) return period.Error.ToProblem();
-            var report = await reports.ReportAsync(ownerId, period.Value, true, ct);
-            await AuditAsync(db, user.Id, "billing.report.read", ownerId, "read", ct);
-            return Results.Ok(report);
-        }).WithName("GetAdministrativeSpend").Produces<SpendReportDto>();
-        admin.MapGet("/export", async (Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, NexusDbContext db, SpendReports reports, TimeProvider clock, CancellationToken ct) =>
-        {
-            var period = SpendPeriod.Create(from, until, offsetMinutes, clock.GetUtcNow());
-            if (!period.IsSuccess) return period.Error.ToProblem();
-            var report = await reports.ReportAsync(ownerId, period.Value, true, ct);
-            await AuditAsync(db, user.Id, "billing.report.export", ownerId, "csv", ct);
-            return Results.File(SpendReports.Csv(report), "text/csv; charset=utf-8", "ai-nexus-spend.csv");
-        }).WithName("ExportAdministrativeSpend");
+        admin.MapGet("/spend", (Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, ReportSpend handler, CancellationToken ct) =>
+            handler.AdministrativeAsync(user.Id, ownerId, from, until, offsetMinutes, "billing.report.read", "read", ct).ToHttpResultAsync()).WithName("GetAdministrativeSpend");
+        admin.MapGet("/export", (Guid? ownerId, DateTimeOffset? from, DateTimeOffset? until, int? offsetMinutes, ICurrentUser user, ReportSpend handler, CancellationToken ct) =>
+            handler.AdministrativeAsync(user.Id, ownerId, from, until, offsetMinutes, "billing.report.export", "csv", ct)
+                .ToHttpResultAsync(report => TypedResults.File(SpendReports.Csv(report), "text/csv; charset=utf-8", "ai-nexus-spend.csv")))
+            .WithName("ExportAdministrativeSpend");
     }
 
-    private static Task AuditAsync(NexusDbContext db, Guid actor, string action, Guid? owner, string result, CancellationToken ct)
+    public async Task<Result<SpendReportDto>> PersonalAsync(Guid owner, DateTimeOffset? from, DateTimeOffset? until, int? offset, CancellationToken ct)
     {
+        var period = SpendPeriod.Create(from, until, offset, clock.GetUtcNow());
+        if (!period.IsSuccess) return period.Error;
+        return await reports.ReportAsync(owner, period.Value, false, ct);
+    }
+
+    public Task<Result<ConversationSpendDto>> ConversationAsync(Guid owner, Guid id, CancellationToken ct) => reports.ConversationAsync(owner, id, ct);
+
+    /// <summary>A platform-wide (or one owner's) report for an administrator; every read or export is audited.</summary>
+    public async Task<Result<SpendReportDto>> AdministrativeAsync(Guid actor, Guid? owner, DateTimeOffset? from, DateTimeOffset? until, int? offset, string action, string result, CancellationToken ct)
+    {
+        var period = SpendPeriod.Create(from, until, offset, clock.GetUtcNow());
+        if (!period.IsSuccess) return period.Error;
+        var report = await reports.ReportAsync(owner, period.Value, true, ct);
         db.AuditEvents.Add(new AuditEvent { OwnerId = actor, Action = action, ResourceId = owner ?? Guid.Empty, Result = result });
-        return db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct);
+        return report;
     }
 }
