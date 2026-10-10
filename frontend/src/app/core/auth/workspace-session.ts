@@ -1,7 +1,7 @@
 import { Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { AuthService } from './auth-service';
 import { NexusApi } from '../api/nexus-api';
-import type { Me } from '../api/types';
+import type { MeDto } from '../api/schema';
 import { UserSettingsService } from '../preferences/user-settings';
 import { FEATURE_NAMES } from '../feature-names';
 
@@ -9,7 +9,7 @@ import { FEATURE_NAMES } from '../feature-names';
 @Injectable({ providedIn: 'root' })
 export class WorkspaceSession {
   readonly auth = inject(AuthService);
-  readonly me = signal<Me | null>(null);
+  readonly me = signal<MeDto | null>(null);
   private readonly api = inject(NexusApi);
   readonly settings = inject(UserSettingsService);
   private generation = -1;
@@ -19,7 +19,7 @@ export class WorkspaceSession {
       if (generation !== this.generation) untracked(() => this.me.set(null));
     });
   }
-  adopt(me: Me) {
+  adopt(me: MeDto) {
     this.generation = this.auth.generation();
     this.me.set(me);
   }

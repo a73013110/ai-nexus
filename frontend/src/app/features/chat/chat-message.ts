@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
-import type { Message } from '../../core/api/types';
+import type { MessageDto } from '../../core/api/schema';
 import { Icon } from '../../shared/ui/icon';
 import { Notice } from '../../shared/ui/notice';
 import { CopyFeedback } from '../../shared/browser/copy-feedback';
@@ -142,22 +142,22 @@ import { formatModelDisplayName } from '../../shared/browser/format';
 })
 export class ChatMessage {
   readonly modelName = formatModelDisplayName;
-  readonly message = input.required<Message>();
+  readonly message = input.required<MessageDto>();
   readonly tree = input.required<MessageTree>();
   readonly matched = input(false);
   readonly currentMatch = input(false);
   readonly active = input(false);
   readonly showModelNames = input(true);
   readonly allowArtifacts = input(false);
-  readonly saveArtifact = output<Message>();
+  readonly saveArtifact = output<MessageDto>();
   readonly rated = output<{ id: string; rating: number }>();
   readonly busy = input(false);
   readonly streamContent = input('');
   readonly status = input('');
   readonly generation = computed(() => generationStatus(this.status(), !!this.streamContent()));
   readonly rendered = output<void>();
-  readonly edit = output<Message>();
-  readonly regenerate = output<Message>();
+  readonly edit = output<MessageDto>();
+  readonly regenerate = output<MessageDto>();
   readonly version = output<number>();
   readonly feedback = inject(CopyFeedback);
   readonly copied = this.feedback.copied;

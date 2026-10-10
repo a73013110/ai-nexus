@@ -15,7 +15,7 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
-import type { ExternalSource, SourceRecord, SourceDetail } from '../../core/api/types';
+import type { SourceDetailDto, SourceDto, SourceRecordDto } from '../../core/api/schema';
 import { FeaturePage } from '../../shared/ui/feature-page';
 import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
@@ -41,10 +41,10 @@ export class IntegrationsPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly transfer = inject(ConversationDraftTransfer);
-  readonly sources = signal<ExternalSource[]>([]);
-  readonly current = signal<ExternalSource | null>(null);
-  readonly rows = signal<SourceRecord[]>([]);
-  readonly detail = signal<SourceDetail | null>(null);
+  readonly sources = signal<SourceDto[]>([]);
+  readonly current = signal<SourceDto | null>(null);
+  readonly rows = signal<SourceRecordDto[]>([]);
+  readonly detail = signal<SourceDetailDto | null>(null);
   readonly query = signal('');
   readonly kind = signal('all');
   readonly loading = signal(true);
@@ -90,7 +90,7 @@ export class IntegrationsPage {
       if (valid()) this.loading.set(false);
     }
   }
-  select(source: ExternalSource) {
+  select(source: SourceDto) {
     if (this.busy()) return;
     ++this.revision;
     ++this.readSequence;

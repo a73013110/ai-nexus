@@ -1,58 +1,57 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiTransport } from '../../core/api/api-transport';
+import { ApiClient } from '../../core/api/api-client';
 import type {
-  AdminCatalog,
-  AdminUsers,
-  AdminUsage,
-  Access,
-  AdminUserDetail,
-  AdminConversationPage,
-  AdminConversationDetail,
-} from '../../core/api/types';
-import type { components } from '../../core/api/schema';
+  AdminRetrievalSearchRequest,
+  FeatureUpdateRequest,
+  GroupUpdateRequest,
+  ModelPolicyRequest,
+  RoleUpdateRequest,
+  UserAccountRequest,
+} from '../../core/api/schema';
 
 @Injectable({ providedIn: 'root' })
 export class AdminApi {
-  private readonly http = inject(ApiTransport);
-  catalog = () => this.http.json<AdminCatalog>('/admin/catalog');
+  private readonly api = inject(ApiClient);
+  catalog = () => this.api.get('/api/v1/admin/catalog');
   users = (search: string, offset = 0) =>
-    this.http.json<AdminUsers>(
-      `/admin/users?${new URLSearchParams({ search, offset: String(offset) })}`,
-    );
-  access = (id: string) => this.http.json<Access>(`/admin/users/${encodeURIComponent(id)}/access`);
-  insights = (id: string) =>
-    this.http.json<AdminUserDetail>(`/admin/users/${encodeURIComponent(id)}/insights`);
+    this.api.get('/api/v1/admin/users', { query: { search, offset } });
+  access = (id: string) => this.api.get('/api/v1/admin/users/{id}/access', { path: { id } });
+  insights = (id: string) => this.api.get('/api/v1/admin/users/{id}/insights', { path: { id } });
   conversations = (id: string, search: string, includeDeleted: boolean, offset = 0) =>
-    this.http.json<AdminConversationPage>(
-      `/admin/users/${encodeURIComponent(id)}/conversations?${new URLSearchParams({ search, includeDeleted: String(includeDeleted), offset: String(offset) })}`,
-    );
+    this.api.get('/api/v1/admin/users/{id}/conversations', {
+      path: { id },
+      query: { search, includeDeleted, offset },
+    });
   conversation = (id: string, offset = 0) =>
-    this.http.json<AdminConversationDetail>(
-      `/admin/conversations/${encodeURIComponent(id)}?offset=${offset}`,
-    );
+    this.api.get('/api/v1/admin/conversations/{id}', { path: { id }, query: { offset } });
   modelPolicy = (id: string) =>
-    this.http.json<components['schemas']['AdminUserModelPolicyDto']>(
-      `/admin/users/${encodeURIComponent(id)}/model-policy`,
-    );
-  saveModelPolicy = (id: string, body: components['schemas']['ModelPolicyRequest']) =>
-    this.http.json<void>(`/admin/users/${encodeURIComponent(id)}/model-policy`, 'PUT', body);
-  usage = () => this.http.json<AdminUsage>('/admin/usage');
+    this.api.get('/api/v1/admin/users/{id}/model-policy', { path: { id } });
+  saveModelPolicy = (id: string, body: ModelPolicyRequest) =>
+    this.api.put('/api/v1/admin/users/{id}/model-policy', { path: { id }, body });
+  embeddingProfiles = () => this.api.get('/api/v1/admin/knowledge/profiles');
+  rebuildProfile = (id: number) =>
+    this.api.post('/api/v1/admin/knowledge/profiles/{id}/rebuild', { path: { id } });
+  activateProfile = (id: number) =>
+    this.api.post('/api/v1/admin/knowledge/profiles/{id}/activate', { path: { id } });
+  clearProfileVectors = (id: number) =>
+    this.api.delete('/api/v1/admin/knowledge/profiles/{id}/vectors', { path: { id } });
+  retrievalCapabilities = () => this.api.get('/api/v1/admin/knowledge/capabilities');
+  probeRetrieval = () => this.api.post('/api/v1/admin/knowledge/capabilities/probe');
+  searchRetrieval = (body: AdminRetrievalSearchRequest) =>
+    this.api.post('/api/v1/admin/knowledge/search', { body });
+  usage = () => this.api.get('/api/v1/admin/usage');
   storage = (id: string, limitBytes: number | null) =>
-    this.http.json<void>(`/admin/users/${encodeURIComponent(id)}/storage`, 'PUT', { limitBytes });
+    this.api.put('/api/v1/admin/users/{id}/storage', { path: { id }, body: { limitBytes } });
   roles = (id: string, roleIds: string[]) =>
-    this.http.json<void>(`/admin/users/${encodeURIComponent(id)}/roles`, 'PUT', { roleIds });
-  saveUser = (id: string | null, body: components['schemas']['UserAccountRequest']) =>
-    this.http.json<void | { id: string }>(
-      id ? `/admin/users/${encodeURIComponent(id)}` : '/admin/users',
-      id ? 'PUT' : 'POST',
-      body,
-    );
-  deleteUser = (id: string) =>
-    this.http.json<void>(`/admin/users/${encodeURIComponent(id)}`, 'DELETE');
-  role = (id: string, body: components['schemas']['RoleUpdateRequest']) =>
-    this.http.json<void>(`/admin/roles/${encodeURIComponent(id)}`, 'PUT', body);
-  group = (id: string, body: components['schemas']['GroupUpdateRequest']) =>
-    this.http.json<void>(`/admin/groups/${encodeURIComponent(id)}`, 'PUT', body);
-  feature = (id: string, body: components['schemas']['FeatureUpdateRequest']) =>
-    this.http.json<void>(`/admin/features/${encodeURIComponent(id)}`, 'PUT', body);
+    this.api.put('/api/v1/admin/users/{id}/roles', { path: { id }, body: { roleIds } });
+  createUser = (body: UserAccountRequest) => this.api.post('/api/v1/admin/users', { body });
+  updateUser = (id: string, body: UserAccountRequest) =>
+    this.api.put('/api/v1/admin/users/{id}', { path: { id }, body });
+  deleteUser = (id: string) => this.api.delete('/api/v1/admin/users/{id}', { path: { id } });
+  role = (id: string, body: RoleUpdateRequest) =>
+    this.api.put('/api/v1/admin/roles/{id}', { path: { id }, body });
+  group = (id: string, body: GroupUpdateRequest) =>
+    this.api.put('/api/v1/admin/groups/{id}', { path: { id }, body });
+  feature = (id: string, body: FeatureUpdateRequest) =>
+    this.api.put('/api/v1/admin/features/{id}', { path: { id }, body });
 }

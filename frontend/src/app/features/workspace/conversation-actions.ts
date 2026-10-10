@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import type { Conversation } from '../../core/api/types';
+import type { ConversationDto } from '../../core/api/schema';
 import { Icon } from '../../shared/ui/icon';
 import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
 
@@ -48,7 +48,7 @@ export type ConversationAction =
   </div>`,
 })
 export class ConversationActions {
-  readonly conversation = input.required<Conversation>();
+  readonly conversation = input.required<ConversationDto>();
   readonly busy = input(false);
   readonly compact = input(false);
   readonly sharing = input(false);

@@ -30,7 +30,7 @@
         "operationId": "QuerySystemLogs",
         "parameters": [
           {
-            "name": "From",
+            "name": "from",
             "in": "query",
             "schema": {
               "type": "string",
@@ -38,7 +38,7 @@
             }
           },
           {
-            "name": "To",
+            "name": "to",
             "in": "query",
             "schema": {
               "type": "string",
@@ -46,21 +46,21 @@
             }
           },
           {
-            "name": "Level",
+            "name": "level",
             "in": "query",
             "schema": {
               "$ref": "#/components/schemas/LogLevel"
             }
           },
           {
-            "name": "Category",
+            "name": "category",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "EventId",
+            "name": "eventId",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -68,28 +68,28 @@
             }
           },
           {
-            "name": "EventName",
+            "name": "eventName",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "IssueCode",
+            "name": "issueCode",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "TraceId",
+            "name": "traceId",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "JobId",
+            "name": "jobId",
             "in": "query",
             "schema": {
               "type": "string",
@@ -97,7 +97,7 @@
             }
           },
           {
-            "name": "RunId",
+            "name": "runId",
             "in": "query",
             "schema": {
               "type": "string",
@@ -105,7 +105,7 @@
             }
           },
           {
-            "name": "OperationId",
+            "name": "operationId",
             "in": "query",
             "schema": {
               "type": "string",
@@ -113,35 +113,35 @@
             }
           },
           {
-            "name": "ErrorCode",
+            "name": "errorCode",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "Instance",
+            "name": "instance",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "Text",
+            "name": "text",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "Cursor",
+            "name": "cursor",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "Take",
+            "name": "take",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -149,7 +149,7 @@
             }
           },
           {
-            "name": "SortDirection",
+            "name": "sortDirection",
             "in": "query",
             "schema": {
               "type": "string"
@@ -619,7 +619,7 @@
         "operationId": "ExportSystemLogs",
         "parameters": [
           {
-            "name": "From",
+            "name": "from",
             "in": "query",
             "schema": {
               "type": "string",
@@ -627,7 +627,7 @@
             }
           },
           {
-            "name": "To",
+            "name": "to",
             "in": "query",
             "schema": {
               "type": "string",
@@ -635,21 +635,21 @@
             }
           },
           {
-            "name": "Level",
+            "name": "level",
             "in": "query",
             "schema": {
               "$ref": "#/components/schemas/LogLevel"
             }
           },
           {
-            "name": "Category",
+            "name": "category",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "EventId",
+            "name": "eventId",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -657,28 +657,28 @@
             }
           },
           {
-            "name": "EventName",
+            "name": "eventName",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "IssueCode",
+            "name": "issueCode",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "TraceId",
+            "name": "traceId",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "JobId",
+            "name": "jobId",
             "in": "query",
             "schema": {
               "type": "string",
@@ -686,7 +686,7 @@
             }
           },
           {
-            "name": "RunId",
+            "name": "runId",
             "in": "query",
             "schema": {
               "type": "string",
@@ -694,7 +694,7 @@
             }
           },
           {
-            "name": "OperationId",
+            "name": "operationId",
             "in": "query",
             "schema": {
               "type": "string",
@@ -702,35 +702,35 @@
             }
           },
           {
-            "name": "ErrorCode",
+            "name": "errorCode",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "Instance",
+            "name": "instance",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "Text",
+            "name": "text",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "Cursor",
+            "name": "cursor",
             "in": "query",
             "schema": {
               "type": "string"
             }
           },
           {
-            "name": "Take",
+            "name": "take",
             "in": "query",
             "schema": {
               "type": "integer",
@@ -738,7 +738,7 @@
             }
           },
           {
-            "name": "SortDirection",
+            "name": "sortDirection",
             "in": "query",
             "schema": {
               "type": "string"
@@ -31077,7 +31077,9 @@
           "status",
           "createdAt",
           "modelId",
-          "attachments"
+          "attachments",
+          "timing",
+          "modelDisplayName"
         ],
         "type": "object",
         "properties": {
@@ -31353,7 +31355,11 @@
           "account",
           "displayName",
           "lastSeenAt",
-          "roleIds"
+          "roleIds",
+          "activity",
+          "enabled",
+          "authentication",
+          "storage"
         ],
         "type": "object",
         "properties": {
@@ -31695,7 +31701,12 @@
           "resourceId",
           "result",
           "at",
-          "detailsJson"
+          "detailsJson",
+          "actingAs",
+          "category",
+          "traceId",
+          "operationId",
+          "issueCode"
         ],
         "type": "object",
         "properties": {
@@ -31772,7 +31783,11 @@
           "configured",
           "account",
           "displayName",
-          "csrfToken"
+          "csrfToken",
+          "methods",
+          "method",
+          "userId",
+          "testing"
         ],
         "type": "object",
         "properties": {
@@ -31943,7 +31958,8 @@
           "documentId",
           "title",
           "pageNumber",
-          "excerpt"
+          "excerpt",
+          "endPage"
         ],
         "type": "object",
         "properties": {
@@ -32110,7 +32126,10 @@
           "contextTokens",
           "reservedOutputTokens",
           "droppedMessages",
-          "budgetExceeded"
+          "budgetExceeded",
+          "isEstimate",
+          "reservedKnowledgeTokens",
+          "reservedWebSearchTokens"
         ],
         "type": "object",
         "properties": {
@@ -32226,7 +32245,12 @@
           "title",
           "activeLeafId",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "isFavorite",
+          "isArchived",
+          "systemInstruction",
+          "labels",
+          "projectId"
         ],
         "type": "object",
         "properties": {
@@ -32638,7 +32662,8 @@
           "recent",
           "webSearchAvailable",
           "giteaAvailable",
-          "embeddingMode"
+          "embeddingMode",
+          "tokens"
         ],
         "type": "object",
         "properties": {
@@ -33097,7 +33122,8 @@
           "warning",
           "jobId",
           "canEdit",
-          "hasOriginal"
+          "hasOriginal",
+          "textVersion"
         ],
         "type": "object",
         "properties": {
@@ -33235,7 +33261,9 @@
         "required": [
           "completedChunks",
           "totalChunks",
-          "pendingDocuments"
+          "pendingDocuments",
+          "complete",
+          "ratio"
         ],
         "type": "object",
         "properties": {
@@ -33605,7 +33633,9 @@
         "required": [
           "label",
           "modelId",
-          "instruction"
+          "instruction",
+          "configuration",
+          "modelDisplayName"
         ],
         "type": "object",
         "properties": {
@@ -33901,7 +33931,8 @@
           "errorCode",
           "errorMessage",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "issueCode"
         ],
         "type": "object",
         "properties": {
@@ -33978,7 +34009,15 @@
           "pageNumber",
           "text",
           "score",
-          "chunkId"
+          "chunkId",
+          "endPage",
+          "ordinal",
+          "vectorRank",
+          "ftsRank",
+          "vectorScore",
+          "rrfScore",
+          "rerankScore",
+          "headingPath"
         ],
         "type": "object",
         "properties": {
@@ -34058,7 +34097,11 @@
       "KnowledgeSearchDto": {
         "required": [
           "mode",
-          "hits"
+          "hits",
+          "rewriteMs",
+          "embedMs",
+          "searchMs",
+          "rerankMs"
         ],
         "type": "object",
         "properties": {
@@ -34155,7 +34198,16 @@
         }
       },
       "LogLevel": {
-        "type": "integer"
+        "enum": [
+          "Trace",
+          "Debug",
+          "Information",
+          "Warning",
+          "Error",
+          "Critical",
+          "None",
+          null
+        ]
       },
       "MeDto": {
         "required": [
@@ -34206,7 +34258,17 @@
           "status",
           "createdAt",
           "runId",
-          "modelId"
+          "modelId",
+          "attachments",
+          "errorCode",
+          "sources",
+          "feedbackRating",
+          "charge",
+          "webSources",
+          "webSearchCharge",
+          "timing",
+          "modelDisplayName",
+          "issueCode"
         ],
         "type": "object",
         "properties": {
@@ -34338,7 +34400,9 @@
           "supportsStreaming",
           "supportsUsage",
           "reasoningEfforts",
-          "defaultReasoningEffort"
+          "defaultReasoningEffort",
+          "supportsImages",
+          "provider"
         ],
         "type": "object",
         "properties": {
@@ -34387,7 +34451,8 @@
         "required": [
           "allowModelSelection",
           "showModelNames",
-          "defaultModelId"
+          "defaultModelId",
+          "maxInputCharacters"
         ],
         "type": "object",
         "properties": {
@@ -34439,7 +34504,8 @@
           "models",
           "providerAvailable",
           "notice",
-          "policy"
+          "policy",
+          "providers"
         ],
         "type": "object",
         "properties": {
@@ -34509,7 +34575,8 @@
           "usedTokens",
           "reservedTokens",
           "remainingTokens",
-          "source"
+          "source",
+          "modelDisplayName"
         ],
         "type": "object",
         "properties": {
@@ -34712,7 +34779,8 @@
           "body",
           "target",
           "createdAt",
-          "readAt"
+          "readAt",
+          "issueCode"
         ],
         "type": "object",
         "properties": {
@@ -34905,7 +34973,10 @@
           "outputTokens",
           "requestsWithUsage",
           "daily",
-          "storage"
+          "storage",
+          "totalDurationMilliseconds",
+          "timedRequests",
+          "tokens"
         ],
         "type": "object",
         "properties": {
@@ -35043,7 +35114,8 @@
           "perRequest",
           "requestCharge",
           "effectiveAt",
-          "note"
+          "note",
+          "modelDisplayName"
         ],
         "type": "object",
         "properties": {
@@ -35577,7 +35649,9 @@
       "RepositoryReviewDetailDto": {
         "required": [
           "review",
-          "sections"
+          "sections",
+          "report",
+          "version"
         ],
         "type": "object",
         "properties": {
@@ -35616,7 +35690,9 @@
           "modelId",
           "note",
           "createdAt",
-          "job"
+          "job",
+          "purpose",
+          "modelDisplayName"
         ],
         "type": "object",
         "properties": {
@@ -36210,7 +36286,9 @@
         "required": [
           "run",
           "summary",
-          "results"
+          "results",
+          "refusalDefinition",
+          "latencyDefinition"
         ],
         "type": "object",
         "properties": {
@@ -36372,7 +36450,10 @@
           "startedAt",
           "finishedAt",
           "inputTokens",
-          "outputTokens"
+          "outputTokens",
+          "timing",
+          "modelDisplayName",
+          "issueCode"
         ],
         "type": "object",
         "properties": {
@@ -36475,7 +36556,8 @@
           "type",
           "status",
           "delta",
-          "errorCode"
+          "errorCode",
+          "issueCode"
         ],
         "type": "object",
         "properties": {
@@ -36719,7 +36801,14 @@
           "content",
           "status",
           "createdAt",
-          "attachments"
+          "attachments",
+          "modelId",
+          "errorCode",
+          "sources",
+          "webSources",
+          "timing",
+          "modelDisplayName",
+          "issueCode"
         ],
         "type": "object",
         "properties": {
@@ -37201,7 +37290,10 @@
           "edition",
           "majorVersion",
           "nativeVector",
-          "exactDistance"
+          "exactDistance",
+          "fullTextInstalled",
+          "traditionalChineseWordBreaker",
+          "fullTextIndex"
         ],
         "type": "object",
         "properties": {
@@ -37355,7 +37447,8 @@
           "requests",
           "requestsWithUsage",
           "inputTokens",
-          "outputTokens"
+          "outputTokens",
+          "modelDisplayName"
         ],
         "type": "object",
         "properties": {
@@ -37695,7 +37788,8 @@
           "requestsWithUsage",
           "inputTokens",
           "outputTokens",
-          "durationMilliseconds"
+          "durationMilliseconds",
+          "modelDisplayName"
         ],
         "type": "object",
         "properties": {
@@ -37742,7 +37836,9 @@
           "cancelled",
           "inputTokens",
           "outputTokens",
-          "requestsWithUsage"
+          "requestsWithUsage",
+          "totalDurationMilliseconds",
+          "timedRequests"
         ],
         "type": "object",
         "properties": {

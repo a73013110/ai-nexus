@@ -1,94 +1,59 @@
 import { inject, Injectable } from '@angular/core';
-import { ApiTransport } from './api-transport';
+import { ApiClient } from './api-client';
 import type {
-  Conversation,
-  ConversationDetail,
-  CreateRun,
-  Me,
-  Models,
-  Preferences,
-  Run,
-  AuthSession,
-  ContextPreview,
-  ContextUsage,
-  WebSearchStatus,
-} from './types';
-export { ApiError } from './api-transport';
+  AuthSessionDto,
+  ContextPreviewRequest,
+  CreateRunRequest,
+  PreferencesDto,
+} from './schema';
+export { ApiError } from './api-client';
 
+/** Sign-in, the conversation list and the run lifecycle used by the chat workspace. */
 @Injectable({ providedIn: 'root' })
 export class NexusApi {
-  private readonly http = inject(ApiTransport);
-  async authSession(): Promise<AuthSession> {
-    const session = await this.http.json<AuthSession>('/auth/session');
-    this.http.session(session);
+  private readonly api = inject(ApiClient);
+  private async remember(request: Promise<AuthSessionDto>) {
+    const session = await request;
+    this.api.session(session);
     return session;
   }
-  async login(account: string, password: string, method = 'ad'): Promise<AuthSession> {
-    const session = await this.http.json<AuthSession>('/auth/login', 'POST', {
-      account,
-      password,
-      method,
-    });
-    this.http.session(session);
-    return session;
-  }
-  async windowsLogin(): Promise<AuthSession> {
-    const session = await this.http.json<AuthSession>('/auth/windows');
-    this.http.session(session);
-    return session;
-  }
-  async logout(): Promise<AuthSession> {
-    const session = await this.http.json<AuthSession>('/auth/logout', 'POST');
-    this.http.session(session);
-    return session;
-  }
-  async testIdentity(userId: string, reason: string): Promise<AuthSession> {
-    const session = await this.http.json<AuthSession>('/auth/test-identity', 'POST', {
-      userId,
-      reason,
-    });
-    this.http.session(session);
-    return session;
-  }
-  async endTestIdentity(): Promise<AuthSession> {
-    const session = await this.http.json<AuthSession>('/auth/test-identity/end', 'POST');
-    this.http.session(session);
-    return session;
-  }
-  async me(): Promise<Me> {
-    const me = await this.http.json<Me>('/me');
-    this.http.token(me.csrfToken);
+  authSession = () => this.remember(this.api.get('/api/v1/auth/session'));
+  login = (account: string, password: string, method = 'ad') =>
+    this.remember(this.api.post('/api/v1/auth/login', { body: { account, password, method } }));
+  windowsLogin = () => this.remember(this.api.get('/api/v1/auth/windows'));
+  logout = () => this.remember(this.api.post('/api/v1/auth/logout'));
+  testIdentity = (userId: string, reason: string) =>
+    this.remember(this.api.post('/api/v1/auth/test-identity', { body: { userId, reason } }));
+  endTestIdentity = () => this.remember(this.api.post('/api/v1/auth/test-identity/end'));
+  async me() {
+    const me = await this.api.get('/api/v1/me');
+    this.api.token(me.csrfToken);
     return me;
   }
-  models = () => this.http.reference<Models>('/models');
-  webSearchStatus = () => this.http.reference<WebSearchStatus>('/tools/web-search');
-  context = (body: ContextPreview, signal: AbortSignal) =>
-    this.http.json<ContextUsage>('/context', 'POST', body, undefined, signal);
+  models = () => this.api.reference('/api/v1/models');
+  webSearchStatus = () => this.api.reference('/api/v1/tools/web-search');
+  context = (body: ContextPreviewRequest, signal: AbortSignal) =>
+    this.api.post('/api/v1/context', { body, signal });
   conversations = (search = '', offset = 0, view = 'active', label = '') =>
-    this.http.json<Conversation[]>(
-      `/conversations?${new URLSearchParams({ search, offset: String(offset), view, label })}`,
-    );
-  conversation = (id: string) =>
-    this.http.json<ConversationDetail>(`/conversations/${encodeURIComponent(id)}`);
-  createConversation = () => this.http.json<Conversation>('/conversations', 'POST', {});
+    this.api.get('/api/v1/conversations', { query: { search, offset, view, label } });
+  conversation = (id: string) => this.api.get('/api/v1/conversations/{id}', { path: { id } });
+  createConversation = () => this.api.post('/api/v1/conversations', { body: {} });
   rename = (id: string, title: string) =>
-    this.http.json<Conversation>(`/conversations/${encodeURIComponent(id)}`, 'PATCH', { title });
-  delete = (id: string) =>
-    this.http.json<void>(`/conversations/${encodeURIComponent(id)}`, 'DELETE');
+    this.api.patch('/api/v1/conversations/{id}', { path: { id }, body: { title } });
+  delete = (id: string) => this.api.delete('/api/v1/conversations/{id}', { path: { id } });
   branch = (id: string, leafId: string) =>
-    this.http.json<void>(`/conversations/${encodeURIComponent(id)}/branch`, 'PATCH', { leafId });
-  createRun = (request: CreateRun, key: string) =>
-    this.http.json<Run>('/runs', 'POST', request, { 'Idempotency-Key': key });
+    this.api.patch('/api/v1/conversations/{id}/branch', { path: { id }, body: { leafId } });
+  createRun = (body: CreateRunRequest, key: string) =>
+    this.api.post('/api/v1/runs', { body, headers: { 'Idempotency-Key': key } });
   run = (id: string, signal?: AbortSignal) =>
-    this.http.json<Run>(`/runs/${encodeURIComponent(id)}`, 'GET', undefined, undefined, signal);
+    this.api.get('/api/v1/runs/{id}', { path: { id }, signal });
   events = (id: string, after: number, signal: AbortSignal) =>
-    this.http.response(
-      `/runs/${encodeURIComponent(id)}/events?after=${after}`,
-      'GET',
-      undefined,
-      { Accept: 'text/event-stream' },
+    this.api.open('/api/v1/runs/{id}/events', {
+      path: { id },
+      query: { after },
+      headers: { Accept: 'text/event-stream' },
       signal,
-    );
-  cancel = (id: string) => this.http.json<Run>(`/runs/${encodeURIComponent(id)}/cancel`, 'POST');
-  preferences = (value: Preferences) => this.http.json<Preferences>('/preferences', 'PUT', value);
+    });
+  cancel = (id: string) => this.api.post('/api/v1/runs/{id}/cancel', { path: { id } });
+  preferences = (body: PreferencesDto) => this.api.put('/api/v1/preferences', { body });
 }

@@ -2,19 +2,17 @@ import { Notice } from '../../shared/ui/notice';
 import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/api/safe-errors';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import type { Model, EffectiveModelPolicy } from '../../core/api/types';
-import type { components } from '../../core/api/schema';
+import type { EffectiveModelPolicyDto, ModelDto, ModelPolicyRequest } from '../../core/api/schema';
 import { Checkbox } from '../../shared/ui/checkbox';
 import { DataTable } from '../../shared/ui/data-table';
 import { formatModelName, formatNumber } from '../../shared/browser/format';
 
-type Policy = components['schemas']['ModelPolicyRequest'];
 export interface ModelPolicyDraft {
   restricted: boolean;
   modelIds: string[];
   tokenLimits: Record<string, string>;
 }
-export function modelPolicyDraft(policy?: Policy | null): ModelPolicyDraft {
+export function modelPolicyDraft(policy?: ModelPolicyRequest | null): ModelPolicyDraft {
   return {
     restricted: policy?.allowedModelIds != null,
     modelIds: policy?.allowedModelIds ? [...policy.allowedModelIds] : [],
@@ -23,7 +21,7 @@ export function modelPolicyDraft(policy?: Policy | null): ModelPolicyDraft {
     ),
   };
 }
-export function modelPolicyRequest(draft: ModelPolicyDraft): Policy {
+export function modelPolicyRequest(draft: ModelPolicyDraft): ModelPolicyRequest {
   const limits: Record<string, number> = {};
   for (const [id, text] of Object.entries(draft.tokenLimits)) {
     if (text.trim() === '') continue;
@@ -164,10 +162,10 @@ export function modelPolicyRequest(draft: ModelPolicyDraft): Policy {
   `,
 })
 export class ModelPolicyEditor {
-  readonly models = input.required<Model[]>();
+  readonly models = input.required<ModelDto[]>();
   readonly value = input.required<ModelPolicyDraft>();
   readonly valueChange = output<ModelPolicyDraft>();
-  readonly effective = input<EffectiveModelPolicy | null>(null);
+  readonly effective = input<EffectiveModelPolicyDto | null>(null);
   readonly personal = input(false);
   readonly disabled = input(false);
   readonly name = formatModelName;

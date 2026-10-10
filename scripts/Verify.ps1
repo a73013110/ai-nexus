@@ -5,7 +5,7 @@
 送 PR 前的完整本機驗證。
 
 .DESCRIPTION
-依序執行：腳本測試（Pester，scripts/tests）、Build.ps1（輸出到 artifacts/verification，不覆寫正在執行的 publish）、
+依序執行：腳本測試（Pester，scripts/tests）、前端 schema.ts 與 openapi.json 一致性、Build.ps1（輸出到 artifacts/verification，不覆寫正在執行的 publish）、
 後端 build、EF 模型與 migration 一致性、後端單元／整合／架構測試、前端 lint 與單元測試。
 真實瀏覽器、SQL Server 與效能測試需另外加參數。
 TRX 寫在 artifacts/test-results。需先執行 Restore.ps1；.github/workflows/ci.yml 也是 Restore.ps1 加上這支腳本。
@@ -57,6 +57,8 @@ try {
     $pester.Output.Verbosity = 'Normal'
     if ((Invoke-Pester -Configuration $pester).Result -ne 'Passed') { throw '腳本測試失敗。' }
 
+    npm --prefix frontend run contracts:check
+    if ($LASTEXITCODE -ne 0) { throw '前端 schema.ts 與 contracts/openapi.json 不一致，請執行 npm --prefix frontend run contracts。' }
     & (Join-Path $PSScriptRoot 'Build.ps1') -OutputDirectory $verification
     dotnet build backend/AiNexus.slnx --no-restore -c Release
     if ($LASTEXITCODE -ne 0) { throw '後端 build 失敗。' }

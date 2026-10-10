@@ -17,7 +17,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import type { ArtifactDocument, ArtifactSummary, ArtifactRevision } from '../../core/api/types';
+import type { ArtifactDto, ArtifactRevisionDto, ArtifactSummaryDto } from '../../core/api/schema';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { FeaturePage } from '../../shared/ui/feature-page';
@@ -63,9 +63,9 @@ export class ArtifactsPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly session = inject(WorkspaceSession);
-  readonly list = signal<ArtifactSummary[]>([]);
-  readonly document = signal<ArtifactDocument | null>(null);
-  readonly revisions = signal<ArtifactRevision[]>([]);
+  readonly list = signal<ArtifactSummaryDto[]>([]);
+  readonly document = signal<ArtifactDto | null>(null);
+  readonly revisions = signal<ArtifactRevisionDto[]>([]);
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly error = signal('');
@@ -178,7 +178,7 @@ export class ArtifactsPage {
       if (valid()) this.loading.set(false);
     }
   }
-  private adopt(value: ArtifactDocument) {
+  private adopt(value: ArtifactDto) {
     this.document.set(value);
     this.title.set(value.resource.name);
     this.content.set(value.content);

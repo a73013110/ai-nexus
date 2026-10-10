@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
-import type { Job } from '../../core/api/types';
+import type { JobDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { downloadFile } from '../../shared/browser/download';
 import { FeaturePage } from '../../shared/ui/feature-page';
@@ -148,7 +148,7 @@ export class DesignPage {
     { tone: 'danger', label: '錯誤', count: 3 },
   ];
   readonly generation = computed(() => generationStatus(this.demo().status, false));
-  readonly demo = signal<Job>({
+  readonly demo = signal<JobDto>({
     id: 'design-sample',
     subjectId: 'design-sample',
     kind: 'demo',
@@ -161,6 +161,7 @@ export class DesignPage {
     cancelRequested: false,
     errorCode: null,
     errorMessage: null,
+    issueCode: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   });

@@ -13,7 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormField, form, maxLength, required } from '@angular/forms/signals';
-import type { PromptTemplate } from '../../core/api/types';
+import type { PromptTemplateDto } from '../../core/api/schema';
 import { Icon } from '../../shared/ui/icon';
 import { WorkspaceApi } from './workspace-api';
 
@@ -107,7 +107,7 @@ export class PromptLibraryDialog {
   private readonly api = inject(WorkspaceApi);
   readonly draft = input('');
   readonly used = output<string>();
-  readonly prompts = signal<PromptTemplate[]>([]);
+  readonly prompts = signal<PromptTemplateDto[]>([]);
   readonly loading = signal(false);
   readonly busy = signal(false);
   readonly error = signal('');
@@ -133,11 +133,11 @@ export class PromptLibraryDialog {
       this.loading.set(false);
     }
   }
-  edit(prompt: PromptTemplate | null) {
+  edit(prompt: PromptTemplateDto | null) {
     this.editingId.set(prompt?.id ?? null);
     this.model.set({ title: prompt?.title ?? '', content: prompt?.content ?? this.draft() });
   }
-  choose(prompt: PromptTemplate) {
+  choose(prompt: PromptTemplateDto) {
     this.dialog()?.nativeElement.close();
     this.used.emit(prompt.content);
   }

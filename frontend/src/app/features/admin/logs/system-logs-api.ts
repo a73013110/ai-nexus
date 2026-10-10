@@ -1,12 +1,9 @@
 import { inject, Injectable } from '@angular/core';
-import { ApiTransport } from '../../../core/api/api-transport';
-import type { components } from '../../../core/api/schema';
+import { ApiClient } from '../../../core/api/api-client';
+import type { LogLevel } from '../../../core/api/schema';
 import type { TableSortDirection } from '../../../shared/ui/data-table';
 
-export type LogEntry = components['schemas']['DiagnosticSummary'];
-export type LogHealth = components['schemas']['DiagnosticHealthDto'];
-export type LogDetail = components['schemas']['DiagnosticDetail'];
-export type LogPage = components['schemas']['DiagnosticPage'];
+/** The log page's filter form; blank fields are left out of the query. */
 export interface LogFilter {
   from: string;
   to: string;
@@ -23,40 +20,35 @@ export interface LogFilter {
   take?: number;
   sortDirection?: TableSortDirection;
 }
+const optional = (value: string) => value || undefined;
+function query(filter: LogFilter, cursor?: string | null) {
+  return {
+    from: optional(filter.from),
+    to: optional(filter.to),
+    level: optional(filter.level) as LogLevel | undefined,
+    category: optional(filter.category),
+    eventName: optional(filter.eventName),
+    issueCode: optional(filter.issueCode),
+    traceId: optional(filter.traceId),
+    jobId: optional(filter.jobId),
+    runId: optional(filter.runId),
+    errorCode: optional(filter.errorCode),
+    instance: optional(filter.instance),
+    text: optional(filter.text),
+    sortDirection: filter.sortDirection,
+    take: filter.take ?? 50,
+    cursor: cursor ?? undefined,
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class SystemLogsApi {
-  private readonly transport = inject(ApiTransport);
-  private path(filter: LogFilter, cursor?: string | null) {
-    const query = new URLSearchParams();
-    for (const [key, value] of Object.entries(filter)) if (value) query.set(key, String(value));
-    query.set('take', String(filter.take ?? 50));
-    if (cursor) query.set('cursor', cursor);
-    return '/admin/logs?' + query;
-  }
-  list(filter: LogFilter, cursor?: string | null, signal?: AbortSignal) {
-    return this.transport.json<LogPage>(
-      this.path(filter, cursor),
-      'GET',
-      undefined,
-      undefined,
-      signal,
-    );
-  }
-  detail(id: string, signal?: AbortSignal) {
-    return this.transport.json<LogDetail>(
-      '/admin/logs/' + encodeURIComponent(id),
-      'GET',
-      undefined,
-      undefined,
-      signal,
-    );
-  }
-  health() {
-    return this.transport.json<LogHealth>('/admin/logs/health');
-  }
-  export(filter: LogFilter) {
-    return this.transport.response(
-      this.path(filter).replace('/admin/logs?', '/admin/logs/export?'),
-    );
-  }
+  private readonly api = inject(ApiClient);
+  list = (filter: LogFilter, cursor?: string | null, signal?: AbortSignal) =>
+    this.api.get('/api/v1/admin/logs', { query: query(filter, cursor), signal });
+  detail = (id: string, signal?: AbortSignal) =>
+    this.api.get('/api/v1/admin/logs/{id}', { path: { id }, signal });
+  health = () => this.api.get('/api/v1/admin/logs/health');
+  export = (filter: LogFilter) =>
+    this.api.open('/api/v1/admin/logs/export', { query: query(filter) });
 }

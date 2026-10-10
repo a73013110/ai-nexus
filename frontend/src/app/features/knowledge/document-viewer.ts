@@ -18,7 +18,8 @@ import {
   viewChild,
 } from '@angular/core';
 import type { PDFDocumentProxy, PDFDocumentLoadingTask, RenderTask } from 'pdfjs-dist';
-import type { DocumentInfo, DocumentPage, Job } from '../../core/api/types';
+import type { DocumentDto, DocumentPageDto, JobDto } from '../../core/api/schema';
+import { apiHref } from '../../core/api/api-client';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { Icon } from '../../shared/ui/icon';
 import { Select } from '../../shared/ui/select';
@@ -50,9 +51,9 @@ export class DocumentViewer {
   readonly expanded = input(false);
   readonly closeRequested = output<void>();
   readonly expandRequested = output<void>();
-  readonly document = signal<DocumentInfo | null>(null);
-  readonly pages = signal<DocumentPage[]>([]);
-  readonly job = signal<Job | null>(null);
+  readonly document = signal<DocumentDto | null>(null);
+  readonly pages = signal<DocumentPageDto[]>([]);
+  readonly job = signal<JobDto | null>(null);
   readonly canControl = signal(false);
   readonly page = signal(1);
   readonly zoom = signal('1');
@@ -104,13 +105,14 @@ export class DocumentViewer {
       disabled: this.busy() || (!!this.target().shareId && !this.hasText()),
     },
   ]);
-  readonly contentUrl = computed(() =>
-    this.target().shareId
-      ? `/api/v1/shares/${encodeURIComponent(this.target().shareId!)}/files/${encodeURIComponent(this.target().id)}`
-      : this.rawImage()
-        ? `/api/v1/attachments/${encodeURIComponent(this.target().id)}/content`
-        : `/api/v1/documents/${encodeURIComponent(this.document()?.id || '')}/content`,
-  );
+  readonly contentUrl = computed(() => {
+    const { id, shareId } = this.target();
+    if (shareId)
+      return apiHref('/api/v1/shares/{id}/files/{file}', { path: { id: shareId, file: id } });
+    return this.rawImage()
+      ? apiHref('/api/v1/attachments/{id}/content', { path: { id } })
+      : apiHref('/api/v1/documents/{id}/content', { path: { id: this.document()?.id || '' } });
+  });
   readonly standaloneUrl = computed(() =>
     this.target().shareId
       ? `/reader/share/${encodeURIComponent(this.target().shareId!)}/${encodeURIComponent(this.target().id)}?page=${this.page()}`
@@ -217,7 +219,7 @@ export class DocumentViewer {
       const shared = target.shareId
         ? await this.shares.preview(target.shareId, id, this.controller.signal)
         : null;
-      const info: DocumentInfo = shared
+      const info: DocumentDto = shared
         ? {
             id,
             fileName: shared.file.fileName,

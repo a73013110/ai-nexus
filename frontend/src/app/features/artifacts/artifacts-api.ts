@@ -1,31 +1,28 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiTransport } from '../../core/api/api-transport';
-import type {
-  ArtifactDocument,
-  ArtifactSummary,
-  ArtifactRevision,
-  TransformResult,
-} from '../../core/api/types';
+import { ApiClient } from '../../core/api/api-client';
 
 @Injectable({ providedIn: 'root' })
 export class ArtifactsApi {
-  private readonly http = inject(ApiTransport);
-  list = () => this.http.json<ArtifactSummary[]>('/artifacts');
+  private readonly api = inject(ApiClient);
+  list = () => this.api.get('/api/v1/artifacts');
   get = (id: string, version?: number) =>
-    this.http.json<ArtifactDocument>(
-      `/artifacts/${encodeURIComponent(id)}${version ? '?version=' + version : ''}`,
-    );
-  create = (title: string, content: string, sourceMessageId: string | null = null, projectId: string | null = null) =>
-    this.http.json<ArtifactDocument>('/artifacts', 'POST', { title, content, sourceMessageId, projectId });
-  save = (id: string, title: string, content: string, expectedVersion: number) =>
-    this.http.json<ArtifactDocument>(`/artifacts/${encodeURIComponent(id)}`, 'PUT', {
-      title,
-      content,
-      expectedVersion,
+    this.api.get('/api/v1/artifacts/{id}', {
+      path: { id },
+      query: { version: version || undefined },
     });
-  versions = (id: string) =>
-    this.http.json<ArtifactRevision[]>(`/artifacts/${encodeURIComponent(id)}/versions`);
-  remove = (id: string) => this.http.json<void>(`/artifacts/${encodeURIComponent(id)}`, 'DELETE');
+  create = (
+    title: string,
+    content: string,
+    sourceMessageId: string | null = null,
+    projectId: string | null = null,
+  ) => this.api.post('/api/v1/artifacts', { body: { title, content, sourceMessageId, projectId } });
+  save = (id: string, title: string, content: string, expectedVersion: number) =>
+    this.api.put('/api/v1/artifacts/{id}', {
+      path: { id },
+      body: { title, content, expectedVersion },
+    });
+  versions = (id: string) => this.api.get('/api/v1/artifacts/{id}/versions', { path: { id } });
+  remove = (id: string) => this.api.delete('/api/v1/artifacts/{id}', { path: { id } });
   transform = (
     text: string,
     action: string,
@@ -33,19 +30,11 @@ export class ArtifactsApi {
     language: string,
     signal: AbortSignal,
   ) =>
-    this.http.json<TransformResult>(
-      '/text/transform',
-      'POST',
-      { text, action, modelId, language },
-      undefined,
-      signal,
-    );
+    this.api.post('/api/v1/text/transform', { body: { text, action, modelId, language }, signal });
   export = (id: string, format: string, version: number, signal?: AbortSignal) =>
-    this.http.response(
-      `/artifacts/${encodeURIComponent(id)}/export/${encodeURIComponent(format)}?version=${version}`,
-      'GET',
-      undefined,
-      undefined,
+    this.api.open('/api/v1/artifacts/{id}/export/{format}', {
+      path: { id, format },
+      query: { version },
       signal,
-    );
+    });
 }

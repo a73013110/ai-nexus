@@ -1,18 +1,18 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { NexusApi } from '../../core/api/nexus-api';
-import type { Model, ModelPolicy, Models } from '../../core/api/types';
+import type { ModelDto, ModelPolicyDto, ModelsDto } from '../../core/api/schema';
 import { AuthService } from '../../core/auth/auth-service';
 
 const CHECKING_SEARCH = { available: false, notice: '正在確認網路搜尋設定…' };
 
-/** Model catalog, the chosen model and effort, and whether web search may join the request. */
+/** ModelDto catalog, the chosen model and effort, and whether web search may join the request. */
 @Injectable({ providedIn: 'root' })
 export class ChatModels {
   private readonly api = inject(NexusApi);
   private readonly auth = inject(AuthService);
-  readonly models = signal<Model[]>([]);
+  readonly models = signal<ModelDto[]>([]);
   readonly modelId = signal('');
-  readonly policy = signal<ModelPolicy>({
+  readonly policy = signal<ModelPolicyDto>({
     allowModelSelection: true,
     showModelNames: true,
     defaultModelId: null,
@@ -25,10 +25,10 @@ export class ChatModels {
   readonly current = computed(() => this.models().find((x) => x.id === this.modelId()));
 
   /** The user's default model when policy allows a choice, else the policy default, else the first. */
-  adopt(catalog: Models, preferredModelId: string | null | undefined, preferredEffort: string) {
-    const models = catalog.models as Model[];
+  adopt(catalog: ModelsDto, preferredModelId: string | null | undefined, preferredEffort: string) {
+    const models = catalog.models as ModelDto[];
     this.models.set(models);
-    this.policy.set(catalog.policy as ModelPolicy);
+    this.policy.set(catalog.policy as ModelPolicyDto);
     this.notice.set(catalog.notice ?? null);
     this.modelId.set(
       catalog.policy.allowModelSelection && models.some((x) => x.id === preferredModelId)

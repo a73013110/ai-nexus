@@ -29,14 +29,14 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import type {
-  AdminCatalog,
-  AdminUser,
-  AdminUsers,
-  AdminRole,
-  AdminGroup,
-  AdminFeature,
-  AdminUsage,
-} from '../../core/api/types';
+  AdminCatalogDto,
+  AdminFeatureDto,
+  AdminGroupDto,
+  AdminRoleDto,
+  AdminUsageDto,
+  AdminUserDto,
+  AdminUsersDto,
+} from '../../core/api/schema';
 import { AdminApi } from './admin-api';
 import { Checkbox } from '../../shared/ui/checkbox';
 import { SearchField } from '../../shared/ui/search-field';
@@ -121,12 +121,12 @@ export class AdminPage {
   private readonly api = inject(AdminApi);
   private readonly router = inject(Router);
   private readonly prices = viewChild.required(PriceBook);
-  readonly catalog = signal<AdminCatalog | null>(null);
-  readonly users = signal<AdminUsers | null>(null);
+  readonly catalog = signal<AdminCatalogDto | null>(null);
+  readonly users = signal<AdminUsersDto | null>(null);
   readonly loadingUsers = signal(false);
   private readonly userTable = viewChild<DataTable>('userTable');
-  readonly inspected = signal<AdminUser | null>(null);
-  readonly usage = signal<AdminUsage | null>(null);
+  readonly inspected = signal<AdminUserDto | null>(null);
+  readonly usage = signal<AdminUsageDto | null>(null);
   readonly loading = signal(true);
   readonly error = signal('');
   readonly notice = signal('');
@@ -145,7 +145,7 @@ export class AdminPage {
   readonly search = signal('');
   readonly editor = signal<Editor | null>(null);
   readonly saving = signal(false);
-  readonly testing = signal<AdminUser | null>(null);
+  readonly testing = signal<AdminUserDto | null>(null);
   readonly testReason = signal('驗證角色權限與功能操作');
   readonly testError = signal('');
   readonly testDialog = viewChild.required<ElementRef<HTMLDialogElement>>('testDialog');
@@ -340,12 +340,12 @@ export class AdminPage {
   groupNames(ids: string[]) {
     return ids.map((id) => this.catalog()?.groups.find((x) => x.id === id)?.name || id);
   }
-  open(kind: Editor['kind'], item?: AdminUser | AdminRole | AdminGroup | AdminFeature) {
+  open(kind: Editor['kind'], item?: AdminUserDto | AdminRoleDto | AdminGroupDto | AdminFeatureDto) {
     this.editorError.set('');
-    const user = kind === 'user' ? (item as AdminUser) : null,
-      role = kind === 'role' ? (item as AdminRole) : null,
-      group = kind === 'group' ? (item as AdminGroup) : null,
-      feature = kind === 'feature' ? (item as AdminFeature) : null;
+    const user = kind === 'user' ? (item as AdminUserDto) : null,
+      role = kind === 'role' ? (item as AdminRoleDto) : null,
+      group = kind === 'group' ? (item as AdminGroupDto) : null,
+      feature = kind === 'feature' ? (item as AdminFeatureDto) : null;
     this.editor.set({
       kind,
       id: item?.id || '',
@@ -420,8 +420,8 @@ export class AdminPage {
     this.editorError.set('');
     try {
       if (e.kind === 'user') {
-        if (e.profileChanged)
-          await this.api.saveUser(e.isNew ? null : e.id, {
+        if (e.profileChanged) {
+          const account = {
             displayName: e.name,
             enabled: e.enabled,
             adEnabled: e.adEnabled,
@@ -430,8 +430,9 @@ export class AdminPage {
             localAccount: e.localEnabled ? e.localAccount : null,
             password: e.password || null,
             roleIds: e.ids,
-          });
-        else await this.api.roles(e.id, e.ids);
+          };
+          await (e.isNew ? this.api.createUser(account) : this.api.updateUser(e.id, account));
+        } else await this.api.roles(e.id, e.ids);
         this.update('password', '');
       }
       if (e.kind === 'role')
@@ -477,7 +478,7 @@ export class AdminPage {
   readonly duration = formatDuration;
   readonly modelName = formatModelName;
   readonly format = formatNumber;
-  actions(user: AdminUser): MenuAction[] {
+  actions(user: AdminUserDto): MenuAction[] {
     const testing = !!this.session.auth.session()?.testing;
     return [
       { id: 'edit', label: '編輯使用者與登入方式', icon: 'edit', disabled: testing },
@@ -496,7 +497,7 @@ export class AdminPage {
       },
     ];
   }
-  async userAction(action: string, user: AdminUser) {
+  async userAction(action: string, user: AdminUserDto) {
     if (action === 'edit') this.open('user', user);
     if (action === 'test') {
       this.testing.set(user);

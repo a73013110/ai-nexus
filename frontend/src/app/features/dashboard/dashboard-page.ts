@@ -7,7 +7,7 @@ import { FilterPanel } from '../../shared/ui/filter-panel';
 import { ClientValidationError } from '../../core/api/safe-errors';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { RouterLink, ActivatedRoute } from '@angular/router';
-import type { Dashboard, SpendBucket } from '../../core/api/types';
+import type { DashboardDto, SpendBucketDto } from '../../core/api/schema';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { FeaturePage } from '../../shared/ui/feature-page';
@@ -48,7 +48,7 @@ export class DashboardPage {
   private readonly api = inject(BillingApi);
   private readonly view = inject(ViewScope);
   private readonly route = inject(ActivatedRoute);
-  readonly data = signal<Dashboard | null>(null);
+  readonly data = signal<DashboardDto | null>(null);
   readonly loading = signal(true);
   readonly error = signal('');
   readonly exporting = signal(false);
@@ -200,7 +200,7 @@ export class DashboardPage {
       if (valid()) this.exporting.set(false);
     }
   }
-  private days(rows: SpendBucket[], key: 'amount' | 'requests') {
+  private days(rows: SpendBucketDto[], key: 'amount' | 'requests') {
     const values = new Map<string, number>();
     rows.forEach((x) => values.set(x.label, (values.get(x.label) ?? 0) + x[key]));
     const result = [];

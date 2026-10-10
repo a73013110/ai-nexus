@@ -189,7 +189,8 @@
             }
           </div>
           <nx-resource-sharing
-            [path]="'/artifacts/' + doc.resource.id + '/access'"
+            kind="artifact"
+            [resourceId]="doc.resource.id"
             [name]="doc.resource.name"
             (saved)="notice.set('存取權限已更新。')"
             #sharing

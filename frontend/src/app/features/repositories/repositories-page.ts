@@ -15,15 +15,15 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type {
-  Collection,
-  Repository,
-  RepositoryFile,
-  RepositoryIssue,
-  RepositoryReviewDetail,
-  RepositoryPage,
-  RepositoryStatus,
-  RepositoryTree,
-} from '../../core/api/types';
+  CollectionDto,
+  RepositoryDto,
+  RepositoryFileDto,
+  RepositoryIssueDto,
+  RepositoryPageDto,
+  RepositoryReviewDetailDto,
+  RepositoryStatusDto,
+  RepositoryTreeDto,
+} from '../../core/api/schema';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { NexusApi } from '../../core/api/nexus-api';
 import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
@@ -67,7 +67,7 @@ export class RepositoriesPage {
   private readonly transfer = inject(ConversationDraftTransfer);
   private readonly router = inject(Router);
   readonly reviewId = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('review') || '');
-  readonly status = signal<RepositoryStatus | null>(null);
+  readonly status = signal<RepositoryStatusDto | null>(null);
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly reading = signal(false);
@@ -75,16 +75,16 @@ export class RepositoriesPage {
   readonly notice = signal('');
   readonly token = signal('');
   readonly reconnect = signal(false);
-  readonly page = signal<RepositoryPage | null>(null);
+  readonly page = signal<RepositoryPageDto | null>(null);
   readonly query = signal('');
-  readonly selected = signal<Repository | null>(null);
-  readonly selectedReview = signal<RepositoryReviewDetail | null>(null);
-  readonly tree = signal<RepositoryTree | null>(null);
-  readonly file = signal<RepositoryFile | null>(null);
-  readonly issues = signal<RepositoryIssue[]>([]);
+  readonly selected = signal<RepositoryDto | null>(null);
+  readonly selectedReview = signal<RepositoryReviewDetailDto | null>(null);
+  readonly tree = signal<RepositoryTreeDto | null>(null);
+  readonly file = signal<RepositoryFileDto | null>(null);
+  readonly issues = signal<RepositoryIssueDto[]>([]);
   readonly tab = signal('files');
   readonly importedId = signal('');
-  readonly collections = signal<Collection[]>([]);
+  readonly collections = signal<CollectionDto[]>([]);
   readonly collection = signal('');
   private sequence = 0;
   readonly repos = computed(
@@ -214,7 +214,7 @@ export class RepositoriesPage {
       if (valid()) this.reading.set(false);
     }
   }
-  async choose(repo: Repository) {
+  async choose(repo: RepositoryDto) {
     if (this.busy()) return;
     this.reviewId.set('');
     this.selectedReview.set(null);

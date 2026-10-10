@@ -9,7 +9,7 @@ import {
   output,
   signal,
 } from '@angular/core';
-import type { Message } from '../../core/api/types';
+import type { MessageDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { Icon } from '../../shared/ui/icon';
 import { Select } from '../../shared/ui/select';
@@ -104,7 +104,7 @@ import { QualityApi } from './quality-api';
   `,
 })
 export class MessageFeedback {
-  readonly message = input.required<Message>();
+  readonly message = input.required<MessageDto>();
   readonly rated = output<{ id: string; rating: number }>();
   private readonly api = inject(QualityApi);
   private readonly scope = inject(ViewScope);

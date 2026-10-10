@@ -22,5 +22,5 @@ Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
 $root = Get-NexusRoot
 Invoke-WebRequest -Uri "$($BaseUrl.TrimEnd('/'))/openapi/v1.json" -OutFile (Join-Path $root 'contracts/openapi.json') -TimeoutSec 10
-npm --prefix (Join-Path $root 'tooling/contracts') run generate
+npm --prefix (Join-Path $root 'frontend') run contracts
 if ($LASTEXITCODE -ne 0) { throw '前端型別產生失敗。' }

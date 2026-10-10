@@ -10,7 +10,7 @@ import {
   output,
   viewChild,
 } from '@angular/core';
-import type { LibraryFile } from '../../core/api/types';
+import type { LibraryFileDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { FileBrowser } from './file-browser';
 import { FileLibraryStore } from './file-library-store';
@@ -100,13 +100,13 @@ export class LibraryPicker {
   readonly disabled = input(false);
   readonly compact = input(false);
   readonly label = input('從檔案庫加入');
-  readonly chosen = output<LibraryFile>();
+  readonly chosen = output<LibraryFileDto>();
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   open() {
     this.dialog().nativeElement.showModal();
     void this.store.load();
   }
-  pick(file: LibraryFile) {
+  pick(file: LibraryFileDto) {
     this.dialog().nativeElement.close();
     this.chosen.emit(file);
   }

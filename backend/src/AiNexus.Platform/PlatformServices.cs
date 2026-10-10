@@ -39,6 +39,8 @@ public static class PlatformServices
             options.SerializerOptions.RespectNullableAnnotations = true;
             options.SerializerOptions.RespectRequiredConstructorParameters = true;
             options.SerializerOptions.MaxDepth = 32;
+            // Enums travel by name, so the contract (and the generated frontend types) lists the accepted names.
+            options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
         services.AddControlledHttpClient(ControlledHttpClients.Tools);
         return builder;

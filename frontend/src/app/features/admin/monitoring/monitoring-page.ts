@@ -24,7 +24,8 @@ import { EmptyState } from '../../../shared/ui/empty-state';
 import { formatBytes } from '../../../shared/browser/format';
 import { downloadBlob } from '../../../shared/browser/download';
 import { safeMessage } from '../../../core/api/safe-errors';
-import { MonitoringStore, type OnlineSession, type DependencyTraffic } from './monitoring-store';
+import type { DependencyTraffic, OnlineSession } from '../../../core/api/schema';
+import { MonitoringStore } from './monitoring-store';
 import { RuntimeTopology } from './runtime-topology';
 import {
   dependencyStatus,

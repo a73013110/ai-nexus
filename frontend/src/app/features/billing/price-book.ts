@@ -13,7 +13,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type { ModelPrice, PriceRequest, PriceTarget } from '../../core/api/types';
+import type { PriceDto, PriceRequest, PriceTargetDto } from '../../core/api/schema';
 import {
   formatDate,
   formatModelDisplayName,
@@ -192,8 +192,8 @@ export class PriceBook {
   readonly draft = signal(emptyPrice());
   readonly effective = signal('');
   private readonly effectivePicker = viewChild.required(DateTimePicker);
-  readonly prices = signal<ModelPrice[]>([]);
-  readonly targets = signal<PriceTarget[]>([]);
+  readonly prices = signal<PriceDto[]>([]);
+  readonly targets = signal<PriceTargetDto[]>([]);
   readonly modelName = formatModelDisplayName;
   readonly modelChoices = computed(() => {
     const choices = new Map<string, string>();
@@ -270,7 +270,7 @@ export class PriceBook {
         perRequest: 0,
       }));
   }
-  use(value: ModelPrice) {
+  use(value: PriceDto) {
     const { id, modelDisplayName, ...price } = value;
     this.draft.set(price);
     this.effective.set('');

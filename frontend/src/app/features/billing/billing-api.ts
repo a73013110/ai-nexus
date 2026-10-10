@@ -1,13 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiTransport } from '../../core/api/api-transport';
-import type {
-  ConversationSpend,
-  Dashboard,
-  ModelPrice,
-  PriceRequest,
-  PriceTarget,
-  SpendReport,
-} from '../../core/api/types';
+import { ApiClient } from '../../core/api/api-client';
+import type { PriceRequest } from '../../core/api/schema';
 
 export interface SpendPeriod {
   from: string;
@@ -48,25 +41,21 @@ export function chargeKind(kind: string): string {
 }
 @Injectable({ providedIn: 'root' })
 export class BillingApi {
-  private readonly http = inject(ApiTransport);
-  conversation = (id: string) =>
-    this.http.json<ConversationSpend>(`/conversations/${encodeURIComponent(id)}/spend`);
+  private readonly api = inject(ApiClient);
+  conversation = (id: string) => this.api.get('/api/v1/conversations/{id}/spend', { path: { id } });
   dashboard = (period: SpendPeriod, scope: string, ownerId = '') =>
-    this.http.json<Dashboard>(`/dashboard?${this.query(period, scope, ownerId)}`);
-  report = (period: SpendPeriod, ownerId = '') =>
-    this.http.json<SpendReport>(`/admin/billing/spend?${this.query(period, 'platform', ownerId)}`);
-  export = (period: SpendPeriod, ownerId = '') =>
-    this.http.response(`/admin/billing/export?${this.query(period, 'platform', ownerId)}`);
-  prices = () => this.http.json<ModelPrice[]>('/admin/billing/prices');
-  targets = () => this.http.json<PriceTarget[]>('/admin/billing/targets');
-  addPrice = (body: PriceRequest) =>
-    this.http.json<ModelPrice>('/admin/billing/prices', 'POST', body);
-  private query(period: SpendPeriod, scope: string, ownerId: string) {
-    return new URLSearchParams({
-      ...period,
-      offsetMinutes: String(period.offsetMinutes),
-      scope,
-      ...(ownerId ? { ownerId } : {}),
+    this.api.get('/api/v1/dashboard', {
+      query: { ...period, scope, ownerId: ownerId || undefined },
     });
-  }
+  report = (period: SpendPeriod, ownerId = '') =>
+    this.api.get('/api/v1/admin/billing/spend', {
+      query: { ...period, ownerId: ownerId || undefined },
+    });
+  export = (period: SpendPeriod, ownerId = '') =>
+    this.api.open('/api/v1/admin/billing/export', {
+      query: { ...period, ownerId: ownerId || undefined },
+    });
+  prices = () => this.api.get('/api/v1/admin/billing/prices');
+  targets = () => this.api.get('/api/v1/admin/billing/targets');
+  addPrice = (body: PriceRequest) => this.api.post('/api/v1/admin/billing/prices', { body });
 }

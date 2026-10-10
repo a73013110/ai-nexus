@@ -1,4 +1,4 @@
-import type { AuditEntry } from '../../core/api/types';
+import type { AuditDto } from '../../core/api/schema';
 
 export const AUDIT_CATEGORIES = [
   { value: '', label: '全部活動' },
@@ -9,7 +9,7 @@ export const AUDIT_CATEGORIES = [
 ];
 
 /** Use the event time, not today's default range, for investigations of older activity. */
-export function auditLogQuery(entry: AuditEntry): Record<string, string> | null {
+export function auditLogQuery(entry: AuditDto): Record<string, string> | null {
   const time = Date.parse(entry.at);
   const traceId = /^[a-f\d]{32}$/i.test(entry.traceId || '') ? entry.traceId! : '';
   const issueCode = /^NX-[a-f\d]{32}$/i.test(entry.issueCode || '') ? entry.issueCode! : '';

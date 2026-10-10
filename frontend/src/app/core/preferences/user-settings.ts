@@ -1,11 +1,10 @@
 import { Injectable, effect, inject, signal, untracked } from '@angular/core';
-import { ApiTransport } from '../api/api-transport';
-import type { UserSettings, PersonalUsage, EffectiveModelPolicy } from '../api/types';
-export type { UserSettings, PersonalUsage } from '../api/types';
+import { ApiClient } from '../api/api-client';
+import type { UserSettingsDto } from '../api/schema';
 import { ThemeService } from './theme-service';
 import { AuthService } from '../auth/auth-service';
 
-export const defaultSettings = (): UserSettings => ({
+export const defaultSettings = (): UserSettingsDto => ({
   appearance: { theme: 'system', reducedMotion: false, defaultModelId: null },
   readingFontSize: 15,
   readingLineHeight: 1.2,
@@ -21,10 +20,10 @@ export const defaultSettings = (): UserSettings => ({
 
 @Injectable({ providedIn: 'root' })
 export class UserSettingsService {
-  private readonly http = inject(ApiTransport);
+  private readonly api = inject(ApiClient);
   private readonly themes = inject(ThemeService);
   private readonly auth = inject(AuthService);
-  readonly value = signal<UserSettings>(defaultSettings());
+  readonly value = signal<UserSettingsDto>(defaultSettings());
   private owner = '';
   private generation = -1;
   constructor() {
@@ -46,7 +45,7 @@ export class UserSettingsService {
       if ((await owner) === this.owner) return this.value();
     }
     const generation = this.auth.generation();
-    const [id, value] = await Promise.all([owner, this.http.json<UserSettings>('/settings')]);
+    const [id, value] = await Promise.all([owner, this.api.get('/api/v1/settings')]);
     if (generation !== this.auth.generation())
       throw new DOMException('Identity changed', 'AbortError');
     this.owner = id;
@@ -54,32 +53,32 @@ export class UserSettingsService {
     this.apply(value);
     return value;
   }
-  preview(value: UserSettings) {
+  preview(value: UserSettingsDto) {
     this.render(value);
     this.themes.apply(value.appearance);
   }
   restore() {
     this.preview(this.value());
   }
-  async save(value: UserSettings) {
+  async save(value: UserSettingsDto) {
     const generation = this.auth.generation();
-    const saved = await this.http.json<UserSettings>('/settings', 'PUT', value);
+    const saved = await this.api.put('/api/v1/settings', { body: value });
     if (generation !== this.auth.generation())
       throw new DOMException('Identity changed', 'AbortError');
     this.apply(saved);
     return saved;
   }
   usage() {
-    return this.http.json<PersonalUsage>('/settings/usage');
+    return this.api.get('/api/v1/settings/usage');
   }
   policy() {
-    return this.http.json<EffectiveModelPolicy>('/settings/model-policy');
+    return this.api.get('/api/v1/settings/model-policy');
   }
-  private apply(value: UserSettings) {
+  private apply(value: UserSettingsDto) {
     this.value.set(value);
     this.preview(value);
   }
-  private render(value: UserSettings) {
+  private render(value: UserSettingsDto) {
     const root = document.documentElement;
     root.style.setProperty('--text-body', `${value.readingFontSize / 16}rem`);
     root.style.setProperty('--line-reading', String(value.readingLineHeight));

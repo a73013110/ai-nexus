@@ -5,14 +5,14 @@ import { ClientValidationError } from '../../core/api/safe-errors';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ApiTransport } from '../../core/api/api-transport';
 import type {
-  Collection,
-  RetrievalEvaluationRun,
+  CollectionDto,
   RetrievalEvaluationCase,
-  RetrievalReport,
-} from '../../core/api/types';
-import { isActive } from '../../core/api/types';
+  RetrievalEvaluationDto,
+  RetrievalReportDto,
+} from '../../core/api/schema';
+import { isActive } from '../../core/api/generation-status';
+import { QualityApi } from './quality-api';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { formatDate } from '../../shared/browser/format';
@@ -32,15 +32,15 @@ import { JobsApi } from '../tasks/jobs-api';
   templateUrl: './retrieval-evaluation.html',
 })
 export class RetrievalEvaluation {
-  private readonly api = inject(ApiTransport);
+  private readonly api = inject(QualityApi);
   private readonly knowledge = inject(KnowledgeApi);
   private readonly jobs = inject(JobsApi);
   private readonly scope = inject(ViewScope);
   readonly session = inject(WorkspaceSession);
-  readonly collections = signal<Collection[]>([]);
+  readonly collections = signal<CollectionDto[]>([]);
   readonly selected = signal<string[]>([]);
-  readonly runs = signal<RetrievalEvaluationRun[]>([]);
-  readonly report = signal<RetrievalReport | null>(null);
+  readonly runs = signal<RetrievalEvaluationDto[]>([]);
+  readonly report = signal<RetrievalReportDto | null>(null);
   readonly error = signal('');
   readonly busy = signal(false);
   readonly loading = signal(true);
@@ -77,7 +77,7 @@ export class RetrievalEvaluation {
       if (!this.session.has('knowledge')) throw new ClientValidationError('featureAccess');
       const [collections, runs] = await Promise.all([
         this.knowledge.collections(),
-        this.api.json<RetrievalEvaluationRun[]>('/quality/retrieval-evals'),
+        this.api.retrievalEvaluations(),
       ]);
       if (!valid()) return;
       this.collections.set(collections);
@@ -106,7 +106,7 @@ export class RetrievalEvaluation {
     this.scope.cancel('retrieval-eval');
     this.error.set('');
     try {
-      const report = await this.api.json<RetrievalReport>(`/quality/retrieval-evals/${id}`);
+      const report = await this.api.retrievalEvaluation(id);
       if (!valid()) return;
       this.report.set(report);
       if (isActive(report.run.job.status))
@@ -138,7 +138,7 @@ export class RetrievalEvaluation {
     }
     this.busy.set(true);
     try {
-      const run = await this.api.json<RetrievalEvaluationRun>('/quality/retrieval-evals', 'POST', {
+      const run = await this.api.startRetrievalEvaluation({
         title: this.form.controls.title.value.trim(),
         collectionIds: this.selected(),
         cases,
@@ -195,9 +195,7 @@ export class RetrievalEvaluation {
     this.busy.set(true);
     this.error.set('');
     try {
-      const latest = await this.api.json<RetrievalReport>(
-        `/quality/retrieval-evals/${report.run.id}/report`,
-      );
+      const latest = await this.api.retrievalReport(report.run.id);
       if (valid()) downloadFile(JSON.stringify(latest, null, 2), report.run.title, 'json');
     } catch (error) {
       if (valid()) this.error.set(this.scope.message(error));
