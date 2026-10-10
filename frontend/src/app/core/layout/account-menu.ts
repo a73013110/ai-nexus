@@ -9,6 +9,7 @@ import { Icon } from '../../shared/ui/icon';
   selector: 'nx-account-menu',
   imports: [Notice, ActionMenu, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './account-menu.scss',
   host: { class: 'ui-density-compact' },
   template: `<nx-action-menu
       [profile]="true"

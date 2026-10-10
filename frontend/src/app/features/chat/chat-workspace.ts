@@ -62,6 +62,7 @@ import { chatTour } from './chat-tour';
 
 @Component({
   selector: 'nx-chat-workspace',
+  styleUrls: ['./chat-workspace.scss', './chat-start.scss', './chat-composer.scss'],
   imports: [
     Notice,
     Card,

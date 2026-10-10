@@ -10,7 +10,6 @@ import {
   output,
   signal,
   viewChild,
-  ViewEncapsulation,
 } from '@angular/core';
 import { ThemeService } from '../../core/preferences/theme-service';
 import { harmonics, reconstruct, sampleOutline } from '../../shared/graphics/fourier';
@@ -23,8 +22,7 @@ const duration = 4200;
 
 @Component({
   selector: 'nx-fourier-mark',
-  encapsulation: ViewEncapsulation.None,
-  styleUrl: '../../../styles/fourier-mark.scss',
+  styleUrl: './fourier-mark.scss',
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<div class="fourier-stage">

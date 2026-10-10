@@ -6,6 +6,7 @@ import { Icon } from './icon';
   selector: 'nx-filter-panel',
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './filter-panel.scss',
   host: { class: 'ui-filter-panel' },
   template: `<div class="ui-filter-heading">
       <strong><nx-icon name="filter" />篩選</strong>

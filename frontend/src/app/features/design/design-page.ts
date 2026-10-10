@@ -8,7 +8,6 @@ import {
   inject,
   signal,
   viewChild,
-  ViewEncapsulation,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
@@ -51,9 +50,7 @@ const jobStates: SelectOption[] = [
 /** Uses production components; all samples are local and perform no model or database calls. */
 @Component({
   selector: 'nx-design-page',
-  // Page-only rules load with this lazy route instead of the initial stylesheet.
-  encapsulation: ViewEncapsulation.None,
-  styleUrl: '../../../styles/design.scss',
+  styleUrl: './design-page.scss',
   imports: [
     Notice,
     Card,

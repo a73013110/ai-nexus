@@ -17,7 +17,6 @@ import {
   output,
   signal,
   viewChild,
-  ViewEncapsulation,
 } from '@angular/core';
 import type {
   AdminConversationDetailDto,
@@ -64,11 +63,7 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-user-inspector.html',
-  styleUrls: [
-    '../../../styles/admin-inspector.scss',
-    '../../../styles/admin-inspector-reading.scss',
-  ],
-  encapsulation: ViewEncapsulation.None,
+  styleUrls: ['./admin-user-inspector.scss', './admin-user-inspector-reading.scss'],
 })
 export class AdminUserInspector {
   readonly user = input<AdminUserDto | null>(null);

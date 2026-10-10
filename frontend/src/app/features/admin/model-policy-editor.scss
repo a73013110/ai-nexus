@@ -1,0 +1,20 @@
+.model-policy-heading h3 {
+  margin: 0 0 8px;
+  font-size: var(--text-heading);
+}
+.model-policy-heading {
+  margin-bottom: var(--section-gap);
+}
+.model-policy-table table {
+  table-layout: fixed;
+}
+.model-policy-limit-column {
+  width: 35%;
+}
+.model-policy-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.model-policy-name {
+  --selection-control-padding: 0;
+}

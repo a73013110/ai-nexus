@@ -1,0 +1,46 @@
+// Content that features project into Notice and EmptyState. Emulated encapsulation cannot reach
+// projected nodes from the receiving component, so these few rules stay global.
+.ui-notice-content a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.ui-notice button {
+  min-height: var(--button-target);
+  font-size: var(--p-font-xs);
+  color: inherit;
+}
+.ui-notice .secondary-button {
+  border: 0;
+  background: transparent;
+}
+@media (pointer: coarse) {
+  .ui-notice .icon-button {
+    width: var(--button-target);
+    height: var(--button-target);
+  }
+}
+.ui-empty-state > :is(h2, h3) {
+  margin: 0;
+  font-size: var(--resource-heading-size);
+  color: var(--ink);
+}
+.ui-empty-state > p {
+  margin: 0;
+  max-width: 60ch;
+  line-height: var(--line-ui);
+}
+.ui-empty-state > nx-icon,
+.ui-empty-state > .empty-symbol {
+  width: 2rem;
+  height: 2rem;
+  color: var(--secondary);
+}
+.ui-empty-state > .empty-symbol {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ui-empty-state > .empty-symbol nx-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}

@@ -17,6 +17,7 @@ export type MessageDisplay = Pick<
   selector: 'nx-message-content',
   imports: [Notice, MarkdownView, Icon, RunTimingDisplay, ReaderLink, AttachmentList],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './message-content.scss',
   template: `@if (message().role === 'user') {
       <div class="user-copy">{{ message().content }}</div>
     } @else {

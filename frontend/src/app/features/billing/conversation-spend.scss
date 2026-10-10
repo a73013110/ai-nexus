@@ -1,0 +1,19 @@
+.charge-content strong {
+  font-weight: 550;
+  color: var(--ink);
+}
+.charge-content p {
+  margin: 0.6rem 0;
+  line-height: 1.7;
+}
+.spend-breakdown {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-block: 0.45rem;
+  border-top: 1px solid var(--line);
+}
+.spend-breakdown span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

@@ -40,6 +40,7 @@ import {
 
 @Component({
   selector: 'nx-settings-page',
+  styleUrls: ['./settings-page.scss', './settings-content.scss', './settings-page-dialog.scss'],
   imports: [
     Notice,
     ViewMotion,

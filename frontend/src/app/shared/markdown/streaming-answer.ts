@@ -21,6 +21,7 @@ import { StreamingMarkdown, type StreamingBlock, type StreamingFence } from './s
   imports: [MarkdownView, Notice],
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './streaming-answer.scss',
   host: { class: 'streaming-answer' },
   template: `<div class="streaming-copy" aria-live="off">
     @for (block of blocks(); track block.id) {

@@ -1,0 +1,64 @@
+.share-created > nx-icon {
+  color: var(--signal);
+  width: 40px;
+  height: 40px;
+}
+.share-recipients {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+}
+.share-recipient {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  padding: var(--p-space-2) var(--p-space-3);
+  min-height: var(--button-target);
+  background: var(--accent-soft);
+  border-radius: var(--p-radius-pill);
+}
+.share-created {
+  text-align: center;
+  padding: var(--p-space-5);
+}
+.share-created p {
+  color: var(--secondary);
+  line-height: var(--line-reading);
+}
+.share-created button,
+.share-created a {
+  margin: var(--p-space-2);
+}
+.directory-results {
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  overflow: auto;
+  max-height: 15rem;
+}
+.directory-user {
+  display: flex;
+  gap: var(--p-space-3);
+  align-items: center;
+  padding: var(--p-space-3);
+}
+.directory-user > span {
+  flex: 1;
+  min-width: 0;
+}
+.directory-user strong,
+.directory-user small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.directory-user small {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.directory-user {
+  width: 100%;
+  text-align: left;
+  min-height: var(--button-target);
+}
+.directory-user:hover {
+  background: var(--hover);
+}

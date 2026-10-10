@@ -16,9 +16,14 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       const issues = inject(ClientIssues);
       const error = (event: ErrorEvent) => void issues.report(event.error, 'exception');
-      const rejection = (event: PromiseRejectionEvent) => void issues.report(event.reason, 'rejection');
-      window.addEventListener('error', error); window.addEventListener('unhandledrejection', rejection);
-      inject(DestroyRef).onDestroy(() => { window.removeEventListener('error', error); window.removeEventListener('unhandledrejection', rejection); });
+      const rejection = (event: PromiseRejectionEvent) =>
+        void issues.report(event.reason, 'rejection');
+      window.addEventListener('error', error);
+      window.addEventListener('unhandledrejection', rejection);
+      inject(DestroyRef).onDestroy(() => {
+        window.removeEventListener('error', error);
+        window.removeEventListener('unhandledrejection', rejection);
+      });
     }),
     provideZonelessChangeDetection(),
     provideRouter(routes),

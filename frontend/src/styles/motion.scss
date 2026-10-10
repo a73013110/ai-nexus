@@ -1,124 +1,17 @@
-.inference-signal {
-  width: 100%;
-  height: 100%;
-  display: block;
-  fill: var(--signal);
-  overflow: visible;
-}
-.inference-signal.is-subtle {
-  opacity: 0.7;
-}
-.inference-signal path {
-  fill: none;
-  stroke-width: 1.5;
-  stroke-linecap: round;
-}
-.signal-track {
-  stroke: var(--line);
-}
-.signal-flow {
-  stroke: var(--signal);
-  stroke-dasharray: 10 70;
-  opacity: 0;
-}
-.inference-signal.active .signal-flow {
-  opacity: 1;
-  animation: signal-transit var(--motion-signal) linear infinite;
-}
-.inference-signal.active .signal-flow.secondary {
-  animation-delay: calc(var(--motion-signal) / -2);
-  opacity: 0.65;
+// Shared keyframes and the global reduced-motion switch. Component animations live with their
+// components but reference these names, because keyframes declared in a component are scoped.
+.workspace-dialog[open] {
+  animation: panel-arrive var(--motion-panel) var(--ease);
 }
 @keyframes signal-transit {
   to {
     stroke-dashoffset: -80;
   }
 }
-.inference-status {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  font-size: var(--text-caption);
-  color: var(--secondary);
-}
-.generation-indicator {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-3);
-  padding: var(--p-space-4) 0 var(--p-space-5);
-  color: var(--secondary);
-}
-.generation-orbit {
-  position: relative;
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: var(--generation-indicator-size);
-  height: var(--generation-indicator-size);
-  color: var(--signal);
-  background: var(--accent-soft);
-  border-radius: 50%;
-}
-.generation-orbit i {
-  position: absolute;
-  inset: 4px;
-  border: 1.5px solid transparent;
-  border-top-color: currentColor;
-  border-radius: 50%;
-  animation: orbit-turn 2.4s linear infinite;
-}
-.generation-orbit i:nth-child(2) {
-  inset: 9px;
-  border-top-color: transparent;
-  border-right-color: currentColor;
-  animation-direction: reverse;
-  animation-duration: 1.8s;
-  opacity: 0.7;
-}
-.generation-orbit i:nth-child(3) {
-  inset: 14px;
-  border-top-color: transparent;
-  border-bottom-color: currentColor;
-  animation-duration: 3s;
-  opacity: 0.5;
-}
-.generation-orbit b {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: generation-pulse 2.4s ease-in-out infinite;
-}
-.is-waiting .generation-orbit i {
-  animation-duration: 4s;
-}
 @keyframes orbit-turn {
   to {
     transform: rotate(360deg);
   }
-}
-.history-state.is-running {
-  animation: orbit-turn 1.6s linear infinite;
-  color: var(--signal);
-}
-.streaming-answer {
-  display: block;
-}
-.stream-frontier {
-  color: var(--ink);
-}
-.answer-settled {
-  animation: content-arrive var(--motion-fast) var(--ease);
-}
-.generation-label {
-  font-size: var(--text-label);
-  font-weight: 500;
-}
-.generation-label small {
-  display: block;
-  font-weight: 400;
-  font-size: var(--text-caption);
-  margin-top: 4px;
 }
 @keyframes generation-pulse {
   0%,
@@ -129,27 +22,6 @@
   25% {
     opacity: 1;
   }
-}
-.attachment-enter {
-  animation: attachment-arrive var(--motion-panel) var(--ease);
-}
-.workspace-dialog[open],
-.command-dialog[open] {
-  animation: panel-arrive var(--motion-panel) var(--ease);
-}
-.conversation-menu[open] .floating-menu,
-.context-details[open] .context-panel {
-  animation: suggestion-arrive var(--motion-enter) var(--ease) both;
-  animation-delay: calc(var(--item-index) * var(--motion-stagger));
-}
-.send-button:not(:disabled):active {
-  transform: scale(0.94);
-}
-.send-button {
-  transition:
-    transform var(--motion-fast) var(--ease),
-    background-color var(--motion),
-    color var(--motion);
 }
 @keyframes attachment-arrive {
   from {
@@ -181,36 +53,10 @@
     transform: translateY(0);
   }
 }
-.stream-cursor {
-  content: '';
-  display: inline-block;
-  width: 0.35rem;
-  height: 0.95em;
-  margin-left: 0.2em;
-  vertical-align: -0.05em;
-  border-radius: var(--p-radius-sm);
-  background: var(--signal);
-  animation: cursor-breathe var(--motion-signal) ease-in-out infinite;
-}
 @keyframes cursor-breathe {
   50% {
     opacity: 0.25;
   }
-}
-@media (max-width: 859px) {
-  .inference-status > span {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    clip-path: inset(50%);
-    overflow: hidden;
-  }
-}
-.empty-enter {
-  animation: arrive var(--motion-enter) var(--ease);
-}
-.message-enter {
-  animation: arrive var(--motion) var(--ease);
 }
 @keyframes arrive {
   from {
@@ -231,14 +77,6 @@
   }
 }
 @mixin reduced-motion {
-  .signal-flow,
-  .stream-cursor,
-  .generation-orbit,
-  .generation-orbit i,
-  .generation-orbit b,
-  .history-state.is-running {
-    animation: none !important;
-  }
   *,
   *::before,
   *::after {

@@ -22,6 +22,7 @@ let sequence = 0;
   selector: 'nx-confirm-dialog',
   imports: [CompactDialog, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './confirm-dialog.scss',
   template: `<dialog
     [nxCompactDialog]="compact()"
     #dialog

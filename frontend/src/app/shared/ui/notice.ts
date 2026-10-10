@@ -1,11 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  ViewEncapsulation,
-  computed,
-  input,
-  output,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { Icon } from './icon';
 import { IssueCode } from './issue-code';
 import type { BadgeTone } from './count-badge';
@@ -15,7 +8,6 @@ import type { BadgeTone } from './count-badge';
   selector: 'nx-notice',
   imports: [Icon, IssueCode],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  encapsulation: ViewEncapsulation.None,
   styleUrl: './notice.scss',
   host: {
     class: 'ui-notice',

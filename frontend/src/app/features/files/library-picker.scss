@@ -1,0 +1,12 @@
+.file-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.file-pagination > span {
+  margin-right: auto;
+}

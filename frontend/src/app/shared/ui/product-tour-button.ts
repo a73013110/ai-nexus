@@ -1,10 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  ViewEncapsulation,
-  inject,
-  input,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
 import { ClientIssues } from '../../core/errors/client-issues';
 import { Icon } from './icon';
 import { ProductTour, type ProductTourDefinition } from './product-tour';
@@ -13,8 +7,6 @@ import { ProductTour, type ProductTourDefinition } from './product-tour';
   selector: 'nx-product-tour-button',
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  encapsulation: ViewEncapsulation.None,
-  styleUrl: '../../../styles/product-tour.scss',
   template: `<button
     type="button"
     [class]="compact() ? 'icon-button tour-trigger' : 'quiet-button tour-trigger'"

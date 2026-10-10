@@ -13,8 +13,10 @@ import { Field } from './field';
 let sequence = 0;
 @Component({
   selector: 'nx-inline-title',
+  host: { '[class.is-block]': "appearance() === 'block'" },
   imports: [Icon, Field],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './inline-title.scss',
   template: `@if (editing()) {
       <div class="inline-title-editor" #editor (focusout)="leave($event)">
         <label class="sr-only" [for]="id">目前對話名稱</label>
@@ -85,6 +87,7 @@ export class InlineTitle {
   readonly value = input.required<string>();
   readonly scope = input.required<string>();
   readonly disabled = input(false);
+  readonly appearance = input<'inline' | 'block'>('inline');
   readonly save = input.required<(value: string) => Promise<boolean>>();
   readonly editing = signal(false);
   readonly draft = signal('');

@@ -7,6 +7,7 @@ import { chargeKind, money } from './billing-api';
   selector: 'nx-charge-label',
   imports: [InfoPopover],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './charge-label.scss',
   template: `<nx-info-popover [label]="label()" icon="money" description="本次模型呼叫的費用與用量">
     <div class="charge-content">
       <strong>{{ kind() }}</strong>

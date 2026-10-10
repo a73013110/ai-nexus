@@ -11,10 +11,12 @@ import { formatModelName } from '../../shared/browser/format';
   host: { class: 'ui-density-compact' },
   imports: [Notice, Icon, Disclosure, Select],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './composer-controls.scss',
   template: `<div class="composer-controls">
     @if (policy().allowModelSelection) {
       <nx-select
         class="composer-select model-control"
+        appearance="inline"
         label="選擇模型"
         [placeholder]="modelPlaceholder()"
         [value]="modelId()"
@@ -37,6 +39,7 @@ import { formatModelName } from '../../shared/browser/format';
     @if (selected()?.reasoningEfforts?.length) {
       <nx-select
         class="composer-select reasoning-control"
+        appearance="inline"
         label="思考強度"
         [value]="effort()"
         [disabled]="disabled()"

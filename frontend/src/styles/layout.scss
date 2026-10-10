@@ -1,0 +1,63 @@
+// App frame shared by chat, FeaturePage and DocumentReader. Rules here may style page content
+// projected into the frame; everything else belongs to the owning component.
+.skip-link {
+  position: fixed;
+  left: 20px;
+  top: -80px;
+  z-index: 100;
+  padding: 12px 20px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.skip-link:focus {
+  top: 12px;
+}
+.workbench,
+.feature-layout {
+  display: grid;
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  height: calc(100dvh - var(--identity-banner-height, 0px) - var(--global-issue-height, 0px));
+  overflow: hidden;
+}
+@media (min-width: 860px) {
+  .workbench:has(.workspace-sidebar.is-compact),
+  .feature-layout:has(.workspace-sidebar.is-compact) {
+    grid-template-columns: var(--sidebar-rail-width) minmax(0, 1fr);
+  }
+}
+@media (max-width: 859px) {
+  .workbench,
+  .feature-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.feature-content {
+  width: 100%;
+  max-width: var(--platform-content-width);
+  margin-inline: auto;
+  min-width: 0;
+  animation: content-arrive var(--motion-enter) var(--ease);
+}
+.feature-content > .form-note {
+  margin-bottom: var(--p-space-3);
+}
+.feature-layout-wide .feature-content {
+  max-width: none;
+}
+.feature-layout-data .feature-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.feature-layout-data .feature-content > * {
+  flex: none;
+}
+.feature-layout-data .feature-content > nx-data-table {
+  flex: 1 0 18rem;
+  min-height: 0;
+}
+.feature-layout-compact .panel-eyebrow {
+  margin-bottom: var(--p-space-1);
+  font-size: var(--p-font-xs);
+}

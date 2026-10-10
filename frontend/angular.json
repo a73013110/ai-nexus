@@ -55,7 +55,8 @@
               }
             ],
             "styles": [
-              "src/styles.scss"
+              "src/styles.scss",
+              { "input": "src/styles/driver-tour.scss", "bundleName": "driver-tour", "inject": false }
             ]
           },
           "configurations": {

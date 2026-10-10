@@ -1,0 +1,101 @@
+.command-search > nx-icon {
+  color: var(--accent);
+}
+.command-dialog {
+  --dialog-max-height: min(85dvh, 52rem);
+  padding: var(--dialog-padding);
+  width: min(var(--dialog-width), 100% - 2rem);
+  max-height: var(--dialog-max-height);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--dialog-radius);
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: var(--shadow-floating);
+}
+.command-dialog::backdrop {
+  background: var(--scrim);
+}
+.command-dialog {
+  --dialog-width: var(--command-width);
+  padding: 0;
+  margin-top: max(3rem, 14dvh);
+}
+.command-search {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  padding: var(--p-space-4);
+  border-bottom: 1px solid var(--line);
+}
+.command-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  min-height: var(--button-target);
+  font-size: var(--control-font-size);
+}
+.command-results {
+  padding: var(--p-space-2);
+  overflow: auto;
+  max-height: 48dvh;
+}
+.command-results > button {
+  display: flex;
+  width: 100%;
+  min-height: var(--button-target);
+  align-items: center;
+  gap: var(--p-space-3);
+  text-align: left;
+  padding: var(--resource-row-padding-block) var(--resource-row-padding-inline);
+  border-radius: var(--p-radius-md);
+}
+.command-results > button[aria-selected='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.command-results button > span {
+  min-width: 0;
+  flex: 1;
+}
+.command-results strong {
+  display: block;
+  font-size: var(--text-label);
+  font-weight: 500;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.command-results small {
+  display: block;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.command-results kbd {
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.command-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--p-space-3) var(--p-space-4);
+  border-top: 1px solid var(--line);
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.command-footer kbd {
+  display: inline-block;
+  padding-inline: var(--p-space-1);
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-sm);
+}
+@media (max-width: 600px) {
+  .command-results kbd {
+    display: none;
+  }
+}
+.command-dialog[open] {
+  animation: panel-arrive var(--motion-panel) var(--ease);
+}

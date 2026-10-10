@@ -15,7 +15,7 @@
 | shared/markdown              | Markdown 解析與檢視、串流 Markdown、Mermaid、程式碼區塊與語法上色                                                                                                  |
 | shared/browser               | ViewScope、autosize、拖放／貼圖、下載、複製、文字選取、popover 定位與未儲存提示                                                                                    |
 | shared/graphics              | 不含認證／業務依賴的數學，例如傅立葉取樣／DFT                                                                                                                      |
-| src/styles                   | 三層 tokens、base、嵌套主題、分區樣式與統一減少動態規則；`src/styles.scss` 只決定載入順序                                                                          |
+| src/styles                   | 跨頁共用：三層 tokens、base、嵌套主題、共用 `ui-*` 模式、Markdown 與統一減少動態規則；元件樣式放在元件旁；`src/styles.scss` 只決定載入順序                         |
 
 依賴方向由 ESLint（`frontend/eslint.config.js`）檢查：`shared` 不可引用 `features`；`core` 除了 `core/layout` 不可引用 `features`；`features` 之間可以互相引用。需要登入的頁面都是 `app.routes.ts` 裡同一個 shell route 的子路由，登入檢查只宣告一次；新頁面加在 children 裡即可。
 

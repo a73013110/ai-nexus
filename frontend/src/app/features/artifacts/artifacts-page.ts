@@ -54,6 +54,7 @@ import { ShareDialog } from '../sharing/share-dialog';
   ],
   providers: [ViewScope, TEXT_ACTION_ICON_PROVIDER],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './artifacts-page.scss',
   templateUrl: './artifacts-page.html',
 })
 export class ArtifactsPage {

@@ -1,0 +1,10 @@
+:host {
+  display: contents;
+}
+@media (max-width: 859px) {
+  .workspace-menu-button {
+    flex: none;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+}

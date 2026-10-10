@@ -1,0 +1,108 @@
+.file-library-toolbar > nx-view-switch {
+  margin-bottom: 0;
+}
+.file-library-toolbar nx-search-field {
+  margin-left: auto;
+  width: min(300px, 100%);
+}
+@media (max-width: 680px) {
+  .file-library-toolbar nx-search-field {
+    order: 1;
+    width: 100%;
+  }
+}
+.file-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.file-pagination > span {
+  margin-right: auto;
+}
+.file-library-toolbar > nx-select {
+  width: 144px;
+}
+@media (max-width: 680px) {
+  .file-library-toolbar > nx-select {
+    flex: 1 1 144px;
+  }
+}
+.file-library-private nx-icon {
+  width: 14px;
+}
+.file-library-note nx-icon {
+  width: 16px;
+  flex: none;
+  margin-top: 2px;
+}
+.file-library-intro {
+  display: flex;
+  align-items: center;
+  gap: var(--section-gap);
+  margin-bottom: var(--section-gap);
+  --card-background: var(--surface-subtle);
+}
+.file-library-intro p {
+  margin: 6px 0 0;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  line-height: 1.7;
+}
+.file-library-intro strong {
+  font-weight: 600;
+}
+.file-library-mark {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: none;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: var(--p-radius-md);
+}
+.file-library-private {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  white-space: nowrap;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.file-library-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 0;
+}
+.file-library-summary {
+  display: flex;
+  justify-content: space-between;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  margin: 0 0 var(--p-space-2);
+}
+.file-library-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--text-caption);
+  color: var(--secondary);
+  line-height: 1.8;
+  margin-top: 0;
+}
+@media (max-width: 680px) {
+  .file-library-intro {
+    padding: var(--section-padding);
+    gap: var(--section-gap);
+  }
+  .file-library-private {
+    display: none;
+  }
+}

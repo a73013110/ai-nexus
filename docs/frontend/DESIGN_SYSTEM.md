@@ -66,13 +66,13 @@
 
 `generationStatus` 共用排隊、準備回答與輸出中的顯示規則，僅依伺服器 run 狀態及是否收到內容判定。思考強度不是實際推理階段，不以設定值宣稱「正在推理」。聊天上方的單一 status 區負責讀屏通知，訊息區的 `GenerationIndicator` 只呈現文字與裝飾訊號，避免重複播報。
 
-系統 `prefers-reduced-motion` 或個人「減少動態效果」停止 signal／generation／cursor loop，進場與 transition 幾乎立即完成；顏色與文字狀態仍保留。兩種入口共用 `styles/motion.scss` 的 reduced-motion mixin，響應規則隨元件樣式保存；鍵盤行為由共用 Disclosure、原生 dialog、CommandPalette 及頁面協調。
+系統 `prefers-reduced-motion` 或個人「減少動態效果」停止 signal／generation／cursor loop，進場與 transition 幾乎立即完成；顏色與文字狀態仍保留。兩種入口共用 `styles/motion.scss` 的 reduced-motion mixin；元件內的 loop 動畫另以 `@media (prefers-reduced-motion)` 與 `:host-context([data-reduced-motion='true'])` 停止，響應規則隨元件樣式保存；鍵盤行為由共用 Disclosure、原生 dialog、CommandPalette 及頁面協調。
 
 ## 檔案與驗證
 
 共用 `Select` 使用 combobox／listbox、可見 focus、方向鍵、typeahead 與原生 popover top layer，避免被側欄或 dialog 裁切；浮層依可用畫面翻轉並限制高度。個人設定只修改 semantic／component tokens，UI 最小字級與觸控目標保留。設定頁的分類側欄與內容寬度使用 `--settings-sidebar-width`、`--settings-content-width`。
 
-`styles.scss` 只管理載入順序；`styles/` 下 `tokens.scss`／`base.scss` 管全域，其餘依責任拆分 controls、shell、sidebar、welcome、messages、markdown、composer、dialogs、tools、attachments。每個檔案包含自身的響應規則；`composer-controls.scss` 管模型／思考／Context，`motion.scss` 統一動效。只屬於單一 lazy 頁面的樣式（登入、專案、分享、品質、整合、設計）由頁面元件引用，不進初始樣式，規則見 [聊天渲染](CHAT_RENDERING.md#樣式載入)。UI 元件不複製 token，也不維持第二份桌面／手機對話選單。
+`styles.scss` 只管理載入順序；`styles/` 只放跨頁共用的 tokens、base、捲軸、controls、layout、platform、markdown、dialogs、data-workspace、projected 與 motion。頁面與元件樣式放在元件旁，用 Emulated 封裝隨元件載入；`composer-controls.scss` 管模型／思考／Context，`motion.scss` 保存共用 keyframes。規則見 [聊天渲染](CHAT_RENDERING.md#樣式載入)。UI 元件不複製 token，也不維持第二份桌面／手機對話選單。
 
 工作區、dialog、範本、快捷指令、附件縮圖與列表高度使用 component tokens：`--reading-width`、`--dialog-width`、`--library-width`、`--command-width`、`--attachment-thumb`、`--attachment-list-max`。對話起點共用輸入區寬度；短表單使用 `.ui-dialog-compact`，可收縮的彈窗採內容高度，上限由 viewport 決定。聊天與側欄操作沿用桌面 34px／觸控 44px 尺度；品牌控制項與收合圖示欄維持 44px，手機側欄 overlay 亦維持 44px。`--sidebar-avatar-size` 為 28px，帳號名稱／帳號兩行文字不因縮圖省略。輸入自動增高讀取 CSS token 上下限，無需同步修改 JavaScript 常數；最小高度 32px，訊息間距正常 16px／緊湊 12px，閱讀字級及行距不變。
 
@@ -121,7 +121,7 @@
 
 側欄品牌與帳號各保留單列，移除重複副標；`--sidebar-brand-gap`、品牌字級與內距集中在 tokens。工作區採 PanelsTopLeft，快捷指令採 SquareTerminal，避免不同操作共用相同符號。44px 點擊目標保持不變，增加空間優先縮減裝飾與重複資訊。
 
-`aside[nxWorkspaceSidebar]` 是側欄外框的唯一實作，`styles/workspace-sidebar.scss` 管共同尺寸、品牌與區域分配；`styles/sidebar.scss` 只管理聊天內容與手機 drawer。所有側欄共用 heading 鈴鐺，位於 sidebar-toggle 左側，收合 rail 時垂直排列。聊天使用 `collapsibleNavigation`：收合工作區時顯示歷史與聊天工具，展開時導覽延伸至品牌列下方並暫時隱藏聊天內容；收合後原有搜尋、篩選與捲動狀態仍在。導航的展開狀態由側欄管理，不以 CSS 猜測子元件狀態。首頁、品牌與登入預設目的地共用 `core/layout/workspace-home.ts` 的 `/dashboard`；登入後由目的頁載入自己的資料，不預先初始化聊天模型、歷史與附件。
+`aside[nxWorkspaceSidebar]` 是側欄外框的唯一實作，`core/layout/workspace-sidebar.scss` 管共同尺寸、品牌與區域分配；`features/chat/chat-sidebar.scss` 只管理聊天內容與手機 drawer。所有側欄共用 heading 鈴鐺，位於 sidebar-toggle 左側，收合 rail 時垂直排列。聊天使用 `collapsibleNavigation`：收合工作區時顯示歷史與聊天工具，展開時導覽延伸至品牌列下方並暫時隱藏聊天內容；收合後原有搜尋、篩選與捲動狀態仍在。導航的展開狀態由側欄管理，不以 CSS 猜測子元件狀態。首頁、品牌與登入預設目的地共用 `core/layout/workspace-home.ts` 的 `/dashboard`；登入後由目的頁載入自己的資料，不預先初始化聊天模型、歷史與附件。
 
 `InferenceSignal` 的 SVG 使用 host 的實際寬高，host 不參與 flex shrink；`JobProgress` 的進度樣式由元件管理，文字與動畫各佔獨立區域，避免小尺寸 host 與較大 SVG 重疊。
 

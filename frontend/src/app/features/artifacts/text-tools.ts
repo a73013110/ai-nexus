@@ -40,6 +40,7 @@ import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
   ],
   providers: [ViewScope, CopyFeedback, TEXT_ACTION_ICON_PROVIDER],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './text-tools.scss',
   template: `<dialog
     nxCompactDialog
     #surface="nxCompactDialog"

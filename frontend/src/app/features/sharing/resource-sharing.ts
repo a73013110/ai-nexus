@@ -24,6 +24,7 @@ import { SearchField } from '../../shared/ui/search-field';
   imports: [Notice, CompactDialog, Icon, Select, Checkbox, SearchField],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './resource-sharing.scss',
   template: `<dialog nxCompactDialog #dialog class="platform-dialog" (cancel)="cancel($event)">
     <div class="dialog-heading">
       <div>

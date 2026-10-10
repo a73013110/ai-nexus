@@ -1,0 +1,33 @@
+.knowledge-hits {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--p-space-3);
+}
+.knowledge-hit {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.knowledge-hit strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.knowledge-hit > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--text-caption);
+  color: var(--signal);
+  margin-block: var(--p-space-2);
+}
+.knowledge-hit p {
+  margin: 0;
+  line-height: 1.7;
+  color: var(--secondary);
+  font-size: var(--text-label);
+  white-space: pre-wrap;
+  max-height: 12rem;
+  overflow-y: auto;
+}
+.knowledge-hit:hover {
+  border-color: var(--signal);
+}

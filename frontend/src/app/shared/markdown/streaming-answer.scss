@@ -1,0 +1,38 @@
+:host {
+  display: block;
+}
+.streaming-copy {
+  line-height: var(--line-reading);
+  overflow-wrap: anywhere;
+}
+.streaming-copy > nx-markdown-view {
+  display: block;
+}
+.streaming-copy .stream-committed {
+  margin-bottom: 16px;
+}
+.streaming-copy .stream-continues {
+  margin-bottom: 0;
+}
+.stream-frontier {
+  color: var(--ink);
+}
+.stream-cursor {
+  content: '';
+  display: inline-block;
+  width: 0.35rem;
+  height: 0.95em;
+  margin-left: 0.2em;
+  vertical-align: -0.05em;
+  border-radius: var(--p-radius-sm);
+  background: var(--signal);
+  animation: cursor-breathe var(--motion-signal) ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .stream-cursor {
+    animation: none !important;
+  }
+}
+:host-context([data-reduced-motion='true']) .stream-cursor {
+  animation: none !important;
+}

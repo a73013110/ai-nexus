@@ -11,6 +11,7 @@ import { formatBytes, formatDate } from '../../shared/browser/format';
   selector: 'nx-file-browser',
   imports: [ReaderLink, RouterLink, Icon, Card],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './file-browser.scss',
   template: `<div class="file-browser" [class.file-browser-list]="layout() === 'list'">
     @for (item of items(); track item.file.id) {
       <article nxCard class="file-card">

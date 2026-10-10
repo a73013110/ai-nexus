@@ -22,6 +22,7 @@ import { SearchField } from '../../shared/ui/search-field';
   imports: [Notice, CompactDialog, FileBrowser, Icon, SearchField, EmptyState],
   providers: [ViewScope, FileLibraryStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './library-picker.scss',
   template: `<button
       type="button"
       [class]="compact() ? 'icon-button' : 'secondary-button'"

@@ -1,0 +1,217 @@
+.viewer-toolbar > nx-view-switch {
+  margin-bottom: 0;
+}
+.reader-pagination nx-select {
+  width: 104px;
+}
+:host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+}
+.viewer-actions .icon-button {
+  width: var(--button-target);
+  height: var(--button-target);
+}
+.reader-pagination .icon-button {
+  width: var(--button-target);
+  height: var(--button-target);
+}
+.viewer-processing nx-job-progress {
+  display: block;
+  margin-top: 12px;
+}
+.viewer-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--section-gap);
+  padding: var(--section-padding);
+  flex: none;
+  border-bottom: 1px solid var(--line);
+}
+.viewer-symbol {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 40px;
+  color: var(--accent);
+  flex: none;
+}
+.viewer-title {
+  flex: 1;
+  min-width: 0;
+}
+.viewer-title h1 {
+  font-size: var(--resource-heading-size);
+  font-weight: 600;
+  line-height: 1.5;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.viewer-title > span {
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.viewer-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+.viewer-close {
+  margin-left: 8px;
+  background: var(--hover);
+}
+.viewer-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--section-gap);
+  padding: var(--p-space-2) var(--section-padding);
+  border-bottom: 1px solid var(--line);
+  flex: none;
+  font-size: var(--text-caption);
+}
+.reader-pagination {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.viewer-zoom {
+  width: 132px;
+}
+.viewer-search {
+  min-width: 120px;
+  max-width: 240px;
+  flex: 1;
+  margin-left: auto;
+}
+.viewer-processing {
+  flex: none;
+  padding: var(--p-space-2) var(--section-padding);
+  border-bottom: 1px solid var(--line);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.viewer-processing summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.viewer-stage {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--canvas);
+}
+.reader-original {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 16px;
+  min-height: 100%;
+  padding: 24px;
+}
+.reader-original canvas {
+  display: block;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1333333333);
+  background: white;
+}
+.viewer-image .reader-original {
+  height: 100%;
+  min-height: 0;
+  align-content: stretch;
+  align-items: center;
+  padding: 16px;
+}
+.viewer-image img {
+  grid-area: 1/1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  object-fit: contain;
+  transition: opacity var(--motion-enter) var(--ease);
+}
+.reader-image-loading {
+  grid-area: 1/1;
+  color: var(--secondary);
+}
+.viewer-image-zoomed .reader-original {
+  height: auto;
+  min-height: 100%;
+  grid-template-columns: minmax(min-content, 1fr);
+  align-content: center;
+}
+.reader-image-pending {
+  opacity: 0;
+}
+.reader-text {
+  width: min(900px, 100%);
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 48px);
+}
+.reader-text pre {
+  font-size: var(--text-body);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+  line-height: var(--line-reading);
+}
+.reader-text-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.reader-matches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: var(--p-space-2) var(--section-padding);
+  font-size: var(--text-caption);
+  flex: none;
+  border-bottom: 1px solid var(--line);
+  max-height: 100px;
+  overflow: auto;
+}
+@media (max-width: 600px) {
+  .viewer-heading {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .viewer-symbol,
+  .viewer-new-tab {
+    display: none;
+  }
+  .viewer-actions {
+    gap: 0;
+  }
+  .viewer-close {
+    margin-left: 0;
+  }
+  .viewer-toolbar {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .viewer-search {
+    max-width: none;
+  }
+  .reader-original {
+    padding: 12px;
+  }
+  .viewer-image .reader-original {
+    padding: 8px;
+  }
+}

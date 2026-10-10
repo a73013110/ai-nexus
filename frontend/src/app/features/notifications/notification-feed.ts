@@ -13,6 +13,7 @@ import { Icon } from '../../shared/ui/icon';
   selector: 'nx-notification-feed',
   imports: [Notice, EmptyState, IssueCode, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './notification-feed.scss',
   host: { style: 'display: contents' },
   template: `<div class="notification-toolbar">
       <button
