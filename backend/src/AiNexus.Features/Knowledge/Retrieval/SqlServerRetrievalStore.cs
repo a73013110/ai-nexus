@@ -17,7 +17,7 @@ public sealed class SqlServerRetrievalStore(ISqlDatabase<NexusDbContext> sql, IO
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromSeconds(30);
             return await sql.QuerySingleAsync<bool>("SELECT CAST(CASE WHEN SERVERPROPERTY('IsFullTextInstalled') = 1 AND EXISTS (SELECT 1 FROM sys.fulltext_languages WHERE lcid = 1028) AND EXISTS (SELECT 1 FROM sys.fulltext_indexes WHERE object_id = OBJECT_ID('knowledge.Chunks') AND is_enabled = 1) THEN 1 ELSE 0 END AS bit)", commandTimeout: 5, cancellationToken: ct);
         });
-        if (!fts && mode == "keyword") throw new ApiException(503, "fulltext_unavailable", "全文索引尚未就緒，請由管理員檢查 SQL 全文元件。");
+        if (!fts && mode == "keyword") throw new ExternalServiceException(Error.Unavailable("fulltext_unavailable"), "全文索引尚未就緒，請由管理員檢查 SQL 全文元件。");
         if (!fts && mode == "hybrid") { mode = "vector"; RetrievalDiagnostics.Degraded(logger, "hybrid", "vector", "fulltext_not_ready"); }
         if (collections.Count == 0) return new(mode, []);
         var settings = options.Value;
@@ -62,7 +62,7 @@ public sealed class SqlServerRetrievalStore(ISqlDatabase<NexusDbContext> sql, IO
                 RetrievalDiagnostics.Degraded(logger, "hybrid", "vector", "fulltext_unavailable", error);
                 return await SearchAsync(collections, profile, query, vector, "vector", ct);
             }
-            throw new ApiException(503, "fulltext_unavailable", "全文搜尋服務目前無法使用。", error);
+            throw new ExternalServiceException(Error.Unavailable("fulltext_unavailable"), "全文搜尋服務目前無法使用。", error);
         }
     }
 }

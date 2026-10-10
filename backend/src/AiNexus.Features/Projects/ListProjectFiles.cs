@@ -19,6 +19,6 @@ internal static class ListProjectFiles
     {
         (await access.RequireAsync(actor, id, Project.Kind, ct)).OrThrow();
         var ids = await db.Set<WorkspaceResource>().Where(x => x.ParentId == id && x.Kind == "document").Select(x => x.Id).Take(Project.MaxFiles).ToListAsync(ct);
-        return await documents.DetailsAsync(actor, ids, ct);
+        return (await documents.DetailsAsync(actor, ids, ct)).OrThrow();
     }
 }

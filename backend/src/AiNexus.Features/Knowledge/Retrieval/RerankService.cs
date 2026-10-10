@@ -14,7 +14,7 @@ public sealed class RerankService(IEnumerable<IRerankClient> clients, RetrievalI
         var scores = await invocations.RunAsync(actor, "rerank", settings.Provider, settings.Model, async () =>
             (await clients.Single(x => x.Provider == settings.Provider).RerankAsync(query, texts, timeout.Token), (long?)null), ct);
         if (scores.Count != candidates.Count || scores.Select(x => x.Index).Distinct().Count() != scores.Count || scores.Any(x => x.Index < 0 || x.Index >= candidates.Count || !double.IsFinite(x.Score)))
-            throw new ApiException(502, "rerank_invalid", "重排回應數量、索引或分數不正確。");
+            throw new ExternalServiceException(Error.Upstream("rerank_invalid"), "重排回應數量、索引或分數不正確。");
         return scores.Where(x => x.Score >= settings.MinScore).OrderByDescending(x => x.Score).ThenBy(x => x.Index)
             .Select(x => candidates[x.Index] with { Score = x.Score, RerankScore = x.Score }).ToArray();
     }

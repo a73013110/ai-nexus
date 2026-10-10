@@ -26,7 +26,7 @@ public sealed class RetrievalEvaluationHandler(NexusDbContext db, RetrievalEvalu
                 var timer = Stopwatch.StartNew(); var result = new RetrievalEvaluationResult { RunId = run.Id, CaseIndex = i, Mode = mode };
                 try
                 {
-                    var search = await pipeline.SearchAsync(run.OwnerId, new(cases[i].Query, collections), ct, mode: mode == "hybrid+rerank" ? "hybrid" : mode, rerank: mode == "hybrid+rerank");
+                    var search = (await pipeline.SearchAsync(run.OwnerId, new(cases[i].Query, collections), ct, mode: mode == "hybrid+rerank" ? "hybrid" : mode, rerank: mode == "hybrid+rerank")).OrThrow();
                     var metrics = RetrievalMetrics.Measure(cases[i], search.Hits, run.TopK);
                     result.ActualMode = search.Mode; result.Recall = metrics.Recall; result.ReciprocalRank = metrics.ReciprocalRank; result.Ndcg = metrics.Ndcg; result.Refused = metrics.Refused;
                     result.RewriteMs = search.RewriteMs; result.EmbedMs = search.EmbedMs; result.SearchMs = search.SearchMs; result.RerankMs = search.RerankMs;

@@ -91,7 +91,7 @@ public sealed class RetrievalPipelineTests
         });
         using var client = await factory.SignedInAsync(); var seed = await SeedAsync(factory, client);
         using var scope = factory.Services.CreateScope();
-        var result = await scope.ServiceProvider.GetRequiredService<RetrievalPipeline>().SearchAsync(seed.Actor, new("採購", [seed.Collection]), CancellationToken.None, [new("user", "請查採購規範")]);
+        var result = (await scope.ServiceProvider.GetRequiredService<RetrievalPipeline>().SearchAsync(seed.Actor, new("採購", [seed.Collection]), CancellationToken.None, [new("user", "請查採購規範")])).Value!;
         Assert.Equal("hybrid+rerank(rewrite-skipped)", result.Mode); Assert.Empty(result.Hits); Assert.Equal("採購", rerank.Query);
     }
     [Fact]
@@ -113,7 +113,7 @@ public sealed class RetrievalPipelineTests
         public string Provider => "tei"; public bool Fail { get; set; } public string? Query { get; private set; } public Func<Task>? BeforeReturn { get; set; }
         public async Task<IReadOnlyList<RerankScore>> RerankAsync(string query, IReadOnlyList<string> candidates, CancellationToken ct)
         {
-            Query = query; if (Fail) throw new ApiException(503, "fixture_rerank", "測試重排失敗。");
+            Query = query; if (Fail) throw new ExternalServiceException(Error.Unavailable("fixture_rerank"), "測試重排失敗。");
             if (BeforeReturn is not null) await BeforeReturn();
             return candidates.Select((_, i) => new RerankScore(i, .5 - i * .01)).ToArray();
         }
@@ -122,6 +122,6 @@ public sealed class RetrievalPipelineTests
     {
         public bool Fail { get; set; }
         public Task<string> RewriteAsync(Guid actor, string query, IReadOnlyList<RewriteTurn> history, CancellationToken ct) => Fail
-            ? throw new ApiException(503, "fixture_rewrite", "測試改寫失敗。") : Task.FromResult("採購核准");
+            ? throw new ExternalServiceException(Error.Unavailable("fixture_rewrite"), "測試改寫失敗。") : Task.FromResult("採購核准");
     }
 }

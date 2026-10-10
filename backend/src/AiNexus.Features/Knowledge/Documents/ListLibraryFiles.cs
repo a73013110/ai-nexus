@@ -23,7 +23,7 @@ internal sealed class ListLibraryFiles(NexusDbContext db, ResourceAccess access,
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("", async (string? search, string? type, string? source, int? offset, int? limit, ICurrentUser user, ListLibraryFiles handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, search, type ?? "all", source ?? "all", offset ?? 0, limit ?? 40, ct)).ToHttpResult())
-        .WithName("ListLibraryFiles").Produces<FileLibraryPageDto>();
+        .WithName("ListLibraryFiles");
 
     public async Task<Result<FileLibraryPageDto>> HandleAsync(Guid actor, string? search, string type, string source, int offset, int limit, CancellationToken ct)
     {

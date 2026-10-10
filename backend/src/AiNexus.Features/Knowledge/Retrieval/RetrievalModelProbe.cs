@@ -29,10 +29,10 @@ public sealed class RetrievalModelProbe(IEnumerable<IEmbeddingClient> embeddings
                 var vectors = actor is Guid owner ? await embeddingService.EmbedBatchAsync(owner, profile, input, EmbeddingPurpose.Query, timeout.Token)
                     : (await embeddings.Single(x => x.Provider == profile.Provider).EmbedBatchAsync(input, EmbeddingPurpose.Query, profile, timeout.Token)).Vectors;
                 if (vectors.Count != input.Length || vectors.Any(x => x.Length != settings.Dimensions || x.Any(v => !float.IsFinite(v)) || x.All(v => v == 0)))
-                    throw new ApiException(502, "embedding_probe_invalid", "向量數量、維度或數值不符合設定。");
+                    throw new ExternalServiceException(Error.Upstream("embedding_probe_invalid"), "向量數量、維度或數值不符合設定。");
                 embedding = embedding with { Available = true, Notice = $"批次向量化通過，維度 {settings.Dimensions}。" };
             }
-            catch (Exception error) when (error is ApiException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
+            catch (Exception error) when (error is ExternalServiceException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
             { ct.ThrowIfCancellationRequested(); using var logging = logger.BeginScope(new Dictionary<string, object?> { ["Stage"] = "embedding-probe", ["ExternalService"] = "embedding" });
                 var issue = issues.Report(error, "embedding_probe_failed", LogLevel.Warning); embedding = embedding with { Available = false, Notice = Issues.Message(issue) }; }
         }
@@ -45,11 +45,11 @@ public sealed class RetrievalModelProbe(IEnumerable<IEmbeddingClient> embeddings
                 if (actor is Guid owner) await rerankService.RerankAsync(owner, "採購如何核准？", input.Select(x => new KnowledgeHitDto(Guid.Empty, "合成測試", 1, x, 0, Guid.Empty)).ToArray(), timeout.Token);
                 else {
                     var scores = await rerankers.Single(x => x.Provider == settings.Rerank.Provider).RerankAsync("採購如何核准？", input, timeout.Token);
-                    if (scores.Count != 2 || scores.Select(x => x.Index).Distinct().Count() != 2 || scores.Any(x => x.Index is < 0 or > 1 || !double.IsFinite(x.Score))) throw new ApiException(502, "rerank_probe_invalid", "重排回應無效。");
+                    if (scores.Count != 2 || scores.Select(x => x.Index).Distinct().Count() != 2 || scores.Any(x => x.Index is < 0 or > 1 || !double.IsFinite(x.Score))) throw new ExternalServiceException(Error.Upstream("rerank_probe_invalid"), "重排回應無效。");
                 }
                 rerank = rerank with { Available = true, Notice = "合成查詢與候選重排通過。" };
             }
-            catch (Exception error) when (error is ApiException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
+            catch (Exception error) when (error is ExternalServiceException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
             { ct.ThrowIfCancellationRequested(); using var logging = logger.BeginScope(new Dictionary<string, object?> { ["Stage"] = "rerank-probe", ["ExternalService"] = "rerank" });
                 var issue = issues.Report(error, "rerank_probe_failed", LogLevel.Warning); rerank = rerank with { Available = false, Notice = Issues.Message(issue) }; }
         }

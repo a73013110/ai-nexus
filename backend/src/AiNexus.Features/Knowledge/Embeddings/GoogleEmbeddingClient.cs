@@ -9,7 +9,7 @@ public sealed class GoogleEmbeddingClient(RetrievalHttp http, IOptions<Inference
     public string Provider => "google";
     public async Task<EmbeddingBatchResult> EmbedBatchAsync(IReadOnlyList<string> inputs, EmbeddingPurpose purpose, EmbeddingProfile profile, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(inference.Value.GoogleApiKey)) throw new ApiException(503, "google_api_key_missing", "尚未設定 Google AI API key。");
+        if (string.IsNullOrWhiteSpace(inference.Value.GoogleApiKey)) throw new ExternalServiceException(Error.Unavailable("google_api_key_missing"), "尚未設定 Google AI API key。");
         var two = profile.Model.StartsWith("gemini-embedding-2", StringComparison.Ordinal);
         var requests = inputs.Select(text => {
             var config = new Dictionary<string, object?> { ["outputDimensionality"] = profile.Dimensions, ["autoTruncate"] = false };

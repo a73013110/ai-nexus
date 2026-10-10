@@ -2,6 +2,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Administration.Retrieval;
 
@@ -23,6 +24,6 @@ internal static class TestAdminRetrieval
 {
     public static void Map(RouteGroupBuilder routes) => routes
         .MapPost("/search", async (AdminRetrievalSearchRequest body, RetrievalPipeline pipeline, ICurrentUser user, CancellationToken ct) =>
-            Results.Ok(await pipeline.SearchAsync(user.Id, new(body.Query, body.CollectionIds), ct, mode: body.Mode, rerank: body.Rerank)))
+            Results.Ok((await pipeline.SearchAsync(user.Id, new(body.Query, body.CollectionIds), ct, mode: body.Mode, rerank: body.Rerank)).OrThrow()))
         .WithName("TestAdminRetrieval").Produces<KnowledgeSearchDto>();
 }

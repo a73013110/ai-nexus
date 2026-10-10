@@ -20,6 +20,6 @@ internal sealed class AddProjectFile(NexusDbContext db, ResourceAccess access, D
         var active = await access.RequireActiveAsync(db, actor, id, write: true, ct);
         if (!active.IsSuccess) return active.Error;
         if (await db.Set<WorkspaceResource>().CountAsync(x => x.ParentId == id && x.Kind == "document", ct) >= Project.MaxFiles) return ProjectsErrors.FileLimit;
-        return await documents.AddAsync(actor, null, attachment, ct, id);
+        return (await documents.AddAsync(actor, null, attachment, ct, id)).OrThrow();
     }
 }

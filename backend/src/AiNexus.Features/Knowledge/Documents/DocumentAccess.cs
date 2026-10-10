@@ -12,8 +12,8 @@ namespace AiNexus.Features.Knowledge.Documents;
 /// <summary>
 /// Who may read or change a document. A collection document follows its collection's ACL and needs the knowledge
 /// feature; a standalone document follows its own resource (and its project's ACL when it belongs to one).
-/// Missing documents and missing features are <see cref="KnowledgeErrors.DocumentNotFound"/>; ACL failures stay
-/// exceptions of <see cref="ResourceAccess"/>.
+/// Missing documents and missing features are <see cref="KnowledgeErrors.DocumentNotFound"/>; ACL failures are the errors
+/// of <see cref="ResourceAccess"/>.
 /// </summary>
 internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, AccessService features)
 {
@@ -25,16 +25,19 @@ internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, A
         if (doc.CollectionId is Guid collection)
         {
             if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "knowledge")) return KnowledgeErrors.DocumentNotFound;
-            (await access.RequireAsync(actor, collection, KnowledgeCollection.Kind, ct, write)).OrThrow();
+            var granted = await access.RequireAsync(actor, collection, KnowledgeCollection.Kind, ct, write);
+            if (!granted.IsSuccess) return granted.Error;
         }
         else
         {
             if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id is "chat" or "knowledge" or "projects")) return KnowledgeErrors.DocumentNotFound;
-            var resource = (await access.RequireAsync(actor, doc.Id, KnowledgeDocument.Kind, ct, write)).OrThrow();
-            if (resource.ParentId is Guid parent)
+            var resource = await access.RequireAsync(actor, doc.Id, KnowledgeDocument.Kind, ct, write);
+            if (!resource.IsSuccess) return resource.Error;
+            if (resource.Value.ParentId is Guid parent)
             {
                 if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "projects")) return KnowledgeErrors.DocumentNotFound;
-                (await access.RequireAsync(actor, parent, "project", ct, write)).OrThrow();
+                var project = await access.RequireAsync(actor, parent, "project", ct, write);
+                if (!project.IsSuccess) return project.Error;
             }
         }
         return doc;
@@ -73,16 +76,17 @@ internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, A
             if (doc.CollectionId is Guid collection)
             {
                 if (!granted.Contains("knowledge")) return KnowledgeErrors.DocumentNotFound;
-                resources.Add(readable.GetValueOrDefault(collection) ?? throw CollaborationErrors.ResourceNotFound.Throwable());
+                if (readable.GetValueOrDefault(collection) is not { } readableCollection) return CollaborationErrors.ResourceNotFound;
+                resources.Add(readableCollection);
             }
             else
             {
                 if (!granted.Contains("chat") && !granted.Contains("knowledge") && !granted.Contains("projects")) return KnowledgeErrors.DocumentNotFound;
-                var resource = readable.GetValueOrDefault(doc.Id) ?? throw CollaborationErrors.ResourceNotFound.Throwable();
+                if (readable.GetValueOrDefault(doc.Id) is not { } resource) return CollaborationErrors.ResourceNotFound;
                 if (resource.ParentId is Guid parent)
                 {
                     if (!granted.Contains("projects")) return KnowledgeErrors.DocumentNotFound;
-                    if (!projects.Contains(parent)) throw CollaborationErrors.ResourceNotFound.Throwable();
+                    if (!projects.Contains(parent)) return CollaborationErrors.ResourceNotFound;
                 }
                 resources.Add(resource);
             }
@@ -104,10 +108,11 @@ internal sealed class DocumentAccess(NexusDbContext db, ResourceAccess access, A
         return file;
     }
 
-    public async Task<DocumentDto> DescribeAsync(Guid actor, KnowledgeDocument doc, CancellationToken ct)
+    public async Task<Result<DocumentDto>> DescribeAsync(Guid actor, KnowledgeDocument doc, CancellationToken ct)
     {
-        var resource = doc.CollectionId is Guid collection ? (await access.RequireAsync(actor, collection, KnowledgeCollection.Kind, ct)).OrThrow() : (await access.RequireAsync(actor, doc.Id, KnowledgeDocument.Kind, ct)).OrThrow();
-        var editable = (await access.DescribeAsync(actor, resource, ct)).CanEdit;
+        var resource = await access.RequireAsync(actor, doc.CollectionId ?? doc.Id, doc.CollectionId is null ? KnowledgeDocument.Kind : KnowledgeCollection.Kind, ct);
+        if (!resource.IsSuccess) return resource.Error;
+        var editable = (await access.DescribeAsync(actor, resource.Value, ct)).CanEdit;
         var state = doc.JobId is Guid job ? await db.Set<BackgroundJob>().Where(x => x.Id == job).Select(x => x.Status).SingleOrDefaultAsync(ct) : null;
         return Describe(doc, editable, state);
     }
