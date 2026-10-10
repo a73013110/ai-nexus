@@ -23,7 +23,7 @@ public static class EndpointHandlers
 
     public static IEnumerable<MethodInfo> MapMethods(Type type) => type
         .GetMethods(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static | BindingFlags.DeclaredOnly)
-        .Where(method => method.Name.StartsWith("Map", StringComparison.Ordinal)
+        .Where(method => method.Name.StartsWith("Map", StringComparison.Ordinal) && !method.IsGenericMethodDefinition
             && method.GetParameters() is [{ ParameterType: var routes }, ..] && routes == typeof(RouteGroupBuilder))
         .Where(_ => !typeof(IFeatureModule).IsAssignableFrom(type));
 }
