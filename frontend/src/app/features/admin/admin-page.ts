@@ -12,7 +12,7 @@ import { ViewSwitch } from '../../shared/ui/view-switch';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { DialogMotion, ViewMotion } from '../../shared/ui/view-motion';
 import { Field } from '../../shared/ui/field';
-import { safeMessage } from '../../core/api/safe-errors';
+import { safeMessage } from '../../core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -23,7 +23,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { FeaturePage } from '../../shared/ui/feature-page';
+import { FeaturePage } from '../../core/layout/feature-page';
 import { Icon } from '../../shared/ui/icon';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -51,8 +51,8 @@ import {
   formatModelDisplayName,
 } from '../../shared/browser/format';
 import { PriceBook } from '../billing/price-book';
-import { FeatureSummary } from '../../shared/ui/feature-summary';
-import { groupFeatures, FEATURE_ICONS } from '../../core/feature-groups';
+import { FeatureSummary } from './feature-summary';
+import { groupFeatures, FEATURE_ICONS } from '../../core/layout/feature-groups';
 import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { StatusBadge } from '../../shared/ui/status-badge';

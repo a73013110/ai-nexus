@@ -1,7 +1,7 @@
 import { Notice } from '../../shared/ui/notice';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { DialogMotion, ViewMotion } from '../../shared/ui/view-motion';
-import { MarkdownEditor } from '../../shared/ui/markdown-editor';
+import { MarkdownEditor } from '../../shared/markdown/markdown-editor';
 import { Field } from '../../shared/ui/field';
 import {
   ChangeDetectionStrategy,

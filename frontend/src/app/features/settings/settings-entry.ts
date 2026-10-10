@@ -1,7 +1,7 @@
 import { Component, afterNextRender, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { SettingsOverlay } from '../../core/preferences/settings-overlay';
-import { WORKSPACE_HOME } from '../../core/workspace-home';
+import { WORKSPACE_HOME } from '../../core/layout/workspace-home';
 
 /** Compatibility for bookmarks; regular entry points open over the current page. */
 @Component({ template: '' })

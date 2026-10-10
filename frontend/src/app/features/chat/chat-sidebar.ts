@@ -11,11 +11,11 @@ import { FormField, form, maxLength } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import type { ConversationDto } from '../../core/api/schema';
 import { Icon } from '../../shared/ui/icon';
-import { NotificationStore } from '../../core/notifications/notification-store';
+import { NotificationStore } from '../notifications/notification-store';
 import { ConversationActions, type ConversationAction } from '../workspace/conversation-actions';
 import { ChatStore } from './chat-store';
 import { Select } from '../../shared/ui/select';
-import { WorkspaceSidebar } from '../../shared/ui/workspace-sidebar';
+import { WorkspaceSidebar } from '../../core/layout/workspace-sidebar';
 
 @Component({
   selector: 'nx-chat-sidebar',

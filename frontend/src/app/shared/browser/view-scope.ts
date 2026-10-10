@@ -1,4 +1,4 @@
-import { safeMessage } from '../../core/api/safe-errors';
+import { safeMessage } from '../../core/errors/safe-errors';
 import { DestroyRef, Injectable, inject } from '@angular/core';
 import { AuthService } from '../../core/auth/auth-service';
 

@@ -1,5 +1,5 @@
-import { safeMessage } from '../../core/api/safe-errors';
-import { NotificationStore } from '../../core/notifications/notification-store';
+import { safeMessage } from '../../core/errors/safe-errors';
+import { NotificationStore } from '../notifications/notification-store';
 import { computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiError, NexusApi } from '../../core/api/nexus-api';

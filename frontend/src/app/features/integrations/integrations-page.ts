@@ -3,7 +3,7 @@ import { Card } from '../../shared/ui/card';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { FilterPanel } from '../../shared/ui/filter-panel';
 import { Field } from '../../shared/ui/field';
-import { ClientValidationError } from '../../core/api/safe-errors';
+import { ClientValidationError } from '../../core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -16,10 +16,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
 import type { SourceDetailDto, SourceDto, SourceRecordDto } from '../../core/api/schema';
-import { FeaturePage } from '../../shared/ui/feature-page';
+import { FeaturePage } from '../../core/layout/feature-page';
 import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
-import { MarkdownView } from '../../shared/ui/markdown-view';
+import { MarkdownView } from '../../shared/markdown/markdown-view';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { formatDate } from '../../shared/browser/format';
 import { IntegrationsApi } from './integrations-api';

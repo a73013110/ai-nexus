@@ -2,9 +2,9 @@ import { inject, Injectable, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import type { AuthSessionDto, paths } from './schema';
 import { BrowserSession } from '../monitoring/browser-session';
-import { ApiError } from './safe-errors';
+import { ApiError } from '../errors/safe-errors';
 
-export { ApiError } from './safe-errors';
+export { ApiError } from '../errors/safe-errors';
 
 type Method = 'get' | 'post' | 'put' | 'patch' | 'delete';
 /** Every contract path that defines the given method. */

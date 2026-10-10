@@ -24,7 +24,7 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { Icon } from '../../shared/ui/icon';
 import { Select } from '../../shared/ui/select';
 import { TextHighlight } from '../../shared/ui/text-highlight';
-import { JobProgress } from '../../shared/ui/job-progress';
+import { JobProgress } from '../tasks/job-progress';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { JobsApi } from '../tasks/jobs-api';
 import { KnowledgeApi } from './knowledge-api';

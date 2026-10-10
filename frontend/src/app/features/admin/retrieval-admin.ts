@@ -23,9 +23,9 @@ import { formatDate } from '../../shared/browser/format';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { Select } from '../../shared/ui/select';
 import { Checkbox } from '../../shared/ui/checkbox';
-import { JobProgress } from '../../shared/ui/job-progress';
+import { JobProgress } from '../tasks/job-progress';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
-import { RetrievalResults } from '../../shared/ui/retrieval-results';
+import { RetrievalResults } from '../knowledge/retrieval-results';
 
 @Component({
   selector: 'nx-retrieval-admin',

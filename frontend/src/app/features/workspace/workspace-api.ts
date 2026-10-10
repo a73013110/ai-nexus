@@ -1,4 +1,4 @@
-import { ClientValidationError } from '../../core/api/safe-errors';
+import { ClientValidationError } from '../../core/errors/safe-errors';
 import { inject, Injectable } from '@angular/core';
 import { ApiClient } from '../../core/api/api-client';
 import type { ConversationBackup, ConversationSettingsRequest } from '../../core/api/schema';

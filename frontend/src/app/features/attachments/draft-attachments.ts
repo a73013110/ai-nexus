@@ -1,4 +1,4 @@
-import { safeMessage, ApiError } from '../../core/api/safe-errors';
+import { safeMessage, ApiError } from '../../core/errors/safe-errors';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import type { AttachmentDto, AttachmentPolicyDto } from '../../core/api/schema';
 import { WorkspaceApi } from '../workspace/workspace-api';

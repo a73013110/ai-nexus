@@ -2,7 +2,7 @@ import { Notice } from '../../shared/ui/notice';
 import { Card } from '../../shared/ui/card';
 import { ViewMotion } from '../../shared/ui/view-motion';
 import { SearchField } from '../../shared/ui/search-field';
-import { safeMessage } from '../../core/api/safe-errors';
+import { safeMessage } from '../../core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -27,10 +27,10 @@ import { DraftRepository } from '../../core/preferences/draft-repository';
 import { NexusApi } from '../../core/api/nexus-api';
 import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
-import { WorkspaceNavigation } from '../../shared/ui/workspace-navigation';
+import { WorkspaceNavigation } from '../../core/layout/workspace-navigation';
 import { downloadFile } from '../../shared/browser/download';
-import { TokenUsageChart } from '../../shared/ui/token-usage-chart';
-import { StorageUsage } from '../../shared/ui/storage-usage';
+import { TokenUsageChart } from '../billing/token-usage-chart';
+import { StorageUsage } from '../files/storage-usage';
 import {
   formatDuration,
   formatBytes,

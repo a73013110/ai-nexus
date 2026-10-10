@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@a
 import { ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest, map } from 'rxjs';
-import { WorkspaceSidebar } from '../../shared/ui/workspace-sidebar';
+import { WorkspaceSidebar } from '../../core/layout/workspace-sidebar';
 import { Icon } from '../../shared/ui/icon';
 import {
   ReaderNavigation,
@@ -10,8 +10,8 @@ import {
   readerReturnUrl,
 } from '../../shared/browser/reader-navigation';
 import { DocumentViewer } from './document-viewer';
-import { WorkspaceLayout } from '../../core/preferences/workspace-layout';
-import { WorkspaceMenuButton } from '../../shared/ui/workspace-menu-button';
+import { WorkspaceLayout } from '../../core/layout/workspace-layout';
+import { WorkspaceMenuButton } from '../../core/layout/workspace-menu-button';
 
 @Component({
   selector: 'nx-document-reader',
