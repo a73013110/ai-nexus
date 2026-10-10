@@ -1,32 +1,15 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiTransport } from '../../core/api/api-transport';
-import type { Attachment, FileLibraryPage } from '../../core/api/types';
+import { ApiClient, type ApiQuery } from '../../core/api/api-client';
 
-export interface FileFilters {
-  search: string;
-  type: string;
-  source: string;
-  offset: number;
-  limit?: number;
-}
+export type FileFilters = ApiQuery<'/api/v1/files', 'get'>;
+
 @Injectable({ providedIn: 'root' })
 export class FilesApi {
-  private readonly http = inject(ApiTransport);
-  list(filters: FileFilters, signal?: AbortSignal) {
-    const query = new URLSearchParams({
-      search: filters.search,
-      type: filters.type,
-      source: filters.source,
-      offset: String(filters.offset),
-      limit: String(filters.limit ?? 40),
-    });
-    return this.http.json<FileLibraryPage>(`/files?${query}`, 'GET', undefined, undefined, signal);
-  }
+  private readonly api = inject(ApiClient);
+  list = (filters: FileFilters, signal?: AbortSignal) =>
+    this.api.get('/api/v1/files', { query: { limit: 40, ...filters }, signal });
   rename = (id: string, fileName: string, expectedFileName: string) =>
-    this.http.json<Attachment>(`/files/${encodeURIComponent(id)}/name`, 'PUT', {
-      fileName,
-      expectedFileName,
-    });
-  retain = (id: string) => this.http.json<void>(`/files/${encodeURIComponent(id)}/retain`, 'POST');
-  remove = (id: string) => this.http.json<void>(`/files/${encodeURIComponent(id)}`, 'DELETE');
+    this.api.put('/api/v1/files/{id}/name', { path: { id }, body: { fileName, expectedFileName } });
+  retain = (id: string) => this.api.post('/api/v1/files/{id}/retain', { path: { id } });
+  remove = (id: string) => this.api.delete('/api/v1/files/{id}', { path: { id } });
 }

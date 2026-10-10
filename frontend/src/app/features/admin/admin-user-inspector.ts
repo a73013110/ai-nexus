@@ -20,12 +20,13 @@ import {
   ViewEncapsulation,
 } from '@angular/core';
 import type {
-  AdminUser,
-  Model,
-  AdminUserDetail,
-  AdminConversationPage,
-  AdminConversationDetail,
-} from '../../core/api/types';
+  AdminConversationDetailDto,
+  AdminConversationPageDto,
+  AdminUserDetailDto,
+  AdminUserDto,
+  AdminUserModelPolicyDto,
+  ModelDto,
+} from '../../core/api/schema';
 import { Icon } from '../../shared/ui/icon';
 import { SearchField } from '../../shared/ui/search-field';
 import { Checkbox } from '../../shared/ui/checkbox';
@@ -41,7 +42,6 @@ import {
   modelPolicyRequest,
   type ModelPolicyDraft,
 } from './model-policy-editor';
-import type { components } from '../../core/api/schema';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 
 @Component({
@@ -71,12 +71,12 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
   encapsulation: ViewEncapsulation.None,
 })
 export class AdminUserInspector {
-  readonly user = input<AdminUser | null>(null);
+  readonly user = input<AdminUserDto | null>(null);
   readonly closed = output<void>();
   readonly settingsChanged = output<void>();
-  readonly models = input<Model[]>([]);
+  readonly models = input<ModelDto[]>([]);
   readonly tab = signal('conversations');
-  readonly modelPolicy = signal<components['schemas']['AdminUserModelPolicyDto'] | null>(null);
+  readonly modelPolicy = signal<AdminUserModelPolicyDto | null>(null);
   readonly modelDraft = signal<ModelPolicyDraft>(modelPolicyDraft());
   readonly savingModels = signal(false);
   readonly modelError = signal('');
@@ -87,9 +87,9 @@ export class AdminUserInspector {
   readonly storageError = signal('');
   readonly storageNotice = signal('');
   readonly session = inject(WorkspaceSession);
-  readonly overview = signal<AdminUserDetail | null>(null);
-  readonly conversations = signal<AdminConversationPage | null>(null);
-  readonly detail = signal<AdminConversationDetail | null>(null);
+  readonly overview = signal<AdminUserDetailDto | null>(null);
+  readonly conversations = signal<AdminConversationPageDto | null>(null);
+  readonly detail = signal<AdminConversationDetailDto | null>(null);
   readonly search = signal('');
   readonly includeDeleted = signal(true);
   readonly loading = signal(false);

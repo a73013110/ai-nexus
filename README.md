@@ -27,7 +27,7 @@ dotnet dev-certs https --trust     # 開發機首次
 | `deploy/` | 部署素材：`sql/` 是交給外部來源 DBA 的授權 view 範本；部署步驟在 `docs/operations/` |
 | `docs/` | 長期文件，依讀者分子資料夾（見下方文件地圖） |
 | `scripts/` | PowerShell 入口：還原、建置、啟動、驗證、發布；共用函式在 `AiNexus/` 模組，腳本與文件檢查在 `tests/` |
-| `tooling/` | 非建置必需的工具：`contracts/` 由 OpenAPI 產生前端 `schema.ts`，`embeddings/` 比較 embedding 模型與實測本地 Ollama |
+| `tooling/` | 非建置必需的工具：`embeddings/` 比較 embedding 模型與實測本地 Ollama |
 | `.github/` | 手動觸發的 CI，以及每月一次、依生態系合併成一個 PR 的 Dependabot |
 | `.config/dotnet-tools.json` | 固定 `dotnet-ef` 版本（`dotnet tool restore`） |
 | `global.json` | 固定 .NET SDK 版本與測試執行器 |

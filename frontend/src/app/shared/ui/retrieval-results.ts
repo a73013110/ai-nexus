@@ -1,6 +1,6 @@
 import { Notice } from './notice';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import type { KnowledgeSearch } from '../../core/api/types';
+import type { KnowledgeSearchDto } from '../../core/api/schema';
 import { ReaderLink } from '../browser/reader-link';
 import { Icon } from './icon';
 import { Card } from './card';
@@ -49,7 +49,7 @@ import { Card } from './card';
   `,
 })
 export class RetrievalResults {
-  readonly result = input.required<KnowledgeSearch>();
+  readonly result = input.required<KnowledgeSearchDto>();
   score(value: number | null | undefined) {
     return value == null ? '—' : value.toFixed(4);
   }

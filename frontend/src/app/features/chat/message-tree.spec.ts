@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { Message } from '../../core/api/types';
+import type { MessageDto } from '../../core/api/schema';
 import { MessageTree } from './message-tree';
 
-const message = (id: string, parentId: string | null, role = 'assistant'): Message => ({
+const message = (id: string, parentId: string | null, role = 'assistant'): MessageDto => ({
   id,
   parentId,
   role,
@@ -13,7 +13,14 @@ const message = (id: string, parentId: string | null, role = 'assistant'): Messa
   modelId: null,
   attachments: [],
   errorCode: null,
+  sources: null,
   feedbackRating: 0,
+  charge: null,
+  webSources: null,
+  webSearchCharge: null,
+  timing: null,
+  modelDisplayName: null,
+  issueCode: null,
 });
 
 describe('Conversation branch index', () => {

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import type { RunTiming } from '../../core/api/types';
+import type { RunTimingDto } from '../../core/api/schema';
 import { formatDuration, formatNumber } from '../browser/format';
 
 @Component({
@@ -37,7 +37,7 @@ import { formatDuration, formatNumber } from '../browser/format';
   `,
 })
 export class RunTimingDisplay {
-  readonly value = input<RunTiming | null | undefined>(null);
+  readonly value = input<RunTimingDto | null | undefined>(null);
   readonly duration = formatDuration;
   readonly number = formatNumber;
 }

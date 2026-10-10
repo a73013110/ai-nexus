@@ -1,3 +1,6 @@
+/** Runs and background jobs share these two non-terminal states. */
+export const isActive = (state: string) => state === 'queued' || state === 'running';
+
 export interface GenerationStatus {
   phase: 'queued' | 'preparing' | 'streaming';
   label: string;

@@ -265,7 +265,8 @@
             </section>
           </div>
           <nx-resource-sharing
-            [path]="'/projects/' + project.resource.id + '/access'"
+            kind="project"
+            [resourceId]="project.resource.id"
             [name]="project.resource.name"
             #sharing
           />

@@ -1,6 +1,6 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { NexusApi } from '../../core/api/nexus-api';
-import type { Conversation } from '../../core/api/types';
+import type { ConversationDto } from '../../core/api/schema';
 
 const PAGE_SIZE = 100;
 
@@ -8,7 +8,7 @@ const PAGE_SIZE = 100;
 @Injectable({ providedIn: 'root' })
 export class ChatHistory {
   private readonly api = inject(NexusApi);
-  readonly conversations = signal<Conversation[]>([]);
+  readonly conversations = signal<ConversationDto[]>([]);
   readonly hasMore = signal(false);
   readonly search = signal('');
   readonly view = signal('active');

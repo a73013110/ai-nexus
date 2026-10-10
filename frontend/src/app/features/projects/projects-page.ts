@@ -20,13 +20,13 @@ import { ReaderLink } from '../../shared/browser/reader-link';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import type {
-  ArtifactSummary,
-  AttachmentPolicy,
-  Conversation,
-  DocumentInfo,
-  Project,
-  ProjectTemplate,
-} from '../../core/api/types';
+  ArtifactSummaryDto,
+  AttachmentPolicyDto,
+  ConversationDto,
+  DocumentDto,
+  ProjectDto,
+  ProjectTemplateDto,
+} from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { FileDrop } from '../../shared/browser/file-drop';
 import { FeaturePage } from '../../shared/ui/feature-page';
@@ -76,12 +76,12 @@ export class ProjectsPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly scope = inject(ViewScope);
-  readonly projects = signal<Project[]>([]);
-  readonly current = signal<Project | null>(null);
-  readonly files = signal<DocumentInfo[]>([]);
-  readonly templates = signal<ProjectTemplate[]>([]);
-  readonly conversations = signal<Conversation[]>([]);
-  readonly outputs = signal<ArtifactSummary[]>([]);
+  readonly projects = signal<ProjectDto[]>([]);
+  readonly current = signal<ProjectDto | null>(null);
+  readonly files = signal<DocumentDto[]>([]);
+  readonly templates = signal<ProjectTemplateDto[]>([]);
+  readonly conversations = signal<ConversationDto[]>([]);
+  readonly outputs = signal<ArtifactSummaryDto[]>([]);
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly error = signal('');
@@ -107,7 +107,7 @@ export class ProjectsPage {
   private editingId: string | null = null;
   private revision = 0;
   private controller?: AbortController;
-  private policy?: AttachmentPolicy;
+  private policy?: AttachmentPolicyDto;
   constructor() {
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((p) => void this.load(p.get('id')));
     inject(DestroyRef).onDestroy(() => this.controller?.abort());
@@ -178,7 +178,7 @@ export class ProjectsPage {
       if (valid()) this.error.set(this.scope.message(e));
     }
   }
-  openProject(value: Project | null = null) {
+  openProject(value: ProjectDto | null = null) {
     if (this.busy()) return;
     this.kind.set('project');
     this.editingId = value?.resource.id ?? null;
@@ -187,7 +187,7 @@ export class ProjectsPage {
     this.instructions.set(value?.instructions ?? '');
     this.dialog().nativeElement.showModal();
   }
-  openTemplate(value: ProjectTemplate | null = null) {
+  openTemplate(value: ProjectTemplateDto | null = null) {
     if (this.busy()) return;
     this.kind.set('template');
     this.editingId = value?.id ?? null;

@@ -1,13 +1,12 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiTransport } from '../../core/api/api-transport';
-import type { Job } from '../../core/api/types';
+import { ApiClient } from '../../core/api/api-client';
 
 @Injectable({ providedIn: 'root' })
 export class JobsApi {
-  private readonly http = inject(ApiTransport);
-  list = () => this.http.json<Job[]>('/jobs');
+  private readonly api = inject(ApiClient);
+  list = () => this.api.get('/api/v1/jobs');
   get = (id: string, signal?: AbortSignal) =>
-    this.http.json<Job>(`/jobs/${encodeURIComponent(id)}`, 'GET', undefined, undefined, signal);
-  cancel = (id: string) => this.http.json<Job>(`/jobs/${encodeURIComponent(id)}/cancel`, 'POST');
-  retry = (id: string) => this.http.json<Job>(`/jobs/${encodeURIComponent(id)}/retry`, 'POST');
+    this.api.get('/api/v1/jobs/{id}', { path: { id }, signal });
+  cancel = (id: string) => this.api.post('/api/v1/jobs/{id}/cancel', { path: { id } });
+  retry = (id: string) => this.api.post('/api/v1/jobs/{id}/retry', { path: { id } });
 }

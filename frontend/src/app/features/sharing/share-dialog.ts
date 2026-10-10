@@ -11,7 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { DirectoryUser, ReadonlyShare } from '../../core/api/types';
+import type { DirectoryUserDto, ShareDto } from '../../core/api/schema';
 import { ResourceApi } from '../../core/api/resource-api';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
@@ -143,12 +143,12 @@ export class ShareDialog {
   readonly name = input('');
   readonly version = input<number | null>(null);
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
-  readonly recipients = signal<DirectoryUser[]>([]);
-  readonly results = signal<DirectoryUser[]>([]);
+  readonly recipients = signal<DirectoryUserDto[]>([]);
+  readonly results = signal<DirectoryUserDto[]>([]);
   readonly search = signal('');
   readonly hours = signal('168');
   readonly includeAttachments = signal(false);
-  readonly created = signal<ReadonlyShare | null>(null);
+  readonly created = signal<ShareDto | null>(null);
   readonly busy = signal(false);
   readonly error = signal('');
   readonly copy = inject(CopyFeedback);
@@ -179,7 +179,7 @@ export class ShareDialog {
   link(id: string) {
     return `${location.origin}/shared/${id}`;
   }
-  add(user: DirectoryUser) {
+  add(user: DirectoryUserDto) {
     if (!this.recipients().some((x) => x.id === user.id) && this.recipients().length < 20)
       this.recipients.update((all) => [...all, user]);
     this.results.update((all) => all.filter((x) => x.id !== user.id));
@@ -224,14 +224,14 @@ export class ShareDialog {
     this.busy.set(true);
     this.error.set('');
     try {
-      const value = await this.api.create(
-        context.kind,
-        context.id,
-        this.recipients().map((x) => x.id),
-        Number(this.hours()),
-        this.includeAttachments(),
-        context.version,
-      );
+      const value = await this.api.create({
+        kind: context.kind,
+        sourceId: context.id,
+        recipientIds: this.recipients().map((x) => x.id),
+        hours: Number(this.hours()),
+        includeAttachments: this.includeAttachments(),
+        artifactVersion: context.version,
+      });
       if (valid()) this.created.set(value);
     } catch (e) {
       if (valid()) this.error.set(this.scope.message(e));

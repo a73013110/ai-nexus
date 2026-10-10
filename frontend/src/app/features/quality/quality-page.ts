@@ -22,14 +22,14 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { NexusApi } from '../../core/api/nexus-api';
 import type {
   EvaluationCase,
-  EvaluationSet,
-  EvaluationRun,
-  EvaluationDetail,
-  EvaluationResult,
-  Feedback,
-  Model,
-  ModelPolicy,
-} from '../../core/api/types';
+  EvaluationDetailDto,
+  EvaluationResultDto,
+  EvaluationRunDto,
+  EvaluationSetDto,
+  FeedbackDto,
+  ModelDto,
+  ModelPolicyDto,
+} from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { formatDate, formatModelName, formatModelDisplayName } from '../../shared/browser/format';
 import { downloadFile } from '../../shared/browser/download';
@@ -89,12 +89,12 @@ export class QualityPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly scope = inject(ViewScope);
-  readonly sets = signal<EvaluationSet[]>([]);
+  readonly sets = signal<EvaluationSetDto[]>([]);
   readonly confirm = viewChild.required(ConfirmDialog);
-  readonly current = signal<EvaluationSet | null>(null);
-  readonly runs = signal<EvaluationRun[]>([]);
-  readonly detail = signal<EvaluationDetail | null>(null);
-  readonly feedback = signal<Feedback[]>([]);
+  readonly current = signal<EvaluationSetDto | null>(null);
+  readonly runs = signal<EvaluationRunDto[]>([]);
+  readonly detail = signal<EvaluationDetailDto | null>(null);
+  readonly feedback = signal<FeedbackDto[]>([]);
   readonly tab = signal('sets');
   readonly loading = signal(true);
   readonly busy = signal(false);
@@ -111,8 +111,8 @@ export class QualityPage {
   readonly description = signal('');
   readonly cases = signal<EvaluationCase[]>([blankCase()]);
   readonly variants = signal<VariantForm[]>([]);
-  readonly models = signal<Model[]>([]);
-  readonly policy = signal<ModelPolicy | null>(null);
+  readonly models = signal<ModelDto[]>([]);
+  readonly policy = signal<ModelPolicyDto | null>(null);
   readonly modelOptions = computed(() =>
     this.models().map((x) => ({ value: x.id, label: formatModelName(x) })),
   );
@@ -237,7 +237,7 @@ export class QualityPage {
       }
     }
   }
-  openSet(value: EvaluationSet | null = null) {
+  openSet(value: EvaluationSetDto | null = null) {
     if (this.busy()) return;
     this.editingId = value?.resource.id ?? null;
     this.form.set('set');
@@ -435,7 +435,7 @@ export class QualityPage {
       if (valid()) this.busy.set(false);
     }
   }
-  openReview(result: EvaluationResult) {
+  openReview(result: EvaluationResultDto) {
     const detail = this.detail();
     if (!detail?.canReview || this.busy()) return;
     this.reviewTarget = { c: result.caseIndex, v: result.variantIndex, run: detail.run.id };

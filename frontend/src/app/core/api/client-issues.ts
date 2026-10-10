@@ -1,6 +1,6 @@
 import { ErrorHandler, Injectable, Injector, effect, inject, signal } from '@angular/core';
 import { AuthService } from '../auth/auth-service';
-import { ApiTransport } from './api-transport';
+import { ApiClient } from './api-client';
 import {
   ApiError,
   ClientValidationError,
@@ -14,7 +14,7 @@ import {
 export class ClientIssues implements ErrorHandler {
   private readonly injector = inject(Injector);
   private get transport() {
-    return this.injector.get(ApiTransport);
+    return this.injector.get(ApiClient);
   }
   private get auth() {
     return this.injector.get(AuthService);
@@ -71,11 +71,9 @@ export class ClientIssues implements ErrorHandler {
         await crypto.subtle.digest('SHA-256', new TextEncoder().encode(key)),
       );
       const fingerprint = Array.from(hash, (byte) => byte.toString(16).padStart(2, '0')).join('');
-      const result = await this.transport.json<{ issueCode: string; accepted: boolean }>(
-        '/client-issues',
-        'POST',
-        { kind, fingerprint },
-      );
+      const result = await this.transport.post('/api/v1/client-issues', {
+        body: { kind, fingerprint },
+      });
       if (
         generation === this.auth.generation() &&
         result.accepted &&

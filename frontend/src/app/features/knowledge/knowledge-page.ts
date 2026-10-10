@@ -16,11 +16,12 @@ import {
   viewChild,
 } from '@angular/core';
 import type {
-  Collection,
-  DocumentInfo,
-  KnowledgeSearch,
-  AttachmentPolicy,
-} from '../../core/api/types';
+  AttachmentPolicyDto,
+  CollectionDto,
+  DocumentDto,
+  KnowledgeSearchDto,
+  LibraryFileDto,
+} from '../../core/api/schema';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { FeaturePage } from '../../shared/ui/feature-page';
@@ -33,7 +34,6 @@ import { WorkspaceApi } from '../workspace/workspace-api';
 import { KnowledgeApi } from './knowledge-api';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LibraryPicker } from '../files/library-picker';
-import type { LibraryFile } from '../../core/api/types';
 import { TextSourceEditor } from './text-source-editor';
 import { ReaderLink } from '../../shared/browser/reader-link';
 import { RetrievalResults } from '../../shared/ui/retrieval-results';
@@ -69,10 +69,10 @@ export class KnowledgePage {
   private readonly uploads = inject(WorkspaceApi);
   private readonly scope = inject(ViewScope);
   readonly session = inject(WorkspaceSession);
-  readonly collections = signal<Collection[]>([]);
+  readonly collections = signal<CollectionDto[]>([]);
   readonly selected = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('collection') || '');
-  readonly documents = signal<DocumentInfo[]>([]);
-  readonly policy = signal<AttachmentPolicy | null>(null);
+  readonly documents = signal<DocumentDto[]>([]);
+  readonly policy = signal<AttachmentPolicyDto | null>(null);
   readonly loading = signal(true);
   readonly loadingDocuments = signal(false);
   readonly error = signal('');
@@ -82,7 +82,7 @@ export class KnowledgePage {
   readonly filter = signal('');
   readonly query = signal('');
   readonly searching = signal(false);
-  readonly result = signal<KnowledgeSearch | null>(null);
+  readonly result = signal<KnowledgeSearchDto | null>(null);
   readonly editorName = signal('');
   readonly editorDescription = signal('');
   readonly editorId = signal<string | null>(null);
@@ -157,7 +157,7 @@ export class KnowledgePage {
     this.filter.set('');
     await this.loadDocuments();
   }
-  async addLibrary(file: LibraryFile) {
+  async addLibrary(file: LibraryFileDto) {
     const collection = this.selected(),
       valid = this.scope.guard();
     if (!collection || this.uploading() || !this.current()?.resource.canEdit) return;
@@ -327,7 +327,7 @@ export class KnowledgePage {
       if (valid()) this.saving.set(false);
     }
   }
-  async reindex(document: DocumentInfo) {
+  async reindex(document: DocumentDto) {
     const valid = this.scope.guard();
     this.error.set('');
     try {
@@ -340,7 +340,7 @@ export class KnowledgePage {
       if (valid()) this.error.set(this.scope.message(error));
     }
   }
-  actions(document: DocumentInfo): MenuAction[] {
+  actions(document: DocumentDto): MenuAction[] {
     return [
       ...(document.textVersion > 0
         ? [
@@ -363,7 +363,7 @@ export class KnowledgePage {
       { id: 'delete', label: '移除文件', icon: 'trash', danger: true, disabled: !document.canEdit },
     ];
   }
-  documentAction(action: string, document: DocumentInfo) {
+  documentAction(action: string, document: DocumentDto) {
     if (action === 'text') void this.textEditor().open(this.selected(), document);
     else if (action === 'delete') this.confirmDelete(document.id, document.fileName);
     else if (action === 'reindex') void this.reindex(document);

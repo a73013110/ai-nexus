@@ -1,6 +1,6 @@
 import { Notice } from '../../shared/ui/notice';
 import { ChangeDetectionStrategy, Component, input, computed } from '@angular/core';
-import type { Message } from '../../core/api/types';
+import type { MessageDto } from '../../core/api/schema';
 import { MarkdownView } from '../../shared/ui/markdown-view';
 import { Icon } from '../../shared/ui/icon';
 import { RunTimingDisplay } from '../../shared/ui/run-timing';
@@ -9,7 +9,7 @@ import { AttachmentList } from '../attachments/attachment-list';
 import { systemProblem } from '../../core/api/safe-errors';
 
 export type MessageDisplay = Pick<
-  Message,
+  MessageDto,
   'role' | 'content' | 'status' | 'attachments' | 'sources' | 'webSources' | 'timing' | 'errorCode'
 > & { issueCode?: string | null };
 /** The same settled answer, citations and attachments in chat and read-only snapshots. */

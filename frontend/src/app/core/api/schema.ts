@@ -8749,8 +8749,8 @@ export interface components {
             createdAt: string;
             modelId: null | string;
             attachments: components["schemas"]["AttachmentDto"][];
-            timing?: null | components["schemas"]["RunTimingDto"];
-            modelDisplayName?: null | string;
+            timing: null | components["schemas"]["RunTimingDto"];
+            modelDisplayName: null | string;
         };
         AdminRetrievalSearchRequest: {
             query: string;
@@ -8822,11 +8822,11 @@ export interface components {
             /** Format: date-time */
             lastSeenAt: string;
             roleIds: string[];
-            activity?: null | components["schemas"]["AdminUserActivityDto"];
+            activity: null | components["schemas"]["AdminUserActivityDto"];
             /** @default true */
             enabled: boolean;
-            authentication?: null | components["schemas"]["UserAuthenticationDto"];
-            storage?: null | components["schemas"]["AttachmentStorageDto"];
+            authentication: null | components["schemas"]["UserAuthenticationDto"];
+            storage: null | components["schemas"]["AttachmentStorageDto"];
         };
         AdminUserModelPolicyDto: {
             personal: components["schemas"]["ModelPolicyRequest"];
@@ -8919,12 +8919,12 @@ export interface components {
             /** Format: date-time */
             at: string;
             detailsJson: null | string;
-            actingAs?: null | string;
-            category?: null | string;
-            traceId?: null | string;
+            actingAs: null | string;
+            category: null | string;
+            traceId: null | string;
             /** Format: uuid */
-            operationId?: null | string;
-            issueCode?: null | string;
+            operationId: null | string;
+            issueCode: null | string;
         };
         AuthSessionDto: {
             mode: string;
@@ -8933,11 +8933,11 @@ export interface components {
             account: null | string;
             displayName: null | string;
             csrfToken: string;
-            methods?: null | string[];
-            method?: null | string;
+            methods: null | string[];
+            method: null | string;
             /** Format: uuid */
-            userId?: null | string;
-            testing?: null | components["schemas"]["TestIdentityDto"];
+            userId: null | string;
+            testing: null | components["schemas"]["TestIdentityDto"];
         };
         BackupMessage: {
             /** Format: uuid */
@@ -9069,9 +9069,9 @@ export interface components {
             isArchived: boolean;
             /** @default  */
             systemInstruction: string;
-            labels?: null | string[];
+            labels: null | string[];
             /** Format: uuid */
-            projectId?: null | string;
+            projectId: null | string;
         };
         ConversationProjectRequest: {
             /** Format: uuid */
@@ -9181,7 +9181,7 @@ export interface components {
             webSearchAvailable: boolean;
             giteaAvailable: boolean;
             embeddingMode: string;
-            tokens?: null | components["schemas"]["TokenUsageDto"];
+            tokens: null | components["schemas"]["TokenUsageDto"];
         };
         DependencyTraffic: {
             id: string;
@@ -9340,9 +9340,9 @@ export interface components {
             totalChunks: number;
             /** Format: int32 */
             pendingDocuments: number;
-            complete?: boolean;
+            complete: boolean;
             /** Format: double */
-            ratio?: number;
+            ratio: number;
         };
         EmbeddingProfileDto: {
             /** Format: int32 */
@@ -9442,8 +9442,8 @@ export interface components {
             label: string;
             modelId: string;
             instruction: string;
-            configuration?: null | components["schemas"]["ModelTaskSnapshot"];
-            modelDisplayName?: null | string;
+            configuration: null | components["schemas"]["ModelTaskSnapshot"];
+            modelDisplayName: null | string;
         };
         EvaluationVariantRequest: {
             label: string;
@@ -9538,7 +9538,7 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
-            issueCode?: null | string;
+            issueCode: null | string;
         };
         KnowledgeHitDto: {
             /** Format: uuid */
@@ -9562,15 +9562,15 @@ export interface components {
              */
             ordinal: number;
             /** Format: int32 */
-            vectorRank?: null | number;
+            vectorRank: null | number;
             /** Format: int32 */
-            ftsRank?: null | number;
+            ftsRank: null | number;
             /** Format: double */
-            vectorScore?: null | number;
+            vectorScore: null | number;
             /** Format: double */
-            rrfScore?: null | number;
+            rrfScore: null | number;
             /** Format: double */
-            rerankScore?: null | number;
+            rerankScore: null | number;
             /** @default  */
             headingPath: string;
         };
@@ -9612,7 +9612,8 @@ export interface components {
             usages: components["schemas"]["FileUsageDto"][];
             canDelete: boolean;
         };
-        LogLevel: number;
+        /** @enum {unknown} */
+        LogLevel: "Trace" | "Debug" | "Information" | "Warning" | "Error" | "Critical" | "None" | null;
         MeDto: {
             /** Format: uuid */
             id: string;
@@ -9637,20 +9638,20 @@ export interface components {
             /** Format: uuid */
             runId: null | string;
             modelId: null | string;
-            attachments?: null | components["schemas"]["AttachmentDto"][];
-            errorCode?: null | string;
-            sources?: null | components["schemas"]["CitationDto"][];
+            attachments: null | components["schemas"]["AttachmentDto"][];
+            errorCode: null | string;
+            sources: null | components["schemas"]["CitationDto"][];
             /**
              * Format: int32
              * @default 0
              */
             feedbackRating: number;
-            charge?: null | components["schemas"]["ChargeDto"];
-            webSources?: null | components["schemas"]["WebSourceDto"][];
-            webSearchCharge?: null | components["schemas"]["ChargeDto"];
-            timing?: null | components["schemas"]["RunTimingDto"];
-            modelDisplayName?: null | string;
-            issueCode?: null | string;
+            charge: null | components["schemas"]["ChargeDto"];
+            webSources: null | components["schemas"]["WebSourceDto"][];
+            webSearchCharge: null | components["schemas"]["ChargeDto"];
+            timing: null | components["schemas"]["RunTimingDto"];
+            modelDisplayName: null | string;
+            issueCode: null | string;
         };
         ModelDto: {
             id: string;
@@ -9665,7 +9666,7 @@ export interface components {
             defaultReasoningEffort: string;
             /** @default false */
             supportsImages: boolean;
-            provider?: null | string;
+            provider: null | string;
         };
         ModelPolicyDto: {
             allowModelSelection: boolean;
@@ -9688,7 +9689,7 @@ export interface components {
             providerAvailable: boolean;
             notice: null | string;
             policy: components["schemas"]["ModelPolicyDto"];
-            providers?: null | components["schemas"]["ProviderStatusDto"][];
+            providers: null | components["schemas"]["ProviderStatusDto"][];
         };
         ModelTaskSnapshot: {
             /** Format: int32 */
@@ -9711,7 +9712,7 @@ export interface components {
             /** Format: int64 */
             remainingTokens: null | number;
             source: string;
-            modelDisplayName?: null | string;
+            modelDisplayName: null | string;
         };
         MoneyTotalDto: {
             currency: string;
@@ -9774,7 +9775,7 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             readAt: null | string;
-            issueCode?: null | string;
+            issueCode: null | string;
         };
         NotificationPageDto: {
             items: components["schemas"]["NotificationDto"][];
@@ -9845,7 +9846,7 @@ export interface components {
              * @default 0
              */
             timedRequests: number;
-            tokens?: null | components["schemas"]["TokenUsageDto"];
+            tokens: null | components["schemas"]["TokenUsageDto"];
         };
         PreferencesDto: {
             theme: string;
@@ -9882,7 +9883,7 @@ export interface components {
             /** Format: date-time */
             effectiveAt: string;
             note: string;
-            modelDisplayName?: null | string;
+            modelDisplayName: null | string;
         };
         PriceRequest: {
             provider: string;
@@ -10029,7 +10030,7 @@ export interface components {
         RepositoryReviewDetailDto: {
             review: components["schemas"]["RepositoryReviewDto"];
             sections: components["schemas"]["RepositoryReviewSectionDto"][];
-            report?: null | components["schemas"]["RepositoryReviewReportDto"];
+            report: null | components["schemas"]["RepositoryReviewReportDto"];
             /**
              * Format: int32
              * @default 1
@@ -10049,7 +10050,7 @@ export interface components {
             job: components["schemas"]["JobDto"];
             /** @default review */
             purpose: string;
-            modelDisplayName?: null | string;
+            modelDisplayName: null | string;
         };
         RepositoryReviewReportDto: {
             output: string;
@@ -10263,9 +10264,9 @@ export interface components {
             inputTokens: null | number;
             /** Format: int64 */
             outputTokens: null | number;
-            timing?: null | components["schemas"]["RunTimingDto"];
-            modelDisplayName?: null | string;
-            issueCode?: null | string;
+            timing: null | components["schemas"]["RunTimingDto"];
+            modelDisplayName: null | string;
+            issueCode: null | string;
         };
         RunEventDto: {
             /** Format: int32 */
@@ -10278,7 +10279,7 @@ export interface components {
             status: string;
             delta: null | string;
             errorCode: null | string;
-            issueCode?: null | string;
+            issueCode: null | string;
         };
         RuntimeResources: {
             /** Format: double */
@@ -10344,13 +10345,13 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
             attachments: components["schemas"]["AttachmentDto"][];
-            modelId?: null | string;
-            errorCode?: null | string;
-            sources?: null | components["schemas"]["CitationDto"][];
-            webSources?: null | components["schemas"]["WebSourceDto"][];
-            timing?: null | components["schemas"]["RunTimingDto"];
-            modelDisplayName?: null | string;
-            issueCode?: null | string;
+            modelId: null | string;
+            errorCode: null | string;
+            sources: null | components["schemas"]["CitationDto"][];
+            webSources: null | components["schemas"]["WebSourceDto"][];
+            timing: null | components["schemas"]["RunTimingDto"];
+            modelDisplayName: null | string;
+            issueCode: null | string;
         };
         ShareDto: {
             /** Format: uuid */
@@ -10525,7 +10526,7 @@ export interface components {
             inputTokens: number;
             /** Format: int64 */
             outputTokens: number;
-            modelDisplayName?: null | string;
+            modelDisplayName: null | string;
         };
         TokenUsageDto: {
             /** Format: date-time */
@@ -10636,7 +10637,7 @@ export interface components {
             outputTokens: number;
             /** Format: int64 */
             durationMilliseconds: number;
-            modelDisplayName?: null | string;
+            modelDisplayName: null | string;
         };
         UsageTotalsDto: {
             /** Format: int32 */
@@ -10736,28 +10737,227 @@ export interface components {
     headers: never;
     pathItems: never;
 }
+export type AccessDto = components['schemas']['AccessDto'];
+export type AccessItemDto = components['schemas']['AccessItemDto'];
+export type AddDocumentRequest = components['schemas']['AddDocumentRequest'];
+export type AdLoginRequest = components['schemas']['AdLoginRequest'];
+export type AdminCatalogDto = components['schemas']['AdminCatalogDto'];
+export type AdminConversationDetailDto = components['schemas']['AdminConversationDetailDto'];
+export type AdminConversationDto = components['schemas']['AdminConversationDto'];
+export type AdminConversationPageDto = components['schemas']['AdminConversationPageDto'];
+export type AdminFeatureDto = components['schemas']['AdminFeatureDto'];
+export type AdminGroupDto = components['schemas']['AdminGroupDto'];
+export type AdminMessageDto = components['schemas']['AdminMessageDto'];
+export type AdminRetrievalSearchRequest = components['schemas']['AdminRetrievalSearchRequest'];
+export type AdminRoleDto = components['schemas']['AdminRoleDto'];
+export type AdminUsageDto = components['schemas']['AdminUsageDto'];
+export type AdminUserActivityDto = components['schemas']['AdminUserActivityDto'];
+export type AdminUserDetailDto = components['schemas']['AdminUserDetailDto'];
+export type AdminUserDto = components['schemas']['AdminUserDto'];
+export type AdminUserModelPolicyDto = components['schemas']['AdminUserModelPolicyDto'];
+export type AdminUsersDto = components['schemas']['AdminUsersDto'];
+export type ArtifactDto = components['schemas']['ArtifactDto'];
+export type ArtifactRevisionDto = components['schemas']['ArtifactRevisionDto'];
+export type ArtifactSummaryDto = components['schemas']['ArtifactSummaryDto'];
+export type AttachmentDto = components['schemas']['AttachmentDto'];
+export type AttachmentPolicyDto = components['schemas']['AttachmentPolicyDto'];
+export type AttachmentStorageDto = components['schemas']['AttachmentStorageDto'];
+export type AttachmentStorageLimitRequest = components['schemas']['AttachmentStorageLimitRequest'];
+export type AuditCatalogDto = components['schemas']['AuditCatalogDto'];
+export type AuditDto = components['schemas']['AuditDto'];
+export type AuthSessionDto = components['schemas']['AuthSessionDto'];
+export type BackupMessage = components['schemas']['BackupMessage'];
+export type ChargeDto = components['schemas']['ChargeDto'];
+export type CitationDto = components['schemas']['CitationDto'];
+export type ClientIssueRequest = components['schemas']['ClientIssueRequest'];
+export type ClientIssueResponse = components['schemas']['ClientIssueResponse'];
+export type CollectionDto = components['schemas']['CollectionDto'];
+export type CollectionRequest = components['schemas']['CollectionRequest'];
+export type ConnectRepositoryRequest = components['schemas']['ConnectRepositoryRequest'];
+export type ContextPreviewRequest = components['schemas']['ContextPreviewRequest'];
+export type ContextUsageDto = components['schemas']['ContextUsageDto'];
+export type ConversationBackup = components['schemas']['ConversationBackup'];
+export type ConversationDetailDto = components['schemas']['ConversationDetailDto'];
+export type ConversationDto = components['schemas']['ConversationDto'];
+export type ConversationProjectRequest = components['schemas']['ConversationProjectRequest'];
+export type ConversationSettingsRequest = components['schemas']['ConversationSettingsRequest'];
+export type ConversationSpendDto = components['schemas']['ConversationSpendDto'];
+export type CreateArtifactRequest = components['schemas']['CreateArtifactRequest'];
+export type CreateConversationRequest = components['schemas']['CreateConversationRequest'];
+export type CreatedUserDto = components['schemas']['CreatedUserDto'];
+export type CreateRepositoryReviewRequest = components['schemas']['CreateRepositoryReviewRequest'];
+export type CreateRunRequest = components['schemas']['CreateRunRequest'];
+export type CreateShareRequest = components['schemas']['CreateShareRequest'];
+export type DashboardCountsDto = components['schemas']['DashboardCountsDto'];
+export type DashboardDto = components['schemas']['DashboardDto'];
+export type DependencyTraffic = components['schemas']['DependencyTraffic'];
+export type DiagnosticDetail = components['schemas']['DiagnosticDetail'];
+export type DiagnosticHealthDto = components['schemas']['DiagnosticHealthDto'];
+export type DiagnosticPage = components['schemas']['DiagnosticPage'];
+export type DiagnosticSummary = components['schemas']['DiagnosticSummary'];
+export type DirectoryGroupDto = components['schemas']['DirectoryGroupDto'];
+export type DirectoryUserDto = components['schemas']['DirectoryUserDto'];
+export type DocumentDto = components['schemas']['DocumentDto'];
+export type DocumentJobDto = components['schemas']['DocumentJobDto'];
+export type DocumentPageDto = components['schemas']['DocumentPageDto'];
+export type EffectiveModelPolicyDto = components['schemas']['EffectiveModelPolicyDto'];
+export type EmbeddingCoverageDto = components['schemas']['EmbeddingCoverageDto'];
+export type EmbeddingProfileDto = components['schemas']['EmbeddingProfileDto'];
+export type EndpointTraffic = components['schemas']['EndpointTraffic'];
+export type EvaluationCase = components['schemas']['EvaluationCase'];
+export type EvaluationDetailDto = components['schemas']['EvaluationDetailDto'];
+export type EvaluationResultDto = components['schemas']['EvaluationResultDto'];
+export type EvaluationRunDto = components['schemas']['EvaluationRunDto'];
+export type EvaluationRunRequest = components['schemas']['EvaluationRunRequest'];
+export type EvaluationSetDto = components['schemas']['EvaluationSetDto'];
+export type EvaluationSetRequest = components['schemas']['EvaluationSetRequest'];
+export type EvaluationVariant = components['schemas']['EvaluationVariant'];
+export type EvaluationVariantRequest = components['schemas']['EvaluationVariantRequest'];
+export type FeatureDto = components['schemas']['FeatureDto'];
+export type FeatureUpdateRequest = components['schemas']['FeatureUpdateRequest'];
+export type FeedbackDto = components['schemas']['FeedbackDto'];
+export type FeedbackRequest = components['schemas']['FeedbackRequest'];
+export type FileLibraryPageDto = components['schemas']['FileLibraryPageDto'];
+export type FileUsageDto = components['schemas']['FileUsageDto'];
+export type GroupPolicyRequest = components['schemas']['GroupPolicyRequest'];
+export type GroupUpdateRequest = components['schemas']['GroupUpdateRequest'];
+export type JobDto = components['schemas']['JobDto'];
+export type KnowledgeHitDto = components['schemas']['KnowledgeHitDto'];
+export type KnowledgeSearchDto = components['schemas']['KnowledgeSearchDto'];
+export type KnowledgeSearchRequest = components['schemas']['KnowledgeSearchRequest'];
+export type KnowledgeSelectionDto = components['schemas']['KnowledgeSelectionDto'];
+export type LibraryFileDto = components['schemas']['LibraryFileDto'];
+export type LogLevel = components['schemas']['LogLevel'];
+export type MeDto = components['schemas']['MeDto'];
+export type MessageDto = components['schemas']['MessageDto'];
+export type ModelDto = components['schemas']['ModelDto'];
+export type ModelPolicyDto = components['schemas']['ModelPolicyDto'];
+export type ModelPolicyRequest = components['schemas']['ModelPolicyRequest'];
+export type ModelsDto = components['schemas']['ModelsDto'];
+export type ModelTaskSnapshot = components['schemas']['ModelTaskSnapshot'];
+export type ModelTokenBudgetDto = components['schemas']['ModelTokenBudgetDto'];
+export type MoneyTotalDto = components['schemas']['MoneyTotalDto'];
+export type MonitoringSnapshot = components['schemas']['MonitoringSnapshot'];
+export type NotificationDto = components['schemas']['NotificationDto'];
+export type NotificationPageDto = components['schemas']['NotificationPageDto'];
+export type NotificationTargetDto = components['schemas']['NotificationTargetDto'];
+export type OnlineSession = components['schemas']['OnlineSession'];
+export type PersonalUsageDto = components['schemas']['PersonalUsageDto'];
+export type PreferencesDto = components['schemas']['PreferencesDto'];
+export type PresenceReceipt = components['schemas']['PresenceReceipt'];
+export type PresenceRequest = components['schemas']['PresenceRequest'];
+export type PriceDto = components['schemas']['PriceDto'];
+export type PriceRequest = components['schemas']['PriceRequest'];
+export type PriceTargetDto = components['schemas']['PriceTargetDto'];
+export type ProjectConversationDto = components['schemas']['ProjectConversationDto'];
+export type ProjectConversationRequest = components['schemas']['ProjectConversationRequest'];
+export type ProjectDto = components['schemas']['ProjectDto'];
+export type ProjectRequest = components['schemas']['ProjectRequest'];
+export type ProjectTemplateDto = components['schemas']['ProjectTemplateDto'];
+export type ProjectTemplateRequest = components['schemas']['ProjectTemplateRequest'];
+export type PromptTemplateDto = components['schemas']['PromptTemplateDto'];
+export type ProviderStatusDto = components['schemas']['ProviderStatusDto'];
+export type ReadNotificationsRequest = components['schemas']['ReadNotificationsRequest'];
+export type RecentWorkDto = components['schemas']['RecentWorkDto'];
+export type RenameConversationRequest = components['schemas']['RenameConversationRequest'];
+export type RenameLibraryFileRequest = components['schemas']['RenameLibraryFileRequest'];
+export type RepositoryCommitDto = components['schemas']['RepositoryCommitDto'];
+export type RepositoryDto = components['schemas']['RepositoryDto'];
+export type RepositoryEntryDto = components['schemas']['RepositoryEntryDto'];
+export type RepositoryFileDto = components['schemas']['RepositoryFileDto'];
+export type RepositoryImportRequest = components['schemas']['RepositoryImportRequest'];
+export type RepositoryIssueDto = components['schemas']['RepositoryIssueDto'];
+export type RepositoryPageDto = components['schemas']['RepositoryPageDto'];
+export type RepositoryReviewDetailDto = components['schemas']['RepositoryReviewDetailDto'];
+export type RepositoryReviewDto = components['schemas']['RepositoryReviewDto'];
+export type RepositoryReviewReportDto = components['schemas']['RepositoryReviewReportDto'];
+export type RepositoryReviewSectionDto = components['schemas']['RepositoryReviewSectionDto'];
+export type RepositoryStatusDto = components['schemas']['RepositoryStatusDto'];
+export type RepositoryTreeDto = components['schemas']['RepositoryTreeDto'];
+export type ResourceAclDto = components['schemas']['ResourceAclDto'];
+export type ResourceAclRequest = components['schemas']['ResourceAclRequest'];
+export type ResourceDto = components['schemas']['ResourceDto'];
+export type ResourceMemberDto = components['schemas']['ResourceMemberDto'];
+export type ResourceMemberUpdate = components['schemas']['ResourceMemberUpdate'];
+export type RetrievalCapabilitiesDto = components['schemas']['RetrievalCapabilitiesDto'];
+export type RetrievalConnectionDto = components['schemas']['RetrievalConnectionDto'];
+export type RetrievalEvaluationCase = components['schemas']['RetrievalEvaluationCase'];
+export type RetrievalEvaluationDto = components['schemas']['RetrievalEvaluationDto'];
+export type RetrievalEvaluationRequest = components['schemas']['RetrievalEvaluationRequest'];
+export type RetrievalLatencyDto = components['schemas']['RetrievalLatencyDto'];
+export type RetrievalMetricDto = components['schemas']['RetrievalMetricDto'];
+export type RetrievalRelevance = components['schemas']['RetrievalRelevance'];
+export type RetrievalReportDto = components['schemas']['RetrievalReportDto'];
+export type RetrievalSummaryDto = components['schemas']['RetrievalSummaryDto'];
+export type ReviewRequest = components['schemas']['ReviewRequest'];
+export type RoleUpdateRequest = components['schemas']['RoleUpdateRequest'];
+export type RunDto = components['schemas']['RunDto'];
+export type RunEventDto = components['schemas']['RunEventDto'];
+export type RuntimeResources = components['schemas']['RuntimeResources'];
+export type RunTimingDto = components['schemas']['RunTimingDto'];
+export type SafeProblemDetails = components['schemas']['SafeProblemDetails'];
+export type SaveArtifactRequest = components['schemas']['SaveArtifactRequest'];
+export type SavePromptRequest = components['schemas']['SavePromptRequest'];
+export type SelectBranchRequest = components['schemas']['SelectBranchRequest'];
+export type SharedContentDto = components['schemas']['SharedContentDto'];
+export type SharedFilePreviewDto = components['schemas']['SharedFilePreviewDto'];
+export type SharedMessageDto = components['schemas']['SharedMessageDto'];
+export type ShareDto = components['schemas']['ShareDto'];
+export type ShareSnapshot = components['schemas']['ShareSnapshot'];
+export type SourceChatDto = components['schemas']['SourceChatDto'];
+export type SourceDetailDto = components['schemas']['SourceDetailDto'];
+export type SourceDto = components['schemas']['SourceDto'];
+export type SourceHistoryDto = components['schemas']['SourceHistoryDto'];
+export type SourceImportRequest = components['schemas']['SourceImportRequest'];
+export type SourceRecordDto = components['schemas']['SourceRecordDto'];
+export type SpendBucketDto = components['schemas']['SpendBucketDto'];
+export type SpendReportDto = components['schemas']['SpendReportDto'];
+export type SpendUserDto = components['schemas']['SpendUserDto'];
+export type SqlVectorCapabilitiesDto = components['schemas']['SqlVectorCapabilitiesDto'];
+export type StatusDto = components['schemas']['StatusDto'];
+export type TestIdentityDto = components['schemas']['TestIdentityDto'];
+export type TestIdentityRequest = components['schemas']['TestIdentityRequest'];
+export type TextDocumentDto = components['schemas']['TextDocumentDto'];
+export type TextDocumentRequest = components['schemas']['TextDocumentRequest'];
+export type TokenDayDto = components['schemas']['TokenDayDto'];
+export type TokenUsageDto = components['schemas']['TokenUsageDto'];
+export type TrafficActivity = components['schemas']['TrafficActivity'];
+export type TrafficMetrics = components['schemas']['TrafficMetrics'];
+export type TrafficPoint = components['schemas']['TrafficPoint'];
+export type TransformTextDto = components['schemas']['TransformTextDto'];
+export type TransformTextRequest = components['schemas']['TransformTextRequest'];
+export type UsageDayDto = components['schemas']['UsageDayDto'];
+export type UsageKindDto = components['schemas']['UsageKindDto'];
+export type UsageModelDto = components['schemas']['UsageModelDto'];
+export type UsageTotalsDto = components['schemas']['UsageTotalsDto'];
+export type UserAccountRequest = components['schemas']['UserAccountRequest'];
+export type UserAuthenticationDto = components['schemas']['UserAuthenticationDto'];
+export type UserRolesRequest = components['schemas']['UserRolesRequest'];
+export type UserSettingsDto = components['schemas']['UserSettingsDto'];
+export type WebSearchStatusDto = components['schemas']['WebSearchStatusDto'];
+export type WebSourceDto = components['schemas']['WebSourceDto'];
 export type $defs = Record<string, never>;
 export interface operations {
     QuerySystemLogs: {
         parameters: {
             query?: {
-                From?: string;
-                To?: string;
-                Level?: components["schemas"]["LogLevel"];
-                Category?: string;
-                EventId?: number;
-                EventName?: string;
-                IssueCode?: string;
-                TraceId?: string;
-                JobId?: string;
-                RunId?: string;
-                OperationId?: string;
-                ErrorCode?: string;
-                Instance?: string;
-                Text?: string;
-                Cursor?: string;
-                Take?: number;
-                SortDirection?: string;
+                from?: string;
+                to?: string;
+                level?: components["schemas"]["LogLevel"];
+                category?: string;
+                eventId?: number;
+                eventName?: string;
+                issueCode?: string;
+                traceId?: string;
+                jobId?: string;
+                runId?: string;
+                operationId?: string;
+                errorCode?: string;
+                instance?: string;
+                text?: string;
+                cursor?: string;
+                take?: number;
+                sortDirection?: string;
             };
             header?: never;
             path?: never;
@@ -11172,23 +11372,23 @@ export interface operations {
     ExportSystemLogs: {
         parameters: {
             query?: {
-                From?: string;
-                To?: string;
-                Level?: components["schemas"]["LogLevel"];
-                Category?: string;
-                EventId?: number;
-                EventName?: string;
-                IssueCode?: string;
-                TraceId?: string;
-                JobId?: string;
-                RunId?: string;
-                OperationId?: string;
-                ErrorCode?: string;
-                Instance?: string;
-                Text?: string;
-                Cursor?: string;
-                Take?: number;
-                SortDirection?: string;
+                from?: string;
+                to?: string;
+                level?: components["schemas"]["LogLevel"];
+                category?: string;
+                eventId?: number;
+                eventName?: string;
+                issueCode?: string;
+                traceId?: string;
+                jobId?: string;
+                runId?: string;
+                operationId?: string;
+                errorCode?: string;
+                instance?: string;
+                text?: string;
+                cursor?: string;
+                take?: number;
+                sortDirection?: string;
             };
             header?: never;
             path?: never;

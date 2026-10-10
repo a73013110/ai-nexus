@@ -10,7 +10,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type { DocumentInfo } from '../../core/api/types';
+import type { DocumentDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { KnowledgeApi } from './knowledge-api';
@@ -92,7 +92,7 @@ export class TextSourceEditor {
   private readonly scope = inject(ViewScope);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly confirm = viewChild.required(ConfirmDialog);
-  readonly saved = output<DocumentInfo>();
+  readonly saved = output<DocumentDto>();
   readonly title = signal('');
   readonly text = signal('');
   readonly documentId = signal('');
@@ -103,7 +103,7 @@ export class TextSourceEditor {
   private version = 0;
   private initial = '';
   private sequence = 0;
-  async open(collection: string, document?: DocumentInfo) {
+  async open(collection: string, document?: DocumentDto) {
     const sequence = ++this.sequence,
       valid = this.scope.guard();
     this.collection = collection;
