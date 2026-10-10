@@ -6,7 +6,7 @@
 
 .DESCRIPTION
 一般參數寫入 .local/config/appsettings.Local.json，密碼與 key 以遮蔽輸入寫入 .local/secrets/appsettings.Secrets.json
-（只有目前使用者可讀）。每一項按 Enter 保留現有值。其餘設定直接編輯這兩個檔案，見 docs/CONFIGURATION.md。
+（只有目前使用者可讀）。每一項按 Enter 保留現有值。其餘設定直接編輯這兩個檔案，見 docs/development/CONFIGURATION.md。
 
 .EXAMPLE
 ./scripts/Configure-Local.ps1

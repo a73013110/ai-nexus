@@ -8,7 +8,7 @@
 ## Schema 與模組
 
 | Schema | 模組 | Schema | 模組 |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `accesscontrol` | AccessControl | `inference` | Inference |
 | `administration` | Administration | `integrations` | Integrations |
 | `artifacts` | Artifacts | `jobs` | Jobs |
@@ -27,32 +27,12 @@
 
 - 能界定長度的字串一律 `HasMaxLength`，上限最好與 validator 共用常數（例如 `PromptTemplate.ContentMaxLength`）；超過 4000 字元的上限在 SQL Server 會是 `nvarchar(max)`，但上限仍由程式檢查。
 - 時間用 `DateTimeOffset`（UTC）；金額 `decimal(20,8)`，未知費用保持 null。
-- 原始附件不進資料庫，只保存站外儲存識別與 metadata（見 [附件](../features/ATTACHMENTS.md)）。
+- 原始附件不進資料庫，只保存站外儲存識別與 metadata（見 [附件保存](../features/ATTACHMENT_STORAGE.md)）。
 - 只有 `Conversation`、`WorkspaceResource` 套用具名 query filter `SoftDelete`；其他刪除是實體刪除。
 
 ## 授權關聯
 
-```mermaid
-erDiagram
-    Users ||--o{ UserRoles : assigned
-    Roles ||--o{ UserRoles : belongs
-    Roles ||--o{ RoleGroupRoles : joins
-    RoleGroups ||--o{ RoleGroupRoles : contains
-    RoleGroups ||--o{ RoleGroupFeatures : grants
-    Features ||--o{ RoleGroupFeatures : available
-    Users ||--o{ Conversations : owns
-    Conversations ||--o{ Messages : contains
-    Conversations ||--o{ GenerationRuns : generates
-    GenerationRuns ||--o{ RunEvents : replays
-    Resources ||--o{ ResourceMembers : names
-    Resources ||--o{ ResourceGroups : permits
-    Resources ||--o| Projects : specializes
-    Resources ||--o| Collections : specializes
-    Resources ||--o| Artifacts : specializes
-    Artifacts ||--o{ ArtifactRevisions : versions
-```
-
-功能 grant 不等於資料 grant：knowledge 不授予全庫閱讀，專案不公開彼此的私人對話。授權模型見 [ACCESS_CONTROL](ACCESS_CONTROL.md)。
+使用者→角色→群組→功能的關聯見 [身分與授權](ACCESS_CONTROL.md)；資源（專案、知識庫、成果）共用 `collaboration` 的 `Resources`／`ResourceMembers`／`ResourceGroups` ACL。功能 grant 不等於資料 grant：knowledge 不授予全庫閱讀，專案不公開彼此的私人對話。
 
 ## 重要約束與索引（為什麼存在）
 
@@ -73,8 +53,8 @@ dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Fea
 ```
 
 - 先改實體與組態（含 `[Comment]`），再產生 migration；一起提交 source、designer 與 snapshot。給 DBA 的 idempotent SQL 不進版控，由 `Publish-IIS.ps1` 在發布時產生（套件的 `migrations.sql`），所以不會與程式不同步。不要手改產生的 migration，只有 EF 表達不了的 DDL（例如全文索引）才在產生後加入 `migrationBuilder.Sql`。
-- 已設定 SQL 的 host 在 HTTP 與背景 worker 啟動前檢查 migration（`DatabaseSchema`）：有未套用版本或模型與 snapshot 不一致就以退出碼 1 停止並列出版本。`Storage:ApplyMigrationsOnStartup=false`（預設）時只做唯讀檢查，不修改 schema。
-- 測試用 SQLite 依目前模型建庫（`SqliteModel.cs` 處理向量與全文差異），不執行 SQL Server migration。
+- 已設定 SQL 的 host 在 HTTP 與背景 worker 啟動前檢查 migration（`DatabaseSchema`）：有未套用版本或模型與 snapshot 不一致就以退出碼 1 停止並列出版本。`Database:ApplyMigrationsOnStartup=false`（預設）時只做唯讀檢查，不修改 schema。
+- 測試用 SQLite 依目前模型建庫（`SqliteModel.cs` 處理向量與全文差異），不執行 SQL Server migration；真實 SQL Server 的測試方式見 [測試](../development/TESTING.md#真實-sql-server)。
 
 ## 初始化與 SQL 權限
 
@@ -95,15 +75,6 @@ EF Core（直接注入 `NexusDbContext`）負責 mapping、migration 與業務�
 - `ISqlDatabase<LegacyGdwebDatabase>`／`ISqlDatabase<LegacyMeihoDatabase>`：外部來源，每次呼叫自開連線，連線字串強制唯讀意圖與加密；這不取代 SQL 端的 view-only 權限。
 
 新增外部資料庫時，在擁有它的模組加一個實作 `ISqlDatabaseDefinition` 的類別（決定連線字串），再以 `AddSqlDatabase<T>()` 註冊。手寫 SQL 裡的 schema 名稱要與上表一致。
-
-## 真實 SQL Server 測試
-
-向量、全文與交易行為只能在真實 SQL Server 驗證。設定測試 instance（登入須能建立／刪除資料庫與全文 catalog）後執行；每項測試建立並清理自己的 `AINexus_Retrieval_Test_` 資料庫，未設定時明確略過。
-
-```powershell
-$env:AINEXUS_SQLSERVER_TEST = 'Server=localhost;Integrated Security=true;Encrypt=true;TrustServerCertificate=true'
-dotnet test --project backend/tests/AiNexus.Tests --filter "FullyQualifiedName~SqlServerRetrievalTests"
-```
 
 ## 保存與備份
 

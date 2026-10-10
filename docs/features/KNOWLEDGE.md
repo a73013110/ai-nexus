@@ -45,4 +45,4 @@ OCR 與一般文字生成共用核准模型、群組政策、日生成配額與�
 
 `jobs.BackgroundJobs` 是 durable queue。Worker 原子取得租約、每兩秒續約／檢查取消，checkpoint 驗證租約 token 與未取消狀態後才提交資料。程序中止後，租約到期可由下一個 worker 接手；失去租約的 worker 無法提交舊結果。同一來源的 active key 唯一，避免重複排程。失敗／取消後最多六次處理；重試先重新檢查來源權限。
 
-此可靠佇列共用於文件辨識、索引、評測及程式碼 review，完成／失敗／取消可在[通知中心](NOTIFICATIONS.md)查看與跳轉。聊天有獨立的 executor 租約，避免另一個實例誤判正在生成的回答；其排程仍在記憶體，每個 IIS app 使用一個 worker，完整限制與升級流程見 [IIS 部署](../operations/IIS_DEPLOYMENT.md)。
+此可靠佇列共用於文件辨識、索引、評測及程式碼 review，完成／失敗／取消可在[通知中心](NOTIFICATIONS.md)查看與跳轉。聊天有獨立的 executor 租約，避免另一個實例誤判正在生成的回答；其排程仍在記憶體，每個 IIS app 使用一個 worker，見 [生成與背景任務](../architecture/GENERATION.md)。
