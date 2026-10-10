@@ -1,4 +1,3 @@
-using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Projects;
@@ -16,11 +15,6 @@ internal static class ProjectsErrors
     public static readonly Error AccessRequired = Error.Forbidden("project_access_required");
     public static readonly Error ConversationMissing = Error.NotFound("conversation_missing");
     public static readonly Error GenerationActive = Error.Conflict("generation_active");
-
-    /// <summary>For <see cref="ProjectService"/>, whose callers in other modules can only fail by exception.</summary>
-    public static ApiException ToException(this Error error)
-    {
-        var status = Problems.Status(error.Kind);
-        return new(status, error.Code, PublicErrorCatalog.Message(error.Code, status));
-    }
+    public static readonly Error FilesPending = Error.Conflict("project_files_pending");
+    public static readonly Error ContextLimit = Error.Conflict("project_context_limit");
 }

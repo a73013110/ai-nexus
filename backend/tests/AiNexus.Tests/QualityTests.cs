@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Chat;
-using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Collaboration;
@@ -71,7 +70,7 @@ public sealed class QualityTests
         using var check = f.Services.CreateScope(); var actor = (await owner.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
         var task = check.ServiceProvider.GetRequiredService<ModelTaskService>();
         var settings = f.Services.GetRequiredService<IOptions<InferenceOptions>>().Value;
-        var invalid = await Assert.ThrowsAsync<ApiException>(() => task.GenerateAsync(actor, "evaluation", new string('中', 4000), "", CancellationToken.None, expectedConfiguration: ModelTaskConfiguration.Capture(settings.Models[0], settings).Fingerprint)); Assert.Equal("context_budget_exceeded", invalid.Code);
+        var invalid = await task.GenerateAsync(actor, "evaluation", new string('中', 4000), "", CancellationToken.None, expectedConfiguration: ModelTaskConfiguration.Capture(settings.Models[0], settings).Fingerprint); Assert.Equal("context_budget_exceeded", invalid.Error?.Code);
         Assert.Equal(1, await check.ServiceProvider.GetRequiredService<NexusDbContext>().Set<ModelInvocation>().CountAsync());
     }
     [Fact]

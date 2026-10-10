@@ -26,7 +26,7 @@ public sealed class EmbeddingService(IEnumerable<IEmbeddingClient> clients, Retr
                 return (batch.Vectors, batch.InputTokens);
             }, ct);
         }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new ApiException(504, "embedding_timeout", "語意索引服務逾時，請重試。"); }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new ExternalServiceException(Error.Timeout("embedding_timeout"), "語意索引服務逾時，請重試。"); }
     }
-    private static ApiException Invalid() => new(502, "embedding_invalid", "向量回應數量、維度或數值不正確。");
+    private static ExternalServiceException Invalid() => new(Error.Upstream("embedding_invalid"), "向量回應數量、維度或數值不正確。");
 }

@@ -2,11 +2,12 @@ using AiNexus.Features.AccessControl;
 
 namespace AiNexus.Features.WebSearch;
 
-internal static class GetWebSearchStatus
+internal sealed class GetWebSearchStatus(WebSearchService service)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
-        .MapGet("/tools/web-search", (WebSearchService service) => TypedResults.Ok(service.Status))
+        .MapGet("/tools/web-search", (GetWebSearchStatus handler) => TypedResults.Ok(handler.Handle()))
         .RequireAuthorization(Policies.Chat)
-        .WithName("GetWebSearchStatus")
-        .Produces<WebSearchStatusDto>();
+        .WithName("GetWebSearchStatus");
+
+    public WebSearchStatusDto Handle() => service.Status;
 }

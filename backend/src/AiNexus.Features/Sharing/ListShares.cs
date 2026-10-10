@@ -5,16 +5,14 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Sharing;
 
 /// <summary>Shares the user sent, or live shares addressed to them whose source still exists.</summary>
-internal static class ListShares
+internal sealed class ListShares(NexusDbContext db, ShareAccess shares, TimeProvider clock)
 {
     private const int PageSize = 100;
 
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("", async (bool? sent, ICurrentUser user, NexusDbContext db, ShareAccess shares, TimeProvider clock, CancellationToken ct) =>
-            Results.Ok(await HandleAsync(db, shares, clock, user.Id, sent ?? false, ct)))
-        .Produces<IReadOnlyList<ShareDto>>();
+        .MapGet("", async (bool? sent, ICurrentUser user, ListShares handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(user.Id, sent ?? false, ct)));
 
-    public static async Task<IReadOnlyList<ShareDto>> HandleAsync(NexusDbContext db, ShareAccess shares, TimeProvider clock, Guid actor, bool sent, CancellationToken ct)
+    public async Task<IReadOnlyList<ShareDto>> HandleAsync(Guid actor, bool sent, CancellationToken ct)
     {
         var now = clock.GetUtcNow();
         var rows = await db.Set<ShareLink>().AsNoTracking()

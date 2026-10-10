@@ -1,3 +1,4 @@
+using AiNexus.Platform.Errors;
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
@@ -57,14 +58,14 @@ public sealed class IntegrationTests
         await adapter.SearchAsync(new("sid-123", "DOMAIN\\actor"), new("' OR 1=1 --%_"), 30, 10, CancellationToken.None);
         Assert.DoesNotContain("OR 1=1", probe.Sql); Assert.Contains("ActorSid = @ActorSid", probe.Sql); Assert.Equal("%' OR 1=1 --~%~_%", probe.Args!.GetType().GetProperty("Pattern")!.GetValue(probe.Args));
         Assert.Equal(30, probe.Args.GetType().GetProperty("Take")!.GetValue(probe.Args));
-        probe.RevokeOnRecheck = true; Assert.Null(await adapter.ReadAsync(new("sid-123", "DOMAIN\\actor"), "doc-1", 10, CancellationToken.None)); Assert.Equal(2, probe.SingleReads);
+        probe.RevokeOnRecheck = true; Assert.Equal("source_record_missing", (await adapter.ReadAsync(new("sid-123", "DOMAIN\\actor"), "doc-1", 10, CancellationToken.None)).Error?.Code); Assert.Equal(2, probe.SingleReads);
     }
     private sealed class FixtureSource : IControlledSourceAdapter
     {
         public string Id => "gdweb"; public SourceActor? Actor; public int Calls; public bool Revoked;
         private bool Allow(SourceActor actor) { Actor = actor; Calls++; return actor.Sid == "S-1-5-21-test-alice" && !Revoked; }
         public Task<IReadOnlyList<SourceRecordDto>> SearchAsync(SourceActor actor, SourceSearchRequest request, int take, int timeout, CancellationToken ct) => Task.FromResult<IReadOnlyList<SourceRecordDto>>(Allow(actor) ? [Record()] : []);
-        public Task<SourceDetailDto?> ReadAsync(SourceActor actor, string id, int timeout, CancellationToken ct) => Task.FromResult<SourceDetailDto?>(Allow(actor) && id == "doc-1" ? new("gdweb", Record(), "通知正文", [new(DateTimeOffset.UtcNow, "approved", "承辦人", "完成核對", "v2")], false) : null);
+        public Task<Result<SourceDetailDto>> ReadAsync(SourceActor actor, string id, int timeout, CancellationToken ct) => Task.FromResult<Result<SourceDetailDto>>(Allow(actor) && id == "doc-1" ? new SourceDetailDto("gdweb", Record(), "通知正文", [new(DateTimeOffset.UtcNow, "approved", "承辦人", "完成核對", "v2")], false) : Error.NotFound("source_record_missing"));
         private static SourceRecordDto Record() => new("doc-1", "document", "測試通知", "核准", "v2", DateTimeOffset.UtcNow);
     }
 }

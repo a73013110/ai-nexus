@@ -90,19 +90,9 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             var run = await db.Runs.SingleAsync(x => x.Id == job.RunId, stoppingToken);
             if (!RunStates.IsActive(run.Status) || run.ExecutorId != scheduler.InstanceId) return;
-            try
+            if (await RecheckAsync(scope.ServiceProvider, db, run, stoppingToken) is { IsSuccess: false } revoked)
             {
-                var grants = await scope.ServiceProvider.GetRequiredService<AiNexus.Features.AccessControl.AccessService>().ForUserAsync(run.OwnerId, stoppingToken);
-                if (!grants.Features.Any(x => x.Id == "chat")) throw new ApiException(403, "chat_access_revoked", "對話功能權限已撤銷。");
-                await scope.ServiceProvider.GetRequiredService<ModelPolicyService>().RequireAsync(run.OwnerId, run.ModelId, stoppingToken, checkQuota: false);
-                var sources = await db.Set<AiNexus.Features.Knowledge.Retrieval.MessageCitation>().Where(x => x.MessageId == run.AssistantMessageId).Select(x => new AiNexus.Features.Knowledge.Retrieval.KnowledgeHitDto(x.DocumentId, x.Title, x.PageNumber, x.Excerpt, 0, Guid.Empty, x.EndPage)).ToListAsync(stoppingToken);
-                await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Knowledge.Retrieval.KnowledgeRetrieval>().ValidateHitsAsync(run.OwnerId, sources, stoppingToken);
-                var projectId = await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.Id == run.ConversationId).Select(x => x.ProjectId).SingleAsync(stoppingToken);
-                await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Projects.ProjectService>().ContextAsync(run.OwnerId, projectId, stoppingToken);
-            }
-            catch (ApiException revoked)
-            {
-                await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, RunStates.Failed, revoked.Code, stoppingToken);
+                await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, RunStates.Failed, revoked.Error.Code, stoppingToken);
                 return;
             }
             run.Status = RunStates.Running;
@@ -113,7 +103,13 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
             parameters = JsonSerializer.Deserialize<GenerationParameters>(run.ParametersJson)!;
             var contexts = scope.ServiceProvider.GetRequiredService<ContextBuilder>();
             // Answered history does not change, so the context CreateRun reserved for is sent as is; only image bytes are read now.
-            messages = job.Context is { } prepared ? await contexts.WithImagesAsync(prepared, stoppingToken) : await contexts.BuildAsync(run.ConversationId, run.UserMessageId, parameters, stoppingToken);
+            var built = job.Context is { } prepared ? await contexts.WithImagesAsync(prepared, stoppingToken) : await contexts.BuildAsync(run.ConversationId, run.UserMessageId, parameters, stoppingToken);
+            if (!built.IsSuccess)
+            {
+                await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, RunStates.Failed, built.Error.Code, stoppingToken);
+                return;
+            }
+            messages = built.Value;
             await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Billing.BillingService>().StartAsync(run.Id, stoppingToken);
             await db.SaveChangesAsync(stoppingToken);
             model = run.ProviderModelId;
@@ -133,7 +129,7 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
             await foreach (var chunk in router.StreamAsync(provider, model, messages, parameters, timeout.Token))
             {
                 characters += chunk.Text.Length;
-                if (characters > options.Value.MaxOutputCharacters) throw new ApiException(502, "output_limit_exceeded", "回答超過文字上限，請分段提問。");
+                if (characters > options.Value.MaxOutputCharacters) throw new ExternalServiceException(Error.Upstream("output_limit_exceeded"), "回答超過文字上限，請分段提問。");
                 completed |= chunk.Done;
                 buffer.Append(chunk.Text);
                 input = chunk.InputTokens ?? input;
@@ -146,17 +142,17 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
                     elapsed.Restart();
                 }
             }
-            if (!completed) throw new ApiException(502, "provider_stream_incomplete", "模型串流提前結束。");
+            if (!completed) throw new ExternalServiceException(Error.Upstream("provider_stream_incomplete"), "模型串流提前結束。");
         }
         catch (OperationCanceledException)
         {
             finalStatus = job.Cancellation.IsCancellationRequested ? RunStates.Cancelled : RunStates.Failed;
             error = finalStatus == RunStates.Cancelled ? null : stoppingToken.IsCancellationRequested ? "server_stopping" : "generation_timeout";
         }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or JsonException or InvalidOperationException or ApiException)
+        catch (Exception ex) when (ex is HttpRequestException or IOException or JsonException or InvalidOperationException or ExternalServiceException)
         {
             finalStatus = RunStates.Failed;
-            error = (ex as ApiException)?.Code ?? (ex is HttpRequestException or IOException ? "provider_connection_lost" : "provider_protocol_error");
+            error = (ex as ExternalServiceException)?.Error.Code ?? (ex is HttpRequestException or IOException ? "provider_connection_lost" : "provider_protocol_error");
             issueCode = issues.Report(ex, error);
         }
         // Request cancellation does not interrupt persistence; partial output survives.
@@ -168,6 +164,19 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
             var run = await db.Runs.SingleAsync(x => x.Id == job.RunId, CancellationToken.None);
             if (RunStates.IsActive(run.Status)) await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, finalStatus, error, CancellationToken.None, issueCode);
         }
+    }
+
+    /// <summary>What CreateRun checked and can change before the run starts: the chat grant, the model policy, the cited documents and the project.</summary>
+    private static async Task<Result> RecheckAsync(IServiceProvider services, NexusDbContext db, GenerationRun run, CancellationToken ct)
+    {
+        var grants = await services.GetRequiredService<AiNexus.Features.AccessControl.AccessService>().ForUserAsync(run.OwnerId, ct);
+        if (!grants.Features.Any(x => x.Id == "chat")) return ChatErrors.AccessRevoked;
+        if (await services.GetRequiredService<ModelPolicyService>().RequireAsync(run.OwnerId, run.ModelId, ct, checkQuota: false) is { IsSuccess: false } refused) return refused.Error;
+        var sources = await db.Set<AiNexus.Features.Knowledge.Retrieval.MessageCitation>().Where(x => x.MessageId == run.AssistantMessageId).Select(x => new AiNexus.Features.Knowledge.Retrieval.KnowledgeHitDto(x.DocumentId, x.Title, x.PageNumber, x.Excerpt, 0, Guid.Empty, x.EndPage)).ToListAsync(ct);
+        if (await services.GetRequiredService<AiNexus.Features.Knowledge.Retrieval.KnowledgeRetrieval>().ValidateHitsAsync(run.OwnerId, sources, ct) is { IsSuccess: false } hidden) return hidden.Error;
+        var projectId = await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.Id == run.ConversationId).Select(x => x.ProjectId).SingleAsync(ct);
+        var project = await services.GetRequiredService<AiNexus.Features.Projects.ProjectService>().ContextAsync(run.OwnerId, projectId, ct);
+        return project.IsSuccess ? Result.Success : project.Error;
     }
 
     /// <summary>What this worker has already written for its run. Flushes only append, so this is all a flush needs.</summary>

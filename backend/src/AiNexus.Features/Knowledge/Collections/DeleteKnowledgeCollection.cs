@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Knowledge.Indexing;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Knowledge.Collections;
 
@@ -16,21 +17,21 @@ namespace AiNexus.Features.Knowledge.Collections;
 internal sealed class DeleteKnowledgeCollection(NexusDbContext db, ResourceAccess access, AttachmentService attachments, AttachmentWriteLock writes, AttachmentLifecycle lifecycle)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/collections/{id:guid}", async (Guid id, ICurrentUser user, DeleteKnowledgeCollection handler, CancellationToken ct) =>
-        {
-            await handler.HandleAsync(user.Id, id, ct);
-            return Results.NoContent();
-        })
-        .WithName("DeleteKnowledgeCollection").Produces(204);
+        .MapDelete("/collections/{id:guid}", (Guid id, ICurrentUser user, DeleteKnowledgeCollection handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .WithName("DeleteKnowledgeCollection");
 
-    public async Task HandleAsync(Guid actor, Guid id, CancellationToken ct)
+    public async Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
-        await access.OwnerAsync(actor, id, KnowledgeCollection.Kind, ct); await writes.Gate.WaitAsync(ct);
+        var owned = await access.OwnerAsync(actor, id, KnowledgeCollection.Kind, ct);
+        if (!owned.IsSuccess) return owned.Error;
+        await writes.Gate.WaitAsync(ct);
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await attachments.LockOwnerAsync(actor, ct);
-            var resource = await access.OwnerAsync(actor, id, KnowledgeCollection.Kind, ct);
+            var current = await access.OwnerAsync(actor, id, KnowledgeCollection.Kind, ct);
+            if (!current.IsSuccess) return current.Error;
+            var resource = current.Value;
             var docs = await db.Set<KnowledgeDocument>().Where(x => x.CollectionId == id && !x.IsDeleted).ToListAsync(ct);
             var documentIds = docs.Select(x => x.Id).ToArray(); var files = docs.Where(x => x.AttachmentId != null).Select(x => x.AttachmentId!.Value).Distinct().ToArray();
             foreach (var doc in docs) { doc.IsDeleted = true; doc.AttachmentId = null; doc.Status = "deleted"; }
@@ -47,5 +48,6 @@ internal sealed class DeleteKnowledgeCollection(NexusDbContext db, ResourceAcces
         }
         finally { writes.Gate.Release(); }
         await lifecycle.DeletePendingAsync(ct);
+        return Result.Success;
     }
 }

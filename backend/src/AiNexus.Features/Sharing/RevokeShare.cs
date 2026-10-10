@@ -7,13 +7,12 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Sharing;
 
 /// <summary>The owner withdraws a share: recipients lose it and its file grants at once, and the snapshot text is erased.</summary>
-internal static class RevokeShare
+internal sealed class RevokeShare(NexusDbContext db, ShareWriteLock writes)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/{id:guid}", async (Guid id, ICurrentUser user, NexusDbContext db, ShareWriteLock writes, CancellationToken ct) =>
-            (await HandleAsync(db, writes, user.Id, id, ct)).ToHttpResult());
+        .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, RevokeShare handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync());
 
-    public static async Task<Result> HandleAsync(NexusDbContext db, ShareWriteLock writes, Guid actor, Guid id, CancellationToken ct)
+    public async Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
         await writes.Gate.WaitAsync(ct);
         try

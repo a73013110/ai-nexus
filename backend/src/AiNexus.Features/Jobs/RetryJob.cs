@@ -12,8 +12,8 @@ namespace AiNexus.Features.Jobs;
 internal sealed class RetryJob(NexusDbContext db, IServiceProvider services, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("/{id:guid}/retry", async (Guid id, ICurrentUser user, RetryJob handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
-        .WithName("RetryJob").Produces<JobDto>();
+        .MapPost("/{id:guid}/retry", (Guid id, ICurrentUser user, RetryJob handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .WithName("RetryJob");
 
     public async Task<Result<JobDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)
     {
@@ -21,10 +21,11 @@ internal sealed class RetryJob(NexusDbContext db, IServiceProvider services, Tim
         if (job is null) return JobsErrors.JobNotFound;
         if (job.Status is not ("failed" or "cancelled")) return JobsErrors.JobNotRetryable;
         if (job.Attempt >= 6) return JobsErrors.JobRetryLimit;
-        // Handlers are resolved only for a retryable job; their own checks belong to their module and fail by exception.
+        // Handlers are resolved only for a retryable job; their own checks belong to their module.
         var handler = services.GetServices<IBackgroundJobHandler>().SingleOrDefault(x => x.Kind == job.Kind);
         if (handler is null) return JobsErrors.JobHandlerMissing;
-        await handler.ValidateRetryAsync(job, ct);
+        var allowed = await handler.ValidateRetryAsync(job, ct);
+        if (!allowed.IsSuccess) return allowed.Error;
         var active = job.Kind + ":" + job.SubjectId.ToString("N");
         if (await db.Set<BackgroundJob>().AnyAsync(x => x.ActiveKey == active && x.Id != id, ct)) return JobsErrors.JobActive;
         var changed = await db.Set<BackgroundJob>().Where(x => x.Id == id && x.Status == job.Status && x.LeaseToken == null).ExecuteUpdateAsync(p =>

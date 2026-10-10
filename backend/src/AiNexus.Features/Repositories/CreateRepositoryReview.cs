@@ -39,7 +39,7 @@ internal sealed class CreateRepositoryReview(NexusDbContext db, RepositoryServic
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/reviews", async (CreateRepositoryReviewRequest body, ICurrentUser user, CreateRepositoryReview handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, body, ct)).ToHttpResult())
-        .WithName("CreateRepositoryReview").Produces<RepositoryReviewDto>();
+        .WithName("CreateRepositoryReview");
 
     public async Task<Result<RepositoryReviewDto>> HandleAsync(Guid owner, CreateRepositoryReviewRequest request, CancellationToken ct)
     {
@@ -55,7 +55,7 @@ internal sealed class CreateRepositoryReview(NexusDbContext db, RepositoryServic
         var hash = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new { request.Repository, head, basis, request.ModelId, note, purpose })));
         var legacyHash = purpose == "review" ? Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new { request.Repository, head, basis, request.ModelId, note }))) : null;
         bool SameRequest(RepositoryReview existing) => existing.RequestHash == hash ||
-            (existing.RequestHash == legacyHash && RepositoryReviewService.Snapshot(existing).Version == 1);
+            (existing.RequestHash == legacyHash && RepositoryReviewService.Snapshot(existing) is { IsSuccess: true, Value.Version: 1 });
         await writes.Gate.WaitAsync(ct);
         try
         {
@@ -67,8 +67,10 @@ internal sealed class CreateRepositoryReview(NexusDbContext db, RepositoryServic
                 if (!source.IsSuccess) return source.Error;
                 return await reviews.DescribeAsync(existing, ct);
             }
-            var model = await catalog.RequireAsync(request.ModelId, ct);
-            await policy.RequireAsync(owner, model.Id, ct);
+            var profile = await catalog.RequireAsync(request.ModelId, ct);
+            if (!profile.IsSuccess) return profile.Error;
+            var model = profile.Value;
+            if (await policy.RequireAsync(owner, model.Id, ct) is { IsSuccess: false } refused) return refused.Error;
             var headExists = await gitea.RequireCommitAsync(owner, request.Repository, head, ct);
             if (!headExists.IsSuccess) return headExists.Error;
             if (basis is not null)
@@ -79,9 +81,10 @@ internal sealed class CreateRepositoryReview(NexusDbContext db, RepositoryServic
             var diff = await gitea.DiffAsync(owner, request.Repository, head, basis, ct);
             if (!diff.IsSuccess) return diff.Error;
             var snapshot = RepositoryReviewPlan.Create(diff.Value, model, request.Repository, head, basis, note, purpose);
+            if (!snapshot.IsSuccess) return snapshot.Error;
             var row = new RepositoryReview { OwnerId = owner, Repository = request.Repository, Commit = head, BaseCommit = basis,
                 BaseUrl = gitea.BaseUrl, ModelId = model.Id, Note = note, ConfigurationFingerprint = ModelTaskConfiguration.Capture(model, inference.Value).Fingerprint,
-                SnapshotJson = JsonSerializer.Serialize(snapshot), IdempotencyKey = request.IdempotencyKey, RequestHash = hash, CreatedAt = clock.GetUtcNow() };
+                SnapshotJson = JsonSerializer.Serialize(snapshot.Value), IdempotencyKey = request.IdempotencyKey, RequestHash = hash, CreatedAt = clock.GetUtcNow() };
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             // This account lock and unique request key also protect multiple application hosts.
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);

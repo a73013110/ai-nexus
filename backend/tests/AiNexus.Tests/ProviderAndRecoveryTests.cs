@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using AiNexus.Features.Chat;
-using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Inference;
@@ -137,8 +136,9 @@ public sealed class ProviderAndRecoveryTests
     public void SubscriptionCapacityIsReleasedWhenClientsDisconnect()
     {
         var limits = new SubscriptionLimits(); var owner = Guid.NewGuid();
-        using var first = limits.Acquire(owner); using (limits.Acquire(owner)) Assert.Throws<ApiException>(() => limits.Acquire(owner));
-        using var replacement = limits.Acquire(owner);
+        using var first = limits.TryAcquire(owner); using (limits.TryAcquire(owner)) Assert.Null(limits.TryAcquire(owner));
+        using var replacement = limits.TryAcquire(owner);
+        Assert.NotNull(replacement);
     }
 
     private sealed class FixtureHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> handler) : HttpMessageHandler

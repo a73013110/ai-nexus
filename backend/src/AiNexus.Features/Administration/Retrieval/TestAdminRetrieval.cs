@@ -2,6 +2,7 @@ using AiNexus.Features.Identity;
 using AiNexus.Platform.Validation;
 using FluentValidation;
 using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Administration.Retrieval;
 
@@ -19,10 +20,12 @@ internal sealed class AdminRetrievalSearchRequestValidator : RequestValidator<Ad
 }
 
 /// <summary>Runs the retrieval pipeline as the administrator, with an optional mode and rerank override.</summary>
-internal static class TestAdminRetrieval
+internal sealed class TestAdminRetrieval(RetrievalPipeline pipeline)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("/search", async (AdminRetrievalSearchRequest body, RetrievalPipeline pipeline, ICurrentUser user, CancellationToken ct) =>
-            Results.Ok(await pipeline.SearchAsync(user.Id, new(body.Query, body.CollectionIds), ct, mode: body.Mode, rerank: body.Rerank)))
-        .WithName("TestAdminRetrieval").Produces<KnowledgeSearchDto>();
+        .MapPost("/search", (AdminRetrievalSearchRequest body, ICurrentUser user, TestAdminRetrieval handler, CancellationToken ct) => handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
+        .WithName("TestAdminRetrieval");
+
+    public Task<Result<KnowledgeSearchDto>> HandleAsync(Guid actor, AdminRetrievalSearchRequest request, CancellationToken ct)
+        => pipeline.SearchAsync(actor, new(request.Query, request.CollectionIds), ct, mode: request.Mode, rerank: request.Rerank);
 }

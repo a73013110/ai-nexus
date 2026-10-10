@@ -14,4 +14,14 @@ internal static class InferenceErrors
     public static readonly Error KnowledgeSelectionChanged = Error.Conflict("knowledge_selection_changed");
     /// <summary>A regeneration reuses the original prompt's attachments.</summary>
     public static readonly Error RegenerateWithAttachments = Error.Invalid("invalid_request");
+    public static readonly Error ModelGroupForbidden = Error.Forbidden("model_group_forbidden");
+    public static readonly Error ModelTokenQuota = Error.RateLimited("model_token_quota");
+    public static readonly Error TaskInputTooLong = Error.Invalid("task_input_too_long");
+    public static readonly Error VisionNotSupported = Error.Invalid("vision_not_supported");
+    public static readonly Error ContextBudgetExceeded = Error.Invalid("context_budget_exceeded");
+    public static readonly Error ConfigurationChanged = Error.Conflict("evaluation_configuration_changed");
+    public static readonly Error ModelSelectionDisabled = Error.Invalid("model_selection_disabled");
+    public static readonly Error ProviderUnavailable = Error.Unavailable("provider_unavailable");
+    public static readonly Error ModelNotAllowed = Error.Invalid("model_not_allowed");
+    public static readonly Error ReasoningNotSupported = Error.Invalid("reasoning_not_supported");
 }

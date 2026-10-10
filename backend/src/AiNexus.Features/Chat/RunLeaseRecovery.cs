@@ -38,7 +38,7 @@ public sealed class RunLeaseRecovery(NexusDbContext db, GenerationScheduler sche
             using var activity = DiagnosticTrace.Start("generation.recover", run.TraceId, run.ParentSpanId);
             activity.SetTag("operation.id", run.Id.ToString());
             using var logging = logger.BeginScope(new Dictionary<string, object?> { ["RunId"] = run.Id, ["OperationId"] = run.Id, ["UserId"] = run.OwnerId, ["RequestId"] = null });
-            run.IssueCode = issues.Report(new ApiException(503, "executor_lost", ""), "executor_lost");
+            run.IssueCode = issues.Report(Error.Unavailable("executor_lost"));
             if (run.StartedAt is null) run.ReservedTokens = 0;
             RunTiming.Finish(run, now);
             await billing.FinishAsync(run.Id, run.Status, ct);

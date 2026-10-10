@@ -10,38 +10,36 @@ namespace AiNexus.Features.Conversations;
 public sealed record ConversationTurn(Guid ConversationId, string? Prompt, Guid? ParentMessageId, Guid? RegenerateUserMessageId);
 
 /// <summary>
-/// The module's contract for other modules (generation, knowledge, artifacts, source chats). Failures are thrown as
-/// <see cref="ApiException"/> for callers that cannot return a result; the module's own endpoints are the slices next to this file.
+/// The module's contract for other modules (generation, knowledge, artifacts, source chats); the module's own endpoints
+/// are the slices next to this file.
 /// </summary>
 public sealed class ConversationService(NexusDbContext db, TimeProvider clock)
 {
-    public async Task<Conversation> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
-        => await db.OwnedConversationAsync(owner, id, ct)
-           ?? throw new ApiException(404, "conversation_not_found", "找不到這個對話。");
+    public async Task<Result<Conversation>> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
+        => await db.OwnedConversationAsync(owner, id, ct) is { } conversation ? conversation : ConversationsErrors.NotFound;
 
-    public async Task<ConversationDto> CreateAsync(Guid owner, string? title, CancellationToken ct)
-    {
-        var created = await CreateConversation.HandleAsync(db, clock, owner, title, ct);
-        return created.IsSuccess ? created.Value : throw created.Error.ToException();
-    }
+    public Task<Result<ConversationDto>> CreateAsync(Guid owner, string? title, CancellationToken ct) => new CreateConversation(db, clock).HandleAsync(owner, title, ct);
 
     // The chat module changes conversation history through this module's contract.
-    public async Task<(Message User, Message Assistant)> PrepareGenerationAsync(Guid owner, ConversationTurn request, string modelId, Guid runId, CancellationToken ct)
+    public async Task<Result<(Message User, Message Assistant)>> PrepareGenerationAsync(Guid owner, ConversationTurn request, string modelId, Guid runId, CancellationToken ct)
     {
-        var conversation = await OwnedAsync(owner, request.ConversationId, ct);
-        if (conversation.IsArchived) throw new ApiException(409, "conversation_archived", "請先還原封存對話，再繼續提問。");
+        var owned = await OwnedAsync(owner, request.ConversationId, ct);
+        if (!owned.IsSuccess) return owned.Error;
+        var conversation = owned.Value;
+        if (conversation.IsArchived) return ConversationsErrors.Archived;
         Message user;
         if (request.RegenerateUserMessageId is Guid userId)
         {
-            if (request.Prompt is not null || request.ParentMessageId is not null) throw new ApiException(400, "invalid_request", "重新生成不可同時提交新提問。");
-            user = await db.Set<Message>().SingleOrDefaultAsync(x => x.Id == userId && x.ConversationId == conversation.Id && x.Role == "user", ct)
-                   ?? throw new ApiException(404, "message_not_found", "找不到原始提問。");
+            if (request.Prompt is not null || request.ParentMessageId is not null) return ConversationsErrors.RegenerateWithPrompt;
+            var original = await db.Set<Message>().SingleOrDefaultAsync(x => x.Id == userId && x.ConversationId == conversation.Id && x.Role == "user", ct);
+            if (original is null) return ConversationsErrors.MessageNotFound;
+            user = original;
         }
         else
         {
-            if (string.IsNullOrWhiteSpace(request.Prompt)) throw new ApiException(400, "prompt_required", "請輸入訊息。");
+            if (string.IsNullOrWhiteSpace(request.Prompt)) return ConversationsErrors.PromptRequired;
             if (request.ParentMessageId is Guid parentId && !await db.Set<Message>().AnyAsync(x => x.Id == parentId && x.ConversationId == conversation.Id && x.Role == "assistant" && x.Status != RunStates.Queued && x.Status != RunStates.Running, ct))
-                throw new ApiException(400, "invalid_parent", "上文必須是此對話中已結束的回答。");
+                return ConversationsErrors.InvalidParent;
             user = new Message { ConversationId = conversation.Id, ParentId = request.ParentMessageId, Content = request.Prompt.Trim() };
             db.Set<Message>().Add(user);
             if (conversation.ActiveLeafId is null && conversation.Title == "新對話") conversation.Title = string.Concat(user.Content.Replace('\n', ' ').Take(36));

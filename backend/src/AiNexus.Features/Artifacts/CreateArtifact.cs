@@ -32,7 +32,7 @@ internal sealed class CreateArtifact(NexusDbContext db, ResourceAccess access, C
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("", async (CreateArtifactRequest request, ICurrentUser user, CreateArtifact handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, request, ct)).ToHttpResult())
-        .WithName("CreateArtifact").Produces<ArtifactDto>();
+        .WithName("CreateArtifact");
 
     public async Task<Result<ArtifactDto>> HandleAsync(Guid actor, CreateArtifactRequest request, CancellationToken ct)
     {
@@ -42,13 +42,15 @@ internal sealed class CreateArtifact(NexusDbContext db, ResourceAccess access, C
         {
             var conversation = await db.Messages.Where(x => x.Id == message).Select(x => (Guid?)x.ConversationId).SingleOrDefaultAsync(ct);
             if (conversation is null) return ArtifactsErrors.MessageNotFound;
-            await conversations.OwnedAsync(actor, conversation.Value, ct);
+            var owned = await conversations.OwnedAsync(actor, conversation.Value, ct);
+            if (!owned.IsSuccess) return owned.Error;
         }
         if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == Artifact.Kind, ct) >= Artifact.MaxPerOwner) return ArtifactsErrors.LimitReached;
         if (request.ProjectId is Guid project)
         {
             if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureIds.Projects)) return ArtifactsErrors.ProjectAccessRequired;
-            await access.RequireAsync(actor, project, "project", ct, write: true);
+            var editable = await access.RequireAsync(actor, project, "project", ct, write: true);
+            if (!editable.IsSuccess) return editable.Error;
         }
         var now = clock.GetUtcNow();
         var resource = new WorkspaceResource { OwnerId = actor, ParentId = request.ProjectId, Kind = Artifact.Kind, Name = request.Title.Trim(), CreatedAt = now, UpdatedAt = now };

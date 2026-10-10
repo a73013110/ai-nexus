@@ -5,12 +5,12 @@ namespace AiNexus.Features.Attachments;
 public sealed record AttachmentPolicyDto(long MaxFileBytes, int MaxFilesPerMessage, long MaxMessageBytes, string[] Extensions);
 
 /// <summary>Upload limits and accepted extensions for the composer.</summary>
-internal static class GetAttachmentPolicy
+internal sealed class GetAttachmentPolicy(IOptions<AttachmentOptions> options)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/policy", (IOptions<AttachmentOptions> options) => Results.Ok(Handle(options.Value)))
-        .WithName("AttachmentPolicy").Produces<AttachmentPolicyDto>();
+        .MapGet("/policy", (GetAttachmentPolicy handler) => TypedResults.Ok(handler.Handle()))
+        .WithName("AttachmentPolicy");
 
-    private static AttachmentPolicyDto Handle(AttachmentOptions options)
-        => new(options.MaxFileBytes, options.MaxFilesPerMessage, options.MaxMessageBytes, DocumentExtractor.Extensions);
+    public AttachmentPolicyDto Handle()
+        => new(options.Value.MaxFileBytes, options.Value.MaxFilesPerMessage, options.Value.MaxMessageBytes, DocumentExtractor.Extensions);
 }

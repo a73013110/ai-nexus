@@ -41,22 +41,26 @@ internal sealed class StartEvaluationRun(NexusDbContext db, ResourceAccess acces
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/sets/{id:guid}/runs", async (Guid id, EvaluationRunRequest body, ICurrentUser user, StartEvaluationRun handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
-        .Produces<EvaluationRunDto>().WithRequestBodyLimit(QualityModule.SetBodyLimit);
+        .WithRequestBodyLimit(QualityModule.SetBodyLimit);
 
     public async Task<Result<EvaluationRunDto>> HandleAsync(Guid actor, Guid setId, EvaluationRunRequest request, CancellationToken ct)
     {
         var variants = new List<EvaluationVariant>();
         foreach (var variant in request.Variants)
         {
-            var model = await models.RequireAsync(variant.ModelId, ct); await policy.RequireAsync(actor, model.Id, ct);
-            variants.Add(new(variant.Label.Trim(), model.Id, variant.Instruction.Trim(), ModelTaskConfiguration.Capture(model, inference.Value)));
+            var model = await models.RequireAsync(variant.ModelId, ct);
+            if (!model.IsSuccess) return model.Error;
+            if (await policy.RequireAsync(actor, model.Value.Id, ct) is { IsSuccess: false } refused) return refused.Error;
+            variants.Add(new(variant.Label.Trim(), model.Value.Id, variant.Instruction.Trim(), ModelTaskConfiguration.Capture(model.Value, inference.Value)));
         }
         // The owner's one active evaluation and run limit, then the set (always in this order).
         using (await writes.AcquireAsync("evaluation-runs", actor, ct))
         using (await writes.AcquireAsync(setId, ct))
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
-            var resource = await access.RequireAsync(actor, setId, EvaluationSet.Kind, ct);
+            var allowed = await access.RequireAsync(actor, setId, EvaluationSet.Kind, ct);
+            if (!allowed.IsSuccess) return allowed.Error;
+            var resource = allowed.Value;
             if (await db.Set<BackgroundJob>().AnyAsync(x => x.OwnerId == actor && x.Kind == "evaluation" && x.ActiveKey != null, ct)) return QualityErrors.EvaluationActive;
             if (await db.Set<EvaluationRun>().CountAsync(x => x.OwnerId == actor, ct) >= 500) return QualityErrors.RunLimit;
             var set = await db.Set<EvaluationSet>().AsNoTracking().SingleAsync(x => x.Id == setId, ct);

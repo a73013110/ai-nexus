@@ -9,7 +9,7 @@ public sealed class LibraryModule : IFeatureModule
 {
     public const int MaxTemplateCharacters = 12000;
 
-    public static void AddServices(IHostApplicationBuilder builder) => builder.Services.AddScoped<SavePromptTemplate>();
+    public static void AddServices(IHostApplicationBuilder builder) { }
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {

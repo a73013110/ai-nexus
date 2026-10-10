@@ -30,8 +30,8 @@ public sealed class WorkspaceExperienceTests
     private sealed class UnfinishedHandler : IBackgroundJobHandler
     {
         public string Kind => "unfinished-test";
-        public Task ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => Task.CompletedTask;
-        public async Task ExecuteAsync(JobExecution execution, CancellationToken ct)
+        public Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => Task.FromResult(Result.Success);
+        public async Task<Result> ExecuteAsync(JobExecution execution, CancellationToken ct)
         {
             var user = await execution.Database.Users.SingleAsync(x => x.Id == execution.Job.OwnerId, ct);
             user.DisplayName = "Uncheckpointed mutation";
@@ -211,10 +211,10 @@ public sealed class WorkspaceExperienceTests
     public void DiffSplittingPreservesAllTextAndBoundsLargeOrBinaryChanges()
     {
         var diff = "diff --git a/long.cs b/long.cs\n@@ -1 +1 @@\n+" + new string('x', 8000) + "\n";
-        var slices = RepositoryReviewService.Split(diff, 512); Assert.Equal(diff, string.Concat(slices.Select(x => x.Diff))); Assert.All(slices, x => Assert.InRange(x.Diff.Length, 1, 512));
-        Assert.True(Assert.Single(RepositoryReviewService.Split("diff --git a/a.png b/a.png\nBinary files a/a.png and b/a.png differ\n", 1000)).Binary);
-        Assert.Throws<ApiException>(() => RepositoryReviewService.Split("", 1000));
-        Assert.Throws<ApiException>(() => RepositoryReviewService.Split("diff --git a/a b/a\n" + new string('x', 257000), 12000));
+        var slices = RepositoryReviewService.Split(diff, 512).Value!; Assert.Equal(diff, string.Concat(slices.Select(x => x.Diff))); Assert.All(slices, x => Assert.InRange(x.Diff.Length, 1, 512));
+        Assert.True(Assert.Single(RepositoryReviewService.Split("diff --git a/a.png b/a.png\nBinary files a/a.png and b/a.png differ\n", 1000).Value!).Binary);
+        Assert.Equal("review_no_changes", RepositoryReviewService.Split("", 1000).Error?.Code);
+        Assert.Equal("repository_diff_limit", RepositoryReviewService.Split("diff --git a/a b/a\n" + new string('x', 257000), 12000).Error?.Code);
     }
     [Fact]
     public void OfficeExtractionReadsWorksheetsCachedFormulasAndSlidesAndRejectsMacrosOrXmlEntities()
@@ -223,15 +223,15 @@ public sealed class WorkspaceExperienceTests
         var types = "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\" />";
         var sheet = "<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><sheetData><row r=\"1\"><c r=\"A1\" t=\"s\"><v>0</v></c><c r=\"B1\"><f>1+1</f><v>2</v></c><c r=\"C1\"><f>SUM(A1:B1)</f></c></row></sheetData></worksheet>";
         var bytes = Zip(new() { ["[Content_Types].xml"] = types, ["xl/workbook.xml"] = "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets><sheet name=\"成本\" r:id=\"rId1\" /></sheets></workbook>", ["xl/_rels/workbook.xml.rels"] = "<Relationships><Relationship Id=\"rId1\" Target=\"worksheets/sheet1.xml\" /></Relationships>", ["xl/sharedStrings.xml"] = "<sst xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\"><si><t>季度目標</t></si></sst>", ["xl/worksheets/sheet1.xml"] = sheet });
-        var (type, text) = extractor.Extract("modern.xlsx", bytes, CancellationToken.None); Assert.Contains("spreadsheetml", type); Assert.Contains("工作表：成本", text); Assert.Contains("A1: 季度目標", text); Assert.Contains("B1: 2", text); Assert.Contains("公式沒有已保存", text);
+        var (type, text) = extractor.Extract("modern.xlsx", bytes, CancellationToken.None).Value; Assert.Contains("spreadsheetml", type); Assert.Contains("工作表：成本", text); Assert.Contains("A1: 季度目標", text); Assert.Contains("B1: 2", text); Assert.Contains("公式沒有已保存", text);
         var ppt = Zip(new() { ["[Content_Types].xml"] = types, ["ppt/slides/slide1.xml"] = "<root xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:p><a:r><a:t>投影片文字</a:t></a:r></a:p></root>" });
-        Assert.Contains("投影片文字", extractor.Extract("slides.pptx", ppt, CancellationToken.None).Text);
+        Assert.Contains("投影片文字", extractor.Extract("slides.pptx", ppt, CancellationToken.None).Value.Text);
         var macro = Zip(new() { ["[Content_Types].xml"] = types, ["xl/vbaProject.bin"] = "macro" });
-        Assert.Equal("office_macros_unsupported", Assert.Throws<ApiException>(() => extractor.Extract("disguised.xlsx", macro, CancellationToken.None)).Code);
+        Assert.Equal("office_macros_unsupported", extractor.Extract("disguised.xlsx", macro, CancellationToken.None).Error?.Code);
         var entity = Zip(new() { ["[Content_Types].xml"] = "<!DOCTYPE Types [<!ENTITY x SYSTEM 'file:///secret'>]><Types>&x;</Types>" });
-        Assert.Equal("document_unreadable", Assert.Throws<ApiException>(() => extractor.Extract("entity.docx", entity, CancellationToken.None)).Code);
+        Assert.Equal("document_unreadable", extractor.Extract("entity.docx", entity, CancellationToken.None).Error?.Code);
         var bounded = new DocumentExtractor(Options.Create(new AttachmentOptions { MaxExtractedCharacters = 10 }));
-        Assert.Equal("document_too_large", Assert.Throws<ApiException>(() => bounded.Extract("too-long.xlsx", bytes, CancellationToken.None)).Code);
+        Assert.Equal("document_too_large", bounded.Extract("too-long.xlsx", bytes, CancellationToken.None).Error?.Code);
     }
     private static byte[] Zip(Dictionary<string, string> files)
     {

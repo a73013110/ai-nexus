@@ -7,19 +7,18 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Attachments;
 
 /// <summary>
-/// The module's contract for other modules: upload, ownership lookup, quota locking and reading stored bytes. These
-/// methods report failures as <see cref="ApiException"/> because their callers do; the module's own endpoints use
-/// <see cref="FindOwnedAsync"/> and their slices.
+/// The module's contract for other modules: upload, ownership lookup, quota locking and reading stored bytes. A stored
+/// file that is missing or does not match its record is an infrastructure failure and is thrown.
 /// </summary>
 public sealed class AttachmentService(DocumentExtractor extractor, IOptions<AttachmentOptions> options, AttachmentWriteLock writes, NexusDbContext db, IAttachmentStorage storage, AttachmentQuota quota, AttachmentLifecycle lifecycle, TimeProvider clock)
 {
     public static AttachmentDto Describe(Attachment file) => new(file.Id, file.FileName, file.ContentType, file.Size, file.ContentType.StartsWith("image/", StringComparison.Ordinal), file.ContentType == "application/pdf" && string.IsNullOrWhiteSpace(file.ExtractedText) ? "ocr-required" : file.ExtractedText is null ? "vision" : "extracted-text");
 
-    public async Task<AttachmentDto> UploadAsync(Guid owner, IFormFile file, CancellationToken ct)
+    public async Task<Result<AttachmentDto>> UploadAsync(Guid owner, IFormFile file, CancellationToken ct)
     {
-        if (file.Length is < 1 || file.Length > options.Value.MaxFileBytes) throw new ApiException(413, "file_size_limit", $"每個檔案最多 {options.Value.MaxFileBytes / 1024 / 1024} MB。");
+        if (file.Length is < 1 || file.Length > options.Value.MaxFileBytes) return AttachmentsErrors.FileSizeLimit;
         var name = Path.GetFileName(file.FileName.Replace('\\', '/'));
-        if (name.Length is < 1 or > 180 || name.Any(char.IsControl)) throw new ApiException(400, "invalid_file_name", "檔案名稱不正確或過長。");
+        if (name.Length is < 1 or > 180 || name.Any(char.IsControl)) return AttachmentsErrors.InvalidFileName;
         using var data = new MemoryStream();
         await using (var input = file.OpenReadStream())
         {
@@ -27,13 +26,15 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<Atta
             int read;
             while ((read = await input.ReadAsync(buffer, ct)) > 0)
             {
-                if (data.Length + read > options.Value.MaxFileBytes) throw new ApiException(413, "file_size_limit", "檔案過大。");
+                if (data.Length + read > options.Value.MaxFileBytes) return AttachmentsErrors.FileSizeLimit;
                 await data.WriteAsync(buffer.AsMemory(0, read), ct);
             }
         }
-        if (data.Length == 0 || data.Length != file.Length) throw new ApiException(400, "file_size_mismatch", "上傳檔案內容不完整，請重新上傳。");
+        if (data.Length == 0 || data.Length != file.Length) return AttachmentsErrors.FileSizeMismatch;
         var bytes = data.ToArray();
-        var (type, text) = extractor.Extract(name, bytes, ct);
+        var extracted = extractor.Extract(name, bytes, ct);
+        if (!extracted.IsSuccess) return extracted.Error;
+        var (type, text) = extracted.Value;
         // Only this owner's expired drafts: they must not count against the quota checked below. Everyone else's are the cleanup worker's.
         await lifecycle.ReclaimAsync(ct, owner);
         var attachment = new Attachment { OwnerId = owner, FileName = name, ContentType = type, Size = bytes.Length, ExtractedText = text, StorageState = AttachmentStates.Pending, CreatedAt = clock.GetUtcNow() };
@@ -41,7 +42,8 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<Atta
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            await quota.ReserveAsync(owner, bytes.Length, ct);
+            var reserved = await quota.ReserveAsync(owner, bytes.Length, ct);
+            if (!reserved.IsSuccess) return reserved.Error;
             db.Set<Attachment>().Add(attachment);
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);
@@ -52,8 +54,9 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<Atta
             await storage.WriteAsync(attachment.StorageKey, bytes, ct);
             var activated = await db.Set<Attachment>().Where(x => x.Id == attachment.Id && x.StorageState == AttachmentStates.Pending)
                 .ExecuteUpdateAsync(p => p.SetProperty(x => x.StorageState, AttachmentStates.Ready), ct);
-            if (activated != 1) throw new ApiException(409, "attachment_upload_expired", "上傳已失效，請重新上傳。");
-            return Describe(attachment);
+            if (activated == 1) return Describe(attachment);
+            await lifecycle.AbortUploadAsync(attachment, CancellationToken.None);
+            return AttachmentsErrors.UploadExpired;
         }
         catch
         {
@@ -69,7 +72,7 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<Atta
         if (stream.CanSeek && stream.Length != file.Size)
         {
             await stream.DisposeAsync();
-            throw new ApiException(503, "attachment_content_invalid", "附件原檔與儲存記錄不符，請聯絡管理員檢查備份。");
+            throw new ExternalServiceException(AttachmentsErrors.ContentInvalid, "附件原檔與儲存記錄不符，請聯絡管理員檢查備份。");
         }
         return stream;
     }
@@ -81,17 +84,11 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<Atta
         return data.ToArray();
     }
 
-    public async Task<Attachment> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
-    {
-        var file = await FindOwnedAsync(owner, id, ct);
-        return file.IsSuccess ? file.Value : throw new ApiException(404, file.Error.Code, "找不到這個附件。");
-    }
-
     /// <summary>
     /// A ready attachment of <paramref name="owner"/>. A file sent only in conversations stays reachable while one of
     /// the owner's conversations that holds it still exists.
     /// </summary>
-    internal async Task<Result<Attachment>> FindOwnedAsync(Guid owner, Guid id, CancellationToken ct)
+    public async Task<Result<Attachment>> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
     {
         var file = await db.Set<Attachment>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner && x.StorageState == AttachmentStates.Ready, ct);
         if (file is null) return AttachmentsErrors.NotFound;
@@ -101,14 +98,19 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<Atta
         return file;
     }
 
-    public async Task<IReadOnlyList<Attachment>> RequireAsync(Guid owner, IReadOnlyList<Guid>? ids, CancellationToken ct)
+    public async Task<Result<IReadOnlyList<Attachment>>> RequireAsync(Guid owner, IReadOnlyList<Guid>? ids, CancellationToken ct)
     {
-        if (ids is null || ids.Count == 0) return [];
-        if (ids.Count > options.Value.MaxFilesPerMessage || ids.Distinct().Count() != ids.Count) throw new ApiException(400, "attachment_limit", $"每則提問最多 {options.Value.MaxFilesPerMessage} 個不同附件。");
+        if (ids is null || ids.Count == 0) return Result<IReadOnlyList<Attachment>>.Ok([]);
+        if (ids.Count > options.Value.MaxFilesPerMessage || ids.Distinct().Count() != ids.Count) return AttachmentsErrors.AttachmentLimit;
         var files = new List<Attachment>();
-        foreach (var id in ids) files.Add(await OwnedAsync(owner, id, ct));
-        if (files.Any(x => x.ContentType == "application/pdf" && string.IsNullOrWhiteSpace(x.ExtractedText))) throw new ApiException(409, "document_processing_required", "掃描 PDF 尚未完成文字辨識，請等待附件處理完成後再送出。");
-        if (files.Sum(x => x.Size) > options.Value.MaxMessageBytes) throw new ApiException(413, "attachment_total_limit", "這次附件總大小超過上限。");
+        foreach (var id in ids)
+        {
+            var file = await OwnedAsync(owner, id, ct);
+            if (!file.IsSuccess) return file.Error;
+            files.Add(file.Value);
+        }
+        if (files.Any(x => x.ContentType == "application/pdf" && string.IsNullOrWhiteSpace(x.ExtractedText))) return AttachmentsErrors.ProcessingRequired;
+        if (files.Sum(x => x.Size) > options.Value.MaxMessageBytes) return AttachmentsErrors.TotalLimit;
         return files;
     }
 }

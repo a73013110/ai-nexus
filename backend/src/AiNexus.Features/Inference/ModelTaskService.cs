@@ -14,21 +14,23 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
 {
     public const int MaxPromptCharacters = 16000;
     public const int FramingTokenReserve = 160;
-    public async Task<ModelTaskResult> GenerateAsync(Guid owner, string kind, string prompt, string instruction, CancellationToken ct, string? model = null, IReadOnlyList<InferenceImage>? images = null, string? expectedConfiguration = null, int? maxOutputTokens = null)
+    public async Task<Result<ModelTaskResult>> GenerateAsync(Guid owner, string kind, string prompt, string instruction, CancellationToken ct, string? model = null, IReadOnlyList<InferenceImage>? images = null, string? expectedConfiguration = null, int? maxOutputTokens = null)
     {
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
         var policy = scope.ServiceProvider.GetRequiredService<ModelPolicyService>();
         var billing = scope.ServiceProvider.GetRequiredService<IModelCallMeter>();
-        if (prompt.Length > MaxPromptCharacters || instruction.Length > 24000) throw new ApiException(400, "task_input_too_long", "處理內容過長，請縮小選取範圍。");
-        var profile = await catalog.RequireAsync(model, ct);
+        if (prompt.Length > MaxPromptCharacters || instruction.Length > 24000) return InferenceErrors.TaskInputTooLong;
         if (maxOutputTokens is <= 0) throw new ArgumentOutOfRangeException(nameof(maxOutputTokens));
+        var resolved = await catalog.RequireAsync(model, ct);
+        if (!resolved.IsSuccess) return resolved.Error;
+        var profile = resolved.Value;
         var outputBudget = Math.Min(maxOutputTokens ?? profile.MaxOutputTokens, profile.MaxOutputTokens);
-        if (kind is "evaluation" or "repository-review") ModelTaskConfiguration.Require(profile, options.Value, expectedConfiguration);
-        if (images?.Count > 0 && !profile.SupportsImages) throw new ApiException(400, "vision_not_supported", "系統模型不支援圖片辨識。");
+        if (kind is "evaluation" or "repository-review" && ModelTaskConfiguration.Require(profile, options.Value, expectedConfiguration) is { IsSuccess: false } changed) return changed.Error;
+        if (images?.Count > 0 && !profile.SupportsImages) return InferenceErrors.VisionNotSupported;
         // Reject invalid input before reserving quota or recording a model invocation.
         if (Encoding.UTF8.GetByteCount(prompt + instruction) + (images?.Sum(x => x.EstimatedTokens) ?? 0) + outputBudget + FramingTokenReserve > profile.ContextTokens)
-            throw new ApiException(400, "context_budget_exceeded", "此段內容超過模型上下文，請縮小範圍或調整系統模型。");
+            return InferenceErrors.ContextBudgetExceeded;
         var call = new ModelInvocation { OwnerId = owner, Kind = kind, ModelId = profile.Id, Provider = profile.Provider, CreatedAt = clock.GetUtcNow() };
         var parameters = new GenerationParameters(profile.ContextTokens, outputBudget, ModelTaskConfiguration.Temperature, instruction, profile.DefaultReasoningEffort, profile.ReasoningControl, profile.SupportsImages);
         var messages = new[] { new InferenceMessage("system", instruction), new InferenceMessage("user", prompt, images) };
@@ -38,7 +40,9 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             // A harmless update serializes reservations for this account across application hosts.
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
-            parameters = await policy.BudgetAsync(owner, profile.Id, parameters, inputEstimate, call.CreatedAt, ct);
+            var budget = await policy.BudgetAsync(owner, profile.Id, parameters, inputEstimate, call.CreatedAt, ct);
+            if (!budget.IsSuccess) return budget.Error;
+            parameters = budget.Value;
             call.ReservedTokens = inputEstimate + parameters.MaxOutputTokens;
             await billing.ReserveAsync(call.Id, owner, null, profile.Provider, profile.NativeId, kind, call.CreatedAt, ct);
             db.Add(call); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
@@ -56,14 +60,14 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
                 call.InputTokens = chunk.InputTokens ?? call.InputTokens; call.OutputTokens = chunk.OutputTokens ?? call.OutputTokens;
                 await billing.MeterAsync(call.Id, chunk.InputTokens, chunk.OutputTokens, chunk.CachedInputTokens, chunk.ReasoningTokens, ct, chunk.Done);
                 finish = chunk.FinishReason ?? finish;
-                if (text.Length > 64000) throw new ApiException(502, "task_output_too_long", "模型輸出超過處理上限。");
+                if (text.Length > 64000) throw new ExternalServiceException(Error.Upstream("task_output_too_long"), "模型輸出超過處理上限。");
             }
-            if (!done || text.Length == 0) throw new ApiException(502, "task_response_incomplete", "模型未傳回完整結果，請重試。");
+            if (!done || text.Length == 0) throw new ExternalServiceException(Error.Upstream("task_response_incomplete"), "模型未傳回完整結果，請重試。");
             call.Status = "completed";
-            return new(text.ToString(), finish == "MAX_TOKENS", call.InputTokens, call.OutputTokens);
+            return new ModelTaskResult(text.ToString(), finish == "MAX_TOKENS", call.InputTokens, call.OutputTokens);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { call.Status = "cancelled"; throw; }
-        catch (OperationCanceledException) { call.Status = "failed"; throw new ApiException(504, "model_timeout", "模型處理逾時，請稍後重試。"); }
+        catch (OperationCanceledException error) { call.Status = "failed"; throw new ExternalServiceException(Error.Timeout("model_timeout"), "模型處理逾時，請稍後重試。", error); }
         catch { call.Status = "failed"; throw; }
         finally { call.DurationMilliseconds = RunTiming.Milliseconds(call.CreatedAt, clock.GetUtcNow()); await billing.FinishAsync(call.Id, call.Status, CancellationToken.None); await db.SaveChangesAsync(CancellationToken.None); }
     }

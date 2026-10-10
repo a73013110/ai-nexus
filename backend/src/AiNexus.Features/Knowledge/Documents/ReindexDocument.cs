@@ -16,7 +16,7 @@ internal sealed class ReindexDocument(NexusDbContext db, DocumentAccess document
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/reindex", async (Guid id, ICurrentUser user, ReindexDocument handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
-        .WithName("ReindexDocument").Produces<DocumentDto>();
+        .WithName("ReindexDocument");
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {

@@ -53,7 +53,7 @@ public sealed class RetrievalEvaluationTests
     public void MalformedRerankerPayloadUsesDeclaredFailurePolicy(string json)
     {
         using var payload = JsonDocument.Parse(json);
-        Assert.Equal("rerank_invalid", Assert.Throws<ApiException>(() => RerankPayload.Parse(payload.RootElement, "score")).Code);
+        Assert.Equal("rerank_invalid", Assert.Throws<ExternalServiceException>(() => RerankPayload.Parse(payload.RootElement, "score")).Error.Code);
     }
     private static async Task Drain(NexusFactory factory)
     {

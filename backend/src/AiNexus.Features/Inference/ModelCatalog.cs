@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Inference;
 
@@ -73,7 +74,7 @@ public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptio
                 var capabilities = await router.For(profile.Provider).CapabilitiesAsync(profile.NativeId, ct);
                 images = profile.ImageCapabilityOverride != false && (capabilities?.SupportsImages ?? profile.ImageCapabilityOverride ?? false);
             }
-            catch (Exception error) when (error is HttpRequestException or OperationCanceledException or JsonException or IOException or AiNexus.Platform.Errors.ApiException)
+            catch (Exception error) when (error is HttpRequestException or OperationCanceledException or JsonException or IOException or ExternalServiceException)
             {
                 issues.Report(error, "provider_capability_unavailable", LogLevel.Warning);
                 images = false;
@@ -105,7 +106,7 @@ public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptio
     {
         try { return (new(id, true, null), await router.For(id).InstalledModelsAsync(ct)); }
         // The token is the refresh's own timeout: a provider that does not answer in time is unavailable.
-        catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException or JsonException or InvalidOperationException or IOException or AiNexus.Platform.Errors.ApiException)
+        catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException or JsonException or InvalidOperationException or IOException or ExternalServiceException)
         {
             var issue = issues.Report(exception, "provider_discovery_unavailable", LogLevel.Warning);
             return (new(id, false, AiNexus.Platform.Diagnostics.Issues.Message(issue)), new HashSet<string>());
@@ -123,23 +124,22 @@ public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptio
             options.Value.ShowModelNames ? providers : []);
     }
 
-    public async Task<ModelProfile> RequireAsync(string? id, CancellationToken ct)
+    public async Task<Result<ModelProfile>> RequireAsync(string? id, CancellationToken ct)
     {
         var requested = id ?? presentation.Policy.DefaultModelId;
-        if (!options.Value.AllowModelSelection && requested != presentation.Policy.DefaultModelId) throw new AiNexus.Platform.Errors.ApiException(400, "model_selection_disabled", "模型由系統指定，無法自行切換。");
+        if (!options.Value.AllowModelSelection && requested != presentation.Policy.DefaultModelId) return InferenceErrors.ModelSelectionDisabled;
         var snapshot = await SnapshotAsync(ct);
         var catalog = Describe(snapshot);
-        if (!catalog.ProviderAvailable) throw new AiNexus.Platform.Errors.ApiException(503, "provider_unavailable", catalog.Notice!);
+        if (!catalog.ProviderAvailable) return InferenceErrors.ProviderUnavailable;
         var profile = options.Value.Models.FirstOrDefault(x => presentation.PublicId(x.Id) == requested);
-        if (profile is not null && snapshot.Providers.Any(x => x.Id == profile.Provider && !x.Available)) throw new AiNexus.Platform.Errors.ApiException(503, "provider_unavailable", "此模型供應商暫時無法使用，請選擇其他模型。");
-        if (!catalog.Models.Any(x => x.Id == requested)) throw new AiNexus.Platform.Errors.ApiException(400, "model_not_allowed", "此模型不可用或未經伺服器核准。");
+        if (profile is not null && snapshot.Providers.Any(x => x.Id == profile.Provider && !x.Available)) return InferenceErrors.ProviderUnavailable;
+        if (!catalog.Models.Any(x => x.Id == requested)) return InferenceErrors.ModelNotAllowed;
         return Current(options.Value.Models.Single(x => presentation.PublicId(x.Id) == requested), snapshot);
     }
 
-    public static string RequireReasoning(ModelProfile model, string? effort)
+    public static Result<string> RequireReasoning(ModelProfile model, string? effort)
     {
         var value = effort ?? model.DefaultReasoningEffort;
-        if (value != "auto" && !model.ReasoningEfforts.Contains(value, StringComparer.Ordinal)) throw new AiNexus.Platform.Errors.ApiException(400, "reasoning_not_supported", "此模型不支援選擇的思考強度。");
-        return value;
+        return value == "auto" || model.ReasoningEfforts.Contains(value, StringComparer.Ordinal) ? value : InferenceErrors.ReasoningNotSupported;
     }
 }

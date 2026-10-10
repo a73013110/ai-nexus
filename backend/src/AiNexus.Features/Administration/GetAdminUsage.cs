@@ -15,8 +15,8 @@ public sealed record AdminUsageDto(int Users, int Requests, int Completed, long 
 internal sealed class GetAdminUsage(NexusDbContext db, UsageReports reports, ModelCatalog catalog, WebSearchService search, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapGet("/usage", async (GetAdminUsage handler, CancellationToken ct) => Results.Ok(await handler.HandleAsync(ct)))
-        .WithName("GetAdminUsage").Produces<AdminUsageDto>();
+        .MapGet("/usage", async (GetAdminUsage handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(ct)))
+        .WithName("GetAdminUsage");
 
     public async Task<AdminUsageDto> HandleAsync(CancellationToken ct)
     {

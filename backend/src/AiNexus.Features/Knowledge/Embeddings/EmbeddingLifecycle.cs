@@ -46,29 +46,37 @@ public sealed class EmbeddingLifecycle(NexusDbContext db, EmbeddingProfiles prof
     /// Queues a rebuild of the profile, or returns the one already running. Like the other administrative changes below,
     /// the caller holds <see cref="KnowledgeWriteLock"/> and audits it; nothing is saved here.
     /// </summary>
-    public async Task<BackgroundJob> QueueRebuildAsync(Guid actor, int id, CancellationToken ct)
+    public async Task<Result<BackgroundJob>> QueueRebuildAsync(Guid actor, int id, CancellationToken ct)
     {
-        var profile = await RequireAsync(id, ct);
-        if (profile.Status == "retired") throw new ApiException(409, "profile_retired", "已退役的索引無法重建。");
+        var found = await RequireAsync(id, ct);
+        if (!found.IsSuccess) return found.Error;
+        var profile = found.Value;
+        if (profile.Status == "retired") return KnowledgeErrors.ProfileRetired;
         var subject = EmbeddingJobs.Subject(id);
         return await db.Set<BackgroundJob>().SingleOrDefaultAsync(x => x.Kind == "embedding-reindex" && x.SubjectId == subject && x.ActiveKey != null, ct)
             ?? jobs.Enqueue(actor, null, subject, "embedding-reindex", $"重建 {profile.Model} 檢索索引");
     }
-    public async Task ActivateCoreAsync(int id, CancellationToken ct)
+    public async Task<Result> ActivateCoreAsync(int id, CancellationToken ct)
     {
-        var profile = await RequireAsync(id, ct);
-        if (profile.Status == "active") return;
-        if (profile.Status != "building") throw new ApiException(409, "profile_not_building", "只能啟用重建中的索引。");
-        if (!(await CoverageAsync(profile, ct)).Complete) throw new ApiException(409, "profile_incomplete", "索引覆蓋率未達 100%，或仍有處理中的文件，請先完成重建。");
+        var found = await RequireAsync(id, ct);
+        if (!found.IsSuccess) return found.Error;
+        var profile = found.Value;
+        if (profile.Status == "active") return Result.Success;
+        if (profile.Status != "building") return KnowledgeErrors.ProfileNotBuilding;
+        if (!(await CoverageAsync(profile, ct)).Complete) return KnowledgeErrors.ProfileIncomplete;
         var now = DateTimeOffset.UtcNow;
         await db.Set<EmbeddingProfile>().Where(x => x.Status == "active").ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, "retired").SetProperty(x => x.RetiredAt, now), ct);
         await db.Set<EmbeddingProfile>().Where(x => x.Id == id && x.Status == "building").ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, "active").SetProperty(x => x.ActivatedAt, now).SetProperty(x => x.RetiredAt, (DateTimeOffset?)null), ct);
+        return Result.Success;
     }
-    public async Task ClearCoreAsync(int id, CancellationToken ct)
+    public async Task<Result> ClearCoreAsync(int id, CancellationToken ct)
     {
-        if ((await RequireAsync(id, ct)).Status != "retired") throw new ApiException(409, "profile_not_retired", "只能清除已退役索引的向量。");
+        var found = await RequireAsync(id, ct);
+        if (!found.IsSuccess) return found.Error;
+        if (found.Value.Status != "retired") return KnowledgeErrors.ProfileNotRetired;
         await db.Set<ChunkEmbedding768>().Where(x => x.ProfileId == id).ExecuteDeleteAsync(ct);
         await db.Set<ChunkEmbedding1024>().Where(x => x.ProfileId == id).ExecuteDeleteAsync(ct);
+        return Result.Success;
     }
     internal async Task CleanupExpiredAsync(CancellationToken ct)
     {
@@ -82,13 +90,13 @@ public sealed class EmbeddingLifecycle(NexusDbContext db, EmbeddingProfiles prof
             foreach (var profile in expired)
             {
                 if (await vectors.Rows(profile).AnyAsync(ct)) {
-                    await ClearCoreAsync(profile.Id, ct); db.AuditEvents.Add(new() { OwnerId = Guid.Empty, Action = "system.embedding_retention", Result = "cleared", DetailsJson = System.Text.Json.JsonSerializer.Serialize(new { profile.Id }) });
+                    if (!(await ClearCoreAsync(profile.Id, ct)).IsSuccess) continue; db.AuditEvents.Add(new() { OwnerId = Guid.Empty, Action = "system.embedding_retention", Result = "cleared", DetailsJson = System.Text.Json.JsonSerializer.Serialize(new { profile.Id }) });
                 }
             }
             await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
         }
         finally { writes.Gate.Release(); }
     }
-    public async Task<EmbeddingProfile> RequireAsync(int id, CancellationToken ct) => await db.Set<EmbeddingProfile>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct)
-        ?? throw new ApiException(404, "profile_not_found", "找不到這個檢索索引。");
+    public async Task<Result<EmbeddingProfile>> RequireAsync(int id, CancellationToken ct)
+        => await db.Set<EmbeddingProfile>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct) is { } profile ? profile : KnowledgeErrors.ProfileNotFound;
 }

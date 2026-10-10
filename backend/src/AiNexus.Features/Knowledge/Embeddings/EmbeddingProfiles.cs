@@ -43,8 +43,8 @@ public sealed class EmbeddingProfiles(NexusDbContext db, IOptions<KnowledgeOptio
     public static ChunkerSnapshot ChunkerSettings(EmbeddingProfile profile)
     {
         var snapshot = JsonSerializer.Deserialize<ChunkerSnapshot>(profile.ChunkerConfiguration)
-            ?? throw new ApiException(409, "chunker_configuration_invalid", "索引切段設定快照無效，請重新建立 profile。");
-        if (snapshot.Version != StructuredChunker.Version) throw new ApiException(409, "chunker_version_unsupported", "此切段器版本已不受支援，請先重建並啟用新 profile。");
+            ?? throw new ExternalServiceException(Error.Conflict("chunker_configuration_invalid"), "索引切段設定快照無效，請重新建立 profile。");
+        if (snapshot.Version != StructuredChunker.Version) throw new ExternalServiceException(Error.Conflict("chunker_version_unsupported"), "此切段器版本已不受支援，請先重建並啟用新 profile。");
         return snapshot;
     }
 }

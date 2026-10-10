@@ -16,7 +16,6 @@ public sealed class BillingModule : IFeatureModule
         builder.Services.AddScoped<IModelCallMeter>(sp => sp.GetRequiredService<BillingService>());
         builder.Services.AddScoped<SpendReports>();
         builder.Services.AddScoped<UsageReports>();
-        builder.Services.AddScoped<ManagePrices>();
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)

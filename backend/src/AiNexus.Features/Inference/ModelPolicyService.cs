@@ -61,27 +61,23 @@ public sealed class ModelPolicyService(NexusDbContext db, AccessService access, 
         }).ToArray();
         return new(effective.AllowedModelIds?.Select(Id).ToArray(), policies.Select(x => x.StoredAttachmentLimitBytes).Min(), budgets, end);
     }
-    public async Task RequireAsync(Guid owner, string internalModel, CancellationToken ct, bool checkQuota = true)
+    public async Task<Result> RequireAsync(Guid owner, string internalModel, CancellationToken ct, bool checkQuota = true)
     {
         var value = await ForAsync(owner, ct, publicIds: false);
-        RequireModel(value, internalModel);
-        if (checkQuota && value.Models.FirstOrDefault(x => x.ModelId == internalModel)?.RemainingTokens is <= 0) throw Exhausted();
+        if (!Allows(value, internalModel)) return InferenceErrors.ModelGroupForbidden;
+        if (checkQuota && value.Models.FirstOrDefault(x => x.ModelId == internalModel)?.RemainingTokens is <= 0) return InferenceErrors.ModelTokenQuota;
+        return Result.Success;
     }
     // Call inside the owner row-lock transaction, then persist the reservation before releasing it.
-    public async Task<GenerationParameters> BudgetAsync(Guid owner, string model, GenerationParameters parameters, long inputEstimate, DateTimeOffset createdAt, CancellationToken ct)
+    public async Task<Result<GenerationParameters>> BudgetAsync(Guid owner, string model, GenerationParameters parameters, long inputEstimate, DateTimeOffset createdAt, CancellationToken ct)
     {
         var value = await ForAsync(owner, ct, publicIds: false, asOf: createdAt);
-        RequireModel(value, model);
+        if (!Allows(value, model)) return InferenceErrors.ModelGroupForbidden;
         var remaining = value.Models.First(x => x.ModelId == model).RemainingTokens;
         var output = remaining is long cap ? Math.Min(parameters.MaxOutputTokens, cap - inputEstimate) : parameters.MaxOutputTokens;
-        if (output < 1) throw Exhausted();
+        if (output < 1) return InferenceErrors.ModelTokenQuota;
         // Preserve the original history trimming budget when reducing the output allowance.
         return parameters with { MaxOutputTokens = (int)output, ContextTokens = parameters.ContextTokens - parameters.MaxOutputTokens + (int)output };
     }
-    private static void RequireModel(EffectiveModelPolicyDto policy, string model)
-    {
-        if (policy.AllowedModelIds is not null && !policy.AllowedModelIds.Contains(model))
-            throw new ApiException(403, "model_group_forbidden", "此模型不在你的個人或群組授權範圍。");
-    }
-    private static ApiException Exhausted() => new(429, "model_token_quota", "此模型今日可用 token 不足（包含輸入、輸出與待結算預留）。請縮短提問、切換模型或聯絡管理員；台北時間每日 08:00 重設。");
+    private static bool Allows(EffectiveModelPolicyDto policy, string model) => policy.AllowedModelIds is null || policy.AllowedModelIds.Contains(model);
 }

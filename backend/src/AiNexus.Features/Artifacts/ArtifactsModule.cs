@@ -16,11 +16,7 @@ public sealed class ArtifactsModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddScoped<GetArtifact>();
         services.AddScoped<CreateArtifact>();
-        services.AddScoped<SaveArtifact>();
-        services.AddScoped<ExportArtifact>();
-        services.AddScoped<TransformText>();
         services.AddScoped(provider => new ArtifactService(provider.GetRequiredService<CreateArtifact>()));
         services.AddScoped<ArtifactExport>();
         services.AddSingleton<PdfExportRenderer>();

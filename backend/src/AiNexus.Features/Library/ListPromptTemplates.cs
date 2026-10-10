@@ -4,17 +4,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Library;
 
-internal static class ListPromptTemplates
+internal sealed class ListPromptTemplates(NexusDbContext db)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("", HandleAsync)
-        .WithName("ListPromptTemplates")
-        .Produces<IReadOnlyList<PromptTemplateDto>>();
+        .MapGet("", async (ICurrentUser user, ListPromptTemplates handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(user.Id, ct)))
+        .WithName("ListPromptTemplates");
 
-    private static async Task<IResult> HandleAsync(ICurrentUser user, NexusDbContext db, CancellationToken ct)
+    public async Task<IReadOnlyList<PromptTemplateDto>> HandleAsync(Guid owner, CancellationToken ct)
     {
-        var templates = await db.Set<PromptTemplate>().AsNoTracking().OwnedBy(user.Id)
+        var templates = await db.Set<PromptTemplate>().AsNoTracking().OwnedBy(owner)
             .OrderByDescending(x => x.UpdatedAt).Take(PromptTemplate.MaxPerOwner).ToListAsync(ct);
-        return TypedResults.Ok(templates.Select(x => x.ToDto()).ToList());
+        return templates.Select(x => x.ToDto()).ToList();
     }
 }

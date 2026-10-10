@@ -11,7 +11,7 @@ internal sealed class ReadRepositoryReview(NexusDbContext db, RepositoryReviewSe
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/reviews/{id:guid}", async (Guid id, ICurrentUser user, ReadRepositoryReview handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
-        .WithName("ReadRepositoryReview").Produces<RepositoryReviewDetailDto>();
+        .WithName("ReadRepositoryReview");
 
     public async Task<Result<RepositoryReviewDetailDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)
     {
@@ -21,7 +21,9 @@ internal sealed class ReadRepositoryReview(NexusDbContext db, RepositoryReviewSe
         var source = await reviews.CheckSourceAsync(owner, row, ct);
         if (!source.IsSuccess) return source.Error;
         var results = await db.Set<RepositoryReviewResult>().AsNoTracking().Where(x => x.ReviewId == id).ToDictionaryAsync(x => x.Ordinal, ct);
-        var snapshot = RepositoryReviewService.Snapshot(row);
+        var frozen = RepositoryReviewService.Snapshot(row);
+        if (!frozen.IsSuccess) return frozen.Error;
+        var snapshot = frozen.Value;
         results.TryGetValue(RepositoryReviewPlan.ReportOrdinal, out var report);
         return new RepositoryReviewDetailDto(await reviews.DescribeAsync(row, ct), snapshot.Slices.Select((slice, i) => {
             results.TryGetValue(i, out var result);

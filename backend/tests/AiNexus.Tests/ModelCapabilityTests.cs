@@ -23,11 +23,11 @@ public sealed class ModelCapabilityTests
         var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]), new AiNexus.Platform.Diagnostics.Issues(Microsoft.Extensions.Logging.Abstractions.NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance));
         var dto = Assert.Single((await catalog.GetAsync(CancellationToken.None)).Models);
         Assert.Equal(expected, dto.SupportsImages); Assert.Equal("model-1", dto.Id); Assert.Equal("AI 助理 1", dto.DisplayName);
-        Assert.Equal(expected, (await catalog.RequireAsync("model-1", CancellationToken.None)).SupportsImages);
+        Assert.Equal(expected, (await catalog.RequireAsync("model-1", CancellationToken.None)).Value!.SupportsImages);
         Assert.Equal(1, provider.Checks);
         // Capabilities are cached; configured generation parameters still reflect current options.
         options.Value.Models[0].MaxOutputTokens = 128;
-        Assert.Equal(128, (await catalog.RequireAsync("model-1", CancellationToken.None)).MaxOutputTokens);
+        Assert.Equal(128, (await catalog.RequireAsync("model-1", CancellationToken.None)).Value!.MaxOutputTokens);
     }
     [Fact]
     public async Task StaleCatalogIsServedAtOnceWhileOneBackgroundRefreshRuns()

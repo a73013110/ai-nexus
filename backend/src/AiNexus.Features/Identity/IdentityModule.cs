@@ -49,6 +49,7 @@ public sealed class IdentityModule : IFeatureModule
         services.AddScoped<IRequestUser>(sp => sp.GetRequiredService<CurrentUser>());
         services.AddScoped<ICurrentUser>(sp => sp.GetRequiredService<CurrentUser>());
         services.AddScoped<IAuthorizationHandler, FeatureAuthorizationHandler>();
+        services.AddSingleton<IAuthorizationMiddlewareResultHandler, ErrorAuthorizationResultHandler>();
         services.AddScoped<IActiveUsers, ActiveUsers>();
         services.AddSingleton(Argon2Cost.Recommended);
         services.AddSingleton<Argon2Passwords>();

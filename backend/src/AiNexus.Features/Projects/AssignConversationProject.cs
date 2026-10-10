@@ -22,7 +22,7 @@ internal sealed class AssignConversationProject(NexusDbContext db, ResourceAcces
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
         .MapPut("/conversations/{id:guid}/project", async (Guid id, ConversationProjectRequest body, ICurrentUser user, AssignConversationProject handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, body.ProjectId, ct)).ToHttpResult())
-        .RequireAuthorization(Policies.Chat).Produces<ConversationDto>();
+        .RequireAuthorization(Policies.Chat);
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid actor, Guid id, Guid? projectId, CancellationToken ct)
     {

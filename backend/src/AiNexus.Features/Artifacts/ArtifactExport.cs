@@ -111,7 +111,7 @@ public sealed class PdfExportRenderer(IOptions<ExportOptions> options) : IAsyncD
     private IBrowser? browser;
     public async Task<byte[]> RenderAsync(string html, CancellationToken ct)
     {
-        if (!await concurrency.WaitAsync(0, ct)) throw new ApiException(429, "pdf_export_busy", "PDF 匯出正在忙碌，請稍後重試。");
+        if (!await concurrency.WaitAsync(0, ct)) throw new ExternalServiceException(Error.RateLimited("pdf_export_busy"), "PDF 匯出正在忙碌，請稍後重試。");
         IBrowserContext? context = null;
         try
         {
@@ -126,7 +126,7 @@ public sealed class PdfExportRenderer(IOptions<ExportOptions> options) : IAsyncD
             return await page.PdfAsync(new() { Format = "A4", PrintBackground = true, PreferCSSPageSize = true, DisplayHeaderFooter = true, HeaderTemplate = "<span></span>", FooterTemplate = "<div style=\"font:9px sans-serif;width:100%;text-align:center;color:#65706a\"><span class=\"pageNumber\"></span> / <span class=\"totalPages\"></span></div>" }).WaitAsync(TimeSpan.FromSeconds(options.Value.TimeoutSeconds), ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-        catch (Exception error) when (error is PlaywrightException or TimeoutException) { throw new ApiException(503, "pdf_renderer_unavailable", "PDF 匯出暫時無法使用，請由管理員檢查匯出瀏覽器安裝與執行權限；可先匯出 Word。 "); }
+        catch (Exception error) when (error is PlaywrightException or TimeoutException) { throw new ExternalServiceException(Error.Unavailable("pdf_renderer_unavailable"), "PDF 匯出暫時無法使用，請由管理員檢查匯出瀏覽器安裝與執行權限；可先匯出 Word。", error); }
         finally { try { if (context is not null) await context.CloseAsync(); } catch (PlaywrightException) { } finally { concurrency.Release(); } }
     }
     public async ValueTask DisposeAsync() { if (browser is not null) await browser.CloseAsync(); driver?.Dispose(); concurrency.Dispose(); startup.Dispose(); }

@@ -7,14 +7,13 @@ namespace AiNexus.Features.Knowledge.Documents;
 public sealed record TextDocumentDto(Guid Id, string Title, string Text, int Version);
 
 /// <summary>The editable text and version of a plain-text source the user may read.</summary>
-internal static class ReadTextDocument
+internal sealed class ReadTextDocument(DocumentAccess documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}/text", async (Guid id, ICurrentUser user, DocumentAccess documents, CancellationToken ct) =>
-            (await HandleAsync(documents, user.Id, id, ct)).ToHttpResult())
-        .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocuments.MaxCharacters)).WithName("ReadTextDocument").Produces<TextDocumentDto>();
+        .MapGet("/{id:guid}/text", (Guid id, ICurrentUser user, ReadTextDocument handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocuments.MaxCharacters)).WithName("ReadTextDocument");
 
-    private static async Task<Result<TextDocumentDto>> HandleAsync(DocumentAccess documents, Guid actor, Guid id, CancellationToken ct)
+    public async Task<Result<TextDocumentDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
         var document = await documents.FindAsync(actor, id, ct);
         if (!document.IsSuccess) return document.Error;

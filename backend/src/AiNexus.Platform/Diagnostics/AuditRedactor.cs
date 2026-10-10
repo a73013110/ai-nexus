@@ -1,5 +1,4 @@
 using System.Text.Json;
-using AiNexus.Platform.Errors;
 
 namespace AiNexus.Platform.Diagnostics;
 
@@ -27,7 +26,7 @@ public static class AuditRedactor
             return result;
         }
         catch (JsonException) when (historical) { return "{\"diagnostic\":\"[LEGACY DETAIL OMITTED]\"}"; }
-        catch (JsonException) { throw new ApiException(503, "audit_unavailable", "稽核紀錄無法安全保存。"); }
+        catch (JsonException) { throw new InvalidOperationException("稽核紀錄無法安全保存。"); }
     }
     private static void Write(Utf8JsonWriter writer, JsonElement value, string key, int depth)
     {

@@ -3,14 +3,13 @@ using AiNexus.Features.Identity;
 namespace AiNexus.Features.Inference;
 
 /// <summary>The models the user's groups allow, with a default the user may actually use.</summary>
-internal static class ListModels
+internal sealed class ListModels(ModelCatalog models, ModelPolicyService policies)
 {
-    public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/models", async (ModelCatalog models, ICurrentUser user, ModelPolicyService policies, CancellationToken ct) =>
-            Results.Ok(await HandleAsync(models, policies, user.Id, ct)))
-        .WithName("ListModels").Produces<ModelsDto>();
+    public static void Map(RouteGroupBuilder routes) => routes
+        .MapGet("/models", async (ICurrentUser user, ListModels handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(user.Id, ct)))
+        .WithName("ListModels");
 
-    public static async Task<ModelsDto> HandleAsync(ModelCatalog models, ModelPolicyService policies, Guid owner, CancellationToken ct)
+    public async Task<ModelsDto> HandleAsync(Guid owner, CancellationToken ct)
     {
         var catalog = await models.GetAsync(ct);
         var policy = await policies.ForAsync(owner, ct);

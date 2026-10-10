@@ -9,14 +9,14 @@ namespace AiNexus.Features.Conversations;
 /// A page of 100 of the user's conversations for one view (active, archived, favorites or all), optionally filtered by
 /// label and by text in the title or any message. Favorites first, then the most recently updated.
 /// </summary>
-internal static class ListConversations
+internal sealed class ListConversations(NexusDbContext db)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("", async (string? search, int? offset, string? view, string? label, ICurrentUser user, NexusDbContext db, CancellationToken ct) =>
-            (await HandleAsync(db, user.Id, search, offset ?? 0, view ?? "active", label, ct)).ToHttpResult())
-        .WithName("ListConversations").Produces<IReadOnlyList<ConversationDto>>();
+        .MapGet("", (string? search, int? offset, string? view, string? label, ICurrentUser user, ListConversations handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, search, offset ?? 0, view ?? "active", label, ct).ToHttpResultAsync())
+        .WithName("ListConversations");
 
-    private static async Task<Result<IReadOnlyList<ConversationDto>>> HandleAsync(NexusDbContext db, Guid owner, string? search, int offset, string view, string? label, CancellationToken ct)
+    public async Task<Result<IReadOnlyList<ConversationDto>>> HandleAsync(Guid owner, string? search, int offset, string view, string? label, CancellationToken ct)
     {
         if (search?.Length > 120 || label?.Length > 24 || view is not ("active" or "archived" or "favorites" or "all") || offset < 0 || offset > 100000) return ConversationsErrors.InvalidQuery;
         var query = db.Set<Conversation>().Include(x => x.Labels).AsNoTracking().Where(x => x.OwnerId == owner);

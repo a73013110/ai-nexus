@@ -18,11 +18,8 @@ public sealed class ConversationsModule : IFeatureModule
     {
         var services = builder.Services;
         services.AddScoped<ConversationService>();
-        services.AddScoped<ImportConversation>();
-        services.AddScoped<RenameConversation>();
-        services.AddScoped<UpdateConversationSettings>();
-        services.AddScoped<SelectBranch>();
         services.AddDomainEventHandler<ContainerDeleted, DetachDeletedProjectConversations>();
+        services.AddScoped<IContainerDeletionCheck, DetachDeletedProjectConversations>();
         services.AddFeaturePolicy(FeatureIds.Chat);
     }
 

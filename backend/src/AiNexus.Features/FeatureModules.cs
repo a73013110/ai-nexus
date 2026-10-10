@@ -62,6 +62,7 @@ public static class FeatureModules
         Add<InferenceModule>(builder);
         Add<ChatModule>(builder);
         Add<MonitoringModule>(builder);
+        builder.Services.AddEndpointHandlers(typeof(FeatureModules).Assembly);
         builder.Services.AddValidatorsFromAssembly(typeof(FeatureModules).Assembly, includeInternalTypes: true);
         return builder;
     }
