@@ -1,6 +1,6 @@
 name: CI
 
-# Manual only for now: pull requests are verified locally (see docs/DEVELOPMENT.md).
+# Manual only for now: pull requests are verified locally (see docs/development/DEVELOPMENT.md).
 # Runs exactly what a contributor runs, so CI and local verification cannot drift apart.
 on:
   workflow_dispatch:

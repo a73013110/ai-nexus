@@ -9,17 +9,21 @@
 
 | 修改內容 | 先讀 |
 |---|---|
-| 後端 slice、錯誤、驗證、軟刪除 | `docs/BACKEND_CONVENTIONS.md` |
-| 模組邊界、跨模組依賴、domain event | `docs/MODULE_BOUNDARIES.md` |
-| 推論、背景工作 | `docs/ARCHITECTURE.md` |
-| 後端測試、`NexusFactory` | `docs/BACKEND_TESTING.md` |
-| 日誌事件、EventId | `docs/LOG_EVENTS.md` |
-| 資料表、migration | `docs/DATABASE.md`、`docs/DEVELOPMENT.md` 的 migration 段 |
-| 設定、秘密 | `docs/CONFIGURATION.md` |
-| 授權、功能 grant | `docs/ACCESS_CONTROL.md` |
-| 前端 UI、樣式 | `docs/UI_PATTERNS.md`、`docs/DESIGN_SYSTEM.md` |
-| 聊天渲染、串流 Markdown、前端請求與快取 | `docs/CHAT_RENDERING.md` |
-| 單一功能 | `README.md` 功能表連到的那一份 |
+| 後端 slice、錯誤、驗證、軟刪除 | `docs/architecture/BACKEND_CONVENTIONS.md` |
+| 模組邊界、跨模組依賴、domain event | `docs/architecture/MODULE_BOUNDARIES.md` |
+| 推論、聊天生成、背景工作 | `docs/architecture/GENERATION.md` |
+| 後端測試、`NexusFactory` | `docs/development/TESTING.md` |
+| 錯誤回應、查證代碼、遮罩 | `docs/architecture/ERROR_CONTRACT.md` |
+| 日誌事件、EventId | `docs/architecture/LOG_EVENTS.md` |
+| 資料表、migration | `docs/architecture/DATABASE.md` |
+| 設定、秘密 | `docs/development/CONFIGURATION.md` |
+| 授權、功能 grant | `docs/architecture/ACCESS_CONTROL.md` |
+| 腳本、建置、驗證 | `docs/development/DEVELOPMENT.md` |
+| IIS 部署、發布套件 | `docs/operations/IIS_DEPLOYMENT.md` |
+| 前端 UI、樣式 | `docs/frontend/UI_PATTERNS.md`、`docs/frontend/DESIGN_SYSTEM.md` |
+| 聊天渲染、串流 Markdown、前端請求與快取 | `docs/frontend/CHAT_RENDERING.md` |
+| 單一功能 | `README.md` 功能表連到的 `docs/features/` 那一份 |
+| 為什麼不拆專案、不用多個 DbContext 等 | `docs/decisions/` |
 
 ## 指令
 
@@ -66,11 +70,12 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 | Angular 類別、signal | PascalCase 類別；signal 用名詞，不加 `$` | `ChatStore`、`messages` |
 | CSS class | kebab-case | `message-row` |
 | PowerShell 腳本 | `scripts/` 只放入口，動詞-名詞或單一動詞；共用函式放 `scripts/AiNexus` 模組，名稱含 `-Nexus` | `Start-Local.ps1`、`Build.ps1`、`Get-NexusLocalPaths` |
-| 文件 | `docs/` 下 UPPER_SNAKE_CASE.md；`README.md`、`CLAUDE.md` 固定大寫 | `BACKEND_CONVENTIONS.md` |
+| 文件 | `docs/<讀者>/` 下 UPPER_SNAKE_CASE.md；ADR 為 `docs/decisions/<四位編號>-kebab-case.md`；`README.md`、`CLAUDE.md` 固定大寫 | `architecture/BACKEND_CONVENTIONS.md` |
 | commit | Conventional Commits，說明用繁體中文 | `perf(inference): 串流只寫入增量` |
 
 ## 文件寫法
 
-- 繁體中文，先寫結論，條列優先；一份文件只講一件事，新文件不超過約 8 KB；既有的長文件修改時順便拆短。
-- 不重抄程式碼已表達的內容（欄位清單、端點清單）；連到檔案或 `openapi.json`。
+- 繁體中文，先寫結論，條列優先；一份文件只講一件事，不超過 8 KB（`scripts/tests/Docs.Tests.ps1` 檢查，`docs/frontend` 暫時除外）。
+- 依讀者放：`architecture`（改後端的人）、`development`、`operations`、`features`、`decisions`（長期有效的「為什麼」）、`research`。
+- 不重抄程式碼已表達的內容（欄位清單、端點清單）；連到檔案或 `openapi.json`。相對連結與反引號內的 repo 路徑必須存在（同一個測試檢查）。
 - 改行為時同一個 PR 更新對應文件；過時的段落直接刪除。
