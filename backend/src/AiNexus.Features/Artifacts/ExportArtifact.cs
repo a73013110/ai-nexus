@@ -10,13 +10,12 @@ namespace AiNexus.Features.Artifacts;
 internal sealed class ExportArtifact(GetArtifact reader, ArtifactExport exporter)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}/export/{format}", async (Guid id, string format, int? version, ICurrentUser user, ExportArtifact handler, HttpContext http, CancellationToken ct) =>
-        {
-            var exported = await handler.HandleAsync(user.Id, id, format, version, ct);
-            if (!exported.IsSuccess) return exported.Error.ToProblem();
-            http.Response.Headers.CacheControl = "private, no-store";
-            return Results.File(exported.Value.File.Data, exported.Value.File.ContentType, exported.Value.FileName);
-        })
+        .MapGet("/{id:guid}/export/{format}", (Guid id, string format, int? version, ICurrentUser user, ExportArtifact handler, HttpContext http, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, format, version, ct).ToHttpResultAsync(exported =>
+            {
+                http.Response.Headers.CacheControl = "private, no-store";
+                return TypedResults.File(exported.File.Data, exported.File.ContentType, exported.FileName);
+            }))
         .WithName("ExportArtifact");
 
     internal sealed record ExportedArtifact(string FileName, ExportFile File);

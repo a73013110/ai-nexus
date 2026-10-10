@@ -8,16 +8,15 @@ namespace AiNexus.Features.Artifacts;
 public sealed record ArtifactSummaryDto(ResourceDto Resource, int Version, Guid? ProjectId);
 
 /// <summary>The 200 most recently updated artifacts the user may read, with whether each one is editable.</summary>
-internal static class ListArtifacts
+internal sealed class ListArtifacts(NexusDbContext db, ResourceAccess access)
 {
     private const int PageSize = 200;
 
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("", async (ICurrentUser user, NexusDbContext db, ResourceAccess access, CancellationToken ct) =>
-            Results.Ok(await HandleAsync(db, access, user.Id, ct)))
-        .WithName("ListArtifacts").Produces<IReadOnlyList<ArtifactSummaryDto>>();
+        .MapGet("", async (ICurrentUser user, ListArtifacts handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(user.Id, ct)))
+        .WithName("ListArtifacts");
 
-    public static async Task<IReadOnlyList<ArtifactSummaryDto>> HandleAsync(NexusDbContext db, ResourceAccess access, Guid actor, CancellationToken ct)
+    public async Task<IReadOnlyList<ArtifactSummaryDto>> HandleAsync(Guid actor, CancellationToken ct)
     {
         var query = await access.QueryAsync(actor, Artifact.Kind, ct);
         // Editable: owner, a named editor, or an editor of the live parent project.

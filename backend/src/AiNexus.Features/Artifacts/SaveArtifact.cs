@@ -29,7 +29,7 @@ internal sealed class SaveArtifact(NexusDbContext db, ResourceAccess access, Res
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}", async (Guid id, SaveArtifactRequest request, ICurrentUser user, SaveArtifact handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, request, ct)).ToHttpResult())
-        .WithName("SaveArtifact").Produces<ArtifactDto>();
+        .WithName("SaveArtifact");
 
     public async Task<Result<ArtifactDto>> HandleAsync(Guid actor, Guid id, SaveArtifactRequest request, CancellationToken ct)
     {
@@ -38,7 +38,9 @@ internal sealed class SaveArtifact(NexusDbContext db, ResourceAccess access, Res
         using (await writes.AcquireAsync(id, ct))
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            var resource = (await access.RequireAsync(actor, id, Artifact.Kind, ct, write: true)).OrThrow();
+            var found = await access.RequireAsync(actor, id, Artifact.Kind, ct, write: true);
+            if (!found.IsSuccess) return found.Error;
+            var resource = found.Value;
             var changed = await db.Set<Artifact>().Where(x => x.Id == id && x.Version == request.ExpectedVersion).ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1), ct);
             if (changed != 1) return ArtifactsErrors.VersionConflict;
             var now = clock.GetUtcNow();
