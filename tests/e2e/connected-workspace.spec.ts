@@ -6,7 +6,7 @@ import {
   expectViewportContained,
   settleEntrance,
 } from "./fixtures";
-import { FEATURE_NAMES } from "../../frontend/src/app/core/feature-names";
+import { FEATURE_NAMES } from "../../frontend/src/app/core/auth/feature-names";
 
 function dashboardFixture(fixture: ApiFixture) {
   const day = new Date().toLocaleDateString("sv-SE");

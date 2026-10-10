@@ -13,7 +13,7 @@ import {
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { FeaturePage } from '../../../shared/ui/feature-page';
+import { FeaturePage } from '../../../core/layout/feature-page';
 import { WorkspaceSession } from '../../../core/auth/workspace-session';
 import { ViewScope } from '../../../shared/browser/view-scope';
 import { IssueCode } from '../../../shared/ui/issue-code';
@@ -34,9 +34,9 @@ import { StatusBadge } from '../../../shared/ui/status-badge';
 import type { BadgeTone } from '../../../shared/ui/count-badge';
 import { DetailDrawer } from '../../../shared/ui/detail-drawer';
 import { Tabs, type TabItem } from '../../../shared/ui/tabs';
-import { CodeBlock } from '../../../shared/ui/code-block';
+import { CodeBlock } from '../../../shared/markdown/code-block';
 import { Disclosure } from '../../../shared/ui/disclosure';
-import { safeMessage } from '../../../core/api/safe-errors';
+import { safeMessage } from '../../../core/errors/safe-errors';
 import {
   APP_TIME_ZONE,
   formatBytes,

@@ -127,7 +127,7 @@ test("short mobile drawers expose scrolling and preserve the focus escape route"
   await expectViewportContained(page);
 });
 
-test("audit-only access follows old bookmarks and same-page links without requesting account administration", async ({
+test("audit-only access keeps deep-link filters and same-page links without requesting account administration", async ({
   page,
 }) => {
   const fixture = new ApiFixture();
@@ -167,7 +167,7 @@ test("audit-only access follows old bookmarks and same-page links without reques
     return route.fulfill({ status: 403, json: { code: "feature_forbidden" } });
   });
   await page.goto(
-    `/admin?tab=audit&category=authentication&search=reviewer&traceId=${traceId}#events`,
+    `/admin/audit?category=authentication&search=reviewer&traceId=${traceId}#events`,
   );
   await expect(page).toHaveURL(
     new RegExp(

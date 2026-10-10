@@ -5,7 +5,7 @@ import { EmptyState } from '../../shared/ui/empty-state';
 import { SearchField } from '../../shared/ui/search-field';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
-import { ClientValidationError } from '../../core/api/safe-errors';
+import { ClientValidationError } from '../../core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -24,11 +24,11 @@ import type {
 } from '../../core/api/schema';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
-import { FeaturePage } from '../../shared/ui/feature-page';
+import { FeaturePage } from '../../core/layout/feature-page';
 import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
 import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
-import { ResourceSharing } from '../../shared/ui/resource-sharing';
+import { ResourceSharing } from '../sharing/resource-sharing';
 import { FileDrop } from '../../shared/browser/file-drop';
 import { WorkspaceApi } from '../workspace/workspace-api';
 import { KnowledgeApi } from './knowledge-api';
@@ -36,7 +36,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { LibraryPicker } from '../files/library-picker';
 import { TextSourceEditor } from './text-source-editor';
 import { ReaderLink } from '../../shared/browser/reader-link';
-import { RetrievalResults } from '../../shared/ui/retrieval-results';
+import { RetrievalResults } from './retrieval-results';
 
 @Component({
   selector: 'nx-knowledge-page',

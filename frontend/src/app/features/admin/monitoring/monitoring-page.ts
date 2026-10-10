@@ -14,7 +14,7 @@ import {
 import { RouterLink } from '@angular/router';
 import { WorkspaceSession } from '../../../core/auth/workspace-session';
 import { ThemeService } from '../../../core/preferences/theme-service';
-import { FeaturePage } from '../../../shared/ui/feature-page';
+import { FeaturePage } from '../../../core/layout/feature-page';
 import { Icon, EXTRA_ICONS } from '../../../shared/ui/icon';
 import { Monitor, Server, Network } from 'lucide';
 import { Select } from '../../../shared/ui/select';
@@ -23,7 +23,7 @@ import { DetailDrawer } from '../../../shared/ui/detail-drawer';
 import { EmptyState } from '../../../shared/ui/empty-state';
 import { formatBytes } from '../../../shared/browser/format';
 import { downloadBlob } from '../../../shared/browser/download';
-import { safeMessage } from '../../../core/api/safe-errors';
+import { safeMessage } from '../../../core/errors/safe-errors';
 import type { DependencyTraffic, OnlineSession } from '../../../core/api/schema';
 import { MonitoringStore } from './monitoring-store';
 import { RuntimeTopology } from './runtime-topology';

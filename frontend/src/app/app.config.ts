@@ -6,7 +6,7 @@ import {
   DestroyRef,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { ClientIssues } from './core/api/client-issues';
+import { ClientIssues } from './core/errors/client-issues';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 

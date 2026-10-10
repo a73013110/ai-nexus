@@ -1,7 +1,7 @@
 import { Notice } from '../../shared/ui/notice';
 import { Card } from '../../shared/ui/card';
 import { Field } from '../../shared/ui/field';
-import { ClientValidationError } from '../../core/api/safe-errors';
+import { ClientValidationError } from '../../core/errors/safe-errors';
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -19,7 +19,7 @@ import { formatDate } from '../../shared/browser/format';
 import { downloadFile } from '../../shared/browser/download';
 import { Checkbox } from '../../shared/ui/checkbox';
 import { Select } from '../../shared/ui/select';
-import { JobProgress } from '../../shared/ui/job-progress';
+import { JobProgress } from '../tasks/job-progress';
 import { KnowledgeApi } from '../knowledge/knowledge-api';
 import { JobsApi } from '../tasks/jobs-api';
 

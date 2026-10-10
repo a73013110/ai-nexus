@@ -1,5 +1,5 @@
-@use './tokens';
-@use './base';
+@use './styles/tokens';
+@use './styles/base';
 @use './styles/scrollbars';
 @use './styles/controls';
 @use './styles/forms';
@@ -28,5 +28,5 @@
 @use './styles/tools';
 @use './styles/attachments';
 @use './styles/billing';
-@use './composer-controls';
-@use './motion';
+@use './styles/composer-controls';
+@use './styles/motion';

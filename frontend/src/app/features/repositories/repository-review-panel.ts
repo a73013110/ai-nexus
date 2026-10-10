@@ -1,7 +1,7 @@
 import { Notice } from '../../shared/ui/notice';
 import { Card } from '../../shared/ui/card';
 import { Field } from '../../shared/ui/field';
-import { ClientValidationError } from '../../core/api/safe-errors';
+import { ClientValidationError } from '../../core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -25,8 +25,8 @@ import { NexusApi } from '../../core/api/nexus-api';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { formatDate, formatModelDisplayName } from '../../shared/browser/format';
-import { JobProgress } from '../../shared/ui/job-progress';
-import { MarkdownView } from '../../shared/ui/markdown-view';
+import { JobProgress } from '../tasks/job-progress';
+import { MarkdownView } from '../../shared/markdown/markdown-view';
 import { Select } from '../../shared/ui/select';
 import { ResourceTarget } from '../../shared/ui/resource-target';
 import { RepositoriesApi } from './repositories-api';

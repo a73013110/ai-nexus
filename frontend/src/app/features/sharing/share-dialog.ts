@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { DirectoryUserDto, ShareDto } from '../../core/api/schema';
-import { ResourceApi } from '../../core/api/resource-api';
+import { ResourceApi } from './resource-api';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { CopyFeedback } from '../../shared/browser/copy-feedback';

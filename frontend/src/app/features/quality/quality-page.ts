@@ -4,7 +4,7 @@ import { Card } from '../../shared/ui/card';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
-import { ApiError, ClientValidationError, issueInMessage } from '../../core/api/safe-errors';
+import { ApiError, ClientValidationError, issueInMessage } from '../../core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -33,12 +33,12 @@ import type {
 import { ViewScope } from '../../shared/browser/view-scope';
 import { formatDate, formatModelName, formatModelDisplayName } from '../../shared/browser/format';
 import { downloadFile } from '../../shared/browser/download';
-import { FeaturePage } from '../../shared/ui/feature-page';
+import { FeaturePage } from '../../core/layout/feature-page';
 import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
-import { MarkdownView } from '../../shared/ui/markdown-view';
-import { JobProgress } from '../../shared/ui/job-progress';
-import { ResourceSharing } from '../../shared/ui/resource-sharing';
+import { MarkdownView } from '../../shared/markdown/markdown-view';
+import { JobProgress } from '../tasks/job-progress';
+import { ResourceSharing } from '../sharing/resource-sharing';
 import { JobsApi } from '../tasks/jobs-api';
 import { QualityApi } from './quality-api';
 import { SearchField } from '../../shared/ui/search-field';

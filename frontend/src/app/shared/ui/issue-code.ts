@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
-import { issueInMessage } from '../../core/api/safe-errors';
+import { issueInMessage } from '../../core/errors/safe-errors';
 import { CopyFeedback } from '../browser/copy-feedback';
 import { Icon } from './icon';
 

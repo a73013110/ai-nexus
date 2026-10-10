@@ -4,7 +4,7 @@ import { Card } from '../../shared/ui/card';
 import { SearchField } from '../../shared/ui/search-field';
 import { Field } from '../../shared/ui/field';
 import { ViewSwitch } from '../../shared/ui/view-switch';
-import { ClientValidationError } from '../../core/api/safe-errors';
+import { ClientValidationError } from '../../core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -20,12 +20,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { ArtifactDto, ArtifactRevisionDto, ArtifactSummaryDto } from '../../core/api/schema';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
-import { FeaturePage } from '../../shared/ui/feature-page';
+import { FeaturePage } from '../../core/layout/feature-page';
 import { Icon } from '../../shared/ui/icon';
 import { Select } from '../../shared/ui/select';
-import { ResourceSharing } from '../../shared/ui/resource-sharing';
+import { ResourceSharing } from '../sharing/resource-sharing';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
-import { MarkdownView } from '../../shared/ui/markdown-view';
+import { MarkdownView } from '../../shared/markdown/markdown-view';
 import { downloadBlob } from '../../shared/browser/download';
 import { formatDate } from '../../shared/browser/format';
 import { ArtifactsApi } from './artifacts-api';

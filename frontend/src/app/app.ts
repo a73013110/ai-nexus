@@ -1,11 +1,11 @@
 import { ChangeDetectionStrategy, Component, effect, inject, Injector } from '@angular/core';
 import { WorkspaceSession } from './core/auth/workspace-session';
-import { UnhandledIssue } from './shared/ui/unhandled-issue';
+import { UnhandledIssue } from './core/errors/unhandled-issue';
 import { RouterOutlet } from '@angular/router';
 import { SettingsDialog } from './features/settings/settings-dialog';
-import { IdentityBanner } from './shared/ui/identity-banner';
+import { IdentityBanner } from './core/auth/identity-banner';
 import { ReaderDialog } from './features/knowledge/reader-dialog';
-import { NotificationCenter } from './shared/ui/notification-center';
+import { NotificationCenter } from './features/notifications/notification-center';
 
 @Component({
   imports: [

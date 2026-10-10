@@ -3,7 +3,7 @@ import { Card } from '../../shared/ui/card';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { formatDate } from '../../shared/browser/format';
-import { ClientValidationError } from '../../core/api/safe-errors';
+import { ClientValidationError } from '../../core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -17,8 +17,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import type { ShareDto, SharedContentDto } from '../../core/api/schema';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
-import { FeaturePage } from '../../shared/ui/feature-page';
-import { MarkdownView } from '../../shared/ui/markdown-view';
+import { FeaturePage } from '../../core/layout/feature-page';
+import { MarkdownView } from '../../shared/markdown/markdown-view';
 import { combineLatest } from 'rxjs';
 import { MessageContent } from '../workspace/message-content';
 import { ReaderOverlay } from '../../shared/browser/reader-overlay';

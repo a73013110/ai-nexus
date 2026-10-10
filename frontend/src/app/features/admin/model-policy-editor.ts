@@ -1,6 +1,6 @@
 import { Notice } from '../../shared/ui/notice';
 import { Field } from '../../shared/ui/field';
-import { ClientValidationError } from '../../core/api/safe-errors';
+import { ClientValidationError } from '../../core/errors/safe-errors';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import type { EffectiveModelPolicyDto, ModelDto, ModelPolicyRequest } from '../../core/api/schema';
 import { Checkbox } from '../../shared/ui/checkbox';
