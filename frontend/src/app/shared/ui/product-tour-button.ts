@@ -5,7 +5,7 @@ import {
   inject,
   input,
 } from '@angular/core';
-import { ClientIssues } from '../../core/api/client-issues';
+import { ClientIssues } from '../../core/errors/client-issues';
 import { Icon } from './icon';
 import { ProductTour, type ProductTourDefinition } from './product-tour';
 

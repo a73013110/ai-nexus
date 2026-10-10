@@ -5,7 +5,7 @@ import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { ViewMotion } from '../../shared/ui/view-motion';
 import { RouterLink } from '@angular/router';
 import { Field } from '../../shared/ui/field';
-import { safeMessage } from '../../core/api/safe-errors';
+import { safeMessage } from '../../core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -30,11 +30,11 @@ import type {
 import { Icon } from '../../shared/ui/icon';
 import { SearchField } from '../../shared/ui/search-field';
 import { Checkbox } from '../../shared/ui/checkbox';
-import { MarkdownView } from '../../shared/ui/markdown-view';
+import { MarkdownView } from '../../shared/markdown/markdown-view';
 import { formatBytes, formatDate, formatNumber } from '../../shared/browser/format';
 import { AdminApi } from './admin-api';
-import { StorageUsage } from '../../shared/ui/storage-usage';
-import { RunTimingDisplay } from '../../shared/ui/run-timing';
+import { StorageUsage } from '../files/storage-usage';
+import { RunTimingDisplay } from '../workspace/run-timing';
 import { parseStorageLimitGb, storageLimitGb } from '../../shared/browser/storage-limit';
 import {
   ModelPolicyEditor,

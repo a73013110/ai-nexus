@@ -16,7 +16,7 @@
 
 ## 串流 Markdown
 
-`StreamingMarkdown`（`shared/ui/streaming-markdown.ts`）把回答分成「已固定的區塊」和「尾段」，只有尾段每格重算：
+`StreamingMarkdown`（`shared/markdown/streaming-markdown.ts`）把回答分成「已固定的區塊」和「尾段」，只有尾段每格重算：
 
 | 情況 | 處理 |
 |---|---|

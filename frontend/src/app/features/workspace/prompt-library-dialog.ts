@@ -1,7 +1,7 @@
 import { Notice } from '../../shared/ui/notice';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
-import { safeMessage } from '../../core/api/safe-errors';
+import { safeMessage } from '../../core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,

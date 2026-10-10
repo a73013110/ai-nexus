@@ -1,4 +1,4 @@
-import { FEATURE_NAMES } from '../../../core/feature-names';
+import { FEATURE_NAMES } from '../../../core/auth/feature-names';
 import { APP_TIME_ZONE } from '../../../shared/browser/format';
 
 const statuses: Record<string, string> = {
