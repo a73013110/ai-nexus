@@ -1,10 +1,11 @@
+import { map } from 'rxjs';
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
 import { SearchField } from '../../shared/ui/search-field';
 import { Field } from '../../shared/ui/field';
 import { ViewSwitch } from '../../shared/ui/view-switch';
-import { ClientValidationError } from '../../core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -14,9 +15,10 @@ import {
   inject,
   signal,
   viewChild,
+  linkedSignal,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import type { ArtifactDto, ArtifactRevisionDto, ArtifactSummaryDto } from '../../core/api/schema';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
@@ -64,20 +66,64 @@ export class ArtifactsPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly session = inject(WorkspaceSession);
-  readonly list = signal<ArtifactSummaryDto[]>([]);
-  readonly document = signal<ArtifactDto | null>(null);
-  readonly revisions = signal<ArtifactRevisionDto[]>([]);
-  readonly loading = signal(true);
+  private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id'))), {
+    initialValue: null,
+  });
+  private readonly listRead = apiResource({
+    feature: 'artifacts',
+    loader: () => this.api.list(),
+  });
+  private readonly documentRead = apiResource({
+    feature: 'artifacts',
+    params: () => this.id() || undefined,
+    loader: (id) => this.api.get(id),
+  });
+  private readonly revisionsRead = apiResource({
+    feature: 'artifacts',
+    params: () => this.id() || undefined,
+    loader: async (id) => ({ id, rows: await this.api.versions(id) }),
+  });
+  readonly list = computed<ArtifactSummaryDto[]>(() => this.listRead.value() ?? []);
+  /** The document on screen: the one in the URL, or a version or save that replaced it. */
+  readonly document = linkedSignal<ArtifactDto | null>(() => {
+    const value = this.documentRead.value();
+    return value && value.resource.id === this.id() ? value : null;
+  });
+  readonly revisions = computed<ArtifactRevisionDto[]>(() => {
+    const value = this.revisionsRead.value();
+    return value && value.id === this.id() ? value.rows : [];
+  });
+  readonly loading = computed(() => this.listRead.loading() || this.documentRead.loading());
   readonly busy = signal(false);
-  readonly error = signal('');
+  readonly actionError = signal('');
+  readonly error = computed(
+    () =>
+      this.actionError() ||
+      this.listRead.error() ||
+      this.documentRead.error() ||
+      this.revisionsRead.error(),
+  );
   readonly notice = signal('');
   readonly filter = signal('');
-  readonly mode = signal('read');
-  readonly title = signal('');
-  readonly content = signal('');
-  readonly restoring = signal(false);
-  readonly selection = signal<{ start: number; end: number; text: string } | null>(null);
-  readonly listOpen = signal(false);
+  // Editing state starts over whenever another document or version is loaded or saved.
+  readonly mode = linkedSignal(() => {
+    this.document();
+    return 'read';
+  });
+  readonly title = linkedSignal(() => this.document()?.resource.name ?? '');
+  readonly content = linkedSignal(() => this.document()?.content ?? '');
+  readonly restoring = linkedSignal(() => {
+    this.document();
+    return false;
+  });
+  readonly selection = linkedSignal<{ start: number; end: number; text: string } | null>(() => {
+    this.document();
+    return null;
+  });
+  readonly listOpen = linkedSignal(() => {
+    this.document();
+    return false;
+  });
   readonly confirm = viewChild.required(ConfirmDialog);
   readonly readonlyShare = viewChild(ShareDialog);
   readonly tools = viewChild.required(TextTools);
@@ -122,9 +168,11 @@ export class ArtifactsPage {
     return () => valid() && generation === this.version;
   }
   constructor() {
-    this.route.paramMap
-      .pipe(takeUntilDestroyed())
-      .subscribe((params) => void this.load(params.get('id')));
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(() => {
+      ++this.version;
+      this.actionError.set('');
+      this.notice.set('');
+    });
     const unload = (event: BeforeUnloadEvent) => {
       if (this.dirty()) event.preventDefault();
     };
@@ -145,55 +193,12 @@ export class ArtifactsPage {
       document.removeEventListener('keydown', key);
     });
   }
-  async load(id: string | null) {
-    const version = ++this.version,
-      guard = this.scope.guard(),
-      valid = () => guard() && version === this.version;
-    this.loading.set(true);
-    this.error.set('');
-    this.notice.set('');
-    this.selection.set(null);
-    try {
-      await this.session.load();
-      if (!valid() || !this.session.me()) return;
-      if (!this.session.has('artifacts')) throw new ClientValidationError('featureAccess');
-      const list = await this.api.list();
-      if (!valid()) return;
-      this.list.set(list);
-      if (id) {
-        const value = await this.api.get(id);
-        if (!valid()) return;
-        this.adopt(value);
-        const revisions = await this.api.versions(id);
-        if (valid()) this.revisions.set(revisions);
-      } else {
-        this.document.set(null);
-        this.revisions.set([]);
-      }
-    } catch (error) {
-      if (valid()) {
-        this.document.set(null);
-        this.error.set(this.scope.message(error));
-      }
-    } finally {
-      if (valid()) this.loading.set(false);
-    }
-  }
-  private adopt(value: ArtifactDto) {
-    this.document.set(value);
-    this.title.set(value.resource.name);
-    this.content.set(value.content);
-    this.restoring.set(false);
-    this.selection.set(null);
-    this.mode.set('read');
-    this.listOpen.set(false);
-  }
   async save() {
     const doc = this.document(),
       valid = this.operationGuard();
     if (!doc || !this.editable() || this.busy() || !this.dirty()) return;
     this.busy.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
       const value = await this.api.save(
         doc.resource.id,
@@ -203,19 +208,13 @@ export class ArtifactsPage {
       );
       if (!valid()) return;
       const priorMode = this.mode();
-      this.adopt(value);
+      this.document.set(value);
       this.mode.set(priorMode);
       this.notice.set(`版本 ${value.version} 已儲存。`);
-      const [revisions, list] = await Promise.all([
-        this.api.versions(doc.resource.id),
-        this.api.list(),
-      ]);
-      if (valid()) {
-        this.revisions.set(revisions);
-        this.list.set(list);
-      }
+      this.revisionsRead.reload();
+      this.listRead.reload();
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -226,12 +225,12 @@ export class ArtifactsPage {
       valid = this.operationGuard();
     if (!id) return;
     this.busy.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
       const value = await this.api.get(id, Number(version));
-      if (valid() && this.document()?.resource.id === id) this.adopt(value);
+      if (valid() && this.document()?.resource.id === id) this.document.set(value);
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -244,7 +243,7 @@ export class ArtifactsPage {
   async discard() {
     if (!(await this.canLeave())) return;
     const doc = this.document();
-    if (doc) this.adopt(doc);
+    if (doc) this.document.set({ ...doc });
   }
   canLeave(): boolean | Promise<boolean> {
     return (
@@ -278,7 +277,7 @@ export class ArtifactsPage {
   replace(text: string) {
     const target = this.replaceTarget;
     if (!target || this.content().slice(target.start, target.end) !== target.text) {
-      this.error.set('選取內容已經改變，請重新選取後再套用。');
+      this.actionError.set('選取內容已經改變，請重新選取後再套用。');
       return;
     }
     this.content.set(
@@ -291,7 +290,7 @@ export class ArtifactsPage {
       valid = this.operationGuard();
     if (!doc || this.busy()) return;
     this.busy.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
       const response = await this.api.export(doc.resource.id, format, doc.version),
         blob = await response.blob();
@@ -300,7 +299,7 @@ export class ArtifactsPage {
         this.notice.set(`已匯出已儲存的版本 ${doc.version}。`);
       }
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -320,7 +319,7 @@ export class ArtifactsPage {
       return;
     const valid = this.operationGuard();
     this.busy.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
       await this.api.remove(doc.resource.id);
       if (valid()) {
@@ -329,7 +328,7 @@ export class ArtifactsPage {
         await this.router.navigate(['/artifacts']);
       }
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }

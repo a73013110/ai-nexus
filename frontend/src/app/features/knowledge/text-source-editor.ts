@@ -1,3 +1,4 @@
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
@@ -9,6 +10,8 @@ import {
   output,
   signal,
   viewChild,
+  linkedSignal,
+  computed,
 } from '@angular/core';
 import type { DocumentDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
@@ -93,41 +96,34 @@ export class TextSourceEditor {
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly confirm = viewChild.required(ConfirmDialog);
   readonly saved = output<DocumentDto>();
-  readonly title = signal('');
-  readonly text = signal('');
-  readonly documentId = signal('');
-  readonly loading = signal(false);
+  /** What the dialog edits: a new source in a collection, or an existing document's text. */
+  private readonly editing = signal<{ collection: string; documentId: string } | null>(null);
+  private readonly sourceRead = apiResource({
+    params: () => {
+      const editing = this.editing();
+      return editing?.documentId ? editing : undefined;
+    },
+    loader: async (editing) => ({ editing, source: await this.api.text(editing.documentId) }),
+  });
+  private readonly source = computed(() => {
+    const value = this.sourceRead.value();
+    return value && value.editing === this.editing() ? value.source : null;
+  });
+  readonly documentId = computed(() => this.editing()?.documentId ?? '');
+  readonly title = linkedSignal(() => this.source()?.title ?? '');
+  readonly text = linkedSignal(() => this.source()?.text ?? '');
+  /** The content as opened, to tell whether closing would discard edits. */
+  private readonly initial = computed(() =>
+    JSON.stringify([this.source()?.title ?? '', this.source()?.text ?? '']),
+  );
+  readonly loading = this.sourceRead.loading;
   readonly busy = signal(false);
-  readonly error = signal('');
-  private collection = '';
-  private version = 0;
-  private initial = '';
-  private sequence = 0;
-  async open(collection: string, document?: DocumentDto) {
-    const sequence = ++this.sequence,
-      valid = this.scope.guard();
-    this.collection = collection;
-    this.documentId.set(document?.id || '');
-    this.title.set('');
-    this.text.set('');
-    this.error.set('');
-    this.initial = '';
-    this.loading.set(!!document);
+  readonly saveError = signal('');
+  readonly error = computed(() => this.saveError() || this.sourceRead.error());
+  open(collection: string, document?: DocumentDto) {
+    this.saveError.set('');
+    this.editing.set({ collection, documentId: document?.id || '' });
     this.dialog().nativeElement.showModal();
-    try {
-      if (document) {
-        const source = await this.api.text(document.id);
-        if (!valid() || sequence !== this.sequence) return;
-        this.title.set(source.title);
-        this.text.set(source.text);
-        this.version = source.version;
-      }
-      this.initial = this.signature();
-    } catch (e) {
-      if (valid() && sequence === this.sequence) this.error.set(this.scope.message(e));
-    } finally {
-      if (valid() && sequence === this.sequence) this.loading.set(false);
-    }
   }
   private signature() {
     return JSON.stringify([this.title(), this.text()]);
@@ -139,7 +135,7 @@ export class TextSourceEditor {
   async close() {
     if (this.busy()) return;
     if (
-      this.signature() !== this.initial &&
+      this.signature() !== this.initial() &&
       (this.title() || this.text()) &&
       !(await this.confirm().ask({
         title: '放棄未儲存的內容',
@@ -148,28 +144,31 @@ export class TextSourceEditor {
       }))
     )
       return;
-    ++this.sequence;
+    this.editing.set(null);
     this.dialog().nativeElement.close();
   }
   async save(event: Event) {
     event.preventDefault();
     if (this.busy() || this.loading() || !this.title().trim() || !this.text().trim()) return;
     const valid = this.scope.guard(),
-      sequence = this.sequence;
+      editing = this.editing(),
+      source = this.source(),
+      current = () => valid() && editing === this.editing();
+    if (!editing) return;
     this.busy.set(true);
-    this.error.set('');
+    this.saveError.set('');
     try {
-      const result = this.documentId()
-        ? await this.api.updateText(this.documentId(), this.title(), this.text(), this.version)
-        : await this.api.createText(this.collection, this.title(), this.text());
-      if (valid() && sequence === this.sequence) {
+      const result = editing.documentId
+        ? await this.api.updateText(editing.documentId, this.title(), this.text(), source!.version)
+        : await this.api.createText(editing.collection, this.title(), this.text());
+      if (current()) {
         this.dialog().nativeElement.close();
         this.saved.emit(result);
       }
     } catch (e) {
-      if (valid() && sequence === this.sequence) this.error.set(this.scope.message(e));
+      if (current()) this.saveError.set(this.scope.message(e));
     } finally {
-      if (valid() && sequence === this.sequence) this.busy.set(false);
+      if (current()) this.busy.set(false);
     }
   }
 }

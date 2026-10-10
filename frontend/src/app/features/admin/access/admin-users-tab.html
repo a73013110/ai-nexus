@@ -1,0 +1,149 @@
+<div class="page-toolbar">
+  <nx-search-field
+    label="搜尋使用者"
+    placeholder="搜尋姓名或登入帳號"
+    [value]="store.search()"
+    (valueChange)="store.find($event)"
+  />
+  <button
+    class="primary-button"
+    [disabled]="!!session.auth.session()?.testing"
+    (click)="edit.emit(undefined)"
+  >
+    <nx-icon name="plus" />新增使用者
+  </button>
+</div>
+<nx-data-table
+  #userTable
+  class="admin-users-table"
+  label="使用者列表"
+  [busy]="store.loadingUsers()"
+  [columns]="userColumns"
+  preferenceKey="admin-users"
+>
+  <div table-toolbar class="ui-table-toolbar">
+    <h2>
+      使用者 <span class="ui-count-label">{{ store.users()?.total || 0 }} 位</span>
+    </h2>
+    <span class="form-note">選取帳號檢視活動與政策</span>
+  </div>
+  <table>
+    <colgroup>
+      <col nxTableColumn="name" />
+      <col nxTableColumn="authentication" class="admin-auth-column" />
+      <col nxTableColumn="roles" />
+      <col nxTableColumn="usage" />
+      <col nxTableColumn="storage" />
+      <col class="admin-user-actions-column" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col" nxTableColumn="name">使用者</th>
+        <th scope="col" nxTableColumn="authentication">登入與狀態</th>
+        <th scope="col" nxTableColumn="roles">角色</th>
+        <th scope="col" nxTableColumn="usage">30 天用量</th>
+        <th scope="col" nxTableColumn="storage">原檔容量</th>
+        <th scope="col"><span class="sr-only">操作</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (user of store.users()?.users || []; track user.id) {
+        <tr
+          nxTableRow
+          [class.is-selected]="selectedId() === user.id"
+          (rowActivate)="inspect.emit(user)"
+        >
+          <td nxTableColumn="name">
+            <button
+              type="button"
+              class="ui-cell-link"
+              data-row-action
+              [attr.aria-label]="'使用者活動：' + user.displayName"
+              aria-haspopup="dialog"
+              (click)="inspect.emit(user)"
+            >
+              <strong>{{ user.displayName }}</strong></button
+            ><small class="ui-truncate" [title]="user.account">{{ user.account }}</small>
+          </td>
+          <td nxTableColumn="authentication">
+            <nx-status-badge [tone]="user.enabled === false ? 'warning' : 'neutral'">{{
+              user.enabled === false ? '停用' : '啟用'
+            }}</nx-status-badge
+            ><small
+              >{{ (user.authentication?.adEnabled ?? true) ? 'AD' : ''
+              }}{{ user.authentication?.adEnabled && user.authentication.localEnabled ? ' · ' : ''
+              }}{{ user.authentication?.localEnabled ? '本地密碼' : '' }}</small
+            >
+          </td>
+          <td nxTableColumn="roles">
+            <div class="resource-badges">
+              @for (role of store.roleNames(user.roleIds); track role) {
+                <span>{{ role }}</span>
+              }
+            </div>
+          </td>
+          <td nxTableColumn="usage">
+            @if (user.activity; as activity) {
+              <strong
+                >{{ format(activity.usage.requests || 0) }} 次 ·
+                {{ format((activity.usage.inputTokens || 0) + (activity.usage.outputTokens || 0)) }}
+                tokens</strong
+              ><small>{{ activity.conversations }} 段對話</small>
+            } @else {
+              <span>—</span>
+            }
+          </td>
+          <td nxTableColumn="storage">
+            @if (user.storage; as capacity) {
+              <span>{{ bytes(capacity.usedBytes) }} / {{ bytes(capacity.limitBytes) }}</span
+              ><small>剩餘 {{ bytes(capacity.remainingBytes) }}</small>
+            } @else {
+              <span>—</span>
+            }
+          </td>
+          <td>
+            <div class="page-actions">
+              <button
+                class="icon-button"
+                [attr.aria-label]="'設定角色：' + user.displayName"
+                [disabled]="!!session.auth.session()?.testing"
+                (click)="edit.emit(user)"
+              >
+                <nx-icon name="edit" /></button
+              ><nx-action-menu
+                [label]="'使用者操作：' + user.displayName"
+                [items]="actions(user)"
+                (action)="userAction($event, user)"
+              />
+            </div>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  @if (!store.users()?.users?.length) {
+    <nx-empty-state table-state
+      ><h2>沒有符合的使用者</h2>
+      <p>可手動建立使用者，或在第一次 AD 登入時自動建立。</p></nx-empty-state
+    >
+  }
+  <div table-footer class="ui-table-footer">
+    <span
+      >{{ store.users()?.total ? (store.users()?.offset || 0) + 1 : 0 }}–{{
+        (store.users()?.offset || 0) + (store.users()?.users?.length || 0)
+      }}
+      / {{ store.users()?.total || 0 }}</span
+    >
+    <nx-table-pagination
+      [pageIndex]="(store.users()?.offset || 0) / 100"
+      [pageSize]="100"
+      [pageSizes]="[100]"
+      [count]="store.users()?.users?.length || 0"
+      [hasNext]="(store.users()?.offset || 0) + 100 < (store.users()?.total || 0)"
+      [busy]="store.loadingUsers()"
+      (pageChange)="store.readUsers((store.users()?.offset || 0) + $event * 100)"
+    />
+  </div>
+</nx-data-table>
+<nx-confirm-dialog />
+<nx-test-identity-dialog />

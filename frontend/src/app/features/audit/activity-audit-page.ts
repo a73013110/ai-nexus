@@ -1,8 +1,8 @@
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { DateTimePicker } from '../../shared/ui/date-time-picker';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { FilterPanel } from '../../shared/ui/filter-panel';
-import { safeMessage } from '../../core/errors/safe-errors';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
@@ -21,8 +21,11 @@ import {
   signal,
   viewChild,
   viewChildren,
+  linkedSignal,
+  untracked,
+  effect,
 } from '@angular/core';
-import { ActivityAuditApi } from './activity-audit-api';
+import { ActivityAuditApi, type AuditFilters } from './activity-audit-api';
 import type { AuditDto, FeatureDto, ModelDto } from '../../core/api/schema';
 import { FeatureSummary } from '../admin/feature-summary';
 import { SearchField } from '../../shared/ui/search-field';
@@ -49,6 +52,12 @@ import {
   auditRejected,
   auditContext,
 } from './audit-presentation';
+
+interface AuditPage {
+  filters: AuditFilters;
+  after: number | undefined;
+  rows: AuditDto[];
+}
 
 @Component({
   selector: 'nx-activity-audit-page',
@@ -82,18 +91,56 @@ export class ActivityAuditPage {
   readonly categories = AUDIT_CATEGORIES;
   readonly category = signal('');
   readonly traceId = signal('');
-  readonly features = signal<readonly FeatureDto[]>([]);
-  readonly models = signal<readonly ModelDto[]>([]);
+  private readonly catalogRead = apiResource({
+    feature: 'audit',
+    loader: () => this.api.catalog(),
+  });
+  readonly features = computed<readonly FeatureDto[]>(
+    () => this.catalogRead.value()?.features ?? [],
+  );
+  readonly models = computed<readonly ModelDto[]>(() => this.catalogRead.value()?.models ?? []);
   readonly modelNames = computed(() =>
     Object.fromEntries(this.models().map((model) => [model.id, formatModelName(model)])),
   );
-  readonly rows = signal<AuditDto[]>([]);
-  readonly pageIndex = signal(0);
-  readonly loadedCount = signal(0);
-  private readonly pages = signal<AuditDto[][]>([]);
+  /** The filters last applied; every change starts again from the newest entries. */
+  private readonly applied = signal<AuditFilters | null>(null);
+  /** The oldest entry already read, when reading the next 100 for the same filters. */
+  private readonly after = linkedSignal<AuditFilters | null, number | undefined>({
+    source: this.applied,
+    computation: () => undefined,
+  });
+  private readonly pageRead = apiResource({
+    feature: 'audit',
+    params: () => {
+      const filters = this.applied();
+      return filters ? { filters, after: this.after() } : undefined;
+    },
+    loader: async (request) => ({
+      ...request,
+      rows: await this.api.query(request.after, request.filters),
+    }),
+  });
+  /** Pages read so far for the applied filters; each read past the last page adds one. */
+  private readonly pages = linkedSignal<
+    { page: AuditPage | undefined; filters: AuditFilters | null },
+    AuditDto[][]
+  >({
+    source: () => ({ page: this.pageRead.value(), filters: this.applied() }),
+    computation: ({ page, filters }, previous) => {
+      if (!page || page.filters !== filters) return [];
+      if (page.after === undefined) return [page.rows];
+      if (!previous || previous.source.page === page) return previous?.value ?? [page.rows];
+      return page.rows.length ? [...previous.value, page.rows] : previous.value;
+    },
+  });
+  readonly pageIndex = linkedSignal(() => Math.max(0, this.pages().length - 1));
+  readonly rows = computed<AuditDto[]>(() => this.pages()[this.pageIndex()] ?? []);
+  readonly loadedCount = computed(() =>
+    this.pages().reduce((count, page) => count + page.length, 0),
+  );
   readonly hasNext = computed(() => this.pageIndex() < this.pages().length - 1 || this.more());
   readonly selectedId = signal<number | null>(null);
-  readonly drawer = viewChild.required(DetailDrawer);
+  readonly drawer = viewChild(DetailDrawer);
   private readonly table = viewChild(DataTable);
   readonly columns: TableColumn[] = [
     { id: 'time', label: '時間', hideable: false },
@@ -102,9 +149,16 @@ export class ActivityAuditPage {
     { id: 'resource', label: '資源' },
     { id: 'result', label: '結果' },
   ];
-  readonly loading = signal(true);
-  readonly more = signal(false);
-  readonly error = signal('');
+  private readonly typing = signal(false);
+  readonly loading = computed(
+    () => this.typing() || this.catalogRead.loading() || this.pageRead.refreshing(),
+  );
+  /** A full page means older entries may remain. */
+  readonly more = computed(() => {
+    const page = this.pageRead.value();
+    return !!page && page.filters === this.applied() && page.rows.length === 100;
+  });
+  readonly error = computed(() => this.catalogRead.error() || this.pageRead.error());
   readonly search = signal('');
   readonly action = signal('');
   readonly result = signal('');
@@ -172,27 +226,25 @@ export class ActivityAuditPage {
   readonly selected = computed(() => this.presentedRows()[this.selectedIndex()] ?? null);
   openDetails(id: number) {
     this.selectedId.set(id);
-    this.drawer().open();
+    this.drawer()?.open();
   }
   adjacent(direction: -1 | 1) {
     const row = this.presentedRows()[this.selectedIndex() + direction];
     if (row) this.openDetails(row.entry.id);
   }
   private resetDetails() {
-    this.drawer().close();
+    this.drawer()?.close();
     this.selectedId.set(null);
     this.table()?.resetScroll();
   }
-  async changePage(direction: -1 | 1) {
+  changePage(direction: -1 | 1) {
     if (this.loading() || !this.validDates()) return;
     const index = this.pageIndex() + direction;
     if (index < 0) return;
-    const page = this.pages()[index];
-    if (page) {
+    if (this.pages()[index]) {
       this.resetDetails();
       this.pageIndex.set(index);
-      this.rows.set(page);
-    } else if (direction === 1 && this.more()) await this.load(true);
+    } else if (direction === 1 && this.more()) this.after.set(this.rows().at(-1)?.id);
   }
   private resolveFeatures(ids: string[]): FeatureDto[] {
     const catalog = new Map(this.features().map((feature) => [feature.id, feature]));
@@ -208,29 +260,10 @@ export class ActivityAuditPage {
   private readonly api = inject(ActivityAuditApi);
   private readonly route = inject(ActivatedRoute);
   private readonly destroy = inject(DestroyRef);
-  private catalogLoaded = false;
-  private version = 0;
   private timer?: ReturnType<typeof setTimeout>;
   constructor() {
-    afterNextRender(() => void this.initialize());
-    this.destroy.onDestroy(() => {
-      ++this.version;
-      clearTimeout(this.timer);
-    });
-  }
-  private async initialize() {
-    try {
-      await this.session.load();
-      if (this.destroy.destroyed) return;
-      if (!this.session.has('audit')) {
-        this.loading.set(false);
-        return;
-      }
-      const catalog = await this.api.catalog();
-      if (this.destroy.destroyed) return;
-      this.features.set(catalog.features);
-      this.models.set(catalog.models);
-      this.catalogLoaded = true;
+    // Date pickers validate the filters, so the link's filters are applied after the first render.
+    afterNextRender(() =>
       this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroy)).subscribe((params) => {
         clearTimeout(this.timer);
         const category = params.get('category') || '';
@@ -250,78 +283,44 @@ export class ActivityAuditPage {
         );
         this.from.set(params.get('from') || '');
         this.until.set(params.get('until') || '');
-        void this.load();
-      });
-    } catch (error) {
-      if (!this.destroy.destroyed) {
-        this.error.set(safeMessage(error));
-        this.loading.set(false);
-      }
-    }
+        this.load();
+      }),
+    );
+    // A new set of pages starts with the drawer closed and the table at the top.
+    effect(() => {
+      this.pages();
+      untracked(() => this.resetDetails());
+    });
+    this.destroy.onDestroy(() => clearTimeout(this.timer));
   }
   reload() {
-    if (this.catalogLoaded) void this.load();
-    else void this.initialize();
+    this.catalogRead.reload();
+    this.pageRead.reload();
   }
   searchChanged(value: string) {
     this.search.set(value);
-    ++this.version;
-    this.loading.set(true);
+    this.typing.set(true);
     clearTimeout(this.timer);
-    this.timer = setTimeout(() => void this.load(), 250);
+    this.timer = setTimeout(() => this.load(), 250);
   }
   filter(key: 'category' | 'action' | 'result' | 'from' | 'until', value: string) {
     this[key].set(value);
     clearTimeout(this.timer);
-    void this.load();
+    this.load();
   }
-  async load(append = false) {
-    if (!this.session.has('audit') || this.destroy.destroyed) return;
-    if (append && this.loading()) return;
-    const version = ++this.version;
-    if (!this.validDates()) {
-      this.loading.set(false);
-      return;
-    }
-    this.loading.set(true);
-    this.error.set('');
-    if (!append) {
-      this.resetDetails();
-      this.pages.set([]);
-      this.pageIndex.set(0);
-      this.loadedCount.set(0);
-      this.rows.set([]);
-      this.more.set(false);
-    }
-    try {
-      const filters = {
-        search: this.search() || undefined,
-        action: this.action() || undefined,
-        result: this.result() || undefined,
-        category: this.category() || undefined,
-        traceId: this.traceId() || undefined,
-        from: this.from() ? this.from() + 'T00:00:00+08:00' : undefined,
-        until: this.until() ? this.nextDay(this.until()) + 'T00:00:00+08:00' : undefined,
-      };
-      const rows = await this.api.query(append ? this.rows().at(-1)?.id : undefined, filters);
-      if (version !== this.version) return;
-      this.more.set(rows.length === 100);
-      if (append && !rows.length) return;
-      if (append) {
-        this.resetDetails();
-        this.pages.update((pages) => [...pages, rows]);
-        this.pageIndex.set(this.pages().length - 1);
-        this.loadedCount.update((count) => count + rows.length);
-      } else {
-        this.pages.set([rows]);
-        this.loadedCount.set(rows.length);
-      }
-      this.rows.set(rows);
-    } catch (error) {
-      if (version === this.version) this.error.set(safeMessage(error));
-    } finally {
-      if (version === this.version) this.loading.set(false);
-    }
+  /** Apply the current filters and read the newest entries again. */
+  load() {
+    this.typing.set(false);
+    if (!this.validDates()) return;
+    this.applied.set({
+      search: this.search() || undefined,
+      action: this.action() || undefined,
+      result: this.result() || undefined,
+      category: this.category() || undefined,
+      traceId: this.traceId() || undefined,
+      from: this.from() ? this.from() + 'T00:00:00+08:00' : undefined,
+      until: this.until() ? this.nextDay(this.until()) + 'T00:00:00+08:00' : undefined,
+    });
   }
   export() {
     const rows = this.pages().flat();

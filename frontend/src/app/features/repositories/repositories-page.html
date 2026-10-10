@@ -161,7 +161,7 @@
                     type="button"
                     class="quiet-button"
                     [disabled]="reading() || busy()"
-                    (click)="file.set(null); folder('')"
+                    (click)="folder('')"
                   >
                     根目錄
                   </button>
@@ -212,7 +212,7 @@
                     type="button"
                     class="quiet-button"
                     [disabled]="busy()"
-                    (click)="file.set(null)"
+                    (click)="closeFile()"
                   >
                     <nx-icon name="back" />返回檔案</button
                   ><strong>{{ f.path }}</strong>

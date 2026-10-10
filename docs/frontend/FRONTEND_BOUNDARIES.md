@@ -19,7 +19,8 @@
 
 依賴方向由 ESLint（`frontend/eslint.config.js`）檢查：`shared` 不可引用 `features`；`core` 除了 `core/layout` 不可引用 `features`；`features` 之間可以互相引用。需要登入的頁面都是 `app.routes.ts` 裡同一個 shell route 的子路由，登入檢查只宣告一次；新頁面加在 children 裡即可。
 
-頁面使用 Signals、OnPush 與 zoneless。ViewScope 管生命週期與延遲回應的帳號檢查；同頁切換資源還需自己的 request version。離開／換帳號取消訂閱或忽略舊回應。新對話交接只留在記憶體，綁定帳號世代與 conversation ID，讀取一次；不把來源全文放在 URL、history state 或 localStorage。
+頁面使用 Signals、OnPush 與 zoneless；讀取與寫入的寫法見「讀取與寫入」。新對話交接只留在記憶體，綁定帳號世代與 conversation ID，讀取一次；不把來源全文放在 URL、history state 或 localStorage。
+
 
 共享 UI 的 DOM ID 每個實例唯一；浮層使用原生 top layer，避免 dialog／捲動區裁切。管理員元件頁 /design 以正式元件及本機範例檢查主題、鍵盤、停用、確認與有限階段動畫。見 [設計系統](DESIGN_SYSTEM.md)。
 
@@ -35,3 +36,18 @@ WorkspaceLayout／WorkspaceSidebar 管所有路由的圖示欄、手機 overlay 
 - 串流與下載用 `ApiClient.open` 取得原始 `Response`；上傳用 `ApiClient.upload`（OpenAPI 不描述 multipart body，只描述回應）。
 - 瀏覽器自己載入的連結（`<a href>`、`<img src>` 的檔案內容）用 `apiHref` 產生，同樣受型別檢查。
 - 表單狀態（例如日誌篩選）不是 DTO，可以在功能內宣告；送出前轉成合約的 query 型別。
+
+## 讀取與寫入
+
+- 讀取一律用 `core/api/api-resource.ts` 的 `apiResource()`：它等帳號載入、檢查功能授權、換帳號時重來並丟掉晚到的回應，把失敗轉成審核過的訊息。全站的載入、錯誤與重試因此是同一種寫法：`loading()` 顯示第一次讀取，`error()` 放進 Notice，重試按鈕呼叫 `reload()`。
+- 依路由或選擇讀取時，`params` 回傳目前的請求；回傳 `undefined` 表示不讀。換請求時舊值會保留到新值回來，所以畫面上若可能出現別筆資料，loader 回傳 `{ id, data }`，再用 computed 比對目前的 id（例：`projects-page.ts`、`admin-user-inspector.ts`）。
+- 需要輪詢的讀取用 `poll`（例：任務、知識庫處理中的文件），分頁隱藏時暫停。
+- 對話框每次開啟都要重讀時，用一個開啟次數的 signal 當 `params`（例：`price-book.ts`）。可編輯的表單值用 `linkedSignal` 從讀到的資料衍生，讀到新資料時自動重設（例：`settings-page.ts`）。
+- 寫入是元件或 store 的方法：成功後把伺服器回傳的值寫進 `value`，或呼叫 `reload()`；寫入錯誤放在自己的 signal，與讀取錯誤合成同一個 `error`。寫入仍用 ViewScope 的 guard 忽略離開頁面或換帳號後才回來的結果。
+- 大頁面拆成元件；同頁多個元件共用的讀取放在頁面提供（`providers`）的 store，例如 `AdminStore`（管理頁的目錄與使用者）與 `LogFilterState`（日誌篩選）。
+- 例外：以下是有自己生命週期的狀態機，保留為 store，不改成 `apiResource()`：
+  - 聊天：`ChatStore` 與 `ChatModels`、`ChatHistory`、`ChatRun`、`ChatDraft`、`DraftAttachments`、`KnowledgeSelection`（串流、草稿、分支與送出佇列互相牽動）。整理對話的寫入在 `ChatConversations`。
+  - `NotificationStore`：輪詢後合併、保留已讀並發出瀏覽器通知。
+  - `MonitoringStore`：即時事件串流與重連。
+  - `DocumentViewer`：PDF 多階段載入與渲染。
+  - 登入與 `AuthService`、`WorkspaceSession`：其他讀取都依賴它們。

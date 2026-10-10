@@ -6,9 +6,7 @@ import { ApiError, NexusApi } from '../../core/api/nexus-api';
 import type {
   ContextPreviewRequest,
   ContextUsageDto,
-  ConversationBackup,
   ConversationDto,
-  ConversationSettingsRequest,
   CreateRunRequest,
   MeDto,
   MessageDto,
@@ -21,11 +19,9 @@ import { AuthService } from '../../core/auth/auth-service';
 import { DraftAttachments } from '../attachments/draft-attachments';
 import { WorkspaceApi } from '../workspace/workspace-api';
 import { MessageTree } from './message-tree';
-import { downloadFile } from '../../shared/browser/download';
 import { UserSettingsService } from '../../core/preferences/user-settings';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { KnowledgeSelection } from '../knowledge/knowledge-selection';
-import { ProjectsApi } from '../projects/projects-api';
 import { ChatDraft } from './chat-draft';
 import { ChatHistory } from './chat-history';
 import { ChatModels } from './chat-models';
@@ -39,21 +35,6 @@ import { ChatRun } from './chat-run';
 @Injectable({ providedIn: 'root' })
 export class ChatStore {
   private readonly notifications = inject(NotificationStore);
-  private readonly projectsApi = inject(ProjectsApi);
-  async assignProject(conversation: ConversationDto, projectId: string | null) {
-    if (this.busy()) return false;
-    const generation = this.auth.generation();
-    try {
-      const value = await this.projectsApi.assign(conversation.id, projectId);
-      if (generation !== this.auth.generation()) return false;
-      if (this.selected()?.id === value.id) this.selected.set(value);
-      await this.refreshHistory();
-      return true;
-    } catch (error) {
-      this.report(error);
-      return false;
-    }
-  }
   private readonly api = inject(NexusApi);
   private readonly router = inject(Router);
   private readonly themes = inject(ThemeService);
@@ -530,28 +511,6 @@ export class ChatStore {
     if (generation === this.auth.generation()) await this.notifications.refresh();
   }
 
-  async rename(id: string, title: string) {
-    try {
-      const updated = await this.api.rename(id, title);
-      if (this.selected()?.id === id) this.selected.set(updated);
-      await this.refreshHistory();
-      return true;
-    } catch (error) {
-      this.report(error);
-      return false;
-    }
-  }
-  async remove(id: string) {
-    try {
-      await this.api.delete(id);
-      if (this.selected()?.id === id) await this.router.navigate(['/chat']);
-      await this.refreshHistory();
-      return true;
-    } catch (error) {
-      this.report(error);
-      return false;
-    }
-  }
   async savePreferences(value: PreferencesDto) {
     const generation = this.auth.generation();
     const version = ++this.preferenceVersion;
@@ -597,76 +556,6 @@ export class ChatStore {
     }
   }
 
-  async filterHistory(view = this.historyView(), label = this.historyLabel()) {
-    this.historyView.set(view);
-    this.historyLabel.set(label);
-    try {
-      await this.refreshHistory();
-    } catch (error) {
-      this.report(error);
-    }
-  }
-  async organize(conversation: ConversationDto, settings: ConversationSettingsRequest) {
-    const generation = this.auth.generation();
-    try {
-      const saved = await this.workspace.settings(conversation.id, settings);
-      if (generation !== this.auth.generation()) return false;
-      if (this.selected()?.id === saved.id) this.selected.set(saved);
-      await this.refreshHistory();
-      const labels = await this.workspace.labels();
-      if (generation !== this.auth.generation()) return false;
-      this.labels.set(labels);
-      return true;
-    } catch (error) {
-      this.report(error);
-      return false;
-    }
-  }
-  async duplicate() {
-    const generation = this.auth.generation();
-    const selected = this.selected();
-    if (!selected || this.busy()) return;
-    try {
-      const copy = await this.workspace.duplicate(selected.id);
-      if (generation !== this.auth.generation()) return;
-      await this.refreshHistory();
-      await this.router.navigate(['/chat', copy.id]);
-    } catch (error) {
-      this.report(error);
-    }
-  }
-  async exportBackup() {
-    const generation = this.auth.generation();
-    const selected = this.selected();
-    if (!selected || this.busy()) return;
-    try {
-      const backup = await this.workspace.export(selected.id);
-      if (generation !== this.auth.generation()) return;
-      downloadFile(JSON.stringify(backup, null, 2), selected.title, 'json');
-    } catch (error) {
-      this.report(error);
-    }
-  }
-  async importBackup(file: File) {
-    const generation = this.auth.generation();
-    if (file.size > 8 * 1024 * 1024) {
-      this.error.set('文字備份最多 8 MB。');
-      return;
-    }
-    try {
-      const body = JSON.parse(await file.text()) as ConversationBackup;
-      if (generation !== this.auth.generation()) return;
-      const imported = await this.workspace.import(body);
-      if (generation !== this.auth.generation()) return;
-      await this.refreshHistory();
-      const labels = await this.workspace.labels();
-      if (generation !== this.auth.generation()) return;
-      this.labels.set(labels);
-      await this.router.navigate(['/chat', imported.id]);
-    } catch (error) {
-      this.report(error instanceof SyntaxError ? new Error('備份不是有效的 JSON 格式。') : error);
-    }
-  }
   removeAttachment(id: string) {
     const inHistory = this.messages().some((message) =>
       message.attachments?.some((file) => file.id === id),

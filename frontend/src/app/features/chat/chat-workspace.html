@@ -7,7 +7,7 @@
     (action)="conversationAction($event.action, $event.conversation)"
     (prompts)="library()?.open()"
     (commands)="palette()?.open()"
-    (import)="store.importBackup($event)"
+    (import)="conversations.importBackup($event)"
   />
   <main
     class="main-workspace ui-density-compact"

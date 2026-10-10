@@ -60,6 +60,7 @@ import { ProductTourButton } from '../../shared/ui/product-tour-button';
 import { ProductTour } from '../../shared/ui/product-tour';
 import { chatTour } from './chat-tour';
 
+import { ChatConversations } from './chat-conversations';
 @Component({
   selector: 'nx-chat-workspace',
   styleUrls: ['./chat-workspace.scss', './chat-start.scss', './chat-composer.scss'],
@@ -101,6 +102,7 @@ import { chatTour } from './chat-tour';
 })
 export class ChatWorkspace {
   readonly store = inject(ChatStore);
+  readonly conversations = inject(ChatConversations);
   readonly starting = computed(
     () => !this.store.visibleMessages().length && !this.store.loadingConversation(),
   );
@@ -168,10 +170,12 @@ export class ChatWorkspace {
   readonly finder = viewChild(ConversationFind);
   readonly importInput = viewChild<ElementRef<HTMLInputElement>>('importInput');
   readonly saveSettings = (conversation: ConversationDto, settings: ConversationSettingsRequest) =>
-    this.store.organize(conversation, settings);
+    this.conversations.organize(conversation, settings);
   readonly renameCurrent = (title: string) => {
     const conversation = this.store.selected();
-    return conversation ? this.store.rename(conversation.id, title) : Promise.resolve(false);
+    return conversation
+      ? this.conversations.rename(conversation.id, title)
+      : Promise.resolve(false);
   };
   readonly statusText = computed(() =>
     this.store.stopping()
@@ -438,8 +442,8 @@ export class ChatWorkspace {
     this.modalBusy.set(true);
     const success =
       this.modal() === 'rename'
-        ? await this.store.rename(target.id, this.renameModel().title)
-        : await this.store.remove(target.id);
+        ? await this.conversations.rename(target.id, this.renameModel().title)
+        : await this.conversations.remove(target.id);
     this.modalBusy.set(false);
     if (success) this.closeDialog();
   }
@@ -486,19 +490,19 @@ export class ChatWorkspace {
         this.exportConversation();
         break;
       case 'backup':
-        void this.store.exportBackup();
+        void this.conversations.exportBackup();
         break;
       case 'settings':
         this.settings()?.open(conversation);
         break;
       case 'duplicate':
-        void this.store.duplicate();
+        void this.conversations.duplicate();
         break;
       case 'favorite':
-        void this.store.organize(conversation, { isFavorite: !conversation.isFavorite });
+        void this.conversations.organize(conversation, { isFavorite: !conversation.isFavorite });
         break;
       case 'archive':
-        void this.store.organize(conversation, { isArchived: !conversation.isArchived });
+        void this.conversations.organize(conversation, { isArchived: !conversation.isArchived });
         break;
       case 'find':
         this.findOpen.set(true);
@@ -552,7 +556,7 @@ export class ChatWorkspace {
   }
   importChanged(event: Event) {
     const input = event.target as HTMLInputElement;
-    if (input.files?.[0]) void this.store.importBackup(input.files[0]);
+    if (input.files?.[0]) void this.conversations.importBackup(input.files[0]);
     input.value = '';
   }
 }

@@ -1,3 +1,5 @@
+import { map } from 'rxjs';
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
@@ -13,9 +15,10 @@ import {
   inject,
   signal,
   viewChild,
+  linkedSignal,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { NexusApi } from '../../core/api/nexus-api';
@@ -86,16 +89,70 @@ export class QualityPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly scope = inject(ViewScope);
-  readonly sets = signal<EvaluationSetDto[]>([]);
+  private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id'))), {
+    initialValue: null,
+  });
+  private readonly setsRead = apiResource({ feature: 'quality', loader: () => this.api.sets() });
+  private readonly feedbackRead = apiResource({
+    feature: 'quality',
+    loader: () => this.api.feedbackList(),
+  });
+  private readonly currentRead = apiResource({
+    feature: 'quality',
+    params: () => this.id() || undefined,
+    loader: (id) => this.api.get(id),
+  });
+  private readonly runsRead = apiResource({
+    feature: 'quality',
+    params: () => this.id() || undefined,
+    loader: async (id) => ({ id, rows: await this.api.runs(id) }),
+  });
+  readonly sets = computed<EvaluationSetDto[]>(() => this.setsRead.value() ?? []);
   readonly confirm = viewChild.required(ConfirmDialog);
-  readonly current = signal<EvaluationSetDto | null>(null);
-  readonly runs = signal<EvaluationRunDto[]>([]);
-  readonly detail = signal<EvaluationDetailDto | null>(null);
-  readonly feedback = signal<FeedbackDto[]>([]);
+  readonly current = computed<EvaluationSetDto | null>(() => {
+    const value = this.currentRead.value();
+    return value && value.resource.id === this.id() ? value : null;
+  });
+  readonly runs = computed<EvaluationRunDto[]>(() => {
+    const value = this.runsRead.value();
+    return value && value.id === this.id() ? value.rows : [];
+  });
+  /** The run on screen: the linked one, then the newest, until the user picks another. */
+  private readonly runId = linkedSignal<{ id: string | null; runs: EvaluationRunDto[] }, string>({
+    source: () => ({ id: this.id(), runs: this.runs() }),
+    computation: (source, previous) =>
+      (previous?.value && previous.source.id === source.id ? previous.value : null) ??
+      (previous ? null : this.route.snapshot.queryParamMap.get('run')) ??
+      source.runs[0]?.id ??
+      '',
+  });
+  /** A queued or running evaluation is read again every 2 seconds. */
+  private readonly detailRead = apiResource({
+    feature: 'quality',
+    params: () => this.runId() || undefined,
+    loader: (id) => this.api.detail(id),
+    poll: (detail) => (['queued', 'running'].includes(detail?.run.job.status ?? '') ? 2000 : null),
+  });
+  readonly detail = computed<EvaluationDetailDto | null>(() => {
+    const value = this.detailRead.value();
+    return value && value.run.id === this.runId() ? value : null;
+  });
+  readonly feedback = computed<FeedbackDto[]>(() => this.feedbackRead.value() ?? []);
   readonly tab = signal('sets');
-  readonly loading = signal(true);
+  readonly loading = computed(
+    () => this.setsRead.loading() || this.feedbackRead.loading() || this.currentRead.loading(),
+  );
   readonly busy = signal(false);
-  readonly error = signal('');
+  readonly actionError = signal('');
+  readonly error = computed(
+    () =>
+      this.actionError() ||
+      this.setsRead.error() ||
+      this.feedbackRead.error() ||
+      this.currentRead.error() ||
+      this.runsRead.error() ||
+      this.detailRead.error(),
+  );
   readonly notice = signal('');
   readonly filter = signal('');
   readonly visible = computed(() =>
@@ -131,59 +188,18 @@ export class QualityPage {
     return this.editingId !== null;
   }
   private revision = 0;
-  private runSequence = 0;
   private reviewTarget = { c: 0, v: 0, run: '' };
   constructor() {
-    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((p) => void this.load(p.get('id')));
+    this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(() => {
+      ++this.revision;
+      this.busy.set(false);
+      this.actionError.set('');
+    });
   }
   private guard() {
     const generation = this.revision,
       alive = this.scope.guard();
     return () => alive() && generation === this.revision;
-  }
-  async load(id: string | null) {
-    ++this.revision;
-    ++this.runSequence;
-    this.busy.set(false);
-    this.loading.set(true);
-    this.current.set(null);
-    this.detail.set(null);
-    this.error.set('');
-    const valid = this.guard();
-    try {
-      await this.session.load();
-      if (!valid() || !this.session.me()) return;
-      if (!this.session.has('quality')) throw new ClientValidationError('featureAccess');
-      const [sets, feedback] = await Promise.all([this.api.sets(), this.api.feedbackList()]);
-      if (!valid()) return;
-      this.sets.set(sets);
-      this.feedback.set(feedback);
-      if (id) {
-        const current = await this.api.get(id);
-        if (!valid()) return;
-        this.current.set(current);
-        await this.refreshRuns();
-      }
-    } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
-    } finally {
-      if (valid()) this.loading.set(false);
-    }
-  }
-  async refreshRuns() {
-    const id = this.current()?.resource.id,
-      valid = this.guard();
-    if (!id) return;
-    try {
-      const runs = await this.api.runs(id);
-      if (!valid()) return;
-      this.runs.set(runs);
-      const selected =
-        this.detail()?.run.id ?? this.route.snapshot.queryParamMap.get('run') ?? runs[0]?.id;
-      if (selected) await this.selectRun(selected);
-    } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
-    }
   }
   async removeSet() {
     const current = this.current(),
@@ -201,38 +217,19 @@ export class QualityPage {
     )
       return;
     this.busy.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
       await this.api.remove(current.resource.id);
       if (valid()) await this.router.navigate(['/quality']);
     } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
+      if (valid()) this.actionError.set(this.scope.message(e));
     } finally {
       if (valid()) this.busy.set(false);
     }
   }
-  async selectRun(id: string) {
-    const sequence = ++this.runSequence,
-      alive = this.guard();
-    const valid = () => alive() && sequence === this.runSequence;
-    try {
-      const detail = await this.api.detail(id);
-      if (!valid()) return;
-      this.detail.set(detail);
-      if (['queued', 'running'].includes(detail.run.job.status))
-        this.scope.later(
-          () => {
-            if (valid()) void this.selectRun(id);
-          },
-          2000,
-          'evaluation-poll',
-        );
-    } catch (e) {
-      if (valid()) {
-        this.detail.set(null);
-        this.error.set(this.scope.message(e));
-      }
-    }
+  selectRun(id: string) {
+    if (id === this.runId()) this.detailRead.reload();
+    else this.runId.set(id);
   }
   openSet(value: EvaluationSetDto | null = null) {
     if (this.busy()) return;
@@ -241,7 +238,7 @@ export class QualityPage {
     this.name.set(value?.resource.name ?? '');
     this.description.set(value?.description ?? '');
     this.cases.set(value ? structuredClone(value.cases) : [blankCase()]);
-    this.error.set('');
+    this.actionError.set('');
     this.dialog().nativeElement.showModal();
   }
   updateCase(
@@ -328,14 +325,14 @@ export class QualityPage {
       this.description.set(data.description);
       this.cases.set(data.cases);
     } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
+      if (valid()) this.actionError.set(this.scope.message(e));
     }
   }
   async openRun() {
     if (this.busy()) return;
     const valid = this.guard();
     this.busy.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
       const catalog = await this.nexus.models();
       if (!valid()) return;
@@ -358,7 +355,7 @@ export class QualityPage {
       this.form.set('run');
       this.dialog().nativeElement.showModal();
     } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
+      if (valid()) this.actionError.set(this.scope.message(e));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -390,7 +387,7 @@ export class QualityPage {
     const valid = this.guard(),
       current = this.current();
     this.busy.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
       if (this.form() === 'set') {
         const value = await this.api.save(
@@ -402,16 +399,19 @@ export class QualityPage {
         );
         if (!valid()) return;
         this.dialog().nativeElement.close();
-        this.current.set(value);
-        this.sets.update((x) => [value, ...x.filter((y) => y.resource.id !== value.resource.id)]);
+        this.currentRead.value.set(value);
+        this.setsRead.value.update((x) => [
+          value,
+          ...(x ?? []).filter((y) => y.resource.id !== value.resource.id),
+        ]);
         await this.router.navigate(['/quality', value.resource.id]);
         this.notice.set('題庫已儲存。');
       } else if (this.form() === 'run' && current) {
         const run = await this.api.run(current.resource.id, this.variants());
         if (!valid()) return;
         this.dialog().nativeElement.close();
-        this.runs.update((x) => [run, ...x]);
-        await this.selectRun(run.id);
+        this.runsRead.value.update((x) => x && { ...x, rows: [run, ...x.rows] });
+        this.selectRun(run.id);
       } else if (this.form() === 'review') {
         const target = this.reviewTarget;
         await this.api.review(
@@ -423,11 +423,11 @@ export class QualityPage {
         );
         if (!valid()) return;
         this.dialog().nativeElement.close();
-        await this.selectRun(target.run);
+        this.selectRun(target.run);
         this.notice.set('人工評分已儲存。');
       }
     } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
+      if (valid()) this.actionError.set(this.scope.message(e));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -451,9 +451,9 @@ export class QualityPage {
     this.busy.set(true);
     try {
       await (retry ? this.jobs.retry(detail.run.job.id) : this.jobs.cancel(detail.run.job.id));
-      if (valid()) await this.selectRun(detail.run.id);
+      if (valid()) this.selectRun(detail.run.id);
     } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
+      if (valid()) this.actionError.set(this.scope.message(e));
     } finally {
       if (valid()) this.busy.set(false);
     }

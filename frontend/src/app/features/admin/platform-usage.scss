@@ -1,0 +1,21 @@
+:host {
+  display: block;
+}
+:host > .form-note {
+  margin-bottom: var(--p-space-3);
+}
+.admin-usage-section {
+  margin-top: var(--section-gap);
+}
+.admin-usage-section h2 {
+  font-size: var(--text-heading);
+}
+.admin-service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+}
+.admin-service-card p {
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
