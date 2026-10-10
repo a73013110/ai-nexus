@@ -40,10 +40,10 @@ export default defineConfig({
     reuseExistingServer: false,
     env: {
       ConnectionStrings__Nexus: "",
-      Storage__ApplyMigrationsOnStartup: "false",
+      Database__ApplyMigrationsOnStartup: "false",
       Database__User: "",
       Database__Password: "",
-      AdAuthentication__Mode: "Windows",
+      Identity__ActiveDirectory__Mode: "Windows",
     },
   },
 });

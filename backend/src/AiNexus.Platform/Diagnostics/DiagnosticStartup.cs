@@ -9,9 +9,7 @@ public static class DiagnosticStartup
     public static async Task RecordAsync(Exception exception, IConfiguration configuration, IHostEnvironment environment)
     {
         var issue = Issues.NewCode(); using var health = new DiagnosticHealth();
-        DiagnosticOptions options;
-        try { options = configuration.GetSection("Diagnostics").Get<DiagnosticOptions>() ?? new(); if (!options.Valid()) options = new(); }
-        catch (Exception) { options = new(); }
+        var options = DiagnosticOptions.Read(configuration);
         try { _ = DiagnosticJournal.Resolve(options.Directory, environment); } catch (Exception) { options.Directory = ""; }
         try
         {

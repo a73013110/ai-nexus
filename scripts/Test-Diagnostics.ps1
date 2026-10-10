@@ -7,7 +7,6 @@ $taskBrowserPrevious = $env:AINEXUS_TEST_BROWSER
 $taskWebRootPrevious = $env:NEXUS_DIAGNOSTIC_WEBROOT
 Push-Location -LiteralPath $taskRoot
 try {
-    & (Join-Path $PSScriptRoot 'Test-Settings.ps1')
     if ($Browser -and !$SkipBuild) { & (Join-Path $PSScriptRoot 'Build.ps1') -OutputDirectory 'artifacts/verification' }
     dotnet test --project backend/tests/AiNexus.Tests/AiNexus.Tests.csproj --no-restore -c $Configuration --filter 'FullyQualifiedName~DiagnosticTests|FullyQualifiedName~DiagnosticFailureTests' --report-xunit-trx --report-xunit-trx-filename diagnostics.trx --results-directory artifacts/test-results
     if ($LASTEXITCODE -ne 0) { throw 'Diagnostics tests failed.' }

@@ -15,13 +15,13 @@ public sealed partial class QueryVectorCache(EmbeddingService embeddings, IOptio
     {
         var normalized = Whitespace().Replace(query.Normalize(NormalizationForm.FormKC).Trim(), " ");
         var digest = SHA256.HashData(Encoding.UTF8.GetBytes(normalized)); var key = (profile.Key, Convert.ToHexString(digest));
-        if (options.Value.QueryCacheMinutes == 0) return (await embeddings.EmbedBatchAsync(actor, profile, [normalized], EmbeddingPurpose.Query, ct))[0];
+        if (options.Value.Retrieval.QueryCacheMinutes == 0) return (await embeddings.EmbedBatchAsync(actor, profile, [normalized], EmbeddingPurpose.Query, ct))[0];
         var gate = gates[digest[0] % gates.Length]; await gate.WaitAsync(ct);
         try
         {
             if (cache.TryGetValue<float[]>(key, out var vector)) return vector!;
             vector = (await embeddings.EmbedBatchAsync(actor, profile, [normalized], EmbeddingPurpose.Query, ct))[0];
-            cache.Set(key, vector, new MemoryCacheEntryOptions { Size = 1, AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(options.Value.QueryCacheMinutes) });
+            cache.Set(key, vector, new MemoryCacheEntryOptions { Size = 1, AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(options.Value.Retrieval.QueryCacheMinutes) });
             return vector;
         }
         finally { gate.Release(); }

@@ -1,8 +1,44 @@
-. (Join-Path $PSScriptRoot 'Settings-Schema.ps1')
-
+# Shared by setup, publishing and repository checks; never writes setting values to stdout.
 function Get-NexusLocalPaths {
     $taskWorkspace = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
     return @{ Root = $taskWorkspace; Settings = Join-Path $taskWorkspace '.local/config/appsettings.Local.json'; Secrets = Join-Path $taskWorkspace '.local/secrets/appsettings.Secrets.json' }
+}
+
+function Set-NexusSetting([System.Collections.IDictionary]$Value, [string]$Path, $Setting) {
+    $taskKeys = $Path.Split('.')
+    $taskNode = $Value
+    for ($taskIndex = 0; $taskIndex -lt $taskKeys.Length - 1; $taskIndex++) {
+        $taskKey = $taskKeys[$taskIndex]
+        if ($taskNode[$taskKey] -isnot [System.Collections.IDictionary]) { $taskNode[$taskKey] = [ordered]@{} }
+        $taskNode = $taskNode[$taskKey]
+    }
+    $taskNode[$taskKeys[-1]] = $Setting
+}
+
+# Writes through a temporary file that inherits the target's ACL, so a secrets file is never briefly readable by others.
+function Save-NexusJson([string]$Path, [System.Collections.IDictionary]$Value) {
+    $taskText = ($Value | ConvertTo-Json -Depth 40) + "`n"
+    $taskAbsolute = [IO.Path]::GetFullPath($Path)
+    $taskTemporary = $taskAbsolute + '.' + [Guid]::NewGuid().ToString('N') + '.tmp'
+    try {
+        [IO.File]::WriteAllText($taskTemporary, '')
+        if (Test-Path -LiteralPath $taskAbsolute) { Set-Acl -LiteralPath $taskTemporary -AclObject (Get-Acl -LiteralPath $taskAbsolute) }
+        [IO.File]::WriteAllText($taskTemporary, $taskText, [Text.UTF8Encoding]::new($false))
+        if (Test-Path -LiteralPath $taskAbsolute) { [IO.File]::Replace($taskTemporary, $taskAbsolute, [NullString]::Value) }
+        else { [IO.File]::Move($taskTemporary, $taskAbsolute) }
+    } finally {
+        if (Test-Path -LiteralPath $taskTemporary) { Remove-Item -LiteralPath $taskTemporary }
+        $taskText = $null
+    }
+}
+
+# Non-empty credential values (passwords, keys, connection strings; with -IncludeUser also SQL logins).
+function Get-NexusSecretValues([System.Collections.IDictionary]$Value, [switch]$IncludeUser, [string]$Path = '') {
+    foreach ($taskKey in $Value.Keys) {
+        $taskNext = if ($Path) { "$Path.$taskKey" } else { $taskKey }
+        if ($Value[$taskKey] -is [System.Collections.IDictionary]) { Get-NexusSecretValues $Value[$taskKey] -IncludeUser:$IncludeUser -Path $taskNext }
+        elseif ($Value[$taskKey] -is [string] -and $Value[$taskKey].Length -gt 0 -and ($taskKey -match '^(Password|DnPass|ApiKey)$' -or $Path -eq 'ConnectionStrings' -or ($IncludeUser -and $taskKey -eq 'User'))) { $Value[$taskKey] }
+    }
 }
 
 function Protect-NexusSecrets([string]$Path) {
@@ -18,35 +54,12 @@ function Protect-NexusSecrets([string]$Path) {
     [System.IO.FileSystemAclExtensions]::SetAccessControl([System.IO.FileInfo]::new($Path), $taskFileAcl)
 }
 
+# Copies the templates on first use; existing machine files are never rewritten here.
 function Initialize-NexusLocalSettings {
     $taskPaths = Get-NexusLocalPaths
     foreach ($taskDirectory in @((Split-Path $taskPaths.Settings), (Split-Path $taskPaths.Secrets))) { New-Item -ItemType Directory -Path $taskDirectory -Force | Out-Null }
-    $taskLegacy = Join-Path $taskPaths.Root 'backend/src/AiNexus.Host/appsettings.Local.json'
-    if (Test-Path -LiteralPath $taskLegacy) {
-        $taskValues = [System.IO.File]::ReadAllText($taskLegacy) | ConvertFrom-Json -AsHashtable
-        $taskPrivate = @{ Database = @{ User = $taskValues.Database.User; Password = $taskValues.Database.Password }; AdAuthentication = @{ DnPass = $taskValues.AdAuthentication.DnPass }; Inference = @{ GoogleApiKey = $taskValues.Inference.GoogleApiKey } }
-        if ($taskValues.ConnectionStrings) { $taskPrivate.ConnectionStrings = $taskValues.ConnectionStrings }
-        [void]$taskValues.Database.Remove('User'); [void]$taskValues.Database.Remove('Password')
-        [void]$taskValues.AdAuthentication.Remove('DnPass'); [void]$taskValues.Inference.Remove('GoogleApiKey'); [void]$taskValues.Remove('ConnectionStrings')
-        if (!(Test-Path -LiteralPath $taskPaths.Settings)) { Save-NexusJson $taskPaths.Settings $taskValues }
-        $taskMerged = if (Test-Path -LiteralPath $taskPaths.Secrets) { [System.IO.File]::ReadAllText($taskPaths.Secrets) | ConvertFrom-Json -AsHashtable } else { @{} }
-        foreach ($taskSection in $taskPrivate.Keys) {
-            if (!$taskMerged[$taskSection]) { $taskMerged[$taskSection] = @{} }
-            foreach ($taskField in $taskPrivate[$taskSection].Keys) {
-                if ([string]::IsNullOrEmpty([string]$taskMerged[$taskSection][$taskField])) { $taskMerged[$taskSection][$taskField] = $taskPrivate[$taskSection][$taskField] }
-            }
-        }
-        Save-NexusJson $taskPaths.Secrets $taskMerged
-        Protect-NexusSecrets $taskPaths.Secrets
-        $taskBackup = Join-Path (Split-Path $taskPaths.Secrets) ('legacy-settings-' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '.json')
-        Copy-Item -LiteralPath $taskLegacy -Destination $taskBackup
-        Protect-NexusSecrets $taskBackup
-        if ((Test-Path -LiteralPath $taskPaths.Settings) -and (Test-Path -LiteralPath $taskPaths.Secrets)) { Remove-Item -LiteralPath $taskLegacy }
-        Write-Output '舊本機設定已拆分到 .local/config 與 .local/secrets；秘密值未輸出。'
-    }
     foreach ($taskTemplate in @(@{ Path = $taskPaths.Settings; Example = 'appsettings.Local.example.json' }, @{ Path = $taskPaths.Secrets; Example = 'appsettings.Secrets.example.json' })) {
         if (!(Test-Path -LiteralPath $taskTemplate.Path)) { Copy-Item -LiteralPath (Join-Path $taskPaths.Root ('backend/src/AiNexus.Host/' + $taskTemplate.Example)) -Destination $taskTemplate.Path }
     }
     Protect-NexusSecrets $taskPaths.Secrets
-    & (Join-Path $PSScriptRoot 'Migrate-Settings.ps1') -SettingsPath $taskPaths.Settings -SecretsPath $taskPaths.Secrets
 }

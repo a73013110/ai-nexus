@@ -2,9 +2,6 @@ namespace AiNexus.Platform.Configuration;
 
 public static class NexusConfiguration
 {
-    /// <summary>Deployment settings schema version accepted by this release.</summary>
-    public const int Version = 3;
-
     /// <param name="builder">The host whose configuration sources are replaced.</param>
     /// <param name="args">Command-line arguments; they override every other source.</param>
     /// <param name="normalize">Feature-owned derivations from machine settings, applied after all sources are loaded.</param>
@@ -40,7 +37,5 @@ public static class NexusConfiguration
                 ? resolved.KeyRingPath : NexusConfigResolver.Absolute(builder.Environment.ContentRootPath, keyRing);
             normalize?.Invoke(builder.Configuration);
         }
-        var version = builder.Configuration.GetValue("ConfigurationVersion", 1);
-        if (version != Version) throw new InvalidOperationException("Unsupported ConfigurationVersion. Use the templates matching this release.");
     }
 }

@@ -17,15 +17,9 @@ search:
 
 ```json
 {
-  "Tools": {
-    "WebSearch": {
-      "Enabled": true,
-      "Provider": "searxng",
-      "Endpoint": "http://搜尋主機:8080/",
-      "TimeoutSeconds": 10,
-      "MaxResults": 5,
-      "MaxDailyRequests": 100
-    }
+  "WebSearch": {
+    "Enabled": true,
+    "Endpoint": "http://搜尋主機:8080/"
   }
 }
 ```
@@ -37,10 +31,10 @@ search:
 一般設定 `Provider=brave`，秘密檔設定：
 
 ```json
-{ "Tools": { "WebSearch": { "ApiKey": "" } } }
+{ "WebSearch": { "ApiKey": "" } }
 ```
 
-在本機編輯器填入自己的 key，或使用 `Tools__WebSearch__ApiKey` 環境變數。後端固定使用 Brave 的 HTTPS API 與 `X-Subscription-Token`，key 不回傳前端。Endpoint 只適用 SearXNG。Brave 查詢限制 600 個字元／75 個單字，超過時在付費呼叫前拒絕，提示簡化。[Brave API](https://api-dashboard.search.brave.com/api-reference/web/search/post)、[驗證](https://api-dashboard.search.brave.com/documentation/guides/authentication)
+在本機編輯器填入自己的 key，或使用 `WebSearch__ApiKey` 環境變數。後端固定使用 Brave 的 HTTPS API 與 `X-Subscription-Token`，key 不回傳前端。Endpoint 只適用 SearXNG。Brave 查詢限制 600 個字元／75 個單字，超過時在付費呼叫前拒絕，提示簡化。[Brave API](https://api-dashboard.search.brave.com/api-reference/web/search/post)、[驗證](https://api-dashboard.search.brave.com/documentation/guides/authentication)
 
 有搜尋費用時，管理員設定供應商 `brave`／模型 `web-search` 的每次固定費率；自架 SearXNG 可設定內部成本或明確免費。沒有設定價格仍可搜尋，費用標示未知。
 

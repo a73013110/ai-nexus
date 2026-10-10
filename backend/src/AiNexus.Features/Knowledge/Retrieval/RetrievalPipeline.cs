@@ -14,7 +14,7 @@ public sealed class RetrievalPipeline(NexusDbContext db, RetrievalAuthorization 
         IReadOnlyList<RewriteTurn>? history = null, string? mode = null, bool? rerank = null)
     {
         if (string.IsNullOrWhiteSpace(request.Query) || request.Query.Length > 2000) return KnowledgeErrors.QueryInvalid;
-        var settings = options.Value; var requested = mode ?? settings.Mode;
+        var settings = options.Value; var requested = mode ?? settings.Retrieval.Mode;
         if (requested is not ("hybrid" or "keyword" or "vector")) return KnowledgeErrors.RetrievalModeInvalid;
         if (await authorization.CollectionsAsync(actor, request.CollectionIds, ct) is { IsSuccess: false } denied) return denied.Error;
         var profile = await profiles.ActiveAsync(ct); var actual = profile.Provider == "none" ? "keyword" : requested;
@@ -61,6 +61,6 @@ public sealed class RetrievalPipeline(NexusDbContext db, RetrievalAuthorization 
         if (await authorization.CollectionsAsync(actor, request.CollectionIds, ct, fresh: true) is { IsSuccess: false } final) return final.Error;
         if (await authorization.HitsAsync(actor, hits, ct, request.CollectionIds) is { IsSuccess: false } moved) return moved.Error;
         if (!await db.Set<EmbeddingProfile>().AsNoTracking().AnyAsync(x => x.Id == profile.Id && x.Status == "active", ct)) return KnowledgeErrors.ProfileChanged;
-        return new KnowledgeSearchDto(actual, RetrievalRanking.Context(hits, settings), rewriteMs, embedMs, searchMs, rerankMs);
+        return new KnowledgeSearchDto(actual, RetrievalRanking.Context(hits, settings.Retrieval), rewriteMs, embedMs, searchMs, rerankMs);
     }
 }

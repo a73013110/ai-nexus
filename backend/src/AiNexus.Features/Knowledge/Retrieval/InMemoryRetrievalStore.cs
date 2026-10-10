@@ -21,11 +21,11 @@ public sealed partial class InMemoryRetrievalStore(NexusDbContext db, EmbeddingV
         var map = stored.ToDictionary(x => x.ChunkId, x => x.Vector.Memory.ToArray()); var terms = Terms(query);
         foreach (var row in rows) row.VectorScore = vector is not null && map.TryGetValue(row.ChunkId, out var value) ? Dot(vector, value) : null;
         var settings = options.Value;
-        var semantic = vector is null ? [] : rows.Where(x => x.VectorScore != null && (settings.MinVectorScore == 0 || x.VectorScore >= settings.MinVectorScore))
-            .OrderByDescending(x => x.VectorScore).ThenBy(x => x.ChunkId).Take(settings.VectorCandidates).Select(x => x.Hit()).ToArray();
+        var semantic = vector is null ? [] : rows.Where(x => x.VectorScore != null && (settings.Retrieval.MinVectorScore == 0 || x.VectorScore >= settings.Retrieval.MinVectorScore))
+            .OrderByDescending(x => x.VectorScore).ThenBy(x => x.ChunkId).Take(settings.Retrieval.VectorCandidates).Select(x => x.Hit()).ToArray();
         var lexical = mode == "vector" ? [] : rows.Select(x => (Hit: x, Score: Lexical(terms, x.HeadingPath + "\n" + x.Text))).Where(x => x.Score > 0)
-            .OrderByDescending(x => x.Score).ThenBy(x => x.Hit.ChunkId).Take(settings.FtsCandidates).Select(x => x.Hit.Hit()).ToArray();
-        return new(mode, RetrievalRanking.Fuse(semantic, lexical, settings));
+            .OrderByDescending(x => x.Score).ThenBy(x => x.Hit.ChunkId).Take(settings.Retrieval.FtsCandidates).Select(x => x.Hit.Hit()).ToArray();
+        return new(mode, RetrievalRanking.Fuse(semantic, lexical, settings.Retrieval));
     }
     public static double Dot(float[] query, float[] stored)
     {

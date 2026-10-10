@@ -29,7 +29,7 @@ internal sealed class SaveKnowledgeCollection(NexusDbContext db, ResourceAccess 
         var name = ResourceAccess.Name(request.Name);
         if (!name.IsSuccess) return name.Error;
         if (request.Description.Length > KnowledgeCollection.DescriptionMaxLength) return KnowledgeErrors.DescriptionTooLong;
-        if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == KnowledgeCollection.Kind, ct) >= options.Value.MaxCollections)
+        if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == KnowledgeCollection.Kind, ct) >= options.Value.Indexing.MaxCollections)
             return KnowledgeErrors.CollectionLimit;
         var now = clock.GetUtcNow();
         var resource = new WorkspaceResource { OwnerId = actor, Kind = KnowledgeCollection.Kind, Name = name.Value, CreatedAt = now, UpdatedAt = now };

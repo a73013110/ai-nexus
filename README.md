@@ -72,7 +72,7 @@ dotnet dev-certs https --trust
 
 | 文件                                       | 內容                                                           |
 | ------------------------------------------ | -------------------------------------------------------------- |
-| [參數](docs/CONFIGURATION.md)              | SQL／AD／Google、設定順序、鎖定／隱藏及模型能力                |
+| [參數](docs/CONFIGURATION.md)              | 設定檔與載入順序、區段對應模組、啟動驗證、秘密                 |
 | [開發](docs/DEVELOPMENT.md)                | 啟動、build／驗證、契約、migration、版控                       |
 | [功能](docs/FEATURES.md)                   | 工作區、聊天操作、快捷鍵及保存                                 |
 | [附件](docs/ATTACHMENTS.md)                | 格式、OCR、配額及檔案生命週期                                  |

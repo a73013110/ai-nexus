@@ -13,21 +13,33 @@ using W = DocumentFormat.OpenXml.Wordprocessing;
 using MarkdownTable = Markdig.Extensions.Tables.Table;
 using MarkdownRow = Markdig.Extensions.Tables.TableRow;
 using MarkdownCell = Markdig.Extensions.Tables.TableCell;
+using System.ComponentModel.DataAnnotations;
 
 namespace AiNexus.Features.Artifacts;
 
-public sealed class ExportOptions
+public sealed class ExportOptions : IValidatableObject
 {
+    public const string Section = "Artifacts:Export";
+
     /// <summary>Installed browser channel (<c>msedge</c>, <c>chrome</c>) or <c>chromium</c> for the Playwright-managed build.</summary>
-    public string BrowserChannel { get; set; } = "msedge";
+    [AllowedValues("msedge", "chrome", "chromium")] public string BrowserChannel { get; set; } = "msedge";
     /// <summary>Absolute path to a Chromium-based browser executable; when set it replaces <see cref="BrowserChannel"/>.</summary>
     public string? BrowserExecutablePath { get; set; }
-    public int TimeoutSeconds { get; set; } = 30;
+    [Range(5, 120)] public int TimeoutSeconds { get; set; } = 30;
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (!string.IsNullOrWhiteSpace(BrowserExecutablePath) && !Path.IsPathFullyQualified(BrowserExecutablePath))
+            yield return new($"{nameof(BrowserExecutablePath)} must be an absolute path.", [nameof(BrowserExecutablePath)]);
+    }
 
     internal BrowserTypeLaunchOptions LaunchOptions() => string.IsNullOrWhiteSpace(BrowserExecutablePath)
         ? new() { Channel = BrowserChannel == "chromium" ? null : BrowserChannel, Headless = true, Timeout = TimeoutSeconds * 1000 }
         : new() { ExecutablePath = BrowserExecutablePath, Headless = true, Timeout = TimeoutSeconds * 1000 };
 }
+[OptionsValidator]
+public sealed partial class ExportOptionsValidator : IValidateOptions<ExportOptions>;
+
 public sealed record ExportFile(byte[] Data, string ContentType);
 public sealed class ArtifactExport(PdfExportRenderer pdf)
 {

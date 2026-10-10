@@ -2,7 +2,7 @@
 # Checks staged files before a commit. Never prints a credential or file contents.
 param([switch]$WorkingTree)
 $ErrorActionPreference = 'Stop'
-. (Join-Path $PSScriptRoot 'Settings-Schema.ps1')
+. (Join-Path $PSScriptRoot 'Local-Settings.ps1')
 $taskRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Push-Location -LiteralPath $taskRoot
 try {

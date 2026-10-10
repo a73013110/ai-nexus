@@ -52,7 +52,7 @@ public sealed class DocumentIndexer(NexusDbContext db, EmbeddingProfiles profile
                 {
                     var copy = chunks.Where(x => cached[profile.Id].ContainsKey(Convert.ToHexString(x.ContentHash)))
                         .Select(x => new EmbeddingWrite(x.Id, x.ContentHash, cached[profile.Id][Convert.ToHexString(x.ContentHash)]));
-                    foreach (var batch in copy.Chunk(options.Value.BatchSize)) await vectors.WriteBatchAsync(profile, batch, ct);
+                    foreach (var batch in copy.Chunk(options.Value.Embedding.BatchSize)) await vectors.WriteBatchAsync(profile, batch, ct);
                 }
             });
         }
@@ -73,7 +73,7 @@ public sealed class DocumentIndexer(NexusDbContext db, EmbeddingProfiles profile
         var version = document.TextVersion;
         var all = await db.Set<KnowledgeChunk>().AsNoTracking().Where(x => x.DocumentId == document.Id).OrderBy(x => x.Ordinal).ToListAsync(ct);
         var complete = (await vectors.ExistingAsync(profile, document.Id, ct)).ToHashSet(); var completed = complete.Count;
-        foreach (var batch in all.Where(x => !complete.Contains(x.Id)).Chunk(options.Value.BatchSize))
+        foreach (var batch in all.Where(x => !complete.Contains(x.Id)).Chunk(options.Value.Embedding.BatchSize))
         {
             if (await RequireUnchangedAsync(actor, document, profile, version, ct) is { IsSuccess: false } changed) return changed;
             var cache = await vectors.CachedAsync(profile, batch.Select(x => x.ContentHash).ToArray(), ct);

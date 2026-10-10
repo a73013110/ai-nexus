@@ -47,7 +47,7 @@ public sealed class RetrievalEvaluationService(NexusDbContext db, RetrievalAutho
     {
         var documents = await (from d in db.Set<KnowledgeDocument>().AsNoTracking() join r in db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).AsNoTracking() on d.Id equals r.Id
             where !d.IsDeleted && d.CollectionId != null && collections.Contains(d.CollectionId.Value) orderby d.Id select new { d.Id, d.TextVersion, r.UpdatedAt, d.Status }).ToArrayAsync(ct);
-        var bytes = JsonSerializer.SerializeToUtf8Bytes(new { profile.Key, Settings = options.Value, Ollama = inference.Value.BaseUrl, Documents = documents }, Json);
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(new { profile.Key, Settings = options.Value, Ollama = inference.Value.Providers.Ollama.Endpoint, Documents = documents }, Json);
         return Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
     }
     internal static T[] Parse<T>(string json) => JsonSerializer.Deserialize<T[]>(json, Json)!;

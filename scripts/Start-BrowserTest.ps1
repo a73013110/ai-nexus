@@ -16,15 +16,15 @@ $taskConfig = Join-Path $taskArtifacts 'browser-server-config'
 New-Item -ItemType Directory -Path $taskConfig -Force | Out-Null
 $taskSettings = Join-Path $taskConfig 'appsettings.Local.json'
 $taskSecrets = Join-Path $taskConfig 'appsettings.Secrets.json'
-[IO.File]::WriteAllText($taskSettings, '{"ConfigurationVersion":3}')
+[IO.File]::WriteAllText($taskSettings, '{}')
 [IO.File]::WriteAllText($taskSecrets, '{}')
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
 $env:ConnectionStrings__Nexus = ''
 $env:Database__User = ''
 $env:Database__Password = ''
 $env:Database__Server = '127.0.0.1,1'
-$env:Storage__ApplyMigrationsOnStartup = 'false'
-$env:AdAuthentication__Mode = 'Windows'
+$env:Database__ApplyMigrationsOnStartup = 'false'
+$env:Identity__ActiveDirectory__Mode = 'Windows'
 $env:DataProtection__KeyRingPath = Join-Path $taskArtifacts 'browser-server-keys'
 $env:Attachments__StoragePath = Join-Path $taskArtifacts 'browser-server-attachments'
 $env:Diagnostics__Directory = Join-Path $taskArtifacts 'browser-server-diagnostics'

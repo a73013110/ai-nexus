@@ -168,7 +168,7 @@ if (-not [Diagnostics.EventLog]::SourceExists('AiNexus.Diagnostics')) {
 
 ## 設定與容量
 
-`Diagnostics` 是一般設定區塊，由 `scripts/settings-layout.json` 統一欄位順序；載入優先順序與外部 Production 規則仍見 [CONFIGURATION](CONFIGURATION.md)。Production 不讀 repository `.local`；修改需重啟 host。runtime 在啟動驗證型別、範圍、endpoint 與站外目錄；錯誤停止啟動並嘗試保存 Critical。最低等級以 Diagnostics 為準，不由舊 `Logging.LogLevel` 偷偷覆蓋重要事件政策。
+`Diagnostics` 是一般設定區塊，範圍規則在 [`DiagnosticOptions`](../backend/src/AiNexus.Platform/Diagnostics/DiagnosticOptions.cs)；載入優先順序與外部 Production 規則見 [CONFIGURATION](CONFIGURATION.md)。Production 不讀 repository `.local`；修改需重啟 host。runtime 在啟動驗證型別、範圍、endpoint 與站外目錄；錯誤停止啟動並嘗試保存 Critical。最低等級以 Diagnostics 為準，不由舊 `Logging.LogLevel` 偷偷覆蓋重要事件政策。
 
 | 設定                                                   | 預設                         | 用途／限制                                                     |
 | ------------------------------------------------------ | ---------------------------- | -------------------------------------------------------------- |

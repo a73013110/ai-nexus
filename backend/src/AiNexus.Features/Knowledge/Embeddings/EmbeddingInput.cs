@@ -7,12 +7,12 @@ namespace AiNexus.Features.Knowledge.Embeddings;
 public static class EmbeddingInput
 {
     public static string Format(KnowledgeOptions options, string text, bool document) =>
-        !document && options.InputFormat == "qwen-query" ? $"Instruct: {options.QueryInstruction}\nQuery: {text}" : text;
+        !document && options.Embedding.InputFormat == "qwen-query" ? $"Instruct: {options.Embedding.QueryInstruction}\nQuery: {text}" : text;
     public static string Profile(KnowledgeOptions options)
     {
-        var basis = options.EmbeddingProvider + ":" + options.EmbeddingModel + ":" + options.Dimensions;
-        var rules = FormattableString.Invariant($"{StructuredChunker.Version}:{options.ChunkTargetTokens}:{options.ChunkMaxTokens}:{options.ChunkMinTokens}:{options.ChunkOverlapRatio}");
-        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(options.InputFormat + "\n" + options.QueryInstruction + "\n" + options.Revision + "\n" + rules)))[..16];
+        var basis = options.Embedding.Provider + ":" + options.Embedding.Model + ":" + options.Embedding.Dimensions;
+        var rules = FormattableString.Invariant($"{StructuredChunker.Version}:{options.Indexing.ChunkTargetTokens}:{options.Indexing.ChunkMaxTokens}:{options.Indexing.ChunkMinTokens}:{options.Indexing.ChunkOverlapRatio}");
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(options.Embedding.InputFormat + "\n" + options.Embedding.QueryInstruction + "\n" + options.Embedding.Revision + "\n" + rules)))[..16];
         return basis + ":" + hash;
     }
     public static string Document(string title, string heading, string text) => $"{title}{(heading.Length == 0 ? "" : " › " + heading)}\n{text}";
