@@ -16,7 +16,7 @@
 | `logs/` | 開發模式前後端的輸出與錯誤 | `Start-Dev.ps1` |
 | `notes/` | 個人的排查紀錄、進度與臨時計畫 | 手動 |
 
-設定的載入順序與欄位見 [參數](../CONFIGURATION.md)。
+設定的載入順序與欄位見 [參數](CONFIGURATION.md)。
 
 ## `artifacts/`：建置與測試輸出
 

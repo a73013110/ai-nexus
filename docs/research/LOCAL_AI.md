@@ -4,7 +4,7 @@
 
 ## 啟用與探測
 
-先套用 [資料庫升級](DATABASE.md)，重啟 API，再重新上傳資料。管理 → 知識檢索顯示 SQL 原生向量、全文元件、1028 斷詞器及端點，按「探測模型」使用合成資料檢查實際 batch 數量／維度／rerank 格式；會計入操作人的模型呼叫配額。
+先套用 [資料庫升級](../architecture/DATABASE.md)，重啟 API，再重新上傳資料。管理 → 知識檢索顯示 SQL 原生向量、全文元件、1028 斷詞器及端點，按「探測模型」使用合成資料檢查實際 batch 數量／維度／rerank 格式；會計入操作人的模型呼叫配額。
 
 ```powershell
 ./tooling/embeddings/Test-LocalAI.ps1 -Endpoint 'http://localhost:11434/' `
@@ -29,4 +29,4 @@ Ollama 主機與 IIS 分開時，Inference.Providers.Ollama.Endpoint 改成可�
 
 模型／維度／Revision／切段改變後建立 building，管理員重建、100% 覆蓋後切換；AutoActivate 預設 false，退役向量預設保留 7 日。保留原始頁面重建不重做 OCR；資料編輯以完整輸入 hash 重用向量。管理動作有稽核，查詢只讀 active profile。
 
-品質 → 檢索評測用固定的真實驗收集比較四種模式與頁碼相關性，報告不含來源或問題原文。資料品質、授權、Recall／nDCG 與 p95 優先驗證；目前 SQL Server 2025 使用精確 cosine，ANN preview 尚未啟用。公文／校務來源仍需先通過來源 ACL 後匯入 collection，共用同一管線。[架構](VECTOR_ARCHITECTURE.md)、[品質評測](QUALITY.md)
+品質 → 檢索評測用固定的真實驗收集比較四種模式與頁碼相關性，報告不含來源或問題原文。資料品質、授權、Recall／nDCG 與 p95 優先驗證；目前 SQL Server 2025 使用精確 cosine，ANN preview 尚未啟用。公文／校務來源仍需先通過來源 ACL 後匯入 collection，共用同一管線。[架構](VECTOR_ARCHITECTURE.md)、[品質評測](../features/QUALITY.md)

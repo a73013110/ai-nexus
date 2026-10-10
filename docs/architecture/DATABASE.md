@@ -27,7 +27,7 @@
 
 - 能界定長度的字串一律 `HasMaxLength`，上限最好與 validator 共用常數（例如 `PromptTemplate.ContentMaxLength`）；超過 4000 字元的上限在 SQL Server 會是 `nvarchar(max)`，但上限仍由程式檢查。
 - 時間用 `DateTimeOffset`（UTC）；金額 `decimal(20,8)`，未知費用保持 null。
-- 原始附件不進資料庫，只保存站外儲存識別與 metadata（見 [附件](ATTACHMENTS.md)）。
+- 原始附件不進資料庫，只保存站外儲存識別與 metadata（見 [附件](../features/ATTACHMENTS.md)）。
 - 只有 `Conversation`、`WorkspaceResource` 套用具名 query filter `SoftDelete`；其他刪除是實體刪除。
 
 ## 授權關聯
@@ -63,7 +63,7 @@ erDiagram
 - `EvaluationResults` 以 `RunId`＋`CaseIndex`＋`VariantIndex` 為主鍵，重試時跳過已完成的結果。
 - `AuditEvents` 以 `At` 及 `Action`／`ResourceId`／`ActorId`＋`Id` 索引支援日期篩選與遞減游標；`DiagnosticEvents` 以 `At`＋`LogId` 為叢集索引，`LogId` 唯一，補送時去重。
 - 重要業務外鍵採 `Restrict`，刪使用者或專案不會連鎖刪除歷史；純附屬資料才 `Cascade`。
-- `knowledge.Chunks` 有 `KnowledgeSearch` 全文索引（繁中 1028 斷詞）。`CREATE FULLTEXT` 不能在交易內執行，所以由 `InitialCreate` 末尾的 raw SQL 建立；缺少全文元件或斷詞器時跳過並警示，執行期改用 vector 模式並明確回報。向量表與擴充方式見 [VECTOR_ARCHITECTURE](VECTOR_ARCHITECTURE.md)。
+- `knowledge.Chunks` 有 `KnowledgeSearch` 全文索引（繁中 1028 斷詞）。`CREATE FULLTEXT` 不能在交易內執行，所以由 `InitialCreate` 末尾的 raw SQL 建立；缺少全文元件或斷詞器時跳過並警示，執行期改用 vector 模式並明確回報。向量表與擴充方式見 [VECTOR_ARCHITECTURE](../research/VECTOR_ARCHITECTURE.md)。
 
 ## Migration
 
@@ -84,7 +84,7 @@ dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Fea
 
 - 只在 `AiNexus` 不存在時建庫，然後套用未完成的 migration；不會 DROP、清空資料或修改 history。DBA 也可以先建空的 `AiNexus`，再審閱執行發布套件的 `migrations.sql`（idempotent，依 `__EFMigrationsHistory` 只執行未套用的部分），其中沒有 CREATE LOGIN／DATABASE 或秘密。
 - **2026-10-09 以前建立的資料庫無法升級**（舊 migration 已刪除），必須刪除後重新初始化；初始化遇到舊表會直接失敗。
-- 正式環境的 DDL 用獨立部署帳號。runtime 登入需要上表所有業務 schema 的 SELECT／INSERT／UPDATE／DELETE 與 `dbo.__EFMigrationsHistory` 的 SELECT，不給建庫、ALTER 或 `db_owner`。目前管理與一般端點共用同一條連線，沒有管理專用的寫入連線。外部來源登入只授權固定 view 的 SELECT（見 [INTEGRATIONS](INTEGRATIONS.md)）。
+- 正式環境的 DDL 用獨立部署帳號。runtime 登入需要上表所有業務 schema 的 SELECT／INSERT／UPDATE／DELETE 與 `dbo.__EFMigrationsHistory` 的 SELECT，不給建庫、ALTER 或 `db_owner`。目前管理與一般端點共用同一條連線，沒有管理專用的寫入連線。外部來源登入只授權固定 view 的 SELECT（見 [INTEGRATIONS](../features/INTEGRATIONS.md)）。
 
 ## 手寫 SQL
 
@@ -109,4 +109,4 @@ dotnet test --project backend/tests/AiNexus.Tests --filter "FullyQualifiedName~S
 
 - `RunEvents` 預設保留 24 小時供 SSE 重播，權威狀態在 `GenerationRuns`；未被引用的草稿附件依保留期清理；分享到期後清理快照。
 - 軟刪除的對話、成果，以及稽核、評測資料的保存期由部署單位制定，目前沒有自動硬刪。
-- 完整備份＝同一時點的 SQL＋站外附件目錄＋設定與 Data Protection key ring，步驟見 [BACKUP](BACKUP.md)。
+- 完整備份＝同一時點的 SQL＋站外附件目錄＋設定與 Data Protection key ring，步驟見 [BACKUP](../operations/BACKUP.md)。

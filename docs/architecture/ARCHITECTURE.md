@@ -1,6 +1,6 @@
 # 架構與擴充邊界
 
-`AiNexus.Features/Monitoring` 在共用 request stream、HttpClientFactory 與 SqlClient 邊界量測，不逐業務方法插入追蹤。Presence 與 15 分鐘聚合均有容量上限；沿用 SSE／權限／稽核，並透過既有 OpenTelemetry 匯出。多執行個體需另外實作分散式 adapter，見 [監控](MONITORING.md)。
+`AiNexus.Features/Monitoring` 在共用 request stream、HttpClientFactory 與 SqlClient 邊界量測，不逐業務方法插入追蹤。Presence 與 15 分鐘聚合均有容量上限；沿用 SSE／權限／稽核，並透過既有 OpenTelemetry 匯出。多執行個體需另外實作分散式 adapter，見 [監控](../features/MONITORING.md)。
 
 診斷入口為 MEL `ILogger`，`AiNexus.Platform/Diagnostics` 集中白名單／遮罩、安全錯誤、W3C Activity、站外 durable JSONL、獨立 SQL 批次補送、管理查詢與清理。安全稽核保持獨立交易政策；OpenTelemetry 1.19.1 匯出可選，預設不用外部 collector。模組不依賴檔案／SQL sink。事件規範、擴充範例與維運限制見 [DIAGNOSTICS](DIAGNOSTICS.md)。
 
@@ -51,7 +51,7 @@ flowchart LR
 
 後端分三個專案，依賴方向固定為 Host → Features → Platform：`AiNexus.Host` 只做 host 組裝與維運指令；`AiNexus.Features` 的每個模組以 `<Module>Module`（`IFeatureModule`）註冊自己的服務、options 驗證、授權政策、rate limit 與端點，`FeatureModules` 是唯一的模組清單，`Persistence` 管共用 context 與 migrations；`AiNexus.Platform` 管錯誤、安全、設定、診斷、HTTP 限制、domain event 分派與手寫 SQL 存取（`Data/Sql`），不引用任何業務模組。端點的 body 上限以 `WithRequestBodyLimit` 宣告在端點旁。`AiNexus.ArchitectureTests` 檢查專案依賴方向，並禁止模組之間形成循環；分層與切斷循環的做法見 [模組邊界](MODULE_BOUNDARIES.md)。slice、錯誤、驗證與授權的寫法見 [後端撰寫慣例](BACKEND_CONVENTIONS.md)。模組間使用明確服務，不新增能繞過 owner、ACL 或模型核准的資料入口。「A 發生後 B 跟著處理」的副作用改用同交易的 domain event（`AiNexus.Platform.Events`）：發布模組 `Raise` 過去式事件，`NexusDbContext` 的 `DomainEventInterceptor` 在 `SaveChangesAsync` 寫入前於同一交易分派給訂閱模組的 handler，一起提交或回復；例如刪除對話／成果撤銷分享、刪除專案解除成果連結。
 
-Notifications 提供 owner scoped durable event 與 typed target，和聊天完成、具名分享、任務 terminal update 使用同一 transaction。RepositoryReviewService 在排程前固定 SHA／diff／模型設定，handler 沿用背景 checkpoint／ModelTaskService，結果讀取仍檢查目前 Gitea 權限；細節見 [通知](NOTIFICATIONS.md)、[程式碼 review](GITEA.md)。
+Notifications 提供 owner scoped durable event 與 typed target，和聊天完成、具名分享、任務 terminal update 使用同一 transaction。RepositoryReviewService 在排程前固定 SHA／diff／模型設定，handler 沿用背景 checkpoint／ModelTaskService，結果讀取仍檢查目前 Gitea 權限；細節見 [通知](../features/NOTIFICATIONS.md)、[程式碼 review](../features/GITEA.md)。
 
 ## 三種權限
 
@@ -59,7 +59,7 @@ Notifications 提供 owner scoped durable event 與 typed target，和聊天完�
 2. **平台資料**：私人對話驗 owner；專案、知識、成果、評測驗 ResourceAccess。子文件／成果繼承專案 ACL。具名分享另保存快照、收件人及期限。
 3. **來源資料**：公文／校務先驗功能及允許來源的群組，再以完整登入者 SID／account 查來源授權 view。平台管理員不自動取得外部資料權限。
 
-擁有者／具名 editor 可寫，群組只授予閱讀。專案成員不因此取得彼此的私人聊天。分享不是匿名 bearer link，也不是原資源的 editor grant。詳見 [授權](ACCESS_CONTROL.md)、[專案](PROJECTS.md)、[分享](SHARING.md)、[整合](INTEGRATIONS.md)。
+擁有者／具名 editor 可寫，群組只授予閱讀。專案成員不因此取得彼此的私人聊天。分享不是匿名 bearer link，也不是原資源的 editor grant。詳見 [授權](ACCESS_CONTROL.md)、[專案](../features/PROJECTS.md)、[分享](../features/SHARING.md)、[整合](../features/INTEGRATIONS.md)。
 
 ## 前端共用邊界
 
@@ -76,7 +76,7 @@ Notifications 提供 owner scoped durable event 與 typed target，和聊天完�
 
 頁面使用 Signals、OnPush 與 zoneless。ViewScope 管生命週期與延遲回應的帳號檢查；同頁切換資源還需自己的 request version。離開／換帳號取消訂閱或忽略舊回應。新對話交接只留在記憶體，綁定帳號世代與 conversation ID，讀取一次；不把來源全文放在 URL、history state 或 localStorage。
 
-共享 UI 的 DOM ID 每個實例唯一；浮層使用原生 top layer，避免 dialog／捲動區裁切。管理員元件頁 /design 以正式元件及本機範例檢查主題、鍵盤、停用、確認與有限階段動畫。見 [設計系統](DESIGN_SYSTEM.md)。
+共享 UI 的 DOM ID 每個實例唯一；浮層使用原生 top layer，避免 dialog／捲動區裁切。管理員元件頁 /design 以正式元件及本機範例檢查主題、鍵盤、停用、確認與有限階段動畫。見 [設計系統](../frontend/DESIGN_SYSTEM.md)。
 
 `InfoPopover` 統一單次／全對話費用的焦點、Esc 與邊界定位；StorageUsage／RunTimingDisplay 共用容量與耗時呈現；`TrendChart` 使用同一份資料提供 SVG、鍵盤游標與文字表格。Dashboard 的流向圖只呈現真實資源／索引／生成狀態，與後端查詢分離。圖示沿用同一個 Lucide renderer，工作區與快捷指令各有獨立語意。
 
@@ -84,7 +84,7 @@ WorkspaceLayout／WorkspaceSidebar 管所有路由的圖示欄、手機 overlay 
 
 ## 生成與背景任務
 
-聊天生成驗核准模型、群組配額、owner、思考能力及冪等 key，再於 transaction 保存訊息、run、參數與首個事件。Context 只略過本次送往模型的最舊完整輪次，不刪歷史。worker 每 80ms／512 字元保存部分文字與 replay 事件；SSE 中斷不停止生成，恢復以 GET snapshot／序號進行。編輯新增分支，重新生成新增 assistant sibling。見 [SSE 契約](../contracts/SSE.md)。
+聊天生成驗核准模型、群組配額、owner、思考能力及冪等 key，再於 transaction 保存訊息、run、參數與首個事件。Context 只略過本次送往模型的最舊完整輪次，不刪歷史。worker 每 80ms／512 字元保存部分文字與 replay 事件；SSE 中斷不停止生成，恢復以 GET snapshot／序號進行。編輯新增分支，重新生成新增 assistant sibling。見 [SSE 契約](SSE.md)。
 
 文件／索引與評測使用 SQL durable jobs：claim、60 秒租約、2 秒 heartbeat、fenced checkpoint 與已完成項目的重用。停止先記取消要求，離開頁面不取消。外部 RPC 不保證跨程序 exactly-once，未保存結果的呼叫可能在重試時重做。
 
@@ -94,11 +94,11 @@ AttachmentQuota 統一個人／群組／預設容量及 SQL owner lock；Attachm
 
 OCR、段落工具與評測共用 ModelTaskService 的核准、配額及用量；保留配額以使用者 SQL row lock 序列化，RPC 不持有 transaction。評測凍結題庫、指令及模型設定指紋，設定變更阻擋執行／重試，已完成結果保留。來源文字以不可信資料封裝，授權在遠端呼叫前後再檢查。
 
-聊天排程仍在程序內，**每個 IIS app 使用一個 worker**，不開 web garden 或重疊 recycle。GenerationRuns 保存 ExecutorId 與兩分鐘的 LeaseExpiresAt，worker 每 15 秒續約；其他實例只處理已到期的租約，避免 local 與 IIS 共用資料庫時互相中止生成。取消先更新 SQL，原 executor 在續約時偵測並停止。這並未提供全域持久佇列或跨程序的模型容量限制；擴展前仍需補上。同一程序內的互斥用 `KeyedAsyncLock` 依鍵分開：生成狀態依對話、資源寫入依資源，不同對話或資源互不等待；每人一個進行中的生成與配額由 Users 列鎖在交易內保證。改成多台伺服器同時運行時，這些程序內鎖要改為資料庫併發控制（rowversion 或條件更新）。首次升級租約版本必須先停止所有舊 host，詳見 [IIS 文件](../deploy/iis/README.md)。
+聊天排程仍在程序內，**每個 IIS app 使用一個 worker**，不開 web garden 或重疊 recycle。GenerationRuns 保存 ExecutorId 與兩分鐘的 LeaseExpiresAt，worker 每 15 秒續約；其他實例只處理已到期的租約，避免 local 與 IIS 共用資料庫時互相中止生成。取消先更新 SQL，原 executor 在續約時偵測並停止。這並未提供全域持久佇列或跨程序的模型容量限制；擴展前仍需補上。同一程序內的互斥用 `KeyedAsyncLock` 依鍵分開：生成狀態依對話、資源寫入依資源，不同對話或資源互不等待；每人一個進行中的生成與配額由 Users 列鎖在交易內保證。改成多台伺服器同時運行時，這些程序內鎖要改為資料庫併發控制（rowversion 或條件更新）。首次升級租約版本必須先停止所有舊 host，詳見 [IIS 文件](../operations/IIS_DEPLOYMENT.md)。
 
 ## 費用與外部連線
 
-呼叫以 run／invocation ID 建立唯一 `ModelCharge`，預約時凍結有效價格；串流用量更新與結束狀態使用同一個 BillingService。價格為追加版本，歷史不重算；取消、失敗與 usage 缺失會保留未知費用，不填成零。SQL 報表依幣別與 API／內部成本分組，以參數化日期區間在資料庫彙總；隱藏模型名稱的政策同時套用對話與個人費用報表。詳見 [費用](BILLING.md)。
+呼叫以 run／invocation ID 建立唯一 `ModelCharge`，預約時凍結有效價格；串流用量更新與結束狀態使用同一個 BillingService。價格為追加版本，歷史不重算；取消、失敗與 usage 缺失會保留未知費用，不填成零。SQL 報表依幣別與 API／內部成本分組，以參數化日期區間在資料庫彙總；隱藏模型名稱的政策同時套用對話與個人費用報表。詳見 [費用](../features/BILLING.md)。
 
 WebSearch 在送出前才對公開提問查詢，搜尋冪等 key 與配額在 SQL 協調；來源是有限摘要，封裝為不可信資料。Gitea 不使用共用平台 token，每人透過 Data Protection 加密保存自己的 token，保護目的綁定登入者與伺服器 URL。兩種 provider 都限制 HTTP 回應大小、停用重新導向及預設 request logging，避免 credential／query 外洩。
 

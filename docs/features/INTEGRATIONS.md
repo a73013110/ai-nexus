@@ -22,7 +22,7 @@
 
 ## 設定步驟
 
-1. 原系統 DBA 準備兩個 `nexus` view，契約見 [authorized-views.sql](../deploy/sql/authorized-views.sql)。範本故意不回傳任何列；先根據原系統資料列授權替換內容並驗證撤權、代理、停用、機密、學生範圍等案例。
+1. 原系統 DBA 準備兩個 `nexus` view，契約見 [authorized-views.sql](../../deploy/sql/authorized-views.sql)。範本故意不回傳任何列；先根據原系統資料列授權替換內容並驗證撤權、代理、停用、機密、學生範圍等案例。
 2. 建立專用唯讀 SQL login/user，只給 `nexus_reader` 對兩個 view 的 SELECT。不給來源全庫 `db_datareader`、原始表 SELECT、寫入或簽核 procedure 權限。`ApplicationIntent=ReadOnly` 只是連線意圖，不能取代真正的 SQL 權限。
 3. 在 `.local/config/appsettings.Local.json` 的 `Integrations.Gdweb.Database`／`Meiho.Database` 設定 Server、Name、TrustServerCertificate、ConnectTimeoutSeconds；帳密在 `.local/secrets/appsettings.Secrets.json` 的相同位置填 User／Password。進階使用者仍可在秘密檔填 `ConnectionStrings.LegacyGdweb`／`LegacyMeiho` 完整 SqlClient 字串，非空時優先於分項設定。
 4. 在一般設定的 `Integrations.Gdweb`／`Meiho` 設定 `Transport=sql`、`Enabled=true`、`AclContractConfirmed=true`、`AllowedGroupIds`、`CommandTimeoutSeconds`（2–30 秒）及 `MaxResults`（1–50）。空群組不會授權任何人，平台管理員也不能繞過。未來 API adapter 可沿用來源識別與 ACL 契約；目前設定其他 transport 會明確顯示未支援。
@@ -41,7 +41,7 @@
 }
 ```
 
-其餘欄位（`Transport`、逾時、筆數上限）沿用 `appsettings.json` 的預設；完整欄位與範圍見 [`IntegrationsOptions`](../backend/src/AiNexus.Features/Integrations/IntegrationsOptions.cs)。
+其餘欄位（`Transport`、逾時、筆數上限）沿用 `appsettings.json` 的預設；完整欄位與範圍見 [`IntegrationsOptions`](../../backend/src/AiNexus.Features/Integrations/IntegrationsOptions.cs)。
 
 兩個來源 marker 強制加密與唯讀意圖，連線 timeout 預設 10 秒。Production 也可明確設定 `TrustServerCertificate=true` 使用自簽 SQL 憑證，連線仍加密。API 不回傳連線字串，失敗記錄僅保留來源代碼與例外類型。
 
@@ -57,4 +57,4 @@ SQL 是固定的 SELECT，查詢字、類型、身分、識別碼與筆數都是
 
 ## 接續向量整合
 
-本版不自動將外部資料複製到共用知識庫。下一階段需依來源類別建立可重驗的 live ACL、版本同步與刪除／撤權清理，並在向量候選生成前套用來源授權。先做公文規範與校務政策，再擴充原有逐列權限的學生查詢。詳見 [VECTOR_ARCHITECTURE.md](VECTOR_ARCHITECTURE.md)。
+本版不自動將外部資料複製到共用知識庫。下一階段需依來源類別建立可重驗的 live ACL、版本同步與刪除／撤權清理，並在向量候選生成前套用來源授權。先做公文規範與校務政策，再擴充原有逐列權限的學生查詢。詳見 [VECTOR_ARCHITECTURE.md](../research/VECTOR_ARCHITECTURE.md)。

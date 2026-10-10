@@ -39,4 +39,4 @@ API 前綴 /api/v1：POST /quality/retrieval-evals 接受 `{title, collectionIds
 
 建立時固定 active profile key、TopK、Knowledge 設定及相關文件版本／狀態指紋，每題前後及重試再驗。若文件、索引或設定變更，重新建立評測；不能把不同狀態混成一份報告。每次檢索結果的 checkpoint 與 job 租約在同一交易，重試跳過完成組合。
 
-驗收集包含問題及文件 ID，私下存於 RetrievalEvaluations；結果表及下載只含 case ID、模式、指標、耗時、設定 hash、job 及評測名稱，不含查詢、片段原文或向量。每次讀取／下載／執行／重試驗 owner、quality 功能及原知識庫 ACL；不是共用模型評測題庫的 ACL。調參指南見 [模型](EMBEDDING_MODELS.md)、[架構](VECTOR_ARCHITECTURE.md)。
+驗收集包含問題及文件 ID，私下存於 RetrievalEvaluations；結果表及下載只含 case ID、模式、指標、耗時、設定 hash、job 及評測名稱，不含查詢、片段原文或向量。每次讀取／下載／執行／重試驗 owner、quality 功能及原知識庫 ACL；不是共用模型評測題庫的 ACL。調參指南見 [模型](../research/EMBEDDING_MODELS.md)、[架構](../research/VECTOR_ARCHITECTURE.md)。

@@ -28,4 +28,4 @@
 
 多主機生成用 `ExecutorId` 與 `LeaseExpiresAt`：每 15 秒續約，有效期兩分鐘。復原採原子條件更新，只處理過期租約並追加一次 `run.recovered`，保留部分內容。跨主機取消先終止持久化狀態，執行主機的心跳會停止其 RPC。此設計避免原本只用本機記憶體判斷而誤殺另一台的生成；仍不是完整的持久聊天排程或全域 GPU 限流。
 
-詳細驗證涵蓋私人資料隔離、editor 不能刪容器、內容保留、繼承權限撤銷、active job 阻擋與凍結結果保留。資料保存期、批次硬刪與備份還原需有明確營運政策，見 [DATABASE](DATABASE.md) 與 [IIS](../deploy/iis/README.md)。
+詳細驗證涵蓋私人資料隔離、editor 不能刪容器、內容保留、繼承權限撤銷、active job 阻擋與凍結結果保留。資料保存期、批次硬刪與備份還原需有明確營運政策，見 [DATABASE](../architecture/DATABASE.md) 與 [IIS](../operations/IIS_DEPLOYMENT.md)。

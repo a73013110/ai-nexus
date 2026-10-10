@@ -1,6 +1,6 @@
 # 開發、執行與文件管理
 
-日誌與安全錯誤變更須執行 `scripts/Verify.ps1 -Browser -Performance`，加跑實際 Angular＋Kestrel 查證流程、原有 UI 回歸及隔離效能量測。report／TRX／screenshots 在 artifacts，見 [驗收文件](DIAGNOSTICS_VERIFICATION.md)。`Test-Repository.ps1 -WorkingTree` 可在不改 Git index 的情況檢查追蹤與未忽略的新檔；預設仍檢查 staged。應用日誌位於站外 Diagnostics.Directory，與 `.local`／ANCM stdout 分開。
+日誌與安全錯誤變更須執行 `scripts/Verify.ps1 -Browser -Performance`，加跑實際 Angular＋Kestrel 查證流程、原有 UI 回歸及隔離效能量測。report／TRX／screenshots 在 artifacts，見 [驗收文件](../DIAGNOSTICS_VERIFICATION.md)。`Test-Repository.ps1 -WorkingTree` 可在不改 Git index 的情況檢查追蹤與未忽略的新檔；預設仍檢查 staged。應用日誌位於站外 Diagnostics.Directory，與 `.local`／ANCM stdout 分開。
 
 既有 Playwright UI 回歸由 `Start-BrowserTest.ps1` 啟動編譯好的網站，使用 artifacts 下明確指定的空設定／秘密檔與獨立附件、金鑰、診斷目錄，不載入開發機 `.local`。API fixture 回歸與使用隔離 SQLite 的真實診斷端到端測試分開；前者的 SQL 匯入降級是刻意未配置資料庫，不能當成 SQL Server 效能或功能驗證。
 
@@ -29,7 +29,7 @@ dotnet dev-certs https --trust
 
 開發模式會啟動 `dotnet watch` 與 Angular dev server。請開 4200；`/api`／`/health` 代理至後端，同源 cookie／CSRF 可以正常運作。Ctrl+C 同時停止腳本啟動的兩個程序。日誌放 `.local/logs/backend.log`、`frontend.log` 與各自 `.error.log`。啟動後等待前後端編譯完成才開頁面。
 
-兩種模式預設 HTTPS，Session／Antiforgery Cookie 使用 `Secure`、`HttpOnly`、`SameSite=Strict`。開發代理使用同一 SDK 憑證，將 PEM／private key 暫存在 ignored `.local/certs`，Node 只信任該憑證。純 HTTP 的自動化／localhost 測試必須明確加 `-Http`；例外只在 Development 且 Host 與來源 IP 都為 loopback 時生效，不能用於 Production。舊 `Security:DisableHttpsRedirection` 已移除，詳見 [安全](SECURITY.md)。
+兩種模式預設 HTTPS，Session／Antiforgery Cookie 使用 `Secure`、`HttpOnly`、`SameSite=Strict`。開發代理使用同一 SDK 憑證，將 PEM／private key 暫存在 ignored `.local/certs`，Node 只信任該憑證。純 HTTP 的自動化／localhost 測試必須明確加 `-Http`；例外只在 Development 且 Host 與來源 IP 都為 loopback 時生效，不能用於 Production。舊 `Security:DisableHttpsRedirection` 已移除，詳見 [安全](../architecture/SECURITY.md)。
 
 ```powershell
 # 既有預覽占用 5080 時使用另一組 port
@@ -54,7 +54,7 @@ dotnet dev-certs https --trust
 
 每支入口腳本都有說明：`Get-Help ./scripts/Verify.ps1 -Detailed`。共用函式在 `scripts/AiNexus/AiNexus.psm1`，腳本本身的測試（Pester 5）在 `scripts/tests`，由 Verify 執行；`Restore.ps1` 會在缺少時安裝 Pester。研究用的 `Test-LocalAI.ps1`、`Compare-Embeddings.ps1` 在 `tooling/embeddings`。
 
-後端測試的執行方式與 `NexusFactory` 的寫法見 [後端測試](BACKEND_TESTING.md)。
+後端測試的執行方式與 `NexusFactory` 的寫法見 [後端測試](TESTING.md)。
 
 GitHub Actions 的 CI 目前只能手動觸發（Actions 頁面的 Run workflow），不會在 push 或 PR 時自動執行；它在 Windows 上執行 `Restore.ps1` 與 `Verify.ps1`，和本機驗證是同一組步驟。送 PR 前請在本機跑 `Verify.ps1`（含 `has-pending-model-changes`，模型有未產生的 migration 就失敗）。
 
@@ -70,7 +70,7 @@ GitHub Actions 的 CI 目前只能手動觸發（Actions 頁面的 Run workflow�
 ./scripts/Export-Contracts.ps1 -BaseUrl https://localhost:5080
 ```
 
-一起提交 `contracts/openapi.json` 與自動產生的 `frontend/src/app/core/api/schema.ts`，不手改 generated 型別。JSON／SSE 的額外規範在 [contracts/SSE](../contracts/SSE.md)。工具的 TypeScript 5 獨立於 Angular 的 TypeScript 6。
+一起提交 `contracts/openapi.json` 與自動產生的 `frontend/src/app/core/api/schema.ts`，不手改 generated 型別。JSON／SSE 的額外規範在 [contracts/SSE](../architecture/SSE.md)。工具的 TypeScript 5 獨立於 Angular 的 TypeScript 6。
 
 資料結構修改先更新 entity／mapping，再新增 migration：
 
@@ -96,11 +96,11 @@ migration 在本機驗證後提交 source、designer 與 snapshot；給 DBA 的 
 | `frontend/src/app/shared/ui` | 無業務狀態的圖示、Markdown、訊號元件 |
 | `frontend/src/*.scss` | 三層 tokens、base、分區樣式與 motion |
 
-頂層資料夾各自的用途見 README 的[資料夾地圖](../README.md#資料夾地圖)。
+頂層資料夾各自的用途見 README 的[資料夾地圖](../../README.md#資料夾地圖)。
 
 ## 什麼文件進 Git
 
-`README` 是入口；`docs` 放會隨程式維護的操作、架構、資料庫、授權與設計文件。本機設定、秘密、日誌與個人筆記放 `.local`，建置與測試輸出放 `artifacts`，兩者都不進 Git，各子資料夾的用途見 [本機產生的資料夾](development/LOCAL_FOLDERS.md)。
+`README` 是入口；`docs` 放會隨程式維護的操作、架構、資料庫、授權與設計文件。本機設定、秘密、日誌與個人筆記放 `.local`，建置與測試輸出放 `artifacts`，兩者都不進 Git，各子資料夾的用途見 [本機產生的資料夾](LOCAL_FOLDERS.md)。
 
 提交前看 `git status`／`git diff --cached`，確認只包含 source、public defaults／examples、lockfiles、generated contracts/migrations 與長期文件。`.gitignore` 不是秘密掃描器，不以 `git add -f` 強制加入本機資料。
 

@@ -1,6 +1,6 @@
 # SQL 與附件備份、還原
 
-新增診斷後，備份還需包含站外 `Diagnostics.Directory` 的 journal／cursor，以及SQL中的DiagnosticEvents／AuditEvents。SQL離線時尚未補送檔案是唯一保存副本，不能在發版或備份時刪除。已清理的segment無法補回較早SQL復原點；LogId只能去重，不能重建遺失資料。日誌備份權限、期限與恢復步驟見 [DIAGNOSTICS](DIAGNOSTICS.md#部署migration與備份)。
+新增診斷後，備份還需包含站外 `Diagnostics.Directory` 的 journal／cursor，以及SQL中的DiagnosticEvents／AuditEvents。SQL離線時尚未補送檔案是唯一保存副本，不能在發版或備份時刪除。已清理的segment無法補回較早SQL復原點；LogId只能去重，不能重建遺失資料。日誌備份權限、期限與恢復步驟見 [DIAGNOSTICS](../architecture/DIAGNOSTICS.md#部署migration與備份)。
 
 完整備份是一組相同時點的 **AiNexus SQL、站外附件目錄、外部設定與 Data Protection keys**。SQL 只保存附件 metadata、StorageKey、引用、權限及衍生搜尋資料；單獨 SQL `.bak` 無法還原原檔，聊天 JSON 文字備份也不包含原檔。
 
@@ -59,4 +59,4 @@ Recovery model 與完整／差異／log 排程由 DBA 維護。若需要在線�
 
 5. 啟動後以合成資料驗證不同帳號登入、角色／ACL、訊息分支、token／耗時、原檔下載、知識引用、專案及具名分享；個人容量與 SQL Size 合計一致，多處引用不重複計算。演練一次刪檔後確認磁碟、metadata 及容量同步。
 
-只有實際還原與授權／原檔驗證都通過，才能認定備份可用。部署與目錄權限見 [IIS](../deploy/iis/README.md)，刪檔、配額及草稿規則見 [附件](ATTACHMENTS.md)。
+只有實際還原與授權／原檔驗證都通過，才能認定備份可用。部署與目錄權限見 [IIS](IIS_DEPLOYMENT.md)，刪檔、配額及草稿規則見 [附件](../features/ATTACHMENTS.md)。

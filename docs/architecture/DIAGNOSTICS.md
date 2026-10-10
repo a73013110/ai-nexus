@@ -9,7 +9,7 @@
 | 活動稽核 `/admin/audit`                 | 誰在何時登入、操作、變更授權或查閱資料，結果如何 | `AuditEvents`，獨立 `audit` 功能授權；不經診斷採樣       |
 | 系統日誌 `/admin/logs`                 | 為何失敗、HTTP 狀態與耗時、例外及執行流程        | `DiagnosticEvents`，既有 logs.query／detail／export 權限 |
 
-活動稽核使用獨立側欄入口與 `audit` 授權，保留原 API 與歷史紀錄；舊 `/admin?tab=audit` 書籤保留條件轉到新頁。頁面與權限拆分見 [活動稽核](ACTIVITY_AUDIT.md)。共用後端分類 expression 同時用於 SQL 篩選與 DTO，依既有 action 分成登入與身分、管理異動、查閱與匯出、功能操作；讀取對話、報表及日誌不混入管理設定異動。既有功能的業務事件繼續由其服務記錄，不以 HTTP 200、開啟頁面或每筆背景輪詢推測使用者成功操作，也不複製整份 HTTP log 到稽核。
+活動稽核使用獨立側欄入口與 `audit` 授權，保留原 API 與歷史紀錄；舊 `/admin?tab=audit` 書籤保留條件轉到新頁。頁面與權限拆分見 [活動稽核](../features/ACTIVITY_AUDIT.md)。共用後端分類 expression 同時用於 SQL 篩選與 DTO，依既有 action 分成登入與身分、管理異動、查閱與匯出、功能操作；讀取對話、報表及日誌不混入管理設定異動。既有功能的業務事件繼續由其服務記錄，不以 HTTP 200、開啟頁面或每筆背景輪詢推測使用者成功操作，也不複製整份 HTTP log 到稽核。
 
 新增 `identity.login`（成功／失敗）及 `identity.logout`：AD／本地登入與明確的 Windows 登入入口記錄語意事件，例行 session／me 查詢及 Negotiate 401 challenge 不視為新的登入。只保存核準的帳號、登入方式、連線來源 IP、失敗代碼及追蹤識別；不保存密碼、cookie、token、任意 header 或聊天內容。失敗登入的帳號尚未驗證，actor 使用空識別碼，介面顯示「未驗證」與嘗試帳號，避免錯誤歸到既有登入 cookie。登入稽核使用獨立 DbContext，不受失敗憑證更新污染，成功寫入後才簽發 cookie；失敗事件與對外 problem 共用同一查證代碼。
 
@@ -168,7 +168,7 @@ if (-not [Diagnostics.EventLog]::SourceExists('AiNexus.Diagnostics')) {
 
 ## 設定與容量
 
-`Diagnostics` 是一般設定區塊，範圍規則在 [`DiagnosticOptions`](../backend/src/AiNexus.Platform/Diagnostics/DiagnosticOptions.cs)；載入優先順序與外部 Production 規則見 [CONFIGURATION](CONFIGURATION.md)。Production 不讀 repository `.local`；修改需重啟 host。runtime 在啟動驗證型別、範圍、endpoint 與站外目錄；錯誤停止啟動並嘗試保存 Critical。最低等級以 Diagnostics 為準，不由舊 `Logging.LogLevel` 偷偷覆蓋重要事件政策。
+`Diagnostics` 是一般設定區塊，範圍規則在 [`DiagnosticOptions`](../../backend/src/AiNexus.Platform/Diagnostics/DiagnosticOptions.cs)；載入優先順序與外部 Production 規則見 [CONFIGURATION](../development/CONFIGURATION.md)。Production 不讀 repository `.local`；修改需重啟 host。runtime 在啟動驗證型別、範圍、endpoint 與站外目錄；錯誤停止啟動並嘗試保存 Critical。最低等級以 Diagnostics 為準，不由舊 `Logging.LogLevel` 偷偷覆蓋重要事件政策。
 
 | 設定                                                   | 預設                         | 用途／限制                                                     |
 | ------------------------------------------------------ | ---------------------------- | -------------------------------------------------------------- |
@@ -259,6 +259,6 @@ SQL完全離線時管理查詢可能因授權／audit失敗無法打開。可在
 ./scripts/Test-Repository.ps1 -WorkingTree
 ```
 
-真實瀏覽器驗收使用已編譯Angular、loopback Kestrel、隔離SQLite與test assembly內identity/provider：觸發受控模型錯誤 → 頁面取得並實際複製NX → 管理頁查到同筆遮罩後的HttpRequestException、TraceId／RunId與timeline；不使用正式憑證。結果、截圖、TRX、吞吐／p95／記憶體報告在artifacts。詳見 [DIAGNOSTICS_VERIFICATION](DIAGNOSTICS_VERIFICATION.md)，明確區分實測與尚未實機驗證事項。
+真實瀏覽器驗收使用已編譯Angular、loopback Kestrel、隔離SQLite與test assembly內identity/provider：觸發受控模型錯誤 → 頁面取得並實際複製NX → 管理頁查到同筆遮罩後的HttpRequestException、TraceId／RunId與timeline；不使用正式憑證。結果、截圖、TRX、吞吐／p95／記憶體報告在artifacts。詳見 [DIAGNOSTICS_VERIFICATION](../DIAGNOSTICS_VERIFICATION.md)，明確區分實測與尚未實機驗證事項。
 
 資安保存期限尚未提供。30天診斷／14天已補送文件／365天稽核只是可設定預設，待確認：組織保存／法定保留與legal hold、哪些角色可query/detail/export、使用者識別保存政策、備份期限、磁碟／SQL容量與告警門檻、external collector的TLS／身分與保存邊界、設定檔變更管理、是否需要WORM及主機crash收集。只有完成日誌功能不代表符合所有資安法規或組織政策。

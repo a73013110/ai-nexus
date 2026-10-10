@@ -11,7 +11,7 @@
 - 按「驗證檢索模型」。bge-m3 須回傳成功、每筆 1024 維；這會呼叫真實模型並計入配額。
 - 模型端點來自 `Knowledge.Embedding.Endpoint`，未指定時使用 `Inference.Providers.Ollama.Endpoint`。確認此網址是部署的 Ollama 設備。
 
-若升級後 host 無法啟動，依啟動訊息套用待完成 migration，詳見 [資料庫](DATABASE.md)。已經套用的 migration 不需重跑或清空資料。
+若升級後 host 無法啟動，依啟動訊息套用待完成 migration，詳見 [資料庫](../architecture/DATABASE.md)。已經套用的 migration 不需重跑或清空資料。
 
 ## 2. 準備可核對的測試文件
 
@@ -92,7 +92,7 @@ dotnet test --project backend/tests/AiNexus.Tests --filter 'FullyQualifiedName~R
 
 `RetrievalDependencyTests` 驗證正式 SQL 檢索服務所需依賴，並啟用 DI scope validation，確認實際改寫器與全部背景處理器可正確建立。其餘測試使用 SQLite 與替代模型，驗證工作續跑、profile、ACL、快取與評測流程；不代表真實 Ollama 或 SQL 原生向量已通過。
 
-真實 SQL Server 的 768／1024 向量、交易及中文全文測試需設定測試 instance 的 `AINEXUS_SQLSERVER_TEST`，詳見 [資料庫整合測試](DATABASE.md)。每項建立及清理自己的暫時資料庫；未設定連線時會明確略過。
+真實 SQL Server 的 768／1024 向量、交易及中文全文測試需設定測試 instance 的 `AINEXUS_SQLSERVER_TEST`，詳見 [資料庫整合測試](../architecture/DATABASE.md)。每項建立及清理自己的暫時資料庫；未設定連線時會明確略過。
 
 若全文元件顯示已安裝，但 `FREETEXTTABLE` 實際回傳 SQL 30053，仍須由 SQL 管理員檢查斷詞器、Filter Daemon Launcher／FDHost 與服務帳號。[Microsoft 全文錯誤說明](https://learn.microsoft.com/en-us/sql/relational-databases/errors-events/mssqlserver-30053-database-engine-error?view=sql-server-ver17)。應用程式對已知全文執行錯誤會讓 hybrid 明確降為 vector，30 秒後重新檢查；keyword 則回報 `fulltext_unavailable`。SQL 2025 部分全文錯誤也與索引版本及未註冊的 stemmer 有關，應依實際版本確認，不能僅由錯誤代碼判定根因。[SQL Server 2025 已知問題](https://learn.microsoft.com/en-us/sql/sql-server/sql-server-2025-known-issues?view=sql-server-ver17#full-text-search)。
 

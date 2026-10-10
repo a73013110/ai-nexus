@@ -57,6 +57,6 @@ Host request body 上限 10 MB；一般 JSON 操作為 64 KB。提問／Context 
 
 實際刪檔採 durable outbox：先移除引用並將 metadata 標記 `deleting`，commit 後刪除 `.blob` 及 `.upload`，成功才刪 metadata、釋放容量。檔案不存在視為已刪；磁碟／權限失敗保留記錄及容量並記錄附件 ID，下一週期重試。維運應監控清理警告及磁碟剩餘量；每人上限不等於磁碟總容量。
 
-完整備份必須包含 SQL 與同一時點的附件目錄，操作見 [備份與還原](BACKUP.md)。JSON **文字備份**保存分支、指令、標籤及附件名稱，**不含原始檔**，匯入後須重新上傳附件；「建立對話副本」完整保留附件關聯。資料庫透過增量 migration 升級，原檔不需搬移，操作見 [資料庫](DATABASE.md)。操作與權限見 [檔案庫](FILES.md)。
+完整備份必須包含 SQL 與同一時點的附件目錄，操作見 [備份與還原](../operations/BACKUP.md)。JSON **文字備份**保存分支、指令、標籤及附件名稱，**不含原始檔**，匯入後須重新上傳附件；「建立對話副本」完整保留附件關聯。資料庫透過增量 migration 升級，原檔不需搬移，操作見 [資料庫](../architecture/DATABASE.md)。操作與權限見 [檔案庫](FILES.md)。
 
 Google key 僅存在後端。使用 Google 時，本次需要的文字／圖片會傳送到 Google API。格式參考：[Gemma 圖片能力](https://ai.google.dev/gemma/docs/core/gemma_on_gemini_api#image-understanding)、[Google 圖片請求](https://ai.google.dev/gemini-api/docs/image-understanding)、[Ollama Chat API](https://docs.ollama.com/api/chat)、[PdfPig](https://github.com/UglyToad/PdfPig)。
