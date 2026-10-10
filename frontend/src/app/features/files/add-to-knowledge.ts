@@ -22,6 +22,7 @@ import { Select } from '../../shared/ui/select';
   imports: [Notice, CompactDialog, Icon, Select, RouterLink],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './add-to-knowledge.scss',
   template: `<dialog
     nxCompactDialog
     #dialog

@@ -21,6 +21,7 @@ import { SearchField } from '../../shared/ui/search-field';
   selector: 'nx-knowledge-picker',
   imports: [Notice, Icon, RouterLink, Checkbox, SearchField],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './knowledge-picker.scss',
   template: `<button
       #trigger
       type="button"

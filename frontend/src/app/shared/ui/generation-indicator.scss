@@ -1,0 +1,75 @@
+.generation-indicator {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  padding: var(--p-space-4) 0 var(--p-space-5);
+  color: var(--secondary);
+}
+.generation-orbit {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--generation-indicator-size);
+  height: var(--generation-indicator-size);
+  color: var(--signal);
+  background: var(--accent-soft);
+  border-radius: 50%;
+}
+.generation-orbit i {
+  position: absolute;
+  inset: 4px;
+  border: 1.5px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: orbit-turn 2.4s linear infinite;
+}
+.generation-orbit i:nth-child(2) {
+  inset: 9px;
+  border-top-color: transparent;
+  border-right-color: currentColor;
+  animation-direction: reverse;
+  animation-duration: 1.8s;
+  opacity: 0.7;
+}
+.generation-orbit i:nth-child(3) {
+  inset: 14px;
+  border-top-color: transparent;
+  border-bottom-color: currentColor;
+  animation-duration: 3s;
+  opacity: 0.5;
+}
+.generation-orbit b {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: generation-pulse 2.4s ease-in-out infinite;
+}
+.is-waiting .generation-orbit i {
+  animation-duration: 4s;
+}
+.generation-label {
+  font-size: var(--text-label);
+  font-weight: 500;
+}
+.generation-label small {
+  display: block;
+  font-weight: 400;
+  font-size: var(--text-caption);
+  margin-top: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .generation-orbit,
+  .generation-orbit i,
+  .generation-orbit b {
+    animation: none !important;
+  }
+}
+:host-context([data-reduced-motion='true']) {
+  .generation-orbit,
+  .generation-orbit i,
+  .generation-orbit b {
+    animation: none !important;
+  }
+}

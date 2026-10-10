@@ -1,0 +1,29 @@
+:host {
+  display: block;
+  position: relative;
+  z-index: 40;
+}
+.identity-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-3);
+  padding: var(--p-space-2) var(--p-space-4);
+  border-bottom: 1px solid var(--signal);
+  background: color-mix(in srgb, var(--signal) 10%, var(--surface));
+  color: var(--ink);
+  font-size: var(--text-label);
+}
+.identity-banner > span {
+  flex: 1;
+  min-width: min(100%, 12rem);
+}
+.identity-banner small {
+  display: block;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.identity-banner nx-notice {
+  flex-basis: 100%;
+  margin: 0;
+}

@@ -22,6 +22,7 @@ export interface Command {
   selector: 'nx-command-palette',
   imports: [Icon, CompactDialog],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './command-palette.scss',
   template: `<dialog
     nxCompactDialog
     #dialog

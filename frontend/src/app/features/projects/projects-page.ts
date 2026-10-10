@@ -13,7 +13,6 @@ import {
   inject,
   signal,
   viewChild,
-  ViewEncapsulation,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ReaderLink } from '../../shared/browser/reader-link';
@@ -43,9 +42,7 @@ import { SearchField } from '../../shared/ui/search-field';
 
 @Component({
   selector: 'nx-projects-page',
-  // Page-only rules load with this lazy route instead of the initial stylesheet.
-  encapsulation: ViewEncapsulation.None,
-  styleUrl: '../../../styles/projects.scss',
+  styleUrl: './projects-page.scss',
   imports: [
     Notice,
     EmptyState,

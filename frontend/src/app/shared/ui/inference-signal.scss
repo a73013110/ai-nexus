@@ -1,0 +1,49 @@
+:host {
+  display: inline-flex;
+  flex: none;
+  width: 2.5rem;
+  height: 1.25rem;
+}
+:host(.is-subtle) {
+  width: 2rem;
+  height: 1rem;
+}
+.inference-signal {
+  width: 100%;
+  height: 100%;
+  display: block;
+  fill: var(--signal);
+  overflow: visible;
+}
+.inference-signal.is-subtle {
+  opacity: 0.7;
+}
+.inference-signal path {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.signal-track {
+  stroke: var(--line);
+}
+.signal-flow {
+  stroke: var(--signal);
+  stroke-dasharray: 10 70;
+  opacity: 0;
+}
+.inference-signal.active .signal-flow {
+  opacity: 1;
+  animation: signal-transit var(--motion-signal) linear infinite;
+}
+.inference-signal.active .signal-flow.secondary {
+  animation-delay: calc(var(--motion-signal) / -2);
+  opacity: 0.65;
+}
+@media (prefers-reduced-motion: reduce) {
+  .signal-flow {
+    animation: none !important;
+  }
+}
+:host-context([data-reduced-motion='true']) .signal-flow {
+  animation: none !important;
+}

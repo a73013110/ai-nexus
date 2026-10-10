@@ -16,6 +16,7 @@ import { Icon } from '../../shared/ui/icon';
   host: { class: 'ui-density-compact' },
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './conversation-find.scss',
   template: ` <div class="conversation-find" role="search" aria-label="搜尋目前對話">
     <nx-icon name="search" /><label class="sr-only" for="message-find">尋找訊息</label
     ><input

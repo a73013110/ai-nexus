@@ -29,6 +29,7 @@ import { JobsApi } from '../tasks/jobs-api';
   imports: [Notice, Card, Field, ReactiveFormsModule, DecimalPipe, Checkbox, Select, JobProgress],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './retrieval-evaluation.scss',
   templateUrl: './retrieval-evaluation.html',
 })
 export class RetrievalEvaluation {

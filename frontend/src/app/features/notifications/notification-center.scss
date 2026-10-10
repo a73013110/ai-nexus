@@ -1,0 +1,7 @@
+.notification-center .dialog-heading {
+  flex: none;
+}
+.notification-center[open] {
+  display: flex;
+  flex-direction: column;
+}

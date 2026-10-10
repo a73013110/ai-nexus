@@ -1,0 +1,13 @@
+.knowledge-file-label nx-icon {
+  flex: none;
+  color: var(--accent);
+}
+.knowledge-file-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  overflow-wrap: anywhere;
+}
+.knowledge-file-label strong {
+  font-weight: 500;
+}

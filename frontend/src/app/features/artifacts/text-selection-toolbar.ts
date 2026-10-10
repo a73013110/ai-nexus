@@ -18,6 +18,7 @@ import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
   imports: [Icon],
   providers: [TEXT_ACTION_ICON_PROVIDER],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './text-selection-toolbar.scss',
   // Focus moves between the toolbar buttons; the container only routes arrow keys.
   template: `<!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
     <div

@@ -13,7 +13,6 @@ import {
   inject,
   signal,
   viewChild,
-  ViewEncapsulation,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -54,9 +53,7 @@ const blankCase = (): EvaluationCase => ({
 });
 @Component({
   selector: 'nx-quality-page',
-  // Page-only rules load with this lazy route instead of the initial stylesheet.
-  encapsulation: ViewEncapsulation.None,
-  styleUrl: '../../../styles/quality.scss',
+  styleUrl: './quality-page.scss',
   imports: [
     Notice,
     EmptyState,

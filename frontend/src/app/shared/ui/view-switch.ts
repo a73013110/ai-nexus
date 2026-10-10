@@ -20,6 +20,7 @@ export interface ViewOption {
   selector: 'nx-view-switch',
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './view-switch.scss',
   host: {
     class: 'ui-view-switch',
     role: 'group',

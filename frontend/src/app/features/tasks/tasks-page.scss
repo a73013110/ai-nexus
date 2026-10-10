@@ -1,0 +1,38 @@
+.job-heading .panel-eyebrow {
+  margin-bottom: var(--p-space-1);
+}
+.job-actions,
+.job-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  flex-wrap: wrap;
+}
+.job-list {
+  display: grid;
+  gap: var(--section-gap);
+}
+.job-card.current {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.job-heading {
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: var(--p-space-2);
+}
+.job-heading h2 {
+  font-size: var(--resource-heading-size);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.job-heading time {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.job-actions {
+  margin-top: var(--p-space-2);
+}
+.job-actions > span:first-child {
+  margin-right: auto;
+}

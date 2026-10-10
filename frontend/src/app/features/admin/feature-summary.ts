@@ -5,6 +5,7 @@ import { groupFeatures } from '../../core/layout/feature-groups';
 @Component({
   selector: 'nx-feature-summary',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './feature-summary.scss',
   host: { class: 'feature-summary' },
   template: `@for (group of groups(); track group.id) {
       <div class="feature-summary-group" [attr.aria-label]="group.name">

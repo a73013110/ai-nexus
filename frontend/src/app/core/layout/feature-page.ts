@@ -7,7 +7,7 @@ import { WorkspaceMenuButton } from './workspace-menu-button';
   selector: 'nx-feature-page',
   imports: [WorkspaceSidebar, WorkspaceMenuButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styles: ':host { display: block; min-width: 0; }',
+  styleUrl: './feature-page.scss',
   template: `<a class="skip-link" href="#feature-content">跳到主要內容</a>
     <div
       class="feature-layout"

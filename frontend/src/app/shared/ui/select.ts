@@ -26,6 +26,8 @@ let sequence = 0;
   selector: 'nx-select',
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './select.scss',
+  host: { '[class.select-inline]': "appearance() === 'inline'" },
   template: `<button
       #trigger
       type="button"
@@ -111,6 +113,8 @@ export class Select {
   readonly disabled = input(false);
   readonly placeholder = input('請選擇');
   readonly searchable = input(false);
+  /** `inline` drops the field chrome for toolbars such as the composer controls. */
+  readonly appearance = input<'field' | 'inline'>('field');
   readonly query = signal('');
   readonly visibleOptions = computed(() =>
     this.options()

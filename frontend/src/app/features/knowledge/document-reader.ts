@@ -17,6 +17,7 @@ import { WorkspaceMenuButton } from '../../core/layout/workspace-menu-button';
   selector: 'nx-document-reader',
   imports: [WorkspaceSidebar, WorkspaceMenuButton, Icon, DocumentViewer],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './document-reader.scss',
   template: `<div class="feature-layout">
     <aside nxWorkspaceSidebar class="feature-sidebar" aria-label="工作區導覽"></aside>
     <main

@@ -25,6 +25,7 @@ import { formatModelDisplayName } from '../../shared/browser/format';
   ],
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './chat-message.scss',
   template: ` <article
     class="message"
     [class.user]="message().role === 'user'"

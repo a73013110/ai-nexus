@@ -21,6 +21,7 @@ import { WorkspaceSidebar } from '../../core/layout/workspace-sidebar';
   selector: 'nx-chat-sidebar',
   imports: [RouterLink, FormField, Icon, Select, WorkspaceSidebar, ConversationActions],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './chat-sidebar.scss',
   host: { style: 'display: contents' },
   templateUrl: './chat-sidebar.html',
 })

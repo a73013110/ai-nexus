@@ -37,6 +37,7 @@ import { WorkspaceApi } from '../workspace/workspace-api';
   imports: [Notice, EmptyState, SearchField, ViewSwitch, Icon, Select, TextHighlight, JobProgress],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './document-viewer.scss',
   templateUrl: './document-viewer.html',
 })
 export class DocumentViewer {

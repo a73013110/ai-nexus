@@ -1,0 +1,94 @@
+.notification-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+}
+.notification-title strong {
+  font-size: var(--text-label);
+  font-weight: 550;
+}
+.notification-row[data-severity='error'] > nx-icon {
+  color: var(--danger);
+}
+.notification-row[data-severity='success'] > nx-icon {
+  color: var(--success);
+}
+.notification-row[data-severity='info'] > nx-icon {
+  color: var(--info);
+}
+.notification-toolbar {
+  flex: none;
+}
+.notification-toolbar {
+  display: flex;
+  gap: var(--p-space-2);
+  align-items: center;
+  flex-wrap: wrap;
+  padding-block: var(--p-space-3);
+  border-block: 1px solid var(--line);
+}
+.notification-toolbar [aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.notification-list {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  max-height: 65dvh;
+  scrollbar-gutter: stable;
+  padding-block: var(--p-space-2);
+  overscroll-behavior: contain;
+}
+.notification-row {
+  display: flex;
+  gap: var(--p-space-3);
+  padding: var(--resource-row-padding-block) var(--resource-row-padding-inline);
+  border-radius: var(--p-radius-sm);
+}
+.notification-row.is-unread {
+  background: var(--surface-subtle);
+}
+.notification-row + .notification-row {
+  border-top: 1px solid var(--line);
+}
+.notification-row > div {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.notification-row p {
+  margin: var(--p-space-1) 0;
+  font-size: var(--text-label);
+  color: var(--secondary);
+}
+.notification-unread {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.notification-unread::before {
+  content: '';
+  width: 0.3125rem;
+  height: 0.3125rem;
+  border-radius: 50%;
+  background: var(--ink);
+  flex: none;
+}
+.notification-row time {
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.notification-actions {
+  display: flex;
+  gap: var(--p-space-2);
+  flex-wrap: wrap;
+  margin-top: var(--p-space-1);
+  align-items: center;
+}
+.notification-actions time {
+  margin-right: auto;
+}

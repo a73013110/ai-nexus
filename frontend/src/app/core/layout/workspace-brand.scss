@@ -1,0 +1,7 @@
+.brand {
+  display: flex;
+  align-items: center;
+  margin: 0 var(--p-space-1);
+  width: fit-content;
+  font-size: min(var(--sidebar-brand-size), 1.25rem);
+}

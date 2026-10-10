@@ -118,18 +118,30 @@ export class ProductTour {
     this.active.set(false);
     this.loading.set(false);
   }
+  // driver.js styles and the Nexus overrides load only when a tour starts; the override is
+  // appended after driver.css so it wins at equal specificity.
   private loadStyles() {
-    return (this.stylesheet ??= new Promise<void>((resolve, reject) => {
+    return (this.stylesheet ??= Promise.all(
+      ['vendor/driver/driver.css', 'driver-tour.css'].map((href) => this.loadStylesheet(href)),
+    ).then(
+      () => undefined,
+      (error: unknown) => {
+        this.stylesheet = undefined;
+        throw error;
+      },
+    ));
+  }
+  private loadStylesheet(href: string) {
+    return new Promise<void>((resolve, reject) => {
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = new URL('vendor/driver/driver.css', document.baseURI).href;
+      link.href = new URL(href, document.baseURI).href;
       link.onload = () => resolve();
       link.onerror = () => {
         link.remove();
-        this.stylesheet = undefined;
         reject(new Error('Tour stylesheet could not be loaded'));
       };
       document.head.append(link);
-    }));
+    });
   }
 }

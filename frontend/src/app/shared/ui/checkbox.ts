@@ -7,6 +7,7 @@ let sequence = 0;
   selector: 'nx-checkbox',
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './checkbox.scss',
   template: `<label
     class="selection-control"
     [class.is-selected]="checked()"
