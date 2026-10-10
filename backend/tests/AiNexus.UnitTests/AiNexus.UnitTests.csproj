@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- No host, no database: tests here construct the class under test directly and finish in milliseconds. -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+  <ItemGroup><ProjectReference Include="../../src/AiNexus.Host/AiNexus.Host.csproj" /></ItemGroup>
+</Project>

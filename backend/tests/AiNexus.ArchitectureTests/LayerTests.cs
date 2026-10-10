@@ -1,5 +1,4 @@
 using NetArchTest.Rules;
-using Xunit;
 
 namespace AiNexus.ArchitectureTests;
 
@@ -7,15 +6,15 @@ namespace AiNexus.ArchitectureTests;
 public sealed class LayerTests
 {
     [Fact]
-    public void Platform_does_not_depend_on_features_or_host()
+    public void PlatformDoesNotDependOnFeaturesOrHost()
         => AssertNoDependency(Types.InAssembly(Assemblies.Platform), "AiNexus.Features", "AiNexus.Host");
 
     [Fact]
-    public void Features_do_not_depend_on_host()
+    public void FeaturesDoNotDependOnHost()
         => AssertNoDependency(Types.InAssembly(Assemblies.Features), "AiNexus.Host");
 
     [Fact]
-    public void Feature_modules_are_registered_through_the_module_contract()
+    public void FeatureModulesAreRegisteredThroughTheModuleContract()
     {
         var modules = Assemblies.Features.GetTypes().Where(t => t.Name.EndsWith("Module", StringComparison.Ordinal) && t.IsClass && !t.IsAbstract).ToList();
         Assert.NotEmpty(modules);

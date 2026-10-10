@@ -56,4 +56,4 @@ SSE 的不緩衝與 heartbeat 沿用回答串流的做法，見 [SSE](../archite
 
 ## 驗證
 
-MonitoringTests 使用隔離 SQLite 驗證權限／CSRF、撤權中止訂閱、生命週期／容量、人數與分頁、實際 payload 與進行中串流計數、直方圖與 SSE 延遲排除、共用 HTTP handler 的失敗／中止及觀測者排除、SQL metadata 遮罩、匯出稽核和停用模式。MonitoringBrowserTests 透過真實 Kestrel、前端及 Edge 驗證瀏覽器心跳、對話操作、即時快照、AD 身分提示、詳情與稽核。tests/e2e/monitoring.spec.ts 以本機 SSE fixture 驗持續更新、篩選、全部服務清單、抽屜、range、匯出、暫停／重連、深淺色、375px、鍵盤與減少動畫。畫面為測試資料；SQL／IIS／AD 與代理 IP 需依部署環境實機驗收。
+單元與整合測試的 Monitoring 資料夾以隔離 SQLite 驗證權限／CSRF、撤權中止訂閱、生命週期／容量、人數與分頁、實際 payload 與進行中串流計數、直方圖與 SSE 延遲排除、共用 HTTP handler 的失敗／中止及觀測者排除、SQL metadata 遮罩、匯出稽核和停用模式。MonitoringBrowserTests 透過真實 Kestrel、前端及 Edge 驗證瀏覽器心跳、對話操作、即時快照、AD 身分提示、詳情與稽核。tests/e2e/monitoring.spec.ts 以本機 SSE fixture 驗持續更新、篩選、全部服務清單、抽屜、range、匯出、暫停／重連、深淺色、375px、鍵盤與減少動畫。畫面為測試資料；SQL／IIS／AD 與代理 IP 需依部署環境實機驗收。

@@ -6,7 +6,8 @@
 
 .DESCRIPTION
 依序執行：腳本測試（Pester，scripts/tests）、Build.ps1（輸出到 artifacts/verification，不覆寫正在執行的 publish）、
-後端 build、EF 模型與 migration 一致性、後端測試、前端 lint 與單元測試。真實瀏覽器與效能測試需另外加參數。
+後端 build、EF 模型與 migration 一致性、後端單元／整合／架構測試、前端 lint 與單元測試。
+真實瀏覽器、SQL Server 與效能測試需另外加參數。
 TRX 寫在 artifacts/test-results。需先執行 Restore.ps1；.github/workflows/ci.yml 也是 Restore.ps1 加上這支腳本。
 
 .PARAMETER Browser
@@ -14,6 +15,9 @@ TRX 寫在 artifacts/test-results。需先執行 Restore.ps1；.github/workflows
 
 .PARAMETER BrowserTarget
 後端瀏覽器測試用的瀏覽器：msedge、chrome，或執行檔絕對路徑（Linux：/opt/pw-browsers/chromium）。
+
+.PARAMETER SqlServer
+加跑真實 SQL Server 2025 測試（Category=SqlServer：全文／向量檢索、診斷批次寫入），需先設定 AINEXUS_SQLSERVER_TEST 連線字串。
 
 .PARAMETER Performance
 加跑隔離的效能量測（Category=Performance），結果寫在 artifacts/。
@@ -23,11 +27,15 @@ TRX 寫在 artifacts/test-results。需先執行 Restore.ps1；.github/workflows
 
 .EXAMPLE
 ./scripts/Verify.ps1 -Browser -Performance
+
+.EXAMPLE
+$env:AINEXUS_SQLSERVER_TEST = 'Server=localhost;Integrated Security=True;TrustServerCertificate=True'; ./scripts/Verify.ps1 -SqlServer
 #>
 [CmdletBinding()]
-param([switch]$Browser, [string]$BrowserTarget = 'msedge', [switch]$Performance)
+param([switch]$Browser, [string]$BrowserTarget = 'msedge', [switch]$SqlServer, [switch]$Performance)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+if ($SqlServer -and -not $env:AINEXUS_SQLSERVER_TEST) { throw '-SqlServer 需要先設定 AINEXUS_SQLSERVER_TEST（測試用 SQL Server 連線字串）。' }
 Import-Module (Join-Path $PSScriptRoot 'AiNexus') -Force
 
 $root = Get-NexusRoot
@@ -54,7 +62,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw '後端 build 失敗。' }
     dotnet ef migrations has-pending-model-changes --no-build --configuration Release --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host
     if ($LASTEXITCODE -ne 0) { throw 'EF 模型有尚未產生的 migration。' }
-    Invoke-BackendTests 'Category!=Performance&Category!=Browser' 'backend.trx'
+    Invoke-BackendTests 'Category!=Performance&Category!=Browser&Category!=SqlServer' 'backend.trx'
     npm --prefix frontend run lint
     if ($LASTEXITCODE -ne 0) { throw '前端 lint 失敗。' }
     npm --prefix frontend test
@@ -68,6 +76,7 @@ try {
         npm run test:e2e
         if ($LASTEXITCODE -ne 0) { throw 'e2e 測試失敗。' }
     }
+    if ($SqlServer) { Invoke-BackendTests 'Category=SqlServer' 'sqlserver.trx' }
     if ($Performance) { Invoke-BackendTests 'Category=Performance' 'diagnostic-performance.trx' }
     Write-Output '驗證通過。'
 } finally {
