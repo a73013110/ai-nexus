@@ -19,20 +19,20 @@ public sealed class GiteaClient(IHttpClientFactory clients, IOptions<GiteaOption
     {
         try {
         using var response = await SendAsync(token, path, "text/plain", ct);
-        if (response.Content.Headers.ContentLength > 256000) throw new ApiException(413, "repository_diff_limit", "變更內容超過 256 KB，請縮小 commit 區間。");
+        if (response.Content.Headers.ContentLength > 256000) throw new ExternalServiceException(RepositoriesErrors.DiffLimit);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(options.Value.TimeoutSeconds));
         await using var stream = await response.Content.ReadAsStreamAsync(timeout.Token);
         using var buffer = new MemoryStream(); var block = new byte[8192];
         int count;
         while ((count = await stream.ReadAsync(block, timeout.Token)) > 0) {
-            if (buffer.Length + count > 256000) throw new ApiException(413, "repository_diff_limit", "變更內容超過 256 KB，請縮小 commit 區間。");
+            if (buffer.Length + count > 256000) throw new ExternalServiceException(RepositoriesErrors.DiffLimit);
             buffer.Write(block, 0, count);
         }
         try { return new UTF8Encoding(false, true).GetString(buffer.ToArray()); }
-        catch (DecoderFallbackException) { throw new ApiException(400, "repository_diff_not_text", "變更內容不是 UTF-8 文字，無法 review。"); }
+        catch (DecoderFallbackException) { throw new ExternalServiceException(RepositoriesErrors.DiffNotText); }
         }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new ApiException(504, "gitea_timeout", "Gitea 讀取逾時。"); }
-        catch (Exception ex) when (ex is HttpRequestException or IOException) { throw new ApiException(503, "gitea_unavailable", "Gitea 目前無法使用，請稍後重試。"); }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new ExternalServiceException(RepositoriesErrors.Timeout); }
+        catch (Exception ex) when (ex is HttpRequestException or IOException) { throw new ExternalServiceException(RepositoriesErrors.Unreachable); }
     }
     private async Task<HttpResponseMessage> SendAsync(string token, string path, string accept, CancellationToken ct)
     {
@@ -44,11 +44,11 @@ public sealed class GiteaClient(IHttpClientFactory clients, IOptions<GiteaOption
             var response = await clients.CreateClient(ControlledHttpClients.Tools).SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
             if (response.IsSuccessStatusCode) return response;
             var status = response.StatusCode; response.Dispose();
-            throw new ApiException(status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden ? 403 : status == HttpStatusCode.NotFound ? 404 : 503,
-                "gitea_read_failed", status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden ? "Gitea 授權不足或 token 已失效，請重新連線並確認唯讀權限。" : "Gitea 項目無法讀取，請確認路徑、版本與權限。");
+            var kind = status is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden ? ErrorKind.Forbidden : status == HttpStatusCode.NotFound ? ErrorKind.NotFound : ErrorKind.Unavailable;
+            throw new ExternalServiceException(new(kind, "gitea_read_failed"), $"Gitea returned {(int)status}.");
         }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new ApiException(504, "gitea_timeout", "Gitea 讀取逾時。"); }
-        catch (HttpRequestException) { throw new ApiException(503, "gitea_unavailable", "Gitea 目前無法使用，請稍後重試。"); }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new ExternalServiceException(RepositoriesErrors.Timeout); }
+        catch (HttpRequestException) { throw new ExternalServiceException(RepositoriesErrors.Unreachable); }
     }
     public async Task<JsonDocument> GetAsync(string token, string path, CancellationToken ct)
     {
@@ -58,7 +58,7 @@ public sealed class GiteaClient(IHttpClientFactory clients, IOptions<GiteaOption
             using var response = await SendAsync(token, path, "application/json", timeout.Token);
             return await BoundedHttpJson.ReadAsync(response, Math.Max(1024 * 1024, options.Value.MaxFileBytes * 2), timeout.Token);
         }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new ApiException(504, "gitea_timeout", "Gitea 讀取逾時。"); }
-        catch (Exception ex) when (ex is HttpRequestException or JsonException or IOException) { throw new ApiException(503, "gitea_unavailable", "Gitea 目前無法使用，請稍後重試。"); }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new ExternalServiceException(RepositoriesErrors.Timeout); }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException or IOException) { throw new ExternalServiceException(RepositoriesErrors.Unreachable); }
     }
 }

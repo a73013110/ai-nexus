@@ -1,4 +1,3 @@
-using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Repositories;
@@ -22,18 +21,17 @@ internal static class RepositoriesErrors
     public static readonly Error ReviewEmptyRange = Error.Invalid("review_empty_range");
     public static readonly Error ReviewPurposeInvalid = Error.Invalid("review_purpose_invalid");
     public static readonly Error IdempotencyConflict = Error.Conflict("idempotency_conflict");
-
-    /// <summary>For callers that can only fail by exception, such as background jobs, which record the error code.</summary>
-    public static ApiException ToException(this Error error)
-    {
-        var status = Problems.Status(error.Kind);
-        return new(status, error.Code, PublicErrorCatalog.Message(error.Code, status));
-    }
-
-    public static T OrThrow<T>(this Result<T> result) => result.IsSuccess ? result.Value : throw result.Error.ToException();
-
-    public static void OrThrow(this Result result)
-    {
-        if (!result.IsSuccess) throw result.Error.ToException();
-    }
+    public static readonly Error SnapshotUnsupported = Error.Conflict("review_snapshot_unsupported");
+    public static readonly Error ReviewNoChanges = Error.Invalid("review_no_changes");
+    public static readonly Error DiffLimit = Error.TooLarge("repository_diff_limit");
+    public static readonly Error DiffNotText = Error.Invalid("repository_diff_not_text");
+    public static readonly Error SegmentLimit = Error.TooLarge("review_segment_limit");
+    public static readonly Error ModelContextSmall = Error.Invalid("review_model_context_small");
+    public static readonly Error ReviewAccessRevoked = Error.Forbidden("review_access_revoked");
+    public static readonly Error ReviewBriefInvalid = Error.Upstream("review_brief_invalid");
+    public static readonly Error ReviewSummaryTooLong = Error.Upstream("review_summary_too_long");
+    public static readonly Error IdentityInvalid = Error.Upstream("gitea_identity_invalid");
+    public static readonly Error ResponseInvalid = Error.Upstream("gitea_response_invalid");
+    public static readonly Error Timeout = Error.Timeout("gitea_timeout");
+    public static readonly Error Unreachable = Error.Unavailable("gitea_unavailable");
 }

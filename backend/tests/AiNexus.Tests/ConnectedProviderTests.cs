@@ -43,8 +43,8 @@ public sealed class ConnectedProviderTests
             return new(HttpStatusCode.Forbidden) { Content = new StringContent("PRIVATE_REMOTE_ERROR fixture-token") };
         }));
         var connector = new GiteaClient(new Factory(client), Options.Create(new GiteaOptions { BaseUrl = "https://gitea.fixture/nested/" }));
-        var error = await Assert.ThrowsAsync<ApiException>(() => connector.GetAsync("fixture-token", "api/v1/user", CancellationToken.None));
-        Assert.Equal(403, error.Status); Assert.DoesNotContain("PRIVATE", error.Message); Assert.DoesNotContain("fixture-token", error.Message);
+        var error = await Assert.ThrowsAsync<ExternalServiceException>(() => connector.GetAsync("fixture-token", "api/v1/user", CancellationToken.None));
+        Assert.Equal(ErrorKind.Forbidden, error.Error.Kind); Assert.DoesNotContain("PRIVATE", error.Message); Assert.DoesNotContain("fixture-token", error.Message);
         await Assert.ThrowsAsync<InvalidOperationException>(() => connector.GetAsync("fixture-token", "https://another.test/api/v1/user", CancellationToken.None));
     }
 

@@ -25,14 +25,14 @@ internal sealed class ConnectRepository(NexusDbContext db, RepositoryService git
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/connection", async (ConnectRepositoryRequest body, ICurrentUser user, ConnectRepository handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, body.Token, ct)).ToHttpResult())
-        .WithName("ConnectRepository").Produces<RepositoryStatusDto>();
+        .WithName("ConnectRepository");
 
     public async Task<Result<RepositoryStatusDto>> HandleAsync(Guid owner, string token, CancellationToken ct)
     {
         if (!gitea.Enabled) return RepositoriesErrors.Disabled;
         using var identity = await client.GetAsync(token, "api/v1/user", ct);
         var login = RepositoryService.Text(identity.RootElement, "login", 100);
-        if (login.Length == 0) throw new ApiException(502, "gitea_identity_invalid", "Gitea 未回傳帳號資訊。");
+        if (login.Length == 0) return RepositoriesErrors.IdentityInvalid;
         await writes.Gate.WaitAsync(ct);
         try
         {

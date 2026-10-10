@@ -5,23 +5,23 @@ using AiNexus.Features.Jobs;
 namespace AiNexus.Features.Repositories;
 
 /// <summary>Cancels or retries the review's background job. Retry re-validates access and the source through <see cref="RepositoryReviewHandler"/>.</summary>
-internal static class ChangeRepositoryReviewJob
+internal sealed class ChangeRepositoryReviewJob(RepositoryReviewService reviews, JobService jobs)
 {
     public static void Map(RouteGroupBuilder routes)
     {
-        routes.MapPost("/reviews/{id:guid}/cancel", (Guid id, ICurrentUser user, RepositoryReviewService reviews, JobService jobs, CancellationToken ct) =>
-                HandleAsync(user.Id, id, false, reviews, jobs, ct))
-            .WithName("CancelRepositoryReview").Produces<JobDto>();
-        routes.MapPost("/reviews/{id:guid}/retry", (Guid id, ICurrentUser user, RepositoryReviewService reviews, JobService jobs, CancellationToken ct) =>
-                HandleAsync(user.Id, id, true, reviews, jobs, ct))
-            .WithName("RetryRepositoryReview").Produces<JobDto>();
+        routes.MapPost("/reviews/{id:guid}/cancel", (Guid id, ICurrentUser user, ChangeRepositoryReviewJob handler, CancellationToken ct) =>
+                handler.HandleAsync(user.Id, id, false, ct).ToHttpResultAsync())
+            .WithName("CancelRepositoryReview");
+        routes.MapPost("/reviews/{id:guid}/retry", (Guid id, ICurrentUser user, ChangeRepositoryReviewJob handler, CancellationToken ct) =>
+                handler.HandleAsync(user.Id, id, true, ct).ToHttpResultAsync())
+            .WithName("RetryRepositoryReview");
     }
 
-    private static async Task<IResult> HandleAsync(Guid owner, Guid id, bool retry, RepositoryReviewService reviews, JobService jobs, CancellationToken ct)
+    public async Task<Result<JobDto>> HandleAsync(Guid owner, Guid id, bool retry, CancellationToken ct)
     {
         var review = await reviews.FindAsync(owner, id, ct);
-        if (!review.IsSuccess) return review.Error.ToProblem();
+        if (!review.IsSuccess) return review.Error;
         var job = review.Value.JobId;
-        return (retry ? await jobs.RetryAsync(owner, job, ct) : await jobs.CancelAsync(owner, job, ct)).ToHttpResult();
+        return retry ? await jobs.RetryAsync(owner, job, ct) : await jobs.CancelAsync(owner, job, ct);
     }
 }

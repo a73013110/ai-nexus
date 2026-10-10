@@ -61,7 +61,7 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
         if (!token.IsSuccess) return token.Error;
         if (!IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         using var json = await client.GetAsync(token.Value, Route(repo) + "/commits?limit=30", ct);
-        if (json.RootElement.ValueKind != JsonValueKind.Array) throw ResponseInvalid();
+        if (json.RootElement.ValueKind != JsonValueKind.Array) throw new ExternalServiceException(RepositoriesErrors.ResponseInvalid);
         return Result<IReadOnlyList<RepositoryCommitDto>>.Ok(json.RootElement.EnumerateArray().Take(30)
             .Select(x => new RepositoryCommitDto(Text(x, "sha", 64), Text(x.GetProperty("commit"), "message", 500))).ToArray());
     }
@@ -72,7 +72,7 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
         var token = await TokenAsync(owner, ct);
         if (!token.IsSuccess) return token.Error;
         using var json = await client.GetAsync(token.Value, $"api/v1/user/repos?page={page}&limit=20", ct);
-        if (json.RootElement.ValueKind != JsonValueKind.Array) throw ResponseInvalid();
+        if (json.RootElement.ValueKind != JsonValueKind.Array) throw new ExternalServiceException(RepositoriesErrors.ResponseInvalid);
         var rows = json.RootElement.EnumerateArray().Take(20).Select(x => new RepositoryDto(Text(x, "full_name", 201), Text(x, "description", 500),
             x.TryGetProperty("private", out var p) && p.GetBoolean(), Text(x, "default_branch", 160), Link(Text(x, "full_name", 201)))).ToArray();
         return new RepositoryPageDto(rows, page, rows.Length == 20);
@@ -131,7 +131,7 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
         var token = await TokenAsync(owner, ct);
         if (!token.IsSuccess) return token.Error;
         using var json = await client.GetAsync(token.Value, Route(repo) + "/issues?state=open&type=issues&limit=30", ct);
-        if (json.RootElement.ValueKind != JsonValueKind.Array) throw ResponseInvalid();
+        if (json.RootElement.ValueKind != JsonValueKind.Array) throw new ExternalServiceException(RepositoriesErrors.ResponseInvalid);
         return Result<IReadOnlyList<RepositoryIssueDto>>.Ok(json.RootElement.EnumerateArray().Take(30).Select(x => new RepositoryIssueDto(x.GetProperty("number").GetInt32(),
             Text(x, "title", 200), Text(x, "body", 8000), Text(x, "state", 16), Link(repo) + "/issues/" + x.GetProperty("number").GetInt32())).ToArray());
     }
@@ -147,7 +147,6 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
 
     private IDataProtector Protector(Guid owner) => protection.CreateProtector("AiNexus.Gitea.UserToken.v1", owner.ToString("N"), Host);
     private string Link(string repo) => Host + repo.Split('/').Select(Uri.EscapeDataString).Aggregate((a, b) => a + "/" + b);
-    private static ApiException ResponseInvalid() => new(502, "gitea_response_invalid", "Gitea 回應格式不正確。");
 
     public static bool IsRepository([NotNullWhen(true)] string? repo) => repo?.Split('/') is { Length: 2 } parts &&
         parts.All(p => p.Length is >= 1 and <= 100 && p is not ("." or "..") && p.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.'));
@@ -156,11 +155,6 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
 
     public static bool IsFilePath([NotNullWhen(true)] string? value, bool directory) => value is not null && value.Length <= 500 && (directory || value.Length > 0) &&
         !value.Contains('\\') && !value.Any(char.IsControl) && (value.Length == 0 || value.Split('/').All(p => p.Length > 0 && p is not ("." or "..")));
-
-    /// <summary>Throwing form of <see cref="IsRepository"/>: the controlled Gitea API path for a repository.</summary>
-    public static string RepositoryRoute(string repo) => IsRepository(repo) ? Route(repo) : throw RepositoriesErrors.InvalidRepository.ToException();
-    public static void Commit(string value) { if (!IsCommit(value)) throw RepositoriesErrors.InvalidCommit.ToException(); }
-    public static string FilePath(string value, bool directory) => IsFilePath(value, directory) ? value : throw RepositoriesErrors.InvalidPath.ToException();
 
     private static string Route(string repo) => "api/v1/repos/" + string.Join('/', repo.Split('/').Select(Uri.EscapeDataString));
     private static string EncodePath(string path) => string.Join('/', path.Split('/').Select(Uri.EscapeDataString));
