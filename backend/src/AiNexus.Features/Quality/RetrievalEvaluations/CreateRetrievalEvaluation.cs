@@ -38,13 +38,12 @@ internal sealed class CreateRetrievalEvaluation(NexusDbContext db, RetrievalEval
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/retrieval-evals", async (RetrievalEvaluationRequest body, ICurrentUser user, CreateRetrievalEvaluation handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, body, ct)).ToHttpResult())
-        .Produces<RetrievalEvaluationDto>();
+            (await handler.HandleAsync(user.Id, body, ct)).ToHttpResult());
 
     public async Task<Result<RetrievalEvaluationDto>> HandleAsync(Guid actor, RetrievalEvaluationRequest request, CancellationToken ct)
     {
         if (!AnnotationsValid(request.Cases)) return QualityErrors.CorpusInvalid;
-        await evaluations.RequireAccessAsync(actor, request.CollectionIds, ct);
+        if (await evaluations.RequireAccessAsync(actor, request.CollectionIds, ct) is { IsSuccess: false } denied) return denied.Error;
         var ids = request.Cases.SelectMany(x => x.Relevant).Select(x => x.DocumentId).Distinct().ToArray();
         var documents = await db.Set<KnowledgeDocument>().AsNoTracking().Where(x => ids.Contains(x.Id) && !x.IsDeleted && x.Status == "ready" && x.CollectionId != null && request.CollectionIds.Contains(x.CollectionId.Value)).Select(x => x.Id).ToListAsync(ct);
         if (documents.Count != ids.Length) return QualityErrors.CorpusInvalid;
@@ -55,7 +54,7 @@ internal sealed class CreateRetrievalEvaluation(NexusDbContext db, RetrievalEval
         using (await writes.AcquireAsync("retrieval-evaluations", actor, ct))
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
-            await evaluations.RequireAccessAsync(actor, request.CollectionIds, ct);
+            if (await evaluations.RequireAccessAsync(actor, request.CollectionIds, ct) is { IsSuccess: false } revoked) return revoked.Error;
             if (await db.Set<BackgroundJob>().AnyAsync(x => x.OwnerId == actor && x.Kind == "retrieval-eval" && x.ActiveKey != null, ct)) return QualityErrors.RetrievalActive;
             if (await db.Set<RetrievalEvaluation>().CountAsync(x => x.OwnerId == actor, ct) >= 500) return QualityErrors.RetrievalLimit;
             var profile = await profiles.ActiveAsync(ct);

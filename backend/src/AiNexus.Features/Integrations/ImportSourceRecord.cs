@@ -27,8 +27,7 @@ internal sealed class ImportSourceRecord(NexusDbContext db, AccessService access
 
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/{source}/import", async (string source, SourceImportRequest body, ICurrentUser user, ImportSourceRecord handler, CancellationToken ct) =>
-            (await handler.HandleAsync(user.Id, source, body, ct)).ToHttpResult())
-        .Produces<ArtifactDto>();
+            (await handler.HandleAsync(user.Id, source, body, ct)).ToHttpResult());
 
     public async Task<Result<ArtifactDto>> HandleAsync(Guid actor, string source, SourceImportRequest request, CancellationToken ct)
     {
@@ -39,7 +38,9 @@ internal sealed class ImportSourceRecord(NexusDbContext db, AccessService access
         if (detail.Record.Revision != request.ExpectedRevision) return IntegrationsErrors.Changed;
         var provenance = JsonSerializer.Serialize(new { source, id = detail.Record.Id, version = detail.Record.Revision, modifiedAt = detail.Record.ModifiedAt, importedAt = clock.GetUtcNow() }, Indented);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var artifact = (await artifacts.CreateAsync(actor, new(detail.Record.Title, detail.Body + "\n\n---\n\n### 匯入來源（當時快照）\n\n```json\n" + provenance + "\n```"), ct)).OrThrow();
+        var created = await artifacts.CreateAsync(actor, new(detail.Record.Title, detail.Body + "\n\n---\n\n### 匯入來源（當時快照）\n\n```json\n" + provenance + "\n```"), ct);
+        if (!created.IsSuccess) return created.Error;
+        var artifact = created.Value;
         db.Add(new ImportedSourceReference { ArtifactId = artifact.Resource.Id, SourceId = source, ExternalId = detail.Record.Id, Revision = detail.Record.Revision, ImportedAt = clock.GetUtcNow() });
         db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = artifact.Resource.Id, Action = "integration.snapshot.imported", Result = "private", DetailsJson = JsonSerializer.Serialize(new { source, externalId = detail.Record.Id }) });
         await db.SaveChangesAsync(ct);

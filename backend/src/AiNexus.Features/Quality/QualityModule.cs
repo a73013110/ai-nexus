@@ -20,14 +20,7 @@ public sealed class QualityModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddScoped<SaveMessageFeedback>();
         services.AddScoped<RetrievalEvaluationService>();
-        services.AddScoped<CreateRetrievalEvaluation>();
-        services.AddScoped<GetRetrievalReport>();
-        services.AddScoped<SaveEvaluationSet>();
-        services.AddScoped<StartEvaluationRun>();
-        services.AddScoped<BrowseEvaluationRuns>();
-        services.AddScoped<ReviewEvaluationResult>();
         services.AddScoped<IBackgroundJobHandler, RetrievalEvaluationHandler>();
         services.AddScoped<IBackgroundJobHandler, EvaluationHandler>();
         services.AddFeaturePolicy(FeatureIds.Quality);

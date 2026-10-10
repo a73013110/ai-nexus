@@ -26,12 +26,13 @@ public sealed class EvaluationSet
 
 internal static class EvaluationSetQueries
 {
-    /// <summary>The set as the actor may see it. Access failures stay exceptions of <see cref="ResourceAccess"/>.</summary>
-    public static async Task<EvaluationSetDto> LoadSetAsync(this ResourceAccess access, NexusDbContext db, Guid actor, Guid id, CancellationToken ct)
+    /// <summary>The set as the actor may see it.</summary>
+    public static async Task<Result<EvaluationSetDto>> LoadSetAsync(this ResourceAccess access, NexusDbContext db, Guid actor, Guid id, CancellationToken ct)
     {
-        var resource = (await access.RequireAsync(actor, id, EvaluationSet.Kind, ct)).OrThrow();
+        var resource = await access.RequireAsync(actor, id, EvaluationSet.Kind, ct);
+        if (!resource.IsSuccess) return resource.Error;
         var set = await db.Set<EvaluationSet>().AsNoTracking().SingleAsync(x => x.Id == id, ct);
-        return set.ToDto(await access.DescribeAsync(actor, resource, ct));
+        return set.ToDto(await access.DescribeAsync(actor, resource.Value, ct));
     }
 }
 
