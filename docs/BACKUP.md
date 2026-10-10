@@ -44,7 +44,7 @@ Recovery model 與完整／差異／log 排程由 DBA 維護。若需要在線�
 1. 設定 `Attachments.StoragePath` 指向還原的站外目錄，恢復外部設定並核對 web.config 的環境變數覆寫。設定與 `__EFMigrationsHistory` 須來自同一版本。
 2. 恢復目錄 ACL：app／config 只讀，原檔目錄須讓固定 IIS 集區身分讀／寫／刪除。磁碟預留足夠空間；不要讓 Users／Everyone 取得原檔讀取權或將目錄掛為 IIS 虛擬目錄。
 3. 還原 keys 需同時具備其 DPAPI 保護身分；換主機／身分不能只複製 XML 就假設可解密。若無法恢復保護身分，依維運政策重建 key ring、重新登入與重新連線 Gitea，保留既有業務資料。
-4. 在啟動 workers 前執行 `--VerifyDeployment true`：核對 schema／snapshot、provider 設定及站外原檔讀寫刪 probe。用 SQL 查核 ready 檔案的清單：
+4. 在啟動 workers 前執行主機指令 `verify deployment`：核對 schema／snapshot、provider 設定及站外原檔讀寫刪 probe。用 SQL 查核 ready 檔案的清單：
 
    ```sql
    SELECT [Id], [StorageKey], [Size]

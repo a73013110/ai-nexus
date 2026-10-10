@@ -14,7 +14,7 @@ dotnet test --project backend/tests/AiNexus.Tests --filter "FullyQualifiedName~C
 | Trait／條件 | 何時執行 |
 |---|---|
 | `Category=Browser` | 設定 `AINEXUS_TEST_BROWSER`（見 [開發](DEVELOPMENT.md)）；未設定時以 `Assert.Skip` 略過 |
-| `Category=Performance` | 只在 `Test-Diagnostics.ps1 -Performance` |
+| `Category=Performance` | 只在 `Verify.ps1 -Performance` |
 | SQL Server 測試 | 設定 `AINEXUS_SQLSERVER_TEST` 連線字串；未設定時略過 |
 
 ## `NexusFactory` 的取捨

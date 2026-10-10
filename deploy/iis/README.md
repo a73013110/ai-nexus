@@ -40,10 +40,10 @@ D:\CoreProject\AiNexus\
 ```powershell
 Set-Location D:\GitProject\ai-nexus
 pwsh -NoProfile -File scripts/Verify.ps1
-pwsh -NoProfile -File scripts/Publish-IIS.ps1 -SkipBuild -PublishDirectory artifacts/verification
+pwsh -NoProfile -File scripts/Publish-IIS.ps1 -DataRoot 'D:\CoreProject\AiNexus\data' -SkipBuild -PublishDirectory artifacts/verification
 ```
 
-套件放 `artifacts/iis/<時間>/`，包含 app／config 範本／空 keys／logs、`Verify-IIS.ps1`、db migration／描述腳本與 docs／deploy 維運文件，不預設攜帶秘密。輸出的 `app` 才是發版成品；已包含前端與後端，IIS 主機不用 Node.js。`PublishDirectory` 預設仍為 `artifacts/publish`；執行完整 Verify 後應明確封裝其 `artifacts/verification` 產物。
+套件放 `artifacts/iis/<時間>/`，包含 app／config 範本／空 keys／logs、`Verify-IIS.ps1`、db migration／描述腳本與 docs／deploy 維運文件，不預設攜帶秘密。`-DataRoot` 是正式主機的站外資料根目錄（必填），套件 config 的 `Attachments.StoragePath`、`Diagnostics.Directory` 會設為其下的 `attachments`、`diagnostics`。輸出的 `app` 才是發版成品；已包含前端與後端，IIS 主機不用 Node.js。`PublishDirectory` 預設仍為 `artifacts/publish`；執行完整 Verify 後應明確封裝其 `artifacts/verification` 產物。
 
 若是在受控環境製作含本機設定的內部移轉套件，可以使用 `-IncludeLocalConfig`；這會複製秘密，套件必須全程受 ACL 保護並在移轉完成後依公司政策清理。預設不複製現有 key ring。`-DestinationPath` 指**全新且空的套件 app 目錄**，不是正在運行的網站；腳本拒絕覆蓋非空目錄。既有 config／keys 也不會被這個封裝流程覆蓋。
 
@@ -162,7 +162,7 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Host.dll' `
   --contentRoot 'D:\CoreProject\AiNexus\app' `
   --LocalConfigPath '..\config\appsettings.Production.json' `
   --SecretsConfigPath '..\config\appsettings.Secrets.json' `
-  --InitializeDatabase true
+  db init
 if ($LASTEXITCODE -ne 0) { throw '資料庫初始化未完成，先不要啟動網站。' }
 ```
 
@@ -190,7 +190,7 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Host.dll' `
   --contentRoot 'D:\CoreProject\AiNexus\app' `
   --LocalConfigPath '..\config\appsettings.Production.json' `
   --SecretsConfigPath '..\config\appsettings.Secrets.json' `
-  --VerifyDeployment true
+  verify deployment
 ```
 
 輸出應有 `environment=Production`、`sqlConnected=true`、`pendingMigrations=0`、`providerAvailable=true`、`availableModelCount>0`、`sqlEncrypted=true`、`trustsSqlCertificate=true`、`adConfigured=true`、各 providers 狀態、模型數、keyRingPath、正確 attachmentStoragePath 與 attachmentStorageWritable=true、`ready=true`。SQL 版本落後或其他基線會輸出原因並退出，模型服務或指定模型不可用會列出 `modelNotice`。檢查會讀取各 provider 模型清單，不產生回答，並寫入／讀取／刪除一個短暫合成原檔 probe；`ready` 是平台狀態，個別群組仍需模型授權。切換 provider 或模型後，於管理頁確認各群組允許的模型，既有白名單不會自動清空或放寬。退出碼 0 才通過。此指令用**目前維運 shell 身分**讀檔，IIS 身分仍需實際網站驗證。
@@ -214,7 +214,7 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Host.dll' `
 13. 如啟用連網搜尋，先完成 [SearXNG／Brave 設定](../../docs/WEB_SEARCH.md)，再測 opt-in、來源與每日配額；未設定時入口停用。自架搜尋仍會向外部搜尋引擎送出公開提問。
 14. 若切到本地 embedding，先確認 Ollama 可達、指定模型已安裝且回傳維度正確，再重新索引合成文件及檢查引用；不要把核心 ready 當成向量驗收。
 
-如需真實 AI、AD TLS 與 EF／Dapper 寫入探測，再於受控環境跑 `--VerifyConnections true --VerificationOutput <logs內檔案>`。該工具會發送合成資料並呼叫真實模型；與上面的 VerifyDeployment 模型清單及原檔 IO 探測分開執行。
+如需真實 AI、AD TLS 與 EF／Dapper 寫入探測，再於受控環境跑主機指令 `verify connections --output <logs內檔案>`。該工具會發送合成資料並呼叫真實模型；與上面的 `verify deployment` 模型清單及原檔 IO 探測分開執行。主機指令清單用 `dotnet AiNexus.Host.dll --help` 查看；結束碼 0 成功、1 失敗、2 用法錯誤。
 
 ## 10. 更新與回復
 
@@ -226,7 +226,7 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Host.dll' `
 
 ## 11. 常見錯誤與診斷
 
-一般操作先用前端 NX 查證代碼在「系統日誌」查詢；必要時擴大時間範圍並檢查補送健康狀態。SQL離線可能使授權與查閱稽核無法保存，此時由授權維運者查站外JSONL、Windows Application `AiNexus.Diagnostics` 與SQL ERRORLOG，不能繞過管理授權。`VerifyDeployment`新增 diagnosticStoragePath、diagnosticStorageWritable、diagnosticCapacityBytes、diagnosticMaxSqlRows與diagnosticOtlpEnabled；它只以呼叫shell身分測試短期IO，IIS帳號權限需另驗。
+一般操作先用前端 NX 查證代碼在「系統日誌」查詢；必要時擴大時間範圍並檢查補送健康狀態。SQL離線可能使授權與查閱稽核無法保存，此時由授權維運者查站外JSONL、Windows Application `AiNexus.Diagnostics` 與SQL ERRORLOG，不能繞過管理授權。`verify deployment`輸出 diagnosticStoragePath、diagnosticStorageWritable、diagnosticCapacityBytes、diagnosticMaxSqlRows與diagnosticOtlpEnabled；它只以呼叫shell身分測試短期IO，IIS帳號權限需另驗。
 
 | 現象                    | 檢查                                                                                                                                                              |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -1,6 +1,6 @@
 # 開發、執行與文件管理
 
-日誌與安全錯誤變更須執行 `scripts/Test-Diagnostics.ps1 -Browser -Performance`；完整 Verify 包含實際 Angular＋Kestrel 查證流程、原有 UI 回歸及隔離效能量測。report／TRX／screenshots 在 artifacts，見 [驗收文件](DIAGNOSTICS_VERIFICATION.md)。`Test-Repository.ps1 -WorkingTree` 可在不改 Git index 的情況檢查追蹤與未忽略的新檔；預設仍檢查 staged。應用日誌位於站外 Diagnostics.Directory，與 `.local`／ANCM stdout 分開。
+日誌與安全錯誤變更須執行 `scripts/Verify.ps1 -Browser -Performance`，加跑實際 Angular＋Kestrel 查證流程、原有 UI 回歸及隔離效能量測。report／TRX／screenshots 在 artifacts，見 [驗收文件](DIAGNOSTICS_VERIFICATION.md)。`Test-Repository.ps1 -WorkingTree` 可在不改 Git index 的情況檢查追蹤與未忽略的新檔；預設仍檢查 staged。應用日誌位於站外 Diagnostics.Directory，與 `.local`／ANCM stdout 分開。
 
 既有 Playwright UI 回歸由 `Start-BrowserTest.ps1` 啟動編譯好的網站，使用 artifacts 下明確指定的空設定／秘密檔與獨立附件、金鑰、診斷目錄，不載入開發機 `.local`。API fixture 回歸與使用隔離 SQLite 的真實診斷端到端測試分開；前者的 SQL 匯入降級是刻意未配置資料庫，不能當成 SQL Server 效能或功能驗證。
 
@@ -46,17 +46,19 @@ dotnet dev-certs https --trust
 
 ```powershell
 ./scripts/Build.ps1 -Restore  # restore + Angular build + .NET publish
-./scripts/Verify.ps1         # build + 後端 + 前端 lint／測試 + Edge 瀏覽器測試
-./scripts/Verify.ps1 -SkipBrowser
+./scripts/Verify.ps1         # 腳本測試 + build + 後端 + 前端 lint／測試
+./scripts/Verify.ps1 -Browser -Performance  # 再加真實瀏覽器、e2e 與效能量測
 ./scripts/Build.ps1 -OutputDirectory artifacts/verification # 預覽仍運行時使用獨立產物
-./scripts/Test-Connections.ps1  # 真實外部連線，與自動化測試分開
+./scripts/Test-Environment.ps1  # 真實 SQL／AD／模型，與自動化測試分開
 ```
+
+每支入口腳本都有說明：`Get-Help ./scripts/Verify.ps1 -Detailed`。共用函式在 `scripts/AiNexus/AiNexus.psm1`，腳本本身的測試（Pester 5）在 `scripts/tests`，由 Verify 執行；`Restore.ps1` 會在缺少時安裝 Pester。研究用的 `Test-LocalAI.ps1`、`Compare-Embeddings.ps1` 在 `tooling/embeddings`。
 
 後端測試的執行方式與 `NexusFactory` 的寫法見 [後端測試](BACKEND_TESTING.md)。
 
-GitHub Actions 的 CI 目前只能手動觸發（Actions 頁面的 Run workflow），不會在 push 或 PR 時自動執行。送 PR 前請在本機跑 `Verify.ps1 -SkipBrowser`，並確認 `dotnet ef migrations has-pending-model-changes` 沒有待產生的 migration。
+GitHub Actions 的 CI 目前只能手動觸發（Actions 頁面的 Run workflow），不會在 push 或 PR 時自動執行。送 PR 前請在本機跑 `Verify.ps1`，並確認 `dotnet ef migrations has-pending-model-changes` 沒有待產生的 migration。
 
-瀏覽器測試使用本機已安裝 Edge，測試伺服器在 5180。後端的真實瀏覽器測試（`Category=Browser`：PDF 匯出、診斷與監控頁）只在設定 `AINEXUS_TEST_BROWSER` 時執行，其值為 channel（`msedge`、`chrome`）或瀏覽器執行檔絕對路徑；`Test-Diagnostics.ps1 -Browser` 會設定它，Linux 以 `-BrowserTarget /opt/pw-browsers/chromium` 指定 Playwright 的 Chromium。測試替身僅存在 `backend/tests`、`tests/e2e`，正式程式不接受測試身分 header。Playwright 覆蓋鍵盤、中文組字、版本分支、斷線、Markdown 安全、模型政策、Context、可讀字體與窄螢幕。結果、trace 與畫面全部在 ignored `artifacts`。後端測試使用獨立 SQLite；SQL schema/migrations、AD 與真模型仍由連線檢查／實機驗收驗證。
+瀏覽器測試使用本機已安裝 Edge，測試伺服器在 5180。後端的真實瀏覽器測試（`Category=Browser`：PDF 匯出、診斷與監控頁）只在設定 `AINEXUS_TEST_BROWSER` 時執行，其值為 channel（`msedge`、`chrome`）或瀏覽器執行檔絕對路徑；`Verify.ps1 -Browser` 會設定它，Linux 以 `-BrowserTarget /opt/pw-browsers/chromium` 指定 Playwright 的 Chromium。測試替身僅存在 `backend/tests`、`tests/e2e`，正式程式不接受測試身分 header。Playwright 覆蓋鍵盤、中文組字、版本分支、斷線、Markdown 安全、模型政策、Context、可讀字體與窄螢幕。結果、trace 與畫面全部在 ignored `artifacts`。後端測試使用獨立 SQLite；SQL schema/migrations、AD 與真模型仍由連線檢查／實機驗收驗證。
 
 ## API 與 migration 更新
 
@@ -84,7 +86,7 @@ migration 在本機驗證後提交 source、designer、snapshot 與 SQL。正式
 
 | 路徑 | 責任 |
 | --- | --- |
-| `backend/src/AiNexus.Host` | host：設定載入、middleware 管線、模組組裝（`Program.cs`）與維運指令（`Commands/`） |
+| `backend/src/AiNexus.Host` | host：設定載入、middleware 管線、模組組裝（`Program.cs`）與維運指令（`Commands/`：`db init`、`verify …`，`AiNexus.Host --help` 列出） |
 | `backend/src/AiNexus.Features/<Module>` | 業務模組：`<Module>Module.cs` 註冊服務、政策與端點，旁邊是 endpoint、entity、service |
 | `backend/src/AiNexus.Features/Persistence` | 共用 `NexusDbContext`、migrations、資料庫初始化與 schema 檢查 |
 | `backend/src/AiNexus.Platform` | 不依賴業務的共用基礎：錯誤、安全、設定、診斷、HTTP 限制、手寫 SQL 存取（`Data/Sql`） |

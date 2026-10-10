@@ -17,7 +17,7 @@ public static class ConnectionVerifier
 {
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 
-    public static async Task<bool> VerifyAsync(IServiceProvider services, IConfiguration configuration, string contentRoot, CancellationToken ct)
+    public static async Task<bool> VerifyAsync(IServiceProvider services, string reportPath, CancellationToken ct)
     {
         var results = new List<object>();
         var passed = true;
@@ -83,8 +83,7 @@ public static class ConnectionVerifier
             if (result.Embedding.Available != true || result.Rerank.Available != true) throw new ExternalServiceException(Error.Unavailable("retrieval_models_unavailable"), result.Embedding.Notice + " " + result.Rerank.Notice);
             return result.Embedding.Notice + " " + result.Rerank.Notice;
         });
-        var destination = configuration["VerificationOutput"] ?? Path.Combine(contentRoot, "connection-checks.json");
-        await File.WriteAllTextAsync(destination, JsonSerializer.Serialize(new { checkedAt = services.GetRequiredService<TimeProvider>().GetUtcNow(), results }, Indented), ct);
+        await File.WriteAllTextAsync(reportPath, JsonSerializer.Serialize(new { checkedAt = services.GetRequiredService<TimeProvider>().GetUtcNow(), results }, Indented), ct);
         return passed;
     }
 
