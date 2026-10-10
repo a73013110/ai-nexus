@@ -16,15 +16,15 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
-import {
-  PersonalUsage,
-  UserSettings,
-  UserSettingsService,
-  defaultSettings,
-} from '../../core/preferences/user-settings';
+import type {
+  EffectiveModelPolicyDto,
+  ModelsDto,
+  PersonalUsageDto,
+  UserSettingsDto,
+} from '../../core/api/schema';
+import { UserSettingsService, defaultSettings } from '../../core/preferences/user-settings';
 import { DraftRepository } from '../../core/preferences/draft-repository';
 import { NexusApi } from '../../core/api/nexus-api';
-import type { Models, EffectiveModelPolicy } from '../../core/api/types';
 import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
 import { WorkspaceNavigation } from '../../shared/ui/workspace-navigation';
@@ -63,17 +63,17 @@ export class SettingsPage {
   readonly service = inject(UserSettingsService);
   private readonly api = inject(NexusApi);
   private readonly drafts = inject(DraftRepository);
-  readonly draft = signal<UserSettings>(defaultSettings());
-  readonly saved = signal<UserSettings>(defaultSettings());
+  readonly draft = signal<UserSettingsDto>(defaultSettings());
+  readonly saved = signal<UserSettingsDto>(defaultSettings());
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly error = signal('');
   readonly notice = signal('');
   readonly search = signal('');
   readonly section = signal('appearance');
-  readonly usage = signal<PersonalUsage | null>(null);
-  readonly models = signal<Models | null>(null);
-  readonly policy = signal<EffectiveModelPolicy | null>(null);
+  readonly usage = signal<PersonalUsageDto | null>(null);
+  readonly models = signal<ModelsDto | null>(null);
+  readonly policy = signal<EffectiveModelPolicyDto | null>(null);
   readonly notificationPermission = signal(
     'Notification' in window ? Notification.permission : 'unsupported',
   );
@@ -169,7 +169,7 @@ export class SettingsPage {
       if (this.alive) this.loading.set(false);
     }
   }
-  update<K extends keyof UserSettings>(key: K, value: UserSettings[K]) {
+  update<K extends keyof UserSettingsDto>(key: K, value: UserSettingsDto[K]) {
     this.draft.update((current) => ({ ...current, [key]: value }));
     this.service.preview(this.draft());
     this.notice.set('');

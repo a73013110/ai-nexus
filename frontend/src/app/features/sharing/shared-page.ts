@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import type { ReadonlyShare, SharedContent } from '../../core/api/types';
+import type { ShareDto, SharedContentDto } from '../../core/api/schema';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { FeaturePage } from '../../shared/ui/feature-page';
@@ -159,8 +159,8 @@ export class SharedPage {
   private readonly scope = inject(ViewScope);
   readonly confirm = viewChild.required(ConfirmDialog);
   readonly sent = signal(false);
-  readonly list = signal<ReadonlyShare[]>([]);
-  readonly content = signal<SharedContent | null>(null);
+  readonly list = signal<ShareDto[]>([]);
+  readonly content = signal<SharedContentDto | null>(null);
   readonly loading = signal(true);
   readonly busy = signal(false);
   readonly error = signal('');
@@ -255,7 +255,7 @@ export class SharedPage {
       'share-access',
     );
   }
-  async revoke(share: ReadonlyShare) {
+  async revoke(share: ShareDto) {
     if (
       this.busy() ||
       !(await this.confirm().ask({

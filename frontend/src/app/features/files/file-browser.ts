@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { LibraryFile } from '../../core/api/types';
+import type { LibraryFileDto } from '../../core/api/schema';
+import { apiHref } from '../../core/api/api-client';
 import { ReaderLink } from '../../shared/browser/reader-link';
 import { Icon } from '../../shared/ui/icon';
 import { Card } from '../../shared/ui/card';
@@ -132,24 +133,24 @@ import { formatBytes, formatDate } from '../../shared/browser/format';
   </div>`,
 })
 export class FileBrowser {
-  readonly items = input.required<LibraryFile[]>();
+  readonly items = input.required<LibraryFileDto[]>();
   readonly layout = input('grid');
   readonly selectable = input(false);
   readonly knowledge = input(false);
   readonly busy = input(false);
-  readonly chosen = output<LibraryFile>();
-  readonly addKnowledge = output<LibraryFile>();
-  readonly rename = output<LibraryFile>();
-  readonly remove = output<LibraryFile>();
+  readonly chosen = output<LibraryFileDto>();
+  readonly addKnowledge = output<LibraryFileDto>();
+  readonly rename = output<LibraryFileDto>();
+  readonly remove = output<LibraryFileDto>();
   readonly bytes = formatBytes;
   readonly date = (value: string) => formatDate(value).split(' ')[0];
   url(id: string) {
-    return `/api/v1/attachments/${encodeURIComponent(id)}/content`;
+    return apiHref('/api/v1/attachments/{id}/content', { path: { id } });
   }
   extension(name: string) {
     return name.split('.').pop()?.toUpperCase() || 'FILE';
   }
-  usageNames(item: LibraryFile) {
+  usageNames(item: LibraryFileDto) {
     return item.usages.map((value) => value.name).join('、');
   }
 }

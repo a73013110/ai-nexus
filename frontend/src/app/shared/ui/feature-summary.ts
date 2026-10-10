@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import type { Feature } from '../../core/api/types';
+import type { FeatureDto } from '../../core/api/schema';
 import { groupFeatures } from '../../core/feature-groups';
 
 @Component({
@@ -20,6 +20,6 @@ import { groupFeatures } from '../../core/feature-groups';
     }`,
 })
 export class FeatureSummary {
-  readonly features = input.required<readonly Feature[]>();
+  readonly features = input.required<readonly FeatureDto[]>();
   readonly groups = computed(() => groupFeatures(this.features()));
 }

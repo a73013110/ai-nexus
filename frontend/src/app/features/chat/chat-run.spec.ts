@@ -1,13 +1,15 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../core/api/nexus-api';
-import type { Run } from '../../core/api/types';
+import type { RunDto } from '../../core/api/schema';
 import { RunStream, type StreamObserver } from '../../core/stream/run-stream';
 import { ChatRun } from './chat-run';
 
-const run = (id: string, status = 'running') => ({ id, status, content: '' }) as Run;
+const run = (id: string, status = 'running') => ({ id, status, content: '' }) as RunDto;
 
-function setup(follow: (run: Run, signal: AbortSignal, observer: StreamObserver) => Promise<Run>) {
+function setup(
+  follow: (run: RunDto, signal: AbortSignal, observer: StreamObserver) => Promise<RunDto>,
+) {
   TestBed.configureTestingModule({
     providers: [{ provide: RunStream, useValue: { follow: vi.fn(follow) } }],
   });
@@ -24,7 +26,7 @@ describe('chat run', () => {
       observer.status({ ...current, status: 'running' });
       return { ...current, status: 'completed', content: '完整' };
     });
-    const settled = vi.fn(async (terminal: Run) => chat.settle(terminal));
+    const settled = vi.fn(async (terminal: RunDto) => chat.settle(terminal));
     await chat.follow(run('r1'), settled);
     expect(chat.text()).toBe('部分');
     expect(settled).toHaveBeenCalledWith(expect.objectContaining({ status: 'completed' }));

@@ -1,11 +1,18 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, NexusApi } from '../api/nexus-api';
-import type { Run } from '../api/types';
+import type { RunDto } from '../api/schema';
 import { RunStream } from './run-stream';
 
-const run = (patch: Partial<Run> = {}) =>
-  ({ id: 'r1', status: 'running', content: '', lastSequence: 0, errorCode: null, ...patch }) as Run;
+const run = (patch: Partial<RunDto> = {}) =>
+  ({
+    id: 'r1',
+    status: 'running',
+    content: '',
+    lastSequence: 0,
+    errorCode: null,
+    ...patch,
+  }) as RunDto;
 
 const event = (sequence: number, type: string, patch: Record<string, unknown> = {}) => ({
   version: 1,

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
-import type { TokenUsage } from '../../core/api/types';
+import type { TokenUsageDto } from '../../core/api/schema';
 import { formatModelDisplayName } from '../browser/format';
 import { Select } from './select';
 import { TrendChart } from './trend-chart';
@@ -165,7 +165,7 @@ import { TrendChart } from './trend-chart';
   `,
 })
 export class TokenUsageChart {
-  readonly usage = input<TokenUsage | null | undefined>(null);
+  readonly usage = input<TokenUsageDto | null | undefined>(null);
   readonly model = signal('all');
   readonly metric = signal('total');
   readonly modelName = formatModelDisplayName;

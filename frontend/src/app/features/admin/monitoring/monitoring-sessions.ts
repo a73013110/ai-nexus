@@ -14,7 +14,7 @@ import { StatusBadge } from '../../../shared/ui/status-badge';
 import { CountBadge } from '../../../shared/ui/count-badge';
 import { SearchField } from '../../../shared/ui/search-field';
 import { Select } from '../../../shared/ui/select';
-import type { OnlineSession } from './monitoring-store';
+import type { OnlineSession } from '../../../core/api/schema';
 import { presenceState, monitoringTime, monitoringFeature } from './monitoring-format';
 
 @Component({

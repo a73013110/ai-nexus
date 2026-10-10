@@ -1,6 +1,6 @@
 import { Notice } from './notice';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import type { Job } from '../../core/api/types';
+import type { JobDto } from '../../core/api/schema';
 import { newLocalIssue, systemProblem, validIssueCode } from '../../core/api/safe-errors';
 import { InferenceSignal } from './inference-signal';
 import { StatusBadge } from './status-badge';
@@ -57,7 +57,7 @@ export class JobProgress {
     }
     return systemProblem(this.legacyCode);
   });
-  readonly job = input.required<Job>();
+  readonly job = input.required<JobDto>();
   readonly active = computed(() => ['queued', 'running'].includes(this.job().status));
   readonly status = computed(() => {
     const statuses: Record<string, { label: string; tone: BadgeTone }> = {

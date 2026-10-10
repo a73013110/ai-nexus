@@ -1,8 +1,8 @@
 import { DestroyRef, effect, Injectable, inject, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { NexusApi } from '../api/nexus-api';
-import type { AuthSession } from '../api/types';
-import { ApiTransport } from '../api/api-transport';
+import type { AuthSessionDto } from '../api/schema';
+import { ApiClient } from '../api/api-client';
 
 const RECENT_SESSION_MS = 5000;
 
@@ -10,14 +10,14 @@ const RECENT_SESSION_MS = 5000;
 export class AuthService {
   private readonly api = inject(NexusApi);
   private readonly router = inject(Router);
-  readonly session = signal<AuthSession | null>(null);
+  readonly session = signal<AuthSessionDto | null>(null);
   readonly generation = signal(0);
-  private pending: Promise<AuthSession> | null = null;
+  private pending: Promise<AuthSessionDto> | null = null;
   private confirmedAt = 0;
   private readonly channel =
     typeof BroadcastChannel === 'undefined' ? null : new BroadcastChannel('nexus-identity');
   constructor() {
-    const transport = inject(ApiTransport);
+    const transport = inject(ApiClient);
     if (this.channel) this.channel.onmessage = () => window.location.reload();
     inject(DestroyRef).onDestroy(() => this.channel?.close());
     effect(() => {
@@ -28,7 +28,7 @@ export class AuthService {
         });
     });
   }
-  async load(): Promise<AuthSession> {
+  async load(): Promise<AuthSessionDto> {
     if (this.pending) return this.pending;
     this.pending = this.api.authSession().then((session) => {
       const previous = this.session();
@@ -86,7 +86,7 @@ export class AuthService {
     await this.load(); // Refresh CSRF if the server has already restored an expired test.
     this.replaceIdentity(await this.api.endTestIdentity(), '/admin');
   }
-  private replaceIdentity(session: AuthSession, url: string) {
+  private replaceIdentity(session: AuthSessionDto, url: string) {
     this.session.set(session);
     this.generation.update((value) => value + 1);
     this.channel?.postMessage('changed');

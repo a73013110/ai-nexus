@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { ApiError, NexusApi } from '../api/nexus-api';
-import { isActive, Run, RunEvent } from '../api/types';
+import type { RunDto, RunEventDto } from '../api/schema';
+import { isActive } from '../api/generation-status';
 import { validIssueCode } from '../api/safe-errors';
 import { SseParser } from './sse-parser';
 import { abortableDelay } from '../../shared/browser/abortable-delay';
@@ -8,7 +9,7 @@ import { FramePublisher } from './frame-publisher';
 
 export interface StreamObserver {
   content(value: string): void;
-  status(value: Run): void;
+  status(value: RunDto): void;
   connection(value: 'connected' | 'reconnecting'): void;
 }
 
@@ -16,7 +17,7 @@ export interface StreamObserver {
 export class RunStream {
   private readonly api = inject(NexusApi);
 
-  async follow(initial: Run, signal: AbortSignal, observer: StreamObserver): Promise<Run> {
+  async follow(initial: RunDto, signal: AbortSignal, observer: StreamObserver): Promise<RunDto> {
     const content = new FramePublisher((value) => {
       if (!signal.aborted) observer.content(value);
     });
@@ -35,10 +36,10 @@ export class RunStream {
     }
   }
   private async followEvents(
-    initial: Run,
+    initial: RunDto,
     signal: AbortSignal,
     observer: StreamObserver,
-  ): Promise<Run> {
+  ): Promise<RunDto> {
     let run = initial;
     let cursor = run.lastSequence;
     let content = run.content;
@@ -61,10 +62,15 @@ export class RunStream {
             for (const frame of parser.feed(decoder.decode(chunk.value, { stream: true }))) {
               if (frame.event === 'error') {
                 const problem = JSON.parse(frame.data) as { code?: string; issueCode?: string };
-                throw new ApiError(503, problem.code ?? 'stream_failed', undefined, problem.issueCode);
+                throw new ApiError(
+                  503,
+                  problem.code ?? 'stream_failed',
+                  undefined,
+                  problem.issueCode,
+                );
               }
               if (frame.event !== 'run') continue;
-              const event = JSON.parse(frame.data) as RunEvent;
+              const event = JSON.parse(frame.data) as RunEventDto;
               if (
                 event.version !== 1 ||
                 event.runId !== run.id ||

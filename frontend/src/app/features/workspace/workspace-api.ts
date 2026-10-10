@@ -1,52 +1,34 @@
 import { ClientValidationError } from '../../core/api/safe-errors';
 import { inject, Injectable } from '@angular/core';
-import { ApiTransport } from '../../core/api/api-transport';
-import type {
-  Attachment,
-  AttachmentPolicy,
-  AttachmentStorage,
-  Conversation,
-  ConversationBackup,
-  ConversationSettings,
-  PromptTemplate,
-} from '../../core/api/types';
+import { ApiClient } from '../../core/api/api-client';
+import type { ConversationBackup, ConversationSettingsRequest } from '../../core/api/schema';
 
 @Injectable({ providedIn: 'root' })
 export class WorkspaceApi {
-  private readonly http = inject(ApiTransport);
-  labels = () => this.http.json<string[]>('/conversations/labels');
-  settings = (id: string, body: ConversationSettings) =>
-    this.http.json<Conversation>(
-      `/conversations/${encodeURIComponent(id)}/settings`,
-      'PATCH',
-      body,
-    );
+  private readonly api = inject(ApiClient);
+  labels = () => this.api.get('/api/v1/conversations/labels');
+  settings = (id: string, body: ConversationSettingsRequest) =>
+    this.api.patch('/api/v1/conversations/{id}/settings', { path: { id }, body });
   duplicate = (id: string) =>
-    this.http.json<Conversation>(`/conversations/${encodeURIComponent(id)}/duplicate`, 'POST');
-  export = (id: string) =>
-    this.http.json<ConversationBackup>(`/conversations/${encodeURIComponent(id)}/export`);
-  import = (body: ConversationBackup) =>
-    this.http.json<Conversation>('/conversations/import', 'POST', body);
-  prompts = () => this.http.json<PromptTemplate[]>('/prompt-templates');
+    this.api.post('/api/v1/conversations/{id}/duplicate', { path: { id } });
+  export = (id: string) => this.api.get('/api/v1/conversations/{id}/export', { path: { id } });
+  import = (body: ConversationBackup) => this.api.post('/api/v1/conversations/import', { body });
+  prompts = () => this.api.get('/api/v1/prompt-templates');
   savePrompt = (id: string | null, title: string, content: string) =>
-    this.http.json<PromptTemplate>(
-      `/prompt-templates${id ? '/' + encodeURIComponent(id) : ''}`,
-      id ? 'PUT' : 'POST',
-      { title, content },
-    );
-  deletePrompt = (id: string) =>
-    this.http.json<void>(`/prompt-templates/${encodeURIComponent(id)}`, 'DELETE');
-  attachmentPolicy = () => this.http.reference<AttachmentPolicy>('/attachments/policy');
+    id
+      ? this.api.put('/api/v1/prompt-templates/{id}', { path: { id }, body: { title, content } })
+      : this.api.post('/api/v1/prompt-templates', { body: { title, content } });
+  deletePrompt = (id: string) => this.api.delete('/api/v1/prompt-templates/{id}', { path: { id } });
+  attachmentPolicy = () => this.api.reference('/api/v1/attachments/policy');
   attachmentStorage = (signal?: AbortSignal) =>
-    this.http.json<AttachmentStorage>('/attachments/storage', 'GET', undefined, undefined, signal);
-  attachment = (id: string) => this.http.json<Attachment>(`/attachments/${encodeURIComponent(id)}`);
+    this.api.get('/api/v1/attachments/storage', { signal });
+  attachment = (id: string) => this.api.get('/api/v1/attachments/{id}', { path: { id } });
   async upload(file: File, signal: AbortSignal) {
     const storage = await this.attachmentStorage(signal);
     if (file.size > storage.remainingBytes) throw new ClientValidationError('attachmentQuota');
     const body = new FormData();
     body.append('file', file);
-    return this.http.json<Attachment>('/attachments', 'POST', body, undefined, signal);
+    return this.api.upload('/api/v1/attachments', body, { signal });
   }
-  removeAttachment = (id: string) =>
-    this.http.json<void>(`/attachments/${encodeURIComponent(id)}`, 'DELETE');
+  removeAttachment = (id: string) => this.api.delete('/api/v1/attachments/{id}', { path: { id } });
 }

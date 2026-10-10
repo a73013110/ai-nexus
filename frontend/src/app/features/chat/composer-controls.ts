@@ -1,6 +1,6 @@
 import { Notice } from '../../shared/ui/notice';
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import type { ContextUsage, Model, ModelPolicy } from '../../core/api/types';
+import type { ContextUsageDto, ModelDto, ModelPolicyDto } from '../../core/api/schema';
 import { Icon } from '../../shared/ui/icon';
 import { Disclosure } from '../../shared/ui/disclosure';
 import { Select } from '../../shared/ui/select';
@@ -132,14 +132,14 @@ import { formatModelName } from '../../shared/browser/format';
   </div>`,
 })
 export class ComposerControls {
-  readonly models = input.required<Model[]>();
-  readonly policy = input.required<ModelPolicy>();
+  readonly models = input.required<ModelDto[]>();
+  readonly policy = input.required<ModelPolicyDto>();
   readonly modelId = input.required<string>();
   readonly effort = input('auto');
   readonly disabled = input(false);
   readonly loading = input(false);
   readonly loadFailed = input(false);
-  readonly usage = input<ContextUsage | null>(null);
+  readonly usage = input<ContextUsageDto | null>(null);
   readonly modelChange = output<string>();
   readonly effortChange = output<string>();
   readonly webSearch = input(false);

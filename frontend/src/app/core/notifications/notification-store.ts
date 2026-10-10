@@ -1,19 +1,19 @@
 import { safeMessage } from '../api/safe-errors';
 import { DestroyRef, Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
-import { ApiTransport } from '../api/api-transport';
-import type { NotificationItem, NotificationPage } from '../api/types';
+import { ApiClient } from '../api/api-client';
+import type { NotificationDto } from '../api/schema';
 import { WorkspaceSession } from '../auth/workspace-session';
 import { WorkspaceLayout } from '../preferences/workspace-layout';
 import { notificationUrl } from './notification-target';
 
 @Injectable({ providedIn: 'root' })
 export class NotificationStore {
-  private readonly http = inject(ApiTransport);
+  private readonly api = inject(ApiClient);
   private readonly session = inject(WorkspaceSession);
   private readonly router = inject(Router);
   private readonly layout = inject(WorkspaceLayout);
-  readonly items = signal<NotificationItem[]>([]);
+  readonly items = signal<NotificationDto[]>([]);
   readonly unread = signal(0);
   readonly hasMore = signal(false);
   readonly loading = signal(false);
@@ -78,16 +78,12 @@ export class NotificationStore {
     this.controller?.abort();
     this.controller = new AbortController();
     this.loading.set(true);
-    const query = new URLSearchParams({ unread: String(this.unreadOnly()) });
-    if (more && this.items().length) query.set('before', this.items().at(-1)!.id);
+    const before = more && this.items().length ? this.items().at(-1)!.id : undefined;
     try {
-      const page = await this.http.json<NotificationPage>(
-        `/notifications?${query}`,
-        'GET',
-        undefined,
-        undefined,
-        this.controller.signal,
-      );
+      const page = await this.api.get('/api/v1/notifications', {
+        query: { unread: this.unreadOnly(), before },
+        signal: this.controller.signal,
+      });
       if (!valid()) return;
       for (const item of page.items) {
         if (
@@ -148,11 +144,11 @@ export class NotificationStore {
       if (item.target.kind === 'conversation' && item.target.id === id && !item.readAt)
         void this.read(item).catch(() => {});
   }
-  async read(item: NotificationItem) {
+  async read(item: NotificationDto) {
     const owner = this.owner,
       generation = this.session.auth.generation();
     try {
-      await this.http.json<void>(`/notifications/${item.id}/read`, 'POST');
+      await this.api.post('/api/v1/notifications/{id}/read', { path: { id: item.id } });
       if (owner !== this.owner || generation !== this.session.auth.generation()) return;
       const unread = this.items().some((x) => x.id === item.id && !x.readAt);
       this.items.update((rows) =>
@@ -166,7 +162,7 @@ export class NotificationStore {
       throw e;
     }
   }
-  async activate(item: NotificationItem) {
+  async activate(item: NotificationDto) {
     const destination = notificationUrl(item.target, item.version);
     if (!destination) return;
     const generation = this.session.auth.generation();
@@ -183,24 +179,22 @@ export class NotificationStore {
       generation = this.session.auth.generation();
     if (!through) return;
     try {
-      await this.http.json<void>('/notifications/read', 'POST', { through });
+      await this.api.post('/api/v1/notifications/read', { body: { through } });
       if (generation === this.session.auth.generation()) await this.refresh();
     } catch (e) {
-      if (generation === this.session.auth.generation())
-        this.error.set(safeMessage(e));
+      if (generation === this.session.auth.generation()) this.error.set(safeMessage(e));
     }
   }
-  async dismiss(item: NotificationItem) {
+  async dismiss(item: NotificationDto) {
     const generation = this.session.auth.generation();
     try {
-      await this.http.json<void>(`/notifications/${item.id}`, 'DELETE');
+      await this.api.delete('/api/v1/notifications/{id}', { path: { id: item.id } });
       if (generation === this.session.auth.generation()) await this.refresh();
     } catch (e) {
-      if (generation === this.session.auth.generation())
-        this.error.set(safeMessage(e));
+      if (generation === this.session.auth.generation()) this.error.set(safeMessage(e));
     }
   }
-  private browserNotify(item: NotificationItem) {
+  private browserNotify(item: NotificationDto) {
     if (
       !this.session.settings.value().notifyOnCompletion ||
       document.visibilityState !== 'hidden' ||

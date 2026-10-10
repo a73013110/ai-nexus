@@ -13,7 +13,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { AttachmentPolicy, LibraryFile } from '../../core/api/types';
+import type { AttachmentPolicyDto, LibraryFileDto } from '../../core/api/schema';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { FileDrop } from '../../shared/browser/file-drop';
@@ -64,7 +64,7 @@ export class FilesPage {
   readonly knowledge = viewChild.required(AddToKnowledge);
   readonly names = viewChild.required(NameDialog);
   private readonly confirm = viewChild.required(ConfirmDialog);
-  readonly policy = signal<AttachmentPolicy | null>(null);
+  readonly policy = signal<AttachmentPolicyDto | null>(null);
   readonly layout = signal('grid');
   readonly uploading = signal(false);
   readonly uploadLabel = signal('');
@@ -154,7 +154,7 @@ export class FilesPage {
       }
     }
   }
-  async remove(item: LibraryFile) {
+  async remove(item: LibraryFileDto) {
     if (this.busy() || !item.canDelete) return;
     const valid = this.scope.guard();
     if (
@@ -183,7 +183,7 @@ export class FilesPage {
       if (valid()) this.busy.set(false);
     }
   }
-  rename(item: LibraryFile) {
+  rename(item: LibraryFileDto) {
     if (this.busy()) return;
     const valid = this.scope.guard();
     this.names().open({

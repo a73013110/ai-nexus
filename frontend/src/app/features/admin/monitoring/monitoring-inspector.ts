@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { Icon } from '../../../shared/ui/icon';
 import { StatusBadge } from '../../../shared/ui/status-badge';
 import { formatBytes } from '../../../shared/browser/format';
-import type { OnlineSession, DependencyTraffic } from './monitoring-store';
+import type { DependencyTraffic, OnlineSession } from '../../../core/api/schema';
 import {
   presenceState,
   dependencyStatus,

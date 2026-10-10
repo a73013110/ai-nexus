@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import type { Attachment } from '../../core/api/types';
+import type { AttachmentDto } from '../../core/api/schema';
+import { apiHref } from '../../core/api/api-client';
 import { Icon } from '../../shared/ui/icon';
 import { ReaderLink } from '../../shared/browser/reader-link';
 
@@ -60,14 +61,15 @@ import { ReaderLink } from '../../shared/browser/reader-link';
   </ul>`,
 })
 export class AttachmentList {
-  readonly files = input.required<Attachment[]>();
+  readonly files = input.required<AttachmentDto[]>();
   readonly editable = input(false);
   readonly shareId = input<string | null>(null);
   readonly remove = output<string>();
   url(id: string) {
-    return this.shareId()
-      ? `/api/v1/shares/${encodeURIComponent(this.shareId()!)}/files/${encodeURIComponent(id)}`
-      : `/api/v1/attachments/${encodeURIComponent(id)}/content`;
+    const share = this.shareId();
+    return share
+      ? apiHref('/api/v1/shares/{id}/files/{file}', { path: { id: share, file: id } })
+      : apiHref('/api/v1/attachments/{id}/content', { path: { id } });
   }
   size(bytes: number) {
     return bytes >= 1024 * 1024

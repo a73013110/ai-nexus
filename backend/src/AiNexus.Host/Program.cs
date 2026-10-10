@@ -29,11 +29,7 @@ try
     LocalDatabaseSettings.Apply(builder.Configuration);
     builder.AddPlatform();
     builder.AddFeatures();
-    builder.Services.AddOpenApi(options => options.AddDocumentTransformer((document, _, _) =>
-    {
-        document.Servers = [new() { Url = "/" }];
-        return Task.CompletedTask;
-    }));
+    builder.Services.AddOpenApiContract();
     builder.ConfigureServerLimits();
     app = builder.Build();
     FeatureModules.VerifyStartup(app.Services);

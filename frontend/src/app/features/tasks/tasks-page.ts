@@ -8,7 +8,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
-import type { Job } from '../../core/api/types';
+import type { JobDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { formatDate } from '../../shared/browser/format';
 import { FeaturePage } from '../../shared/ui/feature-page';
@@ -127,7 +127,7 @@ export class TasksPage {
   readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
   private readonly api = inject(JobsApi);
-  readonly jobs = signal<Job[]>([]);
+  readonly jobs = signal<JobDto[]>([]);
   readonly target = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('job') || '');
   readonly filter = signal(this.target() ? 'all' : 'active');
   readonly loading = signal(true);
@@ -203,7 +203,7 @@ export class TasksPage {
         'poll',
       );
   }
-  async act(job: Job, retry: boolean) {
+  async act(job: JobDto, retry: boolean) {
     if (this.busy()) return;
     const valid = this.scope.guard();
     this.busy.set(job.id);

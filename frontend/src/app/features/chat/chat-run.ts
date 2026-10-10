@@ -1,13 +1,13 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { ApiError } from '../../core/api/nexus-api';
-import type { Run } from '../../core/api/types';
+import type { RunDto } from '../../core/api/schema';
 import { RunStream } from '../../core/stream/run-stream';
 
 /** The one generation this browser follows: its status, streamed text and connection. */
 @Injectable({ providedIn: 'root' })
 export class ChatRun {
   private readonly stream = inject(RunStream);
-  readonly live = signal<Run | null>(null);
+  readonly live = signal<RunDto | null>(null);
   readonly text = signal('');
   readonly connection = signal<'connected' | 'reconnecting' | 'disconnected'>('connected');
   readonly stopping = signal(false);
@@ -17,7 +17,7 @@ export class ChatRun {
    * Follows events until the run settles, then lets the caller reload what it produced. A newer
    * follow, a stop or a reset ends this one silently; other failures mark the connection lost.
    */
-  async follow(run: Run, settled: (terminal: Run) => Promise<void>) {
+  async follow(run: RunDto, settled: (terminal: RunDto) => Promise<void>) {
     this.subscription?.abort();
     const controller = (this.subscription = new AbortController());
     this.live.set(run);
@@ -43,12 +43,12 @@ export class ChatRun {
   }
 
   /** Stops following after a server-side cancel, keeping the partial answer on screen. */
-  stopped(final: Run) {
+  stopped(final: RunDto) {
     this.subscription?.abort();
     this.text.set(final.content);
   }
 
-  settle(run: Run) {
+  settle(run: RunDto) {
     if (this.live()?.id === run.id) this.live.set(null);
     this.connection.set('connected');
   }

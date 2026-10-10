@@ -47,7 +47,7 @@ dotnet dev-certs https --trust
 ./scripts/Test-Environment.ps1                               # 真實 SQL／AD／模型，與自動化測試分開
 ```
 
-- `Verify.ps1` 依序跑腳本測試、build（輸出到 `artifacts/verification`，不覆寫執行中的 publish）、後端 build、`has-pending-model-changes`、後端測試、前端 lint 與單元測試。
+- `Verify.ps1` 依序跑腳本測試、`schema.ts` 與 `openapi.json` 一致性、build（輸出到 `artifacts/verification`，不覆寫執行中的 publish）、後端 build、`has-pending-model-changes`、後端測試、前端 lint 與單元測試。
 - 改到日誌、安全錯誤或監控時加 `-Browser -Performance`。
 - GitHub Actions 只能手動觸發（Actions 頁面的 Run workflow），在 Windows 上跑 `Restore.ps1`＋`Verify.ps1`，和本機是同一組步驟。
 - 建置只接受 `artifacts/` 內的輸出路徑，刪除舊 wwwroot 前驗證絕對路徑與 reparse point。
@@ -60,7 +60,13 @@ API 有變動時，啟動 Development API（整合預覽也可）後執行：
 ./scripts/Export-Contracts.ps1 -BaseUrl https://localhost:5080
 ```
 
-一起提交 `contracts/openapi.json` 與產生的 `frontend/src/app/core/api/schema.ts`，不手改。SSE 等 OpenAPI 表達不了的規則在 [SSE](../architecture/SSE.md)。型別產生工具用隔離的 TypeScript 5（`tooling/contracts`），Angular 用 TypeScript 6。
+一起提交 `contracts/openapi.json` 與產生的 `frontend/src/app/core/api/schema.ts`，不手改。只改了 `openapi.json` 時用 `npm --prefix frontend run contracts` 重產 `schema.ts`。
+
+型別鏈：後端 DTO 改變 → `OpenApiContractTests` 要求重產 `openapi.json` → `Verify.ps1` 的 `contracts:check` 要求重產 `schema.ts` → 前端用到舊欄位的地方編譯失敗。前端所有請求都經過 `ApiClient`，路徑、參數、body 與回應型別都來自 `schema.ts`（寫法見 [前端共用邊界](../frontend/FRONTEND_BOUNDARIES.md#呼叫-api)）。
+
+- 合約由 `backend/src/AiNexus.Host/OpenApiContract.cs` 調整成前端可直接使用：只出現在回應的 DTO，每個屬性都標 required（伺服器一定會寫出），只有條件式 `JsonIgnore` 的屬性可省略；也會當請求 body 的型別維持產生器的判斷，因為有預設值的欄位用戶端可以不送。query 參數名一律 camelCase，enum 以名稱傳遞。
+- `openapi-typescript` 宣告的 peer 是 TypeScript 5；`frontend/package.json` 以 `overrides` 讓它使用前端的 TypeScript 6，產出與 TypeScript 5 相同。
+- SSE 等 OpenAPI 表達不了的規則在 [SSE](../architecture/SSE.md)。
 
 ## 資料結構
 
