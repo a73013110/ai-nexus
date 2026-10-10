@@ -9,7 +9,7 @@
 backend/src/AiNexus.Host/web.config 帶入，不再改寫。config/ 只在不存在時由範本建立，
 並把 Attachments.StoragePath 與 Diagnostics.Directory 設為 -DataRoot 下的 attachments、diagnostics。
 migrations.sql 是發布當下以 dotnet ef 產生的 idempotent SQL，給 DBA 審閱套用。
-套件不含秘密；只有 app/ 是 IIS 的實體路徑。替換執行中網站的步驟見 deploy/iis/README.md。
+套件不含秘密；只有 app/ 是 IIS 的實體路徑。替換執行中網站的步驟見 docs/operations/IIS_DEPLOYMENT.md。
 
 .PARAMETER DataRoot
 正式主機上站外資料的根目錄（絕對路徑），例如 D:\AiNexus\data。
@@ -57,7 +57,7 @@ if (!(Test-Path -LiteralPath (Join-Path $publish 'AiNexus.Host.dll'))) { throw '
 if (!$DestinationPath) { $DestinationPath = Join-Path $root ('artifacts/iis/' + [DateTime]::UtcNow.ToString('yyyyMMddTHHmmssfff') + '/app') }
 $app = [IO.Path]::GetFullPath($DestinationPath)
 if ((Test-Path -LiteralPath $app) -and @(Get-ChildItem -LiteralPath $app -Force).Count) {
-    throw 'DestinationPath 必須是新套件的空 app 目錄；替換執行中的網站請依 deploy/iis/README.md。'
+    throw 'DestinationPath 必須是新套件的空 app 目錄；替換執行中的網站請依 docs/operations/IIS_DEPLOYMENT.md。'
 }
 $package = Split-Path $app
 foreach ($directory in @($app, (Join-Path $package 'config'), (Join-Path $package 'keys'), (Join-Path $package 'logs'))) {
@@ -89,4 +89,4 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'migration SQL 產生失敗；請先執行 scripts/Restore.ps1 還原 dotnet-ef。' }
 } finally { Pop-Location }
 Write-Output "IIS 發布套件：$package"
-Write-Output "只有 app/ 是 IIS 實體路徑。更新時保留執行中的 config/、keys/ 與 $DataRoot；首次啟動前建立站外資料目錄並給 application pool Modify 權限，見 deploy/iis/README.md。套件的 logs/ 只給 ANCM stdout 使用。"
+Write-Output "只有 app/ 是 IIS 實體路徑。更新時保留執行中的 config/、keys/ 與 $DataRoot；首次啟動前建立站外資料目錄並給 application pool Modify 權限，見 docs/operations/IIS_DEPLOYMENT.md。套件的 logs/ 只給 ANCM stdout 使用。"

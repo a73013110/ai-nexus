@@ -6,7 +6,7 @@
 
 .DESCRIPTION
 只送合成文字，不送私人資料，也不呼叫 Google。這是短的單次量測，不代表多人負載或檢索品質；
-GPU／CPU 配置在 GPU 主機上以 ollama ps 查看。說明見 docs/LOCAL_AI.md。
+GPU／CPU 配置在 GPU 主機上以 ollama ps 查看。說明見 docs/research/LOCAL_AI.md。
 
 .PARAMETER Endpoint
 Ollama 網址。

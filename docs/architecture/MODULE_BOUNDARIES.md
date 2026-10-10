@@ -2,7 +2,7 @@
 
 - 模組之間可以互相依賴，但**不可形成循環**。目標是能由下往上讀懂、測試與修改，不是零依賴。
 - `ModuleBoundaryTests.Module_dependencies_have_no_cycles` 以 NetArchTest 計算 `AiNexus.Features` 各模組命名空間之間的依賴；出現循環時列出最短路徑，以及每一段由哪些型別造成。
-- `Persistence` 是共用基礎設施，不算模組：`NexusDbContext` 自動套用各模組的實體設定，跨模組外鍵與 SQLite 差異（`CrossModuleRelationships`、`SqliteModel`）引用各模組的實體，各模組也都使用它。設定的繫結（`InferenceSettings` 等）放在擁有該設定的模組。
+- `Persistence` 是共用基礎設施，不算模組：`NexusDbContext` 自動套用各模組的實體設定，跨模組外鍵與 SQLite 差異（`CrossModuleRelationships`、`SqliteModel`）引用各模組的實體，各模組也都使用它。設定的 Options 類別（`InferenceOptions` 等）放在擁有該設定的模組。
 - 每個模組資料夾的根目錄有 `<Module>Module.cs`（唯一的註冊點）；有預期失敗時也有 `<Module>Errors.cs`。兩者都由 `ModuleBoundaryTests` 檢查。
 
 ## 目前的分層

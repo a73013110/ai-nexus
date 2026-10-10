@@ -7,12 +7,12 @@
 
 ## 檔案與載入順序
 
-| 用途                 | 本機開發                                    | IIS                                     | 範本                                   |
-| -------------------- | ------------------------------------------- | --------------------------------------- | -------------------------------------- |
-| 全部預設值           | `backend/src/AiNexus.Host/appsettings.json` | `app/appsettings.json`（來自發版）      | —                                      |
-| 此機器的一般設定     | `.local/config/appsettings.Local.json`      | `config/appsettings.Production.json`    | `appsettings.Local.example.json`、`appsettings.Production.example.json` |
-| 密碼與 key           | `.local/secrets/appsettings.Secrets.json`   | `config/appsettings.Secrets.json`       | `appsettings.Secrets.example.json`     |
-| 登入 cookie 加密金鑰 | `.local/keys`                               | `keys`（保留，不隨發版覆蓋）            | —                                      |
+| 用途 | 本機開發 | IIS | 範本 |
+| --- | --- | --- | --- |
+| 全部預設值 | `backend/src/AiNexus.Host/appsettings.json` | `app/appsettings.json`（來自發版） | — |
+| 此機器的一般設定 | `.local/config/appsettings.Local.json` | `config/appsettings.Production.json` | `appsettings.Local.example.json`、`appsettings.Production.example.json` |
+| 密碼與 key | `.local/secrets/appsettings.Secrets.json` | `config/appsettings.Secrets.json` | `appsettings.Secrets.example.json` |
+| 登入 cookie 加密金鑰 | `.local/keys` | `keys`（保留，不隨發版覆蓋） | — |
 
 後面的來源優先：`appsettings.json` → 一般設定 → 秘密 → 環境變數 → 命令列。環境變數用 `__` 表示階層，例如 `Database__Password`、`Inference__Providers__Google__ApiKey`。密碼不可放在命令列或前端。
 
@@ -22,21 +22,21 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 
 區段名稱與擁有它的模組一致。欄位、預設值與合法範圍寫在對應的 Options 類別（DataAnnotations 屬性），不在這裡重抄。
 
-| 區段                           | Options 類別                                                                               | 秘密欄位               |
-| ------------------------------ | ------------------------------------------------------------------------------------------ | ---------------------- |
+| 區段 | Options 類別 | 秘密欄位 |
+| --- | --- | --- |
 | `Database`、`ConnectionStrings` | 啟動時組成連線字串：[`LocalDatabaseSettings`](../../backend/src/AiNexus.Platform/Data/LocalDatabaseSettings.cs) | `User`、`Password`、`ConnectionStrings.*` |
-| `Identity.ActiveDirectory`     | [`AdAuthenticationOptions`](../../backend/src/AiNexus.Features/Identity/Authentication/AdAuthenticationOptions.cs) | `DnPass`               |
-| `Administration`               | [`AdministrationOptions`](../../backend/src/AiNexus.Features/Administration/AdministrationOptions.cs) | —                      |
-| `Inference`                    | [`InferenceOptions`](../../backend/src/AiNexus.Features/Inference/InferenceOptions.cs)        | `Providers.Google.ApiKey` |
-| `Knowledge`                    | [`KnowledgeOptions`](../../backend/src/AiNexus.Features/Knowledge/KnowledgeOptions.cs)        | —                      |
-| `WebSearch`                    | [`WebSearchOptions`](../../backend/src/AiNexus.Features/WebSearch/WebSearchOptions.cs)        | `ApiKey`（Brave）      |
-| `Integrations`                 | [`IntegrationsOptions`](../../backend/src/AiNexus.Features/Integrations/IntegrationsOptions.cs) | `<來源>.Database.User`／`Password` |
-| `Repositories.Gitea`           | [`GiteaOptions`](../../backend/src/AiNexus.Features/Repositories/GiteaOptions.cs)             | —（權杖由使用者連線後加密存 SQL） |
-| `Attachments`                  | [`AttachmentOptions`](../../backend/src/AiNexus.Features/Attachments/AttachmentOptions.cs)    | —                      |
-| `Artifacts.Export`             | [`ExportOptions`](../../backend/src/AiNexus.Features/Artifacts/ArtifactExport.cs)             | —                      |
-| `Monitoring`                   | [`MonitoringOptions`](../../backend/src/AiNexus.Features/Monitoring/MonitoringOptions.cs)     | —                      |
-| `Diagnostics`                  | [`DiagnosticOptions`](../../backend/src/AiNexus.Platform/Diagnostics/DiagnosticOptions.cs)    | —                      |
-| `Security`、`DataProtection`、`AllowedHosts` | Host 與 Platform 直接讀取                                                    | —                      |
+| `Identity.ActiveDirectory` | [`AdAuthenticationOptions`](../../backend/src/AiNexus.Features/Identity/Authentication/AdAuthenticationOptions.cs) | `DnPass` |
+| `Administration` | [`AdministrationOptions`](../../backend/src/AiNexus.Features/Administration/AdministrationOptions.cs) | — |
+| `Inference` | [`InferenceOptions`](../../backend/src/AiNexus.Features/Inference/InferenceOptions.cs) | `Providers.Google.ApiKey` |
+| `Knowledge` | [`KnowledgeOptions`](../../backend/src/AiNexus.Features/Knowledge/KnowledgeOptions.cs) | — |
+| `WebSearch` | [`WebSearchOptions`](../../backend/src/AiNexus.Features/WebSearch/WebSearchOptions.cs) | `ApiKey`（Brave） |
+| `Integrations` | [`IntegrationsOptions`](../../backend/src/AiNexus.Features/Integrations/IntegrationsOptions.cs) | `<來源>.Database.User`／`Password` |
+| `Repositories.Gitea` | [`GiteaOptions`](../../backend/src/AiNexus.Features/Repositories/GiteaOptions.cs) | —（權杖由使用者連線後加密存 SQL） |
+| `Attachments` | [`AttachmentOptions`](../../backend/src/AiNexus.Features/Attachments/AttachmentOptions.cs) | — |
+| `Artifacts.Export` | [`ExportOptions`](../../backend/src/AiNexus.Features/Artifacts/ArtifactExport.cs) | — |
+| `Monitoring` | [`MonitoringOptions`](../../backend/src/AiNexus.Features/Monitoring/MonitoringOptions.cs) | — |
+| `Diagnostics` | [`DiagnosticOptions`](../../backend/src/AiNexus.Platform/Diagnostics/DiagnosticOptions.cs) | — |
+| `Security`、`DataProtection`、`AllowedHosts` | Host 與 Platform 直接讀取 | — |
 
 ## 啟動驗證
 
@@ -50,15 +50,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 
 ## 第一次設定
 
-在專案根目錄用 PowerShell 7.4 以上執行：
-
-```powershell
-pwsh -NoProfile -File scripts/Configure-Local.ps1
-pwsh -NoProfile -File scripts/Initialize-Database.ps1
-pwsh -NoProfile -File scripts/Start-Local.ps1
-```
-
-`Configure-Local` 第一次會從範本建立 `.local` 的兩個檔案，再以遮蔽方式詢問 SQL 帳密、AD 服務密碼和 Google key（Enter 保留舊值），秘密檔只開放給目前使用者、SYSTEM 與 Administrators。其他欄位直接用編輯器改 `.local/config/appsettings.Local.json`。IIS 的設定步驟見 [IIS 部署](../operations/IIS_DEPLOYMENT.md)。
+`./scripts/Configure-Local.ps1` 第一次從範本建立 `.local` 的兩個檔案，再以遮蔽方式詢問 SQL 帳密、AD 服務密碼與 Google key（Enter 保留舊值）；秘密檔只開放給目前使用者、SYSTEM 與 Administrators。其他欄位直接編輯 `.local/config/appsettings.Local.json`。IIS 的步驟見 [IIS 外部設定](../operations/IIS_CONFIGURATION.md)。
 
 ## 程式碼表達不了的注意事項
 
@@ -70,4 +62,4 @@ pwsh -NoProfile -File scripts/Start-Local.ps1
 - **完全地端**：停用 `Inference.Providers.Google.Enabled`，embedding 用 ollama 或 none（none 只用全文檢索，SQL Server 需安裝全文元件）。
 - **向量設定變更**：embedding 模型、維度、前處理、`Revision` 或切段設定改變時要重建 profile，見 [向量架構](../research/VECTOR_ARCHITECTURE.md)。
 - **附件路徑**：`Attachments.StoragePath` 必須是站外絕對路徑；Development 留空時用 `.local/data/attachments`。web.config 可用 `Attachments__StoragePath` 覆寫。
-- **其他**：`AllowedHosts` 是 IIS 接受的 Host 名稱（不含 scheme 與 port）。`Security.DisableHttpsRedirection` 不會停用 Production 的 Secure cookie。Google API 與 Brave 只連官方 HTTPS endpoint。
+- **其他**：`AllowedHosts` 是 IIS 接受的 Host 名稱（不含 scheme 與 port）。`Security.AllowInsecureLocalhost` 只由 `-Http` 開啟，Production 一律忽略。Google API 與 Brave 只連官方 HTTPS endpoint。

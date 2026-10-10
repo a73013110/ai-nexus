@@ -39,9 +39,9 @@ IP 只取 HttpContext.Connection.RemoteIpAddress，不自行相信 X-Forwarded-F
 
 目前符合單一 IIS worker 部署，不聚合叢集，重啟重新採集。多執行個體可沿用契約與採集邊界，將 presence lease／聚合移至分散式 adapter。AiNexus.Runtime Meter 已加入既有 OpenTelemetry，啟用 Diagnostics.OtlpEnabled 可經既有 collector 匯出 API 次數、body bytes、duration histogram、in-flight 與工作階段 gauges；tags 不含人員／IP。
 
-## 權限、設定與升級
+## 權限與設定
 
-Migration 只新增 accesscontrol.Features.monitoring 與 administrators grant，沒有遙測資料表。一般成員只能報送自己的 presence；監控讀取需明確 grant，admin 不隱含 monitoring。保留 CSRF／身分版本驗證。SSE 每十五秒以新 scope 重驗帳號與有效 grant，測試身分也驗來源管理員、期限與撤銷；每人最多三條，單條十分鐘後重連重新驗 cookie。SQL 不可用時暫停傳送並重連，安全錯誤不含原始例外。AsyncLocal suppression 排除觀測者自己的 HTTP／SQL／外部呼叫。
+`monitoring` 功能預設只授予 administrators 群組，沒有遙測資料表。一般成員只能報送自己的 presence；監控讀取需明確 grant，admin 不隱含 monitoring。保留 CSRF／身分版本驗證。SSE 每十五秒以新 scope 重驗帳號與有效 grant，測試身分也驗來源管理員、期限與撤銷；每人最多三條，單條十分鐘後重連重新驗 cookie。SQL 不可用時暫停傳送並重連，安全錯誤不含原始例外。AsyncLocal suppression 排除觀測者自己的 HTTP／SQL／外部呼叫。
 
 | 設定 | 預設 | 範圍 |
 | --- | --- | --- |
@@ -52,7 +52,7 @@ Migration 只新增 accesscontrol.Features.monitoring 與 administrators grant�
 
 一般設定可覆寫，修改後重啟，不需新增秘密或 SQL server-wide monitoring 權限。Presence 每人每分鐘 120 次，監控讀取每分鐘 60 次，匯出每分鐘兩次。
 
-依現有流程停止舊 host，執行 scripts/Initialize-Database.ps1 套用 migration，再 build／重啟。IIS／代理的 SSE 不緩衝設定沿用回答串流，見 [IIS](../operations/IIS_DEPLOYMENT.md)。
+SSE 的不緩衝與 heartbeat 沿用回答串流的做法，見 [SSE](../architecture/SSE.md)。
 
 ## 驗證
 

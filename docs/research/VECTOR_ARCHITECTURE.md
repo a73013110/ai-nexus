@@ -20,7 +20,7 @@
 
 實際 embedding 輸入為 `文件名 › HeadingPath\n本文`，`Text` 只存本文。SHA-256 ContentHash 計算完整輸入；同 profile 的相同 hash 可複製向量。批次預設 16，背景併發 1，在聊天生成或排隊時讓出 GPU；容量限制屬每個程序，已發出的請求不會被聊天搶占。每批寫入使用多列 Dapper INSERT，參與 lease-fenced checkpoint 的同一個 EF transaction。HTTP 共用具名 client、逾時與暫時錯誤重試；最多重試兩次，408／429／5xx／網路錯誤採指數退避與抖動。向量檢查數量、維度、有限值與非零值後 L2 正規化。
 
-查詢快取以 profile key + 正規化查詢 hash 為鍵，獨立 `IMemoryCache` 最多 512 筆、預設 TTL 10 分鐘，條帶鎖抑制重複請求。embedding 與 rerank 共用每人每日 20,000 次配額、SQL 使用者列鎖與 `ModelQuotaLock`；批次算一次，快取命中不新增模型呼叫。
+查詢快取以 profile key + 正規化查詢 hash 為鍵，獨立 `IMemoryCache` 最多 512 筆、預設 TTL 10 分鐘，條帶鎖抑制重複請求。embedding 與 rerank 共用每人每日 20,000 次配額、SQL 使用者列鎖（`RetrievalInvocation`）；批次算一次，快取命中不新增模型呼叫。
 
 ## Schema 與 profile
 
@@ -60,6 +60,6 @@ SELECT * FROM sys.fulltext_indexes WHERE object_id = OBJECT_ID('knowledge.Chunks
 
 執行 `scripts/Test-Environment.ps1 -SqlOnly` 或管理 → 知識檢索查看狀態；安裝後若 catalog 尚未建立，由 DBA 依 migration 的全文 DDL 建立 catalog/index，勿改 migration history。已登記的 migration 不會因重跑 idempotent script 而再執行。
 
-新增維度：新增 EF vector entity／`ConfigureVector` 映射及對應表 migration；在單一 `VectorDimensions` allowlist／Table 映射加入維度，擴充 store、coverage、SQLite converter 與設定驗證／腳本。補齊 DatabaseDescriptions 與真實 SQL 測試，再生成 migration SQL、契約，建立新 profile 重建驗證。不能任意拼接使用者提供的表名或維度。
+新增維度：新增 vector entity（仿 `ChunkEmbedding1024` 繼承 `ChunkEmbeddingConfiguration<T>`）及對應表 migration；在單一 `VectorDimensions` allowlist／Table 映射加入維度，擴充 store、coverage、SQLite converter 與設定驗證／腳本。補齊實體的 `[Comment]` 與真實 SQL 測試，再生成 migration SQL、契約，建立新 profile 重建驗證。不能任意拼接使用者提供的表名或維度。
 
 目前採精確 cosine，未啟用 VECTOR_SEARCH／CREATE VECTOR INDEX preview；int clustered PK 與 SearchId 已保留接縫。資料量、p95、Recall@K 確認成為瓶頸後，再評估正式支援的 ANN，必須保留授權候選邊界並驗證召回與撤權。不使用其他向量資料庫。四模式驗收與操作見 [品質評測](../features/QUALITY.md)、[模型與重排](EMBEDDING_MODELS.md)。
