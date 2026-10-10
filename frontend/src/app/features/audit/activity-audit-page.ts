@@ -23,7 +23,7 @@ import {
   viewChildren,
 } from '@angular/core';
 import { ActivityAuditApi } from './activity-audit-api';
-import type { AuditEntry, Feature, Model } from '../../core/api/types';
+import type { AuditDto, FeatureDto, ModelDto } from '../../core/api/schema';
 import { FeatureSummary } from '../../shared/ui/feature-summary';
 import { SearchField } from '../../shared/ui/search-field';
 import { Select } from '../../shared/ui/select';
@@ -82,15 +82,15 @@ export class ActivityAuditPage {
   readonly categories = AUDIT_CATEGORIES;
   readonly category = signal('');
   readonly traceId = signal('');
-  readonly features = signal<readonly Feature[]>([]);
-  readonly models = signal<readonly Model[]>([]);
+  readonly features = signal<readonly FeatureDto[]>([]);
+  readonly models = signal<readonly ModelDto[]>([]);
   readonly modelNames = computed(() =>
     Object.fromEntries(this.models().map((model) => [model.id, formatModelName(model)])),
   );
-  readonly rows = signal<AuditEntry[]>([]);
+  readonly rows = signal<AuditDto[]>([]);
   readonly pageIndex = signal(0);
   readonly loadedCount = signal(0);
-  private readonly pages = signal<AuditEntry[][]>([]);
+  private readonly pages = signal<AuditDto[][]>([]);
   readonly hasNext = computed(() => this.pageIndex() < this.pages().length - 1 || this.more());
   readonly selectedId = signal<number | null>(null);
   readonly drawer = viewChild.required(DetailDrawer);
@@ -194,7 +194,7 @@ export class ActivityAuditPage {
       this.rows.set(page);
     } else if (direction === 1 && this.more()) await this.load(true);
   }
-  private resolveFeatures(ids: string[]): Feature[] {
+  private resolveFeatures(ids: string[]): FeatureDto[] {
     const catalog = new Map(this.features().map((feature) => [feature.id, feature]));
     return ids.map((id) => catalog.get(id) ?? { id, name: FEATURE_NAMES[id] || id, route: '' });
   }
@@ -295,13 +295,13 @@ export class ActivityAuditPage {
     }
     try {
       const filters = {
-        search: this.search(),
-        action: this.action(),
-        result: this.result(),
-        category: this.category(),
-        ...(this.traceId() ? { traceId: this.traceId() } : {}),
-        from: this.from() ? this.from() + 'T00:00:00+08:00' : '',
-        until: this.until() ? this.nextDay(this.until()) + 'T00:00:00+08:00' : '',
+        search: this.search() || undefined,
+        action: this.action() || undefined,
+        result: this.result() || undefined,
+        category: this.category() || undefined,
+        traceId: this.traceId() || undefined,
+        from: this.from() ? this.from() + 'T00:00:00+08:00' : undefined,
+        until: this.until() ? this.nextDay(this.until()) + 'T00:00:00+08:00' : undefined,
       };
       const rows = await this.api.query(append ? this.rows().at(-1)?.id : undefined, filters);
       if (version !== this.version) return;

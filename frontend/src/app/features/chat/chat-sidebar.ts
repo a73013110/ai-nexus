@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { FormField, form, maxLength } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
-import type { Conversation } from '../../core/api/types';
+import type { ConversationDto } from '../../core/api/schema';
 import { Icon } from '../../shared/ui/icon';
 import { NotificationStore } from '../../core/notifications/notification-store';
 import { ConversationActions, type ConversationAction } from '../workspace/conversation-actions';
@@ -28,7 +28,7 @@ export class ChatSidebar {
   readonly hasSharing = (feature: { id: string }) => feature.id === 'shared';
   readonly store = inject(ChatStore);
   readonly notifications = inject(NotificationStore);
-  readonly action = output<{ conversation: Conversation; action: ConversationAction }>();
+  readonly action = output<{ conversation: ConversationDto; action: ConversationAction }>();
   readonly navigate = output<void>();
   readonly prompts = output<void>();
   readonly commands = output<void>();
@@ -44,7 +44,7 @@ export class ChatSidebar {
     const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' });
     const today = day.format(now),
       yesterday = day.format(new Date(now.getTime() - 86400000));
-    const groups = new Map<string, Conversation[]>();
+    const groups = new Map<string, ConversationDto[]>();
     for (const conversation of this.store.conversations()) {
       const date = day.format(new Date(conversation.updatedAt));
       const label = conversation.isFavorite

@@ -3,23 +3,24 @@ import { NotificationStore } from '../../core/notifications/notification-store';
 import { computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiError, NexusApi } from '../../core/api/nexus-api';
-import {
-  Conversation,
-  CreateRun,
-  isActive,
-  Me,
-  Message,
-  Preferences,
-  Run,
-  ContextPreview,
-  ContextUsage,
-} from '../../core/api/types';
+import type {
+  ContextPreviewRequest,
+  ContextUsageDto,
+  ConversationBackup,
+  ConversationDto,
+  ConversationSettingsRequest,
+  CreateRunRequest,
+  MeDto,
+  MessageDto,
+  PreferencesDto,
+  RunDto,
+} from '../../core/api/schema';
+import { isActive } from '../../core/api/generation-status';
 import { ThemeService } from '../../core/preferences/theme-service';
 import { AuthService } from '../../core/auth/auth-service';
 import { DraftAttachments } from '../attachments/draft-attachments';
 import { WorkspaceApi } from '../workspace/workspace-api';
 import { MessageTree } from './message-tree';
-import type { ConversationBackup, ConversationSettings } from '../../core/api/types';
 import { downloadFile } from '../../shared/browser/download';
 import { UserSettingsService } from '../../core/preferences/user-settings';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
@@ -39,7 +40,7 @@ import { ChatRun } from './chat-run';
 export class ChatStore {
   private readonly notifications = inject(NotificationStore);
   private readonly projectsApi = inject(ProjectsApi);
-  async assignProject(conversation: Conversation, projectId: string | null) {
+  async assignProject(conversation: ConversationDto, projectId: string | null) {
     if (this.busy()) return false;
     const generation = this.auth.generation();
     try {
@@ -67,10 +68,10 @@ export class ChatStore {
   readonly composer = inject(ChatDraft);
   readonly history = inject(ChatHistory);
   readonly drafts = this.composer.repository;
-  readonly me = signal<Me | null>(null);
+  readonly me = signal<MeDto | null>(null);
   readonly conversations = this.history.conversations;
-  readonly selected = signal<Conversation | null>(null);
-  readonly messages = signal<Message[]>([]);
+  readonly selected = signal<ConversationDto | null>(null);
+  readonly messages = signal<MessageDto[]>([]);
   rateMessage(value: { id: string; rating: number }) {
     this.messages.update((items) =>
       items.map((x) => (x.id === value.id ? { ...x, feedbackRating: value.rating } : x)),
@@ -83,7 +84,7 @@ export class ChatStore {
   readonly webSearchEnabled = this.model.webSearchEnabled;
   readonly webSearchStatus = this.model.webSearchStatus;
   readonly modelNotice = this.model.notice;
-  readonly contextUsage = signal<ContextUsage | null>(null);
+  readonly contextUsage = signal<ContextUsageDto | null>(null);
   readonly contextNotice = signal<string | null>(null);
   readonly hasChatAccess = computed(
     () => this.me()?.access?.features?.some((x) => x.id === 'chat') ?? false,
@@ -151,7 +152,7 @@ export class ChatStore {
   private initialized: Promise<void> | null = null;
   private selectionVersion = 0;
   private pending: {
-    body: CreateRun;
+    body: CreateRunRequest;
     key: string;
     mode: 'send' | 'edit' | 'regenerate';
     draftId: string | null;
@@ -302,16 +303,16 @@ export class ChatStore {
     try {
       const detail = await this.api.conversation(id);
       if (version !== this.selectionVersion) return;
-      this.selected.set(detail.conversation as Conversation);
+      this.selected.set(detail.conversation as ConversationDto);
       this.notifications.readConversation(id);
-      this.messages.set(detail.messages as Message[]);
+      this.messages.set(detail.messages as MessageDto[]);
       if (this.me()?.access.features?.some((x) => x.id === 'knowledge'))
         await this.knowledge.load(id);
       if (version !== this.selectionVersion) return;
       await this.restoreDraft(id);
       if (version !== this.selectionVersion) return;
       if (detail.activeRun && this.liveRun()?.id !== detail.activeRun.id)
-        void this.follow(detail.activeRun as Run);
+        void this.follow(detail.activeRun as RunDto);
     } catch (error) {
       if (version === this.selectionVersion) {
         this.report(error);
@@ -401,10 +402,10 @@ export class ChatStore {
       const detail = await this.api.conversation(run.conversationId);
       if (generation !== this.auth.generation()) return;
       if (this.selected()?.id === run.conversationId) {
-        this.selected.set(detail.conversation as Conversation);
-        this.messages.set(detail.messages as Message[]);
+        this.selected.set(detail.conversation as ConversationDto);
+        this.messages.set(detail.messages as MessageDto[]);
       }
-      snapshot = (detail.activeRun as Run) ?? run;
+      snapshot = (detail.activeRun as RunDto) ?? run;
     } catch (error) {
       if (generation === this.auth.generation()) this.report(error);
     }
@@ -419,7 +420,7 @@ export class ChatStore {
     if (!this.pendingSubmission()) this.pending = null;
   }
 
-  async regenerate(message: Message) {
+  async regenerate(message: MessageDto) {
     const generation = this.auth.generation();
     if (this.busy() || !message.parentId || !this.modelId()) return;
     this.submitting.set(true);
@@ -448,7 +449,7 @@ export class ChatStore {
     }
   }
 
-  edit(message: Message) {
+  edit(message: MessageDto) {
     if (!this.busy()) {
       this.persistDraft();
       this.editing.set(message);
@@ -462,7 +463,7 @@ export class ChatStore {
     void this.restoreDraft(this.selected()?.id ?? null);
   }
 
-  async selectVersion(message: Message, direction: number) {
+  async selectVersion(message: MessageDto, direction: number) {
     if (this.busy()) return;
     const leaf = this.tree().versionLeaf(message, direction);
     if (!leaf) return;
@@ -505,7 +506,7 @@ export class ChatStore {
     }
   }
 
-  private async follow(run: Run) {
+  private async follow(run: RunDto) {
     try {
       await this.run.follow(run, (terminal) => this.finish(terminal));
     } catch (error) {
@@ -514,14 +515,14 @@ export class ChatStore {
     }
   }
 
-  private async finish(run: Run) {
+  private async finish(run: RunDto) {
     const generation = this.auth.generation();
     if (this.selected()?.id === run.conversationId) {
       const detail = await this.api.conversation(run.conversationId);
       if (generation !== this.auth.generation()) return;
       if (this.selected()?.id === run.conversationId) {
-        this.selected.set(detail.conversation as Conversation);
-        this.messages.set(detail.messages as Message[]);
+        this.selected.set(detail.conversation as ConversationDto);
+        this.messages.set(detail.messages as MessageDto[]);
       }
     }
     this.run.settle(run);
@@ -551,7 +552,7 @@ export class ChatStore {
       return false;
     }
   }
-  async savePreferences(value: Preferences) {
+  async savePreferences(value: PreferencesDto) {
     const generation = this.auth.generation();
     const version = ++this.preferenceVersion;
     this.themes.apply(value);
@@ -581,7 +582,7 @@ export class ChatStore {
     if (!this.busy() && this.model.choose(id)) this.contextUsage.set(null);
   }
 
-  async previewContext(body: ContextPreview, signal: AbortSignal) {
+  async previewContext(body: ContextPreviewRequest, signal: AbortSignal) {
     try {
       const usage = await this.api.context(body, signal);
       if (!signal.aborted) {
@@ -605,7 +606,7 @@ export class ChatStore {
       this.report(error);
     }
   }
-  async organize(conversation: Conversation, settings: ConversationSettings) {
+  async organize(conversation: ConversationDto, settings: ConversationSettingsRequest) {
     const generation = this.auth.generation();
     try {
       const saved = await this.workspace.settings(conversation.id, settings);

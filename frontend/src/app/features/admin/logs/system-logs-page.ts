@@ -44,14 +44,13 @@ import {
   formatDateTimeInput,
   parseDateTimeInput,
 } from '../../../shared/browser/format';
-import {
-  SystemLogsApi,
-  type LogEntry,
-  type LogDetail,
-  type LogFilter,
-  type LogPage,
-  type LogHealth,
-} from './system-logs-api';
+import type {
+  DiagnosticDetail,
+  DiagnosticHealthDto,
+  DiagnosticPage,
+  DiagnosticSummary,
+} from '../../../core/api/schema';
+import { SystemLogsApi, type LogFilter } from './system-logs-api';
 
 type Fields = Omit<LogFilter, 'from' | 'to' | 'take' | 'sortDirection'>;
 const emptyFields = (): Fields => ({
@@ -111,11 +110,11 @@ export class SystemLogsPage {
   private readonly view = inject(ViewScope);
   private readonly drawer = viewChild.required(DetailDrawer);
   private readonly table = viewChild(DataTable);
-  readonly page = signal<LogPage | null>(null);
-  readonly selectedEntry = signal<LogEntry | null>(null);
-  readonly detail = signal<LogDetail | null>(null);
-  readonly related = signal<LogEntry[]>([]);
-  readonly health = signal<LogHealth | null>(null);
+  readonly page = signal<DiagnosticPage | null>(null);
+  readonly selectedEntry = signal<DiagnosticSummary | null>(null);
+  readonly detail = signal<DiagnosticDetail | null>(null);
+  readonly related = signal<DiagnosticSummary[]>([]);
+  readonly health = signal<DiagnosticHealthDto | null>(null);
   readonly loading = signal(false);
   readonly detailLoading = signal(false);
   readonly relatedLoading = signal(false);
@@ -376,7 +375,7 @@ export class SystemLogsPage {
     this.detailError.set('');
     this.relatedError.set('');
   }
-  async inspect(entry: LogEntry) {
+  async inspect(entry: DiagnosticSummary) {
     if (!entry.logId || !this.session.has('logs.detail')) return;
     this.detailController?.abort();
     const controller = (this.detailController = new AbortController());

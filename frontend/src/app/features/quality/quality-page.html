@@ -209,7 +209,8 @@
       </nx-empty-state>
     }
     <nx-resource-sharing
-      [path]="'/quality/sets/' + set.resource.id + '/access'"
+      kind="evaluationSet"
+      [resourceId]="set.resource.id"
       [name]="set.resource.name"
     />
   } @else {

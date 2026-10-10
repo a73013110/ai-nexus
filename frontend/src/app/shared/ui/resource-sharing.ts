@@ -10,8 +10,8 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type { DirectoryUser, ResourceAcl } from '../../core/api/types';
-import { ResourceApi } from '../../core/api/resource-api';
+import type { DirectoryUserDto, ResourceAclDto } from '../../core/api/schema';
+import { ResourceApi, type SharedResourceKind } from '../../core/api/resource-api';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../browser/view-scope';
 import { Icon } from './icon';
@@ -121,7 +121,8 @@ import { SearchField } from './search-field';
   </dialog>`,
 })
 export class ResourceSharing {
-  readonly path = input.required<string>();
+  readonly kind = input.required<SharedResourceKind>();
+  readonly resourceId = input.required<string>();
   readonly name = input.required<string>();
   readonly allowGroups = input(true);
   readonly saved = output<void>();
@@ -129,11 +130,11 @@ export class ResourceSharing {
   private readonly scope = inject(ViewScope);
   private readonly session = inject(WorkspaceSession);
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
-  readonly members = signal<ResourceAcl['members']>([]);
+  readonly members = signal<ResourceAclDto['members']>([]);
   readonly groupIds = signal<string[]>([]);
   readonly groups = signal<{ id: string; name: string }[]>([]);
   readonly search = signal('');
-  readonly results = signal<DirectoryUser[]>([]);
+  readonly results = signal<DirectoryUserDto[]>([]);
   readonly error = signal('');
   readonly loading = signal(false);
   readonly saving = signal(false);
@@ -143,7 +144,8 @@ export class ResourceSharing {
   ];
   private version = 0;
   async open() {
-    const path = this.path(),
+    const kind = this.kind(),
+      id = this.resourceId(),
       valid = this.scope.guard();
     this.dialog().nativeElement.showModal();
     this.loading.set(true);
@@ -151,9 +153,9 @@ export class ResourceSharing {
     this.search.set('');
     this.results.set([]);
     try {
-      const acl = await this.api.access(path),
+      const acl = await this.api.access(kind, id),
         groups = this.allowGroups() ? await this.api.groups() : [];
-      if (valid() && this.path() === path) {
+      if (valid() && this.kind() === kind && this.resourceId() === id) {
         this.members.set(acl.members);
         this.groupIds.set(acl.groupIds);
         this.groups.set(groups);
@@ -192,7 +194,7 @@ export class ResourceSharing {
       'directory',
     );
   }
-  add(user: DirectoryUser) {
+  add(user: DirectoryUserDto) {
     if (this.members().some((x) => x.userId === user.id)) return;
     this.members.update((rows) => [
       ...rows,
@@ -217,15 +219,16 @@ export class ResourceSharing {
   async save() {
     if (this.saving()) return;
     const valid = this.scope.guard(),
-      path = this.path();
+      kind = this.kind(),
+      id = this.resourceId();
     this.saving.set(true);
     this.error.set('');
     try {
-      await this.api.saveAccess(path, {
+      await this.api.saveAccess(kind, id, {
         members: this.members().map((x) => ({ userId: x.userId, role: x.role })),
         groupIds: this.groupIds(),
       });
-      if (valid() && this.path() === path) {
+      if (valid() && this.kind() === kind && this.resourceId() === id) {
         this.dialog().nativeElement.close();
         this.saved.emit();
       }

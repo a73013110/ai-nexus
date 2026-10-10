@@ -1,5 +1,5 @@
 import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
-import type { FileLibraryPage } from '../../core/api/types';
+import type { FileLibraryPageDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { FilesApi } from './files-api';
 
@@ -8,7 +8,7 @@ import { FilesApi } from './files-api';
 export class FileLibraryStore {
   private readonly api = inject(FilesApi);
   private readonly scope = inject(ViewScope);
-  readonly result = signal<FileLibraryPage | null>(null);
+  readonly result = signal<FileLibraryPageDto | null>(null);
   readonly search = signal('');
   readonly type = signal('all');
   readonly source = signal('all');

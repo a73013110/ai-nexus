@@ -1,7 +1,7 @@
 import { safeMessage } from '../../core/api/safe-errors';
 import { Injectable, inject, signal } from '@angular/core';
 import { AuthService } from '../../core/auth/auth-service';
-import type { Collection } from '../../core/api/types';
+import type { CollectionDto } from '../../core/api/schema';
 import { KnowledgeApi } from './knowledge-api';
 
 /** Conversation selection is account-scoped and persists before a generation begins. */
@@ -9,7 +9,7 @@ import { KnowledgeApi } from './knowledge-api';
 export class KnowledgeSelection {
   private readonly api = inject(KnowledgeApi);
   private readonly auth = inject(AuthService);
-  readonly collections = signal<Collection[]>([]);
+  readonly collections = signal<CollectionDto[]>([]);
   readonly ids = signal<string[]>([]);
   readonly saving = signal(false);
   readonly loadFailed = signal(false);
@@ -56,9 +56,7 @@ export class KnowledgeSelection {
     } catch (error) {
       if (version === this.version && generation === this.auth.generation()) {
         this.loadFailed.set(true);
-        this.error.set(
-          safeMessage(error),
-        );
+        this.error.set(safeMessage(error));
       }
     } finally {
       if (version === this.version && generation === this.auth.generation()) {

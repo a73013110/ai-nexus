@@ -1,6 +1,6 @@
 import { Field } from '../../shared/ui/field';
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import type { RepositoryCommit } from '../../core/api/types';
+import type { RepositoryCommitDto } from '../../core/api/schema';
 import { Select } from '../../shared/ui/select';
 
 /** The same searchable commit selection and full-SHA escape hatch for either range endpoint. */
@@ -60,7 +60,7 @@ export class RepositoryCommitPicker {
   readonly label = input.required<string>();
   readonly value = input('');
   readonly excluded = input('');
-  readonly commits = input.required<RepositoryCommit[]>();
+  readonly commits = input.required<RepositoryCommitDto[]>();
   readonly disabled = input(false);
   readonly loading = input(false);
   readonly valueChange = output<string>();

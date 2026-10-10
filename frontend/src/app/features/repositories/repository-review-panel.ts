@@ -16,11 +16,11 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import type {
-  Models,
-  RepositoryCommit,
-  RepositoryReview,
-  RepositoryReviewDetail,
-} from '../../core/api/types';
+  ModelsDto,
+  RepositoryCommitDto,
+  RepositoryReviewDetailDto,
+  RepositoryReviewDto,
+} from '../../core/api/schema';
 import { NexusApi } from '../../core/api/nexus-api';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
@@ -56,17 +56,17 @@ export class RepositoryReviewPanel {
   readonly repository = input.required<string>();
   readonly head = input('');
   readonly reviewId = input('');
-  readonly initialDetail = input<RepositoryReviewDetail | null>(null);
+  readonly initialDetail = input<RepositoryReviewDetailDto | null>(null);
   readonly initialDetailConsumed = output<void>();
   private readonly api = inject(RepositoriesApi);
   private readonly nexus = inject(NexusApi);
   private readonly scope = inject(ViewScope);
   private readonly router = inject(Router);
   readonly session = inject(WorkspaceSession);
-  readonly models = signal<Models | null>(null);
-  readonly commits = signal<RepositoryCommit[]>([]);
-  readonly reviews = signal<RepositoryReview[]>([]);
-  readonly detail = signal<RepositoryReviewDetail | null>(null);
+  readonly models = signal<ModelsDto | null>(null);
+  readonly commits = signal<RepositoryCommitDto[]>([]);
+  readonly reviews = signal<RepositoryReviewDto[]>([]);
+  readonly detail = signal<RepositoryReviewDetailDto | null>(null);
   readonly mode = signal('commit');
   readonly purpose = signal('review');
   readonly commit = signal('');
@@ -202,7 +202,7 @@ export class RepositoryReviewPanel {
       this.historyError,
     );
   }
-  private show(detail: RepositoryReviewDetail) {
+  private show(detail: RepositoryReviewDetailDto) {
     this.detail.set(detail);
     if (['queued', 'running'].includes(detail.review.job!.status))
       this.scope.later(() => void this.read(detail.review.id, true), 3000, 'review');

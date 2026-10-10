@@ -11,7 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { Collection, LibraryFile } from '../../core/api/types';
+import type { CollectionDto, LibraryFileDto } from '../../core/api/schema';
 import { KnowledgeApi } from '../knowledge/knowledge-api';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { Icon } from '../../shared/ui/icon';
@@ -81,8 +81,8 @@ export class AddToKnowledge {
   private readonly api = inject(KnowledgeApi);
   private readonly scope = inject(ViewScope);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
-  readonly file = signal<LibraryFile | null>(null);
-  readonly collections = signal<Collection[]>([]);
+  readonly file = signal<LibraryFileDto | null>(null);
+  readonly collections = signal<CollectionDto[]>([]);
   readonly selected = signal('');
   readonly loading = signal(false);
   readonly saving = signal(false);
@@ -97,7 +97,7 @@ export class AddToKnowledge {
         description: value.resource.isOwner ? '私人或由你共用的知識庫' : '共用知識庫 · 成員可閱讀',
       })),
   );
-  async open(file: LibraryFile) {
+  async open(file: LibraryFileDto) {
     this.file.set(file);
     this.error.set('');
     this.loading.set(true);

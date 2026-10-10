@@ -10,14 +10,13 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { ApiTransport } from '../../core/api/api-transport';
+import { AdminApi } from './admin-api';
 import type {
-  EmbeddingProfile,
-  RetrievalCapabilities,
-  KnowledgeSearch,
-  Collection,
-  Job,
-} from '../../core/api/types';
+  CollectionDto,
+  EmbeddingProfileDto,
+  KnowledgeSearchDto,
+  RetrievalCapabilitiesDto,
+} from '../../core/api/schema';
 import { KnowledgeApi } from '../knowledge/knowledge-api';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { formatDate } from '../../shared/browser/format';
@@ -47,15 +46,15 @@ import { RetrievalResults } from '../../shared/ui/retrieval-results';
   styleUrl: './retrieval-admin.scss',
 })
 export class RetrievalAdmin {
-  private readonly api = inject(ApiTransport);
+  private readonly api = inject(AdminApi);
   private readonly knowledge = inject(KnowledgeApi);
   private readonly scope = inject(ViewScope);
   readonly session = inject(WorkspaceSession);
-  readonly profiles = signal<EmbeddingProfile[]>([]);
-  readonly capabilities = signal<RetrievalCapabilities | null>(null);
-  readonly collections = signal<Collection[]>([]);
+  readonly profiles = signal<EmbeddingProfileDto[]>([]);
+  readonly capabilities = signal<RetrievalCapabilitiesDto | null>(null);
+  readonly collections = signal<CollectionDto[]>([]);
   readonly selected = signal<string[]>([]);
-  readonly result = signal<KnowledgeSearch | null>(null);
+  readonly result = signal<KnowledgeSearchDto | null>(null);
   readonly loading = signal(true);
   readonly working = signal(false);
   readonly searching = signal(false);
@@ -92,8 +91,8 @@ export class RetrievalAdmin {
     this.error.set('');
     try {
       const [profiles, capabilities, collections] = await Promise.all([
-        this.api.json<EmbeddingProfile[]>('/admin/knowledge/profiles'),
-        this.api.json<RetrievalCapabilities>('/admin/knowledge/capabilities'),
+        this.api.embeddingProfiles(),
+        this.api.retrievalCapabilities(),
         this.knowledge.collections(),
       ]);
       if (!guard()) return;
@@ -113,7 +112,7 @@ export class RetrievalAdmin {
   private async refreshProfiles() {
     const guard = this.scope.guard();
     try {
-      const profiles = await this.api.json<EmbeddingProfile[]>('/admin/knowledge/profiles');
+      const profiles = await this.api.embeddingProfiles();
       if (!guard()) return;
       this.profiles.set(profiles);
       if (this.activeJobs()) this.scope.later(() => void this.refreshProfiles(), 2000, 'profiles');
@@ -124,7 +123,7 @@ export class RetrievalAdmin {
   select(id: string, checked: boolean) {
     this.selected.update((ids) => (checked ? [...ids, id] : ids.filter((x) => x !== id)));
   }
-  async operate(profile: EmbeddingProfile, action: 'rebuild' | 'activate' | 'clear') {
+  async operate(profile: EmbeddingProfileDto, action: 'rebuild' | 'activate' | 'clear') {
     if (this.working()) return;
     if (
       action === 'clear' &&
@@ -141,9 +140,9 @@ export class RetrievalAdmin {
     this.error.set('');
     this.notice.set('');
     try {
-      const route = `/admin/knowledge/profiles/${profile.id}`;
-      if (action === 'clear') await this.api.json<void>(`${route}/vectors`, 'DELETE');
-      else await this.api.json<Job | void>(`${route}/${action}`, 'POST');
+      if (action === 'clear') await this.api.clearProfileVectors(profile.id);
+      else if (action === 'rebuild') await this.api.rebuildProfile(profile.id);
+      else await this.api.activateProfile(profile.id);
       if (!guard()) return;
       this.notice.set(
         action === 'rebuild'
@@ -164,10 +163,7 @@ export class RetrievalAdmin {
     this.working.set(true);
     this.error.set('');
     try {
-      const result = await this.api.json<RetrievalCapabilities>(
-        '/admin/knowledge/capabilities/probe',
-        'POST',
-      );
+      const result = await this.api.probeRetrieval();
       if (guard()) this.capabilities.set(result);
     } catch (error) {
       if (guard()) this.error.set(this.scope.message(error));
@@ -189,7 +185,7 @@ export class RetrievalAdmin {
     this.error.set('');
     this.result.set(null);
     try {
-      const result = await this.api.json<KnowledgeSearch>('/admin/knowledge/search', 'POST', {
+      const result = await this.api.searchRetrieval({
         query: this.form.controls.query.value,
         collectionIds: this.selected(),
         mode: this.mode(),

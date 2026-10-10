@@ -1,5 +1,5 @@
 import { inject, Injectable, signal } from '@angular/core';
-import type { Message } from '../../core/api/types';
+import type { MessageDto } from '../../core/api/schema';
 import { DraftRepository } from '../../core/preferences/draft-repository';
 import { UserSettingsService } from '../../core/preferences/user-settings';
 import { DraftAttachments } from '../attachments/draft-attachments';
@@ -11,7 +11,7 @@ export class ChatDraft {
   private readonly attachments = inject(DraftAttachments);
   private readonly settings = inject(UserSettingsService);
   readonly content = signal({ text: '' });
-  readonly editing = signal<Message | null>(null);
+  readonly editing = signal<MessageDto | null>(null);
   private restoring = false;
 
   /** Edits are never saved as drafts; they start a branch from an existing prompt. */

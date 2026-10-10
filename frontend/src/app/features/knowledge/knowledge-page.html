@@ -173,7 +173,8 @@
       </section>
     </div>
     <nx-resource-sharing
-      [path]="'/knowledge/collections/' + collection.resource.id + '/access'"
+      kind="collection"
+      [resourceId]="collection.resource.id"
       [name]="collection.resource.name"
       (saved)="notice.set('存取權限已更新，下次操作立即生效。')"
     />

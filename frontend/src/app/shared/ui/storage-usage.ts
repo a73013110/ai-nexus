@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import type { AttachmentStorage } from '../../core/api/types';
+import type { AttachmentStorageDto } from '../../core/api/schema';
 import { formatBytes, formatNumber } from '../browser/format';
 
 @Component({
@@ -55,7 +55,7 @@ import { formatBytes, formatNumber } from '../browser/format';
   `,
 })
 export class StorageUsage {
-  readonly storage = input<AttachmentStorage | null | undefined>(null);
+  readonly storage = input<AttachmentStorageDto | null | undefined>(null);
   readonly bytes = formatBytes;
   exact(value: number) {
     return `${formatNumber(value)} bytes`;

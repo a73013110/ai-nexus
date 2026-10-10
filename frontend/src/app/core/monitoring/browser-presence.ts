@@ -2,7 +2,7 @@ import { DestroyRef, Injectable, effect, inject, untracked } from '@angular/core
 import { NavigationEnd, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
-import { ApiTransport } from '../api/api-transport';
+import { ApiClient } from '../api/api-client';
 import { WorkspaceSession } from '../auth/workspace-session';
 import { BrowserSession } from './browser-session';
 
@@ -35,7 +35,7 @@ export function presenceFeature(url: string): string | null {
 /** A single application heartbeat. It records a fixed page category and activity state only. */
 @Injectable({ providedIn: 'root' })
 export class BrowserPresence {
-  private readonly http = inject(ApiTransport);
+  private readonly api = inject(ApiClient);
   private readonly session = inject(WorkspaceSession);
   private readonly router = inject(Router);
   private readonly tab = inject(BrowserSession);
@@ -103,13 +103,10 @@ export class BrowserPresence {
     this.lastHeartbeat = Date.now();
     let enabled = true;
     try {
-      const result = await this.http.json<{ enabled: boolean; heartbeatSeconds: number }>(
-        '/presence',
-        'POST',
-        { sessionId: this.tab.id, feature, state },
-        undefined,
-        this.controller.signal,
-      );
+      const result = await this.api.post('/api/v1/presence', {
+        body: { sessionId: this.tab.id, feature, state },
+        signal: this.controller.signal,
+      });
       enabled = result.enabled;
     } catch {
       /* Presence is advisory; telemetry failures never interrupt the user's work. */

@@ -1,16 +1,12 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
-import { ApiTransport, ApiError } from '../../../core/api/api-transport';
-import type { components } from '../../../core/api/schema';
+import { ApiClient, ApiError } from '../../../core/api/api-client';
+import type { MonitoringSnapshot } from '../../../core/api/schema';
 import { jsonEvents } from '../../../core/stream/json-events';
 import { safeMessage } from '../../../core/api/safe-errors';
 
-export type MonitoringSnapshot = components['schemas']['MonitoringSnapshot'];
-export type OnlineSession = components['schemas']['OnlineSession'];
-export type DependencyTraffic = components['schemas']['DependencyTraffic'];
-
 @Injectable()
 export class MonitoringStore {
-  private readonly http = inject(ApiTransport);
+  private readonly api = inject(ApiClient);
   readonly snapshot = signal<MonitoringSnapshot | null>(null);
   readonly connection = signal<
     'connecting' | 'live' | 'reconnecting' | 'paused' | 'hidden' | 'denied'
@@ -77,13 +73,11 @@ export class MonitoringStore {
     this.connection.set(this.snapshot() ? 'reconnecting' : 'connecting');
     try {
       this.armWatchdog();
-      const response = await this.http.response(
-        `/admin/monitoring/events?minutes=${this.minutes()}`,
-        'GET',
-        undefined,
-        { Accept: 'text/event-stream' },
+      const response = await this.api.open('/api/v1/admin/monitoring/events', {
+        query: { minutes: this.minutes() },
+        headers: { Accept: 'text/event-stream' },
         signal,
-      );
+      });
       for await (const snapshot of jsonEvents<MonitoringSnapshot>(response, 'snapshot', signal)) {
         if (signal.aborted || revision !== this.revision) return;
         if (
@@ -121,6 +115,6 @@ export class MonitoringStore {
     this.watchdog = setTimeout(() => this.controller?.abort(), ms);
   }
   export() {
-    return this.http.response(`/admin/monitoring/export?minutes=${this.minutes()}`);
+    return this.api.open('/api/v1/admin/monitoring/export', { query: { minutes: this.minutes() } });
   }
 }

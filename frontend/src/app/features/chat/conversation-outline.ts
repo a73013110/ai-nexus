@@ -11,7 +11,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type { Message } from '../../core/api/types';
+import type { MessageDto } from '../../core/api/schema';
 import { ThemeService } from '../../core/preferences/theme-service';
 import { Icon } from '../../shared/ui/icon';
 import { positionSidePopover } from '../../shared/browser/side-popover-position';
@@ -98,7 +98,7 @@ import { positionSidePopover } from '../../shared/browser/side-popover-position'
   }`,
 })
 export class ConversationOutline {
-  readonly messages = input.required<Message[]>();
+  readonly messages = input.required<MessageDto[]>();
   readonly viewport = input<HTMLElement | null>(null);
   readonly navigated = output<void>();
   readonly expanded = signal(false);

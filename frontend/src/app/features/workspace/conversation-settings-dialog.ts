@@ -11,7 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormField, form, maxLength } from '@angular/forms/signals';
-import type { Conversation, ConversationSettings } from '../../core/api/types';
+import type { ConversationDto, ConversationSettingsRequest } from '../../core/api/schema';
 import { Icon } from '../../shared/ui/icon';
 import { Select } from '../../shared/ui/select';
 import { ProjectsApi } from '../projects/projects-api';
@@ -104,7 +104,7 @@ export class ConversationSettingsDialog {
   readonly projectOptions = signal([{ value: '', label: '個人對話' }]);
   readonly save =
     input.required<
-      (conversation: Conversation, settings: ConversationSettings) => Promise<boolean>
+      (conversation: ConversationDto, settings: ConversationSettingsRequest) => Promise<boolean>
     >();
   readonly model = signal({ instruction: '', labels: '' });
   readonly fields = form(this.model, (schema) => {
@@ -113,9 +113,9 @@ export class ConversationSettingsDialog {
   });
   readonly busy = signal(false);
   readonly error = signal('');
-  private target: Conversation | null = null;
+  private target: ConversationDto | null = null;
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
-  open(conversation: Conversation) {
+  open(conversation: ConversationDto) {
     this.target = conversation;
     this.error.set('');
     this.projectId.set(conversation.projectId ?? '');

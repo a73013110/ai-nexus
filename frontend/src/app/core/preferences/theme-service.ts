@@ -1,9 +1,9 @@
 import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
-import type { Preferences } from '../api/types';
+import type { PreferencesDto } from '../api/schema';
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
-  readonly preferences = signal<Preferences>({
+  readonly preferences = signal<PreferencesDto>({
     theme: 'system',
     reducedMotion: false,
     defaultModelId: null,
@@ -24,7 +24,7 @@ export class ThemeService {
     try {
       const local = JSON.parse(
         localStorage.getItem('nexus.appearance') ?? 'null',
-      ) as Preferences | null;
+      ) as PreferencesDto | null;
       if (local && ['system', 'light', 'dark'].includes(local.theme))
         this.preferences.set({
           theme: local.theme,
@@ -36,7 +36,7 @@ export class ThemeService {
     }
     this.render();
   }
-  apply(value: Preferences) {
+  apply(value: PreferencesDto) {
     this.preferences.set(value);
     this.render();
     try {

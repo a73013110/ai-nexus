@@ -8,7 +8,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type { Message } from '../../core/api/types';
+import type { MessageDto } from '../../core/api/schema';
 import { Icon } from '../../shared/ui/icon';
 
 @Component({
@@ -52,7 +52,7 @@ import { Icon } from '../../shared/ui/icon';
   </div>`,
 })
 export class ConversationFind {
-  readonly messages = input.required<Message[]>();
+  readonly messages = input.required<MessageDto[]>();
   readonly closed = output<void>();
   readonly found = output<{ ids: string[]; active: string | null }>();
   readonly query = signal('');

@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NexusApi } from '../../core/api/nexus-api';
-import type { Models } from '../../core/api/types';
+import type { ModelsDto } from '../../core/api/schema';
 import { AuthService } from '../../core/auth/auth-service';
 import { ChatModels } from './chat-models';
 
@@ -17,7 +17,7 @@ const catalog = (allowModelSelection: boolean, defaultModelId: string | null) =>
     models: [model('a'), model('b', ['low'])],
     policy: { allowModelSelection, showModelNames: true, defaultModelId, maxInputCharacters: 100 },
     notice: null,
-  }) as unknown as Models;
+  }) as unknown as ModelsDto;
 
 function setup(webSearchStatus = vi.fn()) {
   const generation = vi.fn(() => 1);

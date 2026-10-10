@@ -1,7 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { Icon } from '../../../shared/ui/icon';
 import { GraphNode } from '../../../shared/ui/graph-node';
-import type { DependencyTraffic, MonitoringSnapshot, OnlineSession } from './monitoring-store';
+import type {
+  DependencyTraffic,
+  MonitoringSnapshot,
+  OnlineSession,
+} from '../../../core/api/schema';
 import { dependencyStatus, presenceState } from './monitoring-format';
 
 @Component({

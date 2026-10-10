@@ -25,7 +25,7 @@ import {
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { WorkspaceLayout } from '../../core/preferences/workspace-layout';
 import { ThemeService } from '../../core/preferences/theme-service';
-import type { Conversation, ConversationSettings } from '../../core/api/types';
+import type { ConversationDto, ConversationSettingsRequest } from '../../core/api/schema';
 import { Icon } from '../../shared/ui/icon';
 import { InferenceSignal } from '../../shared/ui/inference-signal';
 import { generationStatus } from '../../core/api/generation-status';
@@ -135,9 +135,9 @@ export class ChatWorkspace {
     this.paragraph.set(null);
     window.getSelection()?.removeAllRanges();
   }
-  readonly shareTarget = signal<Conversation | null>(null);
+  readonly shareTarget = signal<ConversationDto | null>(null);
   readonly modal = signal<'rename' | 'delete' | null>(null);
-  readonly modalTarget = signal<Conversation | null>(null);
+  readonly modalTarget = signal<ConversationDto | null>(null);
   readonly modalBusy = signal(false);
   readonly composerForm = form(this.store.draft, (schema) => {
     readonlyField(schema.text, {
@@ -166,7 +166,7 @@ export class ChatWorkspace {
   readonly palette = viewChild(CommandPalette);
   readonly finder = viewChild(ConversationFind);
   readonly importInput = viewChild<ElementRef<HTMLInputElement>>('importInput');
-  readonly saveSettings = (conversation: Conversation, settings: ConversationSettings) =>
+  readonly saveSettings = (conversation: ConversationDto, settings: ConversationSettingsRequest) =>
     this.store.organize(conversation, settings);
   readonly renameCurrent = (title: string) => {
     const conversation = this.store.selected();
@@ -415,7 +415,7 @@ export class ChatWorkspace {
   editMessageFocus() {
     requestAnimationFrame(() => this.textarea()?.nativeElement.focus());
   }
-  openDialog(type: 'rename' | 'delete', target: Conversation) {
+  openDialog(type: 'rename' | 'delete', target: ConversationDto) {
     this.modalTarget.set(target);
     this.modal.set(type);
     this.renameModel.set({ title: target.title });
@@ -471,7 +471,7 @@ export class ChatWorkspace {
     const conversation = this.store.selected();
     if (conversation) this.conversationAction(action, conversation);
   }
-  conversationAction(action: ConversationAction, conversation: Conversation) {
+  conversationAction(action: ConversationAction, conversation: ConversationDto) {
     switch (action) {
       case 'share':
         this.shareTarget.set(conversation);

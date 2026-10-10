@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { NotificationStore } from '../../core/notifications/notification-store';
 import { notificationUrl } from '../../core/notifications/notification-target';
 import { safeMessage, systemProblem, validIssueCode } from '../../core/api/safe-errors';
-import type { NotificationItem } from '../../core/api/types';
+import type { NotificationDto } from '../../core/api/schema';
 import { formatDate } from '../browser/format';
 import { EmptyState } from './empty-state';
 import { Notice } from './notice';
@@ -107,7 +107,7 @@ import { Icon } from './icon';
     </div>`,
 })
 export class NotificationFeed {
-  body(item: NotificationItem) {
+  body(item: NotificationDto) {
     return item.severity === 'error'
       ? validIssueCode(item.issueCode)
         ? systemProblem(item.issueCode)

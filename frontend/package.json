@@ -8,7 +8,8 @@
     "test": "ng test --watch=false",
     "lint": "eslint src",
     "test:e2e": "npm --prefix .. run test:e2e",
-    "contracts": "npm --prefix ../tooling/contracts run generate"
+    "contracts": "openapi-typescript ../contracts/openapi.json -o src/app/core/api/schema.ts --root-types --root-types-no-schema-prefix",
+    "contracts:check": "openapi-typescript ../contracts/openapi.json -o src/app/core/api/schema.ts --root-types --root-types-no-schema-prefix --check"
   },
   "private": true,
   "packageManager": "npm@11.6.1",
@@ -37,6 +38,9 @@
   "overrides": {
     "mermaid": {
       "katex": "0.18.2"
+    },
+    "openapi-typescript": {
+      "typescript": "$typescript"
     }
   },
   "devDependencies": {
@@ -48,6 +52,7 @@
     "angular-eslint": "22.5.0",
     "eslint": "10.12.0",
     "jsdom": "30.1.2",
+    "openapi-typescript": "7.13.0",
     "prettier": "3.9.9",
     "typescript": "6.0.3",
     "typescript-eslint": "8.71.1",

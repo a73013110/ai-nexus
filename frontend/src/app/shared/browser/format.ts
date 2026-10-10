@@ -1,4 +1,4 @@
-import type { Model } from '../../core/api/types';
+import type { ModelDto } from '../../core/api/schema';
 import { formatCalendarValue, parseLocalDateTime, type CalendarSystem } from './date-time';
 
 export const APP_TIME_ZONE = 'Asia/Taipei';
@@ -38,7 +38,7 @@ export const formatDuration = (milliseconds: number) =>
   milliseconds < 60_000
     ? `${(milliseconds / 1000).toFixed(1)} 秒`
     : `${Math.floor(milliseconds / 60_000)} 分 ${Math.floor((milliseconds % 60_000) / 1000)} 秒`;
-export const formatModelName = (model: Pick<Model, 'displayName'>) =>
+export const formatModelName = (model: Pick<ModelDto, 'displayName'>) =>
   model.displayName?.trim() || 'AI 助理';
 export const formatModelDisplayName = (model: { modelDisplayName?: string | null }) =>
   model.modelDisplayName?.trim() || 'AI 助理';

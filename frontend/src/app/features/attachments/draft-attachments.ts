@@ -1,6 +1,6 @@
 import { safeMessage, ApiError } from '../../core/api/safe-errors';
 import { computed, inject, Injectable, signal } from '@angular/core';
-import type { Attachment, AttachmentPolicy } from '../../core/api/types';
+import type { AttachmentDto, AttachmentPolicyDto } from '../../core/api/schema';
 import { WorkspaceApi } from '../workspace/workspace-api';
 import { KnowledgeApi } from '../knowledge/knowledge-api';
 import { abortableDelay } from '../../shared/browser/abortable-delay';
@@ -9,8 +9,8 @@ import { abortableDelay } from '../../shared/browser/abortable-delay';
 export class DraftAttachments {
   private readonly api = inject(WorkspaceApi);
   private readonly documents = inject(KnowledgeApi);
-  readonly files = signal<Attachment[]>([]);
-  readonly policy = signal<AttachmentPolicy | null>(null);
+  readonly files = signal<AttachmentDto[]>([]);
+  readonly policy = signal<AttachmentPolicyDto | null>(null);
   readonly uploading = signal(false);
   readonly error = signal('');
   readonly processingLabel = signal('');
@@ -26,7 +26,7 @@ export class DraftAttachments {
     const policy = await this.api.attachmentPolicy();
     if (version === this.version) this.policy.set(policy);
   }
-  reset(files: Attachment[] = []) {
+  reset(files: AttachmentDto[] = []) {
     this.version++;
     this.controller?.abort();
     this.controller = null;
@@ -47,7 +47,7 @@ export class DraftAttachments {
     if (this.files().some((x) => x.analysisMode === 'ocr-required'))
       void this.processScans(version);
   }
-  async use(file: Attachment) {
+  async use(file: AttachmentDto) {
     const policy = this.policy();
     if (!policy || this.uploading() || this.files().some((value) => value.id === file.id)) return;
     if (
@@ -103,8 +103,7 @@ export class DraftAttachments {
       }
       await this.processScans(version, controller);
     } catch (error) {
-      if (!controller.signal.aborted)
-        this.error.set(safeMessage(error));
+      if (!controller.signal.aborted) this.error.set(safeMessage(error));
     } finally {
       if (version === this.version) {
         this.uploading.set(false);
@@ -130,7 +129,12 @@ export class DraftAttachments {
         if (!this.files().some((x) => x.id === file.id)) continue;
         if (doc.status !== 'ready') {
           const detail = await this.documents.job(doc.id);
-          throw new ApiError(503, detail.job.errorCode ?? 'ocr_failed', undefined, detail.job.issueCode ?? undefined);
+          throw new ApiError(
+            503,
+            detail.job.errorCode ?? 'ocr_failed',
+            undefined,
+            detail.job.issueCode ?? undefined,
+          );
         }
         const updated = await this.api.attachment(file.id);
         if (version === this.version)
