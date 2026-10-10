@@ -17,7 +17,7 @@ internal sealed class DuplicateConversation(NexusDbContext db, GenerationSchedul
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("/{id:guid}/duplicate", async (Guid id, ICurrentUser user, DuplicateConversation handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
-        .WithName("DuplicateConversation").Produces<ConversationDto>();
+        .WithName("DuplicateConversation");
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)
     {

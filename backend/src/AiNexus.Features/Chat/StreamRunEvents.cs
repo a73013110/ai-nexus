@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http.HttpResults;
 using System.Text.Json;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
@@ -10,30 +11,11 @@ using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Chat;
 
-public sealed class SubscriptionLimits
-{
-    private readonly object gate = new();
-    private readonly Dictionary<Guid, int> users = [];
-    private int total;
-    public IDisposable Acquire(Guid owner)
-    {
-        lock (gate)
-        {
-            var count = users.GetValueOrDefault(owner);
-            if (count >= 2 || total >= 64) throw new ApiException(429, "subscription_limit", "事件連線數已達上限，請關閉重複的分頁後重試。");
-            users[owner] = count + 1;
-            total++;
-        }
-        return new Lease(() => { lock (gate) { if (--users[owner] == 0) users.Remove(owner); total--; } });
-    }
-    private sealed class Lease(Action release) : IDisposable
-    {
-        private Action? action = release;
-        public void Dispose() => Interlocked.Exchange(ref action, null)?.Invoke();
-    }
-}
-
-public static class RunEventsEndpoint
+/// <summary>
+/// Server-sent events of one of the user's runs after a cursor (<c>after</c> or <c>Last-Event-ID</c>), with a snapshot
+/// when events were trimmed; the stream ends once the run is finished and every event was sent.
+/// </summary>
+internal sealed class StreamRunEvents(RunService runs, NexusDbContext db, SubscriptionLimits limits, RunSignals signals, TimeProvider clock)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
@@ -41,28 +23,32 @@ public static class RunEventsEndpoint
     private static readonly TimeSpan PollFallback = TimeSpan.FromSeconds(1);
     private const int Batch = 128;
 
-    // The server-sent event stream keeps its original mapping; it resolves the user itself.
+    // A failure is answered as a problem before the stream starts; once it has started, the response is the stream.
     public static RouteHandlerBuilder Map(RouteGroupBuilder api) => api
-        .MapGet("/runs/{id:guid}/events", async (Guid id, long? after, HttpContext http, CurrentUser current, RunService service, NexusDbContext db, SubscriptionLimits limits, RunSignals signals, CancellationToken ct) =>
-            await StreamAsync(http, (await current.GetAsync(ct)).OrThrow().Id, id, after, service, db, limits, signals, ct)).WithName("RunEvents").Produces<RunEventDto>(200, "text/event-stream");
+        .MapGet("/runs/{id:guid}/events", async Task<Results<EmptyHttpResult, ProblemHttpResult>> (Guid id, long? after, HttpContext http, ICurrentUser user, StreamRunEvents handler, CancellationToken ct) =>
+        {
+            var streamed = await handler.HandleAsync(http, user.Id, id, after, ct);
+            return streamed.IsSuccess ? TypedResults.Empty : streamed.Error.ToProblem();
+        })
+        .WithName("RunEvents").Produces<RunEventDto>(200, "text/event-stream");
 
-    public static async Task StreamAsync(HttpContext http, Guid owner, Guid id, long? after, RunService runs, NexusDbContext db, SubscriptionLimits limits, RunSignals signals, CancellationToken ct)
+    public async Task<Result> HandleAsync(HttpContext http, Guid owner, Guid id, long? after, CancellationToken ct)
     {
-        var run = await runs.OwnedAsync(owner, id, ct);
+        var found = await runs.OwnedAsync(owner, id, ct);
+        if (!found.IsSuccess) return found.Error;
+        var run = found.Value;
         var raw = http.Request.Headers["Last-Event-ID"].ToString();
         var cursor = after ?? 0;
-        if (raw.Length > 0)
-        {
-            if (!long.TryParse(raw, out cursor)) throw new ApiException(400, "invalid_cursor", "事件序號不正確。");
-        }
-        if (cursor < 0 || cursor > run.LastSequence) throw new ApiException(409, "invalid_cursor", "請重新取得生成狀態，再訂閱事件。");
-        using var lease = limits.Acquire(owner);
+        if (raw.Length > 0 && !long.TryParse(raw, out cursor)) return ChatErrors.InvalidCursor;
+        if (cursor < 0 || cursor > run.LastSequence) return ChatErrors.CursorAhead;
+        using var lease = limits.TryAcquire(owner);
+        if (lease is null) return ChatErrors.SubscriptionLimit;
         using var subscription = signals.Subscribe(id);
         http.Response.ContentType = "text/event-stream; charset=utf-8";
         http.Response.Headers.CacheControl = "no-cache, no-store";
         http.Response.Headers["X-Accel-Buffering"] = "no";
         http.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
-        var heartbeat = DateTimeOffset.UtcNow;
+        var heartbeat = clock.GetUtcNow();
         await WriteAsync(http, ": connected\n\n", ct);
         while (!ct.IsCancellationRequested)
         {
@@ -87,15 +73,16 @@ public static class RunEventsEndpoint
                 cursor = item.Sequence;
             }
             if (!RunStates.IsActive(status) && cursor >= lastSequence) break;
-            if (DateTimeOffset.UtcNow - heartbeat > TimeSpan.FromSeconds(10))
+            if (clock.GetUtcNow() - heartbeat > TimeSpan.FromSeconds(10))
             {
                 await WriteAsync(http, ": heartbeat\n\n", ct);
-                heartbeat = DateTimeOffset.UtcNow;
+                heartbeat = clock.GetUtcNow();
             }
             if (events.Count == Batch) continue;
             try { await signal.WaitAsync(PollFallback, ct); }
             catch (TimeoutException) { }
         }
+        return Result.Success;
     }
 
     private static Task SendAsync(HttpContext http, RunEventDto value, CancellationToken ct) => WriteAsync(http, $"id: {value.Sequence}\nevent: run\ndata: {JsonSerializer.Serialize(value, Json)}\n\n", ct);

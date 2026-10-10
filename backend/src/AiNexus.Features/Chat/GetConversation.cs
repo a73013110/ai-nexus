@@ -19,7 +19,7 @@ internal sealed class GetConversation(NexusDbContext db, ModelPresentation prese
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapGet("/{id:guid}", async (Guid id, ICurrentUser user, GetConversation handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, ct)).ToHttpResult())
-        .WithName("GetConversation").Produces<ConversationDetailDto>();
+        .WithName("GetConversation");
 
     public async Task<Result<ConversationDetailDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)
     {
