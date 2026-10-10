@@ -52,7 +52,7 @@ Migration 只新增 accesscontrol.Features.monitoring 與 administrators grant�
 
 一般設定可覆寫，修改後重啟，不需新增秘密或 SQL server-wide monitoring 權限。Presence 每人每分鐘 120 次，監控讀取每分鐘 60 次，匯出每分鐘兩次。
 
-依現有流程停止舊 host，執行 scripts/Initialize-Database.ps1 套用 migration，再 build／重啟。IIS／代理的 SSE 不緩衝設定沿用回答串流，見 [IIS](../deploy/iis/README.md)。
+依現有流程停止舊 host，執行 scripts/Initialize-Database.ps1 套用 migration，再 build／重啟。IIS／代理的 SSE 不緩衝設定沿用回答串流，見 [IIS](../operations/IIS_DEPLOYMENT.md)。
 
 ## 驗證
 

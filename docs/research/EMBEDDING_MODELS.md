@@ -2,13 +2,13 @@
 
 預設 Ollama `bge-m3`、1024 維、plain，聊天模型獨立選擇。Ollama `/api/embed` 批次陣列與 truncate=false；目前只使用 dense 向量。混合檢索的另一通道是 SQL 全文，不是 BGE-M3 的 sparse／ColBERT。Qwen 可用 `qwen3-embedding:0.6b`、768 或 1024、qwen-query，查詢加入英文任務指令、文件保留 context header；回應維度須實際相符，不能自行截斷。[Ollama API](https://docs.ollama.com/api/embed)
 
-Google provider 保留 batch embedding API，使用 Inference 的 Google key；none 不建立向量、強制全文。embedding 不隨聊天 provider 自動切換。完整預設及範圍見 [設定](CONFIGURATION.md)。Revision 可填固定模型 digest；同 tag 權重更新時同步變更，以觸發新 profile。InputFormat、QueryInstruction、Revision、維度及 chunker 版本／參數皆納入空間指紋。
+Google provider 保留 batch embedding API，使用 Inference 的 Google key；none 不建立向量、強制全文。embedding 不隨聊天 provider 自動切換。完整預設及範圍見 [設定](../development/CONFIGURATION.md)。Revision 可填固定模型 digest；同 tag 權重更新時同步變更，以觸發新 profile。InputFormat、QueryInstruction、Revision、維度及 chunker 版本／參數皆納入空間指紋。
 
 ## 重建與測量
 
-先套用 [資料庫 migrations](DATABASE.md)，重新上傳資料建立新索引。往後模型設定變更產生 building profile；管理 → 知識檢索開始重建，覆蓋率 100% 後啟用，舊 profile 退役。共用一套切段布局，不提供舊 JSON 或舊 SQL 版本查詢。重建利用保存頁面及 hash 快取，無須重做 OCR。
+先套用 [資料庫 migrations](../architecture/DATABASE.md)，重新上傳資料建立新索引。往後模型設定變更產生 building profile；管理 → 知識檢索開始重建，覆蓋率 100% 後啟用，舊 profile 退役。共用一套切段布局，不提供舊 JSON 或舊 SQL 版本查詢。重建利用保存頁面及 hash 快取，無須重做 OCR。
 
-從品質 → 檢索評測選最多三個授權知識庫、匯入 1–20 題驗收集，四模式執行 vector／keyword／hybrid／hybrid+rerank，計算 Recall@K、MRR、分級 nDCG@K、無來源拒答率與各階段 p50／p95。範例格式與報告定義見 [QUALITY](QUALITY.md)。應涵蓋文號、日期、單位、中文條文、同義詞、跨頁與無答案；以固定文件與設定比較，分開記錄冷啟動／快取效應。未啟用重排或降級的結果有明確模式，不能當成完整四方案比較。
+從品質 → 檢索評測選最多三個授權知識庫、匯入 1–20 題驗收集，四模式執行 vector／keyword／hybrid／hybrid+rerank，計算 Recall@K、MRR、分級 nDCG@K、無來源拒答率與各階段 p50／p95。範例格式與報告定義見 [QUALITY](../features/QUALITY.md)。應涵蓋文號、日期、單位、中文條文、同義詞、跨頁與無答案；以固定文件與設定比較，分開記錄冷啟動／快取效應。未啟用重排或降級的結果有明確模式，不能當成完整四方案比較。
 
 `tooling/embeddings/Compare-Embeddings.ps1` 可做模型的獨立 dense cosine 比較：
 

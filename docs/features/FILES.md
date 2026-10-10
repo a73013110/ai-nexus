@@ -25,4 +25,4 @@ FileLibraryStore 共用於頁面與選取器，搜尋去抖、取消舊請求並
 
 ## 儲存與初始化
 
-原檔位於站外 `Attachments.StoragePath`，資料庫保存 opaque 儲存識別、metadata、引用及衍生搜尋資料。預設每人 5,000,000,000 bytes；個人 override 優先於群組與預設。同一 attachment ID 多處使用只計一次。`InitialCreate` 建立空資料庫基線，後續增量 migration 提供版本升級。詳見 [附件生命週期](ATTACHMENTS.md)、[SQL 初始化](DATABASE.md) 與 [SQL／原檔備份](BACKUP.md)。
+原檔位於站外 `Attachments.StoragePath`，資料庫保存 opaque 儲存識別、metadata、引用及衍生搜尋資料。預設每人 5,000,000,000 bytes；個人 override 優先於群組與預設。同一 attachment ID 多處使用只計一次。`InitialCreate` 建立空資料庫基線，後續增量 migration 提供版本升級。詳見 [附件生命週期](ATTACHMENTS.md)、[SQL 初始化](../architecture/DATABASE.md) 與 [SQL／原檔備份](../operations/BACKUP.md)。

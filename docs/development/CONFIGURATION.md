@@ -16,7 +16,7 @@
 
 後面的來源優先：`appsettings.json` → 一般設定 → 秘密 → 環境變數 → 命令列。環境變數用 `__` 表示階層，例如 `Database__Password`、`Inference__Providers__Google__ApiKey`。密碼不可放在命令列或前端。
 
-Development 向上尋找 `global.json`，使用工作區 `.local`。Production 找 app 旁邊的 `../config/` 與 `../keys`，不讀工作區 `.local`。Testing 不讀機器設定。`LocalConfigPath`、`SecretsConfigPath`、`DataProtection__KeyRingPath` 可明確指定，相對路徑以 app 的 content root 為準；明確指定的檔案不存在時啟動失敗，避免悄悄用錯環境。載入邏輯在 [`NexusConfiguration`](../backend/src/AiNexus.Platform/Configuration/NexusConfiguration.cs)。
+Development 向上尋找 `global.json`，使用工作區 `.local`。Production 找 app 旁邊的 `../config/` 與 `../keys`，不讀工作區 `.local`。Testing 不讀機器設定。`LocalConfigPath`、`SecretsConfigPath`、`DataProtection__KeyRingPath` 可明確指定，相對路徑以 app 的 content root 為準；明確指定的檔案不存在時啟動失敗，避免悄悄用錯環境。載入邏輯在 [`NexusConfiguration`](../../backend/src/AiNexus.Platform/Configuration/NexusConfiguration.cs)。
 
 ## 區段與模組
 
@@ -24,23 +24,23 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 
 | 區段                           | Options 類別                                                                               | 秘密欄位               |
 | ------------------------------ | ------------------------------------------------------------------------------------------ | ---------------------- |
-| `Database`、`ConnectionStrings` | 啟動時組成連線字串：[`LocalDatabaseSettings`](../backend/src/AiNexus.Platform/Data/LocalDatabaseSettings.cs) | `User`、`Password`、`ConnectionStrings.*` |
-| `Identity.ActiveDirectory`     | [`AdAuthenticationOptions`](../backend/src/AiNexus.Features/Identity/Authentication/AdAuthenticationOptions.cs) | `DnPass`               |
-| `Administration`               | [`AdministrationOptions`](../backend/src/AiNexus.Features/Administration/AdministrationOptions.cs) | —                      |
-| `Inference`                    | [`InferenceOptions`](../backend/src/AiNexus.Features/Inference/InferenceOptions.cs)        | `Providers.Google.ApiKey` |
-| `Knowledge`                    | [`KnowledgeOptions`](../backend/src/AiNexus.Features/Knowledge/KnowledgeOptions.cs)        | —                      |
-| `WebSearch`                    | [`WebSearchOptions`](../backend/src/AiNexus.Features/WebSearch/WebSearchOptions.cs)        | `ApiKey`（Brave）      |
-| `Integrations`                 | [`IntegrationsOptions`](../backend/src/AiNexus.Features/Integrations/IntegrationsOptions.cs) | `<來源>.Database.User`／`Password` |
-| `Repositories.Gitea`           | [`GiteaOptions`](../backend/src/AiNexus.Features/Repositories/GiteaOptions.cs)             | —（權杖由使用者連線後加密存 SQL） |
-| `Attachments`                  | [`AttachmentOptions`](../backend/src/AiNexus.Features/Attachments/AttachmentOptions.cs)    | —                      |
-| `Artifacts.Export`             | [`ExportOptions`](../backend/src/AiNexus.Features/Artifacts/ArtifactExport.cs)             | —                      |
-| `Monitoring`                   | [`MonitoringOptions`](../backend/src/AiNexus.Features/Monitoring/MonitoringOptions.cs)     | —                      |
-| `Diagnostics`                  | [`DiagnosticOptions`](../backend/src/AiNexus.Platform/Diagnostics/DiagnosticOptions.cs)    | —                      |
+| `Database`、`ConnectionStrings` | 啟動時組成連線字串：[`LocalDatabaseSettings`](../../backend/src/AiNexus.Platform/Data/LocalDatabaseSettings.cs) | `User`、`Password`、`ConnectionStrings.*` |
+| `Identity.ActiveDirectory`     | [`AdAuthenticationOptions`](../../backend/src/AiNexus.Features/Identity/Authentication/AdAuthenticationOptions.cs) | `DnPass`               |
+| `Administration`               | [`AdministrationOptions`](../../backend/src/AiNexus.Features/Administration/AdministrationOptions.cs) | —                      |
+| `Inference`                    | [`InferenceOptions`](../../backend/src/AiNexus.Features/Inference/InferenceOptions.cs)        | `Providers.Google.ApiKey` |
+| `Knowledge`                    | [`KnowledgeOptions`](../../backend/src/AiNexus.Features/Knowledge/KnowledgeOptions.cs)        | —                      |
+| `WebSearch`                    | [`WebSearchOptions`](../../backend/src/AiNexus.Features/WebSearch/WebSearchOptions.cs)        | `ApiKey`（Brave）      |
+| `Integrations`                 | [`IntegrationsOptions`](../../backend/src/AiNexus.Features/Integrations/IntegrationsOptions.cs) | `<來源>.Database.User`／`Password` |
+| `Repositories.Gitea`           | [`GiteaOptions`](../../backend/src/AiNexus.Features/Repositories/GiteaOptions.cs)             | —（權杖由使用者連線後加密存 SQL） |
+| `Attachments`                  | [`AttachmentOptions`](../../backend/src/AiNexus.Features/Attachments/AttachmentOptions.cs)    | —                      |
+| `Artifacts.Export`             | [`ExportOptions`](../../backend/src/AiNexus.Features/Artifacts/ArtifactExport.cs)             | —                      |
+| `Monitoring`                   | [`MonitoringOptions`](../../backend/src/AiNexus.Features/Monitoring/MonitoringOptions.cs)     | —                      |
+| `Diagnostics`                  | [`DiagnosticOptions`](../../backend/src/AiNexus.Platform/Diagnostics/DiagnosticOptions.cs)    | —                      |
 | `Security`、`DataProtection`、`AllowedHosts` | Host 與 Platform 直接讀取                                                    | —                      |
 
 ## 啟動驗證
 
-每個 Options 類別以 `AddSettings<T, TValidator>(區段)`（[`SettingsRegistration`](../backend/src/AiNexus.Platform/Configuration/SettingsRegistration.cs)）註冊：`BindConfiguration` 綁定、`[OptionsValidator]` source generator 產生的驗證器檢查，`ValidateOnStart` 讓錯誤在接受任何請求前出現。
+每個 Options 類別以 `AddSettings<T, TValidator>(區段)`（[`SettingsRegistration`](../../backend/src/AiNexus.Platform/Configuration/SettingsRegistration.cs)）註冊：`BindConfiguration` 綁定、`[OptionsValidator]` source generator 產生的驗證器檢查，`ValidateOnStart` 讓錯誤在接受任何請求前出現。
 
 - **未知的鍵**（拼錯、放錯區段、舊版名稱）：綁定失敗，訊息列出找不到的鍵，例如 `... the following properties were not found on the instance of AiNexus.Features.Inference.InferenceOptions: 'Execution'`。
 - **不合法的值**：訊息含類別與屬性，例如 `KnowledgeOptions.Retrieval.TopK` 超出範圍，或 `Model 'ollama/qwen3:8b': ContextTokens must be ...`。
@@ -58,7 +58,7 @@ pwsh -NoProfile -File scripts/Initialize-Database.ps1
 pwsh -NoProfile -File scripts/Start-Local.ps1
 ```
 
-`Configure-Local` 第一次會從範本建立 `.local` 的兩個檔案，再以遮蔽方式詢問 SQL 帳密、AD 服務密碼和 Google key（Enter 保留舊值），秘密檔只開放給目前使用者、SYSTEM 與 Administrators。其他欄位直接用編輯器改 `.local/config/appsettings.Local.json`。IIS 的設定步驟見 [IIS 部署](../deploy/iis/README.md)。
+`Configure-Local` 第一次會從範本建立 `.local` 的兩個檔案，再以遮蔽方式詢問 SQL 帳密、AD 服務密碼和 Google key（Enter 保留舊值），秘密檔只開放給目前使用者、SYSTEM 與 Administrators。其他欄位直接用編輯器改 `.local/config/appsettings.Local.json`。IIS 的設定步驟見 [IIS 部署](../operations/IIS_DEPLOYMENT.md)。
 
 ## 程式碼表達不了的注意事項
 
@@ -68,6 +68,6 @@ pwsh -NoProfile -File scripts/Start-Local.ps1
 - **圖片能力**：Ollama 模型的 `SupportsImages` 省略或 null 時依 `/api/show` 的回報判定，`false` 明確停用，`true` 不能覆蓋供應商回報的不支援。
 - **主機位置**：IIS 與 GPU 不在同一台時，`Inference.Providers.Ollama.Endpoint` 的 localhost 指的是 IIS 主機，要改成 GPU 主機位址。`Knowledge.Embedding.Endpoint` 空值沿用 Ollama 端點。
 - **完全地端**：停用 `Inference.Providers.Google.Enabled`，embedding 用 ollama 或 none（none 只用全文檢索，SQL Server 需安裝全文元件）。
-- **向量設定變更**：embedding 模型、維度、前處理、`Revision` 或切段設定改變時要重建 profile，見 [向量架構](VECTOR_ARCHITECTURE.md)。
+- **向量設定變更**：embedding 模型、維度、前處理、`Revision` 或切段設定改變時要重建 profile，見 [向量架構](../research/VECTOR_ARCHITECTURE.md)。
 - **附件路徑**：`Attachments.StoragePath` 必須是站外絕對路徑；Development 留空時用 `.local/data/attachments`。web.config 可用 `Attachments__StoragePath` 覆寫。
 - **其他**：`AllowedHosts` 是 IIS 接受的 Host 名稱（不含 scheme 與 port）。`Security.DisableHttpsRedirection` 不會停用 Production 的 Secure cookie。Google API 與 Brave 只連官方 HTTPS endpoint。

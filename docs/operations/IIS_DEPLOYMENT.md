@@ -1,10 +1,10 @@
 # AI Nexus：IIS 發版與驗證
 
-即時監控須套用 `20261008072048_RuntimeMonitoring`，只新增功能與管理群組 grant。依原流程先停止舊 host 再升級；啟動後由管理員確認 `/admin/monitoring` 的 SSE、工作階段心跳與 SQL 呼叫。每個 IIS app 保持單 worker，監控呈現此程序的資料；範圍與設定見 [監控](../../docs/MONITORING.md)。
+即時監控須套用 `20261008072048_RuntimeMonitoring`，只新增功能與管理群組 grant。依原流程先停止舊 host 再升級；啟動後由管理員確認 `/admin/monitoring` 的 SSE、工作階段心跳與 SQL 呼叫。每個 IIS app 保持單 worker，監控呈現此程序的資料；範圍與設定見 [監控](../features/MONITORING.md)。
 
 此文件對應 `D:\CoreProject\AiNexus\app`、`config`、`keys`、`data/attachments`、`data/diagnostics` 的配置。正式環境使用 **Production**，`config/appsettings.Production.json` 的 `Database.TrustServerCertificate=true` 已可使用自簽 SQL 憑證，連線保持加密；不需要 Development 或額外放行參數。
 
-本版需套用 `20261007040053_SystemDiagnostics`，保留 app 外的診斷 journal，不可與 `logs/stdout` 混用。先建立 diagnostics 目錄及 app pool Modify ACL，按組織政策確認30天診斷／14天已補送檔案／365天稽核預設。Windows emergency source 註冊、SQL離線補送、查證代碼驗收與原生日誌查證見 [DIAGNOSTICS](../../docs/DIAGNOSTICS.md)。此日誌機制不改變目前單 worker 的聊天部署限制。
+本版需套用 `20261007040053_SystemDiagnostics`，保留 app 外的診斷 journal，不可與 `logs/stdout` 混用。先建立 diagnostics 目錄及 app pool Modify ACL，按組織政策確認30天診斷／14天已補送檔案／365天稽核預設。Windows emergency source 註冊、SQL離線補送、查證代碼驗收與原生日誌查證見 [DIAGNOSTICS](../architecture/DIAGNOSTICS.md)。此日誌機制不改變目前單 worker 的聊天部署限制。
 
 ## 1. 部署目錄與各檔用途
 
@@ -49,7 +49,7 @@ pwsh -NoProfile -File scripts/Publish-IIS.ps1 -DataRoot 'D:\CoreProject\AiNexus\
 
 ## 4. 準備外部設定
 
-首次部署將套件 app 複製到 `D:\CoreProject\AiNexus\app`。使用套件 config 範本或保留既有 config，依 [CONFIGURATION](../../docs/CONFIGURATION.md) 填妥；切勿用空範本覆蓋已填的秘密。設定只有一個版本，沒有遷移工具：區段名稱或欄位寫錯時網站不會啟動，錯誤訊息會指出是哪個鍵（見 [CONFIGURATION 的啟動驗證](../../docs/CONFIGURATION.md#啟動驗證)）。
+首次部署將套件 app 複製到 `D:\CoreProject\AiNexus\app`。使用套件 config 範本或保留既有 config，依 [CONFIGURATION](../development/CONFIGURATION.md) 填妥；切勿用空範本覆蓋已填的秘密。設定只有一個版本，沒有遷移工具：區段名稱或欄位寫錯時網站不會啟動，錯誤訊息會指出是哪個鍵（見 [CONFIGURATION 的啟動驗證](../development/CONFIGURATION.md#啟動驗證)）。
 
 一般檔只寫和預設值不同的鍵，至少確認：
 
@@ -152,7 +152,7 @@ icacls 'D:\CoreProject\AiNexus\data\attachments' /inheritance:r `
 
 ## 8. 空資料庫初始化
 
-migration 基線是單一 `InitialCreate`（2026-10-09 重建），包含全部 schema、種子、索引與資料表／欄位說明。2026-10-09 以前建立的資料庫無法升級，必須刪除後重新初始化；初始化不會 DROP、清空資料或重寫 history。日後新增 migration 延續此基線，細節見 [資料庫](../../docs/DATABASE.md)。
+migration 基線是單一 `InitialCreate`（2026-10-09 重建），包含全部 schema、種子、索引與資料表／欄位說明。2026-10-09 以前建立的資料庫無法升級，必須刪除後重新初始化；初始化不會 DROP、清空資料或重寫 history。日後新增 migration 延續此基線，細節見 [資料庫](../architecture/DATABASE.md)。
 
 先停止所有共用此 DB 的 host，確認 DBA 準備的 AiNexus 是空庫或不存在。使用有建庫／DDL 權限的維運身分，在主機 PowerShell 7 執行：
 
@@ -168,7 +168,7 @@ if ($LASTEXITCODE -ne 0) { throw '資料庫初始化未完成，先不要啟動�
 
 工具只建立不存在的 AiNexus，套用 InitialCreate 並檢查模型／snapshot 一致。重跑不會重建；DBA 亦可審閱套用套件的 `migrations.sql`。完成後移除 runtime 身分的 DDL 權限。SQL Server 2025 額外建立 VECTOR(768)／VECTOR(1024)，舊 SQL 使用 portable 路徑。
 
-runtime 需要所有業務 schema（每模組一個，清單見 [資料庫](../../docs/DATABASE.md)）的 DML 與 history 的 SELECT。每個 app 使用一個程序；provider 可各自多個推論 worker，MaxConcurrency 只限制本程序的聊天／模型任務，沒有跨主機全域 GPU 限制。生成租約每 15 秒續期、兩分鐘有效，主機時鐘須同步。
+runtime 需要所有業務 schema（每模組一個，清單見 [資料庫](../architecture/DATABASE.md)）的 DML 與 history 的 SELECT。每個 app 使用一個程序；provider 可各自多個推論 worker，MaxConcurrency 只限制本程序的聊天／模型任務，沒有跨主機全域 GPU 限制。生成租約每 15 秒續期、兩分鐘有效，主機時鐘須同步。
 
 ## 9. 分層驗收：確定設定正確
 
@@ -211,7 +211,7 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Host.dll' `
 10. 完成、取消及失敗回答可展開耗時／排隊／執行與 tokens，重新整理仍保留；管理者同樣可讀並留下稽核。
 11. 總覽在個人／平台範圍、日期與不同幣別間正確切換；先設定測試模型價格，再確認單次／全對話金額及管理 CSV。平台查閱應有稽核。
 12. 啟用 Gitea 後用唯讀個人 token 連線、讀取固定 commit 檔案並帶入草稿；回收集區後仍可解密 token。`keys` 同時保護此 token，不能在更新時清空。
-13. 如啟用連網搜尋，先完成 [SearXNG／Brave 設定](../../docs/WEB_SEARCH.md)，再測 opt-in、來源與每日配額；未設定時入口停用。自架搜尋仍會向外部搜尋引擎送出公開提問。
+13. 如啟用連網搜尋，先完成 [SearXNG／Brave 設定](../features/WEB_SEARCH.md)，再測 opt-in、來源與每日配額；未設定時入口停用。自架搜尋仍會向外部搜尋引擎送出公開提問。
 14. 若切到本地 embedding，先確認 Ollama 可達、指定模型已安裝且回傳維度正確，再重新索引合成文件及檢查引用；不要把核心 ready 當成向量驗收。
 
 如需真實 AI、AD TLS 與 EF／Dapper 寫入探測，再於受控環境跑主機指令 `verify connections --output <logs內檔案>`。該工具會發送合成資料並呼叫真實模型；與上面的 `verify deployment` 模型清單及原檔 IO 探測分開執行。主機指令清單用 `dotnet AiNexus.Host.dll --help` 查看；結束碼 0 成功、1 失敗、2 用法錯誤。
@@ -220,9 +220,9 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Host.dll' `
 
 維運窗口先等待背景任務結束，停止網站／集區，保存同一時點的 SQL＋原檔備份組、config、keys 和上一版 app。不要在程序仍鎖住 DLL 時直接覆蓋，也不要刪整個 AiNexus 根目錄。用全新的 release app 資料夾替換舊 app，保持外部 config／keys／logs／data。需移動目錄時先確認 `Resolve-Path` 真的是 `D:\CoreProject\AiNexus\app`，不是 junction 或其他位置。
 
-首次依序：確認空 DB → 外部設定 → 新 app → 建立站外目錄／ACL → InitialCreate → 部署驗證 → 啟動 IIS → 瀏覽器驗收。日後更新先完成 [SQL＋原檔一致性備份](../../docs/BACKUP.md) 並停止全部 host，再套用相同基線的 migration。日後沒有 schema 變更時省略 migration。使用 `app_offline.htm` 亦可讓 ANCM 停止應用，移除後重啟；不要把該檔留在發版套件。[ANCM 的部署與啟動診斷](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/aspnet-core-module?view=aspnetcore-10.0) 說明了此機制。
+首次依序：確認空 DB → 外部設定 → 新 app → 建立站外目錄／ACL → InitialCreate → 部署驗證 → 啟動 IIS → 瀏覽器驗收。日後更新先完成 [SQL＋原檔一致性備份](BACKUP.md) 並停止全部 host，再套用相同基線的 migration。日後沒有 schema 變更時省略 migration。使用 `app_offline.htm` 亦可讓 ANCM 停止應用，移除後重啟；不要把該檔留在發版套件。[ANCM 的部署與啟動診斷](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/aspnet-core-module?view=aspnetcore-10.0) 說明了此機制。
 
-失敗時先停止新版，回復相符的 app／config／SQL／原檔備份組。舊 binary 架構與本版站外原檔架構不相容，不可只回退 DLL 再指向本版 DB。不要未確認就執行 migration Down，也不要混用不同時點的 SQL 和附件；完整還原程序見 [備份與還原](../../docs/BACKUP.md)。keys 保留原位置與保護身分。
+失敗時先停止新版，回復相符的 app／config／SQL／原檔備份組。舊 binary 架構與本版站外原檔架構不相容，不可只回退 DLL 再指向本版 DB。不要未確認就執行 migration Down，也不要混用不同時點的 SQL 和附件；完整還原程序見 [備份與還原](BACKUP.md)。keys 保留原位置與保護身分。
 
 ## 11. 常見錯誤與診斷
 

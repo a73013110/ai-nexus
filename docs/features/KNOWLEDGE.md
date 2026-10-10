@@ -27,15 +27,15 @@ API 為 `POST /knowledge/collections/{id}/text`、`GET /documents/{id}/text`、`
 
 ## 設定
 
-一般設定放 `.local/config/appsettings.Local.json`；Google key 共用 `.local/secrets/appsettings.Secrets.json` 的 `Inference.Providers.Google.ApiKey`，只由後端使用。聊天與向量模型各自選擇 provider；完全本地運行請參閱 [本地 AI 與向量化](LOCAL_AI.md)。
+一般設定放 `.local/config/appsettings.Local.json`；Google key 共用 `.local/secrets/appsettings.Secrets.json` 的 `Inference.Providers.Google.ApiKey`，只由後端使用。聊天與向量模型各自選擇 provider；完全本地運行請參閱 [本地 AI 與向量化](../research/LOCAL_AI.md)。
 
-預設為 Ollama bge-m3、1024 維、plain；embedding 可覆寫獨立端點。設定鍵、預設值與範圍見 [`KnowledgeOptions`](../backend/src/AiNexus.Features/Knowledge/KnowledgeOptions.cs)，設定檔規則見 [CONFIGURATION](CONFIGURATION.md)。搜尋採 vector／keyword／hybrid，全文不足時明確顯示 vector，重排與改寫略過也會在 mode 顯示；知識庫搜尋測試列出模式、分段耗時及排名／分數。
+預設為 Ollama bge-m3、1024 維、plain；embedding 可覆寫獨立端點。設定鍵、預設值與範圍見 [`KnowledgeOptions`](../../backend/src/AiNexus.Features/Knowledge/KnowledgeOptions.cs)，設定檔規則見 [CONFIGURATION](../development/CONFIGURATION.md)。搜尋採 vector／keyword／hybrid，全文不足時明確顯示 vector，重排與改寫略過也會在 mode 顯示；知識庫搜尋測試列出模式、分段耗時及排名／分數。
 
-從模型探測、測試文件、三種召回模式到聊天引用、ACL 及固定題庫評測，依 [向量檢索測試與異常復原](RETRIEVAL_TESTING.md) 操作。
+從模型探測、測試文件、三種召回模式到聊天引用、ACL 及固定題庫評測，依 [向量檢索測試與異常復原](../research/RETRIEVAL_TESTING.md) 操作。
 
 OCR 與一般文字生成共用核准模型、群組政策、日生成配額與實際 token 記錄。embedding 與 rerank 共用每人每日 20,000 次上限；查詢改寫走生成 token 配額。失敗的生成保留狀態供用量及問題排查；記錄不保存帳密。
 
-本地 BGE-M3／Qwen 的設定、查詢格式、硬體取捨與可重現比較指令見 [模型比較](EMBEDDING_MODELS.md)。切換 provider、模型、維度、查詢指令或 Revision 後，重新索引目標知識庫；總覽的「需重新索引」統計可協助檢查。
+本地 BGE-M3／Qwen 的設定、查詢格式、硬體取捨與可重現比較指令見 [模型比較](../research/EMBEDDING_MODELS.md)。切換 provider、模型、維度、查詢指令或 Revision 後，重新索引目標知識庫；總覽的「需重新索引」統計可協助檢查。
 
 變更向量模型後需重新索引；不同 profile 不混用。Google 官方目前提供獨立 embeddings API，Gemma 可搭配後端檢索結果；不要假設 Gemma 已支援 Google File Search。[Embeddings](https://ai.google.dev/gemini-api/docs/embeddings)、[File Search](https://ai.google.dev/gemini-api/docs/file-search)。
 
@@ -45,4 +45,4 @@ OCR 與一般文字生成共用核准模型、群組政策、日生成配額與�
 
 `jobs.BackgroundJobs` 是 durable queue。Worker 原子取得租約、每兩秒續約／檢查取消，checkpoint 驗證租約 token 與未取消狀態後才提交資料。程序中止後，租約到期可由下一個 worker 接手；失去租約的 worker 無法提交舊結果。同一來源的 active key 唯一，避免重複排程。失敗／取消後最多六次處理；重試先重新檢查來源權限。
 
-此可靠佇列共用於文件辨識、索引、評測及程式碼 review，完成／失敗／取消可在[通知中心](NOTIFICATIONS.md)查看與跳轉。聊天有獨立的 executor 租約，避免另一個實例誤判正在生成的回答；其排程仍在記憶體，每個 IIS app 使用一個 worker，完整限制與升級流程見 [IIS 部署](../deploy/iis/README.md)。
+此可靠佇列共用於文件辨識、索引、評測及程式碼 review，完成／失敗／取消可在[通知中心](NOTIFICATIONS.md)查看與跳轉。聊天有獨立的 executor 租約，避免另一個實例誤判正在生成的回答；其排程仍在記憶體，每個 IIS app 使用一個 worker，完整限制與升級流程見 [IIS 部署](../operations/IIS_DEPLOYMENT.md)。

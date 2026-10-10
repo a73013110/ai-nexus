@@ -2,7 +2,7 @@
 
 錯誤回應、SSE、工作與通知禁止回傳 Exception.Message／SQL／provider 原始 body；共用安全契約提供固定提示、公開分類與伺服器查證代碼。管理日誌也只能看到遮罩後的型別、代碼與無路徑堆疊。日誌 query／detail／export 分開授權、特權讀取先保存稽核，CSV 防公式注入。完整白名單、前端不可信回報、保存與防竄改能力限制見 [DIAGNOSTICS](DIAGNOSTICS.md)。
 
-安全政策集中於 `AiNexus.Platform/Security/WebSecurity.cs`。預設本機與正式網站使用 HTTPS；HTTPS 回應的 Session／Antiforgery Cookie 是 `Secure`、`HttpOnly`、`SameSite=Strict`。正式環境使用 HSTS；IIS 憑證、HTTPS binding、反向代理信任與 AD TLS 必須依 [部署文件](../deploy/iis/README.md) 驗收。
+安全政策集中於 `AiNexus.Platform/Security/WebSecurity.cs`。預設本機與正式網站使用 HTTPS；HTTPS 回應的 Session／Antiforgery Cookie 是 `Secure`、`HttpOnly`、`SameSite=Strict`。正式環境使用 HSTS；IIS 憑證、HTTPS binding、反向代理信任與 AD TLS 必須依 [部署文件](../operations/IIS_DEPLOYMENT.md) 驗收。
 
 `Start-Local`／`Start-Dev` 只有明確 `-Http` 才開啟本機例外，且僅在 Development、Host 與來源 IP 同時是 loopback 時允許。Testing 的 HTTP Cookie 政策只供獨立測試 host；Production 不接受停用 HTTPS 的舊參數。
 

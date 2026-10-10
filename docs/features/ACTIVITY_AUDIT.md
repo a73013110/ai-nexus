@@ -12,4 +12,4 @@
 
 「查證相關日誌」帶入同一 Trace ID（缺少 trace 時使用查證代碼）及事件前後五分鐘，保留歷史查證範圍；系統日誌詳情可反查同一 trace 的稽核。兩側連結依各自授權顯示，API 重新驗證。監控中的頁面分類與 API 流量也分別辨識 audit／logs，不歸入平台管理。
 
-事件分類、保存與關聯細節見 [系統日誌與維運](DIAGNOSTICS.md)。授權、游標、日期、匯出、關聯查證、舊書籤、同頁導航與權限不足的驗證分別由 `ActivityAuditTests`、`admin.spec.ts`、`navigation-audit.spec.ts` 及 `system-logs.spec.ts` 執行。
+事件分類、保存與關聯細節見 [系統日誌與維運](../architecture/DIAGNOSTICS.md)。授權、游標、日期、匯出、關聯查證、舊書籤、同頁導航與權限不足的驗證分別由 `ActivityAuditTests`、`admin.spec.ts`、`navigation-audit.spec.ts` 及 `system-logs.spec.ts` 執行。
