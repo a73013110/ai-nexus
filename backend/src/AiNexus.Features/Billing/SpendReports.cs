@@ -20,14 +20,6 @@ public sealed record SpendPeriod(DateTimeOffset From, DateTimeOffset Until, int 
 
 public sealed class SpendReports(NexusDbContext db, ModelPresentation presentation)
 {
-    /// <summary>For callers outside this module that still report invalid periods by exception.</summary>
-    public static SpendPeriod Period(DateTimeOffset? from, DateTimeOffset? until, int? offset)
-    {
-        var period = SpendPeriod.Create(from, until, offset, DateTimeOffset.UtcNow);
-        return period.IsSuccess ? period.Value : throw new ApiException(400, period.Error.Code, "");
-    }
-    public Task<SpendReportDto> ReportAsync(Guid? owner, DateTimeOffset? from, DateTimeOffset? until, int? offset, bool administrator, CancellationToken ct)
-        => ReportAsync(owner, Period(from, until, offset), administrator, ct);
     public async Task<SpendReportDto> ReportAsync(Guid? owner, SpendPeriod p, bool administrator, CancellationToken ct)
     {
         var query = db.Set<ModelCharge>().AsNoTracking().Where(x => x.CreatedAt >= p.From && x.CreatedAt < p.Until);

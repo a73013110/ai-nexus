@@ -17,12 +17,12 @@ public sealed class WebSearchService(NexusDbContext db, IWebSearchProvider provi
         !options.Value.Enabled ? "管理員尚未啟用網路搜尋。可設定自架 SearXNG 或 Brave Search。"
         : options.Value.Provider == "brave" && options.Value.ApiKey.Length == 0 ? "管理員尚未設定 Brave Search 的 API key。"
         : "開啟後會將這次提問送往搜尋服務，附件與歷史對話不會送出。");
-    public async Task<WebSearchRecord> SearchAsync(Guid owner, Guid conversation, string key, string hash, string query, CancellationToken ct)
+    public async Task<Result<WebSearchRecord>> SearchAsync(Guid owner, Guid conversation, string key, string hash, string query, CancellationToken ct)
     {
-        if (!Status.Available) throw new ApiException(503, "web_search_not_configured", Status.Notice);
-        if (string.IsNullOrWhiteSpace(query) || query.Length > 2000) throw new ApiException(400, "web_query_too_long", "網路搜尋提問最多 2000 個字元，請簡化查詢。");
+        if (!Status.Available) return WebSearchErrors.NotConfigured;
+        if (string.IsNullOrWhiteSpace(query) || query.Length > 2000) return WebSearchErrors.QueryTooLong;
         if (options.Value.Provider == "brave" && (query.Length > 600 || query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length > 75))
-            throw new ApiException(400, "web_query_too_long", "Brave Search 的提問最多 600 個字元或 75 個單字，請簡化查詢。");
+            return WebSearchErrors.QueryTooLong;
         WebSearchRecord record; ModelInvocation call;
         // The owner row lock taken first in this transaction serializes the reservation; it ends before the provider call.
         {
@@ -31,14 +31,14 @@ public sealed class WebSearchService(NexusDbContext db, IWebSearchProvider provi
             var previous = await db.Set<WebSearchRecord>().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct);
             if (previous is not null)
             {
-                if (previous.RequestHash != hash || previous.ConversationId != conversation) throw new ApiException(409, "idempotency_conflict", "此提交識別碼已用於不同搜尋。");
-                if (previous.Status != "completed") throw new ApiException(409, "web_search_pending_or_failed", "這次搜尋正在處理或未完成。請重新提交新的訊息。");
+                if (previous.RequestHash != hash || previous.ConversationId != conversation) return WebSearchErrors.IdempotencyConflict;
+                if (previous.Status != "completed") return WebSearchErrors.PendingOrFailed;
                 return previous;
             }
             record = new() { OwnerId = owner, ConversationId = conversation, IdempotencyKey = key, RequestHash = hash };
             var since = UtcDay.Start(record.CreatedAt); var until = since.AddDays(1);
             if (await db.Set<WebSearchRecord>().CountAsync(x => x.OwnerId == owner && x.CreatedAt >= since && x.CreatedAt < until, ct) >= options.Value.MaxDailyRequests)
-                throw new ApiException(429, "web_search_daily_quota", "今日網路搜尋已達上限。");
+                return WebSearchErrors.DailyQuota;
             call = new() { Id = record.Id, OwnerId = owner, ModelId = "web-search", Kind = "web-search", CreatedAt = record.CreatedAt };
             await billing.ReserveAsync(call.Id, owner, conversation, options.Value.Provider, call.ModelId, call.Kind, call.CreatedAt, ct);
             db.Add(record); db.Add(call); await billing.StartAsync(call.Id, ct); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);

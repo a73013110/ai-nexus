@@ -25,7 +25,7 @@ public sealed partial class WebSearchProvider(IHttpClientFactory clients, IOptio
         try
         {
             using var response = await clients.CreateClient(ControlledHttpClients.Tools).SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
-            if (!response.IsSuccessStatusCode) throw new ApiException(response.StatusCode == HttpStatusCode.TooManyRequests ? 429 : 503, "web_search_unavailable", "網路搜尋服務無法使用，請確認服務設定或稍後重試。");
+            if (!response.IsSuccessStatusCode) throw new ExternalServiceException(response.StatusCode == HttpStatusCode.TooManyRequests ? WebSearchErrors.RateLimited : WebSearchErrors.Unavailable, "網路搜尋服務無法使用，請確認服務設定或稍後重試。");
             using var json = await BoundedHttpJson.ReadAsync(response, 1024 * 1024, timeout.Token);
             JsonElement rows;
             if (o.Provider == "brave") { if (!json.RootElement.TryGetProperty("web", out var web) || !web.TryGetProperty("results", out rows)) return []; }
@@ -43,8 +43,8 @@ public sealed partial class WebSearchProvider(IHttpClientFactory clients, IOptio
             }
             return hits;
         }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new ApiException(504, "web_search_timeout", "網路搜尋逾時，請稍後再試。"); }
-        catch (Exception ex) when (ex is HttpRequestException or JsonException or IOException) { throw new ApiException(503, "web_search_unavailable", "網路搜尋服務無法使用，請確認 JSON 搜尋介面已啟用。"); }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested) { throw new ExternalServiceException(WebSearchErrors.Timeout, "網路搜尋逾時，請稍後再試。"); }
+        catch (Exception ex) when (ex is HttpRequestException or JsonException or IOException) { throw new ExternalServiceException(WebSearchErrors.Unavailable, "網路搜尋服務無法使用，請確認 JSON 搜尋介面已啟用。", ex); }
     }
     public static string? SafeUrl(string? value)
     {

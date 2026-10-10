@@ -61,6 +61,6 @@ internal sealed class GetDashboard(NexusDbContext db, SpendReports reports, Usag
             .OrderByDescending(x => x.UpdatedAt).Take(5).Select(x => new RecentWorkDto(x.Id, "chat", x.Title, x.UpdatedAt)).ToListAsync(ct);
         if (scope == "platform") { db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = ownerId ?? Guid.Empty, Action = "dashboard.platform.read", Result = "metrics" }); await db.SaveChangesAsync(ct); }
         return new DashboardDto(scope, counts, spend, recent, search.Status.Available, gitea.Value.Enabled, embedding.Enabled ? "語意向量" : "關鍵字",
-            await usage.TokensAsync(owner, spend.From, spend.Until, spend.OffsetMinutes, scope == "platform", ct));
+            await usage.TokensAsync(owner, period.Value, scope == "platform", ct));
     }
 }
