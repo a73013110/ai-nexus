@@ -5,6 +5,7 @@ import { Icon } from './icon';
   selector: 'nx-search-field',
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './search-field.scss',
   template: `<div class="search-field">
     <nx-icon name="search" /><input
       #field

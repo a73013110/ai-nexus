@@ -1,0 +1,32 @@
+.reader-dialog {
+  width: min(1600px, 100vw - 32px);
+  height: calc(100dvh - 32px);
+  max-width: none;
+  max-height: none;
+  padding: 0;
+  margin: auto;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 24px 100px rgba(0, 0, 0, 0.3333333333);
+}
+.reader-dialog::backdrop {
+  background: rgba(17, 29, 44, 0.7607843137);
+  backdrop-filter: blur(4px);
+}
+.reader-dialog.reader-expanded {
+  width: 100vw;
+  height: 100dvh;
+  border-radius: 0;
+  border: 0;
+}
+@media (max-width: 600px) {
+  .reader-dialog {
+    width: 100vw;
+    height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+}

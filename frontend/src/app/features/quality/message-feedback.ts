@@ -21,6 +21,7 @@ import { QualityApi } from './quality-api';
   imports: [Notice, Field, Icon, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './message-feedback.scss',
   template: `<div class="message-feedback">
     <div class="feedback-buttons" role="group" aria-label="回答品質回饋">
       <button
@@ -79,29 +80,9 @@ import { QualityApi } from './quality-api';
       <nx-notice tone="danger" [message]="error()" />
     }
     @if (notice()) {
-      <span class="visually-hidden" role="status">{{ notice() }}</span>
+      <span class="sr-only" role="status">{{ notice() }}</span>
     }
   </div>`,
-  styles: `
-    :host {
-      display: block;
-    }
-    .feedback-buttons {
-      display: flex;
-      align-items: center;
-      gap: var(--p-space-1);
-    }
-    .feedback-detail {
-      padding: var(--section-padding);
-      border: 1px solid var(--line);
-      border-radius: var(--p-radius-md);
-      margin-top: var(--p-space-2);
-      max-width: 32rem;
-    }
-    .feedback-detail textarea {
-      resize: vertical;
-    }
-  `,
 })
 export class MessageFeedback {
   readonly message = input.required<MessageDto>();

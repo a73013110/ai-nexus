@@ -62,3 +62,19 @@ kbd {
   --count-badge-top: 0;
   --count-badge-end: -0.375rem;
 }
+.danger-text {
+  color: var(--error);
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--sidebar-avatar-size);
+  height: var(--sidebar-avatar-size);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--accent);
+  font-size: var(--text-caption);
+  font-weight: 600;
+}

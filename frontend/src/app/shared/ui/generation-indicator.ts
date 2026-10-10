@@ -4,6 +4,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 @Component({
   selector: 'nx-generation-indicator',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './generation-indicator.scss',
   template: `<div class="generation-indicator" [class.is-waiting]="waiting()">
     <span class="generation-orbit" aria-hidden="true"><i></i><i></i><i></i><b></b></span>
     <span class="generation-label"

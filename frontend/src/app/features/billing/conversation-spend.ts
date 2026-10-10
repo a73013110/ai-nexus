@@ -10,6 +10,7 @@ import { BillingApi, chargeKind, money } from './billing-api';
   imports: [InfoPopover, Icon],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './conversation-spend.scss',
   template: `@if (data(); as spend) {
       <nx-info-popover
         [label]="summary(spend)"

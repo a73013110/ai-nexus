@@ -1,0 +1,21 @@
+:host {
+  display: contents;
+}
+.platform-dialog.settings-dialog {
+  --dialog-width: 64rem;
+  padding: 0;
+  overflow: hidden;
+  height: min(760px, calc(100dvh - 3rem));
+}
+.settings-dialog nx-settings-page {
+  display: block;
+  height: 100%;
+}
+.settings-loading {
+  padding: var(--section-padding);
+}
+@media (max-width: 680px) {
+  .settings-dialog {
+    height: calc(100dvh - 1.5rem);
+  }
+}

@@ -1,0 +1,182 @@
+// The sidebar content is projected into WorkspaceSidebar; `.sidebar` is its host in this template.
+.new-chat {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--button-target);
+  padding: var(--control-padding-block) var(--p-space-3);
+  background: var(--accent);
+  color: var(--accent-text);
+  border-radius: var(--p-radius-md);
+  font-weight: 600;
+  font-size: var(--text-label);
+}
+.new-chat:hover {
+  opacity: 0.9;
+}
+.new-chat-hint {
+  margin-left: auto;
+  font-weight: 400;
+  opacity: 0.75;
+  font-size: var(--text-caption);
+}
+.sidebar-tools {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+}
+.sidebar-tools > .quiet-button {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  flex: 1;
+  min-height: var(--button-target);
+  padding: var(--control-padding-block) var(--p-space-2);
+  font-size: var(--text-caption);
+  color: var(--secondary);
+  border-radius: var(--p-radius-md);
+}
+// The shared rail keeps 44px targets while compact, including the mobile drawer.
+.is-compact .icon-button {
+  width: 100%;
+  min-height: 2.75rem;
+}
+.sidebar-tools > .icon-button {
+  width: var(--button-target);
+}
+.history-search {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: max(var(--button-target), var(--sidebar-search-height));
+  border-bottom: 1px solid var(--line);
+  padding: var(--control-padding-block) var(--p-space-2);
+  color: var(--secondary);
+}
+.history-search nx-icon {
+  width: 17px;
+  height: 17px;
+}
+.history-search input {
+  background: transparent;
+  border: 0;
+  min-width: 0;
+  width: 100%;
+  font-size: var(--text-label);
+}
+.history-search input::placeholder {
+  color: var(--muted);
+}
+.history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-1);
+}
+.history-filters > button {
+  flex: 1;
+  min-height: var(--button-target);
+  border-radius: var(--p-radius-md);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.history-filters > button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-weight: 600;
+}
+.label-filter {
+  flex-basis: 100%;
+}
+.history {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+  padding-bottom: var(--p-space-2);
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+.history-group h2 {
+  margin: var(--p-space-2) var(--p-space-2) var(--p-space-1);
+  color: var(--muted);
+  font-size: var(--text-caption);
+  font-weight: 500;
+}
+.history-group:first-child h2 {
+  margin-top: var(--p-space-1);
+}
+.history-row {
+  display: flex;
+  align-items: center;
+  border-radius: var(--p-radius-sm);
+  margin-bottom: 0.125rem;
+  position: relative;
+}
+.history-row > a {
+  display: flex;
+  align-items: center;
+  min-height: var(--button-target);
+  padding: var(--control-padding-block) var(--p-space-2);
+  font-size: var(--text-label);
+  min-width: 0;
+  flex: 1;
+}
+.history-row > a span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.history-row.selected,
+.history-row:hover {
+  background: var(--hover);
+}
+.history-row.selected::before {
+  content: '';
+  height: var(--p-space-4);
+  width: 2px;
+  background: var(--accent);
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: var(--p-radius-pill);
+}
+.history-row .history-state {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  margin-right: var(--p-space-2);
+}
+.history-row .history-complete {
+  color: var(--signal);
+}
+.history-state.is-running {
+  animation: orbit-turn 1.6s linear infinite;
+  color: var(--signal);
+}
+.sidebar-note {
+  font-size: var(--text-caption);
+  line-height: 1.8;
+  color: var(--secondary);
+  margin: var(--p-space-4) var(--p-space-2);
+}
+.load-more {
+  width: 100%;
+  margin-top: var(--p-space-3);
+  justify-content: center;
+}
+.sidebar.is-compact :is(.sidebar-tools, .history-search, .history-filters, .history) {
+  display: none;
+}
+.sidebar.is-compact .new-chat {
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: var(--button-target);
+  padding: 0;
+}
+.sidebar.is-compact .new-chat-label,
+.sidebar.is-compact .new-chat-hint {
+  display: none;
+}

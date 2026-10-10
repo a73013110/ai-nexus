@@ -7,7 +7,7 @@ import { Icon } from '../../shared/ui/icon';
   selector: 'nx-workspace-menu-button',
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styles: ':host { display: contents; }',
+  styleUrl: './workspace-menu-button.scss',
   template: `@if (layout.narrow()) {
     <button
       type="button"

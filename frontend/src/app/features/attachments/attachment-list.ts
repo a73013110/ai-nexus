@@ -8,6 +8,7 @@ import { ReaderLink } from '../../shared/browser/reader-link';
   selector: 'nx-attachment-list',
   imports: [Icon, ReaderLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './attachment-list.scss',
   template: `<ul class="attachment-list" aria-label="附件">
     @for (file of files(); track file.id) {
       <li class="attachment-card" animate.enter="attachment-enter">

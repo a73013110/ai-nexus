@@ -9,6 +9,7 @@ import { ViewportInset } from '../../shared/browser/viewport-inset';
   selector: 'nx-identity-banner',
   imports: [Notice, Icon, ViewportInset],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './identity-banner.scss',
   template: `@if (auth.session()?.testing; as testing) {
     <div
       nxViewportInset="--identity-banner-height"

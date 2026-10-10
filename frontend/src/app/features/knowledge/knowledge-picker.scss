@@ -1,0 +1,56 @@
+.knowledge-trigger nx-icon {
+  width: 1rem;
+  height: 1rem;
+}
+.knowledge-trigger {
+  display: inline-flex;
+  gap: var(--p-space-1);
+  align-items: center;
+  min-height: var(--button-target);
+  padding: var(--p-space-1) var(--p-space-2);
+  font-size: var(--text-caption);
+  color: var(--secondary);
+  border-radius: var(--p-radius-sm);
+  white-space: nowrap;
+}
+.knowledge-trigger:hover {
+  background: var(--hover);
+}
+.knowledge-trigger.selected {
+  color: var(--signal);
+  background: var(--accent-soft);
+}
+.knowledge-picker-panel {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: var(--section-padding);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--p-radius-lg);
+  box-shadow: var(--shadow-floating);
+  overflow: auto;
+}
+.knowledge-picker-panel:popover-open {
+  display: grid;
+  gap: var(--p-space-3);
+  animation: panel-arrive var(--motion) var(--ease);
+}
+.picker-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p-space-2);
+}
+.picker-heading span {
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+.knowledge-choices {
+  display: grid;
+  gap: var(--p-space-1);
+}
+.error-note {
+  color: var(--error);
+}

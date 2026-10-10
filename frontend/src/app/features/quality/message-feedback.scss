@@ -1,0 +1,22 @@
+:host {
+  display: block;
+}
+.feedback-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+}
+.feedback-active {
+  color: var(--signal);
+  background: var(--accent-soft);
+}
+.feedback-detail {
+  padding: var(--section-padding);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  margin-top: var(--p-space-2);
+  max-width: 32rem;
+}
+.feedback-detail textarea {
+  resize: vertical;
+}

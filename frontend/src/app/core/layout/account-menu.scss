@@ -1,0 +1,38 @@
+:host {
+  display: block;
+  margin-top: auto;
+  border-top: 1px solid var(--line);
+  padding-top: var(--p-space-1);
+}
+// The trigger content is projected into ActionMenu's profile button.
+.profile-name {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  line-height: 1.35;
+}
+.profile-name strong,
+.profile-name small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-name strong {
+  font-size: var(--text-label);
+  font-weight: 550;
+  color: var(--ink);
+}
+.profile-name small {
+  font-size: var(--text-caption);
+  color: var(--secondary);
+  margin-top: 0;
+}
+nx-action-menu nx-icon {
+  width: 16px;
+  height: 16px;
+}
+:host-context(.is-compact) .profile-name,
+:host-context(.is-compact) nx-action-menu nx-icon {
+  display: none;
+}

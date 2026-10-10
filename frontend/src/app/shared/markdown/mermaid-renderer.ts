@@ -59,7 +59,14 @@ export function renderDiagram(
       }
       if (!active()) return null;
       const container = document.createElement('div');
-      container.className = 'mermaid-measure';
+      // Mermaid measures text in a laid-out but invisible container outside any component.
+      Object.assign(container.style, {
+        position: 'fixed',
+        inset: '0 auto auto 0',
+        width: '1024px',
+        visibility: 'hidden',
+        pointerEvents: 'none',
+      });
       container.setAttribute('aria-hidden', 'true');
       document.body.append(container);
       try {

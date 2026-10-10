@@ -1,0 +1,8 @@
+.audit-details pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: var(--text-caption);
+  padding: var(--p-space-3);
+  background: var(--sidebar);
+  border-radius: var(--p-radius-sm);
+}

@@ -7,6 +7,7 @@ import { BrandWordmark } from '../../shared/ui/brand-wordmark';
   selector: 'nx-workspace-brand',
   imports: [RouterLink, BrandWordmark],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './workspace-brand.scss',
   template: `<a class="brand" [routerLink]="home" aria-label="AI Nexus 總覽">
     <nx-brand-wordmark [compact]="compact()" aria-hidden="true" />
   </a>`,

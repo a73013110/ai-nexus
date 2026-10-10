@@ -1,0 +1,65 @@
+:host-context(.settings-dialog) .settings-layout {
+  height: 100%;
+  grid-template-columns: 14rem minmax(0, 1fr);
+}
+:host-context(.settings-dialog) .settings-sidebar {
+  padding: var(--p-space-5) var(--p-space-3);
+  gap: var(--p-space-3);
+}
+:host-context(.settings-dialog) .settings-main {
+  padding: 0 var(--p-space-6);
+  margin-block: var(--dialog-inset);
+  margin-right: var(--dialog-inset);
+}
+:host-context(.settings-dialog) .settings-page-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin-bottom: var(--section-gap);
+  padding-top: var(--p-space-6);
+  padding-right: var(--button-target);
+  padding-bottom: var(--p-space-3);
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+:host-context(.settings-dialog) .settings-close {
+  top: var(--p-space-6);
+}
+:host-context(.settings-dialog) .settings-page-header h1 {
+  font-size: var(--p-font-2xl);
+}
+@media (max-width: 680px) {
+  :host-context(.settings-dialog) .settings-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  :host-context(.settings-dialog) .settings-sidebar {
+    padding: var(--p-space-3);
+    gap: var(--p-space-2);
+    overflow: hidden;
+  }
+  :host-context(.settings-dialog) .settings-sidebar .panel-eyebrow,
+  :host-context(.settings-dialog) .settings-sidebar h2,
+  :host-context(.settings-dialog) .settings-account {
+    display: none;
+  }
+  :host-context(.settings-dialog) .settings-categories {
+    flex-direction: row;
+    overflow: auto;
+  }
+  :host-context(.settings-dialog) .settings-main {
+    padding: 0 var(--p-space-3);
+  }
+  :host-context(.settings-dialog) .settings-page-header {
+    padding-top: var(--p-space-4);
+  }
+  :host-context(.settings-dialog) .settings-close {
+    top: var(--p-space-4);
+  }
+  :host-context(.settings-dialog) .setting-row {
+    gap: var(--p-space-3);
+  }
+  :host-context(.settings-dialog) .setting-row nx-select {
+    width: 9rem;
+  }
+}

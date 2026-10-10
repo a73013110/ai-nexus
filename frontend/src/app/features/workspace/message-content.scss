@@ -1,0 +1,45 @@
+// Chat and shared snapshots restyle the user copy through these custom properties.
+.user-copy {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: var(--line-reading);
+  padding: var(--user-copy-padding, var(--p-space-2) var(--p-space-3));
+  background: var(--user-copy-background, var(--sidebar));
+  border: var(--user-copy-border, 1px solid var(--line));
+  border-radius: var(--user-copy-radius, var(--p-radius-md));
+}
+.source-citations {
+  display: flex;
+  gap: var(--p-space-2);
+  flex-wrap: wrap;
+  margin-top: var(--p-space-4);
+  a {
+    display: flex;
+    gap: var(--p-space-2);
+    align-items: center;
+    padding: var(--p-space-2) var(--p-space-3);
+    min-height: var(--button-target);
+    border: 1px solid var(--line);
+    border-radius: var(--p-radius-md);
+    background: var(--surface);
+    font-size: var(--text-caption);
+    max-width: 100%;
+    span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    &:hover {
+      border-color: var(--signal);
+      color: var(--signal);
+    }
+  }
+}
+.web-citations a {
+  max-width: 18rem;
+}
+.web-citations a span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

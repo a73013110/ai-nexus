@@ -6,7 +6,7 @@ Chat、功能頁及閱讀器共用 `WorkspaceSidebar`／`WorkspaceLayout`。Togg
 
 對話每列「…」與右上工具列共用 `ConversationActions`／top-layer ActionMenu，提供分享、命名、收藏、封存、刪除。生成中顯示 spinner，禁止破壞生成狀態的操作；切換後仍持續，完成圖示沿用未讀通知。準備回答採三層軌道與中心脈衝，減少動態時保持靜態可讀。
 
-側欄的對話操作、搜尋、篩選、歷史清單、工作區開關與帳號選單沿用 `ui-density-compact`；品牌區與工作區功能分組保留既有尺度。側欄以 `--density-text-size`／`--density-caption-size` 使用 14px 主文字、13px 輔助文字，與功能導覽的 14px 尺度一致；桌面列高 34px、歷史列間距 2px、搜尋列 40px，側欄 overlay／觸控維持 44px。品牌下方保留 12px 間距，其他外框間距 4px，移除工作區按鈕與帳號之間的冗餘留白。帳號使用 28px 頭像及兩行省略文字，共用 `ActionMenu` 樣式集中於 `styles/action-menu.scss`，選單移除列間空隙但保留完整鍵盤／焦點操作。聊天操作區亦共用緊湊尺度，正文仍使用個人閱讀設定；48px 頁首、32px 最小輸入高度與 16px／12px 訊息間距減少冗餘留白，長草稿依內容自動增高。新對話的標題、輸入與建議仍在畫面中央，已有訊息時輸入區固定於底部。
+側欄的對話操作、搜尋、篩選、歷史清單、工作區開關與帳號選單沿用 `ui-density-compact`；品牌區與工作區功能分組保留既有尺度。側欄以 `--density-text-size`／`--density-caption-size` 使用 14px 主文字、13px 輔助文字，與功能導覽的 14px 尺度一致；桌面列高 34px、歷史列間距 2px、搜尋列 40px，側欄 overlay／觸控維持 44px。品牌下方保留 12px 間距，其他外框間距 4px，移除工作區按鈕與帳號之間的冗餘留白。帳號使用 28px 頭像及兩行省略文字，共用 `ActionMenu` 樣式集中於 `shared/ui/action-menu.scss`，選單移除列間空隙但保留完整鍵盤／焦點操作。聊天操作區亦共用緊湊尺度，正文仍使用個人閱讀設定；48px 頁首、32px 最小輸入高度與 16px／12px 訊息間距減少冗餘留白，長草稿依內容自動增高。新對話的標題、輸入與建議仍在畫面中央，已有訊息時輸入區固定於底部。
 
 密度與一致間距參考 [Fluent 2 layout](https://fluent2.microsoft.design/layout)；桌面操作尺寸遵循 [WCAG 2.2 target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum)，手機維持較大的觸控範圍。
 

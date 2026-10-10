@@ -27,8 +27,7 @@
   font-size: var(--resource-heading-size);
   margin-block: 0 var(--p-space-2);
 }
-.ui-section-header,
-.ui-filter-heading {
+.ui-section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -49,121 +48,11 @@
   font-size: var(--resource-heading-size);
   font-weight: 600;
 }
-.ui-filter-panel {
-  display: block;
-  min-width: 0;
-  padding: var(--section-padding);
-  margin-bottom: var(--section-gap);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
-  background: var(--surface);
-}
-.ui-filter-heading strong {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  font-size: var(--text-label);
-  font-weight: 600;
-}
 .ui-filter-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
   align-items: end;
   gap: var(--p-space-3);
-}
-.ui-view-switch {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-1);
-  min-width: 0;
-  max-width: 100%;
-  overflow-x: auto;
-  margin-bottom: var(--section-gap);
-  border-bottom: 1px solid var(--line);
-}
-.ui-view-switch button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--p-space-2);
-  flex: none;
-  min-height: var(--button-target);
-  padding: var(--p-space-1) var(--p-space-3);
-  border-bottom: 2px solid transparent;
-  font-size: var(--text-label);
-  color: var(--secondary);
-}
-.ui-view-switch button[aria-pressed='true'] {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-  font-weight: 600;
-}
-.ui-view-switch-icons {
-  border-bottom: 0;
-}
-.ui-view-switch-icons button {
-  padding: var(--p-space-1);
-  border: 0;
-  border-radius: var(--p-radius-md);
-}
-.ui-view-switch-icons button[aria-pressed='true'] {
-  background: var(--accent-soft);
-}
-.ui-view-switch-segment {
-  width: fit-content;
-  flex-wrap: wrap;
-  overflow: visible;
-  margin-bottom: 0;
-  padding: var(--p-space-1);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
-  background: var(--surface-subtle);
-}
-.ui-view-switch-segment button {
-  border: 0;
-  border-radius: var(--p-radius-sm);
-}
-.ui-view-switch-segment button[aria-pressed='true'] {
-  background: var(--accent-soft);
-}
-.ui-filter-heading .ui-view-switch,
-.ui-filter-panel > .ui-view-switch {
-  margin-bottom: 0;
-}
-.feature-layout-compact .feature-main {
-  padding: var(--p-space-5) var(--p-space-6);
-  scrollbar-gutter: stable;
-}
-.feature-layout-wide .feature-content {
-  max-width: none;
-}
-.feature-layout-data .feature-content {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-.feature-layout-data .feature-content > * {
-  flex: none;
-}
-.feature-layout-data .feature-content > nx-data-table {
-  flex: 1 0 18rem;
-  min-height: 0;
-}
-.feature-layout-compact .feature-header {
-  gap: var(--p-space-4);
-  margin-bottom: var(--p-space-4);
-}
-.feature-layout-compact .feature-header h1 {
-  font-size: var(--p-font-2xl);
-  margin-block: 0 var(--p-space-1);
-}
-.feature-layout-compact .feature-header p {
-  font-size: var(--text-ui);
-  line-height: var(--line-ui);
-}
-.feature-layout-compact .panel-eyebrow {
-  margin-bottom: var(--p-space-1);
-  font-size: var(--p-font-xs);
 }
 .ui-field {
   display: grid;
@@ -193,15 +82,6 @@ select:where(.ui-input) {
   outline: 2px solid var(--focus);
   outline-offset: 1px;
 }
-.ui-data-table {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
-  background: var(--surface);
-  overflow: clip;
-}
 .ui-table-toolbar,
 .ui-table-footer {
   flex: none;
@@ -222,18 +102,10 @@ select:where(.ui-input) {
   font-size: var(--text-ui);
   font-weight: 600;
 }
-.ui-table-toolbar-wrap {
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid var(--line);
-}
 .ui-table-toolbar-wrap > .ui-table-toolbar {
   flex: 1;
   min-width: 0;
   border-bottom: 0;
-}
-.ui-table-toolbar-wrap:empty {
-  display: none;
 }
 .ui-table-sort {
   display: flex;
@@ -386,18 +258,12 @@ select:where(.ui-input) {
   margin: 0;
   font-size: var(--p-font-lg);
 }
-@media (max-width: 640px) {
-  .feature-layout-compact .feature-main {
-    padding: var(--p-space-4) var(--p-space-3);
-  }
-}
 @media (max-width: 640px), (pointer: coarse) {
   .ui-density-compact {
     --button-target: 2.75rem;
     --control-font-size: 1rem;
   }
 }
-
 // Detail content patterns shared by inspectors and management pages.
 .ui-drawer-summary {
   padding: var(--p-space-3) var(--p-space-4);
@@ -438,24 +304,6 @@ select:where(.ui-input) {
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
-.ui-notice-link {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  width: 100%;
-  margin-top: var(--p-space-2);
-  padding: var(--p-space-2);
-  background: var(--error-bg);
-  border-radius: var(--p-radius-md);
-  color: var(--danger);
-  font-size: var(--p-font-sm);
-  text-align: start;
-}
-.ui-notice-link span {
-  flex: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
 .ui-description-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -475,42 +323,6 @@ select:where(.ui-input) {
 .ui-description-wide {
   grid-column: 1 / -1;
 }
-.ui-panel-note {
-  color: var(--secondary);
-  font-size: var(--p-font-data);
-  margin: 0 0 var(--p-space-3);
-}
-.ui-timeline {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.ui-timeline li {
-  padding: var(--p-space-3);
-  border-inline-start: 2px solid var(--line);
-  border-bottom: 1px solid var(--line);
-  font-size: var(--p-font-data);
-  overflow-wrap: anywhere;
-}
-.ui-timeline li.is-selected {
-  border-inline-start-color: var(--accent);
-  background: var(--accent-soft);
-}
-.ui-timeline li > div {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  margin-bottom: var(--p-space-2);
-}
-.ui-timeline p {
-  margin: 0.25rem 0;
-  color: var(--secondary);
-}
-.ui-timeline small,
-.ui-timeline code {
-  display: block;
-}
-
 .ui-data-table td strong {
   font-size: var(--p-font-data);
   font-weight: 600;
@@ -530,7 +342,6 @@ select:where(.ui-input) {
   white-space: nowrap;
   text-overflow: ellipsis;
 }
-
 .ui-table-code {
   font-family: var(--font-code);
 }

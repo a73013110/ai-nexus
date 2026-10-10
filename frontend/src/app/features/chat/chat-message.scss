@@ -1,0 +1,133 @@
+:host {
+  display: block;
+}
+:host(:not(:last-child)) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+  margin-inline: calc(-1 * var(--p-space-2));
+  padding-inline: var(--p-space-2);
+}
+.message {
+  position: relative;
+  padding: 0 0 var(--message-gap);
+  font-size: var(--text-body);
+}
+.message.user {
+  --user-copy-background: var(--user-bubble);
+  --user-copy-border: 1px solid var(--user-bubble-border);
+  --user-copy-radius: var(--p-radius-lg) var(--p-radius-lg) var(--p-radius-sm) var(--p-radius-lg);
+  width: var(--message-user-width);
+  margin-left: auto;
+}
+.message:not(.user) {
+  padding-left: var(--p-space-4);
+  border-left: 2px solid var(--line);
+}
+.message.search-match {
+  background: var(--accent-soft);
+  border-radius: var(--p-radius-md);
+}
+.message.search-current {
+  box-shadow: -3px 0 0 var(--accent);
+}
+.message-enter {
+  animation: arrive var(--motion) var(--ease);
+}
+.message.user .message-heading,
+.message.user .message-actions {
+  justify-content: flex-end;
+}
+.message-heading {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  margin-bottom: var(--p-space-2);
+}
+.message-heading strong {
+  flex: none;
+  white-space: nowrap;
+  font-size: var(--text-caption);
+  font-weight: 600;
+}
+.role-mark {
+  flex: none;
+  font-size: var(--text-caption);
+  background: var(--hover);
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  color: var(--secondary);
+}
+.role-mark.nexus {
+  border-radius: var(--p-radius-sm);
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: var(--text-caption);
+}
+.assistant-label {
+  flex: none;
+  white-space: nowrap;
+  color: var(--signal);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-pill);
+  padding: 1px var(--p-space-2);
+  font-size: var(--text-caption);
+}
+.message-model {
+  min-width: 0;
+  font:
+    var(--text-caption) ui-monospace,
+    'Cascadia Code',
+    monospace;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.message-charges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+.message-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  margin-top: var(--p-space-2);
+  color: var(--muted);
+}
+.version-picker {
+  display: flex;
+  align-items: center;
+  margin-left: 6px;
+  font-size: var(--text-caption);
+  gap: 3px;
+}
+.version-picker .icon-button {
+  width: var(--button-target);
+  height: var(--button-target);
+}
+.version-picker nx-icon {
+  width: 12px;
+  height: 12px;
+}
+@media (max-width: 859px) {
+  .message.user {
+    width: 92%;
+  }
+}
+@media (max-width: 520px) {
+  .message-heading {
+    flex-wrap: wrap;
+    gap: var(--p-space-2);
+  }
+  .message-heading .message-model {
+    flex-basis: 100%;
+    margin-left: 33px;
+    max-width: calc(100% - 33px);
+  }
+}

@@ -24,6 +24,7 @@ import { ChatStore } from '../chat/chat-store';
   imports: [Notice, CompactDialog, Field, Icon, FormField, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './conversation-settings-dialog.scss',
   template: ` <dialog
     nxCompactDialog
     #dialog

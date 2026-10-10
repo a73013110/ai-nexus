@@ -1,0 +1,126 @@
+.settings-layout {
+  display: grid;
+  grid-template-columns: var(--settings-sidebar-width) minmax(0, 1fr);
+  height: calc(100dvh - var(--identity-banner-height, 0px) - var(--global-issue-height, 0px));
+  overflow: hidden;
+}
+.settings-page-header {
+  position: relative;
+}
+.settings-close {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+.settings-sidebar {
+  padding: var(--p-space-6) var(--p-space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-4);
+  background: var(--sidebar);
+  border-right: 1px solid var(--line);
+  overflow: auto;
+}
+.settings-back {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--button-target);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.settings-sidebar h2 {
+  margin: 0;
+  padding: 0 var(--p-space-2);
+  font-size: var(--p-font-2xl);
+}
+.settings-categories {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-1);
+}
+.settings-categories button {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  min-height: var(--button-target);
+  text-align: left;
+  padding: var(--p-space-2) var(--p-space-3);
+  border-radius: var(--p-radius-md);
+  font-size: var(--text-ui);
+  white-space: nowrap;
+}
+.settings-categories button:hover {
+  background: var(--hover);
+}
+.settings-categories [aria-current='page'] {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+.settings-account {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  margin-top: auto;
+  padding-top: var(--p-space-6);
+}
+.settings-account strong,
+.settings-account small {
+  display: block;
+}
+.settings-account small {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.settings-main {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: clamp(24px, 5vw, 72px) var(--workspace-gutter) 0;
+  scroll-padding-top: 32px;
+}
+.settings-page-header,
+.settings-content,
+.settings-savebar {
+  max-width: var(--settings-content-width);
+  margin: 0 auto;
+}
+.settings-page-header {
+  margin-bottom: var(--section-gap);
+}
+.settings-page-header h1 {
+  font-size: var(--p-font-2xl);
+  margin: var(--p-space-3) 0 var(--p-space-2);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+}
+@media (max-width: 860px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .settings-sidebar {
+    padding: var(--p-space-3) var(--p-space-4);
+    gap: var(--p-space-2);
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .settings-sidebar > h2,
+  .settings-sidebar > .panel-eyebrow,
+  .settings-account {
+    display: none;
+  }
+  .settings-back {
+    min-height: 32px;
+  }
+  .settings-categories {
+    flex-direction: row;
+    overflow: auto;
+  }
+  .settings-main {
+    padding-top: var(--p-space-6);
+  }
+}

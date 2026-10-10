@@ -3,6 +3,8 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 @Component({
   selector: 'nx-text-highlight',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styles:
+    'mark { background: var(--accent-soft); color: var(--ink); outline: 1px solid var(--signal) }',
   template: `@for (part of parts(); track $index) {
     @if (part.match) {
       <mark>{{ part.text }}</mark>

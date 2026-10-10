@@ -1,0 +1,147 @@
+.composer-region {
+  flex: none;
+  padding-block: var(--p-space-2) max(var(--p-space-3), env(safe-area-inset-bottom));
+  overflow: hidden;
+  background: var(--canvas);
+}
+.composer {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--composer-radius);
+  padding: var(--p-space-2) var(--p-space-3);
+  box-shadow: var(--shadow);
+  transition:
+    border-color var(--motion),
+    box-shadow var(--motion);
+}
+.composer:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-soft);
+}
+.composer.is-busy {
+  border-color: var(--signal);
+}
+.composer-input {
+  position: relative;
+  min-height: var(--button-target);
+}
+.composer textarea {
+  display: block;
+  border: 0;
+  padding: 0 var(--button-target) 0 0;
+  margin: 0;
+  width: 100%;
+  resize: none;
+  min-height: var(--composer-input-min);
+  max-height: var(--composer-input-max);
+  font-size: var(--text-body);
+  line-height: var(--line-reading);
+  background: transparent;
+  outline: none;
+  overflow-y: auto;
+}
+.composer textarea::placeholder {
+  color: var(--muted);
+}
+.composer-expand {
+  position: absolute;
+  right: 0;
+  top: 0;
+  color: var(--muted);
+}
+.composer-expand nx-icon {
+  width: 15px;
+  height: 15px;
+}
+.composer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p-space-1);
+  margin-top: var(--p-space-1);
+}
+.send-button {
+  width: var(--button-target);
+  height: var(--button-target);
+  display: inline-grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--accent-text);
+  border-radius: var(--p-radius-md);
+}
+.send-button:not(:disabled):hover {
+  background: var(--accent);
+  opacity: 0.85;
+}
+.send-button:disabled {
+  background: var(--hover);
+  color: var(--muted);
+  opacity: 0.75;
+}
+.send-button nx-icon {
+  width: 18px;
+  height: 18px;
+}
+.stop-button nx-icon {
+  width: 15px;
+  height: 15px;
+}
+.composer-hint {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: var(--text-caption);
+  margin: var(--p-space-1) var(--p-space-1) 0;
+  line-height: 1.6;
+}
+@media (max-width: 520px) {
+  .composer-hint {
+    flex-wrap: wrap;
+    gap: var(--p-space-1);
+  }
+}
+.draft-saved {
+  color: var(--secondary);
+}
+.draft-saved::before {
+  content: '';
+  display: inline-block;
+  width: 0.375rem;
+  height: 0.375rem;
+  margin-right: var(--p-space-2);
+  border-radius: 50%;
+  background: var(--signal);
+  vertical-align: 0.1em;
+}
+.composer:has(textarea:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.composer-bottom nx-composer-controls {
+  min-width: 0;
+  flex: 1;
+}
+.send-button {
+  flex: none;
+  transition:
+    transform var(--motion-fast) var(--ease),
+    background-color var(--motion),
+    color var(--motion);
+}
+.send-button:not(:disabled):active {
+  transform: scale(0.94);
+}
+.attach-button {
+  color: var(--accent);
+  border-radius: var(--p-radius-md);
+}
+.upload-status {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--button-target);
+  color: var(--signal);
+  font-size: var(--text-caption);
+}

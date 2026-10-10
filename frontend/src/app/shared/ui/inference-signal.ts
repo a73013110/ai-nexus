@@ -3,19 +3,8 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 @Component({
   selector: 'nx-inference-signal',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './inference-signal.scss',
   host: { '[class.is-subtle]': 'subtle()' },
-  styles: `
-    :host {
-      display: inline-flex;
-      flex: none;
-      width: 2.5rem;
-      height: 1.25rem;
-    }
-    :host(.is-subtle) {
-      width: 2rem;
-      height: 1rem;
-    }
-  `,
   template: `<svg
     viewBox="0 0 48 24"
     class="inference-signal"

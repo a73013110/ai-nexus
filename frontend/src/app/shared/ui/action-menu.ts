@@ -24,6 +24,7 @@ let sequence = 0;
   selector: 'nx-action-menu',
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './action-menu.scss',
   template: `<button
       #trigger
       type="button"
