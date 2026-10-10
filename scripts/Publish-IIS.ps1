@@ -2,11 +2,13 @@
 
 <#
 .SYNOPSIS
-產生新的 IIS 發布套件（app、config 範本、keys、logs 與 Verify-IIS.ps1）。
+產生新的 IIS 發布套件（app、config 範本、keys、logs、migrations.sql 與 Verify-IIS.ps1）。
 
 .DESCRIPTION
-預設先執行 Build.ps1，再把發布產物複製到 artifacts/iis/<時間>/app。config/ 只在不存在時由範本建立，
+預設先執行 Build.ps1，再把發布產物複製到 artifacts/iis/<時間>/app；web.config 由 SDK 從
+backend/src/AiNexus.Host/web.config 帶入，不再改寫。config/ 只在不存在時由範本建立，
 並把 Attachments.StoragePath 與 Diagnostics.Directory 設為 -DataRoot 下的 attachments、diagnostics。
+migrations.sql 是發布當下以 dotnet ef 產生的 idempotent SQL，給 DBA 審閱套用。
 套件不含秘密；只有 app/ 是 IIS 的實體路徑。替換執行中網站的步驟見 deploy/iis/README.md。
 
 .PARAMETER DataRoot
@@ -14,9 +16,6 @@
 
 .PARAMETER DestinationPath
 新套件的 app 目錄，必須是空的；預設 artifacts/iis/<UTC 時間>/app。不要指向執行中的 IIS 目錄。
-
-.PARAMETER Environment
-寫入 web.config 的 ASPNETCORE_ENVIRONMENT。
 
 .PARAMETER IncludeLocalConfig
 以這台機器 .local/ 的設定與秘密取代範本（只用於自己的測試主機）。
@@ -40,7 +39,6 @@
 param(
     [Parameter(Mandatory)][string]$DataRoot,
     [string]$DestinationPath,
-    [ValidateSet('Production', 'Staging')][string]$Environment = 'Production',
     [switch]$IncludeLocalConfig,
     [switch]$AllowUntrustedSql,
     [switch]$SkipBuild,
@@ -67,7 +65,7 @@ foreach ($directory in @($app, (Join-Path $package 'config'), (Join-Path $packag
 }
 Get-ChildItem -LiteralPath $publish | Where-Object { $_.Name -notin @('logs', 'App_Data') } | Copy-Item -Destination $app -Recurse
 
-$settingsPath = Join-Path $package "config/appsettings.$Environment.json"
+$settingsPath = Join-Path $package 'config/appsettings.Production.json'
 $secretsPath = Join-Path $package 'config/appsettings.Secrets.json'
 $templates = Join-Path $root 'backend/src/AiNexus.Host'
 $sources = if ($IncludeLocalConfig) { Initialize-NexusLocalSettings } else {
@@ -82,15 +80,13 @@ if ($AllowUntrustedSql) { Set-NexusSetting $settings 'Database.TrustServerCertif
 Save-NexusJson $settingsPath $settings
 $settings = $null
 
-[xml]$web = [IO.File]::ReadAllText((Join-Path $app 'web.config'))
-$web.SelectSingleNode("//environmentVariable[@name='ASPNETCORE_ENVIRONMENT']").SetAttribute('value', $Environment)
-$web.SelectSingleNode("//environmentVariable[@name='LocalConfigPath']").SetAttribute('value', "..\config\appsettings.$Environment.json")
-$web.Save((Join-Path $app 'web.config'))
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Verify-IIS.ps1') -Destination $package
-foreach ($directory in @('db', 'docs', 'deploy/iis', 'contracts')) {
-    $target = Join-Path $package $directory
-    New-Item -ItemType Directory -Path $target -Force | Out-Null
-    Get-ChildItem -LiteralPath (Join-Path $root $directory) -File | Copy-Item -Destination $target
-}
+
+# Generated from the same source as app/, so the SQL a DBA reviews never drifts from the shipped migrations.
+Push-Location -LiteralPath $root
+try {
+    dotnet ef migrations script --idempotent --configuration Release --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host --output (Join-Path $package 'migrations.sql')
+    if ($LASTEXITCODE -ne 0) { throw 'migration SQL 產生失敗；請先執行 scripts/Restore.ps1 還原 dotnet-ef。' }
+} finally { Pop-Location }
 Write-Output "IIS 發布套件：$package"
 Write-Output "只有 app/ 是 IIS 實體路徑。更新時保留執行中的 config/、keys/ 與 $DataRoot；首次啟動前建立站外資料目錄並給 application pool Modify 權限，見 deploy/iis/README.md。套件的 logs/ 只給 ANCM stdout 使用。"
