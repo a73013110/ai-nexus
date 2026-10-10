@@ -90,7 +90,7 @@ function Get-NexusSecretValues {
         $value = $Settings[$key]
         $next = if ($Path) { "$Path.$key" } else { $key }
         if ($value -is [Collections.IDictionary]) { Get-NexusSecretValues $value -IncludeUser:$IncludeUser -Path $next }
-        elseif ($value -is [string] -and $value.Length -gt 0 -and ($key -match '^(Password|DnPass|ApiKey)$' -or $Path -eq 'ConnectionStrings' -or ($IncludeUser -and $key -eq 'User'))) { $value }
+        elseif ($value -is [string] -and $value.Length -gt 0 -and ($key -match '^(Password|BindPassword|ApiKey)$' -or $Path -eq 'ConnectionStrings' -or ($IncludeUser -and $key -eq 'User'))) { $value }
     }
 }
 

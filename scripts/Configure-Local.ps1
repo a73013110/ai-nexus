@@ -30,9 +30,8 @@ Write-Output 'Enter 保留現有值。密碼與 key 以遮蔽輸入，儲存於 
 foreach ($field in @(
     @{ Path = 'Database.Server'; Prompt = 'SQL server／instance' },
     @{ Path = 'Database.Name'; Prompt = '專用資料庫名稱' },
-    @{ Path = 'Identity.ActiveDirectory.Url'; Prompt = 'AD LDAP URL 與 Base DN' },
-    @{ Path = 'Identity.ActiveDirectory.DnUser'; Prompt = 'AD 服務帳號 DN' },
-    @{ Path = 'Identity.ActiveDirectory.Domain'; Prompt = 'AD 網域名稱' }
+    @{ Path = 'Identity.ActiveDirectory.Domain'; Prompt = 'AD 網域，例如 company.internal' },
+    @{ Path = 'Identity.ActiveDirectory.BindUser'; Prompt = 'AD 服務帳號名稱' }
 )) {
     $value = Read-Host "$($field.Prompt)（Enter 保留）"
     if ($value) { Set-NexusSetting $settings $field.Path $value.Trim() }
@@ -40,7 +39,7 @@ foreach ($field in @(
 foreach ($field in @(
     @{ Path = 'Database.User'; Prompt = '既有 SQL 登入帳號' },
     @{ Path = 'Database.Password'; Prompt = 'SQL 密碼' },
-    @{ Path = 'Identity.ActiveDirectory.DnPass'; Prompt = 'AD 服務帳號密碼' },
+    @{ Path = 'Identity.ActiveDirectory.BindPassword'; Prompt = 'AD 服務帳號密碼' },
     @{ Path = 'Inference.Providers.Google.ApiKey'; Prompt = 'Google AI API key' }
 )) {
     $value = Read-Secret "$($field.Prompt)（遮蔽輸入，Enter 保留）"
