@@ -5,16 +5,15 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.Features.Projects;
 
 /// <summary>Who may read or edit a project, through the shared resource access list (owner only).</summary>
-internal static class ShareProject
+internal sealed class ShareProject(ResourceAccess access)
 {
     public static void Map(RouteGroupBuilder routes)
     {
-        routes.MapGet("/{id:guid}/access", async (Guid id, ICurrentUser user, ResourceAccess access, CancellationToken ct) => Results.Ok((await access.AclAsync(user.Id, id, Project.Kind, ct)).OrThrow()))
-            .Produces<ResourceAclDto>();
-        routes.MapPut("/{id:guid}/access", async (Guid id, ResourceAclRequest body, ICurrentUser user, ResourceAccess access, CancellationToken ct) =>
-        {
-            (await access.SetAclAsync(user.Id, id, Project.Kind, body, ct)).OrThrow();
-            return Results.NoContent();
-        });
+        routes.MapGet("/{id:guid}/access", (Guid id, ICurrentUser user, ShareProject handler, CancellationToken ct) => handler.GetAsync(user.Id, id, ct).ToHttpResultAsync());
+        routes.MapPut("/{id:guid}/access", (Guid id, ResourceAclRequest body, ICurrentUser user, ShareProject handler, CancellationToken ct) => handler.SetAsync(user.Id, id, body, ct).ToHttpResultAsync());
     }
+
+    public Task<Result<ResourceAclDto>> GetAsync(Guid actor, Guid id, CancellationToken ct) => access.AclAsync(actor, id, Project.Kind, ct);
+
+    public Task<Result> SetAsync(Guid actor, Guid id, ResourceAclRequest request, CancellationToken ct) => access.SetAclAsync(actor, id, Project.Kind, request, ct);
 }

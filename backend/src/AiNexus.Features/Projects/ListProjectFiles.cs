@@ -8,17 +8,15 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.Features.Projects;
 
 /// <summary>Up to 50 reference documents of a project the user may read.</summary>
-internal static class ListProjectFiles
+internal sealed class ListProjectFiles(NexusDbContext db, ResourceAccess access, DocumentService documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}/files", async (Guid id, ICurrentUser user, NexusDbContext db, ResourceAccess access, DocumentService documents, CancellationToken ct) =>
-            Results.Ok(await HandleAsync(db, access, documents, user.Id, id, ct)))
-        .Produces<IReadOnlyList<DocumentDto>>();
+        .MapGet("/{id:guid}/files", (Guid id, ICurrentUser user, ListProjectFiles handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync());
 
-    private static async Task<IReadOnlyList<DocumentDto>> HandleAsync(NexusDbContext db, ResourceAccess access, DocumentService documents, Guid actor, Guid id, CancellationToken ct)
+    public async Task<Result<IReadOnlyList<DocumentDto>>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
-        (await access.RequireAsync(actor, id, Project.Kind, ct)).OrThrow();
+        if (await access.RequireAsync(actor, id, Project.Kind, ct) is { IsSuccess: false } denied) return denied.Error;
         var ids = await db.Set<WorkspaceResource>().Where(x => x.ParentId == id && x.Kind == "document").Select(x => x.Id).Take(Project.MaxFiles).ToListAsync(ct);
-        return (await documents.DetailsAsync(actor, ids, ct)).OrThrow();
+        return await documents.DetailsAsync(actor, ids, ct);
     }
 }

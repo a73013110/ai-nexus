@@ -34,18 +34,16 @@ internal sealed class ProjectRequestValidator : RequestValidator<ProjectRequest>
 internal sealed class SaveProject(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
-        .MapPost("", async (ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) => (await handler.CreateAsync(user.Id, body, ct)).ToHttpResult())
-        .Produces<ProjectDto>();
+        .MapPost("", async (ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) => (await handler.CreateAsync(user.Id, body, ct)).ToHttpResult());
 
     public static RouteHandlerBuilder MapUpdate(RouteGroupBuilder routes) => routes
-        .MapPut("/{id:guid}", async (Guid id, ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) => (await handler.UpdateAsync(user.Id, id, body, ct)).ToHttpResult())
-        .Produces<ProjectDto>();
+        .MapPut("/{id:guid}", async (Guid id, ProjectRequest body, ICurrentUser user, SaveProject handler, CancellationToken ct) => (await handler.UpdateAsync(user.Id, id, body, ct)).ToHttpResult());
 
     public async Task<Result<ProjectDto>> CreateAsync(Guid actor, ProjectRequest request, CancellationToken ct)
     {
-        if (!ProjectQueries.NameIsValid(request.Name)) return ProjectsErrors.InvalidName;
+        if (ResourceAccess.Name(request.Name) is not { IsSuccess: true } name) return ProjectsErrors.InvalidName;
         if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == Project.Kind, ct) >= Project.MaxPerOwner) return ProjectsErrors.Limit;
-        var resource = new WorkspaceResource { OwnerId = actor, Name = ResourceAccess.Name(request.Name).OrThrow(), Kind = Project.Kind };
+        var resource = new WorkspaceResource { OwnerId = actor, Name = name.Value, Kind = Project.Kind };
         db.Add(resource); db.Add(new Project { Id = resource.Id, Description = request.Description.Trim(), Instructions = request.Instructions.Trim() });
         db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource.Id, Action = "project.created", Result = "created" });
         await db.SaveChangesAsync(ct);
@@ -54,14 +52,16 @@ internal sealed class SaveProject(NexusDbContext db, ResourceAccess access, Reso
 
     public async Task<Result<ProjectDto>> UpdateAsync(Guid actor, Guid id, ProjectRequest request, CancellationToken ct)
     {
-        if (!ProjectQueries.NameIsValid(request.Name)) return ProjectsErrors.InvalidName;
+        if (ResourceAccess.Name(request.Name) is not { IsSuccess: true } name) return ProjectsErrors.InvalidName;
         using (await writes.AcquireAsync(id, ct))
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
-            var resource = (await access.RequireAsync(actor, id, Project.Kind, ct, write: true)).OrThrow();
+            var allowed = await access.RequireAsync(actor, id, Project.Kind, ct, write: true);
+            if (!allowed.IsSuccess) return allowed.Error;
+            var resource = allowed.Value;
             var count = await db.Set<Project>().Where(x => x.Id == id && x.Version == request.ExpectedVersion).ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1).SetProperty(x => x.Description, request.Description.Trim()).SetProperty(x => x.Instructions, request.Instructions.Trim()).SetProperty(x => x.IsArchived, request.IsArchived), ct);
             if (count != 1) return ProjectsErrors.Conflict;
-            resource.Name = ResourceAccess.Name(request.Name).OrThrow(); resource.UpdatedAt = clock.GetUtcNow();
+            resource.Name = name.Value; resource.UpdatedAt = clock.GetUtcNow();
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "project.updated", Result = "saved" });
             await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
             return await access.LoadProjectAsync(db, actor, id, ct);

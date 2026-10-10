@@ -9,16 +9,14 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.Features.Projects;
 
 /// <summary>The user's own newest 100 conversations in a project they may read; conversations stay private to their owner.</summary>
-internal static class ListProjectConversations
+internal sealed class ListProjectConversations(NexusDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}/conversations", async (Guid id, ICurrentUser user, NexusDbContext db, ResourceAccess access, CancellationToken ct) =>
-            Results.Ok(await HandleAsync(db, access, user.Id, id, ct)))
-        .Produces<IReadOnlyList<ConversationDto>>();
+        .MapGet("/{id:guid}/conversations", (Guid id, ICurrentUser user, ListProjectConversations handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync());
 
-    private static async Task<IReadOnlyList<ConversationDto>> HandleAsync(NexusDbContext db, ResourceAccess access, Guid actor, Guid id, CancellationToken ct)
+    public async Task<Result<IReadOnlyList<ConversationDto>>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
-        (await access.RequireAsync(actor, id, Project.Kind, ct)).OrThrow();
+        if (await access.RequireAsync(actor, id, Project.Kind, ct) is { IsSuccess: false } denied) return denied.Error;
         return (await db.Conversations.Include(x => x.Labels).AsNoTracking().Where(x => x.OwnerId == actor && x.ProjectId == id).OrderByDescending(x => x.UpdatedAt).Take(100).ToListAsync(ct)).Select(x => x.ToDto()).ToList();
     }
 }

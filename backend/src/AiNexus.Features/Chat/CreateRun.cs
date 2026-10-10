@@ -120,7 +120,7 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             }
             if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) return InferenceErrors.GenerationActive;
             var conversation = (await conversations.OwnedAsync(owner, request.ConversationId, ct)).OrThrow();
-            var projectContext = prepared is not null && prepared.ProjectId == conversation.ProjectId ? prepared.ProjectContext : await projects.ContextAsync(owner, conversation.ProjectId, ct);
+            var projectContext = prepared is not null && prepared.ProjectId == conversation.ProjectId ? prepared.ProjectContext : (await projects.ContextAsync(owner, conversation.ProjectId, ct)).OrThrow();
             var currentSelection = (await knowledge.SelectionAsync(owner, request.ConversationId, ct)).OrThrow();
             if (!currentSelection.CollectionIds.Order().SequenceEqual(knowledgeSelection.CollectionIds.Order())) return InferenceErrors.KnowledgeSelectionChanged;
             (await knowledge.ValidateHitsAsync(owner, sources, ct)).OrThrow();
@@ -182,7 +182,7 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             var conversation = await db.Conversations.AsNoTracking().Where(x => x.Id == request.ConversationId && x.OwnerId == owner)
                 .Select(x => new { x.ProjectId, x.SystemInstruction }).SingleOrDefaultAsync(ct);
             if (conversation is null) return null;
-            var projectContext = await projects.ContextAsync(owner, conversation.ProjectId, ct);
+            var projectContext = (await projects.ContextAsync(owner, conversation.ProjectId, ct)).OrThrow();
             var files = (await attachments.RequireAsync(owner, request.AttachmentIds, ct)).OrThrow();
             var systemPrompt = ContextBuilder.SystemPrompt(options.Value.SystemPrompt, conversation.SystemInstruction) + projectContext + KnowledgeRetrieval.Prompt(sources) + WebSearchService.Prompt(search);
             var parameters = new GenerationParameters(profile.ContextTokens, profile.MaxOutputTokens, 0.6, systemPrompt, SupportsImages: profile.SupportsImages);
