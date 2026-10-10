@@ -2204,6 +2204,13 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Bad Request */
                 400: {
                     headers: {
@@ -2489,6 +2496,13 @@ export interface paths {
                 };
             };
             responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Bad Request */
                 400: {
                     headers: {
@@ -3372,6 +3386,13 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Bad Request */
                 400: {
                     headers: {
@@ -4403,6 +4424,13 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Bad Request */
                 400: {
                     headers: {
@@ -6100,6 +6128,13 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Bad Request */
                 400: {
                     headers: {
@@ -6385,6 +6420,13 @@ export interface paths {
                 };
             };
             responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Bad Request */
                 400: {
                     headers: {
@@ -6986,6 +7028,13 @@ export interface paths {
                 };
             };
             responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
                 /** @description Bad Request */
                 400: {
                     headers: {
@@ -13642,6 +13691,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Bad Request */
             400: {
                 headers: {
@@ -23935,6 +23991,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Bad Request */
             400: {
                 headers: {
@@ -24065,6 +24128,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Bad Request */
             400: {
                 headers: {
@@ -25032,6 +25102,13 @@ export interface operations {
             };
         };
         responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Bad Request */
             400: {
                 headers: {
@@ -25162,6 +25239,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Bad Request */
             400: {
                 headers: {
@@ -25719,6 +25803,13 @@ export interface operations {
             };
         };
         responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Bad Request */
             400: {
                 headers: {
@@ -26413,6 +26504,13 @@ export interface operations {
             };
         };
         responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Bad Request */
             400: {
                 headers: {
@@ -26547,6 +26645,13 @@ export interface operations {
             };
         };
         responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Bad Request */
             400: {
                 headers: {
@@ -26681,6 +26786,13 @@ export interface operations {
             };
         };
         responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Bad Request */
             400: {
                 headers: {
@@ -28750,6 +28862,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Bad Request */
             400: {
                 headers: {
