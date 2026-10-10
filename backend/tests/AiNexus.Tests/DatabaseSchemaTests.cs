@@ -40,7 +40,7 @@ public sealed class DatabaseSchemaTests
         Assert.All(missing, id => Assert.Contains(id, error.Message));
         Assert.Contains("InitialCreate", error.Message);
         Assert.Contains("scripts/Initialize-Database.ps1", error.Message);
-        Assert.Contains("db/migrations.sql", error.Message);
+        Assert.Contains("發布套件的 migrations.sql", error.Message);
         Assert.Empty(await db.Database.GetAppliedMigrationsAsync());
         Assert.Equal(1, await TableCountAsync(db));
     }

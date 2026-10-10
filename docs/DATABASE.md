@@ -69,11 +69,10 @@ erDiagram
 
 ```powershell
 dotnet ef migrations add DescriptiveChange --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host --output-dir Persistence/Migrations
-dotnet ef migrations script --idempotent --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host --output db/migrations.sql
 dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host
 ```
 
-- 先改實體與組態（含 `[Comment]`），再產生 migration；一起提交 source、designer、snapshot 與 `db/migrations.sql`。不要手改產生的 migration，只有 EF 表達不了的 DDL（例如全文索引）才在產生後加入 `migrationBuilder.Sql`。
+- 先改實體與組態（含 `[Comment]`），再產生 migration；一起提交 source、designer 與 snapshot。給 DBA 的 idempotent SQL 不進版控，由 `Publish-IIS.ps1` 在發布時產生（套件的 `migrations.sql`），所以不會與程式不同步。不要手改產生的 migration，只有 EF 表達不了的 DDL（例如全文索引）才在產生後加入 `migrationBuilder.Sql`。
 - 已設定 SQL 的 host 在 HTTP 與背景 worker 啟動前檢查 migration（`DatabaseSchema`）：有未套用版本或模型與 snapshot 不一致就以退出碼 1 停止並列出版本。`Storage:ApplyMigrationsOnStartup=false`（預設）時只做唯讀檢查，不修改 schema。
 - 測試用 SQLite 依目前模型建庫（`SqliteModel.cs` 處理向量與全文差異），不執行 SQL Server migration。
 
@@ -83,7 +82,7 @@ dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Fea
 ./scripts/Initialize-Database.ps1
 ```
 
-- 只在 `AiNexus` 不存在時建庫，然後套用未完成的 migration；不會 DROP、清空資料或修改 history。DBA 也可以先建空的 `AiNexus`，再審閱執行 [idempotent SQL](../db/migrations.sql)，其中沒有 CREATE LOGIN／DATABASE 或秘密。
+- 只在 `AiNexus` 不存在時建庫，然後套用未完成的 migration；不會 DROP、清空資料或修改 history。DBA 也可以先建空的 `AiNexus`，再審閱執行發布套件的 `migrations.sql`（idempotent，依 `__EFMigrationsHistory` 只執行未套用的部分），其中沒有 CREATE LOGIN／DATABASE 或秘密。
 - **2026-10-09 以前建立的資料庫無法升級**（舊 migration 已刪除），必須刪除後重新初始化；初始化遇到舊表會直接失敗。
 - 正式環境的 DDL 用獨立部署帳號。runtime 登入需要上表所有業務 schema 的 SELECT／INSERT／UPDATE／DELETE 與 `dbo.__EFMigrationsHistory` 的 SELECT，不給建庫、ALTER 或 `db_owner`。目前管理與一般端點共用同一條連線，沒有管理專用的寫入連線。外部來源登入只授權固定 view 的 SELECT（見 [INTEGRATIONS](INTEGRATIONS.md)）。
 
