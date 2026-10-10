@@ -114,6 +114,7 @@ interface Editor {
     ModelPolicyEditor,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './admin-page.scss',
   templateUrl: './admin-page.html',
 })
 export class AdminPage {

@@ -1,0 +1,108 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.workspace-navigation {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.workspace-navigation > nx-scroll-area {
+  flex: 1;
+}
+.workspace-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-4);
+}
+.workspace-group h3 {
+  font-size: var(--text-caption);
+  font-weight: 500;
+  color: var(--muted);
+  margin: 0 0 var(--p-space-2);
+  padding-inline: var(--p-space-2);
+}
+.workspace-icons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--p-space-1);
+}
+.workspace-icons a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 50px;
+  padding: var(--p-space-1);
+  border-radius: var(--p-radius-md);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.workspace-icons a nx-icon {
+  width: 19px;
+  height: 19px;
+}
+.workspace-icons a span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+.workspace-icons a:hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+.workspace-icons a.current {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+.workspace-disclosure {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: var(--p-space-2);
+  min-height: var(--button-target);
+  padding: var(--control-padding-block) var(--p-space-2);
+  border-radius: var(--p-radius-md);
+  color: var(--secondary);
+}
+.workspace-disclosure strong {
+  flex: 1;
+  text-align: left;
+  font-weight: 500;
+  font-size: var(--text-label);
+}
+.workspace-disclosure > nx-icon:last-child {
+  width: 16px;
+  height: 16px;
+  transform: rotate(-90deg);
+  transition: transform var(--motion-panel) var(--ease);
+}
+.workspace-disclosure[aria-expanded='true'] > nx-icon:last-child {
+  transform: rotate(90deg);
+}
+.collapsible .workspace-groups {
+  padding: var(--p-space-2) 0;
+  animation: panel-arrive var(--motion-panel) var(--ease);
+}
+:host(.is-compact) .workspace-groups {
+  gap: var(--p-space-2);
+}
+:host(.is-compact) .collapsible .workspace-groups {
+  padding: 0;
+}
+:host(.is-compact) .workspace-icons {
+  grid-template-columns: 1fr;
+}
+:host(.is-compact) .workspace-icons a {
+  width: 100%;
+  min-height: var(--button-target);
+}
+:host(.is-compact) .workspace-group h3,
+:host(.is-compact) .workspace-icons span {
+  display: none;
+}

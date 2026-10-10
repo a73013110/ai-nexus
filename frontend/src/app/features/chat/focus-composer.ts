@@ -15,6 +15,7 @@ import { isSubmitKey } from '../../shared/browser/submit-key';
   selector: 'nx-focus-composer',
   imports: [CompactDialog, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './focus-composer.scss',
   template: `<dialog
     nxCompactDialog
     #dialog

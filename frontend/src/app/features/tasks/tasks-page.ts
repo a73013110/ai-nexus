@@ -33,6 +33,7 @@ import { JobsApi } from './jobs-api';
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './tasks-page.scss',
   template: `<nx-feature-page
     [title]="session.featureName('tasks')"
     description="追蹤文件辨識、索引、評測與程式碼 review。離開頁面後任務仍會繼續。"

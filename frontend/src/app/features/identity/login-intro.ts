@@ -1,12 +1,11 @@
-import { ChangeDetectionStrategy, Component, signal, ViewEncapsulation } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { BrandWordmark } from '../../shared/ui/brand-wordmark';
 import { FourierMark } from './fourier-mark';
 
 /** The animated brand side of the login page; the copy reveals once the mark has drawn. */
 @Component({
   selector: 'section[nxLoginIntro]',
-  encapsulation: ViewEncapsulation.None,
-  styleUrl: '../../../styles/login-intro.scss',
+  styleUrl: './login-intro.scss',
   imports: [FourierMark, BrandWordmark],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'login-intro', '[class.intro-ready]': 'ready()' },

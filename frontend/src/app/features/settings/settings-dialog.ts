@@ -15,6 +15,7 @@ import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 
 @Component({
   selector: 'nx-settings-dialog',
+  styleUrl: './settings-dialog.scss',
   imports: [CompactDialog, SettingsPage, ConfirmDialog],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog

@@ -22,6 +22,7 @@ let sequence = 0;
   selector: 'aside[nxWorkspaceSidebar]',
   imports: [WorkspaceBrand, WorkspaceNavigation, AccountMenu, Icon, CountBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './workspace-sidebar.scss',
   host: {
     class: 'workspace-sidebar',
     id: 'workspace-sidebar',

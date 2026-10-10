@@ -16,8 +16,10 @@ export type ConversationAction =
   | 'share';
 @Component({
   selector: 'nx-conversation-actions',
+  host: { '[class.is-compact]': 'compact()' },
   imports: [Icon, ActionMenu],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './conversation-actions.scss',
   template: `<div class="conversation-actions">
     @if (!compact()) {
       <button

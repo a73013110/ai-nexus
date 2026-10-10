@@ -37,6 +37,7 @@ export function modelPolicyRequest(draft: ModelPolicyDraft): ModelPolicyRequest 
   selector: 'nx-model-policy-editor',
   imports: [Notice, Field, Checkbox, DataTable],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './model-policy-editor.scss',
   template: `
     <div class="model-policy-heading">
       <h3>模型授權與 token 預算</h3>

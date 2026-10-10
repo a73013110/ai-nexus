@@ -4,14 +4,7 @@ import { EmptyState } from '../../shared/ui/empty-state';
 import { FilterPanel } from '../../shared/ui/filter-panel';
 import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/errors/safe-errors';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  signal,
-  ViewEncapsulation,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
@@ -26,9 +19,7 @@ import { IntegrationsApi } from './integrations-api';
 
 @Component({
   selector: 'nx-integrations-page',
-  // Page-only rules load with this lazy route instead of the initial stylesheet.
-  encapsulation: ViewEncapsulation.None,
-  styleUrl: '../../../styles/integrations.scss',
+  styleUrl: './integrations-page.scss',
   imports: [Notice, Card, EmptyState, FilterPanel, Field, FeaturePage, Select, Icon, MarkdownView],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,

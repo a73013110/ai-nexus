@@ -92,3 +92,19 @@
 .audit-feature-change small {
   color: var(--secondary);
 }
+.audit-row {
+  align-items: flex-start;
+}
+.audit-row time {
+  min-width: 10rem;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+@media (max-width: 860px) {
+  .audit-row time {
+    min-width: 100%;
+  }
+}
+.admin-row-action-column {
+  width: 3.25rem;
+}

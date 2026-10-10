@@ -16,6 +16,7 @@ import { NotificationFeed } from './notification-feed';
   selector: 'nx-notification-center',
   imports: [Notice, CompactDialog, NotificationFeed, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './notification-center.scss',
   template: `<dialog
     nxCompactDialog
     #dialog

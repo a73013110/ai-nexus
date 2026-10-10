@@ -1,0 +1,17 @@
+.reader-page {
+  min-width: 0;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.reader-return {
+  align-self: flex-start;
+  margin: 6px 12px;
+  flex: none;
+}
+.reader-navigation {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+}

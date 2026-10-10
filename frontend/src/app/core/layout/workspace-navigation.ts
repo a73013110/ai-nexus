@@ -8,9 +8,10 @@ import { ScrollArea } from '../../shared/ui/scroll-area';
 import { groupFeatures, FEATURE_ICONS } from './feature-groups';
 @Component({
   selector: 'nx-workspace-navigation',
+  host: { '[class.is-compact]': 'compact()' },
   imports: [RouterLink, Icon, ScrollArea],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styles: ':host { display: flex; flex-direction: column; min-height: 0; }',
+  styleUrl: './workspace-navigation.scss',
   template: `<nav
     class="workspace-navigation"
     aria-label="工作區功能"

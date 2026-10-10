@@ -21,6 +21,7 @@ import { WorkspaceApi } from './workspace-api';
   selector: 'nx-prompt-library',
   imports: [Notice, CompactDialog, Field, Icon, FormField],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './prompt-library-dialog.scss',
   template: ` <dialog
     nxCompactDialog
     #dialog

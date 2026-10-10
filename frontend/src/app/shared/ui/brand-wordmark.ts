@@ -12,6 +12,7 @@ import { nexusPath } from '../graphics/nexus-logo';
   selector: 'nx-brand-wordmark',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class.is-compact]': 'compact()' },
+  styleUrl: './brand-wordmark.scss',
   template: `<span class="brand-wordmark" role="img" aria-label="AI Nexus">
     <span class="brand-prefix" aria-hidden="true">AI</span>
     <strong aria-hidden="true"

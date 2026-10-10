@@ -1,0 +1,74 @@
+// `inline` fits a toolbar (hosts may set --inline-title-font-size/--inline-title-max-width);
+// `block` is a full-width heading.
+.inline-title-display {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  min-width: 0;
+}
+.inline-title-display h1 {
+  margin: 0;
+  font-size: var(--inline-title-font-size, var(--text-label));
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: var(--inline-title-max-width, none);
+  cursor: text;
+}
+.title-edit {
+  color: var(--muted);
+}
+.inline-title-editor {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.inline-title-editor input {
+  width: min(24rem, 40vw);
+  min-width: 0;
+  border: 1px solid var(--focus);
+  background: var(--surface);
+  color: var(--ink);
+  padding: var(--p-space-2);
+  border-radius: var(--p-radius-sm);
+  font-size: var(--text-ui);
+}
+.inline-title-help {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: var(--surface);
+  padding: var(--p-space-2);
+  font-size: var(--text-caption);
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  z-index: 25;
+}
+:host(.is-block) .inline-title-display h1 {
+  font-size: var(--text-heading);
+  line-height: 1.6;
+  font-weight: 550;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  max-width: none;
+}
+:host(.is-block) .inline-title-editor input {
+  width: 100%;
+  min-height: var(--button-target);
+}
+:host(.is-block) .inline-title-help {
+  white-space: normal;
+  min-width: 14rem;
+}
+@media (max-width: 859px) {
+  .inline-title-editor input {
+    width: min(16rem, 32vw);
+  }
+  .title-edit {
+    width: 2rem;
+    min-width: 2rem;
+  }
+}

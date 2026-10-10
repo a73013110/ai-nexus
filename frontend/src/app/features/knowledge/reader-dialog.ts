@@ -18,6 +18,7 @@ import { DocumentViewer } from './document-viewer';
   selector: 'nx-reader-dialog',
   imports: [CompactDialog, EmptyState, DocumentViewer],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './reader-dialog.scss',
   template: `<dialog
     nxCompactDialog
     #dialog

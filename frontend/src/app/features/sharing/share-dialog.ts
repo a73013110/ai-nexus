@@ -25,6 +25,7 @@ import { Checkbox } from '../../shared/ui/checkbox';
   imports: [Notice, CompactDialog, Field, Select, Icon, RouterLink, Checkbox],
   providers: [ViewScope, CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './share-dialog.scss',
   template: `<dialog
     nxCompactDialog
     #dialog

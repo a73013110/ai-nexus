@@ -1,5 +1,4 @@
-// Projected content shares this component's namespaced styling without deep selectors.
-.ui-empty-state {
+:host {
   display: grid;
   justify-items: center;
   align-content: center;
@@ -8,29 +7,4 @@
   padding: var(--empty-state-padding) var(--section-padding);
   text-align: center;
   color: var(--secondary);
-}
-.ui-empty-state > :is(h2, h3) {
-  margin: 0;
-  font-size: var(--resource-heading-size);
-  color: var(--ink);
-}
-.ui-empty-state > p {
-  margin: 0;
-  max-width: 60ch;
-  line-height: var(--line-ui);
-}
-.ui-empty-state > nx-icon,
-.ui-empty-state > .empty-symbol {
-  width: 2rem;
-  height: 2rem;
-  color: var(--secondary);
-}
-.ui-empty-state > .empty-symbol {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-.ui-empty-state > .empty-symbol nx-icon {
-  width: 1.25rem;
-  height: 1.25rem;
 }

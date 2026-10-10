@@ -102,7 +102,7 @@ const tones: Record<string, BadgeTone> = {
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './system-logs-page.html',
-  styleUrl: './system-logs-page.scss',
+  styleUrls: ['./system-logs-page.scss', './system-logs-timeline.scss'],
 })
 export class SystemLogsPage {
   readonly session = inject(WorkspaceSession);

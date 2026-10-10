@@ -1,0 +1,34 @@
+.paragraph-float {
+  position: fixed;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: var(--p-space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-floating);
+  max-width: calc(100vw - 24px);
+  animation: panel-arrive var(--motion-fast) var(--ease);
+}
+.paragraph-float > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--p-space-2);
+  min-height: var(--button-target);
+  padding-inline: var(--p-space-3);
+  font-size: var(--text-caption);
+  border-radius: var(--p-radius-md);
+  white-space: nowrap;
+}
+.paragraph-float > button:hover {
+  background: var(--hover);
+}
+@media (max-width: 700px) {
+  .paragraph-float > button {
+    padding-inline: var(--p-space-2);
+  }
+}

@@ -1,0 +1,26 @@
+.conversation-find {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  padding: var(--p-space-1) var(--workspace-gutter);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+.conversation-find > input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  min-height: var(--button-target);
+  font-size: var(--text-label);
+}
+.find-count {
+  font-size: var(--text-caption);
+  color: var(--secondary);
+  flex: none;
+}
+@media (max-width: 600px) {
+  .conversation-find {
+    gap: 0;
+  }
+}

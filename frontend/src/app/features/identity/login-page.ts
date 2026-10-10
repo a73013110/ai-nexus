@@ -1,13 +1,6 @@
 import { Notice } from '../../shared/ui/notice';
 import { safeMessage } from '../../core/errors/safe-errors';
-import {
-  ChangeDetectionStrategy,
-  Component,
-  computed,
-  inject,
-  signal,
-  ViewEncapsulation,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import {
   FormField,
   form,
@@ -22,9 +15,7 @@ import { LoginIntro } from './login-intro';
 
 @Component({
   selector: 'nx-login-page',
-  // Page-only rules load with this lazy route instead of the initial stylesheet.
-  encapsulation: ViewEncapsulation.None,
-  styleUrl: '../../../styles/login.scss',
+  styleUrl: './login-page.scss',
   imports: [Notice, FormField, LoginIntro],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login-page.html',

@@ -12,7 +12,6 @@ import {
   untracked,
   viewChild,
   viewChildren,
-  ViewEncapsulation,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { CopyFeedback } from '../browser/copy-feedback';
@@ -31,6 +30,7 @@ type Diagram = ReturnType<typeof sanitizeDiagramSvg>;
 @Component({
   selector: 'nx-diagram-canvas',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './diagram-canvas.scss',
   host: { class: 'mermaid-canvas-host', '[class.is-expanded]': 'expanded()' },
   template: `<div
     #canvas
@@ -151,8 +151,7 @@ export class DiagramCanvas {
       useValue: { code: SquareCode, 'zoom-in': ZoomIn, 'zoom-out': ZoomOut, fit: Scan },
     },
   ],
-  encapsulation: ViewEncapsulation.None,
-  styleUrl: '../../../styles/mermaid.scss',
+  styleUrl: './mermaid-diagram.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<figure
       class="mermaid-frame"

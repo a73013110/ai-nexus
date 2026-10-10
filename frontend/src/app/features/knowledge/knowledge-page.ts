@@ -62,6 +62,7 @@ import { RetrievalResults } from './retrieval-results';
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './knowledge-page.scss',
   templateUrl: './knowledge-page.html',
 })
 export class KnowledgePage {

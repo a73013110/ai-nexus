@@ -53,6 +53,7 @@ import { StorageUsage } from './storage-usage';
   ],
   providers: [ViewScope, FileLibraryStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './files-page.scss',
   templateUrl: './files-page.html',
 })
 export class FilesPage {

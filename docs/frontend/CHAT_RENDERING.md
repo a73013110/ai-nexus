@@ -4,7 +4,7 @@
 
 ## 長對話
 
-- 除了最後一則，每則訊息都是 `content-visibility: auto`（`styles/messages.scss`）。離開畫面的訊息不排版、不繪製；`contain-intrinsic-size: auto` 記住實際高度，捲回時不跳動。
+- 除了最後一則，每則訊息都是 `content-visibility: auto`（`frontend/src/app/features/chat/chat-message.scss`）。離開畫面的訊息不排版、不繪製；`contain-intrinsic-size: auto` 記住實際高度，捲回時不跳動。
 - 這會套用 paint containment，超出訊息框的東西會被裁掉。訊息內不要放絕對定位的浮層，要用 popover／top layer；焦點框靠左右的 `padding-inline` 留空間。
 - 下一步若仍不夠，再做分頁或虛擬捲動；目前的「回到最新」、對話定位、搜尋都依賴所有訊息都在 DOM 中。
 
@@ -18,11 +18,11 @@
 
 `StreamingMarkdown`（`shared/markdown/streaming-markdown.ts`）把回答分成「已固定的區塊」和「尾段」，只有尾段每格重算：
 
-| 情況 | 處理 |
-|---|---|
-| 後面已經有下一個頂層區塊 | 前面的區塊固定，保留 DOM |
-| 尾段是很長的清單（> 1200 字） | 已出現下一項的項目先固定；有序清單由 `start` 接續編號 |
-| 尾段是未結束的程式碼區塊 | 不再解析 Markdown，只掃描新增的行找結束標記；內容以純文字每 24 行一段顯示 |
+| 情況                          | 處理                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------- |
+| 後面已經有下一個頂層區塊      | 前面的區塊固定，保留 DOM                                                  |
+| 尾段是很長的清單（> 1200 字） | 已出現下一項的項目先固定；有序清單由 `start` 接續編號                     |
+| 尾段是未結束的程式碼區塊      | 不再解析 Markdown，只掃描新增的行找結束標記；內容以純文字每 24 行一段顯示 |
 
 - 串流中的畫面可能與完成後略有差異（例如鬆散清單的段落間距）；完成或停止後一律改用伺服器回傳的完整內容重新渲染。
 - `completeStreamingInline` 只補齊畫面上未結束的粗體、行內程式碼與連結，不改動實際回答。
@@ -43,9 +43,17 @@
 
 ## 樣式載入
 
-- 全域 `styles.scss` 只放所有頁面都會用到的樣式。只屬於單一 lazy 頁面的樣式由該頁元件以 `ViewEncapsulation.None` 的 `styleUrl` 引用（例：登入、專案、分享、品質、整合、設計頁），隨路由載入。
-- 移出前確認每個 class 沒有在其他頁或共用元件使用；共用的規則留在全域檔案。
-- 每個元件樣式要在 `anyComponentStyle` 預算（4 kB）內；超過時拆成子元件，不提高預算。
+- 元件樣式放在元件旁的 `.scss`，使用預設的 Emulated 封裝，隨元件（多半隨 lazy 路由）載入；刪掉元件就刪掉它的樣式。不使用 `ViewEncapsulation.None`，也不用 `::ng-deep`。
+- 全域 `styles.scss` 只留 tokens、base、捲軸、按鈕、版面框架、共用 `ui-*`／resource／dialog 模式、Markdown 與動效。這些規則套在多個元件或封裝碰不到的內容上：
+  - Markdown 由 `innerHTML` 產生，元件屬性加不上去。
+  - 投影進共用元件的內容（`ng-content`）帶的是宣告端的屬性，接收端碰不到；Notice、EmptyState 的這類規則放 `styles/projected.scss`，表格內容的規則在 `styles/data-workspace.scss`。
+  - keyframes 留在 `styles/motion.scss`：元件內宣告的 keyframes 會被改名，e2e 也以名稱檢查動畫。
+- driver.js 的覆寫是獨立的 `driver-tour.css`（`angular.json` 的 `inject: false`），導覽啟動時才和 driver.js 樣式一起載入。
+- 跨元件調整：
+  - 祖先或 host 狀態用 `:host(.x)`、`:host-context(.x)`（例：側欄收合 `is-compact`、設定頁嵌在對話框裡）。
+  - 父層要改子元件內部，由子元件開 custom property 或 input（例：`--inline-title-max-width`、`--view-switch-button-*`、`--selection-control-padding`、`Select` 的 `appearance`）。
+  - 父層可以直接排版子元件的 host 元素（例：`.composer-bottom nx-composer-controls`）。
+- 每個元件樣式檔要在 `anyComponentStyle` 預算（4 kB）內；超過時拆成子元件或用 `styleUrls` 分檔，不提高預算。
 
 ## 驗證
 

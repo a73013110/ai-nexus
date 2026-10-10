@@ -1,0 +1,43 @@
+// The pannable canvas only; the frame, toolbar and dialog are styled in mermaid-diagram.scss.
+:host {
+  display: block;
+  min-width: 0;
+}
+:host(.is-expanded) {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  overflow: hidden;
+}
+.mermaid-canvas {
+  overflow: auto;
+  scrollbar-gutter: stable;
+  cursor: grab;
+  overscroll-behavior: contain;
+  background-color: var(--surface);
+  background-image: radial-gradient(var(--line) 0.6px, transparent 0.6px);
+  background-size: 16px 16px;
+}
+:host(.is-expanded) .mermaid-canvas {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+}
+.mermaid-canvas.is-panning {
+  cursor: grabbing;
+}
+.mermaid-paper {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  padding: var(--p-space-4);
+}
+.mermaid-paper img {
+  display: block;
+  max-width: none;
+  max-height: none;
+  flex: none;
+  user-select: none;
+}

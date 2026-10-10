@@ -9,6 +9,7 @@ import { Card } from '../../shared/ui/card';
   selector: 'nx-retrieval-results',
   imports: [Notice, ReaderLink, Icon, Card],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './retrieval-results.scss',
   template: `
     <p class="form-note" role="status">
       模式：{{ result().mode }} · {{ result().hits.length }} 個結果

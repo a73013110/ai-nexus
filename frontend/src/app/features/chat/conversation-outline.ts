@@ -20,6 +20,7 @@ import { positionSidePopover } from '../../shared/browser/side-popover-position'
   selector: 'nx-conversation-outline',
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './conversation-outline.scss',
   template: `@if (turns().length) {
     <!-- Hover preview only; every turn is reachable through its own button. -->
     <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
