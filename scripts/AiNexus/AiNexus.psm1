@@ -1,6 +1,10 @@
 # Shared functions of the entry scripts in scripts/. Never writes setting or secret values to the output.
 Set-StrictMode -Version Latest
 
+# dotnet、npm 等子程序輸出 UTF-8；主控台預設用 OEM 字碼頁（如 950）解碼會讓中文變亂碼。
+[Console]::OutputEncoding = [Text.UTF8Encoding]::new($false)
+[Console]::InputEncoding = [Text.UTF8Encoding]::new($false)
+
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 
 function Get-NexusRoot {
