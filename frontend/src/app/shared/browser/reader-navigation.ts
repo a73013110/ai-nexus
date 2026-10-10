@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Location } from '@angular/common';
 import { NavigationStart, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { WORKSPACE_HOME } from '../../core/workspace-home';
+import { WORKSPACE_HOME } from '../../core/layout/workspace-home';
 
 export interface ReaderOrigin {
   url: string;

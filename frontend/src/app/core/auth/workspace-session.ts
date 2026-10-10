@@ -3,7 +3,7 @@ import { AuthService } from './auth-service';
 import { NexusApi } from '../api/nexus-api';
 import type { MeDto } from '../api/schema';
 import { UserSettingsService } from '../preferences/user-settings';
-import { FEATURE_NAMES } from '../feature-names';
+import { FEATURE_NAMES } from './feature-names';
 
 /** Account context shared by feature pages; it never loads conversation history. */
 @Injectable({ providedIn: 'root' })

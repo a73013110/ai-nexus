@@ -6,7 +6,7 @@
 
 - 使用 `audit` 功能授權，初始授予 administrators 群組。持有 `admin` 不隱含 `audit`；可以只給稽核人員 `audit` 而不給帳號管理權。每個 request 重新驗證 grant。
 - 查詢由 `Audit` 模組的 `ListActivityAudit` 負責（`GET /api/v1/admin/audit`）。`GET /api/v1/admin/audit/catalog` 只提供解讀異動所需的功能與模型名稱，不回傳角色、群組或帳號清單。
-- 前端在 `features/audit`，依路由延後載入，不依賴管理頁。舊書籤 `/admin?tab=audit` 會轉到新頁並保留篩選條件。
+- 前端在 `features/audit`，依路由延後載入，不依賴管理頁。
 
 ## 記錄什麼
 

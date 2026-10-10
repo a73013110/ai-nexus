@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NexusApi } from '../../core/api/nexus-api';
 import { AuthService } from '../../core/auth/auth-service';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { NotificationStore } from '../../core/notifications/notification-store';
+import { NotificationStore } from '../notifications/notification-store';
 import { DraftRepository } from '../../core/preferences/draft-repository';
 import { ThemeService } from '../../core/preferences/theme-service';
 import { defaultSettings, UserSettingsService } from '../../core/preferences/user-settings';

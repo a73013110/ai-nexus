@@ -23,7 +23,7 @@ import {
   readonly as readonlyField,
 } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { WorkspaceLayout } from '../../core/preferences/workspace-layout';
+import { WorkspaceLayout } from '../../core/layout/workspace-layout';
 import { ThemeService } from '../../core/preferences/theme-service';
 import type { ConversationDto, ConversationSettingsRequest } from '../../core/api/schema';
 import { Icon } from '../../shared/ui/icon';
@@ -55,7 +55,7 @@ import { isSubmitKey } from '../../shared/browser/submit-key';
 import { ConversationSpendView } from '../billing/conversation-spend';
 import { ReaderNavigation, type ReaderOrigin } from '../../shared/browser/reader-navigation';
 import { LibraryPicker } from '../files/library-picker';
-import { WorkspaceMenuButton } from '../../shared/ui/workspace-menu-button';
+import { WorkspaceMenuButton } from '../../core/layout/workspace-menu-button';
 import { ProductTourButton } from '../../shared/ui/product-tour-button';
 import { ProductTour } from '../../shared/ui/product-tour';
 import { chatTour } from './chat-tour';

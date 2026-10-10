@@ -18,7 +18,7 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { FileDrop } from '../../shared/browser/file-drop';
 import { formatBytes } from '../../shared/browser/format';
-import { FeaturePage } from '../../shared/ui/feature-page';
+import { FeaturePage } from '../../core/layout/feature-page';
 import { Icon } from '../../shared/ui/icon';
 import { SearchField } from '../../shared/ui/search-field';
 import { Select } from '../../shared/ui/select';
@@ -29,7 +29,7 @@ import { FilesApi } from './files-api';
 import { FileBrowser } from './file-browser';
 import { FileLibraryStore } from './file-library-store';
 import { AddToKnowledge } from './add-to-knowledge';
-import { StorageUsage } from '../../shared/ui/storage-usage';
+import { StorageUsage } from './storage-usage';
 
 @Component({
   selector: 'nx-files-page',

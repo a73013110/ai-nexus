@@ -3,7 +3,7 @@ import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
-import { ClientValidationError } from '../../core/api/safe-errors';
+import { ClientValidationError } from '../../core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -29,10 +29,10 @@ import type {
 } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { FileDrop } from '../../shared/browser/file-drop';
-import { FeaturePage } from '../../shared/ui/feature-page';
+import { FeaturePage } from '../../core/layout/feature-page';
 import { Icon } from '../../shared/ui/icon';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
-import { ResourceSharing } from '../../shared/ui/resource-sharing';
+import { ResourceSharing } from '../sharing/resource-sharing';
 import { TextTools } from '../artifacts/text-tools';
 import { ArtifactsApi } from '../artifacts/artifacts-api';
 import { WorkspaceApi } from '../workspace/workspace-api';

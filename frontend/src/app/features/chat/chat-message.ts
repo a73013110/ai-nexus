@@ -9,7 +9,7 @@ import { GenerationIndicator } from '../../shared/ui/generation-indicator';
 import { generationStatus } from '../../core/api/generation-status';
 import { MessageFeedback } from '../quality/message-feedback';
 import { ChargeLabel } from '../billing/charge-label';
-import { StreamingAnswer } from '../../shared/ui/streaming-answer';
+import { StreamingAnswer } from '../../shared/markdown/streaming-answer';
 import { formatModelDisplayName } from '../../shared/browser/format';
 
 @Component({

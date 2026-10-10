@@ -1594,7 +1594,7 @@ test("activity audit separates sign-ins and opens a historical trace in system l
       },
     });
   });
-  await page.goto("/admin?tab=audit&category=authentication");
+  await page.goto("/admin/audit?category=authentication");
   const audit = page.locator("nx-activity-audit-page");
   await expect(audit.locator(".audit-row")).toHaveCount(1);
   await audit

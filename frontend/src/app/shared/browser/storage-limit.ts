@@ -1,4 +1,4 @@
-import { ClientValidationError } from '../../core/api/safe-errors';
+import { ClientValidationError } from '../../core/errors/safe-errors';
 const bytesPerGb = 1_000_000_000;
 export const maximumStorageGb = 1_000_000;
 

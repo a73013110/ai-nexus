@@ -1,12 +1,12 @@
 import { Notice } from '../../shared/ui/notice';
 import { ChangeDetectionStrategy, Component, input, computed } from '@angular/core';
 import type { MessageDto } from '../../core/api/schema';
-import { MarkdownView } from '../../shared/ui/markdown-view';
+import { MarkdownView } from '../../shared/markdown/markdown-view';
 import { Icon } from '../../shared/ui/icon';
-import { RunTimingDisplay } from '../../shared/ui/run-timing';
+import { RunTimingDisplay } from './run-timing';
 import { ReaderLink } from '../../shared/browser/reader-link';
 import { AttachmentList } from '../attachments/attachment-list';
-import { systemProblem } from '../../core/api/safe-errors';
+import { systemProblem } from '../../core/errors/safe-errors';
 
 export type MessageDisplay = Pick<
   MessageDto,

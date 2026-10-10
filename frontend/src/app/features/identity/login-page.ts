@@ -1,5 +1,5 @@
 import { Notice } from '../../shared/ui/notice';
-import { safeMessage } from '../../core/api/safe-errors';
+import { safeMessage } from '../../core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -17,14 +17,14 @@ import {
 } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth-service';
-import { WORKSPACE_HOME } from '../../core/workspace-home';
+import { WORKSPACE_HOME } from '../../core/layout/workspace-home';
 import { LoginIntro } from './login-intro';
 
 @Component({
   selector: 'nx-login-page',
   // Page-only rules load with this lazy route instead of the initial stylesheet.
   encapsulation: ViewEncapsulation.None,
-  styleUrl: '../../../login.scss',
+  styleUrl: '../../../styles/login.scss',
   imports: [Notice, FormField, LoginIntro],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './login-page.html',
