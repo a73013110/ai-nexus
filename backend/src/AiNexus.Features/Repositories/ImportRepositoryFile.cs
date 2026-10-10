@@ -37,12 +37,12 @@ internal sealed class ImportRepositoryFile(NexusDbContext db, RepositoryService 
         {
             var old = await db.Set<RepositoryImport>().AsNoTracking().Where(x => x.OwnerId == owner && x.CollectionId == body.CollectionId && x.Repository == file.Repository && x.Commit == file.Commit && x.Path == file.Path && x.BaseUrl == gitea.BaseUrl)
                 .Join(db.Set<KnowledgeDocument>().Where(x => !x.IsDeleted), x => x.DocumentId, d => d.Id, (x, d) => x.DocumentId).FirstOrDefaultAsync(ct);
-            if (old != Guid.Empty) return await documents.DetailAsync(owner, old, ct);
+            if (old != Guid.Empty) return (await documents.DetailAsync(owner, old, ct)).OrThrow();
             var text = $"Gitea: {file.Repository}\nPath: {file.Path}\nCommit: {file.Commit}\nSource: {file.Url}\n\n{file.Text}";
             var bytes = Encoding.UTF8.GetBytes(text); using var stream = new MemoryStream(bytes);
             var upload = new FormFile(stream, 0, bytes.Length, "file", string.Concat((file.Repository.Replace('/', '_') + "_" + Path.GetFileName(file.Path)).Take(170)) + ".txt") { Headers = new HeaderDictionary(), ContentType = "text/plain" };
             var attachment = (await attachments.UploadAsync(owner, upload, ct)).OrThrow();
-            var document = await documents.AddAsync(owner, body.CollectionId, attachment.Id, ct);
+            var document = (await documents.AddAsync(owner, body.CollectionId, attachment.Id, ct)).OrThrow();
             db.Add(new RepositoryImport { OwnerId = owner, CollectionId = body.CollectionId, DocumentId = document.Id, Repository = file.Repository, Commit = file.Commit, Path = file.Path, BaseUrl = gitea.BaseUrl });
             db.AuditEvents.Add(new AuditEvent { OwnerId = owner, ResourceId = document.Id, Action = "repository.imported", Result = "snapshot" });
             await db.SaveChangesAsync(ct);

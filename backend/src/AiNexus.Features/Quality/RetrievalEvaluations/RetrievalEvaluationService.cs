@@ -39,7 +39,7 @@ public sealed class RetrievalEvaluationService(NexusDbContext db, RetrievalAutho
     internal async Task RequireAccessAsync(Guid actor, IReadOnlyList<Guid> collections, CancellationToken ct)
     {
         if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "quality")) throw new ApiException(403, "evaluation_access_revoked", "品質評測功能權限已停用。");
-        await authorization.CollectionsAsync(actor, collections, ct);
+        (await authorization.CollectionsAsync(actor, collections, ct)).OrThrow();
     }
     internal async Task<string> FingerprintAsync(EmbeddingProfile profile, IReadOnlyList<Guid> collections, CancellationToken ct)
     {

@@ -67,9 +67,9 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
         var effort = ModelCatalog.RequireReasoning(profile, request.ReasoningEffort).OrThrow();
         // Fails fast; BudgetAsync enforces model approval and quota again under the owner row lock.
         (await policies.RequireAsync(owner, profile.Id, ct)).OrThrow();
-        var knowledgeSelection = await knowledge.SelectionAsync(owner, request.ConversationId, ct);
+        var knowledgeSelection = (await knowledge.SelectionAsync(owner, request.ConversationId, ct)).OrThrow();
         var turn = new ConversationTurn(request.ConversationId, request.Prompt, request.ParentMessageId, request.RegenerateUserMessageId);
-        var sources = await knowledge.ForRunAsync(owner, turn, ct, knowledgeSelection.CollectionIds);
+        var sources = (await knowledge.ForRunAsync(owner, turn, ct, knowledgeSelection.CollectionIds)).OrThrow();
         WebSearchRecord? search = null;
         if (request.WebSearch)
         {
@@ -121,9 +121,9 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) return InferenceErrors.GenerationActive;
             var conversation = (await conversations.OwnedAsync(owner, request.ConversationId, ct)).OrThrow();
             var projectContext = prepared is not null && prepared.ProjectId == conversation.ProjectId ? prepared.ProjectContext : await projects.ContextAsync(owner, conversation.ProjectId, ct);
-            var currentSelection = await knowledge.SelectionAsync(owner, request.ConversationId, ct);
+            var currentSelection = (await knowledge.SelectionAsync(owner, request.ConversationId, ct)).OrThrow();
             if (!currentSelection.CollectionIds.Order().SequenceEqual(knowledgeSelection.CollectionIds.Order())) return InferenceErrors.KnowledgeSelectionChanged;
-            await knowledge.ValidateHitsAsync(owner, sources, ct);
+            (await knowledge.ValidateHitsAsync(owner, sources, ct)).OrThrow();
             if (request.RegenerateUserMessageId is not null && request.AttachmentIds?.Count > 0) return InferenceErrors.RegenerateWithAttachments;
             var files = (await attachments.RequireAsync(owner, request.AttachmentIds, ct)).OrThrow();
             var now = clock.GetUtcNow();

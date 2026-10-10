@@ -40,7 +40,7 @@ internal sealed class PreviewContext(ConversationService conversations, Attachme
         var files = (await attachments.RequireAsync(owner, body.AttachmentIds, ct)).OrThrow();
         var model = (await models.RequireAsync(body.ModelId, ct)).OrThrow();
         (await policies.RequireAsync(owner, model.Id, ct, checkQuota: false)).OrThrow();
-        var reserved = body.ConversationId is Guid cid ? await knowledge.ReservedContextAsync(owner, cid, ct) : 0;
+        var reserved = body.ConversationId is Guid cid ? (await knowledge.ReservedContextAsync(owner, cid, ct)).OrThrow() : 0;
         var webReserved = body.WebSearch ? WebSearchService.ReservedTokens : 0;
         return (await context.PreviewAsync(body.ConversationId, body.ParentMessageId, body.Prompt, new(model.ContextTokens, model.MaxOutputTokens, .6, ContextBuilder.SystemPrompt(options.Value.SystemPrompt, instruction) + project + new string(' ', reserved + webReserved), SupportsImages: model.SupportsImages), ct, files)) with { ReservedKnowledgeTokens = reserved, ReservedWebSearchTokens = webReserved };
     }

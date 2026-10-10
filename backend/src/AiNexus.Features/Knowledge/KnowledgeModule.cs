@@ -34,16 +34,7 @@ public sealed class KnowledgeModule : IFeatureModule
         services.AddSingleton(sp => EmbeddingModel(sp.GetRequiredService<IOptions<KnowledgeOptions>>().Value));
         services.AddScoped<DocumentAccess>();
         services.AddScoped<IPrivateReaders, PrivateReaders>();
-        services.AddScoped<ListLibraryFiles>();
-        services.AddScoped<AddKnowledgeDocument>();
         services.AddScoped(provider => new DocumentService(provider.GetRequiredService<DocumentAccess>(), provider.GetRequiredService<AddKnowledgeDocument>()));
-        services.AddScoped<CreateTextDocument>();
-        services.AddScoped<UpdateTextDocument>();
-        services.AddScoped<SaveKnowledgeCollection>();
-        services.AddScoped<DeleteKnowledgeCollection>();
-        services.AddScoped<SaveConversationKnowledge>();
-        services.AddScoped<DeleteDocument>();
-        services.AddScoped<ReindexDocument>();
         services.AddSingleton<KnowledgeWriteLock>();
         services.AddScoped<EmbeddingProfiles>();
         services.AddScoped<EmbeddingVectorStore>();

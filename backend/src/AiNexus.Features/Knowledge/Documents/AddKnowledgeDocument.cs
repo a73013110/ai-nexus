@@ -26,26 +26,26 @@ internal sealed class AddKnowledgeDocument(NexusDbContext db, ResourceAccess acc
     public static RouteHandlerBuilder MapCollection(RouteGroupBuilder routes) => routes
         .MapPost("/collections/{id:guid}/documents", async (Guid id, AddDocumentRequest request, ICurrentUser user, AddKnowledgeDocument handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, request.AttachmentId, ct)).ToHttpResult())
-        .WithName("AddKnowledgeDocument").Produces<DocumentDto>();
+        .WithName("AddKnowledgeDocument");
 
     /// <summary>Reads an attachment as a standalone document, for the conversation document viewer.</summary>
     public static RouteHandlerBuilder MapAttachment(RouteGroupBuilder api) => api
         .MapPost("/attachments/{id:guid}/document", async (Guid id, ICurrentUser user, AddKnowledgeDocument handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, null, id, ct)).ToHttpResult())
-        .RequireAuthorization(Policies.Attachments).WithName("ReadAttachmentDocument").Produces<DocumentDto>();
+        .RequireAuthorization(Policies.Attachments).WithName("ReadAttachmentDocument");
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid? collection, Guid attachment, CancellationToken ct, Guid? project = null, TextDocumentRequest? text = null)
     {
-        if (collection is Guid collectionId) (await access.RequireAsync(actor, collectionId, KnowledgeCollection.Kind, ct, write: true)).OrThrow();
-        if (project is Guid projectId) (await access.RequireAsync(actor, projectId, "project", ct, write: true)).OrThrow();
+        if (await RequireContainerAsync(actor, collection, project, ct) is { IsSuccess: false } denied) return denied.Error;
         await writes.Gate.WaitAsync(ct);
         try
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await attachments.LockOwnerAsync(actor, ct);
-            if (collection is Guid currentCollection) (await access.RequireAsync(actor, currentCollection, KnowledgeCollection.Kind, ct, write: true)).OrThrow();
-            if (project is Guid currentProject) (await access.RequireAsync(actor, currentProject, "project", ct, write: true)).OrThrow();
-            var file = (await attachments.OwnedAsync(actor, attachment, ct)).OrThrow();
+            if (await RequireContainerAsync(actor, collection, project, ct) is { IsSuccess: false } revoked) return revoked.Error;
+            var owned = await attachments.OwnedAsync(actor, attachment, ct);
+            if (!owned.IsSuccess) return owned.Error;
+            var file = owned.Value;
             if (collection is null)
             {
                 var existing = await (from doc in db.Set<KnowledgeDocument>() join ownerResource in db.Set<WorkspaceResource>() on doc.Id equals ownerResource.Id where doc.AttachmentId == attachment && doc.CollectionId == null && !doc.IsDeleted && ownerResource.OwnerId == actor && ownerResource.ParentId == project select doc).FirstOrDefaultAsync(ct);
@@ -79,5 +79,12 @@ internal sealed class AddKnowledgeDocument(NexusDbContext db, ResourceAccess acc
             return DocumentAccess.Describe(document, true);
         }
         finally { writes.Gate.Release(); }
+    }
+
+    private async Task<Result> RequireContainerAsync(Guid actor, Guid? collection, Guid? project, CancellationToken ct)
+    {
+        if (collection is Guid collectionId && await access.RequireAsync(actor, collectionId, KnowledgeCollection.Kind, ct, write: true) is { IsSuccess: false } noCollection) return noCollection.Error;
+        if (project is Guid projectId && await access.RequireAsync(actor, projectId, "project", ct, write: true) is { IsSuccess: false } noProject) return noProject.Error;
+        return Result.Success;
     }
 }

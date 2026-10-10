@@ -6,14 +6,13 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Knowledge.Documents;
 
 /// <summary>The extracted text of every page of a document the user may read, with whether AI recognition needs review.</summary>
-internal static class ListDocumentPages
+internal sealed class ListDocumentPages(NexusDbContext db, DocumentAccess documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}/pages", async (Guid id, ICurrentUser user, NexusDbContext db, DocumentAccess documents, CancellationToken ct) =>
-            (await HandleAsync(db, documents, user.Id, id, ct)).ToHttpResult())
-        .WithName("DocumentPages").Produces<IReadOnlyList<DocumentPageDto>>();
+        .MapGet("/{id:guid}/pages", (Guid id, ICurrentUser user, ListDocumentPages handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .WithName("DocumentPages");
 
-    private static async Task<Result<IReadOnlyList<DocumentPageDto>>> HandleAsync(NexusDbContext db, DocumentAccess documents, Guid actor, Guid id, CancellationToken ct)
+    public async Task<Result<IReadOnlyList<DocumentPageDto>>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
         var document = await documents.FindAsync(actor, id, ct);
         if (!document.IsSuccess) return document.Error;

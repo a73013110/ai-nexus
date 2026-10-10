@@ -19,7 +19,7 @@ internal sealed class UpdateTextDocument(NexusDbContext db, DocumentAccess docum
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPut("/{id:guid}/text", async (Guid id, TextDocumentRequest body, ICurrentUser user, UpdateTextDocument handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
-        .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocuments.MaxCharacters)).WithName("UpdateTextDocument").Produces<DocumentDto>();
+        .WithRequestBodyLimit(RequestBodyLimits.ForJsonCharacters(TextDocuments.MaxCharacters)).WithName("UpdateTextDocument");
 
     public async Task<Result<DocumentDto>> HandleAsync(Guid actor, Guid id, TextDocumentRequest request, CancellationToken ct)
     {
@@ -30,7 +30,9 @@ internal sealed class UpdateTextDocument(NexusDbContext db, DocumentAccess docum
         var cleaned = TextDocuments.Clean(request);
         if (!cleaned.IsSuccess) return cleaned.Error;
         var source = cleaned.Value;
-        var uploaded = await TextDocuments.UploadAsync(attachments, actor, source, ct);
+        var upload = await TextDocuments.UploadAsync(attachments, actor, source, ct);
+        if (!upload.IsSuccess) return upload.Error;
+        var uploaded = upload.Value;
         await writes.Gate.WaitAsync(ct);
         try
         {

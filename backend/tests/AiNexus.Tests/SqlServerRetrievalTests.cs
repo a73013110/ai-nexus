@@ -42,8 +42,8 @@ public sealed class SqlServerRetrievalTests
             var result = await store.SearchAsync([seed.Collection], profile, "採購核准", vector, "hybrid", CancellationToken.None);
             Assert.Equal("vector", result.Mode); Assert.Equal(seed.Chunks[0].Id, Assert.Single(result.Hits).ChunkId);
             Assert.Equal(1, failing.Failures);
-            var error = await Assert.ThrowsAsync<ApiException>(() => store.SearchAsync([seed.Collection], profile, "採購核准", null, "keyword", CancellationToken.None));
-            Assert.Equal("fulltext_unavailable", error.Code); Assert.Equal(1, failing.Failures);
+            var error = await Assert.ThrowsAsync<ExternalServiceException>(() => store.SearchAsync([seed.Collection], profile, "採購核准", null, "keyword", CancellationToken.None));
+            Assert.Equal("fulltext_unavailable", error.Error.Code); Assert.Equal(1, failing.Failures);
         });
     }
 

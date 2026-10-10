@@ -160,7 +160,7 @@ public sealed class TestEmbeddings : AiNexus.Features.Knowledge.Embeddings.IEmbe
     public async Task<AiNexus.Features.Knowledge.Embeddings.EmbeddingBatchResult> EmbedBatchAsync(IReadOnlyList<string> inputs, AiNexus.Features.Knowledge.Embeddings.EmbeddingPurpose purpose, AiNexus.Features.Knowledge.Embeddings.EmbeddingProfile profile, CancellationToken ct)
     {
         var call = Interlocked.Increment(ref Calls); LastProfileId = profile.Id; await Task.Delay(DelayMs, ct);
-        if (Fail || FailProfileId == profile.Id || FailOnCall == call) throw new ApiException(503, "fixture_embedding_failed", "測試索引服務暫停。");
+        if (Fail || FailProfileId == profile.Id || FailOnCall == call) throw new ExternalServiceException(Error.Unavailable("fixture_embedding_failed"), "測試索引服務暫停。");
         return new(inputs.Select(_ => { var value = new float[profile.Dimensions]; value[0] = 1; return value; }).ToArray());
     }
 }
