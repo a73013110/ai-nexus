@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -49,15 +50,17 @@ public sealed class BackgroundJob
     [Comment("固定安全提示與查證代碼；不可保存例外自由文字。")]
     public string? ErrorMessage { get; set; }
     [Comment("資料建立時間，採 UTC offset。")]
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
     [Comment("資料最後修改時間，採 UTC offset。")]
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset UpdatedAt { get; set; }
 }
 
 internal sealed class BackgroundJobConfiguration : IEntityTypeConfiguration<BackgroundJob>
 {
     public void Configure(EntityTypeBuilder<BackgroundJob> job)
     {
+        job.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
+        job.Property(x => x.UpdatedAt).HasValueGenerator<CreationTime>();
         job.ToTable("BackgroundJobs", "jobs"); job.HasKey(x => x.Id);
         job.Property(x => x.Kind).HasMaxLength(32); job.Property(x => x.Label).HasMaxLength(180); job.Property(x => x.Status).HasMaxLength(16); job.Property(x => x.Stage).HasMaxLength(120);
         job.Property(x => x.IssueCode).HasMaxLength(40); job.Property(x => x.TraceId).HasMaxLength(32); job.Property(x => x.ParentSpanId).HasMaxLength(16);

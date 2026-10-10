@@ -43,13 +43,13 @@ public sealed partial class RetrievalHttp(IHttpClientFactory clients, ILogger<Re
     private static partial void LogRetry(ILogger logger, Exception? exception, int attempt);
 }
 
-public sealed class RetrievalInvocation(IServiceScopeFactory scopes, IOptions<KnowledgeOptions> options)
+public sealed class RetrievalInvocation(IServiceScopeFactory scopes, IOptions<KnowledgeOptions> options, TimeProvider clock)
 {
     public async Task<T> RunAsync<T>(Guid owner, string kind, string provider, string model, Func<Task<(T Value, long? Tokens)>> action, CancellationToken ct)
     {
         using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
         var billing = scope.ServiceProvider.GetRequiredService<AiNexus.Features.Billing.BillingService>();
-        var call = new ModelInvocation { OwnerId = owner, Kind = kind, Provider = provider, ModelId = model };
+        var call = new ModelInvocation { OwnerId = owner, Kind = kind, Provider = provider, ModelId = model, CreatedAt = clock.GetUtcNow() };
         // The owner row lock taken first in this transaction serializes the reservation; it ends before the provider call.
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
@@ -71,7 +71,7 @@ public sealed class RetrievalInvocation(IServiceScopeFactory scopes, IOptions<Kn
         catch { call.Status = "failed"; throw; }
         finally
         {
-            call.DurationMilliseconds = RunTiming.Milliseconds(call.CreatedAt, DateTimeOffset.UtcNow);
+            call.DurationMilliseconds = RunTiming.Milliseconds(call.CreatedAt, clock.GetUtcNow());
             await billing.MeterAsync(call.Id, call.InputTokens, call.OutputTokens, 0, 0, CancellationToken.None, call.Status == "completed");
             await billing.FinishAsync(call.Id, call.Status, CancellationToken.None); await db.SaveChangesAsync(CancellationToken.None);
         }

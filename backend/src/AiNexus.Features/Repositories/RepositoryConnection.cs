@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -16,13 +17,14 @@ public sealed class RepositoryConnection
     [Comment("以 ASP.NET Data Protection 保護的外部 token；不可在 API、稽核或日誌回傳。")]
     public string ProtectedToken { get; set; } = "";
     [Comment("使用者建立外部服務連線的時間。")]
-    public DateTimeOffset ConnectedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset ConnectedAt { get; set; }
 }
 
 internal sealed class RepositoryConnectionConfiguration : IEntityTypeConfiguration<RepositoryConnection>
 {
     public void Configure(EntityTypeBuilder<RepositoryConnection> c)
     {
+        c.Property(x => x.ConnectedAt).HasValueGenerator<CreationTime>();
         c.ToTable("RepositoryConnections", "repositories"); c.HasKey(x => x.OwnerId);
         c.Property(x => x.BaseUrl).HasMaxLength(500); c.Property(x => x.Login).HasMaxLength(100); c.Property(x => x.ProtectedToken).HasMaxLength(4096);
     }

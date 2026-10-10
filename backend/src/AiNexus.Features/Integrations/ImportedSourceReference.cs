@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -16,13 +17,14 @@ public sealed class ImportedSourceReference
     [Comment("外部來源或 repository 的固定版本識別。")]
     public string Revision { get; set; } = "";
     [Comment("此來源版本明確匯入的時間。")]
-    public DateTimeOffset ImportedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset ImportedAt { get; set; }
 }
 
 internal sealed class ImportedSourceReferenceConfiguration : IEntityTypeConfiguration<ImportedSourceReference>
 {
     public void Configure(EntityTypeBuilder<ImportedSourceReference> r)
     {
+        r.Property(x => x.ImportedAt).HasValueGenerator<CreationTime>();
         r.ToTable("SourceReferences", "integrations"); r.HasKey(x => x.ArtifactId);
         r.Property(x => x.SourceId).HasMaxLength(32); r.Property(x => x.ExternalId).HasMaxLength(160); r.Property(x => x.Revision).HasMaxLength(160);
         r.HasIndex(x => new { x.SourceId, x.ExternalId });

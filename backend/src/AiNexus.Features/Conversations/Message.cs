@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -19,7 +20,7 @@ public sealed class Message
     [Comment("業務執行狀態。")]
     public string Status { get; set; } = "completed";
     [Comment("資料建立時間，採 UTC offset。")]
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
     [Comment("產生此訊息的 GenerationRuns 識別碼。")]
     public Guid? RunId { get; set; }
     [Comment("核准模型的內部識別碼。")]
@@ -34,6 +35,7 @@ internal sealed class MessageConfiguration : IEntityTypeConfiguration<Message>
 {
     public void Configure(EntityTypeBuilder<Message> message)
     {
+        message.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
         message.ToTable("Messages", "conversations");
         message.HasKey(x => x.Id);
         message.Property(x => x.Role).HasMaxLength(16);

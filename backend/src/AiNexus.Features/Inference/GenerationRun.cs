@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -53,7 +54,7 @@ public sealed class GenerationRun
     [Comment("對外安全的錯誤代碼，不含密碼或完整例外。")]
     public string? ErrorCode { get; set; }
     [Comment("資料建立時間，採 UTC offset。")]
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset CreatedAt { get; set; }
     [Comment("工作開始執行時間。")]
     public DateTimeOffset? StartedAt { get; set; }
     [Comment("工作結束時間。")]
@@ -75,6 +76,7 @@ internal sealed class GenerationRunConfiguration : IEntityTypeConfiguration<Gene
 {
     public void Configure(EntityTypeBuilder<GenerationRun> run)
     {
+        run.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
         run.ToTable("GenerationRuns", "inference");
         run.HasKey(x => x.Id);
         run.Property(x => x.ModelId).HasMaxLength(160);

@@ -16,7 +16,7 @@ namespace AiNexus.Features.Collaboration;
 public sealed record ContainerDeleted(string Kind, Guid ContainerId, Guid ActorId) : IDomainEvent;
 
 /// <summary>Remove a container without destroying private conversations, owned files or audit evidence.</summary>
-public sealed class ResourceLifecycle(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, DomainEvents events, IEnumerable<IContainerDeletionCheck> checks)
+public sealed class ResourceLifecycle(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, DomainEvents events, IEnumerable<IContainerDeletionCheck> checks, TimeProvider clock)
 {
     public async Task<Result> DeleteAsync(Guid actor, Guid id, string kind, CancellationToken ct)
     {
@@ -39,7 +39,7 @@ public sealed class ResourceLifecycle(NexusDbContext db, ResourceAccess access, 
                 await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.ParentId == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ParentId, (Guid?)null), ct);
             }
             resource.IsDeleted = true;
-            resource.UpdatedAt = DateTimeOffset.UtcNow;
+            resource.UpdatedAt = clock.GetUtcNow();
             events.Raise(new ContainerDeleted(kind, id, actor));
             db.AuditEvents.Add(new() { OwnerId = actor, Action = kind + ".deleted", ResourceId = id, Result = "soft_deleted" });
             await db.SaveChangesAsync(ct);

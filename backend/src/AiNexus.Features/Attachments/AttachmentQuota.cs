@@ -1,3 +1,4 @@
+using AiNexus.Platform.Validation;
 using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.AccessControl;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Attachments;
 
 /// <summary>A personal storage limit set by an administrator; <c>null</c> falls back to the group or default limit.</summary>
+[ValidatedInHandler("The limit is checked inside the audited administrative transaction (SetUserAttachmentStorage).")]
 public sealed record AttachmentStorageLimitRequest(long? LimitBytes);
 
 public sealed class AttachmentQuota(NexusDbContext db, AccessService access, IOptions<AttachmentOptions> options)

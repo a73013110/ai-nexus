@@ -18,7 +18,7 @@ public static class DiagnosticStartup
             using var journal = new DiagnosticJournal(Options.Create(options), health, environment);
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             await journal.AppendAsync([new DiagnosticEvent {
-                Level = LogLevel.Critical, Category = "AiNexus.Startup", EventId = DiagnosticEvents.Configuration, EventName = DiagnosticEvents.ConfigurationName,
+                At = TimeProvider.System.GetUtcNow(), Level = LogLevel.Critical, Category = "AiNexus.Startup", EventId = DiagnosticEvents.Configuration, EventName = DiagnosticEvents.ConfigurationName,
                 MessageTemplate = "Service failed to initialize; inspect masked diagnostic classification.", Service = options.ServiceName,
                 Environment = environment.EnvironmentName, Version = DiagnosticLoggerProvider.Version, Instance = System.Environment.MachineName + "-" + System.Environment.ProcessId,
                 TraceId = ActivityTraceId.CreateRandom().ToHexString(), SpanId = ActivitySpanId.CreateRandom().ToHexString(), IssueCode = issue, ErrorCode = "startup_failed",

@@ -8,7 +8,7 @@ using AiNexus.Features.Knowledge.Indexing;
 
 namespace AiNexus.Features.Knowledge.Embeddings;
 
-public sealed class EmbeddingProfiles(NexusDbContext db, IOptions<KnowledgeOptions> options, KnowledgeWriteLock writes)
+public sealed class EmbeddingProfiles(NexusDbContext db, IOptions<KnowledgeOptions> options, KnowledgeWriteLock writes, TimeProvider clock)
 {
     public async Task<EmbeddingProfile> TargetAsync(CancellationToken ct)
     {
@@ -24,7 +24,7 @@ public sealed class EmbeddingProfiles(NexusDbContext db, IOptions<KnowledgeOptio
                 target = new() { Key = key, Provider = settings.EmbeddingProvider, Model = settings.EmbeddingModel, Dimensions = settings.Dimensions,
                     InputFormat = settings.InputFormat, QueryInstruction = settings.QueryInstruction, Revision = settings.Revision,
                     ChunkerConfiguration = JsonSerializer.Serialize(ChunkerSnapshot.Capture(settings)), Status = active ? "building" : "active",
-                    ActivatedAt = active ? null : DateTimeOffset.UtcNow };
+                    ActivatedAt = active ? null : clock.GetUtcNow() };
                 db.Add(target); await db.SaveChangesAsync(ct);
             }
             else if (target.Status == "retired")
