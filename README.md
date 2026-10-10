@@ -44,7 +44,7 @@ dotnet dev-certs https --trust     # 開發機首次
 | `docs/features/` | 使用者與管理員：各功能的操作與規則（見下方功能表） |
 | `docs/decisions/` | 長期有效的架構決定與原因（ADR），例如 [單一 IIS 與程序內鎖](docs/decisions/0001-single-iis-in-process-locks.md)、[vertical slice 與單一 Features 專案](docs/decisions/0002-vertical-slice-single-features-project.md) |
 | `docs/research/` | 研究與評估：[向量架構](docs/research/VECTOR_ARCHITECTURE.md)、[embedding 比較](docs/research/EMBEDDING_MODELS.md)、[本地 AI](docs/research/LOCAL_AI.md)、[檢索驗收](docs/research/RETRIEVAL_TESTING.md) |
-| `docs/frontend/` | 前端 UI、樣式與聊天渲染（前端重整時再合併） |
+| `docs/frontend/` | 前端：[共用邊界與讀寫](docs/frontend/FRONTEND_BOUNDARIES.md)、[介面模式](docs/frontend/UI_PATTERNS.md)、[設計系統](docs/frontend/DESIGN_SYSTEM.md)、[聊天渲染](docs/frontend/CHAT_RENDERING.md) |
 
 ## 功能
 

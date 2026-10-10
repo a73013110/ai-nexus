@@ -20,6 +20,7 @@
 | 授權、功能 grant | `docs/architecture/ACCESS_CONTROL.md` |
 | 腳本、建置、驗證 | `docs/development/DEVELOPMENT.md` |
 | IIS 部署、發布套件 | `docs/operations/IIS_DEPLOYMENT.md` |
+| 前端資料夾、API 呼叫、讀取與寫入 | `docs/frontend/FRONTEND_BOUNDARIES.md` |
 | 前端 UI、樣式 | `docs/frontend/UI_PATTERNS.md`、`docs/frontend/DESIGN_SYSTEM.md` |
 | 聊天渲染、串流 Markdown、前端請求與快取 | `docs/frontend/CHAT_RENDERING.md` |
 | 單一功能 | `README.md` 功能表連到的 `docs/features/` 那一份 |
@@ -75,7 +76,7 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 
 ## 文件寫法
 
-- 繁體中文，先寫結論，條列優先；一份文件只講一件事，不超過 8 KB（`scripts/tests/Docs.Tests.ps1` 檢查，`docs/frontend` 暫時除外）。
+- 繁體中文，先寫結論，條列優先；一份文件只講一件事，不超過 8 KB（`scripts/tests/Docs.Tests.ps1` 檢查）。
 - 依讀者放：`architecture`（改後端的人）、`development`、`operations`、`features`、`decisions`（長期有效的「為什麼」）、`research`。
 - 不重抄程式碼已表達的內容（欄位清單、端點清單）；連到檔案或 `openapi.json`。相對連結與反引號內的 repo 路徑必須存在（同一個測試檢查）。
 - 改行為時同一個 PR 更新對應文件；過時的段落直接刪除。
