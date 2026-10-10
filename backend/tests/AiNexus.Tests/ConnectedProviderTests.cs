@@ -61,7 +61,7 @@ public sealed class ConnectedProviderTests
     {
         const string body = "data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"PRIVATE_THOUGHT\",\"thought\":true},{\"text\":\"回答\"}]},\"finishReason\":\"STOP\"}]}\n\ndata: {\"usageMetadata\":{\"promptTokenCount\":100,\"cachedContentTokenCount\":40,\"candidatesTokenCount\":20,\"thoughtsTokenCount\":5,\"totalTokenCount\":125}}\n\n";
         using var client = new HttpClient(new Handler(_ => { var r = new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body) }; r.Content.Headers.ContentType = new MediaTypeHeaderValue("text/event-stream"); return r; })) { BaseAddress = new Uri("https://google.fixture/") };
-        var adapter = new GoogleAiProvider(client, Options.Create(new InferenceOptions { GoogleApiKey = "fixture-google-key" }));
+        var adapter = new GoogleAiProvider(client, Options.Create(new InferenceOptions { Providers = { Google = { ApiKey = "fixture-google-key" } } }));
         var rows = new List<InferenceChunk>(); await foreach (var row in adapter.StreamAsync("fixture", [new("user", "提問")], new(8192, 512, .6, "系統"), CancellationToken.None)) rows.Add(row);
         Assert.Equal("回答", string.Concat(rows.Select(x => x.Text))); Assert.True(rows[^1].Done);
         Assert.Equal(100, rows[^1].InputTokens); Assert.Equal(40, rows[^1].CachedInputTokens); Assert.Equal(25, rows[^1].OutputTokens); Assert.Equal(5, rows[^1].ReasoningTokens);

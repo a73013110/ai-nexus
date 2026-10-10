@@ -14,17 +14,17 @@ Write-Output 'Enter 保留現有值。密碼與 key 以遮蔽輸入，儲存於 
 foreach ($taskField in @(
     @{ Section = 'Database'; Name = 'Server'; Prompt = 'SQL server／instance' },
     @{ Section = 'Database'; Name = 'Name'; Prompt = '專用資料庫名稱' },
-    @{ Section = 'AdAuthentication'; Name = 'Url'; Prompt = 'AD LDAP URL 與 Base DN' },
-    @{ Section = 'AdAuthentication'; Name = 'DnUser'; Prompt = 'AD 服務帳號 DN' },
-    @{ Section = 'AdAuthentication'; Name = 'Domain'; Prompt = 'AD 網域名稱' }
+    @{ Section = 'Identity.ActiveDirectory'; Name = 'Url'; Prompt = 'AD LDAP URL 與 Base DN' },
+    @{ Section = 'Identity.ActiveDirectory'; Name = 'DnUser'; Prompt = 'AD 服務帳號 DN' },
+    @{ Section = 'Identity.ActiveDirectory'; Name = 'Domain'; Prompt = 'AD 網域名稱' }
 )) {
     $taskValue = Read-Host ($taskField.Prompt + '（Enter 保留）')
-    if ($taskValue) { $taskConfig[$taskField.Section][$taskField.Name] = $taskValue.Trim() }
+    if ($taskValue) { Set-NexusSetting $taskConfig ($taskField.Section + '.' + $taskField.Name) $taskValue.Trim() }
 }
 foreach ($taskField in @(
     @{ Section = 'Database'; Name = 'User'; Prompt = '既有 SQL 登入帳號' },
     @{ Section = 'Database'; Name = 'Password'; Prompt = 'SQL 密碼' },
-    @{ Section = 'AdAuthentication'; Name = 'DnPass'; Prompt = 'AD 服務帳號密碼' },
+    @{ Section = 'Identity.ActiveDirectory'; Name = 'DnPass'; Prompt = 'AD 服務帳號密碼' },
     @{ Section = 'Inference.Providers.Google'; Name = 'ApiKey'; Prompt = 'Google AI API key' }
 )) {
     $taskValue = Read-NexusSecret ($taskField.Prompt + '（遮蔽輸入，Enter 保留）')

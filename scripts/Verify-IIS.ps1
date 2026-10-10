@@ -21,7 +21,6 @@ foreach ($taskPair in @(@('LocalConfigPath','..\config\appsettings.Production.js
     Add-NexusCheck $taskPair[0] (Test-Path -LiteralPath $taskFile -PathType Leaf) $taskFile
     if (Test-Path -LiteralPath $taskFile) {
         $taskSettings = [IO.File]::ReadAllText($taskFile) | ConvertFrom-Json -AsHashtable
-        Add-NexusCheck ($taskPair[0] + ' v3') ($taskSettings.ConfigurationVersion -eq 3) 'Migrate both external settings files before starting this release'
         if ($taskPair[0] -eq 'LocalConfigPath') {
             Add-NexusCheck 'AllowedHosts configured' ([bool]$taskSettings.AllowedHosts -and $taskSettings.AllowedHosts -notmatch 'company\.internal') 'Use your actual IIS DNS host name (without scheme or port)'
             $taskAttachmentSetting = if ($taskEnv.Attachments__StoragePath) { $taskEnv.Attachments__StoragePath } else { $taskSettings.Attachments.StoragePath }

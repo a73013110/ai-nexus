@@ -21,8 +21,8 @@ public sealed class EmbeddingProfiles(NexusDbContext db, IOptions<KnowledgeOptio
             if (target is null)
             {
                 var active = await db.Set<EmbeddingProfile>().AnyAsync(x => x.Status == "active", ct);
-                target = new() { Key = key, Provider = settings.EmbeddingProvider, Model = settings.EmbeddingModel, Dimensions = settings.Dimensions,
-                    InputFormat = settings.InputFormat, QueryInstruction = settings.QueryInstruction, Revision = settings.Revision,
+                target = new() { Key = key, Provider = settings.Embedding.Provider, Model = settings.Embedding.Model, Dimensions = settings.Embedding.Dimensions,
+                    InputFormat = settings.Embedding.InputFormat, QueryInstruction = settings.Embedding.QueryInstruction, Revision = settings.Embedding.Revision,
                     ChunkerConfiguration = JsonSerializer.Serialize(ChunkerSnapshot.Capture(settings)), Status = active ? "building" : "active",
                     ActivatedAt = active ? null : clock.GetUtcNow() };
                 db.Add(target); await db.SaveChangesAsync(ct);

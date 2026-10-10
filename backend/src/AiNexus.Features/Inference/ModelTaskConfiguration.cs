@@ -15,7 +15,7 @@ public static class ModelTaskConfiguration
         var provider = profile.Provider;
         var serialized = JsonSerializer.SerializeToUtf8Bytes(new {
             Version = 1, Provider = provider,
-            Endpoint = provider == "ollama" ? options.BaseUrl.TrimEnd('/') : "google-v1beta",
+            Endpoint = provider == "ollama" ? options.Providers.Ollama.Endpoint.TrimEnd('/') : "google-v1beta",
             profile.Id, profile.NativeId, profile.ContextTokens, profile.MaxOutputTokens, Temperature,
             profile.DefaultReasoningEffort, profile.ReasoningControl, profile.SupportsImages
         });

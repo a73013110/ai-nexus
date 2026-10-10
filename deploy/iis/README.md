@@ -49,39 +49,27 @@ pwsh -NoProfile -File scripts/Publish-IIS.ps1 -SkipBuild -PublishDirectory artif
 
 ## 4. 準備外部設定
 
-首次部署將套件 app 複製到 `D:\CoreProject\AiNexus\app`。使用套件 config 範本或保留既有 config，依 [CONFIGURATION](../../docs/CONFIGURATION.md) 填妥。先將 v1／v2 設定遷移至 v3，切勿用空範本覆蓋已填的秘密：
+首次部署將套件 app 複製到 `D:\CoreProject\AiNexus\app`。使用套件 config 範本或保留既有 config，依 [CONFIGURATION](../../docs/CONFIGURATION.md) 填妥；切勿用空範本覆蓋已填的秘密。設定只有一個版本，沒有遷移工具：區段名稱或欄位寫錯時網站不會啟動，錯誤訊息會指出是哪個鍵（見 [CONFIGURATION 的啟動驗證](../../docs/CONFIGURATION.md#啟動驗證)）。
 
-```powershell
-pwsh -NoProfile -File scripts/Migrate-Settings.ps1 `
-  -SettingsPath 'D:\CoreProject\AiNexus\config\appsettings.Production.json' `
-  -SecretsPath 'D:\CoreProject\AiNexus\config\appsettings.Secrets.json'
-```
+一般檔只寫和預設值不同的鍵，至少確認：
 
-遷移工具在原檔旁留受相同 ACL 保護的原版本備份，保留自訂值及秘密。套件 `scripts/` 已含 `Migrate-Settings.ps1`、`Local-Settings.ps1`、`Settings-Schema.ps1`、`settings-layout.json`；在主機執行時明確指定兩個外部檔案，不使用維運工具目錄的預設 `.local`。
+| 欄位                                                                 | 本環境要填                                                                    |
+| -------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `AllowedHosts`                                                       | 實際 IIS DNS Host，例如 `ai.company.internal`；多個用 `;`，不要含 https／port |
+| `Database.Server`／`Name`                                            | `192.168.2.95`／`AiNexus`，非預設 SQL port 時填 `192.168.2.95,port`           |
+| `Database.TrustServerCertificate`                                    | true（依目前內部 SQL 自簽憑證需求）                                           |
+| `Identity.ActiveDirectory.Url`                                       | `ad.hanglong.com.tw/DC=hanglong,DC=com,DC=tw`，或經確認的 LDAPS 位址          |
+| `Identity.ActiveDirectory.Domain`                                    | `hanglong.com.tw`                                                             |
+| `Identity.ActiveDirectory.DnUser`                                    | `CN=hanglong,CN=Users,DC=hanglong,DC=com,DC=tw`                               |
+| `Administration.BootstrapAdministrators`                             | `["a73013110"]`，一般帳號不會自動取得管理員                                   |
+| `Attachments.StoragePath`                                            | `D:\CoreProject\AiNexus\data\attachments`，必須在 app 外                     |
+| `Diagnostics.Directory`                                              | `D:\CoreProject\AiNexus\data\diagnostics`，實體本機目錄、app 外、不可映射為網站 URL |
+| `Inference.Providers.<provider>.Enabled`、`Inference.DefaultModelId` | Google／Ollama 可同時啟用；DefaultModelId 使用完整 `provider/model` 路由      |
+| `Knowledge.Embedding.Provider`                                       | 與對話分開設定；離線使用 ollama 或暫用 none                                   |
 
-一般檔至少確認：
+`Identity.ActiveDirectory.Mode`（Ldap）、`Database.ApplyMigrationsOnStartup`（false）與附件容量沿用預設，不必寫入。
 
-| 欄位                                                       | 本環境要填                                                                                       |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `ConfigurationVersion`                                     | 3                                                                                                |
-| `AllowedHosts`                                             | 實際 IIS DNS Host，例如 `ai.company.internal`；多個用 `;`，不要含 https／port                    |
-| `Database.Server`／`Name`                                  | `192.168.2.95`／`AiNexus`，非預設 SQL port 時填 `192.168.2.95,port`                              |
-| `Database.TrustServerCertificate`                          | true（依目前內部 SQL 自簽憑證需求）                                                              |
-| `AdAuthentication.Mode`                                    | Ldap                                                                                             |
-| `AdAuthentication.Url`                                     | `ad.hanglong.com.tw/DC=hanglong,DC=com,DC=tw`，或經確認的 LDAPS 位址                             |
-| `AdAuthentication.Domain`                                  | `hanglong.com.tw`                                                                                |
-| `AdAuthentication.DnUser`                                  | `CN=hanglong,CN=Users,DC=hanglong,DC=com,DC=tw`                                                  |
-| `AdAuthentication.AdAccountAttrName`                       | `sAMAccountName`，不要有尾端空白或 HTML entity                                                   |
-| `Administration.BootstrapAdministrators`                   | `["a73013110"]`，一般帳號不會自動取得管理員                                                      |
-| `Storage.ApplyMigrationsOnStartup`                         | false                                                                                            |
-| `Inference.Providers.<provider>.Enabled`／`MaxConcurrency` | Google／Ollama 可同時啟用，各自並行 1–8；ModelPolicy.DefaultModelId 使用完整 provider/model 路由 |
-| `Attachments.StoragePath`                                  | `D:\CoreProject\AiNexus\data\attachments`，必須在 app 外                                         |
-| `Diagnostics.Directory`                                    | `D:\CoreProject\AiNexus\data\diagnostics`，實體本機目錄、app外、不可映射為網站URL                    |
-| `Attachments.DefaultOwnerLimitBytes`                       | 5000000000（5 GB），個人 override 優先群組與預設                                                 |
-| `Attachments.CleanupIntervalMinutes`／`DraftRetentionDays` | 60 分鐘／14 天；定期回收與失敗刪檔重試                                                           |
-| `Knowledge.Embedding.Provider`                             | 與對話分開設定；離線使用 ollama 或暫用 none                                                      |
-
-秘密檔填 `Database.User`、`Database.Password`、`AdAuthentication.DnPass`；Google 模式再填 `Inference.Providers.Google.ApiKey`。不要將使用者 AD 密碼保存到設定檔。來源系統另外使用專用唯讀帳號。
+秘密檔填 `Database.User`、`Database.Password`、`Identity.ActiveDirectory.DnPass`；Google 模式再填 `Inference.Providers.Google.ApiKey`。不要將使用者 AD 密碼保存到設定檔。來源系統另外使用專用唯讀帳號。
 
 若秘密檔另有非空 `ConnectionStrings.Nexus`，它會優先於 Database 分項欄位；自簽 SQL 憑證需在完整字串也設定 `Encrypt=True;TrustServerCertificate=True`。`Encrypt=Strict` 仍會驗證憑證，這種情況不能只修改一般檔的 TrustServerCertificate。
 
@@ -192,7 +180,7 @@ pwsh -NoProfile -File 'D:\Packages\AiNexus\Verify-IIS.ps1' `
   -BaseUrl 'https://你的實際主機名稱'
 ```
 
-它檢查必要檔案、Production、外部 v3 設定位置、金鑰及站外原檔目錄、Host、集區與 HTTPS session；不會顯示秘密，也不聲稱讀得到檔案就代表集區身分可讀。
+它檢查必要檔案、Production、外部設定位置、金鑰及站外原檔目錄、Host、集區與 HTTPS session；不會顯示秘密，也不聲稱讀得到檔案就代表集區身分可讀。
 
 再做 **SQL／設定與原檔 IO 驗證**，不啟動背景 workers、不登入 AD、不產生 AI 回答（僅讀取模型清單）：
 
@@ -232,7 +220,7 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Host.dll' `
 
 維運窗口先等待背景任務結束，停止網站／集區，保存同一時點的 SQL＋原檔備份組、config、keys 和上一版 app。不要在程序仍鎖住 DLL 時直接覆蓋，也不要刪整個 AiNexus 根目錄。用全新的 release app 資料夾替換舊 app，保持外部 config／keys／logs／data。需移動目錄時先確認 `Resolve-Path` 真的是 `D:\CoreProject\AiNexus\app`，不是 junction 或其他位置。
 
-首次依序：確認空 DB → 外部 v3 設定 → 新 app → 建立站外目錄／ACL → InitialCreate → 部署驗證 → 啟動 IIS → 瀏覽器驗收。日後更新先完成 [SQL＋原檔一致性備份](../../docs/BACKUP.md) 並停止全部 host，再套用相同基線的 migration。日後沒有 schema 變更時省略 migration。使用 `app_offline.htm` 亦可讓 ANCM 停止應用，移除後重啟；不要把該檔留在發版套件。[ANCM 的部署與啟動診斷](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/aspnet-core-module?view=aspnetcore-10.0) 說明了此機制。
+首次依序：確認空 DB → 外部設定 → 新 app → 建立站外目錄／ACL → InitialCreate → 部署驗證 → 啟動 IIS → 瀏覽器驗收。日後更新先完成 [SQL＋原檔一致性備份](../../docs/BACKUP.md) 並停止全部 host，再套用相同基線的 migration。日後沒有 schema 變更時省略 migration。使用 `app_offline.htm` 亦可讓 ANCM 停止應用，移除後重啟；不要把該檔留在發版套件。[ANCM 的部署與啟動診斷](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/aspnet-core-module?view=aspnetcore-10.0) 說明了此機制。
 
 失敗時先停止新版，回復相符的 app／config／SQL／原檔備份組。舊 binary 架構與本版站外原檔架構不相容，不可只回退 DLL 再指向本版 DB。不要未確認就執行 migration Down，也不要混用不同時點的 SQL 和附件；完整還原程序見 [備份與還原](../../docs/BACKUP.md)。keys 保留原位置與保護身分。
 

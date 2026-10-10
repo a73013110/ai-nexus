@@ -9,7 +9,7 @@ public sealed class GoogleEmbeddingClient(RetrievalHttp http, IOptions<Inference
     public string Provider => "google";
     public async Task<EmbeddingBatchResult> EmbedBatchAsync(IReadOnlyList<string> inputs, EmbeddingPurpose purpose, EmbeddingProfile profile, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(inference.Value.GoogleApiKey)) throw new ExternalServiceException(Error.Unavailable("google_api_key_missing"), "尚未設定 Google AI API key。");
+        if (string.IsNullOrWhiteSpace(inference.Value.Providers.Google.ApiKey)) throw new ExternalServiceException(Error.Unavailable("google_api_key_missing"), "尚未設定 Google AI API key。");
         var two = profile.Model.StartsWith("gemini-embedding-2", StringComparison.Ordinal);
         var requests = inputs.Select(text => {
             var config = new Dictionary<string, object?> { ["outputDimensionality"] = profile.Dimensions, ["autoTruncate"] = false };
@@ -18,7 +18,7 @@ public sealed class GoogleEmbeddingClient(RetrievalHttp http, IOptions<Inference
                 text = two && purpose == EmbeddingPurpose.Query ? "task: search result | query: " + text : text
             } } }, embedContentConfig = config };
         }).ToArray();
-        using var json = await http.PostAsync("GoogleAI", $"models/{Uri.EscapeDataString(profile.Model)}:batchEmbedContents", new { requests }, ct, inference.Value.GoogleApiKey);
+        using var json = await http.PostAsync("GoogleAI", $"models/{Uri.EscapeDataString(profile.Model)}:batchEmbedContents", new { requests }, ct, inference.Value.Providers.Google.ApiKey);
         return new(json.RootElement.GetProperty("embeddings").EnumerateArray().Select(x => x.GetProperty("values").EnumerateArray().Select(v => v.GetSingle()).ToArray()).ToArray(),
             json.RootElement.TryGetProperty("usageMetadata", out var usage) && usage.TryGetProperty("promptTokenCount", out var count) ? count.GetInt64() : null);
     }

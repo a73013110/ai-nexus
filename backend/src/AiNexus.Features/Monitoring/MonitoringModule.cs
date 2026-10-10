@@ -3,8 +3,8 @@ using AiNexus.Features.Identity;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Events;
 using AiNexus.Platform.Modules;
-using Microsoft.Extensions.Options;
 using AiNexus.Features.Identity.Sessions;
+using AiNexus.Platform.Configuration;
 
 namespace AiNexus.Features.Monitoring;
 
@@ -17,8 +17,7 @@ public sealed class MonitoringModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
-        services.AddOptions<MonitoringOptions>().BindConfiguration("Monitoring").ValidateOnStart();
-        services.AddSingleton<IValidateOptions<MonitoringOptions>, MonitoringOptionsValidator>();
+        services.AddSettings<MonitoringOptions, MonitoringOptionsValidator>(MonitoringOptions.Section);
         services.AddSingleton<RuntimeTraffic>();
         services.AddDomainEventHandler<UserSignedOut, LeaveSignedOutSession>();
         services.AddSingleton<DependencyCatalog>();
@@ -48,12 +47,6 @@ public static class RuntimeTrafficMiddlewareExtensions
 {
     /// <summary>Outermost: measures every request, including ones the diagnostic and security layers reject.</summary>
     public static IApplicationBuilder UseRuntimeTraffic(this IApplicationBuilder app) => app.UseMiddleware<RuntimeTrafficMiddleware>();
-}
-
-internal sealed class MonitoringOptionsValidator : IValidateOptions<MonitoringOptions>
-{
-    public ValidateOptionsResult Validate(string? name, MonitoringOptions options)
-        => options.Valid() ? ValidateOptionsResult.Success : ValidateOptionsResult.Fail("Invalid monitoring capacity or timing.");
 }
 
 internal sealed class MonitoringFeatures() : FeatureSeed(new PlatformFeature(MonitoringModule.Feature, "即時監控", "/admin/monitoring", 91, AdministratorsOnly: true));

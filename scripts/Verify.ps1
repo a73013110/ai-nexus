@@ -5,7 +5,11 @@ $taskRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $taskPreviousPublishDirectory = $env:NEXUS_E2E_PUBLISH_DIRECTORY
 Push-Location -LiteralPath $taskRoot
 try {
-    & (Join-Path $PSScriptRoot 'Test-Settings.ps1')
+    foreach ($taskScript in Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.ps1') {
+        $taskTokens = $taskErrors = $null
+        [void][Management.Automation.Language.Parser]::ParseFile($taskScript.FullName, [ref]$taskTokens, [ref]$taskErrors)
+        if ($taskErrors.Count) { throw "PowerShell syntax error in $($taskScript.Name)" }
+    }
     & (Join-Path $PSScriptRoot 'Build.ps1') -OutputDirectory 'artifacts/verification'
     dotnet test --solution backend/AiNexus.slnx --no-restore --filter 'Category!=Performance&Category!=Browser' --report-xunit-trx --results-directory artifacts/test-results
     if ($LASTEXITCODE -ne 0) { throw 'Backend tests failed.' }
