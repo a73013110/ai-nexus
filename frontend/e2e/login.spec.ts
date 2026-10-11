@@ -103,7 +103,11 @@ test("login works at 375px and cannot redirect to an external origin", async ({
   await expect(page).toHaveURL(/\/dashboard$/);
 });
 
-for (const destination of ["/dashboard?scope=personal", "/repositories"]) {
+for (const destination of [
+  "/dashboard?scope=personal",
+  "/repositories",
+  "/files",
+]) {
   test(`sign-in preserves the requested ${destination} route without loading chat data`, async ({
     page,
   }) => {
