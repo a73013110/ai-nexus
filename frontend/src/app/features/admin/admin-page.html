@@ -22,9 +22,6 @@
       ><button notice-actions (click)="store.load()">重新載入</button>
     </nx-notice>
   }
-  @if (store.notice()) {
-    <nx-notice tone="info" [message]="store.notice()" />
-  }
   @if (store.catalog()) {
     <nav class="admin-navigation" aria-label="管理分類">
       @for (group of navigationGroups; track group.label) {

@@ -78,3 +78,8 @@ nx-notice {
 .design-empty strong {
   color: var(--ink);
 }
+.design-note {
+  margin: var(--p-space-2) 0 0;
+  color: var(--muted);
+  font-size: var(--text-caption);
+}

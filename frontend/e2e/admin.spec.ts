@@ -7,6 +7,7 @@ import {
   chooseSelect,
   openSettings,
   expectViewportContained,
+  toasts,
 } from "./fixtures";
 import type {
   AdminCatalogDto,
@@ -182,7 +183,9 @@ test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", as
     .click();
   await expect(activate).toBeEnabled();
   await activate.click();
-  await expect(page.getByText("使用中索引已切換。")).toBeVisible();
+  await expect(
+    toasts(page).filter({ hasText: "使用中索引已切換" }),
+  ).toBeVisible();
   await page.getByRole("checkbox", { name: "採購規範", exact: true }).check();
   await page
     .getByRole("textbox", { name: "管理端查詢內容", exact: true })
@@ -198,7 +201,9 @@ test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", as
     .getByRole("dialog", { name: "清除退役向量" })
     .getByRole("button", { name: "清除向量", exact: true })
     .click();
-  await expect(page.getByText("退役向量已清除。")).toBeVisible();
+  await expect(
+    toasts(page).filter({ hasText: "退役向量已清除" }),
+  ).toBeVisible();
   for (const theme of ["light", "dark"] as const) {
     const dialog = await openSettings(page);
     await chooseSelect(page, "主題", theme === "light" ? "淺色" : "深色");

@@ -4,6 +4,7 @@ import { Router, RouterOutlet } from '@angular/router';
 import { bindHotkeys } from '../../shared/browser/hotkeys';
 import { CommandPalette, type Command } from '../../shared/ui/command-palette';
 import { ProductTour } from '../../shared/ui/product-tour';
+import { Toaster } from '../../shared/ui/toaster';
 import { FEATURE_ICONS, groupFeatures } from './feature-groups';
 import { NavigationPreferences } from './navigation-preferences';
 import { SidebarPanel } from './sidebar-panel';
@@ -18,7 +19,7 @@ import { WorkspaceSidebar } from './workspace-sidebar';
  */
 @Component({
   selector: 'nx-workspace-shell',
-  imports: [RouterOutlet, NgTemplateOutlet, WorkspaceSidebar, CommandPalette],
+  imports: [RouterOutlet, NgTemplateOutlet, WorkspaceSidebar, CommandPalette, Toaster],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'workbench' },
   template: `<aside
@@ -31,7 +32,8 @@ import { WorkspaceSidebar } from './workspace-sidebar';
     <div class="workspace-main" [attr.inert]="layout.overlay() ? '' : null">
       <router-outlet />
     </div>
-    <nx-command-palette [commands]="commands()" (selected)="run($event)" />`,
+    <nx-command-palette [commands]="commands()" (selected)="run($event)" />
+    <nx-toaster />`,
 })
 export class WorkspaceShell {
   readonly layout = inject(WorkspaceLayout);

@@ -1,6 +1,7 @@
 import { map } from 'rxjs';
 import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
+import { ToastService } from '../../shared/ui/toast-service';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
@@ -136,7 +137,7 @@ export class ProjectsPage {
       this.detailRead.error(),
   );
   readonly busy = signal(false);
-  readonly notice = signal('');
+  readonly toast = inject(ToastService);
   readonly filter = signal('');
   readonly archived = signal(false);
   readonly visible = computed(() =>
@@ -164,7 +165,6 @@ export class ProjectsPage {
       this.controller?.abort();
       this.busy.set(false);
       this.actionError.set('');
-      this.notice.set('');
     });
     inject(DestroyRef).onDestroy(() => this.controller?.abort());
   }
@@ -215,7 +215,7 @@ export class ProjectsPage {
         );
         if (!valid()) return;
         this.dialog().nativeElement.close();
-        this.notice.set('專案設定已儲存。');
+        this.toast.success('專案設定已儲存');
         this.busy.set(false);
         if (!this.editingId) {
           await this.router.navigate(['/projects', value.resource.id]);
@@ -274,7 +274,10 @@ export class ProjectsPage {
         this.projectsRead.value.update((all) =>
           all?.map((x) => (x.resource.id === value.resource.id ? value : x)),
         );
-        this.notice.set(value.isArchived ? '專案已封存，文件仍可閱讀。' : '專案已還原。');
+        this.toast.success(
+          value.isArchived ? '專案已封存' : '專案已還原',
+          value.isArchived ? '文件仍可閱讀。' : undefined,
+        );
       }
     } catch (e) {
       if (valid()) this.actionError.set(this.scope.message(e));
@@ -326,9 +329,17 @@ export class ProjectsPage {
     this.busy.set(true);
     this.actionError.set('');
     const controller = (this.controller = new AbortController());
+    // One toast follows the batch from upload to done; anything else withdraws it.
+    const progress = 'project-upload';
+    let done = false;
     try {
       for (const file of files) {
-        this.notice.set('正在上傳 ' + file.name);
+        this.toast.show({
+          id: progress,
+          tone: 'info',
+          title: '正在上傳 ' + file.name,
+          duration: 0,
+        });
         const uploaded = await this.workspace.upload(file, controller.signal);
         if (!valid()) return;
         try {
@@ -339,11 +350,17 @@ export class ProjectsPage {
         }
         if (!valid()) return;
       }
-      this.notice.set('文件已上傳，辨識進度可直接開啟文件查看。');
+      this.toast.show({
+        id: progress,
+        title: '文件已上傳',
+        description: '辨識進度可直接開啟文件查看。',
+      });
+      done = true;
       this.refresh();
     } catch (e) {
       if (valid() && !controller.signal.aborted) this.actionError.set(this.scope.message(e));
     } finally {
+      if (!done) this.toast.dismiss(progress);
       if (valid()) this.busy.set(false);
     }
   }

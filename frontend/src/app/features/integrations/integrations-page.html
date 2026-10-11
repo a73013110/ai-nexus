@@ -5,9 +5,6 @@
   @if (error()) {
     <nx-notice tone="danger" [message]="error()" />
   }
-  @if (notice()) {
-    <nx-notice tone="success" [message]="notice()" />
-  }
   @if (loading()) {
     <p role="status">正在載入資料來源…</p>
   } @else {

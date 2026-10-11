@@ -5,6 +5,7 @@ import {
   ApiFixture,
   richAnswer,
   settleEntrance,
+  toasts,
 } from "./fixtures";
 import type { ArtifactDto } from "../src/app/core/api/schema";
 
@@ -115,9 +116,9 @@ test("artifact versions preserve edits, restore older content and export a saved
   await expect(page.getByRole("alert")).not.toContainText("fixture-private");
   await expect(editor).toHaveValue("第二版內容");
   await page.getByRole("button", { name: "儲存新版本" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toContainText(
-    "版本 2 已儲存",
-  );
+  await expect(
+    toasts(page).filter({ hasText: "版本 2 已儲存" }),
+  ).toBeVisible();
   await page.getByRole("combobox", { name: "成果版本" }).click();
   await page.getByRole("option", { name: /^版本 1 / }).click();
   await expect(page.getByText("正在檢視舊版本")).toBeVisible();
@@ -127,9 +128,9 @@ test("artifact versions preserve edits, restore older content and export a saved
   await expect(page.getByRole("table")).toBeVisible();
   await page.getByRole("button", { name: "將此版帶入編輯" }).click();
   await page.getByRole("button", { name: "儲存新版本" }).click();
-  await expect(page.getByRole("main").getByRole("status")).toContainText(
-    "版本 3 已儲存",
-  );
+  await expect(
+    toasts(page).filter({ hasText: "版本 3 已儲存" }),
+  ).toBeVisible();
   expect(versions[2].content).toBe(richAnswer);
   const downloaded = page.waitForEvent("download");
   await page.getByRole("button", { name: "Markdown", exact: true }).click();

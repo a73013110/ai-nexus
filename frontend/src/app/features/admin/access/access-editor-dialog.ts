@@ -219,7 +219,7 @@ export class AccessEditorDialog {
           sortOrder: Number(e.order),
         });
       this.dialog().nativeElement.close();
-      this.store.saved('已儲存。授權變更會在下一次操作生效。');
+      this.store.saved('已儲存', '授權變更會在下一次操作生效。');
     } catch (error) {
       this.editorError.set(safeMessage(error));
     } finally {

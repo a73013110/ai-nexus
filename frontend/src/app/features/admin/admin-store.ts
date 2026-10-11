@@ -4,6 +4,7 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ClientValidationError } from '../../core/errors/safe-errors';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { AdminApi } from './admin-api';
+import { ToastService } from '../../shared/ui/toast-service';
 
 /** The catalog and user list shared by the management tabs and editors of one admin page. */
 @Injectable()
@@ -36,7 +37,7 @@ export class AdminStore {
   readonly error = computed(
     () => this.actionError() || this.catalogRead.error() || this.usersRead.error(),
   );
-  readonly notice = signal('');
+  readonly toast = inject(ToastService);
 
   load() {
     this.actionError.set('');
@@ -62,8 +63,8 @@ export class AdminStore {
     else this.offset.set(offset);
   }
   /** Authorization changed: read the catalog, the shown users and this account's grants again. */
-  saved(notice: string) {
-    this.notice.set(notice);
+  saved(title: string, description?: string) {
+    this.toast.success(title, description);
     this.catalogRead.reload();
     this.usersRead.reload();
     void this.session.load(true);

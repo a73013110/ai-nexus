@@ -1,5 +1,6 @@
 import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
+import { ToastService } from '../../shared/ui/toast-service';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
 import { ViewSwitch } from '../../shared/ui/view-switch';
@@ -15,7 +16,7 @@ import {
   untracked,
   linkedSignal,
 } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import type {
   CollectionDto,
   RepositoryDto,
@@ -52,7 +53,6 @@ import { RepositoriesApi } from './repositories-api';
     Select,
     SearchField,
     MarkdownView,
-    RouterLink,
     RepositoryReviewPanel,
   ],
   providers: [ViewScope],
@@ -177,11 +177,10 @@ export class RepositoriesPage {
       this.fileRead.error() ||
       this.issuesRead.error(),
   );
-  readonly notice = signal('');
+  readonly toast = inject(ToastService);
   readonly token = signal('');
   readonly reconnect = signal(false);
   readonly query = signal('');
-  readonly importedId = signal('');
   readonly collection = signal('');
   readonly repos = computed(
     () =>
@@ -257,7 +256,6 @@ export class RepositoriesPage {
     void this.router.navigate(['/repositories'], { replaceUrl: true });
     this.selected.set(repo);
     this.tab.set('files');
-    this.importedId.set('');
     this.folder('');
   }
   folder(path: string) {
@@ -277,7 +275,6 @@ export class RepositoriesPage {
     const tree = this.tree();
     if (!tree) return;
     this.actionError.set('');
-    this.importedId.set('');
     this.opened.set({ repository: tree.repository, commit: tree.commit, path });
   }
   showIssues() {
@@ -289,13 +286,18 @@ export class RepositoriesPage {
     const valid = this.scope.guard();
     this.busy.set(true);
     this.actionError.set('');
-    this.notice.set('');
     try {
       if (action === 'import') {
         const document = await this.api.import(file, this.collection());
         if (valid()) {
-          this.importedId.set(document.id);
-          this.notice.set('固定版本已匯入知識庫，正在建立索引。');
+          this.toast.show({
+            title: '固定版本已匯入知識庫',
+            description: '正在建立索引。',
+            action: {
+              label: '檢視文件',
+              run: () => void this.router.navigate(['/reader', document.id]),
+            },
+          });
         }
       } else {
         const fresh = await this.api.file(file.repository, file.commit, file.path);

@@ -108,7 +108,7 @@ export class AdminUsersTab {
       try {
         await this.api.deleteUser(user.id);
         this.store.readUsers(0);
-        this.store.notice.set('已刪除登入身分，歷史資料已保留。');
+        this.store.toast.success('已刪除登入身分', '歷史資料已保留。');
       } catch (error) {
         this.store.actionError.set(safeMessage(error));
       }

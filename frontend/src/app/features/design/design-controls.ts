@@ -4,9 +4,10 @@ import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
 import { Checkbox } from '../../shared/ui/checkbox';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { Icon } from '../../shared/ui/icon';
-import { Notice } from '../../shared/ui/notice';
+import { NameDialog } from '../../shared/ui/name-dialog';
 import { Select, type SelectOption } from '../../shared/ui/select';
 import { Tabs } from '../../shared/ui/tabs';
+import { ToastService } from '../../shared/ui/toast-service';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { DesignExample, DesignSection } from './design-section';
 import { DesignSamples } from './design-samples';
@@ -21,7 +22,7 @@ import { DesignSamples } from './design-samples';
     DesignExample,
     DesignSection,
     Icon,
-    Notice,
+    NameDialog,
     Select,
     Tabs,
     ViewSwitch,
@@ -38,10 +39,7 @@ import { DesignSamples } from './design-samples';
       align-items: center;
       gap: var(--p-space-2);
     }
-    nx-notice {
-      flex-basis: 100%;
-      margin: 0;
-    }
+
     nx-view-switch {
       margin-bottom: 0;
     }
@@ -65,31 +63,39 @@ import { DesignSamples } from './design-samples';
       id="design-buttons"
       title="按鈕"
       api=".primary-button · .secondary-button · .quiet-button · .icon-button"
-      description="一個區域只有一個主要操作；危險操作一律經過確認。"
+      description="一個區域只有一個主要操作；危險操作一律經過確認。按下時微縮，完成回饋以右下角通知呈現。"
     >
       <div class="design-buttons">
-        <button type="button" class="primary-button" (click)="samples.notice.set('主要操作示範。')">
+        <button type="button" class="primary-button" (click)="toast.success('主要操作示範')">
           主要操作</button
-        ><button
-          type="button"
-          class="secondary-button"
-          (click)="samples.notice.set('次要操作示範。')"
-        >
+        ><button type="button" class="secondary-button" (click)="toast.success('次要操作示範')">
           次要操作</button
-        ><button type="button" class="quiet-button" (click)="samples.notice.set('安靜操作示範。')">
+        ><button type="button" class="quiet-button" (click)="toast.success('安靜操作示範')">
           <nx-icon name="edit" />安靜操作</button
         ><button
           type="button"
           class="icon-button"
           aria-label="圖示操作示範"
           title="圖示操作"
-          (click)="samples.notice.set('圖示操作示範。')"
+          (click)="toast.success('圖示操作示範')"
         >
           <nx-icon name="settings" /></button
         ><button type="button" class="danger-button" (click)="reset()">重設示範</button
         ><button type="button" class="secondary-button" disabled>停用操作</button>
       </div>
-      <nx-notice tone="info" [message]="samples.notice() || '選取操作後，回饋會出現在這裡。'" />
+    </nx-design-section>
+    <nx-design-section
+      id="design-dialogs"
+      title="對話框"
+      api=".platform-dialog · ConfirmDialog · NameDialog"
+      description="同一套外框：細線、分層陰影、12px 圓角；開啟時由下方彈入，關閉時沿原路退場。初始焦點在取消，Esc 視為取消並還原焦點。"
+    >
+      <div class="design-buttons">
+        <button type="button" class="secondary-button" (click)="confirmPlain()">一般確認</button
+        ><button type="button" class="secondary-button" (click)="rename()">
+          <nx-icon name="edit" />命名對話框
+        </button>
+      </div>
     </nx-design-section>
     <nx-design-section
       id="design-menus"
@@ -184,12 +190,15 @@ import { DesignSamples } from './design-samples';
       />
       <nx-checkbox label="目前無法調整" description="停用狀態" [disabled]="true" />
     </nx-design-section>
-    <nx-confirm-dialog />`,
+    <nx-confirm-dialog />
+    <nx-name-dialog />`,
 })
 export class DesignControls {
   readonly samples = inject(DesignSamples);
   private readonly scope = inject(ViewScope);
+  readonly toast = inject(ToastService);
   private readonly confirmation = viewChild.required(ConfirmDialog);
+  private readonly naming = viewChild.required(NameDialog);
   readonly checked = signal(true);
   readonly filter = signal('active');
   readonly range = signal('week');
@@ -240,5 +249,26 @@ export class DesignControls {
       guard()
     )
       this.samples.restore();
+  }
+  async confirmPlain() {
+    const guard = this.scope.guard();
+    const yes = await this.confirmation().ask({
+      title: '套用示範版面？',
+      message: '這只會在本頁顯示通知，不會修改任何資料。',
+      confirm: '套用',
+    });
+    if (yes && guard()) this.toast.success('已套用示範版面');
+  }
+  rename() {
+    this.naming().open({
+      title: '重新命名示範',
+      value: this.samples.title(),
+      description: '儲存後會更新「直接編輯」範例的標題。',
+      save: async (name) => {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        this.samples.title.set(name);
+        this.toast.success('名稱已更新', name);
+      },
+    });
   }
 }

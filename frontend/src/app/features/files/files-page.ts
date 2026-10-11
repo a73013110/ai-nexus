@@ -1,4 +1,5 @@
 import { Notice } from '../../shared/ui/notice';
+import { ToastService } from '../../shared/ui/toast-service';
 import { Card } from '../../shared/ui/card';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { FilterPanel } from '../../shared/ui/filter-panel';
@@ -76,7 +77,7 @@ export class FilesPage {
   readonly error = computed(
     () => this.actionError() || this.policyRead.error() || this.store.error(),
   );
-  readonly notice = signal('');
+  readonly toast = inject(ToastService);
   readonly bytes = formatBytes;
   readonly accept = computed(() => this.policy()?.extensions.join(',') || '');
   readonly kinds = [
@@ -123,7 +124,6 @@ export class FilesPage {
     this.controller = new AbortController();
     this.uploading.set(true);
     this.actionError.set('');
-    this.notice.set('');
     let saved = 0;
     try {
       for (const file of candidates) {
@@ -135,7 +135,7 @@ export class FilesPage {
         saved++;
       }
       if (valid())
-        this.notice.set(`${saved} 份檔案已保存。可預覽、再次加入對話，或指定加入知識庫。`);
+        this.toast.success(`${saved} 份檔案已保存`, '可預覽、再次加入對話，或指定加入知識庫。');
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
@@ -164,7 +164,7 @@ export class FilesPage {
     try {
       await this.api.remove(item.file.id);
       if (valid()) {
-        this.notice.set('檔案已刪除。');
+        this.toast.success('檔案已刪除');
         if (this.store.items().length === 1 && this.store.offset())
           this.store.offset.update((value) => Math.max(0, value - 40));
         this.store.load();
@@ -186,14 +186,14 @@ export class FilesPage {
       save: async (name) => {
         await this.api.rename(item.file.id, name, item.file.fileName);
         if (valid()) {
-          this.notice.set('檔案名稱已更新。');
+          this.toast.success('檔案名稱已更新');
           this.store.load();
         }
       },
     });
   }
   added() {
-    this.notice.set('已加入知識庫。文字辨識與索引會在背景處理。');
+    this.toast.success('已加入知識庫', '文字辨識與索引會在背景處理。');
     this.store.load();
   }
 }

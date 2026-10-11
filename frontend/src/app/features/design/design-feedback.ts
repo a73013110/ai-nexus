@@ -11,6 +11,8 @@ import { IslandService, type IslandItem } from '../../shared/ui/island-service';
 import { Notice } from '../../shared/ui/notice';
 import { Select } from '../../shared/ui/select';
 import { StatusBadge } from '../../shared/ui/status-badge';
+import { ToastService } from '../../shared/ui/toast-service';
+import { ViewScope } from '../../shared/browser/view-scope';
 import { JobProgress } from '../tasks/job-progress';
 import { DesignExample, DesignSection } from './design-section';
 import { DesignSamples, jobStates } from './design-samples';
@@ -41,6 +43,9 @@ type IslandSample = 'live' | 'warning' | 'info';
 })
 export class DesignFeedback {
   readonly samples = inject(DesignSamples);
+  readonly toast = inject(ToastService);
+  private readonly scope = inject(ViewScope);
+  private burst = 0;
   readonly states = jobStates;
   readonly generation = computed(() => generationStatus(this.samples.demo().status, false));
   /** The island shows whatever is registered while this page is open, so only local samples. */
@@ -80,6 +85,37 @@ export class DesignFeedback {
   ];
   constructor() {
     inject(IslandService).register(this.islandItems);
+  }
+  toastSuccess() {
+    this.toast.success('變更已儲存', '會套用於此帳號的其他裝置。');
+  }
+  toastUndo() {
+    this.toast.show({
+      tone: 'info',
+      title: '已封存 3 則示範對話',
+      action: { label: '復原', run: () => this.toast.success('已復原封存') },
+    });
+  }
+  /** One id carries the toast from in-progress to done, so it updates in place. */
+  toastUpload() {
+    const id = 'design-upload';
+    this.toast.show({ id, tone: 'info', title: '正在上傳 季度報告.pdf', duration: 0 });
+    this.scope.later(
+      () => this.toast.show({ id, title: '文件已上傳', description: '文字辨識會在背景繼續處理。' }),
+      1600,
+      id,
+    );
+  }
+  toastWarning() {
+    this.toast.show({
+      tone: 'warning',
+      title: '部分檔案未加入',
+      description: '2 份檔案超過 20 MB 上限，其餘已加入。',
+    });
+  }
+  toastBurst() {
+    for (const [i, title] of ['來源已移除', '已安排重新索引', '知識庫已儲存'].entries())
+      this.scope.later(() => this.toast.success(title), i * 180, `design-burst-${++this.burst}`);
   }
   hasIsland(kind: IslandSample) {
     return this.islandItems().some((item) => item.id === kind);

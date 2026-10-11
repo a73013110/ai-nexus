@@ -1,6 +1,6 @@
 # 設計系統
 
-結論：介面以閱讀長對話為主，中性色表面、細線分隔與文字層級；顏色只用於選取、焦點與真實狀態。動效交代「東西從哪來、變成什麼」與真的在進行的工作，可以有彈性，但不擋操作與閱讀。主題、字級、尺寸與動效集中在 [`frontend/src/styles/tokens.scss`](../../frontend/src/styles/tokens.scss)，元件不寫 hex、不重複字級；實際值與元件清單以程式碼和 `/design` 頁為準。
+結論：介面以閱讀長對話為主，中性色表面、細線分隔與文字層級；顏色只用於選取、焦點與真實狀態。主題、字級、尺寸與動效集中在 [`frontend/src/styles/tokens.scss`](../../frontend/src/styles/tokens.scss)，元件不寫 hex、不重複字級；實際值與元件清單以程式碼和 `/design` 頁為準。
 
 ## 三層 token
 
@@ -30,19 +30,14 @@
 - 緊湊 scope（`.ui-density-compact`、`FeaturePage` 預設）要同時設定 tokens 與實際字級／行高；共用控制項用 `--density-text-size`／`--density-caption-size`。
 - 操作面積：桌面 34px，觸控與窄螢幕 44px，見 [共用介面模式](ui-patterns.md#手機)。
 
+## 外框與密度
+
+- 參考 [Vercel Geist](https://vercel.com/geist/introduction) 與 Linear 的緊湊介面：1px 細線＋分層陰影（`--shadow` 貼合、`--shadow-floating` 浮層），控制項圓角 6px（`--p-radius-md`）、浮層與對話框 12px（`--dialog-radius`），遮罩不模糊。
+- 主要／危險按鈕 hover 往 `--ink` 混色加深（深色主題變亮），不降透明度；次要按鈕有 `--surface` 底。
+
 ## 動效
 
-- Tokens：時長 `--motion-fast`／`--motion`／`--motion-panel`／`--motion-morph`；easing `--ease`、`--ease-exit`、`--ease-spring`（`linear()` 彈簧，不支援時退回 cubic-bezier）。keyframes 集中在 `frontend/src/styles/motion.scss`（元件內宣告的會被改名，e2e 也以名稱檢查）。
-- 可以用：形狀 morph、共享元素過渡、進場位移／縮放與彈簧回彈。不用：假百分比、整頁持續動畫、要等動畫結束才能操作。
-- 漸進增強（使用者以新版 Edge／Chrome 為主）：View Transitions、`linear()`、`interpolate-size`（`:root` 支援時開啟）只是加分，不支援時直接切換。
-- 共享元素在 `core/layout/view-morph.ts`：
-  - 換頁時頁面交叉淡化，登入標誌移到側欄品牌；側欄顯示即時狀態，導覽 pill 用自己的 CSS 滑動。
-  - 元件沿用的路由（`/chat`↔`/chat/:id`）不跑路由過渡，改用 `ViewMorph.run()` 包住狀態變更：歷史列標題→標題列、第一則提問讓 composer 從置中移到底部。
-  - 名稱只在 `:root[data-morphing]` 期間生效，平時不產生 stacking context；一次性配對用 `ViewMorph.arm()`＋目標的 `data-morph`。
-- 靈動島（`shared/ui/island.ts`）：composer 的狀態與警告註冊到 `IslandService`，依 priority 排序。一則是 pill、多則分出泡泡（split）、點開展開全部（expanded）。會擋住送出、改變送出內容或涉及隱私的提示設 `urgent`，出現時自動展開，收合後維持 pill 直到它消失再出現。跟隨頁面主題，狀態由 tone 色與邊框表示；寬高由 ResizeObserver 量測後用彈簧過渡，不依賴 `interpolate-size`。
-- 生成訊號、等待指示與串流游標只依伺服器 run 狀態與是否收到內容顯示（`core/api/generation-status.ts`）；思考強度不是推理階段，不宣稱「正在推理」，工作結束即停止。
-- 減少動態有兩個來源：系統 `prefers-reduced-motion` 與個人設定（`:root[data-reduced-motion='true']`），共用 `motion.scss` 的 mixin：animation 直接到終點、移除 transition（版面屬性同一幀到位）、View Transitions 略過。元件內的 loop 另以 `@media (prefers-reduced-motion)` 加 `:host-context([data-reduced-motion='true'])` 停止；顏色與文字狀態保留。
-- 登入：傅立葉標誌每個分頁只自動播一次（`sessionStorage`），可跳過／重播、背景分頁暫停，結束交給 `BrandWordmark`，文案與表單不等動畫；`LoginSubmit` 依 idle→loading→success morph，成功停約 0.4 秒再換頁（減少動態不停留）。
+規則、動態島、通知 toast 與對話框進出場見 [動效](motion.md)。
 
 ## 圖示
 

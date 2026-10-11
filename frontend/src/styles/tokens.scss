@@ -26,7 +26,12 @@
   --code-keyword: var(--p-code-keyword);
   --code-string: var(--p-code-string);
   --code-number: var(--p-code-number);
-  --shadow: 0 10px 32px rgb(38 48 38 / 8%);
+  // Layered like Geist: a tight contact shadow plus a soft ambient one.
+  --shadow: 0 1px 2px rgb(24 32 36 / 5%), 0 4px 12px -2px rgb(24 32 36 / 7%);
+  --shadow-floating:
+    0 0 0 1px rgb(24 32 36 / 3%), 0 4px 8px -2px rgb(24 32 36 / 6%),
+    0 16px 32px -8px rgb(24 32 36 / 16%);
+  --scrim: rgb(16 24 32 / 36%);
   // Selected sidebar items and filters: a --surface chip with this ring, unlike the flat --hover.
   --selected-ring: inset 0 0 0 1px var(--line), 0 1px 2px rgb(38 48 38 / 10%);
   --scrollbar-thumb: color-mix(in srgb, var(--muted) 82%, var(--canvas));
@@ -92,15 +97,13 @@
   --p-space-10: 2.5rem;
   --p-space-12: 3rem;
   --p-radius-sm: 0.25rem;
-  --p-radius-md: 0.5rem;
+  --p-radius-md: 0.375rem;
   --p-radius-lg: 0.75rem;
   --p-radius-pill: 999px;
 
   @include light-theme;
   --danger-surface: var(--p-red-700);
   --danger-text: var(--p-white);
-  --scrim: rgb(16 28 40 / 50%);
-  --shadow-floating: 0 16px 70px rgb(0 0 0 / 20%);
   --font-ui: 'Segoe UI', 'Microsoft JhengHei UI', 'Microsoft JhengHei', system-ui, sans-serif;
   --font-code: 'Cascadia Code', ui-monospace, monospace;
   --text-caption: var(--p-font-sm);
@@ -177,9 +180,9 @@
   --command-width: 38rem;
   --scrollbar-size: 0.75rem;
   --scrollbar-inset: 0.1875rem;
-  --dialog-radius: 1.125rem;
+  --dialog-radius: var(--p-radius-lg);
   --dialog-inset: var(--p-space-2);
-  --dialog-padding: var(--p-space-6);
+  --dialog-padding: var(--p-space-5);
   --attachment-thumb: 3rem;
   --attachment-list-max: min(11rem, 22dvh);
 }
@@ -243,7 +246,10 @@
   --code-keyword: var(--p-code-keyword-dark);
   --code-string: var(--p-code-string-dark);
   --code-number: var(--p-code-number-dark);
-  --shadow: 0 10px 32px rgb(0 0 0 / 20%);
+  --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 4px 12px -2px rgb(0 0 0 / 30%);
+  --shadow-floating:
+    0 0 0 1px rgb(0 0 0 / 20%), 0 4px 8px -2px rgb(0 0 0 / 30%), 0 16px 40px -8px rgb(0 0 0 / 55%);
+  --scrim: rgb(0 0 0 / 55%);
   --selected-ring: inset 0 0 0 1px var(--line);
   --scrollbar-thumb: color-mix(in srgb, var(--muted) 82%, var(--canvas));
   --scrollbar-thumb-hover: var(--accent);

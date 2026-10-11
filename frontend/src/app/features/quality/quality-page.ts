@@ -1,6 +1,7 @@
 import { map } from 'rxjs';
 import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
+import { ToastService } from '../../shared/ui/toast-service';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
 import { ViewSwitch } from '../../shared/ui/view-switch';
@@ -153,7 +154,7 @@ export class QualityPage {
       this.runsRead.error() ||
       this.detailRead.error(),
   );
-  readonly notice = signal('');
+  readonly toast = inject(ToastService);
   readonly filter = signal('');
   readonly visible = computed(() =>
     this.sets().filter((x) => x.resource.name.toLowerCase().includes(this.filter().toLowerCase())),
@@ -405,7 +406,7 @@ export class QualityPage {
           ...(x ?? []).filter((y) => y.resource.id !== value.resource.id),
         ]);
         await this.router.navigate(['/quality', value.resource.id]);
-        this.notice.set('題庫已儲存。');
+        this.toast.success('題庫已儲存');
       } else if (this.form() === 'run' && current) {
         const run = await this.api.run(current.resource.id, this.variants());
         if (!valid()) return;
@@ -424,7 +425,7 @@ export class QualityPage {
         if (!valid()) return;
         this.dialog().nativeElement.close();
         this.selectRun(target.run);
-        this.notice.set('人工評分已儲存。');
+        this.toast.success('人工評分已儲存');
       }
     } catch (e) {
       if (valid()) this.actionError.set(this.scope.message(e));

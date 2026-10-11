@@ -24,8 +24,8 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
-// The shell's command palette renders in the top layer and takes no grid cell.
-.workbench > nx-command-palette {
+// The shell's command palette and toaster render in the top layer and take no grid cell.
+.workbench > :is(nx-command-palette, nx-toaster) {
   position: absolute;
 }
 // The routed page and FeaturePage fill the main cell; their first in-flow child scrolls itself.

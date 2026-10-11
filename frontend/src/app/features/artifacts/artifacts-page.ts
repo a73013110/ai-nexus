@@ -1,6 +1,7 @@
 import { map } from 'rxjs';
 import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
+import { ToastService } from '../../shared/ui/toast-service';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
 import { SearchField } from '../../shared/ui/search-field';
@@ -104,7 +105,7 @@ export class ArtifactsPage {
       this.documentRead.error() ||
       this.revisionsRead.error(),
   );
-  readonly notice = signal('');
+  readonly toast = inject(ToastService);
   readonly filter = signal('');
   // Editing state starts over whenever another document or version is loaded or saved.
   readonly mode = linkedSignal(() => {
@@ -172,7 +173,6 @@ export class ArtifactsPage {
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe(() => {
       ++this.version;
       this.actionError.set('');
-      this.notice.set('');
     });
     const unload = (event: BeforeUnloadEvent) => {
       if (this.dirty()) event.preventDefault();
@@ -198,7 +198,7 @@ export class ArtifactsPage {
       const priorMode = this.mode();
       this.document.set(value);
       this.mode.set(priorMode);
-      this.notice.set(`版本 ${value.version} 已儲存。`);
+      this.toast.success(`版本 ${value.version} 已儲存`);
       this.revisionsRead.reload();
       this.listRead.reload();
     } catch (error) {
@@ -226,7 +226,7 @@ export class ArtifactsPage {
   restore() {
     this.restoring.set(true);
     this.mode.set('edit');
-    this.notice.set('舊版本內容已帶入編輯；儲存後會建立新版本。');
+    this.toast.info('已帶入舊版本內容', '儲存後會建立新版本。');
   }
   async discard() {
     if (!(await this.canLeave())) return;
@@ -284,7 +284,7 @@ export class ArtifactsPage {
         blob = await response.blob();
       if (valid()) {
         downloadBlob(blob, doc.resource.name + '-v' + doc.version, format);
-        this.notice.set(`已匯出已儲存的版本 ${doc.version}。`);
+        this.toast.success(`已匯出版本 ${doc.version}`);
       }
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));

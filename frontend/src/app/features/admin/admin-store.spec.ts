@@ -82,11 +82,11 @@ describe('admin store', () => {
     const { store, api, session, settle } = setup();
     await settle();
     const reads = api.users.mock.calls.length;
-    store.saved('已儲存。');
+    store.saved('已儲存');
     await settle();
     expect(api.users.mock.calls.length).toBe(reads + 1);
     expect(api.catalog).toHaveBeenCalledTimes(2);
     expect(session.load).toHaveBeenCalledWith(true);
-    expect(store.notice()).toBe('已儲存。');
+    expect(store.toast.toasts()[0]).toMatchObject({ tone: 'success', title: '已儲存' });
   });
 });

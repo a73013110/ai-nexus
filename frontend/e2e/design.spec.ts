@@ -1,5 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
-import { ApiFixture, expectCompactWorkspace, settleEntrance } from "./fixtures";
+import {
+  ApiFixture,
+  expectCompactWorkspace,
+  settleEntrance,
+  toasts,
+} from "./fixtures";
 
 const features = [
   { id: "projects", name: "專案", route: "/projects" },
@@ -231,12 +236,12 @@ test("theme previews have readable contrast, full navigation and usable narrow l
   await index.getByRole("link", { name: "間距與圓角", exact: true }).click();
   await page.evaluate(() => new Promise(requestAnimationFrame));
   await expect(index.locator('[aria-current="true"]')).toHaveText("間距與圓角");
-  await index.getByRole("link", { name: "靈動島", exact: true }).click();
-  await expect(index.getByRole("link", { name: "靈動島", exact: true })).toHaveAttribute(
+  await index.getByRole("link", { name: "動態島", exact: true }).click();
+  await expect(index.getByRole("link", { name: "動態島", exact: true })).toHaveAttribute(
     "aria-current",
     "true",
   );
-  await expect(page.getByRole("heading", { name: "靈動島", exact: true })).toBeFocused();
+  await expect(page.getByRole("heading", { name: "動態島", exact: true })).toBeFocused();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator(".feature-main").evaluate((el) => (el.scrollTop = 0));
   await settleEntrance(page);
@@ -283,4 +288,61 @@ test("island follows the preview theme instead of a fixed dark zone", async ({
   expect(await lightness()).toBeGreaterThan(200);
   await page.getByRole("button", { name: "深色", exact: true }).click();
   await expect.poll(lightness).toBeLessThan(80);
+});
+
+test("toasts stack, fan out, update in place and leave by keyboard or swipe", async ({
+  page,
+}) => {
+  await gallery(page);
+  const stack = toasts(page);
+  const gap = async (a: string, b: string) =>
+    (await stack.filter({ hasText: b }).boundingBox())!.y -
+    (await stack.filter({ hasText: a }).boundingBox())!.y;
+  await page.getByRole("button", { name: "連續三則", exact: true }).click();
+  await expect(stack).toHaveCount(3);
+  await expect(stack.first()).toContainText("知識庫已儲存");
+  // Collapsed, the older toast peeks above the front one; hovering fans them apart.
+  await expect.poll(() => gap("已安排重新索引", "知識庫已儲存")).toBeLessThan(20);
+  await stack.first().hover();
+  await expect.poll(() => gap("已安排重新索引", "知識庫已儲存")).toBeGreaterThan(30);
+  await stack
+    .first()
+    .getByRole("button", { name: "關閉通知", exact: true })
+    .focus();
+  await page.keyboard.press("Escape");
+  await expect(stack.filter({ hasText: "知識庫已儲存" })).toHaveCount(0);
+  await expect(
+    stack
+      .filter({ hasText: "已安排重新索引" })
+      .getByRole("button", { name: "關閉通知", exact: true }),
+  ).toBeFocused();
+  await page.getByRole("button", { name: "全部清除", exact: true }).click();
+  await expect(stack).toHaveCount(0);
+
+  await page.getByRole("button", { name: "上傳到完成", exact: true }).click();
+  const upload = stack.filter({ hasText: /上傳/ });
+  await expect(upload).toContainText("正在上傳");
+  await expect(upload).toContainText("文件已上傳");
+  await expect(upload).toHaveCount(1);
+  await expect(page.locator("nx-toaster [aria-live='polite']")).toContainText(
+    "文件已上傳",
+  );
+  await page.mouse.move(0, 0);
+  const box = (await upload.boundingBox())!;
+  await page.mouse.move(box.x + 24, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 160, box.y + box.height / 2, { steps: 6 });
+  await page.mouse.up();
+  await expect(upload).toHaveCount(0);
+
+  // A toast raised while a modal is open stays above it.
+  await page.getByRole("button", { name: "命名對話框", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "重新命名示範" });
+  await dialog.getByRole("textbox").fill("新的示範名稱");
+  await dialog.getByRole("button", { name: "儲存名稱", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(stack.filter({ hasText: "名稱已更新" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "新的示範名稱", exact: true }),
+  ).toBeVisible();
 });
