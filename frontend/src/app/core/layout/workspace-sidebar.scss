@@ -123,7 +123,7 @@ nx-workspace-brand {
     box-shadow: var(--shadow);
     visibility: hidden;
     transform: translateX(-100%);
-    // Visibility switches on at the start of the slide in and off at the end of the slide out.
+    // Visibility switches off at the end of the slide out.
     transition:
       transform var(--motion-panel) var(--ease),
       visibility var(--motion-panel);
@@ -131,6 +131,9 @@ nx-workspace-brand {
   :host(.is-open) {
     visibility: visible;
     transform: translateX(0);
+    // Opening shows the drawer at once: a transitioned visibility is still hidden on its first
+    // frame, where moving focus into the drawer would silently fail.
+    transition: transform var(--motion-panel) var(--ease);
   }
   .workspace-backdrop {
     display: block;
@@ -165,6 +168,7 @@ nx-workspace-brand {
 }
 @media (prefers-reduced-motion: reduce) {
   :host,
+  :host(.is-open),
   .workspace-backdrop {
     transition: none;
   }
