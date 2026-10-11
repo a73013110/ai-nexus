@@ -26,15 +26,25 @@ export function positionPopover(
   );
 }
 
-/** Opens to the right of a rail trigger, bottom-aligned with it, for menus on the icon rail. */
-export function positionBesidePopover(trigger: HTMLElement, panel: HTMLElement, width = 240) {
+/**
+ * Opens to the right of a rail trigger, bottom-aligned with it, for menus on the icon rail.
+ * `edge` is the x the panel clears, such as the rail's right edge; the trigger's by default.
+ */
+export function positionBesidePopover(
+  trigger: HTMLElement,
+  panel: HTMLElement,
+  width = 240,
+  maximumHeight = Infinity,
+  edge?: number,
+) {
   const anchor = trigger.getBoundingClientRect();
-  const size = Math.min(width, innerWidth - anchor.right - 20);
+  const right = edge ?? anchor.right;
+  const size = Math.min(width, innerWidth - right - 20);
   panel.style.width = `${size}px`;
-  panel.style.maxHeight = `${Math.max(80, innerHeight - 24)}px`;
+  panel.style.maxHeight = `${Math.max(80, Math.min(maximumHeight, innerHeight - 24))}px`;
   const height = panel.getBoundingClientRect().height;
   const top = Math.max(12, Math.min(anchor.bottom - height, innerHeight - height - 12));
-  panel.style.left = `${anchor.right + 8}px`;
+  panel.style.left = `${right + 8}px`;
   panel.style.top = `${top}px`;
   setPopoverOrigin(panel, 'right', 0, anchor.top + anchor.height / 2 - top);
 }

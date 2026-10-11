@@ -61,7 +61,7 @@
 
 ## 鍵盤與焦點
 
-- 浮層（選單、`InfoPopover`、Select）用原生 top layer（不用會被 overflow 裁切的 `<details>`）；依空間翻轉並限制高度，圖示欄的選單往旁邊開。
+- 浮層（選單、`InfoPopover`、Select）用原生 top layer（不用會被 overflow 裁切的 `<details>`）；依空間翻轉並限制高度，圖示欄的浮層往旁邊開。
 - 共用 UI 的 DOM ID 每個實例唯一。關閉浮層、對話框或抽屜後焦點回到觸發元素；Escape 一層一層關閉巢狀浮層。
 - 群組控制（ViewSwitch、Tabs、ActionMenu、表格事件按鈕、長清單列）用方向鍵／Home／End 移動，跳過停用項目。
 - 操作不能只靠 hover 出現；focus、停用、錯誤、斷線都要可辨識。

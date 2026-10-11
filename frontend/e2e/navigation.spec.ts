@@ -271,9 +271,40 @@ test("one header notification icon exposes the full count and workspace expansio
   });
   await expect(notificationDialog).toBeVisible();
   await expect(bell.locator("nx-count-badge")).not.toBeVisible();
+  // Desktop: a non-modal popover hanging from the bell; the page stays usable.
+  await expect(notificationDialog).not.toHaveAttribute("aria-modal", "true");
+  await expect(page.locator(".workspace-main")).not.toHaveAttribute(
+    "inert",
+    "",
+  );
+  const bellBounds = (await bell.boundingBox())!;
+  await expect
+    .poll(async () => (await notificationDialog.boundingBox())!.y)
+    .toBeGreaterThanOrEqual(bellBounds.y + bellBounds.height);
   await page.keyboard.press("Escape");
   await expect(notificationDialog).not.toBeVisible();
   await expect(bell).toBeFocused();
+  // The bell toggles it, and a click elsewhere dismisses it.
+  await bell.click();
+  await expect(notificationDialog).toBeVisible();
+  await bell.click();
+  await expect(notificationDialog).toBeHidden();
+  await bell.click();
+  await expect(notificationDialog).toBeVisible();
+  await page.mouse.click(900, 600);
+  await expect(notificationDialog).toBeHidden();
+  // Over the tablet drawer it is still a popover; Escape closes it before the drawer.
+  await page.setViewportSize({ width: 800, height: 700 });
+  await page.getByRole("button", { name: "展開側欄", exact: true }).click();
+  await bell.click();
+  await expect(notificationDialog).toBeVisible();
+  await expect(notificationDialog).not.toHaveAttribute("aria-modal", "true");
+  await page.keyboard.press("Escape");
+  await expect(notificationDialog).toBeHidden();
+  await expect(sidebar).toBeVisible();
+  await expect(bell).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(sidebar).not.toBeVisible();
   await page.setViewportSize({ width: 375, height: 667 });
   await page.getByRole("button", { name: "展開側欄", exact: true }).click();
   await workspace.click();
@@ -366,6 +397,11 @@ test("icon rail, notification filtering and typed task navigation work across pa
   await page.getByRole("button", { name: "通知", exact: true }).click();
   let dialog = page.getByRole("dialog", { name: "通知", exact: true });
   await expect(dialog.locator(".notification-row")).toHaveCount(2);
+  // On the icon rail the popover opens beside the rail.
+  const rail = (await sidebar.boundingBox())!.width;
+  await expect
+    .poll(async () => (await dialog.boundingBox())!.x)
+    .toBeGreaterThanOrEqual(rail);
   await expect(dialog).toHaveCSS("font-size", "13px");
   await expect(dialog.locator(".notification-title strong").first()).toHaveCSS(
     "font-size",
@@ -398,7 +434,8 @@ test("icon rail, notification filtering and typed task navigation work across pa
     .getByRole("button", { name: "標為已讀", exact: true })
     .click();
   await expect(dialog.locator(".notification-row")).toHaveCount(1);
-  await dialog.getByRole("button", { name: "查看內容" }).click();
+  // The whole row opens its target, like 「查看內容」.
+  await dialog.locator(".notification-row p").click();
   await expect(page).toHaveURL(new RegExp(`/tasks\\?job=${job.id}$`));
   await expect(page.locator(".job-card.current")).toContainText(job.label);
   await expect(page.locator(".job-card.current")).toBeFocused();

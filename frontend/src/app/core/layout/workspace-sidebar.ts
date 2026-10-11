@@ -55,7 +55,7 @@ let sequence = 0;
           [attr.aria-describedby]="notificationStatusId"
           [attr.aria-expanded]="notifications.opened()"
           aria-haspopup="dialog"
-          (click)="notifications.open()"
+          (click)="toggleNotifications($event)"
         >
           <span class="icon-badge-anchor">
             <nx-icon name="bell" />
@@ -116,8 +116,19 @@ export class WorkspaceSidebar {
   collapse() {
     this.layout.closeMobile();
   }
+  /** The desktop center is non-modal, so the bell stays reachable and closes it again. */
+  toggleNotifications(event: MouseEvent) {
+    if (this.notifications.opened()) this.notifications.close();
+    else this.notifications.open(event.currentTarget as HTMLElement);
+  }
   key(event: KeyboardEvent) {
-    if (event.defaultPrevented || !this.layout.overlay() || document.querySelector('dialog[open]'))
+    // An open notification popover sits outside the drawer: it owns Escape, and Tab follows the bell.
+    if (
+      event.defaultPrevented ||
+      !this.layout.overlay() ||
+      this.notifications.opened() ||
+      document.querySelector('dialog[open]')
+    )
       return;
     if (event.key === 'Escape') {
       event.preventDefault();

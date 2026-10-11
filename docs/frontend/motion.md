@@ -47,7 +47,7 @@
 
 ## 浮層（popover）
 
-- 選單、下拉、日期、欄位、知識來源、資訊浮層與側欄功能面板都掛 [`popovers.scss`](../../frontend/src/styles/popovers.scss) 的 `.popover-panel`：外框與進出場只寫在這裡，元件樣式只留 padding、尺寸等差異。新增浮層同樣掛這個 class。
+- 選單、下拉、日期、欄位、知識來源、資訊浮層、側欄功能面板與桌面的通知中心都掛 [`popovers.scss`](../../frontend/src/styles/popovers.scss) 的 `.popover-panel`：外框與進出場只寫在這裡，元件樣式只留 padding、尺寸等差異。新增浮層同樣掛這個 class。
 - 進場從觸發點長出：位移 0.25rem＋`scale 0.98`，`--motion`＋`--ease-spring`；退場沿原路 `--ease-exit`，`overlay`、`display` 用 `allow-discrete`。
 - 方向與原點由定位函式（`shared/browser/popover-position.ts` 的 `setPopoverOrigin`）在量測後寫入 `data-side` 與 `transform-origin`。進場因此用 keyframes（`popover-arrive`）而不是 `@starting-style`：後者的起始值在 `showPopover()` 後第一次量測就固定，翻轉來不及生效；keyframes 裡的 `var()` 會重新解析。
 - 退場中已不是 `:popover-open`，Esc 歸屬（`DetailDrawer`）與 light dismiss 不受影響；同時 inert、不接點擊。e2e 關閉後用 `toBeHidden()` 等退場結束。

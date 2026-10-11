@@ -4,6 +4,8 @@
 
 通知中心另有「本次工作階段」tab，列出這個分頁的 toast，不經伺服器、不計入未讀（[規則](../frontend/motion.md#本次工作階段紀錄)）。
 
+通知中心（[`notification-center.ts`](../../frontend/src/app/features/notifications/notification-center.ts)）在 640px 以上是鈴鐺下方的非 modal popover（圖示欄時開在側欄旁），頁面仍可操作；再按鈴鐺、點外部或 Esc 關閉，焦點回到鈴鐺，Tab 從鈴鐺接續進出面板。640px 以下是 modal 底部 sheet。
+
 所有側欄只有 heading 的鈴鐺入口，位於 sidebar-toggle 左側；未讀使用共用 CountBadge 的 info 色與 overlay，0 隱藏，超過 99 顯示 99+。按鈕保留「通知」名稱並描述完整數量，單一 atomic status 播報更新。未讀數來自 API 的全通知匣 `unread`，不從最近 50 筆估算嚴重性；事件的 info／success／error 在通知中心分別使用 info／success／danger 語意色。
 
 ## 公開契約
@@ -31,7 +33,7 @@
 | `share` | `/shared/{id}` | 收件者／寄件者、來源功能、期限、撤銷狀態 |
 | `repository-review` | `/repositories?review={id}` | Review owner、repositories 功能、目前 Gitea 權限 |
 
-`notification-target.ts` 是唯一 URL 轉換邊界，拒絕未知種類／版本及非法 ID。點擊先保存已讀，再關閉通知與手機側欄並跳轉。背景任務與 review 使用共用 `ResourceTarget` 定位與移動鍵盤焦點，僅在指定資源首次出現時執行，輪詢不重設閱讀位置。目標失效由功能頁顯示錯誤，不得回退成其他資源內容。
+`notification-target.ts` 是唯一 URL 轉換邊界，拒絕未知種類／版本及非法 ID。點整列與「查看內容」相同（列內按鈕與選取文字除外）；鍵盤走「查看內容」，「標為已讀」與移除是各自的按鈕。開啟先保存已讀，再關閉通知與手機側欄並跳轉。背景任務與 review 使用共用 `ResourceTarget` 定位與移動鍵盤焦點，僅在指定資源首次出現時執行，輪詢不重設閱讀位置。目標失效由功能頁顯示錯誤，不得回退成其他資源內容。
 
 ## 事件與提交
 

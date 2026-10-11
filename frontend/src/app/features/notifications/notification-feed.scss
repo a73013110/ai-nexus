@@ -34,6 +34,12 @@
 .notification-row.is-unread {
   background: var(--surface-subtle);
 }
+.notification-row.is-actionable {
+  cursor: pointer;
+}
+.notification-row.is-actionable:hover {
+  background: var(--hover);
+}
 .notification-row + .notification-row {
   border-top: 1px solid var(--line);
 }

@@ -123,7 +123,10 @@ export class NotificationStore {
       if (valid()) this.loading.set(false);
     }
   }
-  open() {
+  /** The bell that opened the center; the desktop popover anchors to it and returns focus there. */
+  trigger: HTMLElement | null = null;
+  open(trigger: HTMLElement | null = null) {
+    this.trigger = trigger;
     this.opened.set(true);
     void this.refresh();
   }
