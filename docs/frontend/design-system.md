@@ -13,11 +13,11 @@
 - 新顏色先建立用途（semantic）再選 primitive。換品牌色只改 `--accent`、`--accent-soft`、`--focus`、`--signal` 的兩種主題映射。
 - 全站字級調 font primitives；單一區域密度調 component tokens；元件要讓父層調整時開 custom property，不讓父層覆寫內部。
 - 不用彩色側邊線、漸層背景、發光陰影與透視網格。低層次表面共用 `--surface-subtle`。
-- 「目前所在／已選取」是 `--surface` 加 `--selected-ring` 的凸起 chip，圖示用 `--accent`；hover 只用平的 `--hover`，兩者不能長得一樣。同組換選取時用一個 chip 以 `--ease-spring` 滑動。
+- 選取 chip：「目前所在／已選取」與展開後取代原內容的切換鈕（如「全部功能」）用 `--surface`＋`--selected-ring` 凸起、圖示 `--accent`；hover 只用平的 `--hover`，兩者不能一樣。同組只有一個選取 chip（或底線），換選取以 `--ease-spring` 滑動（`SlidingIndicator`）。
 
 ## 主題
 
-- `[data-theme='light'|'dark']` 重新映射同一組 semantic tokens；`/design` 的局部預覽與固定深色的元件（靈動島）都靠它。
+- `[data-theme='light'|'dark']` 重新映射同一組 semantic tokens；`/design` 的局部預覽靠它。
 - 危險按鈕用 `--danger-surface`／`--danger-text`，與錯誤文字 `--error` 分開。
 - 個人設定只改 semantic／component tokens，不能縮小最小字級與觸控目標。
 - 一般文字對比 WCAG AA 4.5:1，focus 有 2px 可見輪廓；新的文字／背景組合要實測。
@@ -33,17 +33,16 @@
 ## 動效
 
 - Tokens：時長 `--motion-fast`／`--motion`／`--motion-panel`／`--motion-morph`；easing `--ease`、`--ease-exit`、`--ease-spring`（`linear()` 彈簧，不支援時退回 cubic-bezier）。keyframes 集中在 `frontend/src/styles/motion.scss`（元件內宣告的會被改名，e2e 也以名稱檢查）。
-- 可以用：形狀 morph、共享元素過渡、進場位移／縮放與彈簧回彈。不用：假百分比、整頁持續動畫、要等動畫結束才能操作的內容。
-- 漸進增強：使用者以新版 Edge／Chrome 為主，少數 Safari／Firefox。View Transitions、`linear()`、`interpolate-size`（`:root` 在支援時開啟）都只是加分，不支援時直接切換。
+- 可以用：形狀 morph、共享元素過渡、進場位移／縮放與彈簧回彈。不用：假百分比、整頁持續動畫、要等動畫結束才能操作。
+- 漸進增強（使用者以新版 Edge／Chrome 為主）：View Transitions、`linear()`、`interpolate-size`（`:root` 支援時開啟）只是加分，不支援時直接切換。
 - 共享元素在 `core/layout/view-morph.ts`：
   - 換頁時頁面交叉淡化，登入標誌移到側欄品牌；側欄顯示即時狀態，導覽 pill 用自己的 CSS 滑動。
   - 元件沿用的路由（`/chat`↔`/chat/:id`）不跑路由過渡，改用 `ViewMorph.run()` 包住狀態變更：歷史列標題→標題列、第一則提問讓 composer 從置中移到底部。
   - 名稱只在 `:root[data-morphing]` 期間生效，平時不產生 stacking context；一次性配對用 `ViewMorph.arm()`＋目標的 `data-morph`。
-- 靈動島（`shared/ui/island.ts`）：composer 的狀態與警告註冊到 `IslandService`，依 priority 排序。一則是 pill、多則分出泡泡（split）、點開展開全部（expanded）。會擋住送出、改變送出內容或涉及隱私的提示設 `urgent`，出現時自動展開，收合後維持 pill 直到它消失再出現。寬高由 ResizeObserver 量測後用彈簧過渡，因此不依賴 `interpolate-size`。
+- 靈動島（`shared/ui/island.ts`）：composer 的狀態與警告註冊到 `IslandService`，依 priority 排序。一則是 pill、多則分出泡泡（split）、點開展開全部（expanded）。會擋住送出、改變送出內容或涉及隱私的提示設 `urgent`，出現時自動展開，收合後維持 pill 直到它消失再出現。跟隨頁面主題，狀態由 tone 色與邊框表示；寬高由 ResizeObserver 量測後用彈簧過渡，不依賴 `interpolate-size`。
 - 生成訊號、等待指示與串流游標只依伺服器 run 狀態與是否收到內容顯示（`core/api/generation-status.ts`）；思考強度不是推理階段，不宣稱「正在推理」，工作結束即停止。
 - 減少動態有兩個來源：系統 `prefers-reduced-motion` 與個人設定（`:root[data-reduced-motion='true']`），共用 `motion.scss` 的 mixin：animation 直接到終點、移除 transition（版面屬性同一幀到位）、View Transitions 略過。元件內的 loop 另以 `@media (prefers-reduced-motion)` 加 `:host-context([data-reduced-motion='true'])` 停止；顏色與文字狀態保留。
-- 登入頁的傅立葉標誌動畫每個分頁只自動播一次（`sessionStorage`，登出回來直接是靜態標誌），可跳過／重播、背景分頁暫停，結束後交給靜態 SVG（`BrandWordmark`）；介紹文案與表單不等動畫。
-- 登入按鈕（`LoginSubmit`）依 idle→loading→success morph：成功時縮成打勾圓鈕，停約 0.4 秒再換頁；減少動態時不停留。
+- 登入：傅立葉標誌每個分頁只自動播一次（`sessionStorage`），可跳過／重播、背景分頁暫停，結束交給 `BrandWordmark`，文案與表單不等動畫；`LoginSubmit` 依 idle→loading→success morph，成功停約 0.4 秒再換頁（減少動態不停留）。
 
 ## 圖示
 
@@ -70,12 +69,11 @@
 
 ## 元件工作臺 /design
 
-- 管理員從平台管理右上「管理工具」→「介面元件」進入。
-- 組合正式元件與本機範例，提供淺色／深色局部預覽與 semantic tokens 的 JSON 匯出；不改偏好、不呼叫模型、不建立資料。
+- 管理員從平台管理右上「管理工具」→「介面元件」進入；正式元件配本機範例，淺色／深色局部預覽、匯出 semantic tokens，不改偏好、不呼叫模型、不建立資料。
+- 側欄是元件索引（捲動時標示目前區段）；每個元件一個 `DesignSection`（名稱、用途、來源元件、範例舞台），各組分檔於 `frontend/src/app/features/design`。
 - 新共用元件要放範例（含停用、錯誤、選填等狀態）。
 
 ## 改 token 或元件後的檢查
 
-- 跑 `scripts/Verify.ps1 -Browser`（例：`design.spec.ts`、`chat-layout.spec.ts`），並在瀏覽器人工檢視。
-- 人工至少檢查：light／dark 對比、375px 手機與 1280×768 桌面、長回答／長草稿、浮層與捲動、Tab／方向鍵／Esc、確認視窗焦點返回、停用狀態、減少動態。
-- build 成功不等於視覺驗收；自動測試只涵蓋選定的文字／背景組合、控制面積與橫向溢出。
+- 跑 `scripts/Verify.ps1 -Browser`，再人工檢查：light／dark 對比、375px 與 1280×768、長回答／長草稿、浮層與捲動、Tab／方向鍵／Esc、焦點返回、停用狀態、減少動態。
+- 自動測試只涵蓋選定的對比組合、控制面積與橫向溢出，不等於視覺驗收。

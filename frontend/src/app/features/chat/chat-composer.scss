@@ -3,6 +3,8 @@
   scrollbar-gutter: stable both-edges;
   flex: none;
   padding-block: var(--p-space-2) max(var(--p-space-3), env(safe-area-inset-bottom));
+  // A scroll container, so the stable gutter matches the thread above; the block padding leaves
+  // room for the composer's 3px focus ring.
   overflow: hidden;
   background: var(--canvas);
 }
@@ -17,9 +19,12 @@
     border-color var(--motion),
     box-shadow var(--motion);
 }
+// One focus treatment: the border takes the focus colour and a soft ring grows around it.
 .composer:focus-within {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent-soft);
+  border-color: var(--focus);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--focus) 22%, transparent),
+    var(--shadow);
 }
 .composer.is-busy {
   border-color: var(--signal);
@@ -117,10 +122,6 @@
   background: var(--signal);
   vertical-align: 0.1em;
 }
-.composer:has(textarea:focus-visible) {
-  outline: 2px solid var(--focus);
-  outline-offset: 3px;
-}
 .composer-bottom nx-composer-controls {
   min-width: 0;
   flex: 1;
@@ -151,7 +152,7 @@
 :host-context(.chat-starting) {
   scrollbar-gutter: auto;
   margin-block-end: auto;
-  padding-block-start: 0;
+  padding-block-start: var(--p-space-1);
 }
 .chat-start-suggestions {
   display: grid;

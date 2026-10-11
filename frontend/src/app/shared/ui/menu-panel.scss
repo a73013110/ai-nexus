@@ -28,3 +28,25 @@
     background: var(--hover);
   }
 }
+.menu-heading {
+  display: grid;
+  gap: 2px;
+  margin-bottom: var(--p-space-1);
+  padding: var(--p-space-2) var(--control-padding-inline);
+  border-bottom: 1px solid var(--line);
+  line-height: var(--line-ui);
+  strong {
+    font-size: var(--text-label);
+    font-weight: 600;
+  }
+  small {
+    color: var(--secondary);
+    font-size: var(--text-caption);
+  }
+  strong,
+  small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

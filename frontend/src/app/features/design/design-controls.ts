@@ -1,0 +1,244 @@
+import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
+import { ViewScope } from '../../shared/browser/view-scope';
+import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
+import { Checkbox } from '../../shared/ui/checkbox';
+import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
+import { Icon } from '../../shared/ui/icon';
+import { Notice } from '../../shared/ui/notice';
+import { Select, type SelectOption } from '../../shared/ui/select';
+import { Tabs } from '../../shared/ui/tabs';
+import { ViewSwitch } from '../../shared/ui/view-switch';
+import { DesignExample, DesignSection } from './design-section';
+import { DesignSamples } from './design-samples';
+
+/** Buttons, menus, confirmation and every selection control. */
+@Component({
+  selector: 'nx-design-controls',
+  imports: [
+    ActionMenu,
+    Checkbox,
+    ConfirmDialog,
+    DesignExample,
+    DesignSection,
+    Icon,
+    Notice,
+    Select,
+    Tabs,
+    ViewSwitch,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styles: `
+    :host {
+      display: grid;
+      gap: var(--p-space-6);
+    }
+    .design-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--p-space-2);
+    }
+    nx-notice {
+      flex-basis: 100%;
+      margin: 0;
+    }
+    nx-view-switch {
+      margin-bottom: 0;
+    }
+    .design-wide {
+      width: min(100%, 18rem);
+    }
+    .design-tabs {
+      flex-basis: 100%;
+      min-width: 0;
+    }
+    .design-tabs [role='tabpanel'] {
+      padding: var(--p-space-3);
+      color: var(--secondary);
+      font-size: var(--text-caption);
+    }
+    nx-select {
+      width: min(100%, 16rem);
+    }
+  `,
+  template: `<nx-design-section
+      id="design-buttons"
+      title="按鈕"
+      api=".primary-button · .secondary-button · .quiet-button · .icon-button"
+      description="一個區域只有一個主要操作；危險操作一律經過確認。"
+    >
+      <div class="design-buttons">
+        <button type="button" class="primary-button" (click)="samples.notice.set('主要操作示範。')">
+          主要操作</button
+        ><button
+          type="button"
+          class="secondary-button"
+          (click)="samples.notice.set('次要操作示範。')"
+        >
+          次要操作</button
+        ><button type="button" class="quiet-button" (click)="samples.notice.set('安靜操作示範。')">
+          <nx-icon name="edit" />安靜操作</button
+        ><button
+          type="button"
+          class="icon-button"
+          aria-label="圖示操作示範"
+          title="圖示操作"
+          (click)="samples.notice.set('圖示操作示範。')"
+        >
+          <nx-icon name="settings" /></button
+        ><button type="button" class="danger-button" (click)="reset()">重設示範</button
+        ><button type="button" class="secondary-button" disabled>停用操作</button>
+      </div>
+      <nx-notice tone="info" [message]="samples.notice() || '選取操作後，回饋會出現在這裡。'" />
+    </nx-design-section>
+    <nx-design-section
+      id="design-menus"
+      title="選單與下拉"
+      api="ActionMenu · Select"
+      description="浮層在 top layer，跨越捲動區；Tab 移動、方向鍵選取、Enter 套用、Esc 關閉。"
+    >
+      <nx-design-example label="Select">
+        <nx-select
+          label="示範閱讀模式"
+          [value]="samples.selection()"
+          [options]="choices"
+          (valueChange)="samples.selection.set($event)"
+        />
+      </nx-design-example>
+      <nx-design-example label="ActionMenu">
+        <nx-action-menu label="示範更多操作" [items]="actions" (action)="action($event)" />
+      </nx-design-example>
+    </nx-design-section>
+    <nx-design-section
+      id="design-switches"
+      title="切換與頁籤"
+      api="ViewSwitch · Tabs"
+      description="同組只有一個選取 chip，以彈簧滑到新選項；連結 tabpanel 的內容才用 Tabs。"
+    >
+      <nx-design-example label="segment · fill（側欄篩選）">
+        <nx-view-switch
+          class="design-wide"
+          label="示範篩選"
+          appearance="segment"
+          [fill]="true"
+          [options]="filters"
+          [value]="filter()"
+          (valueChange)="filter.set($event)"
+        />
+      </nx-design-example>
+      <nx-design-example label="segment">
+        <nx-view-switch
+          label="示範時間範圍"
+          appearance="segment"
+          [options]="ranges"
+          [value]="range()"
+          (valueChange)="range.set($event)"
+        />
+      </nx-design-example>
+      <nx-design-example label="icon">
+        <nx-view-switch
+          label="示範顯示方式"
+          [iconOnly]="true"
+          [options]="displays"
+          [value]="display()"
+          (valueChange)="display.set($event)"
+        />
+      </nx-design-example>
+      <nx-design-example label="line（頁面檢視）">
+        <nx-view-switch
+          label="示範頁面檢視"
+          [options]="ranges"
+          [value]="range()"
+          (valueChange)="range.set($event)"
+        />
+      </nx-design-example>
+      <div class="design-tabs">
+        <nx-tabs
+          #tabs
+          label="示範頁籤"
+          [items]="tabItems"
+          [value]="tab()"
+          (valueChange)="tab.set($event)"
+        />
+        <div
+          role="tabpanel"
+          tabindex="0"
+          [id]="tabs.panelId(tab())"
+          [attr.aria-labelledby]="tabs.tabId(tab())"
+        >
+          {{ tab() === 'overview' ? '概覽內容：Tabs 連結 tabpanel。' : '屬性內容：方向鍵切換。' }}
+        </div>
+      </div>
+    </nx-design-section>
+    <nx-design-section
+      id="design-checkbox"
+      title="核取方塊"
+      api="Checkbox"
+      description="整列可點選，保留原生鍵盤操作。"
+    >
+      <nx-checkbox
+        label="開啟此項授權"
+        description="整個項目都可點選。"
+        [checked]="checked()"
+        (checkedChange)="checked.set($event)"
+      />
+      <nx-checkbox label="目前無法調整" description="停用狀態" [disabled]="true" />
+    </nx-design-section>
+    <nx-confirm-dialog />`,
+})
+export class DesignControls {
+  readonly samples = inject(DesignSamples);
+  private readonly scope = inject(ViewScope);
+  private readonly confirmation = viewChild.required(ConfirmDialog);
+  readonly checked = signal(true);
+  readonly filter = signal('active');
+  readonly range = signal('week');
+  readonly display = signal('icons');
+  readonly tab = signal('overview');
+  readonly filters = [
+    { value: 'active', label: '近期' },
+    { value: 'favorites', label: '收藏' },
+    { value: 'archived', label: '封存' },
+  ];
+  readonly ranges = [
+    { value: 'day', label: '今天' },
+    { value: 'week', label: '過去 7 天' },
+    { value: 'month', label: '過去 30 天' },
+    { value: 'off', label: '停用', disabled: true },
+  ];
+  readonly displays = [
+    { value: 'icons', label: '圖示顯示', icon: 'apps' },
+    { value: 'list', label: '條列顯示', icon: 'list' },
+  ];
+  readonly tabItems = [
+    { value: 'overview', label: '概覽' },
+    { value: 'properties', label: '屬性' },
+  ];
+  readonly choices: SelectOption[] = [
+    { value: 'standard', label: '標準閱讀', description: '清楚留白，適合一般文件' },
+    { value: 'wide', label: '寬幅閱讀', description: '為表格與程式碼保留空間' },
+    { value: 'unavailable', label: '未開放選項', description: '停用狀態示範', disabled: true },
+  ];
+  readonly actions: MenuAction[] = [
+    { id: 'edit', label: '修改示範標題', icon: 'edit' },
+    { id: 'export', label: '未開放操作', icon: 'download', disabled: true },
+    { id: 'reset', label: '重設示範', icon: 'restore', danger: true },
+  ];
+  action(id: string) {
+    if (id === 'edit') this.samples.editRequest.update((x) => x + 1);
+    if (id === 'reset') void this.reset();
+  }
+  async reset() {
+    const guard = this.scope.guard();
+    if (
+      (await this.confirmation().ask({
+        title: '重設介面示範？',
+        message: '這只會還原此頁的示範標題、選項及進度。',
+        confirm: '重設示範',
+        danger: true,
+      })) &&
+      guard()
+    )
+      this.samples.restore();
+  }
+}

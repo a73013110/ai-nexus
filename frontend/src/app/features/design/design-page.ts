@@ -1,312 +1,195 @@
-import { apiResource } from '../../core/api/api-resource';
-import { Notice } from '../../shared/ui/notice';
-import { Card } from '../../shared/ui/card';
 import {
+  afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
-  computed,
   ElementRef,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { apiResource } from '../../core/api/api-resource';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
-import type { JobDto } from '../../core/api/schema';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { downloadFile } from '../../shared/browser/download';
 import { FeaturePage } from '../../core/layout/feature-page';
+import { SidebarPanelContent } from '../../core/layout/sidebar-panel';
+import { downloadFile } from '../../shared/browser/download';
+import { ViewScope } from '../../shared/browser/view-scope';
 import { Icon } from '../../shared/ui/icon';
-import { Select, type SelectOption } from '../../shared/ui/select';
-import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
-import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
-import { InlineTitle } from '../../shared/ui/inline-title';
-import { JobProgress } from '../tasks/job-progress';
-import { MarkdownView } from '../../shared/markdown/markdown-view';
-import { Checkbox } from '../../shared/ui/checkbox';
-import { SearchField } from '../../shared/ui/search-field';
-import { GenerationIndicator } from '../../shared/ui/generation-indicator';
-import { InferenceSignal } from '../../shared/ui/inference-signal';
-import { CountBadge, type BadgeTone } from '../../shared/ui/count-badge';
-import { generationStatus } from '../../core/api/generation-status';
-import { Field } from '../../shared/ui/field';
-import { DataTable } from '../../shared/ui/data-table';
-import { StatusBadge } from '../../shared/ui/status-badge';
-import { DetailDrawer } from '../../shared/ui/detail-drawer';
-import { Tabs } from '../../shared/ui/tabs';
-import { CodeBlock } from '../../shared/markdown/code-block';
-import { DateTimePicker } from '../../shared/ui/date-time-picker';
-import { FilterPanel } from '../../shared/ui/filter-panel';
+import { Notice } from '../../shared/ui/notice';
+import { SlidingIndicator } from '../../shared/ui/sliding-indicator';
 import { ViewSwitch } from '../../shared/ui/view-switch';
-import { NexusIsland } from '../../shared/ui/island';
-import { IslandService, type IslandItem } from '../../shared/ui/island-service';
+import { DesignControls } from './design-controls';
+import { DesignData } from './design-data';
+import { DesignFeedback } from './design-feedback';
+import { DesignForms } from './design-forms';
+import { DesignFoundations } from './design-foundations';
+import { DesignSamples } from './design-samples';
 
-const sampleTitle = '把想法，整理成可用的成果';
-const jobStates: SelectOption[] = [
-  { value: 'completed', label: '已完成' },
-  { value: 'queued', label: '等待處理' },
-  { value: 'failed', label: '需要重試' },
-  { value: 'cancelled', label: '已取消' },
-  { value: 'running', label: '處理中（示範播放）', disabled: true },
+/** Index of the workbench; ids match the `nx-design-section` ids. */
+const INDEX = [
+  {
+    name: '基礎',
+    sections: [
+      { id: 'design-colors', name: '色彩' },
+      { id: 'design-type', name: '字級' },
+      { id: 'design-space', name: '間距與圓角' },
+      { id: 'design-motion', name: '動效' },
+    ],
+  },
+  {
+    name: '操作與選取',
+    sections: [
+      { id: 'design-buttons', name: '按鈕' },
+      { id: 'design-menus', name: '選單與下拉' },
+      { id: 'design-switches', name: '切換與頁籤' },
+      { id: 'design-checkbox', name: '核取方塊' },
+    ],
+  },
+  {
+    name: '表單',
+    sections: [
+      { id: 'design-fields', name: '欄位與搜尋' },
+      { id: 'design-dates', name: '日期與時間' },
+      { id: 'design-inline', name: '直接編輯' },
+    ],
+  },
+  {
+    name: '回饋',
+    sections: [
+      { id: 'design-notices', name: '提示' },
+      { id: 'design-island', name: '靈動島' },
+      { id: 'design-badges', name: '狀態與數量' },
+      { id: 'design-progress', name: '進度與生成' },
+      { id: 'design-popover', name: '資訊浮層與空狀態' },
+    ],
+  },
+  {
+    name: '資料與內容',
+    sections: [
+      { id: 'design-table', name: '資料工作區' },
+      { id: 'design-markdown', name: '內容閱讀' },
+    ],
+  },
+];
+const TOKEN_NAMES = [
+  '--canvas',
+  '--sidebar',
+  '--surface',
+  '--surface-subtle',
+  '--hover',
+  '--line',
+  '--ink',
+  '--secondary',
+  '--muted',
+  '--accent',
+  '--accent-text',
+  '--signal',
+  '--warning',
+  '--error',
+  '--danger-surface',
+  '--danger-text',
+  '--focus',
+  '--text-body',
+  '--text-ui',
+  '--text-caption',
+  '--button-target',
+  '--motion',
+  '--ease-spring',
 ];
 
-/** Uses production components; all samples are local and perform no model or database calls. */
+/**
+ * The component workbench: production components with local samples, indexed in the sidebar and
+ * previewed in either theme. Nothing here calls a model or writes data.
+ */
 @Component({
   selector: 'nx-design-page',
   styleUrl: './design-page.scss',
   imports: [
-    Notice,
-    NexusIsland,
-    Card,
-    RouterLink,
+    DesignControls,
+    DesignData,
+    DesignFeedback,
+    DesignForms,
+    DesignFoundations,
     FeaturePage,
     Icon,
-    Select,
-    ActionMenu,
-    ConfirmDialog,
-    InlineTitle,
-    JobProgress,
-    MarkdownView,
-    Checkbox,
-    SearchField,
-    GenerationIndicator,
-    InferenceSignal,
-    CountBadge,
-    Field,
-    DataTable,
-    StatusBadge,
-    DetailDrawer,
-    Tabs,
-    CodeBlock,
-    DateTimePicker,
-    FilterPanel,
+    Notice,
+    RouterLink,
+    SidebarPanelContent,
+    SlidingIndicator,
     ViewSwitch,
   ],
-  providers: [ViewScope],
+  providers: [ViewScope, DesignSamples],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './design-page.html',
 })
 export class DesignPage {
   readonly session = inject(WorkspaceSession);
-  private readonly scope = inject(ViewScope);
   /** The page shows only the account's feature names, so the account is its one read. */
   private readonly account = apiResource({ loader: () => this.session.load() });
   readonly loading = this.account.loading;
   readonly error = this.account.error;
+  readonly index = INDEX;
   readonly theme = signal<'light' | 'dark'>('light');
   readonly previewThemes = [
     { value: 'light', label: '淺色' },
     { value: 'dark', label: '深色' },
   ];
-  readonly title = signal(sampleTitle);
-  readonly titleVersion = signal(0);
-  readonly selection = signal('standard');
-  readonly checked = signal(true);
-  readonly search = signal('');
-  readonly notice = signal('');
-  /** Local island samples; the island shows whatever is registered while this page is open. */
-  readonly islandItems = signal<IslandItem[]>([]);
-  readonly islandSamples: Record<'live' | 'warning' | 'info', IslandItem> = {
-    live: { id: 'live', priority: 50, tone: 'live', icon: 'activity', label: '正在生成回答' },
-    warning: {
-      id: 'warning',
-      priority: 80,
-      tone: 'warning',
-      icon: 'info',
-      label: '超出 Context 預算',
-      message: '本次提問與附件超出 Context 預算，請縮短內容或減少附件。',
-      urgent: true,
-    },
-    info: {
-      id: 'info',
-      priority: 10,
-      tone: 'info',
-      icon: 'globe',
-      label: '網路搜尋',
-      message: '會將這次提問送往搜尋服務；附件與歷史對話不會送出。',
-      action: { label: '關閉', run: () => this.toggleIsland('info') },
-    },
-  };
+  /** The section nearest the top of the scroll area, highlighted in the index. */
+  readonly current = signal(INDEX[0].sections[0].id);
+  readonly preview = viewChild<ElementRef<HTMLElement>>('preview');
+
+  /** A section picked in the index stays current until the reader scrolls by hand. */
+  private picked: string | null = null;
+
   constructor() {
-    inject(IslandService).register(this.islandItems);
+    // The preview renders once the account loads. The current section is the last one whose
+    // heading has passed a line near the top of the scroll area; a line further down would pick
+    // the next short section right after jumping to the one above it.
+    afterRenderEffect((onCleanup) => {
+      const preview = this.preview()?.nativeElement;
+      const root = preview?.closest<HTMLElement>('.feature-main');
+      if (!preview || !root) return;
+      let frame = 0;
+      const update = () => {
+        frame = 0;
+        if (this.picked) return;
+        const line = root.getBoundingClientRect().top + Math.min(root.clientHeight * 0.25, 96);
+        let current = INDEX[0].sections[0].id;
+        for (const section of preview.querySelectorAll('nx-design-section'))
+          if (section.getBoundingClientRect().top <= line) current = section.id;
+        this.current.set(current);
+      };
+      const schedule = () => (frame ||= requestAnimationFrame(update));
+      const release = () => (this.picked = null);
+      const manual = ['wheel', 'touchstart', 'pointerdown', 'keydown'] as const;
+      root.addEventListener('scroll', schedule, { passive: true });
+      for (const type of manual) root.addEventListener(type, release, { passive: true });
+      update();
+      onCleanup(() => {
+        cancelAnimationFrame(frame);
+        root.removeEventListener('scroll', schedule);
+        for (const type of manual) root.removeEventListener(type, release);
+      });
+    });
   }
-  toggleIsland(kind: 'live' | 'warning' | 'info') {
-    this.islandItems.update((items) =>
-      items.some((item) => item.id === kind)
-        ? items.filter((item) => item.id !== kind)
-        : [...items, this.islandSamples[kind]],
-    );
-  }
-  readonly states = jobStates;
-  readonly dataTab = signal('overview');
-  readonly calendarDate = signal('2026-10-08T14:30:45');
-  readonly optionalDate = signal('');
-  readonly dataView = signal('all');
-  readonly dataViews = [
-    { value: 'all', label: '全部狀態' },
-    { value: 'success', label: '已完成' },
-  ];
-  readonly dataTabs = [
-    { value: 'overview', label: '概覽' },
-    { value: 'properties', label: '屬性' },
-  ];
-  readonly dataRows = [
-    {
-      event: 'knowledge.index.completed',
-      time: '10:42:18',
-      status: '完成',
-      tone: 'success' as const,
-    },
-    { event: 'inference.request.started', time: '10:42:06', status: '資訊', tone: 'info' as const },
-    { event: 'provider.request.retry', time: '10:41:55', status: '重試', tone: 'warning' as const },
-  ];
-  readonly dataEvent = signal(this.dataRows[0].event);
-  readonly visibleDataRows = computed(() =>
-    this.dataView() === 'all'
-      ? this.dataRows
-      : this.dataRows.filter((row) => row.tone === 'success'),
-  );
-  readonly dataProperties = JSON.stringify(
-    { service: 'AiNexus.Host', attempts: 2, state: 'completed' },
-    null,
-    2,
-  );
-  readonly dataDrawer = viewChild.required(DetailDrawer);
-  inspectData(event: string) {
-    this.dataEvent.set(event);
-    this.dataDrawer().open();
-  }
-  readonly badgeTones: { tone: BadgeTone; label: string; count: number }[] = [
-    { tone: 'neutral', label: '一般', count: 2 },
-    { tone: 'info', label: '資訊', count: 8 },
-    { tone: 'success', label: '成功', count: 4 },
-    { tone: 'warning', label: '注意', count: 12 },
-    { tone: 'danger', label: '錯誤', count: 3 },
-  ];
-  readonly generation = computed(() => generationStatus(this.demo().status, false));
-  readonly demo = signal<JobDto>({
-    id: 'design-sample',
-    subjectId: 'design-sample',
-    kind: 'demo',
-    label: '狀態元件示範',
-    status: 'completed',
-    stage: '處理完成',
-    completedUnits: 3,
-    totalUnits: 3,
-    attempt: 1,
-    cancelRequested: false,
-    errorCode: null,
-    errorMessage: null,
-    issueCode: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  });
-  private demoVersion = 0;
-  readonly choices: SelectOption[] = [
-    { value: 'standard', label: '標準閱讀', description: '清楚留白，適合一般文件' },
-    { value: 'wide', label: '寬幅閱讀', description: '為表格與程式碼保留空間' },
-    { value: 'unavailable', label: '未開放選項', description: '停用狀態示範', disabled: true },
-  ];
-  readonly actions: MenuAction[] = [
-    { id: 'edit', label: '修改示範標題', icon: 'edit' },
-    { id: 'export', label: '未開放操作', icon: 'download', disabled: true },
-    { id: 'reset', label: '重設示範', icon: 'restore', danger: true },
-  ];
-  readonly swatches = [
-    { token: '--canvas', label: '頁面', purpose: '工作區底色' },
-    { token: '--surface', label: '閱讀面', purpose: '卡片與彈出視窗' },
-    { token: '--accent', label: '主要操作', purpose: '重點與目前位置' },
-    { token: '--signal', label: '處理訊號', purpose: '進度與完成' },
-    { token: '--error', label: '需要注意', purpose: '錯誤文字' },
-    { token: '--danger-surface', label: '危險操作', purpose: '搭配獨立前景色' },
-  ];
-  readonly markdown =
-    '### 好的回答，也需要好的閱讀介面\n\n文字有清楚的層次，資料有可以核對的來源。**段落、表格與程式碼**沿用同一套閱讀元件。\n\n| 項目 | 用途 |\n| --- | --- |\n| 文件來源 | 核對原始資訊 |\n| 成果版本 | 保存每次異動 |\n\n```typescript\nconst workspace = { clarity: true };\n```\n\n> 先讓使用者看得清楚，再讓操作自然發生。';
-  readonly confirmation = viewChild.required(ConfirmDialog);
-  readonly editable = viewChild.required(InlineTitle);
-  readonly preview = viewChild.required<ElementRef<HTMLElement>>('preview');
-  readonly saveTitle = async (value: string) => {
-    this.title.set(value);
-    return true;
-  };
   load() {
     this.account.reload();
   }
-  action(id: string) {
-    if (id === 'edit') this.editable().begin();
-    if (id === 'reset') void this.reset();
-  }
-  async reset() {
-    const guard = this.scope.guard();
-    if (
-      !(await this.confirmation().ask({
-        title: '重設介面示範？',
-        message: '這只會還原此頁的示範標題、選項及進度。',
-        confirm: '重設示範',
-        danger: true,
-      })) ||
-      !guard()
-    )
-      return;
-    this.titleVersion.update((x) => x + 1);
-    this.title.set(sampleTitle);
-    this.selection.set('standard');
-    this.setState('completed');
-    this.notice.set('示範已重設。');
-  }
-  setState(status: string) {
-    this.demoVersion++;
-    const stage = jobStates.find((x) => x.value === status)?.label ?? '處理中';
-    this.demo.update((x) => ({
-      ...x,
-      status,
-      stage,
-      completedUnits: status === 'completed' ? 3 : 0,
-      errorMessage: status === 'failed' ? '示範：來源暫時無法使用，可重新處理。' : null,
-    }));
-  }
-  play() {
-    const version = ++this.demoVersion;
-    this.demo.update((x) => ({
-      ...x,
-      status: 'running',
-      stage: '讀取文件',
-      completedUnits: 0,
-      errorMessage: null,
-    }));
-    ['整理文字', '建立索引', '處理完成'].forEach((stage, i) =>
-      this.scope.later(
-        () => {
-          if (version !== this.demoVersion) return;
-          this.demo.update((x) => ({
-            ...x,
-            stage,
-            completedUnits: i + 1,
-            status: i === 2 ? 'completed' : 'running',
-          }));
-        },
-        (i + 1) * 700,
-        `design-stage-${i}`,
-      ),
-    );
+  go(event: Event, id: string) {
+    event.preventDefault();
+    const section = document.getElementById(id);
+    if (!section) return;
+    this.picked = id;
+    this.current.set(id);
+    section.scrollIntoView({ block: 'start' });
+    section.querySelector<HTMLElement>('h3')?.focus({ preventScroll: true });
   }
   exportTokens() {
-    const style = getComputedStyle(this.preview().nativeElement);
-    const names = [
-      ...this.swatches.map((x) => x.token),
-      '--ink',
-      '--secondary',
-      '--accent-text',
-      '--danger-text',
-      '--focus',
-      '--text-body',
-      '--text-ui',
-      '--text-caption',
-      '--button-target',
-      '--motion',
-    ];
+    const preview = this.preview()?.nativeElement;
+    if (!preview) return;
+    const style = getComputedStyle(preview);
     const tokens = Object.fromEntries(
-      names.map((name) => [name, style.getPropertyValue(name).trim()]),
+      TOKEN_NAMES.map((name) => [name, style.getPropertyValue(name).trim()]),
     );
     downloadFile(
       JSON.stringify({ theme: this.theme(), tokens }, null, 2),

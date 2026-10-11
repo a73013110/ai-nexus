@@ -1,12 +1,40 @@
+// One indicator (the host's ::before, measured by SlidingIndicator) marks the pressed option, so
+// changing views slides it instead of repainting two buttons.
 :host {
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   gap: var(--p-space-1);
   min-width: 0;
   max-width: 100%;
   overflow-x: auto;
+  scrollbar-width: none;
   margin-bottom: var(--section-gap);
   border-bottom: 1px solid var(--line);
+}
+:host::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  left: 0;
+  width: var(--indicator-w, 0);
+  height: 2px;
+  border-radius: var(--p-radius-pill);
+  background: var(--accent);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(var(--indicator-x, 0), calc(var(--indicator-y, 0px) + var(--indicator-h, 0px) - 2px));
+}
+:host([data-indicator])::before {
+  opacity: 1;
+}
+:host([data-indicator-ready])::before {
+  transition:
+    transform var(--motion-morph) var(--ease-spring),
+    width var(--motion-morph) var(--ease-spring),
+    opacity var(--motion-fast) var(--ease);
 }
 :host button {
   display: inline-flex;
@@ -17,44 +45,69 @@
   min-width: var(--view-switch-button-min-width, auto);
   min-height: var(--button-target);
   padding: var(--p-space-1) var(--view-switch-button-padding-inline, var(--p-space-3));
-  border-bottom: 2px solid transparent;
+  border-radius: var(--p-radius-md);
   font-size: var(--view-switch-button-font-size, var(--text-label));
   color: var(--secondary);
+  white-space: nowrap;
 }
-:host button[aria-pressed='true'] {
+:host button:not(:disabled):hover {
+  color: var(--ink);
+}
+// The indicator is the selection; hover must not paint over it.
+:host button[aria-pressed='true'],
+:host button[aria-pressed='true']:hover {
+  background: transparent;
   color: var(--accent);
-  border-bottom-color: var(--accent);
   font-weight: 600;
 }
+:host(.ui-view-switch-fill) {
+  width: 100%;
+}
+:host(.ui-view-switch-fill) button {
+  flex: 1 1 0;
+  min-width: 0;
+}
+// Segment and icon-only: a raised chip instead of an underline.
+:host(.ui-view-switch-segment),
 :host(.ui-view-switch-icons) {
   border-bottom: 0;
+  &::before {
+    height: var(--indicator-h, 0);
+    border-radius: var(--p-radius-md);
+    background: var(--surface);
+    box-shadow: var(--selected-ring);
+    transform: translate(var(--indicator-x, 0), var(--indicator-y, 0));
+  }
 }
 :host(.ui-view-switch-icons) button {
   padding: var(--p-space-1);
-  border: 0;
-  border-radius: var(--p-radius-md);
 }
 :host(.ui-view-switch-icons) button[aria-pressed='true'] {
-  background: var(--surface);
-  box-shadow: var(--selected-ring);
+  color: var(--ink);
+  nx-icon {
+    color: var(--accent);
+  }
 }
 :host(.ui-view-switch-segment) {
   width: fit-content;
-  flex-wrap: wrap;
-  overflow: visible;
+  gap: 2px;
   margin-bottom: 0;
-  padding: var(--p-space-1);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
-  background: var(--surface-subtle);
+  padding: 2px;
+  border-radius: calc(var(--p-radius-md) + 2px);
+  background: var(--hover);
+  &::before {
+    border-radius: var(--p-radius-md);
+  }
+}
+:host(.ui-view-switch-segment.ui-view-switch-fill) {
+  width: 100%;
 }
 :host(.ui-view-switch-segment) button {
-  border: 0;
-  border-radius: var(--p-radius-sm);
+  min-height: calc(var(--button-target) - 4px);
+  font-size: var(--view-switch-button-font-size, var(--text-caption));
 }
 :host(.ui-view-switch-segment) button[aria-pressed='true'] {
-  background: var(--surface);
-  box-shadow: var(--selected-ring);
+  color: var(--ink);
 }
 :host-context(.ui-filter-heading),
 :host-context(.ui-filter-panel) {

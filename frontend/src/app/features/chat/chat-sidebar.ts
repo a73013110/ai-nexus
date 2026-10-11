@@ -16,6 +16,7 @@ import { currentDay } from '../../shared/browser/calendar-day';
 import { Icon } from '../../shared/ui/icon';
 import { MenuPanel } from '../../shared/ui/menu-panel';
 import { Select } from '../../shared/ui/select';
+import { ViewSwitch } from '../../shared/ui/view-switch';
 import { NotificationStore } from '../notifications/notification-store';
 import { conversationMenu, type ConversationAction } from '../workspace/conversation-actions';
 import { ChatConversations } from './chat-conversations';
@@ -28,7 +29,7 @@ import { historyGroups } from './history-groups';
  */
 @Component({
   selector: 'nx-chat-sidebar',
-  imports: [RouterLink, FormField, Icon, Select, MenuPanel],
+  imports: [RouterLink, FormField, Icon, Select, MenuPanel, ViewSwitch],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './chat-sidebar.scss',
   host: { style: 'display: contents' },
@@ -50,13 +51,10 @@ export class ChatSidebar {
     ...this.store.labels().map((value) => ({ value, label: value })),
   ]);
   readonly historyViews = [
-    { id: 'active', name: '近期' },
-    { id: 'favorites', name: '收藏' },
-    { id: 'archived', name: '封存' },
-  ] as const;
-  readonly historyViewIndex = computed(() =>
-    this.historyViews.findIndex((view) => view.id === this.store.historyView()),
-  );
+    { value: 'active', label: '近期' },
+    { value: 'favorites', label: '收藏' },
+    { value: 'archived', label: '封存' },
+  ];
   private readonly today = currentDay();
   readonly groups = computed(() => historyGroups(this.store.conversations(), this.today()));
   readonly menu = viewChild.required(MenuPanel);

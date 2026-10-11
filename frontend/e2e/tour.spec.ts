@@ -134,6 +134,7 @@ test("a pending tour never opens after navigation and can be started again", asy
   await page
     .locator(".workspace-sidebar")
     .getByRole("link", { name: "對話", exact: true })
+    .first()
     .click();
   await expect(launcher).toBeEnabled();
   await launcher.click();

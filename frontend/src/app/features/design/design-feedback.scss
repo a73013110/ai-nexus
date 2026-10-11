@@ -1,0 +1,80 @@
+:host {
+  display: grid;
+  gap: var(--p-space-6);
+}
+nx-notice {
+  margin: 0;
+}
+.design-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-2) var(--p-space-3);
+}
+.design-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  font-size: var(--text-caption);
+}
+// The island sits on the canvas, as it does above the composer.
+.design-island-stage {
+  display: grid;
+  place-items: center;
+  min-height: 7rem;
+  padding: var(--p-space-4);
+  border-radius: var(--p-radius-md);
+  background: var(--canvas);
+}
+.design-island-stage nx-island {
+  width: min(100%, 32rem);
+}
+.design-island-empty {
+  color: var(--muted);
+  font-size: var(--text-caption);
+}
+.design-island-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--p-space-2);
+}
+.design-island-controls [aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.design-progress-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-2);
+}
+.design-progress-tools nx-select {
+  width: min(100%, 16rem);
+}
+.inference-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.design-popover-title {
+  color: var(--ink);
+}
+.design-popover-copy {
+  margin: var(--p-space-1) 0 0;
+}
+.design-empty {
+  --empty-state-padding: var(--p-space-4);
+  min-width: 14rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--p-radius-md);
+}
+.design-empty nx-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--muted);
+}
+.design-empty strong {
+  color: var(--ink);
+}

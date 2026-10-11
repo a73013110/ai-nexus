@@ -42,7 +42,9 @@ export type { MenuAction } from './menu-panel';
       #menu
       [label]="label()"
       [items]="items()"
-      [minWidth]="profile() ? 0 : 260"
+      [minWidth]="profile() && placement() === 'below' ? 0 : 240"
+      [placement]="placement()"
+      [heading]="heading()"
       (action)="action.emit($event)"
     />`,
 })
@@ -50,6 +52,8 @@ export class ActionMenu {
   readonly triggerLabel = input('');
   readonly icon = input('more');
   readonly profile = input(false);
+  readonly placement = input<'below' | 'beside'>('below');
+  readonly heading = input<{ title: string; detail?: string } | null>(null);
   readonly label = input('更多操作');
   readonly items = input.required<MenuAction[]>();
   readonly action = output<string>();

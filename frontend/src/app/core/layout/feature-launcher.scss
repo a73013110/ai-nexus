@@ -63,6 +63,7 @@
   gap: 2px 0;
 }
 .workspace-icons > * {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -97,6 +98,21 @@
   nx-icon {
     color: var(--accent);
   }
+}
+// Pinned is a property of the entry, not a selection, so it is a small mark instead of a chip.
+.workspace-icons .pin-mark {
+  position: absolute;
+  top: var(--p-space-1);
+  left: calc(50% + 8px);
+  width: 12px;
+  height: 12px;
+  color: var(--muted);
+  transform: rotate(35deg);
+}
+.workspace-icons.is-list .pin-mark {
+  position: static;
+  margin-left: auto;
+  flex: none;
 }
 .workspace-icons.is-list {
   grid-template-columns: minmax(0, 1fr);

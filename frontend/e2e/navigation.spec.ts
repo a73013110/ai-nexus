@@ -35,13 +35,15 @@ test("chat history stays primary with grouped tools collapsed and settings only 
   ]);
   await expect(tools.getByRole("region", { name: "系統" })).toHaveCount(0);
   await launcher.click();
-  // Pinned features stay on top; the launcher lists only the rest, in the shared groups.
+  // The launcher lists every feature in the shared groups; pinned ones keep their place with a
+  // pin mark, and the current page stays marked once, on its pinned row.
   await expect(
     tools.getByRole("region", { name: "系統", exact: true }),
   ).toBeVisible();
-  await expect(
-    tools.getByRole("region", { name: "工作", exact: true }),
-  ).toHaveCount(0);
+  const work = tools.getByRole("region", { name: "工作", exact: true });
+  await expect(work.getByRole("link", { name: "對話", exact: true })).not.toHaveClass(/current/);
+  await expect(work.locator(".pin-mark")).toHaveCount(3);
+  await expect(tools.locator('[aria-current="page"]')).toHaveCount(1);
   await tools.getByRole("button", { name: "自訂釘選", exact: true }).click();
   await expect(tools.getByRole("status")).toContainText("已釘選 4／5 項");
   await tools
@@ -84,6 +86,22 @@ test("chat history stays primary with grouped tools collapsed and settings only 
   ).toBeVisible();
   await expect(page.getByRole("menuitem")).toHaveCount(2);
   await page.keyboard.press("Escape");
+  // On the collapsed rail the menu opens beside it, wide enough for its labels and naming the
+  // account the rail no longer shows.
+  await page.getByRole("button", { name: "收合側欄", exact: true }).click();
+  const account = page.getByRole("button", { name: "登入者選單", exact: true });
+  await account.click();
+  const menu = page.getByRole("menu", { name: "登入者選單", exact: true });
+  await expect(menu).toContainText("測試使用者");
+  const [rail, panel] = await Promise.all([
+    page.locator(".workspace-sidebar").boundingBox(),
+    menu.boundingBox(),
+  ]);
+  expect(panel!.x).toBeGreaterThanOrEqual(rail!.x + rail!.width);
+  expect(panel!.width).toBeGreaterThanOrEqual(200);
+  await expect(menu).toBeInViewport({ ratio: 1 });
+  await page.keyboard.press("Escape");
+  await expect(account).toBeFocused();
   await settleEntrance(page);
 });
 
@@ -259,7 +277,7 @@ test("one header notification icon exposes the full count and workspace expansio
   await workspace.click();
   await expect(sidebar.locator(".new-chat")).not.toBeVisible();
   await expect(
-    sidebar.getByRole("link", { name: "程式庫", exact: true }),
+    sidebar.getByRole("link", { name: "程式庫", exact: true }).first(),
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(sidebar).not.toBeVisible();
@@ -338,7 +356,7 @@ test("icon rail, notification filtering and typed task navigation work across pa
   await expect(
     sidebar.getByRole("link", { name: "知識庫", exact: true }),
   ).toBeVisible();
-  await sidebar.getByRole("link", { name: "知識庫", exact: true }).click();
+  await sidebar.getByRole("link", { name: "知識庫", exact: true }).first().click();
   await expect(sidebar).toHaveClass(/is-compact/);
   await page.getByRole("button", { name: "通知", exact: true }).click();
   let dialog = page.getByRole("dialog", { name: "通知", exact: true });
@@ -487,7 +505,7 @@ test("feature navigation opens from the shared header and dismisses after select
   expect((await page.locator(".feature-main").boundingBox())!.width).toBe(375);
   await page.getByRole("button", { name: "展開側欄", exact: true }).click();
   const sidebar = page.locator(".workspace-sidebar");
-  await sidebar.getByRole("link", { name: "知識庫", exact: true }).click();
+  await sidebar.getByRole("link", { name: "知識庫", exact: true }).first().click();
   await expect(page).toHaveURL(/\/knowledge$/);
   await expect(sidebar).not.toBeVisible();
   await expect(page.locator(".workspace-main")).not.toHaveAttribute(
@@ -512,9 +530,9 @@ test("the shell keeps one sidebar while pages and conversations change", async (
   await sidebar.evaluate(
     (element) => ((element as HTMLElement).dataset["kept"] = "1"),
   );
-  await sidebar.getByRole("link", { name: "知識庫", exact: true }).click();
+  await sidebar.getByRole("link", { name: "知識庫", exact: true }).first().click();
   await expect(page).toHaveURL(/\/knowledge$/);
-  await sidebar.getByRole("link", { name: "對話", exact: true }).click();
+  await sidebar.getByRole("link", { name: "對話", exact: true }).first().click();
   await expect(page).toHaveURL(/\/chat$/);
   const workspace = page.locator(".main-workspace");
   await workspace.evaluate(
@@ -591,7 +609,8 @@ test("custom feature names stay consistent across navigation, overview links and
   await expect(
     page
       .getByRole("navigation", { name: "工作區功能" })
-      .getByRole("link", { name: "部門知識庫", exact: true }),
+      .getByRole("link", { name: "部門知識庫", exact: true })
+      .first(),
   ).toBeVisible();
   await expect(page.locator(".flow-inspector").getByRole("heading")).toHaveText(
     "部門知識庫",
@@ -667,10 +686,10 @@ test("the icon rail keeps pins, opens every other feature beside it and still sc
   const flyout = page.getByRole("dialog", { name: "全部功能", exact: true });
   await expect(flyout).toBeVisible();
   await expect(flyout.getByRole("link").first()).toBeFocused();
-  // Pinned features are not repeated; everything else keeps the three-column groups.
+  // Every feature keeps its group; pinned ones carry a pin mark instead of disappearing.
   await expect(
-    flyout.getByRole("link", { name: "總覽", exact: true }),
-  ).toHaveCount(0);
+    flyout.getByRole("link", { name: "總覽", exact: true }).locator(".pin-mark"),
+  ).toHaveCount(1);
   await expect
     .poll(async () => {
       const box = (await flyout.boundingBox())!;

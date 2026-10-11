@@ -1,9 +1,11 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { ProductTourButton } from '../../shared/ui/product-tour-button';
+import type { ProductTourDefinition } from '../../shared/ui/product-tour';
 import { WorkspaceMenuButton } from './workspace-menu-button';
 
 @Component({
   selector: 'nx-feature-page',
-  imports: [WorkspaceMenuButton],
+  imports: [WorkspaceMenuButton, ProductTourButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './feature-page.scss',
   host: {
@@ -26,6 +28,10 @@ import { WorkspaceMenuButton } from './workspace-menu-button';
             }
           </div>
           <ng-content select="[page-actions]" />
+          @if (tour(); as definition) {
+            <!-- Every page keeps its tour at the far right of its header. -->
+            <nx-product-tour-button class="feature-tour" [tour]="definition" [compact]="true" />
+          }
         </header>
         <ng-content />
       </div>
@@ -38,4 +44,6 @@ export class FeaturePage {
   readonly density = input<'comfortable' | 'compact'>('compact');
   readonly wide = input(true);
   readonly layoutMode = input<'flow' | 'data'>('flow');
+  /** The page's guided tour; its trigger sits at the far right of the header. */
+  readonly tour = input<ProductTourDefinition | null>(null);
 }

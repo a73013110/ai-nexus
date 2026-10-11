@@ -12,7 +12,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Icon } from './icon';
-import { positionPopover } from '../browser/popover-position';
+import { positionBesidePopover, positionPopover } from '../browser/popover-position';
 
 export interface MenuAction {
   id: string;
@@ -44,6 +44,14 @@ let sequence = 0;
       (toggle)="toggled($any($event).newState === 'open')"
       (keydown)="key($event)"
     >
+      @if (heading(); as header) {
+        <div class="menu-heading" aria-hidden="true">
+          <strong>{{ header.title }}</strong>
+          @if (header.detail) {
+            <small>{{ header.detail }}</small>
+          }
+        </div>
+      }
       @for (item of items(); track item.id) {
         <button
           type="button"
@@ -62,6 +70,10 @@ export class MenuPanel {
   readonly items = input.required<MenuAction[]>();
   /** Narrowest width; 0 matches the trigger, as the account menu does. */
   readonly minWidth = input(260);
+  /** `beside` opens to the right of an icon-rail trigger instead of below it. */
+  readonly placement = input<'below' | 'beside'>('below');
+  /** Context the trigger cannot show, such as the account name on the collapsed rail. */
+  readonly heading = input<{ title: string; detail?: string } | null>(null);
   readonly action = output<string>();
   readonly opened = signal(false);
   readonly id = `nx-menu-${++sequence}`;
@@ -70,8 +82,7 @@ export class MenuPanel {
   private readonly panel = viewChild.required<ElementRef<HTMLDivElement>>('panel');
   constructor() {
     const position = () => {
-      if (this.opened() && this.anchor)
-        positionPopover(this.anchor, this.panel().nativeElement, this.minWidth(), 'right');
+      if (this.opened() && this.anchor) this.place(this.anchor);
     };
     window.addEventListener('resize', position);
     window.addEventListener('scroll', position, true);
@@ -87,17 +98,22 @@ export class MenuPanel {
     this.anchor = anchor;
     panel.showPopover();
     this.opened.set(true);
-    positionPopover(anchor, panel, this.minWidth(), 'right');
+    this.place(anchor);
     // Items may belong to the row that just asked, so place and focus once they have rendered.
     afterNextRender(
       () => {
         if (!this.isOpenFor(anchor)) return;
-        positionPopover(anchor, panel, this.minWidth(), 'right');
+        this.place(anchor);
         const buttons = this.buttons();
         (focus === 'first' ? buttons[0] : buttons.at(-1))?.focus();
       },
       { injector: this.injector },
     );
+  }
+  private place(anchor: HTMLElement) {
+    const panel = this.panel().nativeElement;
+    if (this.placement() === 'beside') positionBesidePopover(anchor, panel, this.minWidth() || 240);
+    else positionPopover(anchor, panel, this.minWidth(), 'right');
   }
   isOpenFor(anchor: HTMLElement) {
     return this.opened() && this.anchor === anchor;

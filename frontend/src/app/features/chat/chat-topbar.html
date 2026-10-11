@@ -25,7 +25,6 @@
   }
 </div>
 <div class="topbar-actions">
-  <nx-product-tour-button [tour]="tour()" [compact]="true" />
   @if (store.selected(); as conversation) {
     <nx-conversation-spend
       [id]="conversation.id"
@@ -51,4 +50,6 @@
       (action)="action.emit($event)"
     />
   }
+  <!-- Every page keeps its tour at the far right of its header. -->
+  <nx-product-tour-button [tour]="tour()" [compact]="true" />
 </div>

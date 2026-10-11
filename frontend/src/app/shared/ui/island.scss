@@ -1,5 +1,7 @@
-// The capsule sits on a dark theme zone in both themes, like a status island above the composer.
+// The capsule follows the page theme: an inverted ink capsule would shout on a light page, so it
+// floats as a raised surface with a hairline and a soft shadow, and tone colours carry the state.
 :host {
+  --island-surface: color-mix(in srgb, var(--surface) 88%, transparent);
   --island-height: 2.5rem;
   --island-radius: 1.25rem;
   --button-target: 2rem;
@@ -22,9 +24,12 @@
   min-height: var(--island-height);
   border: 1px solid var(--line);
   border-radius: var(--island-radius);
-  background: var(--sidebar);
+  background: var(--island-surface);
   color: var(--ink);
-  box-shadow: var(--shadow);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 6%),
+    var(--shadow);
+  backdrop-filter: blur(12px) saturate(1.4);
 }
 .island {
   box-sizing: content-box;
@@ -40,6 +45,16 @@
 }
 [data-tone='info'] {
   --tone: var(--ink);
+}
+// Live work tints the capsule's rim so progress is visible at a glance in either theme.
+.island[data-tone='live'] {
+  border-color: color-mix(in srgb, var(--signal) 45%, var(--line));
+}
+.island[data-tone='danger'] {
+  border-color: color-mix(in srgb, var(--error) 45%, var(--line));
+}
+.island[data-tone='warning'] {
+  border-color: color-mix(in srgb, var(--warning) 45%, var(--line));
 }
 [data-tone='live'] {
   --tone: var(--signal);
@@ -109,12 +124,13 @@
   min-height: var(--button-target);
   padding-inline: var(--p-space-3);
   border-radius: var(--p-radius-pill);
-  background: var(--surface);
-  color: var(--ink);
+  background: var(--accent);
+  color: var(--accent-text);
   font-weight: 600;
 }
 .island-action:hover:not(:disabled) {
-  background: var(--hover);
+  background: var(--accent);
+  opacity: 0.88;
 }
 .island-collapse {
   margin: calc((var(--island-height) - var(--button-target)) / 2);

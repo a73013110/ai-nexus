@@ -30,10 +30,7 @@
   padding: var(--p-space-4) var(--outline-space) var(--p-space-3) 0;
 }
 .chat-start {
-  padding-block: var(--p-space-6) var(--section-gap);
-  .panel-eyebrow {
-    margin-bottom: var(--p-space-1);
-  }
+  padding-block: var(--p-space-6) var(--p-space-4);
   h2 {
     margin: 0 0 var(--p-space-2);
     font-size: var(--p-font-2xl);
@@ -46,14 +43,6 @@
     margin: 0;
     color: var(--secondary);
   }
-}
-.chat-tour-invitation {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  margin-top: var(--p-space-3);
-  color: var(--secondary);
-  font-size: var(--p-font-xs);
 }
 .empty-enter {
   animation: arrive var(--motion-enter) var(--ease);

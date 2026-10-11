@@ -80,8 +80,11 @@
   background: var(--surface);
   box-shadow: var(--selected-ring);
 }
-// Open is a state of the control, not a location, so it tints instead of raising.
+// Open replaces the page's own panel (chat history and the like), so it raises the same selected
+// chip as a current row; a tint alone went unnoticed and the panel looked empty.
 :is(.launcher-toggle, .workspace-disclosure)[aria-expanded='true'] {
+  background: var(--surface);
+  box-shadow: var(--selected-ring);
   color: var(--ink);
   nx-icon {
     color: var(--accent);

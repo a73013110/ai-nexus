@@ -16,8 +16,6 @@ import { ThemeService } from '../../core/preferences/theme-service';
 import type { ReaderOrigin } from '../../shared/browser/reader-navigation';
 import { TextSelection, type SelectedText } from '../../shared/browser/text-selection';
 import { Icon } from '../../shared/ui/icon';
-import type { ProductTourDefinition } from '../../shared/ui/product-tour';
-import { ProductTourButton } from '../../shared/ui/product-tour-button';
 import { TextSelectionToolbar } from '../artifacts/text-selection-toolbar';
 import { TextTools } from '../artifacts/text-tools';
 import { ChatMessage } from './chat-message';
@@ -34,7 +32,6 @@ import { ConversationOutline } from './conversation-outline';
     ChatMessage,
     ConversationOutline,
     Icon,
-    ProductTourButton,
     TextSelection,
     TextSelectionToolbar,
     TextTools,
@@ -46,7 +43,6 @@ import { ConversationOutline } from './conversation-outline';
 export class ChatThread {
   readonly store = inject(ChatStore);
   private readonly themes = inject(ThemeService);
-  readonly tour = input.required<ProductTourDefinition>();
   readonly matches = input<string[]>([]);
   readonly currentMatch = input<string | null>(null);
   /** Set on each navigation; a saved reader position wins over auto-follow. */

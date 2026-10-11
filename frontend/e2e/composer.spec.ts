@@ -188,13 +188,12 @@ test("composer exposes model, supported reasoning and keyboard-accessible contex
   await expect(context).toHaveAccessibleName(/預估/);
   await context.focus();
   await context.press("Enter");
-  await expect(
-    page.getByRole("group", { name: "上下文用量", exact: true }),
-  ).toContainText("預留 2,048 tokens");
+  const usage = page.getByRole("dialog", { name: "上下文用量", exact: true });
+  await expect(usage).toContainText("預留 2,048 tokens");
+  // The composer clips its overflow; the panel must still be fully on screen.
+  await expect(usage).toBeInViewport({ ratio: 1 });
   await page.keyboard.press("Escape");
-  await expect(
-    page.getByRole("group", { name: "上下文用量", exact: true }),
-  ).not.toHaveAttribute("open");
+  await expect(usage).toBeHidden();
   await expect(context).toBeFocused();
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect.poll(() => fixture.lastRequest?.reasoningEffort).toBe("high");
