@@ -75,7 +75,7 @@ try {
         $env:NEXUS_DIAGNOSTIC_WEBROOT = Join-Path $root "$verification/wwwroot"
         Invoke-BackendTests 'Category=Browser' 'diagnostic-browser.trx'
         $env:NEXUS_E2E_PUBLISH_DIRECTORY = $verification
-        npm run test:e2e
+        npm --prefix frontend run test:e2e
         if ($LASTEXITCODE -ne 0) { throw 'e2e 測試失敗。' }
     }
     if ($SqlServer) { Invoke-BackendTests 'Category=SqlServer' 'sqlserver.trx' }

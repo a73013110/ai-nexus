@@ -44,4 +44,4 @@ Mermaid 的 KaTeX npm 間接依賴透過有範圍的 override 固定為官方已
 
 文字選取操作由 `TEXT_ACTIONS` 共用改寫、摘要、解釋、翻譯的名稱與語意圖示；聊天浮動工具依實際尺寸定位，窄螢幕換列並限制於可視範圍，支援方向鍵與 Esc。成果編輯器使用相同操作及 `TextTools`。解釋走既有模型授權、用量、取消與文字轉換端點，以淺白文字說明詞義及關係，未知背景不得臆測。翻譯使用 `ViewSwitch` 的 segment 外觀直接選四個語言，不使用選單；共用 aria-pressed、方向鍵及觸控目標。
 
-CSP 禁 inline script；build 關閉 inlineCritical 避免 CSS loader 的 inline onload 被擋。瀏覽器測試同時檢查互動、實際 grid／字級／尺寸、隱藏模型與 motion。artifacts/screenshots 的聊天畫面使用明確的測試使用者；正式執行不填入測試身分或回答。
+CSP 禁 inline script；build 關閉 inlineCritical 避免 CSS loader 的 inline onload 被擋。瀏覽器測試同時檢查互動、實際 grid／字級／尺寸、隱藏模型與 motion。e2e 的聊天畫面使用明確的測試使用者；正式執行不填入測試身分或回答。
