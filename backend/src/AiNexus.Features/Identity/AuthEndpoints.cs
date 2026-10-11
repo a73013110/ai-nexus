@@ -21,6 +21,7 @@ public static class AuthEndpoints
         WindowsLogin.Map(auth);
         LogIn.Map(auth);
         LogOut.Map(auth);
+        SelectIdentity.Map(auth);
         StartTestIdentity.Map(auth);
         EndTestIdentity.Map(auth);
     }

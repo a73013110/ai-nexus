@@ -22,6 +22,11 @@ AD login → Users（SID）→ UserRoles → Roles
 
 首次登入建立 UserRole；既有使用者沒有角色時不自動補回，避免管理員撤銷後，使用者重新登入又獲得權限。
 
+## 登入身分
+
+- 目前每個帳號只有「個人」身分，角色是權限聯集；`AuthSessionDto.identities` 固定一筆，登入頁因此跳過身分選擇。
+- 擴充點：之後的組織、部門或代理人身分加在 `AuthSession.Identities`，選擇由 `POST /api/v1/auth/identity` 寫入 cookie（`nexus_identity`）。加入第二種身分時，同一個變更要決定該身分的授權範圍（`AccessService`）並寫稽核；只顯示選項而不改授權會讓使用者誤以為權限已切換。
+
 ## 擴充功能
 
 1. 新增 `Features/Reports` 與 `ReportsModule.cs`，宣告 `FeatureSeed` 子類別，列出穩定 Feature ID（例如 `reports`）、名稱、route、SortOrder 與是否只給管理員，再產生 migration。

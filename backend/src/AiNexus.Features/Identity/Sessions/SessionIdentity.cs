@@ -18,6 +18,7 @@ public static class SessionIdentity
     public const string ActorMethod = "nexus_actor_method";
     public const string TestExpires = "nexus_test_expires";
     public const string TestId = "nexus_test_id";
+    public const string ActiveIdentity = "nexus_identity";
     public const string Restored = "Nexus.IdentityRestored";
     private const string Validated = "Nexus.ValidatedUser";
 
