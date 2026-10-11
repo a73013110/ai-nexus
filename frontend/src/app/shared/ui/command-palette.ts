@@ -26,7 +26,7 @@ export interface Command {
   template: `<dialog
     nxCompactDialog
     #dialog
-    class="command-dialog"
+    class="platform-dialog command-dialog"
     aria-labelledby="command-title"
     (close)="query.set(''); index.set(0)"
   >

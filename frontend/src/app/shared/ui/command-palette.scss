@@ -1,22 +1,9 @@
 .command-search > nx-icon {
   color: var(--accent);
 }
+// The frame and the open/close motion come from .platform-dialog (styles/dialogs.scss).
 .command-dialog {
   --dialog-max-height: min(85dvh, 52rem);
-  padding: var(--dialog-padding);
-  width: min(var(--dialog-width), 100% - 2rem);
-  max-height: var(--dialog-max-height);
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: var(--dialog-radius);
-  color: var(--ink);
-  background: var(--surface);
-  box-shadow: var(--shadow-floating);
-}
-.command-dialog::backdrop {
-  background: var(--scrim);
-}
-.command-dialog {
   --dialog-width: var(--command-width);
   padding: 0;
   margin-top: max(3rem, 14dvh);
@@ -95,7 +82,4 @@
   .command-results kbd {
     display: none;
   }
-}
-.command-dialog[open] {
-  animation: panel-arrive var(--motion-panel) var(--ease);
 }

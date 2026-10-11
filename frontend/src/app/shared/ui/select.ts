@@ -51,7 +51,7 @@ let sequence = 0;
       #panel
       [id]="id + '-panel'"
       popover="auto"
-      class="select-panel"
+      class="popover-panel select-panel"
       [attr.role]="searchable() ? 'dialog' : null"
       [attr.aria-label]="label()"
       (toggle)="toggled($event)"

@@ -52,20 +52,8 @@
   background: var(--hover);
 }
 .select-panel {
-  position: fixed;
-  inset: auto;
-  margin: 0;
   padding: var(--p-space-2);
   overflow: auto;
-  background: var(--surface);
-  color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
-  box-shadow: var(--shadow-floating);
-  overscroll-behavior: contain;
-}
-.select-panel:popover-open {
-  animation: panel-arrive var(--motion-fast) var(--ease) both;
 }
 .select-option {
   display: flex;

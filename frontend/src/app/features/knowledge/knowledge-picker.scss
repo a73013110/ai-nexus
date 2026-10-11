@@ -21,21 +21,12 @@
   background: var(--accent-soft);
 }
 .knowledge-picker-panel {
-  position: fixed;
-  inset: auto;
-  margin: 0;
   padding: var(--section-padding);
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--ink);
-  border-radius: var(--p-radius-lg);
-  box-shadow: var(--shadow-floating);
   overflow: auto;
 }
 .knowledge-picker-panel:popover-open {
   display: grid;
   gap: var(--p-space-3);
-  animation: panel-arrive var(--motion) var(--ease);
 }
 .picker-heading {
   display: flex;
