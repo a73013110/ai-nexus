@@ -203,9 +203,17 @@ const upload = async (
   mimeType = "text/plain",
 ) => {
   const chooser = page.waitForEvent("filechooser");
-  await page
-    .getByRole("button", { name: "加入文件或圖片", exact: true })
-    .click();
+  // Narrow composers fold the attach button into the tools menu.
+  const tools = page.getByRole("button", { name: "加入與工具", exact: true });
+  if (await tools.isVisible()) {
+    await tools.click();
+    await page
+      .getByRole("menuitem", { name: "加入文件或圖片", exact: true })
+      .click();
+  } else
+    await page
+      .getByRole("button", { name: "加入文件或圖片", exact: true })
+      .click();
   await (await chooser).setFiles({ name, mimeType, buffer });
 };
 async function send(page: Page, text = "請分析目前文件") {
@@ -584,7 +592,12 @@ test("mobile uploads settings and palette remain usable with reduced motion", as
   await page.goto("/chat");
   await expect(
     page.getByRole("button", { name: "加入文件或圖片" }),
+  ).toBeHidden();
+  await page.getByRole("button", { name: "加入與工具", exact: true }).click();
+  await expect(
+    page.getByRole("menuitem", { name: "加入文件或圖片" }),
   ).toBeEnabled();
+  await page.keyboard.press("Escape");
   await upload(page, "mobile.png", png, "image/png");
   await expect(page.locator(".composer .attachment-card")).toBeVisible();
   await expect

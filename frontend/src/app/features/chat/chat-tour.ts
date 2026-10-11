@@ -18,9 +18,11 @@ export function chatTour(narrow: boolean, knowledge: boolean): ProductTourDefini
           '描述目標、補充背景與期待的格式。下方會顯示目前的送出與換行快捷鍵；右上角可展開輸入區。',
       },
       {
-        target: '.composer .attach-button',
+        // Narrow composers fold attachments and sources into the tools menu.
+        target: '.composer .attach-button, .composer .tools-menu',
         title: '帶上你的文件與圖片',
-        description: '點選迴紋針加入附件，也可以拖放檔案或貼上圖片。AI 會依附件內容協助分析。',
+        description:
+          '點選迴紋針（窄畫面在「＋」選單）加入附件，也可以拖放檔案或貼上圖片。AI 會依附件內容協助分析。',
       },
       {
         target: 'nx-composer-controls',
@@ -31,10 +33,10 @@ export function chatTour(narrow: boolean, knowledge: boolean): ProductTourDefini
       ...(knowledge
         ? [
             {
-              target: 'nx-knowledge-picker',
+              target: '.knowledge-trigger, .composer .tools-menu',
               title: '讓回答有資料依據',
               description:
-                '加入知識庫來源，讓回答參考你的文件。需要查證時，可從回答的來源開啟閱讀器。',
+                '從「來源」（窄畫面在「＋」選單）加入知識庫，讓回答參考你的文件。需要查證時，可從回答的來源開啟閱讀器。',
             },
           ]
         : []),

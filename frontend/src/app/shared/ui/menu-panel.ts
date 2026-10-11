@@ -20,6 +20,8 @@ export interface MenuAction {
   icon: string;
   disabled?: boolean;
   danger?: boolean;
+  /** Makes the item a checkbox toggle (menuitemcheckbox) that shows its state. */
+  checked?: boolean;
 }
 let sequence = 0;
 
@@ -55,12 +57,16 @@ let sequence = 0;
       @for (item of items(); track item.id) {
         <button
           type="button"
-          role="menuitem"
+          [attr.role]="item.checked === undefined ? 'menuitem' : 'menuitemcheckbox'"
+          [attr.aria-checked]="item.checked ?? null"
           [disabled]="item.disabled"
           [class.danger-text]="item.danger"
           (click)="choose(item.id)"
         >
           <nx-icon [name]="item.icon" />{{ item.label }}
+          @if (item.checked) {
+            <nx-icon name="check" class="menu-check" />
+          }
         </button>
       }
     </div>`,

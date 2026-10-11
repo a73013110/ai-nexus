@@ -1,0 +1,75 @@
+:host-context(.chat-starting) {
+  scrollbar-gutter: auto;
+  margin-block-end: auto;
+  padding-block-start: var(--p-space-1);
+}
+.chat-start-suggestions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--section-gap);
+  margin-block-start: var(--section-gap);
+}
+.chat-start-suggestions > button {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  text-align: start;
+  min-height: var(--button-target);
+  color: var(--ink);
+  transition:
+    border-color var(--motion),
+    background-color var(--motion);
+}
+.chat-start-suggestions > button:hover {
+  background: var(--surface-subtle);
+  border-color: var(--accent);
+}
+.chat-start-suggestions nx-icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: var(--secondary);
+}
+.suggestion-copy {
+  min-width: 0;
+  flex: 1;
+}
+.suggestion-copy strong {
+  display: block;
+  font-size: var(--text-ui);
+  font-weight: 600;
+}
+.suggestion-copy small {
+  display: block;
+  margin-top: var(--p-space-1);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+// Phones keep the composer in the thumb zone from the first screen: the greeting floats in the
+// free space and the starters become one swipeable row right above the composer.
+@media (max-width: 640px) {
+  :host-context(.chat-starting) {
+    margin-block-end: 0;
+  }
+  :host-context(.chat-starting) .composer-container {
+    display: flex;
+    flex-direction: column;
+  }
+  .chat-start-suggestions {
+    display: flex;
+    order: -1;
+    gap: var(--p-space-2);
+    margin-block: 0 var(--p-space-3);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .chat-start-suggestions > button {
+    flex: none;
+    width: min(13.5rem, 70%);
+    scroll-snap-align: start;
+  }
+  .chat-start-suggestions > button > nx-icon:last-child {
+    display: none;
+  }
+}

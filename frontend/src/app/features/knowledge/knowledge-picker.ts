@@ -118,10 +118,13 @@ export class KnowledgePicker {
   );
   readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
   readonly panel = viewChild.required<ElementRef<HTMLDivElement>>('panel');
+  private from: HTMLElement | null = null;
+  private anchor() {
+    return this.from ?? this.trigger().nativeElement;
+  }
   constructor() {
     const update = () => {
-      if (this.opened())
-        positionPopover(this.trigger().nativeElement, this.panel().nativeElement, 360, 'left');
+      if (this.opened()) positionPopover(this.anchor(), this.panel().nativeElement, 360, 'left');
     };
     window.addEventListener('resize', update);
     window.addEventListener('scroll', update, true);
@@ -130,15 +133,17 @@ export class KnowledgePicker {
       window.removeEventListener('scroll', update, true);
     });
   }
-  open() {
+  /** Opens beside `from` when another control (the narrow composer's tools menu) asks. */
+  open(from?: HTMLElement) {
     const panel = this.panel().nativeElement;
     if (this.opened()) {
       panel.hidePopover();
       return;
     }
+    this.from = from ?? null;
     panel.showPopover();
     this.opened.set(true);
-    positionPopover(this.trigger().nativeElement, panel, 360, 'left');
+    positionPopover(this.anchor(), panel, 360, 'left');
     panel.querySelector<HTMLInputElement>('input[type=search]')?.focus();
     void this.selection.initialize();
   }
