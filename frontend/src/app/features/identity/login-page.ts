@@ -61,11 +61,13 @@ export class LoginPage {
       this.loading.set(false);
     }
   }
+  /**
+   * Router navigation never leaves the app, so any app path is a safe destination; only the login
+   * page itself is excluded to avoid a loop. Unknown paths fall back through the wildcard route.
+   */
   private returnUrl() {
-    const url = this.route.snapshot.queryParamMap.get('returnUrl') ?? WORKSPACE_HOME;
-    return /^\/(?:(?:dashboard|repositories|chat|projects|artifacts|knowledge|tasks|settings|admin|design|quality|integrations|shared)(?:\/[a-z0-9-]+)?|reader(?:\/attachment|\/share\/[a-z0-9-]+)?\/[a-z0-9-]+)(?:\?[a-z0-9=&%_-]+)?$/i.test(
-      url,
-    )
+    const url = this.route.snapshot.queryParamMap.get('returnUrl');
+    return url?.startsWith('/') && !url.startsWith('//') && !/^\/login(?:[/?#]|$)/.test(url)
       ? url
       : WORKSPACE_HOME;
   }
