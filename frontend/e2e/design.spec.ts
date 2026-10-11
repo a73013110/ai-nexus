@@ -295,6 +295,68 @@ test("island follows the preview theme instead of a fixed dark zone", async ({
   await expect.poll(lightness).toBeLessThan(80);
 });
 
+test("missed toasts stay in the notification center's session list, opened and left by keyboard", async ({
+  page,
+}) => {
+  await gallery(page);
+  await page.getByRole("button", { name: "附帶復原", exact: true }).click();
+  await page.getByRole("button", { name: "成功", exact: true }).click();
+  await expect(toasts(page)).toHaveCount(2);
+  // Cleared before anyone read them: the stack empties, the session record stays.
+  await page.getByRole("button", { name: "全部清除", exact: true }).click();
+  await expect(toasts(page)).toHaveCount(0);
+  const sample = page.locator("#design-toasts nx-toast-history li");
+  await expect(sample).toHaveCount(2);
+  await expect(sample.first()).toContainText("變更已儲存");
+
+  const bell = page.getByRole("button", { name: "通知", exact: true });
+  await bell.focus();
+  await page.keyboard.press("Enter");
+  const dialog = page.getByRole("dialog", { name: "通知", exact: true });
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole("tab", { name: "通知匣", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  const session = dialog.getByRole("tab", {
+    name: "本次工作階段，2 則",
+    exact: true,
+  });
+  await expect(session.locator("nx-count-badge")).toHaveText("2");
+  await page.keyboard.press("Tab");
+  await page.keyboard.press("ArrowRight");
+  await expect(session).toBeFocused();
+  await expect(session).toHaveAttribute("aria-selected", "true");
+  const panel = dialog.getByRole("tabpanel", { name: /^本次工作階段/ });
+  const rows = panel.locator("li");
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(1)).toContainText("已封存 3 則示範對話");
+  await expect(rows.first().locator("time")).toHaveText(/^\d{2}:\d{2}$/);
+
+  await page.keyboard.press("Tab");
+  const undo = panel.getByRole("button", {
+    name: "復原：已封存 3 則示範對話",
+    exact: true,
+  });
+  await expect(undo).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(dialog).not.toBeVisible();
+  await expect(bell).toBeFocused();
+  await expect(toasts(page).filter({ hasText: "已復原封存" })).toBeVisible();
+
+  // The action ran once; reopening returns to the same tab without it.
+  await page.keyboard.press("Enter");
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.getByRole("tab", { name: "本次工作階段，3 則", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(rows).toHaveCount(3);
+  await expect(rows.first()).toContainText("已復原封存");
+  await expect(panel.getByRole("button", { name: /^復原/ })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toBeVisible();
+  await expect(bell).toBeFocused();
+});
+
 test("toasts stack, fan out, update in place and leave by keyboard or swipe", async ({
   page,
 }) => {

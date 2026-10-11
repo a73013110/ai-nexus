@@ -83,3 +83,10 @@ nx-notice {
   color: var(--muted);
   font-size: var(--text-caption);
 }
+.design-toast-history {
+  max-height: 18rem;
+  overflow-y: auto;
+  padding-inline: var(--p-space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+}

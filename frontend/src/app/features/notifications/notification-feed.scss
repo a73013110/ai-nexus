@@ -26,7 +26,8 @@
   align-items: center;
   flex-wrap: wrap;
   padding-block: var(--p-space-3);
-  border-block: 1px solid var(--line);
+  // The center's tabs draw the line above.
+  border-bottom: 1px solid var(--line);
 }
 .notification-toolbar [aria-pressed='true'] {
   background: var(--accent-soft);

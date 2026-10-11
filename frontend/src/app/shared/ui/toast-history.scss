@@ -1,0 +1,67 @@
+:host {
+  display: block;
+  min-width: 0;
+}
+.toast-history-note {
+  margin: 0;
+  padding-block: var(--p-space-2);
+  color: var(--muted);
+  font-size: var(--text-caption);
+}
+.toast-history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.toast-record {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--p-space-3);
+  padding: var(--resource-row-padding-block) var(--resource-row-padding-inline);
+}
+.toast-record + .toast-record {
+  border-top: 1px solid var(--line);
+}
+[data-tone='success'] {
+  --tone: var(--signal);
+}
+[data-tone='info'] {
+  --tone: var(--info);
+}
+[data-tone='warning'] {
+  --tone: var(--warning);
+}
+[data-tone='danger'] {
+  --tone: var(--error);
+}
+.toast-record > nx-icon {
+  --icon-size: 1rem;
+  flex: none;
+  margin-top: 0.125rem;
+  color: var(--tone);
+}
+.toast-record-text {
+  display: grid;
+  gap: 0.125rem;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--text-label);
+}
+.toast-record-text strong {
+  font-weight: 550;
+}
+.toast-record-text span {
+  color: var(--secondary);
+}
+.toast-record time {
+  flex: none;
+  margin-top: 0.125rem;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+}
+.toast-record .quiet-button {
+  flex: none;
+  margin-block: calc(-1 * var(--p-space-1));
+}

@@ -4,17 +4,26 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  computed,
   effect,
   inject,
   viewChild,
 } from '@angular/core';
+import { WorkspaceLayout } from '../../core/layout/workspace-layout';
 import { NotificationStore } from './notification-store';
 import { Icon } from '../../shared/ui/icon';
+import { Tabs, type TabItem } from '../../shared/ui/tabs';
+import { ToastHistory } from '../../shared/ui/toast-history';
+import { ToastService } from '../../shared/ui/toast-service';
 import { NotificationFeed } from './notification-feed';
 
+/**
+ * The server inbox, and beside it this tab's toasts: the inbox is what lasts, the session list
+ * only helps find a confirmation that left before it was read.
+ */
 @Component({
   selector: 'nx-notification-center',
-  imports: [Notice, CompactDialog, NotificationFeed, Icon],
+  imports: [Notice, CompactDialog, NotificationFeed, Icon, Tabs, ToastHistory],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './notification-center.scss',
   template: `<dialog
@@ -40,17 +49,41 @@ import { NotificationFeed } from './notification-feed';
         <nx-icon name="close" />
       </button>
     </header>
-    @defer (when store.opened()) {
-      <nx-notification-feed />
-    } @loading {
-      <p class="form-note" role="status">正在載入通知...</p>
-    } @error {
-      <nx-notice message="通知介面暫時無法載入，請重新整理頁面。" />
-    }
+    <nx-tabs
+      #tabs
+      label="通知來源"
+      [items]="views()"
+      [value]="store.view()"
+      (valueChange)="store.view.set($any($event))"
+    />
+    <div
+      role="tabpanel"
+      class="notification-panel"
+      [id]="tabs.panelId(store.view())"
+      [attr.aria-labelledby]="tabs.tabId(store.view())"
+    >
+      @if (store.view() === 'session') {
+        <nx-toast-history (activated)="leave()" />
+      } @else {
+        @defer (when store.opened()) {
+          <nx-notification-feed />
+        } @loading {
+          <p class="form-note" role="status">正在載入通知...</p>
+        } @error {
+          <nx-notice message="通知介面暫時無法載入，請重新整理頁面。" />
+        }
+      }
+    </div>
   </dialog>`,
 })
 export class NotificationCenter {
   readonly store = inject(NotificationStore);
+  private readonly toasts = inject(ToastService);
+  private readonly layout = inject(WorkspaceLayout);
+  readonly views = computed<TabItem[]>(() => [
+    { value: 'inbox', label: '通知匣' },
+    { value: 'session', label: '本次工作階段', count: this.toasts.history().length },
+  ]);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   constructor() {
     effect(() => {
@@ -58,5 +91,10 @@ export class NotificationCenter {
       if (this.store.opened() && !dialog.open) dialog.showModal();
       else if (!this.store.opened() && dialog.open) dialog.close();
     });
+  }
+  /** A recorded action may navigate, so the dialog and the mobile sidebar get out of the way. */
+  leave() {
+    this.store.close();
+    this.layout.closeMobile();
   }
 }

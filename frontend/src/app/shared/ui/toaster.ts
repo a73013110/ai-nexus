@@ -14,14 +14,8 @@ import {
   viewChildren,
 } from '@angular/core';
 import { Icon } from './icon';
-import { ToastService, type Toast, type ToastTone } from './toast-service';
+import { ToastService, toastIcon, type Toast } from './toast-service';
 
-const ICONS: Record<ToastTone, string> = {
-  success: 'check',
-  info: 'info',
-  warning: 'info',
-  danger: 'info',
-};
 /** Toasts drawn behind the front one while collapsed. */
 const VISIBLE = 3;
 const PEEK = 10;
@@ -205,7 +199,7 @@ export class Toaster {
     return height === undefined ? null : height + 'px';
   }
   icon(toast: Toast) {
-    return ICONS[toast.tone];
+    return toastIcon(toast.tone);
   }
   hover(value: boolean) {
     this.hovered.set(value);
@@ -230,13 +224,12 @@ export class Toaster {
     if (toast) this.dismiss(toast, true);
   }
   act(toast: Toast, keyboard: boolean) {
-    toast.action?.run();
-    this.dismiss(toast, keyboard);
+    this.dismiss(toast, keyboard, () => this.service.act(toast.id));
   }
   /** Keyboard dismissal keeps focus in the stack, or returns it where it came from. */
-  dismiss(toast: Toast, keyboard = false) {
+  dismiss(toast: Toast, keyboard = false, close = () => this.service.dismiss(toast.id)) {
     const next = this.toasts().find((item) => item.id !== toast.id);
-    this.service.dismiss(toast.id);
+    close();
     if (!keyboard) return;
     afterNextRender(
       () => {
