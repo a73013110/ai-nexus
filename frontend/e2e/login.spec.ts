@@ -74,12 +74,107 @@ test("LDAP login rejects passwords, clears secrets and returns to chat", async (
   await expect(
     page.getByRole("heading", { name: "今天，從哪件事開始？" }),
   ).toBeVisible();
+  // The workspace closes as itself: the sign-out transition still shows who signed out.
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as { signOut: string[] }).signOut = seen;
+    new MutationObserver(() => {
+      if (document.documentElement.dataset.morphKind === "sign-out")
+        seen.push(
+          document.querySelector("nx-account-menu .profile-name strong")
+            ?.textContent ?? "",
+        );
+    }).observe(document.documentElement, { attributes: true });
+  });
   await page.getByRole("button", { name: "登入者選單", exact: true }).click();
   await page.getByRole("menuitem", { name: "登出工作區" }).click();
   await expect(page.getByRole("heading", { name: "登入工作區" })).toBeVisible();
+  await expect(page).toHaveURL(/\/login$/);
+  const seen = await page.evaluate(
+    () => (window as unknown as { signOut: string[] }).signOut,
+  );
+  expect(seen.length).toBeGreaterThan(0);
+  expect(seen[0]).toBe("測試使用者");
   expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain(
     "fixture-password",
   );
+  await page.getByLabel("AD 帳號", { exact: true }).fill("alice");
+  await page.getByLabel("AD 密碼", { exact: true }).fill("fixture-password");
+  await expect(submit).toBeEnabled();
+});
+
+test("accounts with several identities choose one, then the welcome hands the brand to the sidebar", async ({
+  page,
+}) => {
+  const fixture = new ApiFixture();
+  fixture.ldap = true;
+  fixture.identities = [
+    { id: "finance", kind: "department", name: "財務部", detail: "主管" },
+  ];
+  await fixture.attach(page);
+  const selections: string[] = [];
+  page.on("request", (request) => {
+    if (new URL(request.url()).pathname === "/api/v1/auth/identity")
+      selections.push(request.postDataJSON().identity);
+  });
+  await page.goto("/login");
+  await page.getByLabel("AD 帳號", { exact: true }).fill("alice");
+  await page.getByLabel("AD 密碼", { exact: true }).fill("fixture-password");
+  await page.getByRole("button", { name: "登入工作區", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "選擇登入身分" }),
+  ).toBeVisible();
+  const options = page.locator(".identity-option");
+  await expect(options).toHaveCount(2);
+  await expect(options.first()).toBeFocused();
+  await page.getByRole("button", { name: "使用其他帳號", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "登入工作區" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "本地帳號", exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("AD 帳號", { exact: true }).fill("alice");
+  await page.getByLabel("AD 密碼", { exact: true }).fill("fixture-password");
+  await page.getByRole("button", { name: "登入工作區", exact: true }).click();
+  await expect(options.first()).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(options.nth(1)).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("status").filter({ hasText: "財務部" }),
+  ).toContainText("正在開啟你的工作區");
+  await expect(page).toHaveURL(/\/dashboard$/);
+  expect(selections).toEqual(["finance"]);
+  await expect(
+    page.locator(".workspace-sidebar nx-brand-wordmark"),
+  ).toBeVisible();
+  await expect(page.locator(".login-workspace")).toHaveCount(0);
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.dataset.entrance))
+    .toBeUndefined();
+});
+
+test("a single identity goes straight from the check to the welcome", async ({
+  page,
+}) => {
+  const fixture = new ApiFixture();
+  fixture.ldap = true;
+  await fixture.attach(page);
+  await page.goto("/login");
+  await page.getByLabel("AD 帳號", { exact: true }).fill("alice");
+  await page.getByLabel("AD 密碼", { exact: true }).fill("wrong");
+  await page.getByRole("button", { name: "登入工作區", exact: true }).click();
+  await expect(page.locator(".login-content")).toHaveClass(/shake-a/);
+  await page.getByLabel("AD 密碼", { exact: true }).fill("fixture-password");
+  await page.getByRole("button", { name: "登入工作區", exact: true }).click();
+  await expect(page.locator(".login-workspace")).toHaveAttribute(
+    "data-stage",
+    "welcome",
+  );
+  await expect(page.getByRole("heading", { name: "選擇登入身分" })).toHaveCount(
+    0,
+  );
+  await expect(page.locator("nx-login-welcome")).toContainText("測試使用者");
+  await expect(page).toHaveURL(/\/dashboard$/);
 });
 
 test("login works at 375px and cannot redirect to an external origin", async ({
@@ -156,19 +251,19 @@ test("login copy reads at once, the wordmark follows the mark and both fit stand
   await fixture.attach(page);
   await page.goto("/login");
   await expect(
-    page.getByRole("heading", { name: /讓想法有個\s*專注的空間/ }),
+    page.getByRole("heading", { name: /思考與流程，\s*在此交會/ }),
   ).toBeVisible();
   await expect(page.locator(".login-brand")).toHaveAttribute(
     "aria-hidden",
     "true",
   );
-  await expect(page.locator(".login-brand .login-reveal")).toHaveCSS(
+  await expect(page.locator(".login-brand .brand-suffix")).toHaveCSS(
     "opacity",
     "0",
   );
   await page.getByRole("button", { name: "跳過標誌動畫", exact: true }).click();
   await expect(page.locator(".login-intro")).toHaveClass(/intro-ready/);
-  await expect(page.locator(".login-brand .login-reveal")).toHaveCSS(
+  await expect(page.locator(".login-brand .brand-suffix")).toHaveCSS(
     "opacity",
     "1",
   );
@@ -318,7 +413,14 @@ test("login focuses the account, reveals the password on request and warns about
     "data-phase",
     "loading",
   );
-  await expect(page.getByRole("button", { name: "登入成功" })).toBeVisible();
+  // The check holds for about 0.4 s before the welcome takes the page; sample every frame.
+  await page.waitForFunction(
+    () =>
+      document.querySelector(".login-submit[data-phase='success'] .sr-only")
+        ?.textContent === "登入成功",
+    undefined,
+    { polling: "raf" },
+  );
   await expect(page).toHaveURL(/\/dashboard$/);
 });
 

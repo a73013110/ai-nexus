@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { NexusApi } from '../api/nexus-api';
 import type { AuthSessionDto } from '../api/schema';
 import { ApiClient } from '../api/api-client';
+import { ViewMorph } from '../layout/view-morph';
 
 const RECENT_SESSION_MS = 5000;
 
@@ -10,6 +11,7 @@ const RECENT_SESSION_MS = 5000;
 export class AuthService {
   private readonly api = inject(NexusApi);
   private readonly router = inject(Router);
+  private readonly morph = inject(ViewMorph);
   readonly session = signal<AuthSessionDto | null>(null);
   readonly generation = signal(0);
   private pending: Promise<AuthSessionDto> | null = null;
@@ -72,12 +74,29 @@ export class AuthService {
     this.generation.update((value) => value + 1);
     this.channel?.postMessage('changed');
   }
+  /** Acts as another identity the account offers; pages reload their data for it. */
+  async selectIdentity(identity: string) {
+    this.session.set(await this.api.selectIdentity(identity));
+    this.generation.update((value) => value + 1);
+    this.channel?.postMessage('changed');
+  }
   async logout() {
     await this.api.logout();
     this.session.set(null);
+    // The workspace closes into the avatar the sign-out was chosen from (motion.scss, `sign-out`).
+    // The new generation waits until it has left, so it still shows who signed out and its pages
+    // do not reload for the signed-out account on the way.
+    const avatar = document.querySelector('nx-account-menu .avatar')?.getBoundingClientRect();
+    this.morph.next(
+      'sign-out',
+      avatar?.width
+        ? { x: avatar.x + avatar.width / 2, y: avatar.y + avatar.height / 2 }
+        : undefined,
+    );
+    await this.router.navigate(['/login']);
+    this.morph.discard();
     this.generation.update((value) => value + 1);
     this.channel?.postMessage('changed');
-    await this.router.navigate(['/login']);
   }
   async testIdentity(userId: string, reason: string) {
     this.replaceIdentity(await this.api.testIdentity(userId, reason), '/dashboard');

@@ -2,7 +2,7 @@
 .brand-wordmark,
 .brand-wordmark strong {
   display: inline-flex;
-  align-items: center;
+  align-items: baseline;
 }
 .brand-wordmark {
   gap: 0.3em;
@@ -12,19 +12,36 @@
 .brand-wordmark strong {
   font-weight: 600;
 }
-// Hosts can hide the text until an intro finishes, e.g. the login brand.
+// Hosts can hide the text until an intro finishes, e.g. the login brand: the words then slide
+// out of the N as they sharpen.
 .brand-prefix,
 .brand-suffix {
   opacity: var(--brand-affix-opacity, 1);
+  filter: blur(var(--brand-affix-blur, 0));
   transition: var(--brand-affix-transition, 0s);
 }
+.brand-prefix {
+  translate: var(--brand-affix-shift, 0) 0;
+}
+.brand-suffix {
+  translate: calc(-1 * var(--brand-affix-shift, 0)) 0;
+}
+// The N is set like a capital: its serifs sit on the cap line and the baseline of the words and
+// only the stem tips overshoot. The serifs span 1.44 of the mark's 2-unit box (nexus-logo.ts).
 .brand-symbol {
+  --cap: 0.7em;
   display: inline-flex;
   flex: none;
-  width: 0.86em;
-  height: 0.94em;
-  margin-inline-end: 0.02em;
+  width: calc(var(--cap) / 0.72);
+  height: calc(var(--cap) / 0.72);
+  margin-inline: -0.02em 0.05em;
+  translate: 0 calc(var(--cap) * 0.28 / 1.44);
   color: var(--accent);
+}
+@supports (height: 1cap) {
+  .brand-symbol {
+    --cap: 1cap;
+  }
 }
 .brand-symbol svg {
   display: block;
@@ -37,4 +54,5 @@
 }
 :host(.is-compact) .brand-symbol {
   margin: 0;
+  translate: none;
 }

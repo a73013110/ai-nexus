@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { ApiFixture, settleEntrance } from "./fixtures";
 
-test("the drawing docks into the wordmark N after a wide-screen and font-size change", async ({
+test("the drawing lands on the wordmark N after a wide-screen and font-size change", async ({
   page,
 }) => {
   const fixture = new ApiFixture();
@@ -9,10 +9,8 @@ test("the drawing docks into the wordmark N after a wide-screen and font-size ch
   await fixture.attach(page);
   await page.clock.install({ time: new Date("2026-10-06T00:00:00Z") });
   await page.goto("/login");
-  await expect(page.locator("nx-fourier-mark canvas")).toHaveAttribute(
-    "width",
-    /[1-9]\d+/,
-  );
+  const stage = page.locator("nx-signal-mark .signal-stage");
+  await expect(stage).toBeAttached();
   const now = await page.evaluate(() => Date.now());
   await page.clock.pauseAt(new Date(now + 1000));
   // Reset the drawing after startup, then sample it with the clock paused between steps.
@@ -22,50 +20,32 @@ test("the drawing docks into the wordmark N after a wide-screen and font-size ch
   await page
     .getByRole("button", { name: "重播標誌動畫", exact: true })
     .dispatchEvent("click");
-  await page.clock.runFor(3000);
+  await page.clock.runFor(1000);
+  // Mid-drawing it covers the outline left in the space above the copy, away from the wordmark.
+  const [drawing, slot] = await Promise.all([
+    stage.boundingBox(),
+    page.locator(".login-signal-slot svg").boundingBox(),
+  ]);
+  expect(Math.abs(drawing!.width - slot!.width)).toBeLessThan(1);
+  expect(Math.abs(drawing!.y - slot!.y)).toBeLessThan(1);
+  await page.clock.runFor(1300);
   await page.setViewportSize({ width: 2560, height: 1080 });
   await page
     .locator(".login-brand")
     .evaluate((element) => (element.style.fontSize = "32px"));
-  await page.clock.runFor(1192);
-  const drawing = await page
-    .locator("nx-fourier-mark canvas")
-    .evaluate((element: HTMLCanvasElement) => {
-      const pixels = element
-        .getContext("2d")!
-        .getImageData(0, 0, element.width, element.height).data;
-      let left = element.width,
-        right = 0,
-        top = element.height,
-        bottom = 0,
-        count = 0;
-      for (let y = 0; y < element.height; y++)
-        for (let x = 0; x < element.width; x++) {
-          if (pixels[(y * element.width + x) * 4 + 3] > 200) {
-            left = Math.min(left, x);
-            right = Math.max(right, x);
-            top = Math.min(top, y);
-            bottom = Math.max(bottom, y);
-            count++;
-          }
-        }
-      const bounds = element.getBoundingClientRect();
-      return {
-        count,
-        x: bounds.x + (((left + right) / 2) * bounds.width) / element.width,
-        y: bounds.y + (((top + bottom) / 2) * bounds.height) / element.height,
-        width: ((right - left) * bounds.width) / element.width,
-      };
-    });
-  const mark = await page.locator(".login-brand .brand-symbol").boundingBox();
-  expect(drawing.count).toBeGreaterThan(0);
-  expect(Math.abs(drawing.x - (mark!.x + mark!.width / 2))).toBeLessThan(2);
-  expect(Math.abs(drawing.y - (mark!.y + mark!.height / 2))).toBeLessThan(2);
-  expect(Math.abs(drawing.width - mark!.width * 0.96)).toBeLessThan(2);
+  await page.clock.runFor(590);
+  const [landing, mark] = await Promise.all([
+    stage.boundingBox(),
+    page.locator(".login-brand .brand-symbol").boundingBox(),
+  ]);
+  expect(Math.abs(landing!.x - mark!.x)).toBeLessThan(1);
+  expect(Math.abs(landing!.y - mark!.y)).toBeLessThan(1);
+  expect(Math.abs(landing!.width - mark!.width)).toBeLessThan(1);
   await page.clock.runFor(1000);
   await expect(
     page.getByRole("button", { name: "重播標誌動畫", exact: true }),
   ).toBeEnabled();
+  await expect(stage).toBeHidden();
   await expect(page.locator(".login-brand .brand-symbol")).toHaveCSS(
     "opacity",
     "1",
@@ -79,7 +59,7 @@ test("the drawing docks into the wordmark N after a wide-screen and font-size ch
   await settleEntrance(page);
 });
 
-test("Fourier identity keeps sign-in usable, can settle immediately and respects reduced motion", async ({
+test("the sign-in mark keeps sign-in usable, can settle immediately and respects reduced motion", async ({
   page,
 }) => {
   const fixture = new ApiFixture();
@@ -93,8 +73,7 @@ test("Fourier identity keeps sign-in usable, can settle immediately and respects
   await expect(
     page.getByRole("button", { name: "登入工作區", exact: true }),
   ).toBeEnabled();
-  const canvas = page.locator("nx-fourier-mark canvas");
-  await expect(canvas).toHaveAttribute("width", /[1-9]\d+/);
+  await expect(page.locator("nx-signal-mark .signal-stage")).toBeVisible();
   await page.getByRole("button", { name: "跳過標誌動畫", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "重播標誌動畫", exact: true }),

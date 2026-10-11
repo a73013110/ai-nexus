@@ -22,6 +22,8 @@ export class NexusApi {
     this.remember(this.api.post('/api/v1/auth/login', { body: { account, password, method } }));
   windowsLogin = () => this.remember(this.api.get('/api/v1/auth/windows'));
   logout = () => this.remember(this.api.post('/api/v1/auth/logout'));
+  selectIdentity = (identity: string) =>
+    this.remember(this.api.post('/api/v1/auth/identity', { body: { identity } }));
   testIdentity = (userId: string, reason: string) =>
     this.remember(this.api.post('/api/v1/auth/test-identity', { body: { userId, reason } }));
   endTestIdentity = () => this.remember(this.api.post('/api/v1/auth/test-identity/end'));

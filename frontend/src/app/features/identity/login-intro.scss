@@ -1,18 +1,65 @@
 // The brand wordmark reads its affix opacity from these hooks.
 :host {
   --brand-affix-opacity: 0;
-  --brand-affix-transition: opacity 640ms var(--ease);
+  --brand-affix-shift: 0.45em;
+  --brand-affix-blur: 6px;
+  --brand-affix-transition:
+    opacity 560ms var(--ease), translate 820ms var(--ease-spring), filter 560ms var(--ease);
   position: relative;
   min-height: 0;
   overflow: hidden;
+  isolation: isolate;
   background: var(--sidebar);
   border-right: 1px solid var(--line);
 }
+// A still wash of the two brand colours behind a dot field. The field brightens under a fine
+// pointer (login-intro.ts writes --spot-x/y); nothing moves on its own.
+:host::before,
+:host::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+:host::before {
+  background:
+    radial-gradient(
+      60% 50% at 18% 12%,
+      color-mix(in srgb, var(--accent) 9%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      55% 45% at 88% 92%,
+      color-mix(in srgb, var(--signal) 8%, transparent),
+      transparent 70%
+    );
+}
+:host::after {
+  --dot: color-mix(in srgb, var(--ink) 22%, transparent);
+  background: radial-gradient(circle, var(--dot) 0.75px, transparent 1.25px) 0 0 / 22px 22px;
+  mask-image: radial-gradient(
+    circle 18rem at var(--spot-x, 72%) var(--spot-y, 38%),
+    #000,
+    rgb(0 0 0 / 25%) 55%,
+    rgb(0 0 0 / 8%)
+  );
+  opacity: 0.5;
+  transition: opacity var(--motion-panel) var(--ease);
+}
+:host(.has-spot)::after {
+  --dot: color-mix(in srgb, var(--accent) 45%, transparent);
+  opacity: 1;
+}
+// A column: the wordmark on top, the copy at the foot and the mark's space between them.
 .login-intro-layout {
   position: relative;
+  display: flex;
+  flex-direction: column;
   width: min(100%, 560px);
   height: 100%;
   margin-inline-start: auto;
+  padding: calc(var(--login-gutter) + 3.5rem) var(--login-gutter) calc(var(--login-gutter) + 4.5rem);
 }
 .login-brand {
   position: absolute;
@@ -25,25 +72,41 @@
   font-size: var(--p-font-2xl);
   font-weight: 400;
 }
-.login-brand small {
-  display: block;
-  font-size: var(--text-caption);
-  letter-spacing: 0.12em;
-  color: var(--secondary);
+// The mark draws here (signal-mark.ts) over its outline (login-trace.ts), which stays behind.
+.login-signal-slot {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  min-height: 0;
+  padding-block: 1.5rem;
+  pointer-events: none;
 }
 .intro-eyebrow {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  margin: 0 0 18px;
   font-size: var(--text-caption);
   color: var(--secondary);
-  letter-spacing: 0.045em;
-  margin-bottom: 14px;
+  letter-spacing: 0.06em;
+}
+.intro-eyebrow [lang='en'] {
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.intro-eyebrow [lang='en']::after {
+  content: '';
+  display: inline-block;
+  width: 1.75rem;
+  height: 1px;
+  margin-inline-start: 0.75em;
+  vertical-align: middle;
+  background: var(--line);
 }
 .login-intro-copy {
-  position: absolute;
-  left: var(--login-gutter);
-  right: var(--login-gutter);
-  top: 46%;
-  transform: translateY(-25%);
+  flex: none;
+  margin-top: auto;
 }
 h1 {
   font-size: clamp(2rem, 3.3vw, 3.25rem);
@@ -52,7 +115,13 @@ h1 {
   letter-spacing: 0.035em;
   margin: 0 0 24px;
 }
-p {
+h1 em {
+  font-style: normal;
+  background: linear-gradient(100deg, var(--accent), var(--signal));
+  background-clip: text;
+  color: transparent;
+}
+.intro-lede {
   color: var(--secondary);
   font-size: var(--text-ui);
   line-height: 1.9;
@@ -60,67 +129,71 @@ p {
   text-wrap: pretty;
   margin: 0;
 }
-.login-footnote {
-  position: absolute;
-  bottom: var(--login-gutter);
-  left: var(--login-gutter);
-  color: var(--secondary);
-  font-size: var(--text-caption);
-}
 // The copy arrives with the page; only the wordmark affix waits for the mark to dock.
-.login-intro-copy > *,
-.login-footnote {
+.login-intro-copy > * {
   animation: arrive 640ms var(--ease) both;
 }
 .login-intro-copy h1 {
   animation-delay: 60ms;
 }
-.login-intro-copy p {
+.login-intro-copy .intro-lede {
   animation-delay: 120ms;
-}
-.login-footnote {
-  animation-delay: 180ms;
-}
-.login-reveal {
-  opacity: 0;
-  transform: translateY(12px);
-  transition:
-    opacity 640ms var(--ease),
-    transform 640ms var(--ease);
 }
 :host(.intro-ready) {
   --brand-affix-opacity: 1;
+  --brand-affix-shift: 0px;
+  --brand-affix-blur: 0px;
 }
-:host(.intro-ready) .login-reveal {
-  opacity: 1;
-  transform: translateY(0);
+// Welcome: the side fills the page, the wordmark grows to the centre and the greeting settles
+// below it. The move itself is a view transition (motion.scss, `sign-in-welcome`).
+:host([data-stage='welcome']) {
+  border: 0;
+  .login-intro-layout {
+    width: 100%;
+    margin: 0;
+  }
+  .login-brand {
+    top: 50%;
+    left: 50%;
+    align-items: center;
+    font-size: clamp(2.5rem, 6vw, 4.25rem);
+    translate: -50% calc(-100% - 1.5rem);
+  }
+  .login-signal-slot,
+  nx-signal-mark {
+    display: none;
+  }
 }
 @media (max-width: 720px) {
   :host {
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
+  :host([data-stage='welcome']) .login-brand {
+    top: 50%;
+    font-size: 2.5rem;
+  }
   .login-brand {
     top: 20px;
     font-size: var(--p-font-xl);
     gap: var(--p-space-1);
   }
-  .login-brand small {
-    font-size: var(--text-caption);
-    letter-spacing: 0.08em;
+  .login-intro-layout {
+    padding: 0;
   }
   .login-intro-copy {
-    top: auto;
+    position: absolute;
     bottom: 12px;
     left: var(--login-gutter);
-    transform: none;
   }
   .intro-eyebrow {
     margin: 0;
   }
+  // No room to draw the mark (signal-mark.ts), so the wordmark shows at once.
   .login-intro-copy h1,
-  .login-intro-copy p,
-  .login-footnote {
+  .login-intro-copy .intro-lede,
+  .login-signal-slot,
+  nx-signal-mark {
     display: none;
   }
 }
@@ -130,6 +203,10 @@ p {
   }
 }
 @media (max-height: 620px) and (min-width: 721px) {
+  .login-signal-slot,
+  nx-signal-mark {
+    display: none;
+  }
   h1 {
     font-size: 2rem;
     margin-bottom: 12px;

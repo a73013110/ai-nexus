@@ -20,6 +20,8 @@ export class ViewMorph {
   private armed: { name: string; element: HTMLElement } | null = null;
   private running = 0;
   private morphs = 0;
+  private kind: { name: string; origin?: { x: number; y: number } } | null = null;
+  private settled: Promise<unknown> = Promise.resolve();
 
   /** A morph is running; route transitions give way instead of cutting it short. */
   get active() {
@@ -30,17 +32,53 @@ export class ViewMorph {
     return 'startViewTransition' in document && !this.theme.reducedMotion();
   }
 
+  /**
+   * The next transition (a route change or `run`) is choreographed as `name`: it is exposed as
+   * `:root[data-morph-kind]` while it runs, with `origin` (viewport pixels) as `--morph-x`,
+   * `--morph-y` and the radius `--morph-r` that reaches the farthest corner from it.
+   */
+  next(name: string, origin?: { x: number; y: number }) {
+    this.kind = { name, origin };
+  }
+
+  /** A transition is not going to run; the pending kind must not leak into a later one. */
+  discard() {
+    this.kind = null;
+  }
+
+  /** Resolves once the `run` morphs started so far have finished. */
+  whenSettled() {
+    return this.settled;
+  }
+
   /** Marks the document while `transition` runs so the CSS names apply. */
   track(transition: ViewTransition) {
     const root = document.documentElement;
+    const kind = this.kind;
+    this.kind = null;
     this.running++;
     root.dataset['morphing'] = '';
+    if (kind) {
+      root.dataset['morphKind'] = kind.name;
+      if (kind.origin) {
+        const { x, y } = kind.origin;
+        const reach = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+        root.style.setProperty('--morph-x', `${x}px`);
+        root.style.setProperty('--morph-y', `${y}px`);
+        root.style.setProperty('--morph-r', `${Math.ceil(reach)}px`);
+      }
+    }
     // A newer transition skips this one; its promises then reject, which is expected.
     transition.ready.catch(() => undefined);
     return transition.finished
       .catch(() => undefined)
       .finally(() => {
         if (--this.running === 0) delete root.dataset['morphing'];
+        if (kind && root.dataset['morphKind'] === kind.name) {
+          delete root.dataset['morphKind'];
+          for (const name of ['--morph-x', '--morph-y', '--morph-r'])
+            root.style.removeProperty(name);
+        }
       });
   }
 
@@ -56,7 +94,10 @@ export class ViewMorph {
   async run(update: () => void, name?: string) {
     const source = this.armed?.name === name ? this.armed?.element : null;
     if (name) this.armed = null;
-    if (!this.enabled || (name && !source?.isConnected)) return update();
+    if (!this.enabled || (name && !source?.isConnected)) {
+      this.discard();
+      return update();
+    }
     if (name && source) source.style.viewTransitionName = name;
     let target: HTMLElement | null = null;
     this.morphs++;
@@ -68,7 +109,7 @@ export class ViewMorph {
       target = document.querySelector<HTMLElement>(`[data-morph="${name}"]`);
       if (target) target.style.viewTransitionName = name;
     });
-    void this.track(transition).finally(() => {
+    this.settled = this.track(transition).finally(() => {
       this.morphs--;
       if (source) source.style.viewTransitionName = '';
       if (target) target.style.viewTransitionName = '';
@@ -96,7 +137,9 @@ export const withNexusViewTransitions = () =>
     skipInitialTransition: true,
     onViewTransitionCreated: ({ transition, from, to }: ViewTransitionInfo) => {
       const morph = inject(ViewMorph);
-      if (!morph.enabled || morph.active || reusedPage(from, to)) transition.skipTransition();
-      else void morph.track(transition);
+      if (!morph.enabled || morph.active || reusedPage(from, to)) {
+        morph.discard();
+        transition.skipTransition();
+      } else void morph.track(transition);
     },
   });

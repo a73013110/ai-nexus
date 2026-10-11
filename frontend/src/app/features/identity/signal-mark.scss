@@ -1,0 +1,68 @@
+:host {
+  position: absolute;
+  inset: 0;
+  display: block;
+  pointer-events: none;
+}
+.signal-stage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  color: var(--accent);
+  --px: 0.01;
+}
+:host(.is-complete) .signal-stage {
+  display: none;
+}
+.signal-trace,
+.signal-tail,
+.signal-ring {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.signal-fill {
+  fill: currentColor;
+}
+.signal-trace {
+  stroke: currentColor;
+  stroke-width: calc(1.5 * var(--px));
+  stroke-dasharray: 0 2;
+}
+.signal-tail {
+  stroke: var(--signal);
+  stroke-width: calc(2.5 * var(--px));
+  stroke-dasharray: 0 2;
+}
+.signal-ring {
+  stroke: var(--signal);
+  stroke-width: calc(1.25 * var(--px));
+  opacity: 0;
+}
+.signal-head {
+  opacity: 0;
+}
+.signal-glow {
+  fill: color-mix(in srgb, var(--signal) 22%, transparent);
+}
+.signal-core {
+  fill: var(--signal);
+}
+.signal-replay {
+  position: absolute;
+  right: var(--login-gutter);
+  bottom: calc(var(--login-gutter) - 12px);
+  pointer-events: auto;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--sidebar);
+}
+@media (max-width: 720px) {
+  .signal-replay {
+    right: 18px;
+    bottom: 18px;
+  }
+}
