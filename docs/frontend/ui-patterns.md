@@ -5,26 +5,27 @@
 ## 頁面版面
 
 - 功能頁用 `FeaturePage`：預設 compact 與 wide，只改內容密度；側欄與閱讀正文有各自尺度。需要時才明確指定 comfortable 或窄版。
-- 全頁只有 `.feature-main` 一個捲動區；`.feature-content` 統一內容上限與對齊線。不要讓子元件產生第二個頁面捲軸。
+- 全頁只有 `.feature-main` 一個捲動區；`.feature-content` 統一內容上限與對齊線。
 - `layoutMode="data"` 讓資料表填滿剩餘高度；篩選展開很多時外層仍可捲動。
-- 依資料用途選版型：表格用於橫向比較固定欄位；文件、報告、進度這類內容差異大的資料用資源清單、卡片或專屬閱讀介面。不把所有功能強制改成日誌資料表。
+- 依資料用途選版型：表格比較固定欄位；內容差異大的文件、報告、進度用資源清單、卡片或專屬閱讀介面。
 - 卡片用 `nxCard`（保留原生語意），空白與載入內容用 `EmptyState`。
 
 ## 導覽
 
-- 登入後的路由都掛在 `WorkspaceShell` 下：側欄只建立一次，換頁保留狀態；頁面只提供主區，需要側欄內容（例：對話歷史）時用 `<ng-template nxSidebarPanel>` 宣告。手機側欄狀態只放 `WorkspaceLayout`，頁面標題列放 `WorkspaceMenuButton`。
-- 同一頁的列表與詳細路徑用 `optionalId('<path>')` 合成一條路由，id 出現或改變時沿用元件而不是重建。
-- `WorkspaceLayout` 分開管理 `desktopCompact` 與 `mobileOpen`：860px 以上側欄可收合為圖示欄（`--sidebar-rail-width` 同時控制側欄與主欄），保留功能、通知與帳號；859px 以下是覆蓋式抽屜，收合時不佔寬度。桌面收合狀態跨路由維持。
-- 選取的功能依 Router UrlTree 的 segment 取最深的可見功能；query、fragment、matrix parameters 不影響。同層只有一項 `aria-current="page"`，功能自己的詳細路由仍屬於該功能。
-- 功能導覽用 `ScrollArea`：隱藏捲軸，只在實際溢位的方向顯示可點擊的漸層箭頭；高對比模式恢復原生捲軸。理由見 [MDN scrollbar-width 無障礙說明](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/scrollbar-width#accessibility)。
-- `ViewportInset` 量測全域提示與測試身分列的實際高度，工作區與抽屜共用；移除提示時一併清除佔位。
-- 附件、引用、知識庫與專案文件的閱讀連結用 `ReaderLink`：來源放 URL（重新整理、新分頁仍可返回，只接受本站工作區路徑），閱讀位置放 history state；返回聊天時保留草稿、捲動與焦點。
-- 登入後的返回位置只接受白名單內的本站功能／閱讀器路徑。
-- 新頁面的操作導覽提供 `ProductTourDefinition`，沿用 `ProductTourButton`／`ProductTour`：可略過、可重播，依可見功能過濾步驟，不代替使用者送出；Driver.js 首次啟動才載入。
+- 登入後的路由都掛在 `WorkspaceShell` 下：側欄只建立一次，換頁保留狀態；頁面只提供主區，側欄內容（例：對話歷史）用 `<ng-template nxSidebarPanel>` 宣告，標題列放 `WorkspaceMenuButton`。
+- 同一頁的列表與詳細路徑用 `optionalId('<path>')` 合成一條路由，id 改變時沿用元件。
+- `WorkspaceLayout` 分開管理 `desktopCompact` 與 `mobileOpen`：860px 以上側欄可收合為圖示欄（寬度由側欄過渡，grid 欄跟隨），859px 以下是覆蓋式抽屜。收合狀態跨路由維持。
+- 功能清單只由 `WorkspaceNavigation` 呈現（釘選＋全部功能，行為見 [個人設定](../features/settings.md#側欄)）。`Ctrl + K` 是 shell 的 `CommandPalette`（含全部功能），頁面用 `WorkspaceCommands.provide()` 加入動作。
+- 長清單（例：對話歷史）共用一個 `MenuPanel`，不每列建 `ActionMenu`；列加 `content-visibility: auto` 略過畫面外繪製，DOM 仍留給焦點與頁內尋找。
+- 選取的功能依 Router UrlTree 的 segment 取最深的可見功能，不看 query、fragment、matrix parameters；只有一項 `aria-current="page"`，詳細路由仍屬於該功能。
+- 功能導覽用 `ScrollArea`：隱藏捲軸，只在溢位方向顯示可點的漸層箭頭，高對比模式恢復原生捲軸。理由見 [MDN scrollbar-width 無障礙說明](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/scrollbar-width#accessibility)。
+- `ViewportInset` 量測全域提示與測試身分列的實際高度，工作區與抽屜共用，移除提示時清除佔位。
+- 附件、引用、知識庫與專案文件的閱讀連結用 `ReaderLink`：來源放 URL（重新整理、新分頁仍可返回，只接受本站工作區路徑），閱讀位置放 history state；返回聊天時保留草稿、捲動與焦點。登入後的返回位置只接受白名單路徑。
+- 新頁面的操作導覽提供 `ProductTourDefinition`，沿用 `ProductTourButton`／`ProductTour`：可略過、可重播，依可見功能過濾步驟，不代替使用者送出。
 
 ## 表單
 
-- 原生 input／select／textarea 用 `nxField`，搜尋用 `SearchField`，互斥檢視用 `ViewSwitch`（group＋aria-pressed）；連結 tabpanel 的內容才用 `Tabs`。共用元件不接管查詢、驗證、草稿或 API，這些留在功能頁。
+- 原生 input／select／textarea 用 `nxField`，搜尋用 `SearchField`，互斥檢視用 `ViewSwitch`（group＋aria-pressed）；連結 tabpanel 的內容才用 `Tabs`。共用元件不接管查詢、驗證、草稿或 API。
 - 欄位的驗證說明靠近欄位，不放頁面提示容器。
 - 日期一律用 `DateTimePicker` 與 `shared/browser/format.ts`（`formatDate`、`parseDateTimeInput`）：以台北 wall-clock 輸入與顯示、送出時轉 UTC，瀏覽器不得自行把日期正規化成另一天。民國曆只影響顯示與輸入。
 - `DateTimePicker` 預設必填；選填要指定 `[required]="false"`，清空時發出空值。選填日期無效時暫停自動查詢，清空則移除條件。
@@ -38,7 +39,7 @@
 - `ConfirmDialog` 初始焦點在「取消」，Esc／關閉視為取消，結束後返回先前焦點。危險動作一律經過確認。
 - 詳情用 `DetailDrawer`：桌面 modeless（可繼續操作列表、選下一列），1023px 以下改為原生 modal。依據 [Fluent 2 Drawer](https://fluent2.microsoft.design/components/web/react/core/drawer/usage)。
 - 多頁籤視窗（例：使用者活動）各頁籤維持相同寬高，切換不改外框；確實需要不同尺寸的 dialog 才用 `DialogMotion` 過渡寬高。內容切換用 `ViewMotion`。
-- 只在開啟時建立昂貴內容（`CompactDialog.opened`），關閉時銷毀閱讀器、圖表與 Blob URL，避免隱藏視窗持續渲染。
+- 只在開啟時建立昂貴內容（`CompactDialog.opened`），關閉時銷毀閱讀器、圖表與 Blob URL。
 
 ## 資料工作區
 
@@ -62,7 +63,7 @@
 
 - 浮層（選單、popover、Select）用原生 top layer，避免被裁切；依可用空間翻轉並限制高度。
 - 共用 UI 的 DOM ID 每個實例唯一。關閉浮層、對話框或抽屜後焦點回到觸發元素；Escape 一層一層關閉巢狀浮層。
-- 群組控制（ViewSwitch、Tabs、ActionMenu、表格事件按鈕）用方向鍵／Home／End 移動，跳過停用項目。
+- 群組控制（ViewSwitch、Tabs、ActionMenu、表格事件按鈕、長清單列）用方向鍵／Home／End 移動，跳過停用項目。
 - 操作不能只靠 hover 出現；focus、停用、錯誤、斷線都要可辨識。
 
 ## 手機

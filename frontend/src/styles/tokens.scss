@@ -27,6 +27,8 @@
   --code-string: var(--p-code-string);
   --code-number: var(--p-code-number);
   --shadow: 0 10px 32px rgb(38 48 38 / 8%);
+  // Selected sidebar items and filters: a --surface chip with this ring, unlike the flat --hover.
+  --selected-ring: inset 0 0 0 1px var(--line), 0 1px 2px rgb(38 48 38 / 10%);
   --scrollbar-thumb: color-mix(in srgb, var(--muted) 82%, var(--canvas));
   --scrollbar-thumb-hover: var(--accent);
 }
@@ -211,6 +213,7 @@
   --code-string: var(--p-code-string-dark);
   --code-number: var(--p-code-number-dark);
   --shadow: 0 10px 32px rgb(0 0 0 / 20%);
+  --selected-ring: inset 0 0 0 1px var(--line);
   --scrollbar-thumb: color-mix(in srgb, var(--muted) 82%, var(--canvas));
   --scrollbar-thumb-hover: var(--accent);
 }

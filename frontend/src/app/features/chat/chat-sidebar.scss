@@ -82,7 +82,7 @@
 .history-filters > button[aria-pressed='true'] {
   background: var(--surface);
   color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--line);
+  box-shadow: var(--selected-ring);
   font-weight: 600;
 }
 .label-filter {
@@ -105,12 +105,19 @@
 .history-group:first-child h2 {
   margin-top: var(--p-space-1);
 }
+// Off-screen rows skip layout and paint but stay in the DOM, so focus, find-in-page and the
+// accessibility tree still see the whole list.
 .history-row {
   display: flex;
   align-items: center;
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--p-radius-md);
   margin-bottom: 0.125rem;
   position: relative;
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--button-target);
+}
+.history-more {
+  flex: none;
 }
 .history-row > a {
   display: flex;
@@ -127,20 +134,16 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.history-row.selected,
 .history-row:hover {
   background: var(--hover);
 }
-.history-row.selected::before {
-  content: '';
-  height: var(--p-space-4);
-  width: 2px;
-  background: var(--accent);
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  border-radius: var(--p-radius-pill);
+// The open conversation uses the sidebar's selected chip, never the hover tint.
+.history-row.selected {
+  background: var(--surface);
+  box-shadow: var(--selected-ring);
+}
+.history-row.selected > a {
+  font-weight: 600;
 }
 .history-row .history-state {
   width: 16px;

@@ -11,13 +11,13 @@
 | `core/api` | 產生的 OpenAPI 型別、`ApiClient`（JSON／multipart／SSE）、`apiResource()`、CSRF 與登入失效 |
 | `core/auth` | 路由 guard、帳號世代與 `WorkspaceSession`、身分橫幅、功能名稱 |
 | `core/errors` | 安全錯誤訊息、查證代碼、前端例外回報與未處理錯誤提示 |
-| `core/layout` | 版面 shell（`WorkspaceShell`、`FeaturePage`、側欄、導覽、首頁路徑）；唯一可以組合 features 的 core 資料夾 |
+| `core/layout` | 版面 shell（`WorkspaceShell`、`FeaturePage`、側欄、導覽與釘選偏好、快捷指令、首頁路徑）；唯一可以組合 features 的 core 資料夾 |
 | `core/preferences` | 主題、帳號設定、本機草稿、跨頁新對話草稿交接 |
 | `core/monitoring`、`core/stream` | 瀏覽器在線狀態；SSE 解析與生成串流 |
 | `features/*` | 按路由載入的頁面、該功能的 `*-api.ts`、store 與業務元件；被多個功能共用的業務元件也留在 features（例：`features/workspace` 的 `ConversationActions`） |
-| `shared/ui` | 無業務狀態的通用元件（Select、ActionMenu、ConfirmDialog、Notice…） |
+| `shared/ui` | 無業務狀態的通用元件（Select、ActionMenu／MenuPanel、CommandPalette、ConfirmDialog、Notice…） |
 | `shared/markdown` | Markdown 解析與檢視、串流 Markdown、Mermaid、程式碼區塊與語法上色 |
-| `shared/browser` | ViewScope、autosize、拖放／貼圖、選檔（`pickFile`）、下載、複製、快捷鍵（`bindHotkeys`）、日期格式、popover 定位、未儲存提示 |
+| `shared/browser` | ViewScope、autosize、拖放／貼圖、選檔（`pickFile`）、下載、複製、快捷鍵（`bindHotkeys`）、日期格式與本地日期（`currentDay`）、popover 定位、未儲存提示 |
 | `shared/graphics` | 不含認證／業務依賴的數學（傅立葉取樣／DFT、標誌輪廓） |
 | `frontend/src/styles` | 跨頁共用樣式；規則見 [設計系統](design-system.md#樣式載入) |
 

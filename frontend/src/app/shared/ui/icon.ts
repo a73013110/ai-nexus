@@ -75,6 +75,9 @@ import {
   Play,
   Calendar,
   Activity,
+  LayoutGrid,
+  List,
+  Pin,
 } from 'lucide';
 import { LucideDynamicIcon } from '@lucide/angular';
 
@@ -82,6 +85,9 @@ import { LucideDynamicIcon } from '@lucide/angular';
 // Import curated SVG data; a single Angular renderer avoids retaining per-icon component metadata.
 const icons: Record<string, IconNode> = {
   activity: Activity,
+  apps: LayoutGrid,
+  list: List,
+  pin: Pin,
   image: ImageIcon,
   files: Files,
   bell: Bell,

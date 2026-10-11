@@ -11,6 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import type { ConversationDto, ConversationSettingsRequest } from '../../core/api/schema';
 import { SidebarPanelContent } from '../../core/layout/sidebar-panel';
+import { WorkspaceCommands } from '../../core/layout/workspace-commands';
 import { WorkspaceLayout } from '../../core/layout/workspace-layout';
 import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
 import { ThemeService } from '../../core/preferences/theme-service';
@@ -18,7 +19,7 @@ import { downloadFile } from '../../shared/browser/download';
 import { FileDrop } from '../../shared/browser/file-drop';
 import { bindHotkeys } from '../../shared/browser/hotkeys';
 import { ReaderNavigation, type ReaderOrigin } from '../../shared/browser/reader-navigation';
-import { Command, CommandPalette } from '../../shared/ui/command-palette';
+import type { Command } from '../../shared/ui/command-palette';
 import { Icon } from '../../shared/ui/icon';
 import { Notice } from '../../shared/ui/notice';
 import { ProductTour } from '../../shared/ui/product-tour';
@@ -49,7 +50,6 @@ import { conversationMarkdown } from './conversation-markdown';
     ChatSidebar,
     ChatThread,
     ChatTopbar,
-    CommandPalette,
     ConversationDialog,
     ConversationFind,
     ConversationSettingsDialog,
@@ -83,7 +83,7 @@ export class ChatWorkspace {
   readonly thread = viewChild.required(ChatThread);
   readonly composer = viewChild.required(ChatComposer);
   readonly library = viewChild.required(PromptLibraryDialog);
-  readonly palette = viewChild.required(CommandPalette);
+  readonly palette = inject(WorkspaceCommands);
   private readonly settings = viewChild.required(ConversationSettingsDialog);
   private readonly dialog = viewChild.required(ConversationDialog);
   private readonly finder = viewChild(ConversationFind);
@@ -91,7 +91,7 @@ export class ChatWorkspace {
   private navigationSequence = 0;
   readonly saveSettings = (conversation: ConversationDto, settings: ConversationSettingsRequest) =>
     this.conversations.organize(conversation, settings);
-  readonly commands = computed<Command[]>(() => [
+  private readonly actions = computed<Command[]>(() => [
     {
       id: 'new',
       label: '開始新對話',
@@ -130,18 +130,24 @@ export class ChatWorkspace {
           { id: 'duplicate', label: '建立對話副本', detail: '保留所有分支與附件', icon: 'copy' },
         ]
       : []),
-    ...this.store.conversations().map((conversation) => ({
+  ]);
+  private readonly entries = computed<Command[]>(() =>
+    this.store.conversations().map((conversation) => ({
       id: 'conversation:' + conversation.id,
       label: conversation.title,
       detail: conversation.isArchived ? '封存對話' : '開啟對話',
-      icon: 'document',
+      icon: 'chat',
     })),
-  ]);
+  );
 
   constructor() {
+    this.palette.provide({
+      actions: this.actions,
+      entries: this.entries,
+      run: (id) => this.command(id),
+    });
     bindHotkeys(
       {
-        'mod+k': () => this.palette().open(),
         'mod+alt+n': () => void this.router.navigate(['/chat']),
         'mod+shift+l': () => void this.library().open(),
       },
@@ -216,7 +222,6 @@ export class ChatWorkspace {
     }
   }
   command(id: string) {
-    this.layout.closeMobile();
     if (id.startsWith('conversation:')) void this.router.navigate(['/chat', id.slice(13)]);
     else if (id === 'new') void this.router.navigate(['/chat']);
     else if (id === 'prompts') void this.library().open();

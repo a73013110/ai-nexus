@@ -238,6 +238,7 @@ test("compact chat keeps more history and controls visible while touch menus rem
       return rectangle.top >= bounds.top && rectangle.bottom <= bounds.bottom;
     }).length;
   });
+  // Pinned features share one row above the history, which keeps its height.
   expect(visibleRows).toBeGreaterThanOrEqual(14);
   const composer = page.locator("form.composer");
   expect((await composer.boundingBox())!.height).toBeLessThanOrEqual(92);
@@ -249,18 +250,11 @@ test("compact chat keeps more history and controls visible while touch menus rem
     exact: true,
   });
   const workspace = sidebar.getByRole("button", {
-    name: "工作區",
+    name: "全部功能",
     exact: true,
   });
   await expect(account).toBeInViewport();
   await expect(workspace).toBeInViewport();
-  const [workspaceBounds, accountBounds] = await Promise.all([
-    workspace.boundingBox(),
-    account.boundingBox(),
-  ]);
-  expect(
-    accountBounds!.y - (workspaceBounds!.y + workspaceBounds!.height),
-  ).toBeLessThanOrEqual(9);
   await account.press("ArrowDown");
   const menu = page.getByRole("menu", { name: "登入者選單", exact: true });
   await expect(
@@ -546,4 +540,62 @@ test("compact conversation uses readable text and preserves over 70 percent of d
   ).toBe(true);
   await expect(page.locator(".markdown")).toHaveCSS("font-size", "15px");
   await settleEntrance(page);
+});
+
+test("history groups by local day, shares one row menu and moves with arrow keys", async ({
+  page,
+}) => {
+  const core = new ApiFixture();
+  const day = 86_400_000;
+  for (const [index, age] of [0, 1, 3, 12, 45].entries())
+    core.conversations.push({
+      id: randomUUID(),
+      title: `第 ${index + 1} 則`,
+      activeLeafId: null,
+      createdAt: new Date(Date.now() - age * day).toISOString(),
+      updatedAt: new Date(Date.now() - age * day).toISOString(),
+      isFavorite: false,
+      isArchived: false,
+      systemInstruction: "",
+      labels: [],
+      projectId: null,
+    });
+  await core.attach(page);
+  await page.goto("/chat");
+  const history = page.getByRole("navigation", { name: "對話歷史" });
+  await expect(history.locator(".history-group h2")).toHaveText([
+    "今天",
+    "昨天",
+    "過去 7 天",
+    "過去 30 天",
+    "更早",
+  ]);
+  // Rows are plain links and buttons; one menu serves all of them.
+  await expect(page.locator("nx-chat-sidebar nx-menu-panel")).toHaveCount(1);
+  const trigger = history.getByRole("button", { name: "對話操作：第 2 則" });
+  await trigger.click();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  const menu = page.getByRole("menu", { name: "對話操作：第 2 則" });
+  await expect(menu.getByRole("menuitem").first()).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(menu).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  const links = history.locator(".history-row > a");
+  await page
+    .getByRole("searchbox", { name: "搜尋對話標題與內容" })
+    .press("ArrowDown");
+  await expect(links.nth(0)).toBeFocused();
+  await page.keyboard.press("ArrowDown");
+  await expect(links.nth(1)).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(links.nth(4)).toBeFocused();
+  await page.keyboard.press("ArrowUp");
+  await expect(links.nth(3)).toBeFocused();
+  await page.keyboard.press("Home");
+  await expect(links.nth(0)).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(
+    new RegExp(`/chat/${core.conversations[0].id}$`),
+  );
 });

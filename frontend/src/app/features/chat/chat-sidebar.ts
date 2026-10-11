@@ -6,20 +6,28 @@ import {
   inject,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { FormField, form, maxLength } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import type { ConversationDto } from '../../core/api/schema';
+import { currentDay } from '../../shared/browser/calendar-day';
 import { Icon } from '../../shared/ui/icon';
-import { NotificationStore } from '../notifications/notification-store';
-import { ConversationActions, type ConversationAction } from '../workspace/conversation-actions';
-import { ChatStore } from './chat-store';
+import { MenuPanel } from '../../shared/ui/menu-panel';
 import { Select } from '../../shared/ui/select';
-
+import { NotificationStore } from '../notifications/notification-store';
+import { conversationMenu, type ConversationAction } from '../workspace/conversation-actions';
 import { ChatConversations } from './chat-conversations';
+import { ChatStore } from './chat-store';
+import { historyGroups } from './history-groups';
+
+/**
+ * Chat history in the shared sidebar. Rows are plain links with one shared action menu, and the
+ * browser skips rendering rows outside the viewport, so long histories stay cheap.
+ */
 @Component({
   selector: 'nx-chat-sidebar',
-  imports: [RouterLink, FormField, Icon, Select, ConversationActions],
+  imports: [RouterLink, FormField, Icon, Select, MenuPanel],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './chat-sidebar.scss',
   host: { style: 'display: contents' },
@@ -39,27 +47,26 @@ export class ChatSidebar {
     { value: '', label: '全部標籤' },
     ...this.store.labels().map((value) => ({ value, label: value })),
   ]);
-  readonly groups = computed(() => {
-    const now = new Date();
-    const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Taipei' });
-    const today = day.format(now),
-      yesterday = day.format(new Date(now.getTime() - 86400000));
-    const groups = new Map<string, ConversationDto[]>();
-    for (const conversation of this.store.conversations()) {
-      const date = day.format(new Date(conversation.updatedAt));
-      const label = conversation.isFavorite
-        ? '收藏'
-        : date === today
-          ? '今天'
-          : date === yesterday
-            ? '昨天'
-            : '先前的對話';
-      const rows = groups.get(label) ?? [];
-      rows.push(conversation);
-      groups.set(label, rows);
-    }
-    return [...groups].map(([label, conversations]) => ({ label, conversations }));
+  private readonly today = currentDay();
+  readonly groups = computed(() => historyGroups(this.store.conversations(), this.today()));
+  readonly menu = viewChild.required(MenuPanel);
+  /** The row whose menu is open; items follow its latest state and running generation. */
+  readonly menuTarget = signal<string | null>(null);
+  readonly menuItems = computed(() => {
+    const conversation = this.store.conversations().find((x) => x.id === this.menuTarget());
+    return conversation
+      ? conversationMenu(conversation, {
+          compact: true,
+          sharing: this.store.hasSharing(),
+          busy: this.store.liveRun()?.conversationId === conversation.id,
+        })
+      : [];
   });
+  readonly menuLabel = computed(
+    () =>
+      '對話操作：' +
+      (this.store.conversations().find((x) => x.id === this.menuTarget())?.title ?? ''),
+  );
   private searchTimer: ReturnType<typeof setTimeout> | null = null;
   constructor() {
     inject(DestroyRef).onDestroy(() => {
@@ -82,5 +89,37 @@ export class ChatSidebar {
     } catch (error) {
       this.store.report(error);
     }
+  }
+  menuOpen(id: string) {
+    return this.menu().opened() && this.menuTarget() === id;
+  }
+  openMenu(event: Event, id: string) {
+    const trigger = event.currentTarget as HTMLElement;
+    if (this.menu().isOpenFor(trigger)) {
+      this.menu().close();
+      return;
+    }
+    this.menuTarget.set(id);
+    this.menu().open(trigger);
+  }
+  chooseMenu(action: string) {
+    const conversation = this.store.conversations().find((x) => x.id === this.menuTarget());
+    if (conversation) this.action.emit({ conversation, action: action as ConversationAction });
+  }
+  /** Arrow keys move between conversations, like a list; Tab still visits each row's menu. */
+  historyKey(event: KeyboardEvent, history: HTMLElement) {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    const links = [...history.querySelectorAll<HTMLElement>('.history-row > a')];
+    const current = links.indexOf(event.target as HTMLElement);
+    const fromSearch = event.currentTarget !== history;
+    if (fromSearch ? event.key !== 'ArrowDown' : current < 0) return;
+    event.preventDefault();
+    const index =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? links.length - 1
+          : Math.max(0, Math.min(links.length - 1, current + (event.key === 'ArrowDown' ? 1 : -1)));
+    links[index]?.focus();
   }
 }

@@ -14,20 +14,19 @@
 }
 .workbench {
   display: grid;
-  grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   height: calc(100dvh - var(--identity-banner-height, 0px) - var(--global-issue-height, 0px));
   overflow: hidden;
-}
-@media (min-width: 860px) {
-  .workbench:has(.workspace-sidebar.is-compact) {
-    grid-template-columns: var(--sidebar-rail-width) minmax(0, 1fr);
-  }
 }
 @media (max-width: 859px) {
   .workbench {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+// The shell's command palette renders in the top layer and takes no grid cell.
+.workbench > nx-command-palette {
+  position: absolute;
 }
 // The routed page and FeaturePage fill the main cell; their first in-flow child scrolls itself.
 .workspace-main,

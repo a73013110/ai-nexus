@@ -4,7 +4,7 @@
     (navigate)="layout.closeMobile()"
     (action)="conversationAction($event.action, $event.conversation)"
     (prompts)="library().open()"
-    (commands)="palette().open()"
+    (commands)="palette.open()"
   />
 </ng-template>
 <main
@@ -58,7 +58,6 @@
     <div nxChatComposer class="composer-region" (sent)="thread().follow()"></div>
   </div>
 </main>
-<nx-command-palette [commands]="commands()" (selected)="command($event)" />
 <nx-prompt-library [draft]="store.draft().text" (used)="composer().use($event)" />
 <nx-conversation-settings [save]="saveSettings" />
 <nx-conversation-dialog />

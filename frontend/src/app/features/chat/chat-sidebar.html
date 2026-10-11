@@ -23,15 +23,6 @@
     >
       <nx-icon name="command" />
     </button>
-    <button
-      type="button"
-      class="icon-button"
-      aria-label="匯入對話文字備份"
-      title="匯入 JSON 文字備份"
-      (click)="conversations.chooseBackup()"
-    >
-      <nx-icon name="upload" />
-    </button>
   </div>
   <div class="history-search">
     <nx-icon name="search" /><input
@@ -40,6 +31,7 @@
       placeholder="搜尋標題與內容"
       [formField]="searchForm.query"
       (input)="searchChanged()"
+      (keydown)="historyKey($event, history)"
     />
   </div>
   <div class="history-filters" aria-label="對話篩選">
@@ -69,7 +61,9 @@
       />
     }
   </div>
-  <nav class="history" aria-label="對話歷史">
+  <!-- Keys come from the focused row links; the list itself only routes arrows. -->
+  <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
+  <nav #history class="history" aria-label="對話歷史" (keydown)="historyKey($event, history)">
     @if (store.loading()) {
       <p class="sidebar-note" role="status">正在取得對話…</p>
     }
@@ -95,13 +89,17 @@
               }
               <span>{{ conversation.title }}</span></a
             >
-            <nx-conversation-actions
-              [conversation]="conversation"
-              [compact]="true"
-              [sharing]="store.hasSharing()"
-              [busy]="store.liveRun()?.conversationId === conversation.id"
-              (action)="action.emit({ conversation, action: $event })"
-            />
+            <button
+              type="button"
+              class="icon-button history-more"
+              aria-haspopup="menu"
+              [attr.aria-label]="'對話操作：' + conversation.title"
+              [attr.aria-expanded]="menuOpen(conversation.id)"
+              [attr.aria-controls]="menu().id"
+              (click)="openMenu($event, conversation.id)"
+            >
+              <nx-icon name="more" />
+            </button>
           </div>
         }
       </div>
@@ -124,4 +122,5 @@
       <button class="quiet-button load-more" (click)="loadMore()">載入更早的對話</button>
     }
   </nav>
+  <nx-menu-panel [label]="menuLabel()" [items]="menuItems()" (action)="chooseMenu($event)" />
 }

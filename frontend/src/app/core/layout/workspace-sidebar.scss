@@ -29,6 +29,10 @@ nx-workspace-brand {
   align-items: center;
   flex: none;
 }
+// Heading buttons use the pinned cell width, so the sidebar toggle sits above the launcher toggle.
+.workspace-sidebar-controls .icon-button {
+  width: max(var(--button-target), 2.25rem);
+}
 .sidebar-notifications {
   --count-badge-ring: var(--sidebar);
 }
@@ -40,16 +44,14 @@ nx-workspace-brand {
   min-height: 0;
   flex: 0 1 auto;
 }
-.sidebar-navigation-bottom {
-  order: 1;
-  border-top: 1px solid var(--line);
-  padding-top: var(--p-space-1);
+.has-panel {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--p-space-1);
 }
 :host(.has-expanded-navigation) > nx-workspace-navigation {
-  order: 0;
   flex: 1;
-  border-top: 0;
-  padding-top: 0;
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 .workspace-sidebar-content {
   display: flex;
@@ -89,15 +91,22 @@ nx-workspace-brand {
 :host(.is-compact) .workspace-sidebar-controls {
   flex-direction: column;
 }
-:host(.is-compact) .sidebar-navigation-bottom {
-  order: 0;
+:host(.is-compact) .has-panel {
   border: 0;
+  padding-bottom: 0;
 }
 :host(.is-compact) .workspace-sidebar-content {
   --button-target: 2.75rem;
   flex: none;
   order: -2;
   overflow: visible;
+}
+// The rail and the full sidebar animate their own width; the grid column follows.
+@media (min-width: 860px) {
+  :host {
+    width: var(--sidebar-width);
+    transition: width var(--motion-panel) var(--ease);
+  }
 }
 @media (max-width: 859px) {
   :host {
