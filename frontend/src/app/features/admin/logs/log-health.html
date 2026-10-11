@@ -1,0 +1,76 @@
+@if (health(); as state) {
+  <section
+    class="log-health"
+    [class.degraded]="state.status === 'degraded'"
+    aria-label="日誌系統健康狀態"
+  >
+    <div class="log-health-row">
+      <nx-status-badge [tone]="state.status === 'degraded' ? 'warning' : 'success'">{{
+        state.status === 'degraded' ? '日誌系統降級' : '日誌系統正常'
+      }}</nx-status-badge>
+      <span
+        >佇列 <b>{{ state.queueDepth }}</b></span
+      >
+      <span
+        >寫入失敗 <b>{{ state.writeFailures }}</b></span
+      >
+      <span
+        >待補送 <b>{{ bytes(state.pendingBytes) }}</b></span
+      >
+      <span class="log-health-sql"
+        >SQL <b>{{ state.estimatedSqlRows.toLocaleString() }}</b> 筆</span
+      >
+    </div>
+    <details nxDisclosure class="log-health-details">
+      <summary>更多指標<nx-icon name="chevron" /></summary>
+      <div class="log-health-popover">
+        <dl class="ui-description-list">
+          <div>
+            <dt>遺失／損壞</dt>
+            <dd>{{ state.lost }} / {{ state.corrupt }}</dd>
+          </div>
+          <div>
+            <dt>已補送</dt>
+            <dd>{{ state.replayed }}</dd>
+          </div>
+          <div>
+            <dt>暫存大小</dt>
+            <dd>{{ bytes(state.diskBytes) }}</dd>
+          </div>
+          <div>
+            <dt>採樣略過</dt>
+            <dd>{{ state.sampled }}</dd>
+          </div>
+          <div>
+            <dt>SQL 最後成功</dt>
+            <dd>{{ state.lastSqlWrite ? date(state.lastSqlWrite) : '尚未寫入' }}</dd>
+          </div>
+          <div>
+            <dt>檔案最後成功</dt>
+            <dd>{{ state.lastFileWrite ? date(state.lastFileWrite) : '尚未寫入' }}</dd>
+          </div>
+          <div>
+            <dt>選配匯出失敗</dt>
+            <dd>{{ state.exportFailures }} 次</dd>
+          </div>
+        </dl>
+        @if (state.failure) {
+          <p class="form-note">診斷狀態：{{ state.failure }}</p>
+        }
+      </div>
+    </details>
+    <button
+      type="button"
+      class="icon-button"
+      aria-label="更新狀態"
+      title="更新狀態"
+      [disabled]="refreshing()"
+      (click)="refresh()"
+    >
+      <nx-icon name="refresh" />
+    </button>
+  </section>
+}
+@if (error()) {
+  <nx-notice tone="danger" [message]="error()" />
+}

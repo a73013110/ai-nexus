@@ -1,9 +1,9 @@
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { Field } from '../../shared/ui/field';
-import { ClientValidationError } from '../../core/errors/safe-errors';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   ChangeDetectionStrategy,
@@ -12,6 +12,8 @@ import {
   computed,
   inject,
   signal,
+  untracked,
+  linkedSignal,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type {
@@ -67,26 +69,120 @@ export class RepositoriesPage {
   private readonly transfer = inject(ConversationDraftTransfer);
   private readonly router = inject(Router);
   readonly reviewId = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('review') || '');
-  readonly status = signal<RepositoryStatusDto | null>(null);
-  readonly loading = signal(true);
+  private readonly statusRead = apiResource({
+    feature: 'repositories',
+    loader: () => this.api.status(),
+  });
+  readonly status = computed<RepositoryStatusDto | null>(() => this.statusRead.value() ?? null);
+  private readonly connected = computed(() => !!this.status()?.connected);
+  private readonly collectionsRead = apiResource({
+    feature: 'repositories',
+    loader: () =>
+      this.session.has('knowledge') ? this.knowledge.collections() : Promise.resolve([]),
+  });
+  readonly collections = computed<CollectionDto[]>(() => this.collectionsRead.value() ?? []);
+  private readonly listPage = signal(1);
+  private readonly pageRead = apiResource({
+    feature: 'repositories',
+    params: () => (this.connected() && this.status()?.available ? this.listPage() : undefined),
+    loader: (page) => this.api.list(page),
+  });
+  readonly page = computed<RepositoryPageDto | null>(() =>
+    this.connected() ? (this.pageRead.value() ?? null) : null,
+  );
+  /** A review opened by link: its repository and tab are shown once it loads. */
+  private readonly reviewRead = apiResource({
+    feature: 'repositories',
+    params: () => (this.reviewId() && this.connected() ? this.reviewId() : undefined),
+    loader: (id) => this.api.review(id),
+  });
+  private readonly linkedReview = computed(() => {
+    const value = this.reviewRead.value();
+    return value && value.review.id === this.reviewId() ? value : null;
+  });
+  readonly selectedReview = linkedSignal<RepositoryReviewDetailDto | null>(this.linkedReview);
+  readonly selected = linkedSignal<RepositoryReviewDetailDto | null, RepositoryDto | null>({
+    source: this.linkedReview,
+    computation: (review, previous) => {
+      if (!review) return previous?.value ?? null;
+      const name = review.review.repository;
+      return (
+        untracked(this.page)?.items.find((x) => x.fullName === name) || {
+          fullName: name,
+          description: '',
+          private: true,
+          defaultBranch: '',
+          url: untracked(this.status)!.baseUrl + name,
+        }
+      );
+    },
+  });
+  readonly tab = linkedSignal<RepositoryReviewDetailDto | null, string>({
+    source: this.linkedReview,
+    computation: (review, previous) => (review ? 'review' : (previous?.value ?? 'files')),
+  });
+  /** The folder being browsed; its commit stays fixed while moving between folders. */
+  private readonly browsing = signal<{ repository: string; commit: string; path: string } | null>(
+    null,
+  );
+  private readonly treeRead = apiResource({
+    feature: 'repositories',
+    params: () => this.browsing() ?? undefined,
+    loader: (at) => this.api.tree(at.repository, at.commit, at.path),
+  });
+  readonly tree = computed<RepositoryTreeDto | null>(() => {
+    const value = this.treeRead.value();
+    return value && value.repository === this.selected()?.fullName ? value : null;
+  });
+  private readonly opened = signal<{ repository: string; commit: string; path: string } | null>(
+    null,
+  );
+  private readonly fileRead = apiResource({
+    feature: 'repositories',
+    params: () => this.opened() ?? undefined,
+    loader: (at) => this.api.file(at.repository, at.commit, at.path),
+  });
+  readonly file = computed<RepositoryFileDto | null>(() => {
+    const value = this.fileRead.value(),
+      opened = this.opened();
+    return value && opened && value.path === opened.path && value.commit === opened.commit
+      ? value
+      : null;
+  });
+  private readonly issuesRead = apiResource({
+    feature: 'repositories',
+    params: () =>
+      this.tab() === 'issues' && this.selected() ? this.selected()!.fullName : undefined,
+    loader: (repository) => this.api.issues(repository),
+  });
+  readonly issues = computed<RepositoryIssueDto[]>(() => this.issuesRead.value() ?? []);
+  readonly loading = this.statusRead.loading;
+  readonly reading = computed(
+    () =>
+      this.pageRead.refreshing() ||
+      this.treeRead.loading() ||
+      this.fileRead.loading() ||
+      this.issuesRead.loading(),
+  );
   readonly busy = signal(false);
-  readonly reading = signal(false);
-  readonly error = signal('');
+  readonly actionError = signal('');
+  readonly error = computed(
+    () =>
+      this.actionError() ||
+      this.statusRead.error() ||
+      this.collectionsRead.error() ||
+      this.pageRead.error() ||
+      this.reviewRead.error() ||
+      this.treeRead.error() ||
+      this.fileRead.error() ||
+      this.issuesRead.error(),
+  );
   readonly notice = signal('');
   readonly token = signal('');
   readonly reconnect = signal(false);
-  readonly page = signal<RepositoryPageDto | null>(null);
   readonly query = signal('');
-  readonly selected = signal<RepositoryDto | null>(null);
-  readonly selectedReview = signal<RepositoryReviewDetailDto | null>(null);
-  readonly tree = signal<RepositoryTreeDto | null>(null);
-  readonly file = signal<RepositoryFileDto | null>(null);
-  readonly issues = signal<RepositoryIssueDto[]>([]);
-  readonly tab = signal('files');
   readonly importedId = signal('');
-  readonly collections = signal<CollectionDto[]>([]);
   readonly collection = signal('');
-  private sequence = 0;
   readonly repos = computed(
     () =>
       this.page()?.items.filter((x) =>
@@ -102,60 +198,14 @@ export class RepositoriesPage {
     inject(DestroyRef).onDestroy(() => this.token.set(''));
     inject(ActivatedRoute)
       .queryParamMap.pipe(takeUntilDestroyed())
-      .subscribe((params) => {
-        const id = params.get('review') || '';
-        if (id === this.reviewId()) return;
-        this.reviewId.set(id);
-        if (id && this.status()?.connected) void this.openReview(id);
-      });
-    void this.load();
+      .subscribe((params) => this.reviewId.set(params.get('review') || ''));
   }
-  private async openReview(id: string) {
-    const sequence = ++this.sequence,
-      valid = this.scope.guard();
-    try {
-      const detail = await this.api.review(id);
-      if (!valid() || sequence !== this.sequence || id !== this.reviewId()) return;
-      const name = detail.review.repository;
-      this.selectedReview.set(detail);
-      this.selected.set(
-        this.page()?.items.find((x) => x.fullName === name) || {
-          fullName: name,
-          description: '',
-          private: true,
-          defaultBranch: '',
-          url: this.status()!.baseUrl + name,
-        },
-      );
-      this.tab.set('review');
-    } catch (e) {
-      if (valid() && sequence === this.sequence) this.error.set(this.scope.message(e));
-    }
-  }
-  async load() {
-    const valid = this.scope.guard();
-    this.loading.set(true);
-    this.error.set('');
-    try {
-      await this.session.load();
-      if (!valid()) return;
-      if (!this.session.has('repositories')) throw new ClientValidationError('featureAccess');
-      const status = await this.api.status();
-      if (!valid()) return;
-      this.status.set(status);
-      if (status.connected && status.available) {
-        await this.list();
-        if (this.reviewId()) await this.openReview(this.reviewId());
-      }
-      if (this.session.has('knowledge')) {
-        const collections = await this.knowledge.collections();
-        if (valid()) this.collections.set(collections);
-      }
-    } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
-    } finally {
-      if (valid()) this.loading.set(false);
-    }
+  /** Read the connection, repositories and collections again. */
+  load() {
+    this.actionError.set('');
+    this.statusRead.reload();
+    this.collectionsRead.reload();
+    this.pageRead.reload();
   }
   async connect(event: Event) {
     event.preventDefault();
@@ -164,16 +214,15 @@ export class RepositoriesPage {
       valid = this.scope.guard();
     this.token.set('');
     this.busy.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
       const status = await this.api.connect(token);
       if (!valid()) return;
-      this.status.set(status);
+      this.statusRead.value.set(status);
       this.reconnect.set(false);
-      await this.list();
-      if (this.reviewId()) await this.openReview(this.reviewId());
+      this.pageRead.reload();
     } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
+      if (valid()) this.actionError.set(this.scope.message(e));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -185,107 +234,61 @@ export class RepositoriesPage {
     try {
       await this.api.disconnect();
       if (valid()) {
-        this.status.update((x) => (x ? { ...x, connected: false, login: null } : x));
-        this.page.set(null);
+        this.statusRead.value.update((x) => (x ? { ...x, connected: false, login: null } : x));
         this.selected.set(null);
-        this.tree.set(null);
-        this.file.set(null);
-        this.issues.set([]);
-        ++this.sequence;
+        this.browsing.set(null);
+        this.opened.set(null);
       }
     } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
+      if (valid()) this.actionError.set(this.scope.message(e));
     } finally {
       if (valid()) this.busy.set(false);
     }
   }
-  async list(page = 1) {
-    const valid = this.scope.guard();
-    this.reading.set(true);
-    try {
-      const result = await this.api.list(page);
-      if (valid()) {
-        this.page.set(result);
-        this.query.set('');
-      }
-    } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
-    } finally {
-      if (valid()) this.reading.set(false);
-    }
+  list(page = 1) {
+    this.query.set('');
+    if (page === this.listPage()) this.pageRead.reload();
+    else this.listPage.set(page);
   }
-  async choose(repo: RepositoryDto) {
+  choose(repo: RepositoryDto) {
     if (this.busy()) return;
     this.reviewId.set('');
     this.selectedReview.set(null);
     void this.router.navigate(['/repositories'], { replaceUrl: true });
     this.selected.set(repo);
-    this.file.set(null);
-    this.tree.set(null);
-    this.issues.set([]);
     this.tab.set('files');
     this.importedId.set('');
-    await this.folder('');
+    this.folder('');
   }
-  async folder(path: string) {
+  folder(path: string) {
     const repo = this.selected();
     if (!repo) return;
-    const valid = this.scope.guard(),
-      sequence = ++this.sequence;
-    this.reading.set(true);
-    this.error.set('');
-    this.file.set(null);
-    try {
-      const tree = await this.api.tree(repo.fullName, this.tree()?.commit ?? '', path);
-      if (valid() && sequence === this.sequence) this.tree.set(tree);
-    } catch (e) {
-      if (valid() && sequence === this.sequence) this.error.set(this.scope.message(e));
-    } finally {
-      if (valid() && sequence === this.sequence) this.reading.set(false);
-    }
+    this.actionError.set('');
+    this.opened.set(null);
+    this.browsing.set({ repository: repo.fullName, commit: this.tree()?.commit ?? '', path });
+  }
+  closeFile() {
+    this.opened.set(null);
   }
   parent() {
     return (this.tree()?.path ?? '').split('/').slice(0, -1).join('/');
   }
-  async read(path: string) {
+  read(path: string) {
     const tree = this.tree();
     if (!tree) return;
-    const valid = this.scope.guard(),
-      sequence = ++this.sequence;
-    this.reading.set(true);
-    this.error.set('');
+    this.actionError.set('');
     this.importedId.set('');
-    try {
-      const file = await this.api.file(tree.repository, tree.commit, path);
-      if (valid() && sequence === this.sequence) this.file.set(file);
-    } catch (e) {
-      if (valid() && sequence === this.sequence) this.error.set(this.scope.message(e));
-    } finally {
-      if (valid() && sequence === this.sequence) this.reading.set(false);
-    }
+    this.opened.set({ repository: tree.repository, commit: tree.commit, path });
   }
-  async showIssues() {
-    const repo = this.selected();
-    if (!repo || this.busy()) return;
-    const valid = this.scope.guard(),
-      sequence = ++this.sequence;
-    this.tab.set('issues');
-    this.reading.set(true);
-    try {
-      const rows = await this.api.issues(repo.fullName);
-      if (valid() && sequence === this.sequence) this.issues.set(rows);
-    } catch (e) {
-      if (valid() && sequence === this.sequence) this.error.set(this.scope.message(e));
-    } finally {
-      if (valid() && sequence === this.sequence) this.reading.set(false);
-    }
+  showIssues() {
+    if (this.selected() && !this.busy()) this.tab.set('issues');
   }
   async use(action: 'chat' | 'import') {
     const file = this.file();
     if (!file || this.busy()) return;
     const valid = this.scope.guard();
     this.busy.set(true);
-    this.error.set('');
+    this.actionError.set('');
     this.notice.set('');
     try {
       if (action === 'import') {
@@ -306,7 +309,7 @@ export class RepositoriesPage {
         await this.router.navigate(['/chat', next.id]);
       }
     } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
+      if (valid()) this.actionError.set(this.scope.message(e));
     } finally {
       if (valid()) this.busy.set(false);
     }

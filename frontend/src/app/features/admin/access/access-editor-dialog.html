@@ -1,0 +1,263 @@
+<dialog
+  nxCompactDialog
+  #editorDialog
+  class="workspace-dialog platform-dialog admin-editor"
+  [nxDialogView]="groupSection()"
+  [class.admin-group-editor]="editor()?.kind === 'group'"
+  [class.admin-editor-wide]="
+    editor()?.kind === 'group' && (groupSection() === 'models' || groupSection() === 'features')
+  "
+  [class.ui-dialog-compact]="editor()?.kind === 'feature'"
+  aria-labelledby="admin-editor-title"
+  (close)="editor.set(null)"
+  (cancel)="cancel($event)"
+>
+  <div class="dialog-scroll">
+    @if (editor(); as e) {
+      <div class="dialog-heading">
+        <div>
+          <span class="panel-eyebrow">{{ e.isNew ? '新增' : '編輯' }}{{ label(e.kind) }}</span>
+          <h2 id="admin-editor-title">{{ e.name || '建立新的' + label(e.kind) }}</h2>
+          @if (e.subtitle) {
+            <p>{{ e.subtitle }}</p>
+          }
+        </div>
+        <button
+          class="icon-button"
+          aria-label="關閉管理編輯"
+          [disabled]="saving()"
+          (click)="close()"
+        >
+          <nx-icon name="close" />
+        </button>
+      </div>
+      @if (editorError()) {
+        <nx-notice tone="danger" [message]="editorError()" />
+      }
+      @if (e.kind === 'group') {
+        <nx-view-switch
+          label="群組設定分類"
+          [options]="groupViewOptions"
+          [value]="groupSection()"
+          (valueChange)="groupSection.set($event)"
+        />
+      }
+      <form class="admin-editor-form" (submit)="save($event)">
+        <div class="platform-form admin-editor-fields" [nxViewMotion]="groupSection()">
+          @if (e.kind === 'user') {
+            <label
+              >姓名<input
+                nxField
+                aria-label="使用者姓名"
+                required
+                maxlength="120"
+                [value]="e.name"
+                [readOnly]="saving()"
+                (input)="update('name', $any($event.target).value)"
+            /></label>
+            <nx-checkbox
+              label="啟用使用者"
+              [checked]="e.enabled"
+              [disabled]="saving()"
+              (checkedChange)="update('enabled', $event)"
+            />
+            <fieldset>
+              <legend>允許的登入方式</legend>
+              <p class="form-note">可同時開啟多種方式，皆使用同一份角色、對話與個人設定。</p>
+              <nx-checkbox
+                label="允許 AD 驗證"
+                [checked]="e.adEnabled"
+                [disabled]="saving()"
+                (checkedChange)="update('adEnabled', $event)"
+              />
+              @if (e.adEnabled) {
+                <label
+                  >AD 帳號<input
+                    nxField
+                    aria-label="使用者 AD 帳號"
+                    required
+                    maxlength="64"
+                    autocomplete="off"
+                    [value]="e.adAccount"
+                    [readOnly]="saving()"
+                    (input)="update('adAccount', $any($event.target).value)"
+                /></label>
+                <p class="form-note">
+                  填目錄中的帳號，不含網域。驗證後綁定 AD SID，不保存 AD 密碼。
+                </p>
+              }
+              <nx-checkbox
+                label="允許本地密碼登入"
+                [checked]="e.localEnabled"
+                [disabled]="saving()"
+                (checkedChange)="update('localEnabled', $event)"
+              />
+              @if (e.localEnabled) {
+                <label
+                  >本地登入帳號<input
+                    nxField
+                    aria-label="本地登入帳號"
+                    required
+                    maxlength="64"
+                    autocomplete="off"
+                    [value]="e.localAccount"
+                    [readOnly]="saving()"
+                    (input)="update('localAccount', $any($event.target).value)"
+                /></label>
+                <label
+                  >{{ e.hasLocalPassword ? '重設本地密碼' : '初始本地密碼'
+                  }}<input
+                    nxField
+                    aria-label="設定本地密碼"
+                    type="password"
+                    autocomplete="new-password"
+                    minlength="12"
+                    maxlength="128"
+                    [required]="!e.hasLocalPassword"
+                    [value]="e.password"
+                    [readOnly]="saving()"
+                    (input)="update('password', $any($event.target).value)"
+                /></label>
+                <p class="form-note">
+                  12–128 個字元，以 Argon2id
+                  加鹽雜湊保存。編輯時留白可保留既有密碼，重設後舊登入會失效。
+                </p>
+              }
+            </fieldset>
+          }
+          @if (e.kind !== 'user' && (e.kind !== 'group' || groupSection() === 'general')) {
+            @if (e.isNew) {
+              <label
+                >識別碼<input
+                  nxField
+                  aria-label="識別碼"
+                  required
+                  maxlength="64"
+                  pattern="[a-z][a-z0-9_-]{0,63}"
+                  placeholder="例如：document-reviewers"
+                  [value]="e.id"
+                  [readOnly]="saving()"
+                  (input)="update('id', $any($event.target).value)"
+              /></label>
+            }
+            <label
+              >名稱<input
+                nxField
+                aria-label="名稱"
+                required
+                maxlength="120"
+                [value]="e.name"
+                [readOnly]="saving()"
+                (input)="update('name', $any($event.target).value)"
+            /></label>
+            <nx-checkbox
+              [label]="'啟用' + label(e.kind)"
+              [checked]="e.enabled"
+              [disabled]="saving()"
+              (checkedChange)="update('enabled', $event)"
+            />
+          }
+          @if (e.kind !== 'feature' && (e.kind !== 'group' || groupSection() === 'features')) {
+            <fieldset>
+              <legend>
+                {{
+                  e.kind === 'user' ? '分派角色' : e.kind === 'role' ? '加入功能群組' : '授予功能'
+                }}
+              </legend>
+              <div class="choice-list">
+                @if (e.kind === 'group') {
+                  @for (section of groupedFeatures(); track section.id) {
+                    <fieldset class="feature-choice-group">
+                      <legend>{{ section.name }}</legend>
+                      @for (item of section.features; track item.id) {
+                        <nx-checkbox
+                          [label]="item.name + (item.enabled ? '' : '（停用）')"
+                          [description]="item.id"
+                          [checked]="e.ids.includes(item.id)"
+                          [disabled]="saving()"
+                          (checkedChange)="check(item.id, $event)"
+                        />
+                      }
+                    </fieldset>
+                  }
+                } @else {
+                  @for (item of choices(); track item.id) {
+                    <nx-checkbox
+                      [label]="item.name + (item.enabled ? '' : '（停用）')"
+                      [description]="item.id"
+                      [checked]="e.ids.includes(item.id)"
+                      [disabled]="saving()"
+                      (checkedChange)="check(item.id, $event)"
+                    />
+                  }
+                }
+              </div>
+            </fieldset>
+          }
+          @if (e.kind === 'user' || e.kind === 'role') {
+            <p class="form-note">儲存後可用功能（預覽）：</p>
+            <nx-feature-summary [features]="proposedFeatures()" />
+          }
+          @if (e.kind === 'group' && groupSection() === 'models') {
+            <nx-model-policy-editor
+              [models]="store.catalog()?.models || []"
+              [value]="e.modelPolicy"
+              [disabled]="saving()"
+              (valueChange)="update('modelPolicy', $event)"
+            />
+          }
+          @if (e.kind === 'group' && groupSection() === 'storage') {
+            <h3>每位成員的原檔容量</h3>
+            <label
+              >群組附件空間上限（GB）<input
+                nxField
+                type="number"
+                aria-label="群組附件空間上限"
+                min="0"
+                max="1000000"
+                step="0.000000001"
+                placeholder="使用預設 5 GB"
+                [value]="e.storage"
+                [readOnly]="saving()"
+                (input)="update('storage', $any($event.target).value)"
+            /></label>
+            <p class="form-note">
+              各有效群組容量取最低值；個人設定優先。留空使用網站預設，0
+              禁止新增上傳。降低上限保留既有檔案。1 GB = 1,000,000,000 bytes。
+            </p>
+          }
+          @if (e.kind === 'feature') {
+            <label
+              >顯示順序<input
+                nxField
+                type="number"
+                aria-label="顯示順序"
+                required
+                min="0"
+                max="10000"
+                step="1"
+                [value]="e.order"
+                [readOnly]="saving()"
+                (input)="update('order', $any($event.target).value)"
+            /></label>
+          }
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="secondary-button" [disabled]="saving()" (click)="close()">
+            取消</button
+          ><button type="submit" class="primary-button" [disabled]="saving()">
+            {{
+              saving()
+                ? '儲存中…'
+                : e.kind === 'feature'
+                  ? '儲存功能'
+                  : e.kind === 'user' && e.profileChanged
+                    ? '儲存使用者'
+                    : '儲存授權'
+            }}
+          </button>
+        </div>
+      </form>
+    }
+  </div>
+</dialog>

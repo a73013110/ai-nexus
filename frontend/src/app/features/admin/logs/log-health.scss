@@ -1,0 +1,84 @@
+:host {
+  display: block;
+}
+.log-health {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  padding: var(--p-space-2) var(--p-space-3);
+  margin-bottom: var(--p-space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  background: var(--surface);
+  font-size: var(--p-font-xs);
+}
+.log-health.degraded {
+  border-color: var(--warning);
+}
+.log-health-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--p-space-2) var(--p-space-4);
+  color: var(--secondary);
+}
+.log-health-row b {
+  color: var(--ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.log-health-details summary {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  min-height: var(--button-target);
+  cursor: pointer;
+  color: var(--secondary);
+  white-space: nowrap;
+}
+summary {
+  list-style: none;
+}
+summary::-webkit-details-marker {
+  display: none;
+}
+summary nx-icon {
+  width: 14px;
+  height: 14px;
+}
+.log-health-details summary nx-icon {
+  transform: rotate(90deg);
+}
+.log-health-details[open] summary nx-icon {
+  transform: rotate(-90deg);
+}
+.log-health-popover {
+  position: absolute;
+  inset: calc(100% + 0.25rem) 0 auto auto;
+  z-index: 4;
+  width: min(35rem, 100%);
+  padding: var(--p-space-4);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  box-shadow: var(--shadow-floating);
+}
+@media (max-width: 1200px) {
+  .log-health-sql {
+    display: none;
+  }
+}
+@media (max-width: 640px) {
+  .log-health {
+    flex-wrap: wrap;
+  }
+  .log-health-row {
+    flex-basis: 100%;
+    gap: var(--p-space-2);
+  }
+  .log-health-details {
+    margin-inline-start: auto;
+  }
+}

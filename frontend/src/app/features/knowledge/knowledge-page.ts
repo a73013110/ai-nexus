@@ -1,3 +1,4 @@
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { Card } from '../../shared/ui/card';
 import { StatusBadge } from '../../shared/ui/status-badge';
@@ -5,7 +6,6 @@ import { EmptyState } from '../../shared/ui/empty-state';
 import { SearchField } from '../../shared/ui/search-field';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
-import { ClientValidationError } from '../../core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -70,13 +70,44 @@ export class KnowledgePage {
   private readonly uploads = inject(WorkspaceApi);
   private readonly scope = inject(ViewScope);
   readonly session = inject(WorkspaceSession);
-  readonly collections = signal<CollectionDto[]>([]);
-  readonly selected = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('collection') || '');
-  readonly documents = signal<DocumentDto[]>([]);
-  readonly policy = signal<AttachmentPolicyDto | null>(null);
-  readonly loading = signal(true);
-  readonly loadingDocuments = signal(false);
-  readonly error = signal('');
+  private readonly collectionsRead = apiResource({
+    feature: 'knowledge',
+    loader: () => this.api.collections(),
+  });
+  private readonly policyRead = apiResource({
+    feature: 'knowledge',
+    loader: () => this.uploads.attachmentPolicy(),
+  });
+  readonly collections = computed<CollectionDto[]>(() => this.collectionsRead.value() ?? []);
+  /** The collection asked for (link or picker); the first one when it is not available. */
+  private readonly requested = signal(
+    inject(ActivatedRoute).snapshot.queryParamMap.get('collection') || '',
+  );
+  readonly selected = computed(() =>
+    this.collections().some((x) => x.resource.id === this.requested())
+      ? this.requested()
+      : this.collections()[0]?.resource.id || '',
+  );
+  /** Documents are re-read while any of them is still being processed. */
+  private readonly documentsRead = apiResource({
+    feature: 'knowledge',
+    params: () => this.selected() || undefined,
+    loader: (id) => this.api.documents(id),
+    poll: (rows) =>
+      rows?.some((x) => ['queued', 'running', 'processing'].includes(x.status)) ? 2500 : null,
+  });
+  readonly documents = computed<DocumentDto[]>(() => this.documentsRead.value() ?? []);
+  readonly policy = computed<AttachmentPolicyDto | null>(() => this.policyRead.value() ?? null);
+  readonly loading = this.collectionsRead.loading;
+  readonly loadingDocuments = this.documentsRead.loading;
+  readonly actionError = signal('');
+  readonly error = computed(
+    () =>
+      this.actionError() ||
+      this.collectionsRead.error() ||
+      this.policyRead.error() ||
+      this.documentsRead.error(),
+  );
   readonly notice = signal('');
   readonly uploading = signal(false);
   readonly uploadLabel = signal('');
@@ -126,79 +157,34 @@ export class KnowledgePage {
       disabled: !this.current()?.resource.isOwner,
     },
   ]);
-  private documentVersion = 0;
-  constructor() {
-    void this.load();
+  /** Read the collections and the selected collection's documents again. */
+  load() {
+    this.actionError.set('');
+    this.collectionsRead.reload();
+    this.documentsRead.reload();
   }
-  async load() {
-    const valid = this.scope.guard();
-    this.error.set('');
-    try {
-      await this.session.load();
-      if (!valid() || !this.session.me()) return;
-      if (!this.session.has('knowledge')) throw new ClientValidationError('featureAccess');
-      const rows = await this.api.collections(),
-        policy = await this.uploads.attachmentPolicy();
-      if (!valid()) return;
-      this.collections.set(rows);
-      this.policy.set(policy);
-      if (!rows.some((x) => x.resource.id === this.selected()))
-        this.selected.set(rows[0]?.resource.id || '');
-      if (this.selected()) await this.loadDocuments();
-    } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.loading.set(false);
-    }
-  }
-  async select(id: string) {
-    this.selected.set(id);
+  select(id: string) {
+    this.requested.set(id);
     this.result.set(null);
     this.query.set('');
     this.filter.set('');
-    await this.loadDocuments();
   }
   async addLibrary(file: LibraryFileDto) {
     const collection = this.selected(),
       valid = this.scope.guard();
     if (!collection || this.uploading() || !this.current()?.resource.canEdit) return;
     this.uploading.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
       await this.api.add(collection, file.file.id);
       if (valid()) {
         this.notice.set('已從檔案庫加入來源，索引會在背景建立。');
-        await this.load();
+        this.load();
       }
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.uploading.set(false);
-    }
-  }
-  async loadDocuments(poll = false) {
-    const id = this.selected(),
-      version = ++this.documentVersion,
-      guard = this.scope.guard(),
-      valid = () => guard() && version === this.documentVersion && id === this.selected();
-    if (!id) return;
-    if (!poll) this.loadingDocuments.set(true);
-    try {
-      const rows = await this.api.documents(id);
-      if (!valid()) return;
-      this.documents.set(rows);
-      if (rows.some((x) => ['queued', 'running', 'processing'].includes(x.status)))
-        this.scope.later(
-          () => {
-            if (id === this.selected()) void this.loadDocuments(true);
-          },
-          2500,
-          'documents',
-        );
-    } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.loadingDocuments.set(false);
     }
   }
   openEditor(edit = false) {
@@ -220,12 +206,12 @@ export class KnowledgePage {
         await this.api.update(this.editorId()!, this.editorName(), this.editorDescription());
       else {
         const created = await this.api.create(this.editorName(), this.editorDescription());
-        if (valid()) this.selected.set(created.resource.id);
+        if (valid()) this.requested.set(created.resource.id);
       }
       if (valid()) {
         this.editorDialog().nativeElement.close();
         this.notice.set('知識庫已儲存。');
-        await this.load();
+        this.load();
       }
     } catch (error) {
       if (valid()) this.editorError.set(this.scope.message(error));
@@ -249,7 +235,7 @@ export class KnowledgePage {
     if (this.uploading() || !collection || !policy || !this.current()?.resource.canEdit) return;
     const candidates = Array.from(files);
     if (candidates.length > 10) {
-      this.error.set('每批最多上傳十份文件。');
+      this.actionError.set('每批最多上傳十份文件。');
       return;
     }
     if (
@@ -259,13 +245,13 @@ export class KnowledgePage {
           !policy.extensions.includes('.' + x.name.split('.').pop()?.toLowerCase()),
       )
     ) {
-      this.error.set(
+      this.actionError.set(
         `支援 ${policy.extensions.slice(0, 8).join('、')}，每份最多 ${policy.maxFileBytes / 1048576} MB。`,
       );
       return;
     }
     this.uploading.set(true);
-    this.error.set('');
+    this.actionError.set('');
     const controller = new AbortController();
     try {
       for (const file of candidates) {
@@ -274,14 +260,14 @@ export class KnowledgePage {
         const uploaded = await this.uploads.upload(file, controller.signal);
         if (!valid()) return;
         await this.api.add(collection, uploaded.id);
-        if (valid() && this.selected() === collection) await this.loadDocuments();
+        if (valid() && this.selected() === collection) this.documentsRead.reload();
       }
       if (valid()) {
         this.notice.set('文件已上傳。文字辨識與索引會在背景繼續處理。');
-        this.collections.set(await this.api.collections());
+        this.collectionsRead.reload();
       }
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) {
         this.uploading.set(false);
@@ -295,12 +281,12 @@ export class KnowledgePage {
     const valid = this.scope.guard(),
       collection = this.selected();
     this.searching.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
       const result = await this.api.search(this.query(), [collection]);
       if (valid() && this.selected() === collection) this.result.set(result);
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.searching.set(false);
     }
@@ -320,7 +306,7 @@ export class KnowledgePage {
       if (valid()) {
         this.deleteDialog().nativeElement.close();
         this.notice.set('已移除來源。');
-        await this.load();
+        this.load();
       }
     } catch (error) {
       if (valid()) this.editorError.set(this.scope.message(error));
@@ -330,15 +316,15 @@ export class KnowledgePage {
   }
   async reindex(document: DocumentDto) {
     const valid = this.scope.guard();
-    this.error.set('');
+    this.actionError.set('');
     try {
       await this.api.reindex(document.id);
       if (valid()) {
         this.notice.set('已安排重新索引，既有完成頁面會沿用。');
-        await this.loadDocuments();
+        this.documentsRead.reload();
       }
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.actionError.set(this.scope.message(error));
     }
   }
   actions(document: DocumentDto): MenuAction[] {
@@ -371,7 +357,7 @@ export class KnowledgePage {
   }
   textSaved() {
     this.notice.set('文字來源已儲存，索引正在背景更新。');
-    void this.load();
+    this.load();
   }
   status(value: string) {
     return (

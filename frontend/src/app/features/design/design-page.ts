@@ -1,3 +1,4 @@
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { Card } from '../../shared/ui/card';
 import {
@@ -85,8 +86,10 @@ const jobStates: SelectOption[] = [
 export class DesignPage {
   readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
-  readonly loading = signal(true);
-  readonly error = signal('');
+  /** The page shows only the account's feature names, so the account is its one read. */
+  private readonly account = apiResource({ loader: () => this.session.load() });
+  readonly loading = this.account.loading;
+  readonly error = this.account.error;
   readonly theme = signal<'light' | 'dark'>('light');
   readonly previewThemes = [
     { value: 'light', label: '淺色' },
@@ -190,20 +193,8 @@ export class DesignPage {
     this.title.set(value);
     return true;
   };
-  constructor() {
-    void this.load();
-  }
-  async load() {
-    const guard = this.scope.guard();
-    this.loading.set(true);
-    this.error.set('');
-    try {
-      await this.session.load();
-    } catch (error) {
-      if (guard()) this.error.set(this.scope.message(error));
-    } finally {
-      if (guard()) this.loading.set(false);
-    }
+  load() {
+    this.account.reload();
   }
   action(id: string) {
     if (id === 'edit') this.editable().begin();

@@ -3,7 +3,6 @@ import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
 import { FilterPanel } from '../../shared/ui/filter-panel';
 import { ViewSwitch } from '../../shared/ui/view-switch';
-import { ClientValidationError } from '../../core/errors/safe-errors';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -16,6 +15,7 @@ import { Icon } from '../../shared/ui/icon';
 import { JobProgress } from './job-progress';
 import { ResourceTarget } from '../../shared/ui/resource-target';
 import { JobsApi } from './jobs-api';
+import { apiResource } from '../../core/api/api-resource';
 
 @Component({
   selector: 'nx-tasks-page',
@@ -38,7 +38,7 @@ import { JobsApi } from './jobs-api';
     [title]="session.featureName('tasks')"
     description="追蹤文件辨識、索引、評測與程式碼 review。離開頁面後任務仍會繼續。"
   >
-    <button page-actions class="secondary-button" (click)="refresh()">
+    <button page-actions class="secondary-button" (click)="jobs.reload()">
       <nx-icon name="repeat" />重新整理
     </button>
     @if (error()) {
@@ -51,7 +51,7 @@ import { JobsApi } from './jobs-api';
         [value]="filter()"
         (valueChange)="filter.set($event)"
     /></nx-filter-panel>
-    @if (loading()) {
+    @if (jobs.loading()) {
       <p role="status" class="form-note">正在載入任務…</p>
     } @else if (!visible().length) {
       <nx-empty-state>
@@ -128,11 +128,21 @@ export class TasksPage {
   readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
   private readonly api = inject(JobsApi);
-  readonly jobs = signal<JobDto[]>([]);
   readonly target = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('job') || '');
+  /** Jobs are re-read every few seconds; a linked job outside the recent list is added to it. */
+  readonly jobs = apiResource({
+    feature: 'tasks',
+    params: () => this.target(),
+    loader: async (target) => {
+      const jobs = await this.api.list();
+      if (target && !jobs.some((x) => x.id === target)) jobs.push(await this.api.get(target));
+      return jobs;
+    },
+    poll: () => 3000,
+  });
   readonly filter = signal(this.target() ? 'all' : 'active');
-  readonly loading = signal(true);
-  readonly error = signal('');
+  readonly actionError = signal('');
+  readonly error = computed(() => this.actionError() || this.jobs.error());
   readonly busy = signal<string | null>(null);
   readonly filters = [
     { id: 'active', name: '處理中' },
@@ -142,7 +152,7 @@ export class TasksPage {
   ];
   readonly filterOptions = this.filters.map((item) => ({ value: item.id, label: item.name }));
   readonly visible = computed(() =>
-    this.jobs().filter(
+    (this.jobs.value() ?? []).filter(
       (x) =>
         this.filter() === 'all' ||
         (this.filter() === 'active'
@@ -152,7 +162,6 @@ export class TasksPage {
             : x.status === 'completed'),
     ),
   );
-  private revision = 0;
   constructor() {
     inject(ActivatedRoute)
       .queryParamMap.pipe(takeUntilDestroyed())
@@ -161,59 +170,19 @@ export class TasksPage {
         if (id === this.target()) return;
         this.target.set(id);
         if (id) this.filter.set('all');
-        if (!this.loading()) void this.refresh();
       });
-    void this.initialize();
-  }
-  private async initialize() {
-    const valid = this.scope.guard();
-    try {
-      await this.session.load();
-      if (!valid() || !this.session.me()) return;
-      if (!this.session.has('tasks')) throw new ClientValidationError('featureAccess');
-      await this.refresh();
-    } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.loading.set(false);
-    }
-  }
-  async refresh() {
-    const revision = ++this.revision,
-      guard = this.scope.guard(),
-      valid = () => guard() && revision === this.revision;
-    try {
-      const jobs = await this.api.list();
-      if (valid()) {
-        if (this.target() && !jobs.some((x) => x.id === this.target()))
-          jobs.push(await this.api.get(this.target()));
-        if (!valid()) return;
-        this.jobs.set(jobs);
-        this.error.set('');
-      }
-    } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
-    }
-    if (valid())
-      this.scope.later(
-        () => {
-          if (!document.hidden) void this.refresh();
-          else this.scope.later(() => void this.refresh(), 4000, 'poll');
-        },
-        3000,
-        'poll',
-      );
   }
   async act(job: JobDto, retry: boolean) {
     if (this.busy()) return;
     const valid = this.scope.guard();
     this.busy.set(job.id);
-    this.error.set('');
+    this.actionError.set('');
     try {
       const value = await (retry ? this.api.retry(job.id) : this.api.cancel(job.id));
-      if (valid()) this.jobs.update((items) => items.map((x) => (x.id === value.id ? value : x)));
+      if (valid())
+        this.jobs.value.update((items) => items?.map((x) => (x.id === value.id ? value : x)));
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(null);
     }

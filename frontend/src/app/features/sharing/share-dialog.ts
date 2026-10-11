@@ -9,16 +9,16 @@ import {
   input,
   signal,
   viewChild,
+  computed,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { DirectoryUserDto, ShareDto } from '../../core/api/schema';
-import { ResourceApi } from './resource-api';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { CopyFeedback } from '../../shared/browser/copy-feedback';
 import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
 import { SharingApi } from './sharing-api';
+import { directorySearch } from './directory-search';
 import { Checkbox } from '../../shared/ui/checkbox';
 @Component({
   selector: 'nx-share-dialog',
@@ -76,8 +76,8 @@ import { Checkbox } from '../../shared/ui/checkbox';
               placeholder="輸入至少兩個字，搜尋公司帳號"
               maxlength="120"
               [disabled]="busy()"
-              [value]="search()"
-              (input)="find($any($event.target).value)"
+              [value]="people.text()"
+              (input)="people.find($any($event.target).value)"
           /></label>
           <div class="share-recipients">
             @for (user of recipients(); track user.id) {
@@ -86,9 +86,9 @@ import { Checkbox } from '../../shared/ui/checkbox';
               </button>
             }
           </div>
-          @if (search().trim().length >= 2) {
+          @if (people.text().trim().length >= 2) {
             <div class="directory-results">
-              @for (user of results(); track user.id) {
+              @for (user of people.results(); track user.id) {
                 <button
                   class="directory-user"
                   [disabled]="busy() || recipients().length >= 20"
@@ -145,17 +145,15 @@ export class ShareDialog {
   readonly version = input<number | null>(null);
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   readonly recipients = signal<DirectoryUserDto[]>([]);
-  readonly results = signal<DirectoryUserDto[]>([]);
-  readonly search = signal('');
+  readonly people = directorySearch(() => this.recipients().map((x) => x.id));
   readonly hours = signal('168');
   readonly includeAttachments = signal(false);
   readonly created = signal<ShareDto | null>(null);
   readonly busy = signal(false);
-  readonly error = signal('');
+  readonly createError = signal('');
+  readonly error = computed(() => this.createError() || this.people.error());
   readonly copy = inject(CopyFeedback);
   private readonly api = inject(SharingApi);
-  private readonly directory = inject(ResourceApi);
-  private readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
   private request = 0;
   private context?: { kind: string; id: string; version: number | null };
@@ -170,10 +168,9 @@ export class ShareDialog {
     ++this.request;
     this.context = { kind: this.kind(), id: this.sourceId(), version: this.version() };
     this.created.set(null);
-    this.error.set('');
+    this.createError.set('');
     this.recipients.set([]);
-    this.search.set('');
-    this.results.set([]);
+    this.people.clear();
     this.includeAttachments.set(false);
     this.dialog().nativeElement.showModal();
   }
@@ -183,39 +180,9 @@ export class ShareDialog {
   add(user: DirectoryUserDto) {
     if (!this.recipients().some((x) => x.id === user.id) && this.recipients().length < 20)
       this.recipients.update((all) => [...all, user]);
-    this.results.update((all) => all.filter((x) => x.id !== user.id));
   }
   remove(id: string) {
     this.recipients.update((all) => all.filter((x) => x.id !== id));
-  }
-  find(value: string) {
-    this.search.set(value);
-    const sequence = ++this.request,
-      valid = this.scope.guard();
-    if (value.trim().length < 2) {
-      this.results.set([]);
-      return;
-    }
-    this.scope.later(
-      () => {
-        void this.directory
-          .directory(value.trim())
-          .then((all) => {
-            if (valid() && sequence === this.request)
-              this.results.set(
-                all.filter(
-                  (x) =>
-                    x.id !== this.session.me()?.id && !this.recipients().some((u) => u.id === x.id),
-                ),
-              );
-          })
-          .catch((e) => {
-            if (valid() && sequence === this.request) this.error.set(this.scope.message(e));
-          });
-      },
-      250,
-      'share-directory',
-    );
   }
   async create() {
     if (this.busy() || !this.recipients().length || !this.context) return;
@@ -223,7 +190,7 @@ export class ShareDialog {
       alive = this.scope.guard();
     const valid = () => alive() && context === this.context && context.id === this.sourceId();
     this.busy.set(true);
-    this.error.set('');
+    this.createError.set('');
     try {
       const value = await this.api.create({
         kind: context.kind,
@@ -235,7 +202,7 @@ export class ShareDialog {
       });
       if (valid()) this.created.set(value);
     } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
+      if (valid()) this.createError.set(this.scope.message(e));
     } finally {
       if (alive()) this.busy.set(false);
     }

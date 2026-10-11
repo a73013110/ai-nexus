@@ -68,7 +68,7 @@
         <button
           type="button"
           [attr.aria-pressed]="store.historyView() === view.id"
-          (click)="store.filterHistory(view.id)"
+          (click)="conversations.filterHistory(view.id)"
         >
           {{ view.name }}
         </button>

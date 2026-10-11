@@ -1,3 +1,4 @@
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
@@ -11,6 +12,7 @@ import {
   output,
   signal,
   viewChild,
+  computed,
 } from '@angular/core';
 import { FormField, form, maxLength, required } from '@angular/forms/signals';
 import type { PromptTemplateDto } from '../../core/api/schema';
@@ -108,10 +110,17 @@ export class PromptLibraryDialog {
   private readonly api = inject(WorkspaceApi);
   readonly draft = input('');
   readonly used = output<string>();
-  readonly prompts = signal<PromptTemplateDto[]>([]);
-  readonly loading = signal(false);
+  /** Each opening reads the saved prompts. */
+  private readonly opened = signal(0);
+  private readonly promptsRead = apiResource({
+    params: () => this.opened() || undefined,
+    loader: () => this.api.prompts(),
+  });
+  readonly prompts = computed<PromptTemplateDto[]>(() => this.promptsRead.value() ?? []);
+  readonly loading = this.promptsRead.loading;
   readonly busy = signal(false);
-  readonly error = signal('');
+  readonly actionError = signal('');
+  readonly error = computed(() => this.actionError() || this.promptsRead.error());
   readonly editingId = signal<string | null>(null);
   readonly model = signal({ title: '', content: '' });
   readonly fields = form(this.model, (schema) => {
@@ -121,18 +130,11 @@ export class PromptLibraryDialog {
     maxLength(schema.content, 12000);
   });
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
-  async open() {
-    this.error.set('');
+  open() {
+    this.actionError.set('');
     this.edit(null);
     this.dialog()?.nativeElement.showModal();
-    this.loading.set(true);
-    try {
-      this.prompts.set(await this.api.prompts());
-    } catch (error) {
-      this.report(error);
-    } finally {
-      this.loading.set(false);
-    }
+    this.opened.update((value) => value + 1);
   }
   edit(prompt: PromptTemplateDto | null) {
     this.editingId.set(prompt?.id ?? null);
@@ -146,10 +148,10 @@ export class PromptLibraryDialog {
     event.preventDefault();
     if (this.busy() || this.fields().invalid()) return;
     this.busy.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
       await this.api.savePrompt(this.editingId(), this.model().title, this.model().content);
-      this.prompts.set(await this.api.prompts());
+      this.promptsRead.reload();
       this.edit(null);
     } catch (error) {
       this.report(error);
@@ -162,7 +164,7 @@ export class PromptLibraryDialog {
     this.busy.set(true);
     try {
       await this.api.deletePrompt(id);
-      this.prompts.update((prompts) => prompts.filter((prompt) => prompt.id !== id));
+      this.promptsRead.value.update((prompts) => prompts?.filter((prompt) => prompt.id !== id));
       if (this.editingId() === id) this.edit(null);
     } catch (error) {
       this.report(error);
@@ -171,6 +173,6 @@ export class PromptLibraryDialog {
     }
   }
   private report(error: unknown) {
-    this.error.set(safeMessage(error));
+    this.actionError.set(safeMessage(error));
   }
 }

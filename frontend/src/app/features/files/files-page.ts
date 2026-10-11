@@ -26,6 +26,7 @@ import { NameDialog } from '../../shared/ui/name-dialog';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { WorkspaceApi } from '../workspace/workspace-api';
 import { FilesApi } from './files-api';
+import { apiResource } from '../../core/api/api-resource';
 import { FileBrowser } from './file-browser';
 import { FileLibraryStore } from './file-library-store';
 import { AddToKnowledge } from './add-to-knowledge';
@@ -65,12 +66,16 @@ export class FilesPage {
   readonly knowledge = viewChild.required(AddToKnowledge);
   readonly names = viewChild.required(NameDialog);
   private readonly confirm = viewChild.required(ConfirmDialog);
-  readonly policy = signal<AttachmentPolicyDto | null>(null);
+  private readonly policyRead = apiResource({ loader: () => this.uploads.attachmentPolicy() });
+  readonly policy = computed<AttachmentPolicyDto | null>(() => this.policyRead.value() ?? null);
   readonly layout = signal('grid');
   readonly uploading = signal(false);
   readonly uploadLabel = signal('');
   readonly busy = signal(false);
-  readonly error = signal('');
+  readonly actionError = signal('');
+  readonly error = computed(
+    () => this.actionError() || this.policyRead.error() || this.store.error(),
+  );
   readonly notice = signal('');
   readonly bytes = formatBytes;
   readonly accept = computed(() => this.policy()?.extensions.join(',') || '');
@@ -93,22 +98,8 @@ export class FilesPage {
   ];
   private controller?: AbortController;
   constructor() {
-    void this.load();
+    this.store.load();
     inject(DestroyRef).onDestroy(() => this.controller?.abort());
-  }
-  async load() {
-    const valid = this.scope.guard();
-    try {
-      await this.session.load();
-      if (!valid()) return;
-      const policy = await this.uploads.attachmentPolicy();
-      if (valid()) {
-        this.policy.set(policy);
-        await this.store.load();
-      }
-    } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
-    }
   }
   async upload(files: FileList | File[]) {
     const candidates = Array.from(files),
@@ -123,7 +114,7 @@ export class FilesPage {
           !policy.extensions.includes('.' + file.name.split('.').pop()?.toLowerCase()),
       )
     ) {
-      this.error.set(
+      this.actionError.set(
         `每批最多十份檔案，每份最多 ${this.bytes(policy.maxFileBytes)}。支援 ${policy.extensions.join('、')}。`,
       );
       return;
@@ -131,7 +122,7 @@ export class FilesPage {
     const valid = this.scope.guard();
     this.controller = new AbortController();
     this.uploading.set(true);
-    this.error.set('');
+    this.actionError.set('');
     this.notice.set('');
     let saved = 0;
     try {
@@ -146,12 +137,12 @@ export class FilesPage {
       if (valid())
         this.notice.set(`${saved} 份檔案已保存。可預覽、再次加入對話，或指定加入知識庫。`);
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) {
         this.uploading.set(false);
         this.uploadLabel.set('');
-        await this.store.load();
+        this.store.load();
       }
     }
   }
@@ -169,17 +160,17 @@ export class FilesPage {
     )
       return;
     this.busy.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
       await this.api.remove(item.file.id);
       if (valid()) {
         this.notice.set('檔案已刪除。');
         if (this.store.items().length === 1 && this.store.offset())
           this.store.offset.update((value) => Math.max(0, value - 40));
-        await this.store.load();
+        this.store.load();
       }
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -196,13 +187,13 @@ export class FilesPage {
         await this.api.rename(item.file.id, name, item.file.fileName);
         if (valid()) {
           this.notice.set('檔案名稱已更新。');
-          await this.store.load();
+          this.store.load();
         }
       },
     });
   }
   added() {
     this.notice.set('已加入知識庫。文字辨識與索引會在背景處理。');
-    void this.store.load();
+    this.store.load();
   }
 }

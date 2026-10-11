@@ -1,3 +1,4 @@
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { Field } from '../../shared/ui/field';
 import {
@@ -8,6 +9,7 @@ import {
   input,
   output,
   signal,
+  linkedSignal,
 } from '@angular/core';
 import type { MessageDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
@@ -91,11 +93,23 @@ export class MessageFeedback {
   private readonly scope = inject(ViewScope);
   private readonly savedRating = signal<number | null>(null);
   readonly rating = computed(() => this.savedRating() ?? this.message().feedbackRating ?? 0);
-  readonly expanded = signal(false);
-  readonly busy = signal(false);
-  readonly reason = signal('');
-  readonly note = signal('');
-  readonly error = signal('');
+  /** Supplementary details are read when the user first opens them. */
+  private readonly requested = signal(false);
+  private readonly detailsRead = apiResource({
+    params: () => (this.requested() ? this.message().id : undefined),
+    loader: async (id) => ({ id, feedback: await this.api.feedbackFor(id) }),
+  });
+  private readonly details = computed(() => {
+    const value = this.detailsRead.value();
+    return value && value.id === this.message().id ? value : null;
+  });
+  readonly expanded = computed(() => this.requested() && !!this.details());
+  private readonly saving = signal(false);
+  readonly busy = computed(() => this.saving() || this.detailsRead.loading());
+  readonly reason = linkedSignal(() => this.details()?.feedback?.reason ?? '');
+  readonly note = linkedSignal(() => this.details()?.feedback?.note ?? '');
+  readonly saveError = signal('');
+  readonly error = computed(() => this.saveError() || this.detailsRead.error());
   readonly notice = signal('');
   readonly reasons = [
     { value: '', label: '選擇原因（選填）' },
@@ -108,34 +122,19 @@ export class MessageFeedback {
   rate(value: number) {
     void this.save(this.rating() === value ? 0 : value);
   }
-  async openDetails() {
-    if (this.expanded()) {
-      this.expanded.set(false);
-      return;
-    }
-    if (this.busy()) return;
-    const id = this.message().id,
-      valid = this.scope.guard();
-    this.busy.set(true);
-    this.error.set('');
-    try {
-      const value = await this.api.feedbackFor(id);
-      if (!valid() || this.message().id !== id) return;
-      this.reason.set(value?.reason ?? '');
-      this.note.set(value?.note ?? '');
-      this.expanded.set(true);
-    } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
-    } finally {
-      if (valid()) this.busy.set(false);
+  openDetails() {
+    if (this.expanded()) this.requested.set(false);
+    else if (!this.busy()) {
+      this.saveError.set('');
+      this.requested.set(true);
     }
   }
   async save(value: number) {
     if (this.busy()) return;
     const id = this.message().id,
       alive = this.scope.guard();
-    this.busy.set(true);
-    this.error.set('');
+    this.saving.set(true);
+    this.saveError.set('');
     try {
       await this.api.feedback(
         id,
@@ -146,12 +145,12 @@ export class MessageFeedback {
       if (!alive() || this.message().id !== id) return;
       this.savedRating.set(value);
       this.rated.emit({ id, rating: value });
-      this.expanded.set(false);
+      this.requested.set(false);
       this.notice.set(value ? '回饋已儲存' : '回饋已移除');
     } catch (e) {
-      if (alive() && this.message().id === id) this.error.set(this.scope.message(e));
+      if (alive() && this.message().id === id) this.saveError.set(this.scope.message(e));
     } finally {
-      if (alive()) this.busy.set(false);
+      if (alive()) this.saving.set(false);
     }
   }
 }

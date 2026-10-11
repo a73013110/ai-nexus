@@ -1,10 +1,17 @@
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { Card } from '../../shared/ui/card';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { FilterPanel } from '../../shared/ui/filter-panel';
 import { Field } from '../../shared/ui/field';
-import { ClientValidationError } from '../../core/errors/safe-errors';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+  linkedSignal,
+} from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
@@ -32,135 +39,110 @@ export class IntegrationsPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly transfer = inject(ConversationDraftTransfer);
-  readonly sources = signal<SourceDto[]>([]);
-  readonly current = signal<SourceDto | null>(null);
-  readonly rows = signal<SourceRecordDto[]>([]);
-  readonly detail = signal<SourceDetailDto | null>(null);
+  /** Source and record named by the link that opened the page. */
+  private readonly linked = {
+    source: this.route.snapshot.queryParamMap.get('source'),
+    record: this.route.snapshot.queryParamMap.get('record'),
+  };
+  private readonly sourcesRead = apiResource({
+    feature: 'integrations',
+    loader: () => this.api.list(),
+  });
+  readonly sources = computed<SourceDto[]>(() => this.sourcesRead.value() ?? []);
+  /** The linked source, else the first one, until the user picks another. */
+  readonly current = linkedSignal<SourceDto[], SourceDto | null>({
+    source: this.sources,
+    computation: (sources, previous) =>
+      sources.find((x) => x.id === (previous?.value?.id ?? this.linked.source)) ??
+      sources[0] ??
+      null,
+  });
   readonly query = signal('');
   readonly kind = signal('all');
-  readonly loading = signal(true);
-  readonly searching = signal(false);
-  readonly reading = signal(false);
+  /** The search last submitted; results belong to it and its source. */
+  private readonly submitted = signal<{ source: string; query: string; kind: string } | null>(null);
+  private readonly rowsRead = apiResource({
+    feature: 'integrations',
+    params: () => this.submitted() ?? undefined,
+    loader: async (search) => ({
+      search,
+      rows: await this.api.search(search.source, search.query, search.kind),
+    }),
+  });
+  private readonly results = computed(() => {
+    const value = this.rowsRead.value();
+    return value && value.search === this.submitted() ? value.rows : null;
+  });
+  readonly rows = computed<SourceRecordDto[]>(() => this.results() ?? []);
+  readonly searched = computed(() => this.results() !== null);
+  readonly searching = this.rowsRead.loading;
+  /** The record on screen: the linked one, a single search hit, or the one the user opened. */
+  private readonly record = linkedSignal<SourceRecordDto[] | null, string | null>({
+    source: this.results,
+    computation: (rows, previous) =>
+      !previous ? this.linked.record : rows?.length === 1 ? rows[0].id : null,
+  });
+  /** The open record is checked again every 30 seconds while the tab is visible. */
+  private readonly detailRead = apiResource({
+    feature: 'integrations',
+    params: () => {
+      const source = this.current(),
+        id = this.record();
+      return source?.canQuery && id ? { source: source.id, id } : undefined;
+    },
+    loader: (record) => this.api.get(record.source, record.id),
+    poll: () => 30000,
+  });
+  readonly detail = computed<SourceDetailDto | null>(() => {
+    const value = this.detailRead.value();
+    return value && value.record.id === this.record() ? value : null;
+  });
+  readonly loading = this.sourcesRead.loading;
+  readonly reading = this.detailRead.loading;
   readonly busy = signal(false);
-  readonly searched = signal(false);
-  readonly error = signal('');
+  readonly actionError = signal('');
+  readonly error = computed(
+    () =>
+      this.actionError() ||
+      this.sourcesRead.error() ||
+      this.rowsRead.error() ||
+      this.detailRead.error(),
+  );
   readonly notice = signal('');
   readonly kindOptions = computed(() => [
     { value: 'all', label: '全部類型' },
     ...(this.current()?.kinds ?? []).map((x) => ({ value: x, label: this.label(x) })),
   ]);
   private revision = 0;
-  private readSequence = 0;
-  constructor() {
-    void this.load();
-  }
   private guard() {
     const revision = this.revision,
       valid = this.scope.guard();
     return () => valid() && revision === this.revision;
   }
-  async load() {
-    const valid = this.scope.guard();
-    try {
-      await this.session.load();
-      if (!valid() || !this.session.me()) return;
-      if (!this.session.has('integrations')) throw new ClientValidationError('featureAccess');
-      const sources = await this.api.list();
-      if (!valid()) return;
-      this.sources.set(sources);
-      const chosen =
-        sources.find((x) => x.id === this.route.snapshot.queryParamMap.get('source')) ?? sources[0];
-      if (chosen) {
-        this.select(chosen);
-        const id = this.route.snapshot.queryParamMap.get('record');
-        if (id && chosen.canQuery) await this.read(id);
-      }
-    } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
-    } finally {
-      if (valid()) this.loading.set(false);
-    }
-  }
   select(source: SourceDto) {
     if (this.busy()) return;
     ++this.revision;
-    ++this.readSequence;
     this.current.set(source);
-    this.rows.set([]);
-    this.detail.set(null);
+    this.submitted.set(null);
+    this.record.set(null);
     this.query.set('');
     this.kind.set('all');
-    this.searched.set(false);
-    this.error.set('');
+    this.actionError.set('');
     this.notice.set('');
-    this.searching.set(false);
-    this.reading.set(false);
   }
-  async search(event: Event) {
+  search(event: Event) {
     event.preventDefault();
-    const source = this.current(),
-      valid = this.guard();
+    const source = this.current();
     if (!source?.canQuery || this.searching() || this.query().trim().length < 2) return;
-    ++this.readSequence;
-    this.detail.set(null);
-    this.reading.set(false);
-    this.searching.set(true);
-    this.error.set('');
+    this.actionError.set('');
     this.notice.set('');
-    try {
-      const rows = await this.api.search(source.id, this.query(), this.kind());
-      if (!valid()) return;
-      this.rows.set(rows);
-      this.searched.set(true);
-      if (rows.length === 1) await this.read(rows[0].id);
-    } catch (e) {
-      if (valid()) {
-        this.rows.set([]);
-        this.error.set(this.scope.message(e));
-      }
-    } finally {
-      if (valid()) this.searching.set(false);
-    }
+    this.submitted.set({ source: source.id, query: this.query(), kind: this.kind() });
   }
-  async read(id: string, check = false) {
-    if (this.busy()) return;
-    const source = this.current(),
-      sequence = ++this.readSequence,
-      alive = this.guard();
-    if (!source?.canQuery) return;
-    const valid = () => alive() && sequence === this.readSequence;
-    this.reading.set(!check);
-    if (!check) {
-      this.detail.set(null);
-      this.error.set('');
-    }
-    try {
-      const detail = await this.api.get(source.id, id);
-      if (!valid()) return;
-      this.detail.set(detail);
-      this.scope.later(
-        () => {
-          if (valid() && document.visibilityState === 'visible') void this.read(id, true);
-          else if (valid())
-            this.scope.later(
-              () => {
-                if (valid()) void this.read(id, true);
-              },
-              30000,
-              'source-check',
-            );
-        },
-        30000,
-        'source-check',
-      );
-    } catch (e) {
-      if (valid()) {
-        this.detail.set(null);
-        this.error.set(this.scope.message(e));
-      }
-    } finally {
-      if (valid()) this.reading.set(false);
-    }
+  read(id: string) {
+    if (this.busy() || !this.current()?.canQuery) return;
+    this.actionError.set('');
+    if (id === this.record()) this.detailRead.reload();
+    else this.record.set(id);
   }
   async use(action: 'import' | 'chat') {
     const detail = this.detail(),
@@ -168,7 +150,7 @@ export class IntegrationsPage {
       valid = this.guard();
     if (!detail || !source || this.busy()) return;
     this.busy.set(true);
-    this.error.set('');
+    this.actionError.set('');
     try {
       if (action === 'import') {
         const artifact = await this.api.import(source.id, detail.record.id, detail.record.revision);
@@ -181,7 +163,7 @@ export class IntegrationsPage {
         }
       }
     } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
+      if (valid()) this.actionError.set(this.scope.message(e));
     } finally {
       if (valid()) this.busy.set(false);
     }
