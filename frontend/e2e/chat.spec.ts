@@ -371,41 +371,45 @@ test("unsafe Markdown cannot execute script or request tracking images", async (
   await expect(page.locator(".markdown img")).toHaveCount(0);
 });
 
-test("long answers on a throttled browser keep reading position and offer return to latest", async ({
-  page,
-}) => {
-  const fixture = new ApiFixture();
-  fixture.answer = (richAnswer + "\n\n").repeat(24);
-  fixture.hold = true;
-  const cdp = await page.context().newCDPSession(page);
-  await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
-  await fixture.attach(page);
-  await page.goto("/chat");
-  await page.getByRole("textbox", { name: "傳送訊息" }).fill("長答案測試");
-  await page.getByRole("button", { name: "送出訊息" }).click();
-  await expect(page.getByText("這是已保存的部分回答。")).toBeVisible();
-  await page.getByRole("button", { name: "停止生成" }).click();
-  // Load a long historical answer to inspect the stable scroller independently of stream timing.
-  fixture.messages.find((x) => x.role === "assistant")!.content =
-    fixture.answer;
-  await page.reload();
-  await expect(page.getByRole("table")).toHaveCount(24);
-  const viewport = page.locator(".conversation-viewport");
-  await viewport.evaluate((element) => (element.scrollTop = 120));
-  await expect(page.getByRole("button", { name: "回到最新" })).toBeVisible();
-  const before = await viewport.evaluate((element) => element.scrollTop);
-  await page.waitForTimeout(250);
-  expect(await viewport.evaluate((element) => element.scrollTop)).toBe(before);
-  await page.getByRole("button", { name: "回到最新" }).click();
-  await expect
-    .poll(() =>
-      viewport.evaluate(
-        (element) =>
-          element.scrollHeight - element.scrollTop - element.clientHeight,
-      ),
-    )
-    .toBeLessThan(100);
-});
+test(
+  "long answers on a throttled browser keep reading position and offer return to latest",
+  { tag: "@serial" },
+  async ({ page }) => {
+    const fixture = new ApiFixture();
+    fixture.answer = (richAnswer + "\n\n").repeat(24);
+    fixture.hold = true;
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate: 4 });
+    await fixture.attach(page);
+    await page.goto("/chat");
+    await page.getByRole("textbox", { name: "傳送訊息" }).fill("長答案測試");
+    await page.getByRole("button", { name: "送出訊息" }).click();
+    await expect(page.getByText("這是已保存的部分回答。")).toBeVisible();
+    await page.getByRole("button", { name: "停止生成" }).click();
+    // Load a long historical answer to inspect the stable scroller independently of stream timing.
+    fixture.messages.find((x) => x.role === "assistant")!.content =
+      fixture.answer;
+    await page.reload();
+    await expect(page.getByRole("table")).toHaveCount(24);
+    const viewport = page.locator(".conversation-viewport");
+    await viewport.evaluate((element) => (element.scrollTop = 120));
+    await expect(page.getByRole("button", { name: "回到最新" })).toBeVisible();
+    const before = await viewport.evaluate((element) => element.scrollTop);
+    await page.waitForTimeout(250);
+    expect(await viewport.evaluate((element) => element.scrollTop)).toBe(
+      before,
+    );
+    await page.getByRole("button", { name: "回到最新" }).click();
+    await expect
+      .poll(() =>
+        viewport.evaluate(
+          (element) =>
+            element.scrollHeight - element.scrollTop - element.clientHeight,
+        ),
+      )
+      .toBeLessThan(100);
+  },
+);
 
 test("chat search is opt-in and cost/source panels stay accessible without clipping", async ({
   page,

@@ -79,6 +79,8 @@ dotnet test --project backend/tests/AiNexus.IntegrationTests --filter "Category=
 
 - Playwright（`frontend/e2e`）由同資料夾的 `Start-BrowserTest.ps1` 啟動編譯好的網站（5180），使用 `artifacts/` 下專用的空設定、金鑰、附件與日誌，不讀開發機的 `.local`；API 由測試替身提供。
 - Windows 用 Edge（`msedge` channel，與使用者相同）；其他系統用 Playwright 的 Chromium，`npx playwright install chromium` 或以 `CHROMIUM_EXECUTABLE_PATH` 指向已安裝的 Chromium。
-- 預設 1 個 worker。`-- --workers=4` 在 4 核心機器約快四成，但伺服器與瀏覽器搶 CPU 時，計時相關的斷言（串流中途、動畫）會不穩，只適合本機快速回歸。
+- 測試平行執行，worker 數＝邏輯核心的 25%（16 執行緒約 4 分鐘；再加 worker 只是搶 CPU，不會更快）。斷言會受 CPU 競爭影響的測試（CPU 降速、串流中途、動畫中途）標 `{ tag: "@serial" }`，等平行測試跑完後由 `serial` 專案以 1 個 worker 單獨執行。它設為 teardown 而不是 dependency，因為 dependency 失敗時整組會被略過。
+- 平行時偶發失敗多半是真的競態（在畫面還在載入時操作），先等待畫面就緒；只有斷言本身依賴時間時才標 `@serial`。
+- 開發中只跑相關的 spec：`npm --prefix frontend run test:e2e -- chat composer`，或加 `--only-changed`、`--last-failed`；全套留給 `Verify.ps1 -Browser`。
 - `Verify.ps1 -Browser` 設定 `NEXUS_E2E_PUBLISH_DIRECTORY=artifacts/verification`；單獨執行 npm 測試預設用 `artifacts/publish`。
 - 覆蓋鍵盤、中文組字、版本分支、斷線、Markdown 安全、模型政策、Context、字體與窄螢幕；失敗時的截圖、trace 與報告在 `artifacts/`；測試內不另外留存畫面，需要畫面比對時才用 `toHaveScreenshot`。API fixture 回歸刻意不配置資料庫，不能當成 SQL Server 的功能或效能驗證。
