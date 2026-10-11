@@ -69,3 +69,11 @@
     flex-basis: calc(100% - 3rem);
   }
 }
+// A form inside a flush frame: the body keeps form spacing, the foot carries the actions.
+.access-dialog .dialog-body {
+  padding: var(--p-space-4);
+}
+.access-dialog .dialog-foot {
+  flex-wrap: wrap;
+  padding-block: var(--p-space-2);
+}

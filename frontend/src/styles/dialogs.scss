@@ -167,12 +167,12 @@
 
 // Flush dialogs (pickers, inboxes): a header bar, one scrolling body and an optional footer,
 // separated by hairlines and running edge to edge, so the frame adds no padding of its own.
-.platform-dialog.dialog-flush {
+:is(.platform-dialog, .workspace-dialog).dialog-flush {
   flex-direction: column;
   padding: 0;
 }
 // Layout lives outside [open]: the exit keeps `display` but would drop the rest at once.
-.platform-dialog.dialog-flush[open] {
+:is(.platform-dialog, .workspace-dialog).dialog-flush[open] {
   display: flex;
 }
 .dialog-bar {
@@ -190,6 +190,26 @@
   margin: 0;
   font-size: var(--text-ui);
   font-weight: 600;
+}
+// A title with a short detail beside it (a count, the item's name); the detail stays outside the
+// h2 so the dialog's accessible name is the title alone.
+.dialog-title {
+  display: flex;
+  align-items: baseline;
+  flex: 1;
+  gap: var(--p-space-2);
+  min-width: 0;
+}
+.dialog-title h2 {
+  flex: none;
+}
+.dialog-title small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .dialog-bar > nx-search-field {
   flex: 1;

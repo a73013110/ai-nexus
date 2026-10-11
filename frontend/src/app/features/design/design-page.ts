@@ -41,7 +41,10 @@ const INDEX = [
     sections: [
       { id: 'design-buttons', name: '按鈕' },
       { id: 'design-dialogs', name: '對話框' },
+      { id: 'design-flush', name: '扁平對話框' },
+      { id: 'design-sheet', name: '底部 sheet' },
       { id: 'design-menus', name: '選單與下拉' },
+      { id: 'design-menu-check', name: '核取選單項目' },
       { id: 'design-switches', name: '切換與頁籤' },
       { id: 'design-checkbox', name: '核取方塊' },
     ],
@@ -50,6 +53,7 @@ const INDEX = [
     name: '表單',
     sections: [
       { id: 'design-fields', name: '欄位與搜尋' },
+      { id: 'design-search-bare', name: '列內搜尋' },
       { id: 'design-dates', name: '日期與時間' },
       { id: 'design-inline', name: '直接編輯' },
     ],
