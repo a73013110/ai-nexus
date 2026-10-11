@@ -1,6 +1,6 @@
 # AI Nexus
 
-校內 AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF Core 10／SQL Server、Angular 22（zoneless、signals），部署在單一 IIS 執行個體。
+AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF Core 10／SQL Server、Angular 22（zoneless、signals），部署在單一 IIS 執行個體。
 
 ## 讀文件的原則
 
