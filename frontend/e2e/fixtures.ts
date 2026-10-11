@@ -12,6 +12,10 @@ export async function chooseSelect(
     .getByRole("option", { name: text, exact: true })
     .click();
 }
+/** The shell's bottom-right toast stack; it stays visible above modal dialogs. */
+export function toasts(page: Page) {
+  return page.locator("nx-toaster .toast");
+}
 export async function openSettings(page: Page) {
   const account = page.getByRole("button", { name: "登入者選單", exact: true });
   const sidebar = page.locator(".workspace-sidebar");

@@ -98,9 +98,6 @@
                 @if (storageError()) {
                   <nx-notice tone="danger" [message]="storageError()" />
                 }
-                @if (storageNotice()) {
-                  <nx-notice tone="success" [message]="storageNotice()" />
-                }
               </form>
             </section>
           }
@@ -116,9 +113,6 @@
               <div class="inspector-model-fields">
                 @if (modelError()) {
                   <nx-notice tone="danger" [message]="modelError()" />
-                }
-                @if (modelNotice()) {
-                  <nx-notice tone="success" [message]="modelNotice()" />
                 }
                 <nx-model-policy-editor
                   [models]="models()"

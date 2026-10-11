@@ -4,6 +4,7 @@ import {
   chooseSelect,
   expectViewportContained,
   dashboardFixture,
+  toasts,
 } from "./fixtures";
 
 test("price dialog creates immutable versions and stays within the viewport", async ({
@@ -64,7 +65,7 @@ test("price dialog creates immutable versions and stays within the viewport", as
     .getByRole("button", { name: "新增價格版本", exact: true })
     .click();
   await expect(
-    dialog.getByRole("status").filter({ hasText: "新價格版本已儲存" }),
+    toasts(page).filter({ hasText: "新價格版本已儲存" }),
   ).toBeVisible();
   expect(saved).toMatchObject({
     provider: "ollama",

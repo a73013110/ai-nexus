@@ -13,9 +13,6 @@
   @if (error()) {
     <nx-notice tone="danger" [message]="error()" />
   }
-  @if (notice()) {
-    <nx-notice tone="success" [message]="notice()" />
-  }
   @if (loading()) {
     <p role="status">正在載入成果文件…</p>
   } @else {
@@ -192,7 +189,7 @@
             kind="artifact"
             [resourceId]="doc.resource.id"
             [name]="doc.resource.name"
-            (saved)="notice.set('存取權限已更新。')"
+            (saved)="toast.success('存取權限已更新')"
             #sharing
           />
         </section>

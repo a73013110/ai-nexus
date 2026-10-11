@@ -1,4 +1,8 @@
-.platform-dialog {
+// Every modal shares one frame: a hairline, a layered shadow and a 12px radius. It rises and
+// scales in on the spring and leaves the same way; `overlay` and `display` keep it in the top layer
+// until the exit ends. Browsers without @starting-style simply open and close.
+.platform-dialog,
+.workspace-dialog {
   --dialog-max-height: calc(100dvh - 3rem);
   width: min(var(--dialog-width), calc(100vw - 2rem));
   max-width: none;
@@ -7,18 +11,59 @@
   margin: auto;
   overflow: hidden;
   overscroll-behavior: contain;
-  border: 1px solid color-mix(in srgb, var(--line) 65%, transparent);
+  border: 1px solid var(--line);
   border-radius: var(--dialog-radius);
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow-floating);
+  opacity: 0;
+  translate: 0 0.5rem;
+  scale: 0.97;
+  transition:
+    opacity var(--motion) var(--ease-exit),
+    translate var(--motion) var(--ease-exit),
+    scale var(--motion) var(--ease-exit),
+    overlay var(--motion) allow-discrete,
+    display var(--motion) allow-discrete;
 }
-.platform-dialog::backdrop {
+// A leaving dialog is still painted for its exit; it no longer takes clicks or focus.
+.platform-dialog:not([open]),
+.workspace-dialog:not([open]) {
+  pointer-events: none;
+  interactivity: inert;
+}
+.platform-dialog[open],
+.workspace-dialog[open] {
+  opacity: 1;
+  translate: 0 0;
+  scale: 1;
+  transition-duration: var(--motion-panel);
+  transition-timing-function: var(--ease-spring);
+}
+.platform-dialog::backdrop,
+.workspace-dialog::backdrop {
   background: var(--scrim);
-  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition:
+    opacity var(--motion) var(--ease),
+    overlay var(--motion) allow-discrete,
+    display var(--motion) allow-discrete;
 }
-.platform-dialog[open] {
-  animation: panel-arrive var(--motion-panel) var(--ease);
+.platform-dialog[open]::backdrop,
+.workspace-dialog[open]::backdrop {
+  opacity: 1;
+}
+@starting-style {
+  .platform-dialog[open],
+  .workspace-dialog[open] {
+    opacity: 0;
+    translate: 0 0.5rem;
+    scale: 0.97;
+  }
+  .platform-dialog[open]::backdrop,
+  .workspace-dialog[open]::backdrop {
+    opacity: 0;
+  }
 }
 .platform-dialog .dialog-heading {
   margin-bottom: var(--p-space-3);
@@ -56,15 +101,6 @@
 }
 .workspace-dialog {
   --dialog-max-height: min(85dvh, 52rem);
-  padding: var(--dialog-padding);
-  width: min(var(--dialog-width), calc(100% - 2rem));
-  max-height: var(--dialog-max-height);
-  overflow: hidden;
-  border: 1px solid var(--line);
-  border-radius: var(--dialog-radius);
-  color: var(--ink);
-  background: var(--surface);
-  box-shadow: var(--shadow-floating);
 }
 .platform-dialog:has(> .dialog-scroll),
 .workspace-dialog:has(> .dialog-scroll) {
@@ -81,9 +117,7 @@
   scroll-padding-block: var(--dialog-padding);
   border-radius: calc(var(--dialog-radius) - var(--dialog-inset));
 }
-.workspace-dialog::backdrop {
-  background: var(--scrim);
-}
+
 .workspace-dialog .dialog-heading {
   margin-bottom: var(--section-gap);
 }

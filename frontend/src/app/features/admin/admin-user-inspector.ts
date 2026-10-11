@@ -1,6 +1,7 @@
 import { ViewScope } from '../../shared/browser/view-scope';
 import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
+import { ToastService } from '../../shared/ui/toast-service';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
@@ -94,7 +95,7 @@ export class AdminUserInspector {
   );
   readonly savingStorage = signal(false);
   readonly storageError = signal('');
-  readonly storageNotice = signal('');
+  private readonly toast = inject(ToastService);
   /** The model policy is read the first time its tab is opened for this user. */
   private readonly modelsWanted = linkedSignal(() => (this.userId(), false));
   private readonly modelsRead = apiResource({
@@ -112,7 +113,6 @@ export class AdminUserInspector {
   readonly savingModels = signal(false);
   readonly saveModelError = signal('');
   readonly modelError = computed(() => this.saveModelError() || this.modelsRead.error());
-  readonly modelNotice = signal('');
   readonly search = linkedSignal(() => (this.userId(), ''));
   private readonly query = linkedSignal(() => (this.userId(), ''));
   private readonly typing = signal(false);
@@ -182,10 +182,8 @@ export class AdminUserInspector {
         this.scope.cancel('inspector-search');
         this.typing.set(false);
         this.storageError.set('');
-        this.storageNotice.set('');
         this.savingStorage.set(false);
         this.saveModelError.set('');
-        this.modelNotice.set('');
         this.savingModels.set(false);
       });
       if (user) {
@@ -203,14 +201,13 @@ export class AdminUserInspector {
       valid = () => alive() && this.userId() === user?.id;
     if (!user || this.savingStorage()) return;
     this.storageError.set('');
-    this.storageNotice.set('');
     this.savingStorage.set(true);
     try {
       const bytes = parseStorageLimitGb(this.storageLimit());
       await this.api.storage(user.id, bytes);
       if (!valid()) return;
       this.overviewRead.reload();
-      this.storageNotice.set('個人容量上限已更新。');
+      this.toast.success('個人容量上限已更新');
       this.settingsChanged.emit();
     } catch (error) {
       if (valid()) this.storageError.set(safeMessage(error));
@@ -234,12 +231,11 @@ export class AdminUserInspector {
     if (!user || this.savingModels()) return;
     this.savingModels.set(true);
     this.saveModelError.set('');
-    this.modelNotice.set('');
     try {
       await this.api.saveModelPolicy(user.id, modelPolicyRequest(this.modelDraft()));
       if (!valid()) return;
       this.modelsRead.reload();
-      this.modelNotice.set('個人模型政策已儲存，下次生成生效。');
+      this.toast.success('個人模型政策已儲存', '下次生成生效。');
       this.settingsChanged.emit();
     } catch (error) {
       if (valid()) this.saveModelError.set(safeMessage(error));

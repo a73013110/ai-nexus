@@ -1,5 +1,6 @@
 import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
+import { ToastService } from '../../shared/ui/toast-service';
 import { Card } from '../../shared/ui/card';
 import { Field } from '../../shared/ui/field';
 import {
@@ -93,7 +94,7 @@ export class RetrievalAdmin {
       this.capabilitiesRead.error() ||
       this.collectionsRead.error(),
   );
-  readonly notice = signal('');
+  private readonly toast = inject(ToastService);
   readonly confirmation = viewChild.required(ConfirmDialog);
   readonly form = new FormGroup({
     query: new FormControl('', {
@@ -138,19 +139,13 @@ export class RetrievalAdmin {
     const guard = this.scope.guard();
     this.working.set(true);
     this.actionError.set('');
-    this.notice.set('');
     try {
       if (action === 'clear') await this.api.clearProfileVectors(profile.id);
       else if (action === 'rebuild') await this.api.rebuildProfile(profile.id);
       else await this.api.activateProfile(profile.id);
       if (!guard()) return;
-      this.notice.set(
-        action === 'rebuild'
-          ? '重建工作已排入佇列，可從進度查看結果。'
-          : action === 'activate'
-            ? '使用中索引已切換。'
-            : '退役向量已清除。',
-      );
+      if (action === 'rebuild') this.toast.success('重建工作已排入佇列', '可從進度查看結果。');
+      else this.toast.success(action === 'activate' ? '使用中索引已切換' : '退役向量已清除');
       this.profilesRead.reload();
     } catch (error) {
       if (guard()) this.actionError.set(this.scope.message(error));

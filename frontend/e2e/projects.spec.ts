@@ -4,7 +4,12 @@ import type {
   ProjectDto,
   ProjectTemplateDto,
 } from "../src/app/core/api/schema";
-import { expectCompactWorkspace, ApiFixture, settleEntrance } from "./fixtures";
+import {
+  expectCompactWorkspace,
+  ApiFixture,
+  settleEntrance,
+  toasts,
+} from "./fixtures";
 
 test("project settings, shared templates and private conversations work directly on desktop and mobile", async ({
   page,
@@ -101,9 +106,9 @@ test("project settings, shared templates and private conversations work directly
     ),
   ).toBe(true);
   await page.getByRole("button", { name: "封存", exact: true }).click();
-  await expect(page.getByRole("main").getByRole("status")).toContainText(
-    "專案已封存",
-  );
+  await expect(
+    toasts(page).filter({ hasText: "專案已封存" }),
+  ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "開始對話", exact: true }),
   ).toBeDisabled();
@@ -192,10 +197,13 @@ for (const kind of ["project", "evaluation"] as const) {
     const confirm = page.getByRole("dialog", { name: `刪除「${title}」？` });
     await expect(confirm).toContainText(isProject ? "保留" : "歷史結果");
     await confirm.getByRole("button", { name: "取消", exact: true }).click();
+    // The dialog leaves on a short transition; wait so its buttons are gone.
+    await expect(confirm).toBeHidden();
     expect(deleteCalls).toBe(0);
     await page.getByRole("button", { name: action, exact: true }).click();
     await confirm.getByRole("button", { name: action, exact: true }).click();
     await expect(page.getByRole("alert")).toContainText("仍有背景任務");
+    await expect(confirm).toBeHidden();
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
     blocked = false;
     await page.getByRole("button", { name: action, exact: true }).click();

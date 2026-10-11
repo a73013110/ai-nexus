@@ -108,7 +108,6 @@ export class IntegrationsPage {
       this.rowsRead.error() ||
       this.detailRead.error(),
   );
-  readonly notice = signal('');
   readonly kindOptions = computed(() => [
     { value: 'all', label: '全部類型' },
     ...(this.current()?.kinds ?? []).map((x) => ({ value: x, label: this.label(x) })),
@@ -128,14 +127,12 @@ export class IntegrationsPage {
     this.query.set('');
     this.kind.set('all');
     this.actionError.set('');
-    this.notice.set('');
   }
   search(event: Event) {
     event.preventDefault();
     const source = this.current();
     if (!source?.canQuery || this.searching() || this.query().trim().length < 2) return;
     this.actionError.set('');
-    this.notice.set('');
     this.submitted.set({ source: source.id, query: this.query(), kind: this.kind() });
   }
   read(id: string) {

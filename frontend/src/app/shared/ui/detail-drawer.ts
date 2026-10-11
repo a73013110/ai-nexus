@@ -90,7 +90,8 @@ export class DetailDrawer {
         !this.dialog().nativeElement.open
       )
         return;
-      if (document.querySelector('dialog:modal, [popover]:popover-open')) return;
+      // The toaster's layer is always open and never owns Escape for the page.
+      if (document.querySelector('dialog:modal, [popover]:popover-open:not(.toaster)')) return;
       event.preventDefault();
       this.close();
     };

@@ -16,9 +16,6 @@
   @if (error()) {
     <nx-notice tone="danger" [message]="error()" />
   }
-  @if (notice()) {
-    <nx-notice tone="success" [message]="notice()" />
-  }
   <nx-view-switch
     label="品質功能"
     [options]="[

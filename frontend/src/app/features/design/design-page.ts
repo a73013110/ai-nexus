@@ -40,6 +40,7 @@ const INDEX = [
     name: '操作與選取',
     sections: [
       { id: 'design-buttons', name: '按鈕' },
+      { id: 'design-dialogs', name: '對話框' },
       { id: 'design-menus', name: '選單與下拉' },
       { id: 'design-switches', name: '切換與頁籤' },
       { id: 'design-checkbox', name: '核取方塊' },
@@ -57,7 +58,8 @@ const INDEX = [
     name: '回饋',
     sections: [
       { id: 'design-notices', name: '提示' },
-      { id: 'design-island', name: '靈動島' },
+      { id: 'design-toasts', name: '通知' },
+      { id: 'design-island', name: '動態島' },
       { id: 'design-badges', name: '狀態與數量' },
       { id: 'design-progress', name: '進度與生成' },
       { id: 'design-popover', name: '資訊浮層與空狀態' },
@@ -95,6 +97,9 @@ const TOKEN_NAMES = [
   '--button-target',
   '--motion',
   '--ease-spring',
+  '--shadow',
+  '--shadow-floating',
+  '--dialog-radius',
 ];
 
 /**

@@ -277,13 +277,6 @@
               <p>從文件、原始碼或議題取得脈絡，再選擇帶入對話。</p>
             </nx-empty-state>
           }
-          @if (notice()) {
-            <nx-notice tone="success" [message]="notice()">
-              @if (importedId()) {
-                <a notice-actions [routerLink]="['/reader', importedId()]">檢視文件</a>
-              }
-            </nx-notice>
-          }
         </section>
       </div>
     }

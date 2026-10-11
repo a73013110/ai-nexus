@@ -9,19 +9,30 @@
   <nx-notice tone="success" message="變更已儲存，可以繼續工作。" />
   <nx-notice tone="warning" message="內容接近模型的 Context 上限，請精簡背景資料。" />
   <nx-notice message="操作未完成，請確認連線後重試。">
-    <button
-      notice-actions
-      type="button"
-      class="quiet-button"
-      (click)="samples.notice.set('已示範重試操作。')"
-    >
+    <button notice-actions type="button" class="quiet-button" (click)="toast.success('已重新嘗試')">
       重試
     </button>
   </nx-notice>
 </nx-design-section>
 <nx-design-section
+  id="design-toasts"
+  title="通知"
+  api="ToastService · Toaster"
+  description="剛完成的操作在右下角回饋：多則疊成一落，滑過或聚焦時展開並暫停計時；新通知從膠囊形變為卡片。可按 Esc、關閉鈕或向右滑走。失敗、風險與需要留著讀的內容仍用頁內提示。"
+>
+  <div class="design-island-controls" role="group" aria-label="通知示範">
+    <button type="button" class="secondary-button" (click)="toastSuccess()">成功</button>
+    <button type="button" class="secondary-button" (click)="toastUndo()">附帶復原</button>
+    <button type="button" class="secondary-button" (click)="toastUpload()">上傳到完成</button>
+    <button type="button" class="secondary-button" (click)="toastWarning()">警告</button>
+    <button type="button" class="secondary-button" (click)="toastBurst()">連續三則</button>
+    <button type="button" class="quiet-button" (click)="toast.clear()">全部清除</button>
+  </div>
+  <p design-notes class="design-note">通知跟隨目前的個人主題，不受上方預覽主題影響。</p>
+</nx-design-section>
+<nx-design-section
   id="design-island"
-  title="靈動島"
+  title="動態島"
   api="NexusIsland · IslandService"
   description="composer 的狀態與警告：一則是 pill、多則分出泡泡、點開展開全部；緊急提示自動展開。跟隨淺色／深色主題。"
   [stacked]="true"
@@ -32,7 +43,7 @@
       <span class="design-island-empty">選擇下方提示，看島如何變形</span>
     }
   </div>
-  <div class="design-island-controls" role="group" aria-label="靈動島示範提示">
+  <div class="design-island-controls" role="group" aria-label="動態島示範提示">
     @for (button of islandButtons; track button.kind) {
       <button
         type="button"
@@ -79,7 +90,7 @@
         type="button"
         class="icon-button"
         aria-label="通知示範，12 則未讀"
-        (click)="samples.notice.set('通知示範。')"
+        (click)="toast.info('通知示範')"
       >
         <span class="icon-badge-anchor">
           <nx-icon name="bell" /><nx-count-badge [count]="12" [overlay]="true" />
@@ -89,7 +100,7 @@
         type="button"
         class="icon-button"
         aria-label="提醒示範，有新的錯誤"
-        (click)="samples.notice.set('提醒示範。')"
+        (click)="toast.info('提醒示範')"
       >
         <span class="icon-badge-anchor"
           ><nx-icon name="info" /><nx-count-badge

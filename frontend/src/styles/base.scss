@@ -71,7 +71,8 @@ summary {
   transition:
     background-color var(--motion),
     color var(--motion),
-    opacity var(--motion);
+    opacity var(--motion),
+    scale var(--motion-fast) var(--ease);
 }
 button:not(:disabled):hover {
   background: var(--hover);

@@ -43,17 +43,26 @@ kbd {
   background: var(--accent);
   color: var(--accent-text);
 }
+// Hover deepens the fill toward the ink (lighter in dark mode) instead of fading it.
 .primary-button:not(:disabled):hover {
-  background: var(--accent);
-  opacity: 0.9;
+  background: color-mix(in srgb, var(--accent) 86%, var(--ink));
 }
 .secondary-button {
   border: 1px solid var(--line);
+  background: var(--surface);
 }
-.danger-button,
-.danger-button:not(:disabled):hover {
+.danger-button {
   background: var(--danger-surface);
   color: var(--danger-text);
+}
+.danger-button:not(:disabled):hover {
+  background: color-mix(in srgb, var(--danger-surface) 86%, var(--ink));
+}
+// A pressed button gives a little under the finger; reduced motion removes the transition only.
+:is(.primary-button, .secondary-button, .danger-button, .quiet-button, .icon-button):not(
+    :disabled
+  ):active {
+  scale: 0.97;
 }
 .icon-badge-anchor {
   position: relative;

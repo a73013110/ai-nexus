@@ -2,6 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import type { JobDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
 import type { SelectOption } from '../../shared/ui/select';
+import { ToastService } from '../../shared/ui/toast-service';
 
 export const sampleTitle = '把想法，整理成可用的成果';
 export const jobStates: SelectOption[] = [
@@ -19,10 +20,10 @@ export const jobStates: SelectOption[] = [
 @Injectable()
 export class DesignSamples {
   private readonly scope = inject(ViewScope);
+  private readonly toast = inject(ToastService);
   readonly title = signal(sampleTitle);
   readonly titleVersion = signal(0);
   readonly selection = signal('standard');
-  readonly notice = signal('');
   /** Bumped by the action menu; the inline title sample starts editing when it changes. */
   readonly editRequest = signal(0);
   readonly demo = signal<JobDto>({
@@ -49,7 +50,7 @@ export class DesignSamples {
     this.title.set(sampleTitle);
     this.selection.set('standard');
     this.setState('completed');
-    this.notice.set('示範已重設。');
+    this.toast.success('示範已重設');
   }
   setState(status: string) {
     this.demoVersion++;

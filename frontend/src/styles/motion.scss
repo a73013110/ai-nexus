@@ -1,8 +1,6 @@
 // Shared keyframes and the global reduced-motion switch. Component animations live with their
 // components but reference these names, because keyframes declared in a component are scoped.
-.workspace-dialog[open] {
-  animation: panel-arrive var(--motion-panel) var(--ease);
-}
+
 @keyframes signal-transit {
   to {
     stroke-dashoffset: -80;
@@ -92,6 +90,63 @@
   }
   to {
     opacity: 1;
+  }
+}
+// Toasts (shared/ui/toaster): a capsule rises from the corner, stretches into a wide pill, then
+// opens into the card; the text settles in once the surface can hold it.
+@keyframes toast-arrive {
+  from {
+    opacity: 0;
+    translate: 0 1rem;
+  }
+  35% {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes toast-surface-arrive {
+  from {
+    inset: calc(100% - var(--pill)) 0 0 calc(100% - var(--pill));
+    border-radius: calc(var(--pill) / 2);
+  }
+  40% {
+    inset: calc(100% - var(--pill)) 0 0 0;
+    border-radius: calc(var(--pill) / 2);
+  }
+}
+@keyframes toast-content-arrive {
+  0%,
+  45% {
+    opacity: 0;
+    filter: blur(4px);
+    translate: 0 2px;
+  }
+}
+@keyframes toast-depart {
+  to {
+    opacity: 0;
+    translate: 0 0.5rem;
+  }
+}
+@keyframes toast-surface-depart {
+  to {
+    inset: calc(100% - var(--pill)) 0 0 calc(100% - 2 * var(--pill));
+    border-radius: calc(var(--pill) / 2);
+  }
+}
+@keyframes toast-content-depart {
+  40%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes toast-swipe-out {
+  from {
+    translate: var(--swipe-x, 0) 0;
+  }
+  to {
+    opacity: 0;
+    translate: 110% 0;
   }
 }
 // View transitions (core/layout/view-morph.ts). Names apply only while one runs, so they never

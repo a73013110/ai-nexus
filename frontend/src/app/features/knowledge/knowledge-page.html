@@ -19,9 +19,6 @@
   @if (error()) {
     <nx-notice tone="danger" [message]="error()" />
   }
-  @if (notice()) {
-    <nx-notice tone="success" [message]="notice()" />
-  }
   @if (loading()) {
     <p role="status">正在載入知識庫…</p>
   } @else if (!collections().length && session.has('knowledge')) {
@@ -176,7 +173,7 @@
       kind="collection"
       [resourceId]="collection.resource.id"
       [name]="collection.resource.name"
-      (saved)="notice.set('存取權限已更新，下次操作立即生效。')"
+      (saved)="toast.success('存取權限已更新，下次操作立即生效')"
     />
   }
   <nx-text-source-editor (saved)="textSaved()" />

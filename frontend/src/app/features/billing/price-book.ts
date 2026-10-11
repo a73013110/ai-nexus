@@ -1,5 +1,6 @@
 import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
+import { ToastService } from '../../shared/ui/toast-service';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
 import { DateTimePicker } from '../../shared/ui/date-time-picker';
@@ -236,6 +237,7 @@ export class PriceBook {
   readonly saveError = signal('');
   readonly error = computed(() => this.saveError() || this.catalogRead.error());
   readonly notice = signal('');
+  private readonly toast = inject(ToastService);
   readonly providers = ['google', 'ollama', 'searxng', 'brave'].map((value) => ({
     value,
     label: value,
@@ -321,7 +323,8 @@ export class PriceBook {
         effectiveAt,
       });
       if (valid()) {
-        this.notice.set('新價格版本已儲存，之後的呼叫會套用。');
+        this.notice.set('');
+        this.toast.success('新價格版本已儲存', '之後的呼叫會套用。');
         this.catalogRead.reload();
       }
     } catch (e) {

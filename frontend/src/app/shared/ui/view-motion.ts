@@ -9,6 +9,11 @@ function timing(element: HTMLElement) {
   };
 }
 
+/** Layout size, unaffected by the dialog's own open/close scale. */
+function size(element: HTMLElement) {
+  return { width: element.offsetWidth, height: element.offsetHeight };
+}
+
 /** A keyed panel transition keeps tabs and their keyboard focus stationary. */
 @Directive({ selector: '[nxViewMotion]' })
 export class ViewMotion {
@@ -47,7 +52,7 @@ export class DialogMotion {
   private readonly theme = inject(ThemeService);
   private animation?: Animation;
   private previous: unknown;
-  private rectangle?: DOMRect;
+  private rectangle?: { width: number; height: number };
   private initialized = false;
   closed() {
     this.animation?.cancel();
@@ -56,7 +61,7 @@ export class DialogMotion {
   constructor() {
     const observer = new ResizeObserver(() => {
       if (this.element.open && this.animation?.playState !== 'running')
-        this.rectangle = this.element.getBoundingClientRect();
+        this.rectangle = size(this.element);
     });
     observer.observe(this.element);
     afterRenderEffect(() => {
@@ -65,12 +70,9 @@ export class DialogMotion {
       const changed = this.initialized && view !== this.previous;
       this.previous = view;
       this.initialized = true;
-      const before =
-        this.animation?.playState === 'running'
-          ? this.element.getBoundingClientRect()
-          : this.rectangle;
+      const before = this.animation?.playState === 'running' ? size(this.element) : this.rectangle;
       this.animation?.cancel();
-      const after = this.element.getBoundingClientRect();
+      const after = size(this.element);
       this.rectangle = after;
       if (
         !changed ||

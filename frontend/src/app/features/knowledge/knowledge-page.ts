@@ -1,5 +1,6 @@
 import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
+import { ToastService } from '../../shared/ui/toast-service';
 import { Card } from '../../shared/ui/card';
 import { StatusBadge } from '../../shared/ui/status-badge';
 import { EmptyState } from '../../shared/ui/empty-state';
@@ -108,7 +109,7 @@ export class KnowledgePage {
       this.policyRead.error() ||
       this.documentsRead.error(),
   );
-  readonly notice = signal('');
+  readonly toast = inject(ToastService);
   readonly uploading = signal(false);
   readonly uploadLabel = signal('');
   readonly filter = signal('');
@@ -178,7 +179,7 @@ export class KnowledgePage {
     try {
       await this.api.add(collection, file.file.id);
       if (valid()) {
-        this.notice.set('已從檔案庫加入來源，索引會在背景建立。');
+        this.toast.success('已從檔案庫加入來源，索引會在背景建立');
         this.load();
       }
     } catch (error) {
@@ -210,7 +211,7 @@ export class KnowledgePage {
       }
       if (valid()) {
         this.editorDialog().nativeElement.close();
-        this.notice.set('知識庫已儲存。');
+        this.toast.success('知識庫已儲存');
         this.load();
       }
     } catch (error) {
@@ -263,7 +264,7 @@ export class KnowledgePage {
         if (valid() && this.selected() === collection) this.documentsRead.reload();
       }
       if (valid()) {
-        this.notice.set('文件已上傳。文字辨識與索引會在背景繼續處理。');
+        this.toast.success('文件已上傳', '文字辨識與索引會在背景繼續處理。');
         this.collectionsRead.reload();
       }
     } catch (error) {
@@ -305,7 +306,7 @@ export class KnowledgePage {
       await (target.collection ? this.api.removeCollection(target.id) : this.api.remove(target.id));
       if (valid()) {
         this.deleteDialog().nativeElement.close();
-        this.notice.set('已移除來源。');
+        this.toast.success('已移除來源');
         this.load();
       }
     } catch (error) {
@@ -320,7 +321,7 @@ export class KnowledgePage {
     try {
       await this.api.reindex(document.id);
       if (valid()) {
-        this.notice.set('已安排重新索引，既有完成頁面會沿用。');
+        this.toast.success('已安排重新索引，既有完成頁面會沿用');
         this.documentsRead.reload();
       }
     } catch (error) {
@@ -356,7 +357,7 @@ export class KnowledgePage {
     else if (action === 'reindex') void this.reindex(document);
   }
   textSaved() {
-    this.notice.set('文字來源已儲存，索引正在背景更新。');
+    this.toast.success('文字來源已儲存，索引正在背景更新');
     this.load();
   }
   status(value: string) {
