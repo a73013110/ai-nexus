@@ -108,8 +108,10 @@ nx-workspace-brand {
     transition: width var(--motion-panel) var(--ease);
   }
 }
-// The drawer slides; its scrim stays put and fades. The scrim lives inside the drawer (so Tab and
-// clicks stay with it), so it counter-translates by the drawer width on the same curve.
+// The drawer slides and its scrim fades. The scrim lives inside the drawer (so Tab and clicks stay
+// with it) and starts at the drawer's edge, so it travels with the edge instead of racing it. Mid
+// slide the edge has not reached its place yet, so the painted scrim (::before) runs a full
+// viewport wide while the button keeps the on-screen hit area.
 @media (max-width: 859px) {
   :host {
     --control-height-compact: 2.75rem;
@@ -121,7 +123,10 @@ nx-workspace-brand {
     box-shadow: var(--shadow);
     visibility: hidden;
     transform: translateX(-100%);
-    transition: transform var(--motion-panel) var(--ease);
+    // Visibility switches on at the start of the slide in and off at the end of the slide out.
+    transition:
+      transform var(--motion-panel) var(--ease),
+      visibility var(--motion-panel);
   }
   :host(.is-open) {
     visibility: visible;
@@ -132,22 +137,30 @@ nx-workspace-brand {
     position: absolute;
     inset: 0 auto 0 100%;
     width: calc(100vw - var(--sidebar-drawer-width));
-    background: var(--scrim);
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+    background: transparent;
     z-index: -1;
     opacity: 0;
     pointer-events: none;
-    transform: translateX(var(--sidebar-drawer-width));
-    transition:
-      transform var(--motion-panel) var(--ease),
-      opacity var(--motion-panel) var(--ease);
+    transition: opacity var(--motion-panel) var(--ease);
   }
   :host(.is-open) .workspace-backdrop {
     opacity: 1;
     pointer-events: auto;
-    transform: none;
+  }
+  .workspace-backdrop::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 100vw;
+    background: var(--scrim);
   }
   .workspace-backdrop:hover {
-    background: var(--scrim);
+    background: transparent;
   }
 }
 @media (prefers-reduced-motion: reduce) {
