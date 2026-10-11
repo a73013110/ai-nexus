@@ -6,7 +6,7 @@
 ## 原因
 
 - 跨模組外鍵（例如訊息連附件、資源連專案）與「一個請求一個交易」是需求：刪除對話要同時撤銷分享，建立 run 要同時預約配額。
-- domain event 在 `SaveChangesAsync` 內同交易分派（見 [模組邊界](../architecture/MODULE_BOUNDARIES.md#直接呼叫或-domain-event)），多個 DbContext 會失去這個保證，得改用 outbox 或分散式交易。
+- domain event 在 `SaveChangesAsync` 內同交易分派（見 [模組邊界](../architecture/module-boundaries.md#直接呼叫或-domain-event)），多個 DbContext 會失去這個保證，得改用 outbox 或分散式交易。
 - 模組的資料歸屬改由 schema 與測試表達：`DatabaseModelTests` 檢查每張表的 schema 與擁有它的模組一致，跨模組外鍵集中在 `Persistence/CrossModuleRelationships.cs`。
 
 ## 何時重新評估

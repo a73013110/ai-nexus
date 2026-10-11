@@ -6,7 +6,7 @@
 
 .DESCRIPTION
 呼叫 compare.py，對 Ollama 端點上的模型做獨立的 dense cosine 比較，結果寫在 artifacts/embeddings。
-不安裝或移除模型。需要 Python 3。說明見 docs/research/EMBEDDING_MODELS.md。
+不安裝或移除模型。需要 Python 3。說明見 docs/research/embedding-models.md。
 
 .PARAMETER Endpoint
 Ollama 網址。

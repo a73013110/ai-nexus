@@ -11,4 +11,4 @@
 
 ## 代價
 
-SQL Server 的 migration、全文與向量行為不會在每次 `Verify.ps1` 驗證，改由 `Test-Environment.ps1 -SqlOnly`、opt-in 測試與部署驗收補上。見 [測試](../development/TESTING.md)。
+SQL Server 的 migration、全文與向量行為不會在每次 `Verify.ps1` 驗證，改由 `Test-Environment.ps1 -SqlOnly`、opt-in 測試與部署驗收補上。見 [測試](../development/testing.md)。

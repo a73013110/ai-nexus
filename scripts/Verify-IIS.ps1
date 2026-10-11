@@ -6,7 +6,7 @@
 
 .DESCRIPTION
 隨發布套件複製到主機上執行，所以不依賴 repo 的其他檔案。不輸出秘密；讀得到檔案不代表集區身分可讀。
-SQL、設定與站外目錄寫入另用主機指令 verify deployment 檢查，見 docs/operations/IIS_VERIFICATION.md。
+SQL、設定與站外目錄寫入另用主機指令 verify deployment 檢查，見 docs/operations/iis-verification.md。
 
 .PARAMETER AppPath
 IIS 網站的實體路徑（app 目錄）。
@@ -102,4 +102,4 @@ if ($BaseUrl) {
 }
 $checks | Format-Table -AutoSize
 if (@($checks | Where-Object { !$_.Passed }).Count) { exit 1 }
-Write-Output '靜態檢查通過。SQL 就緒、application pool ACL、實際 AD 登入與串流仍需依 docs/operations/IIS_VERIFICATION.md 驗證。'
+Write-Output '靜態檢查通過。SQL 就緒、application pool ACL、實際 AD 登入與串流仍需依 docs/operations/iis-verification.md 驗證。'

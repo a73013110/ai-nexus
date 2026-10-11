@@ -6,7 +6,7 @@
 
 .DESCRIPTION
 執行主機的 db init 指令。只在資料庫不存在時建庫，不會刪除或清空既有資料；需要有建庫／DDL 權限的 SQL 登入。
-正式環境改用主機指令，見 docs/operations/IIS_DEPLOYMENT.md。
+正式環境改用主機指令，見 docs/operations/iis-deployment.md。
 
 .EXAMPLE
 ./scripts/Initialize-Database.ps1

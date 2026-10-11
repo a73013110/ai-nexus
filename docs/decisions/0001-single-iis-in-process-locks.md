@@ -16,4 +16,4 @@
 
 ## 何時重新評估
 
-要同時跑多台伺服器時：程序內鎖改為資料庫併發控制（rowversion 或條件更新），匯入改成資料庫層的預約與唯一約束，監控的 presence 改成分散式 adapter，Data Protection key ring 改為共用。見 [生成與背景任務](../architecture/GENERATION.md)。
+要同時跑多台伺服器時：程序內鎖改為資料庫併發控制（rowversion 或條件更新），匯入改成資料庫層的預約與唯一約束，監控的 presence 改成分散式 adapter，Data Protection key ring 改為共用。見 [生成與背景任務](../architecture/generation.md)。
