@@ -39,7 +39,7 @@ import { SearchField } from '../../shared/ui/search-field';
     </button>
     <div
       #panel
-      class="knowledge-picker-panel ui-density-compact"
+      class="popover-panel knowledge-picker-panel ui-density-compact"
       popover="auto"
       role="dialog"
       aria-label="對話知識來源"

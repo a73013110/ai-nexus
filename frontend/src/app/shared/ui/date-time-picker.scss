@@ -39,18 +39,10 @@
   color: var(--danger);
 }
 .ui-date-panel {
-  position: fixed;
-  inset: auto;
-  margin: 0;
   width: min(20rem, calc(100vw - 1rem));
   max-height: calc(100dvh - 1rem);
   overflow: auto;
   padding: var(--p-space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: var(--shadow-floating);
 }
 .ui-calendar-heading,
 .ui-calendar-month,

@@ -16,6 +16,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { Icon } from '../../shared/ui/icon';
 import { ScrollArea } from '../../shared/ui/scroll-area';
+import { setPopoverOrigin } from '../../shared/browser/popover-position';
 import { FEATURE_ICONS } from './feature-groups';
 import { FeatureLauncher } from './feature-launcher';
 import { NavigationPreferences } from './navigation-preferences';
@@ -109,7 +110,7 @@ let sequence = 0;
       <div
         #flyout
         popover="auto"
-        class="launcher-flyout"
+        class="popover-panel launcher-flyout"
         role="dialog"
         aria-label="全部功能"
         [id]="flyoutId"
@@ -181,7 +182,9 @@ export class WorkspaceNavigation {
     const rail = trigger.closest('.workspace-sidebar')?.getBoundingClientRect() ?? anchor;
     flyout.style.left = `${rail.right + 8}px`;
     flyout.style.maxHeight = `${innerHeight - 24}px`;
-    flyout.style.top = `${Math.max(12, Math.min(anchor.top - 8, innerHeight - flyout.offsetHeight - 12))}px`;
+    const top = Math.max(12, Math.min(anchor.top - 8, innerHeight - flyout.offsetHeight - 12));
+    flyout.style.top = `${top}px`;
+    setPopoverOrigin(flyout, 'right', 0, anchor.top + anchor.height / 2 - top);
   }
   flyoutToggled(open: boolean) {
     this.flyoutOpen.set(open);

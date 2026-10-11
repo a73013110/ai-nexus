@@ -38,7 +38,7 @@ let sequence = 0;
     </button>
     <div
       #panel
-      class="info-popover-panel ui-density-compact"
+      class="popover-panel info-popover-panel ui-density-compact"
       [id]="id"
       role="dialog"
       popover="auto"
@@ -77,23 +77,12 @@ let sequence = 0;
       color: var(--ink);
     }
     .info-popover-panel {
-      position: fixed;
-      inset: auto;
-      margin: 0;
       padding: var(--section-padding);
-      border: 1px solid var(--line);
-      border-radius: var(--p-radius-lg);
-      background: var(--surface);
       color: var(--secondary);
-      box-shadow: var(--shadow-floating);
       overflow: auto;
-      overscroll-behavior: contain;
       text-align: left;
       font-size: var(--text-caption);
       outline: none;
-    }
-    .info-popover-panel:popover-open {
-      animation: panel-arrive var(--motion-fast) var(--ease);
     }
   `,
 })

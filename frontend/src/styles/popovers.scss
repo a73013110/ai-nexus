@@ -1,0 +1,48 @@
+// Top-layer popovers (menus, selects, pickers, info panels) share one frame and one motion, the
+// popover form of the dialogs': they grow out of their trigger on the spring with a small shift
+// and scale, and leave the same way with --ease-exit; `overlay` and `display` keep them painted
+// until the exit ends. Placement (shared/browser/popover-position.ts) sets data-side and
+// transform-origin after measuring, so the entry is a keyframe: var() in keyframes re-resolves
+// once the side is known, whereas @starting-style values are fixed at the first measurement.
+.popover-panel {
+  --popover-shift: 0 -0.25rem;
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-floating);
+  overscroll-behavior: contain;
+  opacity: 0;
+  translate: var(--popover-shift);
+  scale: 0.98;
+  transition:
+    opacity var(--motion) var(--ease-exit),
+    translate var(--motion) var(--ease-exit),
+    scale var(--motion) var(--ease-exit),
+    overlay var(--motion) allow-discrete,
+    display var(--motion) allow-discrete;
+  &[data-side='top'] {
+    --popover-shift: 0 0.25rem;
+  }
+  &[data-side='right'] {
+    --popover-shift: -0.25rem 0;
+  }
+  &[data-side='left'] {
+    --popover-shift: 0.25rem 0;
+  }
+  &:popover-open {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+    animation: popover-arrive var(--motion) var(--ease-spring);
+  }
+  // A leaving popover is no longer :popover-open, so Escape routing and light dismiss already
+  // ignore it; while it is still painted it takes no clicks or focus either.
+  &:not(:popover-open) {
+    pointer-events: none;
+    interactivity: inert;
+  }
+}

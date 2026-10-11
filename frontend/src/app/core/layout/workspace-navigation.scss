@@ -144,21 +144,10 @@
 .launcher-flyout {
   // Rows inside follow the panel's own density, not the 44px rail.
   --nav-row: var(--button-target);
-  position: fixed;
-  inset: auto;
   width: min(15rem, calc(100vw - var(--sidebar-rail-width) - 24px));
-  margin: 0;
   padding: var(--p-space-2) var(--p-space-3);
   background: var(--sidebar);
-  color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
-  box-shadow: var(--shadow-floating);
   overflow: auto;
-  overscroll-behavior: contain;
-  &:popover-open {
-    animation: panel-arrive var(--motion) var(--ease);
-  }
   h2 {
     margin-top: var(--p-space-1);
   }

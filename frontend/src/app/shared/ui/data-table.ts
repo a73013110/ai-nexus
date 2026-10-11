@@ -54,7 +54,7 @@ export type TableSortDirection = 'asc' | 'desc';
       popover="auto"
       role="dialog"
       aria-label="顯示欄位"
-      class="ui-table-columns-panel"
+      class="popover-panel ui-table-columns-panel"
       (toggle)="columnsOpen.set($any($event).newState === 'open')"
       (keydown.escape)="closeColumns($event)"
     >

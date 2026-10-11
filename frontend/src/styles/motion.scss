@@ -41,6 +41,14 @@
     transform: translateY(0) scale(1);
   }
 }
+// Top-layer popovers (styles/popovers.scss); the shift follows the side placement measured.
+@keyframes popover-arrive {
+  from {
+    opacity: 0;
+    translate: var(--popover-shift);
+    scale: 0.98;
+  }
+}
 @keyframes suggestion-arrive {
   from {
     opacity: 0;
