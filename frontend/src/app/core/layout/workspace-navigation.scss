@@ -3,7 +3,11 @@
   flex-direction: column;
   min-height: 0;
 }
+// Declared on the nav so rows follow its compact density (44px on touch and narrow screens).
+// Every row shares one grid: icons start 8px in, labels 8px after a 20px icon.
 .workspace-navigation {
+  --nav-row: var(--button-target);
+  --nav-gap: 2px;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -12,97 +16,160 @@
 .workspace-navigation > nx-scroll-area {
   flex: 1;
 }
-.workspace-groups {
-  display: flex;
-  flex-direction: column;
-  gap: var(--p-space-4);
-}
-.workspace-group h3 {
-  font-size: var(--text-caption);
-  font-weight: 500;
-  color: var(--muted);
-  margin: 0 0 var(--p-space-2);
-  padding-inline: var(--p-space-2);
-}
-.workspace-icons {
+// One selected chip slides between pinned rows instead of each row painting its own background.
+.pinned-features {
+  position: relative;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--p-space-1);
+  gap: var(--nav-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: var(--nav-row);
+    border-radius: var(--p-radius-md);
+    background: var(--surface);
+    box-shadow: var(--selected-ring);
+    opacity: 0;
+    transform: translateY(calc(var(--active-index, 0) * (var(--nav-row) + var(--nav-gap))));
+    transition:
+      transform var(--motion-panel) var(--ease),
+      opacity var(--motion-fast) var(--ease);
+  }
+  &.has-active::before {
+    opacity: 1;
+  }
 }
-.workspace-icons a {
+.pinned-features a,
+.launcher-trigger,
+.launcher-toggle,
+.workspace-disclosure {
+  position: relative;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
+  gap: var(--p-space-2);
+  width: 100%;
   min-width: 0;
-  min-height: 50px;
-  padding: var(--p-space-1);
+  height: var(--nav-row);
+  padding: 0 var(--p-space-2);
   border-radius: var(--p-radius-md);
   color: var(--secondary);
-  font-size: var(--text-caption);
+  font-size: var(--text-label);
+  white-space: nowrap;
 }
-.workspace-icons a nx-icon {
-  width: 19px;
-  height: 19px;
+.pinned-features a span {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.workspace-icons a span {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  text-align: center;
-}
-.workspace-icons a:hover {
+.pinned-features a:not(.current):hover,
+:is(.launcher-trigger, .launcher-toggle, .workspace-disclosure):hover {
   background: var(--hover);
   color: var(--ink);
 }
-.workspace-icons a.current {
-  background: var(--accent-soft);
-  color: var(--accent);
+.pinned-features a.current,
+.launcher-trigger.current {
+  color: var(--ink);
   font-weight: 600;
+  nx-icon {
+    color: var(--accent);
+  }
+}
+.launcher-trigger.current {
+  background: var(--surface);
+  box-shadow: var(--selected-ring);
+}
+// Open is a state of the control, not a location, so it tints instead of raising.
+:is(.launcher-toggle, .workspace-disclosure)[aria-expanded='true'] {
+  color: var(--ink);
+  nx-icon {
+    color: var(--accent);
+  }
+}
+// Icon display: equal square cells from the left, the launcher toggle on the right edge, so the
+// cells line up with the two-cell columns of the launcher grid below.
+.pinned-features.is-strip {
+  --strip-cell: min(max(var(--nav-row), 2.25rem), calc(100% / 6));
+  display: flex;
+  gap: 0;
+  &::before {
+    right: auto;
+    width: var(--strip-cell);
+    transform: translateX(calc(var(--active-index, 0) * 100%));
+  }
+  li {
+    flex: none;
+    width: var(--strip-cell);
+  }
+  li:has(.launcher-toggle) {
+    margin-left: auto;
+  }
+  :is(a, .launcher-toggle) {
+    justify-content: center;
+    padding: 0;
+  }
+  a span {
+    display: none;
+  }
 }
 .workspace-disclosure {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  gap: var(--p-space-2);
-  min-height: var(--button-target);
-  padding: var(--control-padding-block) var(--p-space-2);
-  border-radius: var(--p-radius-md);
-  color: var(--secondary);
+  margin-top: var(--nav-gap);
 }
 .workspace-disclosure strong {
   flex: 1;
   text-align: left;
   font-weight: 500;
-  font-size: var(--text-label);
 }
 .workspace-disclosure > nx-icon:last-child {
   width: 16px;
   height: 16px;
-  transform: rotate(-90deg);
+  transform: rotate(90deg);
   transition: transform var(--motion-panel) var(--ease);
 }
 .workspace-disclosure[aria-expanded='true'] > nx-icon:last-child {
-  transform: rotate(90deg);
+  transform: rotate(-90deg);
 }
-.collapsible .workspace-groups {
-  padding: var(--p-space-2) 0;
-  animation: panel-arrive var(--motion-panel) var(--ease);
+.launcher-title,
+.launcher-flyout h2 {
+  margin: var(--p-space-3) 0 var(--p-space-1);
+  padding-inline: var(--p-space-2);
+  color: var(--muted);
+  font-size: var(--text-caption);
+  font-weight: 500;
 }
-:host(.is-compact) .workspace-groups {
-  gap: var(--p-space-2);
+.launcher-flyout {
+  // Rows inside follow the panel's own density, not the 44px rail.
+  --nav-row: var(--button-target);
+  position: fixed;
+  inset: auto;
+  width: min(15rem, calc(100vw - var(--sidebar-rail-width) - 24px));
+  margin: 0;
+  padding: var(--p-space-2) var(--p-space-3);
+  background: var(--sidebar);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-lg);
+  box-shadow: var(--shadow-floating);
+  overflow: auto;
+  overscroll-behavior: contain;
+  &:popover-open {
+    animation: panel-arrive var(--motion) var(--ease);
+  }
+  h2 {
+    margin-top: var(--p-space-1);
+  }
 }
-:host(.is-compact) .collapsible .workspace-groups {
+:host(.is-compact) .workspace-navigation {
+  --nav-row: 2.75rem;
+}
+:host(.is-compact) :is(.pinned-features a, .launcher-trigger) {
+  justify-content: center;
   padding: 0;
 }
-:host(.is-compact) .workspace-icons {
-  grid-template-columns: 1fr;
-}
-:host(.is-compact) .workspace-icons a {
-  width: 100%;
-  min-height: var(--button-target);
-}
-:host(.is-compact) .workspace-group h3,
-:host(.is-compact) .workspace-icons span {
+:host(.is-compact) .pinned-features a span {
   display: none;
+}
+:host(.is-compact) .launcher-trigger {
+  margin-top: var(--nav-gap);
 }

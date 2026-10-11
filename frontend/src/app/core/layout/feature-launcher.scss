@@ -1,0 +1,117 @@
+// Sits on the navigation's grid: rows put icons 8px in, tool buttons match the pinned cells, and
+// the icon grid's three columns are two cells wide each.
+:host {
+  --row: var(--nav-row, var(--button-target));
+  --cell: max(var(--row), 2.25rem);
+  display: block;
+  animation: panel-arrive var(--motion-panel) var(--ease);
+}
+.launcher-tools {
+  display: flex;
+  align-items: center;
+  margin-block: var(--nav-gap, 2px) var(--p-space-2);
+}
+.launcher-tools .quiet-button {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  flex: 1;
+  min-width: 0;
+  height: var(--row);
+  padding: 0 var(--p-space-2);
+  border-radius: var(--p-radius-md);
+  color: var(--secondary);
+  font-size: var(--text-label);
+  white-space: nowrap;
+}
+.launcher-tools .quiet-button[aria-pressed='true'] {
+  color: var(--accent);
+  font-weight: 600;
+}
+.launcher-tools nx-view-switch {
+  --view-switch-button-min-width: var(--cell);
+  gap: 0;
+  margin: 0;
+  overflow: visible;
+}
+.launcher-tools .icon-button {
+  width: var(--cell);
+  height: var(--row);
+}
+.launcher-note {
+  margin: 0 var(--p-space-2) var(--p-space-2);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  line-height: 1.6;
+}
+.workspace-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-3);
+  padding-bottom: var(--p-space-2);
+}
+.workspace-group h3 {
+  font-size: var(--text-caption);
+  font-weight: 500;
+  color: var(--muted);
+  margin: 0 0 var(--p-space-1);
+  padding-inline: var(--p-space-2);
+}
+.workspace-icons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px 0;
+}
+.workspace-icons > * {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 0;
+  min-height: 52px;
+  padding: var(--p-space-1);
+  border-radius: var(--p-radius-md);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.workspace-icons nx-icon {
+  width: 20px;
+  height: 20px;
+}
+.workspace-icons span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+.workspace-icons > :not(.current):hover {
+  background: var(--hover);
+  color: var(--ink);
+}
+// Selected and pinned share the sidebar's raised chip; the icon carries the accent.
+.workspace-icons > :is(.current, [aria-pressed='true']) {
+  background: var(--surface);
+  box-shadow: var(--selected-ring);
+  color: var(--ink);
+  font-weight: 600;
+  nx-icon {
+    color: var(--accent);
+  }
+}
+.workspace-icons.is-list {
+  grid-template-columns: minmax(0, 1fr);
+}
+.workspace-icons.is-list > * {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: var(--p-space-2);
+  min-height: var(--row);
+  padding: 0 var(--p-space-2);
+  font-size: var(--text-label);
+}
+.workspace-icons.is-list span {
+  text-align: left;
+}
+.workspace-icons > :disabled {
+  opacity: 0.45;
+}

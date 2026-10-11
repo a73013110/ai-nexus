@@ -1,42 +1,16 @@
-.action-menu-panel {
-  position: fixed;
-  inset: auto;
-  margin: 0;
-  padding: var(--p-space-1);
-  background: var(--surface);
-  color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
-  box-shadow: var(--shadow-floating);
-  overflow: auto;
-  font-size: var(--text-ui);
-  &:popover-open {
-    display: grid;
-    animation: panel-arrive var(--motion) var(--ease);
-  }
-  button {
-    display: flex;
-    align-items: center;
-    gap: var(--p-space-2);
-    text-align: left;
-    min-height: var(--button-target);
-    padding: var(--control-padding-block) var(--control-padding-inline);
-    border-radius: var(--p-radius-md);
-  }
-  button:hover,
-  button:focus-visible {
-    background: var(--hover);
-  }
-}
 // The account menu projects its avatar and name into this trigger.
 .profile-trigger.icon-button {
   width: 100%;
   height: auto;
   min-height: var(--sidebar-account-height);
   justify-content: flex-start;
-  padding: var(--p-space-1);
-  gap: var(--p-space-2);
+  // The avatar centres on the sidebar's icon column and the name starts on its label column.
+  padding: var(--p-space-1) var(--p-space-2) var(--p-space-1) var(--p-space-1);
+  gap: var(--p-space-1);
   border-radius: var(--p-radius-md);
+}
+.profile-trigger.icon-button[aria-expanded='true'] {
+  background: var(--hover);
 }
 :host-context(.is-compact) .profile-trigger.icon-button {
   justify-content: center;

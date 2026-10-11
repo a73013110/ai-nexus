@@ -37,7 +37,7 @@ export interface Command {
         #search
         id="command-search"
         type="search"
-        placeholder="搜尋指令或對話…"
+        placeholder="搜尋功能、指令或對話…"
         autocomplete="off"
         [value]="query()"
         (input)="searchChanged($event)"
@@ -74,7 +74,7 @@ export interface Command {
           }
         </button>
       } @empty {
-        <p class="panel-note">找不到符合的指令或對話。</p>
+        <p class="panel-note">找不到符合的功能、指令或對話。</p>
       }
     </div>
     <div class="command-footer">

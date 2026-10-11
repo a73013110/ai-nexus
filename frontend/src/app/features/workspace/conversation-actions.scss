@@ -3,12 +3,6 @@
   align-items: center;
   gap: var(--p-space-1);
 }
-:host(.is-compact) .conversation-actions {
-  gap: 0;
-}
-:host(.is-compact) nx-action-menu {
-  flex: none;
-}
 .favorite-button.is-favorite {
   --icon-fill: var(--accent-soft);
   color: var(--accent);

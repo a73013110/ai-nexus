@@ -24,20 +24,54 @@ test("chat history stays primary with grouped tools collapsed and settings only 
     name: "工作區功能",
     exact: true,
   });
-  await expect(
-    tools.getByRole("button", { name: "工作區", exact: true }),
-  ).toHaveAttribute("aria-expanded", "false");
-  await expect(tools.getByRole("link")).toHaveCount(0);
-  await tools.getByRole("button", { name: "工作區", exact: true }).click();
-  await expect(
-    tools.getByRole("region", { name: "工作", exact: true }),
-  ).toBeVisible();
-  await expect(
-    tools.getByRole("region", { name: "協作與品質", exact: true }),
-  ).toBeVisible();
+  const launcher = tools.getByRole("button", { name: "全部功能", exact: true });
+  const pinned = tools.getByRole("list", { name: "釘選功能", exact: true });
+  await expect(launcher).toHaveAttribute("aria-expanded", "false");
+  await expect(pinned.getByRole("link")).toHaveText([
+    "對話",
+    "專案",
+    "檔案庫",
+    "背景任務",
+  ]);
+  await expect(tools.getByRole("region", { name: "系統" })).toHaveCount(0);
+  await launcher.click();
+  // Pinned features stay on top; the launcher lists only the rest, in the shared groups.
   await expect(
     tools.getByRole("region", { name: "系統", exact: true }),
   ).toBeVisible();
+  await expect(
+    tools.getByRole("region", { name: "工作", exact: true }),
+  ).toHaveCount(0);
+  await tools.getByRole("button", { name: "自訂釘選", exact: true }).click();
+  await expect(tools.getByRole("status")).toContainText("已釘選 4／5 項");
+  await tools
+    .getByRole("button", { name: "釘選背景任務", exact: true })
+    .click();
+  await expect(
+    tools.getByRole("button", { name: "釘選背景任務", exact: true }),
+  ).toHaveAttribute("aria-pressed", "false");
+  await tools
+    .getByRole("button", { name: "釘選平台管理", exact: true })
+    .click();
+  await tools.getByRole("button", { name: "完成", exact: true }).click();
+  await expect(pinned.getByRole("link")).toHaveText([
+    "對話",
+    "專案",
+    "檔案庫",
+    "平台管理",
+  ]);
+  await expect(
+    tools
+      .getByRole("region", { name: "協作與品質", exact: true })
+      .getByRole("link", { name: "背景任務", exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(pinned.getByRole("link")).toHaveText([
+    "對話",
+    "專案",
+    "檔案庫",
+    "平台管理",
+  ]);
   await expect(
     tools.getByRole("link", { name: "設定", exact: true }),
   ).toHaveCount(0);
@@ -61,8 +95,7 @@ test("chat and feature sidebars share brand, account alignment and compact navig
   fixture.extraFeatures = [{ id: "tasks", name: "背景任務", route: "/tasks" }];
   await fixture.attach(page);
   await page.goto("/chat");
-  await page.getByRole("button", { name: "工作區", exact: true }).click();
-  await expect(page.locator(".workspace-icons a").first()).toBeVisible();
+  await expect(page.locator(".pinned-features a").first()).toBeVisible();
   await settleEntrance(page);
   const measure = () =>
     page.locator(".workspace-sidebar").evaluate((el) => {
@@ -71,19 +104,20 @@ test("chat and feature sidebars share brand, account alignment and compact navig
         .querySelector("nx-account-menu")!
         .getBoundingClientRect();
       const link = el
-        .querySelector(".workspace-icons a")!
+        .querySelector(".pinned-features a")!
         .getBoundingClientRect();
       return {
         brand: { x: brand.x, y: brand.y },
         account: { x: account.x, bottom: account.bottom },
-        link: { width: link.width, height: link.height },
+        // Pages with a sidebar panel add the launcher toggle to the pinned row, so only height matches.
+        link: { height: link.height },
       };
     });
   const chat = await measure();
   await expect(page.locator(".brand")).toHaveAttribute("href", "/dashboard");
   await expectViewportContained(page);
   await page.goto("/tasks");
-  await expect(page.locator(".workspace-icons a").first()).toBeVisible();
+  await expect(page.locator(".pinned-features a").first()).toBeVisible();
   expect(await measure()).toEqual(chat);
   await expectViewportContained(page);
   await page.locator(".brand").click();
@@ -187,7 +221,7 @@ test("one header notification icon exposes the full count and workspace expansio
     page.getByRole("textbox", { name: "傳送訊息", exact: true }),
   ).toHaveCSS("line-height", "18px");
   const workspace = sidebar.getByRole("button", {
-    name: "工作區",
+    name: "全部功能",
     exact: true,
   });
   await workspace.click();
@@ -200,7 +234,7 @@ test("one header notification icon exposes the full count and workspace expansio
   );
   const [heading, navigation] = await Promise.all([
     sidebar.locator(".workspace-sidebar-heading").boundingBox(),
-    workspace.boundingBox(),
+    sidebar.locator(".pinned-features a").first().boundingBox(),
   ]);
   expect(navigation!.y - (heading!.y + heading!.height)).toBeLessThanOrEqual(
     16,
@@ -225,7 +259,7 @@ test("one header notification icon exposes the full count and workspace expansio
   await workspace.click();
   await expect(sidebar.locator(".new-chat")).not.toBeVisible();
   await expect(
-    sidebar.getByRole("link", { name: "背景任務", exact: true }),
+    sidebar.getByRole("link", { name: "程式庫", exact: true }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(sidebar).not.toBeVisible();
@@ -300,7 +334,7 @@ test("icon rail, notification filtering and typed task navigation work across pa
   await page.goto("/files");
   await page.getByRole("button", { name: "收合側欄", exact: true }).click();
   const sidebar = page.locator(".workspace-sidebar");
-  expect((await sidebar.boundingBox())!.width).toBe(52);
+  await expect(sidebar).toHaveCSS("width", "52px");
   await expect(
     sidebar.getByRole("link", { name: "知識庫", exact: true }),
   ).toBeVisible();
@@ -369,7 +403,10 @@ test("icon rail, notification filtering and typed task navigation work across pa
     .getByRole("button", { name: "查看內容" })
     .click();
   await expect(sidebar).not.toBeVisible();
-  await expect(page.locator(".workspace-main")).not.toHaveAttribute("inert", "");
+  await expect(page.locator(".workspace-main")).not.toHaveAttribute(
+    "inert",
+    "",
+  );
   await page.getByRole("button", { name: "展開側欄", exact: true }).click();
   await page.getByRole("button", { name: "通知", exact: true }).click();
   for (let i = 0; i < 20; i++)
@@ -402,7 +439,7 @@ test("mobile navigation uses the full viewport, traps focus and preserves deskto
   await page.goto("/chat");
   const sidebar = page.locator(".workspace-sidebar");
   await sidebar.locator(".sidebar-toggle").click();
-  expect((await sidebar.boundingBox())!.width).toBe(52);
+  await expect(sidebar).toHaveCSS("width", "52px");
   await page.setViewportSize({ width: 375, height: 812 });
   await expect(sidebar).not.toBeVisible();
   expect((await page.locator("main").boundingBox())!.width).toBe(375);
@@ -421,14 +458,17 @@ test("mobile navigation uses the full viewport, traps focus and preserves deskto
   await expect(sidebar.locator(".workspace-sidebar-heading a")).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(opener).toBeFocused();
-  await expect(page.locator(".workspace-main")).not.toHaveAttribute("inert", "");
+  await expect(page.locator(".workspace-main")).not.toHaveAttribute(
+    "inert",
+    "",
+  );
   await opener.click();
   await sidebar.locator(".workspace-backdrop").click();
   await expect(opener).toBeFocused();
   await expectViewportContained(page);
   await page.setViewportSize({ width: 1440, height: 1000 });
   await expect(sidebar).toHaveClass(/is-compact/);
-  expect((await sidebar.boundingBox())!.width).toBe(52);
+  await expect(sidebar).toHaveCSS("width", "52px");
 });
 
 test("feature navigation opens from the shared header and dismisses after selecting a destination", async ({
@@ -450,7 +490,10 @@ test("feature navigation opens from the shared header and dismisses after select
   await sidebar.getByRole("link", { name: "知識庫", exact: true }).click();
   await expect(page).toHaveURL(/\/knowledge$/);
   await expect(sidebar).not.toBeVisible();
-  await expect(page.locator(".workspace-main")).not.toHaveAttribute("inert", "");
+  await expect(page.locator(".workspace-main")).not.toHaveAttribute(
+    "inert",
+    "",
+  );
   await expectViewportContained(page);
 });
 
@@ -466,14 +509,20 @@ test("the shell keeps one sidebar while pages and conversations change", async (
   await fixture.attach(page);
   await page.goto("/files");
   const sidebar = page.locator(".workspace-sidebar");
-  await sidebar.evaluate((element) => ((element as HTMLElement).dataset["kept"] = "1"));
+  await sidebar.evaluate(
+    (element) => ((element as HTMLElement).dataset["kept"] = "1"),
+  );
   await sidebar.getByRole("link", { name: "知識庫", exact: true }).click();
   await expect(page).toHaveURL(/\/knowledge$/);
   await sidebar.getByRole("link", { name: "對話", exact: true }).click();
   await expect(page).toHaveURL(/\/chat$/);
   const workspace = page.locator(".main-workspace");
-  await workspace.evaluate((element) => ((element as HTMLElement).dataset["kept"] = "1"));
-  await page.getByRole("textbox", { name: "傳送訊息", exact: true }).fill("第一句");
+  await workspace.evaluate(
+    (element) => ((element as HTMLElement).dataset["kept"] = "1"),
+  );
+  await page
+    .getByRole("textbox", { name: "傳送訊息", exact: true })
+    .fill("第一句");
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect(page).toHaveURL(/\/chat\/[^/]+$/);
   // The same elements survive: the shell did not rebuild the sidebar, nor the router the chat.
@@ -584,7 +633,7 @@ async function navigationWorkspace(page: Page) {
   return fixture;
 }
 
-test("compact navigation keeps its width and exposes every scroll boundary and focused destination", async ({
+test("the icon rail keeps pins, opens every other feature beside it and still scrolls when short", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1280, height: 560 });
@@ -596,62 +645,105 @@ test("compact navigation keeps its width and exposes every scroll boundary and f
     name: "工作區功能",
     exact: true,
   });
-  const area = sidebar.locator("nx-scroll-area");
-  const up = area.getByRole("button", {
-    name: "向上捲動工作區功能",
-    exact: true,
-  });
-  const down = area.getByRole("button", {
+  const down = sidebar.getByRole("button", {
     name: "向下捲動工作區功能",
     exact: true,
   });
   await expect(sidebar).toHaveCSS("width", "52px");
   await expect(viewport).toHaveCSS("scrollbar-width", "none");
-  await expect(up).not.toBeVisible();
-  await expect(down).toBeVisible();
+  await expect(
+    sidebar.getByRole("list", { name: "釘選功能" }).getByRole("link"),
+  ).toHaveCount(4);
+  await expect(down).not.toBeVisible();
   const center = (await sidebar
     .getByRole("link", { name: "總覽", exact: true })
     .boundingBox())!;
   expect(Math.abs(center.x + center.width / 2 - 26)).toBeLessThan(1);
-  const contentWidth = await viewport.evaluate((el) => el.clientWidth);
-  await down.click();
+  const trigger = sidebar.getByRole("button", {
+    name: "全部功能",
+    exact: true,
+  });
+  await trigger.click();
+  const flyout = page.getByRole("dialog", { name: "全部功能", exact: true });
+  await expect(flyout).toBeVisible();
+  await expect(flyout.getByRole("link").first()).toBeFocused();
+  // Pinned features are not repeated; everything else keeps the three-column groups.
+  await expect(
+    flyout.getByRole("link", { name: "總覽", exact: true }),
+  ).toHaveCount(0);
+  await expect
+    .poll(async () => {
+      const box = (await flyout.boundingBox())!;
+      return box.x >= 52 && box.y >= 0 && box.y + box.height <= 560;
+    })
+    .toBe(true);
+  await page.keyboard.press("Escape");
+  await expect(flyout).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+  await trigger.click();
+  await flyout.getByRole("link", { name: "活動稽核", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/audit$/);
+  await expect(flyout).not.toBeVisible();
+  await expect(trigger).toHaveClass(/current/);
+  await page.setViewportSize({ width: 1280, height: 300 });
+  // Focus is back on the launcher trigger, so the short rail keeps it in view and offers the way up.
+  const up = sidebar.getByRole("button", {
+    name: "向上捲動工作區功能",
+    exact: true,
+  });
   await expect(up).toBeVisible();
-  await expect(down).toBeVisible();
+  await expect(trigger).toBeInViewport();
   await viewport.focus();
-  await page.keyboard.press("End");
-  await expect(down).not.toBeVisible();
-  await expect(up).toBeVisible();
-  expect(await viewport.evaluate((el) => el.clientWidth)).toBe(contentWidth);
   await page.keyboard.press("Home");
-  await expect(up).not.toBeVisible();
-  const audit = sidebar.getByRole("link", { name: "活動稽核", exact: true });
-  await audit.focus();
-  const bounds = (await viewport.boundingBox())!;
-  const focused = (await audit.boundingBox())!;
-  expect(focused.y).toBeGreaterThanOrEqual(bounds.y);
-  expect(focused.y + focused.height).toBeLessThanOrEqual(
-    bounds.y + bounds.height + 1,
-  );
-  await expect(audit).toBeFocused();
-  await viewport.hover();
-  await page.mouse.wheel(0, -1000);
-  await expect(up).not.toBeVisible();
-  await expect(audit).toBeFocused();
-  await page.setViewportSize({ width: 1280, height: 1600 });
-  await expect(up).not.toBeVisible();
-  await expect(down).not.toBeVisible();
-  await expect(viewport).toHaveAttribute("tabindex", "-1");
-  expect(await viewport.evaluate((el) => el.clientWidth)).toBe(contentWidth);
-  await expectViewportContained(page);
-  await viewport.focus();
-  await page.setViewportSize({ width: 1280, height: 360 });
   await expect(down).toBeVisible();
-  await page.evaluate(
-    () => (document.documentElement.dataset["theme"] = "dark"),
-  );
+  await expect(up).not.toBeVisible();
   await expectViewportContained(page);
   await page.emulateMedia({ forcedColors: "active" });
   await expect(viewport).toHaveCSS("scrollbar-width", "auto");
+});
+
+test("Ctrl+K finds every feature, the pinned pill follows the route and the display switches to a list", async ({
+  page,
+}) => {
+  await navigationWorkspace(page);
+  await page.keyboard.press("Control+k");
+  const search = page.getByRole("combobox", { name: "快捷指令" });
+  await expect(search).toBeFocused();
+  await search.fill("稽核");
+  await expect(page.getByRole("option")).toHaveCount(1);
+  await search.press("Enter");
+  await expect(page).toHaveURL(/\/admin\/audit$/);
+  const pinned = page.getByRole("list", { name: "釘選功能", exact: true });
+  await expect(pinned).not.toHaveClass(/has-active/);
+  await pinned.getByRole("link", { name: "知識庫", exact: true }).click();
+  await expect(pinned).toHaveClass(/has-active/);
+  const pillOnCurrent = () =>
+    pinned.evaluate((list) => {
+      const row = list.querySelector("a.current")!.getBoundingClientRect();
+      const box = list.getBoundingClientRect();
+      const pill = getComputedStyle(list, "::before");
+      const move = new DOMMatrix(pill.transform);
+      return (
+        Math.abs(move.m41 - (row.left - box.left)) < 1 &&
+        Math.abs(move.m42 - (row.top - box.top)) < 1 &&
+        Math.abs(parseFloat(pill.width) - row.width) < 1
+      );
+    });
+  // Icon display keeps the pins in one row; list display gives each its own line.
+  await expect(pinned).toHaveClass(/is-strip/);
+  expect((await pinned.boundingBox())!.height).toBeLessThanOrEqual(36);
+  await expect.poll(pillOnCurrent).toBe(true);
+  await page
+    .getByRole("group", { name: "功能顯示方式" })
+    .getByRole("button", { name: "條列顯示", exact: true })
+    .click();
+  await expect(pinned).not.toHaveClass(/is-strip/);
+  await expect(page.locator(".workspace-icons.is-list").first()).toBeVisible();
+  await expect.poll(pillOnCurrent).toBe(true);
+  await page.reload();
+  await expect(pinned).not.toHaveClass(/is-strip/);
+  await expect(page.locator(".workspace-icons.is-list").first()).toBeVisible();
+  await expectViewportContained(page);
 });
 
 test("short mobile drawers expose scrolling and preserve the focus escape route", async ({

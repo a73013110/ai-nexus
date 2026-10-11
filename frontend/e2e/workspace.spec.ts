@@ -495,7 +495,9 @@ test("duplicate and JSON text backup preserve the tree in a separate conversatio
   expect(backup.messages).toHaveLength(2);
   expect(backup.version).toBe(1);
   const chooser = page.waitForEvent("filechooser");
-  await page.getByRole("button", { name: "匯入對話文字備份" }).click();
+  await page.keyboard.press("Control+k");
+  await page.getByRole("combobox", { name: "快捷指令" }).fill("匯入");
+  await page.getByRole("combobox", { name: "快捷指令" }).press("Enter");
   await (
     await chooser
   ).setFiles({

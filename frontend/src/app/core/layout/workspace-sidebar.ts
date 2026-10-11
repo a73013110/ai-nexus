@@ -73,7 +73,7 @@ let sequence = 0;
       >
     </div>
     <nx-workspace-navigation
-      [class.sidebar-navigation-bottom]="collapsibleNavigation()"
+      [class.has-panel]="collapsibleNavigation()"
       [collapsible]="collapsibleNavigation()"
       [compact]="layout.compact()"
       [expanded]="navigationExpanded()"

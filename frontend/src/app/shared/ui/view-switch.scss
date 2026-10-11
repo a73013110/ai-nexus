@@ -35,7 +35,8 @@
   border-radius: var(--p-radius-md);
 }
 :host(.ui-view-switch-icons) button[aria-pressed='true'] {
-  background: var(--accent-soft);
+  background: var(--surface);
+  box-shadow: var(--selected-ring);
 }
 :host(.ui-view-switch-segment) {
   width: fit-content;
@@ -52,7 +53,8 @@
   border-radius: var(--p-radius-sm);
 }
 :host(.ui-view-switch-segment) button[aria-pressed='true'] {
-  background: var(--accent-soft);
+  background: var(--surface);
+  box-shadow: var(--selected-ring);
 }
 :host-context(.ui-filter-heading),
 :host-context(.ui-filter-panel) {
