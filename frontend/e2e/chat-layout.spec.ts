@@ -527,10 +527,9 @@ test("compact conversation uses readable text and preserves over 70 percent of d
     page.getByRole("button", { name: "展開側欄", exact: true }),
   ).toBeVisible();
   await page.getByLabel(/上下文用量：/).click();
-  const panel = await page
-    .getByRole("group", { name: "上下文用量", exact: true })
-    .locator(".context-panel")
-    .boundingBox();
+  const usage = page.getByRole("dialog", { name: "上下文用量", exact: true });
+  await expect(usage).toBeInViewport({ ratio: 1 });
+  const panel = await usage.boundingBox();
   expect(panel!.x).toBeGreaterThanOrEqual(0);
   expect(panel!.x + panel!.width).toBeLessThanOrEqual(375);
   expect(

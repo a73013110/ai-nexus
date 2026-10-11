@@ -7,6 +7,7 @@ import {
   output,
 } from '@angular/core';
 import { Icon } from './icon';
+import { SlidingIndicator } from './sliding-indicator';
 
 export interface ViewOption {
   value: string;
@@ -15,14 +16,21 @@ export interface ViewOption {
   disabled?: boolean;
 }
 
-/** A group of mutually exclusive filters/views. Tabs remain for linked tabpanels. */
+/**
+ * A group of mutually exclusive filters/views; one indicator slides to the pressed option.
+ * `line` underlines (page-level views), `segment` raises a chip in a track (compact filters,
+ * `fill` makes the options share the width), icon-only raises a chip without the track.
+ * Tabs remain for linked tabpanels.
+ */
 @Component({
   selector: 'nx-view-switch',
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './view-switch.scss',
+  hostDirectives: [SlidingIndicator],
   host: {
     class: 'ui-view-switch',
+    '[class.ui-view-switch-fill]': 'fill()',
     role: 'group',
     '[attr.aria-label]': 'label()',
     '[class.ui-view-switch-icons]': 'iconOnly()',
@@ -55,6 +63,7 @@ export class ViewSwitch {
   readonly disabled = input(false);
   readonly iconOnly = input(false);
   readonly appearance = input<'line' | 'segment'>('line');
+  readonly fill = input(false);
   readonly valueChange = output<string>();
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   key(event: KeyboardEvent, index: number) {

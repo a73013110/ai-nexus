@@ -149,7 +149,10 @@ test("logout clears private workspace state while drafts restore only for their 
     await page.getByLabel("AD 密碼", { exact: true }).fill("fixture-password");
     await page.getByRole("button", { name: "登入工作區", exact: true }).click();
     await expect(page).toHaveURL(/\/dashboard$/);
-    await page.getByRole("link", { name: "對話", exact: true }).click();
+    await page
+      .getByRole("list", { name: "釘選功能", exact: true })
+      .getByRole("link", { name: "對話", exact: true })
+      .click();
     await expect(
       page.getByRole("button", { name: "加入文件或圖片" }),
     ).toBeEnabled();
@@ -557,13 +560,10 @@ test("shared disclosures close outside and permanent authorization errors do not
   await fixture.attach(page);
   await page.goto("/chat");
   await page.getByLabel(/上下文用量：/).click();
-  await expect(
-    page.getByRole("group", { name: "上下文用量", exact: true }),
-  ).toHaveAttribute("open");
+  const usage = page.getByRole("dialog", { name: "上下文用量", exact: true });
+  await expect(usage).toBeInViewport();
   await page.getByRole("textbox", { name: "傳送訊息" }).click();
-  await expect(
-    page.getByRole("group", { name: "上下文用量", exact: true }),
-  ).not.toHaveAttribute("open");
+  await expect(usage).toBeHidden();
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("權限撤銷");
   await page.getByRole("button", { name: "送出訊息" }).click();
   await expect(page.getByRole("alert")).toContainText("沒有存取此資料的權限。");

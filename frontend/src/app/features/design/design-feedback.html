@@ -1,0 +1,164 @@
+<nx-design-section
+  id="design-notices"
+  title="提示"
+  api="Notice"
+  description="錯誤為 alert、其他為 status；錯誤附可複製的查證代碼，動作放 notice-actions。"
+  [stacked]="true"
+>
+  <nx-notice tone="info" message="可加入文件、圖片或知識庫來源，提供更多背景。" />
+  <nx-notice tone="success" message="變更已儲存，可以繼續工作。" />
+  <nx-notice tone="warning" message="內容接近模型的 Context 上限，請精簡背景資料。" />
+  <nx-notice message="操作未完成，請確認連線後重試。">
+    <button
+      notice-actions
+      type="button"
+      class="quiet-button"
+      (click)="samples.notice.set('已示範重試操作。')"
+    >
+      重試
+    </button>
+  </nx-notice>
+</nx-design-section>
+<nx-design-section
+  id="design-island"
+  title="靈動島"
+  api="NexusIsland · IslandService"
+  description="composer 的狀態與警告：一則是 pill、多則分出泡泡、點開展開全部；緊急提示自動展開。跟隨淺色／深色主題。"
+  [stacked]="true"
+>
+  <div class="design-island-stage">
+    <nx-island />
+    @if (!islandItems().length) {
+      <span class="design-island-empty">選擇下方提示，看島如何變形</span>
+    }
+  </div>
+  <div class="design-island-controls" role="group" aria-label="靈動島示範提示">
+    @for (button of islandButtons; track button.kind) {
+      <button
+        type="button"
+        class="secondary-button"
+        [attr.aria-pressed]="hasIsland(button.kind)"
+        (click)="toggleIsland(button.kind)"
+      >
+        {{ button.label }}
+      </button>
+    }
+  </div>
+</nx-design-section>
+<nx-design-section
+  id="design-badges"
+  title="狀態與數量"
+  api="StatusBadge · CountBadge"
+  description="文字或圓點與顏色並用；數量超過 99 顯示 99+，零值預設隱藏。"
+>
+  <nx-design-example label="StatusBadge">
+    <span class="design-row">
+      <nx-status-badge tone="success">完成</nx-status-badge>
+      <nx-status-badge tone="info">資訊</nx-status-badge>
+      <nx-status-badge tone="warning">重試</nx-status-badge>
+      <nx-status-badge tone="danger">失敗</nx-status-badge>
+    </span>
+  </nx-design-example>
+  <nx-design-example label="CountBadge">
+    <span class="design-row">
+      @for (badge of badgeTones; track badge.tone) {
+        <span class="design-badge"
+          >{{ badge.label }}
+          <nx-count-badge [count]="badge.count" [tone]="badge.tone" [size]="'md'"
+        /></span>
+      }
+      <span class="design-badge">大量 <nx-count-badge [count]="125" /></span>
+      <span class="design-badge"
+        >零值 <nx-count-badge [count]="0" [showZero]="true" tone="neutral"
+      /></span>
+    </span>
+  </nx-design-example>
+  <nx-design-example label="圖示徽章">
+    <span class="design-row">
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="通知示範，12 則未讀"
+        (click)="samples.notice.set('通知示範。')"
+      >
+        <span class="icon-badge-anchor">
+          <nx-icon name="bell" /><nx-count-badge [count]="12" [overlay]="true" />
+        </span>
+      </button>
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="提醒示範，有新的錯誤"
+        (click)="samples.notice.set('提醒示範。')"
+      >
+        <span class="icon-badge-anchor"
+          ><nx-icon name="info" /><nx-count-badge
+            [count]="1"
+            [overlay]="true"
+            [dot]="true"
+            tone="danger"
+          />
+        </span>
+      </button>
+    </span>
+  </nx-design-example>
+</nx-design-section>
+<nx-design-section
+  id="design-progress"
+  title="進度與生成"
+  api="JobProgress · InferenceSignal · GenerationIndicator"
+  description="進度只顯示伺服器的真實階段；未知總量用不定進度，不做假百分比。"
+  [stacked]="true"
+>
+  <div class="design-progress-tools">
+    <nx-select
+      label="示範任務狀態"
+      [value]="samples.demo().status"
+      [options]="states"
+      (valueChange)="samples.setState($event)"
+    />
+    <button
+      type="button"
+      class="secondary-button"
+      [disabled]="samples.demo().status === 'running'"
+      (click)="samples.play()"
+    >
+      <nx-icon name="repeat" />播放狀態示範
+    </button>
+  </div>
+  <nx-job-progress [job]="samples.demo()" />
+  @if (generation(); as current) {
+    <div class="design-row">
+      <span class="inference-status"
+        ><nx-inference-signal [active]="true" [subtle]="true" /><span>{{
+          current.label
+        }}</span></span
+      >
+      <nx-generation-indicator
+        [waiting]="current.phase === 'queued'"
+        [label]="current.label"
+        [detail]="current.detail"
+      />
+    </div>
+  }
+</nx-design-section>
+<nx-design-section
+  id="design-popover"
+  title="資訊浮層與空狀態"
+  api="InfoPopover · EmptyState"
+  description="精簡指標的說明放 InfoPopover（top layer，不被捲動區裁切）；沒有內容時用 EmptyState。"
+>
+  <nx-design-example label="InfoPopover">
+    <nx-info-popover label="本次用量" icon="money" description="示範用量說明">
+      <strong class="design-popover-title">示範用量</strong>
+      <p class="design-popover-copy">約 1,280 tokens · 預留 2,048 tokens 給回答。</p>
+    </nx-info-popover>
+  </nx-design-example>
+  <nx-design-example label="EmptyState">
+    <nx-empty-state class="design-empty">
+      <nx-icon name="document" />
+      <strong>還沒有文件</strong>
+      <span>上傳或建立第一份文件。</span>
+    </nx-empty-state>
+  </nx-design-example>
+</nx-design-section>

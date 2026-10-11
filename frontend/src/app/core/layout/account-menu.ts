@@ -4,6 +4,7 @@ import { WorkspaceSession } from '../auth/workspace-session';
 import { SettingsOverlay } from '../preferences/settings-overlay';
 import { ActionMenu } from '../../shared/ui/action-menu';
 import { Icon } from '../../shared/ui/icon';
+import { WorkspaceLayout } from './workspace-layout';
 
 @Component({
   selector: 'nx-account-menu',
@@ -14,6 +15,8 @@ import { Icon } from '../../shared/ui/icon';
   template: `<nx-action-menu
       [profile]="true"
       label="登入者選單"
+      [placement]="layout.compact() ? 'beside' : 'below'"
+      [heading]="layout.compact() ? profile() : null"
       [items]="items()"
       (action)="act($event)"
     >
@@ -30,6 +33,12 @@ import { Icon } from '../../shared/ui/icon';
 })
 export class AccountMenu {
   readonly session = inject(WorkspaceSession);
+  readonly layout = inject(WorkspaceLayout);
+  /** The rail hides the name, so the menu opened from it repeats who is signed in. */
+  readonly profile = computed(() => ({
+    title: this.session.me()?.displayName || '帳號',
+    detail: this.session.me()?.account,
+  }));
   private readonly settings = inject(SettingsOverlay);
   readonly error = signal('');
   readonly items = computed(() => [

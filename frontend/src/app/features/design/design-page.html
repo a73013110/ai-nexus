@@ -1,11 +1,37 @@
+<ng-template nxSidebarPanel>
+  <nav class="design-index" aria-label="元件索引">
+    @for (group of index; track group.name) {
+      <h2>{{ group.name }}</h2>
+      <ul nxSlidingIndicator='[aria-current="true"]'>
+        @for (section of group.sections; track section.id) {
+          <li>
+            <a
+              [href]="'#' + section.id"
+              [attr.aria-current]="current() === section.id ? 'true' : null"
+              (click)="go($event, section.id)"
+              >{{ section.name }}</a
+            >
+          </li>
+        }
+      </ul>
+    }
+  </nav>
+</ng-template>
 <nx-feature-page
   title="介面元件"
-  description="用實際元件檢視風格與互動，讓下一個功能保持一致。"
-  eyebrow="AI NEXUS · DESIGN SYSTEM"
+  eyebrow=""
+  description="正式元件的本機範例；不呼叫 AI、不修改資料，預覽主題不影響個人設定。"
 >
   <div page-actions class="page-actions">
+    <nx-view-switch
+      label="預覽主題"
+      appearance="segment"
+      [options]="previewThemes"
+      [value]="theme()"
+      (valueChange)="theme.set($event === 'dark' ? 'dark' : 'light')"
+    />
     <a routerLink="/admin" class="secondary-button"
-      ><nx-icon name="left" />回到{{ session.featureName('admin') }}</a
+      ><nx-icon name="left" />{{ session.featureName('admin') }}</a
     >
   </div>
   @if (loading()) {
@@ -17,354 +43,27 @@
   } @else if (!session.has('admin')) {
     <nx-notice tone="danger">介面元件工作區僅提供平台管理員使用。</nx-notice>
   } @else {
-    <div class="design-intro">
-      <div>
-        <h2>清楚、有層次，也保留一點科技感。</h2>
-        <p>所有範例僅在此頁示範，不會呼叫 AI 或修改資料。預覽主題不會改動你的個人設定。</p>
-      </div>
-      <nx-view-switch
-        label="預覽主題"
-        [options]="previewThemes"
-        [value]="theme()"
-        (valueChange)="theme.set($event === 'dark' ? 'dark' : 'light')"
-      />
-    </div>
     <div #preview class="design-preview" [attr.data-theme]="theme()">
-      <div class="design-preview-heading">
-        <div>
-          <span class="panel-eyebrow">01 / 基礎語彙</span>
-          <h2>從 tokens 到每一個細節</h2>
-        </div>
-        <button type="button" class="quiet-button" (click)="exportTokens()">
-          <nx-icon name="download" />匯出目前 tokens
-        </button>
-      </div>
-      <div class="design-swatches">
-        @for (swatch of swatches; track swatch.token) {
-          <div class="design-swatch">
-            <span
-              class="design-color"
-              [style.background]="'var(' + swatch.token + ')'"
-              aria-hidden="true"
-            ></span
-            ><strong>{{ swatch.label }}</strong
-            ><small>{{ swatch.purpose }}</small
-            ><code>{{ swatch.token }}</code>
-          </div>
-        }
-      </div>
-      <div class="design-grid">
-        <section nxCard class="design-type" aria-labelledby="design-type-title">
-          <span class="panel-eyebrow">字級與閱讀</span>
-          <h2 id="design-type-title">先讓資訊看得清楚</h2>
-          <p class="design-reading">
-            正文預設 15px、行距 1.2 倍。字級、行距及閱讀寬度可在個人設定調整。
-          </p>
-          <p class="design-ui-copy">緊湊介面 13px：傳達下一個動作</p>
-          <p class="form-note">輔助資訊 12px：時間、狀態與來源</p>
-          <div class="design-spacing" aria-label="間距為 4、8、12、16、24、32 像素">
-            @for (space of [4, 8, 12, 16, 24, 32]; track space) {
-              <span><i [style.width.px]="space" aria-hidden="true"></i>{{ space }}</span>
-            }
-          </div>
-        </section>
-        <section nxCard aria-labelledby="design-actions-title">
-          <span class="panel-eyebrow">操作與狀態</span>
-          <h2 id="design-actions-title">一致的操作層級</h2>
-          <p class="form-note">操作層級清楚，桌面控制項 34px，手機與觸控操作至少 44px。</p>
-          <div class="design-actions">
-            <button type="button" class="primary-button" (click)="notice.set('主要操作示範。')">
-              主要操作</button
-            ><button type="button" class="secondary-button" (click)="notice.set('次要操作示範。')">
-              次要操作</button
-            ><button type="button" class="danger-button" (click)="reset()">重設示範</button
-            ><button type="button" class="secondary-button" disabled>停用操作</button>
-          </div>
-          <nx-notice tone="info" [message]="notice() || '選取操作後，回饋會出現在這裡。'" />
-        </section>
-        <section nxCard aria-labelledby="design-selection-title">
-          <span class="panel-eyebrow">選擇與選單</span>
-          <h2 id="design-selection-title">熟悉，而且容易操作</h2>
-          <p class="form-note">Tab 移動焦點，方向鍵選取，Enter 套用，Esc 關閉。</p>
-          <div class="design-select-row">
-            <nx-select
-              label="示範閱讀模式"
-              [value]="selection()"
-              [options]="choices"
-              (valueChange)="selection.set($event)"
-            /><nx-action-menu label="示範更多操作" [items]="actions" (action)="action($event)" />
-          </div>
-          <p class="form-note">彈出層可跨越捲動區及確認視窗，提供停用狀態與目前選項。</p>
-        </section>
-        <section nxCard aria-labelledby="design-form-heading">
-          <span class="panel-eyebrow">表單與選取</span>
-          <h2 id="design-form-heading">看得清楚，也容易點選</h2>
-          <nx-search-field
-            label="示範搜尋"
-            placeholder="搜尋文件與對話"
-            [value]="search()"
-            (valueChange)="search.set($event)"
-          />
-          <nx-checkbox
-            label="開啟此項授權"
-            description="整個項目都可點選，保留原生鍵盤操作。"
-            [checked]="checked()"
-            (checkedChange)="checked.set($event)"
-          />
-          <nx-checkbox label="目前無法調整" description="停用狀態" [disabled]="true" />
-        </section>
-        <section nxCard aria-labelledby="design-title-heading">
-          <span class="panel-eyebrow">直接編輯</span>
-          <h2 id="design-title-heading">在看到的地方修改</h2>
-          <p class="form-note">雙擊標題或按 F2／Enter，即可直接編輯；Esc 取消。</p>
-          <div class="design-inline-title">
-            <nx-inline-title
-              appearance="block"
-              [value]="title()"
-              [scope]="'design-' + titleVersion()"
-              [save]="saveTitle"
-            />
-          </div>
-        </section>
-        <section nxCard class="design-status" aria-labelledby="design-status-title">
-          <div class="resource-heading">
-            <div>
-              <span class="panel-eyebrow">動態與回饋</span>
-              <h2 id="design-status-title">進度必須代表真正的階段</h2>
-            </div>
-            <button
-              type="button"
-              class="secondary-button"
-              [disabled]="demo().status === 'running'"
-              (click)="play()"
-            >
-              <nx-icon name="repeat" />播放狀態示範
-            </button>
-          </div>
-          <p class="form-note">
-            這是三個步驟的動畫示範。正式任務直接顯示伺服器階段與數量，支援減少動態效果。
-          </p>
-          <nx-job-progress [job]="demo()" />
-          <nx-select
-            label="示範任務狀態"
-            [value]="demo().status"
-            [options]="states"
-            (valueChange)="setState($event)"
-          />
-          @if (generation(); as current) {
-            <p class="form-note">
-              對話上方的線路流動與訊息區的短線淡亮共用配色，動態與層級各自區分。
-            </p>
-            <div class="inference-status">
-              <nx-inference-signal [active]="true" [subtle]="true" /><span>{{
-                current.label
-              }}</span>
-            </div>
-            <nx-generation-indicator
-              [waiting]="current.phase === 'queued'"
-              [label]="current.label"
-              [detail]="current.detail"
-            />
-          }
-        </section>
-        <section nxCard aria-labelledby="design-notices-title">
-          <span class="panel-eyebrow">操作回饋</span>
-          <h2 id="design-notices-title">緊湊提示，同一套共用元件</h2>
-          <nx-notice tone="info" message="可加入文件、圖片或知識庫來源，提供更多背景。" />
-          <nx-notice tone="success" message="變更已儲存，可以繼續工作。" />
-          <nx-notice tone="warning" message="內容接近模型的 Context 上限，請精簡背景資料。" />
-          <nx-notice message="操作未完成，請確認連線後重試。">
-            <button
-              notice-actions
-              type="button"
-              class="quiet-button"
-              (click)="notice.set('已示範重試操作。')"
-            >
-              重試
-            </button>
-          </nx-notice>
-          <p class="form-note">靈動島：一則是 pill、多則分出泡泡，緊急提示會自動展開。</p>
-          <nx-island />
-          <div class="design-actions">
-            <button type="button" class="secondary-button" (click)="toggleIsland('live')">
-              生成狀態
-            </button>
-            <button type="button" class="secondary-button" (click)="toggleIsland('info')">
-              一般提示
-            </button>
-            <button type="button" class="secondary-button" (click)="toggleIsland('warning')">
-              緊急警告
-            </button>
-          </div>
-        </section>
-        <section nxCard aria-labelledby="design-badges-title">
-          <span class="panel-eyebrow">數量與提醒</span>
-          <h2 id="design-badges-title">小標示，共用同一套語意</h2>
-          <p class="form-note">
-            數量超過 99 顯示 99+；零值預設隱藏。色彩搭配文字，數量更新由所屬功能提供完整提示。
-          </p>
-          <div class="design-badges">
-            @for (badge of badgeTones; track badge.tone) {
-              <span
-                >{{ badge.label }}
-                <nx-count-badge [count]="badge.count" [tone]="badge.tone" [size]="'md'"
-              /></span>
-            }
-            <span>大量 <nx-count-badge [count]="125" /></span>
-            <span>零值 <nx-count-badge [count]="0" [showZero]="true" tone="neutral" /></span>
-          </div>
-          <div class="design-badges">
-            <button
-              type="button"
-              class="icon-button"
-              aria-label="通知示範，12 則未讀"
-              (click)="notice.set('通知示範。')"
-            >
-              <span class="icon-badge-anchor">
-                <nx-icon name="bell" /><nx-count-badge [count]="12" [overlay]="true" />
-              </span>
-            </button>
-            <button
-              type="button"
-              class="icon-button"
-              aria-label="提醒示範，有新的錯誤"
-              (click)="notice.set('提醒示範。')"
-            >
-              <span class="icon-badge-anchor"
-                ><nx-icon name="info" /><nx-count-badge
-                  [count]="1"
-                  [overlay]="true"
-                  [dot]="true"
-                  tone="danger"
-                />
-              </span>
-            </button>
-          </div>
-        </section>
-        <section
-          nxCard
-          class="design-data-workspace ui-density-compact"
-          aria-labelledby="design-data-title"
-        >
-          <span class="panel-eyebrow">03 / 資料工作區</span>
-          <h2 id="design-data-title">緊湊的資訊，熟悉的操作</h2>
-          <p class="form-note">資料表保留列表位置，詳情於側欄開啟；窄螢幕自動使用 modal。</p>
-          <nx-filter-panel>
-            <div class="ui-filter-grid">
-              <label class="ui-field"
-                >共用表單欄位<input nxField aria-label="示範資料篩選" placeholder="依事件名稱查詢"
-              /></label>
-              <nx-date-time-picker
-                label="選填日期"
-                [withTime]="false"
-                [required]="false"
-                [value]="optionalDate()"
-                (valueChange)="optionalDate.set($event)"
-              />
-            </div>
-          </nx-filter-panel>
-          <nx-view-switch
-            label="資料範例檢視"
-            [options]="dataViews"
-            [value]="dataView()"
-            (valueChange)="dataView.set($event)"
-          />
-          <div class="design-calendar-samples">
-            <nx-date-time-picker
-              label="西元日期時間"
-              [value]="calendarDate()"
-              (valueChange)="calendarDate.set($event)"
-            />
-            <nx-date-time-picker
-              label="民國日期時間"
-              calendarSystem="roc"
-              [value]="calendarDate()"
-              (valueChange)="calendarDate.set($event)"
-            />
-          </div>
-          <nx-data-table label="共用資料表範例">
-            <div table-toolbar class="ui-table-toolbar">
-              <h2>事件範例</h2>
-              <span class="ui-count-label">{{ visibleDataRows().length }} 筆</span>
-            </div>
-            <table>
-              <caption class="sr-only">
-                共用資料表與狀態標籤範例
-              </caption>
-              <thead>
-                <tr>
-                  <th scope="col">時間</th>
-                  <th scope="col">事件</th>
-                  <th scope="col">狀態</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (entry of visibleDataRows(); track entry.event) {
-                  <tr>
-                    <td>{{ entry.time }}</td>
-                    <td>
-                      <button
-                        type="button"
-                        class="ui-table-link"
-                        (click)="inspectData(entry.event)"
-                      >
-                        {{ entry.event }}
-                      </button>
-                    </td>
-                    <td>
-                      <nx-status-badge [tone]="entry.tone">{{ entry.status }}</nx-status-badge>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </nx-data-table>
-        </section>
-        <section nxCard class="design-markdown" aria-labelledby="design-markdown-title">
-          <span class="panel-eyebrow">02 / 內容閱讀</span>
-          <h2 id="design-markdown-title">長文字也能輕鬆瀏覽</h2>
-          <nx-markdown-view [content]="markdown" />
-        </section>
-      </div>
-      <nx-confirm-dialog />
+      <section aria-labelledby="design-foundations-title">
+        <h2 id="design-foundations-title">基礎</h2>
+        <nx-design-foundations (exportTokens)="exportTokens()" />
+      </section>
+      <section aria-labelledby="design-controls-title">
+        <h2 id="design-controls-title">操作與選取</h2>
+        <nx-design-controls />
+      </section>
+      <section aria-labelledby="design-forms-title">
+        <h2 id="design-forms-title">表單</h2>
+        <nx-design-forms />
+      </section>
+      <section aria-labelledby="design-feedback-title">
+        <h2 id="design-feedback-title">回饋</h2>
+        <nx-design-feedback />
+      </section>
+      <section aria-labelledby="design-data-title">
+        <h2 id="design-data-title">資料與內容</h2>
+        <nx-design-data [theme]="theme()" />
+      </section>
     </div>
   }
 </nx-feature-page>
-<nx-detail-drawer title="資料詳情示範" [attr.data-theme]="theme()">
-  <div drawer-summary class="ui-drawer-summary">
-    <h3>{{ dataEvent() }}</h3>
-    <span class="ui-drawer-subtitle">共用詳情面板 · 本地範例</span>
-  </div>
-  <nx-tabs
-    #dataTabsControl
-    drawer-tabs
-    label="資料詳情示範內容"
-    [items]="dataTabs"
-    [value]="dataTab()"
-    (valueChange)="dataTab.set($event)"
-  />
-  <section
-    role="tabpanel"
-    tabindex="0"
-    [id]="dataTabsControl.panelId(dataTab())"
-    [attr.aria-labelledby]="dataTabsControl.tabId(dataTab())"
-  >
-    @if (dataTab() === 'overview') {
-      <h3 class="ui-section-heading">事件</h3>
-      <p class="ui-message-box">{{ dataEvent() }}</p>
-      <h3 class="ui-section-heading">執行資訊</h3>
-      <dl class="ui-description-list">
-        <div>
-          <dt>服務</dt>
-          <dd>AiNexus.Host</dd>
-        </div>
-        <div>
-          <dt>來源</dt>
-          <dd>介面元件範例</dd>
-        </div>
-      </dl>
-    } @else {
-      <nx-code-block label="示範屬性 JSON" [value]="dataProperties" />
-    }
-  </section>
-</nx-detail-drawer>

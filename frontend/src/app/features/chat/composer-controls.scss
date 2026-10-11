@@ -36,28 +36,16 @@
   width: 1rem;
   height: 1rem;
 }
-.context-details {
-  position: static;
+// Both panels are InfoPopovers in the top layer, so the composer's clipping never hides them.
+nx-info-popover {
+  --info-popover-trigger-padding: var(--p-space-1) var(--p-space-2);
   flex: none;
 }
-.context-trigger {
-  list-style: none;
-  display: flex;
+.context-trigger,
+.search-trigger {
+  display: inline-flex;
   align-items: center;
   gap: var(--p-space-1);
-  min-width: var(--button-target);
-  min-height: var(--button-target);
-  padding: var(--p-space-1) var(--p-space-2);
-  font-size: var(--text-caption);
-  color: var(--secondary);
-  border-radius: var(--p-radius-sm);
-}
-.context-trigger::-webkit-details-marker {
-  display: none;
-}
-.context-trigger:hover,
-.context-details[open] .context-trigger {
-  background: var(--hover);
 }
 .context-ring {
   width: 1.5rem;
@@ -80,20 +68,11 @@
   stroke: var(--error);
 }
 .context-panel {
-  position: absolute;
-  bottom: calc(100% + var(--p-space-3));
-  right: 0;
-  z-index: 12;
-  width: min(21rem, calc(100vw - 2rem));
-  max-height: min(26rem, 65dvh);
-  overflow-y: auto;
-  padding: var(--p-space-5);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
-  background: var(--surface);
-  box-shadow: var(--shadow);
-  font-size: var(--text-caption);
+  display: block;
   line-height: var(--line-reading);
+}
+.context-panel strong {
+  color: var(--ink);
 }
 .context-panel p {
   margin: var(--p-space-2) 0 0;
@@ -116,10 +95,6 @@
   margin-top: var(--p-space-3);
   accent-color: var(--signal);
 }
-.context-details[open] .context-panel {
-  animation: suggestion-arrive var(--motion-enter) var(--ease) both;
-  animation-delay: calc(var(--item-index) * var(--motion-stagger));
-}
 .search-toggle {
   display: inline-flex;
   align-items: center;
@@ -141,15 +116,12 @@
   width: 17px;
   height: 17px;
 }
-.search-setup summary {
-  cursor: pointer;
+.search-trigger nx-icon {
+  width: 17px;
+  height: 17px;
 }
-.search-setup summary small {
-  font-size: var(--text-caption);
-  color: var(--secondary);
-}
-.search-setup summary::-webkit-details-marker {
-  display: none;
+.search-trigger small {
+  color: var(--muted);
 }
 @media (max-width: 859px) {
   .model-control {
@@ -160,7 +132,8 @@
   }
 }
 @media (max-width: 620px) {
-  .search-toggle span {
+  .search-toggle span,
+  .search-trigger > span {
     display: none;
   }
 }
@@ -179,16 +152,11 @@
   .reasoning-control {
     --select-trigger-padding-inline: var(--p-space-1);
   }
-  .context-trigger {
-    padding: var(--p-space-1);
-    justify-content: center;
+  nx-info-popover {
+    --info-popover-trigger-padding: var(--p-space-1);
   }
   .context-trigger > span {
     display: none;
-  }
-  .context-panel {
-    right: 0;
-    width: min(21rem, calc(100vw - 2 * var(--workspace-gutter)));
   }
   .model-lock {
     max-width: 8rem;

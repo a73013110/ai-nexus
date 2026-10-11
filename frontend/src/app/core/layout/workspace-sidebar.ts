@@ -36,8 +36,13 @@ let sequence = 0;
       'collapsibleNavigation() && navigationExpanded() && !layout.compact()',
     '(document:keydown)': 'key($event)',
   },
-  template: `@if (layout.overlay()) {
-      <button class="workspace-backdrop" aria-label="收合側欄" (click)="collapse()"></button>
+  template: `@if (layout.narrow()) {
+      <button
+        class="workspace-backdrop"
+        aria-label="收合側欄"
+        tabindex="-1"
+        (click)="collapse()"
+      ></button>
     }
     <div class="workspace-sidebar-heading">
       <nx-workspace-brand [compact]="layout.compact()" />

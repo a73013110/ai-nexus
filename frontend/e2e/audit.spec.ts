@@ -60,7 +60,7 @@ test("audit-only access keeps deep-link filters and same-page links without requ
     "/admin/audit",
   );
   await page
-    .locator(".workspace-navigation")
+    .getByRole("list", { name: "釘選功能", exact: true })
     .getByRole("link", { name: "活動稽核", exact: true })
     .click();
   await expect(

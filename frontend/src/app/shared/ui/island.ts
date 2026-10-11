@@ -37,7 +37,6 @@ export type IslandMode = 'hidden' | 'compact' | 'split' | 'expanded';
   template: `@if (primary(); as first) {
       <div
         class="island"
-        data-theme="dark"
         animate.enter="island-enter"
         animate.leave="island-leave"
         [attr.data-tone]="first.tone"
@@ -116,7 +115,6 @@ export type IslandMode = 'hidden' | 'compact' | 'split' | 'expanded';
         <button
           type="button"
           class="island-bubble"
-          data-theme="dark"
           animate.enter="island-bubble-enter"
           [attr.data-tone]="rest()[0].tone"
           [attr.aria-label]="'另有 ' + rest().length + ' 則提示：' + rest()[0].label"

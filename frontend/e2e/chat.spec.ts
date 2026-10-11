@@ -45,8 +45,9 @@ test("對話開場沿用共用卡片與操作密度，手機及深色保留閱�
         ),
       ).toBeLessThan(surface.height * 0.1);
     } else {
+      // The start screen sits slightly above centre, but keeps the composer off the header.
       expect(composer!.y + composer!.height / 2).toBeGreaterThan(
-        viewport.height * 0.35,
+        viewport.height * 0.3,
       );
     }
     for (const button of await suggestions.locator("button.ui-card").all())
@@ -271,7 +272,10 @@ test("dark theme, reduced motion and narrow viewport remain usable", async ({
   await expect(
     page.getByRole("button", { name: "展開側欄", exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".workspace-main")).not.toHaveAttribute("inert", "");
+  await expect(page.locator(".workspace-main")).not.toHaveAttribute(
+    "inert",
+    "",
+  );
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("窄畫面測試");
   await expect(page.getByRole("textbox", { name: "傳送訊息" })).toHaveValue(
     "窄畫面測試",
@@ -304,9 +308,16 @@ test("mobile drawer supports Escape and restores visible keyboard focus", async 
   await expect(page.locator(".workspace-main")).toHaveAttribute("inert", "");
   await page.keyboard.press("Escape");
   await expect(toggle).toBeFocused();
-  await expect(page.locator(".workspace-main")).not.toHaveAttribute("inert", "");
+  await expect(page.locator(".workspace-main")).not.toHaveAttribute(
+    "inert",
+    "",
+  );
   await page.getByRole("textbox", { name: "傳送訊息" }).focus();
-  await expect(page.locator(".composer")).toHaveCSS("outline-width", "2px");
+  // The composer's one focus treatment is a 3px ring around its border, not an outline.
+  await expect(page.locator(".composer")).toHaveCSS(
+    "box-shadow",
+    /0px 0px 0px 3px/,
+  );
 });
 
 test("failed preference save retains editable changes and can be retried", async ({
@@ -502,7 +513,14 @@ test("chat search is opt-in and cost/source panels stay accessible without clipp
     .getByRole("button", { name: "搜尋網路", exact: true })
     .boundingBox();
   const contextBox = await page.locator(".context-trigger").boundingBox();
-  expect(Math.abs(searchBox!.y - contextBox!.y)).toBeLessThanOrEqual(1);
+  // Same row: the two triggers differ in size, so compare their centres.
+  expect(
+    Math.abs(
+      searchBox!.y +
+        searchBox!.height / 2 -
+        (contextBox!.y + contextBox!.height / 2),
+    ),
+  ).toBeLessThanOrEqual(1);
   await page.keyboard.press("Escape");
   await page
     .getByRole("button", { name: "本次模型呼叫的費用與用量", exact: true })
@@ -529,7 +547,7 @@ test("local deployments explain why web search is not enabled", async ({
   await page.getByText("搜尋網路", { exact: true }).click();
   await expect(
     page.getByText("網路搜尋尚未啟用", { exact: true }),
-  ).toBeVisible();
+  ).toBeInViewport();
   await expect(page.locator(".search-setup")).toContainText(
     "地端模型本身不會連網",
   );
@@ -580,7 +598,10 @@ test("送出的提問立即顯示，失敗時退回輸入框", async ({ page }) 
   await page.route("**/api/v1/runs", async (route) => {
     if (route.request().method() !== "POST") return route.fallback();
     await held;
-    await route.fulfill({ status: 500, json: { title: "伺服器錯誤", status: 500 } });
+    await route.fulfill({
+      status: 500,
+      json: { title: "伺服器錯誤", status: 500 },
+    });
   });
   await page.goto("/chat");
   const input = page.getByRole("textbox", { name: "傳送訊息", exact: true });

@@ -13,9 +13,13 @@
   gap: var(--p-space-6);
   margin-bottom: var(--section-gap);
 }
-.feature-header > div:first-child {
+.feature-header > nx-workspace-menu-button + div {
   flex: 1;
   min-width: 0;
+}
+.feature-tour {
+  flex: none;
+  align-self: flex-start;
 }
 .feature-header h1 {
   font-size: var(--p-font-3xl);

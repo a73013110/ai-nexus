@@ -17,7 +17,7 @@ async function gallery(page: Page) {
   await fixture.attach(page);
   await page.goto("/design");
   await expect(
-    page.getByRole("heading", { name: "從 tokens 到每一個細節" }),
+    page.getByRole("region", { name: "色彩", exact: true }),
   ).toBeVisible();
   return fixture;
 }
@@ -213,11 +213,30 @@ test("theme previews have readable contrast, full navigation and usable narrow l
     await settleEntrance(page);
   }
   await page.getByRole("button", { name: "匯出目前 tokens" }).click();
+  // The workbench index fills the sidebar, so “全部功能” starts collapsed and lists every
+  // feature, pinned ones included, once opened.
   const nav = page.getByRole("navigation", { name: "工作區功能" });
-  await expect(nav.getByRole("link")).toHaveCount(10);
+  const launcher = nav.getByRole("button", { name: "全部功能", exact: true });
+  await expect(launcher).toHaveCSS("box-shadow", "none");
+  await launcher.click();
+  // Open replaces the page's panel, so the toggle raises the selected chip.
+  await expect(launcher).not.toHaveCSS("box-shadow", "none");
+  await expect(nav.getByRole("link")).toHaveCount(14);
   await expect(
-    nav.getByRole("link", { name: "檔案庫", exact: true }),
+    nav.getByRole("link", { name: "檔案庫", exact: true }).last(),
   ).toBeVisible();
+  await nav.getByRole("button", { name: "全部功能", exact: true }).click();
+  const index = page.getByRole("navigation", { name: "元件索引", exact: true });
+  // A short section followed by another short one stays current after the jump.
+  await index.getByRole("link", { name: "間距與圓角", exact: true }).click();
+  await page.evaluate(() => new Promise(requestAnimationFrame));
+  await expect(index.locator('[aria-current="true"]')).toHaveText("間距與圓角");
+  await index.getByRole("link", { name: "靈動島", exact: true }).click();
+  await expect(index.getByRole("link", { name: "靈動島", exact: true })).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+  await expect(page.getByRole("heading", { name: "靈動島", exact: true })).toBeFocused();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator(".feature-main").evaluate((el) => (el.scrollTop = 0));
   await settleEntrance(page);
@@ -244,4 +263,24 @@ test("component workbench is scoped to administrators", async ({ page }) => {
   await page.goto("/design");
   await expect(page.getByRole("alert")).toContainText("僅提供平台管理員");
   await expect(page.locator(".design-preview")).toHaveCount(0);
+});
+
+test("island follows the preview theme instead of a fixed dark zone", async ({
+  page,
+}) => {
+  await gallery(page);
+  await page.getByRole("button", { name: "生成狀態", exact: true }).click();
+  const island = page.locator("#design-island nx-island .island");
+  await expect(island).toBeVisible();
+  const lightness = () =>
+    island.evaluate((element) => {
+      // color-mix() may serialise as color(srgb r g b / a) with 0–1 channels.
+      const color = getComputedStyle(element).backgroundColor;
+      const scale = color.startsWith("color(") ? 255 : 1;
+      const [r, g, b] = color.match(/[\d.]+/g)!.map(Number);
+      return ((r + g + b) / 3) * scale;
+    });
+  expect(await lightness()).toBeGreaterThan(200);
+  await page.getByRole("button", { name: "深色", exact: true }).click();
+  await expect.poll(lightness).toBeLessThan(80);
 });

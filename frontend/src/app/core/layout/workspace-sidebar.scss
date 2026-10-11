@@ -108,6 +108,8 @@ nx-workspace-brand {
     transition: width var(--motion-panel) var(--ease);
   }
 }
+// The drawer slides; its scrim stays put and fades. The scrim lives inside the drawer (so Tab and
+// clicks stay with it), so it counter-translates by the drawer width on the same curve.
 @media (max-width: 859px) {
   :host {
     --control-height-compact: 2.75rem;
@@ -132,10 +134,25 @@ nx-workspace-brand {
     width: calc(100vw - var(--sidebar-drawer-width));
     background: var(--scrim);
     z-index: -1;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(var(--sidebar-drawer-width));
+    transition:
+      transform var(--motion-panel) var(--ease),
+      opacity var(--motion-panel) var(--ease);
+  }
+  :host(.is-open) .workspace-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+  .workspace-backdrop:hover {
+    background: var(--scrim);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  :host {
+  :host,
+  .workspace-backdrop {
     transition: none;
   }
 }

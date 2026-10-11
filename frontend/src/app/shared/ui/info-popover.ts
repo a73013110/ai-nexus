@@ -12,7 +12,11 @@ import { Icon } from './icon';
 import { positionPopover } from '../browser/popover-position';
 let sequence = 0;
 
-/** A non-modal information panel in the native top layer, shared by compact metrics. */
+/**
+ * A non-modal information panel in the native top layer, shared by compact metrics. The trigger
+ * defaults to an icon and label; project `[popover-trigger]` content for a custom glyph (e.g. the
+ * context ring). Being in the top layer, the panel is never clipped by a scrolling parent.
+ */
 @Component({
   selector: 'nx-info-popover',
   imports: [Icon],
@@ -22,12 +26,15 @@ let sequence = 0;
       type="button"
       class="info-popover-trigger"
       [attr.aria-label]="description() || label()"
+      [attr.title]="hint() || null"
       aria-haspopup="dialog"
       [attr.aria-expanded]="opened()"
       [attr.aria-controls]="id"
       (click)="toggle()"
     >
-      <nx-icon [name]="icon()" /><span>{{ label() }}</span>
+      <ng-content select="[popover-trigger]"
+        ><nx-icon [name]="icon()" /><span>{{ label() }}</span></ng-content
+      >
     </button>
     <div
       #panel
@@ -36,7 +43,7 @@ let sequence = 0;
       role="dialog"
       popover="auto"
       tabindex="-1"
-      [attr.aria-label]="description() || label()"
+      [attr.aria-label]="panelLabel() || description() || label()"
       (toggle)="opened.set($any($event).newState === 'open')"
       (keydown.escape)="close($event)"
     >
@@ -52,6 +59,7 @@ let sequence = 0;
       align-items: center;
       gap: 0.35rem;
       min-height: var(--button-target);
+      padding: var(--info-popover-trigger-padding, 0);
       white-space: nowrap;
       font-size: var(--text-caption);
       color: var(--secondary);
@@ -63,6 +71,10 @@ let sequence = 0;
     }
     .info-popover-trigger:hover {
       color: var(--signal);
+    }
+    .info-popover-trigger[aria-expanded='true'] {
+      background: var(--hover);
+      color: var(--ink);
     }
     .info-popover-panel {
       position: fixed;
@@ -90,6 +102,10 @@ export class InfoPopover {
   readonly description = input('');
   readonly icon = input('info');
   readonly align = input<'left' | 'right'>('left');
+  /** Name of the panel when it differs from the trigger's (which may carry a live value). */
+  readonly panelLabel = input('');
+  readonly hint = input('');
+  readonly width = input(320);
   readonly opened = signal(false);
   readonly id = 'nx-info-' + ++sequence;
   private readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
@@ -121,6 +137,12 @@ export class InfoPopover {
     this.trigger().nativeElement.focus();
   }
   private position() {
-    positionPopover(this.trigger().nativeElement, this.panel().nativeElement, 320, this.align());
+    positionPopover(
+      this.trigger().nativeElement,
+      this.panel().nativeElement,
+      this.width(),
+      this.align(),
+      420,
+    );
   }
 }

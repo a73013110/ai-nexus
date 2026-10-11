@@ -28,8 +28,10 @@
   min-width: 0;
   min-height: 0;
 }
-// The start screen centres the greeting and composer together and scrolls them as one.
+// The start screen centres the greeting and composer together and scrolls them as one; the
+// bottom padding lifts the group to the optical centre, a little above the geometric one.
 .chat-starting .chat-surface {
+  padding-block-end: clamp(0px, 16dvh, 10rem);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable both-edges;

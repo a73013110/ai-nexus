@@ -1,0 +1,133 @@
+:host {
+  display: grid;
+  gap: var(--p-space-6);
+}
+.design-swatches {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--p-space-3);
+}
+.design-swatch {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font-size: var(--text-caption);
+}
+.design-color {
+  height: 2.5rem;
+  margin-bottom: var(--p-space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+}
+.design-swatch strong {
+  font-weight: 550;
+}
+code {
+  overflow-wrap: anywhere;
+  color: var(--secondary);
+  font: var(--p-font-xs) var(--font-code);
+}
+.design-export {
+  align-self: flex-start;
+}
+.design-scale {
+  display: grid;
+  margin: 0;
+  div {
+    display: grid;
+    grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr);
+    align-items: baseline;
+    gap: var(--p-space-4);
+    padding-block: var(--p-space-2);
+  }
+  div + div {
+    border-top: 1px solid var(--line);
+  }
+  dt {
+    display: grid;
+    gap: 2px;
+  }
+  small {
+    color: var(--muted);
+    font-size: var(--p-font-xs);
+  }
+  dd {
+    margin: 0;
+    min-width: 0;
+    line-height: var(--line-ui);
+  }
+  .is-title {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .design-reading {
+    line-height: var(--line-reading);
+  }
+}
+.design-spacing,
+.design-radii {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--p-space-4);
+  color: var(--secondary);
+  font: var(--p-font-xs) var(--font-code);
+}
+.design-spacing span {
+  display: grid;
+  justify-items: center;
+  gap: var(--p-space-1);
+}
+.design-spacing i {
+  height: 4px;
+  border-radius: var(--p-radius-pill);
+  background: var(--signal);
+}
+.design-radii span {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 2.25rem;
+  border: 1px solid var(--line);
+  background: var(--surface-subtle);
+}
+// Hover or focus replays the curve on a dot travelling the track.
+.design-motion {
+  display: grid;
+  gap: var(--p-space-1);
+  width: 9rem;
+  padding: var(--p-space-2);
+  border-radius: var(--p-radius-md);
+  text-align: left;
+  font-size: var(--text-caption);
+}
+.design-motion-track {
+  position: relative;
+  height: 1.25rem;
+  border-radius: var(--p-radius-pill);
+  background: var(--hover);
+}
+.design-motion i {
+  position: absolute;
+  top: 0.25rem;
+  left: 0.25rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--accent);
+  transition: transform var(--duration) var(--curve);
+}
+.design-motion:is(:hover, :focus-visible) i {
+  transform: translateX(6.75rem);
+}
+@media (max-width: 1100px) {
+  .design-swatches {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 520px) {
+  .design-scale div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--p-space-1);
+  }
+}

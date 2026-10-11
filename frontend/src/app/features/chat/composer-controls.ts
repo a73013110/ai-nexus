@@ -2,14 +2,14 @@ import { Notice } from '../../shared/ui/notice';
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import type { ContextUsageDto, ModelDto, ModelPolicyDto } from '../../core/api/schema';
 import { Icon } from '../../shared/ui/icon';
-import { Disclosure } from '../../shared/ui/disclosure';
+import { InfoPopover } from '../../shared/ui/info-popover';
 import { Select } from '../../shared/ui/select';
 import { formatModelName } from '../../shared/browser/format';
 
 @Component({
   selector: 'nx-composer-controls',
   host: { class: 'ui-density-compact' },
-  imports: [Notice, Icon, Disclosure, Select],
+  imports: [Notice, Icon, InfoPopover, Select],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './composer-controls.scss',
   template: `<div class="composer-controls">
@@ -61,23 +61,33 @@ import { formatModelName } from '../../shared/browser/format';
           <nx-icon name="globe" /><span>搜尋網路</span>
         </button>
       } @else {
-        <details class="context-details search-setup" aria-label="網路搜尋設定" nxDisclosure>
-          <summary class="search-toggle" aria-label="搜尋網路：查看設定說明">
-            <nx-icon name="globe" /><span>搜尋網路</span><small>未啟用</small>
-          </summary>
+        <nx-info-popover
+          class="search-setup"
+          label="搜尋網路"
+          description="搜尋網路：查看設定說明"
+          panelLabel="網路搜尋設定"
+          icon="globe"
+          align="right"
+        >
+          <span popover-trigger class="search-trigger"
+            ><nx-icon name="globe" /><span>搜尋網路</span><small>未啟用</small></span
+          >
           <div class="context-panel">
             <strong>網路搜尋尚未啟用</strong>
             <p>{{ webSearchNotice() }}</p>
             <p>地端模型本身不會連網。管理員可部署公司自架的 SearXNG，再啟用搜尋服務。</p>
           </div>
-        </details>
+        </nx-info-popover>
       }
-      <details class="context-details" aria-label="上下文用量" nxDisclosure>
-        <summary
-          class="context-trigger"
-          [attr.aria-label]="'上下文用量：' + (usage() ? percent() + '%（預估）' : '尚未取得')"
-          title="查看 Context 用量"
-        >
+      <nx-info-popover
+        class="context-usage"
+        label="Context"
+        panelLabel="上下文用量"
+        hint="查看 Context 用量"
+        align="right"
+        [description]="'上下文用量：' + (usage() ? percent() + '%（預估）' : '尚未取得')"
+      >
+        <span popover-trigger class="context-trigger">
           <svg
             viewBox="0 0 24 24"
             class="context-ring"
@@ -95,7 +105,7 @@ import { formatModelName } from '../../shared/browser/format';
             />
           </svg>
           <span>{{ usage() ? percent() + '%' : 'Context' }}</span>
-        </summary>
+        </span>
         <div class="context-panel">
           <strong>Context 用量</strong>
           @if (usage(); as context) {
@@ -130,7 +140,7 @@ import { formatModelName } from '../../shared/browser/format';
             <p>選定可用模型後會取得預估用量。</p>
           }
         </div>
-      </details>
+      </nx-info-popover>
     </div>
   </div>`,
 })

@@ -16,8 +16,8 @@ import { WorkspaceCommands } from './workspace-commands';
 
 /**
  * Every feature the account can open, in the shared groups as three-column icons or one per line.
- * Pinned features already sit above it, so it lists the rest; editing shows them all as pin
- * toggles.
+ * Pinned features stay in their group with a pin mark, so the catalogue never reshuffles; editing
+ * turns every entry into a pin toggle. A pinned current page is marked once, on its pinned row.
  */
 @Component({
   selector: 'nx-feature-launcher',
@@ -76,22 +76,25 @@ import { WorkspaceCommands } from './workspace-commands';
               } @else {
                 <a
                   [routerLink]="feature.route"
-                  [class.current]="active() === feature.id"
-                  [attr.aria-current]="active() === feature.id ? 'page' : null"
-                  [attr.title]="feature.name"
+                  [class.current]="active() === feature.id && !pins.has(feature.id)"
+                  [attr.aria-current]="
+                    active() === feature.id && !pins.has(feature.id) ? 'page' : null
+                  "
+                  [attr.title]="pins.has(feature.id) ? feature.name + '（已釘選）' : feature.name"
                   [attr.aria-label]="feature.name"
                   (click)="activated.emit()"
                 >
                   <nx-icon [name]="icons[feature.id] || 'document'" /><span>{{
                     feature.name
                   }}</span>
+                  @if (pins.has(feature.id)) {
+                    <nx-icon class="pin-mark" name="pin" aria-hidden="true" />
+                  }
                 </a>
               }
             }
           </div>
         </section>
-      } @empty {
-        <p class="launcher-note">所有功能都已釘選在上方。</p>
       }
     </div>`,
 })
@@ -107,11 +110,5 @@ export class FeatureLauncher {
     { value: 'list', label: '條列顯示', icon: 'list' },
   ];
   readonly icons = FEATURE_ICONS;
-  readonly groups = computed(() =>
-    groupFeatures(
-      this.editing()
-        ? this.pins.features()
-        : this.pins.features().filter((feature) => !this.pins.has(feature.id)),
-    ),
-  );
+  readonly groups = computed(() => groupFeatures(this.pins.features()));
 }
