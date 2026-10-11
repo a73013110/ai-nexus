@@ -67,22 +67,39 @@
 .history-search input::placeholder {
   color: var(--muted);
 }
+// Like the pinned features, one chip springs between the equal-width views.
 .history-filters {
+  --filter-gap: var(--p-space-1);
+  position: relative;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--p-space-1);
+  gap: var(--filter-gap);
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: calc((100% - 2 * var(--filter-gap)) / 3);
+    height: var(--button-target);
+    border-radius: var(--p-radius-md);
+    background: var(--surface);
+    box-shadow: var(--selected-ring);
+    transform: translateX(calc(var(--active-index, 0) * (100% + var(--filter-gap))));
+    transition: transform var(--motion-morph) var(--ease-spring);
+  }
 }
 .history-filters > button {
-  flex: 1;
+  position: relative;
+  flex: 1 1 0;
   min-height: var(--button-target);
   border-radius: var(--p-radius-md);
   color: var(--secondary);
   font-size: var(--text-caption);
+  transition: color var(--motion-fast) var(--ease);
 }
+// The chip underneath is the selection; hover must not tint over it.
 .history-filters > button[aria-pressed='true'] {
-  background: var(--surface);
+  background: transparent;
   color: var(--accent);
-  box-shadow: var(--selected-ring);
   font-weight: 600;
 }
 .label-filter {

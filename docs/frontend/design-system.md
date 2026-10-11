@@ -13,7 +13,7 @@
 - 新顏色先建立用途（semantic）再選 primitive。換品牌色只改 `--accent`、`--accent-soft`、`--focus`、`--signal` 的兩種主題映射。
 - 全站字級調 font primitives；單一區域密度調 component tokens；元件要讓父層調整時開 custom property，不讓父層覆寫內部。
 - 不用彩色側邊線、漸層背景、發光陰影與透視網格。低層次表面共用 `--surface-subtle`。
-- 「目前所在／已選取」是 `--surface` 加 `--selected-ring` 的凸起 chip，圖示用 `--accent`；hover 只用平的 `--hover`，兩者不能長得一樣。
+- 「目前所在／已選取」是 `--surface` 加 `--selected-ring` 的凸起 chip，圖示用 `--accent`；hover 只用平的 `--hover`，兩者不能長得一樣。同組換選取時用一個 chip 以 `--ease-spring` 滑動。
 
 ## 主題
 
