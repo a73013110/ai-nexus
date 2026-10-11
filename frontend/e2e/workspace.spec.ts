@@ -494,7 +494,11 @@ test("duplicate and JSON text backup preserve the tree in a separate conversatio
   const backup = JSON.parse(content);
   expect(backup.messages).toHaveLength(2);
   expect(backup.version).toBe(1);
-  await page.locator("nx-chat-sidebar input[type=file]").setInputFiles({
+  const chooser = page.waitForEvent("filechooser");
+  await page.getByRole("button", { name: "匯入對話文字備份" }).click();
+  await (
+    await chooser
+  ).setFiles({
     name: "backup.json",
     mimeType: "application/json",
     buffer: Buffer.from(content),

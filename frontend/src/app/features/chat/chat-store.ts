@@ -5,10 +5,10 @@ import { Router } from '@angular/router';
 import { ApiError, NexusApi } from '../../core/api/nexus-api';
 import type {
   ContextPreviewRequest,
+  AttachmentDto,
   ContextUsageDto,
   ConversationDto,
   CreateRunRequest,
-  MeDto,
   MessageDto,
   PreferencesDto,
   RunDto,
@@ -49,7 +49,7 @@ export class ChatStore {
   readonly composer = inject(ChatDraft);
   readonly history = inject(ChatHistory);
   readonly drafts = this.composer.repository;
-  readonly me = signal<MeDto | null>(null);
+  readonly me = this.session.me;
   readonly conversations = this.history.conversations;
   readonly selected = signal<ConversationDto | null>(null);
   readonly messages = signal<MessageDto[]>([]);
@@ -67,15 +67,10 @@ export class ChatStore {
   readonly modelNotice = this.model.notice;
   readonly contextUsage = signal<ContextUsageDto | null>(null);
   readonly contextNotice = signal<string | null>(null);
-  readonly hasChatAccess = computed(
-    () => this.me()?.access?.features?.some((x) => x.id === 'chat') ?? false,
-  );
-  readonly hasKnowledgeAccess = computed(
-    () => this.me()?.access.features?.some((x) => x.id === 'knowledge') ?? false,
-  );
-  readonly hasArtifactsAccess = computed(
-    () => this.me()?.access.features?.some((x) => x.id === 'artifacts') ?? false,
-  );
+  readonly hasChatAccess = computed(() => this.session.has('chat'));
+  readonly hasKnowledgeAccess = computed(() => this.session.has('knowledge'));
+  readonly hasArtifactsAccess = computed(() => this.session.has('artifacts'));
+  readonly hasSharing = computed(() => this.session.has('shared'));
   readonly error = signal<string | null>(null);
   readonly ready = signal(false);
   readonly loading = signal(true);
@@ -129,7 +124,18 @@ export class ChatStore {
       !this.attachments.uploading() &&
       !!this.attachments.policy(),
   );
-  readonly visibleMessages = computed(() => this.tree().branch(this.selected()?.activeLeafId));
+  /** The prompt being submitted, shown at once until the server's copy arrives. */
+  private readonly prompt = signal<MessageDto | null>(null);
+  readonly visibleMessages = computed(() => {
+    const prompt = this.prompt();
+    return prompt
+      ? [...this.tree().branch(prompt.parentId), prompt]
+      : this.tree().branch(this.selected()?.activeLeafId);
+  });
+  /** No conversation content yet, so the page shows its start screen. */
+  readonly starting = computed(() => !this.visibleMessages().length && !this.loadingConversation());
+  private unsent: { text: string; editing: MessageDto | null; files: AttachmentDto[] } | null =
+    null;
   private initialized: Promise<void> | null = null;
   private selectionVersion = 0;
   private pending: {
@@ -194,7 +200,6 @@ export class ChatStore {
       // Account and settings load together; the account is always fresh here for its active run.
       const me = await this.session.load(true);
       if (!me || generation !== this.auth.generation()) return;
-      this.me.set(me);
       this.themes.apply({
         theme: me.preferences.theme ?? 'system',
         reducedMotion: me.preferences.reducedMotion ?? false,
@@ -209,9 +214,7 @@ export class ChatStore {
       const extensions = Promise.allSettled([
         this.attachments.initialize(),
         this.workspace.labels(),
-        ...(me.access.features?.some((x) => x.id === 'knowledge')
-          ? [this.knowledge.initialize()]
-          : []),
+        ...(this.hasKnowledgeAccess() ? [this.knowledge.initialize()] : []),
       ]);
       const [catalog] = await Promise.all([this.api.models(), this.refreshHistory()]);
       if (generation !== this.auth.generation()) return;
@@ -265,6 +268,7 @@ export class ChatStore {
       return;
     }
     const version = ++this.selectionVersion;
+    this.prompt.set(null);
     this.persistDraft();
     this.composer.clear();
     this.attachments.reset();
@@ -287,8 +291,7 @@ export class ChatStore {
       this.selected.set(detail.conversation as ConversationDto);
       this.notifications.readConversation(id);
       this.messages.set(detail.messages as MessageDto[]);
-      if (this.me()?.access.features?.some((x) => x.id === 'knowledge'))
-        await this.knowledge.load(id);
+      if (this.hasKnowledgeAccess()) await this.knowledge.load(id);
       if (version !== this.selectionVersion) return;
       await this.restoreDraft(id);
       if (version !== this.selectionVersion) return;
@@ -311,6 +314,9 @@ export class ChatStore {
     if (!text || !this.canSend()) return;
     this.submitting.set(true);
     this.error.set(null);
+    const edit = this.editing();
+    const files = this.attachments.files();
+    this.showPrompt(text, edit ? edit.parentId : (this.selected()?.activeLeafId ?? null));
     try {
       let conversation = this.selected();
       const draftId = conversation?.id ?? null;
@@ -322,7 +328,6 @@ export class ChatStore {
         this.selected.set(conversation);
         await this.router.navigate(['/chat', conversation.id]);
       }
-      const edit = this.editing();
       this.pending = {
         key: crypto.randomUUID(),
         mode: edit ? 'edit' : 'send',
@@ -334,7 +339,7 @@ export class ChatStore {
           parentMessageId: edit ? edit.parentId : conversation.activeLeafId,
           regenerateUserMessageId: null,
           reasoningEffort: this.reasoningEffort(),
-          attachmentIds: this.attachments.files().map((file) => file.id),
+          attachmentIds: files.map((file) => file.id),
           webSearch: this.webSearchEnabled(),
         },
       };
@@ -366,6 +371,7 @@ export class ChatStore {
     const run = await this.api.createRun(pending.body, pending.key);
     if (generation !== this.auth.generation()) return;
     this.pending = null;
+    this.unsent = null;
     this.pendingSubmission.set(false);
     if (pending.mode === 'send' && this.me()) {
       this.drafts.clear(this.me()!.id, pending.draftId);
@@ -382,10 +388,7 @@ export class ChatStore {
     try {
       const detail = await this.api.conversation(run.conversationId);
       if (generation !== this.auth.generation()) return;
-      if (this.selected()?.id === run.conversationId) {
-        this.selected.set(detail.conversation as ConversationDto);
-        this.messages.set(detail.messages as MessageDto[]);
-      }
+      if (this.selected()?.id === run.conversationId) this.adopt(detail);
       snapshot = (detail.activeRun as RunDto) ?? run;
     } catch (error) {
       if (generation === this.auth.generation()) this.report(error);
@@ -395,10 +398,52 @@ export class ChatStore {
     await this.refreshHistory().catch((error) => this.report(error));
   }
 
+  /** A network failure keeps the prompt for retry; any other failure returns it to the composer. */
   private submissionError(error: unknown) {
     this.report(error);
     this.pendingSubmission.set(!!this.pending && error instanceof ApiError && error.status === 0);
-    if (!this.pendingSubmission()) this.pending = null;
+    if (this.pendingSubmission()) return;
+    this.pending = null;
+    this.prompt.set(null);
+    if (this.unsent) {
+      this.draft.set({ text: this.unsent.text });
+      this.editing.set(this.unsent.editing);
+      this.attachments.reset(this.unsent.files);
+      this.unsent = null;
+    }
+  }
+
+  private showPrompt(text: string, parentId: string | null) {
+    this.unsent = { text, editing: this.editing(), files: this.attachments.files() };
+    this.prompt.set({
+      id: 'pending:' + crypto.randomUUID(),
+      parentId,
+      role: 'user',
+      content: text,
+      status: 'completed',
+      createdAt: new Date().toISOString(),
+      runId: null,
+      modelId: null,
+      attachments: this.unsent.files,
+      errorCode: null,
+      sources: null,
+      feedbackRating: 0,
+      charge: null,
+      webSources: null,
+      webSearchCharge: null,
+      timing: null,
+      modelDisplayName: null,
+      issueCode: null,
+    });
+    this.composer.clear();
+    this.attachments.reset();
+  }
+
+  /** The server's copy of the open conversation replaces any prompt shown ahead of it. */
+  private adopt(detail: { conversation: unknown; messages: unknown }) {
+    this.selected.set(detail.conversation as ConversationDto);
+    this.messages.set(detail.messages as MessageDto[]);
+    this.prompt.set(null);
   }
 
   async regenerate(message: MessageDto) {
@@ -501,10 +546,7 @@ export class ChatStore {
     if (this.selected()?.id === run.conversationId) {
       const detail = await this.api.conversation(run.conversationId);
       if (generation !== this.auth.generation()) return;
-      if (this.selected()?.id === run.conversationId) {
-        this.selected.set(detail.conversation as ConversationDto);
-        this.messages.set(detail.messages as MessageDto[]);
-      }
+      if (this.selected()?.id === run.conversationId) this.adopt(detail);
     }
     this.run.settle(run);
     await this.refreshHistory();
@@ -581,6 +623,8 @@ export class ChatStore {
     this.history.reset();
     this.initialized = null;
     this.pending = null;
+    this.unsent = null;
+    this.prompt.set(null);
     this.pendingSubmission.set(false);
     this.submitting.set(false);
     this.loadingConversation.set(false);

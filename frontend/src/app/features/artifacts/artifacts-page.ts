@@ -34,6 +34,7 @@ import { ArtifactsApi } from './artifacts-api';
 import { TextTools } from './text-tools';
 import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
 import { ShareDialog } from '../sharing/share-dialog';
+import { bindHotkeys } from '../../shared/browser/hotkeys';
 
 @Component({
   selector: 'nx-artifacts-page',
@@ -176,22 +177,9 @@ export class ArtifactsPage {
     const unload = (event: BeforeUnloadEvent) => {
       if (this.dirty()) event.preventDefault();
     };
-    const key = (event: KeyboardEvent) => {
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.key.toLowerCase() === 's' &&
-        !event.isComposing
-      ) {
-        event.preventDefault();
-        if (this.dirty() && !this.busy()) void this.save();
-      }
-    };
+    bindHotkeys({ 'mod+s': () => void this.save() });
     window.addEventListener('beforeunload', unload);
-    document.addEventListener('keydown', key);
-    inject(DestroyRef).onDestroy(() => {
-      window.removeEventListener('beforeunload', unload);
-      document.removeEventListener('keydown', key);
-    });
+    inject(DestroyRef).onDestroy(() => window.removeEventListener('beforeunload', unload));
   }
   async save() {
     const doc = this.document(),

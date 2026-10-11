@@ -26,7 +26,6 @@ import { ChatConversations } from './chat-conversations';
   templateUrl: './chat-sidebar.html',
 })
 export class ChatSidebar {
-  readonly hasSharing = (feature: { id: string }) => feature.id === 'shared';
   readonly store = inject(ChatStore);
   readonly conversations = inject(ChatConversations);
   readonly notifications = inject(NotificationStore);
@@ -34,7 +33,6 @@ export class ChatSidebar {
   readonly navigate = output<void>();
   readonly prompts = output<void>();
   readonly commands = output<void>();
-  readonly import = output<File>();
   readonly searchModel = signal({ query: '' });
   readonly searchForm = form(this.searchModel, (schema) => maxLength(schema.query, 120));
   readonly labelOptions = computed(() => [
@@ -77,11 +75,6 @@ export class ChatSidebar {
   }
   selectLabel(value: string) {
     void this.conversations.filterHistory(undefined, value);
-  }
-  importFile(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (input.files?.[0]) this.import.emit(input.files[0]);
-    input.value = '';
   }
   async loadMore() {
     try {

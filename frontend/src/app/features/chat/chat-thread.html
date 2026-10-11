@@ -1,0 +1,69 @@
+<div
+  class="conversation-viewport chat-gutter"
+  #viewport
+  nxTextSelection
+  (textSelected)="paragraph.set($event)"
+  (scroll)="onScroll()"
+>
+  @if (store.loadingConversation()) {
+    <div class="conversation-loading" role="status">正在開啟對話…</div>
+  } @else if (!store.visibleMessages().length) {
+    <section
+      class="chat-start chat-column"
+      aria-labelledby="chat-start-title"
+      animate.enter="empty-enter"
+    >
+      <span class="panel-eyebrow">AI NEXUS / 對話</span>
+      <h2 id="chat-start-title">今天，從哪件事開始？</h2>
+      <p>輸入訊息，或選擇一個起點。可加入文件、圖片與知識庫來源。</p>
+      <div class="chat-tour-invitation">
+        <nx-product-tour-button [tour]="tour()" /><span>約 1 分鐘，熟悉對話操作</span>
+      </div>
+    </section>
+  } @else {
+    <section class="message-list chat-column" aria-label="目前對話訊息">
+      @for (message of store.visibleMessages(); track message.id) {
+        <nx-chat-message
+          [message]="message"
+          [tree]="store.tree()"
+          [matched]="matches().includes(message.id)"
+          [currentMatch]="currentMatch() === message.id"
+          [active]="store.liveRun()?.assistantMessageId === message.id"
+          [streamContent]="
+            store.liveRun()?.assistantMessageId === message.id ? store.streamingText() : ''
+          "
+          [status]="store.liveRun()?.status || ''"
+          (rendered)="scheduleFollow()"
+          [busy]="store.busy()"
+          [showModelNames]="store.policy().showModelNames"
+          [allowArtifacts]="store.hasArtifactsAccess()"
+          (saveArtifact)="saveArtifact($event)"
+          (rated)="store.rateMessage($event)"
+          (edit)="edit($event)"
+          (regenerate)="store.regenerate($event)"
+          (version)="store.selectVersion(message, $event)"
+        />
+      }
+    </section>
+  }
+</div>
+<nx-conversation-outline
+  [messages]="store.visibleMessages()"
+  [viewport]="viewport"
+  (navigated)="pauseFollowing()"
+/>
+@if (!following() && store.visibleMessages().length) {
+  <button class="latest-button" (click)="scrollLatest()"><nx-icon name="down" />回到最新</button>
+}
+<nx-text-tools
+  [modelId]="store.modelId() || null"
+  [projectId]="store.selected()?.projectId || null"
+/>
+@if (paragraph(); as selected) {
+  <nx-text-selection-toolbar
+    [selection]="selected"
+    [canSave]="store.hasArtifactsAccess()"
+    (selected)="paragraphAction($event)"
+    (dismissed)="paragraph.set(null)"
+  />
+}
