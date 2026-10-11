@@ -34,15 +34,12 @@
       (keydown)="historyKey($event, history)"
     />
   </div>
-  <div class="history-filters" aria-label="對話篩選">
-    @for (
-      view of [
-        { id: 'active', name: '近期' },
-        { id: 'favorites', name: '收藏' },
-        { id: 'archived', name: '封存' },
-      ];
-      track view.id
-    ) {
+  <div
+    class="history-filters"
+    aria-label="對話篩選"
+    [style.--active-index]="historyViewIndex()"
+  >
+    @for (view of historyViews; track view.id) {
       <button
         type="button"
         [attr.aria-pressed]="store.historyView() === view.id"

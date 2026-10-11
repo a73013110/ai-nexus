@@ -49,6 +49,14 @@ export class ChatSidebar {
     { value: '', label: '全部標籤' },
     ...this.store.labels().map((value) => ({ value, label: value })),
   ]);
+  readonly historyViews = [
+    { id: 'active', name: '近期' },
+    { id: 'favorites', name: '收藏' },
+    { id: 'archived', name: '封存' },
+  ] as const;
+  readonly historyViewIndex = computed(() =>
+    this.historyViews.findIndex((view) => view.id === this.store.historyView()),
+  );
   private readonly today = currentDay();
   readonly groups = computed(() => historyGroups(this.store.conversations(), this.today()));
   readonly menu = viewChild.required(MenuPanel);
