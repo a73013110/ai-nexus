@@ -1,3 +1,4 @@
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import {
@@ -9,6 +10,7 @@ import {
   output,
   signal,
   viewChild,
+  linkedSignal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import type { CollectionDto, LibraryFileDto } from '../../core/api/schema';
@@ -83,11 +85,20 @@ export class AddToKnowledge {
   private readonly scope = inject(ViewScope);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   readonly file = signal<LibraryFileDto | null>(null);
-  readonly collections = signal<CollectionDto[]>([]);
-  readonly selected = signal('');
-  readonly loading = signal(false);
+  /** Each opening reads the collections again; nothing is read before the first one. */
+  private readonly opened = signal(0);
+  private readonly collectionsRead = apiResource({
+    params: () => this.opened() || undefined,
+    loader: () => this.api.collections(),
+  });
+  readonly collections = computed<CollectionDto[]>(() => this.collectionsRead.value() ?? []);
+  readonly selected = linkedSignal(
+    () => this.collections().find((value) => value.resource.canEdit)?.resource.id || '',
+  );
+  readonly loading = this.collectionsRead.refreshing;
   readonly saving = signal(false);
-  readonly error = signal('');
+  readonly saveError = signal('');
+  readonly error = computed(() => this.saveError() || this.collectionsRead.error());
   readonly added = output<void>();
   readonly choices = computed(() =>
     this.collections()
@@ -98,30 +109,18 @@ export class AddToKnowledge {
         description: value.resource.isOwner ? '私人或由你共用的知識庫' : '共用知識庫 · 成員可閱讀',
       })),
   );
-  async open(file: LibraryFileDto) {
+  open(file: LibraryFileDto) {
     this.file.set(file);
-    this.error.set('');
-    this.loading.set(true);
+    this.saveError.set('');
+    this.opened.update((value) => value + 1);
     this.dialog().nativeElement.showModal();
-    const valid = this.scope.guard();
-    try {
-      const rows = await this.api.collections();
-      if (valid()) {
-        this.collections.set(rows);
-        this.selected.set(rows.find((value) => value.resource.canEdit)?.resource.id || '');
-      }
-    } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.loading.set(false);
-    }
   }
   async save() {
     const file = this.file();
     if (!file || this.saving() || !this.selected()) return;
     const valid = this.scope.guard();
     this.saving.set(true);
-    this.error.set('');
+    this.saveError.set('');
     try {
       await this.api.add(this.selected(), file.file.id);
       if (valid()) {
@@ -129,7 +128,7 @@ export class AddToKnowledge {
         this.added.emit();
       }
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.saveError.set(this.scope.message(error));
     } finally {
       if (valid()) this.saving.set(false);
     }

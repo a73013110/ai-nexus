@@ -8,6 +8,7 @@ const localValidationHints = {
   tokenLimit: 'token 上限需為 0 至 1,000,000,000,000 的整數；留空繼承設定。',
   attachmentQuota: publicErrorHints['attachment_quota'],
   featureAccess: publicErrorHints['feature_forbidden'],
+  adminAccess: '你的帳號目前沒有平台管理權限。',
   evaluationFileSize: '題庫檔案最多 1.4 MB。',
   evaluationFormat: '題庫格式不正確，請先匯出一份範本。',
   retrievalEvaluationFormat: '驗收集需為含 1 至 20 題的 JSON 陣列。',

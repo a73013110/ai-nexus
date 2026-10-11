@@ -1093,7 +1093,7 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
       const target =
         tab === "活動稽核"
           ? "nx-filter-panel"
-          : ".feature-content > .form-note";
+          : ".feature-content > :is(nx-admin-features-tab, nx-platform-usage) > .form-note";
       await expect(page.locator(target).first()).toBeVisible();
       if (tab === "平台用量")
         await expect(page.locator(".stat-card")).toHaveCount(4);

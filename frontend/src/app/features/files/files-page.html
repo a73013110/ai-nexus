@@ -38,8 +38,8 @@
     </div>
     <span class="file-library-private"><nx-icon name="lock" />個人檔案庫</span>
   </section>
-  @if (error() || store.error()) {
-    <nx-notice tone="danger" [message]="error() || store.error()" />
+  @if (error()) {
+    <nx-notice tone="danger" [message]="error()" />
   }
   @if (notice()) {
     <nx-notice tone="success" [message]="notice()" />
@@ -76,7 +76,7 @@
   <div class="file-library-summary">
     <span>{{ store.total() }} 份檔案</span>
   </div>
-  <nx-storage-usage [storage]="store.result()?.storage" />
+  <nx-storage-usage [storage]="store.result.value()?.storage" />
   @if (store.loading()) {
     <nx-empty-state role="status"><nx-icon name="document" />正在載入檔案…</nx-empty-state>
   } @else if (store.items().length) {

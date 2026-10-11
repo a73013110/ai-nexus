@@ -1,3 +1,4 @@
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import {
@@ -9,9 +10,12 @@ import {
   output,
   signal,
   viewChild,
+  linkedSignal,
+  computed,
 } from '@angular/core';
 import type { DirectoryUserDto, ResourceAclDto } from '../../core/api/schema';
 import { ResourceApi, type SharedResourceKind } from './resource-api';
+import { directorySearch } from './directory-search';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { Icon } from '../../shared/ui/icon';
@@ -51,12 +55,12 @@ import { SearchField } from '../../shared/ui/search-field';
           >加入使用者<nx-search-field
             label="尋找要授權的使用者"
             placeholder="輸入至少兩個字，搜尋已登入的 AD 帳號"
-            [value]="search()"
-            (valueChange)="find($event)"
+            [value]="people.text()"
+            (valueChange)="people.find($event)"
         /></label>
-        @if (search().trim().length >= 2) {
+        @if (people.text().trim().length >= 2) {
           <div class="directory-results" role="region" aria-label="符合的使用者">
-            @for (user of results(); track user.id) {
+            @for (user of people.results(); track user.id) {
               <button class="directory-user" (click)="add(user)">
                 <span
                   ><strong>{{ user.displayName }}</strong
@@ -131,69 +135,37 @@ export class ResourceSharing {
   private readonly scope = inject(ViewScope);
   private readonly session = inject(WorkspaceSession);
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
-  readonly members = signal<ResourceAclDto['members']>([]);
-  readonly groupIds = signal<string[]>([]);
-  readonly groups = signal<{ id: string; name: string }[]>([]);
-  readonly search = signal('');
-  readonly results = signal<DirectoryUserDto[]>([]);
-  readonly error = signal('');
-  readonly loading = signal(false);
+  /** Each opening reads the current permissions; edits stay local until saved. */
+  private readonly opened = signal(0);
+  private readonly aclRead = apiResource({
+    params: () =>
+      this.opened()
+        ? { kind: this.kind(), id: this.resourceId(), opened: this.opened() }
+        : undefined,
+    loader: async ({ kind, id }) => ({
+      acl: await this.api.access(kind, id),
+      groups: this.allowGroups() ? await this.api.groups() : [],
+    }),
+  });
+  readonly members = linkedSignal<ResourceAclDto['members']>(
+    () => this.aclRead.value()?.acl.members ?? [],
+  );
+  readonly groupIds = linkedSignal<string[]>(() => this.aclRead.value()?.acl.groupIds ?? []);
+  readonly groups = computed(() => this.aclRead.value()?.groups ?? []);
+  readonly people = directorySearch(() => this.members().map((x) => x.userId));
+  readonly saveError = signal('');
+  readonly error = computed(() => this.saveError() || this.aclRead.error() || this.people.error());
+  readonly loading = this.aclRead.loading;
   readonly saving = signal(false);
   readonly roles = [
     { value: 'viewer', label: '可檢視' },
     { value: 'editor', label: '可編輯' },
   ];
-  private version = 0;
-  async open() {
-    const kind = this.kind(),
-      id = this.resourceId(),
-      valid = this.scope.guard();
+  open() {
     this.dialog().nativeElement.showModal();
-    this.loading.set(true);
-    this.error.set('');
-    this.search.set('');
-    this.results.set([]);
-    try {
-      const acl = await this.api.access(kind, id),
-        groups = this.allowGroups() ? await this.api.groups() : [];
-      if (valid() && this.kind() === kind && this.resourceId() === id) {
-        this.members.set(acl.members);
-        this.groupIds.set(acl.groupIds);
-        this.groups.set(groups);
-      }
-    } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.loading.set(false);
-    }
-  }
-  find(value: string) {
-    this.search.set(value);
-    const version = ++this.version;
-    this.results.set([]);
-    if (value.trim().length < 2) return;
-    this.scope.later(
-      () => {
-        const valid = this.scope.guard();
-        void this.api
-          .directory(value.trim())
-          .then((rows) => {
-            if (valid() && version === this.version)
-              this.results.set(
-                rows.filter(
-                  (x) =>
-                    x.id !== this.session.me()?.id &&
-                    !this.members().some((m) => m.userId === x.id),
-                ),
-              );
-          })
-          .catch((error) => {
-            if (valid() && version === this.version) this.error.set(this.scope.message(error));
-          });
-      },
-      250,
-      'directory',
-    );
+    this.saveError.set('');
+    this.people.clear();
+    this.opened.update((value) => value + 1);
   }
   add(user: DirectoryUserDto) {
     if (this.members().some((x) => x.userId === user.id)) return;
@@ -201,9 +173,7 @@ export class ResourceSharing {
       ...rows,
       { userId: user.id, account: user.account, displayName: user.displayName, role: 'viewer' },
     ]);
-    this.search.set('');
-    this.results.set([]);
-    this.version++;
+    this.people.clear();
   }
   remove(id: string) {
     this.members.update((rows) => rows.filter((x) => x.userId !== id));
@@ -223,7 +193,7 @@ export class ResourceSharing {
       kind = this.kind(),
       id = this.resourceId();
     this.saving.set(true);
-    this.error.set('');
+    this.saveError.set('');
     try {
       await this.api.saveAccess(kind, id, {
         members: this.members().map((x) => ({ userId: x.userId, role: x.role })),
@@ -234,7 +204,7 @@ export class ResourceSharing {
         this.saved.emit();
       }
     } catch (error) {
-      if (valid()) this.error.set(this.scope.message(error));
+      if (valid()) this.saveError.set(this.scope.message(error));
     } finally {
       if (valid()) this.saving.set(false);
     }

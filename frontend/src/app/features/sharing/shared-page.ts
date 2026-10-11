@@ -1,18 +1,28 @@
+import { map } from 'rxjs';
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { Card } from '../../shared/ui/card';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { formatDate } from '../../shared/browser/format';
-import { ClientValidationError } from '../../core/errors/safe-errors';
-import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  signal,
+  viewChild,
+  linkedSignal,
+  untracked,
+  computed,
+  effect,
+} from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { toSignal } from '@angular/core/rxjs-interop';
 import type { ShareDto, SharedContentDto } from '../../core/api/schema';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { FeaturePage } from '../../core/layout/feature-page';
 import { MarkdownView } from '../../shared/markdown/markdown-view';
-import { combineLatest } from 'rxjs';
 import { MessageContent } from '../workspace/message-content';
 import { ReaderOverlay } from '../../shared/browser/reader-overlay';
 import { Icon } from '../../shared/ui/icon';
@@ -39,12 +49,7 @@ import { SharingApi } from './sharing-api';
   template: `<nx-feature-page
       [title]="session.featureName('shared')"
       description="收到的內容集中閱讀，自己建立的分享可隨時撤銷。"
-      ><button
-        page-actions
-        class="secondary-button"
-        [disabled]="loading()"
-        (click)="load(route.snapshot.paramMap.get('id'))"
-      >
+      ><button page-actions class="secondary-button" [disabled]="loading()" (click)="load()">
         <nx-icon name="repeat" />重新整理
       </button>
       <nx-view-switch
@@ -149,17 +154,59 @@ export class SharedPage {
   readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
   readonly confirm = viewChild.required(ConfirmDialog);
-  readonly sent = signal(false);
-  readonly list = signal<ShareDto[]>([]);
-  readonly content = signal<SharedContentDto | null>(null);
-  readonly loading = signal(true);
+  private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id'))), {
+    initialValue: null,
+  });
+  private readonly sentParam = toSignal(this.route.queryParamMap.pipe(map((p) => p.get('sent'))), {
+    initialValue: null,
+  });
+  /** Access is checked again before the share expires and at least every 30 seconds. */
+  private readonly contentRead = apiResource({
+    feature: 'shared',
+    params: () => this.id() || undefined,
+    loader: (id) => this.api.get(id),
+    poll: (value) =>
+      value
+        ? Math.max(50, Math.min(30000, new Date(value.share.expiresAt).getTime() - Date.now()))
+        : null,
+  });
+  /** A failed check hides the content at once: the share may have been revoked or expired. */
+  readonly content = computed<SharedContentDto | null>(() => {
+    const value = this.contentRead.value();
+    return value && value.share.id === this.id() ? value : null;
+  });
+  /** The tab in the link, else the side of the open share, else the last one shown. */
+  readonly sent = linkedSignal<{ param: string | null; owner: boolean | undefined }, boolean>({
+    source: () => ({ param: this.sentParam(), owner: this.content()?.share.isOwner }),
+    computation: (source, previous) =>
+      source.param !== null ? source.param === 'true' : (source.owner ?? previous?.value ?? false),
+  });
+  private readonly listRead = apiResource({
+    feature: 'shared',
+    params: () => this.sent(),
+    loader: (sent) => this.api.list(sent),
+  });
+  readonly list = computed<ShareDto[]>(() => this.listRead.value() ?? []);
+  readonly loading = computed(() => this.listRead.loading() || this.contentRead.loading());
   readonly busy = signal(false);
-  readonly error = signal('');
-  private revision = 0;
+  readonly actionError = signal('');
+  readonly error = computed(
+    () => this.actionError() || this.contentRead.error() || this.listRead.error(),
+  );
   constructor() {
-    combineLatest([this.route.paramMap, this.route.queryParamMap])
-      .pipe(takeUntilDestroyed())
-      .subscribe(([p]) => void this.load(p.get('id')));
+    // The reader overlay never keeps showing a share this page no longer shows.
+    let shown: string | null = null;
+    effect(() => {
+      const id = this.content()?.share.id ?? null;
+      if (shown && shown !== id && untracked(this.reader.target)?.shareId === shown)
+        untracked(() => this.reader.close());
+      shown = id;
+    });
+  }
+  load() {
+    this.actionError.set('');
+    this.contentRead.reload();
+    this.listRead.reload();
   }
   readonly date = formatDate;
   expired(value: string) {
@@ -167,84 +214,6 @@ export class SharedPage {
   }
   async switchTab(sent: boolean) {
     await this.router.navigate(['/shared'], { queryParams: { sent } });
-  }
-  async load(id: string | null) {
-    const revision = ++this.revision,
-      guard = this.scope.guard(),
-      valid = () => guard() && revision === this.revision;
-    this.loading.set(true);
-    this.error.set('');
-    if (this.content()?.share.id !== id) this.clearContent();
-    try {
-      await this.session.load();
-      if (!valid() || !this.session.me()) return;
-      if (!this.session.has('shared')) throw new ClientValidationError('featureAccess');
-      const filter = this.route.snapshot.queryParamMap.get('sent');
-      if (filter !== null) this.sent.set(filter === 'true');
-      const [detail, listing] = await Promise.allSettled([
-        id ? this.api.get(id) : Promise.resolve(null),
-        this.api.list(this.sent()),
-      ]);
-      if (!valid()) return;
-      if (listing.status === 'fulfilled') this.list.set(listing.value);
-      else this.error.set(this.scope.message(listing.reason));
-      if (detail.status === 'rejected') {
-        this.clearContent();
-        this.error.set(this.scope.message(detail.reason));
-        return;
-      }
-      const value = detail.value;
-      if (filter === null && value && value.share.isOwner !== this.sent()) {
-        this.sent.set(value.share.isOwner);
-        const rows = await this.api.list(this.sent());
-        if (!valid()) return;
-        this.list.set(rows);
-      }
-      this.content.set(value);
-      if (value) this.watchAccess(value.share.id, revision);
-    } catch (e) {
-      if (valid()) {
-        this.clearContent();
-        this.error.set(this.scope.message(e));
-      }
-    } finally {
-      if (valid()) this.loading.set(false);
-    }
-  }
-  private clearContent() {
-    if (this.reader.target()?.shareId === this.content()?.share.id) this.reader.close();
-    this.content.set(null);
-  }
-  private watchAccess(id: string, revision: number) {
-    const alive = this.scope.guard();
-    const valid = () => alive() && revision === this.revision && this.content()?.share.id === id;
-    const remaining = new Date(this.content()!.share.expiresAt).getTime() - Date.now();
-    this.scope.later(
-      () => {
-        if (!valid()) return;
-        if (remaining <= 30000 && this.expired(this.content()!.share.expiresAt)) {
-          this.clearContent();
-          this.error.set('分享已到期，內容已收起。');
-          return;
-        }
-        void this.api
-          .get(id)
-          .then((value) => {
-            if (valid()) {
-              this.content.set(value);
-              this.watchAccess(id, revision);
-            }
-          })
-          .catch((e) => {
-            if (valid()) {
-              this.clearContent();
-              this.error.set(this.scope.message(e));
-            }
-          });
-      },
-      Math.max(50, Math.min(30000, remaining)),
-      'share-access',
-    );
   }
   async revoke(share: ShareDto) {
     if (
@@ -262,11 +231,12 @@ export class SharedPage {
     try {
       await this.api.revoke(share.id);
       if (valid()) {
-        this.clearContent();
+        this.contentRead.value.set(undefined);
+        this.listRead.reload();
         await this.router.navigate(['/shared'], { queryParams: { sent: this.sent() } });
       }
     } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
+      if (valid()) this.actionError.set(this.scope.message(e));
     } finally {
       if (valid()) this.busy.set(false);
     }

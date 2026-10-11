@@ -1,4 +1,5 @@
-import { ChangeDetectionStrategy, Component, effect, inject, input, signal } from '@angular/core';
+import { apiResource } from '../../core/api/api-resource';
+import { ChangeDetectionStrategy, Component, inject, input, computed } from '@angular/core';
 import type { ConversationSpendDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { InfoPopover } from '../../shared/ui/info-popover';
@@ -61,36 +62,21 @@ import { BillingApi, chargeKind, money } from './billing-api';
 export class ConversationSpendView {
   readonly id = input.required<string>();
   readonly revision = input('');
-  readonly data = signal<ConversationSpendDto | null>(null);
-  readonly failed = signal(false);
   private readonly api = inject(BillingApi);
-  private readonly scope = inject(ViewScope);
-  private sequence = 0;
-  private loadedId = '';
+  /** Read again for each new revision of the conversation (a finished run adds spending). */
+  private readonly spendRead = apiResource({
+    params: () => ({ id: this.id(), revision: this.revision() }),
+    loader: async ({ id }) => ({ id, spend: await this.api.conversation(id) }),
+  });
+  readonly data = computed<ConversationSpendDto | null>(() => {
+    const value = this.spendRead.value();
+    return value && value.id === this.id() ? value.spend : null;
+  });
+  readonly failed = computed(() => !!this.spendRead.error());
   readonly money = money;
   readonly kind = chargeKind;
-  constructor() {
-    effect(() => {
-      this.id();
-      this.revision();
-      void this.load();
-    });
-  }
-  async load() {
-    const id = this.id(),
-      sequence = ++this.sequence,
-      valid = this.scope.guard();
-    if (this.loadedId !== id) {
-      this.data.set(null);
-      this.loadedId = id;
-    }
-    this.failed.set(false);
-    try {
-      const data = await this.api.conversation(id);
-      if (valid() && sequence === this.sequence) this.data.set(data);
-    } catch {
-      if (valid() && sequence === this.sequence) this.failed.set(true);
-    }
+  load() {
+    this.spendRead.reload();
   }
   summary(spend: ConversationSpendDto) {
     const priced = spend.totals.filter((x) => !!x.currency);

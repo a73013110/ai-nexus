@@ -1,3 +1,4 @@
+import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
@@ -12,6 +13,7 @@ import {
   input,
   signal,
   viewChild,
+  linkedSignal,
 } from '@angular/core';
 import type { PriceDto, PriceRequest, PriceTargetDto } from '../../core/api/schema';
 import {
@@ -37,6 +39,11 @@ const emptyPrice = (): PriceRequest => ({
   effectiveAt: '',
   note: '',
 });
+interface PriceCatalog {
+  prices: PriceDto[];
+  targets: PriceTargetDto[];
+}
+
 @Component({
   selector: 'nx-price-book',
   imports: [Notice, CompactDialog, Field, DateTimePicker, Icon, Select],
@@ -189,11 +196,32 @@ const emptyPrice = (): PriceRequest => ({
 export class PriceBook {
   readonly showTrigger = input(true);
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
-  readonly draft = signal(emptyPrice());
+  /** Each opening reads the price history and the models that can be priced. */
+  private readonly opened = signal(0);
+  private readonly catalogRead = apiResource({
+    params: () => this.opened() || undefined,
+    loader: async () => {
+      const [prices, targets] = await Promise.all([this.api.prices(), this.api.targets()]);
+      return { prices, targets };
+    },
+  });
+  readonly prices = computed<PriceDto[]>(() => this.catalogRead.value()?.prices ?? []);
+  readonly targets = computed<PriceTargetDto[]>(() => this.catalogRead.value()?.targets ?? []);
+  /** The form; a blank model picks the provider's first known model once the catalog loads. */
+  readonly draft = linkedSignal<PriceCatalog | undefined, PriceRequest>({
+    source: this.catalogRead.value,
+    computation: (catalog, previous) => {
+      const draft = previous?.value ?? emptyPrice();
+      if (draft.modelId || !catalog) return draft;
+      const first =
+        catalog.prices.find((x) => x.provider === draft.provider)?.modelId ??
+        catalog.targets.find((x) => x.provider === draft.provider)?.modelId ??
+        '';
+      return { ...draft, modelId: first };
+    },
+  });
   readonly effective = signal('');
   private readonly effectivePicker = viewChild.required(DateTimePicker);
-  readonly prices = signal<PriceDto[]>([]);
-  readonly targets = signal<PriceTargetDto[]>([]);
   readonly modelName = formatModelDisplayName;
   readonly modelChoices = computed(() => {
     const choices = new Map<string, string>();
@@ -203,9 +231,10 @@ export class PriceBook {
       choices.set(target.modelId, target.displayName);
     return [...choices].map(([value, label]) => ({ value, label }));
   });
-  readonly loading = signal(false);
+  readonly loading = this.catalogRead.refreshing;
   readonly busy = signal(false);
-  readonly error = signal('');
+  readonly saveError = signal('');
+  readonly error = computed(() => this.saveError() || this.catalogRead.error());
   readonly notice = signal('');
   readonly providers = ['google', 'ollama', 'searxng', 'brave'].map((value) => ({
     value,
@@ -229,17 +258,16 @@ export class PriceBook {
   readonly kind = chargeKind;
   private readonly api = inject(BillingApi);
   private readonly scope = inject(ViewScope);
-  private requestSequence = 0;
   constructor() {
     inject(DestroyRef).onDestroy(() => this.dialog()?.nativeElement.close());
   }
   open() {
     this.draft.set(emptyPrice());
     this.effective.set('');
-    this.error.set('');
+    this.saveError.set('');
     this.notice.set('');
     this.dialog().nativeElement.showModal();
-    void this.load();
+    this.opened.update((value) => value + 1);
   }
   close(event?: Event) {
     if (this.busy()) {
@@ -277,29 +305,12 @@ export class PriceBook {
     this.notice.set('已帶入此版本。儲存會建立新版本，歷史價格保持原樣。');
   }
   readonly time = formatDate;
-  async load() {
-    const valid = this.scope.guard(),
-      sequence = ++this.requestSequence;
-    this.loading.set(true);
-    try {
-      const [rows, targets] = await Promise.all([this.api.prices(), this.api.targets()]);
-      if (valid() && sequence === this.requestSequence) {
-        this.prices.set(rows);
-        this.targets.set(targets);
-        if (!this.draft().modelId) this.field('modelId', this.modelChoices()[0]?.value ?? '');
-      }
-    } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
-    } finally {
-      if (valid() && sequence === this.requestSequence) this.loading.set(false);
-    }
-  }
   async save(event: Event) {
     event.preventDefault();
     if (this.busy() || !this.effectivePicker().valid()) return;
     const valid = this.scope.guard();
     this.busy.set(true);
-    this.error.set('');
+    this.saveError.set('');
     try {
       const effectiveAt = (
         this.effective() ? parseDateTimeInput(this.effective()) : new Date()
@@ -311,10 +322,10 @@ export class PriceBook {
       });
       if (valid()) {
         this.notice.set('新價格版本已儲存，之後的呼叫會套用。');
-        await this.load();
+        this.catalogRead.reload();
       }
     } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
+      if (valid()) this.saveError.set(this.scope.message(e));
     } finally {
       if (valid()) this.busy.set(false);
     }

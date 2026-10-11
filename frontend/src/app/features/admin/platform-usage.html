@@ -1,0 +1,127 @@
+@if (read.error()) {
+  <nx-notice [message]="read.error()"
+    ><button notice-actions (click)="read.reload()">重新載入</button>
+  </nx-notice>
+}
+@if (read.value(); as stats) {
+  <div class="page-toolbar">
+    <p class="form-note">
+      最近 30 天 · {{ date(stats.since) }} 至 {{ date(stats.until) }} · 全平台
+    </p>
+    <div class="page-actions">
+      <a routerLink="/dashboard" [queryParams]="{ scope: 'platform' }" class="secondary-button"
+        ><nx-icon name="chart" />用量與費用總覽</a
+      >
+      <button class="quiet-button" (click)="prices.emit()">
+        <nx-icon name="money" />模型與工具價格
+      </button>
+      <button class="icon-button" aria-label="更新用量" title="更新用量" (click)="read.reload()">
+        <nx-icon name="refresh" />
+      </button>
+    </div>
+  </div>
+  <p class="form-note">
+    在此檢查模型使用、生成品質、原檔容量與服務狀態。日期篩選、費用及 CSV 請開啟「用量與費用總覽」。
+  </p>
+  <div class="usage-grid">
+    <div nxCard class="stat-card">
+      <span>啟用帳號</span><strong>{{ format(stats.users) }}</strong
+      ><small>{{ format(stats.activeUsers) }} 位在區間內使用 AI</small>
+    </div>
+    <div nxCard class="stat-card">
+      <span>生成次數</span><strong>{{ format(stats.requests) }}</strong
+      ><small
+        >{{ format(stats.completed) }} 完成 · {{ format(stats.failed) }} 失敗 ·
+        {{ format(stats.cancelled) }} 取消</small
+      >
+    </div>
+    <div nxCard class="stat-card">
+      <span>回報 tokens</span><strong>{{ format(stats.inputTokens + stats.outputTokens) }}</strong
+      ><small>輸入 {{ format(stats.inputTokens) }} · 輸出 {{ format(stats.outputTokens) }}</small>
+    </div>
+    <div nxCard class="stat-card">
+      <span>原檔容量</span><strong>{{ bytes(stats.storedBytes) }}</strong
+      ><small>{{ format(stats.storedFiles) }} 份原檔 · 所有期間，重複引用不重複計算</small>
+    </div>
+  </div>
+  <p class="form-note">
+    {{ format(stats.requestsWithUsage) }} 次請求回報完整用量；其餘
+    {{ format(stats.requests - stats.requestsWithUsage) }} 次未回報完整
+    token，不估算實際用量。累計處理 {{ duration(stats.totalDurationMilliseconds) }}（{{
+      stats.timedRequests
+    }}
+    次有紀錄）。
+  </p>
+  <section class="admin-usage-section" aria-label="各模型用量">
+    <h2>各模型使用狀況</h2>
+    <nx-data-table label="各模型使用狀況">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">模型</th>
+            <th scope="col">請求</th>
+            <th scope="col">輸入 tokens</th>
+            <th scope="col">輸出 tokens</th>
+            <th scope="col">失敗</th>
+            <th scope="col">缺少完整用量</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (model of stats.models; track model.modelId) {
+            <tr>
+              <td>{{ usageModelName(model) }}</td>
+              <td>{{ format(model.requests) }}</td>
+              <td>{{ format(model.inputTokens) }}</td>
+              <td>{{ format(model.outputTokens) }}</td>
+              <td>{{ format(model.failed) }}</td>
+              <td>{{ format(model.requests - model.requestsWithUsage) }}</td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6">區間內尚無模型使用紀錄。</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </nx-data-table>
+  </section>
+  <section class="admin-usage-section" aria-label="功能用量">
+    <h2>使用來源</h2>
+    <div class="resource-badges">
+      @for (kind of stats.kinds; track kind.kind) {
+        <span>{{ usageKindName(kind.kind) }} · {{ format(kind.requests) }} 次</span>
+      } @empty {
+        <p class="form-note">尚無使用紀錄。</p>
+      }
+    </div>
+  </section>
+  <section class="admin-usage-section" aria-label="模型與搜尋服務">
+    <h2>服務狀態</h2>
+    <div class="admin-service-grid">
+      @for (provider of stats.providers; track provider.id) {
+        <article nxCard class="admin-service-card">
+          <strong
+            >{{
+              provider.id === 'ollama'
+                ? '地端 Ollama'
+                : provider.id === 'google'
+                  ? 'Google AI'
+                  : provider.id
+            }}
+            · {{ provider.available ? '已連線' : '無法連線' }}</strong
+          >
+          <p>
+            {{ provider.notice || '模型目錄可正常讀取。圖片能力依各模型實際回報判定。' }}
+          </p>
+        </article>
+      }
+      <article nxCard class="admin-service-card">
+        <strong>網路搜尋 · {{ stats.webSearch.available ? '已設定' : '尚未啟用' }}</strong>
+        <p>{{ stats.webSearch.notice }}</p>
+        <p>地端部署可搭配公司自架 SearXNG；模型本身不會自動連網。</p>
+      </article>
+    </div>
+  </section>
+} @else if (!read.error()) {
+  <p role="status">正在載入平台用量…</p>
+}

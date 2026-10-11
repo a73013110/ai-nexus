@@ -17,6 +17,7 @@ import { ChatStore } from './chat-store';
 import { Select } from '../../shared/ui/select';
 import { WorkspaceSidebar } from '../../core/layout/workspace-sidebar';
 
+import { ChatConversations } from './chat-conversations';
 @Component({
   selector: 'nx-chat-sidebar',
   imports: [RouterLink, FormField, Icon, Select, WorkspaceSidebar, ConversationActions],
@@ -28,6 +29,7 @@ import { WorkspaceSidebar } from '../../core/layout/workspace-sidebar';
 export class ChatSidebar {
   readonly hasSharing = (feature: { id: string }) => feature.id === 'shared';
   readonly store = inject(ChatStore);
+  readonly conversations = inject(ChatConversations);
   readonly notifications = inject(NotificationStore);
   readonly action = output<{ conversation: ConversationDto; action: ConversationAction }>();
   readonly navigate = output<void>();
@@ -75,7 +77,7 @@ export class ChatSidebar {
     );
   }
   selectLabel(value: string) {
-    void this.store.filterHistory(undefined, value);
+    void this.conversations.filterHistory(undefined, value);
   }
   importFile(event: Event) {
     const input = event.target as HTMLInputElement;
