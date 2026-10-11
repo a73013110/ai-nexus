@@ -1,17 +1,6 @@
+// The frame and the open/close motion come from .platform-dialog (styles/dialogs.scss).
 .action-dialog {
-  --dialog-max-height: calc(100dvh - 3rem);
-  border: 1px solid var(--line);
-  border-radius: var(--dialog-radius);
-  background: var(--surface);
-  color: var(--ink);
-  padding: var(--dialog-inset);
-  max-height: var(--dialog-max-height);
-  overflow: hidden;
-  width: min(430px, calc(100% - 36px));
-  box-shadow: var(--shadow);
-}
-.action-dialog::backdrop {
-  background: var(--scrim);
+  --dialog-width: 430px;
 }
 label {
   display: block;

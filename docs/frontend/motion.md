@@ -32,7 +32,8 @@
 
 ## 對話框
 
-- `.platform-dialog`／`.workspace-dialog` 共用外框（快捷指令面板也掛 `.platform-dialog`）；開啟時由下方 0.5rem、`scale 0.97` 彈入，關閉沿原路以 `--ease-exit` 退場，遮罩同步淡入淡出（`overlay`、`display` 用 `allow-discrete` 保留在 top layer）。
+- 置中的對話框一律掛 `.platform-dialog` 或 `.workspace-dialog`，共用外框與動效，元件只覆寫尺寸（快捷指令、檔案預覽也是）；側邊的 `DetailDrawer` 另有自己的滑入。
+- 開啟時由下方 0.5rem、`scale 0.97` 彈入，關閉沿原路以 `--ease-exit` 退場，遮罩同步淡入淡出（`overlay`、`display` 用 `allow-discrete` 保留在 top layer）。
 - 關閉中仍在畫面上，但 `pointer-events: none`＋`interactivity: inert`，不接點擊與焦點。
 - `DialogMotion` 以 `offsetWidth／offsetHeight` 量測，不受開關時的縮放影響。
 

@@ -19,7 +19,12 @@ import { ChatConversations } from './chat-conversations';
   imports: [CompactDialog, Field, FormField, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './conversation-dialog.scss',
-  template: `<dialog nxCompactDialog #dialog class="action-dialog" (close)="mode.set(null)">
+  template: `<dialog
+    nxCompactDialog
+    #dialog
+    class="platform-dialog action-dialog"
+    (close)="mode.set(null)"
+  >
     <div class="dialog-scroll">
       <form (submit)="confirm($event)">
         <div class="dialog-heading">

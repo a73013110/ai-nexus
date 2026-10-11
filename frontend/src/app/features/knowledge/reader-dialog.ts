@@ -22,7 +22,7 @@ import { DocumentViewer } from './document-viewer';
   template: `<dialog
     nxCompactDialog
     #dialog
-    class="reader-dialog"
+    class="platform-dialog reader-dialog"
     aria-label="檔案預覽"
     [class.reader-expanded]="expanded()"
     (cancel)="$event.preventDefault(); overlay.close()"
