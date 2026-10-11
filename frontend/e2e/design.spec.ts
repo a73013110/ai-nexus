@@ -241,11 +241,12 @@ test("theme previews have readable contrast, full navigation and usable narrow l
   await page.evaluate(() => new Promise(requestAnimationFrame));
   await expect(index.locator('[aria-current="true"]')).toHaveText("間距與圓角");
   await index.getByRole("link", { name: "動態島", exact: true }).click();
-  await expect(index.getByRole("link", { name: "動態島", exact: true })).toHaveAttribute(
-    "aria-current",
-    "true",
-  );
-  await expect(page.getByRole("heading", { name: "動態島", exact: true })).toBeFocused();
+  await expect(
+    index.getByRole("link", { name: "動態島", exact: true }),
+  ).toHaveAttribute("aria-current", "true");
+  await expect(
+    page.getByRole("heading", { name: "動態島", exact: true }),
+  ).toBeFocused();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.locator(".feature-main").evaluate((el) => (el.scrollTop = 0));
   await settleEntrance(page);
@@ -306,9 +307,13 @@ test("toasts stack, fan out, update in place and leave by keyboard or swipe", as
   await expect(stack).toHaveCount(3);
   await expect(stack.first()).toContainText("知識庫已儲存");
   // Collapsed, the older toast peeks above the front one; hovering fans them apart.
-  await expect.poll(() => gap("已安排重新索引", "知識庫已儲存")).toBeLessThan(20);
+  await expect
+    .poll(() => gap("已安排重新索引", "知識庫已儲存"))
+    .toBeLessThan(20);
   await stack.first().hover();
-  await expect.poll(() => gap("已安排重新索引", "知識庫已儲存")).toBeGreaterThan(30);
+  await expect
+    .poll(() => gap("已安排重新索引", "知識庫已儲存"))
+    .toBeGreaterThan(30);
   await stack
     .first()
     .getByRole("button", { name: "關閉通知", exact: true })

@@ -28,14 +28,7 @@ import { ConversationOutline } from './conversation-outline';
  */
 @Component({
   selector: 'div[nxChatThread]',
-  imports: [
-    ChatMessage,
-    ConversationOutline,
-    Icon,
-    TextSelection,
-    TextSelectionToolbar,
-    TextTools,
-  ],
+  imports: [ChatMessage, ConversationOutline, Icon, TextSelection, TextSelectionToolbar, TextTools],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./chat-column.scss', './chat-thread.scss'],
   templateUrl: './chat-thread.html',

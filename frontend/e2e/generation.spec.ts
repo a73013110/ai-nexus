@@ -197,9 +197,7 @@ for (const preference of ["system", "personal"] as const) {
     const indicator = page.locator("nx-generation-indicator");
     await expect(indicator).toContainText("正在準備回答");
     expect(await activeLoops(indicator)).toBe(0);
-    expect(await activeLoops(page.locator("nx-island .island"))).toBe(
-      0,
-    );
+    expect(await activeLoops(page.locator("nx-island .island"))).toBe(0);
     await expect(indicator.locator(".generation-orbit i").first()).toHaveCSS(
       "opacity",
       "1",

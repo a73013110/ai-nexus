@@ -145,10 +145,9 @@
                       </button>
                     </td>
                     <td>
-                      <nx-status-badge
-                        [tone]="d.status === 'healthy' ? 'success' : 'neutral'"
-                        >{{ dependencyStatus(d.status) }}</nx-status-badge
-                      >
+                      <nx-status-badge [tone]="d.status === 'healthy' ? 'success' : 'neutral'">{{
+                        dependencyStatus(d.status)
+                      }}</nx-status-badge>
                     </td>
                     <td class="ui-table-numeric">{{ d.metrics.requests }}</td>
                     <td class="ui-table-numeric">{{ latency(d.metrics.averageMs) }}</td>
