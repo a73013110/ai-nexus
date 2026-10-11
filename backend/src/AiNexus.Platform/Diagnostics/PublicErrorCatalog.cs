@@ -7,6 +7,7 @@ public static class PublicErrorCatalog
     {
         ["https_required"] = "此工作區需要 HTTPS 安全連線。",
         ["identity_changed"] = "測試身分已結束，請重新載入工作區。",
+        ["identity_not_found"] = "找不到這個身分，請重新選擇。",
         ["access_denied"] = "沒有存取此資料的權限。",
         ["account_exists"] = "此登入帳號已由其他使用者使用或保留。",
         ["ad_binding_conflict"] = "AD 身分與已連結帳號不一致，請聯絡管理員。",

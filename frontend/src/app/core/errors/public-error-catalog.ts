@@ -2,6 +2,7 @@
 export const publicErrorHints: Readonly<Record<string, string>> = {
   https_required: '此工作區需要 HTTPS 安全連線。',
   identity_changed: '測試身分已結束，請重新載入工作區。',
+  identity_not_found: '找不到這個身分，請重新選擇。',
   authentication_required: '請先登入工作區。',
   access_denied: '沒有存取此資料的權限。',
   not_found: '找不到資料。',

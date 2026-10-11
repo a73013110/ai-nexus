@@ -24,5 +24,6 @@ internal static class IdentityErrors
     public static readonly Error TestUserNotFound = Error.NotFound("user_not_found");
     public static readonly Error TestIdentitySame = Error.Invalid("test_identity_same");
     public static readonly Error TestSourceRevoked = Error.Unauthenticated("test_source_revoked");
+    public static readonly Error IdentityNotFound = Error.NotFound("identity_not_found");
     public static readonly Error TestSessionInvalid = Error.Unauthenticated("test_session_invalid");
 }

@@ -84,4 +84,28 @@ public sealed class SessionTests
         // Cookie validation reads the row; the current user reuses it instead of a second single-row read.
         Assert.Equal(1, queries.Count("/api/v1/me", "FROM \"Users\" AS", "LIMIT 2"));
     }
+
+    [Fact]
+    public async Task SignedInSessionsOfferThePersonalIdentityAndSwitchOnlyToOfferedOnes()
+    {
+        await using var factory = new NexusFactory(ldap: true);
+        using var client = factory.CreateClient();
+        Assert.Empty((await client.GetFromJsonAsync<AuthSessionDto>("/api/v1/auth/session"))!.Identities!);
+        await Login(client, "alice");
+        var session = (await client.GetFromJsonAsync<AuthSessionDto>("/api/v1/auth/session"))!;
+        var personal = Assert.Single(session.Identities!);
+        Assert.Equal(("personal", "personal", session.Account), (personal.Id, personal.Kind, personal.Detail));
+        Assert.Equal("personal", session.Identity);
+        var unknown = await client.PostAsJsonAsync("/api/v1/auth/identity", new SelectIdentityRequest("finance"));
+        Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
+        Assert.Contains("identity_not_found", await unknown.Content.ReadAsStringAsync(), StringComparison.Ordinal);
+        var selected = await client.PostAsJsonAsync("/api/v1/auth/identity", new SelectIdentityRequest("personal"));
+        selected.EnsureSuccessStatusCode();
+        var switched = (await selected.Content.ReadFromJsonAsync<AuthSessionDto>())!;
+        Assert.Equal(("personal", session.UserId), (switched.Identity, switched.UserId));
+        // The answer carries the token for the re-issued cookie; writes keep working with it.
+        client.DefaultRequestHeaders.Remove("X-Nexus-CSRF"); client.DefaultRequestHeaders.Add("X-Nexus-CSRF", switched.CsrfToken);
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/api/v1/auth/logout", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/v1/auth/identity", new SelectIdentityRequest("personal"))).StatusCode);
+    }
 }
