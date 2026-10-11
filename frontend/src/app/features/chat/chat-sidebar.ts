@@ -15,12 +15,11 @@ import { NotificationStore } from '../notifications/notification-store';
 import { ConversationActions, type ConversationAction } from '../workspace/conversation-actions';
 import { ChatStore } from './chat-store';
 import { Select } from '../../shared/ui/select';
-import { WorkspaceSidebar } from '../../core/layout/workspace-sidebar';
 
 import { ChatConversations } from './chat-conversations';
 @Component({
   selector: 'nx-chat-sidebar',
-  imports: [RouterLink, FormField, Icon, Select, WorkspaceSidebar, ConversationActions],
+  imports: [RouterLink, FormField, Icon, Select, ConversationActions],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './chat-sidebar.scss',
   host: { style: 'display: contents' },

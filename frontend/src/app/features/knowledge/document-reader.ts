@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@a
 import { ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { combineLatest, map } from 'rxjs';
-import { WorkspaceSidebar } from '../../core/layout/workspace-sidebar';
 import { Icon } from '../../shared/ui/icon';
 import {
   ReaderNavigation,
@@ -10,34 +9,24 @@ import {
   readerReturnUrl,
 } from '../../shared/browser/reader-navigation';
 import { DocumentViewer } from './document-viewer';
-import { WorkspaceLayout } from '../../core/layout/workspace-layout';
 import { WorkspaceMenuButton } from '../../core/layout/workspace-menu-button';
 
 @Component({
   selector: 'nx-document-reader',
-  imports: [WorkspaceSidebar, WorkspaceMenuButton, Icon, DocumentViewer],
+  imports: [WorkspaceMenuButton, Icon, DocumentViewer],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './document-reader.scss',
-  template: `<div class="feature-layout">
-    <aside nxWorkspaceSidebar class="feature-sidebar" aria-label="工作區導覽"></aside>
-    <main
-      class="reader-page ui-density-compact"
-      id="feature-content"
-      tabindex="-1"
-      [attr.inert]="layout.overlay() ? '' : null"
-    >
-      <div class="reader-navigation">
-        <nx-workspace-menu-button />
-        <a class="reader-return quiet-button" [href]="returnTo()" (click)="back($event)"
-          ><nx-icon name="back" />{{ returnLabel() }}</a
-        >
-      </div>
-      <nx-document-viewer [target]="state().target" />
-    </main>
-  </div>`,
+  template: `<main class="reader-page ui-density-compact" id="feature-content" tabindex="-1">
+    <div class="reader-navigation">
+      <nx-workspace-menu-button />
+      <a class="reader-return quiet-button" [href]="returnTo()" (click)="back($event)"
+        ><nx-icon name="back" />{{ returnLabel() }}</a
+      >
+    </div>
+    <nx-document-viewer [target]="state().target" />
+  </main>`,
 })
 export class DocumentReader {
-  readonly layout = inject(WorkspaceLayout);
   private readonly route = inject(ActivatedRoute);
   private readonly navigation = inject(ReaderNavigation);
   readonly state = toSignal(

@@ -119,12 +119,19 @@ test("the shared wordmark has one N and the compact new-chat icon stays centered
       exact: true,
     });
     if (await collapse.isVisible()) await collapse.click();
+    await expect(sidebar).toHaveClass(/is-compact/);
     const button = sidebar.getByRole("link", { name: "新對話", exact: true });
-    const [rail, bounds, icon] = await Promise.all([
-      sidebar.boundingBox(),
-      button.boundingBox(),
-      button.locator("nx-icon").boundingBox(),
-    ]);
+    const measure = () =>
+      Promise.all([
+        sidebar.boundingBox(),
+        button.boundingBox(),
+        button.locator("nx-icon").boundingBox(),
+      ]);
+    // Measure once the rail has settled; reduced motion still finishes layout on the next frame.
+    await expect
+      .poll(async () => JSON.stringify(await measure()))
+      .toBe(JSON.stringify(await measure()));
+    const [rail, bounds, icon] = await measure();
     expect(bounds!.width).toBeGreaterThanOrEqual(44);
     expect(bounds!.height).toBeGreaterThanOrEqual(44);
     expect(
@@ -352,7 +359,7 @@ test("icon rail, notification filtering and typed task navigation work across pa
   await expectCompactWorkspace(page);
   await expect(sidebar).not.toBeVisible();
   await page.getByRole("button", { name: "展開側欄", exact: true }).click();
-  await expect(page.locator(".feature-main")).toHaveAttribute("inert", "");
+  await expect(page.locator(".workspace-main")).toHaveAttribute("inert", "");
   await page.getByRole("button", { name: "通知", exact: true }).click();
   dialog = page.getByRole("dialog", { name: "通知", exact: true });
   await dialog.getByRole("button", { name: "只看未讀", exact: true }).click();
@@ -362,7 +369,7 @@ test("icon rail, notification filtering and typed task navigation work across pa
     .getByRole("button", { name: "查看內容" })
     .click();
   await expect(sidebar).not.toBeVisible();
-  await expect(page.locator(".feature-main")).not.toHaveAttribute("inert", "");
+  await expect(page.locator(".workspace-main")).not.toHaveAttribute("inert", "");
   await page.getByRole("button", { name: "展開側欄", exact: true }).click();
   await page.getByRole("button", { name: "通知", exact: true }).click();
   for (let i = 0; i < 20; i++)
@@ -404,7 +411,7 @@ test("mobile navigation uses the full viewport, traps focus and preserves deskto
   const opener = page.getByRole("button", { name: "展開側欄", exact: true });
   await opener.click();
   await expect(sidebar).toHaveAttribute("aria-modal", "true");
-  await expect(page.locator("main")).toHaveAttribute("inert", "");
+  await expect(page.locator(".workspace-main")).toHaveAttribute("inert", "");
   await expect(sidebar.locator(".sidebar-toggle")).toBeFocused();
   expect((await page.locator("main").boundingBox())!.width).toBe(375);
   await sidebar
@@ -414,7 +421,7 @@ test("mobile navigation uses the full viewport, traps focus and preserves deskto
   await expect(sidebar.locator(".workspace-sidebar-heading a")).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(opener).toBeFocused();
-  await expect(page.locator("main")).not.toHaveAttribute("inert", "");
+  await expect(page.locator(".workspace-main")).not.toHaveAttribute("inert", "");
   await opener.click();
   await sidebar.locator(".workspace-backdrop").click();
   await expect(opener).toBeFocused();
@@ -443,8 +450,35 @@ test("feature navigation opens from the shared header and dismisses after select
   await sidebar.getByRole("link", { name: "知識庫", exact: true }).click();
   await expect(page).toHaveURL(/\/knowledge$/);
   await expect(sidebar).not.toBeVisible();
-  await expect(page.locator(".feature-main")).not.toHaveAttribute("inert", "");
+  await expect(page.locator(".workspace-main")).not.toHaveAttribute("inert", "");
   await expectViewportContained(page);
+});
+
+test("the shell keeps one sidebar while pages and conversations change", async ({
+  page,
+}) => {
+  const fixture = new ApiFixture();
+  fixture.extraFeatures.push({
+    id: "knowledge",
+    name: "知識庫",
+    route: "/knowledge",
+  });
+  await fixture.attach(page);
+  await page.goto("/files");
+  const sidebar = page.locator(".workspace-sidebar");
+  await sidebar.evaluate((element) => ((element as HTMLElement).dataset["kept"] = "1"));
+  await sidebar.getByRole("link", { name: "知識庫", exact: true }).click();
+  await expect(page).toHaveURL(/\/knowledge$/);
+  await sidebar.getByRole("link", { name: "對話", exact: true }).click();
+  await expect(page).toHaveURL(/\/chat$/);
+  const workspace = page.locator(".main-workspace");
+  await workspace.evaluate((element) => ((element as HTMLElement).dataset["kept"] = "1"));
+  await page.getByRole("textbox", { name: "傳送訊息", exact: true }).fill("第一句");
+  await page.getByRole("button", { name: "送出訊息" }).click();
+  await expect(page).toHaveURL(/\/chat\/[^/]+$/);
+  // The same elements survive: the shell did not rebuild the sidebar, nor the router the chat.
+  await expect(sidebar).toHaveAttribute("data-kept", "1");
+  await expect(workspace).toHaveAttribute("data-kept", "1");
 });
 
 test.describe("touch interaction", () => {

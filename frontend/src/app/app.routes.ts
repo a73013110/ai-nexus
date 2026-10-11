@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authenticated } from './core/auth/auth-guard';
+import { optionalId } from './core/layout/optional-id';
 import { pendingChanges } from './shared/browser/pending-changes';
 import { WORKSPACE_HOME } from './core/layout/workspace-home';
 
@@ -11,9 +12,12 @@ export const routes: Routes = [
   },
   { path: '', pathMatch: 'full', redirectTo: WORKSPACE_HOME },
   {
-    // Every workspace page requires a signed-in session; the guard is declared once here.
+    // Every workspace page requires a signed-in session; the guard is declared once here, and the
+    // shell keeps the sidebar alive across pages.
     path: '',
     canActivateChild: [authenticated],
+    loadComponent: () =>
+      import('./core/layout/workspace-shell').then((module) => module.WorkspaceShell),
     children: [
       {
         path: 'files',
@@ -128,12 +132,8 @@ export const routes: Routes = [
           import('./features/settings/settings-entry').then((module) => module.SettingsEntry),
       },
       {
-        path: 'chat',
-        loadComponent: () =>
-          import('./features/chat/chat-workspace').then((module) => module.ChatWorkspace),
-      },
-      {
-        path: 'chat/:id',
+        // One route for /chat and /chat/:id, so starting a conversation keeps the same workspace.
+        matcher: optionalId('chat'),
         loadComponent: () =>
           import('./features/chat/chat-workspace').then((module) => module.ChatWorkspace),
       },

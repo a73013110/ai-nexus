@@ -56,6 +56,7 @@ import { ConversationSpendView } from '../billing/conversation-spend';
 import { ReaderNavigation, type ReaderOrigin } from '../../shared/browser/reader-navigation';
 import { LibraryPicker } from '../files/library-picker';
 import { WorkspaceMenuButton } from '../../core/layout/workspace-menu-button';
+import { SidebarPanelContent } from '../../core/layout/sidebar-panel';
 import { ProductTourButton } from '../../shared/ui/product-tour-button';
 import { ProductTour } from '../../shared/ui/product-tour';
 import { chatTour } from './chat-tour';
@@ -95,6 +96,7 @@ import { ChatConversations } from './chat-conversations';
     ConversationSpendView,
     LibraryPicker,
     WorkspaceMenuButton,
+    SidebarPanelContent,
     ProductTourButton,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -116,9 +118,7 @@ export class ChatWorkspace {
   private navigationSequence = 0;
   readonly layout = inject(WorkspaceLayout);
   readonly tours = inject(ProductTour);
-  readonly sidebarOpen = this.layout.expanded;
-  readonly narrow = this.layout.narrow;
-  readonly tour = computed(() => chatTour(this.narrow(), this.store.hasKnowledgeAccess()));
+  readonly tour = computed(() => chatTour(this.layout.narrow(), this.store.hasKnowledgeAccess()));
   readonly following = signal(true);
   readonly composing = signal(false);
   readonly findOpen = signal(false);
@@ -413,9 +413,6 @@ export class ChatWorkspace {
   }
   closeMobileSidebar() {
     this.layout.closeMobile();
-  }
-  newChat() {
-    this.closeMobileSidebar();
   }
   editMessageFocus() {
     requestAnimationFrame(() => this.textarea()?.nativeElement.focus());

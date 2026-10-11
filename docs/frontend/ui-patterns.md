@@ -12,7 +12,8 @@
 
 ## 導覽
 
-- 所有工作區（Chat、`FeaturePage`、`DocumentReader`）共用 `WorkspaceLayout`／`WorkspaceSidebar` 與 `WorkspaceMenuButton`；新工作區不要自己保存手機側欄狀態。
+- 登入後的路由都掛在 `WorkspaceShell` 下：側欄只建立一次，換頁保留狀態；頁面只提供主區，需要側欄內容（例：對話歷史）時用 `<ng-template nxSidebarPanel>` 宣告。手機側欄狀態只放 `WorkspaceLayout`，頁面標題列放 `WorkspaceMenuButton`。
+- 同一頁的列表與詳細路徑用 `optionalId('<path>')` 合成一條路由，id 出現或改變時沿用元件而不是重建。
 - `WorkspaceLayout` 分開管理 `desktopCompact` 與 `mobileOpen`：860px 以上側欄可收合為圖示欄（`--sidebar-rail-width` 同時控制側欄與主欄），保留功能、通知與帳號；859px 以下是覆蓋式抽屜，收合時不佔寬度。桌面收合狀態跨路由維持。
 - 選取的功能依 Router UrlTree 的 segment 取最深的可見功能；query、fragment、matrix parameters 不影響。同層只有一項 `aria-current="page"`，功能自己的詳細路由仍屬於該功能。
 - 功能導覽用 `ScrollArea`：隱藏捲軸，只在實際溢位的方向顯示可點擊的漸層箭頭；高對比模式恢復原生捲軸。理由見 [MDN scrollbar-width 無障礙說明](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/scrollbar-width#accessibility)。
