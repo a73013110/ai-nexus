@@ -27,7 +27,8 @@ dotnet dev-certs https --trust
 | 開發更新 | `./scripts/Start-Dev.ps1` | Angular 4200＋API 5080 | 編輯前後端、自動更新 |
 
 - 整合預覽先 build Angular 再 publish .NET，靜態檔放進 `artifacts/publish/wwwroot`；已 build 時加 `-SkipBuild`。重新 build 前先停止正在使用 publish 目錄的程序。
-- 開發模式啟動 `dotnet watch` 與 Angular dev server，請開 4200；`/api`、`/health` 代理到後端，同源 cookie 與 CSRF 照常運作。日誌在 `.local/logs`。Ctrl+C 同時停止兩個程序。
+- 開發模式啟動 `dotnet watch` 與 Angular dev server，請開 4200；`/api`、`/health` 代理到後端，同源 cookie 與 CSRF 照常運作。輸出即時寫在 `.local/logs`，stderr 另印在主控台。Ctrl+C 同時停止兩個程序。
+- 後端啟動失敗時 `dotnet watch` 不結束、等存檔後重啟，網頁只顯示本機問題代碼；原因看主控台。
 - 兩種模式都讀同一份 `.local/config` 與 `.local/secrets`，修改後重啟。開發代理建議用 Ldap 登入；Windows Negotiate 經代理的行為需另外實測。
 - 預設 HTTPS，Session／Antiforgery cookie 是 `Secure`、`HttpOnly`、`SameSite=Strict`。開發代理用同一張 SDK 憑證（暫存在 `.local/certs`）。純 HTTP 的本機測試要明確加 `-Http`，只在 Development 且 Host 與來源 IP 都是 loopback 時生效，見 [網站安全](../architecture/security.md)。
 

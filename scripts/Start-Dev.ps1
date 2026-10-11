@@ -5,8 +5,8 @@
 開發模式：同時啟動 dotnet watch（API）與 Angular dev server，存檔後自動更新。
 
 .DESCRIPTION
-Angular 的 /api、/health 代理到後端，同源 cookie 與 CSRF 照常運作。兩個程序的輸出寫在 .local/logs/，
-Ctrl+C 會一起停止；任一程序結束時另一個也會停止。
+Angular 的 /api、/health 代理到後端，同源 cookie 與 CSRF 照常運作。兩個程序的輸出即時寫在 .local/logs/，
+stderr（啟動例外、編譯錯誤）同時顯示在主控台。Ctrl+C 會一起停止；任一程序結束時另一個也會停止。
 
 .PARAMETER Restore
 先執行 Restore.ps1。
@@ -84,13 +84,24 @@ function Start-Child([string]$Name, [string]$Executable, [string]$Directory, [st
     $process = [Diagnostics.Process]::new()
     $process.StartInfo = $info
     if (!$process.Start()) { throw "無法啟動 $Name。" }
-    $out = [IO.File]::Open((Join-Path $logs "$Name.log"), 'Create', 'Write', 'ReadWrite')
-    $err = [IO.File]::Open((Join-Path $logs "$Name.error.log"), 'Create', 'Write', 'ReadWrite')
+    # bufferSize 1＝不緩衝：程序執行中就能從紀錄檔看到輸出
+    $errorLog = Join-Path $logs "$Name.error.log"
+    $out = [IO.FileStream]::new((Join-Path $logs "$Name.log"), 'Create', 'Write', 'ReadWrite', 1)
+    $err = [IO.FileStream]::new($errorLog, 'Create', 'Write', 'ReadWrite', 1)
     @{
         Name = $Name; Process = $process; Out = $out; Err = $err
+        ErrorReader = [IO.StreamReader]::new([IO.FileStream]::new($errorLog, 'Open', 'Read', 'ReadWrite'))
+        Pending = ''
         CopyOut = $process.StandardOutput.BaseStream.CopyToAsync($out)
         CopyErr = $process.StandardError.BaseStream.CopyToAsync($err)
     }
+}
+
+# dotnet watch 在程式啟動失敗後會等待存檔而不結束，所以 stderr（啟動例外、編譯錯誤）要同步轉印到主控台。
+function Write-ChildError([hashtable]$Child) {
+    $lines = ($Child.Pending + $Child.ErrorReader.ReadToEnd()) -split '\r?\n'
+    $Child.Pending = $lines[-1]
+    $lines | Select-Object -SkipLast 1 | Where-Object { $_.Trim() } | ForEach-Object { "[$($Child.Name)] $_" }
 }
 
 $children = [Collections.Generic.List[hashtable]]::new()
@@ -105,7 +116,10 @@ try {
     Write-Output "啟動與錯誤紀錄：$logs。Ctrl+C 同時停止兩個服務。"
     while ($true) {
         foreach ($child in $children) {
-            if ($child.Process.HasExited) { throw "$($child.Name) 已結束（$($child.Process.ExitCode)）；請查看 .local/logs/$($child.Name).error.log 與 .log。" }
+            $exited = $child.Process.HasExited
+            if ($exited) { $child.CopyErr.Wait(3000) | Out-Null }
+            Write-ChildError $child
+            if ($exited) { throw "$($child.Name) 已結束（$($child.Process.ExitCode)）；請查看 .local/logs/$($child.Name).error.log 與 .log。" }
         }
         Start-Sleep -Milliseconds 500
     }
@@ -114,6 +128,6 @@ try {
         if (!$child.Process.HasExited) { $child.Process.Kill($true) }
         $child.Process.WaitForExit()
         try { [Threading.Tasks.Task]::WaitAll(@($child.CopyOut, $child.CopyErr), 3000) | Out-Null }
-        finally { $child.Out.Dispose(); $child.Err.Dispose(); $child.Process.Dispose() }
+        finally { $child.Out.Dispose(); $child.Err.Dispose(); $child.ErrorReader.Dispose(); $child.Process.Dispose() }
     }
 }
