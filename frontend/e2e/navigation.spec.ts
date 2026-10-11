@@ -769,9 +769,11 @@ test("Ctrl+K finds every feature, the pinned pill follows the route and the disp
   expect((await pinned.boundingBox())!.height).toBeLessThanOrEqual(36);
   await expect.poll(pillOnCurrent).toBe(true);
   await page
-    .getByRole("group", { name: "功能顯示方式" })
-    .getByRole("button", { name: "條列顯示", exact: true })
+    .getByRole("button", { name: "切換為條列顯示", exact: true })
     .click();
+  await expect(
+    page.getByRole("button", { name: "切換為圖示顯示", exact: true }),
+  ).toBeVisible();
   await expect(pinned).not.toHaveClass(/is-strip/);
   await expect(page.locator(".workspace-icons.is-list").first()).toBeVisible();
   await expect.poll(pillOnCurrent).toBe(true);

@@ -28,15 +28,27 @@
   color: var(--accent);
   font-weight: 600;
 }
-.launcher-tools nx-view-switch {
-  --view-switch-button-min-width: var(--cell);
-  gap: 0;
-  margin: 0;
-  overflow: visible;
-}
 .launcher-tools .icon-button {
   width: var(--cell);
   height: var(--row);
+}
+// Both glyphs share the cell; the one for the next display turns in while the other turns away.
+.display-toggle {
+  display: grid;
+  place-items: center;
+  > nx-icon {
+    grid-area: 1 / 1;
+    transition:
+      opacity var(--motion) var(--ease),
+      rotate var(--motion-morph) var(--ease-spring),
+      scale var(--motion-morph) var(--ease-spring);
+  }
+  &[data-display='icons'] > nx-icon:first-child,
+  &[data-display='list'] > nx-icon:last-child {
+    opacity: 0;
+    rotate: -90deg;
+    scale: 0.6;
+  }
 }
 .launcher-note {
   margin: 0 var(--p-space-2) var(--p-space-2);
