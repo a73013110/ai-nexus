@@ -40,7 +40,7 @@
 ## 對話框
 
 - 置中的對話框一律掛 `.platform-dialog` 或 `.workspace-dialog`，共用外框與動效，元件只覆寫尺寸（快捷指令、檔案預覽也是）。
-- 開啟時由下方 0.5rem、`scale 0.97` 彈入，關閉沿原路以 `--ease-exit` 退場，遮罩同步淡入淡出（`overlay`、`display` 用 `allow-discrete` 保留在 top layer）。
+- 開啟時由下方 0.5rem、`scale 0.97` 彈入，關閉沿原路以 `--ease-exit` 退場，遮罩同步淡入淡出（`overlay`、`display` 用 `allow-discrete` 保留在 top layer）。起點與曲線是 `--dialog-enter-y`／`--dialog-enter-scale`／`--dialog-ease`；640px 以下的底部 sheet 從底緣整片升起、不回彈（回彈會讓底邊離開畫面）。
 - 關閉中仍在畫面上，但 `pointer-events: none`＋`interactivity: inert`，不接點擊與焦點。
 - 側邊的 `DetailDrawer` 同一套作法改成從右緣滑入、滑出（1.5rem）；`closed` 等退場結束才送出，宿主清空內容時抽屜不會空著離開，退場中重新開啟則不送。
 - `DialogMotion` 以 `offsetWidth／offsetHeight` 量測，不受開關時的縮放影響。

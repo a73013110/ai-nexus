@@ -17,36 +17,19 @@
 .notification-row[data-severity='info'] > nx-icon {
   color: var(--info);
 }
-.notification-toolbar {
-  flex: none;
-}
-.notification-toolbar {
-  display: flex;
-  gap: var(--p-space-2);
-  align-items: center;
-  flex-wrap: wrap;
-  padding-block: var(--p-space-3);
-  // The center's tabs draw the line above.
-  border-bottom: 1px solid var(--line);
-}
-.notification-toolbar [aria-pressed='true'] {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
 .notification-list {
   min-height: 0;
   flex: 1;
   overflow-y: auto;
-  max-height: 65dvh;
   scrollbar-gutter: stable;
-  padding-block: var(--p-space-2);
+  padding: var(--p-space-2);
   overscroll-behavior: contain;
 }
 .notification-row {
   display: flex;
   gap: var(--p-space-3);
-  padding: var(--resource-row-padding-block) var(--resource-row-padding-inline);
-  border-radius: var(--p-radius-sm);
+  padding: var(--p-space-3);
+  border-radius: var(--p-radius-md);
 }
 .notification-row.is-unread {
   background: var(--surface-subtle);

@@ -15,31 +15,7 @@ import { Icon } from '../../shared/ui/icon';
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './notification-feed.scss',
   host: { style: 'display: contents' },
-  template: `<div class="notification-toolbar">
-      <button
-        class="quiet-button"
-        [attr.aria-pressed]="store.unreadOnly()"
-        (click)="store.unreadOnly.update(toggle); store.refresh()"
-      >
-        只看未讀
-      </button>
-      <button
-        class="quiet-button"
-        [disabled]="!store.unread() || store.loading()"
-        (click)="store.readAll()"
-      >
-        全部標為已讀
-      </button>
-      <button
-        class="icon-button"
-        aria-label="重新整理通知"
-        [disabled]="store.loading()"
-        (click)="store.refresh()"
-      >
-        <nx-icon name="refresh" />
-      </button>
-    </div>
-    @if (store.error()) {
+  template: `@if (store.error()) {
       <nx-notice [message]="store.error()"
         ><button notice-actions (click)="store.refresh()">重試</button>
       </nx-notice>
@@ -118,6 +94,5 @@ export class NotificationFeed {
   readonly store = inject(NotificationStore);
   readonly date = formatDate;
   readonly url = notificationUrl;
-  readonly toggle = (value: boolean) => !value;
   readonly ignore = () => {};
 }

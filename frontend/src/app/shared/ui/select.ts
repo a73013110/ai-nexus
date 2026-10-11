@@ -35,8 +35,8 @@ let sequence = 0;
       role="combobox"
       [attr.aria-label]="label()"
       [attr.aria-expanded]="opened()"
-      [attr.aria-haspopup]="searchable() ? 'dialog' : 'listbox'"
-      [attr.aria-controls]="searchable() ? id + '-panel' : id"
+      [attr.aria-haspopup]="search() ? 'dialog' : 'listbox'"
+      [attr.aria-controls]="search() ? id + '-panel' : id"
       [attr.aria-activedescendant]="opened() && active() >= 0 ? id + '-' + active() : null"
       [disabled]="disabled() || !options().length"
       (click)="toggle()"
@@ -52,11 +52,11 @@ let sequence = 0;
       [id]="id + '-panel'"
       popover="auto"
       class="popover-panel select-panel"
-      [attr.role]="searchable() ? 'dialog' : null"
+      [attr.role]="search() ? 'dialog' : null"
       [attr.aria-label]="label()"
       (toggle)="toggled($event)"
     >
-      @if (searchable()) {
+      @if (search()) {
         <div class="select-search">
           <nx-icon name="search" /><input
             type="search"
@@ -72,7 +72,7 @@ let sequence = 0;
             (keydown)="searchKey($event)"
           />
         </div>
-        <p class="select-count">{{ visibleOptions().length }} 個選項</p>
+        <p class="sr-only" role="status">{{ visibleOptions().length }} 個選項</p>
       }
       <div role="listbox" [id]="id" [attr.aria-label]="label()">
         @for (entry of visibleOptions(); track entry.option.value) {
@@ -113,6 +113,9 @@ export class Select {
   readonly disabled = input(false);
   readonly placeholder = input('請選擇');
   readonly searchable = input(false);
+  /** Shows the filter only from this many options, so short lists open straight to their choices. */
+  readonly searchFrom = input(0);
+  readonly search = computed(() => this.searchable() && this.options().length >= this.searchFrom());
   /** `inline` drops the field chrome for toolbars such as the composer controls. */
   readonly appearance = input<'field' | 'inline'>('field');
   readonly query = signal('');
@@ -132,7 +135,7 @@ export class Select {
   readonly id = `nx-select-${++sequence}`;
   private readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
   private readonly panel = viewChild.required<ElementRef<HTMLDivElement>>('panel');
-  private search = '';
+  private typed = '';
   private searchTimer?: ReturnType<typeof setTimeout>;
   constructor() {
     const reposition = () => {
@@ -167,7 +170,7 @@ export class Select {
     positionPopover(
       this.trigger().nativeElement,
       this.panel().nativeElement,
-      this.searchable() ? 360 : 240,
+      this.search() ? 360 : 240,
     );
   }
   close() {
@@ -224,15 +227,15 @@ export class Select {
       event.preventDefault();
       if (!this.opened()) this.open();
       clearTimeout(this.searchTimer);
-      this.search += key.toLocaleLowerCase();
+      this.typed += key.toLocaleLowerCase();
       const index = this.options().findIndex(
-        (x) => !x.disabled && x.label.toLocaleLowerCase().startsWith(this.search),
+        (x) => !x.disabled && x.label.toLocaleLowerCase().startsWith(this.typed),
       );
       if (index >= 0) {
         this.active.set(index);
         this.reveal();
       }
-      this.searchTimer = setTimeout(() => (this.search = ''), 650);
+      this.searchTimer = setTimeout(() => (this.typed = ''), 650);
     }
   }
   private reveal() {

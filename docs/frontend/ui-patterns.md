@@ -16,16 +16,16 @@
 - 同一頁的列表與詳細路徑用 `optionalId('<path>')` 合成一條路由，id 改變時沿用元件。
 - `WorkspaceLayout` 分開管理 `desktopCompact` 與 `mobileOpen`：860px 以上側欄可收合為圖示欄（寬度由側欄過渡，grid 欄跟隨），859px 以下是覆蓋式抽屜。收合狀態跨路由維持。
 - 功能清單只由 `WorkspaceNavigation` 呈現（釘選＋全部功能，行為見 [個人設定](../features/settings.md#側欄)）。`Ctrl + K` 是 shell 的 `CommandPalette`（含全部功能），頁面用 `WorkspaceCommands.provide()` 加入動作。
-- 長清單（例：對話歷史）共用一個 `MenuPanel`，不每列建 `ActionMenu`；列加 `content-visibility: auto`（DOM 仍留給焦點與頁內尋找）。
-- 選取的功能依 Router UrlTree 的 segment 取最深的可見功能，不看 query、fragment、matrix parameters；只有一項 `aria-current="page"`，詳細路由仍屬於該功能。
-- 功能導覽用 `ScrollArea`：隱藏捲軸，只在溢位方向顯示可點的漸層箭頭，高對比模式恢復原生捲軸（[MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference/Properties/scrollbar-width#accessibility)）。
+- 長清單共用一個 `MenuPanel`，不每列建 `ActionMenu`；列加 `content-visibility: auto`。
+- 選取的功能依 Router UrlTree 的 segment 取最深的可見功能（不看 query、fragment）；只有一項 `aria-current="page"`，詳細路由仍屬於該功能。
+- 功能導覽用 `ScrollArea`：隱藏捲軸，只在溢位方向顯示可點的漸層箭頭，高對比模式恢復原生捲軸。
 - `ViewportInset` 量測全域提示與測試身分列的實際高度，工作區與抽屜共用，移除提示時清除佔位。
 - 附件、引用、知識庫與專案文件的閱讀連結用 `ReaderLink`：來源放 URL（重新整理、新分頁仍可返回，只接受本站工作區路徑），閱讀位置放 history state；返回聊天時保留草稿、捲動與焦點。登入後的返回位置只接受白名單路徑。
 - 操作導覽提供 `ProductTourDefinition`：可略過、可重播、依可見功能過濾步驟、不代替送出；觸發點只在頁首最右（`FeaturePage` 的 `tour`）。
 
 ## 表單
 
-- 原生 input／select／textarea 用 `nxField`，搜尋用 `SearchField`，互斥檢視用 `ViewSwitch`（group＋aria-pressed；`line` 頁面檢視、`segment` 緊湊篩選，`fill` 平分寬度）；連結 tabpanel 的內容才用 `Tabs`。共用元件不接管查詢、驗證、草稿或 API。
+- 原生 input／select／textarea 用 `nxField`，搜尋用 `SearchField`（對話框列內用 `appearance="bare"`），互斥檢視用 `ViewSwitch`（group＋aria-pressed；`line` 頁面檢視、`segment` 緊湊篩選，`fill` 平分寬度）；連結 tabpanel 的內容才用 `Tabs`。共用元件不接管查詢、驗證、草稿或 API。
 - 欄位的驗證說明靠近欄位，不放頁面提示容器。
 - 日期一律用 `DateTimePicker` 與 `shared/browser/format.ts`（`formatDate`、`parseDateTimeInput`）：以台北 wall-clock 輸入與顯示、送出時轉 UTC，瀏覽器不得自行把日期正規化成另一天。民國曆只影響顯示與輸入。
 - `DateTimePicker` 預設必填；選填要指定 `[required]="false"`，清空時發出空值。選填日期無效時暫停自動查詢，清空則移除條件。
@@ -35,10 +35,10 @@
 ## 對話框與抽屜
 
 - 用原生 `<dialog>`，加 `nxCompactDialog` 套用共用密度；沒有可存取名稱時由 h2 建立，不接管 focus、Escape 或業務狀態。
-- 外框只負責圓角、top layer、焦點與關閉；內容放 `.dialog-scroll`，捲動與最大高度在內層。
+- 外框只負責圓角、top layer、焦點與關閉；表單放 `.dialog-scroll`。選取器、清單用 `.dialog-flush`：`.dialog-bar`（標題或搜尋＋關閉，不加眉標）、`.dialog-body`、必要時的 `.dialog-foot`。
 - `ConfirmDialog` 初始焦點在「取消」，Esc／關閉視為取消，結束後返回先前焦點。危險動作一律經過確認。
 - 詳情用 `DetailDrawer`：桌面 modeless（可繼續操作列表、選下一列），1023px 以下改為原生 modal。
-- 多頁籤視窗（例：使用者活動）各頁籤維持相同寬高，切換不改外框；確實需要不同尺寸的 dialog 才用 `DialogMotion` 過渡寬高。內容切換用 `ViewMotion`。
+- 多頁籤視窗各頁籤維持相同寬高，切換不改外框；確實需要不同尺寸的 dialog 才用 `DialogMotion` 過渡寬高。內容切換用 `ViewMotion`。
 - 只在開啟時建立昂貴內容（`CompactDialog.opened`），關閉時銷毀閱讀器、圖表與 Blob URL。
 
 ## 資料工作區
@@ -69,6 +69,7 @@
 ## 手機
 
 - 桌面控制項 34px；640px 以下與觸控指標至少 44px（[WCAG 2.2 target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum)），手機輸入字級至少 16px（避免 iOS 自動放大）。
-- 抽屜背景 inert、Tab 留在抽屜，Escape 或點遮罩關閉並還原焦點；遮罩原地淡入。
-- 窄容器用 container query 調整（例：附件列表縮圖與單行省略），完整名稱保留在提示與可存取名稱。
+- 抽屜背景 inert、Tab 留在抽屜，Escape 或點遮罩關閉並還原焦點；遮罩隨抽屜邊緣移動並淡入。
+- 640px 以下置中對話框改為底部 sheet（快捷指令例外）。
+- 窄容器用 container query 調整（例：附件列表、輸入區工具列），完整名稱留在提示與可存取名稱。
 - 頁面在 375px 寬不得出現橫向捲動；長內容在自己的區域內捲動。

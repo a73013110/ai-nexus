@@ -36,6 +36,7 @@
 }
 // Inline triggers size to their label; hosts cap the width with --select-trigger-max-width.
 :host(.select-inline) .select-trigger {
+  gap: var(--p-space-1);
   min-width: 0;
   min-height: var(--button-target);
   padding: var(--p-space-1) var(--select-trigger-padding-inline, var(--p-space-2));
@@ -106,7 +107,6 @@
   background: transparent;
   font-size: var(--text-ui);
 }
-.select-count,
 .select-empty {
   font-size: var(--text-caption);
   color: var(--secondary);

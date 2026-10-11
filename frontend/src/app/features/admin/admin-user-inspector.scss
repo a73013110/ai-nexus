@@ -2,6 +2,9 @@
   --dialog-width: 72rem;
   height: min(860px, calc(100dvh - 48px));
   max-width: calc(100vw - 32px);
+  @media (max-width: 640px) {
+    max-width: none;
+  }
   overflow: hidden;
   flex-direction: column;
   gap: 12px;

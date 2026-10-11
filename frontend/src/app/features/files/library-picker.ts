@@ -12,14 +12,16 @@ import {
 } from '@angular/core';
 import type { LibraryFileDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
-import { FileBrowser } from './file-browser';
+import { apiHref } from '../../core/api/api-client';
+import { ReaderLink } from '../../shared/browser/reader-link';
+import { formatBytes, formatDate } from '../../shared/browser/format';
 import { FileLibraryStore } from './file-library-store';
 import { Icon } from '../../shared/ui/icon';
 import { SearchField } from '../../shared/ui/search-field';
 
 @Component({
   selector: 'nx-library-picker',
-  imports: [Notice, CompactDialog, FileBrowser, Icon, SearchField, EmptyState],
+  imports: [Notice, CompactDialog, ReaderLink, Icon, SearchField, EmptyState],
   providers: [ViewScope, FileLibraryStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './library-picker.scss',
@@ -39,30 +41,27 @@ import { SearchField } from '../../shared/ui/search-field';
     <dialog
       nxCompactDialog
       #dialog
-      class="platform-dialog file-picker-dialog"
+      class="platform-dialog dialog-flush file-picker-dialog"
       aria-label="從檔案庫選取"
     >
-      <div class="dialog-scroll">
-        <div class="dialog-heading">
-          <div>
-            <span class="panel-eyebrow">重用已保存的檔案</span>
-            <h2>從檔案庫選取</h2>
-          </div>
-          <button class="icon-button" aria-label="關閉檔案選取" (click)="dialog.close()">
-            <nx-icon name="close" />
-          </button>
-        </div>
+      <div class="dialog-bar">
         <nx-search-field
+          appearance="bare"
           label="搜尋檔案庫"
-          placeholder="搜尋檔案名稱"
+          placeholder="搜尋檔案庫中的檔案"
           [value]="store.search()"
           (valueChange)="store.find($event)"
         />
+        <button class="icon-button" aria-label="關閉檔案選取" (click)="dialog.close()">
+          <nx-icon name="close" />
+        </button>
+      </div>
+      <div class="dialog-body" [attr.aria-busy]="store.loading()">
         @if (store.error()) {
           <nx-notice tone="danger" [message]="store.error()" />
         }
-        @if (store.loading()) {
-          <p role="status" class="form-note">正在載入檔案…</p>
+        @if (store.loading() && !store.items().length) {
+          <p role="status" class="picker-note">正在載入檔案…</p>
         } @else if (!store.items().length) {
           <nx-empty-state
             ><p>
@@ -70,14 +69,48 @@ import { SearchField } from '../../shared/ui/search-field';
             </p></nx-empty-state
           >
         } @else {
-          <nx-file-browser
-            [items]="store.items()"
-            layout="list"
-            [selectable]="true"
-            (chosen)="pick($event)"
-          />
+          <ul class="picker-list">
+            @for (item of store.items(); track item.file.id) {
+              <li>
+                <button
+                  type="button"
+                  class="picker-choose"
+                  [attr.aria-label]="'選取 ' + item.file.fileName"
+                  (click)="pick(item)"
+                >
+                  <span class="picker-thumb" aria-hidden="true">
+                    @if (item.file.isImage) {
+                      <img [src]="url(item.file.id)" alt="" loading="lazy" decoding="async" />
+                    } @else {
+                      {{ extension(item.file.fileName) }}
+                    }
+                  </span>
+                  <span class="picker-copy"
+                    ><strong [title]="item.file.fileName">{{ item.file.fileName }}</strong
+                    ><small
+                      >{{ bytes(item.file.size) }} · {{ date(item.createdAt) }}
+                      @if (item.usages[0]; as usage) {
+                        · {{ usage.name }}
+                      }
+                    </small></span
+                  >
+                  <nx-icon name="plus" class="picker-add" />
+                </button>
+                <a
+                  class="icon-button"
+                  [nxReaderLink]="item.file.id"
+                  [readerAttachment]="true"
+                  [attr.aria-label]="'預覽 ' + item.file.fileName"
+                  title="預覽"
+                  ><nx-icon name="eye"
+                /></a>
+              </li>
+            }
+          </ul>
         }
-        <div class="file-pagination">
+      </div>
+      @if (store.offset() || store.canNext()) {
+        <div class="dialog-foot">
           <span>{{ store.total() }} 份檔案</span
           ><button
             class="quiet-button"
@@ -93,7 +126,7 @@ import { SearchField } from '../../shared/ui/search-field';
             下一頁
           </button>
         </div>
-      </div>
+      }
     </dialog>`,
 })
 export class LibraryPicker {
@@ -102,6 +135,8 @@ export class LibraryPicker {
   readonly compact = input(false);
   readonly label = input('從檔案庫加入');
   readonly chosen = output<LibraryFileDto>();
+  readonly bytes = formatBytes;
+  readonly date = (value: string) => formatDate(value).split(' ')[0];
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   open() {
     this.dialog().nativeElement.showModal();
@@ -110,5 +145,11 @@ export class LibraryPicker {
   pick(file: LibraryFileDto) {
     this.dialog().nativeElement.close();
     this.chosen.emit(file);
+  }
+  url(id: string) {
+    return apiHref('/api/v1/attachments/{id}/content', { path: { id } });
+  }
+  extension(name: string) {
+    return name.split('.').pop()?.toUpperCase().slice(0, 4) || 'FILE';
   }
 }

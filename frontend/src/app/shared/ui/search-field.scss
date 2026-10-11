@@ -40,3 +40,13 @@
   width: 18px;
   height: 18px;
 }
+// A bare search fills its bar; the bar's hairline and the caret mark the field.
+:host(.search-bare) {
+  width: 100%;
+}
+:host(.search-bare) .search-field {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}

@@ -23,6 +23,7 @@ import { formatModelName } from '../../shared/browser/format';
         [disabled]="disabled() || loading() || !models().length"
         [options]="modelOptions()"
         [searchable]="true"
+        [searchFrom]="8"
         (valueChange)="modelChange.emit($event)"
       />
     } @else {
