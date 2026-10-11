@@ -130,9 +130,14 @@ export class DetailDrawer {
       return;
     }
     if (this.destroyed) return;
-    this.wide.set(false);
-    this.closed.emit();
     if (this.returnFocus?.isConnected) this.returnFocus.focus({ preventScroll: true });
     this.returnFocus = null;
+    // Hosts clear the content on `closed`, so wait for the exit; reopening meanwhile cancels it.
+    const dialog = this.dialog().nativeElement;
+    void Promise.allSettled(dialog.getAnimations().map((x) => x.finished)).then(() => {
+      if (this.destroyed || dialog.open) return;
+      this.wide.set(false);
+      this.closed.emit();
+    });
   }
 }
