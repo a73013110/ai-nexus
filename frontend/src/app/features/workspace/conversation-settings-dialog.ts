@@ -37,10 +37,7 @@ import { ChatConversations } from '../chat/chat-conversations';
     <div class="dialog-scroll">
       <form (submit)="submit($event)">
         <div class="dialog-heading">
-          <div>
-            <span class="panel-eyebrow">CONVERSATION SETTINGS</span>
-            <h2 id="settings-title">讓這段對話更合用</h2>
-          </div>
+          <h2 id="settings-title">讓這段對話更合用</h2>
           <button
             type="button"
             class="icon-button"

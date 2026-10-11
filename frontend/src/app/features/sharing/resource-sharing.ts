@@ -29,11 +29,16 @@ import { SearchField } from '../../shared/ui/search-field';
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './resource-sharing.scss',
-  template: `<dialog nxCompactDialog #dialog class="platform-dialog" (cancel)="cancel($event)">
-    <div class="dialog-heading">
-      <div>
+  template: `<dialog
+    nxCompactDialog
+    #dialog
+    class="platform-dialog dialog-flush access-dialog"
+    (cancel)="cancel($event)"
+  >
+    <header class="dialog-bar">
+      <div class="dialog-title">
         <h2>存取權限</h2>
-        <p>{{ name() }} · 擁有者保留完整權限</p>
+        <small [title]="name()">{{ name() }}</small>
       </div>
       <button
         class="icon-button"
@@ -43,84 +48,89 @@ import { SearchField } from '../../shared/ui/search-field';
       >
         <nx-icon name="close" />
       </button>
-    </div>
-    @if (error()) {
-      <nx-notice tone="danger" [message]="error()" />
-    }
-    @if (loading()) {
-      <p role="status">正在載入授權…</p>
-    } @else {
-      <div class="platform-form">
-        <label
-          >加入使用者<nx-search-field
-            label="尋找要授權的使用者"
-            placeholder="輸入至少兩個字，搜尋已登入的 AD 帳號"
-            [value]="people.text()"
-            (valueChange)="people.find($event)"
-        /></label>
-        @if (people.text().trim().length >= 2) {
-          <div class="directory-results" role="region" aria-label="符合的使用者">
-            @for (user of people.results(); track user.id) {
-              <button class="directory-user" (click)="add(user)">
-                <span
-                  ><strong>{{ user.displayName }}</strong
-                  ><small>{{ user.account }}</small></span
-                ><nx-icon name="plus" />
-              </button>
-            } @empty {
-              <p class="form-note">尚無符合帳號，或使用者尚未登入過平台。</p>
-            }
-          </div>
-        }
-        <fieldset>
-          <legend>具名成員</legend>
-          <div class="acl-members">
-            @for (member of members(); track member.userId) {
-              <div class="acl-member">
-                <span
-                  ><strong>{{ member.displayName }}</strong
-                  ><small>{{ member.account }}</small></span
-                ><nx-select
-                  [label]="member.displayName + '的權限'"
-                  [options]="roles"
-                  [value]="member.role"
-                  (valueChange)="role(member.userId, $event)"
-                /><button
-                  class="icon-button"
-                  [attr.aria-label]="'移除成員：' + member.displayName"
-                  (click)="remove(member.userId)"
-                >
-                  <nx-icon name="close" />
+    </header>
+    <div class="dialog-body">
+      @if (error()) {
+        <nx-notice tone="danger" [message]="error()" />
+      }
+      @if (loading()) {
+        <p role="status" class="form-note">正在載入授權…</p>
+      } @else {
+        <div class="platform-form">
+          <label
+            >加入使用者<nx-search-field
+              label="尋找要授權的使用者"
+              placeholder="輸入至少兩個字，搜尋已登入的 AD 帳號"
+              [value]="people.text()"
+              (valueChange)="people.find($event)"
+          /></label>
+          @if (people.text().trim().length >= 2) {
+            <div class="directory-results" role="region" aria-label="符合的使用者">
+              @for (user of people.results(); track user.id) {
+                <button class="directory-user" (click)="add(user)">
+                  <span
+                    ><strong>{{ user.displayName }}</strong
+                    ><small>{{ user.account }}</small></span
+                  ><nx-icon name="plus" />
                 </button>
-              </div>
-            } @empty {
-              <p class="form-note">目前僅擁有者可以存取。</p>
-            }
-          </div>
-        </fieldset>
-        @if (allowGroups()) {
+              } @empty {
+                <p class="form-note">尚無符合帳號，或使用者尚未登入過平台。</p>
+              }
+            </div>
+          }
           <fieldset>
-            <legend>群組可檢視</legend>
-            <p class="form-note">群組授權只允許閱讀。協作編輯請加入具名成員。</p>
-            <div class="choice-list">
-              @for (group of groups(); track group.id) {
-                <nx-checkbox
-                  [label]="group.name"
-                  [checked]="groupIds().includes(group.id)"
-                  [disabled]="saving()"
-                  (checkedChange)="toggleGroup(group.id, $event)"
-                />
+            <legend>具名成員</legend>
+            <div class="acl-members">
+              @for (member of members(); track member.userId) {
+                <div class="acl-member">
+                  <span
+                    ><strong>{{ member.displayName }}</strong
+                    ><small>{{ member.account }}</small></span
+                  ><nx-select
+                    [label]="member.displayName + '的權限'"
+                    [options]="roles"
+                    [value]="member.role"
+                    (valueChange)="role(member.userId, $event)"
+                  /><button
+                    class="icon-button"
+                    [attr.aria-label]="'移除成員：' + member.displayName"
+                    (click)="remove(member.userId)"
+                  >
+                    <nx-icon name="close" />
+                  </button>
+                </div>
+              } @empty {
+                <p class="form-note">目前僅擁有者可以存取。</p>
               }
             </div>
           </fieldset>
-        }
-        <div class="dialog-actions">
-          <button class="secondary-button" [disabled]="saving()" (click)="dialog.close()">
-            取消</button
-          ><button class="primary-button" [disabled]="saving()" (click)="save()">
-            {{ saving() ? '正在儲存…' : '儲存權限' }}
-          </button>
+          @if (allowGroups()) {
+            <fieldset>
+              <legend>群組可檢視</legend>
+              <p class="form-note">群組授權只允許閱讀。協作編輯請加入具名成員。</p>
+              <div class="choice-list">
+                @for (group of groups(); track group.id) {
+                  <nx-checkbox
+                    [label]="group.name"
+                    [checked]="groupIds().includes(group.id)"
+                    [disabled]="saving()"
+                    (checkedChange)="toggleGroup(group.id, $event)"
+                  />
+                }
+              </div>
+            </fieldset>
+          }
         </div>
+      }
+    </div>
+    @if (!loading()) {
+      <div class="dialog-foot">
+        <span>擁有者保留完整權限</span
+        ><button class="secondary-button" [disabled]="saving()" (click)="dialog.close()">
+          取消</button
+        ><button class="primary-button" [disabled]="saving()" (click)="save()">
+          {{ saving() ? '正在儲存…' : '儲存權限' }}
+        </button>
       </div>
     }
   </dialog>`,

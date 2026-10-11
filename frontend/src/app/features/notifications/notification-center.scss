@@ -1,21 +1,6 @@
 .notification-center {
   --dialog-width: 30rem;
 }
-// The count sits beside the title but outside it, so the dialog's name stays 「通知」.
-.notification-heading {
-  display: flex;
-  align-items: baseline;
-  flex: 1;
-  gap: var(--p-space-2);
-  min-width: 0;
-}
-.notification-heading h2 {
-  flex: none;
-}
-.notification-heading small {
-  color: var(--secondary);
-  font-size: var(--text-caption);
-}
 .notification-center [aria-pressed='true'] {
   background: var(--accent-soft);
   color: var(--accent);

@@ -30,6 +30,17 @@ import { DesignSamples } from './design-samples';
     nx-design-example > * {
       width: 100%;
     }
+    .design-bar-frame {
+      width: min(100%, 28rem);
+      border: 1px solid var(--line);
+      border-radius: var(--dialog-radius);
+    }
+    .design-bar-frame p {
+      margin: 0;
+      padding: var(--p-space-3) var(--p-space-4);
+      color: var(--secondary);
+      font-size: var(--text-caption);
+    }
   `,
   template: `<nx-design-section
       id="design-fields"
@@ -50,6 +61,25 @@ import { DesignSamples } from './design-samples';
           (valueChange)="search.set($event)"
         />
       </nx-design-example>
+    </nx-design-section>
+    <nx-design-section
+      id="design-search-bare"
+      title="列內搜尋"
+      api='SearchField appearance="bare"'
+      description="放進已有外框的列（對話框標題列、面板頂端）時去掉欄位外框，由列的細線與游標標示輸入位置。"
+    >
+      <div class="design-bar-frame">
+        <div class="dialog-bar">
+          <nx-search-field
+            appearance="bare"
+            label="示範列內搜尋"
+            placeholder="搜尋檔案庫中的檔案"
+            [value]="bareSearch()"
+            (valueChange)="bareSearch.set($event)"
+          />
+        </div>
+        <p>{{ bareSearch() ? '搜尋：' + bareSearch() : '結果列在標題列下方。' }}</p>
+      </div>
     </nx-design-section>
     <nx-design-section
       id="design-dates"
@@ -100,6 +130,7 @@ export class DesignForms {
   readonly samples = inject(DesignSamples);
   private readonly title = viewChild.required(InlineTitle);
   readonly search = signal('');
+  readonly bareSearch = signal('');
   readonly calendarDate = signal('2026-10-08T14:30:45');
   readonly optionalDate = signal('');
   readonly saveTitle = async (value: string) => {

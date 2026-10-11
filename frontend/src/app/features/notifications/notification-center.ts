@@ -35,7 +35,7 @@ import { NotificationFeed } from './notification-feed';
     (close)="store.close()"
   >
     <header class="dialog-bar">
-      <div class="notification-heading">
+      <div class="dialog-title">
         <h2 id="notification-title">通知</h2>
         @if (store.unread()) {
           <small>{{ store.unread() }} 則未讀</small>

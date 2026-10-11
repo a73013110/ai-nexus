@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, inject, signal, viewChild } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
 import { Checkbox } from '../../shared/ui/checkbox';
@@ -9,6 +16,7 @@ import { Select, type SelectOption } from '../../shared/ui/select';
 import { Tabs } from '../../shared/ui/tabs';
 import { ToastService } from '../../shared/ui/toast-service';
 import { ViewSwitch } from '../../shared/ui/view-switch';
+import { DesignDialogs } from './design-dialogs';
 import { DesignExample, DesignSection } from './design-section';
 import { DesignSamples } from './design-samples';
 
@@ -19,6 +27,7 @@ import { DesignSamples } from './design-samples';
     ActionMenu,
     Checkbox,
     ConfirmDialog,
+    DesignDialogs,
     DesignExample,
     DesignSection,
     Icon,
@@ -97,6 +106,7 @@ import { DesignSamples } from './design-samples';
         </button>
       </div>
     </nx-design-section>
+    <nx-design-dialogs />
     <nx-design-section
       id="design-menus"
       title="選單與下拉"
@@ -114,6 +124,14 @@ import { DesignSamples } from './design-samples';
       <nx-design-example label="ActionMenu">
         <nx-action-menu label="示範更多操作" [items]="actions" (action)="action($event)" />
       </nx-design-example>
+    </nx-design-section>
+    <nx-design-section
+      id="design-menu-check"
+      title="核取選單項目"
+      api="MenuPanel · MenuAction.checked"
+      description="設定 checked 的項目成為 menuitemcheckbox（aria-checked），勾選時右側打勾；選取後選單關閉，狀態由頁面切換。未設定 checked 的項目仍是一般操作。"
+    >
+      <nx-action-menu label="示範檢視選項" [items]="toggles()" (action)="toggle($event)" />
     </nx-design-section>
     <nx-design-section
       id="design-switches"
@@ -200,6 +218,12 @@ export class DesignControls {
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly naming = viewChild.required(NameDialog);
   readonly checked = signal(true);
+  readonly options = signal({ web: true, time: false });
+  readonly toggles = computed<MenuAction[]>(() => [
+    { id: 'web', label: '網路搜尋', icon: 'globe', checked: this.options().web },
+    { id: 'time', label: '顯示時間', icon: 'history', checked: this.options().time },
+    { id: 'locked', label: '由管理員鎖定', icon: 'lock', checked: true, disabled: true },
+  ]);
   readonly filter = signal('active');
   readonly range = signal('week');
   readonly display = signal('icons');
@@ -233,6 +257,10 @@ export class DesignControls {
     { id: 'export', label: '未開放操作', icon: 'download', disabled: true },
     { id: 'reset', label: '重設示範', icon: 'restore', danger: true },
   ];
+  toggle(id: string) {
+    if (id === 'web' || id === 'time')
+      this.options.update((value) => ({ ...value, [id]: !value[id] }));
+  }
   action(id: string) {
     if (id === 'edit') this.samples.editRequest.update((x) => x + 1);
     if (id === 'reset') void this.reset();

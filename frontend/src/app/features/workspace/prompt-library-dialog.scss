@@ -1,15 +1,24 @@
+// Saved prompts beside the editor. The body scrolls as one; the editor stays in view beside a long
+// list, and the list's edge runs the full height as the divider.
 .library-dialog {
   --dialog-width: var(--library-width);
 }
 .library-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: var(--section-gap);
+  padding: 0;
+}
+.library-layout > nx-notice {
+  grid-column: 1 / -1;
+  margin: var(--p-space-2) var(--p-space-2) 0;
 }
 .template-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
   min-width: 0;
-  overflow: auto;
-  max-height: 55dvh;
+  padding: var(--p-space-2);
+  border-inline-end: 1px solid var(--line);
 }
 .template-create {
   display: flex;
@@ -17,66 +26,82 @@
   gap: var(--p-space-2);
   width: 100%;
   min-height: var(--button-target);
-  color: var(--accent);
-  background: var(--accent-soft);
+  margin-bottom: var(--p-space-1);
+  padding: var(--p-space-2) var(--p-space-3);
   border-radius: var(--p-radius-md);
-  padding: var(--p-space-3);
-  text-align: left;
+  background: var(--accent-soft);
+  color: var(--accent);
+  text-align: start;
   font-size: var(--text-label);
+}
+.template-note {
+  margin: 0;
+  padding: var(--p-space-3) var(--p-space-2);
+  color: var(--secondary);
+  font-size: var(--text-caption);
 }
 .template-row {
   display: flex;
   align-items: center;
   gap: var(--p-space-1);
-  border-bottom: 1px solid var(--line);
-  padding-block: var(--p-space-2);
+  border-radius: var(--p-radius-md);
+}
+.template-row:hover,
+.template-row:focus-within {
+  background: var(--hover);
 }
 .template-row.is-editing {
-  background: var(--canvas);
+  background: var(--surface);
+  box-shadow: var(--selected-ring);
 }
 .template-use {
   flex: 1;
   min-width: 0;
-  text-align: left;
   padding: var(--p-space-2);
-  border-radius: var(--p-radius-md);
+  border-radius: inherit;
+  text-align: start;
 }
 .template-use strong,
 .template-use small {
   display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .template-use strong {
   font-size: var(--text-label);
   font-weight: 500;
 }
 .template-use small {
-  font-size: var(--text-caption);
+  margin-top: 2px;
   color: var(--secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-top: var(--p-space-1);
+  font-size: var(--text-caption);
+}
+.template-row .icon-button {
+  color: var(--secondary);
 }
 .template-editor {
+  position: sticky;
+  top: 0;
+  align-self: start;
   min-width: 0;
-  border-left: 1px solid var(--line);
-  padding-left: var(--p-space-6);
+  padding: var(--p-space-3) var(--p-space-4) var(--p-space-4);
 }
 .template-editor h3 {
-  font-size: var(--text-heading);
   margin: 0;
-  font-weight: 500;
+  font-size: var(--text-ui);
+  font-weight: 600;
 }
-@media (max-width: 600px) {
+// The sheet stacks the list over the editor and scrolls both together.
+@media (max-width: 640px) {
   .library-layout {
     grid-template-columns: minmax(0, 1fr);
   }
   .template-list {
-    max-height: 25dvh;
+    border-inline-end: 0;
+    border-bottom: 1px solid var(--line);
   }
   .template-editor {
-    border-left: 0;
-    border-top: 1px solid var(--line);
-    padding: var(--p-space-4) 0 0;
+    position: static;
   }
 }
