@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   ElementRef,
   inject,
@@ -19,6 +20,7 @@ import { ViewMorph } from '../../core/layout/view-morph';
 import { ThemeService } from '../../core/preferences/theme-service';
 import { Autosize } from '../../shared/browser/autosize';
 import { isSubmitKey } from '../../shared/browser/submit-key';
+import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
 import { Card } from '../../shared/ui/card';
 import { Icon } from '../../shared/ui/icon';
 import { InferenceSignal } from '../../shared/ui/inference-signal';
@@ -61,6 +63,7 @@ const SUGGESTIONS = [
 @Component({
   selector: 'div[nxChatComposer]',
   imports: [
+    ActionMenu,
     AttachmentList,
     Autosize,
     Card,
@@ -75,7 +78,7 @@ const SUGGESTIONS = [
     Notice,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrls: ['./chat-column.scss', './chat-composer.scss'],
+  styleUrls: ['./chat-column.scss', './chat-composer.scss', './chat-start.scss'],
   templateUrl: './chat-composer.html',
 })
 export class ChatComposer {
@@ -102,6 +105,41 @@ export class ChatComposer {
   });
   readonly focusComposer = viewChild.required(FocusComposer);
   private readonly textarea = viewChild.required<ElementRef<HTMLTextAreaElement>>('composer');
+  private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
+  private readonly library = viewChild.required(LibraryPicker);
+  private readonly knowledge = viewChild(KnowledgePicker);
+  private readonly toolsAnchor = viewChild.required('toolsMenu', { read: ElementRef });
+  /** The narrow composer's tools menu: the same actions its wide row shows as separate controls. */
+  readonly tools = computed<MenuAction[]>(() => {
+    const store = this.store;
+    const sources = store.knowledge.ids().length;
+    return [
+      { id: 'upload', label: '加入文件或圖片', icon: 'paperclip', disabled: !store.canUpload() },
+      { id: 'library', label: '從檔案庫加入', icon: 'files', disabled: !store.canUpload() },
+      ...(store.hasKnowledgeAccess()
+        ? [
+            {
+              id: 'knowledge',
+              label: sources ? `知識來源（${sources}）` : '知識來源',
+              icon: 'library',
+              disabled:
+                store.busy() || store.loadingConversation() || !!store.selected()?.isArchived,
+            },
+          ]
+        : []),
+      ...(store.webSearchStatus().available
+        ? [
+            {
+              id: 'web',
+              label: '搜尋網路',
+              icon: 'globe',
+              checked: store.webSearchEnabled(),
+              disabled: store.busy(),
+            },
+          ]
+        : []),
+    ];
+  });
 
   constructor() {
     inject(IslandService).register(chatIslandItems());
@@ -169,6 +207,12 @@ export class ChatComposer {
       ...this.themes.preferences(),
       defaultModelId: this.store.modelId() || null,
     });
+  }
+  tool(id: string) {
+    if (id === 'upload') this.fileInput().nativeElement.click();
+    else if (id === 'library') this.library().open();
+    else if (id === 'knowledge') this.knowledge()?.open(this.toolsAnchor().nativeElement);
+    else if (id === 'web') this.store.webSearchEnabled.update((on) => !on);
   }
   uploadChanged(event: Event) {
     const input = event.target as HTMLInputElement;

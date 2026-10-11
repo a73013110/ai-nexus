@@ -18,6 +18,10 @@
   button:focus-visible {
     background: var(--hover);
   }
+  .menu-check {
+    margin-inline-start: auto;
+    color: var(--signal);
+  }
 }
 .menu-heading {
   display: grid;

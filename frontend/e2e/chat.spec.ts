@@ -36,18 +36,19 @@ test("對話開場沿用共用卡片與操作密度，手機及深色保留閱�
     );
     const starters = await suggestions.boundingBox();
     const composer = await page.locator(".composer").boundingBox();
-    expect(starters!.y).toBeGreaterThan(composer!.y + composer!.height);
     const surface = (await page.locator(".chat-surface").boundingBox())!;
     if (viewport.width > 640) {
+      expect(starters!.y).toBeGreaterThan(composer!.y + composer!.height);
       expect(
         Math.abs(
           composer!.y + composer!.height / 2 - (surface.y + surface.height / 2),
         ),
       ).toBeLessThan(surface.height * 0.1);
     } else {
-      // The start screen sits slightly above centre, but keeps the composer off the header.
-      expect(composer!.y + composer!.height / 2).toBeGreaterThan(
-        viewport.height * 0.3,
+      // Phones dock the composer at the bottom with the starters in one row right above it.
+      expect(starters!.y + starters!.height).toBeLessThanOrEqual(composer!.y);
+      expect(composer!.y + composer!.height).toBeGreaterThan(
+        surface.y + surface.height - 120,
       );
     }
     for (const button of await suggestions.locator("button.ui-card").all())
@@ -506,21 +507,28 @@ test("chat search is opt-in and cost/source panels stay accessible without clipp
       page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
     )
     .toBe(true);
+  // Phones keep one control row: web search moves into the tools menu as a checkbox item.
   await expect(
     page.getByRole("button", { name: "搜尋網路", exact: true }),
-  ).toBeVisible();
-  const searchBox = await page
-    .getByRole("button", { name: "搜尋網路", exact: true })
+  ).toBeHidden();
+  const toolsBox = await page
+    .getByRole("button", { name: "加入與工具", exact: true })
     .boundingBox();
   const contextBox = await page.locator(".context-trigger").boundingBox();
-  // Same row: the two triggers differ in size, so compare their centres.
-  expect(
-    Math.abs(
-      searchBox!.y +
-        searchBox!.height / 2 -
-        (contextBox!.y + contextBox!.height / 2),
-    ),
-  ).toBeLessThanOrEqual(1);
+  const sendBox = await page
+    .getByRole("button", { name: "送出訊息", exact: true })
+    .boundingBox();
+  for (const box of [contextBox!, sendBox!])
+    expect(
+      Math.abs(toolsBox!.y + toolsBox!.height / 2 - (box.y + box.height / 2)),
+    ).toBeLessThanOrEqual(1);
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "加入與工具", exact: true }).click();
+  const web = page.getByRole("menuitemcheckbox", {
+    name: "搜尋網路",
+    exact: true,
+  });
+  await expect(web).toHaveAttribute("aria-checked", /true|false/);
   await page.keyboard.press("Escape");
   await page
     .getByRole("button", { name: "本次模型呼叫的費用與用量", exact: true })

@@ -46,3 +46,9 @@
 .error-note {
   color: var(--error);
 }
+// The narrow composer opens the picker from its tools menu instead.
+@container composer (max-width: 36rem) {
+  .knowledge-trigger {
+    display: none;
+  }
+}

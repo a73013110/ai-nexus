@@ -16,6 +16,10 @@
 :host-context(.chat-starting) {
   flex: none;
   margin-block-start: auto;
+  // On phones the composer sits at the bottom, so the greeting centres in the space above it.
+  @media (max-width: 640px) {
+    margin-block-end: auto;
+  }
   .conversation-viewport {
     flex: none;
     overflow: visible;

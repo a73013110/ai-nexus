@@ -10,6 +10,7 @@
 }
 .composer {
   position: relative;
+  container: composer / inline-size;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--composer-radius);
@@ -149,56 +150,46 @@
   font-size: var(--text-caption);
 }
 
-:host-context(.chat-starting) {
-  scrollbar-gutter: auto;
-  margin-block-end: auto;
-  padding-block-start: var(--p-space-1);
-}
-.chat-start-suggestions {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--section-gap);
-  margin-block-start: var(--section-gap);
-}
-.chat-start-suggestions > button {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  text-align: start;
-  min-height: var(--button-target);
-  color: var(--ink);
-  transition:
-    border-color var(--motion),
-    background-color var(--motion);
-}
-.chat-start-suggestions > button:hover {
-  background: var(--surface-subtle);
-  border-color: var(--accent);
-}
-.chat-start-suggestions nx-icon {
+// Below 36rem the row keeps model, effort, Context and send; the rest folds into the tools menu.
+.tools-menu {
+  display: none;
+  position: relative;
   flex: none;
-  width: 1rem;
-  height: 1rem;
-  color: var(--secondary);
+  color: var(--accent);
 }
-.suggestion-copy {
-  min-width: 0;
-  flex: 1;
+.tools-menu.is-active::after {
+  content: '';
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 50%;
+  background: var(--signal);
+  pointer-events: none;
 }
-.suggestion-copy strong {
-  display: block;
-  font-size: var(--text-ui);
-  font-weight: 600;
+@container composer (max-width: 36rem) {
+  .tools-menu {
+    display: block;
+  }
+  .attach-button {
+    display: none;
+  }
+  // Their triggers are hidden; the hosts only carry the dialog and popover, so they take no gap.
+  nx-library-picker,
+  nx-knowledge-picker {
+    display: contents;
+  }
 }
-.suggestion-copy small {
-  display: block;
-  margin-top: var(--p-space-1);
-  color: var(--secondary);
-  font-size: var(--text-caption);
+// Phones have no Enter-to-send shortcut worth teaching; the disclaimer stays.
+@media (pointer: coarse) {
+  .hint-keys {
+    display: none;
+  }
 }
 @media (max-width: 640px) {
-  .chat-start-suggestions {
-    grid-template-columns: 1fr;
-    gap: var(--p-space-2);
+  .composer-hint {
+    justify-content: center;
+    text-align: center;
   }
 }

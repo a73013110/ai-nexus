@@ -35,4 +35,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable both-edges;
+  @media (max-width: 640px) {
+    padding-block-end: 0;
+  }
 }
