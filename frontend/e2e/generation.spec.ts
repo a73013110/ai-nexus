@@ -133,8 +133,9 @@ test("generation follows queue, preparation and content with distinct unobtrusiv
         width: sample.width,
         height: sample.height,
       });
-      const backdrop = page.locator(".workspace-backdrop");
-      if (sample.width < 860 && (await backdrop.isVisible()))
+      // The drawer slides out after a resize, so ask whether it is open rather than painted.
+      const drawer = page.locator(".workspace-sidebar.is-open");
+      if (sample.width < 860 && (await drawer.count()))
         await page
           .getByRole("button", { name: "收合側欄", exact: true })
           .first()
