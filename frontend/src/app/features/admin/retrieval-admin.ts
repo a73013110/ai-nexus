@@ -27,6 +27,7 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { Select } from '../../shared/ui/select';
 import { Checkbox } from '../../shared/ui/checkbox';
 import { JobProgress } from '../tasks/job-progress';
+import { JobToasts } from '../tasks/job-toasts';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { RetrievalResults } from '../knowledge/retrieval-results';
 
@@ -95,6 +96,7 @@ export class RetrievalAdmin {
       this.collectionsRead.error(),
   );
   private readonly toast = inject(ToastService);
+  private readonly jobToasts = inject(JobToasts);
   readonly confirmation = viewChild.required(ConfirmDialog);
   readonly form = new FormGroup({
     query: new FormControl('', {
@@ -141,7 +143,8 @@ export class RetrievalAdmin {
     this.actionError.set('');
     try {
       if (action === 'clear') await this.api.clearProfileVectors(profile.id);
-      else if (action === 'rebuild') await this.api.rebuildProfile(profile.id);
+      else if (action === 'rebuild')
+        this.jobToasts.track(await this.api.rebuildProfile(profile.id));
       else await this.api.activateProfile(profile.id);
       if (!guard()) return;
       if (action === 'rebuild') this.toast.success('重建工作已排入佇列', '可從進度查看結果。');

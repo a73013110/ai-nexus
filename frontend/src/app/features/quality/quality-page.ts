@@ -43,6 +43,7 @@ import { MarkdownView } from '../../shared/markdown/markdown-view';
 import { JobProgress } from '../tasks/job-progress';
 import { ResourceSharing } from '../sharing/resource-sharing';
 import { JobsApi } from '../tasks/jobs-api';
+import { JobToasts } from '../tasks/job-toasts';
 import { QualityApi } from './quality-api';
 import { SearchField } from '../../shared/ui/search-field';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
@@ -87,6 +88,7 @@ export class QualityPage {
   private readonly api = inject(QualityApi);
   private readonly nexus = inject(NexusApi);
   private readonly jobs = inject(JobsApi);
+  private readonly jobToasts = inject(JobToasts);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly scope = inject(ViewScope);
@@ -409,6 +411,7 @@ export class QualityPage {
         this.toast.success('題庫已儲存');
       } else if (this.form() === 'run' && current) {
         const run = await this.api.run(current.resource.id, this.variants());
+        this.jobToasts.track(run.job);
         if (!valid()) return;
         this.dialog().nativeElement.close();
         this.runsRead.value.update((x) => x && { ...x, rows: [run, ...x.rows] });
@@ -451,7 +454,8 @@ export class QualityPage {
     if (!detail?.run.canControl || this.busy()) return;
     this.busy.set(true);
     try {
-      await (retry ? this.jobs.retry(detail.run.job.id) : this.jobs.cancel(detail.run.job.id));
+      if (retry) this.jobToasts.track(await this.jobs.retry(detail.run.job.id));
+      else await this.jobs.cancel(detail.run.job.id);
       if (valid()) this.selectRun(detail.run.id);
     } catch (e) {
       if (valid()) this.actionError.set(this.scope.message(e));

@@ -17,6 +17,7 @@ import type { DocumentDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { KnowledgeApi } from './knowledge-api';
+import { JobToasts } from '../tasks/job-toasts';
 
 @Component({
   selector: 'nx-text-source-editor',
@@ -92,6 +93,7 @@ import { KnowledgeApi } from './knowledge-api';
 })
 export class TextSourceEditor {
   private readonly api = inject(KnowledgeApi);
+  private readonly jobToasts = inject(JobToasts);
   private readonly scope = inject(ViewScope);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly confirm = viewChild.required(ConfirmDialog);
@@ -161,6 +163,7 @@ export class TextSourceEditor {
       const result = editing.documentId
         ? await this.api.updateText(editing.documentId, this.title(), this.text(), source!.version)
         : await this.api.createText(editing.collection, this.title(), this.text());
+      this.jobToasts.trackDocument(result);
       if (current()) {
         this.dialog().nativeElement.close();
         this.saved.emit(result);

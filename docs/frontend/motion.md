@@ -28,6 +28,7 @@
 - 同一 `id` 再次顯示會原地更新並重新計時（例：上傳中→已上傳）；進行中的 toast 設 `duration: 0`，失敗或中止時 `dismiss`。
 - 關閉：關閉鈕、Esc（焦點移到下一則或回到原處）、向右滑超過 64px。帶動作的 toast 預設 8 秒。
 - 圖層是 manual popover；modal 開著時新 toast 會重新進入 top layer，所以顯示在對話框之上（但受 modal inert，無法點）。
+- 背景任務結束的 toast 是例外的失敗回饋：失敗仍留在任務頁與通知匣，規則見[本分頁的任務 toast](../features/notifications.md#本分頁的任務-toast)。
 - 螢幕閱讀器只聽兩個常駐 live region（polite／danger 用 assertive），不重複朗讀卡片；換帳號時清空。
 
 ## 對話框

@@ -27,6 +27,7 @@ import { TextHighlight } from '../../shared/ui/text-highlight';
 import { JobProgress } from '../tasks/job-progress';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { JobsApi } from '../tasks/jobs-api';
+import { JobToasts } from '../tasks/job-toasts';
 import { KnowledgeApi } from './knowledge-api';
 import type { ReaderTarget } from '../../shared/browser/reader-overlay';
 import { SharingApi } from '../sharing/sharing-api';
@@ -44,6 +45,7 @@ export class DocumentViewer {
   private readonly api = inject(KnowledgeApi);
   private readonly shares = inject(SharingApi);
   private readonly jobs = inject(JobsApi);
+  private readonly jobToasts = inject(JobToasts);
   private readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
   private readonly uploads = inject(WorkspaceApi);
@@ -314,6 +316,7 @@ export class DocumentViewer {
   private async refresh(id: string, valid: () => boolean) {
     try {
       const info = await this.api.document(id);
+      this.jobToasts.observeDocument(info);
       if (!valid()) return;
       this.document.set(info);
       const pages = await this.api.pages(id);
@@ -411,6 +414,7 @@ export class DocumentViewer {
     this.error.set('');
     try {
       const value = await (retry ? this.jobs.retry(job.id) : this.jobs.cancel(job.id));
+      if (retry) this.jobToasts.track(value);
       if (valid() && this.document()?.id === id) {
         this.job.set(value);
         await this.refresh(id!, valid);

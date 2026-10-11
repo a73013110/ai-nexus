@@ -27,6 +27,7 @@ import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { formatDate, formatModelDisplayName } from '../../shared/browser/format';
 import { JobProgress } from '../tasks/job-progress';
+import { JobToasts } from '../tasks/job-toasts';
 import { MarkdownView } from '../../shared/markdown/markdown-view';
 import { Select } from '../../shared/ui/select';
 import { ResourceTarget } from '../../shared/ui/resource-target';
@@ -65,6 +66,7 @@ export class RepositoryReviewPanel {
   private readonly nexus = inject(NexusApi);
   private readonly scope = inject(ViewScope);
   private readonly router = inject(Router);
+  private readonly jobToasts = inject(JobToasts);
   readonly session = inject(WorkspaceSession);
   private readonly modelsRead = apiResource({
     feature: 'repositories',
@@ -273,6 +275,7 @@ export class RepositoryReviewPanel {
     this.actionError.set('');
     try {
       const review = await this.api.createReview({ ...request, idempotencyKey: this.requestKey });
+      this.jobToasts.track(review.job);
       if (!valid() || repository !== this.repository()) return;
       this.requestSignature = '';
       this.historyRead.value.update(
@@ -297,7 +300,8 @@ export class RepositoryReviewPanel {
     this.busy.set(true);
     this.actionError.set('');
     try {
-      await this.api.reviewJob(id, retry);
+      const job = await this.api.reviewJob(id, retry);
+      if (retry) this.jobToasts.track(job);
       if (valid()) this.choose(id);
     } catch (e) {
       if (valid()) this.actionError.set(this.scope.message(e));

@@ -12,6 +12,7 @@ import {
   Component,
   ElementRef,
   computed,
+  effect,
   inject,
   signal,
   viewChild,
@@ -38,6 +39,7 @@ import { LibraryPicker } from '../files/library-picker';
 import { TextSourceEditor } from './text-source-editor';
 import { ReaderLink } from '../../shared/browser/reader-link';
 import { RetrievalResults } from './retrieval-results';
+import { JobToasts } from '../tasks/job-toasts';
 
 @Component({
   selector: 'nx-knowledge-page',
@@ -110,6 +112,7 @@ export class KnowledgePage {
       this.documentsRead.error(),
   );
   readonly toast = inject(ToastService);
+  private readonly jobToasts = inject(JobToasts);
   readonly uploading = signal(false);
   readonly uploadLabel = signal('');
   readonly filter = signal('');
@@ -158,6 +161,9 @@ export class KnowledgePage {
       disabled: !this.current()?.resource.isOwner,
     },
   ]);
+  constructor() {
+    effect(() => this.documents().forEach((x) => this.jobToasts.observeDocument(x)));
+  }
   /** Read the collections and the selected collection's documents again. */
   load() {
     this.actionError.set('');
@@ -177,7 +183,7 @@ export class KnowledgePage {
     this.uploading.set(true);
     this.actionError.set('');
     try {
-      await this.api.add(collection, file.file.id);
+      this.jobToasts.trackDocument(await this.api.add(collection, file.file.id));
       if (valid()) {
         this.toast.success('已從檔案庫加入來源，索引會在背景建立');
         this.load();
@@ -260,7 +266,7 @@ export class KnowledgePage {
         this.uploadLabel.set(`正在上傳 ${file.name}`);
         const uploaded = await this.uploads.upload(file, controller.signal);
         if (!valid()) return;
-        await this.api.add(collection, uploaded.id);
+        this.jobToasts.trackDocument(await this.api.add(collection, uploaded.id));
         if (valid() && this.selected() === collection) this.documentsRead.reload();
       }
       if (valid()) {
@@ -319,7 +325,7 @@ export class KnowledgePage {
     const valid = this.scope.guard();
     this.actionError.set('');
     try {
-      await this.api.reindex(document.id);
+      this.jobToasts.trackDocument(await this.api.reindex(document.id));
       if (valid()) {
         this.toast.success('已安排重新索引，既有完成頁面會沿用');
         this.documentsRead.reload();
