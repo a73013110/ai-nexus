@@ -3,7 +3,14 @@ import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
 import { FilterPanel } from '../../shared/ui/filter-panel';
 import { ViewSwitch } from '../../shared/ui/view-switch';
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
@@ -15,6 +22,8 @@ import { Icon } from '../../shared/ui/icon';
 import { JobProgress } from './job-progress';
 import { ResourceTarget } from '../../shared/ui/resource-target';
 import { JobsApi } from './jobs-api';
+import { jobKindName } from './job-kind';
+import { JobToasts } from './job-toasts';
 import { apiResource } from '../../core/api/api-resource';
 
 @Component({
@@ -128,6 +137,7 @@ export class TasksPage {
   readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
   private readonly api = inject(JobsApi);
+  private readonly jobToasts = inject(JobToasts);
   readonly target = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('job') || '');
   /** Jobs are re-read every few seconds; a linked job outside the recent list is added to it. */
   readonly jobs = apiResource({
@@ -163,6 +173,7 @@ export class TasksPage {
     ),
   );
   constructor() {
+    effect(() => this.jobs.value()?.forEach((job) => this.jobToasts.observe(job)));
     inject(ActivatedRoute)
       .queryParamMap.pipe(takeUntilDestroyed())
       .subscribe((params) => {
@@ -179,6 +190,7 @@ export class TasksPage {
     this.actionError.set('');
     try {
       const value = await (retry ? this.api.retry(job.id) : this.api.cancel(job.id));
+      if (retry) this.jobToasts.track(value);
       if (valid())
         this.jobs.value.update((items) => items?.map((x) => (x.id === value.id ? value : x)));
     } catch (error) {
@@ -187,20 +199,6 @@ export class TasksPage {
       if (valid()) this.busy.set(null);
     }
   }
-  kind(value: string) {
-    return (
-      (
-        {
-          'document-ingest': '文件辨識與索引',
-          'document-embedding': '文件批次向量化',
-          'embedding-reindex': '檢索索引重建',
-          'retrieval-eval': '檢索品質評測',
-          evaluation: '品質評測',
-          'repository-review': '程式碼 Review',
-          'integration-import': '資料來源匯入',
-        } as Record<string, string>
-      )[value] || '背景處理'
-    );
-  }
+  readonly kind = jobKindName;
   readonly date = formatDate;
 }

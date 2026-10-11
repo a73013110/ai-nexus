@@ -30,6 +30,7 @@ import { Select } from '../../shared/ui/select';
 import { JobProgress } from '../tasks/job-progress';
 import { KnowledgeApi } from '../knowledge/knowledge-api';
 import { JobsApi } from '../tasks/jobs-api';
+import { JobToasts } from '../tasks/job-toasts';
 
 @Component({
   selector: 'nx-retrieval-evaluation',
@@ -44,6 +45,7 @@ export class RetrievalEvaluation {
   private readonly api = inject(QualityApi);
   private readonly knowledge = inject(KnowledgeApi);
   private readonly jobs = inject(JobsApi);
+  private readonly jobToasts = inject(JobToasts);
   private readonly scope = inject(ViewScope);
   readonly session = inject(WorkspaceSession);
   private readonly collectionsRead = apiResource({
@@ -151,6 +153,7 @@ export class RetrievalEvaluation {
         collectionIds: this.selected(),
         cases,
       });
+      this.jobToasts.track(run.job);
       if (!valid()) return;
       this.runsRead.value.update((runs) => [run, ...(runs ?? [])]);
       this.select(run.id);
@@ -188,7 +191,7 @@ export class RetrievalEvaluation {
     this.actionError.set('');
     try {
       if (action === 'cancel') await this.jobs.cancel(report.run.job.id);
-      else await this.jobs.retry(report.run.job.id);
+      else this.jobToasts.track(await this.jobs.retry(report.run.job.id));
       if (valid()) this.select(report.run.id);
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));

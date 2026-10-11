@@ -55,6 +55,8 @@ export class KnowledgeFixture {
     displayName: "林同事",
   };
   sourceQueries = 0;
+  /** New sources wait in a queued ingest job instead of being searchable at once. */
+  queueUploads = false;
   seed() {
     const collection = this.collection("公司作業規範");
     const id = randomUUID(),
@@ -177,15 +179,33 @@ export class KnowledgeFixture {
             collectionId: list[1],
             fileName: file.fileName,
             contentType: file.contentType,
-            status: "ready",
+            status: this.queueUploads ? "queued" : "ready",
             pageCount: 1,
             chunkCount: 1,
             warning: null,
-            jobId: null,
+            jobId: this.queueUploads ? randomUUID() : null,
             canEdit: true,
             hasOriginal: true,
           };
           this.documents.push(document);
+          if (document.jobId)
+            this.jobs.push({
+              id: document.jobId,
+              subjectId: document.id,
+              kind: "document-ingest",
+              label: document.fileName,
+              status: "queued",
+              stage: "等待處理",
+              completedUnits: 0,
+              totalUnits: null,
+              attempt: 0,
+              cancelRequested: false,
+              errorCode: null,
+              errorMessage: null,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              issueCode: null,
+            });
           this.documentFiles.set(document.id, file.id);
           this.core.retainedFiles.add(file.id);
           const collection = this.collections.find(
@@ -353,6 +373,7 @@ export class KnowledgeFixture {
         if (job[2] === "cancel") value.cancelRequested = true;
         else {
           value.status = "queued";
+          value.updatedAt = new Date().toISOString();
           value.errorCode = null;
           value.errorMessage = null;
           value.stage = "等待處理";
