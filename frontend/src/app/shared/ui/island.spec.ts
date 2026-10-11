@@ -35,7 +35,11 @@ describe('NexusIsland', () => {
   it('orders notices by priority and drops them with their source', () => {
     const { fixture, host } = setup();
     host.items.set([item('low', 1), item('high', 9)]);
-    expect(TestBed.inject(IslandService).items().map((x) => x.id)).toEqual(['high', 'low']);
+    expect(
+      TestBed.inject(IslandService)
+        .items()
+        .map((x) => x.id),
+    ).toEqual(['high', 'low']);
     fixture.destroy();
     expect(TestBed.inject(IslandService).items()).toEqual([]);
   });

@@ -52,9 +52,8 @@ export type IslandMode = 'hidden' | 'compact' | 'split' | 'expanded';
                   [attr.data-tone]="item.tone"
                   [attr.role]="item.tone === 'danger' ? 'alert' : 'status'"
                 >
-                  <ng-container
-                    *ngTemplateOutlet="glyph; context: { $implicit: item }"
-                  /><span class="island-message"
+                  <ng-container *ngTemplateOutlet="glyph; context: { $implicit: item }" /><span
+                    class="island-message"
                     >{{ item.message || item.label }}
                     @if (item.link; as link) {
                       <a [routerLink]="link.commands">{{ link.label }}</a>
@@ -158,8 +157,7 @@ export class NexusIsland {
     // Read even when empty, so notices that left are forgotten before they can return.
     const seen = this.seen();
     if (!items.length) return 'hidden';
-    if (this.opened() || items.some((item) => item.urgent && !seen.has(item.id)))
-      return 'expanded';
+    if (this.opened() || items.some((item) => item.urgent && !seen.has(item.id))) return 'expanded';
     return items.length > 1 ? 'split' : 'compact';
   });
   readonly size = signal<{ width: number; height: number } | null>(null);

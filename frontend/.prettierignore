@@ -1,2 +1,6 @@
 # 由 openapi-typescript 產生（npm run contracts），保持產生器原樣以通過 contracts:check
 src/app/core/api/schema.ts
+# 工具輸出
+.angular/
+dist/
+coverage/

@@ -83,7 +83,8 @@ export class DesignSection {
   selector: 'nx-design-example',
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'design-example' },
-  template: `<span class="design-example-label">{{ label() }}</span><ng-content />`,
+  template: `<span class="design-example-label">{{ label() }}</span
+    ><ng-content />`,
   styles: `
     :host {
       display: inline-flex;

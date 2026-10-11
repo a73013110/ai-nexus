@@ -35,6 +35,7 @@ dotnet build backend/AiNexus.slnx         # 0 warning（warning 即錯誤）
 dotnet test --solution backend/AiNexus.slnx --no-build --filter "FullyQualifiedName~<Module>"
 dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host
 ./scripts/Export-Contracts.ps1 -BaseUrl https://localhost:5080   # API 有變動時重產 openapi.json 與 schema.ts
+npm --prefix frontend run format          # 前端改完先排版；Verify 會以 format:check 擋下
 ```
 
 GitHub Actions 只能手動觸發，驗證在本機完成。

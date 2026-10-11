@@ -106,9 +106,7 @@ test("project settings, shared templates and private conversations work directly
     ),
   ).toBe(true);
   await page.getByRole("button", { name: "封存", exact: true }).click();
-  await expect(
-    toasts(page).filter({ hasText: "專案已封存" }),
-  ).toBeVisible();
+  await expect(toasts(page).filter({ hasText: "專案已封存" })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "開始對話", exact: true }),
   ).toBeDisabled();

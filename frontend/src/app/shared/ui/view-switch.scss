@@ -25,7 +25,10 @@
   background: var(--accent);
   opacity: 0;
   pointer-events: none;
-  transform: translate(var(--indicator-x, 0), calc(var(--indicator-y, 0px) + var(--indicator-h, 0px) - 2px));
+  transform: translate(
+    var(--indicator-x, 0),
+    calc(var(--indicator-y, 0px) + var(--indicator-h, 0px) - 2px)
+  );
 }
 :host([data-indicator])::before {
   opacity: 1;
