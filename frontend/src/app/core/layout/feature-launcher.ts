@@ -9,9 +9,8 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Icon } from '../../shared/ui/icon';
-import { ViewSwitch } from '../../shared/ui/view-switch';
 import { FEATURE_ICONS, groupFeatures } from './feature-groups';
-import { PIN_LIMIT, NavigationPreferences } from './navigation-preferences';
+import { PIN_LIMIT, NavigationPreferences, type NavigationDisplay } from './navigation-preferences';
 import { WorkspaceCommands } from './workspace-commands';
 
 /**
@@ -21,7 +20,7 @@ import { WorkspaceCommands } from './workspace-commands';
  */
 @Component({
   selector: 'nx-feature-launcher',
-  imports: [RouterLink, Icon, ViewSwitch],
+  imports: [RouterLink, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './feature-launcher.scss',
   template: `<div class="launcher-tools">
@@ -33,13 +32,16 @@ import { WorkspaceCommands } from './workspace-commands';
       >
         <nx-icon [name]="editing() ? 'check' : 'pin'" />{{ editing() ? '完成' : '自訂釘選' }}
       </button>
-      <nx-view-switch
-        label="功能顯示方式"
-        [iconOnly]="true"
-        [options]="displays"
-        [value]="pins.display()"
-        (valueChange)="pins.setDisplay($any($event))"
-      />
+      <button
+        type="button"
+        class="icon-button display-toggle"
+        [attr.data-display]="pins.display()"
+        [attr.aria-label]="nextDisplay().label"
+        [attr.title]="nextDisplay().label"
+        (click)="pins.setDisplay(nextDisplay().value)"
+      >
+        <nx-icon name="apps" /><nx-icon name="list" />
+      </button>
       <button
         type="button"
         class="icon-button"
@@ -105,10 +107,15 @@ export class FeatureLauncher {
   readonly activated = output<void>();
   readonly editing = signal(false);
   readonly limit = PIN_LIMIT;
-  readonly displays = [
-    { value: 'icons', label: '圖示顯示', icon: 'apps' },
-    { value: 'list', label: '條列顯示', icon: 'list' },
-  ];
+  /**
+   * One button flips between the two displays, so the toolbar keeps a single cell. It shows the
+   * display it switches to, the convention of a toggle whose two states are both views.
+   */
+  readonly nextDisplay = computed<{ value: NavigationDisplay; label: string }>(() =>
+    this.pins.display() === 'icons'
+      ? { value: 'list', label: '切換為條列顯示' }
+      : { value: 'icons', label: '切換為圖示顯示' },
+  );
   readonly icons = FEATURE_ICONS;
   readonly groups = computed(() => groupFeatures(this.pins.features()));
 }
