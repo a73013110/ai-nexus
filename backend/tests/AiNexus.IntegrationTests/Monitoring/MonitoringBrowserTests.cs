@@ -28,8 +28,9 @@ public sealed class MonitoringBrowserTests
         await page.GetByRole(AriaRole.Textbox, new() { Name = "傳送訊息" }).FillAsync("即時營運監控的受控驗收");
         await page.GetByRole(AriaRole.Button, new() { Name = "送出訊息", Exact = true }).ClickAsync();
         await Expect(page.Locator("article[aria-label='AI 回覆'][aria-busy='false']").First).ToBeVisibleAsync();
-        await page.Locator(".workspace-disclosure").ClickAsync();
-        await page.GetByRole(AriaRole.Link, new() { Name = "即時監控", Exact = true }).ClickAsync();
+        var tools = page.GetByRole(AriaRole.Navigation, new() { Name = "工作區功能", Exact = true });
+        await tools.GetByRole(AriaRole.Button, new() { Name = "全部功能", Exact = true }).ClickAsync();
+        await tools.GetByRole(AriaRole.Link, new() { Name = "即時監控", Exact = true }).ClickAsync();
         await Expect(page.GetByText("即時連線", new() { Exact = true })).ToBeVisibleAsync();
         await Expect(page.Locator(".monitor-table")).ToContainTextAsync("alice");
         await Expect(page.Locator(".activity-list")).ToContainTextAsync("執行對話", new() { Timeout = 15000 });

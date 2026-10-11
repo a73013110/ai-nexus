@@ -43,7 +43,8 @@ $verification = 'artifacts/verification'
 $results = 'artifacts/test-results'
 
 function Invoke-BackendTests([string]$Filter, [string]$Report) {
-    dotnet test --solution backend/AiNexus.slnx --no-build -c Release --filter $Filter --report-xunit-trx --report-xunit-trx-filename $Report --results-directory $results
+    # 分類篩選時，沒有該分類的測試專案會以「零項測試」（結束代碼 8）結束，這不算失敗。
+    dotnet test --solution backend/AiNexus.slnx --no-build -c Release --filter $Filter --report-xunit-trx --report-xunit-trx-filename $Report --results-directory $results --ignore-exit-code 8
     if ($LASTEXITCODE -ne 0) { throw "後端測試失敗：$Filter" }
 }
 
