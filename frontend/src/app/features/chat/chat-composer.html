@@ -1,38 +1,5 @@
 <div class="composer-container chat-column">
-  @if (store.webSearchEnabled()) {
-    <nx-notice icon="globe" tone="info"
-      >會將這次提問送往搜尋服務；附件與歷史對話不會送出。
-    </nx-notice>
-  }
-  @if (store.modelNotice(); as notice) {
-    <nx-notice icon="info" tone="info" [message]="notice" />
-  }
-  @if (store.liveRun(); as run) {
-    @if (run.conversationId !== store.selected()?.id) {
-      <nx-notice tone="info">
-        另有對話正在生成。<a [routerLink]="['/chat', run.conversationId]">回到該對話</a>
-      </nx-notice>
-    }
-  }
-  @if (store.selected()?.isArchived) {
-    <nx-notice icon="archive" tone="info"
-      ><span>這段對話已封存，還原後即可繼續。</span
-      ><button notice-actions type="button" (click)="restoreArchived()">還原對話</button>
-    </nx-notice>
-  }
-  @if (store.editing()) {
-    <nx-notice icon="edit" tone="info"
-      ><span>編輯提問 · 送出後建立新分支，原始內容保留</span
-      ><button
-        notice-actions
-        class="icon-button"
-        aria-label="取消編輯"
-        (click)="store.cancelEdit()"
-      >
-        <nx-icon name="close" />
-      </button>
-    </nx-notice>
-  }
+  <nx-island />
   <form
     class="composer"
     [class.is-busy]="store.busy()"
@@ -161,23 +128,6 @@
       }
     </div>
   </form>
-  @if (store.attachments.error()) {
-    <nx-notice [message]="store.attachments.error()" />
-  }
-  @if (store.visionNotice()) {
-    <nx-notice tone="warning" [message]="store.visionNotice()" />
-  }
-  @if (store.contextUsage()?.budgetExceeded) {
-    <nx-notice tone="warning"> 本次提問與附件超出 Context 預算，請縮短內容或減少附件。 </nx-notice>
-  }
-  @if (store.draft().text.length > store.policy().maxInputCharacters) {
-    <nx-notice tone="warning">
-      訊息超過系統允許的 {{ store.policy().maxInputCharacters }} 個字元，請拆分內容。
-    </nx-notice>
-  }
-  @if (store.contextNotice(); as notice) {
-    <nx-notice tone="warning" [message]="notice" />
-  }
   <div class="composer-hint" id="composer-hint">
     <span>
       @if (store.draft().text.trim() && !store.editing()) {

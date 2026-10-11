@@ -11,6 +11,7 @@ import {
 import { FormField, form, maxLength } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import type { ConversationDto } from '../../core/api/schema';
+import { ViewMorph } from '../../core/layout/view-morph';
 import { currentDay } from '../../shared/browser/calendar-day';
 import { Icon } from '../../shared/ui/icon';
 import { MenuPanel } from '../../shared/ui/menu-panel';
@@ -37,6 +38,7 @@ export class ChatSidebar {
   readonly store = inject(ChatStore);
   readonly conversations = inject(ChatConversations);
   readonly notifications = inject(NotificationStore);
+  private readonly morph = inject(ViewMorph);
   readonly action = output<{ conversation: ConversationDto; action: ConversationAction }>();
   readonly navigate = output<void>();
   readonly prompts = output<void>();
@@ -72,6 +74,12 @@ export class ChatSidebar {
     inject(DestroyRef).onDestroy(() => {
       if (this.searchTimer) clearTimeout(this.searchTimer);
     });
+  }
+  /** A plain click morphs the row title into the topbar once the conversation loads. */
+  open(event: MouseEvent, title: HTMLElement) {
+    this.navigate.emit();
+    if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0)
+      this.morph.arm('conversation-title', title);
   }
   searchChanged() {
     if (this.searchTimer) clearTimeout(this.searchTimer);

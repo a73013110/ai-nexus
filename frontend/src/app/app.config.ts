@@ -9,6 +9,7 @@ import {
 import { ClientIssues } from './core/errors/client-issues';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
+import { withNexusViewTransitions } from './core/layout/view-morph';
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -26,6 +27,6 @@ export const appConfig: ApplicationConfig = {
       });
     }),
     provideZonelessChangeDetection(),
-    provideRouter(routes),
+    provideRouter(routes, withNexusViewTransitions()),
   ],
 };

@@ -183,6 +183,19 @@
               重試
             </button>
           </nx-notice>
+          <p class="form-note">靈動島：一則是 pill、多則分出泡泡，緊急提示會自動展開。</p>
+          <nx-island />
+          <div class="design-actions">
+            <button type="button" class="secondary-button" (click)="toggleIsland('live')">
+              生成狀態
+            </button>
+            <button type="button" class="secondary-button" (click)="toggleIsland('info')">
+              一般提示
+            </button>
+            <button type="button" class="secondary-button" (click)="toggleIsland('warning')">
+              緊急警告
+            </button>
+          </div>
         </section>
         <section nxCard aria-labelledby="design-badges-title">
           <span class="panel-eyebrow">數量與提醒</span>

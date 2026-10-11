@@ -1,0 +1,157 @@
+// The capsule sits on a dark theme zone in both themes, like a status island above the composer.
+:host {
+  --island-height: 2.5rem;
+  --island-radius: 1.25rem;
+  --button-target: 2rem;
+  container-type: inline-size;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--p-space-2);
+  font-size: var(--p-font-data);
+  line-height: var(--line-ui);
+}
+:host([data-mode='hidden']) {
+  display: none;
+}
+:host(:not([data-mode='hidden'])) {
+  margin-block: var(--p-space-1) var(--p-space-2);
+}
+.island,
+.island-bubble {
+  min-height: var(--island-height);
+  border: 1px solid var(--line);
+  border-radius: var(--island-radius);
+  background: var(--sidebar);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+.island {
+  box-sizing: content-box;
+  max-width: calc(100% - 2px);
+  overflow: clip;
+  transition:
+    width var(--motion-morph) var(--ease-spring),
+    height var(--motion-morph) var(--ease-spring);
+}
+.island-content {
+  width: max-content;
+  max-width: calc(100cqw - 2px);
+}
+[data-tone='info'] {
+  --tone: var(--ink);
+}
+[data-tone='live'] {
+  --tone: var(--signal);
+}
+[data-tone='warning'] {
+  --tone: var(--warning);
+}
+[data-tone='danger'] {
+  --tone: var(--error);
+}
+.island-glyph {
+  --icon-size: 1rem;
+  flex: none;
+  color: var(--tone);
+}
+.island-pill {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--island-height);
+  padding-inline: var(--p-space-4);
+  border-radius: inherit;
+  color: inherit;
+  white-space: nowrap;
+}
+.island-pill:hover {
+  background: var(--hover);
+}
+.island-label {
+  color: var(--tone);
+  font-weight: 600;
+}
+.island-content:has(.island-list) {
+  display: flex;
+  align-items: flex-start;
+  width: calc(100cqw - 2px);
+}
+.island-list {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: var(--p-space-1) 0 var(--p-space-1) var(--p-space-4);
+  list-style: none;
+}
+.island-item {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--button-target);
+  padding-block: var(--p-space-1);
+  overflow-wrap: anywhere;
+}
+.island-item + .island-item {
+  border-top: 1px solid var(--line);
+}
+.island-message {
+  flex: 1;
+  min-width: 0;
+  color: var(--tone);
+}
+.island-message a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.island-action {
+  flex: none;
+  min-height: var(--button-target);
+  padding-inline: var(--p-space-3);
+  border-radius: var(--p-radius-pill);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+}
+.island-action:hover:not(:disabled) {
+  background: var(--hover);
+}
+.island-collapse {
+  margin: calc((var(--island-height) - var(--button-target)) / 2);
+  border-radius: 50%;
+}
+.island-bubble {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--p-space-1);
+  min-width: var(--island-height);
+  padding-inline: var(--p-space-2);
+  color: var(--tone);
+}
+.island-bubble nx-icon {
+  --icon-size: 1rem;
+}
+.island-count {
+  color: var(--ink);
+  font-weight: 600;
+}
+.island-enter {
+  animation: island-arrive var(--motion-morph) var(--ease-spring);
+}
+.island-leave {
+  animation: island-depart var(--motion) var(--ease-exit) forwards;
+}
+.island-swap {
+  animation: content-arrive var(--motion) var(--ease);
+}
+.island-bubble-enter {
+  animation: bubble-arrive var(--motion-morph) var(--ease-spring);
+}
+@media (pointer: coarse) {
+  :host {
+    --island-height: 2.75rem;
+    --island-radius: 1.375rem;
+    --button-target: 2.75rem;
+  }
+}

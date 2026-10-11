@@ -38,6 +38,8 @@ import { CodeBlock } from '../../shared/markdown/code-block';
 import { DateTimePicker } from '../../shared/ui/date-time-picker';
 import { FilterPanel } from '../../shared/ui/filter-panel';
 import { ViewSwitch } from '../../shared/ui/view-switch';
+import { NexusIsland } from '../../shared/ui/island';
+import { IslandService, type IslandItem } from '../../shared/ui/island-service';
 
 const sampleTitle = '把想法，整理成可用的成果';
 const jobStates: SelectOption[] = [
@@ -54,6 +56,7 @@ const jobStates: SelectOption[] = [
   styleUrl: './design-page.scss',
   imports: [
     Notice,
+    NexusIsland,
     Card,
     RouterLink,
     FeaturePage,
@@ -101,6 +104,39 @@ export class DesignPage {
   readonly checked = signal(true);
   readonly search = signal('');
   readonly notice = signal('');
+  /** Local island samples; the island shows whatever is registered while this page is open. */
+  readonly islandItems = signal<IslandItem[]>([]);
+  readonly islandSamples: Record<'live' | 'warning' | 'info', IslandItem> = {
+    live: { id: 'live', priority: 50, tone: 'live', icon: 'activity', label: '正在生成回答' },
+    warning: {
+      id: 'warning',
+      priority: 80,
+      tone: 'warning',
+      icon: 'info',
+      label: '超出 Context 預算',
+      message: '本次提問與附件超出 Context 預算，請縮短內容或減少附件。',
+      urgent: true,
+    },
+    info: {
+      id: 'info',
+      priority: 10,
+      tone: 'info',
+      icon: 'globe',
+      label: '網路搜尋',
+      message: '會將這次提問送往搜尋服務；附件與歷史對話不會送出。',
+      action: { label: '關閉', run: () => this.toggleIsland('info') },
+    },
+  };
+  constructor() {
+    inject(IslandService).register(this.islandItems);
+  }
+  toggleIsland(kind: 'live' | 'warning' | 'info') {
+    this.islandItems.update((items) =>
+      items.some((item) => item.id === kind)
+        ? items.filter((item) => item.id !== kind)
+        : [...items, this.islandSamples[kind]],
+    );
+  }
   readonly states = jobStates;
   readonly dataTab = signal('overview');
   readonly calendarDate = signal('2026-10-08T14:30:45');

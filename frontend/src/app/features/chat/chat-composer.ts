@@ -15,18 +15,20 @@ import {
   readonly as readonlyField,
   required,
 } from '@angular/forms/signals';
-import { RouterLink } from '@angular/router';
+import { ViewMorph } from '../../core/layout/view-morph';
 import { ThemeService } from '../../core/preferences/theme-service';
 import { Autosize } from '../../shared/browser/autosize';
 import { isSubmitKey } from '../../shared/browser/submit-key';
 import { Card } from '../../shared/ui/card';
 import { Icon } from '../../shared/ui/icon';
 import { InferenceSignal } from '../../shared/ui/inference-signal';
+import { NexusIsland } from '../../shared/ui/island';
+import { IslandService } from '../../shared/ui/island-service';
 import { Notice } from '../../shared/ui/notice';
 import { AttachmentList } from '../attachments/attachment-list';
 import { LibraryPicker } from '../files/library-picker';
 import { KnowledgePicker } from '../knowledge/knowledge-picker';
-import { ChatConversations } from './chat-conversations';
+import { chatIslandItems } from './chat-island';
 import { ChatStore } from './chat-store';
 import { ComposerControls } from './composer-controls';
 import { FocusComposer } from './focus-composer';
@@ -53,7 +55,7 @@ const SUGGESTIONS = [
 ];
 
 /**
- * The prompt box with its attachments, model controls and notices. It also keeps the Context
+ * The prompt box with its attachments, model controls and the island of composer notices. It also keeps the Context
  * estimate current while the person types.
  */
 @Component({
@@ -69,8 +71,8 @@ const SUGGESTIONS = [
     InferenceSignal,
     KnowledgePicker,
     LibraryPicker,
+    NexusIsland,
     Notice,
-    RouterLink,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./chat-column.scss', './chat-composer.scss'],
@@ -78,8 +80,8 @@ const SUGGESTIONS = [
 })
 export class ChatComposer {
   readonly store = inject(ChatStore);
-  readonly conversations = inject(ChatConversations);
   private readonly themes = inject(ThemeService);
+  private readonly morph = inject(ViewMorph);
   /** A prompt was handed to the store, so the thread can follow its answer. */
   readonly sent = output<void>();
   readonly suggestions = SUGGESTIONS;
@@ -102,6 +104,7 @@ export class ChatComposer {
   private readonly textarea = viewChild.required<ElementRef<HTMLTextAreaElement>>('composer');
 
   constructor() {
+    inject(IslandService).register(chatIslandItems());
     effect((onCleanup) => {
       const ready = this.store.ready(),
         modelId = this.store.modelId(),
@@ -152,8 +155,13 @@ export class ChatComposer {
   submit(event?: Event) {
     event?.preventDefault();
     if (!this.store.canSend() || this.promptForm.text().invalid()) return;
-    this.sent.emit();
-    void this.store.send();
+    const send = () => {
+      this.sent.emit();
+      void this.store.send();
+    };
+    // The first prompt moves the composer from the centred start screen to the bottom.
+    if (this.store.starting()) void this.morph.run(send);
+    else send();
   }
   selectModel(id: string) {
     this.store.chooseModel(id);
@@ -161,10 +169,6 @@ export class ChatComposer {
       ...this.themes.preferences(),
       defaultModelId: this.store.modelId() || null,
     });
-  }
-  restoreArchived() {
-    const conversation = this.store.selected();
-    if (conversation) void this.conversations.organize(conversation, { isArchived: false });
   }
   uploadChanged(event: Event) {
     const input = event.target as HTMLInputElement;
