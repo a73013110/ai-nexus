@@ -1,28 +1,93 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  effect,
+  ElementRef,
+  inject,
+  input,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { ThemeService } from '../../core/preferences/theme-service';
 import { BrandWordmark } from '../../shared/ui/brand-wordmark';
-import { FourierMark } from './fourier-mark';
+import { LoginWelcome } from './login-welcome';
+import { LoginTrace } from './login-trace';
+import { markPlayed, SignalMark } from './signal-mark';
 
-/** The brand side of the login page; the copy reads at once, the wordmark waits for the drawn N. */
+export type LoginStage = 'credentials' | 'identity' | 'welcome';
+
+/**
+ * The brand side of the login page. The copy reads at once; the wordmark waits for its N, which
+ * two signals draw in the free space above the copy before it lands in place. After sign-in the side widens into the welcome screen, the wordmark moves to its centre, and
+ * from there it and the avatar fly into the sidebar of the workspace.
+ */
 @Component({
   selector: 'section[nxLoginIntro]',
   styleUrl: './login-intro.scss',
-  imports: [FourierMark, BrandWordmark],
+  imports: [SignalMark, LoginTrace, BrandWordmark, LoginWelcome],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'login-intro', '[class.intro-ready]': 'ready()' },
+  host: {
+    class: 'login-intro',
+    '[class.intro-ready]': 'ready()',
+    '[attr.data-stage]': 'stage()',
+    '(pointermove)': 'follow($event)',
+    '(pointerleave)': 'spot.set(null)',
+    '[style.--spot-x]': 'spot()?.x',
+    '[style.--spot-y]': 'spot()?.y',
+    '[class.has-spot]': '!!spot()',
+  },
   template: `<div class="login-intro-layout">
       <div class="login-brand" [attr.aria-hidden]="!ready()">
         <nx-brand-wordmark #brand [markVisible]="ready()" />
-        <small class="login-reveal">INTERNAL WORKSPACE</small>
       </div>
-      <div class="login-intro-copy">
-        <span class="intro-eyebrow">你的工作，從這裡接續</span>
-        <h1>讓想法有個<br />專注的空間。</h1>
-        <p>整理資訊、打磨文字，和 AI 一起推進手上的工作。</p>
+      <div class="login-signal-slot" aria-hidden="true">
+        <svg nxLoginTrace></svg>
       </div>
-      <span class="login-footnote">公司帳號 · 個人工作區</span>
+      @if (stage() === 'welcome') {
+        <nx-login-welcome [name]="name()" [identity]="identity()" />
+      } @else {
+        <div class="login-intro-copy">
+          <p class="intro-eyebrow"><span lang="en">nex·us</span><span>連結各方的交會點</span></p>
+          <h1>思考與流程，<br />在此<em>交會</em>。</h1>
+          <p class="intro-lede">和 AI 一起整理資訊、推進專案，日常的工作流程也從這裡接續。</p>
+        </div>
+      }
     </div>
-    <nx-fourier-mark [anchor]="brand.markElement()" (finishedChange)="ready.set($event)" />`,
+    <nx-signal-mark
+      [anchor]="brand.markElement()"
+      [origin]="trace().nativeElement"
+      (finishedChange)="ready.set($event)"
+    />`,
 })
 export class LoginIntro {
-  readonly ready = signal(false);
+  private readonly themes = inject(ThemeService);
+  readonly stage = input<LoginStage>('credentials');
+  readonly name = input('');
+  /** The identity chosen on the previous step, when the account had a choice to make. */
+  readonly identity = input<string | null>(null);
+  /** Ready from the start when the mark has already played, e.g. right after a sign-out. */
+  readonly ready = signal(markPlayed() || this.themes.reducedMotion());
+  readonly spot = signal<{ x: string; y: string } | null>(null);
+  private readonly mark = viewChild.required(SignalMark);
+  readonly trace = viewChild.required(LoginTrace, { read: ElementRef });
+  private frame = 0;
+  constructor() {
+    // Signing in while the N is still being drawn settles it, so the wordmark can travel whole.
+    effect(() => {
+      if (this.stage() === 'credentials') return;
+      if (!this.mark().complete()) this.mark().finish();
+      this.spot.set(null);
+    });
+  }
+  /** A soft light follows a fine pointer across the dot field; touch and reduced motion skip it. */
+  follow(event: PointerEvent) {
+    if (event.pointerType !== 'mouse' || this.themes.reducedMotion() || this.stage() === 'welcome')
+      return;
+    const host = event.currentTarget as HTMLElement;
+    cancelAnimationFrame(this.frame);
+    this.frame = requestAnimationFrame(() => {
+      const box = host.getBoundingClientRect();
+      this.spot.set({ x: `${event.clientX - box.left}px`, y: `${event.clientY - box.top}px` });
+    });
+  }
 }

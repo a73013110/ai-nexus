@@ -1,0 +1,19 @@
+:host {
+  height: min(100%, 15rem);
+  aspect-ratio: 1;
+  overflow: visible;
+  animation: content-arrive 900ms var(--ease) both;
+}
+path {
+  fill: color-mix(in srgb, var(--ink) 3%, transparent);
+  stroke: color-mix(in srgb, var(--ink) 22%, transparent);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+  transition: stroke var(--motion-panel) var(--ease);
+}
+:host-context(.has-spot) path {
+  stroke: color-mix(in srgb, var(--accent) 50%, transparent);
+}
+circle {
+  fill: var(--signal);
+}

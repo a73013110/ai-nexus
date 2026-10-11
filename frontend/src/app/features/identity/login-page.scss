@@ -17,9 +17,23 @@
   padding: var(--login-gutter) clamp(28px, 5vw, 80px);
   overflow: auto;
 }
+.login-panel[hidden] {
+  display: none;
+}
+// After sign-in the brand side takes the whole page for the greeting.
+.login-workspace[data-stage='welcome'] {
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+}
 .login-content {
   width: min(100%, 360px);
   animation: panel-arrive 600ms var(--ease) both;
+}
+// A rejected password shakes the form once; the two names restart it on the next rejection.
+.login-content.shake-a {
+  animation: login-shake-a 420ms var(--ease) both;
+}
+.login-content.shake-b {
+  animation: login-shake-b 420ms var(--ease) both;
 }
 h2 {
   font-size: var(--p-font-2xl);
@@ -32,22 +46,43 @@ h2 {
   font-size: var(--text-ui);
 }
 .login-methods {
+  --method-gap: var(--p-space-1);
+  position: relative;
   display: flex;
-  gap: var(--p-space-1);
+  gap: var(--method-gap);
   padding: var(--p-space-1);
   margin-block: calc(var(--login-space) * 0.66);
   border: 1px solid var(--line);
   border-radius: var(--p-radius-md);
+  // One chip springs to the chosen method, like the sidebar's navigation pill.
+  &::before {
+    content: '';
+    position: absolute;
+    inset-block: var(--p-space-1);
+    left: var(--p-space-1);
+    width: calc(
+      (100% - 2 * var(--p-space-1) - (var(--method-count) - 1) * var(--method-gap)) /
+        var(--method-count)
+    );
+    border-radius: var(--p-radius-sm);
+    background: var(--accent-soft);
+    translate: calc(var(--method-index) * (100% + var(--method-gap))) 0;
+    transition: translate var(--motion-morph) var(--ease-spring);
+  }
 }
 .login-methods button {
+  position: relative;
   flex: 1;
   min-height: var(--button-target);
   border-radius: var(--p-radius-sm);
   color: var(--secondary);
   font-size: var(--text-label);
+  transition: color var(--motion) var(--ease);
+}
+.login-methods button:active:not(:disabled) {
+  scale: 0.97;
 }
 .login-methods button[aria-pressed='true'] {
-  background: var(--accent-soft);
   color: var(--accent);
 }
 form {
@@ -67,6 +102,13 @@ input {
   border: 1px solid var(--line);
   border-radius: var(--p-radius-md);
   min-height: 46px;
+  transition:
+    border-color var(--motion) var(--ease),
+    box-shadow var(--motion) var(--ease);
+}
+input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 14%, transparent);
 }
 .login-password {
   position: relative;
@@ -122,6 +164,11 @@ input {
   .login-panel {
     justify-items: center;
     padding: 20px 24px;
+  }
+}
+@media (max-width: 720px) {
+  .login-workspace[data-stage='welcome'] {
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   }
 }
 @media (max-width: 720px) and (max-height: 620px) {

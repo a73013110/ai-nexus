@@ -1,106 +1,143 @@
-<main class="login-workspace">
-  <section nxLoginIntro aria-label="AI Nexus"></section>
-  <section class="login-panel" aria-labelledby="login-heading">
-    <div class="login-content">
-      <h2 id="login-heading">登入工作區</h2>
-      <p class="login-description">{{ spec().description }}</p>
-      @if (!loading() && methods().length > 1) {
-        <div class="login-methods" role="group" aria-label="登入方式">
-          @for (item of methods(); track item) {
-            <button
-              type="button"
-              [attr.aria-pressed]="method() === item"
-              [disabled]="submitting()"
-              (click)="selectMethod(item)"
-            >
-              {{ catalog[item].label }}
-            </button>
-          }
-        </div>
-      }
-      @if (loading()) {
-        <p role="status">正在確認登入設定…</p>
-      } @else if (windowsFailed()) {
-        <nx-notice tone="info">
-          尚未取得 Windows
-          身分。請確認使用公司網域電腦登入；仍無法登入時請聯絡管理員，或改用其他登入方式。
-        </nx-notice>
-      } @else if (spec().credentials && auth.session()?.configured === false) {
-        <nx-notice tone="info">此登入方式尚未開放，請聯絡管理員。</nx-notice>
-      }
-      @if (error(); as message) {
-        <nx-notice tone="danger" [message]="message" />
-      }
-      @if (spec().credentials; as copy) {
-        <form (submit)="submit($event)">
-          <label for="login-account">{{ copy.account }}</label
-          ><input
-            #account
-            id="login-account"
-            autocomplete="username"
-            [placeholder]="copy.placeholder"
-            [formField]="loginForm.account"
-            aria-describedby="account-hint"
-          />
-          <p id="account-hint" class="login-field-hint">{{ copy.hint }}</p>
-          <label for="login-password">{{ copy.password }}</label>
-          <div class="login-password">
-            <input
-              id="login-password"
-              [type]="passwordVisible() ? 'text' : 'password'"
-              autocomplete="current-password"
-              [formField]="loginForm.password"
-              [attr.aria-describedby]="capsLock() ? 'caps-hint' : null"
-              (keydown)="readCapsLock($event)"
-              (keyup)="readCapsLock($event)"
-              (blur)="capsLock.set(false)"
-            />
-            <button
-              type="button"
-              class="icon-button"
-              aria-controls="login-password"
-              [attr.aria-pressed]="passwordVisible()"
-              [attr.aria-label]="passwordVisible() ? '隱藏密碼' : '顯示密碼'"
-              [attr.title]="passwordVisible() ? '隱藏密碼' : '顯示密碼'"
-              [disabled]="submitting()"
-              (click)="passwordVisible.set(!passwordVisible())"
-            >
-              <nx-icon [name]="passwordVisible() ? 'eye-off' : 'eye'" />
-            </button>
+<main class="login-workspace" [attr.data-stage]="stage()">
+  <section
+    nxLoginIntro
+    aria-label="AI Nexus"
+    [stage]="stage()"
+    [name]="auth.session()?.displayName || auth.session()?.account || ''"
+    [identity]="chosenIdentity()"
+  ></section>
+  <section
+    class="login-panel"
+    [attr.aria-labelledby]="stage() === 'identity' ? 'identity-heading' : 'login-heading'"
+    [hidden]="stage() === 'welcome'"
+  >
+    @if (stage() === 'identity') {
+      <div class="login-content">
+        <nx-login-identity
+          [identities]="identities()"
+          [current]="auth.session()?.identity ?? null"
+          [choosing]="choosing()"
+          (chosen)="chooseIdentity($event)"
+          (back)="useAnotherAccount()"
+        />
+        @if (error(); as message) {
+          <nx-notice tone="danger" [message]="message" />
+        }
+      </div>
+    } @else if (stage() === 'credentials') {
+      <div
+        class="login-content"
+        [class.shake-a]="rejections() % 2 === 1"
+        [class.shake-b]="rejections() > 0 && rejections() % 2 === 0"
+      >
+        <h2 id="login-heading">登入工作區</h2>
+        <p class="login-description">{{ spec().description }}</p>
+        @if (!loading() && methods().length > 1) {
+          <div
+            class="login-methods"
+            role="group"
+            aria-label="登入方式"
+            [style.--method-count]="methods().length"
+            [style.--method-index]="methods().indexOf(method())"
+          >
+            @for (item of methods(); track item) {
+              <button
+                type="button"
+                [attr.aria-pressed]="method() === item"
+                [disabled]="submitting()"
+                (click)="selectMethod(item)"
+              >
+                {{ catalog[item].label }}
+              </button>
+            }
           </div>
-          @if (capsLock()) {
-            <p id="caps-hint" class="login-caps" role="status">大寫鎖定已開啟</p>
-          }
+        }
+        @if (loading()) {
+          <p role="status">正在確認登入設定…</p>
+        } @else if (windowsFailed()) {
+          <nx-notice tone="info">
+            尚未取得 Windows
+            身分。請確認使用公司網域電腦登入；仍無法登入時請聯絡管理員，或改用其他登入方式。
+          </nx-notice>
+        } @else if (spec().credentials && auth.session()?.configured === false) {
+          <nx-notice tone="info">此登入方式尚未開放，請聯絡管理員。</nx-notice>
+        }
+        @if (error(); as message) {
+          <nx-notice tone="danger" [message]="message" />
+        }
+        @if (spec().credentials; as copy) {
+          <form (submit)="submit($event)">
+            <label for="login-account">{{ copy.account }}</label
+            ><input
+              #account
+              id="login-account"
+              autocomplete="username"
+              [placeholder]="copy.placeholder"
+              [formField]="loginForm.account"
+              aria-describedby="account-hint"
+            />
+            <p id="account-hint" class="login-field-hint">{{ copy.hint }}</p>
+            <label for="login-password">{{ copy.password }}</label>
+            <div class="login-password">
+              <input
+                id="login-password"
+                [type]="passwordVisible() ? 'text' : 'password'"
+                autocomplete="current-password"
+                [formField]="loginForm.password"
+                [attr.aria-describedby]="capsLock() ? 'caps-hint' : null"
+                (keydown)="readCapsLock($event)"
+                (keyup)="readCapsLock($event)"
+                (blur)="capsLock.set(false)"
+              />
+              <button
+                type="button"
+                class="icon-button"
+                aria-controls="login-password"
+                [attr.aria-pressed]="passwordVisible()"
+                [attr.aria-label]="passwordVisible() ? '隱藏密碼' : '顯示密碼'"
+                [attr.title]="passwordVisible() ? '隱藏密碼' : '顯示密碼'"
+                [disabled]="submitting()"
+                (click)="passwordVisible.set(!passwordVisible())"
+              >
+                <nx-icon [name]="passwordVisible() ? 'eye-off' : 'eye'" />
+              </button>
+            </div>
+            @if (capsLock()) {
+              <p id="caps-hint" class="login-caps" role="status">大寫鎖定已開啟</p>
+            }
+            <button
+              nxLoginSubmit
+              type="submit"
+              busy="正在登入…"
+              [phase]="phase()"
+              [disabled]="
+                loading() || submitting() || !auth.session()?.configured || loginForm().invalid()
+              "
+            >
+              登入工作區
+            </button>
+          </form>
+        } @else if (!loading()) {
           <button
             nxLoginSubmit
-            type="submit"
-            busy="正在登入…"
+            type="button"
+            busy="正在確認 Windows 身分…"
             [phase]="phase()"
-            [disabled]="
-              loading() || submitting() || !auth.session()?.configured || loginForm().invalid()
-            "
+            [disabled]="submitting()"
+            (click)="windowsLogin()"
           >
-            登入工作區
+            使用 Windows 身分登入
           </button>
-        </form>
-      } @else if (!loading()) {
-        <button
-          nxLoginSubmit
-          type="button"
-          busy="正在確認 Windows 身分…"
-          [phase]="phase()"
-          [disabled]="submitting()"
-          (click)="windowsLogin()"
-        >
-          使用 Windows 身分登入
-        </button>
-      }
-      @if (!loading() && (error() || windowsFailed())) {
-        <button class="secondary-button login-retry" type="button" (click)="initialize()">
-          重新確認登入服務
-        </button>
-      }
-      <p class="login-privacy">以公司身分登入，接續自己的對話。管理員的授權檢視會留下稽核紀錄。</p>
-    </div>
+        }
+        @if (!loading() && (error() || windowsFailed())) {
+          <button class="secondary-button login-retry" type="button" (click)="initialize()">
+            重新確認登入服務
+          </button>
+        }
+        <p class="login-privacy">
+          以公司身分登入，接續自己的工作。管理員的授權檢視會留下稽核紀錄。
+        </p>
+      </div>
+    }
   </section>
 </main>

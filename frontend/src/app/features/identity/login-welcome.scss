@@ -1,0 +1,38 @@
+:host {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% 0;
+  display: grid;
+  justify-items: center;
+  gap: var(--p-space-2);
+  width: min(100% - 2 * var(--login-gutter), 32rem);
+  text-align: center;
+  h2 {
+    margin: var(--p-space-2) 0 0;
+    font-size: clamp(1.5rem, 2.6vw, 2.125rem);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-wrap: balance;
+  }
+  p {
+    margin: 0;
+    color: var(--secondary);
+  }
+  > * {
+    animation: arrive var(--motion-morph) var(--ease) both;
+  }
+  > :nth-child(2) {
+    animation-delay: 240ms;
+  }
+  > :nth-child(3) {
+    animation-delay: 320ms;
+  }
+}
+.welcome-avatar {
+  --sidebar-avatar-size: 3.5rem;
+  font-size: var(--p-font-xl);
+  box-shadow: 0 10px 30px -18px var(--accent);
+  animation-name: welcome-avatar-arrive;
+  animation-delay: 160ms;
+}

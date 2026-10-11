@@ -157,6 +157,93 @@
     translate: 110% 0;
   }
 }
+// Sign-in (features/identity). Shake twice-named so a second rejection restarts it.
+@keyframes login-shake-a {
+  15%,
+  55% {
+    translate: -6px 0;
+  }
+  35%,
+  75% {
+    translate: 5px 0;
+  }
+}
+@keyframes login-shake-b {
+  15%,
+  55% {
+    translate: -6px 0;
+  }
+  35%,
+  75% {
+    translate: 5px 0;
+  }
+}
+@keyframes identity-arrive {
+  from {
+    opacity: 0;
+    translate: 1.5rem 0;
+  }
+}
+@keyframes welcome-avatar-arrive {
+  from {
+    opacity: 0;
+    scale: 0.4;
+  }
+}
+@keyframes step-depart {
+  to {
+    opacity: 0;
+    translate: -2rem 0;
+  }
+}
+@keyframes step-arrive {
+  from {
+    opacity: 0;
+    translate: 2rem 0;
+  }
+}
+@keyframes sign-in-recede {
+  to {
+    scale: 0.985;
+    opacity: 0.6;
+  }
+}
+// The reveal edge is a soft band rather than a hard circle, so the workspace blooms like light.
+@property --sign-in-reach {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes sign-in-reveal {
+  from {
+    --sign-in-reach: 0px;
+  }
+  to {
+    --sign-in-reach: calc(var(--morph-r, 150vmax) + 10rem);
+  }
+}
+@keyframes sign-in-sidebar {
+  from {
+    translate: -100% 0;
+  }
+}
+@keyframes sign-out-sidebar {
+  to {
+    translate: -100% 0;
+  }
+}
+@keyframes sign-out-avatar {
+  to {
+    opacity: 0;
+    scale: 0.3;
+  }
+}
+@keyframes sign-out-settle {
+  from {
+    scale: 1.03;
+    opacity: 0.4;
+  }
+}
 // View transitions (core/layout/view-morph.ts). Names apply only while one runs, so they never
 // create stacking contexts at rest. Pages cross-fade; named elements move on the spring. The
 // sidebar shows its live state, so the navigation pill keeps its own slide.
@@ -169,6 +256,21 @@
   }
   .composer-region form.composer {
     view-transition-name: chat-composer;
+  }
+  // Login steps slide along one axis; the brand side widens into the welcome screen, whose avatar
+  // lands on the account menu.
+  // Not while entering or leaving the workspace: the whole page moves then.
+  &:not([data-morph-kind='sign-in']):not([data-morph-kind='sign-out']) {
+    .login-content {
+      view-transition-name: login-step;
+    }
+    .login-intro {
+      view-transition-name: login-stage;
+    }
+  }
+  .welcome-avatar,
+  nx-account-menu .avatar {
+    view-transition-name: nx-avatar;
   }
 }
 ::view-transition-group(*) {
@@ -185,6 +287,108 @@
 ::view-transition-group(workspace-sidebar),
 ::view-transition-new(workspace-sidebar):not(:only-child) {
   animation: none;
+}
+::view-transition-old(login-step) {
+  animation: step-depart var(--motion-panel) var(--ease-exit) both;
+}
+::view-transition-new(login-step) {
+  animation: step-arrive var(--motion-morph) var(--ease) 60ms both;
+}
+// Welcome: a slower, calmer move than everyday morphs; it happens once per sign-in. The brand
+// side opens like a container: both states keep their own size, pinned to the left edge, so the
+// old copy fades in place instead of stretching and the greeting is uncovered as the side widens.
+:root[data-morph-kind='sign-in-welcome'] {
+  &::view-transition-group(login-stage),
+  &::view-transition-group(nx-brand) {
+    animation-duration: 760ms;
+    animation-timing-function: cubic-bezier(0.65, 0, 0.2, 1);
+  }
+  &::view-transition-image-pair(login-stage) {
+    overflow: clip;
+  }
+  &::view-transition-old(login-stage),
+  &::view-transition-new(login-stage) {
+    width: auto;
+    height: 100%;
+    object-fit: none;
+    object-position: left top;
+    inset: 0 auto auto 0;
+  }
+  &::view-transition-old(login-stage) {
+    animation-duration: 280ms;
+  }
+}
+// Into the workspace: the page widens out from where the mark was while the sidebar slides in to
+// receive the mark and the avatar. The welcome screen recedes underneath.
+:root[data-morph-kind='sign-in'] {
+  &::view-transition-old(root) {
+    animation: sign-in-recede 900ms var(--ease) both;
+  }
+  &::view-transition-new(root) {
+    mask-image: radial-gradient(
+      circle at var(--morph-x, 50%) var(--morph-y, 50%),
+      #000 calc(var(--sign-in-reach) - 10rem),
+      transparent var(--sign-in-reach)
+    );
+    animation: sign-in-reveal 900ms cubic-bezier(0.65, 0, 0.2, 1) both;
+  }
+  &::view-transition-new(workspace-sidebar):only-child {
+    animation: sign-in-sidebar 640ms var(--ease) 120ms both;
+  }
+  // The sidebar is new to the page, so its group would paint above the mark and avatar flying
+  // into it; they stay on top until they land.
+  &::view-transition-group(nx-brand),
+  &::view-transition-group(nx-avatar) {
+    z-index: 2;
+    animation-duration: 860ms;
+  }
+}
+// Sign-out reverses it, a little quicker: the workspace closes into the avatar the sign-out was
+// chosen from, the sidebar slides away, and the mark returns to the sign-in wordmark.
+:root[data-morph-kind='sign-out'] {
+  &::view-transition-old(root) {
+    z-index: 1;
+    mask-image: radial-gradient(
+      circle at var(--morph-x, 50%) var(--morph-y, 50%),
+      #000 calc(var(--sign-in-reach) - 10rem),
+      transparent var(--sign-in-reach)
+    );
+    // Played in reverse, this ease-out curve runs as an ease-in: it starts slowly, then closes.
+    animation: sign-in-reveal 680ms cubic-bezier(0.25, 1, 0.5, 1) reverse both;
+  }
+  &::view-transition-new(root) {
+    animation: sign-out-settle 820ms var(--ease) 120ms both;
+  }
+  &::view-transition-group(workspace-sidebar) {
+    z-index: 2;
+  }
+  &::view-transition-old(workspace-sidebar):only-child {
+    animation: sign-out-sidebar 520ms var(--ease-exit) 140ms both;
+  }
+  &::view-transition-group(nx-brand),
+  &::view-transition-group(nx-avatar) {
+    z-index: 3;
+    animation-duration: 760ms;
+  }
+  &::view-transition-old(nx-avatar):only-child {
+    animation: sign-out-avatar 360ms var(--ease-exit) both;
+  }
+}
+// The first workspace page after sign-in settles in order: pinned navigation, then the page
+// header and its blocks. login-page.ts clears the mark once they have arrived.
+:root[data-entrance='sign-in'] {
+  .pinned-features > li,
+  .feature-content > * {
+    animation: arrive var(--motion-morph) var(--ease) both;
+  }
+  @for $i from 1 through 8 {
+    .pinned-features > li:nth-child(#{$i}) {
+      animation-delay: #{280 + $i * 50}ms;
+    }
+    .feature-content > :nth-child(#{$i}) {
+      animation-delay: #{360 + $i * 70}ms;
+    }
+  }
 }
 // Animations jump to their end state and transitions are removed, so layout properties settle in
 // the same frame instead of easing over a hidden 0.01ms transition.

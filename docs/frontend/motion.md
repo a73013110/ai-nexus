@@ -10,7 +10,7 @@
 
 ## 共享元素
 
-- 在 `core/layout/view-morph.ts`：換頁時頁面交叉淡化，登入標誌移到側欄品牌；側欄顯示即時狀態，導覽 pill 用自己的 CSS 滑動。
+- 在 `core/layout/view-morph.ts`：換頁時頁面交叉淡化，登入標誌與頭像移到側欄；側欄顯示即時狀態，導覽 pill 用自己的 CSS 滑動。
 - 元件沿用的路由（`/chat`↔`/chat/:id`）不跑路由過渡，改用 `ViewMorph.run()` 包住狀態變更：歷史列標題→標題列、第一則提問讓 composer 從置中移到底部。
 - 名稱只在 `:root[data-morphing]` 期間生效，平時不產生 stacking context；一次性配對用 `ViewMorph.arm()`＋目標的 `data-morph`。
 
@@ -61,4 +61,6 @@
 ## 生成與登入
 
 - 生成訊號、等待指示與串流游標只依伺服器 run 狀態與是否收到內容顯示（`core/api/generation-status.ts`）；思考強度不是推理階段，不宣稱「正在推理」，工作結束即停止。
-- 登入：傅立葉標誌每個分頁只自動播一次（`sessionStorage`），可跳過／重播、背景分頁暫停，結束交給 `BrandWordmark`，文案與表單不等動畫；`LoginSubmit` 依 idle→loading→success morph，成功停約 0.4 秒再換頁（減少動態不停留）。
+- 登入：兩道訊號從 N 的兩端沿輪廓描繪、交會後填色，再落到字標（`signal-mark.ts`）；輪廓留下，品牌側不變空。每個分頁只播一次（`sessionStorage`），可跳過／重播；窄或矮的視窗不播。文案與表單不等動畫。`LoginSubmit` 依 idle→loading→success morph，打勾停約 0.4 秒。
+- 登入後依序：（帳號有多個身分時）身分選擇沿 X 軸滑入 → 品牌側展開成歡迎畫面、標誌移到正中（`sign-in-welcome`），同時預先載入 `/me` 約 0.9 秒 → 換頁時工作區從標誌位置柔邊擴散、側欄滑入，標誌與頭像飛進側欄（`sign-in`），第一頁內容依序進場（`data-entrance`）。編排用 `ViewMorph.next(kind, origin)`，樣式集中在 `motion.scss`。減少動態時不停留、不經歡迎畫面。
+- 登出反向且較快（`sign-out`）：工作區收進頭像、側欄滑出、標誌飛回登入頁。帳號世代在離開工作區後才更新，收合時仍顯示登出的人，頁面也不會重新讀取。

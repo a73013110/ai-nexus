@@ -1,0 +1,114 @@
+:host {
+  display: block;
+}
+h2 {
+  font-size: var(--p-font-2xl);
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.login-description {
+  color: var(--secondary);
+  margin: 0 0 var(--login-space, 24px);
+  font-size: var(--text-ui);
+}
+.identity-list {
+  display: grid;
+  gap: var(--p-space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+// Options follow the form along the same axis, one after another.
+.identity-list li {
+  animation: identity-arrive var(--motion-morph) var(--ease-spring) both;
+  animation-delay: calc(120ms + var(--i, 0) * var(--motion-stagger));
+}
+.identity-option {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  width: 100%;
+  min-height: 4rem;
+  padding: var(--p-space-3) var(--p-space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-lg);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  transition:
+    border-color var(--motion) var(--ease),
+    box-shadow var(--motion) var(--ease),
+    translate var(--motion-morph) var(--ease-spring),
+    opacity var(--motion) var(--ease);
+}
+.identity-option:hover:not(:disabled) {
+  border-color: var(--accent);
+  box-shadow: 0 6px 20px -12px var(--accent);
+  translate: 0 -1px;
+}
+.identity-option:active:not(:disabled) {
+  scale: 0.985;
+}
+.identity-option > nx-icon {
+  margin-inline-start: auto;
+  color: var(--secondary);
+  transition: translate var(--motion) var(--ease);
+}
+.identity-option:hover:not(:disabled) > nx-icon {
+  translate: 3px 0;
+  color: var(--accent);
+}
+// The chosen option keeps its place and colour; the others step back while it signs in.
+.identity-option:disabled {
+  opacity: 0.45;
+}
+.identity-option.is-chosen {
+  opacity: 1;
+  border-color: var(--accent);
+  box-shadow: var(--selected-ring);
+}
+.identity-avatar {
+  --sidebar-avatar-size: 2.5rem;
+  font-size: var(--text-ui);
+}
+.identity-avatar[data-kind='organization'],
+.identity-avatar[data-kind='department'] {
+  border-radius: var(--p-radius-md);
+}
+.identity-avatar[data-kind='delegate'] {
+  border-style: dashed;
+}
+.identity-text {
+  min-width: 0;
+  line-height: 1.4;
+}
+.identity-text strong,
+.identity-text small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.identity-text strong {
+  font-weight: 600;
+}
+.identity-text small {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+.identity-spinner {
+  animation: orbit-turn 1s linear infinite;
+}
+.identity-back {
+  width: 100%;
+  min-height: 46px;
+  margin-top: var(--login-space, 24px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .identity-spinner {
+    animation: none;
+  }
+}
+:host-context([data-reduced-motion='true']) .identity-spinner {
+  animation: none;
+}

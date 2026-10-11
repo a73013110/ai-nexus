@@ -207,6 +207,14 @@ export class ApiFixture {
   failPreferencesOnce = false;
   ldap = false;
   authenticated = false;
+  /** Extra sign-in identities after the personal one; the login page asks only when there are any. */
+  identities: {
+    id: string;
+    kind: string;
+    name: string;
+    detail: string | null;
+  }[] = [];
+  identity = "personal";
   loginMethod = "ad";
   chatAccess = true;
   adminAccess = false;
@@ -251,8 +259,11 @@ export class ApiFixture {
       path === "/auth/session" ||
       path === "/auth/windows" ||
       path === "/auth/login" ||
-      path === "/auth/logout"
+      path === "/auth/logout" ||
+      path === "/auth/identity"
     ) {
+      if (path === "/auth/identity")
+        this.identity = route.request().postDataJSON().identity;
       if (path === "/auth/login") {
         if (route.request().postDataJSON().password !== "fixture-password")
           return json(
@@ -281,6 +292,16 @@ export class ApiFixture {
             : "windows",
         userId: this.userId,
         testing: null,
+        identities: [
+          {
+            id: "personal",
+            kind: "personal",
+            name: "測試使用者",
+            detail: "TEST\\fixture",
+          },
+          ...this.identities,
+        ],
+        identity: this.identity,
       });
     }
     if (path === "/me") {
