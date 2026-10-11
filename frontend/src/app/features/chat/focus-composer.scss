@@ -3,10 +3,11 @@
   display: none;
   height: min(720px, calc(100dvh - 3rem));
   overflow: hidden;
+  flex-direction: column;
 }
+// Layout lives outside [open]: the exit keeps `display` but would drop the rest at once.
 .platform-dialog.focus-composer-dialog[open] {
   display: flex;
-  flex-direction: column;
 }
 .focus-composer-dialog textarea {
   flex: 1;

@@ -23,10 +23,11 @@
 .knowledge-picker-panel {
   padding: var(--section-padding);
   overflow: auto;
+  gap: var(--p-space-3);
 }
+// Layout lives outside :popover-open: the exit keeps `display` but would drop the rest at once.
 .knowledge-picker-panel:popover-open {
   display: grid;
-  gap: var(--p-space-3);
 }
 .picker-heading {
   display: flex;
