@@ -54,9 +54,13 @@ test("共用資料工作區在元件頁可操作，保留局部主題與焦點",
       () => (window as unknown as { __copied: string }).__copied,
     ),
   ).toContain("completed");
-  await drawer
-    .getByRole("button", { name: "關閉資料詳情示範", exact: true })
-    .click();
+  await page.keyboard.press("Escape");
+  // The exit keeps the drawer's display; its column layout must not fall back to a row.
+  await expect(page.locator(".ui-detail-drawer")).toHaveCSS(
+    "flex-direction",
+    "column",
+  );
+  await expect(drawer).toBeHidden();
   await expect(button).toBeFocused();
 });
 

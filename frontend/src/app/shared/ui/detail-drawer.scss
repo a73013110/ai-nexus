@@ -17,17 +17,51 @@
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow-floating);
+  // Layout stays outside [open]: the exit keeps `display` but would drop the rest at once.
+  flex-direction: column;
+  opacity: 0;
+  translate: 1.5rem 0;
+  transition:
+    opacity var(--motion) var(--ease-exit),
+    translate var(--motion) var(--ease-exit),
+    overlay var(--motion) allow-discrete,
+    display var(--motion) allow-discrete;
+}
+// Slides in from the edge and back out, like the dialogs (styles/dialogs.scss): `overlay` and
+// `display` keep it painted for the exit, while it takes no clicks or focus.
+.ui-detail-drawer:not([open]) {
+  pointer-events: none;
+  interactivity: inert;
 }
 .ui-detail-drawer[open] {
   display: flex;
-  flex-direction: column;
-  animation: drawer-arrive var(--motion-panel) var(--ease);
+  opacity: 1;
+  translate: 0 0;
+  transition-duration: var(--motion-panel);
+  transition-timing-function: var(--ease);
 }
 .ui-detail-drawer.is-wide {
   width: min(72rem, 100vw);
 }
 .ui-detail-drawer::backdrop {
   background: var(--scrim);
+  opacity: 0;
+  transition:
+    opacity var(--motion) var(--ease),
+    overlay var(--motion) allow-discrete,
+    display var(--motion) allow-discrete;
+}
+.ui-detail-drawer[open]::backdrop {
+  opacity: 1;
+}
+@starting-style {
+  .ui-detail-drawer[open] {
+    opacity: 0;
+    translate: 1.5rem 0;
+  }
+  .ui-detail-drawer[open]::backdrop {
+    opacity: 0;
+  }
 }
 .ui-drawer-header {
   display: flex;
@@ -56,16 +90,6 @@
   scrollbar-gutter: stable;
   padding: var(--p-space-4);
 }
-@keyframes drawer-arrive {
-  from {
-    transform: translateX(1.5rem);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
 @media (max-width: 640px) {
   .drawer-resize {
     display: none;
@@ -75,10 +99,5 @@
   }
   .ui-drawer-body {
     padding: var(--p-space-3);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .ui-detail-drawer[open] {
-    animation: none;
   }
 }
