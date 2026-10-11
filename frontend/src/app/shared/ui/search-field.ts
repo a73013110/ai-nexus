@@ -6,6 +6,7 @@ import { Icon } from './icon';
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './search-field.scss',
+  host: { '[class.search-bare]': "appearance() === 'bare'" },
   template: `<div class="search-field">
     <nx-icon name="search" /><input
       #field
@@ -35,5 +36,7 @@ export class SearchField {
   readonly value = input('');
   readonly disabled = input(false);
   readonly maxLength = input(120);
+  /** `bare` drops the field chrome where a dialog bar or panel already frames the search. */
+  readonly appearance = input<'field' | 'bare'>('field');
   readonly valueChange = output<string>();
 }

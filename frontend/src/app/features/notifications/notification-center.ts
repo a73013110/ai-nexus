@@ -29,16 +29,48 @@ import { NotificationFeed } from './notification-feed';
   template: `<dialog
     nxCompactDialog
     #dialog
-    class="platform-dialog notification-center"
+    class="platform-dialog dialog-flush notification-center"
     aria-labelledby="notification-title"
     (cancel)="store.close()"
     (close)="store.close()"
   >
-    <header class="dialog-heading">
-      <div>
+    <header class="dialog-bar">
+      <div class="notification-heading">
         <h2 id="notification-title">通知</h2>
-        <p class="form-note">{{ store.unread() }} 則未讀通知</p>
+        @if (store.unread()) {
+          <small>{{ store.unread() }} 則未讀</small>
+        }
       </div>
+      @if (store.view() === 'inbox') {
+        <button
+          type="button"
+          class="quiet-button"
+          [attr.aria-pressed]="store.unreadOnly()"
+          (click)="store.unreadOnly.update(toggle); store.refresh()"
+        >
+          只看未讀
+        </button>
+        <button
+          type="button"
+          class="icon-button"
+          aria-label="全部標為已讀"
+          title="全部標為已讀"
+          [disabled]="!store.unread() || store.loading()"
+          (click)="store.readAll()"
+        >
+          <nx-icon name="check" />
+        </button>
+        <button
+          type="button"
+          class="icon-button"
+          aria-label="重新整理通知"
+          title="重新整理"
+          [disabled]="store.loading()"
+          (click)="store.refresh()"
+        >
+          <nx-icon name="refresh" />
+        </button>
+      }
       <button
         autofocus
         type="button"
@@ -84,6 +116,7 @@ export class NotificationCenter {
     { value: 'inbox', label: '通知匣' },
     { value: 'session', label: '本次工作階段', count: this.toasts.history().length },
   ]);
+  readonly toggle = (value: boolean) => !value;
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   constructor() {
     effect(() => {

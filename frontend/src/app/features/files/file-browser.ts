@@ -82,52 +82,42 @@ import { formatBytes, formatDate } from '../../shared/browser/format';
           </div>
         </div>
         <div class="file-card-actions">
-          @if (selectable()) {
+          @if (knowledge()) {
             <button
-              class="secondary-button"
-              (click)="chosen.emit(item)"
-              [attr.aria-label]="'選取 ' + item.file.fileName"
+              class="quiet-button file-add-knowledge"
+              (click)="addKnowledge.emit(item)"
+              [attr.aria-label]="'將 ' + item.file.fileName + ' 加入知識庫'"
             >
-              <nx-icon name="plus" />選取
-            </button>
-          } @else {
-            @if (knowledge()) {
-              <button
-                class="quiet-button file-add-knowledge"
-                (click)="addKnowledge.emit(item)"
-                [attr.aria-label]="'將 ' + item.file.fileName + ' 加入知識庫'"
-              >
-                <nx-icon name="library" />加入知識庫
-              </button>
-            }
-            <button
-              class="icon-button"
-              [disabled]="busy()"
-              [attr.aria-label]="'重新命名 ' + item.file.fileName"
-              title="重新命名檔案"
-              (click)="rename.emit(item)"
-            >
-              <nx-icon name="edit" />
-            </button>
-            <a
-              class="icon-button"
-              [href]="url(item.file.id) + '?download=true'"
-              [attr.aria-label]="'下載 ' + item.file.fileName"
-              title="下載原檔"
-              ><nx-icon name="download"
-            /></a>
-            <button
-              class="icon-button danger-text"
-              [disabled]="busy() || !item.canDelete"
-              [title]="
-                item.canDelete ? '刪除檔案' : '仍被對話、知識庫或專案引用；先移除引用後即可刪除'
-              "
-              [attr.aria-label]="'刪除 ' + item.file.fileName"
-              (click)="remove.emit(item)"
-            >
-              <nx-icon name="trash" />
+              <nx-icon name="library" />加入知識庫
             </button>
           }
+          <button
+            class="icon-button"
+            [disabled]="busy()"
+            [attr.aria-label]="'重新命名 ' + item.file.fileName"
+            title="重新命名檔案"
+            (click)="rename.emit(item)"
+          >
+            <nx-icon name="edit" />
+          </button>
+          <a
+            class="icon-button"
+            [href]="url(item.file.id) + '?download=true'"
+            [attr.aria-label]="'下載 ' + item.file.fileName"
+            title="下載原檔"
+            ><nx-icon name="download"
+          /></a>
+          <button
+            class="icon-button danger-text"
+            [disabled]="busy() || !item.canDelete"
+            [title]="
+              item.canDelete ? '刪除檔案' : '仍被對話、知識庫或專案引用；先移除引用後即可刪除'
+            "
+            [attr.aria-label]="'刪除 ' + item.file.fileName"
+            (click)="remove.emit(item)"
+          >
+            <nx-icon name="trash" />
+          </button>
         </div>
       </article>
     }
@@ -136,10 +126,8 @@ import { formatBytes, formatDate } from '../../shared/browser/format';
 export class FileBrowser {
   readonly items = input.required<LibraryFileDto[]>();
   readonly layout = input('grid');
-  readonly selectable = input(false);
   readonly knowledge = input(false);
   readonly busy = input(false);
-  readonly chosen = output<LibraryFileDto>();
   readonly addKnowledge = output<LibraryFileDto>();
   readonly rename = output<LibraryFileDto>();
   readonly remove = output<LibraryFileDto>();

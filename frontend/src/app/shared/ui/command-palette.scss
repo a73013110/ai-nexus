@@ -83,3 +83,16 @@
     display: none;
   }
 }
+// Search starts at the top where the keyboard cannot cover it, so the palette stays a floating
+// panel instead of the phone bottom sheet other dialogs become.
+@media (max-width: 640px) {
+  .command-dialog {
+    --dialog-enter-y: -0.5rem;
+    --dialog-enter-scale: 0.97;
+    --dialog-ease: var(--ease-spring);
+    width: calc(100vw - 1rem);
+    margin-block: max(0.5rem, env(safe-area-inset-top)) auto;
+    border: 1px solid var(--line);
+    border-radius: var(--dialog-radius);
+  }
+}
