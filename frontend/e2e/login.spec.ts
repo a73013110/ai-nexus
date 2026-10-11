@@ -148,13 +148,16 @@ test("desktop login keeps the workspace visual language", async ({ page }) => {
   await settleEntrance(page);
 });
 
-test("login copy follows the completed mark and fits standard desktop and mobile viewports", async ({
+test("login copy reads at once, the wordmark follows the mark and both fit standard viewports", async ({
   page,
 }) => {
   const fixture = new ApiFixture();
   fixture.ldap = true;
   await fixture.attach(page);
   await page.goto("/login");
+  await expect(
+    page.getByRole("heading", { name: /讓想法有個\s*專注的空間/ }),
+  ).toBeVisible();
   await expect(page.locator(".login-brand")).toHaveAttribute(
     "aria-hidden",
     "true",
@@ -244,8 +247,11 @@ test("real anonymous startup shows login before constructing the private workspa
   await expect(page).toHaveURL(/\/login\?returnUrl=%2Fchat$/);
   await expect(page.getByRole("heading", { name: "登入工作區" })).toBeVisible();
   await expect(
-    page.getByText("尚未取得 Windows 身分。", { exact: false }),
+    page.getByRole("button", { name: "使用 Windows 身分登入", exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByText("尚未取得 Windows 身分。", { exact: false }),
+  ).toHaveCount(0);
   await expect(page.locator(".workbench")).toHaveCount(0);
   await expect(page.getByRole("textbox", { name: "傳送訊息" })).toHaveCount(0);
   expect(errors).toEqual([]);
@@ -278,3 +284,86 @@ for (const target of ["/", "/chat", "/projects", "/admin", "/quality"]) {
     await expect(page.locator(".workbench")).toHaveCount(0);
   });
 }
+
+test("login focuses the account, reveals the password on request and warns about CapsLock", async ({
+  page,
+}) => {
+  const fixture = new ApiFixture();
+  fixture.ldap = true;
+  await fixture.attach(page);
+  await page.goto("/login");
+  const account = page.getByLabel("AD 帳號", { exact: true });
+  const password = page.getByLabel("AD 密碼", { exact: true });
+  await expect(account).toBeFocused();
+  await account.fill("alice");
+  await password.fill("fixture-password");
+  await expect(password).toHaveAttribute("type", "password");
+  await page.getByRole("button", { name: "顯示密碼", exact: true }).click();
+  await expect(password).toHaveAttribute("type", "text");
+  await expect(
+    page.getByRole("button", { name: "隱藏密碼", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await password.dispatchEvent("keydown", { key: "A", modifierCapsLock: true });
+  await expect(password).toHaveAccessibleDescription("大寫鎖定已開啟");
+  await password.dispatchEvent("keyup", { key: "a", modifierCapsLock: false });
+  await expect(page.getByText("大寫鎖定已開啟")).toHaveCount(0);
+  // A slow sign-in shows the loading state, then the button docks into its check.
+  await page.route("**/api/v1/auth/login", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    await route.fallback();
+  });
+  await page.getByRole("button", { name: "登入工作區", exact: true }).click();
+  await expect(password).toHaveAttribute("type", "password");
+  await expect(page.locator(".login-submit")).toHaveAttribute(
+    "data-phase",
+    "loading",
+  );
+  await expect(page.getByRole("button", { name: "登入成功" })).toBeVisible();
+  await expect(page).toHaveURL(/\/dashboard$/);
+});
+
+test("the Windows hint waits for a refused challenge and the mark plays once per tab", async ({
+  page,
+}) => {
+  const core = new ApiFixture();
+  await core.attach(page);
+  await page.route("**/api/v1/auth/session", (route) =>
+    route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        mode: "Windows",
+        authenticated: false,
+        configured: true,
+        account: null,
+        displayName: null,
+        csrfToken: "browser-test-csrf",
+        methods: ["windows", "local"],
+      }),
+    }),
+  );
+  await page.route("**/api/v1/auth/windows", (route) =>
+    route.fulfill({
+      status: 401,
+      contentType: "application/problem+json",
+      body: JSON.stringify({ code: "authentication_required" }),
+    }),
+  );
+  await page.goto("/login");
+  await expect(
+    page.getByRole("button", { name: "跳過標誌動畫", exact: true }),
+  ).toBeVisible();
+  const hint = page.getByText("尚未取得 Windows 身分。", { exact: false });
+  await expect(hint).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "使用 Windows 身分登入", exact: true })
+    .click();
+  await expect(hint).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await page.getByRole("button", { name: "本地帳號", exact: true }).click();
+  await expect(hint).toHaveCount(0);
+  await page.reload();
+  await expect(page.locator(".login-intro")).toHaveClass(/intro-ready/);
+  await expect(
+    page.getByRole("button", { name: "重播標誌動畫", exact: true }),
+  ).toBeVisible();
+});

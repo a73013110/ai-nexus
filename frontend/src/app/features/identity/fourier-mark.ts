@@ -19,6 +19,18 @@ import { Icon } from '../../shared/ui/icon';
 const spectrum = harmonics(sampleOutline(nexusOutline, 128)).slice(0, 48);
 const trail = Array.from({ length: 641 }, (_, i) => reconstruct(spectrum, (i / 640) * Math.PI * 2));
 const duration = 4200;
+const playedKey = 'nexus.login-mark-played';
+
+/** The drawing greets a tab once; later visits (after sign-out, say) start from the docked mark. */
+function firstVisitThisSession() {
+  try {
+    if (sessionStorage.getItem(playedKey)) return false;
+    sessionStorage.setItem(playedKey, '1');
+  } catch {
+    // Without storage every visit plays; the drawing stays skippable.
+  }
+  return true;
+}
 
 @Component({
   selector: 'nx-fourier-mark',
@@ -103,7 +115,8 @@ export class FourierMark {
       };
       document.addEventListener('visibilitychange', visibility);
       this.colors();
-      this.play();
+      if (firstVisitThisSession()) this.play();
+      else this.finish();
       destroy.onDestroy(() => {
         cancelAnimationFrame(this.frame);
         this.resize?.disconnect();
