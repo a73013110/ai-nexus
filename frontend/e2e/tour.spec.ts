@@ -1,10 +1,18 @@
-import { test, expect, type Route } from "@playwright/test";
+import { test, expect, type Page, type Route } from "@playwright/test";
 import {
   ApiFixture,
   expectViewportContained,
   settleEntrance,
 } from "./fixtures";
 import { KnowledgeFixture } from "./knowledge-fixture";
+
+// The tour picks its steps from what is visible when it starts, so start it on a loaded composer.
+async function openChat(page: Page) {
+  await page.goto("/chat");
+  await expect(
+    page.getByRole("textbox", { name: "傳送訊息", exact: true }),
+  ).toBeEditable();
+}
 
 for (const width of [1440, 375]) {
   test(`chat tour explains visible capabilities, replays and restores focus at ${width}px`, async ({
@@ -23,7 +31,9 @@ for (const width of [1440, 375]) {
       await knowledge.attach(page);
     } else await fixture.attach(page);
     await page.setViewportSize({ width, height: width === 375 ? 812 : 1000 });
-    await page.goto("/chat");
+    await openChat(page);
+    if (width === 1440)
+      await expect(page.locator(".knowledge-trigger")).toBeVisible();
     const launcher = page
       .locator(".topbar")
       .getByRole("button", { name: "操作導覽", exact: true });
@@ -89,7 +99,7 @@ test("tour respects reduced motion and cleans up overlays when its route closes"
   const fixture = new ApiFixture();
   await fixture.attach(page);
   await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "dark" });
-  await page.goto("/chat");
+  await openChat(page);
   await page.locator(".topbar .tour-trigger").click();
   const tour = page.locator(".driver-popover.nx-tour");
   await expect(tour).toBeVisible();
@@ -115,7 +125,7 @@ test("a pending tour never opens after navigation and can be started again", asy
   await page.route("**/vendor/driver/driver.css", (route) => {
     pending = route;
   });
-  await page.goto("/chat");
+  await openChat(page);
   const launcher = page.locator(".topbar .tour-trigger");
   await launcher.click();
   await expect(launcher).toBeDisabled();

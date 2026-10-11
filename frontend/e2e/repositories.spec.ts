@@ -151,6 +151,10 @@ test("review stays usable while commits load and presents one expandable overall
   ).toBeEnabled();
   await chooseSelect(page, "檢閱範圍", "Commit 區間");
   fixture.release();
+  // The pickers re-render when the commits arrive; an earlier click opens a list that is replaced.
+  await expect(
+    page.getByRole("status").filter({ hasText: "正在取得近期 commit" }),
+  ).toBeHidden();
   const start = page.getByRole("combobox", { name: "起點 SHA", exact: true });
   await start.click();
   await page.getByRole("combobox", { name: "搜尋起點 SHA" }).fill("起始");
