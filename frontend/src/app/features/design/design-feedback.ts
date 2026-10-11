@@ -11,6 +11,7 @@ import { IslandService, type IslandItem } from '../../shared/ui/island-service';
 import { Notice } from '../../shared/ui/notice';
 import { Select } from '../../shared/ui/select';
 import { StatusBadge } from '../../shared/ui/status-badge';
+import { ToastHistory } from '../../shared/ui/toast-history';
 import { ToastService } from '../../shared/ui/toast-service';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { JobProgress } from '../tasks/job-progress';
@@ -36,6 +37,7 @@ type IslandSample = 'live' | 'warning' | 'info';
     Notice,
     Select,
     StatusBadge,
+    ToastHistory,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './design-feedback.scss',

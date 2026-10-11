@@ -17,8 +17,9 @@
 <nx-design-section
   id="design-toasts"
   title="通知"
-  api="ToastService · Toaster"
-  description="剛完成的操作在右下角回饋：多則疊成一落，滑過或聚焦時展開並暫停計時；新通知從膠囊形變為卡片。可按 Esc、關閉鈕或向右滑走。失敗、風險與需要留著讀的內容仍用頁內提示。"
+  api="ToastService · Toaster · ToastHistory"
+  description="剛完成的操作在右下角回饋：多則疊成一落，滑過或聚焦時展開並暫停計時；新通知從膠囊形變為卡片。可按 Esc、關閉鈕或向右滑走。錯過的會留在通知中心的「本次工作階段」。失敗、風險與需要留著讀的內容仍用頁內提示。"
+  [stacked]="true"
 >
   <div class="design-island-controls" role="group" aria-label="通知示範">
     <button type="button" class="secondary-button" (click)="toastSuccess()">成功</button>
@@ -28,7 +29,12 @@
     <button type="button" class="secondary-button" (click)="toastBurst()">連續三則</button>
     <button type="button" class="quiet-button" (click)="toast.clear()">全部清除</button>
   </div>
-  <p design-notes class="design-note">通知跟隨目前的個人主題，不受上方預覽主題影響。</p>
+  <nx-design-example label="本次工作階段">
+    <nx-toast-history class="design-toast-history" />
+  </nx-design-example>
+  <p design-notes class="design-note">
+    通知跟隨目前的個人主題，不受上方預覽主題影響。紀錄與側欄鈴鐺開啟的通知中心是同一份。
+  </p>
 </nx-design-section>
 <nx-design-section
   id="design-island"

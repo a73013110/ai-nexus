@@ -31,6 +31,12 @@
 - 背景任務結束的 toast 是例外的失敗回饋：失敗仍留在任務頁與通知匣，規則見[本分頁的任務 toast](../features/notifications.md#本分頁的任務-toast)。
 - 螢幕閱讀器只聽兩個常駐 live region（polite／danger 用 assertive），不重複朗讀卡片；換帳號時清空。
 
+### 本次工作階段紀錄
+
+- 已定案的 toast 另記在 `ToastService.history`：最近 20 則、新的在前，含時間與動作，只在記憶體，重新整理或換帳號清空。進行中（`duration: 0`）定案才記；同一 `id` 原地更新只算一則。
+- 併入通知中心而不另做清單：入口仍是鈴鐺，不多一個浮動按鈕；「通知匣」與「本次工作階段」（`ToastHistory`）分 tab，紀錄不計入未讀，任務 toast 與通知匣重複也不必去重。tab 數量用 neutral `CountBadge`（`TabItem.count`，數字寫進名稱）。
+- 動作只執行一次（toast 或紀錄任一處），之後通知中心關閉、焦點回到鈴鐺；因此動作在 toast 離開後仍要有效（導覽或伺服器會再檢查的操作）。
+
 ## 對話框
 
 - 置中的對話框一律掛 `.platform-dialog` 或 `.workspace-dialog`，共用外框與動效，元件只覆寫尺寸（快捷指令、檔案預覽也是）。

@@ -6,17 +6,21 @@ import {
   input,
   output,
 } from '@angular/core';
+import { CountBadge } from './count-badge';
 import { SlidingIndicator } from './sliding-indicator';
 
 export interface TabItem {
   value: string;
   label: string;
+  /** A neutral CountBadge after the label; the tab's name carries the number. */
+  count?: number;
 }
 let sequence = 0;
 
 /** Tabs for linked tabpanels; shares ViewSwitch's sliding underline. */
 @Component({
   selector: 'nx-tabs',
+  imports: [CountBadge],
   changeDetection: ChangeDetectionStrategy.OnPush,
   hostDirectives: [SlidingIndicator],
   host: { role: 'tablist', '[attr.aria-label]': 'label()' },
@@ -57,6 +61,9 @@ let sequence = 0;
         width var(--motion-morph) var(--ease-spring);
     }
     button {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--p-space-2);
       flex: none;
       min-height: var(--button-target);
       padding: var(--p-space-2) var(--p-space-3);
@@ -81,12 +88,16 @@ let sequence = 0;
       role="tab"
       [id]="tabId(item.value)"
       [attr.aria-controls]="panelId(item.value)"
+      [attr.aria-label]="item.count ? item.label + '，' + item.count + ' 則' : null"
       [attr.aria-selected]="value() === item.value"
       [tabIndex]="value() === item.value ? 0 : -1"
       (click)="valueChange.emit(item.value)"
       (keydown)="key($event, $index)"
     >
       {{ item.label }}
+      @if (item.count) {
+        <nx-count-badge tone="neutral" [count]="item.count" />
+      }
     </button>
   }`,
 })

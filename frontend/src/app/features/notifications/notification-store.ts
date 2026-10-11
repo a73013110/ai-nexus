@@ -20,6 +20,8 @@ export class NotificationStore {
   readonly error = signal('');
   readonly opened = signal(false);
   readonly unreadOnly = signal(false);
+  /** The center's tab: the server inbox or this tab's toast history. */
+  readonly view = signal<'inbox' | 'session'>('inbox');
   private timer?: ReturnType<typeof setTimeout>;
   private controller?: AbortController;
   private owner = '';
@@ -44,6 +46,7 @@ export class NotificationStore {
         this.hasMore.set(false);
         this.opened.set(false);
         this.unreadOnly.set(false);
+        this.view.set('inbox');
         this.loading.set(false);
         this.error.set('');
         this.seen.clear();
