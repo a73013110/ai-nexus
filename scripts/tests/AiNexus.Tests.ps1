@@ -91,7 +91,7 @@ Describe 'Test-NexusForbiddenPath' {
     It 'allows <Path>' -ForEach @(
         @{ Path = 'backend/src/AiNexus.Features/Artifacts/ExportArtifact.cs' }, @{ Path = 'backend/src/AiNexus.Host/appsettings.json' },
         @{ Path = 'backend/src/AiNexus.Host/appsettings.Local.example.json' }, @{ Path = 'backend/src/AiNexus.Host/appsettings.Production.example.json' },
-        @{ Path = '.env.example' }, @{ Path = 'docs/development/LOCAL_FOLDERS.md' }) {
+        @{ Path = '.env.example' }, @{ Path = 'docs/development/local-folders.md' }) {
         Test-NexusForbiddenPath $Path | Should -BeFalse
     }
 }

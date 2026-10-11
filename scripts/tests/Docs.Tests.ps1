@@ -1,4 +1,4 @@
-# Documentation rules from CLAUDE.md: links and repository paths in Markdown resolve, and docs/ files stay short and
+# Documentation rules from .claude/rules/docs.md: links and repository paths in Markdown resolve, and docs/ files stay short and
 # follow the naming table.
 BeforeDiscovery {
     $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
@@ -67,7 +67,7 @@ Describe '<Name>' -ForEach $docs {
     It 'follows the docs naming rule' {
         $leaf = Split-Path -Leaf $Path
         if ($Name -like 'docs/decisions/*') { $leaf | Should -MatchExactly '^\d{4}(-[a-z0-9]+)+\.md$' }
-        else { $leaf | Should -MatchExactly '^[A-Z0-9]+(_[A-Z0-9]+)*\.md$' }
+        else { $leaf | Should -MatchExactly '^[a-z0-9]+(-[a-z0-9]+)*\.md$' }
     }
 
     It 'stays within about 8 KB' {

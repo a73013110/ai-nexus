@@ -5,7 +5,7 @@ namespace AiNexus.ArchitectureTests;
 
 /// <summary>
 /// Diagnostics are queried by EventId and EventName, so every [LoggerMessage] names a fixed, unique pair
-/// (docs/architecture/LOG_EVENTS.md). CA1848 already forbids logging outside [LoggerMessage] methods.
+/// (docs/architecture/log-events.md). CA1848 already forbids logging outside [LoggerMessage] methods.
 /// </summary>
 public sealed class LoggingTests
 {

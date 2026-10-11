@@ -8,7 +8,7 @@ namespace AiNexus.Platform.Diagnostics;
 
 /// <summary>
 /// Ids of the core events that code outside their <c>[LoggerMessage]</c> declaration refers to. Every event id and
-/// name is listed in docs/architecture/LOG_EVENTS.md.
+/// name is listed in docs/architecture/log-events.md.
 /// </summary>
 public static class DiagnosticEvents
 {

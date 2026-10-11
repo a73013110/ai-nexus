@@ -11,4 +11,4 @@
 
 ## 做法
 
-造成循環時依序考慮：把型別移到真正擁有它的模組 → 下層定義介面、上層實作 → domain event → 下層方法改收自己的參數型別。詳見 [模組邊界](../architecture/MODULE_BOUNDARIES.md)。對話的讀取／匯出／複製／刪除留在 `Chat`，就是因為搬到 `Conversations` 會形成循環。
+造成循環時依序考慮：把型別移到真正擁有它的模組 → 下層定義介面、上層實作 → domain event → 下層方法改收自己的參數型別。詳見 [模組邊界](../architecture/module-boundaries.md)。對話的讀取／匯出／複製／刪除留在 `Chat`，就是因為搬到 `Conversations` 會形成循環。
