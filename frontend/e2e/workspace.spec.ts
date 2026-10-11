@@ -80,6 +80,8 @@ test("returning to a new draft ignores a delayed previous conversation response"
     .getByRole("link", { name: "新對話", exact: false })
     .first();
   await newConversation.click();
+  // The router activates after its view transition starts, so type once the new draft is open.
+  await expect(page).toHaveURL(/\/chat$/);
   await input.fill("新對話中還沒送出的想法");
   await expect
     .poll(() =>

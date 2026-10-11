@@ -68,6 +68,24 @@
     transform: translateY(0);
   }
 }
+@keyframes island-arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+@keyframes island-depart {
+  to {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+@keyframes bubble-arrive {
+  from {
+    opacity: 0;
+    transform: translateX(-2.5rem) scale(0.4);
+  }
+}
 @keyframes content-arrive {
   from {
     opacity: 0;
@@ -76,19 +94,54 @@
     opacity: 1;
   }
 }
-@mixin reduced-motion {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
+// View transitions (core/layout/view-morph.ts). Names apply only while one runs, so they never
+// create stacking contexts at rest. Pages cross-fade; named elements move on the spring. The
+// sidebar shows its live state, so the navigation pill keeps its own slide.
+:root[data-morphing] {
+  .workspace-sidebar {
+    view-transition-name: workspace-sidebar;
+  }
+  nx-brand-wordmark {
+    view-transition-name: nx-brand;
+  }
+  .composer-region form.composer {
+    view-transition-name: chat-composer;
+  }
+}
+::view-transition-group(*) {
+  animation-duration: var(--motion-morph);
+  animation-timing-function: var(--ease-spring);
+}
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--motion);
+}
+::view-transition-old(workspace-sidebar):not(:only-child) {
+  display: none;
+}
+::view-transition-group(workspace-sidebar),
+::view-transition-new(workspace-sidebar):not(:only-child) {
+  animation: none;
+}
+// Animations jump to their end state and transitions are removed, so layout properties settle in
+// the same frame instead of easing over a hidden 0.01ms transition.
+@mixin reduced-motion($root) {
+  #{$root} *,
+  #{$root} *::before,
+  #{$root} *::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition: none !important;
     scroll-behavior: auto !important;
+  }
+  #{$root}::view-transition-group(*),
+  #{$root}::view-transition-old(*),
+  #{$root}::view-transition-new(*) {
+    animation: none !important;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  @include reduced-motion;
+  @include reduced-motion(':root');
 }
-:root[data-reduced-motion='true'] {
-  @include reduced-motion;
-}
+@include reduced-motion(":root[data-reduced-motion='true']");

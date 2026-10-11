@@ -90,7 +90,7 @@ test("generation follows queue, preparation and content with distinct unobtrusiv
       .fill("準備回答");
     await page.getByRole("button", { name: "送出訊息", exact: true }).click();
     const indicator = page.locator("nx-generation-indicator");
-    const header = page.locator(".topbar .inference-status");
+    const header = page.locator("nx-island .island");
     await expect(indicator).toContainText("等待模型回應");
     await expect(indicator.locator(".generation-indicator")).toHaveClass(
       /is-waiting/,
@@ -117,7 +117,7 @@ test("generation follows queue, preparation and content with distinct unobtrusiv
     expect(await activeLoops(indicator)).toBe(4);
     expect(await activeLoops(header)).toBe(2);
     expect(await activeLoops(page.locator(".composer"))).toBe(0);
-    await expect(page.locator(".topbar [role='status']")).toHaveCount(1);
+    await expect(page.locator("nx-island [role='status']")).toHaveCount(1);
     await expect(indicator.locator("[role='status']")).toHaveCount(0);
     await expect(indicator.locator(".generation-orbit")).toHaveAttribute(
       "aria-hidden",
@@ -197,7 +197,7 @@ for (const preference of ["system", "personal"] as const) {
     const indicator = page.locator("nx-generation-indicator");
     await expect(indicator).toContainText("正在準備回答");
     expect(await activeLoops(indicator)).toBe(0);
-    expect(await activeLoops(page.locator(".topbar .inference-status"))).toBe(
+    expect(await activeLoops(page.locator("nx-island .island"))).toBe(
       0,
     );
     await expect(indicator.locator(".generation-orbit i").first()).toHaveCSS(

@@ -1,6 +1,6 @@
 <div class="topbar-left">
   <nx-workspace-menu-button />
-  <div class="conversation-heading">
+  <div class="conversation-heading" data-morph="conversation-title">
     @if (store.selected(); as conversation) {
       <nx-inline-title
         [value]="conversation.title"
@@ -31,11 +31,6 @@
       [id]="conversation.id"
       [revision]="conversation.updatedAt + (store.liveRun()?.status ?? '')"
     />
-  }
-  @if (status()) {
-    <span class="inference-status" role="status"
-      ><nx-inference-signal [active]="true" [subtle]="true" /><span>{{ status() }}</span></span
-    >
   }
   @if (store.selected(); as conversation) {
     @if (store.hasSharing()) {

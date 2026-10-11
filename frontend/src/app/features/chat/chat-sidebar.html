@@ -74,7 +74,7 @@
           <div class="history-row" [class.selected]="store.selected()?.id === conversation.id">
             <a
               [routerLink]="['/chat', conversation.id]"
-              (click)="navigate.emit()"
+              (click)="open($event, rowTitle)"
               [attr.aria-current]="store.selected()?.id === conversation.id ? 'page' : null"
               [title]="conversation.title"
             >
@@ -87,7 +87,7 @@
                   >回答已完成 ·
                 </span>
               }
-              <span>{{ conversation.title }}</span></a
+              <span #rowTitle>{{ conversation.title }}</span></a
             >
             <button
               type="button"

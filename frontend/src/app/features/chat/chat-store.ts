@@ -14,6 +14,7 @@ import type {
   RunDto,
 } from '../../core/api/schema';
 import { isActive } from '../../core/api/generation-status';
+import { ViewMorph } from '../../core/layout/view-morph';
 import { ThemeService } from '../../core/preferences/theme-service';
 import { AuthService } from '../../core/auth/auth-service';
 import { DraftAttachments } from '../attachments/draft-attachments';
@@ -38,6 +39,7 @@ export class ChatStore {
   private readonly api = inject(NexusApi);
   private readonly router = inject(Router);
   private readonly themes = inject(ThemeService);
+  private readonly morph = inject(ViewMorph);
   readonly attachments = inject(DraftAttachments);
   readonly knowledge = inject(KnowledgeSelection);
   private readonly workspace = inject(WorkspaceApi);
@@ -288,9 +290,13 @@ export class ChatStore {
     try {
       const detail = await this.api.conversation(id);
       if (version !== this.selectionVersion) return;
-      this.selected.set(detail.conversation as ConversationDto);
+      await this.morph.run(() => {
+        if (version !== this.selectionVersion) return;
+        this.selected.set(detail.conversation as ConversationDto);
+        this.messages.set(detail.messages as MessageDto[]);
+      }, 'conversation-title');
+      if (version !== this.selectionVersion) return;
       this.notifications.readConversation(id);
-      this.messages.set(detail.messages as MessageDto[]);
       if (this.hasKnowledgeAccess()) await this.knowledge.load(id);
       if (version !== this.selectionVersion) return;
       await this.restoreDraft(id);

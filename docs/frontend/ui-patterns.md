@@ -37,7 +37,7 @@
 - 用原生 `<dialog>`，加 `nxCompactDialog` 套用共用密度；沒有可存取名稱時由 h2 建立，不接管 focus、Escape 或業務狀態。
 - 外框只負責圓角、top layer、焦點與關閉；內容放 `.dialog-scroll`，捲動與最大高度在內層。
 - `ConfirmDialog` 初始焦點在「取消」，Esc／關閉視為取消，結束後返回先前焦點。危險動作一律經過確認。
-- 詳情用 `DetailDrawer`：桌面 modeless（可繼續操作列表、選下一列），1023px 以下改為原生 modal。依據 [Fluent 2 Drawer](https://fluent2.microsoft.design/components/web/react/core/drawer/usage)。
+- 詳情用 `DetailDrawer`：桌面 modeless（可繼續操作列表、選下一列），1023px 以下改為原生 modal。
 - 多頁籤視窗（例：使用者活動）各頁籤維持相同寬高，切換不改外框；確實需要不同尺寸的 dialog 才用 `DialogMotion` 過渡寬高。內容切換用 `ViewMotion`。
 - 只在開啟時建立昂貴內容（`CompactDialog.opened`），關閉時銷毀閱讀器、圖表與 Blob URL。
 
@@ -54,7 +54,7 @@
 
 ## 提示、載入與錯誤
 
-- 失敗、風險、資訊與完成回饋一律用 `Notice`（錯誤為 `alert`，其他為 `status`）；不要新增 `error-banner` 或自訂提示容器。`message` 會附上可複製的查證代碼，動作放 `notice-actions`。
+- 失敗、風險、資訊與完成回饋一律用 `Notice`（錯誤為 `alert`，其他為 `status`）；不另建提示容器；composer 的提示收斂在 `NexusIsland`（[動效](design-system.md#動效)）。`message` 會附上可複製的查證代碼，動作放 `notice-actions`。
 - 讀取的載入／錯誤／重試寫法見 [讀取與寫入](frontend-boundaries.md#讀取與寫入)。
 - 進度只顯示真實階段（`JobProgress`）；未知總量用不定進度，不做假百分比。未知金額或未取得的用量顯示說明文字，不顯示為零。
 - 狀態用 `StatusBadge`／`CountBadge`：文字或圓點與顏色並用，不只靠顏色。數量徽章是裝飾，完整脈絡由父按鈕的名稱提供，只由一個 contextual status 播報更新。
