@@ -22,10 +22,14 @@ import { Icon } from '../../shared/ui/icon';
     }
     <div class="notification-list" [attr.aria-busy]="store.loading()">
       @for (item of store.items(); track item.id) {
+        <!-- The row is a pointer shortcut for 「查看內容」, which stays the keyboard path. -->
+        <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
         <article
           class="notification-row"
           [class.is-unread]="!item.readAt"
+          [class.is-actionable]="url(item.target, item.version)"
           [attr.data-severity]="item.severity"
+          (click)="open($event, item)"
         >
           <nx-icon
             [name]="
@@ -95,4 +99,15 @@ export class NotificationFeed {
   readonly date = formatDate;
   readonly url = notificationUrl;
   readonly ignore = () => {};
+  /** Clicks on the row's own controls and text selection keep their behavior. */
+  open(event: MouseEvent, item: NotificationDto) {
+    if (
+      !this.url(item.target, item.version) ||
+      !(event.target instanceof Element) ||
+      event.target.closest('button,a,input,select,textarea') ||
+      window.getSelection()?.toString()
+    )
+      return;
+    void this.store.activate(item);
+  }
 }

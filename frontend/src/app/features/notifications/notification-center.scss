@@ -1,6 +1,16 @@
 .notification-center {
   --dialog-width: 30rem;
 }
+// Desktop: a popover under the bell (beside it on the icon rail), laid out like the flush dialog.
+// Layout stays outside :popover-open so the exit keeps it while `display` is held.
+.notification-popover {
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+.notification-popover:popover-open {
+  display: flex;
+}
 .notification-center [aria-pressed='true'] {
   background: var(--accent-soft);
   color: var(--accent);
