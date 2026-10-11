@@ -1,0 +1,40 @@
+// The button keeps its block size; only width and corners morph, so the form never shifts.
+:host {
+  align-self: center;
+  width: 100%;
+  min-height: 46px;
+  margin-top: 14px;
+  overflow: hidden;
+  white-space: nowrap;
+  transition:
+    width var(--motion-morph) var(--ease-spring),
+    border-radius var(--motion-morph) var(--ease-spring),
+    opacity var(--motion-fast) var(--ease);
+}
+:host([data-phase='loading']):disabled {
+  opacity: 1;
+  cursor: progress;
+}
+:host([data-phase='success']):disabled {
+  width: 46px;
+  padding-inline: 0;
+  border-radius: 23px;
+  opacity: 1;
+}
+.submit-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  animation: arrive var(--motion) var(--ease-spring) both;
+}
+.submit-spinner {
+  animation: orbit-turn 1s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .submit-spinner {
+    animation: none;
+  }
+}
+:host-context([data-reduced-motion='true']) .submit-spinner {
+  animation: none;
+}

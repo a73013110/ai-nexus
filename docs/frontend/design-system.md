@@ -42,7 +42,8 @@
 - 靈動島（`shared/ui/island.ts`）：composer 的狀態與警告註冊到 `IslandService`，依 priority 排序。一則是 pill、多則分出泡泡（split）、點開展開全部（expanded）。會擋住送出、改變送出內容或涉及隱私的提示設 `urgent`，出現時自動展開，收合後維持 pill 直到它消失再出現。寬高由 ResizeObserver 量測後用彈簧過渡，因此不依賴 `interpolate-size`。
 - 生成訊號、等待指示與串流游標只依伺服器 run 狀態與是否收到內容顯示（`core/api/generation-status.ts`）；思考強度不是推理階段，不宣稱「正在推理」，工作結束即停止。
 - 減少動態有兩個來源：系統 `prefers-reduced-motion` 與個人設定（`:root[data-reduced-motion='true']`），共用 `motion.scss` 的 mixin：animation 直接到終點、移除 transition（版面屬性同一幀到位）、View Transitions 略過。元件內的 loop 另以 `@media (prefers-reduced-motion)` 加 `:host-context([data-reduced-motion='true'])` 停止；顏色與文字狀態保留。
-- 登入頁的傅立葉標誌動畫可跳過／重播、背景分頁暫停、數秒後停止，結束後交給靜態 SVG（`BrandWordmark`）；表單全程可用。
+- 登入頁的傅立葉標誌動畫每個分頁只自動播一次（`sessionStorage`，登出回來直接是靜態標誌），可跳過／重播、背景分頁暫停，結束後交給靜態 SVG（`BrandWordmark`）；介紹文案與表單不等動畫。
+- 登入按鈕（`LoginSubmit`）依 idle→loading→success morph：成功時縮成打勾圓鈕，停約 0.4 秒再換頁；減少動態時不停留。
 
 ## 圖示
 

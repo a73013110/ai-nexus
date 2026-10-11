@@ -89,7 +89,7 @@ test("Fourier identity keeps sign-in usable, can settle immediately and respects
   const account = page.getByRole("textbox", { name: "AD 帳號", exact: true });
   await expect(account).toBeVisible();
   await account.fill("fixture");
-  await page.locator("#ad-password").fill("fixture-password");
+  await page.locator("#login-password").fill("fixture-password");
   await expect(
     page.getByRole("button", { name: "登入工作區", exact: true }),
   ).toBeEnabled();
