@@ -1,7 +1,10 @@
 .notification-center .dialog-heading {
   flex: none;
 }
+.notification-center {
+  flex-direction: column;
+}
+// Layout lives outside [open]: the exit keeps `display` but would drop the rest at once.
 .notification-center[open] {
   display: flex;
-  flex-direction: column;
 }

@@ -62,11 +62,12 @@
   height: calc(100dvh - 48px);
   max-height: 60rem;
   overflow: hidden;
-}
-.mermaid-dialog[open] {
-  display: flex;
   flex-direction: column;
   gap: var(--p-space-3);
+}
+// Layout lives outside [open]: the exit keeps `display` but would drop the rest at once.
+.mermaid-dialog[open] {
+  display: flex;
 }
 .mermaid-dialog .dialog-heading {
   flex: none;
