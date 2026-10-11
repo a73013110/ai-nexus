@@ -180,6 +180,7 @@ test("new conversations share the selected column width and narrow screens keep 
   await page.locator(".workspace-sidebar .sidebar-toggle").click();
   await alignedChat(page, 1024);
   await page.setViewportSize({ width: 375, height: 812 });
+  await expect(page.locator(".workspace-menu-button")).toBeVisible();
   const widths: number[] = [];
   for (const label of ["專注 · 窄", "標準", "寬廣"]) {
     await saveWidth(page, label);

@@ -1,4 +1,4 @@
-// The sidebar content is projected into WorkspaceSidebar; `.sidebar` is its host in this template.
+// Rendered as the chat panel inside the shell's WorkspaceSidebar; compact rules follow its rail.
 .new-chat {
   display: flex;
   align-items: center;
@@ -37,7 +37,7 @@
   border-radius: var(--p-radius-md);
 }
 // The shared rail keeps 44px targets while compact, including the mobile drawer.
-.is-compact .icon-button {
+:host-context(.workspace-sidebar.is-compact) .icon-button {
   width: 100%;
   min-height: 2.75rem;
 }
@@ -166,17 +166,18 @@
   margin-top: var(--p-space-3);
   justify-content: center;
 }
-.sidebar.is-compact :is(.sidebar-tools, .history-search, .history-filters, .history) {
+:host-context(.workspace-sidebar.is-compact)
+  :is(.sidebar-tools, .history-search, .history-filters, .history) {
   display: none;
 }
-.sidebar.is-compact .new-chat {
+:host-context(.workspace-sidebar.is-compact) .new-chat {
   display: grid;
   place-items: center;
   align-self: center;
   width: var(--button-target);
   padding: 0;
 }
-.sidebar.is-compact .new-chat-label,
-.sidebar.is-compact .new-chat-hint {
+:host-context(.workspace-sidebar.is-compact) .new-chat-label,
+:host-context(.workspace-sidebar.is-compact) .new-chat-hint {
   display: none;
 }

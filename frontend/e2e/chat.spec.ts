@@ -71,7 +71,7 @@ test("blank desktop workspace, real forms, keyboard and Markdown copy", async ({
     page.getByRole("heading", { name: "今天，從哪件事開始？" }),
   ).toBeVisible();
   await expect(page.locator(".workbench")).toHaveCSS("display", "grid");
-  await expect(page.locator(".sidebar")).toHaveCSS("width", "240px");
+  await expect(page.locator(".workspace-sidebar")).toHaveCSS("width", "240px");
   await expect(page.getByRole("button", { name: "送出訊息" })).toBeDisabled();
   const start = page.locator(".chat-start");
   await expect(start).toHaveCSS("font-size", "13px");
@@ -271,7 +271,7 @@ test("dark theme, reduced motion and narrow viewport remain usable", async ({
   await expect(
     page.getByRole("button", { name: "展開側欄", exact: true }),
   ).toBeVisible();
-  await expect(page.locator("main")).not.toHaveAttribute("inert", "");
+  await expect(page.locator(".workspace-main")).not.toHaveAttribute("inert", "");
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("窄畫面測試");
   await expect(page.getByRole("textbox", { name: "傳送訊息" })).toHaveValue(
     "窄畫面測試",
@@ -301,10 +301,10 @@ test("mobile drawer supports Escape and restores visible keyboard focus", async 
   await page.goto("/chat");
   const toggle = page.getByRole("button", { name: "展開側欄" });
   await toggle.click();
-  await expect(page.locator("main")).toHaveAttribute("inert", "");
+  await expect(page.locator(".workspace-main")).toHaveAttribute("inert", "");
   await page.keyboard.press("Escape");
   await expect(toggle).toBeFocused();
-  await expect(page.locator("main")).not.toHaveAttribute("inert", "");
+  await expect(page.locator(".workspace-main")).not.toHaveAttribute("inert", "");
   await page.getByRole("textbox", { name: "傳送訊息" }).focus();
   await expect(page.locator(".composer")).toHaveCSS("outline-width", "2px");
 });

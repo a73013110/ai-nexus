@@ -11,7 +11,7 @@
 | `core/api` | 產生的 OpenAPI 型別、`ApiClient`（JSON／multipart／SSE）、`apiResource()`、CSRF 與登入失效 |
 | `core/auth` | 路由 guard、帳號世代與 `WorkspaceSession`、身分橫幅、功能名稱 |
 | `core/errors` | 安全錯誤訊息、查證代碼、前端例外回報與未處理錯誤提示 |
-| `core/layout` | 版面 shell（`FeaturePage`、側欄、導覽、首頁路徑）；唯一可以組合 features 的 core 資料夾 |
+| `core/layout` | 版面 shell（`WorkspaceShell`、`FeaturePage`、側欄、導覽、首頁路徑）；唯一可以組合 features 的 core 資料夾 |
 | `core/preferences` | 主題、帳號設定、本機草稿、跨頁新對話草稿交接 |
 | `core/monitoring`、`core/stream` | 瀏覽器在線狀態；SSE 解析與生成串流 |
 | `features/*` | 按路由載入的頁面、該功能的 `*-api.ts`、store 與業務元件；被多個功能共用的業務元件也留在 features（例：`features/workspace` 的 `ConversationActions`） |

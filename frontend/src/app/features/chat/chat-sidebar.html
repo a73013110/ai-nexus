@@ -1,143 +1,134 @@
-<aside
-  nxWorkspaceSidebar
-  class="sidebar"
-  aria-label="對話導覽"
-  [collapsibleNavigation]="true"
-  (activated)="navigate.emit()"
->
-  @if (store.hasChatAccess()) {
-    <a
-      routerLink="/chat"
-      class="new-chat"
-      aria-label="新對話"
-      title="新對話"
-      (click)="navigate.emit()"
-      ><nx-icon name="plus" /><span class="new-chat-label">新對話</span
-      ><span class="new-chat-hint">開始</span></a
+@if (store.hasChatAccess()) {
+  <a
+    routerLink="/chat"
+    class="new-chat"
+    aria-label="新對話"
+    title="新對話"
+    (click)="navigate.emit()"
+    ><nx-icon name="plus" /><span class="new-chat-label">新對話</span
+    ><span class="new-chat-hint">開始</span></a
+  >
+}
+@if (store.hasChatAccess()) {
+  <div class="sidebar-tools">
+    <button type="button" class="quiet-button" (click)="prompts.emit()">
+      <nx-icon name="library" />常用範本
+    </button>
+    <button
+      type="button"
+      class="icon-button"
+      aria-label="開啟快捷指令"
+      title="快捷指令 Ctrl + K"
+      (click)="commands.emit()"
     >
-  }
-  @if (store.hasChatAccess()) {
-    <div class="sidebar-tools">
-      <button type="button" class="quiet-button" (click)="prompts.emit()">
-        <nx-icon name="library" />常用範本
-      </button>
+      <nx-icon name="command" />
+    </button>
+    <button
+      type="button"
+      class="icon-button"
+      aria-label="匯入對話文字備份"
+      title="匯入 JSON 文字備份"
+      (click)="backupInput.click()"
+    >
+      <nx-icon name="upload" />
+    </button>
+    <input
+      #backupInput
+      type="file"
+      class="sr-only"
+      accept="application/json,.json"
+      (change)="importFile($event)"
+    />
+  </div>
+  <div class="history-search">
+    <nx-icon name="search" /><input
+      type="search"
+      aria-label="搜尋對話標題與內容"
+      placeholder="搜尋標題與內容"
+      [formField]="searchForm.query"
+      (input)="searchChanged()"
+    />
+  </div>
+  <div class="history-filters" aria-label="對話篩選">
+    @for (
+      view of [
+        { id: 'active', name: '近期' },
+        { id: 'favorites', name: '收藏' },
+        { id: 'archived', name: '封存' },
+      ];
+      track view.id
+    ) {
       <button
         type="button"
-        class="icon-button"
-        aria-label="開啟快捷指令"
-        title="快捷指令 Ctrl + K"
-        (click)="commands.emit()"
+        [attr.aria-pressed]="store.historyView() === view.id"
+        (click)="conversations.filterHistory(view.id)"
       >
-        <nx-icon name="command" />
+        {{ view.name }}
       </button>
-      <button
-        type="button"
-        class="icon-button"
-        aria-label="匯入對話文字備份"
-        title="匯入 JSON 文字備份"
-        (click)="backupInput.click()"
-      >
-        <nx-icon name="upload" />
-      </button>
-      <input
-        #backupInput
-        type="file"
-        class="sr-only"
-        accept="application/json,.json"
-        (change)="importFile($event)"
+    }
+    @if (store.labels().length) {
+      <nx-select
+        class="label-filter"
+        label="依標籤篩選"
+        [value]="store.historyLabel()"
+        [options]="labelOptions()"
+        (valueChange)="selectLabel($event)"
       />
-    </div>
-    <div class="history-search">
-      <nx-icon name="search" /><input
-        type="search"
-        aria-label="搜尋對話標題與內容"
-        placeholder="搜尋標題與內容"
-        [formField]="searchForm.query"
-        (input)="searchChanged()"
-      />
-    </div>
-    <div class="history-filters" aria-label="對話篩選">
-      @for (
-        view of [
-          { id: 'active', name: '近期' },
-          { id: 'favorites', name: '收藏' },
-          { id: 'archived', name: '封存' },
-        ];
-        track view.id
-      ) {
-        <button
-          type="button"
-          [attr.aria-pressed]="store.historyView() === view.id"
-          (click)="conversations.filterHistory(view.id)"
-        >
-          {{ view.name }}
-        </button>
-      }
-      @if (store.labels().length) {
-        <nx-select
-          class="label-filter"
-          label="依標籤篩選"
-          [value]="store.historyLabel()"
-          [options]="labelOptions()"
-          (valueChange)="selectLabel($event)"
-        />
-      }
-    </div>
-    <nav class="history" aria-label="對話歷史">
-      @if (store.loading()) {
-        <p class="sidebar-note" role="status">正在取得對話…</p>
-      }
-      @for (group of groups(); track group.label) {
-        <div class="history-group">
-          <h2>{{ group.label }}</h2>
-          @for (conversation of group.conversations; track conversation.id) {
-            <div class="history-row" [class.selected]="store.selected()?.id === conversation.id">
-              <a
-                [routerLink]="['/chat', conversation.id]"
-                (click)="navigate.emit()"
-                [attr.aria-current]="store.selected()?.id === conversation.id ? 'page' : null"
-                [title]="conversation.title"
-              >
-                @if (store.liveRun()?.conversationId === conversation.id) {
-                  <nx-icon class="history-state is-running" name="loading" /><span class="sr-only"
-                    >正在產生回答 ·
-                  </span>
-                } @else if (notifications.completed(conversation.id)) {
-                  <nx-icon class="history-state history-complete" name="check" /><span
-                    class="sr-only"
-                    >回答已完成 ·
-                  </span>
-                }
-                <span>{{ conversation.title }}</span></a
-              >
-              <nx-conversation-actions
-                [conversation]="conversation"
-                [compact]="true"
-                [sharing]="store.me()?.access?.features?.some(hasSharing) ?? false"
-                [busy]="store.liveRun()?.conversationId === conversation.id"
-                (action)="action.emit({ conversation, action: $event })"
-              />
-            </div>
-          }
-        </div>
-      } @empty {
-        @if (!store.loading()) {
-          <p class="sidebar-note">
-            {{
-              searchModel().query
-                ? '沒有符合的對話。'
-                : store.historyView() === 'archived'
-                  ? '封存的對話會放在這裡。'
-                  : store.historyView() === 'favorites'
-                    ? '收藏重要對話，方便再次開啟。'
-                    : '對話會保存在這裡，隨時接續。'
-            }}
-          </p>
+    }
+  </div>
+  <nav class="history" aria-label="對話歷史">
+    @if (store.loading()) {
+      <p class="sidebar-note" role="status">正在取得對話…</p>
+    }
+    @for (group of groups(); track group.label) {
+      <div class="history-group">
+        <h2>{{ group.label }}</h2>
+        @for (conversation of group.conversations; track conversation.id) {
+          <div class="history-row" [class.selected]="store.selected()?.id === conversation.id">
+            <a
+              [routerLink]="['/chat', conversation.id]"
+              (click)="navigate.emit()"
+              [attr.aria-current]="store.selected()?.id === conversation.id ? 'page' : null"
+              [title]="conversation.title"
+            >
+              @if (store.liveRun()?.conversationId === conversation.id) {
+                <nx-icon class="history-state is-running" name="loading" /><span class="sr-only"
+                  >正在產生回答 ·
+                </span>
+              } @else if (notifications.completed(conversation.id)) {
+                <nx-icon class="history-state history-complete" name="check" /><span class="sr-only"
+                  >回答已完成 ·
+                </span>
+              }
+              <span>{{ conversation.title }}</span></a
+            >
+            <nx-conversation-actions
+              [conversation]="conversation"
+              [compact]="true"
+              [sharing]="store.me()?.access?.features?.some(hasSharing) ?? false"
+              [busy]="store.liveRun()?.conversationId === conversation.id"
+              (action)="action.emit({ conversation, action: $event })"
+            />
+          </div>
         }
+      </div>
+    } @empty {
+      @if (!store.loading()) {
+        <p class="sidebar-note">
+          {{
+            searchModel().query
+              ? '沒有符合的對話。'
+              : store.historyView() === 'archived'
+                ? '封存的對話會放在這裡。'
+                : store.historyView() === 'favorites'
+                  ? '收藏重要對話，方便再次開啟。'
+                  : '對話會保存在這裡，隨時接續。'
+          }}
+        </p>
       }
-      @if (store.hasMore()) {
-        <button class="quiet-button load-more" (click)="loadMore()">載入更早的對話</button>
-      }
-    </nav>
-  }
-</aside>
+    }
+    @if (store.hasMore()) {
+      <button class="quiet-button load-more" (click)="loadMore()">載入更早的對話</button>
+    }
+  </nav>
+}
