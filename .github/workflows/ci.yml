@@ -31,9 +31,9 @@ jobs:
           global-json-file: global.json
       - uses: actions/setup-node@v6
         with:
-          node-version-file: .node-version
+          node-version-file: frontend/package.json
           cache: npm
-          cache-dependency-path: '**/package-lock.json'
+          cache-dependency-path: frontend/package-lock.json
       - name: Restore
         run: ./scripts/Restore.ps1
       - name: Verify

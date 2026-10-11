@@ -13,7 +13,7 @@
 | `backend/tests/AiNexus.ArchitectureTests` | 專案依賴方向、模組無循環、slice 形狀、資料庫模型、檔名＝型別名、測試的資料夾與命名、EventId 唯一 |
 | `scripts/tests` | 腳本慣例、共用模組函式、文件連結與長度（`Docs.Tests.ps1`） |
 | `frontend/src/**/*.spec.ts` | 前端單元測試（Vitest，`npm --prefix frontend test`） |
-| `tests/e2e` | Playwright 端到端測試，對發布後的網站執行 |
+| `frontend/e2e` | Playwright 端到端測試，對發布後的網站執行；spec 以功能命名 |
 
 ## 測試怎麼放、怎麼命名
 
@@ -48,7 +48,7 @@ dotnet test --project backend/tests/AiNexus.IntegrationTests --filter "FullyQual
 - **背景工作**：只有生成 worker 會跑。其他 hosted worker 用 `workers: [typeof(DiagnosticWorker)]` 選用；週期性工作由測試直接呼叫，例如 `ActivatorUtilities.CreateInstance<BackgroundJobWorker>(factory.Services).ProcessNextAsync(...)`。原因：背景工作和測試搶同一個 SQLite 檔的寫入鎖，會造成偶發失敗。
 - **時間**：需要逾時或週期的測試傳 `clock: new FakeTimeProvider(DateTimeOffset.UtcNow)` 再 `Advance`；正式程式碼的計時器與 `CancellationTokenSource` 逾時都要吃 `TimeProvider` 才能這樣測。
 - **密碼**：Argon2 用 `NexusFactory.PasswordCost`（1 MiB、1 次）；正式環境固定 `Argon2Cost.Recommended`。
-- 測試替身只存在 `backend/tests` 與 `tests/e2e`，正式程式不接受測試身分 header。
+- 測試替身只存在 `backend/tests` 與 `frontend/e2e`，正式程式不接受測試身分 header。
 
 ## 等待非同步結果
 
@@ -77,6 +77,8 @@ dotnet test --project backend/tests/AiNexus.IntegrationTests --filter "Category=
 
 ## 瀏覽器測試
 
-- Playwright（`tests/e2e`）由 `Start-BrowserTest.ps1` 啟動編譯好的網站（5180），使用 `artifacts/` 下專用的空設定、金鑰、附件與日誌，不讀開發機的 `.local`；API 由測試替身提供。
+- Playwright（`frontend/e2e`）由同資料夾的 `Start-BrowserTest.ps1` 啟動編譯好的網站（5180），使用 `artifacts/` 下專用的空設定、金鑰、附件與日誌，不讀開發機的 `.local`；API 由測試替身提供。
+- Windows 用 Edge（`msedge` channel，與使用者相同）；其他系統用 Playwright 的 Chromium，`npx playwright install chromium` 或以 `CHROMIUM_EXECUTABLE_PATH` 指向已安裝的 Chromium。
+- 預設 1 個 worker。`-- --workers=4` 在 4 核心機器約快四成，但伺服器與瀏覽器搶 CPU 時，計時相關的斷言（串流中途、動畫）會不穩，只適合本機快速回歸。
 - `Verify.ps1 -Browser` 設定 `NEXUS_E2E_PUBLISH_DIRECTORY=artifacts/verification`；單獨執行 npm 測試預設用 `artifacts/publish`。
-- 覆蓋鍵盤、中文組字、版本分支、斷線、Markdown 安全、模型政策、Context、字體與窄螢幕；結果、trace 與畫面在 `artifacts/`。API fixture 回歸刻意不配置資料庫，不能當成 SQL Server 的功能或效能驗證。
+- 覆蓋鍵盤、中文組字、版本分支、斷線、Markdown 安全、模型政策、Context、字體與窄螢幕；失敗時的截圖、trace 與報告在 `artifacts/`；測試內不另外留存畫面，需要畫面比對時才用 `toHaveScreenshot`。API fixture 回歸刻意不配置資料庫，不能當成 SQL Server 的功能或效能驗證。

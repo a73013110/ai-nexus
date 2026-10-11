@@ -1,9 +1,9 @@
-# Conventions every PowerShell file in scripts/ and tooling/ follows; see the comment-based help of each entry script.
+# Conventions every PowerShell file in scripts/, tooling/ and frontend/e2e follows; see the comment-based help of each entry script.
 BeforeDiscovery {
     $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
-    $entries = @(Get-ChildItem -LiteralPath (Join-Path $root 'scripts') -Filter '*.ps1' | ForEach-Object { @{ Name = $_.Name; Path = $_.FullName } })
+    $entries = @(Get-ChildItem -LiteralPath (Join-Path $root 'scripts'), (Join-Path $root 'frontend/e2e') -Filter '*.ps1' | ForEach-Object { @{ Name = $_.Name; Path = $_.FullName } })
     $tools = @(Get-ChildItem -LiteralPath (Join-Path $root 'tooling') -Filter '*.ps1' -Recurse | ForEach-Object { @{ Name = $_.Name; Path = $_.FullName } })
-    $all = @(Get-ChildItem -LiteralPath (Join-Path $root 'scripts'), (Join-Path $root 'tooling') -Include '*.ps1', '*.psm1' -Recurse | ForEach-Object { @{ Name = $_.Name; Path = $_.FullName } })
+    $all = @(Get-ChildItem -LiteralPath (Join-Path $root 'scripts'), (Join-Path $root 'tooling'), (Join-Path $root 'frontend/e2e') -Include '*.ps1', '*.psm1' -Recurse | ForEach-Object { @{ Name = $_.Name; Path = $_.FullName } })
 }
 
 BeforeAll {
@@ -19,10 +19,9 @@ Describe 'scripts/ entry list' {
     It 'contains only the documented entry scripts' {
         $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
         $names = @(Get-ChildItem -LiteralPath (Join-Path $root 'scripts') -Filter '*.ps1').BaseName | Sort-Object
-        # Start-BrowserTest moves to frontend/e2e together with the Playwright tests.
         $names | Should -Be (@(
-            'Build', 'Configure-Local', 'Export-Contracts', 'Initialize-Database', 'Publish-IIS', 'Restore', 'Start-BrowserTest',
-            'Start-Dev', 'Start-Local', 'Test-Environment', 'Test-Repository', 'Verify', 'Verify-IIS') | Sort-Object)
+            'Build', 'Configure-Local', 'Export-Contracts', 'Initialize-Database', 'Publish-IIS', 'Restore', 'Start-Dev',
+            'Start-Local', 'Test-Environment', 'Test-Repository', 'Verify', 'Verify-IIS') | Sort-Object)
     }
 }
 
