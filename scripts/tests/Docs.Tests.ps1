@@ -1,5 +1,5 @@
 # Documentation rules from CLAUDE.md: links and repository paths in Markdown resolve, and docs/ files stay short and
-# follow the naming table. docs/frontend is merged and shortened in a later step, so only its links are checked here.
+# follow the naming table.
 BeforeDiscovery {
     $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
     $markdown = @(git -C $root -c core.quotepath=false ls-files --cached --others --exclude-standard -- '*.md' |
@@ -70,7 +70,7 @@ Describe '<Name>' -ForEach $docs {
         else { $leaf | Should -MatchExactly '^[A-Z0-9]+(_[A-Z0-9]+)*\.md$' }
     }
 
-    It 'stays within about 8 KB' -Skip:($Name -like 'docs/frontend/*') {
+    It 'stays within about 8 KB' {
         (Get-Item -LiteralPath $Path).Length | Should -BeLessOrEqual 8192
     }
 }
