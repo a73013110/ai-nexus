@@ -1,0 +1,59 @@
+<div class="topbar-left">
+  <nx-workspace-menu-button />
+  <div class="conversation-heading">
+    @if (store.selected(); as conversation) {
+      <nx-inline-title
+        [value]="conversation.title"
+        [scope]="conversation.id"
+        [save]="rename"
+        [disabled]="store.loadingConversation()"
+      />
+    } @else {
+      <h1>新對話</h1>
+    }
+  </div>
+  @if (store.selected()?.isArchived) {
+    <span class="archive-badge">已封存</span>
+  }
+  @if (store.selected()?.projectId; as projectId) {
+    <a
+      class="project-chat-link"
+      [routerLink]="['/projects', projectId]"
+      title="檢視專案指示與參考文件"
+      ><nx-icon name="archive" />專案</a
+    >
+  }
+</div>
+<div class="topbar-actions">
+  <nx-product-tour-button [tour]="tour()" [compact]="true" />
+  @if (store.selected(); as conversation) {
+    <nx-conversation-spend
+      [id]="conversation.id"
+      [revision]="conversation.updatedAt + (store.liveRun()?.status ?? '')"
+    />
+  }
+  @if (status()) {
+    <span class="inference-status" role="status"
+      ><nx-inference-signal [active]="true" [subtle]="true" /><span>{{ status() }}</span></span
+    >
+  }
+  @if (store.selected(); as conversation) {
+    @if (store.hasSharing()) {
+      <button
+        class="icon-button"
+        aria-label="分享此對話"
+        title="建立具名唯讀分享"
+        [disabled]="store.busy()"
+        (click)="action.emit('share')"
+      >
+        <nx-icon name="share" />
+      </button>
+    }
+    <nx-conversation-actions
+      [conversation]="conversation"
+      [busy]="store.busy()"
+      [sharing]="store.hasSharing()"
+      (action)="action.emit($event)"
+    />
+  }
+</div>

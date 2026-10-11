@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NexusApi } from '../../core/api/nexus-api';
+import type { ConversationDto } from '../../core/api/schema';
 import { ChatHistory } from './chat-history';
 
 const rows = (prefix: string, count: number) =>
@@ -44,5 +45,34 @@ describe('chat history', () => {
     expect(conversations.mock.calls[1][1]).toBe(100);
     expect(history.conversations()).toHaveLength(103);
     expect(history.hasMore()).toBe(false);
+  });
+
+  it('places a changed conversation where the server list would, or drops it from the view', () => {
+    TestBed.configureTestingModule({ providers: [{ provide: NexusApi, useValue: {} }] });
+    const history = TestBed.inject(ChatHistory);
+    const row = (id: string, updatedAt: string, changes: Partial<ConversationDto> = {}) =>
+      ({
+        id,
+        updatedAt,
+        isFavorite: false,
+        isArchived: false,
+        labels: [],
+        ...changes,
+      }) as ConversationDto;
+    history.conversations.set([
+      row('a', '2026-01-03'),
+      row('b', '2026-01-02'),
+      row('c', '2026-01-01'),
+    ]);
+
+    history.place(row('c', '2026-01-01', { isFavorite: true }));
+    expect(history.conversations().map((x) => x.id)).toEqual(['c', 'a', 'b']);
+
+    history.place(row('a', '2026-01-03', { isArchived: true }));
+    expect(history.conversations().map((x) => x.id)).toEqual(['c', 'b']);
+
+    history.label.set('工作');
+    history.place(row('b', '2026-01-02', { title: '改名' }));
+    expect(history.conversations().map((x) => x.id)).toEqual(['c']);
   });
 });

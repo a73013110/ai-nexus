@@ -1,4 +1,6 @@
-.composer-region {
+:host {
+  padding-inline: var(--workspace-gutter);
+  scrollbar-gutter: stable both-edges;
   flex: none;
   padding-block: var(--p-space-2) max(var(--p-space-3), env(safe-area-inset-bottom));
   overflow: hidden;
@@ -144,4 +146,58 @@
   min-height: var(--button-target);
   color: var(--signal);
   font-size: var(--text-caption);
+}
+
+:host-context(.chat-starting) {
+  scrollbar-gutter: auto;
+  margin-block-end: auto;
+  padding-block-start: 0;
+}
+.chat-start-suggestions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--section-gap);
+  margin-block-start: var(--section-gap);
+}
+.chat-start-suggestions > button {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  text-align: start;
+  min-height: var(--button-target);
+  color: var(--ink);
+  transition:
+    border-color var(--motion),
+    background-color var(--motion);
+}
+.chat-start-suggestions > button:hover {
+  background: var(--surface-subtle);
+  border-color: var(--accent);
+}
+.chat-start-suggestions nx-icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  color: var(--secondary);
+}
+.suggestion-copy {
+  min-width: 0;
+  flex: 1;
+}
+.suggestion-copy strong {
+  display: block;
+  font-size: var(--text-ui);
+  font-weight: 600;
+}
+.suggestion-copy small {
+  display: block;
+  margin-top: var(--p-space-1);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+}
+@media (max-width: 640px) {
+  .chat-start-suggestions {
+    grid-template-columns: 1fr;
+    gap: var(--p-space-2);
+  }
 }

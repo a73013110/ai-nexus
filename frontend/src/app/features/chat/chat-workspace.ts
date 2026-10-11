@@ -1,215 +1,96 @@
-import { Notice } from '../../shared/ui/notice';
-import { CompactDialog } from '../../shared/ui/compact-dialog';
-import { Field } from '../../shared/ui/field';
-import { Card } from '../../shared/ui/card';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  afterRenderEffect,
   DestroyRef,
-  effect,
-  ElementRef,
   inject,
   signal,
   viewChild,
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import {
-  FormField,
-  form,
-  maxLength,
-  required,
-  readonly as readonlyField,
-} from '@angular/forms/signals';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { WorkspaceLayout } from '../../core/layout/workspace-layout';
-import { ThemeService } from '../../core/preferences/theme-service';
+import { ActivatedRoute, Router } from '@angular/router';
 import type { ConversationDto, ConversationSettingsRequest } from '../../core/api/schema';
-import { Icon } from '../../shared/ui/icon';
-import { InferenceSignal } from '../../shared/ui/inference-signal';
-import { generationStatus } from '../../core/api/generation-status';
-import { Autosize } from '../../shared/browser/autosize';
-import { FileDrop } from '../../shared/browser/file-drop';
+import { SidebarPanelContent } from '../../core/layout/sidebar-panel';
+import { WorkspaceLayout } from '../../core/layout/workspace-layout';
+import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
+import { ThemeService } from '../../core/preferences/theme-service';
 import { downloadFile } from '../../shared/browser/download';
+import { FileDrop } from '../../shared/browser/file-drop';
+import { bindHotkeys } from '../../shared/browser/hotkeys';
+import { ReaderNavigation, type ReaderOrigin } from '../../shared/browser/reader-navigation';
 import { Command, CommandPalette } from '../../shared/ui/command-palette';
-import { AttachmentList } from '../attachments/attachment-list';
-import { ConversationAction, ConversationActions } from '../workspace/conversation-actions';
+import { Icon } from '../../shared/ui/icon';
+import { Notice } from '../../shared/ui/notice';
+import { ProductTour } from '../../shared/ui/product-tour';
+import { ShareDialog } from '../sharing/share-dialog';
+import type { ConversationAction } from '../workspace/conversation-actions';
 import { ConversationSettingsDialog } from '../workspace/conversation-settings-dialog';
 import { PromptLibraryDialog } from '../workspace/prompt-library-dialog';
-import { ChatMessage } from './chat-message';
+import { ChatComposer } from './chat-composer';
+import { ChatConversations } from './chat-conversations';
 import { ChatSidebar } from './chat-sidebar';
 import { ChatStore } from './chat-store';
-import { ComposerControls } from './composer-controls';
-import { ConversationFind } from './conversation-find';
-import { InlineTitle } from '../../shared/ui/inline-title';
-import { ConversationOutline } from './conversation-outline';
-import { KnowledgePicker } from '../knowledge/knowledge-picker';
-import { TextSelection, type SelectedText } from '../../shared/browser/text-selection';
-import { TextTools } from '../artifacts/text-tools';
-import { TextSelectionToolbar } from '../artifacts/text-selection-toolbar';
-import { ShareDialog } from '../sharing/share-dialog';
-import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
-import { FocusComposer } from './focus-composer';
-import { isSubmitKey } from '../../shared/browser/submit-key';
-import { ConversationSpendView } from '../billing/conversation-spend';
-import { ReaderNavigation, type ReaderOrigin } from '../../shared/browser/reader-navigation';
-import { LibraryPicker } from '../files/library-picker';
-import { WorkspaceMenuButton } from '../../core/layout/workspace-menu-button';
-import { SidebarPanelContent } from '../../core/layout/sidebar-panel';
-import { ProductTourButton } from '../../shared/ui/product-tour-button';
-import { ProductTour } from '../../shared/ui/product-tour';
+import { ChatThread } from './chat-thread';
+import { ChatTopbar } from './chat-topbar';
 import { chatTour } from './chat-tour';
+import { ConversationDialog } from './conversation-dialog';
+import { ConversationFind } from './conversation-find';
+import { conversationMarkdown } from './conversation-markdown';
 
-import { ChatConversations } from './chat-conversations';
+/**
+ * The chat page: it opens the routed conversation and routes commands, shortcuts and menu actions
+ * to the topbar, thread, composer and dialogs that carry them out.
+ */
 @Component({
   selector: 'nx-chat-workspace',
-  styleUrls: ['./chat-workspace.scss', './chat-start.scss', './chat-composer.scss'],
+  styleUrl: './chat-workspace.scss',
   imports: [
-    Notice,
-    Card,
-    CompactDialog,
-    Field,
-    FormField,
-    RouterLink,
-    Icon,
-    ChatMessage,
+    ChatComposer,
     ChatSidebar,
-    ComposerControls,
-    InferenceSignal,
-    Autosize,
-    FileDrop,
-    AttachmentList,
-    ConversationActions,
-    ConversationSettingsDialog,
-    PromptLibraryDialog,
+    ChatThread,
+    ChatTopbar,
     CommandPalette,
+    ConversationDialog,
     ConversationFind,
-    InlineTitle,
-    ConversationOutline,
-    KnowledgePicker,
-    TextSelection,
-    TextTools,
-    TextSelectionToolbar,
+    ConversationSettingsDialog,
+    FileDrop,
+    Icon,
+    Notice,
+    PromptLibraryDialog,
     ShareDialog,
-    FocusComposer,
-    ConversationSpendView,
-    LibraryPicker,
-    WorkspaceMenuButton,
     SidebarPanelContent,
-    ProductTourButton,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './chat-workspace.html',
 })
 export class ChatWorkspace {
   readonly store = inject(ChatStore);
-  readonly conversations = inject(ChatConversations);
-  readonly starting = computed(
-    () => !this.store.visibleMessages().length && !this.store.loadingConversation(),
-  );
-  readonly themes = inject(ThemeService);
-  private readonly destroy = inject(DestroyRef);
+  readonly layout = inject(WorkspaceLayout);
+  private readonly conversations = inject(ChatConversations);
+  private readonly themes = inject(ThemeService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly readerNavigation = inject(ReaderNavigation);
-  private readonly returnPosition = signal<ReaderOrigin | null>(null);
   private readonly transfer = inject(ConversationDraftTransfer);
-  private navigationSequence = 0;
-  readonly layout = inject(WorkspaceLayout);
-  readonly tours = inject(ProductTour);
+  private readonly tours = inject(ProductTour);
   readonly tour = computed(() => chatTour(this.layout.narrow(), this.store.hasKnowledgeAccess()));
-  readonly following = signal(true);
-  readonly composing = signal(false);
   readonly findOpen = signal(false);
   readonly matches = signal<string[]>([]);
   readonly currentMatch = signal<string | null>(null);
-  readonly paragraph = signal<SelectedText | null>(null);
-  readonly textTools = viewChild(TextTools);
-  readonly focusComposer = viewChild.required(FocusComposer);
-  readonly shareDialog = viewChild(ShareDialog);
-  readonly hasSharing = computed(
-    () => this.store.me()?.access.features.some((x) => x.id === 'shared') ?? false,
-  );
-  paragraphAction(action: string) {
-    const selected = this.paragraph();
-    if (!selected) return;
-    this.textTools()?.open(selected.text, action, selected.sourceId);
-    this.paragraph.set(null);
-    window.getSelection()?.removeAllRanges();
-  }
   readonly shareTarget = signal<ConversationDto | null>(null);
-  readonly modal = signal<'rename' | 'delete' | null>(null);
-  readonly modalTarget = signal<ConversationDto | null>(null);
-  readonly modalBusy = signal(false);
-  readonly composerForm = form(this.store.draft, (schema) => {
-    readonlyField(schema.text, {
-      when: () =>
-        this.store.loading() ||
-        this.store.loadingConversation() ||
-        !!this.store.selected()?.isArchived ||
-        this.store.submitting() ||
-        this.store.pendingSubmission(),
-    });
-    required(schema.text, { message: '請輸入訊息。' });
-    maxLength(schema.text, () => this.store.policy().maxInputCharacters, {
-      message: '訊息超過系統允許的字數，請縮短內容。',
-    });
-  });
-  readonly renameModel = signal({ title: '' });
-  readonly renameForm = form(this.renameModel, (schema) => {
-    required(schema.title);
-    maxLength(schema.title, 120);
-  });
-  readonly textarea = viewChild<ElementRef<HTMLTextAreaElement>>('composer');
-  readonly viewport = viewChild<ElementRef<HTMLElement>>('viewport');
-  readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
-  readonly library = viewChild(PromptLibraryDialog);
-  readonly settings = viewChild(ConversationSettingsDialog);
-  readonly palette = viewChild(CommandPalette);
-  readonly finder = viewChild(ConversationFind);
-  readonly importInput = viewChild<ElementRef<HTMLInputElement>>('importInput');
+  readonly arrival = signal<{ position: ReaderOrigin | null }>({ position: null });
+  readonly restoreTo = signal<ReaderOrigin | null>(null);
+  readonly thread = viewChild.required(ChatThread);
+  readonly composer = viewChild.required(ChatComposer);
+  readonly library = viewChild.required(PromptLibraryDialog);
+  readonly palette = viewChild.required(CommandPalette);
+  private readonly settings = viewChild.required(ConversationSettingsDialog);
+  private readonly dialog = viewChild.required(ConversationDialog);
+  private readonly finder = viewChild(ConversationFind);
+  private readonly shareDialog = viewChild(ShareDialog);
+  private navigationSequence = 0;
   readonly saveSettings = (conversation: ConversationDto, settings: ConversationSettingsRequest) =>
     this.conversations.organize(conversation, settings);
-  readonly renameCurrent = (title: string) => {
-    const conversation = this.store.selected();
-    return conversation
-      ? this.conversations.rename(conversation.id, title)
-      : Promise.resolve(false);
-  };
-  readonly statusText = computed(() =>
-    this.store.stopping()
-      ? '正在停止…'
-      : this.store.connection() === 'reconnecting'
-        ? '連線中斷，正在恢復…'
-        : (generationStatus(this.store.liveRun()?.status ?? '', !!this.store.streamingText())
-            ?.label ??
-          (this.store.submitting()
-            ? this.store.webSearchEnabled()
-              ? '正在搜尋網路並準備回答…'
-              : '正在提交訊息…'
-            : '')),
-  );
-  readonly suggestions = [
-    {
-      icon: 'lines',
-      title: '整理思緒',
-      detail: '讓重點與下一步更清楚',
-      text: '幫我整理以下筆記，歸納重點與待辦事項：\n',
-    },
-    {
-      icon: 'document',
-      title: '寫得更精準',
-      detail: '打磨文字，保留你的觀點',
-      text: '幫我修改以下文字，讓語氣清楚、自然且專業：\n',
-    },
-    {
-      icon: 'idea',
-      title: '拆解問題',
-      detail: '從複雜問題找到可行方向',
-      text: '和我一起分析以下問題，列出可行方向與需要確認的資訊：\n',
-    },
-  ];
   readonly commands = computed<Command[]>(() => [
     {
       id: 'new',
@@ -256,215 +137,37 @@ export class ChatWorkspace {
       icon: 'document',
     })),
   ]);
-  private scrollFrame = 0;
-  private lastScrollTop = 0;
 
   constructor() {
-    const keyboard = (event: KeyboardEvent) => {
-      if (event.isComposing || event.repeat || this.tours.active() || this.tours.loading()) return;
-      if (!(event.ctrlKey || event.metaKey) || document.querySelector('dialog[open]')) return;
-      if (event.key.toLowerCase() === 'k') {
-        event.preventDefault();
-        this.palette()?.open();
-      } else if (event.altKey && event.key.toLowerCase() === 'n') {
-        event.preventDefault();
-        void this.router.navigate(['/chat']);
-      } else if (event.shiftKey && event.key.toLowerCase() === 'l') {
-        event.preventDefault();
-        void this.library()?.open();
-      }
-    };
-    document.addEventListener('keydown', keyboard);
-    this.destroy.onDestroy(() => this.navigationSequence++);
+    bindHotkeys(
+      {
+        'mod+k': () => this.palette().open(),
+        'mod+alt+n': () => void this.router.navigate(['/chat']),
+        'mod+shift+l': () => void this.library().open(),
+      },
+      () =>
+        !this.tours.active() && !this.tours.loading() && !document.querySelector('dialog[open]'),
+    );
+    inject(DestroyRef).onDestroy(() => this.navigationSequence++);
     this.route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const navigation = ++this.navigationSequence;
+      const id = params.get('id');
       const position = this.readerNavigation.takeReturn(this.router.url);
-      this.following.set(position ? false : this.store.personal.value().autoFollow);
-      void this.store.initialize().then(() => {
-        if (navigation === this.navigationSequence && this.store.ready())
-          void this.store.select(params.get('id')).then(() => {
-            if (
-              navigation !== this.navigationSequence ||
-              this.store.selected()?.id !== params.get('id')
-            )
-              return;
-            const prompt = this.transfer.take(params.get('id'));
-            if (prompt) {
-              this.store.draft.set({ text: prompt });
-            }
-            this.returnPosition.set(position);
-          });
-      });
       this.closeFind();
-    });
-    afterRenderEffect(() => {
-      const position = this.returnPosition(),
-        view = this.viewport()?.nativeElement;
-      if (!position || !view || this.store.loadingConversation()) return;
-      view.scrollTop = position.scrollTop;
-      this.lastScrollTop = view.scrollTop;
-      const link = Array.from(view.querySelectorAll<HTMLAnchorElement>('a[data-reader-id]')).find(
-        (element) =>
-          element.dataset['readerId'] === position.documentId &&
-          (!position.messageId ||
-            element.closest<HTMLElement>('[data-message-id]')?.dataset['messageId'] ===
-              position.messageId),
-      );
-      link?.focus({ preventScroll: true });
-      this.returnPosition.set(null);
-    });
-    effect((onCleanup) => {
-      const ready = this.store.ready(),
-        modelId = this.store.modelId(),
-        conversation = this.store.selected(),
-        edit = this.store.editing(),
-        prompt = this.store.draft().text;
-      const attachmentIds = this.store.attachments.files().map((file) => file.id);
-      const webSearch = this.store.webSearchEnabled();
-      this.store.messages();
-      this.store.knowledge.revision();
-      this.store.contextUsage.set(null);
-      if (!ready || !modelId) return;
-      const controller = new AbortController();
-      const timer = setTimeout(
-        () =>
-          void this.store.previewContext(
-            {
-              conversationId: conversation?.id ?? null,
-              parentMessageId: edit ? edit.parentId : (conversation?.activeLeafId ?? null),
-              prompt,
-              modelId,
-              attachmentIds,
-              webSearch,
-            },
-            controller.signal,
-          ),
-        350,
-      );
-      onCleanup(() => {
-        clearTimeout(timer);
-        controller.abort();
+      this.arrival.set({ position });
+      this.restoreTo.set(null);
+      void this.store.initialize().then(() => {
+        if (navigation !== this.navigationSequence || !this.store.ready()) return;
+        void this.store.select(id).then(() => {
+          if (navigation !== this.navigationSequence || this.store.selected()?.id !== id) return;
+          const prompt = this.transfer.take(id);
+          if (prompt) this.store.draft.set({ text: prompt });
+          this.restoreTo.set(position);
+        });
       });
     });
-    effect(() => {
-      this.store.streamingText();
-      this.store.visibleMessages();
-      this.scheduleFollow();
-    });
-    this.destroy.onDestroy(() => {
-      document.removeEventListener('keydown', keyboard);
-      cancelAnimationFrame(this.scrollFrame);
-    });
   }
-  pickSuggestion(text: string) {
-    this.store.draft.set({ text });
-    this.textarea()?.nativeElement.focus();
-  }
-  scheduleFollow() {
-    if (!this.following() || this.scrollFrame) return;
-    this.scrollFrame = requestAnimationFrame(() => {
-      this.scrollFrame = 0;
-      if (this.following()) this.scrollLatest(false);
-    });
-  }
-  keydown(event: KeyboardEvent) {
-    if (!isSubmitKey(event, this.composing(), this.store.personal.value().enterToSend)) return;
-    event.preventDefault();
-    this.submitDraft();
-  }
-  send(event: Event) {
-    event.preventDefault();
-    this.submitDraft();
-  }
-  submitDraft() {
-    if (this.store.canSend() && !this.composerForm.text().invalid()) {
-      this.following.set(this.store.personal.value().autoFollow);
-      void this.store.send();
-    }
-  }
-  onScroll() {
-    this.paragraph.set(null);
-    const view = this.viewport()?.nativeElement;
-    if (view) {
-      const near = view.scrollHeight - view.scrollTop - view.clientHeight < 96;
-      // A smooth jump upwards begins near the bottom; that first event must not restart auto-follow.
-      this.following.set(near && (this.following() || view.scrollTop > this.lastScrollTop));
-      this.lastScrollTop = view.scrollTop;
-      if (!near) {
-        cancelAnimationFrame(this.scrollFrame);
-        this.scrollFrame = 0;
-      }
-    }
-  }
-  pauseFollowing() {
-    this.following.set(false);
-    cancelAnimationFrame(this.scrollFrame);
-    this.scrollFrame = 0;
-    this.lastScrollTop = this.viewport()?.nativeElement.scrollTop ?? 0;
-  }
-  scrollLatest(smooth = true) {
-    const view = this.viewport()?.nativeElement;
-    if (!view) return;
-    this.following.set(true);
-    view.scrollTo({
-      top: view.scrollHeight,
-      behavior: smooth && !this.themes.reducedMotion() ? 'smooth' : 'instant',
-    });
-  }
-  closeMobileSidebar() {
-    this.layout.closeMobile();
-  }
-  editMessageFocus() {
-    requestAnimationFrame(() => this.textarea()?.nativeElement.focus());
-  }
-  openDialog(type: 'rename' | 'delete', target: ConversationDto) {
-    this.modalTarget.set(target);
-    this.modal.set(type);
-    this.renameModel.set({ title: target.title });
-    this.dialog()?.nativeElement.showModal();
-  }
-  closeDialog() {
-    this.dialog()?.nativeElement.close();
-    this.modal.set(null);
-  }
-  async confirmDialog(event: Event) {
-    event.preventDefault();
-    const target = this.modalTarget();
-    if (!target || this.modalBusy()) return;
-    if (
-      this.modal() === 'rename' &&
-      (!this.renameModel().title.trim() || this.renameForm.title().invalid())
-    )
-      return;
-    this.modalBusy.set(true);
-    const success =
-      this.modal() === 'rename'
-        ? await this.conversations.rename(target.id, this.renameModel().title)
-        : await this.conversations.remove(target.id);
-    this.modalBusy.set(false);
-    if (success) this.closeDialog();
-  }
-  selectModel(id: string) {
-    this.store.chooseModel(id);
-    void this.store.savePreferences({
-      ...this.themes.preferences(),
-      defaultModelId: this.store.modelId() || null,
-    });
-  }
-  exportConversation() {
-    const conversation = this.store.selected();
-    if (!conversation || this.store.busy()) return;
-    const content = [
-      '# ' + conversation.title,
-      ...this.store
-        .visibleMessages()
-        .map(
-          (message) =>
-            `## ${message.role === 'user' ? '你' : 'AI Nexus'}\n\n${message.content}${message.attachments?.length ? '\n\n附件：' + message.attachments.map((file) => file.fileName).join('、') : ''}`,
-        ),
-    ].join('\n\n');
-    downloadFile(content, conversation.title, 'md');
-  }
+
   async reload() {
     await this.store.initialize(true);
     if (this.store.ready()) await this.store.select(this.route.snapshot.paramMap.get('id'), true);
@@ -481,16 +184,21 @@ export class ChatWorkspace {
         break;
       case 'rename':
       case 'delete':
-        this.openDialog(action, conversation);
+        this.dialog().open(action, conversation);
         break;
       case 'markdown':
-        this.exportConversation();
+        if (!this.store.busy())
+          downloadFile(
+            conversationMarkdown(conversation.title, this.store.visibleMessages()),
+            conversation.title,
+            'md',
+          );
         break;
       case 'backup':
         void this.conversations.exportBackup();
         break;
       case 'settings':
-        this.settings()?.open(conversation);
+        this.settings().open(conversation);
         break;
       case 'duplicate':
         void this.conversations.duplicate();
@@ -508,14 +216,11 @@ export class ChatWorkspace {
     }
   }
   command(id: string) {
-    this.closeMobileSidebar();
-    if (id.startsWith('conversation:')) {
-      void this.router.navigate(['/chat', id.slice(13)]);
-      return;
-    }
-    if (id === 'new') void this.router.navigate(['/chat']);
-    else if (id === 'prompts') void this.library()?.open();
-    else if (id === 'import') this.importInput()?.nativeElement.click();
+    this.layout.closeMobile();
+    if (id.startsWith('conversation:')) void this.router.navigate(['/chat', id.slice(13)]);
+    else if (id === 'new') void this.router.navigate(['/chat']);
+    else if (id === 'prompts') void this.library().open();
+    else if (id === 'import') void this.conversations.chooseBackup();
     else if (id === 'theme')
       void this.store.savePreferences({
         ...this.themes.preferences(),
@@ -526,34 +231,11 @@ export class ChatWorkspace {
   find(result: { ids: string[]; active: string | null }) {
     this.matches.set(result.ids);
     this.currentMatch.set(result.active);
-    if (result.active) {
-      this.following.set(false);
-      requestAnimationFrame(() =>
-        this.viewport()
-          ?.nativeElement.querySelector<HTMLElement>(
-            `[data-message-id="${CSS.escape(result.active!)}"]`,
-          )
-          ?.scrollIntoView({
-            block: 'center',
-            behavior: this.themes.reducedMotion() ? 'instant' : 'smooth',
-          }),
-      );
-    }
+    if (result.active) this.thread().reveal(result.active);
   }
   closeFind() {
-    this.paragraph.set(null);
     this.findOpen.set(false);
     this.matches.set([]);
     this.currentMatch.set(null);
-  }
-  uploadChanged(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (input.files) void this.store.attachments.upload(input.files);
-    input.value = '';
-  }
-  importChanged(event: Event) {
-    const input = event.target as HTMLInputElement;
-    if (input.files?.[0]) void this.conversations.importBackup(input.files[0]);
-    input.value = '';
   }
 }

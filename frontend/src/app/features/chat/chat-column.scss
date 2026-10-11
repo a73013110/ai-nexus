@@ -1,0 +1,13 @@
+// The reading column shared by the message list and the composer, so both stay aligned.
+.chat-gutter {
+  padding-inline: var(--workspace-gutter);
+  scrollbar-gutter: stable both-edges;
+}
+.chat-column {
+  width: min(var(--reading-width), 100%);
+  min-width: 0;
+  margin-inline: auto;
+}
+:host-context(.chat-starting) .chat-gutter {
+  scrollbar-gutter: auto;
+}

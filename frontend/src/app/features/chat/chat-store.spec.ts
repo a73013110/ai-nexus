@@ -50,7 +50,15 @@ function setup(features = ['chat']) {
     conversations: vi.fn(() => conversations.promise),
     webSearchStatus: vi.fn(async () => ({ available: true, notice: '' })),
   };
-  const session = { load: vi.fn(async () => me(features)), adopt: vi.fn() };
+  const account = signal<ReturnType<typeof me> | null>(null);
+  const session = {
+    me: account,
+    load: vi.fn(async () => {
+      account.set(me(features));
+      return account();
+    }),
+    has: (id: string) => account()?.access.features.some((x) => x.id === id) ?? false,
+  };
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),

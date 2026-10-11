@@ -1,0 +1,105 @@
+:host {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p-space-3);
+  height: var(--topbar-height);
+  padding: 0 35px;
+  flex: none;
+  border-bottom: 1px solid var(--line);
+}
+.topbar-left,
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-width: 0;
+}
+.topbar-actions {
+  gap: 6px;
+}
+.conversation-heading {
+  --inline-title-max-width: 400px;
+  min-width: 0;
+}
+.conversation-heading h1 {
+  font-size: var(--text-label);
+  font-weight: 500;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: var(--inline-title-max-width);
+}
+.project-chat-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  color: var(--secondary);
+  padding: var(--p-space-2);
+  font-size: var(--text-caption);
+  min-height: var(--button-target);
+}
+.archive-badge {
+  flex: none;
+  font-size: var(--text-caption);
+  color: var(--secondary);
+  background: var(--hover);
+  border-radius: var(--p-radius-sm);
+  padding: 0 var(--p-space-2);
+}
+.inference-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  font-size: var(--text-caption);
+  color: var(--secondary);
+}
+@media (max-width: 1150px) {
+  :host {
+    padding: 0 24px;
+  }
+  .conversation-heading {
+    --inline-title-max-width: 240px;
+  }
+}
+@media (max-width: 859px) {
+  :host {
+    gap: 10px;
+    padding: 0 18px;
+  }
+  .topbar-left {
+    gap: 12px;
+  }
+  .conversation-heading {
+    --inline-title-max-width: 220px;
+  }
+  .inference-status > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+    overflow: hidden;
+  }
+}
+@media (max-width: 520px) {
+  :host {
+    padding: 0 13px;
+  }
+  .topbar-left {
+    gap: var(--p-space-2);
+  }
+  .topbar-actions {
+    gap: 0;
+  }
+  .conversation-heading {
+    --inline-title-max-width: 140px;
+    --inline-title-font-size: var(--text-caption);
+  }
+  .conversation-heading h1 {
+    font-size: var(--text-caption);
+  }
+  .archive-badge {
+    display: none;
+  }
+}

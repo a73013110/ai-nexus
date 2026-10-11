@@ -571,3 +571,24 @@ test("signal motion respects reduced motion and Markdown export follows the visi
   expect(contents).toContain("這是已保存的部分回答。");
   expect(contents).not.toContain("fixture:8b");
 });
+
+test("送出的提問立即顯示，失敗時退回輸入框", async ({ page }) => {
+  const fixture = new ApiFixture();
+  await fixture.attach(page);
+  let release!: () => void;
+  const held = new Promise<void>((done) => (release = done));
+  await page.route("**/api/v1/runs", async (route) => {
+    if (route.request().method() !== "POST") return route.fallback();
+    await held;
+    await route.fulfill({ status: 500, json: { title: "伺服器錯誤", status: 500 } });
+  });
+  await page.goto("/chat");
+  const input = page.getByRole("textbox", { name: "傳送訊息", exact: true });
+  await input.fill("立即顯示的提問");
+  await page.getByRole("button", { name: "送出訊息" }).click();
+  await expect(page.locator(".message-list")).toContainText("立即顯示的提問");
+  await expect(input).toHaveValue("");
+  release();
+  await expect(input).toHaveValue("立即顯示的提問");
+  await expect(page.locator(".message-list")).toHaveCount(0);
+});

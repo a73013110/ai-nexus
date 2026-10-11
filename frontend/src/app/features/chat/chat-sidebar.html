@@ -28,17 +28,10 @@
       class="icon-button"
       aria-label="匯入對話文字備份"
       title="匯入 JSON 文字備份"
-      (click)="backupInput.click()"
+      (click)="conversations.chooseBackup()"
     >
       <nx-icon name="upload" />
     </button>
-    <input
-      #backupInput
-      type="file"
-      class="sr-only"
-      accept="application/json,.json"
-      (change)="importFile($event)"
-    />
   </div>
   <div class="history-search">
     <nx-icon name="search" /><input
@@ -105,7 +98,7 @@
             <nx-conversation-actions
               [conversation]="conversation"
               [compact]="true"
-              [sharing]="store.me()?.access?.features?.some(hasSharing) ?? false"
+              [sharing]="store.hasSharing()"
               [busy]="store.liveRun()?.conversationId === conversation.id"
               (action)="action.emit({ conversation, action: $event })"
             />

@@ -7,13 +7,15 @@ import type {
   ConversationSettingsRequest,
 } from '../../core/api/schema';
 import { downloadFile } from '../../shared/browser/download';
+import { pickFile } from '../../shared/browser/pick-file';
 import { ProjectsApi } from '../projects/projects-api';
 import { WorkspaceApi } from '../workspace/workspace-api';
 import { ChatStore } from './chat-store';
 
 /**
- * Organizing conversations: rename, delete, settings, project, copies and backups. Each write
- * refreshes the history list and reports failures through ChatStore.
+ * Organizing conversations: rename, delete, settings, project, copies and backups. Edits show at
+ * once in the open conversation and the history list, then settle to the server's copy or roll
+ * back; failures are reported through ChatStore.
  */
 @Injectable({ providedIn: 'root' })
 export class ChatConversations {
@@ -28,8 +30,7 @@ export class ChatConversations {
     try {
       const value = await this.projectsApi.assign(conversation.id, projectId);
       if (generation !== this.store.auth.generation()) return false;
-      if (this.store.selected()?.id === value.id) this.store.selected.set(value);
-      await this.store.refreshHistory();
+      this.show(value);
       return true;
     } catch (error) {
       this.store.report(error);
@@ -37,12 +38,13 @@ export class ChatConversations {
     }
   }
   async rename(id: string, title: string) {
+    const current = this.find(id);
+    if (current) this.show({ ...current, title: title.trim() });
     try {
-      const updated = await this.api.rename(id, title);
-      if (this.store.selected()?.id === id) this.store.selected.set(updated);
-      await this.store.refreshHistory();
+      this.show(await this.api.rename(id, title));
       return true;
     } catch (error) {
+      if (current) this.show(current);
       this.store.report(error);
       return false;
     }
@@ -50,8 +52,8 @@ export class ChatConversations {
   async remove(id: string) {
     try {
       await this.api.delete(id);
+      this.store.history.remove(id);
       if (this.store.selected()?.id === id) await this.router.navigate(['/chat']);
-      await this.store.refreshHistory();
       return true;
     } catch (error) {
       this.store.report(error);
@@ -69,16 +71,24 @@ export class ChatConversations {
   }
   async organize(conversation: ConversationDto, settings: ConversationSettingsRequest) {
     const generation = this.store.auth.generation();
+    const changes = Object.fromEntries(
+      Object.entries(settings).filter(([, value]) => value !== null && value !== undefined),
+    );
+    // The open conversation's copy is newer than a history row, e.g. its active branch.
+    const current = this.find(conversation.id) ?? conversation;
+    this.show({ ...current, ...changes });
     try {
       const saved = await this.workspace.settings(conversation.id, settings);
       if (generation !== this.store.auth.generation()) return false;
-      if (this.store.selected()?.id === saved.id) this.store.selected.set(saved);
-      await this.store.refreshHistory();
-      const labels = await this.workspace.labels();
-      if (generation !== this.store.auth.generation()) return false;
-      this.store.labels.set(labels);
+      this.show(saved);
+      if (settings.labels) {
+        const labels = await this.workspace.labels();
+        if (generation !== this.store.auth.generation()) return false;
+        this.store.labels.set(labels);
+      }
       return true;
     } catch (error) {
+      if (generation === this.store.auth.generation()) this.show(current);
       this.store.report(error);
       return false;
     }
@@ -108,6 +118,11 @@ export class ChatConversations {
       this.store.report(error);
     }
   }
+  /** Asks for a backup file; call from a click so the browser allows the file chooser. */
+  async chooseBackup() {
+    const file = await pickFile('application/json,.json');
+    if (file) await this.importBackup(file);
+  }
   async importBackup(file: File) {
     const generation = this.store.auth.generation();
     if (file.size > 8 * 1024 * 1024) {
@@ -129,5 +144,13 @@ export class ChatConversations {
         error instanceof SyntaxError ? new Error('備份不是有效的 JSON 格式。') : error,
       );
     }
+  }
+  private find(id: string) {
+    const selected = this.store.selected();
+    return selected?.id === id ? selected : this.store.conversations().find((x) => x.id === id);
+  }
+  private show(conversation: ConversationDto) {
+    if (this.store.selected()?.id === conversation.id) this.store.selected.set(conversation);
+    this.store.history.place(conversation);
   }
 }

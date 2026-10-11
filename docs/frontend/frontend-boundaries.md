@@ -17,7 +17,7 @@
 | `features/*` | 按路由載入的頁面、該功能的 `*-api.ts`、store 與業務元件；被多個功能共用的業務元件也留在 features（例：`features/workspace` 的 `ConversationActions`） |
 | `shared/ui` | 無業務狀態的通用元件（Select、ActionMenu、ConfirmDialog、Notice…） |
 | `shared/markdown` | Markdown 解析與檢視、串流 Markdown、Mermaid、程式碼區塊與語法上色 |
-| `shared/browser` | ViewScope、autosize、拖放／貼圖、下載、複製、日期格式、popover 定位、未儲存提示 |
+| `shared/browser` | ViewScope、autosize、拖放／貼圖、選檔（`pickFile`）、下載、複製、快捷鍵（`bindHotkeys`）、日期格式、popover 定位、未儲存提示 |
 | `shared/graphics` | 不含認證／業務依賴的數學（傅立葉取樣／DFT、標誌輪廓） |
 | `frontend/src/styles` | 跨頁共用樣式；規則見 [設計系統](design-system.md#樣式載入) |
 
@@ -45,6 +45,7 @@
 - 需要輪詢的讀取用 `poll`（例：任務、知識庫處理中的文件），分頁隱藏時暫停。
 - 對話框每次開啟都要重讀時，用一個開啟次數的 signal 當 `params`（例：`price-book.ts`）。可編輯的表單值用 `linkedSignal` 從讀到的資料衍生，讀到新資料時自動重設（例：`settings-page.ts`）。
 - 寫入是元件或 store 的方法：成功後把伺服器回傳的值寫進 `value`，或呼叫 `reload()`；寫入錯誤放在自己的 signal，與讀取錯誤合成同一個 `error`。寫入仍用 ViewScope 的 guard 忽略離開頁面或換帳號後才回來的結果。
+- 聊天的送出與整理對話先更新畫面再寫入：成功換成伺服器回傳值，失敗就還原，提問退回輸入框；只有網路中斷時保留提問供重試。
 - 寫入失敗時保留使用者的輸入（例：`NameDialog`、`TextSourceEditor`）；防止覆蓋他人變更靠伺服器的 conditional update／concurrency token，不靠前端判斷。
 - 大頁面拆成元件；同頁多個元件共用的讀取放在頁面提供（`providers`）的 store，例如 `AdminStore`（管理頁的目錄與使用者）與 `LogFilterState`（日誌篩選）。
 - 例外：以下是有自己生命週期的狀態機，保留為 store，不改成 `apiResource()`：
