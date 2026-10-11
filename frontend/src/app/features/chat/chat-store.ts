@@ -149,6 +149,8 @@ export class ChatStore {
   private preferenceWrite: Promise<void> = Promise.resolve();
   private preferenceVersion = 0;
   private authGeneration = -1;
+  // Saving waits for the session's stored draft; a slow start must not overwrite it with an empty one.
+  private draftSettled = false;
 
   constructor() {
     effect(() => {
@@ -176,7 +178,7 @@ export class ChatStore {
 
   private persistDraft() {
     const user = this.me();
-    if (user && this.ready() && !this.loadingConversation())
+    if (user && this.ready() && this.draftSettled && !this.loadingConversation())
       this.composer.save(user.id, this.selected()?.id ?? null);
   }
   private async restoreDraft(id: string | null) {
@@ -233,6 +235,8 @@ export class ChatStore {
       if (attachments.status === 'rejected')
         this.attachments.error.set('附件服務尚未就緒，請重新連線。');
       if (!this.selected() && !this.draft().text) await this.restoreDraft(null);
+      this.draftSettled = true;
+      this.persistDraft();
       if (me.activeRunId && !this.liveRun()) {
         const active = await this.api.run(me.activeRunId);
         if (generation !== this.auth.generation()) return;
@@ -623,6 +627,7 @@ export class ChatStore {
   private resetSession() {
     this.knowledge.reset();
     this.persistDraft();
+    this.draftSettled = false;
     this.model.reset();
     this.run.reset();
     this.composer.reset();
