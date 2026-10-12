@@ -58,6 +58,14 @@ export async function touchSwipe(
         from.y + ((to.y - from.y) * step) / steps,
       ),
     });
+  // Chromium delivers moves with the next animation frame; let the last one land before `held`.
+  if (held)
+    await page.evaluate(
+      () =>
+        new Promise((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(resolve)),
+        ),
+    );
   await held?.();
   if (hold) await page.waitForTimeout(hold);
   await cdp.send("Input.dispatchTouchEvent", {

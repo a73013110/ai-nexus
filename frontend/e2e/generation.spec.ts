@@ -114,12 +114,15 @@ test("generation follows queue, preparation and content with distinct unobtrusiv
     await expect(indicator.locator(".generation-indicator")).not.toHaveClass(
       /is-waiting/,
     );
-    expect(await activeLoops(indicator)).toBe(4);
-    expect(await activeLoops(header)).toBe(2);
-    expect(await activeLoops(page.locator(".composer"))).toBe(0);
+    // Each of the nine matrix dots runs the wave, and a light band crosses the title.
+    expect(await activeLoops(indicator)).toBe(10);
+    // The island's signal runs two pulses, and the same band crosses its label.
+    expect(await activeLoops(header)).toBe(3);
+    // The busy composer only lets a faint glint travel along its hairline.
+    expect(await activeLoops(page.locator(".composer"))).toBe(1);
     await expect(page.locator("nx-island [role='status']")).toHaveCount(1);
     await expect(indicator.locator("[role='status']")).toHaveCount(0);
-    await expect(indicator.locator(".generation-orbit")).toHaveAttribute(
+    await expect(indicator.locator(".generation-matrix")).toHaveAttribute(
       "aria-hidden",
       "true",
     );
@@ -199,7 +202,7 @@ for (const preference of ["system", "personal"] as const) {
     await expect(indicator).toContainText("正在準備回答");
     expect(await activeLoops(indicator)).toBe(0);
     expect(await activeLoops(page.locator("nx-island .island"))).toBe(0);
-    await expect(indicator.locator(".generation-orbit i").first()).toHaveCSS(
+    await expect(indicator.locator(".generation-matrix i").first()).toHaveCSS(
       "opacity",
       "1",
     );
