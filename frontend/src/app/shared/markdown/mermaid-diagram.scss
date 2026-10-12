@@ -57,26 +57,22 @@
   min-height: 10rem;
   justify-content: center;
 }
+// A flush viewer: the .dialog-bar header and the canvas run edge to edge (styles/dialogs.scss).
 .platform-dialog.mermaid-dialog {
   --dialog-width: 88rem;
   height: calc(100dvh - 48px);
   max-height: 60rem;
   overflow: hidden;
-  flex-direction: column;
-  gap: var(--p-space-3);
 }
-// Layout lives outside [open]: the exit keeps `display` but would drop the rest at once.
-.mermaid-dialog[open] {
-  display: flex;
-}
-.mermaid-dialog .dialog-heading {
-  flex: none;
+.mermaid-dialog .dialog-bar {
   flex-wrap: wrap;
-  margin: 0;
 }
-.mermaid-dialog .dialog-heading h2 {
-  min-width: 0;
+.mermaid-dialog .dialog-bar h2 {
   overflow-wrap: anywhere;
+}
+.mermaid-dialog nx-diagram-canvas {
+  border: 0;
+  border-radius: 0;
 }
 @media (max-width: 600px) {
   .mermaid-toolbar {
@@ -88,6 +84,5 @@
   }
   .platform-dialog.mermaid-dialog {
     height: calc(100dvh - 24px);
-    padding: var(--p-space-3);
   }
 }
