@@ -104,10 +104,7 @@
 }
 .message-model {
   min-width: 0;
-  font:
-    var(--text-caption) ui-monospace,
-    'Cascadia Code',
-    monospace;
+  font: var(--text-caption) var(--font-code);
   color: var(--muted);
   overflow: hidden;
   text-overflow: ellipsis;

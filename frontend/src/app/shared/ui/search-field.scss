@@ -37,8 +37,7 @@
 }
 .search-field > nx-icon {
   color: var(--muted);
-  width: 18px;
-  height: 18px;
+  --icon-size: var(--icon-lg);
 }
 // A bare search fills its bar; the bar's hairline and the caret mark the field.
 :host(.search-bare) {

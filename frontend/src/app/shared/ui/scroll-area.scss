@@ -51,8 +51,7 @@
   background: linear-gradient(to top, var(--scroll-area-surface) 30%, transparent);
 }
 .scroll-area-edge nx-icon {
-  width: 16px;
-  height: 16px;
+  --icon-size: var(--icon-md);
   background: var(--scroll-area-surface);
   border-radius: var(--p-radius-pill);
 }

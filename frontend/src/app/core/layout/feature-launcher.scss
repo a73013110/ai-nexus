@@ -88,10 +88,6 @@
   color: var(--secondary);
   font-size: var(--text-caption);
 }
-.workspace-icons nx-icon {
-  width: 20px;
-  height: 20px;
-}
 .workspace-icons span {
   max-width: 100%;
   overflow-wrap: anywhere;
@@ -116,8 +112,7 @@
   position: absolute;
   top: var(--p-space-1);
   left: calc(50% + 8px);
-  width: 12px;
-  height: 12px;
+  --icon-size: var(--icon-xs);
   color: var(--muted);
   transform: rotate(35deg);
 }

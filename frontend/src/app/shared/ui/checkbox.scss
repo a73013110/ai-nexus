@@ -3,8 +3,7 @@
   min-width: 0;
 }
 .selection-indicator nx-icon {
-  width: 14px;
-  height: 14px;
+  --icon-size: var(--icon-sm);
   opacity: 0;
 }
 .selection-box input:checked + .selection-indicator nx-icon {

@@ -61,8 +61,7 @@ let sequence = 0;
       border-radius: var(--p-radius-md);
     }
     .info-popover-trigger nx-icon {
-      width: 16px;
-      height: 16px;
+      --icon-size: var(--icon-md);
     }
     .info-popover-trigger:hover {
       color: var(--signal);

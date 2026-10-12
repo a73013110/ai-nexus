@@ -47,8 +47,7 @@ summary::-webkit-details-marker {
   display: none;
 }
 summary nx-icon {
-  width: 14px;
-  height: 14px;
+  --icon-size: var(--icon-sm);
 }
 .log-health-details summary nx-icon {
   transform: rotate(90deg);

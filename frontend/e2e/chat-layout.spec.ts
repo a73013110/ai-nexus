@@ -362,8 +362,9 @@ test("user questions and AI answers have distinct roles and spatial alignment", 
   await conversation(page);
   const user = page.getByRole("article", { name: "你的提問" });
   const ai = page.getByRole("article", { name: "AI 回覆" });
-  await expect(user).toContainText("你的提問");
-  await expect(ai.locator(".assistant-label")).toHaveText("AI 回覆");
+  // The bubble marks the question; only the answer names its author.
+  await expect(user.locator(".message-heading")).toHaveCount(0);
+  await expect(ai.locator(".message-heading")).toContainText("AI Nexus");
   const positions = await page.evaluate(() => {
     const user = document.querySelector<HTMLElement>(".message.user")!;
     const ai = document.querySelector<HTMLElement>(".message:not(.user)")!;

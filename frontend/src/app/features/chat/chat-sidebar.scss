@@ -54,8 +54,7 @@
   color: var(--secondary);
 }
 .history-search nx-icon {
-  width: 17px;
-  height: 17px;
+  --icon-size: var(--icon-lg);
 }
 .history-search input {
   background: transparent;
@@ -130,8 +129,7 @@
   font-weight: 600;
 }
 .history-row .history-state {
-  width: 16px;
-  height: 16px;
+  --icon-size: var(--icon-md);
   flex: none;
   margin-right: var(--p-space-2);
 }
@@ -139,7 +137,7 @@
   color: var(--signal);
 }
 .history-state.is-running {
-  animation: orbit-turn 1.6s linear infinite;
+  animation: orbit-turn var(--motion-spin) linear infinite;
   color: var(--signal);
 }
 .sidebar-note {

@@ -34,8 +34,7 @@
 }
 .chat-start-suggestions nx-icon {
   flex: none;
-  width: 1rem;
-  height: 1rem;
+  --icon-size: var(--icon-md);
 }
 .suggestion-copy {
   min-width: 0;

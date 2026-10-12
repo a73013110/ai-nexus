@@ -85,7 +85,7 @@ ol {
   --tone: var(--error);
 }
 .toast-icon {
-  --icon-size: 1rem;
+  --icon-size: var(--icon-md);
   flex: none;
   margin-top: 0.125rem;
   color: var(--tone);

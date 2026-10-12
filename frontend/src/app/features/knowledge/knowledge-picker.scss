@@ -1,6 +1,5 @@
 .knowledge-trigger nx-icon {
-  width: 1rem;
-  height: 1rem;
+  --icon-size: var(--icon-md);
 }
 .knowledge-trigger {
   display: inline-flex;

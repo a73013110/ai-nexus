@@ -159,13 +159,14 @@ const icons: Record<string, IconNode> = {
 };
 /** Optional feature icons stay in their lazy feature bundle. */
 export const EXTRA_ICONS = new InjectionToken<Readonly<Record<string, IconNode>>>('Feature icons');
+/** Callers size it with `--icon-size` (the `--icon-*` tokens), not width and height. */
 @Component({
   selector: 'nx-icon',
   imports: [LucideDynamicIcon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: '<svg [lucideIcon]="icon()" [size]="20" [strokeWidth]="1.65" aria-hidden="true"></svg>',
   styles:
-    ':host{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;flex:none;line-height:0;vertical-align:middle}svg{display:block;width:100%;height:100%;fill:var(--icon-fill,none)}',
+    ':host{display:inline-flex;align-items:center;justify-content:center;width:var(--icon-size,var(--icon-xl,1.25rem));height:var(--icon-size,var(--icon-xl,1.25rem));flex:none;line-height:0;vertical-align:middle}svg{display:block;width:100%;height:100%;fill:var(--icon-fill,none)}',
 })
 export class Icon {
   private readonly extra = inject(EXTRA_ICONS, { optional: true });

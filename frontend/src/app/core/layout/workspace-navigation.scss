@@ -125,8 +125,7 @@
   font-weight: 500;
 }
 .workspace-disclosure > nx-icon:last-child {
-  width: 16px;
-  height: 16px;
+  --icon-size: var(--icon-md);
   transform: rotate(90deg);
   transition: transform var(--motion-panel) var(--ease);
 }

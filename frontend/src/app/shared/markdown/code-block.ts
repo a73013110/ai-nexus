@@ -43,8 +43,7 @@ import { Icon } from '../ui/icon';
       font-size: var(--p-font-sm);
     }
     .icon-button nx-icon {
-      width: 16px;
-      height: 16px;
+      --icon-size: var(--icon-md);
     }
   `,
   template: `<header>

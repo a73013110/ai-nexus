@@ -6,7 +6,7 @@
   justify-content: space-between;
   gap: var(--p-space-3);
   height: var(--topbar-height);
-  padding: 0 35px;
+  padding: 0 var(--p-space-8);
   flex: none;
   border-bottom: 1px solid var(--line);
 }
@@ -18,10 +18,10 @@
   min-width: 0;
 }
 .topbar-actions {
-  gap: 6px;
+  gap: var(--p-space-1);
 }
 .conversation-heading {
-  --inline-title-max-width: 400px;
+  --inline-title-max-width: 25rem;
   min-width: 0;
 }
 .conversation-heading h1 {
@@ -52,27 +52,26 @@
 }
 @include bp.below(wide) {
   :host {
-    padding: 0 24px;
+    padding: 0 var(--p-space-6);
   }
   .conversation-heading {
-    --inline-title-max-width: 240px;
+    --inline-title-max-width: 15rem;
   }
 }
 @include bp.below(narrow) {
   :host {
-    gap: 10px;
-    padding: 0 18px;
+    padding: 0 var(--p-space-4);
   }
   .topbar-left {
-    gap: 12px;
+    gap: var(--p-space-3);
   }
   .conversation-heading {
-    --inline-title-max-width: 220px;
+    --inline-title-max-width: 14rem;
   }
 }
 @include bp.below(compact) {
   :host {
-    padding: 0 13px;
+    padding: 0 var(--p-space-3);
   }
   .topbar-left {
     gap: var(--p-space-2);
@@ -81,7 +80,6 @@
     gap: 0;
   }
   .conversation-heading {
-    --inline-title-max-width: 140px;
     --inline-title-font-size: var(--text-caption);
   }
   .conversation-heading h1 {

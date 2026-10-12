@@ -43,6 +43,7 @@
 ## 圖示
 
 - `Icon` 以語意名稱對應精選的 Lucide SVG 資料，由單一 renderer 繪製；新增圖示只改 `shared/ui/icon.ts` 的對照。
+- 尺寸只設 `--icon-size`，值取 `--icon-xs`（12px）到 `--icon-xl`（20px，預設）；插圖式的大圖示用 `--icon-2xl`～`--icon-4xl`。不另寫 width／height。
 - 不同操作不共用同一個符號。品牌、傅立葉畫布與資料圖表保留自己的圖形。
 
 ## 捲軸與彈窗外框
