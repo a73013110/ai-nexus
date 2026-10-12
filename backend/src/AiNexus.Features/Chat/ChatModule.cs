@@ -1,3 +1,4 @@
+using AiNexus.Platform.Dashboard;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Modules;
@@ -21,6 +22,7 @@ public sealed class ChatModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
+        services.AddDashboardSource<ChatDashboard>();
         services.AddScoped<RunService>();
         services.AddScoped<RunLeaseRecovery>();
         services.AddScoped<ContextBuilder>();

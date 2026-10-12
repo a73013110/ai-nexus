@@ -1,3 +1,4 @@
+using AiNexus.Platform.Dashboard;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Collaboration;
 using AiNexus.Platform.Events;
@@ -16,6 +17,7 @@ public sealed class ArtifactsModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
+        services.AddDashboardSource<ArtifactsDashboard>();
         services.AddScoped<CreateArtifact>();
         services.AddScoped(provider => new ArtifactService(provider.GetRequiredService<CreateArtifact>()));
         services.AddScoped<ArtifactExport>();

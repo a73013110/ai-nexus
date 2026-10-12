@@ -1,3 +1,4 @@
+using AiNexus.Platform.Dashboard;
 using AiNexus.Features.AccessControl;
 using AiNexus.Platform.Modules;
 
@@ -12,6 +13,7 @@ public sealed class JobsModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)
     {
+        builder.Services.AddDashboardSource<JobsDashboard>();
         builder.Services.AddScoped<JobService>();
         builder.Services.AddHostedService<BackgroundJobWorker>();
         builder.Services.AddFeaturePolicy(FeatureIds.Tasks);

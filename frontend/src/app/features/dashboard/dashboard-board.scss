@@ -1,0 +1,56 @@
+:host {
+  display: block;
+  container-type: inline-size;
+}
+.board {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  // Not dense: what the viewer sees follows the order they arranged, so drops land predictably.
+  grid-auto-flow: row;
+  gap: var(--board-gap, var(--p-space-4));
+  align-items: stretch;
+}
+nx-dashboard-tile {
+  grid-column: span 4;
+  &[data-size='s'] {
+    grid-column: span 3;
+  }
+  &[data-size='l'] {
+    grid-column: span 6;
+  }
+  &[data-size='w'] {
+    grid-column: span 8;
+  }
+  &[data-size='xl'] {
+    grid-column: 1 / -1;
+  }
+  &.is-tall {
+    grid-row: span 2;
+  }
+}
+.is-editing nx-dashboard-tile {
+  user-select: none;
+}
+// Narrower boards fold spans: two per row, then one.
+@container (max-width: 72rem) {
+  nx-dashboard-tile {
+    &[data-size='s'],
+    &[data-size='m'] {
+      grid-column: span 6;
+    }
+    &[data-size='l'],
+    &[data-size='w'] {
+      grid-column: 1 / -1;
+    }
+  }
+}
+@container (max-width: 40rem) {
+  nx-dashboard-tile {
+    &[data-size] {
+      grid-column: 1 / -1;
+    }
+    &.is-tall {
+      grid-row: auto;
+    }
+  }
+}

@@ -1,3 +1,4 @@
+using AiNexus.Platform.Dashboard;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Diagnostics;
@@ -17,6 +18,7 @@ public sealed class MonitoringModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
+        services.AddDashboardSource<MonitoringDashboard>();
         services.AddSettings<MonitoringOptions, MonitoringOptionsValidator>(MonitoringOptions.Section);
         services.AddSingleton<RuntimeTraffic>();
         services.AddDomainEventHandler<UserSignedOut, LeaveSignedOutSession>();

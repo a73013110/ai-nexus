@@ -17,6 +17,12 @@
 - 建議 chip（如對話起點）：透明底、1px `--line`、膠囊圓角，hover 用 `--hover`；不用卡片外框，也不加 chevron（chevron 只給會開啟另一個畫面的列）。
 - 選取 chip：「目前所在／已選取」與展開後取代原內容的切換鈕（如「全部功能」）用 `--surface`＋`--selected-ring` 凸起、圖示 `--accent`；hover 只用平的 `--hover`，兩者不能一樣。同組只有一個選取 chip（或底線），換選取以 `--ease-spring` 滑動（`SlidingIndicator`）。
 
+## 資料視覺化與總覽的例外
+
+- 圖表的類別色依序用 `--series-1`～`--series-7`，熱圖用 `--heat`；兩種主題各自映射，不在元件寫色碼。共用元件：`NumberTicker`、`Sparkline`、`DonutChart`、`HeatmapCalendar`、`nxSpotlight`（見 `/design`「資料視覺化」）。
+- [總覽](../features/dashboard.md)是唯一放寬上述「不用漸層、發光、透視」的頁面：三種風格可用漸層背景、發光、游標聚光、卡片傾斜與 3D（three.js 只在星軌風格延遲載入）。卡片外觀集中在 `dashboard-page.scss` 依風格設定的 `--tile-*`；其他頁面規則不變。
+- 例外不放寬可讀性：文字對比、焦點、減少動態與「未知不顯示為零」照常適用。
+
 ## 主題
 
 - `[data-theme='light'|'dark']` 重新映射同一組 semantic tokens；`/design` 的局部預覽靠它。

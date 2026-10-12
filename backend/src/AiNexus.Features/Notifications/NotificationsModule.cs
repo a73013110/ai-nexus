@@ -1,3 +1,4 @@
+using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Notifications;
@@ -5,7 +6,11 @@ namespace AiNexus.Features.Notifications;
 /// <summary>Workspace inbox. Other modules publish through <see cref="NotificationService"/>; each use case has its own file.</summary>
 public sealed class NotificationsModule : IFeatureModule
 {
-    public static void AddServices(IHostApplicationBuilder builder) => builder.Services.AddScoped<NotificationService>();
+    public static void AddServices(IHostApplicationBuilder builder)
+    {
+        builder.Services.AddScoped<NotificationService>();
+        builder.Services.AddDashboardSource<NotificationsDashboard>();
+    }
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {

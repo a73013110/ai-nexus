@@ -50,7 +50,7 @@ dotnet dev-certs https --trust     # 開發機首次
 
 | 工作區 | 能力 | 文件 |
 | --- | --- | --- |
-| 總覽 | 空間流程與狀態、日期篩選、每次／全對話／使用者費用、價格版本與 CSV | [費用](docs/features/billing.md)、[名詞與統計](docs/features/terminology.md) |
+| 總覽 | 各功能區塊卡片、三種風格（含 3D）、可拖曳自訂版面、日期篩選、每次／全對話／使用者費用、價格版本與 CSV | [總覽](docs/features/dashboard.md)、[費用](docs/features/billing.md)、[名詞與統計](docs/features/terminology.md) |
 | 對話 | 文件／圖片分析、分支、停止與斷線恢復、範本、搜尋、收藏／封存／標籤、草稿、文字備份、快捷指令 | [對話](docs/features/chat.md)、[文件與圖片](docs/features/attachments.md) |
 | 個人設定 | 當頁設定視窗、主題、閱讀與密度、通知、草稿、用量、快捷鍵 | [個人設定](docs/features/settings.md) |
 | 檔案庫 | 對話／知識／專案原檔、搜尋篩選、重用、容量 | [檔案庫](docs/features/files.md)、[附件保存](docs/features/attachment-storage.md) |

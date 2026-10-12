@@ -1,3 +1,4 @@
+using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Modules;
 
@@ -7,6 +8,7 @@ public sealed class WebSearchModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)
     {
+        builder.Services.AddDashboardSource<WebSearchDashboard>();
         builder.Services.AddSettings<WebSearchOptions, WebSearchOptionsValidator>(WebSearchOptions.Section);
         builder.Services.AddScoped<WebSearchService>();
         builder.Services.AddScoped<IWebSearchProvider, WebSearchProvider>();

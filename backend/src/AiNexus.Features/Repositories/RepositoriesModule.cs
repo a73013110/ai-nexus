@@ -1,3 +1,4 @@
+using AiNexus.Platform.Dashboard;
 using AiNexus.Features.AccessControl;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Configuration;
@@ -11,6 +12,7 @@ public sealed class RepositoriesModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
+        services.AddDashboardSource<RepositoriesDashboard>();
         services.AddSettings<GiteaOptions, GiteaOptionsValidator>(GiteaOptions.Section);
         services.AddScoped<IGiteaClient, GiteaClient>();
         services.AddScoped<RepositoryService>();

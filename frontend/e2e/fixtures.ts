@@ -1013,14 +1013,416 @@ export class ApiFixture {
 }
 
 /** Usage, spend and price data shared by the dashboard, navigation and price specs. */
-export function dashboardFixture(fixture: ApiFixture) {
-  const day = new Date().toLocaleDateString("sv-SE");
+type Tone = "neutral" | "info" | "success" | "warning" | "danger";
+/** The last `days` local days, oldest first, as `YYYY-MM-DD`. */
+function fixtureDays(days: number) {
+  return Array.from({ length: days }, (_, i) =>
+    new Date(Date.now() - (days - 1 - i) * 86400000).toLocaleDateString(
+      "sv-SE",
+    ),
+  );
+}
+/** Deterministic daily values: a weekly rhythm with a slow rise. */
+function fixtureSeries(scale: number, seed = 1) {
+  return fixtureDays(30).map((date, i) => ({
+    date,
+    value: Math.max(
+      0,
+      Math.round(scale * (0.55 + 0.45 * Math.sin((i + seed) * 0.9) + i / 60)),
+    ),
+  }));
+}
+function metric(
+  key: string,
+  label: string,
+  value: number | null,
+  unit: string,
+  extra: { format?: string; tone?: Tone; period?: boolean; hint?: string } = {},
+) {
   return {
+    key,
+    label,
+    value,
+    unit,
+    format: extra.format ?? "count",
+    tone: extra.tone ?? "neutral",
+    period: extra.period ?? false,
+    hint: extra.hint ?? null,
+  };
+}
+interface FixtureItem {
+  id: string;
+  title: string;
+  detail: string | null;
+  at: string | null;
+  link: string | null;
+  tone: Tone;
+}
+function section(
+  id: string,
+  feature: string,
+  title: string,
+  route: string | null,
+  parts: {
+    state?: string;
+    metrics: ReturnType<typeof metric>[];
+    series?: {
+      key: string;
+      label: string;
+      unit: string;
+      points: { date: string; value: number }[];
+    }[];
+    shares?: { key: string; label: string; value: number; tone: Tone }[];
+    items?: FixtureItem[];
+    facts?: { label: string; value: string; tone: Tone }[];
+  },
+) {
+  return {
+    id,
+    feature,
+    title,
+    route,
+    state: parts.state ?? "idle",
+    metrics: parts.metrics,
+    series: parts.series ?? [],
+    shares: parts.shares ?? [],
+    items: parts.items ?? [],
+    facts: parts.facts ?? [],
+  };
+}
+const ago = (minutes: number) =>
+  new Date(Date.now() - minutes * 60000).toISOString();
+
+/** A month of activity across every feature; `platform` adds the administrator sections. */
+export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
+  const day = new Date().toLocaleDateString("sv-SE");
+  const days = fixtureDays(30);
+  const calls = fixtureSeries(14, 2);
+  const conversation = randomUUID();
+  const sections = [
+    section("chat", "chat", "對話", "/chat", {
+      state: "active",
+      metrics: [
+        metric("conversations", "對話", 12, "個", {
+          hint: "3 個收藏 · 1 個封存",
+        }),
+        metric("generating", "AI 回覆生成", 1, "件進行中", { tone: "info" }),
+        metric("questions", "期間提問", 186, "則", { period: true }),
+        metric("replies", "完成回覆", 181, "則", {
+          period: true,
+          tone: "success",
+        }),
+        metric("failed", "回覆失敗", 2, "則", { period: true, tone: "danger" }),
+        metric("latency", "平均回覆時間", 4820, "", {
+          period: true,
+          format: "duration",
+        }),
+      ],
+      series: [
+        {
+          key: "questions",
+          label: "每日提問",
+          unit: "則",
+          points: fixtureSeries(6, 1),
+        },
+      ],
+      shares: [
+        {
+          key: "fixture:8b",
+          label: "本機測試模型",
+          value: 120,
+          tone: "neutral",
+        },
+        { key: "second-model", label: "雲端助理", value: 63, tone: "neutral" },
+      ],
+      items: [
+        {
+          id: conversation,
+          title: "整理期末評量規準",
+          detail: "收藏",
+          at: ago(12),
+          link: "/chat/" + conversation,
+          tone: "neutral",
+        },
+        {
+          id: randomUUID(),
+          title: "校務會議紀錄摘要",
+          detail: null,
+          at: ago(240),
+          link: "/chat/" + randomUUID(),
+          tone: "neutral",
+        },
+      ],
+    }),
+    section("web-search", "chat", "網路搜尋", "/chat", {
+      metrics: [
+        metric("searches", "期間搜尋", 23, "次", { period: true }),
+        metric("failed", "搜尋失敗", 0, "次", { period: true }),
+      ],
+      series: [
+        {
+          key: "searches",
+          label: "每日網路搜尋",
+          unit: "次",
+          points: fixtureSeries(1, 4),
+        },
+      ],
+      facts: [{ label: "網路搜尋", value: "已啟用", tone: "success" }],
+    }),
+    section("knowledge", "knowledge", "知識庫", "/knowledge", {
+      state: "attention",
+      metrics: [
+        metric("collections", "知識庫", 2, "個"),
+        metric("documents", "知識庫文件", 8, "份", {
+          hint: "7 份可查詢 · 312 頁",
+        }),
+        metric("chunks", "索引分段", 214, "段"),
+        metric("processing", "處理中文件", 0, "份"),
+        metric("failed", "處理失敗", 1, "份", { tone: "danger" }),
+        metric("added", "期間新增文件", 5, "份", { period: true }),
+      ],
+      series: [
+        {
+          key: "added",
+          label: "每日新增知識庫文件",
+          unit: "份",
+          points: fixtureSeries(0.4, 3),
+        },
+      ],
+      shares: [
+        { key: "ready", label: "可查詢", value: 7, tone: "success" },
+        { key: "failed", label: "處理失敗", value: 1, tone: "danger" },
+      ],
+      facts: [{ label: "檢索方式", value: "語意向量", tone: "success" }],
+    }),
+    section("files", "files", "檔案庫", "/files", {
+      metrics: [
+        metric("files", "已保存原檔", 5, "個"),
+        metric("size", "原檔大小", 48_200_000, "", { format: "bytes" }),
+        metric("uploads", "期間保存", 4, "個", { period: true }),
+        metric("quota", "容量使用", 23.4, "", { format: "percent" }),
+      ],
+      series: [
+        {
+          key: "uploads",
+          label: "每日保存原檔",
+          unit: "個",
+          points: fixtureSeries(0.3, 5),
+        },
+      ],
+      shares: [
+        { key: "PDF", label: "PDF", value: 3, tone: "neutral" },
+        { key: "圖片", label: "圖片", value: 2, tone: "neutral" },
+      ],
+    }),
+    section("tasks", "tasks", "背景任務", "/tasks", {
+      state: "active",
+      metrics: [
+        metric("active", "處理中任務", 1, "件", {
+          tone: "info",
+          hint: "1 件執行中 · 0 件等待中",
+        }),
+        metric("failed", "失敗任務", 0, "件"),
+        metric("created", "期間建立", 17, "件", { period: true }),
+        metric("completed", "期間完成", 16, "件", {
+          period: true,
+          tone: "success",
+        }),
+      ],
+      series: [
+        {
+          key: "created",
+          label: "每日建立任務",
+          unit: "件",
+          points: fixtureSeries(0.8, 6),
+        },
+      ],
+      shares: [
+        {
+          key: "document-ingest",
+          label: "文字擷取",
+          value: 9,
+          tone: "neutral",
+        },
+        {
+          key: "document-embedding",
+          label: "向量索引",
+          value: 8,
+          tone: "neutral",
+        },
+      ],
+      items: [
+        {
+          id: randomUUID(),
+          title: "課程綱要.pdf",
+          detail: "建立索引",
+          at: ago(3),
+          link: "/tasks?job=" + randomUUID(),
+          tone: "info",
+        },
+      ],
+    }),
+    section("projects", "projects", "專案", "/projects", {
+      metrics: [
+        metric("projects", "專案", 3, "個"),
+        metric("templates", "提問範本", 6, "個"),
+        metric("created", "期間建立", 1, "個", { period: true }),
+        metric("shared", "共用給我", 2, "個"),
+      ],
+      shares: [{ key: "active", label: "進行中", value: 3, tone: "info" }],
+    }),
+    section("artifacts", "artifacts", "成果文件", "/artifacts", {
+      metrics: [
+        metric("artifacts", "成果文件", 9, "份", { hint: "4 份由對話建立" }),
+        metric("versions", "期間保存版本", 27, "版", { period: true }),
+      ],
+      series: [
+        {
+          key: "versions",
+          label: "每日保存版本",
+          unit: "版",
+          points: fixtureSeries(1.2, 7),
+        },
+      ],
+    }),
+    section("shared", "shared", "分享", "/shared", {
+      metrics: [
+        metric("sent", "有效分享", 4, "個", { hint: "未撤銷且未到期" }),
+        metric("expiring", "7 天內到期", 1, "個", { tone: "warning" }),
+        metric("created", "期間建立", 3, "個", { period: true }),
+        metric("received", "收到的分享", 2, "個"),
+      ],
+    }),
+    section("quality", "quality", "品質評測", "/quality", {
+      metrics: [
+        metric("helpful", "回覆有幫助", 86, "", {
+          period: true,
+          format: "percent",
+          hint: "43 則有幫助 · 7 則沒幫助",
+        }),
+        metric("ratings", "期間評分", 50, "則", { period: true }),
+        metric("evaluations", "期間評測", 3, "次", { period: true }),
+        metric("running", "評測進行中", 0, "次"),
+      ],
+      shares: [
+        { key: "up", label: "有幫助", value: 43, tone: "success" },
+        { key: "down", label: "沒幫助", value: 7, tone: "danger" },
+      ],
+    }),
+    section("repositories", "repositories", "程式庫", "/repositories", {
+      metrics: [
+        metric("running", "Review 進行中", 0, "次"),
+        metric("reviews", "期間 Review", 5, "次", { period: true }),
+        metric("failed", "Review 失敗", 0, "次", { period: true }),
+      ],
+      facts: [
+        { label: "Gitea", value: "已啟用", tone: "success" },
+        { label: "帳號連線", value: "已連線", tone: "success" },
+      ],
+    }),
+    section("notifications", "dashboard", "通知", "", {
+      metrics: [
+        metric("unread", "未讀通知", 2, "則", { tone: "info" }),
+        metric("errors", "未讀錯誤", 0, "則"),
+        metric("received", "期間收到", 9, "則", { period: true }),
+      ],
+      items: [
+        {
+          id: randomUUID(),
+          title: "收到分享",
+          detail: "王老師分享了「期中考題」",
+          at: ago(30),
+          link: "/shared/" + randomUUID(),
+          tone: "info",
+        },
+      ],
+    }),
+  ];
+  if (scope === "platform")
+    sections.push(
+      section("platform", "admin", "平台", null, {
+        metrics: [
+          metric("users", "啟用帳號", 128, "人", { hint: "另有 3 個停用" }),
+          metric("seen", "期間登入", 96, "人", { period: true }),
+          metric("calling", "期間使用 AI", 71, "人", { period: true }),
+          metric("locked", "暫時鎖定", 0, "人"),
+          metric("audit", "稽核事件", 1542, "筆", { period: true }),
+        ],
+        series: [
+          {
+            key: "audit",
+            label: "每日稽核事件",
+            unit: "筆",
+            points: fixtureSeries(50, 8),
+          },
+        ],
+        shares: [
+          { key: "seen", label: "期間登入", value: 96, tone: "success" },
+          { key: "idle", label: "期間未登入", value: 32, tone: "neutral" },
+        ],
+        facts: [
+          { label: "Google AI", value: "可連線", tone: "success" },
+          { label: "地端 Ollama", value: "無法連線", tone: "danger" },
+        ],
+      }),
+      section("monitoring", "monitoring", "即時監控", "/admin/monitoring", {
+        state: "active",
+        metrics: [
+          metric("online", "在線人數", 14, "人", {
+            tone: "info",
+            hint: "17 個工作階段 · 9 個活躍",
+          }),
+          metric("rps", "每秒請求", 3.42, "次", { hint: "近 5 分鐘" }),
+          metric("errors", "錯誤比例", 0.4, "", { format: "percent" }),
+          metric("p95", "P95 回應時間", 182, "", { format: "duration" }),
+        ],
+        facts: [{ label: "執行個體", value: "WEB01", tone: "neutral" }],
+      }),
+    );
+  // Like the backend: only sections of granted features, titled with their (custom) names.
+  const granted = new Map<string, string>([
+    ["dashboard", "總覽"],
+    ...fixture.extraFeatures.map((x): [string, string] => [x.id, x.name]),
+    ...(fixture.chatAccess
+      ? ([
+          ["chat", "對話"],
+          ["files", "檔案庫"],
+        ] as [string, string][])
+      : []),
+    ...(fixture.adminAccess
+      ? ([
+          ["admin", "平台管理"],
+          ["monitoring", "即時監控"],
+        ] as [string, string][])
+      : []),
+  ]);
+  const visible = sections
+    .filter((x) => granted.has(x.feature))
+    .map((x) =>
+      x.id === x.feature ? { ...x, title: granted.get(x.feature)! } : x,
+    );
+  const window = {
+    from: new Date(Date.now() - 29 * 86400000).toISOString(),
+    until: new Date(Date.now() + 86400000).toISOString(),
+  };
+  return {
+    scope,
+    ownerId: scope === "personal" ? fixture.userId : null,
+    generatedAt: new Date().toISOString(),
+    period: { ...window, offsetMinutes: 480 },
     tokens: {
-      from: new Date(Date.now() - 6 * 86400000).toISOString(),
-      until: new Date(Date.now() + 86400000).toISOString(),
+      ...window,
       timezoneOffsetMinutes: 480,
       daily: [
+        ...days.slice(0, -1).map((date, i) => ({
+          date,
+          modelId: "second-model",
+          modelDisplayName: "雲端助理",
+          requests: 3,
+          requestsWithUsage: 3,
+          inputTokens: 3000 + i * 40,
+          outputTokens: 900,
+        })),
         {
           date: day,
           modelId: "fixture:8b",
@@ -1041,26 +1443,11 @@ export function dashboardFixture(fixture: ApiFixture) {
         },
       ],
     },
-    scope: "personal",
-    counts: {
-      files: 5,
-      conversations: 12,
-      projects: 3,
-      collections: 2,
-      documents: 8,
-      readyDocuments: 7,
-      failedDocuments: 1,
-      chunks: 214,
-      activeGenerations: 0,
-      activeJobs: 1,
-      failedJobs: 0,
-      staleIndexes: 1,
-    },
     spend: {
-      from: new Date().toISOString(),
-      until: new Date().toISOString(),
+      from: window.from,
+      until: window.until,
       offsetMinutes: 480,
-      requests: 42,
+      requests: calls.reduce((sum, x) => sum + x.value, 0),
       pendingCalls: 1,
       legacyCalls: 2,
       inputTokens: 10200,
@@ -1082,15 +1469,25 @@ export function dashboardFixture(fixture: ApiFixture) {
         },
       ],
       daily: [
-        {
-          label: day,
+        ...calls.map((x) => ({
+          label: x.date,
           currency: "USD",
           kind: "api",
-          amount: 0.1208,
-          requests: 40,
-          unknownCalls: 1,
-          inputTokens: 10000,
-          outputTokens: 1300,
+          amount: x.date === day ? 0.1208 : x.value * 0.002,
+          requests: x.value,
+          unknownCalls: 0,
+          inputTokens: 1000,
+          outputTokens: 300,
+        })),
+        {
+          label: day,
+          currency: "TWD",
+          kind: "internal",
+          amount: 15,
+          requests: 1,
+          unknownCalls: 0,
+          inputTokens: 0,
+          outputTokens: 0,
         },
       ],
       models: [
@@ -1104,6 +1501,26 @@ export function dashboardFixture(fixture: ApiFixture) {
           inputTokens: 10000,
           outputTokens: 1300,
         },
+        {
+          label: "網路搜尋",
+          currency: "USD",
+          kind: "api",
+          amount: 0.031,
+          requests: 23,
+          unknownCalls: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+        },
+        {
+          label: "內部模型",
+          currency: "TWD",
+          kind: "internal",
+          amount: 15,
+          requests: 1,
+          unknownCalls: 0,
+          inputTokens: 0,
+          outputTokens: 0,
+        },
       ],
       users: [
         {
@@ -1116,11 +1533,18 @@ export function dashboardFixture(fixture: ApiFixture) {
           requests: 40,
           unknownCalls: 1,
         },
+        {
+          ownerId: randomUUID(),
+          displayName: "王小明",
+          account: "TEST\\ming",
+          currency: "USD",
+          kind: "api",
+          amount: 0.052,
+          requests: 18,
+          unknownCalls: 0,
+        },
       ],
     },
-    recent: [],
-    webSearchAvailable: true,
-    giteaAvailable: true,
-    embeddingMode: "語意向量",
+    sections: visible,
   };
 }
