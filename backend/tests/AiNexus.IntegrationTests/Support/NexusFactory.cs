@@ -123,11 +123,21 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     private static string ConnectionString(string path) => $"Data Source={path};Default Timeout=10";
     private static DbContextOptions<NexusDbContext> DatabaseOptions(string path) => new DbContextOptionsBuilder<NexusDbContext>().UseSqlite(ConnectionString(path)).Options;
 
+    /// <summary>
+    /// Closes the pooled connections to one file so it can be copied or deleted. <c>ClearAllPools</c> is process-wide
+    /// and disposes the native handles of hosts still running in parallel tests, which then fail with 503.
+    /// </summary>
+    private static void ReleaseFile(string path)
+    {
+        using var connection = new SqliteConnection(ConnectionString(path));
+        SqliteConnection.ClearPool(connection);
+    }
+
     private static string CreateTemplate()
     {
         var path = Path.Combine(Path.GetTempPath(), $"nexus-template-{Guid.NewGuid():N}.db");
         using (var db = new NexusDbContext(DatabaseOptions(path))) db.Database.EnsureCreated();
-        SqliteConnection.ClearAllPools();
+        ReleaseFile(path);
         AppDomain.CurrentDomain.ProcessExit += (_, _) => File.Delete(path);
         return path;
     }
@@ -135,6 +145,6 @@ public sealed class NexusFactory : WebApplicationFactory<Program>
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        if (disposing) { SqliteConnection.ClearAllPools(); File.Delete(databasePath); if (Directory.Exists(databasePath + ".attachments")) Directory.Delete(databasePath + ".attachments", recursive: true); if (Directory.Exists(databasePath + ".logs")) Directory.Delete(databasePath + ".logs", recursive: true); }
+        if (disposing) { ReleaseFile(databasePath); File.Delete(databasePath); if (Directory.Exists(databasePath + ".attachments")) Directory.Delete(databasePath + ".attachments", recursive: true); if (Directory.Exists(databasePath + ".logs")) Directory.Delete(databasePath + ".logs", recursive: true); }
     }
 }
