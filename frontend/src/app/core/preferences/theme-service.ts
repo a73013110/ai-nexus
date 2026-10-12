@@ -12,6 +12,10 @@ export class ThemeService {
   private readonly dark = mediaQuery('(prefers-color-scheme: dark)');
   private readonly systemReduced = mediaQuery('(prefers-reduced-motion: reduce)');
   readonly reducedMotion = computed(() => this.preferences().reducedMotion || this.systemReduced());
+  /** For `scrollTo` and `scrollIntoView`: jumps instead of gliding under reduced motion. */
+  readonly scrollBehavior = computed<ScrollBehavior>(() =>
+    this.reducedMotion() ? 'instant' : 'smooth',
+  );
   constructor() {
     // Follows the system scheme; preference changes render synchronously through apply().
     effect(() => {
