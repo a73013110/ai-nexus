@@ -12,6 +12,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 後端 slice、錯誤、驗證、軟刪除 | `docs/architecture/backend-conventions.md` |
 | 模組邊界、跨模組依賴、domain event | `docs/architecture/module-boundaries.md` |
 | 推論、聊天生成、背景工作 | `docs/architecture/generation.md` |
+| 總覽區塊、儀表板 widget | `docs/architecture/dashboard-sections.md` |
 | 後端測試、`NexusFactory` | `docs/development/testing.md` |
 | 錯誤回應、查證代碼、遮罩 | `docs/architecture/error-contract.md` |
 | 日誌事件、EventId | `docs/architecture/log-events.md` |

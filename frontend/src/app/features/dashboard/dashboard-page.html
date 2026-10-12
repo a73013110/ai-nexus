@@ -1,274 +1,131 @@
 <nx-feature-page
   [title]="session.featureName('dashboard')"
-  description="從使用量到知識索引，掌握每一步工作的狀態。"
+  description="從用量、知識索引到每一件工作，一眼掌握整個工作區。"
   eyebrow="AI NEXUS · OVERVIEW"
 >
   <div page-actions class="page-actions">
+    <nx-view-switch
+      label="總覽風格"
+      appearance="segment"
+      [options]="styles"
+      [value]="layout.style()"
+      (valueChange)="setStyle($event)"
+    />
     @if (session.has('admin')) {
       <nx-select
         label="總覽範圍"
-        [value]="scope()"
-        [options]="[
-          { value: 'personal', label: '我的工作' },
-          { value: 'platform', label: '整個平台' },
-        ]"
-        (valueChange)="setScope($event)"
+        [value]="store.scope()"
+        [options]="scopes"
+        (valueChange)="store.setScope($event)"
       />
       <nx-price-book />
     }
     <button
       type="button"
+      class="secondary-button"
+      [attr.aria-pressed]="layout.editing()"
+      [disabled]="!store.data()"
+      (click)="layout.editing.set(!layout.editing())"
+    >
+      <nx-icon name="layout" />{{ layout.editing() ? '完成' : '自訂版面' }}
+    </button>
+    <button
+      type="button"
       class="icon-button"
       aria-label="重新整理總覽"
-      [disabled]="loading()"
-      (click)="load()"
+      [disabled]="store.refreshing()"
+      (click)="store.load()"
     >
       <nx-icon name="refresh" />
     </button>
   </div>
-  <form (submit)="$event.preventDefault(); load()">
+  <form (submit)="$event.preventDefault(); store.load()">
     <nx-filter-panel
       ><div class="ui-filter-grid">
         <nx-select
           label="費用查詢期間"
-          [options]="rangeOptions"
-          [value]="range()"
-          (valueChange)="setRange($event)"
+          [options]="store.rangeOptions"
+          [value]="store.range()"
+          (valueChange)="store.setRange($event)"
         />
         <nx-date-time-picker
           #fromDate
           label="費用開始日期"
           [withTime]="false"
-          [value]="from()"
-          [max]="through()"
-          (valueChange)="from.set($event); range.set('custom')"
+          [value]="store.from()"
+          [max]="store.through()"
+          (valueChange)="store.from.set($event); store.range.set('custom')"
         />
         <nx-date-time-picker
           #throughDate
           label="費用結束日期"
           [withTime]="false"
-          [value]="through()"
-          [min]="from()"
-          [max]="today"
-          (valueChange)="through.set($event); range.set('custom')"
+          [value]="store.through()"
+          [min]="store.from()"
+          [max]="store.today"
+          (valueChange)="store.through.set($event); store.range.set('custom')"
         />
         <button
           type="submit"
           class="secondary-button"
-          [disabled]="loading() || !fromDate.valid() || !throughDate.valid()"
+          [disabled]="store.refreshing() || !fromDate.valid() || !throughDate.valid()"
         >
           查詢
         </button>
-        @if (scope() === 'platform') {
+        @if (store.scope() === 'platform') {
           <button
             type="button"
             class="quiet-button"
-            [disabled]="exporting() || loading()"
-            (click)="export()"
+            [disabled]="store.exporting() || store.refreshing()"
+            (click)="store.export()"
           >
             <nx-icon name="download" />匯出費用
           </button>
         }
-        @if (units().length) {
+        @if (store.units().length) {
           <nx-select
             label="顯示的費用幣別與類型"
-            [options]="units()"
-            [value]="unit()"
-            (valueChange)="unit.set($event)"
+            [options]="store.units()"
+            [value]="store.unit()"
+            (valueChange)="store.unit.set($event)"
           />
         }</div
     ></nx-filter-panel>
   </form>
-  @if (error()) {
-    <nx-notice [message]="error()"
-      ><button notice-actions type="button" (click)="load()">重試</button>
+  @if (store.error()) {
+    <nx-notice [message]="store.error()"
+      ><button notice-actions type="button" (click)="store.load()">重試</button>
     </nx-notice>
   }
-  @if (loading() && !data()) {
+  @if (store.loading() && !store.data()) {
     <div class="dashboard-skeleton" aria-label="正在載入總覽" role="status">
-      <div class="skeleton"></div>
+      <div class="skeleton is-hero"></div>
       <div class="skeleton"></div>
       <div class="skeleton"></div>
       <div class="skeleton"></div>
     </div>
   }
-  @if (data(); as d) {
-    <div class="dashboard-content" [attr.aria-busy]="loading()" [class.is-refreshing]="loading()">
-      <div class="dashboard-metrics">
-        <article nxCard class="metric-card">
-          <span><nx-icon name="money" />區間已知費用</span
-          ><strong>{{
-            total()?.knownCalls ? money(total()!.amount, total()!.currency) : '尚無已知金額'
-          }}</strong
-          ><small
-            >{{ total() ? kind(total()!.kind) : '請由管理員設定模型與工具價格' }}
-            @if (unknown()) {
-              · 各類型共 {{ unknown() }} 次費用未知
-            }
-          </small>
-        </article>
-        <article nxCard class="metric-card">
-          <span><nx-icon name="chart" />模型與工具呼叫</span
-          ><strong>{{ d.spend.requests.toLocaleString() }}<em>次</em></strong
-          ><small>{{ d.spend.pendingCalls }} 次待結算 · 包含搜尋、OCR、索引與評測</small>
-        </article>
-        <article nxCard class="metric-card">
-          <span><nx-icon name="database" />Token 使用量</span
-          ><strong>{{ (tokenTotals().input + tokenTotals().output).toLocaleString() }}</strong
-          ><small
-            >輸入 {{ tokenTotals().input.toLocaleString() }} · 輸出
-            {{ tokenTotals().output.toLocaleString() }}</small
-          >
-        </article>
-        <article nxCard class="metric-card">
-          <span><nx-icon name="tasks" />處理中工作</span
-          ><strong>{{ d.counts.activeJobs + d.counts.activeGenerations }}<em>件</em></strong
-          ><small
-            >{{ d.counts.activeGenerations }} 件 AI 回覆生成 ·
-            {{ d.counts.activeJobs }} 件背景任務</small
-          >
-        </article>
-      </div>
-      <p class="form-note">
-        統計範圍：{{ scopeLabel() }}。費用、呼叫與 Token
-        使用量依查詢期間統計；工作狀態與資源數量顯示目前狀況。
-      </p>
-      <section nxCard class="operations-overview">
-        <header class="ui-section-header">
-          <div>
-            <span class="panel-eyebrow">WORKSPACE FLOW</span>
-            <h2>讓資訊走到答案</h2>
-          </div>
-          <nx-status-badge
-            [tone]="d.counts.activeJobs + d.counts.activeGenerations ? 'info' : 'neutral'"
-            >{{
-              d.counts.activeJobs + d.counts.activeGenerations ? '工作處理中' : '目前無進行中工作'
-            }}</nx-status-badge
-          >
-        </header>
-        <nx-workspace-flow
-          [counts]="d.counts"
-          [requests]="d.spend.requests"
-          [scope]="scope()"
-          [scopeLabel]="scopeLabel()"
-          [embeddingMode]="d.embeddingMode"
-          [webSearchAvailable]="d.webSearchAvailable"
-          [giteaAvailable]="d.giteaAvailable"
-        />
-      </section>
-      <div class="dashboard-charts">
-        <section nxCard>
-          <nx-trend-chart
-            [points]="trend()"
-            label="每日已知費用"
-            [currency]="total()?.currency ?? ''"
-          />
-          <p class="form-note">
-            {{ total() ? kind(total()!.kind) : '尚無價格紀錄' }} ·
-            未知費用未納入金額，不同幣別與費用類型不相加。
-          </p>
-        </section>
-        <section nxCard><nx-token-usage-chart [usage]="d.tokens" /></section>
-      </div>
-      <div class="dashboard-lower">
-        <section nxCard>
-          <header class="ui-section-header">
-            <h2>模型與工具費用分布</h2>
-            <span>{{ total()?.currency ?? '' }}</span>
-          </header>
-          @for (model of modelRows(); track model.label) {
-            <div class="model-spend-row">
-              <div>
-                <strong>{{ model.label }}</strong
-                ><small
-                  >{{ model.requests }} 次
-                  @if (model.unknownCalls) {
-                    · {{ model.unknownCalls }} 次費用未知
-                  }
-                </small>
-              </div>
-              <strong>{{ money(model.amount, model.currency) }}</strong
-              ><meter
-                min="0"
-                [max]="total()?.amount || 1"
-                [value]="model.amount"
-                [attr.aria-label]="model.label + '費用占比'"
-              ></meter>
-            </div>
-          }
-          @if (!modelRows().length) {
-            <p class="form-note">價格設定完成後，新的呼叫會呈現在這裡。</p>
-          }
-        </section>
-        <section nxCard>
-          <header class="ui-section-header">
-            <h2>繼續工作</h2>
-            <a routerLink="/chat" class="quiet-button">新對話<nx-icon name="plus" /></a>
-          </header>
-          @for (work of d.recent; track work.id) {
-            <a class="recent-work" [routerLink]="['/chat', work.id]"
-              ><nx-icon name="lines" /><span>{{ work.title }}</span
-              ><nx-icon name="chevron"
-            /></a>
-          }
-          @if (!d.recent.length) {
-            <p class="form-note">第一段對話會出現在這裡。</p>
-          }
-        </section>
-      </div>
-      @if (scope() === 'platform') {
-        <section nxCard class="dashboard-users">
-          <header class="ui-section-header">
-            <div>
-              <h2>使用者區間費用</h2>
-              <p class="form-note">
-                依目前選擇的幣別與費用類型呈現；匯出涵蓋目前已套用範圍與期間的資料。
-              </p>
-            </div>
-            @if (owner()) {
-              <button class="secondary-button" (click)="owner.set(''); load()">查看所有人</button>
-            }
-          </header>
-          <nx-data-table label="使用者區間費用" [busy]="loading()">
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">使用者</th>
-                  <th scope="col">呼叫</th>
-                  <th scope="col">已知費用</th>
-                  <th scope="col">費用未知次數</th>
-                  <th scope="col"><span class="sr-only">操作</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (user of users(); track user.ownerId) {
-                  <tr>
-                    <th scope="row">
-                      <strong>{{ user.displayName }}</strong
-                      ><small>{{ user.account }}</small>
-                    </th>
-                    <td>{{ user.requests }}</td>
-                    <td>{{ money(user.amount, user.currency) }}</td>
-                    <td>{{ user.unknownCalls }}</td>
-                    <td>
-                      <button
-                        type="button"
-                        class="quiet-button"
-                        (click)="owner.set(user.ownerId); load()"
-                      >
-                        檢視
-                      </button>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </nx-data-table>
-          @if (!users().length) {
-            <p class="form-note">此期間尚無符合條件的費用紀錄。</p>
-          }
-        </section>
+  @if (store.data()) {
+    <div
+      class="dashboard"
+      [attr.aria-busy]="store.refreshing()"
+      [class.is-refreshing]="store.refreshing()"
+    >
+      @switch (layout.style()) {
+        @case ('orbit') {
+          <nx-orbit-hero />
+        }
+        @case ('pulse') {
+          <nx-pulse-hero />
+        }
+        @default {
+          <nx-aurora-hero />
+        }
       }
+      @if (layout.editing()) {
+        <nx-dashboard-edit-bar />
+      }
+      <nx-dashboard-board [tilt]="tilt()" />
     </div>
   }
 </nx-feature-page>

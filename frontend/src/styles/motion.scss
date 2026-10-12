@@ -431,3 +431,94 @@
   @include reduced-motion(':root');
 }
 @include reduced-motion(":root[data-reduced-motion='true']");
+
+// Overview: data marks draw in, the hero backdrops drift and live indicators breathe. Loops stop
+// with the reduced-motion rule above, leaving their resting frame.
+@keyframes sparkline-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+@keyframes ring-sweep {
+  from {
+    stroke-dasharray: 0 100;
+  }
+}
+@keyframes heat-arrive {
+  from {
+    opacity: 0;
+    scale: 0.4;
+  }
+}
+@keyframes tile-arrive {
+  from {
+    opacity: 0;
+    translate: 0 1rem;
+    scale: 0.98;
+  }
+}
+@keyframes tile-wiggle {
+  0%,
+  100% {
+    rotate: -0.25deg;
+  }
+  50% {
+    rotate: 0.25deg;
+  }
+}
+@keyframes aurora-drift {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate3d(8%, -6%, 0) scale(1.12) rotate(18deg);
+  }
+  66% {
+    transform: translate3d(-6%, 8%, 0) scale(0.94) rotate(-12deg);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(0deg);
+  }
+}
+@keyframes live-ping {
+  75%,
+  100% {
+    opacity: 0;
+    scale: 2.4;
+  }
+}
+@keyframes marquee-scroll {
+  to {
+    translate: -50% 0;
+  }
+}
+@keyframes flow-particle {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  100% {
+    left: calc(100% - 6px);
+    opacity: 0;
+  }
+}
+@keyframes hud-scan {
+  from {
+    translate: 0 -100%;
+  }
+  to {
+    translate: 0 100%;
+  }
+}
+@keyframes ecg-trace {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: -1;
+  }
+}

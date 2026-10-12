@@ -32764,119 +32764,305 @@
           }
         }
       },
-      "DashboardCountsDto": {
-        "required": [
-          "conversations",
-          "projects",
-          "collections",
-          "documents",
-          "readyDocuments",
-          "failedDocuments",
-          "chunks",
-          "activeGenerations",
-          "activeJobs",
-          "failedJobs",
-          "staleIndexes",
-          "files"
-        ],
-        "type": "object",
-        "properties": {
-          "conversations": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "projects": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "collections": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "documents": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "readyDocuments": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "failedDocuments": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "chunks": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "activeGenerations": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "activeJobs": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "failedJobs": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "staleIndexes": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "files": {
-            "type": "integer",
-            "format": "int32"
-          }
-        }
-      },
       "DashboardDto": {
         "required": [
           "scope",
-          "counts",
+          "ownerId",
+          "generatedAt",
+          "period",
           "spend",
-          "recent",
-          "webSearchAvailable",
-          "giteaAvailable",
-          "embeddingMode",
-          "tokens"
+          "tokens",
+          "sections"
         ],
         "type": "object",
         "properties": {
           "scope": {
             "type": "string"
           },
-          "counts": {
-            "$ref": "#/components/schemas/DashboardCountsDto"
+          "ownerId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "generatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "period": {
+            "$ref": "#/components/schemas/DashboardPeriodDto"
           },
           "spend": {
             "$ref": "#/components/schemas/SpendReportDto"
           },
-          "recent": {
+          "tokens": {
+            "$ref": "#/components/schemas/TokenUsageDto"
+          },
+          "sections": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/RecentWorkDto"
+              "$ref": "#/components/schemas/DashboardSectionDto"
             }
-          },
-          "webSearchAvailable": {
-            "type": "boolean"
-          },
-          "giteaAvailable": {
-            "type": "boolean"
-          },
-          "embeddingMode": {
+          }
+        }
+      },
+      "DashboardFactDto": {
+        "required": [
+          "label",
+          "value",
+          "tone"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
             "type": "string"
           },
-          "tokens": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/TokenUsageDto"
-              }
+          "value": {
+            "type": "string"
+          },
+          "tone": {
+            "type": "string"
+          }
+        }
+      },
+      "DashboardItemDto": {
+        "required": [
+          "id",
+          "title",
+          "detail",
+          "at",
+          "link",
+          "tone"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": [
+              "null",
+              "string"
             ]
+          },
+          "at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "link": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tone": {
+            "type": "string"
+          }
+        }
+      },
+      "DashboardMetricDto": {
+        "required": [
+          "key",
+          "label",
+          "value",
+          "unit",
+          "format",
+          "tone",
+          "period",
+          "hint"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "format": {
+            "type": "string"
+          },
+          "tone": {
+            "type": "string"
+          },
+          "period": {
+            "type": "boolean"
+          },
+          "hint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "DashboardPeriodDto": {
+        "required": [
+          "from",
+          "until",
+          "offsetMinutes"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "until": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "offsetMinutes": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "DashboardPointDto": {
+        "required": [
+          "date",
+          "value"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "DashboardSectionDto": {
+        "required": [
+          "id",
+          "feature",
+          "title",
+          "route",
+          "state",
+          "metrics",
+          "series",
+          "shares",
+          "items",
+          "facts"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "feature": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "route": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "state": {
+            "type": "string"
+          },
+          "metrics": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardMetricDto"
+            }
+          },
+          "series": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardSeriesDto"
+            }
+          },
+          "shares": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardShareDto"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardItemDto"
+            }
+          },
+          "facts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardFactDto"
+            }
+          }
+        }
+      },
+      "DashboardSeriesDto": {
+        "required": [
+          "key",
+          "label",
+          "unit",
+          "points"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "points": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardPointDto"
+            }
+          }
+        }
+      },
+      "DashboardShareDto": {
+        "required": [
+          "key",
+          "label",
+          "value",
+          "tone"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number",
+            "format": "double"
+          },
+          "tone": {
+            "type": "string"
           }
         }
       },
@@ -35599,31 +35785,6 @@
         "type": "object",
         "properties": {
           "through": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "RecentWorkDto": {
-        "required": [
-          "id",
-          "kind",
-          "title",
-          "updatedAt"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "kind": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "updatedAt": {
             "type": "string",
             "format": "date-time"
           }

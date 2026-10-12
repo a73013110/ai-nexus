@@ -1,0 +1,120 @@
+:host {
+  display: block;
+  container-type: inline-size;
+}
+.flow {
+  display: grid;
+  grid-template-columns: repeat(var(--stages), minmax(0, 1fr));
+  gap: var(--p-space-6);
+  margin: 0;
+  padding: var(--p-space-2) 0;
+  list-style: none;
+}
+li {
+  position: relative;
+  min-width: 0;
+  animation: tile-arrive 520ms var(--ease-spring) both;
+  animation-delay: calc(var(--i) * 90ms);
+}
+.flow-node {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: var(--p-space-3) var(--p-space-2);
+  border-radius: var(--tile-inner-radius, var(--p-radius-lg));
+  color: inherit;
+  text-align: center;
+  text-decoration: none;
+  transition:
+    background var(--motion) var(--ease),
+    translate var(--motion) var(--ease-spring);
+}
+a.flow-node:hover {
+  background: var(--hover);
+  translate: 0 -3px;
+}
+a.flow-node:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.flow-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  margin-bottom: var(--p-space-2);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tile-accent, var(--accent)) 14%, transparent);
+  color: var(--tile-accent, var(--accent));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tile-accent, var(--accent)) 30%, transparent);
+  --icon-size: var(--icon-xl);
+}
+.is-live .flow-icon::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 2px var(--tile-accent, var(--accent));
+  animation: live-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.flow-label {
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+}
+strong {
+  font-size: var(--p-font-2xl);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+}
+small {
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+}
+.flow-meta {
+  color: var(--muted);
+  font-size: 0.6875rem;
+}
+// The connector sits in the gap before each stage, at the icon's height.
+.flow-link {
+  position: absolute;
+  top: calc(var(--p-space-3) + 1.5rem);
+  right: calc(50% + 1.75rem);
+  left: calc(-50% - var(--p-space-6) + 1.75rem);
+  height: 2px;
+  border-radius: 1px;
+  background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 10px);
+  i {
+    position: absolute;
+    top: -2px;
+    left: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--tile-accent, var(--accent));
+    opacity: 0;
+  }
+  &.is-flowing i {
+    animation: flow-particle 2.4s linear infinite;
+    &:nth-child(2) {
+      animation-delay: 0.8s;
+    }
+    &:nth-child(3) {
+      animation-delay: 1.6s;
+    }
+  }
+}
+.flow-note {
+  margin: var(--p-space-2) 0 0;
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+}
+@container (max-width: 44rem) {
+  .flow {
+    grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+    gap: var(--p-space-2);
+  }
+  .flow-link {
+    display: none;
+  }
+}

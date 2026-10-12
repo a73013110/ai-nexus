@@ -1,3 +1,4 @@
+using AiNexus.Platform.Dashboard;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Modules;
@@ -22,6 +23,7 @@ public sealed class AttachmentsModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
+        services.AddDashboardSource<FilesDashboard>();
         services.AddScoped<AttachmentService>();
         services.AddScoped<DocumentExtractor>();
         services.AddSingleton<AttachmentWriteLock>();

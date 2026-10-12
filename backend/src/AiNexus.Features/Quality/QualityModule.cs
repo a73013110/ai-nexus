@@ -1,3 +1,4 @@
+using AiNexus.Platform.Dashboard;
 using AiNexus.Features.AccessControl;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
@@ -20,6 +21,7 @@ public sealed class QualityModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
+        services.AddDashboardSource<QualityDashboard>();
         services.AddScoped<RetrievalEvaluationService>();
         services.AddScoped<IBackgroundJobHandler, RetrievalEvaluationHandler>();
         services.AddScoped<IBackgroundJobHandler, EvaluationHandler>();

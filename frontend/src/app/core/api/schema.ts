@@ -9165,41 +9165,79 @@ export interface components {
             /** Format: int32 */
             artifactVersion?: null | number;
         };
-        DashboardCountsDto: {
-            /** Format: int32 */
-            conversations: number;
-            /** Format: int32 */
-            projects: number;
-            /** Format: int32 */
-            collections: number;
-            /** Format: int32 */
-            documents: number;
-            /** Format: int32 */
-            readyDocuments: number;
-            /** Format: int32 */
-            failedDocuments: number;
-            /** Format: int32 */
-            chunks: number;
-            /** Format: int32 */
-            activeGenerations: number;
-            /** Format: int32 */
-            activeJobs: number;
-            /** Format: int32 */
-            failedJobs: number;
-            /** Format: int32 */
-            staleIndexes: number;
-            /** Format: int32 */
-            files: number;
-        };
         DashboardDto: {
             scope: string;
-            counts: components["schemas"]["DashboardCountsDto"];
+            /** Format: uuid */
+            ownerId: null | string;
+            /** Format: date-time */
+            generatedAt: string;
+            period: components["schemas"]["DashboardPeriodDto"];
             spend: components["schemas"]["SpendReportDto"];
-            recent: components["schemas"]["RecentWorkDto"][];
-            webSearchAvailable: boolean;
-            giteaAvailable: boolean;
-            embeddingMode: string;
-            tokens: null | components["schemas"]["TokenUsageDto"];
+            tokens: components["schemas"]["TokenUsageDto"];
+            sections: components["schemas"]["DashboardSectionDto"][];
+        };
+        DashboardFactDto: {
+            label: string;
+            value: string;
+            tone: string;
+        };
+        DashboardItemDto: {
+            id: string;
+            title: string;
+            detail: null | string;
+            /** Format: date-time */
+            at: null | string;
+            link: null | string;
+            tone: string;
+        };
+        DashboardMetricDto: {
+            key: string;
+            label: string;
+            /** Format: double */
+            value: null | number;
+            unit: string;
+            format: string;
+            tone: string;
+            period: boolean;
+            hint: null | string;
+        };
+        DashboardPeriodDto: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            until: string;
+            /** Format: int32 */
+            offsetMinutes: number;
+        };
+        DashboardPointDto: {
+            date: string;
+            /** Format: double */
+            value: number;
+        };
+        DashboardSectionDto: {
+            id: string;
+            feature: string;
+            title: string;
+            route: null | string;
+            state: string;
+            metrics: components["schemas"]["DashboardMetricDto"][];
+            series: components["schemas"]["DashboardSeriesDto"][];
+            shares: components["schemas"]["DashboardShareDto"][];
+            items: components["schemas"]["DashboardItemDto"][];
+            facts: components["schemas"]["DashboardFactDto"][];
+        };
+        DashboardSeriesDto: {
+            key: string;
+            label: string;
+            unit: string;
+            points: components["schemas"]["DashboardPointDto"][];
+        };
+        DashboardShareDto: {
+            key: string;
+            label: string;
+            /** Format: double */
+            value: number;
+            tone: string;
         };
         DependencyTraffic: {
             id: string;
@@ -9983,14 +10021,6 @@ export interface components {
         ReadNotificationsRequest: {
             /** Format: date-time */
             through: string;
-        };
-        RecentWorkDto: {
-            /** Format: uuid */
-            id: string;
-            kind: string;
-            title: string;
-            /** Format: date-time */
-            updatedAt: string;
         };
         RenameConversationRequest: {
             title: string;
@@ -10815,8 +10845,15 @@ export type CreatedUserDto = components['schemas']['CreatedUserDto'];
 export type CreateRepositoryReviewRequest = components['schemas']['CreateRepositoryReviewRequest'];
 export type CreateRunRequest = components['schemas']['CreateRunRequest'];
 export type CreateShareRequest = components['schemas']['CreateShareRequest'];
-export type DashboardCountsDto = components['schemas']['DashboardCountsDto'];
 export type DashboardDto = components['schemas']['DashboardDto'];
+export type DashboardFactDto = components['schemas']['DashboardFactDto'];
+export type DashboardItemDto = components['schemas']['DashboardItemDto'];
+export type DashboardMetricDto = components['schemas']['DashboardMetricDto'];
+export type DashboardPeriodDto = components['schemas']['DashboardPeriodDto'];
+export type DashboardPointDto = components['schemas']['DashboardPointDto'];
+export type DashboardSectionDto = components['schemas']['DashboardSectionDto'];
+export type DashboardSeriesDto = components['schemas']['DashboardSeriesDto'];
+export type DashboardShareDto = components['schemas']['DashboardShareDto'];
 export type DependencyTraffic = components['schemas']['DependencyTraffic'];
 export type DiagnosticDetail = components['schemas']['DiagnosticDetail'];
 export type DiagnosticHealthDto = components['schemas']['DiagnosticHealthDto'];
@@ -10885,7 +10922,6 @@ export type ProjectTemplateRequest = components['schemas']['ProjectTemplateReque
 export type PromptTemplateDto = components['schemas']['PromptTemplateDto'];
 export type ProviderStatusDto = components['schemas']['ProviderStatusDto'];
 export type ReadNotificationsRequest = components['schemas']['ReadNotificationsRequest'];
-export type RecentWorkDto = components['schemas']['RecentWorkDto'];
 export type RenameConversationRequest = components['schemas']['RenameConversationRequest'];
 export type RenameLibraryFileRequest = components['schemas']['RenameLibraryFileRequest'];
 export type RepositoryCommitDto = components['schemas']['RepositoryCommitDto'];

@@ -36,9 +36,10 @@
 3. **domain event**：「A 發生後 B 跟著處理」，A 不需要結果。例：`UserSignedOut` 由 Monitoring 移除線上連線；`ContainerDeleted` 由 Conversations、Artifacts 解除專案連結。寫法見 [後端撰寫慣例](backend-conventions.md)。
 4. **只是參數**：下層方法不要收上層的 request 型別，改收自己定義的參數。例：`ConversationTurn` 取代 `CreateRunRequest`。
 
-另外兩個固定做法：
+另外三個固定做法：
 
 - 兩端分屬不同模組的外鍵設定放在 `Persistence/CrossModuleRelationships.cs`；模組自己的實體設定只參照自己的實體。資料庫約束不變。
+- 各模組都要實作的組合擴充點（`IFeatureModule`、總覽的 `IDashboardSource`）放在 Platform，見 [總覽區塊](dashboard-sections.md)。
 - 共用的識別字放在下層模組，例如管理功能的 `FeatureIds.Admin`／`Policies.Admin` 在 AccessControl，`AdministrationConfiguration` 引用它。編譯期常數不會產生依賴，但放在下層才不會誤導讀者。
 
 ## 直接呼叫或 domain event

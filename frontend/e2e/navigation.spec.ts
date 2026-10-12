@@ -794,19 +794,27 @@ test("custom feature names stay consistent across navigation, overview links and
       .getByRole("link", { name: "部門知識庫", exact: true })
       .first(),
   ).toBeVisible();
-  await expect(page.locator(".flow-inspector").getByRole("heading")).toHaveText(
-    "部門知識庫",
-  );
-  await page.getByRole("link", { name: "前往部門知識庫", exact: true }).click();
+  const knowledge = page.getByRole("region", {
+    name: "部門知識庫",
+    exact: true,
+  });
+  await expect(knowledge.getByRole("heading")).toHaveText("部門知識庫");
+  await knowledge
+    .getByRole("link", { name: "前往部門知識庫", exact: true })
+    .click();
   await expect(page).toHaveURL(/\/knowledge$/);
   await expect(
     page.getByRole("heading", { name: "部門知識庫", exact: true }),
   ).toBeVisible();
   await page.goto("/dashboard");
-  await page.locator(".flow-node").filter({ hasText: "背景任務" }).click();
-  await expect(page.locator(".flow-inspector").getByRole("link")).toHaveCount(
-    0,
-  );
+  // Features the account cannot open have no section, so no tile or flow stage links to them.
+  await expect(
+    page.getByRole("region", { name: "部門知識庫", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "背景任務", exact: true }),
+  ).toHaveCount(0);
+  await expect(page.locator('a[href^="/tasks"]')).toHaveCount(0);
 });
 
 async function navigationWorkspace(page: Page) {

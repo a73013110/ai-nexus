@@ -18,6 +18,7 @@ import { Icon } from '../../shared/ui/icon';
 import { Notice } from '../../shared/ui/notice';
 import { SlidingIndicator } from '../../shared/ui/sliding-indicator';
 import { ViewSwitch } from '../../shared/ui/view-switch';
+import { DesignCharts } from './design-charts';
 import { DesignControls } from './design-controls';
 import { DesignData } from './design-data';
 import { DesignFeedback } from './design-feedback';
@@ -76,6 +77,15 @@ const INDEX = [
       { id: 'design-markdown', name: '內容閱讀' },
     ],
   },
+  {
+    name: '資料視覺化',
+    sections: [
+      { id: 'design-ticker', name: '數字與走勢' },
+      { id: 'design-donut', name: '環狀分布' },
+      { id: 'design-heatmap', name: '日曆熱圖' },
+      { id: 'design-spotlight', name: '聚光與傾斜' },
+    ],
+  },
 ];
 const TOKEN_NAMES = [
   '--canvas',
@@ -92,6 +102,9 @@ const TOKEN_NAMES = [
   '--signal',
   '--activity',
   '--activity-rest',
+  '--series-1',
+  '--series-2',
+  '--heat',
   '--warning',
   '--error',
   '--danger-surface',
@@ -116,6 +129,7 @@ const TOKEN_NAMES = [
   selector: 'nx-design-page',
   styleUrl: './design-page.scss',
   imports: [
+    DesignCharts,
     DesignControls,
     DesignData,
     DesignFeedback,

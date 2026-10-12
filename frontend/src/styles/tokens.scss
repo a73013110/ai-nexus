@@ -47,6 +47,15 @@
   --selected-ring: inset 0 0 0 1px var(--line), 0 1px 2px rgb(38 48 38 / 10%);
   --scrollbar-thumb: color-mix(in srgb, var(--muted) 82%, var(--canvas));
   --scrollbar-thumb-hover: var(--accent);
+  // Data visualization: categorical series in a fixed order, plus the heatmap ramp's full color.
+  --series-1: var(--p-viz-blue);
+  --series-2: var(--p-viz-teal);
+  --series-3: var(--p-viz-amber);
+  --series-4: var(--p-viz-pink);
+  --series-5: var(--p-viz-violet);
+  --series-6: var(--p-viz-green);
+  --series-7: var(--p-viz-slate);
+  --heat: var(--p-viz-teal);
 }
 :root {
   --p-white: #fff;
@@ -87,6 +96,20 @@
   --p-code-keyword-dark: #c5aedc;
   --p-code-string-dark: #aad0b7;
   --p-code-number-dark: #e2bf92;
+  --p-viz-blue: #2563eb;
+  --p-viz-teal: #0d9488;
+  --p-viz-amber: #d97706;
+  --p-viz-pink: #db2777;
+  --p-viz-violet: #7c3aed;
+  --p-viz-green: #16a34a;
+  --p-viz-slate: #64748b;
+  --p-viz-blue-dark: #60a5fa;
+  --p-viz-teal-dark: #2dd4bf;
+  --p-viz-amber-dark: #fbbf24;
+  --p-viz-pink-dark: #f472b6;
+  --p-viz-violet-dark: #a78bfa;
+  --p-viz-green-dark: #4ade80;
+  --p-viz-slate-dark: #94a3b8;
 
   --p-font-xs: 0.75rem;
   --p-font-data: 0.8125rem;
@@ -286,4 +309,12 @@
   --selected-ring: inset 0 0 0 1px var(--line);
   --scrollbar-thumb: color-mix(in srgb, var(--muted) 82%, var(--canvas));
   --scrollbar-thumb-hover: var(--accent);
+  --series-1: var(--p-viz-blue-dark);
+  --series-2: var(--p-viz-teal-dark);
+  --series-3: var(--p-viz-amber-dark);
+  --series-4: var(--p-viz-pink-dark);
+  --series-5: var(--p-viz-violet-dark);
+  --series-6: var(--p-viz-green-dark);
+  --series-7: var(--p-viz-slate-dark);
+  --heat: var(--p-viz-teal-dark);
 }

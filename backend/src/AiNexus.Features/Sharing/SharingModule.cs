@@ -1,3 +1,4 @@
+using AiNexus.Platform.Dashboard;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Chat;
@@ -11,6 +12,7 @@ public sealed class SharingModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)
     {
+        builder.Services.AddDashboardSource<SharingDashboard>();
         builder.Services.AddScoped<ShareService>();
         builder.Services.AddScoped<ShareAccess>();
         builder.Services.AddSingleton<ShareWriteLock>();

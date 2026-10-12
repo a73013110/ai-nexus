@@ -43,10 +43,6 @@ export function chargeKind(kind: string): string {
 export class BillingApi {
   private readonly api = inject(ApiClient);
   conversation = (id: string) => this.api.get('/api/v1/conversations/{id}/spend', { path: { id } });
-  dashboard = (period: SpendPeriod, scope: string, ownerId = '') =>
-    this.api.get('/api/v1/dashboard', {
-      query: { ...period, scope, ownerId: ownerId || undefined },
-    });
   report = (period: SpendPeriod, ownerId = '') =>
     this.api.get('/api/v1/admin/billing/spend', {
       query: { ...period, ownerId: ownerId || undefined },

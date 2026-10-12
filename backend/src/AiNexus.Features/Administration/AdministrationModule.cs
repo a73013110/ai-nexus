@@ -1,3 +1,4 @@
+using AiNexus.Platform.Dashboard;
 using AiNexus.Features.AccessControl;
 using AiNexus.Platform.Modules;
 using AiNexus.Features.Administration.Users;
@@ -18,6 +19,7 @@ public sealed class AdministrationModule : IFeatureModule
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
+        services.AddDashboardSource<PlatformDashboard>();
         services.AddSettings<AdministrationOptions, AdministrationOptionsValidator>(AdministrationOptions.Section);
         services.AddScoped<ISignInGrant, AdminBootstrap>();
         services.AddScoped<AdministrativeAudit>();
