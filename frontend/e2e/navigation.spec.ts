@@ -6,6 +6,7 @@ import {
   expectViewportContained,
   expectCompactWorkspace,
   dashboardFixture,
+  touchSwipe,
 } from "./fixtures";
 import { KnowledgeFixture } from "./knowledge-fixture";
 
@@ -638,6 +639,136 @@ test.describe("touch interaction", () => {
     await notice.getByRole("button", { name: "關閉提示", exact: true }).tap();
     await expect(notice).toHaveCount(0);
     await expectViewportContained(page);
+  });
+
+  test("the drawer closes on a leftward swipe of its heading or scrim, and springs back from a short one", async ({
+    page,
+  }) => {
+    await new ApiFixture().attach(page);
+    await page.goto("/chat");
+    const opener = page.locator(".workspace-menu-button");
+    const sidebar = page.locator(".workspace-sidebar");
+    await opener.tap();
+    await expect(sidebar).toHaveClass(/is-open/);
+    const heading = (await sidebar
+      .locator(".workspace-sidebar-heading")
+      .boundingBox())!;
+    const from = { x: heading.x + 40, y: heading.y + heading.height / 2 };
+    // Short and slow: the drawer follows, then springs back open.
+    await touchSwipe(
+      page,
+      from,
+      { x: from.x - 40, y: from.y },
+      {
+        hold: 200,
+        held: async () =>
+          expect((await sidebar.boundingBox())!.x).toBeCloseTo(-40, -1),
+      },
+    );
+    await expect(sidebar).toHaveClass(/is-open/);
+    await expect
+      .poll(async () => (await sidebar.boundingBox())!.x)
+      .toBeCloseTo(0, 0);
+    // Past a third of its width closes it and returns focus to the opener.
+    await touchSwipe(page, from, { x: from.x - 200, y: from.y }, { hold: 200 });
+    await expect(sidebar).not.toBeVisible();
+    await expect(opener).toBeFocused();
+    // A quick flick on the scrim is enough.
+    await opener.tap();
+    await expect(sidebar).toHaveClass(/is-open/);
+    const scrim = { x: 360, y: 400 };
+    await touchSwipe(
+      page,
+      scrim,
+      { x: scrim.x - 60, y: scrim.y },
+      { steps: 3 },
+    );
+    await expect(sidebar).not.toBeVisible();
+    await expectViewportContained(page);
+  });
+
+  test("bottom sheets close on a downward swipe of their header but not of their content", async ({
+    page,
+  }) => {
+    await new ApiFixture().attach(page);
+    await page.goto("/chat");
+    const sidebar = page.locator(".workspace-sidebar");
+    const openSheet = async () => {
+      // Closing the sheet leaves the drawer it was opened from in place.
+      if (!(await sidebar.evaluate((element) => element.matches(".is-open"))))
+        await page.locator(".workspace-menu-button").tap();
+      await page
+        .locator(".workspace-sidebar")
+        .getByRole("button", { name: "通知", exact: true })
+        .tap();
+      const sheet = page.getByRole("dialog", { name: "通知", exact: true });
+      await expect(sheet).toBeVisible();
+      // Measure once the rise has finished.
+      await expect
+        .poll(() => sheet.evaluate((element) => element.getAnimations().length))
+        .toBe(0);
+      return sheet;
+    };
+    let sheet = await openSheet();
+    const rest = (await sheet.boundingBox())!.y;
+    const bar = (await sheet.locator(".dialog-bar").boundingBox())!;
+    const from = { x: bar.x + 40, y: bar.y + bar.height / 2 };
+    // Short and slow: the sheet follows the finger, then springs back.
+    await touchSwipe(
+      page,
+      from,
+      { x: from.x, y: from.y + 50 },
+      {
+        hold: 200,
+        held: async () =>
+          expect((await sheet.boundingBox())!.y - rest).toBeCloseTo(50, -1),
+      },
+    );
+    await expect(sheet).toBeVisible();
+    await expect
+      .poll(async () => Math.round((await sheet.boundingBox())!.y))
+      .toBe(Math.round(rest));
+    // Dragging the content scrolls it instead of moving the sheet.
+    const body = (await sheet.locator(".notification-panel").boundingBox())!;
+    await touchSwipe(
+      page,
+      { x: body.x + 40, y: body.y + 20 },
+      { x: body.x + 40, y: body.y + 320 },
+      { hold: 200 },
+    );
+    await expect(sheet).toBeVisible();
+    // Past the distance closes it like Escape.
+    await touchSwipe(page, from, { x: from.x, y: from.y + 300 }, { hold: 200 });
+    await expect(sheet).toBeHidden();
+    // A quick flick is enough.
+    sheet = await openSheet();
+    await touchSwipe(page, from, { x: from.x, y: from.y + 60 }, { steps: 3 });
+    await expect(sheet).toBeHidden();
+    await expectViewportContained(page);
+  });
+
+  test("with reduced motion a released sheet settles at once", async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await new ApiFixture().attach(page);
+    await page.goto("/chat");
+    await page.locator(".workspace-menu-button").tap();
+    await page
+      .locator(".workspace-sidebar")
+      .getByRole("button", { name: "通知", exact: true })
+      .tap();
+    const sheet = page.getByRole("dialog", { name: "通知", exact: true });
+    await expect(sheet).toBeVisible();
+    const bar = (await sheet.locator(".dialog-bar").boundingBox())!;
+    const from = { x: bar.x + 40, y: bar.y + bar.height / 2 };
+    await touchSwipe(page, from, { x: from.x, y: from.y + 50 }, { hold: 200 });
+    expect(
+      await sheet.evaluate((element) => [
+        getComputedStyle(element).translate,
+        getComputedStyle(element).transitionDuration,
+      ]),
+    ).toEqual(["0px", "0s"]);
   });
 });
 

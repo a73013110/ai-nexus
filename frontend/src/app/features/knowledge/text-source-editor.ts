@@ -32,7 +32,7 @@ import { JobToasts } from '../tasks/job-toasts';
       (cancel)="cancel($event)"
     >
       <form class="platform-form dialog-scroll" (submit)="save($event)">
-        <h2>{{ documentId() ? '編輯純文字來源' : '加入純文字來源' }}</h2>
+        <h2 data-sheet-handle>{{ documentId() ? '編輯純文字來源' : '加入純文字來源' }}</h2>
         <p class="form-note">貼上筆記或文字內容。儲存後會在背景建立索引，完成即可供對話查詢。</p>
         @if (loading()) {
           <p role="status">正在讀取內容…</p>

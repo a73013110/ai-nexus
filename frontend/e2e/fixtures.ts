@@ -29,6 +29,44 @@ export async function openSettings(page: Page) {
   return dialog;
 }
 
+/**
+ * A touch drag through CDP (Chromium/Edge), so the page sees real touch pointer events. `hold`
+ * pauses before lifting, which turns a drag into a slow release with no fling speed; `held` runs
+ * while the finger is still down.
+ */
+export async function touchSwipe(
+  page: Page,
+  from: { x: number; y: number },
+  to: { x: number; y: number },
+  {
+    steps = 10,
+    hold = 0,
+    held,
+  }: { steps?: number; hold?: number; held?: () => Promise<void> } = {},
+) {
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (x: number, y: number) => [{ x, y, id: 1 }];
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchStart",
+    touchPoints: touch(from.x, from.y),
+  });
+  for (let step = 1; step <= steps; step++)
+    await cdp.send("Input.dispatchTouchEvent", {
+      type: "touchMove",
+      touchPoints: touch(
+        from.x + ((to.x - from.x) * step) / steps,
+        from.y + ((to.y - from.y) * step) / steps,
+      ),
+    });
+  await held?.();
+  if (hold) await page.waitForTimeout(hold);
+  await cdp.send("Input.dispatchTouchEvent", {
+    type: "touchEnd",
+    touchPoints: [],
+  });
+  await cdp.detach();
+}
+
 export async function expectViewportContained(page: Page) {
   await expect
     .poll(() =>

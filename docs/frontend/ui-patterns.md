@@ -68,8 +68,5 @@
 
 ## 手機
 
-- 桌面控制項 34px；640px 以下與觸控指標至少 44px（[WCAG 2.2 target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum)），手機輸入字級至少 16px（避免 iOS 自動放大）。
-- 抽屜背景 inert、Tab 留在抽屜，Escape 或點遮罩關閉並還原焦點；遮罩隨抽屜邊緣移動並淡入。
-- 640px 以下置中對話框改為底部 sheet（快捷指令例外）。
-- 窄容器用 container query 調整（例：附件列表、輸入區工具列），完整名稱留在提示與可存取名稱。
-- 頁面在 375px 寬不得出現橫向捲動；長內容在自己的區域內捲動。
+觸控尺寸、底部 sheet、抽屜、滑動關閉與螢幕鍵盤見 [手機](mobile.md)。
+

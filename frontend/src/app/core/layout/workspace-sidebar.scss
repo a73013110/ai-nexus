@@ -165,6 +165,28 @@ nx-workspace-brand {
   .workspace-backdrop:hover {
     background: transparent;
   }
+  // Swiping left on the heading or the scrim drags the drawer (workspace-sidebar.ts): the scrim
+  // fades with it, and a release that stays springs back. The sidebar-coloured shadow on the left
+  // fills the gap that spring opens at the screen edge.
+  :host(.is-open) {
+    box-shadow:
+      -2rem 0 0 var(--sidebar),
+      var(--shadow);
+  }
+  :host(.is-open) :is(.workspace-sidebar-heading, .workspace-backdrop) {
+    touch-action: none;
+  }
+  :host([data-swipe='drag']),
+  :host([data-swipe='drag']) .workspace-backdrop {
+    transition: none;
+    user-select: none;
+  }
+  :host([data-swipe='drag']) .workspace-backdrop {
+    opacity: calc(1 - var(--swipe-progress, 0));
+  }
+  :host(.is-open[data-swipe='return']) {
+    transition-timing-function: var(--ease-spring);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   :host,

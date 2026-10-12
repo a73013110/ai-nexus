@@ -1,0 +1,28 @@
+# 手機
+
+結論：640px 以下以拇指區為準：對話框是底部 sheet、側欄是覆蓋式抽屜、composer 貼底；sheet 與抽屜可以滑動關閉，貼底的內容永遠在螢幕鍵盤之上，頁面不跳動也不橫向捲動。
+
+## 尺寸與版面
+
+- 桌面控制項 34px；640px 以下與觸控指標至少 44px（[WCAG 2.2 target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum)），手機輸入字級至少 16px（避免 iOS 自動放大）。
+- 抽屜背景 inert、Tab 留在抽屜，Escape 或點遮罩關閉並還原焦點；遮罩隨抽屜邊緣移動並淡入。
+- 640px 以下置中對話框改為底部 sheet（快捷指令例外，`--dialog-sheet: 0`）：從底緣整片升起、不回彈（回彈會讓底邊離開畫面）。
+- 窄容器用 container query 調整（例：附件列表、輸入區工具列），完整名稱留在提示與可存取名稱。
+- 頁面在 375px 寬不得出現橫向捲動；長內容在自己的區域內捲動。
+
+## 滑動關閉
+
+- 共用 `shared/browser/swipe.ts`：`SwipeTracker` 算位移與放開時的速度，`bindSwipe` 只在把手上接手。toast 向右滑、sheet 向下、抽屜向左都用它。
+- 只從把手開始：sheet 是標題區（`.dialog-heading`、`.dialog-bar`、`header`，其他標題加 `data-sheet-handle`）與外框留白；抽屜是標題列與遮罩。把手設 `touch-action: none`，內容的捲動與文字選取仍交給瀏覽器；輸入欄位不會開始拖曳。
+- 先移動 6px 且方向以拖曳軸為主才接手，所以把手上的按鈕仍可點；拖曳後的那次 click 會被吞掉。
+- 放開時超過距離（sheet：高度 1/3，最多 120px；抽屜：寬度 1/3）或快速甩動（約 0.45 px/ms）就關閉，否則以 `--ease-spring` 彈回；反方向拖曳有阻力。遮罩隨拖曳變淡。
+- sheet 關閉走 Escape 的路：送出可取消的 `cancel`，擁有者擋下（忙碌、未儲存）就彈回，所以不必逐一改對話框。sheet 綁在 document 上（`shared/ui/sheet-swipe.ts`），由 `--dialog-sheet: 1` 判斷是否為 sheet 版面。
+- 彈回可能越過原位，sheet 下方與抽屜左側各有一段同色陰影補上空隙。
+- 減少動態：拖曳時仍跟著手指（直接操作），放開後的彈回與退場由全域 mixin 移除 transition，直接到位。
+
+## 螢幕鍵盤
+
+- `index.html` 的 viewport 加 `interactive-widget=resizes-content`：Chromium（Android）在鍵盤出現時縮小 layout viewport，`100dvh` 的工作區跟著變矮，composer 自然在鍵盤上方。
+- Safari 不支援，只縮小 visual viewport。`core/layout/keyboard-inset.ts` 以 `innerHeight − visualViewport.height` 算出被蓋住的高度寫入 `--keyboard-inset`（小於 80px 視為捲軸或工具列，不算；縮放時不算），並把 Safari 為了露出欄位而捲動的文件捲回 0。
+- 使用 `--keyboard-inset`：`.workbench` 高度扣掉它；sheet 以 `margin-block-end` 坐在鍵盤上、最大高度同步扣除；composer 與 sheet 的 home indicator 留白在鍵盤出現時歸零。
+- 新增貼底或滿高的版面用 `dvh` 並扣 `--keyboard-inset`，不要用 `100vh` 或監聽 `resize` 自行調整。

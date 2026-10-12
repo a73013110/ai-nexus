@@ -1,5 +1,10 @@
 import { test, expect } from "@playwright/test";
-import { ApiFixture, chooseSelect, settleEntrance } from "./fixtures";
+import {
+  ApiFixture,
+  chooseSelect,
+  expectViewportContained,
+  settleEntrance,
+} from "./fixtures";
 
 test("focused composer synchronizes edits and uses the same IME safe submission behavior", async ({
   page,
@@ -205,6 +210,51 @@ test("composer exposes model, supported reasoning and keyboard-accessible contex
   await settleEntrance(page);
 });
 
+test("narrow composers fold reasoning effort into the model panel", async ({
+  page,
+}) => {
+  const fixture = new ApiFixture();
+  await fixture.attach(page);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/chat");
+  const model = page.getByRole("combobox", { name: "選擇模型", exact: true });
+  await expect(model).toContainText("本機測試模型");
+  await expect(
+    page.getByRole("combobox", { name: "思考強度", exact: true }),
+  ).toBeHidden();
+  // The model name keeps the row: nothing beside it truncates it.
+  expect(
+    await model.locator("span").evaluate((x) => x.scrollWidth <= x.clientWidth),
+  ).toBe(true);
+  await model.focus();
+  await page.keyboard.press("ArrowDown");
+  const effort = page.getByRole("group", { name: "思考強度", exact: true });
+  await expect(effort).toBeVisible();
+  await expect(
+    effort.getByRole("radio", { name: "快速回應", exact: true }),
+  ).toBeChecked();
+  // Tab moves from the model list into the effort choices; arrows change the choice.
+  await page.keyboard.press("Tab");
+  await expect(
+    effort.getByRole("radio", { name: "快速回應", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(
+    effort.getByRole("radio", { name: "深入思考", exact: true }),
+  ).toBeChecked();
+  for (const option of await effort.locator("label").all())
+    expect((await option.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await expect(effort).toBeInViewport({ ratio: 1 });
+  await page.keyboard.press("Escape");
+  await expect(effort).toBeHidden();
+  await expect(model).toBeFocused();
+  await expect(model).toContainText("本機測試模型");
+  await page.getByRole("textbox", { name: "傳送訊息" }).fill("窄版思考設定");
+  await page.getByRole("button", { name: "送出訊息" }).click();
+  await expect.poll(() => fixture.lastRequest?.reasoningEffort).toBe("high");
+  await expectViewportContained(page);
+});
+
 test("locked hidden model has no selector or provider name in current or historical UI", async ({
   page,
 }) => {
@@ -268,7 +318,13 @@ test("200 percent text scaling keeps composer controls operable without page ove
     document.documentElement.style.fontSize = "200%";
   });
   await page.getByRole("textbox", { name: "傳送訊息" }).fill("放大文字測試");
-  await expect(page.getByRole("combobox", { name: "思考強度" })).toBeVisible();
+  // 36rem doubles with the text, so the composer folds reasoning effort into the model panel.
+  await page.getByRole("combobox", { name: "選擇模型" }).click();
+  // The enlarged panel scrolls; the effort section stays reachable inside it.
+  const effort = page.getByRole("group", { name: "思考強度", exact: true });
+  await effort.scrollIntoViewIfNeeded();
+  await expect(effort).toBeInViewport({ ratio: 1 });
+  await page.keyboard.press("Escape");
   const send = page.getByRole("button", { name: "送出訊息" });
   await expect(send).toBeEnabled();
   const box = await send.boundingBox();

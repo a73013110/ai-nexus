@@ -31,7 +31,7 @@ export interface NameRequest {
     (cancel)="cancel($event)"
   >
     <form class="platform-form dialog-scroll" (submit)="save($event)">
-      <h2>{{ request()?.title }}</h2>
+      <h2 data-sheet-handle>{{ request()?.title }}</h2>
       @if (request()?.description) {
         <p class="form-note">{{ request()?.description }}</p>
       }
