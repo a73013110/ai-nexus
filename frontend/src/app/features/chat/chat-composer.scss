@@ -31,14 +31,29 @@
     0 0 0 3px color-mix(in srgb, var(--focus) 22%, transparent),
     var(--shadow);
 }
-// While the model works, the hairline takes a softened model-activity sweep (the island above
-// carries the full one); focus keeps its ring.
+// While the model works, a faint glint travels along the hairline, like light catching an edge;
+// the frame stays neutral and focus keeps its ring.
 .composer.is-busy {
   border-color: transparent;
   background:
     linear-gradient(var(--surface), var(--surface)) padding-box,
-    linear-gradient(color-mix(in srgb, var(--surface) 45%, transparent)) border-box,
-    var(--ai-gradient) border-box var(--surface);
+    linear-gradient(90deg, var(--line) 40%, var(--activity-glint) 50%, var(--line) 60%) 0 0 / 300%
+      100% border-box;
+  animation: sheen-pass var(--motion-waiting) var(--ease) infinite;
+}
+.composer.is-busy:focus-within {
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(var(--focus), var(--focus)) border-box;
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .composer.is-busy {
+    animation: none;
+  }
+}
+:host-context([data-reduced-motion='true']) .composer.is-busy {
+  animation: none;
 }
 .composer-input {
   position: relative;
