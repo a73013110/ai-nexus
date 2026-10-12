@@ -12,7 +12,8 @@
 
 - 新顏色先建立用途（semantic）再選 primitive。換品牌色只改 `--accent`、`--accent-soft`、`--focus`、`--signal` 的兩種主題映射。
 - 全站字級調 font primitives；單一區域密度調 component tokens；元件要讓父層調整時開 custom property，不讓父層覆寫內部。
-- 不用彩色側邊線、漸層背景、發光陰影與透視網格。低層次表面共用 `--surface-subtle`。
+- 不用彩色側邊線、漸層背景、發光陰影與透視網格（模型活動色例外，見下）。低層次表面共用 `--surface-subtle`。
+- 模型活動色 `--ai-1`～`--ai-3`、`--ai-gradient`、`--ai-glow`：參考 Gemini 的藍→紫→玫瑰漸層，只用在「模型正在工作」的視覺（生成光球、動態島生成狀態、`InferenceSignal`、串流游標、生成中的輸入框外框與側欄轉圈）。每一色在 `--surface`／`--canvas` 上達 4.5:1，可當文字。完成、成功與一般進度條仍用 `--signal`／`--success`，兩者不混色。
 - 建議 chip（如對話起點）：透明底、1px `--line`、膠囊圓角，hover 用 `--hover`；不用卡片外框，也不加 chevron（chevron 只給會開啟另一個畫面的列）。
 - 選取 chip：「目前所在／已選取」與展開後取代原內容的切換鈕（如「全部功能」）用 `--surface`＋`--selected-ring` 凸起、圖示 `--accent`；hover 只用平的 `--hover`，兩者不能一樣。同組只有一個選取 chip（或底線），換選取以 `--ease-spring` 滑動（`SlidingIndicator`）。
 

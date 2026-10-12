@@ -31,8 +31,14 @@
     0 0 0 3px color-mix(in srgb, var(--focus) 22%, transparent),
     var(--shadow);
 }
+// While the model works, the hairline takes a softened model-activity sweep (the island above
+// carries the full one); focus keeps its ring.
 .composer.is-busy {
-  border-color: var(--signal);
+  border-color: transparent;
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(color-mix(in srgb, var(--surface) 45%, transparent)) border-box,
+    var(--ai-gradient) border-box var(--surface);
 }
 .composer-input {
   position: relative;
@@ -145,7 +151,7 @@
   align-items: center;
   gap: var(--p-space-2);
   min-height: var(--button-target);
-  color: var(--signal);
+  color: var(--secondary);
   font-size: var(--text-caption);
 }
 
