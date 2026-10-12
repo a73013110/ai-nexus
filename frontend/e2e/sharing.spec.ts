@@ -103,12 +103,14 @@ test("named read-only sharing is created beside a conversation and can be revoke
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await page.getByRole("button", { name: "撤銷分享", exact: true }).click();
+  await page.getByRole("button", { name: "分享操作", exact: true }).click();
+  await page.getByRole("menuitem", { name: "撤銷分享" }).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "撤銷分享", exact: true })
     .click();
   await expect(page.locator(".share-content")).toHaveCount(0);
+  await expect(page).toHaveURL(/\/shared\?sent=true$/);
   expect(share!.isRevoked).toBe(true);
 });
 
@@ -221,21 +223,19 @@ test("sent shares preserve their list and reuse the authorized PDF reader, citat
   });
   await page.goto("/shared");
   await page.getByRole("button", { name: "我分享的", exact: true }).click();
-  await page
-    .getByRole("navigation", { name: "分享清單" })
-    .getByRole("link")
-    .click();
+  const cards = page.locator("nx-resource-gallery").getByRole("link");
+  await cards.click();
   await expect(page).toHaveURL(new RegExp(`/shared/${id}\\?sent=true$`));
-  await expect(
-    page.getByRole("navigation", { name: "分享清單" }).getByRole("link"),
-  ).toHaveCount(1);
+  await page.getByRole("link", { name: "全部分享", exact: true }).click();
+  await expect(page).toHaveURL(/\/shared\?sent=true$/);
+  await expect(cards).toHaveCount(1);
   await page.reload();
   await expect(
     page.getByRole("button", { name: "我分享的", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  await expect(
-    page.getByRole("navigation", { name: "分享清單" }).getByRole("link"),
-  ).toHaveCount(1);
+  await expect(cards).toHaveCount(1);
+  await cards.click();
+  await expect(page).toHaveURL(new RegExp(`/shared/${id}\\?sent=true$`));
   await page.locator("nx-run-timing summary").click();
   await expect(page.locator("nx-run-timing")).toContainText("100");
   await page.locator(".shared-citation summary").click();

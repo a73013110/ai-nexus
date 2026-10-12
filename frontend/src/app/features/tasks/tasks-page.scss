@@ -1,38 +1,78 @@
-.job-heading .panel-eyebrow {
-  margin-bottom: var(--p-space-1);
+nx-notice {
+  margin-bottom: var(--p-space-4);
 }
-.job-actions,
-.job-heading {
+nx-resource-gallery {
+  --gallery-min: 20rem;
+}
+// A gallery tile (`--tile-*`) that is not a link: progress and its actions live inside.
+.job-card {
   display: flex;
-  align-items: center;
-  gap: var(--p-space-3);
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: var(--p-space-2);
+  min-width: 0;
+  padding: var(--p-space-4) var(--p-space-5);
+  border: 1px solid var(--tile-line);
+  border-radius: var(--tile-radius);
+  background: var(--surface);
+  box-shadow: var(--tile-shadow);
+  transition:
+    box-shadow var(--motion) var(--ease),
+    border-color var(--motion) var(--ease);
 }
-.job-list {
-  display: grid;
-  gap: var(--section-gap);
+.job-card:hover {
+  border-color: var(--line);
+  box-shadow: var(--shadow);
 }
 .job-card.current {
   border-color: var(--accent);
-  background: var(--accent-soft);
+  background: color-mix(in srgb, var(--accent-soft) 40%, var(--surface));
 }
-.job-heading {
-  justify-content: space-between;
-  align-items: start;
-  margin-bottom: var(--p-space-2);
+.job-top {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  color: var(--muted);
+  font-size: var(--text-caption);
+  time {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
 }
-.job-heading h2 {
-  font-size: var(--resource-heading-size);
-  margin: 0;
+.job-icon {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--tile-inner-radius);
+  background: var(--tile-inset);
+  color: var(--secondary);
+  --icon-size: var(--icon-md);
+}
+.job-kind {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+h2 {
+  margin: var(--p-space-1) 0 0;
+  font-size: var(--text-label);
+  font-weight: 600;
+  line-height: 1.45;
   overflow-wrap: anywhere;
 }
-.job-heading time {
-  color: var(--secondary);
-  font-size: var(--text-caption);
-}
 .job-actions {
-  margin-top: var(--p-space-2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-1) var(--p-space-2);
+  margin-top: auto;
+  padding-top: var(--p-space-2);
 }
-.job-actions > span:first-child {
+.job-attempt {
   margin-right: auto;
+  color: var(--muted);
+  font-size: var(--text-caption);
 }

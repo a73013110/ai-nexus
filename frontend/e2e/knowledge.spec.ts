@@ -147,7 +147,7 @@ test("background tasks show real stages and distinguish cancellation requests fr
   job.errorCode = "fixture_error";
   job.errorMessage = "Password=fixture-private; source service stack trace";
   job.issueCode = "NX-" + "D".repeat(32);
-  await page.getByRole("button", { name: "重新整理", exact: true }).click();
+  // The list re-reads itself every few seconds; there is no refresh button.
   await page.getByRole("button", { name: "需要處理", exact: true }).click();
   const failure = page.locator("nx-job-progress").getByRole("alert");
   await expect(failure).toContainText(

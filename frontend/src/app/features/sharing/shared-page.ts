@@ -1,10 +1,8 @@
 import { map } from 'rxjs';
 import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
-import { Card } from '../../shared/ui/card';
 import { EmptyState } from '../../shared/ui/empty-state';
-import { ViewSwitch } from '../../shared/ui/view-switch';
-import { formatDate } from '../../shared/browser/format';
+import { formatDate, formatModelDisplayName, relativeTime } from '../../shared/browser/format';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -26,124 +24,36 @@ import { MarkdownView } from '../../shared/markdown/markdown-view';
 import { MessageContent } from '../workspace/message-content';
 import { ReaderOverlay } from '../../shared/browser/reader-overlay';
 import { Icon } from '../../shared/ui/icon';
-import { formatModelDisplayName } from '../../shared/browser/format';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
+import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
+import { Panel } from '../../shared/ui/panel';
+import { ResourceCard } from '../../shared/ui/resource-card';
+import { ResourceGallery } from '../../shared/ui/resource-gallery';
+import { StatusBadge } from '../../shared/ui/status-badge';
+import type { BadgeTone } from '../../shared/ui/count-badge';
 import { SharingApi } from './sharing-api';
+
 @Component({
   selector: 'nx-shared-page',
   styleUrl: './shared-page.scss',
   imports: [
     Notice,
-    Card,
     EmptyState,
-    ViewSwitch,
     FeaturePage,
     MarkdownView,
     Icon,
     RouterLink,
     ConfirmDialog,
     MessageContent,
+    ActionMenu,
+    Panel,
+    ResourceCard,
+    ResourceGallery,
+    StatusBadge,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<nx-feature-page
-      [title]="session.featureName('shared')"
-      description="收到的內容集中閱讀，自己建立的分享可隨時撤銷。"
-      ><button page-actions class="secondary-button" [disabled]="loading()" (click)="load()">
-        <nx-icon name="repeat" />重新整理
-      </button>
-      <nx-view-switch
-        label="分享分類"
-        [options]="[
-          { value: 'received', label: '分享給我' },
-          { value: 'sent', label: '我分享的' },
-        ]"
-        [value]="sent() ? 'sent' : 'received'"
-        (valueChange)="switchTab($event === 'sent')"
-      />
-      @if (error()) {
-        <nx-notice tone="danger" [message]="error()" />
-      }
-      @if (loading()) {
-        <p role="status">正在載入分享…</p>
-      }
-      <div class="share-workspace">
-        <nav class="share-list" aria-label="分享清單">
-          @for (item of list(); track item.id) {
-            <a
-              [routerLink]="['/shared', item.id]"
-              [queryParams]="{ sent: sent() }"
-              [attr.aria-current]="content()?.share?.id === item.id ? 'page' : null"
-              ><nx-icon [name]="item.kind === 'artifact' ? 'document' : 'lines'" /><span
-                ><strong>{{ item.title }}</strong
-                ><small>{{
-                  item.isRevoked
-                    ? '已撤銷'
-                    : expired(item.expiresAt)
-                      ? '已到期'
-                      : item.isOwner
-                        ? '分享給 ' + item.recipients.join('、')
-                        : item.owner + ' 分享給你'
-                }}</small></span
-              ></a
-            >
-          } @empty {
-            <p class="form-note">目前沒有分享。可以在對話或成果文件建立具名分享。</p>
-          }
-        </nav>
-        @if (content(); as view) {
-          <article nxCard class="share-content">
-            <div class="share-heading">
-              <div>
-                <span class="panel-eyebrow"
-                  >唯讀分享{{
-                    view.snapshot.artifactVersion ? ' · 版本 ' + view.snapshot.artifactVersion : ''
-                  }}</span
-                >
-                <h2>{{ view.share.title }}</h2>
-                <p>{{ view.share.owner }} · 到期 {{ date(view.share.expiresAt) }}</p>
-              </div>
-              @if (view.share.isOwner) {
-                <button class="danger-button" [disabled]="busy()" (click)="revoke(view.share)">
-                  撤銷分享
-                </button>
-              }
-            </div>
-            @if (view.share.kind === 'artifact') {
-              <nx-markdown-view [content]="view.snapshot.content" />
-            } @else {
-              @for (message of view.snapshot.messages; track $index) {
-                <section class="shared-message" [class.shared-user]="message.role === 'user'">
-                  <span class="message-author"
-                    >{{ message.role === 'user' ? '提問' : 'AI Nexus'
-                    }}{{
-                      message.status !== 'completed'
-                        ? ' · ' + (message.status === 'cancelled' ? '已停止' : '未完成')
-                        : ''
-                    }}</span
-                  >
-                  <div class="shared-message-meta">
-                    @if (message.modelId) {
-                      <span class="message-model">{{ modelName(message) }}</span>
-                    }
-                    <time class="form-note" [attr.datetime]="message.createdAt">{{
-                      date(message.createdAt)
-                    }}</time>
-                  </div>
-                  <nx-message-content [message]="message" [shareId]="view.share.id" />
-                </section>
-              }
-            }
-          </article>
-        } @else {
-          <nx-empty-state>
-            <span class="empty-symbol"><nx-icon name="copy" /></span>
-            <h2>分享當下的成果</h2>
-            <p>只有指定帳號能閱讀。新內容不會自動公開，<br />到期與撤銷會立即停止存取。</p>
-          </nx-empty-state>
-        }
-      </div> </nx-feature-page
-    ><nx-confirm-dialog />`,
+  templateUrl: './shared-page.html',
 })
 export class SharedPage {
   readonly modelName = formatModelDisplayName;
@@ -154,7 +64,7 @@ export class SharedPage {
   readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
   readonly confirm = viewChild.required(ConfirmDialog);
-  private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id'))), {
+  readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id'))), {
     initialValue: null,
   });
   private readonly sentParam = toSignal(this.route.queryParamMap.pipe(map((p) => p.get('sent'))), {
@@ -187,7 +97,21 @@ export class SharedPage {
     loader: (sent) => this.api.list(sent),
   });
   readonly list = computed<ShareDto[]>(() => this.listRead.value() ?? []);
-  readonly loading = computed(() => this.listRead.loading() || this.contentRead.loading());
+  readonly listLoading = this.listRead.loading;
+  readonly contentLoading = this.contentRead.loading;
+  readonly term = signal('');
+  readonly scopes = [
+    { value: 'received', label: '分享給我' },
+    { value: 'sent', label: '我分享的' },
+  ];
+  readonly visible = computed(() =>
+    this.list().filter((x) => x.title.toLowerCase().includes(this.term().toLowerCase())),
+  );
+  readonly shareActions = computed<MenuAction[]>(() =>
+    this.content()?.share.isOwner
+      ? [{ id: 'revoke', label: '撤銷分享', icon: 'stop', danger: true, disabled: this.busy() }]
+      : [],
+  );
   readonly busy = signal(false);
   readonly actionError = signal('');
   readonly error = computed(
@@ -209,8 +133,17 @@ export class SharedPage {
     this.listRead.reload();
   }
   readonly date = formatDate;
-  expired(value: string) {
-    return new Date(value).getTime() <= Date.now();
+  readonly when = relativeTime;
+  /** Shares that can no longer be read say so on their card. */
+  state(share: ShareDto): { label: string; tone: BadgeTone } | null {
+    if (share.isRevoked) return { label: '已撤銷', tone: 'neutral' };
+    if (new Date(share.expiresAt).getTime() <= Date.now())
+      return { label: '已到期', tone: 'warning' };
+    return null;
+  }
+  shareAction(action: string) {
+    const share = this.content()?.share;
+    if (action === 'revoke' && share) void this.revoke(share);
   }
   async switchTab(sent: boolean) {
     await this.router.navigate(['/shared'], { queryParams: { sent } });

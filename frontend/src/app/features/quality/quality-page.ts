@@ -4,7 +4,6 @@ import { Notice } from '../../shared/ui/notice';
 import { ToastService } from '../../shared/ui/toast-service';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
-import { ViewSwitch } from '../../shared/ui/view-switch';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
 import { ApiError, ClientValidationError, issueInMessage } from '../../core/errors/safe-errors';
@@ -34,7 +33,12 @@ import type {
   ModelPolicyDto,
 } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
-import { formatDate, formatModelName, formatModelDisplayName } from '../../shared/browser/format';
+import {
+  formatDate,
+  formatModelName,
+  formatModelDisplayName,
+  relativeTime,
+} from '../../shared/browser/format';
 import { downloadFile } from '../../shared/browser/download';
 import { FeaturePage } from '../../core/layout/feature-page';
 import { Select } from '../../shared/ui/select';
@@ -45,9 +49,12 @@ import { ResourceSharing } from '../sharing/resource-sharing';
 import { JobsApi } from '../tasks/jobs-api';
 import { JobToasts } from '../tasks/job-toasts';
 import { QualityApi } from './quality-api';
-import { SearchField } from '../../shared/ui/search-field';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
-import { RetrievalEvaluation } from './retrieval-evaluation';
+import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
+import { Panel } from '../../shared/ui/panel';
+import { ResourceCard } from '../../shared/ui/resource-card';
+import { ResourceGallery } from '../../shared/ui/resource-gallery';
+import { accessLabel } from '../sharing/access-label';
 
 type VariantForm = { label: string; modelId: string | null; instruction: string };
 const blankCase = (): EvaluationCase => ({
@@ -63,11 +70,9 @@ const blankCase = (): EvaluationCase => ({
     Notice,
     EmptyState,
     Card,
-    ViewSwitch,
     CompactDialog,
     Field,
     FeaturePage,
-    SearchField,
     ConfirmDialog,
     RouterLink,
     Icon,
@@ -76,7 +81,10 @@ const blankCase = (): EvaluationCase => ({
     JobProgress,
     ResourceSharing,
     DecimalPipe,
-    RetrievalEvaluation,
+    ActionMenu,
+    Panel,
+    ResourceCard,
+    ResourceGallery,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -92,7 +100,7 @@ export class QualityPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly scope = inject(ViewScope);
-  private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id'))), {
+  readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id'))), {
     initialValue: null,
   });
   private readonly setsRead = apiResource({ feature: 'quality', loader: () => this.api.sets() });
@@ -142,9 +150,13 @@ export class QualityPage {
   });
   readonly feedback = computed<FeedbackDto[]>(() => this.feedbackRead.value() ?? []);
   readonly tab = signal('sets');
-  readonly loading = computed(
-    () => this.setsRead.loading() || this.feedbackRead.loading() || this.currentRead.loading(),
-  );
+  readonly tabs = [
+    { value: 'sets', label: '評測集' },
+    { value: 'feedback', label: '我的回饋' },
+  ];
+  readonly setsLoading = this.setsRead.loading;
+  readonly feedbackLoading = this.feedbackRead.loading;
+  readonly currentLoading = this.currentRead.loading;
   readonly busy = signal(false);
   readonly actionError = signal('');
   readonly error = computed(
@@ -161,6 +173,47 @@ export class QualityPage {
   readonly visible = computed(() =>
     this.sets().filter((x) => x.resource.name.toLowerCase().includes(this.filter().toLowerCase())),
   );
+  readonly visibleFeedback = computed(() =>
+    this.feedback().filter((x) =>
+      x.conversationTitle.toLowerCase().includes(this.filter().toLowerCase()),
+    ),
+  );
+  /** The open set's description with its size and version, under the page title. */
+  readonly summary = computed(() => {
+    const set = this.current();
+    if (!set) return '';
+    const facts = `${set.cases.length} 題 · v${set.version}`;
+    return set.description ? `${set.description} · ${facts}` : facts;
+  });
+  readonly listActions: MenuAction[] = [
+    { id: 'import', label: '匯入題庫', icon: 'upload' },
+    { id: 'retrieval', label: '檢索評測', icon: 'chart' },
+  ];
+  readonly setActions = computed<MenuAction[]>(() => {
+    const set = this.current();
+    if (!set) return [];
+    return [
+      ...(set.resource.canEdit
+        ? [{ id: 'edit', label: '編輯題庫', icon: 'edit', disabled: this.busy() }]
+        : []),
+      { id: 'export', label: '匯出題庫', icon: 'download' },
+      ...(set.resource.isOwner
+        ? [
+            { id: 'access', label: '存取權限', icon: 'lock' },
+            {
+              id: 'delete',
+              label: '刪除評測集',
+              icon: 'trash',
+              danger: true,
+              disabled: this.busy(),
+            },
+          ]
+        : []),
+    ];
+  });
+  readonly importInput = viewChild<ElementRef<HTMLInputElement>>('importInput');
+  readonly access = accessLabel;
+  readonly when = relativeTime;
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   readonly sharing = viewChild(ResourceSharing);
   readonly form = signal('set');
@@ -198,6 +251,25 @@ export class QualityPage {
       this.busy.set(false);
       this.actionError.set('');
     });
+  }
+  reload() {
+    this.actionError.set('');
+    this.setsRead.reload();
+    this.feedbackRead.reload();
+    this.currentRead.reload();
+    this.runsRead.reload();
+  }
+  listAction(action: string) {
+    if (action === 'import') this.importInput()?.nativeElement.click();
+    else if (action === 'retrieval') void this.router.navigate(['/quality/retrieval']);
+  }
+  setAction(action: string) {
+    const set = this.current();
+    if (!set) return;
+    if (action === 'edit') this.openSet(set);
+    else if (action === 'export') this.exportSet();
+    else if (action === 'access') void this.sharing()?.open();
+    else if (action === 'delete') void this.removeSet();
   }
   private guard() {
     const generation = this.revision,

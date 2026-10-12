@@ -440,10 +440,13 @@ test("icon rail, notification filtering and typed task navigation work across pa
   await expect(page).toHaveURL(new RegExp(`/tasks\\?job=${job.id}$`));
   await expect(page.locator(".job-card.current")).toContainText(job.label);
   await expect(page.locator(".job-card.current")).toBeFocused();
-  await expect(page.locator(".job-card.current")).toHaveCSS("padding", "12px");
-  await expect(page.locator(".job-card.current .job-heading h2")).toHaveCSS(
+  await expect(page.locator(".job-card.current")).toHaveCSS(
+    "padding",
+    "16px 20px",
+  );
+  await expect(page.locator(".job-card.current h2")).toHaveCSS(
     "font-size",
-    "16px",
+    "13px",
   );
   await expect(page.locator(".job-card.current nx-status-badge")).toHaveText(
     "已完成",
