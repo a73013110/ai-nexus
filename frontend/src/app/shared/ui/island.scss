@@ -46,14 +46,6 @@
 [data-tone='info'] {
   --tone: var(--ink);
 }
-// Model work draws the capsule's rim with the model-activity sweep (an opaque fill keeps the
-// gradient to the hairline), so progress is visible at a glance in either theme.
-.island[data-tone='live'] {
-  border-color: transparent;
-  background:
-    linear-gradient(var(--surface), var(--surface)) padding-box,
-    var(--ai-gradient) border-box var(--surface);
-}
 .island[data-tone='danger'] {
   border-color: color-mix(in srgb, var(--error) 45%, var(--line));
 }
@@ -61,7 +53,7 @@
   border-color: color-mix(in srgb, var(--warning) 45%, var(--line));
 }
 [data-tone='live'] {
-  --tone: var(--ai-2);
+  --tone: var(--activity);
 }
 [data-tone='warning'] {
   --tone: var(--warning);
@@ -91,11 +83,20 @@
   color: var(--tone);
   font-weight: 600;
 }
-// Every stop of the sweep passes 4.5:1, so the live label can carry it as text.
+// Model work keeps the neutral capsule; a light band crossing the label says it is live.
 .island[data-tone='live'] .island-label {
-  background: var(--ai-gradient);
+  background: var(--activity-sheen) 0 0 / 300% 100% no-repeat;
   background-clip: text;
   color: transparent;
+  animation: sheen-pass var(--motion-waiting) linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .island[data-tone='live'] .island-label {
+    animation: none;
+  }
+}
+:host-context([data-reduced-motion='true']) .island[data-tone='live'] .island-label {
+  animation: none;
 }
 .island-content:has(.island-list) {
   display: flex;

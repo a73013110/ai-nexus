@@ -17,15 +17,16 @@
 .stream-frontier {
   color: var(--ink);
 }
+// A small ink dot that breathes at the end of the stream, like a pen resting on the page.
 .stream-cursor {
   content: '';
   display: inline-block;
-  width: 0.35rem;
-  height: 0.95em;
-  margin-left: 0.2em;
-  vertical-align: -0.05em;
-  border-radius: var(--p-radius-sm);
-  background: linear-gradient(var(--ai-1), var(--ai-2));
+  width: 0.5em;
+  height: 0.5em;
+  margin-left: 0.3em;
+  vertical-align: 0.05em;
+  border-radius: 50%;
+  background: var(--activity);
   animation: cursor-breathe var(--motion-signal) ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) {

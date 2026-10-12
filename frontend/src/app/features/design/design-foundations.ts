@@ -112,7 +112,7 @@ export class DesignFoundations {
         { token: '--secondary', label: '次要文字' },
         { token: '--accent', label: '主要操作' },
         { token: '--signal', label: '處理訊號' },
-        { token: '--ai-gradient', label: '模型活動' },
+        { token: '--activity', label: '模型活動' },
         { token: '--warning', label: '注意' },
         { token: '--error', label: '錯誤' },
       ],

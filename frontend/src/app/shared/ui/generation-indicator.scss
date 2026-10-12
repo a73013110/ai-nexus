@@ -5,67 +5,43 @@
   padding: var(--p-space-4) 0 var(--p-space-5);
   color: var(--secondary);
 }
-// A small orb in the model-activity palette (Gemini's blue → violet → rose): a comet ring sweeps
-// around two soft blobs that morph out of phase, and a light core breathes. Queued runs slow
-// down and lose colour so waiting reads differently from preparing.
-.generation-orbit {
-  position: relative;
+// A 3×3 dot matrix in ink (after the instrument displays of Teenage Engineering and Nothing):
+// a wave lifts the dots along the diagonal while the model prepares. Queued runs drop the wave
+// and breathe as one slow, dim grid, so waiting reads differently from working.
+.generation-matrix {
+  --dot: 0.3125rem;
   display: grid;
-  place-items: center;
+  grid-template-columns: repeat(3, var(--dot));
+  place-content: center;
+  gap: 0.1875rem;
   flex: none;
   width: var(--generation-indicator-size);
   height: var(--generation-indicator-size);
-  isolation: isolate;
+}
+.generation-matrix i {
+  width: var(--dot);
+  height: var(--dot);
   border-radius: 50%;
-  background: radial-gradient(closest-side, var(--ai-glow), transparent);
-  transition:
-    filter var(--motion) var(--ease),
-    opacity var(--motion) var(--ease);
+  background-color: var(--activity-rest);
+  animation: matrix-wave var(--motion-generation) var(--ease) infinite;
+  animation-delay: calc(var(--step) * 120ms);
 }
-.generation-orbit i {
-  position: absolute;
-  border-radius: 50%;
-}
-.generation-orbit i:nth-child(1) {
-  inset: 0;
-  background: conic-gradient(transparent 15%, var(--ai-1) 50%, var(--ai-2) 75%, var(--ai-3));
-  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
-  animation: orbit-turn 2.4s linear infinite;
-}
-.generation-orbit i:nth-child(2) {
-  inset: 18%;
-  background: linear-gradient(135deg, var(--ai-1), var(--ai-2), var(--ai-3));
-  opacity: 0.6;
-  filter: blur(1px);
-  animation: generation-morph 3.6s ease-in-out infinite;
-}
-.generation-orbit i:nth-child(3) {
-  inset: 28%;
-  background: linear-gradient(315deg, var(--ai-3), var(--ai-1));
-  opacity: 0.5;
-  filter: blur(1px);
-  animation: generation-morph 4.8s ease-in-out -1.2s infinite reverse;
-}
-.generation-orbit b {
-  position: relative;
-  width: 26%;
-  height: 26%;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--ai-2) 12%, white);
-  box-shadow: 0 0 0.25rem 0.0625rem var(--ai-glow);
-  animation: generation-breathe 2.4s ease-in-out infinite;
-}
-.is-waiting .generation-orbit {
-  filter: saturate(0.15);
-  opacity: 0.7;
-}
-.is-waiting .generation-orbit i,
-.is-waiting .generation-orbit b {
-  animation-duration: 6s;
+.is-waiting .generation-matrix i {
+  animation: matrix-idle var(--motion-waiting) ease-in-out infinite;
 }
 .generation-label {
   font-size: var(--text-label);
   font-weight: 500;
+}
+// The title carries a light band that crosses it once per cycle; at rest it is plain --secondary.
+.generation-title {
+  background: var(--activity-sheen) 0 0 / 300% 100% no-repeat;
+  background-clip: text;
+  color: transparent;
+  animation: sheen-pass var(--motion-waiting) linear infinite;
+}
+.is-waiting .generation-title {
+  animation: none;
 }
 .generation-label small {
   display: block;
@@ -74,16 +50,14 @@
   margin-top: 4px;
 }
 @media (prefers-reduced-motion: reduce) {
-  .generation-orbit,
-  .generation-orbit i,
-  .generation-orbit b {
+  .generation-matrix i,
+  .generation-title {
     animation: none !important;
   }
 }
 :host-context([data-reduced-motion='true']) {
-  .generation-orbit,
-  .generation-orbit i,
-  .generation-orbit b {
+  .generation-matrix i,
+  .generation-title {
     animation: none !important;
   }
 }
