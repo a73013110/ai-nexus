@@ -1,6 +1,5 @@
 import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
-import { Card } from '../../shared/ui/card';
 import { Field } from '../../shared/ui/field';
 import { ClientValidationError } from '../../core/errors/safe-errors';
 import {
@@ -28,14 +27,27 @@ import { downloadFile } from '../../shared/browser/download';
 import { Checkbox } from '../../shared/ui/checkbox';
 import { Select } from '../../shared/ui/select';
 import { JobProgress } from '../tasks/job-progress';
+import { FeaturePage } from '../../core/layout/feature-page';
+import { Icon } from '../../shared/ui/icon';
+import { Panel } from '../../shared/ui/panel';
 import { KnowledgeApi } from '../knowledge/knowledge-api';
 import { JobsApi } from '../tasks/jobs-api';
 import { JobToasts } from '../tasks/job-toasts';
 
 @Component({
   selector: 'nx-retrieval-evaluation',
-  host: { class: 'platform-form' },
-  imports: [Notice, Card, Field, ReactiveFormsModule, DecimalPipe, Checkbox, Select, JobProgress],
+  imports: [
+    Notice,
+    Field,
+    ReactiveFormsModule,
+    DecimalPipe,
+    Checkbox,
+    Select,
+    JobProgress,
+    FeaturePage,
+    Icon,
+    Panel,
+  ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './retrieval-evaluation.scss',

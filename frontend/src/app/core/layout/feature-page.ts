@@ -24,6 +24,7 @@ import { WorkspaceMenuButton } from './workspace-menu-button';
             <a
               class="icon-button feature-back"
               [routerLink]="link.path"
+              [queryParams]="link.query"
               [attr.aria-label]="link.label"
               [title]="link.label"
               ><nx-icon name="left"
@@ -49,7 +50,11 @@ export class FeaturePage {
   readonly title = input.required<string>();
   readonly description = input('');
   /** A detail page's way back to its collection, shown before the title. */
-  readonly back = input<{ path: string; label: string } | null>(null);
+  readonly back = input<{
+    path: string;
+    label: string;
+    query?: Record<string, string | boolean>;
+  } | null>(null);
   readonly density = input<'comfortable' | 'compact'>('compact');
   readonly wide = input(true);
   readonly layoutMode = input<'flow' | 'data'>('flow');

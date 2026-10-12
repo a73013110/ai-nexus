@@ -1,8 +1,109 @@
-.audit-details pre {
+@use 'breakpoints' as bp;
+
+.retrieval-layout {
+  display: grid;
+  gap: var(--p-space-4);
+}
+nx-notice {
+  margin-bottom: var(--p-space-4);
+}
+nx-panel nx-select {
+  min-width: min(18rem, 100%);
+}
+.report-note,
+.form-intro {
+  margin-block: var(--p-space-3);
+}
+.report-skeleton {
+  height: 12rem;
+  border-radius: var(--tile-inner-radius);
+}
+.choice-skeleton {
+  display: block;
+  height: 2.5rem;
+  border-radius: var(--p-radius-md);
+}
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
+  gap: var(--p-space-3);
+}
+.metric-tile {
+  min-width: 0;
+  padding: var(--p-space-3) var(--p-space-4);
+  border-radius: var(--tile-inner-radius);
+  background: var(--tile-inset);
+  h3 {
+    margin: 0 0 var(--p-space-1);
+    font: 600 var(--text-label) / 1.4 var(--font-code);
+  }
+}
+.warning-note {
+  color: var(--warning);
+}
+.metric-list {
+  display: grid;
+  gap: var(--p-space-1);
+  margin: var(--p-space-3) 0 0;
+  font-size: var(--text-caption);
+  div {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--p-space-3);
+  }
+  dt {
+    color: var(--secondary);
+  }
+  dd {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+}
+.mode-details,
+.format-details {
+  color: var(--secondary);
+  font-size: var(--text-label);
+  summary {
+    display: flex;
+    align-items: center;
+    min-height: var(--button-target);
+    cursor: pointer;
+  }
+}
+.mode-details {
+  margin-top: var(--p-space-3);
+}
+.mode-rows {
+  display: grid;
+}
+.mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--p-space-1) var(--p-space-3);
+  padding-block: var(--p-space-2);
+  border-top: 1px solid var(--tile-line);
+  strong {
+    color: var(--ink);
+    font-weight: 500;
+  }
+  small {
+    color: var(--muted);
+    font: var(--text-caption) var(--font-code);
+  }
+}
+.format-details pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   font-size: var(--text-caption);
   padding: var(--p-space-3);
-  background: var(--sidebar);
-  border-radius: var(--p-radius-sm);
+  background: var(--tile-inset);
+  border-radius: var(--tile-inner-radius);
+}
+@include bp.below(phone) {
+  nx-panel nx-select {
+    min-width: 0;
+    flex: 1;
+  }
 }

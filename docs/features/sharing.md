@@ -8,7 +8,7 @@
 
 收件匣只顯示仍有效且來源存在的分享。寄件者在「我分享的」可查看期限、收件者及撤銷狀態。閱讀頁在到期時收起內容，並定期重新檢查存取權；已下載或複製的內容無法遠端撤回。
 
-「我分享的」使用 URL 的 `sent=true` 保留篩選，點選、重新整理及返回後仍有左側清單，詳細內容失效時也可保留有效列表。Chat／分享共用 `MessageContent`、Markdown、附件卡片及 `DocumentViewer`。快照包含引用摘要、網路來源、耗時、Token 與失敗／取消資訊；知識引用只展開已分享摘要，不授予來源原檔權限。
+`/shared` 以卡片列出分享（分享給我／我分享的），已撤銷或到期的卡片標示狀態；`/shared/{id}` 左側是快照內容、右側是分享資訊，擁有者從頁首「⋯」撤銷。「我分享的」使用 URL 的 `sent=true` 保留篩選，開啟、返回及重新整理後不變。Chat／分享共用 `MessageContent`、Markdown、附件卡片及 `DocumentViewer`。快照包含引用摘要、網路來源、耗時、Token 與失敗／取消資訊；知識引用只展開已分享摘要，不授予來源原檔權限。
 
 `GET /shares/{id}/files/{fileId}/preview` 提供分享專用 metadata／已完成擷取頁，原檔讀取使用同一 grant。獨立連結為 `/reader/share/{shareId}/{fileId}`。不建立新 OCR／索引、不呼叫 owner-only 附件 API。圖片／PDF 可安全 inline，其他格式保持 attachment disposition，由閱讀器呈現已擷取文字。每次 API 重新授權；開啟畫面每 30 秒及到期時清除失效內容。建立分享同一 transaction 發送 `share.received`，見 [通知](notifications.md)。
 

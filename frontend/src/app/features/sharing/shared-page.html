@@ -1,0 +1,141 @@
+<nx-feature-page
+  [title]="content()?.share?.title || session.featureName('shared')"
+  [description]="
+    content()
+      ? content()!.share.owner + ' 分享 · ' + date(content()!.share.expiresAt) + ' 到期'
+      : id()
+        ? ''
+        : '收到的內容集中閱讀，自己建立的分享可隨時撤銷。'
+  "
+  [back]="id() ? { path: '/shared', label: '全部分享', query: { sent: sent() } } : null"
+>
+  <div page-actions class="page-actions">
+    @if (shareActions().length) {
+      <nx-action-menu label="分享操作" [items]="shareActions()" (action)="shareAction($event)" />
+    }
+  </div>
+  @if (error()) {
+    <nx-notice [message]="error()"
+      ><button notice-actions type="button" (click)="load()">重試</button></nx-notice
+    >
+  }
+  @if (!id()) {
+    <nx-resource-gallery
+      label="分享"
+      placeholder="尋找分享"
+      [search]="term()"
+      [filters]="scopes"
+      [filter]="sent() ? 'sent' : 'received'"
+      [loading]="listLoading()"
+      [empty]="!visible().length"
+      (searchChange)="term.set($event)"
+      (filterChange)="switchTab($event === 'sent')"
+    >
+      @for (item of visible(); track item.id) {
+        <a
+          nxResourceCard
+          [icon]="item.kind === 'artifact' ? 'document' : 'chat'"
+          [routerLink]="['/shared', item.id]"
+          [queryParams]="{ sent: sent() }"
+          [heading]="item.title"
+          [description]="
+            item.isOwner ? '分享給 ' + item.recipients.join('、') : item.owner + ' 分享給你'
+          "
+        >
+          @if (state(item); as badge) {
+            <nx-status-badge card-badge [tone]="badge.tone">{{ badge.label }}</nx-status-badge>
+          }
+          <span>{{ item.kind === 'artifact' ? '成果文件' : '對話' }}</span
+          ><span>{{ when(item.createdAt) }}分享</span></a
+        >
+      }
+      <nx-empty-state gallery-empty>
+        <nx-icon name="share" />
+        @if (term()) {
+          <h2>沒有符合的分享</h2>
+        } @else if (sent()) {
+          <h2>分享當下的成果</h2>
+          <p>
+            在對話或成果文件建立具名分享，只有指定帳號能閱讀。<br />新內容不會自動公開，到期與撤銷會立即停止存取。
+          </p>
+        } @else {
+          <h2>還沒有人分享給你</h2>
+          <p>同事分享對話或成果文件給你時，會出現在這裡並通知你。</p>
+        }
+      </nx-empty-state>
+    </nx-resource-gallery>
+  } @else if (content(); as view) {
+    <div class="share-layout">
+      <nx-panel
+        [heading]="view.share.kind === 'artifact' ? '成果內容' : '對話內容'"
+        [icon]="view.share.kind === 'artifact' ? 'document' : 'chat'"
+        [count]="view.share.kind === 'artifact' ? null : view.snapshot.messages.length"
+        class="share-content"
+      >
+        @if (view.share.kind === 'artifact') {
+          <nx-markdown-view [content]="view.snapshot.content" />
+        } @else {
+          @for (message of view.snapshot.messages; track $index) {
+            <section class="shared-message" [class.shared-user]="message.role === 'user'">
+              <div class="shared-message-meta">
+                <span class="message-author"
+                  >{{ message.role === 'user' ? '提問' : 'AI Nexus'
+                  }}{{
+                    message.status !== 'completed'
+                      ? ' · ' + (message.status === 'cancelled' ? '已停止' : '未完成')
+                      : ''
+                  }}</span
+                >
+                @if (message.modelId) {
+                  <span class="message-model">{{ modelName(message) }}</span>
+                }
+                <time [attr.datetime]="message.createdAt">{{ date(message.createdAt) }}</time>
+              </div>
+              <nx-message-content [message]="message" [shareId]="view.share.id" />
+            </section>
+          }
+        }
+      </nx-panel>
+      <nx-panel heading="分享資訊" icon="share">
+        <dl class="share-facts">
+          <div>
+            <dt>分享者</dt>
+            <dd>{{ view.share.owner }}</dd>
+          </div>
+          <div>
+            <dt>收件者</dt>
+            <dd>{{ view.share.recipients.join('、') || '—' }}</dd>
+          </div>
+          <div>
+            <dt>建立</dt>
+            <dd>{{ date(view.share.createdAt) }}</dd>
+          </div>
+          <div>
+            <dt>到期</dt>
+            <dd>{{ date(view.share.expiresAt) }}</dd>
+          </div>
+          @if (view.snapshot.artifactVersion) {
+            <div>
+              <dt>版本</dt>
+              <dd>版本 {{ view.snapshot.artifactVersion }}</dd>
+            </div>
+          }
+          @if (view.share.kind !== 'artifact') {
+            <div>
+              <dt>附件</dt>
+              <dd>{{ view.share.includeAttachments ? '一併分享' : '未分享' }}</dd>
+            </div>
+          }
+        </dl>
+        <p class="form-note panel-foot">
+          唯讀快照：之後的修改不會出現在這裡，到期或撤銷後立即停止閱讀。
+        </p>
+      </nx-panel>
+    </div>
+  } @else if (contentLoading()) {
+    <div class="share-layout" role="status" aria-label="正在載入分享">
+      <span class="skeleton share-skeleton"></span><span class="skeleton share-skeleton"></span>
+    </div>
+  }
+</nx-feature-page>
+<nx-confirm-dialog />

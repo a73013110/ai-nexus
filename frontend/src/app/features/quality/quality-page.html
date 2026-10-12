@@ -1,138 +1,146 @@
 <nx-feature-page
-  [title]="session.featureName('quality')"
-  description="用固定題目比較模型與指令，留下可重現的結果與人工判讀。"
+  [title]="current()?.resource?.name || session.featureName('quality')"
+  [description]="
+    current() ? summary() : id() ? '' : '用固定題目比較模型與指令，留下可重現的結果與人工判讀。'
+  "
+  [back]="id() ? { path: '/quality', label: '全部評測' } : null"
 >
-  <div page-actions class="page-actions" [hidden]="tab() === 'retrieval'">
-    <label class="upload-label secondary-button"
-      ><nx-icon name="upload" />匯入題庫<input
-        type="file"
-        accept=".json"
-        (change)="importSet($event)"
-        [disabled]="busy()" /></label
-    ><button class="primary-button" (click)="openSet()" [disabled]="busy()">
-      <nx-icon name="plus" />建立評測集
-    </button>
+  <div page-actions class="page-actions">
+    @if (current()) {
+      <button class="primary-button" (click)="openRun()" [disabled]="busy()">
+        <nx-icon name="play" />開始比較
+      </button>
+      <nx-action-menu label="評測集操作" [items]="setActions()" (action)="setAction($event)" />
+    } @else if (!id()) {
+      <button class="primary-button" (click)="openSet()" [disabled]="busy()">
+        <nx-icon name="plus" />建立評測集
+      </button>
+      <nx-action-menu label="評測操作" [items]="listActions" (action)="listAction($event)" />
+      <input #importInput type="file" accept=".json" hidden (change)="importSet($event)" />
+    }
   </div>
   @if (error()) {
-    <nx-notice tone="danger" [message]="error()" />
+    <nx-notice [message]="error()"
+      ><button notice-actions type="button" (click)="reload()">重試</button></nx-notice
+    >
   }
-  <nx-view-switch
-    label="品質功能"
-    [options]="[
-      { value: 'retrieval', label: '檢索評測' },
-      { value: 'sets', label: '評測與比較' },
-      { value: 'feedback', label: '我的回饋 ' + feedback().length },
-    ]"
-    [value]="tab()"
-    (valueChange)="tab.set($event)"
-  />
-  @if (loading()) {
-    <p role="status">正在載入品質評測…</p>
-  } @else if (tab() === 'retrieval') {
-    <nx-retrieval-evaluation />
-  } @else if (tab() === 'feedback') {
-    <div class="platform-grid">
-      @for (item of feedback(); track item.messageId) {
-        <a nxCard [routerLink]="['/chat', item.conversationId]"
-          ><span class="panel-eyebrow"
-            >{{ item.rating === 1 ? '有幫助' : '待改善' }} · {{ date(item.updatedAt) }}</span
+  @if (!id()) {
+    <nx-resource-gallery
+      [label]="tab() === 'feedback' ? '回饋' : '評測集'"
+      [placeholder]="tab() === 'feedback' ? '尋找對話' : '尋找評測集'"
+      [search]="filter()"
+      [filters]="tabs"
+      [filter]="tab()"
+      [loading]="tab() === 'feedback' ? feedbackLoading() : setsLoading()"
+      [empty]="tab() === 'feedback' ? !visibleFeedback().length : !visible().length"
+      (searchChange)="filter.set($event)"
+      (filterChange)="tab.set($event)"
+    >
+      @if (tab() === 'feedback') {
+        @for (item of visibleFeedback(); track item.messageId) {
+          <a
+            nxResourceCard
+            [icon]="item.rating === 1 ? 'thumb-up' : 'thumb-down'"
+            [routerLink]="['/chat', item.conversationId]"
+            [heading]="item.conversationTitle"
+            [description]="item.note || '已提供快速回饋'"
+            ><span>{{ item.rating === 1 ? '有幫助' : '待改善' }}</span
+            ><span>{{ when(item.updatedAt) }}</span></a
           >
-          <h2>{{ item.conversationTitle }}</h2>
-          <p>{{ item.note || '已提供快速回饋' }}</p>
-          <span class="card-link">回到對話<nx-icon name="chevron" /></span
-        ></a>
-      } @empty {
-        <nx-empty-state>
-          <nx-icon name="check" />
+        }
+      } @else {
+        @for (set of visible(); track set.resource.id) {
+          <a
+            nxResourceCard
+            icon="lines"
+            [routerLink]="['/quality', set.resource.id]"
+            [heading]="set.resource.name"
+            [description]="set.description"
+            ><span>{{ set.cases.length }} 題 · v{{ set.version }}</span
+            ><span>{{ access(set.resource) }}</span
+            ><span>{{ when(set.resource.updatedAt) }}更新</span></a
+          >
+        }
+      }
+      <nx-empty-state gallery-empty>
+        @if (filter()) {
+          <nx-icon name="search" />
+          <h2>{{ tab() === 'feedback' ? '沒有符合的回饋' : '沒有符合的評測集' }}</h2>
+        } @else if (tab() === 'feedback') {
+          <nx-icon name="thumb-up" />
           <h2>回饋從回答旁開始</h2>
           <p>在 AI 回覆下方按讚或標示待改善，就會保存在這裡。</p>
           <a routerLink="/chat" class="secondary-button">前往{{ session.featureName('chat') }}</a>
-        </nx-empty-state>
-      }
-    </div>
+        } @else {
+          <nx-icon name="lines" />
+          <h2>把好答案變成可重現的標準</h2>
+          <p>建立少量代表題目、參考答案與檢核詞，再比較模型或指令。</p>
+        }
+      </nx-empty-state>
+    </nx-resource-gallery>
   } @else if (current(); as set) {
-    <div class="resource-heading">
-      <div>
-        <a routerLink="/quality" class="quiet-button"><nx-icon name="left" />所有評測集</a>
-        <h2>{{ set.resource.name }}</h2>
-        <p>{{ set.description }} · {{ set.cases.length }} 題 · v{{ set.version }}</p>
-      </div>
-      <div class="page-actions">
-        <button class="secondary-button" (click)="exportSet()">匯出題庫</button>
-        @if (set.resource.isOwner) {
-          <button
-            class="icon-button danger-text"
-            aria-label="刪除評測集"
-            [disabled]="busy()"
-            (click)="removeSet()"
-          >
-            <nx-icon name="trash" />
-          </button>
-          <button class="secondary-button" (click)="sharing()?.open()">存取權限</button>
+    <div class="quality-layout">
+      <nx-panel heading="比較紀錄" icon="history" [count]="runs().length">
+        @if (runs().length) {
+          <nx-select
+            panel-actions
+            appearance="pill"
+            label="選擇評測紀錄"
+            [options]="runOptions()"
+            [value]="detail()?.run?.id || ''"
+            (valueChange)="selectRun($event)"
+          />
         }
-        @if (set.resource.canEdit) {
-          <button class="secondary-button" (click)="openSet(set)" [disabled]="busy()">
-            編輯題庫
-          </button>
-        }
-        <button class="primary-button" (click)="openRun()" [disabled]="busy()">開始比較</button>
-      </div>
-    </div>
-    <p class="quality-disclosure">
-      <nx-icon
-        name="info"
-      />比較結果與指令可供此題庫的授權成員檢視。關鍵字檢核只提供線索，請搭配參考答案與人工評分。
-    </p>
-    @if (runs().length) {
-      <label class="quality-run-picker"
-        >執行紀錄<nx-select
-          label="選擇評測紀錄"
-          [options]="runOptions()"
-          [value]="detail()?.run?.id || ''"
-          (valueChange)="selectRun($event)"
-      /></label>
-    }
-    @if (detail(); as view) {
-      <div class="quality-progress">
-        <nx-job-progress [job]="view.run.job" />
-        <div class="page-actions">
-          @if (view.run.canControl) {
-            @if (view.run.job.status === 'running' || view.run.job.status === 'queued') {
-              <button
-                class="secondary-button"
-                (click)="control(false)"
-                [disabled]="busy() || view.run.job.cancelRequested"
-              >
-                停止評測
-              </button>
-            } @else if (view.run.job.status === 'failed' || view.run.job.status === 'cancelled') {
-              <button
-                class="secondary-button"
-                (click)="control(true)"
-                [disabled]="busy() || view.run.job.attempt >= 6"
-              >
-                接續重試
-              </button>
-            }
-          }
-        </div>
-      </div>
-      <div class="evaluation-cases">
-        @for (test of view.cases; track $index; let c = $index) {
-          <section class="evaluation-case">
-            <header>
-              <span class="panel-eyebrow">固定題目 {{ c + 1 }}</span>
-              <h3>{{ test.question }}</h3>
-              @if (test.reference) {
-                <details>
-                  <summary>參考答案</summary>
-                  <p class="plain-copy">{{ test.reference }}</p>
-                </details>
+        @if (detail(); as view) {
+          <nx-job-progress [job]="view.run.job">
+            @if (view.run.canControl) {
+              @if (view.run.job.status === 'running' || view.run.job.status === 'queued') {
+                <button
+                  job-actions
+                  class="quiet-button"
+                  (click)="control(false)"
+                  [disabled]="busy() || view.run.job.cancelRequested"
+                >
+                  停止評測
+                </button>
+              } @else if (view.run.job.status === 'failed' || view.run.job.status === 'cancelled') {
+                <button
+                  job-actions
+                  class="quiet-button"
+                  (click)="control(true)"
+                  [disabled]="busy() || view.run.job.attempt >= 6"
+                >
+                  <nx-icon name="repeat" />接續重試
+                </button>
               }
-            </header>
+            }
+          </nx-job-progress>
+        } @else if (runs().length) {
+          <span class="skeleton run-skeleton" role="status" aria-label="正在載入比較紀錄"></span>
+        } @else {
+          <nx-empty-state>
+            <nx-icon name="history" />
+            <h2>建立第一份比較紀錄</h2>
+            <p>每次可比較 1–3 個模型／指令方案，會依題數計入模型用量。</p>
+          </nx-empty-state>
+        }
+        <p class="form-note panel-foot">
+          比較結果與指令可供此題庫的授權成員檢視。關鍵字檢核只提供線索，請搭配參考答案與人工評分。
+        </p>
+      </nx-panel>
+      @if (detail(); as view) {
+        @for (test of view.cases; track $index; let c = $index) {
+          <nx-panel [heading]="'題目 ' + (c + 1)" class="evaluation-case">
+            <h3>{{ test.question }}</h3>
+            @if (test.reference) {
+              <details>
+                <summary>參考答案</summary>
+                <p class="plain-copy">{{ test.reference }}</p>
+              </details>
+            }
             <div class="evaluation-comparison" [style.--variant-count]="view.variants.length">
               @for (variant of view.variants; track $index; let v = $index) {
-                <article nxCard class="evaluation-answer">
+                <article class="evaluation-answer">
                   <div class="evaluation-answer-heading">
                     <strong>{{ variant.label }}</strong>
                     @if (policy()?.showModelNames) {
@@ -192,47 +200,18 @@
                 </article>
               }
             </div>
-          </section>
+          </nx-panel>
         }
-      </div>
-    } @else {
-      <nx-empty-state>
-        <nx-icon name="lines" />
-        <h2>建立第一份比較紀錄</h2>
-        <p>每次可比较 1–3 個模型／指令方案，會依題數計入模型用量。</p>
-        <button class="secondary-button" (click)="openRun()" [disabled]="busy()">
-          設定比較方案
-        </button>
-      </nx-empty-state>
-    }
+      }
+    </div>
     <nx-resource-sharing
       kind="evaluationSet"
       [resourceId]="set.resource.id"
       [name]="set.resource.name"
     />
-  } @else {
-    <nx-search-field
-      class="list-search"
-      label="搜尋評測集"
-      [value]="filter()"
-      (valueChange)="filter.set($event)"
-    />
-    <div class="platform-grid">
-      @for (set of visible(); track set.resource.id) {
-        <a nxCard [routerLink]="['/quality', set.resource.id]"
-          ><span class="panel-eyebrow">{{ set.cases.length }} 題 · v{{ set.version }}</span>
-          <h2>{{ set.resource.name }}</h2>
-          <p>{{ set.description || '固定題庫，可比較不同模型與提示詞。' }}</p>
-          <span class="card-link">檢視比較<nx-icon name="chevron" /></span
-        ></a>
-      } @empty {
-        <nx-empty-state>
-          <nx-icon name="lines" />
-          <h2>把好答案變成可重現的標準</h2>
-          <p>建立少量代表題目、參考答案與檢核詞，再比較模型或指令。</p>
-          <button class="secondary-button" (click)="openSet()">建立第一個評測集</button>
-        </nx-empty-state>
-      }
+  } @else if (currentLoading()) {
+    <div class="quality-layout" role="status" aria-label="正在載入評測集">
+      <span class="skeleton quality-skeleton"></span><span class="skeleton quality-skeleton"></span>
     </div>
   }
 </nx-feature-page>

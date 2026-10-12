@@ -190,18 +190,15 @@ for (const kind of ["project", "evaluation"] as const) {
         body: JSON.stringify(body),
       });
     });
-    // A project keeps deletion in its actions menu; an evaluation set shows the button.
+    // Both keep deletion in the header's actions menu.
     const askDelete = async () => {
-      if (isProject)
-        await page
-          .getByRole("button", { name: "專案操作", exact: true })
-          .click();
       await page
-        .getByRole(isProject ? "menuitem" : "button", {
-          name: action,
+        .getByRole("button", {
+          name: isProject ? "專案操作" : "評測集操作",
           exact: true,
         })
         .click();
+      await page.getByRole("menuitem", { name: action, exact: true }).click();
     };
     await page.goto(`/${section}/${resource.id}`);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();

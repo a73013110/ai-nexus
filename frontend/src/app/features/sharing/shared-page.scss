@@ -1,112 +1,83 @@
 @use 'breakpoints' as bp;
 
-.share-workspace {
+// The snapshot on the left at reading width; who shared it and until when on the right.
+.share-layout {
   display: grid;
-  grid-template-columns: 15rem minmax(0, 1fr);
-  gap: var(--section-gap);
-}
-.share-list {
-  display: grid;
-  align-content: start;
-  gap: var(--p-space-2);
-}
-.share-list a {
-  display: flex;
-  gap: var(--p-space-3);
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
+  gap: var(--p-space-4);
   align-items: start;
-  padding: var(--p-space-3);
-  border-radius: var(--p-radius-md);
 }
-.share-list a[aria-current],
-.share-list a:hover {
-  background: var(--accent-soft);
+nx-notice {
+  margin-bottom: var(--p-space-4);
 }
-.share-list strong,
-.share-list small {
-  display: block;
-  overflow-wrap: anywhere;
-}
-.share-list small {
-  color: var(--secondary);
-  font-size: var(--text-caption);
-  line-height: var(--line-reading);
-  margin-top: var(--p-space-1);
+.share-skeleton {
+  height: 16rem;
+  border-radius: var(--tile-radius);
 }
 .share-content {
   overflow-wrap: anywhere;
 }
-.share-heading {
-  display: flex;
-  align-items: start;
-  gap: var(--p-space-4);
-  margin-bottom: var(--section-gap);
-}
-.share-heading > div {
-  flex: 1;
-  min-width: 0;
-}
-.share-heading h2 {
-  font-size: var(--resource-heading-size);
-  margin: var(--p-space-2) 0;
-  overflow-wrap: anywhere;
-}
-.share-heading p {
-  color: var(--secondary);
-  font-size: var(--text-caption);
-}
-.shared-message {
-  margin-bottom: var(--p-space-8);
-  padding-top: var(--p-space-4);
-  border-top: 1px solid var(--line);
-}
-.shared-message .message-author {
-  font-size: var(--text-caption);
-  color: var(--secondary);
-  margin-bottom: var(--p-space-2);
-  display: block;
-}
-.shared-user {
-  margin-left: 12%;
-  padding: var(--p-space-4);
-  border-radius: var(--p-radius-lg);
-  background: var(--accent-soft);
-  border: 0;
+.shared-message + .shared-message {
+  margin-top: var(--p-space-6);
 }
 .shared-message-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--p-space-3);
-  margin-bottom: var(--p-space-3);
+  gap: var(--p-space-1) var(--p-space-3);
+  margin-bottom: var(--p-space-2);
+  color: var(--muted);
+  font-size: var(--text-caption);
+}
+.message-author {
+  color: var(--secondary);
+  font-weight: 600;
+}
+.message-model {
+  min-width: 0;
+  font-family: var(--font-code);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .shared-user {
+  margin-left: 12%;
+  padding: var(--p-space-3) var(--p-space-4);
+  border-radius: var(--tile-inner-radius);
+  background: var(--tile-inset);
   --user-copy-padding: 0;
   --user-copy-border: 0;
   --user-copy-background: transparent;
 }
+.share-facts {
+  display: grid;
+  gap: var(--p-space-3);
+  margin: 0;
+  div {
+    display: grid;
+    gap: var(--p-space-1);
+  }
+  dt {
+    color: var(--muted);
+    font-size: var(--text-caption);
+  }
+  dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+}
+.panel-foot {
+  margin-top: var(--p-space-4);
+  color: var(--muted);
+  font-size: var(--text-caption);
+}
+@include bp.below(tablet) {
+  .share-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 @include bp.below(phone) {
-  .share-workspace {
-    grid-template-columns: 1fr;
-  }
-  .share-list {
-    display: flex;
-    overflow: auto;
-  }
-  .share-list a {
-    min-width: 200px;
-  }
-  .share-heading {
-    flex-direction: column;
-  }
   .shared-user {
     margin-left: 6%;
   }
-}
-.message-model {
-  min-width: 0;
-  font: var(--text-caption) var(--font-code);
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }

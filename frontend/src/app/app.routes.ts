@@ -44,19 +44,16 @@ export const routes: Routes = [
           import('./features/integrations/integrations-page').then((m) => m.IntegrationsPage),
       },
       {
-        path: 'quality/:id',
+        path: 'quality/retrieval',
+        loadComponent: () =>
+          import('./features/quality/retrieval-evaluation').then((m) => m.RetrievalEvaluation),
+      },
+      {
+        matcher: optionalId('quality'),
         loadComponent: () => import('./features/quality/quality-page').then((m) => m.QualityPage),
       },
       {
-        path: 'quality',
-        loadComponent: () => import('./features/quality/quality-page').then((m) => m.QualityPage),
-      },
-      {
-        path: 'shared/:id',
-        loadComponent: () => import('./features/sharing/shared-page').then((m) => m.SharedPage),
-      },
-      {
-        path: 'shared',
+        matcher: optionalId('shared'),
         loadComponent: () => import('./features/sharing/shared-page').then((m) => m.SharedPage),
       },
       {

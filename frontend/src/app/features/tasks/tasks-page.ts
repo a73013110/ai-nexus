@@ -1,8 +1,6 @@
 import { Notice } from '../../shared/ui/notice';
 import { EmptyState } from '../../shared/ui/empty-state';
-import { Card } from '../../shared/ui/card';
-import { FilterPanel } from '../../shared/ui/filter-panel';
-import { ViewSwitch } from '../../shared/ui/view-switch';
+import { ResourceGallery } from '../../shared/ui/resource-gallery';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -16,13 +14,13 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import type { JobDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
-import { formatDate } from '../../shared/browser/format';
+import { formatDate, relativeTime } from '../../shared/browser/format';
 import { FeaturePage } from '../../core/layout/feature-page';
 import { Icon } from '../../shared/ui/icon';
 import { JobProgress } from './job-progress';
 import { ResourceTarget } from '../../shared/ui/resource-target';
 import { JobsApi } from './jobs-api';
-import { jobKindName } from './job-kind';
+import { jobKindIcon, jobKindName } from './job-kind';
 import { JobToasts } from './job-toasts';
 import { apiResource } from '../../core/api/api-resource';
 
@@ -30,10 +28,8 @@ import { apiResource } from '../../core/api/api-resource';
   selector: 'nx-tasks-page',
   imports: [
     Notice,
-    Card,
     EmptyState,
-    FilterPanel,
-    ViewSwitch,
+    ResourceGallery,
     FeaturePage,
     Icon,
     JobProgress,
@@ -47,90 +43,87 @@ import { apiResource } from '../../core/api/api-resource';
     [title]="session.featureName('tasks')"
     description="追蹤文件辨識、索引、評測與程式碼 review。離開頁面後任務仍會繼續。"
   >
-    <button page-actions class="secondary-button" (click)="jobs.reload()">
-      <nx-icon name="repeat" />重新整理
-    </button>
     @if (error()) {
-      <nx-notice tone="danger" [message]="error()" />
+      <nx-notice [message]="error()"
+        ><button notice-actions type="button" (click)="reload()">重試</button></nx-notice
+      >
     }
-    <nx-filter-panel
-      ><nx-view-switch
-        label="任務篩選"
-        [options]="filterOptions"
-        [value]="filter()"
-        (valueChange)="filter.set($event)"
-    /></nx-filter-panel>
-    @if (jobs.loading()) {
-      <p role="status" class="form-note">正在載入任務…</p>
-    } @else if (!visible().length) {
-      <nx-empty-state>
+    <nx-resource-gallery
+      label="任務"
+      placeholder="尋找任務"
+      [search]="term()"
+      [filters]="filterOptions"
+      [filter]="filter()"
+      [loading]="jobs.loading()"
+      [empty]="!visible().length"
+      (searchChange)="term.set($event)"
+      (filterChange)="filter.set($event)"
+    >
+      @for (job of visible(); track job.id) {
+        <article
+          class="job-card"
+          [id]="'job-' + job.id"
+          [class.current]="target() === job.id"
+          [nxResourceTarget]="target() === job.id"
+          animate.enter="panel-arrive"
+        >
+          <div class="job-top">
+            <span class="job-icon"><nx-icon [name]="icon(job.kind)" /></span>
+            <span class="job-kind">{{ kind(job.kind) }}</span>
+            <time [attr.datetime]="job.createdAt" [title]="date(job.createdAt)">{{
+              when(job.createdAt)
+            }}</time>
+          </div>
+          <h2>{{ job.label }}</h2>
+          <nx-job-progress [job]="job" />
+          <div class="job-actions">
+            <span class="job-attempt">{{
+              job.attempt ? '第 ' + job.attempt + ' 次處理' : '尚未開始'
+            }}</span>
+            @if (job.kind === 'repository-review' && session.has('repositories')) {
+              <a
+                class="quiet-button"
+                routerLink="/repositories"
+                [queryParams]="{ review: job.subjectId }"
+                >檢視 review<nx-icon name="chevron"
+              /></a>
+            }
+            @if (job.kind === 'document-ingest') {
+              <a class="quiet-button" [routerLink]="['/reader', job.subjectId]"
+                >檢視文件<nx-icon name="chevron"
+              /></a>
+            }
+            @if (['queued', 'running'].includes(job.status)) {
+              <button
+                class="quiet-button"
+                [disabled]="busy() === job.id || job.cancelRequested"
+                (click)="act(job, false)"
+              >
+                <nx-icon name="stop" />停止處理
+              </button>
+            } @else if (['failed', 'cancelled'].includes(job.status) && job.attempt < 6) {
+              <button class="quiet-button" [disabled]="busy() === job.id" (click)="act(job, true)">
+                <nx-icon name="repeat" />重試
+              </button>
+            }
+          </div>
+        </article>
+      }
+      <nx-empty-state gallery-empty>
         <nx-icon name="check" />
-        <h2>{{ filter() === 'active' ? '目前沒有處理中的任務' : '這裡尚無任務' }}</h2>
-        <p>加入知識庫文件或執行評測後，即可在這裡追蹤。</p>
-        @if (session.has('knowledge')) {
-          <a class="secondary-button" routerLink="/knowledge"
-            >前往{{ session.featureName('knowledge') }}</a
-          >
+        @if (term()) {
+          <h2>沒有符合的任務</h2>
+        } @else {
+          <h2>{{ filter() === 'active' ? '目前沒有處理中的任務' : '這裡尚無任務' }}</h2>
+          <p>加入知識庫文件或執行評測後，即可在這裡追蹤。</p>
+          @if (session.has('knowledge')) {
+            <a class="secondary-button" routerLink="/knowledge"
+              >前往{{ session.featureName('knowledge') }}</a
+            >
+          }
         }
       </nx-empty-state>
-    } @else {
-      <div class="job-list">
-        @for (job of visible(); track job.id) {
-          <article
-            nxCard
-            class="job-card"
-            [id]="'job-' + job.id"
-            [class.current]="target() === job.id"
-            [nxResourceTarget]="target() === job.id"
-            animate.enter="panel-arrive"
-          >
-            <div class="job-heading">
-              <div>
-                <span class="panel-eyebrow">{{ kind(job.kind) }}</span>
-                <h2>{{ job.label }}</h2>
-              </div>
-              <time>{{ date(job.createdAt) }}</time>
-            </div>
-            <nx-job-progress [job]="job" />
-            <div class="job-actions">
-              <span class="form-note">{{
-                job.attempt ? '第 ' + job.attempt + ' 次處理' : '尚未開始'
-              }}</span>
-              @if (job.kind === 'repository-review' && session.has('repositories')) {
-                <a
-                  class="quiet-button"
-                  routerLink="/repositories"
-                  [queryParams]="{ review: job.subjectId }"
-                  >檢視 review<nx-icon name="chevron"
-                /></a>
-              }
-              @if (job.kind === 'document-ingest') {
-                <a class="quiet-button" [routerLink]="['/reader', job.subjectId]"
-                  >檢視文件<nx-icon name="chevron"
-                /></a>
-              }
-              @if (['queued', 'running'].includes(job.status)) {
-                <button
-                  class="secondary-button"
-                  [disabled]="busy() === job.id || job.cancelRequested"
-                  (click)="act(job, false)"
-                >
-                  停止處理
-                </button>
-              } @else if (['failed', 'cancelled'].includes(job.status) && job.attempt < 6) {
-                <button
-                  class="secondary-button"
-                  [disabled]="busy() === job.id"
-                  (click)="act(job, true)"
-                >
-                  <nx-icon name="repeat" />重試
-                </button>
-              }
-            </div>
-          </article>
-        }
-      </div>
-    }
+    </nx-resource-gallery>
   </nx-feature-page>`,
 })
 export class TasksPage {
@@ -154,22 +147,23 @@ export class TasksPage {
   readonly actionError = signal('');
   readonly error = computed(() => this.actionError() || this.jobs.error());
   readonly busy = signal<string | null>(null);
-  readonly filters = [
-    { id: 'active', name: '處理中' },
-    { id: 'all', name: '全部' },
-    { id: 'attention', name: '需要處理' },
-    { id: 'completed', name: '已完成' },
+  readonly filterOptions = [
+    { value: 'active', label: '處理中' },
+    { value: 'all', label: '全部' },
+    { value: 'attention', label: '需要處理' },
+    { value: 'completed', label: '已完成' },
   ];
-  readonly filterOptions = this.filters.map((item) => ({ value: item.id, label: item.name }));
+  readonly term = signal('');
   readonly visible = computed(() =>
     (this.jobs.value() ?? []).filter(
       (x) =>
-        this.filter() === 'all' ||
-        (this.filter() === 'active'
-          ? ['queued', 'running'].includes(x.status)
-          : this.filter() === 'attention'
-            ? ['failed', 'cancelled'].includes(x.status)
-            : x.status === 'completed'),
+        x.label.toLowerCase().includes(this.term().toLowerCase()) &&
+        (this.filter() === 'all' ||
+          (this.filter() === 'active'
+            ? ['queued', 'running'].includes(x.status)
+            : this.filter() === 'attention'
+              ? ['failed', 'cancelled'].includes(x.status)
+              : x.status === 'completed')),
     ),
   );
   constructor() {
@@ -182,6 +176,10 @@ export class TasksPage {
         this.target.set(id);
         if (id) this.filter.set('all');
       });
+  }
+  reload() {
+    this.actionError.set('');
+    this.jobs.reload();
   }
   async act(job: JobDto, retry: boolean) {
     if (this.busy()) return;
@@ -200,5 +198,7 @@ export class TasksPage {
     }
   }
   readonly kind = jobKindName;
+  readonly icon = jobKindIcon;
   readonly date = formatDate;
+  readonly when = relativeTime;
 }

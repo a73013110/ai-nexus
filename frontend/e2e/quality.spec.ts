@@ -117,7 +117,9 @@ test("檢索評測固定驗收集並顯示四模式指標及降級原因", async
   });
   await page.goto("/quality");
   await settleEntrance(page);
-  await page.getByRole("button", { name: "檢索評測", exact: true }).click();
+  await page.getByRole("button", { name: "評測操作", exact: true }).click();
+  await page.getByRole("menuitem", { name: "檢索評測" }).click();
+  await expect(page).toHaveURL(/\/quality\/retrieval$/);
   await page.getByRole("textbox", { name: "檢索評測名稱" }).fill("採購驗收");
   await page.getByRole("checkbox", { name: "採購規範" }).check();
   const corpus = page.getByRole("textbox", { name: "檢索驗收集 JSON" });
