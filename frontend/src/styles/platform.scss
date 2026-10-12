@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .page-actions {
   display: flex;
   align-items: center;
@@ -180,7 +182,7 @@
   line-height: 1.65;
   margin: 0;
 }
-@media (max-width: 860px) {
+@include bp.below(narrow) {
   .resource-row {
     padding: var(--resource-row-padding-block) var(--resource-row-padding-inline);
     gap: var(--p-space-2);
@@ -193,7 +195,7 @@
     grid-template-columns: 1fr;
   }
 }
-@media (max-width: 600px) {
+@include bp.below(phone) {
   .resource-badges {
     order: 3;
     width: 100%;

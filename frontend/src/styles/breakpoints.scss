@@ -1,0 +1,43 @@
+// Viewport tiers, mirrored in shared/browser/breakpoints.ts. Each value is the widest viewport of
+// its tier: `below(phone)` matches 640px and narrower, `above(phone)` everything wider, so a pair
+// never overlaps or leaves a gap at fractional widths. Widths a component owns use container
+// queries instead (docs/frontend/mobile.md).
+@use 'sass:map';
+
+$tiers: (
+  // Single-column cards and stacked rows.
+  compact: 520px,
+  // Dialogs become bottom sheets; touch-sized controls.
+  phone: 640px,
+  // The workspace sidebar becomes an overlay drawer (WorkspaceLayout).
+  narrow: 859px,
+  // Side-by-side panes collapse; the detail drawer turns modal.
+  tablet: 1100px,
+  // Dense multi-column grids drop a column.
+  wide: 1200px
+);
+
+@function -width($tier) {
+  @if not map.has-key($tiers, $tier) {
+    @error 'Unknown breakpoint `#{$tier}`; use one of #{map.keys($tiers)}.';
+  }
+  @return map.get($tiers, $tier);
+}
+
+/// Viewports at or below `$tier`. `$or` adds alternative conditions, e.g. `'(pointer: coarse)'`.
+@mixin below($tier, $or: null) {
+  $query: '(width <= #{-width($tier)})';
+  @if $or {
+    $query: '#{$query}, #{$or}';
+  }
+  @media #{$query} {
+    @content;
+  }
+}
+
+/// Viewports wider than `$tier`: the exact complement of `below($tier)`.
+@mixin above($tier) {
+  @media (width > #{-width($tier)}) {
+    @content;
+  }
+}

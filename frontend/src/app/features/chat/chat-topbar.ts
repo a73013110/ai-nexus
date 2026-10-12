@@ -1,14 +1,8 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  DestroyRef,
-  inject,
-  input,
-  output,
-  signal,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { WorkspaceMenuButton } from '../../core/layout/workspace-menu-button';
+import { below } from '../../shared/browser/breakpoints';
+import { mediaQuery } from '../../shared/browser/media-query';
 import { Icon } from '../../shared/ui/icon';
 import { InlineTitle } from '../../shared/ui/inline-title';
 import type { ProductTourDefinition } from '../../shared/ui/product-tour';
@@ -40,14 +34,8 @@ export class ChatTopbar {
   private readonly router = inject(Router);
   readonly tour = input.required<ProductTourDefinition>();
   readonly action = output<ConversationAction>();
-  private readonly media = matchMedia('(max-width: 640px)');
   /** Phones keep the menu button, the title, one overflow menu and the tour. */
-  readonly compact = signal(this.media.matches);
-  constructor() {
-    const change = () => this.compact.set(this.media.matches);
-    this.media.addEventListener('change', change);
-    inject(DestroyRef).onDestroy(() => this.media.removeEventListener('change', change));
-  }
+  readonly compact = mediaQuery(below('phone'));
   choose(action: ConversationAction, spend: ConversationSpendView) {
     const projectId = this.store.selected()?.projectId;
     if (action === 'spend') spend.open();

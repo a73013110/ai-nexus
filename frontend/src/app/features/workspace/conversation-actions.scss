@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .conversation-actions {
   display: flex;
   align-items: center;
@@ -7,7 +9,7 @@
   --icon-fill: var(--accent-soft);
   color: var(--accent);
 }
-@media (max-width: 520px) {
+@include bp.below(compact) {
   .conversation-actions {
     gap: 0;
   }

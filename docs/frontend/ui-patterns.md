@@ -14,7 +14,7 @@
 
 - 登入後的路由都掛在 `WorkspaceShell` 下：側欄只建立一次，換頁保留狀態；頁面只提供主區，側欄內容（例：對話歷史）用 `<ng-template nxSidebarPanel>` 宣告，標題列放 `WorkspaceMenuButton`。
 - 同一頁的列表與詳細路徑用 `optionalId('<path>')` 合成一條路由，id 改變時沿用元件。
-- `WorkspaceLayout` 分開管理 `desktopCompact` 與 `mobileOpen`：860px 以上側欄可收合為圖示欄（寬度由側欄過渡，grid 欄跟隨），859px 以下是覆蓋式抽屜。收合狀態跨路由維持。
+- `WorkspaceLayout` 分開管理 `desktopCompact` 與 `mobileOpen`：寬於 `narrow` 斷點（[手機](mobile.md#斷點)）時側欄可收合為圖示欄（寬度由側欄過渡，grid 欄跟隨），`narrow` 以下是覆蓋式抽屜。收合狀態跨路由維持。
 - 功能清單只由 `WorkspaceNavigation` 呈現（釘選＋全部功能，行為見 [個人設定](../features/settings.md#側欄)）。`Ctrl + K` 是 shell 的 `CommandPalette`（含全部功能），頁面用 `WorkspaceCommands.provide()` 加入動作。
 - 長清單共用一個 `MenuPanel`，不每列建 `ActionMenu`；列加 `content-visibility: auto`。
 - 選取的功能依 Router UrlTree 的 segment 取最深的可見功能（不看 query、fragment）；只有一項 `aria-current="page"`，詳細路由仍屬於該功能。
@@ -37,7 +37,7 @@
 - 用原生 `<dialog>`，加 `nxCompactDialog` 套用共用密度；沒有可存取名稱時由 h2 建立，不接管 focus、Escape 或業務狀態。
 - 外框只負責圓角、top layer、焦點與關閉；表單放 `.dialog-scroll`。選取器、清單用 `.dialog-flush`：`.dialog-bar`（標題或搜尋＋關閉，不加眉標）、`.dialog-body`、必要時的 `.dialog-foot`。
 - `ConfirmDialog` 初始焦點在「取消」，Esc／關閉視為取消，結束後返回先前焦點。危險動作一律經過確認。
-- 詳情用 `DetailDrawer`：桌面 modeless（可繼續操作列表、選下一列），1023px 以下改為原生 modal。
+- 詳情用 `DetailDrawer`：桌面 modeless（可繼續操作列表、選下一列），`tablet` 斷點以下改為原生 modal。
 - 多頁籤視窗各頁籤維持相同寬高，切換不改外框；確實需要不同尺寸的 dialog 才用 `DialogMotion` 過渡寬高。內容切換用 `ViewMotion`。
 - 只在開啟時建立昂貴內容（`CompactDialog.opened`），關閉時銷毀閱讀器、圖表與 Blob URL。
 

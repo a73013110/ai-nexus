@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .inspector-list {
   display: flex;
   flex-direction: column;
@@ -130,7 +132,7 @@
   color: var(--secondary);
 }
 
-@media (max-width: 760px) {
+@include bp.below(narrow) {
   .inspector-list {
     max-height: 260px;
     flex: none;

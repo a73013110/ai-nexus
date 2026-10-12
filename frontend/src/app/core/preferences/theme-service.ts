@@ -1,4 +1,5 @@
-import { computed, DestroyRef, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, Injectable, signal, untracked } from '@angular/core';
+import { mediaQuery } from '../../shared/browser/media-query';
 import type { PreferencesDto } from '../api/schema';
 
 @Injectable({ providedIn: 'root' })
@@ -8,18 +9,14 @@ export class ThemeService {
     reducedMotion: false,
     defaultModelId: null,
   });
-  private readonly dark = window.matchMedia('(prefers-color-scheme: dark)');
-  private readonly motion = window.matchMedia('(prefers-reduced-motion: reduce)');
-  private readonly systemReduced = signal(this.motion.matches);
+  private readonly dark = mediaQuery('(prefers-color-scheme: dark)');
+  private readonly systemReduced = mediaQuery('(prefers-reduced-motion: reduce)');
   readonly reducedMotion = computed(() => this.preferences().reducedMotion || this.systemReduced());
   constructor() {
-    const themeChanged = () => this.render();
-    const motionChanged = () => this.systemReduced.set(this.motion.matches);
-    this.dark.addEventListener('change', themeChanged);
-    this.motion.addEventListener('change', motionChanged);
-    inject(DestroyRef).onDestroy(() => {
-      this.dark.removeEventListener('change', themeChanged);
-      this.motion.removeEventListener('change', motionChanged);
+    // Follows the system scheme; preference changes render synchronously through apply().
+    effect(() => {
+      this.dark();
+      untracked(() => this.render());
     });
     try {
       const local = JSON.parse(
@@ -49,7 +46,7 @@ export class ThemeService {
   private render() {
     const value = this.preferences();
     document.documentElement.dataset['theme'] =
-      value.theme === 'system' ? (this.dark.matches ? 'dark' : 'light') : value.theme;
+      value.theme === 'system' ? (this.dark() ? 'dark' : 'light') : value.theme;
     document.documentElement.dataset['reducedMotion'] = String(value.reducedMotion);
   }
 }

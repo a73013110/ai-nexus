@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .activity-audit-table {
   --table-max-height: min(60dvh, 42rem);
   margin-top: var(--section-gap);
@@ -68,7 +70,7 @@
 .audit-before {
   color: var(--secondary);
 }
-@media (max-width: 760px) {
+@include bp.below(narrow) {
   .audit-changes > div {
     grid-template-columns: 1fr;
     gap: 4px;
@@ -100,7 +102,7 @@
   color: var(--secondary);
   font-size: var(--text-caption);
 }
-@media (max-width: 860px) {
+@include bp.below(narrow) {
   .audit-row time {
     min-width: 100%;
   }

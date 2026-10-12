@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
 }
@@ -153,7 +155,7 @@
     stroke-dashoffset: -72;
   }
 }
-@media (max-width: 1180px) {
+@include bp.below(wide) {
   .flow-layout {
     grid-template-columns: minmax(0, 1fr) 12rem;
     gap: 0.5rem;
@@ -162,7 +164,7 @@
     padding-left: 1rem;
   }
 }
-@media (max-width: 760px) {
+@include bp.below(narrow) {
   .flow-layout {
     grid-template-columns: 1fr;
   }

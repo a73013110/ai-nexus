@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: grid;
   gap: var(--p-space-6);
@@ -120,12 +122,12 @@ code {
 .design-motion:is(:hover, :focus-visible) i {
   transform: translateX(6.75rem);
 }
-@media (max-width: 1100px) {
+@include bp.below(tablet) {
   .design-swatches {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
-@media (max-width: 520px) {
+@include bp.below(compact) {
   .design-scale div {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--p-space-1);

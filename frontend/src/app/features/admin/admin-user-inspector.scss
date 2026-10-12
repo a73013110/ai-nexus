@@ -1,8 +1,10 @@
+@use 'breakpoints' as bp;
+
 .platform-dialog.admin-inspector {
   --dialog-width: 72rem;
   height: min(860px, calc(100dvh - 48px));
   max-width: calc(100vw - 32px);
-  @media (max-width: 640px) {
+  @include bp.below(phone) {
     max-width: none;
   }
   overflow: hidden;
@@ -153,7 +155,7 @@
   border-top: 1px solid var(--line);
 }
 
-@media (max-width: 760px) {
+@include bp.below(narrow) {
   .platform-dialog.admin-inspector {
     height: calc(100dvh - 24px);
     padding: 16px;

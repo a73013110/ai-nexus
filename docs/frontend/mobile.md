@@ -7,8 +7,14 @@
 - 桌面控制項 34px；640px 以下與觸控指標至少 44px（[WCAG 2.2 target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum)），手機輸入字級至少 16px（避免 iOS 自動放大）。
 - 抽屜背景 inert、Tab 留在抽屜，Escape 或點遮罩關閉並還原焦點；遮罩隨抽屜邊緣移動並淡入。
 - 640px 以下置中對話框改為底部 sheet（快捷指令例外，`--dialog-sheet: 0`）：從底緣整片升起、不回彈（回彈會讓底邊離開畫面）。
-- 窄容器用 container query 調整（例：附件列表、輸入區工具列），完整名稱留在提示與可存取名稱。
 - 頁面在 375px 寬不得出現橫向捲動；長內容在自己的區域內捲動。
+
+## 斷點
+
+- 視窗寬度只分五級，值是該級的最大寬度：`compact` 520px（卡片單欄）、`phone` 640px（sheet、觸控尺寸）、`narrow` 859px（側欄改為抽屜）、`tablet` 1100px（並排窗格收合、詳細抽屜改為 modal）、`wide` 1200px（密集格線少一欄）。定義在 `frontend/src/styles/breakpoints.scss`，TS 對應 `frontend/src/app/shared/browser/breakpoints.ts`。
+- SCSS：`@use 'breakpoints' as bp;`，寫 `@include bp.below(phone) { … }`；互補條件用 `bp.above(narrow)`（range 語法，兩者不重疊也不留縫）。高度條件在 mixin 內巢狀 `@media (max-height: …)`，「或」用 `$or: '(pointer: coarse)'`。不寫 `@media (max-width: …)` 字面值。
+- TS：`mediaQuery(below('phone'))` 回傳 `Signal<boolean>`，在注入情境呼叫、隨擁有者解除監聽；跨越時要做的事寫成 effect，不自己接 `matchMedia`。
+- 元件自身寬度決定的版面（附件列表、輸入區工具列）用 container query，不用視窗斷點：側欄展開時 860px 視窗的內容只剩約 550px，視窗寬度量不準。完整名稱留在提示與可存取名稱。
 
 ## 滑動關閉
 

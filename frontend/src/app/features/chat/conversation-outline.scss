@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: contents;
 }
@@ -129,7 +131,7 @@
 .outline-entry.is-current {
   background: var(--accent-soft);
 }
-@media (max-width: 859px) {
+@include bp.below(narrow) {
   .conversation-outline {
     top: auto;
     bottom: var(--p-space-3);

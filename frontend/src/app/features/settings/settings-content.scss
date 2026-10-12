@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .settings-page-header p,
 .secondary {
   color: var(--secondary);
@@ -183,7 +185,7 @@
   color: var(--secondary);
   font-size: var(--text-caption);
 }
-@media (max-width: 520px) {
+@include bp.below(compact) {
   .reading-preview {
     padding: var(--p-space-4);
   }

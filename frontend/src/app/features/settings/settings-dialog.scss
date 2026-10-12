@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: contents;
 }
@@ -14,7 +16,7 @@
 .settings-loading {
   padding: var(--section-padding);
 }
-@media (max-width: 680px) {
+@include bp.below(phone) {
   .settings-dialog {
     height: calc(100dvh - 1.5rem);
   }

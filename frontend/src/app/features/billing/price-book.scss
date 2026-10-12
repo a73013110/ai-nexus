@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .price-dialog {
   --dialog-width: 52rem;
 }
@@ -46,7 +48,7 @@
   color: var(--secondary);
   margin-top: 0.2rem;
 }
-@media (max-width: 640px) {
+@include bp.below(phone) {
   .price-fields {
     grid-template-columns: 1fr;
   }

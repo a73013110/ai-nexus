@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .command-search > nx-icon {
   color: var(--accent);
 }
@@ -78,14 +80,14 @@
   border: 1px solid var(--line);
   border-radius: var(--p-radius-sm);
 }
-@media (max-width: 600px) {
+@include bp.below(phone) {
   .command-results kbd {
     display: none;
   }
 }
 // Search starts at the top where the keyboard cannot cover it, so the palette stays a floating
 // panel instead of the phone bottom sheet other dialogs become.
-@media (max-width: 640px) {
+@include bp.below(phone) {
   .command-dialog {
     --dialog-sheet: 0;
     --dialog-enter-y: -0.5rem;

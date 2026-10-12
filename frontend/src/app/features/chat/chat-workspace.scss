@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .main-workspace {
   position: relative;
   display: flex;
@@ -35,7 +37,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable both-edges;
-  @media (max-width: 640px) {
+  @include bp.below(phone) {
     padding-block-end: 0;
   }
 }

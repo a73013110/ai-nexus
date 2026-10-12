@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   position: relative;
   display: flex;
@@ -17,7 +19,7 @@
   flex: none;
   margin-block-start: auto;
   // On phones the composer sits at the bottom, so the greeting centres in the space above it.
-  @media (max-width: 640px) {
+  @include bp.below(phone) {
     margin-block-end: auto;
   }
   .conversation-viewport {
@@ -71,12 +73,12 @@
     height: 14px;
   }
 }
-@media (max-width: 859px) {
+@include bp.below(narrow) {
   .message-list {
     padding-right: 0;
   }
 }
-@media (max-width: 640px) {
+@include bp.below(phone) {
   .chat-start {
     padding-block-start: var(--p-space-4);
   }

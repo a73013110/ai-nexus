@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .share-workspace {
   display: grid;
   grid-template-columns: 15rem minmax(0, 1fr);
@@ -82,7 +84,7 @@
   --user-copy-border: 0;
   --user-copy-background: transparent;
 }
-@media (max-width: 700px) {
+@include bp.below(phone) {
   .share-workspace {
     grid-template-columns: 1fr;
   }

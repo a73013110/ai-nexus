@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .viewer-toolbar > nx-view-switch {
   margin-bottom: 0;
 }
@@ -172,7 +174,7 @@
   max-height: 100px;
   overflow: auto;
 }
-@media (max-width: 600px) {
+@include bp.below(phone) {
   .viewer-heading,
   .viewer-toolbar,
   .viewer-processing {

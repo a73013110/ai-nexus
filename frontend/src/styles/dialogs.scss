@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 // Every modal shares one frame: a hairline, a layered shadow and a 12px radius. It rises and
 // scales in on the spring and leaves the same way; `overlay` and `display` keep it in the top layer
 // until the exit ends. Browsers without @starting-style simply open and close.
@@ -154,7 +156,7 @@
   min-height: var(--button-target);
   font-size: var(--text-label);
 }
-@media (max-width: 600px) {
+@include bp.below(phone) {
   .workspace-dialog {
     --dialog-padding: var(--p-space-4);
   }
@@ -246,7 +248,7 @@
 // (shared/ui/sheet-swipe.ts, which reads `--dialog-sheet`); the backdrop fades with the drag and a
 // release that stays springs back. The surface-coloured shadow below fills the gap that spring
 // opens under the sheet.
-@media (max-width: 640px) {
+@include bp.below(phone) {
   .platform-dialog,
   .workspace-dialog {
     --dialog-sheet: 1;

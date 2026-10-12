@@ -1,10 +1,11 @@
-import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
+import { below } from '../../shared/browser/breakpoints';
+import { mediaQuery } from '../../shared/browser/media-query';
 
 /** Desktop density and mobile disclosure are independent across workspace routes. */
 @Injectable({ providedIn: 'root' })
 export class WorkspaceLayout {
-  private readonly media = window.matchMedia('(max-width: 859px)');
-  readonly narrow = signal(this.media.matches);
+  readonly narrow = mediaQuery(below('narrow'));
   readonly desktopCompact = signal(false);
   readonly mobileOpen = signal(false);
   readonly compact = computed(() => !this.narrow() && this.desktopCompact());
@@ -13,17 +14,18 @@ export class WorkspaceLayout {
   private opener: HTMLElement | null = null;
   private focusFrame = 0;
   constructor() {
-    const resize = () => {
-      const focusInSidebar = document.activeElement?.closest('.workspace-sidebar');
-      this.narrow.set(this.media.matches);
-      this.mobileOpen.set(false);
-      if (focusInSidebar) this.scheduleFocus();
-    };
-    this.media.addEventListener('change', resize);
-    inject(DestroyRef).onDestroy(() => {
-      this.media.removeEventListener('change', resize);
-      cancelAnimationFrame(this.focusFrame);
+    // Crossing the breakpoint closes the drawer; focus left in the sidebar moves to the visible toggle.
+    let narrow = this.narrow();
+    effect(() => {
+      if (this.narrow() === narrow) return;
+      narrow = this.narrow();
+      untracked(() => {
+        const focusInSidebar = document.activeElement?.closest('.workspace-sidebar');
+        this.mobileOpen.set(false);
+        if (focusInSidebar) this.scheduleFocus();
+      });
     });
+    inject(DestroyRef).onDestroy(() => cancelAnimationFrame(this.focusFrame));
   }
   toggle() {
     if (!this.narrow()) {

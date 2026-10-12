@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 // App frame owned by WorkspaceShell and shared by every signed-in page. Rules here may style page content
 // projected into the frame; everything else belongs to the owning component.
 .skip-link {
@@ -25,7 +27,7 @@
   );
   overflow: hidden;
 }
-@media (max-width: 859px) {
+@include bp.below(narrow) {
   .workbench {
     grid-template-columns: minmax(0, 1fr);
   }

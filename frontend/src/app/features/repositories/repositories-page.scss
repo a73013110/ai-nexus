@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .repository-connect {
   max-width: 36rem;
   margin: 2rem auto;
@@ -182,12 +184,12 @@
 .repository-issues details[open] summary nx-icon {
   transform: rotate(90deg);
 }
-@media (max-width: 1100px) {
+@include bp.below(tablet) {
   .repository-layout {
     grid-template-columns: 14rem minmax(0, 1fr);
   }
 }
-@media (max-width: 720px) {
+@include bp.below(phone) {
   .repository-layout {
     grid-template-columns: 1fr;
   }
