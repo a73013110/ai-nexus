@@ -51,7 +51,7 @@ test("對話開場沿用共用卡片與操作密度，手機及深色保留閱�
         surface.y + surface.height - 120,
       );
     }
-    for (const button of await suggestions.locator("button.ui-card").all())
+    for (const button of await suggestions.getByRole("button").all())
       expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(
         viewport.width === 375 ? 44 : 34,
       );
@@ -82,14 +82,26 @@ test("blank desktop workspace, real forms, keyboard and Markdown copy", async ({
     name: "對話起點",
     exact: true,
   });
-  await expect(suggestions.locator("button.ui-card")).toHaveCount(3);
-  const layout = await suggestions.evaluate(
-    (el) => getComputedStyle(el).gridTemplateColumns.split(" ").length,
+  // Desktop starters are one quiet row of chips (no card surface, no chevron) from the composer edge.
+  const chips = suggestions.getByRole("button");
+  await expect(chips).toHaveCount(3);
+  await expect(
+    suggestions.locator(".ui-card, nx-icon[name=chevron]"),
+  ).toHaveCount(0);
+  await expect(chips.first()).toHaveAccessibleName(
+    /整理思緒.*讓重點與下一步更清楚/,
   );
-  expect(layout).toBe(3);
+  const chipBoxes = await chips.evaluateAll((buttons) =>
+    buttons.map((x) => x.getBoundingClientRect().toJSON() as DOMRect),
+  );
+  for (const box of chipBoxes) {
+    expect(Math.abs(box.top - chipBoxes[0].top)).toBeLessThan(1);
+    expect(box.height).toBeLessThan(48);
+  }
   expect((await start.boundingBox())!.height).toBeLessThan(220);
   const composer = (await page.locator(".composer").boundingBox())!,
     surface = (await page.locator(".chat-surface").boundingBox())!;
+  expect(Math.abs(chipBoxes[0].left - composer.x)).toBeLessThan(1);
   expect(
     Math.abs(
       composer.y + composer.height / 2 - (surface.y + surface.height / 2),
@@ -542,7 +554,7 @@ test("chat search is opt-in and cost/source panels stay accessible without clipp
   expect(mobileBox!.y + mobileBox!.height).toBeLessThanOrEqual(812);
 });
 
-test("local deployments explain why web search is not enabled", async ({
+test("deployments without web search hide it from the composer and explain it in settings", async ({
   page,
 }) => {
   const fixture = new ApiFixture();
@@ -556,15 +568,26 @@ test("local deployments explain why web search is not enabled", async ({
     }),
   );
   await page.goto("/chat");
-  await page.getByText("搜尋網路", { exact: true }).click();
-  await expect(
-    page.getByText("網路搜尋尚未啟用", { exact: true }),
-  ).toBeInViewport();
-  await expect(page.locator(".search-setup")).toContainText(
-    "地端模型本身不會連網",
-  );
+  await expect(page.locator("form.composer")).toBeVisible();
+  await expect(page.locator("form.composer")).not.toContainText("搜尋網路");
   expect(fixture.lastRequest?.webSearch).not.toBe(true);
+  const dialog = await openSettings(page);
+  await dialog.getByRole("searchbox", { name: "搜尋設定" }).fill("網路搜尋");
+  await dialog.getByRole("button", { name: "對話", exact: true }).click();
+  await expect(dialog).toContainText("網路搜尋 · 尚未啟用");
+  await expect(dialog).toContainText("管理員尚未啟用網路搜尋。");
+  await expect(dialog).toContainText("地端模型本身不會連網");
+  await dialog.getByRole("button", { name: "關閉設定", exact: true }).click();
+  // Narrow composers fold the tools into one menu, which leaves web search out too.
   await page.setViewportSize({ width: 375, height: 812 });
+  await page.getByRole("button", { name: "加入與工具", exact: true }).click();
+  await expect(
+    page.getByRole("menuitem", { name: "加入文件或圖片", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("menuitemcheckbox", { name: "搜尋網路" }),
+  ).toHaveCount(0);
+  await page.keyboard.press("Escape");
   await expectViewportContained(page);
 });
 

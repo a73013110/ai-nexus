@@ -31,7 +31,7 @@ export default defineConfig({
   testDir: ".",
   testMatch: "*.spec.ts",
   fullyParallel: true,
-  workers: "25%",
+  workers: 2,
   timeout: 30000,
   expect: { timeout: 8000 },
   outputDir: "../../artifacts/browser-results",

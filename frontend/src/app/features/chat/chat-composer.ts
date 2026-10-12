@@ -21,7 +21,6 @@ import { ThemeService } from '../../core/preferences/theme-service';
 import { Autosize } from '../../shared/browser/autosize';
 import { isSubmitKey } from '../../shared/browser/submit-key';
 import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
-import { Card } from '../../shared/ui/card';
 import { Icon } from '../../shared/ui/icon';
 import { InferenceSignal } from '../../shared/ui/inference-signal';
 import { NexusIsland } from '../../shared/ui/island';
@@ -66,7 +65,6 @@ const SUGGESTIONS = [
     ActionMenu,
     AttachmentList,
     Autosize,
-    Card,
     ComposerControls,
     FocusComposer,
     FormField,

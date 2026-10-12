@@ -233,6 +233,22 @@
                   (valueChange)="update('defaultReasoningEffort', $event)"
                 />
               </div>
+              @if (webSearch(); as search) {
+                <div class="setting-row">
+                  <div>
+                    <strong>網路搜尋 · {{ search.available ? '已啟用' : '尚未啟用' }}</strong>
+                    @if (search.available) {
+                      <p>預設關閉；在輸入區按「搜尋網路」後，只將本次提問送往搜尋服務。</p>
+                    } @else {
+                      <p>{{ search.notice }}</p>
+                      <p>
+                        地端模型本身不會連網，所以輸入區不顯示「搜尋網路」。需要時請管理員部署公司自架的
+                        SearXNG 並啟用搜尋服務。
+                      </p>
+                    }
+                  </div>
+                </div>
+              }
             </section>
           }
           @case ('notifications') {

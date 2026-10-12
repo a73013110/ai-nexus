@@ -36,13 +36,12 @@
   width: 1rem;
   height: 1rem;
 }
-// Both panels are InfoPopovers in the top layer, so the composer's clipping never hides them.
+// The Context panel is an InfoPopover in the top layer, so the composer's clipping never hides it.
 nx-info-popover {
   --info-popover-trigger-padding: var(--p-space-1) var(--p-space-2);
   flex: none;
 }
-.context-trigger,
-.search-trigger {
+.context-trigger {
   display: inline-flex;
   align-items: center;
   gap: var(--p-space-1);
@@ -116,13 +115,6 @@ nx-info-popover {
   width: 17px;
   height: 17px;
 }
-.search-trigger nx-icon {
-  width: 17px;
-  height: 17px;
-}
-.search-trigger small {
-  color: var(--muted);
-}
 // Measured against the composer, not the viewport: the sidebar and width setting change its size.
 @container composer (max-width: 48rem) {
   .model-control {
@@ -133,8 +125,7 @@ nx-info-popover {
   }
 }
 @container composer (max-width: 44rem) {
-  .search-toggle span,
-  .search-trigger > span {
+  .search-toggle span {
     display: none;
   }
 }
@@ -145,8 +136,7 @@ nx-info-popover {
     flex-wrap: nowrap;
     gap: 0;
   }
-  .search-toggle,
-  .search-setup {
+  .search-toggle {
     display: none;
   }
   .model-control {
