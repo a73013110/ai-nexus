@@ -100,6 +100,10 @@
   margin-top: 0;
 }
 @include bp.below(phone) {
+  // A phone has no drag and drop, so the drop-zone explanation only returns to show upload progress.
+  .file-library-intro:not(.is-uploading) {
+    display: none;
+  }
   .file-library-intro {
     padding: var(--section-padding);
     gap: var(--section-gap);

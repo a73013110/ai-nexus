@@ -15,21 +15,32 @@
   gap: var(--p-space-6);
   margin-bottom: var(--section-gap);
 }
-.feature-header > nx-workspace-menu-button + div {
+// The title and its one-sentence purpose share a baseline so the header stays two short lines;
+// a long description wraps inside its own column instead of pushing the content down.
+.feature-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--p-space-1) var(--p-space-3);
   flex: 1;
   min-width: 0;
 }
+.feature-title .panel-eyebrow {
+  flex-basis: 100%;
+  margin: 0;
+}
 .feature-tour {
   flex: none;
-  align-self: flex-start;
 }
 .feature-header h1 {
   font-size: var(--p-font-3xl);
-  margin: var(--p-space-2) 0;
+  margin: 0;
   letter-spacing: -0.025em;
   text-wrap: balance;
 }
 .feature-header p {
+  flex: 1 1 18rem;
+  min-width: 0;
   color: var(--secondary);
   margin: 0;
   line-height: 1.65;
@@ -44,7 +55,6 @@
 }
 :host(.feature-layout-compact) .feature-header h1 {
   font-size: var(--p-font-2xl);
-  margin-block: 0 var(--p-space-1);
 }
 :host(.feature-layout-compact) .feature-header p {
   font-size: var(--text-ui);
@@ -54,12 +64,34 @@
   .feature-header {
     flex-wrap: wrap;
   }
-  .feature-header > div:first-child {
-    min-width: 100%;
+  // Actions wrap below a title that would otherwise be squeezed into a narrow column.
+  .feature-title {
+    flex: 1 1 16rem;
   }
 }
+// A phone keeps the header to one row: the drawer button, the title and icon actions. The eyebrow
+// and description repeat what the sidebar and the content already say, so the content starts higher.
 @include bp.below(phone) {
   :host(.feature-layout-compact) .feature-main {
-    padding: var(--p-space-4) var(--p-space-3);
+    padding: var(--p-space-3) var(--p-space-3) var(--p-space-4);
+  }
+  .feature-header,
+  :host(.feature-layout-compact) .feature-header {
+    gap: var(--p-space-2);
+    margin-bottom: var(--p-space-3);
+  }
+  .feature-title {
+    flex: 1 1 6rem;
+  }
+  .feature-title .panel-eyebrow,
+  .feature-header p {
+    display: none;
+  }
+  .feature-header h1,
+  :host(.feature-layout-compact) .feature-header h1 {
+    overflow: hidden;
+    font-size: var(--p-font-xl);
+    white-space: nowrap;
+    text-overflow: ellipsis;
   }
 }

@@ -82,9 +82,11 @@ export async function expectViewportContained(page: Page) {
 export async function expectCompactWorkspace(page: Page) {
   const workspace = page.locator(".feature-content").first();
   await expectCompactSurfaces(workspace);
+  // A phone header is one row, so its title steps down a size.
+  const phone = (page.viewportSize()?.width ?? 1440) <= 640;
   await expect(workspace.locator(".feature-header h1")).toHaveCSS(
     "font-size",
-    "24px",
+    phone ? "20px" : "24px",
   );
 }
 

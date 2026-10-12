@@ -18,7 +18,7 @@ import { WorkspaceMenuButton } from './workspace-menu-button';
       <div class="feature-content" [class.ui-density-compact]="density() === 'compact'">
         <header class="feature-header">
           <nx-workspace-menu-button />
-          <div>
+          <div class="feature-title">
             @if (eyebrow()) {
               <span class="panel-eyebrow">{{ eyebrow() }}</span>
             }

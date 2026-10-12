@@ -28,6 +28,7 @@
   <section
     nxCard
     class="file-library-intro"
+    [class.is-uploading]="uploadLabel()"
     [nxFileDrop]="!uploading() && !!policy()"
     (filesDropped)="upload($event)"
   >
