@@ -162,13 +162,12 @@
   @if (store.starting()) {
     <section class="chat-start-suggestions" aria-label="對話起點">
       @for (suggestion of suggestions; track suggestion.title) {
-        <button nxCard type="button" (click)="use(suggestion.text)" [disabled]="store.busy()">
+        <button type="button" (click)="use(suggestion.text)" [disabled]="store.busy()">
           <nx-icon [name]="suggestion.icon" />
           <span class="suggestion-copy"
             ><strong>{{ suggestion.title }}</strong
             ><small>{{ suggestion.detail }}</small></span
           >
-          <nx-icon name="chevron" />
         </button>
       }
     </section>

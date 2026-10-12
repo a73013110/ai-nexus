@@ -23,6 +23,7 @@ import type {
   ModelsDto,
   PersonalUsageDto,
   UserSettingsDto,
+  WebSearchStatusDto,
 } from '../../core/api/schema';
 import { UserSettingsService, defaultSettings } from '../../core/preferences/user-settings';
 import { DraftRepository } from '../../core/preferences/draft-repository';
@@ -76,6 +77,10 @@ export class SettingsPage {
     loader: () => (this.session.has('chat') ? this.api.models() : Promise.resolve(null)),
   });
   private readonly policyRead = apiResource({ loader: () => this.service.policy() });
+  /** The composer hides web search when it is unavailable, so the reason lives here. */
+  private readonly webSearchRead = apiResource({
+    loader: () => (this.session.has('chat') ? this.api.webSearchStatus() : Promise.resolve(null)),
+  });
   /** What the server holds; the draft starts from it and is compared against it. */
   readonly saved = linkedSignal<UserSettingsDto>(() =>
     structuredClone(this.settingsRead.value() ?? defaultSettings()),
@@ -96,6 +101,9 @@ export class SettingsPage {
   readonly usage = computed<PersonalUsageDto | null>(() => this.usageRead.value() ?? null);
   readonly models = computed<ModelsDto | null>(() => this.modelsRead.value() ?? null);
   readonly policy = computed<EffectiveModelPolicyDto | null>(() => this.policyRead.value() ?? null);
+  readonly webSearch = computed<WebSearchStatusDto | null>(
+    () => this.webSearchRead.value() ?? null,
+  );
   readonly notificationPermission = signal(
     'Notification' in window ? Notification.permission : 'unsupported',
   );
@@ -107,7 +115,12 @@ export class SettingsPage {
       icon: 'sliders',
       keywords: '字級 字體 行距 主題 密度 側欄 寬度 動畫',
     },
-    { id: 'conversation', name: '對話', icon: 'lines', keywords: '模型 思考 強度 送出 自動捲動' },
+    {
+      id: 'conversation',
+      name: '對話',
+      icon: 'lines',
+      keywords: '模型 思考 強度 網路搜尋 SearXNG 送出 自動捲動',
+    },
     { id: 'notifications', name: '通知', icon: 'info', keywords: '完成 回覆 瀏覽器' },
     { id: 'data', name: '資料與草稿', icon: 'archive', keywords: '保存 清除 匯出 備份' },
     { id: 'account', name: '帳號與權限', icon: 'lock', keywords: 'AD 登入 角色 功能 登出' },

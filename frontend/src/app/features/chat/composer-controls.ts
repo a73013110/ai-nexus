@@ -49,6 +49,7 @@ import { formatModelName } from '../../shared/browser/format';
       />
     }
     <div class="composer-tools">
+      <!-- A deployment without a search service shows nothing here; personal settings explain why. -->
       @if (webSearchAvailable()) {
         <button
           type="button"
@@ -56,29 +57,11 @@ import { formatModelName } from '../../shared/browser/format';
           aria-label="搜尋網路"
           [attr.aria-pressed]="webSearch()"
           [title]="webSearchNotice()"
-          [disabled]="disabled() || !webSearchAvailable()"
+          [disabled]="disabled()"
           (click)="webSearchChange.emit(!webSearch())"
         >
           <nx-icon name="globe" /><span>搜尋網路</span>
         </button>
-      } @else {
-        <nx-info-popover
-          class="search-setup"
-          label="搜尋網路"
-          description="搜尋網路：查看設定說明"
-          panelLabel="網路搜尋設定"
-          icon="globe"
-          align="right"
-        >
-          <span popover-trigger class="search-trigger"
-            ><nx-icon name="globe" /><span>搜尋網路</span><small>未啟用</small></span
-          >
-          <div class="context-panel">
-            <strong>網路搜尋尚未啟用</strong>
-            <p>{{ webSearchNotice() }}</p>
-            <p>地端模型本身不會連網。管理員可部署公司自架的 SearXNG，再啟用搜尋服務。</p>
-          </div>
-        </nx-info-popover>
       }
       <nx-info-popover
         class="context-usage"
