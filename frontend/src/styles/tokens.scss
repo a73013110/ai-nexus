@@ -20,6 +20,13 @@
   --info: var(--focus);
   --success: var(--signal);
   --warning: var(--p-amber-700);
+  // Model activity only (generating, thinking): a blue → violet → rose sweep after Gemini's
+  // gradient. Every stop passes 4.5:1 on --surface and --canvas, so any of them can carry text.
+  --ai-1: var(--p-azure-600);
+  --ai-2: var(--p-violet-600);
+  --ai-3: var(--p-rose-600);
+  --ai-gradient: linear-gradient(90deg, var(--ai-1), var(--ai-2) 55%, var(--ai-3));
+  --ai-glow: color-mix(in srgb, var(--ai-2) 18%, transparent);
   --danger: var(--error);
   --status-on-color: var(--p-white);
   --code: var(--sidebar);
@@ -50,6 +57,9 @@
   --p-blue-100: #e3eaf0;
   --p-blue-600: #3b6b8d;
   --p-teal-700: #087e83;
+  --p-azure-600: #3367d6;
+  --p-violet-600: #7356bf;
+  --p-rose-600: #b04f66;
   --p-red-700: #97462c;
   --p-orange-50: #fff4e9;
   --p-amber-700: #885900;
@@ -66,6 +76,9 @@
   --p-sky-200: #abc5d5;
   --p-sky-100: #a6cce6;
   --p-teal-300: #79d9cb;
+  --p-azure-300: #8ab4f8;
+  --p-violet-300: #b79cf2;
+  --p-rose-300: #ee8f9b;
   --p-dark-accent: #18232c;
   --p-dark-accent-soft: #304352;
   --p-dark-error: #f0b095;
@@ -252,6 +265,12 @@
   --info: var(--focus);
   --success: var(--signal);
   --warning: var(--p-amber-300);
+  --ai-1: var(--p-azure-300);
+  --ai-2: var(--p-violet-300);
+  --ai-3: var(--p-rose-300);
+  // Redeclared so a dark preview zone resolves the gradient with its own stops.
+  --ai-gradient: linear-gradient(90deg, var(--ai-1), var(--ai-2) 55%, var(--ai-3));
+  --ai-glow: color-mix(in srgb, var(--ai-2) 24%, transparent);
   --danger: var(--error);
   --status-on-color: var(--p-night-950);
   --code: var(--p-night-code);

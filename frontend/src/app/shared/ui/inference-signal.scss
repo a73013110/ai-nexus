@@ -12,8 +12,20 @@
   width: 100%;
   height: 100%;
   display: block;
-  fill: var(--signal);
   overflow: visible;
+}
+stop:nth-child(1),
+.signal-start {
+  stop-color: var(--ai-1);
+  fill: var(--ai-1);
+}
+stop:nth-child(2) {
+  stop-color: var(--ai-2);
+}
+stop:nth-child(3),
+.signal-end {
+  stop-color: var(--ai-3);
+  fill: var(--ai-3);
 }
 .inference-signal.is-subtle {
   opacity: 0.7;
@@ -27,7 +39,6 @@
   stroke: var(--line);
 }
 .signal-flow {
-  stroke: var(--signal);
   stroke-dasharray: 10 70;
   opacity: 0;
 }
