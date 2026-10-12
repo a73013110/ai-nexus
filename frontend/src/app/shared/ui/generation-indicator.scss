@@ -5,6 +5,9 @@
   padding: var(--p-space-4) 0 var(--p-space-5);
   color: var(--secondary);
 }
+// A fluid orb after the Apple Intelligence glow: an aurora ring turns around two liquid blobs
+// that morph out of phase, and the core breathes. One loop per layer; queued runs slow down and
+// lose color so waiting reads differently from preparing.
 .generation-orbit {
   position: relative;
   display: grid;
@@ -12,42 +15,62 @@
   flex: none;
   width: var(--generation-indicator-size);
   height: var(--generation-indicator-size);
-  color: var(--signal);
-  background: var(--accent-soft);
+  isolation: isolate;
   border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--signal) 14%, transparent),
+    transparent
+  );
+  transition: filter var(--motion) var(--ease);
 }
 .generation-orbit i {
   position: absolute;
-  inset: 4px;
-  border: 1.5px solid transparent;
-  border-top-color: currentColor;
   border-radius: 50%;
+}
+.generation-orbit i:nth-child(1) {
+  inset: 0;
+  background: conic-gradient(
+    from 0deg,
+    var(--signal),
+    color-mix(in srgb, var(--focus) 75%, var(--signal)),
+    transparent 60%,
+    var(--signal)
+  );
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
   animation: orbit-turn 2.4s linear infinite;
 }
 .generation-orbit i:nth-child(2) {
-  inset: 9px;
-  border-top-color: transparent;
-  border-right-color: currentColor;
-  animation-direction: reverse;
-  animation-duration: 1.8s;
-  opacity: 0.7;
+  inset: 20%;
+  background: linear-gradient(
+    135deg,
+    var(--signal),
+    color-mix(in srgb, var(--focus) 60%, transparent)
+  );
+  opacity: 0.6;
+  animation: generation-morph 3.6s ease-in-out infinite;
 }
 .generation-orbit i:nth-child(3) {
-  inset: 14px;
-  border-top-color: transparent;
-  border-bottom-color: currentColor;
-  animation-duration: 3s;
+  inset: 26%;
+  background: linear-gradient(315deg, var(--signal), transparent);
   opacity: 0.5;
+  animation: generation-morph 4.8s ease-in-out -1.2s infinite reverse;
 }
 .generation-orbit b {
-  width: 5px;
-  height: 5px;
+  position: relative;
+  width: 24%;
+  height: 24%;
   border-radius: 50%;
-  background: currentColor;
-  animation: generation-pulse 2.4s ease-in-out infinite;
+  background: color-mix(in srgb, var(--signal) 30%, white);
+  box-shadow: 0 0 0.375rem var(--signal);
+  animation: generation-breathe 2.4s ease-in-out infinite;
 }
-.is-waiting .generation-orbit i {
-  animation-duration: 4s;
+.is-waiting .generation-orbit {
+  filter: saturate(0.25);
+}
+.is-waiting .generation-orbit i,
+.is-waiting .generation-orbit b {
+  animation-duration: 6s;
 }
 .generation-label {
   font-size: var(--text-label);

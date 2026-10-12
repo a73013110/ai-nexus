@@ -11,14 +11,32 @@
     transform: rotate(360deg);
   }
 }
-@keyframes generation-pulse {
+// The generation orb's liquid blobs: the outline morphs while it turns, so the silhouette never
+// repeats within a cycle.
+@keyframes generation-morph {
   0%,
-  65%,
   100% {
-    opacity: 0.3;
+    border-radius: 42% 58% 55% 45% / 48% 42% 58% 52%;
+    transform: rotate(0deg) scale(1);
   }
-  25% {
+  33% {
+    border-radius: 58% 42% 40% 60% / 55% 60% 40% 45%;
+    transform: rotate(120deg) scale(1.12);
+  }
+  66% {
+    border-radius: 45% 55% 62% 38% / 40% 52% 48% 60%;
+    transform: rotate(240deg) scale(0.92);
+  }
+}
+@keyframes generation-breathe {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(0.7);
+  }
+  50% {
     opacity: 1;
+    transform: scale(1);
   }
 }
 @keyframes attachment-arrive {
