@@ -44,12 +44,11 @@ export class UserSettingsService {
     if (!refresh && this.owner && this.generation === this.auth.generation()) {
       if ((await owner) === this.owner) return this.value();
     }
-    const generation = this.auth.generation();
+    const current = this.auth.guard();
     const [id, value] = await Promise.all([owner, this.api.get('/api/v1/settings')]);
-    if (generation !== this.auth.generation())
-      throw new DOMException('Identity changed', 'AbortError');
+    if (!current()) throw new DOMException('Identity changed', 'AbortError');
     this.owner = id;
-    this.generation = generation;
+    this.generation = this.auth.generation();
     this.apply(value);
     return value;
   }
@@ -61,10 +60,9 @@ export class UserSettingsService {
     this.preview(this.value());
   }
   async save(value: UserSettingsDto) {
-    const generation = this.auth.generation();
+    const current = this.auth.guard();
     const saved = await this.api.put('/api/v1/settings', { body: value });
-    if (generation !== this.auth.generation())
-      throw new DOMException('Identity changed', 'AbortError');
+    if (!current()) throw new DOMException('Identity changed', 'AbortError');
     this.apply(saved);
     return saved;
   }

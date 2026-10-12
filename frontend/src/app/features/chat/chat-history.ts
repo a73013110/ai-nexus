@@ -1,6 +1,8 @@
 import { inject, Injectable, signal } from '@angular/core';
 import { NexusApi } from '../../core/api/nexus-api';
 import type { ConversationDto } from '../../core/api/schema';
+import { AuthService } from '../../core/auth/auth-service';
+import { WorkspaceApi } from '../workspace/workspace-api';
 
 const PAGE_SIZE = 100;
 const listOrder = (a: ConversationDto, b: ConversationDto) =>
@@ -10,6 +12,8 @@ const listOrder = (a: ConversationDto, b: ConversationDto) =>
 @Injectable({ providedIn: 'root' })
 export class ChatHistory {
   private readonly api = inject(NexusApi);
+  private readonly workspace = inject(WorkspaceApi);
+  private readonly auth = inject(AuthService);
   readonly conversations = signal<ConversationDto[]>([]);
   readonly hasMore = signal(false);
   readonly search = signal('');
@@ -47,6 +51,13 @@ export class ChatHistory {
       const others = rows.filter((row) => row.id !== conversation.id);
       return fits ? [...others, conversation].sort(listOrder) : others;
     });
+  }
+
+  /** Labels change with conversation settings and imports, so callers reload them after those. */
+  async reloadLabels() {
+    const current = this.auth.guard();
+    const labels = await this.workspace.labels();
+    if (current()) this.labels.set(labels);
   }
 
   remove(id: string) {

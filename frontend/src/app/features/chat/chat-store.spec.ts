@@ -65,7 +65,10 @@ function setup(features = ['chat']) {
       provideRouter([]),
       { provide: NexusApi, useValue: api },
       { provide: WorkspaceSession, useValue: session },
-      { provide: AuthService, useValue: { generation: signal(1) } },
+      {
+        provide: AuthService,
+        useValue: { generation: signal(1), guard: AuthService.prototype.guard },
+      },
       { provide: UserSettingsService, useValue: { value: signal(defaultSettings()) } },
       { provide: ThemeService, useValue: { apply: vi.fn() } },
       { provide: NotificationStore, useValue: {} },

@@ -12,7 +12,10 @@ describe('controlled client reports', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: ApiClient, useValue: { post } },
-        { provide: AuthService, useValue: { generation: () => 0 } },
+        {
+          provide: AuthService,
+          useValue: { generation: () => 0, guard: AuthService.prototype.guard },
+        },
       ],
     });
     const service = TestBed.inject(ClientIssues);
@@ -27,7 +30,10 @@ describe('controlled client reports', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: ApiClient, useValue: { post } },
-        { provide: AuthService, useValue: { generation: () => 0 } },
+        {
+          provide: AuthService,
+          useValue: { generation: () => 0, guard: AuthService.prototype.guard },
+        },
       ],
     });
     const service = TestBed.inject(ClientIssues);
@@ -53,7 +59,10 @@ describe('controlled client reports', () => {
       TestBed.configureTestingModule({
         providers: [
           { provide: ApiClient, useValue: { post } },
-          { provide: AuthService, useValue: { generation: () => 0 } },
+          {
+            provide: AuthService,
+            useValue: { generation: () => 0, guard: AuthService.prototype.guard },
+          },
         ],
       });
       const service = TestBed.inject(ClientIssues);

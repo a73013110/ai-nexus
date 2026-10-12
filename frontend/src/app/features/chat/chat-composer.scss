@@ -79,6 +79,11 @@
   background: var(--accent);
   color: var(--accent-text);
   border-radius: var(--p-radius-md);
+  flex: none;
+  transition:
+    transform var(--motion-fast) var(--ease),
+    background-color var(--motion),
+    color var(--motion);
 }
 .send-button:not(:disabled):hover {
   background: var(--accent);
@@ -128,13 +133,6 @@
 .composer-bottom nx-composer-controls {
   min-width: 0;
   flex: 1;
-}
-.send-button {
-  flex: none;
-  transition:
-    transform var(--motion-fast) var(--ease),
-    background-color var(--motion),
-    color var(--motion);
 }
 .send-button:not(:disabled):active {
   transform: scale(0.94);

@@ -25,7 +25,7 @@ export class WorkspaceSession {
   }
   async load(refresh = false) {
     if (!refresh && this.me() && this.generation === this.auth.generation()) return this.me();
-    const generation = this.auth.generation();
+    const current = this.auth.guard();
     if (!(await this.auth.requireLogin())) return null;
     const request = this.api.me();
     const [me] = await Promise.all([
@@ -35,7 +35,7 @@ export class WorkspaceSession {
         refresh,
       ),
     ]);
-    if (generation !== this.auth.generation()) return null;
+    if (!current()) return null;
     this.adopt(me);
     return me;
   }

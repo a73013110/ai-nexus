@@ -24,7 +24,7 @@ function setup(webSearchStatus = vi.fn()) {
   TestBed.configureTestingModule({
     providers: [
       { provide: NexusApi, useValue: { webSearchStatus } },
-      { provide: AuthService, useValue: { generation } },
+      { provide: AuthService, useValue: { generation, guard: AuthService.prototype.guard } },
     ],
   });
   return { models: TestBed.inject(ChatModels), generation };

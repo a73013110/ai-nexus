@@ -55,12 +55,12 @@ export class ChatModels {
   }
 
   async loadWebSearch() {
-    const generation = this.auth.generation();
+    const current = this.auth.guard();
     try {
       const status = await this.api.webSearchStatus();
-      if (generation === this.auth.generation()) this.webSearchStatus.set(status);
+      if (current()) this.webSearchStatus.set(status);
     } catch {
-      if (generation === this.auth.generation())
+      if (current())
         this.webSearchStatus.set({
           available: false,
           notice: '暫時無法確認搜尋服務，請重新連線。',

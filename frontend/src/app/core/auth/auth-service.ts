@@ -50,6 +50,11 @@ export class AuthService {
       this.pending = null;
     }
   }
+  /** The returned check stays true until the account changes; late responses test it first. */
+  guard() {
+    const generation = this.generation();
+    return () => generation === this.generation();
+  }
   /** The route guard has just confirmed the session; a page loading right after reuses it. */
   async requireLogin(): Promise<boolean> {
     if (this.session()?.authenticated && Date.now() - this.confirmedAt < RECENT_SESSION_MS)

@@ -90,9 +90,7 @@ export class ChatComposer {
   readonly promptForm = form(this.store.draft, (schema) => {
     readonlyField(schema.text, {
       when: () =>
-        this.store.loading() ||
-        this.store.loadingConversation() ||
-        !!this.store.selected()?.isArchived ||
+        this.store.conversationLocked() ||
         this.store.submitting() ||
         this.store.pendingSubmission(),
     });
@@ -126,8 +124,7 @@ export class ChatComposer {
               id: 'knowledge',
               label: sources ? `知識來源（${sources}）` : '知識來源',
               icon: 'library',
-              disabled:
-                store.busy() || store.loadingConversation() || !!store.selected()?.isArchived,
+              disabled: !store.canPickKnowledge(),
             },
           ]
         : []),

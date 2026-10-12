@@ -39,6 +39,7 @@ export class ClientIssues implements ErrorHandler {
   }
   async report(error: unknown, kind: 'exception' | 'rejection') {
     if (isCancellation(error) || error instanceof ClientValidationError) return;
+    const current = this.auth.guard();
     const generation = this.auth.generation();
     if (this.epoch !== null && generation !== this.epoch) {
       this.reported.clear();
@@ -74,11 +75,7 @@ export class ClientIssues implements ErrorHandler {
       const result = await this.transport.post('/api/v1/client-issues', {
         body: { kind, fingerprint },
       });
-      if (
-        generation === this.auth.generation() &&
-        result.accepted &&
-        validIssueCode(result.issueCode)
-      ) {
+      if (current() && result.accepted && validIssueCode(result.issueCode)) {
         const message = systemProblem(result.issueCode);
         this.reported.set(key, { at: now, message });
         this.notice.set(message);

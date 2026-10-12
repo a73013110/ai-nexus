@@ -7,6 +7,13 @@ import { Select } from '../../shared/ui/select';
 import { formatModelName } from '../../shared/browser/format';
 import { ReasoningChoice } from './reasoning-choice';
 
+const EFFORT_LABELS: Record<string, string> = {
+  minimal: '快速回應',
+  low: '輕度思考',
+  medium: '標準思考',
+  high: '深入思考',
+};
+
 @Component({
   selector: 'nx-composer-controls',
   host: { class: 'ui-density-compact' },
@@ -177,7 +184,7 @@ export class ComposerControls {
     { value: 'auto', label: '自動思考' },
     ...(this.selected()?.reasoningEfforts || []).map((value) => ({
       value,
-      label: this.effortLabel(value),
+      label: EFFORT_LABELS[value] ?? value,
     })),
   ]);
   readonly modelName = formatModelName;
@@ -187,14 +194,4 @@ export class ComposerControls {
       ? Math.min(100, Math.round((value.estimatedInputTokens / value.contextTokens) * 100))
       : 0;
   });
-  effortLabel(value: string) {
-    return (
-      (
-        { minimal: '快速回應', low: '輕度思考', medium: '標準思考', high: '深入思考' } as Record<
-          string,
-          string
-        >
-      )[value] ?? value
-    );
-  }
 }
