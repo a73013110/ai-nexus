@@ -28,7 +28,7 @@ export function chatTour(narrow: boolean, knowledge: boolean): ProductTourDefini
         target: 'nx-composer-controls',
         title: '選擇適合的回答方式',
         description:
-          '在這裡選擇模型、推理強度與可用的網路搜尋。切換前可查看模型能力與 Context 使用量。',
+          '在這裡選擇模型、推理強度（窄畫面在模型選單裡）與可用的網路搜尋。切換前可查看模型能力與 Context 使用量。',
       },
       ...(knowledge
         ? [

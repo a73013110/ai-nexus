@@ -87,6 +87,7 @@
 // panel instead of the phone bottom sheet other dialogs become.
 @media (max-width: 640px) {
   .command-dialog {
+    --dialog-sheet: 0;
     --dialog-enter-y: -0.5rem;
     --dialog-enter-scale: 0.97;
     --dialog-ease: var(--ease-spring);
@@ -94,5 +95,6 @@
     margin-block: max(0.5rem, env(safe-area-inset-top)) auto;
     border: 1px solid var(--line);
     border-radius: var(--dialog-radius);
+    box-shadow: var(--shadow-floating);
   }
 }

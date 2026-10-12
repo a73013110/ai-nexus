@@ -1,5 +1,12 @@
 import { apiResource } from '../../core/api/api-resource';
-import { ChangeDetectionStrategy, Component, inject, input, computed } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  viewChild,
+} from '@angular/core';
 import type { ConversationSpendDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { InfoPopover } from '../../shared/ui/info-popover';
@@ -18,6 +25,7 @@ import { BillingApi, chargeKind, money } from './billing-api';
         icon="money"
         description="檢視全對話費用"
         align="right"
+        [anchor]="anchor()"
       >
         <div class="charge-content">
           <strong>全對話 · {{ spend.requests }} 次呼叫</strong>
@@ -48,7 +56,7 @@ import { BillingApi, chargeKind, money } from './billing-api';
           }
         </div>
       </nx-info-popover>
-    } @else if (failed()) {
+    } @else if (failed() && !anchor()) {
       <button
         type="button"
         class="quiet-button"
@@ -62,6 +70,9 @@ import { BillingApi, chargeKind, money } from './billing-api';
 export class ConversationSpendView {
   readonly id = input.required<string>();
   readonly revision = input('');
+  /** Set when an overflow menu shows the cost (`menuLabel`) and opens the panel (`open`). */
+  readonly anchor = input<HTMLElement | null>(null);
+  private readonly popover = viewChild(InfoPopover);
   private readonly api = inject(BillingApi);
   /** Read again for each new revision of the conversation (a finished run adds spending). */
   private readonly spendRead = apiResource({
@@ -75,8 +86,20 @@ export class ConversationSpendView {
   readonly failed = computed(() => !!this.spendRead.error());
   readonly money = money;
   readonly kind = chargeKind;
+  /** The overflow menu item; null while the first read is still loading. */
+  readonly menuLabel = computed(() => {
+    const spend = this.data();
+    if (!spend) return this.failed() ? '重新載入全對話費用' : null;
+    const summary = this.summary(spend);
+    if (summary === '全對話費用') return '檢視全對話費用';
+    return summary.startsWith('費用') ? '全對話' + summary : `全對話費用 · ${summary}`;
+  });
   load() {
     this.spendRead.reload();
+  }
+  open() {
+    if (this.data()) this.popover()?.toggle();
+    else this.load();
   }
   summary(spend: ConversationSpendDto) {
     const priced = spend.totals.filter((x) => !!x.currency);

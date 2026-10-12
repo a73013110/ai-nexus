@@ -2,7 +2,9 @@
   padding-inline: var(--workspace-gutter);
   scrollbar-gutter: stable both-edges;
   flex: none;
-  padding-block: var(--p-space-2) max(var(--p-space-3), env(safe-area-inset-bottom));
+  // The home indicator sits under the keyboard while it is up, so its inset is not kept twice.
+  padding-block: var(--p-space-2)
+    max(var(--p-space-3), env(safe-area-inset-bottom) - var(--keyboard-inset, 0px));
   // A scroll container, so the stable gutter matches the thread above; the block padding leaves
   // room for the composer's 3px focus ring.
   overflow: hidden;

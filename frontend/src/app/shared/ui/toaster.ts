@@ -13,6 +13,7 @@ import {
   viewChild,
   viewChildren,
 } from '@angular/core';
+import { SwipeTracker } from '../browser/swipe';
 import { Icon } from './icon';
 import { ToastService, toastIcon, type Toast } from './toast-service';
 
@@ -116,7 +117,7 @@ export class Toaster {
   private readonly focused = signal(false);
   readonly expanded = computed(() => this.hovered() || this.focused());
   readonly heights = signal<Record<string, number>>({});
-  readonly dragging = signal<{ id: string; start: number; x: number } | null>(null);
+  readonly dragging = signal<{ id: string; swipe: SwipeTracker; x: number } | null>(null);
   private readonly layer = viewChild.required<ElementRef<HTMLElement>>('layer');
   private readonly bodies = viewChildren<ElementRef<HTMLElement>>('body');
   private readonly injector = inject(Injector);
@@ -247,20 +248,23 @@ export class Toaster {
   grab(event: PointerEvent, toast: Toast) {
     if (event.button !== 0 || (event.target as HTMLElement).closest('button')) return;
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-    this.dragging.set({ id: toast.id, start: event.clientX, x: 0 });
+    this.dragging.set({
+      id: toast.id,
+      swipe: new SwipeTracker(1, event.clientX, event.timeStamp),
+      x: 0,
+    });
   }
   drag(event: PointerEvent, toast: Toast) {
     const drag = this.dragging();
     if (drag?.id !== toast.id) return;
-    const dx = event.clientX - drag.start;
-    // Rightward follows the pointer; leftward resists, since that is not a way out.
-    this.dragging.set({ ...drag, x: dx > 0 ? dx : dx / 6 });
+    this.dragging.set({ ...drag, x: drag.swipe.move(event.clientX, event.timeStamp) });
   }
   release(event: PointerEvent, toast: Toast) {
     const drag = this.dragging();
     if (drag?.id !== toast.id) return;
     this.dragging.set(null);
-    if (event.type === 'pointercancel' || drag.x <= SWIPE_DISMISS) return;
+    if (event.type === 'pointercancel' || !drag.swipe.dismisses(SWIPE_DISMISS, event.timeStamp))
+      return;
     // Set on the element itself: the leaving view's bindings are no longer refreshed.
     const element = event.currentTarget as HTMLElement;
     element.dataset['swiped'] = '';

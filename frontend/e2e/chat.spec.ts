@@ -552,6 +552,43 @@ test("chat search is opt-in and cost/source panels stay accessible without clipp
   const mobileBox = await panel.boundingBox();
   expect(mobileBox!.x).toBeGreaterThanOrEqual(0);
   expect(mobileBox!.y + mobileBox!.height).toBeLessThanOrEqual(812);
+  await page.keyboard.press("Escape");
+  // Phones keep the menu button, the title, one overflow menu and the tour in the header.
+  const header = page.locator(".topbar");
+  expect(
+    await header
+      .getByRole("button")
+      .evaluateAll((buttons) =>
+        buttons.map((x) => x.getAttribute("aria-label")),
+      ),
+  ).toEqual(["展開側欄", "對話操作", "操作導覽"]);
+  await expect(
+    header.getByRole("heading", { name: "公開資料的最新消息", exact: true }),
+  ).toBeVisible();
+  const more = header.getByRole("button", { name: "對話操作", exact: true });
+  await more.click();
+  for (const name of ["重新命名目前對話", "收藏", "搜尋目前對話訊息"])
+    await expect(
+      page.getByRole("menuitem", { name, exact: true }),
+    ).toBeVisible();
+  await page.getByRole("menuitem", { name: /^全對話費用 · / }).click();
+  const spend = page.getByRole("dialog", {
+    name: "檢視全對話費用",
+    exact: true,
+  });
+  await expect(spend).toContainText("全對話 · 2 次呼叫");
+  await expect(spend).toBeInViewport({ ratio: 1 });
+  await page.keyboard.press("Escape");
+  await expect(spend).toBeHidden();
+  await expect(more).toBeFocused();
+  await more.click();
+  await page
+    .getByRole("menuitem", { name: "搜尋目前對話訊息", exact: true })
+    .click();
+  await expect(
+    page.getByRole("searchbox", { name: "尋找訊息", exact: true }),
+  ).toBeFocused();
+  await expectViewportContained(page);
 });
 
 test("deployments without web search hide it from the composer and explain it in settings", async ({

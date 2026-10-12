@@ -1,7 +1,10 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  DestroyRef,
   ElementRef,
+  Injector,
+  afterNextRender,
   inject,
   input,
   output,
@@ -15,6 +18,7 @@ import { Icon } from '../../shared/ui/icon';
 import { WorkspaceLayout } from './workspace-layout';
 import { NotificationStore } from '../../features/notifications/notification-store';
 import { CountBadge } from '../../shared/ui/count-badge';
+import { bindSwipe, swipeSettleTime } from '../../shared/browser/swipe';
 
 let sequence = 0;
 
@@ -112,9 +116,57 @@ export class WorkspaceSidebar {
       });
       onCleanup(() => cancelAnimationFrame(frame));
     });
+    inject(DestroyRef).onDestroy(this.bindSwipe());
   }
   collapse() {
     this.layout.closeMobile();
+  }
+  /**
+   * The open drawer follows a leftward drag on its heading or the scrim and closes past a third of
+   * its width or on a flick; otherwise it springs back. The nav list keeps its own scrolling.
+   */
+  private bindSwipe() {
+    const host = this.element.nativeElement;
+    const injector = inject(Injector);
+    return bindSwipe(host, {
+      axis: 'x',
+      direction: -1,
+      begin: (event) => {
+        const target = event.target as Element;
+        if (
+          !this.layout.overlay() ||
+          !target.closest('.workspace-sidebar-heading, .workspace-backdrop')
+        )
+          return null;
+        const width = host.offsetWidth;
+        const clear = () => {
+          host.style.removeProperty('transform');
+          host.style.removeProperty('--swipe-progress');
+          delete host.dataset['swipe'];
+        };
+        return {
+          distance: width / 3,
+          move(offset) {
+            host.dataset['swipe'] = 'drag';
+            host.style.transform = `translateX(${offset}px)`;
+            host.style.setProperty('--swipe-progress', String(Math.max(0, -offset) / width));
+          },
+          end: (dismiss) => {
+            if (dismiss) {
+              // Hold the dragged position until the closed class lands, so the slide out starts there.
+              this.layout.closeMobile();
+              afterNextRender(clear, { injector });
+              return;
+            }
+            clear();
+            host.dataset['swipe'] = 'return';
+            window.setTimeout(() => {
+              if (host.dataset['swipe'] === 'return') delete host.dataset['swipe'];
+            }, swipeSettleTime(host));
+          },
+        };
+      },
+    });
   }
   /** The desktop center is non-modal, so the bell stays reachable and closes it again. */
   toggleNotifications(event: MouseEvent) {

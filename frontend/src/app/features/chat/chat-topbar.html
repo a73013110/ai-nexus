@@ -7,6 +7,7 @@
         [scope]="conversation.id"
         [save]="rename"
         [disabled]="store.loadingConversation()"
+        [editButton]="!compact()"
       />
     } @else {
       <h1>新對話</h1>
@@ -15,7 +16,7 @@
   @if (store.selected()?.isArchived) {
     <span class="archive-badge">已封存</span>
   }
-  @if (store.selected()?.projectId; as projectId) {
+  @if (!compact() && store.selected()?.projectId; as projectId) {
     <a
       class="project-chat-link"
       [routerLink]="['/projects', projectId]"
@@ -24,15 +25,17 @@
     >
   }
 </div>
-<div class="topbar-actions">
+<div class="topbar-actions" #actions>
   @if (store.selected(); as conversation) {
+    <!-- Phones fold the cost, find, favourite and rename into the conversation menu. -->
     <nx-conversation-spend
+      #spend
+      [class.in-menu]="compact()"
       [id]="conversation.id"
       [revision]="conversation.updatedAt + (store.liveRun()?.status ?? '')"
+      [anchor]="compact() ? actions : null"
     />
-  }
-  @if (store.selected(); as conversation) {
-    @if (store.hasSharing()) {
+    @if (store.hasSharing() && !compact()) {
       <button
         class="icon-button"
         aria-label="分享此對話"
@@ -47,7 +50,9 @@
       [conversation]="conversation"
       [busy]="store.busy()"
       [sharing]="store.hasSharing()"
-      (action)="action.emit($event)"
+      [compact]="compact()"
+      [spend]="spend.menuLabel()"
+      (action)="choose($event, spend)"
     />
   }
   <!-- Every page keeps its tour at the far right of its header. -->

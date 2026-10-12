@@ -1,4 +1,11 @@
-import { ChangeDetectionStrategy, Component, effect, inject, Injector } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  effect,
+  inject,
+  Injector,
+} from '@angular/core';
 import { WorkspaceSession } from './core/auth/workspace-session';
 import { UnhandledIssue } from './core/errors/unhandled-issue';
 import { RouterOutlet } from '@angular/router';
@@ -6,6 +13,8 @@ import { SettingsDialog } from './features/settings/settings-dialog';
 import { IdentityBanner } from './core/auth/identity-banner';
 import { ReaderDialog } from './features/knowledge/reader-dialog';
 import { NotificationCenter } from './features/notifications/notification-center';
+import { trackKeyboardInset } from './core/layout/keyboard-inset';
+import { bindSheetSwipe } from './shared/ui/sheet-swipe';
 
 @Component({
   imports: [
@@ -25,6 +34,9 @@ export class App {
   constructor() {
     const session = inject(WorkspaceSession);
     const injector = inject(Injector);
+    const destroyRef = inject(DestroyRef);
+    destroyRef.onDestroy(trackKeyboardInset());
+    destroyRef.onDestroy(bindSheetSwipe());
     let started = false;
     effect(() => {
       if (session.me() && !started) {

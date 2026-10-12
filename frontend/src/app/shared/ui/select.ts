@@ -21,7 +21,11 @@ export interface SelectOption {
 }
 let sequence = 0;
 
-/** Single-choice listbox. The native top layer prevents clipping inside dialogs and scroll panels. */
+/**
+ * Single-choice listbox. The native top layer prevents clipping inside dialogs and scroll panels.
+ * A projected `[select-footer]` adds a related setting under the options (e.g. reasoning effort
+ * under the model); Tab moves into it and focus leaving the panel closes it.
+ */
 @Component({
   selector: 'nx-select',
   imports: [Icon],
@@ -47,6 +51,8 @@ let sequence = 0;
       }}</span
       ><nx-icon name="chevron" />
     </button>
+    <!-- Focus stays on the projected footer controls; the panel only routes their Escape. -->
+    <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
     <div
       #panel
       [id]="id + '-panel'"
@@ -55,6 +61,8 @@ let sequence = 0;
       [attr.role]="search() ? 'dialog' : null"
       [attr.aria-label]="label()"
       (toggle)="toggled($event)"
+      (focusout)="leave($event)"
+      (keydown.escape)="dismiss($event)"
     >
       @if (search()) {
         <div class="select-search">
@@ -104,6 +112,7 @@ let sequence = 0;
           <p class="select-empty">沒有符合的選項</p>
         }
       </div>
+      <ng-content select="[select-footer]" />
     </div>`,
 })
 export class Select {
@@ -191,7 +200,8 @@ export class Select {
     if (event.isComposing) return;
     const key = event.key;
     if (key === 'Tab') {
-      this.close();
+      if (!event.shiftKey && this.opened() && this.focusFooter()) event.preventDefault();
+      else this.close();
       return;
     }
     if (key === 'Escape' && this.opened()) {
@@ -237,6 +247,31 @@ export class Select {
       }
       this.searchTimer = setTimeout(() => (this.typed = ''), 650);
     }
+  }
+  private focusFooter() {
+    const footer = this.panel().nativeElement.querySelector<HTMLElement>('[select-footer]');
+    if (!footer?.checkVisibility()) return false;
+    const target =
+      footer.querySelector<HTMLElement>('input:checked:enabled') ??
+      footer.querySelector<HTMLElement>('input:enabled, button:enabled');
+    target?.focus();
+    return !!target;
+  }
+  leave(event: FocusEvent) {
+    const next = event.relatedTarget as Node | null;
+    if (
+      this.opened() &&
+      next &&
+      !this.panel().nativeElement.contains(next) &&
+      next !== this.trigger().nativeElement
+    )
+      this.close();
+  }
+  /** Escape from footer controls; the trigger and search field handle their own. */
+  dismiss(event: Event) {
+    event.preventDefault();
+    this.close();
+    this.trigger().nativeElement.focus();
   }
   private reveal() {
     requestAnimationFrame(() =>

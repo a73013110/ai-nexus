@@ -89,3 +89,20 @@
     display: none;
   }
 }
+// The title takes every pixel the menu, overflow and tour buttons leave.
+@media (max-width: 640px) {
+  .topbar-left {
+    flex: 1;
+  }
+  .conversation-heading {
+    --inline-title-max-width: none;
+    display: flex;
+    flex: 1;
+  }
+  nx-inline-title {
+    min-width: 0;
+  }
+  .in-menu {
+    display: contents;
+  }
+}

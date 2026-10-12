@@ -13,7 +13,9 @@ export type ConversationAction =
   | 'favorite'
   | 'archive'
   | 'find'
-  | 'share';
+  | 'share'
+  | 'spend'
+  | 'project';
 
 /** Menu items for one conversation; `compact` is the shorter list used by sidebar rows. */
 export function conversationMenu(
@@ -54,25 +56,27 @@ export function conversationMenu(
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './conversation-actions.scss',
   template: `<div class="conversation-actions">
-    <button
-      type="button"
-      class="icon-button favorite-button"
-      [class.is-favorite]="conversation().isFavorite"
-      [attr.aria-label]="conversation().isFavorite ? '取消收藏目前對話' : '收藏目前對話'"
-      [attr.aria-pressed]="conversation().isFavorite"
-      (click)="action.emit('favorite')"
-    >
-      <nx-icon name="star" />
-    </button>
-    <button
-      type="button"
-      class="icon-button"
-      aria-label="搜尋目前對話訊息"
-      title="搜尋訊息"
-      (click)="action.emit('find')"
-    >
-      <nx-icon name="search" />
-    </button>
+    @if (!compact()) {
+      <button
+        type="button"
+        class="icon-button favorite-button"
+        [class.is-favorite]="conversation().isFavorite"
+        [attr.aria-label]="conversation().isFavorite ? '取消收藏目前對話' : '收藏目前對話'"
+        [attr.aria-pressed]="conversation().isFavorite"
+        (click)="action.emit('favorite')"
+      >
+        <nx-icon name="star" />
+      </button>
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="搜尋目前對話訊息"
+        title="搜尋訊息"
+        (click)="action.emit('find')"
+      >
+        <nx-icon name="search" />
+      </button>
+    }
     <nx-action-menu label="對話操作" [items]="items()" (action)="choose($event)" />
   </div>`,
 })
@@ -80,13 +84,28 @@ export class ConversationActions {
   readonly conversation = input.required<ConversationDto>();
   readonly busy = input(false);
   readonly sharing = input(false);
+  /** Phones keep only the menu: find, the project link and the cost (`spend` label) join it. */
+  readonly compact = input(false);
+  readonly spend = input<string | null>(null);
   readonly action = output<ConversationAction>();
-  readonly items = computed(() =>
-    conversationMenu(this.conversation(), {
+  readonly items = computed(() => {
+    const items = conversationMenu(this.conversation(), {
       busy: this.busy(),
       sharing: this.sharing(),
-    }),
-  );
+    });
+    if (!this.compact()) return items;
+    const spend = this.spend();
+    const at = items.findIndex((x) => x.id === 'favorite') + 1;
+    return [
+      ...items.slice(0, at),
+      { id: 'find', label: '搜尋目前對話訊息', icon: 'search' },
+      ...(spend ? [{ id: 'spend', label: spend, icon: 'money' }] : []),
+      ...(this.conversation().projectId
+        ? [{ id: 'project', label: '檢視專案指示與參考文件', icon: 'archive' }]
+        : []),
+      ...items.slice(at),
+    ];
+  });
   choose(value: string) {
     this.action.emit(value as ConversationAction);
   }

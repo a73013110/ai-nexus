@@ -129,8 +129,8 @@ nx-info-popover {
     display: none;
   }
 }
-// The narrow composer keeps one row: web search moves to the tools menu, the model name takes
-// what is left and truncates, and Context shows only its ring.
+// The narrow composer keeps one row: web search moves to the tools menu, reasoning effort into
+// the model panel (ReasoningChoice), the model name takes what is left, and Context shows its ring.
 @container composer (max-width: 36rem) {
   .composer-controls {
     flex-wrap: nowrap;
@@ -140,16 +140,11 @@ nx-info-popover {
     display: none;
   }
   .model-control {
-    flex: 0 1 auto;
     --select-trigger-max-width: 100%;
-  }
-  .reasoning-control {
-    flex: 0 1 auto;
-    --select-trigger-max-width: 5rem;
-  }
-  .model-control,
-  .reasoning-control {
     --select-trigger-padding-inline: var(--p-space-1);
+  }
+  .reasoning-control {
+    display: none;
   }
   .composer-tools {
     margin-inline-start: auto;

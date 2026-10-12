@@ -1,0 +1,57 @@
+// Shown only in the narrow composer; the panel is in the top layer but still queries the composer.
+:host {
+  display: none;
+}
+@container composer (max-width: 36rem) {
+  :host {
+    display: block;
+  }
+}
+fieldset {
+  margin: var(--p-space-2) 0 0;
+  padding: var(--p-space-2) 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+legend {
+  float: left;
+  width: 100%;
+  padding: 0 var(--p-space-2) var(--p-space-2);
+  font-size: var(--text-caption);
+  color: var(--muted);
+}
+.reasoning-options {
+  clear: both;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+  gap: var(--p-space-1);
+}
+label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--button-target);
+  padding-inline: var(--p-space-2);
+  white-space: nowrap;
+  border-radius: var(--p-radius-md);
+  font-size: var(--text-caption);
+  color: var(--secondary);
+  cursor: pointer;
+}
+label:hover {
+  background: var(--hover);
+}
+label:has(:checked) {
+  background: var(--surface);
+  box-shadow: var(--selected-ring);
+  color: var(--ink);
+}
+label:has(:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+label:has(:disabled) {
+  opacity: 0.5;
+  cursor: default;
+}

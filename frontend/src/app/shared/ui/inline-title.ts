@@ -70,15 +70,17 @@ let sequence = 0;
         >
           {{ value() }}
         </h1>
-        <button
-          type="button"
-          class="icon-button title-edit"
-          aria-label="修改目前對話名稱"
-          [disabled]="disabled()"
-          (click)="begin()"
-        >
-          <nx-icon name="edit" />
-        </button>
+        @if (editButton()) {
+          <button
+            type="button"
+            class="icon-button title-edit"
+            aria-label="修改目前對話名稱"
+            [disabled]="disabled()"
+            (click)="begin()"
+          >
+            <nx-icon name="edit" />
+          </button>
+        }
       </div>
     }`,
 })
@@ -88,6 +90,8 @@ export class InlineTitle {
   readonly scope = input.required<string>();
   readonly disabled = input(false);
   readonly appearance = input<'inline' | 'block'>('inline');
+  /** Off where a menu already offers renaming; double click and F2 still edit in place. */
+  readonly editButton = input(true);
   readonly save = input.required<(value: string) => Promise<boolean>>();
   readonly editing = signal(false);
   readonly draft = signal('');

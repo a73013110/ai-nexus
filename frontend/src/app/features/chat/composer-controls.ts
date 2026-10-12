@@ -5,11 +5,12 @@ import { Icon } from '../../shared/ui/icon';
 import { InfoPopover } from '../../shared/ui/info-popover';
 import { Select } from '../../shared/ui/select';
 import { formatModelName } from '../../shared/browser/format';
+import { ReasoningChoice } from './reasoning-choice';
 
 @Component({
   selector: 'nx-composer-controls',
   host: { class: 'ui-density-compact' },
-  imports: [Notice, Icon, InfoPopover, Select],
+  imports: [Notice, Icon, InfoPopover, Select, ReasoningChoice],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './composer-controls.scss',
   template: `<div class="composer-controls">
@@ -25,7 +26,17 @@ import { formatModelName } from '../../shared/browser/format';
         [searchable]="true"
         [searchFrom]="8"
         (valueChange)="modelChange.emit($event)"
-      />
+      >
+        @if (selected()?.reasoningEfforts?.length) {
+          <nx-reasoning-choice
+            select-footer
+            [options]="effortOptions()"
+            [value]="effort()"
+            [disabled]="disabled()"
+            (valueChange)="effortChange.emit($event)"
+          />
+        }
+      </nx-select>
     } @else {
       <span class="model-lock" title="模型由系統指定"
         ><nx-icon name="lock" />{{

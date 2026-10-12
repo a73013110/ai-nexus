@@ -26,7 +26,7 @@
 - 堆疊參考 [Sonner](https://sonner.emilkowal.ski/)：最新在前、後方露出邊緣（最多 3 張可見、保留 5 則）；滑過或聚焦時以彈簧展開並暫停所有計時，分頁隱藏時也暫停。
 - 進場是動態島語彙：表面（`::before`）從角落的膠囊拉成寬 pill，再展開成卡片，文字最後淡入；離場收回膠囊。表面另成一層，陰影跟著形變。
 - 同一 `id` 再次顯示會原地更新並重新計時（例：上傳中→已上傳）；進行中的 toast 設 `duration: 0`，失敗或中止時 `dismiss`。
-- 關閉：關閉鈕、Esc（焦點移到下一則或回到原處）、向右滑超過 64px。帶動作的 toast 預設 8 秒。
+- 關閉：關閉鈕、Esc（焦點移到下一則或回到原處）、向右滑超過 64px 或甩動。帶動作的 toast 預設 8 秒。
 - 圖層是 manual popover；modal 開著時新 toast 會重新進入 top layer，所以顯示在對話框之上（但受 modal inert，無法點）。
 - 背景任務結束的 toast 是例外的失敗回饋：失敗仍留在任務頁與通知匣，規則見[本分頁的任務 toast](../features/notifications.md#本分頁的任務-toast)。
 - 螢幕閱讀器只聽兩個常駐 live region（polite／danger 用 assertive），不重複朗讀卡片；換帳號時清空。
@@ -40,10 +40,10 @@
 ## 對話框
 
 - 置中的對話框一律掛 `.platform-dialog` 或 `.workspace-dialog`，共用外框與動效，元件只覆寫尺寸（快捷指令、檔案預覽也是）。
-- 開啟時由下方 0.5rem、`scale 0.97` 彈入，關閉沿原路以 `--ease-exit` 退場，遮罩同步淡入淡出（`overlay`、`display` 用 `allow-discrete` 保留在 top layer）。起點與曲線是 `--dialog-enter-y`／`--dialog-enter-scale`／`--dialog-ease`；640px 以下的底部 sheet 從底緣整片升起、不回彈（回彈會讓底邊離開畫面）。
+- 開啟時由下方 0.5rem、`scale 0.97` 彈入，關閉沿原路以 `--ease-exit` 退場，遮罩同步淡入淡出（`overlay`、`display` 用 `allow-discrete` 保留在 top layer）。起點與曲線是 `--dialog-enter-y`／`--dialog-enter-scale`／`--dialog-ease`；手機的底部 sheet 見 [手機](mobile.md)。
 - 關閉中仍在畫面上，但 `pointer-events: none`＋`interactivity: inert`，不接點擊與焦點。
 - 側邊的 `DetailDrawer` 同一套作法改成從右緣滑入、滑出（1.5rem）；`closed` 等退場結束才送出，宿主清空內容時抽屜不會空著離開，退場中重新開啟則不送。
-- `DialogMotion` 以 `offsetWidth／offsetHeight` 量測，不受開關時的縮放影響。
+- sheet 與抽屜可滑動關閉，未達距離或速度以 `--ease-spring` 彈回，見 [手機](mobile.md#滑動關閉)。
 
 ## 浮層（popover）
 

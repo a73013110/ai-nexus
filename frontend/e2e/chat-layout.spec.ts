@@ -598,3 +598,129 @@ test("history groups by local day, shares one row menu and moves with arrow keys
     new RegExp(`/chat/${core.conversations[0].id}$`),
   );
 });
+
+test.describe("on-screen keyboard", () => {
+  test.use({
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+  });
+
+  async function expectComposerAbove(page: Page, bottom: number) {
+    const composer = page.locator("form.composer");
+    await expect
+      .poll(async () => {
+        const box = (await composer.boundingBox())!;
+        return Math.round(bottom - box.y - box.height);
+      })
+      .toBeGreaterThanOrEqual(0);
+    const box = (await composer.boundingBox())!;
+    expect(bottom - box.y - box.height).toBeLessThan(120);
+    // The frame moved instead of the page: no document scroll in either direction.
+    expect(
+      await page.evaluate(() => ({
+        scrolled: scrollX !== 0 || scrollY !== 0,
+        horizontal: document.documentElement.scrollWidth > innerWidth,
+      })),
+    ).toEqual({ scrolled: false, horizontal: false });
+  }
+
+  test("Chromium resizes the content, so the docked composer rises with the keyboard", async ({
+    page,
+  }) => {
+    await new ApiFixture().attach(page);
+    await page.goto("/chat");
+    await expect(page.locator('meta[name="viewport"]')).toHaveAttribute(
+      "content",
+      /interactive-widget=resizes-content/,
+    );
+    const input = page.getByRole("textbox", { name: "傳送訊息", exact: true });
+    await input.tap();
+    await expectComposerAbove(page, 844);
+    // resizes-content shrinks the layout viewport while the keyboard is up.
+    await page.setViewportSize({ width: 390, height: 500 });
+    await expectComposerAbove(page, 500);
+    await expect(input).toBeFocused();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expectComposerAbove(page, 844);
+  });
+
+  test("where only the visual viewport shrinks (Safari), the frame and sheets subtract the keyboard", async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      const real = window.visualViewport!;
+      const fake = new EventTarget();
+      let covered = 0;
+      for (const key of [
+        "width",
+        "offsetLeft",
+        "offsetTop",
+        "pageLeft",
+        "pageTop",
+        "scale",
+      ])
+        Object.defineProperty(fake, key, {
+          get: () => real[key as keyof VisualViewport],
+        });
+      Object.defineProperty(fake, "height", {
+        get: () => real.height - covered,
+      });
+      Object.defineProperty(window, "visualViewport", { get: () => fake });
+      (window as unknown as { keyboard(height: number): void }).keyboard = (
+        height,
+      ) => {
+        covered = height;
+        fake.dispatchEvent(new Event("resize"));
+      };
+    });
+    await new ApiFixture().attach(page);
+    await page.goto("/chat");
+    const input = page.getByRole("textbox", { name: "傳送訊息", exact: true });
+    await input.tap();
+    const keyboard = (height: number) =>
+      page.evaluate(
+        (value) =>
+          (window as unknown as { keyboard(height: number): void }).keyboard(
+            value,
+          ),
+        height,
+      );
+    await keyboard(320);
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          document.documentElement.style.getPropertyValue("--keyboard-inset"),
+        ),
+      )
+      .toBe("320px");
+    await expectComposerAbove(page, 844 - 320);
+    await expect(
+      page.getByRole("button", { name: "送出訊息", exact: true }),
+    ).toBeInViewport();
+    await page.locator(".workspace-menu-button").tap();
+    await page
+      .locator(".workspace-sidebar")
+      .getByRole("button", { name: "通知", exact: true })
+      .tap();
+    const sheet = page.getByRole("dialog", { name: "通知", exact: true });
+    await expect
+      .poll(async () => {
+        const box = (await sheet.boundingBox())!;
+        return Math.round(box.y + box.height);
+      })
+      .toBe(844 - 320);
+    await sheet.getByRole("button", { name: "關閉通知", exact: true }).tap();
+    await expect(sheet).toBeHidden();
+    // A scrollbar-sized gap is not a keyboard.
+    await keyboard(20);
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          document.documentElement.style.getPropertyValue("--keyboard-inset"),
+        ),
+      )
+      .toBe("");
+    await expectComposerAbove(page, 844);
+  });
+});
