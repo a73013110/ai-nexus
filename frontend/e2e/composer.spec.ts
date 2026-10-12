@@ -242,6 +242,8 @@ test("narrow composers fold reasoning effort into the model panel", async ({
   await expect(
     effort.getByRole("radio", { name: "深入思考", exact: true }),
   ).toBeChecked();
+  // Measure the targets at rest, not while the panel still scales in.
+  await settleEntrance(page);
   for (const option of await effort.locator("label").all())
     expect((await option.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await expect(effort).toBeInViewport({ ratio: 1 });

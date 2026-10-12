@@ -653,6 +653,10 @@ test.describe("touch interaction", () => {
     const sidebar = page.locator(".workspace-sidebar");
     await opener.tap();
     await expect(sidebar).toHaveClass(/is-open/);
+    // The class lands as the slide in starts; measure the heading once the drawer is in place.
+    await expect
+      .poll(() => sidebar.evaluate((element) => element.getAnimations().length))
+      .toBe(0);
     const heading = (await sidebar
       .locator(".workspace-sidebar-heading")
       .boundingBox())!;

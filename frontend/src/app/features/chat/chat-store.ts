@@ -146,7 +146,8 @@ export class ChatStore {
   private preferenceVersion = 0;
   private authGeneration = -1;
   // Saving waits for the session's stored draft; a slow start must not overwrite it with an empty one.
-  private draftSettled = false;
+  // The owner is kept here because the shared session forgets the account before this store resets.
+  private draftOwner: string | null = null;
 
   constructor() {
     effect(() => {
@@ -173,9 +174,8 @@ export class ChatStore {
   }
 
   private persistDraft() {
-    const user = this.me();
-    if (user && this.ready() && this.draftSettled && !this.loadingConversation())
-      this.composer.save(user.id, this.selected()?.id ?? null);
+    if (this.draftOwner && this.ready() && !this.loadingConversation())
+      this.composer.save(this.draftOwner, this.selected()?.id ?? null);
   }
   private async restoreDraft(id: string | null) {
     const user = this.me();
@@ -230,7 +230,7 @@ export class ChatStore {
       if (attachments.status === 'rejected')
         this.attachments.error.set('附件服務尚未就緒，請重新連線。');
       if (!this.selected() && !this.draft().text) await this.restoreDraft(null);
-      this.draftSettled = true;
+      this.draftOwner = me.id;
       this.persistDraft();
       if (me.activeRunId && !this.liveRun()) {
         const active = await this.api.run(me.activeRunId);
@@ -637,7 +637,7 @@ export class ChatStore {
   private resetSession() {
     this.knowledge.reset();
     this.persistDraft();
-    this.draftSettled = false;
+    this.draftOwner = null;
     this.model.reset();
     this.run.reset();
     this.composer.reset();
