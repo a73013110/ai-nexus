@@ -34,7 +34,7 @@ import { ResourceSharing } from '../sharing/resource-sharing';
 import { FileDrop } from '../../shared/browser/file-drop';
 import { WorkspaceApi } from '../workspace/workspace-api';
 import { KnowledgeApi } from './knowledge-api';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
 import { LibraryPicker } from '../files/library-picker';
 import { TextSourceEditor } from './text-source-editor';
 import { ReaderLink } from '../../shared/browser/reader-link';
@@ -57,7 +57,6 @@ import { JobToasts } from '../tasks/job-toasts';
     ActionMenu,
     ResourceSharing,
     FileDrop,
-    RouterLink,
     LibraryPicker,
     ReaderLink,
     RetrievalResults,

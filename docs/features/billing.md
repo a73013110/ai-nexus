@@ -8,7 +8,7 @@
 
 `tokens` 為 `{ from, until, timezoneOffsetMinutes, daily }`，daily 包含 `date, modelId, modelDisplayName, requests, requestsWithUsage, inputTokens, outputTokens`。從 Runs／ModelInvocations 聚合，含沒有價格快照的舊呼叫及 OCR／評測／review 等背景模型呼叫，不依費用是否可結算決定 Token 數。缺少回報不當成已知零值，合計只加已回報數字，完整回報比例另外呈現；無呼叫日期補零維持連續時間軸。總覽沿用所選時區／owner／區間，個人設定為最近 30 日 UTC，模型識別遵循平台顯示政策。
 
-管理員在管理頁或總覽開啟「模型與工具價格」，新增價格版本：
+管理員在平台管理的「管理工具」選單開啟「模型與工具價格」，新增價格版本：
 
 | 欄位 | 設定方式 |
 | --- | --- |
