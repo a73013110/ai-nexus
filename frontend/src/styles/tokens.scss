@@ -1,4 +1,13 @@
 // Primitive → semantic → component. Theme zones also power the component review page.
+// Resource surfaces (overview tiles, panels, resource cards): a hairline, a generous radius and a
+// whisper of shadow. Mixed from semantic colors, so each theme zone recomputes them.
+@mixin resource-surfaces {
+  --tile-radius: 1.25rem;
+  --tile-inner-radius: 0.875rem;
+  --tile-line: color-mix(in srgb, var(--line) 70%, transparent);
+  --tile-inset: color-mix(in srgb, var(--ink) 4%, var(--surface));
+  --tile-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 5%, transparent);
+}
 @mixin light-theme {
   color-scheme: light;
   --canvas: var(--p-stone-50);
@@ -56,6 +65,7 @@
   --series-6: var(--p-viz-green);
   --series-7: var(--p-viz-slate);
   --heat: var(--p-viz-teal);
+  @include resource-surfaces;
 }
 :root {
   --p-white: #fff;
@@ -317,4 +327,5 @@
   --series-6: var(--p-viz-green-dark);
   --series-7: var(--p-viz-slate-dark);
   --heat: var(--p-viz-teal-dark);
+  @include resource-surfaces;
 }

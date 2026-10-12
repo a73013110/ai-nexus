@@ -60,29 +60,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/sharing/shared-page').then((m) => m.SharedPage),
       },
       {
-        path: 'projects/:id',
+        matcher: optionalId('projects'),
         loadComponent: () =>
           import('./features/projects/projects-page').then((m) => m.ProjectsPage),
       },
       {
-        path: 'projects',
-        loadComponent: () =>
-          import('./features/projects/projects-page').then((m) => m.ProjectsPage),
-      },
-      {
-        path: 'artifacts/:id',
+        matcher: optionalId('artifacts'),
         canDeactivate: [pendingChanges],
         loadComponent: () =>
           import('./features/artifacts/artifacts-page').then((module) => module.ArtifactsPage),
       },
       {
-        path: 'artifacts',
-        canDeactivate: [pendingChanges],
-        loadComponent: () =>
-          import('./features/artifacts/artifacts-page').then((module) => module.ArtifactsPage),
-      },
-      {
-        path: 'knowledge',
+        matcher: optionalId('knowledge'),
         loadComponent: () =>
           import('./features/knowledge/knowledge-page').then((module) => module.KnowledgePage),
       },

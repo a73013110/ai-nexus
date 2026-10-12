@@ -10,7 +10,7 @@ test("a source added here announces once when it becomes searchable, not in othe
   fixture.seed();
   fixture.queueUploads = true;
   await fixture.attach(page);
-  await page.goto("/knowledge");
+  await page.goto(`/knowledge/${fixture.collections[0].resource.id}`);
   await page.locator("nx-knowledge-page input[type=file]").setInputFiles({
     name: "差旅補充.txt",
     mimeType: "text/plain",

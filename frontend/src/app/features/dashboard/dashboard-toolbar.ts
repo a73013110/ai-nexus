@@ -53,8 +53,8 @@ import { DashboardStore } from './dashboard-store';
     <div class="toolbar-end">
       @if (store.units().length) {
         <nx-select
-          class="toolbar-pill"
-          appearance="inline"
+          class="toolbar-unit"
+          appearance="pill"
           label="顯示的費用幣別與類型"
           [options]="store.units()"
           [value]="store.unit()"

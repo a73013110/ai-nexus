@@ -32,7 +32,10 @@ let sequence = 0;
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './select.scss',
-  host: { '[class.select-inline]': "appearance() === 'inline'" },
+  host: {
+    '[class.select-inline]': "appearance() === 'inline'",
+    '[class.select-pill]': "appearance() === 'pill'",
+  },
   template: `<button
       #trigger
       type="button"
@@ -127,7 +130,7 @@ export class Select {
   readonly searchFrom = input(0);
   readonly search = computed(() => this.searchable() && this.options().length >= this.searchFrom());
   /** `inline` drops the field chrome for toolbars such as the composer controls. */
-  readonly appearance = input<'field' | 'inline'>('field');
+  readonly appearance = input<'field' | 'inline' | 'pill'>('field');
   readonly query = signal('');
   readonly visibleOptions = computed(() =>
     this.options()

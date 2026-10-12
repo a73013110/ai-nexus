@@ -3,7 +3,6 @@ import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { ToastService } from '../../shared/ui/toast-service';
 import { EmptyState } from '../../shared/ui/empty-state';
-import { Card } from '../../shared/ui/card';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
 import {
@@ -39,7 +38,14 @@ import { WorkspaceApi } from '../workspace/workspace-api';
 import { KnowledgeApi } from '../knowledge/knowledge-api';
 import { ProjectsApi } from './projects-api';
 import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
-import { SearchField } from '../../shared/ui/search-field';
+import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
+import { Panel } from '../../shared/ui/panel';
+import { ResourceCard } from '../../shared/ui/resource-card';
+import { ResourceGallery } from '../../shared/ui/resource-gallery';
+import { StatusBadge } from '../../shared/ui/status-badge';
+import { relativeTime } from '../../shared/browser/format';
+import { accessLabel } from '../sharing/access-label';
+import { documentBusy, documentStatus } from '../knowledge/document-status';
 
 @Component({
   selector: 'nx-projects-page',
@@ -47,7 +53,6 @@ import { SearchField } from '../../shared/ui/search-field';
   imports: [
     Notice,
     EmptyState,
-    Card,
     CompactDialog,
     Field,
     FeaturePage,
@@ -58,7 +63,11 @@ import { SearchField } from '../../shared/ui/search-field';
     ConfirmDialog,
     ResourceSharing,
     TextTools,
-    SearchField,
+    ActionMenu,
+    Panel,
+    ResourceCard,
+    ResourceGallery,
+    StatusBadge,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -74,7 +83,7 @@ export class ProjectsPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly scope = inject(ViewScope);
-  private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id'))), {
+  readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id'))), {
     initialValue: null,
   });
   private readonly projectsRead = apiResource({
@@ -109,8 +118,7 @@ export class ProjectsPage {
         outputs: outputs.filter((x) => x.projectId === id),
       };
     },
-    poll: (detail) =>
-      detail?.files.some((x) => ['queued', 'running'].includes(x.status)) ? 2000 : null,
+    poll: (detail) => (detail?.files.some((x) => documentBusy(x.status)) ? 2000 : null),
   });
   readonly projects = computed<ProjectDto[]>(() => this.projectsRead.value() ?? []);
   /** Another project's data is never shown while the requested one loads or fails. */
@@ -127,6 +135,12 @@ export class ProjectsPage {
   readonly conversations = computed<ConversationDto[]>(() => this.detail()?.conversations ?? []);
   readonly outputs = computed<ArtifactSummaryDto[]>(() => this.detail()?.outputs ?? []);
   readonly loading = computed(() => this.projectsRead.loading() || this.currentRead.loading());
+  readonly projectsLoading = this.projectsRead.loading;
+  /** Members with edit access may change an active project; an archived one is read-only. */
+  readonly editable = computed(() => {
+    const project = this.current();
+    return !!project?.resource.canEdit && !project.isArchived;
+  });
   readonly actionError = signal('');
   readonly error = computed(
     () =>
@@ -140,6 +154,36 @@ export class ProjectsPage {
   readonly toast = inject(ToastService);
   readonly filter = signal('');
   readonly archived = signal(false);
+  readonly scopes = [
+    { value: 'active', label: '進行中' },
+    { value: 'archived', label: '已封存' },
+  ];
+  readonly access = accessLabel;
+  readonly when = relativeTime;
+  readonly status = documentStatus;
+  readonly projectActions = computed<MenuAction[]>(() => {
+    const project = this.current();
+    if (!project) return [];
+    return [
+      ...(project.resource.canEdit
+        ? [
+            { id: 'edit', label: '編輯專案', icon: 'edit', disabled: this.busy() },
+            {
+              id: 'archive',
+              label: project.isArchived ? '還原專案' : '封存專案',
+              icon: project.isArchived ? 'restore' : 'archive',
+              disabled: this.busy(),
+            },
+          ]
+        : []),
+      ...(project.resource.isOwner
+        ? [
+            { id: 'access', label: '成員與權限', icon: 'lock' },
+            { id: 'delete', label: '刪除專案', icon: 'trash', danger: true, disabled: this.busy() },
+          ]
+        : []),
+    ];
+  });
   readonly visible = computed(() =>
     this.projects().filter(
       (x) =>
@@ -176,6 +220,21 @@ export class ProjectsPage {
   refresh() {
     this.detailRead.reload();
   }
+  reload() {
+    this.actionError.set('');
+    this.projectsRead.reload();
+    this.currentRead.reload();
+    this.detailRead.reload();
+  }
+  projectAction(action: string) {
+    const project = this.current();
+    if (!project) return;
+    if (action === 'edit') this.openProject(project);
+    else if (action === 'archive') void this.archive();
+    else if (action === 'access') void this.sharing()?.open();
+    else if (action === 'delete') void this.removeProject();
+  }
+
   openProject(value: ProjectDto | null = null) {
     if (this.busy()) return;
     this.kind.set('project');

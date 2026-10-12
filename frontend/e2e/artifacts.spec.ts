@@ -129,7 +129,8 @@ test("artifact versions preserve edits, restore older content and export a saved
   await expect(toasts(page).filter({ hasText: "版本 3 已儲存" })).toBeVisible();
   expect(versions[2].content).toBe(richAnswer);
   const downloaded = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Markdown", exact: true }).click();
+  await page.getByRole("button", { name: "匯出成果", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Markdown", exact: true }).click();
   await downloaded;
   expect(exportedVersion).toBe("3");
   await editor.fill("尚未儲存");

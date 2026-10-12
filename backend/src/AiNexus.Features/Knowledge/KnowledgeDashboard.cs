@@ -51,7 +51,7 @@ internal sealed class KnowledgeDashboard(NexusDbContext db, EmbeddingService emb
             .ActiveWhen(processing);
         var recent = await db.Set<WorkspaceResource>().AsNoTracking().Where(x => x.OwnerId == scope.Actor && x.Kind == KnowledgeCollection.Kind)
             .OrderByDescending(x => x.UpdatedAt).Take(5).Select(x => new { x.Id, x.Name, x.UpdatedAt }).ToListAsync(ct);
-        foreach (var item in recent) section.Item(item.Id.ToString(), item.Name, null, item.UpdatedAt, "/knowledge");
+        foreach (var item in recent) section.Item(item.Id.ToString(), item.Name, null, item.UpdatedAt, "/knowledge/" + item.Id);
         return section.Build();
     }
 }

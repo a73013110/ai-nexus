@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 // One indicator (the host's ::before, measured by SlidingIndicator) marks the pressed option, so
 // changing views slides it instead of repainting two buttons.
 :host {
@@ -112,6 +114,12 @@
 :host(.ui-view-switch-segment) button {
   min-height: calc(var(--button-target) - 4px);
   font-size: var(--view-switch-button-font-size, var(--text-caption));
+}
+// Touch keeps every option at the full target; the track grows around it.
+@include bp.below(phone, '(pointer: coarse)') {
+  :host(.ui-view-switch-segment) button {
+    min-height: var(--button-target);
+  }
 }
 :host(.ui-view-switch-segment) button[aria-pressed='true'] {
   color: var(--ink);

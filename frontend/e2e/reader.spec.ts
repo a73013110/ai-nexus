@@ -148,13 +148,13 @@ test("knowledge modals and direct reader links share PDF rendering and reject ex
   const fixture = new KnowledgeFixture(),
     doc = fixture.seed();
   await fixture.attach(page);
-  await page.goto("/knowledge");
+  await page.goto(`/knowledge/${fixture.collections[0].resource.id}`);
   const link = page.getByRole("link", { name: /差旅費用申請.pdf/ }).first();
   const href = (await link.getAttribute("href"))!;
   await link.click();
   const dialog = page.getByRole("dialog", { name: "檔案預覽", exact: true });
   await expect(dialog.locator("canvas")).toHaveAttribute("width", /[1-9]\d+/);
-  await expect(page).toHaveURL(/\/knowledge$/);
+  await expect(page).toHaveURL(/\/knowledge\/[^/]+$/);
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
   const tab = await context.newPage();
@@ -162,7 +162,7 @@ test("knowledge modals and direct reader links share PDF rendering and reject ex
   await tab.goto(href);
   await expect(tab.locator("canvas")).toHaveAttribute("width", /[1-9]\d+/);
   await tab.getByRole("link", { name: "返回知識庫", exact: true }).click();
-  await expect(tab).toHaveURL(/\/knowledge$/);
+  await expect(tab).toHaveURL(/\/knowledge\/[^/]+$/);
   await tab.goto(
     `/reader/${doc.id}?returnTo=${encodeURIComponent("https://evil.invalid")}`,
   );

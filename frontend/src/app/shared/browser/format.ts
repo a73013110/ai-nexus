@@ -42,3 +42,14 @@ export const formatModelName = (model: Pick<ModelDto, 'displayName'>) =>
   model.displayName?.trim() || 'AI 助理';
 export const formatModelDisplayName = (model: { modelDisplayName?: string | null }) =>
   model.modelDisplayName?.trim() || 'AI 助理';
+const relative = new Intl.RelativeTimeFormat('zh-TW', { numeric: 'auto' });
+/** "3 分鐘前", "昨天"; older than a month falls back to the date. */
+export function relativeTime(iso: string, now = Date.now()) {
+  const seconds = Math.round((new Date(iso).getTime() - now) / 1000);
+  const abs = Math.abs(seconds);
+  if (abs < 45) return '剛剛';
+  if (abs < 3600) return relative.format(Math.round(seconds / 60), 'minute');
+  if (abs < 86400) return relative.format(Math.round(seconds / 3600), 'hour');
+  if (abs < 86400 * 30) return relative.format(Math.round(seconds / 86400), 'day');
+  return iso.slice(0, 10);
+}

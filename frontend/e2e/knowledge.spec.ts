@@ -14,7 +14,7 @@ test("knowledge upload, source query and named reader permissions are direct and
   const fixture = new KnowledgeFixture();
   fixture.seed();
   await fixture.attach(page);
-  await page.goto("/knowledge");
+  await page.goto(`/knowledge/${fixture.collections[0].resource.id}`);
   await expect(
     page.getByRole("link", { name: /差旅費用申請.pdf/ }),
   ).toBeVisible();
@@ -234,7 +234,7 @@ test("vector retrieval cards contain long filenames, URLs and multiline excerpts
       },
     }),
   );
-  await page.goto("/knowledge");
+  await page.goto(`/knowledge/${fixture.collections[0].resource.id}`);
   await page.getByRole("textbox", { name: "知識庫查詢內容" }).fill("誤植原因");
   await page.getByRole("button", { name: "檢索來源" }).click();
   const hit = page.locator(".knowledge-hit");
@@ -249,7 +249,7 @@ test("vector retrieval cards contain long filenames, URLs and multiline excerpts
       await hit.scrollIntoViewIfNeeded();
       const contained = await hit.evaluate((element) => {
         const card = element.getBoundingClientRect();
-        const panel = element.closest(".knowledge-test")!;
+        const panel = element.closest("nx-panel")!;
         const bounds = panel.getBoundingClientRect();
         const style = getComputedStyle(panel);
         const excerpt = element.querySelector("p")!;
@@ -315,7 +315,7 @@ test("pasted knowledge text is editable and a version conflict preserves the dra
     if (!fixture.documents.length) fixture.documents.push(doc);
     return route.fulfill({ json: doc });
   });
-  await page.goto("/knowledge");
+  await page.goto(`/knowledge/${fixture.collections[0].resource.id}`);
   await page.getByRole("button", { name: "貼上純文字", exact: true }).click();
   const dialog = page.getByRole("dialog", {
     name: "純文字來源編輯器",

@@ -1,13 +1,20 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 import {
   expectCompactWorkspace,
-  chooseSelect,
   expectViewportContained,
   settleEntrance,
   ApiFixture,
 } from "./fixtures";
 import { KnowledgeFixture } from "./knowledge-fixture";
+
+/** Opens a library tile's menu and returns the named item. */
+async function fileAction(page: Page, fileName: string, label: string) {
+  await page
+    .getByRole("button", { name: `檔案操作：${fileName}`, exact: true })
+    .click();
+  return page.getByRole("menuitem", { name: label, exact: true });
+}
 
 test("capacity preflight prevents an upload when the remaining space is exhausted", async ({
   page,
@@ -59,9 +66,7 @@ test("library files can be searched, previewed, reused in chat and added to know
     .getByRole("searchbox", { name: "搜尋檔案庫", exact: true })
     .fill("分析");
   await expect(page.locator(".file-card")).toHaveCount(1);
-  await page
-    .getByRole("button", { name: "將 分析計畫.txt 加入知識庫" })
-    .click();
+  await (await fileAction(page, "分析計畫.txt", "加入知識庫")).click();
   const add = page.getByRole("dialog", { name: "加入知識庫", exact: true });
   await expect(add).toContainText("成員可以閱讀原檔");
   await add.getByRole("button", { name: "加入並建立索引" }).click();
@@ -72,21 +77,15 @@ test("library files can be searched, previewed, reused in chat and added to know
       .getByRole("link", { name: "公司作業規範", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "刪除 分析計畫.txt", exact: true }),
+    await fileAction(page, "分析計畫.txt", "刪除檔案（仍被引用）"),
   ).toBeDisabled();
+  await page.keyboard.press("Escape");
   await page
     .getByRole("searchbox", { name: "搜尋檔案庫", exact: true })
     .fill("");
   await expect(page.locator(".file-card")).toHaveCount(2);
   await settleEntrance(page);
   await expectCompactWorkspace(page);
-  const grid = page.getByRole("button", { name: "網格排列", exact: true });
-  const list = page.getByRole("button", { name: "清單排列", exact: true });
-  await grid.focus();
-  await grid.press("ArrowRight");
-  await expect(list).toBeFocused();
-  await expect(list).toHaveAttribute("aria-pressed", "true");
-  await expect(page.locator(".file-browser")).toHaveClass(/file-browser-list/);
   await page.setViewportSize({ width: 375, height: 812 });
   await expectViewportContained(page);
   const sourceLabel = page
@@ -142,7 +141,7 @@ test("knowledge can choose an existing library original and display its source i
   const second = fixture.collection("新的知識庫");
   await fixture.attach(page);
   await page.goto("/knowledge");
-  await chooseSelect(page, "目前知識庫", "新的知識庫 0 / 0 份文件可查詢");
+  await page.getByRole("link", { name: /新的知識庫/ }).click();
   await page.getByRole("button", { name: "從檔案庫加入", exact: true }).click();
   const picker = page.getByRole("dialog", {
     name: "從檔案庫選取",
@@ -192,9 +191,7 @@ test("file names retain their extension and a rejected edit remains recoverable"
     return route.fulfill({ json: file });
   });
   await page.goto("/files");
-  await page
-    .getByRole("button", { name: `重新命名 ${file.fileName}`, exact: true })
-    .click();
+  await (await fileAction(page, file.fileName, "重新命名")).click();
   const dialog = page.getByRole("dialog", {
     name: "重新命名檔案",
     exact: true,
@@ -244,16 +241,12 @@ test("retained project originals are discoverable through the library and explic
   ).toBeVisible();
   await search.fill("參考");
   await expect(page.locator(".file-card")).toBeVisible();
-  await page
-    .getByRole("button", { name: "刪除 保留的參考文件.txt", exact: true })
-    .click();
+  await (await fileAction(page, "保留的參考文件.txt", "刪除檔案")).click();
   const confirm = page.getByRole("dialog", { name: "刪除檔案", exact: true });
   await expect(confirm).toBeVisible();
   await page.keyboard.press("Escape");
   expect(core.retainedFiles.has(id)).toBe(true);
-  await page
-    .getByRole("button", { name: "刪除 保留的參考文件.txt", exact: true })
-    .click();
+  await (await fileAction(page, "保留的參考文件.txt", "刪除檔案")).click();
   await confirm.getByRole("button", { name: "刪除檔案", exact: true }).click();
   await expect(page.locator(".file-card")).toHaveCount(0);
   expect(core.retainedFiles.has(id)).toBe(false);

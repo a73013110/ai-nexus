@@ -51,6 +51,14 @@
 :host(.select-inline) .select-trigger:hover {
   background: var(--hover);
 }
+// Pill: a capsule on a toolbar (overview, galleries) — hairline outline, flat hover.
+:host(.select-pill) .select-trigger {
+  gap: var(--p-space-1);
+  padding: var(--p-space-1) var(--p-space-3);
+  border-color: var(--tile-line);
+  border-radius: var(--p-radius-pill);
+  font-size: var(--text-caption);
+}
 .select-panel {
   padding: var(--p-space-2);
   overflow: auto;

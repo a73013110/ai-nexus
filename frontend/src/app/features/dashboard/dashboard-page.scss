@@ -1,13 +1,7 @@
-// One calm skin for every viewer: neutral surfaces, hairlines and a single accent. Tiles, the
-// toolbar and widgets read these `--tile-*` properties; chart categories become steps of the
-// accent, so data never competes with the few colors that mean a real state.
+// One calm skin for every viewer: tiles use the shared `--tile-*` surfaces (tokens.scss); chart
+// categories become steps of the accent, so data never competes with the few colors that mean a
+// real state.
 :host {
-  --platform-content-width: 100rem;
-  --tile-radius: 1.25rem;
-  --tile-inner-radius: 0.875rem;
-  --tile-line: color-mix(in srgb, var(--line) 70%, transparent);
-  --tile-inset: color-mix(in srgb, var(--ink) 4%, var(--surface));
-  --tile-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 5%, transparent);
   --board-gap: var(--p-space-4);
   --series-1: var(--accent);
   --series-2: color-mix(in srgb, var(--accent) 68%, var(--surface));

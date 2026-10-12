@@ -12,7 +12,7 @@ describe('reader return destinations', () => {
       expect(readerReturnUrl(url)).toBe(url);
     expect(readerReturnLabel('/chat/abc-123')).toBe('返回對話');
     expect(readerReturnLabel('/projects/abc-123')).toBe('返回專案');
-    expect(readerReturnLabel('/knowledge?collection=abc-123')).toBe('返回知識庫');
+    expect(readerReturnLabel('/knowledge/abc-123')).toBe('返回知識庫');
   });
   it('rejects external redirects, malformed origins and recursive reader returns', () => {
     for (const value of [
