@@ -1338,47 +1338,6 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
       ],
     }),
   ];
-  if (scope === "platform")
-    sections.push(
-      section("platform", "admin", "平台", null, {
-        metrics: [
-          metric("users", "啟用帳號", 128, "人", { hint: "另有 3 個停用" }),
-          metric("seen", "期間登入", 96, "人", { period: true }),
-          metric("calling", "期間使用 AI", 71, "人", { period: true }),
-          metric("locked", "暫時鎖定", 0, "人"),
-          metric("audit", "稽核事件", 1542, "筆", { period: true }),
-        ],
-        series: [
-          {
-            key: "audit",
-            label: "每日稽核事件",
-            unit: "筆",
-            points: fixtureSeries(50, 8),
-          },
-        ],
-        shares: [
-          { key: "seen", label: "期間登入", value: 96, tone: "success" },
-          { key: "idle", label: "期間未登入", value: 32, tone: "neutral" },
-        ],
-        facts: [
-          { label: "Google AI", value: "可連線", tone: "success" },
-          { label: "地端 Ollama", value: "無法連線", tone: "danger" },
-        ],
-      }),
-      section("monitoring", "monitoring", "即時監控", "/admin/monitoring", {
-        state: "active",
-        metrics: [
-          metric("online", "在線人數", 14, "人", {
-            tone: "info",
-            hint: "17 個工作階段 · 9 個活躍",
-          }),
-          metric("rps", "每秒請求", 3.42, "次", { hint: "近 5 分鐘" }),
-          metric("errors", "錯誤比例", 0.4, "", { format: "percent" }),
-          metric("p95", "P95 回應時間", 182, "", { format: "duration" }),
-        ],
-        facts: [{ label: "執行個體", value: "WEB01", tone: "neutral" }],
-      }),
-    );
   // Like the backend: only sections of granted features, titled with their (custom) names.
   const granted = new Map<string, string>([
     ["dashboard", "總覽"],

@@ -1,0 +1,91 @@
+@use 'breakpoints' as bp;
+
+// No panel: the controls sit on the canvas like a macOS toolbar, capsules on one baseline.
+:host {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-2) var(--p-space-3);
+  min-width: 0;
+  margin-bottom: var(--p-space-5);
+}
+nx-view-switch {
+  max-width: 100%;
+  --view-switch-radius: var(--p-radius-pill);
+  --view-switch-track: var(--tile-inset, var(--hover));
+  --view-switch-button-padding-inline: var(--p-space-3);
+}
+.toolbar-period {
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.toolbar-dates {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-width: 0;
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+  --date-control-radius: var(--p-radius-pill);
+  nx-date-time-picker {
+    width: 10.5rem;
+  }
+}
+.toolbar-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-2);
+  margin-left: auto;
+}
+// Capsules: a hairline outline, a flat hover; neither is a filled block of color.
+.toolbar-pill {
+  border: 1px solid var(--tile-line, var(--line));
+  border-radius: var(--p-radius-pill);
+  background: var(--surface);
+  --select-trigger-radius: var(--p-radius-pill);
+  --select-trigger-color: var(--ink);
+  --select-trigger-padding-inline: var(--p-space-3);
+  --select-trigger-max-width: 16rem;
+}
+.toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  min-height: var(--button-target);
+  padding: 0 var(--p-space-3);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-caption);
+  cursor: pointer;
+  transition: background var(--motion-fast) var(--ease);
+  --icon-size: var(--icon-sm);
+  &:hover:not(:disabled) {
+    background: var(--hover);
+  }
+  &:disabled {
+    color: var(--muted);
+    cursor: default;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 1px;
+  }
+}
+@include bp.below(phone) {
+  nx-view-switch {
+    --view-switch-button-padding-inline: var(--p-space-2);
+  }
+  .toolbar-dates {
+    width: 100%;
+    nx-date-time-picker {
+      flex: 1;
+      width: auto;
+    }
+  }
+  .toolbar-end {
+    margin-left: 0;
+  }
+}

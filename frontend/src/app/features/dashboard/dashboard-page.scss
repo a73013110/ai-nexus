@@ -1,89 +1,28 @@
-// Each style sets the page backdrop and the tile skin (`--tile-*`) the board and widgets read.
+// One calm skin for every viewer: neutral surfaces, hairlines and a single accent. Tiles, the
+// toolbar and widgets read these `--tile-*` properties; chart categories become steps of the
+// accent, so data never competes with the few colors that mean a real state.
 :host {
   --platform-content-width: 100rem;
-  // Restated so a style that forces a theme (orbit) also recolors inherited text.
-  color: var(--ink);
-  background: var(--canvas);
-}
-:host([data-dashboard-style='aurora']) {
-  --tile-bg: color-mix(in srgb, var(--surface) 66%, transparent);
-  --tile-border: 1px solid color-mix(in srgb, var(--ink) 9%, transparent);
-  --tile-border-hover: color-mix(in srgb, var(--series-5) 45%, transparent);
   --tile-radius: 1.25rem;
   --tile-inner-radius: 0.875rem;
-  --tile-shadow: inset 0 1px 0 rgb(255 255 255 / 35%), 0 24px 48px -28px rgb(40 24 110 / 38%);
-  --tile-blur: blur(18px) saturate(1.5);
-  --tile-accent: var(--series-5);
-  --tile-spot: color-mix(in srgb, var(--series-5) 15%, transparent);
-  --board-gap: 1.125rem;
-  background:
-    radial-gradient(
-      70rem 36rem at 0% -10%,
-      color-mix(in srgb, var(--series-5) 16%, transparent),
-      transparent 60%
-    ),
-    radial-gradient(
-      60rem 32rem at 100% 0%,
-      color-mix(in srgb, var(--series-1) 14%, transparent),
-      transparent 60%
-    ),
-    radial-gradient(
-      50rem 30rem at 50% 110%,
-      color-mix(in srgb, var(--series-2) 10%, transparent),
-      transparent 60%
-    ),
-    var(--canvas);
-}
-:host([data-dashboard-style='orbit']) {
-  --tile-bg: rgb(8 14 28 / 74%);
-  --tile-border: 1px solid rgb(103 232 249 / 16%);
-  --tile-border-hover: rgb(103 232 249 / 55%);
-  --tile-radius: 0.625rem;
-  --tile-inner-radius: 0.375rem;
-  --tile-shadow: 0 0 0 1px rgb(0 0 0 / 35%), 0 0 48px -24px rgb(34 211 238 / 45%);
-  --tile-blur: blur(10px);
-  --tile-accent: #22d3ee;
-  --tile-spot: rgb(34 211 238 / 13%);
-  --tile-title-font: 600 0.75rem / 1.3 var(--font-code);
-  --tile-title-tracking: 0.14em;
-  --tile-title-case: uppercase;
-  --kpi-surface: rgb(34 211 238 / 5%);
-  background:
-    radial-gradient(1px 1px at 12% 18%, rgb(255 255 255 / 70%) 50%, transparent 51%),
-    radial-gradient(1px 1px at 68% 42%, rgb(255 255 255 / 55%) 50%, transparent 51%),
-    radial-gradient(1.5px 1.5px at 38% 78%, rgb(186 230 253 / 60%) 50%, transparent 51%),
-    radial-gradient(1px 1px at 88% 88%, rgb(255 255 255 / 45%) 50%, transparent 51%),
-    radial-gradient(80rem 40rem at 50% -20%, rgb(14 116 144 / 28%), transparent 65%), #03060d;
-  background-size:
-    23rem 19rem,
-    31rem 27rem,
-    17rem 23rem,
-    29rem 13rem,
-    auto,
-    auto;
-}
-:host([data-dashboard-style='pulse']) {
-  --tile-bg: transparent;
-  --tile-border: 0 solid transparent;
-  --tile-shadow: inset 0 3px 0 var(--ink);
-  --tile-radius: 0;
-  --tile-inner-radius: 0;
-  --tile-icon-radius: 0;
-  --tile-pad: 1.125rem 0 0;
-  --tile-accent: var(--pulse-accent);
-  --tile-title-font: 800 1.125rem / 1.2 var(--font-ui);
-  --tile-title-tracking: -0.02em;
-  --section-metric-size: 1.875rem;
-  --section-metric-weight: 800;
-  --kpi-size: clamp(2rem, 5cqi, 3.25rem);
-  --kpi-weight: 800;
-  --kpi-surface: transparent;
-  --board-gap: 2.25rem 1.75rem;
-  --pulse-accent: light-dark(#ff4f1f, #c6ff3d);
+  --tile-line: color-mix(in srgb, var(--line) 70%, transparent);
+  --tile-inset: color-mix(in srgb, var(--ink) 4%, var(--surface));
+  --tile-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 5%, transparent);
+  --board-gap: var(--p-space-4);
+  --series-1: var(--accent);
+  --series-2: color-mix(in srgb, var(--accent) 68%, var(--surface));
+  --series-3: color-mix(in srgb, var(--accent) 44%, var(--surface));
+  --series-4: color-mix(in srgb, var(--accent) 26%, var(--surface));
+  --series-5: var(--muted);
+  --series-6: color-mix(in srgb, var(--muted) 55%, var(--surface));
+  --series-7: color-mix(in srgb, var(--muted) 30%, var(--surface));
+  --heat: var(--accent);
+  --sparkline-color: var(--accent);
+  --trend-color: var(--accent);
 }
 .dashboard {
   display: grid;
-  gap: var(--board-gap, var(--p-space-4));
+  gap: var(--board-gap);
   transition: opacity var(--motion) var(--ease);
 }
 .dashboard.is-refreshing {
@@ -92,13 +31,13 @@
 .dashboard-skeleton {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--p-space-4);
+  gap: var(--board-gap);
   .skeleton {
     height: 11rem;
-    border-radius: var(--tile-radius, var(--p-radius-lg));
+    border-radius: var(--tile-radius);
   }
-  .is-hero {
+  .is-wide {
     grid-column: 1 / -1;
-    height: 15rem;
+    height: 9rem;
   }
 }

@@ -5,7 +5,6 @@ import {
   DestroyRef,
   ElementRef,
   inject,
-  input,
   signal,
 } from '@angular/core';
 import { ThemeService } from '../../core/preferences/theme-service';
@@ -47,7 +46,6 @@ const SCROLL_SPEED = 18;
         <nx-dashboard-tile
           [tile]="tile"
           [editing]="layout.editing()"
-          [tilt]="tilt()"
           [class.is-dragging]="dragging() === tile.id"
           [style.animation-delay.ms]="$index * 45"
           (grab)="grab($event, tile.id)"
@@ -61,8 +59,6 @@ const SCROLL_SPEED = 18;
     <p class="sr-only" aria-live="polite">{{ announcement() }}</p>`,
 })
 export class DashboardBoard {
-  /** Maximum lean of a tile toward the pointer, in degrees. */
-  readonly tilt = input(0);
   readonly layout = inject(DashboardLayout);
   private readonly app = inject(ApplicationRef);
   private readonly theme = inject(ThemeService);

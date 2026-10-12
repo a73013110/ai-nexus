@@ -91,16 +91,20 @@
     color: var(--accent);
   }
 }
+// Hosts can round the track and chip into capsules (--view-switch-radius) and tint the track.
 :host(.ui-view-switch-segment) {
   width: fit-content;
   gap: 2px;
   margin-bottom: 0;
   padding: 2px;
-  border-radius: calc(var(--p-radius-md) + 2px);
-  background: var(--hover);
+  border-radius: calc(var(--view-switch-radius, var(--p-radius-md)) + 2px);
+  background: var(--view-switch-track, var(--hover));
   &::before {
-    border-radius: var(--p-radius-md);
+    border-radius: var(--view-switch-radius, var(--p-radius-md));
   }
+}
+:host(.ui-view-switch-segment) button {
+  border-radius: var(--view-switch-radius, var(--p-radius-md));
 }
 :host(.ui-view-switch-segment.ui-view-switch-fill) {
   width: 100%;

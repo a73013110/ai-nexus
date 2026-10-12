@@ -20,8 +20,8 @@
 ## 資料視覺化與總覽的例外
 
 - 圖表的類別色依序用 `--series-1`～`--series-7`，熱圖用 `--heat`；兩種主題各自映射，不在元件寫色碼。共用元件：`NumberTicker`、`Sparkline`、`DonutChart`、`HeatmapCalendar`、`nxSpotlight`（見 `/design`「資料視覺化」）。
-- [總覽](../features/dashboard.md)是唯一放寬上述「不用漸層、發光、透視」的頁面：三種風格可用漸層背景、發光、游標聚光、卡片傾斜與 3D（three.js 只在星軌風格延遲載入）。卡片外觀集中在 `dashboard-page.scss` 依風格設定的 `--tile-*`；其他頁面規則不變。
-- 例外不放寬可讀性：文字對比、焦點、減少動態與「未知不顯示為零」照常適用。
+- [總覽](../features/dashboard.md)沒有例外，同樣不用漸層、發光、傾斜與 3D。它在 `dashboard-page.scss` 把 `--series-*`、`--heat` 與走勢色改成 `--accent` 的明度階，所以圖表單色、只有真實狀態（warning／danger）帶色；卡片外觀（`--tile-*`：20px 圓角、髮絲邊框、極淡陰影，hover 只加深邊框與陰影）也集中在那裡。
+- 頭條數字用 `tabular-nums`、依容器寬度（`cqi`）縮放，金額超過一萬改用縮寫（`figureMoney`），完整值放在 title 與報讀文字；任何尺寸的卡片都不能溢出。
 
 ## 主題
 

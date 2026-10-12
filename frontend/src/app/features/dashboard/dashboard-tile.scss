@@ -1,105 +1,86 @@
-// The skin comes from custom properties set per style on the page (`--tile-*`).
+// A quiet card: hairline and a whisper of shadow (page `--tile-*`); hover only deepens both, so
+// nothing moves under the pointer.
 :host {
   position: relative;
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding: var(--tile-pad, var(--p-space-5));
-  border: var(--tile-border, 1px solid var(--line));
+  padding: var(--p-space-5);
+  border: 1px solid var(--tile-line, var(--line));
   border-radius: var(--tile-radius, var(--p-radius-lg));
-  background: var(--tile-bg, var(--surface));
-  box-shadow: var(--tile-shadow, var(--shadow));
-  backdrop-filter: var(--tile-blur, none);
-  transform: perspective(900px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
+  background: var(--surface);
+  box-shadow: var(--tile-shadow, none);
   transition:
-    transform var(--motion-panel) var(--ease),
     box-shadow var(--motion) var(--ease),
     border-color var(--motion) var(--ease);
-  animation: tile-arrive 560ms var(--ease-spring) both;
-  isolation: isolate;
+  animation: tile-arrive var(--motion-enter) var(--ease) both;
   container-type: inline-size;
 }
-// A light that follows the pointer (Spotlight writes --spot-x/--spot-y).
-:host::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background: radial-gradient(
-    var(--tile-spot-size, 22rem) circle at var(--spot-x, 50%) var(--spot-y, 50%),
-    var(--tile-spot, transparent),
-    transparent 70%
-  );
-  opacity: 0;
-  transition: opacity var(--motion) var(--ease);
-  pointer-events: none;
-}
-:host([data-spot])::before {
-  opacity: 1;
-}
 :host(:hover) {
-  border-color: var(--tile-border-hover, var(--line));
+  border-color: var(--line);
+  box-shadow: var(--shadow);
 }
 .tile-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--p-space-2);
-  min-height: 2rem;
+  min-height: 1.75rem;
   margin-bottom: var(--p-space-4);
 }
 .tile-icon {
-  display: grid;
-  place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: var(--tile-icon-radius, var(--p-radius-md));
-  background: color-mix(in srgb, var(--tile-accent, var(--accent)) 14%, transparent);
-  color: var(--tile-accent, var(--accent));
-  --icon-size: var(--icon-md);
+  display: inline-grid;
+  color: var(--muted);
+  --icon-size: var(--icon-sm);
 }
 h2 {
-  flex: 1;
+  flex: 1 1 6rem;
   min-width: 0;
   margin: 0;
   overflow: hidden;
-  font: var(--tile-title-font, 600 var(--text-ui) / 1.3 var(--font-ui));
-  letter-spacing: var(--tile-title-tracking, 0);
+  color: var(--secondary);
+  font: 600 var(--text-caption) / 1.3 var(--font-ui);
   text-overflow: ellipsis;
-  text-transform: var(--tile-title-case, none);
   white-space: nowrap;
 }
 .tile-body {
   flex: 1;
   min-width: 0;
 }
+// Every size stays reachable: on a narrow tile the tools take their own row and wrap.
 .tile-tools {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 2px;
+  margin-left: auto;
   --icon-size: var(--icon-md);
 }
 .tile-sizes {
   display: flex;
   margin-right: var(--p-space-1);
   padding: 2px;
-  border-radius: var(--p-radius-md);
-  background: var(--hover);
+  border-radius: var(--p-radius-pill);
+  background: var(--tile-inset, var(--hover));
   button {
-    min-width: 1.75rem;
+    min-width: 1.625rem;
     height: 1.625rem;
     padding: 0 0.25rem;
     border: 0;
-    border-radius: var(--p-radius-sm);
+    border-radius: var(--p-radius-pill);
     background: none;
     color: var(--secondary);
     font: inherit;
     font-size: var(--p-font-xs);
     cursor: pointer;
+    &:hover {
+      color: var(--ink);
+    }
     &[aria-pressed='true'] {
       background: var(--surface);
       box-shadow: var(--selected-ring);
       color: var(--ink);
+      font-weight: 600;
     }
   }
 }
@@ -109,7 +90,7 @@ h2 {
   width: 1.875rem;
   height: 1.875rem;
   border: 0;
-  border-radius: var(--p-radius-md);
+  border-radius: var(--p-radius-pill);
   background: none;
   color: var(--secondary);
   cursor: pointer;
@@ -128,11 +109,9 @@ button:focus-visible {
   outline-offset: 1px;
 }
 :host(.is-editing) {
-  border-style: dashed;
-  // A brief nudge on entering edit mode says the tiles can move; it does not keep moving targets.
-  animation: tile-wiggle 360ms ease-in-out 2;
+  border-color: var(--line);
   .tile-body {
-    opacity: 0.55;
+    opacity: 0.5;
   }
 }
 :host(.is-dragging) {
@@ -142,8 +121,17 @@ button:focus-visible {
   transition: none;
   cursor: grabbing;
 }
-@container (max-width: 26rem) {
-  .tile-sizes {
-    display: none;
+@container (max-width: 24rem) {
+  .tile-tools {
+    flex-basis: 100%;
+    justify-content: space-between;
+    margin-left: 0;
+  }
+}
+@media (pointer: coarse) {
+  .tile-sizes button,
+  .tile-tool {
+    min-width: 2.75rem;
+    height: 2.75rem;
   }
 }

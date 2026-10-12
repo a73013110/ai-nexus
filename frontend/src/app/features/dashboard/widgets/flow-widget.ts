@@ -72,9 +72,7 @@ const STAGES: Stage[] = [
       @for (stage of stages(); track stage.section) {
         <li [class.is-live]="stage.live" [style.--i]="$index">
           @if (!$first) {
-            <span class="flow-link" [class.is-flowing]="stage.flowing" aria-hidden="true"
-              ><i></i><i></i><i></i
-            ></span>
+            <span class="flow-link" [class.is-flowing]="stage.flowing" aria-hidden="true"></span>
           }
           @if (stage.link; as link) {
             <a class="flow-node" [routerLink]="link.path" [queryParams]="link.query">

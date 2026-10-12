@@ -10,9 +10,6 @@ public interface IDashboardSource
     /// <summary>Feature grant that shows the section. An empty title or route falls back to this feature's name and route.</summary>
     string Feature { get; }
 
-    /// <summary>Only an administrator reading the platform scope sees the section.</summary>
-    bool PlatformOnly => false;
-
     /// <summary>Counts for the scope, or <c>null</c> when the section has nothing to say (for example, the service is off).</summary>
     Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct);
 }

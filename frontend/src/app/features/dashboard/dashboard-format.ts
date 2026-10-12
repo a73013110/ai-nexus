@@ -6,12 +6,13 @@ export type DashboardTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger
 export function tone(value: string): DashboardTone {
   return (['info', 'success', 'warning', 'danger'] as const).find((x) => x === value) ?? 'neutral';
 }
+/** Tones as colors: the accent for information, status colors only for states that are real. */
 export const TONE_COLORS: Record<DashboardTone, string> = {
-  neutral: 'var(--series-7)',
-  info: 'var(--series-1)',
-  success: 'var(--series-2)',
-  warning: 'var(--series-3)',
-  danger: 'var(--series-4)',
+  neutral: 'var(--muted)',
+  info: 'var(--accent)',
+  success: 'var(--success)',
+  warning: 'var(--warning)',
+  danger: 'var(--danger)',
 };
 
 /** The number part of a metric, without its unit; unknown values never read as zero. */
@@ -46,6 +47,27 @@ export function compactNumber(value: number) {
     value,
   );
 }
+/**
+ * Money as a headline figure that fits any tile: cents as usual, sub-unit amounts to three
+ * significant digits, and from ten thousand on the compact form (`USD 1.23萬`). Exact amounts stay
+ * with `money()` in tables, tooltips and the accessible name.
+ */
+export function figureMoney(amount: number, currency: string) {
+  if (!currency) return compactNumber(amount);
+  const abs = Math.abs(amount);
+  const options: Intl.NumberFormatOptions =
+    abs >= 10_000
+      ? { notation: 'compact', maximumSignificantDigits: 3 }
+      : abs > 0 && abs < 1
+        ? { maximumSignificantDigits: 3 }
+        : { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+  return new Intl.NumberFormat('zh-TW', {
+    style: 'currency',
+    currency,
+    currencyDisplay: 'code',
+    ...options,
+  }).format(amount);
+}
 /** Local days from `from` through `through`, inclusive, as `YYYY-MM-DD`. */
 export function dayRange(from: string, through: string): string[] {
   const days: string[] = [];
@@ -79,8 +101,6 @@ const SECTION_ICONS: Record<string, string> = {
   quality: 'thumb-up',
   repositories: 'git',
   notifications: 'bell',
-  platform: 'shield',
-  monitoring: 'activity',
 };
 /** Icon for a section; unknown sections (new features) get a neutral chart. */
 export function sectionIcon(id: string) {

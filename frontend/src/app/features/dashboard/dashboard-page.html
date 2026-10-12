@@ -1,16 +1,9 @@
 <nx-feature-page
   [title]="session.featureName('dashboard')"
-  description="從用量、知識索引到每一件工作，一眼掌握整個工作區。"
+  [description]="summary()"
   eyebrow="AI NEXUS · OVERVIEW"
 >
   <div page-actions class="page-actions">
-    <nx-view-switch
-      label="總覽風格"
-      appearance="segment"
-      [options]="styles"
-      [value]="layout.style()"
-      (valueChange)="setStyle($event)"
-    />
     @if (session.has('admin')) {
       <nx-select
         label="總覽範圍"
@@ -33,65 +26,14 @@
       type="button"
       class="icon-button"
       aria-label="重新整理總覽"
+      title="重新整理總覽"
       [disabled]="store.refreshing()"
       (click)="store.load()"
     >
       <nx-icon name="refresh" />
     </button>
   </div>
-  <form (submit)="$event.preventDefault(); store.load()">
-    <nx-filter-panel
-      ><div class="ui-filter-grid">
-        <nx-select
-          label="費用查詢期間"
-          [options]="store.rangeOptions"
-          [value]="store.range()"
-          (valueChange)="store.setRange($event)"
-        />
-        <nx-date-time-picker
-          #fromDate
-          label="費用開始日期"
-          [withTime]="false"
-          [value]="store.from()"
-          [max]="store.through()"
-          (valueChange)="store.from.set($event); store.range.set('custom')"
-        />
-        <nx-date-time-picker
-          #throughDate
-          label="費用結束日期"
-          [withTime]="false"
-          [value]="store.through()"
-          [min]="store.from()"
-          [max]="store.today"
-          (valueChange)="store.through.set($event); store.range.set('custom')"
-        />
-        <button
-          type="submit"
-          class="secondary-button"
-          [disabled]="store.refreshing() || !fromDate.valid() || !throughDate.valid()"
-        >
-          查詢
-        </button>
-        @if (store.scope() === 'platform') {
-          <button
-            type="button"
-            class="quiet-button"
-            [disabled]="store.exporting() || store.refreshing()"
-            (click)="store.export()"
-          >
-            <nx-icon name="download" />匯出費用
-          </button>
-        }
-        @if (store.units().length) {
-          <nx-select
-            label="顯示的費用幣別與類型"
-            [options]="store.units()"
-            [value]="store.unit()"
-            (valueChange)="store.unit.set($event)"
-          />
-        }</div
-    ></nx-filter-panel>
-  </form>
+  <nx-dashboard-toolbar />
   @if (store.error()) {
     <nx-notice [message]="store.error()"
       ><button notice-actions type="button" (click)="store.load()">重試</button>
@@ -99,7 +41,7 @@
   }
   @if (store.loading() && !store.data()) {
     <div class="dashboard-skeleton" aria-label="正在載入總覽" role="status">
-      <div class="skeleton is-hero"></div>
+      <div class="skeleton is-wide"></div>
       <div class="skeleton"></div>
       <div class="skeleton"></div>
       <div class="skeleton"></div>
@@ -111,21 +53,10 @@
       [attr.aria-busy]="store.refreshing()"
       [class.is-refreshing]="store.refreshing()"
     >
-      @switch (layout.style()) {
-        @case ('orbit') {
-          <nx-orbit-hero />
-        }
-        @case ('pulse') {
-          <nx-pulse-hero />
-        }
-        @default {
-          <nx-aurora-hero />
-        }
-      }
       @if (layout.editing()) {
         <nx-dashboard-edit-bar />
       }
-      <nx-dashboard-board [tilt]="tilt()" />
+      <nx-dashboard-board />
     </div>
   }
 </nx-feature-page>

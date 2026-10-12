@@ -2,9 +2,8 @@ import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@a
 import { formatModelDisplayName } from '../../../shared/browser/format';
 import { DonutChart } from '../../../shared/ui/donut-chart';
 import { ViewSwitch } from '../../../shared/ui/view-switch';
-import { money } from '../../billing/billing-api';
 import { DashboardStore } from '../dashboard-store';
-import { compactNumber } from '../dashboard-format';
+import { compactNumber, figureMoney } from '../dashboard-format';
 
 const SHOWN = 6;
 
@@ -18,6 +17,9 @@ const SHOWN = 6;
       display: grid;
       gap: var(--p-space-3);
       container-type: inline-size;
+      --view-switch-radius: var(--p-radius-pill);
+      --view-switch-track: var(--tile-inset);
+      --donut-value-size: clamp(0.8125rem, 5.5cqi, 1.125rem);
     }
   `,
   template: `<nx-view-switch
@@ -54,7 +56,7 @@ export class MixWidget {
   readonly compact = compactNumber;
   readonly spendFormat = computed(() => {
     const currency = this.store.total()?.currency ?? '';
-    return (value: number) => (currency ? money(value, currency) : compactNumber(value));
+    return (value: number) => (currency ? figureMoney(value, currency) : compactNumber(value));
   });
   readonly spend = computed(() =>
     top(this.store.modelRows().map((x) => ({ key: x.label, label: x.label, value: x.amount }))),

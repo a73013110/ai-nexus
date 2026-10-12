@@ -1,28 +1,29 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { Icon } from '../../../shared/ui/icon';
 import { NumberTicker } from '../../../shared/ui/number-ticker';
 import { Sparkline } from '../../../shared/ui/sparkline';
 import { chargeKind, money } from '../../billing/billing-api';
 import { DashboardStore } from '../dashboard-store';
-import { metricFormatter } from '../dashboard-format';
+import { compactNumber, figureMoney, metricFormatter } from '../dashboard-format';
 
 /** The headline figures for the period and the work in progress now, each with its trend. */
 @Component({
   selector: 'nx-overview-widget',
-  imports: [Icon, NumberTicker, Sparkline],
+  imports: [NumberTicker, Sparkline],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './overview-widget.scss',
   template: `<div class="kpis">
       @for (kpi of kpis(); track kpi.key) {
-        <article class="kpi" [attr.data-key]="kpi.key" [style.--kpi-color]="kpi.color">
-          <span class="kpi-label"><nx-icon [name]="kpi.icon" />{{ kpi.label }}</span>
-          <strong class="kpi-value"
+        <article class="kpi" [attr.data-key]="kpi.key">
+          <span class="kpi-label"
+            >{{ kpi.label }}
+            @if (kpi.live) {
+              <i class="kpi-live" aria-hidden="true"></i>
+            }
+          </span>
+          <strong class="kpi-value" [attr.title]="kpi.exact"
             ><nx-number-ticker [value]="kpi.value" [format]="kpi.format" />
             @if (kpi.unit) {
               <em>{{ kpi.unit }}</em>
-            }
-            @if (kpi.live) {
-              <i class="kpi-live" aria-hidden="true"></i>
             }
           </strong>
           <small>{{ kpi.hint }}</small>
@@ -47,55 +48,54 @@ export class OverviewWidget {
     const generating = this.store.metric('chat', 'generating') ?? 0,
       jobs = this.store.metric('tasks', 'active') ?? 0;
     const count = metricFormatter('count');
+    // Headline counts shorten past a hundred thousand so they fit the narrowest tile.
+    const figure = (value: number) =>
+      Math.abs(value) >= 100_000 ? compactNumber(value) : count(value);
     return [
       {
         key: 'spend',
-        icon: 'money',
         label: '區間已知費用',
         value: total?.knownCalls ? total.amount : null,
-        format: (value: number) => (total ? money(value, total.currency) : count(value)),
+        format: (value: number) => (total ? figureMoney(value, total.currency) : figure(value)),
+        exact: total?.knownCalls ? money(total.amount, total.currency) : null,
         unit: '',
         hint:
           (total ? chargeKind(total.kind) : '請由管理員設定模型與工具價格') +
           (unknown ? ` · 各類型共 ${unknown} 次費用未知` : ''),
         trend: this.store.spendDaily().map((x) => x.value),
-        color: 'var(--series-1)',
         live: false,
       },
       {
         key: 'calls',
-        icon: 'chart',
         label: '模型與工具呼叫',
         value: data.spend.requests,
-        format: count,
+        format: figure,
+        exact: count(data.spend.requests),
         unit: '次',
         hint: `${data.spend.pendingCalls} 次待結算 · 含搜尋、OCR、索引與評測`,
         trend: this.store.callsDaily().map((x) => x.value),
-        color: 'var(--series-2)',
         live: false,
       },
       {
         key: 'tokens',
-        icon: 'database',
         label: 'Token 使用量',
         value: tokens.input + tokens.output,
-        format: count,
+        format: figure,
+        exact: count(tokens.input + tokens.output),
         unit: '',
         hint: `輸入 ${count(tokens.input)} · 輸出 ${count(tokens.output)}`,
         trend: this.store.tokensDaily().map((x) => x.value),
-        color: 'var(--series-5)',
         live: false,
       },
       {
         key: 'active',
-        icon: 'tasks',
         label: '處理中工作',
         value: this.store.activeWork(),
-        format: count,
+        format: figure,
+        exact: count(this.store.activeWork()),
         unit: '件',
         hint: `${generating} 件 AI 回覆生成 · ${jobs} 件背景任務`,
         trend: null,
-        color: 'var(--series-3)',
         live: this.store.activeWork() > 0,
       },
     ];

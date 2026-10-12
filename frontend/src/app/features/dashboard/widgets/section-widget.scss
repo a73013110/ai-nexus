@@ -14,13 +14,9 @@
   align-content: start;
   gap: 2px;
   min-width: 0;
+  container-type: inline-size;
   --metric-color: var(--ink);
-  &[data-tone='info'] {
-    --metric-color: var(--info);
-  }
-  &[data-tone='success'] {
-    --metric-color: var(--success);
-  }
+  // Only states that need the viewer are colored; information and success stay in ink.
   &[data-tone='warning'] {
     --metric-color: var(--warning);
   }
@@ -46,12 +42,20 @@ dd {
   display: flex;
   align-items: baseline;
   gap: var(--p-space-1);
+  min-width: 0;
   margin: 0;
   color: var(--metric-color);
-  font-size: var(--section-metric-size, var(--p-font-xl));
-  font-weight: var(--section-metric-weight, 650);
-  letter-spacing: -0.03em;
+  font-size: clamp(1rem, 15cqi, 1.625rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  nx-number-ticker {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   em {
+    flex: none;
     color: var(--muted);
     font-size: var(--p-font-xs);
     font-style: normal;
@@ -69,7 +73,6 @@ small {
 .series {
   display: grid;
   gap: var(--p-space-1);
-  --sparkline-color: var(--tile-accent, var(--accent));
   span {
     display: flex;
     justify-content: space-between;
@@ -161,15 +164,12 @@ small {
   align-items: center;
   justify-self: start;
   gap: var(--p-space-1);
-  color: var(--tile-accent, var(--accent));
+  color: var(--accent);
   font-size: var(--text-caption);
   font-weight: 600;
   text-decoration: none;
   --icon-size: var(--icon-sm);
-  nx-icon {
-    transition: translate var(--motion) var(--ease-spring);
-  }
-  &:hover nx-icon {
-    translate: 3px 0;
+  &:hover {
+    text-decoration: underline;
   }
 }

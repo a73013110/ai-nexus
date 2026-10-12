@@ -8,12 +8,11 @@ import {
   type TileSize,
 } from './dashboard-widgets';
 
-export type DashboardStyle = 'aurora' | 'orbit' | 'pulse';
-export const DASHBOARD_STYLES: readonly { value: DashboardStyle; label: string; icon: string }[] = [
-  { value: 'aurora', label: '極光', icon: 'sparkles' },
-  { value: 'orbit', label: '星軌', icon: 'orbit' },
-  { value: 'pulse', label: '脈衝', icon: 'waves' },
-];
+/**
+ * Tiles that no longer exist anywhere (the administrator-only sections). Saved arrangements may
+ * still name them; they are dropped on read so they neither show nor linger.
+ */
+const RETIRED = new Set(['section:monitoring', 'section:platform']);
 
 /** A tile's place and shape as the viewer arranged it. */
 export interface TileState {
@@ -33,7 +32,11 @@ export function parseTiles(value: unknown): TileState[] | null {
   return tiles
     .filter(
       (x): x is TileState =>
-        !!x && typeof x.id === 'string' && x.id.length <= 120 && isTileSize(x.size),
+        !!x &&
+        typeof x.id === 'string' &&
+        x.id.length <= 120 &&
+        !RETIRED.has(x.id) &&
+        isTileSize(x.size),
     )
     .slice(0, 100)
     .map((x) => ({ id: x.id, size: x.size, tall: x.tall === true, hidden: x.hidden === true }));
@@ -71,6 +74,15 @@ export function moveTile(tiles: readonly TileState[], id: string, target: string
   return result;
 }
 
+/** Changes one tile's size, height or visibility; every size can follow every other. */
+export function updateTile(
+  tiles: readonly TileState[],
+  id: string,
+  change: Partial<Omit<TileState, 'id'>>,
+): TileState[] {
+  return tiles.map((x) => (x.id === id ? { ...x, ...change } : x));
+}
+
 function read(key: string): unknown {
   try {
     return JSON.parse(localStorage.getItem(key) ?? 'null');
@@ -88,18 +100,15 @@ function write(key: string, value: unknown) {
 }
 
 /**
- * How this browser shows the overview for the signed-in account: the visual style and, per scope,
- * which tiles appear in what order and size. Presentation only; it never changes what is read.
+ * How this browser shows the overview for the signed-in account: per scope, which tiles appear in
+ * what order and size. Presentation only; it never changes what is read. (A visual style saved by
+ * earlier versions under `nexus.dashboard.style.*` is no longer read.)
  */
 @Injectable()
 export class DashboardLayout {
   private readonly store = inject(DashboardStore);
   private readonly session = inject(WorkspaceSession);
   private readonly user = computed(() => this.session.me()?.id ?? '');
-  readonly style = linkedSignal<DashboardStyle>(() => {
-    const value = read(`nexus.dashboard.style.${this.user()}`);
-    return DASHBOARD_STYLES.find((x) => x.value === value)?.value ?? 'aurora';
-  });
   readonly editing = signal(false);
   readonly widgets = computed(() =>
     this.store.data()
@@ -122,10 +131,6 @@ export class DashboardLayout {
   /** The viewer arranged this scope; reset returns to the defaults. */
   readonly customized = computed(() => this.saved() !== null);
 
-  setStyle(style: DashboardStyle) {
-    this.style.set(style);
-    write(`nexus.dashboard.style.${this.user()}`, style);
-  }
   move(id: string, target: string) {
     this.commit(moveTile(this.tiles(), id, target));
   }
@@ -149,8 +154,8 @@ export class DashboardLayout {
     this.saved.set(null);
     write(this.key(), null);
   }
-  private update(id: string, change: Partial<TileState>) {
-    this.commit(this.tiles().map((x) => (x.id === id ? { ...x, ...change } : x)));
+  private update(id: string, change: Partial<Omit<TileState, 'id'>>) {
+    this.commit(updateTile(this.tiles(), id, change));
   }
   private commit(tiles: TileState[]) {
     this.saved.set(tiles);
