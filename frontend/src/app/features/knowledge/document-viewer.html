@@ -1,8 +1,7 @@
 <header class="viewer-heading">
-  <span class="viewer-symbol"><nx-icon [name]="isImage() ? 'image' : 'document'" /></span>
   <div class="viewer-title">
     <h1 [title]="document()?.fileName || ''">{{ document()?.fileName || '檔案預覽' }}</h1>
-    <span>{{ format() }}{{ total() > 1 ? ' · ' + total() + ' 頁' : '' }}</span>
+    <small>{{ format() }}{{ total() > 1 ? ' · ' + total() + ' 頁' : '' }}</small>
   </div>
   <div class="viewer-actions">
     @if (document()?.hasOriginal) {
@@ -120,20 +119,14 @@
       }
     </div>
   }
+  <!-- The OCR caution lives on each page's text meta; only an unfinished job needs a strip. -->
   @if (job(); as job) {
-    @if (job.status !== 'completed' || info.warning) {
-      <details class="viewer-processing" [open]="job.status === 'failed'">
-        <summary>
-          <nx-icon name="info" />{{
-            job.status === 'failed'
-              ? '文件處理未完成'
-              : info.warning || '文字辨識與索引正在背景處理'
-          }}
-        </summary>
-        <nx-job-progress [job]="job" />
+    @if (job.status !== 'completed') {
+      <nx-job-progress class="viewer-processing" [job]="job">
         @if (canControl()) {
           @if (job.status === 'queued' || job.status === 'running') {
             <button
+              job-actions
               class="quiet-button"
               [disabled]="busy() || job.cancelRequested"
               (click)="control(false)"
@@ -141,12 +134,12 @@
               停止處理
             </button>
           } @else if (job.status === 'failed' || job.status === 'cancelled') {
-            <button class="secondary-button" [disabled]="busy()" (click)="control(true)">
-              重新處理
+            <button job-actions class="quiet-button" [disabled]="busy()" (click)="control(true)">
+              <nx-icon name="refresh" />重新處理
             </button>
           }
         }
-      </details>
+      </nx-job-progress>
     }
   }
 }
@@ -186,13 +179,19 @@
     } @else {
       <article class="reader-text">
         @if (text(); as text) {
-          <div class="reader-text-meta">
-            <span>第 {{ text.pageNumber }} 頁</span
-            ><span>{{
-              text.extraction === 'ocr' ? 'AI 文字辨識 · 請核對原文' : '文件原生文字'
-            }}</span>
-          </div>
-          <pre><nx-text-highlight [text]="text.text" [query]="query()" /></pre>
+          @if (!text.text.trim()) {
+            <p class="form-note">
+              {{ isImage() ? '圖片中沒有可辨識的文字。' : '此頁沒有可辨識的文字。' }}
+            </p>
+          } @else {
+            <div class="reader-text-meta">
+              <span>第 {{ text.pageNumber }} 頁</span
+              ><span>{{
+                text.extraction === 'ocr' ? 'AI 文字辨識 · 請核對原文' : '文件原生文字'
+              }}</span>
+            </div>
+            <pre><nx-text-highlight [text]="text.text" [query]="query()" /></pre>
+          }
         } @else {
           <p class="form-note">
             {{

@@ -265,10 +265,10 @@ export class DiagramCanvas {
     <dialog
       nxCompactDialog
       #dialog
-      class="platform-dialog mermaid-dialog"
+      class="platform-dialog dialog-flush mermaid-dialog"
       aria-label="展開 Mermaid 圖表"
     >
-      <header class="dialog-heading ui-density-compact">
+      <header class="dialog-bar">
         <h2>{{ diagram()?.title || 'Mermaid 圖表' }}</h2>
         <div class="mermaid-actions">
           <ng-container [ngTemplateOutlet]="zoomTools" />

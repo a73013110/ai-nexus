@@ -20,40 +20,34 @@
   width: var(--button-target);
   height: var(--button-target);
 }
-.viewer-processing nx-job-progress {
-  display: block;
-  margin-top: 12px;
-}
 .viewer-heading {
   display: flex;
   align-items: center;
-  gap: var(--section-gap);
-  padding: var(--section-padding);
+  gap: var(--p-space-2);
+  min-height: calc(var(--button-target) + 2 * var(--p-space-2));
+  padding: var(--p-space-2) var(--p-space-2) var(--p-space-2) var(--p-space-4);
   flex: none;
   border-bottom: 1px solid var(--line);
 }
-.viewer-symbol {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 40px;
-  color: var(--accent);
-  flex: none;
-}
+// Same as .dialog-title: the format sits beside the name instead of on a second line.
 .viewer-title {
+  display: flex;
+  align-items: baseline;
   flex: 1;
+  gap: var(--p-space-2);
   min-width: 0;
 }
 .viewer-title h1 {
-  font-size: var(--resource-heading-size);
+  min-width: 0;
+  font-size: var(--text-ui);
   font-weight: 600;
-  line-height: 1.5;
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.viewer-title > span {
+.viewer-title small {
+  flex: none;
   font-size: var(--text-caption);
   color: var(--secondary);
 }
@@ -71,8 +65,8 @@
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--section-gap);
-  padding: var(--p-space-2) var(--section-padding);
+  gap: var(--p-space-2);
+  padding: var(--p-space-2) var(--p-space-2) var(--p-space-2) var(--p-space-4);
   border-bottom: 1px solid var(--line);
   flex: none;
   font-size: var(--text-caption);
@@ -93,16 +87,8 @@
 }
 .viewer-processing {
   flex: none;
-  padding: var(--p-space-2) var(--section-padding);
+  padding: var(--p-space-2) var(--p-space-2) var(--p-space-2) var(--p-space-4);
   border-bottom: 1px solid var(--line);
-  color: var(--secondary);
-  font-size: var(--text-caption);
-}
-.viewer-processing summary {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 .viewer-stage {
   flex: 1;
@@ -187,11 +173,11 @@
   overflow: auto;
 }
 @media (max-width: 600px) {
-  .viewer-heading {
-    padding: 10px 12px;
-    gap: 8px;
+  .viewer-heading,
+  .viewer-toolbar,
+  .viewer-processing {
+    padding-inline-start: var(--p-space-3);
   }
-  .viewer-symbol,
   .viewer-new-tab {
     display: none;
   }
@@ -200,10 +186,6 @@
   }
   .viewer-close {
     margin-left: 0;
-  }
-  .viewer-toolbar {
-    padding: 8px 12px;
-    gap: 8px;
   }
   .viewer-search {
     max-width: none;
