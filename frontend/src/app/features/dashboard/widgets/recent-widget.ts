@@ -3,7 +3,8 @@ import { RouterLink } from '@angular/router';
 import { EmptyState } from '../../../shared/ui/empty-state';
 import { Icon } from '../../../shared/ui/icon';
 import { DashboardStore } from '../dashboard-store';
-import { relativeTime, sectionIcon, workspaceLink } from '../dashboard-format';
+import { relativeTime } from '../../../shared/browser/format';
+import { sectionIcon, workspaceLink } from '../dashboard-format';
 
 /** The viewer's latest work across every feature, to pick up where they left off. */
 @Component({

@@ -1,11 +1,13 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { Icon } from '../../shared/ui/icon';
 import { ProductTourButton } from '../../shared/ui/product-tour-button';
 import type { ProductTourDefinition } from '../../shared/ui/product-tour';
 import { WorkspaceMenuButton } from './workspace-menu-button';
 
 @Component({
   selector: 'nx-feature-page',
-  imports: [WorkspaceMenuButton, ProductTourButton],
+  imports: [WorkspaceMenuButton, ProductTourButton, RouterLink, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './feature-page.scss',
   host: {
@@ -18,10 +20,16 @@ import { WorkspaceMenuButton } from './workspace-menu-button';
       <div class="feature-content" [class.ui-density-compact]="density() === 'compact'">
         <header class="feature-header">
           <nx-workspace-menu-button />
+          @if (back(); as link) {
+            <a
+              class="icon-button feature-back"
+              [routerLink]="link.path"
+              [attr.aria-label]="link.label"
+              [title]="link.label"
+              ><nx-icon name="left"
+            /></a>
+          }
           <div class="feature-title">
-            @if (eyebrow()) {
-              <span class="panel-eyebrow">{{ eyebrow() }}</span>
-            }
             <h1>{{ title() }}</h1>
             @if (description()) {
               <p>{{ description() }}</p>
@@ -40,7 +48,8 @@ import { WorkspaceMenuButton } from './workspace-menu-button';
 export class FeaturePage {
   readonly title = input.required<string>();
   readonly description = input('');
-  readonly eyebrow = input('AI NEXUS / 工作區');
+  /** A detail page's way back to its collection, shown before the title. */
+  readonly back = input<{ path: string; label: string } | null>(null);
   readonly density = input<'comfortable' | 'compact'>('compact');
   readonly wide = input(true);
   readonly layoutMode = input<'flow' | 'data'>('flow');

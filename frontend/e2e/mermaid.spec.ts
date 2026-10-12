@@ -475,9 +475,9 @@ test("artifact preview uses the same Mermaid reader as chat", async ({
     });
   });
   await page.goto(`/artifacts/${id}`);
-  await expect(page.locator(".artifact-preview .mermaid-frame")).toHaveCount(2);
+  await expect(page.locator(".artifact-paper .mermaid-frame")).toHaveCount(2);
   await expect(
-    page.locator(".artifact-preview .mermaid-frame").first().getByRole("img"),
+    page.locator(".artifact-paper .mermaid-frame").first().getByRole("img"),
   ).toBeVisible();
   await expectViewportContained(page);
 });

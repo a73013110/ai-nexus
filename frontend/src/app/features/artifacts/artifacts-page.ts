@@ -3,8 +3,6 @@ import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { ToastService } from '../../shared/ui/toast-service';
 import { EmptyState } from '../../shared/ui/empty-state';
-import { Card } from '../../shared/ui/card';
-import { SearchField } from '../../shared/ui/search-field';
 import { Field } from '../../shared/ui/field';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import {
@@ -30,7 +28,11 @@ import { ResourceSharing } from '../sharing/resource-sharing';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { MarkdownView } from '../../shared/markdown/markdown-view';
 import { downloadBlob } from '../../shared/browser/download';
-import { formatDate } from '../../shared/browser/format';
+import { formatDate, relativeTime } from '../../shared/browser/format';
+import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
+import { ResourceCard } from '../../shared/ui/resource-card';
+import { ResourceGallery } from '../../shared/ui/resource-gallery';
+import { accessLabel } from '../sharing/access-label';
 import { ArtifactsApi } from './artifacts-api';
 import { TextTools } from './text-tools';
 import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
@@ -43,8 +45,6 @@ import { bindHotkeys } from '../../shared/browser/hotkeys';
     Notice,
     ViewSwitch,
     EmptyState,
-    Card,
-    SearchField,
     Field,
     FeaturePage,
     Icon,
@@ -55,6 +55,9 @@ import { bindHotkeys } from '../../shared/browser/hotkeys';
     RouterLink,
     MarkdownView,
     ShareDialog,
+    ActionMenu,
+    ResourceCard,
+    ResourceGallery,
   ],
   providers: [ViewScope, TEXT_ACTION_ICON_PROVIDER],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -68,7 +71,7 @@ export class ArtifactsPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   readonly session = inject(WorkspaceSession);
-  private readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id'))), {
+  readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id'))), {
     initialValue: null,
   });
   private readonly listRead = apiResource({
@@ -96,6 +99,7 @@ export class ArtifactsPage {
     return value && value.id === this.id() ? value.rows : [];
   });
   readonly loading = computed(() => this.listRead.loading() || this.documentRead.loading());
+  readonly listLoading = this.listRead.loading;
   readonly busy = signal(false);
   readonly actionError = signal('');
   readonly error = computed(
@@ -107,6 +111,19 @@ export class ArtifactsPage {
   );
   readonly toast = inject(ToastService);
   readonly filter = signal('');
+  readonly ownership = signal('all');
+  readonly ownerships = [
+    { value: 'all', label: '全部' },
+    { value: 'mine', label: '我擁有' },
+    { value: 'shared', label: '共用給我' },
+  ];
+  readonly access = accessLabel;
+  readonly when = relativeTime;
+  readonly exports: MenuAction[] = [
+    { id: 'docx', label: 'Word', icon: 'download' },
+    { id: 'pdf', label: 'PDF', icon: 'download' },
+    { id: 'md', label: 'Markdown', icon: 'download' },
+  ];
   // Editing state starts over whenever another document or version is loaded or saved.
   readonly mode = linkedSignal(() => {
     this.document();
@@ -122,18 +139,20 @@ export class ArtifactsPage {
     this.document();
     return null;
   });
-  readonly listOpen = linkedSignal(() => {
-    this.document();
-    return false;
-  });
   readonly confirm = viewChild.required(ConfirmDialog);
   readonly readonlyShare = viewChild(ShareDialog);
   readonly tools = viewChild.required(TextTools);
   readonly sharing = viewChild(ResourceSharing);
   readonly editor = viewChild<ElementRef<HTMLTextAreaElement>>('editor');
-  readonly visible = computed(() =>
-    this.list().filter((x) => x.resource.name.toLowerCase().includes(this.filter().toLowerCase())),
-  );
+  readonly visible = computed(() => {
+    const term = this.filter().toLowerCase(),
+      ownership = this.ownership();
+    return this.list().filter(
+      (x) =>
+        (ownership === 'all' || x.resource.isOwner === (ownership === 'mine')) &&
+        x.resource.name.toLowerCase().includes(term),
+    );
+  });
   readonly dirty = computed(
     () =>
       !!this.document() &&
@@ -146,6 +165,23 @@ export class ArtifactsPage {
       this.document()?.resource.canEdit &&
       (this.document()?.version === this.document()?.currentVersion || this.restoring()),
   );
+  /** The line under the title: the viewer's access, the version on screen and whether it is saved. */
+  readonly summary = computed(() => {
+    const doc = this.document();
+    if (!doc) return this.id() ? '' : '把回答整理為可交付的文件，保留每次修改，與同事協作核對。';
+    return `${accessLabel(doc.resource)} · 版本 ${doc.version} · ${this.dirty() ? '有未儲存修改' : '已儲存'}`;
+  });
+  readonly documentActions = computed<MenuAction[]>(() => {
+    const doc = this.document();
+    if (!doc?.resource.isOwner) return [];
+    return [
+      ...(this.session.has('shared')
+        ? [{ id: 'share', label: '唯讀分享', icon: 'share', disabled: this.busy() || this.dirty() }]
+        : []),
+      { id: 'access', label: '存取權限', icon: 'lock' },
+      { id: 'delete', label: '移除成果文件', icon: 'trash', danger: true, disabled: this.busy() },
+    ];
+  });
   readonly modeOptions = computed(() => [
     { value: 'read', label: '閱讀' },
     ...(this.editable()
@@ -180,6 +216,17 @@ export class ArtifactsPage {
     bindHotkeys({ 'mod+s': () => void this.save() });
     window.addEventListener('beforeunload', unload);
     inject(DestroyRef).onDestroy(() => window.removeEventListener('beforeunload', unload));
+  }
+  reload() {
+    this.actionError.set('');
+    this.listRead.reload();
+    this.documentRead.reload();
+    this.revisionsRead.reload();
+  }
+  documentAction(action: string) {
+    if (action === 'share') void this.readonlyShare()?.open();
+    else if (action === 'access') void this.sharing()?.open();
+    else if (action === 'delete') void this.remove();
   }
   async save() {
     const doc = this.document(),

@@ -5,9 +5,9 @@ import {
   fillDays,
   metricLabel,
   metricText,
-  relativeTime,
   workspaceLink,
 } from './dashboard-format';
+import { relativeTime } from '../../shared/browser/format';
 
 describe('dashboard format', () => {
   it('shortens long amounts so headline money always fits its tile', () => {

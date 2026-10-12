@@ -1,182 +1,131 @@
 @use 'breakpoints' as bp;
 
-.project-workspace {
+// Work (templates, conversations) on the left; the context it starts from on the right.
+.project-layout {
   display: grid;
-  grid-template-columns: 14rem minmax(0, 1fr);
-  gap: var(--section-gap);
-  align-items: start;
-}
-.project-list {
-  display: grid;
-  gap: var(--p-space-3);
-  min-width: 0;
-  position: sticky;
-  top: 0;
-}
-.project-list nav {
-  display: grid;
-  gap: var(--p-space-2);
-}
-.project-list a {
-  display: flex;
-  gap: var(--p-space-3);
-  padding: var(--p-space-3);
-  border-radius: var(--p-radius-md);
-}
-.project-list a[aria-current],
-.project-list a:hover {
-  background: var(--accent-soft);
-}
-.project-list strong,
-.project-list small,
-.project-item strong,
-.project-item small {
-  display: block;
-  overflow-wrap: anywhere;
-}
-.project-list small,
-.project-item small {
-  color: var(--secondary);
-  font-size: var(--text-caption);
-  margin-top: var(--p-space-1);
-}
-.project-detail {
-  min-width: 0;
-}
-.project-heading {
-  display: flex;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 24rem);
   gap: var(--p-space-4);
-  margin-bottom: var(--section-gap);
+  align-items: start;
 }
-.project-heading > div:first-child {
+.project-column {
+  display: grid;
+  gap: var(--p-space-4);
+  min-width: 0;
+}
+nx-notice {
+  margin-bottom: var(--p-space-4);
+}
+.project-skeleton {
+  height: 16rem;
+  border-radius: var(--tile-radius);
+}
+.template-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(15rem, 100%), 1fr));
+  gap: var(--p-space-3);
+}
+.template-grid > .form-note {
+  grid-column: 1 / -1;
+}
+.template-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  border-radius: var(--tile-inner-radius);
+  background: var(--tile-inset);
+}
+.template-start {
   flex: 1;
   min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: var(--p-space-1);
+  padding: var(--p-space-3) var(--p-space-4);
+  border-radius: inherit;
+  text-align: left;
+  strong {
+    padding-right: 4.5rem;
+    font-size: var(--text-label);
+    overflow-wrap: anywhere;
+  }
+  span {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: var(--secondary);
+    font-size: var(--text-caption);
+    line-height: 1.6;
+  }
+  small {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--p-space-1);
+    margin-top: var(--p-space-1);
+    color: var(--muted);
+    font-size: var(--text-caption);
+    --icon-size: var(--icon-xs);
+  }
 }
-.project-heading h2 {
-  margin: var(--p-space-2) 0;
-  font-size: var(--resource-heading-size);
-  overflow-wrap: anywhere;
+.template-start:not(:disabled):hover {
+  background: var(--hover);
+  small {
+    color: var(--ink);
+  }
 }
-.project-heading p {
-  color: var(--secondary);
-  line-height: var(--line-reading);
-}
-.project-actions {
+.template-tools {
+  position: absolute;
+  top: var(--p-space-1);
+  right: var(--p-space-1);
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--p-space-2);
 }
-.project-instructions {
-  background: var(--sidebar);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
-  padding: var(--section-padding);
-  margin-bottom: var(--section-gap);
+.project-rows {
+  display: grid;
 }
-.project-instructions summary {
+.project-row {
   display: flex;
   align-items: center;
   gap: var(--p-space-3);
   min-height: var(--button-target);
-  cursor: pointer;
-}
-.project-instructions summary span {
-  margin-left: auto;
-  color: var(--secondary);
-  font-size: var(--text-caption);
-}
-.project-instructions p {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  line-height: var(--line-reading);
-}
-.project-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--section-gap);
-}
-.project-items {
-  display: grid;
-  gap: var(--p-space-2);
-}
-.project-item {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-3);
-  padding-block: var(--p-space-3);
-  border-top: 1px solid var(--line);
-}
-.project-item a {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-3);
-  flex: 1;
-  min-width: 0;
-}
-.project-item span {
-  flex: 1;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.project-item a:hover strong,
-a.project-item:hover span {
-  text-decoration: underline;
-}
-.project-template {
-  display: flex;
-  gap: var(--p-space-2);
-  border-top: 1px solid var(--line);
-  padding-top: var(--p-space-2);
-}
-.project-template-start {
-  flex: 1;
-  min-width: 0;
-  display: grid;
-  gap: var(--p-space-2);
-  text-align: left;
-  padding: var(--p-space-3);
+  padding: var(--p-space-1) var(--p-space-2);
+  margin-inline: calc(-1 * var(--p-space-2));
   border-radius: var(--p-radius-md);
+  color: var(--ink);
+  text-decoration: none;
+  small {
+    flex: none;
+    color: var(--muted);
+    font-size: var(--text-caption);
+  }
 }
-.project-template-start:hover {
+.project-row:hover {
   background: var(--hover);
 }
-.project-template-start span {
-  color: var(--secondary);
-  font-size: var(--text-caption);
+.row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.project-instructions {
+  margin: 0;
   line-height: var(--line-reading);
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-.project-template-start small {
-  color: var(--accent);
+.project-instructions.is-empty,
+.panel-foot {
+  color: var(--muted);
   font-size: var(--text-caption);
 }
-@include bp.below(tablet) {
-  .project-grid {
-    grid-template-columns: 1fr;
-  }
-  .project-heading {
-    flex-direction: column;
-  }
+.panel-foot {
+  margin-top: var(--p-space-3);
 }
-@include bp.below(phone) {
-  .project-workspace {
-    grid-template-columns: 1fr;
-  }
-  .project-list {
-    position: static;
-  }
-  .project-list nav {
-    display: flex;
-    overflow: auto;
-  }
-  .project-list a {
-    min-width: 180px;
-  }
-  .project-list {
-    margin-bottom: var(--p-space-3);
-  }
-  .project-instructions summary {
-    flex-wrap: wrap;
+@include bp.below(tablet) {
+  .project-layout {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

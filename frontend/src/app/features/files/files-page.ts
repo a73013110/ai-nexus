@@ -1,9 +1,7 @@
 import { Notice } from '../../shared/ui/notice';
 import { ToastService } from '../../shared/ui/toast-service';
-import { Card } from '../../shared/ui/card';
 import { EmptyState } from '../../shared/ui/empty-state';
-import { FilterPanel } from '../../shared/ui/filter-panel';
-import { ViewSwitch } from '../../shared/ui/view-switch';
+import { ResourceGallery } from '../../shared/ui/resource-gallery';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -20,7 +18,6 @@ import { FileDrop } from '../../shared/browser/file-drop';
 import { formatBytes } from '../../shared/browser/format';
 import { FeaturePage } from '../../core/layout/feature-page';
 import { Icon } from '../../shared/ui/icon';
-import { SearchField } from '../../shared/ui/search-field';
 import { Select } from '../../shared/ui/select';
 import { NameDialog } from '../../shared/ui/name-dialog';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
@@ -36,13 +33,10 @@ import { StorageUsage } from './storage-usage';
   selector: 'nx-files-page',
   imports: [
     Notice,
-    Card,
     EmptyState,
-    FilterPanel,
-    ViewSwitch,
+    ResourceGallery,
     FeaturePage,
     Icon,
-    SearchField,
     Select,
     FileDrop,
     FileBrowser,
@@ -67,9 +61,7 @@ export class FilesPage {
   private readonly confirm = viewChild.required(ConfirmDialog);
   private readonly policyRead = apiResource({ loader: () => this.uploads.attachmentPolicy() });
   readonly policy = computed<AttachmentPolicyDto | null>(() => this.policyRead.value() ?? null);
-  readonly layout = signal('grid');
   readonly uploading = signal(false);
-  readonly uploadLabel = signal('');
   readonly busy = signal(false);
   readonly actionError = signal('');
   readonly error = computed(
@@ -79,14 +71,9 @@ export class FilesPage {
   readonly bytes = formatBytes;
   readonly accept = computed(() => this.policy()?.extensions.join(',') || '');
   readonly kinds = [
-    { id: 'all', name: '全部檔案' },
-    { id: 'images', name: '圖片' },
-    { id: 'documents', name: '文件' },
-  ];
-  readonly kindOptions = this.kinds.map((item) => ({ value: item.id, label: item.name }));
-  readonly layoutOptions = [
-    { value: 'grid', label: '網格排列', icon: 'dashboard' },
-    { value: 'list', label: '清單排列', icon: 'lines' },
+    { value: 'all', label: '全部' },
+    { value: 'images', label: '圖片' },
+    { value: 'documents', label: '文件' },
   ];
   readonly sources = [
     { value: 'all', label: '全部來源' },
@@ -99,6 +86,11 @@ export class FilesPage {
   constructor() {
     this.store.load();
     inject(DestroyRef).onDestroy(() => this.controller?.abort());
+  }
+  reload() {
+    this.actionError.set('');
+    this.policyRead.reload();
+    this.store.load();
   }
   async upload(files: FileList | File[]) {
     const candidates = Array.from(files),
@@ -122,24 +114,36 @@ export class FilesPage {
     this.controller = new AbortController();
     this.uploading.set(true);
     this.actionError.set('');
-    let saved = 0;
+    // One toast follows the batch from the first file to done; a failure withdraws it.
+    const progress = 'library-upload';
+    let saved = 0,
+      done = false;
     try {
       for (const file of candidates) {
         if (!valid()) return;
-        this.uploadLabel.set(`正在保存 ${file.name}`);
+        this.toast.show({
+          id: progress,
+          tone: 'info',
+          title: '正在保存 ' + file.name,
+          duration: 0,
+        });
         const uploaded = await this.uploads.upload(file, this.controller.signal);
         if (!valid()) return;
         await this.api.retain(uploaded.id);
         saved++;
       }
-      if (valid())
-        this.toast.success(`${saved} 份檔案已保存`, '可預覽、再次加入對話，或指定加入知識庫。');
+      this.toast.show({
+        id: progress,
+        title: `${saved} 份檔案已保存`,
+        description: '可預覽、再次加入對話，或指定加入知識庫。',
+      });
+      done = true;
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
+      if (!done) this.toast.dismiss(progress);
       if (valid()) {
         this.uploading.set(false);
-        this.uploadLabel.set('');
         this.store.load();
       }
     }

@@ -1,0 +1,72 @@
+// A tile (`--tile-*`) that is one link: hover deepens the hairline and lifts the shadow only.
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: var(--p-space-2);
+  min-width: 0;
+  min-height: 9.5rem;
+  padding: var(--p-space-4) var(--p-space-5);
+  border: 1px solid var(--tile-line);
+  border-radius: var(--tile-radius);
+  background: var(--surface);
+  box-shadow: var(--tile-shadow);
+  color: var(--ink);
+  text-decoration: none;
+  transition:
+    box-shadow var(--motion) var(--ease),
+    border-color var(--motion) var(--ease);
+}
+:host(:hover) {
+  border-color: var(--line);
+  box-shadow: var(--shadow);
+}
+:host(:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--p-space-2);
+  margin-bottom: var(--p-space-1);
+}
+.card-icon {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--tile-inner-radius);
+  background: var(--tile-inset);
+  color: var(--secondary);
+  --icon-size: var(--icon-md);
+}
+.card-name {
+  font-size: var(--text-label);
+  font-weight: 600;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.card-description {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  line-height: 1.6;
+}
+.card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-1) var(--p-space-3);
+  margin-top: auto;
+  padding-top: var(--p-space-2);
+  color: var(--muted);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+}
+.card-meta:empty {
+  display: none;
+}

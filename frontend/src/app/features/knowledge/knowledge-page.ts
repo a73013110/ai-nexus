@@ -1,11 +1,12 @@
+import { map } from 'rxjs';
 import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { ToastService } from '../../shared/ui/toast-service';
-import { Card } from '../../shared/ui/card';
 import { StatusBadge } from '../../shared/ui/status-badge';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { SearchField } from '../../shared/ui/search-field';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { Field } from '../../shared/ui/field';
 import {
   ChangeDetectionStrategy,
@@ -14,9 +15,12 @@ import {
   computed,
   effect,
   inject,
+  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import type {
   AttachmentPolicyDto,
   CollectionDto,
@@ -27,35 +31,42 @@ import type {
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { FeaturePage } from '../../core/layout/feature-page';
-import { Select } from '../../shared/ui/select';
 import { Icon } from '../../shared/ui/icon';
 import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
+import { Panel } from '../../shared/ui/panel';
+import { ResourceCard } from '../../shared/ui/resource-card';
+import { ResourceGallery } from '../../shared/ui/resource-gallery';
 import { ResourceSharing } from '../sharing/resource-sharing';
+import { accessLabel } from '../sharing/access-label';
 import { FileDrop } from '../../shared/browser/file-drop';
 import { WorkspaceApi } from '../workspace/workspace-api';
 import { KnowledgeApi } from './knowledge-api';
-import { ActivatedRoute } from '@angular/router';
 import { LibraryPicker } from '../files/library-picker';
 import { TextSourceEditor } from './text-source-editor';
 import { ReaderLink } from '../../shared/browser/reader-link';
 import { RetrievalResults } from './retrieval-results';
 import { JobToasts } from '../tasks/job-toasts';
+import { documentBusy, documentStatus } from './document-status';
 
+/** `/knowledge` lists the collections; `/knowledge/:id` is one collection's sources and query. */
 @Component({
   selector: 'nx-knowledge-page',
   imports: [
     Notice,
     StatusBadge,
-    Card,
     EmptyState,
     SearchField,
     CompactDialog,
+    ConfirmDialog,
     Field,
     FeaturePage,
     Icon,
-    Select,
     ActionMenu,
+    Panel,
+    ResourceCard,
+    ResourceGallery,
     ResourceSharing,
+    RouterLink,
     FileDrop,
     LibraryPicker,
     ReaderLink,
@@ -71,7 +82,11 @@ export class KnowledgePage {
   private readonly api = inject(KnowledgeApi);
   private readonly uploads = inject(WorkspaceApi);
   private readonly scope = inject(ViewScope);
+  private readonly router = inject(Router);
   readonly session = inject(WorkspaceSession);
+  readonly id = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('id'))), {
+    initialValue: null,
+  });
   private readonly collectionsRead = apiResource({
     feature: 'knowledge',
     loader: () => this.api.collections(),
@@ -81,24 +96,18 @@ export class KnowledgePage {
     loader: () => this.uploads.attachmentPolicy(),
   });
   readonly collections = computed<CollectionDto[]>(() => this.collectionsRead.value() ?? []);
-  /** The collection asked for (link or picker); the first one when it is not available. */
-  private readonly requested = signal(
-    inject(ActivatedRoute).snapshot.queryParamMap.get('collection') || '',
-  );
-  readonly selected = computed(() =>
-    this.collections().some((x) => x.resource.id === this.requested())
-      ? this.requested()
-      : this.collections()[0]?.resource.id || '',
-  );
+  readonly current = computed(() => this.collections().find((x) => x.resource.id === this.id()));
   /** Documents are re-read while any of them is still being processed. */
   private readonly documentsRead = apiResource({
     feature: 'knowledge',
-    params: () => this.selected() || undefined,
-    loader: (id) => this.api.documents(id),
-    poll: (rows) =>
-      rows?.some((x) => ['queued', 'running', 'processing'].includes(x.status)) ? 2500 : null,
+    params: () => this.id() || undefined,
+    loader: async (id) => ({ id, rows: await this.api.documents(id) }),
+    poll: (value) => (value?.rows.some((x) => documentBusy(x.status)) ? 2500 : null),
   });
-  readonly documents = computed<DocumentDto[]>(() => this.documentsRead.value() ?? []);
+  readonly documents = computed<DocumentDto[]>(() => {
+    const value = this.documentsRead.value();
+    return value && value.id === this.id() ? value.rows : [];
+  });
   readonly policy = computed<AttachmentPolicyDto | null>(() => this.policyRead.value() ?? null);
   readonly loading = this.collectionsRead.loading;
   readonly loadingDocuments = this.documentsRead.loading;
@@ -112,32 +121,40 @@ export class KnowledgePage {
   );
   readonly toast = inject(ToastService);
   private readonly jobToasts = inject(JobToasts);
+  readonly access = accessLabel;
+  readonly status = documentStatus;
+  readonly term = signal('');
+  readonly ownership = signal('all');
+  readonly ownerships = [
+    { value: 'all', label: '全部' },
+    { value: 'mine', label: '我擁有' },
+    { value: 'shared', label: '共用給我' },
+  ];
+  readonly gallery = computed(() => {
+    const term = this.term().toLowerCase(),
+      ownership = this.ownership();
+    return this.collections().filter(
+      (x) =>
+        (ownership === 'all' || x.resource.isOwner === (ownership === 'mine')) &&
+        x.resource.name.toLowerCase().includes(term),
+    );
+  });
   readonly uploading = signal(false);
   readonly uploadLabel = signal('');
-  readonly filter = signal('');
-  readonly query = signal('');
+  // The filter, query and its result belong to the collection on screen.
+  readonly filter = linkedSignal(() => (this.id(), ''));
+  readonly query = linkedSignal(() => (this.id(), ''));
+  readonly result = linkedSignal<KnowledgeSearchDto | null>(() => (this.id(), null));
   readonly searching = signal(false);
-  readonly result = signal<KnowledgeSearchDto | null>(null);
   readonly editorName = signal('');
   readonly editorDescription = signal('');
   readonly editorId = signal<string | null>(null);
   readonly editorError = signal('');
   readonly saving = signal(false);
-  readonly deleteTarget = signal<{ id: string; name: string; collection: boolean } | null>(null);
   readonly editorDialog = viewChild.required<ElementRef<HTMLDialogElement>>('editorDialog');
-  readonly deleteDialog = viewChild.required<ElementRef<HTMLDialogElement>>('deleteDialog');
+  readonly confirm = viewChild.required(ConfirmDialog);
   readonly textEditor = viewChild.required(TextSourceEditor);
   readonly sharing = viewChild(ResourceSharing);
-  readonly current = computed(() =>
-    this.collections().find((x) => x.resource.id === this.selected()),
-  );
-  readonly choices = computed(() =>
-    this.collections().map((x) => ({
-      value: x.resource.id,
-      label: x.resource.name,
-      description: `${x.readyDocuments} / ${x.documents} 份文件可查詢${x.resource.isOwner ? '' : ' · 已共用'}`,
-    })),
-  );
   readonly visible = computed(() =>
     this.documents().filter((x) => x.fileName.toLowerCase().includes(this.filter().toLowerCase())),
   );
@@ -163,20 +180,14 @@ export class KnowledgePage {
   constructor() {
     effect(() => this.documents().forEach((x) => this.jobToasts.observeDocument(x)));
   }
-  /** Read the collections and the selected collection's documents again. */
+  /** Read the collections and the open collection's documents again. */
   load() {
     this.actionError.set('');
     this.collectionsRead.reload();
     this.documentsRead.reload();
   }
-  select(id: string) {
-    this.requested.set(id);
-    this.result.set(null);
-    this.query.set('');
-    this.filter.set('');
-  }
   async addLibrary(file: LibraryFileDto) {
-    const collection = this.selected(),
+    const collection = this.id(),
       valid = this.scope.guard();
     if (!collection || this.uploading() || !this.current()?.resource.canEdit) return;
     this.uploading.set(true);
@@ -208,11 +219,11 @@ export class KnowledgePage {
     this.saving.set(true);
     this.editorError.set('');
     try {
-      if (this.editorId())
-        await this.api.update(this.editorId()!, this.editorName(), this.editorDescription());
+      const id = this.editorId();
+      if (id) await this.api.update(id, this.editorName(), this.editorDescription());
       else {
         const created = await this.api.create(this.editorName(), this.editorDescription());
-        if (valid()) this.requested.set(created.resource.id);
+        if (valid()) void this.router.navigate(['/knowledge', created.resource.id]);
       }
       if (valid()) {
         this.editorDialog().nativeElement.close();
@@ -229,13 +240,14 @@ export class KnowledgePage {
     if (this.saving()) event.preventDefault();
   }
   action(id: string) {
+    const current = this.current();
+    if (!current) return;
     if (id === 'edit') this.openEditor(true);
     if (id === 'access') void this.sharing()?.open();
-    if (id === 'delete' && this.current())
-      this.confirmDelete(this.current()!.resource.id, this.current()!.resource.name, true);
+    if (id === 'delete') void this.remove(current.resource.id, current.resource.name, true);
   }
   async upload(files: FileList | File[]) {
-    const collection = this.selected(),
+    const collection = this.id(),
       valid = this.scope.guard(),
       policy = this.policy();
     if (this.uploading() || !collection || !policy || !this.current()?.resource.canEdit) return;
@@ -266,7 +278,7 @@ export class KnowledgePage {
         const uploaded = await this.uploads.upload(file, controller.signal);
         if (!valid()) return;
         this.jobToasts.trackDocument(await this.api.add(collection, uploaded.id));
-        if (valid() && this.selected() === collection) this.documentsRead.reload();
+        if (valid() && this.id() === collection) this.documentsRead.reload();
       }
       if (valid()) {
         this.toast.success('文件已上傳', '文字辨識與索引會在背景繼續處理。');
@@ -283,41 +295,42 @@ export class KnowledgePage {
   }
   async search(event: Event) {
     event.preventDefault();
-    if (this.searching() || !this.query().trim()) return;
-    const valid = this.scope.guard(),
-      collection = this.selected();
+    const collection = this.id();
+    if (this.searching() || !this.query().trim() || !collection) return;
+    const valid = this.scope.guard();
     this.searching.set(true);
     this.actionError.set('');
     try {
       const result = await this.api.search(this.query(), [collection]);
-      if (valid() && this.selected() === collection) this.result.set(result);
+      if (valid() && this.id() === collection) this.result.set(result);
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {
       if (valid()) this.searching.set(false);
     }
   }
-  confirmDelete(id: string, name: string, collection = false) {
-    this.deleteTarget.set({ id, name, collection });
-    this.editorError.set('');
-    this.deleteDialog().nativeElement.showModal();
-  }
-  async remove() {
-    const target = this.deleteTarget(),
-      valid = this.scope.guard();
-    if (!target || this.saving()) return;
-    this.saving.set(true);
+  /** Removes a source, or a whole collection, after confirmation; originals stay in the library. */
+  async remove(id: string, name: string, collection = false) {
+    const valid = this.scope.guard();
+    if (
+      !(await this.confirm().ask({
+        title: collection ? '移除知識庫' : '移除文件',
+        message: `將移除「${name}」${collection ? '與其中所有文件' : ''}的來源與索引。原檔仍保留在檔案庫；已生成的對話文字會保留，來源引用連結將失效。`,
+        confirm: '移除來源',
+        danger: true,
+      })) ||
+      !valid()
+    )
+      return;
+    this.actionError.set('');
     try {
-      await (target.collection ? this.api.removeCollection(target.id) : this.api.remove(target.id));
-      if (valid()) {
-        this.deleteDialog().nativeElement.close();
-        this.toast.success('已移除來源');
-        this.load();
-      }
+      await (collection ? this.api.removeCollection(id) : this.api.remove(id));
+      if (!valid()) return;
+      this.toast.success('已移除來源');
+      if (collection) void this.router.navigate(['/knowledge']);
+      this.load();
     } catch (error) {
-      if (valid()) this.editorError.set(this.scope.message(error));
-    } finally {
-      if (valid()) this.saving.set(false);
+      if (valid()) this.actionError.set(this.scope.message(error));
     }
   }
   async reindex(document: DocumentDto) {
@@ -334,49 +347,28 @@ export class KnowledgePage {
     }
   }
   actions(document: DocumentDto): MenuAction[] {
+    const busy = documentBusy(document.status);
     return [
       ...(document.textVersion > 0
-        ? [
-            {
-              id: 'text',
-              label: '編輯純文字',
-              icon: 'edit',
-              disabled:
-                !document.canEdit || ['queued', 'running', 'processing'].includes(document.status),
-            },
-          ]
+        ? [{ id: 'text', label: '編輯純文字', icon: 'edit', disabled: !document.canEdit || busy }]
         : []),
       {
         id: 'reindex',
         label: ['failed', 'cancelled'].includes(document.status) ? '重試索引' : '重新索引',
         icon: 'repeat',
-        disabled:
-          !document.canEdit || ['queued', 'running', 'processing'].includes(document.status),
+        disabled: !document.canEdit || busy,
       },
       { id: 'delete', label: '移除文件', icon: 'trash', danger: true, disabled: !document.canEdit },
     ];
   }
   documentAction(action: string, document: DocumentDto) {
-    if (action === 'text') void this.textEditor().open(this.selected(), document);
-    else if (action === 'delete') this.confirmDelete(document.id, document.fileName);
+    const collection = this.id();
+    if (action === 'text' && collection) void this.textEditor().open(collection, document);
+    else if (action === 'delete') void this.remove(document.id, document.fileName);
     else if (action === 'reindex') void this.reindex(document);
   }
   textSaved() {
     this.toast.success('文字來源已儲存，索引正在背景更新');
     this.load();
-  }
-  status(value: string) {
-    return (
-      (
-        {
-          ready: '可查詢',
-          queued: '等待處理',
-          running: '處理中',
-          processing: '處理中',
-          failed: '需要重試',
-          cancelled: '已取消',
-        } as Record<string, string>
-      )[value] || value
-    );
   }
 }

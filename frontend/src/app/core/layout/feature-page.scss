@@ -25,9 +25,9 @@
   flex: 1;
   min-width: 0;
 }
-.feature-title .panel-eyebrow {
-  flex-basis: 100%;
-  margin: 0;
+.feature-back {
+  flex: none;
+  margin-right: calc(-1 * var(--p-space-2));
 }
 .feature-tour {
   flex: none;
@@ -69,8 +69,8 @@
     flex: 1 1 16rem;
   }
 }
-// A phone keeps the header to one row: the drawer button, the title and icon actions. The eyebrow
-// and description repeat what the sidebar and the content already say, so the content starts higher.
+// A phone keeps the header to one row: the drawer button, the title and icon actions. The
+// description repeats what the content already says, so the content starts higher.
 @include bp.below(phone) {
   :host(.feature-layout-compact) .feature-main {
     padding: var(--p-space-3) var(--p-space-3) var(--p-space-4);
@@ -83,7 +83,6 @@
   .feature-title {
     flex: 1 1 6rem;
   }
-  .feature-title .panel-eyebrow,
   .feature-header p {
     display: none;
   }

@@ -96,7 +96,7 @@ test("project settings, shared templates and private conversations work directly
   await expect(
     page.getByRole("button", { name: /公文重點摘要.*使用範本開始對話/ }),
   ).toBeVisible();
-  await expect(page.getByText("這裡顯示你的提問紀錄。")).toBeVisible();
+  await expect(page.getByText("只有你看得到自己的提問")).toBeVisible();
   await settleEntrance(page);
   await expectCompactWorkspace(page);
   await page.setViewportSize({ width: 375, height: 812 });
@@ -105,7 +105,8 @@ test("project settings, shared templates and private conversations work directly
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
-  await page.getByRole("button", { name: "封存", exact: true }).click();
+  await page.getByRole("button", { name: "專案操作", exact: true }).click();
+  await page.getByRole("menuitem", { name: "封存專案", exact: true }).click();
   await expect(toasts(page).filter({ hasText: "專案已封存" })).toBeVisible();
   await expect(
     page.getByRole("button", { name: "開始對話", exact: true }),
@@ -189,22 +190,35 @@ for (const kind of ["project", "evaluation"] as const) {
         body: JSON.stringify(body),
       });
     });
+    // A project keeps deletion in its actions menu; an evaluation set shows the button.
+    const askDelete = async () => {
+      if (isProject)
+        await page
+          .getByRole("button", { name: "專案操作", exact: true })
+          .click();
+      await page
+        .getByRole(isProject ? "menuitem" : "button", {
+          name: action,
+          exact: true,
+        })
+        .click();
+    };
     await page.goto(`/${section}/${resource.id}`);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
-    await page.getByRole("button", { name: action, exact: true }).click();
+    await askDelete();
     const confirm = page.getByRole("dialog", { name: `刪除「${title}」？` });
     await expect(confirm).toContainText(isProject ? "保留" : "歷史結果");
     await confirm.getByRole("button", { name: "取消", exact: true }).click();
     // The dialog leaves on a short transition; wait so its buttons are gone.
     await expect(confirm).toBeHidden();
     expect(deleteCalls).toBe(0);
-    await page.getByRole("button", { name: action, exact: true }).click();
+    await askDelete();
     await confirm.getByRole("button", { name: action, exact: true }).click();
     await expect(page.getByRole("alert")).toContainText("仍有背景任務");
     await expect(confirm).toBeHidden();
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
     blocked = false;
-    await page.getByRole("button", { name: action, exact: true }).click();
+    await askDelete();
     await confirm.getByRole("button", { name: action, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/${section}$`));
     await expect(page.getByRole("heading", { name: title })).toHaveCount(0);

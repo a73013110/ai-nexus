@@ -41,14 +41,13 @@ nx-view-switch {
   margin-left: auto;
 }
 // Capsules: a hairline outline, a flat hover; neither is a filled block of color.
+.toolbar-unit {
+  max-width: 16rem;
+}
 .toolbar-pill {
   border: 1px solid var(--tile-line, var(--line));
   border-radius: var(--p-radius-pill);
   background: var(--surface);
-  --select-trigger-radius: var(--p-radius-pill);
-  --select-trigger-color: var(--ink);
-  --select-trigger-padding-inline: var(--p-space-3);
-  --select-trigger-max-width: 16rem;
 }
 .toolbar-button {
   display: inline-flex;

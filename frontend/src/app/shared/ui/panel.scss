@@ -1,0 +1,64 @@
+@use 'breakpoints' as bp;
+
+// The overview tile skin (`--tile-*`, tokens.scss): hairline and a whisper of shadow; hover only
+// deepens both, so nothing moves under the pointer.
+:host {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: var(--p-space-4) var(--p-space-5) var(--p-space-5);
+  border: 1px solid var(--tile-line);
+  border-radius: var(--tile-radius);
+  background: var(--surface);
+  box-shadow: var(--tile-shadow);
+  transition:
+    box-shadow var(--motion) var(--ease),
+    border-color var(--motion) var(--ease);
+}
+:host(:hover) {
+  border-color: var(--line);
+  box-shadow: var(--shadow);
+}
+:host(.is-dragging) {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent-soft) 40%, var(--surface));
+}
+.panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: 2rem;
+  margin-bottom: var(--p-space-3);
+}
+.panel-icon {
+  display: inline-grid;
+  color: var(--muted);
+  --icon-size: var(--icon-sm);
+}
+h2 {
+  min-width: 0;
+  margin: 0;
+  color: var(--secondary);
+  font: 600 var(--text-caption) / 1.3 var(--font-ui);
+}
+.panel-count {
+  color: var(--muted);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+}
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-1);
+  margin-left: auto;
+}
+.panel-actions:empty {
+  display: none;
+}
+@include bp.below(phone) {
+  :host {
+    padding: var(--p-space-3) var(--p-space-4) var(--p-space-4);
+  }
+}

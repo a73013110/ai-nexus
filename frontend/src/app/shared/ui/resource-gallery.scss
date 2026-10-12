@@ -1,0 +1,44 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: block;
+  min-width: 0;
+}
+// No panel: the controls sit on the canvas in capsules, like the overview's toolbar.
+.gallery-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-2) var(--p-space-3);
+  margin-bottom: var(--p-space-4);
+  nx-view-switch {
+    margin: 0;
+    --view-switch-radius: var(--p-radius-pill);
+    --view-switch-track: var(--tile-inset);
+    --view-switch-button-padding-inline: var(--p-space-3);
+  }
+}
+.gallery-search {
+  width: min(100%, 18rem);
+  margin-left: auto;
+  --search-field-radius: var(--p-radius-pill);
+  --search-field-line: var(--tile-line);
+}
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--gallery-min, 17rem), 100%), 1fr));
+  gap: var(--p-space-4);
+}
+.gallery-skeleton {
+  height: 9.5rem;
+  border-radius: var(--tile-radius);
+}
+@include bp.below(phone) {
+  .gallery-search {
+    order: -1;
+    width: 100%;
+  }
+  .gallery-grid {
+    gap: var(--p-space-3);
+  }
+}

@@ -24,5 +24,5 @@
 - 每個區塊自動成為 `section:<id>` 卡片（`SectionWidget`），事實（`Fact`）也會出現在服務狀態卡片。
 - 專屬 widget 寫在 `frontend/src/app/features/dashboard/widgets/`，從 `DashboardStore` 讀資料，再加進 [`dashboard-widgets.ts`](../../frontend/src/app/features/dashboard/dashboard-widgets.ts) 的清單與預設順序。
 - 區塊圖示在 `dashboard-format.ts` 的 `SECTION_ICONS`；未列出的用通用圖示。
-- 卡片外觀由 `dashboard-page.scss` 的 `--tile-*` 變數決定，widget 只用 token 與這些變數；頭條數字要能在最窄的卡片裡縮小或縮寫，不能溢出。
+- 卡片外觀由 `tokens.scss` 共用的 `--tile-*` 變數決定，widget 只用 token 與這些變數；頭條數字要能在最窄的卡片裡縮小或縮寫，不能溢出。
 - 移除區塊時，把它的 `section:<id>` 加進 `dashboard-layout.ts` 的 `RETIRED`，讓舊的已存版面讀取時直接略過。

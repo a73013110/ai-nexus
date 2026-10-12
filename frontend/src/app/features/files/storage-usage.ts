@@ -2,55 +2,54 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import type { AttachmentStorageDto } from '../../core/api/schema';
 import { formatBytes, formatNumber } from '../../shared/browser/format';
 
+/** The original-file quota in one line: a thin meter, used of limit, and what remains. */
 @Component({
   selector: 'nx-storage-usage',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `@if (storage(); as value) {
-    <div class="storage-usage" aria-label="原檔容量">
+    <div
+      class="storage-usage"
+      [class.is-over]="value.usedBytes > value.limitBytes"
+      title="包含草稿；同一原檔的多處引用只計一次。"
+    >
       <meter
         min="0"
         [max]="value.limitBytes || 1"
         [value]="value.usedBytes"
-        [attr.aria-label]="'已用 ' + bytes(value.usedBytes) + '，上限 ' + bytes(value.limitBytes)"
+        [attr.aria-label]="
+          '原檔容量：已用 ' + bytes(value.usedBytes) + '，上限 ' + bytes(value.limitBytes)
+        "
       ></meter>
-      <div class="storage-usage-values">
-        <span [title]="exact(value.usedBytes)"
-          >已用 <strong>{{ bytes(value.usedBytes) }}</strong></span
-        >
-        <span [title]="exact(value.limitBytes)"
-          >上限 <strong>{{ bytes(value.limitBytes) }}</strong></span
-        >
-        <span [title]="exact(value.remainingBytes)"
-          >剩餘 <strong>{{ bytes(value.remainingBytes) }}</strong></span
-        >
-      </div>
-      <small
-        >包含草稿；同一原檔的多處引用只計一次。{{
-          value.usedBytes > value.limitBytes ? '目前已超額，請刪除檔案或調整上限。' : ''
-        }}</small
+      <span [title]="exact(value.usedBytes)"
+        >已用 <strong>{{ bytes(value.usedBytes) }}</strong> / {{ bytes(value.limitBytes) }}</span
       >
+      <span [title]="exact(value.remainingBytes)">剩餘 {{ bytes(value.remainingBytes) }}</span>
+      @if (value.usedBytes > value.limitBytes) {
+        <span>已超額，請刪除檔案或調整上限</span>
+      }
     </div>
   }`,
   styles: `
-    :host {
-      display: block;
-    }
     .storage-usage {
-      display: grid;
-      gap: 0.5rem;
-    }
-    meter {
-      width: 100%;
-      height: 0.6rem;
-      accent-color: var(--accent);
-    }
-    .storage-usage-values {
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem 1.5rem;
-    }
-    small {
+      align-items: center;
+      gap: var(--p-space-1) var(--p-space-3);
       color: var(--muted);
+      font-size: var(--text-caption);
+      font-variant-numeric: tabular-nums;
+    }
+    meter {
+      width: 8rem;
+      height: 0.375rem;
+      accent-color: var(--accent);
+    }
+    strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+    .is-over {
+      color: var(--error);
     }
   `,
 })

@@ -1,8 +1,4 @@
-<nx-feature-page
-  [title]="session.featureName('dashboard')"
-  [description]="summary()"
-  eyebrow="AI NEXUS · OVERVIEW"
->
+<nx-feature-page [title]="session.featureName('dashboard')" [description]="summary()">
   <div page-actions class="page-actions">
     @if (session.has('admin')) {
       <nx-select

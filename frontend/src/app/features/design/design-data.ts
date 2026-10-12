@@ -11,6 +11,10 @@ import { MarkdownView } from '../../shared/markdown/markdown-view';
 import { DataTable } from '../../shared/ui/data-table';
 import { DetailDrawer } from '../../shared/ui/detail-drawer';
 import { FilterPanel } from '../../shared/ui/filter-panel';
+import { Icon } from '../../shared/ui/icon';
+import { Panel } from '../../shared/ui/panel';
+import { ResourceCard } from '../../shared/ui/resource-card';
+import { ResourceGallery } from '../../shared/ui/resource-gallery';
 import { StatusBadge } from '../../shared/ui/status-badge';
 import { Tabs } from '../../shared/ui/tabs';
 import { ViewSwitch } from '../../shared/ui/view-switch';
@@ -25,7 +29,11 @@ import { DesignSection } from './design-section';
     DesignSection,
     DetailDrawer,
     FilterPanel,
+    Icon,
     MarkdownView,
+    Panel,
+    ResourceCard,
+    ResourceGallery,
     StatusBadge,
     Tabs,
     ViewSwitch,
@@ -45,6 +53,9 @@ import { DesignSection } from './design-section';
     nx-markdown-view {
       display: block;
       max-width: var(--reading-width);
+    }
+    .design-resources {
+      --gallery-min: 13rem;
     }
   `,
   template: `<nx-design-section
@@ -103,6 +114,44 @@ import { DesignSection } from './design-section';
       </nx-data-table>
     </nx-design-section>
     <nx-design-section
+      id="design-resources"
+      class="design-resources ui-density-compact"
+      title="資源集合"
+      api="ResourceGallery · ResourceCard · Panel"
+      description="檔案庫、知識庫、專案與成果共用：列表是膠囊工具列與卡片格線，詳細頁由 Panel 組成。"
+      [stacked]="true"
+    >
+      <nx-resource-gallery
+        label="範例資源"
+        placeholder="尋找範例"
+        [filters]="dataViews"
+        [filter]="dataView()"
+        [search]="term()"
+        [empty]="!cards().length"
+        (filterChange)="dataView.set($event)"
+        (searchChange)="term.set($event)"
+      >
+        @for (card of cards(); track card.name) {
+          <a
+            nxResourceCard
+            href="#design-resources"
+            icon="library"
+            [heading]="card.name"
+            [description]="card.description"
+            ><span>{{ card.meta }}</span
+            ><span>3 天前更新</span></a
+          >
+        }
+        <p gallery-empty class="form-note">沒有符合的範例。</p>
+      </nx-resource-gallery>
+      <nx-panel heading="來源文件" icon="document" [count]="2">
+        <button panel-actions class="icon-button" aria-label="範例動作">
+          <nx-icon name="plus" />
+        </button>
+        <p class="form-note">Panel 的標題、數量與右側動作；內容由功能決定。</p>
+      </nx-panel>
+    </nx-design-section>
+    <nx-design-section
       id="design-markdown"
       class="design-markdown"
       title="內容閱讀"
@@ -158,6 +207,17 @@ export class DesignData {
     { value: 'all', label: '全部狀態' },
     { value: 'success', label: '已完成' },
   ];
+  readonly term = signal('');
+  readonly cards = computed(() =>
+    [
+      {
+        name: '公司作業規範',
+        description: '同事共用的規章與表單，引用可回到原檔頁碼。',
+        meta: '我擁有',
+      },
+      { name: '產品技術文件', description: '', meta: '共用 · 可閱讀' },
+    ].filter((card) => card.name.includes(this.term())),
+  );
   readonly tab = signal('overview');
   readonly tabs = [
     { value: 'overview', label: '概覽' },

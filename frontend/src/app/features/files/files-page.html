@@ -1,7 +1,6 @@
 <nx-feature-page
   [title]="session.featureName('files')"
-  eyebrow="AI NEXUS · 你的檔案與素材"
-  description="保存原檔，重用於對話，也能指定加入知識庫。"
+  description="對話附件、知識庫與專案的原檔都保存在這裡，可再用於對話或加入知識庫。"
 >
   <div page-actions class="page-actions">
     <button
@@ -20,105 +19,74 @@
       (change)="upload(fileInput.files!); fileInput.value = ''"
     />
   </div>
-  <section
-    nxCard
-    class="file-library-intro"
-    [class.is-uploading]="uploadLabel()"
-    [nxFileDrop]="!uploading() && !!policy()"
-    (filesDropped)="upload($event)"
-  >
-    <span class="file-library-mark"><nx-icon name="paperclip" /></span>
-    <div>
-      <strong>{{ uploadLabel() || '工作中用過的檔案，都在這裡' }}</strong>
-      <p>對話附件、知識庫與專案的原檔會自動保存。也可以將新檔案拖曳到這裡。</p>
-    </div>
-    <span class="file-library-private"><nx-icon name="lock" />個人檔案庫</span>
-  </section>
   @if (error()) {
-    <nx-notice tone="danger" [message]="error()" />
+    <nx-notice [message]="error()"
+      ><button notice-actions type="button" (click)="reload()">重試</button></nx-notice
+    >
   }
-  <nx-filter-panel
-    ><div class="file-library-toolbar">
-      <nx-view-switch
-        label="檔案類型"
-        [options]="kindOptions"
-        [value]="store.type()"
-        (valueChange)="store.filter($event)"
-      />
-      <nx-search-field
-        label="搜尋檔案庫"
-        placeholder="搜尋檔案名稱"
-        [value]="store.search()"
-        (valueChange)="store.find($event)"
-      />
+  <div class="file-drop" [nxFileDrop]="!uploading() && !!policy()" (filesDropped)="upload($event)">
+    <nx-resource-gallery
+      label="檔案庫"
+      placeholder="搜尋檔案名稱"
+      [search]="store.search()"
+      [filters]="kinds"
+      [filter]="store.type()"
+      [loading]="store.loading() && !store.items().length"
+      [empty]="!store.items().length"
+      (searchChange)="store.find($event)"
+      (filterChange)="store.filter($event)"
+    >
       <nx-select
+        gallery-tools
+        class="file-source"
+        appearance="pill"
         label="檔案來源"
         [options]="sources"
         [value]="store.source()"
         (valueChange)="store.filter(store.type(), $event)"
       />
-      <nx-view-switch
-        label="檔案排列"
-        [iconOnly]="true"
-        [options]="layoutOptions"
-        [value]="layout()"
-        (valueChange)="layout.set($event)"
+      <nx-file-browser
+        [items]="store.items()"
+        [knowledge]="session.has('knowledge')"
+        [busy]="busy()"
+        (addKnowledge)="knowledge().open($event)"
+        (remove)="remove($event)"
+        (rename)="rename($event)"
       />
-    </div>
-  </nx-filter-panel>
-  <div class="file-library-summary">
-    <span>{{ store.total() }} 份檔案</span>
+      <nx-empty-state gallery-empty>
+        <nx-icon name="files" />
+        @if (store.search() || store.type() !== 'all' || store.source() !== 'all') {
+          <h2>沒有符合的檔案</h2>
+        } @else {
+          <h2>從一份檔案開始</h2>
+          <p>上傳或拖曳檔案到這裡，或在對話中傳送附件。</p>
+        }
+      </nx-empty-state>
+    </nx-resource-gallery>
+    <span class="file-drop-hint" aria-hidden="true"
+      ><nx-icon name="upload" />放開以保存到檔案庫</span
+    >
   </div>
-  <nx-storage-usage [storage]="store.result.value()?.storage" />
-  @if (store.loading()) {
-    <nx-empty-state role="status"><nx-icon name="document" />正在載入檔案…</nx-empty-state>
-  } @else if (store.items().length) {
-    <nx-file-browser
-      [items]="store.items()"
-      [layout]="layout()"
-      [knowledge]="session.has('knowledge')"
-      [busy]="busy()"
-      (addKnowledge)="knowledge().open($event)"
-      (remove)="remove($event)"
-      (rename)="rename($event)"
-    />
-  } @else {
-    <nx-empty-state>
-      <nx-icon name="document" />
-      <h2>
-        {{
-          store.search() || store.type() !== 'all' || store.source() !== 'all'
-            ? '沒有符合的檔案'
-            : '從一份檔案開始'
-        }}
-      </h2>
-      <p>
-        上傳圖片或文件，或在對話中傳送附件。<br />加入知識庫後，即可讓 AI 在回答時檢索並引用它。
-      </p>
-    </nx-empty-state>
-  }
-  @if (store.total() > 40) {
-    <div class="file-pagination">
-      <span>第 {{ store.offset() / 40 + 1 }} 頁</span
-      ><button
-        class="secondary-button"
-        [disabled]="store.loading() || !store.offset()"
-        (click)="store.page(-1)"
-      >
-        上一頁</button
-      ><button
-        class="secondary-button"
-        [disabled]="store.loading() || !store.canNext()"
-        (click)="store.page(1)"
-      >
-        下一頁
-      </button>
-    </div>
-  }
-  <p class="file-library-note">
-    <nx-icon
-      name="info"
-    />檔案庫保存原檔；知識庫管理可檢索的來源與成員權限。移除知識庫來源，原檔仍會保留在這裡。
-  </p>
+  <footer class="file-footer">
+    <nx-storage-usage [storage]="store.result.value()?.storage" />
+    @if (store.total() > 40) {
+      <div class="file-pagination">
+        <span>{{ store.total() }} 份 · 第 {{ store.offset() / 40 + 1 }} 頁</span
+        ><button
+          class="secondary-button"
+          [disabled]="store.loading() || !store.offset()"
+          (click)="store.page(-1)"
+        >
+          上一頁</button
+        ><button
+          class="secondary-button"
+          [disabled]="store.loading() || !store.canNext()"
+          (click)="store.page(1)"
+        >
+          下一頁
+        </button>
+      </div>
+    }
+  </footer>
   <nx-add-to-knowledge (added)="added()" /><nx-confirm-dialog /><nx-name-dialog />
 </nx-feature-page>

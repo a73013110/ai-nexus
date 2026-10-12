@@ -4,13 +4,13 @@ import { SERIES_COLORS } from '../../../shared/ui/donut-chart';
 import { Icon } from '../../../shared/ui/icon';
 import { NumberTicker } from '../../../shared/ui/number-ticker';
 import { Sparkline } from '../../../shared/ui/sparkline';
+import { relativeTime } from '../../../shared/browser/format';
 import { StatusBadge } from '../../../shared/ui/status-badge';
 import { DashboardStore } from '../dashboard-store';
 import {
   fillDays,
   metricFormatter,
   metricText,
-  relativeTime,
   tone,
   TONE_COLORS,
   workspaceLink,
