@@ -84,7 +84,7 @@
 .latest-button {
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--p-space-2);
   font-size: var(--text-caption);
   position: absolute;
   bottom: var(--p-space-2);
@@ -93,12 +93,11 @@
   z-index: 2;
   border: 1px solid var(--line);
   background: var(--surface);
-  border-radius: 20px;
-  padding: 9px 14px;
+  border-radius: var(--p-radius-pill);
+  padding: var(--p-space-2) var(--p-space-4);
   box-shadow: var(--shadow);
   nx-icon {
-    width: 14px;
-    height: 14px;
+    --icon-size: var(--icon-sm);
   }
 }
 @include bp.below(narrow) {

@@ -43,7 +43,7 @@
   overflow: auto;
 }
 .ui-notice-icon {
-  --icon-size: 1rem;
+  --icon-size: var(--icon-md);
   flex: none;
 }
 .ui-notice-content {

@@ -9,7 +9,7 @@ import { Icon } from './icon';
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles:
-    ':host { display: inline; } button { margin-inline-start: .25rem; } .icon-button { width: 1.5rem; height: 1.5rem; } .icon-button nx-icon { width: 14px; height: 14px; } @media (pointer: coarse) { .icon-button { width: var(--button-target); height: var(--button-target); } }',
+    ':host { display: inline; } button { margin-inline-start: .25rem; } .icon-button { width: 1.5rem; height: 1.5rem; } .icon-button nx-icon { --icon-size: var(--icon-sm); } @media (pointer: coarse) { .icon-button { width: var(--button-target); height: var(--button-target); } }',
   template: `@if (code()) {
     <button
       type="button"

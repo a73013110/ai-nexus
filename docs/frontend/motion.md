@@ -4,7 +4,7 @@
 
 ## 原則
 
-- Tokens：時長 `--motion-fast`／`--motion`／`--motion-panel`／`--motion-morph`；easing `--ease`、`--ease-exit`、`--ease-spring`（`linear()` 彈簧，不支援時退回 cubic-bezier）。
+- Tokens：時長 `--motion-fast`／`--motion`／`--motion-panel`／`--motion-morph`、小轉圈 `--motion-spin`；easing `--ease`、`--ease-exit`、`--ease-spring`（`linear()` 彈簧，不支援時退回 cubic-bezier）。
 - 可以用：形狀 morph、共享元素過渡、進場位移／縮放與彈簧回彈、按下時微縮（`scale: 0.97`）。不用：假百分比、整頁持續動畫、要等動畫結束才能操作。
 - 漸進增強（使用者以新版 Edge／Chrome 為主）：View Transitions、`linear()`、`interpolate-size`、`@starting-style` 與 `transition-behavior: allow-discrete` 只是加分，不支援時直接切換。
 

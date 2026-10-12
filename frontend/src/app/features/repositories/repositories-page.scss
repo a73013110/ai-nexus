@@ -5,8 +5,7 @@
   margin: 2rem auto;
 }
 .repository-connect > nx-icon {
-  width: 2rem;
-  height: 2rem;
+  --icon-size: var(--icon-3xl);
   color: var(--signal);
 }
 .repository-connect h2 {
@@ -71,8 +70,7 @@
   margin-top: 0.3rem;
 }
 .repository-row nx-icon {
-  width: 16px;
-  height: 16px;
+  --icon-size: var(--icon-md);
 }
 .repository-row:hover,
 .repository-row.current {

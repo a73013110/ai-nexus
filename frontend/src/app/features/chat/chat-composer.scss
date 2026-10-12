@@ -63,8 +63,7 @@
   color: var(--muted);
 }
 .composer-expand nx-icon {
-  width: 15px;
-  height: 15px;
+  --icon-size: var(--icon-sm);
 }
 .composer-bottom {
   display: flex;
@@ -97,21 +96,19 @@
   opacity: 0.75;
 }
 .send-button nx-icon {
-  width: 18px;
-  height: 18px;
+  --icon-size: var(--icon-lg);
 }
 .stop-button nx-icon {
-  width: 15px;
-  height: 15px;
+  --icon-size: var(--icon-md);
 }
 .composer-hint {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--p-space-3);
   color: var(--muted);
   font-size: var(--text-caption);
   margin: var(--p-space-1) var(--p-space-1) 0;
-  line-height: 1.6;
+  line-height: var(--line-ui);
 }
 @include bp.below(compact) {
   .composer-hint {

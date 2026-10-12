@@ -95,8 +95,7 @@
   padding: 0.75rem 0 0.5rem 1.5rem;
 }
 .flow-inspector > nx-icon {
-  width: 1.5rem;
-  height: 1.5rem;
+  --icon-size: var(--icon-2xl);
   color: var(--signal);
   margin-bottom: 0.8rem;
 }
@@ -146,8 +145,7 @@
   color: var(--secondary);
 }
 .dashboard-services nx-icon {
-  width: 16px;
-  height: 16px;
+  --icon-size: var(--icon-md);
 }
 
 @keyframes flow-transit {

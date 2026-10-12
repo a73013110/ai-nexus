@@ -115,7 +115,7 @@ import { SharingApi } from './sharing-api';
               @for (message of view.snapshot.messages; track $index) {
                 <section class="shared-message" [class.shared-user]="message.role === 'user'">
                   <span class="message-author"
-                    >{{ message.role === 'user' ? '提問' : 'AI 回答'
+                    >{{ message.role === 'user' ? '提問' : 'AI Nexus'
                     }}{{
                       message.status !== 'completed'
                         ? ' · ' + (message.status === 'cancelled' ? '已停止' : '未完成')

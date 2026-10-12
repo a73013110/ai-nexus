@@ -29,18 +29,15 @@
   max-width: 60ch;
   line-height: var(--line-ui);
 }
-.ui-empty-state > nx-icon,
-.ui-empty-state > .empty-symbol {
-  width: 2rem;
-  height: 2rem;
+.ui-empty-state > nx-icon {
+  --icon-size: var(--icon-3xl);
   color: var(--secondary);
 }
 .ui-empty-state > .empty-symbol {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-}
-.ui-empty-state > .empty-symbol nx-icon {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: var(--icon-3xl);
+  height: var(--icon-3xl);
+  color: var(--secondary);
 }

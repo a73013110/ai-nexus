@@ -28,7 +28,7 @@
   animation: arrive var(--motion) var(--ease-spring) both;
 }
 .submit-spinner {
-  animation: orbit-turn 1s linear infinite;
+  animation: orbit-turn var(--motion-spin) linear infinite;
 }
 @media (prefers-reduced-motion: reduce) {
   .submit-spinner {

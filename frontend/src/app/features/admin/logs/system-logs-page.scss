@@ -37,8 +37,7 @@
   width: 7rem;
 }
 th nx-icon {
-  width: 12px;
-  height: 12px;
+  --icon-size: var(--icon-xs);
   margin-left: 0.25rem;
 }
 .log-correlation {

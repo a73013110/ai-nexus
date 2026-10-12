@@ -48,18 +48,15 @@ const idle: Signal<string> = signal('').asReadonly();
     [attr.aria-busy]="active()"
     [animate.enter]="enter() ? 'message-enter' : ''"
   >
-    <div class="message-heading">
-      <span class="role-mark" [class.nexus]="message().role === 'assistant'">{{
-        message().role === 'user' ? '你' : 'N'
-      }}</span
-      ><strong>{{ message().role === 'user' ? '你的提問' : 'AI Nexus' }}</strong>
-      @if (message().role === 'assistant') {
-        <span class="assistant-label">AI 回覆</span>
-      }
-      @if (showModelNames() && message().modelId) {
-        <span class="message-model">{{ modelName(message()) }}</span>
-      }
-    </div>
+    <!-- The bubble already marks the user's turn; only answers name who wrote them and how. -->
+    @if (message().role === 'assistant') {
+      <div class="message-heading">
+        <span class="role-mark" aria-hidden="true">N</span><strong>AI Nexus</strong>
+        @if (showModelNames() && message().modelId) {
+          <span class="message-model">{{ modelName(message()) }}</span>
+        }
+      </div>
+    }
     @if (active() && message().role === 'assistant') {
       @if (streamContent()) {
         <nx-streaming-answer [content]="streamContent()" (rendered)="rendered.emit()" />

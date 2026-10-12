@@ -34,10 +34,10 @@
   }
 }
 .file-library-private nx-icon {
-  width: 14px;
+  --icon-size: var(--icon-sm);
 }
 .file-library-note nx-icon {
-  width: 16px;
+  --icon-size: var(--icon-md);
   flex: none;
   margin-top: 2px;
 }

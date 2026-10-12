@@ -97,7 +97,7 @@ h2 {
   font-size: var(--text-caption);
 }
 .identity-spinner {
-  animation: orbit-turn 1s linear infinite;
+  animation: orbit-turn var(--motion-spin) linear infinite;
 }
 .identity-back {
   width: 100%;

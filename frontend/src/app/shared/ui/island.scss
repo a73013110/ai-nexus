@@ -66,7 +66,7 @@
   --tone: var(--error);
 }
 .island-glyph {
-  --icon-size: 1rem;
+  --icon-size: var(--icon-md);
   flex: none;
   color: var(--tone);
 }
@@ -146,7 +146,7 @@
   color: var(--tone);
 }
 .island-bubble nx-icon {
-  --icon-size: 1rem;
+  --icon-size: var(--icon-md);
 }
 .island-count {
   color: var(--ink);

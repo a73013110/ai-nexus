@@ -29,8 +29,7 @@
   margin-top: 0;
 }
 nx-action-menu nx-icon {
-  width: 16px;
-  height: 16px;
+  --icon-size: var(--icon-md);
 }
 :host-context(.is-compact) .profile-name,
 :host-context(.is-compact) nx-action-menu nx-icon {

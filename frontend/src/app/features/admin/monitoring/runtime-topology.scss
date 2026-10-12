@@ -81,7 +81,7 @@
   box-shadow: 0 0 45px color-mix(in srgb, var(--signal) 12%, transparent);
 }
 .core-mark nx-icon {
-  --icon-size: 2rem;
+  --icon-size: var(--icon-3xl);
 }
 .core-orbit {
   position: absolute;

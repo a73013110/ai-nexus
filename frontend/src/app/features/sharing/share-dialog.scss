@@ -1,7 +1,6 @@
 .share-created > nx-icon {
   color: var(--signal);
-  width: 40px;
-  height: 40px;
+  --icon-size: var(--icon-4xl);
 }
 .share-recipients {
   display: flex;

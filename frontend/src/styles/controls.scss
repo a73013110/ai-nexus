@@ -19,8 +19,7 @@
   color: var(--secondary);
 }
 .quiet-button nx-icon {
-  width: 14px;
-  height: 14px;
+  --icon-size: var(--icon-sm);
 }
 kbd {
   font: inherit;

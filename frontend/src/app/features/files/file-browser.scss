@@ -12,22 +12,18 @@
   margin-left: 0;
 }
 .file-cover-document nx-icon {
-  width: 40px;
-  height: 40px;
+  --icon-size: var(--icon-4xl);
   stroke-width: 1.2;
 }
 .file-cover-preview nx-icon {
-  width: 14px;
-  height: 14px;
+  --icon-size: var(--icon-sm);
 }
 .file-usages > a nx-icon {
-  width: 12px;
-  height: 12px;
+  --icon-size: var(--icon-xs);
   flex: none;
 }
 .file-browser-list .file-cover-document nx-icon {
-  width: 24px;
-  height: 24px;
+  --icon-size: var(--icon-2xl);
 }
 .file-card {
   --card-padding: 0;
