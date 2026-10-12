@@ -30,7 +30,6 @@ let sequence = 0;
       stroke-linecap: round;
       stroke-linejoin: round;
       vector-effect: non-scaling-stroke;
-      stroke-dasharray: 1;
       animation: sparkline-draw 1.1s var(--ease) both;
     }
     .end {
@@ -53,7 +52,7 @@ let sequence = 0;
       </defs>
       <path [attr.d]="fill()" [attr.fill]="'url(#' + id + ')'" />
     }
-    <path class="line" pathLength="1" [attr.d]="path()" />
+    <path class="line" [attr.d]="path()" />
     @if (points().length) {
       <circle class="end" r="1.6" [attr.cx]="last().x" [attr.cy]="last().y" />
     }

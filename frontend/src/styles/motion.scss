@@ -434,9 +434,14 @@
 
 // Overview: data marks draw in, tiles settle and live indicators breathe in opacity. Loops stop
 // with the reduced-motion rule above, leaving their resting frame.
+// A clip, not a dash: under `non-scaling-stroke` dashes are measured in screen pixels while
+// `pathLength` scales by the user-space length, so a stretched line would draw only part way.
 @keyframes sparkline-draw {
   from {
-    stroke-dashoffset: 1;
+    clip-path: inset(-4px 100% -4px -4px);
+  }
+  to {
+    clip-path: inset(-4px);
   }
 }
 @keyframes ring-sweep {
