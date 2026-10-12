@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .feature-main {
   position: relative;
   padding: var(--p-space-6) var(--workspace-gutter) var(--p-space-8);
@@ -48,10 +50,7 @@
   font-size: var(--text-ui);
   line-height: var(--line-ui);
 }
-@media (max-width: 860px) {
-  .feature-main {
-    padding-top: var(--p-space-6);
-  }
+@include bp.below(narrow) {
   .feature-header {
     flex-wrap: wrap;
   }
@@ -59,13 +58,7 @@
     min-width: 100%;
   }
 }
-@media (max-width: 859px) {
-  .feature-header > nx-workspace-menu-button + div {
-    flex: 1;
-    min-width: 0;
-  }
-}
-@media (max-width: 640px) {
+@include bp.below(phone) {
   :host(.feature-layout-compact) .feature-main {
     padding: var(--p-space-4) var(--p-space-3);
   }

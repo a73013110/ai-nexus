@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .file-library-toolbar > nx-view-switch {
   margin-bottom: 0;
 }
@@ -5,7 +7,7 @@
   margin-left: auto;
   width: min(300px, 100%);
 }
-@media (max-width: 680px) {
+@include bp.below(phone) {
   .file-library-toolbar nx-search-field {
     order: 1;
     width: 100%;
@@ -26,7 +28,7 @@
 .file-library-toolbar > nx-select {
   width: 144px;
 }
-@media (max-width: 680px) {
+@include bp.below(phone) {
   .file-library-toolbar > nx-select {
     flex: 1 1 144px;
   }
@@ -97,7 +99,7 @@
   line-height: 1.8;
   margin-top: 0;
 }
-@media (max-width: 680px) {
+@include bp.below(phone) {
   .file-library-intro {
     padding: var(--section-padding);
     gap: var(--section-gap);

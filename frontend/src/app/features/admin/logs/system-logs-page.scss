@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .log-table-title,
 .log-table-hint {
   display: flex;
@@ -56,7 +58,7 @@ code {
 .log-http-error {
   color: var(--danger);
 }
-@media (max-width: 640px) {
+@include bp.below(phone) {
   .log-table-hint {
     flex-wrap: wrap;
     gap: var(--p-space-2);

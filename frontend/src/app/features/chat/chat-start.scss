@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host-context(.chat-starting) {
   scrollbar-gutter: auto;
   margin-block-end: auto;
@@ -53,7 +55,7 @@
 }
 // Phones keep the composer in the thumb zone from the first screen: the greeting floats in the
 // free space and the starters become one swipeable row of tiles right above the composer.
-@media (max-width: 640px) {
+@include bp.below(phone) {
   :host-context(.chat-starting) {
     margin-block-end: 0;
   }

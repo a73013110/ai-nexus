@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: contents;
 }
@@ -90,7 +92,7 @@
   scrollbar-gutter: stable;
   padding: var(--p-space-4);
 }
-@media (max-width: 640px) {
+@include bp.below(phone) {
   .drawer-resize {
     display: none;
   }

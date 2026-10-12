@@ -3,12 +3,16 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  effect,
   inject,
   input,
   output,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
+import { below } from '../browser/breakpoints';
+import { mediaQuery } from '../browser/media-query';
 import { Icon } from './icon';
 
 let sequence = 0;
@@ -68,20 +72,27 @@ export class DetailDrawer {
   readonly id = `nx-drawer-${++sequence}`;
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly body = viewChild.required<ElementRef<HTMLElement>>('body');
-  private readonly narrow = matchMedia('(max-width: 1023px)');
+  /** Narrower viewports get a modal drawer; wider ones keep the page usable beside it. */
+  private readonly narrow = mediaQuery(below('tablet'));
   private returnFocus: HTMLElement | null = null;
   private suppressedCloses = 0;
   private destroyed = false;
   constructor() {
-    const resize = () => {
-      const dialog = this.dialog().nativeElement;
-      if (!dialog.open || this.modal() === this.narrow.matches) return;
-      const focused = document.activeElement as HTMLElement | null;
-      ++this.suppressedCloses;
-      dialog.close();
-      this.showNative();
-      if (focused && dialog.contains(focused)) focused.focus({ preventScroll: true });
-    };
+    // An open drawer reopens in the other form when the viewport crosses the breakpoint.
+    let narrow = this.narrow();
+    effect(() => {
+      if (this.narrow() === narrow) return;
+      narrow = this.narrow();
+      untracked(() => {
+        const dialog = this.dialog().nativeElement;
+        if (!dialog.open || this.modal() === narrow) return;
+        const focused = document.activeElement as HTMLElement | null;
+        ++this.suppressedCloses;
+        dialog.close();
+        this.showNative();
+        if (focused && dialog.contains(focused)) focused.focus({ preventScroll: true });
+      });
+    });
     const escape = (event: KeyboardEvent) => {
       if (
         event.key !== 'Escape' ||
@@ -95,11 +106,9 @@ export class DetailDrawer {
       event.preventDefault();
       this.close();
     };
-    this.narrow.addEventListener('change', resize);
     document.addEventListener('keydown', escape);
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
-      this.narrow.removeEventListener('change', resize);
       document.removeEventListener('keydown', escape);
       if (this.dialog().nativeElement.open) this.dialog().nativeElement.close();
     });
@@ -113,10 +122,10 @@ export class DetailDrawer {
     this.resetScroll();
   }
   private showNative() {
-    this.modal.set(this.narrow.matches);
-    this.narrow.matches
-      ? this.dialog().nativeElement.showModal()
-      : this.dialog().nativeElement.show();
+    // Hosts may open the drawer from an effect; the viewport must not become its dependency.
+    const modal = untracked(this.narrow);
+    this.modal.set(modal);
+    modal ? this.dialog().nativeElement.showModal() : this.dialog().nativeElement.show();
   }
   resetScroll() {
     this.body().nativeElement.scrollTop = 0;

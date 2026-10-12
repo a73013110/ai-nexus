@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   padding-inline: var(--workspace-gutter);
   scrollbar-gutter: stable both-edges;
@@ -111,7 +113,7 @@
   margin: var(--p-space-1) var(--p-space-1) 0;
   line-height: 1.6;
 }
-@media (max-width: 520px) {
+@include bp.below(compact) {
   .composer-hint {
     flex-wrap: wrap;
     gap: var(--p-space-1);
@@ -187,7 +189,7 @@
     display: none;
   }
 }
-@media (max-width: 640px) {
+@include bp.below(phone) {
   .composer-hint {
     justify-content: center;
     text-align: center;

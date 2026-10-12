@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 // Saved prompts beside the editor. The body scrolls as one; the editor stays in view beside a long
 // list, and the list's edge runs the full height as the divider.
 .library-dialog {
@@ -93,7 +95,7 @@
   font-weight: 600;
 }
 // The sheet stacks the list over the editor and scrolls both together.
-@media (max-width: 640px) {
+@include bp.below(phone) {
   .library-layout {
     grid-template-columns: minmax(0, 1fr);
   }

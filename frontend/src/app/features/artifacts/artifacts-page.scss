@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .artifact-toolbar > nx-view-switch {
   margin-bottom: 0;
 }
@@ -144,7 +146,7 @@
   color: var(--secondary);
   margin-right: auto;
 }
-@media (max-width: 1200px) {
+@include bp.below(wide) {
   .artifacts-workspace {
     grid-template-columns: 12rem minmax(0, 1fr);
   }
@@ -152,7 +154,7 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
-@media (max-width: 700px) {
+@include bp.below(phone) {
   .artifacts-workspace {
     grid-template-columns: minmax(0, 1fr);
   }

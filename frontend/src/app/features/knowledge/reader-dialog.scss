@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 // The frame and the open/close motion come from .platform-dialog (styles/dialogs.scss); the
 // reader only sizes itself to the viewport and darkens the page further.
 .reader-dialog {
@@ -17,7 +19,7 @@
   border-radius: 0;
   border: 0;
 }
-@media (max-width: 600px) {
+@include bp.below(phone) {
   .reader-dialog {
     width: 100vw;
     height: 100dvh;

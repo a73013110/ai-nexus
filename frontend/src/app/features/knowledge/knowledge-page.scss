@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .knowledge-test .primary-button {
   justify-content: space-between;
 }
@@ -5,7 +7,7 @@
   min-width: 16rem;
   max-width: 100%;
 }
-@media (max-width: 600px) {
+@include bp.below(phone) {
   .knowledge-heading > nx-select {
     min-width: 0;
     flex: 1;
@@ -17,7 +19,7 @@
 .document-row .resource-summary strong {
   overflow-wrap: anywhere;
 }
-@media (max-width: 600px) {
+@include bp.below(phone) {
   .document-row .resource-summary {
     flex-basis: calc(100% - 4rem);
   }
@@ -105,12 +107,12 @@
   width: var(--button-target);
   height: var(--button-target);
 }
-@media (max-width: 1100px) {
+@include bp.below(tablet) {
   .knowledge-sections {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-@media (max-width: 600px) {
+@include bp.below(phone) {
   .knowledge-upload {
     flex-wrap: wrap;
     padding: var(--p-space-4);

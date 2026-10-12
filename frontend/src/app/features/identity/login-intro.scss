@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 // The brand wordmark reads its affix opacity from these hooks.
 :host {
   --brand-affix-opacity: 0;
@@ -164,7 +166,7 @@ h1 em {
     display: none;
   }
 }
-@media (max-width: 720px) {
+@include bp.below(narrow) {
   :host {
     border-right: 0;
     border-bottom: 1px solid var(--line);
@@ -197,18 +199,22 @@ h1 em {
     display: none;
   }
 }
-@media (max-width: 720px) and (max-height: 620px) {
-  .login-intro-copy {
-    display: none;
+@include bp.below(narrow) {
+  @media (max-height: 620px) {
+    .login-intro-copy {
+      display: none;
+    }
   }
 }
-@media (max-height: 620px) and (min-width: 721px) {
-  .login-signal-slot,
-  nx-signal-mark {
-    display: none;
-  }
-  h1 {
-    font-size: 2rem;
-    margin-bottom: 12px;
+@include bp.above(narrow) {
+  @media (max-height: 620px) {
+    .login-signal-slot,
+    nx-signal-mark {
+      display: none;
+    }
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 12px;
+    }
   }
 }

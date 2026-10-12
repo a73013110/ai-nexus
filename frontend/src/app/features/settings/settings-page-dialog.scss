@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host-context(.settings-dialog) .settings-layout {
   height: 100%;
   grid-template-columns: 14rem minmax(0, 1fr);
@@ -28,7 +30,7 @@
 :host-context(.settings-dialog) .settings-page-header h1 {
   font-size: var(--p-font-2xl);
 }
-@media (max-width: 680px) {
+@include bp.below(phone) {
   :host-context(.settings-dialog) .settings-layout {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);

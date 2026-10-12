@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 // Shared control density. Reading typography remains controlled by personal settings.
 .ui-density-compact {
   --button-target: var(--control-height-compact);
@@ -258,7 +260,7 @@ select:where(.ui-input) {
   margin: 0;
   font-size: var(--p-font-lg);
 }
-@media (max-width: 640px), (pointer: coarse) {
+@include bp.below(phone, $or: '(pointer: coarse)') {
   .ui-density-compact {
     --button-target: 2.75rem;
     --control-font-size: 1rem;

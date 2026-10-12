@@ -7,11 +7,15 @@ import {
   ElementRef,
   afterRenderEffect,
   computed,
+  effect,
   inject,
   linkedSignal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
+import { below } from '../../shared/browser/breakpoints';
+import { mediaQuery } from '../../shared/browser/media-query';
 import { positionBesidePopover, positionPopover } from '../../shared/browser/popover-position';
 import { WorkspaceLayout } from '../../core/layout/workspace-layout';
 import { NotificationStore } from './notification-store';
@@ -139,11 +143,12 @@ export class NotificationCenter {
     { value: 'session', label: '本次工作階段', count: this.toasts.history().length },
   ]);
   readonly toggle = (value: boolean) => !value;
-  private readonly media = matchMedia('(max-width: 640px)');
+  private readonly phone = mediaQuery(below('phone'));
   /** Phones get the modal bottom sheet; wider screens a popover. Chosen on open, kept for the exit. */
   readonly sheet = linkedSignal<boolean, boolean>({
     source: this.store.opened,
-    computation: (opened, previous) => (opened || !previous ? this.media.matches : previous.value),
+    computation: (opened, previous) =>
+      opened || !previous ? untracked(this.phone) : previous.value,
   });
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('sheetDialog');
   private readonly panel = viewChild<ElementRef<HTMLDivElement>>('panel');
@@ -173,15 +178,16 @@ export class NotificationCenter {
       onCleanup(() => observer.unobserve(panel));
     });
     // Crossing the phone breakpoint while open would leave the wrong form on screen.
-    const breakpoint = () => {
-      if (this.store.opened() && this.sheet() !== this.media.matches) this.store.close();
-    };
-    this.media.addEventListener('change', breakpoint);
+    effect(() => {
+      const phone = this.phone();
+      untracked(() => {
+        if (this.store.opened() && this.sheet() !== phone) this.store.close();
+      });
+    });
     window.addEventListener('resize', place);
     window.addEventListener('scroll', place, true);
     inject(DestroyRef).onDestroy(() => {
       observer.disconnect();
-      this.media.removeEventListener('change', breakpoint);
       window.removeEventListener('resize', place);
       window.removeEventListener('scroll', place, true);
     });

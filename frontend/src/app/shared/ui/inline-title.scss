@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 // `inline` fits a toolbar (hosts may set --inline-title-font-size/--inline-title-max-width);
 // `block` is a full-width heading.
 .inline-title-display {
@@ -63,7 +65,7 @@
   white-space: normal;
   min-width: 14rem;
 }
-@media (max-width: 859px) {
+@include bp.below(narrow) {
   .inline-title-editor input {
     width: min(16rem, 32vw);
   }

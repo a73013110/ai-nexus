@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 // Sidebar index: group captions on the sidebar's label column and one chip that slides to the
 // section in view.
 .design-index {
@@ -84,7 +86,7 @@
   font-size: var(--p-font-lg);
   font-weight: 600;
 }
-@media (max-width: 640px) {
+@include bp.below(phone) {
   .design-preview {
     padding: var(--p-space-3);
     gap: var(--p-space-6);

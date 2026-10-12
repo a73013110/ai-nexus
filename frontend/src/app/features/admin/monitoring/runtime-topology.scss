@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
   min-width: 0;
@@ -175,7 +177,7 @@
     animation: none;
   }
 }
-@media (max-width: 767px) {
+@include bp.below(narrow) {
   .topology-columns {
     display: none;
   }

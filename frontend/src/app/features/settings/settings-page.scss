@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .settings-layout {
   display: grid;
   grid-template-columns: var(--settings-sidebar-width) minmax(0, 1fr);
@@ -97,7 +99,7 @@
   font-weight: 650;
   letter-spacing: -0.025em;
 }
-@media (max-width: 860px) {
+@include bp.below(narrow) {
   .settings-layout {
     grid-template-columns: 1fr;
     grid-template-rows: auto minmax(0, 1fr);

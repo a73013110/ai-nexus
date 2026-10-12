@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .attachment-list {
   container-type: inline-size;
   list-style: none;
@@ -151,7 +153,7 @@
     display: none;
   }
 }
-@media (max-width: 520px) {
+@include bp.below(compact) {
   .attachment-card {
     flex-basis: 100%;
   }

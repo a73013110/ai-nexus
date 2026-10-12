@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
 }
@@ -51,7 +53,7 @@ summary nx-icon {
   padding-top: var(--p-space-3);
   border-top: 1px solid var(--line);
 }
-@media (max-width: 1200px) {
+@include bp.below(wide) {
   .log-filter-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -65,7 +67,7 @@ summary nx-icon {
     display: none;
   }
 }
-@media (max-width: 640px) {
+@include bp.below(phone) {
   .log-filter-presets {
     width: 100%;
   }

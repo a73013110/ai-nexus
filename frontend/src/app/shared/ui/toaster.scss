@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 // A manual popover: transparent and click-through except for the stack itself. Keyframes live in
 // motion.scss; the surface is ::before, so the card can morph from a capsule with its shadow.
 .toaster {
@@ -146,7 +148,7 @@ ol {
 .toast-swap {
   animation: content-arrive var(--motion) var(--ease);
 }
-@media (max-width: 640px) {
+@include bp.below(phone) {
   .toaster {
     inset: auto var(--p-space-2) var(--p-space-2) auto;
     width: calc(100vw - 2 * var(--p-space-2));

@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   display: block;
 }
@@ -65,12 +67,12 @@ summary nx-icon {
   border-radius: var(--p-radius-md);
   box-shadow: var(--shadow-floating);
 }
-@media (max-width: 1200px) {
+@include bp.below(wide) {
   .log-health-sql {
     display: none;
   }
 }
-@media (max-width: 640px) {
+@include bp.below(phone) {
   .log-health {
     flex-wrap: wrap;
   }

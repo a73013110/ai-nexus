@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 // Short and narrow screens only change the rhythm variables; the mobile query also restacks.
 .login-workspace {
   --login-gutter: clamp(28px, 4vw, 64px);
@@ -150,13 +152,13 @@ input:focus {
   color: var(--secondary);
   line-height: 1.7;
 }
-@media (max-width: 720px), (max-height: 620px) {
+@include bp.below(narrow, $or: '(max-height: 620px)') {
   .login-workspace {
     --login-gutter: 24px;
     --login-space: 14px;
   }
 }
-@media (max-width: 720px) {
+@include bp.below(narrow) {
   .login-workspace {
     grid-template-columns: 1fr;
     grid-template-rows: 112px minmax(0, 1fr);
@@ -165,18 +167,18 @@ input:focus {
     justify-items: center;
     padding: 20px 24px;
   }
-}
-@media (max-width: 720px) {
   .login-workspace[data-stage='welcome'] {
     grid-template: minmax(0, 1fr) / minmax(0, 1fr);
   }
 }
-@media (max-width: 720px) and (max-height: 620px) {
-  .login-workspace {
-    --login-space: 9px;
-    grid-template-rows: 88px minmax(0, 1fr);
-  }
-  .login-panel {
-    padding: 12px 20px;
+@include bp.below(narrow) {
+  @media (max-height: 620px) {
+    .login-workspace {
+      --login-space: 9px;
+      grid-template-rows: 88px minmax(0, 1fr);
+    }
+    .login-panel {
+      padding: 12px 20px;
+    }
   }
 }

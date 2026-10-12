@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 :host {
   position: relative;
   display: flex;
@@ -102,7 +104,7 @@ nx-workspace-brand {
   overflow: visible;
 }
 // The rail and the full sidebar animate their own width; the grid column follows.
-@media (min-width: 860px) {
+@include bp.above(narrow) {
   :host {
     width: var(--sidebar-width);
     transition: width var(--motion-panel) var(--ease);
@@ -112,7 +114,7 @@ nx-workspace-brand {
 // with it) and starts at the drawer's edge, so it travels with the edge instead of racing it. Mid
 // slide the edge has not reached its place yet, so the painted scrim (::before) runs a full
 // viewport wide while the button keeps the on-screen hit area.
-@media (max-width: 859px) {
+@include bp.below(narrow) {
   :host {
     --control-height-compact: 2.75rem;
     position: fixed;

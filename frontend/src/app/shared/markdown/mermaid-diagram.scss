@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .mermaid-frame {
   margin: 0;
   overflow: hidden;
@@ -74,7 +76,7 @@
   border: 0;
   border-radius: 0;
 }
-@media (max-width: 600px) {
+@include bp.below(phone) {
   .mermaid-toolbar {
     padding: var(--p-space-2);
     gap: var(--p-space-2);

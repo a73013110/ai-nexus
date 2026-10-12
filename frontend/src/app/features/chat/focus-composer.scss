@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .platform-dialog.focus-composer-dialog {
   --dialog-width: calc(var(--reading-width) + 2 * var(--dialog-padding) + 2px);
   display: none;
@@ -37,7 +39,7 @@
 .focus-composer-count.is-over {
   color: var(--error);
 }
-@media (max-width: 600px) {
+@include bp.below(phone) {
   .focus-composer-footer > span {
     flex-basis: 100%;
   }

@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .file-browser {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
@@ -184,7 +186,7 @@
   flex: none;
   border: 0;
 }
-@media (max-width: 680px) {
+@include bp.below(phone) {
   .file-browser-list .file-card {
     flex-wrap: wrap;
   }

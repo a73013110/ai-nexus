@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .paragraph-float {
   position: fixed;
   z-index: 30;
@@ -27,7 +29,7 @@
 .paragraph-float > button:hover {
   background: var(--hover);
 }
-@media (max-width: 700px) {
+@include bp.below(phone) {
   .paragraph-float > button {
     padding-inline: var(--p-space-2);
   }
