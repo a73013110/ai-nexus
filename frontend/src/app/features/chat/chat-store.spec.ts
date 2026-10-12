@@ -49,6 +49,7 @@ function setup(features = ['chat']) {
     models: vi.fn(() => models.promise),
     conversations: vi.fn(() => conversations.promise),
     webSearchStatus: vi.fn(async () => ({ available: true, notice: '' })),
+    context: vi.fn(),
   };
   const account = signal<ReturnType<typeof me> | null>(null);
   const session = {
@@ -128,5 +129,27 @@ describe('chat store bootstrap', () => {
     expect(f.store.error()).toContain('沒有對話功能');
     expect(f.api.models).not.toHaveBeenCalled();
     expect(f.api.conversations).not.toHaveBeenCalled();
+  });
+
+  it('keeps sending blocked while an over-budget estimate is being refreshed', async () => {
+    const f = setup();
+    f.models.resolve(catalog);
+    f.conversations.resolve([]);
+    await f.store.initialize();
+    const usage = (budgetExceeded: boolean) =>
+      ({ estimatedInputTokens: 1, contextTokens: 10, budgetExceeded }) as never;
+    f.store.contextUsage.set(usage(true));
+    expect(f.store.canSend()).toBe(false);
+
+    const next = deferred<unknown>();
+    f.api.context.mockReturnValue(next.promise);
+    f.store.contextPending.set(true);
+    const preview = f.store.previewContext({} as never, new AbortController().signal);
+    expect(f.store.canSend()).toBe(false);
+
+    next.resolve(usage(false));
+    await preview;
+    expect(f.store.contextPending()).toBe(false);
+    expect(f.store.canSend()).toBe(true);
   });
 });

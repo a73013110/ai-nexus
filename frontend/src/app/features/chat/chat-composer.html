@@ -105,6 +105,7 @@
         [loading]="store.loading()"
         [loadFailed]="!store.ready() && !!store.error()"
         [usage]="store.contextUsage()"
+        [usagePending]="store.contextPending()"
         [webSearch]="store.webSearchEnabled()"
         [webSearchAvailable]="store.webSearchStatus().available"
         [webSearchNotice]="store.webSearchStatus().notice"
@@ -129,12 +130,7 @@
           <nx-icon name="stop" />
         </button>
       } @else {
-        <button
-          class="send-button"
-          type="submit"
-          aria-label="送出訊息"
-          [disabled]="!store.canSend() || !store.draft().text.trim() || promptForm.text().invalid()"
-        >
+        <button class="send-button" type="submit" aria-label="送出訊息" [disabled]="!canSubmit()">
           <nx-icon name="arrow" />
         </button>
       }
@@ -177,8 +173,8 @@
   [text]="store.draft().text"
   (textChange)="store.draft.set({ text: $event })"
   [readonly]="promptForm.text().readonly()"
-  [canSend]="store.canSend() && !promptForm.text().invalid()"
-  [maxLength]="store.policy().maxInputCharacters"
+  [canSend]="canSubmit()"
+  [limit]="store.policy().maxInputCharacters"
   [enterToSend]="store.personal.value().enterToSend"
   (sent)="submit()"
 />

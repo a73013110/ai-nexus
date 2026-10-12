@@ -87,6 +87,7 @@ import { ReasoningChoice } from './reasoning-choice';
             viewBox="0 0 24 24"
             class="context-ring"
             [class.warning]="usage()?.budgetExceeded"
+            [class.pending]="usagePending()"
             aria-hidden="true"
           >
             <circle class="context-ring-track" cx="12" cy="12" r="8" />
@@ -148,6 +149,7 @@ export class ComposerControls {
   readonly loading = input(false);
   readonly loadFailed = input(false);
   readonly usage = input<ContextUsageDto | null>(null);
+  readonly usagePending = input(false);
   readonly modelChange = output<string>();
   readonly effortChange = output<string>();
   readonly webSearch = input(false);

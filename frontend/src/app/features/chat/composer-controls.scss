@@ -51,6 +51,10 @@ nx-info-popover {
   height: 1.5rem;
   flex: none;
   transform: rotate(-90deg);
+  transition: opacity var(--motion);
+}
+.context-ring.pending {
+  opacity: 0.6;
 }
 .context-ring circle {
   fill: none;

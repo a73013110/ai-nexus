@@ -34,6 +34,9 @@
   color: var(--secondary);
   font-size: var(--text-caption);
 }
+.focus-composer-count.is-over {
+  color: var(--error);
+}
 @media (max-width: 600px) {
   .focus-composer-footer > span {
     flex-basis: 100%;
