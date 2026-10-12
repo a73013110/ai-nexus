@@ -1,18 +1,17 @@
 import { NgComponentOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { Icon } from '../../shared/ui/icon';
-import { Spotlight } from '../../shared/ui/spotlight';
 import type { PlacedTile } from './dashboard-layout';
 import { TILE_SIZES, type TileSize } from './dashboard-widgets';
 
 /**
  * One tile of the board: a titled surface around its widget. In edit mode it shows a move handle
- * (drag, or arrow keys), size choices and hide; the board owns the order.
+ * (drag, or arrow keys), every size, height and hide; the board owns the order. The tools wrap
+ * under the title on narrow tiles instead of hiding, so a small tile can always grow again.
  */
 @Component({
   selector: 'nx-dashboard-tile',
   imports: [Icon, NgComponentOutlet],
-  hostDirectives: [{ directive: Spotlight, inputs: ['nxSpotlight: tilt'] }],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './dashboard-tile.scss',
   host: {

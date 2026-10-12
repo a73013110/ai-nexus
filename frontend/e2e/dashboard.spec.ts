@@ -52,7 +52,7 @@ const tileOrder = (page: Page) =>
 test("dashboard shows every granted feature, keeps currencies apart and narrows the platform view to one user", async ({
   page,
 }) => {
-  const { fixture } = await openDashboard(page);
+  const { fixture, reads } = await openDashboard(page);
   await page.goto("/");
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(
@@ -108,9 +108,12 @@ test("dashboard shows every granted feature, keeps currencies apart and narrows 
   await expect(chart.locator(".trend-tooltip")).toContainText("TWD");
 
   await chooseSelect(page, "總覽範圍", "整個平台");
-  await expect(tile(page, "平台")).toContainText("128");
-  await expect(tile(page, "平台")).toContainText("無法連線");
-  await expect(tile(page, "即時監控")).toContainText("14");
+  // Administrators see the same tiles as everyone, plus the per-user spend; no monitoring tile.
+  await expect(
+    page.locator('nx-dashboard-tile[data-id="users"]'),
+  ).toBeVisible();
+  await expect(tile(page, "平台")).toHaveCount(0);
+  await expect(tile(page, "即時監控")).toHaveCount(0);
   await expect(tile(page, "工作流程")).toContainText("目前帳號有權限的工作區");
   await chooseSelect(page, "顯示的費用幣別與類型", "USD · API 計費估算");
   const users = tile(page, "使用者區間費用");
@@ -119,6 +122,10 @@ test("dashboard shows every granted feature, keeps currencies apart and narrows 
     .getByRole("button", { name: "檢視", exact: true })
     .click();
   await expect(overview).toContainText("使用者：測試使用者");
+  await page
+    .getByRole("group", { name: "費用查詢期間", exact: true })
+    .getByRole("button", { name: "自訂", exact: true })
+    .click();
   const appliedFrom = await page
     .getByLabel("費用開始日期", { exact: true })
     .inputValue();
@@ -132,8 +139,8 @@ test("dashboard shows every granted feature, keeps currencies apart and narrows 
       body: "使用者,費用\n測試,1",
     });
   });
-  // Export follows the applied period, not an unsubmitted date.
-  await page.getByLabel("費用開始日期", { exact: true }).fill("2025/01/01");
+  // Export follows the applied period, never an unfinished date.
+  await page.getByLabel("費用開始日期", { exact: true }).fill("2025/13/01");
   await page.getByRole("button", { name: "匯出費用", exact: true }).click();
   await expect
     .poll(() => exportedFrom)
@@ -141,34 +148,28 @@ test("dashboard shows every granted feature, keeps currencies apart and narrows 
       new Date(appliedFrom.replaceAll("/", "-") + "T00:00:00").toISOString(),
     );
   expect(exportedOwner).toBe(fixture.userId);
-  await page.getByLabel("費用開始日期", { exact: true }).fill(appliedFrom);
+  // A valid date applies itself once typing pauses; there is no query button.
+  await expect(
+    page.getByRole("button", { name: "查詢", exact: true }),
+  ).toHaveCount(0);
+  await page.getByLabel("費用開始日期", { exact: true }).fill("2025/01/01");
+  await expect
+    .poll(() => reads.at(-1)?.searchParams.get("from"))
+    .toBe(new Date("2025-01-01T00:00:00").toISOString());
   await users.getByRole("button", { name: "查看所有人", exact: true }).click();
   await expect(overview).toContainText("整個平台");
 });
 
-test("styles switch and persist, and tiles can be moved, resized, hidden and reset", async ({
+test("one overview style, and tiles can be moved, resized, hidden and reset", async ({
   page,
 }) => {
   await openDashboard(page, false);
   await page.goto("/dashboard");
-  const host = page.locator("nx-dashboard-page");
-  await expect(host).toHaveAttribute("data-dashboard-style", "aurora");
-  await expect(page.locator("nx-aurora-hero")).toContainText("測試使用者");
-  const styles = page.getByRole("group", { name: "總覽風格", exact: true });
-  await styles.getByRole("button", { name: "星軌", exact: true }).click();
-  await expect(host).toHaveAttribute("data-dashboard-style", "orbit");
-  // The night sky is dark whatever the theme; its feature labels are real buttons.
-  await expect(host).toHaveAttribute("data-theme", "dark");
-  const map = page.getByRole("group", { name: "功能星圖", exact: true });
-  await map.getByRole("button", { name: /知識庫/ }).click();
-  await expect(page.locator("nx-orbit-panel")).toContainText("索引分段");
-  await expect(
-    page.locator("nx-orbit-panel").getByRole("link", { name: "前往知識庫" }),
-  ).toHaveAttribute("href", "/knowledge");
-  await styles.getByRole("button", { name: "脈衝", exact: true }).click();
-  await expect(page.locator("nx-pulse-hero")).toContainText("次模型與工具呼叫");
-  await page.reload();
-  await expect(host).toHaveAttribute("data-dashboard-style", "pulse");
+  await expect(page.getByRole("group", { name: "總覽風格" })).toHaveCount(0);
+  await expect(page.locator("nx-dashboard-page")).not.toHaveAttribute(
+    "data-theme",
+    /.+/,
+  );
 
   const defaults = await tileOrder(page);
   await page.getByRole("button", { name: "自訂版面", exact: true }).click();
@@ -186,8 +187,12 @@ test("styles switch and persist, and tiles can be moved, resized, hidden and res
     page.getByRole("button", { name: /^移動 呼叫熱度/ }),
   ).toBeFocused();
   // Pointer: drop the knowledge tile on the chat tile beside it.
+  // Both tiles in view, away from the edges that scroll the page while dragging.
+  await page.setViewportSize({ width: 1440, height: 1400 });
   const handle = page.getByRole("button", { name: /^移動 知識庫/ });
-  await handle.evaluate((el) => el.scrollIntoView({ block: "center" }));
+  await tile(page, "對話").evaluate((el) =>
+    el.scrollIntoView({ block: "center" }),
+  );
   const start = (await handle.boundingBox())!;
   const target = (await tile(page, "對話").boundingBox())!;
   await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
@@ -204,12 +209,12 @@ test("styles switch and persist, and tiles can be moved, resized, hidden and res
       return order.indexOf("section:knowledge") < order.indexOf("section:chat");
     })
     .toBe(true);
-  // Size, height and hiding.
+  // Size, height and hiding. A tile made small can grow again (its sizes used to vanish).
   const activity = page.locator('nx-dashboard-tile[data-id="activity"]');
-  await activity
-    .getByRole("group", { name: "呼叫熱度 大小" })
-    .getByRole("button", { name: "滿版", exact: true })
-    .click();
+  const sizes = activity.getByRole("group", { name: "呼叫熱度 大小" });
+  await sizes.getByRole("button", { name: "小", exact: true }).click();
+  await expect(activity).toHaveAttribute("data-size", "s");
+  await sizes.getByRole("button", { name: "滿版", exact: true }).click();
   await expect(activity).toHaveAttribute("data-size", "xl");
   await page
     .getByRole("button", { name: "加高：呼叫熱度", exact: true })
@@ -265,10 +270,19 @@ test("dashboard fits a phone in the dark with reduced motion", async ({
       tiles.map((x) => Math.round(x.getBoundingClientRect().width)),
     );
   expect(new Set(widths).size).toBe(1);
-  await expect(page.locator("nx-aurora-hero .aurora i").first()).toHaveCSS(
-    "animation-iteration-count",
-    "1",
+  await expect(page.locator("nx-dashboard-tile").first()).toHaveCSS(
+    "animation-duration",
+    "0s",
   );
+  // Headline figures fit their panels at phone width.
+  for (const value of await page.locator(".kpi-value").all())
+    expect(
+      await value.evaluate((x) => x.scrollWidth <= x.clientWidth + 1),
+    ).toBe(true);
+  await page
+    .getByRole("group", { name: "費用查詢期間", exact: true })
+    .getByRole("button", { name: "自訂", exact: true })
+    .click();
   for (const label of ["費用開始日期", "費用結束日期"]) {
     await expect
       .poll(() =>

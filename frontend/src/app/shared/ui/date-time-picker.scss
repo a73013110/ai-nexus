@@ -8,7 +8,7 @@
   align-items: center;
   min-height: var(--button-target);
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
+  border-radius: var(--date-control-radius, var(--p-radius-md));
   background: var(--surface);
 }
 .ui-date-control:focus-within {

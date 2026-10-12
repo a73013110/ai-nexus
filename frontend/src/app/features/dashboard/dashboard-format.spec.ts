@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   dayRange,
+  figureMoney,
   fillDays,
   metricLabel,
   metricText,
@@ -9,6 +10,19 @@ import {
 } from './dashboard-format';
 
 describe('dashboard format', () => {
+  it('shortens long amounts so headline money always fits its tile', () => {
+    // Intl joins the code and the number with a no-break space, which keeps them on one line.
+    const figure = (amount: number, currency: string) =>
+      figureMoney(amount, currency).replace(/\s/g, ' ');
+    expect(figure(15.1208, 'USD')).toBe('USD 15.12');
+    expect(figure(0.0012345, 'USD')).toBe('USD 0.00123');
+    expect(figure(0, 'USD')).toBe('USD 0.00');
+    expect(figure(12_345.67, 'TWD')).toBe('TWD 1.23萬');
+    expect(figure(98_765_432_109.5, 'TWD')).toBe('TWD 988億');
+    for (const amount of [1, 9_999.99, 123_456_789, 9.87e14])
+      expect(figure(amount, 'USD').length).toBeLessThanOrEqual(14);
+  });
+
   it('formats metrics by kind and never shows unknown as zero', () => {
     expect(metricText(null, 'count')).toBe('—');
     expect(metricText(1234.567, 'count')).toBe('1,234.57');

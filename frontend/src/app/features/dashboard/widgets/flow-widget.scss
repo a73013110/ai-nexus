@@ -13,8 +13,8 @@
 li {
   position: relative;
   min-width: 0;
-  animation: tile-arrive 520ms var(--ease-spring) both;
-  animation-delay: calc(var(--i) * 90ms);
+  animation: tile-arrive var(--motion-enter) var(--ease) both;
+  animation-delay: calc(var(--i) * var(--motion-stagger));
 }
 .flow-node {
   display: grid;
@@ -25,13 +25,10 @@ li {
   color: inherit;
   text-align: center;
   text-decoration: none;
-  transition:
-    background var(--motion) var(--ease),
-    translate var(--motion) var(--ease-spring);
+  transition: background var(--motion) var(--ease);
 }
 a.flow-node:hover {
-  background: var(--hover);
-  translate: 0 -3px;
+  background: var(--tile-inset, var(--hover));
 }
 a.flow-node:focus-visible {
   outline: 2px solid var(--focus);
@@ -45,27 +42,37 @@ a.flow-node:focus-visible {
   height: 3rem;
   margin-bottom: var(--p-space-2);
   border-radius: 50%;
-  background: color-mix(in srgb, var(--tile-accent, var(--accent)) 14%, transparent);
-  color: var(--tile-accent, var(--accent));
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--tile-accent, var(--accent)) 30%, transparent);
-  --icon-size: var(--icon-xl);
+  background: var(--tile-inset, var(--hover));
+  color: var(--secondary);
+  --icon-size: var(--icon-lg);
 }
-.is-live .flow-icon::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  box-shadow: 0 0 0 2px var(--tile-accent, var(--accent));
-  animation: live-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+// Work in progress: the stage takes the accent and a small dot breathes beside it.
+.is-live .flow-icon {
+  color: var(--accent);
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0.125rem;
+    right: 0.125rem;
+    width: 0.5rem;
+    height: 0.5rem;
+    border: 2px solid var(--surface);
+    border-radius: 50%;
+    background: var(--accent);
+    animation: live-breathe var(--motion-signal) var(--ease) infinite;
+  }
 }
 .flow-label {
   color: var(--secondary);
   font-size: var(--p-font-xs);
 }
 strong {
+  max-width: 100%;
+  overflow: hidden;
   font-size: var(--p-font-2xl);
-  font-weight: 650;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-overflow: ellipsis;
 }
 small {
   color: var(--secondary);
@@ -75,33 +82,17 @@ small {
   color: var(--muted);
   font-size: 0.6875rem;
 }
-// The connector sits in the gap before each stage, at the icon's height.
+// The connector sits in the gap before each stage, at the icon's height: a plain hairline.
 .flow-link {
   position: absolute;
   top: calc(var(--p-space-3) + 1.5rem);
   right: calc(50% + 1.75rem);
   left: calc(-50% - var(--p-space-6) + 1.75rem);
-  height: 2px;
-  border-radius: 1px;
-  background: repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 10px);
-  i {
-    position: absolute;
-    top: -2px;
-    left: 0;
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--tile-accent, var(--accent));
-    opacity: 0;
-  }
-  &.is-flowing i {
-    animation: flow-particle 2.4s linear infinite;
-    &:nth-child(2) {
-      animation-delay: 0.8s;
-    }
-    &:nth-child(3) {
-      animation-delay: 1.6s;
-    }
+  height: 1px;
+  background: var(--line);
+  transition: background var(--motion) var(--ease);
+  &.is-flowing {
+    background: color-mix(in srgb, var(--accent) 45%, var(--line));
   }
 }
 .flow-note {

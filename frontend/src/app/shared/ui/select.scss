@@ -41,9 +41,9 @@
   padding: var(--p-space-1) var(--select-trigger-padding-inline, var(--p-space-2));
   max-width: var(--select-trigger-max-width, 13rem);
   border: 0;
-  border-radius: var(--p-radius-sm);
+  border-radius: var(--select-trigger-radius, var(--p-radius-sm));
   background: transparent;
-  color: var(--secondary);
+  color: var(--select-trigger-color, var(--secondary));
   font-size: var(--text-caption);
   cursor: pointer;
   text-overflow: ellipsis;

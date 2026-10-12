@@ -1,55 +1,33 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import {
-  AudioWaveform,
-  EyeOff,
-  Gauge,
-  GripVertical,
-  LayoutGrid,
-  Orbit,
-  RotateCcw,
-  Sparkles,
-} from 'lucide';
+import { EyeOff, Gauge, GripVertical, LayoutGrid, RotateCcw } from 'lucide';
 import { FeaturePage } from '../../core/layout/feature-page';
 import { ViewScope } from '../../shared/browser/view-scope';
-import { DateTimePicker } from '../../shared/ui/date-time-picker';
-import { FilterPanel } from '../../shared/ui/filter-panel';
 import { EXTRA_ICONS, Icon } from '../../shared/ui/icon';
 import { Notice } from '../../shared/ui/notice';
 import { Select } from '../../shared/ui/select';
-import { ViewSwitch } from '../../shared/ui/view-switch';
 import { PriceBook } from '../billing/price-book';
 import { DashboardBoard } from './dashboard-board';
 import { DashboardEditBar } from './dashboard-edit-bar';
-import { DASHBOARD_STYLES, DashboardLayout, type DashboardStyle } from './dashboard-layout';
+import { DashboardLayout } from './dashboard-layout';
 import { DashboardStore } from './dashboard-store';
-import { AuroraHero } from './heroes/aurora-hero';
-import { OrbitHero } from './heroes/orbit-hero';
-import { PulseHero } from './heroes/pulse-hero';
-
-/** How far tiles lean toward the pointer in each style, in degrees. */
-const TILT: Record<DashboardStyle, number> = { aurora: 3, orbit: 5, pulse: 0 };
+import { DashboardToolbar } from './dashboard-toolbar';
 
 /**
- * The overview: a hero in the chosen style over a board of tiles the viewer can reorder, resize
- * and hide. Data comes from one read (`DashboardStore`); arrangement is a browser preference
- * (`DashboardLayout`).
+ * The overview: a greeting that says what is happening now, the period toolbar and a board of
+ * tiles the viewer can reorder, resize and hide. Data comes from one read (`DashboardStore`);
+ * arrangement is a browser preference (`DashboardLayout`).
  */
 @Component({
   selector: 'nx-dashboard-page',
   imports: [
-    AuroraHero,
     DashboardBoard,
     DashboardEditBar,
-    DateTimePicker,
+    DashboardToolbar,
     FeaturePage,
-    FilterPanel,
     Icon,
     Notice,
-    OrbitHero,
     PriceBook,
-    PulseHero,
     Select,
-    ViewSwitch,
   ],
   providers: [
     ViewScope,
@@ -60,9 +38,6 @@ const TILT: Record<DashboardStyle, number> = { aurora: 3, orbit: 5, pulse: 0 };
       useValue: {
         grip: GripVertical,
         'eye-off': EyeOff,
-        sparkles: Sparkles,
-        orbit: Orbit,
-        waves: AudioWaveform,
         reset: RotateCcw,
         gauge: Gauge,
         layout: LayoutGrid,
@@ -70,11 +45,6 @@ const TILT: Record<DashboardStyle, number> = { aurora: 3, orbit: 5, pulse: 0 };
     },
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: {
-    '[attr.data-dashboard-style]': 'layout.style()',
-    // The orbit style is a night sky whatever the theme.
-    '[attr.data-theme]': "layout.style() === 'orbit' ? 'dark' : null",
-  },
   templateUrl: './dashboard-page.html',
   styleUrl: './dashboard-page.scss',
 })
@@ -82,14 +52,22 @@ export class DashboardPage {
   readonly store = inject(DashboardStore);
   readonly layout = inject(DashboardLayout);
   readonly session = this.store.session;
-  readonly styles = DASHBOARD_STYLES;
   readonly scopes = [
     { value: 'personal', label: '我的工作' },
     { value: 'platform', label: '整個平台' },
   ];
-  readonly tilt = computed(() => TILT[this.layout.style()]);
-  setStyle(value: string) {
-    const style = DASHBOARD_STYLES.find((x) => x.value === value)?.value;
-    if (style) this.layout.setStyle(style);
-  }
+  /** The line under the title: a greeting, then work in progress or what needs attention. */
+  readonly summary = computed(() => {
+    const hour = new Date().getHours();
+    const part =
+      hour < 5 ? '夜深了' : hour < 11 ? '早安' : hour < 14 ? '午安' : hour < 18 ? '下午好' : '晚安';
+    const name = this.session.me()?.displayName;
+    const greeting = name ? `${part}，${name}。` : `${part}。`;
+    if (!this.store.data()) return greeting;
+    const active = this.store.activeWork(),
+      attention = this.store.attention();
+    if (active) return `${greeting}目前有 ${active} 件工作處理中。`;
+    if (attention.length) return `${greeting}${attention.map((x) => x.title).join('、')}需要留意。`;
+    return `${greeting}一切就緒，沒有進行中的工作。`;
+  });
 }

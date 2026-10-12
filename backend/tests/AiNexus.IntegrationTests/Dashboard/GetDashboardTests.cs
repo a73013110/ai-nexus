@@ -66,19 +66,20 @@ public sealed class GetDashboardTests
     }
 
     [Fact]
-    public async Task SectionsFollowFeatureGrantsAndPlatformSectionsNeedTheAdministratorScope()
+    public async Task SectionsFollowFeatureGrantsAndAreTheSameInEveryScope()
     {
         await using var factory = new NexusFactory(administrators: ["alice"]);
         using var alice = await factory.SignedInAsync();
         using var bob = await factory.SignedInAsync("bob");
         var personal = await Read(alice, Period);
         Assert.Contains(personal.Sections, x => x.Id == "chat");
-        Assert.DoesNotContain(personal.Sections, x => x.Id == "platform");
         // The feature's (possibly customised) name and route title the section; an explicit title stays.
         Assert.Equal(("對話", "/chat"), (Section(personal, "chat").Title, Section(personal, "chat").Route));
         Assert.Equal(("通知", ""), (Section(personal, "notifications").Title, Section(personal, "notifications").Route));
         var platform = await Read(alice, "scope=platform&" + Period);
-        Assert.Equal(2, Value(platform, "platform", "users"));
+        // The overview looks the same for everyone: the platform scope widens the figures, not the sections.
+        Assert.DoesNotContain(platform.Sections, x => x.Id is "platform" or "monitoring");
+        Assert.Equal(personal.Sections.Select(x => x.Id), platform.Sections.Select(x => x.Id));
         Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync("/api/v1/dashboard?scope=platform&" + Period)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await bob.GetAsync($"/api/v1/dashboard?ownerId={Guid.NewGuid()}&{Period}")).StatusCode);
         using (var scope = factory.Services.CreateScope())

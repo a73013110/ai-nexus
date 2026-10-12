@@ -39,7 +39,7 @@ internal sealed class GetDashboard(NexusDbContext db, SpendReports reports, Usag
         // Sources share this request's context, so they run one after another.
         foreach (var source in sources)
         {
-            if (source.PlatformOnly && !platform || !features.TryGetValue(source.Feature, out var feature)) continue;
+            if (!features.TryGetValue(source.Feature, out var feature)) continue;
             if (await source.ReadAsync(window, ct) is not { } section) continue;
             sections.Add(section with { Title = section.Title.Length > 0 ? section.Title : feature.Name, Route = section.Route ?? feature.Route });
         }

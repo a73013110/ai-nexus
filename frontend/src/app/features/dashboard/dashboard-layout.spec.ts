@@ -1,7 +1,17 @@
+import { Component } from '@angular/core';
+import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
 import type { DashboardSectionDto } from '../../core/api/schema';
-import { mergeTiles, moveTile, parseTiles, type TileState } from './dashboard-layout';
-import { dashboardWidgets } from './dashboard-widgets';
+import {
+  mergeTiles,
+  moveTile,
+  parseTiles,
+  updateTile,
+  type PlacedTile,
+  type TileState,
+} from './dashboard-layout';
+import { DashboardTile } from './dashboard-tile';
+import { dashboardWidgets, TILE_SIZES, type TileSize } from './dashboard-widgets';
 
 function section(id: string): DashboardSectionDto {
   return {
@@ -42,12 +52,12 @@ describe('dashboard widgets', () => {
     expect(ids).not.toContain('users');
   });
 
-  it('adds the user table and leads with platform sections for administrators', () => {
-    const ids = dashboardWidgets({
-      scope: 'platform',
-      sections: [section('chat'), section('platform')],
-    }).map((x) => x.id);
-    expect(ids.slice(0, 3)).toEqual(['overview', 'section:platform', 'users']);
+  it('keeps one arrangement for everyone; the platform scope only adds the user table', () => {
+    const sections = [section('chat'), section('knowledge')];
+    const personal = dashboardWidgets({ scope: 'personal', sections }).map((x) => x.id);
+    const platform = dashboardWidgets({ scope: 'platform', sections }).map((x) => x.id);
+    expect(platform.filter((x) => x !== 'users')).toEqual(personal);
+    expect(platform.slice(0, 4)).toEqual(['overview', 'spend', 'activity', 'users']);
   });
 });
 
@@ -78,10 +88,72 @@ describe('dashboard layout', () => {
     ).toEqual([{ id: 'spend', size: 'w', tall: false, hidden: false }]);
   });
 
+  it('ignores retired administrator tiles in arrangements saved by earlier versions', () => {
+    const saved = parseTiles({
+      v: 1,
+      tiles: [
+        { id: 'section:monitoring', size: 'l' },
+        { id: 'section:platform', size: 'l' },
+        { id: 'spend', size: 's' },
+      ],
+    });
+    expect(saved).toEqual([{ id: 'spend', size: 's', tall: false, hidden: false }]);
+    expect(mergeTiles(widgets, saved).map((x) => x.id)).not.toContain('section:monitoring');
+  });
+
+  it('resizes between every pair of sizes, through a save and reload', () => {
+    const sizes = TILE_SIZES.map((x) => x.value);
+    for (const from of sizes)
+      for (const to of sizes) {
+        const start = updateTile(mergeTiles(widgets, null), 'spend', { size: from });
+        const saved = parseTiles({ v: 1, tiles: updateTile(start, 'spend', { size: to }) });
+        expect(mergeTiles(widgets, saved).find((x) => x.id === 'spend')?.size).toBe(to);
+      }
+  });
+
   it('moves a tile to the place of another in either direction', () => {
     const tiles = ['a', 'b', 'c', 'd'].map((id) => tile(id));
     expect(moveTile(tiles, 'a', 'c').map((x) => x.id)).toEqual(['b', 'c', 'a', 'd']);
     expect(moveTile(tiles, 'd', 'b').map((x) => x.id)).toEqual(['a', 'd', 'b', 'c']);
     expect(moveTile(tiles, 'a', 'missing').map((x) => x.id)).toEqual(['a', 'b', 'c', 'd']);
+  });
+});
+
+@Component({ template: '' })
+class Empty {}
+
+describe('dashboard tile', () => {
+  // Regression: narrow tiles used to hide the size choices, so a tile made small could not grow.
+  it('offers every size while editing, whatever the current size', () => {
+    for (const size of TILE_SIZES.map((x) => x.value)) {
+      const fixture = TestBed.createComponent(DashboardTile);
+      const tile: PlacedTile = {
+        id: 'spend',
+        size,
+        tall: false,
+        hidden: false,
+        widget: {
+          id: 'spend',
+          title: '費用趨勢',
+          description: '',
+          icon: 'money',
+          size: 'w',
+          component: Empty,
+        },
+      };
+      fixture.componentRef.setInput('tile', tile);
+      fixture.componentRef.setInput('editing', true);
+      const chosen: TileSize[] = [];
+      fixture.componentInstance.sizeChange.subscribe((x) => chosen.push(x));
+      fixture.detectChanges();
+      const buttons = [
+        ...(fixture.nativeElement as HTMLElement).querySelectorAll<HTMLButtonElement>(
+          '.tile-sizes button',
+        ),
+      ];
+      expect(buttons.map((x) => x.textContent?.trim())).toEqual(TILE_SIZES.map((x) => x.label));
+      buttons.forEach((x) => x.click());
+      expect(chosen).toEqual(TILE_SIZES.map((x) => x.value));
+    }
   });
 });

@@ -31,8 +31,9 @@ nx-dashboard-tile {
 .is-editing nx-dashboard-tile {
   user-select: none;
 }
-// Narrower boards fold spans: two per row, then one.
-@container (max-width: 72rem) {
+// Narrower boards fold spans: two per row, then one. The first fold waits until the board is
+// narrower than a common laptop's, so every size still looks different there.
+@container (max-width: 60rem) {
   nx-dashboard-tile {
     &[data-size='s'],
     &[data-size='m'] {

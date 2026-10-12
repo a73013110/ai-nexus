@@ -12,7 +12,7 @@
 .trend-plot {
   position: relative;
   height: 11rem;
-  color: var(--signal);
+  color: var(--trend-color, var(--signal));
 }
 .trend-plot svg {
   width: 100%;
@@ -73,7 +73,7 @@
   height: var(--button-target);
   background: transparent;
   border: 0;
-  accent-color: var(--signal);
+  accent-color: var(--trend-color, var(--signal));
   opacity: 0.4;
 }
 .trend-scrubber:focus-visible,

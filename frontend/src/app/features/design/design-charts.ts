@@ -62,8 +62,6 @@ const TREND = [4, 7, 5, 9, 6, 11, 8, 13, 10, 15, 12, 18];
         var(--surface);
       color: var(--secondary);
       font-size: var(--text-caption);
-      transform: perspective(700px) rotateX(var(--tilt-x, 0deg)) rotateY(var(--tilt-y, 0deg));
-      transition: transform var(--motion-panel) var(--ease);
     }
   `,
   template: `<nx-design-section
@@ -124,11 +122,11 @@ const TREND = [4, 7, 5, 9, 6, 11, 8, 13, 10, 15, 12, 18];
     </nx-design-section>
     <nx-design-section
       id="design-spotlight"
-      title="聚光與傾斜"
+      title="聚光"
       api="nxSpotlight"
-      description="指標移動時寫入 --spot-x／--spot-y，給值時一併寫入 --tilt-x／--tilt-y；外觀由宿主決定，觸控與減少動態保持平面。"
+      description="指標移動時寫入 --spot-x／--spot-y；外觀由宿主決定，觸控不顯示。"
     >
-      <div class="design-spot" nxSpotlight="6">移動指標看光線與傾斜</div>
+      <div class="design-spot" nxSpotlight>移動指標看光線</div>
     </nx-design-section>`,
 })
 export class DesignCharts {

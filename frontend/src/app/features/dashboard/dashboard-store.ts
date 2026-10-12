@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, linkedSignal, signal } from '@angular/core';
+import { computed, DestroyRef, inject, Injectable, linkedSignal, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { apiResource } from '../../core/api/api-resource';
 import type { DashboardDto, DashboardSectionDto } from '../../core/api/schema';
@@ -11,6 +11,8 @@ import { dayRange, fillDays } from './dashboard-format';
 
 /** The personal overview refreshes itself; the audited platform read waits for the viewer. */
 const REFRESH_MS = 60_000;
+/** Typed dates apply once the viewer pauses, so a half-typed day is not read (or audited). */
+const DATE_SETTLE_MS = 600;
 
 /**
  * The overview's one read and the choices around it: scope, period, selected user and the
@@ -36,11 +38,11 @@ export class DashboardStore {
   readonly from = signal(localDate(new Date(Date.now() - 29 * 86400000)));
   readonly through = signal(this.today);
   readonly rangeOptions = [
-    { value: '7', label: '最近 7 天' },
-    { value: '30', label: '最近 30 天' },
-    { value: '90', label: '最近 90 天' },
-    { value: '365', label: '最近一年' },
-    { value: 'custom', label: '自訂期間' },
+    { value: '7', label: '7 天' },
+    { value: '30', label: '30 天' },
+    { value: '90', label: '90 天' },
+    { value: '365', label: '1 年' },
+    { value: 'custom', label: '自訂' },
   ];
   readonly range = signal('30');
   /** The period and owner last submitted; the read follows it and the scope. */
@@ -167,7 +169,14 @@ export class DashboardStore {
       .sort((a, b) => (b.at ?? '').localeCompare(a.at ?? '')),
   );
 
-  load() {
+  private settle = 0;
+  constructor() {
+    inject(DestroyRef).onDestroy(() => clearTimeout(this.settle));
+  }
+
+  /** Reads the chosen period; `force` reads again even when nothing changed (refresh, retry). */
+  load(force = true) {
+    clearTimeout(this.settle);
     this.exportError.set('');
     if (!this.from() || !this.through() || this.from() > this.through()) {
       this.formError.set('請提供有效的開始與結束日期。');
@@ -180,16 +189,23 @@ export class DashboardStore {
       query.from === current.from &&
       query.through === current.through &&
       query.owner === current.owner
-    )
-      this.resource.reload();
-    else this.query.set(query);
+    ) {
+      if (force) this.resource.reload();
+    } else this.query.set(query);
+  }
+  /** A typed or picked date; an empty value is an unfinished or out-of-range entry and waits. */
+  setDate(which: 'from' | 'through', value: string) {
+    (which === 'from' ? this.from : this.through).set(value);
+    this.range.set('custom');
+    clearTimeout(this.settle);
+    if (value) this.settle = setTimeout(() => this.load(false), DATE_SETTLE_MS);
   }
   setRange(value: string) {
     this.range.set(value);
     if (value === 'custom') return;
     this.through.set(this.today);
     this.from.set(localDate(new Date(Date.now() - (Number(value) - 1) * 86400000)));
-    this.load();
+    this.load(false);
   }
   setScope(value: string) {
     this.requestedScope.set(value);

@@ -43,65 +43,42 @@ export interface WidgetContext {
   sections: readonly DashboardSectionDto[];
 }
 
-/** Default order; section tiles of new features follow in the order the backend sends them. */
-const ORDER: Record<WidgetContext['scope'], readonly string[]> = {
-  personal: [
-    'overview',
-    'spend',
-    'activity',
-    'section:chat',
-    'section:knowledge',
-    'section:tasks',
-    'flow',
-    'recent',
-    'mix',
-    'section:notifications',
-    'tokens',
-    'section:files',
-    'section:projects',
-    'section:artifacts',
-    'section:shared',
-    'section:quality',
-    'section:repositories',
-    'section:web-search',
-    'services',
-  ],
-  platform: [
-    'overview',
-    'section:platform',
-    'section:monitoring',
-    'users',
-    'spend',
-    'activity',
-    'mix',
-    'tokens',
-    'flow',
-    'section:chat',
-    'section:knowledge',
-    'section:tasks',
-    'section:files',
-    'section:projects',
-    'section:artifacts',
-    'section:shared',
-    'section:quality',
-    'section:repositories',
-    'section:web-search',
-    'services',
-    'recent',
-    'section:notifications',
-  ],
-};
+/**
+ * Default order, the same for everyone; the user table only exists in the platform scope. Section
+ * tiles of new features follow in the order the backend sends them.
+ */
+const ORDER: readonly string[] = [
+  'overview',
+  'spend',
+  'activity',
+  'users',
+  'section:chat',
+  'section:knowledge',
+  'section:tasks',
+  'flow',
+  'recent',
+  'mix',
+  'section:notifications',
+  'tokens',
+  'section:files',
+  'section:projects',
+  'section:artifacts',
+  'section:shared',
+  'section:quality',
+  'section:repositories',
+  'section:web-search',
+  'services',
+];
 
 /** Default sizes chosen so the default order fills whole rows. */
 const SECTION_SIZES: Record<string, TileSize> = {
-  platform: 'l',
-  monitoring: 'l',
   files: 's',
   projects: 's',
   artifacts: 's',
   shared: 's',
   quality: 's',
   repositories: 's',
+  'web-search': 'l',
 };
 
 /**
@@ -171,7 +148,7 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
       title: '服務狀態',
       description: '檢索方式、網路搜尋、Gitea 與模型服務',
       icon: 'shield',
-      size: 'm',
+      size: 'l',
       component: ServicesWidget,
     },
     ...context.sections.map((section): DashboardWidget => ({
@@ -196,10 +173,9 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
       size: 'xl',
       component: UsersWidget,
     });
-  const order = ORDER[context.scope];
   const rank = (id: string) => {
-    const index = order.indexOf(id);
-    return index < 0 ? order.length : index;
+    const index = ORDER.indexOf(id);
+    return index < 0 ? ORDER.length : index;
   };
   // Array sort is stable, so unknown sections keep the backend's order after the known ones.
   return widgets.sort((a, b) => rank(a.id) - rank(b.id));

@@ -37,6 +37,8 @@ let sequence = 0;
 })
 export class DateTimePicker {
   readonly label = input.required<string>();
+  /** Keeps the label for assistive technology only, for toolbars that say it another way. */
+  readonly hideLabel = input(false);
   readonly value = input('');
   readonly calendarSystem = input<CalendarSystem>('gregory');
   readonly withTime = input(true);

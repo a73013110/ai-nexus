@@ -4,7 +4,7 @@
 
 ## 後端：一個模組一個來源
 
-1. 在模組根目錄新增 `<Module>Dashboard.cs`（`internal sealed class`），實作 [`IDashboardSource`](../../backend/src/AiNexus.Platform/Dashboard/IDashboardSource.cs)：`Feature` 是決定是否顯示的功能 grant；管理員專用的設 `PlatformOnly`。
+1. 在模組根目錄新增 `<Module>Dashboard.cs`（`internal sealed class`），實作 [`IDashboardSource`](../../backend/src/AiNexus.Platform/Dashboard/IDashboardSource.cs)：`Feature` 是決定是否顯示的功能 grant。總覽對每個人都一樣，不加管理員專用的區塊；平台層級的監控與帳號狀況放在各自的管理頁。
 2. 在模組的 `AddServices` 呼叫 `services.AddDashboardSource<XxxDashboard>()`。
 3. 用 [`DashboardSection`](../../backend/src/AiNexus.Platform/Dashboard/DashboardSection.cs) 組出內容：`Count`（目前數量）、`Period`（依查詢期間）、`Size`、`Daily`（`DashboardDays.CountAsync` 依使用者時區分日）、`Share`、`Item`、`Fact`。範例：[`JobsDashboard`](../../backend/src/AiNexus.Features/Jobs/JobsDashboard.cs)。
 4. 在 `backend/tests/AiNexus.IntegrationTests/Dashboard/GetDashboardTests.cs` 或模組自己的測試驗證數字口徑，並重產合約（`Export-Contracts.ps1`）。
@@ -21,7 +21,8 @@
 
 ## 前端：通用卡片與專屬 widget
 
-- 每個區塊自動成為 `section:<id>` 卡片（`SectionWidget`），並出現在星軌、脈衝跑馬燈與服務狀態。
+- 每個區塊自動成為 `section:<id>` 卡片（`SectionWidget`），事實（`Fact`）也會出現在服務狀態卡片。
 - 專屬 widget 寫在 `frontend/src/app/features/dashboard/widgets/`，從 `DashboardStore` 讀資料，再加進 [`dashboard-widgets.ts`](../../frontend/src/app/features/dashboard/dashboard-widgets.ts) 的清單與預設順序。
 - 區塊圖示在 `dashboard-format.ts` 的 `SECTION_ICONS`；未列出的用通用圖示。
-- 卡片外觀由頁面依風格設定的 `--tile-*` 變數決定，widget 只用 token 與這些變數，不判斷風格。
+- 卡片外觀由 `dashboard-page.scss` 的 `--tile-*` 變數決定，widget 只用 token 與這些變數；頭條數字要能在最窄的卡片裡縮小或縮寫，不能溢出。
+- 移除區塊時，把它的 `section:<id>` 加進 `dashboard-layout.ts` 的 `RETIRED`，讓舊的已存版面讀取時直接略過。
