@@ -33,30 +33,36 @@ export class ChatConversations {
       this.show(value);
       return true;
     } catch (error) {
-      this.store.report(error);
+      if (generation === this.store.auth.generation()) this.store.report(error);
       return false;
     }
   }
   async rename(id: string, title: string) {
+    const generation = this.store.auth.generation();
     const current = this.find(id);
     if (current) this.show({ ...current, title: title.trim() });
     try {
-      this.show(await this.api.rename(id, title));
+      const saved = await this.api.rename(id, title);
+      if (generation !== this.store.auth.generation()) return false;
+      this.show(saved);
       return true;
     } catch (error) {
+      if (generation !== this.store.auth.generation()) return false;
       if (current) this.show(current);
       this.store.report(error);
       return false;
     }
   }
   async remove(id: string) {
+    const generation = this.store.auth.generation();
     try {
       await this.api.delete(id);
+      if (generation !== this.store.auth.generation()) return false;
       this.store.history.remove(id);
       if (this.store.selected()?.id === id) await this.router.navigate(['/chat']);
       return true;
     } catch (error) {
-      this.store.report(error);
+      if (generation === this.store.auth.generation()) this.store.report(error);
       return false;
     }
   }
@@ -88,7 +94,8 @@ export class ChatConversations {
       }
       return true;
     } catch (error) {
-      if (generation === this.store.auth.generation()) this.show(current);
+      if (generation !== this.store.auth.generation()) return false;
+      this.show(current);
       this.store.report(error);
       return false;
     }
@@ -101,9 +108,10 @@ export class ChatConversations {
       const copy = await this.workspace.duplicate(selected.id);
       if (generation !== this.store.auth.generation()) return;
       await this.store.refreshHistory();
+      if (generation !== this.store.auth.generation()) return;
       await this.router.navigate(['/chat', copy.id]);
     } catch (error) {
-      this.store.report(error);
+      if (generation === this.store.auth.generation()) this.store.report(error);
     }
   }
   async exportBackup() {
@@ -115,7 +123,7 @@ export class ChatConversations {
       if (generation !== this.store.auth.generation()) return;
       downloadFile(JSON.stringify(backup, null, 2), selected.title, 'json');
     } catch (error) {
-      this.store.report(error);
+      if (generation === this.store.auth.generation()) this.store.report(error);
     }
   }
   /** Asks for a backup file; call from a click so the browser allows the file chooser. */
@@ -140,6 +148,7 @@ export class ChatConversations {
       this.store.labels.set(labels);
       await this.router.navigate(['/chat', imported.id]);
     } catch (error) {
+      if (generation !== this.store.auth.generation()) return;
       this.store.report(
         error instanceof SyntaxError ? new Error('備份不是有效的 JSON 格式。') : error,
       );

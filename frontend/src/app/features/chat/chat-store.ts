@@ -68,6 +68,8 @@ export class ChatStore {
   readonly webSearchStatus = this.model.webSearchStatus;
   readonly modelNotice = this.model.notice;
   readonly contextUsage = signal<ContextUsageDto | null>(null);
+  /** A newer estimate is on its way; contextUsage still holds the last one. */
+  readonly contextPending = signal(false);
   readonly contextNotice = signal<string | null>(null);
   readonly hasChatAccess = computed(() => this.session.has('chat'));
   readonly hasKnowledgeAccess = computed(() => this.session.has('knowledge'));
@@ -395,17 +397,32 @@ export class ChatStore {
     if (generation !== this.auth.generation()) return;
     this.liveRun.set(run);
     let snapshot = run;
+    let conversation: ConversationDto | null = null;
     try {
       const detail = await this.api.conversation(run.conversationId);
       if (generation !== this.auth.generation()) return;
       if (this.selected()?.id === run.conversationId) this.adopt(detail);
       snapshot = (detail.activeRun as RunDto) ?? run;
+      conversation = detail.conversation as ConversationDto;
     } catch (error) {
       if (generation === this.auth.generation()) this.report(error);
     }
     if (generation !== this.auth.generation()) return;
     void this.follow(snapshot);
-    await this.refreshHistory().catch((error) => this.report(error));
+    await (conversation ? this.showInHistory(conversation) : this.refreshHistory()).catch(
+      (error) => {
+        if (generation === this.auth.generation()) this.report(error);
+      },
+    );
+  }
+
+  /**
+   * Updates one history row from a fresh copy instead of reloading the list. A search is matched by
+   * the server, so it still reloads.
+   */
+  private async showInHistory(conversation: ConversationDto) {
+    if (this.search()) await this.refreshHistory();
+    else this.history.place(conversation);
   }
 
   /** A network failure keeps the prompt for retry; any other failure returns it to the composer. */
@@ -506,7 +523,8 @@ export class ChatStore {
     try {
       await this.api.branch(this.selected()!.id, leaf);
       await this.select(this.selected()!.id, true);
-      await this.refreshHistory();
+      const conversation = this.selected();
+      if (conversation) await this.showInHistory(conversation);
     } catch (error) {
       this.report(error);
     }
@@ -553,13 +571,16 @@ export class ChatStore {
 
   private async finish(run: RunDto) {
     const generation = this.auth.generation();
+    let conversation: ConversationDto | null = null;
     if (this.selected()?.id === run.conversationId) {
       const detail = await this.api.conversation(run.conversationId);
       if (generation !== this.auth.generation()) return;
       if (this.selected()?.id === run.conversationId) this.adopt(detail);
+      conversation = detail.conversation as ConversationDto;
     }
     this.run.settle(run);
-    await this.refreshHistory();
+    // Another conversation's run has no fresh copy here, so its row needs the server's list.
+    await (conversation ? this.showInHistory(conversation) : this.refreshHistory());
     if (generation === this.auth.generation()) await this.notifications.refresh();
   }
 
@@ -605,6 +626,8 @@ export class ChatStore {
         this.contextUsage.set(null);
         this.contextNotice.set('暫時無法取得 Context 預估，仍可提交訊息。');
       }
+    } finally {
+      if (!signal.aborted) this.contextPending.set(false);
     }
   }
 
@@ -644,6 +667,7 @@ export class ChatStore {
     this.selected.set(null);
     this.messages.set([]);
     this.contextUsage.set(null);
+    this.contextPending.set(false);
     this.contextNotice.set(null);
     this.attachments.reset();
     this.error.set(null);

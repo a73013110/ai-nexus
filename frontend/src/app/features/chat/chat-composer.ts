@@ -101,12 +101,18 @@ export class ChatComposer {
       message: '訊息超過系統允許的字數，請縮短內容。',
     });
   });
+  /** Send needs a ready store and a non-blank prompt within the length limit. */
+  readonly canSubmit = computed(
+    () =>
+      this.store.canSend() && !!this.store.draft().text.trim() && !this.promptForm.text().invalid(),
+  );
   readonly focusComposer = viewChild.required(FocusComposer);
   private readonly textarea = viewChild.required<ElementRef<HTMLTextAreaElement>>('composer');
   private readonly fileInput = viewChild.required<ElementRef<HTMLInputElement>>('fileInput');
   private readonly library = viewChild.required(LibraryPicker);
   private readonly knowledge = viewChild(KnowledgePicker);
   private readonly toolsAnchor = viewChild.required('toolsMenu', { read: ElementRef });
+  private contextScope = '';
   /** The narrow composer's tools menu: the same actions its wide row shows as separate controls. */
   readonly tools = computed<MenuAction[]>(() => {
     const store = this.store;
@@ -151,8 +157,13 @@ export class ChatComposer {
         webSearch = this.store.webSearchEnabled();
       this.store.messages();
       this.store.knowledge.revision();
-      this.store.contextUsage.set(null);
-      if (!ready || !modelId) return;
+      // The last estimate stays until the next one arrives, so the ring, the budget notice and the
+      // send gate hold steady while typing; it only stops applying in another model or conversation.
+      const scope = ready && modelId ? `${modelId}|${conversation?.id ?? ''}` : '';
+      if (scope !== this.contextScope) this.store.contextUsage.set(null);
+      this.contextScope = scope;
+      this.store.contextPending.set(!!scope);
+      if (!scope) return;
       const controller = new AbortController();
       const timer = setTimeout(
         () =>
@@ -190,7 +201,7 @@ export class ChatComposer {
   }
   submit(event?: Event) {
     event?.preventDefault();
-    if (!this.store.canSend() || this.promptForm.text().invalid()) return;
+    if (!this.canSubmit()) return;
     const send = () => {
       this.sent.emit();
       void this.store.send();

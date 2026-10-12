@@ -2,6 +2,7 @@ import { CompactDialog } from '../../shared/ui/compact-dialog';
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   ElementRef,
   input,
   output,
@@ -37,7 +38,6 @@ import { isSubmitKey } from '../../shared/browser/submit-key';
       aria-label="放大的訊息輸入"
       [value]="text()"
       [readOnly]="readonly()"
-      [maxLength]="maxLength()"
       placeholder="輸入訊息，或整理長篇提問…"
       (input)="textChange.emit(editor.value)"
       (keydown)="keydown($event)"
@@ -46,18 +46,15 @@ import { isSubmitKey } from '../../shared/browser/submit-key';
     ></textarea>
     <footer class="focus-composer-footer">
       <span
-        >草稿同步保留 · {{ text().length.toLocaleString() }} /
-        {{ maxLength().toLocaleString() }} 字元</span
+        >草稿同步保留 ·
+        <span class="focus-composer-count" [class.is-over]="over()"
+          >{{ text().length.toLocaleString() }} / {{ limit().toLocaleString() }} 字元</span
+        ></span
       >
       <button type="button" class="secondary-button" (click)="dialog.close()">
         繼續在對話中編輯
       </button>
-      <button
-        type="button"
-        class="primary-button"
-        [disabled]="!canSend() || !text().trim()"
-        (click)="submit()"
-      >
+      <button type="button" class="primary-button" [disabled]="!canSend()" (click)="submit()">
         <nx-icon name="arrow" />送出訊息
       </button>
     </footer>
@@ -68,7 +65,9 @@ export class FocusComposer {
   readonly readonly = input(false);
   readonly canSend = input(false);
   readonly enterToSend = input(true);
-  readonly maxLength = input(24000);
+  /** Longer text stays editable, like the main composer, and only blocks sending. */
+  readonly limit = input(24000);
+  readonly over = computed(() => this.text().length > this.limit());
   readonly textChange = output<string>();
   readonly sent = output<void>();
   readonly composing = signal(false);
@@ -84,7 +83,7 @@ export class FocusComposer {
     }
   }
   submit() {
-    if (!this.canSend() || !this.text().trim()) return;
+    if (!this.canSend()) return;
     this.dialog().nativeElement.close();
     this.sent.emit();
   }
