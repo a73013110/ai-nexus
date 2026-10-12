@@ -5,7 +5,6 @@ import { ViewScope } from '../../shared/browser/view-scope';
 import { EXTRA_ICONS, Icon } from '../../shared/ui/icon';
 import { Notice } from '../../shared/ui/notice';
 import { Select } from '../../shared/ui/select';
-import { PriceBook } from '../billing/price-book';
 import { DashboardBoard } from './dashboard-board';
 import { DashboardEditBar } from './dashboard-edit-bar';
 import { DashboardLayout } from './dashboard-layout';
@@ -19,16 +18,7 @@ import { DashboardToolbar } from './dashboard-toolbar';
  */
 @Component({
   selector: 'nx-dashboard-page',
-  imports: [
-    DashboardBoard,
-    DashboardEditBar,
-    DashboardToolbar,
-    FeaturePage,
-    Icon,
-    Notice,
-    PriceBook,
-    Select,
-  ],
+  imports: [DashboardBoard, DashboardEditBar, DashboardToolbar, FeaturePage, Icon, Notice, Select],
   providers: [
     ViewScope,
     DashboardStore,

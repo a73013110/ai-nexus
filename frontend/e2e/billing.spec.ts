@@ -3,7 +3,6 @@ import {
   ApiFixture,
   chooseSelect,
   expectViewportContained,
-  dashboardFixture,
   toasts,
 } from "./fixtures";
 
@@ -12,14 +11,8 @@ test("price dialog creates immutable versions and stays within the viewport", as
 }) => {
   const fixture = new ApiFixture();
   fixture.adminAccess = true;
-  fixture.extraFeatures = [
-    { id: "dashboard", name: "總覽", route: "/dashboard" },
-  ];
   await fixture.attach(page);
   let saved: Record<string, unknown> | undefined;
-  await page.route("**/api/v1/dashboard?**", (route) =>
-    route.fulfill({ json: dashboardFixture(fixture) }),
-  );
   await page.route("**/api/v1/admin/billing/prices", (route) => {
     if (route.request().method() === "POST") {
       saved = route.request().postDataJSON();
@@ -39,9 +32,11 @@ test("price dialog creates immutable versions and stays within the viewport", as
       ],
     }),
   );
-  await page.goto("/dashboard");
+  await page.goto("/admin");
+  const tools = page.getByRole("button", { name: "管理工具", exact: true });
+  await tools.click();
   await page
-    .getByRole("button", { name: "模型與工具價格", exact: true })
+    .getByRole("menuitem", { name: "模型與工具價格", exact: true })
     .click();
   const dialog = page.getByRole("dialog", { name: "模型與工具價格版本" });
   await expect(dialog).toBeVisible();
@@ -101,7 +96,5 @@ test("price dialog creates immutable versions and stays within the viewport", as
   await body.evaluate((el) => el.scrollTo({ top: 0, behavior: "instant" }));
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "模型與工具價格", exact: true }),
-  ).toBeFocused();
+  await expect(tools).toBeFocused();
 });

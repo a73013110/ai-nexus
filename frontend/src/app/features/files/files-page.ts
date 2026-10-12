@@ -13,7 +13,6 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import type { AttachmentPolicyDto, LibraryFileDto } from '../../core/api/schema';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
@@ -50,7 +49,6 @@ import { StorageUsage } from './storage-usage';
     AddToKnowledge,
     ConfirmDialog,
     NameDialog,
-    RouterLink,
     StorageUsage,
   ],
   providers: [ViewScope, FileLibraryStore],

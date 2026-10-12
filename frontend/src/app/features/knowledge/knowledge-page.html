@@ -3,11 +3,6 @@
   description="整理可查核的文件來源，讓 AI 回答附上依據與頁碼。"
 >
   <div page-actions class="page-actions">
-    @if (session.has('files')) {
-      <a routerLink="/files" class="secondary-button"
-        ><nx-icon name="document" />{{ session.featureName('files') }}</a
-      >
-    }
     <button
       class="primary-button"
       (click)="openEditor()"
