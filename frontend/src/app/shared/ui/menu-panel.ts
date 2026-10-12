@@ -2,16 +2,15 @@ import {
   afterNextRender,
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   ElementRef,
   inject,
   Injector,
   input,
   output,
-  signal,
   viewChild,
 } from '@angular/core';
 import { Icon } from './icon';
+import { anchoredPopover } from '../browser/anchored-popover';
 import { positionBesidePopover, positionPopover } from '../browser/popover-position';
 
 export interface MenuAction {
@@ -43,7 +42,7 @@ let sequence = 0;
       popover="auto"
       role="menu"
       [attr.aria-label]="label()"
-      (toggle)="toggled($any($event).newState === 'open')"
+      (toggle)="popover.sync($event)"
       (keydown)="key($event)"
     >
       @if (heading(); as header) {
@@ -81,56 +80,42 @@ export class MenuPanel {
   /** Context the trigger cannot show, such as the account name on the collapsed rail. */
   readonly heading = input<{ title: string; detail?: string } | null>(null);
   readonly action = output<string>();
-  readonly opened = signal(false);
   readonly id = `nx-menu-${++sequence}`;
   private anchor: HTMLElement | null = null;
   private readonly injector = inject(Injector);
   private readonly panel = viewChild.required<ElementRef<HTMLDivElement>>('panel');
-  constructor() {
-    const position = () => {
-      if (this.opened() && this.anchor) this.place(this.anchor);
-    };
-    window.addEventListener('resize', position);
-    window.addEventListener('scroll', position, true);
-    inject(DestroyRef).onDestroy(() => {
-      window.removeEventListener('resize', position);
-      window.removeEventListener('scroll', position, true);
-    });
-  }
+  protected readonly popover = anchoredPopover({
+    panel: () => this.panel().nativeElement,
+    place: (panel) => {
+      if (!this.anchor) return;
+      if (this.placement() === 'beside')
+        positionBesidePopover(this.anchor, panel, this.minWidth() || 240);
+      else positionPopover(this.anchor, panel, this.minWidth(), 'right');
+    },
+  });
+  readonly opened = this.popover.opened;
   /** Opens beside `anchor`; focus returns there when the menu closes from the keyboard. */
   open(anchor: HTMLElement, focus: 'first' | 'last' = 'first') {
-    const panel = this.panel().nativeElement;
-    if (this.opened()) panel.hidePopover();
+    if (this.opened()) this.popover.hide();
     this.anchor = anchor;
-    panel.showPopover();
-    this.opened.set(true);
-    this.place(anchor);
+    this.popover.show();
     // Items may belong to the row that just asked, so place and focus once they have rendered.
     afterNextRender(
       () => {
         if (!this.isOpenFor(anchor)) return;
-        this.place(anchor);
+        this.popover.reposition();
         const buttons = this.buttons();
         (focus === 'first' ? buttons[0] : buttons.at(-1))?.focus();
       },
       { injector: this.injector },
     );
   }
-  private place(anchor: HTMLElement) {
-    const panel = this.panel().nativeElement;
-    if (this.placement() === 'beside') positionBesidePopover(anchor, panel, this.minWidth() || 240);
-    else positionPopover(anchor, panel, this.minWidth(), 'right');
-  }
   isOpenFor(anchor: HTMLElement) {
     return this.opened() && this.anchor === anchor;
   }
   close() {
-    this.panel().nativeElement.hidePopover();
-    this.opened.set(false);
+    this.popover.hide();
     this.anchor?.focus();
-  }
-  toggled(open: boolean) {
-    this.opened.set(open);
   }
   choose(id: string) {
     this.close();

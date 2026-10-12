@@ -41,7 +41,7 @@
   role="dialog"
   [id]="id + '-panel'"
   [attr.aria-label]="label() + '日期選擇'"
-  (toggle)="toggled($event)"
+  (toggle)="popover.sync($event)"
   (keydown)="panelKey($event)"
 >
   <div class="ui-calendar-heading">

@@ -16,6 +16,7 @@ import {
 import { NgTemplateOutlet } from '@angular/common';
 import { below } from '../../shared/browser/breakpoints';
 import { mediaQuery } from '../../shared/browser/media-query';
+import { anchoredPopover } from '../../shared/browser/anchored-popover';
 import { positionBesidePopover, positionPopover } from '../../shared/browser/popover-position';
 import { WorkspaceLayout } from '../../core/layout/workspace-layout';
 import { NotificationStore } from './notification-store';
@@ -127,7 +128,7 @@ import { NotificationFeed } from './notification-feed';
         role="dialog"
         aria-labelledby="notification-title"
         class="popover-panel notification-center notification-popover ui-density-compact"
-        (toggle)="toggled($any($event).newState === 'open')"
+        (toggle)="toggled($event)"
         (keydown)="key($event)"
       >
         <ng-container [ngTemplateOutlet]="content" />
@@ -152,6 +153,10 @@ export class NotificationCenter {
   });
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('sheetDialog');
   private readonly panel = viewChild<ElementRef<HTMLDivElement>>('panel');
+  private readonly popover = anchoredPopover({
+    panel: () => this.panel()?.nativeElement,
+    place: (panel) => this.place(panel),
+  });
   constructor() {
     afterRenderEffect(() => {
       const opened = this.store.opened();
@@ -164,13 +169,11 @@ export class NotificationCenter {
       if (opened && !shown) {
         const trigger = this.store.trigger?.isConnected ? this.store.trigger : undefined;
         // The bell becomes the invoker: Tab continues from the bell into the panel and back out.
-        panel.showPopover({ source: trigger });
-        this.place();
-      } else if (!opened && shown) panel.hidePopover();
+        this.popover.show(trigger);
+      } else if (!opened && shown) this.popover.hide();
     });
-    const place = () => this.place();
     // The feed loads after opening; keep the panel on its anchor as it grows.
-    const observer = new ResizeObserver(place);
+    const observer = new ResizeObserver(() => this.popover.reposition());
     afterRenderEffect((onCleanup) => {
       const panel = this.panel()?.nativeElement;
       if (!panel) return;
@@ -184,19 +187,11 @@ export class NotificationCenter {
         if (this.store.opened() && this.sheet() !== phone) this.store.close();
       });
     });
-    window.addEventListener('resize', place);
-    window.addEventListener('scroll', place, true);
-    inject(DestroyRef).onDestroy(() => {
-      observer.disconnect();
-      window.removeEventListener('resize', place);
-      window.removeEventListener('scroll', place, true);
-    });
+    inject(DestroyRef).onDestroy(() => observer.disconnect());
   }
   /** Below the bell, or beside it on the icon rail. */
-  private place() {
-    const panel = this.panel()?.nativeElement,
-      trigger = this.store.trigger;
-    if (!panel?.matches(':popover-open')) return;
+  private place(panel: HTMLElement) {
+    const trigger = this.store.trigger;
     if (!trigger?.isConnected) {
       panel.style.left = panel.style.top = '12px';
       return;
@@ -212,8 +207,9 @@ export class NotificationCenter {
     else positionPopover(trigger, panel, 480, 'right', 640);
   }
   /** Light dismiss closes the panel natively; the store follows and focus returns to the bell. */
-  toggled(open: boolean) {
-    if (open) return;
+  toggled(event: Event) {
+    this.popover.sync(event);
+    if (this.popover.opened()) return;
     if (this.store.opened()) this.store.close();
     const focused = document.activeElement;
     if (!focused || focused === document.body || this.panel()?.nativeElement.contains(focused))

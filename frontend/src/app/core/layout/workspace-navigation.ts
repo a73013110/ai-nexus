@@ -8,7 +8,6 @@ import {
   Injector,
   input,
   output,
-  signal,
   viewChild,
 } from '@angular/core';
 import { NavigationEnd, PRIMARY_OUTLET, Router, RouterLink } from '@angular/router';
@@ -16,6 +15,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
 import { Icon } from '../../shared/ui/icon';
 import { ScrollArea } from '../../shared/ui/scroll-area';
+import { anchoredPopover } from '../../shared/browser/anchored-popover';
 import { setPopoverOrigin } from '../../shared/browser/popover-position';
 import { FEATURE_ICONS } from './feature-groups';
 import { FeatureLauncher } from './feature-launcher';
@@ -114,8 +114,8 @@ let sequence = 0;
         role="dialog"
         aria-label="全部功能"
         [id]="flyoutId"
-        (beforetoggle)="placeFlyout($any($event).newState === 'open')"
-        (toggle)="flyoutToggled($any($event).newState === 'open')"
+        (beforetoggle)="$any($event).newState === 'open' && placeFlyout(flyout)"
+        (toggle)="flyoutToggled($event)"
       >
         <h2>全部功能</h2>
         @if (flyoutOpen()) {
@@ -139,9 +139,13 @@ export class WorkspaceNavigation {
   readonly flyoutId = `launcher-flyout-${++sequence}`;
   /** Icon display packs the pins (and the launcher toggle) into one row beside each other. */
   readonly strip = computed(() => !this.compact() && this.pins.display() === 'icons');
-  readonly flyoutOpen = signal(false);
   private readonly flyout = viewChild<ElementRef<HTMLElement>>('flyout');
   private readonly flyoutTrigger = viewChild<ElementRef<HTMLElement>>('flyoutTrigger');
+  private readonly flyoutPopover = anchoredPopover({
+    panel: () => this.flyout()?.nativeElement,
+    place: (flyout) => this.placeFlyout(flyout),
+  });
+  readonly flyoutOpen = this.flyoutPopover.opened;
   private readonly injector = inject(Injector);
   /** Select the deepest matching feature; its own detail routes still belong to it. */
   readonly activeFeature = computed(() => {
@@ -174,10 +178,9 @@ export class WorkspaceNavigation {
   });
   readonly icons = FEATURE_ICONS;
   /** Opens beside the rail, aligned with its trigger and kept inside the viewport. */
-  placeFlyout(open: boolean) {
-    const flyout = this.flyout()?.nativeElement;
+  placeFlyout(flyout: HTMLElement) {
     const trigger = this.flyoutTrigger()?.nativeElement;
-    if (!open || !flyout || !trigger) return;
+    if (!trigger) return;
     const anchor = trigger.getBoundingClientRect();
     const rail = trigger.closest('.workspace-sidebar')?.getBoundingClientRect() ?? anchor;
     flyout.style.left = `${rail.right + 8}px`;
@@ -186,19 +189,19 @@ export class WorkspaceNavigation {
     flyout.style.top = `${top}px`;
     setPopoverOrigin(flyout, 'right', 0, anchor.top + anchor.height / 2 - top);
   }
-  flyoutToggled(open: boolean) {
-    this.flyoutOpen.set(open);
-    if (open)
+  flyoutToggled(event: Event) {
+    this.flyoutPopover.sync(event);
+    if (this.flyoutOpen())
       afterNextRender(
         () => {
-          this.placeFlyout(true);
+          this.flyoutPopover.reposition();
           this.flyout()?.nativeElement.querySelector<HTMLElement>('a[href]')?.focus();
         },
         { injector: this.injector },
       );
   }
   closeFlyout() {
-    this.flyout()?.nativeElement.hidePopover();
+    this.flyoutPopover.hide();
     this.activated.emit();
   }
 }

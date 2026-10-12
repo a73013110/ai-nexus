@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { Icon } from './icon';
 import { Select } from './select';
+import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
 
 export interface TableColumn {
@@ -55,7 +56,7 @@ export type TableSortDirection = 'asc' | 'desc';
       role="dialog"
       aria-label="顯示欄位"
       class="popover-panel ui-table-columns-panel"
-      (toggle)="columnsOpen.set($any($event).newState === 'open')"
+      (toggle)="columnsPopover.sync($event)"
       (keydown.escape)="closeColumns($event)"
     >
       <h3>顯示欄位</h3>
@@ -83,12 +84,19 @@ export class DataTable {
   readonly busy = input(false);
   readonly columns = input<TableColumn[]>([]);
   readonly preferenceKey = input('');
-  readonly columnsOpen = signal(false);
   readonly hidden = signal<string[]>([]);
   readonly id = 'nx-table-columns-' + ++tableSequence;
   private readonly trigger = viewChild<ElementRef<HTMLButtonElement>>('columnTrigger');
   private readonly panel = viewChild.required<ElementRef<HTMLElement>>('columnPanel');
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  protected readonly columnsPopover = anchoredPopover({
+    panel: () => this.panel().nativeElement,
+    place: (panel) => {
+      const trigger = this.trigger()?.nativeElement;
+      if (trigger) positionPopover(trigger, panel, 220, 'right');
+    },
+  });
+  readonly columnsOpen = this.columnsPopover.opened;
   constructor() {
     effect(() => {
       const columns = this.columns(),
@@ -122,18 +130,13 @@ export class DataTable {
     return !this.hidden().includes(id);
   }
   toggleColumns() {
-    const panel = this.panel().nativeElement,
-      trigger = this.trigger()?.nativeElement;
-    if (this.columnsOpen()) panel.hidePopover();
-    else if (trigger) {
-      panel.showPopover();
-      positionPopover(trigger, panel, 220, 'right');
-    }
+    if (this.columnsOpen()) this.columnsPopover.hide();
+    else if (this.trigger()) this.columnsPopover.show();
   }
   closeColumns(event: Event) {
     event.preventDefault();
     event.stopPropagation();
-    this.panel().nativeElement.hidePopover();
+    this.columnsPopover.hide();
     this.trigger()?.nativeElement.focus({ preventScroll: true });
   }
   toggleColumn(id: string) {

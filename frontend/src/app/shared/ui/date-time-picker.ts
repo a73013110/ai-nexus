@@ -1,11 +1,9 @@
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   ElementRef,
   computed,
   effect,
-  inject,
   input,
   output,
   signal,
@@ -15,6 +13,7 @@ import {
 import { Icon } from './icon';
 import { Field } from './field';
 import { Select } from './select';
+import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
 import { formatDateTimeInput } from '../browser/format';
 import {
@@ -47,7 +46,6 @@ export class DateTimePicker {
   readonly max = input('');
   readonly valueChange = output<string>();
   readonly id = 'nx-date-' + ++sequence;
-  readonly opened = signal(false);
   readonly text = signal<string | null>(null);
   readonly touched = signal(false);
   readonly draft = signal(formatDateTimeInput(new Date()));
@@ -114,6 +112,11 @@ export class DateTimePicker {
   private readonly control = viewChild.required<ElementRef<HTMLElement>>('control');
   private readonly editor = viewChild.required<ElementRef<HTMLInputElement>>('editor');
   private readonly panel = viewChild.required<ElementRef<HTMLElement>>('panel');
+  protected readonly popover = anchoredPopover({
+    panel: () => this.panel().nativeElement,
+    place: (panel) => positionPopover(this.control().nativeElement, panel, 320, 'left', 520),
+  });
+  readonly opened = this.popover.opened;
   private returnFocus: HTMLElement | null = null;
   private lastEmitted = '';
   constructor() {
@@ -125,15 +128,6 @@ export class DateTimePicker {
           this.touched.set(false);
         });
       this.lastEmitted = value;
-    });
-    const reposition = () => {
-      if (this.opened()) this.position();
-    };
-    window.addEventListener('resize', reposition);
-    window.addEventListener('scroll', reposition, true);
-    inject(DestroyRef).onDestroy(() => {
-      window.removeEventListener('resize', reposition);
-      window.removeEventListener('scroll', reposition, true);
     });
   }
   edit(text: string) {
@@ -173,21 +167,12 @@ export class DateTimePicker {
     );
     this.view.set(this.parts());
     this.focused.set(value.slice(0, 10));
-    this.panel().nativeElement.showPopover();
-    this.opened.set(true);
-    this.position();
+    this.popover.show();
     this.focusDay();
   }
-  private position() {
-    positionPopover(this.control().nativeElement, this.panel().nativeElement, 320, 'left', 520);
-  }
   close() {
-    this.panel().nativeElement.hidePopover();
-    this.opened.set(false);
+    this.popover.hide();
     if (this.returnFocus?.isConnected) this.returnFocus.focus({ preventScroll: true });
-  }
-  toggled(event: Event) {
-    this.opened.set((event as ToggleEvent).newState === 'open');
   }
   panelKey(event: KeyboardEvent) {
     if (event.key === 'Enter' && event.target instanceof HTMLInputElement) {
