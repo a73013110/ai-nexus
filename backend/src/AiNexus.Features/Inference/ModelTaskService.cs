@@ -14,7 +14,7 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
 {
     public const int MaxPromptCharacters = 16000;
     public const int FramingTokenReserve = 160;
-    public async Task<Result<ModelTaskResult>> GenerateAsync(Guid owner, string kind, string prompt, string instruction, CancellationToken ct, string? model = null, IReadOnlyList<InferenceImage>? images = null, string? expectedConfiguration = null, int? maxOutputTokens = null)
+    public async Task<Result<ModelTaskResult>> GenerateAsync(Guid owner, string kind, string prompt, string instruction, CancellationToken ct, string? model = null, IReadOnlyList<InferenceImage>? images = null, string? expectedConfiguration = null, int? maxOutputTokens = null, bool allowEmpty = false)
     {
         using var scope = scopes.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
@@ -62,9 +62,12 @@ public sealed class ModelTaskService(IServiceScopeFactory scopes, ModelCatalog c
                 finish = chunk.FinishReason ?? finish;
                 if (text.Length > 64000) throw new ExternalServiceException(Error.Upstream("task_output_too_long"), "模型輸出超過處理上限。");
             }
-            if (!done || text.Length == 0) throw new ExternalServiceException(Error.Upstream("task_response_incomplete"), "模型未傳回完整結果，請重試。");
+            if (!done) throw new ExternalServiceException(Error.Upstream("task_response_incomplete"), "模型未傳回完整結果，請重試。");
             call.Status = "completed";
-            return new ModelTaskResult(text.ToString(), finish == "MAX_TOKENS", call.InputTokens, call.OutputTokens);
+            // A completed but empty answer is the model's own outcome (OCR of a photo without text), not a broken stream.
+            var output = text.ToString();
+            if (!allowEmpty && string.IsNullOrWhiteSpace(output)) return InferenceErrors.TaskResponseEmpty;
+            return new ModelTaskResult(output, finish == "MAX_TOKENS", call.InputTokens, call.OutputTokens);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested) { call.Status = "cancelled"; throw; }
         catch (OperationCanceledException error) { call.Status = "failed"; throw new ExternalServiceException(Error.Timeout("model_timeout"), "模型處理逾時，請稍後重試。", error); }

@@ -53,14 +53,14 @@ public sealed partial class BackgroundJobWorker(IServiceScopeFactory scopes, Sto
             if (!outcome.IsSuccess)
             {
                 status = "failed"; code = outcome.Error.Code;
-                issue = issues.Report(outcome.Error); message = Issues.Message(issue);
+                issue = issues.Report(outcome.Error); message = Issues.Message(outcome.Error, issue);
             }
         }
         catch (OperationCanceledException) { status = "cancelled"; }
         catch (Exception ex)
         {
             status = "failed"; code = ex switch { ExternalServiceException external => external.Error.Code, _ => "job_processing_failed" };
-            issue = issues.Report(ex, code); message = Issues.Message(issue);
+            issue = issues.Report(ex, code); message = ex is ExternalServiceException known ? Issues.Message(known.Error, issue) : Issues.Message(issue);
         }
         finally { monitor.Cancel(); try { await heartbeat; } catch (OperationCanceledException) { } }
         // Host shutdown keeps the lease and checkpoint so another process can resume later.
@@ -78,7 +78,7 @@ public sealed partial class BackgroundJobWorker(IServiceScopeFactory scopes, Sto
             await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Notifications.NotificationService>().PublishAsync(final.OwnerId,
                 $"job:{id}:{final.Attempt}", "task." + final.Status, final.Status == "failed" ? "error" : final.Status == "completed" ? "success" : "info",
                 final.Status == "completed" ? "背景任務已完成" : final.Status == "failed" ? "背景任務需要重試" : "背景任務已取消",
-                final.Status == "failed" ? Issues.Message(final.IssueCode) : final.Label, final.Kind == "repository-review" ? "repository-review" : "task", final.Kind == "repository-review" ? final.SubjectId : final.Id, CancellationToken.None, final.IssueCode);
+                final.Status == "failed" ? final.ErrorMessage ?? Issues.Message(final.IssueCode) : final.Label, final.Kind == "repository-review" ? "repository-review" : "task", final.Kind == "repository-review" ? final.SubjectId : final.Id, CancellationToken.None, final.IssueCode);
             await db.SaveChangesAsync(CancellationToken.None);
         }
         await completion.CommitAsync(CancellationToken.None);

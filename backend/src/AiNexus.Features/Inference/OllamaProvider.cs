@@ -56,7 +56,9 @@ public sealed class OllamaProvider(HttpClient client) : IInferenceProvider
             var done = root.TryGetProperty("done", out var end) && end.GetBoolean();
             var inputTokens = root.TryGetProperty("prompt_eval_count", out var input) ? input.GetInt64() : (long?)null;
             var outputTokens = root.TryGetProperty("eval_count", out var output) ? output.GetInt64() : (long?)null;
-            yield return new InferenceChunk(text, done, inputTokens, outputTokens, CachedInputTokens: done ? 0 : null);
+            // Normalized to the provider-neutral finish reasons so callers can detect an output-limit cut.
+            var finish = !done ? null : root.TryGetProperty("done_reason", out var reason) && reason.GetString() == "length" ? "MAX_TOKENS" : "STOP";
+            yield return new InferenceChunk(text, done, inputTokens, outputTokens, finish, CachedInputTokens: done ? 0 : null);
             if (done) { completed = true; break; }
         }
         if (!completed) throw new InvalidDataException("Provider stream ended without completion.");

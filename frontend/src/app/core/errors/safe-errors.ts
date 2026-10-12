@@ -44,6 +44,12 @@ export function systemProblem(issueCode?: string | null): string {
     ? `操作未完成，請聯絡管理員。查證代碼：${issueCode}`
     : `操作未完成，請確認連線或聯絡管理員。本機問題代碼：${localPattern.test(issueCode ?? '') ? issueCode : newLocalIssue()}（尚未記入伺服器）`;
 }
+/** A recorded failure without an HTTP status (a background job): a reviewed hint when the code has one. */
+export function recordedProblem(code: string | null | undefined, issueCode: string): string {
+  return code && Object.hasOwn(publicErrorHints, code) && validIssueCode(issueCode)
+    ? `${publicErrorHints[code]} 查證代碼：${issueCode}`
+    : systemProblem(issueCode);
+}
 /** Only reviewed operation hints or opaque issue codes enter general UI surfaces. */
 export class ApiError extends Error {
   readonly issueCode: string;

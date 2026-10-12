@@ -54,6 +54,9 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
     public static string NewCode() => "NX-" + Convert.ToHexString(RandomNumberGenerator.GetBytes(16));
     public static bool ValidCode(string? code) => code is { Length: 35 } && code.StartsWith("NX-", StringComparison.Ordinal) && code[3..].All(char.IsAsciiHexDigit);
     public static string Message(string? issue) => "操作未完成，請聯絡管理員。查證代碼：" + (ValidCode(issue) ? issue : "無法取得");
+    /// <summary>The stored text of a failure that has no HTTP response, such as a background job: an expected error keeps its reviewed hint.</summary>
+    public static string Message(Error error, string issue)
+        => Problems.Status(error.Kind) is var status && status < 500 ? PublicErrorCatalog.Message(error.Code, status) + " 查證代碼：" + issue : Message(issue);
     public string Report(Exception exception, string code, LogLevel level = LogLevel.Error) => Report(exception, code, level, rejection: false);
 
     /// <summary>Records an expected failure that has no exception, such as a background job that returned an <see cref="Error"/>.</summary>

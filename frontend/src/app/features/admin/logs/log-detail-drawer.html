@@ -220,8 +220,23 @@
           </dl>
         }
         @case ('properties') {
-          <nx-code-block label="原始訊息模板" [value]="selected.event.messageTemplate" />
-          <p class="ui-panel-note">僅顯示經遮罩的受控屬性。</p>
+          @if (messageFields().length) {
+            <h3 class="ui-section-heading">訊息欄位</h3>
+            <dl class="ui-description-list">
+              @for (field of messageFields(); track field.name) {
+                <div class="ui-description-wide">
+                  <dt>{{ field.name }}</dt>
+                  <dd>
+                    <code>{{ field.value }}</code>
+                  </dd>
+                </div>
+              }
+            </dl>
+          }
+          <nx-code-block label="訊息模板" [value]="selected.event.messageTemplate" />
+          <p class="ui-panel-note">
+            大括號是欄位名稱，值列於上方；展開後的訊息見概覽。僅顯示經遮罩的受控屬性。
+          </p>
           <nx-code-block label="受控屬性 JSON" [value]="properties()" />
         }
         @case ('exception') {

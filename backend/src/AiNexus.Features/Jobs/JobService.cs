@@ -8,7 +8,7 @@ namespace AiNexus.Features.Jobs;
 /// <summary>Background jobs as other modules use them: enqueue with their subject, describe, cancel and retry.</summary>
 public sealed class JobService(NexusDbContext db, IServiceProvider services)
 {
-    public static JobDto Describe(BackgroundJob x) => new(x.Id, x.Kind, x.SubjectId, x.Label, x.Status, x.Stage, x.Attempt, x.CompletedUnits, x.TotalUnits, x.CancelRequested, x.ErrorCode, x.Status == "failed" ? Issues.Message(x.IssueCode) : null, x.CreatedAt, x.UpdatedAt, x.IssueCode);
+    public static JobDto Describe(BackgroundJob x) => new(x.Id, x.Kind, x.SubjectId, x.Label, x.Status, x.Stage, x.Attempt, x.CompletedUnits, x.TotalUnits, x.CancelRequested, x.ErrorCode, x.Status == "failed" ? x.ErrorMessage ?? Issues.Message(x.IssueCode) : null, x.CreatedAt, x.UpdatedAt, x.IssueCode);
     public BackgroundJob Enqueue(Guid owner, Guid? resource, Guid subject, string kind, string label)
     {
         var job = new BackgroundJob { OwnerId = owner, ResourceId = resource, SubjectId = subject, Kind = kind, Label = label, ActiveKey = kind + ":" + subject.ToString("N") };

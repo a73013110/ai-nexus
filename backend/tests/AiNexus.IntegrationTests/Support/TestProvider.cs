@@ -9,6 +9,8 @@ public sealed class TestProvider : IInferenceProvider
     public int DelayMs { get; set; } = 30;
     public bool Fail { get; set; }
     public bool NeverFinish { get; set; }
+    /// <summary>Finishes normally without text, as a vision model does for a photo with nothing to transcribe.</summary>
+    public bool Empty { get; set; }
     private TaskCompletionSource? hold;
     public int Calls;
     public int Concurrent;
@@ -48,6 +50,12 @@ public sealed class TestProvider : IInferenceProvider
         try
         {
             if (Fail) throw new HttpRequestException("fixture failure");
+            if (Empty)
+            {
+                await Task.Delay(DelayMs, ct);
+                yield return new InferenceChunk("", true, 123, 1, "STOP", CachedInputTokens: 0, ReasoningTokens: 0);
+                yield break;
+            }
             if (parameters.SystemPrompt.Contains("\"conclusion\"", StringComparison.Ordinal))
             {
                 await Task.Delay(DelayMs, ct);

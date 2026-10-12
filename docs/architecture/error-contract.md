@@ -20,6 +20,7 @@
 
 - 查證代碼由伺服器 CSPRNG 產生（`NX-`＋32 個十六進位字元），不是權限憑證；一般使用者不能用它查管理 API。
 - 4xx 的提示、狀態碼與重試分類來自固定的 `PublicErrorCatalog`；前後端 catalog 一致由 `PublicErrorCatalogTests` 檢查。
+- 背景工作沒有 HTTP 狀態，以錯誤的 `ErrorKind` 決定：預期內（4xx 類）失敗存 catalog 提示＋查證代碼（`Issues.Message(Error, issue)`），前端依 `errorCode` 顯示同一提示；其餘一律「請聯絡管理員」。新增 4xx 錯誤代碼時同時補 catalog，否則只會顯示通用提示。
 - SSE 已開始時改送安全的 `event: error`（`code`、`message`、`issueCode`），durable run 的 `status`／`snapshot` 事件同樣帶 issueCode，格式見 [SSE](sse.md)。已開始的非 SSE 二進位回應失敗時中止連線，狀態碼無法再改寫。
 
 ## 前端
