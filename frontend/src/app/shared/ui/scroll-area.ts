@@ -93,7 +93,9 @@ export class ScrollArea {
     this.frame = requestAnimationFrame(() => {
       this.frame = 0;
       const viewport = this.viewport().nativeElement;
-      const maximum = viewport.scrollHeight - viewport.clientHeight;
+      // Layout height, not scrollHeight: a transformed child (e.g. an entrance slide) adds scrollable
+      // overflow while it moves, and its end resizes nothing, so the cue would outlive it.
+      const maximum = this.content().nativeElement.offsetHeight - viewport.clientHeight;
       // A zero-height viewport has no usable scroll range; ignore fractional pixel rounding.
       const visible = viewport.clientHeight > 0;
       this.above.set(visible && maximum > 1 && viewport.scrollTop > 1);
