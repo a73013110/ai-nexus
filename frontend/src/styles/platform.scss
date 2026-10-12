@@ -11,6 +11,21 @@
   align-items: center;
   gap: var(--p-space-2);
 }
+// On a phone the header actions show only their icon so the title and actions fit one row; the
+// label stays in the DOM as the accessible name. Buttons without an icon keep their text.
+@include bp.below(phone) {
+  .feature-header
+    :is([page-actions], [page-actions] > *, [page-actions] > * > button):is(
+      .primary-button,
+      .secondary-button,
+      .quiet-button
+    ):has(> nx-icon) {
+    width: var(--button-target);
+    padding-inline: 0;
+    gap: 0;
+    font-size: 0;
+  }
+}
 .resource-heading {
   display: flex;
   align-items: flex-start;

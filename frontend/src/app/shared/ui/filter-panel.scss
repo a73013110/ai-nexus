@@ -1,3 +1,5 @@
+@use 'breakpoints' as bp;
+
 .ui-filter-heading {
   display: flex;
   align-items: center;
@@ -21,4 +23,14 @@
   gap: var(--p-space-2);
   font-size: var(--text-label);
   font-weight: 600;
+}
+// On a phone the "篩選" label alone costs a row; the controls already say what they filter.
+@include bp.below(phone) {
+  .ui-filter-heading:not(:has(.page-actions > *)) {
+    display: none;
+  }
+  :host {
+    padding: var(--p-space-3);
+    margin-bottom: var(--p-space-3);
+  }
 }
