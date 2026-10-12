@@ -133,6 +133,34 @@ export class LogDetailDrawer {
       return raw;
     }
   });
+  /** Each `{Name}` of the stored template with the value it renders, so the template does not read as unfilled. */
+  readonly messageFields = computed(() => {
+    const selected = this.detail();
+    if (!selected) return [];
+    let properties: Record<string, unknown> = {};
+    try {
+      properties = JSON.parse(selected.propertiesJson);
+    } catch {
+      // Malformed historical metadata still lists the names.
+    }
+    // Correlation values live in summary columns (IssueCode → issueCode), not always in the properties.
+    const columns = selected.event as unknown as Record<string, unknown>;
+    const names = new Set(
+      Array.from(
+        selected.event.messageTemplate
+          .replace(/\{\{|\}\}/g, '')
+          .matchAll(/\{([A-Za-z][\w.]*)[^{}]*\}/g),
+        (match) => match[1],
+      ),
+    );
+    return [...names].map((name) => {
+      const value = properties[name] ?? columns[name.charAt(0).toLowerCase() + name.slice(1)];
+      return {
+        name,
+        value: value === null || value === undefined || value === '' ? '—' : String(value),
+      };
+    });
+  });
   readonly requestContext = computed(() => {
     try {
       const properties: Record<string, unknown> = JSON.parse(this.detail()?.propertiesJson ?? '{}');

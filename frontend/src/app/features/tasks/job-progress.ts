@@ -1,7 +1,12 @@
 import { Notice } from '../../shared/ui/notice';
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import type { JobDto } from '../../core/api/schema';
-import { newLocalIssue, systemProblem, validIssueCode } from '../../core/errors/safe-errors';
+import {
+  newLocalIssue,
+  recordedProblem,
+  systemProblem,
+  validIssueCode,
+} from '../../core/errors/safe-errors';
 import { InferenceSignal } from '../../shared/ui/inference-signal';
 import { StatusBadge } from '../../shared/ui/status-badge';
 import type { BadgeTone } from '../../shared/ui/count-badge';
@@ -24,6 +29,7 @@ import type { BadgeTone } from '../../shared/ui/count-badge';
         @if (job().totalUnits; as total) {
           <span>{{ job().completedUnits }} / {{ total }}</span>
         }
+        <ng-content select="[job-actions]" />
       </div>
     </div>
     @if (active()) {
@@ -50,7 +56,7 @@ export class JobProgress {
   private legacyCode = '';
   readonly failure = computed(() => {
     const job = this.job();
-    if (validIssueCode(job.issueCode)) return systemProblem(job.issueCode);
+    if (validIssueCode(job.issueCode)) return recordedProblem(job.errorCode, job.issueCode);
     if (this.legacyId !== job.id || !this.legacyCode) {
       this.legacyId = job.id;
       this.legacyCode = newLocalIssue();

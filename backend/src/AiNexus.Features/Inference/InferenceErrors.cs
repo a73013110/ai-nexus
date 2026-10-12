@@ -17,6 +17,8 @@ internal static class InferenceErrors
     public static readonly Error ModelGroupForbidden = Error.Forbidden("model_group_forbidden");
     public static readonly Error ModelTokenQuota = Error.RateLimited("model_token_quota");
     public static readonly Error TaskInputTooLong = Error.Invalid("task_input_too_long");
+    /// <summary>The model finished normally without producing text; not a provider failure, so retrying does not help.</summary>
+    public static readonly Error TaskResponseEmpty = Error.Unprocessable("task_response_empty");
     public static readonly Error VisionNotSupported = Error.Invalid("vision_not_supported");
     public static readonly Error ContextBudgetExceeded = Error.Invalid("context_budget_exceeded");
     public static readonly Error ConfigurationChanged = Error.Conflict("evaluation_configuration_changed");

@@ -63,4 +63,32 @@ public sealed class DocumentIndexingTests
         Assert.Single(factory.Provider.LastMessages.Single(x => x.Role == "user").Images!);
         Assert.Equal("extracted-text", (await client.GetFromJsonAsync<AttachmentDto>($"/api/v1/attachments/{file.Id}"))!.AnalysisMode);
     }
+
+    [Fact]
+    public async Task ImageWithoutTextCompletesAndStaysVisionInput()
+    {
+        await using var factory = new NexusFactory(inference: x => x.Models[0].SupportsImages = true);
+        using var client = await factory.SignedInAsync(); factory.Provider.Empty = true;
+        var file = await Upload(client, "cat.png", Png);
+        var response = await client.PostAsync($"/api/v1/attachments/{file.Id}/document", null); response.EnsureSuccessStatusCode(); var document = (await response.Content.ReadFromJsonAsync<DocumentDto>())!;
+        await Process(factory);
+        Assert.Equal("completed", (await client.GetFromJsonAsync<JobDto>($"/api/v1/jobs/{document.JobId}"))!.Status);
+        document = (await client.GetFromJsonAsync<DocumentDto>($"/api/v1/documents/{document.Id}"))!; Assert.Equal("ready", document.Status); Assert.Null(document.Warning);
+        var page = Assert.Single((await client.GetFromJsonAsync<DocumentPageDto[]>($"/api/v1/documents/{document.Id}/pages"))!); Assert.Equal("", page.Text); Assert.False(page.NeedsReview);
+        Assert.Equal("vision", (await client.GetFromJsonAsync<AttachmentDto>($"/api/v1/attachments/{file.Id}"))!.AnalysisMode);
+    }
+
+    [Fact]
+    public async Task ScanWithoutTextFailsWithItsReviewedHintInsteadOfContactingAnAdministrator()
+    {
+        await using var factory = new NexusFactory(inference: x => x.Models[0].SupportsImages = true);
+        using var client = await factory.SignedInAsync(); factory.Provider.Empty = true;
+        var builder = new PdfDocumentBuilder(); builder.AddPage(300, 400).AddPng(Png, new PdfRectangle(0, 0, 300, 400));
+        var file = await Upload(client, "blank-scan.pdf", builder.Build());
+        var response = await client.PostAsync($"/api/v1/attachments/{file.Id}/document", null); response.EnsureSuccessStatusCode(); var document = (await response.Content.ReadFromJsonAsync<DocumentDto>())!;
+        await Process(factory);
+        var job = (await client.GetFromJsonAsync<JobDto>($"/api/v1/jobs/{document.JobId}"))!;
+        Assert.Equal("failed", job.Status); Assert.Equal("document_has_no_text", job.ErrorCode);
+        Assert.Equal("文件沒有可讀文字。 查證代碼：" + job.IssueCode, job.ErrorMessage);
+    }
 }
