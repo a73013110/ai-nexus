@@ -17,8 +17,8 @@ export class ViewScope {
     });
   }
   guard() {
-    const generation = this.auth.generation();
-    return () => this.alive && generation === this.auth.generation();
+    const current = this.auth.guard();
+    return () => this.alive && current();
   }
   later(work: () => void, delay = 2000, key?: string) {
     const guard = this.guard();

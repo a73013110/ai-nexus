@@ -26,43 +26,43 @@ export class ChatConversations {
   private readonly router = inject(Router);
   async assignProject(conversation: ConversationDto, projectId: string | null) {
     if (this.store.busy()) return false;
-    const generation = this.store.auth.generation();
+    const current = this.store.auth.guard();
     try {
       const value = await this.projectsApi.assign(conversation.id, projectId);
-      if (generation !== this.store.auth.generation()) return false;
+      if (!current()) return false;
       this.show(value);
       return true;
     } catch (error) {
-      if (generation === this.store.auth.generation()) this.store.report(error);
+      if (current()) this.store.report(error);
       return false;
     }
   }
   async rename(id: string, title: string) {
-    const generation = this.store.auth.generation();
-    const current = this.find(id);
-    if (current) this.show({ ...current, title: title.trim() });
+    const current = this.store.auth.guard();
+    const previous = this.find(id);
+    if (previous) this.show({ ...previous, title: title.trim() });
     try {
       const saved = await this.api.rename(id, title);
-      if (generation !== this.store.auth.generation()) return false;
+      if (!current()) return false;
       this.show(saved);
       return true;
     } catch (error) {
-      if (generation !== this.store.auth.generation()) return false;
-      if (current) this.show(current);
+      if (!current()) return false;
+      if (previous) this.show(previous);
       this.store.report(error);
       return false;
     }
   }
   async remove(id: string) {
-    const generation = this.store.auth.generation();
+    const current = this.store.auth.guard();
     try {
       await this.api.delete(id);
-      if (generation !== this.store.auth.generation()) return false;
+      if (!current()) return false;
       this.store.history.remove(id);
       if (this.store.selected()?.id === id) await this.router.navigate(['/chat']);
       return true;
     } catch (error) {
-      if (generation === this.store.auth.generation()) this.store.report(error);
+      if (current()) this.store.report(error);
       return false;
     }
   }
@@ -76,54 +76,53 @@ export class ChatConversations {
     }
   }
   async organize(conversation: ConversationDto, settings: ConversationSettingsRequest) {
-    const generation = this.store.auth.generation();
+    const current = this.store.auth.guard();
     const changes = Object.fromEntries(
       Object.entries(settings).filter(([, value]) => value !== null && value !== undefined),
     );
     // The open conversation's copy is newer than a history row, e.g. its active branch.
-    const current = this.find(conversation.id) ?? conversation;
-    this.show({ ...current, ...changes });
+    const previous = this.find(conversation.id) ?? conversation;
+    this.show({ ...previous, ...changes });
     try {
       const saved = await this.workspace.settings(conversation.id, settings);
-      if (generation !== this.store.auth.generation()) return false;
+      if (!current()) return false;
       this.show(saved);
       if (settings.labels) {
-        const labels = await this.workspace.labels();
-        if (generation !== this.store.auth.generation()) return false;
-        this.store.labels.set(labels);
+        await this.store.history.reloadLabels();
+        if (!current()) return false;
       }
       return true;
     } catch (error) {
-      if (generation !== this.store.auth.generation()) return false;
-      this.show(current);
+      if (!current()) return false;
+      this.show(previous);
       this.store.report(error);
       return false;
     }
   }
   async duplicate() {
-    const generation = this.store.auth.generation();
+    const current = this.store.auth.guard();
     const selected = this.store.selected();
     if (!selected || this.store.busy()) return;
     try {
       const copy = await this.workspace.duplicate(selected.id);
-      if (generation !== this.store.auth.generation()) return;
+      if (!current()) return;
       await this.store.refreshHistory();
-      if (generation !== this.store.auth.generation()) return;
+      if (!current()) return;
       await this.router.navigate(['/chat', copy.id]);
     } catch (error) {
-      if (generation === this.store.auth.generation()) this.store.report(error);
+      if (current()) this.store.report(error);
     }
   }
   async exportBackup() {
-    const generation = this.store.auth.generation();
+    const current = this.store.auth.guard();
     const selected = this.store.selected();
     if (!selected || this.store.busy()) return;
     try {
       const backup = await this.workspace.export(selected.id);
-      if (generation !== this.store.auth.generation()) return;
+      if (!current()) return;
       downloadFile(JSON.stringify(backup, null, 2), selected.title, 'json');
     } catch (error) {
-      if (generation === this.store.auth.generation()) this.store.report(error);
+      if (current()) this.store.report(error);
     }
   }
   /** Asks for a backup file; call from a click so the browser allows the file chooser. */
@@ -132,23 +131,22 @@ export class ChatConversations {
     if (file) await this.importBackup(file);
   }
   async importBackup(file: File) {
-    const generation = this.store.auth.generation();
+    const current = this.store.auth.guard();
     if (file.size > 8 * 1024 * 1024) {
       this.store.error.set('文字備份最多 8 MB。');
       return;
     }
     try {
       const body = JSON.parse(await file.text()) as ConversationBackup;
-      if (generation !== this.store.auth.generation()) return;
+      if (!current()) return;
       const imported = await this.workspace.import(body);
-      if (generation !== this.store.auth.generation()) return;
+      if (!current()) return;
       await this.store.refreshHistory();
-      const labels = await this.workspace.labels();
-      if (generation !== this.store.auth.generation()) return;
-      this.store.labels.set(labels);
+      await this.store.history.reloadLabels();
+      if (!current()) return;
       await this.router.navigate(['/chat', imported.id]);
     } catch (error) {
-      if (generation !== this.store.auth.generation()) return;
+      if (!current()) return;
       this.store.report(
         error instanceof SyntaxError ? new Error('備份不是有效的 JSON 格式。') : error,
       );

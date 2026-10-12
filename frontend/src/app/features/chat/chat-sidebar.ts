@@ -2,7 +2,6 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  DestroyRef,
   inject,
   output,
   signal,
@@ -13,6 +12,7 @@ import { RouterLink } from '@angular/router';
 import type { ConversationDto } from '../../core/api/schema';
 import { ViewMorph } from '../../core/layout/view-morph';
 import { currentDay } from '../../shared/browser/calendar-day';
+import { ViewScope } from '../../shared/browser/view-scope';
 import { Icon } from '../../shared/ui/icon';
 import { MenuPanel } from '../../shared/ui/menu-panel';
 import { Select } from '../../shared/ui/select';
@@ -30,6 +30,7 @@ import { historyGroups } from './history-groups';
 @Component({
   selector: 'nx-chat-sidebar',
   imports: [RouterLink, FormField, Icon, Select, MenuPanel, ViewSwitch],
+  providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './chat-sidebar.scss',
   host: { style: 'display: contents' },
@@ -40,6 +41,7 @@ export class ChatSidebar {
   readonly conversations = inject(ChatConversations);
   readonly notifications = inject(NotificationStore);
   private readonly morph = inject(ViewMorph);
+  private readonly scope = inject(ViewScope);
   readonly action = output<{ conversation: ConversationDto; action: ConversationAction }>();
   readonly navigate = output<void>();
   readonly prompts = output<void>();
@@ -75,12 +77,6 @@ export class ChatSidebar {
       '對話操作：' +
       (this.store.conversations().find((x) => x.id === this.menuTarget())?.title ?? ''),
   );
-  private searchTimer: ReturnType<typeof setTimeout> | null = null;
-  constructor() {
-    inject(DestroyRef).onDestroy(() => {
-      if (this.searchTimer) clearTimeout(this.searchTimer);
-    });
-  }
   /** A plain click morphs the row title into the topbar once the conversation loads. */
   open(event: MouseEvent, title: HTMLElement) {
     this.navigate.emit();
@@ -88,11 +84,7 @@ export class ChatSidebar {
       this.morph.arm('conversation-title', title);
   }
   searchChanged() {
-    if (this.searchTimer) clearTimeout(this.searchTimer);
-    this.searchTimer = setTimeout(
-      () => void this.store.searchHistory(this.searchModel().query),
-      250,
-    );
+    this.scope.later(() => void this.store.searchHistory(this.searchModel().query), 250, 'search');
   }
   selectLabel(value: string) {
     void this.conversations.filterHistory(undefined, value);

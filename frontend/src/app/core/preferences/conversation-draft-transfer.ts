@@ -5,13 +5,13 @@ import { AuthService } from '../auth/auth-service';
 @Injectable({ providedIn: 'root' })
 export class ConversationDraftTransfer {
   private readonly auth = inject(AuthService);
-  private pending: { id: string; text: string; generation: number } | null = null;
+  private pending: { id: string; text: string; current: () => boolean } | null = null;
   put(id: string, text: string) {
-    this.pending = { id, text, generation: this.auth.generation() };
+    this.pending = { id, text, current: this.auth.guard() };
   }
   take(id: string | null) {
     const value = this.pending;
-    if (!value || value.generation !== this.auth.generation()) {
+    if (!value || !value.current()) {
       this.pending = null;
       return null;
     }

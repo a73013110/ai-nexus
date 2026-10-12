@@ -17,6 +17,12 @@ export class KnowledgeSelection {
   readonly revision = signal(0);
   private conversation: string | null = null;
   private version = 0;
+  /** True until the account changes or a newer load or reset replaces this selection. */
+  private guard() {
+    const version = this.version,
+      session = this.auth.guard();
+    return () => version === this.version && session();
+  }
   reset() {
     this.version++;
     this.conversation = null;
@@ -28,20 +34,17 @@ export class KnowledgeSelection {
     this.revision.update((x) => x + 1);
   }
   async initialize() {
-    const generation = this.auth.generation(),
-      version = this.version;
+    const current = this.guard();
     try {
       const rows = await this.api.collections();
-      if (generation === this.auth.generation() && version === this.version)
-        this.collections.set(rows);
+      if (current()) this.collections.set(rows);
     } catch (error) {
-      if (generation === this.auth.generation() && version === this.version)
-        this.error.set(safeMessage(error));
+      if (current()) this.error.set(safeMessage(error));
     }
   }
   async load(conversation: string | null) {
-    const version = ++this.version,
-      generation = this.auth.generation();
+    this.version++;
+    const current = this.guard();
     this.conversation = conversation;
     this.ids.set([]);
     this.saving.set(!!conversation);
@@ -50,16 +53,15 @@ export class KnowledgeSelection {
     try {
       if (conversation) {
         const value = await this.api.selection(conversation);
-        if (version === this.version && generation === this.auth.generation())
-          this.ids.set(value.collectionIds);
+        if (current()) this.ids.set(value.collectionIds);
       }
     } catch (error) {
-      if (version === this.version && generation === this.auth.generation()) {
+      if (current()) {
         this.loadFailed.set(true);
         this.error.set(safeMessage(error));
       }
     } finally {
-      if (version === this.version && generation === this.auth.generation()) {
+      if (current()) {
         this.saving.set(false);
         this.revision.update((x) => x + 1);
       }
@@ -74,30 +76,28 @@ export class KnowledgeSelection {
     const before = this.ids(),
       next = checked ? [...new Set([...before, id])] : before.filter((x) => x !== id);
     if (next.length > 3) return;
-    const version = this.version,
-      generation = this.auth.generation();
+    const current = this.guard();
     this.ids.set(next);
     this.error.set('');
     this.saving.set(true);
     try {
       if (this.conversation) await this.api.select(this.conversation, next);
     } catch (error) {
-      if (version === this.version && generation === this.auth.generation()) {
+      if (current()) {
         this.ids.set(before);
         this.error.set(safeMessage(error));
       }
     } finally {
-      if (version === this.version && generation === this.auth.generation()) {
+      if (current()) {
         this.saving.set(false);
         this.revision.update((x) => x + 1);
       }
     }
   }
   async bindNew(conversation: string) {
-    const generation = this.auth.generation(),
-      version = this.version;
+    const current = this.guard();
     if (this.ids().length) await this.api.select(conversation, this.ids());
-    if (version === this.version && generation === this.auth.generation()) {
+    if (current()) {
       this.conversation = conversation;
       this.revision.update((x) => x + 1);
     }

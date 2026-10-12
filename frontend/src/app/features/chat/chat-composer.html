@@ -114,10 +114,7 @@
         (effortChange)="store.reasoningEffort.set($event)"
       />
       @if (store.hasKnowledgeAccess()) {
-        <nx-knowledge-picker
-          #knowledge
-          [disabled]="store.busy() || store.loadingConversation() || !!store.selected()?.isArchived"
-        />
+        <nx-knowledge-picker #knowledge [disabled]="!store.canPickKnowledge()" />
       }
       @if (store.liveRun()) {
         <button

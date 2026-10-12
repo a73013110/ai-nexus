@@ -37,7 +37,7 @@ function setup(features = ['admin']) {
       ViewScope,
       { provide: AdminApi, useValue: api },
       { provide: WorkspaceSession, useValue: session },
-      { provide: AuthService, useValue: { generation } },
+      { provide: AuthService, useValue: { generation, guard: AuthService.prototype.guard } },
     ],
   });
   const settle = () => TestBed.inject(ApplicationRef).whenStable();

@@ -31,7 +31,7 @@ function setup() {
           me: () => ({ id: 'me' }),
         },
       },
-      { provide: AuthService, useValue: { generation } },
+      { provide: AuthService, useValue: { generation, guard: AuthService.prototype.guard } },
     ],
   });
   const chosen = signal<string[]>([]);

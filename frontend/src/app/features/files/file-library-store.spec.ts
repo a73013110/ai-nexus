@@ -24,7 +24,7 @@ function setup(total = 100) {
         provide: WorkspaceSession,
         useValue: { auth: { generation }, load: async () => true, has: () => true },
       },
-      { provide: AuthService, useValue: { generation } },
+      { provide: AuthService, useValue: { generation, guard: AuthService.prototype.guard } },
     ],
   });
   const settle = () => TestBed.inject(ApplicationRef).whenStable();

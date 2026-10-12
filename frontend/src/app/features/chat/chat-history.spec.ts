@@ -1,11 +1,26 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { NexusApi } from '../../core/api/nexus-api';
 import type { ConversationDto } from '../../core/api/schema';
+import { AuthService } from '../../core/auth/auth-service';
+import { WorkspaceApi } from '../workspace/workspace-api';
 import { ChatHistory } from './chat-history';
 
 const rows = (prefix: string, count: number) =>
   Array.from({ length: count }, (_, index) => ({ id: `${prefix}${index}` }));
+
+function setup(api: object, workspace: object = {}) {
+  const generation = signal(1);
+  TestBed.configureTestingModule({
+    providers: [
+      { provide: NexusApi, useValue: api },
+      { provide: WorkspaceApi, useValue: workspace },
+      { provide: AuthService, useValue: { generation, guard: AuthService.prototype.guard } },
+    ],
+  });
+  return { history: TestBed.inject(ChatHistory), generation };
+}
 
 describe('chat history', () => {
   afterEach(() => TestBed.resetTestingModule());
@@ -15,10 +30,7 @@ describe('chat history', () => {
     const conversations = vi.fn(
       (_search: string) => new Promise((resolve) => pending.push(resolve)),
     );
-    TestBed.configureTestingModule({
-      providers: [{ provide: NexusApi, useValue: { conversations } }],
-    });
-    const history = TestBed.inject(ChatHistory);
+    const { history } = setup({ conversations });
     history.search.set('舊');
     const older = history.refresh();
     history.search.set('新');
@@ -35,10 +47,7 @@ describe('chat history', () => {
       .fn()
       .mockResolvedValueOnce(rows('a', 100))
       .mockResolvedValueOnce(rows('b', 3));
-    TestBed.configureTestingModule({
-      providers: [{ provide: NexusApi, useValue: { conversations } }],
-    });
-    const history = TestBed.inject(ChatHistory);
+    const { history } = setup({ conversations });
     await history.refresh();
     expect(history.hasMore()).toBe(true);
     await history.refresh(true);
@@ -48,8 +57,7 @@ describe('chat history', () => {
   });
 
   it('places a changed conversation where the server list would, or drops it from the view', () => {
-    TestBed.configureTestingModule({ providers: [{ provide: NexusApi, useValue: {} }] });
-    const history = TestBed.inject(ChatHistory);
+    const { history } = setup({});
     const row = (id: string, updatedAt: string, changes: Partial<ConversationDto> = {}) =>
       ({
         id,
@@ -74,5 +82,16 @@ describe('chat history', () => {
     history.label.set('工作');
     history.place(row('b', '2026-01-02', { title: '改名' }));
     expect(history.conversations().map((x) => x.id)).toEqual(['c']);
+  });
+
+  it('drops labels that arrive after the account changed', async () => {
+    let resolve!: (value: string[]) => void;
+    const labels = () => new Promise<string[]>((done) => (resolve = done));
+    const { history, generation } = setup({}, { labels });
+    const reload = history.reloadLabels();
+    generation.set(2);
+    resolve(['工作']);
+    await reload;
+    expect(history.labels()).toEqual([]);
   });
 });

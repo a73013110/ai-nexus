@@ -18,7 +18,6 @@ import { ViewMorph } from '../../core/layout/view-morph';
 import { ThemeService } from '../../core/preferences/theme-service';
 import { AuthService } from '../../core/auth/auth-service';
 import { DraftAttachments } from '../attachments/draft-attachments';
-import { WorkspaceApi } from '../workspace/workspace-api';
 import { MessageTree } from './message-tree';
 import { UserSettingsService } from '../../core/preferences/user-settings';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
@@ -42,7 +41,6 @@ export class ChatStore {
   private readonly morph = inject(ViewMorph);
   readonly attachments = inject(DraftAttachments);
   readonly knowledge = inject(KnowledgeSelection);
-  private readonly workspace = inject(WorkspaceApi);
   readonly auth = inject(AuthService);
   readonly personal = inject(UserSettingsService);
   private readonly session = inject(WorkspaceSession);
@@ -55,11 +53,6 @@ export class ChatStore {
   readonly conversations = this.history.conversations;
   readonly selected = signal<ConversationDto | null>(null);
   readonly messages = signal<MessageDto[]>([]);
-  rateMessage(value: { id: string; rating: number }) {
-    this.messages.update((items) =>
-      items.map((x) => (x.id === value.id ? { ...x, feedbackRating: value.rating } : x)),
-    );
-  }
   readonly models = this.model.models;
   readonly modelId = this.model.modelId;
   readonly policy = this.model.policy;
@@ -101,14 +94,17 @@ export class ChatStore {
   readonly busy = computed(
     () => this.submitting() || this.liveRun() !== null || this.pendingSubmission(),
   );
+  /** The page or conversation is still loading, or the conversation is archived. */
+  readonly conversationLocked = computed(
+    () => this.loading() || this.loadingConversation() || !!this.selected()?.isArchived,
+  );
+  readonly canPickKnowledge = computed(() => !this.conversationLocked() && !this.busy());
   readonly canSend = computed(
     () =>
       this.ready() &&
-      !this.loading() &&
       this.hasChatAccess() &&
       !!this.modelId() &&
-      !this.loadingConversation() &&
-      !this.selected()?.isArchived &&
+      !this.conversationLocked() &&
       !this.attachments.uploading() &&
       !this.attachments.files().some((x) => x.analysisMode === 'ocr-required') &&
       !this.knowledge.saving() &&
@@ -121,9 +117,7 @@ export class ChatStore {
     () =>
       this.ready() &&
       this.hasChatAccess() &&
-      !this.loading() &&
-      !this.loadingConversation() &&
-      !this.selected()?.isArchived &&
+      !this.conversationLocked() &&
       !this.busy() &&
       !this.attachments.uploading() &&
       !!this.attachments.policy(),
@@ -199,13 +193,13 @@ export class ChatStore {
   }
 
   private async bootstrap() {
-    const generation = this.auth.generation();
+    const current = this.auth.guard();
     this.loading.set(true);
     this.error.set(null);
     try {
       // Account and settings load together; the account is always fresh here for its active run.
       const me = await this.session.load(true);
-      if (!me || generation !== this.auth.generation()) return;
+      if (!me || !current()) return;
       this.themes.apply({
         theme: me.preferences.theme ?? 'system',
         reducedMotion: me.preferences.reducedMotion ?? false,
@@ -219,11 +213,11 @@ export class ChatStore {
       // Optional services never block the composer, so they start alongside models and history.
       const extensions = Promise.allSettled([
         this.attachments.initialize(),
-        this.workspace.labels(),
+        this.history.reloadLabels(),
         ...(this.hasKnowledgeAccess() ? [this.knowledge.initialize()] : []),
       ]);
       const [catalog] = await Promise.all([this.api.models(), this.refreshHistory()]);
-      if (generation !== this.auth.generation()) return;
+      if (!current()) return;
       this.model.adopt(
         catalog,
         me.preferences.defaultModelId,
@@ -231,9 +225,8 @@ export class ChatStore {
       );
       this.ready.set(true);
       void this.model.loadWebSearch();
-      const [attachments, labels] = await extensions;
-      if (generation !== this.auth.generation()) return;
-      if (labels.status === 'fulfilled') this.labels.set(labels.value);
+      const [attachments] = await extensions;
+      if (!current()) return;
       if (attachments.status === 'rejected')
         this.attachments.error.set('附件服務尚未就緒，請重新連線。');
       if (!this.selected() && !this.draft().text) await this.restoreDraft(null);
@@ -241,16 +234,16 @@ export class ChatStore {
       this.persistDraft();
       if (me.activeRunId && !this.liveRun()) {
         const active = await this.api.run(me.activeRunId);
-        if (generation !== this.auth.generation()) return;
+        if (!current()) return;
         if (isActive(active.status)) void this.follow(active);
       }
     } catch (error) {
-      if (generation === this.auth.generation()) {
+      if (current()) {
         this.ready.set(false);
         this.report(error);
       }
     } finally {
-      if (generation === this.auth.generation()) this.loading.set(false);
+      if (current()) this.loading.set(false);
     }
   }
 
@@ -321,22 +314,19 @@ export class ChatStore {
   }
 
   async send() {
-    const generation = this.auth.generation();
     const text = this.draft().text.trim();
     if (!text || !this.canSend()) return;
-    this.submitting.set(true);
-    this.error.set(null);
-    const edit = this.editing();
-    const files = this.attachments.files();
-    this.showPrompt(text, edit ? edit.parentId : (this.selected()?.activeLeafId ?? null));
-    try {
+    await this.whileSubmitting(async (current) => {
+      const edit = this.editing();
+      const files = this.attachments.files();
+      this.showPrompt(text, edit ? edit.parentId : (this.selected()?.activeLeafId ?? null));
       let conversation = this.selected();
       const draftId = conversation?.id ?? null;
       if (!conversation) {
         conversation = await this.api.createConversation();
-        if (generation !== this.auth.generation()) return;
+        if (!current()) return;
         await this.knowledge.bindNew(conversation.id);
-        if (generation !== this.auth.generation()) return;
+        if (!current()) return;
         this.selected.set(conversation);
         await this.router.navigate(['/chat', conversation.id]);
       }
@@ -356,32 +346,32 @@ export class ChatStore {
         },
       };
       await this.submitPending();
-    } catch (error) {
-      if (generation === this.auth.generation()) this.submissionError(error);
-    } finally {
-      if (generation === this.auth.generation()) this.submitting.set(false);
-    }
+    });
   }
 
   async retrySubmission() {
-    const generation = this.auth.generation();
-    if (!this.pending || this.submitting()) return;
+    if (this.pending && !this.submitting()) await this.whileSubmitting(() => this.submitPending());
+  }
+
+  /** Holds `submitting` while work runs; a failure in the same account keeps or returns the prompt. */
+  private async whileSubmitting(work: (current: () => boolean) => Promise<void>) {
+    const current = this.auth.guard();
     this.submitting.set(true);
     this.error.set(null);
     try {
-      await this.submitPending();
+      await work(current);
     } catch (error) {
-      if (generation === this.auth.generation()) this.submissionError(error);
+      if (current()) this.submissionError(error);
     } finally {
-      if (generation === this.auth.generation()) this.submitting.set(false);
+      if (current()) this.submitting.set(false);
     }
   }
 
   private async submitPending() {
-    const generation = this.auth.generation();
+    const current = this.auth.guard();
     const pending = this.pending!;
     const run = await this.api.createRun(pending.body, pending.key);
-    if (generation !== this.auth.generation()) return;
+    if (!current()) return;
     this.pending = null;
     this.unsent = null;
     this.pendingSubmission.set(false);
@@ -394,24 +384,24 @@ export class ChatStore {
       this.attachments.reset();
       if (pending.mode === 'edit') await this.restoreDraft(run.conversationId);
     }
-    if (generation !== this.auth.generation()) return;
+    if (!current()) return;
     this.liveRun.set(run);
     let snapshot = run;
     let conversation: ConversationDto | null = null;
     try {
       const detail = await this.api.conversation(run.conversationId);
-      if (generation !== this.auth.generation()) return;
+      if (!current()) return;
       if (this.selected()?.id === run.conversationId) this.adopt(detail);
       snapshot = (detail.activeRun as RunDto) ?? run;
       conversation = detail.conversation as ConversationDto;
     } catch (error) {
-      if (generation === this.auth.generation()) this.report(error);
+      if (current()) this.report(error);
     }
-    if (generation !== this.auth.generation()) return;
+    if (!current()) return;
     void this.follow(snapshot);
     await (conversation ? this.showInHistory(conversation) : this.refreshHistory()).catch(
       (error) => {
-        if (generation === this.auth.generation()) this.report(error);
+        if (current()) this.report(error);
       },
     );
   }
@@ -474,10 +464,7 @@ export class ChatStore {
   }
 
   async regenerate(message: MessageDto) {
-    const generation = this.auth.generation();
     if (this.busy() || !message.parentId || !this.modelId()) return;
-    this.submitting.set(true);
-    this.error.set(null);
     this.pending = {
       key: crypto.randomUUID(),
       mode: 'regenerate',
@@ -493,13 +480,7 @@ export class ChatStore {
         webSearch: this.webSearchEnabled(),
       },
     };
-    try {
-      await this.submitPending();
-    } catch (error) {
-      if (generation === this.auth.generation()) this.submissionError(error);
-    } finally {
-      if (generation === this.auth.generation()) this.submitting.set(false);
-    }
+    await this.whileSubmitting(() => this.submitPending());
   }
 
   edit(message: MessageDto) {
@@ -531,30 +512,30 @@ export class ChatStore {
   }
 
   async stop() {
-    const generation = this.auth.generation();
+    const current = this.auth.guard();
     const run = this.liveRun();
     if (!run || this.stopping()) return;
     this.stopping.set(true);
     try {
       const final = await this.api.cancel(run.id);
-      if (generation !== this.auth.generation()) return;
+      if (!current()) return;
       this.run.stopped(final);
       await this.finish(final);
     } catch (error) {
-      if (generation === this.auth.generation()) this.report(error);
+      if (current()) this.report(error);
     } finally {
-      if (generation === this.auth.generation()) this.stopping.set(false);
+      if (current()) this.stopping.set(false);
     }
   }
 
   async resume() {
-    const generation = this.auth.generation();
+    const current = this.auth.guard();
     const run = this.liveRun();
     if (!run) return;
     try {
       this.error.set(null);
-      const current = await this.api.run(run.id);
-      if (generation === this.auth.generation()) await this.follow(current);
+      const latest = await this.api.run(run.id);
+      if (current()) await this.follow(latest);
     } catch (error) {
       this.report(error);
     }
@@ -570,31 +551,31 @@ export class ChatStore {
   }
 
   private async finish(run: RunDto) {
-    const generation = this.auth.generation();
+    const current = this.auth.guard();
     let conversation: ConversationDto | null = null;
     if (this.selected()?.id === run.conversationId) {
       const detail = await this.api.conversation(run.conversationId);
-      if (generation !== this.auth.generation()) return;
+      if (!current()) return;
       if (this.selected()?.id === run.conversationId) this.adopt(detail);
       conversation = detail.conversation as ConversationDto;
     }
     this.run.settle(run);
     // Another conversation's run has no fresh copy here, so its row needs the server's list.
     await (conversation ? this.showInHistory(conversation) : this.refreshHistory());
-    if (generation === this.auth.generation()) await this.notifications.refresh();
+    if (current()) await this.notifications.refresh();
   }
 
   async savePreferences(value: PreferencesDto) {
-    const generation = this.auth.generation();
+    const current = this.auth.guard();
     const version = ++this.preferenceVersion;
     this.themes.apply(value);
     if (!this.ready()) return;
     this.preferenceWrite = this.preferenceWrite.then(async () => {
-      if (generation !== this.auth.generation()) return;
+      if (!current()) return;
       try {
         const saved = await this.api.preferences(value);
-        if (generation !== this.auth.generation()) return;
-        this.me.update((current) => (current ? { ...current, preferences: saved } : current));
+        if (!current()) return;
+        this.me.update((me) => (me ? { ...me, preferences: saved } : me));
         if (version === this.preferenceVersion) this.themes.apply(saved);
       } catch (error) {
         if (version === this.preferenceVersion) {
@@ -608,6 +589,12 @@ export class ChatStore {
   }
   report(error: unknown) {
     this.error.set(safeMessage(error));
+  }
+
+  rateMessage(value: { id: string; rating: number }) {
+    this.messages.update((items) =>
+      items.map((x) => (x.id === value.id ? { ...x, feedbackRating: value.rating } : x)),
+    );
   }
 
   chooseModel(id: string) {
