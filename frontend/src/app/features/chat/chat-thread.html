@@ -6,7 +6,14 @@
   (scroll)="onScroll()"
 >
   @if (store.loadingConversation()) {
-    <div class="conversation-loading" role="status">正在開啟對話…</div>
+    <div class="conversation-loading chat-column" role="status">
+      <span class="sr-only">正在開啟對話…</span>
+      <div class="loading-prompt skeleton" aria-hidden="true"></div>
+      <div class="loading-answer" aria-hidden="true">
+        <span class="skeleton"></span><span class="skeleton"></span><span class="skeleton"></span>
+      </div>
+      <div class="loading-prompt is-short skeleton" aria-hidden="true"></div>
+    </div>
   } @else if (!store.visibleMessages().length) {
     <section
       class="chat-start chat-column"
@@ -22,14 +29,13 @@
         <nx-chat-message
           [message]="message"
           [tree]="store.tree()"
-          [matched]="matches().includes(message.id)"
+          [matched]="matched().has(message.id)"
           [currentMatch]="currentMatch() === message.id"
-          [active]="store.liveRun()?.assistantMessageId === message.id"
-          [streamContent]="
-            store.liveRun()?.assistantMessageId === message.id ? store.streamingText() : ''
-          "
-          [status]="store.liveRun()?.status || ''"
-          (rendered)="scheduleFollow()"
+          [active]="activeId() === message.id"
+          [stream]="store.streamingText"
+          [status]="activeId() === message.id ? runStatus() : ''"
+          [enter]="entering().has(message.id)"
+          (rendered)="scroll.schedule()"
           [busy]="store.busy()"
           [showModelNames]="store.policy().showModelNames"
           [allowArtifacts]="store.hasArtifactsAccess()"
@@ -46,10 +52,10 @@
 <nx-conversation-outline
   [messages]="store.visibleMessages()"
   [viewport]="viewport"
-  (navigated)="pauseFollowing()"
+  (navigated)="scroll.pause()"
 />
 @if (!following() && store.visibleMessages().length) {
-  <button class="latest-button" (click)="scrollLatest()"><nx-icon name="down" />回到最新</button>
+  <button class="latest-button" (click)="scroll.toLatest()"><nx-icon name="down" />回到最新</button>
 }
 <nx-text-tools
   [modelId]="store.modelId() || null"

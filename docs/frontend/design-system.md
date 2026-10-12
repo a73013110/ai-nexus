@@ -58,6 +58,7 @@
   - Markdown 由 `innerHTML` 產生（`markdown.scss`）。
   - 投影內容（`ng-content`）帶宣告端的屬性：Notice、EmptyState 放 `projected.scss`，表格內容放 `data-workspace.scss`。
   - View Transition 名稱與 pseudo-element 樣式（`motion.scss`）。
+  - 多頁共用的載入佔位 `.skeleton`（`skeleton.scss`）；減少動態時由全域開關停在靜止色塊。
 - driver.js 的覆寫是獨立 bundle（`angular.json` 的 `driver-tour`，`inject: false`），導覽啟動時才載入。
 - 跨元件調整：祖先狀態用 `:host(.x)`／`:host-context(.x)`；父層要改子元件內部，由子元件開 custom property 或 input（例：`--inline-title-max-width`、`Select` 的 `appearance`）；父層可以排版子元件的 host。
 - 元件樣式檔在 `anyComponentStyle` 預算（4 kB）內；超過時拆子元件或分檔，不提高預算、不搬到全域。

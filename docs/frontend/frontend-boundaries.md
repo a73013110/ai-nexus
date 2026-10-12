@@ -17,7 +17,7 @@
 | `features/*` | 按路由載入的頁面、該功能的 `*-api.ts`、store 與業務元件；被多個功能共用的業務元件也留在 features（例：`features/workspace` 的 `ConversationActions`） |
 | `shared/ui` | 無業務狀態的通用元件（Select、ActionMenu／MenuPanel、CommandPalette、ConfirmDialog、Notice…） |
 | `shared/markdown` | Markdown 解析與檢視、串流 Markdown、Mermaid、程式碼區塊與語法上色 |
-| `shared/browser` | ViewScope、autosize、拖放／貼圖、選檔（`pickFile`）、下載、複製、快捷鍵（`bindHotkeys`）、日期格式與本地日期（`currentDay`）、popover 定位、未儲存提示 |
+| `shared/browser` | ViewScope、autosize、拖放／貼圖、選檔（`pickFile`）、下載、複製、快捷鍵（`bindHotkeys`）、日期格式與本地日期（`currentDay`）、popover 定位、跟隨底部捲動（`followScroll`）、未儲存提示 |
 | `shared/graphics` | 不含認證／業務依賴的圖形資料與數學（標誌輪廓、沿折線取點） |
 | `frontend/src/styles` | 跨頁共用樣式；規則見 [設計系統](design-system.md#樣式載入) |
 

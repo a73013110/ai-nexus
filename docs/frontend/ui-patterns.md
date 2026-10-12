@@ -55,7 +55,7 @@
 ## 提示、載入與錯誤
 
 - 失敗、風險與要留著讀的資訊用 `Notice`（錯誤為 `alert`，其他為 `status`）；`message` 附可複製的查證代碼，動作放 `notice-actions`。剛完成的操作用 `ToastService`；composer 的提示收斂在動態島（見 [動效](motion.md)）。
-- 讀取的載入／錯誤／重試寫法見 [讀取與寫入](frontend-boundaries.md#讀取與寫入)。
+- 讀取的載入／錯誤／重試寫法見 [讀取與寫入](frontend-boundaries.md#讀取與寫入)。形狀已知的內容用 `.skeleton`（`frontend/src/styles/skeleton.scss`）排出佔位，容器保留 `role="status"` 與可讀的文字。
 - 進度只顯示真實階段（`JobProgress`）；未知總量用不定進度，不做假百分比。未知金額或未取得的用量顯示說明文字，不顯示為零。
 - 狀態用 `StatusBadge`／`CountBadge`：文字或圓點與顏色並用，不只靠顏色。數量徽章是裝飾，完整脈絡由父按鈕的名稱提供，只由一個 contextual status 播報更新。
 

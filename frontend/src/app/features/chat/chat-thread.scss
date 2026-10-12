@@ -27,13 +27,41 @@
     overflow: visible;
   }
 }
+.message-list,
 .conversation-loading {
-  color: var(--secondary);
-  font-size: var(--text-label);
-  padding: 70px 12%;
-}
-.message-list {
   padding: var(--p-space-4) var(--outline-space) var(--p-space-3) 0;
+}
+// Message-shaped placeholders; they appear only when opening takes long enough to notice.
+.conversation-loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--message-gap);
+  font-size: var(--text-body);
+  animation: arrive var(--motion) var(--ease) var(--motion) both;
+}
+.loading-prompt {
+  align-self: flex-end;
+  width: min(60%, 28rem);
+  height: 3.25em;
+  border-radius: var(--p-radius-lg) var(--p-radius-lg) var(--p-radius-sm) var(--p-radius-lg);
+  &.is-short {
+    width: min(40%, 18rem);
+  }
+}
+.loading-answer {
+  display: grid;
+  gap: 0.75em;
+  padding: var(--p-space-2) 0 var(--p-space-2) var(--p-space-4);
+  border-left: 2px solid var(--line);
+  .skeleton {
+    height: 1em;
+  }
+  .skeleton:nth-child(2) {
+    width: 88%;
+  }
+  .skeleton:nth-child(3) {
+    width: 62%;
+  }
 }
 .chat-start {
   padding-block: var(--p-space-6) var(--p-space-4);
@@ -74,7 +102,8 @@
   }
 }
 @include bp.below(narrow) {
-  .message-list {
+  .message-list,
+  .conversation-loading {
     padding-right: 0;
   }
 }

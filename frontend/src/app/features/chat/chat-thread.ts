@@ -2,7 +2,7 @@ import {
   afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
+  computed,
   effect,
   ElementRef,
   inject,
@@ -13,6 +13,7 @@ import {
 } from '@angular/core';
 import type { MessageDto } from '../../core/api/schema';
 import { ThemeService } from '../../core/preferences/theme-service';
+import { followScroll } from '../../shared/browser/follow-scroll';
 import type { ReaderOrigin } from '../../shared/browser/reader-navigation';
 import { TextSelection, type SelectedText } from '../../shared/browser/text-selection';
 import { Icon } from '../../shared/ui/icon';
@@ -44,19 +45,51 @@ export class ChatThread {
   readonly restoreTo = input<ReaderOrigin | null>(null);
   /** A prompt was opened for editing, so the composer should take focus. */
   readonly edited = output<void>();
-  readonly following = linkedSignal({
-    source: this.arrival,
-    computation: ({ position }) => !position && this.store.personal.value().autoFollow,
+  private readonly viewport = viewChild.required<ElementRef<HTMLElement>>('viewport');
+  readonly scroll = followScroll({
+    viewport: () => this.viewport().nativeElement,
+    initial: () => !this.arrival().position && this.store.personal.value().autoFollow,
   });
+  readonly following = this.scroll.following;
   readonly paragraph = linkedSignal<unknown, SelectedText | null>({
     source: this.arrival,
     computation: () => null,
   });
+  /** The answer being generated; only its row reads the streamed text. */
+  readonly activeId = computed(() => this.store.liveRun()?.assistantMessageId ?? null);
+  readonly runStatus = computed(() => this.store.liveRun()?.status ?? '');
+  readonly matched = computed(() => new Set(this.matches()));
+  /**
+   * Messages that arrived after the conversation was shown (a sent prompt, a new answer), so they
+   * animate in. Opening a conversation or another version renders everything at once, and the
+   * server's copy of a sent prompt replaces the one already shown without arriving again.
+   */
+  readonly entering = linkedSignal<EnteringSource, ReadonlySet<string>>({
+    source: () => ({
+      messages: this.store.visibleMessages(),
+      loading: this.store.loadingConversation(),
+      conversation: this.store.selected()?.id ?? null,
+    }),
+    computation: (current, previous) => {
+      const before = previous?.source;
+      if (
+        !before ||
+        current.loading ||
+        before.loading ||
+        before.conversation !== current.conversation
+      )
+        return none;
+      const shown = new Set(before.messages.map((message) => message.id));
+      const replacing = before.messages.some((message) => message.id.startsWith(pendingPrefix));
+      return new Set(
+        current.messages
+          .filter((message) => !shown.has(message.id) && !(replacing && message.role === 'user'))
+          .map((message) => message.id),
+      );
+    },
+  });
   private readonly returnPosition = linkedSignal(() => this.restoreTo());
-  private readonly viewport = viewChild.required<ElementRef<HTMLElement>>('viewport');
   private readonly textTools = viewChild.required(TextTools);
-  private scrollFrame = 0;
-  private lastScrollTop = 0;
 
   constructor() {
     afterRenderEffect(() => {
@@ -64,7 +97,7 @@ export class ChatThread {
         view = this.viewport().nativeElement;
       if (!position || this.store.loadingConversation()) return;
       view.scrollTop = position.scrollTop;
-      this.lastScrollTop = view.scrollTop;
+      this.scroll.mark();
       const link = Array.from(view.querySelectorAll<HTMLAnchorElement>('a[data-reader-id]')).find(
         (element) =>
           element.dataset['readerId'] === position.documentId &&
@@ -78,9 +111,10 @@ export class ChatThread {
     effect(() => {
       this.store.streamingText();
       this.store.visibleMessages();
-      this.scheduleFollow();
+      // Read on every change so each arrival is compared with what was on screen before it.
+      this.entering();
+      this.scroll.schedule();
     });
-    inject(DestroyRef).onDestroy(() => cancelAnimationFrame(this.scrollFrame));
   }
 
   /** A new prompt was sent; follow its answer when the person prefers that. */
@@ -92,35 +126,12 @@ export class ChatThread {
     requestAnimationFrame(() =>
       this.viewport()
         .nativeElement.querySelector<HTMLElement>(`[data-message-id="${CSS.escape(messageId)}"]`)
-        ?.scrollIntoView({ block: 'center', behavior: this.motion() }),
+        ?.scrollIntoView({ block: 'center', behavior: this.themes.scrollBehavior() }),
     );
-  }
-
-  scheduleFollow() {
-    if (!this.following() || this.scrollFrame) return;
-    this.scrollFrame = requestAnimationFrame(() => {
-      this.scrollFrame = 0;
-      if (this.following()) this.scrollLatest(false);
-    });
   }
   onScroll() {
     this.paragraph.set(null);
-    const view = this.viewport().nativeElement;
-    const near = view.scrollHeight - view.scrollTop - view.clientHeight < 96;
-    // A smooth jump upwards begins near the bottom; that first event must not restart auto-follow.
-    this.following.set(near && (this.following() || view.scrollTop > this.lastScrollTop));
-    this.lastScrollTop = view.scrollTop;
-    if (!near) this.cancelFollow();
-  }
-  pauseFollowing() {
-    this.following.set(false);
-    this.cancelFollow();
-    this.lastScrollTop = this.viewport().nativeElement.scrollTop;
-  }
-  scrollLatest(smooth = true) {
-    const view = this.viewport().nativeElement;
-    this.following.set(true);
-    view.scrollTo({ top: view.scrollHeight, behavior: smooth ? this.motion() : 'instant' });
+    this.scroll.scrolled();
   }
   edit(message: MessageDto) {
     this.store.edit(message);
@@ -136,11 +147,12 @@ export class ChatThread {
     this.paragraph.set(null);
     window.getSelection()?.removeAllRanges();
   }
-  private cancelFollow() {
-    cancelAnimationFrame(this.scrollFrame);
-    this.scrollFrame = 0;
-  }
-  private motion(): ScrollBehavior {
-    return this.themes.reducedMotion() ? 'instant' : 'smooth';
-  }
 }
+
+interface EnteringSource {
+  messages: MessageDto[];
+  loading: boolean;
+  conversation: string | null;
+}
+const none: ReadonlySet<string> = new Set();
+const pendingPrefix = 'pending:';

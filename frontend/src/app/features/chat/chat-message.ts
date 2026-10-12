@@ -1,4 +1,13 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  input,
+  output,
+  signal,
+  type Signal,
+} from '@angular/core';
 import type { MessageDto } from '../../core/api/schema';
 import { Icon } from '../../shared/ui/icon';
 import { Notice } from '../../shared/ui/notice';
@@ -12,6 +21,8 @@ import { ChargeLabel } from '../billing/charge-label';
 import { StreamingAnswer } from '../../shared/markdown/streaming-answer';
 import { formatModelDisplayName } from '../../shared/browser/format';
 
+const idle: Signal<string> = signal('').asReadonly();
+
 @Component({
   selector: 'nx-chat-message',
   imports: [
@@ -24,6 +35,7 @@ import { formatModelDisplayName } from '../../shared/browser/format';
     StreamingAnswer,
   ],
   providers: [CopyFeedback],
+  host: { '[attr.data-role]': 'message().role' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './chat-message.scss',
   template: ` <article
@@ -34,7 +46,7 @@ import { formatModelDisplayName } from '../../shared/browser/format';
     [attr.data-message-id]="message().id"
     [attr.aria-label]="message().role === 'user' ? '你的提問' : 'AI 回覆'"
     [attr.aria-busy]="active()"
-    animate.enter="message-enter"
+    [animate.enter]="enter() ? 'message-enter' : ''"
   >
     <div class="message-heading">
       <span class="role-mark" [class.nexus]="message().role === 'assistant'">{{
@@ -153,8 +165,12 @@ export class ChatMessage {
   readonly saveArtifact = output<MessageDto>();
   readonly rated = output<{ id: string; rating: number }>();
   readonly busy = input(false);
-  readonly streamContent = input('');
+  /** The live answer's text; read only by the active message, so other rows skip each token. */
+  readonly stream = input<Signal<string>>(idle);
+  readonly streamContent = computed(() => (this.active() ? this.stream()() : ''));
   readonly status = input('');
+  /** Arrived after the conversation was shown, so it animates in. */
+  readonly enter = input(false);
   readonly generation = computed(() => generationStatus(this.status(), !!this.streamContent()));
   readonly rendered = output<void>();
   readonly edit = output<MessageDto>();

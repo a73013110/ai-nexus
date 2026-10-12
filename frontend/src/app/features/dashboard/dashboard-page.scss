@@ -96,16 +96,9 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
 }
-.dashboard-skeleton div {
+.dashboard-skeleton .skeleton {
   height: 9rem;
   border-radius: var(--p-radius-lg);
-  background: var(--accent-soft);
-  animation: skeleton-breathe var(--motion-signal) var(--ease) infinite alternate;
-}
-@keyframes skeleton-breathe {
-  to {
-    opacity: 0.45;
-  }
 }
 @include bp.below(wide) {
   .dashboard-metrics,

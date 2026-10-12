@@ -1,4 +1,5 @@
 import {
+  afterRenderEffect,
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
@@ -17,6 +18,11 @@ import { ThemeService } from '../../core/preferences/theme-service';
 import { Icon } from '../../shared/ui/icon';
 import { anchoredPopover } from '../../shared/browser/anchored-popover';
 import { positionSidePopover } from '../../shared/browser/side-popover-position';
+
+/** How far below the viewport's top a prompt counts as the current turn. */
+const currentLine = 90;
+/** Reaches above any conversation, so every prompt scrolled past stays reported. */
+const reach = 10_000_000;
 
 @Component({
   selector: 'nx-conversation-outline',
@@ -151,35 +157,49 @@ export class ConversationOutline {
       untracked(() => this.popover.show());
       onCleanup(() => this.popover.hide());
     });
-    effect((onCleanup) => {
-      const root = this.viewport(),
-        turns = this.turns();
+    effect(() => {
+      this.turns();
       this.preview.set(null);
       this.expanded.set(false);
-      if (!root || !turns.length) return;
-      let frame = 0;
-      const update = () => {
-        cancelAnimationFrame(frame);
-        frame = requestAnimationFrame(() => {
-          const top = root.getBoundingClientRect().top + 90;
-          let index = 0;
-          const nodes = root.querySelectorAll<HTMLElement>('.message.user');
-          for (let i = 0; i < nodes.length; i++) {
-            if (nodes[i].getBoundingClientRect().top <= top) index = i;
-            else break;
-          }
-          this.active.set(index);
-        });
+    });
+    // The current turn is the last prompt whose top has passed a line 90px below the viewport's top.
+    // An observer whose root reaches far above the viewport and ends at that line reports exactly
+    // those prompts, so scrolling reads no layout. Its margin follows the viewport's height.
+    afterRenderEffect((onCleanup) => {
+      const root = this.viewport();
+      this.turns();
+      const prompts = root
+        ? Array.from(root.querySelectorAll<HTMLElement>('nx-chat-message[data-role="user"]'))
+        : [];
+      if (!root || !prompts.length) return;
+      const order = new Map<Element, number>(prompts.map((node, i) => [node, i]));
+      const passed = new Set<number>();
+      let observer: IntersectionObserver | undefined;
+      let height = -1;
+      const observe = () => {
+        if (root.clientHeight === height) return;
+        height = root.clientHeight;
+        observer?.disconnect();
+        passed.clear();
+        observer = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              const index = order.get(entry.target)!;
+              if (entry.isIntersecting) passed.add(index);
+              else passed.delete(index);
+            }
+            this.active.set(passed.size ? Math.max(...passed) : 0);
+          },
+          { root, rootMargin: `${reach}px 0px ${currentLine - height}px 0px` },
+        );
+        prompts.forEach((node) => observer!.observe(node));
       };
-      root.addEventListener('scroll', update, { passive: true });
-      const observer = new ResizeObserver(update);
-      const list = root.querySelector('.message-list');
-      observer.observe(list ?? root);
-      update();
+      const resize = new ResizeObserver(observe);
+      resize.observe(root);
+      observe();
       onCleanup(() => {
-        root.removeEventListener('scroll', update);
-        observer.disconnect();
-        cancelAnimationFrame(frame);
+        resize.disconnect();
+        observer?.disconnect();
       });
     });
     inject(DestroyRef).onDestroy(() => this.cancelLeave());
@@ -222,7 +242,7 @@ export class ConversationOutline {
     this.active.set(index);
     target.scrollIntoView({
       block: 'start',
-      behavior: this.themes.reducedMotion() ? 'instant' : 'smooth',
+      behavior: this.themes.scrollBehavior(),
     });
   }
 }

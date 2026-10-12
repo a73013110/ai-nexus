@@ -110,7 +110,7 @@ export class ScrollArea {
     const viewport = this.viewport().nativeElement;
     viewport.scrollBy({
       top: direction * Math.max(44, viewport.clientHeight * 0.75),
-      behavior: this.theme.reducedMotion() ? 'instant' : 'smooth',
+      behavior: this.theme.scrollBehavior(),
     });
   }
 

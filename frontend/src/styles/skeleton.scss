@@ -1,0 +1,23 @@
+// Placeholder shapes while content loads; the page sizes them. A highlight passes across, and under
+// reduced motion the global switch ends the animation at once, leaving a still block.
+.skeleton {
+  display: block;
+  border-radius: var(--p-radius-sm);
+  background:
+    linear-gradient(
+        90deg,
+        transparent 33%,
+        color-mix(in srgb, var(--surface) 55%, transparent) 50%,
+        transparent 67%
+      )
+      0 0 / 300% 100% no-repeat,
+    var(--hover);
+  animation: skeleton-shimmer var(--motion-signal) var(--ease) infinite;
+}
+@keyframes skeleton-shimmer {
+  from {
+    background-position:
+      100% 0,
+      0 0;
+  }
+}
