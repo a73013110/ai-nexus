@@ -1,5 +1,6 @@
 import MarkdownIt from 'markdown-it';
 import DOMPurify from 'dompurify';
+import { LruCache } from './lru-cache';
 const markdown = new MarkdownIt({ html: false, linkify: false, typographer: false, breaks: true });
 const escape = markdown.utils.escapeHtml;
 markdown.renderer.rules['image'] = (tokens, index) =>
@@ -47,11 +48,29 @@ export function markdownBlockStructure(content: string) {
 export const renderMarkdown = (content: string, streaming = false): string =>
   sanitizeMarkdown(markdown.render(content, { streaming }));
 
+export interface RenderedMarkdown {
+  readonly html: string;
+  readonly diagrams: readonly string[];
+}
+
+// Rendering depends only on the text, so remounts (conversation switches, shares, artifacts) reuse
+// it. About two long conversations of answers; at most ~8 MB of UTF-16 source plus HTML.
+const rendered = new LruCache<string, RenderedMarkdown>({
+  maxEntries: 256,
+  maxWeight: 4_000_000,
+  weigh: (value, content) => content.length + value.html.length,
+});
+
 /** Fences keep their original nesting; only renderer-owned slots host Angular widgets. */
-export function renderMarkdownWithDiagrams(content: string, streaming = false) {
+export function renderMarkdownWithDiagrams(content: string, streaming = false): RenderedMarkdown {
+  // The streaming frontier changes every frame and is never shown twice; it is not cached.
+  const cached = streaming ? undefined : rendered.get(content);
+  if (cached) return cached;
   const diagrams: string[] = [];
   const html = sanitizeMarkdown(markdown.render(content, { streaming, diagrams }));
-  return { html, diagrams };
+  const result: RenderedMarkdown = Object.freeze({ html, diagrams: Object.freeze(diagrams) });
+  if (!streaming) rendered.set(content, result);
+  return result;
 }
 
 const sanitizeMarkdown = (html: string): string =>

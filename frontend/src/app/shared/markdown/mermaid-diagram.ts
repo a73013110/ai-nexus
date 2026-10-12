@@ -7,6 +7,7 @@ import {
   ElementRef,
   inject,
   input,
+  type OnInit,
   output,
   signal,
   untracked,
@@ -21,11 +22,8 @@ import { CompactDialog } from '../ui/compact-dialog';
 import { Icon, EXTRA_ICONS } from '../ui/icon';
 import { SquareCode, ZoomIn, ZoomOut, Scan } from 'lucide';
 import { ViewSwitch } from '../ui/view-switch';
-import { renderDiagram } from './mermaid-renderer';
+import { cachedDiagram, renderDiagram, type Diagram, type DiagramView } from './mermaid-renderer';
 import { diagramTheme } from './mermaid-theme';
-import type { sanitizeDiagramSvg } from './mermaid-svg';
-
-type Diagram = ReturnType<typeof sanitizeDiagramSvg>;
 
 @Component({
   selector: 'nx-diagram-canvas',
@@ -297,7 +295,7 @@ export class DiagramCanvas {
       }
     </dialog>`,
 })
-export class MermaidDiagram {
+export class MermaidDiagram implements OnInit {
   readonly source = input.required<string>();
   readonly diagram = signal<Diagram | null>(null);
   readonly url = signal('');
@@ -316,6 +314,7 @@ export class MermaidDiagram {
   private readonly canvases = viewChildren(DiagramCanvas);
   private readonly refresh = signal(0);
   private revision = 0;
+  private held: DiagramView | null = null;
   constructor() {
     const observer = new MutationObserver(() => this.retry());
     observer.observe(document.documentElement, {
@@ -330,8 +329,14 @@ export class MermaidDiagram {
     inject(DestroyRef).onDestroy(() => {
       ++this.revision;
       observer.disconnect();
-      if (this.url()) URL.revokeObjectURL(this.url());
+      this.held?.release();
     });
+  }
+  /** A diagram rendered before (e.g. while streaming) is shown in the first paint, not after it. */
+  ngOnInit() {
+    const { config, semantics } = this.theme();
+    const cached = cachedDiagram(this.source(), config, semantics);
+    if (cached) this.show(cached);
   }
   retry() {
     this.refresh.update((value) => value + 1);
@@ -357,20 +362,31 @@ export class MermaidDiagram {
         'svg',
       );
   }
+  private theme() {
+    return diagramTheme(getComputedStyle(this.host.nativeElement));
+  }
+  private show(view: DiagramView) {
+    this.loading.set(false);
+    this.error.set('');
+    if (view.url === this.held?.url) return view.release();
+    this.held?.release();
+    this.held = view;
+    this.diagram.set(view.diagram);
+    this.url.set(view.url);
+  }
   private async render(source: string) {
     const revision = ++this.revision;
     const active = () => revision === this.revision;
-    const style = getComputedStyle(this.host.nativeElement);
-    const { config, semantics } = diagramTheme(style);
+    const { config, semantics } = this.theme();
+    const cached = cachedDiagram(source, config, semantics);
+    if (cached) return this.show(cached);
     this.loading.set(true);
     this.error.set('');
     try {
-      const result = await renderDiagram(source, config, active, semantics);
-      if (!active() || !result) return;
-      const previous = this.url();
-      this.diagram.set(result);
-      this.url.set(URL.createObjectURL(new Blob([result.svg], { type: 'image/svg+xml' })));
-      if (previous) URL.revokeObjectURL(previous);
+      const view = await renderDiagram(source, config, active, semantics);
+      if (!view) return;
+      if (!active()) return view.release();
+      this.show(view);
     } catch {
       if (active()) {
         this.error.set('無法繪製這段 Mermaid；請檢查語法，原始碼仍可複製。');
