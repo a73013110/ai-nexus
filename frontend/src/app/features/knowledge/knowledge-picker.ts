@@ -2,7 +2,6 @@ import { Notice } from '../../shared/ui/notice';
 import {
   ChangeDetectionStrategy,
   Component,
-  DestroyRef,
   ElementRef,
   computed,
   inject,
@@ -12,6 +11,7 @@ import {
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Icon } from '../../shared/ui/icon';
+import { anchoredPopover } from '../../shared/browser/anchored-popover';
 import { positionPopover } from '../../shared/browser/popover-position';
 import { KnowledgeSelection } from './knowledge-selection';
 import { Checkbox } from '../../shared/ui/checkbox';
@@ -43,7 +43,7 @@ import { SearchField } from '../../shared/ui/search-field';
       popover="auto"
       role="dialog"
       aria-label="對話知識來源"
-      (toggle)="opened.set($any($event).newState === 'open')"
+      (toggle)="popover.sync($event)"
     >
       <div class="picker-heading"><strong>知識來源</strong><span>最多 3 個 · 選取即儲存</span></div>
       <nx-search-field
@@ -96,7 +96,7 @@ import { SearchField } from '../../shared/ui/search-field';
           移除已失效的來源<nx-icon name="close" />
         </button>
       }
-      <a routerLink="/knowledge" class="quiet-button" (click)="panel.hidePopover()"
+      <a routerLink="/knowledge" class="quiet-button" (click)="popover.hide()"
         >管理知識庫<nx-icon name="chevron"
       /></a>
     </div>`,
@@ -105,7 +105,6 @@ export class KnowledgePicker {
   readonly selection = inject(KnowledgeSelection);
   readonly disabled = input(false);
   readonly query = signal('');
-  readonly opened = signal(false);
   readonly visible = computed(() =>
     this.selection
       .collections()
@@ -119,32 +118,21 @@ export class KnowledgePicker {
   readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
   readonly panel = viewChild.required<ElementRef<HTMLDivElement>>('panel');
   private from: HTMLElement | null = null;
-  private anchor() {
-    return this.from ?? this.trigger().nativeElement;
-  }
-  constructor() {
-    const update = () => {
-      if (this.opened()) positionPopover(this.anchor(), this.panel().nativeElement, 360, 'left');
-    };
-    window.addEventListener('resize', update);
-    window.addEventListener('scroll', update, true);
-    inject(DestroyRef).onDestroy(() => {
-      window.removeEventListener('resize', update);
-      window.removeEventListener('scroll', update, true);
-    });
-  }
+  protected readonly popover = anchoredPopover({
+    panel: () => this.panel().nativeElement,
+    place: (panel) =>
+      positionPopover(this.from ?? this.trigger().nativeElement, panel, 360, 'left'),
+  });
+  readonly opened = this.popover.opened;
   /** Opens beside `from` when another control (the narrow composer's tools menu) asks. */
   open(from?: HTMLElement) {
-    const panel = this.panel().nativeElement;
     if (this.opened()) {
-      panel.hidePopover();
+      this.popover.hide();
       return;
     }
     this.from = from ?? null;
-    panel.showPopover();
-    this.opened.set(true);
-    positionPopover(this.anchor(), panel, 360, 'left');
-    panel.querySelector<HTMLInputElement>('input[type=search]')?.focus();
+    this.popover.show();
+    this.panel().nativeElement.querySelector<HTMLInputElement>('input[type=search]')?.focus();
     void this.selection.initialize();
   }
 }

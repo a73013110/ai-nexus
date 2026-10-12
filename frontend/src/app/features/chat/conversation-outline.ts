@@ -9,11 +9,13 @@ import {
   input,
   output,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import type { MessageDto } from '../../core/api/schema';
 import { ThemeService } from '../../core/preferences/theme-service';
 import { Icon } from '../../shared/ui/icon';
+import { anchoredPopover } from '../../shared/browser/anchored-popover';
 import { positionSidePopover } from '../../shared/browser/side-popover-position';
 
 @Component({
@@ -124,39 +126,30 @@ export class ConversationOutline {
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   private readonly panel = viewChild<ElementRef<HTMLElement>>('panel');
   private leaveTimer?: ReturnType<typeof setTimeout>;
+  private readonly popover = anchoredPopover({
+    panel: () => this.panel()?.nativeElement,
+    place: (panel) => {
+      const root = this.viewport();
+      const trigger = this.element.querySelector<HTMLElement>(
+        this.expanded()
+          ? '.outline-count'
+          : `.outline-tick:nth-child(${(this.preview() ?? 0) + 1})`,
+      );
+      if (root && trigger) positionSidePopover(trigger, panel, root.parentElement!);
+    },
+    dismiss: () => this.close(),
+    within: () => this.element,
+  });
   constructor() {
+    // Placed again against the hovered tick, or the count once the directory opens.
     effect((onCleanup) => {
       const panel = this.panel()?.nativeElement,
-        root = this.viewport(),
-        preview = this.preview();
-      const expanded = this.expanded();
+        root = this.viewport();
+      this.preview();
+      this.expanded();
       if (!panel || !root) return;
-      const position = () => {
-        const trigger = this.element.querySelector<HTMLElement>(
-          expanded ? '.outline-count' : `.outline-tick:nth-child(${(preview ?? 0) + 1})`,
-        );
-        if (trigger) positionSidePopover(trigger, panel, root.parentElement!);
-      };
-      panel.showPopover();
-      position();
-      const outside = (event: PointerEvent) => {
-        if (event.target instanceof Node && !this.element.contains(event.target)) this.close();
-      };
-      const escape = (event: KeyboardEvent) => {
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          this.close();
-        }
-      };
-      window.addEventListener('resize', position);
-      document.addEventListener('pointerdown', outside);
-      document.addEventListener('keydown', escape);
-      onCleanup(() => {
-        if (panel.isConnected && panel.matches(':popover-open')) panel.hidePopover();
-        window.removeEventListener('resize', position);
-        document.removeEventListener('pointerdown', outside);
-        document.removeEventListener('keydown', escape);
-      });
+      untracked(() => this.popover.show());
+      onCleanup(() => this.popover.hide());
     });
     effect((onCleanup) => {
       const root = this.viewport(),

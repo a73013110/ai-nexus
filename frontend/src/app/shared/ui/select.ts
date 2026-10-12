@@ -11,6 +11,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Icon } from './icon';
+import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
 
 export interface SelectOption {
@@ -60,7 +61,7 @@ let sequence = 0;
       class="popover-panel select-panel"
       [attr.role]="search() ? 'dialog' : null"
       [attr.aria-label]="label()"
-      (toggle)="toggled($event)"
+      (toggle)="popover.sync($event)"
       (focusout)="leave($event)"
       (keydown.escape)="dismiss($event)"
     >
@@ -139,24 +140,20 @@ export class Select {
   );
   readonly valueChange = output<string>();
   readonly selected = computed(() => this.options().find((x) => x.value === this.value()));
-  readonly opened = signal(false);
   readonly active = signal(-1);
   readonly id = `nx-select-${++sequence}`;
   private readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
   private readonly panel = viewChild.required<ElementRef<HTMLDivElement>>('panel');
+  protected readonly popover = anchoredPopover({
+    panel: () => this.panel().nativeElement,
+    place: (panel) =>
+      positionPopover(this.trigger().nativeElement, panel, this.search() ? 360 : 240),
+  });
+  readonly opened = this.popover.opened;
   private typed = '';
   private searchTimer?: ReturnType<typeof setTimeout>;
   constructor() {
-    const reposition = () => {
-      if (this.opened()) this.position();
-    };
-    window.addEventListener('resize', reposition);
-    window.addEventListener('scroll', reposition, true);
-    inject(DestroyRef).onDestroy(() => {
-      clearTimeout(this.searchTimer);
-      window.removeEventListener('resize', reposition);
-      window.removeEventListener('scroll', reposition, true);
-    });
+    inject(DestroyRef).onDestroy(() => clearTimeout(this.searchTimer));
   }
   toggle() {
     this.opened() ? this.close() : this.open();
@@ -170,24 +167,11 @@ export class Select {
         this.options().findIndex((x) => x.value === this.value()),
       ),
     );
-    this.panel().nativeElement.showPopover();
-    this.opened.set(true);
-    this.position();
+    this.popover.show();
     this.reveal();
   }
-  private position() {
-    positionPopover(
-      this.trigger().nativeElement,
-      this.panel().nativeElement,
-      this.search() ? 360 : 240,
-    );
-  }
   close() {
-    this.panel().nativeElement.hidePopover();
-    this.opened.set(false);
-  }
-  toggled(event: Event) {
-    this.opened.set((event as ToggleEvent).newState === 'open');
+    this.popover.hide();
   }
   choose(index: number) {
     const option = this.options()[index];
@@ -281,7 +265,7 @@ export class Select {
   filter(query: string) {
     this.query.set(query);
     this.active.set(this.visibleOptions().find((x) => !x.option.disabled)?.index ?? -1);
-    this.position();
+    this.popover.reposition();
   }
   searchKey(event: KeyboardEvent) {
     if (['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', 'Escape', 'Tab'].includes(event.key))

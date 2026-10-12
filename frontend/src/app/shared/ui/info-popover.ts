@@ -1,14 +1,6 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  DestroyRef,
-  ElementRef,
-  inject,
-  input,
-  signal,
-  viewChild,
-} from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, input, viewChild } from '@angular/core';
 import { Icon } from './icon';
+import { anchoredPopover } from '../browser/anchored-popover';
 import { positionPopover } from '../browser/popover-position';
 let sequence = 0;
 
@@ -47,7 +39,7 @@ let sequence = 0;
       popover="auto"
       tabindex="-1"
       [attr.aria-label]="panelLabel() || description() || label()"
-      (toggle)="opened.set($any($event).newState === 'open')"
+      (toggle)="popover.sync($event)"
       (keydown.escape)="close($event)"
     >
       <ng-content />
@@ -100,46 +92,34 @@ export class InfoPopover {
   readonly width = input(320);
   /** Positions the panel against this element instead of rendering a trigger. */
   readonly anchor = input<HTMLElement | null>(null);
-  readonly opened = signal(false);
   readonly id = 'nx-info-' + ++sequence;
   private readonly trigger = viewChild<ElementRef<HTMLButtonElement>>('trigger');
   /** Where focus returns: the trigger, or whatever opened an anchored panel. */
   private opener: HTMLElement | null = null;
   private readonly panel = viewChild.required<ElementRef<HTMLDivElement>>('panel');
-  constructor() {
-    const position = () => {
-      if (this.opened()) this.position();
-    };
-    window.addEventListener('resize', position);
-    window.addEventListener('scroll', position, true);
-    inject(DestroyRef).onDestroy(() => {
-      window.removeEventListener('resize', position);
-      window.removeEventListener('scroll', position, true);
-    });
-  }
+  protected readonly popover = anchoredPopover({
+    panel: () => this.panel().nativeElement,
+    place: (panel) =>
+      positionPopover(
+        this.anchor() ?? this.trigger()!.nativeElement,
+        panel,
+        this.width(),
+        this.align(),
+        420,
+      ),
+  });
+  readonly opened = this.popover.opened;
   toggle() {
     if (this.opened()) this.close();
     else {
       this.opener = this.trigger()?.nativeElement ?? (document.activeElement as HTMLElement | null);
-      this.panel().nativeElement.showPopover();
-      this.opened.set(true);
-      this.position();
+      this.popover.show();
       this.panel().nativeElement.focus();
     }
   }
   close(event?: Event) {
     event?.stopPropagation();
-    this.panel().nativeElement.hidePopover();
-    this.opened.set(false);
+    this.popover.hide();
     this.opener?.focus();
-  }
-  private position() {
-    positionPopover(
-      this.anchor() ?? this.trigger()!.nativeElement,
-      this.panel().nativeElement,
-      this.width(),
-      this.align(),
-      420,
-    );
   }
 }
