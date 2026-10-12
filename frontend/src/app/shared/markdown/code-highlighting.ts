@@ -1,14 +1,26 @@
+import { LruCache } from './lru-cache';
+
 type Highlighter = typeof import('./code-highlight').highlightCode;
 
 let highlighter: Promise<Highlighter | null> | null = null;
 let observer: IntersectionObserver | null | undefined;
 let flushing = false;
 const queue = new Set<HTMLElement>();
+// Remounts (stream → final answer, conversation switches) reapply colour before paint instead of
+// flashing plain text. null records a language without a grammar. ~2 MB of UTF-16 at most.
+const highlighted = new LruCache<string, string | null>({
+  maxEntries: 512,
+  maxWeight: 1_000_000,
+  weigh: (html, key) => key.length + (html?.length ?? 0),
+});
+const cacheKey = (block: HTMLElement) =>
+  `${block.dataset['language'] ?? ''}\n${block.textContent ?? ''}`;
 
 /**
  * Syntax colour is decoration: code first renders as escaped text, and only blocks near the
  * viewport are highlighted, in short slices, so long conversations open without parsing every
- * block. Returns a cleanup for blocks that are replaced before they were reached.
+ * block; code highlighted before is coloured at once from the cache. Returns a cleanup for blocks
+ * that are replaced before they were reached.
  */
 export function highlightWhenVisible(root: HTMLElement): () => void {
   const blocks = [...root.querySelectorAll<HTMLElement>('code[data-language]')];
@@ -20,12 +32,18 @@ export function highlightWhenVisible(root: HTMLElement): () => void {
           rootMargin: '600px 0px',
           scrollMargin: '600px 0px',
         } as IntersectionObserverInit);
-  for (const block of blocks) {
+  const pending = blocks.filter((block) => {
+    const html = highlighted.get(cacheKey(block));
+    if (html === undefined) return true;
+    show(block, html);
+    return false;
+  });
+  for (const block of pending) {
     if (observer) observer.observe(block);
     else enqueue(block);
   }
   return () => {
-    for (const block of blocks) {
+    for (const block of pending) {
       observer?.unobserve(block);
       queue.delete(block);
     }
@@ -65,8 +83,13 @@ async function flush() {
 }
 
 function apply(block: HTMLElement, highlight: Highlighter) {
-  const language = block.dataset['language'] ?? '';
+  const key = cacheKey(block);
+  const html = highlight(block.dataset['language'] ?? '', block.textContent ?? '');
+  highlighted.set(key, html);
+  show(block, html);
+}
+
+function show(block: HTMLElement, html: string | null) {
   block.removeAttribute('data-language');
-  const html = highlight(language, block.textContent ?? '');
   if (html !== null) block.innerHTML = html;
 }

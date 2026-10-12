@@ -583,7 +583,7 @@ test("Mermaid math labels preserve sanitized native MathML", async ({
     .toBe(true);
 });
 
-test("streaming Mermaid stays source until committed and releases diagrams on completion and navigation", async ({
+test("streaming Mermaid stays source until committed, is reused on completion and released on navigation", async ({
   page,
 }) => {
   const core = new ApiFixture();
@@ -640,16 +640,11 @@ test("streaming Mermaid stays source until committed and releases diagrams on co
   });
   await expect(stream).toHaveCount(0);
   await expect(page.locator(".mermaid-frame").getByRole("img")).toBeVisible();
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () => (window as unknown as { __revoked: string[] }).__revoked,
-      ),
-    )
-    .toContain(liveUrl);
+  // The settled answer reuses the diagram drawn while streaming: same image, no redraw.
   const finalUrl = (await page
     .locator(".mermaid-frame img")
     .getAttribute("src"))!;
+  expect(finalUrl).toBe(liveUrl);
   await page.getByRole("link", { name: /^新對話/ }).click();
   await expect(page.locator(".mermaid-frame")).toHaveCount(0);
   await expect

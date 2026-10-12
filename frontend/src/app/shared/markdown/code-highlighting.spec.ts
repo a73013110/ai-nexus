@@ -25,4 +25,23 @@ describe('deferred code highlighting', () => {
     expect(unknown.innerHTML).toBe('plain\n');
     host.remove();
   });
+
+  it('colours code highlighted before immediately when it is mounted again', async () => {
+    const markdown = renderMarkdown('```ts\nconst again = 1;\n```');
+    const first = document.createElement('div');
+    document.body.append(first);
+    first.innerHTML = markdown;
+    highlightWhenVisible(first);
+    await vi.waitFor(() => expect(first.querySelector('.hljs-keyword')).not.toBeNull());
+
+    const remount = document.createElement('div');
+    document.body.append(remount);
+    remount.innerHTML = markdown;
+    highlightWhenVisible(remount);
+    const [before, after] = [first, remount].map((host) => host.querySelector('code')!);
+    expect(after.innerHTML).toBe(before.innerHTML);
+    expect(after.hasAttribute('data-language')).toBe(false);
+    first.remove();
+    remount.remove();
+  });
 });

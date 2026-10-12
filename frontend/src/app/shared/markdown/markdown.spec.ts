@@ -38,6 +38,15 @@ describe('Markdown security', () => {
         .diagrams,
     ).toHaveLength(0);
   });
+  it('reuses the render of settled content and never caches the streaming frontier', () => {
+    const content = '## 快取\n\n```mermaid\nflowchart LR\nA --> B\n```';
+    const first = renderMarkdownWithDiagrams(content);
+    expect(renderMarkdownWithDiagrams(content)).toBe(first);
+    expect(Object.isFrozen(first.diagrams)).toBe(true);
+    expect(renderMarkdownWithDiagrams(content, true)).not.toBe(
+      renderMarkdownWithDiagrams(content, true),
+    );
+  });
   it('keeps streaming Mermaid as escaped source until the block is committed', () => {
     const source = '```mermaid\nflowchart LR\nA["<img src=x>"] -->';
     const { html, diagrams } = renderMarkdownWithDiagrams(source, true);
