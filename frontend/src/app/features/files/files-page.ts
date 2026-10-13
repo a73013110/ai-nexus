@@ -28,6 +28,7 @@ import { FileBrowser } from './file-browser';
 import { FileLibraryStore } from './file-library-store';
 import { AddToKnowledge } from './add-to-knowledge';
 import { StorageUsage } from './storage-usage';
+import { filesTour } from './files-tour';
 
 @Component({
   selector: 'nx-files-page',
@@ -69,6 +70,7 @@ export class FilesPage {
   );
   readonly toast = inject(ToastService);
   readonly bytes = formatBytes;
+  readonly tour = computed(() => filesTour({ knowledge: this.session.has('knowledge') }));
   readonly accept = computed(() => this.policy()?.extensions.join(',') || '');
   readonly kinds = [
     { value: 'all', label: '全部' },
