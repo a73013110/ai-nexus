@@ -34,7 +34,7 @@ public sealed class DiagnosticPerformanceTests
 
     private static async Task<Measurement> MeasureAsync(bool enabled)
     {
-        await using var factory = new NexusFactory(services: services => { if (!enabled) services.RemoveAll<ILoggerProvider>(); }); using var client = factory.CreateClient();
+        await using var factory = new NexusFactory(workers: enabled ? [typeof(DiagnosticWorker)] : [], services: services => { if (!enabled) services.RemoveAll<ILoggerProvider>(); }); using var client = factory.CreateClient();
         for (var i = 0; i < 200; i++) { using var response = await client.GetAsync("/health/live"); response.EnsureSuccessStatusCode(); }
         GC.Collect(); GC.WaitForPendingFinalizers(); var before = GC.GetTotalMemory(true); var allocated = GC.GetTotalAllocatedBytes(true); var samples = new double[4000];
         var watch = Stopwatch.StartNew();
