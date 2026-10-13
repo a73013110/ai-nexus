@@ -295,7 +295,13 @@ export class QualityPage {
     this.actionError.set('');
     try {
       await this.api.remove(current.resource.id);
-      if (valid()) await this.router.navigate(['/quality']);
+      if (!valid()) return;
+      // The page stays mounted across /quality and /quality/:id, so the list drops it here.
+      this.setsRead.value.update((all) =>
+        all?.filter((x) => x.resource.id !== current.resource.id),
+      );
+      this.setsRead.reload();
+      await this.router.navigate(['/quality']);
     } catch (e) {
       if (valid()) this.actionError.set(this.scope.message(e));
     } finally {

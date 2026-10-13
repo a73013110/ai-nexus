@@ -171,6 +171,8 @@ export class TextTools {
   readonly projectId = input<string | null>(null);
   readonly canReplace = input(false);
   readonly replace = output<string>();
+  /** A new artifact was saved; the tools then open it. */
+  readonly created = output<void>();
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly surface = viewChild.required<CompactDialog>('surface');
   readonly mode = signal('save');
@@ -265,6 +267,7 @@ export class TextTools {
       );
       if (valid()) {
         this.dialog().nativeElement.close();
+        this.created.emit();
         await this.router.navigate(['/artifacts', artifact.resource.id]);
       }
     } catch (error) {

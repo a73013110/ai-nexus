@@ -235,6 +235,10 @@ export class ArtifactsPage {
     this.documentRead.reload();
     this.revisionsRead.reload();
   }
+  /** An artifact saved from the text tools opens on this same page, so the list is read again. */
+  created() {
+    this.listRead.reload();
+  }
   documentAction(action: string) {
     if (action === 'share') void this.readonlyShare()?.open();
     else if (action === 'access') void this.sharing()?.open();
@@ -371,6 +375,9 @@ export class ArtifactsPage {
       await this.api.remove(doc.resource.id);
       if (valid()) {
         this.document.set(null);
+        // The page stays mounted across /artifacts and /artifacts/:id, so the list drops it here.
+        this.listRead.value.update((all) => all?.filter((x) => x.resource.id !== doc.resource.id));
+        this.listRead.reload();
         this.busy.set(false);
         await this.router.navigate(['/artifacts']);
       }
