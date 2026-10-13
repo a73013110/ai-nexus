@@ -89,7 +89,7 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
         if (!Catalog.Any(x => x.Id == source)) return IntegrationsErrors.UnknownSource;
         if (fresh) access.Invalidate();
         var grants = await access.ForUserAsync(actor, ct);
-        if (!grants.Features.Any(x => x.Id == FeatureIds.Integrations)) return IntegrationsErrors.FeatureRevoked;
+        if (!grants.Features.Any(x => x.Id == FeatureIds.Integrations)) return AccessControlErrors.FeatureForbidden;
         var value = options.Value.For(source);
         if (value.Transport != "sql") return IntegrationsErrors.TransportUnsupported;
         if (!value.Enabled || !value.AclContractConfirmed || string.IsNullOrWhiteSpace(config.GetConnectionString(IntegrationsOptions.ConnectionKey(source)))) return IntegrationsErrors.NotConfigured;

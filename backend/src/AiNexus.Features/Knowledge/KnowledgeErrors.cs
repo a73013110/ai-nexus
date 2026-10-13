@@ -22,7 +22,6 @@ internal static class KnowledgeErrors
     public static readonly Error PromptRequired = Error.Invalid("prompt_required");
     public static readonly Error InvalidHistory = Error.Conflict("invalid_history");
     public static readonly Error SelectionLimit = Error.Invalid("knowledge_collection_limit");
-    public static readonly Error AccessRevoked = Error.Forbidden("knowledge_access_revoked");
     public static readonly Error SourceChanged = Error.Conflict("knowledge_source_changed");
     public static readonly Error ProfileNotFound = Error.NotFound("profile_not_found");
     public static readonly Error ProfileRetired = Error.Conflict("profile_retired");

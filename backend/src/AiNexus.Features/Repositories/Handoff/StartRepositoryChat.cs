@@ -43,7 +43,7 @@ internal sealed class StartRepositoryChat(AccessService access, RepositoryServic
     public async Task<Result<RepositoryChatDto>> HandleAsync(Guid owner, string repo, StartRepositoryChatRequest request, CancellationToken ct)
     {
         if (!RepositoryService.IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
-        if (!(await access.ForUserAsync(owner, ct)).Features.Any(x => x.Id == FeatureIds.Chat)) return RepositoriesErrors.ChatFeatureRequired;
+        if (!(await access.ForUserAsync(owner, ct)).Features.Any(x => x.Id == FeatureIds.Chat)) return AccessControlErrors.FeatureForbidden;
         var shortName = repo.Split('/')[1];
         var bundle = request.Paths is { Count: > 0 } paths ? await FilesAsync(owner, repo, request.Commit!.ToLowerInvariant(), paths, ct)
             : request.Issue is { } issue ? await IssueAsync(owner, repo, issue, ct)

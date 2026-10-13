@@ -22,12 +22,10 @@ internal static class RepositoriesErrors
     public static readonly Error FileLimit = Error.TooLarge("repository_file_limit");
     public static readonly Error NotText = Error.Invalid("repository_not_text");
     public static readonly Error PinLimit = Error.Conflict("repository_pin_limit");
-    public static readonly Error ChatFeatureRequired = Error.Forbidden("chat_feature_required");
     public static readonly Error ChatSourceInvalid = Error.Invalid("repository_chat_source_invalid");
     public static readonly Error ChatTooLarge = Error.TooLarge("repository_chat_too_large");
     public static readonly Error ImportEmpty = Error.Invalid("repository_import_empty");
     public static readonly Error ImportLimit = Error.TooLarge("repository_import_limit");
-    public static readonly Error ImportAccessRevoked = Error.Forbidden("repository_import_access_revoked");
     public static readonly Error ReviewNotFound = Error.NotFound("review_not_found");
     public static readonly Error ReviewHostChanged = Error.Conflict("review_host_changed");
     public static readonly Error ReviewEmptyRange = Error.Invalid("review_empty_range");
@@ -40,7 +38,6 @@ internal static class RepositoriesErrors
     public static readonly Error DiffNotText = Error.Invalid("repository_diff_not_text");
     public static readonly Error SegmentLimit = Error.TooLarge("review_segment_limit");
     public static readonly Error ModelContextSmall = Error.Invalid("review_model_context_small");
-    public static readonly Error ReviewAccessRevoked = Error.Forbidden("review_access_revoked");
     public static readonly Error ReviewBriefInvalid = Error.Upstream("review_brief_invalid");
     public static readonly Error ReviewSummaryTooLong = Error.Upstream("review_summary_too_long");
     public static readonly Error CommentUnavailable = Error.Conflict("review_comment_unavailable");

@@ -17,7 +17,7 @@ public sealed partial class RepositoryReviewHandler(NexusDbContext db, Repositor
     public string Kind => "repository-review";
     private async Task<Result<RepositoryReview>> RequireAsync(BackgroundJob job, CancellationToken ct)
     {
-        if (!(await features.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == "repositories")) return RepositoriesErrors.ReviewAccessRevoked;
+        if (!(await features.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == "repositories")) return AccessControlErrors.FeatureForbidden;
         var row = await reviews.FindAsync(job.OwnerId, job.SubjectId, ct);
         if (!row.IsSuccess) return row;
         if (await reviews.CheckSourceAsync(job.OwnerId, row.Value, ct) is { IsSuccess: false } source) return source.Error;

@@ -31,7 +31,7 @@ internal sealed class ImportSourceRecord(NexusDbContext db, AccessService access
 
     public async Task<Result<ArtifactDto>> HandleAsync(Guid actor, string source, SourceImportRequest request, CancellationToken ct)
     {
-        if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureIds.Artifacts)) return IntegrationsErrors.ArtifactFeatureRequired;
+        if (!(await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureIds.Artifacts)) return AccessControlErrors.FeatureForbidden;
         var read = await gateway.ReadAsync(actor, source, request.RecordId, ct);
         if (!read.IsSuccess) return read.Error;
         var detail = read.Value;

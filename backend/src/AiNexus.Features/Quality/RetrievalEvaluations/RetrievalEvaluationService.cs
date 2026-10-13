@@ -40,7 +40,7 @@ public sealed class RetrievalEvaluationService(NexusDbContext db, RetrievalAutho
     }
     internal async Task<Result> RequireAccessAsync(Guid actor, IReadOnlyList<Guid> collections, CancellationToken ct)
     {
-        if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "quality")) return QualityErrors.AccessRevoked;
+        if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "quality")) return AccessControlErrors.FeatureForbidden;
         return await authorization.CollectionsAsync(actor, collections, ct);
     }
     internal async Task<string> FingerprintAsync(EmbeddingProfile profile, IReadOnlyList<Guid> collections, CancellationToken ct)
