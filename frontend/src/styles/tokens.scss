@@ -7,6 +7,27 @@
   --tile-line: color-mix(in srgb, var(--line) 70%, transparent);
   --tile-inset: color-mix(in srgb, var(--ink) 4%, var(--surface));
   --tile-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 5%, transparent);
+  // Lifted tiles and hero surfaces: the same contact shadow plus a long, faint ambient one.
+  --tile-shadow-raised:
+    0 1px 2px color-mix(in srgb, var(--ink) 5%, transparent),
+    0 12px 32px -16px color-mix(in srgb, var(--ink) 22%, transparent);
+  // Light falling on a surface from above: one hue, a few percent of contrast (docs/frontend/materials.md).
+  --surface-sheen: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ink) 3%, var(--surface)),
+    var(--surface) 64%
+  );
+  // Translucent materials for sticky bars, floating toolbars and hero layers.
+  --material: color-mix(in srgb, var(--surface) 72%, transparent);
+  --material-thick: color-mix(in srgb, var(--surface) 88%, transparent);
+  --material-filter: blur(20px) saturate(180%);
+  --material-line: color-mix(in srgb, var(--ink) 8%, transparent);
+
+  @media (prefers-reduced-transparency: reduce) {
+    --material: var(--surface);
+    --material-thick: var(--surface);
+    --material-filter: none;
+  }
 }
 @mixin light-theme {
   color-scheme: light;

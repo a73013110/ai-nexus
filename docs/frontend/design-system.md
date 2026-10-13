@@ -12,7 +12,7 @@
 
 - 新顏色先建立用途（semantic）再選 primitive。換品牌色只改 `--accent`、`--accent-soft`、`--focus`、`--signal` 的兩種主題映射。
 - 全站字級調 font primitives；單一區域密度調 component tokens；元件要讓父層調整時開 custom property，不讓父層覆寫內部。
-- 不用彩色側邊線、漸層背景、發光陰影與透視網格。低層次表面共用 `--surface-subtle`。
+- 材質、受光漸層、分層陰影與狀態光暈依 [質感](materials.md) 使用；不用多色相漸層、漸層文字、彩色發光、彩色側邊線與透視網格。低層次表面共用 `--surface-subtle`。
 - 模型活動（生成光點矩陣、動態島生成狀態、`InferenceSignal`、串流游標、生成中的輸入框外框與側欄轉圈）一律單色：用 `--activity`／`--activity-rest`／`--activity-glint`，動態只改明暗（`--activity-sheen` 光帶掃過），不換色相、不發光。不用多彩漸層，是為了避免「AI 炫光」的廉價感；完成與成功仍用 `--signal`／`--success`。
 - 建議 chip（如對話起點）：透明底、1px `--line`、膠囊圓角，hover 用 `--hover`；不用卡片外框，也不加 chevron（chevron 只給會開啟另一個畫面的列）。
 - 選取 chip：「目前所在／已選取」與展開後取代原內容的切換鈕（如「全部功能」）用 `--surface`＋`--selected-ring` 凸起、圖示 `--accent`；hover 只用平的 `--hover`，兩者不能一樣。同組只有一個選取 chip（或底線），換選取以 `--ease-spring` 滑動（`SlidingIndicator`）。
@@ -20,7 +20,7 @@
 ## 資料視覺化與總覽的例外
 
 - 圖表的類別色依序用 `--series-1`～`--series-7`，熱圖用 `--heat`；兩種主題各自映射，不在元件寫色碼。共用元件：`NumberTicker`、`Sparkline`、`DonutChart`、`HeatmapCalendar`、`nxSpotlight`（見 `/design`「資料視覺化」）。
-- [總覽](../features/dashboard.md)沒有例外，同樣不用漸層、發光、傾斜與 3D。它在 `dashboard-page.scss` 把 `--series-*`、`--heat` 與走勢色改成 `--accent` 的明度階，所以圖表單色、只有真實狀態（warning／danger）帶色。
+- [總覽](../features/dashboard.md)與監控同樣依 [質感](materials.md)，不用傾斜與 3D。總覽在 `dashboard-page.scss` 把 `--series-*`、`--heat` 與走勢色改成 `--accent` 的明度階，所以圖表單色、只有真實狀態（warning／danger）帶色。
 - 資源表面 `--tile-*`（20px 圓角、髮絲邊框、極淡陰影，hover 只加深兩者）在 `tokens.scss` 的 `resource-surfaces`，總覽、`Panel`、`ResourceCard`、檔案卡片共用。工具列用膠囊：segment `ViewSwitch`、`Select` 的 `pill`、`--search-field-radius`。
 - 頭條數字用 `tabular-nums`、依容器寬度（`cqi`）縮放，金額超過一萬改用縮寫（`figureMoney`），完整值放在 title 與報讀文字；任何尺寸的卡片都不能溢出。
 
