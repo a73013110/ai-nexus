@@ -35,6 +35,7 @@ import { ResourceGallery } from '../../shared/ui/resource-gallery';
 import { accessLabel } from '../sharing/access-label';
 import { ArtifactsApi } from './artifacts-api';
 import { TextTools } from './text-tools';
+import { artifactTour, artifactsTour } from './artifacts-tour';
 import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
 import { ShareDialog } from '../sharing/share-dialog';
 import { bindHotkeys } from '../../shared/browser/hotkeys';
@@ -182,6 +183,17 @@ export class ArtifactsPage {
       { id: 'delete', label: '移除成果文件', icon: 'trash', danger: true, disabled: this.busy() },
     ];
   });
+  /** The collection's tour, or the open document's for what this viewer can do there. */
+  readonly tour = computed(() =>
+    this.id()
+      ? artifactTour({
+          editable: !!this.editable(),
+          editing: this.mode() !== 'read' && !!this.editable(),
+          manage: this.documentActions().length > 0,
+          shared: this.session.has('shared'),
+        })
+      : artifactsTour({ chat: this.session.has('chat') }),
+  );
   readonly modeOptions = computed(() => [
     { value: 'read', label: '閱讀' },
     ...(this.editable()

@@ -148,3 +148,122 @@ test("artifact versions preserve edits, restore older content and export a saved
     ),
   ).toBe(true);
 });
+
+for (const width of [1440, 375]) {
+  test(`artifacts tours walk the list and what the viewer can do with a document at ${width}px`, async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const core = new ApiFixture();
+    core.extraFeatures.push({
+      id: "artifacts",
+      name: "成果文件",
+      route: "/artifacts",
+    });
+    // A reader of a single version has no version picker, editor or document menu.
+    const reader = width === 375;
+    const versions = reader ? 1 : 2;
+    const artifact: ArtifactDto = {
+      resource: {
+        id: randomUUID(),
+        kind: "artifact",
+        name: "工作成果",
+        canEdit: !reader,
+        isOwner: !reader,
+        updatedAt: new Date().toISOString(),
+      },
+      version: versions,
+      currentVersion: versions,
+      content: "# 工作成果\n\n第一段內容。",
+      sourceMessageId: null,
+      projectId: null,
+    };
+    await core.attach(page);
+    await page.route("**/api/v1/artifacts**", (route) => {
+      const path = new URL(route.request().url()).pathname;
+      const body = path.endsWith("/versions")
+        ? Array.from({ length: versions }, (_, index) => ({
+            version: index + 1,
+            author: "測試使用者",
+            createdAt: new Date().toISOString(),
+          }))
+        : path === "/api/v1/artifacts"
+          ? [artifact]
+          : artifact;
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(body),
+      });
+    });
+    const height = width === 375 ? 812 : 1000;
+    await page.setViewportSize({ width, height });
+    const launcher = page
+      .locator(".feature-header")
+      .getByRole("button", { name: "操作導覽", exact: true });
+    const tour = page.locator(".driver-popover.nx-tour");
+    const title = tour.locator(".driver-popover-title");
+    const progress = tour.locator(".driver-popover-progress-text");
+    // Walks to the end and returns each step's title and the last description.
+    const walk = async () => {
+      await launcher.click();
+      await expect(title).toHaveText(/./);
+      const total = Number((await progress.innerText()).split("/")[1]);
+      const titles = [await title.innerText()];
+      for (let step = 2; step <= total; step++) {
+        await tour.getByRole("button", { name: "下一步", exact: true }).click();
+        await expect(progress).toHaveText(`${step} / ${total}`);
+        titles.push(await title.innerText());
+        await settleEntrance(page);
+        const bounds = (await tour.boundingBox())!;
+        expect(bounds.x).toBeGreaterThanOrEqual(0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+        expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
+      }
+      const last = await tour
+        .locator(".driver-popover-description")
+        .innerText();
+      await tour.getByRole("button", { name: "開始使用", exact: true }).click();
+      await expect(tour).toHaveCount(0);
+      await expect(launcher).toBeFocused();
+      await expect(page.locator(".driver-overlay")).toHaveCount(0);
+      return { titles, last };
+    };
+    await page.goto("/artifacts");
+    await expect(page.locator(".resource-card")).toBeVisible();
+    const list = await walk();
+    expect(list.titles).toEqual([
+      "把回答整理成文件",
+      "我擁有與共用給我",
+      "用名稱尋找成果",
+      "打開成果",
+      "新增成果",
+    ]);
+    expect(list.last).toContain("重播導覽");
+    await page.locator(".resource-card").click();
+    await expect(page.locator(".artifact-paper")).toContainText("第一段內容");
+    // An editor switches to 編輯 first, so the tour adds the selection and save steps.
+    if (!reader) {
+      await page.getByRole("button", { name: "編輯", exact: true }).click();
+      await expect(
+        page.getByRole("textbox", { name: "編輯成果內容", exact: true }),
+      ).toBeVisible();
+    }
+    const detail = await walk();
+    expect(detail.titles).toEqual(
+      reader
+        ? ["成果的狀態", "閱讀成果", "匯出已儲存的版本"]
+        : [
+            "成果的狀態",
+            "切換版本",
+            "閱讀、編輯或並排預覽",
+            "選取段落交給 AI",
+            "儲存新版本",
+            "匯出已儲存的版本",
+            "分享與權限",
+          ],
+    );
+    expect(detail.last).toContain("重播導覽");
+    expect(errors).toEqual([]);
+  });
+}
