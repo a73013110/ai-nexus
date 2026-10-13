@@ -1,7 +1,8 @@
-<nx-feature-page [title]="session.featureName('dashboard')" [description]="summary()">
+<nx-feature-page [title]="session.featureName('dashboard')" [description]="summary()" [tour]="tour">
   <div page-actions class="page-actions">
     @if (session.has('operations')) {
       <nx-select
+        class="dashboard-scope"
         label="總覽範圍"
         [value]="store.scope()"
         [options]="scopes"
@@ -10,7 +11,7 @@
     }
     <button
       type="button"
-      class="secondary-button"
+      class="secondary-button dashboard-customize"
       [attr.aria-pressed]="layout.editing()"
       [disabled]="!store.data()"
       (click)="layout.editing.set(!layout.editing())"
@@ -19,7 +20,7 @@
     </button>
     <button
       type="button"
-      class="icon-button"
+      class="icon-button dashboard-refresh"
       aria-label="重新整理總覽"
       title="重新整理總覽"
       [disabled]="store.refreshing()"

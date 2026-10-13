@@ -10,6 +10,7 @@ import { DashboardEditBar } from './dashboard-edit-bar';
 import { DashboardLayout } from './dashboard-layout';
 import { DashboardStore } from './dashboard-store';
 import { DashboardToolbar } from './dashboard-toolbar';
+import { DASHBOARD_TOUR } from './dashboard-tour';
 
 /**
  * The overview: a greeting that says what is happening now, the period toolbar and a board of
@@ -42,6 +43,7 @@ export class DashboardPage {
   readonly store = inject(DashboardStore);
   readonly layout = inject(DashboardLayout);
   readonly session = this.store.session;
+  readonly tour = DASHBOARD_TOUR;
   readonly scopes = [
     { value: 'personal', label: '我的工作' },
     { value: 'platform', label: '整個平台' },
