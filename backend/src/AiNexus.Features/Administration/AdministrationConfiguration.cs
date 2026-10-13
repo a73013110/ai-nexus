@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace AiNexus.Features.Administration;
 
 /// <summary>The administrator role, group and feature, seeded with <c>HasData</c>.</summary>
-public sealed class AdministrationConfiguration() : FeatureSeed(new PlatformFeature(Feature, "平台管理", "/admin", 90, AdministratorsOnly: true)),
+public sealed class AdministrationConfiguration() : FeatureSeed(new PlatformFeature(Feature, "存取管理", "/admin", 90, AdministratorsOnly: true)),
     IEntityTypeConfiguration<AccessControl.Role>, IEntityTypeConfiguration<RoleGroup>, IEntityTypeConfiguration<RoleGroupRole>
 {
     public const string Role = "administrator", Group = BuiltInAccess.AdministratorsGroup, Feature = FeatureIds.Admin, Policy = Policies.Admin;

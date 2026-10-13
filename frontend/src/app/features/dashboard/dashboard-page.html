@@ -1,6 +1,6 @@
 <nx-feature-page [title]="session.featureName('dashboard')" [description]="summary()">
   <div page-actions class="page-actions">
-    @if (session.has('admin')) {
+    @if (session.has('operations')) {
       <nx-select
         label="總覽範圍"
         [value]="store.scope()"

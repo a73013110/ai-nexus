@@ -32,4 +32,4 @@ public sealed class JobsModule : IFeatureModule
     }
 }
 
-internal sealed class JobsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Tasks, "背景任務", "/tasks", 70));
+internal sealed class JobsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Tasks, "背景任務", "/tasks", 55));

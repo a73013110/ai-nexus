@@ -7,7 +7,7 @@ public static class MonitoringVocabulary
     {
         ["dashboard"] = "總覽", ["chat"] = "對話", ["files"] = "檔案庫", ["knowledge"] = "知識庫", ["reader"] = "閱讀器",
         ["projects"] = "專案", ["artifacts"] = "成果文件", ["shared"] = "分享", ["quality"] = "品質評測", ["tasks"] = "背景任務",
-        ["repositories"] = "程式庫", ["integrations"] = "資料來源", ["admin"] = "平台管理", ["monitoring"] = "即時監控",
+        ["repositories"] = "程式庫", ["integrations"] = "資料來源", ["admin"] = "存取管理", ["operations"] = "平台營運", ["monitoring"] = "即時監控",
         ["audit"] = "活動稽核", ["logs"] = "系統日誌", ["settings"] = "個人設定"
     };
     public static bool ValidFeature(string feature) => Features.ContainsKey(feature);
@@ -17,6 +17,8 @@ public static class MonitoringVocabulary
         var segments = route.Replace("/api/v1/", "", StringComparison.Ordinal).TrimStart('/').Split('/');
         var segment = segments[0];
         if (segment == "admin" && segments.Length > 1 && segments[1] is "monitoring" or "audit" or "logs") return segments[1];
+        // Platform operations APIs keep their /admin paths: usage, retrieval administration and prices.
+        if (segment == "admin" && segments.Length > 1 && segments[1] is "usage" or "knowledge" or "billing") return "operations";
         return segment switch
         {
             "conversations" or "runs" or "context" or "models" or "prompt-templates" or "tools" => "chat",

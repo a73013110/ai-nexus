@@ -4,6 +4,7 @@ import { optionalId } from './core/layout/optional-id';
 import { repositoryRoute } from './features/repositories/repository-route';
 import { pendingChanges } from './shared/browser/pending-changes';
 import { WORKSPACE_HOME } from './core/layout/workspace-home';
+import { operationsRedirect } from './features/admin/operations/operations-redirect';
 
 export const routes: Routes = [
   {
@@ -94,6 +95,11 @@ export const routes: Routes = [
           import('./features/knowledge/document-reader').then((module) => module.DocumentReader),
       },
       {
+        path: 'admin/operations',
+        loadComponent: () =>
+          import('./features/admin/operations/operations-page').then((m) => m.OperationsPage),
+      },
+      {
         path: 'admin/monitoring',
         loadComponent: () =>
           import('./features/admin/monitoring/monitoring-page').then((m) => m.MonitoringPage),
@@ -110,6 +116,7 @@ export const routes: Routes = [
       },
       {
         path: 'admin',
+        canActivate: [operationsRedirect],
         loadComponent: () =>
           import('./features/admin/admin-page').then((module) => module.AdminPage),
       },

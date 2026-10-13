@@ -230,7 +230,7 @@ test("theme previews have readable contrast, full navigation and usable narrow l
   await launcher.click();
   // Open replaces the page's panel, so the toggle raises the selected chip.
   await expect(launcher).not.toHaveCSS("box-shadow", "none");
-  await expect(nav.getByRole("link")).toHaveCount(14);
+  await expect(nav.getByRole("link")).toHaveCount(15);
   await expect(
     nav.getByRole("link", { name: "檔案庫", exact: true }).last(),
   ).toBeVisible();

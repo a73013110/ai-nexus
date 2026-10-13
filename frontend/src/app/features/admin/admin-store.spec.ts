@@ -57,11 +57,12 @@ describe('admin store', () => {
     expect(store.groupNames(['basic'])).toEqual(['基本']);
   });
 
-  it('explains a missing management grant without reading the catalog', async () => {
-    const { store, api, settle } = setup(['chat']);
+  it('explains a missing access management grant without reading the catalog', async () => {
+    // Platform operations is a grant of its own and does not open access management.
+    const { store, api, settle } = setup(['chat', 'operations']);
     await settle();
     expect(api.catalog).not.toHaveBeenCalled();
-    expect(store.error()).toBe('你的帳號目前沒有平台管理權限。');
+    expect(store.error()).toBe('你的帳號目前沒有存取管理權限。');
   });
 
   it('searches after typing pauses and starts again from the first page', async () => {

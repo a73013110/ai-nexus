@@ -1,14 +1,13 @@
 import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { ToastService } from '../../shared/ui/toast-service';
-import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { Card } from '../../shared/ui/card';
 import { Field } from '../../shared/ui/field';
 import { DateTimePicker } from '../../shared/ui/date-time-picker';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  DestroyRef,
   ElementRef,
   inject,
   signal,
@@ -22,6 +21,7 @@ import {
   parseDateTimeInput,
 } from '../../shared/browser/format';
 import { ViewScope } from '../../shared/browser/view-scope';
+import { ThemeService } from '../../core/preferences/theme-service';
 import { Icon } from '../../shared/ui/icon';
 import { Select } from '../../shared/ui/select';
 import { BillingApi, chargeKind } from './billing-api';
@@ -44,156 +44,19 @@ interface PriceCatalog {
   targets: PriceTargetDto[];
 }
 
+/** Model and tool price versions: the history and a form that adds the next version. */
 @Component({
   selector: 'nx-price-book',
-  imports: [Notice, CompactDialog, Field, DateTimePicker, Icon, Select],
+  imports: [Notice, Card, Field, DateTimePicker, Icon, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './price-book.scss',
-  template: `<dialog
-    nxCompactDialog
-    #dialog
-    class="platform-dialog price-dialog"
-    aria-labelledby="price-title"
-    (cancel)="close($event)"
-  >
-    <div class="dialog-scroll">
-      <div class="dialog-heading">
-        <div>
-          <span class="panel-eyebrow">計費設定</span>
-          <h2 id="price-title">模型與工具價格版本</h2>
-        </div>
-        <button class="icon-button" type="button" aria-label="關閉價格設定" (click)="close()">
-          <nx-icon name="close" />
-        </button>
-      </div>
-      <p class="form-note">
-        價格只影響之後的呼叫。依你的方案填寫 API 價格，本機模型可使用內部成本；不同幣別分開統計。
-      </p>
-      @if (error()) {
-        <nx-notice tone="danger" [message]="error()" />
-      }
-      @if (notice()) {
-        <nx-notice tone="info" [message]="notice()" />
-      }
-      <form (submit)="save($event)" class="platform-form price-form">
-        <div class="price-fields">
-          <label
-            >供應商<nx-select
-              label="計費供應商"
-              [options]="providers"
-              [value]="draft().provider"
-              (valueChange)="setProvider($event)"
-          /></label>
-          <label
-            >模型或工具<nx-select
-              label="計費模型或工具"
-              [options]="modelChoices()"
-              [value]="draft().modelId"
-              [disabled]="loading() || !modelChoices().length"
-              (valueChange)="field('modelId', $event)"
-          /></label>
-          <label
-            >幣別<nx-select
-              label="計費幣別"
-              [options]="currencies"
-              [value]="draft().currency"
-              (valueChange)="field('currency', $event)"
-          /></label>
-          <label
-            >費用類型<nx-select
-              label="費用類型"
-              [options]="kinds"
-              [value]="draft().kind"
-              (valueChange)="setKind($event)"
-          /></label>
-          @for (rate of rates; track rate.key) {
-            <label
-              >{{ rate.label
-              }}<input
-                nxField
-                type="number"
-                min="0"
-                max="100000"
-                step="0.00000001"
-                required
-                [disabled]="draft().kind === 'free'"
-                [value]="draft()[rate.key]"
-                (input)="rateField(rate.key, $event)"
-            /></label>
-          }
-          <label
-            >單次計費時機<nx-select
-              label="單次計費時機"
-              [options]="triggers"
-              [value]="draft().requestCharge"
-              (valueChange)="field('requestCharge', $event)"
-          /></label>
-          <div class="ui-field">
-            <nx-date-time-picker
-              #effectiveDate
-              label="生效時間"
-              [required]="false"
-              [value]="effective()"
-              (valueChange)="effective.set($event)"
-            /><small>台北時區；留空即儲存時生效。</small>
-          </div>
-        </div>
-        <label
-          >價格依據或備註<textarea
-            nxField
-            maxlength="500"
-            rows="2"
-            [value]="draft().note"
-            (input)="field('note', $any($event.target).value)"
-            placeholder="例如：內部每次處理成本，或合約／官方價格表日期"
-          ></textarea>
-        </label>
-        <div class="dialog-actions">
-          <button
-            class="primary-button"
-            type="submit"
-            [disabled]="busy() || loading() || !draft().modelId.trim() || !effectiveDate.valid()"
-          >
-            {{ busy() ? '儲存中…' : '新增價格版本' }}
-          </button>
-        </div>
-      </form>
-      <section class="price-history" aria-label="價格歷史">
-        <h3>價格歷史</h3>
-        @if (loading()) {
-          <p role="status">正在載入價格…</p>
-        }
-        @for (price of prices(); track price.id) {
-          <button type="button" class="price-history-row" (click)="use(price)">
-            <span
-              ><strong>{{ modelName(price) }}</strong
-              ><small
-                >{{ price.provider }} · {{ kind(price.kind) }} ·
-                {{ time(price.effectiveAt) }}</small
-              ></span
-            ><span
-              >{{ price.currency
-              }}<small
-                >輸入 {{ price.inputPerMillion }} / 輸出 {{ price.outputPerMillion }} / 每次
-                {{ price.perRequest }}</small
-              ></span
-            ><nx-icon name="copy" />
-          </button>
-        }
-        @if (!loading() && !prices().length) {
-          <p class="form-note">尚未設定價格。系統會明確標示未定價，不會把未知費用算成零。</p>
-        }
-      </section>
-    </div>
-  </dialog>`,
+  templateUrl: './price-book.html',
 })
 export class PriceBook {
-  readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
-  /** Each opening reads the price history and the models that can be priced. */
-  private readonly opened = signal(0);
-  private readonly catalogRead = apiResource({
-    params: () => this.opened() || undefined,
+  /** Read each time the tab is shown: the price history and the models that can be priced. */
+  readonly catalogRead = apiResource({
+    feature: 'operations',
     loader: async () => {
       const [prices, targets] = await Promise.all([this.api.prices(), this.api.targets()]);
       return { prices, targets };
@@ -228,7 +91,6 @@ export class PriceBook {
   readonly loading = this.catalogRead.refreshing;
   readonly busy = signal(false);
   readonly saveError = signal('');
-  readonly error = computed(() => this.saveError() || this.catalogRead.error());
   readonly notice = signal('');
   private readonly toast = inject(ToastService);
   readonly providers = ['google', 'ollama', 'searxng', 'brave'].map((value) => ({
@@ -253,24 +115,8 @@ export class PriceBook {
   readonly kind = chargeKind;
   private readonly api = inject(BillingApi);
   private readonly scope = inject(ViewScope);
-  constructor() {
-    inject(DestroyRef).onDestroy(() => this.dialog()?.nativeElement.close());
-  }
-  open() {
-    this.draft.set(emptyPrice());
-    this.effective.set('');
-    this.saveError.set('');
-    this.notice.set('');
-    this.dialog().nativeElement.showModal();
-    this.opened.update((value) => value + 1);
-  }
-  close(event?: Event) {
-    if (this.busy()) {
-      event?.preventDefault();
-      return;
-    }
-    this.dialog().nativeElement.close();
-  }
+  private readonly themes = inject(ThemeService);
+  private readonly editor = viewChild.required<ElementRef<HTMLElement>>('editor');
   field(key: keyof PriceRequest, value: string) {
     this.draft.update((x) => ({ ...x, [key]: value }));
   }
@@ -298,6 +144,10 @@ export class PriceBook {
     this.draft.set(price);
     this.effective.set('');
     this.notice.set('已帶入此版本。儲存會建立新版本，歷史價格保持原樣。');
+    this.editor().nativeElement.scrollIntoView({
+      block: 'start',
+      behavior: this.themes.scrollBehavior(),
+    });
   }
   readonly time = formatDate;
   async save(event: Event) {

@@ -38,4 +38,4 @@ public sealed class ProjectsModule : IFeatureModule
     }
 }
 
-internal sealed class ProjectsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Projects, "專案", "/projects", 20));
+internal sealed class ProjectsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Projects, "專案", "/projects", 15));

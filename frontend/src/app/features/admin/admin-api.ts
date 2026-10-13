@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { ApiClient } from '../../core/api/api-client';
 import type {
-  AdminRetrievalSearchRequest,
   FeatureUpdateRequest,
   GroupUpdateRequest,
   ModelPolicyRequest,
@@ -28,18 +27,6 @@ export class AdminApi {
     this.api.get('/api/v1/admin/users/{id}/model-policy', { path: { id } });
   saveModelPolicy = (id: string, body: ModelPolicyRequest) =>
     this.api.put('/api/v1/admin/users/{id}/model-policy', { path: { id }, body });
-  embeddingProfiles = () => this.api.get('/api/v1/admin/knowledge/profiles');
-  rebuildProfile = (id: number) =>
-    this.api.post('/api/v1/admin/knowledge/profiles/{id}/rebuild', { path: { id } });
-  activateProfile = (id: number) =>
-    this.api.post('/api/v1/admin/knowledge/profiles/{id}/activate', { path: { id } });
-  clearProfileVectors = (id: number) =>
-    this.api.delete('/api/v1/admin/knowledge/profiles/{id}/vectors', { path: { id } });
-  retrievalCapabilities = () => this.api.get('/api/v1/admin/knowledge/capabilities');
-  probeRetrieval = () => this.api.post('/api/v1/admin/knowledge/capabilities/probe');
-  searchRetrieval = (body: AdminRetrievalSearchRequest) =>
-    this.api.post('/api/v1/admin/knowledge/search', { body });
-  usage = () => this.api.get('/api/v1/admin/usage');
   storage = (id: string, limitBytes: number | null) =>
     this.api.put('/api/v1/admin/users/{id}/storage', { path: { id }, body: { limitBytes } });
   roles = (id: string, roleIds: string[]) =>

@@ -3,20 +3,21 @@ export const WORKSPACE_FEATURE_GROUPS = [
   {
     id: 'work',
     name: '工作',
-    ids: ['dashboard', 'chat', 'files', 'projects', 'knowledge', 'artifacts'],
+    ids: ['dashboard', 'chat', 'projects', 'files', 'knowledge', 'artifacts'],
   },
-  { id: 'collaboration', name: '協作與品質', ids: ['shared', 'quality', 'tasks', 'repositories'] },
+  { id: 'collaboration', name: '協作與品質', ids: ['shared', 'tasks', 'repositories', 'quality'] },
   {
     id: 'system',
     name: '系統',
     ids: [
-      'integrations',
       'admin',
+      'operations',
+      'integrations',
       'monitoring',
-      'audit',
       'logs.query',
       'logs.detail',
       'logs.export',
+      'audit',
     ],
   },
 ] as const;
@@ -49,6 +50,7 @@ export const FEATURE_ICONS: Record<string, string> = {
   tasks: 'tasks',
   quality: 'shield',
   admin: 'lock',
+  operations: 'chart',
   monitoring: 'activity',
   audit: 'audit',
   'logs.query': 'logs',

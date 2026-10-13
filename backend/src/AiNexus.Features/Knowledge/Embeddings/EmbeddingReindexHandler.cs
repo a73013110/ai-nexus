@@ -15,10 +15,10 @@ public sealed class EmbeddingReindexHandler(NexusDbContext db, EmbeddingLifecycl
     public string Kind => "embedding-reindex";
     public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => (await ProfileAsync(job, ct)) is { IsSuccess: false } invalid ? invalid.Error : Result.Success;
 
-    /// <summary>The profile to rebuild, while its owner is still an administrator and it is not retired.</summary>
+    /// <summary>The profile to rebuild, while its owner still has platform operations and it is not retired.</summary>
     private async Task<Result<EmbeddingProfile>> ProfileAsync(BackgroundJob job, CancellationToken ct)
     {
-        if (!(await access.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == FeatureIds.Admin)) return KnowledgeErrors.AdminRequired;
+        if (!(await access.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == FeatureIds.Operations)) return KnowledgeErrors.AdminRequired;
         var profile = await lifecycle.RequireAsync(EmbeddingJobs.Profile(job.SubjectId), ct);
         if (profile.IsSuccess && profile.Value.Status == "retired") return KnowledgeErrors.ProfileRetired;
         return profile;

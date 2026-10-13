@@ -89,6 +89,21 @@ public sealed class GetDashboardTests
     }
 
     [Fact]
+    public async Task PlatformScopeFollowsPlatformOperationsNotAccessManagement()
+    {
+        await using var factory = new NexusFactory(administrators: ["alice"]);
+        using var alice = await factory.SignedInAsync();
+        using var bob = await factory.SignedInAsync("bob");
+        var b = await Me(bob);
+        await PlatformGrants.SplitOperationsAsync(factory, b);
+        Assert.Equal(HttpStatusCode.Forbidden, (await alice.GetAsync("/api/v1/dashboard?scope=platform&" + Period)).StatusCode);
+        (await alice.GetAsync("/api/v1/dashboard?" + Period)).EnsureSuccessStatusCode();
+        Assert.Equal("platform", (await Read(bob, "scope=platform&" + Period)).Scope);
+        using var scope = factory.Services.CreateScope();
+        Assert.True(await scope.ServiceProvider.GetRequiredService<NexusDbContext>().AuditEvents.AnyAsync(x => x.Action == "dashboard.platform.read" && x.OwnerId == b));
+    }
+
+    [Fact]
     public async Task QuestionsAreBucketedByTheViewersDayAndRecentTitlesAreAlwaysTheViewers()
     {
         await using var factory = new NexusFactory(administrators: ["alice"]);

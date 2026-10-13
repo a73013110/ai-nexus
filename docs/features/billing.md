@@ -1,6 +1,6 @@
 # 模型費用與使用量
 
-每則 AI 回覆下方提供本次呼叫的費用與 tokens；目前對話上方的費用按鈕顯示全對話總額。總覽可選 7／30／90 天或日期區間，管理員切換「整個平台」後，可查各使用者、模型及每日金額，並匯出 CSV。不同幣別與 API／內部成本各自顯示，不進行隱含匯率換算。
+每則 AI 回覆下方提供本次呼叫的費用與 tokens；目前對話上方的費用按鈕顯示全對話總額。總覽可選 7／30／90 天或日期區間，有平台營運權限者切換「整個平台」後，可查各使用者、模型及每日金額，並匯出 CSV。不同幣別與 API／內部成本各自顯示，不進行隱含匯率換算。
 
 ## 設定價格
 
@@ -8,7 +8,7 @@
 
 `tokens` 為 `{ from, until, timezoneOffsetMinutes, daily }`，daily 包含 `date, modelId, modelDisplayName, requests, requestsWithUsage, inputTokens, outputTokens`。從 Runs／ModelInvocations 聚合，含沒有價格快照的舊呼叫及 OCR／評測／review 等背景模型呼叫，不依費用是否可結算決定 Token 數。缺少回報不當成已知零值，合計只加已回報數字，完整回報比例另外呈現；無呼叫日期補零維持連續時間軸。總覽沿用所選時區／owner／區間，個人設定為最近 30 日 UTC，模型識別遵循平台顯示政策。
 
-管理員在平台管理的「管理工具」選單開啟「模型與工具價格」，新增價格版本：
+在 [平台營運](operations.md) 的「模型與工具價格」分頁（`/admin/operations?tab=prices`）新增價格版本：
 
 | 欄位 | 設定方式 |
 | --- | --- |
@@ -20,7 +20,7 @@
 | 單次計費時機 | 成功完成時，或已開始呼叫時（包含失敗／取消）。此選項只控制固定費用，token 費依有效用量計算 |
 | 生效時間／備註 | 留空立即生效；可排定未來版本，記錄官方價格、合約日期或內部估算依據 |
 
-系統不預填某一家供應商的價格，也不推定本機模型為零成本。不同帳號的方案、折扣、免費額度與計費方式可能不同，請依實際方案輸入。「價格歷史」可帶入舊設定，再儲存成新版本；最新 500 個版本可在視窗中瀏覽，所有歷史仍保留於 SQL。
+系統不預填某一家供應商的價格，也不推定本機模型為零成本。不同帳號的方案、折扣、免費額度與計費方式可能不同，請依實際方案輸入。「價格歷史」可帶入舊設定，再儲存成新版本；最新 500 個版本可在分頁中瀏覽，所有歷史仍保留於 SQL。
 
 ## 計算與歷史
 
@@ -55,10 +55,10 @@ Google 的 prompt tokens 包含快取，輸出統計另有 thoughts tokens。本
 | --- | --- |
 | `GET /api/v1/billing/spend` | 已登入，只查自己 |
 | `GET /api/v1/conversations/{id}/spend` | chat 權限且為對話擁有者 |
-| `GET /api/v1/admin/billing/targets` | 平台管理員；已設定的模型與工具及其顯示名稱 |
-| `GET/POST /api/v1/admin/billing/prices` | 平台管理員；新增版本，沒有修改／刪除歷史接口 |
-| `GET /api/v1/admin/billing/spend` | 管理員，選用 ownerId、from、until、offsetMinutes |
-| `GET /api/v1/admin/billing/export` | 管理員，相同條件，完整使用者彙總 CSV |
+| `GET /api/v1/admin/billing/targets` | `operations`；已設定的模型與工具及其顯示名稱 |
+| `GET/POST /api/v1/admin/billing/prices` | `operations`；新增版本，沒有修改／刪除歷史接口 |
+| `GET /api/v1/admin/billing/spend` | `operations`，選用 ownerId、from、until、offsetMinutes |
+| `GET /api/v1/admin/billing/export` | `operations`，相同條件，完整使用者彙總 CSV |
 | `GET /api/v1/dashboard` | dashboard 功能；platform 範圍額外需要 admin |
 
 所有網頁模型標籤只顯示 DisplayName，管理報表與價格歷史也遵循此規則。一般使用者仍依模型隱藏政策顯示「AI 助理 N」；已移除模型顯示通用標籤，完整 ID 只作為路由、統計或計費參照。平台總覽的最近對話標題仍只顯示管理員自己的工作；查看其他人的對話使用原有管理頁並留下稽核。新增價格、平台報表／總覽讀取和匯出都留稽核。CSV 對文字欄位處理公式開頭，避免開啟檔案時把帳號或名稱視為試算表公式。

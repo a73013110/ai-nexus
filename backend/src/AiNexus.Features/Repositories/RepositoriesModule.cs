@@ -61,4 +61,4 @@ public sealed class RepositoriesModule : IFeatureModule
     }
 }
 
-internal sealed class RepositoriesFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Repositories, "程式庫", "/repositories", 65));
+internal sealed class RepositoriesFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Repositories, "程式庫", "/repositories", 60));

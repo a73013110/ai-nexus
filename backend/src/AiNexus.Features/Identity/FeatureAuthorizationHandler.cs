@@ -12,7 +12,8 @@ public sealed class FeatureAuthorizationHandler(CurrentUser current, AccessServi
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, FeatureRequirement requirement)
     {
         if (context.User.Identity?.IsAuthenticated != true) return;
-        if (requirement.FeatureIds.Contains(FeatureIds.Admin) && context.User.HasClaim(x => x.Type == SessionIdentity.ActorId) &&
+        // A test identity may read the management APIs (access management and platform operations) but never change them.
+        if ((requirement.FeatureIds.Contains(FeatureIds.Admin) || requirement.FeatureIds.Contains(FeatureIds.Operations)) && context.User.HasClaim(x => x.Type == SessionIdentity.ActorId) &&
             http.HttpContext?.Request.Method is not ("GET" or "HEAD" or "OPTIONS"))
         {
             context.Fail(new ErrorFailureReason(this, IdentityErrors.TestAdminReadOnly));

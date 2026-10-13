@@ -7,9 +7,9 @@ namespace AiNexus.Features.Diagnostics;
 
 /// <summary>The system-log features, seeded with <c>HasData</c>, and their policy names.</summary>
 public sealed class DiagnosticConfiguration() : FeatureSeed(
-    new PlatformFeature(Query, "系統日誌", "/admin/logs", 110, AdministratorsOnly: true),
-    new PlatformFeature(Detail, "日誌診斷詳情", "", 111, AdministratorsOnly: true),
-    new PlatformFeature(Export, "日誌匯出", "", 112, AdministratorsOnly: true))
+    new PlatformFeature(Query, "系統日誌", "/admin/logs", 94, AdministratorsOnly: true),
+    new PlatformFeature(Detail, "日誌診斷詳情", "", 95, AdministratorsOnly: true),
+    new PlatformFeature(Export, "日誌匯出", "", 96, AdministratorsOnly: true))
 {
     public const string Query = "logs.query", Detail = "logs.detail", Export = "logs.export";
     public const string QueryPolicy = Policies.Prefix + Query, DetailPolicy = Policies.Prefix + Detail, ExportPolicy = Policies.Prefix + Export;
