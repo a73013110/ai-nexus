@@ -37,6 +37,7 @@ import { ArtifactsApi } from '../artifacts/artifacts-api';
 import { WorkspaceApi } from '../workspace/workspace-api';
 import { KnowledgeApi } from '../knowledge/knowledge-api';
 import { ProjectsApi } from './projects-api';
+import { PROJECTS_TOUR, projectTour } from './projects-tour';
 import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
 import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
 import { Panel } from '../../shared/ui/panel';
@@ -184,6 +185,16 @@ export class ProjectsPage {
         : []),
     ];
   });
+  /** The collection's tour, or the open project's for what this viewer can use there. */
+  readonly tour = computed(() =>
+    this.id()
+      ? projectTour({
+          chat: this.session.has('chat'),
+          artifacts: this.session.has('artifacts'),
+          manage: this.projectActions().length > 0,
+        })
+      : PROJECTS_TOUR,
+  );
   readonly visible = computed(() =>
     this.projects().filter(
       (x) =>
