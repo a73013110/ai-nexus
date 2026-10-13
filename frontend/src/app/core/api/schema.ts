@@ -9701,6 +9701,17 @@ export interface components {
             featureIds: string[];
             policy?: null | components["schemas"]["GroupPolicyRequest"];
         };
+        HealthIssue: {
+            code: string;
+            severity: string;
+            subject: string;
+            title: string;
+            detail: string;
+        };
+        HealthSummary: {
+            status: string;
+            issues: components["schemas"]["HealthIssue"][];
+        };
         ImportRepositoryFolderRequest: {
             commit: string;
             path: string;
@@ -9915,6 +9926,15 @@ export interface components {
             /** Format: int32 */
             unknownCalls: number;
         };
+        MonitoredSubsystem: {
+            id: string;
+            name: string;
+            status: string;
+            summary: null | string;
+            facts: components["schemas"]["SubsystemFact"][];
+            /** Format: date-time */
+            observedAt: null | string;
+        };
         MonitoringSnapshot: {
             /** Format: int32 */
             version: number;
@@ -9930,6 +9950,7 @@ export interface components {
             refreshSeconds: number;
             /** Format: int32 */
             sessionTimeoutSeconds: number;
+            health: components["schemas"]["HealthSummary"];
             /** Format: int32 */
             onlineUsers: number;
             /** Format: int32 */
@@ -9945,12 +9966,15 @@ export interface components {
             /** Format: int64 */
             droppedSessions: number;
             resources: components["schemas"]["RuntimeResources"];
+            resourceTimeline: components["schemas"]["ResourcePoint"][];
             traffic: components["schemas"]["TrafficMetrics"];
+            recentTraffic: components["schemas"]["TrafficMetrics"];
             timeline: components["schemas"]["TrafficPoint"][];
             sessions: components["schemas"]["OnlineSession"][];
             activities: components["schemas"]["TrafficActivity"][];
             dependencies: components["schemas"]["DependencyTraffic"][];
             endpoints: components["schemas"]["EndpointTraffic"][];
+            subsystems: components["schemas"]["MonitoredSubsystem"][];
         };
         NotificationDto: {
             /** Format: uuid */
@@ -10424,6 +10448,20 @@ export interface components {
             userId: string;
             role: string;
         };
+        ResourcePoint: {
+            /** Format: date-time */
+            at: string;
+            /** Format: double */
+            cpuPercent: null | number;
+            /** Format: int64 */
+            workingSetBytes: null | number;
+            /** Format: int64 */
+            managedHeapBytes: null | number;
+            /** Format: int64 */
+            threadPoolQueueLength: null | number;
+            /** Format: double */
+            gcPausePercent: null | number;
+        };
         RetrievalCapabilitiesDto: {
             sql: null | components["schemas"]["SqlVectorCapabilitiesDto"];
             testStore: boolean;
@@ -10592,8 +10630,24 @@ export interface components {
             workingSetBytes: number;
             /** Format: int64 */
             managedHeapBytes: number;
+            /** Format: int64 */
+            memoryLimitBytes: null | number;
             /** Format: int32 */
             threadCount: number;
+            /** Format: int32 */
+            threadPoolThreads: number;
+            /** Format: int64 */
+            threadPoolQueueLength: number;
+            /** Format: double */
+            lockContentionsPerSecond: number;
+            /** Format: int32 */
+            gen0Collections: number;
+            /** Format: int32 */
+            gen1Collections: number;
+            /** Format: int32 */
+            gen2Collections: number;
+            /** Format: double */
+            gcPausePercent: null | number;
             /** Format: double */
             uptimeSeconds: number;
         };
@@ -10808,6 +10862,15 @@ export interface components {
             queueDepth: number;
             generating: boolean;
         };
+        SubsystemFact: {
+            id: string;
+            label: string;
+            /** Format: double */
+            value: null | number;
+            unit: string;
+            text: null | string;
+            tone: string;
+        };
         TestIdentityDto: {
             /** Format: uuid */
             administratorId: string;
@@ -10907,8 +10970,12 @@ export interface components {
             requestsPerSecond: number;
             /** Format: double */
             errorPercent: number;
+            /** Format: int64 */
+            serverErrors: number;
             /** Format: double */
             averageMs: null | number;
+            /** Format: double */
+            p95Ms: null | number;
             /** Format: int64 */
             receivedBytes: number;
             /** Format: int64 */
@@ -11149,6 +11216,8 @@ export type FileLibraryPageDto = components['schemas']['FileLibraryPageDto'];
 export type FileUsageDto = components['schemas']['FileUsageDto'];
 export type GroupPolicyRequest = components['schemas']['GroupPolicyRequest'];
 export type GroupUpdateRequest = components['schemas']['GroupUpdateRequest'];
+export type HealthIssue = components['schemas']['HealthIssue'];
+export type HealthSummary = components['schemas']['HealthSummary'];
 export type ImportRepositoryFolderRequest = components['schemas']['ImportRepositoryFolderRequest'];
 export type JobDto = components['schemas']['JobDto'];
 export type KnowledgeHitDto = components['schemas']['KnowledgeHitDto'];
@@ -11166,6 +11235,7 @@ export type ModelsDto = components['schemas']['ModelsDto'];
 export type ModelTaskSnapshot = components['schemas']['ModelTaskSnapshot'];
 export type ModelTokenBudgetDto = components['schemas']['ModelTokenBudgetDto'];
 export type MoneyTotalDto = components['schemas']['MoneyTotalDto'];
+export type MonitoredSubsystem = components['schemas']['MonitoredSubsystem'];
 export type MonitoringSnapshot = components['schemas']['MonitoringSnapshot'];
 export type NotificationDto = components['schemas']['NotificationDto'];
 export type NotificationPageDto = components['schemas']['NotificationPageDto'];
@@ -11221,6 +11291,7 @@ export type ResourceAclRequest = components['schemas']['ResourceAclRequest'];
 export type ResourceDto = components['schemas']['ResourceDto'];
 export type ResourceMemberDto = components['schemas']['ResourceMemberDto'];
 export type ResourceMemberUpdate = components['schemas']['ResourceMemberUpdate'];
+export type ResourcePoint = components['schemas']['ResourcePoint'];
 export type RetrievalCapabilitiesDto = components['schemas']['RetrievalCapabilitiesDto'];
 export type RetrievalConnectionDto = components['schemas']['RetrievalConnectionDto'];
 export type RetrievalEvaluationCase = components['schemas']['RetrievalEvaluationCase'];
@@ -11260,6 +11331,7 @@ export type SpendUserDto = components['schemas']['SpendUserDto'];
 export type SqlVectorCapabilitiesDto = components['schemas']['SqlVectorCapabilitiesDto'];
 export type StartRepositoryChatRequest = components['schemas']['StartRepositoryChatRequest'];
 export type StatusDto = components['schemas']['StatusDto'];
+export type SubsystemFact = components['schemas']['SubsystemFact'];
 export type TestIdentityDto = components['schemas']['TestIdentityDto'];
 export type TestIdentityRequest = components['schemas']['TestIdentityRequest'];
 export type TextDocumentDto = components['schemas']['TextDocumentDto'];

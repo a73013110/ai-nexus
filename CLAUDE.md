@@ -13,6 +13,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 模組邊界、跨模組依賴、domain event | `docs/architecture/module-boundaries.md` |
 | 推論、聊天生成、背景工作 | `docs/architecture/generation.md` |
 | 總覽區塊、儀表板 widget | `docs/architecture/dashboard-sections.md` |
+| 監控子系統來源、健康判定 | `docs/architecture/monitoring-sources.md` |
 | 後端測試、`NexusFactory` | `docs/development/testing.md` |
 | 錯誤回應、查證代碼、遮罩 | `docs/architecture/error-contract.md` |
 | 日誌事件、EventId | `docs/architecture/log-events.md` |
@@ -22,7 +23,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 腳本、建置、驗證 | `docs/development/development.md` |
 | IIS 部署、發布套件 | `docs/operations/iis-deployment.md` |
 | 前端資料夾、API 呼叫、讀取與寫入 | `docs/frontend/frontend-boundaries.md` |
-| 前端 UI、樣式 | `docs/frontend/ui-patterns.md`、`docs/frontend/design-system.md` |
+| 前端 UI、樣式 | `docs/frontend/ui-patterns.md`、`docs/frontend/design-system.md`、`docs/frontend/materials.md` |
 | 檔案庫、知識庫、專案、成果等列表／詳細頁 | `docs/frontend/resource-pages.md` |
 | 動效、動態島、通知（toast）、對話框進出場 | `docs/frontend/motion.md` |
 | 手機版面、滑動關閉、螢幕鍵盤 | `docs/frontend/mobile.md` |

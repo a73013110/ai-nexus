@@ -19,6 +19,8 @@ public sealed class MonitoringModule : IFeatureModule
         var services = builder.Services;
         services.AddSettings<MonitoringOptions, MonitoringOptionsValidator>(MonitoringOptions.Section);
         services.AddSingleton<RuntimeTraffic>();
+        services.AddSingleton<SubsystemReadings>();
+        services.AddSingleton<MonitoringSnapshots>();
         services.AddDomainEventHandler<UserSignedOut, LeaveSignedOutSession>();
         services.AddSingleton<DependencyCatalog>();
         services.AddSingleton<MonitoringStreams>();

@@ -31,12 +31,18 @@ public sealed class GenerationScheduler
     /// <summary>Completes once the worker has recovered leases and synchronised model profiles; it never completes if that fails.</summary>
     public Task WhenFirstReady => firstReady.Task;
     public bool Generating => Volatile.Read(ref active) > 0;
+    /// <summary>Runs a worker is generating now.</summary>
+    public int Running => Volatile.Read(ref active);
     public int QueueDepth => Volatile.Read(ref count);
+    /// <summary>Accepted runs, queued or generating, out of <see cref="Capacity"/>; when full, new runs are refused.</summary>
+    public int Reserved => Capacity - capacity.CurrentCount;
+    public int Capacity { get; }
     public IReadOnlyList<ProviderQueue> Workers { get; }
 
     public GenerationScheduler(IOptions<InferenceOptions> options)
     {
         var limit = options.Value.QueueCapacity;
+        Capacity = limit;
         capacity = new SemaphoreSlim(limit, limit);
         foreach (var provider in options.Value.ProviderConcurrency)
             queues.Add(provider.Key, Channel.CreateBounded<GenerationJob>(new BoundedChannelOptions(limit) { SingleReader = provider.Value == 1, FullMode = BoundedChannelFullMode.Wait }));

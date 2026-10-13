@@ -39,7 +39,7 @@
 另外三個固定做法：
 
 - 兩端分屬不同模組的外鍵設定放在 `Persistence/CrossModuleRelationships.cs`；模組自己的實體設定只參照自己的實體。資料庫約束不變。
-- 各模組都要實作的組合擴充點（`IFeatureModule`、總覽的 `IDashboardSource`）放在 Platform，見 [總覽區塊](dashboard-sections.md)。
+- 各模組都要實作的組合擴充點（`IFeatureModule`、總覽的 `IDashboardSource`、即時監控的 `IMonitoringSource`）放在 Platform，見 [總覽區塊](dashboard-sections.md)、[監控子系統](monitoring-sources.md)。Monitoring 屬基礎能力層，只透過 `IMonitoringSource` 讀上層模組的狀態，不引用它們。
 - 共用的識別字放在下層模組，例如管理功能的 `FeatureIds.Admin`／`Policies.Admin` 在 AccessControl，`AdministrationConfiguration` 引用它。編譯期常數不會產生依賴，但放在下層才不會誤導讀者。
 
 ## 直接呼叫或 domain event

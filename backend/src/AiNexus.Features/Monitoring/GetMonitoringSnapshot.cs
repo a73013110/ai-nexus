@@ -5,7 +5,7 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.Features.Monitoring;
 
 /// <summary>This instance's live sessions, traffic and dependencies over the last 1, 5 or 15 minutes. The read is audited.</summary>
-internal sealed class GetMonitoringSnapshot(RuntimeTraffic traffic, NexusDbContext db)
+internal sealed class GetMonitoringSnapshot(MonitoringSnapshots snapshots, NexusDbContext db)
 {
     public static void Map(RouteGroupBuilder monitor) => monitor
         .MapGet("", (int? minutes, HttpContext http, ICurrentUser user, GetMonitoringSnapshot handler, CancellationToken ct) =>
@@ -19,7 +19,7 @@ internal sealed class GetMonitoringSnapshot(RuntimeTraffic traffic, NexusDbConte
     public async Task<Result<MonitoringSnapshot>> HandleAsync(Guid user, int window, CancellationToken ct)
     {
         if (!MonitoringReads.ValidWindow(window)) return MonitoringErrors.InvalidWindow;
-        var snapshot = traffic.Snapshot(window);
+        var snapshot = snapshots.Read(window);
         await MonitoringReads.AuditAsync(db, user, "monitoring.snapshot", ct);
         return snapshot;
     }

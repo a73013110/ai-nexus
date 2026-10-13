@@ -7,6 +7,8 @@ namespace AiNexus.Features.Monitoring;
 /// <summary>SqlClient's shared diagnostic boundary covers EF, Dapper and direct commands without reading SQL text.</summary>
 public sealed class RuntimeSampler(RuntimeTraffic traffic, DependencyCatalog catalog, TimeProvider clock) : BackgroundService, IObserver<DiagnosticListener>, IObserver<KeyValuePair<string, object?>>
 {
+    /// <summary>Process sampling period; samples fold into the ten-second resource buckets of <see cref="RuntimeTraffic"/>.</summary>
+    public static readonly TimeSpan SampleInterval = TimeSpan.FromSeconds(3);
     private readonly ConcurrentDictionary<Guid, (string Id, long Start)> commands = new();
     private readonly List<IDisposable> subscriptions = [];
     public void OnNext(DiagnosticListener source)
@@ -38,16 +40,23 @@ public sealed class RuntimeSampler(RuntimeTraffic traffic, DependencyCatalog cat
         using var all = DiagnosticListener.AllListeners.Subscribe(this);
         using var process = Process.GetCurrentProcess();
         var start = clock.GetUtcNow(); var previous = Stopwatch.GetTimestamp(); var cpu = process.TotalProcessorTime;
-        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(3), clock);
+        var pause = GC.GetTotalPauseDuration(); var contentions = Monitor.LockContentionCount;
+        using var timer = new PeriodicTimer(SampleInterval, clock);
         try
         {
             while (await timer.WaitForNextTickAsync(stoppingToken))
             {
-                process.Refresh(); var nextCpu = process.TotalProcessorTime;
+                process.Refresh();
+                var nextCpu = process.TotalProcessorTime; var nextPause = GC.GetTotalPauseDuration(); var nextContentions = Monitor.LockContentionCount;
                 var elapsed = Stopwatch.GetElapsedTime(previous).TotalMilliseconds;
                 var percent = Math.Clamp(100 * (nextCpu - cpu).TotalMilliseconds / elapsed / Environment.ProcessorCount, 0, 100);
-                traffic.SampleResources(new(Math.Round(percent, 2), process.WorkingSet64, GC.GetTotalMemory(false), process.Threads.Count, (clock.GetUtcNow() - start).TotalSeconds));
-                cpu = nextCpu; previous = Stopwatch.GetTimestamp();
+                var paused = Math.Clamp(100 * (nextPause - pause).TotalMilliseconds / elapsed, 0, 100);
+                // Physical memory, container limit or GC hard limit; zero until the GC has reported it.
+                var limit = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+                traffic.SampleResources(new(Math.Round(percent, 2), process.WorkingSet64, GC.GetTotalMemory(false), limit > 0 ? limit : null, process.Threads.Count,
+                    ThreadPool.ThreadCount, ThreadPool.PendingWorkItemCount, Math.Round((nextContentions - contentions) * 1000d / elapsed, 2),
+                    GC.CollectionCount(0), GC.CollectionCount(1), GC.CollectionCount(2), Math.Round(paused, 2), (clock.GetUtcNow() - start).TotalSeconds));
+                cpu = nextCpu; pause = nextPause; contentions = nextContentions; previous = Stopwatch.GetTimestamp();
                 // Missing terminal provider events must not retain unbounded operations/in-flight counts.
                 foreach (var pair in commands.Where(x => Stopwatch.GetElapsedTime(x.Value.Start) > TimeSpan.FromMinutes(10)))
                     if (commands.TryRemove(pair.Key, out var stale)) traffic.DependencyFinished(stale.Id, 600000, true);

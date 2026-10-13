@@ -37,10 +37,13 @@ public sealed class UsageReports(NexusDbContext db, ModelPresentation presentati
         await Entries().Where(x => ids.Contains(x.OwnerId)).GroupBy(x => x.OwnerId)
             .Select(g => new OwnerUsageDto(g.Key, new UsageTotalsDto(g.Count(), g.Count(x => x.Status == "completed"), g.Count(x => x.Status == "failed"), g.Count(x => x.Status == "cancelled"),
                 g.Sum(x => x.InputTokens ?? 0), g.Sum(x => x.OutputTokens ?? 0), g.Count(x => x.InputTokens.HasValue && x.OutputTokens.HasValue), g.Sum(x => x.DurationMilliseconds ?? 0), g.Count(x => x.DurationMilliseconds.HasValue)))).ToListAsync(ct);
-    public async Task<UsageTotalsDto> AllAsync(CancellationToken ct) => await Entries().GroupBy(x => 1)
+    public Task<UsageTotalsDto> AllAsync(CancellationToken ct) => AllSinceAsync(Since, ct);
+    /// <summary>Every owner's totals from <paramref name="from"/> on, such as today's usage for runtime monitoring.</summary>
+    public async Task<UsageTotalsDto> AllSinceAsync(DateTimeOffset from, CancellationToken ct) => await Entries(from).GroupBy(x => 1)
         .Select(g => new UsageTotalsDto(g.Count(), g.Count(x => x.Status == "completed"), g.Count(x => x.Status == "failed"), g.Count(x => x.Status == "cancelled"),
             g.Sum(x => x.InputTokens ?? 0), g.Sum(x => x.OutputTokens ?? 0), g.Count(x => x.InputTokens.HasValue && x.OutputTokens.HasValue), g.Sum(x => x.DurationMilliseconds ?? 0), g.Count(x => x.DurationMilliseconds.HasValue))).SingleOrDefaultAsync(ct) ?? new(0, 0, 0, 0, 0, 0, 0);
-    public Task<int> ActiveOwnersAsync(CancellationToken ct) => Entries().Select(x => x.OwnerId).Distinct().CountAsync(ct);
+    public Task<int> ActiveOwnersAsync(CancellationToken ct) => ActiveOwnersSinceAsync(Since, ct);
+    public Task<int> ActiveOwnersSinceAsync(DateTimeOffset from, CancellationToken ct) => Entries(from).Select(x => x.OwnerId).Distinct().CountAsync(ct);
     public async Task<IReadOnlyList<UsageModelDto>> ModelsAsync(CancellationToken ct) => (await Entries().GroupBy(x => x.ModelId).OrderBy(g => g.Key)
         .Select(g => new UsageModelDto(g.Key, g.Count(), g.Count(x => x.Status == "failed"), g.Count(x => x.InputTokens != null && x.OutputTokens != null),
             g.Sum(x => x.InputTokens ?? 0), g.Sum(x => x.OutputTokens ?? 0), g.Sum(x => x.DurationMilliseconds ?? 0), null)).ToListAsync(ct))

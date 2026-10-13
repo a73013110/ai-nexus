@@ -35966,6 +35966,51 @@
           }
         }
       },
+      "HealthIssue": {
+        "required": [
+          "code",
+          "severity",
+          "subject",
+          "title",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "HealthSummary": {
+        "required": [
+          "status",
+          "issues"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "issues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HealthIssue"
+            }
+          }
+        }
+      },
       "ImportRepositoryFolderRequest": {
         "required": [
           "commit",
@@ -36716,6 +36761,47 @@
           }
         }
       },
+      "MonitoredSubsystem": {
+        "required": [
+          "id",
+          "name",
+          "status",
+          "summary",
+          "facts",
+          "observedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "summary": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "facts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SubsystemFact"
+            }
+          },
+          "observedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "MonitoringSnapshot": {
         "required": [
           "version",
@@ -36726,6 +36812,7 @@
           "windowMinutes",
           "refreshSeconds",
           "sessionTimeoutSeconds",
+          "health",
           "onlineUsers",
           "onlineSessions",
           "activeSessions",
@@ -36734,12 +36821,15 @@
           "omittedSessions",
           "droppedSessions",
           "resources",
+          "resourceTimeline",
           "traffic",
+          "recentTraffic",
           "timeline",
           "sessions",
           "activities",
           "dependencies",
-          "endpoints"
+          "endpoints",
+          "subsystems"
         ],
         "type": "object",
         "properties": {
@@ -36773,6 +36863,9 @@
             "type": "integer",
             "format": "int32"
           },
+          "health": {
+            "$ref": "#/components/schemas/HealthSummary"
+          },
           "onlineUsers": {
             "type": "integer",
             "format": "int32"
@@ -36804,7 +36897,16 @@
           "resources": {
             "$ref": "#/components/schemas/RuntimeResources"
           },
+          "resourceTimeline": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResourcePoint"
+            }
+          },
           "traffic": {
+            "$ref": "#/components/schemas/TrafficMetrics"
+          },
+          "recentTraffic": {
             "$ref": "#/components/schemas/TrafficMetrics"
           },
           "timeline": {
@@ -36835,6 +36937,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/EndpointTraffic"
+            }
+          },
+          "subsystems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MonitoredSubsystem"
             }
           }
         }
@@ -38549,6 +38657,58 @@
           }
         }
       },
+      "ResourcePoint": {
+        "required": [
+          "at",
+          "cpuPercent",
+          "workingSetBytes",
+          "managedHeapBytes",
+          "threadPoolQueueLength",
+          "gcPausePercent"
+        ],
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cpuPercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "workingSetBytes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "managedHeapBytes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "threadPoolQueueLength": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "gcPausePercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          }
+        }
+      },
       "RetrievalCapabilitiesDto": {
         "required": [
           "sql",
@@ -39150,7 +39310,15 @@
           "cpuPercent",
           "workingSetBytes",
           "managedHeapBytes",
+          "memoryLimitBytes",
           "threadCount",
+          "threadPoolThreads",
+          "threadPoolQueueLength",
+          "lockContentionsPerSecond",
+          "gen0Collections",
+          "gen1Collections",
+          "gen2Collections",
+          "gcPausePercent",
           "uptimeSeconds"
         ],
         "type": "object",
@@ -39170,9 +39338,47 @@
             "type": "integer",
             "format": "int64"
           },
+          "memoryLimitBytes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
           "threadCount": {
             "type": "integer",
             "format": "int32"
+          },
+          "threadPoolThreads": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "threadPoolQueueLength": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "lockContentionsPerSecond": {
+            "type": "number",
+            "format": "double"
+          },
+          "gen0Collections": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gen1Collections": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gen2Collections": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "gcPausePercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
           },
           "uptimeSeconds": {
             "type": "number",
@@ -39974,6 +40180,44 @@
           }
         }
       },
+      "SubsystemFact": {
+        "required": [
+          "id",
+          "label",
+          "value",
+          "unit",
+          "text",
+          "tone"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": "string"
+          },
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "tone": {
+            "type": "string"
+          }
+        }
+      },
       "TestIdentityDto": {
         "required": [
           "administratorId",
@@ -40275,7 +40519,9 @@
           "at",
           "requestsPerSecond",
           "errorPercent",
+          "serverErrors",
           "averageMs",
+          "p95Ms",
           "receivedBytes",
           "sentBytes"
         ],
@@ -40293,7 +40539,18 @@
             "type": "number",
             "format": "double"
           },
+          "serverErrors": {
+            "type": "integer",
+            "format": "int64"
+          },
           "averageMs": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "p95Ms": {
             "type": [
               "null",
               "number"

@@ -26,7 +26,7 @@ public sealed class MonitoringStreams
 /// a fresh scope re-checks the monitoring grant and a testing identity's administrator, so revocation ends the stream
 /// with an error event.
 /// </summary>
-internal sealed class StreamMonitoringSnapshots(RuntimeTraffic traffic, MonitoringStreams streams, NexusDbContext db, IServiceScopeFactory scopes, IOptions<MonitoringOptions> options, TimeProvider clock)
+internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, MonitoringStreams streams, NexusDbContext db, IServiceScopeFactory scopes, IOptions<MonitoringOptions> options, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder monitor) => monitor
         .MapGet("/events", (int? minutes, HttpContext http, ICurrentUser user, StreamMonitoringSnapshots handler, CancellationToken ct) =>
@@ -69,7 +69,7 @@ internal sealed class StreamMonitoringSnapshots(RuntimeTraffic traffic, Monitori
                     }
                     nextCheck = clock.GetUtcNow().AddSeconds(15);
                 }
-                await http.Response.WriteAsync("event: snapshot\ndata: " + JsonSerializer.Serialize(traffic.Snapshot(window), JsonSerializerOptions.Web) + "\n\n", ct);
+                await http.Response.WriteAsync("event: snapshot\ndata: " + JsonSerializer.Serialize(snapshots.Read(window), JsonSerializerOptions.Web) + "\n\n", ct);
                 await http.Response.Body.FlushAsync(ct);
             } while (clock.GetUtcNow() < expires && await timer.WaitForNextTickAsync(ct));
             return Result.Success;

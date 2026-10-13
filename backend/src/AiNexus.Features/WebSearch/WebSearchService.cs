@@ -13,9 +13,11 @@ namespace AiNexus.Features.WebSearch;
 public sealed class WebSearchService(NexusDbContext db, IWebSearchProvider provider, BillingService billing, IOptions<WebSearchOptions> options, TimeProvider clock)
 {
     public const int ReservedTokens = 3600;
-    public WebSearchStatusDto Status => new(options.Value.Enabled && (options.Value.Provider != "brave" || options.Value.ApiKey.Length > 0),
-        !options.Value.Enabled ? "管理員尚未啟用網路搜尋。可設定自架 SearXNG 或 Brave Search。"
-        : options.Value.Provider == "brave" && options.Value.ApiKey.Length == 0 ? "管理員尚未設定 Brave Search 的 API key。"
+    public WebSearchStatusDto Status => StatusOf(options.Value);
+    /// <summary>Availability from configuration alone; no request to the search service.</summary>
+    public static WebSearchStatusDto StatusOf(WebSearchOptions settings) => new(settings.Enabled && (settings.Provider != "brave" || settings.ApiKey.Length > 0),
+        !settings.Enabled ? "管理員尚未啟用網路搜尋。可設定自架 SearXNG 或 Brave Search。"
+        : settings.Provider == "brave" && settings.ApiKey.Length == 0 ? "管理員尚未設定 Brave Search 的 API key。"
         : "開啟後會將這次提問送往搜尋服務，附件與歷史對話不會送出。");
     public async Task<Result<WebSearchRecord>> SearchAsync(Guid owner, Guid conversation, string key, string hash, string query, CancellationToken ct)
     {

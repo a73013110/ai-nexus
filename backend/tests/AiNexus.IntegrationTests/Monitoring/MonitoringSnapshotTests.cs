@@ -1,7 +1,9 @@
 using System.Net.Http.Json;
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.Jobs;
 using AiNexus.Features.Monitoring;
 using AiNexus.Features.Persistence;
+using AiNexus.Platform.Monitoring;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;
@@ -29,6 +31,36 @@ public sealed class MonitoringSnapshotTests
         Assert.Equal(body.Length, session.SentBytes); Assert.True(session.ReceivedBytes > 0);
         Assert.DoesNotContain(snapshot.Endpoints, e => e.Route.Contains("presence") || e.Route.Contains("monitoring"));
         Assert.NotNull(Assert.Single(snapshot.Activities, x => x.SessionId == session.Id).TraceId);
+    }
+
+    [Fact]
+    public async Task SnapshotReportsHealthAndEveryModulesSubsystemAfterABackgroundRead()
+    {
+        var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);
+        await using var factory = new NexusFactory(administrators: ["alice"], clock: clock);
+        using var alice = await factory.SignedInAsync();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            db.Set<BackgroundJob>().Add(new() { OwnerId = db.Users.Select(x => x.Id).First(), Kind = "document-ingest", Status = "running", LeaseToken = Guid.NewGuid(),
+                LeaseUntil = clock.GetUtcNow().AddMinutes(-1), OperationId = Guid.NewGuid(), SubjectId = Guid.NewGuid() });
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+        var first = (await alice.GetFromJsonAsync<MonitoringSnapshot>("/api/v1/admin/monitoring", TestContext.Current.CancellationToken))!;
+        Assert.Equal(2, first.Version);
+        Assert.Equal(["generation", "model-providers", "jobs", "log-pipeline", "knowledge-index", "usage-today", "storage", "integrations"], first.Subsystems.Select(x => x.Id));
+        // Reads run in the background; the page gets them with the next snapshot.
+        await factory.Services.GetRequiredService<SubsystemReadings>().Settled;
+        clock.Advance(MonitoringSnapshots.ReuseFor);
+        var snapshot = (await alice.GetFromJsonAsync<MonitoringSnapshot>("/api/v1/admin/monitoring", TestContext.Current.CancellationToken))!;
+        Assert.All(snapshot.Subsystems, x => Assert.NotNull(x.ObservedAt));
+        Assert.DoesNotContain(snapshot.Subsystems, x => x.Summary == SubsystemReadings.UnreadableSummary);
+        var jobs = Assert.Single(snapshot.Subsystems, x => x.Id == "jobs");
+        Assert.Equal(SubsystemStates.Degraded, jobs.Status);
+        Assert.Equal(1, Assert.Single(jobs.Facts, x => x.Id == "expired_leases").Value);
+        Assert.Equal(SubsystemStates.Healthy, Assert.Single(snapshot.Subsystems, x => x.Id == "log-pipeline").Status);
+        Assert.Equal(MonitoringHealth.Attention, snapshot.Health.Status);
+        Assert.Contains(snapshot.Health.Issues, x => x is { Code: "subsystem_degraded", Subject: "jobs" });
     }
 
     [Fact]
