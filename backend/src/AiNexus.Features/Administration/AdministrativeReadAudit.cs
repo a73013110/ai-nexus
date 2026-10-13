@@ -16,7 +16,7 @@ internal sealed class AdministrativeReadAudit(NexusDbContext db, AccessService a
 
     public async Task<Result> RecordAsync(Guid actor, string action, Guid resource, object details, CancellationToken ct)
     {
-        if (!await AllowedAsync(actor, ct)) return AdministrationErrors.AdminRequired;
+        if (!await AllowedAsync(actor, ct)) return AccessControlErrors.FeatureForbidden;
         db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource, Action = action, Result = "read", DetailsJson = JsonSerializer.Serialize(details) });
         // The response is released only after its sensitive read is audited successfully.
         await db.SaveChangesAsync(ct);

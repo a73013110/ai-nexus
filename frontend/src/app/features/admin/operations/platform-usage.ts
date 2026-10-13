@@ -1,5 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, output } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { apiResource } from '../../../core/api/api-resource';
 import {
   formatBytes,
@@ -28,14 +27,13 @@ const kindNames: Record<string, string> = {
 /** The last 30 days of platform usage, read each time the tab is shown. */
 @Component({
   selector: 'nx-platform-usage',
-  imports: [RouterLink, Card, DataTable, Icon, Notice],
+  imports: [Card, DataTable, Icon, Notice],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './platform-usage.scss',
   templateUrl: './platform-usage.html',
 })
 export class PlatformUsage {
   private readonly api = inject(OperationsApi);
-  readonly prices = output<void>();
   readonly read = apiResource({ feature: 'operations', loader: () => this.api.usage() });
   readonly usageModelName = formatModelDisplayName;
   readonly date = formatDate;

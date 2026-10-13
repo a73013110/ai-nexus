@@ -1,7 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { apiResource } from '../../core/api/api-resource';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { ClientValidationError } from '../../core/errors/safe-errors';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { AdminApi } from './admin-api';
 import { ToastService } from '../../shared/ui/toast-service';
@@ -14,11 +13,9 @@ export class AdminStore {
   private readonly scope = inject(ViewScope);
   /** The account is read fresh: this page changes what it may do. */
   private readonly catalogRead = apiResource({
+    feature: 'admin',
     freshAccount: true,
-    loader: () => {
-      if (!this.session.has('admin')) throw new ClientValidationError('adminAccess');
-      return this.api.catalog();
-    },
+    loader: () => this.api.catalog(),
   });
   readonly catalog = computed(() => this.catalogRead.value() ?? null);
   private readonly ready = computed(() => !!this.catalog());

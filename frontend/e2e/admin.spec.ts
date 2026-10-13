@@ -1057,10 +1057,18 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
       const target =
         tab === "活動稽核"
           ? "nx-filter-panel"
-          : ".feature-content > :is(nx-admin-features-tab, nx-platform-usage) > .form-note";
+          : tab === "平台用量"
+            ? ".feature-content > nx-platform-usage > .page-toolbar"
+            : ".feature-content > nx-admin-features-tab > .form-note";
       await expect(page.locator(target).first()).toBeVisible();
-      if (tab === "平台用量")
+      if (tab === "平台用量") {
         await expect(page.locator(".stat-card")).toHaveCount(4);
+        // The tabs are the way to prices; the usage tab only refreshes itself.
+        await expect(page.locator("nx-platform-usage a")).toHaveCount(0);
+        await expect(
+          page.locator("nx-platform-usage .page-actions button"),
+        ).toHaveCount(1);
+      }
       await expectCompactWorkspace(page);
       const header = await page.locator(".feature-header").boundingBox();
       const content = await page.locator(target).first().boundingBox();
@@ -1130,9 +1138,9 @@ test("members have no management navigation and direct routes show an access exp
   const fixture = new ApiFixture();
   await fixture.attach(page);
   await page.goto("/admin");
-  await expect(page.getByRole("alert")).toContainText("沒有存取管理權限");
+  await expect(page.getByRole("alert")).toContainText("需要「存取管理」權限");
   await page.goto("/admin/operations");
-  await expect(page.getByRole("alert")).toContainText("需要平台營運權限");
+  await expect(page.getByRole("alert")).toContainText("需要「平台營運」權限");
   for (const name of ["存取管理", "平台營運"])
     await expect(
       page

@@ -25,7 +25,7 @@
     }
   </div>
   @if (!session.has('logs.query') && session.me()) {
-    <nx-notice tone="danger">需要系統日誌查詢權限。</nx-notice>
+    <nx-feature-access-notice feature="logs.query" />
   }
   @if (session.has('logs.query')) {
     <nx-log-health [reported]="page()?.health ?? null" />

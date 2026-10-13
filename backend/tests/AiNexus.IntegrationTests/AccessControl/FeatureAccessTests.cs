@@ -111,18 +111,25 @@ public sealed class FeatureAccessTests
         foreach (var route in operations)
         {
             (await bob.GetAsync($"/api/v1/{route}")).EnsureSuccessStatusCode();
-            Assert.Equal(HttpStatusCode.Forbidden, (await alice.GetAsync($"/api/v1/{route}")).StatusCode);
+            await AssertFeatureForbiddenAsync(await alice.GetAsync($"/api/v1/{route}"));
         }
         foreach (var route in accessManagement)
         {
             (await alice.GetAsync($"/api/v1/{route}")).EnsureSuccessStatusCode();
-            Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync($"/api/v1/{route}")).StatusCode);
+            await AssertFeatureForbiddenAsync(await bob.GetAsync($"/api/v1/{route}"));
         }
-        Assert.Equal(HttpStatusCode.Forbidden, (await alice.PostAsync("/api/v1/admin/knowledge/capabilities/probe", null)).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await bob.PutAsJsonAsync("/api/v1/admin/features/files", new FeatureUpdateRequest("檔案庫", 20, false))).StatusCode);
+        await AssertFeatureForbiddenAsync(await alice.PostAsync("/api/v1/admin/knowledge/capabilities/probe", null));
+        await AssertFeatureForbiddenAsync(await bob.PutAsJsonAsync("/api/v1/admin/features/files", new FeatureUpdateRequest("檔案庫", 20, false)));
         var bobFeatures = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features;
         Assert.Contains(bobFeatures, x => x.Id == "operations");
         Assert.DoesNotContain(bobFeatures, x => x.Id == "admin");
+    }
+
+    /// <summary>Every missing grant, from a policy or a handler's own check, answers with the one shared code.</summary>
+    private static async Task AssertFeatureForbiddenAsync(HttpResponseMessage response)
+    {
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal("feature_forbidden", (await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>()).GetProperty("code").GetString());
     }
 
     // Only the effective-feature read of AccessService joins this table.

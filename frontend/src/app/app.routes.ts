@@ -4,7 +4,6 @@ import { optionalId } from './core/layout/optional-id';
 import { repositoryRoute } from './features/repositories/repository-route';
 import { pendingChanges } from './shared/browser/pending-changes';
 import { WORKSPACE_HOME } from './core/layout/workspace-home';
-import { operationsRedirect } from './features/admin/operations/operations-redirect';
 
 export const routes: Routes = [
   {
@@ -116,7 +115,6 @@ export const routes: Routes = [
       },
       {
         path: 'admin',
-        canActivate: [operationsRedirect],
         loadComponent: () =>
           import('./features/admin/admin-page').then((module) => module.AdminPage),
       },

@@ -86,7 +86,7 @@ test("management access alone does not imply audit access or issue protected aud
     return route.fulfill({ status: 403, json: { code: "feature_forbidden" } });
   });
   await page.goto("/admin/audit");
-  await expect(page.getByRole("alert")).toContainText("需要活動稽核查閱權限");
+  await expect(page.getByRole("alert")).toContainText("需要「活動稽核」權限");
   await expect(
     page.locator(".workspace-navigation a[href='/admin/audit']"),
   ).toHaveCount(0);

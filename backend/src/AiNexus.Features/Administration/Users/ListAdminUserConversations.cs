@@ -1,3 +1,4 @@
+using AiNexus.Features.AccessControl;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
@@ -20,7 +21,7 @@ internal sealed class ListAdminUserConversations(NexusDbContext db, Administrati
 
     public async Task<Result<AdminConversationPageDto>> HandleAsync(Guid actor, Guid owner, string? search, int offset, bool includeDeleted, CancellationToken ct)
     {
-        if (!await reads.AllowedAsync(actor, ct)) return AdministrationErrors.AdminRequired;
+        if (!await reads.AllowedAsync(actor, ct)) return AccessControlErrors.FeatureForbidden;
         if (!AdministrativeReadAudit.ValidPage(search, offset)) return AdministrationErrors.InvalidSearch;
         if (!await db.Users.AnyAsync(x => x.Id == owner, ct)) return AdministrationErrors.NotFound;
         var query = db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).AsNoTracking().Where(x => x.OwnerId == owner && (includeDeleted || !x.IsDeleted));

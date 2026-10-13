@@ -7,6 +7,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { FEATURE_NAMES } from '../../core/auth/feature-names';
+import { FeatureAccessNotice } from '../../core/layout/feature-access-notice';
 import { FeaturePage } from '../../core/layout/feature-page';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { Disclosure } from '../../shared/ui/disclosure';
@@ -63,6 +64,7 @@ interface AuditPage {
   selector: 'nx-activity-audit-page',
   imports: [
     FeaturePage,
+    FeatureAccessNotice,
     Notice,
     EmptyState,
     DateTimePicker,

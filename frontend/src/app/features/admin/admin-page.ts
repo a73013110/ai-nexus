@@ -1,6 +1,7 @@
 import { Notice } from '../../shared/ui/notice';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { FeatureAccessNotice } from '../../core/layout/feature-access-notice';
 import { FeaturePage } from '../../core/layout/feature-page';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -23,6 +24,7 @@ import { AdminFeaturesTab } from './access/admin-features-tab';
     Notice,
     ViewSwitch,
     FeaturePage,
+    FeatureAccessNotice,
     ActionMenu,
     AdminUserInspector,
     AccessEditorDialog,

@@ -9,7 +9,7 @@
       ><button notice-actions type="button" (click)="account.reload()">重新載入</button>
     </nx-notice>
   } @else if (!session.has('operations')) {
-    <nx-notice tone="danger">需要平台營運權限。</nx-notice>
+    <nx-feature-access-notice feature="operations" />
   } @else {
     <nx-view-switch
       label="平台營運分類"
@@ -19,7 +19,7 @@
     />
     @switch (tab()) {
       @case ('usage') {
-        <nx-platform-usage (prices)="selectTab('prices')" />
+        <nx-platform-usage />
       }
       @case ('retrieval') {
         <nx-retrieval-admin />

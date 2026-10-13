@@ -4,7 +4,6 @@ namespace AiNexus.Features.Administration;
 
 internal static class AdministrationErrors
 {
-    public static readonly Error AdminRequired = Error.Forbidden("admin_required");
     public static readonly Error Lockout = Error.Conflict("admin_lockout");
     public static readonly Error NotFound = Error.NotFound("admin_resource_not_found");
     public static readonly Error InvalidSearch = Error.Invalid("invalid_search");

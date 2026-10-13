@@ -43,7 +43,6 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   unknown_access_id: '清單包含不存在的角色、群組或功能。',
   admin_resource_not_found: '找不到此管理項目。',
   admin_lockout: '此變更會撤銷你的管理權限。請先由另一位管理員處理。',
-  admin_required: '需要平台管理權限。',
   model_group_forbidden: '此模型不在你的個人或群組授權範圍。',
   model_token_quota:
     '此模型今日可用 token 不足（包含輸入、輸出與待結算預留）。請縮短提問、切換模型或聯絡管理員；台北時間每日 08:00 重設。',
@@ -106,7 +105,6 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   invalid_parent: '上文必須是此對話中已結束的回答。',
   invalid_title: '標題需為 1 至 120 個字元。',
   invalid_dashboard_scope: '檢視範圍不正確。',
-  dashboard_access_denied: '只有管理員可檢視平台總覽。',
   invalid_password: '本地密碼需為 12–128 個字元，可使用長句與密碼管理器。',
   authentication_mode: '此工作區未使用 Windows 整合驗證。',
   invalid_credentials: '帳號、密碼或登入方式不正確，或帳號暫時無法登入。',

@@ -51,7 +51,7 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
             // Both checks read SQL inside this transaction, not the grants the request authorized with.
             access.Invalidate();
-            if (!await HoldsAsync(actor, feature, ct)) return AdministrationErrors.AdminRequired;
+            if (!await HoldsAsync(actor, feature, ct)) return AccessControlErrors.FeatureForbidden;
             before = await SnapshotAsync(action, resource, key, ct);
             var outcome = await mutation();
             if (!outcome.IsSuccess) return outcome.Error;

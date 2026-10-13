@@ -18,7 +18,7 @@ public sealed class EmbeddingReindexHandler(NexusDbContext db, EmbeddingLifecycl
     /// <summary>The profile to rebuild, while its owner still has platform operations and it is not retired.</summary>
     private async Task<Result<EmbeddingProfile>> ProfileAsync(BackgroundJob job, CancellationToken ct)
     {
-        if (!(await access.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == FeatureIds.Operations)) return KnowledgeErrors.AdminRequired;
+        if (!(await access.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == FeatureIds.Operations)) return AccessControlErrors.FeatureForbidden;
         var profile = await lifecycle.RequireAsync(EmbeddingJobs.Profile(job.SubjectId), ct);
         if (profile.IsSuccess && profile.Value.Status == "retired") return KnowledgeErrors.ProfileRetired;
         return profile;

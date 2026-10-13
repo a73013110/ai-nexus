@@ -30,7 +30,7 @@ internal sealed class GetDashboard(NexusDbContext db, SpendReports reports, Usag
         if (scope is not ("personal" or "platform") || (scope == "personal" && ownerId != null)) return DashboardErrors.InvalidScope;
         var features = (await access.ForUserAsync(actor, ct)).Features.ToDictionary(x => x.Id, StringComparer.Ordinal);
         var platform = scope == "platform";
-        if (platform && !features.ContainsKey(FeatureIds.Operations)) return DashboardErrors.AccessDenied;
+        if (platform && !features.ContainsKey(FeatureIds.Operations)) return AccessControlErrors.FeatureForbidden;
         var period = SpendPeriod.Create(from, until, offset, clock.GetUtcNow());
         if (!period.IsSuccess) return period.Error;
         Guid? owner = platform ? ownerId : actor;

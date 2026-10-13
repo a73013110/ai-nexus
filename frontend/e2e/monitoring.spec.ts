@@ -545,9 +545,7 @@ test("permission gate prevents telemetry subscription", async ({ page }) => {
   await fixture.attach(page, false);
   try {
     await page.goto("/admin/monitoring");
-    await expect(
-      page.getByRole("heading", { name: "需要即時監控權限" }),
-    ).toBeVisible();
+    await expect(page.getByRole("alert")).toContainText("需要「即時監控」權限");
     expect(fixture.connections).toBe(0);
   } finally {
     await page.goto("about:blank");
