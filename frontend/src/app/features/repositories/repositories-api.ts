@@ -1,34 +1,74 @@
 import { Injectable, inject } from '@angular/core';
 import { ApiClient } from '../../core/api/api-client';
-import type { CreateRepositoryReviewRequest, RepositoryFileDto } from '../../core/api/schema';
+import type {
+  CreateRepositoryReviewRequest,
+  ImportRepositoryFolderRequest,
+  StartRepositoryChatRequest,
+} from '../../core/api/schema';
+
+/** A repository as the routes name it: `owner/name` split in two. */
+export interface RepositoryKey {
+  owner: string;
+  name: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class RepositoriesApi {
   private readonly api = inject(ApiClient);
-  commits = (repository: string) =>
-    this.api.get('/api/v1/repositories/commits', { query: { repository } });
-  reviews = (repository: string) =>
-    this.api.get('/api/v1/repositories/reviews', { query: { repository } });
-  review = (id: string) => this.api.get('/api/v1/repositories/reviews/{id}', { path: { id } });
-  createReview = (body: CreateRepositoryReviewRequest) =>
-    this.api.post('/api/v1/repositories/reviews', { body });
-  reviewJob = (id: string, retry: boolean) =>
-    retry
-      ? this.api.post('/api/v1/repositories/reviews/{id}/retry', { path: { id } })
-      : this.api.post('/api/v1/repositories/reviews/{id}/cancel', { path: { id } });
   status = () => this.api.get('/api/v1/repositories/connection');
   connect = (token: string) =>
     this.api.post('/api/v1/repositories/connection', { body: { token } });
   disconnect = () => this.api.delete('/api/v1/repositories/connection');
-  list = (page = 1) => this.api.get('/api/v1/repositories', { query: { page } });
-  tree = (repository: string, commit = '', path = '') =>
-    this.api.get('/api/v1/repositories/tree', { query: { repository, commit, path } });
-  file = (repository: string, commit: string, path: string) =>
-    this.api.get('/api/v1/repositories/file', { query: { repository, commit, path } });
-  issues = (repository: string) =>
-    this.api.get('/api/v1/repositories/issues', { query: { repository } });
-  import = (file: RepositoryFileDto, collectionId: string) =>
-    this.api.post('/api/v1/repositories/import', {
-      body: { repository: file.repository, commit: file.commit, path: file.path, collectionId },
+  list = (q: string, page: number) => this.api.get('/api/v1/repositories', { query: { q, page } });
+  review = (id: string) => this.api.get('/api/v1/repositories/reviews/{id}', { path: { id } });
+  reviewJob = (id: string, retry: boolean) =>
+    retry
+      ? this.api.post('/api/v1/repositories/reviews/{id}/retry', { path: { id } })
+      : this.api.post('/api/v1/repositories/reviews/{id}/cancel', { path: { id } });
+  comment = (id: string, body: string) =>
+    this.api.post('/api/v1/repositories/reviews/{id}/comment', { path: { id }, body: { body } });
+  read = (path: RepositoryKey) => this.api.get('/api/v1/repositories/{owner}/{name}', { path });
+  tree = (path: RepositoryKey, commit: string, folder: string) =>
+    this.api.get('/api/v1/repositories/{owner}/{name}/tree', {
+      path,
+      query: { commit, path: folder },
     });
+  file = (path: RepositoryKey, commit: string, file: string) =>
+    this.api.get('/api/v1/repositories/{owner}/{name}/file', {
+      path,
+      query: { commit, path: file },
+    });
+  pin = (path: RepositoryKey) => this.api.put('/api/v1/repositories/{owner}/{name}/pin', { path });
+  unpin = (path: RepositoryKey) =>
+    this.api.delete('/api/v1/repositories/{owner}/{name}/pin', { path });
+  commits = (path: RepositoryKey, ref: string, page: number) =>
+    this.api.get('/api/v1/repositories/{owner}/{name}/commits', { path, query: { ref, page } });
+  diff = (path: RepositoryKey, head: string, base: string | null) =>
+    this.api.get('/api/v1/repositories/{owner}/{name}/diff', {
+      path,
+      query: base ? { head, base } : { head },
+    });
+  issues = (path: RepositoryKey, state: string, page: number, q = '') =>
+    this.api.get('/api/v1/repositories/{owner}/{name}/issues', {
+      path,
+      query: q ? { state, page, q } : { state, page },
+    });
+  issue = (path: RepositoryKey, number: number) =>
+    this.api.get('/api/v1/repositories/{owner}/{name}/issues/{number}', {
+      path: { ...path, number },
+    });
+  pulls = (path: RepositoryKey, state: string, page: number) =>
+    this.api.get('/api/v1/repositories/{owner}/{name}/pulls', { path, query: { state, page } });
+  pull = (path: RepositoryKey, number: number) =>
+    this.api.get('/api/v1/repositories/{owner}/{name}/pulls/{number}', {
+      path: { ...path, number },
+    });
+  chat = (path: RepositoryKey, body: StartRepositoryChatRequest) =>
+    this.api.post('/api/v1/repositories/{owner}/{name}/chat', { path, body });
+  import = (path: RepositoryKey, body: ImportRepositoryFolderRequest) =>
+    this.api.post('/api/v1/repositories/{owner}/{name}/imports', { path, body });
+  reviews = (path: RepositoryKey) =>
+    this.api.get('/api/v1/repositories/{owner}/{name}/reviews', { path });
+  createReview = (path: RepositoryKey, body: CreateRepositoryReviewRequest) =>
+    this.api.post('/api/v1/repositories/{owner}/{name}/reviews', { path, body });
 }

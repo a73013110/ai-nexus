@@ -1,6 +1,8 @@
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Persistence;
+using AiNexus.Features.Repositories.Connections;
+using AiNexus.Features.Repositories.Reviews;
 using AiNexus.Platform.Dashboard;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -42,7 +44,7 @@ internal sealed class RepositoriesDashboard(NexusDbContext db, IOptions<GiteaOpt
         var recent = await reviews.Where(x => x.OwnerId == scope.Actor).OrderByDescending(x => x.CreatedAt).Take(5)
             .Select(x => new { x.Id, x.Repository, x.Commit, x.CreatedAt }).ToListAsync(ct);
         foreach (var review in recent)
-            section.Item(review.Id.ToString(), review.Repository, review.Commit[..Math.Min(7, review.Commit.Length)], review.CreatedAt, "/repositories?review=" + review.Id);
+            section.Item(review.Id.ToString(), review.Repository, review.Commit[..Math.Min(7, review.Commit.Length)], review.CreatedAt, "/repositories/" + review.Repository + "/reviews/" + review.Id);
         return section.Build();
     }
 }

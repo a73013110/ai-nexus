@@ -73,4 +73,31 @@ describe('controlled client reports', () => {
       expect(post).toHaveBeenCalledTimes(1);
     }
   });
+  it('words page exceptions as a reload hint and clears the notice by itself', async () => {
+    vi.useFakeTimers();
+    try {
+      const code = 'NX-' + 'D'.repeat(32);
+      TestBed.configureTestingModule({
+        providers: [
+          {
+            provide: ApiClient,
+            useValue: { post: vi.fn().mockResolvedValue({ issueCode: code, accepted: true }) },
+          },
+          {
+            provide: AuthService,
+            useValue: { generation: () => 0, guard: AuthService.prototype.guard },
+          },
+        ],
+      });
+      const service = TestBed.inject(ClientIssues);
+      await service.report(new TypeError('secret'), 'exception');
+      expect(service.notice()).toContain('頁面發生非預期錯誤');
+      expect(service.notice()).toContain(code);
+      expect(service.notice()).not.toContain('操作未完成');
+      await vi.advanceTimersByTimeAsync(12_000);
+      expect(service.notice()).toBe('');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

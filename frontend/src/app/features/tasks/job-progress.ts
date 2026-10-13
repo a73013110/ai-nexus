@@ -9,7 +9,7 @@ import {
 } from '../../core/errors/safe-errors';
 import { InferenceSignal } from '../../shared/ui/inference-signal';
 import { StatusBadge } from '../../shared/ui/status-badge';
-import type { BadgeTone } from '../../shared/ui/count-badge';
+import { jobStatus } from './job-kind';
 
 @Component({
   selector: 'nx-job-progress',
@@ -65,14 +65,5 @@ export class JobProgress {
   });
   readonly job = input.required<JobDto>();
   readonly active = computed(() => ['queued', 'running'].includes(this.job().status));
-  readonly status = computed(() => {
-    const statuses: Record<string, { label: string; tone: BadgeTone }> = {
-      queued: { label: '排隊中', tone: 'neutral' },
-      running: { label: '處理中', tone: 'info' },
-      completed: { label: '已完成', tone: 'success' },
-      failed: { label: '處理失敗', tone: 'danger' },
-      cancelled: { label: '已停止', tone: 'neutral' },
-    };
-    return statuses[this.job().status] ?? { label: '背景處理', tone: 'neutral' as BadgeTone };
-  });
+  readonly status = computed(() => jobStatus(this.job().status));
 }

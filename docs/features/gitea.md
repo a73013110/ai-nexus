@@ -1,10 +1,10 @@
 # Gitea 程式庫工作區
 
-提供程式庫清單、固定 commit 的檔案瀏覽、待處理議題、對話草稿、知識庫快照與背景 [程式碼 review](code-review.md)。所有 Gitea 遠端操作都是 GET；不建立 issue、commit 或 PR、不推送修改。存取權由各使用者自己的權杖決定，AI Nexus 管理員不會自動取得私人程式庫內容。
+用每個人自己的 Gitea 權杖閱讀程式碼、提交紀錄、議題與 Pull Request，帶入對話、匯入知識庫或交給 [AI 檢閱](code-review.md)。對 Gitea 的唯一寫入是「把 AI 檢閱貼成 PR 留言」，需要使用者另外授予 `write:issue` 並逐次確認；其餘都是 GET，不建立 commit、議題或 PR。AI Nexus 管理員不會因此取得任何人的私人程式庫。
 
 ## 管理員設定
 
-在機器的一般設定開啟（鍵與範圍在 `GiteaOptions`，預設 `Enabled=false`）：
+在機器的一般設定開啟（鍵、範圍與預設在 `GiteaOptions` 與 `appsettings.json`，預設 `Enabled=false`）：
 
 ```json
 {
@@ -17,32 +17,40 @@
 }
 ```
 
-重啟後，「程式庫」對有 repositories 功能的角色顯示。預設的 `workspace` 群組已授予此功能，但讀取仍要各自連線；沒有任何共用管理者權杖。
+重啟後，「程式庫」對有 repositories 功能的角色顯示；預設 `workspace` 群組已授予，但讀取仍要各自連線，沒有共用管理者權杖。
 
-BaseUrl 支援 Gitea 在子路徑部署；使用 HTTPS，HTTP 僅允許 loopback 本機測試。IIS 主機需要信任 Gitea 憑證，並可連到 `/api/v1`。網站登入頁可存取不代表 API 權限已通過。
+BaseUrl 可在子路徑；必須 HTTPS，HTTP 只允許 loopback。IIS 主機要信任 Gitea 憑證並連得到 `/api/v1`；網站登入頁可開不代表 API 可用。
 
 ## 使用者連線
 
-在 Gitea 的「設定 → 應用程式」建立個人權杖，優先只授予 `read:user`、`read:repository`、`read:issue`，將權杖填入 AI Nexus「程式庫」連線視窗。不同 Gitea 版本的 scope／repo 範圍介面可能不同，以你主機的 `/api/swagger` 與 `/swagger.v1.json` 為準；不用發送權杖到聊天。[Gitea API 驗證與 scope](https://docs.gitea.com/development/api-usage/)
+在 Gitea「設定 → 應用程式」建立個人權杖，授予 `read:user`、`read:repository`、`read:issue`；要把檢閱貼回 PR 才加 `write:issue`。scope 介面依 Gitea 版本而異，以主機的 `/api/swagger` 為準。[Gitea API 驗證與 scope](https://docs.gitea.com/development/api-usage/)
 
-後端用權杖驗證 `/api/v1/user`，以 ASP.NET Data Protection 加密後存於 `repositories.RepositoryConnections`。保護目的同時綁定使用者 ID 與 Gitea BaseUrl；不同使用者／不同主機設定不能混用。畫面不會回傳權杖，不放在瀏覽器 localStorage，HttpClient 也不記錄授權標頭、不跟隨重新導向。IIS 的 `keys/` 同時保護登入 cookie 與 連線權杖，更新 app 必須保留；DPAPI 身分或 key ring 改變後可能需要重新連線。
+後端用權杖驗證 `/api/v1/user`，以 Data Protection 加密存於 `repositories.RepositoryConnections`，保護目的綁定使用者 ID 與 BaseUrl。權杖不回傳畫面、不進瀏覽器儲存，HttpClient 不記錄授權標頭、不跟隨重新導向。IIS 的 `keys/` 同時保護登入 cookie 與權杖，更新 app 必須保留；key ring 改變後要重新連線。
 
-「更新授權」替換加密權杖；「中斷連線」刪除自己的連線。Gitea 撤銷權杖後新讀取失敗，沒有自動切換共用帳號。連線、解除連線及匯入均留稽核。
+「更新授權」替換權杖；「中斷連線」刪除自己的連線，已匯入的文件與檢閱紀錄保留。Gitea 拒絕權杖（401）、權限不足（403）或找不到（404）各有錯誤代碼與提示，不顯示泛用失敗訊息。連線、中斷與匯入留稽核。
 
-## 檔案、草稿與索引
+## 瀏覽
 
-選擇程式庫時先把預設 branch 解析成 commit SHA，之後瀏覽與匯入均使用相同 SHA，不會在閱讀途中混入新的 main 內容。目錄最多 500 個項目；程式庫每頁 20 個，頁內搜尋有明確標示；議題列出最多 30 個開啟項目。
+- **列表**：伺服器端搜尋使用者能讀的所有程式庫（每頁 20 個，依更新時間）；最多釘選 30 個，存在 `repositories.RepositoryPins`，顯示在列表上方。
+- **版本**：分支、標籤或 commit 由網址 `?ref=` 指定，進入時解析成 commit SHA；之後的資料夾、檔案、提交紀錄都讀這個 SHA，閱讀途中不混入新推送。
+- **程式碼**：資料夾附 README；檔案有行號與語法上色，Markdown 可切換預覽與原始碼。只讀 `MaxFileBytes` 內的 UTF-8 文字，不接受 LFS、二進位或路徑跳脫。
+- **提交紀錄**：從固定版本往前，每頁 30 個、依日期分組。選兩個提交即開啟區間（含較舊那一個的變更），網址為 `compare/{base}...{head}`；單一提交比對第一個父版本。diff 超過 256,000 bytes 不顯示也不能交給 AI，改到 Gitea 查看。
+- **議題與 PR**：依開啟／關閉／全部篩選，議題可搜尋；詳情含內文與最多 100 則留言。PR 的「查看變更」比較合併基準到 head。
 
-只讀上限內的 UTF-8 文字，不接受目錄、LFS、二進位檔或路徑跳脫。外部 API 回應受大小限制，不使用 Gitea 回傳的任意 download URL。
+## 帶入對話
 
-「帶入對話草稿」會再次確認權限並讀取固定版本，建立一個私人新對話，把來源 URL、commit 與文字放入輸入區。超過 6000 字只帶前段並提示；使用者可檢視後再送出，**不自動呼叫模型**。Google 模式送出時仍會將這份內容交給 Google；不希望離開內網時同時將對話與 embedding 設為 Ollama。
+在檔案列勾選（可跨資料夾，預設最多 `MaxChatFiles`=20 個）或在議題／PR 詳情按「帶入對話」。後端以目前權限重讀固定版本，打包成**一個 Markdown 附件**，建立私人新對話並放入草稿；**不自動送出**。非文字或過大的檔案略過並列在附件裡；總長超過 `MaxChatCharacters` 直接拒絕，請少選或改用匯入知識庫。PR 在長度允許時附上 diff。
 
-「匯入版本快照」只可選擇能編輯的知識庫，由後端重讀固定版本、沿用附件驗證與文件索引工作。相同使用者／知識庫／來源／commit／path 的重複匯入會重用未刪除的文件，同一 app 內以寫入鎖防止並行重複。IIS 使用一個 worker；未來部署多個 app 實例前，應改成跨實例的匯入唯一性／資料庫協調，不依賴記憶體鎖。
+附件內容會隨對話送給所選模型；不希望程式碼離開內網時，將對話與 embedding 都設為 Ollama。
 
-快照匯入後是 AiNexus 的獨立資料，依目的知識庫 ACL 保存，**不會同步 Gitea 的後續撤權、修改或刪除**。分享前須確認內容適合目的成員；中斷程式庫連線不會刪除已匯入的文件。來源識別存在 `repositories.RepositoryImports`，文件仍有 commit／URL 可核對。
+## 匯入知識庫
+
+只能從資料夾匯入（不提供單檔匯入），目標是自己能編輯的知識庫。建立時用 Gitea 遞迴樹列出固定版本下的文字檔（副檔名白名單、`MaxFileBytes` 內，最多 `MaxImportFiles`=200 個），存在 `repositories.RepositoryFolderImports`，交給背景任務「程式庫匯入」逐檔處理。每個檔案匯入前重新確認 Gitea、功能與知識庫權限；之前匯入過的同一來源與 commit 會重用文件（`repositories.RepositoryImports`），所以重試從斷點繼續。
+
+匯入後是 AI Nexus 的獨立資料，依知識庫 ACL 保存，**不同步 Gitea 之後的撤權、修改或刪除**；分享前確認內容適合該知識庫的成員。
 
 ## 尚未開放
 
-自動 webhook 匯入、寫入 issue／PR 都還沒有做。要做時先具備 HMAC 驗證、權限同步、revision／刪除標記與去重，寫入則需獨立的寫入 scope、預覽、確認與稽核，避免閱讀權杖變成修改帳號。
+自動 webhook 同步、建立議題或 PR、在 PR 上逐行留言都還沒有做。webhook 要先有 HMAC 驗證、權限同步、revision 與刪除標記；其他寫入要有獨立 scope、預覽、確認與稽核。
 
-部署驗收時用自己的唯讀權杖逐項確認連線、私人程式庫隔離、固定版本、草稿交接與匯入權限。無權杖的 API 403 只能證明主機有回應。
+部署驗收時用自己的權杖逐項確認連線、私人程式庫隔離、固定版本、帶入對話、資料夾匯入與 PR 留言。無權杖的 API 403 只能證明主機有回應。

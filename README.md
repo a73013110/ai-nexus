@@ -59,7 +59,7 @@ dotnet dev-certs https --trust     # 開發機首次
 | 成果文件 | 共用編輯、不可變版本、段落工具、Word／PDF | [成果](docs/features/artifacts.md) |
 | 分享 | 具名收件人、版本快照、附件授權、到期與撤銷 | [分享](docs/features/sharing.md) |
 | 品質評測 | 私人回饋、固定題庫、模型與指令比較、人工評分 | [品質](docs/features/quality.md) |
-| 程式庫 | Gitea 唯讀檔案與議題、固定 commit 快照、背景 AI review | [Gitea](docs/features/gitea.md)、[程式碼 review](docs/features/code-review.md) |
+| 程式庫 | 用個人 Gitea 權限閱讀程式碼、提交、議題與 PR；帶入對話、資料夾匯入知識庫、AI 檢閱並可貼回 PR | [Gitea](docs/features/gitea.md)、[程式碼 review](docs/features/code-review.md) |
 | 連網搜尋 | 手動開啟、SearXNG／Brave、來源與時間、配額 | [網路搜尋](docs/features/web-search.md) |
 | 資料來源 | 公文／校務唯讀 adapter、歷程、私人成果與聊天草稿 | [資料來源](docs/features/integrations.md) |
 | 通知 | 共用通知中心、未讀、進度與分享事件、瀏覽器通知 | [通知](docs/features/notifications.md) |

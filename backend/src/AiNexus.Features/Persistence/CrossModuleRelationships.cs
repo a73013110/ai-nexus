@@ -10,7 +10,10 @@ using AiNexus.Features.Integrations;
 using AiNexus.Features.Library;
 using AiNexus.Features.Notifications;
 using AiNexus.Features.Projects;
-using AiNexus.Features.Repositories;
+using AiNexus.Features.Repositories.Browsing;
+using AiNexus.Features.Repositories.Connections;
+using AiNexus.Features.Repositories.Handoff;
+using AiNexus.Features.Repositories.Reviews;
 using AiNexus.Features.Sharing;
 using AiNexus.Features.WebSearch;
 using Microsoft.EntityFrameworkCore;
@@ -62,7 +65,9 @@ internal sealed class CrossModuleRelationships :
     IEntityTypeConfiguration<MessageFeedback>,
     IEntityTypeConfiguration<RetrievalEvaluation>,
     IEntityTypeConfiguration<RepositoryConnection>,
+    IEntityTypeConfiguration<RepositoryFolderImport>,
     IEntityTypeConfiguration<RepositoryImport>,
+    IEntityTypeConfiguration<RepositoryPin>,
     IEntityTypeConfiguration<RepositoryReview>,
     IEntityTypeConfiguration<ShareLink>,
     IEntityTypeConfiguration<ShareRecipient>,
@@ -163,7 +168,15 @@ internal sealed class CrossModuleRelationships :
 
     public void Configure(EntityTypeBuilder<RepositoryConnection> repositoryConnection) => repositoryConnection.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
 
+    public void Configure(EntityTypeBuilder<RepositoryFolderImport> repositoryFolderImport)
+    {
+        repositoryFolderImport.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
+        repositoryFolderImport.HasOne<BackgroundJob>().WithMany().HasForeignKey(x => x.JobId).OnDelete(DeleteBehavior.Restrict);
+    }
+
     public void Configure(EntityTypeBuilder<RepositoryImport> repositoryImport) => repositoryImport.HasOne<KnowledgeDocument>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Restrict);
+
+    public void Configure(EntityTypeBuilder<RepositoryPin> repositoryPin) => repositoryPin.HasOne<NexusUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
 
     public void Configure(EntityTypeBuilder<RepositoryReview> repositoryReview)
     {

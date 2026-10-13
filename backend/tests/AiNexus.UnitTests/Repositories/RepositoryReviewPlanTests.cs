@@ -1,6 +1,6 @@
 using System.Text;
 using AiNexus.Features.Inference;
-using AiNexus.Features.Repositories;
+using AiNexus.Features.Repositories.Reviews;
 
 namespace AiNexus.UnitTests.Repositories;
 
@@ -50,5 +50,12 @@ public sealed class RepositoryReviewPlanTests
         Assert.True(Assert.Single(RepositoryReviewService.Split("diff --git a/a.png b/a.png\nBinary files a/a.png and b/a.png differ\n", 1000).Value!).Binary);
         Assert.Equal("review_no_changes", RepositoryReviewService.Split("", 1000).Error?.Code);
         Assert.Equal("repository_diff_limit", RepositoryReviewService.Split("diff --git a/a b/a\n" + new string('x', 257000), 12000).Error?.Code);
+    }
+
+    [Fact]
+    public void OnlyQuickReviewsAndSummariesAreOffered()
+    {
+        Assert.True(RepositoryReviewPlan.IsPurpose("review")); Assert.True(RepositoryReviewPlan.IsPurpose("summary"));
+        Assert.False(RepositoryReviewPlan.IsPurpose("typos"));
     }
 }

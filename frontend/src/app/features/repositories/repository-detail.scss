@@ -1,0 +1,85 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: grid;
+  gap: var(--p-space-4);
+  min-width: 0;
+}
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--p-space-3);
+  border-bottom: 1px solid var(--tile-line);
+}
+.sections {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.ref {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-2);
+  padding-bottom: var(--p-space-2);
+}
+.flag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--p-radius-pill);
+  background: var(--tile-inset);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  --icon-size: var(--icon-xs);
+}
+.ref-select {
+  max-width: 16rem;
+}
+.sha {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--tile-line);
+  border-radius: var(--p-radius-pill);
+  background: var(--surface);
+  color: var(--secondary);
+  font: var(--text-caption) var(--font-code);
+  cursor: pointer;
+  transition:
+    border-color var(--motion) var(--ease),
+    color var(--motion) var(--ease);
+  --icon-size: var(--icon-sm);
+  &:hover {
+    border-color: var(--line);
+    color: var(--ink);
+  }
+  &:active {
+    scale: 0.97;
+  }
+}
+.content {
+  min-width: 0;
+}
+.loading {
+  display: grid;
+  gap: var(--p-space-4);
+}
+.bar-skeleton {
+  height: 2.5rem;
+  border-radius: var(--p-radius-md);
+}
+.body-skeleton {
+  height: 22rem;
+  border-radius: var(--tile-radius);
+}
+@include bp.below(phone) {
+  .ref {
+    width: 100%;
+  }
+}

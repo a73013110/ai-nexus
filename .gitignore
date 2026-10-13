@@ -42,4 +42,8 @@ Thumbs.db
 # Local state of AI coding agents
 /.agents/
 /.codex/
-.claude/worktrees/
+
+# Claude Code：預設忽略個人設定，只放行共用的部分
+.claude/*
+!.claude/rules/
+!.claude/rules/**

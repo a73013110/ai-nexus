@@ -1,465 +1,648 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, type Route } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import {
-  ApiFixture,
-  chooseSelect,
-  expectViewportContained,
-  settleEntrance,
-  expectCompactWorkspace,
-} from "./fixtures";
+import { ApiFixture, expectViewportContained } from "./fixtures";
 
-async function reviewFixture(page: Page, existing = false) {
-  const core = new ApiFixture();
-  core.extraFeatures.push(
-    { id: "repositories", name: "程式庫", route: "/repositories" },
-    { id: "tasks", name: "背景任務", route: "/tasks" },
-  );
-  await core.attach(page);
-  const id = randomUUID(),
-    commit = "a".repeat(40),
-    basis = "b".repeat(40);
-  let release!: () => void;
-  const ready = new Promise<void>((resolve) => (release = resolve));
-  const job = {
-    id: randomUUID(),
-    subjectId: id,
-    kind: "repository-review",
-    label: "team/repo",
-    status: "running",
-    stage: "檢閱區段 1 / 2",
-    attempt: 1,
-    completedUnits: 0,
-    totalUnits: 3,
-    cancelRequested: false,
-    errorCode: null,
-    errorMessage: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
+const head = "c".repeat(40),
+  middle = "b".repeat(40),
+  first = "a".repeat(40),
+  root = "9".repeat(40),
+  dev = "d".repeat(40);
+
+const repository = {
+  fullName: "team/nexus",
+  description: "AI 工作平台",
+  private: true,
+  archived: false,
+  empty: false,
+  defaultBranch: "main",
+  language: "C#",
+  stars: 3,
+  forks: 1,
+  openIssues: 1,
+  openPulls: 1,
+  updatedAt: new Date().toISOString(),
+  url: "https://gitea.example/team/nexus",
+  pinned: false,
+};
+
+const commit = (
+  sha: string,
+  title: string,
+  parents: string[],
+  day: string,
+) => ({
+  sha,
+  title,
+  message: `${title}\n\n詳細說明 ${title}`,
+  author: "kai",
+  at: `${day}T08:00:00Z`,
+  parents,
+});
+const commits = [
+  commit(head, "修正登入逾時", [middle], "2026-10-12"),
+  commit(middle, "新增匯出 API", [first], "2026-10-12"),
+  commit(first, "初始版本", [root], "2026-10-10"),
+];
+
+const diff = [
+  "diff --git a/src/app.ts b/src/app.ts",
+  "--- a/src/app.ts",
+  "+++ b/src/app.ts",
+  "@@ -1,2 +1,2 @@",
+  " export const answer = 42;",
+  "-console.log(answer);",
+  "+console.info(answer);",
+  "diff --git a/docs/new.md b/docs/new.md",
+  "new file mode 100644",
+  "--- /dev/null",
+  "+++ b/docs/new.md",
+  "@@ -0,0 +1 @@",
+  "+# 新文件",
+  "",
+].join("\n");
+
+const file = (path: string, text: string) => ({
+  commit: head,
+  path,
+  text,
+  size: text.length,
+  url: `${repository.url}/src/commit/${head}/${path}`,
+});
+
+const label = { name: "bug", color: "#d73a4a" };
+const pull = {
+  number: 2,
+  title: "登入逾時改為可設定",
+  state: "open",
+  merged: false,
+  draft: false,
+  author: "mei",
+  headRef: "feature/timeout",
+  baseRef: "main",
+  labels: [label],
+  comments: 1,
+  createdAt: "2026-10-11T08:00:00Z",
+  updatedAt: "2026-10-12T08:00:00Z",
+  url: `${repository.url}/pulls/2`,
+};
+const issue = {
+  number: 1,
+  title: "登入後偶爾被登出",
+  state: "open",
+  author: "lin",
+  labels: [label],
+  assignees: [],
+  comments: 1,
+  createdAt: "2026-10-09T08:00:00Z",
+  updatedAt: "2026-10-12T08:00:00Z",
+  url: `${repository.url}/issues/1`,
+};
+const comment = {
+  id: 7,
+  author: "kai",
+  body: "已在 **#2** 修正。",
+  createdAt: "2026-10-12T09:00:00Z",
+  url: `${repository.url}/issues/1#issuecomment-7`,
+};
+
+class RepositoryFixture {
+  readonly core = new ApiFixture();
+  readonly requests: {
+    method: string;
+    path: string;
+    body: unknown;
+    query: URLSearchParams;
+  }[] = [];
+  connection = {
+    available: true,
+    connected: true,
+    baseUrl: "https://gitea.example/",
+    login: "kai",
+    connectedAt: new Date().toISOString(),
   };
-  const review = {
-    id,
-    repository: "team/repo",
-    commit,
-    baseCommit: basis,
-    purpose: "summary",
-    note: "",
-    modelId: "fixture:8b",
-    createdAt: job.createdAt,
-    job,
-  };
-  let created = false;
-  let report: object | null = null;
-  const calls = { commits: 0, detail: 0 };
-  await page.route("**/api/v1/repositories**", async (route) => {
-    const url = new URL(route.request().url()),
-      path = url.pathname;
-    if (path.endsWith("/connection"))
-      return route.fulfill({
-        json: {
-          available: true,
-          connected: true,
-          baseUrl: "https://gitea.example/",
-          login: "fixture",
-          notice: "",
-        },
-      });
-    if (path.endsWith("/tree"))
-      return route.fulfill({
-        json: { repository: "team/repo", commit, path: "", entries: [] },
-      });
-    if (path.endsWith("/commits")) {
-      calls.commits++;
-      await ready;
-      return route.fulfill({
+  listFailure: { status: number; code: string } | null = null;
+  pinned = false;
+  reviews: Record<string, unknown>[] = [];
+  /** Reads of a review before it reports completion. */
+  pendingReads = 1;
+
+  constructor() {
+    this.core.extraFeatures.push(
+      { id: "repositories", name: "程式庫", route: "/repositories" },
+      { id: "knowledge", name: "知識庫", route: "/knowledge" },
+      { id: "tasks", name: "背景任務", route: "/tasks" },
+    );
+  }
+
+  async attach(page: Page) {
+    await this.core.attach(page);
+    await page.route("**/api/v1/repositories**", (route) => this.handle(route));
+    await page.route("**/api/v1/knowledge/collections", (route) =>
+      route.fulfill({
         json: [
-          { sha: commit, message: "最後版本" },
-          { sha: basis, message: "起始版本" },
-        ],
-      });
-    }
-    if (path.endsWith("/reviews")) {
-      if (route.request().method() === "POST") {
-        expect(route.request().postDataJSON()).toMatchObject({
-          purpose: "summary",
-          commit,
-          baseCommit: basis,
-        });
-        created = true;
-        return route.fulfill({ json: review });
-      }
-      return route.fulfill({ json: created || existing ? [review] : [] });
-    }
-    if (path.endsWith("/" + id)) {
-      calls.detail++;
-      return route.fulfill({
-        json: {
-          review,
-          version: 2,
-          report,
-          sections: [
-            {
-              ordinal: 0,
-              label: "src/auth.ts",
-              diff: "+authorize(user)",
-              output: "區段筆記，不應預設展開",
-              binary: false,
-              truncated: false,
-            },
-          ],
-        },
-      });
-    }
-    return route.fulfill({
-      json: {
-        items: [
           {
-            fullName: "team/repo",
+            resource: {
+              id: randomUUID(),
+              name: "工程知識",
+              canEdit: true,
+              isOwner: true,
+            },
             description: "",
-            private: true,
-            defaultBranch: "main",
-            url: "https://gitea.example/team/repo",
+            documentCount: 0,
           },
         ],
+      }),
+    );
+  }
+
+  private job(status: string) {
+    const now = new Date().toISOString();
+    return {
+      id: randomUUID(),
+      subjectId: randomUUID(),
+      kind: "repository-review",
+      label: "team/nexus",
+      status,
+      stage: status === "completed" ? "完成" : "檢閱區段 1 / 2",
+      attempt: 1,
+      completedUnits: status === "completed" ? 2 : 1,
+      totalUnits: 2,
+      cancelRequested: false,
+      errorCode: null,
+      errorMessage: null,
+      issueCode: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+  }
+
+  private async handle(route: Route) {
+    const request = route.request(),
+      url = new URL(request.url()),
+      path = url.pathname.replace("/api/v1/repositories", ""),
+      method = request.method(),
+      body = request.postData() ? request.postDataJSON() : null;
+    this.requests.push({ method, path, body, query: url.searchParams });
+    const json = (value: unknown, status = 200) =>
+      route.fulfill({ status, json: value });
+    if (path === "/connection") return json(this.connection);
+    if (path === "") {
+      if (this.listFailure)
+        return route.fulfill({
+          status: this.listFailure.status,
+          contentType: "application/problem+json",
+          body: JSON.stringify({
+            title: "Forbidden",
+            code: this.listFailure.code,
+          }),
+        });
+      const q = url.searchParams.get("q") ?? "";
+      return json({
+        items:
+          q && !"nexus".includes(q)
+            ? []
+            : [{ ...repository, pinned: this.pinned }],
+        pinned: this.pinned
+          ? [
+              {
+                fullName: repository.fullName,
+                description: repository.description,
+                private: true,
+                pinnedAt: new Date().toISOString(),
+              },
+            ]
+          : [],
         page: 1,
         hasMore: false,
-      },
-    });
-  });
-  return {
-    release,
-    calls,
-    id,
-    job,
-    commit,
-    basis,
-    setReport: (value: object) => (report = value),
-  };
+      });
+    }
+    const review = /^\/reviews\/([^/]+)(?:\/(comment|cancel|retry))?$/.exec(
+      path,
+    );
+    if (review) {
+      const row = this.reviews.find((x) => x["id"] === review[1]);
+      if (!row)
+        return json({ title: "Not found", code: "review_not_found" }, 404);
+      if (review[2] === "comment") {
+        row["commentUrl"] = `${repository.url}/pulls/2#issuecomment-99`;
+        return json(row);
+      }
+      const done = this.pendingReads-- <= 0;
+      if (done) row["job"] = this.job("completed");
+      return json({
+        review: row,
+        sections: [
+          {
+            ordinal: 1,
+            label: "src/app.ts",
+            diff: "@@ -1 +1 @@\n-a\n+b",
+            binary: false,
+            output: "此段沒有問題。",
+            truncated: false,
+            inputTokens: 10,
+            outputTokens: 5,
+            elapsedMs: 900,
+          },
+        ],
+        report: done
+          ? {
+              output: "## 結論\n\n變更把日誌層級改為 info。",
+              truncated: false,
+              inputTokens: 1200,
+              outputTokens: 300,
+              elapsedMs: 4200,
+            }
+          : null,
+      });
+    }
+    const repo = path.replace("/team/nexus", "");
+    if (repo === "")
+      return json({
+        repository: { ...repository, pinned: this.pinned },
+        commit: head,
+        branches: [
+          { name: "main", commit: head },
+          { name: "dev", commit: dev },
+        ],
+        tags: [{ name: "v1.0", commit: first }],
+      });
+    if (repo === "/pin") {
+      this.pinned = method === "PUT";
+      return route.fulfill({ status: 204 });
+    }
+    if (repo === "/tree") {
+      const folder = url.searchParams.get("path") ?? "";
+      return json(
+        folder === "docs"
+          ? {
+              commit: head,
+              path: "docs",
+              entries: [
+                {
+                  name: "guide.md",
+                  path: "docs/guide.md",
+                  kind: "file",
+                  size: 40,
+                },
+              ],
+              readme: null,
+            }
+          : {
+              commit: head,
+              path: "",
+              entries: [
+                { name: "docs", path: "docs", kind: "dir", size: 0 },
+                {
+                  name: "README.md",
+                  path: "README.md",
+                  kind: "file",
+                  size: 30,
+                },
+                { name: "app.ts", path: "app.ts", kind: "file", size: 48 },
+              ],
+              readme: file(
+                "README.md",
+                "# Nexus\n\n給團隊用的 **AI 工作平台**。",
+              ),
+            },
+      );
+    }
+    if (repo === "/file") {
+      const target = url.searchParams.get("path")!;
+      return json(
+        file(
+          target,
+          target.endsWith(".ts")
+            ? "export const answer = 42;\nconsole.log(answer);\n"
+            : "# 指南\n",
+        ),
+      );
+    }
+    if (repo === "/commits")
+      return json({ items: commits, page: 1, hasMore: false });
+    if (repo === "/diff") {
+      const base = url.searchParams.get("base");
+      const headCommit =
+        commits.find((x) => x.sha === url.searchParams.get("head")) ??
+        commits[0];
+      return json({
+        head: headCommit,
+        base: base
+          ? (commits.find((x) => x.sha === base) ??
+            commit(base, "更早的版本", [], "2026-10-01"))
+          : null,
+        diff,
+        tooLarge: false,
+      });
+    }
+    if (repo === "/pulls")
+      return json({
+        items: url.searchParams.get("state") === "closed" ? [] : [pull],
+        page: 1,
+        hasMore: false,
+      });
+    if (repo === "/pulls/2")
+      return json({
+        pull,
+        body: "把逾時改成設定值。",
+        headCommit: head,
+        baseCommit: first,
+        comments: [comment],
+      });
+    if (repo === "/issues")
+      return json({ items: [issue], page: 1, hasMore: false });
+    if (repo === "/issues/1")
+      return json({
+        issue,
+        body: "重現步驟：閒置 10 分鐘。",
+        comments: [comment],
+      });
+    if (repo === "/chat") {
+      const now = new Date().toISOString();
+      const conversation = {
+        id: randomUUID(),
+        title: "team/nexus",
+        activeLeafId: null,
+        createdAt: now,
+        updatedAt: now,
+        isFavorite: false,
+        isArchived: false,
+        systemInstruction: "",
+        labels: [],
+      };
+      const attachment = {
+        id: randomUUID(),
+        fileName: "team-nexus.md",
+        contentType: "text/markdown",
+        size: 120,
+        isImage: false,
+        analysisMode: "extracted-text",
+      };
+      this.core.conversations.unshift(conversation);
+      this.core.attachments.push(attachment);
+      return json({
+        conversation,
+        attachment,
+        prompt: "請閱讀附件中的程式碼。",
+        skipped: [],
+      });
+    }
+    if (repo === "/imports")
+      return json({
+        id: randomUUID(),
+        files: 4,
+        job: { ...this.job("queued"), kind: "repository-import" },
+      });
+    if (repo === "/reviews" && method === "POST") {
+      const created = {
+        id: randomUUID(),
+        repository: "team/nexus",
+        commit: (body as { commit: string | null }).commit ?? head,
+        baseCommit: (body as { baseCommit: string | null }).baseCommit,
+        pullRequest: (body as { pullRequest: number | null }).pullRequest,
+        purpose: (body as { purpose: string }).purpose,
+        modelId: "fixture:8b",
+        modelDisplayName: "本機測試模型",
+        note: "",
+        createdAt: new Date().toISOString(),
+        job: this.job("running"),
+        commentUrl: null,
+      };
+      this.reviews.unshift(created);
+      return json(created, 201);
+    }
+    if (repo === "/reviews") return json(this.reviews);
+    return json({ title: "Not found", code: "gitea_not_found" }, 404);
+  }
 }
 
-test("review stays usable while commits load and presents one expandable overall report", async ({
+test("a rejected Gitea token says what to fix instead of a generic failure", async ({
   page,
 }) => {
-  const fixture = await reviewFixture(page);
+  const fixture = new RepositoryFixture();
+  fixture.listFailure = { status: 403, code: "gitea_unauthorized" };
+  await fixture.attach(page);
   await page.goto("/repositories");
-  await page.locator(".repository-row").click();
-  await page.getByRole("button", { name: "AI Review", exact: true }).click();
   await expect(
-    page.getByRole("status").filter({ hasText: "正在取得近期 commit" }),
+    page.getByText("Gitea 拒絕這個權杖，請確認權杖仍有效，或更新授權。"),
   ).toBeVisible();
+  await expect(page.getByText("操作未完成")).toHaveCount(0);
+});
+
+test("a connection that is not set up shows the steps without an error", async ({
+  page,
+}) => {
+  const fixture = new RepositoryFixture();
+  fixture.connection = { ...fixture.connection, connected: false, login: "" };
+  await fixture.attach(page);
+  await page.goto("/repositories");
   await expect(
-    page.getByRole("button", { name: "建立背景 review", exact: true }),
-  ).toBeEnabled();
-  await chooseSelect(page, "檢閱範圍", "Commit 區間");
-  fixture.release();
-  // The pickers re-render when the commits arrive; an earlier click opens a list that is replaced.
+    page.getByRole("heading", { name: "連接你的 Gitea" }),
+  ).toBeVisible();
+  await expect(page.locator("nx-notice")).toHaveCount(0);
+});
+
+test("browsing code pins a commit, reads folders and files, and hands picked files to a conversation", async ({
+  page,
+}) => {
+  const fixture = new RepositoryFixture();
+  await fixture.attach(page);
+  await page.goto("/repositories");
+  await page.getByRole("link", { name: /team\/nexus/ }).click();
+  await expect(page).toHaveURL(/\/repositories\/team\/nexus$/);
+  await expect(page.getByRole("button", { name: /ccccccc/ })).toBeVisible();
+  // The folder's README is rendered under its entries.
   await expect(
-    page.getByRole("status").filter({ hasText: "正在取得近期 commit" }),
-  ).toBeHidden();
-  const start = page.getByRole("combobox", { name: "起點 SHA", exact: true });
-  await start.click();
-  await page.getByRole("combobox", { name: "搜尋起點 SHA" }).fill("起始");
-  await page.getByRole("option", { name: /起始版本/ }).click();
-  await expect(start).toContainText("bbbbbbbbbb");
-  await expect(
-    page.getByRole("listbox", { name: "起點 SHA", exact: true }),
-  ).toBeHidden();
-  const endpoint = page.getByRole("combobox", {
-    name: "終點 SHA",
-    exact: true,
+    page.getByRole("heading", { name: "Nexus", exact: true }),
+  ).toBeVisible();
+
+  await page.getByRole("button", { name: "釘選到列表上方" }).click();
+  await expect(page.getByRole("button", { name: "取消釘選" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  expect(
+    fixture.requests.some((x) => x.method === "PUT" && x.path.endsWith("/pin")),
+  ).toBe(true);
+
+  await page.getByRole("link", { name: "app.ts" }).click();
+  await expect(page).toHaveURL(/file=app\.ts/);
+  await expect(page.locator(".gutter")).toHaveText("1\n2");
+  await expect(page.locator(".code code")).toContainText(
+    "console.log(answer);",
+  );
+  expect(
+    fixture.requests.find((x) => x.path.endsWith("/file"))?.query.get("commit"),
+  ).toBe(head);
+
+  await page.getByRole("link", { name: "nexus", exact: true }).click();
+  await page.getByRole("checkbox", { name: "選取 app.ts" }).check();
+  await page.getByRole("link", { name: "docs" }).click();
+  await page.getByRole("checkbox", { name: "選取 guide.md" }).check();
+  const selection = page.getByRole("region", { name: "已選取的檔案" });
+  await expect(selection).toContainText("2 / 20 個檔案");
+  await selection.getByRole("button", { name: "帶入對話" }).click();
+  await expect(page).toHaveURL(/\/chat\/[\da-f-]{36}$/);
+  expect(fixture.requests.find((x) => x.path.endsWith("/chat"))?.body).toEqual({
+    commit: head,
+    paths: ["app.ts", "docs/guide.md"],
+    issue: null,
+    pull: null,
   });
-  await endpoint.click();
-  await expect(page.getByRole("option", { name: /起始版本/ })).toBeDisabled();
-  await page.keyboard.press("Escape");
-  const picker = page
-    .locator("nx-repository-commit-picker")
-    .filter({ has: start });
-  await picker.getByText("貼上完整 SHA", { exact: true }).click();
-  const sha = page.getByRole("textbox", { name: "起點 SHA（完整 SHA）" });
-  await sha.fill("c".repeat(40));
-  await expect(start).toContainText("自訂版本");
-  await sha.fill(fixture.basis);
-  await page.getByRole("combobox", { name: "檢閱目的", exact: true }).click();
-  await page.getByRole("option", { name: /^變更摘要/ }).click();
+});
+
+test("a commit range opens its diff and a summary review that reports back", async ({
+  page,
+}) => {
+  const fixture = new RepositoryFixture();
+  await fixture.attach(page);
+  await page.goto("/repositories/team/nexus/commits");
+  await expect(
+    page.getByRole("heading", { name: /2026年10月12日/ }),
+  ).toBeVisible();
   await page
-    .getByRole("button", { name: "建立背景 review", exact: true })
+    .getByRole("button", { name: "選為區間端點：修正登入逾時" })
     .click();
-  await expect(page.locator(".review-report")).toContainText(
-    "正在分析變更並彙整整體報告",
+  await page.getByRole("button", { name: "選為區間端點：初始版本" }).click();
+  const range = page.getByRole("region", { name: "提交區間" });
+  await expect(range).toContainText("3 個提交");
+  await range.getByRole("button", { name: "查看區間變更" }).click();
+  // The older end is included, so the range starts after its parent.
+  await expect(page).toHaveURL(new RegExp(`/compare/${root}\\.\\.\\.${head}$`));
+  await expect(page.getByText("2 個檔案")).toBeVisible();
+  await expect(page.locator(".line[data-kind='add']").first()).toContainText(
+    "console.info(answer);",
   );
-  const stage = page.locator(".review-results .job-stage-label");
-  const [signal, label] = await Promise.all([
-    stage.locator("svg").boundingBox(),
-    stage.locator("> span").boundingBox(),
-  ]);
-  expect(signal!.x + signal!.width + 8).toBeLessThanOrEqual(label!.x);
-  await expect(page.locator(".review-evidence")).not.toHaveAttribute(
-    "open",
-    "",
-  );
-  await expect(page.locator(".review-section pre")).toHaveCount(0);
-  fixture.job.status = "completed";
-  fixture.job.stage = "整體報告已完成";
-  fixture.setReport({
-    output:
-      "結論：已彙整跨檔案影響。\n\n" +
-      "變更說明與主要影響。\n\n".repeat(100) +
-      "最後一項跨檔結論",
-    truncated: true,
-    inputTokens: 200,
-    outputTokens: 100,
-    elapsedMs: 1000,
-  });
-  await expect(
-    page.getByRole("region", { name: "整體報告內容" }),
-  ).toContainText("已彙整跨檔案影響");
-  const body = page.locator(".review-report-body");
-  expect(await body.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(
-    true,
-  );
-  await page.getByRole("button", { name: "展開完整報告", exact: true }).click();
-  await expect(body).toHaveCSS("max-height", "none");
-  await expect(page.locator(".review-report nx-notice")).toContainText(
-    "結果不完整",
-  );
-  await page.locator(".review-evidence > summary").click();
-  await page.locator(".review-section > summary").click();
-  await expect(page.locator(".review-section")).toContainText(
-    "authorize(user)",
-  );
-  await page.setViewportSize({ width: 375, height: 812 });
-  await expectViewportContained(page);
-});
 
-test("historical reports are read on selection and a deep link reuses the authorized detail while commits wait", async ({
-  page,
-}) => {
-  const fixture = await reviewFixture(page, true);
-  fixture.job.status = "completed";
-  fixture.setReport({
-    output: "已彙整變更，未發現明確缺陷。",
-    truncated: false,
-    elapsedMs: 100,
-  });
-  await page.goto("/repositories");
-  await page.locator(".repository-row").click();
-  await page.getByRole("button", { name: "AI Review", exact: true }).click();
+  await page.getByRole("button", { name: "AI 變更摘要" }).click();
+  const dialog = page.getByRole("dialog", { name: "交給 AI 初檢" });
   await expect(
-    page.getByRole("combobox", { name: "歷史 review", exact: true }),
-  ).toBeVisible();
-  expect(fixture.calls.detail).toBe(0);
-  await page.goto(`/repositories?review=${fixture.id}`);
-  await expect(page.locator(".review-report")).toContainText("未發現明確缺陷");
-  await page.locator(".review-create > summary").click();
-  await expect(
-    page.getByRole("status").filter({ hasText: "正在取得近期 commit" }),
-  ).toBeVisible();
-  expect(fixture.calls.detail).toBe(1);
-  fixture.release();
-  await expect(
-    page.getByRole("status").filter({ hasText: "正在取得近期 commit" }),
-  ).toHaveCount(0);
-  expect(fixture.calls.detail).toBe(1);
-  await page.locator(".review-create > summary").click();
-  await page.getByRole("button", { name: "檔案", exact: true }).click();
-  await page.getByRole("button", { name: "AI Review", exact: true }).click();
-  await expect(page.locator(".review-report")).toContainText("未發現明確缺陷");
-  expect(fixture.calls.detail).toBe(2);
-});
-
-test("a failed commit list and history keep manual SHA entry and the review form available", async ({
-  page,
-}) => {
-  const fixture = await reviewFixture(page);
-  await page.route("**/api/v1/repositories/commits?**", (route) =>
-    route.fulfill({
-      status: 503,
-      json: { message: "近期 commit 暫時無法取得" },
-    }),
+    dialog.getByRole("button", { name: "變更摘要" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await dialog.getByRole("button", { name: "開始" }).click();
+  await expect(page).toHaveURL(
+    /\/repositories\/team\/nexus\/reviews\/[\da-f-]{36}$/,
   );
-  await page.route("**/api/v1/repositories/reviews?**", (route) =>
-    route.fulfill({ status: 503, json: { message: "歷史紀錄暫時無法取得" } }),
-  );
-  await page.goto("/repositories");
-  await page.locator(".repository-row").click();
-  await page.getByRole("button", { name: "AI Review", exact: true }).click();
-  await expect(page.locator(".review-create")).toContainText(
-    "可直接貼上完整 SHA",
-  );
-  await page.getByText("貼上完整 SHA", { exact: true }).click();
-  await page
-    .getByRole("textbox", { name: "Commit SHA（完整 SHA）" })
-    .fill("c".repeat(40));
-  await expect(
-    page.getByRole("button", { name: "建立背景 review", exact: true }),
-  ).toBeEnabled();
-  fixture.release();
-});
-
-test("repository range review creates a fixed background task and opens the same result after navigation", async ({
-  page,
-}) => {
-  const core = new ApiFixture();
-  core.extraFeatures.push(
-    { id: "repositories", name: "程式庫", route: "/repositories" },
-    { id: "tasks", name: "背景任務", route: "/tasks" },
-  );
-  await core.attach(page);
-  const commit = "a".repeat(40),
-    basis = "b".repeat(40),
-    id = randomUUID(),
-    jobId = randomUUID();
-  let created = false;
-  const job = {
-    id: jobId,
-    subjectId: id,
-    kind: "repository-review",
-    label: "team/repo",
-    status: "completed",
-    stage: "處理完成",
-    attempt: 1,
-    completedUnits: 1,
-    totalUnits: 1,
-    cancelRequested: false,
-    errorCode: null,
-    errorMessage: null,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  const review = {
-    id,
-    repository: "team/repo",
-    commit,
-    baseCommit: basis,
+  expect(
+    fixture.requests.find(
+      (x) => x.method === "POST" && x.path.endsWith("/reviews"),
+    )?.body,
+  ).toMatchObject({
+    commit: head,
+    baseCommit: root,
+    pullRequest: null,
+    purpose: "summary",
     modelId: "fixture:8b",
-    note: "確認授權",
-    purpose: "review",
-    createdAt: job.createdAt,
-    job,
-  };
-  await page.route("**/api/v1/repositories**", (route) => {
-    const url = new URL(route.request().url()),
-      path = url.pathname;
-    if (path.endsWith("/connection"))
-      return route.fulfill({
-        json: {
-          available: true,
-          connected: true,
-          baseUrl: "https://gitea.example/",
-          login: "fixture",
-          notice: "",
-        },
-      });
-    if (path.endsWith("/commits"))
-      return route.fulfill({
-        json: [
-          { sha: commit, message: "修正授權" },
-          { sha: basis, message: "起始版本" },
-        ],
-      });
-    if (path.endsWith("/tree"))
-      return route.fulfill({
-        json: { repository: "team/repo", commit, path: "", entries: [] },
-      });
-    if (path.endsWith("/reviews")) {
-      if (route.request().method() === "POST") {
-        const body = route.request().postDataJSON();
-        expect(body).toMatchObject({
-          repository: "team/repo",
-          commit,
-          baseCommit: basis,
-          note: "確認授權",
-          purpose: "review",
-        });
-        expect(body.idempotencyKey).toMatch(/^[\da-f-]{36}$/);
-        created = true;
-        return route.fulfill({ json: review });
-      }
-      return route.fulfill({ json: created ? [review] : [] });
-    }
-    if (path.endsWith("/" + id))
-      return route.fulfill({
-        json: {
-          review,
-          version: 2,
-          report: {
-            output: "## [P2] 檢查角色範圍\n\n請測試未授權帳號的請求。",
-            truncated: false,
-            inputTokens: 800,
-            outputTokens: 120,
-            elapsedMs: 1000,
-          },
-          sections: [
-            {
-              ordinal: 0,
-              label: "src/auth.ts",
-              diff: "diff --git a/src/auth.ts b/src/auth.ts\n+authorize(user);",
-              binary: false,
-              output: "## [P2] 檢查角色範圍\n\n請測試未授權帳號的請求。",
-              truncated: false,
-              inputTokens: 800,
-              outputTokens: 120,
-              elapsedMs: 1000,
-            },
-          ],
-        },
-      });
-    return route.fulfill({
-      json: {
-        items: [
-          {
-            fullName: "team/repo",
-            description: "受控程式庫",
-            private: true,
-            defaultBranch: "main",
-            url: "https://gitea.example/team/repo",
-          },
-        ],
-        page: 1,
-        hasMore: false,
-      },
-    });
   });
-  await page.goto("/repositories");
+  await expect(page.getByRole("article", { name: "整體報告" })).toContainText(
+    "變更把日誌層級改為 info",
+    {
+      timeout: 10000,
+    },
+  );
+  await expect(page.getByRole("button", { name: "貼到 PR 留言" })).toHaveCount(
+    0,
+  );
+});
+
+test("a pull request review can be posted back as a comment once", async ({
+  page,
+}) => {
+  const fixture = new RepositoryFixture();
+  fixture.pendingReads = 0;
+  await fixture.attach(page);
+  await page.goto("/repositories/team/nexus/pulls");
+  await page.getByRole("link", { name: /登入逾時改為可設定/ }).click();
+  await expect(page.getByText("把逾時改成設定值。")).toBeVisible();
+  await expect(page.getByRole("link", { name: "查看變更" })).toHaveAttribute(
+    "href",
+    `/repositories/team/nexus/compare/${first}...${head}`,
+  );
+  await page.locator(".head").getByRole("button", { name: "AI 檢閱" }).click();
   await page
-    .locator(".repository-row")
-    .filter({ hasText: "team/repo" })
+    .getByRole("dialog", { name: "交給 AI 初檢" })
+    .getByRole("button", { name: "開始" })
     .click();
-  await page.getByRole("button", { name: "AI Review", exact: true }).click();
-  await chooseSelect(page, "檢閱範圍", "Commit 區間");
-  await page.getByRole("combobox", { name: "起點 SHA", exact: true }).click();
-  await page.getByRole("option", { name: /bbbbbbbbbb · 起始版本/ }).click();
-  await page
-    .getByLabel("特別關注的內容（選填）", { exact: true })
-    .fill("確認授權");
-  await page
-    .getByRole("button", { name: "建立背景 review", exact: true })
-    .click();
-  await expect(page).toHaveURL(new RegExp(`review=${id}`));
-  await expect(page.locator(".review-results")).toContainText(
-    "[P2] 檢查角色範圍",
+  expect(
+    fixture.requests.find(
+      (x) => x.method === "POST" && x.path.endsWith("/reviews"),
+    )?.body,
+  ).toMatchObject({
+    commit: null,
+    pullRequest: 2,
+    purpose: "review",
+  });
+  await page.getByRole("button", { name: "貼到 PR 留言" }).click();
+  const dialog = page.getByRole("dialog", { name: /貼到 Pull Request #2/ });
+  await expect(dialog.getByRole("textbox", { name: "留言內容" })).toHaveValue(
+    /變更把日誌層級改為 info/,
   );
-  await expect(page.locator(".review-create")).not.toHaveAttribute("open", "");
-  await page.reload();
-  await expect(page.locator(".review-results")).toContainText(
-    "請測試未授權帳號",
+  await dialog.getByRole("button", { name: "留言" }).click();
+  await expect(page.getByRole("link", { name: /已貼到 PR/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "貼到 PR 留言" })).toHaveCount(
+    0,
   );
-  await settleEntrance(page);
-  await expect(page.locator(".review-results > header")).toBeInViewport();
-  await expect(page.locator(".review-results > header")).toBeFocused();
-  await expect
-    .poll(() =>
-      page
-        .locator(".review-report-body")
-        .evaluate((element) => element.scrollHeight - element.clientHeight),
-    )
-    .toBeLessThanOrEqual(1);
-  await expectCompactWorkspace(page);
-  await page.setViewportSize({ width: 375, height: 812 });
-  await page.reload();
-  await expect(page.locator(".review-results")).toContainText(
-    "請測試未授權帳號",
-  );
+});
+
+test("issues filter by state and search, and open with their discussion", async ({
+  page,
+}) => {
+  const fixture = new RepositoryFixture();
+  await fixture.attach(page);
+  await page.goto("/repositories/team/nexus/issues");
+  await page.getByRole("searchbox", { name: "搜尋議題" }).fill("登出");
+  await expect(page).toHaveURL(/q=%E7%99%BB%E5%87%BA/);
+  expect(
+    fixture.requests
+      .filter((x) => x.path.endsWith("/issues"))
+      .at(-1)
+      ?.query.get("q"),
+  ).toBe("登出");
+  await page.getByRole("button", { name: "已關閉", exact: true }).click();
+  await expect(page).toHaveURL(/state=closed/);
+  await page.getByRole("link", { name: /登入後偶爾被登出/ }).click();
+  await expect(page.getByText("重現步驟：閒置 10 分鐘。")).toBeVisible();
+  await expect(page.locator(".post").nth(1)).toContainText("已在 #2 修正。");
+});
+
+test("a repository fits a phone screen", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const fixture = new RepositoryFixture();
+  await fixture.attach(page);
+  await page.goto("/repositories/team/nexus/compare/" + first + "..." + head);
+  await expect(page.getByText("2 個檔案")).toBeVisible();
   await expectViewportContained(page);
-  await expect(page.locator(".review-results > header")).toBeInViewport();
-  await expectCompactWorkspace(page);
+  await page.goto("/repositories/team/nexus?file=app.ts");
+  await expect(page.locator(".code code")).toContainText("answer");
+  await expectViewportContained(page);
+});
+
+test("notification links that only know the review id open it inside its repository", async ({
+  page,
+}) => {
+  const fixture = new RepositoryFixture();
+  fixture.pendingReads = 0;
+  const id = randomUUID();
+  fixture.reviews.push({
+    id,
+    repository: "team/nexus",
+    commit: head,
+    baseCommit: null,
+    pullRequest: null,
+    purpose: "review",
+    modelId: "fixture:8b",
+    modelDisplayName: "本機測試模型",
+    note: "",
+    createdAt: new Date().toISOString(),
+    job: {},
+    commentUrl: null,
+  });
+  await fixture.attach(page);
+  await page.goto(`/repositories?review=${id}`);
+  await expect(page).toHaveURL(
+    new RegExp(`/repositories/team/nexus/reviews/${id}$`),
+  );
+  await expect(page.getByRole("article", { name: "整體報告" })).toContainText(
+    "結論",
+  );
 });

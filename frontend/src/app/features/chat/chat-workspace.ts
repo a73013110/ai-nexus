@@ -166,8 +166,11 @@ export class ChatWorkspace {
         if (navigation !== this.navigationSequence || !this.store.ready()) return;
         void this.store.select(id).then(() => {
           if (navigation !== this.navigationSequence || this.store.selected()?.id !== id) return;
-          const prompt = this.transfer.take(id);
-          if (prompt) this.store.draft.set({ text: prompt });
+          const draft = this.transfer.take(id);
+          if (draft) {
+            this.store.draft.set({ text: draft.text });
+            if (draft.attachments.length) this.store.attachments.reset(draft.attachments);
+          }
           this.restoreTo.set(position);
         });
       });
