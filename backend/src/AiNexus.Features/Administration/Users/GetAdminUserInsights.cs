@@ -21,7 +21,7 @@ internal sealed class GetAdminUserInsights(NexusDbContext db, AdministrativeRead
 
     public async Task<Result<AdminUserDetailDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct)
     {
-        if (!await reads.AllowedAsync(actor, ct)) return AdministrationErrors.AdminRequired;
+        if (!await reads.AllowedAsync(actor, ct)) return AccessControlErrors.FeatureForbidden;
         var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (user is null) return AdministrationErrors.NotFound;
         var roles = await db.Set<UserRole>().Where(x => x.UserId == id).Select(x => x.RoleId).ToListAsync(ct);

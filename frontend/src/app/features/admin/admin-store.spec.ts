@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AuthService } from '../../core/auth/auth-service';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
+import { publicErrorHints } from '../../core/errors/public-error-catalog';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { AdminApi } from './admin-api';
 import { AdminStore } from './admin-store';
@@ -62,7 +63,7 @@ describe('admin store', () => {
     const { store, api, settle } = setup(['chat', 'operations']);
     await settle();
     expect(api.catalog).not.toHaveBeenCalled();
-    expect(store.error()).toBe('你的帳號目前沒有存取管理權限。');
+    expect(store.error()).toBe(publicErrorHints['feature_forbidden']);
   });
 
   it('searches after typing pauses and starts again from the first page', async () => {

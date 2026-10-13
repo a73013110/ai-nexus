@@ -9,20 +9,11 @@
       最近 30 天 · {{ date(stats.since) }} 至 {{ date(stats.until) }} · 全平台
     </p>
     <div class="page-actions">
-      <a routerLink="/dashboard" [queryParams]="{ scope: 'platform' }" class="secondary-button"
-        ><nx-icon name="chart" />用量與費用總覽</a
-      >
-      <button class="quiet-button" (click)="prices.emit()">
-        <nx-icon name="money" />模型與工具價格
-      </button>
       <button class="icon-button" aria-label="更新用量" title="更新用量" (click)="read.reload()">
         <nx-icon name="refresh" />
       </button>
     </div>
   </div>
-  <p class="form-note">
-    在此檢查模型使用、生成品質、原檔容量與服務狀態。日期篩選、費用及 CSV 請開啟「用量與費用總覽」。
-  </p>
   <div class="usage-grid">
     <div nxCard class="stat-card">
       <span>啟用帳號</span><strong>{{ format(stats.users) }}</strong

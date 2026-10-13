@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { apiResource } from '../../../core/api/api-resource';
+import { FeatureAccessNotice } from '../../../core/layout/feature-access-notice';
 import { FeaturePage } from '../../../core/layout/feature-page';
 import { WorkspaceSession } from '../../../core/auth/workspace-session';
 import { Notice } from '../../../shared/ui/notice';
@@ -13,7 +14,15 @@ import { RetrievalAdmin } from './retrieval-admin';
 /** Platform operations: usage, retrieval indexes and model and tool prices, one tab each. */
 @Component({
   selector: 'nx-operations-page',
-  imports: [FeaturePage, Notice, ViewSwitch, PlatformUsage, RetrievalAdmin, PriceBook],
+  imports: [
+    FeaturePage,
+    FeatureAccessNotice,
+    Notice,
+    ViewSwitch,
+    PlatformUsage,
+    RetrievalAdmin,
+    PriceBook,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './operations-page.html',
 })

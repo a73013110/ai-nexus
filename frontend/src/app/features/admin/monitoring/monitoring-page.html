@@ -45,11 +45,7 @@
     <nx-notice tone="danger" [message]="actionError()" />
   }
   @if (ready() && !session.has('monitoring')) {
-    <nx-empty-state
-      ><nx-icon name="lock" />
-      <h2>需要即時監控權限</h2>
-      <p>請由平台管理員在角色群組中授予「即時監控」功能。</p></nx-empty-state
-    >
+    <nx-feature-access-notice feature="monitoring" />
   } @else if (store.snapshot(); as data) {
     <div class="monitor-dashboard" [class.is-stale]="store.stale()">
       <nx-monitoring-hero [data]="data">

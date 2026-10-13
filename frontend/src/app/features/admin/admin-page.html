@@ -9,8 +9,9 @@
   }
   @if (store.loading()) {
     <p role="status">正在載入管理工作區…</p>
-  }
-  @if (store.error()) {
+  } @else if (session.me() && !session.has('admin')) {
+    <nx-feature-access-notice feature="admin" />
+  } @else if (store.error()) {
     <nx-notice [message]="store.error()"
       ><button notice-actions (click)="store.load()">重新載入</button>
     </nx-notice>

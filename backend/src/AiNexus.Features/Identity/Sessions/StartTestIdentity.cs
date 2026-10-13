@@ -52,7 +52,7 @@ internal sealed class StartTestIdentity(CurrentUser current, NexusDbContext db, 
         var resolved = await current.GetAsync(ct);
         if (!resolved.IsSuccess) return resolved.Error;
         var actor = resolved.Value;
-        if (!(await access.ForUserAsync(actor.Id, ct)).Features.Any(x => x.Id == FeatureIds.Admin)) return IdentityErrors.AdminRequired;
+        if (!(await access.ForUserAsync(actor.Id, ct)).Features.Any(x => x.Id == FeatureIds.Admin)) return AccessControlErrors.FeatureForbidden;
         var target = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == body.UserId && x.Enabled && x.DeletedAt == null, ct);
         if (target is null) return IdentityErrors.TestUserNotFound;
         if (target.Id == actor.Id) return IdentityErrors.TestIdentitySame;

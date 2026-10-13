@@ -31,7 +31,7 @@ AD login → Users（SID）→ UserRoles → Roles
 
 1. 新增 `Features/Reports` 與 `ReportsModule.cs`，宣告 `FeatureSeed` 子類別，列出穩定 Feature ID（例如 `reports`）、名稱、route、SortOrder 與是否只給管理員，再產生 migration。
 2. 在 `ReportsModule` 註冊服務與 `services.AddFeaturePolicy("reports")`，加入 `FeatureModules` 清單，endpoint 明確 RequireAuthorization。
-3. 前端新增 lazy route／feature，根據 `/me` 的 features 顯示入口；UI 判斷只改善體驗，API policy 仍是實際權限邊界。
+3. 前端新增 lazy route／feature，根據 `/me` 的 features 顯示入口，沒有授權時頁面顯示 `FeatureAccessNotice`（錯誤代碼見 [錯誤回應](error-contract.md#錯誤回應)）；UI 判斷只改善體驗，API policy 仍是實際權限邊界。
 4. 以至少兩個角色驗沒有 grant 的 403、資料 owner 的 404 與停用／撤銷。重產 OpenAPI 並更新文件。
 
 角色、群組、使用者分派與功能啟用由 [管理工作區](../features/administration.md) 維護。`administrator → administrators → admin` 是獨立的管理授權；一般使用者無法呼叫其編輯 API。bootstrap 使用明確設定的 AD 帳號且只授權一次，撤銷不會因再次登入而補回。

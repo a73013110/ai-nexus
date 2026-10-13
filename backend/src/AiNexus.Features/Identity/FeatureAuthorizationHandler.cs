@@ -24,6 +24,6 @@ public sealed class FeatureAuthorizationHandler(CurrentUser current, AccessServi
         if (!user.IsSuccess) { context.Fail(new ErrorFailureReason(this, user.Error)); return; }
         var grants = await access.ForUserAsync(user.Value.Id, ct);
         if (grants.Features.Any(x => requirement.FeatureIds.Contains(x.Id))) context.Succeed(requirement);
-        else context.Fail(new ErrorFailureReason(this, IdentityErrors.FeatureForbidden));
+        else context.Fail(new ErrorFailureReason(this, AccessControlErrors.FeatureForbidden));
     }
 }

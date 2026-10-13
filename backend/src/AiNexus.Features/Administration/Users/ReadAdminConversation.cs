@@ -1,3 +1,4 @@
+using AiNexus.Features.AccessControl;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
@@ -21,7 +22,7 @@ internal sealed class ReadAdminConversation(NexusDbContext db, AdministrativeRea
 
     public async Task<Result<AdminConversationDetailDto>> HandleAsync(Guid actor, Guid id, int offset, CancellationToken ct)
     {
-        if (!await reads.AllowedAsync(actor, ct)) return AdministrationErrors.AdminRequired;
+        if (!await reads.AllowedAsync(actor, ct)) return AccessControlErrors.FeatureForbidden;
         if (!AdministrativeReadAudit.ValidPage(null, offset)) return AdministrationErrors.InvalidSearch;
         var value = await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, ct);
         if (value is null) return AdministrationErrors.NotFound;

@@ -11,7 +11,7 @@
     }
   </div>
   @if (!session.has('audit') && session.me()) {
-    <nx-notice tone="danger">需要活動稽核查閱權限。</nx-notice>
+    <nx-feature-access-notice feature="audit" />
   } @else if (error()) {
     <nx-notice tone="danger" [message]="error()"
       ><button notice-actions type="button" (click)="reload()">重新載入</button></nx-notice

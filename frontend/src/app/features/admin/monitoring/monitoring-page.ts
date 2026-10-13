@@ -10,6 +10,7 @@ import { Monitor, Network, Pause, Server } from 'lucide';
 import type { OnlineSession } from '../../../core/api/schema';
 import { WorkspaceSession } from '../../../core/auth/workspace-session';
 import { safeMessage } from '../../../core/errors/safe-errors';
+import { FeatureAccessNotice } from '../../../core/layout/feature-access-notice';
 import { FeaturePage } from '../../../core/layout/feature-page';
 import { downloadBlob } from '../../../shared/browser/download';
 import { DetailDrawer } from '../../../shared/ui/detail-drawer';
@@ -46,6 +47,7 @@ const DRAWER_TITLES = {
     DetailDrawer,
     EmptyState,
     FeaturePage,
+    FeatureAccessNotice,
     Icon,
     MonitoringActivity,
     MonitoringHero,

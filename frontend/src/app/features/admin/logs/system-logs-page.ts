@@ -10,6 +10,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { FeatureAccessNotice } from '../../../core/layout/feature-access-notice';
 import { FeaturePage } from '../../../core/layout/feature-page';
 import { WorkspaceSession } from '../../../core/auth/workspace-session';
 import { apiResource } from '../../../core/api/api-resource';
@@ -48,6 +49,7 @@ interface LogPageRequest {
     Notice,
     EmptyState,
     FeaturePage,
+    FeatureAccessNotice,
     RouterLink,
     IssueCode,
     Icon,

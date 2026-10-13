@@ -29,7 +29,6 @@ internal static class KnowledgeErrors
     public static readonly Error ProfileNotBuilding = Error.Conflict("profile_not_building");
     public static readonly Error ProfileIncomplete = Error.Conflict("profile_incomplete");
     public static readonly Error ProfileNotRetired = Error.Conflict("profile_not_retired");
-    public static readonly Error AdminRequired = Error.Forbidden("admin_required");
     public static readonly Error DocumentPagesMissing = Error.Conflict("document_pages_missing");
     public static readonly Error PdfPageLimit = Error.Invalid("pdf_page_limit");
     public static readonly Error DocumentTooLarge = Error.Invalid("document_too_large");

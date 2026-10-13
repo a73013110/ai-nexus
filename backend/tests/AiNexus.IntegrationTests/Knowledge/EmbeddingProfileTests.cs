@@ -64,7 +64,7 @@ public sealed class EmbeddingProfileTests
         db.Remove(await db.Set<UserRole>().SingleAsync(x => x.UserId == bobId && x.RoleId == "operator")); await db.SaveChangesAsync();
         await Drain(factory);
         var failed = await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(x => x.Id == job.Id);
-        Assert.Equal(("failed", "admin_required"), (failed.Status, failed.ErrorCode));
+        Assert.Equal(("failed", "feature_forbidden"), (failed.Status, failed.ErrorCode));
         Assert.Empty(await db.Set<ChunkEmbedding1024>().ToListAsync());
     }
 

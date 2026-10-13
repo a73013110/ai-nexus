@@ -55,7 +55,7 @@ internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, M
                     if (!identity.IsSuccess) return identity.Error;
                     var access = scope.ServiceProvider.GetRequiredService<AccessService>();
                     if (!(await access.ForUserAsync(identity.Value.Id, ct)).Features.Any(x => x.Id == MonitoringModule.Feature))
-                        return MonitoringErrors.FeatureForbidden;
+                        return AccessControlErrors.FeatureForbidden;
                     if (Guid.TryParse(http.User.FindFirstValue(SessionIdentity.ActorId), out var actorId))
                     {
                         var actor = await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == actorId, ct);
