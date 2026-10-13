@@ -2,6 +2,7 @@
   [title]="document()?.resource?.name || session.featureName('artifacts')"
   [description]="summary()"
   [back]="id() ? { path: '/artifacts', label: '全部成果文件' } : null"
+  [tour]="tour()"
 >
   <div page-actions class="page-actions">
     @if (document(); as doc) {
@@ -17,6 +18,7 @@
         />
       }
       <nx-action-menu
+        class="artifact-export"
         label="匯出成果"
         triggerLabel="匯出"
         icon="download"
@@ -25,6 +27,7 @@
       />
       @if (documentActions().length) {
         <nx-action-menu
+          class="artifact-menu"
           label="成果操作"
           [items]="documentActions()"
           (action)="documentAction($event)"
@@ -32,7 +35,7 @@
       }
     } @else if (!id()) {
       <button
-        class="primary-button"
+        class="primary-button artifact-create"
         [disabled]="loading() || busy() || !session.has('artifacts')"
         (click)="tools.open('請在這裡撰寫工作成果。', 'save')"
       >
@@ -108,7 +111,7 @@
           <button class="quiet-button" [disabled]="busy()" (click)="discard()">捨棄修改</button>
         }
         <button
-          class="primary-button"
+          class="primary-button artifact-save"
           [disabled]="!dirty() || busy() || !content().trim() || !title().trim()"
           (click)="save()"
         >
@@ -171,7 +174,12 @@
     <span class="skeleton artifact-skeleton" role="status" aria-label="正在載入成果文件"></span>
   }
 </nx-feature-page>
-<nx-text-tools [canReplace]="true" (replace)="replace($event)" #tools /><nx-confirm-dialog />
+<nx-text-tools
+  [canReplace]="true"
+  (replace)="replace($event)"
+  (created)="created()"
+  #tools
+/><nx-confirm-dialog />
 @if (document(); as doc) {
   @if (doc.resource.isOwner && session.has('shared')) {
     <nx-share-dialog

@@ -35,6 +35,7 @@ import { ResourceGallery } from '../../shared/ui/resource-gallery';
 import { accessLabel } from '../sharing/access-label';
 import { ArtifactsApi } from './artifacts-api';
 import { TextTools } from './text-tools';
+import { artifactTour, artifactsTour } from './artifacts-tour';
 import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
 import { ShareDialog } from '../sharing/share-dialog';
 import { bindHotkeys } from '../../shared/browser/hotkeys';
@@ -182,6 +183,17 @@ export class ArtifactsPage {
       { id: 'delete', label: '移除成果文件', icon: 'trash', danger: true, disabled: this.busy() },
     ];
   });
+  /** The collection's tour, or the open document's for what this viewer can do there. */
+  readonly tour = computed(() =>
+    this.id()
+      ? artifactTour({
+          editable: !!this.editable(),
+          editing: this.mode() !== 'read' && !!this.editable(),
+          manage: this.documentActions().length > 0,
+          shared: this.session.has('shared'),
+        })
+      : artifactsTour({ chat: this.session.has('chat') }),
+  );
   readonly modeOptions = computed(() => [
     { value: 'read', label: '閱讀' },
     ...(this.editable()
@@ -222,6 +234,10 @@ export class ArtifactsPage {
     this.listRead.reload();
     this.documentRead.reload();
     this.revisionsRead.reload();
+  }
+  /** An artifact saved from the text tools opens on this same page, so the list is read again. */
+  created() {
+    this.listRead.reload();
   }
   documentAction(action: string) {
     if (action === 'share') void this.readonlyShare()?.open();
@@ -359,6 +375,9 @@ export class ArtifactsPage {
       await this.api.remove(doc.resource.id);
       if (valid()) {
         this.document.set(null);
+        // The page stays mounted across /artifacts and /artifacts/:id, so the list drops it here.
+        this.listRead.value.update((all) => all?.filter((x) => x.resource.id !== doc.resource.id));
+        this.listRead.reload();
         this.busy.set(false);
         await this.router.navigate(['/artifacts']);
       }

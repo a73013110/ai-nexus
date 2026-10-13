@@ -39,7 +39,10 @@ export interface ApiResource<T> {
   readonly refreshing: Signal<boolean>;
   /** Reviewed message for the last failed read; empty while the last read succeeded. */
   readonly error: Signal<string>;
-  /** Read again with the current request. */
+  /**
+   * Read again with the current request. Called while a new request is still loading (which may
+   * predate a write), it reads once more after that load settles instead of being ignored.
+   */
   reload(): void;
 }
 
@@ -99,5 +102,17 @@ export function apiResource<T, P = true>(options: ApiResourceOptions<T, P>): Api
       onCleanup(() => clearTimeout(timer));
     });
   }
-  return { value, loading, refreshing: ref.isLoading, error, reload: () => void ref.reload() };
+  // Angular ignores reload() while a new request loads; a write that lands meanwhile would then
+  // show the read that started before it, so the reload waits for that load instead.
+  let pendingReload = false;
+  effect(() => {
+    const status = ref.status();
+    if (!pendingReload || status === 'loading' || status === 'reloading') return;
+    pendingReload = false;
+    untracked(() => ref.reload());
+  });
+  const reload = () => {
+    if (!ref.reload() && untracked(ref.status) === 'loading') pendingReload = true;
+  };
+  return { value, loading, refreshing: ref.isLoading, error, reload };
 }
