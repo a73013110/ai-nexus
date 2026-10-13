@@ -174,7 +174,12 @@
     <span class="skeleton artifact-skeleton" role="status" aria-label="正在載入成果文件"></span>
   }
 </nx-feature-page>
-<nx-text-tools [canReplace]="true" (replace)="replace($event)" #tools /><nx-confirm-dialog />
+<nx-text-tools
+  [canReplace]="true"
+  (replace)="replace($event)"
+  (created)="created()"
+  #tools
+/><nx-confirm-dialog />
 @if (document(); as doc) {
   @if (doc.resource.isOwner && session.has('shared')) {
     <nx-share-dialog
