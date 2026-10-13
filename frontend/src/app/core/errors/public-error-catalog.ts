@@ -141,6 +141,7 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   input_too_long: '訊息超過字數上限。',
   evaluation_configuration_changed: '模型設定已變更；請建立新的任務，避免混用不同設定的結果。',
   task_input_too_long: '處理內容過長，請縮小選取範圍。',
+  stream_superseded: '已在其他視窗開啟即時監控，此視窗暫停更新；按「繼續更新」改在此視窗監控。',
   subscription_limit: '事件連線數已達上限，請關閉重複的分頁後重試。',
   invalid_cursor: '事件序號不正確。',
   run_not_found: '找不到這次生成。',

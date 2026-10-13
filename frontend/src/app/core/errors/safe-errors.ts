@@ -64,6 +64,8 @@ export class ApiError extends Error {
     readonly code: string,
     _untrustedMessage?: string,
     issueCode?: string,
+    /** Seconds from a 429's `Retry-After`, when the server sent one. */
+    readonly retryAfter?: number,
   ) {
     const issue = validIssueCode(issueCode) ? issueCode : newLocalIssue();
     super(

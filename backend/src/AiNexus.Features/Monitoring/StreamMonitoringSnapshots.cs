@@ -10,21 +10,54 @@ using AiNexus.Features.Identity.Sessions;
 
 namespace AiNexus.Features.Monitoring;
 
+/// <summary>
+/// At most <see cref="PerUser"/> live streams per user. A new stream supersedes the user's oldest instead of being refused:
+/// after a reload the old stream lingers until the server notices the browser left (a proxy may hide that until the
+/// stream expires), and refusing would lock the page out meanwhile.
+/// </summary>
 public sealed class MonitoringStreams
 {
-    private readonly Dictionary<Guid, int> counts = new();
-    public bool Enter(Guid user)
+    public const int PerUser = 3;
+    private readonly Dictionary<Guid, List<CancellationTokenSource>> open = new();
+
+    public Lease Enter(Guid user)
     {
-        lock (counts) { var count = counts.GetValueOrDefault(user); if (count >= 3) return false; counts[user] = count + 1; return true; }
+        var source = new CancellationTokenSource();
+        lock (open)
+        {
+            if (!open.TryGetValue(user, out var streams)) open[user] = streams = [];
+            if (streams.Count >= PerUser)
+            {
+                // Cancelled under the lock, so the superseded stream's lease cannot dispose the source meanwhile.
+                streams[0].Cancel();
+                streams.RemoveAt(0);
+            }
+            streams.Add(source);
+        }
+        return new(this, user, source);
     }
-    public void Exit(Guid user)
-    { lock (counts) { var count = counts.GetValueOrDefault(user); if (count <= 1) counts.Remove(user); else counts[user] = count - 1; } }
+
+    private void Exit(Guid user, CancellationTokenSource source)
+    {
+        lock (open)
+        {
+            if (open.TryGetValue(user, out var streams) && streams.Remove(source) && streams.Count == 0) open.Remove(user);
+            source.Dispose();
+        }
+    }
+
+    /// <summary>One open stream; <see cref="Superseded"/> fires when a newer stream of the same user takes its place.</summary>
+    public sealed class Lease(MonitoringStreams owner, Guid user, CancellationTokenSource source) : IDisposable
+    {
+        public CancellationToken Superseded { get; } = source.Token;
+        public void Dispose() => owner.Exit(user, source);
+    }
 }
 
 /// <summary>
-/// Server-sent snapshots for up to ten minutes, at most three streams per user. The view is audited once; every 15 seconds
-/// a fresh scope re-checks the monitoring grant and a testing identity's administrator, so revocation ends the stream
-/// with an error event.
+/// Server-sent snapshots for up to ten minutes; a user's fourth stream ends the oldest with <c>stream_superseded</c>. The view
+/// is audited once; every 15 seconds a fresh scope re-checks the monitoring grant and a testing identity's administrator, so
+/// revocation ends the stream with an error event.
 /// </summary>
 internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, MonitoringStreams streams, NexusDbContext db, IServiceScopeFactory scopes, IOptions<MonitoringOptions> options, TimeProvider clock)
 {
@@ -36,9 +69,11 @@ internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, M
     public async Task<Result> HandleAsync(HttpContext http, Guid user, int window, CancellationToken ct)
     {
         if (!MonitoringReads.ValidWindow(window)) return MonitoringErrors.InvalidWindow;
-        if (!streams.Enter(user)) return MonitoringErrors.StreamLimit;
+        using var lease = streams.Enter(user);
+        using var stream = CancellationTokenSource.CreateLinkedTokenSource(ct, lease.Superseded);
         try
         {
+            ct = stream.Token;
             await MonitoringReads.AuditAsync(db, user, "monitoring.view", ct);
             http.Response.ContentType = "text/event-stream";
             http.Response.Headers.CacheControl = "no-store"; http.Response.Headers["X-Accel-Buffering"] = "no";
@@ -74,6 +109,9 @@ internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, M
             } while (clock.GetUtcNow() < expires && await timer.WaitForNextTickAsync(ct));
             return Result.Success;
         }
-        finally { streams.Exit(user); }
+        catch (OperationCanceledException) when (lease.Superseded.IsCancellationRequested && !http.RequestAborted.IsCancellationRequested)
+        {
+            return MonitoringErrors.StreamSuperseded;
+        }
     }
 }
