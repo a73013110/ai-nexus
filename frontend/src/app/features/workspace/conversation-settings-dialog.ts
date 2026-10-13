@@ -101,10 +101,12 @@ export class ConversationSettingsDialog {
   private readonly conversations = inject(ChatConversations);
   private readonly scope = inject(ViewScope);
   readonly projectId = signal('');
-  /** The conversation being edited; each opening reads the projects it can move to. */
+  /** The conversation being edited. */
   private readonly target = signal<ConversationDto | null>(null);
+  /** Each opening reads the projects it can move to, even for the same conversation. */
+  private readonly opened = signal(0);
   private readonly projectsRead = apiResource({
-    params: () => (this.target() && this.session.has('projects') ? this.target() : undefined),
+    params: () => (this.opened() && this.session.has('projects') ? this.opened() : undefined),
     loader: () => this.projects.list(),
   });
   readonly projectOptions = computed(() => [
@@ -128,6 +130,7 @@ export class ConversationSettingsDialog {
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
   open(conversation: ConversationDto) {
     this.target.set(conversation);
+    this.opened.update((value) => value + 1);
     this.actionError.set('');
     this.projectId.set(conversation.projectId ?? '');
     this.model.set({

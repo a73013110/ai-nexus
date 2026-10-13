@@ -57,6 +57,27 @@ describe('apiResource', () => {
     expect(read.error()).not.toBe('');
   });
 
+  it('reads again after the first load when reloaded while it is in flight', async () => {
+    let version = 1;
+    let release: () => void = () => undefined;
+    const loader = vi.fn(async () => {
+      const read = version;
+      if (read === 1) await new Promise<void>((done) => (release = done));
+      return read;
+    });
+    const { read, settle } = setup({ loader });
+    TestBed.tick();
+    await vi.waitFor(() => expect(loader).toHaveBeenCalledOnce());
+    expect(read.loading()).toBe(true);
+    // A write lands while the first read is still in flight.
+    version = 2;
+    read.reload();
+    release();
+    await settle();
+    expect(loader).toHaveBeenCalledTimes(2);
+    expect(read.value()).toBe(2);
+  });
+
   it('stays idle without a request', async () => {
     const loader = vi.fn(async () => 'value');
     const { read, settle } = setup({ params: () => undefined, loader });

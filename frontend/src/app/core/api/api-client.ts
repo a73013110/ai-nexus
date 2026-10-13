@@ -165,8 +165,10 @@ export class ApiClient {
     if (method === 'GET' && !untyped.headers && !untyped.signal) {
       let read = this.reads.get(url);
       if (!read) {
-        read = this.text(url).finally(() => this.reads.delete(url));
-        this.reads.set(url, read);
+        const started: Promise<string> = this.text(url).finally(() => {
+          if (this.reads.get(url) === started) this.reads.delete(url);
+        });
+        this.reads.set(url, (read = started));
       }
       return parse<T>(await read);
     }
@@ -240,8 +242,12 @@ export class ApiClient {
         retryAfterSeconds(response.headers.get('Retry-After')),
       );
     }
-    // Any change made from this browser may affect reference data, so it is read again.
-    if (method !== 'GET') this.references.clear();
+    // Any change made from this browser may affect reference data, so it is read again. A read
+    // still in flight may predate the change, so a read after it never joins that request.
+    if (method !== 'GET') {
+      this.references.clear();
+      this.reads.clear();
+    }
     return response;
   }
 }

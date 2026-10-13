@@ -53,6 +53,28 @@ describe('api client reads', () => {
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 
+  it('does not let a read after a change join a read that started before it', async () => {
+    let finish: (response: Response) => void = () => undefined;
+    fetch.mockImplementationOnce(() => new Promise<Response>((done) => (finish = done)));
+    const api = TestBed.inject(ApiClient);
+    const before = api.get('/api/v1/projects');
+    await api.delete('/api/v1/projects/{id}', { path: { id: 'p1' } });
+    fetch.mockResolvedValueOnce(json([]));
+    const after = api.get('/api/v1/projects');
+    finish(json([{ id: 'p1' }]));
+    await expect(before).resolves.toEqual([{ id: 'p1' }]);
+    await expect(after).resolves.toEqual([]);
+    expect(fetch).toHaveBeenCalledTimes(3);
+
+    // The earlier read settling must not end the sharing of the read that replaced it.
+    fetch.mockImplementationOnce(() => new Promise<Response>((done) => (finish = done)));
+    const first = api.get('/api/v1/projects');
+    const second = api.get('/api/v1/projects');
+    finish(json([]));
+    await Promise.all([first, second]);
+    expect(fetch).toHaveBeenCalledTimes(4);
+  });
+
   it('reuses reference data until a change request or another identity', async () => {
     const api = TestBed.inject(ApiClient);
     api.session(session('u1'));

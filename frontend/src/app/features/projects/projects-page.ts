@@ -288,6 +288,8 @@ export class ProjectsPage {
         this.toast.success('專案設定已儲存');
         this.busy.set(false);
         if (!this.editingId) {
+          // The page stays mounted across /projects and /projects/:id, so the list is read again.
+          this.projectsRead.reload();
           await this.router.navigate(['/projects', value.resource.id]);
           return;
         }
@@ -374,7 +376,12 @@ export class ProjectsPage {
     this.actionError.set('');
     try {
       await this.api.remove(current.resource.id);
-      if (valid()) await this.router.navigate(['/projects']);
+      if (!valid()) return;
+      this.projectsRead.value.update((all) =>
+        all?.filter((x) => x.resource.id !== current.resource.id),
+      );
+      this.projectsRead.reload();
+      await this.router.navigate(['/projects']);
     } catch (e) {
       if (valid()) this.actionError.set(this.scope.message(e));
     } finally {
