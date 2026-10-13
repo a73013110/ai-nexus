@@ -4,6 +4,7 @@ using AiNexus.Features.AccessControl;
 using AiNexus.Features.Account;
 using AiNexus.Features.Administration.Roles;
 using AiNexus.Features.Audit;
+using AiNexus.Features.Billing;
 using AiNexus.Features.Identity.Sessions;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Projects;
@@ -26,6 +27,7 @@ public sealed class TestIdentityTests
         Assert.Equal(id, me.Id); Assert.DoesNotContain(me.Access.Features, x => x.Id == "admin");
         Assert.Equal(HttpStatusCode.NotFound, (await admin.GetAsync($"/api/v1/conversations/{own.Id}")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.GetAsync("/api/v1/admin/catalog")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await admin.GetAsync("/api/v1/admin/usage")).StatusCode);
         (await admin.PostAsJsonAsync("/api/v1/projects", new ProjectRequest("測試身分專案"))).EnsureSuccessStatusCode();
         (await admin.PostAsync("/api/v1/auth/test-identity/end", null)).EnsureSuccessStatusCode();
         await Csrf(admin); Assert.Equal(actor.Id, (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id);
@@ -46,6 +48,12 @@ public sealed class TestIdentityTests
         var id = await CreateUser(admin, LocalAccount(roles: ["member", "administrator"])); await Begin(admin, id);
         (await admin.GetAsync("/api/v1/admin/catalog")).EnsureSuccessStatusCode();
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.PutAsJsonAsync("/api/v1/admin/features/chat", new FeatureUpdateRequest("越權", 10, true))).StatusCode);
+        // Platform operations is management too: readable while testing, never writable.
+        (await admin.GetAsync("/api/v1/admin/billing/prices")).EnsureSuccessStatusCode();
+        (await admin.GetAsync("/api/v1/admin/knowledge/profiles")).EnsureSuccessStatusCode();
+        var price = new PriceRequest("google", "test-model", "USD", "api", 1, 1, 2, 0, "completed", DateTimeOffset.UtcNow, "越權");
+        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsJsonAsync("/api/v1/admin/billing/prices", price)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsync("/api/v1/admin/knowledge/capabilities/probe", null)).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await admin.PostAsJsonAsync("/api/v1/auth/test-identity", new TestIdentityRequest(Guid.NewGuid(), "巢狀切換"))).StatusCode);
         (await admin.PostAsync("/api/v1/auth/test-identity/end", null)).EnsureSuccessStatusCode();
     }

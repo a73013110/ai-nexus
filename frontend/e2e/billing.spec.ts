@@ -6,7 +6,7 @@ import {
   toasts,
 } from "./fixtures";
 
-test("price dialog creates immutable versions and stays within the viewport", async ({
+test("price tab creates immutable versions, reuses history and fits a phone", async ({
   page,
 }) => {
   const fixture = new ApiFixture();
@@ -16,9 +16,13 @@ test("price dialog creates immutable versions and stays within the viewport", as
   await page.route("**/api/v1/admin/billing/prices", (route) => {
     if (route.request().method() === "POST") {
       saved = route.request().postDataJSON();
-      return route.fulfill({ json: { ...saved, id: crypto.randomUUID() } });
+      return route.fulfill({ json: { ...saved, id: "price-1" } });
     }
-    return route.fulfill({ json: [] });
+    return route.fulfill({
+      json: saved
+        ? [{ ...saved, id: "price-1", modelDisplayName: "本地助理" }]
+        : [],
+    });
   });
   await page.route("**/api/v1/admin/billing/targets", (route) =>
     route.fulfill({
@@ -32,33 +36,37 @@ test("price dialog creates immutable versions and stays within the viewport", as
       ],
     }),
   );
-  await page.goto("/admin");
-  const tools = page.getByRole("button", { name: "管理工具", exact: true });
-  await tools.click();
+  await page.goto("/admin/operations");
   await page
-    .getByRole("menuitem", { name: "模型與工具價格", exact: true })
+    .getByRole("group", { name: "平台營運分類", exact: true })
+    .getByRole("button", { name: "模型與工具價格", exact: true })
     .click();
-  const dialog = page.getByRole("dialog", { name: "模型與工具價格版本" });
-  await expect(dialog).toBeVisible();
+  await expect(page).toHaveURL(/\/admin\/operations\?tab=prices$/);
+  const editor = page.getByRole("region", {
+    name: "新增價格版本",
+    exact: true,
+  });
+  const history = page.getByRole("region", { name: "價格歷史", exact: true });
+  await expect(history).toContainText("尚未設定價格");
   await chooseSelect(page, "計費供應商", "ollama");
   await chooseSelect(page, "計費模型或工具", "本地助理");
-  await expect(dialog).not.toContainText("qwen3:8b");
+  await expect(editor).not.toContainText("qwen3:8b");
   await chooseSelect(page, "費用類型", "內部成本估算");
-  await dialog.getByLabel("每次呼叫固定費用", { exact: true }).fill("0.3");
-  const effective = dialog.getByRole("textbox", {
+  await editor.getByLabel("每次呼叫固定費用", { exact: true }).fill("0.3");
+  const effective = editor.getByRole("textbox", {
     name: "生效時間",
     exact: true,
   });
   await expect(effective).toHaveValue("");
   await effective.fill("2026/02/30 14:30:45");
   await effective.press("Tab");
-  await expect(
-    dialog.getByRole("button", { name: "新增價格版本", exact: true }),
-  ).toBeDisabled();
+  const submit = editor.getByRole("button", {
+    name: "新增價格版本",
+    exact: true,
+  });
+  await expect(submit).toBeDisabled();
   await effective.fill("2026/10/09 14:30:45");
-  await dialog
-    .getByRole("button", { name: "新增價格版本", exact: true })
-    .click();
+  await submit.click();
   await expect(
     toasts(page).filter({ hasText: "新價格版本已儲存" }),
   ).toBeVisible();
@@ -70,31 +78,16 @@ test("price dialog creates immutable versions and stays within the viewport", as
     perRequest: 0.3,
     effectiveAt: "2026-10-09T06:30:45.000Z",
   });
+  const row = history.getByRole("button").filter({ hasText: "本地助理" });
+  await expect(row).toBeVisible();
+  await chooseSelect(page, "計費供應商", "google");
+  await row.click();
+  await expect(editor).toContainText("已帶入此版本");
+  await expect(
+    editor.getByLabel("每次呼叫固定費用", { exact: true }),
+  ).toHaveValue("0.3");
+  await page.reload();
+  await expect(history.getByRole("button")).toHaveCount(1);
   await page.setViewportSize({ width: 375, height: 812 });
-  const bounds = await dialog.boundingBox();
-  expect(bounds!.x).toBeGreaterThanOrEqual(0);
-  expect(bounds!.width).toBeLessThanOrEqual(375);
-  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(812);
-  const body = dialog.locator(".dialog-scroll");
-  expect(await body.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(
-    true,
-  );
-  expect(
-    await dialog.evaluate((el) => el.scrollHeight <= el.clientHeight),
-  ).toBe(true);
-  const bodyBounds = await body.boundingBox();
-  expect(
-    bounds!.x + bounds!.width - (bodyBounds!.x + bodyBounds!.width),
-  ).toBeGreaterThanOrEqual(8);
-  await body.hover();
-  await page.mouse.wheel(0, 500);
-  await expect
-    .poll(() => body.evaluate((el) => el.scrollTop))
-    .toBeGreaterThan(0);
   await expectViewportContained(page);
-  await page.evaluate(() => (document.documentElement.dataset.theme = "dark"));
-  await body.evaluate((el) => el.scrollTo({ top: 0, behavior: "instant" }));
-  await page.keyboard.press("Escape");
-  await expect(dialog).not.toBeVisible();
-  await expect(tools).toBeFocused();
 });

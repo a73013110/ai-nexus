@@ -23,7 +23,7 @@ public sealed class BillingModule : IFeatureModule
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         ReportSpend.MapPersonal(api);
-        var admin = api.MapGroup("/admin/billing").RequireAuthorization(Policies.Admin).WithTags("Billing");
+        var admin = api.MapGroup("/admin/billing").RequireAuthorization(Policies.Operations).WithTags("Billing");
         ManagePrices.Map(admin);
         ReportSpend.MapAdministrative(admin);
     }

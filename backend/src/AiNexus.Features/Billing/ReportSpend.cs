@@ -5,7 +5,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Billing;
 
-/// <summary>Spend reports: personal, per conversation, and platform-wide (administrators, audited).</summary>
+/// <summary>Spend reports: personal, per conversation, and platform-wide (platform operations, audited).</summary>
 internal sealed class ReportSpend(NexusDbContext db, SpendReports reports, TimeProvider clock)
 {
     public static void MapPersonal(RouteGroupBuilder api)

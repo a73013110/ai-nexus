@@ -173,7 +173,12 @@ test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", as
     }
     return route.fulfill({ status: 404 });
   });
+  await page.goto("/admin/operations");
+  await expect(
+    page.getByRole("heading", { name: "平台營運", exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "知識檢索", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/operations\?tab=retrieval$/);
   const activate = page.getByRole("button", { name: "啟用索引", exact: true });
   await expect(activate).toBeDisabled();
   await page
@@ -342,7 +347,7 @@ test("稽核表格保留捲動與欄位偏好，抽屜支援逐筆檢視和手�
   ).toHaveCount(0);
 });
 
-test("管理工具集中、分類分組，使用者分頁及功能短表單保持緊湊", async ({
+test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功能短表單保持緊湊", async ({
   page,
 }) => {
   const state = await administration(page);
@@ -361,33 +366,21 @@ test("管理工具集中、分類分組，使用者分頁及功能短表單保�
   await expect(users).toContainText("101–106 / 106");
   await users.getByRole("button", { name: "上一頁", exact: true }).click();
   await expect(users.locator("tbody tr")).toHaveCount(100);
-  await expect(
-    page.getByRole("navigation", { name: "管理分類" }).getByRole("group"),
-  ).toHaveCount(2);
+  const tabs = page.getByRole("group", { name: "存取管理分類", exact: true });
+  await expect(tabs.getByRole("button")).toHaveText([
+    "使用者",
+    "角色",
+    "功能群組與模型",
+    "功能",
+  ]);
   await expect(
     page.locator(".feature-header .page-actions button:visible"),
   ).toHaveCount(1);
-  await page.route("**/api/v1/admin/billing/prices", (route) =>
-    route.fulfill({ json: [] }),
-  );
-  await page.route("**/api/v1/admin/billing/targets", (route) =>
-    route.fulfill({ json: [] }),
-  );
-  const tools = page.getByRole("button", { name: "管理工具", exact: true });
+  const tools = page.getByRole("button", { name: "存取管理工具", exact: true });
   await tools.click();
-  const menu = page.getByRole("menu", { name: "管理工具", exact: true });
-  for (const name of ["用量與費用總覽", "模型與工具價格", "介面元件"])
-    await expect(
-      menu.getByRole("menuitem", { name, exact: true }),
-    ).toBeVisible();
-  await menu
-    .getByRole("menuitem", { name: "模型與工具價格", exact: true })
-    .click();
-  const prices = page.getByRole("dialog", { name: "模型與工具價格版本" });
-  await expect(prices).toBeVisible();
-  await prices
-    .getByRole("button", { name: "關閉價格設定", exact: true })
-    .click();
+  const menu = page.getByRole("menu", { name: "存取管理工具", exact: true });
+  await expect(menu.getByRole("menuitem")).toHaveText(["介面元件"]);
+  await page.keyboard.press("Escape");
   await expect(tools).toBeFocused();
   await page.getByRole("button", { name: "功能", exact: true }).click();
   const features = page.locator(".admin-features-table");
@@ -501,7 +494,7 @@ async function administration(page: Page) {
       },
       {
         id: "admin",
-        name: "平台管理",
+        name: "存取管理",
         route: "/admin",
         sortOrder: 90,
         enabled: true,
@@ -846,7 +839,7 @@ async function administration(page: Page) {
   });
   await page.goto("/admin");
   await expect(
-    page.getByRole("heading", { name: "平台管理", exact: true }),
+    page.getByRole("heading", { name: "存取管理", exact: true }),
   ).toBeVisible();
   await expect(page.getByText("王小明", { exact: true })).toBeVisible();
   return { fixture, catalog, bob, actor, managedUsers, audit, conversationId };
@@ -989,7 +982,7 @@ test("testing an identity clears the prior draft, shows a responsive banner and 
           features: [
             { id: "chat", name: "對話", route: "/chat" },
             ...(!testing
-              ? [{ id: "admin", name: "平台管理", route: "/admin" }]
+              ? [{ id: "admin", name: "存取管理", route: "/admin" }]
               : []),
           ],
         },
@@ -1029,7 +1022,7 @@ test("testing an identity clears the prior draft, shows a responsive banner and 
   await expect(page).toHaveURL(/\/admin$/);
   await expect(banner).toHaveCount(0);
   await expect(
-    page.getByRole("heading", { name: "平台管理", exact: true }),
+    page.getByRole("heading", { name: "存取管理", exact: true }),
   ).toBeVisible();
 });
 test("feature notes, audit and platform usage stay aligned on wide and narrow screens", async ({
@@ -1054,6 +1047,7 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
     await page.setViewportSize({ width, height: 900 });
     for (const tab of ["功能", "平台用量", "活動稽核"]) {
       if (tab === "活動稽核") await page.goto("/admin/audit");
+      else if (tab === "平台用量") await page.goto("/admin/operations");
       else await page.goto("/admin");
       const tabButton = page.getByRole("button", { name: tab, exact: true });
       if (tab !== "活動稽核") {
@@ -1136,12 +1130,15 @@ test("members have no management navigation and direct routes show an access exp
   const fixture = new ApiFixture();
   await fixture.attach(page);
   await page.goto("/admin");
-  await expect(page.getByRole("alert")).toContainText("沒有平台管理權限");
-  await expect(
-    page
-      .getByRole("navigation", { name: "工作區功能" })
-      .getByRole("link", { name: "平台管理", exact: true }),
-  ).toHaveCount(0);
+  await expect(page.getByRole("alert")).toContainText("沒有存取管理權限");
+  await page.goto("/admin/operations");
+  await expect(page.getByRole("alert")).toContainText("需要平台營運權限");
+  for (const name of ["存取管理", "平台營運"])
+    await expect(
+      page
+        .getByRole("navigation", { name: "工作區功能" })
+        .getByRole("link", { name, exact: true }),
+    ).toHaveCount(0);
 });
 
 test("administrators inspect user usage and deleted conversations through an audited read only view", async ({

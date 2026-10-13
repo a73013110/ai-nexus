@@ -15,6 +15,7 @@ public static class FeatureIds
     public const string Dashboard = "dashboard";
     public const string Repositories = "repositories";
     public const string Admin = "admin";
+    public const string Operations = "operations";
 }
 
 /// <summary>
@@ -36,6 +37,7 @@ public static class Policies
     public const string Dashboard = Prefix + FeatureIds.Dashboard;
     public const string Repositories = Prefix + FeatureIds.Repositories;
     public const string Admin = Prefix + FeatureIds.Admin;
+    public const string Operations = Prefix + FeatureIds.Operations;
 
     /// <summary>Chat or artifacts: text tools available from either surface.</summary>
     public const string Text = Prefix + "text";

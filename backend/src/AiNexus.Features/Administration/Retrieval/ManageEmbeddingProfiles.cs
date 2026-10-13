@@ -9,7 +9,7 @@ namespace AiNexus.Features.Administration.Retrieval;
 
 /// <summary>
 /// Embedding profile lifecycle: list, rebuild, activate and clear retired vectors. Each change holds the knowledge write
-/// lock and is audited.
+/// lock and is audited as an administrative change that requires platform operations.
 /// </summary>
 internal sealed class ManageEmbeddingProfiles(EmbeddingLifecycle lifecycle, KnowledgeWriteLock writes, AdministrativeAudit audit)
 {
@@ -51,7 +51,7 @@ internal sealed class ManageEmbeddingProfiles(EmbeddingLifecycle lifecycle, Know
     private async Task<Result> LockedAsync(string action, int id, Func<Task<Result>> mutation, CancellationToken ct)
     {
         await writes.Gate.WaitAsync(ct);
-        try { return await audit.MutateAsync(action, null, id.ToString(CultureInfo.InvariantCulture), mutation, ct); }
+        try { return await audit.MutateAsync(OperationsConfiguration.Feature, action, null, id.ToString(CultureInfo.InvariantCulture), mutation, ct); }
         finally { writes.Gate.Release(); }
     }
 }

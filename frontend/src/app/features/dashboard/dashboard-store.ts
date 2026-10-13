@@ -29,9 +29,11 @@ export class DashboardStore {
       ? 'platform'
       : 'personal',
   );
-  /** Only administrators can see the whole platform; others always see their own work. */
+  /** Only platform operations can see the whole platform; others always see their own work. */
   readonly scope = computed<'personal' | 'platform'>(() =>
-    this.requestedScope() === 'platform' && this.session.has('admin') ? 'platform' : 'personal',
+    this.requestedScope() === 'platform' && this.session.has('operations')
+      ? 'platform'
+      : 'personal',
   );
   readonly owner = signal('');
   readonly today = localDate(new Date());

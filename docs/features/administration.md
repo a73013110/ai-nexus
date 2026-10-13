@@ -1,6 +1,8 @@
-# 平台管理
+# 存取管理
 
-管理工作區在 `/admin`，只有有效權限包含 `admin` 的使用者可用；一般登入不會取得管理權。API 每次查詢與異動都重新驗證，寫入另要求 CSRF。相關頁面：[模型政策與配額](model-policy.md)、[測試身分](test-identity.md)、[活動稽核](activity-audit.md)、[系統日誌](system-logs.md)、[即時監控](monitoring.md)。授權模型見 [身分與授權](../architecture/access-control.md)。
+存取管理在 `/admin`，分為使用者、角色、功能群組與模型、功能四個分頁，只有有效權限包含 `admin` 的使用者可用；一般登入不會取得管理權。API 每次查詢與異動都重新驗證，寫入另要求 CSRF。頁首「⋯」選單只有「介面元件」（`/design`，見 [設計系統](../frontend/design-system.md#元件工作臺-design)）。
+
+平台用量、知識檢索與價格是另一個功能 [平台營運](operations.md)；稽核、監控、日誌各自從側欄進入：[活動稽核](activity-audit.md)、[系統日誌](system-logs.md)、[即時監控](monitoring.md)。相關頁面：[模型政策與配額](model-policy.md)、[測試身分](test-identity.md)。授權模型見 [身分與授權](../architecture/access-control.md)。
 
 ## 設定第一位管理員
 
@@ -42,7 +44,3 @@
 - 每次回答可展開總耗時、排隊、執行與輸入／輸出 tokens；執行時間包含 Context 準備與等待 provider 容量，不是供應商的純運算時間。
 - 活動視窗可搜尋標題與本文，包含封存與已軟刪除的對話；對話每頁 50 段、內容每次 100 則，顯示資料庫保存的所有分支。附件只顯示名稱與大小，不增加下載權限。
 - 唯讀 API：`GET /api/v1/admin/users/{id}/insights`、`.../users/{id}/conversations`、`/api/v1/admin/conversations/{id}`。每次重新檢查 `admin`，回應前先保存 `admin.user_usage_read`、`admin.conversations_list` 或 `admin.conversation_read` 稽核。管理員不能透過一般 API 修改他人的對話；登入頁會說明這項授權檢視。
-
-## 平台用量與費用
-
-管理工具的平台用量看最近 30 天的活躍使用者、完成／失敗／取消、各模型輸入輸出、缺失用量與原檔容量，另顯示模型供應商連線與搜尋設定。區間費用、價格版本與 CSV 在總覽的平台範圍，見 [費用](billing.md)；平台讀取與匯出都會留下稽核。

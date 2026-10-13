@@ -1,18 +1,18 @@
 import { ChangeDetectionStrategy, Component, inject, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { apiResource } from '../../core/api/api-resource';
+import { apiResource } from '../../../core/api/api-resource';
 import {
   formatBytes,
   formatDate,
   formatDuration,
   formatModelDisplayName,
   formatNumber,
-} from '../../shared/browser/format';
-import { Card } from '../../shared/ui/card';
-import { DataTable } from '../../shared/ui/data-table';
-import { Icon } from '../../shared/ui/icon';
-import { Notice } from '../../shared/ui/notice';
-import { AdminApi } from './admin-api';
+} from '../../../shared/browser/format';
+import { Card } from '../../../shared/ui/card';
+import { DataTable } from '../../../shared/ui/data-table';
+import { Icon } from '../../../shared/ui/icon';
+import { Notice } from '../../../shared/ui/notice';
+import { OperationsApi } from './operations-api';
 
 const kindNames: Record<string, string> = {
   chat: '對話',
@@ -34,9 +34,9 @@ const kindNames: Record<string, string> = {
   templateUrl: './platform-usage.html',
 })
 export class PlatformUsage {
-  private readonly api = inject(AdminApi);
+  private readonly api = inject(OperationsApi);
   readonly prices = output<void>();
-  readonly read = apiResource({ feature: 'admin', loader: () => this.api.usage() });
+  readonly read = apiResource({ feature: 'operations', loader: () => this.api.usage() });
   readonly usageModelName = formatModelDisplayName;
   readonly date = formatDate;
   readonly bytes = formatBytes;

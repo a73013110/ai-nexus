@@ -43,11 +43,11 @@
 - 讀取一律用 `core/api/api-resource.ts` 的 `apiResource()`：它等帳號載入、檢查功能授權、換帳號時重來並丟掉晚到的回應，把失敗轉成審核過的訊息。全站的載入、錯誤與重試因此是同一種寫法：`loading()` 顯示第一次讀取，`error()` 放進 Notice，重試按鈕呼叫 `reload()`。
 - 依路由或選擇讀取時，`params` 回傳目前的請求；回傳 `undefined` 表示不讀。換請求時舊值會保留到新值回來，所以畫面上若可能出現別筆資料，loader 回傳 `{ id, data }`，再用 computed 比對目前的 id（例：`projects-page.ts`、`admin-user-inspector.ts`）。
 - 需要輪詢的讀取用 `poll`（例：任務、知識庫處理中的文件），分頁隱藏時暫停。
-- 對話框每次開啟都要重讀時，用一個開啟次數的 signal 當 `params`（例：`price-book.ts`）。可編輯的表單值用 `linkedSignal` 從讀到的資料衍生，讀到新資料時自動重設（例：`settings-page.ts`）。
+- 對話框每次開啟都要重讀時，用一個開啟次數的 signal 當 `params`（例：`prompt-library-dialog.ts`）。可編輯的表單值用 `linkedSignal` 從讀到的資料衍生，讀到新資料時自動重設（例：`settings-page.ts`）。
 - 寫入是元件或 store 的方法：成功後把伺服器回傳的值寫進 `value`，或呼叫 `reload()`；寫入錯誤放在自己的 signal，與讀取錯誤合成同一個 `error`。寫入仍用 ViewScope 的 guard 忽略離開頁面或換帳號後才回來的結果。
 - 聊天的送出與整理對話先更新畫面再寫入：成功換成伺服器回傳值，失敗就還原，提問退回輸入框；只有網路中斷時保留提問供重試。
 - 寫入失敗時保留使用者的輸入（例：`NameDialog`、`TextSourceEditor`）；防止覆蓋他人變更靠伺服器的 conditional update／concurrency token，不靠前端判斷。
-- 大頁面拆成元件；同頁多個元件共用的讀取放在頁面提供（`providers`）的 store，例如 `AdminStore`（管理頁的目錄與使用者）與 `LogFilterState`（日誌篩選）。
+- 大頁面拆成元件；同頁多個元件共用的讀取放在頁面提供（`providers`）的 store，例如 `AdminStore`（存取管理四個分頁共用的功能目錄與使用者；平台營運的分頁各自讀取，不共用它）與 `LogFilterState`（日誌篩選）。
 - 例外：以下是有自己生命週期的狀態機，保留為 store，不改成 `apiResource()`：
   - 聊天：`ChatStore` 與 `ChatModels`、`ChatHistory`、`ChatRun`、`ChatDraft`、`DraftAttachments`、`KnowledgeSelection`（串流、草稿、分支與送出佇列互相牽動）。整理對話的寫入在 `ChatConversations`。
   - `NotificationStore`：輪詢後合併、保留已讀並發出瀏覽器通知；登入世代切換時清除。

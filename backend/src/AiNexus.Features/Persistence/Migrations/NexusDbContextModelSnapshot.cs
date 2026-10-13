@@ -70,9 +70,17 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "admin",
                             Enabled = true,
-                            Name = "平台管理",
+                            Name = "存取管理",
                             Route = "/admin",
                             SortOrder = 90
+                        },
+                        new
+                        {
+                            Id = "operations",
+                            Enabled = true,
+                            Name = "平台營運",
+                            Route = "/admin/operations",
+                            SortOrder = 91
                         },
                         new
                         {
@@ -88,7 +96,7 @@ namespace AiNexus.Features.Persistence.Migrations
                             Enabled = true,
                             Name = "檔案庫",
                             Route = "/files",
-                            SortOrder = 15
+                            SortOrder = 20
                         },
                         new
                         {
@@ -96,7 +104,7 @@ namespace AiNexus.Features.Persistence.Migrations
                             Enabled = true,
                             Name = "活動稽核",
                             Route = "/admin/audit",
-                            SortOrder = 92
+                            SortOrder = 97
                         },
                         new
                         {
@@ -112,7 +120,7 @@ namespace AiNexus.Features.Persistence.Migrations
                             Enabled = true,
                             Name = "系統日誌",
                             Route = "/admin/logs",
-                            SortOrder = 110
+                            SortOrder = 94
                         },
                         new
                         {
@@ -120,7 +128,7 @@ namespace AiNexus.Features.Persistence.Migrations
                             Enabled = true,
                             Name = "日誌診斷詳情",
                             Route = "",
-                            SortOrder = 111
+                            SortOrder = 95
                         },
                         new
                         {
@@ -128,7 +136,7 @@ namespace AiNexus.Features.Persistence.Migrations
                             Enabled = true,
                             Name = "日誌匯出",
                             Route = "",
-                            SortOrder = 112
+                            SortOrder = 96
                         },
                         new
                         {
@@ -136,7 +144,7 @@ namespace AiNexus.Features.Persistence.Migrations
                             Enabled = true,
                             Name = "資料來源",
                             Route = "/integrations",
-                            SortOrder = 80
+                            SortOrder = 92
                         },
                         new
                         {
@@ -144,7 +152,7 @@ namespace AiNexus.Features.Persistence.Migrations
                             Enabled = true,
                             Name = "背景任務",
                             Route = "/tasks",
-                            SortOrder = 70
+                            SortOrder = 55
                         },
                         new
                         {
@@ -160,7 +168,7 @@ namespace AiNexus.Features.Persistence.Migrations
                             Enabled = true,
                             Name = "即時監控",
                             Route = "/admin/monitoring",
-                            SortOrder = 91
+                            SortOrder = 93
                         },
                         new
                         {
@@ -168,7 +176,7 @@ namespace AiNexus.Features.Persistence.Migrations
                             Enabled = true,
                             Name = "專案",
                             Route = "/projects",
-                            SortOrder = 20
+                            SortOrder = 15
                         },
                         new
                         {
@@ -176,7 +184,7 @@ namespace AiNexus.Features.Persistence.Migrations
                             Enabled = true,
                             Name = "品質評測",
                             Route = "/quality",
-                            SortOrder = 60
+                            SortOrder = 65
                         },
                         new
                         {
@@ -184,7 +192,7 @@ namespace AiNexus.Features.Persistence.Migrations
                             Enabled = true,
                             Name = "程式庫",
                             Route = "/repositories",
-                            SortOrder = 65
+                            SortOrder = 60
                         },
                         new
                         {
@@ -332,6 +340,11 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             GroupId = "administrators",
                             FeatureId = "admin"
+                        },
+                        new
+                        {
+                            GroupId = "administrators",
+                            FeatureId = "operations"
                         },
                         new
                         {

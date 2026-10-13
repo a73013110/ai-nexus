@@ -94,6 +94,37 @@ public sealed class FeatureAccessTests
         Assert.DoesNotContain((await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features, x => x.Id == "files");
     }
 
+    [Fact]
+    public async Task OperationsAndAccessManagementAreSeparateGrants()
+    {
+        await using var factory = new NexusFactory(administrators: ["alice"]);
+        using var alice = await factory.SignedInAsync();
+        using var bob = await factory.SignedInAsync("bob");
+        var features = (await alice.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features;
+        Assert.Contains(new FeatureDto("admin", "存取管理", "/admin"), features);
+        Assert.Contains(new FeatureDto("operations", "平台營運", "/admin/operations"), features);
+        await PlatformGrants.SplitOperationsAsync(factory, (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id);
+
+        var operations = new[] { "admin/usage", "admin/billing/prices", "admin/billing/targets", "admin/billing/spend", "admin/knowledge/profiles",
+            "admin/knowledge/capabilities", "dashboard?scope=platform" };
+        var accessManagement = new[] { "admin/catalog", "admin/users" };
+        foreach (var route in operations)
+        {
+            (await bob.GetAsync($"/api/v1/{route}")).EnsureSuccessStatusCode();
+            Assert.Equal(HttpStatusCode.Forbidden, (await alice.GetAsync($"/api/v1/{route}")).StatusCode);
+        }
+        foreach (var route in accessManagement)
+        {
+            (await alice.GetAsync($"/api/v1/{route}")).EnsureSuccessStatusCode();
+            Assert.Equal(HttpStatusCode.Forbidden, (await bob.GetAsync($"/api/v1/{route}")).StatusCode);
+        }
+        Assert.Equal(HttpStatusCode.Forbidden, (await alice.PostAsync("/api/v1/admin/knowledge/capabilities/probe", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await bob.PutAsJsonAsync("/api/v1/admin/features/files", new FeatureUpdateRequest("檔案庫", 20, false))).StatusCode);
+        var bobFeatures = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.Features;
+        Assert.Contains(bobFeatures, x => x.Id == "operations");
+        Assert.DoesNotContain(bobFeatures, x => x.Id == "admin");
+    }
+
     // Only the effective-feature read of AccessService joins this table.
     private const string GrantRead = "RoleGroupFeatures";
 

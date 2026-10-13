@@ -1,8 +1,8 @@
-import { apiResource } from '../../core/api/api-resource';
-import { Notice } from '../../shared/ui/notice';
-import { ToastService } from '../../shared/ui/toast-service';
-import { Card } from '../../shared/ui/card';
-import { Field } from '../../shared/ui/field';
+import { apiResource } from '../../../core/api/api-resource';
+import { Notice } from '../../../shared/ui/notice';
+import { ToastService } from '../../../shared/ui/toast-service';
+import { Card } from '../../../shared/ui/card';
+import { Field } from '../../../shared/ui/field';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -13,23 +13,23 @@ import {
   linkedSignal,
 } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { AdminApi } from './admin-api';
+import { OperationsApi } from './operations-api';
 import type {
   CollectionDto,
   EmbeddingProfileDto,
   KnowledgeSearchDto,
   RetrievalCapabilitiesDto,
-} from '../../core/api/schema';
-import { KnowledgeApi } from '../knowledge/knowledge-api';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { formatDate } from '../../shared/browser/format';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { Select } from '../../shared/ui/select';
-import { Checkbox } from '../../shared/ui/checkbox';
-import { JobProgress } from '../tasks/job-progress';
-import { JobToasts } from '../tasks/job-toasts';
-import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
-import { RetrievalResults } from '../knowledge/retrieval-results';
+} from '../../../core/api/schema';
+import { KnowledgeApi } from '../../knowledge/knowledge-api';
+import { ViewScope } from '../../../shared/browser/view-scope';
+import { formatDate } from '../../../shared/browser/format';
+import { WorkspaceSession } from '../../../core/auth/workspace-session';
+import { Select } from '../../../shared/ui/select';
+import { Checkbox } from '../../../shared/ui/checkbox';
+import { JobProgress } from '../../tasks/job-progress';
+import { JobToasts } from '../../tasks/job-toasts';
+import { ConfirmDialog } from '../../../shared/ui/confirm-dialog';
+import { RetrievalResults } from '../../knowledge/retrieval-results';
 
 @Component({
   selector: 'nx-retrieval-admin',
@@ -50,18 +50,18 @@ import { RetrievalResults } from '../knowledge/retrieval-results';
   styleUrl: './retrieval-admin.scss',
 })
 export class RetrievalAdmin {
-  private readonly api = inject(AdminApi);
+  private readonly api = inject(OperationsApi);
   private readonly knowledge = inject(KnowledgeApi);
   private readonly scope = inject(ViewScope);
   readonly session = inject(WorkspaceSession);
   private readonly profilesRead = apiResource({
-    feature: 'admin',
+    feature: 'operations',
     loader: () => this.api.embeddingProfiles(),
     poll: (profiles) =>
       profiles?.some((x) => x.job && ['queued', 'running'].includes(x.job.status)) ? 2000 : null,
   });
   private readonly capabilitiesRead = apiResource({
-    feature: 'admin',
+    feature: 'operations',
     loader: () => this.api.retrievalCapabilities(),
   });
   private readonly collectionsRead = apiResource({ loader: () => this.knowledge.collections() });

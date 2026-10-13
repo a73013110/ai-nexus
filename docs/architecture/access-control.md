@@ -2,11 +2,11 @@
 
 AD 或本地密碼驗證決定「你是誰」，access schema 決定「你可以用哪些功能」，conversation owner 決定「你可讀寫哪筆資料」。兩種登入可綁定同一個平台 UserId；停用或移除使用者會排除所有 grant。取得 chat 功能也只能存取自己的對話，其他人的 ID 一律以 404 回應。
 
-具有 `admin` 功能的管理員可透過獨立、會留下敏感讀取稽核的管理 API 檢視使用者用量及對話。此例外僅提供唯讀內容，沒有放寬一般 conversations 的 owner 檢查或附件下載 ACL；操作方式見 [管理工作區](../features/administration.md)。
+具有 `admin` 功能的管理員可透過獨立、會留下敏感讀取稽核的管理 API 檢視使用者用量及對話。此例外僅提供唯讀內容，沒有放寬一般 conversations 的 owner 檢查或附件下載 ACL；操作方式見 [存取管理](../features/administration.md)。
 
 ## 預設授權
 
-每個首次登入的使用者取得 `member` 角色，加入 `workspace` 群組。各模組以 `FeatureSeed` 宣告自己的功能與預設群組：`workspace` 預設有 dashboard、chat、files、projects、knowledge、artifacts、shared、quality、repositories、tasks；`administrators` 預設有 admin、integrations、monitoring、audit 與 `logs.query`／`logs.detail`／`logs.export`。`admin` 不隱含其他管理功能，monitoring、audit、logs 都要明確授予（見 [活動稽核](../features/activity-audit.md)、[系統日誌](../features/system-logs.md)、[監控](../features/monitoring.md)）。平台管理員可調整群組功能。三種主檔皆有 Enabled，停用會排除 grant。多個角色／群組的功能取聯集並去重，不採名稱或前端路由推斷權限。
+每個首次登入的使用者取得 `member` 角色，加入 `workspace` 群組。各模組以 `FeatureSeed` 宣告自己的功能與預設群組：`workspace` 預設有 dashboard、chat、files、projects、knowledge、artifacts、shared、quality、repositories、tasks；`administrators` 預設有 admin、operations、integrations、monitoring、audit 與 `logs.query`／`logs.detail`／`logs.export`。`admin` 不隱含其他管理功能，operations、monitoring、audit、logs 都要明確授予（見 [平台營運](../features/operations.md)、[活動稽核](../features/activity-audit.md)、[系統日誌](../features/system-logs.md)、[監控](../features/monitoring.md)）。預設授權只寫進內建群組；新增的功能不會自動加到既有的自訂群組，需要時由管理員手動授予。管理員可調整群組功能。三種主檔皆有 Enabled，停用會排除 grant。多個角色／群組的功能取聯集並去重，不採名稱或前端路由推斷權限。
 
 模型授權也取有效群組聯集；任一群組未限制模型即可使用全部平台可用模型，個人白名單只能進一步限縮。逐模型 token 額度只合併有授權該模型的群組，取最高值、無上限優先，個人覆寫優先。停用群組或撤銷角色後，下一次請求重新計算授權與額度。詳見 [模型政策與配額](../features/model-policy.md)。
 

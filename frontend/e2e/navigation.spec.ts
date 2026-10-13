@@ -56,14 +56,14 @@ test("chat history stays primary with grouped tools collapsed and settings only 
     tools.getByRole("button", { name: "釘選背景任務", exact: true }),
   ).toHaveAttribute("aria-pressed", "false");
   await tools
-    .getByRole("button", { name: "釘選平台管理", exact: true })
+    .getByRole("button", { name: "釘選存取管理", exact: true })
     .click();
   await tools.getByRole("button", { name: "完成", exact: true }).click();
   await expect(pinned.getByRole("link")).toHaveText([
     "對話",
     "專案",
     "檔案庫",
-    "平台管理",
+    "存取管理",
   ]);
   await expect(
     tools
@@ -75,7 +75,7 @@ test("chat history stays primary with grouped tools collapsed and settings only 
     "對話",
     "專案",
     "檔案庫",
-    "平台管理",
+    "存取管理",
   ]);
   await expect(
     tools.getByRole("link", { name: "設定", exact: true }),

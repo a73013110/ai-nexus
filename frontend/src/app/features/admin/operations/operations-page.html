@@ -1,0 +1,32 @@
+<nx-feature-page
+  [title]="session.featureName('operations')"
+  description="檢查平台用量、管理知識檢索索引與模型價格。"
+>
+  @if (account.loading()) {
+    <p role="status">正在載入平台營運…</p>
+  } @else if (account.error()) {
+    <nx-notice [message]="account.error()"
+      ><button notice-actions type="button" (click)="account.reload()">重新載入</button>
+    </nx-notice>
+  } @else if (!session.has('operations')) {
+    <nx-notice tone="danger">需要平台營運權限。</nx-notice>
+  } @else {
+    <nx-view-switch
+      label="平台營運分類"
+      [options]="tabs"
+      [value]="tab()"
+      (valueChange)="selectTab($event)"
+    />
+    @switch (tab()) {
+      @case ('usage') {
+        <nx-platform-usage (prices)="selectTab('prices')" />
+      }
+      @case ('retrieval') {
+        <nx-retrieval-admin />
+      }
+      @case ('prices') {
+        <nx-price-book />
+      }
+    }
+  }
+</nx-feature-page>

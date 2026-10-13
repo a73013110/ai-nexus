@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using AiNexus.Features.AccessControl;
+using AiNexus.Features.Account;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge;
 using AiNexus.Features.Knowledge.Documents;
@@ -41,6 +43,29 @@ public sealed class EmbeddingProfileTests
         Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "admin.embedding_activate" && x.Result == "saved");
         Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "admin.embedding_activate" && x.Result == "profile_incomplete");
         Assert.Equal(HttpStatusCode.Conflict, (await client.DeleteAsync($"/api/v1/admin/knowledge/profiles/{target.Id}/vectors")).StatusCode);
+    }
+
+    [Fact]
+    public async Task PlatformOperationsAloneManagesProfilesAndItsRevocationStopsTheRebuild()
+    {
+        await using var factory = new NexusFactory(administrators: ["alice"]); using var alice = await factory.SignedInAsync();
+        using var bob = await factory.SignedInAsync("bob"); var bobId = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
+        await PlatformGrants.SplitOperationsAsync(factory, bobId);
+        await KnowledgeApi.SeedAsync(factory, bob);
+        Assert.Equal(HttpStatusCode.Forbidden, (await alice.GetAsync("/api/v1/admin/knowledge/profiles")).StatusCode);
+        factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.Embedding.Dimensions = 1024;
+        var target = (await Profiles(bob)).Single(x => x.Status == "building");
+        Assert.Equal(HttpStatusCode.Forbidden, (await alice.PostAsync($"/api/v1/admin/knowledge/profiles/{target.Id}/rebuild", null)).StatusCode);
+        using var response = await bob.PostAsync($"/api/v1/admin/knowledge/profiles/{target.Id}/rebuild", null); response.EnsureSuccessStatusCode();
+        var job = (await response.Content.ReadFromJsonAsync<JobDto>())!;
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "admin.embedding_rebuild" && x.Result == "saved" && x.OwnerId == bobId);
+        // The reindex runs as its owner: once platform operations is revoked, the queued rebuild is refused.
+        db.Remove(await db.Set<UserRole>().SingleAsync(x => x.UserId == bobId && x.RoleId == "operator")); await db.SaveChangesAsync();
+        await Drain(factory);
+        var failed = await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(x => x.Id == job.Id);
+        Assert.Equal(("failed", "admin_required"), (failed.Status, failed.ErrorCode));
+        Assert.Empty(await db.Set<ChunkEmbedding1024>().ToListAsync());
     }
 
     [Fact]

@@ -32,7 +32,8 @@ describe('workspace navigation ownership', () => {
             me: signal({
               access: {
                 features: [
-                  { id: 'admin', name: '平台管理', route: '/admin' },
+                  { id: 'admin', name: '存取管理', route: '/admin' },
+                  { id: 'operations', name: '平台營運', route: '/admin/operations' },
                   { id: 'audit', name: '活動稽核', route: '/admin/audit' },
                   { id: 'logs.query', name: '系統日誌', route: '/admin/logs' },
                   { id: 'projects', name: '專案', route: '/projects' },
@@ -51,6 +52,7 @@ describe('workspace navigation ownership', () => {
       ['/admin/logs/details/123', '/admin/logs'],
       ['/admin/audit?traceId=abc&category=authentication', '/admin/audit'],
       ['/admin?tab=users', '/admin'],
+      ['/admin/operations?tab=prices', '/admin/operations'],
       ['/projects/project-123?view=members', '/projects'],
       ['/chat/conversation-123', '/chat'],
     ]) {

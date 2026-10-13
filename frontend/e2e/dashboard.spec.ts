@@ -160,6 +160,24 @@ test("dashboard shows every granted feature, keeps currencies apart and narrows 
   await expect(overview).toContainText("整個平台");
 });
 
+test("the platform scope follows platform operations, not access management", async ({
+  page,
+}) => {
+  const { fixture, reads } = await openDashboard(page);
+  fixture.operationsAccess = false;
+  await page.goto("/dashboard?scope=platform");
+  await expect(
+    page.getByRole("heading", { name: "總覽", exact: true }),
+  ).toBeVisible();
+  await expect.poll(() => reads.length).toBeGreaterThan(0);
+  await expect(
+    page.getByRole("combobox", { name: "總覽範圍", exact: true }),
+  ).toHaveCount(0);
+  expect(
+    reads.every((url) => url.searchParams.get("scope") !== "platform"),
+  ).toBe(true);
+});
+
 test("one overview style, and tiles can be moved, resized, hidden and reset", async ({
   page,
 }) => {

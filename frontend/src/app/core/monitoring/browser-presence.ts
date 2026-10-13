@@ -22,7 +22,7 @@ const features = new Set([
   'admin',
   'settings',
 ]);
-const systemFeatures = ['monitoring', 'audit', 'logs'];
+const systemFeatures = ['operations', 'monitoring', 'audit', 'logs'];
 export function presenceFeature(url: string): string | null {
   const path = url.split(/[?#;]/)[0];
   for (const feature of systemFeatures) {

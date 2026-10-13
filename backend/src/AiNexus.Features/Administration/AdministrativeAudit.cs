@@ -16,12 +16,19 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
     /// <summary>
-    /// Under the administrative write lock and one serializable transaction: the actor must still be an administrator,
-    /// the before snapshot is taken, the mutation runs and is saved, the actor must keep administrator access, and the
-    /// after snapshot is audited. Any failure, returned or an <see cref="ExternalServiceException"/>, rolls back and is
-    /// audited with its code.
+    /// An access-management change: <see cref="MutateAsync(string, string, Guid?, string, Func{Task{Result}}, CancellationToken)"/>
+    /// requiring <see cref="AdministrationConfiguration.Feature"/>.
     /// </summary>
-    internal async Task<Result> MutateAsync(string action, Guid? resource, string key, Func<Task<Result>> mutation, CancellationToken ct)
+    internal Task<Result> MutateAsync(string action, Guid? resource, string key, Func<Task<Result>> mutation, CancellationToken ct)
+        => MutateAsync(AdministrationConfiguration.Feature, action, resource, key, mutation, ct);
+
+    /// <summary>
+    /// Under the administrative write lock and one serializable transaction: the actor must still hold
+    /// <paramref name="feature"/>, the before snapshot is taken, the mutation runs and is saved, the actor must keep that
+    /// feature, and the after snapshot is audited. Any failure, returned or an <see cref="ExternalServiceException"/>,
+    /// rolls back and is audited with its code.
+    /// </summary>
+    internal async Task<Result> MutateAsync(string feature, string action, Guid? resource, string key, Func<Task<Result>> mutation, CancellationToken ct)
     {
         var signedIn = await current.GetAsync(ct);
         if (!signedIn.IsSuccess) return signedIn.Error;
@@ -44,13 +51,13 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
             await using var transaction = await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct);
             // Both checks read SQL inside this transaction, not the grants the request authorized with.
             access.Invalidate();
-            if (!await IsAdministratorAsync(actor, ct)) return AdministrationErrors.AdminRequired;
+            if (!await HoldsAsync(actor, feature, ct)) return AdministrationErrors.AdminRequired;
             before = await SnapshotAsync(action, resource, key, ct);
             var outcome = await mutation();
             if (!outcome.IsSuccess) return outcome.Error;
             await db.SaveChangesAsync(ct);
             access.Invalidate();
-            if (!await IsAdministratorAsync(actor, ct)) return AdministrationErrors.Lockout;
+            if (!await HoldsAsync(actor, feature, ct)) return AdministrationErrors.Lockout;
             var after = await SnapshotAsync(action, resource, key, ct);
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource, Action = action, Result = "saved", DetailsJson = JsonSerializer.Serialize(new { resourceKey = key, before, after }, Json) });
             await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
@@ -72,8 +79,8 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
             await db.SaveChangesAsync(ct);
         }
     }
-    private async Task<bool> IsAdministratorAsync(Guid actor, CancellationToken ct)
-        => (await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == AdministrationConfiguration.Feature);
+    private async Task<bool> HoldsAsync(Guid actor, string feature, CancellationToken ct)
+        => (await access.ForUserAsync(actor, ct)).Features.Any(x => x.Id == feature);
     private async Task<object?> SnapshotAsync(string action, Guid? resource, string key, CancellationToken ct)
     {
         if (action.StartsWith("admin.embedding_", StringComparison.Ordinal) && int.TryParse(key, out var profile)) return new {

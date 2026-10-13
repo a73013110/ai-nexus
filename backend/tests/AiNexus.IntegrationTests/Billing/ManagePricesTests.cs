@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using AiNexus.Features.Account;
 using AiNexus.Features.Billing;
 using AiNexus.Features.Chat;
 using AiNexus.Features.Persistence;
@@ -21,6 +22,23 @@ public sealed class ManagePricesTests
             valid with { CachedInputPerMillion = 2 }, valid with { Kind = "free", PerRequest = 1 } })
             Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsJsonAsync("/api/v1/admin/billing/prices", invalid)).StatusCode);
         Assert.Empty((await client.GetFromJsonAsync<PriceDto[]>("/api/v1/admin/billing/prices"))!);
+    }
+
+    [Fact]
+    public async Task PricesBelongToPlatformOperationsAndAreAudited()
+    {
+        await using var factory = new NexusFactory(administrators: ["alice"]);
+        using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
+        var bobId = (await bob.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Id;
+        await PlatformGrants.SplitOperationsAsync(factory, bobId);
+        var price = new PriceRequest("google", "test-model", "USD", "api", 1, 1, 2, 0, "completed", DateTimeOffset.UtcNow, "fixture");
+        Assert.Equal(HttpStatusCode.Forbidden, (await alice.PostAsJsonAsync("/api/v1/admin/billing/prices", price)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await alice.GetAsync("/api/v1/admin/billing/prices")).StatusCode);
+        var created = await bob.PostAsJsonAsync("/api/v1/admin/billing/prices", price); created.EnsureSuccessStatusCode();
+        var id = (await created.Content.ReadFromJsonAsync<PriceDto>())!.Id;
+        Assert.Single((await bob.GetFromJsonAsync<PriceDto[]>("/api/v1/admin/billing/prices"))!);
+        using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        Assert.Equal(bobId, (await db.AuditEvents.SingleAsync(x => x.Action == "billing.price.created" && x.ResourceId == id)).OwnerId);
     }
 
     [Fact]

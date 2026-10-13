@@ -41,7 +41,7 @@ flowchart LR
 | Identity | AD／Windows 與本地登入、SID 映射、cookie／CSRF、功能授權判斷 |
 | AccessControl | 使用者→角色→群組→功能的有效授權、模型政策資料、server-side policy |
 | Account | 登入者本人的資料、偏好、閱讀設定與個人用量 |
-| Administration | 首次管理員 bootstrap、帳號與授權、群組模型與配額、用量與唯讀對話 |
+| Administration | 首次管理員 bootstrap；存取管理（帳號與授權、群組模型與配額、個人用量與唯讀對話）與平台營運（平台用量、檢索索引）兩個功能 |
 | Conversations | 私人訊息樹與分支、標題、收藏／封存／標籤、搜尋、文字備份匯入 |
 | Inference | provider、模型呈現與政策、聊天佇列、服務狀態（`/status`）、共用模型任務 |
 | Chat | 組合對話、附件、專案、知識與網路搜尋：Context、執行與 SSE、重播事件清理，整段對話的讀取／匯出／複製／刪除 |
@@ -62,7 +62,7 @@ flowchart LR
 | Billing | 追加價格版本、呼叫價格快照、實際用量計費、報表與 CSV；不以 Context 預估冒充帳單 |
 | WebSearch | 搜尋 provider、本人配額與冪等紀錄、可核對來源；不爬取結果網站 |
 | Repositories | 使用者 Gitea token、唯讀 repository／issue／檔案、固定 commit 匯入、背景程式碼 review |
-| Dashboard | 組合已授權的資源、任務與費用統計；平台範圍另驗 admin |
+| Dashboard | 組合已授權的資源、任務與費用統計；平台範圍另驗 operations |
 
 ## 三種權限
 

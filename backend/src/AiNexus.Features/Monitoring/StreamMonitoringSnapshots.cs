@@ -64,7 +64,7 @@ internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, M
                         if (!long.TryParse(http.User.FindFirstValue(SessionIdentity.TestExpires), out var testExpires) || testExpires <= clock.GetUtcNow().ToUnixTimeSeconds() ||
                             !Guid.TryParse(http.User.FindFirstValue(SessionIdentity.TestId), out var testId) ||
                             await scope.ServiceProvider.GetRequiredService<NexusDbContext>().AuditEvents.AsNoTracking().AnyAsync(x => x.ResourceId == testId && x.OwnerId == actorId && x.Action == "identity.test_end", ct) ||
-                            !(await access.ForUserAsync(actorId, ct)).Features.Any(x => x.Id == "admin"))
+                            !(await access.ForUserAsync(actorId, ct)).Features.Any(x => x.Id == FeatureIds.Admin))
                             return MonitoringErrors.SessionRevoked;
                     }
                     nextCheck = clock.GetUtcNow().AddSeconds(15);

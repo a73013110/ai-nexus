@@ -266,6 +266,8 @@ export class ApiFixture {
   loginMethod = "ad";
   chatAccess = true;
   adminAccess = false;
+  /** Platform operations; administrators have it unless a test sets it on its own. */
+  operationsAccess: boolean | null = null;
   auditAccess = false;
   extraFeatures: { id: string; name: string; route: string }[] = [];
   modelPolicy: ModelPolicyDto = {
@@ -385,7 +387,16 @@ export class ApiFixture {
                 ]
               : []),
             ...(this.adminAccess
-              ? [{ id: "admin", name: "平台管理", route: "/admin" }]
+              ? [{ id: "admin", name: "存取管理", route: "/admin" }]
+              : []),
+            ...((this.operationsAccess ?? this.adminAccess)
+              ? [
+                  {
+                    id: "operations",
+                    name: "平台營運",
+                    route: "/admin/operations",
+                  },
+                ]
               : []),
             ...(this.auditAccess
               ? [{ id: "audit", name: "活動稽核", route: "/admin/audit" }]
@@ -1360,7 +1371,7 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
       : []),
     ...(fixture.adminAccess
       ? ([
-          ["admin", "平台管理"],
+          ["admin", "存取管理"],
           ["monitoring", "即時監控"],
         ] as [string, string][])
       : []),

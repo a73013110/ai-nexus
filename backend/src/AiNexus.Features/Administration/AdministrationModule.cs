@@ -10,8 +10,9 @@ using AiNexus.Platform.Configuration;
 namespace AiNexus.Features.Administration;
 
 /// <summary>
-/// Platform administration: roles, groups, features, users, model policies, usage, audited inspection and retrieval
-/// operations. Each use case has its own file. Every mutation goes through <see cref="AdministrativeAudit"/>.
+/// Platform administration. Access management (<see cref="AdministrationConfiguration"/>): roles, groups, features, users,
+/// model policies and audited inspection. Platform operations (<see cref="OperationsConfiguration"/>): platform usage and
+/// retrieval administration. Each use case has its own file. Every mutation goes through <see cref="AdministrativeAudit"/>.
 /// </summary>
 public sealed class AdministrationModule : IFeatureModule
 {
@@ -24,13 +25,13 @@ public sealed class AdministrationModule : IFeatureModule
         services.AddScoped<AdministrativeReadAudit>();
         services.AddSingleton<AdministrativeWriteLock>();
         services.AddFeaturePolicy(AdministrationConfiguration.Policy, AdministrationConfiguration.Feature);
+        services.AddFeaturePolicy(OperationsConfiguration.Policy, OperationsConfiguration.Feature);
     }
 
-    // Endpoint order is the published OpenAPI order.
+    // Endpoint order is the published OpenAPI order, so the access-management and operations groups interleave.
     public static void MapEndpoints(RouteGroupBuilder root)
     {
-        var api = root.MapGroup("/admin").RequireAuthorization(AdministrationConfiguration.Policy).WithTags("Administration");
-        var knowledge = api.MapGroup("/knowledge");
+        var knowledge = Operations(root).MapGroup("/knowledge");
         ManageEmbeddingProfiles.MapList(knowledge);
         ManageEmbeddingProfiles.MapRebuild(knowledge);
         ManageEmbeddingProfiles.MapActivate(knowledge);
@@ -38,6 +39,7 @@ public sealed class AdministrationModule : IFeatureModule
         ReadRetrievalCapabilities.MapGet(knowledge);
         ReadRetrievalCapabilities.MapProbe(knowledge);
         TestAdminRetrieval.Map(knowledge);
+        var api = root.MapGroup("/admin").RequireAuthorization(AdministrationConfiguration.Policy).WithTags("Administration");
         GetAdminCatalog.Map(api);
         ListAdminUsers.Map(api);
         ManageUserAccounts.MapCreate(api);
@@ -54,7 +56,10 @@ public sealed class AdministrationModule : IFeatureModule
         SaveRole.Map(api);
         SaveRoleGroup.Map(api);
         SaveFeature.Map(api);
-        GetAdminUsage.Map(api);
+        GetAdminUsage.Map(Operations(root));
         GetEffectiveModelPolicy.Map(root);
     }
+
+    private static RouteGroupBuilder Operations(RouteGroupBuilder root)
+        => root.MapGroup("/admin").RequireAuthorization(OperationsConfiguration.Policy).WithTags("Administration");
 }

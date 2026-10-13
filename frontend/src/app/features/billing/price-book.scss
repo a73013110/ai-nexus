@@ -1,7 +1,8 @@
 @use 'breakpoints' as bp;
 
-.price-dialog {
-  --dialog-width: 52rem;
+:host {
+  display: grid;
+  gap: var(--section-gap);
 }
 .price-fields {
   display: grid;
@@ -18,16 +19,12 @@
   font-size: var(--text-caption);
   color: var(--secondary);
 }
-.price-form > label {
-  margin-top: 1rem;
+.price-form {
+  margin-top: var(--section-gap);
 }
-.price-history {
-  border-top: 1px solid var(--line);
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-}
-.price-history h3 {
-  font-size: var(--text-ui);
+.price-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 .price-history-row {
   display: flex;
@@ -38,6 +35,9 @@
   padding: 0.8rem 0.4rem;
   text-align: left;
   border-bottom: 1px solid var(--line);
+}
+.price-history-row:last-of-type {
+  border-bottom: 0;
 }
 .price-history-row span {
   min-width: 0;

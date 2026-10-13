@@ -2,17 +2,11 @@
   [title]="session.featureName('admin')"
   description="管理公司身分、功能授權與 AI 使用政策。"
 >
-  <div page-actions class="page-actions">
-    @if (managementTools().length) {
-      <nx-action-menu
-        label="管理工具"
-        triggerLabel="管理工具"
-        icon="sliders"
-        [items]="managementTools()"
-        (action)="managementAction($event)"
-      />
-    }
-  </div>
+  @if (pageTools().length) {
+    <div page-actions class="page-actions">
+      <nx-action-menu label="存取管理工具" [items]="pageTools()" (action)="pageAction($event)" />
+    </div>
+  }
   @if (store.loading()) {
     <p role="status">正在載入管理工作區…</p>
   }
@@ -22,23 +16,13 @@
     </nx-notice>
   }
   @if (store.catalog()) {
-    <nav class="admin-navigation" aria-label="管理分類">
-      @for (group of navigationGroups; track group.label) {
-        <div>
-          <span>{{ group.label }}</span
-          ><nx-view-switch
-            [label]="group.label"
-            [options]="group.options"
-            [value]="tab()"
-            (valueChange)="selectTab($event)"
-          />
-        </div>
-      }
-    </nav>
+    <nx-view-switch
+      label="存取管理分類"
+      [options]="tabs"
+      [value]="tab()"
+      (valueChange)="selectTab($event)"
+    />
     @switch (tab()) {
-      @case ('retrieval') {
-        <nx-retrieval-admin />
-      }
       @case ('users') {
         <nx-admin-users-tab
           [selectedId]="inspected()?.id ?? null"
@@ -55,9 +39,6 @@
       @case ('features') {
         <nx-admin-features-tab (edit)="editor.open('feature', $event)" />
       }
-      @case ('usage') {
-        <nx-platform-usage (prices)="managementAction('prices')" />
-      }
     }
   }
 </nx-feature-page>
@@ -67,5 +48,4 @@
   (closed)="inspected.set(null)"
   (settingsChanged)="store.readUsers()"
 />
-<nx-price-book />
 <nx-access-editor-dialog #editor />

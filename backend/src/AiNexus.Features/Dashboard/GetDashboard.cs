@@ -16,7 +16,7 @@ public sealed record DashboardPeriodDto(DateTimeOffset From, DateTimeOffset Unti
 public sealed record DashboardDto(string Scope, Guid? OwnerId, DateTimeOffset GeneratedAt, DashboardPeriodDto Period, SpendReportDto Spend,
     TokenUsageDto Tokens, IReadOnlyList<DashboardSectionDto> Sections);
 
-/// <summary>Personal overview, or the platform-wide one for administrators (audited).</summary>
+/// <summary>Personal overview, or the platform-wide one for platform operations (audited).</summary>
 internal sealed class GetDashboard(NexusDbContext db, SpendReports reports, UsageReports usage, AccessService access,
     IEnumerable<IDashboardSource> sources, TimeProvider clock)
 {
@@ -30,7 +30,7 @@ internal sealed class GetDashboard(NexusDbContext db, SpendReports reports, Usag
         if (scope is not ("personal" or "platform") || (scope == "personal" && ownerId != null)) return DashboardErrors.InvalidScope;
         var features = (await access.ForUserAsync(actor, ct)).Features.ToDictionary(x => x.Id, StringComparer.Ordinal);
         var platform = scope == "platform";
-        if (platform && !features.ContainsKey(FeatureIds.Admin)) return DashboardErrors.AccessDenied;
+        if (platform && !features.ContainsKey(FeatureIds.Operations)) return DashboardErrors.AccessDenied;
         var period = SpendPeriod.Create(from, until, offset, clock.GetUtcNow());
         if (!period.IsSuccess) return period.Error;
         Guid? owner = platform ? ownerId : actor;
