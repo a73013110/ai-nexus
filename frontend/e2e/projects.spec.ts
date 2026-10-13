@@ -222,3 +222,116 @@ for (const kind of ["project", "evaluation"] as const) {
     expect(deleteCalls).toBe(2);
   });
 }
+
+for (const width of [1440, 375]) {
+  test(`projects tours walk the list and the visible project panels at ${width}px`, async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const core = new ApiFixture();
+    core.extraFeatures.push({
+      id: "projects",
+      name: "專案",
+      route: "/projects",
+    });
+    // A reader has no project menu, so the tour ends on the files panel instead.
+    const reader = width === 375;
+    const project: ProjectDto = {
+      resource: {
+        id: randomUUID(),
+        name: "公司文件研究",
+        kind: "project",
+        isOwner: !reader,
+        canEdit: !reader,
+        updatedAt: new Date().toISOString(),
+      },
+      description: "共用背景與參考文件",
+      instructions: "先提供結論，再提供依據。",
+      version: 1,
+      isArchived: false,
+    };
+    await core.attach(page);
+    await page.route("**/api/v1/projects**", (route) => {
+      const path = new URL(route.request().url()).pathname;
+      const body =
+        path === "/api/v1/projects"
+          ? [project]
+          : path.endsWith(`/projects/${project.resource.id}`)
+            ? project
+            : path.endsWith("/templates")
+              ? [
+                  {
+                    id: randomUUID(),
+                    title: "公文重點摘要",
+                    content: "請列出重點。",
+                  },
+                ]
+              : [];
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(body),
+      });
+    });
+    const height = width === 375 ? 812 : 1000;
+    await page.setViewportSize({ width, height });
+    const launcher = page
+      .locator(".feature-header")
+      .getByRole("button", { name: "操作導覽", exact: true });
+    const tour = page.locator(".driver-popover.nx-tour");
+    const title = tour.locator(".driver-popover-title");
+    const progress = tour.locator(".driver-popover-progress-text");
+    // Walks to the end and returns each step's title and the last description.
+    const walk = async () => {
+      await launcher.click();
+      await expect(title).toHaveText(/./);
+      const total = Number((await progress.innerText()).split("/")[1]);
+      const titles = [await title.innerText()];
+      for (let step = 2; step <= total; step++) {
+        await tour.getByRole("button", { name: "下一步", exact: true }).click();
+        await expect(progress).toHaveText(`${step} / ${total}`);
+        titles.push(await title.innerText());
+        await settleEntrance(page);
+        const bounds = (await tour.boundingBox())!;
+        expect(bounds.x).toBeGreaterThanOrEqual(0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+        expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
+      }
+      const last = await tour
+        .locator(".driver-popover-description")
+        .innerText();
+      await tour.getByRole("button", { name: "開始使用", exact: true }).click();
+      await expect(tour).toHaveCount(0);
+      await expect(launcher).toBeFocused();
+      await expect(page.locator(".driver-overlay")).toHaveCount(0);
+      return { titles, last };
+    };
+    await page.goto("/projects");
+    await expect(page.locator(".resource-card")).toBeVisible();
+    const list = await walk();
+    expect(list.titles).toEqual([
+      "把工作放進同一個脈絡",
+      "進行中與已封存分開列",
+      "用名稱尋找專案",
+      "打開專案",
+      "建立新專案",
+    ]);
+    expect(list.last).toContain("重播導覽");
+    await page.locator(".resource-card").click();
+    await expect(
+      page.getByRole("button", { name: /公文重點摘要.*使用範本開始對話/ }),
+    ).toBeVisible();
+    const detail = await walk();
+    expect(detail.titles).toEqual([
+      "專案的工作說明",
+      "從專案開始對話",
+      "用範本快速開始",
+      "只有你看得到的對話",
+      "共用指示",
+      "參考文件",
+      ...(reader ? [] : ["管理專案"]),
+    ]);
+    expect(detail.last).toContain("重播導覽");
+    expect(errors).toEqual([]);
+  });
+}

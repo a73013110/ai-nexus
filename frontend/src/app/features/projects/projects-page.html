@@ -4,11 +4,16 @@
     current() ? current()!.description : '共用背景、指示與參考文件，讓每次工作都從相同的脈絡開始。'
   "
   [back]="id() ? { path: '/projects', label: '全部專案' } : null"
+  [tour]="tour()"
 >
   <div page-actions class="page-actions">
     @if (current(); as project) {
       @if (session.has('chat')) {
-        <button class="primary-button" [disabled]="busy() || project.isArchived" (click)="start()">
+        <button
+          class="primary-button project-start"
+          [disabled]="busy() || project.isArchived"
+          (click)="start()"
+        >
           <nx-icon name="chat" />開始對話
         </button>
       }
@@ -21,7 +26,7 @@
       }
     } @else if (!id()) {
       <button
-        class="primary-button"
+        class="primary-button project-create"
         [disabled]="loading() || busy() || !session.has('projects')"
         (click)="openProject()"
       >
@@ -81,7 +86,12 @@
     }
     <div class="project-layout">
       <div class="project-column">
-        <nx-panel heading="共用範本" icon="idea" [count]="templates().length">
+        <nx-panel
+          class="project-templates"
+          heading="共用範本"
+          icon="idea"
+          [count]="templates().length"
+        >
           @if (editable()) {
             <button panel-actions class="quiet-button" [disabled]="busy()" (click)="openTemplate()">
               <nx-icon name="plus" />新增範本
@@ -125,7 +135,12 @@
           </div>
         </nx-panel>
         @if (session.has('chat')) {
-          <nx-panel heading="我的對話" icon="chat" [count]="conversations().length">
+          <nx-panel
+            class="project-conversations"
+            heading="我的對話"
+            icon="chat"
+            [count]="conversations().length"
+          >
             <nav class="project-rows" aria-label="我的專案對話">
               @for (item of conversations(); track item.id) {
                 <a class="project-row" [routerLink]="['/chat', item.id]"
@@ -143,7 +158,7 @@
         }
       </div>
       <div class="project-column">
-        <nx-panel heading="共用指示" icon="sliders">
+        <nx-panel class="project-guidance" heading="共用指示" icon="sliders">
           @if (editable()) {
             <button
               panel-actions
@@ -164,6 +179,7 @@
           </p>
         </nx-panel>
         <nx-panel
+          class="project-files"
           heading="參考文件"
           icon="document"
           [count]="files().length"
@@ -210,7 +226,7 @@
           </p>
         </nx-panel>
         @if (session.has('artifacts')) {
-          <nx-panel heading="成果" icon="files" [count]="outputs().length">
+          <nx-panel class="project-outputs" heading="成果" icon="files" [count]="outputs().length">
             @if (editable()) {
               <button
                 panel-actions
