@@ -1,10 +1,11 @@
 <nx-feature-page
   [title]="session.featureName('files')"
   description="對話附件、知識庫與專案的原檔都保存在這裡，可再用於對話或加入知識庫。"
+  [tour]="tour()"
 >
   <div page-actions class="page-actions">
     <button
-      class="primary-button"
+      class="primary-button file-upload"
       [disabled]="uploading() || !policy()"
       (click)="fileInput.click()"
     >
