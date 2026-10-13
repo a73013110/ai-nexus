@@ -9,6 +9,8 @@ using AiNexus.Features.Jobs;
 using AiNexus.Features.Notifications;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Repositories;
+using AiNexus.Features.Repositories.Connections;
+using AiNexus.Features.Repositories.Reviews;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -18,6 +20,8 @@ namespace AiNexus.IntegrationTests.Repositories;
 
 public sealed class RepositoryReviewTests
 {
+    private const string Reviews = "/api/v1/repositories/hanglong/nexus/reviews";
+
     private static NexusFactory Factory(FixtureGitea source, ReviewProvider provider) => new(services: services =>
     {
         services.RemoveAll<IGiteaClient>(); services.AddSingleton<IGiteaClient>(source);
@@ -28,7 +32,7 @@ public sealed class RepositoryReviewTests
     private static async Task<RepositoryReviewDto> Create(HttpClient client, string purpose = "review")
     {
         (await client.PostAsJsonAsync("/api/v1/repositories/connection", new ConnectRepositoryRequest("fixtureOnlyReadTokenForGitea00001"))).EnsureSuccessStatusCode();
-        var response = await client.PostAsJsonAsync("/api/v1/repositories/reviews", new CreateRepositoryReviewRequest("hanglong/nexus", new string('a', 40), null, "test-model", "", Guid.NewGuid().ToString(), purpose));
+        var response = await client.PostAsJsonAsync(Reviews, new CreateRepositoryReviewRequest(new string('a', 40), null, null, "test-model", "", Guid.NewGuid().ToString(), purpose));
         response.EnsureSuccessStatusCode(); return (await response.Content.ReadFromJsonAsync<RepositoryReviewDto>())!;
     }
 
@@ -44,14 +48,13 @@ public sealed class RepositoryReviewTests
     [Theory]
     [InlineData("review", "整體程式碼檢閱")]
     [InlineData("summary", "理解整體變更")]
-    [InlineData("typos", "找內容誤植")]
     public async Task SmallCrossFileChangesProduceOnePurposeSpecificReport(string purpose, string focus)
     {
         var source = new FixtureGitea { Diff = Diff(2, 10) }; var provider = new ReviewProvider();
         await using var factory = Factory(source, provider); using var client = await factory.SignedInAsync();
         var review = await Create(client, purpose); await ProcessOne(factory);
         var detail = (await client.GetFromJsonAsync<RepositoryReviewDetailDto>($"/api/v1/repositories/reviews/{review.Id}"))!;
-        Assert.Equal("completed", detail.Review.Job.Status); Assert.Equal(purpose, detail.Review.Purpose); Assert.Equal(3, detail.Version);
+        Assert.Equal("completed", detail.Review.Job.Status); Assert.Equal(purpose, detail.Review.Purpose);
         var call = Assert.Single(provider.Calls); Assert.Contains(focus, call.Parameters.SystemPrompt);
         Assert.Contains("file-0.cs", call.Prompt); Assert.Contains("file-1.cs", call.Prompt);
         Assert.NotNull(detail.Report); Assert.Contains("file-0.cs", detail.Report.Output); Assert.Contains("file-1.cs", detail.Report.Output);
@@ -115,28 +118,10 @@ public sealed class RepositoryReviewTests
     }
 
     [Fact]
-    public async Task LegacySnapshotsRemainReadableAndRetryWithTheirFrozenSectionInstruction()
-    {
-        var source = new FixtureGitea { Diff = Diff(2, 10) }; var provider = new ReviewProvider();
-        await using var factory = Factory(source, provider); using var client = await factory.SignedInAsync();
-        var review = await Create(client);
-        using (var scope = factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>(); var row = await db.Set<RepositoryReview>().SingleAsync(x => x.Id == review.Id);
-            row.SnapshotJson = JsonSerializer.Serialize(new ReviewSnapshot(1, "舊版固定檢閱指令", RepositoryReviewService.Split(source.Diff, 1000).Value!));
-            db.Add(new RepositoryReviewResult { ReviewId = review.Id, Ordinal = 0, Output = "已完成的舊版區段" }); await db.SaveChangesAsync();
-        }
-        await ProcessOne(factory);
-        var detail = (await client.GetFromJsonAsync<RepositoryReviewDetailDto>($"/api/v1/repositories/reviews/{review.Id}"))!;
-        Assert.Equal(1, detail.Version); Assert.Null(detail.Report); Assert.Equal("completed", detail.Review.Job.Status);
-        Assert.Equal("已完成的舊版區段", detail.Sections[0].Output); Assert.Equal("舊版固定檢閱指令", Assert.Single(provider.Calls).Parameters.SystemPrompt);
-    }
-
-    [Fact]
     public async Task UnsupportedPurposeIsRejectedBeforeEnqueuingWork()
     {
         var provider = new ReviewProvider(); await using var factory = Factory(new(), provider); using var client = await factory.SignedInAsync();
-        var response = await client.PostAsJsonAsync("/api/v1/repositories/reviews", new CreateRepositoryReviewRequest("hanglong/nexus", new string('a', 40), null, "test-model", "", Guid.NewGuid().ToString(), "unsupported"));
+        var response = await client.PostAsJsonAsync(Reviews, new CreateRepositoryReviewRequest(new string('a', 40), null, null, "test-model", "", Guid.NewGuid().ToString(), "typos"));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode); Assert.Empty(provider.Calls);
         using var scope = factory.Services.CreateScope(); Assert.Empty(await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Set<RepositoryReview>().ToListAsync());
     }
@@ -180,21 +165,35 @@ public sealed class RepositoryReviewTests
     }
 
     [Fact]
-    public async Task VersionTwoReportsStillUseTheirFrozenMarkdownInstruction()
+    public async Task PullRequestReviewsPinTheMergeBaseAndArePostedOnceAfterTheyFinish()
     {
-        var provider = new ReviewProvider(); await using var factory = Factory(new() { Diff = Diff(2, 10) }, provider);
-        using var client = await factory.SignedInAsync(); var review = await Create(client);
-        using (var scope = factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>(); var row = await db.Set<RepositoryReview>().SingleAsync(x => x.Id == review.Id);
-            var snapshot = RepositoryReviewService.Snapshot(row).Value!;
-            row.SnapshotJson = JsonSerializer.Serialize(snapshot with { Version = 2, ReportInstruction = "請產生一份舊版固定 Markdown 報告。" });
-            await db.SaveChangesAsync();
-        }
+        var source = new FixtureGitea { Diff = Diff(2, 10) }; var provider = new ReviewProvider();
+        await using var factory = Factory(source, provider); using var client = await factory.SignedInAsync();
+        (await client.PostAsJsonAsync("/api/v1/repositories/connection", new ConnectRepositoryRequest("fixtureOnlyReadTokenForGitea00001"))).EnsureSuccessStatusCode();
+        var created = await client.PostAsJsonAsync(Reviews, new CreateRepositoryReviewRequest(null, null, 2, "test-model", "", Guid.NewGuid().ToString(), "summary"));
+        created.EnsureSuccessStatusCode(); var review = (await created.Content.ReadFromJsonAsync<RepositoryReviewDto>())!;
+        Assert.Equal(2, review.PullRequest); Assert.Equal(FixtureGitea.Head, review.Commit); Assert.Equal(FixtureGitea.Base, review.BaseCommit);
+        var comment = $"/api/v1/repositories/reviews/{review.Id}/comment";
+        Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync(comment, new PostRepositoryReviewCommentRequest("初檢"))).StatusCode);
         await ProcessOne(factory);
-        var detail = (await client.GetFromJsonAsync<RepositoryReviewDetailDto>($"/api/v1/repositories/reviews/{review.Id}"))!;
-        Assert.Equal("completed", detail.Review.Job.Status); Assert.Equal(2, detail.Version); Assert.NotNull(detail.Report);
-        Assert.Equal("請產生一份舊版固定 Markdown 報告。", Assert.Single(provider.Calls).Parameters.SystemPrompt);
+        source.ReadOnly = true;
+        var refused = await client.PostAsJsonAsync(comment, new PostRepositoryReviewCommentRequest("初檢"));
+        Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode); Assert.Contains("gitea_forbidden", await refused.Content.ReadAsStringAsync());
+        source.ReadOnly = false;
+        var posted = await client.PostAsJsonAsync(comment, new PostRepositoryReviewCommentRequest("### AI Nexus 初檢\n未發現明確缺陷。")); posted.EnsureSuccessStatusCode();
+        Assert.StartsWith("https://gitea.hanglong.com.tw/", (await posted.Content.ReadFromJsonAsync<RepositoryReviewDto>())!.CommentUrl);
+        var (path, body) = Assert.Single(source.Comments);
+        Assert.Equal("api/v1/repos/hanglong/nexus/issues/2/comments", path); Assert.StartsWith("### AI Nexus", body);
+        Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync(comment, new PostRepositoryReviewCommentRequest("再貼一次"))).StatusCode);
+        Assert.Single(source.Comments);
+    }
+
+    [Fact]
+    public async Task CommitReviewsCannotBePostedAsComments()
+    {
+        var provider = new ReviewProvider(); await using var factory = Factory(new() { Diff = Diff(1, 10) }, provider); using var client = await factory.SignedInAsync();
+        var review = await Create(client); await ProcessOne(factory);
+        Assert.Equal(HttpStatusCode.Conflict, (await client.PostAsJsonAsync($"/api/v1/repositories/reviews/{review.Id}/comment", new PostRepositoryReviewCommentRequest("初檢"))).StatusCode);
     }
 
     private sealed class ReviewProvider : IInferenceProvider
@@ -242,12 +241,12 @@ public sealed class RepositoryReviewTests
         await using var factory = new NexusFactory(services: services => { services.RemoveAll<IGiteaClient>(); services.AddSingleton<IGiteaClient>(source); services.PostConfigure<GiteaOptions>(o => o.Enabled = true); });
         using var owner = await factory.SignedInAsync(); using var other = await factory.SignedInAsync("bob");
         (await owner.PostAsJsonAsync("/api/v1/repositories/connection", new ConnectRepositoryRequest("fixtureOnlyReadTokenForGitea00001"))).EnsureSuccessStatusCode();
-        var request = new CreateRepositoryReviewRequest("hanglong/nexus", new string('a', 40), new string('b', 40), "test-model", "權限", Guid.NewGuid().ToString());
-        var response = await owner.PostAsJsonAsync("/api/v1/repositories/reviews", request); response.EnsureSuccessStatusCode(); var review = (await response.Content.ReadFromJsonAsync<RepositoryReviewDto>())!;
+        var request = new CreateRepositoryReviewRequest(new string('a', 40), new string('b', 40), null, "test-model", "權限", Guid.NewGuid().ToString());
+        var response = await owner.PostAsJsonAsync(Reviews, request); response.EnsureSuccessStatusCode(); var review = (await response.Content.ReadFromJsonAsync<RepositoryReviewDto>())!;
         Assert.Equal("queued", review.Job.Status); Assert.Equal("repository-review", review.Job.Kind);
-        var again = await owner.PostAsJsonAsync("/api/v1/repositories/reviews", request); again.EnsureSuccessStatusCode(); Assert.Equal(review.Id, (await again.Content.ReadFromJsonAsync<RepositoryReviewDto>())!.Id);
+        var again = await owner.PostAsJsonAsync(Reviews, request); again.EnsureSuccessStatusCode(); Assert.Equal(review.Id, (await again.Content.ReadFromJsonAsync<RepositoryReviewDto>())!.Id);
         Assert.Contains(source.Requests, x => x.EndsWith("/compare/" + request.BaseCommit + ".." + request.Commit + "?output=diff", StringComparison.Ordinal));
-        Assert.Equal(HttpStatusCode.Conflict, (await owner.PostAsJsonAsync("/api/v1/repositories/reviews", request with { Note = "不同重點" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await owner.PostAsJsonAsync(Reviews, request with { Note = "不同重點" })).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await other.GetAsync($"/api/v1/repositories/reviews/{review.Id}")).StatusCode);
         using (var scope = factory.Services.CreateScope()) { var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             db.Add(new RepositoryReviewResult { ReviewId = review.Id, Ordinal = 0, Output = "已完成區段" });
@@ -256,7 +255,7 @@ public sealed class RepositoryReviewTests
         var detail = (await owner.GetFromJsonAsync<RepositoryReviewDetailDto>($"/api/v1/repositories/reviews/{review.Id}"))!;
         Assert.Equal("completed", detail.Review.Job.Status); Assert.True(detail.Sections.Count > 1); Assert.Equal("已完成區段", detail.Sections[0].Output); Assert.Equal(detail.Sections.Count, factory.Provider.Calls);
         Assert.All(detail.Sections, x => Assert.NotNull(x.Output));
-        Assert.NotNull(detail.Report); Assert.Equal(3, detail.Version); Assert.Equal(detail.Sections.Count + 1, detail.Review.Job.TotalUnits);
+        Assert.NotNull(detail.Report); Assert.Equal(detail.Sections.Count + 1, detail.Review.Job.TotalUnits);
         Assert.Contains((await owner.GetFromJsonAsync<NotificationPageDto>("/api/v1/notifications"))!.Items, x => x.Target == new NotificationTargetDto("repository-review", review.Id));
         source.Revoked = true;
         Assert.Equal(HttpStatusCode.Forbidden, (await owner.GetAsync($"/api/v1/repositories/reviews/{review.Id}")).StatusCode);

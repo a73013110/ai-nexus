@@ -1,0 +1,96 @@
+:host {
+  display: grid;
+  gap: var(--p-space-5);
+}
+.pinned h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  margin: 0 0 var(--p-space-3);
+  color: var(--secondary);
+  font: 600 var(--text-caption) / 1.3 var(--font-ui);
+  --icon-size: var(--icon-sm);
+}
+.pinned-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
+  gap: var(--p-space-3);
+}
+.pin {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-3);
+  min-width: 0;
+  padding: var(--p-space-3);
+  border: 1px solid var(--tile-line);
+  border-radius: var(--tile-inner-radius);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+  box-shadow: var(--tile-shadow);
+  animation: tile-arrive var(--motion-morph) var(--ease-spring) both;
+  transition:
+    border-color var(--motion) var(--ease),
+    box-shadow var(--motion) var(--ease),
+    translate var(--motion) var(--ease);
+  &:hover {
+    border-color: var(--line);
+    box-shadow: var(--shadow);
+  }
+  &:active {
+    scale: 0.98;
+  }
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: 2px;
+  }
+}
+.monogram {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.625rem;
+  background: var(--tile-inset);
+  color: var(--accent);
+  font-weight: 650;
+}
+.pin-text {
+  display: grid;
+  min-width: 0;
+  strong,
+  small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  small {
+    color: var(--muted);
+    font-size: var(--text-caption);
+  }
+}
+.pin-lock {
+  margin-left: auto;
+  color: var(--muted);
+  --icon-size: var(--icon-sm);
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  color: var(--muted);
+  font-size: var(--text-caption);
+  --icon-size: var(--icon-xs);
+}
+.stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1875rem;
+  font-variant-numeric: tabular-nums;
+  --icon-size: var(--icon-xs);
+}
+.more {
+  display: flex;
+  justify-content: center;
+}

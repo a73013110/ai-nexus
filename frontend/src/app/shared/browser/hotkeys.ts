@@ -5,7 +5,10 @@ import { DestroyRef, inject } from '@angular/core';
  * from the physical key, so macOS Option combinations still read as their letter.
  */
 export function hotkey(event: KeyboardEvent) {
-  const key = event.code.startsWith('Key') ? event.code.slice(3) : event.key;
+  // Chrome autofill dispatches a bare `keydown` Event without `code` or `key`; it is no combo.
+  const { code = '', key: name = '' } = event as Partial<KeyboardEvent>;
+  const key = code.startsWith('Key') ? code.slice(3) : name;
+  if (!key) return '';
   return [
     (event.ctrlKey || event.metaKey) && 'mod',
     event.altKey && 'alt',

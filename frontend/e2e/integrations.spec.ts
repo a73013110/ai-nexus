@@ -159,7 +159,7 @@ test("unconfigured sources disclose setup status and do not offer queries", asyn
   ).toHaveCount(0);
 });
 
-test("Gitea token is cleared after connecting, pinned files become drafts without sending automatically", async ({
+test("Gitea token is cleared after connecting, picked files become a draft with an attachment without sending", async ({
   page,
 }) => {
   const fixture = new ApiFixture();
@@ -171,10 +171,26 @@ test("Gitea token is cleared after connecting, pinned files become drafts withou
   let connected = false;
   let tokenReceived = "";
   const commit = "a".repeat(40);
+  const repository = {
+    fullName: "hanglong/nexus",
+    description: "唯讀文件",
+    private: true,
+    archived: false,
+    empty: false,
+    defaultBranch: "main",
+    language: "",
+    stars: 0,
+    forks: 0,
+    openIssues: 0,
+    openPulls: 0,
+    updatedAt: null,
+    url: "https://gitea.fixture/hanglong/nexus",
+    pinned: false,
+  };
   await page.route("**/api/v1/repositories**", (route) => {
     const url = new URL(route.request().url());
-    const path = url.pathname;
-    if (path.endsWith("/connection")) {
+    const path = url.pathname.replace("/api/v1/repositories", "");
+    if (path === "/connection") {
       if (route.request().method() === "POST") {
         tokenReceived = route.request().postDataJSON().token;
         connected = true;
@@ -185,70 +201,90 @@ test("Gitea token is cleared after connecting, pinned files become drafts withou
           connected,
           baseUrl: "https://gitea.fixture/",
           login: connected ? "fixture-user" : null,
-          notice: "使用你的唯讀權限。",
+          connectedAt: connected ? new Date().toISOString() : null,
         },
       });
     }
-    if (path.endsWith("/tree"))
+    if (path === "/hanglong/nexus")
       return route.fulfill({
         json: {
-          repository: "hanglong/nexus",
+          repository,
+          commit,
+          branches: [{ name: "main", commit }],
+          tags: [],
+        },
+      });
+    if (path === "/hanglong/nexus/tree")
+      return route.fulfill({
+        json: {
           commit,
           path: "",
           entries: [
             { name: "README.md", path: "README.md", kind: "file", size: 20 },
           ],
+          readme: null,
         },
       });
-    if (path.endsWith("/file")) {
-      expect(url.searchParams.get("commit")).toBe(commit);
+    if (path === "/hanglong/nexus/chat") {
+      expect(route.request().postDataJSON()).toEqual({
+        commit,
+        paths: ["README.md"],
+        issue: null,
+        pull: null,
+      });
+      const now = new Date().toISOString();
+      const conversation = {
+        id: randomUUID(),
+        title: "hanglong/nexus",
+        activeLeafId: null,
+        createdAt: now,
+        updatedAt: now,
+        isFavorite: false,
+        isArchived: false,
+        systemInstruction: "",
+        labels: [],
+      };
+      const attachment = {
+        id: randomUUID(),
+        fileName: "hanglong-nexus.md",
+        contentType: "text/markdown",
+        size: 40,
+        isImage: false,
+        analysisMode: "extracted-text",
+      };
+      fixture.conversations.unshift(conversation);
+      fixture.attachments.push(attachment);
       return route.fulfill({
         json: {
-          repository: "hanglong/nexus",
-          commit,
-          path: "README.md",
-          text: "# 內部技術文件",
-          url: `https://gitea.fixture/hanglong/nexus/src/commit/${commit}/README.md`,
+          conversation,
+          attachment,
+          prompt: "請閱讀附件中的內部技術文件。",
+          skipped: [],
         },
       });
     }
     return route.fulfill({
-      json: {
-        items: [
-          {
-            fullName: "hanglong/nexus",
-            description: "唯讀文件",
-            private: true,
-            defaultBranch: "main",
-            url: "https://gitea.fixture/hanglong/nexus",
-          },
-        ],
-        page: 1,
-        hasMore: false,
-      },
+      json: { items: [repository], pinned: [], page: 1, hasMore: false },
     });
   });
-  await page.route("**/api/v1/knowledge/collections", (route) =>
-    route.fulfill({ json: [] }),
-  );
   await page.goto("/repositories");
   await page
-    .getByLabel("個人存取權杖", { exact: true })
+    .getByLabel("貼上權杖", { exact: true })
     .fill("fixtureReadOnlyToken00000000");
   await page.getByRole("button", { name: "連線 Gitea", exact: true }).click();
-  await expect(page.locator(".repository-login")).toContainText("fixture-user");
+  await expect(page.locator(".account")).toContainText("fixture-user");
   expect(tokenReceived).toBe("fixtureReadOnlyToken00000000");
   await expect(page.locator("#gitea-token")).toHaveCount(0);
-  await page.getByRole("button", { name: /hanglong\/nexus/ }).click();
-  await page.getByRole("button", { name: /README.md/ }).click();
-  await expect(page.locator(".repository-file-text")).toContainText(
-    "內部技術文件",
-  );
-  await settleEntrance(page);
-  await page.getByRole("button", { name: "帶入對話草稿", exact: true }).click();
+  await page.getByRole("link", { name: /hanglong\/nexus/ }).click();
+  await page.getByRole("checkbox", { name: "選取 README.md" }).check();
+  await page
+    .getByRole("region", { name: "已選取的檔案" })
+    .getByRole("button", { name: "帶入對話" })
+    .click();
   await expect(
     page.getByRole("textbox", { name: "傳送訊息", exact: true }),
-  ).toHaveValue(/內部技術文件/);
+  ).toHaveValue("請閱讀附件中的內部技術文件。");
+  await expect(page.getByText("hanglong-nexus.md")).toBeVisible();
   expect(fixture.posts).toBe(0);
   expect(fixture.conversations).toHaveLength(1);
 });

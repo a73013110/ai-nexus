@@ -1,14 +1,26 @@
-import { ErrorHandler, Injectable, Injector, effect, inject, signal } from '@angular/core';
+import {
+  ErrorHandler,
+  Injectable,
+  Injector,
+  effect,
+  inject,
+  isDevMode,
+  signal,
+} from '@angular/core';
 import { AuthService } from '../auth/auth-service';
 import { ApiClient } from '../api/api-client';
 import {
   ApiError,
   ClientValidationError,
   isCancellation,
+  newLocalIssue,
+  pageProblem,
   safeMessage,
-  systemProblem,
   validIssueCode,
 } from './safe-errors';
+
+/** A page exception leaves the app usable, so its notice clears itself unless something replaced it. */
+const PAGE_NOTICE_MS = 12_000;
 
 @Injectable({ providedIn: 'root' })
 export class ClientIssues implements ErrorHandler {
@@ -34,11 +46,19 @@ export class ClientIssues implements ErrorHandler {
       this.epoch = generation;
     });
   }
+  private show(message: string) {
+    this.notice.set(message);
+    setTimeout(() => {
+      if (this.notice() === message) this.notice.set('');
+    }, PAGE_NOTICE_MS);
+  }
   handleError(error: unknown) {
     void this.report(error, 'exception');
   }
   async report(error: unknown, kind: 'exception' | 'rejection') {
     if (isCancellation(error) || error instanceof ClientValidationError) return;
+    // The server only receives the error type; during development the stack is the only way to find the cause.
+    if (isDevMode()) console.error(error);
     const current = this.auth.guard();
     const generation = this.auth.generation();
     if (this.epoch !== null && generation !== this.epoch) {
@@ -57,11 +77,11 @@ export class ClientIssues implements ErrorHandler {
     const key = kind + ':' + type;
     const previous = this.reported.get(key);
     if (previous && now - previous.at < 60_000) {
-      this.notice.set(previous.message);
+      this.show(previous.message);
       return;
     }
-    const localMessage = safeMessage(error);
-    this.notice.set(localMessage);
+    const localMessage = pageProblem(newLocalIssue());
+    this.show(localMessage);
     this.calls = this.calls.filter((time) => now - time < 60_000);
     if (this.calls.length >= 5) return;
     this.calls.push(now);
@@ -76,9 +96,9 @@ export class ClientIssues implements ErrorHandler {
         body: { kind, fingerprint },
       });
       if (current() && result.accepted && validIssueCode(result.issueCode)) {
-        const message = systemProblem(result.issueCode);
+        const message = pageProblem(result.issueCode);
         this.reported.set(key, { at: now, message });
-        this.notice.set(message);
+        if (this.notice() === localMessage) this.show(message);
       }
     } catch {
       /* Keep the explicitly local code. A failed report must never report itself. */

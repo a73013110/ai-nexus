@@ -28,7 +28,7 @@
 - Angular `ApiError` 不信任伺服器的任意 title，依公開 catalog 與有效 IssueCode 顯示提示並提供複製；頁面、toast、附件／工作詳情、通知與聊天共用同一政策。
 - 本機格式／容量檢查用 `ClientValidationError` 的固定提示；預期的 AbortError 不當成故障。
 - 沒有有效伺服器代碼時顯示 `LOCAL-`＋16 個十六進位字元，明確標示「尚未記入伺服器」。
-- 未處理的 exception 與 Promise rejection 經 `/api/v1/client-issues` 回報，只送 `kind` 與粗粒度 SHA-256 fingerprint，不送 message、stack、URL、DOM。伺服器端 body ≤2 KiB、每人每分鐘 10 次、去重快取；前端每分鐘最多 5 次。事件標記 `UntrustedClient=true`；`accepted=true` 只代表佇列接受。
+- 未處理的 exception 與 Promise rejection 經 `/api/v1/client-issues` 回報，只送 `kind` 與粗粒度 SHA-256 fingerprint（`kind:錯誤型別`），不送 message、stack、URL、DOM；所以伺服器日誌只看得出型別，原因要在開發模式的瀏覽器 console 看 stack。畫面顯示「頁面發生非預期錯誤」並在 12 秒後自動收起，不說成操作失敗；沒有 error 物件或來自其他 origin（擴充套件）的 `error` 事件不回報。伺服器端 body ≤2 KiB、每人每分鐘 10 次、去重快取；前端每分鐘最多 5 次。事件標記 `UntrustedClient=true`；`accepted=true` 只代表佇列接受。
 
 ## 流程關聯
 

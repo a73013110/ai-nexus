@@ -1,14 +1,25 @@
-using AiNexus.Platform.Dashboard;
 using AiNexus.Features.AccessControl;
-using AiNexus.Platform.Modules;
-using AiNexus.Platform.Configuration;
+using AiNexus.Features.Identity;
 using AiNexus.Features.Jobs;
+using AiNexus.Features.Repositories.Browsing;
+using AiNexus.Features.Repositories.Connections;
+using AiNexus.Features.Repositories.Handoff;
+using AiNexus.Features.Repositories.Reviews;
+using AiNexus.Platform.Configuration;
+using AiNexus.Platform.Dashboard;
+using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Repositories;
 
-/// <summary>Read-only Gitea access with each user's own token, file imports into knowledge, and background code reviews. Each use case has its own file.</summary>
+/// <summary>
+/// Gitea with each user's own token: browsing code, history, issues and pull requests; handing files to a conversation or a
+/// knowledge collection; background AI reviews, which may be posted back as a pull-request comment.
+/// </summary>
 public sealed class RepositoriesModule : IFeatureModule
 {
+    public const string ReadRateLimit = "repositories-read";
+    public const string WriteRateLimit = "repositories-write";
+
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
@@ -18,24 +29,35 @@ public sealed class RepositoriesModule : IFeatureModule
         services.AddScoped<RepositoryService>();
         services.AddScoped<RepositoryReviewService>();
         services.AddScoped<IBackgroundJobHandler, RepositoryReviewHandler>();
+        services.AddScoped<IBackgroundJobHandler, RepositoryImportHandler>();
         services.AddSingleton<RepositoryWriteLock>();
         services.AddFeaturePolicy(FeatureIds.Repositories);
+        // Every read is a Gitea call made with the user's token; writes also start model work, uploads or remote comments.
+        services.AddRateLimiter(options => options.AddPerUserLimit(ReadRateLimit, 240).AddPerUserLimit(WriteRateLimit, 20));
     }
 
     // Endpoint order is the published OpenAPI order.
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        var routes = api.MapGroup("/repositories").RequireAuthorization(Policies.Repositories).WithTags("Repositories");
-        BrowseRepositories.MapCommits(routes);
-        ListRepositoryReviews.Map(routes);
-        CreateRepositoryReview.Map(routes);
-        ReadRepositoryReview.Map(routes);
-        ChangeRepositoryReviewJob.Map(routes);
+        var routes = api.MapGroup("/repositories").RequireAuthorization(Policies.Repositories).WithTags("Repositories").RequireRateLimiting(ReadRateLimit);
         GetRepositoryConnection.Map(routes);
         ConnectRepository.Map(routes);
         DisconnectRepository.Map(routes);
-        BrowseRepositories.Map(routes);
-        ImportRepositoryFile.Map(routes);
+        BrowseRepositories.MapList(routes);
+        ReadRepositoryReview.Map(routes);
+        ChangeRepositoryReviewJob.Map(routes);
+        PostRepositoryReviewComment.Map(routes);
+
+        var repository = routes.MapGroup("/{owner}/{name}");
+        BrowseRepositories.Map(repository);
+        PinRepository.Map(repository);
+        UnpinRepository.Map(repository);
+        BrowseRepositoryHistory.Map(repository);
+        BrowseRepositoryIssues.Map(repository);
+        StartRepositoryChat.Map(repository);
+        ImportRepositoryFolder.Map(repository);
+        ListRepositoryReviews.Map(repository);
+        CreateRepositoryReview.Map(repository);
     }
 }
 

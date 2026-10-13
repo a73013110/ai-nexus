@@ -15,4 +15,7 @@ describe('hotkey', () => {
   it('keeps named keys', () => {
     expect(press({ key: 'Escape', code: 'Escape' })).toBe('escape');
   });
+  it('ignores the bare keydown Chrome autofill dispatches', () => {
+    expect(hotkey(new Event('keydown') as KeyboardEvent)).toBe('');
+  });
 });

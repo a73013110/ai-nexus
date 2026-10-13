@@ -2789,7 +2789,55 @@ namespace AiNexus.Features.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Repositories.RepositoryConnection", b =>
+            modelBuilder.Entity("AiNexus.Features.Repositories.Browsing.RepositoryPin", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("資料的主鍵識別碼。");
+
+                    b.Property<string>("BaseUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasComment("Gitea 連線主機位址。");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasComment("釘選當時的程式庫說明。");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。");
+
+                    b.Property<DateTimeOffset>("PinnedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasComment("釘選的時間。");
+
+                    b.Property<bool>("Private")
+                        .HasColumnType("bit")
+                        .HasComment("釘選當時是否為私人程式庫。");
+
+                    b.Property<string>("Repository")
+                        .IsRequired()
+                        .HasMaxLength(201)
+                        .HasColumnType("nvarchar(201)")
+                        .HasComment("Gitea repository 的 owner/name 識別。");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "BaseUrl", "Repository")
+                        .IsUnique();
+
+                    b.ToTable("RepositoryPins", "repositories", t =>
+                        {
+                            t.HasComment("使用者釘選的 Gitea 程式庫；名稱與說明為釘選當時的快照。");
+                        });
+                });
+
+            modelBuilder.Entity("AiNexus.Features.Repositories.Connections.RepositoryConnection", b =>
                 {
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uniqueidentifier")
@@ -2825,7 +2873,80 @@ namespace AiNexus.Features.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Repositories.RepositoryImport", b =>
+            modelBuilder.Entity("AiNexus.Features.Repositories.Handoff.RepositoryFolderImport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("資料的主鍵識別碼。");
+
+                    b.Property<string>("BaseUrl")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasComment("Gitea 連線主機位址。");
+
+                    b.Property<Guid>("CollectionId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("關聯知識庫的識別碼。");
+
+                    b.Property<string>("Commit")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasComment("匯入當時固定的 commit SHA。");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasComment("資料建立時間，採 UTC offset。");
+
+                    b.Property<int>("Imported")
+                        .HasColumnType("int")
+                        .HasComment("已匯入或沿用的檔案數。");
+
+                    b.Property<Guid>("JobId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("關聯背景工作識別碼。");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasComment("repository 內的資料夾路徑；空字串為根目錄。");
+
+                    b.Property<string>("PathsJson")
+                        .IsRequired()
+                        .HasMaxLength(600000)
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("建立時選定的檔案路徑 JSON 陣列。");
+
+                    b.Property<string>("Repository")
+                        .IsRequired()
+                        .HasMaxLength(201)
+                        .HasColumnType("nvarchar(201)")
+                        .HasComment("Gitea repository 的 owner/name 識別。");
+
+                    b.Property<int>("Skipped")
+                        .HasColumnType("int")
+                        .HasComment("因非文字或超過上限而略過的檔案數。");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobId");
+
+                    b.HasIndex("OwnerId", "CreatedAt");
+
+                    b.ToTable("RepositoryFolderImports", "repositories", t =>
+                        {
+                            t.HasComment("程式庫資料夾匯入知識庫的固定版本、檔案清單與背景工作。");
+                        });
+                });
+
+            modelBuilder.Entity("AiNexus.Features.Repositories.Handoff.RepositoryImport", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2880,7 +3001,7 @@ namespace AiNexus.Features.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Repositories.RepositoryReview", b =>
+            modelBuilder.Entity("AiNexus.Features.Repositories.Reviews.RepositoryReview", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -2897,6 +3018,15 @@ namespace AiNexus.Features.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)")
                         .HasComment("Gitea 連線主機位址。");
+
+                    b.Property<string>("CommentUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasComment("報告貼到 Pull Request 的留言網址；空值表示尚未張貼。");
+
+                    b.Property<DateTimeOffset?>("CommentedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasComment("報告貼到 Pull Request 的時間。");
 
                     b.Property<string>("Commit")
                         .IsRequired()
@@ -2940,6 +3070,10 @@ namespace AiNexus.Features.Persistence.Migrations
                         .HasColumnType("uniqueidentifier")
                         .HasComment("資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。");
 
+                    b.Property<int?>("PullRequest")
+                        .HasColumnType("int")
+                        .HasComment("來源 Pull Request 編號；空值表示直接選擇的 commit 或區間。");
+
                     b.Property<string>("Repository")
                         .IsRequired()
                         .HasMaxLength(201)
@@ -2973,7 +3107,7 @@ namespace AiNexus.Features.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Repositories.RepositoryReviewResult", b =>
+            modelBuilder.Entity("AiNexus.Features.Repositories.Reviews.RepositoryReviewResult", b =>
                 {
                     b.Property<Guid>("ReviewId")
                         .HasColumnType("uniqueidentifier")
@@ -3997,7 +4131,7 @@ namespace AiNexus.Features.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Repositories.RepositoryConnection", b =>
+            modelBuilder.Entity("AiNexus.Features.Repositories.Browsing.RepositoryPin", b =>
                 {
                     b.HasOne("AiNexus.Features.Identity.Users.NexusUser", null)
                         .WithMany()
@@ -4006,16 +4140,16 @@ namespace AiNexus.Features.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Repositories.RepositoryImport", b =>
+            modelBuilder.Entity("AiNexus.Features.Repositories.Connections.RepositoryConnection", b =>
                 {
-                    b.HasOne("AiNexus.Features.Knowledge.Documents.KnowledgeDocument", null)
+                    b.HasOne("AiNexus.Features.Identity.Users.NexusUser", null)
                         .WithMany()
-                        .HasForeignKey("DocumentId")
+                        .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Repositories.RepositoryReview", b =>
+            modelBuilder.Entity("AiNexus.Features.Repositories.Handoff.RepositoryFolderImport", b =>
                 {
                     b.HasOne("AiNexus.Features.Jobs.BackgroundJob", null)
                         .WithMany()
@@ -4030,9 +4164,33 @@ namespace AiNexus.Features.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Repositories.RepositoryReviewResult", b =>
+            modelBuilder.Entity("AiNexus.Features.Repositories.Handoff.RepositoryImport", b =>
                 {
-                    b.HasOne("AiNexus.Features.Repositories.RepositoryReview", null)
+                    b.HasOne("AiNexus.Features.Knowledge.Documents.KnowledgeDocument", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AiNexus.Features.Repositories.Reviews.RepositoryReview", b =>
+                {
+                    b.HasOne("AiNexus.Features.Jobs.BackgroundJob", null)
+                        .WithMany()
+                        .HasForeignKey("JobId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AiNexus.Features.Identity.Users.NexusUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AiNexus.Features.Repositories.Reviews.RepositoryReviewResult", b =>
+                {
+                    b.HasOne("AiNexus.Features.Repositories.Reviews.RepositoryReview", null)
                         .WithMany()
                         .HasForeignKey("ReviewId")
                         .OnDelete(DeleteBehavior.Restrict)

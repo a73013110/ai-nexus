@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authenticated } from './core/auth/auth-guard';
 import { optionalId } from './core/layout/optional-id';
+import { repositoryRoute } from './features/repositories/repository-route';
 import { pendingChanges } from './shared/browser/pending-changes';
 import { WORKSPACE_HOME } from './core/layout/workspace-home';
 
@@ -30,7 +31,7 @@ export const routes: Routes = [
           import('./features/dashboard/dashboard-page').then((m) => m.DashboardPage),
       },
       {
-        path: 'repositories',
+        matcher: repositoryRoute,
         loadComponent: () =>
           import('./features/repositories/repositories-page').then((m) => m.RepositoriesPage),
       },

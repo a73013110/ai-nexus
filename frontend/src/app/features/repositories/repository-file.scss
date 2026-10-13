@@ -1,0 +1,96 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--tile-line);
+  border-radius: var(--tile-radius);
+  background: var(--surface);
+  box-shadow: var(--tile-shadow);
+  animation: panel-arrive var(--motion-morph) var(--ease-spring) both;
+}
+:host(.compact) {
+  box-shadow: none;
+  animation: none;
+}
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--p-space-2) var(--p-space-3);
+  min-height: 3rem;
+  padding: var(--p-space-2) var(--p-space-3) var(--p-space-2) var(--p-space-4);
+  border-bottom: 1px solid var(--tile-line);
+  background: var(--tile-inset);
+  > nx-icon {
+    color: var(--accent);
+    --icon-size: var(--icon-sm);
+  }
+}
+.name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font: 600 var(--text-body) / 1.3 var(--font-code);
+}
+.meta {
+  color: var(--muted);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+}
+.tools {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  margin-left: auto;
+}
+.page {
+  padding: var(--p-space-5) var(--p-space-6);
+  @include bp.below(phone) {
+    padding: var(--p-space-4);
+  }
+}
+.blank {
+  margin: 0;
+  padding: var(--p-space-6);
+  color: var(--muted);
+  text-align: center;
+}
+.source {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  max-height: min(72vh, 60rem);
+  overflow: auto;
+  font: 0.8125rem / 1.65 var(--font-code);
+  tab-size: 4;
+  &:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+}
+pre {
+  margin: 0;
+  padding: var(--p-space-3) 0;
+  font: inherit;
+}
+.gutter {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  padding-inline: var(--p-space-4) var(--p-space-3);
+  border-right: 1px solid var(--tile-line);
+  background: var(--surface);
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  opacity: 0.7;
+}
+.code {
+  padding-inline: var(--p-space-4);
+  code {
+    display: block;
+    width: max-content;
+    min-width: 100%;
+    white-space: pre;
+  }
+}

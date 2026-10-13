@@ -44,6 +44,12 @@ export function systemProblem(issueCode?: string | null): string {
     ? `操作未完成，請聯絡管理員。查證代碼：${issueCode}`
     : `操作未完成，請確認連線或聯絡管理員。本機問題代碼：${localPattern.test(issueCode ?? '') ? issueCode : newLocalIssue()}（尚未記入伺服器）`;
 }
+/** An exception in the page itself: no request failed, so it suggests a reload before an administrator. */
+export function pageProblem(issueCode: string): string {
+  return validIssueCode(issueCode)
+    ? `頁面發生非預期錯誤，若畫面異常請重新整理；反覆發生再聯絡管理員。查證代碼：${issueCode}`
+    : `頁面發生非預期錯誤，若畫面異常請重新整理。本機問題代碼：${localPattern.test(issueCode) ? issueCode : newLocalIssue()}（尚未記入伺服器）`;
+}
 /** A recorded failure without an HTTP status (a background job): a reviewed hint when the code has one. */
 export function recordedProblem(code: string | null | undefined, issueCode: string): string {
   return code && Object.hasOwn(publicErrorHints, code) && validIssueCode(issueCode)

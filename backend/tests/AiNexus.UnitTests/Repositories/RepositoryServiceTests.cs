@@ -19,4 +19,12 @@ public sealed class RepositoryServiceTests
 
     [Fact]
     public void BranchNamesCannotMasqueradeAsPinnedCommits() => Assert.False(RepositoryService.IsCommit("main"));
+
+    [Theory]
+    [InlineData("main", true)]
+    [InlineData("release/1.0", true)]
+    [InlineData("feature..evil", false)]
+    [InlineData("main?token=x", false)]
+    [InlineData("main branch", false)]
+    public void RefsAreLimitedToPlainBranchAndTagNames(string value, bool valid) => Assert.Equal(valid, RepositoryService.IsRef(value));
 }

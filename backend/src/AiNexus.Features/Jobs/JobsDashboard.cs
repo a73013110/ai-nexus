@@ -19,6 +19,7 @@ internal sealed class JobsDashboard(NexusDbContext db) : IDashboardSource
         ["evaluation"] = "品質評測",
         ["retrieval-eval"] = "檢索評測",
         ["repository-review"] = "程式碼 review",
+        ["repository-import"] = "程式庫匯入",
     };
 
     public string Feature => FeatureIds.Tasks;
