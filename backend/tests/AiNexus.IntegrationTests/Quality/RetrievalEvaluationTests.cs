@@ -38,7 +38,8 @@ public sealed class RetrievalEvaluationTests
         Assert.DoesNotContain("採購應先核准", JsonSerializer.Serialize(await db.Set<RetrievalEvaluationResult>().ToListAsync()));
         using var bob = await factory.SignedInAsync("bob"); Assert.Equal(HttpStatusCode.NotFound, (await bob.GetAsync($"/api/v1/quality/retrieval-evals/{run.Id}")).StatusCode);
         db.Remove(await db.Set<RoleGroupFeature>().SingleAsync(x => x.FeatureId == "knowledge")); await db.SaveChangesAsync();
-        Assert.Equal(HttpStatusCode.Forbidden, (await client.GetAsync($"/api/v1/quality/retrieval-evals/{run.Id}/report")).StatusCode);
+        using var revoked = await client.GetAsync($"/api/v1/quality/retrieval-evals/{run.Id}/report");
+        Assert.Equal(HttpStatusCode.Forbidden, revoked.StatusCode); Assert.Contains("feature_forbidden", await revoked.Content.ReadAsStringAsync());
     }
 
     [Fact]

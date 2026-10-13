@@ -36,7 +36,7 @@ internal sealed class AssignConversationProject(NexusDbContext db, ResourceAcces
             if (await db.Runs.AnyAsync(x => x.ConversationId == id && x.ActiveOwnerId != null, ct)) return ProjectsErrors.GenerationActive;
             if (projectId is Guid project)
             {
-                if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "projects")) return ProjectsErrors.AccessRequired;
+                if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "projects")) return AccessControlErrors.FeatureForbidden;
                 var active = await access.RequireActiveAsync(db, actor, project, write: false, ct);
                 if (!active.IsSuccess) return active.Error;
             }

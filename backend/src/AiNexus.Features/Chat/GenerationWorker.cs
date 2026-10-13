@@ -170,7 +170,7 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
     private static async Task<Result> RecheckAsync(IServiceProvider services, NexusDbContext db, GenerationRun run, CancellationToken ct)
     {
         var grants = await services.GetRequiredService<AiNexus.Features.AccessControl.AccessService>().ForUserAsync(run.OwnerId, ct);
-        if (!grants.Features.Any(x => x.Id == "chat")) return ChatErrors.AccessRevoked;
+        if (!grants.Features.Any(x => x.Id == "chat")) return AiNexus.Features.AccessControl.AccessControlErrors.FeatureForbidden;
         if (await services.GetRequiredService<ModelPolicyService>().RequireAsync(run.OwnerId, run.ModelId, ct, checkQuota: false) is { IsSuccess: false } refused) return refused.Error;
         var sources = await db.Set<AiNexus.Features.Knowledge.Retrieval.MessageCitation>().Where(x => x.MessageId == run.AssistantMessageId).Select(x => new AiNexus.Features.Knowledge.Retrieval.KnowledgeHitDto(x.DocumentId, x.Title, x.PageNumber, x.Excerpt, 0, Guid.Empty, x.EndPage)).ToListAsync(ct);
         if (await services.GetRequiredService<AiNexus.Features.Knowledge.Retrieval.KnowledgeRetrieval>().ValidateHitsAsync(run.OwnerId, sources, ct) is { IsSuccess: false } hidden) return hidden.Error;

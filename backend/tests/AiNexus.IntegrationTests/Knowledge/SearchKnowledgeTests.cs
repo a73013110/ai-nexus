@@ -118,7 +118,8 @@ public sealed class SearchKnowledgeTests
         rerank.BeforeReturn = async () => { using var other = factory.Services.CreateScope(); var db = other.ServiceProvider.GetRequiredService<NexusDbContext>();
             await db.Set<AiNexus.Features.AccessControl.UserRole>().Where(x => x.UserId == seed.Actor).ExecuteDeleteAsync(); };
         using var response = await client.PostAsJsonAsync("/api/v1/knowledge/search", new KnowledgeSearchRequest("採購", [seed.Collection]));
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode); Assert.DoesNotContain("主管簽署", await response.Content.ReadAsStringAsync());
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode); Assert.Contains("feature_forbidden", body); Assert.DoesNotContain("主管簽署", body);
     }
 
     internal sealed class FixtureReranker : IRerankClient

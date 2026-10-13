@@ -26,7 +26,7 @@ internal sealed class StartProjectConversation(NexusDbContext db, ResourceAccess
     {
         var active = await access.RequireActiveAsync(db, actor, id, write: false, ct);
         if (!active.IsSuccess) return active.Error;
-        if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "chat")) return ProjectsErrors.ChatAccessRequired;
+        if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "chat")) return AccessControlErrors.FeatureForbidden;
         var prompt = ""; var title = request.Title ?? "新對話";
         if (request.TemplateId is Guid key)
         {

@@ -11,8 +11,6 @@ internal static class ProjectsErrors
     public static readonly Error FileLimit = Error.Conflict("project_file_limit");
     public static readonly Error TemplateMissing = Error.NotFound("template_missing");
     public static readonly Error TemplateLimit = Error.Conflict("template_limit");
-    public static readonly Error ChatAccessRequired = Error.Forbidden("chat_access_required");
-    public static readonly Error AccessRequired = Error.Forbidden("project_access_required");
     public static readonly Error ConversationMissing = Error.NotFound("conversation_missing");
     public static readonly Error GenerationActive = Error.Conflict("generation_active");
     public static readonly Error FilesPending = Error.Conflict("project_files_pending");

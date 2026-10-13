@@ -25,7 +25,7 @@ public sealed class EvaluationHandler(NexusDbContext db, ResourceAccess access, 
     public string Kind => "evaluation";
     private async Task<Result<EvaluationRun>> RequireAsync(BackgroundJob job, CancellationToken ct)
     {
-        if (!(await features.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == "quality")) return QualityErrors.AccessRevoked;
+        if (!(await features.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == "quality")) return AccessControlErrors.FeatureForbidden;
         var run = await db.Set<EvaluationRun>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == job.SubjectId && x.OwnerId == job.OwnerId, ct);
         if (run is null) return QualityErrors.RunMissing;
         if (await access.RequireAsync(job.OwnerId, run.SetId, "evaluation", ct) is { IsSuccess: false } denied) return denied.Error;

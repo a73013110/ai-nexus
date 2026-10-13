@@ -15,7 +15,7 @@ public sealed class ProjectService(NexusDbContext db, ResourceAccess access, Acc
     public async Task<Result<string>> ContextAsync(Guid actor, Guid? id, CancellationToken ct)
     {
         if (id is not Guid projectId) return "";
-        if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "projects")) return ProjectsErrors.AccessRequired;
+        if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "projects")) return AccessControlErrors.FeatureForbidden;
         var active = await access.RequireActiveAsync(db, actor, projectId, write: false, ct);
         if (!active.IsSuccess) return active.Error;
         var project = active.Value;
