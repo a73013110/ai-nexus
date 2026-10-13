@@ -336,3 +336,55 @@ test("dashboard fits a phone in the dark with reduced motion", async ({
           other.bottom <= flow[i].top,
       ).toBe(true);
 });
+
+for (const width of [1440, 375]) {
+  test(`dashboard tour walks the visible controls and tiles at ${width}px`, async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const { fixture } = await openDashboard(page);
+    // Without platform operations the scope switch is absent, and so is its step.
+    if (width === 375) fixture.operationsAccess = false;
+    const height = width === 375 ? 812 : 1000;
+    await page.setViewportSize({ width, height });
+    await page.goto("/dashboard");
+    await expect(tile(page, "關鍵指標")).toBeVisible();
+    const launcher = page
+      .locator(".feature-header")
+      .getByRole("button", { name: "操作導覽", exact: true });
+    await launcher.click();
+    const tour = page.locator(".driver-popover.nx-tour");
+    const title = tour.locator(".driver-popover-title");
+    const progress = tour.locator(".driver-popover-progress-text");
+    await expect(title).toHaveText("一句話掌握現況");
+    const total = Number((await progress.innerText()).split("/")[1]);
+    const titles = [await title.innerText()];
+    for (let step = 2; step <= total; step++) {
+      await tour.getByRole("button", { name: "下一步", exact: true }).click();
+      await expect(progress).toHaveText(`${step} / ${total}`);
+      titles.push(await title.innerText());
+      await settleEntrance(page);
+      const bounds = (await tour.boundingBox())!;
+      expect(bounds.x).toBeGreaterThanOrEqual(0);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+      expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
+    }
+    expect(titles).toEqual([
+      "一句話掌握現況",
+      ...(width === 375 ? [] : ["切換總覽範圍"]),
+      "選擇查詢期間",
+      "幣別與費用類型分開看",
+      "先看關鍵指標",
+      "每個功能一張卡片",
+      "從上次停下的地方繼續",
+      "排出自己的總覽",
+      "需要最新數字時",
+    ]);
+    await tour.getByRole("button", { name: "開始使用", exact: true }).click();
+    await expect(tour).toHaveCount(0);
+    await expect(launcher).toBeFocused();
+    await expect(page.locator(".driver-overlay")).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+}
