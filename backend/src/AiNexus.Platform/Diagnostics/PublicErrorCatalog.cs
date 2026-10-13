@@ -247,6 +247,7 @@ public static class PublicErrorCatalog
         ["spreadsheet_cell_limit"] = "單一工作表最多 100,000 個非空儲存格。",
         ["spreadsheet_sheet_limit"] = "試算表需為 1 至 128 個工作表。",
         ["spreadsheet_string_limit"] = "試算表文字表過大，請拆分工作表。",
+        ["stream_superseded"] = "已在其他視窗開啟即時監控，此視窗暫停更新；按「繼續更新」改在此視窗監控。",
         ["subscription_limit"] = "事件連線數已達上限，請關閉重複的分頁後重試。",
         ["table_row_too_long"] = "表格單列超過片段上限，請先拆分表格欄位。",
         ["task_input_too_long"] = "處理內容過長，請縮小選取範圍。",

@@ -180,9 +180,12 @@ export class MonitoringStore {
   }
   toggle() {
     this.paused.update((v) => !v);
+    this.error.set('');
     this.restart();
   }
   refresh() {
+    this.paused.set(false);
+    this.error.set('');
     this.retries = 0;
     this.restart();
   }
@@ -221,18 +224,26 @@ export class MonitoringStore {
   }
   private async follow(revision: number, signal: AbortSignal) {
     this.connection.set(this.snapshot() ? 'reconnecting' : 'connecting');
+    let received = false;
     try {
       this.armWatchdog();
       const response = await this.api.events(this.minutes(), signal);
       for await (const frame of jsonEvents<unknown>(response, 'snapshot', signal)) {
         if (signal.aborted || revision !== this.revision) return;
         const snapshot = this.receive(frame);
+        received = true;
         this.connection.set('live');
         this.error.set('');
         this.retries = 0;
         this.armWatchdog(Math.max(15000, snapshot.refreshSeconds * 4000));
       }
-      if (!signal.aborted) throw new Error('事件串流已結束');
+      if (signal.aborted || revision !== this.revision) return;
+      // The server ends every stream after ten minutes so the cookie is checked again; that is not an error.
+      if (received) {
+        this.restart();
+        return;
+      }
+      throw new Error('事件串流已結束');
     } catch (error) {
       if (revision !== this.revision) return;
       clearTimeout(this.watchdog);
@@ -242,10 +253,19 @@ export class MonitoringStore {
         this.error.set(safeMessage(error));
         return;
       }
+      // A newer stream of this account (another window) took over; reconnecting would take it back in turn.
+      if (error instanceof ApiError && error.code === 'stream_superseded') {
+        this.paused.set(true);
+        this.connection.set('paused');
+        this.error.set(safeMessage(error));
+        return;
+      }
       this.connection.set('reconnecting');
       this.error.set(safeMessage(error));
-      const delay = Math.min(1000 * 2 ** this.retries++, 30000);
-      this.retry = setTimeout(() => this.restart(), delay);
+      const backoff = Math.min(1000 * 2 ** this.retries++, 30000);
+      const asked =
+        error instanceof ApiError && error.status === 429 ? (error.retryAfter ?? 0) * 1000 : 0;
+      this.retry = setTimeout(() => this.restart(), Math.max(backoff, asked));
     }
   }
   private armWatchdog(ms = 20000) {

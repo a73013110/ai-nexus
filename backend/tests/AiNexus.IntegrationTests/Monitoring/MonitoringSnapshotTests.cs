@@ -77,6 +77,31 @@ public sealed class MonitoringSnapshotTests
     }
 
     [Fact]
+    public async Task NewStreamSupersedesTheOldestInsteadOfBeingRefused()
+    {
+        await using var factory = new NexusFactory(administrators: ["alice"]);
+        using var alice = await factory.SignedInAsync(); using var cancel = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
+        cancel.CancelAfter(TimeSpan.FromSeconds(20));
+        var responses = new List<HttpResponseMessage>(); var readers = new List<StreamReader>();
+        try
+        {
+            // A reload leaves the old streams open until the server notices; the next page must still connect.
+            for (var i = 0; i <= MonitoringStreams.PerUser; i++)
+            {
+                var response = await alice.GetAsync("/api/v1/admin/monitoring/events", HttpCompletionOption.ResponseHeadersRead, cancel.Token);
+                response.EnsureSuccessStatusCode(); responses.Add(response);
+                var reader = new StreamReader(await response.Content.ReadAsStreamAsync(cancel.Token)); readers.Add(reader);
+                Assert.Equal("event: snapshot", await reader.ReadLineAsync(cancel.Token));
+            }
+            string? line;
+            while ((line = await readers[0].ReadLineAsync(cancel.Token)) is not null && line != "event: error") { }
+            Assert.Equal("event: error", line);
+            Assert.Contains("\"stream_superseded\"", await readers[0].ReadLineAsync(cancel.Token));
+        }
+        finally { readers.ForEach(x => x.Dispose()); responses.ForEach(x => x.Dispose()); }
+    }
+
+    [Fact]
     public async Task RevokedGrantTerminatesExistingStream()
     {
         var clock = new FakeTimeProvider(DateTimeOffset.UtcNow);

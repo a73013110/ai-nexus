@@ -57,7 +57,7 @@ IP 只取 HttpContext.Connection.RemoteIpAddress，不自行相信 X-Forwarded-F
 
 ## 權限與設定
 
-`monitoring` 功能預設只授予 administrators 群組，沒有遙測資料表。一般成員只能報送自己的 presence；監控讀取需明確 grant，admin 不隱含 monitoring。保留 CSRF／身分版本驗證。SSE 每十五秒以新 scope 重驗帳號與有效 grant，測試身分也驗來源管理員、期限與撤銷；每人最多三條，單條十分鐘後重連重新驗 cookie。SQL 不可用時暫停傳送並重連，安全錯誤不含原始例外。AsyncLocal suppression 排除觀測者自己的 HTTP／SQL／外部呼叫。
+`monitoring` 功能預設只授予 administrators 群組，沒有遙測資料表。一般成員只能報送自己的 presence；監控讀取需明確 grant，admin 不隱含 monitoring。保留 CSRF／身分版本驗證。SSE 每十五秒以新 scope 重驗帳號與有效 grant，測試身分也驗來源管理員、期限與撤銷；每人最多三條，新連線取代最舊一條（`stream_superseded`）而非被拒，因為重新整理後舊連線要等伺服器或代理察覺斷線才釋放；被取代的視窗暫停、不重連。單條十分鐘後結束並立即重連以重驗 cookie；429 依 `Retry-After` 退避。SQL 不可用時暫停傳送並重連，安全錯誤不含原始例外。AsyncLocal suppression 排除觀測者自己的 HTTP／SQL／外部呼叫。
 
 | 設定 | 預設 | 範圍 |
 | --- | --- | --- |
@@ -72,4 +72,4 @@ SSE 的不緩衝與 heartbeat 沿用回答串流的做法，見 [SSE](../archite
 
 ## 驗證
 
-單元與整合測試的 Monitoring 資料夾涵蓋權限／CSRF、撤權中止訂閱、容量、計數口徑、直方圖、健康門檻、資源趨勢、子系統快取與觀測者排除。MonitoringBrowserTests 以真實 Kestrel、前端及 Edge 驗證心跳到即時快照與稽核；`frontend/e2e/monitoring.spec.ts` 以本機 SSE fixture 驗頁面互動、深淺色、375px、鍵盤與減少動畫。SQL／IIS／AD 與代理 IP 需依部署環境實機驗收。
+單元與整合測試在各自的 Monitoring 資料夾。MonitoringBrowserTests 以真實 Kestrel、前端及 Edge 驗證心跳到即時快照與稽核；`frontend/e2e/monitoring.spec.ts` 以本機 SSE fixture 驗頁面互動、深淺色、375px、鍵盤與減少動畫。SQL／IIS／AD 與代理 IP 需依部署環境實機驗收。

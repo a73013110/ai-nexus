@@ -56,7 +56,12 @@
       @if (store.error() || data.omittedSessions || data.droppedSessions) {
         <div class="monitor-notices">
           @if (store.error()) {
-            <nx-notice tone="warning">{{ store.error() }} 保留最近快照，正在恢復連線。</nx-notice>
+            <nx-notice tone="warning">
+              {{ store.error() }}
+              @if (!store.paused()) {
+                保留最近快照，正在恢復連線。
+              }
+            </nx-notice>
           }
           @if (data.omittedSessions || data.droppedSessions) {
             <nx-notice tone="warning">
@@ -123,8 +128,12 @@
     >
   } @else {
     <div class="monitor-loading" role="status">
-      <nx-icon name="loading" /><strong>正在建立監控連線</strong>
-      <p>等待此執行個體的第一份快照。</p>
+      @if (store.paused()) {
+        <nx-icon name="pause" /><strong>監控已暫停</strong>
+      } @else {
+        <nx-icon name="loading" /><strong>正在建立監控連線</strong>
+        <p>等待此執行個體的第一份快照。</p>
+      }
       @if (store.error()) {
         <p>{{ store.error() }}</p>
         <button type="button" class="secondary-button" (click)="store.refresh()">重新連線</button>

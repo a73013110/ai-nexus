@@ -51,6 +51,9 @@ interface Untyped {
 const REFERENCE_MAX_AGE_MS = 30_000;
 const parse = <T>(body: string): T => (body ? JSON.parse(body) : undefined) as T;
 const isAuthPath = (url: string) => url.startsWith('/api/v1/auth/');
+/** `Retry-After` in delta seconds, the only form the server sends. */
+const retryAfterSeconds = (value: string | null) =>
+  value && /^\d{1,5}$/.test(value) ? Number(value) : undefined;
 
 /** Fill `{name}` segments and append the query, skipping absent values and repeating arrays. */
 export function apiUrl(path: string, request: Untyped = {}): string {
@@ -234,6 +237,7 @@ export class ApiClient {
             ? '登入已失效，請重新登入工作區。'
             : '服務暫時無法使用，請稍後重試。'),
         problem.issueCode,
+        retryAfterSeconds(response.headers.get('Retry-After')),
       );
     }
     // Any change made from this browser may affect reference data, so it is read again.

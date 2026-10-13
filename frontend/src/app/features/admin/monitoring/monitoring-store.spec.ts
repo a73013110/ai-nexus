@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ApiError } from '../../../core/api/api-client';
 import type { MonitoringSnapshot } from '../../../core/api/schema';
 import { MonitoringApi } from './monitoring-api';
 import { AnnouncementGate, MonitoringStore, readSnapshot } from './monitoring-store';
@@ -135,17 +136,73 @@ describe('AnnouncementGate', () => {
   });
 });
 
+/** An SSE response carrying the given frames; `open` keeps it from ending, as a live stream does. */
+function sse(frames: string[], open = false) {
+  return new Response(
+    new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode(frames.join('')));
+        if (!open) controller.close();
+      },
+    }),
+    { headers: { 'Content-Type': 'text/event-stream' } },
+  );
+}
+const frame = (value: MonitoringSnapshot) => `event: snapshot\ndata: ${JSON.stringify(value)}\n\n`;
+
 describe('MonitoringStore', () => {
-  afterEach(() => TestBed.resetTestingModule());
-  function store() {
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.useRealTimers();
+  });
+  function store(events: () => Promise<Response> = () => new Promise(() => undefined)) {
     TestBed.configureTestingModule({
-      providers: [MonitoringStore, { provide: MonitoringApi, useValue: {} }],
+      providers: [MonitoringStore, { provide: MonitoringApi, useValue: { events: vi.fn(events) } }],
     });
-    return TestBed.inject(MonitoringStore);
+    return {
+      monitoring: TestBed.inject(MonitoringStore),
+      events: TestBed.inject(MonitoringApi).events as ReturnType<typeof vi.fn>,
+    };
   }
 
+  it('pauses instead of reconnecting when another window takes the stream over', async () => {
+    const { monitoring, events } = store(async () =>
+      sse(['event: error\ndata: {"status":409,"code":"stream_superseded"}\n\n']),
+    );
+    monitoring.start();
+    await vi.waitFor(() => expect(monitoring.connection()).toBe('paused'));
+    expect(monitoring.paused()).toBe(true);
+    expect(monitoring.error()).toContain('其他視窗');
+    expect(events).toHaveBeenCalledTimes(1);
+    monitoring.refresh();
+    expect(monitoring.paused()).toBe(false);
+    expect(events).toHaveBeenCalledTimes(2);
+  });
+
+  it('reconnects at once, without an error, when a stream reaches its time limit', async () => {
+    const responses = [sse([frame(snapshot())]), sse([frame(snapshot())], true)];
+    const { monitoring, events } = store(async () => responses.shift()!);
+    monitoring.start();
+    await vi.waitFor(() => expect(events).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(monitoring.connection()).toBe('live'));
+    expect(monitoring.error()).toBe('');
+  });
+
+  it('waits as long as a rate limit asks before reconnecting', async () => {
+    vi.useFakeTimers();
+    const { monitoring, events } = store(() =>
+      Promise.reject(new ApiError(429, 'rate_limited', undefined, undefined, 20)),
+    );
+    monitoring.start();
+    await vi.advanceTimersByTimeAsync(19_000);
+    expect(events).toHaveBeenCalledTimes(1);
+    expect(monitoring.connection()).toBe('reconnecting');
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(events).toHaveBeenCalledTimes(2);
+  });
+
   it('keeps slice references while their content is unchanged', () => {
-    const monitoring = store();
+    const { monitoring } = store();
     const first = snapshot();
     monitoring.receive(copy(first));
     const timeline = monitoring.timeline(),
@@ -181,7 +238,7 @@ describe('MonitoringStore', () => {
   });
 
   it('announces a health change only after it holds for two snapshots', () => {
-    const monitoring = store();
+    const { monitoring } = store();
     const attention = snapshot({
       health: {
         status: 'critical',
@@ -206,7 +263,7 @@ describe('MonitoringStore', () => {
   });
 
   it('treats data without a live stream, or older than four refreshes, as stale', () => {
-    const monitoring = store();
+    const { monitoring } = store();
     monitoring.receive(snapshot({ at: new Date().toISOString() }));
     expect(monitoring.stale()).toBe(true);
     monitoring.connection.set('live');
