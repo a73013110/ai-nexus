@@ -11,7 +11,11 @@ public sealed class RuntimeTraffic : IDisposable
     private readonly IOptions<MonitoringOptions> options;
     private readonly TimeProvider clock;
     public const int BucketSeconds = 10;
+    /// <summary>Health reads the last minute of completed buckets, whatever window the viewer picked.</summary>
+    public const int RecentSeconds = 60;
     private const int RetentionSeconds = 900, MaxEndpoints = 128, MaxActivities = 120;
+    // One resource bucket per retained ten-second bucket plus the open one.
+    private const int ResourceBuckets = RetentionSeconds / BucketSeconds + 1;
     private static readonly double[] LatencyBounds = [1, 2, 5, 10, 20, 30, 50, 75, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000, 10000, 30000, 60000, 300000, 600000];
     private readonly object gate = new();
     private readonly SortedDictionary<long, Bucket> buckets = [];
@@ -22,7 +26,8 @@ public sealed class RuntimeTraffic : IDisposable
     private readonly string instance = Environment.MachineName + " / " + Environment.ProcessId;
     private long sequence, droppedSessions;
     private int inFlight, openStreams;
-    private RuntimeResources resources = new(null, 0, 0, 0, 0);
+    private RuntimeResources resources = new(null, 0, 0, null, 0, 0, 0, 0, 0, 0, 0, null, 0);
+    private readonly ResourceBucket[] resourceBuckets = Enumerable.Range(0, ResourceBuckets).Select(_ => new ResourceBucket()).ToArray();
     private readonly Meter meter = new("AiNexus.Runtime", "1.0");
     private readonly Counter<long> requestCounter, receivedCounter, sentCounter;
     private readonly Histogram<double> requestDuration;
@@ -119,11 +124,33 @@ public sealed class RuntimeTraffic : IDisposable
             stats.Add(error && !cancelled, error && !cancelled, cancelled, duration, 0, 0);
         }
     }
-    public void SampleResources(RuntimeResources sample) { lock (gate) resources = sample; }
-    public MonitoringSnapshot Snapshot(int minutes)
+    /// <summary>Records the latest process sample and folds it into its ten-second bucket of a fixed ring.</summary>
+    public void SampleResources(RuntimeResources sample)
+    {
+        lock (gate)
+        {
+            resources = sample;
+            var key = clock.GetUtcNow().ToUnixTimeSeconds() / BucketSeconds * BucketSeconds;
+            var bucket = resourceBuckets[(int)(key / BucketSeconds % ResourceBuckets)];
+            if (bucket.Key != key) bucket.Reset(key);
+            bucket.Add(sample);
+        }
+    }
+
+    /// <summary>
+    /// The snapshot for a 1, 5 or 15 minute window. <paramref name="subsystems"/> are other modules' cached readings;
+    /// health is evaluated after the lock is released.
+    /// </summary>
+    public MonitoringSnapshot Snapshot(int minutes, MonitoredSubsystem[]? subsystems = null)
     {
         // Callers validate the window with MonitoringReads.ValidWindow.
         if (!MonitoringReads.ValidWindow(minutes)) throw new ArgumentOutOfRangeException(nameof(minutes));
+        var snapshot = Collect(minutes, subsystems ?? []);
+        return snapshot with { Health = MonitoringHealth.Evaluate(snapshot) };
+    }
+
+    private MonitoringSnapshot Collect(int minutes, MonitoredSubsystem[] subsystems)
+    {
         lock (gate)
         {
             var now = clock.GetUtcNow(); Prune(now);
@@ -133,12 +160,18 @@ public sealed class RuntimeTraffic : IDisposable
             var selected = buckets.Where(x => x.Key >= since && x.Key < end).Select(x => x.Value).ToArray();
             var seconds = Math.Max(BucketSeconds, end - since);
             var total = new Stats(); foreach (var bucket in selected) total.Merge(bucket.Http);
-            var timeline = new List<TrafficPoint>();
+            var recentSince = Math.Max(since, end - RecentSeconds);
+            var recent = new Stats();
+            var timeline = new List<TrafficPoint>(); var resourceTimeline = new List<ResourcePoint>();
             for (var time = since; time < end; time += BucketSeconds)
             {
                 var stats = buckets.GetValueOrDefault(time)?.Http ?? new Stats();
-                timeline.Add(new(DateTimeOffset.FromUnixTimeSeconds(time), stats.Requests / (double)BucketSeconds, Percent(stats.Errors, stats.Requests), stats.Average,
+                if (time >= recentSince) recent.Merge(stats);
+                var at = DateTimeOffset.FromUnixTimeSeconds(time);
+                timeline.Add(new(at, stats.Requests / (double)BucketSeconds, Percent(stats.Errors, stats.Requests), stats.ServerErrors, stats.Average, stats.P95(),
                     stats.Received, stats.Sent));
+                var sampled = resourceBuckets[(int)(time / BucketSeconds % ResourceBuckets)];
+                resourceTimeline.Add(sampled.Key == time ? sampled.Point(at) : new(at, null, null, null, null, null));
             }
             var depTraffic = dependencies.Select(pair => {
                 var stats = new Stats(); foreach (var bucket in selected) if (bucket.Dependencies.TryGetValue(pair.Key, out var part)) stats.Merge(part);
@@ -152,12 +185,14 @@ public sealed class RuntimeTraffic : IDisposable
                 endpoint.Stats.Merge(pair.Value.Stats);
             }
             var visibleSessions = sessions.Values.OrderByDescending(x => x.LastSeen).ThenBy(x => x.Id).Take(200).Select(x => x.Dto()).ToArray();
-            return new(1, Enabled, instance, started, now, minutes, options.Value.RefreshSeconds, options.Value.SessionTimeoutSeconds,
-                sessions.Values.Select(x => x.User).Distinct().Count(), sessions.Count, sessions.Values.Count(x => x.State == "active"),
+            return new(MonitoringSnapshot.CurrentVersion, Enabled, instance, started, now, minutes, options.Value.RefreshSeconds, options.Value.SessionTimeoutSeconds,
+                MonitoringHealth.Pending, sessions.Values.Select(x => x.User).Distinct().Count(), sessions.Count, sessions.Values.Count(x => x.State == "active"),
                 Math.Max(0, Volatile.Read(ref inFlight) - Volatile.Read(ref openStreams)), Math.Max(0, Volatile.Read(ref openStreams)),
-                Math.Max(0, sessions.Count - visibleSessions.Length), droppedSessions, resources, total.Dto(seconds), timeline.ToArray(), visibleSessions,
+                Math.Max(0, sessions.Count - visibleSessions.Length), droppedSessions, resources, resourceTimeline.ToArray(), total.Dto(seconds),
+                recent.Dto(Math.Max(BucketSeconds, end - recentSince)), timeline.ToArray(), visibleSessions,
                 activities.Where(x => x.At >= DateTimeOffset.FromUnixTimeSeconds(since)).Reverse().ToArray(), depTraffic,
-                endpoints.Values.OrderByDescending(x => x.Stats.Requests).Take(12).Select(x => new EndpointTraffic(x.Method, x.Route, x.Feature, x.Stats.Dto(seconds))).ToArray());
+                endpoints.Values.OrderByDescending(x => x.Stats.Requests).Take(12).Select(x => new EndpointTraffic(x.Method, x.Route, x.Feature, x.Stats.Dto(seconds))).ToArray(),
+                subsystems);
         }
     }
     private Bucket Current(DateTimeOffset now)
@@ -203,13 +238,31 @@ public sealed class RuntimeTraffic : IDisposable
             Received += other.Received; Sent += other.Sent; Timed += other.Timed; duration += other.duration;
             for (var i = 0; i < histogram.Length; i++) histogram[i] += other.histogram[i];
         }
-        public TrafficMetrics Dto(double seconds)
+        /// <summary>Upper bound of the histogram bucket holding the 95th percentile; null without samples or beyond the last bound.</summary>
+        public double? P95()
         {
-            double? p95 = null; long sum = 0;
+            long sum = 0;
             for (var i = 0; i < histogram.Length && Timed > 0; i++)
-            { sum += histogram[i]; if (sum >= Math.Ceiling(Timed * .95)) { p95 = i < LatencyBounds.Length ? LatencyBounds[i] : null; break; } }
-            return new(Requests, Errors, ServerErrors, Cancelled, Received, Sent, Math.Round(Requests / seconds, 3), Percent(Errors, Requests), Average, p95);
+            { sum += histogram[i]; if (sum >= Math.Ceiling(Timed * .95)) return i < LatencyBounds.Length ? LatencyBounds[i] : null; }
+            return null;
         }
+        public TrafficMetrics Dto(double seconds)
+            => new(Requests, Errors, ServerErrors, Cancelled, Received, Sent, Math.Round(Requests / seconds, 3), Percent(Errors, Requests), Average, P95());
+    }
+    private sealed class ResourceBucket
+    {
+        public long Key { get; private set; } = long.MinValue;
+        private double cpu, pause; private int cpuSamples, pauseSamples;
+        private long workingSet, heap, queue;
+        public void Reset(long key) { Key = key; cpu = pause = 0; cpuSamples = pauseSamples = 0; workingSet = heap = queue = 0; }
+        public void Add(RuntimeResources sample)
+        {
+            if (sample.CpuPercent is { } c) { cpu += c; cpuSamples++; }
+            if (sample.GcPausePercent is { } p) { pause += p; pauseSamples++; }
+            workingSet = sample.WorkingSetBytes; heap = sample.ManagedHeapBytes; queue = Math.Max(queue, sample.ThreadPoolQueueLength);
+        }
+        public ResourcePoint Point(DateTimeOffset at) => new(at, cpuSamples == 0 ? null : Math.Round(cpu / cpuSamples, 2), workingSet, heap, queue,
+            pauseSamples == 0 ? null : Math.Round(pause / pauseSamples, 2));
     }
     private sealed class Bucket
     { public Stats Http { get; } = new(); public Dictionary<string, Stats> Dependencies { get; } = new(StringComparer.Ordinal); public Dictionary<string, Endpoint> Endpoints { get; } = new(StringComparer.Ordinal); }

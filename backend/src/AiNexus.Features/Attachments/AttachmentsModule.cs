@@ -3,6 +3,7 @@ using AiNexus.Features.AccessControl;
 using AiNexus.Features.Identity;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Configuration;
+using AiNexus.Platform.Monitoring;
 
 namespace AiNexus.Features.Attachments;
 
@@ -24,6 +25,7 @@ public sealed class AttachmentsModule : IFeatureModule
     {
         var services = builder.Services;
         services.AddDashboardSource<FilesDashboard>();
+        services.AddMonitoringSource<StorageMonitoring>();
         services.AddScoped<AttachmentService>();
         services.AddScoped<DocumentExtractor>();
         services.AddSingleton<AttachmentWriteLock>();

@@ -2,6 +2,7 @@ using AiNexus.Features.AccessControl;
 using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Http;
 using AiNexus.Platform.Modules;
+using AiNexus.Platform.Monitoring;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Inference;
@@ -31,6 +32,8 @@ public sealed class InferenceModule : IFeatureModule
         services.AddSingleton<ModelCatalog>();
         services.AddSingleton<ModelPresentation>();
         services.AddSingleton<GenerationScheduler>();
+        services.AddMonitoringSource<GenerationQueueMonitoring>();
+        services.AddMonitoringSource<ModelProvidersMonitoring>();
     }
 
     // Endpoint order is the published OpenAPI order.

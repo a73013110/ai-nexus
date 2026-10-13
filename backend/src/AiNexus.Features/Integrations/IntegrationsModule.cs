@@ -2,6 +2,7 @@ using AiNexus.Features.AccessControl;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Configuration;
+using AiNexus.Platform.Monitoring;
 
 namespace AiNexus.Features.Integrations;
 
@@ -14,6 +15,7 @@ public sealed class IntegrationsModule : IFeatureModule
         services.AddSqlDatabase<LegacyMeihoDatabase>();
         services.AddSettings<IntegrationsOptions, IntegrationsOptionsValidator>(IntegrationsOptions.Section);
         services.AddScoped<SourceGateway>();
+        services.AddMonitoringSource<IntegrationsMonitoring>();
         services.AddScoped<IControlledSourceAdapter, GdwebSource>();
         services.AddScoped<IControlledSourceAdapter, MeihoSource>();
         services.AddFeaturePolicy(FeatureIds.Integrations);

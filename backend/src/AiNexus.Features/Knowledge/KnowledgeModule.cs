@@ -14,6 +14,7 @@ using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Knowledge.Indexing;
 using AiNexus.Features.Knowledge.Embeddings;
 using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Platform.Monitoring;
 
 namespace AiNexus.Features.Knowledge;
 
@@ -32,6 +33,7 @@ public sealed class KnowledgeModule : IFeatureModule
     {
         var services = builder.Services;
         services.AddDashboardSource<KnowledgeDashboard>();
+        services.AddMonitoringSource<KnowledgeMonitoring>();
         services.AddSettings<KnowledgeOptions, KnowledgeOptionsValidator>(KnowledgeOptions.Section);
         services.AddSingleton(sp => EmbeddingModel(sp.GetRequiredService<IOptions<KnowledgeOptions>>().Value));
         services.AddScoped<DocumentAccess>();

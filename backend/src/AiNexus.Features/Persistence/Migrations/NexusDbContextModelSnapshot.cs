@@ -1418,6 +1418,10 @@ namespace AiNexus.Features.Persistence.Migrations
 
                     b.HasIndex("AssistantMessageId");
 
+                    b.HasIndex("CreatedAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedAt"), new[] { "OwnerId", "ModelId", "Status", "InputTokens", "OutputTokens", "DurationMilliseconds" });
+
                     b.HasIndex("UserMessageId");
 
                     b.HasIndex("ActiveOwnerId", "LeaseExpiresAt");
@@ -1491,6 +1495,10 @@ namespace AiNexus.Features.Persistence.Migrations
                         .HasComment("業務執行狀態。");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedAt"), new[] { "OwnerId", "Kind", "ModelId", "Status", "InputTokens", "OutputTokens", "DurationMilliseconds" });
 
                     b.HasIndex("OwnerId", "CreatedAt");
 

@@ -91,6 +91,8 @@ internal sealed class GenerationRunConfiguration : IEntityTypeConfiguration<Gene
         run.HasIndex(x => x.ActiveOwnerId).IsUnique().HasFilter("[ActiveOwnerId] IS NOT NULL");
         run.HasIndex(x => new { x.ConversationId, x.CreatedAt });
         run.HasIndex(x => new { x.OwnerId, x.CreatedAt }); // Daily token budgets and personal usage reports.
+        // Platform-wide date ranges (admin usage and spend reports, today's usage on runtime monitoring) cover the report columns.
+        run.HasIndex(x => x.CreatedAt).IncludeProperties(x => new { x.OwnerId, x.ModelId, x.Status, x.InputTokens, x.OutputTokens, x.DurationMilliseconds });
         run.HasIndex(x => new { x.ActiveOwnerId, x.LeaseExpiresAt });
     }
 }

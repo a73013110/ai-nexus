@@ -41,5 +41,7 @@ internal sealed class ModelInvocationConfiguration : IEntityTypeConfiguration<Mo
         item.Property(x => x.Kind).HasMaxLength(32); item.Property(x => x.ModelId).HasMaxLength(160); item.Property(x => x.Status).HasMaxLength(16);
         item.Property(x => x.Provider).HasMaxLength(32);
         item.HasIndex(x => new { x.OwnerId, x.CreatedAt });
+        // Platform-wide date ranges (admin usage and spend reports, today's usage on runtime monitoring) cover the report columns.
+        item.HasIndex(x => x.CreatedAt).IncludeProperties(x => new { x.OwnerId, x.Kind, x.ModelId, x.Status, x.InputTokens, x.OutputTokens, x.DurationMilliseconds });
     }
 }
