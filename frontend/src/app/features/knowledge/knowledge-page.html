@@ -4,18 +4,23 @@
     id() ? current()?.description || '' : '整理可查核的文件來源，讓 AI 回答附上依據與頁碼。'
   "
   [back]="id() ? { path: '/knowledge', label: '全部知識庫' } : null"
+  [tour]="tour()"
 >
   <div page-actions class="page-actions">
     @if (current(); as collection) {
       @if (collection.resource.canEdit) {
-        <button class="primary-button" [disabled]="uploading()" (click)="fileInput.click()">
+        <button
+          class="primary-button knowledge-upload"
+          [disabled]="uploading()"
+          (click)="fileInput.click()"
+        >
           <nx-icon name="upload" />{{ uploading() ? '正在上傳…' : '上傳文件' }}
         </button>
       }
       <nx-action-menu label="知識庫操作" [items]="collectionActions()" (action)="action($event)" />
     } @else if (!id()) {
       <button
-        class="primary-button"
+        class="primary-button knowledge-create"
         (click)="openEditor()"
         [disabled]="loading() || !session.has('knowledge')"
       >
@@ -74,6 +79,7 @@
   } @else if (current(); as collection) {
     <div class="knowledge-layout">
       <nx-panel
+        class="knowledge-sources"
         heading="來源文件"
         icon="document"
         [count]="documents().length"

@@ -353,3 +353,93 @@ test("pasted knowledge text is editable and a version conflict preserves the dra
     .click();
   await expect(dialog).not.toBeVisible();
 });
+
+for (const width of [1440, 375]) {
+  test(`knowledge tours walk the list and the visible collection steps at ${width}px`, async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const fixture = new KnowledgeFixture();
+    const seeded = fixture.seed();
+    const collection = fixture.collections[0];
+    // An editor with seven sources sees the filter, adding sources and both menus; a reader's
+    // tour ends on the query test instead.
+    const reader = width === 375;
+    if (reader) {
+      collection.resource.canEdit = false;
+      collection.resource.isOwner = false;
+      seeded.canEdit = false;
+    } else
+      for (let index = 1; index <= 6; index++)
+        fixture.documents.push({
+          ...seeded,
+          id: randomUUID(),
+          fileName: `補充規範 ${index}.pdf`,
+          status: index === 6 ? "failed" : "ready",
+          jobId: null,
+          textVersion: 0,
+        });
+    await fixture.attach(page);
+    const height = width === 375 ? 812 : 1000;
+    await page.setViewportSize({ width, height });
+    const launcher = page
+      .locator(".feature-header")
+      .getByRole("button", { name: "操作導覽", exact: true });
+    const tour = page.locator(".driver-popover.nx-tour");
+    const title = tour.locator(".driver-popover-title");
+    const progress = tour.locator(".driver-popover-progress-text");
+    // Walks to the end and returns each step's title and the last description.
+    const walk = async () => {
+      await launcher.click();
+      await expect(title).toHaveText(/./);
+      const total = Number((await progress.innerText()).split("/")[1]);
+      const titles = [await title.innerText()];
+      for (let step = 2; step <= total; step++) {
+        await tour.getByRole("button", { name: "下一步", exact: true }).click();
+        await expect(progress).toHaveText(`${step} / ${total}`);
+        titles.push(await title.innerText());
+        await settleEntrance(page);
+        const bounds = (await tour.boundingBox())!;
+        expect(bounds.x).toBeGreaterThanOrEqual(0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+        expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
+      }
+      const last = await tour
+        .locator(".driver-popover-description")
+        .innerText();
+      await tour.getByRole("button", { name: "開始使用", exact: true }).click();
+      await expect(tour).toHaveCount(0);
+      await expect(launcher).toBeFocused();
+      await expect(page.locator(".driver-overlay")).toHaveCount(0);
+      return { titles, last };
+    };
+    await page.goto("/knowledge");
+    await expect(page.locator(".resource-card")).toBeVisible();
+    const list = await walk();
+    expect(list.titles).toEqual([
+      "可查核的資料來源",
+      "依擁有者篩選",
+      "用名稱尋找知識庫",
+      "打開知識庫",
+      "建立知識庫",
+    ]);
+    expect(list.last).toContain("重播導覽");
+    await page.locator(".resource-card").click();
+    await expect(
+      page.getByRole("link", { name: /差旅費用申請.pdf/ }),
+    ).toBeVisible();
+    const detail = await walk();
+    expect(detail.titles).toEqual([
+      "這個知識庫的用途",
+      ...(reader ? [] : ["上傳文件", "貼上文字或從檔案庫加入", "篩選來源文件"]),
+      "開啟原檔核對",
+      "處理狀態",
+      ...(reader ? [] : ["文件操作"]),
+      "檢索測試",
+      ...(reader ? [] : ["知識庫操作"]),
+    ]);
+    expect(detail.last).toContain("重播導覽");
+    expect(errors).toEqual([]);
+  });
+}
