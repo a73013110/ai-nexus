@@ -19,6 +19,9 @@ import type { BadgeTone } from './count-badge';
       font-weight: 600;
       line-height: 1.6;
       white-space: nowrap;
+      transition:
+        color var(--motion-panel) var(--ease),
+        background-color var(--motion-panel) var(--ease);
     }
     :host([data-tone='info']) {
       --badge-color: var(--info);

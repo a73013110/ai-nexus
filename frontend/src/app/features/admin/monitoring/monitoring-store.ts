@@ -1,9 +1,92 @@
-import { DestroyRef, Injectable, inject, signal } from '@angular/core';
+import { computed, DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { ApiError } from '../../../core/api/api-client';
-import type { MonitoringSnapshot } from '../../../core/api/schema';
+import type {
+  DependencyTraffic,
+  HealthSummary,
+  MonitoredSubsystem,
+  MonitoringSnapshot,
+  ResourcePoint,
+  TrafficPoint,
+} from '../../../core/api/schema';
 import { jsonEvents } from '../../../core/stream/json-events';
 import { safeMessage } from '../../../core/errors/safe-errors';
 import { MonitoringApi } from './monitoring-api';
+import { healthAnnouncement } from './monitoring-format';
+
+const arrays = [
+  'sessions',
+  'timeline',
+  'resourceTimeline',
+  'activities',
+  'dependencies',
+  'endpoints',
+  'subsystems',
+] as const;
+
+/**
+ * Accepts version 2 snapshots only and normalises the parts a newer server might leave out, so a
+ * malformed frame fails loudly (and reconnects) instead of rendering half a page.
+ */
+export function readSnapshot(value: unknown): MonitoringSnapshot {
+  const snapshot = value as MonitoringSnapshot | null;
+  if (
+    !snapshot ||
+    typeof snapshot !== 'object' ||
+    snapshot.version !== 2 ||
+    arrays.some((key) => !Array.isArray(snapshot[key])) ||
+    !snapshot.health ||
+    !Array.isArray(snapshot.health.issues) ||
+    !snapshot.resources ||
+    !snapshot.traffic ||
+    !Number.isFinite(Date.parse(snapshot.at))
+  )
+    throw new Error('監控資料格式不正確');
+  return {
+    ...snapshot,
+    recentTraffic: snapshot.recentTraffic ?? snapshot.traffic,
+    subsystems: snapshot.subsystems.map((s) => ({
+      ...s,
+      facts: Array.isArray(s.facts) ? s.facts : [],
+    })),
+  };
+}
+
+/** Series compare by their newest completed bucket: a bucket never changes once it is closed. */
+export const sameSeries = (
+  a: readonly (TrafficPoint | ResourcePoint)[],
+  b: readonly (TrafficPoint | ResourcePoint)[],
+) =>
+  a === b ||
+  (a.length === b.length && a.at(0)?.at === b.at(0)?.at && a.at(-1)?.at === b.at(-1)?.at);
+export const healthKey = (health: HealthSummary | null) =>
+  health
+    ? health.status +
+      '|' +
+      health.issues
+        .map((i) => [i.code, i.severity, i.subject, i.title, i.detail].join('·'))
+        .join('|')
+    : '';
+const sameJson = <T>(a: T, b: T) => a === b || JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * Speaks only once a new health state holds for two snapshots in a row, so a value hovering at a
+ * threshold does not chatter; the first settled state is the page itself and is not announced.
+ */
+export class AnnouncementGate {
+  private pending = '';
+  private settled: string | null = null;
+  /** Returns the text to announce, or null. */
+  observe(key: string, text: string): string | null {
+    if (key !== this.pending) {
+      this.pending = key;
+      return null;
+    }
+    if (key === this.settled) return null;
+    const first = this.settled === null;
+    this.settled = key;
+    return first ? null : text;
+  }
+}
 
 @Injectable()
 export class MonitoringStore {
@@ -16,23 +99,75 @@ export class MonitoringStore {
   readonly minutes = signal(5);
   readonly paused = signal(false);
   readonly now = signal(Date.now());
+  /** The polite announcement of a settled health change (see `AnnouncementGate`). */
+  readonly announcement = signal('');
+
+  // Slices keep their reference while their content is unchanged, so a 3-second snapshot only
+  // re-renders the parts that actually moved.
+  readonly health = computed(() => this.snapshot()?.health ?? null, {
+    equal: (a, b) => healthKey(a) === healthKey(b),
+  });
+  readonly timeline = computed<readonly TrafficPoint[]>(() => this.snapshot()?.timeline ?? [], {
+    equal: sameSeries,
+  });
+  readonly resourceTimeline = computed<readonly ResourcePoint[]>(
+    () => this.snapshot()?.resourceTimeline ?? [],
+    { equal: sameSeries },
+  );
+  readonly dependencies = computed<readonly DependencyTraffic[]>(
+    () => this.snapshot()?.dependencies ?? [],
+    { equal: sameJson },
+  );
+  readonly subsystems = computed<readonly MonitoredSubsystem[]>(
+    () => this.snapshot()?.subsystems ?? [],
+    { equal: sameJson },
+  );
+  readonly issueCount = computed(() => this.health()?.issues.length ?? 0);
+  readonly worstSeverity = computed<'critical' | 'warning' | null>(() => {
+    const issues = this.health()?.issues ?? [];
+    return issues.some((i) => i.severity === 'critical')
+      ? 'critical'
+      : issues.length
+        ? 'warning'
+        : null;
+  });
+  /** Data older than four refreshes, or no live stream, is shown as such. */
+  readonly stale = computed(() => {
+    const snapshot = this.snapshot();
+    return (
+      this.connection() !== 'live' ||
+      !snapshot ||
+      this.now() - Date.parse(snapshot.at) > Math.max(15000, snapshot.refreshSeconds * 4000)
+    );
+  });
+
+  private readonly gate = new AnnouncementGate();
   private controller?: AbortController;
   private retry?: ReturnType<typeof setTimeout>;
   private watchdog?: ReturnType<typeof setTimeout>;
+  private clock?: ReturnType<typeof setInterval>;
   private revision = 0;
   private retries = 0;
   private started = false;
   constructor() {
     const visibility = () => {
+      this.tick();
       if (this.started) this.restart();
     };
     document.addEventListener('visibilitychange', visibility);
-    const clock = setInterval(() => this.now.set(Date.now()), 1000);
+    this.tick();
     inject(DestroyRef).onDestroy(() => {
       this.stop();
-      clearInterval(clock);
+      clearInterval(this.clock);
       document.removeEventListener('visibilitychange', visibility);
     });
+  }
+  /** The one-second clock behind staleness and uptime; it stops while the tab is hidden. */
+  private tick() {
+    clearInterval(this.clock);
+    this.now.set(Date.now());
+    if (document.visibilityState !== 'hidden')
+      this.clock = setInterval(() => this.now.set(Date.now()), 1000);
   }
   start() {
     this.started = true;
@@ -50,6 +185,20 @@ export class MonitoringStore {
   refresh() {
     this.retries = 0;
     this.restart();
+  }
+  /** Applies one snapshot from the stream. */
+  receive(value: unknown) {
+    const snapshot = readSnapshot(value);
+    this.snapshot.set(snapshot);
+    this.now.set(Date.now());
+    const said = this.gate.observe(
+      snapshot.health.status +
+        ':' +
+        snapshot.health.issues.map((i) => i.code + '/' + i.subject).join(','),
+      healthAnnouncement(snapshot.health),
+    );
+    if (said) this.announcement.set(said);
+    return snapshot;
   }
   private stop() {
     ++this.revision;
@@ -75,17 +224,9 @@ export class MonitoringStore {
     try {
       this.armWatchdog();
       const response = await this.api.events(this.minutes(), signal);
-      for await (const snapshot of jsonEvents<MonitoringSnapshot>(response, 'snapshot', signal)) {
+      for await (const frame of jsonEvents<unknown>(response, 'snapshot', signal)) {
         if (signal.aborted || revision !== this.revision) return;
-        if (
-          snapshot.version !== 1 ||
-          !Array.isArray(snapshot.sessions) ||
-          !Array.isArray(snapshot.timeline) ||
-          !Number.isFinite(Date.parse(snapshot.at))
-        )
-          throw new Error('監控資料格式不正確');
-        this.snapshot.set(snapshot);
-        this.now.set(Date.now());
+        const snapshot = this.receive(frame);
         this.connection.set('live');
         this.error.set('');
         this.retries = 0;

@@ -14,6 +14,7 @@ import { WorkspaceMenuButton } from './workspace-menu-button';
     '[class.feature-layout-compact]': "density() === 'compact'",
     '[class.feature-layout-wide]': 'wide()',
     '[class.feature-layout-data]': "layoutMode() === 'data'",
+    '[class.feature-layout-sticky]': 'stickyHeader()',
   },
   template: `<a class="skip-link" href="#feature-content">跳到主要內容</a>
     <main class="feature-main" id="feature-content" tabindex="-1">
@@ -58,6 +59,11 @@ export class FeaturePage {
   readonly density = input<'comfortable' | 'compact'>('compact');
   readonly wide = input(true);
   readonly layoutMode = input<'flow' | 'data'>('flow');
+  /**
+   * Keeps the header and its actions at the top while the page scrolls; it becomes a translucent
+   * material once content passes beneath it. For live pages whose controls stay in use.
+   */
+  readonly stickyHeader = input(false);
   /** The page's guided tour; its trigger sits at the far right of the header. */
   readonly tour = input<ProductTourDefinition | null>(null);
 }

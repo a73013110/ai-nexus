@@ -1,0 +1,55 @@
+<nx-panel heading="操作動態" [count]="activities().length">
+  <span panel-actions class="activity-caption">異動、錯誤與中止</span>
+  <ol class="activity-list">
+    @for (a of visible(); track a.sequence) {
+      <li animate.enter="activity-enter">
+        <div class="activity-row">
+          <span class="activity-marker" [class.is-error]="a.outcome === 'error'"
+            ><nx-icon [name]="a.outcome === 'error' ? 'shield' : 'activity'"
+          /></span>
+          <div class="activity-text">
+            <p>
+              <strong>{{ a.displayName }}</strong> · {{ a.action }}
+            </p>
+            <small
+              >{{ time(a.at) }} · {{ a.method }} ·
+              <span [class.is-error]="a.statusCode >= 500">{{ a.statusCode }}</span> ·
+              {{ latency(a.durationMs) }}{{ a.outcome === 'cancelled' ? ' · 已中止' : '' }}</small
+            >
+          </div>
+          @if (a.traceId && canTrace()) {
+            <a
+              class="activity-trace"
+              [routerLink]="'/admin/logs'"
+              [queryParams]="{ traceId: a.traceId }"
+              >追查流程 <nx-icon name="external"
+            /></a>
+          }
+        </div>
+      </li>
+    } @empty {
+      <li class="activity-empty">此期間沒有異動、錯誤或中止事件。</li>
+    }
+  </ol>
+</nx-panel>
+<nx-panel heading="熱門 API">
+  <details class="endpoint-fold" [open]="!phone()">
+    <summary>
+      顯示 {{ endpoints().length }} 個熱門 API<nx-icon class="fold-chevron" name="chevron-down" />
+    </summary>
+    <ol class="endpoint-list">
+      @for (e of endpoints(); track e.method + e.route) {
+        <li class="endpoint-row">
+          <div>
+            <span class="method-tag">{{ e.method }}</span
+            ><code>{{ e.route }}</code
+            ><small>{{ featureName(e.feature) }} · 平均 {{ latency(e.metrics.averageMs) }}</small>
+          </div>
+          <strong>{{ number(e.metrics.requests) }}<small>次</small></strong>
+        </li>
+      } @empty {
+        <li class="activity-empty">等待第一個完整的 10 秒觀測區間。</li>
+      }
+    </ol>
+  </details>
+</nx-panel>

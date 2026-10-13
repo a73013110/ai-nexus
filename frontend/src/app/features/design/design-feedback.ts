@@ -14,6 +14,7 @@ import { StatusBadge } from '../../shared/ui/status-badge';
 import { ToastHistory } from '../../shared/ui/toast-history';
 import { ToastService } from '../../shared/ui/toast-service';
 import { ViewScope } from '../../shared/browser/view-scope';
+import { LiveDot } from '../../shared/ui/live-dot';
 import { JobProgress } from '../tasks/job-progress';
 import { DesignExample, DesignSection } from './design-section';
 import { DesignSamples, jobStates } from './design-samples';
@@ -33,6 +34,7 @@ type IslandSample = 'live' | 'warning' | 'info';
     InferenceSignal,
     InfoPopover,
     JobProgress,
+    LiveDot,
     NexusIsland,
     Notice,
     Select,
