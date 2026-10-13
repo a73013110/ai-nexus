@@ -62,6 +62,9 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
 app.MapFeatures();
 // Unknown API paths must never return the SPA's HTML document.
 app.Map("/api/{**path}", () => Results.NotFound()).RequireAuthorization();
+// The default fallback skips any path whose last segment has a dot, taking it for a missing file. Repository
+// routes end in Gitea names (`team/my.repo`) and `base...head` ranges, and no static file lives under them.
+app.MapFallbackToFile("/repositories/{**path}", "index.html").AllowAnonymous();
 app.MapFallbackToFile("index.html").AllowAnonymous();
 
 if (!await app.EnsureDatabaseReadyAsync())

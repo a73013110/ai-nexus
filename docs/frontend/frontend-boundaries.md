@@ -25,6 +25,7 @@
 
 - 由 [`frontend/eslint.config.js`](../../frontend/eslint.config.js) 檢查：`shared` 不可引用 `features`；`core` 除了 `core/layout` 不可引用 `features`；`features` 之間可以互相引用。
 - 需要登入的頁面都是 `app.routes.ts` 裡同一個 shell route 的子路由，登入檢查只宣告一次；新頁面加在 children 裡。
+- 伺服器預設把最後一段含 `.` 的路徑當成檔案，不回 `index.html`。路徑段可能含點（外部名稱、`base...head` 區間）的路由，要在 [`Program.cs`](../../backend/src/AiNexus.Host/Program.cs) 為它的前綴加 `MapFallbackToFile`（例：`/repositories`），並在 `SpaFallbackTests` 加一列。
 - 頁面使用 Signals、OnPush 與 zoneless。
 - 新對話草稿交接只留在記憶體，綁定帳號世代與 conversation ID，讀取一次；不把來源全文放在 URL、history state 或 localStorage。
 
