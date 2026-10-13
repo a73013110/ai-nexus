@@ -66,6 +66,11 @@ export class AdminStore {
     this.usersRead.reload();
     void this.session.load(true);
   }
+  /** Features moved: read the catalog and this account's navigation (sidebar order) again. */
+  reordered() {
+    this.catalogRead.reload();
+    void this.session.load(true);
+  }
   roleNames(ids: string[]) {
     return ids.map((id) => this.catalog()?.roles.find((x) => x.id === id)?.name || id);
   }

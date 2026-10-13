@@ -1,0 +1,133 @@
+@switch (tab()) {
+  @case ('account') {
+    <form class="settings-form" (submit)="submit($event)">
+      <div class="settings-fields">
+        <ng-container [ngTemplateOutlet]="error" />
+        <nx-user-account-fields
+          [value]="store.account()"
+          [disabled]="store.locked()"
+          (valueChange)="store.account.set($event)"
+        />
+      </div>
+      <ng-container
+        [ngTemplateOutlet]="actions"
+        [ngTemplateOutletContext]="{ label: '儲存帳號' }"
+      />
+    </form>
+  }
+  @case ('roles') {
+    <form class="settings-form" (submit)="submit($event)">
+      <div class="settings-fields">
+        <ng-container [ngTemplateOutlet]="error" />
+        <nx-user-role-fields
+          [roleIds]="store.roles()"
+          [enabled]="store.current()?.enabled !== false"
+          [disabled]="store.locked()"
+          (roleIdsChange)="store.roles.set($event)"
+        />
+      </div>
+      <ng-container
+        [ngTemplateOutlet]="actions"
+        [ngTemplateOutletContext]="{ label: '儲存角色' }"
+      />
+    </form>
+  }
+  @case ('models') {
+    @if (store.modelPolicy(); as policy) {
+      <form class="settings-form" (submit)="submit($event)">
+        <div class="settings-fields">
+          <ng-container [ngTemplateOutlet]="error" />
+          <nx-model-policy-editor
+            [models]="admin.catalog()?.models || []"
+            [value]="store.models()"
+            [effective]="policy.effective"
+            [personal]="true"
+            [disabled]="store.locked()"
+            (valueChange)="store.models.set($event)"
+          />
+        </div>
+        <ng-container
+          [ngTemplateOutlet]="actions"
+          [ngTemplateOutletContext]="{ label: '儲存模型政策' }"
+        />
+      </form>
+    } @else if (store.loadingModels()) {
+      <p class="form-note settings-loading" role="status">正在載入模型政策…</p>
+    } @else {
+      <div class="settings-fields">
+        @if (store.modelsError()) {
+          <nx-notice tone="danger" [message]="store.modelsError()" />
+        }
+        <button type="button" class="secondary-button" (click)="store.reloadModels()">
+          重新載入模型政策
+        </button>
+      </div>
+    }
+  }
+  @case ('storage') {
+    <form class="settings-form" (submit)="submit($event)">
+      <div class="settings-fields">
+        <ng-container [ngTemplateOutlet]="error" />
+        <fieldset>
+          <legend>原檔容量</legend>
+          <nx-storage-usage [storage]="store.current()?.storage" />
+          <label class="storage-limit"
+            >個人容量上限（GB）<input
+              nxField
+              type="number"
+              min="0"
+              max="1000000"
+              step="0.000000001"
+              aria-label="個人容量上限（GB）"
+              placeholder="使用群組或預設容量"
+              [value]="store.storage()"
+              [readOnly]="store.locked()"
+              (input)="store.storage.set($any($event.target).value)"
+          /></label>
+          <p class="form-note">
+            個人設定優先於群組；留空套用群組或預設 5 GB，0
+            禁止新增上傳。降低上限會阻止超額上傳，既有檔案仍保留。1 GB = 1,000,000,000 bytes。
+          </p>
+        </fieldset>
+      </div>
+      <ng-container
+        [ngTemplateOutlet]="actions"
+        [ngTemplateOutletContext]="{ label: '儲存容量上限' }"
+      />
+    </form>
+  }
+}
+
+<ng-template #error>
+  @if (store.errors()[tab()]) {
+    <nx-notice tone="danger" [message]="store.errors()[tab()]!" />
+  }
+</ng-template>
+<ng-template #actions let-label="label">
+  <div class="dialog-actions settings-actions">
+    <span class="settings-state" role="status">{{
+      store.testing()
+        ? '測試身分期間不能修改管理設定'
+        : store.dirty()[tab()]
+          ? '有未儲存的變更'
+          : ''
+    }}</span>
+    @if (store.dirty()[tab()]) {
+      <button
+        type="button"
+        class="secondary-button"
+        [disabled]="!!store.saving()"
+        (click)="store.revert(tab())"
+      >
+        還原
+      </button>
+    }
+    <button
+      type="submit"
+      class="primary-button"
+      [disabled]="store.locked() || !store.dirty()[tab()]"
+    >
+      {{ store.saving() === tab() ? '儲存中…' : label }}
+    </button>
+  </div>
+</ng-template>

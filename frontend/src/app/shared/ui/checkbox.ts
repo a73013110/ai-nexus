@@ -2,17 +2,16 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 import { Icon } from './icon';
 let sequence = 0;
 
-/** Native checkbox semantics with a consistent, whole-row pointer target. */
+/**
+ * Native checkbox semantics with a consistent, whole-row pointer target. Only the box shows the
+ * checked state: rows in a list keep one background, so hover (`--hover`) is never confused with it.
+ */
 @Component({
   selector: 'nx-checkbox',
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './checkbox.scss',
-  template: `<label
-    class="selection-control"
-    [class.is-selected]="checked()"
-    [class.is-disabled]="disabled()"
-  >
+  template: `<label class="selection-control" [class.is-disabled]="disabled()">
     <span class="selection-box"
       ><input
         type="checkbox"

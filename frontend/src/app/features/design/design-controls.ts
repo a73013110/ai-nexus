@@ -198,7 +198,7 @@ import { DesignSamples } from './design-samples';
       id="design-checkbox"
       title="核取方塊"
       api="Checkbox"
-      description="整列可點選，保留原生鍵盤操作。"
+      description="整列可點選，保留原生鍵盤操作；勾選只由方框表示，列不填色，清單只有 hover 一種底色。"
     >
       <nx-checkbox
         label="開啟此項授權"

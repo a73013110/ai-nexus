@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { AdminUserDto } from '../../../core/api/schema';
+import type { AdminRoleDto } from '../../../core/api/schema';
 import { AdminApi } from '../admin-api';
 import { AdminStore } from '../admin-store';
 import { AccessEditorDialog } from './access-editor-dialog';
@@ -25,17 +25,10 @@ const catalog = {
   ],
   models: [],
 };
-const user = {
-  id: 'u1',
-  displayName: '王小明',
-  account: 'CORP\\wang',
-  enabled: true,
-  roleIds: ['member'],
-  authentication: null,
-} as unknown as AdminUserDto;
+const role = catalog.roles[0] as unknown as AdminRoleDto;
 
 function setup() {
-  const api = { roles: vi.fn(async () => undefined), updateUser: vi.fn(async () => undefined) };
+  const api = { role: vi.fn(async () => undefined) };
   const store = { catalog: signal(catalog), saved: vi.fn() };
   TestBed.configureTestingModule({
     providers: [
@@ -63,34 +56,27 @@ describe('AccessEditorDialog', () => {
   });
   afterEach(() => TestBed.resetTestingModule());
 
-  it('previews the enabled features a user would receive from enabled roles', () => {
+  it('previews the enabled features of the enabled groups a role would join', () => {
     const { dialog } = setup();
-    dialog.open('user', user);
+    dialog.open('role', role);
     expect(dialog.proposedFeatures().map((x) => x.id)).toEqual(['chat']);
-    dialog.check('reviewer', true);
-    dialog.check('retired', true);
+    dialog.check('review', true);
     expect(dialog.proposedFeatures().map((x) => x.id)).toEqual(['chat', 'repositories']);
+    dialog.update('enabled', false);
+    expect(dialog.proposedFeatures()).toEqual([]);
   });
 
-  it('saves only the roles when a user profile is unchanged', async () => {
+  it('saves a role with its groups and reports the change', async () => {
     const { dialog, api, store } = setup();
-    dialog.open('user', user);
-    dialog.check('reviewer', true);
+    dialog.open('role', role);
+    dialog.check('review', true);
     await dialog.save(new Event('submit'));
-    expect(api.roles).toHaveBeenCalledWith('u1', ['member', 'reviewer']);
-    expect(api.updateUser).not.toHaveBeenCalled();
+    expect(api.role).toHaveBeenCalledWith('member', {
+      name: '成員',
+      enabled: true,
+      groupIds: ['basic', 'review'],
+    });
     expect(store.saved).toHaveBeenCalled();
-  });
-
-  it('saves the whole account once a login field changes', async () => {
-    const { dialog, api } = setup();
-    dialog.open('user', user);
-    dialog.update('name', '王大明');
-    await dialog.save(new Event('submit'));
-    expect(api.updateUser).toHaveBeenCalledWith(
-      'u1',
-      expect.objectContaining({ displayName: '王大明', adAccount: 'wang', roleIds: ['member'] }),
-    );
   });
 
   it('requires an identifier and a name for new roles', async () => {

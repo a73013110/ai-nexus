@@ -60,7 +60,7 @@ export function modelPolicyRequest(draft: ModelPolicyDraft): ModelPolicyRequest 
         (checkedChange)="change({ restricted: $event })"
       />
     </div>
-    <nx-data-table class="model-policy-table" label="模型授權與額度">
+    <nx-data-table class="model-policy-table" label="模型授權與額度" [stacked]="true">
       <table>
         <colgroup>
           <col />
@@ -120,7 +120,7 @@ export function modelPolicyRequest(draft: ModelPolicyDraft): ModelPolicyRequest 
                   }
                 </div>
               </td>
-              <td>
+              <td data-label="每日 token 上限">
                 <input
                   nxField
                   type="number"

@@ -196,6 +196,72 @@ select:where(.ui-input) {
 .ui-table-scroll tbody tr.is-selected td:first-child {
   box-shadow: inset 3px 0 var(--accent);
 }
+// `<nx-data-table stacked>`: one card per row at `narrow` and below, so a phone never scrolls a
+// table sideways. The header stays for assistive technology; cells name themselves by `data-label`.
+.ui-table-stack .ui-table-scroll > table {
+  min-width: var(--table-min-width, 0);
+}
+@include bp.below(narrow) {
+  .ui-table-stack .ui-table-scroll {
+    max-height: none;
+    scrollbar-gutter: auto;
+    > table,
+    tbody,
+    tbody :is(td, th) {
+      display: block;
+      min-width: 0;
+    }
+    thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    tbody tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: start;
+      gap: var(--p-space-1) var(--p-space-3);
+      min-height: 2.75rem;
+      padding: var(--p-space-3);
+      border-bottom: 1px solid var(--line);
+    }
+    tbody:last-of-type tr:last-child {
+      border-bottom: 0;
+    }
+    tbody :is(td, th) {
+      grid-column: 1;
+      padding: 0;
+      border: 0;
+    }
+    tbody th[colspan] {
+      grid-column: 1 / -1;
+    }
+    // Spans two lines so a touch-sized button does not push the next line down.
+    [data-stack='end'] {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      margin: calc(-1 * var(--p-space-2)) calc(-1 * var(--p-space-1)) 0 0;
+    }
+    [data-stack='hide'] {
+      display: none;
+    }
+    td[data-label]::before {
+      content: attr(data-label);
+      margin-inline-end: var(--p-space-2);
+      color: var(--secondary);
+      font-size: var(--p-font-xs);
+    }
+    tbody tr.is-selected {
+      box-shadow: inset 3px 0 var(--accent);
+      td:first-child {
+        box-shadow: none;
+      }
+    }
+  }
+}
 .ui-table-state {
   display: grid;
   justify-items: center;

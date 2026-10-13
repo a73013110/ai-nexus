@@ -1,0 +1,24 @@
+// The order handle and the row being dragged; the table itself is styled by access-tabs.scss.
+.feature-handle {
+  color: var(--secondary);
+  cursor: grab;
+  touch-action: none;
+}
+.feature-handle[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.45;
+}
+.admin-table-name {
+  min-width: 0;
+  font-weight: 600;
+}
+tr.is-dragging {
+  position: relative;
+  z-index: 2;
+  background: var(--surface);
+  box-shadow: var(--shadow-floating);
+  cursor: grabbing;
+}
+tr.is-dragging .feature-handle {
+  cursor: grabbing;
+}

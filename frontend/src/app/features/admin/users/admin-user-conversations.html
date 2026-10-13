@@ -1,0 +1,156 @@
+<p class="conversation-audit-note">
+  <nx-icon
+    name="shield"
+  />對話為唯讀；開啟清單與內容都會寫入稽核。包含各分支版本，附件只顯示名稱與大小。
+</p>
+@if (reader.error()) {
+  <nx-notice tone="danger" [message]="reader.error()" />
+}
+<div class="conversation-body">
+  <aside class="conversation-list" aria-label="使用者對話清單">
+    <nx-search-field
+      label="搜尋使用者對話"
+      placeholder="搜尋標題與對話內容"
+      [value]="reader.search()"
+      (valueChange)="reader.searchChanged($event)"
+    />
+    <div class="conversation-filter">
+      <nx-checkbox
+        label="包含已刪除對話"
+        [checked]="reader.includeDeleted()"
+        (checkedChange)="reader.deletedChanged($event)"
+      />
+      @if (reader.page(); as page) {
+        <span class="ui-count-label">{{ format(page.total) }} 段</span>
+      }
+    </div>
+    @if (reader.loading()) {
+      <p role="status" class="form-note">正在取得對話…</p>
+    }
+    <div class="conversation-items">
+      @for (conversation of reader.page()?.items || []; track conversation.id) {
+        <button
+          type="button"
+          class="conversation-item"
+          [attr.aria-current]="
+            reader.detail()?.conversation?.id === conversation.id ? 'true' : null
+          "
+          [attr.aria-label]="'檢視對話：' + conversation.title"
+          (click)="reader.read(conversation.id)"
+        >
+          <strong>{{ conversation.title }}</strong>
+          <small
+            >{{ date(conversation.updatedAt) }} · {{ conversation.messages }} 則
+            @if (conversation.isDeleted) {
+              <nx-status-badge tone="warning">已刪除</nx-status-badge>
+            } @else if (conversation.isArchived) {
+              <nx-status-badge tone="neutral">已封存</nx-status-badge>
+            }
+          </small>
+        </button>
+      } @empty {
+        @if (!reader.loading()) {
+          <p class="form-note conversation-empty">沒有符合的對話。</p>
+        }
+      }
+    </div>
+    @if (reader.page(); as page) {
+      @if (page.total > reader.pageSize) {
+        <div class="conversation-pages">
+          <span
+            >{{ page.offset + 1 }}–{{ page.offset + page.items.length }} /
+            {{ format(page.total) }}</span
+          >
+          <button
+            type="button"
+            class="icon-button"
+            aria-label="上一頁對話"
+            [disabled]="reader.loading() || !page.offset"
+            (click)="reader.loadList(page.offset - reader.pageSize)"
+          >
+            <nx-icon name="left" /></button
+          ><button
+            type="button"
+            class="icon-button"
+            aria-label="下一頁對話"
+            [disabled]="reader.loading() || page.offset + reader.pageSize >= page.total"
+            (click)="reader.loadList(page.offset + reader.pageSize)"
+          >
+            <nx-icon name="chevron" />
+          </button>
+        </div>
+      }
+    }
+  </aside>
+  <section
+    class="conversation-reading"
+    aria-label="唯讀對話內容"
+    aria-live="polite"
+    [attr.aria-busy]="reader.reading()"
+  >
+    @if (reader.readError()) {
+      <nx-notice tone="danger" [message]="reader.readError()" />
+    }
+    @if (reader.detail(); as data) {
+      <header class="reading-heading">
+        <h3>{{ data.conversation.title }}</h3>
+        <small
+          >{{ data.ownerName }} · 共 {{ data.total }} 則 · 所有版本按時間排列
+          @if (data.conversation.isDeleted) {
+            <nx-status-badge tone="warning">已刪除</nx-status-badge>
+          }
+        </small>
+      </header>
+      @if (data.systemInstruction) {
+        <details class="reading-instructions">
+          <summary>對話指示</summary>
+          <p>{{ data.systemInstruction }}</p>
+        </details>
+      }
+      @for (message of data.messages; track message.id) {
+        <article class="reading-message" [class.inspector-user-message]="message.role === 'user'">
+          <header>
+            <strong>{{ message.role === 'user' ? data.ownerName + ' 的提問' : 'AI 回覆' }}</strong
+            ><small>{{ date(message.createdAt) }} · {{ message.status }}</small>
+          </header>
+          <nx-run-timing [value]="message.timing" />
+          @if (message.role === 'user') {
+            <p class="reading-input">{{ message.content }}</p>
+          } @else {
+            <nx-markdown-view [content]="message.content" />
+          }
+          @if (message.attachments.length) {
+            <div class="reading-attachments">
+              @for (file of message.attachments; track file.id) {
+                <span
+                  ><nx-icon name="paperclip" />{{ file.fileName }} · {{ bytes(file.size) }}</span
+                >
+              }
+            </div>
+          }
+          <small class="reading-version"
+            >訊息 {{ message.id.slice(0, 8) }}
+            @if (message.parentId) {
+              · 上一則 {{ message.parentId.slice(0, 8) }}
+            }
+          </small>
+        </article>
+      }
+      @if (data.messages.length < data.total) {
+        <button
+          type="button"
+          class="secondary-button"
+          [disabled]="reader.reading()"
+          (click)="reader.read(data.conversation.id, true)"
+        >
+          {{ reader.reading() ? '載入中…' : '載入後續訊息' }}
+        </button>
+      }
+    } @else {
+      <nx-empty-state class="reading-empty">
+        <nx-icon name="lines" />
+        <p>{{ reader.reading() ? '正在讀取對話…' : '選取左側對話，查看完整內容。' }}</p>
+      </nx-empty-state>
+    }
+  </section>
+</div>

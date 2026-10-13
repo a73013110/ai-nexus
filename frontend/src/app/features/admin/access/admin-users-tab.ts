@@ -23,9 +23,11 @@ import {
 import { EmptyState } from '../../../shared/ui/empty-state';
 import { Icon } from '../../../shared/ui/icon';
 import { SearchField } from '../../../shared/ui/search-field';
-import { StatusBadge } from '../../../shared/ui/status-badge';
 import { AdminApi } from '../admin-api';
 import { AdminStore } from '../admin-store';
+import { AdminUserCreateDialog } from '../users/admin-user-create-dialog';
+import { signInMethods } from '../users/user-account-fields';
+import { AccessStatus } from './access-status';
 import { TestIdentityDialog } from './test-identity-dialog';
 
 @Component({
@@ -38,10 +40,11 @@ import { TestIdentityDialog } from './test-identity-dialog';
     EmptyState,
     Icon,
     SearchField,
-    StatusBadge,
+    AccessStatus,
     ActionMenu,
     ConfirmDialog,
     TestIdentityDialog,
+    AdminUserCreateDialog,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './access-tabs.scss',
@@ -51,13 +54,13 @@ export class AdminUsersTab {
   readonly session = inject(WorkspaceSession);
   readonly store = inject(AdminStore);
   private readonly api = inject(AdminApi);
-  /** The user whose activity is open beside the list. */
+  /** The user open in the inspector, where the account, roles and policies are edited. */
   readonly selectedId = input<string | null>(null);
-  readonly edit = output<AdminUserDto | undefined>();
   readonly inspect = output<AdminUserDto>();
   private readonly userTable = viewChild<DataTable>('userTable');
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly testDialog = viewChild.required(TestIdentityDialog);
+  readonly createDialog = viewChild.required(AdminUserCreateDialog);
   readonly userColumns: TableColumn[] = [
     { id: 'name', label: '使用者', hideable: false },
     { id: 'authentication', label: '登入與狀態' },
@@ -67,15 +70,16 @@ export class AdminUsersTab {
   ];
   readonly bytes = formatBytes;
   readonly format = formatNumber;
+  readonly methods = signInMethods;
   constructor() {
     effect(() => {
       if (this.store.users()) this.userTable()?.resetScroll();
     });
   }
+  /** Only what the inspector does not hold: switching identity and removal. */
   actions(user: AdminUserDto): MenuAction[] {
     const testing = !!this.session.auth.session()?.testing;
     return [
-      { id: 'edit', label: '編輯使用者與登入方式', icon: 'edit', disabled: testing },
       {
         id: 'test',
         label: '以此身分測試',
@@ -92,7 +96,6 @@ export class AdminUsersTab {
     ];
   }
   async userAction(action: string, user: AdminUserDto) {
-    if (action === 'edit') this.edit.emit(user);
     if (action === 'test') this.testDialog().open(user);
     if (action === 'delete') {
       if (

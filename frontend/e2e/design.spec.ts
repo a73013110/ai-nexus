@@ -99,6 +99,21 @@ test("共用密度、檢視鍵盤與選填日期保留桌面和手機可用性",
   await expect(page.locator(".ui-date-error")).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 844 });
   await expectCompactWorkspace(page);
+  // A stacked table turns its rows into cards instead of scrolling sideways.
+  const example = page.locator(".design-data-workspace nx-data-table");
+  await expect(example.locator("tbody tr").first()).toHaveCSS(
+    "display",
+    "grid",
+  );
+  await expect(example.locator('td[data-stack="end"]').first()).toHaveCSS(
+    "grid-column-start",
+    "2",
+  );
+  expect(
+    await example
+      .locator(".ui-table-scroll")
+      .evaluate((el) => el.scrollWidth <= el.clientWidth),
+  ).toBe(true);
   expect((await field.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await expect(field).toHaveCSS("font-size", "16px");
   await expect(page.locator(".design-reading")).toHaveCSS("font-size", "15px");

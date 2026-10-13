@@ -1,0 +1,33 @@
+@use 'breakpoints' as bp;
+
+:host {
+  display: grid;
+  gap: var(--p-space-3);
+  min-width: 0;
+}
+label {
+  display: grid;
+  gap: var(--field-label-gap);
+  min-width: 0;
+  font-size: var(--field-label-size);
+  font-weight: 550;
+}
+.user-name-field {
+  max-width: 24rem;
+}
+fieldset > .form-note {
+  margin-bottom: var(--p-space-1);
+}
+// A method's fields hang under its checkbox label, so they read as that choice's details.
+.login-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--p-space-2) var(--p-space-3);
+  padding: 0 0 var(--p-space-2) calc(var(--control-padding-inline) + 20px + var(--p-space-3));
+}
+@include bp.below(phone) {
+  .login-fields {
+    grid-template-columns: minmax(0, 1fr);
+    padding-left: 0;
+  }
+}

@@ -19,20 +19,13 @@
     --selection-control-padding,
     var(--control-padding-block) var(--control-padding-inline)
   );
-  border: 1px solid transparent;
   border-radius: var(--p-radius-md);
   cursor: pointer;
   color: var(--ink);
-  transition:
-    background var(--motion),
-    border-color var(--motion);
+  transition: background var(--motion);
 }
 .selection-control:hover:not(.is-disabled) {
   background: var(--hover);
-}
-.selection-control.is-selected {
-  background: var(--accent-soft);
-  border-color: color-mix(in srgb, var(--accent) 15%, transparent);
 }
 .selection-box {
   position: relative;
