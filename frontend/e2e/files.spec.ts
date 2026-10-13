@@ -251,3 +251,77 @@ test("retained project originals are discoverable through the library and explic
   await expect(page.locator(".file-card")).toHaveCount(0);
   expect(core.retainedFiles.has(id)).toBe(false);
 });
+
+for (const width of [1440, 375]) {
+  test(`the library tour walks upload, filters, a file and capacity at ${width}px`, async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    // Without the knowledge feature the menu step leaves out "加入知識庫".
+    const knowledge = width === 1440;
+    if (knowledge) {
+      const fixture = new KnowledgeFixture();
+      fixture.seed();
+      await fixture.attach(page);
+    } else {
+      const core = new ApiFixture();
+      const id = randomUUID();
+      core.attachments.push({
+        id,
+        fileName: "保留的參考文件.txt",
+        contentType: "text/plain",
+        size: 100,
+        isImage: false,
+        analysisMode: "extracted-text",
+      });
+      core.retainedFiles.add(id);
+      await core.attach(page);
+    }
+    const height = width === 375 ? 812 : 1000;
+    await page.setViewportSize({ width, height });
+    await page.goto("/files");
+    await expect(page.locator(".file-card")).toBeVisible();
+    await expect(page.locator("nx-files-page nx-storage-usage")).toBeVisible();
+    const launcher = page
+      .locator(".feature-header")
+      .getByRole("button", { name: "操作導覽", exact: true });
+    const tour = page.locator(".driver-popover.nx-tour");
+    const title = tour.locator(".driver-popover-title");
+    const description = tour.locator(".driver-popover-description");
+    const progress = tour.locator(".driver-popover-progress-text");
+    await launcher.click();
+    await expect(title).toHaveText(/./);
+    const total = Number((await progress.innerText()).split("/")[1]);
+    const titles = [await title.innerText()];
+    let menu = "";
+    for (let step = 2; step <= total; step++) {
+      await tour.getByRole("button", { name: "下一步", exact: true }).click();
+      await expect(progress).toHaveText(`${step} / ${total}`);
+      titles.push(await title.innerText());
+      if (titles.at(-1) === "檔案操作") menu = await description.innerText();
+      await settleEntrance(page);
+      const bounds = (await tour.boundingBox())!;
+      expect(bounds.x).toBeGreaterThanOrEqual(0);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+      expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
+    }
+    expect(titles).toEqual([
+      "你的原檔都在這裡",
+      "先保存，再決定用途",
+      "依類型篩選",
+      "依來源篩選",
+      "用名稱尋找檔案",
+      "預覽與引用位置",
+      "檔案操作",
+      "留意原檔容量",
+    ]);
+    expect(menu.includes("加入知識庫")).toBe(knowledge);
+    await expect(description).toContainText("重播導覽");
+    await tour.getByRole("button", { name: "開始使用", exact: true }).click();
+    await expect(tour).toHaveCount(0);
+    await expect(launcher).toBeFocused();
+    await expect(page.locator(".driver-overlay")).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+}
