@@ -47,6 +47,7 @@ import { ReaderLink } from '../../shared/browser/reader-link';
 import { RetrievalResults } from './retrieval-results';
 import { JobToasts } from '../tasks/job-toasts';
 import { documentBusy, documentStatus } from './document-status';
+import { KNOWLEDGE_TOUR, collectionTour } from './knowledge-tour';
 
 /** `/knowledge` lists the collections; `/knowledge/:id` is one collection's sources and query. */
 @Component({
@@ -155,6 +156,16 @@ export class KnowledgePage {
   readonly confirm = viewChild.required(ConfirmDialog);
   readonly textEditor = viewChild.required(TextSourceEditor);
   readonly sharing = viewChild(ResourceSharing);
+  /** The collections tour, or the open collection's for what this viewer can change there. */
+  readonly tour = computed(() => {
+    const resource = this.current()?.resource;
+    return this.id()
+      ? collectionTour({
+          edit: !!resource?.canEdit,
+          manage: !!(resource?.canEdit || resource?.isOwner),
+        })
+      : KNOWLEDGE_TOUR;
+  });
   readonly visible = computed(() =>
     this.documents().filter((x) => x.fileName.toLowerCase().includes(this.filter().toLowerCase())),
   );
