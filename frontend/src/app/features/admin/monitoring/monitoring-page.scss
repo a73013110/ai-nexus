@@ -1,257 +1,124 @@
 @use 'breakpoints' as bp;
 
-.monitor-dashboard {
-  display: grid;
-  gap: 1rem;
-}
-.monitor-actions,
-.monitor-statusbar,
-.monitor-resources {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+// The overview's calm skin: chart categories and trends become steps of the accent, so only
+// warning and danger carry colour on this page.
+:host {
+  --series-1: var(--accent);
+  --series-2: color-mix(in srgb, var(--accent) 68%, var(--surface));
+  --series-3: color-mix(in srgb, var(--accent) 44%, var(--surface));
+  --series-4: color-mix(in srgb, var(--accent) 26%, var(--surface));
+  --sparkline-color: var(--accent);
+  --trend-color: var(--accent);
 }
 .monitor-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
+  gap: var(--p-space-2);
+  nx-view-switch {
+    margin: 0;
+    --view-switch-button-font-size: var(--text-caption);
+  }
 }
-.monitor-statusbar {
-  color: var(--secondary);
-  font-size: 0.75rem;
-}
-.instance-label {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-.monitor-metrics {
+.monitor-dashboard {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0.75rem;
+  gap: var(--p-space-4);
 }
-.monitor-stat {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(
-    140deg,
-    color-mix(in srgb, var(--signal) 4%, var(--surface)),
-    var(--surface)
-  );
-}
-.monitor-stat > span {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--secondary);
-}
-.monitor-stat > strong {
-  display: block;
-  margin: 0.75rem 0 0.4rem;
-  font-size: clamp(1.65rem, 2.6vw, 2.3rem);
-  font-weight: 550;
-  letter-spacing: -0.04em;
-  font-variant-numeric: tabular-nums;
-}
-.monitor-stat strong small {
-  margin-left: 0.4rem;
-  font-size: 0.75rem;
-  color: var(--secondary);
-  letter-spacing: 0;
-}
-.monitor-stat p {
-  margin: 0;
-  font-size: 0.75rem;
-  color: var(--secondary);
-}
-.stat-alert {
-  border-color: color-mix(in srgb, var(--warning) 35%, var(--line));
-}
-.stat-alert > strong {
-  color: var(--warning);
-}
-.monitor-caption {
-  color: var(--secondary);
-  font-size: 0.75rem;
-  line-height: 1.6;
-  margin-bottom: 0;
-}
-.monitor-resources {
-  padding: 0.5rem 1rem;
-  justify-content: space-between;
-  color: var(--secondary);
-  font-size: 0.75rem;
-}
-.monitor-resources span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.monitor-resources strong {
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-}
-.monitor-chart-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
-  gap: 1rem;
-}
-.monitor-bottom-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  align-items: start;
-}
-.module-row {
-  width: 100%;
-  display: grid;
-  gap: 0.55rem;
-  padding: 0.8rem 0;
-  text-align: left;
-  background: transparent;
-  border: 0;
-  border-radius: 4px;
-  cursor: pointer;
-}
-.module-row > span:first-child {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-.module-row strong {
-  font-size: 0.75rem;
-  color: var(--secondary);
-  font-weight: 450;
-}
-.module-track {
-  height: 4px;
-  background: var(--hover);
-  border-radius: 4px;
-  overflow: hidden;
-}
-.module-track i {
-  display: block;
-  height: 100%;
-  background: var(--signal);
-  border-radius: 4px;
-}
-.endpoint-row small {
-  display: block;
-  margin-top: 0.25rem;
-  color: var(--secondary);
-  font-size: 0.75rem;
-}
-.activity-list {
-  max-height: 29rem;
-  overflow: auto;
-}
-.activity-row {
-  display: flex;
-  gap: 0.75rem;
-  padding: 0.8rem 0;
-  border-bottom: 1px solid var(--line);
-}
-.activity-marker {
-  display: grid;
-  place-items: center;
-  flex: 0 0 1.8rem;
-  height: 1.8rem;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--signal);
-}
-.activity-marker.error {
-  background: var(--error-bg);
-  color: var(--danger);
-}
-.activity-row p {
-  margin: 0 0 0.2rem;
-}
-.activity-row small {
-  color: var(--secondary);
-  font-size: 0.75rem;
-}
-.activity-row a {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  margin-left: 0.75rem;
-  font-size: 0.75rem;
-}
-.endpoint-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.8rem 0;
-  border-bottom: 1px solid var(--line);
-}
-.endpoint-row > div {
+// Sections settle in once, in reading order; the block is never recreated by a snapshot.
+.monitor-dashboard > * {
   min-width: 0;
+  animation: tile-arrive var(--motion-enter) var(--ease-spring) backwards;
+  transition: opacity var(--motion-panel) var(--ease);
 }
-.endpoint-row code {
-  display: inline;
-  overflow-wrap: anywhere;
-  font-size: 0.75rem;
+@for $i from 1 through 8 {
+  .monitor-dashboard > :nth-child(#{$i}) {
+    animation-delay: calc(var(--motion-stagger) * #{$i - 1});
+  }
 }
-.endpoint-row > strong {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+// Old data stays readable but recedes; the hero says why.
+.monitor-dashboard.is-stale > :not(nx-monitoring-hero) {
+  opacity: 0.6;
 }
-.method-tag {
-  color: var(--signal);
-  font-size: 0.65rem;
-  font-weight: 600;
-  margin-right: 0.4rem;
+.monitor-notices {
+  display: grid;
+  gap: var(--p-space-2);
+  nx-notice {
+    margin: 0;
+  }
 }
-.monitor-empty {
-  padding: 2rem 0.5rem;
-  text-align: center;
-  color: var(--secondary);
+.monitor-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: var(--p-space-4);
+  align-items: stretch;
+}
+nx-monitoring-service-map,
+nx-monitoring-subsystems,
+.monitor-pair > * {
+  contain: layout;
+}
+// Below the fold: skip rendering until scrolled near. That also clips painting to the box, so a
+// little room keeps the tiles' shadows.
+.monitor-deferred {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 36rem;
+  margin: calc(-1 * var(--p-space-2));
+  padding: var(--p-space-2);
 }
 .monitor-scope {
-  padding: 0.5rem 0;
+  padding: 0 var(--p-space-1);
   color: var(--secondary);
-  font-size: 0.75rem;
+  font-size: var(--p-font-xs);
   line-height: 1.8;
-}
-.monitor-scope summary {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  min-height: 44px;
+  summary {
+    display: flex;
+    align-items: center;
+    gap: var(--p-space-2);
+    min-height: var(--button-target);
+    cursor: pointer;
+    --icon-size: var(--icon-sm);
+  }
+  p {
+    max-width: 52rem;
+  }
 }
 .monitor-loading {
   display: grid;
   justify-items: center;
-  gap: 0.75rem;
-  padding: 5rem 1rem;
+  gap: var(--p-space-3);
+  padding: 5rem var(--p-space-4);
   color: var(--secondary);
   text-align: center;
-}
-.monitor-loading p {
-  margin: 0;
+  p {
+    margin: 0;
+  }
 }
 @include bp.below(tablet) {
-  .monitor-metrics {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .monitor-pair {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @include bp.below(narrow) {
-  .monitor-chart-grid,
-  .monitor-bottom-grid {
-    grid-template-columns: 1fr;
-  }
   .monitor-actions {
     justify-content: flex-start;
   }
-  .instance-label {
-    margin-left: 0;
-    width: 100%;
+}
+// Phones: the range and the icon actions share one row under the title.
+@include bp.below(phone) {
+  .monitor-actions {
+    flex-wrap: nowrap;
+    gap: var(--p-space-1);
+    nx-view-switch {
+      --view-switch-button-padding-inline: var(--p-space-2);
+    }
   }
-  .monitor-resources {
-    gap: 0.75rem 1rem;
-    padding: 0.5rem 0;
-  }
+}
+.monitor-scope .fold-chevron {
+  color: var(--muted);
+  transition: rotate var(--motion-panel) var(--ease-spring);
+  --icon-size: var(--icon-sm);
+}
+details[open] > summary .fold-chevron {
+  rotate: 180deg;
 }

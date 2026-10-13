@@ -1,0 +1,135 @@
+// Six figures in the overview's tile skin: three across, two on a narrow page. Each figure scales
+// with its own tile (cqi) and never spills out of it.
+:host {
+  display: block;
+  container-type: inline-size;
+}
+.vitals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--p-space-3);
+}
+.vital {
+  --vital-color: var(--accent);
+  display: grid;
+  grid-template-rows: auto auto auto 1fr;
+  gap: var(--p-space-1);
+  min-width: 0;
+  padding: var(--p-space-4) var(--p-space-5) var(--p-space-4);
+  border: 1px solid var(--tile-line);
+  border-radius: var(--tile-radius);
+  background: var(--surface);
+  box-shadow: var(--tile-shadow);
+  container-type: inline-size;
+  transition:
+    background-color var(--motion-panel) var(--ease),
+    border-color var(--motion-panel) var(--ease);
+  --sparkline-height: 2.25rem;
+  --sparkline-color: var(--vital-color);
+}
+.vital[data-tone='warning'] {
+  --vital-color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 30%, var(--tile-line));
+  background: color-mix(in srgb, var(--warning) 5%, var(--surface));
+}
+.vital[data-tone='danger'] {
+  --vital-color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 32%, var(--tile-line));
+  background: color-mix(in srgb, var(--danger) 5%, var(--surface));
+}
+.vital-label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.125rem var(--p-space-2);
+  min-width: 0;
+  min-height: 1.5rem;
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  font-weight: 500;
+  > span {
+    white-space: nowrap;
+  }
+}
+.vital-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25em;
+  min-width: 0;
+  margin-top: var(--p-space-1);
+  font-size: clamp(1.25rem, 12cqi, 2.25rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  white-space: nowrap;
+  transition: color var(--motion-panel) var(--ease);
+  nx-number-ticker {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  em {
+    flex: none;
+    color: var(--muted);
+    font-size: var(--p-font-xs);
+    font-style: normal;
+    font-weight: 500;
+    letter-spacing: 0;
+  }
+}
+.vital[data-tone='warning'] .vital-value {
+  color: var(--warning);
+}
+.vital[data-tone='danger'] .vital-value {
+  color: var(--danger);
+}
+small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+  line-height: 1.45;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+nx-sparkline,
+.vital-split {
+  align-self: end;
+  margin-top: var(--p-space-2);
+}
+// Who is online, as one bar: in use, idle, then background tabs.
+.vital-split {
+  display: flex;
+  gap: 2px;
+  height: 0.375rem;
+  margin-bottom: var(--p-space-2);
+  overflow: hidden;
+  border-radius: var(--p-radius-pill);
+  background: var(--hover);
+  i {
+    flex: 0 1 0;
+    min-width: 0;
+    background: var(--accent);
+    transition: flex-grow var(--motion-morph) var(--ease-spring);
+  }
+  [data-part='idle'] {
+    background: color-mix(in srgb, var(--accent) 45%, var(--surface));
+  }
+  [data-part='background'] {
+    background: color-mix(in srgb, var(--muted) 35%, var(--surface));
+  }
+}
+.vitals-note {
+  margin: var(--p-space-2) 0 0;
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+}
+@container (max-width: 40rem) {
+  .vitals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .vital {
+    padding: var(--p-space-3) var(--p-space-4);
+  }
+}

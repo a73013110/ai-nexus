@@ -38,6 +38,16 @@
   margin: 0;
   overflow-wrap: anywhere;
 }
+.monitor-details [data-tone='success'] {
+  color: var(--success);
+}
+.monitor-details [data-tone='warning'] {
+  color: var(--warning);
+}
+.monitor-details [data-tone='danger'] {
+  color: var(--danger);
+  font-weight: 600;
+}
 .session-key {
   font-size: 0.75rem;
 }

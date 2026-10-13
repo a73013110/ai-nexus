@@ -65,8 +65,8 @@
 <nx-design-section
   id="design-badges"
   title="狀態與數量"
-  api="StatusBadge · CountBadge"
-  description="文字或圓點與顏色並用；數量超過 99 顯示 99+，零值預設隱藏。"
+  api="StatusBadge · CountBadge · LiveDot"
+  description="文字或圓點與顏色並用；數量超過 99 顯示 99+，零值預設隱藏。即時狀態點只在連線中呼吸，暫停或警告時靜止，旁邊一定有文字。"
 >
   <nx-design-example label="StatusBadge">
     <span class="design-row">
@@ -74,6 +74,14 @@
       <nx-status-badge tone="info">資訊</nx-status-badge>
       <nx-status-badge tone="warning">重試</nx-status-badge>
       <nx-status-badge tone="danger">失敗</nx-status-badge>
+    </span>
+  </nx-design-example>
+  <nx-design-example label="LiveDot">
+    <span class="design-row">
+      <span class="design-row"><nx-live-dot tone="success" [live]="true" />即時連線</span>
+      <span class="design-row"><nx-live-dot />已暫停</span>
+      <span class="design-row"><nx-live-dot tone="warning" />正在重連</span>
+      <span class="design-row"><nx-live-dot tone="danger" [live]="true" />嚴重問題</span>
     </span>
   </nx-design-example>
   <nx-design-example label="CountBadge">

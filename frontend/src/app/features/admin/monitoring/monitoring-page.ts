@@ -1,8 +1,3 @@
-import { Card } from '../../../shared/ui/card';
-import { StatusBadge } from '../../../shared/ui/status-badge';
-import { MonitoringSessions } from './monitoring-sessions';
-import { MonitoringInspector } from './monitoring-inspector';
-import { Notice } from '../../../shared/ui/notice';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -11,49 +6,66 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Monitor, Network, Pause, Server } from 'lucide';
+import type { OnlineSession } from '../../../core/api/schema';
 import { WorkspaceSession } from '../../../core/auth/workspace-session';
-import { ThemeService } from '../../../core/preferences/theme-service';
+import { safeMessage } from '../../../core/errors/safe-errors';
 import { FeaturePage } from '../../../core/layout/feature-page';
-import { Icon, EXTRA_ICONS } from '../../../shared/ui/icon';
-import { Monitor, Server, Network } from 'lucide';
-import { Select } from '../../../shared/ui/select';
-import { TrendChart } from '../../../shared/ui/trend-chart';
+import { downloadBlob } from '../../../shared/browser/download';
 import { DetailDrawer } from '../../../shared/ui/detail-drawer';
 import { EmptyState } from '../../../shared/ui/empty-state';
-import { formatBytes } from '../../../shared/browser/format';
-import { downloadBlob } from '../../../shared/browser/download';
-import { safeMessage } from '../../../core/errors/safe-errors';
-import type { DependencyTraffic, OnlineSession } from '../../../core/api/schema';
+import { EXTRA_ICONS, Icon } from '../../../shared/ui/icon';
+import { Notice } from '../../../shared/ui/notice';
+import { ViewSwitch } from '../../../shared/ui/view-switch';
+import { MonitoringActivity } from './monitoring-activity';
+import { MonitoringHero } from './monitoring-hero';
+import { MonitoringInspector } from './monitoring-inspector';
+import { MonitoringIssues, type MonitoringTarget } from './monitoring-issues';
+import { MonitoringPeople } from './monitoring-people';
+import { MonitoringRuntime } from './monitoring-runtime';
+import { MonitoringServiceMap } from './monitoring-service-map';
 import { MonitoringStore } from './monitoring-store';
-import { RuntimeTopology } from './runtime-topology';
-import {
-  dependencyStatus,
-  monitoringTime,
-  monitoringLatency,
-  monitoringFeature,
-} from './monitoring-format';
+import { MonitoringSubsystems } from './monitoring-subsystems';
+import { MonitoringTraffic } from './monitoring-traffic';
+import { MonitoringVitals } from './monitoring-vitals';
+
+type Selection =
+  | { kind: 'session'; session: OnlineSession }
+  | { kind: 'dependency'; id: string }
+  | { kind: 'subsystem'; id: string };
+
+const DRAWER_TITLES = {
+  session: '工作階段詳情',
+  dependency: '周邊服務詳情',
+  subsystem: '子系統詳情',
+} as const;
 
 @Component({
   selector: 'nx-monitoring-page',
   imports: [
-    Notice,
-    FeaturePage,
-    Icon,
-    RouterLink,
-    Select,
-    TrendChart,
     DetailDrawer,
     EmptyState,
-    RuntimeTopology,
-    Card,
-    StatusBadge,
-    MonitoringSessions,
+    FeaturePage,
+    Icon,
+    MonitoringActivity,
+    MonitoringHero,
     MonitoringInspector,
+    MonitoringIssues,
+    MonitoringPeople,
+    MonitoringRuntime,
+    MonitoringServiceMap,
+    MonitoringSubsystems,
+    MonitoringTraffic,
+    MonitoringVitals,
+    Notice,
+    ViewSwitch,
   ],
   providers: [
     MonitoringStore,
-    { provide: EXTRA_ICONS, useValue: { monitor: Monitor, server: Server, network: Network } },
+    {
+      provide: EXTRA_ICONS,
+      useValue: { monitor: Monitor, server: Server, network: Network, pause: Pause },
+    },
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './monitoring-page.html',
@@ -62,87 +74,40 @@ import {
 export class MonitoringPage {
   readonly session = inject(WorkspaceSession);
   readonly store = inject(MonitoringStore);
-  readonly theme = inject(ThemeService);
   readonly ready = signal(false);
   readonly featureFilter = signal('all');
-  readonly metric = signal('requests');
-  readonly selectedSession = signal<OnlineSession | null>(null);
-  readonly selectedDependency = signal<DependencyTraffic | null>(null);
+  readonly selection = signal<Selection | null>(null);
   readonly exporting = signal(false);
   readonly actionError = signal('');
   private readonly drawer = viewChild.required(DetailDrawer);
-  readonly bytes = formatBytes;
-  readonly dependencyStatus = dependencyStatus;
-  readonly time = monitoringTime;
-  readonly latency = monitoringLatency;
   readonly windows = [
-    { value: '1', label: '最近 1 分鐘' },
-    { value: '5', label: '最近 5 分鐘' },
-    { value: '15', label: '最近 15 分鐘' },
+    { value: '1', label: '1 分鐘' },
+    { value: '5', label: '5 分鐘' },
+    { value: '15', label: '15 分鐘' },
   ];
-  readonly metrics = [
-    { value: 'requests', label: 'API 請求速率' },
-    { value: 'latency', label: '平均回應時間' },
-    { value: 'bytes', label: 'HTTP 回應量' },
-    { value: 'errors', label: '錯誤比例' },
-  ];
-  readonly chartPoints = computed(() =>
-    (this.store.snapshot()?.timeline ?? []).map((p) => ({
-      label: this.time(p.at),
-      value:
-        this.metric() === 'requests'
-          ? p.requestsPerSecond
-          : this.metric() === 'latency'
-            ? (p.averageMs ?? 0)
-            : this.metric() === 'errors'
-              ? p.errorPercent
-              : p.sentBytes / 10 / 1000,
-    })),
-  );
-  readonly chartUnit = computed(
-    () =>
-      ({ requests: '次／秒', latency: 'ms', bytes: 'KB／秒', errors: '%' })[this.metric()] ?? '',
-  );
-  readonly chartTitle = computed(() => this.metrics.find((m) => m.value === this.metric())!.label);
-  readonly moduleCounts = computed(() => {
-    const counts = new Map<string, number>();
-    for (const s of this.store.snapshot()?.sessions ?? [])
-      counts.set(s.feature, (counts.get(s.feature) ?? 0) + 1);
-    return [...counts]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 6)
-      .map(([feature, count]) => ({
-        feature,
-        count,
-        percent: (100 * count) / Math.max(1, this.store.snapshot()?.onlineSessions ?? 0),
-      }));
+  readonly drawerTitle = computed(() => DRAWER_TITLES[this.selection()?.kind ?? 'dependency']);
+  readonly selectedSession = computed(() => {
+    const selection = this.selection();
+    return selection?.kind === 'session' ? selection.session : null;
   });
-  readonly stale = computed(
-    () =>
-      this.store.connection() !== 'live' ||
-      this.store.now() - Date.parse(this.store.snapshot()?.at ?? '') >
-        Math.max(15000, (this.store.snapshot()?.refreshSeconds ?? 3) * 4000),
-  );
-  readonly liveSession = computed(
-    () => this.store.snapshot()?.sessions.find((s) => s.id === this.selectedSession()?.id) ?? null,
-  );
-  readonly liveDependency = computed(
-    () =>
-      this.store.snapshot()?.dependencies.find((d) => d.id === this.selectedDependency()?.id) ??
-      null,
-  );
-  readonly statusText = computed(() =>
-    this.stale() && this.store.connection() === 'live'
-      ? '資料已過期'
-      : {
-          connecting: '正在連線',
-          live: '即時連線',
-          reconnecting: '正在重連',
-          paused: '已暫停',
-          hidden: '背景暫停',
-          denied: '無法存取',
-        }[this.store.connection()],
-  );
+  readonly liveSession = computed(() => {
+    const id = this.selectedSession()?.id;
+    return (id && this.store.snapshot()?.sessions.find((s) => s.id === id)) || null;
+  });
+  readonly liveDependency = computed(() => {
+    const selection = this.selection();
+    return selection?.kind === 'dependency'
+      ? (this.store.dependencies().find((d) => d.id === selection.id) ?? null)
+      : null;
+  });
+  readonly subsystemId = computed(() => {
+    const selection = this.selection();
+    return selection?.kind === 'subsystem' ? selection.id : null;
+  });
+  readonly liveSubsystem = computed(() => {
+    const id = this.subsystemId();
+    return (id && this.store.subsystems().find((s) => s.id === id)) || null;
+  });
   constructor() {
     void this.load();
   }
@@ -156,16 +121,21 @@ export class MonitoringPage {
       this.ready.set(true);
     }
   }
-  readonly featureName = monitoringFeature;
-  showSession(session: OnlineSession) {
-    this.selectedDependency.set(null);
-    this.selectedSession.set(session);
+  private show(selection: Selection) {
+    this.selection.set(selection);
     this.drawer().open();
   }
-  showDependency(dependency: DependencyTraffic) {
-    this.selectedSession.set(null);
-    this.selectedDependency.set(dependency);
-    this.drawer().open();
+  showSession(session: OnlineSession) {
+    this.show({ kind: 'session', session });
+  }
+  showDependency(id: string) {
+    this.show({ kind: 'dependency', id });
+  }
+  showSubsystem(id: string) {
+    this.show({ kind: 'subsystem', id });
+  }
+  showTarget(target: MonitoringTarget) {
+    this.show(target);
   }
   async export() {
     this.exporting.set(true);

@@ -94,3 +94,29 @@
     text-overflow: ellipsis;
   }
 }
+// A sticky header spans the scroll area's padding as one bar; the only blurred layer on its page.
+// Phones keep the header in the flow: the screen belongs to the content.
+@include bp.above(phone) {
+  :host(.feature-layout-sticky) .feature-main {
+    padding-top: 0;
+  }
+  :host(.feature-layout-sticky) .feature-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    margin-inline: calc(-1 * var(--feature-gutter));
+    padding: var(--p-space-4) var(--feature-gutter) var(--p-space-3);
+    border-bottom: 1px solid var(--material-line);
+    background-color: var(--material-thick);
+    backdrop-filter: var(--material-filter);
+    animation: header-material linear both;
+    animation-timeline: scroll(nearest block);
+    animation-range: 0 var(--p-space-6);
+  }
+}
+:host(.feature-layout-sticky) {
+  --feature-gutter: var(--workspace-gutter);
+}
+:host(.feature-layout-sticky.feature-layout-compact) {
+  --feature-gutter: var(--p-space-6);
+}

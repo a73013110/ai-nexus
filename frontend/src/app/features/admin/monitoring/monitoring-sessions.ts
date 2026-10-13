@@ -8,10 +8,8 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { Card } from '../../../shared/ui/card';
 import { Icon } from '../../../shared/ui/icon';
 import { StatusBadge } from '../../../shared/ui/status-badge';
-import { CountBadge } from '../../../shared/ui/count-badge';
 import { SearchField } from '../../../shared/ui/search-field';
 import { Select } from '../../../shared/ui/select';
 import type { OnlineSession } from '../../../core/api/schema';
@@ -19,7 +17,7 @@ import { presenceState, monitoringTime, monitoringFeature } from './monitoring-f
 
 @Component({
   selector: 'nx-monitoring-sessions',
-  imports: [Card, Icon, StatusBadge, CountBadge, SearchField, Select],
+  imports: [Icon, StatusBadge, SearchField, Select],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './monitoring-sessions.html',
   styles: ':host { display: block; min-width: 0; }',

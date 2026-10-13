@@ -61,13 +61,47 @@
   } @else {
     <p class="monitor-empty">{{ selected.displayName }} 的連線已離線，或已不在目前快照的清單中。</p>
   }
+} @else if (subsystemId()) {
+  @if (liveSubsystem(); as s) {
+    <div class="inspector-heading">
+      <nx-icon name="chart" />
+      <div>
+        <h3>{{ s.name }}</h3>
+        <p>{{ s.summary || '尚未取得這個子系統的狀態。' }}</p>
+      </div>
+      <nx-status-badge [tone]="tone(s.status)">{{ subsystemStatus(s.status) }}</nx-status-badge>
+    </div>
+    <dl class="monitor-details">
+      @for (fact of s.facts; track fact.id) {
+        <div>
+          <dt>{{ fact.label }}</dt>
+          <dd [attr.data-tone]="factTone(fact.tone)">{{ factText(fact) }}</dd>
+        </div>
+      } @empty {
+        <div>
+          <dt>指標</dt>
+          <dd>—</dd>
+        </div>
+      }
+      <div>
+        <dt>最近讀取</dt>
+        <dd>{{ s.observedAt ? time(s.observedAt) : '尚未讀取' }}</dd>
+      </div>
+    </dl>
+    <p class="monitor-caption">
+      子系統由各模組在背景讀取，更新頻率依模組而定；讀取失敗或逾時時列為需要注意。
+    </p>
+  } @else {
+    <p class="monitor-empty">這個子系統已不在目前的快照中。</p>
+  }
 } @else if (liveDependency(); as d) {
   <div class="inspector-heading">
     <nx-icon [name]="d.kind === 'database' ? 'database' : 'server'" />
     <div>
       <h3>{{ d.name }}</h3>
-      <p>{{ dependencyStatus(d.status) }}</p>
+      <p>{{ d.kind === 'database' ? 'SQL 資料庫' : 'HTTP 服務' }}</p>
     </div>
+    <nx-status-badge [tone]="tone(d.status)">{{ dependencyStatus(d.status) }}</nx-status-badge>
   </div>
   <dl class="monitor-details">
     <div>
@@ -88,8 +122,16 @@
     </div>
     <div>
       <dt>失敗／中止</dt>
-      <dd>{{ d.metrics.errors }} / {{ d.metrics.cancelled }}</dd>
+      <dd [attr.data-tone]="d.metrics.errors > 0 ? 'danger' : null">
+        {{ d.metrics.errors }} / {{ d.metrics.cancelled }}
+      </dd>
     </div>
+    @if (d.kind !== 'database') {
+      <div>
+        <dt>伺服器錯誤（5xx）</dt>
+        <dd>{{ d.metrics.serverErrors }}</dd>
+      </div>
+    }
     <div>
       <dt>執行中的呼叫</dt>
       <dd>{{ d.inFlight }}</dd>

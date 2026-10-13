@@ -466,3 +466,38 @@
     opacity: 0.35;
   }
 }
+// A status halo: a same-colour ring grows out of a live dot and fades (shared/ui/live-dot).
+@keyframes halo-breathe {
+  from {
+    opacity: 0.35;
+    scale: 1;
+  }
+  to {
+    opacity: 0;
+    scale: 2.2;
+  }
+}
+// Monitoring issues and new activity rows: they settle in from just above and leave by
+// collapsing their row (the row's grid track closes while the content fades).
+@keyframes issue-arrive {
+  from {
+    opacity: 0;
+    translate: 0 -0.25rem;
+    scale: 0.98;
+  }
+}
+@keyframes issue-depart {
+  to {
+    opacity: 0;
+    scale: 0.98;
+    grid-template-rows: 0fr;
+  }
+}
+// A sticky page header turns into a material once content scrolls beneath it (scroll-driven;
+// without scroll timelines it simply stays a material).
+@keyframes header-material {
+  from {
+    background-color: transparent;
+    border-bottom-color: transparent;
+  }
+}

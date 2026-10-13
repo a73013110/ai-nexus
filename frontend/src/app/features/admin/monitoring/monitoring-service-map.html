@@ -1,0 +1,80 @@
+<nx-panel heading="周邊服務" [count]="store.dependencies().length">
+  <span panel-actions class="map-caption">依所選範圍內的實際呼叫判定</span>
+  @if (observed().length) {
+    <div class="map">
+      <div class="map-core">
+        <span class="core-mark"><nx-icon name="network" /></span>
+        <strong>AI Nexus</strong>
+        <small
+          >{{ snapshot()?.inFlightRequests ?? 0 }} 處理中 ·
+          {{ snapshot()?.openStreams ?? 0 }} 串流</small
+        >
+      </div>
+      <svg class="map-wires" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        @for (dep of observed(); track dep.id; let i = $index) {
+          <path [attr.d]="paths()[i].wire" [class.is-failing]="dep.status === 'failing'" />
+        }
+        @for (dep of observed(); track dep.id; let i = $index) {
+          @if (moving() && dep.inFlight > 0 && dep.status !== 'failing') {
+            <path class="transit" [attr.d]="paths()[i].transit" />
+          }
+        }
+      </svg>
+      <ul class="map-rows">
+        @for (dep of observed(); track dep.id) {
+          <li>
+            <button
+              type="button"
+              class="dep"
+              [attr.data-tone]="tone(dep.status)"
+              [attr.aria-label]="'檢視 ' + dep.name + '，' + status(dep.status)"
+              (click)="selected.emit(dep.id)"
+            >
+              <span class="dep-icon"
+                ><nx-icon [name]="dep.kind === 'database' ? 'database' : 'server'"
+              /></span>
+              <strong class="dep-name">{{ dep.name }}</strong>
+              <small class="dep-meta"
+                ><span>{{ rate(dep.metrics.requestsPerSecond) }} 次／秒</span
+                ><span>平均 {{ latency(dep.metrics.averageMs) }}</span
+                ><span>P95 {{ latency(dep.metrics.p95Ms) }}</span>
+                @if (dep.metrics.errors > 0) {
+                  <span class="dep-errors">{{ number(dep.metrics.errors) }} 次失敗</span>
+                }
+              </small>
+              <nx-status-badge class="dep-badge" [tone]="tone(dep.status)">{{
+                status(dep.status)
+              }}</nx-status-badge>
+            </button>
+          </li>
+        }
+      </ul>
+    </div>
+  } @else {
+    <p class="map-empty">此範圍內尚未觀測到 SQL 或 HTTP 周邊服務呼叫。</p>
+  }
+  @if (unobserved().length) {
+    <details class="map-more">
+      <summary>
+        另有 {{ unobserved().length }} 項尚無觀測<nx-icon
+          class="fold-chevron"
+          name="chevron-down"
+        />
+      </summary>
+      <ul>
+        @for (dep of unobserved(); track dep.id) {
+          <li>
+            <button
+              type="button"
+              [attr.aria-label]="'檢視 ' + dep.name + '，' + status(dep.status)"
+              (click)="selected.emit(dep.id)"
+            >
+              <nx-icon [name]="dep.kind === 'database' ? 'database' : 'server'" />{{ dep.name }}
+            </button>
+          </li>
+        }
+      </ul>
+      <p>沒有呼叫不代表故障；此頁不主動探測服務。</p>
+    </details>
+  }
+</nx-panel>
