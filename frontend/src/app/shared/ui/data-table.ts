@@ -25,13 +25,23 @@ export interface TableColumn {
 }
 export type TableSortDirection = 'asc' | 'desc';
 
-/** Semantic table shell with view preferences. Data fetching and query state remain feature responsibilities. */
+/**
+ * Semantic table shell with view preferences. Data fetching and query state remain feature
+ * responsibilities. `stacked` opts into cards at the `narrow` breakpoint and below: cells stack in
+ * one column, `data-stack="end"` sits top-right (the row's menu or edit button), `data-stack="hide"`
+ * is left to the detail view and `data-label` names a value that needs its column header. The
+ * table's own minimum width goes in `--table-min-width` so the cards can drop it.
+ */
 @Component({
   selector: 'nx-data-table',
   imports: [Icon],
   styleUrl: './data-table.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'ui-data-table', '[attr.aria-busy]': 'busy()' },
+  host: {
+    class: 'ui-data-table',
+    '[class.ui-table-stack]': 'stacked()',
+    '[attr.aria-busy]': 'busy()',
+  },
   template: `<div class="ui-table-toolbar-wrap">
       <ng-content select="[table-toolbar]" />
       @if (columns().length) {
@@ -84,6 +94,8 @@ export class DataTable {
   readonly busy = input(false);
   readonly columns = input<TableColumn[]>([]);
   readonly preferenceKey = input('');
+  /** Rows become cards on narrow screens (see the class comment). */
+  readonly stacked = input(false);
   readonly hidden = signal<string[]>([]);
   readonly id = 'nx-table-columns-' + ++tableSequence;
   private readonly trigger = viewChild<ElementRef<HTMLButtonElement>>('columnTrigger');

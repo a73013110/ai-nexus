@@ -8,33 +8,34 @@
   <button
     class="primary-button"
     [disabled]="!!session.auth.session()?.testing"
-    (click)="edit.emit(undefined)"
+    (click)="createDialog().open()"
   >
     <nx-icon name="plus" />新增使用者
   </button>
 </div>
 <nx-data-table
   #userTable
-  class="admin-users-table"
+  class="admin-access-table admin-users-table"
   label="使用者列表"
   [busy]="store.loadingUsers()"
   [columns]="userColumns"
+  [stacked]="true"
   preferenceKey="admin-users"
 >
   <div table-toolbar class="ui-table-toolbar">
     <h2>
       使用者 <span class="ui-count-label">{{ store.users()?.total || 0 }} 位</span>
     </h2>
-    <span class="form-note">選取帳號檢視活動與政策</span>
+    <span class="form-note">選取使用者管理帳號、角色、模型、容量與對話</span>
   </div>
   <table>
     <colgroup>
       <col nxTableColumn="name" />
-      <col nxTableColumn="authentication" class="admin-auth-column" />
+      <col nxTableColumn="authentication" class="admin-status-column" />
       <col nxTableColumn="roles" />
       <col nxTableColumn="usage" />
       <col nxTableColumn="storage" />
-      <col class="admin-user-actions-column" />
+      <col class="admin-row-action-column" />
     </colgroup>
     <thead>
       <tr>
@@ -56,9 +57,9 @@
           <td nxTableColumn="name">
             <button
               type="button"
-              class="ui-cell-link"
+              class="ui-table-link"
               data-row-action
-              [attr.aria-label]="'使用者活動：' + user.displayName"
+              [attr.aria-label]="'管理使用者：' + user.displayName"
               aria-haspopup="dialog"
               (click)="inspect.emit(user)"
             >
@@ -66,14 +67,9 @@
             ><small class="ui-truncate" [title]="user.account">{{ user.account }}</small>
           </td>
           <td nxTableColumn="authentication">
-            <nx-status-badge [tone]="user.enabled === false ? 'warning' : 'neutral'">{{
-              user.enabled === false ? '停用' : '啟用'
-            }}</nx-status-badge
-            ><small
-              >{{ (user.authentication?.adEnabled ?? true) ? 'AD' : ''
-              }}{{ user.authentication?.adEnabled && user.authentication.localEnabled ? ' · ' : ''
-              }}{{ user.authentication?.localEnabled ? '本地密碼' : '' }}</small
-            >
+            <nx-access-status [enabled]="user.enabled !== false" /><small>{{
+              methods(user)
+            }}</small>
           </td>
           <td nxTableColumn="roles">
             <div class="resource-badges">
@@ -82,7 +78,7 @@
               }
             </div>
           </td>
-          <td nxTableColumn="usage">
+          <td nxTableColumn="usage" data-stack="hide">
             @if (user.activity; as activity) {
               <strong
                 >{{ format(activity.usage.requests || 0) }} 次 ·
@@ -93,7 +89,7 @@
               <span>—</span>
             }
           </td>
-          <td nxTableColumn="storage">
+          <td nxTableColumn="storage" data-stack="hide">
             @if (user.storage; as capacity) {
               <span>{{ bytes(capacity.usedBytes) }} / {{ bytes(capacity.limitBytes) }}</span
               ><small>剩餘 {{ bytes(capacity.remainingBytes) }}</small>
@@ -101,21 +97,12 @@
               <span>—</span>
             }
           </td>
-          <td>
-            <div class="page-actions">
-              <button
-                class="icon-button"
-                [attr.aria-label]="'設定角色：' + user.displayName"
-                [disabled]="!!session.auth.session()?.testing"
-                (click)="edit.emit(user)"
-              >
-                <nx-icon name="edit" /></button
-              ><nx-action-menu
-                [label]="'使用者操作：' + user.displayName"
-                [items]="actions(user)"
-                (action)="userAction($event, user)"
-              />
-            </div>
+          <td data-stack="end">
+            <nx-action-menu
+              [label]="'使用者操作：' + user.displayName"
+              [items]="actions(user)"
+              (action)="userAction($event, user)"
+            />
           </td>
         </tr>
       }
@@ -147,3 +134,4 @@
 </nx-data-table>
 <nx-confirm-dialog />
 <nx-test-identity-dialog />
+<nx-admin-user-create-dialog />

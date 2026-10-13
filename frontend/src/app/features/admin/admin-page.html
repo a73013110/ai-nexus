@@ -23,30 +23,26 @@
       [value]="tab()"
       (valueChange)="selectTab($event)"
     />
-    @switch (tab()) {
-      @case ('users') {
-        <nx-admin-users-tab
-          [selectedId]="inspected()?.id ?? null"
-          (inspect)="inspected.set($event)"
-          (edit)="editor.open('user', $event)"
-        />
+    <div class="admin-tab-panel" [nxViewMotion]="tab()">
+      @switch (tab()) {
+        @case ('users') {
+          <nx-admin-users-tab
+            [selectedId]="inspected()?.id ?? null"
+            (inspect)="inspected.set($event)"
+          />
+        }
+        @case ('roles') {
+          <nx-admin-roles-tab (edit)="editor.open('role', $event)" />
+        }
+        @case ('groups') {
+          <nx-admin-groups-tab (edit)="editor.open('group', $event)" />
+        }
+        @case ('features') {
+          <nx-admin-features-tab (edit)="editor.open('feature', $event)" />
+        }
       }
-      @case ('roles') {
-        <nx-admin-roles-tab (edit)="editor.open('role', $event)" />
-      }
-      @case ('groups') {
-        <nx-admin-groups-tab (edit)="editor.open('group', $event)" />
-      }
-      @case ('features') {
-        <nx-admin-features-tab (edit)="editor.open('feature', $event)" />
-      }
-    }
+    </div>
   }
 </nx-feature-page>
-<nx-admin-user-inspector
-  [user]="inspected()"
-  [models]="store.catalog()?.models || []"
-  (closed)="inspected.set(null)"
-  (settingsChanged)="store.readUsers()"
-/>
+<nx-admin-user-inspector [user]="inspected()" (closed)="inspected.set(null)" />
 <nx-access-editor-dialog #editor />

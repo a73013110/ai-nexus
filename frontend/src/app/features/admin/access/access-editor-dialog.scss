@@ -1,13 +1,14 @@
 @use 'breakpoints' as bp;
 
-.feature-choice-group {
-  display: grid;
-  align-content: start;
-  gap: var(--p-space-1);
+// Sections (form-sections.scss) sit closer than the global form rhythm.
+.admin-editor-fields {
+  gap: var(--p-space-3);
 }
-.feature-choice-group legend {
-  color: var(--secondary);
-  font-size: var(--text-caption);
+.feature-choice-list {
+  gap: var(--p-space-3) var(--p-space-4);
+}
+.feature-choice-group {
+  gap: var(--p-space-1);
 }
 .admin-editor.admin-editor-wide {
   --dialog-width: 64rem;

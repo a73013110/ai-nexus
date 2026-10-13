@@ -1,0 +1,52 @@
+@use 'breakpoints' as bp;
+
+// Settings tabs take a form's width and their content's height; reading conversations needs the
+// room of a workspace. DialogMotion moves the frame between the two.
+.platform-dialog.admin-inspector {
+  --dialog-width: 52rem;
+  flex-direction: column;
+  gap: var(--p-space-3);
+  overflow: hidden;
+}
+// Layout lives outside [open]: the exit keeps `display` but would drop the rest at once.
+.admin-inspector[open] {
+  display: flex;
+}
+.platform-dialog.admin-inspector.inspector-wide {
+  --dialog-width: 72rem;
+  height: min(54rem, var(--dialog-max-height));
+}
+.platform-dialog.admin-inspector .inspector-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: start;
+  flex: none;
+  gap: var(--p-space-3) var(--p-space-2);
+  margin: 0;
+}
+.inspector-heading > .icon-button {
+  grid-column: 3;
+  grid-row: 1;
+}
+.admin-inspector > nx-notice,
+.inspector-tabs {
+  flex: none;
+}
+.inspector-tabs {
+  margin: 0;
+}
+.inspector-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+@include bp.below(phone) {
+  .platform-dialog.admin-inspector.inspector-wide {
+    height: var(--dialog-max-height);
+  }
+  .inspector-tabs {
+    --view-switch-button-padding-inline: var(--p-space-2);
+  }
+}

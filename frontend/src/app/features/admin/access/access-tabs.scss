@@ -1,30 +1,35 @@
+@use 'breakpoints' as bp;
+
+// Shared by the four access tabs: one table shape, fixed column widths and the toolbar above it.
+// At `narrow` and below the tables turn into cards (`DataTable` `stacked`).
 :host {
   display: block;
 }
-:host > .form-note {
-  margin-bottom: var(--p-space-3);
+.page-toolbar > .form-note {
+  flex: 1 1 20rem;
 }
-.admin-users-table,
-.admin-features-table {
+.admin-access-table {
   --table-max-height: min(60dvh, 42rem);
+  --table-min-width: 52rem;
 }
-.admin-users-table table,
-.admin-features-table table {
+.admin-access-table table {
   table-layout: fixed;
-  min-width: 52rem;
-}
-.admin-users-table .page-actions {
-  flex-wrap: nowrap;
 }
 .admin-row-action-column {
   width: 3.25rem;
 }
-.admin-user-actions-column {
+.admin-handle-column {
+  width: 2.75rem;
+}
+.admin-status-column,
+.admin-count-column {
   width: 6.5rem;
 }
-.admin-auth-column,
-.admin-order-column {
-  width: 6.5rem;
+.admin-name-column {
+  width: 15rem;
+}
+.admin-model-column {
+  width: 9rem;
 }
 .admin-table-name {
   display: flex;
@@ -40,4 +45,34 @@
   background: var(--surface-subtle);
   color: var(--secondary);
   font-size: var(--text-caption);
+}
+// A phone keeps search (or the note) and the add button on one row; the button shows its icon
+// and keeps its text as the accessible name, like the page header's actions.
+@include bp.below(phone) {
+  .page-toolbar {
+    flex-wrap: nowrap;
+    align-items: flex-start;
+  }
+  .page-toolbar > :is(nx-search-field, .form-note) {
+    flex: 1 1 0;
+    width: auto;
+  }
+  .page-toolbar > .primary-button:has(> nx-icon) {
+    flex: none;
+    width: var(--button-target);
+    padding-inline: 0;
+    gap: 0;
+    font-size: 0;
+  }
+}
+@include bp.below(narrow) {
+  nx-access-status + small {
+    display: inline;
+    margin-inline-start: var(--p-space-2);
+  }
+  .admin-features-table tr.admin-feature-section {
+    min-height: 0;
+    padding-block: var(--p-space-2);
+    background: var(--surface-subtle);
+  }
 }

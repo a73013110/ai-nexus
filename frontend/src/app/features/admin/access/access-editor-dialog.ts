@@ -7,12 +7,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type {
-  AdminFeatureDto,
-  AdminGroupDto,
-  AdminRoleDto,
-  AdminUserDto,
-} from '../../../core/api/schema';
+import type { AdminFeatureDto, AdminGroupDto, AdminRoleDto } from '../../../core/api/schema';
 import { safeMessage } from '../../../core/errors/safe-errors';
 import { groupFeatures } from '../../../core/layout/feature-groups';
 import { parseStorageLimitGb, storageLimitGb } from '../../../shared/browser/storage-limit';
@@ -33,38 +28,26 @@ import {
   type ModelPolicyDraft,
 } from '../model-policy-editor';
 
-export type AccessKind = 'user' | 'role' | 'group' | 'feature';
-export type AccessItem = AdminUserDto | AdminRoleDto | AdminGroupDto | AdminFeatureDto;
+/** Users are edited in the user inspector and created in `AdminUserCreateDialog`. */
+export type AccessKind = 'role' | 'group' | 'feature';
+export type AccessItem = AdminRoleDto | AdminGroupDto | AdminFeatureDto;
 interface Editor {
   kind: AccessKind;
   id: string;
   name: string;
+  /** Fixed at open so the heading names what is being edited, not the draft name. */
+  title: string;
   subtitle: string;
   enabled: boolean;
   ids: string[];
   modelPolicy: ModelPolicyDraft;
   storage: string;
-  order: string;
+  /** Kept as it is: the order is changed on the features list. */
+  order: number;
   isNew: boolean;
-  adEnabled: boolean;
-  localEnabled: boolean;
-  adAccount: string;
-  localAccount: string;
-  password: string;
-  hasLocalPassword: boolean;
-  profileChanged: boolean;
 }
-const profileKeys = [
-  'name',
-  'enabled',
-  'adEnabled',
-  'localEnabled',
-  'adAccount',
-  'localAccount',
-  'password',
-];
 
-/** Creates or edits a user, role, feature group or feature in one dialog. */
+/** Creates or edits a role, feature group or feature in one dialog. */
 @Component({
   selector: 'nx-access-editor-dialog',
   imports: [
@@ -80,7 +63,7 @@ const profileKeys = [
     ViewSwitch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './access-editor-dialog.scss',
+  styleUrls: ['../form-sections.scss', './access-editor-dialog.scss'],
   templateUrl: './access-editor-dialog.html',
 })
 export class AccessEditorDialog {
@@ -101,18 +84,15 @@ export class AccessEditorDialog {
     const e = this.editor(),
       c = this.store.catalog();
     if (!e || !c) return [];
-    return e.kind === 'user' ? c.roles : e.kind === 'role' ? c.groups : c.features;
+    return e.kind === 'role' ? c.groups : c.features;
   });
   readonly groupedFeatures = computed(() => groupFeatures(this.store.catalog()?.features || []));
+  /** What a role would grant once saved: enabled features of its enabled groups. */
   readonly proposedFeatures = computed(() => {
     const e = this.editor(),
       c = this.store.catalog();
-    if (!e || !e.enabled || !['user', 'role'].includes(e.kind) || !c) return [];
-    const groups = new Set(
-      e.kind === 'role'
-        ? e.ids
-        : c.roles.filter((x) => x.enabled && e.ids.includes(x.id)).flatMap((x) => x.groupIds),
-    );
+    if (!e || !e.enabled || e.kind !== 'role' || !c) return [];
+    const groups = new Set(e.ids);
     const features = new Set(
       c.groups.filter((x) => x.enabled && groups.has(x.id)).flatMap((x) => x.featureIds),
     );
@@ -120,48 +100,31 @@ export class AccessEditorDialog {
   });
   open(kind: AccessKind, item?: AccessItem) {
     this.editorError.set('');
-    const user = kind === 'user' ? (item as AdminUserDto) : null,
-      role = kind === 'role' ? (item as AdminRoleDto) : null,
+    const role = kind === 'role' ? (item as AdminRoleDto) : null,
       group = kind === 'group' ? (item as AdminGroupDto) : null,
       feature = kind === 'feature' ? (item as AdminFeatureDto) : null;
+    const name = role?.name || group?.name || feature?.name || '';
     this.editor.set({
       kind,
       id: item?.id || '',
-      name: user?.displayName || role?.name || group?.name || feature?.name || '',
-      subtitle: user?.account || feature?.route || '',
-      enabled: user?.enabled ?? role?.enabled ?? group?.enabled ?? feature?.enabled ?? true,
-      ids:
-        user?.roleIds || role?.groupIds || group?.featureIds || (kind === 'user' ? ['member'] : []),
+      name,
+      title: (item ? '編輯' : '新增') + this.label(kind) + (item ? '：' + name : ''),
+      subtitle: feature ? feature.id + ' · ' + feature.route : item?.id || '',
+      enabled: role?.enabled ?? group?.enabled ?? feature?.enabled ?? true,
+      ids: role?.groupIds || group?.featureIds || [],
       modelPolicy: modelPolicyDraft(group?.policy),
       storage:
         group?.policy?.storedAttachmentLimitBytes == null
           ? ''
           : storageLimitGb(group.policy.storedAttachmentLimitBytes),
-      order: String(feature?.sortOrder || 10),
+      order: feature?.sortOrder ?? 0,
       isNew: !item,
-      adEnabled: user?.authentication?.adEnabled ?? !!user,
-      localEnabled: user?.authentication?.localEnabled ?? !user,
-      adAccount:
-        user?.authentication?.adAccount ?? user?.account.split('\\').at(-1)?.split('@')[0] ?? '',
-      localAccount: user?.authentication?.localAccount ?? '',
-      password: '',
-      hasLocalPassword: user?.authentication?.hasLocalPassword ?? false,
-      profileChanged: !item,
     });
     this.groupSection.set('general');
     this.dialog().nativeElement.showModal();
   }
   update<K extends keyof Editor>(key: K, value: Editor[K]) {
-    this.editor.update((old) =>
-      old
-        ? {
-            ...old,
-            [key]: value,
-            profileChanged:
-              old.profileChanged || (old.kind === 'user' && profileKeys.includes(key)),
-          }
-        : null,
-    );
+    this.editor.update((old) => (old ? { ...old, [key]: value } : null));
   }
   check(id: string, checked: boolean) {
     const e = this.editor();
@@ -177,29 +140,13 @@ export class AccessEditorDialog {
     event.preventDefault();
     const e = this.editor();
     if (!e) return;
-    if ((!e.id && e.kind !== 'user') || !e.name.trim()) {
+    if (!e.id || !e.name.trim()) {
       this.editorError.set('請輸入識別碼與名稱。');
       return;
     }
     this.saving.set(true);
     this.editorError.set('');
     try {
-      if (e.kind === 'user') {
-        if (e.profileChanged) {
-          const account = {
-            displayName: e.name,
-            enabled: e.enabled,
-            adEnabled: e.adEnabled,
-            localEnabled: e.localEnabled,
-            adAccount: e.adEnabled ? e.adAccount : null,
-            localAccount: e.localEnabled ? e.localAccount : null,
-            password: e.password || null,
-            roleIds: e.ids,
-          };
-          await (e.isNew ? this.api.createUser(account) : this.api.updateUser(e.id, account));
-        } else await this.api.roles(e.id, e.ids);
-        this.update('password', '');
-      }
       if (e.kind === 'role')
         await this.api.role(e.id, { name: e.name, enabled: e.enabled, groupIds: e.ids });
       if (e.kind === 'group')
@@ -216,7 +163,7 @@ export class AccessEditorDialog {
         await this.api.feature(e.id, {
           name: e.name,
           enabled: e.enabled,
-          sortOrder: Number(e.order),
+          sortOrder: e.order,
         });
       this.dialog().nativeElement.close();
       this.store.saved('已儲存', '授權變更會在下一次操作生效。');
@@ -227,8 +174,6 @@ export class AccessEditorDialog {
     }
   }
   label(kind: string) {
-    return (
-      { user: '使用者', role: '角色', group: '功能群組', feature: '功能' } as Record<string, string>
-    )[kind];
+    return ({ role: '角色', group: '功能群組', feature: '功能' } as Record<string, string>)[kind];
   }
 }

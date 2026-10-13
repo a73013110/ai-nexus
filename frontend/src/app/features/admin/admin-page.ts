@@ -1,5 +1,6 @@
 import { Notice } from '../../shared/ui/notice';
 import { ViewSwitch } from '../../shared/ui/view-switch';
+import { ViewMotion } from '../../shared/ui/view-motion';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FeatureAccessNotice } from '../../core/layout/feature-access-notice';
 import { FeaturePage } from '../../core/layout/feature-page';
@@ -10,7 +11,7 @@ import type { AdminUserDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
 import { AdminStore } from './admin-store';
-import { AdminUserInspector } from './admin-user-inspector';
+import { AdminUserInspector } from './users/admin-user-inspector';
 import { AccessEditorDialog } from './access/access-editor-dialog';
 import { AdminUsersTab } from './access/admin-users-tab';
 import { AdminRolesTab } from './access/admin-roles-tab';
@@ -23,6 +24,7 @@ import { AdminFeaturesTab } from './access/admin-features-tab';
   imports: [
     Notice,
     ViewSwitch,
+    ViewMotion,
     FeaturePage,
     FeatureAccessNotice,
     ActionMenu,

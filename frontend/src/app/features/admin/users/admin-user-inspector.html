@@ -1,0 +1,42 @@
+<dialog
+  nxCompactDialog
+  #dialog
+  class="platform-dialog admin-inspector"
+  [class.inspector-wide]="store.tab() === 'conversations'"
+  [nxDialogView]="store.tab()"
+  aria-labelledby="inspector-title"
+  (cancel)="cancel($event)"
+  (close)="closing()"
+>
+  <header class="dialog-heading inspector-heading">
+    <nx-admin-user-summary (leave)="close()" />
+    <button
+      type="button"
+      class="icon-button"
+      aria-label="關閉使用者管理"
+      [disabled]="!!store.saving()"
+      (click)="requestClose()"
+    >
+      <nx-icon name="close" />
+    </button>
+  </header>
+  @if (store.overviewError()) {
+    <nx-notice tone="danger" [message]="store.overviewError()" />
+  }
+  <nx-view-switch
+    class="inspector-tabs"
+    label="使用者管理分類"
+    [options]="tabs"
+    [value]="store.tab()"
+    (valueChange)="selectTab($event)"
+  />
+  @let tab = store.tab();
+  <div class="inspector-panel" [nxViewMotion]="tab">
+    @if (tab === 'conversations') {
+      <nx-admin-user-conversations />
+    } @else {
+      <nx-admin-user-settings [tab]="tab" />
+    }
+  </div>
+</dialog>
+<nx-confirm-dialog />

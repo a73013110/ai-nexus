@@ -47,8 +47,8 @@ import { DesignSection } from './design-section';
     .design-data-workspace nx-view-switch {
       margin-bottom: 0;
     }
-    .design-data-workspace table {
-      min-width: 32rem;
+    .design-data-workspace nx-data-table {
+      --table-min-width: 32rem;
     }
     nx-markdown-view {
       display: block;
@@ -63,7 +63,7 @@ import { DesignSection } from './design-section';
       class="design-data-workspace ui-density-compact"
       title="資料工作區"
       api="FilterPanel · DataTable · DetailDrawer"
-      description="表格獨立捲動、固定表頭；詳情在側欄開啟，可繼續選下一列，窄螢幕改為 modal。"
+      description="表格獨立捲動、固定表頭；詳情在側欄開啟，可繼續選下一列，窄螢幕改為 modal。加 stacked 的表格在窄螢幕改為卡片列。"
       [stacked]="true"
     >
       <nx-filter-panel>
@@ -79,7 +79,7 @@ import { DesignSection } from './design-section';
         [value]="dataView()"
         (valueChange)="dataView.set($event)"
       />
-      <nx-data-table label="共用資料表範例">
+      <nx-data-table label="共用資料表範例" [stacked]="true">
         <div table-toolbar class="ui-table-toolbar">
           <h2>事件範例</h2>
           <span class="ui-count-label">{{ visibleRows().length }} 筆</span>
@@ -98,13 +98,13 @@ import { DesignSection } from './design-section';
           <tbody>
             @for (entry of visibleRows(); track entry.event) {
               <tr>
-                <td>{{ entry.time }}</td>
+                <td data-label="時間">{{ entry.time }}</td>
                 <td>
                   <button type="button" class="ui-table-link" (click)="inspect(entry.event)">
                     {{ entry.event }}
                   </button>
                 </td>
-                <td>
+                <td data-stack="end">
                   <nx-status-badge [tone]="entry.tone">{{ entry.status }}</nx-status-badge>
                 </td>
               </tr>

@@ -1,0 +1,30 @@
+// Shared by the access editor and the user forms (styleUrls, so each component keeps its own copy).
+// A section is one light frame with its legend on the line; groups inside a section are named by a
+// caption and never framed again.
+fieldset {
+  display: grid;
+  align-content: start;
+  gap: var(--p-space-2);
+  min-width: 0;
+  margin: 0;
+  padding: var(--p-space-2) var(--p-space-3) var(--p-space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+}
+legend {
+  padding: 0 var(--p-space-1);
+  font-size: var(--text-ui);
+  font-weight: 600;
+}
+fieldset fieldset {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+}
+fieldset fieldset legend {
+  padding: 0;
+  margin-bottom: var(--p-space-1);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  font-weight: 500;
+}
