@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { groupFeatures } from '@core/layout/feature-groups';
-import { MAX_SORT_ORDER, orderFeatures, reorderWrites, shiftId } from './feature-order';
+import { navigationSections, navigationTree } from '@core/layout/navigation-tree';
+import {
+  MAX_SORT_ORDER,
+  nextSortOrder,
+  orderFeatures,
+  reorderWrites,
+  shiftId,
+} from './feature-order';
 
 const work = [
   { id: 'dashboard', sortOrder: 5 },
@@ -14,20 +20,35 @@ const ids = (list: readonly { id: string }[]) => list.map((x) => x.id);
 describe('feature order', () => {
   it('orders like the server, then groups like the sidebar', () => {
     const features = [
-      { id: 'admin', sortOrder: 90 },
-      { id: 'files', sortOrder: 20 },
-      { id: 'chat', sortOrder: 20 },
-      { id: 'dashboard', sortOrder: 5 },
+      { id: 'admin', sortOrder: 90, groupId: 'system' },
+      { id: 'files', sortOrder: 20, groupId: 'work' },
+      { id: 'chat', sortOrder: 20, groupId: 'work' },
+      { id: 'dashboard', sortOrder: 5, groupId: 'work' },
+    ];
+    const groups = [
+      { id: 'work', parentId: null, name: '工作台', sortOrder: 10 },
+      { id: 'system', parentId: null, name: '系統管理', sortOrder: 30 },
     ];
     expect(ids(orderFeatures(features))).toEqual(['dashboard', 'chat', 'files', 'admin']);
     const overridden = orderFeatures(features, { dashboard: 95 });
     expect(ids(overridden)).toEqual(['chat', 'files', 'admin', 'dashboard']);
     expect(overridden.at(-1)!.sortOrder).toBe(95);
     expect(features[3].sortOrder).toBe(5);
-    expect(groupFeatures(overridden).map((group) => [group.id, ids(group.features)])).toEqual([
+    expect(
+      navigationSections(navigationTree(overridden, groups)).map((section) => [
+        section.id,
+        ids(section.features),
+      ]),
+    ).toEqual([
       ['work', ['chat', 'files', 'dashboard']],
       ['system', ['admin']],
     ]);
+  });
+
+  it('places a moved feature or group after its new siblings, within range', () => {
+    expect(nextSortOrder([])).toBe(10);
+    expect(nextSortOrder(work)).toBe(40);
+    expect(nextSortOrder([{ sortOrder: MAX_SORT_ORDER - 3 }])).toBe(MAX_SORT_ORDER);
   });
 
   it('shifts within the list and clamps at either end', () => {

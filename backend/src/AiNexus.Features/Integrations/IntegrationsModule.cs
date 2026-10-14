@@ -32,4 +32,4 @@ public sealed class IntegrationsModule : IFeatureModule
     }
 }
 
-internal sealed class IntegrationsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Integrations, "資料來源", "/integrations", 92, AdministratorsOnly: true));
+internal sealed class IntegrationsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Integrations, "資料來源", "/integrations", 92, BuiltInAccess.SystemNavigation, "integrations", AdministratorsOnly: true));

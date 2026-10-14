@@ -15,10 +15,16 @@ import type {
   AdminGroupDto,
   AdminRoleDto,
   GroupPolicyRequest,
+  NavigationGroupDto,
 } from '@core/api/schema';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import { safeMessage } from '@core/errors/safe-errors';
-import { groupFeatures } from '@core/layout/feature-groups';
+import {
+  descendantIds,
+  featureIcon,
+  navigationSections,
+  navigationTree,
+} from '@core/layout/navigation-tree';
 import { parseStorageLimitGb, storageLimitGb } from '@shared/browser/storage-limit';
 import { Checkbox } from '@shared/ui/checkbox';
 import { ChoiceGroups, type ChoiceGroup } from '@shared/ui/choice-groups';
@@ -27,13 +33,16 @@ import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { DialogHeader } from '@shared/ui/dialog-header';
 import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
 import { Field } from '@shared/ui/field';
+import { ICON_NAMES, Icon } from '@shared/ui/icon';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { Notice } from '@shared/ui/notice';
+import { Select, type SelectOption } from '@shared/ui/select';
 import { Tabs, type TabItem } from '@shared/ui/tabs';
 import { ViewMotion } from '@shared/ui/view-motion';
 import { AdministrationApi } from '../administration-api';
 import { AdministrationStore } from '../administration-store';
 import { FeatureSummary } from './feature-summary';
+import { nextSortOrder } from './feature-order';
 import {
   ModelPolicyEditor,
   modelPolicyDraft,
@@ -43,9 +52,12 @@ import {
 } from '../model-policies/model-policy-editor';
 import { sameIds } from '../users/user-role-fields';
 
-/** Users are edited in the user inspector and created in `AdminUserCreateDialog`. */
-export type AccessKind = 'role' | 'group' | 'feature';
-export type AccessItem = AdminRoleDto | AdminGroupDto | AdminFeatureDto;
+/**
+ * Users are edited in the user inspector and created in `AdminUserCreateDialog`. `menu` is a
+ * navigation group: it only arranges the menu and grants nothing.
+ */
+export type AccessKind = 'role' | 'group' | 'feature' | 'menu';
+export type AccessItem = AdminRoleDto | AdminGroupDto | AdminFeatureDto | NavigationGroupDto;
 type GroupSection = 'settings' | 'models';
 interface Editor {
   kind: AccessKind;
@@ -60,6 +72,10 @@ interface Editor {
   storage: string;
   /** Kept as it is: the order is changed on the features list. */
   order: number;
+  /** A feature's menu group, or a menu group's parent; '' is the top level. */
+  placement: string;
+  /** A feature's icon name. */
+  icon: string;
   isNew: boolean;
 }
 
@@ -71,7 +87,9 @@ function sameEditor(a: Editor, b: Editor) {
     a.enabled === b.enabled &&
     sameIds(a.ids, b.ids) &&
     sameModelPolicy(a.modelPolicy, b.modelPolicy) &&
-    a.storage.trim() === b.storage.trim()
+    a.storage.trim() === b.storage.trim() &&
+    a.placement === b.placement &&
+    a.icon === b.icon
   );
 }
 
@@ -94,15 +112,28 @@ let sequence = 0;
     DialogSaveBar,
     Field,
     FeatureSummary,
+    Icon,
     InfoPopover,
     ModelPolicyEditor,
     NgTemplateOutlet,
     Notice,
+    Select,
     Tabs,
     ViewMotion,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './access-editor-dialog.html',
+  styles: `
+    .feature-icon-field {
+      display: flex;
+      align-items: center;
+      gap: var(--p-space-2);
+    }
+    .feature-icon-field nx-select {
+      flex: 1;
+      min-width: 0;
+    }
+  `,
 })
 export class AccessEditorDialog {
   readonly id = `nx-access-editor-${++sequence}`;
@@ -139,16 +170,20 @@ export class AccessEditorDialog {
     role: '停用後，擁有此角色的使用者不再取得它的功能群組。',
     group: '停用後不授予功能、模型或附件容量。',
     feature: '停用後任何群組都不會授予此功能。',
+    menu: '',
   };
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('editorDialog');
   private readonly body = viewChild<ElementRef<HTMLElement>>('body');
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly injector = inject(Injector);
-  /** A group grants features, listed by the sidebar's categories. */
+  /** A group grants features, listed by the menu's groups. */
   readonly featureChoices = computed<ChoiceGroup[]>(() =>
-    groupFeatures(this.store.catalog()?.features || []).map((section) => ({
-      id: section.id,
-      name: section.name,
+    navigationSections(
+      navigationTree(this.store.catalog()?.features || [], this.store.navigationGroups()),
+      { topName: '最上層' },
+    ).map((section) => ({
+      id: section.id || 'top',
+      name: section.path,
       options: section.features.map((feature) => ({
         id: feature.id,
         label: feature.name + (feature.enabled ? '' : '（停用）'),
@@ -168,6 +203,27 @@ export class AccessEditorDialog {
       })),
     },
   ]);
+  /**
+   * Where a feature or menu group can go: the top level or any group, shown by its path. A group
+   * cannot move under itself or its own subgroups.
+   */
+  readonly placements = computed<SelectOption[]>(() => {
+    const e = this.editor(),
+      groups = this.store.navigationGroups();
+    const excluded =
+      e?.kind === 'menu' && !e.isNew ? descendantIds(groups, e.id) : new Set<string>();
+    return [
+      { value: '', label: '最上層（不分群）' },
+      ...navigationSections(navigationTree([], groups, { keepEmpty: true }))
+        .filter((section) => !excluded.has(section.id))
+        .map((section) => ({ value: section.id, label: section.path })),
+    ];
+  });
+  readonly icons: SelectOption[] = [...ICON_NAMES].sort().map((name) => ({
+    value: name,
+    label: name,
+  }));
+  readonly icon = featureIcon;
   /** What a role would grant once saved: enabled features of its enabled groups. */
   readonly proposedFeatures = computed(() => {
     const e = this.editor(),
@@ -184,8 +240,9 @@ export class AccessEditorDialog {
     this.editorError.set('');
     const role = kind === 'role' ? (item as AdminRoleDto) : null,
       group = kind === 'group' ? (item as AdminGroupDto) : null,
-      feature = kind === 'feature' ? (item as AdminFeatureDto) : null;
-    const name = role?.name || group?.name || feature?.name || '';
+      feature = kind === 'feature' ? (item as AdminFeatureDto) : null,
+      menu = kind === 'menu' ? (item as NavigationGroupDto) : null;
+    const name = role?.name || group?.name || feature?.name || menu?.name || '';
     const draft: Editor = {
       kind,
       id: item?.id || '',
@@ -200,7 +257,9 @@ export class AccessEditorDialog {
         group?.policy?.storedAttachmentLimitBytes == null
           ? ''
           : storageLimitGb(group.policy.storedAttachmentLimitBytes),
-      order: feature?.sortOrder ?? 0,
+      order: feature?.sortOrder ?? menu?.sortOrder ?? 0,
+      placement: feature?.groupId ?? menu?.parentId ?? '',
+      icon: feature?.icon ?? '',
       isNew: !item,
     };
     this.editor.set(draft);
@@ -293,21 +352,52 @@ export class AccessEditorDialog {
         await this.api.feature(e.id, {
           name: e.name,
           enabled: e.enabled,
-          sortOrder: e.order,
+          // A feature moved to another group goes to that group's end.
+          sortOrder: this.order(e, () =>
+            (this.store.catalog()?.features ?? []).filter(
+              (x) => (x.groupId ?? '') === e.placement && x.id !== e.id,
+            ),
+          ),
+          groupId: e.placement || null,
+          icon: e.icon,
         });
+      if (e.kind === 'menu') {
+        const body = {
+          name: e.name,
+          parentId: e.placement || null,
+          // A new group, or one moved under another parent, goes after its new siblings.
+          sortOrder: this.order(e, () =>
+            this.store
+              .navigationGroups()
+              .filter((x) => (x.parentId ?? '') === e.placement && x.id !== e.id),
+          ),
+        };
+        if (e.isNew) await this.api.createNavigationGroup({ id: e.id, ...body });
+        else await this.api.updateNavigationGroup(e.id, body);
+      }
       this.opened.set(e);
       this.dialog().nativeElement.close();
-      this.store.saved(
-        e.isNew ? '已建立' + this.label(e.kind) : '已儲存',
-        '授權變更會在下一次操作生效。',
-      );
+      if (e.kind === 'menu') {
+        this.store.toast.success(e.isNew ? '已建立選單分群' : '已儲存', '側欄選單已更新。');
+        this.store.reordered();
+      } else
+        this.store.saved(
+          e.isNew ? '已建立' + this.label(e.kind) : '已儲存',
+          '授權變更會在下一次操作生效。',
+        );
     } catch (error) {
       this.editorError.set(safeMessage(error));
     } finally {
       this.saving.set(false);
     }
   }
+  /** The saved place, or the end of the new parent's list when the placement changed. */
+  private order(e: Editor, siblings: () => readonly { sortOrder: number }[]) {
+    return !e.isNew && e.placement === this.opened()?.placement
+      ? e.order
+      : nextSortOrder(siblings());
+  }
   label(kind: AccessKind) {
-    return ({ role: '角色', group: '功能群組', feature: '功能' } as const)[kind];
+    return ({ role: '角色', group: '功能群組', feature: '功能', menu: '選單分群' } as const)[kind];
   }
 }

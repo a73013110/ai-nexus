@@ -1,7 +1,11 @@
 <div class="page-toolbar">
   <p class="form-note">
-    功能由模組註冊，路由與 API 授權固定；可調整名稱、啟用與分群內順序（側欄同序）。
+    功能由模組註冊，路由與 API
+    授權固定；可調整名稱、圖示、啟用、選單分群與順序（側欄同序）。選單分群只決定排列，不影響授權。
   </p>
+  <button class="secondary-button" [disabled]="saving()" (click)="editGroup.emit(undefined)">
+    <nx-icon name="plus" />新增選單分群
+  </button>
 </div>
 <nx-data-table
   class="admin-access-table admin-features-table"
@@ -38,10 +42,26 @@
       <tbody [attr.data-section]="section.id">
         <tr class="feature-section">
           <th scope="rowgroup" colspan="5">
-            {{ section.name }}
-            <nx-count-badge tone="neutral" [count]="section.features.length" />
+            <div class="feature-section-head" [style.--depth]="section.depth">
+              <span class="ui-truncate" [title]="section.path">{{ section.path }}</span>
+              <nx-count-badge tone="neutral" [count]="section.features.length" />
+              @if (section.id) {
+                <nx-action-menu
+                  [label]="'選單分群：' + section.path"
+                  [items]="groupMoves(section.id)"
+                  (action)="groupAction($event, section)"
+                />
+              }
+            </div>
           </th>
         </tr>
+        @if (!section.features.length) {
+          <tr class="feature-empty">
+            <td colspan="5" class="form-note">
+              沒有直接放在這裡的功能；可從功能的「⋯」移入，空分群不會出現在側欄。
+            </td>
+          </tr>
+        }
         @for (feature of section.features; track feature.id) {
           <tr
             nxTableRow
@@ -65,7 +85,7 @@
             </td>
             <td>
               <div class="feature-name">
-                <nx-icon [name]="featureIcons[feature.id] || 'document'" />
+                <nx-icon [name]="icon(feature.icon)" />
                 <button
                   type="button"
                   class="ui-table-link admin-table-name"
@@ -91,9 +111,9 @@
             </td>
             <td data-stack="end">
               <nx-action-menu
-                [label]="'調整順序：' + feature.name"
+                [label]="'調整功能：' + feature.name"
                 [items]="moves($index, section.features.length)"
-                (action)="menu($event, section.id, feature.id)"
+                (action)="menu($event, section.id, feature)"
               />
             </td>
           </tr>
@@ -103,3 +123,4 @@
   </table>
 </nx-data-table>
 <p class="sr-only" aria-live="polite">{{ announcement() }}</p>
+<nx-confirm-dialog />

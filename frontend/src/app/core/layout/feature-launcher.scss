@@ -62,12 +62,18 @@
   gap: var(--p-space-3);
   padding-bottom: var(--p-space-2);
 }
-.workspace-group h3 {
+.workspace-group :is(h3, h4) {
   font-size: var(--text-caption);
   font-weight: 500;
   color: var(--muted);
   margin: 0 0 var(--p-space-1);
   padding-inline: var(--p-space-2);
+}
+// A subgroup sits inside its parent's section, set in by a rule so the nesting reads at a glance.
+.workspace-group.is-nested {
+  margin: var(--p-space-2) 0 0 var(--p-space-2);
+  padding-inline-start: var(--p-space-1);
+  border-inline-start: 1px solid var(--line);
 }
 .workspace-icons {
   display: grid;

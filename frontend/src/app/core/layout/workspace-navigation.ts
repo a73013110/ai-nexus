@@ -17,9 +17,9 @@ import { Icon } from '@shared/ui/icon';
 import { ScrollArea } from '@shared/ui/scroll-area';
 import { anchoredPopover } from '@shared/browser/anchored-popover';
 import { setPopoverOrigin } from '@shared/browser/popover-position';
-import { FEATURE_ICONS } from './feature-groups';
 import { FeatureLauncher } from './feature-launcher';
 import { NavigationPreferences } from './navigation-preferences';
+import { featureIcon } from './navigation-tree';
 
 let sequence = 0;
 
@@ -58,7 +58,7 @@ let sequence = 0;
               [attr.aria-label]="feature.name"
               (click)="activated.emit()"
             >
-              <nx-icon [name]="icons[feature.id] || 'document'" /><span>{{ feature.name }}</span>
+              <nx-icon [name]="icon(feature.icon)" /><span>{{ feature.name }}</span>
             </a>
           </li>
         }
@@ -176,7 +176,7 @@ export class WorkspaceNavigation {
     const active = this.activeFeature();
     return active ? this.pins.ids().indexOf(active) : -1;
   });
-  readonly icons = FEATURE_ICONS;
+  readonly icon = featureIcon;
   /** Opens beside the rail, aligned with its trigger and kept inside the viewport. */
   placeFlyout(flyout: HTMLElement) {
     const trigger = this.flyoutTrigger()?.nativeElement;

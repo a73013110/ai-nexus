@@ -14,7 +14,7 @@ import { StatusBadge } from '@shared/ui/status-badge';
 import { SearchField } from '@shared/ui/search-field';
 import { Select } from '@shared/ui/select';
 import type { OnlineSession } from '@core/api/schema';
-import { presenceState, monitoringTime, monitoringFeature } from '../monitoring-format';
+import { presenceState, monitoringTime, monitoringFeatureNames } from '../monitoring-format';
 
 @Component({
   selector: 'nx-monitoring-sessions',
@@ -34,7 +34,7 @@ export class MonitoringSessions {
   readonly state = signal('all');
   readonly sort = signal<'name' | 'requests'>('name');
   readonly page = signal(0);
-  readonly featureName = monitoringFeature;
+  readonly featureName = monitoringFeatureNames();
   readonly stateName = presenceState;
   readonly time = monitoringTime;
   readonly states = [

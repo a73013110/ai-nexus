@@ -2,7 +2,7 @@
   nxCompactDialog
   #editorDialog
   class="platform-dialog admin-editor"
-  [size]="editor()?.kind === 'feature' ? 'sm' : 'lg'"
+  [size]="editor()?.kind === 'feature' || editor()?.kind === 'menu' ? 'sm' : 'lg'"
   (cancel)="cancel($event)"
 >
   @if (editor(); as e) {
@@ -50,6 +50,10 @@
                 <h3 [id]="id + '-basics'">基本資料</h3>
                 @if (e.kind === 'feature') {
                   <p class="form-note">路由與授權由模組註冊；順序在功能列表調整。</p>
+                } @else if (e.kind === 'menu') {
+                  <p class="form-note">
+                    只決定側欄怎麼排列，不影響授權。{{ e.isNew ? '識別碼建立後不能修改。' : '' }}
+                  </p>
                 } @else if (e.isNew) {
                   <p class="form-note">識別碼建立後不能修改。</p>
                 }
@@ -64,7 +68,9 @@
                       required
                       maxlength="64"
                       pattern="[a-z][a-z0-9_-]{0,63}"
-                      placeholder="例如：document-reviewers"
+                      [placeholder]="
+                        e.kind === 'menu' ? '例如：reports' : '例如：document-reviewers'
+                      "
                       autocomplete="off"
                       [attr.aria-describedby]="id + '-id-hint'"
                       [value]="e.id"
@@ -86,13 +92,38 @@
                     [readOnly]="locked()"
                     (input)="update('name', $any($event.target).value)"
                 /></label>
-                <nx-checkbox
-                  [label]="'啟用' + label(e.kind)"
-                  [description]="enabledNote[e.kind]"
-                  [checked]="e.enabled"
-                  [disabled]="locked()"
-                  (checkedChange)="update('enabled', $event)"
-                />
+                @if (e.kind !== 'menu') {
+                  <nx-checkbox
+                    [label]="'啟用' + label(e.kind)"
+                    [description]="enabledNote[e.kind]"
+                    [checked]="e.enabled"
+                    [disabled]="locked()"
+                    (checkedChange)="update('enabled', $event)"
+                  />
+                }
+                @if (e.kind === 'feature' || e.kind === 'menu') {
+                  <label class="form-field-short"
+                    >{{ e.kind === 'menu' ? '上層分群' : '選單分群'
+                    }}<nx-select
+                      [label]="e.kind === 'menu' ? '上層分群' : '選單分群'"
+                      [options]="placements()"
+                      [value]="e.placement"
+                      [disabled]="locked()"
+                      (valueChange)="update('placement', $event)"
+                  /></label>
+                }
+                @if (e.kind === 'feature') {
+                  <label class="form-field-short"
+                    >圖示<span class="feature-icon-field"
+                      ><nx-icon [name]="icon(e.icon)" /><nx-select
+                        label="圖示"
+                        [options]="icons"
+                        [value]="e.icon"
+                        [searchable]="true"
+                        [disabled]="locked()"
+                        (valueChange)="update('icon', $event)" /></span
+                  ></label>
+                }
               </div>
             </section>
             @if (e.kind === 'role') {
@@ -120,7 +151,10 @@
                   @if (!e.enabled) {
                     <nx-notice tone="warning" message="角色已停用，儲存後不授予任何功能。" />
                   }
-                  <nx-feature-summary [features]="proposedFeatures()" />
+                  <nx-feature-summary
+                    [features]="proposedFeatures()"
+                    [groups]="store.navigationGroups()"
+                  />
                 </div>
               </section>
             }

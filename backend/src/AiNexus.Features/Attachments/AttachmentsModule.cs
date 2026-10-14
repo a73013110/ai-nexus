@@ -68,4 +68,4 @@ public sealed class AttachmentsModule : IFeatureModule
     public static void VerifyStorage(IServiceProvider services) => _ = services.GetRequiredService<IAttachmentStorage>();
 }
 
-internal sealed class AttachmentsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Files, "檔案庫", "/files", 20));
+internal sealed class AttachmentsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Files, "檔案庫", "/files", 20, BuiltInAccess.WorkNavigation, "files"));

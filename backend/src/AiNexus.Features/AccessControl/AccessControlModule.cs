@@ -10,7 +10,7 @@ public sealed class AccessControlModule : IFeatureModule
     }
 }
 
-internal sealed class AccessControlFeatures() : FeatureSeed(new PlatformFeature(BuiltInAccess.ChatFeature, "對話", "/chat", 10));
+internal sealed class AccessControlFeatures() : FeatureSeed(new PlatformFeature(BuiltInAccess.ChatFeature, "對話", "/chat", 10, BuiltInAccess.WorkNavigation, "chat"));
 
 public static class FeaturePolicies
 {

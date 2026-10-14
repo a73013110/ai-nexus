@@ -1,5 +1,6 @@
 import type { HealthSummary, SubsystemFact } from '@core/api/schema';
-import { FEATURE_NAMES } from '@core/auth/feature-names';
+import { inject } from '@angular/core';
+import { WorkspaceSession } from '@core/auth/workspace-session';
 import {
   APP_TIME_ZONE,
   compactNumber,
@@ -37,10 +38,20 @@ export const monitoringTime = (value: string) => clock.format(new Date(value));
 export const monitoringLatency = (value: number | null | undefined) =>
   value == null ? '—' : value.toLocaleString('zh-TW', { maximumFractionDigits: 1 }) + ' ms';
 
-export const monitoringFeature = (id: string) =>
-  FEATURE_NAMES[id] ??
-  ({ reader: '閱讀器', settings: '個人設定', system: '系統' } as Record<string, string>)[id] ??
-  id;
+const PAGES: Readonly<Record<string, string>> = {
+  reader: '閱讀器',
+  settings: '個人設定',
+  system: '系統',
+};
+
+/**
+ * Names the feature or page ids that presence and traffic report. Feature names are the ones
+ * administrators set (from the viewer's `/me`); call it where `inject` works, e.g. a field.
+ */
+export function monitoringFeatureNames() {
+  const session = inject(WorkspaceSession);
+  return (id: string) => PAGES[id] ?? session.featureName(id);
+}
 
 /**
  * Status words of dependencies and subsystems as badge tones. Only real problems carry warning or

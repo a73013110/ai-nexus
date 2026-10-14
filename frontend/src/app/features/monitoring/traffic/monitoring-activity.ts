@@ -13,7 +13,7 @@ import { formatNumber } from '@shared/browser/format';
 import { mediaQuery } from '@shared/browser/media-query';
 import { Icon } from '@shared/ui/icon';
 import { Panel } from '@shared/ui/panel';
-import { monitoringFeature, monitoringLatency, monitoringTime } from '../monitoring-format';
+import { monitoringFeatureNames, monitoringLatency, monitoringTime } from '../monitoring-format';
 
 /**
  * Recent changes, errors and cancellations next to the busiest API routes. Once the first rows
@@ -35,7 +35,7 @@ export class MonitoringActivity {
   readonly settled = signal(false);
   readonly time = monitoringTime;
   readonly latency = monitoringLatency;
-  readonly featureName = monitoringFeature;
+  readonly featureName = monitoringFeatureNames();
   readonly number = formatNumber;
   readonly visible = computed(() => this.activities().slice(0, this.phone() ? 8 : 20));
   constructor() {

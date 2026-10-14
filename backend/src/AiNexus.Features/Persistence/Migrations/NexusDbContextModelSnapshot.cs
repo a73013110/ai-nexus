@@ -34,6 +34,17 @@ namespace AiNexus.Features.Persistence.Migrations
                         .HasColumnType("bit")
                         .HasComment("是否啟用；停用不刪除歷史資料。");
 
+                    b.Property<string>("GroupId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasComment("所在的選單分群；null 表示位於選單最上層。");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)")
+                        .HasComment("前端圖示名稱；未知名稱由前端改用預設圖示。");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -48,13 +59,15 @@ namespace AiNexus.Features.Persistence.Migrations
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("int")
-                        .HasComment("介面顯示順序；數值越小越前。");
+                        .HasComment("同一選單分群內的顯示順序；數值越小越前。");
 
                     b.HasKey("Id");
 
+                    b.HasIndex("GroupId");
+
                     b.ToTable("Features", "accesscontrol", t =>
                         {
-                            t.HasComment("模組註冊的功能入口、顯示名稱、路由及啟用狀態。");
+                            t.HasComment("模組註冊的功能入口、顯示名稱、路由、選單分群及啟用狀態。");
                         });
 
                     b.HasData(
@@ -62,6 +75,8 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "chat",
                             Enabled = true,
+                            GroupId = "work",
+                            Icon = "chat",
                             Name = "對話",
                             Route = "/chat",
                             SortOrder = 10
@@ -70,6 +85,8 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "admin",
                             Enabled = true,
+                            GroupId = "system",
+                            Icon = "lock",
                             Name = "存取管理",
                             Route = "/admin",
                             SortOrder = 90
@@ -78,6 +95,8 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "operations",
                             Enabled = true,
+                            GroupId = "system",
+                            Icon = "chart",
                             Name = "平台營運",
                             Route = "/admin/operations",
                             SortOrder = 91
@@ -86,6 +105,8 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "artifacts",
                             Enabled = true,
+                            GroupId = "work",
+                            Icon = "document",
                             Name = "成果文件",
                             Route = "/artifacts",
                             SortOrder = 40
@@ -94,6 +115,8 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "files",
                             Enabled = true,
+                            GroupId = "work",
+                            Icon = "files",
                             Name = "檔案庫",
                             Route = "/files",
                             SortOrder = 20
@@ -102,6 +125,8 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "audit",
                             Enabled = true,
+                            GroupId = "system",
+                            Icon = "audit",
                             Name = "活動稽核",
                             Route = "/admin/audit",
                             SortOrder = 97
@@ -110,6 +135,7 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "dashboard",
                             Enabled = true,
+                            Icon = "dashboard",
                             Name = "總覽",
                             Route = "/dashboard",
                             SortOrder = 5
@@ -118,6 +144,8 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "logs.query",
                             Enabled = true,
+                            GroupId = "system",
+                            Icon = "logs",
                             Name = "系統日誌",
                             Route = "/admin/logs",
                             SortOrder = 94
@@ -126,6 +154,8 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "logs.detail",
                             Enabled = true,
+                            GroupId = "system",
+                            Icon = "search",
                             Name = "日誌診斷詳情",
                             Route = "",
                             SortOrder = 95
@@ -134,6 +164,8 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "logs.export",
                             Enabled = true,
+                            GroupId = "system",
+                            Icon = "download",
                             Name = "日誌匯出",
                             Route = "",
                             SortOrder = 96
@@ -142,6 +174,8 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "integrations",
                             Enabled = true,
+                            GroupId = "system",
+                            Icon = "integrations",
                             Name = "資料來源",
                             Route = "/integrations",
                             SortOrder = 92
@@ -150,6 +184,8 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "tasks",
                             Enabled = true,
+                            GroupId = "collaboration",
+                            Icon = "tasks",
                             Name = "背景任務",
                             Route = "/tasks",
                             SortOrder = 55
@@ -158,6 +194,8 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "knowledge",
                             Enabled = true,
+                            GroupId = "work",
+                            Icon = "library",
                             Name = "知識庫",
                             Route = "/knowledge",
                             SortOrder = 30
@@ -166,6 +204,8 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "monitoring",
                             Enabled = true,
+                            GroupId = "system",
+                            Icon = "activity",
                             Name = "即時監控",
                             Route = "/admin/monitoring",
                             SortOrder = 93
@@ -174,6 +214,8 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "projects",
                             Enabled = true,
+                            GroupId = "work",
+                            Icon = "projects",
                             Name = "專案",
                             Route = "/projects",
                             SortOrder = 15
@@ -182,14 +224,18 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "quality",
                             Enabled = true,
+                            GroupId = "system",
+                            Icon = "shield",
                             Name = "品質評測",
                             Route = "/quality",
-                            SortOrder = 65
+                            SortOrder = 98
                         },
                         new
                         {
                             Id = "repositories",
                             Enabled = true,
+                            GroupId = "collaboration",
+                            Icon = "git",
                             Name = "程式庫",
                             Route = "/repositories",
                             SortOrder = 60
@@ -198,13 +244,15 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             Id = "shared",
                             Enabled = true,
+                            GroupId = "collaboration",
+                            Icon = "share",
                             Name = "分享",
                             Route = "/shared",
                             SortOrder = 50
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.AccessControl.GroupModelPolicy", b =>
+            modelBuilder.Entity("AiNexus.Features.AccessControl.ModelPolicies.GroupModelPolicy", b =>
                 {
                     b.Property<string>("GroupId")
                         .HasMaxLength(64)
@@ -233,7 +281,83 @@ namespace AiNexus.Features.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.AccessControl.Role", b =>
+            modelBuilder.Entity("AiNexus.Features.AccessControl.ModelPolicies.UserModelPolicy", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("關聯使用者的 Users 主鍵。");
+
+                    b.Property<string>("AllowedModelsJson")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
+                        .HasComment("模型白名單 JSON；群組取聯集，空值授予全部、空陣列不授權；個人白名單再限縮。");
+
+                    b.Property<string>("DailyTokenLimitsJson")
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("各模型每日輸入加輸出 token 上限 JSON；授權群組取最高值、留空不限，個人覆寫優先，UTC 午夜重設。");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("UserModelPolicies", "accesscontrol", t =>
+                        {
+                            t.HasComment("使用者的模型白名單與各模型每日 token 覆寫政策。");
+                        });
+                });
+
+            modelBuilder.Entity("AiNexus.Features.AccessControl.Navigation.NavigationGroup", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasComment("資料的主鍵識別碼。");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)")
+                        .HasComment("業務物件的顯示名稱。");
+
+                    b.Property<string>("ParentId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasComment("上層分群；null 表示位於選單最上層。");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int")
+                        .HasComment("同一層內的顯示順序；數值越小越前，同一層的功能排在分群之前。");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParentId");
+
+                    b.ToTable("NavigationGroups", "accesscontrol", t =>
+                        {
+                            t.HasComment("工作區選單的分群；可巢狀，只決定功能入口的排列，不影響授權。");
+                        });
+
+                    b.HasData(
+                        new
+                        {
+                            Id = "work",
+                            Name = "AI 工作台",
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = "collaboration",
+                            Name = "協作",
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = "system",
+                            Name = "系統管理",
+                            SortOrder = 30
+                        });
+                });
+
+            modelBuilder.Entity("AiNexus.Features.AccessControl.Roles.Role", b =>
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(64)
@@ -272,7 +396,7 @@ namespace AiNexus.Features.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.AccessControl.RoleGroup", b =>
+            modelBuilder.Entity("AiNexus.Features.AccessControl.Roles.RoleGroup", b =>
                 {
                     b.Property<string>("Id")
                         .HasMaxLength(64)
@@ -311,7 +435,7 @@ namespace AiNexus.Features.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.AccessControl.RoleGroupFeature", b =>
+            modelBuilder.Entity("AiNexus.Features.AccessControl.Roles.RoleGroupFeature", b =>
                 {
                     b.Property<string>("GroupId")
                         .HasColumnType("nvarchar(64)")
@@ -423,7 +547,7 @@ namespace AiNexus.Features.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.AccessControl.RoleGroupRole", b =>
+            modelBuilder.Entity("AiNexus.Features.AccessControl.Roles.RoleGroupRole", b =>
                 {
                     b.Property<string>("RoleId")
                         .HasColumnType("nvarchar(64)")
@@ -455,31 +579,7 @@ namespace AiNexus.Features.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.AccessControl.UserModelPolicy", b =>
-                {
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("關聯使用者的 Users 主鍵。");
-
-                    b.Property<string>("AllowedModelsJson")
-                        .HasMaxLength(4000)
-                        .HasColumnType("nvarchar(4000)")
-                        .HasComment("模型白名單 JSON；群組取聯集，空值授予全部、空陣列不授權；個人白名單再限縮。");
-
-                    b.Property<string>("DailyTokenLimitsJson")
-                        .HasMaxLength(8000)
-                        .HasColumnType("nvarchar(max)")
-                        .HasComment("各模型每日輸入加輸出 token 上限 JSON；授權群組取最高值、留空不限，個人覆寫優先，UTC 午夜重設。");
-
-                    b.HasKey("UserId");
-
-                    b.ToTable("UserModelPolicies", "accesscontrol", t =>
-                        {
-                            t.HasComment("使用者的模型白名單與各模型每日 token 覆寫政策。");
-                        });
-                });
-
-            modelBuilder.Entity("AiNexus.Features.AccessControl.UserRole", b =>
+            modelBuilder.Entity("AiNexus.Features.AccessControl.Roles.UserRole", b =>
                 {
                     b.Property<Guid>("UserId")
                         .HasColumnType("uniqueidentifier")
@@ -699,7 +799,7 @@ namespace AiNexus.Features.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Billing.ModelCharge", b =>
+            modelBuilder.Entity("AiNexus.Features.Billing.Charges.ModelCharge", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -839,7 +939,7 @@ namespace AiNexus.Features.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Billing.ModelPrice", b =>
+            modelBuilder.Entity("AiNexus.Features.Billing.Prices.ModelPrice", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1282,7 +1382,125 @@ namespace AiNexus.Features.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Inference.GenerationRun", b =>
+            modelBuilder.Entity("AiNexus.Features.Inference.ModelTasks.ModelInvocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("資料的主鍵識別碼。");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasComment("資料建立時間，採 UTC offset。");
+
+                    b.Property<long?>("DurationMilliseconds")
+                        .HasColumnType("bigint")
+                        .HasComment("從請求建立至終止的總耗時毫秒；包括排隊、生成、取消與失敗。");
+
+                    b.Property<long?>("InputTokens")
+                        .HasColumnType("bigint")
+                        .HasComment("模型回報的輸入 tokens；未知保持空值。");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("模型呼叫種類。");
+
+                    b.Property<string>("ModelId")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)")
+                        .HasComment("核准模型的內部識別碼。");
+
+                    b.Property<long?>("OutputTokens")
+                        .HasColumnType("bigint")
+                        .HasComment("模型回報的輸出 tokens；未知保持空值。");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier")
+                        .HasComment("資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("模型或搜尋服務供應商識別碼。");
+
+                    b.Property<long>("ReservedTokens")
+                        .HasColumnType("bigint")
+                        .HasComment("生成預留的保守輸入加最大輸出 token；執行中或缺失 usage 時占用配額，未執行即取消釋放。");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasComment("業務執行狀態。");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedAt"), new[] { "OwnerId", "Kind", "ModelId", "Status", "InputTokens", "OutputTokens", "DurationMilliseconds" });
+
+                    b.HasIndex("OwnerId", "CreatedAt");
+
+                    b.ToTable("ModelInvocations", "inference", t =>
+                        {
+                            t.HasComment("文字、OCR、embedding 等模型呼叫的狀態與實際用量。");
+                        });
+                });
+
+            modelBuilder.Entity("AiNexus.Features.Inference.Models.ModelProfile", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasMaxLength(160)
+                        .HasColumnType("nvarchar(160)")
+                        .HasComment("資料的主鍵識別碼。");
+
+                    b.Property<int>("ContextTokens")
+                        .HasColumnType("int")
+                        .HasComment("模型上下文容量，以 tokens 計。");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)")
+                        .HasComment("模型的介面顯示名稱。");
+
+                    b.Property<int>("MaxOutputTokens")
+                        .HasColumnType("int")
+                        .HasComment("模型核准的最大輸出 tokens。");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("模型或搜尋服務供應商識別碼。");
+
+                    b.Property<string>("ProviderModelId")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasComment("送往指定供應商的原生模型識別碼，與核准路由識別碼分開保存。");
+
+                    b.Property<bool>("SupportsStreaming")
+                        .HasColumnType("bit")
+                        .HasComment("模型是否支援串流輸出。");
+
+                    b.Property<bool>("SupportsUsage")
+                        .HasColumnType("bit")
+                        .HasComment("模型是否會回報實際用量。");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ModelProfiles", "inference", t =>
+                        {
+                            t.HasComment("核准模型的能力、上下文與輸出限制。");
+                        });
+                });
+
+            modelBuilder.Entity("AiNexus.Features.Inference.Runs.GenerationRun", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -1452,125 +1670,7 @@ namespace AiNexus.Features.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Inference.ModelInvocation", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("資料的主鍵識別碼。");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("datetimeoffset")
-                        .HasComment("資料建立時間，採 UTC offset。");
-
-                    b.Property<long?>("DurationMilliseconds")
-                        .HasColumnType("bigint")
-                        .HasComment("從請求建立至終止的總耗時毫秒；包括排隊、生成、取消與失敗。");
-
-                    b.Property<long?>("InputTokens")
-                        .HasColumnType("bigint")
-                        .HasComment("模型回報的輸入 tokens；未知保持空值。");
-
-                    b.Property<string>("Kind")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)")
-                        .HasComment("模型呼叫種類。");
-
-                    b.Property<string>("ModelId")
-                        .IsRequired()
-                        .HasMaxLength(160)
-                        .HasColumnType("nvarchar(160)")
-                        .HasComment("核准模型的內部識別碼。");
-
-                    b.Property<long?>("OutputTokens")
-                        .HasColumnType("bigint")
-                        .HasComment("模型回報的輸出 tokens；未知保持空值。");
-
-                    b.Property<Guid>("OwnerId")
-                        .HasColumnType("uniqueidentifier")
-                        .HasComment("資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。");
-
-                    b.Property<string>("Provider")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)")
-                        .HasComment("模型或搜尋服務供應商識別碼。");
-
-                    b.Property<long>("ReservedTokens")
-                        .HasColumnType("bigint")
-                        .HasComment("生成預留的保守輸入加最大輸出 token；執行中或缺失 usage 時占用配額，未執行即取消釋放。");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)")
-                        .HasComment("業務執行狀態。");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt");
-
-                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("CreatedAt"), new[] { "OwnerId", "Kind", "ModelId", "Status", "InputTokens", "OutputTokens", "DurationMilliseconds" });
-
-                    b.HasIndex("OwnerId", "CreatedAt");
-
-                    b.ToTable("ModelInvocations", "inference", t =>
-                        {
-                            t.HasComment("文字、OCR、embedding 等模型呼叫的狀態與實際用量。");
-                        });
-                });
-
-            modelBuilder.Entity("AiNexus.Features.Inference.ModelProfile", b =>
-                {
-                    b.Property<string>("Id")
-                        .HasMaxLength(160)
-                        .HasColumnType("nvarchar(160)")
-                        .HasComment("資料的主鍵識別碼。");
-
-                    b.Property<int>("ContextTokens")
-                        .HasColumnType("int")
-                        .HasComment("模型上下文容量，以 tokens 計。");
-
-                    b.Property<string>("DisplayName")
-                        .IsRequired()
-                        .HasMaxLength(120)
-                        .HasColumnType("nvarchar(120)")
-                        .HasComment("模型的介面顯示名稱。");
-
-                    b.Property<int>("MaxOutputTokens")
-                        .HasColumnType("int")
-                        .HasComment("模型核准的最大輸出 tokens。");
-
-                    b.Property<string>("Provider")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)")
-                        .HasComment("模型或搜尋服務供應商識別碼。");
-
-                    b.Property<string>("ProviderModelId")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)")
-                        .HasComment("送往指定供應商的原生模型識別碼，與核准路由識別碼分開保存。");
-
-                    b.Property<bool>("SupportsStreaming")
-                        .HasColumnType("bit")
-                        .HasComment("模型是否支援串流輸出。");
-
-                    b.Property<bool>("SupportsUsage")
-                        .HasColumnType("bit")
-                        .HasComment("模型是否會回報實際用量。");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("ModelProfiles", "inference", t =>
-                        {
-                            t.HasComment("核准模型的能力、上下文與輸出限制。");
-                        });
-                });
-
-            modelBuilder.Entity("AiNexus.Features.Inference.RunEvent", b =>
+            modelBuilder.Entity("AiNexus.Features.Inference.Runs.RunEvent", b =>
                 {
                     b.Property<Guid>("RunId")
                         .HasColumnType("uniqueidentifier")
@@ -1618,7 +1718,7 @@ namespace AiNexus.Features.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Integrations.ImportedSourceReference", b =>
+            modelBuilder.Entity("AiNexus.Features.Integrations.Handoff.ImportedSourceReference", b =>
                 {
                     b.Property<Guid>("ArtifactId")
                         .HasColumnType("uniqueidentifier")
@@ -2445,7 +2545,7 @@ namespace AiNexus.Features.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Projects.ProjectTemplate", b =>
+            modelBuilder.Entity("AiNexus.Features.Projects.Templates.ProjectTemplate", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -3501,46 +3601,24 @@ namespace AiNexus.Features.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("AiNexus.Features.AccessControl.GroupModelPolicy", b =>
+            modelBuilder.Entity("AiNexus.Features.AccessControl.Feature", b =>
                 {
-                    b.HasOne("AiNexus.Features.AccessControl.RoleGroup", null)
+                    b.HasOne("AiNexus.Features.AccessControl.Navigation.NavigationGroup", null)
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("AiNexus.Features.AccessControl.ModelPolicies.GroupModelPolicy", b =>
+                {
+                    b.HasOne("AiNexus.Features.AccessControl.Roles.RoleGroup", null)
                         .WithMany()
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("AiNexus.Features.AccessControl.RoleGroupFeature", b =>
-                {
-                    b.HasOne("AiNexus.Features.AccessControl.Feature", null)
-                        .WithMany()
-                        .HasForeignKey("FeatureId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AiNexus.Features.AccessControl.RoleGroup", null)
-                        .WithMany()
-                        .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("AiNexus.Features.AccessControl.RoleGroupRole", b =>
-                {
-                    b.HasOne("AiNexus.Features.AccessControl.RoleGroup", null)
-                        .WithMany()
-                        .HasForeignKey("GroupId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("AiNexus.Features.AccessControl.Role", null)
-                        .WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("AiNexus.Features.AccessControl.UserModelPolicy", b =>
+            modelBuilder.Entity("AiNexus.Features.AccessControl.ModelPolicies.UserModelPolicy", b =>
                 {
                     b.HasOne("AiNexus.Features.Identity.Users.NexusUser", null)
                         .WithMany()
@@ -3549,9 +3627,47 @@ namespace AiNexus.Features.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("AiNexus.Features.AccessControl.UserRole", b =>
+            modelBuilder.Entity("AiNexus.Features.AccessControl.Navigation.NavigationGroup", b =>
                 {
-                    b.HasOne("AiNexus.Features.AccessControl.Role", null)
+                    b.HasOne("AiNexus.Features.AccessControl.Navigation.NavigationGroup", null)
+                        .WithMany()
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("AiNexus.Features.AccessControl.Roles.RoleGroupFeature", b =>
+                {
+                    b.HasOne("AiNexus.Features.AccessControl.Feature", null)
+                        .WithMany()
+                        .HasForeignKey("FeatureId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AiNexus.Features.AccessControl.Roles.RoleGroup", null)
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AiNexus.Features.AccessControl.Roles.RoleGroupRole", b =>
+                {
+                    b.HasOne("AiNexus.Features.AccessControl.Roles.RoleGroup", null)
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("AiNexus.Features.AccessControl.Roles.Role", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AiNexus.Features.AccessControl.Roles.UserRole", b =>
+                {
+                    b.HasOne("AiNexus.Features.AccessControl.Roles.Role", null)
                         .WithMany()
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -3648,7 +3764,7 @@ namespace AiNexus.Features.Persistence.Migrations
                     b.Navigation("Attachment");
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Billing.ModelCharge", b =>
+            modelBuilder.Entity("AiNexus.Features.Billing.Charges.ModelCharge", b =>
                 {
                     b.HasOne("AiNexus.Features.Conversations.Conversation", null)
                         .WithMany()
@@ -3661,13 +3777,13 @@ namespace AiNexus.Features.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("AiNexus.Features.Billing.ModelPrice", null)
+                    b.HasOne("AiNexus.Features.Billing.Prices.ModelPrice", null)
                         .WithMany()
                         .HasForeignKey("PriceId")
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Billing.ModelPrice", b =>
+            modelBuilder.Entity("AiNexus.Features.Billing.Prices.ModelPrice", b =>
                 {
                     b.HasOne("AiNexus.Features.Identity.Users.NexusUser", null)
                         .WithMany()
@@ -3678,7 +3794,7 @@ namespace AiNexus.Features.Persistence.Migrations
 
             modelBuilder.Entity("AiNexus.Features.Collaboration.ResourceGroup", b =>
                 {
-                    b.HasOne("AiNexus.Features.AccessControl.RoleGroup", null)
+                    b.HasOne("AiNexus.Features.AccessControl.Roles.RoleGroup", null)
                         .WithMany()
                         .HasForeignKey("GroupId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -3859,7 +3975,16 @@ namespace AiNexus.Features.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Inference.GenerationRun", b =>
+            modelBuilder.Entity("AiNexus.Features.Inference.ModelTasks.ModelInvocation", b =>
+                {
+                    b.HasOne("AiNexus.Features.Identity.Users.NexusUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("AiNexus.Features.Inference.Runs.GenerationRun", b =>
                 {
                     b.HasOne("AiNexus.Features.Conversations.Message", null)
                         .WithMany()
@@ -3886,25 +4011,16 @@ namespace AiNexus.Features.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Inference.ModelInvocation", b =>
+            modelBuilder.Entity("AiNexus.Features.Inference.Runs.RunEvent", b =>
                 {
-                    b.HasOne("AiNexus.Features.Identity.Users.NexusUser", null)
-                        .WithMany()
-                        .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("AiNexus.Features.Inference.RunEvent", b =>
-                {
-                    b.HasOne("AiNexus.Features.Inference.GenerationRun", null)
+                    b.HasOne("AiNexus.Features.Inference.Runs.GenerationRun", null)
                         .WithMany()
                         .HasForeignKey("RunId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Integrations.ImportedSourceReference", b =>
+            modelBuilder.Entity("AiNexus.Features.Integrations.Handoff.ImportedSourceReference", b =>
                 {
                     b.HasOne("AiNexus.Features.Artifacts.Artifact", null)
                         .WithMany()
@@ -4060,7 +4176,7 @@ namespace AiNexus.Features.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("AiNexus.Features.Projects.ProjectTemplate", b =>
+            modelBuilder.Entity("AiNexus.Features.Projects.Templates.ProjectTemplate", b =>
                 {
                     b.HasOne("AiNexus.Features.Projects.Project", null)
                         .WithMany()

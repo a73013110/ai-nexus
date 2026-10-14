@@ -1,17 +1,17 @@
-/** A feature's place: the server lists features by `sortOrder`, then `id`. */
+/** A feature's (or menu group's) place: the server lists them by `sortOrder`, then `id`. */
 export interface FeatureOrder {
   id: string;
   sortOrder: number;
 }
 export type OrderShift = number | 'first' | 'last';
 
-/** The largest `sortOrder` the server accepts (`SaveFeature`). */
+/** The largest `sortOrder` the server accepts (`NavigationRules`). */
 export const MAX_SORT_ORDER = 10000;
 const STEP = 10;
 
 /**
  * Features in display order with `overrides` (values being saved) applied, the way the sidebar
- * and the catalog order them; `groupFeatures` keeps this order inside each group.
+ * and the catalog order them; `navigationTree` keeps this order inside each group.
  */
 export function orderFeatures<T extends FeatureOrder>(
   features: readonly T[],
@@ -22,6 +22,11 @@ export function orderFeatures<T extends FeatureOrder>(
       feature.id in overrides ? { ...feature, sortOrder: overrides[feature.id] } : feature,
     )
     .sort((a, b) => a.sortOrder - b.sortOrder || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+}
+
+/** The place after the last of `siblings` (10 when there are none), within the accepted range. */
+export function nextSortOrder(siblings: readonly { sortOrder: number }[]): number {
+  return Math.min(MAX_SORT_ORDER, Math.max(0, ...siblings.map((x) => x.sortOrder)) + STEP);
 }
 
 /** `ids` with `id` moved by `shift` places (or to either end), clamped to the list. */

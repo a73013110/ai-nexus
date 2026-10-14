@@ -16,6 +16,6 @@ internal sealed class GetAuditCatalog(NexusDbContext db, ModelCatalog catalog)
         .WithName("GetAuditCatalog");
 
     public async Task<AuditCatalogDto> HandleAsync(CancellationToken ct) => new(
-        await db.Set<Feature>().AsNoTracking().OrderBy(x => x.SortOrder).ThenBy(x => x.Id).Select(x => new FeatureDto(x.Id, x.Name, x.Route)).ToArrayAsync(ct),
+        await db.Set<Feature>().AsNoTracking().OrderBy(x => x.SortOrder).ThenBy(x => x.Id).Select(x => new FeatureDto(x.Id, x.Name, x.Route, x.GroupId, x.Icon, x.SortOrder)).ToArrayAsync(ct),
         (await catalog.ProfilesAsync(ct)).Select(x => x.ToDto()).ToArray());
 }

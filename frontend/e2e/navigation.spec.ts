@@ -34,14 +34,14 @@ test("chat history stays primary with grouped tools collapsed and settings only 
     "檔案庫",
     "背景任務",
   ]);
-  await expect(tools.getByRole("region", { name: "系統" })).toHaveCount(0);
+  await expect(tools.getByRole("region", { name: "系統管理" })).toHaveCount(0);
   await launcher.click();
   // The launcher lists every feature in the shared groups; pinned ones keep their place with a
   // pin mark, and the current page stays marked once, on its pinned row.
   await expect(
-    tools.getByRole("region", { name: "系統", exact: true }),
+    tools.getByRole("region", { name: "系統管理", exact: true }),
   ).toBeVisible();
-  const work = tools.getByRole("region", { name: "工作", exact: true });
+  const work = tools.getByRole("region", { name: "AI 工作台", exact: true });
   await expect(
     work.getByRole("link", { name: "對話", exact: true }),
   ).not.toHaveClass(/current/);
@@ -67,7 +67,7 @@ test("chat history stays primary with grouped tools collapsed and settings only 
   ]);
   await expect(
     tools
-      .getByRole("region", { name: "協作與品質", exact: true })
+      .getByRole("region", { name: "協作", exact: true })
       .getByRole("link", { name: "背景任務", exact: true }),
   ).toBeVisible();
   await page.reload();

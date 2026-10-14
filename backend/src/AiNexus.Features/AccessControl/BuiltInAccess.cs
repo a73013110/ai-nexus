@@ -8,4 +8,6 @@ public static class BuiltInAccess
     public const string AdministratorsGroup = "administrators";
     public const string ChatFeature = "chat";
     public const string ChatPolicy = Policies.Prefix + ChatFeature;
+    /// <summary>Menu groups seeded by AccessControl (<c>NavigationGroupConfiguration</c>); modules place their features in them.</summary>
+    public const string WorkNavigation = "work", CollaborationNavigation = "collaboration", SystemNavigation = "system";
 }

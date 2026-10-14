@@ -1,5 +1,6 @@
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Administration.ModelPolicies;
+using AiNexus.Features.Administration.Navigation;
 using AiNexus.Features.Administration.Retrieval;
 using AiNexus.Features.Administration.Roles;
 using AiNexus.Features.Administration.Usage;
@@ -11,7 +12,7 @@ using AiNexus.Platform.Modules;
 namespace AiNexus.Features.Administration;
 
 /// <summary>
-/// Platform administration. Access management (<see cref="AdministrationConfiguration"/>): roles, groups, features, users,
+/// Platform administration. Access management (<see cref="AdministrationConfiguration"/>): roles, groups, features, menu groups, users,
 /// model policies and audited inspection. Platform operations (<see cref="OperationsConfiguration"/>): platform usage and
 /// retrieval administration. Each use case has its own file. Every mutation goes through <see cref="AdministrativeAudit"/>.
 /// </summary>
@@ -57,6 +58,9 @@ public sealed class AdministrationModule : IFeatureModule
         SaveRole.Map(api);
         SaveRoleGroup.Map(api);
         SaveFeature.Map(api);
+        CreateNavigationGroup.Map(api);
+        UpdateNavigationGroup.Map(api);
+        DeleteNavigationGroup.Map(api);
         GetAdminUsage.Map(Operations(root));
         GetEffectiveModelPolicy.Map(root);
     }

@@ -157,6 +157,8 @@ const icons: Record<string, IconNode> = {
   calendar: Calendar,
   columns: SlidersHorizontal,
 };
+/** Names `nx-icon` draws without a feature bundle; menu icons from the API fall back when unknown. */
+export const ICON_NAMES: ReadonlySet<string> = new Set(Object.keys(icons));
 /** Optional feature icons stay in their lazy feature bundle. */
 export const EXTRA_ICONS = new InjectionToken<Readonly<Record<string, IconNode>>>('Feature icons');
 /** Callers size it with `--icon-size` (the `--icon-*` tokens), not width and height. */

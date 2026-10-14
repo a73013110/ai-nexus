@@ -13,9 +13,19 @@
   font-size: var(--text-caption);
   font-weight: 600;
 }
-.feature-section nx-count-badge {
-  margin-inline-start: var(--p-space-1);
-  vertical-align: 0.0625rem;
+// The group's path, its count and its menu on one line; a subgroup is set in by its depth.
+.feature-section-head {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  min-width: 0;
+  padding-inline-start: calc(var(--depth, 0) * var(--p-space-4));
+}
+.feature-section-head nx-action-menu {
+  margin-inline-start: auto;
+}
+.feature-empty td {
+  padding-block: var(--p-space-2);
 }
 // Icon, then the name over its identifier, like the name and id of roles and groups.
 .feature-name {

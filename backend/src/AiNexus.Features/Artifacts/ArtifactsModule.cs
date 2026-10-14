@@ -48,4 +48,4 @@ public sealed class ArtifactsModule : IFeatureModule
     }
 }
 
-internal sealed class ArtifactsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Artifacts, "成果文件", "/artifacts", 40));
+internal sealed class ArtifactsFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Artifacts, "成果文件", "/artifacts", 40, BuiltInAccess.WorkNavigation, "document"));
