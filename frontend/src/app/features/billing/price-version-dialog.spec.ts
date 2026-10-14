@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
+import { TESTING_IDENTITY_NOTE, WorkspaceSession } from '../../core/auth/workspace-session';
 import type { PriceDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
@@ -32,7 +32,13 @@ function setup(testing = false) {
     providers: [
       { provide: BillingApi, useValue: api },
       { provide: ToastService, useValue: toast },
-      { provide: WorkspaceSession, useValue: { auth: { session: signal({ testing }) } } },
+      {
+        provide: WorkspaceSession,
+        useValue: {
+          testing: signal(testing),
+          testingNote: signal(testing ? TESTING_IDENTITY_NOTE : ''),
+        },
+      },
     ],
   });
   // The draft's logic is under test; the form needs browser layout APIs jsdom lacks.
@@ -115,7 +121,7 @@ describe('PriceVersionDialog', () => {
     dialog.open({ from: 'history', price: version });
     dialog.field('perRequest', 1);
     expect(dialog.canSave()).toBe(false);
-    expect(dialog.note()).toBe('測試身分期間不能修改管理設定');
+    expect(dialog.note()).toBe(TESTING_IDENTITY_NOTE);
     const closing = dialog.cancel(new Event('cancel'));
     expect(confirm.value()?.title).toBe('放棄未儲存的變更？');
     confirm.answer(false);

@@ -97,6 +97,15 @@ test("dashboard shows every granted feature, keeps currencies apart and narrows 
     "逐日檢視每日 輸出 Tokens",
   );
   await chooseSelect(page, "Token 統計模型", "所有模型");
+  // The per-model breakdown is a shared data table: a row filters the chart and stays selected.
+  await tokens.getByText(/依模型檢視 Token 分布/).click();
+  const breakdown = tokens.getByRole("region", { name: "各模型 Token 使用量" });
+  const local = breakdown.getByRole("button", { name: "本機測試模型" });
+  await local.click();
+  await expect(local).toHaveAttribute("aria-pressed", "true");
+  await expect(breakdown.locator("tr.is-selected")).toHaveCount(1);
+  await local.click();
+  await expect(breakdown.locator("tr.is-selected")).toHaveCount(0);
 
   const chart = tile(page, "費用趨勢").locator("nx-trend-chart");
   await chart.getByRole("slider").focus();

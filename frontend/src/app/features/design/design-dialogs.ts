@@ -1,9 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { TESTING_IDENTITY_NOTE } from '../../core/auth/workspace-session';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { DialogHeader } from '../../shared/ui/dialog-header';
+import { DialogSaveBar } from '../../shared/ui/dialog-save-bar';
 import { Field } from '../../shared/ui/field';
 import { Icon } from '../../shared/ui/icon';
 import { SearchField } from '../../shared/ui/search-field';
+import { Tabs, type TabItem } from '../../shared/ui/tabs';
 import { ToastService } from '../../shared/ui/toast-service';
 import { DesignExample, DesignSection } from './design-section';
 
@@ -16,10 +19,22 @@ const FILES = [
   { name: '資安自評表.xlsx', detail: '204 KB · 09/18' },
 ];
 
-/** The shared dialog structure in its three common sizes. */
+const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
+
+/** The shared dialog structure in its three common sizes, and the save bar of settings forms. */
 @Component({
   selector: 'nx-design-dialogs',
-  imports: [CompactDialog, DesignExample, DesignSection, DialogHeader, Field, Icon, SearchField],
+  imports: [
+    CompactDialog,
+    DesignExample,
+    DesignSection,
+    DialogHeader,
+    DialogSaveBar,
+    Field,
+    Icon,
+    SearchField,
+    Tabs,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -52,10 +67,22 @@ const FILES = [
       margin: 0;
       padding: var(--p-space-4);
     }
+    nx-design-example:has(.design-save-frame) {
+      flex: 1 1 20rem;
+    }
+    .design-save-frame {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: var(--dialog-radius);
+      background: var(--surface);
+    }
+    .design-save-frame .dialog-body {
+      overflow: visible;
+    }
   `,
   template: `<nx-design-section
       id="design-dialog"
-      title="對話框"
+      title="對話框尺寸"
       api="nxCompactDialog size · nx-dialog-header · .dialog-body · .dialog-foot · .dialog-note"
       description="一個結構：標題列（nx-dialog-header，自帶關閉）、只有內容區捲動、選用頁尾。sm、md 無分隔線；lg、full 以分隔線切開三區。640px 以下一律變底部 sheet，可由標題列下拉關閉。"
     >
@@ -69,6 +96,60 @@ const FILES = [
         <button type="button" class="secondary-button" (click)="show(picker)">
           <nx-icon name="files" />開啟 lg
         </button>
+      </nx-design-example>
+    </nx-design-section>
+    <nx-design-section
+      id="design-save-bar"
+      title="儲存列"
+      api="nx-dialog-save-bar · TabItem.dirty"
+      description="編輯已儲存內容的頁尾：說明｜還原｜儲存，按鈕位置固定。未變更時兩鈕停用；有變更時說明轉色，所在頁籤加圓點（名稱加「有未儲存的變更」）；不能寫入時 note 取代說明，儲存停用、還原仍可用。"
+    >
+      <nx-design-example label="未變更 → 有變更">
+        <form class="design-save-frame" (submit)="save($event)">
+          <nx-tabs
+            #sections
+            label="示範設定分類"
+            [items]="tabs()"
+            [value]="tab()"
+            (valueChange)="tab.set($event)"
+          />
+          <div
+            class="dialog-body"
+            role="tabpanel"
+            [id]="sections.panelId(tab())"
+            [attr.aria-labelledby]="sections.tabId(tab())"
+          >
+            @if (tab() === 'name') {
+              <label
+                >角色名稱<input
+                  nxField
+                  [value]="draft().name"
+                  (input)="edit('name', $any($event.target).value)"
+              /></label>
+            } @else {
+              <label
+                >說明<input
+                  nxField
+                  [value]="draft().note"
+                  (input)="edit('note', $any($event.target).value)"
+              /></label>
+            }
+          </div>
+          <nx-dialog-save-bar label="儲存角色" [dirty]="dirty()" (revert)="draft.set(saved())" />
+        </form>
+      </nx-design-example>
+      <nx-design-example label="不能寫入（測試身分）">
+        <form class="design-save-frame" (submit)="$event.preventDefault()">
+          <div class="dialog-body">
+            <label>角色名稱<input nxField value="已修改的名稱" readonly /></label>
+          </div>
+          <nx-dialog-save-bar
+            label="儲存角色"
+            [dirty]="true"
+            [disabled]="true"
+            [note]="lockedNote"
+          />
+        </form>
       </nx-design-example>
     </nx-design-section>
     <dialog nxCompactDialog size="sm" #small class="platform-dialog">
@@ -127,6 +208,16 @@ const FILES = [
 })
 export class DesignDialogs {
   private readonly toast = inject(ToastService);
+  readonly lockedNote = TESTING_IDENTITY_NOTE;
+  readonly saved = signal(SAVED);
+  readonly draft = signal(SAVED);
+  readonly tab = signal('name');
+  readonly dirty = computed(() => this.tabs().some((tab) => tab.dirty));
+  /** One save covers both tabs, so each marks the changes it holds. */
+  readonly tabs = computed<TabItem[]>(() => [
+    { value: 'name', label: '名稱', dirty: this.draft().name !== this.saved().name },
+    { value: 'note', label: '說明', dirty: this.draft().note !== this.saved().note },
+  ]);
   readonly query = signal('');
   readonly matches = computed(() => {
     const query = this.query().trim().toLowerCase();
@@ -135,6 +226,14 @@ export class DesignDialogs {
   show(dialog: HTMLDialogElement) {
     this.query.set('');
     dialog.showModal();
+  }
+  edit(key: keyof typeof SAVED, value: string) {
+    this.draft.update((draft) => ({ ...draft, [key]: value }));
+  }
+  save(event: Event) {
+    event.preventDefault();
+    this.saved.set(this.draft());
+    this.toast.success('已儲存示範角色');
   }
   pick(dialog: HTMLDialogElement, name: string) {
     dialog.close();

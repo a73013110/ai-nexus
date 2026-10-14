@@ -7,6 +7,7 @@ import {
   formatDate,
   formatDay,
   compactNumber,
+  formatDuration,
   figureMoney,
   metricFormatter,
   metricText,
@@ -65,6 +66,15 @@ describe('figures and metrics', () => {
     expect(metricText(4820, 'duration')).toBe('4.8 秒');
     expect(metricText(Number.NaN, 'bytes')).toBe('—');
     expect(metricText(75_000, 'duration')).toBe('1 分 15 秒');
+  });
+
+  it('reads durations in the two largest units', () => {
+    expect(formatDuration(4820)).toBe('4.8 秒');
+    expect(formatDuration(75_000)).toBe('1 分 15 秒');
+    expect(formatDuration(120_000)).toBe('2 分');
+    expect(formatDuration(39_888_000)).toBe('11 小時 4 分');
+    expect(formatDuration(7_200_000)).toBe('2 小時');
+    expect(formatDuration(183_600_000)).toBe('2 天 3 小時');
   });
 
   it('shortens counts for headline figures and reuses one formatter per kind', () => {

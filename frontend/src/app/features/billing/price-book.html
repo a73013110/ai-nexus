@@ -15,8 +15,8 @@
   <button
     type="button"
     class="primary-button"
-    [disabled]="testing() || loading()"
-    [title]="testing() ? '測試身分期間不能修改管理設定' : ''"
+    [disabled]="session.testing() || loading()"
+    [title]="session.testingNote()"
     (click)="add()"
   >
     <nx-icon name="plus" />新增價格版本
@@ -70,7 +70,7 @@
       </thead>
       <tbody>
         @for (row of current(); track row.key) {
-          <tr nxTableRow [rowEnabled]="!testing()" (rowActivate)="adjust(row)">
+          <tr nxTableRow [rowEnabled]="!session.testing()" (rowActivate)="adjust(row)">
             <th scope="row">
               <strong class="ui-truncate" [title]="row.name">{{ row.name }}</strong
               ><small>{{ provider(row.provider) }}</small>
@@ -113,7 +113,7 @@
                 type="button"
                 class="icon-button"
                 data-row-action
-                [disabled]="testing()"
+                [disabled]="session.testing()"
                 [attr.aria-label]="'新增價格版本：' + row.name"
                 [title]="'新增價格版本：' + row.name"
                 aria-haspopup="dialog"
@@ -184,7 +184,7 @@
       <tbody>
         @for (version of history(); track version.price.id) {
           @let price = version.price;
-          <tr nxTableRow [rowEnabled]="!testing()" (rowActivate)="reuse(version)">
+          <tr nxTableRow [rowEnabled]="!session.testing()" (rowActivate)="reuse(version)">
             <td class="price-time" nxTableColumn="effective">
               <time [attr.datetime]="price.effectiveAt">{{ date(price.effectiveAt) }}</time>
             </td>
@@ -225,7 +225,7 @@
                 type="button"
                 class="icon-button"
                 data-row-action
-                [disabled]="testing()"
+                [disabled]="session.testing()"
                 [attr.aria-label]="'帶入此版本：' + version.name"
                 [title]="'帶入此版本：' + version.name"
                 aria-haspopup="dialog"

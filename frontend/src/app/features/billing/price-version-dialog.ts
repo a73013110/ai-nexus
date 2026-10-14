@@ -93,7 +93,7 @@ export class PriceVersionDialog {
   readonly effective = signal('');
   readonly saving = signal(false);
   readonly error = signal('');
-  readonly locked = computed(() => !!this.session.auth.session()?.testing);
+  readonly locked = this.session.testing;
   readonly dirty = computed(() => !!this.effective() || !samePrice(this.draft(), this.baseline()));
   readonly detail = computed(() => {
     const seed = this.seed();
@@ -103,7 +103,7 @@ export class PriceVersionDialog {
     return '價格只影響之後的呼叫；不同幣別分開統計。';
   });
   /** Replaces the save bar's own 尚未變更／有未儲存的變更 while writes are refused. */
-  readonly note = computed(() => (this.locked() ? '測試身分期間不能修改管理設定' : ''));
+  readonly note = this.session.testingNote;
   readonly rateError = computed(() =>
     this.draft().cachedInputPerMillion > this.draft().inputPerMillion
       ? '快取輸入不得高於一般輸入。'

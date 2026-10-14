@@ -123,8 +123,6 @@ export class RetrievalAdmin {
       this.capabilitiesRead.error() ||
       this.collectionsRead.error(),
   );
-  /** A test identity may read but every write is refused by the server, so the buttons say so. */
-  readonly testing = computed(() => !!this.session.auth.session()?.testing);
   private readonly confirmation = viewChild.required(ConfirmDialog);
   readonly form = new FormGroup({
     query: new FormControl('', {

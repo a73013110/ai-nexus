@@ -2,6 +2,7 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { AdminFeatureDto, AdminGroupDto, AdminRoleDto } from '../../../core/api/schema';
+import { WorkspaceSession } from '../../../core/auth/workspace-session';
 import { AdminApi } from '../admin-api';
 import { ConfirmDialog } from '../../../shared/ui/confirm-dialog';
 import { AdminStore } from '../admin-store';
@@ -35,11 +36,12 @@ function setup(testing = false) {
     group: vi.fn(async () => undefined),
     feature: vi.fn(async () => undefined),
   };
-  const store = { catalog: signal(catalog), saved: vi.fn(), testing: signal(testing) };
+  const store = { catalog: signal(catalog), saved: vi.fn() };
   TestBed.configureTestingModule({
     providers: [
       { provide: AdminApi, useValue: api },
       { provide: AdminStore, useValue: store },
+      { provide: WorkspaceSession, useValue: { testing: signal(testing) } },
     ],
   });
   // The editor's logic is under test; its template needs browser layout APIs jsdom lacks.
@@ -183,6 +185,10 @@ describe('AccessEditorDialog', () => {
     dialog.update('storage', '3');
     dialog.update('enabled', false);
     expect(dialog.dirty()).toBe(true);
+    // One save covers both tabs, so the tab holding the change is marked.
+    expect(dialog.groupSections().map((x) => x.dirty)).toEqual([true, false]);
+    dialog.update('modelPolicy', { ...dialog.editor()!.modelPolicy, restricted: true });
+    expect(dialog.groupSections().map((x) => x.dirty)).toEqual([true, true]);
     dialog.revert();
     expect(dialog.dirty()).toBe(false);
     expect(dialog.editor()!.enabled).toBe(true);

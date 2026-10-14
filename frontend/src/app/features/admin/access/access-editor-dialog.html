@@ -13,7 +13,7 @@
         <nx-tabs
           #sections
           label="功能群組設定分類"
-          [items]="groupSections"
+          [items]="groupSections()"
           [value]="groupSection()"
           (valueChange)="selectSection($any($event))"
         />
@@ -183,8 +183,8 @@
       </ng-template>
       @if (e.isNew) {
         <footer class="dialog-foot">
-          @if (store.testing()) {
-            <span class="dialog-note" role="status">{{ testingNote }}</span>
+          @if (session.testing()) {
+            <span class="dialog-note" role="status">{{ session.testingNote() }}</span>
           }
           <button
             type="button"
@@ -203,8 +203,8 @@
           [label]="'儲存' + label(e.kind)"
           [dirty]="dirty()"
           [saving]="saving()"
-          [disabled]="store.testing()"
-          [note]="store.testing() ? testingNote : ''"
+          [disabled]="session.testing()"
+          [note]="session.testingNote()"
           (revert)="revert()"
         />
       }

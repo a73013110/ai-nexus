@@ -34,7 +34,7 @@
   <nx-tabs
     #sections
     label="使用者管理分類"
-    [items]="tabs"
+    [items]="tabs()"
     [value]="store.tab()"
     (valueChange)="selectTab($event)"
   />
