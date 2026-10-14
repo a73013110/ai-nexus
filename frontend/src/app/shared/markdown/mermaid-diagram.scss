@@ -59,7 +59,13 @@
   min-height: 10rem;
   justify-content: center;
 }
-// The viewer canvas runs edge to edge between the header and the dialog frame.
+// 展開的對話框：縮放工具浮在畫布上方（nx-floating-toolbar），畫布貼齊標題列與外框。
+.mermaid-viewer {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
 dialog nx-diagram-canvas {
   border: 0;
   border-radius: 0;

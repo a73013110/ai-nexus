@@ -1,4 +1,4 @@
-<header class="dialog-bar viewer-bar" [class.viewer-bar-page]="!embedded()">
+<header class="dialog-bar" [class.viewer-bar-page]="!embedded()">
   <div class="dialog-title">
     @if (embedded()) {
       <h2 [title]="document()?.fileName || ''">{{ document()?.fileName || '檔案預覽' }}</h2>
@@ -7,39 +7,6 @@
     }
     <small>{{ format() }}{{ total() > 1 ? ' · ' + total() + ' 頁' : '' }}</small>
   </div>
-  @if (document(); as info) {
-    @if (searchOpen()) {
-      <nx-search-field
-        class="viewer-search"
-        label="搜尋文件文字"
-        placeholder="搜尋文字"
-        [maxLength]="200"
-        [value]="query()"
-        (valueChange)="query.set($event)"
-      />
-    }
-    @if (hasText()) {
-      <button
-        class="icon-button"
-        [attr.aria-label]="searchOpen() ? '關閉搜尋' : '搜尋文件文字'"
-        [attr.aria-pressed]="searchOpen()"
-        [title]="searchDisabled() ? '切換到原始碼才能搜尋' : '搜尋文件文字（Ctrl+F）'"
-        [disabled]="searchDisabled()"
-        (click)="toggleSearch()"
-      >
-        <nx-icon name="search" />
-      </button>
-    }
-    @if (isPdf() || isImage() || isRich()) {
-      <nx-view-switch
-        class="viewer-modes"
-        label="文件檢視方式"
-        [options]="modeOptions()"
-        [value]="view()"
-        (valueChange)="setMode($event)"
-      />
-    }
-  }
   @if (document()?.hasOriginal) {
     <a
       class="icon-button"
@@ -78,56 +45,7 @@
     </button>
   }
 </header>
-@if (document(); as info) {
-  @if (isPdf() || (isImage() && mode() === 'original')) {
-    <div class="viewer-toolbar">
-      @if (isPdf()) {
-        <div class="reader-pagination">
-          <button
-            class="icon-button"
-            aria-label="上一頁"
-            [disabled]="page() <= 1"
-            (click)="navigate(page() - 1)"
-          >
-            <nx-icon name="back" />
-          </button>
-          <nx-select
-            label="文件頁碼"
-            [options]="pageOptions()"
-            [value]="'' + page()"
-            (valueChange)="navigate(+$event)"
-          />
-          <button
-            class="icon-button"
-            aria-label="下一頁"
-            [disabled]="page() >= total()"
-            (click)="navigate(page() + 1)"
-          >
-            <nx-icon name="chevron" />
-          </button>
-        </div>
-      }
-      @if (isPdf() && mode() === 'original') {
-        <nx-select
-          class="viewer-zoom"
-          label="文件縮放"
-          [options]="zoomOptions"
-          [value]="zoom()"
-          (valueChange)="zoom.set($event)"
-        />
-      }
-      @if (isImage() && mode() === 'original') {
-        <nx-select
-          class="viewer-zoom"
-          label="圖片縮放"
-          [options]="imageZoomOptions"
-          [value]="imageZoom()"
-          [disabled]="imageLoading()"
-          (valueChange)="imageZoom.set($event)"
-        />
-      }
-    </div>
-  }
+@if (document()) {
   @if (query().trim()) {
     <div class="reader-matches">
       <span role="status">{{ matches().length }} 頁符合</span>
@@ -165,93 +83,180 @@
 @if (error() || renderError()) {
   <nx-notice tone="danger" [message]="error() || renderError()" />
 }
-<div
-  class="viewer-stage"
-  [class.viewer-image]="isImage() && mode() === 'original'"
-  [class.viewer-frame]="isRich() && view() !== 'text'"
-  [class.viewer-image-zoomed]="isImage() && imageZoom() !== 'fit'"
-  [attr.aria-busy]="loading() || rendering() || imageLoading()"
->
-  @if (loading()) {
-    <nx-empty-state><p>正在開啟文件…</p></nx-empty-state>
-  } @else if (document(); as info) {
-    @if (mode() === 'original' && (isPdf() || isImage())) {
-      <div class="reader-original">
-        @if (isPdf()) {
-          <canvas #pdfCanvas [attr.aria-label]="info.fileName + ' 第 ' + page() + ' 頁'"></canvas>
-        } @else {
-          @if (imageLoading()) {
-            <p class="reader-image-loading" role="status">正在載入原始圖片…</p>
-          }
-          <img
-            [src]="contentUrl()"
-            [alt]="info.fileName"
-            decoding="async"
-            [style.width.px]="imageZoom() === 'fit' ? null : imageSize().width * +imageZoom()"
-            [style.height.px]="imageZoom() === 'fit' ? null : imageSize().height * +imageZoom()"
-            [class.reader-image-pending]="imageLoading()"
-            [hidden]="!!renderError()"
-            (load)="imageLoaded($event)"
-            (error)="imageFailed()"
+<div class="viewer-body" #body>
+  @if (hasTools()) {
+    <nx-floating-toolbar label="檢視工具" [region]="body" [pinned]="!!query()">
+      @if (isPdf() || isImage() || isRich()) {
+        <nx-view-switch
+          label="文件檢視方式"
+          appearance="segment"
+          [options]="modeOptions()"
+          [value]="view()"
+          (valueChange)="setMode($event)"
+        />
+      }
+      @if (paged()) {
+        <div class="reader-pagination" role="group" aria-label="頁碼">
+          <button
+            class="icon-button"
+            aria-label="上一頁"
+            [disabled]="page() <= 1"
+            (click)="navigate(page() - 1)"
+          >
+            <nx-icon name="back" />
+          </button>
+          <nx-select
+            appearance="pill"
+            label="文件頁碼"
+            [options]="pageOptions()"
+            [value]="'' + page()"
+            (valueChange)="navigate(+$event)"
           />
-        }
-      </div>
-    } @else if (isRich() && view() !== 'text') {
-      <div class="viewer-rich" [class.viewer-split]="view() === 'split'">
-        @if (view() === 'split') {
-          <div class="viewer-pane">
-            <ng-container [ngTemplateOutlet]="source" />
-          </div>
-        }
-        <div class="viewer-pane">
-          @if (kind() === 'markdown') {
-            <article class="reader-text">
-              <nx-markdown-view [content]="markdownText()" />
-            </article>
-          } @else if (gate.scripts() !== null) {
-            <nx-html-preview
-              [url]="htmlUrl()"
-              [gated]="gate.gated()"
-              [running]="gate.running()"
-              (run)="gate.run()"
-              (viewSource)="setMode('text')"
+          <button
+            class="icon-button"
+            aria-label="下一頁"
+            [disabled]="page() >= total()"
+            (click)="navigate(page() + 1)"
+          >
+            <nx-icon name="chevron" />
+          </button>
+        </div>
+      }
+      @if (isPdf() && mode() === 'original') {
+        <nx-select
+          class="viewer-zoom"
+          appearance="pill"
+          label="文件縮放"
+          [options]="zoomOptions"
+          [value]="zoom()"
+          (valueChange)="zoom.set($event)"
+        />
+      }
+      @if (isImage() && mode() === 'original') {
+        <nx-select
+          class="viewer-zoom"
+          appearance="pill"
+          label="圖片縮放"
+          [options]="imageZoomOptions"
+          [value]="imageZoom()"
+          [disabled]="imageLoading()"
+          (valueChange)="imageZoom.set($event)"
+        />
+      }
+      @if (hasText()) {
+        <div class="viewer-find">
+          @if (searchOpen()) {
+            <nx-search-field
+              class="viewer-search"
+              label="搜尋文件文字"
+              placeholder="搜尋文字"
+              [maxLength]="200"
+              [value]="query()"
+              (valueChange)="query.set($event)"
+            />
+          }
+          <button
+            class="icon-button"
+            [attr.aria-label]="searchOpen() ? '關閉搜尋' : '搜尋文件文字'"
+            [title]="searchDisabled() ? '切換到原始碼才能搜尋' : '搜尋文件文字（Ctrl+F）'"
+            [disabled]="searchDisabled()"
+            (click)="toggleSearch()"
+          >
+            <nx-icon [name]="searchOpen() ? 'close' : 'search'" />
+          </button>
+        </div>
+      }
+    </nx-floating-toolbar>
+  }
+  <div
+    class="viewer-stage"
+    [class.viewer-tooled]="hasTools()"
+    [class.viewer-image]="isImage() && mode() === 'original'"
+    [class.viewer-frame]="isRich() && view() !== 'text'"
+    [class.viewer-image-zoomed]="isImage() && imageZoom() !== 'fit'"
+    [attr.aria-busy]="loading() || rendering() || imageLoading()"
+  >
+    @if (loading()) {
+      <nx-empty-state><p>正在開啟文件…</p></nx-empty-state>
+    } @else if (document(); as info) {
+      @if (mode() === 'original' && (isPdf() || isImage())) {
+        <div class="reader-original">
+          @if (isPdf()) {
+            <canvas #pdfCanvas [attr.aria-label]="info.fileName + ' 第 ' + page() + ' 頁'"></canvas>
+          } @else {
+            @if (imageLoading()) {
+              <p class="reader-image-loading" role="status">正在載入原始圖片…</p>
+            }
+            <img
+              [src]="contentUrl()"
+              [alt]="info.fileName"
+              decoding="async"
+              [style.width.px]="imageZoom() === 'fit' ? null : imageSize().width * +imageZoom()"
+              [style.height.px]="imageZoom() === 'fit' ? null : imageSize().height * +imageZoom()"
+              [class.reader-image-pending]="imageLoading()"
+              [hidden]="!!renderError()"
+              (load)="imageLoaded($event)"
+              (error)="imageFailed()"
             />
           }
         </div>
-      </div>
-    } @else {
-      <ng-container [ngTemplateOutlet]="source" />
-    }
-    <ng-template #source>
-      <article class="reader-text">
-        @if (text(); as text) {
-          @if (!text.text.trim()) {
-            <p class="form-note">
-              {{ isImage() ? '圖片中沒有可辨識的文字。' : '此頁沒有可辨識的文字。' }}
-            </p>
-          } @else {
-            @if (total() > 1 || text.extraction === 'ocr') {
-              <div class="reader-text-meta">
-                <span>第 {{ text.pageNumber }} 頁</span
-                ><span>{{
-                  text.extraction === 'ocr' ? 'AI 文字辨識 · 請核對原文' : '文件原生文字'
-                }}</span>
-              </div>
-            }
-            <pre><nx-text-highlight [text]="text.text" [query]="query()" /></pre>
+      } @else if (isRich() && view() !== 'text') {
+        <div class="viewer-rich" [class.viewer-split]="view() === 'split'">
+          @if (view() === 'split') {
+            <div class="viewer-pane">
+              <ng-container [ngTemplateOutlet]="source" />
+            </div>
           }
-        } @else {
-          <p class="form-note">
-            {{
-              target().shareId
-                ? '這份分享尚無此頁的擷取文字。可預覽原檔或下載。'
-                : busy()
-                  ? '正在建立文字辨識工作…'
-                  : '此頁尚無擷取文字。處理完成後會自動顯示。'
-            }}
-          </p>
-        }
-      </article>
-    </ng-template>
-  }
+          <div class="viewer-pane">
+            @if (kind() === 'markdown') {
+              <article class="reader-text">
+                <nx-markdown-view [content]="markdownText()" />
+              </article>
+            } @else if (gate.scripts() !== null) {
+              <nx-html-preview
+                [url]="htmlUrl()"
+                [gated]="gate.gated()"
+                [running]="gate.running()"
+                (run)="gate.run()"
+                (viewSource)="showSource()"
+              />
+            }
+          </div>
+        </div>
+      } @else {
+        <ng-container [ngTemplateOutlet]="source" />
+      }
+      <ng-template #source>
+        <article class="reader-text">
+          @if (text(); as text) {
+            @if (!text.text.trim()) {
+              <p class="form-note">
+                {{ isImage() ? '圖片中沒有可辨識的文字。' : '此頁沒有可辨識的文字。' }}
+              </p>
+            } @else {
+              @if (total() > 1 || text.extraction === 'ocr') {
+                <div class="reader-text-meta">
+                  <span>第 {{ text.pageNumber }} 頁</span
+                  ><span>{{
+                    text.extraction === 'ocr' ? 'AI 文字辨識 · 請核對原文' : '文件原生文字'
+                  }}</span>
+                </div>
+              }
+              <pre><nx-text-highlight [text]="text.text" [query]="query()" /></pre>
+            }
+          } @else {
+            <p class="form-note">
+              {{
+                target().shareId
+                  ? '這份分享尚無此頁的擷取文字。可預覽原檔或下載。'
+                  : busy()
+                    ? '正在建立文字辨識工作…'
+                    : '此頁尚無擷取文字。處理完成後會自動顯示。'
+              }}
+            </p>
+          }
+        </article>
+      </ng-template>
+    }
+  </div>
 </div>
