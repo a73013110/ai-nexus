@@ -1,12 +1,6 @@
-// Size, frame and motion come from size="full" (styles/dialogs.scss); the reader only darkens the
-// backdrop further and can expand edge to edge.
+// Size, frame, motion and the edge-to-edge maximized state come from nxCompactDialog
+// (styles/dialogs.scss); the reader only darkens the backdrop further.
 .reader-dialog::backdrop {
   background: rgba(17, 29, 44, 0.7607843137);
   backdrop-filter: blur(4px);
-}
-.reader-dialog.reader-expanded {
-  width: 100vw;
-  height: 100dvh;
-  border-radius: 0;
-  border: 0;
 }
