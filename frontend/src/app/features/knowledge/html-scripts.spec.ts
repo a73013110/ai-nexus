@@ -29,28 +29,27 @@ describe('HtmlScriptGate', () => {
     const gate = new HtmlScriptGate();
     gate.inspect('<p>hi</p>');
     expect(gate.gated()).toBe(false);
-    expect(gate.sandbox()).toBe('');
+    expect(gate.running()).toBe(false);
   });
   it('gates scripts until the user runs them', () => {
     const gate = new HtmlScriptGate();
     gate.inspect('<script>1</script>');
     expect(gate.gated()).toBe(true);
-    expect(gate.sandbox()).toBe('');
+    expect(gate.running()).toBe(false);
     gate.run();
     expect(gate.gated()).toBe(false);
     expect(gate.running()).toBe(true);
-    expect(gate.sandbox()).toBe('allow-scripts');
   });
   it('ignores run without scripts and resets on target change', () => {
     const gate = new HtmlScriptGate();
     gate.inspect('<p>x</p>');
     gate.run();
-    expect(gate.sandbox()).toBe('');
+    expect(gate.running()).toBe(false);
     gate.inspect('<script></script>');
     gate.run();
     gate.reset();
     expect(gate.scripts()).toBeNull();
-    expect(gate.sandbox()).toBe('');
+    expect(gate.running()).toBe(false);
     gate.inspect('<script></script>');
     expect(gate.gated()).toBe(true);
   });

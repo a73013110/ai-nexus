@@ -8,7 +8,6 @@ export class HtmlScriptGate {
   readonly allowed = signal(false);
   readonly gated = computed(() => this.scripts() === true && !this.allowed());
   readonly running = computed(() => this.scripts() === true && this.allowed());
-  readonly sandbox = computed(() => (this.running() ? 'allow-scripts' : ''));
   inspect(html: string) {
     this.scripts.set(hasScripts(html));
   }
