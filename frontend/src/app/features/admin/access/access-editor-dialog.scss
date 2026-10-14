@@ -1,5 +1,0 @@
-// A feature group keeps one height for all four tabs, so switching never resizes the frame; long
-// tabs scroll in the body under the tabs.
-.platform-dialog.admin-editor[data-kind='group'] {
-  height: min(44rem, var(--dialog-max-height));
-}

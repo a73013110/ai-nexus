@@ -4,7 +4,7 @@
 
 ## 原則
 
-- Tokens：時長 `--motion-fast`／`--motion`／`--motion-panel`／`--motion-morph`、小轉圈 `--motion-spin`；easing `--ease`、`--ease-exit`、`--ease-spring`（`linear()` 彈簧，不支援時退回 cubic-bezier）。
+- 時長用 `--motion*`、曲線用 `--ease*`；`--ease-spring` 是 `linear()` 彈簧，不支援時退回 cubic-bezier。
 - 可以用：形狀 morph、共享元素過渡、進場位移／縮放與彈簧回彈、按下時微縮（`scale: 0.97`）。不用：假百分比、整頁持續動畫、要等動畫結束才能操作。
 - 漸進增強（使用者以新版 Edge／Chrome 為主）：View Transitions、`linear()`、`interpolate-size`、`@starting-style` 與 `transition-behavior: allow-discrete` 只是加分，不支援時直接切換。
 
@@ -34,20 +34,21 @@
 ### 本次工作階段紀錄
 
 - 已定案的 toast 另記在 `ToastService.history`：最近 20 則、新的在前，含時間與動作，只在記憶體，重新整理或換帳號清空。進行中（`duration: 0`）定案才記；同一 `id` 原地更新只算一則。
-- 併入通知中心而不另做清單：入口仍是鈴鐺，不多一個浮動按鈕；「通知匣」與「本次工作階段」（`ToastHistory`）分 tab，紀錄不計入未讀，任務 toast 與通知匣重複也不必去重。tab 數量用 neutral `CountBadge`（`TabItem.count`，數字寫進名稱）。
+- 併入通知中心而不另做清單：入口仍是鈴鐺，不多一個浮動按鈕；「通知匣」與「本次工作階段」（`ToastHistory`）分 tab，紀錄不計入未讀，任務 toast 與通知匣重複也不必去重。
 - 動作只執行一次（toast 或紀錄任一處），之後通知中心關閉、焦點回到鈴鐺；因此動作在 toast 離開後仍要有效（導覽或伺服器會再檢查的操作）。
 
 ## 對話框
 
 - 置中的對話框一律掛 `.platform-dialog`，共用外框與動效，元件只覆寫尺寸（快捷指令、檔案預覽也是）。
-- 開啟時由下方 0.5rem、`scale 0.97` 彈入，關閉沿原路以 `--ease-exit` 退場，遮罩同步淡入淡出（`overlay`、`display` 用 `allow-discrete` 保留在 top layer）。起點與曲線是 `--dialog-enter-y`／`--dialog-enter-scale`／`--dialog-ease`；手機的底部 sheet 見 [手機](mobile.md)。
+- 開啟時由下方小幅位移＋微縮彈入，關閉沿原路以 `--ease-exit` 退場，遮罩同步淡入淡出（`overlay`、`display` 用 `allow-discrete` 留在 top layer）。參數是 `--dialog-enter-y`／`--dialog-enter-scale`／`--dialog-ease`；手機 sheet 見 [手機](mobile.md)。
 - 關閉中仍在畫面上，但 `pointer-events: none`＋`interactivity: inert`，不接點擊與焦點。
-- 側邊的 `DetailDrawer` 同一套作法改成從右緣滑入、滑出（1.5rem）；`closed` 等退場結束才送出，宿主清空內容時抽屜不會空著離開，退場中重新開啟則不送。
+- 尺寸跟著內容：`nxCompactDialog` 內建 `FrameMotion`，`nxViewMotion` 換檢視（例：頁籤）或 `size` 改變時外框過渡到新寬高，不固定高度；關閉即忘記尺寸，開啟不過渡。非 dialog 浮層掛 `nxFrameMotion`（通知中心）。
+- 側邊的 `DetailDrawer` 同一套作法改成從右緣滑入、滑出；`closed` 等退場結束才送出，宿主清空內容時抽屜不會空著離開，退場中重新開啟則不送。
 - sheet 與抽屜可滑動關閉，未達距離或速度以 `--ease-spring` 彈回，見 [手機](mobile.md#滑動關閉)。
 
 ## 浮層（popover）
 
-- 選單、下拉、日期、欄位、知識來源、資訊浮層、側欄功能面板與桌面的通知中心都掛 [`popovers.scss`](../../frontend/src/styles/popovers.scss) 的 `.popover-panel`：外框與進出場只寫在這裡，元件樣式只留 padding、尺寸等差異。新增浮層同樣掛這個 class。
+- 選單、下拉、日期、資訊浮層、桌面的通知中心等浮層一律掛 [`popovers.scss`](../../frontend/src/styles/popovers.scss) 的 `.popover-panel`：外框與進出場只寫在這裡，元件樣式只留 padding、尺寸等差異。
 - 進場從觸發點長出：位移 0.25rem＋`scale 0.98`，`--motion`＋`--ease-spring`；退場沿原路 `--ease-exit`，`overlay`、`display` 用 `allow-discrete`。
 - 方向與原點由定位函式（`shared/browser/popover-position.ts` 的 `setPopoverOrigin`）在量測後寫入 `data-side` 與 `transform-origin`。進場因此用 keyframes（`popover-arrive`）而不是 `@starting-style`：後者的起始值在 `showPopover()` 後第一次量測就固定，翻轉來不及生效；keyframes 裡的 `var()` 會重新解析。
 - 退場中已不是 `:popover-open`，Esc 歸屬（`DetailDrawer`）與 light dismiss 不受影響；同時 inert、不接點擊。e2e 關閉後用 `toBeHidden()` 等退場結束。
@@ -55,7 +56,7 @@
 
 ## 減少動態
 
-- 兩個來源：系統 `prefers-reduced-motion` 與個人設定（`:root[data-reduced-motion='true']`），共用 `motion.scss` 的 mixin：animation 直接到終點、移除 transition（版面屬性同一幀到位）、View Transitions 略過。
+- 兩個來源：系統 `prefers-reduced-motion` 與個人設定（`:root[data-reduced-motion='true']`），共用 `motion.scss` 的 mixin：animation 直接到終點、移除 transition（版面屬性同一幀到位）、View Transitions 略過。JS 動畫（`view-motion.ts`）看 `ThemeService.reducedMotion()`。
 - 元件內的 loop 另以 `@media (prefers-reduced-motion)` 加 `:host-context([data-reduced-motion='true'])` 停止；顏色與文字狀態保留。
 
 ## 生成與登入

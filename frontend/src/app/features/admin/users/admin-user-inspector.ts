@@ -18,7 +18,7 @@ import { ConfirmDialog } from '../../../shared/ui/confirm-dialog';
 import { DialogHeader } from '../../../shared/ui/dialog-header';
 import { Icon } from '../../../shared/ui/icon';
 import { Tabs, type TabItem } from '../../../shared/ui/tabs';
-import { DialogMotion, ViewMotion } from '../../../shared/ui/view-motion';
+import { ViewMotion } from '../../../shared/ui/view-motion';
 import { AccessStatus } from '../access/access-status';
 import { AdminUserConversations } from './admin-user-conversations';
 import { AdminUserSettings } from './admin-user-settings';
@@ -41,7 +41,6 @@ import { UserConversationReader } from './user-conversation-reader';
     CompactDialog,
     ConfirmDialog,
     DialogHeader,
-    DialogMotion,
     Icon,
     RouterLink,
     Tabs,
