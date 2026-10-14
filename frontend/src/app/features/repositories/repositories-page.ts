@@ -22,8 +22,9 @@ import { Icon } from '../../shared/ui/icon';
 import { Notice } from '../../shared/ui/notice';
 import { ToastService } from '../../shared/ui/toast-service';
 import { RepositoriesApi } from './repositories-api';
+import { repositoriesTour, repositoryTour } from './repositories-tour';
 import { RepositoryConnect } from './repository-connect';
-import { RepositoryDetail } from './repository-detail';
+import { RepositoryDetail, repositorySection } from './repository-detail';
 import { repositoryIcons } from './repository-icons';
 import { RepositoryList } from './repository-list';
 import { RepositoryStore } from './repository-store';
@@ -52,6 +53,7 @@ import { RepositoryStore } from './repository-store';
       [title]="title()"
       [description]="description()"
       [back]="store.key() ? { path: '/repositories', label: '全部程式庫' } : null"
+      [tour]="tour()"
     >
       <div page-actions class="page-actions">
         @if (status()?.connected && !reconnecting()) {
@@ -82,6 +84,7 @@ import { RepositoryStore } from './repository-store';
             >
           }
           <nx-action-menu
+            class="repository-account"
             label="Gitea 連線"
             [heading]="{ title: status()!.login || 'Gitea', detail: status()!.baseUrl }"
             [items]="accountActions"
@@ -157,6 +160,20 @@ export class RepositoriesPage {
     if (!key)
       return '用你的 Gitea 權限閱讀程式、提交紀錄、議題與 Pull Request，再帶入對話或交給 AI 初檢。';
     return this.store.detail()?.repository.description || key.owner;
+  });
+  /** The list's tour or the open repository's, once connected; the connect screen explains itself. */
+  readonly tour = computed(() => {
+    if (!this.status()?.connected || this.reconnecting()) return null;
+    const features = { chat: this.session.has('chat'), knowledge: this.session.has('knowledge') };
+    if (!this.store.key()) return repositoriesTour(features);
+    const section = repositorySection(this.view());
+    return repositoryTour({
+      ...features,
+      section,
+      // A file opens through the query; every other section's item is in the path.
+      item: section === 'code' ? !!this.query().get('file') : !!this.item(),
+      empty: !!this.store.detail()?.repository.empty,
+    });
   });
   readonly accountActions: MenuAction[] = [
     { id: 'reconnect', label: '更新授權', icon: 'key' },
