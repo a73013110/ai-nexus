@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import type { AdminCatalogDto } from '../../../core/api/schema';
-import { Checkbox } from '../../../shared/ui/checkbox';
+import { ChoiceGroups, type ChoiceGroup } from '../../../shared/ui/choice-groups';
 import { AdminStore } from '../admin-store';
 import { FeatureSummary } from '../feature-summary';
 
@@ -23,7 +23,7 @@ export function sameIds(a: readonly string[], b: readonly string[]) {
 /** Role assignment with a preview of the features it grants; shared by create and inspector. */
 @Component({
   selector: 'nx-user-role-fields',
-  imports: [Checkbox, FeatureSummary],
+  imports: [ChoiceGroups, FeatureSummary],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['../form-sections.scss'],
   styles: `
@@ -34,20 +34,13 @@ export function sameIds(a: readonly string[], b: readonly string[]) {
     }
   `,
   template: `
-    <fieldset>
-      <legend>分派角色</legend>
-      <div class="choice-list">
-        @for (role of roles(); track role.id) {
-          <nx-checkbox
-            [label]="role.name + (role.enabled ? '' : '（停用）')"
-            [description]="role.id"
-            [checked]="roleIds().includes(role.id)"
-            [disabled]="disabled()"
-            (checkedChange)="toggle(role.id, $event)"
-          />
-        }
-      </div>
-    </fieldset>
+    <nx-choice-groups
+      label="分派角色"
+      [groups]="choices()"
+      [selected]="roleIds()"
+      [disabled]="disabled()"
+      (selectedChange)="roleIdsChange.emit($event)"
+    />
     <fieldset>
       <legend>儲存後可用功能（預覽）</legend>
       @if (!enabled()) {
@@ -64,12 +57,19 @@ export class UserRoleFields {
   readonly enabled = input(true);
   readonly disabled = input(false);
   readonly roleIdsChange = output<string[]>();
-  readonly roles = computed(() => this.store.catalog()?.roles ?? []);
+  /** 角色沒有分類，收成一張卡片。 */
+  readonly choices = computed<ChoiceGroup[]>(() => [
+    {
+      id: 'roles',
+      name: '角色',
+      options: (this.store.catalog()?.roles ?? []).map((role) => ({
+        id: role.id,
+        label: role.name + (role.enabled ? '' : '（停用）'),
+        description: role.id,
+      })),
+    },
+  ]);
   readonly features = computed(() =>
     userFeatures(this.store.catalog(), this.roleIds(), this.enabled()),
   );
-  toggle(id: string, checked: boolean) {
-    const ids = this.roleIds().filter((x) => x !== id);
-    this.roleIdsChange.emit(checked ? [...ids, id] : ids);
-  }
 }

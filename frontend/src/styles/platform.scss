@@ -174,11 +174,6 @@
   font-weight: 550;
   padding: 0 var(--p-space-2);
 }
-.choice-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--p-space-2);
-}
 .form-note {
   font-size: var(--text-caption);
   color: var(--secondary);
@@ -193,9 +188,6 @@
   }
   .resource-row > .resource-badges {
     flex-basis: 100%;
-  }
-  .choice-list {
-    grid-template-columns: 1fr;
   }
 }
 @include bp.below(phone) {

@@ -33,14 +33,17 @@ export function modelPolicyRequest(draft: ModelPolicyDraft): ModelPolicyRequest 
   return { allowedModelIds: draft.restricted ? draft.modelIds : null, dailyTokenLimits: limits };
 }
 
+/**
+ * 群組或單一使用者的模型授權與每日 token 預算。不自帶標題：兩個使用它的對話框都以「AI 模型」頁籤
+ * 呈現，名稱由頁籤提供。
+ */
 @Component({
   selector: 'nx-model-policy-editor',
   imports: [Notice, Field, Checkbox, DataTable],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './model-policy-editor.scss',
   template: `
-    <div class="model-policy-heading">
-      <h3>模型授權與 token 預算</h3>
+    <div class="model-policy-intro">
       <p class="form-note">
         每日上限合計輸入與輸出 tokens，台北時間 08:00 重設。{{
           personal()

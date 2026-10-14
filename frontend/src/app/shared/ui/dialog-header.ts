@@ -9,7 +9,11 @@ import {
 import { requestDialogClose } from '../browser/dialog-close';
 import { Icon } from './icon';
 
-/** Title bar of a `.platform-dialog`: heading, optional detail and tools, and the close button. */
+/**
+ * Title bar of a `.platform-dialog`: heading, optional detail and tools, and the close button.
+ * Content marked `dialog-title` (a status badge) sits beside the heading, outside the h2 so the
+ * dialog's accessible name stays the heading alone; other content is placed before the close button.
+ */
 let headerSequence = 0;
 
 @Component({
@@ -19,6 +23,7 @@ let headerSequence = 0;
   host: { class: 'dialog-bar' },
   template: `<div class="dialog-title">
       <h2 [id]="titleId">{{ heading() }}</h2>
+      <ng-content select="[dialog-title]" />
       @if (detail()) {
         <small>{{ detail() }}</small>
       }

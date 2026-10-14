@@ -1,8 +1,6 @@
-.model-policy-heading h3 {
-  margin: 0 0 8px;
-  font-size: var(--text-heading);
-}
-.model-policy-heading {
+.model-policy-intro {
+  display: grid;
+  gap: var(--p-space-2);
   margin-bottom: var(--section-gap);
 }
 .model-policy-table table {

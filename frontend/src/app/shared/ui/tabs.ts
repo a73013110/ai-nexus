@@ -25,11 +25,14 @@ let sequence = 0;
   hostDirectives: [SlidingIndicator],
   host: { role: 'tablist', '[attr.aria-label]': 'label()' },
   styles: `
+    /* Like ViewSwitch: min-height keeps a sideways scroller from being squeezed in a column, and
+       the underline sits on the bottom edge whatever padding the host is given. */
     :host {
       position: relative;
       isolation: isolate;
       display: flex;
       gap: var(--p-space-1);
+      min-height: min-content;
       padding-inline: var(--p-space-3);
       border-bottom: 1px solid var(--line);
       overflow-x: auto;
@@ -39,7 +42,7 @@ let sequence = 0;
       content: '';
       position: absolute;
       z-index: -1;
-      top: 0;
+      bottom: 0;
       left: 0;
       width: var(--indicator-w, 0);
       height: 2px;
@@ -47,10 +50,7 @@ let sequence = 0;
       background: var(--accent);
       opacity: 0;
       pointer-events: none;
-      transform: translate(
-        var(--indicator-x, 0),
-        calc(var(--indicator-y, 0px) + var(--indicator-h, 0px) - 2px)
-      );
+      transform: translateX(var(--indicator-x, 0));
     }
     :host([data-indicator])::before {
       opacity: 1;
@@ -66,7 +66,7 @@ let sequence = 0;
       gap: var(--p-space-2);
       flex: none;
       min-height: var(--button-target);
-      padding: var(--p-space-2) var(--p-space-3);
+      padding: var(--p-space-2) var(--tab-padding-inline, var(--p-space-3));
       border-radius: var(--p-radius-md);
       color: var(--secondary);
       font-size: var(--p-font-sm);

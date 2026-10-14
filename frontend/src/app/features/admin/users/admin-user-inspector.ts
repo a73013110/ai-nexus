@@ -9,14 +9,17 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import type { AdminUserDto } from '../../../core/api/schema';
+import { WorkspaceSession } from '../../../core/auth/workspace-session';
 import { ViewScope } from '../../../shared/browser/view-scope';
 import { CompactDialog } from '../../../shared/ui/compact-dialog';
 import { ConfirmDialog } from '../../../shared/ui/confirm-dialog';
+import { DialogHeader } from '../../../shared/ui/dialog-header';
 import { Icon } from '../../../shared/ui/icon';
-import { Notice } from '../../../shared/ui/notice';
+import { Tabs, type TabItem } from '../../../shared/ui/tabs';
 import { DialogMotion, ViewMotion } from '../../../shared/ui/view-motion';
-import { ViewSwitch } from '../../../shared/ui/view-switch';
+import { AccessStatus } from '../access/access-status';
 import { AdminUserConversations } from './admin-user-conversations';
 import { AdminUserSettings } from './admin-user-settings';
 import { AdminUserStore, type UserTab } from './admin-user-store';
@@ -25,21 +28,24 @@ import { UserConversationReader } from './user-conversation-reader';
 
 /**
  * One user's management centre: who they are and their last 30 days above tabs for the account,
- * roles, model policy, storage and an audited read-only view of their conversations.
+ * roles, model policy, storage and an audited read-only view of their conversations. The shared
+ * title bar names the dialog after the user; the summary and the tabs follow it.
  */
 @Component({
   selector: 'nx-admin-user-inspector',
   imports: [
+    AccessStatus,
     AdminUserConversations,
     AdminUserSettings,
     AdminUserSummary,
     CompactDialog,
     ConfirmDialog,
+    DialogHeader,
     DialogMotion,
     Icon,
-    Notice,
+    RouterLink,
+    Tabs,
     ViewMotion,
-    ViewSwitch,
   ],
   providers: [ViewScope, AdminUserStore, UserConversationReader],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -50,9 +56,10 @@ export class AdminUserInspector {
   readonly user = input<AdminUserDto | null>(null);
   readonly closed = output<void>();
   readonly store = inject(AdminUserStore);
+  readonly session = inject(WorkspaceSession);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly confirmation = viewChild.required(ConfirmDialog);
-  readonly tabs: { value: UserTab; label: string }[] = [
+  readonly tabs: readonly (TabItem & { value: UserTab })[] = [
     { value: 'account', label: '帳號' },
     { value: 'roles', label: '角色與權限' },
     { value: 'models', label: 'AI 模型' },
@@ -79,14 +86,14 @@ export class AdminUserInspector {
     await Promise.allSettled(dialog.getAnimations({ subtree: true }).map((x) => x.finished));
     if (!dialog.open) this.store.release();
   }
-  /** Leaving for another page: nothing is asked, the dialog simply goes. */
+  /** Leaving for the audit page: nothing is asked, the dialog simply goes. */
   close() {
     this.dialog().nativeElement.close();
   }
   async requestClose() {
     if (await this.mayLeave()) this.close();
   }
-  /** Escape and the sheet's swipe arrive here; unsaved changes are confirmed first. */
+  /** Escape, the close button and the sheet's swipe arrive here; unsaved changes are confirmed. */
   cancel(event: Event) {
     event.preventDefault();
     void this.requestClose();

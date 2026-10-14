@@ -10,6 +10,18 @@ import { DialogHeader } from './dialog-header';
 })
 class Host {}
 
+@Component({
+  selector: 'nx-dialog-header-projection-host',
+  imports: [DialogHeader],
+  template: `<dialog>
+    <nx-dialog-header heading="王小明">
+      <span dialog-title class="badge">啟用</span>
+      <a class="tool" href="/audit">稽核</a>
+    </nx-dialog-header>
+  </dialog>`,
+})
+class ProjectionHost {}
+
 function setup() {
   const fixture = TestBed.createComponent(Host);
   fixture.detectChanges();
@@ -31,6 +43,21 @@ describe('DialogHeader', () => {
     const { root } = setup();
     expect(root.querySelector('h2')?.textContent).toBe('標題');
     expect(root.querySelector('small')?.textContent).toBe('3 份');
+  });
+
+  it('places title content beside the heading and tools before the close button', () => {
+    const fixture = TestBed.createComponent(ProjectionHost);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const title = root.querySelector('.dialog-title')!;
+    expect(title.querySelector('h2 + .badge')?.textContent).toBe('啟用');
+    expect(root.querySelector('h2')?.textContent).toBe('王小明');
+    const bar = root.querySelector('nx-dialog-header')!;
+    expect([...bar.children].map((x) => x.className)).toEqual([
+      'dialog-title',
+      'tool',
+      'icon-button',
+    ]);
   });
 
   it('closes the dialog through a cancelable cancel event', () => {

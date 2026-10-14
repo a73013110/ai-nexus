@@ -1,30 +1,25 @@
-import { ChangeDetectionStrategy, Component, computed, inject, output } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { WorkspaceSession } from '../../../core/auth/workspace-session';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { formatBytes, formatDate, formatNumber } from '../../../shared/browser/format';
-import { Icon } from '../../../shared/ui/icon';
+import { Notice } from '../../../shared/ui/notice';
 import { NumberTicker } from '../../../shared/ui/number-ticker';
-import { AccessStatus } from '../access/access-status';
 import { AdminStore } from '../admin-store';
 import { AdminUserStore } from './admin-user-store';
 import { signInMethods } from './user-account-fields';
 
-/** Who the user is and their last 30 days, above every inspector tab. */
+/**
+ * How the user signs in, their roles and their last 30 days, between the inspector's title bar
+ * (name, status, account) and its tabs.
+ */
 @Component({
   selector: 'nx-admin-user-summary',
-  imports: [AccessStatus, Icon, NumberTicker, RouterLink],
+  imports: [Notice, NumberTicker],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './admin-user-summary.scss',
   template: `
     @if (store.current(); as user) {
       <div class="summary-identity">
-        <div class="summary-title">
-          <h2 id="inspector-title">{{ user.displayName }}</h2>
-          <nx-access-status [enabled]="user.enabled !== false" />
-        </div>
         <p class="summary-meta">
-          <span>{{ user.account }}</span
-          ><span>登入：{{ methods(user) }}</span
+          <span>登入：{{ methods(user) }}</span
           ><span>最近活動 {{ date(user.lastSeenAt) }}</span>
         </p>
         <div class="resource-badges summary-roles" aria-label="角色">
@@ -35,16 +30,6 @@ import { signInMethods } from './user-account-fields';
           }
         </div>
       </div>
-      @if (session.has('audit')) {
-        <a
-          class="quiet-button summary-audit"
-          routerLink="/admin/audit"
-          [queryParams]="{ search: user.id }"
-          (click)="leave.emit()"
-        >
-          <nx-icon name="audit" />查閱活動稽核
-        </a>
-      }
       <div class="inspector-stats" role="group" aria-label="最近三十天 AI 用量">
         <div class="summary-stat">
           <span>30 天生成</span>
@@ -71,14 +56,14 @@ import { signInMethods } from './user-account-fields';
         </div>
       </div>
     }
+    @if (store.overviewError()) {
+      <nx-notice tone="danger" [message]="store.overviewError()" />
+    }
   `,
 })
 export class AdminUserSummary {
   readonly store = inject(AdminUserStore);
-  readonly session = inject(WorkspaceSession);
   private readonly admin = inject(AdminStore);
-  /** The audit link leaves for another page, so the dialog closes first. */
-  readonly leave = output<void>();
   readonly usage = computed(() => this.store.overview()?.usage ?? null);
   readonly tokens = computed(() => {
     const usage = this.usage();

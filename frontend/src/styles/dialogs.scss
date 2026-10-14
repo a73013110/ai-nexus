@@ -116,7 +116,9 @@ form.dialog-form {
 .dialog-title h2 {
   max-width: 100%;
 }
+// The detail gives way first (basis 0), so a long one never squeezes the title onto two lines.
 .dialog-title small {
+  flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
   color: var(--secondary);
@@ -129,6 +131,12 @@ form.dialog-form {
 }
 .dialog-bar > .icon-button {
   flex: none;
+}
+// 分類頁籤收在標題區（標題列與其下選用的摘要）之後、tabpanel 之上：tabpanel 是 .dialog-body，
+// 或含自己 body 與頁尾的面板。內容捲動時頁籤不動，第一個標籤與 body 文字對齊。
+:is(.platform-dialog, form.dialog-form) > nx-tabs {
+  flex: none;
+  padding-inline: var(--p-space-2);
 }
 
 // Body: the only scrolling part. Fields inside need no per-dialog CSS.
@@ -195,6 +203,10 @@ form.dialog-form {
     padding: var(--p-space-2) var(--p-space-2) var(--p-space-2) var(--p-space-5);
     border-bottom: 1px solid var(--line);
   }
+  // The tabs' own rule divides the header from the body.
+  &:has(> nx-tabs, > form.dialog-form > nx-tabs) .dialog-bar {
+    border-bottom: 0;
+  }
   .dialog-body {
     padding: var(--p-space-4) var(--p-space-5);
   }
@@ -252,6 +264,10 @@ form.dialog-form {
   }
   .platform-dialog :is(.dialog-bar, [data-sheet-handle]) {
     touch-action: none;
+  }
+  // 窄螢幕收窄頁籤內距，五個分類也不會超出畫面。
+  :is(.platform-dialog, form.dialog-form) > nx-tabs {
+    --tab-padding-inline: var(--p-space-2);
   }
   .platform-dialog[data-swipe='drag'] {
     transition: none;
