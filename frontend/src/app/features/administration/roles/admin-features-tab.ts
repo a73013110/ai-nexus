@@ -9,13 +9,20 @@ import {
   linkedSignal,
   output,
   signal,
+  viewChild,
 } from '@angular/core';
 import { GripVertical } from 'lucide';
-import type { AdminFeatureDto } from '@core/api/schema';
+import type { AdminFeatureDto, NavigationGroupDto } from '@core/api/schema';
 import { safeMessage } from '@core/errors/safe-errors';
-import { FEATURE_ICONS, groupFeatures } from '@core/layout/feature-groups';
+import {
+  featureIcon,
+  navigationSections,
+  navigationTree,
+  type NavigationSection,
+} from '@core/layout/navigation-tree';
 import { ThemeService } from '@core/preferences/theme-service';
 import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
+import { ConfirmDialog } from '@shared/ui/confirm-dialog';
 import { CountBadge } from '@shared/ui/count-badge';
 import { DataTable, DataTableRow } from '@shared/ui/data-table';
 import { EXTRA_ICONS, Icon } from '@shared/ui/icon';
@@ -38,13 +45,16 @@ const SCROLL_EDGE = 48;
 const SCROLL_SPEED = 12;
 
 /**
- * Features are registered by modules; only their name, switch and place are editable. The place is
- * changed on the list itself, within a sidebar group: drag the handle, press ↑↓ (Home/End) on it, or
- * use the row's menu. Each move saves at once through the feature endpoint (see `reorderWrites`).
+ * Features are registered by modules; their name, switch, icon, menu group and place are editable.
+ * The list follows the sidebar: top-level features, then every menu group (empty ones too) with its
+ * subgroups after it. The place within a group is changed on the list itself: drag the handle,
+ * press ↑↓ (Home/End) on it, or use the row's menu. Each move saves at once through the feature
+ * endpoint (see `reorderWrites`). Moving to another group, and editing groups, go through the
+ * editor dialog; a group's own menu moves it among its sibling groups or deletes it.
  */
 @Component({
   selector: 'nx-admin-features-tab',
-  imports: [Icon, DataTable, DataTableRow, AccessStatus, ActionMenu, CountBadge],
+  imports: [Icon, DataTable, DataTableRow, AccessStatus, ActionMenu, CountBadge, ConfirmDialog],
   providers: [{ provide: EXTRA_ICONS, useValue: { grip: GripVertical } }],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['../access-tabs.scss', './admin-features-tab.scss'],
@@ -57,7 +67,10 @@ export class AdminFeaturesTab {
   private readonly theme = inject(ThemeService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
   readonly edit = output<AdminFeatureDto | undefined>();
-  readonly featureIcons = FEATURE_ICONS;
+  /** A menu group to edit, or undefined to add one. */
+  readonly editGroup = output<NavigationGroupDto | undefined>();
+  private readonly confirmation = viewChild.required(ConfirmDialog);
+  readonly icon = featureIcon;
   readonly features = computed(() => this.store.catalog()?.features ?? []);
   /** Orders saved, or being saved, ahead of the catalog read that confirms them. */
   private readonly pending = linkedSignal<readonly AdminFeatureDto[], Record<string, number>>({
@@ -66,8 +79,17 @@ export class AdminFeaturesTab {
   });
   /** One group's order while its row is dragged; saved on drop. */
   private readonly draft = signal<{ section: string; ids: string[] } | null>(null);
-  private readonly ordered = computed(() =>
-    groupFeatures(orderFeatures(this.features(), this.pending())),
+  private readonly ordered = computed<NavigationSection<AdminFeatureDto>[]>(() =>
+    navigationSections(
+      navigationTree(
+        orderFeatures(this.features(), this.pending()),
+        this.store.navigationGroups(),
+        {
+          keepEmpty: true,
+        },
+      ),
+      { topName: '最上層（不分群）' },
+    ),
   );
   readonly sections = computed(() => {
     const draft = this.draft();
@@ -101,13 +123,88 @@ export class AdminFeaturesTab {
         icon: 'chevron-down',
         disabled: busy || index === count - 1,
       },
+      { id: 'edit', label: '移到其他分群或編輯…', icon: 'edit', disabled: busy },
     ];
   }
-  menu(action: string, section: string, id: string) {
+  menu(action: string, section: string, feature: AdminFeatureDto) {
+    if (action === 'edit') return this.edit.emit(feature);
     const shift = ({ up: -1, down: 1, first: 'first', last: 'last' } as const)[
       action as 'up' | 'down' | 'first' | 'last'
     ];
-    if (shift !== undefined) void this.shift(section, id, shift, false);
+    if (shift !== undefined) void this.shift(section, feature.id, shift, false);
+  }
+
+  /** The menu groups beside `id` (same parent), in menu order. */
+  private siblings(id: string) {
+    const groups = this.store.navigationGroups();
+    const parent = groups.find((x) => x.id === id)?.parentId ?? null;
+    return orderFeatures(groups.filter((x) => (x.parentId ?? null) === parent));
+  }
+  groupMoves(id: string): MenuAction[] {
+    const busy = this.saving(),
+      ids = this.siblings(id).map((x) => x.id),
+      index = ids.indexOf(id);
+    return [
+      { id: 'edit', label: '重新命名或移動…', icon: 'edit', disabled: busy },
+      { id: 'up', label: '分群上移', icon: 'arrow', disabled: busy || index <= 0 },
+      { id: 'down', label: '分群下移', icon: 'down', disabled: busy || index === ids.length - 1 },
+      { id: 'delete', label: '刪除分群', icon: 'trash', danger: true, disabled: busy },
+    ];
+  }
+  async groupAction(action: string, section: NavigationSection<AdminFeatureDto>) {
+    const group = this.store.navigationGroups().find((x) => x.id === section.id);
+    if (!group || this.saving()) return;
+    if (action === 'edit') return this.editGroup.emit(group);
+    this.store.actionError.set('');
+    if (action === 'delete') {
+      const confirmed = await this.confirmation().ask({
+        title: '刪除選單分群？',
+        message: `刪除「${section.path}」。分群內仍有功能或子分群時無法刪除，請先移出。`,
+        confirm: '刪除分群',
+        danger: true,
+      });
+      if (!confirmed) return;
+      return this.write(async () => {
+        await this.api.deleteNavigationGroup(group.id);
+        this.announcement.set(`已刪除選單分群：${section.path}`);
+      });
+    }
+    const shift = ({ up: -1, down: 1 } as const)[action as 'up' | 'down'];
+    if (shift === undefined) return;
+    const siblings = this.siblings(group.id);
+    const writes = reorderWrites(
+      siblings,
+      group.id,
+      shiftId(
+        siblings.map((x) => x.id),
+        group.id,
+        shift,
+      ),
+    );
+    await this.write(async () => {
+      for (const write of writes) {
+        const value = siblings.find((x) => x.id === write.id)!;
+        await this.api.updateNavigationGroup(value.id, {
+          name: value.name,
+          parentId: value.parentId,
+          sortOrder: write.sortOrder,
+        });
+      }
+      this.announcement.set(`${section.path}：已${shift < 0 ? '上移' : '下移'}`);
+    });
+  }
+
+  /** One group change at a time; the catalog and the sidebar are read again either way. */
+  private async write(change: () => Promise<void>) {
+    this.saving.set(true);
+    try {
+      await change();
+    } catch (error) {
+      this.store.actionError.set(safeMessage(error));
+    } finally {
+      this.saving.set(false);
+      this.store.reordered();
+    }
   }
   key(event: KeyboardEvent, section: string, id: string) {
     const shift = (
@@ -143,7 +240,7 @@ export class AdminFeaturesTab {
     const name = current.find((x) => x.id === id)?.name ?? '';
     const group = this.ordered().find((x) => x.id === section);
     this.announcement.set(
-      `${name}：${group?.name ?? ''}第 ${ids.indexOf(id) + 1} 個，共 ${ids.length} 個`,
+      `${name}：${group?.path ?? ''}第 ${ids.indexOf(id) + 1} 個，共 ${ids.length} 個`,
     );
     this.store.actionError.set('');
     this.saving.set(true);
@@ -155,6 +252,8 @@ export class AdminFeaturesTab {
           name: feature.name,
           enabled: feature.enabled,
           sortOrder: write.sortOrder,
+          groupId: feature.groupId,
+          icon: feature.icon,
         });
         written.push({ id: write.id, sortOrder: feature.sortOrder });
       }
@@ -169,6 +268,8 @@ export class AdminFeaturesTab {
             name: feature.name,
             enabled: feature.enabled,
             sortOrder: write.sortOrder,
+            groupId: feature.groupId,
+            icon: feature.icon,
           });
         } catch {
           restored = false;

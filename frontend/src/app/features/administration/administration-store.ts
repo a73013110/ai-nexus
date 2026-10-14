@@ -18,6 +18,8 @@ export class AdministrationStore {
     loader: () => this.api.catalog(),
   });
   readonly catalog = computed(() => this.catalogRead.value() ?? null);
+  /** Every menu group, empty ones included: the editor arranges them, the summaries group by them. */
+  readonly navigationGroups = computed(() => this.catalog()?.navigationGroups ?? []);
   private readonly ready = computed(() => !!this.catalog());
   readonly search = signal('');
   private readonly query = signal('');
@@ -66,7 +68,7 @@ export class AdministrationStore {
     this.usersRead.reload();
     void this.session.load(true);
   }
-  /** Features moved: read the catalog and this account's navigation (sidebar order) again. */
+  /** Features or menu groups moved: read the catalog and this account's navigation (sidebar) again. */
   reordered() {
     this.catalogRead.reload();
     void this.session.load(true);

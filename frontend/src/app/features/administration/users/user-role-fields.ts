@@ -61,14 +61,14 @@ let sequence = 0;
         @if (!enabled()) {
           <nx-notice tone="warning" message="使用者已停用，儲存後無法使用任何功能。" />
         }
-        <nx-feature-summary [features]="features()" />
+        <nx-feature-summary [features]="features()" [groups]="store.navigationGroups()" />
       </div>
     </section>
   `,
 })
 export class UserRoleFields {
   readonly id = `nx-user-roles-${++sequence}`;
-  private readonly store = inject(AdministrationStore);
+  readonly store = inject(AdministrationStore);
   readonly roleIds = input.required<string[]>();
   /** A disabled user keeps their roles but can open nothing. */
   readonly enabled = input(true);

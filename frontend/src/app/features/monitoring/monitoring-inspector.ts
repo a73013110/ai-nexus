@@ -8,7 +8,7 @@ import {
   dependencyStatus,
   monitoringTime,
   monitoringLatency,
-  monitoringFeature,
+  monitoringFeatureNames,
   subsystemStatus,
   factText,
   factTone,
@@ -34,7 +34,7 @@ export class MonitoringInspector {
   readonly dependencyStatus = dependencyStatus;
   readonly time = monitoringTime;
   readonly latency = monitoringLatency;
-  readonly featureName = monitoringFeature;
+  readonly featureName = monitoringFeatureNames();
   readonly subsystemStatus = subsystemStatus;
   readonly factText = factText;
   readonly factTone = factTone;

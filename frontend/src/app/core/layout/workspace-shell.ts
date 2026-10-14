@@ -5,8 +5,8 @@ import { bindHotkeys } from '@shared/browser/hotkeys';
 import { CommandPalette, type Command } from '@shared/ui/command-palette';
 import { ProductTour } from '@shared/ui/product-tour';
 import { Toaster } from '@shared/ui/toaster';
-import { FEATURE_ICONS, groupFeatures } from './feature-groups';
 import { NavigationPreferences } from './navigation-preferences';
+import { featureIcon, navigationSections } from './navigation-tree';
 import { SidebarPanel } from './sidebar-panel';
 import { WorkspaceCommands } from './workspace-commands';
 import { WorkspaceLayout } from './workspace-layout';
@@ -45,12 +45,12 @@ export class WorkspaceShell {
   private readonly palette = viewChild.required(CommandPalette);
   readonly commands = computed<Command[]>(() => {
     const source = this.workspaceCommands.source();
-    const features = groupFeatures(this.pins.features()).flatMap((group) =>
-      group.features.map((feature) => ({
+    const features = navigationSections(this.pins.tree()).flatMap((section) =>
+      section.features.map((feature) => ({
         id: 'feature:' + feature.id,
         label: feature.name,
-        detail: '前往功能 · ' + group.name,
-        icon: FEATURE_ICONS[feature.id] || 'document',
+        detail: section.path ? '前往功能 · ' + section.path : '前往功能',
+        icon: featureIcon(feature.icon),
       })),
     );
     return [...(source?.actions() ?? []), ...features, ...(source?.entries?.() ?? [])];

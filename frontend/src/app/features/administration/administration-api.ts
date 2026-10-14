@@ -5,6 +5,8 @@ import type {
   FeatureUpdateRequest,
   GroupUpdateRequest,
   ModelPolicyRequest,
+  NavigationGroupCreateRequest,
+  NavigationGroupUpdateRequest,
   RoleUpdateRequest,
   UserAccountRequest,
 } from '@core/api/schema';
@@ -43,6 +45,12 @@ export class AdministrationApi {
     this.api.put('/api/v1/admin/groups/{id}', { path: { id }, body });
   feature = (id: string, body: FeatureUpdateRequest) =>
     this.api.put('/api/v1/admin/features/{id}', { path: { id }, body });
+  createNavigationGroup = (body: NavigationGroupCreateRequest) =>
+    this.api.post('/api/v1/admin/navigation-groups', { body });
+  updateNavigationGroup = (id: string, body: NavigationGroupUpdateRequest) =>
+    this.api.put('/api/v1/admin/navigation-groups/{id}', { path: { id }, body });
+  deleteNavigationGroup = (id: string) =>
+    this.api.delete('/api/v1/admin/navigation-groups/{id}', { path: { id } });
   usage = () => this.api.get('/api/v1/admin/usage');
   embeddingProfiles = () => this.api.get('/api/v1/admin/knowledge/profiles');
   rebuildProfile = (id: number) =>

@@ -39,7 +39,7 @@ public sealed class RoleManagementTests
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsJsonAsync("/api/v1/admin/roles/broken", new RoleUpdateRequest("無效", true, ["missing"]))).StatusCode);
         var catalog = (await admin.GetFromJsonAsync<AdminCatalogDto>("/api/v1/admin/catalog"))!; Assert.DoesNotContain(catalog.Roles, x => x.Id == "broken");
         admin.DefaultRequestHeaders.Remove("X-Nexus-CSRF");
-        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PutAsJsonAsync("/api/v1/admin/features/chat", new FeatureUpdateRequest("任意", 10, true))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PutAsJsonAsync("/api/v1/admin/features/chat", new FeatureUpdateRequest("任意", 10, true, "work", "chat"))).StatusCode);
     }
 
     [Fact]

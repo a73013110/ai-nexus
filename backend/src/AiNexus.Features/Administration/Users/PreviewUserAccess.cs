@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Administration.Users;
 
-/// <summary>The roles, groups and features a user currently receives.</summary>
+/// <summary>The roles, groups and features a user currently receives, with the menu groups those features appear in.</summary>
 internal sealed class PreviewUserAccess(NexusDbContext db, AccessService access)
 {
     public static void Map(RouteGroupBuilder routes) => routes
@@ -15,6 +15,6 @@ internal sealed class PreviewUserAccess(NexusDbContext db, AccessService access)
     public async Task<Result<AccessDto>> HandleAsync(Guid id, CancellationToken ct)
     {
         if (!await db.Users.AnyAsync(x => x.Id == id, ct)) return AdministrationErrors.NotFound;
-        return await access.ForUserAsync(id, ct);
+        return await access.WithNavigationAsync(id, ct);
     }
 }

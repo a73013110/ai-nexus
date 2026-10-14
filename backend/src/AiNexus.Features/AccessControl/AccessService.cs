@@ -1,3 +1,4 @@
+using AiNexus.Features.AccessControl.Navigation;
 using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Persistence;
 using Microsoft.AspNetCore.Authorization;
@@ -33,9 +34,21 @@ public sealed class AccessService(NexusDbContext db, IActiveUsers activeUsers, I
         return value;
     }
 
+    /// <summary>
+    /// <see cref="ForUserAsync"/> with the menu groups the user's features need (<see cref="NavigationTree.VisibleGroups"/>),
+    /// for the payloads that draw a menu; grant checks call <see cref="ForUserAsync"/> and skip the group read.
+    /// </summary>
+    public async Task<AccessDto> WithNavigationAsync(Guid user, CancellationToken ct)
+    {
+        var access = await ForUserAsync(user, ct);
+        var groups = await db.Set<NavigationGroup>().AsNoTracking().OrderBy(x => x.SortOrder).ThenBy(x => x.Id)
+            .Select(x => new NavigationGroupDto(x.Id, x.ParentId, x.Name, x.SortOrder)).ToListAsync(ct);
+        return access with { NavigationGroups = NavigationTree.VisibleGroups(groups, access.Features) };
+    }
+
     private async Task<AccessDto> ReadAsync(Guid user, CancellationToken ct)
     {
-        if (!await activeUsers.Ids.AnyAsync(x => x == user, ct)) return new([], [], []);
+        if (!await activeUsers.Ids.AnyAsync(x => x == user, ct)) return new([], [], [], []);
         var roleIds = db.Set<UserRole>().Where(x => x.UserId == user).Select(x => x.RoleId);
         var roles = await db.Set<Role>().AsNoTracking().Where(x => roleIds.Contains(x.Id) && x.Enabled)
             .OrderBy(x => x.Id).Select(x => new AccessItemDto(x.Id, x.Name)).ToListAsync(ct);
@@ -45,8 +58,8 @@ public sealed class AccessService(NexusDbContext db, IActiveUsers activeUsers, I
         var enabledGroups = groups.Select(x => x.Id).ToArray();
         var featureIds = db.Set<RoleGroupFeature>().Where(x => enabledGroups.Contains(x.GroupId)).Select(x => x.FeatureId);
         var features = await db.Set<Feature>().AsNoTracking().Where(x => featureIds.Contains(x.Id) && x.Enabled)
-            .OrderBy(x => x.SortOrder).ThenBy(x => x.Id).Select(x => new FeatureDto(x.Id, x.Name, x.Route)).ToListAsync(ct);
-        return new(roles, groups, features);
+            .OrderBy(x => x.SortOrder).ThenBy(x => x.Id).Select(x => new FeatureDto(x.Id, x.Name, x.Route, x.GroupId, x.Icon, x.SortOrder)).ToListAsync(ct);
+        return new(roles, groups, features, []);
     }
 }
 

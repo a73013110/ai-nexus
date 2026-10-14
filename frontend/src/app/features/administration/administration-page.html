@@ -40,7 +40,11 @@
           <nx-admin-groups-tab class="ui-table-fill" (edit)="editor.open('group', $event)" />
         }
         @case ('features') {
-          <nx-admin-features-tab class="ui-table-fill" (edit)="editor.open('feature', $event)" />
+          <nx-admin-features-tab
+            class="ui-table-fill"
+            (edit)="editor.open('feature', $event)"
+            (editGroup)="editor.open('menu', $event)"
+          />
         }
       }
     </div>

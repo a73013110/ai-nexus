@@ -55,4 +55,4 @@ public static class RuntimeTrafficMiddlewareExtensions
     public static IApplicationBuilder UseRuntimeTraffic(this IApplicationBuilder app) => app.UseMiddleware<RuntimeTrafficMiddleware>();
 }
 
-internal sealed class MonitoringFeatures() : FeatureSeed(new PlatformFeature(MonitoringModule.Feature, "即時監控", "/admin/monitoring", 93, AdministratorsOnly: true));
+internal sealed class MonitoringFeatures() : FeatureSeed(new PlatformFeature(MonitoringModule.Feature, "即時監控", "/admin/monitoring", 93, BuiltInAccess.SystemNavigation, "activity", AdministratorsOnly: true));

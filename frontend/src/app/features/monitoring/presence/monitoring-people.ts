@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, model, output } fr
 import type { OnlineSession } from '@core/api/schema';
 import { Panel } from '@shared/ui/panel';
 import { MonitoringSessions } from './monitoring-sessions';
-import { monitoringFeature } from '../monitoring-format';
+import { monitoringFeatureNames } from '../monitoring-format';
 
 /**
  * Who is online: the features they have open, as filters, and the session list behind them.
@@ -103,12 +103,13 @@ export class MonitoringPeople {
   readonly selectedId = input<string | null>(null);
   readonly feature = model('all');
   readonly selected = output<OnlineSession>();
+  private readonly featureName = monitoringFeatureNames();
   readonly features = computed(() => {
     const counts = new Map<string, number>();
     for (const s of this.sessions()) counts.set(s.feature, (counts.get(s.feature) ?? 0) + 1);
     return [...counts]
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
       .slice(0, 8)
-      .map(([feature, count]) => ({ feature, count, name: monitoringFeature(feature) }));
+      .map(([feature, count]) => ({ feature, count, name: this.featureName(feature) }));
   });
 }

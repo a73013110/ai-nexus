@@ -1,11 +1,10 @@
 import { Injectable, computed, inject, linkedSignal } from '@angular/core';
 import { WorkspaceSession } from '../auth/workspace-session';
-import { WORKSPACE_FEATURE_GROUPS } from './feature-groups';
+import { navigationOrder, navigationTree } from './navigation-tree';
 
 export const PIN_LIMIT = 5;
 export type NavigationDisplay = 'icons' | 'list';
 const DEFAULT_PINS = ['dashboard', 'chat', 'knowledge', 'projects'];
-const GROUP_ORDER: readonly string[] = WORKSPACE_FEATURE_GROUPS.flatMap((group) => group.ids);
 
 /**
  * How the sidebar lists features for this account: which few are pinned on top and whether
@@ -16,8 +15,13 @@ const GROUP_ORDER: readonly string[] = WORKSPACE_FEATURE_GROUPS.flatMap((group) 
 @Injectable({ providedIn: 'root' })
 export class NavigationPreferences {
   private readonly session = inject(WorkspaceSession);
+  /** Features with a page; grant-only features (no route) never reach the menu. */
   readonly features = computed(() =>
     (this.session.me()?.access.features ?? []).filter((feature) => !!feature.route),
+  );
+  /** The menu as administrators arranged it (`navigationTree`), shared by the launcher and Ctrl+K. */
+  readonly tree = computed(() =>
+    navigationTree(this.features(), this.session.me()?.access.navigationGroups ?? []),
   );
   private readonly user = computed(() => this.session.me()?.id ?? '');
   private readonly saved = linkedSignal(() => {
@@ -31,8 +35,9 @@ export class NavigationPreferences {
   );
   readonly ids = computed(() => {
     const visible = new Set(this.features().map((feature) => feature.id));
-    // Without a saved choice, pin the first four the account can open, in a fixed preference order.
-    const ids = this.saved() ?? [...new Set([...DEFAULT_PINS, ...GROUP_ORDER, ...visible])];
+    // Without a saved choice, pin the first four the account can open: a fixed preference, then menu order.
+    const menu = navigationOrder(this.tree()).map((feature) => feature.id);
+    const ids = this.saved() ?? [...new Set([...DEFAULT_PINS, ...menu])];
     return ids.filter((id) => visible.has(id)).slice(0, this.saved() ? PIN_LIMIT : 4);
   });
   readonly pinned = computed(() => {

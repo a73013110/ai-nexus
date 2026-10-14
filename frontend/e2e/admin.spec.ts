@@ -14,6 +14,8 @@ import {
   openSettings,
   expectViewportContained,
   toasts,
+  FIXTURE_NAVIGATION_GROUPS,
+  withMenu,
 } from "./fixtures";
 import type {
   AdminCatalogDto,
@@ -384,13 +386,15 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
       account: "AD\\colleague" + index,
     });
   state.catalog.groups![1].enabled = false;
-  state.catalog.features.push({
-    id: "logs.export",
-    name: "日誌匯出",
-    route: "",
-    sortOrder: 95,
-    enabled: true,
-  });
+  state.catalog.features.push(
+    withMenu({
+      id: "logs.export",
+      name: "日誌匯出",
+      route: "",
+      sortOrder: 95,
+      enabled: true,
+    }),
+  );
   await page.reload();
   const users = page.locator(".admin-users-table");
   await expect(users.locator("tbody tr")).toHaveCount(100);
@@ -452,7 +456,8 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
   ).toContainText("chat · /chat");
   await expect(editor.locator(".panel-eyebrow")).toHaveCount(0);
   expect((await editor.boundingBox())!.width).toBeLessThanOrEqual(450);
-  expect((await editor.boundingBox())!.height).toBeLessThan(440);
+  // Name, switch, menu group and icon: still a short dialog.
+  expect((await editor.boundingBox())!.height).toBeLessThan(600);
   await page.route("**/api/v1/admin/features/chat", async (route) => {
     const body = route.request().postDataJSON();
     // The order is moved on the list; the dialog keeps it as it is.
@@ -460,6 +465,8 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
       name: "AI 對話",
       sortOrder: 10,
       enabled: true,
+      groupId: "work",
+      icon: "chat",
     });
     Object.assign(
       state.catalog.features.find((feature) => feature.id === "chat")!,
@@ -572,7 +579,7 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
   ]);
   // Each feature category is its own framed card with a count; no outer fieldset wraps them.
   await expect(editor.locator("fieldset")).toHaveCount(0);
-  const work = editor.getByRole("group", { name: "工作", exact: true });
+  const work = editor.getByRole("group", { name: "AI 工作台", exact: true });
   await expect(work).toHaveCSS("border-left-style", "solid");
   await expect(work.locator(".choice-group-count")).toHaveText(/^\d+\/\d+$/);
   await editor
@@ -676,7 +683,7 @@ test("手機版存取管理四個分頁改為卡片列，不橫向捲動，點�
     page.getByRole("button", { name: "移動「對話」，用上下鍵調整順序" }),
   ).toBeHidden();
   await expect(
-    page.getByRole("button", { name: "調整順序：對話", exact: true }),
+    page.getByRole("button", { name: "調整功能：對話", exact: true }),
   ).toBeVisible();
 });
 
@@ -684,21 +691,23 @@ test("功能在分群內以鍵盤、選單或拖曳重新排序，只送出變�
   page,
 }) => {
   const state = await administration(page);
+  // 總覽 is seeded at the top level; this test places it in the work group to move four rows.
   state.catalog.features.push(
-    {
+    withMenu({
       id: "dashboard",
       name: "總覽",
       route: "/dashboard",
       sortOrder: 5,
       enabled: true,
-    },
-    {
+      groupId: "work",
+    }),
+    withMenu({
       id: "knowledge",
       name: "知識庫",
       route: "/knowledge",
       sortOrder: 30,
       enabled: true,
-    },
+    }),
   );
   const puts: { id: string; body: unknown }[] = [];
   let me = 0;
@@ -734,12 +743,21 @@ test("功能在分群內以鍵盤、選單或拖曳重新排序，只送出變�
   await files.press("ArrowUp");
   await expect(names).toHaveText(["總覽", "檔案庫", "對話", "知識庫"]);
   await expect(files).toBeFocused();
-  await expect(live).toHaveText("檔案庫：工作第 2 個，共 4 個");
+  await expect(live).toHaveText("檔案庫：AI 工作台第 2 個，共 4 個");
   // One write: the moved feature takes the middle of its new gap (5 … 10).
   await expect
     .poll(() => puts)
     .toEqual([
-      { id: "files", body: { name: "檔案庫", enabled: true, sortOrder: 7 } },
+      {
+        id: "files",
+        body: {
+          name: "檔案庫",
+          enabled: true,
+          sortOrder: 7,
+          groupId: "work",
+          icon: "files",
+        },
+      },
     ]);
   // The sidebar reads this account's features, and so their order, again.
   await expect.poll(() => me).toBeGreaterThan(reads);
@@ -759,7 +777,13 @@ test("功能在分群內以鍵盤、選單或拖曳重新排序，只送出變�
   await expect(names).toHaveText(["總覽", "檔案庫", "對話", "知識庫"]);
   expect(puts.at(-1)).toEqual({
     id: "files",
-    body: { name: "檔案庫", enabled: true, sortOrder: 40 },
+    body: {
+      name: "檔案庫",
+      enabled: true,
+      sortOrder: 40,
+      groupId: "work",
+      icon: "files",
+    },
   });
   expect(state.catalog.features.find((x) => x.id === "files")!.sortOrder).toBe(
     7,
@@ -767,9 +791,9 @@ test("功能在分群內以鍵盤、選單或拖曳重新排序，只送出變�
   await page.unroute("**/api/v1/admin/features/files");
   // The row menu moves without dragging, for touch and pointer users alike.
   await page
-    .getByRole("button", { name: "調整順序：總覽", exact: true })
+    .getByRole("button", { name: "調整功能：總覽", exact: true })
     .click();
-  const menu = page.getByRole("menu", { name: "調整順序：總覽", exact: true });
+  const menu = page.getByRole("menu", { name: "調整功能：總覽", exact: true });
   await expect(
     menu.getByRole("menuitem", { name: "上移", exact: true }),
   ).toBeDisabled();
@@ -781,7 +805,13 @@ test("功能在分群內以鍵盤、選單或拖曳重新排序，只送出變�
     .poll(() => puts.at(-1))
     .toEqual({
       id: "dashboard",
-      body: { name: "總覽", enabled: true, sortOrder: 40 },
+      body: {
+        name: "總覽",
+        enabled: true,
+        sortOrder: 40,
+        groupId: "work",
+        icon: "dashboard",
+      },
     });
   await expect(table).toHaveAttribute("aria-busy", "false");
   // Dragging the handle swaps rows of the same group as the pointer passes them.
@@ -806,7 +836,13 @@ test("功能在分群內以鍵盤、選單或拖曳重新排序，只送出變�
     .poll(() => puts.at(-1))
     .toEqual({
       id: "knowledge",
-      body: { name: "知識庫", enabled: true, sortOrder: 0 },
+      body: {
+        name: "知識庫",
+        enabled: true,
+        sortOrder: 0,
+        groupId: "work",
+        icon: "library",
+      },
     });
   expect(puts).toHaveLength(4);
   // Other groups keep their order.
@@ -908,7 +944,8 @@ async function administration(page: Page) {
         sortOrder: 92,
         enabled: true,
       },
-    ],
+    ].map(withMenu),
+    navigationGroups: FIXTURE_NAVIGATION_GROUPS,
     models: [
       {
         id: "fixture:8b",
@@ -1043,7 +1080,8 @@ async function administration(page: Page) {
       return json({
         roles: [],
         groups: [],
-        features: [{ id: "chat", name: "對話", route: "/chat" }],
+        features: [{ id: "chat", name: "對話", route: "/chat" }].map(withMenu),
+        navigationGroups: FIXTURE_NAVIGATION_GROUPS,
       });
     if (path.endsWith("/insights")) {
       const user =
@@ -1304,7 +1342,7 @@ test("manual user creation, dual login editing and removal keep one place for ea
     .getByLabel("設定本地密碼", { exact: true })
     .fill("test long password 123!");
   await expect(dialog.locator(".feature-summary-group")).toContainText([
-    "工作",
+    "AI 工作台",
   ]);
   await page.setViewportSize({ width: 375, height: 812 });
   await settleEntrance(page);
@@ -1436,12 +1474,13 @@ test("testing an identity clears the prior draft, shows a responsive banner and 
         access: {
           roles: [],
           groups: [],
+          navigationGroups: FIXTURE_NAVIGATION_GROUPS,
           features: [
             { id: "chat", name: "對話", route: "/chat" },
             ...(!testing
               ? [{ id: "admin", name: "存取管理", route: "/admin" }]
               : []),
-          ],
+          ].map(withMenu),
         },
       }),
     }),

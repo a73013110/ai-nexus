@@ -1,6 +1,111 @@
 import { expect, type Locator, type Page, type Route } from "@playwright/test";
 import { randomUUID } from "node:crypto";
 export const fixtureIssueCode = "NX-" + "D".repeat(32);
+
+/** The seeded menu (each module's FeatureSeed): name, group, place and icon of every feature. */
+export const FIXTURE_MENU: Record<
+  string,
+  { name: string; groupId: string | null; sortOrder: number; icon: string }
+> = {
+  dashboard: { name: "總覽", groupId: null, sortOrder: 5, icon: "dashboard" },
+  chat: { name: "對話", groupId: "work", sortOrder: 10, icon: "chat" },
+  projects: { name: "專案", groupId: "work", sortOrder: 15, icon: "projects" },
+  files: { name: "檔案庫", groupId: "work", sortOrder: 20, icon: "files" },
+  knowledge: {
+    name: "知識庫",
+    groupId: "work",
+    sortOrder: 30,
+    icon: "library",
+  },
+  artifacts: {
+    name: "成果文件",
+    groupId: "work",
+    sortOrder: 40,
+    icon: "document",
+  },
+  shared: {
+    name: "分享",
+    groupId: "collaboration",
+    sortOrder: 50,
+    icon: "share",
+  },
+  tasks: {
+    name: "背景任務",
+    groupId: "collaboration",
+    sortOrder: 55,
+    icon: "tasks",
+  },
+  repositories: {
+    name: "程式庫",
+    groupId: "collaboration",
+    sortOrder: 60,
+    icon: "git",
+  },
+  admin: { name: "存取管理", groupId: "system", sortOrder: 90, icon: "lock" },
+  operations: {
+    name: "平台營運",
+    groupId: "system",
+    sortOrder: 91,
+    icon: "chart",
+  },
+  integrations: {
+    name: "資料來源",
+    groupId: "system",
+    sortOrder: 92,
+    icon: "integrations",
+  },
+  monitoring: {
+    name: "即時監控",
+    groupId: "system",
+    sortOrder: 93,
+    icon: "activity",
+  },
+  "logs.query": {
+    name: "系統日誌",
+    groupId: "system",
+    sortOrder: 94,
+    icon: "logs",
+  },
+  "logs.detail": {
+    name: "日誌診斷詳情",
+    groupId: "system",
+    sortOrder: 95,
+    icon: "search",
+  },
+  "logs.export": {
+    name: "日誌匯出",
+    groupId: "system",
+    sortOrder: 96,
+    icon: "download",
+  },
+  audit: { name: "活動稽核", groupId: "system", sortOrder: 97, icon: "audit" },
+  quality: {
+    name: "品質評測",
+    groupId: "system",
+    sortOrder: 98,
+    icon: "shield",
+  },
+};
+/** The menu groups AccessControl seeds. */
+export const FIXTURE_NAVIGATION_GROUPS = [
+  { id: "work", parentId: null, name: "AI 工作台", sortOrder: 10 },
+  { id: "collaboration", parentId: null, name: "協作", sortOrder: 20 },
+  { id: "system", parentId: null, name: "系統管理", sortOrder: 30 },
+];
+/** A fixture feature with its seeded menu placement filled in where the test left it out. */
+export function withMenu<T extends { id: string }>(feature: T) {
+  const seed = FIXTURE_MENU[feature.id] ?? {
+    groupId: null,
+    sortOrder: 100,
+    icon: "document",
+  };
+  return {
+    groupId: seed.groupId,
+    sortOrder: seed.sortOrder,
+    icon: seed.icon,
+    ...feature,
+  };
+}
 export async function chooseSelect(
   page: import("@playwright/test").Page,
   label: string,
@@ -378,6 +483,7 @@ export class ApiFixture {
               : []),
           ],
           groups: [{ id: "workspace", name: "基本工作區" }],
+          navigationGroups: FIXTURE_NAVIGATION_GROUPS,
           features: [
             ...this.extraFeatures,
             ...(this.chatAccess
@@ -401,7 +507,7 @@ export class ApiFixture {
             ...(this.auditAccess
               ? [{ id: "audit", name: "活動稽核", route: "/admin/audit" }]
               : []),
-          ],
+          ].map(withMenu),
         },
         activeRunId:
           this.runs.find(

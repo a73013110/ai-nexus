@@ -47,7 +47,7 @@ public sealed class TestIdentityTests
         using var admin = f.CreateClient(); await Login(admin, "alice");
         var id = await CreateUser(admin, LocalAccount(roles: ["member", "administrator"])); await Begin(admin, id);
         (await admin.GetAsync("/api/v1/admin/catalog")).EnsureSuccessStatusCode();
-        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PutAsJsonAsync("/api/v1/admin/features/chat", new FeatureUpdateRequest("越權", 10, true))).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await admin.PutAsJsonAsync("/api/v1/admin/features/chat", new FeatureUpdateRequest("越權", 10, true, "work", "chat"))).StatusCode);
         // Platform operations is management too: readable while testing, never writable.
         (await admin.GetAsync("/api/v1/admin/billing/prices")).EnsureSuccessStatusCode();
         (await admin.GetAsync("/api/v1/admin/knowledge/profiles")).EnsureSuccessStatusCode();

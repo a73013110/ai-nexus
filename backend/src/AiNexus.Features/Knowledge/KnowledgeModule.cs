@@ -110,4 +110,4 @@ public sealed class KnowledgeModule : IFeatureModule
     }
 }
 
-internal sealed class KnowledgeFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Knowledge, "知識庫", "/knowledge", 30));
+internal sealed class KnowledgeFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Knowledge, "知識庫", "/knowledge", 30, BuiltInAccess.WorkNavigation, "library"));

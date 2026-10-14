@@ -3,10 +3,10 @@ import { Notice } from '@shared/ui/notice';
 import { DateTimePicker } from '@shared/ui/date-time-picker';
 import { EmptyState } from '@shared/ui/empty-state';
 import { FilterPanel } from '@shared/ui/filter-panel';
+import { FEATURE_NAMES } from '@core/auth/feature-names';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '@core/auth/workspace-session';
-import { FEATURE_NAMES } from '@core/auth/feature-names';
 import { FeatureAccessNotice } from '@core/layout/feature-access-notice';
 import { FeaturePage } from '@core/layout/feature-page';
 import { ViewSwitch } from '@shared/ui/view-switch';
@@ -250,7 +250,17 @@ export class ActivityAuditPage {
   }
   private resolveFeatures(ids: string[]): FeatureDto[] {
     const catalog = new Map(this.features().map((feature) => [feature.id, feature]));
-    return ids.map((id) => catalog.get(id) ?? { id, name: FEATURE_NAMES[id] || id, route: '' });
+    return ids.map(
+      (id) =>
+        catalog.get(id) ?? {
+          id,
+          name: FEATURE_NAMES[id] || id,
+          route: '',
+          groupId: null,
+          icon: '',
+          sortOrder: 0,
+        },
+    );
   }
   readonly results = [
     { value: '', label: '所有結果' },

@@ -49,4 +49,4 @@ public sealed class QualityModule : IFeatureModule
     }
 }
 
-internal sealed class QualityFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Quality, "品質評測", "/quality", 65));
+internal sealed class QualityFeatures() : FeatureSeed(new PlatformFeature(FeatureIds.Quality, "品質評測", "/quality", 98, BuiltInAccess.SystemNavigation, "shield"));

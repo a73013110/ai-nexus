@@ -22,6 +22,6 @@ internal sealed class GetMe(NexusDbContext db, IAntiforgery csrf, AccessService 
     {
         var active = await db.Runs.AsNoTracking().Where(x => x.ActiveOwnerId == user.Id).Select(x => (Guid?)x.Id).SingleOrDefaultAsync(ct);
         WebSecurity.NoStore(http.Response);
-        return new MeDto(user.Id, user.Account, user.DisplayName, models.Preferences(user.Preferences), csrf.GetAndStoreTokens(http).RequestToken!, active, await access.ForUserAsync(user.Id, ct));
+        return new MeDto(user.Id, user.Account, user.DisplayName, models.Preferences(user.Preferences), csrf.GetAndStoreTokens(http).RequestToken!, active, await access.WithNavigationAsync(user.Id, ct));
     }
 }

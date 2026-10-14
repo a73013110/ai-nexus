@@ -1,4 +1,8 @@
-/** Built-in defaults; administrator-defined names are shared by navigation and page titles. */
+/**
+ * Seeded defaults (each module's `FeatureSeed`), for names `/me` cannot give: before it loads, and
+ * features this account is not granted (access notices, monitoring). Administrator-defined names
+ * from `/me` always win.
+ */
 export const FEATURE_NAMES: Readonly<Record<string, string>> = {
   dashboard: '總覽',
   chat: '對話',

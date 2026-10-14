@@ -1,5 +1,4 @@
 import { test, expect, type Page } from "@playwright/test";
-import { FEATURE_NAMES } from "../src/app/core/auth/feature-names";
 import {
   expectCompactWorkspace,
   ApiFixture,
@@ -7,6 +6,7 @@ import {
   expectViewportContained,
   settleEntrance,
   dashboardFixture,
+  FIXTURE_MENU,
 } from "./fixtures";
 
 const FEATURES = [
@@ -25,7 +25,7 @@ async function openDashboard(page: Page, admin = true) {
   fixture.adminAccess = admin;
   fixture.extraFeatures = FEATURES.map((id) => ({
     id,
-    name: FEATURE_NAMES[id],
+    name: FIXTURE_MENU[id].name,
     route: "/" + id,
   }));
   await fixture.attach(page);

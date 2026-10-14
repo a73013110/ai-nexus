@@ -43,6 +43,11 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   unknown_access_id: '清單包含不存在的角色、群組或功能。',
   admin_resource_not_found: '找不到此管理項目。',
   admin_lockout: '此變更會撤銷你的管理權限。請先由另一位管理員處理。',
+  invalid_feature_icon: '圖示名稱使用小寫英文、數字與連字號，最多 40 字元。',
+  navigation_group_cycle: '不能把選單分群移到它自己或它的子分群底下。',
+  navigation_group_exists: '已有相同識別碼的選單分群。',
+  navigation_group_not_empty: '選單分群仍有子分群或功能，請先移出後再刪除。',
+  navigation_group_not_found: '找不到這個選單分群。',
   model_group_forbidden: '此模型不在你的個人或群組授權範圍。',
   model_token_quota:
     '此模型今日可用 token 不足（包含輸入、輸出與待結算預留）。請縮短提問、切換模型或聯絡管理員；台北時間每日 08:00 重設。',

@@ -2,6 +2,7 @@ using System.Data;
 using System.Text.Json;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.AccessControl.ModelPolicies;
+using AiNexus.Features.AccessControl.Navigation;
 using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Administration.Roles;
 using AiNexus.Features.Identity;
@@ -119,7 +120,12 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
                 policy = policy is null ? null : new GroupPolicyRequest(ModelPolicyService.Allowed(policy.AllowedModelsJson), ModelPolicyService.Limits(policy.DailyTokenLimitsJson), policy.StoredAttachmentLimitBytes)
             };
         }
+        if (action.StartsWith("admin.navigation_group", StringComparison.Ordinal))
+        {
+            var group = await db.Set<NavigationGroup>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == key, ct);
+            return group is null ? null : new { group.Name, group.ParentId, group.SortOrder };
+        }
         var feature = await db.Set<Feature>().AsNoTracking().SingleOrDefaultAsync(x => x.Id == key, ct);
-        return feature is null ? null : new { feature.Name, feature.Enabled, feature.SortOrder };
+        return feature is null ? null : new { feature.Name, feature.Enabled, feature.SortOrder, feature.GroupId, feature.Icon };
     }
 }
