@@ -66,21 +66,3 @@
     width: 8rem;
   }
 }
-// The share bar uses the accent like the other figures, not the browser's green.
-meter {
-  border-radius: var(--p-radius-pill);
-  background: var(--hover);
-}
-meter::-webkit-meter-bar {
-  border: 0;
-  border-radius: var(--p-radius-pill);
-  background: var(--hover);
-}
-meter::-webkit-meter-optimum-value {
-  border-radius: var(--p-radius-pill);
-  background: var(--accent);
-}
-meter::-moz-meter-bar {
-  border-radius: var(--p-radius-pill);
-  background: var(--accent);
-}
