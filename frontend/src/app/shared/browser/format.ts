@@ -14,6 +14,9 @@ const workspaceDateTime = new Intl.DateTimeFormat('en-CA', {
 });
 export const formatDate = (value: string, calendar: CalendarSystem = 'gregory') =>
   formatCalendarValue(formatDateTimeInput(new Date(value)), calendar);
+/** The workspace-zone date of a timestamp, without the time. */
+export const formatDay = (value: string, calendar: CalendarSystem = 'gregory') =>
+  formatCalendarValue(formatDateTimeInput(new Date(value)), calendar, false);
 /** ISO wall-clock values use the workspace zone, independently of browser locale and zone. */
 export function formatDateTimeInput(date: Date) {
   if (!Number.isFinite(date.getTime())) return '';

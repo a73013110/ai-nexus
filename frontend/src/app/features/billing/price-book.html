@@ -1,129 +1,257 @@
+<div class="page-toolbar price-toolbar">
+  <nx-view-switch
+    label="價格檢視"
+    appearance="segment"
+    [options]="views"
+    [value]="view()"
+    (valueChange)="view.set($event === 'history' ? 'history' : 'current')"
+  />
+  <nx-search-field
+    label="搜尋模型或工具"
+    placeholder="搜尋名稱或供應商"
+    [value]="search()"
+    (valueChange)="search.set($event)"
+  />
+  <button
+    type="button"
+    class="primary-button"
+    [disabled]="testing() || loading()"
+    [title]="testing() ? '測試身分期間不能修改管理設定' : ''"
+    (click)="add()"
+  >
+    <nx-icon name="plus" />新增價格版本
+  </button>
+</div>
 @if (catalogRead.error()) {
   <nx-notice [message]="catalogRead.error()"
     ><button notice-actions type="button" (click)="catalogRead.reload()">重新載入</button>
   </nx-notice>
 }
-<section nxCard #editor aria-labelledby="price-form-title">
-  <div class="page-toolbar">
-    <h2 id="price-form-title">新增價格版本</h2>
-  </div>
-  <p class="form-note">
-    價格只影響之後的呼叫。依你的方案填寫 API 價格，本機模型可使用內部成本；不同幣別分開統計。
-  </p>
-  @if (saveError()) {
-    <nx-notice tone="danger" [message]="saveError()" />
-  }
-  @if (notice()) {
-    <nx-notice tone="info" [message]="notice()" />
-  }
-  <form (submit)="save($event)" class="platform-form price-form">
-    <div class="price-fields">
-      <label
-        >供應商<nx-select
-          label="計費供應商"
-          [options]="providers"
-          [value]="draft().provider"
-          (valueChange)="setProvider($event)"
-      /></label>
-      <label
-        >模型或工具<nx-select
-          label="計費模型或工具"
-          [options]="modelChoices()"
-          [value]="draft().modelId"
-          [disabled]="loading() || !modelChoices().length"
-          (valueChange)="field('modelId', $event)"
-      /></label>
-      <label
-        >幣別<nx-select
-          label="計費幣別"
-          [options]="currencies"
-          [value]="draft().currency"
-          (valueChange)="field('currency', $event)"
-      /></label>
-      <label
-        >費用類型<nx-select
-          label="費用類型"
-          [options]="kinds"
-          [value]="draft().kind"
-          (valueChange)="setKind($event)"
-      /></label>
-      @for (rate of rates; track rate.key) {
-        <label
-          >{{ rate.label
-          }}<input
-            nxField
-            type="number"
-            min="0"
-            max="100000"
-            step="0.00000001"
-            required
-            [disabled]="draft().kind === 'free'"
-            [value]="draft()[rate.key]"
-            (input)="rateField(rate.key, $event)"
-        /></label>
-      }
-      <label
-        >單次計費時機<nx-select
-          label="單次計費時機"
-          [options]="triggers"
-          [value]="draft().requestCharge"
-          (valueChange)="field('requestCharge', $event)"
-      /></label>
-      <div class="ui-field">
-        <nx-date-time-picker
-          #effectiveDate
-          label="生效時間"
-          [required]="false"
-          [value]="effective()"
-          (valueChange)="effective.set($event)"
-        /><small>台北時區；留空即儲存時生效。</small>
-      </div>
+@if (view() === 'current') {
+  <nx-data-table
+    class="ops-table ops-figures price-current"
+    label="目前價格"
+    [busy]="catalogRead.refreshing()"
+    [stacked]="true"
+  >
+    <div table-toolbar class="ui-table-toolbar">
+      <h2>
+        目前價格 <span class="ui-count-label">{{ current().length }} 項</span>
+        @if (unpriced()) {
+          <nx-status-badge tone="warning">{{ unpriced() }} 項未定價</nx-status-badge>
+        }
+      </h2>
+      <span class="ops-table-note">token 單價為每百萬 tokens；選取項目新增下一個版本</span>
     </div>
-    <label
-      >價格依據或備註<textarea
-        nxField
-        maxlength="500"
-        rows="2"
-        [value]="draft().note"
-        (input)="field('note', $any($event.target).value)"
-        placeholder="例如：內部每次處理成本，或合約／官方價格表日期"
-      ></textarea>
-    </label>
-    <div class="price-actions">
-      <button
-        class="primary-button"
-        type="submit"
-        [disabled]="busy() || loading() || !draft().modelId.trim() || !effectiveDate.valid()"
-      >
-        {{ busy() ? '儲存中…' : '新增價格版本' }}
-      </button>
+    <table>
+      <colgroup>
+        <col />
+        <col class="price-kind-column" />
+        <col class="price-currency-column" />
+        <col class="price-rate-column" />
+        <col class="price-rate-column" />
+        <col class="price-rate-column" />
+        <col class="price-rate-column" />
+        <col class="price-time-column" />
+        <col class="ops-action-column" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th scope="col">模型或工具</th>
+          <th scope="col">費用類型</th>
+          <th scope="col">幣別</th>
+          <th scope="col" class="ops-num">輸入</th>
+          <th scope="col" class="ops-num">快取輸入</th>
+          <th scope="col" class="ops-num">輸出</th>
+          <th scope="col" class="ops-num">每次固定</th>
+          <th scope="col">生效時間</th>
+          <th scope="col"><span class="sr-only">操作</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of current(); track row.key) {
+          <tr nxTableRow [rowEnabled]="!testing()" (rowActivate)="adjust(row)">
+            <th scope="row">
+              <strong class="ui-truncate" [title]="row.name">{{ row.name }}</strong
+              ><small>{{ provider(row.provider) }}</small>
+            </th>
+            @if (row.current; as price) {
+              <td data-label="費用類型">{{ kind(price.kind) }}</td>
+              <td data-label="幣別">{{ price.currency }}</td>
+              <td class="ops-num" data-label="輸入">{{ rate(price.inputPerMillion) }}</td>
+              <td class="ops-num" data-label="快取輸入">
+                {{ rate(price.cachedInputPerMillion) }}
+              </td>
+              <td class="ops-num" data-label="輸出">{{ rate(price.outputPerMillion) }}</td>
+              <td class="ops-num" data-label="每次固定">
+                {{ rate(price.perRequest) }}
+                @if (price.perRequest) {
+                  <small>{{ trigger(price) }}</small>
+                }
+              </td>
+              <td class="price-time ops-span" data-label="生效">
+                <time [attr.datetime]="price.effectiveAt">{{ date(price.effectiveAt) }}</time>
+                @if (row.next; as next) {
+                  <small>{{ day(next.effectiveAt) }} 起改用已排定的新版本</small>
+                }
+              </td>
+            } @else {
+              <td colspan="6" class="ops-span price-unpriced">
+                <nx-status-badge tone="warning">未定價</nx-status-badge>
+                <small>費用顯示為未知，不當成免費</small>
+              </td>
+              @if (row.next; as next) {
+                <td class="price-time ops-span" data-label="生效">
+                  <small>{{ day(next.effectiveAt) }} 起適用已排定的版本</small>
+                </td>
+              } @else {
+                <td class="price-time" data-stack="hide"><span aria-hidden="true">—</span></td>
+              }
+            }
+            <td data-stack="end">
+              <button
+                type="button"
+                class="icon-button"
+                data-row-action
+                [disabled]="testing()"
+                [attr.aria-label]="'新增價格版本：' + row.name"
+                [title]="'新增價格版本：' + row.name"
+                aria-haspopup="dialog"
+                (click)="adjust(row)"
+              >
+                <nx-icon name="edit" />
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    @if (!current().length) {
+      <nx-empty-state table-state class="ui-table-state">
+        @if (loading()) {
+          <nx-icon name="loading" />
+          <p>正在讀取價格</p>
+        } @else if (search()) {
+          <nx-icon name="search" />
+          <p>沒有符合的模型或工具。</p>
+        } @else {
+          <nx-icon name="money" />
+          <p>尚未設定可計費的模型或工具。系統會明確標示未定價，不會把未知費用算成零。</p>
+        }
+      </nx-empty-state>
+    }
+  </nx-data-table>
+} @else {
+  <nx-data-table
+    class="ops-table ops-figures price-history"
+    label="價格歷史"
+    [busy]="catalogRead.refreshing()"
+    [stacked]="true"
+    [columns]="historyColumns"
+    preferenceKey="price-history"
+  >
+    <div table-toolbar class="ui-table-toolbar">
+      <h2>
+        價格歷史 <span class="ui-count-label">{{ history().length }} 個版本</span>
+      </h2>
+      <span class="ops-table-note">版本不可修改；帶入舊版本後另存成新版本。顯示最新 500 個</span>
     </div>
-  </form>
-</section>
-<section nxCard class="price-history" aria-labelledby="price-history-title">
-  <div class="page-toolbar">
-    <h2 id="price-history-title">價格歷史</h2>
-  </div>
-  @if (loading() && !prices().length) {
-    <p role="status">正在載入價格…</p>
-  }
-  @for (price of prices(); track price.id) {
-    <button type="button" class="price-history-row" (click)="use(price)">
-      <span
-        ><strong>{{ modelName(price) }}</strong
-        ><small
-          >{{ price.provider }} · {{ kind(price.kind) }} · {{ time(price.effectiveAt) }}</small
-        ></span
-      ><span
-        >{{ price.currency
-        }}<small
-          >輸入 {{ price.inputPerMillion }} / 輸出 {{ price.outputPerMillion }} / 每次
-          {{ price.perRequest }}</small
-        ></span
-      ><nx-icon name="copy" />
-    </button>
-  }
-  @if (!loading() && !catalogRead.error() && !prices().length) {
-    <p class="form-note">尚未設定價格。系統會明確標示未定價，不會把未知費用算成零。</p>
-  }
-</section>
+    <table>
+      <colgroup>
+        <col class="price-time-column" nxTableColumn="effective" />
+        <col class="price-name-column" nxTableColumn="model" />
+        <col class="price-state-column" nxTableColumn="state" />
+        <col class="price-rate-column" nxTableColumn="input" />
+        <col class="price-rate-column" nxTableColumn="cached" />
+        <col class="price-rate-column" nxTableColumn="output" />
+        <col class="price-rate-column" nxTableColumn="request" />
+        <col nxTableColumn="note" />
+        <col class="ops-action-column" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th scope="col" nxTableColumn="effective">生效時間</th>
+          <th scope="col" nxTableColumn="model">模型或工具</th>
+          <th scope="col" nxTableColumn="state">狀態</th>
+          <th scope="col" class="ops-num" nxTableColumn="input">輸入</th>
+          <th scope="col" class="ops-num" nxTableColumn="cached">快取輸入</th>
+          <th scope="col" class="ops-num" nxTableColumn="output">輸出</th>
+          <th scope="col" class="ops-num" nxTableColumn="request">每次固定</th>
+          <th scope="col" nxTableColumn="note">備註</th>
+          <th scope="col"><span class="sr-only">操作</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (version of history(); track version.price.id) {
+          @let price = version.price;
+          <tr nxTableRow [rowEnabled]="!testing()" (rowActivate)="reuse(version)">
+            <td class="price-time" nxTableColumn="effective">
+              <time [attr.datetime]="price.effectiveAt">{{ date(price.effectiveAt) }}</time>
+            </td>
+            <th scope="row" nxTableColumn="model">
+              <strong class="ui-truncate" [title]="version.name">{{ version.name }}</strong
+              ><small class="ui-truncate"
+                >{{ provider(price.provider) }} · {{ price.currency }} ·
+                {{ kind(price.kind) }}</small
+              >
+            </th>
+            <td class="ops-span" nxTableColumn="state">
+              <nx-status-badge [tone]="version.state.tone">{{
+                version.state.label
+              }}</nx-status-badge>
+            </td>
+            <td class="ops-num" nxTableColumn="input" data-label="輸入">
+              {{ rate(price.inputPerMillion) }}
+            </td>
+            <td class="ops-num" nxTableColumn="cached" data-label="快取輸入">
+              {{ rate(price.cachedInputPerMillion) }}
+            </td>
+            <td class="ops-num" nxTableColumn="output" data-label="輸出">
+              {{ rate(price.outputPerMillion) }}
+            </td>
+            <td class="ops-num" nxTableColumn="request" data-label="每次固定">
+              {{ rate(price.perRequest) }}
+              @if (price.perRequest) {
+                <small>{{ trigger(price) }}</small>
+              }
+            </td>
+            <td nxTableColumn="note" data-stack="hide">
+              <span class="ui-truncate price-note" [title]="price.note">{{
+                price.note || '—'
+              }}</span>
+            </td>
+            <td data-stack="end">
+              <button
+                type="button"
+                class="icon-button"
+                data-row-action
+                [disabled]="testing()"
+                [attr.aria-label]="'帶入此版本：' + version.name"
+                [title]="'帶入此版本：' + version.name"
+                aria-haspopup="dialog"
+                (click)="reuse(version)"
+              >
+                <nx-icon name="copy" />
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    @if (!history().length) {
+      <nx-empty-state table-state class="ui-table-state">
+        @if (loading()) {
+          <nx-icon name="loading" />
+          <p>正在讀取價格</p>
+        } @else if (search()) {
+          <nx-icon name="search" />
+          <p>沒有符合的價格版本。</p>
+        } @else {
+          <nx-icon name="history" />
+          <p>尚未設定價格。系統會明確標示未定價，不會把未知費用算成零。</p>
+        }
+      </nx-empty-state>
+    }
+  </nx-data-table>
+}
+<nx-price-version-dialog [prices]="prices()" [targets]="targets()" (saved)="catalogRead.reload()" />

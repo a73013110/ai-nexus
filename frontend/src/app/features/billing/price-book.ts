@@ -1,59 +1,126 @@
-import { apiResource } from '../../core/api/api-resource';
-import { Notice } from '../../shared/ui/notice';
-import { ToastService } from '../../shared/ui/toast-service';
-import { Card } from '../../shared/ui/card';
-import { Field } from '../../shared/ui/field';
-import { DateTimePicker } from '../../shared/ui/date-time-picker';
 import {
   ChangeDetectionStrategy,
   Component,
   computed,
-  ElementRef,
   inject,
   signal,
   viewChild,
-  linkedSignal,
 } from '@angular/core';
-import type { PriceDto, PriceRequest, PriceTargetDto } from '../../core/api/schema';
+import { apiResource } from '../../core/api/api-resource';
+import { WorkspaceSession } from '../../core/auth/workspace-session';
+import type { PriceDto, PriceTargetDto } from '../../core/api/schema';
+import { formatDate, formatDay, formatModelDisplayName } from '../../shared/browser/format';
+import type { BadgeTone } from '../../shared/ui/count-badge';
 import {
-  formatDate,
-  formatModelDisplayName,
-  parseDateTimeInput,
-} from '../../shared/browser/format';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { ThemeService } from '../../core/preferences/theme-service';
+  DataTable,
+  DataTableColumn,
+  DataTableRow,
+  type TableColumn,
+} from '../../shared/ui/data-table';
+import { EmptyState } from '../../shared/ui/empty-state';
 import { Icon } from '../../shared/ui/icon';
-import { Select } from '../../shared/ui/select';
-import { BillingApi, chargeKind } from './billing-api';
+import { Notice } from '../../shared/ui/notice';
+import { SearchField } from '../../shared/ui/search-field';
+import { StatusBadge } from '../../shared/ui/status-badge';
+import { ViewSwitch } from '../../shared/ui/view-switch';
+import { BillingApi, chargeKind, providerName } from './billing-api';
+import { PriceVersionDialog } from './price-version-dialog';
 
-const emptyPrice = (): PriceRequest => ({
-  provider: 'google',
-  modelId: '',
-  currency: 'USD',
-  kind: 'api',
-  inputPerMillion: 0,
-  cachedInputPerMillion: 0,
-  outputPerMillion: 0,
-  perRequest: 0,
-  requestCharge: 'completed',
-  effectiveAt: '',
-  note: '',
-});
-interface PriceCatalog {
-  prices: PriceDto[];
-  targets: PriceTargetDto[];
+/** One priceable model or tool and the version that applies to it now. */
+export interface CurrentPrice {
+  key: string;
+  provider: string;
+  modelId: string;
+  name: string;
+  current: PriceDto | null;
+  /** The earliest version scheduled after now. */
+  next: PriceDto | null;
+}
+export interface PriceVersion {
+  price: PriceDto;
+  name: string;
+  state: { label: string; tone: BadgeTone };
+}
+const providerOrder = ['google', 'ollama', 'searxng', 'brave'];
+const keyOf = (x: { provider: string; modelId: string }) => `${x.provider}\n${x.modelId}`;
+const rateFormat = new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 8 });
+
+/**
+ * For each configured or priced model and tool, the version in effect now (its latest version not
+ * after `now`) and the next scheduled one; and the history, newest first, each version with its
+ * state. The server returns the latest 500 versions.
+ */
+export function priceCatalog(prices: PriceDto[], targets: PriceTargetDto[], now = Date.now()) {
+  const names = new Map(targets.map((x) => [keyOf(x), x.displayName]));
+  const rows = new Map<string, CurrentPrice>();
+  const row = (x: { provider: string; modelId: string }, name: string) => {
+    const key = keyOf(x);
+    if (!rows.has(key))
+      rows.set(key, {
+        key,
+        provider: x.provider,
+        modelId: x.modelId,
+        name,
+        current: null,
+        next: null,
+      });
+    return rows.get(key)!;
+  };
+  for (const target of targets) row(target, target.displayName);
+  const sorted = [...prices].sort((a, b) => Date.parse(b.effectiveAt) - Date.parse(a.effectiveAt));
+  for (const price of sorted) {
+    const entry = row(price, names.get(keyOf(price)) ?? formatModelDisplayName(price));
+    if (Date.parse(price.effectiveAt) > now) entry.next = price;
+    else entry.current ??= price;
+  }
+  const current = [...rows.values()].sort(
+    (a, b) => rank(a.provider) - rank(b.provider) || a.name.localeCompare(b.name, 'zh-Hant'),
+  );
+  const history: PriceVersion[] = sorted.map((price) => {
+    const entry = rows.get(keyOf(price))!;
+    return {
+      price,
+      name: entry.name,
+      state:
+        Date.parse(price.effectiveAt) > now
+          ? { label: '已排定', tone: 'info' }
+          : entry.current === price
+            ? { label: '適用中', tone: 'success' }
+            : { label: '已取代', tone: 'neutral' },
+    };
+  });
+  return { current, history };
+}
+function rank(provider: string) {
+  const index = providerOrder.indexOf(provider);
+  return index < 0 ? providerOrder.length : index;
 }
 
-/** Model and tool price versions: the history and a form that adds the next version. */
+/**
+ * Model and tool prices: what applies now and the version history, one view at a time. Versions are
+ * never changed, so every edit opens the dialog that adds the next one.
+ */
 @Component({
   selector: 'nx-price-book',
-  imports: [Notice, Card, Field, DateTimePicker, Icon, Select],
-  providers: [ViewScope],
+  imports: [
+    DataTable,
+    DataTableColumn,
+    DataTableRow,
+    EmptyState,
+    Icon,
+    Notice,
+    PriceVersionDialog,
+    SearchField,
+    StatusBadge,
+    ViewSwitch,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './price-book.scss',
+  styleUrls: ['../admin/operations/operations-tabs.scss', './price-book.scss'],
   templateUrl: './price-book.html',
 })
 export class PriceBook {
+  private readonly session = inject(WorkspaceSession);
+  private readonly api = inject(BillingApi);
   /** Read each time the tab is shown: the price history and the models that can be priced. */
   readonly catalogRead = apiResource({
     feature: 'operations',
@@ -64,116 +131,62 @@ export class PriceBook {
   });
   readonly prices = computed<PriceDto[]>(() => this.catalogRead.value()?.prices ?? []);
   readonly targets = computed<PriceTargetDto[]>(() => this.catalogRead.value()?.targets ?? []);
-  /** The form; a blank model picks the provider's first known model once the catalog loads. */
-  readonly draft = linkedSignal<PriceCatalog | undefined, PriceRequest>({
-    source: this.catalogRead.value,
-    computation: (catalog, previous) => {
-      const draft = previous?.value ?? emptyPrice();
-      if (draft.modelId || !catalog) return draft;
-      const first =
-        catalog.prices.find((x) => x.provider === draft.provider)?.modelId ??
-        catalog.targets.find((x) => x.provider === draft.provider)?.modelId ??
-        '';
-      return { ...draft, modelId: first };
-    },
-  });
-  readonly effective = signal('');
-  private readonly effectivePicker = viewChild.required(DateTimePicker);
-  readonly modelName = formatModelDisplayName;
-  readonly modelChoices = computed(() => {
-    const choices = new Map<string, string>();
-    for (const price of this.prices().filter((x) => x.provider === this.draft().provider))
-      choices.set(price.modelId, this.modelName(price));
-    for (const target of this.targets().filter((x) => x.provider === this.draft().provider))
-      choices.set(target.modelId, target.displayName);
-    return [...choices].map(([value, label]) => ({ value, label }));
-  });
-  readonly loading = this.catalogRead.refreshing;
-  readonly busy = signal(false);
-  readonly saveError = signal('');
-  readonly notice = signal('');
-  private readonly toast = inject(ToastService);
-  readonly providers = ['google', 'ollama', 'searxng', 'brave'].map((value) => ({
-    value,
-    label: value,
-  }));
-  readonly currencies = ['USD', 'TWD', 'EUR', 'JPY'].map((value) => ({ value, label: value }));
-  readonly kinds = ['api', 'internal', 'free'].map((value) => ({
-    value,
-    label: chargeKind(value),
-  }));
-  readonly triggers = [
-    { value: 'completed', label: '成功完成時' },
-    { value: 'attempted', label: '已開始呼叫時（包含失敗）' },
+  readonly catalog = computed(() => priceCatalog(this.prices(), this.targets()));
+  readonly view = signal<'current' | 'history'>('current');
+  readonly views = [
+    { value: 'current', label: '目前價格' },
+    { value: 'history', label: '價格歷史' },
   ];
-  readonly rates = [
-    { key: 'inputPerMillion', label: '輸入 / 百萬 tokens' },
-    { key: 'cachedInputPerMillion', label: '快取輸入 / 百萬 tokens' },
-    { key: 'outputPerMillion', label: '輸出 / 百萬 tokens' },
-    { key: 'perRequest', label: '每次呼叫固定費用' },
-  ] as const;
+  readonly search = signal('');
+  readonly current = computed(() =>
+    this.catalog().current.filter((x) => this.matches(x.name, x.provider)),
+  );
+  readonly history = computed(() =>
+    this.catalog().history.filter((x) => this.matches(x.name, x.price.provider)),
+  );
+  readonly unpriced = computed(() => this.catalog().current.filter((x) => !x.current).length);
+  readonly historyColumns: TableColumn[] = [
+    { id: 'effective', label: '生效時間', hideable: false },
+    { id: 'model', label: '模型或工具', hideable: false },
+    { id: 'state', label: '狀態' },
+    { id: 'input', label: '輸入' },
+    { id: 'cached', label: '快取輸入' },
+    { id: 'output', label: '輸出' },
+    { id: 'request', label: '每次固定' },
+    { id: 'note', label: '備註' },
+  ];
+  readonly loading = this.catalogRead.loading;
+  readonly testing = computed(() => !!this.session.auth.session()?.testing);
+  private readonly editor = viewChild.required(PriceVersionDialog);
   readonly kind = chargeKind;
-  private readonly api = inject(BillingApi);
-  private readonly scope = inject(ViewScope);
-  private readonly themes = inject(ThemeService);
-  private readonly editor = viewChild.required<ElementRef<HTMLElement>>('editor');
-  field(key: keyof PriceRequest, value: string) {
-    this.draft.update((x) => ({ ...x, [key]: value }));
+  readonly provider = providerName;
+  readonly date = formatDate;
+  readonly day = formatDay;
+  rate(value: number) {
+    return rateFormat.format(value);
   }
-  setProvider(provider: string) {
-    this.draft.update((x) => ({ ...x, provider, modelId: '' }));
-    this.field('modelId', this.modelChoices()[0]?.value ?? '');
+  trigger(price: PriceDto) {
+    return price.requestCharge === 'attempted' ? '開始呼叫即計' : '成功完成才計';
   }
-  rateField(key: string, event: Event) {
-    const value = (event.target as HTMLInputElement).valueAsNumber;
-    this.draft.update((x) => ({ ...x, [key]: Number.isFinite(value) ? value : 0 }));
+  add() {
+    this.editor().open();
   }
-  setKind(value: string) {
-    this.field('kind', value);
-    if (value === 'free')
-      this.draft.update((x) => ({
-        ...x,
-        inputPerMillion: 0,
-        cachedInputPerMillion: 0,
-        outputPerMillion: 0,
-        perRequest: 0,
-      }));
+  adjust(row: CurrentPrice) {
+    this.editor().open(
+      row.current
+        ? { from: 'current', price: row.current }
+        : { from: 'target', provider: row.provider, modelId: row.modelId },
+    );
   }
-  use(value: PriceDto) {
-    const { id, modelDisplayName, ...price } = value;
-    this.draft.set(price);
-    this.effective.set('');
-    this.notice.set('已帶入此版本。儲存會建立新版本，歷史價格保持原樣。');
-    this.editor().nativeElement.scrollIntoView({
-      block: 'start',
-      behavior: this.themes.scrollBehavior(),
-    });
+  reuse(version: PriceVersion) {
+    this.editor().open({ from: 'history', price: version.price });
   }
-  readonly time = formatDate;
-  async save(event: Event) {
-    event.preventDefault();
-    if (this.busy() || !this.effectivePicker().valid()) return;
-    const valid = this.scope.guard();
-    this.busy.set(true);
-    this.saveError.set('');
-    try {
-      const effectiveAt = (
-        this.effective() ? parseDateTimeInput(this.effective()) : new Date()
-      ).toISOString();
-      await this.api.addPrice({
-        ...this.draft(),
-        modelId: this.draft().modelId.trim(),
-        effectiveAt,
-      });
-      if (valid()) {
-        this.notice.set('');
-        this.toast.success('新價格版本已儲存', '之後的呼叫會套用。');
-        this.catalogRead.reload();
-      }
-    } catch (e) {
-      if (valid()) this.saveError.set(this.scope.message(e));
-    } finally {
-      if (valid()) this.busy.set(false);
-    }
+  private matches(name: string, provider: string) {
+    const query = this.search().trim().toLocaleLowerCase();
+    return (
+      !query ||
+      name.toLocaleLowerCase().includes(query) ||
+      providerName(provider).toLocaleLowerCase().includes(query)
+    );
   }
 }

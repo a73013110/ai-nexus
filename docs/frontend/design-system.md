@@ -19,7 +19,7 @@
 
 ## 資料視覺化與總覽的例外
 
-- 圖表的類別色依序用 `--series-1`～`--series-7`，熱圖用 `--heat`；兩種主題各自映射，不在元件寫色碼。共用元件：`NumberTicker`、`Sparkline`、`DonutChart`、`HeatmapCalendar`、`nxSpotlight`（見 `/design`「資料視覺化」）。
+- 圖表的類別色依序用 `--series-1`～`--series-7`，熱圖用 `--heat`；兩種主題各自映射，不在元件寫色碼。共用元件：`StatTile`（頭條數字列，管理頁的摘要）、`NumberTicker`、`Sparkline`、`DonutChart`、`HeatmapCalendar`、`nxSpotlight`（見 `/design`「資料視覺化」）。
 - [總覽](../features/dashboard.md)與監控同樣依 [質感](materials.md)，不用傾斜與 3D。總覽在 `dashboard-page.scss` 把 `--series-*`、`--heat` 與走勢色改成 `--accent` 的明度階，所以圖表單色、只有真實狀態（warning／danger）帶色。
 - 資源表面 `--tile-*`（20px 圓角、髮絲邊框、極淡陰影，hover 只加深兩者）在 `tokens.scss` 的 `resource-surfaces`，總覽、`Panel`、`ResourceCard`、檔案卡片共用。工具列用膠囊：segment `ViewSwitch`、`Select` 的 `pill`、`--search-field-radius`。
 - 頭條數字用 `tabular-nums`、依容器寬度（`cqi`）縮放，金額超過一萬改用縮寫（`figureMoney`），完整值放在 title 與報讀文字；任何尺寸的卡片都不能溢出。

@@ -84,6 +84,7 @@ const INDEX = [
     name: '資料視覺化',
     sections: [
       { id: 'design-ticker', name: '數字與走勢' },
+      { id: 'design-stat', name: '頭條數字' },
       { id: 'design-donut', name: '環狀分布' },
       { id: 'design-heatmap', name: '日曆熱圖' },
       { id: 'design-spotlight', name: '聚光與傾斜' },

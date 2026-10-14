@@ -6,6 +6,7 @@ import { FeatureAccessNotice } from '../../../core/layout/feature-access-notice'
 import { FeaturePage } from '../../../core/layout/feature-page';
 import { WorkspaceSession } from '../../../core/auth/workspace-session';
 import { Notice } from '../../../shared/ui/notice';
+import { ViewMotion } from '../../../shared/ui/view-motion';
 import { ViewSwitch } from '../../../shared/ui/view-switch';
 import { PriceBook } from '../../billing/price-book';
 import { PlatformUsage } from './platform-usage';
@@ -18,6 +19,7 @@ import { RetrievalAdmin } from './retrieval-admin';
     FeaturePage,
     FeatureAccessNotice,
     Notice,
+    ViewMotion,
     ViewSwitch,
     PlatformUsage,
     RetrievalAdmin,

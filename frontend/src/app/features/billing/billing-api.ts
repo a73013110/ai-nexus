@@ -39,6 +39,19 @@ export function chargeKind(kind: string): string {
     )[kind] ?? kind
   );
 }
+/** Display names of the model and search providers; an unknown id is shown as is. */
+export function providerName(id: string): string {
+  return (
+    (
+      {
+        google: 'Google AI',
+        ollama: '地端 Ollama',
+        searxng: 'SearXNG',
+        brave: 'Brave Search',
+      } as Record<string, string>
+    )[id] ?? id
+  );
+}
 @Injectable({ providedIn: 'root' })
 export class BillingApi {
   private readonly api = inject(ApiClient);

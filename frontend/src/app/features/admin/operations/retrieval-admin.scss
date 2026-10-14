@@ -1,46 +1,81 @@
 @use 'breakpoints' as bp;
 
-:host {
-  display: grid;
-  gap: var(--section-gap);
+.retrieval-profiles {
+  --table-min-width: 50rem;
 }
-.retrieval-profile {
-  align-items: start;
-  flex-wrap: wrap;
+.retrieval-capabilities {
+  --table-min-width: 36rem;
 }
-.retrieval-profile .resource-summary {
-  flex: 1 1 18rem;
+.retrieval-name-column {
+  width: 14rem;
 }
-@include bp.below(phone) {
-  .retrieval-profile .resource-summary,
-  .retrieval-profile .page-actions {
-    flex-basis: 100%;
-  }
+.retrieval-status-column {
+  width: 8rem;
+}
+.retrieval-time-column {
+  width: 9rem;
+}
+.retrieval-action-column {
+  width: 13rem;
+}
+.retrieval-profiles :is(td, th) {
+  vertical-align: top;
 }
 .retrieval-coverage {
-  display: grid;
-  gap: var(--p-space-2);
-  font-size: var(--text-caption);
-}
-progress {
-  width: 100%;
-  height: 0.5rem;
-  accent-color: var(--accent);
-}
-.usage-stat-card {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: 1.5rem;
+  progress {
+    flex: 1;
+    min-width: 0;
+    height: 0.375rem;
+    accent-color: var(--accent);
+  }
+  .ops-num {
+    flex: none;
+    min-width: 3.25rem;
+  }
+}
+td > nx-job-progress {
+  display: block;
+  margin-top: var(--p-space-2);
+}
+.retrieval-time {
+  font-variant-numeric: tabular-nums;
+}
+.retrieval-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--p-space-2);
 }
-.usage-stat-card strong {
-  font-size: var(--resource-heading-size);
-  font-weight: 550;
-  line-height: var(--line-ui);
+.retrieval-detail {
+  color: var(--secondary);
   overflow-wrap: anywhere;
 }
-.usage-stat-card > span,
-.usage-stat-card small {
-  color: var(--secondary);
-  font-size: var(--text-caption);
-  overflow-wrap: anywhere;
+.ui-table-toolbar > .retrieval-probe-note {
+  flex: 1 1 12rem;
+}
+.retrieval-collections {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
+  max-width: none;
+}
+.retrieval-mode {
+  max-width: 16rem;
+}
+.retrieval-submit {
+  display: flex;
+  justify-content: flex-end;
+}
+.retrieval-result {
+  margin-top: var(--section-gap);
+  padding-top: var(--section-gap);
+  border-top: 1px solid var(--line);
+}
+@include bp.below(narrow) {
+  .ui-table-stack .retrieval-actions {
+    justify-content: flex-start;
+    padding-top: var(--p-space-1);
+  }
 }
