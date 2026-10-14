@@ -16,6 +16,7 @@ import { safeMessage } from '../../../core/errors/safe-errors';
 import { FEATURE_ICONS, groupFeatures } from '../../../core/layout/feature-groups';
 import { ThemeService } from '../../../core/preferences/theme-service';
 import { ActionMenu, type MenuAction } from '../../../shared/ui/action-menu';
+import { CountBadge } from '../../../shared/ui/count-badge';
 import { DataTable, DataTableRow } from '../../../shared/ui/data-table';
 import { EXTRA_ICONS, Icon } from '../../../shared/ui/icon';
 import { AdminApi } from '../admin-api';
@@ -43,7 +44,7 @@ const SCROLL_SPEED = 12;
  */
 @Component({
   selector: 'nx-admin-features-tab',
-  imports: [Icon, DataTable, DataTableRow, AccessStatus, ActionMenu],
+  imports: [Icon, DataTable, DataTableRow, AccessStatus, ActionMenu, CountBadge],
   providers: [{ provide: EXTRA_ICONS, useValue: { grip: GripVertical } }],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./access-tabs.scss', './admin-features-tab.scss'],

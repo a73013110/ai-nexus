@@ -1,6 +1,7 @@
 @use 'breakpoints' as bp;
 
-// Shared by the four access tabs: one table shape, fixed column widths and the toolbar above it.
+// Shared by the four access tabs: one table shape, fixed column widths and the toolbar above it;
+// a tab's own cells (e.g. the features' order handle) are styled in its own file.
 // At `narrow` and below the tables turn into cards (`DataTable` `stacked`).
 :host {
   display: block;
@@ -18,9 +19,6 @@
 .admin-row-action-column {
   width: 3.25rem;
 }
-.admin-handle-column {
-  width: 2.75rem;
-}
 .admin-status-column,
 .admin-count-column {
   width: 6.5rem;
@@ -33,21 +31,6 @@
 }
 .admin-storage-column {
   width: 7rem;
-}
-.admin-table-name {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
-}
-.admin-table-name nx-icon {
-  flex: none;
-  --icon-size: var(--icon-md);
-  color: var(--secondary);
-}
-.admin-features-table .admin-feature-section th {
-  background: var(--surface-subtle);
-  color: var(--secondary);
-  font-size: var(--text-caption);
 }
 // A phone keeps search (or the note) and the add button on one row; the button shows its icon
 // and keeps its text as the accessible name, like the page header's actions.
@@ -72,10 +55,5 @@
   nx-access-status + small {
     display: inline;
     margin-inline-start: var(--p-space-2);
-  }
-  .admin-features-table tr.admin-feature-section {
-    min-height: 0;
-    padding-block: var(--p-space-2);
-    background: var(--surface-subtle);
   }
 }

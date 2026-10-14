@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { AdminGroupDto, AdminRoleDto } from '../../../core/api/schema';
+import type { AdminFeatureDto, AdminGroupDto, AdminRoleDto } from '../../../core/api/schema';
 import { AdminApi } from '../admin-api';
 import { AdminStore } from '../admin-store';
 import { AccessEditorDialog } from './access-editor-dialog';
@@ -29,7 +29,11 @@ const role = catalog.roles[0] as unknown as AdminRoleDto;
 const group = { ...catalog.groups[1], policy: null } as unknown as AdminGroupDto;
 
 function setup() {
-  const api = { role: vi.fn(async () => undefined), group: vi.fn(async () => undefined) };
+  const api = {
+    role: vi.fn(async () => undefined),
+    group: vi.fn(async () => undefined),
+    feature: vi.fn(async () => undefined),
+  };
   const store = { catalog: signal(catalog), saved: vi.fn() };
   TestBed.configureTestingModule({
     providers: [
@@ -103,6 +107,29 @@ describe('AccessEditorDialog', () => {
       expect.objectContaining({ name: '功能群組', options: expect.any(Array) }),
     ]);
     expect(dialog.groupChoices()[0].options.map((x) => x.id)).toEqual(['basic', 'review', 'admin']);
+  });
+
+  it('names a feature by id and route, leaves out a missing route and keeps its order', async () => {
+    const { dialog, api } = setup();
+    const feature = (route: string) =>
+      ({
+        id: 'logs.export',
+        name: '日誌匯出',
+        route,
+        sortOrder: 95,
+        enabled: true,
+      }) as AdminFeatureDto;
+    dialog.open('feature', feature('/admin/logs'));
+    expect(dialog.editor()!.subtitle).toBe('logs.export · /admin/logs');
+    dialog.open('feature', feature(''));
+    expect(dialog.editor()!.subtitle).toBe('logs.export');
+    dialog.update('name', '匯出日誌');
+    await dialog.save(new Event('submit'));
+    expect(api.feature).toHaveBeenCalledWith('logs.export', {
+      name: '匯出日誌',
+      enabled: true,
+      sortOrder: 95,
+    });
   });
 
   it('saves every tab of a group at once and opens the tab that holds an invalid value', async () => {

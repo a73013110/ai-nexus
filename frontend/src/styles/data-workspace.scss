@@ -248,6 +248,10 @@ select:where(.ui-input) {
     [data-stack='hide'] {
       display: none;
     }
+    // The whole card is the touch target, so a name link keeps the line under it close.
+    .ui-table-row .ui-table-link {
+      min-height: 1.5rem;
+    }
     td[data-label]::before {
       content: attr(data-label);
       margin-inline-end: var(--p-space-2);
