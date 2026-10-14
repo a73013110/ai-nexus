@@ -153,6 +153,13 @@ select:where(.ui-input) {
 .ui-table-row [data-row-action]:focus-visible {
   outline: none;
 }
+// Forced colors drop the tint, so the selected row keeps a thin inset system-color line instead.
+@media (forced-colors: active) {
+  .ui-table-row.is-selected {
+    outline: 1px solid Highlight;
+    outline-offset: -3px;
+  }
+}
 // With nothing under the scroll region (no footer, no state), the last row sits in the frame's
 // rounded bottom corners; its tint and ring take the frame's inner radius instead of being cut off.
 .ui-table-frame

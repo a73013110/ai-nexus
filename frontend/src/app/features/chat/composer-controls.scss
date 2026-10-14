@@ -92,10 +92,10 @@ nx-info-popover {
   border-top: 1px solid var(--line);
 }
 .context-panel meter {
+  --meter-color: var(--signal);
   width: 100%;
   height: var(--p-space-2);
   margin-top: var(--p-space-3);
-  accent-color: var(--signal);
 }
 .search-toggle {
   display: inline-flex;
