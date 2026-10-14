@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import { Notice } from '../../shared/ui/notice';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { SearchField } from '../../shared/ui/search-field';
@@ -32,10 +33,29 @@ import { KnowledgeApi } from './knowledge-api';
 import type { ReaderTarget } from '../../shared/browser/reader-overlay';
 import { SharingApi } from '../sharing/sharing-api';
 import { WorkspaceApi } from '../workspace/workspace-api';
+import { MarkdownView } from '../../shared/markdown/markdown-view';
+import { below } from '../../shared/browser/breakpoints';
+import { mediaQuery } from '../../shared/browser/media-query';
+import { HtmlPreview } from './html-preview';
+import { HtmlScriptGate } from './html-script-gate';
+import { richKind } from './html-scripts';
 
 @Component({
   selector: 'nx-document-viewer',
-  imports: [Notice, EmptyState, SearchField, ViewSwitch, Icon, Select, TextHighlight, JobProgress],
+  imports: [
+    NgTemplateOutlet,
+    Notice,
+    EmptyState,
+    SearchField,
+    ViewSwitch,
+    Icon,
+    Select,
+    TextHighlight,
+    JobProgress,
+    MarkdownView,
+    HtmlPreview,
+  ],
+  host: { '(keydown)': 'shortcut($event)' },
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './document-viewer.scss',
@@ -49,6 +69,7 @@ export class DocumentViewer {
   private readonly session = inject(WorkspaceSession);
   private readonly scope = inject(ViewScope);
   private readonly uploads = inject(WorkspaceApi);
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   readonly target = input.required<ReaderTarget>();
   readonly embedded = input(false);
   readonly expanded = input(false);
@@ -62,6 +83,10 @@ export class DocumentViewer {
   readonly zoom = signal('1');
   readonly mode = signal('original');
   readonly query = signal('');
+  readonly searchOpen = signal(false);
+  readonly rawText = signal('');
+  readonly gate = new HtmlScriptGate();
+  private readonly narrow = mediaQuery(below('tablet'));
   readonly loading = signal(true);
   readonly rendering = signal(false);
   readonly error = signal('');
@@ -90,6 +115,23 @@ export class DocumentViewer {
   );
   readonly isPdf = computed(() => this.document()?.contentType === 'application/pdf');
   readonly isImage = computed(() => this.document()?.contentType.startsWith('image/') ?? false);
+  readonly kind = computed(() => {
+    const info = this.document();
+    return info ? richKind(info.fileName, info.contentType) : 'other';
+  });
+  readonly isRich = computed(() => this.kind() !== 'other');
+  /** Side by side needs width; below the tablet breakpoint it falls back to the preview. */
+  readonly view = computed(() =>
+    this.mode() === 'split' && this.narrow() ? 'preview' : this.mode(),
+  );
+  readonly searchDisabled = computed(() => this.kind() === 'html' && this.view() === 'preview');
+  readonly markdownText = computed(
+    () =>
+      this.rawText() ||
+      this.pages()
+        .map((x) => x.text)
+        .join('\n\n'),
+  );
   readonly format = computed(() =>
     this.isPdf() ? 'PDF 文件' : this.isImage() ? '圖片' : '文字文件',
   );
@@ -99,7 +141,16 @@ export class DocumentViewer {
   readonly imageZoomOptions = [{ value: 'fit', label: '符合視窗' }, ...this.zoomOptions];
   readonly hasText = computed(() => this.pages().some((page) => page.text.trim()));
   readonly rawImage = signal(false);
-  readonly modeOptions = computed(() => [
+  readonly modeOptions = computed(() =>
+    this.isRich()
+      ? [
+          { value: 'preview', label: '預覽' },
+          { value: 'text', label: '原始碼' },
+          ...(this.narrow() ? [] : [{ value: 'split', label: '並排' }]),
+        ]
+      : this.fileModes(),
+  );
+  private readonly fileModes = computed(() => [
     { value: 'original', label: this.isImage() ? '原始圖片' : '原始頁面', icon: 'eye' },
     {
       value: 'text',
@@ -115,6 +166,16 @@ export class DocumentViewer {
     return this.rawImage()
       ? apiHref('/api/v1/attachments/{id}/content', { path: { id } })
       : apiHref('/api/v1/documents/{id}/content', { path: { id: this.document()?.id || '' } });
+  });
+  readonly htmlUrl = computed(() => {
+    const { id, shareId } = this.target();
+    if (shareId)
+      return apiHref('/api/v1/shares/{id}/files/{file}/render', {
+        path: { id: shareId, file: id },
+      });
+    return this.rawImage()
+      ? apiHref('/api/v1/attachments/{id}/render', { path: { id } })
+      : apiHref('/api/v1/documents/{id}/render', { path: { id: this.document()?.id || '' } });
   });
   readonly standaloneUrl = computed(() =>
     this.target().shareId
@@ -180,6 +241,9 @@ export class DocumentViewer {
     this.imageZoom.set('fit');
     this.imageSize.set({ width: 0, height: 0 });
     this.query.set('');
+    this.searchOpen.set(false);
+    this.rawText.set('');
+    this.gate.reset();
     this.rawImage.set(false);
     this.mode.set('original');
     this.imageLoading.set(false);
@@ -243,12 +307,16 @@ export class DocumentViewer {
       if (!valid()) return;
       this.document.set(info);
       this.imageLoading.set(info.contentType.startsWith('image/'));
+      const kind = richKind(info.fileName, info.contentType);
       this.mode.set(
         info.contentType === 'application/pdf' || info.contentType.startsWith('image/')
           ? 'original'
-          : 'text',
+          : kind !== 'other'
+            ? 'preview'
+            : 'text',
       );
       this.loading.set(false);
+      if (kind !== 'other') void this.loadRaw(info, target, kind === 'html', valid);
       if (shared) {
         this.pages.set(shared.pages);
         this.watchShare(target, valid);
@@ -286,6 +354,43 @@ export class DocumentViewer {
     } finally {
       if (valid()) this.loading.set(false);
     }
+  }
+  /** Raw text for the Markdown preview and the HTML script check (same-origin GET). */
+  private async loadRaw(
+    info: DocumentDto,
+    target: ReaderTarget,
+    html: boolean,
+    valid: () => boolean,
+  ) {
+    try {
+      const response = await (target.shareId
+          ? this.shares.original(target.shareId, target.id, this.controller?.signal)
+          : this.api.original(info.id, this.controller?.signal)),
+        text = await response.text();
+      if (!valid()) return;
+      this.rawText.set(text);
+      if (html) this.gate.inspect(text);
+    } catch {
+      // Without the text the HTML cannot be vetted, so it stays in the script-free sandbox.
+      if (valid() && html) this.gate.inspect('');
+    }
+  }
+  shortcut(event: KeyboardEvent) {
+    if (!(event.ctrlKey || event.metaKey) || event.key.toLowerCase() !== 'f') return;
+    if (!this.hasText() || this.searchDisabled()) return;
+    event.preventDefault();
+    this.openSearch();
+  }
+  openSearch() {
+    this.searchOpen.set(true);
+    setTimeout(() =>
+      this.host.nativeElement.querySelector<HTMLInputElement>('.viewer-search input')?.focus(),
+    );
+  }
+  toggleSearch() {
+    if (!this.searchOpen()) return this.openSearch();
+    this.query.set('');
+    this.searchOpen.set(false);
   }
   private watchShare(target: ReaderTarget, valid: () => boolean) {
     this.scope.later(

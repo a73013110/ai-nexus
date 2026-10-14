@@ -46,6 +46,31 @@ public sealed class AttachmentStorageTests
     }
 
     [Fact]
+    public async Task HtmlRendersInSandboxedFrameWhileOtherFilesAndStrangersAreRefused()
+    {
+        await using var factory = new NexusFactory();
+        using var alice = await factory.SignedInAsync(); using var bob = await factory.SignedInAsync("bob");
+        using var body = new MultipartFormDataContent();
+        body.Add(new ByteArrayContent(Encoding.UTF8.GetBytes("<script>1</script>")), "file", "page.html");
+        var html = (await (await alice.PostAsync("/api/v1/attachments", body)).Content.ReadFromJsonAsync<AttachmentDto>())!;
+        var text = (await (await Upload(alice)).Content.ReadFromJsonAsync<AttachmentDto>())!;
+        using var render = await alice.GetAsync($"/api/v1/attachments/{html.Id}/render");
+        render.EnsureSuccessStatusCode();
+        Assert.Equal("<script>1</script>", await render.Content.ReadAsStringAsync());
+        Assert.Equal("text/html", render.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("SAMEORIGIN", render.Headers.GetValues("X-Frame-Options").Single());
+        Assert.Equal("nosniff", render.Headers.GetValues("X-Content-Type-Options").Single());
+        var csp = render.Headers.GetValues("Content-Security-Policy").Single();
+        Assert.StartsWith("sandbox allow-scripts;", csp); Assert.DoesNotContain("allow-same-origin", csp);
+        Assert.Contains("connect-src 'none'", csp); Assert.Contains("frame-ancestors 'self'", csp);
+        using var content = await alice.GetAsync($"/api/v1/attachments/{html.Id}/content");
+        Assert.Contains("frame-ancestors 'none'", content.Headers.GetValues("Content-Security-Policy").Single());
+        Assert.Equal("DENY", content.Headers.GetValues("X-Frame-Options").Single());
+        Assert.Equal(HttpStatusCode.NotFound, (await alice.GetAsync($"/api/v1/attachments/{text.Id}/render")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await bob.GetAsync($"/api/v1/attachments/{html.Id}/render")).StatusCode);
+    }
+
+    [Fact]
     public async Task PersonalOverrideExceedsBothGroupAndDefaultCapsAndCanRestoreInheritance()
     {
         await using var factory = new NexusFactory(administrators: ["alice"]);

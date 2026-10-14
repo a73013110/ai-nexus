@@ -27,7 +27,7 @@ public static class WebSecurity
         headers["X-Content-Type-Options"] = "nosniff";
         headers["X-Frame-Options"] = "DENY";
         headers["Referrer-Policy"] = "no-referrer";
-        headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob:; connect-src 'self'; font-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'";
+        headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' blob:; connect-src 'self'; font-src 'self'; frame-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'";
         headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=(), payment=(), usb=()";
         headers["Cross-Origin-Opener-Policy"] = "same-origin";
         headers["Cross-Origin-Resource-Policy"] = "same-origin";
@@ -52,5 +52,22 @@ public static class WebSecurity
         http.Response.Headers["Content-Security-Policy"] = "default-src 'none'; sandbox; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
         var inline = !download && (contentType is "application/pdf" or "image/png" or "image/jpeg" or "image/webp");
         return TypedResults.File(stream, contentType, fileDownloadName: inline ? null : name);
+    }
+
+    public static bool IsHtml(string contentType, string name) =>
+        contentType.StartsWith("text/html", StringComparison.OrdinalIgnoreCase) ||
+        name.EndsWith(".html", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".htm", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Serves an uploaded HTML file so the app's own iframe can run it. The CSP sandbox (no allow-same-origin) gives the
+    /// document an opaque origin even when opened directly, and no external resource can be loaded or contacted.
+    /// </summary>
+    public static FileStreamHttpResult SandboxedHtml(HttpContext http, Stream stream)
+    {
+        NoStore(http.Response);
+        var headers = http.Response.Headers;
+        headers["Content-Security-Policy"] = "sandbox allow-scripts; default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; font-src data:; media-src data: blob:; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'self'";
+        headers["X-Frame-Options"] = "SAMEORIGIN";
+        return TypedResults.File(stream, "text/html; charset=utf-8");
     }
 }
