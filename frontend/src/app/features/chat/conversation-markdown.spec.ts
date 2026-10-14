@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { AttachmentDto } from '../../core/api/schema';
+import type { AttachmentDto } from '@core/api/schema';
 import { conversationMarkdown } from './conversation-markdown';
 
 describe('conversationMarkdown', () => {

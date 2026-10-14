@@ -1,11 +1,11 @@
 import { map } from 'rxjs';
-import { apiResource } from '../../core/api/api-resource';
-import { Notice } from '../../shared/ui/notice';
-import { ToastService } from '../../shared/ui/toast-service';
-import { EmptyState } from '../../shared/ui/empty-state';
-import { DialogHeader } from '../../shared/ui/dialog-header';
-import { CompactDialog } from '../../shared/ui/compact-dialog';
-import { Field } from '../../shared/ui/field';
+import { apiResource } from '@core/api/api-resource';
+import { Notice } from '@shared/ui/notice';
+import { ToastService } from '@shared/ui/toast-service';
+import { EmptyState } from '@shared/ui/empty-state';
+import { DialogHeader } from '@shared/ui/dialog-header';
+import { CompactDialog } from '@shared/ui/compact-dialog';
+import { Field } from '@shared/ui/field';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -17,37 +17,37 @@ import {
   viewChild,
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { ReaderLink } from '../../shared/browser/reader-link';
+import { ReaderLink } from '@shared/browser/reader-link';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
+import { WorkspaceSession } from '@core/auth/workspace-session';
 import type {
   ArtifactSummaryDto,
   ConversationDto,
   DocumentDto,
   ProjectDto,
   ProjectTemplateDto,
-} from '../../core/api/schema';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { FileDrop } from '../../shared/browser/file-drop';
-import { FeaturePage } from '../../core/layout/feature-page';
-import { Icon } from '../../shared/ui/icon';
-import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
-import { ResourceSharing } from '../sharing/resource-sharing';
-import { TextTools } from '../artifacts/text-tools';
-import { ArtifactsApi } from '../artifacts/artifacts-api';
-import { WorkspaceApi } from '../workspace/workspace-api';
-import { KnowledgeApi } from '../knowledge/knowledge-api';
+} from '@core/api/schema';
+import { ViewScope } from '@shared/browser/view-scope';
+import { FileDrop } from '@shared/browser/file-drop';
+import { FeaturePage } from '@core/layout/feature-page';
+import { Icon } from '@shared/ui/icon';
+import { ConfirmDialog } from '@shared/ui/confirm-dialog';
+import { ResourceSharing } from '@features/collaboration/resource-sharing';
+import { TextTools } from '@features/artifacts/text-tools';
+import { ArtifactsApi } from '@features/artifacts/artifacts-api';
+import { AttachmentsApi } from '@features/attachments/attachments-api';
+import { KnowledgeApi } from '@features/knowledge/knowledge-api';
 import { ProjectsApi } from './projects-api';
 import { PROJECTS_TOUR, projectTour } from './projects-tour';
-import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
-import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
-import { Panel } from '../../shared/ui/panel';
-import { ResourceCard } from '../../shared/ui/resource-card';
-import { ResourceGallery } from '../../shared/ui/resource-gallery';
-import { StatusBadge } from '../../shared/ui/status-badge';
-import { relativeTime } from '../../shared/browser/format';
-import { accessLabel } from '../sharing/access-label';
-import { documentBusy, documentStatus } from '../knowledge/document-status';
+import { ConversationDraftTransfer } from '@core/preferences/conversation-draft-transfer';
+import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
+import { Panel } from '@shared/ui/panel';
+import { ResourceCard } from '@shared/ui/resource-card';
+import { ResourceGallery } from '@shared/ui/resource-gallery';
+import { StatusBadge } from '@shared/ui/status-badge';
+import { relativeTime } from '@shared/browser/format';
+import { accessLabel } from '@features/collaboration/access-label';
+import { documentBusy, documentStatus } from '@features/knowledge/documents/document-status';
 
 @Component({
   selector: 'nx-projects-page',
@@ -80,7 +80,7 @@ export class ProjectsPage {
   readonly session = inject(WorkspaceSession);
   private readonly api = inject(ProjectsApi);
   private readonly transfer = inject(ConversationDraftTransfer);
-  private readonly workspace = inject(WorkspaceApi);
+  private readonly attachments = inject(AttachmentsApi);
   private readonly knowledge = inject(KnowledgeApi);
   private readonly artifacts = inject(ArtifactsApi);
   private readonly route = inject(ActivatedRoute);
@@ -95,7 +95,7 @@ export class ProjectsPage {
   });
   private readonly policyRead = apiResource({
     feature: 'projects',
-    loader: () => this.workspace.attachmentPolicy(),
+    loader: () => this.attachments.policy(),
   });
   private readonly currentRead = apiResource({
     feature: 'projects',
@@ -419,12 +419,12 @@ export class ProjectsPage {
           title: '正在上傳 ' + file.name,
           duration: 0,
         });
-        const uploaded = await this.workspace.upload(file, controller.signal);
+        const uploaded = await this.attachments.upload(file, controller.signal);
         if (!valid()) return;
         try {
           await this.api.addFile(current.resource.id, uploaded.id);
         } catch (e) {
-          await this.workspace.removeAttachment(uploaded.id).catch(() => undefined);
+          await this.attachments.removeAttachment(uploaded.id).catch(() => undefined);
           throw e;
         }
         if (!valid()) return;

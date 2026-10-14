@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import type { ChargeDto } from '../../core/api/schema';
-import { InfoPopover } from '../../shared/ui/info-popover';
+import type { ChargeDto } from '@core/api/schema';
+import { InfoPopover } from '@shared/ui/info-popover';
 import { chargeKind, money } from './billing-api';
 
 @Component({

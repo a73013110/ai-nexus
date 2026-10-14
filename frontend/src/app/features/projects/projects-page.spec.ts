@@ -3,15 +3,15 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import type { ProjectDto } from '../../core/api/schema';
-import { AuthService } from '../../core/auth/auth-service';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { optionalId } from '../../core/layout/optional-id';
-import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
-import { ToastService } from '../../shared/ui/toast-service';
-import { ArtifactsApi } from '../artifacts/artifacts-api';
-import { KnowledgeApi } from '../knowledge/knowledge-api';
-import { WorkspaceApi } from '../workspace/workspace-api';
+import type { ProjectDto } from '@core/api/schema';
+import { AuthService } from '@core/auth/auth-service';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { optionalId } from '@core/layout/optional-id';
+import { ConversationDraftTransfer } from '@core/preferences/conversation-draft-transfer';
+import { ToastService } from '@shared/ui/toast-service';
+import { ArtifactsApi } from '@features/artifacts/artifacts-api';
+import { KnowledgeApi } from '@features/knowledge/knowledge-api';
+import { AttachmentsApi } from '@features/attachments/attachments-api';
 import { ProjectsApi } from './projects-api';
 import { ProjectsPage } from './projects-page';
 
@@ -46,7 +46,7 @@ async function setup(url: string, rows: ProjectDto[]) {
     providers: [
       provideRouter([{ matcher: optionalId('projects'), component: ProjectsPage }]),
       { provide: ProjectsApi, useValue: api },
-      { provide: WorkspaceApi, useValue: { attachmentPolicy: async () => ({}) } },
+      { provide: AttachmentsApi, useValue: { policy: async () => ({}) } },
       { provide: KnowledgeApi, useValue: {} },
       { provide: ArtifactsApi, useValue: {} },
       { provide: ConversationDraftTransfer, useValue: {} },

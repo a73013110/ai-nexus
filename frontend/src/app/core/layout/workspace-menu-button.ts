@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { WorkspaceLayout } from './workspace-layout';
-import { Icon } from '../../shared/ui/icon';
+import { Icon } from '@shared/ui/icon';
 
 /** The same reachable mobile navigation entry on chat, feature pages and readers. */
 @Component({

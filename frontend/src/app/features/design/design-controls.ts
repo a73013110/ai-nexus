@@ -6,22 +6,22 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
-import { Checkbox } from '../../shared/ui/checkbox';
-import { ChoiceGroups, type ChoiceGroup } from '../../shared/ui/choice-groups';
-import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
-import { Icon } from '../../shared/ui/icon';
-import { NameDialog } from '../../shared/ui/name-dialog';
-import { Select, type SelectOption } from '../../shared/ui/select';
-import { Tabs } from '../../shared/ui/tabs';
-import { ToastService } from '../../shared/ui/toast-service';
-import { ViewSwitch } from '../../shared/ui/view-switch';
+import { ViewScope } from '@shared/browser/view-scope';
+import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
+import { Checkbox } from '@shared/ui/checkbox';
+import { ChoiceGroups, type ChoiceGroup } from '@shared/ui/choice-groups';
+import { ConfirmDialog } from '@shared/ui/confirm-dialog';
+import { Icon } from '@shared/ui/icon';
+import { NameDialog } from '@shared/ui/name-dialog';
+import { Select, type SelectOption } from '@shared/ui/select';
+import { Tabs } from '@shared/ui/tabs';
+import { ToastService } from '@shared/ui/toast-service';
+import { ViewSwitch } from '@shared/ui/view-switch';
 import { DesignDialogs } from './design-dialogs';
 import { DesignExample, DesignSection } from './design-section';
 import { DesignSamples } from './design-samples';
-import { FloatingToolbar } from '../../shared/ui/floating-toolbar';
-import { IdleChrome } from '../../shared/ui/idle-chrome';
+import { FloatingToolbar } from '@shared/ui/floating-toolbar';
+import { IdleChrome } from '@shared/ui/idle-chrome';
 
 /** Buttons, menus, confirmation and every selection control. */
 @Component({

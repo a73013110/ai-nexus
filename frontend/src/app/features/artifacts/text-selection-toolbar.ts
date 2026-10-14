@@ -9,8 +9,8 @@ import {
   output,
   viewChild,
 } from '@angular/core';
-import { SelectedText } from '../../shared/browser/text-selection';
-import { Icon } from '../../shared/ui/icon';
+import { SelectedText } from '@shared/browser/text-selection';
+import { Icon } from '@shared/ui/icon';
 import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
 
 @Component({

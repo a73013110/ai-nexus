@@ -6,10 +6,10 @@ import {
   DestroyRef,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { ClientIssues } from './core/errors/client-issues';
+import { ClientIssues } from '@core/errors/client-issues';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
-import { withNexusViewTransitions } from './core/layout/view-morph';
+import { withNexusViewTransitions } from '@core/layout/view-morph';
 
 export const appConfig: ApplicationConfig = {
   providers: [

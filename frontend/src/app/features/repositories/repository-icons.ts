@@ -14,7 +14,7 @@ import {
   PinOff,
   Sparkles,
 } from 'lucide';
-import { EXTRA_ICONS } from '../../shared/ui/icon';
+import { EXTRA_ICONS } from '@shared/ui/icon';
 
 /** Repository vocabulary, kept in the feature's lazy bundle. */
 export const repositoryIcons: Provider = {

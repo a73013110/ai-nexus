@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { Icon } from '../../shared/ui/icon';
+import { Icon } from '@shared/ui/icon';
 
 export type SubmitPhase = 'idle' | 'loading' | 'success';
 

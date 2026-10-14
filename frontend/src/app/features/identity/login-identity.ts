@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import type { SignInIdentityDto } from '../../core/api/schema';
-import { Icon } from '../../shared/ui/icon';
+import type { SignInIdentityDto } from '@core/api/schema';
+import { Icon } from '@shared/ui/icon';
 
 const KINDS: Readonly<Record<string, string>> = {
   personal: '個人',

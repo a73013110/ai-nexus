@@ -1,4 +1,4 @@
-import { ApiError } from '../api/api-client';
+import { ApiError } from '../errors/safe-errors';
 import { SseParser } from './sse-parser';
 
 /** Decode bounded SSE frames through the existing parser, sharing error and cancellation semantics. */

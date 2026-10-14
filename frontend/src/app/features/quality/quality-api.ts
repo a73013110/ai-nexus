@@ -1,10 +1,10 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiClient } from '../../core/api/api-client';
+import { ApiClient } from '@core/api/api-client';
 import type {
   EvaluationCase,
   EvaluationVariantRequest,
   RetrievalEvaluationRequest,
-} from '../../core/api/schema';
+} from '@core/api/schema';
 
 @Injectable({ providedIn: 'root' })
 export class QualityApi {

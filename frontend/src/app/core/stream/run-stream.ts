@@ -1,10 +1,11 @@
 import { inject, Injectable } from '@angular/core';
-import { ApiError, NexusApi } from '../api/nexus-api';
+import { NexusApi } from '../api/nexus-api';
+import { ApiError, validIssueCode } from '../errors/safe-errors';
 import type { RunDto, RunEventDto } from '../api/schema';
 import { isActive } from '../api/generation-status';
-import { validIssueCode } from '../errors/safe-errors';
+
 import { SseParser } from './sse-parser';
-import { abortableDelay } from '../../shared/browser/abortable-delay';
+import { abortableDelay } from '@shared/browser/abortable-delay';
 import { FramePublisher } from './frame-publisher';
 
 export interface StreamObserver {

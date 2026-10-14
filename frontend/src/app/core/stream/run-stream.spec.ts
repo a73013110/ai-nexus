@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, NexusApi } from '../api/nexus-api';
+import { NexusApi } from '../api/nexus-api';
+import { ApiError } from '../errors/safe-errors';
 import type { RunDto } from '../api/schema';
 import { RunStream } from './run-stream';
 

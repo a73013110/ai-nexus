@@ -6,7 +6,6 @@ import type {
   CreateRunRequest,
   PreferencesDto,
 } from './schema';
-export { ApiError } from './api-client';
 
 /** Sign-in, the conversation list and the run lifecycle used by the chat workspace. */
 @Injectable({ providedIn: 'root' })

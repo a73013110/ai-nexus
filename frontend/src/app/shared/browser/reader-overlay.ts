@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { AuthService } from '../../core/auth/auth-service';
+import { AuthService } from '@core/auth/auth-service';
 
 export interface ReaderTarget {
   id: string;

@@ -1,6 +1,4 @@
-import type { ProductTourDefinition, TourStep } from '../../shared/ui/product-tour';
-
-const replay = '右上角的問號圖示可隨時重播導覽。';
+import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
 
 /** The collection tour; the card step is skipped while no project is listed. */
 export const PROJECTS_TOUR: ProductTourDefinition = {
@@ -31,15 +29,14 @@ export const PROJECTS_TOUR: ProductTourDefinition = {
     {
       target: 'nx-projects-page .project-create',
       title: '建立新專案',
-      description: `填寫名稱、工作說明與共用指示即可建立，之後再上傳文件與邀請成員。${replay}`,
+      description: '填寫名稱、工作說明與共用指示即可建立，之後再上傳文件與邀請成員。',
       side: 'bottom',
     },
   ],
 };
 
 /**
- * The project tour. Which steps exist follows the viewer's features and rights, so the replay hint
- * always lands on the last one; steps still not on screen are skipped when the tour starts.
+ * The project tour. Which steps exist follows the viewer's features and rights.
  */
 export function projectTour(options: {
   chat: boolean;
@@ -109,7 +106,5 @@ export function projectTour(options: {
         ]
       : []),
   ];
-  const last = steps.length - 1;
-  steps[last] = { ...steps[last], description: `${steps[last].description}${replay}` };
   return { steps };
 }

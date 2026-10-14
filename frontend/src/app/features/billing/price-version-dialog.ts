@@ -9,24 +9,20 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import type { PriceDto, PriceRequest, PriceTargetDto } from '../../core/api/schema';
-import {
-  formatDate,
-  formatModelDisplayName,
-  parseDateTimeInput,
-} from '../../shared/browser/format';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { CompactDialog } from '../../shared/ui/compact-dialog';
-import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
-import { DateTimePicker } from '../../shared/ui/date-time-picker';
-import { DialogHeader } from '../../shared/ui/dialog-header';
-import { DialogSaveBar } from '../../shared/ui/dialog-save-bar';
-import { Field } from '../../shared/ui/field';
-import { InfoPopover } from '../../shared/ui/info-popover';
-import { Notice } from '../../shared/ui/notice';
-import { Select } from '../../shared/ui/select';
-import { ToastService } from '../../shared/ui/toast-service';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import type { PriceDto, PriceRequest, PriceTargetDto } from '@core/api/schema';
+import { formatDate, formatModelDisplayName, parseDateTimeInput } from '@shared/browser/format';
+import { ViewScope } from '@shared/browser/view-scope';
+import { CompactDialog } from '@shared/ui/compact-dialog';
+import { ConfirmDialog } from '@shared/ui/confirm-dialog';
+import { DateTimePicker } from '@shared/ui/date-time-picker';
+import { DialogHeader } from '@shared/ui/dialog-header';
+import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
+import { Field } from '@shared/ui/field';
+import { InfoPopover } from '@shared/ui/info-popover';
+import { Notice } from '@shared/ui/notice';
+import { Select } from '@shared/ui/select';
+import { ToastService } from '@shared/ui/toast-service';
 import { BillingApi, chargeKind, providerName } from './billing-api';
 
 const emptyPrice = (): PriceRequest => ({

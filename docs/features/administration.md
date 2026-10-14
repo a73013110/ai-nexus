@@ -43,7 +43,7 @@
 
 - 「功能」分頁照側欄實際的順序列出：全域依 `SortOrder`、再依 ID 排序，分群由 `feature-groups.ts` 決定。不顯示也不讓人填數字，只能在同一分群內移動。
 - 移動方式：拖曳把手；聚焦把手按 ↑↓、Home、End；或列的「調整順序」選單（手機卡片只有選單）。新位置由 live region 播報。
-- 每次移動立即儲存，沿用 `PUT /api/v1/admin/features/{id}`，只送出值有變的功能。通常只有被移動的那一項，取新間隙的中間值；沒有空間時整個分群重編為 10、20、30…。計算在 `frontend/src/app/features/admin/access/feature-order.ts`。
+- 每次移動立即儲存，沿用 `PUT /api/v1/admin/features/{id}`，只送出值有變的功能。通常只有被移動的那一項，取新間隙的中間值；沒有空間時整個分群重編為 10、20、30…。計算在 `frontend/src/app/features/administration/roles/feature-order.ts`。
 - 儲存中不能再移動。失敗時先還原已寫入的項目，畫面回到原順序並顯示錯誤；成功後重新讀取目錄與 `/me`，側欄跟著更新。重編時的多筆寫入各自成交易與稽核，不是原子操作。
 
 ## 使用者用量與對話

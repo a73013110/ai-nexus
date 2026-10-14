@@ -1,5 +1,5 @@
 import { inject, Injectable } from '@angular/core';
-import { ApiClient } from '../../core/api/api-client';
+import { ApiClient } from '@core/api/api-client';
 
 /** The signed-in user's notification inbox. */
 @Injectable({ providedIn: 'root' })

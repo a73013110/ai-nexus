@@ -1,6 +1,6 @@
-import { Notice } from '../../shared/ui/notice';
-import { CompactDialog } from '../../shared/ui/compact-dialog';
-import { Field } from '../../shared/ui/field';
+import { Notice } from '@shared/ui/notice';
+import { CompactDialog } from '@shared/ui/compact-dialog';
+import { Field } from '@shared/ui/field';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -12,15 +12,15 @@ import {
   computed,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import type { DirectoryUserDto, ShareDto } from '../../core/api/schema';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { CopyFeedback } from '../../shared/browser/copy-feedback';
-import { Select } from '../../shared/ui/select';
-import { DialogHeader } from '../../shared/ui/dialog-header';
-import { Icon } from '../../shared/ui/icon';
+import type { DirectoryUserDto, ShareDto } from '@core/api/schema';
+import { ViewScope } from '@shared/browser/view-scope';
+import { CopyFeedback } from '@shared/browser/copy-feedback';
+import { Select } from '@shared/ui/select';
+import { DialogHeader } from '@shared/ui/dialog-header';
+import { Icon } from '@shared/ui/icon';
 import { SharingApi } from './sharing-api';
-import { directorySearch } from './directory-search';
-import { Checkbox } from '../../shared/ui/checkbox';
+import { directorySearch } from '@features/collaboration/directory-search';
+import { Checkbox } from '@shared/ui/checkbox';
 @Component({
   selector: 'nx-share-dialog',
   imports: [Notice, CompactDialog, DialogHeader, Field, Select, Icon, RouterLink, Checkbox],

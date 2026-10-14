@@ -1,5 +1,5 @@
 import { Languages, ListFilter, BookOpenText } from 'lucide';
-import { EXTRA_ICONS } from '../../shared/ui/icon';
+import { EXTRA_ICONS } from '@shared/ui/icon';
 
 /** Shared action names, labels and icons for message and document selections. */
 export const TEXT_ACTIONS = [

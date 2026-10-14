@@ -1,5 +1,5 @@
-import { Notice } from '../../shared/ui/notice';
-import { ApiError, safeMessage } from '../../core/errors/safe-errors';
+import { Notice } from '@shared/ui/notice';
+import { ApiError, safeMessage } from '@core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -18,14 +18,14 @@ import {
 } from '@angular/forms/signals';
 import { ActivatedRoute, Router } from '@angular/router';
 import { EyeOff } from 'lucide';
-import { AuthService } from '../../core/auth/auth-service';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { ViewMorph } from '../../core/layout/view-morph';
-import { WORKSPACE_HOME } from '../../core/layout/workspace-home';
-import { ThemeService } from '../../core/preferences/theme-service';
-import { EXTRA_ICONS, Icon } from '../../shared/ui/icon';
+import { AuthService } from '@core/auth/auth-service';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { ViewMorph } from '@core/layout/view-morph';
+import { WORKSPACE_HOME } from '@core/layout/workspace-home';
+import { ThemeService } from '@core/preferences/theme-service';
+import { EXTRA_ICONS, Icon } from '@shared/ui/icon';
 import { LoginIdentity } from './login-identity';
-import { LoginIntro, type LoginStage } from './login-intro';
+import { LoginIntro, type LoginStage } from './intro/login-intro';
 import { isLoginMethod, LOGIN_METHODS, type LoginMethod, offeredMethods } from './login-methods';
 import { LoginSubmit, type SubmitPhase } from './login-submit';
 

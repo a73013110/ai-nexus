@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
-import { DonutChart } from '../../shared/ui/donut-chart';
-import { HeatmapCalendar } from '../../shared/ui/heatmap-calendar';
-import { NumberTicker } from '../../shared/ui/number-ticker';
-import { Sparkline } from '../../shared/ui/sparkline';
-import { Spotlight } from '../../shared/ui/spotlight';
-import { StatGrid, StatTile } from '../../shared/ui/stat-tile';
+import { DonutChart } from '@shared/ui/donut-chart';
+import { HeatmapCalendar } from '@shared/ui/heatmap-calendar';
+import { NumberTicker } from '@shared/ui/number-ticker';
+import { Sparkline } from '@shared/ui/sparkline';
+import { Spotlight } from '@shared/ui/spotlight';
+import { StatGrid, StatTile } from '@shared/ui/stat-tile';
 import { DesignExample, DesignSection } from './design-section';
 
 function day(offset: number) {

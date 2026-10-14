@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { NumberTicker } from '../../../shared/ui/number-ticker';
-import { Sparkline } from '../../../shared/ui/sparkline';
-import { chargeKind, money } from '../../billing/billing-api';
+import { NumberTicker } from '@shared/ui/number-ticker';
+import { Sparkline } from '@shared/ui/sparkline';
+import { chargeKind, money } from '@features/billing/billing-api';
 import { DashboardStore } from '../dashboard-store';
-import { compactNumber, figureMoney, metricFormatter } from '../dashboard-format';
+import { compactNumber, figureMoney, metricFormatter } from '@shared/browser/format';
 
 /** The headline figures for the period and the work in progress now, each with its trend. */
 @Component({

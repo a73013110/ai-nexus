@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import type { AttachmentDto } from '../../core/api/schema';
-import { apiHref } from '../../core/api/api-client';
-import { Icon } from '../../shared/ui/icon';
-import { ReaderLink } from '../../shared/browser/reader-link';
+import type { AttachmentDto } from '@core/api/schema';
+import { apiHref } from '@core/api/api-client';
+import { Icon } from '@shared/ui/icon';
+import { ReaderLink } from '@shared/browser/reader-link';
 
 @Component({
   selector: 'nx-attachment-list',

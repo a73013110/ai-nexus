@@ -2,18 +2,18 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { NexusApi } from '../../core/api/nexus-api';
-import { AuthService } from '../../core/auth/auth-service';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { NotificationStore } from '../notifications/notification-store';
-import { DraftRepository } from '../../core/preferences/draft-repository';
-import { ThemeService } from '../../core/preferences/theme-service';
-import { defaultSettings, UserSettingsService } from '../../core/preferences/user-settings';
-import { RunStream } from '../../core/stream/run-stream';
-import { DraftAttachments } from '../attachments/draft-attachments';
-import { KnowledgeSelection } from '../knowledge/knowledge-selection';
-import { ProjectsApi } from '../projects/projects-api';
-import { WorkspaceApi } from '../workspace/workspace-api';
+import { NexusApi } from '@core/api/nexus-api';
+import { AuthService } from '@core/auth/auth-service';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { NotificationStore } from '@features/notifications/notification-store';
+import { DraftRepository } from '@core/preferences/draft-repository';
+import { ThemeService } from '@core/preferences/theme-service';
+import { defaultSettings, UserSettingsService } from '@core/preferences/user-settings';
+import { RunStream } from '@core/stream/run-stream';
+import { DraftAttachments } from '@features/attachments/draft-attachments';
+import { KnowledgeSelection } from '@features/knowledge/collections/knowledge-selection';
+import { ProjectsApi } from '@features/projects/projects-api';
+import { ConversationsApi } from '@features/conversations/conversations-api';
 import { ChatStore } from './chat-store';
 
 function deferred<T>() {
@@ -76,7 +76,7 @@ function setup(features = ['chat']) {
       { provide: NotificationStore, useValue: {} },
       { provide: ProjectsApi, useValue: {} },
       { provide: RunStream, useValue: {} },
-      { provide: WorkspaceApi, useValue: { labels: vi.fn(async () => ['工作']) } },
+      { provide: ConversationsApi, useValue: { labels: vi.fn(async () => ['工作']) } },
       { provide: DraftRepository, useValue: drafts },
       {
         provide: DraftAttachments,

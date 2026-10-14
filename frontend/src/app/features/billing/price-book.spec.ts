@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { PriceDto, PriceTargetDto } from '../../core/api/schema';
+import type { PriceDto, PriceTargetDto } from '@core/api/schema';
 import { priceCatalog } from './price-book';
 
 const now = Date.parse('2026-10-14T00:00:00Z');

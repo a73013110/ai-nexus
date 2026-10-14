@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { TrendChart } from '../../../shared/ui/trend-chart';
-import { chargeKind } from '../../billing/billing-api';
+import { TrendChart } from '@shared/ui/trend-chart';
+import { chargeKind } from '@features/billing/billing-api';
 import { DashboardStore } from '../dashboard-store';
 
 /** Known spend per day in one currency and charge kind; kinds and currencies never add up. */

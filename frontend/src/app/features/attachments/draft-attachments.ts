@@ -1,13 +1,13 @@
-import { safeMessage, ApiError } from '../../core/errors/safe-errors';
+import { safeMessage, ApiError } from '@core/errors/safe-errors';
 import { computed, inject, Injectable, signal } from '@angular/core';
-import type { AttachmentDto, AttachmentPolicyDto } from '../../core/api/schema';
-import { WorkspaceApi } from '../workspace/workspace-api';
-import { KnowledgeApi } from '../knowledge/knowledge-api';
-import { abortableDelay } from '../../shared/browser/abortable-delay';
+import type { AttachmentDto, AttachmentPolicyDto } from '@core/api/schema';
+import { AttachmentsApi } from './attachments-api';
+import { KnowledgeApi } from '@features/knowledge/knowledge-api';
+import { abortableDelay } from '@shared/browser/abortable-delay';
 
 @Injectable({ providedIn: 'root' })
 export class DraftAttachments {
-  private readonly api = inject(WorkspaceApi);
+  private readonly api = inject(AttachmentsApi);
   private readonly documents = inject(KnowledgeApi);
   readonly files = signal<AttachmentDto[]>([]);
   readonly policy = signal<AttachmentPolicyDto | null>(null);
@@ -23,7 +23,7 @@ export class DraftAttachments {
 
   async initialize() {
     const version = this.version;
-    const policy = await this.api.attachmentPolicy();
+    const policy = await this.api.policy();
     if (version === this.version) this.policy.set(policy);
   }
   reset(files: AttachmentDto[] = []) {

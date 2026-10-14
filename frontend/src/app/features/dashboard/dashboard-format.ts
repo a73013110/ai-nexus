@@ -1,20 +1,13 @@
-import type { DashboardMetricDto } from '../../core/api/schema';
-import { metricText } from '../../shared/browser/format';
-
-export {
-  compactNumber,
-  figureMoney,
-  metricFormatter,
-  metricText,
-} from '../../shared/browser/format';
+import type { DashboardMetricDto } from '@core/api/schema';
+import { metricText } from '@shared/browser/format';
+import type { BadgeTone } from '@shared/ui/count-badge';
 
 /** Tones the backend uses for metrics, shares and items, as badge tones and colors. */
-export type DashboardTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
-export function tone(value: string): DashboardTone {
+export function tone(value: string): BadgeTone {
   return (['info', 'success', 'warning', 'danger'] as const).find((x) => x === value) ?? 'neutral';
 }
 /** Tones as colors: the accent for information, status colors only for states that are real. */
-export const TONE_COLORS: Record<DashboardTone, string> = {
+export const TONE_COLORS: Record<BadgeTone, string> = {
   neutral: 'var(--muted)',
   info: 'var(--accent)',
   success: 'var(--success)',

@@ -2,7 +2,7 @@ import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationStart, Router } from '@angular/router';
 import type { Driver, DriveStep } from 'driver.js';
-import { ThemeService } from '../../core/preferences/theme-service';
+import { ThemeService } from '@core/preferences/theme-service';
 
 export interface TourStep {
   target: string;
@@ -19,6 +19,8 @@ const escape = (value: string) =>
     (character) =>
       ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!,
   );
+
+const REPLAY_HINT = '右上角的問號圖示可隨時重播導覽。';
 
 /** Lazy tour engine; pages supply content, while lifecycle, motion and theming stay shared. */
 @Injectable({ providedIn: 'root' })
@@ -49,17 +51,19 @@ export class ProductTour {
         [...document.querySelectorAll<HTMLElement>(selector)].find(
           (element) => element.checkVisibility() && !element.closest('[inert]'),
         );
-      const steps: DriveStep[] = definition.steps
-        .filter((step) => visible(step.target))
-        .map((step) => ({
-          element: () => visible(step.target)!,
-          popover: {
-            title: escape(step.title),
-            description: escape(step.description),
-            side: step.side ?? 'top',
-            align: 'center',
-          },
-        }));
+      const shown = definition.steps.filter((step) => visible(step.target));
+      const steps: DriveStep[] = shown.map((step, index) => ({
+        element: () => visible(step.target)!,
+        popover: {
+          title: escape(step.title),
+          // Steps not on screen are skipped, so the replay hint goes on the last step shown.
+          description: escape(
+            index === shown.length - 1 ? step.description + REPLAY_HINT : step.description,
+          ),
+          side: step.side ?? 'top',
+          align: 'center',
+        },
+      }));
       if (!steps.length) return;
       this.instance = driver({
         steps,

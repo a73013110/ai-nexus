@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { NotificationStore } from './notification-store';
 import { notificationUrl } from './notification-target';
-import { safeMessage, systemProblem, validIssueCode } from '../../core/errors/safe-errors';
-import type { NotificationDto } from '../../core/api/schema';
-import { formatDate } from '../../shared/browser/format';
-import { EmptyState } from '../../shared/ui/empty-state';
-import { Notice } from '../../shared/ui/notice';
-import { IssueCode } from '../../shared/ui/issue-code';
-import { Icon } from '../../shared/ui/icon';
+import { safeMessage, systemProblem, validIssueCode } from '@core/errors/safe-errors';
+import type { NotificationDto } from '@core/api/schema';
+import { formatDate } from '@shared/browser/format';
+import { EmptyState } from '@shared/ui/empty-state';
+import { Notice } from '@shared/ui/notice';
+import { IssueCode } from '@shared/ui/issue-code';
+import { Icon } from '@shared/ui/icon';
 
 @Component({
   selector: 'nx-notification-feed',

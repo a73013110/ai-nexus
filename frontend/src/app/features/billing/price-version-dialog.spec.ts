@@ -1,11 +1,11 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { TESTING_IDENTITY_NOTE, WorkspaceSession } from '../../core/auth/workspace-session';
-import type { PriceDto } from '../../core/api/schema';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
-import { ToastService } from '../../shared/ui/toast-service';
+import { TESTING_IDENTITY_NOTE, WorkspaceSession } from '@core/auth/workspace-session';
+import type { PriceDto } from '@core/api/schema';
+import { ViewScope } from '@shared/browser/view-scope';
+import { ConfirmDialog } from '@shared/ui/confirm-dialog';
+import { ToastService } from '@shared/ui/toast-service';
 import { BillingApi } from './billing-api';
 import { PriceVersionDialog } from './price-version-dialog';
 

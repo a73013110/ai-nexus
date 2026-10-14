@@ -1,4 +1,4 @@
-import type { ModelDto } from '../../core/api/schema';
+import type { ModelDto } from '@core/api/schema';
 import { formatCalendarValue, parseLocalDateTime, type CalendarSystem } from './date-time';
 
 export const APP_TIME_ZONE = 'Asia/Taipei';
@@ -27,6 +27,12 @@ export function formatDateTimeInput(date: Date) {
 export const parseDateTimeInput = (value: string) =>
   parseLocalDateTime(value) && value.includes('T') ? new Date(value + '+08:00') : new Date(NaN);
 export const formatNumber = (value: number) => value.toLocaleString('zh-TW');
+const percentFormat = new Intl.NumberFormat('zh-TW', {
+  style: 'percent',
+  maximumFractionDigits: 1,
+});
+/** A ratio (0.25) as a percentage with at most one decimal (25%). */
+export const formatPercent = (ratio: number) => percentFormat.format(ratio);
 export const formatBytes = (value: number) =>
   value < 1000
     ? `${formatNumber(value)} bytes`

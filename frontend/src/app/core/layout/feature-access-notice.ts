@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { WorkspaceSession } from '../auth/workspace-session';
-import { Notice } from '../../shared/ui/notice';
+import { Notice } from '@shared/ui/notice';
 
 /**
  * What a page shows an account without the feature it needs, the same on every page. The API

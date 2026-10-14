@@ -62,7 +62,7 @@
 
 ## 本分頁的任務 toast
 
-本分頁剛發起或重試的背景任務結束時，另以 toast 回饋（[`job-toasts.ts`](../../frontend/src/app/features/tasks/job-toasts.ts)）；通知匣與任務頁仍是留存的來源。
+本分頁剛發起或重試的背景任務結束時，另以 toast 回饋（[`job-toasts.ts`](../../frontend/src/app/features/jobs/job-toasts.ts)）；通知匣與任務頁仍是留存的來源。
 
 - 只認發起處登記的 job：上傳、加入、重新索引或儲存文字來源，重建檢索索引，評測，程式碼 review，以及各頁的重試。其他分頁、重新整理前或伺服器排的 job 不推送，因此多分頁與重新整理都不會重複；換頁不影響，換帳號清空登記。
 - 不新增請求：結果來自既有的通知輪詢（`task.*`，target 為 task 或 repository-review），任務頁、知識庫與閱讀器本來就在輪詢時則提早得知；同一 job 只推送一次。通知時間早於重試時間的屬於上一次 attempt，略過。

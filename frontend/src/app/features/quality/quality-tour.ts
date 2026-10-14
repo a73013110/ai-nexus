@@ -1,6 +1,4 @@
-import type { ProductTourDefinition, TourStep } from '../../shared/ui/product-tour';
-
-const replay = '右上角的問號圖示可隨時重播導覽。';
+import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
 
 /**
  * The collection tour. The card step follows the open tab (評測集 or 我的回饋) and is skipped while
@@ -48,7 +46,8 @@ export function qualityTour(options: { feedback: boolean; chat: boolean }): Prod
       {
         target: 'nx-quality-page .quality-list-menu',
         title: '匯入題庫與檢索評測',
-        description: `「評測操作」可匯入先前匯出的題庫 JSON，或前往檢索評測比較知識庫的四種檢索模式。${replay}`,
+        description:
+          '「評測操作」可匯入先前匯出的題庫 JSON，或前往檢索評測比較知識庫的四種檢索模式。',
         side: 'bottom',
       },
     ],
@@ -57,8 +56,7 @@ export function qualityTour(options: { feedback: boolean; chat: boolean }): Prod
 
 /**
  * The evaluation set tour. Which steps exist follows the viewer's rights on the set and the run on
- * screen, so the replay hint always lands on the set menu, which every viewer has; the answers and
- * the review button are skipped while no result is shown.
+ * screen; the answers and the review button are skipped while no result is shown.
  */
 export function evaluationSetTour(options: {
   /** The viewer may edit the cases. */
@@ -106,7 +104,7 @@ export function evaluationSetTour(options: {
     {
       target: 'nx-quality-page .quality-set-menu',
       title: '評測集操作',
-      description: `「評測集操作」可${options.edit ? '編輯題庫、' : ''}匯出題庫 JSON${options.owner ? '、設定存取權限或刪除評測集' : ''}。${replay}`,
+      description: `「評測集操作」可${options.edit ? '編輯題庫、' : ''}匯出題庫 JSON${options.owner ? '、設定存取權限或刪除評測集' : ''}。`,
       side: 'bottom',
     },
   ];
@@ -142,7 +140,7 @@ export const RETRIEVAL_TOUR: ProductTourDefinition = {
     {
       target: 'nx-retrieval-evaluation .retrieval-start',
       title: '開始四模式評測',
-      description: `在背景執行，一次只能進行一個；報告只有你看得到，也不會生成回答。${replay}`,
+      description: '在背景執行，一次只能進行一個；報告只有你看得到，也不會生成回答。',
       side: 'top',
     },
   ],

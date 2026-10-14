@@ -1,8 +1,8 @@
-import { safeMessage } from '../../core/errors/safe-errors';
-import { NotificationStore } from '../notifications/notification-store';
+import { ApiError, safeMessage } from '@core/errors/safe-errors';
+import { NotificationStore } from '@features/notifications/notification-store';
 import { computed, DestroyRef, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
-import { ApiError, NexusApi } from '../../core/api/nexus-api';
+import { NexusApi } from '@core/api/nexus-api';
 import type {
   ContextPreviewRequest,
   AttachmentDto,
@@ -12,20 +12,20 @@ import type {
   MessageDto,
   PreferencesDto,
   RunDto,
-} from '../../core/api/schema';
-import { isActive } from '../../core/api/generation-status';
-import { ViewMorph } from '../../core/layout/view-morph';
-import { ThemeService } from '../../core/preferences/theme-service';
-import { AuthService } from '../../core/auth/auth-service';
-import { DraftAttachments } from '../attachments/draft-attachments';
-import { MessageTree } from './message-tree';
-import { UserSettingsService } from '../../core/preferences/user-settings';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { KnowledgeSelection } from '../knowledge/knowledge-selection';
-import { ChatDraft } from './chat-draft';
-import { ChatHistory } from './chat-history';
-import { ChatModels } from './chat-models';
-import { ChatRun } from './chat-run';
+} from '@core/api/schema';
+import { isActive } from '@core/api/generation-status';
+import { ViewMorph } from '@core/layout/view-morph';
+import { ThemeService } from '@core/preferences/theme-service';
+import { AuthService } from '@core/auth/auth-service';
+import { DraftAttachments } from '@features/attachments/draft-attachments';
+import { MessageTree } from './state/message-tree';
+import { UserSettingsService } from '@core/preferences/user-settings';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { KnowledgeSelection } from '@features/knowledge/collections/knowledge-selection';
+import { ChatDraft } from './state/chat-draft';
+import { ChatHistory } from './state/chat-history';
+import { ChatModels } from './state/chat-models';
+import { ChatRun } from './state/chat-run';
 
 /**
  * Orchestrates the chat page: bootstrap, conversation selection and submission. State with its

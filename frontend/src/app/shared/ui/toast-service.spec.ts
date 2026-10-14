@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AuthService } from '../../core/auth/auth-service';
+import { AuthService } from '@core/auth/auth-service';
 import { HISTORY_LIMIT, ToastService } from './toast-service';
 
 describe('ToastService', () => {

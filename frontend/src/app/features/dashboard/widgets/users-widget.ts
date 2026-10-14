@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { DataTable, DataTableRow } from '../../../shared/ui/data-table';
-import { money } from '../../billing/billing-api';
+import { DataTable, DataTableRow } from '@shared/ui/data-table';
+import { money } from '@features/billing/billing-api';
 import { DashboardStore } from '../dashboard-store';
 
 /** Spend per user in the chosen currency; picking one narrows the whole overview to them. */

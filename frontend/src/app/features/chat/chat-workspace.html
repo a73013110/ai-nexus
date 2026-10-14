@@ -58,7 +58,7 @@
   </div>
 </main>
 <nx-prompt-library [draft]="store.draft().text" (used)="composer().use($event)" />
-<nx-conversation-settings [save]="saveSettings" />
+<nx-conversation-settings [save]="saveSettings" [assignProject]="assignProject" />
 <nx-conversation-dialog />
 @if (store.hasSharing() && (shareTarget() || store.selected()); as selected) {
   <nx-share-dialog kind="conversation" [sourceId]="selected.id" [name]="selected.title" />

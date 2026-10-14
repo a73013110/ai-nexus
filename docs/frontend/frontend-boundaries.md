@@ -1,6 +1,6 @@
 # 前端共用邊界
 
-結論：業務 UI、store 與 `*-api.ts` 放 `features`；全站單例放 `core`；沒有業務狀態的通用程式放 `shared`。依賴方向由 ESLint 檢查，所有請求經過型別安全的 `ApiClient`，讀取一律用 `apiResource()`。
+結論：業務 UI、store 與 `*-api.ts` 放 `features/<模組>`，資料夾與後端模組同名；全站單例放 `core`；沒有業務狀態的通用程式放 `shared`。依賴方向由 ESLint 檢查，所有請求經過型別安全的 `ApiClient`，讀取一律用 `apiResource()`。
 
 ## 資料夾責任
 
@@ -14,12 +14,20 @@
 | `core/layout` | 版面 shell（`WorkspaceShell`、`FeaturePage`、側欄、導覽與釘選偏好、快捷指令、首頁路徑）；唯一可以組合 features 的 core 資料夾 |
 | `core/preferences` | 主題、帳號設定、本機草稿、跨頁新對話草稿交接 |
 | `core/monitoring`、`core/stream` | 瀏覽器在線狀態；SSE 解析與生成串流 |
-| `features/*` | 按路由載入的頁面、該功能的 `*-api.ts`、store 與業務元件；被多個功能共用的業務元件也留在 features（例：`features/workspace` 的 `ConversationActions`） |
+| `features/*` | 按路由載入的頁面、該模組的 `*-api.ts`、store 與業務元件；被多個功能共用的業務元件留在擁有它的模組（例：`features/conversations` 的 `ConversationActions`） |
 | `shared/ui` | 無業務狀態的通用元件（Select、ActionMenu／MenuPanel、CommandPalette、ConfirmDialog、Notice…） |
 | `shared/markdown` | Markdown 解析與檢視、串流 Markdown、Mermaid、程式碼區塊與語法上色 |
 | `shared/browser` | ViewScope、autosize、拖放／貼圖、選檔（`pickFile`）、下載、複製、快捷鍵（`bindHotkeys`）、日期格式與本地日期（`currentDay`）、popover 定位、跟隨底部捲動（`followScroll`）、未儲存提示 |
 | `shared/graphics` | 不含認證／業務依賴的圖形資料與數學（標誌輪廓、沿折線取點） |
 | `frontend/src/styles` | 跨頁共用樣式；規則見 [設計系統](design-system.md#樣式載入) |
+
+## 功能資料夾對應後端模組
+
+- `features/<module>` 對應 `backend/src/AiNexus.Features/<Module>`，名稱轉成 kebab-case（`AccessControl` → `access-control`）。元件呼叫哪個模組的端點，就放在那個模組；`<module>-api.ts` 只放該模組的端點。網址與功能 ID（`/files`、`tasks`）不跟著改名。
+- 唯一例外是 `features/design`：開發用的設計系統樣本頁，沒有後端模組。
+- 登入、帳號、模型與對話生成的端點在 `core/api/nexus-api.ts`（`core` 的 session 與串流要用）。
+- 超過約 15 個檔案時依能力分子資料夾：後端已有子資料夾就用同名 kebab-case（`knowledge/documents`、`administration/users`），沒有才用 UI 分組（`chat/composer`）。頁面、store 與 `<module>-api.ts` 留在模組根目錄。
+- 跨進 `core`、`shared` 或其他模組用別名 `@core/`、`@shared/`、`@features/`；同一區內用相對路徑。跨區的相對路徑由 ESLint 擋下。
 
 ## 依賴方向
 
@@ -49,7 +57,7 @@
 - `/<功能>` 與 `/<功能>/:id` 共用一個路由（`optionalId`），切換時頁面元件被重用，列表不會因導覽重讀。在詳細頁新增、刪除或改變列表內容的寫入，要自己更新列表的 `value` 或 `reload()`（例：`projects-page.ts` 的建立與刪除）。
 - 聊天的送出與整理對話先更新畫面再寫入：成功換成伺服器回傳值，失敗就還原，提問退回輸入框；只有網路中斷時保留提問供重試。
 - 寫入失敗時保留使用者的輸入（例：`NameDialog`、`TextSourceEditor`）；防止覆蓋他人變更靠伺服器的 conditional update／concurrency token，不靠前端判斷。
-- 大頁面拆成元件；同頁多個元件共用的讀取放在頁面提供（`providers`）的 store，例如 `AdminStore`（存取管理四個分頁共用的功能目錄與使用者；平台營運的分頁各自讀取，不共用它）與 `LogFilterState`（日誌篩選）。
+- 大頁面拆成元件；同頁多個元件共用的讀取放在頁面提供（`providers`）的 store，例如 `AdministrationStore`（存取管理四個分頁共用的功能目錄與使用者；平台營運的分頁各自讀取，不共用它）與 `LogFilterState`（日誌篩選）。
 - 例外：以下是有自己生命週期的狀態機，保留為 store，不改成 `apiResource()`：
   - 聊天：`ChatStore` 與 `ChatModels`、`ChatHistory`、`ChatRun`、`ChatDraft`、`DraftAttachments`、`KnowledgeSelection`（串流、草稿、分支與送出佇列互相牽動）。整理對話的寫入在 `ChatConversations`。
   - `NotificationStore`：輪詢後合併、保留已讀並發出瀏覽器通知；登入世代切換時清除。

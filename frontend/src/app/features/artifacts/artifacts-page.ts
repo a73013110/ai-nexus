@@ -1,10 +1,10 @@
 import { map } from 'rxjs';
-import { apiResource } from '../../core/api/api-resource';
-import { Notice } from '../../shared/ui/notice';
-import { ToastService } from '../../shared/ui/toast-service';
-import { EmptyState } from '../../shared/ui/empty-state';
-import { Field } from '../../shared/ui/field';
-import { ViewSwitch } from '../../shared/ui/view-switch';
+import { apiResource } from '@core/api/api-resource';
+import { Notice } from '@shared/ui/notice';
+import { ToastService } from '@shared/ui/toast-service';
+import { EmptyState } from '@shared/ui/empty-state';
+import { Field } from '@shared/ui/field';
+import { ViewSwitch } from '@shared/ui/view-switch';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -18,27 +18,27 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import type { ArtifactDto, ArtifactRevisionDto, ArtifactSummaryDto } from '../../core/api/schema';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { FeaturePage } from '../../core/layout/feature-page';
-import { Icon } from '../../shared/ui/icon';
-import { Select } from '../../shared/ui/select';
-import { ResourceSharing } from '../sharing/resource-sharing';
-import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
-import { MarkdownView } from '../../shared/markdown/markdown-view';
-import { downloadBlob } from '../../shared/browser/download';
-import { formatDate, relativeTime } from '../../shared/browser/format';
-import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
-import { ResourceCard } from '../../shared/ui/resource-card';
-import { ResourceGallery } from '../../shared/ui/resource-gallery';
-import { accessLabel } from '../sharing/access-label';
+import type { ArtifactDto, ArtifactRevisionDto, ArtifactSummaryDto } from '@core/api/schema';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { ViewScope } from '@shared/browser/view-scope';
+import { FeaturePage } from '@core/layout/feature-page';
+import { Icon } from '@shared/ui/icon';
+import { Select } from '@shared/ui/select';
+import { ResourceSharing } from '@features/collaboration/resource-sharing';
+import { ConfirmDialog } from '@shared/ui/confirm-dialog';
+import { MarkdownView } from '@shared/markdown/markdown-view';
+import { downloadBlob } from '@shared/browser/download';
+import { formatDate, relativeTime } from '@shared/browser/format';
+import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
+import { ResourceCard } from '@shared/ui/resource-card';
+import { ResourceGallery } from '@shared/ui/resource-gallery';
+import { accessLabel } from '@features/collaboration/access-label';
 import { ArtifactsApi } from './artifacts-api';
 import { TextTools } from './text-tools';
 import { artifactTour, artifactsTour } from './artifacts-tour';
 import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
-import { ShareDialog } from '../sharing/share-dialog';
-import { bindHotkeys } from '../../shared/browser/hotkeys';
+import { ShareDialog } from '@features/sharing/share-dialog';
+import { bindHotkeys } from '@shared/browser/hotkeys';
 
 @Component({
   selector: 'nx-artifacts-page',

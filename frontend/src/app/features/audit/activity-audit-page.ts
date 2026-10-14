@@ -1,16 +1,16 @@
-import { apiResource } from '../../core/api/api-resource';
-import { Notice } from '../../shared/ui/notice';
-import { DateTimePicker } from '../../shared/ui/date-time-picker';
-import { EmptyState } from '../../shared/ui/empty-state';
-import { FilterPanel } from '../../shared/ui/filter-panel';
+import { apiResource } from '@core/api/api-resource';
+import { Notice } from '@shared/ui/notice';
+import { DateTimePicker } from '@shared/ui/date-time-picker';
+import { EmptyState } from '@shared/ui/empty-state';
+import { FilterPanel } from '@shared/ui/filter-panel';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { FEATURE_NAMES } from '../../core/auth/feature-names';
-import { FeatureAccessNotice } from '../../core/layout/feature-access-notice';
-import { FeaturePage } from '../../core/layout/feature-page';
-import { ViewSwitch } from '../../shared/ui/view-switch';
-import { Disclosure } from '../../shared/ui/disclosure';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { FEATURE_NAMES } from '@core/auth/feature-names';
+import { FeatureAccessNotice } from '@core/layout/feature-access-notice';
+import { FeaturePage } from '@core/layout/feature-page';
+import { ViewSwitch } from '@shared/ui/view-switch';
+import { Disclosure } from '@shared/ui/disclosure';
 import { AUDIT_CATEGORIES, auditLogQuery } from './audit-navigation';
 import {
   ChangeDetectionStrategy,
@@ -26,24 +26,24 @@ import {
   untracked,
   effect,
 } from '@angular/core';
-import { ActivityAuditApi, type AuditFilters } from './activity-audit-api';
-import type { AuditDto, FeatureDto, ModelDto } from '../../core/api/schema';
-import { FeatureSummary } from '../admin/feature-summary';
-import { SearchField } from '../../shared/ui/search-field';
-import { Select } from '../../shared/ui/select';
-import { Icon } from '../../shared/ui/icon';
+import { AuditApi, type AuditFilters } from './audit-api';
+import type { AuditDto, FeatureDto, ModelDto } from '@core/api/schema';
+import { FeatureSummary } from '@features/administration/roles/feature-summary';
+import { SearchField } from '@shared/ui/search-field';
+import { Select } from '@shared/ui/select';
+import { Icon } from '@shared/ui/icon';
 import {
   DataTable,
   DataTableColumn,
   DataTableRow,
   TablePagination,
   type TableColumn,
-} from '../../shared/ui/data-table';
-import { DetailDrawer } from '../../shared/ui/detail-drawer';
-import { StatusBadge } from '../../shared/ui/status-badge';
-import { downloadBlob } from '../../shared/browser/download';
-import { toCsv } from '../../shared/browser/csv';
-import { formatDate, formatModelName } from '../../shared/browser/format';
+} from '@shared/ui/data-table';
+import { DetailDrawer } from '@shared/ui/detail-drawer';
+import { StatusBadge } from '@shared/ui/status-badge';
+import { downloadBlob } from '@shared/browser/download';
+import { toCsv } from '@shared/browser/csv';
+import { formatDate, formatModelName } from '@shared/browser/format';
 import {
   auditAction,
   auditChanges,
@@ -259,7 +259,7 @@ export class ActivityAuditPage {
     { value: 'read', label: '已檢視' },
     { value: 'failed', label: '未完成／拒絕' },
   ];
-  private readonly api = inject(ActivityAuditApi);
+  private readonly api = inject(AuditApi);
   private readonly route = inject(ActivatedRoute);
   private readonly destroy = inject(DestroyRef);
   private timer?: ReturnType<typeof setTimeout>;

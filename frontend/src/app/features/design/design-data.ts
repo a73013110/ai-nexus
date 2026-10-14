@@ -6,18 +6,18 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { CodeBlock } from '../../shared/markdown/code-block';
-import { MarkdownView } from '../../shared/markdown/markdown-view';
-import { DataTable, DataTableRow } from '../../shared/ui/data-table';
-import { DetailDrawer } from '../../shared/ui/detail-drawer';
-import { FilterPanel } from '../../shared/ui/filter-panel';
-import { Icon } from '../../shared/ui/icon';
-import { Panel } from '../../shared/ui/panel';
-import { ResourceCard } from '../../shared/ui/resource-card';
-import { ResourceGallery } from '../../shared/ui/resource-gallery';
-import { StatusBadge } from '../../shared/ui/status-badge';
-import { Tabs } from '../../shared/ui/tabs';
-import { ViewSwitch } from '../../shared/ui/view-switch';
+import { CodeBlock } from '@shared/markdown/code-block';
+import { MarkdownView } from '@shared/markdown/markdown-view';
+import { DataTable, DataTableRow } from '@shared/ui/data-table';
+import { DetailDrawer } from '@shared/ui/detail-drawer';
+import { FilterPanel } from '@shared/ui/filter-panel';
+import { Icon } from '@shared/ui/icon';
+import { Panel } from '@shared/ui/panel';
+import { ResourceCard } from '@shared/ui/resource-card';
+import { ResourceGallery } from '@shared/ui/resource-gallery';
+import { StatusBadge } from '@shared/ui/status-badge';
+import { Tabs } from '@shared/ui/tabs';
+import { ViewSwitch } from '@shared/ui/view-switch';
 import { DesignSection } from './design-section';
 
 /** The compact data workspace (filters, table, detail drawer) and the reading components. */

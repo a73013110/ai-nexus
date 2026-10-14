@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiClient } from '../../core/api/api-client';
-import type { SpendPeriod } from '../billing/billing-api';
+import { ApiClient } from '@core/api/api-client';
+import type { SpendPeriod } from '@features/billing/billing-api';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardApi {

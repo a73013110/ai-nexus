@@ -1,4 +1,4 @@
-import type { AuditDto } from '../../core/api/schema';
+import type { AuditDto } from '@core/api/schema';
 
 export const AUDIT_CATEGORIES = [
   { value: '', label: '全部活動' },

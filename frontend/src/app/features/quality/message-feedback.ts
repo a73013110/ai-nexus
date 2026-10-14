@@ -1,6 +1,6 @@
-import { apiResource } from '../../core/api/api-resource';
-import { Notice } from '../../shared/ui/notice';
-import { Field } from '../../shared/ui/field';
+import { apiResource } from '@core/api/api-resource';
+import { Notice } from '@shared/ui/notice';
+import { Field } from '@shared/ui/field';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -11,10 +11,10 @@ import {
   signal,
   linkedSignal,
 } from '@angular/core';
-import type { MessageDto } from '../../core/api/schema';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { Icon } from '../../shared/ui/icon';
-import { Select } from '../../shared/ui/select';
+import type { MessageDto } from '@core/api/schema';
+import { ViewScope } from '@shared/browser/view-scope';
+import { Icon } from '@shared/ui/icon';
+import { Select } from '@shared/ui/select';
 import { QualityApi } from './quality-api';
 
 @Component({

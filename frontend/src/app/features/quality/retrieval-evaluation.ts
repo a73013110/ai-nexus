@@ -1,7 +1,7 @@
-import { apiResource } from '../../core/api/api-resource';
-import { Notice } from '../../shared/ui/notice';
-import { Field } from '../../shared/ui/field';
-import { ClientValidationError } from '../../core/errors/safe-errors';
+import { apiResource } from '@core/api/api-resource';
+import { Notice } from '@shared/ui/notice';
+import { Field } from '@shared/ui/field';
+import { ClientValidationError } from '@core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -17,22 +17,22 @@ import type {
   RetrievalEvaluationCase,
   RetrievalEvaluationDto,
   RetrievalReportDto,
-} from '../../core/api/schema';
-import { isActive } from '../../core/api/generation-status';
+} from '@core/api/schema';
+import { isActive } from '@core/api/generation-status';
 import { QualityApi } from './quality-api';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { formatDate } from '../../shared/browser/format';
-import { downloadFile } from '../../shared/browser/download';
-import { Checkbox } from '../../shared/ui/checkbox';
-import { Select } from '../../shared/ui/select';
-import { JobProgress } from '../tasks/job-progress';
-import { FeaturePage } from '../../core/layout/feature-page';
-import { Icon } from '../../shared/ui/icon';
-import { Panel } from '../../shared/ui/panel';
-import { KnowledgeApi } from '../knowledge/knowledge-api';
-import { JobsApi } from '../tasks/jobs-api';
-import { JobToasts } from '../tasks/job-toasts';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { ViewScope } from '@shared/browser/view-scope';
+import { formatDate } from '@shared/browser/format';
+import { downloadFile } from '@shared/browser/download';
+import { Checkbox } from '@shared/ui/checkbox';
+import { Select } from '@shared/ui/select';
+import { JobProgress } from '@features/jobs/job-progress';
+import { FeaturePage } from '@core/layout/feature-page';
+import { Icon } from '@shared/ui/icon';
+import { Panel } from '@shared/ui/panel';
+import { KnowledgeApi } from '@features/knowledge/knowledge-api';
+import { JobsApi } from '@features/jobs/jobs-api';
+import { JobToasts } from '@features/jobs/job-toasts';
 import { RETRIEVAL_TOUR } from './quality-tour';
 
 @Component({

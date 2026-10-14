@@ -1,5 +1,5 @@
 import { DestroyRef, inject, linkedSignal, type WritableSignal } from '@angular/core';
-import { ThemeService } from '../../core/preferences/theme-service';
+import { ThemeService } from '@core/preferences/theme-service';
 
 export interface FollowScrollOptions {
   /** The scrolling element; it may come and go with the view. */

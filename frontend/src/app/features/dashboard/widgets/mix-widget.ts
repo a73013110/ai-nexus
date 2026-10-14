@@ -1,9 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { formatModelDisplayName } from '../../../shared/browser/format';
-import { DonutChart } from '../../../shared/ui/donut-chart';
-import { ViewSwitch } from '../../../shared/ui/view-switch';
+import { DonutChart } from '@shared/ui/donut-chart';
+import { ViewSwitch } from '@shared/ui/view-switch';
 import { DashboardStore } from '../dashboard-store';
-import { compactNumber, figureMoney } from '../dashboard-format';
+import { compactNumber, figureMoney, formatModelDisplayName } from '@shared/browser/format';
 
 const SHOWN = 6;
 

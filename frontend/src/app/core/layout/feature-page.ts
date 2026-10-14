@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Icon } from '../../shared/ui/icon';
-import { ProductTourButton } from '../../shared/ui/product-tour-button';
-import type { ProductTourDefinition } from '../../shared/ui/product-tour';
+import { Icon } from '@shared/ui/icon';
+import { ProductTourButton } from '@shared/ui/product-tour-button';
+import type { ProductTourDefinition } from '@shared/ui/product-tour';
 import { WorkspaceMenuButton } from './workspace-menu-button';
 
 @Component({

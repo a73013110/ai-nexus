@@ -1,5 +1,5 @@
 import { effect, inject, Injectable, signal, untracked } from '@angular/core';
-import { AuthService } from '../../core/auth/auth-service';
+import { AuthService } from '@core/auth/auth-service';
 
 export type ToastTone = 'success' | 'info' | 'warning' | 'danger';
 

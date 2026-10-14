@@ -16,7 +16,7 @@ export function calendarDate(parts: LocalDateTime) {
   date.setUTCHours(parts.hour, parts.minute, parts.second, 0);
   return date;
 }
-export function validDateTime(parts: LocalDateTime) {
+function validDateTime(parts: LocalDateTime) {
   if (Object.values(parts).some((value) => !Number.isInteger(value))) return false;
   if (parts.year < 1 || parts.year > 9999) return false;
   const date = calendarDate(parts);

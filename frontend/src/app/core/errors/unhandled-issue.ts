@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { ClientIssues } from './client-issues';
-import { Notice } from '../../shared/ui/notice';
-import { ViewportInset } from '../../shared/browser/viewport-inset';
+import { Notice } from '@shared/ui/notice';
+import { ViewportInset } from '@shared/browser/viewport-inset';
 
 @Component({
   selector: 'nx-unhandled-issue',

@@ -6,15 +6,15 @@ import {
   inject,
   Injector,
 } from '@angular/core';
-import { WorkspaceSession } from './core/auth/workspace-session';
-import { UnhandledIssue } from './core/errors/unhandled-issue';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { UnhandledIssue } from '@core/errors/unhandled-issue';
 import { RouterOutlet } from '@angular/router';
-import { SettingsDialog } from './features/settings/settings-dialog';
-import { IdentityBanner } from './core/auth/identity-banner';
-import { ReaderDialog } from './features/knowledge/reader-dialog';
-import { NotificationCenter } from './features/notifications/notification-center';
-import { trackKeyboardInset } from './core/layout/keyboard-inset';
-import { bindSheetSwipe } from './shared/ui/sheet-swipe';
+import { SettingsDialog } from '@features/account/settings-dialog';
+import { IdentityBanner } from '@core/auth/identity-banner';
+import { ReaderDialog } from '@features/knowledge/documents/reader-dialog';
+import { NotificationCenter } from '@features/notifications/notification-center';
+import { trackKeyboardInset } from '@core/layout/keyboard-inset';
+import { bindSheetSwipe } from '@shared/ui/sheet-swipe';
 
 @Component({
   imports: [
@@ -41,7 +41,7 @@ export class App {
     effect(() => {
       if (session.me() && !started) {
         started = true;
-        void import('./core/monitoring/browser-presence')
+        void import('@core/monitoring/browser-presence')
           .then(({ BrowserPresence }) => injector.get(BrowserPresence))
           .catch(() => {
             started = false;

@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AuthService } from '../../core/auth/auth-service';
+import { AuthService } from '@core/auth/auth-service';
 import { ToastHistory } from './toast-history';
 import { ToastService } from './toast-service';
 

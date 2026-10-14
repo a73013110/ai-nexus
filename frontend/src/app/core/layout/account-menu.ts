@@ -1,9 +1,9 @@
-import { Notice } from '../../shared/ui/notice';
+import { Notice } from '@shared/ui/notice';
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { WorkspaceSession } from '../auth/workspace-session';
 import { SettingsOverlay } from '../preferences/settings-overlay';
-import { ActionMenu } from '../../shared/ui/action-menu';
-import { Icon } from '../../shared/ui/icon';
+import { ActionMenu } from '@shared/ui/action-menu';
+import { Icon } from '@shared/ui/icon';
 import { WorkspaceLayout } from './workspace-layout';
 
 @Component({

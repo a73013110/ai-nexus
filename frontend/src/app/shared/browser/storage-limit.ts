@@ -1,6 +1,6 @@
-import { ClientValidationError } from '../../core/errors/safe-errors';
+import { ClientValidationError } from '@core/errors/safe-errors';
 const bytesPerGb = 1_000_000_000;
-export const maximumStorageGb = 1_000_000;
+const maximumStorageGb = 1_000_000;
 
 /** Convert decimal GB to integer bytes without floating-point rounding. Blank restores inheritance. */
 export function parseStorageLimitGb(value: string): number | null {

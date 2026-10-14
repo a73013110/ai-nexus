@@ -1,8 +1,8 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { apiResource } from '../../core/api/api-resource';
-import type { RepositoryDetailDto, StartRepositoryChatRequest } from '../../core/api/schema';
-import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
+import { apiResource } from '@core/api/api-resource';
+import type { RepositoryDetailDto, StartRepositoryChatRequest } from '@core/api/schema';
+import { ConversationDraftTransfer } from '@core/preferences/conversation-draft-transfer';
 import { RepositoriesApi, type RepositoryKey } from './repositories-api';
 
 export const isSha = (value: string) => /^(?:[\da-f]{40}|[\da-f]{64})$/i.test(value);

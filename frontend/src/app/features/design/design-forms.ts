@@ -7,10 +7,10 @@ import {
   untracked,
   viewChild,
 } from '@angular/core';
-import { DateTimePicker } from '../../shared/ui/date-time-picker';
-import { Field } from '../../shared/ui/field';
-import { InlineTitle } from '../../shared/ui/inline-title';
-import { SearchField } from '../../shared/ui/search-field';
+import { DateTimePicker } from '@shared/ui/date-time-picker';
+import { Field } from '@shared/ui/field';
+import { InlineTitle } from '@shared/ui/inline-title';
+import { SearchField } from '@shared/ui/search-field';
 import { DesignExample, DesignSection } from './design-section';
 import { DesignSamples } from './design-samples';
 

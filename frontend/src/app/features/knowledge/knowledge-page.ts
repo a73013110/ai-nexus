@@ -1,14 +1,14 @@
 import { map } from 'rxjs';
-import { apiResource } from '../../core/api/api-resource';
-import { Notice } from '../../shared/ui/notice';
-import { ToastService } from '../../shared/ui/toast-service';
-import { StatusBadge } from '../../shared/ui/status-badge';
-import { EmptyState } from '../../shared/ui/empty-state';
-import { SearchField } from '../../shared/ui/search-field';
-import { DialogHeader } from '../../shared/ui/dialog-header';
-import { CompactDialog } from '../../shared/ui/compact-dialog';
-import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
-import { Field } from '../../shared/ui/field';
+import { apiResource } from '@core/api/api-resource';
+import { Notice } from '@shared/ui/notice';
+import { ToastService } from '@shared/ui/toast-service';
+import { StatusBadge } from '@shared/ui/status-badge';
+import { EmptyState } from '@shared/ui/empty-state';
+import { SearchField } from '@shared/ui/search-field';
+import { DialogHeader } from '@shared/ui/dialog-header';
+import { CompactDialog } from '@shared/ui/compact-dialog';
+import { ConfirmDialog } from '@shared/ui/confirm-dialog';
+import { Field } from '@shared/ui/field';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -28,26 +28,26 @@ import type {
   DocumentDto,
   KnowledgeSearchDto,
   LibraryFileDto,
-} from '../../core/api/schema';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { FeaturePage } from '../../core/layout/feature-page';
-import { Icon } from '../../shared/ui/icon';
-import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
-import { Panel } from '../../shared/ui/panel';
-import { ResourceCard } from '../../shared/ui/resource-card';
-import { ResourceGallery } from '../../shared/ui/resource-gallery';
-import { ResourceSharing } from '../sharing/resource-sharing';
-import { accessLabel } from '../sharing/access-label';
-import { FileDrop } from '../../shared/browser/file-drop';
-import { WorkspaceApi } from '../workspace/workspace-api';
+} from '@core/api/schema';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { ViewScope } from '@shared/browser/view-scope';
+import { FeaturePage } from '@core/layout/feature-page';
+import { Icon } from '@shared/ui/icon';
+import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
+import { Panel } from '@shared/ui/panel';
+import { ResourceCard } from '@shared/ui/resource-card';
+import { ResourceGallery } from '@shared/ui/resource-gallery';
+import { ResourceSharing } from '@features/collaboration/resource-sharing';
+import { accessLabel } from '@features/collaboration/access-label';
+import { FileDrop } from '@shared/browser/file-drop';
+import { AttachmentsApi } from '@features/attachments/attachments-api';
 import { KnowledgeApi } from './knowledge-api';
-import { LibraryPicker } from '../files/library-picker';
-import { TextSourceEditor } from './text-source-editor';
-import { ReaderLink } from '../../shared/browser/reader-link';
-import { RetrievalResults } from './retrieval-results';
-import { JobToasts } from '../tasks/job-toasts';
-import { documentBusy, documentStatus } from './document-status';
+import { LibraryPicker } from '@features/attachments/file-library/library-picker';
+import { TextSourceEditor } from './documents/text-source-editor';
+import { ReaderLink } from '@shared/browser/reader-link';
+import { RetrievalResults } from './retrieval/retrieval-results';
+import { JobToasts } from '@features/jobs/job-toasts';
+import { documentBusy, documentStatus } from './documents/document-status';
 import { KNOWLEDGE_TOUR, collectionTour } from './knowledge-tour';
 
 /** `/knowledge` lists the collections; `/knowledge/:id` is one collection's sources and query. */
@@ -83,7 +83,7 @@ import { KNOWLEDGE_TOUR, collectionTour } from './knowledge-tour';
 })
 export class KnowledgePage {
   private readonly api = inject(KnowledgeApi);
-  private readonly uploads = inject(WorkspaceApi);
+  private readonly uploads = inject(AttachmentsApi);
   private readonly scope = inject(ViewScope);
   private readonly router = inject(Router);
   readonly session = inject(WorkspaceSession);
@@ -96,7 +96,7 @@ export class KnowledgePage {
   });
   private readonly policyRead = apiResource({
     feature: 'knowledge',
-    loader: () => this.uploads.attachmentPolicy(),
+    loader: () => this.uploads.policy(),
   });
   readonly collections = computed<CollectionDto[]>(() => this.collectionsRead.value() ?? []);
   readonly current = computed(() => this.collections().find((x) => x.resource.id === this.id()));

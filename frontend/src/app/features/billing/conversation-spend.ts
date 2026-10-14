@@ -1,4 +1,4 @@
-import { apiResource } from '../../core/api/api-resource';
+import { apiResource } from '@core/api/api-resource';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -7,10 +7,10 @@ import {
   input,
   viewChild,
 } from '@angular/core';
-import type { ConversationSpendDto } from '../../core/api/schema';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { InfoPopover } from '../../shared/ui/info-popover';
-import { Icon } from '../../shared/ui/icon';
+import type { ConversationSpendDto } from '@core/api/schema';
+import { ViewScope } from '@shared/browser/view-scope';
+import { InfoPopover } from '@shared/ui/info-popover';
+import { Icon } from '@shared/ui/icon';
 import { BillingApi, chargeKind, money } from './billing-api';
 
 @Component({

@@ -1,10 +1,10 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiClient } from '../../core/api/api-client';
+import { ApiClient } from '@core/api/api-client';
 import type {
   CreateRepositoryReviewRequest,
   ImportRepositoryFolderRequest,
   StartRepositoryChatRequest,
-} from '../../core/api/schema';
+} from '@core/api/schema';
 
 /** A repository as the routes name it: `owner/name` split in two. */
 export interface RepositoryKey {
