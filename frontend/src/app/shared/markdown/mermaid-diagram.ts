@@ -19,6 +19,7 @@ import { CopyFeedback } from '../browser/copy-feedback';
 import { Notice } from '../ui/notice';
 import { downloadBlob } from '../browser/download';
 import { DialogHeader } from '../ui/dialog-header';
+import { FloatingToolbar } from '../ui/floating-toolbar';
 import { CompactDialog } from '../ui/compact-dialog';
 import { Icon, EXTRA_ICONS } from '../ui/icon';
 import { SquareCode, ZoomIn, ZoomOut, Scan } from 'lucide';
@@ -142,7 +143,16 @@ export class DiagramCanvas {
 
 @Component({
   selector: 'nx-mermaid-diagram',
-  imports: [Icon, ViewSwitch, CompactDialog, DialogHeader, DiagramCanvas, NgTemplateOutlet, Notice],
+  imports: [
+    Icon,
+    ViewSwitch,
+    CompactDialog,
+    DialogHeader,
+    FloatingToolbar,
+    DiagramCanvas,
+    NgTemplateOutlet,
+    Notice,
+  ],
   providers: [
     CopyFeedback,
     {
@@ -269,27 +279,29 @@ export class DiagramCanvas {
       aria-label="展開 Mermaid 圖表"
     >
       <nx-dialog-header [heading]="diagram()?.title || 'Mermaid 圖表'" closeLabel="關閉圖表">
-        <div class="mermaid-actions">
-          <ng-container [ngTemplateOutlet]="zoomTools" />
-          <button
-            class="icon-button"
-            type="button"
-            title="下載 SVG 圖表"
-            aria-label="下載 SVG 圖表"
-            (click)="download()"
-          >
-            <nx-icon name="download" />
-          </button>
-        </div>
+        <button
+          class="icon-button"
+          type="button"
+          title="下載 SVG 圖表"
+          aria-label="下載 SVG 圖表"
+          (click)="download()"
+        >
+          <nx-icon name="download" />
+        </button>
       </nx-dialog-header>
       @if (diagram(); as graph) {
-        <nx-diagram-canvas
-          [diagram]="graph"
-          [url]="url()"
-          [zoom]="zoom()"
-          [expanded]="true"
-          (zoomChange)="setZoom($event)"
-        />
+        <div class="mermaid-viewer">
+          <nx-floating-toolbar label="圖表工具">
+            <ng-container [ngTemplateOutlet]="zoomTools" />
+          </nx-floating-toolbar>
+          <nx-diagram-canvas
+            [diagram]="graph"
+            [url]="url()"
+            [zoom]="zoom()"
+            [expanded]="true"
+            (zoomChange)="setZoom($event)"
+          />
+        </div>
       }
     </dialog>`,
 })

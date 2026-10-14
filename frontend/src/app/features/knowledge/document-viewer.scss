@@ -1,8 +1,5 @@
 @use 'breakpoints' as bp;
 
-.reader-pagination nx-select {
-  width: 104px;
-}
 :host {
   display: flex;
   flex: 1;
@@ -11,29 +8,7 @@
   min-height: 0;
   height: 100%;
 }
-.reader-pagination .icon-button {
-  width: var(--button-target);
-  height: var(--button-target);
-}
-.viewer-toolbar {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--p-space-2);
-  padding: var(--p-space-2) var(--p-space-2) var(--p-space-2) var(--p-space-4);
-  border-bottom: 1px solid var(--line);
-  flex: none;
-  font-size: var(--text-caption);
-}
-.reader-pagination {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.viewer-zoom {
-  width: 132px;
-}
-// The header title keeps its room; the search field takes what the tools leave.
+// 標題列只放檔名與視窗層級動作；內容功能在 .viewer-body 的浮動工具列（nx-floating-toolbar）。
 .dialog-bar h1 {
   min-width: 0;
   margin: 0;
@@ -50,9 +25,37 @@
   padding-block: var(--p-space-2);
   border-bottom: 1px solid var(--line);
 }
+// 浮動工具列蓋在內容上方，不佔版面；只有捲到最上方的文字與 PDF 頁面留出它的高度。
+.viewer-body {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+.reader-pagination,
+.viewer-find {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+}
+.reader-pagination nx-select {
+  width: 6.5rem;
+}
+.viewer-zoom {
+  width: 7.5rem;
+}
 .viewer-search {
-  flex: 0 1 240px;
-  min-width: 120px;
+  width: min(14rem, 60vw);
+}
+.viewer-tooled {
+  --viewer-tools-clearance: calc(var(--button-target) + 2 * var(--p-space-3));
+}
+.viewer-tooled .reader-text {
+  padding-top: max(var(--viewer-tools-clearance), clamp(20px, 4vw, 48px));
+}
+.viewer-tooled:not(.viewer-image) .reader-original {
+  padding-top: var(--viewer-tools-clearance);
 }
 .viewer-frame {
   overflow: hidden;
@@ -160,15 +163,14 @@
   overflow: auto;
 }
 @include bp.below(phone) {
-  .viewer-toolbar,
   .viewer-processing {
     padding-inline-start: var(--p-space-3);
   }
   .viewer-new-tab {
     display: none;
   }
-  .viewer-search {
-    flex: 1;
+  .viewer-zoom {
+    width: 6rem;
   }
   .reader-original {
     padding: 12px;

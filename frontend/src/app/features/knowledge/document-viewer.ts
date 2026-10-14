@@ -3,11 +3,14 @@ import { Notice } from '../../shared/ui/notice';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { SearchField } from '../../shared/ui/search-field';
 import { ViewSwitch } from '../../shared/ui/view-switch';
+import { FloatingToolbar } from '../../shared/ui/floating-toolbar';
 import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
   ElementRef,
+  Injector,
+  afterNextRender,
   afterRenderEffect,
   computed,
   effect,
@@ -48,6 +51,7 @@ import { richKind } from './html-scripts';
     EmptyState,
     SearchField,
     ViewSwitch,
+    FloatingToolbar,
     Icon,
     Select,
     TextHighlight,
@@ -70,6 +74,7 @@ export class DocumentViewer {
   private readonly scope = inject(ViewScope);
   private readonly uploads = inject(WorkspaceApi);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly injector = inject(Injector);
   readonly target = input.required<ReaderTarget>();
   readonly embedded = input(false);
   readonly expanded = input(false);
@@ -96,6 +101,9 @@ export class DocumentViewer {
   private readonly pdfRevision = signal(0);
   private readonly viewportWidth = signal(800);
   readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('pdfCanvas');
+  private readonly modeSwitch = viewChild<ViewSwitch, ElementRef<HTMLElement>>(ViewSwitch, {
+    read: ElementRef,
+  });
   readonly total = computed(() => this.pdfPages() || this.document()?.pageCount || 1);
   readonly pageOptions = computed(() =>
     Array.from({ length: this.total() }, (_, i) => ({
@@ -140,6 +148,14 @@ export class DocumentViewer {
   readonly imageSize = signal({ width: 0, height: 0 });
   readonly imageZoomOptions = [{ value: 'fit', label: '符合視窗' }, ...this.zoomOptions];
   readonly hasText = computed(() => this.pages().some((page) => page.text.trim()));
+  /** 多頁的 PDF 或擷取文字才需要頁碼；Markdown／HTML 預覽一次顯示全文。 */
+  readonly paged = computed(() => this.total() > 1 && !this.isRich() && !this.isImage());
+  /** 浮動工具列只在有內容功能時出現（純文字至少要有可搜尋的文字）。 */
+  readonly hasTools = computed(
+    () =>
+      !!this.document() &&
+      (this.isPdf() || this.isImage() || this.isRich() || this.paged() || this.hasText()),
+  );
   readonly rawImage = signal(false);
   readonly modeOptions = computed(() =>
     this.isRich()
@@ -480,6 +496,20 @@ export class DocumentViewer {
   }
   navigate(number: number) {
     this.page.set(Math.max(1, Math.min(number, this.total())));
+  }
+  /**
+   * 從指令碼提示改看原始碼：提示與按鈕隨預覽移除，焦點改落在浮動工具列已選的「原始碼」，
+   * 留在檢視器內（Ctrl+F 照常開啟搜尋），也能直接切回預覽。
+   */
+  showSource() {
+    void this.setMode('text');
+    afterNextRender(
+      () =>
+        this.modeSwitch()
+          ?.nativeElement.querySelector<HTMLButtonElement>('[aria-pressed="true"]')
+          ?.focus(),
+      { injector: this.injector },
+    );
   }
   async setMode(mode: string) {
     this.mode.set(mode);
