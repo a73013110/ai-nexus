@@ -1,5 +1,6 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { WorkspaceSession } from '../../../core/auth/workspace-session';
 import { DialogSaveBar } from '../../../shared/ui/dialog-save-bar';
 import { Field } from '../../../shared/ui/field';
 import { InfoPopover } from '../../../shared/ui/info-popover';
@@ -35,6 +36,7 @@ import { UserRoleFields } from './user-role-fields';
 export class AdminUserSettings {
   readonly store = inject(AdminUserStore);
   readonly admin = inject(AdminStore);
+  readonly session = inject(WorkspaceSession);
   readonly tab = input.required<UserSettingsTab>();
   submit(event: Event) {
     event.preventDefault();

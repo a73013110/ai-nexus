@@ -52,8 +52,6 @@ export class AdminUserStore {
     source: this.key,
     computation: () => 'account',
   });
-  /** Management writes are refused while testing another identity. */
-  readonly testing = computed(() => !!this.session.auth.session()?.testing);
   readonly saving = linkedSignal<string | undefined, UserSettingsTab | null>({
     source: this.key,
     computation: () => null,
@@ -62,7 +60,8 @@ export class AdminUserStore {
     source: this.key,
     computation: () => ({}),
   });
-  readonly locked = computed(() => !!this.saving() || this.testing());
+  /** Fields are read-only while a tab saves or while testing another identity. */
+  readonly locked = computed(() => !!this.saving() || this.session.testing());
 
   private readonly request = computed(() => {
     const key = this.key(),

@@ -42,8 +42,8 @@ const INDEX = [
     sections: [
       { id: 'design-buttons', name: '按鈕' },
       { id: 'design-dialogs', name: '對話框' },
-      { id: 'design-flush', name: '扁平對話框' },
-      { id: 'design-sheet', name: '底部 sheet' },
+      { id: 'design-dialog', name: '對話框尺寸' },
+      { id: 'design-save-bar', name: '儲存列' },
       { id: 'design-menus', name: '選單與下拉' },
       { id: 'design-menu-check', name: '核取選單項目' },
       { id: 'design-switches', name: '切換與頁籤' },

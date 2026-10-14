@@ -78,7 +78,7 @@ export class AdminUsersTab {
   }
   /** Only what the inspector does not hold: switching identity and removal. */
   actions(user: AdminUserDto): MenuAction[] {
-    const testing = !!this.session.auth.session()?.testing;
+    const testing = this.session.testing();
     return [
       {
         id: 'test',

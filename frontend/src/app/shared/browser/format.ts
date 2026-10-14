@@ -37,10 +37,25 @@ export const formatBytes = (value: number) =>
         : value < 1_000_000_000_000
           ? `${(value / 1_000_000_000).toFixed(2)} GB`
           : `${(value / 1_000_000_000_000).toFixed(2)} TB`;
-export const formatDuration = (milliseconds: number) =>
-  milliseconds < 60_000
-    ? `${(milliseconds / 1000).toFixed(1)} 秒`
-    : `${Math.floor(milliseconds / 60_000)} 分 ${Math.floor((milliseconds % 60_000) / 1000)} 秒`;
+const DURATION_UNITS = [
+  [86_400_000, '天'],
+  [3_600_000, '小時'],
+  [60_000, '分'],
+  [1000, '秒'],
+] as const;
+/**
+ * "4.8 秒", "11 分 4 秒", "11 小時 4 分", "2 天 3 小時": the two largest units, floored, so a long
+ * total never reads as hundreds of minutes; a zero second unit is left out ("2 小時").
+ */
+export function formatDuration(milliseconds: number) {
+  if (milliseconds < 60_000) return `${(milliseconds / 1000).toFixed(1)} 秒`;
+  const index = DURATION_UNITS.findIndex(([size]) => milliseconds >= size);
+  const [size, unit] = DURATION_UNITS[index];
+  const [next, nextUnit] = DURATION_UNITS[index + 1];
+  const major = Math.floor(milliseconds / size);
+  const minor = Math.floor((milliseconds % size) / next);
+  return minor ? `${major} ${unit} ${minor} ${nextUnit}` : `${major} ${unit}`;
+}
 export const formatModelName = (model: Pick<ModelDto, 'displayName'>) =>
   model.displayName?.trim() || 'AI 助理';
 export const formatModelDisplayName = (model: { modelDisplayName?: string | null }) =>
@@ -65,11 +80,7 @@ export function metricText(value: number | null | undefined, format: string): st
     case 'percent':
       return `${value >= 10 ? Math.round(value) : Math.round(value * 10) / 10}%`;
     case 'duration':
-      return value < 1000
-        ? `${Math.round(value)} ms`
-        : value < 60_000
-          ? `${(value / 1000).toFixed(1)} 秒`
-          : `${Math.floor(value / 60_000)} 分 ${Math.round((value % 60_000) / 1000)} 秒`;
+      return value < 1000 ? `${Math.round(value)} ms` : formatDuration(value);
     default:
       return formatNumber(Math.round(value * 100) / 100);
   }

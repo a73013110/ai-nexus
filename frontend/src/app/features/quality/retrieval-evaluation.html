@@ -45,7 +45,7 @@
               <button
                 job-actions
                 class="quiet-button"
-                [disabled]="busy() || !!session.auth.session()?.testing"
+                [disabled]="busy() || session.testing()"
                 (click)="control('retry')"
               >
                 <nx-icon name="repeat" />續跑評測
@@ -211,9 +211,7 @@
           <button
             type="submit"
             class="primary-button"
-            [disabled]="
-              busy() || form.invalid || !selected().length || !!session.auth.session()?.testing
-            "
+            [disabled]="busy() || form.invalid || !selected().length || session.testing()"
           >
             <nx-icon name="play" />開始四模式評測
           </button>

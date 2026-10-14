@@ -16,6 +16,7 @@ import type {
   AdminRoleDto,
   GroupPolicyRequest,
 } from '../../../core/api/schema';
+import { WorkspaceSession } from '../../../core/auth/workspace-session';
 import { safeMessage } from '../../../core/errors/safe-errors';
 import { groupFeatures } from '../../../core/layout/feature-groups';
 import { parseStorageLimitGb, storageLimitGb } from '../../../shared/browser/storage-limit';
@@ -106,6 +107,7 @@ let sequence = 0;
 export class AccessEditorDialog {
   readonly id = `nx-access-editor-${++sequence}`;
   readonly store = inject(AdminStore);
+  readonly session = inject(WorkspaceSession);
   private readonly api = inject(AdminApi);
   readonly editor = signal<Editor | null>(null);
   /** The draft as opened, for revert and the unsaved-changes check. */
@@ -117,15 +119,22 @@ export class AccessEditorDialog {
   });
   readonly saving = signal(false);
   /** Fields are read-only while saving or while testing another identity. */
-  readonly locked = computed(() => this.saving() || this.store.testing());
-  readonly testingNote = '測試身分期間不能修改管理設定';
+  readonly locked = computed(() => this.saving() || this.session.testing());
   readonly editorError = signal('');
   /** A feature group's settings: its page of sections, and its model policy. */
   readonly groupSection = signal<GroupSection>('settings');
-  readonly groupSections: readonly (TabItem & { value: GroupSection })[] = [
-    { value: 'settings', label: '群組設定' },
-    { value: 'models', label: 'AI 模型' },
-  ];
+  /** One save covers both tabs, so each marks the changes it holds. */
+  readonly groupSections = computed<readonly (TabItem & { value: GroupSection })[]>(() => {
+    const draft = this.editor(),
+      opened = this.opened();
+    const models = !!draft && !!opened && !sameModelPolicy(draft.modelPolicy, opened.modelPolicy);
+    const settings =
+      !!draft && !!opened && !sameEditor({ ...draft, modelPolicy: opened.modelPolicy }, opened);
+    return [
+      { value: 'settings', label: '群組設定', dirty: settings },
+      { value: 'models', label: 'AI 模型', dirty: models },
+    ];
+  });
   readonly enabledNote: Record<AccessKind, string> = {
     role: '停用後，擁有此角色的使用者不再取得它的功能群組。',
     group: '停用後不授予功能、模型或附件容量。',

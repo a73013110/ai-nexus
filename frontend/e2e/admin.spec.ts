@@ -1346,8 +1346,9 @@ test("manual user creation, dual login editing and removal keep one place for ea
   await expect(edit.getByLabel("使用者姓名", { exact: true })).toHaveValue(
     "本地測試員",
   );
+  // The tab holding the draft says so in its name until it is saved.
   await expect(
-    edit.getByRole("tab", { name: "帳號", exact: true }),
+    edit.getByRole("tab", { name: "帳號（有未儲存的變更）", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
   await edit
     .getByRole("checkbox", { name: "允許 AD 驗證", exact: true })
@@ -1357,6 +1358,9 @@ test("manual user creation, dual login editing and removal keep one place for ea
   await expect(edit).toContainText("登入：AD · 本地密碼");
   await expect(edit).toHaveAccessibleName("本地測試員");
   await expect(edit).not.toContainText("有未儲存的變更");
+  await expect(
+    edit.getByRole("tab", { name: "帳號", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
   expect(created.authentication.adEnabled).toBe(true);
   expect(created.displayName).toBe("本地測試員");
   // Saved: Escape closes without asking and focus returns to the row.

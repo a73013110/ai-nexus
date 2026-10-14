@@ -119,7 +119,7 @@ function rank(provider: string) {
   templateUrl: './price-book.html',
 })
 export class PriceBook {
-  private readonly session = inject(WorkspaceSession);
+  readonly session = inject(WorkspaceSession);
   private readonly api = inject(BillingApi);
   /** Read each time the tab is shown: the price history and the models that can be priced. */
   readonly catalogRead = apiResource({
@@ -156,7 +156,6 @@ export class PriceBook {
     { id: 'note', label: '備註' },
   ];
   readonly loading = this.catalogRead.loading;
-  readonly testing = computed(() => !!this.session.auth.session()?.testing);
   private readonly editor = viewChild.required(PriceVersionDialog);
   readonly kind = chargeKind;
   readonly provider = providerName;

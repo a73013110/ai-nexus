@@ -97,7 +97,7 @@
                   <button
                     type="button"
                     class="primary-button"
-                    [disabled]="working() || testing() || !profile.coverage.complete"
+                    [disabled]="working() || session.testing() || !profile.coverage.complete"
                     [title]="
                       profile.coverage.complete ? '' : '覆蓋率達 100% 且文件全部就緒後才能啟用'
                     "
@@ -110,7 +110,9 @@
                   <button
                     type="button"
                     class="danger-button"
-                    [disabled]="working() || testing() || profile.coverage.completedChunks === 0"
+                    [disabled]="
+                      working() || session.testing() || profile.coverage.completedChunks === 0
+                    "
                     (click)="operate(profile, 'clear')"
                   >
                     清除退役向量
@@ -121,7 +123,7 @@
                 <button
                   type="button"
                   class="secondary-button"
-                  [disabled]="working() || testing() || jobActive(profile)"
+                  [disabled]="working() || session.testing() || jobActive(profile)"
                   (click)="operate(profile, 'rebuild')"
                 >
                   開始重建
@@ -159,7 +161,7 @@
     <button
       type="button"
       class="secondary-button"
-      [disabled]="probing() || testing() || !capabilities().length"
+      [disabled]="probing() || session.testing() || !capabilities().length"
       (click)="probe()"
     >
       <nx-icon [name]="probing() ? 'loading' : 'check'" />{{
