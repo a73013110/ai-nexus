@@ -3,11 +3,13 @@
     <form class="dialog-form" (submit)="submit($event)">
       <div class="dialog-body">
         <ng-container [ngTemplateOutlet]="error" />
-        <nx-user-account-fields
-          [value]="store.account()"
-          [disabled]="store.locked()"
-          (valueChange)="store.account.set($event)"
-        />
+        <div class="form-sections">
+          <nx-user-account-fields
+            [value]="store.account()"
+            [disabled]="store.locked()"
+            (valueChange)="store.account.set($event)"
+          />
+        </div>
       </div>
       <ng-container
         [ngTemplateOutlet]="actions"
@@ -19,12 +21,14 @@
     <form class="dialog-form" (submit)="submit($event)">
       <div class="dialog-body">
         <ng-container [ngTemplateOutlet]="error" />
-        <nx-user-role-fields
-          [roleIds]="store.roles()"
-          [enabled]="store.current()?.enabled !== false"
-          [disabled]="store.locked()"
-          (roleIdsChange)="store.roles.set($event)"
-        />
+        <div class="form-sections">
+          <nx-user-role-fields
+            [roleIds]="store.roles()"
+            [enabled]="store.current()?.enabled !== false"
+            [disabled]="store.locked()"
+            (roleIdsChange)="store.roles.set($event)"
+          />
+        </div>
       </div>
       <ng-container
         [ngTemplateOutlet]="actions"
@@ -70,27 +74,49 @@
     <form class="dialog-form" (submit)="submit($event)">
       <div class="dialog-body">
         <ng-container [ngTemplateOutlet]="error" />
-        <fieldset>
-          <legend>原檔容量</legend>
-          <nx-storage-usage [storage]="store.current()?.storage" />
-          <label class="storage-limit"
-            >個人容量上限（GB）<input
-              nxField
-              type="number"
-              min="0"
-              max="1000000"
-              step="0.000000001"
-              aria-label="個人容量上限（GB）"
-              placeholder="使用群組或預設容量"
-              [value]="store.storage()"
-              [readOnly]="store.locked()"
-              (input)="store.storage.set($any($event.target).value)"
-          /></label>
-          <p class="form-note">
-            個人設定優先於群組；留空套用群組或預設 5 GB，0
-            禁止新增上傳。降低上限會阻止超額上傳，既有檔案仍保留。1 GB = 1,000,000,000 bytes。
-          </p>
-        </fieldset>
+        <div class="form-sections">
+          <section class="form-section" role="group" aria-labelledby="user-storage-usage">
+            <header class="form-section-head">
+              <h3 id="user-storage-usage">目前用量</h3>
+              <p class="form-note">原檔總量，含草稿。</p>
+            </header>
+            <div class="form-section-body">
+              <nx-storage-usage [storage]="store.current()?.storage" />
+            </div>
+          </section>
+          <section class="form-section" role="group" aria-labelledby="user-storage-limit">
+            <header class="form-section-head">
+              <h3 id="user-storage-limit">容量上限</h3>
+              <p class="form-note">個人設定優先於群組。</p>
+              <nx-info-popover label="計算方式" panelLabel="附件容量的計算方式" [width]="300">
+                <ul class="form-note-list">
+                  <li>同一原檔的多處引用只計一次。</li>
+                  <li>沒有個人設定時，多個有效群組取最低值。</li>
+                  <li>1 GB = 1,000,000,000 bytes。</li>
+                </ul>
+              </nx-info-popover>
+            </header>
+            <div class="form-section-body">
+              <label class="storage-limit"
+                >個人容量上限（GB）<input
+                  nxField
+                  type="number"
+                  min="0"
+                  max="1000000"
+                  step="0.000000001"
+                  aria-label="個人容量上限（GB）"
+                  aria-describedby="user-storage-hint"
+                  placeholder="使用群組或預設容量"
+                  [value]="store.storage()"
+                  [readOnly]="store.locked()"
+                  (input)="store.storage.set($any($event.target).value)"
+              /></label>
+              <p id="user-storage-hint" class="form-note">
+                留空套用群組或預設 5 GB，0 禁止新增上傳；降低上限只阻擋新的上傳，既有檔案仍保留。
+              </p>
+            </div>
+          </section>
+        </div>
       </div>
       <ng-container
         [ngTemplateOutlet]="actions"
@@ -107,23 +133,22 @@
 </ng-template>
 <ng-template #actions let-label="label">
   <footer class="dialog-foot">
-    <span class="dialog-note" role="status">{{
+    <!-- 按鈕位置固定：未變更時「還原」與儲存一起停用，說明寫在左側。 -->
+    <span class="dialog-note" role="status" [class.is-dirty]="store.dirty()[tab()]">{{
       store.testing()
         ? '測試身分期間不能修改管理設定'
         : store.dirty()[tab()]
           ? '有未儲存的變更'
-          : ''
+          : '尚未變更'
     }}</span>
-    @if (store.dirty()[tab()]) {
-      <button
-        type="button"
-        class="secondary-button"
-        [disabled]="!!store.saving()"
-        (click)="store.revert(tab())"
-      >
-        還原
-      </button>
-    }
+    <button
+      type="button"
+      class="secondary-button"
+      [disabled]="!store.dirty()[tab()] || !!store.saving()"
+      (click)="revert($event)"
+    >
+      還原
+    </button>
     <button
       type="submit"
       class="primary-button"

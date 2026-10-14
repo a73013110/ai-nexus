@@ -180,6 +180,83 @@
   line-height: 1.65;
   margin: 0;
 }
+// 設定表單的段落：`.form-sections` 包住數個 `section.form-section`（`.form-section-head` 的 h3 與
+// 一句 form-note，＋ `.form-section-body`）。段落以細線分隔、不加外框；容器夠寬時標題在左欄、欄位
+// 在右欄並限制可讀寬度，窄時標題在上。欄位元件的 host 可用 display: contents，讓段落直接排進父層。
+.form-sections {
+  container: form-sections / inline-size;
+  display: grid;
+  gap: var(--p-space-4);
+  min-width: 0;
+}
+.form-section {
+  display: grid;
+  align-items: start;
+  gap: var(--p-space-3);
+  min-width: 0;
+  padding-top: var(--p-space-4);
+  border-top: 1px solid var(--line);
+}
+.form-sections > .form-section:first-child,
+.form-sections > :first-child > .form-section:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.form-section-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--p-space-1) var(--p-space-2);
+  min-width: 0;
+}
+.form-section-head > :not(h3, nx-info-popover) {
+  grid-column: 1 / -1;
+}
+.form-section-head h3 {
+  margin: 0;
+  font-size: var(--text-label);
+  font-weight: 600;
+  line-height: var(--line-ui);
+}
+// 次要規則收進標題旁的 InfoPopover（面板裡的條列用 .form-note-list）；觸控面積不撐高標題列。
+.form-section-head > nx-info-popover {
+  grid-area: 1 / 2;
+  justify-self: start;
+  margin-block: calc((1lh - var(--button-target)) / 2);
+}
+.form-note-list {
+  display: grid;
+  gap: var(--p-space-1);
+  margin: 0;
+  padding-inline-start: 1.1em;
+  line-height: 1.65;
+}
+.form-section-body {
+  display: grid;
+  gap: var(--p-space-3);
+  min-width: 0;
+  max-width: 36rem;
+}
+// 勾選框的方框對齊欄位左緣，hover 底色仍留在外側；依附於勾選項的欄位對齊它的文字。
+.form-section-body > nx-checkbox {
+  margin-inline-start: calc(-1 * var(--control-padding-inline));
+}
+.form-section-body > nx-notice {
+  margin-block: 0;
+}
+.form-subfields {
+  display: grid;
+  gap: var(--p-space-3);
+  min-width: 0;
+  margin-top: calc(-1 * var(--p-space-2));
+  padding-inline-start: calc(1.25rem + var(--p-space-3));
+}
+@container form-sections (min-width: 40rem) {
+  .form-section {
+    grid-template-columns: 12rem minmax(0, 1fr);
+    column-gap: var(--p-space-6);
+  }
+}
 @include bp.below(narrow) {
   .resource-row {
     padding: var(--resource-row-padding-block) var(--resource-row-padding-inline);

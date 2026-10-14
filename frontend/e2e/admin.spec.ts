@@ -365,6 +365,13 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
       account: "AD\\colleague" + index,
     });
   state.catalog.groups![1].enabled = false;
+  state.catalog.features.push({
+    id: "logs.export",
+    name: "日誌匯出",
+    route: "",
+    sortOrder: 95,
+    enabled: true,
+  });
   await page.reload();
   const users = page.locator(".admin-users-table");
   await expect(users.locator("tbody tr")).toHaveCount(100);
@@ -394,6 +401,25 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
   await expect(
     features.getByRole("region", { name: "功能配置列表" }),
   ).toBeVisible();
+  // Like roles and groups: the name over its id, then the status; the route takes the rest.
+  const chat = features.locator('tr[data-feature="chat"]');
+  await expect(chat.locator("td").nth(1)).toHaveText(/對話\s*chat/);
+  await expect(chat.locator("td").nth(2).locator("nx-status-badge")).toHaveText(
+    "啟用",
+  );
+  await expect(chat.locator("td").nth(3)).toHaveText("/chat");
+  const permission = features.locator('tr[data-feature="logs.export"]');
+  await expect(permission.locator("td").nth(3)).toHaveText("無頁面，僅權限");
+  await permission
+    .getByRole("button", { name: "編輯功能：日誌匯出", exact: true })
+    .click();
+  await expect(
+    page.locator("dialog.admin-editor nx-dialog-header small"),
+  ).toHaveText("logs.export");
+  await page
+    .locator("dialog.admin-editor")
+    .getByRole("button", { name: "取消", exact: true })
+    .click();
   await features
     .getByRole("button", { name: "編輯功能：對話", exact: true })
     .click();
@@ -1761,8 +1787,32 @@ test("personal model budgets share the group editor; settings stay form sized an
   expect(first.y).toBeGreaterThanOrEqual(identity.y + identity.height - 1);
   expect(Math.abs(first.y - last.y)).toBeLessThan(1);
   expect(Math.abs(first.x - identity.x)).toBeLessThan(1);
+  // Sections are divided by hairlines, never framed; on a wide dialog the title sits beside the
+  // fields and a checkbox's box lines up with their edge. With nothing to save both actions rest.
+  await expect(dialog.locator("fieldset")).toHaveCount(0);
+  const login = dialog.getByRole("group", { name: "登入方式", exact: true });
+  const loginTitle = (await login.getByRole("heading").boundingBox())!;
+  const nameField = (await dialog
+    .getByLabel("使用者姓名", { exact: true })
+    .boundingBox())!;
+  expect(nameField.x).toBeGreaterThan(loginTitle.x + loginTitle.width);
+  const box = (await dialog.locator(".selection-box").first().boundingBox())!;
+  expect(Math.abs(box.x - nameField.x)).toBeLessThan(1);
+  await expect(dialog.locator(".dialog-foot")).toContainText("尚未變更");
+  await expect(
+    dialog.getByRole("button", { name: "還原", exact: true }),
+  ).toBeDisabled();
   await dialog.getByRole("tab", { name: "AI 模型", exact: true }).click();
   await expect(dialog).toContainText("100,000 tokens / 日");
+  // Secondary rules are one click away; Escape closes that panel and keeps the dialog open.
+  const rules = dialog.getByRole("button", { name: "額度規則", exact: true });
+  await rules.click();
+  const panel = page.getByRole("dialog", { name: "模型授權與額度規則" });
+  await expect(panel).toContainText("共用預算");
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  await expect(dialog).toBeVisible();
+  await expect(rules).toBeFocused();
   await expect(
     dialog.getByRole("region", { name: "模型授權與額度" }),
   ).toBeVisible();
