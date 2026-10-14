@@ -2,22 +2,24 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { DomSanitizer } from '@angular/platform-browser';
 
 /**
- * Sandboxed HTML preview. The iframe loads the server's `/render` route (same origin, CSP that
- * blocks external resources); `allow-same-origin` must never be added, so scripts cannot reach
- * the session. The iframe is recreated when the sandbox changes because the attribute only
- * applies on navigation.
+ * 沙盒 HTML 預覽。iframe 載入伺服器的 `/render` 路由（同源、CSP 封鎖外部資源）；絕不加
+ * `allow-same-origin`，指令碼因此碰不到登入狀態。
+ * Angular 只接受靜態的 iframe `sandbox`（動態綁定會丟 NG0910），所以兩種權限各寫一個分支：
+ * 切換時 @if 銷毀舊 iframe 再建立新的，sandbox 在新 iframe 第一次導覽前就已生效。
  */
 @Component({
   selector: 'nx-html-preview',
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './html-preview.scss',
-  template: `@for (sandbox of [sandbox()]; track sandbox) {
+  template: `@if (running()) {
       <iframe
         title="HTML 預覽"
         referrerpolicy="no-referrer"
-        [attr.sandbox]="sandbox"
+        sandbox="allow-scripts"
         [src]="frame()"
       ></iframe>
+    } @else {
+      <iframe title="HTML 預覽" referrerpolicy="no-referrer" sandbox="" [src]="frame()"></iframe>
     }
     @if (gated()) {
       <div class="html-gate-backdrop">
@@ -47,7 +49,6 @@ export class HtmlPreview {
   readonly running = input(false);
   readonly run = output<void>();
   readonly viewSource = output<void>();
-  readonly sandbox = computed(() => (this.running() ? 'allow-scripts' : ''));
   // Same-origin render URL built by the app, never user-supplied.
   readonly frame = computed(() => this.sanitizer.bypassSecurityTrustResourceUrl(this.url()));
 }
