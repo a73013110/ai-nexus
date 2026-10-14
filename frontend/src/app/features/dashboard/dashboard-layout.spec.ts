@@ -73,7 +73,7 @@ describe('dashboard layout', () => {
     const merged = mergeTiles(widgets, saved);
     const ids = merged.map((x) => x.id);
     expect(ids.slice(0, 4)).toEqual(['section:chat', 'overview', 'gone-feature', 'spend']);
-    expect(ids.at(-1)).toBe('services');
+    expect(ids.at(-1)).toBe('tokens');
     expect(merged.find((x) => x.id === 'overview')?.size).toBe('l');
   });
 
@@ -94,11 +94,14 @@ describe('dashboard layout', () => {
       tiles: [
         { id: 'section:monitoring', size: 'l' },
         { id: 'section:platform', size: 'l' },
+        { id: 'services', size: 'l' },
         { id: 'spend', size: 's' },
       ],
     });
     expect(saved).toEqual([{ id: 'spend', size: 's', tall: false, hidden: false }]);
-    expect(mergeTiles(widgets, saved).map((x) => x.id)).not.toContain('section:monitoring');
+    const ids = mergeTiles(widgets, saved).map((x) => x.id);
+    expect(ids).not.toContain('section:monitoring');
+    expect(ids).not.toContain('services');
   });
 
   it('resizes between every pair of sizes, through a save and reload', () => {

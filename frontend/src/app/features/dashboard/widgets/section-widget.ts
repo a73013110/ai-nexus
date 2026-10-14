@@ -5,7 +5,6 @@ import { Icon } from '../../../shared/ui/icon';
 import { NumberTicker } from '../../../shared/ui/number-ticker';
 import { Sparkline } from '../../../shared/ui/sparkline';
 import { relativeTime } from '../../../shared/browser/format';
-import { StatusBadge } from '../../../shared/ui/status-badge';
 import { DashboardStore } from '../dashboard-store';
 import {
   fillDays,
@@ -17,13 +16,13 @@ import {
 } from '../dashboard-format';
 
 /**
- * Any overview section as sent by the backend: figures, the first daily series, a distribution,
- * facts and the viewer's recent items. A feature that registers a dashboard source appears here
+ * Any overview section as sent by the backend: figures, the first daily series, a distribution
+ * and the viewer's recent items. A feature that registers a dashboard source appears here
  * without frontend changes.
  */
 @Component({
   selector: 'nx-section-widget',
-  imports: [Icon, NumberTicker, RouterLink, Sparkline, StatusBadge],
+  imports: [Icon, NumberTicker, RouterLink, Sparkline],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './section-widget.scss',
   template: `@if (section(); as s) {
@@ -72,16 +71,6 @@ import {
         </ul>
       </div>
     }
-    @if (s.facts.length) {
-      <div class="facts">
-        @for (fact of s.facts; track fact.label) {
-          <span
-            >{{ fact.label
-            }}<nx-status-badge [tone]="toneOf(fact.tone)">{{ fact.value }}</nx-status-badge></span
-          >
-        }
-      </div>
-    }
     @if (items().length) {
       <ul class="items">
         @for (item of items(); track item.id) {
@@ -112,7 +101,6 @@ export class SectionWidget {
   readonly sectionId = input.required<string>();
   readonly store = inject(DashboardStore);
   readonly section = computed(() => this.store.section(this.sectionId()));
-  readonly toneOf = tone;
   private readonly formatters = new Map<string, (value: number) => string>();
   formatter(format: string) {
     let value = this.formatters.get(format);

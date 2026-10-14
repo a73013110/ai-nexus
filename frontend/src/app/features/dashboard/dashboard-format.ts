@@ -8,7 +8,7 @@ export {
   metricText,
 } from '../../shared/browser/format';
 
-/** Tones the backend uses for metrics, items and facts, as badge tones and colors. */
+/** Tones the backend uses for metrics, shares and items, as badge tones and colors. */
 export type DashboardTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
 export function tone(value: string): DashboardTone {
   return (['info', 'success', 'warning', 'danger'] as const).find((x) => x === value) ?? 'neutral';
