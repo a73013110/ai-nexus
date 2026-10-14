@@ -185,15 +185,31 @@ test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", as
   ).toBeVisible();
   await page.getByRole("button", { name: "知識檢索", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/operations\?tab=retrieval$/);
-  const activate = page.getByRole("button", { name: "啟用索引", exact: true });
+  const indexes = page.getByRole("region", { name: "檢索索引", exact: true });
+  await expect(
+    indexes.locator(".retrieval-profile").filter({ hasText: "bge-m3-v2" }),
+  ).toContainText("0 / 1 個片段");
+  const activate = indexes.getByRole("button", {
+    name: "啟用索引",
+    exact: true,
+  });
   await expect(activate).toBeDisabled();
-  await page
+  // Rebuilding and activating change what every search uses, so both ask first.
+  await indexes
     .locator(".retrieval-profile")
     .filter({ hasText: "bge-m3-v2" })
     .getByRole("button", { name: "開始重建" })
     .click();
+  await page
+    .getByRole("dialog", { name: "重建檢索索引" })
+    .getByRole("button", { name: "開始重建", exact: true })
+    .click();
   await expect(activate).toBeEnabled();
   await activate.click();
+  await page
+    .getByRole("dialog", { name: "切換使用中索引" })
+    .getByRole("button", { name: "啟用索引", exact: true })
+    .click();
   await expect(
     toasts(page).filter({ hasText: "使用中索引已切換" }),
   ).toBeVisible();
@@ -207,7 +223,9 @@ test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", as
   await expect(
     page.getByText("向量排名 1 · 全文排名 2", { exact: false }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "清除退役向量", exact: true }).click();
+  await indexes
+    .getByRole("button", { name: "清除退役向量", exact: true })
+    .click();
   await page
     .getByRole("dialog", { name: "清除退役向量" })
     .getByRole("button", { name: "清除向量", exact: true })
@@ -237,9 +255,10 @@ test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", as
       ),
     ).toBe(true);
     await expectCompactWorkspace(page);
-    await expect(page.locator(".usage-stat-card strong").first()).toHaveCSS(
+    // The index table keeps the compact data size in both themes and widths.
+    await expect(page.locator(".retrieval-profile strong").first()).toHaveCSS(
       "font-size",
-      "16px",
+      "13px",
     );
   }
 });
@@ -1488,11 +1507,13 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
         tab === "活動稽核"
           ? "nx-filter-panel"
           : tab === "平台用量"
-            ? ".feature-content > nx-platform-usage > .page-toolbar"
+            ? ".feature-content nx-platform-usage > .page-toolbar"
             : ".feature-content nx-admin-features-tab > .page-toolbar";
       await expect(page.locator(target).first()).toBeVisible();
       if (tab === "平台用量") {
-        await expect(page.locator(".stat-card")).toHaveCount(4);
+        await expect(
+          page.locator("nx-platform-usage nx-stat-tile"),
+        ).toHaveCount(4);
         // The tabs are the way to prices; the usage tab only refreshes itself.
         await expect(page.locator("nx-platform-usage a")).toHaveCount(0);
         await expect(

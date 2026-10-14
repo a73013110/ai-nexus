@@ -88,6 +88,11 @@ export class MonitoringPage {
     { value: '15', label: '15 分鐘' },
   ];
   readonly drawerTitle = computed(() => DRAWER_TITLES[this.selection()?.kind ?? 'dependency']);
+  /** Whether the inspector is open; its content stays while it leaves. */
+  readonly drawerOpen = signal(false);
+  readonly openSessionId = computed(() =>
+    this.drawerOpen() ? (this.selectedSession()?.id ?? null) : null,
+  );
   readonly selectedSession = computed(() => {
     const selection = this.selection();
     return selection?.kind === 'session' ? selection.session : null;
@@ -125,6 +130,7 @@ export class MonitoringPage {
   }
   private show(selection: Selection) {
     this.selection.set(selection);
+    this.drawerOpen.set(true);
     this.drawer().open();
   }
   showSession(session: OnlineSession) {

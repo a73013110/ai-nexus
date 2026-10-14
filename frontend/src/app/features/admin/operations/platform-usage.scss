@@ -46,9 +46,10 @@
     height: 0.375rem;
     vertical-align: middle;
   }
-  .ops-num {
+  .ui-table-numeric {
     display: inline-block;
     min-width: 3.5rem;
+    text-align: end;
   }
 }
 .usage-rate {

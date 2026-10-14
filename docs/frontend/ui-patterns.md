@@ -6,7 +6,7 @@
 
 - 功能頁用 `FeaturePage`（預設 compact、wide，只改內容密度；需要時才指定 comfortable 或窄版）。頁首只放標題、一句說明與動作，不加眉標或其他功能的入口。
 - 全頁只有 `.feature-main` 一個捲動區；`.feature-content` 統一內容上限與對齊線。
-- `layoutMode="data"` 讓資料表填滿剩餘高度；篩選展開很多時外層仍可捲動。
+- `layoutMode="data"` 讓資料表最多用到剩餘高度（見 [資料工作區](data-workspace.md)）；篩選展開很多時外層仍可捲動。
 - 表格用於固定欄位（表格、查詢與分頁見 [資料工作區](data-workspace.md)）；差異大的文件、報告、進度用卡片或專屬閱讀介面。
 - 卡片用 `nxCard`（保留原生語意），空白與載入內容用 `EmptyState`。資源的列表與詳細頁見 [資源集合頁](resource-pages.md)。
 

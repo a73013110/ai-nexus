@@ -32,7 +32,11 @@
         <th scope="col">裝置／連線位址</th>
         <th scope="col">目前功能</th>
         <th scope="col">狀態</th>
-        <th scope="col" [attr.aria-sort]="sort() === 'requests' ? 'descending' : 'none'">
+        <th
+          scope="col"
+          class="ui-table-numeric"
+          [attr.aria-sort]="sort() === 'requests' ? 'descending' : 'none'"
+        >
           <button type="button" class="ui-table-sort" (click)="sort.set('requests')">
             請求數 <nx-icon name="chevron" />
           </button>
@@ -42,9 +46,15 @@
     </thead>
     <tbody>
       @for (s of visible(); track s.id) {
-        <tr>
+        <tr nxTableRow [class.is-selected]="selectedId() === s.id" (rowActivate)="showSession(s)">
           <td>
-            <button type="button" class="ui-table-link" (click)="showSession(s)">
+            <button
+              type="button"
+              class="ui-table-link"
+              data-row-action
+              aria-haspopup="dialog"
+              (click)="showSession(s)"
+            >
               <strong>{{ s.displayName }}</strong
               ><small>{{ s.account }}{{ s.testingIdentity ? ' · 測試身分' : '' }}</small>
             </button>

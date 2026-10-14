@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { CodeBlock } from '../../shared/markdown/code-block';
 import { MarkdownView } from '../../shared/markdown/markdown-view';
-import { DataTable } from '../../shared/ui/data-table';
+import { DataTable, DataTableRow } from '../../shared/ui/data-table';
 import { DetailDrawer } from '../../shared/ui/detail-drawer';
 import { FilterPanel } from '../../shared/ui/filter-panel';
 import { Icon } from '../../shared/ui/icon';
@@ -26,6 +26,7 @@ import { DesignSection } from './design-section';
   imports: [
     CodeBlock,
     DataTable,
+    DataTableRow,
     DesignSection,
     DetailDrawer,
     FilterPanel,
@@ -63,7 +64,7 @@ import { DesignSection } from './design-section';
       class="design-data-workspace ui-density-compact"
       title="資料工作區"
       api="FilterPanel · DataTable · DetailDrawer"
-      description="表格獨立捲動、固定表頭；詳情在側欄開啟，可繼續選下一列，窄螢幕改為 modal。加 stacked 的表格在窄螢幕改為卡片列。"
+      description="表格獨立捲動、固定表頭；整列可點，hover 淡底、開啟中的列為選取色，鍵盤焦點只在列外框一圈。詳情在側欄開啟，可繼續選下一列，窄螢幕改為 modal。加 stacked 的表格在窄螢幕改為卡片列。"
       [stacked]="true"
     >
       <nx-filter-panel>
@@ -97,10 +98,20 @@ import { DesignSection } from './design-section';
           </thead>
           <tbody>
             @for (entry of visibleRows(); track entry.event) {
-              <tr>
+              <tr
+                nxTableRow
+                [class.is-selected]="selected() === entry.event"
+                (rowActivate)="inspect(entry.event)"
+              >
                 <td data-label="時間">{{ entry.time }}</td>
                 <td>
-                  <button type="button" class="ui-table-link" (click)="inspect(entry.event)">
+                  <button
+                    type="button"
+                    class="ui-table-link"
+                    data-row-action
+                    [attr.aria-expanded]="selected() === entry.event"
+                    (click)="inspect(entry.event)"
+                  >
                     {{ entry.event }}
                   </button>
                 </td>
@@ -161,7 +172,11 @@ import { DesignSection } from './design-section';
     >
       <nx-markdown-view [content]="markdown" />
     </nx-design-section>
-    <nx-detail-drawer title="資料詳情示範" [attr.data-theme]="theme()">
+    <nx-detail-drawer
+      title="資料詳情示範"
+      [attr.data-theme]="theme()"
+      (closed)="selected.set(null)"
+    >
       <div drawer-summary class="ui-drawer-summary">
         <h3>{{ event() }}</h3>
         <span class="ui-drawer-subtitle">共用詳情面板 · 本地範例</span>
@@ -234,6 +249,8 @@ export class DesignData {
     { event: 'provider.request.retry', time: '10:41:55', status: '重試', tone: 'warning' as const },
   ];
   readonly event = signal(this.rows[0].event);
+  /** The row whose detail is open; the drawer keeps its content while it leaves. */
+  readonly selected = signal<string | null>(null);
   readonly visibleRows = computed(() =>
     this.dataView() === 'all' ? this.rows : this.rows.filter((row) => row.tone === 'success'),
   );
@@ -247,6 +264,7 @@ export class DesignData {
   private readonly drawer = viewChild.required(DetailDrawer);
   inspect(event: string) {
     this.event.set(event);
+    this.selected.set(event);
     this.drawer().open();
   }
 }

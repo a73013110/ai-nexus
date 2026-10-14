@@ -27,12 +27,6 @@
 .ops-table table {
   table-layout: fixed;
 }
-// Figures line up on the right in tabular numerals, so digits of the same place stack.
-.ops-num {
-  text-align: end;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
 .ops-action-column {
   width: 3.25rem;
 }
@@ -40,13 +34,9 @@
   color: var(--secondary);
   font-size: var(--p-font-xs);
 }
-// A card reads a value after its label, so it starts at the left like the label. Tables of figures
-// (`.ops-figures`) list them two to a row under the name instead of one per line; the row's button
-// keeps the top-right corner and `.ops-span` cells take the whole row.
+// On cards, tables of figures (`.ops-figures`) list them two to a row under the name instead of
+// one per line; the row's button keeps the top-right corner and `.ops-span` cells take the whole row.
 @include bp.below(narrow) {
-  .ui-table-stack .ops-num {
-    text-align: start;
-  }
   .ops-figures.ui-table-stack tbody tr {
     position: relative;
     grid-template-columns: repeat(2, minmax(0, 1fr));

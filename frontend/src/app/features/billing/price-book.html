@@ -60,10 +60,10 @@
           <th scope="col">模型或工具</th>
           <th scope="col">費用類型</th>
           <th scope="col">幣別</th>
-          <th scope="col" class="ops-num">輸入</th>
-          <th scope="col" class="ops-num">快取輸入</th>
-          <th scope="col" class="ops-num">輸出</th>
-          <th scope="col" class="ops-num">每次固定</th>
+          <th scope="col" class="ui-table-numeric">輸入</th>
+          <th scope="col" class="ui-table-numeric">快取輸入</th>
+          <th scope="col" class="ui-table-numeric">輸出</th>
+          <th scope="col" class="ui-table-numeric">每次固定</th>
           <th scope="col">生效時間</th>
           <th scope="col"><span class="sr-only">操作</span></th>
         </tr>
@@ -78,12 +78,12 @@
             @if (row.current; as price) {
               <td data-label="費用類型">{{ kind(price.kind) }}</td>
               <td data-label="幣別">{{ price.currency }}</td>
-              <td class="ops-num" data-label="輸入">{{ rate(price.inputPerMillion) }}</td>
-              <td class="ops-num" data-label="快取輸入">
+              <td class="ui-table-numeric" data-label="輸入">{{ rate(price.inputPerMillion) }}</td>
+              <td class="ui-table-numeric" data-label="快取輸入">
                 {{ rate(price.cachedInputPerMillion) }}
               </td>
-              <td class="ops-num" data-label="輸出">{{ rate(price.outputPerMillion) }}</td>
-              <td class="ops-num" data-label="每次固定">
+              <td class="ui-table-numeric" data-label="輸出">{{ rate(price.outputPerMillion) }}</td>
+              <td class="ui-table-numeric" data-label="每次固定">
                 {{ rate(price.perRequest) }}
                 @if (price.perRequest) {
                   <small>{{ trigger(price) }}</small>
@@ -173,10 +173,10 @@
           <th scope="col" nxTableColumn="effective">生效時間</th>
           <th scope="col" nxTableColumn="model">模型或工具</th>
           <th scope="col" nxTableColumn="state">狀態</th>
-          <th scope="col" class="ops-num" nxTableColumn="input">輸入</th>
-          <th scope="col" class="ops-num" nxTableColumn="cached">快取輸入</th>
-          <th scope="col" class="ops-num" nxTableColumn="output">輸出</th>
-          <th scope="col" class="ops-num" nxTableColumn="request">每次固定</th>
+          <th scope="col" class="ui-table-numeric" nxTableColumn="input">輸入</th>
+          <th scope="col" class="ui-table-numeric" nxTableColumn="cached">快取輸入</th>
+          <th scope="col" class="ui-table-numeric" nxTableColumn="output">輸出</th>
+          <th scope="col" class="ui-table-numeric" nxTableColumn="request">每次固定</th>
           <th scope="col" nxTableColumn="note">備註</th>
           <th scope="col"><span class="sr-only">操作</span></th>
         </tr>
@@ -200,16 +200,16 @@
                 version.state.label
               }}</nx-status-badge>
             </td>
-            <td class="ops-num" nxTableColumn="input" data-label="輸入">
+            <td class="ui-table-numeric" nxTableColumn="input" data-label="輸入">
               {{ rate(price.inputPerMillion) }}
             </td>
-            <td class="ops-num" nxTableColumn="cached" data-label="快取輸入">
+            <td class="ui-table-numeric" nxTableColumn="cached" data-label="快取輸入">
               {{ rate(price.cachedInputPerMillion) }}
             </td>
-            <td class="ops-num" nxTableColumn="output" data-label="輸出">
+            <td class="ui-table-numeric" nxTableColumn="output" data-label="輸出">
               {{ rate(price.outputPerMillion) }}
             </td>
-            <td class="ops-num" nxTableColumn="request" data-label="每次固定">
+            <td class="ui-table-numeric" nxTableColumn="request" data-label="每次固定">
               {{ rate(price.perRequest) }}
               @if (price.perRequest) {
                 <small>{{ trigger(price) }}</small>
