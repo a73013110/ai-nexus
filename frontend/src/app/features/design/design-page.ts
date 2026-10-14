@@ -47,7 +47,9 @@ const INDEX = [
       { id: 'design-menus', name: '選單與下拉' },
       { id: 'design-menu-check', name: '核取選單項目' },
       { id: 'design-switches', name: '切換與頁籤' },
+      { id: 'design-floating-toolbar', name: '浮動工具列' },
       { id: 'design-checkbox', name: '核取方塊' },
+      { id: 'design-choice-groups', name: '分組多選' },
     ],
   },
   {

@@ -5,7 +5,10 @@ import { afterNextRender, DestroyRef, Directive, ElementRef, inject, input } fro
  * host, so one chip or underline (the host's `::before`) slides between items of any width. It
  * watches the selection attribute and sizes itself, so it never runs on unrelated renders.
  * `data-indicator` marks that something is selected; `data-indicator-ready` turns the slide on
- * after the first placement, so the chip does not fly in from the corner.
+ * after a placement, so the chip does not fly in from the corner. A group that disappears (a
+ * closed dialog, a hidden panel) drops both, and its next placement is again instant: the box it
+ * last measured is stale. Offsets are layout values, so a dialog's open/close scale never skews
+ * them; the ResizeObserver re-measures once the group has a box again.
  */
 @Directive({ selector: '[nxSlidingIndicator]' })
 export class SlidingIndicator {
@@ -17,16 +20,29 @@ export class SlidingIndicator {
   constructor() {
     const host = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
     if (typeof ResizeObserver === 'undefined') return;
-    let frame = 0;
+    let frame = 0,
+      ready = 0;
     const place = () => {
       frame = 0;
       const active = host.querySelector<HTMLElement>(this.nxSlidingIndicator());
-      host.toggleAttribute('data-indicator', !!active?.offsetWidth);
-      if (!active?.offsetWidth) return;
+      if (!active?.offsetWidth) {
+        cancelAnimationFrame(ready);
+        ready = 0;
+        host.removeAttribute('data-indicator');
+        host.removeAttribute('data-indicator-ready');
+        return;
+      }
       host.style.setProperty('--indicator-x', `${active.offsetLeft}px`);
       host.style.setProperty('--indicator-y', `${active.offsetTop}px`);
       host.style.setProperty('--indicator-w', `${active.offsetWidth}px`);
       host.style.setProperty('--indicator-h', `${active.offsetHeight}px`);
+      host.setAttribute('data-indicator', '');
+      // The slide starts a frame after the first placement has painted.
+      if (!host.hasAttribute('data-indicator-ready'))
+        ready ||= requestAnimationFrame(() => {
+          ready = 0;
+          host.setAttribute('data-indicator-ready', '');
+        });
     };
     const schedule = () => (frame ||= requestAnimationFrame(place));
     const resize = new ResizeObserver(schedule);
@@ -46,10 +62,10 @@ export class SlidingIndicator {
         attributeFilter: ['aria-pressed', 'aria-selected', 'aria-current', 'class'],
       });
       place();
-      requestAnimationFrame(() => host.setAttribute('data-indicator-ready', ''));
     });
     inject(DestroyRef).onDestroy(() => {
       cancelAnimationFrame(frame);
+      cancelAnimationFrame(ready);
       resize.disconnect();
       mutation.disconnect();
     });

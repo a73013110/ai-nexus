@@ -3,40 +3,41 @@
     name="shield"
   />對話為唯讀；開啟清單與內容都會寫入稽核。包含各分支版本，附件只顯示名稱與大小。
 </p>
-@if (reader.error()) {
-  <nx-notice tone="danger" [message]="reader.error()" />
-}
-<div class="conversation-body">
+<div class="conversation-body" [class.is-reading]="!!reader.selected()">
   <aside class="conversation-list" aria-label="使用者對話清單">
-    <nx-search-field
-      label="搜尋使用者對話"
-      placeholder="搜尋標題與對話內容"
-      [value]="reader.search()"
-      (valueChange)="reader.searchChanged($event)"
-    />
-    <div class="conversation-filter">
-      <nx-checkbox
-        label="包含已刪除對話"
-        [checked]="reader.includeDeleted()"
-        (checkedChange)="reader.deletedChanged($event)"
+    <div class="conversation-tools">
+      <nx-search-field
+        label="搜尋使用者對話"
+        placeholder="搜尋標題與對話內容"
+        [value]="reader.search()"
+        (valueChange)="reader.searchChanged($event)"
       />
-      @if (reader.page(); as page) {
-        <span class="ui-count-label">{{ format(page.total) }} 段</span>
+      <div class="conversation-filter">
+        <nx-checkbox
+          label="包含已刪除對話"
+          [checked]="reader.includeDeleted()"
+          (checkedChange)="reader.deletedChanged($event)"
+        />
+        @if (reader.page(); as page) {
+          <span class="ui-count-label">{{ format(page.total) }} 段</span>
+        }
+      </div>
+      @if (reader.error()) {
+        <nx-notice tone="danger" [message]="reader.error()" />
       }
     </div>
-    @if (reader.loading()) {
-      <p role="status" class="form-note">正在取得對話…</p>
-    }
     <div class="conversation-items">
+      @if (reader.loading()) {
+        <p role="status" class="form-note conversation-loading">正在取得對話…</p>
+      }
       @for (conversation of reader.page()?.items || []; track conversation.id) {
         <button
           type="button"
           class="conversation-item"
-          [attr.aria-current]="
-            reader.detail()?.conversation?.id === conversation.id ? 'true' : null
-          "
+          [attr.data-conversation]="conversation.id"
+          [attr.aria-current]="reader.selected() === conversation.id ? 'true' : null"
           [attr.aria-label]="'檢視對話：' + conversation.title"
-          (click)="reader.read(conversation.id)"
+          (click)="open(conversation.id)"
         >
           <strong>{{ conversation.title }}</strong>
           <small
@@ -50,7 +51,7 @@
         </button>
       } @empty {
         @if (!reader.loading()) {
-          <p class="form-note conversation-empty">沒有符合的對話。</p>
+          <nx-empty-state><p>沒有符合的對話。</p></nx-empty-state>
         }
       }
     </div>
@@ -88,6 +89,9 @@
     aria-live="polite"
     [attr.aria-busy]="reader.reading()"
   >
+    <button #back type="button" class="quiet-button reading-back" (click)="close()">
+      <nx-icon name="left" />返回對話清單
+    </button>
     @if (reader.readError()) {
       <nx-notice tone="danger" [message]="reader.readError()" />
     }

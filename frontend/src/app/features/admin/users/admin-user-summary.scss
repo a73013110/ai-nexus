@@ -1,28 +1,19 @@
 @use 'breakpoints' as bp;
 
-// The summary lays out in the inspector heading's grid (identity, audit link, close; figures
-// below across the full width), so the figures line up with the tabs and fields.
+// Context right under the title bar, aligned with the tabs and fields: how the user signs in and
+// their roles on one line, the three figures in one compact row below.
 :host {
-  display: contents;
+  display: grid;
+  flex: none;
+  gap: var(--p-space-3);
+  padding: 0 var(--p-space-5) var(--p-space-3);
 }
 .summary-identity {
-  grid-column: 1;
-  grid-row: 1;
-  display: grid;
-  gap: var(--p-space-1);
-  min-width: 0;
-}
-.summary-title {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--p-space-2);
-}
-.summary-title h2 {
-  margin: 0;
-  font-size: var(--text-heading);
-  font-weight: 600;
-  overflow-wrap: anywhere;
+  gap: var(--p-space-2) var(--p-space-4);
+  min-width: 0;
 }
 .summary-meta {
   display: flex;
@@ -33,28 +24,25 @@
   font-size: var(--text-caption);
   overflow-wrap: anywhere;
 }
-.summary-roles {
-  margin-top: var(--p-space-1);
-}
-// Figures sit on inset panels like the overview's, at a tool's density: no frame, no glow.
-.summary-audit {
-  grid-column: 2;
-  grid-row: 1;
-}
+// Figures sit on inset panels like the overview's, at a tool's density: the label above, the
+// value with its detail on one baseline.
 .inspector-stats {
-  grid-column: 1 / -1;
-  grid-row: 2;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--p-space-2);
 }
 .summary-stat {
   display: grid;
-  gap: 2px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0 var(--p-space-2);
   min-width: 0;
   padding: var(--p-space-2) var(--p-space-3);
   border-radius: var(--tile-inner-radius);
   background: var(--tile-inset);
+}
+.summary-stat > span {
+  grid-column: 1 / -1;
 }
 .summary-stat > span,
 .summary-stat small {
@@ -68,12 +56,11 @@
   display: flex;
   align-items: baseline;
   gap: 0.25em;
-  min-width: 0;
-  font-size: var(--p-font-xl);
+  font-size: var(--p-font-lg);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
-  line-height: 1.25;
+  line-height: 1.3;
 }
 .summary-stat em {
   color: var(--muted);
@@ -83,30 +70,22 @@
   letter-spacing: 0;
 }
 
-// Phones keep who and the three figures; details are one tab away.
+// Phones and short windows (landscape phones) keep the sign-in and the three figures; roles and
+// the figures' detail are one tab away.
 @include bp.below(phone) {
+  :host {
+    gap: var(--p-space-2);
+    padding-bottom: var(--p-space-2);
+  }
   .summary-meta span:last-child,
   .summary-roles,
   .summary-stat small {
     display: none;
   }
-  .summary-audit {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    justify-self: start;
-    margin-left: -7px;
-  }
-  .inspector-stats {
-    grid-row: 3;
-  }
   .summary-stat {
-    padding: var(--p-space-2);
-  }
-  .summary-stat strong {
-    font-size: var(--p-font-lg);
+    padding: var(--p-space-1) var(--p-space-2);
   }
 }
-// Short windows (landscape phones) keep the figures and drop their detail lines.
 @media (max-height: 600px) {
   .summary-roles,
   .summary-stat small {

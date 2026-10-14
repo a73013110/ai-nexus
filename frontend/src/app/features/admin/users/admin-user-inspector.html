@@ -5,35 +5,48 @@
   class="platform-dialog admin-inspector"
   [class.inspector-wide]="store.tab() === 'conversations'"
   [nxDialogView]="store.tab()"
-  aria-labelledby="inspector-title"
   (cancel)="cancel($event)"
   (close)="closing()"
 >
-  <header class="dialog-bar">
-    <nx-admin-user-summary (leave)="close()" />
-    <button
-      type="button"
-      class="icon-button"
-      aria-label="關閉使用者管理"
-      [disabled]="!!store.saving()"
-      (click)="requestClose()"
-    >
-      <nx-icon name="close" />
-    </button>
-  </header>
-  <div class="inspector-nav">
-    @if (store.overviewError()) {
-      <nx-notice tone="danger" [message]="store.overviewError()" />
+  @let user = store.current();
+  <nx-dialog-header
+    [heading]="user?.displayName ?? ''"
+    [detail]="user?.account ?? ''"
+    closeLabel="關閉使用者管理"
+  >
+    @if (user) {
+      <nx-access-status dialog-title [enabled]="user.enabled !== false" />
     }
-    <nx-view-switch
-      label="使用者管理分類"
-      [options]="tabs"
-      [value]="store.tab()"
-      (valueChange)="selectTab($event)"
-    />
-  </div>
+    @if (user && session.has('audit')) {
+      <a
+        class="quiet-button inspector-audit"
+        routerLink="/admin/audit"
+        aria-label="查閱活動稽核"
+        title="查閱活動稽核"
+        [queryParams]="{ search: user.id }"
+        (click)="close()"
+      >
+        <nx-icon name="audit" /><span>查閱活動稽核</span>
+      </a>
+    }
+  </nx-dialog-header>
+  <nx-admin-user-summary />
+  <!-- 頁籤固定在面板上方；每個設定頁籤是各自儲存的表單，面板含自己的頁尾。 -->
+  <nx-tabs
+    #sections
+    label="使用者管理分類"
+    [items]="tabs"
+    [value]="store.tab()"
+    (valueChange)="selectTab($event)"
+  />
   @let tab = store.tab();
-  <div class="inspector-panel" [nxViewMotion]="tab">
+  <div
+    class="inspector-panel"
+    role="tabpanel"
+    [id]="sections.panelId(tab)"
+    [attr.aria-labelledby]="sections.tabId(tab)"
+    [nxViewMotion]="tab"
+  >
     @if (tab === 'conversations') {
       <nx-admin-user-conversations />
     } @else {

@@ -21,12 +21,12 @@ import { ViewScope } from '../../shared/browser/view-scope';
 import { DialogHeader } from '../../shared/ui/dialog-header';
 import { Icon } from '../../shared/ui/icon';
 import { Select } from '../../shared/ui/select';
-import { Checkbox } from '../../shared/ui/checkbox';
+import { ChoiceGroups, type ChoiceGroup } from '../../shared/ui/choice-groups';
 import { SearchField } from '../../shared/ui/search-field';
 
 @Component({
   selector: 'nx-resource-sharing',
-  imports: [Notice, CompactDialog, DialogHeader, Icon, Select, Checkbox, SearchField],
+  imports: [Notice, CompactDialog, DialogHeader, Icon, Select, ChoiceGroups, SearchField],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './resource-sharing.scss',
@@ -93,21 +93,15 @@ import { SearchField } from '../../shared/ui/search-field';
               }
             </div>
           </fieldset>
-          @if (allowGroups()) {
-            <fieldset>
-              <legend>群組可檢視</legend>
-              <p class="form-note">群組授權只允許閱讀。協作編輯請加入具名成員。</p>
-              <div class="choice-list">
-                @for (group of groups(); track group.id) {
-                  <nx-checkbox
-                    [label]="group.name"
-                    [checked]="groupIds().includes(group.id)"
-                    [disabled]="saving()"
-                    (checkedChange)="toggleGroup(group.id, $event)"
-                  />
-                }
-              </div>
-            </fieldset>
+          @if (allowGroups() && groups().length) {
+            <p class="form-note">群組授權只允許閱讀。協作編輯請加入具名成員。</p>
+            <nx-choice-groups
+              label="可檢視的群組"
+              [groups]="groupChoices()"
+              [selected]="groupIds()"
+              [disabled]="saving()"
+              (selectedChange)="groupIds.set($event)"
+            />
           }
         </div>
       }
@@ -152,6 +146,14 @@ export class ResourceSharing {
   );
   readonly groupIds = linkedSignal<string[]>(() => this.aclRead.value()?.acl.groupIds ?? []);
   readonly groups = computed(() => this.aclRead.value()?.groups ?? []);
+  /** 群組沒有分類，收成一張卡片。 */
+  readonly groupChoices = computed<ChoiceGroup[]>(() => [
+    {
+      id: 'groups',
+      name: '群組可檢視',
+      options: this.groups().map((group) => ({ id: group.id, label: group.name })),
+    },
+  ]);
   readonly people = directorySearch(() => this.members().map((x) => x.userId));
   readonly saveError = signal('');
   readonly error = computed(() => this.saveError() || this.aclRead.error() || this.people.error());
@@ -180,9 +182,6 @@ export class ResourceSharing {
   }
   role(id: string, role: string) {
     this.members.update((rows) => rows.map((x) => (x.userId === id ? { ...x, role } : x)));
-  }
-  toggleGroup(id: string, checked: boolean) {
-    this.groupIds.update((rows) => (checked ? [...rows, id] : rows.filter((x) => x !== id)));
   }
   cancel(event: Event) {
     if (this.saving()) event.preventDefault();

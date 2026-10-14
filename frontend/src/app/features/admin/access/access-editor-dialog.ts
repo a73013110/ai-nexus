@@ -1,3 +1,4 @@
+import { NgTemplateOutlet } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -7,17 +8,23 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import type { AdminFeatureDto, AdminGroupDto, AdminRoleDto } from '../../../core/api/schema';
+import type {
+  AdminFeatureDto,
+  AdminGroupDto,
+  AdminRoleDto,
+  GroupPolicyRequest,
+} from '../../../core/api/schema';
 import { safeMessage } from '../../../core/errors/safe-errors';
 import { groupFeatures } from '../../../core/layout/feature-groups';
 import { parseStorageLimitGb, storageLimitGb } from '../../../shared/browser/storage-limit';
 import { Checkbox } from '../../../shared/ui/checkbox';
+import { ChoiceGroups, type ChoiceGroup } from '../../../shared/ui/choice-groups';
 import { CompactDialog } from '../../../shared/ui/compact-dialog';
 import { Field } from '../../../shared/ui/field';
 import { DialogHeader } from '../../../shared/ui/dialog-header';
 import { Notice } from '../../../shared/ui/notice';
-import { DialogMotion, ViewMotion } from '../../../shared/ui/view-motion';
-import { ViewSwitch } from '../../../shared/ui/view-switch';
+import { Tabs, type TabItem } from '../../../shared/ui/tabs';
+import { ViewMotion } from '../../../shared/ui/view-motion';
 import { AdminApi } from '../admin-api';
 import { AdminStore } from '../admin-store';
 import { FeatureSummary } from '../feature-summary';
@@ -31,6 +38,7 @@ import {
 /** Users are edited in the user inspector and created in `AdminUserCreateDialog`. */
 export type AccessKind = 'role' | 'group' | 'feature';
 export type AccessItem = AdminRoleDto | AdminGroupDto | AdminFeatureDto;
+type GroupSection = 'general' | 'features' | 'models' | 'storage';
 interface Editor {
   kind: AccessKind;
   id: string;
@@ -52,15 +60,16 @@ interface Editor {
   selector: 'nx-access-editor-dialog',
   imports: [
     Checkbox,
+    ChoiceGroups,
     CompactDialog,
     DialogHeader,
-    DialogMotion,
     Field,
     FeatureSummary,
     ModelPolicyEditor,
+    NgTemplateOutlet,
     Notice,
+    Tabs,
     ViewMotion,
-    ViewSwitch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['../form-sections.scss', './access-editor-dialog.scss'],
@@ -72,21 +81,44 @@ export class AccessEditorDialog {
   readonly editor = signal<Editor | null>(null);
   readonly saving = signal(false);
   readonly editorError = signal('');
-  readonly groupSection = signal('general');
-  readonly groupViewOptions = [
+  /** A feature group's settings are split into these tabs; one save covers all of them. */
+  readonly groupSection = signal<GroupSection>('general');
+  readonly groupSections: readonly TabItem[] = [
     { value: 'general', label: '基本資料' },
     { value: 'features', label: '功能授權' },
     { value: 'models', label: 'AI 模型' },
     { value: 'storage', label: '附件容量' },
   ];
+  readonly enabledNote: Record<AccessKind, string> = {
+    role: '停用後，擁有此角色的使用者不再取得它的功能群組。',
+    group: '停用後此群組不授予功能、模型或附件容量。',
+    feature: '停用後任何群組都不會授予此功能。',
+  };
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('editorDialog');
-  readonly choices = computed(() => {
-    const e = this.editor(),
-      c = this.store.catalog();
-    if (!e || !c) return [];
-    return e.kind === 'role' ? c.groups : c.features;
-  });
-  readonly groupedFeatures = computed(() => groupFeatures(this.store.catalog()?.features || []));
+  /** A group grants features, listed by the sidebar's categories. */
+  readonly featureChoices = computed<ChoiceGroup[]>(() =>
+    groupFeatures(this.store.catalog()?.features || []).map((section) => ({
+      id: section.id,
+      name: section.name,
+      options: section.features.map((feature) => ({
+        id: feature.id,
+        label: feature.name + (feature.enabled ? '' : '（停用）'),
+        description: feature.id,
+      })),
+    })),
+  );
+  /** A role joins feature groups; they have no categories, so they form one card. */
+  readonly groupChoices = computed<ChoiceGroup[]>(() => [
+    {
+      id: 'groups',
+      name: '功能群組',
+      options: (this.store.catalog()?.groups || []).map((group) => ({
+        id: group.id,
+        label: group.name + (group.enabled ? '' : '（停用）'),
+        description: group.id,
+      })),
+    },
+  ]);
   /** What a role would grant once saved: enabled features of its enabled groups. */
   readonly proposedFeatures = computed(() => {
     const e = this.editor(),
@@ -126,10 +158,6 @@ export class AccessEditorDialog {
   update<K extends keyof Editor>(key: K, value: Editor[K]) {
     this.editor.update((old) => (old ? { ...old, [key]: value } : null));
   }
-  check(id: string, checked: boolean) {
-    const e = this.editor();
-    if (e) this.update('ids', checked ? [...e.ids, id] : e.ids.filter((x) => x !== id));
-  }
   close() {
     if (!this.saving()) this.dialog().nativeElement.close();
   }
@@ -140,24 +168,36 @@ export class AccessEditorDialog {
     event.preventDefault();
     const e = this.editor();
     if (!e) return;
-    if (!e.id || !e.name.trim()) {
-      this.editorError.set('請輸入識別碼與名稱。');
-      return;
+    // An error shows on the tab that holds the field, so the fix is in view.
+    const fail = (section: GroupSection, message: string) => {
+      if (e.kind === 'group') this.groupSection.set(section);
+      this.editorError.set(message);
+    };
+    if (!e.id || !e.name.trim()) return fail('general', '請輸入識別碼與名稱。');
+    let policy: GroupPolicyRequest | undefined;
+    if (e.kind === 'group') {
+      try {
+        policy = modelPolicyRequest(e.modelPolicy);
+      } catch (error) {
+        return fail('models', safeMessage(error));
+      }
+      try {
+        policy.storedAttachmentLimitBytes = parseStorageLimitGb(e.storage);
+      } catch (error) {
+        return fail('storage', safeMessage(error));
+      }
     }
     this.saving.set(true);
     this.editorError.set('');
     try {
       if (e.kind === 'role')
         await this.api.role(e.id, { name: e.name, enabled: e.enabled, groupIds: e.ids });
-      if (e.kind === 'group')
+      if (e.kind === 'group' && policy)
         await this.api.group(e.id, {
           name: e.name,
           enabled: e.enabled,
           featureIds: e.ids,
-          policy: {
-            ...modelPolicyRequest(e.modelPolicy),
-            storedAttachmentLimitBytes: parseStorageLimitGb(e.storage),
-          },
+          policy,
         });
       if (e.kind === 'feature')
         await this.api.feature(e.id, {

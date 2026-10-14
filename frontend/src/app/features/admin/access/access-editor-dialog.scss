@@ -1,33 +1,21 @@
-@use 'breakpoints' as bp;
-
 // Sections (form-sections.scss) sit closer than the global form rhythm.
 .admin-editor-fields {
-  gap: var(--p-space-3);
+  gap: var(--p-space-4);
 }
-.feature-choice-list {
-  gap: var(--p-space-3) var(--p-space-4);
+// A feature group keeps one height for all four tabs, so switching never resizes the frame; long
+// tabs scroll in the body under the tabs.
+.platform-dialog.admin-editor[data-kind='group'] {
+  height: min(44rem, var(--dialog-max-height));
 }
-.feature-choice-group {
+.admin-editor-fields > .form-note {
+  margin: 0;
+}
+.admin-editor-short {
+  max-width: 24rem;
+}
+.admin-editor-rules {
+  display: grid;
   gap: var(--p-space-1);
-}
-@include bp.below(narrow) {
-  .admin-editor nx-view-switch {
-    --view-switch-button-padding-inline: 4px;
-    --view-switch-button-font-size: var(--text-caption);
-    --view-switch-button-min-width: 0;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    overflow: visible;
-    white-space: normal;
-  }
-}
-
-// The category tabs stay reachable while a long tab scrolls under them.
-.admin-editor nx-view-switch {
-  position: sticky;
-  top: calc(-1 * var(--p-space-4));
-  z-index: 1;
-  padding-block: var(--p-space-2);
-  margin-block: calc(-1 * var(--p-space-2));
-  background: var(--surface);
+  margin: 0;
+  padding-inline-start: 1.25em;
 }

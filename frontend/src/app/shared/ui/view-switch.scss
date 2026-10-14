@@ -2,6 +2,9 @@
 
 // One indicator (the host's ::before, measured by SlidingIndicator) marks the pressed option, so
 // changing views slides it instead of repainting two buttons.
+// The host scrolls sideways, and a scroll container's automatic minimum height is 0: in a column
+// whose content overflows (a dialog body) it would be squeezed to a sliver that clips the buttons
+// and the underline. `min-height` keeps the row whole; sideways it still shrinks and scrolls.
 :host {
   position: relative;
   isolation: isolate;
@@ -10,16 +13,18 @@
   gap: var(--p-space-1);
   min-width: 0;
   max-width: 100%;
+  min-height: min-content;
   overflow-x: auto;
   scrollbar-width: none;
   margin-bottom: var(--section-gap);
   border-bottom: 1px solid var(--line);
 }
+// The underline sits on the bottom edge, so padding a host adds never lifts it off the rule.
 :host::before {
   content: '';
   position: absolute;
   z-index: -1;
-  top: 0;
+  bottom: 0;
   left: 0;
   width: var(--indicator-w, 0);
   height: 2px;
@@ -27,10 +32,7 @@
   background: var(--accent);
   opacity: 0;
   pointer-events: none;
-  transform: translate(
-    var(--indicator-x, 0),
-    calc(var(--indicator-y, 0px) + var(--indicator-h, 0px) - 2px)
-  );
+  transform: translateX(var(--indicator-x, 0));
 }
 :host([data-indicator])::before {
   opacity: 1;
@@ -77,6 +79,8 @@
 :host(.ui-view-switch-icons) {
   border-bottom: 0;
   &::before {
+    top: 0;
+    bottom: auto;
     height: var(--indicator-h, 0);
     border-radius: var(--p-radius-md);
     background: var(--surface);

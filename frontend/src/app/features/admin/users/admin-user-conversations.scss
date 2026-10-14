@@ -1,34 +1,42 @@
 @use 'breakpoints' as bp;
 
+// A master-detail workspace filling the dialog under its tabs: a fixed list column and the
+// reading pane, each scrolling on its own, both aligned with the dialog's 20px edge.
 :host {
   display: flex;
   flex-direction: column;
   flex: 1;
-  gap: var(--p-space-3);
   min-height: 0;
 }
 .conversation-audit-note {
   display: flex;
   align-items: center;
+  flex: none;
   gap: var(--p-space-2);
   margin: 0;
+  padding: var(--p-space-2) var(--p-space-5);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-subtle);
   color: var(--secondary);
   font-size: var(--text-caption);
 }
 .conversation-body {
   display: grid;
-  grid-template-columns: 17rem minmax(0, 1fr);
+  grid-template-columns: 18rem minmax(0, 1fr);
   flex: 1;
   min-height: 0;
 }
-// The list and its pages are one column: the pager follows the last row, not the column's foot.
 .conversation-list {
   display: flex;
   flex-direction: column;
-  gap: var(--p-space-2);
   min-height: 0;
-  padding-right: var(--p-space-3);
   border-right: 1px solid var(--line);
+}
+.conversation-tools {
+  display: grid;
+  flex: none;
+  gap: var(--p-space-2);
+  padding: var(--p-space-3) var(--p-space-3) var(--p-space-2) var(--p-space-5);
 }
 .conversation-filter {
   display: flex;
@@ -37,11 +45,17 @@
   gap: var(--p-space-2);
   --selection-control-padding: 0;
 }
+// Rows keep their own inset, so the list starts 8px in to line titles up with the search field.
 .conversation-items {
-  flex: 0 1 auto;
+  flex: 1;
   min-height: 0;
+  padding: 0 0 var(--p-space-3) var(--p-space-2);
   overflow: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+.conversation-loading {
+  padding: var(--p-space-1) var(--p-space-3);
 }
 .conversation-item {
   display: grid;
@@ -77,14 +91,12 @@
   font-size: var(--text-caption);
   font-variant-numeric: tabular-nums;
 }
-.conversation-empty {
-  padding: var(--p-space-2) var(--p-space-3);
-}
 .conversation-pages {
   display: flex;
   align-items: center;
+  flex: none;
   gap: var(--p-space-1);
-  padding-top: var(--p-space-2);
+  padding: var(--p-space-1) var(--p-space-2) var(--p-space-1) var(--p-space-5);
   border-top: 1px solid var(--line);
   color: var(--secondary);
   font-size: var(--text-caption);
@@ -95,9 +107,13 @@
 }
 .conversation-reading {
   min-height: 0;
+  padding: var(--p-space-4) var(--p-space-5) var(--p-space-5);
   overflow: auto;
   overscroll-behavior: contain;
-  padding: 0 var(--p-space-3) var(--p-space-5) var(--p-space-5);
+  scrollbar-gutter: stable;
+}
+.reading-back {
+  margin: 0 0 var(--p-space-2) -7px;
 }
 .reading-heading {
   margin-bottom: var(--p-space-4);
@@ -158,34 +174,24 @@
   overflow-wrap: anywhere;
 }
 .reading-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  min-height: 7.5rem;
-  color: var(--secondary);
+  min-height: 100%;
 }
 
+// Narrow screens show the list or the conversation, never both squeezed side by side.
+@include bp.above(narrow) {
+  .reading-back {
+    display: none;
+  }
+}
 @include bp.below(narrow) {
   .conversation-body {
-    display: flex;
-    flex-direction: column;
-    gap: var(--p-space-3);
-    overflow: auto;
+    grid-template-columns: minmax(0, 1fr);
   }
   .conversation-list {
-    flex: none;
-    padding: 0 0 var(--p-space-3);
     border-right: 0;
-    border-bottom: 1px solid var(--line);
   }
-  .conversation-items {
-    max-height: 18rem;
-  }
-  .conversation-reading {
-    flex: none;
-    overflow: visible;
-    padding: 0;
+  .conversation-body.is-reading .conversation-list,
+  .conversation-body:not(.is-reading) .conversation-reading {
+    display: none;
   }
 }

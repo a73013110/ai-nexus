@@ -460,17 +460,19 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
     groups.locator("tbody tr").nth(1).locator("nx-status-badge"),
   ).toHaveAttribute("data-tone", "warning");
   await expect(groups.locator("tbody tr").nth(1)).toContainText("停用");
-  // Groups inside the framed feature section are named by a caption, never framed again.
+  // Each feature category is its own framed card with a count; no outer fieldset wraps them.
   await groups.locator("tbody tr").first().locator("td").first().click();
-  await editor.getByRole("button", { name: "功能授權", exact: true }).click();
-  await expect(editor.locator("fieldset").first()).toHaveCSS(
-    "border-left-style",
-    "solid",
+  await editor.getByRole("tab", { name: "功能授權", exact: true }).click();
+  await expect(editor.getByRole("tabpanel")).toHaveAttribute(
+    "aria-labelledby",
+    (await editor
+      .getByRole("tab", { name: "功能授權", exact: true })
+      .getAttribute("id"))!,
   );
-  await expect(editor.locator(".feature-choice-group").first()).toHaveCSS(
-    "border-left-style",
-    "none",
-  );
+  await expect(editor.locator("fieldset")).toHaveCount(0);
+  const work = editor.getByRole("group", { name: "工作", exact: true });
+  await expect(work).toHaveCSS("border-left-style", "solid");
+  await expect(work.locator(".choice-group-count")).toHaveText(/^\d+\/\d+$/);
   await editor.getByRole("button", { name: "取消", exact: true }).click();
   await expect(editor).not.toBeVisible();
   await page.setViewportSize({ width: 375, height: 812 });
@@ -551,9 +553,7 @@ test("手機版存取管理四個分頁改為卡片列，不橫向捲動，點�
     ).toBeVisible();
     if (tab === "功能群組與模型") {
       // The daily limit takes the card's width instead of a squeezed column.
-      await editor
-        .getByRole("button", { name: "AI 模型", exact: true })
-        .click();
+      await editor.getByRole("tab", { name: "AI 模型", exact: true }).click();
       const limit = editor.getByRole("spinbutton", {
         name: "每日 token 上限：測試模型",
       });
@@ -1159,7 +1159,7 @@ test("administrators edit roles with effective access preview and an audit trail
     .getByRole("button", { name: "管理使用者：王小明", exact: true })
     .click();
   const dialog = page.getByRole("dialog", { name: "王小明", exact: true });
-  await dialog.getByRole("button", { name: "角色與權限", exact: true }).click();
+  await dialog.getByRole("tab", { name: "角色與權限", exact: true }).click();
   const save = dialog.getByRole("button", { name: "儲存角色", exact: true });
   await expect(save).toBeDisabled();
   await dialog
@@ -1230,7 +1230,7 @@ test("manual user creation, dual login editing and removal keep one place for ea
   );
   // Leaving a tab with unsaved changes asks first; cancelling keeps the draft.
   await edit.getByLabel("使用者姓名", { exact: true }).fill("本地測試員");
-  await edit.getByRole("button", { name: "對話", exact: true }).click();
+  await edit.getByRole("tab", { name: "對話", exact: true }).click();
   const discard = page.getByRole("dialog", {
     name: "放棄未儲存的變更？",
     exact: true,
@@ -1241,8 +1241,8 @@ test("manual user creation, dual login editing and removal keep one place for ea
     "本地測試員",
   );
   await expect(
-    edit.getByRole("button", { name: "帳號", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+    edit.getByRole("tab", { name: "帳號", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
   await edit
     .getByRole("checkbox", { name: "允許 AD 驗證", exact: true })
     .check();
@@ -1448,15 +1448,15 @@ test("group model limits and self-lockout errors work on desktop and mobile", as
   await dialog
     .getByRole("textbox", { name: "名稱", exact: true })
     .fill("研發工作區");
-  await dialog.getByRole("button", { name: "功能授權", exact: true }).click();
+  await dialog.getByRole("tab", { name: "功能授權", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "對話", exact: true }).check();
-  await dialog.getByRole("button", { name: "AI 模型", exact: true }).click();
+  await dialog.getByRole("tab", { name: "AI 模型", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "限制可用模型" }).check();
   await dialog.getByRole("checkbox", { name: "測試模型", exact: true }).check();
   await dialog
     .getByRole("spinbutton", { name: "每日 token 上限：測試模型" })
     .fill("50000");
-  await dialog.getByRole("button", { name: "儲存授權" }).click();
+  await dialog.getByRole("button", { name: "建立功能群組" }).click();
   await expect(dialog).not.toBeVisible();
   expect(
     state.catalog.groups?.find((x) => x.id === "research")?.policy
@@ -1468,7 +1468,7 @@ test("group model limits and self-lockout errors work on desktop and mobile", as
     .getByRole("button", { name: "管理使用者：測試使用者", exact: true })
     .click();
   const self = page.getByRole("dialog", { name: "測試使用者", exact: true });
-  await self.getByRole("button", { name: "角色與權限", exact: true }).click();
+  await self.getByRole("tab", { name: "角色與權限", exact: true }).click();
   await self
     .getByRole("checkbox", { name: "平台管理員", exact: true })
     .uncheck();
@@ -1527,7 +1527,7 @@ test("administrators inspect user usage and deleted conversations through an aud
   expect(state.audit.some((x) => x.action === "admin.conversations_list")).toBe(
     false,
   );
-  await dialog.getByRole("button", { name: "附件容量", exact: true }).click();
+  await dialog.getByRole("tab", { name: "附件容量", exact: true }).click();
   await expect(dialog.locator("nx-storage-usage")).toContainText("5.00 GB");
   await dialog.getByLabel("個人容量上限（GB）", { exact: true }).fill("10");
   await dialog
@@ -1541,7 +1541,7 @@ test("administrators inspect user usage and deleted conversations through an aud
     .click();
   await expect(dialog.locator("nx-storage-usage")).toContainText("5.00 GB");
   expect(state.bob.storage.personalLimitBytes).toBeNull();
-  await dialog.getByRole("button", { name: "對話", exact: true }).click();
+  await dialog.getByRole("tab", { name: "對話", exact: true }).click();
   await expect(dialog).toContainText("開啟清單與內容都會寫入稽核");
   await dialog
     .getByRole("button", { name: "檢視對話：公文內容討論", exact: true })
@@ -1576,7 +1576,7 @@ test("administrators inspect user usage and deleted conversations through an aud
     dialog.getByRole("button", { name: "檢視對話：公文內容討論", exact: true }),
   ).toHaveCount(0);
   await page.setViewportSize({ width: 375, height: 812 });
-  await dialog.getByRole("button", { name: "附件容量", exact: true }).click();
+  await dialog.getByRole("tab", { name: "附件容量", exact: true }).click();
   await dialog.getByLabel("個人容量上限（GB）", { exact: true }).fill("10");
   await dialog
     .getByRole("button", { name: "儲存容量上限", exact: true })
@@ -1722,7 +1722,7 @@ test("a delayed initial conversation list cannot overwrite a newer filter", asyn
     .getByRole("button", { name: "管理使用者：王小明", exact: true })
     .click();
   const dialog = page.getByRole("dialog", { name: "王小明", exact: true });
-  await dialog.getByRole("button", { name: "對話", exact: true }).click();
+  await dialog.getByRole("tab", { name: "對話", exact: true }).click();
   await received;
   await dialog
     .getByRole("checkbox", { name: "包含已刪除對話", exact: true })
@@ -1761,7 +1761,7 @@ test("personal model budgets share the group editor; settings stay form sized an
   expect(first.y).toBeGreaterThanOrEqual(identity.y + identity.height - 1);
   expect(Math.abs(first.y - last.y)).toBeLessThan(1);
   expect(Math.abs(first.x - identity.x)).toBeLessThan(1);
-  await dialog.getByRole("button", { name: "AI 模型", exact: true }).click();
+  await dialog.getByRole("tab", { name: "AI 模型", exact: true }).click();
   await expect(dialog).toContainText("100,000 tokens / 日");
   await expect(
     dialog.getByRole("region", { name: "模型授權與額度" }),
@@ -1776,13 +1776,13 @@ test("personal model budgets share the group editor; settings stay form sized an
   expect(
     Math.abs((await dialog.boundingBox())!.width - account.width),
   ).toBeLessThan(1);
-  await dialog.getByRole("button", { name: "附件容量", exact: true }).click();
+  await dialog.getByRole("tab", { name: "附件容量", exact: true }).click();
   await expect(dialog.getByLabel("個人容量上限（GB）")).toBeVisible();
   await settleEntrance(page);
   expect(
     Math.abs((await dialog.boundingBox())!.width - account.width),
   ).toBeLessThan(1);
-  await dialog.getByRole("button", { name: "對話", exact: true }).click();
+  await dialog.getByRole("tab", { name: "對話", exact: true }).click();
   await expect(dialog.locator(".conversation-body")).toBeVisible();
   await settleEntrance(page);
   const reading = (await dialog.boundingBox())!;
@@ -1793,7 +1793,7 @@ test("personal model budgets share the group editor; settings stay form sized an
   // The pager is not shown for a single page; the count sits beside the filter.
   await expect(dialog.locator(".conversation-pages")).toHaveCount(0);
   await expect(dialog.locator(".conversation-filter")).toContainText("1 段");
-  await dialog.getByRole("button", { name: "AI 模型", exact: true }).click();
+  await dialog.getByRole("tab", { name: "AI 模型", exact: true }).click();
   await dialog
     .getByLabel("每日 token 上限：測試模型", { exact: true })
     .fill("150000");
@@ -1816,7 +1816,7 @@ test("personal model budgets share the group editor; settings stay form sized an
     .click();
   await expect(dialog).toContainText("群組設定");
   await expect(
-    dialog.getByRole("group", { name: "使用者管理分類" }),
+    dialog.getByRole("tablist", { name: "使用者管理分類" }),
   ).toBeInViewport();
   await expect(dialog.locator(".inspector-stats")).toBeInViewport();
   await expect(
@@ -1844,7 +1844,7 @@ test("many model policies keep group tabs and save controls reachable on small s
     .getByRole("button", { name: "編輯功能群組：基本工作區", exact: true })
     .click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByRole("button", { name: "AI 模型", exact: true }).click();
+  await dialog.getByRole("tab", { name: "AI 模型", exact: true }).click();
   for (const viewport of [
     { width: 1440, height: 1000 },
     { width: 375, height: 812 },
@@ -1857,10 +1857,10 @@ test("many model policies keep group tabs and save controls reachable on small s
       .getByLabel("每日 token 上限：地端模型 12", { exact: true })
       .fill("50000");
     await expect(
-      dialog.getByRole("group", { name: "群組設定分類" }),
+      dialog.getByRole("tablist", { name: "功能群組設定分類" }),
     ).toBeInViewport({ ratio: 1 });
     await expect(
-      dialog.getByRole("button", { name: "儲存授權", exact: true }),
+      dialog.getByRole("button", { name: "儲存功能群組", exact: true }),
     ).toBeInViewport({
       ratio: 1,
     });
@@ -1870,12 +1870,14 @@ test("many model policies keep group tabs and save controls reachable on small s
     await page.emulateMedia({ colorScheme: "light" });
     await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
     await expect(
-      dialog.getByRole("button", { name: "儲存授權", exact: true }),
+      dialog.getByRole("button", { name: "儲存功能群組", exact: true }),
     ).toBeInViewport({
       ratio: 1,
     });
   }
-  await dialog.getByRole("button", { name: "儲存授權", exact: true }).click();
+  await dialog
+    .getByRole("button", { name: "儲存功能群組", exact: true })
+    .click();
   expect(
     state.catalog.groups!.find((group) => group.id === "workspace")!.policy!
       .dailyTokenLimits!["fixture:11"],
@@ -1972,7 +1974,7 @@ test("dialog tabs animate their content and necessary frame changes, preserve fo
   const inspector = page.getByRole("dialog", { name: "王小明", exact: true });
   await settleEntrance(page);
   const frame = (await inspector.boundingBox())!;
-  const models = inspector.getByRole("button", {
+  const models = inspector.getByRole("tab", {
     name: "AI 模型",
     exact: true,
   });
@@ -1980,7 +1982,7 @@ test("dialog tabs animate their content and necessary frame changes, preserve fo
   await expect
     .poll(() =>
       inspector
-        .locator(".inspector-panel")
+        .getByRole("tabpanel")
         .evaluate((el) =>
           el
             .getAnimations()
@@ -2000,7 +2002,7 @@ test("dialog tabs animate their content and necessary frame changes, preserve fo
   const after = (await inspector.boundingBox())!;
   expect(Math.abs(after.width - frame.width)).toBeLessThan(1);
   // Reading conversations needs a wider frame, which moves rather than jumps.
-  await inspector.getByRole("button", { name: "對話", exact: true }).click();
+  await inspector.getByRole("tab", { name: "對話", exact: true }).click();
   await expect
     .poll(() =>
       inspector.evaluate((el) =>
@@ -2016,12 +2018,10 @@ test("dialog tabs animate their content and necessary frame changes, preserve fo
     .toBe(true);
   await settleEntrance(page);
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await inspector
-    .getByRole("button", { name: "附件容量", exact: true })
-    .click();
+  await inspector.getByRole("tab", { name: "附件容量", exact: true }).click();
   expect(
     await inspector
-      .locator(".inspector-panel")
+      .getByRole("tabpanel")
       .evaluate((el) => el.getAnimations().length),
   ).toBe(0);
   expect(await inspector.evaluate((el) => el.getAnimations().length)).toBe(0);
@@ -2037,30 +2037,49 @@ test("dialog tabs animate their content and necessary frame changes, preserve fo
     .click();
   const group = page.locator("dialog.admin-editor");
   await settleEntrance(page);
-  await group.getByRole("button", { name: "基本資料", exact: true }).click();
-  await settleEntrance(page);
-  await group.getByRole("button", { name: "功能授權", exact: true }).click();
-  await expect
-    .poll(() =>
-      group.evaluate((el) =>
-        el
-          .getAnimations()
-          .some(
-            (a) =>
-              a.effect instanceof KeyframeEffect &&
-              a.effect.getKeyframes().some((frame) => !!frame.width),
-          ),
-      ),
-    )
-    .toBe(true);
-  for (const name of ["AI 模型", "基本資料", "附件容量", "功能授權"])
-    await group.getByRole("button", { name, exact: true }).click();
-  await settleEntrance(page);
+  // A feature group keeps one frame for all four tabs: switching never resizes or moves it,
+  // and the tabs stay above the scrolling body.
+  const groupFrame = (await group.boundingBox())!;
+  const tabs = group.getByRole("tablist", { name: "功能群組設定分類" });
+  const tabsTop = (await tabs.boundingBox())!.y;
+  for (const name of [
+    "功能授權",
+    "AI 模型",
+    "附件容量",
+    "基本資料",
+    "功能授權",
+  ]) {
+    await group.getByRole("tab", { name, exact: true }).click();
+    await settleEntrance(page);
+    const box = (await group.boundingBox())!;
+    expect(Math.abs(box.width - groupFrame.width)).toBeLessThan(1);
+    expect(Math.abs(box.height - groupFrame.height)).toBeLessThan(1);
+    await group
+      .locator(".dialog-body")
+      .evaluate((el) => (el.scrollTop = el.scrollHeight));
+    expect(Math.abs((await tabs.boundingBox())!.y - tabsTop)).toBeLessThan(1);
+  }
   await expect(
-    group.getByRole("button", { name: "功能授權", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+    group.getByRole("tab", { name: "功能授權", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  // The selected tab's underline sits on the tabs' bottom rule.
+  const underline = await tabs.evaluate((el) => {
+    const host = el.getBoundingClientRect();
+    const line = getComputedStyle(el, "::before");
+    return {
+      shown: el.hasAttribute("data-indicator") && line.opacity === "1",
+      bottom: parseFloat(line.bottom),
+      height: host.height,
+    };
+  });
+  expect(underline).toEqual({
+    shown: true,
+    bottom: 0,
+    height: expect.any(Number),
+  });
+  expect(underline.height).toBeGreaterThanOrEqual(34);
   await expect(
-    group.getByRole("button", { name: "儲存授權", exact: true }),
+    group.getByRole("button", { name: "儲存功能群組", exact: true }),
   ).toBeVisible();
   await expectViewportContained(page);
 });

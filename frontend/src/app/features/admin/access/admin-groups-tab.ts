@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, output } from '@angular/core';
 import type { AdminGroupDto } from '../../../core/api/schema';
+import { storageLimitGb } from '../../../shared/browser/storage-limit';
 import { DataTable, DataTableRow } from '../../../shared/ui/data-table';
 import { Icon } from '../../../shared/ui/icon';
 import { AdminStore } from '../admin-store';
@@ -30,13 +31,14 @@ import { AccessStatus } from './access-status';
         <h2>
           功能群組 <span class="ui-count-label">{{ groups().length }} 個</span>
         </h2>
-        <span class="form-note">選取群組編輯功能、模型與容量</span>
+        <span class="form-note">選取群組編輯基本資料、功能、模型與容量</span>
       </div>
       <table>
         <colgroup>
           <col class="admin-name-column" />
           <col class="admin-status-column" />
           <col class="admin-model-column" />
+          <col class="admin-storage-column" />
           <col />
           <col class="admin-row-action-column" />
         </colgroup>
@@ -45,6 +47,7 @@ import { AccessStatus } from './access-status';
             <th scope="col">功能群組</th>
             <th scope="col">狀態</th>
             <th scope="col">AI 模型</th>
+            <th scope="col">附件容量</th>
             <th scope="col">功能授權</th>
             <th scope="col"><span class="sr-only">編輯</span></th>
           </tr>
@@ -63,7 +66,11 @@ import { AccessStatus } from './access-status';
                     ? '全部模型'
                     : '授予 ' + group.policy.allowedModelIds.length + ' 個模型'
                 }}
+                @if (limited(group); as count) {
+                  <small>{{ count }} 個模型有每日額度</small>
+                }
               </td>
+              <td data-label="附件容量">{{ storage(group) }}</td>
               <td data-label="功能授權">
                 <nx-feature-summary [features]="summaries()[group.id] || []" />
               </td>
@@ -88,6 +95,14 @@ export class AdminGroupsTab {
   readonly store = inject(AdminStore);
   readonly edit = output<AdminGroupDto | undefined>();
   readonly groups = computed(() => this.store.catalog()?.groups ?? []);
+  /** Models with a daily token limit in this group. */
+  limited(group: AdminGroupDto) {
+    return Object.keys(group.policy?.dailyTokenLimits ?? {}).length;
+  }
+  storage(group: AdminGroupDto) {
+    const bytes = group.policy?.storedAttachmentLimitBytes;
+    return bytes == null ? '網站預設' : bytes === 0 ? '禁止上傳' : storageLimitGb(bytes) + ' GB';
+  }
   readonly summaries = computed(() => {
     const features = this.store.catalog()?.features || [];
     return Object.fromEntries(

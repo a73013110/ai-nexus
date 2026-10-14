@@ -1,27 +1,10 @@
 @use 'breakpoints' as bp;
 
 // Settings tabs take a form's height; reading conversations needs the room of a workspace.
-// DialogMotion moves the frame between the two. The header is custom (user summary + close).
+// DialogMotion moves the frame between the two.
 .platform-dialog.admin-inspector.inspector-wide {
   --dialog-width: 72rem;
-  height: min(54rem, var(--dialog-max-height));
-}
-// The summary lays out in this grid: identity, audit link, close; figures below across the width.
-.admin-inspector > .dialog-bar {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  align-items: start;
-  gap: var(--p-space-3) var(--p-space-2);
-}
-.admin-inspector > .dialog-bar > .icon-button {
-  grid-column: 3;
-  grid-row: 1;
-}
-.inspector-nav {
-  display: grid;
-  flex: none;
-  gap: var(--p-space-2);
-  padding: var(--p-space-3) var(--p-space-5) 0;
+  height: var(--dialog-max-height);
 }
 .inspector-panel {
   display: flex;
@@ -31,10 +14,12 @@
 }
 
 @include bp.below(phone) {
-  .platform-dialog.admin-inspector.inspector-wide {
-    height: var(--dialog-max-height);
+  // The title keeps the room; the audit link keeps its icon, its name and a touch-sized target.
+  .inspector-audit {
+    justify-content: center;
+    min-width: var(--button-target);
   }
-  .inspector-nav nx-view-switch {
-    --view-switch-button-padding-inline: var(--p-space-2);
+  .inspector-audit > span {
+    display: none;
   }
 }

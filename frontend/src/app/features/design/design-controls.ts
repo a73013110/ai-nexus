@@ -9,6 +9,7 @@ import {
 import { ViewScope } from '../../shared/browser/view-scope';
 import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
 import { Checkbox } from '../../shared/ui/checkbox';
+import { ChoiceGroups, type ChoiceGroup } from '../../shared/ui/choice-groups';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { Icon } from '../../shared/ui/icon';
 import { NameDialog } from '../../shared/ui/name-dialog';
@@ -19,6 +20,7 @@ import { ViewSwitch } from '../../shared/ui/view-switch';
 import { DesignDialogs } from './design-dialogs';
 import { DesignExample, DesignSection } from './design-section';
 import { DesignSamples } from './design-samples';
+import { FloatingToolbar } from '../../shared/ui/floating-toolbar';
 
 /** Buttons, menus, confirmation and every selection control. */
 @Component({
@@ -26,10 +28,12 @@ import { DesignSamples } from './design-samples';
   imports: [
     ActionMenu,
     Checkbox,
+    ChoiceGroups,
     ConfirmDialog,
     DesignDialogs,
     DesignExample,
     DesignSection,
+    FloatingToolbar,
     Icon,
     NameDialog,
     Select,
@@ -66,6 +70,19 @@ import { DesignSamples } from './design-samples';
     }
     nx-select {
       width: min(100%, 16rem);
+    }
+    .design-floating {
+      position: relative;
+      flex-basis: 100%;
+      min-height: 10rem;
+      padding: 4.5rem var(--p-space-4) var(--p-space-4);
+      border: 1px solid var(--line);
+      border-radius: var(--p-radius-md);
+      background: var(--canvas);
+      color: var(--secondary);
+    }
+    .design-floating nx-select {
+      width: 7.5rem;
     }
   `,
   template: `<nx-design-section
@@ -195,6 +212,32 @@ import { DesignSamples } from './design-samples';
       </div>
     </nx-design-section>
     <nx-design-section
+      id="design-floating-toolbar"
+      title="浮動工具列"
+      api="FloatingToolbar"
+      description="檢視器的內容功能（模式、頁碼、縮放、搜尋）浮在內容上方、不佔版面；指標移動、觸控或焦點進入時出現，閒置約 2 秒淡出，焦點在內、下拉展開或 pinned 時保留。標題列只留視窗層級動作。"
+    >
+      <div class="design-floating" role="region" aria-label="浮動工具列示範內容" tabindex="0">
+        <nx-floating-toolbar label="示範檢視工具">
+          <nx-view-switch
+            label="示範檢視方式"
+            appearance="segment"
+            [options]="views"
+            [value]="view()"
+            (valueChange)="view.set($event)"
+          />
+          <nx-select
+            appearance="pill"
+            label="示範縮放"
+            [options]="zooms"
+            [value]="zoom()"
+            (valueChange)="zoom.set($event)"
+          />
+        </nx-floating-toolbar>
+        在這個區域移動指標、點一下或用 Tab 進入，工具列就會出現。
+      </div>
+    </nx-design-section>
+    <nx-design-section
       id="design-checkbox"
       title="核取方塊"
       api="Checkbox"
@@ -208,6 +251,19 @@ import { DesignSamples } from './design-samples';
       />
       <nx-checkbox label="目前無法調整" description="停用狀態" [disabled]="true" />
     </nx-design-section>
+    <nx-design-section
+      id="design-choice-groups"
+      title="分組多選"
+      api="ChoiceGroups"
+      description="依分類分組的多選清單：每類一張有框卡片，標題旁是已選數與全選／全不選；寬處兩欄、窄處一欄，不再包一層總 fieldset。"
+    >
+      <nx-choice-groups
+        label="示範授權"
+        [groups]="choiceGroups"
+        [selected]="chosen()"
+        (selectedChange)="chosen.set($event)"
+      />
+    </nx-design-section>
     <nx-confirm-dialog />
     <nx-name-dialog />`,
 })
@@ -218,6 +274,26 @@ export class DesignControls {
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly naming = viewChild.required(NameDialog);
   readonly checked = signal(true);
+  readonly chosen = signal(['chat', 'files']);
+  readonly choiceGroups: ChoiceGroup[] = [
+    {
+      id: 'work',
+      name: '工作',
+      options: [
+        { id: 'chat', label: '對話', description: 'chat' },
+        { id: 'files', label: '檔案庫', description: 'files' },
+        { id: 'knowledge', label: '知識庫', description: 'knowledge' },
+      ],
+    },
+    {
+      id: 'system',
+      name: '系統',
+      options: [
+        { id: 'admin', label: '存取管理', description: 'admin' },
+        { id: 'audit', label: '活動稽核', description: 'audit' },
+      ],
+    },
+  ];
   readonly options = signal({ web: true, time: false });
   readonly toggles = computed<MenuAction[]>(() => [
     { id: 'web', label: '網路搜尋', icon: 'globe', checked: this.options().web },
@@ -228,6 +304,16 @@ export class DesignControls {
   readonly range = signal('week');
   readonly display = signal('icons');
   readonly tab = signal('overview');
+  readonly view = signal('preview');
+  readonly zoom = signal('1');
+  readonly views = [
+    { value: 'preview', label: '預覽' },
+    { value: 'source', label: '原始碼' },
+  ];
+  readonly zooms = ['0.75', '1', '1.5'].map((value) => ({
+    value,
+    label: `${Number(value) * 100}%`,
+  }));
   readonly filters = [
     { value: 'active', label: '近期' },
     { value: 'favorites', label: '收藏' },

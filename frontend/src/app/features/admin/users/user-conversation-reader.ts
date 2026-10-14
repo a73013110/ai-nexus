@@ -62,6 +62,8 @@ export class UserConversationReader {
     source: this.key,
     computation: () => null,
   });
+  /** The conversation chosen for reading, before and after its messages arrive. */
+  readonly selected = computed(() => this.opened()?.id ?? null);
   private readonly detailRead = apiResource({
     params: () => this.opened() ?? undefined,
     loader: async (request) => ({
@@ -111,6 +113,10 @@ export class UserConversationReader {
   }
   loadList(offset = 0) {
     this.offset.set(offset);
+  }
+  /** Back to the list on narrow screens; the next read starts afresh. */
+  close() {
+    this.opened.set(null);
   }
   read(id: string, more = false) {
     if (more) {

@@ -1,0 +1,46 @@
+// Cards share the row: two columns where two 20rem cards fit (a large dialog), one otherwise.
+// Inside a card the options take as many 11rem columns as fit.
+:host {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  align-items: start;
+  gap: var(--p-space-3);
+  min-width: 0;
+}
+.choice-group {
+  display: grid;
+  gap: var(--p-space-1);
+  min-width: 0;
+  padding: var(--p-space-1) var(--p-space-1) var(--p-space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  background: var(--surface);
+}
+// The title lines up with the checkbox labels' boxes below it.
+.choice-group-head {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-2);
+  min-height: var(--button-target);
+  padding-inline-start: var(--control-padding-inline);
+}
+.choice-group-head h3 {
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-label);
+  font-weight: 600;
+}
+.choice-group-count {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
+}
+.choice-group-batch {
+  margin-inline-start: auto;
+  font-size: var(--text-caption);
+}
+.choice-group-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr));
+  gap: 0 var(--p-space-1);
+}
