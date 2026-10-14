@@ -23,6 +23,7 @@ import { JobsApi } from './jobs-api';
 import { jobKindIcon, jobKindName } from './job-kind';
 import { JobToasts } from './job-toasts';
 import { apiResource } from '../../core/api/api-resource';
+import { tasksTour } from './tasks-tour';
 
 @Component({
   selector: 'nx-tasks-page',
@@ -42,6 +43,7 @@ import { apiResource } from '../../core/api/api-resource';
   template: `<nx-feature-page
     [title]="session.featureName('tasks')"
     description="追蹤文件辨識、索引、評測與程式碼 review。離開頁面後任務仍會繼續。"
+    [tour]="tour()"
   >
     @if (error()) {
       <nx-notice [message]="error()"
@@ -80,29 +82,33 @@ import { apiResource } from '../../core/api/api-resource';
             <span class="job-attempt">{{
               job.attempt ? '第 ' + job.attempt + ' 次處理' : '尚未開始'
             }}</span>
-            @if (job.kind === 'repository-review' && session.has('repositories')) {
+            @if (opensReview(job)) {
               <a
-                class="quiet-button"
+                class="quiet-button job-result"
                 routerLink="/repositories"
                 [queryParams]="{ review: job.subjectId }"
                 >檢視 review<nx-icon name="chevron"
               /></a>
             }
             @if (job.kind === 'document-ingest') {
-              <a class="quiet-button" [routerLink]="['/reader', job.subjectId]"
+              <a class="quiet-button job-result" [routerLink]="['/reader', job.subjectId]"
                 >檢視文件<nx-icon name="chevron"
               /></a>
             }
-            @if (['queued', 'running'].includes(job.status)) {
+            @if (canStop(job)) {
               <button
-                class="quiet-button"
+                class="quiet-button job-control"
                 [disabled]="busy() === job.id || job.cancelRequested"
                 (click)="act(job, false)"
               >
                 <nx-icon name="stop" />停止處理
               </button>
-            } @else if (['failed', 'cancelled'].includes(job.status) && job.attempt < 6) {
-              <button class="quiet-button" [disabled]="busy() === job.id" (click)="act(job, true)">
+            } @else if (canRetry(job)) {
+              <button
+                class="quiet-button job-control"
+                [disabled]="busy() === job.id"
+                (click)="act(job, true)"
+              >
                 <nx-icon name="repeat" />重試
               </button>
             }
@@ -166,6 +172,15 @@ export class TasksPage {
               : x.status === 'completed')),
     ),
   );
+  /** The list's tour; card steps follow the cards and actions the current filter shows. */
+  readonly tour = computed(() => {
+    const jobs = this.jobs.loading() ? [] : this.visible();
+    return tasksTour({
+      cards: jobs.length > 0,
+      results: jobs.some((job) => job.kind === 'document-ingest' || this.opensReview(job)),
+      controls: jobs.some((job) => this.canStop(job) || this.canRetry(job)),
+    });
+  });
   constructor() {
     effect(() => this.jobs.value()?.forEach((job) => this.jobToasts.observe(job)));
     inject(ActivatedRoute)
@@ -176,6 +191,15 @@ export class TasksPage {
         this.target.set(id);
         if (id) this.filter.set('all');
       });
+  }
+  opensReview(job: JobDto) {
+    return job.kind === 'repository-review' && this.session.has('repositories');
+  }
+  canStop(job: JobDto) {
+    return ['queued', 'running'].includes(job.status);
+  }
+  canRetry(job: JobDto) {
+    return ['failed', 'cancelled'].includes(job.status) && job.attempt < 6;
   }
   reload() {
     this.actionError.set('');

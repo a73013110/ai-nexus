@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
-import { toasts } from "./fixtures";
+import { randomUUID } from "node:crypto";
+import { settleEntrance, toasts } from "./fixtures";
 import { KnowledgeFixture } from "./knowledge-fixture";
 
 test("a source added here announces once when it becomes searchable, not in other tabs or after reload", async ({
@@ -80,3 +81,93 @@ test("a retried task that fails again announces it and links to the task", async
   await expect(page).toHaveURL(new RegExp(`/tasks\\?job=${job.id}$`));
   await expect(page.locator(`#job-${job.id}`)).toContainText("處理失敗");
 });
+
+for (const width of [1440, 375]) {
+  test(`tasks tour follows the cards and actions the filter shows at ${width}px`, async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const fixture = new KnowledgeFixture();
+    fixture.seed();
+    // Desktop lists a running ingest that can be opened and stopped; mobile starts on an empty
+    // 處理中 filter, then shows the completed ingest under 全部.
+    const running = width === 1440;
+    if (running)
+      fixture.jobs.push({
+        ...fixture.jobs[0],
+        id: randomUUID(),
+        subjectId: randomUUID(),
+        label: "公文彙整.pdf",
+        status: "running",
+        stage: "辨識第 2 頁",
+        completedUnits: 1,
+        totalUnits: 3,
+      });
+    await fixture.attach(page);
+    const height = width === 375 ? 812 : 1000;
+    await page.setViewportSize({ width, height });
+    const launcher = page
+      .locator(".feature-header")
+      .getByRole("button", { name: "操作導覽", exact: true });
+    const tour = page.locator(".driver-popover.nx-tour");
+    const title = tour.locator(".driver-popover-title");
+    const progress = tour.locator(".driver-popover-progress-text");
+    // Walks to the end and returns each step's title and the last description.
+    const walk = async () => {
+      await launcher.click();
+      await expect(title).toHaveText(/./);
+      const total = Number((await progress.innerText()).split("/")[1]);
+      const titles = [await title.innerText()];
+      for (let step = 2; step <= total; step++) {
+        await tour.getByRole("button", { name: "下一步", exact: true }).click();
+        await expect(progress).toHaveText(`${step} / ${total}`);
+        titles.push(await title.innerText());
+        await settleEntrance(page);
+        const bounds = (await tour.boundingBox())!;
+        expect(bounds.x).toBeGreaterThanOrEqual(0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+        expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
+      }
+      const last = await tour
+        .locator(".driver-popover-description")
+        .innerText();
+      await tour.getByRole("button", { name: "開始使用", exact: true }).click();
+      await expect(tour).toHaveCount(0);
+      await expect(launcher).toBeFocused();
+      await expect(page.locator(".driver-overlay")).toHaveCount(0);
+      return { titles, last };
+    };
+    const toolbar = ["耗時的處理交給背景", "依狀態篩選", "用名稱尋找任務"];
+    await page.goto("/tasks");
+    if (running) {
+      await expect(page.locator(".job-card")).toHaveCount(1);
+      await expect(page.locator(".job-card")).toContainText("公文彙整.pdf");
+      const active = await walk();
+      expect(active.titles).toEqual([
+        ...toolbar,
+        "看真實進度",
+        "查看處理結果",
+        "停止或重試",
+      ]);
+      expect(active.last).toContain("重播導覽");
+    } else {
+      await expect(
+        page.getByRole("heading", { name: "目前沒有處理中的任務" }),
+      ).toBeVisible();
+      // Nothing is listed, so the tour ends on the search.
+      const empty = await walk();
+      expect(empty.titles).toEqual(toolbar);
+      expect(empty.last).toContain("重播導覽");
+      await page.getByRole("button", { name: "全部", exact: true }).click();
+      await expect(
+        page.locator(".job-card", { hasText: "差旅費用申請.pdf" }),
+      ).toContainText("已完成");
+      // A completed task has nothing to stop or retry.
+      const all = await walk();
+      expect(all.titles).toEqual([...toolbar, "看真實進度", "查看處理結果"]);
+      expect(all.last).toContain("重播導覽");
+    }
+    expect(errors).toEqual([]);
+  });
+}

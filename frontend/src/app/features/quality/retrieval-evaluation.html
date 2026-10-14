@@ -2,6 +2,7 @@
   title="檢索評測"
   description="以同一批標註題目比較向量、全文、混合與混合重排的召回品質。"
   [back]="{ path: '/quality', label: '全部評測' }"
+  [tour]="tour"
 >
   @if (error()) {
     <nx-notice [message]="error()"
@@ -10,7 +11,7 @@
   }
   <div class="retrieval-layout">
     @if (runs().length) {
-      <nx-panel heading="評測報告" icon="chart" [count]="runs().length">
+      <nx-panel class="retrieval-reports" heading="評測報告" icon="chart" [count]="runs().length">
         <ng-container panel-actions>
           <nx-select
             appearance="pill"
@@ -171,7 +172,7 @@
             maxlength="120"
             placeholder="例如：採購規範驗收"
         /></label>
-        <fieldset>
+        <fieldset class="retrieval-collections">
           <legend>選擇知識庫（最多三個）</legend>
           @if (loading()) {
             <span class="skeleton choice-skeleton" role="status" aria-label="正在載入知識庫"></span>
@@ -189,7 +190,7 @@
             }
           }
         </fieldset>
-        <label
+        <label class="retrieval-corpus"
           >驗收集 JSON（1 至 20 題）<textarea
             nxField
             aria-label="檢索驗收集 JSON"
@@ -210,7 +211,7 @@
         <div class="page-actions">
           <button
             type="submit"
-            class="primary-button"
+            class="primary-button retrieval-start"
             [disabled]="busy() || form.invalid || !selected().length || session.testing()"
           >
             <nx-icon name="play" />開始四模式評測

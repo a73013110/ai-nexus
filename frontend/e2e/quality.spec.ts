@@ -350,3 +350,254 @@ test("answer feedback is one click, can be supplemented and toggled off", async 
   await expect(negative).toHaveAttribute("aria-pressed", "false");
   expect(rating).toBe(0);
 });
+
+for (const width of [1440, 375]) {
+  test(`quality tours walk the list, an evaluation set and retrieval evaluation at ${width}px`, async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const core = new ApiFixture();
+    core.extraFeatures.push(
+      { id: "quality", name: "品質評測", route: "/quality" },
+      { id: "knowledge", name: "知識庫", route: "/knowledge" },
+    );
+    // A reader without runs has no answers to review; the menu then offers only the export.
+    const reader = width === 375;
+    const now = new Date().toISOString();
+    const job = (subjectId: string, kind: string) => ({
+      id: randomUUID(),
+      kind,
+      subjectId,
+      label: "品質評測",
+      status: "completed",
+      stage: "處理完成",
+      attempt: 1,
+      completedUnits: 2,
+      totalUnits: 2,
+      cancelRequested: false,
+      errorCode: null,
+      errorMessage: null,
+      issueCode: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    const set: EvaluationSetDto = {
+      resource: {
+        id: randomUUID(),
+        name: "公文摘要檢核",
+        kind: "evaluation",
+        canEdit: !reader,
+        isOwner: !reader,
+        updatedAt: now,
+      },
+      description: "比較摘要的可用性",
+      version: 2,
+      cases: [
+        {
+          question: "整理通知的辦理期限",
+          reference: "整理重點後確認日期與承辦人",
+          requiredTerms: ["期限"],
+          forbiddenTerms: [],
+        },
+      ],
+    };
+    const runId = randomUUID();
+    const detail: EvaluationDetailDto = {
+      run: {
+        id: runId,
+        setId: set.resource.id,
+        title: set.resource.name,
+        setVersion: 2,
+        canControl: true,
+        createdAt: now,
+        job: job(runId, "evaluation"),
+      },
+      cases: set.cases,
+      variants: ["方案 A", "方案 B"].map((label) => ({
+        label,
+        modelId: "model-1",
+        instruction: "",
+        configuration: null,
+        modelDisplayName: "AI 助理 1",
+      })),
+      canReview: true,
+      results: [0, 1].map((variantIndex) => ({
+        caseIndex: 0,
+        variantIndex,
+        output: "辦理期限須由承辦人確認。",
+        truncated: false,
+        requiredMatches: 1,
+        requiredTotal: 1,
+        forbiddenMatches: 0,
+        elapsedMs: 1200,
+        inputTokens: 100,
+        outputTokens: 30,
+        reviewScore: null,
+        reviewNote: "",
+      })),
+    };
+    const evaluationId = randomUUID();
+    const retrieval = {
+      id: evaluationId,
+      title: "採購驗收",
+      cases: 2,
+      topK: 6,
+      profileKey: "ollama:bge-m3:1024:test",
+      configurationFingerprint: "a".repeat(64),
+      createdAt: now,
+      job: job(evaluationId, "retrieval-eval"),
+    };
+    const latency = { p50: 12, p95: 21 };
+    const report = {
+      run: retrieval,
+      refusalDefinition: "無答案題未提供任何來源的比例。",
+      latencyDefinition: "共用正常查詢快取。",
+      summary: ["vector", "keyword", "hybrid", "hybrid+rerank"].map((mode) => ({
+        mode,
+        comparable: true,
+        completed: 2,
+        unavailable: 0,
+        recall: 1,
+        mrr: 1,
+        ndcg: 1,
+        refusalRate: 0.5,
+        rewrite: latency,
+        embed: latency,
+        search: latency,
+        rerank: latency,
+        total: latency,
+      })),
+      results: [],
+    };
+    await core.attach(page);
+    await page.route("**/api/v1/knowledge/collections", (route) =>
+      route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            resource: {
+              id: randomUUID(),
+              name: "採購規範",
+              kind: "knowledge",
+              isOwner: true,
+              canEdit: true,
+              updatedAt: now,
+            },
+            description: "",
+            documents: 1,
+            readyDocuments: 1,
+          },
+        ]),
+      }),
+    );
+    await page.route("**/api/v1/quality/**", (route) => {
+      const path = new URL(route.request().url()).pathname;
+      const body = path.endsWith("/feedback")
+        ? []
+        : path.endsWith("/quality/sets")
+          ? [set]
+          : path.endsWith("/runs")
+            ? reader
+              ? []
+              : [detail.run]
+            : path.includes("/quality/runs/")
+              ? detail
+              : path.endsWith("/retrieval-evals")
+                ? reader
+                  ? []
+                  : [retrieval]
+                : path.includes("/retrieval-evals/")
+                  ? report
+                  : set;
+      return route.fulfill({
+        contentType: "application/json",
+        body: JSON.stringify(body),
+      });
+    });
+    const height = width === 375 ? 812 : 1000;
+    await page.setViewportSize({ width, height });
+    const launcher = page
+      .locator(".feature-header")
+      .getByRole("button", { name: "操作導覽", exact: true });
+    const tour = page.locator(".driver-popover.nx-tour");
+    const title = tour.locator(".driver-popover-title");
+    const progress = tour.locator(".driver-popover-progress-text");
+    // Walks to the end and returns each step's title and the last description.
+    const walk = async () => {
+      await launcher.click();
+      await expect(title).toHaveText(/./);
+      const total = Number((await progress.innerText()).split("/")[1]);
+      const titles = [await title.innerText()];
+      for (let step = 2; step <= total; step++) {
+        await tour.getByRole("button", { name: "下一步", exact: true }).click();
+        await expect(progress).toHaveText(`${step} / ${total}`);
+        titles.push(await title.innerText());
+        await settleEntrance(page);
+        const bounds = (await tour.boundingBox())!;
+        expect(bounds.x).toBeGreaterThanOrEqual(0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+        expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
+      }
+      const last = await tour
+        .locator(".driver-popover-description")
+        .innerText();
+      await tour.getByRole("button", { name: "開始使用", exact: true }).click();
+      await expect(tour).toHaveCount(0);
+      await expect(launcher).toBeFocused();
+      await expect(page.locator(".driver-overlay")).toHaveCount(0);
+      return { titles, last };
+    };
+    await page.goto("/quality");
+    await expect(page.locator(".resource-card")).toBeVisible();
+    const list = await walk();
+    expect(list.titles).toEqual([
+      "用固定題目衡量品質",
+      "評測集與我的回饋",
+      "用名稱尋找評測集",
+      "打開評測集",
+      "建立評測集",
+      "匯入題庫與檢索評測",
+    ]);
+    expect(list.last).toContain("重播導覽");
+    await page.locator(".resource-card").click();
+    await expect(
+      page.getByRole("heading", { name: set.resource.name, exact: true }),
+    ).toBeVisible();
+    if (reader)
+      await expect(
+        page.getByRole("heading", { name: "建立第一份比較紀錄", exact: true }),
+      ).toBeVisible();
+    else await expect(page.locator(".evaluation-answer")).toHaveCount(2);
+    const evaluation = await walk();
+    expect(evaluation.titles).toEqual([
+      "評測集的內容",
+      "開始比較",
+      "比較紀錄",
+      ...(reader ? [] : ["逐題比較答案", "補上人工評分"]),
+      "評測集操作",
+    ]);
+    expect(evaluation.last).toContain("重播導覽");
+    expect(evaluation.last).toContain(
+      reader ? "可匯出題庫 JSON。" : "可編輯題庫、匯出題庫 JSON、設定存取權限",
+    );
+    await page.goto("/quality/retrieval");
+    await expect(
+      page.getByRole("checkbox", { name: "採購規範" }),
+    ).toBeVisible();
+    if (!reader)
+      await expect(
+        page.getByRole("heading", { name: "hybrid+rerank", exact: true }),
+      ).toBeVisible();
+    const retrievalTour = await walk();
+    expect(retrievalTour.titles).toEqual([
+      "比較四種檢索模式",
+      ...(reader ? [] : ["閱讀評測報告"]),
+      "選擇知識庫",
+      "貼上驗收集",
+      "開始四模式評測",
+    ]);
+    expect(retrievalTour.last).toContain("重播導覽");
+    expect(errors).toEqual([]);
+  });
+}
