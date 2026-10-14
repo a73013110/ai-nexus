@@ -4,7 +4,6 @@
   #dialog
   class="platform-dialog admin-inspector"
   [class.inspector-wide]="store.tab() === 'conversations'"
-  [nxDialogView]="store.tab()"
   (cancel)="cancel($event)"
   (close)="closing()"
 >

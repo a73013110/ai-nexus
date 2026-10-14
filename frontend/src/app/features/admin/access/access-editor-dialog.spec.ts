@@ -138,17 +138,24 @@ describe('AccessEditorDialog', () => {
     });
   });
 
-  it('saves every tab of a group at once and opens the tab that holds an invalid value', async () => {
+  it('saves both tabs of a group at once and opens the tab that holds an invalid value', async () => {
     const { dialog, api } = setup();
     dialog.open('group', group);
-    dialog.groupSection.set('models');
+    dialog.selectSection('models');
     dialog.update('name', ' ');
     await dialog.save(new Event('submit'));
-    expect(dialog.groupSection()).toBe('general');
+    expect(dialog.groupSection()).toBe('settings');
     dialog.update('name', '審閱');
+    dialog.update('modelPolicy', {
+      ...dialog.editor()!.modelPolicy,
+      tokenLimits: { m: '-1' },
+    });
+    await dialog.save(new Event('submit'));
+    expect(dialog.groupSection()).toBe('models');
+    dialog.update('modelPolicy', { ...dialog.editor()!.modelPolicy, tokenLimits: {} });
     dialog.update('storage', 'abc');
     await dialog.save(new Event('submit'));
-    expect(dialog.groupSection()).toBe('storage');
+    expect(dialog.groupSection()).toBe('settings');
     expect(dialog.editorError()).not.toBe('');
     expect(api.group).not.toHaveBeenCalled();
     dialog.update('storage', '2');
@@ -172,7 +179,7 @@ describe('AccessEditorDialog', () => {
     dialog.update('ids', ['off', 'repositories']);
     dialog.update('modelPolicy', { ...dialog.editor()!.modelPolicy, tokenLimits: { m: ' ' } });
     expect(dialog.dirty()).toBe(false);
-    dialog.groupSection.set('storage');
+    dialog.selectSection('models');
     dialog.update('storage', '3');
     dialog.update('enabled', false);
     expect(dialog.dirty()).toBe(true);
@@ -180,7 +187,15 @@ describe('AccessEditorDialog', () => {
     expect(dialog.dirty()).toBe(false);
     expect(dialog.editor()!.enabled).toBe(true);
     expect(dialog.editor()!.storage).toBe('');
-    expect(dialog.groupSection()).toBe('storage');
+    expect(dialog.groupSection()).toBe('models');
+  });
+
+  it('opens every group on its settings tab', () => {
+    const { dialog } = setup();
+    dialog.open('group', group);
+    dialog.selectSection('models');
+    dialog.open('group', group);
+    expect(dialog.groupSection()).toBe('settings');
   });
 
   it('asks before closing with unsaved changes and closes at once without them', async () => {

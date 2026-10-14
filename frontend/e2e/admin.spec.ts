@@ -556,15 +556,21 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
     groups.locator("tbody tr").nth(1).locator("nx-status-badge"),
   ).toHaveAttribute("data-tone", "warning");
   await expect(groups.locator("tbody tr").nth(1)).toContainText("停用");
-  // Each feature category is its own framed card with a count; no outer fieldset wraps them.
+  // Like a role: one page of sections (basics, features, storage), with the model policy beside it.
   await groups.locator("tbody tr").first().locator("td").first().click();
-  await editor.getByRole("tab", { name: "功能授權", exact: true }).click();
+  await expect(editor.getByRole("tab")).toHaveText(["群組設定", "AI 模型"]);
   await expect(editor.getByRole("tabpanel")).toHaveAttribute(
     "aria-labelledby",
     (await editor
-      .getByRole("tab", { name: "功能授權", exact: true })
+      .getByRole("tab", { name: "群組設定", exact: true })
       .getAttribute("id"))!,
   );
+  await expect(editor.locator(".form-section-head h3")).toHaveText([
+    "基本資料",
+    "功能授權",
+    "附件容量",
+  ]);
+  // Each feature category is its own framed card with a count; no outer fieldset wraps them.
   await expect(editor.locator("fieldset")).toHaveCount(0);
   const work = editor.getByRole("group", { name: "工作", exact: true });
   await expect(work).toHaveCSS("border-left-style", "solid");
@@ -1550,7 +1556,6 @@ test("group model limits and self-lockout errors work on desktop and mobile", as
   await dialog
     .getByRole("textbox", { name: "名稱", exact: true })
     .fill("研發工作區");
-  await dialog.getByRole("tab", { name: "功能授權", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "對話", exact: true }).check();
   await dialog.getByRole("tab", { name: "AI 模型", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "限制可用模型" }).check();
@@ -2163,30 +2168,46 @@ test("dialog tabs animate their content and necessary frame changes, preserve fo
     .click();
   const group = page.locator("dialog.admin-editor");
   await settleEntrance(page);
-  // A feature group keeps one frame for all four tabs: switching never resizes or moves it,
-  // and the tabs stay above the scrolling body.
+  // A feature group's frame follows its two tabs like the user's: same width, the height moves
+  // instead of jumping, and the tabs stay above the scrolling body.
   const groupFrame = (await group.boundingBox())!;
   const tabs = group.getByRole("tablist", { name: "功能群組設定分類" });
-  const tabsTop = (await tabs.boundingBox())!.y;
-  for (const name of [
-    "功能授權",
-    "AI 模型",
-    "附件容量",
-    "基本資料",
-    "功能授權",
-  ]) {
+  await group.getByRole("tab", { name: "AI 模型", exact: true }).click();
+  await expect
+    .poll(() =>
+      group.evaluate((el) =>
+        el
+          .getAnimations()
+          .some(
+            (a) =>
+              a.effect instanceof KeyframeEffect &&
+              a.effect.getKeyframes().some((frame) => !!frame.height),
+          ),
+      ),
+    )
+    .toBe(true);
+  await settleEntrance(page);
+  const modelsFrame = (await group.boundingBox())!;
+  expect(Math.abs(modelsFrame.width - groupFrame.width)).toBeLessThan(1);
+  expect(Math.abs(modelsFrame.height - groupFrame.height)).toBeGreaterThan(1);
+  for (const name of ["群組設定", "AI 模型", "群組設定"]) {
     await group.getByRole("tab", { name, exact: true }).click();
     await settleEntrance(page);
-    const box = (await group.boundingBox())!;
-    expect(Math.abs(box.width - groupFrame.width)).toBeLessThan(1);
-    expect(Math.abs(box.height - groupFrame.height)).toBeLessThan(1);
+    // Each tab starts at the top of the body.
+    expect(
+      await group.locator(".dialog-body").evaluate((el) => el.scrollTop),
+    ).toBe(0);
+    const tabsTop = (await tabs.boundingBox())!.y;
     await group
       .locator(".dialog-body")
       .evaluate((el) => (el.scrollTop = el.scrollHeight));
     expect(Math.abs((await tabs.boundingBox())!.y - tabsTop)).toBeLessThan(1);
   }
+  expect(
+    Math.abs((await group.boundingBox())!.height - groupFrame.height),
+  ).toBeLessThan(1);
   await expect(
-    group.getByRole("tab", { name: "功能授權", exact: true }),
+    group.getByRole("tab", { name: "群組設定", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
   // The selected tab's underline sits on the tabs' bottom rule.
   const underline = await tabs.evaluate((el) => {

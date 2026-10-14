@@ -24,16 +24,28 @@ import { Icon } from '../../shared/ui/icon';
 import { Tabs, type TabItem } from '../../shared/ui/tabs';
 import { ToastHistory } from '../../shared/ui/toast-history';
 import { ToastService } from '../../shared/ui/toast-service';
+import { FrameMotion, ViewMotion } from '../../shared/ui/view-motion';
 import { NotificationFeed } from './notification-feed';
 
 /**
  * The server inbox, and beside it this tab's toasts: the inbox is what lasts, the session list
  * only helps find a confirmation that left before it was read. On desktop it is a non-modal
- * popover anchored to the bell; on phones the same content is a modal bottom sheet.
+ * popover anchored to the bell; on phones the same content is a modal bottom sheet. Either frame
+ * follows the selected tab's height.
  */
 @Component({
   selector: 'nx-notification-center',
-  imports: [Notice, CompactDialog, NgTemplateOutlet, NotificationFeed, Icon, Tabs, ToastHistory],
+  imports: [
+    Notice,
+    CompactDialog,
+    FrameMotion,
+    NgTemplateOutlet,
+    NotificationFeed,
+    Icon,
+    Tabs,
+    ToastHistory,
+    ViewMotion,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './notification-center.scss',
   template: `<ng-template #content>
@@ -96,6 +108,7 @@ import { NotificationFeed } from './notification-feed';
         class="notification-panel"
         [id]="tabs.panelId(store.view())"
         [attr.aria-labelledby]="tabs.tabId(store.view())"
+        [nxViewMotion]="store.view()"
       >
         @if (store.view() === 'session') {
           <nx-toast-history (activated)="leave()" />
@@ -125,6 +138,7 @@ import { NotificationFeed } from './notification-feed';
     } @else {
       <div
         #panel
+        nxFrameMotion
         popover="auto"
         role="dialog"
         aria-labelledby="notification-title"

@@ -3,6 +3,8 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
+  afterNextRender,
   computed,
   inject,
   signal,
@@ -43,7 +45,7 @@ import { sameIds } from '../users/user-role-fields';
 /** Users are edited in the user inspector and created in `AdminUserCreateDialog`. */
 export type AccessKind = 'role' | 'group' | 'feature';
 export type AccessItem = AdminRoleDto | AdminGroupDto | AdminFeatureDto;
-type GroupSection = 'general' | 'features' | 'models' | 'storage';
+type GroupSection = 'settings' | 'models';
 interface Editor {
   kind: AccessKind;
   id: string;
@@ -76,8 +78,9 @@ let sequence = 0;
 
 /**
  * Creates or edits a role, feature group or feature in one dialog, laid out like the user
- * inspector: `.form-sections` in the body and, when editing, `DialogSaveBar` at the foot. A group's
- * settings are split into tabs that save together. Closing with unsaved changes asks first.
+ * inspector: `.form-sections` in the body and, when editing, `DialogSaveBar` at the foot. A group
+ * adds a tab for its model policy beside that page; one save covers both. Closing with unsaved
+ * changes asks first.
  */
 @Component({
   selector: 'nx-access-editor-dialog',
@@ -98,7 +101,6 @@ let sequence = 0;
     ViewMotion,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './access-editor-dialog.scss',
   templateUrl: './access-editor-dialog.html',
 })
 export class AccessEditorDialog {
@@ -118,13 +120,11 @@ export class AccessEditorDialog {
   readonly locked = computed(() => this.saving() || this.store.testing());
   readonly testingNote = '測試身分期間不能修改管理設定';
   readonly editorError = signal('');
-  /** A feature group's settings are split into these tabs; one save covers all of them. */
-  readonly groupSection = signal<GroupSection>('general');
-  readonly groupSections: readonly TabItem[] = [
-    { value: 'general', label: '基本資料' },
-    { value: 'features', label: '功能授權' },
+  /** A feature group's settings: its page of sections, and its model policy. */
+  readonly groupSection = signal<GroupSection>('settings');
+  readonly groupSections: readonly (TabItem & { value: GroupSection })[] = [
+    { value: 'settings', label: '群組設定' },
     { value: 'models', label: 'AI 模型' },
-    { value: 'storage', label: '附件容量' },
   ];
   readonly enabledNote: Record<AccessKind, string> = {
     role: '停用後，擁有此角色的使用者不再取得它的功能群組。',
@@ -132,7 +132,9 @@ export class AccessEditorDialog {
     feature: '停用後任何群組都不會授予此功能。',
   };
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('editorDialog');
+  private readonly body = viewChild<ElementRef<HTMLElement>>('body');
   private readonly confirmation = viewChild.required(ConfirmDialog);
+  private readonly injector = inject(Injector);
   /** A group grants features, listed by the sidebar's categories. */
   readonly featureChoices = computed<ChoiceGroup[]>(() =>
     groupFeatures(this.store.catalog()?.features || []).map((section) => ({
@@ -194,8 +196,13 @@ export class AccessEditorDialog {
     };
     this.editor.set(draft);
     this.opened.set(draft);
-    this.groupSection.set('general');
+    this.selectSection('settings');
     this.dialog().nativeElement.showModal();
+  }
+  /** Each tab, and each opening, starts at the top of the body. */
+  selectSection(section: GroupSection) {
+    this.groupSection.set(section);
+    this.body()?.nativeElement.scrollTo({ top: 0 });
   }
   update<K extends keyof Editor>(key: K, value: Editor[K]) {
     this.editor.update((old) => (old ? { ...old, [key]: value } : null));
@@ -231,12 +238,23 @@ export class AccessEditorDialog {
     event.preventDefault();
     const e = this.editor();
     if (!e || this.locked() || (!e.isNew && !this.dirty())) return;
-    // An error shows on the tab that holds the field, so the fix is in view.
-    const fail = (section: GroupSection, message: string) => {
-      if (e.kind === 'group') this.groupSection.set(section);
+    // An error opens the tab that holds the field and focuses it (or shows the message), so the
+    // fix is in view even when the field sits further down the page.
+    const fail = (section: GroupSection, message: string, field?: string) => {
+      if (e.kind === 'group') this.selectSection(section);
       this.editorError.set(message);
+      afterNextRender(
+        () => {
+          const body = this.body()?.nativeElement;
+          const target = field && body?.querySelector<HTMLElement>(`[data-field="${field}"]`);
+          if (target) target.focus();
+          else body?.querySelector('nx-notice')?.scrollIntoView({ block: 'nearest' });
+        },
+        { injector: this.injector },
+      );
     };
-    if (!e.id || !e.name.trim()) return fail('general', '請輸入識別碼與名稱。');
+    if (!e.id || !e.name.trim())
+      return fail('settings', '請輸入識別碼與名稱。', e.id ? 'name' : 'id');
     let policy: GroupPolicyRequest | undefined;
     if (e.kind === 'group') {
       try {
@@ -247,7 +265,7 @@ export class AccessEditorDialog {
       try {
         policy.storedAttachmentLimitBytes = parseStorageLimitGb(e.storage);
       } catch (error) {
-        return fail('storage', safeMessage(error));
+        return fail('settings', safeMessage(error), 'storage');
       }
     }
     this.saving.set(true);
