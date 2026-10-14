@@ -19,7 +19,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 日誌事件、EventId | `docs/architecture/log-events.md` |
 | 資料表、migration | `docs/architecture/database.md` |
 | 設定、秘密 | `docs/development/configuration.md` |
-| 授權、功能 grant | `docs/architecture/access-control.md` |
+| 授權、功能 grant、選單分群 | `docs/architecture/access-control.md` |
 | 腳本、建置、驗證 | `docs/development/development.md` |
 | IIS 部署、發布套件 | `docs/operations/iis-deployment.md` |
 | 前端資料夾、API 呼叫、讀取與寫入 | `docs/frontend/frontend-boundaries.md` |
@@ -30,7 +30,7 @@ AI 工作平台：.NET 10 Minimal API（模組化單體＋vertical slice）、EF
 | 手機版面、滑動關閉、螢幕鍵盤 | `docs/frontend/mobile.md` |
 | 聊天渲染、串流 Markdown、前端請求與快取 | `docs/frontend/chat-rendering.md` |
 | 單一功能 | `README.md` 功能表連到的 `docs/features/` 那一份 |
-| 為什麼不拆專案、不用多個 DbContext 等 | `docs/decisions/` |
+| 為什麼不拆專案、不用多個 DbContext、目錄為何對應模組等 | `docs/decisions/` |
 
 ## 指令
 
@@ -47,7 +47,8 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 
 ## 必須遵守
 
-- 一個 use case 一個檔案（handler＋endpoint＋validator），放在 `AiNexus.Features/<Module>/`（大模組依能力分子資料夾）；namespace＝資料夾。
+- 一個 use case 一個檔案（handler＋endpoint＋validator），放在 `AiNexus.Features/<Module>/`；模組根目錄超過 15 個檔案就依能力分一層子資料夾；namespace＝資料夾。
+- 前端 `features/<module-kebab>/` 與後端模組同名（能力子資料夾也同名，唯一例外 `design/`）；選單分群是資料（`accesscontrol.NavigationGroups`），不反映在目錄。跨區引用用 `@core`／`@shared`／`@features` 別名。
 - 預期內的失敗回傳 `Result<T>`，錯誤定義在 `<Module>Errors`；不要為此 throw。
 - request body 要有 `RequestValidator<T>`，刻意交給 handler 驗證的標 `[ValidatedInHandler(原因)]`；時間用 `TimeProvider`；使用者用 `ICurrentUser`。
 - 設定用 `AddSettings<T, TValidator>(區段)` 註冊（`[OptionsValidator]` 驗證、啟動即檢查），區段名＝模組名；預設值寫進 `appsettings.json`。
@@ -74,6 +75,7 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 | 資料庫 schema | 小寫單字，與模組對應 | `knowledge` |
 | 資料表、欄位 | PascalCase，表名複數 | `GenerationRuns.OwnerId` |
 | 索引、約束 | EF 預設：`IX_表_欄`、`CK_表_名` | `IX_Attachments_StorageKey` |
+| Angular 功能資料夾 | 後端模組名的 kebab-case | `AccessControl` → `features/access-control` |
 | Angular 檔名 | 小寫 kebab-case，不加 `.component` | `chat-workspace.ts` |
 | Angular 類別、signal | PascalCase 類別；signal 用名詞，不加 `$` | `ChatStore`、`messages` |
 | CSS class | kebab-case | `message-row` |
