@@ -1,13 +1,13 @@
 using System.Text;
-using AiNexus.Platform.Errors;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.Conversations;
-using AiNexus.Features.Inference;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Knowledge.Collections;
 using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Knowledge.Indexing;
+using AiNexus.Features.Persistence;
+using AiNexus.Platform.Errors;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Knowledge.Retrieval;
 

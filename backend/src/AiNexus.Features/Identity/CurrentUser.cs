@@ -2,14 +2,15 @@ using System.DirectoryServices.AccountManagement;
 using System.Runtime.Versioning;
 using System.Security.Claims;
 using System.Security.Principal;
-using AiNexus.Platform.Errors;
-using AiNexus.Platform.Security;
-using AiNexus.Features.Persistence;
 using AiNexus.Features.AccessControl;
-using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Identity.Authentication;
 using AiNexus.Features.Identity.Sessions;
 using AiNexus.Features.Identity.Users;
+using AiNexus.Features.Persistence;
+using AiNexus.Platform.Errors;
+using AiNexus.Platform.Security;
+using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Identity;
 

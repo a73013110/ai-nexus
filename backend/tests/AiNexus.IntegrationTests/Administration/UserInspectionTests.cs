@@ -1,13 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.AccessControl;
 using AiNexus.Features.Account;
 using AiNexus.Features.Administration.Users;
 using AiNexus.Features.Audit;
-using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using AiNexus.Features.Inference.ModelTasks;
+using AiNexus.Features.AccessControl.Roles;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Administration;

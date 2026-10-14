@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Projects;
+using AiNexus.Features.Projects.Management;
+using AiNexus.Features.Projects.Contents;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Projects;

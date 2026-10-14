@@ -1,5 +1,5 @@
 using AiNexus.Features.Identity;
-using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.ModelPolicies;
 
 namespace AiNexus.Features.Administration.ModelPolicies;
 

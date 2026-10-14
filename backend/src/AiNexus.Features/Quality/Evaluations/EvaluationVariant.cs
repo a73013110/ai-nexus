@@ -1,4 +1,4 @@
-using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.ModelTasks;
 
 namespace AiNexus.Features.Quality.Evaluations;
 

@@ -1,3 +1,5 @@
+using AiNexus.Features.Inference.Models;
+using AiNexus.Features.Inference.Runs;
 namespace AiNexus.Features.Inference;
 
 public static class InferenceMappings

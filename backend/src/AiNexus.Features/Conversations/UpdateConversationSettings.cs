@@ -1,5 +1,5 @@
 using AiNexus.Features.Identity;
-using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Validation;
@@ -14,7 +14,7 @@ internal sealed class ConversationSettingsRequestValidator : RequestValidator<Co
 {
     public override string ProblemCode => ConversationsErrors.InstructionTooLongCode;
 
-    public ConversationSettingsRequestValidator() => RuleFor(x => x.SystemInstruction).MaximumLength(ConversationQueries.InstructionMaxLength);
+    public ConversationSettingsRequestValidator() => RuleFor(x => x.SystemInstruction).MaximumLength(Conversation.InstructionMaxLength);
 }
 
 /// <summary>
@@ -41,7 +41,7 @@ internal sealed class UpdateConversationSettings(NexusDbContext db, GenerationSc
             if (request.IsArchived is bool archived) conversation.IsArchived = archived;
             if (request.Labels is { } requested)
             {
-                var names = ConversationQueries.CleanLabels(requested);
+                var names = ConversationLabel.Clean(requested);
                 if (names is null) return ConversationsErrors.InvalidLabels;
                 // Keep unchanged tracked keys; removing and adding the same key breaks EF identity tracking.
                 var removed = conversation.Labels.Where(x => !names.Contains(x.Name, StringComparer.Ordinal)).ToList();

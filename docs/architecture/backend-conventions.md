@@ -7,16 +7,19 @@
 - 一個 use case 一個檔案，檔名是動詞片語：`SavePromptTemplate.cs`、`ListNotifications.cs`。同一資源、共用大量邏輯的唯讀查詢可以放在同一檔（如 `BrowseSources.cs`）。
 - 模組根目錄的 `<Module>Module.cs` 建立路由群組（授權、tags、body 上限），再依序呼叫各 slice 的 `Map`。端點順序就是 OpenAPI 順序，不要任意調整。模組的功能入口也在這個檔案宣告成 `FeatureSeed` 子類別。
 - 檔名＝檔內主要型別名，namespace＝資料夾（`SourceLayoutTests` 檢查）。entity 與它的 `IEntityTypeConfiguration<T>`、查詢擴充方法同檔（如 `PromptTemplate.cs`）。
-- 組態類別要有無參數建構子，`NexusDbContext` 以 `ApplyConfigurationsFromAssembly` 自動套用，新增實體只要加這一個檔案。種子資料用該模組組態的 `HasData`；另一端在別的模組的外鍵寫在 `Persistence/CrossModuleRelationships.cs`，只有 SQLite 才需要的差異寫在 `Persistence/SqliteModel.cs`。
+- 組態類別要有無參數建構子，`NexusDbContext` 以 `ApplyConfigurationsFromAssembly` 自動套用，新增實體只要加這一個檔案。種子資料用該模組組態的 `HasData`；跨模組外鍵與 SQLite 差異見 [資料庫](database.md)。
 - DTO 只有一個 use case 用就寫在該 use case 檔的開頭；多個檔案共用才獨立成 `<Dto>.cs`。
 - 模組的預期失敗集中在根目錄的 `<Module>Errors.cs`（`ModuleBoundaryTests` 檢查）。
-- 超過約 20 個檔案的模組依能力分子資料夾（如 `Knowledge/Documents`、`Identity/Sessions`）；`<Module>Module.cs`、`<Module>Errors.cs`、options 與跨子資料夾共用的型別留在模組根目錄。
-- slice 類別預設 `internal`；只有其他模組要用的服務（如 `NotificationService.PublishAsync`）才是 `public`，這就是模組的對外合約。
+- 模組超過 15 個檔案就依能力分一層子資料夾（`SourceLayoutTests` 檢查）：
+  - 根目錄只留橫跨模組的：`<Module>Module`、`<Module>Errors`、options、對外合約服務、總覽來源、write lock、多個能力共用的 entity。
+  - 其餘放進擁有它的能力，如 `Inference/Runs`、`Attachments/Storage`；模組本身資源的 CRUD 放 `Management/`。
+  - 名稱用 PascalCase 名詞，不取其他模組的名字（如 `Chat/Transcripts`）。測試只依模組分資料夾。
+- slice 類別預設 `internal`；只有其他模組要用的服務（如 `NotificationService.PublishAsync`）才是 `public`，這就是模組的對外合約；跨模組只透過它，且不可形成循環，見 [模組邊界](module-boundaries.md)。
 
 ## 建置規則
 
 - `AnalysisLevel=latest-recommended`＋`EnforceCodeStyleInBuild`，warning 即錯誤。整體關掉的規則與原因集中在根目錄 `.editorconfig`；單一型別的例外用寫明 `Justification` 的 `[SuppressMessage]`，不用 `#pragma`。
-- NuGet 版本只寫在 `backend/Directory.Packages.props`，`PackageReference` 不帶版本；改版本後 restore 更新各專案的 `packages.lock.json`。
+- NuGet 版本只寫在 `backend/Directory.Packages.props`；改版本後 restore 更新 `packages.lock.json`。
 
 ## 端點與 handler
 
@@ -41,6 +44,7 @@ internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
 - 直接使用 `NexusDbContext`；不要新增 repository 或只轉送呼叫的 service。
 - 一個使用者能放大成本的端點（送出、上傳、外部呼叫、匯出）在模組 `AddServices` 用 `options.AddPerUserLimit(名稱, 每分鐘次數)` 註冊，端點加 `.RequireRateLimiting(名稱)`。
 - 日誌寫成 `[LoggerMessage]` 方法，EventId 固定且唯一，見 [LOG_EVENTS](log-events.md)；直接呼叫 `LogWarning` 等會編譯失敗。
+- 授權 policy 用 `Policies.*` 或模組常數，不寫字串。`EndpointConventionTests` 檢查每個端點都宣告授權，且每個 policy 都已註冊。
 
 ## 錯誤
 
@@ -64,11 +68,3 @@ internal sealed class SavePromptTemplate(NexusDbContext db, TimeProvider clock)
 - 需要看到已刪除列的查詢以名稱退出：`IgnoreQueryFilters([SoftDelete.Filter])`，不要用無參數版本（會連其他 filter 一起關掉）。退出作用於**整個查詢**，同一查詢裡其他有 filter 的 entity 也會看到已刪除列，必要時自行補條件。適用：管理端稽核讀取、容器刪除時清除已刪除子項的連結、背景任務收尾（對話或文件在處理中被刪除）、清理／保留工作。
 - 運算式樹內（`Where(x => ...)` 的子查詢）不能寫集合運算式，先在外面宣告 `var rows = db.Set<T>().IgnoreQueryFilters([SoftDelete.Filter]);` 再引用。
 - `KnowledgeDocument`、`NexusUser.DeletedAt` 沒有 filter，仍明確寫條件：文件與其 `WorkspaceResource` 同步刪除，文件本身的 `IsDeleted` 是判斷依據；刪除的使用者保留供稽核與歷史顯示。Dapper／原生 SQL 不受 filter 影響，必須自行加條件。
-
-## 授權
-
-- policy 名稱用 `Policies.*` 或模組常數，不要寫字串。`EndpointConventionTests` 檢查每個端點都宣告授權，且每個 policy 都已註冊。
-
-## 跨模組
-
-- 只透過對方模組的 `public` 服務或 DTO。模組之間不可有循環依賴；造成循環時的處理順序，以及何時直接呼叫、何時用 domain event，見 [模組邊界](module-boundaries.md)。

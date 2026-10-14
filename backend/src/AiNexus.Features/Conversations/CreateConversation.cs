@@ -14,7 +14,7 @@ internal sealed class CreateConversationRequestValidator : RequestValidator<Crea
     public override string ProblemCode => ConversationsErrors.InvalidTitleCode;
 
     public CreateConversationRequestValidator()
-        => RuleFor(x => x.Title).Must(x => x is null || ConversationQueries.TitleIsValid(x)).WithErrorCode("length");
+        => RuleFor(x => x.Title).Must(x => x is null || Conversation.TitleIsValid(x)).WithErrorCode("length");
 }
 
 /// <summary>Starts an empty conversation owned by the user. Other modules reach it through <see cref="ConversationService.CreateAsync"/>.</summary>
@@ -28,7 +28,7 @@ internal sealed class CreateConversation(NexusDbContext db, TimeProvider clock)
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, string? title, CancellationToken ct)
     {
         title = (title ?? "新對話").Trim();
-        if (!ConversationQueries.TitleIsValid(title)) return ConversationsErrors.InvalidTitle;
+        if (!Conversation.TitleIsValid(title)) return ConversationsErrors.InvalidTitle;
         var now = clock.GetUtcNow();
         var conversation = new Conversation { OwnerId = owner, Title = title, CreatedAt = now, UpdatedAt = now };
         db.Set<Conversation>().Add(conversation);

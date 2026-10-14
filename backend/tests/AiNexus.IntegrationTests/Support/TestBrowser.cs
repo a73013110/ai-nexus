@@ -1,4 +1,4 @@
-using AiNexus.Features.Artifacts;
+using AiNexus.Features.Artifacts.Export;
 using Microsoft.Playwright;
 
 namespace AiNexus.IntegrationTests.Support;

@@ -4,6 +4,7 @@ using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Projects;
+using AiNexus.Features.Projects.Management;
 using Microsoft.AspNetCore.Http;
 
 namespace AiNexus.IntegrationTests.Support;

@@ -1,8 +1,9 @@
+using AiNexus.Features.Knowledge.Embeddings;
 using AiNexus.Platform.Errors;
 
 namespace AiNexus.IntegrationTests.Support;
 
-public sealed class TestEmbeddings : AiNexus.Features.Knowledge.Embeddings.IEmbeddingClient
+public sealed class TestEmbeddings : IEmbeddingClient
 {
     public string Provider => "ollama";
     public bool Enabled { get; set; } = true;
@@ -12,7 +13,7 @@ public sealed class TestEmbeddings : AiNexus.Features.Knowledge.Embeddings.IEmbe
     public int LastProfileId { get; private set; }
     public int Calls;
     public int DelayMs { get; set; }
-    public async Task<AiNexus.Features.Knowledge.Embeddings.EmbeddingBatchResult> EmbedBatchAsync(IReadOnlyList<string> inputs, AiNexus.Features.Knowledge.Embeddings.EmbeddingPurpose purpose, AiNexus.Features.Knowledge.Embeddings.EmbeddingProfile profile, CancellationToken ct)
+    public async Task<EmbeddingBatchResult> EmbedBatchAsync(IReadOnlyList<string> inputs, EmbeddingPurpose purpose, EmbeddingProfile profile, CancellationToken ct)
     {
         var call = Interlocked.Increment(ref Calls); LastProfileId = profile.Id; await Task.Delay(DelayMs, ct);
         if (Fail || FailProfileId == profile.Id || FailOnCall == call) throw new ExternalServiceException(Error.Unavailable("fixture_embedding_failed"), "測試索引服務暫停。");

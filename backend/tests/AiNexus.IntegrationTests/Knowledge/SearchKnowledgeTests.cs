@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using AiNexus.Features.AccessControl.Roles;
 using static AiNexus.IntegrationTests.Support.BackgroundJobs;
 using static AiNexus.IntegrationTests.Support.KnowledgeApi;
 
@@ -116,7 +117,7 @@ public sealed class SearchKnowledgeTests
         });
         using var client = await factory.SignedInAsync(); var seed = await SeedAsync(factory, client);
         rerank.BeforeReturn = async () => { using var other = factory.Services.CreateScope(); var db = other.ServiceProvider.GetRequiredService<NexusDbContext>();
-            await db.Set<AiNexus.Features.AccessControl.UserRole>().Where(x => x.UserId == seed.Actor).ExecuteDeleteAsync(); };
+            await db.Set<UserRole>().Where(x => x.UserId == seed.Actor).ExecuteDeleteAsync(); };
         using var response = await client.PostAsJsonAsync("/api/v1/knowledge/search", new KnowledgeSearchRequest("採購", [seed.Collection]));
         var body = await response.Content.ReadAsStringAsync();
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode); Assert.Contains("feature_forbidden", body); Assert.DoesNotContain("主管簽署", body);

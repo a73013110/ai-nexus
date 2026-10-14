@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Chat;
+using AiNexus.Features.Chat.Context;
+using AiNexus.Features.Chat.Runs;
+using AiNexus.Features.Chat.Transcripts;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.WebSearch;
 using AiNexus.Platform.Errors;

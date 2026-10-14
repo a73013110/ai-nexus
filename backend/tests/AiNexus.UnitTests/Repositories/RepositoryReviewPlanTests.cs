@@ -1,5 +1,5 @@
 using System.Text;
-using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.ModelTasks;
 using AiNexus.Features.Repositories.Reviews;
 
 namespace AiNexus.UnitTests.Repositories;

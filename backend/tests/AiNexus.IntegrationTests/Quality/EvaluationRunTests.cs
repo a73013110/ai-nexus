@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.ModelTasks;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Quality.Evaluations;
@@ -85,7 +86,7 @@ public sealed class EvaluationRunTests
         var set = (await (await owner.PostAsJsonAsync("/api/v1/quality/sets", new EvaluationSetRequest("fixture", "", [new("question")]))).Content.ReadFromJsonAsync<EvaluationSetDto>())!;
         var run = (await (await owner.PostAsJsonAsync($"/api/v1/quality/sets/{set.Resource.Id}/runs", new EvaluationRunRequest([new("default", "test-model", "")]))).Content.ReadFromJsonAsync<EvaluationRunDto>())!;
         Assert.Equal(HttpStatusCode.Conflict, (await owner.DeleteAsync($"/api/v1/quality/sets/{set.Resource.Id}")).StatusCode);
-        await ActivatorUtilities.CreateInstance<AiNexus.Features.Jobs.BackgroundJobWorker>(f.Services).ProcessNextAsync(default);
+        await ActivatorUtilities.CreateInstance<BackgroundJobWorker>(f.Services).ProcessNextAsync(default);
         Assert.Equal(HttpStatusCode.NoContent, (await owner.DeleteAsync($"/api/v1/quality/sets/{set.Resource.Id}")).StatusCode);
         Assert.Empty((await owner.GetFromJsonAsync<EvaluationSetDto[]>("/api/v1/quality/sets"))!);
         Assert.Equal(HttpStatusCode.NotFound, (await owner.GetAsync($"/api/v1/quality/runs/{run.Id}")).StatusCode);

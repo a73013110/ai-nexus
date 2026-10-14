@@ -1,9 +1,11 @@
 using System.Net;
 using System.Text.Json;
+using AiNexus.Features.Billing;
+using AiNexus.Features.Inference.ModelTasks;
+using AiNexus.Features.Inference.Runs;
+using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Time;
-using AiNexus.Features.Persistence;
-using AiNexus.Features.Inference;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -48,7 +50,7 @@ public sealed class RetrievalInvocation(IServiceScopeFactory scopes, IOptions<Kn
     public async Task<T> RunAsync<T>(Guid owner, string kind, string provider, string model, Func<Task<(T Value, long? Tokens)>> action, CancellationToken ct)
     {
         using var scope = scopes.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-        var billing = scope.ServiceProvider.GetRequiredService<AiNexus.Features.Billing.BillingService>();
+        var billing = scope.ServiceProvider.GetRequiredService<BillingService>();
         var call = new ModelInvocation { OwnerId = owner, Kind = kind, Provider = provider, ModelId = model, CreatedAt = clock.GetUtcNow() };
         // The owner row lock taken first in this transaction serializes the reservation; it ends before the provider call.
         {

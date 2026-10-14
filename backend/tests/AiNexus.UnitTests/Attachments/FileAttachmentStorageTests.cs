@@ -1,4 +1,4 @@
-using AiNexus.Features.Attachments;
+using AiNexus.Features.Attachments.Storage;
 
 namespace AiNexus.UnitTests.Attachments;
 

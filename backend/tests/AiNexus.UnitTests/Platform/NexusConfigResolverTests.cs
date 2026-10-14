@@ -1,4 +1,5 @@
 using AiNexus.Features.Integrations;
+using AiNexus.Features.Integrations.Sources;
 using AiNexus.Platform.Configuration;
 using Microsoft.Extensions.Configuration;
 
@@ -57,7 +58,7 @@ public sealed class NexusConfigResolverTests
             ["Integrations:Gdweb:Database:ConnectTimeoutSeconds"] = "7"
         });
         IntegrationsSettings.SourceConnections(config);
-        var sql = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(AiNexus.Features.Integrations.LegacyGdwebDatabase.ConnectionString(config));
+        var sql = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(LegacyGdwebDatabase.ConnectionString(config));
         Assert.Equal(Microsoft.Data.SqlClient.SqlConnectionEncryptOption.Mandatory, sql.Encrypt);
         Assert.True(sql.TrustServerCertificate); Assert.Equal(7, sql.ConnectTimeout);
         Assert.Equal(Microsoft.Data.SqlClient.ApplicationIntent.ReadOnly, sql.ApplicationIntent);

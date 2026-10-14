@@ -36,6 +36,24 @@ public sealed class SourceLayoutTests
         Assert.True(mismatched.Count == 0, "Namespaces must match folders:\n" + string.Join("\n", mismatched));
     }
 
+    /// <summary>
+    /// A module stays flat up to <see cref="MaxModuleRootFiles"/> files. A larger one files its use cases, entities and
+    /// services in capability folders one level below the module, and its root keeps only what spans the module.
+    /// </summary>
+    [Fact]
+    public void LargeModulesAreSplitIntoCapabilityFolders()
+    {
+        var paths = SourceTree.Files("AiNexus.Features").Select(SourceTree.Relative).Select(path => path.Split('/'))
+            .Where(parts => parts.Length > 2 && parts[1] != "Persistence").ToList();
+        var crowded = paths.Where(parts => parts.Length == 3).GroupBy(parts => parts[1])
+            .Where(module => module.Count() > MaxModuleRootFiles).Select(module => $"{module.Key}: {module.Count()} files at the root");
+        var nested = paths.Where(parts => parts.Length > 4).Select(parts => string.Join('/', parts));
+        var offending = crowded.Concat(nested).Order(StringComparer.Ordinal).ToList();
+        Assert.True(offending.Count == 0, "Group a large module's files into capability folders, one level deep:\n" + string.Join("\n", offending));
+    }
+
+    private const int MaxModuleRootFiles = 15;
+
     [Theory]
     [MemberData(nameof(ModuleTestProjects))]
     public void TestsAreFiledByModule(string project)

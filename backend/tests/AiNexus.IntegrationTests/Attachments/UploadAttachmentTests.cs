@@ -2,10 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using AiNexus.Features.Attachments;
-using AiNexus.Features.Chat;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using AiNexus.Features.Chat.Transcripts;
 using static AiNexus.IntegrationTests.Support.AttachmentApi;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 

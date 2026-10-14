@@ -3,8 +3,9 @@ using AiNexus.Features.Account;
 using AiNexus.Features.Administration;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Attachments;
-using AiNexus.Features.Chat;
+using AiNexus.Features.Audit;
 using AiNexus.Features.Billing;
+using AiNexus.Features.Chat;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Dashboard;
@@ -12,6 +13,7 @@ using AiNexus.Features.Diagnostics;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Integrations;
+using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge;
 using AiNexus.Features.Library;
 using AiNexus.Features.Monitoring;
@@ -26,8 +28,6 @@ using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Modules;
 using AiNexus.Platform.Validation;
 using FluentValidation;
-using AiNexus.Features.Jobs;
-using AiNexus.Features.Audit;
 
 namespace AiNexus.Features;
 
@@ -82,6 +82,7 @@ public static class FeatureModules
         Map<AuditModule>(api);
         Map<JobsModule>(api);
         Map<KnowledgeModule>(api);
+        Map<CollaborationModule>(api);
         Map<ArtifactsModule>(api);
         Map<ProjectsModule>(api);
         Map<SharingModule>(api);

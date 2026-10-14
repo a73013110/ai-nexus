@@ -1,3 +1,4 @@
+using AiNexus.Features.AccessControl.Roles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

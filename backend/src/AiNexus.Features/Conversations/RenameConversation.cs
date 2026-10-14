@@ -12,7 +12,7 @@ internal sealed class RenameConversationRequestValidator : RequestValidator<Rena
 {
     public override string ProblemCode => ConversationsErrors.InvalidTitleCode;
 
-    public RenameConversationRequestValidator() => RuleFor(x => x.Title).Must(ConversationQueries.TitleIsValid).WithErrorCode("length");
+    public RenameConversationRequestValidator() => RuleFor(x => x.Title).Must(Conversation.TitleIsValid).WithErrorCode("length");
 }
 
 /// <summary>Renames one of the user's own conversations.</summary>

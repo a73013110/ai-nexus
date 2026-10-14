@@ -1,8 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
-using AiNexus.Features.Chat;
 using AiNexus.Features.Conversations;
+using AiNexus.Features.Chat.Transcripts;
 using static AiNexus.IntegrationTests.Support.AttachmentApi;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 

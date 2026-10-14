@@ -1,8 +1,9 @@
 using System.Net.Http.Json;
-using AiNexus.Features.Chat;
+using AiNexus.Features.Chat.Runs;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity.Users;
-using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.ModelPolicies;
+using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,7 +29,7 @@ public sealed class RunRecoveryTests
         using var client = await factory.SignedInAsync();
         var run = (await client.GetFromJsonAsync<RunDto>($"/api/v1/runs/{interruptedId}"))!;
         Assert.Equal(RunStates.Failed, run.Status); Assert.Equal("executor_lost", run.ErrorCode); Assert.Equal("既有部分回答", run.Content); Assert.Equal(0, factory.Provider.Calls); Assert.NotNull(run.Timing);
-        var budget = Assert.Single((await client.GetFromJsonAsync<AiNexus.Features.Inference.EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
+        var budget = Assert.Single((await client.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
         Assert.Equal(500, budget.ReservedTokens);
     }
 

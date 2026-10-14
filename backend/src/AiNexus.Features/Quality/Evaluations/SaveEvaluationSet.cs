@@ -23,7 +23,7 @@ internal sealed class EvaluationSetRequestValidator : RequestValidator<Evaluatio
 
     public EvaluationSetRequestValidator()
     {
-        When(x => SaveEvaluationSet.NameIsValid(x.Name), () =>
+        When(x => ResourceAccess.IsValidName(x.Name), () =>
         {
             RuleFor(x => x.Description).MaximumLength(2000);
             RuleFor(x => x.Cases).Must(x => x is { Count: >= 1 and <= 20 }).WithErrorCode("count");
@@ -51,9 +51,6 @@ internal sealed class SaveEvaluationSet(NexusDbContext db, ResourceAccess access
     public static RouteHandlerBuilder MapUpdate(RouteGroupBuilder routes) => routes
         .MapPut("/sets/{id:guid}", async (Guid id, EvaluationSetRequest body, ICurrentUser user, SaveEvaluationSet handler, CancellationToken ct) => (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
         .WithRequestBodyLimit(QualityModule.SetBodyLimit);
-
-    /// <summary>The rule of <see cref="ResourceAccess.Name"/>.</summary>
-    internal static bool NameIsValid(string? name) => name?.Trim() is { Length: >= 1 and <= 120 } trimmed && !trimmed.Any(char.IsControl);
 
     public async Task<Result<EvaluationSetDto>> HandleAsync(Guid actor, Guid? id, EvaluationSetRequest request, CancellationToken ct)
     {

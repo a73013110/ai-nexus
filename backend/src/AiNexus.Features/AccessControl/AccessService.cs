@@ -1,3 +1,4 @@
+using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;

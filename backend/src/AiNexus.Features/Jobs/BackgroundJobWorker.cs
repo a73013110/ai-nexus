@@ -1,7 +1,8 @@
-using AiNexus.Platform.Diagnostics;
 using System.Diagnostics;
-using AiNexus.Platform.Errors;
+using AiNexus.Features.Notifications;
 using AiNexus.Features.Persistence;
+using AiNexus.Platform.Diagnostics;
+using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Jobs;
@@ -75,7 +76,7 @@ public sealed partial class BackgroundJobWorker(IServiceScopeFactory scopes, Sto
              .SetProperty(x => x.ErrorCode, code).SetProperty(x => x.IssueCode, issue).SetProperty(x => x.ErrorMessage, message).SetProperty(x => x.UpdatedAt, clock.GetUtcNow()), CancellationToken.None);
         if (finished == 1) {
             var final = await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(x => x.Id == id, CancellationToken.None);
-            await scope.ServiceProvider.GetRequiredService<AiNexus.Features.Notifications.NotificationService>().PublishAsync(final.OwnerId,
+            await scope.ServiceProvider.GetRequiredService<NotificationService>().PublishAsync(final.OwnerId,
                 $"job:{id}:{final.Attempt}", "task." + final.Status, final.Status == "failed" ? "error" : final.Status == "completed" ? "success" : "info",
                 final.Status == "completed" ? "背景任務已完成" : final.Status == "failed" ? "背景任務需要重試" : "背景任務已取消",
                 final.Status == "failed" ? final.ErrorMessage ?? Issues.Message(final.IssueCode) : final.Label, final.Kind == "repository-review" ? "repository-review" : "task", final.Kind == "repository-review" ? final.SubjectId : final.Id, CancellationToken.None, final.IssueCode);

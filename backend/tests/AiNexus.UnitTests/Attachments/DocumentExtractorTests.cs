@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.Text;
 using AiNexus.Features.Attachments;
+using AiNexus.Features.Attachments.Extraction;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.UnitTests.Attachments;

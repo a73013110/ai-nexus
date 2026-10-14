@@ -3,7 +3,6 @@ using System.Net.Http.Json;
 using System.Text;
 using AiNexus.Features.Account;
 using AiNexus.Features.Attachments;
-using AiNexus.Features.Inference;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge.Collections;
 using AiNexus.Features.Knowledge.Documents;
@@ -11,6 +10,10 @@ using AiNexus.Features.Persistence;
 using AiNexus.Features.Sharing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using AiNexus.Features.Inference.Runs;
+using AiNexus.Features.Sharing.Management;
+using AiNexus.Features.Attachments.Files;
+using AiNexus.Features.Sharing.Viewing;
 using static AiNexus.IntegrationTests.Support.AttachmentApi;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 

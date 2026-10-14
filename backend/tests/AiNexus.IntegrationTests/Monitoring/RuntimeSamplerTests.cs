@@ -1,5 +1,6 @@
 using System.Net;
 using AiNexus.Features.Monitoring;
+using AiNexus.Features.Monitoring.Traffic;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Time.Testing;

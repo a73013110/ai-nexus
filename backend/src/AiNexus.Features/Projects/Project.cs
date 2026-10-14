@@ -1,4 +1,6 @@
 using AiNexus.Features.Collaboration;
+using AiNexus.Features.Persistence;
+using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -32,5 +34,26 @@ internal sealed class ProjectConfiguration : IEntityTypeConfiguration<Project>
     {
         row.ToTable("Projects", "projects"); row.HasKey(x => x.Id);
         row.Property(x => x.Description).HasMaxLength(2000); row.Property(x => x.Instructions).HasMaxLength(4000);
+    }
+}
+
+internal static class ProjectQueries
+{
+    /// <summary>The project as the actor may see it.</summary>
+    public static async Task<Result<ProjectDto>> LoadProjectAsync(this ResourceAccess access, NexusDbContext db, Guid actor, Guid id, CancellationToken ct)
+    {
+        var resource = await access.RequireAsync(actor, id, Project.Kind, ct);
+        if (!resource.IsSuccess) return resource.Error;
+        var project = await db.Set<Project>().AsNoTracking().SingleAsync(x => x.Id == id, ct);
+        return project.ToDto(await access.DescribeAsync(actor, resource.Value, ct));
+    }
+
+    /// <summary>Read (or edit) access first, then the project must not be archived.</summary>
+    public static async Task<Result<Project>> RequireActiveAsync(this ResourceAccess access, NexusDbContext db, Guid actor, Guid id, bool write, CancellationToken ct)
+    {
+        if (await access.RequireAsync(actor, id, Project.Kind, ct, write) is { IsSuccess: false } denied) return denied.Error;
+        var row = await db.Set<Project>().AsNoTracking().SingleAsync(x => x.Id == id, ct);
+        if (row.IsArchived) return ProjectsErrors.Archived;
+        return row;
     }
 }

@@ -10,6 +10,13 @@ public sealed class ConversationLabel
     public Guid ConversationId { get; set; }
     [Comment("業務物件的顯示名稱。")]
     public string Name { get; set; } = "";
+
+    /// <summary>At most 5 labels of 1 to 24 characters, trimmed and distinct; null when the list is invalid.</summary>
+    public static string[]? Clean(IReadOnlyList<string> labels)
+    {
+        if (labels.Count > 5 || labels.Any(x => string.IsNullOrWhiteSpace(x) || x.Trim().Length > 24 || x.Any(char.IsControl))) return null;
+        return labels.Select(x => x.Trim()).Distinct(StringComparer.Ordinal).ToArray();
+    }
 }
 
 internal sealed class ConversationLabelConfiguration : IEntityTypeConfiguration<ConversationLabel>

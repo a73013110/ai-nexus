@@ -1,15 +1,19 @@
 using System.Text;
 using System.Text.Json;
+using AiNexus.Features.AccessControl;
+using AiNexus.Features.AccessControl.Roles;
+using AiNexus.Features.Attachments.Extraction;
+using AiNexus.Features.Identity.Authentication;
+using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.Models;
+using AiNexus.Features.Inference.Providers;
+using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Data.Sql;
-using AiNexus.Features.Persistence;
-using AiNexus.Features.Inference;
-using AiNexus.Features.AccessControl;
-using AiNexus.Features.Attachments;
+using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using AiNexus.Platform.Errors;
-using AiNexus.Features.Identity.Authentication;
 
 namespace AiNexus.Host.Commands;
 
@@ -79,7 +83,7 @@ public static class ConnectionVerifier
             return images.Length > 0 ? "真實模型已辨識合成文件代碼及紅色 PNG 圖片；未傳送私人資料" : "真實模型已辨識合成文件代碼；此 profile 未啟用圖片能力";
         });
         await Check("RetrievalModels", async () => {
-            var result = await services.GetRequiredService<AiNexus.Features.Knowledge.Retrieval.RetrievalModelProbe>().CheckAsync(null, ct);
+            var result = await services.GetRequiredService<RetrievalModelProbe>().CheckAsync(null, ct);
             if (result.Embedding.Available != true || result.Rerank.Available != true) throw new ExternalServiceException(Error.Unavailable("retrieval_models_unavailable"), result.Embedding.Notice + " " + result.Rerank.Notice);
             return result.Embedding.Notice + " " + result.Rerank.Notice;
         });

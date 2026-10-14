@@ -7,6 +7,8 @@ using AiNexus.Features.Sharing;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using AiNexus.Features.Artifacts.Management;
+using AiNexus.Features.Sharing.Management;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Sharing;

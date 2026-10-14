@@ -1,10 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Account;
 using AiNexus.Features.Artifacts;
-using AiNexus.Features.Chat;
+using AiNexus.Features.Chat.Transcripts;
 using AiNexus.Features.Integrations;
+using AiNexus.Features.Integrations.Handoff;
+using AiNexus.Features.Integrations.Sources;
 using AiNexus.Platform.Errors;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;

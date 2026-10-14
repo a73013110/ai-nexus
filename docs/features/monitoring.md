@@ -34,7 +34,7 @@ IP 只取 HttpContext.Connection.RemoteIpAddress，不自行相信 X-Forwarded-F
 
 ## 健康判定
 
-`health.status`：有嚴重問題為 `critical`，只有警告為 `attention`，沒有問題為 `healthy`；停用監控或尚無任何觀測為 `unobserved`。門檻是 [`MonitoringHealth`](../../backend/src/AiNexus.Features/Monitoring/MonitoringHealth.cs) 的常數：
+`health.status`：有嚴重問題為 `critical`，只有警告為 `attention`，沒有問題為 `healthy`；停用監控或尚無任何觀測為 `unobserved`。門檻是 [`MonitoringHealth`](../../backend/src/AiNexus.Features/Monitoring/Snapshots/MonitoringHealth.cs) 的常數：
 
 | 代碼 | 等級 | 條件 |
 | --- | --- | --- |

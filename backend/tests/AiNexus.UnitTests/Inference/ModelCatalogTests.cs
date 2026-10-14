@@ -1,4 +1,6 @@
 using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.Models;
+using AiNexus.Features.Inference.Providers;
 using AiNexus.Features.Knowledge;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;

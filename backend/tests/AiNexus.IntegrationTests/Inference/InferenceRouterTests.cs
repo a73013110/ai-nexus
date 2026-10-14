@@ -1,12 +1,17 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Billing;
-using AiNexus.Features.Chat;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using AiNexus.Features.Account;
+using AiNexus.Features.Administration.Users;
+using AiNexus.Features.Inference.Models;
+using AiNexus.Features.Inference.Runs;
+using AiNexus.Features.Billing.Charges;
+using AiNexus.Features.Billing.Reports;
+using AiNexus.Features.Chat.Transcripts;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Inference;
@@ -89,9 +94,9 @@ public sealed class InferenceRouterTests
         Assert.Equal(123, timing.InputTokens); Assert.Equal(6, timing.OutputTokens);
         var detail = (await client.GetFromJsonAsync<ConversationDetailDto>($"/api/v1/conversations/{conversation.Id}"))!;
         Assert.Equal(timing, detail.Messages.Single(x => x.Id == completed.AssistantMessageId).Timing);
-        var admin = (await client.GetFromJsonAsync<AiNexus.Features.Administration.Users.AdminConversationDetailDto>($"/api/v1/admin/conversations/{conversation.Id}"))!;
+        var admin = (await client.GetFromJsonAsync<AdminConversationDetailDto>($"/api/v1/admin/conversations/{conversation.Id}"))!;
         Assert.Equal(timing, admin.Messages.Single(x => x.Id == completed.AssistantMessageId).Timing);
-        var usage = (await client.GetFromJsonAsync<AiNexus.Features.Account.PersonalUsageDto>("/api/v1/settings/usage"))!;
+        var usage = (await client.GetFromJsonAsync<PersonalUsageDto>("/api/v1/settings/usage"))!;
         Assert.Equal(timing.TotalMilliseconds, usage.TotalDurationMilliseconds); Assert.Equal(1, usage.TimedRequests);
         factory.Provider.NeverFinish = true;
         var next = await CreateRun(client, conversation.Id, "cancel", completed.AssistantMessageId);

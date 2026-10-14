@@ -1,8 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
-using AiNexus.Features.Billing;
+using AiNexus.Features.Billing.Charges;
+using AiNexus.Features.Billing.Reports;
 using AiNexus.Features.Dashboard;
+using AiNexus.Features.Identity.Users;
 using AiNexus.Features.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -45,7 +47,7 @@ public sealed class ReportSpendTests
         {
             for (var i = 0; i < 250; i++)
             {
-                var user = new AiNexus.Features.Identity.Users.NexusUser { Sid = "fixture-cost-" + i, Account = "account-" + i, DisplayName = "user-" + i };
+                var user = new NexusUser { Sid = "fixture-cost-" + i, Account = "account-" + i, DisplayName = "user-" + i };
                 db.Add(user); db.Add(new ModelCharge { Id = Guid.NewGuid(), OwnerId = user.Id, Currency = "USD", Kind = "api", Amount = 1m, State = "metered", CreatedAt = DateTimeOffset.UtcNow, ModelId = "test-model", Provider = "google" });
             }
             db.SaveChanges();

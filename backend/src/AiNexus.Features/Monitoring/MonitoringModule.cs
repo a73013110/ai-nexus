@@ -1,10 +1,14 @@
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.Diagnostics;
 using AiNexus.Features.Identity;
+using AiNexus.Features.Identity.Sessions;
+using AiNexus.Features.Monitoring.Presence;
+using AiNexus.Features.Monitoring.Snapshots;
+using AiNexus.Features.Monitoring.Traffic;
+using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Events;
 using AiNexus.Platform.Modules;
-using AiNexus.Features.Identity.Sessions;
-using AiNexus.Platform.Configuration;
 
 namespace AiNexus.Features.Monitoring;
 
@@ -37,7 +41,7 @@ public sealed class MonitoringModule : IFeatureModule
         HeartbeatPresence.Map(api);
         LeavePresence.Map(api);
         // Monitoring reads share the log query rate limit, are audited and kept out of the request log.
-        var monitor = api.MapGroup("/admin/monitoring").RequireAuthorization(Policy).RequireRateLimiting(AiNexus.Features.Diagnostics.DiagnosticsModule.QueryRateLimit)
+        var monitor = api.MapGroup("/admin/monitoring").RequireAuthorization(Policy).RequireRateLimiting(DiagnosticsModule.QueryRateLimit)
             .WithMetadata(new SuppressSuccessfulRequestLog()).WithTags("Runtime monitoring");
         GetMonitoringSnapshot.Map(monitor);
         ExportMonitoringSnapshot.Map(monitor);
