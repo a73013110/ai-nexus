@@ -1,4 +1,4 @@
-using AiNexus.Features.Billing;
+using AiNexus.Features.Billing.Charges;
 
 namespace AiNexus.UnitTests.Billing;
 

@@ -1,5 +1,5 @@
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Billing;
+using AiNexus.Features.Billing.Reports;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Dashboard;

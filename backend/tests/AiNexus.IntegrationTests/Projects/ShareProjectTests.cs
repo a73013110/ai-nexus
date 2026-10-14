@@ -2,9 +2,13 @@ using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Artifacts;
+using AiNexus.Features.Artifacts.Management;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Projects;
+using AiNexus.Features.Projects.Contents;
+using AiNexus.Features.Projects.Management;
+using AiNexus.Features.Projects.Templates;
 
 namespace AiNexus.IntegrationTests.Projects;
 

@@ -1,4 +1,5 @@
 using AiNexus.Features.Persistence;
+using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -67,5 +68,18 @@ internal sealed class BackgroundJobConfiguration : IEntityTypeConfiguration<Back
         job.Property(x => x.ActiveKey).HasMaxLength(100); job.Property(x => x.ErrorCode).HasMaxLength(80); job.Property(x => x.ErrorMessage).HasMaxLength(240);
         job.HasIndex(x => x.ActiveKey).IsUnique().HasFilter("[ActiveKey] IS NOT NULL"); job.HasIndex(x => new { x.Status, x.LeaseUntil, x.CreatedAt }); job.HasIndex(x => new { x.OwnerId, x.CreatedAt });
         job.HasIndex(x => x.SubjectId); // Active work on a document or embedding profile.
+    }
+}
+
+internal static class BackgroundJobQueries
+{
+    public static IQueryable<BackgroundJob> OwnedBy(this IQueryable<BackgroundJob> jobs, Guid owner) => jobs.Where(x => x.OwnerId == owner);
+
+    /// <summary>Re-reads a job after a bulk update; tracked entities are discarded first.</summary>
+    public static async Task<Result<JobDto>> ReloadJobAsync(this NexusDbContext db, Guid owner, Guid id, CancellationToken ct)
+    {
+        db.ChangeTracker.Clear();
+        var job = await db.Set<BackgroundJob>().OwnedBy(owner).SingleOrDefaultAsync(x => x.Id == id, ct);
+        return job is null ? JobsErrors.JobNotFound : JobService.Describe(job);
     }
 }

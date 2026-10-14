@@ -16,7 +16,7 @@ public sealed record RepositoryChatDto(ConversationDto Conversation, AttachmentD
 
 internal sealed class StartRepositoryChatRequestValidator : RequestValidator<StartRepositoryChatRequest>
 {
-    public override string ProblemCode => "repository_chat_source_invalid";
+    public override string ProblemCode => RepositoriesErrors.ChatSourceInvalid.Code;
 
     public StartRepositoryChatRequestValidator()
     {

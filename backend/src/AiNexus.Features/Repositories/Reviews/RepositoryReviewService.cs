@@ -1,10 +1,10 @@
 using System.Text;
 using System.Text.Json;
-using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.Models;
+using AiNexus.Features.Jobs;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
-using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Repositories.Reviews;
 

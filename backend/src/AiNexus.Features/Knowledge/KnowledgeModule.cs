@@ -1,20 +1,20 @@
-using AiNexus.Platform.Dashboard;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Attachments;
-using AiNexus.Features.Inference;
-using AiNexus.Features.Persistence;
-using AiNexus.Platform.Configuration;
-using AiNexus.Platform.Http;
-using AiNexus.Platform.Modules;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+using AiNexus.Features.Attachments.Storage;
+using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge.Collections;
 using AiNexus.Features.Knowledge.Documents;
-using AiNexus.Features.Knowledge.Indexing;
 using AiNexus.Features.Knowledge.Embeddings;
+using AiNexus.Features.Knowledge.Indexing;
 using AiNexus.Features.Knowledge.Retrieval;
+using AiNexus.Features.Persistence;
+using AiNexus.Platform.Configuration;
+using AiNexus.Platform.Dashboard;
+using AiNexus.Platform.Http;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Monitoring;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Knowledge;
 
@@ -105,8 +105,6 @@ public sealed class KnowledgeModule : IFeatureModule
         ReindexDocument.Map(documents);
 
         AddKnowledgeDocument.MapAttachment(api);
-        SearchDirectory.MapUsers(api);
-        SearchDirectory.MapGroups(api);
 
         ListLibraryFiles.Map(api.MapGroup("/files").RequireAuthorization(Policies.Files).WithTags("File library"));
     }

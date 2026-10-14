@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text.Json;
 using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.Providers;
 using AiNexus.Platform.Errors;
 using AiNexus.UnitTests.Support;
 using Microsoft.Extensions.Options;

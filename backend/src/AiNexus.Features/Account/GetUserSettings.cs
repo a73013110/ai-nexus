@@ -1,6 +1,6 @@
-using AiNexus.Features.Inference;
 using AiNexus.Features.Identity;
 using AiNexus.Features.Identity.Users;
+using AiNexus.Features.Inference.Models;
 
 namespace AiNexus.Features.Account;
 

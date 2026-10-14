@@ -1,3 +1,4 @@
+using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Data;
 using Microsoft.EntityFrameworkCore;
@@ -8,6 +9,9 @@ namespace AiNexus.Features.Conversations;
 [Comment("使用者私人對話、目前訊息分支、收藏封存與自訂指令。")]
 public sealed class Conversation
 {
+    public const int TitleMaxLength = 120;
+    public const int InstructionMaxLength = 4000;
+
     [Comment("資料的主鍵識別碼。")]
     public Guid Id { get; set; } = Guid.NewGuid();
     [Comment("資料擁有者／有效操作身分的 Users 主鍵；用於私人資料隔離。")]
@@ -31,6 +35,8 @@ public sealed class Conversation
     [Comment("對話專用的回答指令。")]
     public string SystemInstruction { get; set; } = "";
     public List<ConversationLabel> Labels { get; set; } = [];
+
+    public static bool TitleIsValid(string? title) => title?.Trim().Length is >= 1 and <= TitleMaxLength;
 }
 
 internal sealed class ConversationConfiguration : IEntityTypeConfiguration<Conversation>
@@ -41,10 +47,20 @@ internal sealed class ConversationConfiguration : IEntityTypeConfiguration<Conve
         conversation.Property(x => x.UpdatedAt).HasValueGenerator<CreationTime>();
         conversation.ToTable("Conversations", "conversations");
         conversation.HasKey(x => x.Id);
-        conversation.Property(x => x.Title).HasMaxLength(ConversationQueries.TitleMaxLength);
-        conversation.Property(x => x.SystemInstruction).HasMaxLength(ConversationQueries.InstructionMaxLength);
+        conversation.Property(x => x.Title).HasMaxLength(Conversation.TitleMaxLength);
+        conversation.Property(x => x.SystemInstruction).HasMaxLength(Conversation.InstructionMaxLength);
         conversation.HasIndex(x => new { x.OwnerId, x.IsDeleted, x.UpdatedAt });
         conversation.HasIndex(x => new { x.OwnerId, x.IsDeleted, x.IsArchived, x.IsFavorite, x.UpdatedAt });
         conversation.HasQueryFilter(SoftDelete.Filter, x => !x.IsDeleted);
     }
+}
+
+internal static class ConversationQueries
+{
+    /// <summary>The user's own conversation that is not deleted (soft-delete filter), with its labels; null when there is none.</summary>
+    public static Task<Conversation?> OwnedConversationAsync(this NexusDbContext db, Guid owner, Guid id, CancellationToken ct)
+        => db.Set<Conversation>().Include(x => x.Labels).SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct);
+
+    public static Task<bool> HasActiveRunAsync(this NexusDbContext db, Guid id, CancellationToken ct)
+        => db.Set<GenerationRun>().AnyAsync(x => x.ConversationId == id && x.ActiveOwnerId != null, ct);
 }

@@ -1,8 +1,8 @@
-using AiNexus.Features.Artifacts;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Validation;
 using Microsoft.Extensions.Options;
 using UglyToad.PdfPig;
+using AiNexus.Features.Artifacts.Export;
 using static AiNexus.IntegrationTests.Support.ArtifactApi;
 
 namespace AiNexus.IntegrationTests.Artifacts;

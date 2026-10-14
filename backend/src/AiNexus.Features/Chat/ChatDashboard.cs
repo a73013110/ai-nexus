@@ -1,5 +1,6 @@
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.Models;
+using AiNexus.Features.Inference.Runs;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Dashboard;
 using Microsoft.EntityFrameworkCore;

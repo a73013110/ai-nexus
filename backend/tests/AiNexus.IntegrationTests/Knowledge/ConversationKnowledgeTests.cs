@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
-using AiNexus.Features.Chat;
 using AiNexus.Features.Knowledge.Collections;
+using AiNexus.Features.Chat.Transcripts;
 using static AiNexus.IntegrationTests.Support.BackgroundJobs;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 using static AiNexus.IntegrationTests.Support.KnowledgeApi;

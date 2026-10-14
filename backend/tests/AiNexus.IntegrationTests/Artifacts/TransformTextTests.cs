@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Artifacts;
+using AiNexus.Features.Artifacts.Management;
+using AiNexus.Features.Artifacts.Transforms;
 using static AiNexus.IntegrationTests.Support.ArtifactApi;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 

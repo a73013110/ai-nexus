@@ -2,11 +2,12 @@ using System.IO.Compression;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
-using AiNexus.Features.Chat;
 using UglyToad.PdfPig.Content;
 using UglyToad.PdfPig.Core;
 using UglyToad.PdfPig.Fonts.Standard14Fonts;
 using UglyToad.PdfPig.Writer;
+using AiNexus.Features.Chat.Transcripts;
+using AiNexus.Features.Chat.Context;
 using static AiNexus.IntegrationTests.Support.AttachmentApi;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 

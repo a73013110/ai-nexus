@@ -33,7 +33,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 | `Integrations` | [`IntegrationsOptions`](../../backend/src/AiNexus.Features/Integrations/IntegrationsOptions.cs) | `<來源>.Database.User`／`Password` |
 | `Repositories.Gitea` | [`GiteaOptions`](../../backend/src/AiNexus.Features/Repositories/GiteaOptions.cs) | —（權杖由使用者連線後加密存 SQL） |
 | `Attachments` | [`AttachmentOptions`](../../backend/src/AiNexus.Features/Attachments/AttachmentOptions.cs) | — |
-| `Artifacts.Export` | [`ExportOptions`](../../backend/src/AiNexus.Features/Artifacts/ArtifactExport.cs) | — |
+| `Artifacts.Export` | [`ExportOptions`](../../backend/src/AiNexus.Features/Artifacts/Export/ArtifactExport.cs) | — |
 | `Monitoring` | [`MonitoringOptions`](../../backend/src/AiNexus.Features/Monitoring/MonitoringOptions.cs) | — |
 | `Diagnostics` | [`DiagnosticOptions`](../../backend/src/AiNexus.Platform/Diagnostics/DiagnosticOptions.cs) | — |
 | `Security`、`DataProtection`、`AllowedHosts` | Host 與 Platform 直接讀取 | — |

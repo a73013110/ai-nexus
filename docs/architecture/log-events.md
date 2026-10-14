@@ -20,15 +20,15 @@
 | 2003 | `embedding.bootstrap_deferred` | `Knowledge/Embeddings/EmbeddingBootstrapWorker.cs` |
 | 3000 / 3001 | `job.started` / `job.finished` | `Jobs/BackgroundJobWorker.cs` |
 | 3002 / 3003 | `job.queue_unavailable` / `job.lease_renewal_failed` | 同上 |
-| 3004 | `replay.cleanup_failed` | `Chat/RunEventRetentionWorker.cs` |
+| 3004 | `replay.cleanup_failed` | `Chat/Runs/RunEventRetentionWorker.cs` |
 | 3005 | `repository_review.brief_rejected` | `Repositories/Reviews/RepositoryReviewHandler.cs` |
-| 3006 | `monitoring.source_unavailable` | `Monitoring/SubsystemReadings.cs` |
-| 3100 / 3101 | `generation.started` / `generation.finished` | `Chat/GenerationWorker.cs`、`RunService.cs` |
-| 3102 / 3103 / 3104 | `generation.disabled` / `generation.storage_unavailable` / `generation.startup_failed` | `Chat/GenerationWorker.cs` |
+| 3006 | `monitoring.source_unavailable` | `Monitoring/Snapshots/SubsystemReadings.cs` |
+| 3100 / 3101 | `generation.started` / `generation.finished` | `Chat/Runs/GenerationWorker.cs`、`RunService.cs` |
+| 3102 / 3103 / 3104 | `generation.disabled` / `generation.storage_unavailable` / `generation.startup_failed` | `Chat/Runs/GenerationWorker.cs` |
 | 3105 / 3106 | `generation.recovery_pending` / `generation.recovery_postponed` | `GenerationWorker.cs`、`RunRecoveryWorker.cs` |
 | 4001 | `client.unhandled` | `Diagnostics/ReportClientIssue.cs` |
 | 5000 / 5001 / 5002 | `service.started` / `service.stopping` / `service.startup.failed` | `Host/Program.cs`、`DiagnosticStartup.cs` |
-| 6001 / 6002 / 6003 | `attachment.delete_deferred` / `attachment.untracked_delete_deferred` / `attachment.cleanup_deferred` | `Attachments/AttachmentLifecycle.cs` |
+| 6001 / 6002 / 6003 | `attachment.delete_deferred` / `attachment.untracked_delete_deferred` / `attachment.cleanup_deferred` | `Attachments/Storage/AttachmentLifecycle.cs` |
 | 6101 | `share.cleanup_deferred` | `Sharing/ShareService.cs` |
 
 `service.startup.failed` 不經 logger，由 `DiagnosticStartup` 直接寫入 journal。

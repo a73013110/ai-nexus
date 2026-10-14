@@ -5,11 +5,16 @@ using AiNexus.Features.Account;
 using AiNexus.Features.Administration;
 using AiNexus.Features.Administration.Roles;
 using AiNexus.Features.Audit;
-using AiNexus.Features.Chat;
-using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using AiNexus.Features.Inference.Models;
+using AiNexus.Features.Chat.Context;
+using AiNexus.Features.AccessControl.ModelPolicies;
+using AiNexus.Features.Inference.ModelPolicies;
+using AiNexus.Features.Inference.Runs;
+using AiNexus.Features.Inference.ModelTasks;
+using AiNexus.Features.AccessControl.Roles;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Administration;

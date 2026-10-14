@@ -1,13 +1,13 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using AiNexus.Features.AccessControl;
 using AiNexus.Features.Knowledge;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Quality.RetrievalEvaluations;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.AccessControl.Roles;
 using static AiNexus.IntegrationTests.Support.BackgroundJobs;
 
 namespace AiNexus.IntegrationTests.Quality;

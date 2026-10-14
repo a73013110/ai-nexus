@@ -1,10 +1,10 @@
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.Runs;
+using AiNexus.Features.Knowledge.Retrieval;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
-using AiNexus.Features.Knowledge.Retrieval;
 
 namespace AiNexus.Features.Knowledge.Collections;
 

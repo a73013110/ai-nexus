@@ -1,6 +1,7 @@
 using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity.Users;
-using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.Models;
+using AiNexus.Features.Inference.Runs;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 

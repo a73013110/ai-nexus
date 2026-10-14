@@ -6,6 +6,7 @@ using AiNexus.Features.Persistence;
 using AiNexus.Features.Sharing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using AiNexus.Features.Sharing.Management;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Notifications;

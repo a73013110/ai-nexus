@@ -1,12 +1,13 @@
 using AiNexus.Features.Attachments;
+using AiNexus.Features.Attachments.Storage;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Identity;
-using AiNexus.Features.Persistence;
-using AiNexus.Platform.Errors;
-using AiNexus.Platform.Data;
-using Microsoft.EntityFrameworkCore;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge.Indexing;
+using AiNexus.Features.Persistence;
+using AiNexus.Platform.Data;
+using AiNexus.Platform.Errors;
+using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Knowledge.Documents;
 

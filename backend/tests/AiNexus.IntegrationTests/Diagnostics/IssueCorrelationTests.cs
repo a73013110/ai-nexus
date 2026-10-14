@@ -3,8 +3,6 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using AiNexus.Features.Account;
-using AiNexus.Features.Chat;
-using AiNexus.Features.Inference;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
@@ -13,6 +11,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using AiNexus.Features.Chat.Runs;
+using AiNexus.Features.Inference.Runs;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 using static AiNexus.IntegrationTests.Support.DiagnosticIssues;
 

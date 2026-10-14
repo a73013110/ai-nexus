@@ -2,12 +2,13 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using Microsoft.AspNetCore.DataProtection;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
+using AiNexus.Platform.Security;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Diagnostics;
 
@@ -137,12 +138,7 @@ public sealed class DiagnosticQuery(NexusDbContext db, IDataProtectionProvider p
         foreach (var row in rows) csv.AppendLine(string.Join(",", new object?[] { row.LogId, row.At.ToUniversalTime().ToString("O"), row.Level, row.Category, row.EventName, row.IssueCode, row.TraceId, row.JobId, row.RunId, row.ErrorCode, row.Instance }.Select(Csv)));
         return csv.ToString();
     }
-    public static string Csv(object? value)
-    {
-        var text = DiagnosticRedactor.Text(Convert.ToString(value, CultureInfo.InvariantCulture), 240);
-        if (text.TrimStart().StartsWith('=') || text.TrimStart().StartsWith('+') || text.TrimStart().StartsWith('-') || text.TrimStart().StartsWith('@')) text = "'" + text;
-        return "\"" + text.Replace("\"", "\"\"") + "\"";
-    }
+    private static string Csv(object? value) => CsvCell.Quote(DiagnosticRedactor.Text(Convert.ToString(value, CultureInfo.InvariantCulture), 240));
     private async Task AuditAsync(Guid actor, string action, Guid? logId, DiagnosticFilter? filter, CancellationToken ct)
     {
         // Privileged reads fail closed if the audit cannot be persisted. This is separate from diagnostic sampling/queues.

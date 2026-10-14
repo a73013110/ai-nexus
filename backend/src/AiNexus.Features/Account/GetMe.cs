@@ -1,11 +1,11 @@
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Inference;
+using AiNexus.Features.Identity;
+using AiNexus.Features.Identity.Users;
+using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Security;
 using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.EntityFrameworkCore;
-using AiNexus.Features.Identity;
-using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Account;
 

@@ -1,14 +1,15 @@
-using AiNexus.Platform.Errors;
-using AiNexus.Features.Inference;
 using AiNexus.Features.Attachments;
 using AiNexus.Features.Collaboration;
+using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.ModelTasks;
+using AiNexus.Features.Jobs;
+using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Platform.Data;
+using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
-using AiNexus.Features.Jobs;
-using AiNexus.Features.Knowledge.Documents;
 
 namespace AiNexus.Features.Knowledge.Indexing;
 

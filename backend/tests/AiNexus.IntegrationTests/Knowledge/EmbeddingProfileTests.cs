@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.AccessControl;
 using AiNexus.Features.Account;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge;
@@ -11,6 +10,8 @@ using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using AiNexus.Features.Administration.Retrieval;
+using AiNexus.Features.AccessControl.Roles;
 using static AiNexus.IntegrationTests.Support.BackgroundJobs;
 
 namespace AiNexus.IntegrationTests.Knowledge;
@@ -114,7 +115,7 @@ public sealed class EmbeddingProfileTests
     {
         await using var factory = new NexusFactory(administrators: ["alice"], services: services => services.PostConfigure<KnowledgeOptions>(x => x.Embedding.Provider = "none"));
         using var client = await factory.SignedInAsync(); var seed = await KnowledgeApi.SeedAsync(factory, client);
-        using var search = await client.PostAsJsonAsync("/api/v1/admin/knowledge/search", new AiNexus.Features.Administration.Retrieval.AdminRetrievalSearchRequest("採購", [seed.Collection], "vector")); search.EnsureSuccessStatusCode();
+        using var search = await client.PostAsJsonAsync("/api/v1/admin/knowledge/search", new AdminRetrievalSearchRequest("採購", [seed.Collection], "vector")); search.EnsureSuccessStatusCode();
         Assert.Equal("keyword", (await search.Content.ReadFromJsonAsync<KnowledgeSearchDto>())!.Mode); Assert.Equal(0, factory.Embeddings.Calls);
         factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.Embedding.Provider = "ollama";
         using var probe = await client.PostAsync("/api/v1/admin/knowledge/capabilities/probe", null); probe.EnsureSuccessStatusCode();

@@ -1,4 +1,4 @@
-using AiNexus.Features.Chat;
+using AiNexus.Features.Chat.Runs;
 
 namespace AiNexus.UnitTests.Chat;
 

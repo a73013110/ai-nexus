@@ -1,11 +1,14 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
-using AiNexus.Features.Billing;
-using AiNexus.Features.Chat;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using AiNexus.Features.Billing.Prices;
+using AiNexus.Features.Chat.Runs;
+using AiNexus.Features.Chat.Transcripts;
+using AiNexus.Features.Billing.Reports;
+using AiNexus.Features.Billing.Charges;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Billing;

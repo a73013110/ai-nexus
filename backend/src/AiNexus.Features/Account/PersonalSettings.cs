@@ -1,7 +1,7 @@
-using AiNexus.Features.Attachments;
-using AiNexus.Features.Billing;
-using AiNexus.Features.Inference;
+using AiNexus.Features.Attachments.Storage;
+using AiNexus.Features.Billing.Reports;
 using AiNexus.Features.Identity.Users;
+using AiNexus.Features.Inference.Models;
 
 namespace AiNexus.Features.Account;
 

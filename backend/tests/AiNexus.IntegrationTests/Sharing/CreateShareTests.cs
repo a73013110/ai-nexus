@@ -4,11 +4,14 @@ using System.Text;
 using AiNexus.Features.Account;
 using AiNexus.Features.Artifacts;
 using AiNexus.Features.Attachments;
-using AiNexus.Features.Inference;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Sharing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using AiNexus.Features.Inference.Runs;
+using AiNexus.Features.Sharing.Management;
+using AiNexus.Features.Sharing.Viewing;
+using AiNexus.Features.Artifacts.Management;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Sharing;

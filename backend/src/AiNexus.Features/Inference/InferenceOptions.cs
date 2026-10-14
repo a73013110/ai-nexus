@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using AiNexus.Features.Inference.Models;
 using AiNexus.Platform.Configuration;
 using Microsoft.Extensions.Options;
 

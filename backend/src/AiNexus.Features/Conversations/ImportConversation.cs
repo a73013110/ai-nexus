@@ -24,8 +24,8 @@ internal sealed class ConversationBackupValidator : RequestValidator<Conversatio
     public ConversationBackupValidator()
     {
         RuleFor(x => x.Version).Equal(1);
-        RuleFor(x => x.Title).Must(ConversationQueries.TitleIsValid).WithErrorCode("length");
-        RuleFor(x => x.SystemInstruction).NotNull().MaximumLength(ConversationQueries.InstructionMaxLength);
+        RuleFor(x => x.Title).Must(Conversation.TitleIsValid).WithErrorCode("length");
+        RuleFor(x => x.SystemInstruction).NotNull().MaximumLength(Conversation.InstructionMaxLength);
         RuleFor(x => x.Labels).NotNull();
         RuleFor(x => x.Messages).Must(x => x is { Count: <= MaxMessages } && x.All(m => m is { Content: not null }) && x.Sum(m => (long)m.Content.Length) <= MaxContentCharacters).WithErrorCode("size");
     }
@@ -43,7 +43,7 @@ internal sealed class ImportConversation(NexusDbContext db, TimeProvider clock)
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, ConversationBackup backup, CancellationToken ct)
     {
-        var labels = ConversationQueries.CleanLabels(backup.Labels);
+        var labels = ConversationLabel.Clean(backup.Labels);
         if (labels is null) return ConversationsErrors.InvalidLabels;
         var lookup = new Dictionary<Guid, BackupMessage>();
         foreach (var message in backup.Messages)

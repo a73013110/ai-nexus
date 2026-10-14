@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.Monitoring;
+using AiNexus.Features.Monitoring.Presence;
+using AiNexus.Features.Monitoring.Snapshots;
 
 namespace AiNexus.IntegrationTests.Monitoring;
 

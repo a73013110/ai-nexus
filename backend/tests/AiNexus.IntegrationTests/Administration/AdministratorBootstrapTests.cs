@@ -1,11 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.AccessControl;
 using AiNexus.Features.Account;
 using AiNexus.Features.Identity.Sessions;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using AiNexus.Features.AccessControl.Roles;
 using static AiNexus.IntegrationTests.Support.IdentityApi;
 
 namespace AiNexus.IntegrationTests.Administration;

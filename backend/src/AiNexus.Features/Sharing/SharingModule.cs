@@ -1,7 +1,9 @@
-using AiNexus.Platform.Dashboard;
 using AiNexus.Features.AccessControl;
-using AiNexus.Features.Artifacts;
-using AiNexus.Features.Chat;
+using AiNexus.Features.Artifacts.Management;
+using AiNexus.Features.Chat.Transcripts;
+using AiNexus.Features.Sharing.Management;
+using AiNexus.Features.Sharing.Viewing;
+using AiNexus.Platform.Dashboard;
 using AiNexus.Platform.Events;
 using AiNexus.Platform.Modules;
 

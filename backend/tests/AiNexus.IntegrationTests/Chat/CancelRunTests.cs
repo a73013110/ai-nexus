@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Net.Http.Json;
-using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.ModelPolicies;
+using AiNexus.Features.Inference.Runs;
 using static AiNexus.IntegrationTests.Support.ChatApi;
 
 namespace AiNexus.IntegrationTests.Chat;
@@ -42,7 +43,7 @@ public sealed class CancelRunTests
         (await bob.PostAsync($"/api/v1/runs/{second.Id}/cancel", null)).EnsureSuccessStatusCode();
         (await alice.PostAsync($"/api/v1/runs/{first.Id}/cancel", null)).EnsureSuccessStatusCode();
         Assert.Equal(RunStates.Cancelled, (await ChatApi.WaitForTerminal(bob, second.Id)).Status);
-        var budget = Assert.Single((await bob.GetFromJsonAsync<AiNexus.Features.Inference.EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
+        var budget = Assert.Single((await bob.GetFromJsonAsync<EffectiveModelPolicyDto>("/api/v1/settings/model-policy"))!.Models);
         Assert.Equal(0, budget.ReservedTokens);
         await Task.Delay(100); Assert.True(factory.Provider.Calls <= 1);
     }

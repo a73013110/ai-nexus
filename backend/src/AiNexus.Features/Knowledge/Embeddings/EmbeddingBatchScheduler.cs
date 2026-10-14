@@ -1,4 +1,4 @@
-using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.Runs;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Knowledge.Embeddings;

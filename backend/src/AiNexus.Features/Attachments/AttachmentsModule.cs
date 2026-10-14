@@ -1,8 +1,11 @@
-using AiNexus.Platform.Dashboard;
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.Attachments.Extraction;
+using AiNexus.Features.Attachments.Files;
+using AiNexus.Features.Attachments.Storage;
 using AiNexus.Features.Identity;
-using AiNexus.Platform.Modules;
 using AiNexus.Platform.Configuration;
+using AiNexus.Platform.Dashboard;
+using AiNexus.Platform.Modules;
 using AiNexus.Platform.Monitoring;
 
 namespace AiNexus.Features.Attachments;

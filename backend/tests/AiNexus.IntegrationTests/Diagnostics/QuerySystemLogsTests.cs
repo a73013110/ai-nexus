@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using AiNexus.Features.AccessControl;
+using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Diagnostics;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Diagnostics;

@@ -10,8 +10,6 @@ namespace AiNexus.Platform.Modules;
 /// </summary>
 public static class EndpointHandlers
 {
-    public const string HandleMethod = "HandleAsync";
-
     public static IServiceCollection AddEndpointHandlers(this IServiceCollection services, Assembly assembly)
     {
         foreach (var slice in Slices(assembly).Where(type => !type.IsAbstract)) services.TryAddScoped(slice);

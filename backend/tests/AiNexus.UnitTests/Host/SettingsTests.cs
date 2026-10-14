@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using AiNexus.Features;
 using AiNexus.Features.Inference;
 using AiNexus.Features.Knowledge;
+using AiNexus.Features.Repositories;
 using AiNexus.Platform;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
@@ -78,7 +79,7 @@ public sealed class SettingsTests
         using var services = Settings(new() { ["Knowledge:Retrieval:TopK"] = "50", ["Repositories:Gitea:BaseUrl"] = "http://gitea.fixture.test/" });
         var knowledge = Assert.Throws<OptionsValidationException>(() => services.GetRequiredService<IOptions<KnowledgeOptions>>().Value);
         Assert.Contains("Retrieval.TopK", knowledge.Message, StringComparison.Ordinal);
-        var gitea = Assert.Throws<OptionsValidationException>(() => services.GetRequiredService<IOptions<AiNexus.Features.Repositories.GiteaOptions>>().Value);
+        var gitea = Assert.Throws<OptionsValidationException>(() => services.GetRequiredService<IOptions<GiteaOptions>>().Value);
         Assert.Contains("BaseUrl", gitea.Message, StringComparison.Ordinal);
     }
 

@@ -2,12 +2,16 @@ using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Artifacts;
+using AiNexus.Features.Artifacts.Management;
 using AiNexus.Features.Attachments;
-using AiNexus.Features.Chat;
+using AiNexus.Features.Chat.Transcripts;
 using AiNexus.Features.Collaboration;
+using AiNexus.Features.Jobs;
 using AiNexus.Features.Knowledge.Documents;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Projects;
+using AiNexus.Features.Projects.Contents;
+using AiNexus.Features.Projects.Management;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -44,7 +48,7 @@ public sealed class DeleteProjectTests
         var document = (await (await owner.PostAsJsonAsync($"/api/v1/projects/{id}/files", new AddDocumentRequest(attachment.Id))).Content.ReadFromJsonAsync<DocumentDto>())!;
         Assert.Equal(HttpStatusCode.NotFound, (await editor.DeleteAsync($"/api/v1/projects/{id}")).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, (await owner.DeleteAsync($"/api/v1/projects/{id}")).StatusCode);
-        await ActivatorUtilities.CreateInstance<AiNexus.Features.Jobs.BackgroundJobWorker>(f.Services).ProcessNextAsync(default);
+        await ActivatorUtilities.CreateInstance<BackgroundJobWorker>(f.Services).ProcessNextAsync(default);
         Assert.Equal(HttpStatusCode.NoContent, (await owner.DeleteAsync($"/api/v1/projects/{id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await owner.GetAsync($"/api/v1/projects/{id}")).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await editor.GetAsync($"/api/v1/artifacts/{artifact.Resource.Id}")).StatusCode);

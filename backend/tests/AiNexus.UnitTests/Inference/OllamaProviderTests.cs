@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using AiNexus.Features.Inference;
+using AiNexus.Features.Inference.Providers;
 
 namespace AiNexus.UnitTests.Inference;
 

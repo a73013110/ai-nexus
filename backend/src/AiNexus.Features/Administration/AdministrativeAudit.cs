@@ -1,13 +1,16 @@
 using System.Data;
 using System.Text.Json;
-using AiNexus.Features.Inference;
-using AiNexus.Platform.Errors;
-using AiNexus.Features.Persistence;
-using AiNexus.Features.Identity;
 using AiNexus.Features.AccessControl;
-using Microsoft.EntityFrameworkCore;
+using AiNexus.Features.AccessControl.ModelPolicies;
+using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Administration.Roles;
+using AiNexus.Features.Identity;
 using AiNexus.Features.Identity.Users;
+using AiNexus.Features.Inference.ModelPolicies;
+using AiNexus.Features.Knowledge.Embeddings;
+using AiNexus.Features.Persistence;
+using AiNexus.Platform.Errors;
+using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Administration;
 
@@ -84,8 +87,8 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
     private async Task<object?> SnapshotAsync(string action, Guid? resource, string key, CancellationToken ct)
     {
         if (action.StartsWith("admin.embedding_", StringComparison.Ordinal) && int.TryParse(key, out var profile)) return new {
-            profiles = await db.Set<AiNexus.Features.Knowledge.Embeddings.EmbeddingProfile>().AsNoTracking().Select(x => new { x.Id, x.Status, x.ActivatedAt, x.RetiredAt }).ToArrayAsync(ct),
-            vectors = await db.Set<AiNexus.Features.Knowledge.Embeddings.ChunkEmbedding768>().CountAsync(x => x.ProfileId == profile, ct) + await db.Set<AiNexus.Features.Knowledge.Embeddings.ChunkEmbedding1024>().CountAsync(x => x.ProfileId == profile, ct)
+            profiles = await db.Set<EmbeddingProfile>().AsNoTracking().Select(x => new { x.Id, x.Status, x.ActivatedAt, x.RetiredAt }).ToArrayAsync(ct),
+            vectors = await db.Set<ChunkEmbedding768>().CountAsync(x => x.ProfileId == profile, ct) + await db.Set<ChunkEmbedding1024>().CountAsync(x => x.ProfileId == profile, ct)
         };
         if (action == "admin.user_model_policy")
         {

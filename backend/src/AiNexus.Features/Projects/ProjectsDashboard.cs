@@ -1,6 +1,7 @@
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Persistence;
+using AiNexus.Features.Projects.Templates;
 using AiNexus.Platform.Dashboard;
 using Microsoft.EntityFrameworkCore;
 

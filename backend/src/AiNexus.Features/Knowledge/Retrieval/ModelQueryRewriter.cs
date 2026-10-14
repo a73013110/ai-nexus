@@ -1,8 +1,10 @@
 using System.Text.Json;
-using AiNexus.Platform.Errors;
 using AiNexus.Features.Inference;
-using Microsoft.Extensions.Options;
+using AiNexus.Features.Inference.ModelTasks;
+using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Knowledge.Indexing;
+using AiNexus.Platform.Errors;
+using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Knowledge.Retrieval;
 

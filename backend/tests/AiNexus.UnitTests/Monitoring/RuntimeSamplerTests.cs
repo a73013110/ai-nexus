@@ -1,4 +1,5 @@
 using AiNexus.Features.Monitoring;
+using AiNexus.Features.Monitoring.Traffic;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;

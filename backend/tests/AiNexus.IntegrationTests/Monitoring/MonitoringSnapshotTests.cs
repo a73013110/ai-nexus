@@ -1,7 +1,9 @@
 using System.Net.Http.Json;
-using AiNexus.Features.AccessControl;
+using AiNexus.Features.AccessControl.Roles;
 using AiNexus.Features.Jobs;
 using AiNexus.Features.Monitoring;
+using AiNexus.Features.Monitoring.Presence;
+using AiNexus.Features.Monitoring.Snapshots;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Monitoring;
 using Microsoft.Extensions.DependencyInjection;

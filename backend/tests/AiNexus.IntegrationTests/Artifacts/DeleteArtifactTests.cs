@@ -2,8 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
 using AiNexus.Features.Artifacts;
+using AiNexus.Features.Artifacts.Management;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Sharing;
+using AiNexus.Features.Sharing.Management;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 

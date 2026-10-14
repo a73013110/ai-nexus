@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using AiNexus.Features.Artifacts;
+using AiNexus.Features.Artifacts.Management;
 
 namespace AiNexus.IntegrationTests.Support;
 
