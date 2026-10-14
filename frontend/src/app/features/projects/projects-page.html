@@ -265,17 +265,12 @@
   }
 </nx-feature-page>
 <dialog nxCompactDialog #dialog class="platform-dialog" (cancel)="close($event)">
-  <div class="dialog-scroll">
-    <div class="dialog-heading">
-      <h2>{{ kind() === 'project' ? '專案設定' : '共用範本' }}</h2>
-      <button class="icon-button" aria-label="關閉專案設定" (click)="close()">
-        <nx-icon name="close" />
-      </button>
-    </div>
-    @if (error()) {
-      <nx-notice tone="danger" [message]="error()" />
-    }
-    <form class="platform-form" (submit)="save($event)">
+  <form class="dialog-form" (submit)="save($event)">
+    <nx-dialog-header [heading]="kind() === 'project' ? '專案設定' : '共用範本'" />
+    <div class="dialog-body">
+      @if (error()) {
+        <nx-notice tone="danger" [message]="error()" />
+      }
       <label
         >{{ kind() === 'project' ? '專案名稱' : '範本名稱'
         }}<input
@@ -325,17 +320,17 @@
           ></textarea>
         </label>
       }
-      <div class="dialog-actions">
-        <button type="button" class="secondary-button" [disabled]="busy()" (click)="close()">
-          取消</button
-        ><button
-          class="primary-button"
-          [disabled]="busy() || !name().trim() || (kind() === 'template' && !templateText().trim())"
-        >
-          {{ busy() ? '正在儲存…' : '儲存' }}
-        </button>
-      </div>
-    </form>
-  </div>
+    </div>
+    <footer class="dialog-foot">
+      <button type="button" class="secondary-button" [disabled]="busy()" (click)="close()">
+        取消</button
+      ><button
+        class="primary-button"
+        [disabled]="busy() || !name().trim() || (kind() === 'template' && !templateText().trim())"
+      >
+        {{ busy() ? '正在儲存…' : '儲存' }}
+      </button>
+    </footer>
+  </form>
 </dialog>
 <nx-confirm-dialog /><nx-text-tools [projectId]="current()?.resource?.id || null" #tools />

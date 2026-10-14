@@ -114,7 +114,8 @@ import { NotificationFeed } from './notification-feed';
       <dialog
         nxCompactDialog
         #sheetDialog
-        class="platform-dialog dialog-flush notification-center"
+        size="md"
+        class="platform-dialog notification-center"
         aria-labelledby="notification-title"
         (cancel)="store.close()"
         (close)="store.close()"

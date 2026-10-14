@@ -215,40 +215,26 @@
     </div>
   }
 </nx-feature-page>
-<dialog nxCompactDialog #dialog class="platform-dialog quality-dialog" (cancel)="close($event)">
-  <div class="dialog-scroll">
-    <form (submit)="save($event)">
-      <div class="dialog-heading">
-        <div>
-          <h2>
-            {{
-              form() === 'set'
-                ? editing()
-                  ? '編輯評測集'
-                  : '建立評測集'
-                : form() === 'run'
-                  ? '設定比較方案'
-                  : '人工評分'
-            }}
-          </h2>
-          <p>
-            {{
-              form() === 'run'
-                ? '最多三個方案，模型呼叫數 = 題目數 × 方案數。'
-                : '內容不會自動送出，儲存後才套用。'
-            }}
-          </p>
-        </div>
-        <button
-          type="button"
-          class="icon-button"
-          aria-label="關閉評測設定"
-          (click)="close()"
-          [disabled]="busy()"
-        >
-          <nx-icon name="close" />
-        </button>
-      </div>
+<dialog nxCompactDialog size="lg" #dialog class="platform-dialog" (cancel)="close($event)">
+  <form class="dialog-form" (submit)="save($event)">
+    <nx-dialog-header
+      [heading]="
+        form() === 'set'
+          ? editing()
+            ? '編輯評測集'
+            : '建立評測集'
+          : form() === 'run'
+            ? '設定比較方案'
+            : '人工評分'
+      "
+      [detail]="
+        form() === 'run'
+          ? '最多三個方案，模型呼叫數 = 題目數 × 方案數。'
+          : '內容不會自動送出，儲存後才套用。'
+      "
+      closeLabel="關閉評測設定"
+    />
+    <div class="dialog-body">
       @if (error()) {
         <nx-notice tone="danger" [message]="error()" />
       }
@@ -395,14 +381,14 @@
           </label>
         }
       </fieldset>
-      <div class="dialog-actions">
-        <button type="button" class="secondary-button" (click)="close()" [disabled]="busy()">
-          取消</button
-        ><button type="submit" class="primary-button" [disabled]="busy()">
-          {{ busy() ? '正在儲存…' : form() === 'run' ? '開始評測' : '儲存' }}
-        </button>
-      </div>
-    </form>
-  </div>
+    </div>
+    <footer class="dialog-foot">
+      <button type="button" class="secondary-button" (click)="close()" [disabled]="busy()">
+        取消</button
+      ><button type="submit" class="primary-button" [disabled]="busy()">
+        {{ busy() ? '正在儲存…' : form() === 'run' ? '開始評測' : '儲存' }}
+      </button>
+    </footer>
+  </form>
 </dialog>
 <nx-confirm-dialog />

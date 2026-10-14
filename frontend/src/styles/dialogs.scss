@@ -3,16 +3,19 @@
 // Every modal shares one frame: a hairline, a layered shadow and a 12px radius. It rises and
 // scales in on the spring and leaves the same way; `overlay` and `display` keep it in the top layer
 // until the exit ends. Browsers without @starting-style simply open and close.
-.platform-dialog,
-.workspace-dialog {
+// Inside, a dialog is `nx-dialog-header` (.dialog-bar) + .dialog-body + optional .dialog-foot, and
+// `size` (sm | md | lg | full, set by nxCompactDialog) picks the width and the density: sm and md
+// have no dividers, lg and full separate the three parts with hairlines.
+.platform-dialog {
   --dialog-max-height: calc(100dvh - 3rem);
   --dialog-enter-y: 0.5rem;
   --dialog-enter-scale: 0.97;
   --dialog-ease: var(--ease-spring);
+  flex-direction: column;
   width: min(var(--dialog-width), calc(100vw - 2rem));
   max-width: none;
   max-height: var(--dialog-max-height);
-  padding: var(--dialog-padding);
+  padding: 0;
   margin: auto;
   overflow: hidden;
   overscroll-behavior: contain;
@@ -31,22 +34,21 @@
     overlay var(--motion) allow-discrete,
     display var(--motion) allow-discrete;
 }
-// A leaving dialog is still painted for its exit; it no longer takes clicks or focus.
-.platform-dialog:not([open]),
-.workspace-dialog:not([open]) {
-  pointer-events: none;
-  interactivity: inert;
-}
-.platform-dialog[open],
-.workspace-dialog[open] {
+// Layout lives under [open] only: the exit keeps `display` but would drop the rest at once.
+.platform-dialog[open] {
+  display: flex;
   opacity: 1;
   translate: 0 0;
   scale: 1;
   transition-duration: var(--motion-panel);
   transition-timing-function: var(--dialog-ease);
 }
-.platform-dialog::backdrop,
-.workspace-dialog::backdrop {
+// A leaving dialog is still painted for its exit; it no longer takes clicks or focus.
+.platform-dialog:not([open]) {
+  pointer-events: none;
+  interactivity: inert;
+}
+.platform-dialog::backdrop {
   background: var(--scrim);
   opacity: 0;
   transition:
@@ -54,144 +56,53 @@
     overlay var(--motion) allow-discrete,
     display var(--motion) allow-discrete;
 }
-.platform-dialog[open]::backdrop,
-.workspace-dialog[open]::backdrop {
+.platform-dialog[open]::backdrop {
   opacity: 1;
 }
 @starting-style {
-  .platform-dialog[open],
-  .workspace-dialog[open] {
+  .platform-dialog[open] {
     opacity: 0;
     translate: 0 var(--dialog-enter-y);
     scale: var(--dialog-enter-scale);
   }
-  .platform-dialog[open]::backdrop,
-  .workspace-dialog[open]::backdrop {
+  .platform-dialog[open]::backdrop {
     opacity: 0;
   }
 }
-.platform-dialog .dialog-heading {
-  margin-bottom: var(--p-space-3);
+
+// Sizes. md is the default (--dialog-width in tokens.scss).
+.platform-dialog[data-size='sm'] {
+  --dialog-width: var(--dialog-width-sm);
 }
-.platform-dialog .dialog-actions {
-  position: sticky;
-  bottom: calc(var(--dialog-inset) - var(--dialog-padding));
-  padding-block: var(--p-space-3);
-  background: var(--surface);
-}
-.dialog-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--p-space-3);
-  margin-bottom: var(--p-space-3);
-}
-.dialog-heading h2 {
-  font-size: var(--text-heading);
-  font-weight: 600;
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-.dialog-heading > :first-child {
-  min-width: 0;
-}
-.dialog-heading > .icon-button {
-  flex: none;
-}
-.dialog-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--p-space-2);
-  margin-top: var(--section-gap);
-}
-.workspace-dialog {
+.platform-dialog[data-size='lg'] {
+  --dialog-width: var(--dialog-width-lg);
   --dialog-max-height: min(85dvh, 52rem);
 }
-.platform-dialog:has(> .dialog-scroll),
-.workspace-dialog:has(> .dialog-scroll) {
-  padding: var(--dialog-inset);
-}
-.dialog-scroll {
-  position: relative;
-  min-width: 0;
-  max-height: calc(var(--dialog-max-height) - 2 * var(--dialog-inset) - 2px);
-  padding: calc(var(--dialog-padding) - var(--dialog-inset));
-  overflow: auto;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-  scroll-padding-block: var(--dialog-padding);
-  border-radius: calc(var(--dialog-radius) - var(--dialog-inset));
+.platform-dialog[data-size='full'] {
+  --dialog-max-height: none;
+  width: calc(100vw - 2rem);
+  height: calc(100dvh - 2rem);
 }
 
-.workspace-dialog .dialog-heading {
-  margin-bottom: var(--section-gap);
-}
-.panel-eyebrow {
-  display: block;
-  margin-bottom: var(--p-space-2);
-  color: var(--secondary);
-  font-size: var(--text-caption);
-  letter-spacing: 0.04em;
-}
-.panel-note {
-  color: var(--secondary);
-  font-size: var(--text-caption);
-  line-height: var(--line-reading);
-  margin: var(--p-space-2) 0 var(--p-space-4);
-}
-.workspace-dialog :where(label:not(.selection-control), .field-label) {
-  display: block;
-  color: var(--ink);
-  font-size: var(--text-label);
-  font-weight: 500;
-  margin: var(--section-gap) 0 var(--field-label-gap);
-}
-.workspace-dialog textarea {
-  resize: vertical;
-  min-height: 7rem;
-  max-height: 40dvh;
-}
-.workspace-dialog .primary-button,
-.workspace-dialog .secondary-button {
-  min-height: var(--button-target);
-  font-size: var(--text-label);
-}
-@include bp.below(phone) {
-  .workspace-dialog {
-    --dialog-padding: var(--p-space-4);
-  }
-  .platform-dialog {
-    --dialog-padding: var(--p-space-4);
-    --dialog-max-height: calc(100dvh - 1.5rem);
-    padding: var(--dialog-padding);
-  }
+// An optional <form class="dialog-form"> may wrap the three parts without joining the layout.
+form.dialog-form {
+  display: contents;
 }
 
-// Flush dialogs (pickers, inboxes): a header bar, one scrolling body and an optional footer,
-// separated by hairlines and running edge to edge, so the frame adds no padding of its own.
-:is(.platform-dialog, .workspace-dialog).dialog-flush {
-  flex-direction: column;
-  padding: 0;
-}
-// Layout lives outside [open]: the exit keeps `display` but would drop the rest at once.
-:is(.platform-dialog, .workspace-dialog).dialog-flush[open] {
-  display: flex;
-}
+// Header bar: title (+ detail), projected tools, close button.
 .dialog-bar {
   display: flex;
   align-items: center;
   flex: none;
   gap: var(--p-space-2);
-  min-height: calc(var(--button-target) + 2 * var(--p-space-2));
-  padding: var(--p-space-2) var(--p-space-2) var(--p-space-2) var(--p-space-4);
-  border-bottom: 1px solid var(--line);
+  padding: var(--p-space-3) var(--p-space-2) 0 var(--p-space-5);
 }
 .dialog-bar h2 {
-  flex: 1;
   min-width: 0;
   margin: 0;
-  font-size: var(--text-ui);
+  font-size: var(--text-heading);
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 // A title with a short detail beside it (a count, the item's name); the detail stays outside the
 // h2 so the dialog's accessible name is the title alone.
@@ -203,7 +114,7 @@
   min-width: 0;
 }
 .dialog-title h2 {
-  flex: none;
+  max-width: 100%;
 }
 .dialog-title small {
   min-width: 0;
@@ -219,26 +130,96 @@
 .dialog-bar > .icon-button {
   flex: none;
 }
+
+// Body: the only scrolling part. Fields inside need no per-dialog CSS.
 .dialog-body {
+  display: flex;
+  flex-direction: column;
   flex: 1;
+  gap: var(--section-gap);
   min-height: 0;
-  padding: var(--p-space-2);
-  overflow-y: auto;
+  padding: var(--p-space-3) var(--p-space-5);
+  overflow: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
 }
+.dialog-body-flush {
+  gap: 0;
+  padding: 0;
+}
+.dialog-body :where(label:not(.selection-control), .field-label) {
+  display: block;
+  color: var(--ink);
+  font-size: var(--text-label);
+  font-weight: 500;
+}
+.dialog-body :where(label:not(.selection-control), .field-label) > :where(input, select, textarea) {
+  margin-top: var(--field-label-gap);
+}
+.dialog-body textarea {
+  resize: vertical;
+  min-height: 7rem;
+  max-height: 40dvh;
+}
+.dialog-body > :where(p, .form-note) {
+  margin: 0;
+}
+
+// Footer: an optional note on the left, actions on the right.
 .dialog-foot {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   flex: none;
   gap: var(--p-space-2);
-  padding: var(--p-space-1) var(--p-space-2) var(--p-space-1) var(--p-space-4);
-  border-top: 1px solid var(--line);
+  padding: var(--p-space-3) var(--p-space-4) var(--p-space-4) var(--p-space-5);
+}
+.dialog-note {
+  flex: 1;
+  min-width: 0;
+  margin-block: 0;
+  margin-inline-end: auto;
   color: var(--secondary);
   font-size: var(--text-caption);
+  line-height: var(--line-reading);
 }
-.dialog-foot > :first-child {
-  margin-inline-end: auto;
+.dialog-foot :is(.primary-button, .secondary-button, .danger-button) {
+  min-height: var(--button-target);
+  font-size: var(--text-label);
+}
+
+// lg and full are denser and carry hairlines between bar, body and foot.
+.platform-dialog:is([data-size='lg'], [data-size='full']) {
+  .dialog-bar {
+    min-height: calc(var(--button-target) + 2 * var(--p-space-2));
+    padding: var(--p-space-2) var(--p-space-2) var(--p-space-2) var(--p-space-5);
+    border-bottom: 1px solid var(--line);
+  }
+  .dialog-body {
+    padding: var(--p-space-4) var(--p-space-5);
+  }
+  .dialog-body-flush {
+    padding: 0;
+  }
+  .dialog-foot {
+    padding: var(--p-space-2) var(--p-space-3) var(--p-space-2) var(--p-space-5);
+    border-top: 1px solid var(--line);
+    background: var(--surface-subtle);
+  }
+}
+
+.panel-eyebrow {
+  display: block;
+  margin-bottom: var(--p-space-2);
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  letter-spacing: 0.04em;
+}
+.panel-note {
+  color: var(--secondary);
+  font-size: var(--text-caption);
+  line-height: var(--line-reading);
+  margin: var(--p-space-2) 0 var(--p-space-4);
 }
 
 // On phones every centred dialog becomes a bottom sheet: full width, anchored to the thumb zone,
@@ -249,8 +230,7 @@
 // release that stays springs back. The surface-coloured shadow below fills the gap that spring
 // opens under the sheet.
 @include bp.below(phone) {
-  .platform-dialog,
-  .workspace-dialog {
+  .platform-dialog {
     --dialog-sheet: 1;
     --dialog-enter-y: 100%;
     --dialog-enter-scale: 1;
@@ -266,19 +246,28 @@
       0 2rem 0 var(--surface),
       var(--shadow-floating);
   }
-  :is(.platform-dialog, .workspace-dialog)
-    :is(.dialog-heading, .dialog-bar, header, [data-sheet-handle]) {
+  .platform-dialog[data-size='full'] {
+    --dialog-max-height: none;
+    height: calc(100dvh - 1.5rem);
+  }
+  .platform-dialog :is(.dialog-bar, [data-sheet-handle]) {
     touch-action: none;
   }
-  :is(.platform-dialog, .workspace-dialog)[data-swipe='drag'] {
+  .platform-dialog[data-swipe='drag'] {
     transition: none;
     user-select: none;
   }
-  :is(.platform-dialog, .workspace-dialog)[data-swipe='drag']::backdrop {
+  .platform-dialog[data-swipe='drag']::backdrop {
     opacity: calc(1 - var(--swipe-progress, 0));
     transition: none;
   }
-  :is(.platform-dialog, .workspace-dialog)[open][data-swipe='return'] {
+  .platform-dialog[open][data-swipe='return'] {
     transition-timing-function: var(--ease-spring);
+  }
+  .dialog-foot {
+    flex-wrap: wrap;
+  }
+  .dialog-note {
+    flex-basis: 100%;
   }
 }

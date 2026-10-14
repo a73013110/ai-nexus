@@ -10,43 +10,8 @@
 .feature-choice-group {
   gap: var(--p-space-1);
 }
-.admin-editor.admin-editor-wide {
-  --dialog-width: 64rem;
-}
-.admin-editor .dialog-scroll {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.admin-group-editor .dialog-scroll {
-  max-height: min(700px, calc(100dvh - 4rem));
-}
-.admin-editor .dialog-heading,
-.admin-editor nx-view-switch,
-.admin-editor nx-notice {
-  flex: none;
-}
-.admin-editor-form {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-}
-.admin-editor-fields {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 0 var(--p-space-2) var(--p-space-2) 0;
-  overscroll-behavior: contain;
-}
-.platform-dialog.admin-editor .dialog-actions {
-  flex: none;
-  position: static;
-  margin-top: 12px;
-  border-top: 1px solid var(--line);
-}
 @include bp.below(narrow) {
-  .admin-group-editor nx-view-switch {
+  .admin-editor nx-view-switch {
     --view-switch-button-padding-inline: 4px;
     --view-switch-button-font-size: var(--text-caption);
     --view-switch-button-min-width: 0;
@@ -55,4 +20,14 @@
     overflow: visible;
     white-space: normal;
   }
+}
+
+// The category tabs stay reachable while a long tab scrolls under them.
+.admin-editor nx-view-switch {
+  position: sticky;
+  top: calc(-1 * var(--p-space-4));
+  z-index: 1;
+  padding-block: var(--p-space-2);
+  margin-block: calc(-1 * var(--p-space-2));
+  background: var(--surface);
 }

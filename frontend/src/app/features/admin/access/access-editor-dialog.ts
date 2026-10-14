@@ -14,7 +14,7 @@ import { parseStorageLimitGb, storageLimitGb } from '../../../shared/browser/sto
 import { Checkbox } from '../../../shared/ui/checkbox';
 import { CompactDialog } from '../../../shared/ui/compact-dialog';
 import { Field } from '../../../shared/ui/field';
-import { Icon } from '../../../shared/ui/icon';
+import { DialogHeader } from '../../../shared/ui/dialog-header';
 import { Notice } from '../../../shared/ui/notice';
 import { DialogMotion, ViewMotion } from '../../../shared/ui/view-motion';
 import { ViewSwitch } from '../../../shared/ui/view-switch';
@@ -53,10 +53,10 @@ interface Editor {
   imports: [
     Checkbox,
     CompactDialog,
+    DialogHeader,
     DialogMotion,
     Field,
     FeatureSummary,
-    Icon,
     ModelPolicyEditor,
     Notice,
     ViewMotion,

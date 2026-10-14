@@ -1,5 +1,6 @@
 <dialog
   nxCompactDialog
+  size="lg"
   #dialog
   class="platform-dialog admin-inspector"
   [class.inspector-wide]="store.tab() === 'conversations'"
@@ -8,7 +9,7 @@
   (cancel)="cancel($event)"
   (close)="closing()"
 >
-  <header class="dialog-heading inspector-heading">
+  <header class="dialog-bar">
     <nx-admin-user-summary (leave)="close()" />
     <button
       type="button"
@@ -20,16 +21,17 @@
       <nx-icon name="close" />
     </button>
   </header>
-  @if (store.overviewError()) {
-    <nx-notice tone="danger" [message]="store.overviewError()" />
-  }
-  <nx-view-switch
-    class="inspector-tabs"
-    label="使用者管理分類"
-    [options]="tabs"
-    [value]="store.tab()"
-    (valueChange)="selectTab($event)"
-  />
+  <div class="inspector-nav">
+    @if (store.overviewError()) {
+      <nx-notice tone="danger" [message]="store.overviewError()" />
+    }
+    <nx-view-switch
+      label="使用者管理分類"
+      [options]="tabs"
+      [value]="store.tab()"
+      (valueChange)="selectTab($event)"
+    />
+  </div>
   @let tab = store.tab();
   <div class="inspector-panel" [nxViewMotion]="tab">
     @if (tab === 'conversations') {

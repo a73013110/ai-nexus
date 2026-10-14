@@ -208,20 +208,9 @@
   <nx-text-source-editor (saved)="textSaved()" />
 </nx-feature-page>
 <dialog nxCompactDialog #editorDialog class="platform-dialog" (cancel)="cancel($event)">
-  <div class="dialog-scroll">
-    <form class="platform-form" (submit)="save($event)">
-      <div class="dialog-heading">
-        <h2>{{ editorId() ? '編輯知識庫' : '新增知識庫' }}</h2>
-        <button
-          type="button"
-          class="icon-button"
-          aria-label="關閉知識庫設定"
-          [disabled]="saving()"
-          (click)="editorDialog.close()"
-        >
-          <nx-icon name="close" />
-        </button>
-      </div>
+  <form class="dialog-form" (submit)="save($event)">
+    <nx-dialog-header [heading]="editorId() ? '編輯知識庫' : '新增知識庫'" />
+    <div class="dialog-body">
       @if (editorError()) {
         <nx-notice tone="danger" [message]="editorError()" />
       }
@@ -244,20 +233,20 @@
           (input)="editorDescription.set($any($event.target).value)"
         ></textarea>
       </label>
-      <p class="form-note">新建時僅你可以存取。建立後可從「存取權限」加入同事或群組。</p>
-      <div class="dialog-actions">
-        <button
-          type="button"
-          class="secondary-button"
-          [disabled]="saving()"
-          (click)="editorDialog.close()"
-        >
-          取消</button
-        ><button class="primary-button" [disabled]="saving()">
-          {{ saving() ? '正在儲存…' : '儲存知識庫' }}
-        </button>
-      </div>
-    </form>
-  </div>
+    </div>
+    <footer class="dialog-foot">
+      <p class="dialog-note">新建時僅你可以存取。建立後可從「存取權限」加入同事或群組。</p>
+      <button
+        type="button"
+        class="secondary-button"
+        [disabled]="saving()"
+        (click)="editorDialog.close()"
+      >
+        取消</button
+      ><button class="primary-button" [disabled]="saving()">
+        {{ saving() ? '正在儲存…' : '儲存知識庫' }}
+      </button>
+    </footer>
+  </form>
 </dialog>
 <nx-confirm-dialog />

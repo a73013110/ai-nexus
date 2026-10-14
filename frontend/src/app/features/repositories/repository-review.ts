@@ -16,6 +16,7 @@ import { ClientValidationError } from '../../core/errors/safe-errors';
 import { formatDate, formatModelDisplayName, formatNumber } from '../../shared/browser/format';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { MarkdownView } from '../../shared/markdown/markdown-view';
+import { DialogHeader } from '../../shared/ui/dialog-header';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
 import { Icon } from '../../shared/ui/icon';
@@ -32,7 +33,16 @@ const commentLimit = 20_000;
 /** One review: its progress while it runs, then the report and the evidence it read. */
 @Component({
   selector: 'nx-repository-review',
-  imports: [RouterLink, CompactDialog, Field, Icon, JobProgress, MarkdownView, Notice],
+  imports: [
+    RouterLink,
+    CompactDialog,
+    DialogHeader,
+    Field,
+    Icon,
+    JobProgress,
+    MarkdownView,
+    Notice,
+  ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './repository-review.scss',
@@ -170,40 +180,32 @@ const commentLimit = 20_000;
     }
     <dialog
       nxCompactDialog
+      size="lg"
       #comment
-      class="platform-dialog wide"
-      (cancel)="posting() && $event.preventDefault()"
+      class="platform-dialog"
+      (cancel)="posting() ? $event.preventDefault() : null"
     >
-      <form class="platform-form dialog-scroll" (submit)="post($event)">
-        <div class="dialog-heading">
-          <h2>貼到 Pull Request #{{ detail()?.review?.pullRequest }}</h2>
-          <button
-            type="button"
-            class="icon-button"
-            aria-label="關閉"
-            [disabled]="posting()"
-            (click)="comment.close()"
-          >
-            <nx-icon name="close" />
-          </button>
+      <form class="dialog-form" (submit)="post($event)">
+        <nx-dialog-header [heading]="'貼到 Pull Request #' + detail()?.review?.pullRequest" />
+        <div class="dialog-body">
+          <p class="form-note">
+            會以你的 Gitea 帳號留言，所有能看到這個 PR 的人都看得到；每份 review 只能貼一次。
+          </p>
+          <label
+            >留言內容<textarea
+              nxField
+              rows="14"
+              [maxLength]="limit"
+              [value]="draft()"
+              (input)="draft.set($any($event.target).value)"
+            ></textarea>
+          </label>
+          <p class="form-note count">{{ number(draft().length) }} / {{ number(limit) }}</p>
+          @if (commentError()) {
+            <nx-notice tone="danger" [message]="commentError()" />
+          }
         </div>
-        <p class="form-note">
-          會以你的 Gitea 帳號留言，所有能看到這個 PR 的人都看得到；每份 review 只能貼一次。
-        </p>
-        <label
-          >留言內容<textarea
-            nxField
-            rows="14"
-            [maxLength]="limit"
-            [value]="draft()"
-            (input)="draft.set($any($event.target).value)"
-          ></textarea>
-        </label>
-        <p class="form-note count">{{ number(draft().length) }} / {{ number(limit) }}</p>
-        @if (commentError()) {
-          <nx-notice tone="danger" [message]="commentError()" />
-        }
-        <div class="dialog-actions">
+        <footer class="dialog-foot">
           <button
             type="button"
             class="secondary-button"
@@ -215,7 +217,7 @@ const commentLimit = 20_000;
           <button class="primary-button" [disabled]="posting() || !draft().trim()">
             {{ posting() ? '正在留言…' : '留言' }}
           </button>
-        </div>
+        </footer>
       </form>
     </dialog>`,
 })

@@ -13,6 +13,7 @@ import { apiResource } from '../../core/api/api-resource';
 import { NexusApi } from '../../core/api/nexus-api';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { DialogHeader } from '../../shared/ui/dialog-header';
 import { Field } from '../../shared/ui/field';
 import { Icon } from '../../shared/ui/icon';
 import { Notice } from '../../shared/ui/notice';
@@ -39,7 +40,7 @@ const purposes = {
 /** Starts a background review; it keeps running after the dialog and the page are closed. */
 @Component({
   selector: 'nx-repository-review-dialog',
-  imports: [CompactDialog, Field, Icon, Notice, Select, ViewSwitch],
+  imports: [CompactDialog, DialogHeader, Field, Icon, Notice, Select, ViewSwitch],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
@@ -68,59 +69,50 @@ const purposes = {
     nxCompactDialog
     #dialog
     class="platform-dialog"
-    (cancel)="saving() && $event.preventDefault()"
+    (cancel)="saving() ? $event.preventDefault() : null"
   >
-    <form class="platform-form dialog-scroll" (submit)="save($event)">
-      <div class="dialog-heading">
-        <h2>交給 AI 初檢</h2>
-        <button
-          type="button"
-          class="icon-button"
-          aria-label="關閉"
-          [disabled]="saving()"
-          (click)="dialog.close()"
-        >
-          <nx-icon name="close" />
-        </button>
+    <form class="dialog-form" (submit)="save($event)">
+      <nx-dialog-header heading="交給 AI 初檢" />
+      <div class="dialog-body">
+        <p class="target"><nx-icon name="review" />{{ target()?.label }}</p>
+        <div class="purpose">
+          <nx-view-switch
+            label="檢閱目的"
+            appearance="segment"
+            [fill]="true"
+            [options]="purposeOptions"
+            [value]="purpose()"
+            (valueChange)="purpose.set($any($event))"
+          />
+          <p class="form-note">{{ purposeNote() }}</p>
+        </div>
+        @if (models()?.policy?.allowModelSelection && choices().length > 1) {
+          <nx-select
+            label="模型"
+            [options]="choices()"
+            [value]="model()"
+            (valueChange)="model.set($event)"
+          />
+        }
+        @if (models()?.notice) {
+          <nx-notice tone="info" [message]="models()!.notice" />
+        }
+        <label
+          >特別關注（選填）<textarea
+            nxField
+            rows="2"
+            maxlength="2000"
+            [value]="note()"
+            placeholder="例如：只看權限判斷，或確認金額計算"
+            (input)="note.set($any($event.target).value)"
+          ></textarea>
+        </label>
+        @if (error()) {
+          <nx-notice tone="danger" [message]="error()" />
+        }
       </div>
-      <p class="target"><nx-icon name="review" />{{ target()?.label }}</p>
-      <div class="purpose">
-        <nx-view-switch
-          label="檢閱目的"
-          appearance="segment"
-          [fill]="true"
-          [options]="purposeOptions"
-          [value]="purpose()"
-          (valueChange)="purpose.set($any($event))"
-        />
-        <p class="form-note">{{ purposeNote() }}</p>
-      </div>
-      @if (models()?.policy?.allowModelSelection && choices().length > 1) {
-        <nx-select
-          label="模型"
-          [options]="choices()"
-          [value]="model()"
-          (valueChange)="model.set($event)"
-        />
-      }
-      @if (models()?.notice) {
-        <nx-notice tone="info" [message]="models()!.notice" />
-      }
-      <label
-        >特別關注（選填）<textarea
-          nxField
-          rows="2"
-          maxlength="2000"
-          [value]="note()"
-          placeholder="例如：只看權限判斷，或確認金額計算"
-          (input)="note.set($any($event.target).value)"
-        ></textarea>
-      </label>
-      @if (error()) {
-        <nx-notice tone="danger" [message]="error()" />
-      }
-      <p class="form-note">在背景執行並使用你的模型額度；完成時會通知你，可以先離開。</p>
-      <div class="dialog-actions">
+      <footer class="dialog-foot">
+        <p class="dialog-note">在背景執行並使用你的模型額度；完成時會通知你，可以先離開。</p>
         <button
           type="button"
           class="secondary-button"
@@ -132,7 +124,7 @@ const purposes = {
         <button class="primary-button" [disabled]="saving() || !model()">
           {{ saving() ? '正在安排…' : '開始' }}
         </button>
-      </div>
+      </footer>
     </form>
   </dialog>`,
 })

@@ -1,36 +1,17 @@
-.text-tools-content .dialog-actions {
-  position: static;
-  flex-wrap: wrap;
-  margin: 0;
-  padding-bottom: 0;
-  border-top: 1px solid var(--line);
-}
-.text-tools-layout > .dialog-heading {
-  flex: none;
-}
 .text-tools-dialog {
-  --dialog-width: 56rem;
   height: min(46rem, 100dvh - 3rem);
 }
-.text-tools-dialog.is-expanded {
-  --dialog-width: calc(100vw - 2rem);
-  height: calc(100dvh - 3rem);
+.text-tools-dialog[data-size='full'] {
+  height: calc(100dvh - 2rem);
 }
-.text-tools-layout,
+// Header, content and footer share the dialog's height; only the body scrolls.
 .text-tools-content {
   display: flex;
-  flex-direction: column;
-  gap: var(--p-space-3);
-  height: 100%;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-}
-.text-tools-content {
   flex: 1;
-  height: auto;
+  flex-direction: column;
+  min-height: 0;
 }
-.text-tools-content > :not(nx-markdown-editor) {
+.text-tools-content .dialog-body > :not(nx-markdown-editor) {
   flex: none;
 }
 .text-tools-title {

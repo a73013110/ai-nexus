@@ -397,7 +397,7 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
   await features
     .getByRole("button", { name: "編輯功能：對話", exact: true })
     .click();
-  const editor = page.locator('dialog[aria-labelledby="admin-editor-title"]');
+  const editor = page.locator("dialog.admin-editor");
   await expect(
     page.getByRole("dialog", { name: "編輯功能：對話", exact: true }),
   ).toContainText("chat · /chat");

@@ -1,47 +1,27 @@
 <dialog
   nxCompactDialog
   #editorDialog
-  class="workspace-dialog platform-dialog admin-editor"
+  class="platform-dialog admin-editor"
+  [size]="editor()?.kind === 'group' ? 'lg' : editor()?.kind === 'feature' ? 'sm' : 'md'"
   [nxDialogView]="groupSection()"
-  [class.admin-group-editor]="editor()?.kind === 'group'"
-  [class.admin-editor-wide]="
-    editor()?.kind === 'group' && (groupSection() === 'models' || groupSection() === 'features')
-  "
-  [class.ui-dialog-compact]="editor()?.kind === 'feature'"
-  aria-labelledby="admin-editor-title"
   (close)="editor.set(null)"
   (cancel)="cancel($event)"
 >
-  <div class="dialog-scroll">
-    @if (editor(); as e) {
-      <div class="dialog-heading">
-        <div>
-          <h2 id="admin-editor-title">{{ e.title }}</h2>
-          @if (e.subtitle) {
-            <p>{{ e.subtitle }}</p>
-          }
-        </div>
-        <button
-          class="icon-button"
-          aria-label="關閉管理編輯"
-          [disabled]="saving()"
-          (click)="close()"
-        >
-          <nx-icon name="close" />
-        </button>
-      </div>
-      @if (editorError()) {
-        <nx-notice tone="danger" [message]="editorError()" />
-      }
-      @if (e.kind === 'group') {
-        <nx-view-switch
-          label="群組設定分類"
-          [options]="groupViewOptions"
-          [value]="groupSection()"
-          (valueChange)="groupSection.set($event)"
-        />
-      }
-      <form class="admin-editor-form" (submit)="save($event)">
+  @if (editor(); as e) {
+    <form class="dialog-form" (submit)="save($event)">
+      <nx-dialog-header [heading]="e.title" [detail]="e.subtitle" closeLabel="關閉管理編輯" />
+      <div class="dialog-body">
+        @if (editorError()) {
+          <nx-notice tone="danger" [message]="editorError()" />
+        }
+        @if (e.kind === 'group') {
+          <nx-view-switch
+            label="群組設定分類"
+            [options]="groupViewOptions"
+            [value]="groupSection()"
+            (valueChange)="groupSection.set($event)"
+          />
+        }
         <div class="platform-form admin-editor-fields" [nxViewMotion]="groupSection()">
           @if (e.kind !== 'group' || groupSection() === 'general') {
             @if (e.isNew) {
@@ -74,9 +54,6 @@
               [disabled]="saving()"
               (checkedChange)="update('enabled', $event)"
             />
-            @if (e.kind === 'feature') {
-              <p class="form-note">順序在功能列表上直接調整，與側欄一致。</p>
-            }
           }
           @if (e.kind !== 'feature' && (e.kind !== 'group' || groupSection() === 'features')) {
             <fieldset>
@@ -146,14 +123,18 @@
             </p>
           }
         </div>
-        <div class="dialog-actions">
-          <button type="button" class="secondary-button" [disabled]="saving()" (click)="close()">
-            取消</button
-          ><button type="submit" class="primary-button" [disabled]="saving()">
-            {{ saving() ? '儲存中…' : e.kind === 'feature' ? '儲存功能' : '儲存授權' }}
-          </button>
-        </div>
-      </form>
-    }
-  </div>
+      </div>
+      <footer class="dialog-foot">
+        @if (e.kind === 'feature') {
+          <p class="dialog-note">順序在功能列表上直接調整，與側欄一致。</p>
+        }
+        <button type="button" class="secondary-button" [disabled]="saving()" (click)="close()">
+          取消
+        </button>
+        <button type="submit" class="primary-button" [disabled]="saving()">
+          {{ saving() ? '儲存中…' : e.kind === 'feature' ? '儲存功能' : '儲存授權' }}
+        </button>
+      </footer>
+    </form>
+  }
 </dialog>

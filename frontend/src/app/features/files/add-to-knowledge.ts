@@ -1,5 +1,6 @@
 import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
+import { DialogHeader } from '../../shared/ui/dialog-header';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import {
   ChangeDetectionStrategy,
@@ -21,7 +22,7 @@ import { Select } from '../../shared/ui/select';
 
 @Component({
   selector: 'nx-add-to-knowledge',
-  imports: [Notice, CompactDialog, Icon, Select, RouterLink],
+  imports: [Notice, CompactDialog, DialogHeader, Icon, Select, RouterLink],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './add-to-knowledge.scss',
@@ -30,27 +31,14 @@ import { Select } from '../../shared/ui/select';
     #dialog
     class="platform-dialog"
     aria-label="加入知識庫"
-    (cancel)="saving() && $event.preventDefault()"
+    (cancel)="saving() ? $event.preventDefault() : null"
   >
-    <div class="dialog-scroll">
-      <div class="dialog-heading">
-        <h2>加入知識庫</h2>
-        <button
-          class="icon-button"
-          aria-label="關閉加入知識庫"
-          [disabled]="saving()"
-          (click)="dialog.close()"
-        >
-          <nx-icon name="close" />
-        </button>
-      </div>
+    <nx-dialog-header heading="加入知識庫" closeLabel="關閉加入知識庫" />
+    <div class="dialog-body">
       <p class="knowledge-file-label">
         <nx-icon [name]="file()?.file?.isImage ? 'image' : 'document'" /><strong>{{
           file()?.file?.fileName
         }}</strong>
-      </p>
-      <p class="form-note">
-        共用原檔並建立檢索索引。加入後，該知識庫的成員可以閱讀原檔與查詢內容。
       </p>
       @if (error()) {
         <nx-notice tone="danger" [message]="error()" />
@@ -69,15 +57,19 @@ import { Select } from '../../shared/ui/select';
           [value]="selected()"
           (valueChange)="selected.set($event)"
         />
-        <div class="dialog-actions">
-          <button class="secondary-button" [disabled]="saving()" (click)="dialog.close()">
-            取消</button
-          ><button class="primary-button" [disabled]="saving() || !selected()" (click)="save()">
-            {{ saving() ? '正在加入…' : '加入並建立索引' }}
-          </button>
-        </div>
       }
     </div>
+    <footer class="dialog-foot">
+      <p class="dialog-note">
+        共用原檔並建立檢索索引。加入後，該知識庫的成員可以閱讀原檔與查詢內容。
+      </p>
+      <button class="secondary-button" [disabled]="saving()" (click)="dialog.close()">取消</button>
+      @if (choices().length) {
+        <button class="primary-button" [disabled]="saving() || !selected()" (click)="save()">
+          {{ saving() ? '正在加入…' : '加入並建立索引' }}
+        </button>
+      }
+    </footer>
   </dialog>`,
 })
 export class AddToKnowledge {

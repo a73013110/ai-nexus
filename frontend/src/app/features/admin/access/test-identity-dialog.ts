@@ -10,45 +10,37 @@ import type { AdminUserDto } from '../../../core/api/schema';
 import { WorkspaceSession } from '../../../core/auth/workspace-session';
 import { safeMessage } from '../../../core/errors/safe-errors';
 import { CompactDialog } from '../../../shared/ui/compact-dialog';
+import { DialogHeader } from '../../../shared/ui/dialog-header';
 import { Field } from '../../../shared/ui/field';
-import { Icon } from '../../../shared/ui/icon';
 import { Notice } from '../../../shared/ui/notice';
 
 /** Switches to another user's identity for a short, audited test. */
 @Component({
   selector: 'nx-test-identity-dialog',
-  imports: [CompactDialog, Field, Icon, Notice],
+  imports: [CompactDialog, DialogHeader, Field, Notice],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <dialog
       nxCompactDialog
+      size="md"
       #testDialog
       class="platform-dialog"
-      aria-labelledby="test-identity-title"
       (close)="user.set(null)"
-      (cancel)="busy() && $event.preventDefault()"
+      (cancel)="busy() ? $event.preventDefault() : null"
     >
-      <div class="dialog-scroll">
-        <div class="dialog-heading">
-          <h2 id="test-identity-title">以 {{ user()?.displayName }} 的身分測試</h2>
-          <button
-            type="button"
-            class="icon-button"
-            aria-label="關閉身分測試"
-            [disabled]="busy()"
-            (click)="testDialog.close()"
-          >
-            <nx-icon name="close" />
-          </button>
-        </div>
-        <p class="form-note">
-          接下來會使用此使用者的實際權限與私人資料範圍。操作會生效並記錄管理者來源；15
-          分鐘後返回原管理者，亦可隨時提前返回。
-        </p>
-        @if (error()) {
-          <nx-notice tone="danger" [message]="error()" />
-        }
-        <form class="platform-form" (submit)="start($event)">
+      <form class="dialog-form" (submit)="start($event)">
+        <nx-dialog-header
+          [heading]="'以 ' + user()?.displayName + ' 的身分測試'"
+          closeLabel="關閉身分測試"
+        />
+        <div class="dialog-body">
+          <p class="form-note">
+            接下來會使用此使用者的實際權限與私人資料範圍。操作會生效並記錄管理者來源；15
+            分鐘後返回原管理者，亦可隨時提前返回。
+          </p>
+          @if (error()) {
+            <nx-notice tone="danger" [message]="error()" />
+          }
           <label
             >測試目的<input
               nxField
@@ -60,21 +52,21 @@ import { Notice } from '../../../shared/ui/notice';
               [readOnly]="busy()"
               (input)="reason.set($any($event.target).value)"
           /></label>
-          <div class="dialog-actions">
-            <button
-              type="button"
-              class="secondary-button"
-              [disabled]="busy()"
-              (click)="testDialog.close()"
-            >
-              取消
-            </button>
-            <button type="submit" class="primary-button" [disabled]="busy()">
-              {{ busy() ? '正在切換…' : '開始身分測試' }}
-            </button>
-          </div>
-        </form>
-      </div>
+        </div>
+        <footer class="dialog-foot">
+          <button
+            type="button"
+            class="secondary-button"
+            [disabled]="busy()"
+            (click)="testDialog.close()"
+          >
+            取消
+          </button>
+          <button type="submit" class="primary-button" [disabled]="busy()">
+            {{ busy() ? '正在切換…' : '開始身分測試' }}
+          </button>
+        </footer>
+      </form>
     </dialog>
   `,
 })

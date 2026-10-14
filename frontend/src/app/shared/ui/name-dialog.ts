@@ -1,5 +1,6 @@
 import { Notice } from './notice';
 import { CompactDialog } from './compact-dialog';
+import { DialogHeader } from './dialog-header';
 import { Field } from './field';
 import { safeMessage } from '../../core/errors/safe-errors';
 import {
@@ -19,43 +20,45 @@ export interface NameRequest {
   save: (name: string) => Promise<void>;
 }
 @Component({
-  imports: [Notice, CompactDialog, Field],
+  imports: [Notice, CompactDialog, DialogHeader, Field],
   selector: 'nx-name-dialog',
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
     [nxCompactDialog]="compact()"
+    size="sm"
     #dialog
-    class="workspace-dialog"
-    [class.ui-dialog-compact]="compact()"
+    class="platform-dialog"
     [attr.aria-label]="request()?.title"
     (cancel)="cancel($event)"
   >
-    <form class="platform-form dialog-scroll" (submit)="save($event)">
-      <h2 data-sheet-handle>{{ request()?.title }}</h2>
-      @if (request()?.description) {
-        <p class="form-note">{{ request()?.description }}</p>
-      }
-      <label
-        >名稱<input
-          nxField
-          #field
-          required
-          [value]="name()"
-          [maxLength]="request()?.maxLength || 120"
-          [readOnly]="busy()"
-          (input)="name.set($any($event.target).value)"
-      /></label>
-      @if (error()) {
-        <nx-notice tone="danger" [message]="error()" />
-      }
-      <div class="dialog-actions">
+    <form class="dialog-form" (submit)="save($event)">
+      <nx-dialog-header [heading]="request()?.title ?? ''" />
+      <div class="dialog-body">
+        @if (request()?.description) {
+          <p class="form-note">{{ request()?.description }}</p>
+        }
+        <label
+          >名稱<input
+            nxField
+            #field
+            required
+            [value]="name()"
+            [maxLength]="request()?.maxLength || 120"
+            [readOnly]="busy()"
+            (input)="name.set($any($event.target).value)"
+        /></label>
+        @if (error()) {
+          <nx-notice tone="danger" [message]="error()" />
+        }
+      </div>
+      <footer class="dialog-foot">
         <button type="button" class="secondary-button" [disabled]="busy()" (click)="dialog.close()">
           取消
         </button>
         <button class="primary-button" [disabled]="busy() || !name().trim()">
           {{ busy() ? '正在儲存…' : '儲存名稱' }}
         </button>
-      </div>
+      </footer>
     </form>
   </dialog>`,
 })

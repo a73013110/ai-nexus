@@ -1,4 +1,5 @@
 import { Notice } from '../../shared/ui/notice';
+import { DialogHeader } from '../../shared/ui/dialog-header';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { DialogMotion, ViewMotion } from '../../shared/ui/view-motion';
 import { MarkdownEditor } from '../../shared/markdown/markdown-editor';
@@ -30,6 +31,7 @@ import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
   imports: [
     Notice,
     CompactDialog,
+    DialogHeader,
     DialogMotion,
     ViewMotion,
     MarkdownEditor,
@@ -43,36 +45,43 @@ import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
   styleUrl: './text-tools.scss',
   template: `<dialog
     nxCompactDialog
+    [size]="expanded() ? 'full' : 'lg'"
     #surface="nxCompactDialog"
     #dialog
     class="platform-dialog text-tools-dialog"
-    [class.is-expanded]="expanded()"
     [nxDialogView]="expanded()"
     (cancel)="cancel($event)"
   >
-    <div class="text-tools-layout">
-      <div class="dialog-heading">
-        <h2>{{ mode() === 'save' ? '儲存成果文件' : labels[mode()] }}</h2>
-        <div class="page-actions">
-          <button
-            class="icon-button"
-            [attr.aria-label]="expanded() ? '縮小段落工具' : '展開段落工具'"
-            [attr.aria-pressed]="expanded()"
-            (click)="expanded.set(!expanded())"
-          >
-            <nx-icon [name]="expanded() ? 'minimize' : 'maximize'" />
-          </button>
-          <button class="icon-button" aria-label="關閉段落工具" (click)="close()">
-            <nx-icon name="close" />
-          </button>
-        </div>
-      </div>
-      @if (error()) {
-        <nx-notice tone="danger" [message]="error()" />
+    <nx-dialog-header
+      [heading]="mode() === 'save' ? '儲存成果文件' : labels[mode()]"
+      closeLabel="關閉段落工具"
+    >
+      @if (mode() === 'save') {
+        <nx-view-switch
+          label="成果內容呈現方式"
+          appearance="segment"
+          [options]="editorViews"
+          [value]="editorView()"
+          (valueChange)="editorView.set($any($event))"
+        />
       }
-      @if (surface.opened()) {
-        @if (mode() === 'save') {
-          <form class="text-tools-content" [nxViewMotion]="mode()" (submit)="save($event)">
+      <button
+        type="button"
+        class="icon-button"
+        [attr.aria-label]="expanded() ? '縮小段落工具' : '展開段落工具'"
+        [attr.aria-pressed]="expanded()"
+        (click)="expanded.set(!expanded())"
+      >
+        <nx-icon [name]="expanded() ? 'minimize' : 'maximize'" />
+      </button>
+    </nx-dialog-header>
+    @if (surface.opened()) {
+      @if (mode() === 'save') {
+        <form class="text-tools-content" [nxViewMotion]="mode()" (submit)="save($event)">
+          <div class="dialog-body">
+            @if (error()) {
+              <nx-notice tone="danger" [message]="error()" />
+            }
             <label class="text-tools-title"
               >成果名稱<input
                 nxField
@@ -82,25 +91,31 @@ import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
                 required
                 [value]="title()"
                 (input)="title.set($any($event.target).value)" /></label
-            ><nx-markdown-editor label="成果內容" [(content)]="result" [disabled]="saving()" />
-            <div class="dialog-actions">
-              <button
-                type="button"
-                class="secondary-button"
-                (click)="close()"
-                [disabled]="saving()"
-              >
-                取消</button
-              ><button
-                class="primary-button"
-                [disabled]="saving() || !title().trim() || !result().trim()"
-              >
-                {{ saving() ? '正在儲存…' : '儲存並開啟' }}
-              </button>
-            </div>
-          </form>
-        } @else {
-          <div class="text-tools-content" [nxViewMotion]="mode()">
+            ><nx-markdown-editor
+              label="成果內容"
+              [(content)]="result"
+              [(mode)]="editorView"
+              [showModeSwitch]="false"
+              [disabled]="saving()"
+            />
+          </div>
+          <footer class="dialog-foot">
+            <button type="button" class="secondary-button" (click)="close()" [disabled]="saving()">
+              取消</button
+            ><button
+              class="primary-button"
+              [disabled]="saving() || !title().trim() || !result().trim()"
+            >
+              {{ saving() ? '正在儲存…' : '儲存並開啟' }}
+            </button>
+          </footer>
+        </form>
+      } @else {
+        <div class="text-tools-content" [nxViewMotion]="mode()">
+          <div class="dialog-body">
+            @if (error()) {
+              <nx-notice tone="danger" [message]="error()" />
+            }
             <details class="text-tool-source">
               <summary>
                 選取原文 <span>{{ source().length.toLocaleString() }} 字元</span>
@@ -137,28 +152,28 @@ import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
                 模型輸出已達上限，結果可能不完整；請核對或縮小選取範圍後重試。
               </nx-notice>
             }
-            <div class="dialog-actions">
-              <button class="secondary-button" [disabled]="busy() || saving()" (click)="generate()">
-                {{ result() ? '重新處理' : '開始處理' }}
-              </button>
-              @if (result()) {
-                <button class="secondary-button" (click)="copy.copy(result())">
-                  {{ copy.copied() ? '已複製' : '複製結果' }}
-                </button>
-                @if (canReplace()) {
-                  <button class="primary-button" (click)="replace.emit(result()); close()">
-                    套用到選取段落
-                  </button>
-                }
-                @if (session.has('artifacts')) {
-                  <button class="secondary-button" (click)="mode.set('save')">另存成果</button>
-                }
-              }
-            </div>
           </div>
-        }
+          <footer class="dialog-foot">
+            <button class="secondary-button" [disabled]="busy() || saving()" (click)="generate()">
+              {{ result() ? '重新處理' : '開始處理' }}
+            </button>
+            @if (result()) {
+              <button class="secondary-button" (click)="copy.copy(result())">
+                {{ copy.copied() ? '已複製' : '複製結果' }}
+              </button>
+              @if (canReplace()) {
+                <button class="primary-button" (click)="replace.emit(result()); close()">
+                  套用到選取段落
+                </button>
+              }
+              @if (session.has('artifacts')) {
+                <button class="secondary-button" (click)="mode.set('save')">另存成果</button>
+              }
+            }
+          </footer>
+        </div>
       }
-    </div>
+    }
   </dialog>`,
 })
 export class TextTools {
@@ -179,6 +194,11 @@ export class TextTools {
   readonly source = signal('');
   readonly result = signal('');
   readonly expanded = signal(false);
+  readonly editorView = signal<'read' | 'edit'>('read');
+  readonly editorViews = [
+    { value: 'read', label: '閱讀', icon: 'document' },
+    { value: 'edit', label: '編輯', icon: 'edit' },
+  ];
   readonly title = signal('工作成果');
   readonly language = signal('English');
   readonly truncated = signal(false);
@@ -216,6 +236,7 @@ export class TextTools {
     this.result.set(action === 'save' ? text : '');
     this.mode.set(action);
     this.expanded.set(false);
+    this.editorView.set('read');
     this.sourceMessage = message;
     this.truncated.set(false);
     this.title.set(

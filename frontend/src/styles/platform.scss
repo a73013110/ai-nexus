@@ -151,18 +151,6 @@
   border: 1px solid var(--line);
   border-radius: var(--p-radius-sm);
 }
-.platform-dialog .dialog-heading {
-  align-items: flex-start;
-}
-.platform-dialog .dialog-heading h2 {
-  margin-bottom: var(--p-space-1);
-}
-.platform-dialog .dialog-heading p {
-  color: var(--secondary);
-  font-size: var(--text-caption);
-  margin: 0;
-  word-break: break-word;
-}
 .platform-form {
   display: flex;
   flex-direction: column;

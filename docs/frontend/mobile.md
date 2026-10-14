@@ -21,7 +21,7 @@
 ## 滑動關閉
 
 - 共用 `shared/browser/swipe.ts`：`SwipeTracker` 算位移與放開時的速度，`bindSwipe` 只在把手上接手。toast 向右滑、sheet 向下、抽屜向左都用它。
-- 只從把手開始：sheet 是標題區（`.dialog-heading`、`.dialog-bar`、`header`，其他標題加 `data-sheet-handle`）與外框留白；抽屜是標題列與遮罩。把手設 `touch-action: none`，內容的捲動與文字選取仍交給瀏覽器；輸入欄位不會開始拖曳。
+- 只從把手開始：sheet 是標題區（`.dialog-bar`、`header`，其他標題加 `data-sheet-handle`）與外框留白；抽屜是標題列與遮罩。把手設 `touch-action: none`，內容的捲動與文字選取仍交給瀏覽器；輸入欄位不會開始拖曳。
 - 先移動 6px 且方向以拖曳軸為主才接手，所以把手上的按鈕仍可點；拖曳後的那次 click 會被吞掉。
 - 放開時超過距離（sheet：高度 1/3，最多 120px；抽屜：寬度 1/3）或快速甩動（約 0.45 px/ms）就關閉，否則以 `--ease-spring` 彈回；反方向拖曳有阻力。遮罩隨拖曳變淡。
 - sheet 關閉走 Escape 的路：送出可取消的 `cancel`，擁有者擋下（忙碌、未儲存）就彈回，所以不必逐一改對話框。sheet 綁在 document 上（`shared/ui/sheet-swipe.ts`），由 `--dialog-sheet: 1` 判斷是否為 sheet 版面。

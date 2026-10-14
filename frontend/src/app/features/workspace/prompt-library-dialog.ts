@@ -16,27 +16,18 @@ import {
 } from '@angular/core';
 import { FormField, form, maxLength, required } from '@angular/forms/signals';
 import type { PromptTemplateDto } from '../../core/api/schema';
+import { DialogHeader } from '../../shared/ui/dialog-header';
 import { Icon } from '../../shared/ui/icon';
 import { WorkspaceApi } from './workspace-api';
 
 @Component({
   selector: 'nx-prompt-library',
-  imports: [Notice, CompactDialog, Field, Icon, FormField],
+  imports: [Notice, CompactDialog, DialogHeader, Field, Icon, FormField],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './prompt-library-dialog.scss',
-  template: ` <dialog
-    nxCompactDialog
-    #dialog
-    class="workspace-dialog dialog-flush library-dialog"
-    aria-labelledby="library-title"
-  >
-    <header class="dialog-bar">
-      <h2 id="library-title">常用提示詞</h2>
-      <button type="button" class="icon-button" aria-label="關閉範本庫" (click)="dialog.close()">
-        <nx-icon name="close" />
-      </button>
-    </header>
-    <div class="dialog-body library-layout">
+  template: `<dialog nxCompactDialog size="lg" #dialog class="platform-dialog library-dialog">
+    <nx-dialog-header heading="常用提示詞" closeLabel="關閉範本庫" />
+    <div class="dialog-body dialog-body-flush library-layout">
       @if (error()) {
         <nx-notice tone="danger" [message]="error()" />
       }
@@ -77,22 +68,22 @@ import { WorkspaceApi } from './workspace-api';
       </div>
       <form class="template-editor" (submit)="save($event)">
         <h3>{{ editingId() ? '編輯範本' : '新增範本' }}</h3>
-        <label for="prompt-title">範本名稱</label
-        ><input
-          #titleField
-          nxField
-          id="prompt-title"
-          [formField]="fields.title"
-          placeholder="例如：會議摘要"
-        /><label for="prompt-content">提示詞內容</label
-        ><textarea
-          nxField
-          id="prompt-content"
-          [formField]="fields.content"
-          placeholder="說明任務、格式與預期結果…"
-          rows="7"
-        ></textarea>
-        <div class="dialog-actions">
+        <label
+          >範本名稱<input
+            #titleField
+            nxField
+            [formField]="fields.title"
+            placeholder="例如：會議摘要"
+        /></label>
+        <label
+          >提示詞內容<textarea
+            nxField
+            [formField]="fields.content"
+            placeholder="說明任務、格式與預期結果…"
+            rows="7"
+          ></textarea>
+        </label>
+        <div class="template-actions">
           <button type="submit" class="primary-button" [disabled]="busy() || fields().invalid()">
             {{ busy() ? '儲存中…' : '儲存範本' }}
           </button>

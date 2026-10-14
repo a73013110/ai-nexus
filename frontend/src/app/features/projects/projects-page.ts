@@ -3,6 +3,7 @@ import { apiResource } from '../../core/api/api-resource';
 import { Notice } from '../../shared/ui/notice';
 import { ToastService } from '../../shared/ui/toast-service';
 import { EmptyState } from '../../shared/ui/empty-state';
+import { DialogHeader } from '../../shared/ui/dialog-header';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
 import {
@@ -52,6 +53,7 @@ import { documentBusy, documentStatus } from '../knowledge/document-status';
   selector: 'nx-projects-page',
   styleUrl: './projects-page.scss',
   imports: [
+    DialogHeader,
     Notice,
     EmptyState,
     CompactDialog,

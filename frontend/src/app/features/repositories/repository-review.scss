@@ -155,11 +155,7 @@ h2 {
   height: 18rem;
   border-radius: var(--tile-radius);
 }
-.wide {
-  width: min(48rem, calc(100vw - 2rem));
-}
 .count {
-  margin-top: calc(var(--p-space-2) * -1);
   text-align: right;
   font-variant-numeric: tabular-nums;
 }

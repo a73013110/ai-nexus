@@ -3,21 +3,16 @@
 :host {
   display: contents;
 }
+// Two panes (categories + content) need a fixed height; the page brings its own header and close.
 .platform-dialog.settings-dialog {
-  --dialog-width: 64rem;
-  padding: 0;
-  overflow: hidden;
-  height: min(760px, calc(100dvh - 3rem));
+  height: min(760px, var(--dialog-max-height));
 }
 .settings-dialog nx-settings-page {
   display: block;
   height: 100%;
 }
-.settings-loading {
-  padding: var(--section-padding);
-}
 @include bp.below(phone) {
   .settings-dialog {
-    height: calc(100dvh - 1.5rem);
+    height: var(--dialog-max-height);
   }
 }

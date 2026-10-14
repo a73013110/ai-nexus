@@ -20,6 +20,7 @@ import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
       nxCompactDialog
+      size="lg"
       #dialog
       class="platform-dialog settings-dialog"
       aria-label="個人設定"
@@ -35,7 +36,9 @@ import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
           />
         }
       } @placeholder {
-        <p class="settings-loading" role="status">正在開啟設定…</p>
+        <div class="dialog-body">
+          <p class="form-note" role="status">正在開啟設定…</p>
+        </div>
       }
     </dialog>
     <nx-confirm-dialog #discard />`,

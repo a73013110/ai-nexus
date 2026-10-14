@@ -18,6 +18,7 @@ import { NgTemplateOutlet } from '@angular/common';
 import { CopyFeedback } from '../browser/copy-feedback';
 import { Notice } from '../ui/notice';
 import { downloadBlob } from '../browser/download';
+import { DialogHeader } from '../ui/dialog-header';
 import { CompactDialog } from '../ui/compact-dialog';
 import { Icon, EXTRA_ICONS } from '../ui/icon';
 import { SquareCode, ZoomIn, ZoomOut, Scan } from 'lucide';
@@ -141,7 +142,7 @@ export class DiagramCanvas {
 
 @Component({
   selector: 'nx-mermaid-diagram',
-  imports: [Icon, ViewSwitch, CompactDialog, DiagramCanvas, NgTemplateOutlet, Notice],
+  imports: [Icon, ViewSwitch, CompactDialog, DialogHeader, DiagramCanvas, NgTemplateOutlet, Notice],
   providers: [
     CopyFeedback,
     {
@@ -262,12 +263,12 @@ export class DiagramCanvas {
     </ng-template>
     <dialog
       nxCompactDialog
+      size="full"
       #dialog
-      class="platform-dialog dialog-flush mermaid-dialog"
+      class="platform-dialog"
       aria-label="展開 Mermaid 圖表"
     >
-      <header class="dialog-bar">
-        <h2>{{ diagram()?.title || 'Mermaid 圖表' }}</h2>
+      <nx-dialog-header [heading]="diagram()?.title || 'Mermaid 圖表'" closeLabel="關閉圖表">
         <div class="mermaid-actions">
           <ng-container [ngTemplateOutlet]="zoomTools" />
           <button
@@ -279,11 +280,8 @@ export class DiagramCanvas {
           >
             <nx-icon name="download" />
           </button>
-          <button class="icon-button" type="button" aria-label="關閉圖表" (click)="dialog.close()">
-            <nx-icon name="close" />
-          </button>
         </div>
-      </header>
+      </nx-dialog-header>
       @if (diagram(); as graph) {
         <nx-diagram-canvas
           [diagram]="graph"
