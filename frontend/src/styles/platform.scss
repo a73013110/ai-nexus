@@ -244,6 +244,14 @@
 .form-section-body > nx-notice {
   margin-block: 0;
 }
+// 寬的多選清單（多張 ChoiceGroups 卡片）不限寬，卡片才能並排。
+.form-section-wide > .form-section-body {
+  max-width: none;
+}
+// 名稱、識別碼、數字等短欄位不撐滿右欄。
+.form-field-short {
+  max-width: 24rem;
+}
 .form-subfields {
   display: grid;
   gap: var(--p-space-3);

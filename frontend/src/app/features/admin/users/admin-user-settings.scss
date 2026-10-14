@@ -1,21 +1,6 @@
-@use 'breakpoints' as bp;
-
 :host {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-}
-.storage-limit {
-  max-width: 20rem;
-}
-// Unsaved changes read like the personal settings' save bar.
-.dialog-note.is-dirty {
-  color: var(--signal);
-}
-// On a phone the short note shares the row with the actions; a long one wraps beside them.
-@include bp.below(phone) {
-  .dialog-note {
-    flex-basis: 0;
-  }
 }

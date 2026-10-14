@@ -72,7 +72,7 @@ let sequence = 0;
     <section class="form-section" role="group" [attr.aria-labelledby]="id + '-basics'">
       <header class="form-section-head"><h3 [id]="id + '-basics'">基本資料</h3></header>
       <div class="form-section-body">
-        <label class="user-name-field"
+        <label class="form-field-short"
           >姓名<input
             nxField
             aria-label="使用者姓名"

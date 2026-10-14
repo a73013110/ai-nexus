@@ -35,6 +35,8 @@ export class AdminStore {
     () => this.actionError() || this.catalogRead.error() || this.usersRead.error(),
   );
   readonly toast = inject(ToastService);
+  /** Management writes are refused while testing another identity. */
+  readonly testing = computed(() => !!this.session.auth.session()?.testing);
 
   load() {
     this.actionError.set('');

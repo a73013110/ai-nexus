@@ -33,6 +33,19 @@ export function modelPolicyRequest(draft: ModelPolicyDraft): ModelPolicyRequest 
   }
   return { allowedModelIds: draft.restricted ? draft.modelIds : null, dailyTokenLimits: limits };
 }
+/** Token limits left blank mean "inherit", so a blank and a missing limit are the same policy. */
+export function sameModelPolicy(a: ModelPolicyDraft, b: ModelPolicyDraft) {
+  const ids = (draft: ModelPolicyDraft) => [...draft.modelIds].sort().join('\n');
+  const limits = (draft: ModelPolicyDraft) =>
+    Object.entries(draft.tokenLimits)
+      .filter(([, value]) => value.trim() !== '')
+      .map(([id, value]) => `${id}=${value.trim()}`)
+      .sort()
+      .join('\n');
+  return (
+    a.restricted === b.restricted && (!a.restricted || ids(a) === ids(b)) && limits(a) === limits(b)
+  );
+}
 
 /**
  * 群組或單一使用者的模型授權與每日 token 預算。不自帶標題：兩個使用它的對話框都以「AI 模型」頁籤

@@ -416,9 +416,13 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
   await expect(
     page.locator("dialog.admin-editor nx-dialog-header small"),
   ).toHaveText("logs.export");
+  // Nothing changed: the save bar rests and closing asks nothing.
+  await expect(page.locator("dialog.admin-editor .dialog-foot")).toContainText(
+    "尚未變更",
+  );
   await page
     .locator("dialog.admin-editor")
-    .getByRole("button", { name: "取消", exact: true })
+    .getByRole("button", { name: "關閉管理編輯", exact: true })
     .click();
   await features
     .getByRole("button", { name: "編輯功能：對話", exact: true })
@@ -463,9 +467,22 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
     page.getByRole("dialog", { name: "編輯角色：一般使用者", exact: true }),
   ).toContainText("member");
   await expect(editor.locator(".panel-eyebrow")).toHaveCount(0);
-  // A section is one light frame; a checked row is not filled.
-  const section = editor.locator("fieldset").first();
-  await expect(section).toHaveCSS("border-left-style", "solid");
+  // Like the user dialog: sections divided by hairlines, the title beside the fields on a wide
+  // dialog; a checked row is not filled.
+  await expect(editor.locator("fieldset")).toHaveCount(0);
+  const groupsSection = editor.getByRole("group", {
+    name: "功能群組",
+    exact: true,
+  });
+  await expect(groupsSection).toHaveCSS("border-top-style", "solid");
+  const groupsTitle = (await groupsSection
+    .getByRole("heading")
+    .first()
+    .boundingBox())!;
+  const roleName = (await editor
+    .getByLabel("名稱", { exact: true })
+    .boundingBox())!;
+  expect(roleName.x).toBeGreaterThan(groupsTitle.x + groupsTitle.width);
   await expect(
     editor.getByRole("checkbox", { name: "基本工作區", exact: true }),
   ).toBeChecked();
@@ -474,7 +491,41 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
       has: page.getByRole("checkbox", { name: "基本工作區", exact: true }),
     }),
   ).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-  await editor.getByRole("button", { name: "取消", exact: true }).click();
+  // The foot is note | revert | save; both actions rest until something changes, and revert
+  // puts the draft back.
+  const revert = editor.getByRole("button", { name: "還原", exact: true });
+  const saveRole = editor.getByRole("button", {
+    name: "儲存角色",
+    exact: true,
+  });
+  await expect(editor.locator(".dialog-foot")).toContainText("尚未變更");
+  await expect(revert).toBeDisabled();
+  await expect(saveRole).toBeDisabled();
+  await editor
+    .getByRole("checkbox", { name: "基本工作區", exact: true })
+    .uncheck();
+  await expect(editor.locator(".dialog-foot")).toContainText("有未儲存的變更");
+  await expect(saveRole).toBeEnabled();
+  await revert.click();
+  await expect(
+    editor.getByRole("checkbox", { name: "基本工作區", exact: true }),
+  ).toBeChecked();
+  await expect(revert).toBeDisabled();
+  // Closing with unsaved changes asks first; cancelling keeps the draft.
+  await editor.getByLabel("名稱", { exact: true }).fill("成員");
+  await editor
+    .getByRole("button", { name: "關閉管理編輯", exact: true })
+    .click();
+  const discard = page.getByRole("dialog", {
+    name: "放棄未儲存的變更？",
+    exact: true,
+  });
+  await discard.getByRole("button", { name: "取消", exact: true }).click();
+  await expect(editor.getByLabel("名稱", { exact: true })).toHaveValue("成員");
+  await editor
+    .getByRole("button", { name: "關閉管理編輯", exact: true })
+    .click();
+  await discard.getByRole("button", { name: "放棄變更", exact: true }).click();
   await expect(editor).not.toBeVisible();
   await page
     .getByRole("button", { name: "功能群組與模型", exact: true })
@@ -499,7 +550,9 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
   const work = editor.getByRole("group", { name: "工作", exact: true });
   await expect(work).toHaveCSS("border-left-style", "solid");
   await expect(work.locator(".choice-group-count")).toHaveText(/^\d+\/\d+$/);
-  await editor.getByRole("button", { name: "取消", exact: true }).click();
+  await editor
+    .getByRole("button", { name: "關閉管理編輯", exact: true })
+    .click();
   await expect(editor).not.toBeVisible();
   await page.setViewportSize({ width: 375, height: 812 });
   await expectViewportContained(page);
@@ -588,7 +641,9 @@ test("手機版存取管理四個分頁改為卡片列，不橫向捲動，點�
         await editor.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
       ).toBe(true);
     }
-    await editor.getByRole("button", { name: "取消", exact: true }).click();
+    await editor
+      .getByRole("button", { name: "關閉管理編輯", exact: true })
+      .click();
     await expect(editor).not.toBeVisible();
   }
   // Moving a feature on a phone goes through the card's menu; the drag handle is left out.
