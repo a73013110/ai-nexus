@@ -1,6 +1,8 @@
 // The host takes whatever height the page gives it and stays transparent; the frame inside is as
 // tall as its rows and never taller than the host, so a short list leaves no empty framed area.
 :host {
+  // The frame's corner; the last row rounds its bottom corners to match (data-workspace.scss).
+  --table-radius: var(--p-radius-lg);
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -13,7 +15,7 @@
   min-width: 0;
   min-height: 0;
   border: 1px solid var(--line);
-  border-radius: var(--p-radius-lg);
+  border-radius: var(--table-radius);
   background: var(--surface);
   overflow: clip;
 }

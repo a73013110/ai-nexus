@@ -1,5 +1,13 @@
 // Native scrolling everywhere: Firefox uses the standard properties, while
 // Chromium/WebKit get an inset, rounded thumb with a wider pointer target.
+//
+// `--scrollbar-gutter` is the width a `scrollbar-gutter: stable` gutter takes (zero where
+// scrollbars overlay the content). A padded scroll region that keeps a stable gutter takes it out of
+// its end padding — `max(0px, <padding> - var(--scrollbar-gutter))` — so both sides look alike
+// without a scrollbar and nothing moves when one appears (docs/frontend/data-workspace.md).
+:root {
+  --scrollbar-gutter: 0px;
+}
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
@@ -9,6 +17,12 @@
     // Non-auto standard properties override the pseudo-elements in Chromium.
     scrollbar-width: auto;
     scrollbar-color: auto;
+  }
+  // Styled scrollbars are classic ones; touch screens keep overlay scrollbars and no gutter.
+  @media (pointer: fine) {
+    :root {
+      --scrollbar-gutter: var(--scrollbar-size);
+    }
   }
   ::-webkit-scrollbar {
     width: var(--scrollbar-size);

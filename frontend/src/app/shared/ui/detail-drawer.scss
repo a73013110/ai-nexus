@@ -91,6 +91,7 @@
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   padding: var(--p-space-4);
+  padding-inline-end: max(0px, var(--p-space-4) - var(--scrollbar-gutter));
 }
 @include bp.below(phone) {
   .drawer-resize {

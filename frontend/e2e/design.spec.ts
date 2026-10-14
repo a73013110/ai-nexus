@@ -102,10 +102,32 @@ test("共用密度、檢視鍵盤與選填日期保留桌面和手機可用性",
   await expect(actions.nth(1)).toBeFocused();
   await expect(rows.nth(1)).toHaveCSS("outline-style", "none");
   await expect(actions.nth(1)).toHaveCSS("outline-style", "none");
+  // Closing with Escape counts as the keyboard to the browser; a clicked row still gets no ring.
+  await rows.nth(1).locator("td").first().click();
+  await expect(rows.nth(1)).toHaveClass(/is-selected/);
+  await page.keyboard.press("Escape");
+  await expect(rows.nth(1)).not.toHaveClass(/is-selected/);
+  await expect(actions.nth(1)).toBeFocused();
+  await expect(rows.nth(1)).toHaveCSS("outline-style", "none");
   await actions.nth(1).press("ArrowDown");
   await expect(actions.nth(2)).toBeFocused();
   await expect(rows.nth(2)).toHaveCSS("outline-style", "solid");
   await expect(actions.nth(2)).toHaveCSS("outline-style", "none");
+  // The last row meets the frame's rounded corners, so its ring takes the inner radius; a row
+  // opened from the keyboard keeps its ring when focus comes back.
+  await expect(rows.nth(2)).toHaveCSS("border-bottom-left-radius", "11px");
+  await expect(rows.nth(0)).toHaveCSS("border-bottom-left-radius", "0px");
+  await actions.nth(2).press("Enter");
+  await expect(rows.nth(2)).toHaveClass(/is-selected/);
+  await page.keyboard.press("Escape");
+  await expect(actions.nth(2)).toBeFocused();
+  await expect(rows.nth(2)).toHaveCSS("outline-style", "solid");
+  // No gutter is kept for a scrollbar the rows do not need: header and row lines reach the frame.
+  expect(
+    await page
+      .locator(".design-data-workspace .ui-table-scroll")
+      .evaluate((el) => (el as HTMLElement).offsetWidth - el.clientWidth),
+  ).toBe(0);
   const optional = page.getByRole("textbox", { name: "選填日期", exact: true });
   await optional.fill("2026/02/30");
   await optional.press("Tab");

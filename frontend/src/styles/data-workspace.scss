@@ -135,6 +135,7 @@ select:where(.ui-input) {
 // (`nxTableRow`) tints on hover; the row whose detail or dialog is open (`is-selected`) takes the
 // accent tint; keyboard focus on the row's action draws one ring around the row instead of a
 // second one around the action. A mouse click leaves no ring, and no state changes the layout.
+// The ring follows the row's corners, which match the frame where the last row meets it.
 .ui-table-row {
   cursor: pointer;
 }
@@ -144,12 +145,23 @@ select:where(.ui-input) {
 .ui-table-row.is-selected {
   background: var(--accent-soft);
 }
-.ui-table-row:has([data-row-action]:focus-visible) {
+// `is-focus-returned`: focus came back from a dialog the row was clicked open from (DataTableRow).
+.ui-table-row:not(.is-focus-returned):has([data-row-action]:focus-visible) {
   outline: 2px solid var(--focus);
   outline-offset: -2px;
 }
 .ui-table-row [data-row-action]:focus-visible {
   outline: none;
+}
+// With nothing under the scroll region (no footer, no state), the last row sits in the frame's
+// rounded bottom corners; its tint and ring take the frame's inner radius instead of being cut off.
+.ui-table-frame
+  > .ui-table-scroll:last-child
+  > table:last-child
+  > tbody:last-of-type
+  > tr:last-child {
+  border-end-start-radius: calc(var(--table-radius) - 1px);
+  border-end-end-radius: calc(var(--table-radius) - 1px);
 }
 .ui-table-pagination {
   display: flex;
@@ -177,7 +189,9 @@ select:where(.ui-input) {
   // Only for a table outside a data page (a panel or dialog); a data page caps it by layout.
   max-height: var(--table-max-height, none);
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  // No reserved gutter: the header and row lines reach the frame, and a scrollbar appears only
+  // when the rows overflow (data changes, not interaction, so the columns do not shift under use).
+  scrollbar-gutter: auto;
   scroll-padding-block-start: 2.5rem;
 }
 .ui-table-scroll > table {
@@ -218,7 +232,6 @@ select:where(.ui-input) {
 @include bp.below(narrow) {
   .ui-table-stack .ui-table-scroll {
     max-height: none;
-    scrollbar-gutter: auto;
     > table,
     tbody,
     tbody :is(td, th) {
