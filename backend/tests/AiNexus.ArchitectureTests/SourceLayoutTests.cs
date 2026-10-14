@@ -54,6 +54,21 @@ public sealed class SourceLayoutTests
 
     private const int MaxModuleRootFiles = 15;
 
+    /// <summary>
+    /// A frontend feature folder is the kebab-case name of the backend module that owns its API, so either side finds
+    /// the other by name (ADR 0009). <c>design</c> is the design-system gallery and has no backend.
+    /// </summary>
+    [Fact]
+    public void FrontendFeaturesAreNamedAfterBackendModules()
+    {
+        var modules = SourceTree.Modules();
+        var unmatched = Directory.EnumerateDirectories(Path.Combine(SourceTree.Root, "frontend", "src", "app", "features"))
+            .Select(Path.GetFileName).OfType<string>().Where(folder => folder != "design")
+            .Where(folder => !modules.Contains(string.Concat(folder.Split('-').Select(part => char.ToUpperInvariant(part[0]) + part[1..]))))
+            .Order(StringComparer.Ordinal).ToList();
+        Assert.True(unmatched.Count == 0, "Name frontend feature folders after the backend module in kebab-case:\n" + string.Join("\n", unmatched));
+    }
+
     [Theory]
     [MemberData(nameof(ModuleTestProjects))]
     public void TestsAreFiledByModule(string project)
