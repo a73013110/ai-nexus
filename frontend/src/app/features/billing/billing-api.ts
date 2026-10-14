@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
-import { ApiClient } from '../../core/api/api-client';
-import type { PriceRequest } from '../../core/api/schema';
+import { ApiClient } from '@core/api/api-client';
+import type { PriceRequest } from '@core/api/schema';
 
 export interface SpendPeriod {
   from: string;

@@ -10,7 +10,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { ThemeService } from '../../core/preferences/theme-service';
+import { ThemeService } from '@core/preferences/theme-service';
 import { Icon } from './icon';
 
 let sequence = 0;

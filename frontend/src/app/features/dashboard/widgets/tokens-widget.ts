@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { TokenUsageChart } from '../../billing/token-usage-chart';
+import { TokenUsageChart } from '@features/billing/token-usage-chart';
 import { DashboardStore } from '../dashboard-store';
 
 @Component({

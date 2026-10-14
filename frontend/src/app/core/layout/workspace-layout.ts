@@ -1,6 +1,6 @@
 import { DestroyRef, Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
-import { below } from '../../shared/browser/breakpoints';
-import { mediaQuery } from '../../shared/browser/media-query';
+import { below } from '@shared/browser/breakpoints';
+import { mediaQuery } from '@shared/browser/media-query';
 
 /** Desktop density and mobile disclosure are independent across workspace routes. */
 @Injectable({ providedIn: 'root' })

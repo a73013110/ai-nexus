@@ -7,15 +7,15 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { apiResource } from '../../core/api/api-resource';
-import type { RepositoryDto, RepositoryPageDto } from '../../core/api/schema';
-import { relativeTime } from '../../shared/browser/format';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { EmptyState } from '../../shared/ui/empty-state';
-import { Icon } from '../../shared/ui/icon';
-import { Notice } from '../../shared/ui/notice';
-import { ResourceCard } from '../../shared/ui/resource-card';
-import { ResourceGallery } from '../../shared/ui/resource-gallery';
+import { apiResource } from '@core/api/api-resource';
+import type { RepositoryDto, RepositoryPageDto } from '@core/api/schema';
+import { relativeTime } from '@shared/browser/format';
+import { ViewScope } from '@shared/browser/view-scope';
+import { EmptyState } from '@shared/ui/empty-state';
+import { Icon } from '@shared/ui/icon';
+import { Notice } from '@shared/ui/notice';
+import { ResourceCard } from '@shared/ui/resource-card';
+import { ResourceGallery } from '@shared/ui/resource-gallery';
 import { RepositoriesApi } from './repositories-api';
 
 /** Every repository the user's token can read, recently updated first, with their pins on top. */

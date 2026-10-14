@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { WORKSPACE_HOME } from './workspace-home';
-import { BrandWordmark } from '../../shared/ui/brand-wordmark';
+import { BrandWordmark } from '@shared/ui/brand-wordmark';
 
 @Component({
   selector: 'nx-workspace-brand',

@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { below } from '../../shared/browser/breakpoints';
-import { mediaQuery } from '../../shared/browser/media-query';
-import { DateTimePicker } from '../../shared/ui/date-time-picker';
-import { Icon } from '../../shared/ui/icon';
-import { Select } from '../../shared/ui/select';
-import { ViewSwitch } from '../../shared/ui/view-switch';
+import { below } from '@shared/browser/breakpoints';
+import { mediaQuery } from '@shared/browser/media-query';
+import { DateTimePicker } from '@shared/ui/date-time-picker';
+import { Icon } from '@shared/ui/icon';
+import { Select } from '@shared/ui/select';
+import { ViewSwitch } from '@shared/ui/view-switch';
 import { DashboardStore } from './dashboard-store';
 
 /**

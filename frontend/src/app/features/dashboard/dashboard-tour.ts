@@ -1,4 +1,4 @@
-import type { ProductTourDefinition } from '../../shared/ui/product-tour';
+import type { ProductTourDefinition } from '@shared/ui/product-tour';
 
 /**
  * The overview tour. Steps for controls or tiles the viewer cannot see (no platform scope, no
@@ -58,7 +58,7 @@ export const DASHBOARD_TOUR: ProductTourDefinition = {
     {
       target: 'nx-dashboard-page .dashboard-refresh',
       title: '需要最新數字時',
-      description: '按重新整理立即讀取。右上角的問號圖示可隨時重播導覽。',
+      description: '按重新整理立即讀取。',
       side: 'bottom',
     },
   ],

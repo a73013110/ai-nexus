@@ -1,4 +1,4 @@
-import type { ProductTourDefinition } from '../../shared/ui/product-tour';
+import type { ProductTourDefinition } from '@shared/ui/product-tour';
 
 export function chatTour(narrow: boolean, knowledge: boolean): ProductTourDefinition {
   return {
@@ -43,8 +43,7 @@ export function chatTour(narrow: boolean, knowledge: boolean): ProductTourDefini
       {
         target: '.composer .send-button',
         title: '送出，然後一起完善',
-        description:
-          '準備好就送出訊息。回答後可繼續追問、複製內容、重新生成或編輯提問建立新分支。右上角的問號圖示可隨時重播導覽。',
+        description: '準備好就送出訊息。回答後可繼續追問、複製內容、重新生成或編輯提問建立新分支。',
       },
     ],
   };

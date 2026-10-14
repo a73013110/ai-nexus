@@ -1,5 +1,5 @@
 import { computed, effect, Injectable, signal, untracked } from '@angular/core';
-import { mediaQuery } from '../../shared/browser/media-query';
+import { mediaQuery } from '@shared/browser/media-query';
 import type { PreferencesDto } from '../api/schema';
 
 @Injectable({ providedIn: 'root' })

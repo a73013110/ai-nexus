@@ -8,7 +8,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { ThemeService } from '../../core/preferences/theme-service';
+import { ThemeService } from '@core/preferences/theme-service';
 import { formatNumber } from '../browser/format';
 
 const DURATION = 900;

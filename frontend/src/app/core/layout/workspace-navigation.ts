@@ -13,10 +13,10 @@ import {
 import { NavigationEnd, PRIMARY_OUTLET, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
-import { Icon } from '../../shared/ui/icon';
-import { ScrollArea } from '../../shared/ui/scroll-area';
-import { anchoredPopover } from '../../shared/browser/anchored-popover';
-import { setPopoverOrigin } from '../../shared/browser/popover-position';
+import { Icon } from '@shared/ui/icon';
+import { ScrollArea } from '@shared/ui/scroll-area';
+import { anchoredPopover } from '@shared/browser/anchored-popover';
+import { setPopoverOrigin } from '@shared/browser/popover-position';
 import { FEATURE_ICONS } from './feature-groups';
 import { FeatureLauncher } from './feature-launcher';
 import { NavigationPreferences } from './navigation-preferences';

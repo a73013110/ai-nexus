@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Icon } from '../../../shared/ui/icon';
-import { NumberTicker } from '../../../shared/ui/number-ticker';
+import { Icon } from '@shared/ui/icon';
+import { NumberTicker } from '@shared/ui/number-ticker';
 import { DashboardStore } from '../dashboard-store';
-import { metricText, workspaceLink } from '../dashboard-format';
+import { metricText } from '@shared/browser/format';
+import { workspaceLink } from '../dashboard-format';
 
 interface Stage {
   section: string;

@@ -14,11 +14,11 @@ import {
 import { WorkspaceBrand } from './workspace-brand';
 import { WorkspaceNavigation } from './workspace-navigation';
 import { AccountMenu } from './account-menu';
-import { Icon } from '../../shared/ui/icon';
+import { Icon } from '@shared/ui/icon';
 import { WorkspaceLayout } from './workspace-layout';
-import { NotificationStore } from '../../features/notifications/notification-store';
-import { CountBadge } from '../../shared/ui/count-badge';
-import { bindSwipe, swipeSettleTime } from '../../shared/browser/swipe';
+import { NotificationStore } from '@features/notifications/notification-store';
+import { CountBadge } from '@shared/ui/count-badge';
+import { bindSwipe, swipeSettleTime } from '@shared/browser/swipe';
 
 let sequence = 0;
 

@@ -1,7 +1,7 @@
 import { Component, ElementRef, signal, viewChild } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ThemeService } from '../../core/preferences/theme-service';
+import { ThemeService } from '@core/preferences/theme-service';
 import { followScroll } from './follow-scroll';
 
 @Component({

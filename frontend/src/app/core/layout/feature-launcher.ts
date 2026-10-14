@@ -8,7 +8,7 @@ import {
   signal,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { Icon } from '../../shared/ui/icon';
+import { Icon } from '@shared/ui/icon';
 import { FEATURE_ICONS, groupFeatures } from './feature-groups';
 import { PIN_LIMIT, NavigationPreferences, type NavigationDisplay } from './navigation-preferences';
 import { WorkspaceCommands } from './workspace-commands';

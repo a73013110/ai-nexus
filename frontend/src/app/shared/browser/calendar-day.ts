@@ -2,7 +2,7 @@ import { DestroyRef, inject, signal } from '@angular/core';
 
 const DAY = 86_400_000;
 
-export function startOfDay(time: number) {
+function startOfDay(time: number) {
   const date = new Date(time);
   date.setHours(0, 0, 0, 0);
   return date.getTime();

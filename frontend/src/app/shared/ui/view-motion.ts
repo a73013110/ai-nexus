@@ -7,7 +7,7 @@ import {
   Injector,
   input,
 } from '@angular/core';
-import { ThemeService } from '../../core/preferences/theme-service';
+import { ThemeService } from '@core/preferences/theme-service';
 
 function timing(element: HTMLElement) {
   const style = getComputedStyle(element);

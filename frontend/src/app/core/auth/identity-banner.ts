@@ -1,9 +1,9 @@
-import { Notice } from '../../shared/ui/notice';
+import { Notice } from '@shared/ui/notice';
 import { safeMessage } from '../errors/safe-errors';
 import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { AuthService } from './auth-service';
-import { Icon } from '../../shared/ui/icon';
-import { ViewportInset } from '../../shared/browser/viewport-inset';
+import { Icon } from '@shared/ui/icon';
+import { ViewportInset } from '@shared/browser/viewport-inset';
 
 @Component({
   selector: 'nx-identity-banner',

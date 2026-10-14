@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
-import { ApiClient } from '../../core/api/api-client';
-import type { CreateShareRequest } from '../../core/api/schema';
+import { ApiClient } from '@core/api/api-client';
+import type { CreateShareRequest } from '@core/api/schema';
 
 @Injectable({ providedIn: 'root' })
 export class SharingApi {

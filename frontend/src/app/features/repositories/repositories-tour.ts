@@ -1,17 +1,16 @@
-import type { ProductTourDefinition, TourStep } from '../../shared/ui/product-tour';
+import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
 import type { RepositorySection } from './repository-detail';
-
-const replay = '右上角的問號圖示可隨時重播導覽。';
 
 /** Joins the last two items with 「或」: 「甲、乙或丙」. */
 const either = (items: string[]) =>
   items.length > 1 ? `${items.slice(0, -1).join('、')}或${items.at(-1)}` : (items[0] ?? '');
 
-/** Ends with the connection menu, which every connected viewer has, so the replay hint stays. */
+/** The connection menu, which every connected viewer has; tours end with it. */
 const connection = (): TourStep => ({
   target: 'nx-repositories-page .repository-account',
   title: '你的 Gitea 連線',
-  description: `所有內容都以你自己的權杖讀取。「更新授權」換新權杖，「中斷連線」刪除保存的權杖，已匯入的文件與檢閱紀錄會保留。${replay}`,
+  description:
+    '所有內容都以你自己的權杖讀取。「更新授權」換新權杖，「中斷連線」刪除保存的權杖，已匯入的文件與檢閱紀錄會保留。',
   side: 'bottom',
 });
 
@@ -192,7 +191,7 @@ function sectionSteps(options: {
 /**
  * One repository's tour. Its steps follow the open section and whether one of its items is open,
  * plus the viewer's chat and knowledge features; an empty repository has no ref or content to
- * show. The connection menu is always last, so the replay hint always lands on the final step.
+ * show. The connection menu is always last.
  */
 export function repositoryTour(options: {
   section: RepositorySection;

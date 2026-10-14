@@ -1,8 +1,8 @@
 import { map } from 'rxjs';
-import { apiResource } from '../../core/api/api-resource';
-import { Notice } from '../../shared/ui/notice';
-import { EmptyState } from '../../shared/ui/empty-state';
-import { formatDate, formatModelDisplayName, relativeTime } from '../../shared/browser/format';
+import { apiResource } from '@core/api/api-resource';
+import { Notice } from '@shared/ui/notice';
+import { EmptyState } from '@shared/ui/empty-state';
+import { formatDate, formatModelDisplayName, relativeTime } from '@shared/browser/format';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -16,21 +16,21 @@ import {
 } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
-import type { ShareDto, SharedContentDto } from '../../core/api/schema';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { FeaturePage } from '../../core/layout/feature-page';
-import { MarkdownView } from '../../shared/markdown/markdown-view';
-import { MessageContent } from '../workspace/message-content';
-import { ReaderOverlay } from '../../shared/browser/reader-overlay';
-import { Icon } from '../../shared/ui/icon';
-import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
-import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
-import { Panel } from '../../shared/ui/panel';
-import { ResourceCard } from '../../shared/ui/resource-card';
-import { ResourceGallery } from '../../shared/ui/resource-gallery';
-import { StatusBadge } from '../../shared/ui/status-badge';
-import type { BadgeTone } from '../../shared/ui/count-badge';
+import type { ShareDto, SharedContentDto } from '@core/api/schema';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { ViewScope } from '@shared/browser/view-scope';
+import { FeaturePage } from '@core/layout/feature-page';
+import { MarkdownView } from '@shared/markdown/markdown-view';
+import { MessageContent } from '@features/conversations/message-content';
+import { ReaderOverlay } from '@shared/browser/reader-overlay';
+import { Icon } from '@shared/ui/icon';
+import { ConfirmDialog } from '@shared/ui/confirm-dialog';
+import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
+import { Panel } from '@shared/ui/panel';
+import { ResourceCard } from '@shared/ui/resource-card';
+import { ResourceGallery } from '@shared/ui/resource-gallery';
+import { StatusBadge } from '@shared/ui/status-badge';
+import type { BadgeTone } from '@shared/ui/count-badge';
 import { SharingApi } from './sharing-api';
 import { shareTour, sharesTour } from './shared-tour';
 

@@ -1,9 +1,9 @@
-import { safeMessage } from '../../core/errors/safe-errors';
+import { safeMessage } from '@core/errors/safe-errors';
 import { DestroyRef, Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { Router } from '@angular/router';
-import type { NotificationDto } from '../../core/api/schema';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { WorkspaceLayout } from '../../core/layout/workspace-layout';
+import type { NotificationDto } from '@core/api/schema';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { WorkspaceLayout } from '@core/layout/workspace-layout';
 import { notificationUrl } from './notification-target';
 import { NotificationsApi } from './notifications-api';
 

@@ -9,33 +9,33 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import type { ConversationDto, ConversationSettingsRequest } from '../../core/api/schema';
-import { SidebarPanelContent } from '../../core/layout/sidebar-panel';
-import { WorkspaceCommands } from '../../core/layout/workspace-commands';
-import { WorkspaceLayout } from '../../core/layout/workspace-layout';
-import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
-import { ThemeService } from '../../core/preferences/theme-service';
-import { downloadFile } from '../../shared/browser/download';
-import { FileDrop } from '../../shared/browser/file-drop';
-import { bindHotkeys } from '../../shared/browser/hotkeys';
-import { ReaderNavigation, type ReaderOrigin } from '../../shared/browser/reader-navigation';
-import type { Command } from '../../shared/ui/command-palette';
-import { Icon } from '../../shared/ui/icon';
-import { Notice } from '../../shared/ui/notice';
-import { ProductTour } from '../../shared/ui/product-tour';
-import { ShareDialog } from '../sharing/share-dialog';
-import type { ConversationAction } from '../workspace/conversation-actions';
-import { ConversationSettingsDialog } from '../workspace/conversation-settings-dialog';
-import { PromptLibraryDialog } from '../workspace/prompt-library-dialog';
-import { ChatComposer } from './chat-composer';
-import { ChatConversations } from './chat-conversations';
-import { ChatSidebar } from './chat-sidebar';
+import type { ConversationDto, ConversationSettingsRequest } from '@core/api/schema';
+import { SidebarPanelContent } from '@core/layout/sidebar-panel';
+import { WorkspaceCommands } from '@core/layout/workspace-commands';
+import { WorkspaceLayout } from '@core/layout/workspace-layout';
+import { ConversationDraftTransfer } from '@core/preferences/conversation-draft-transfer';
+import { ThemeService } from '@core/preferences/theme-service';
+import { downloadFile } from '@shared/browser/download';
+import { FileDrop } from '@shared/browser/file-drop';
+import { bindHotkeys } from '@shared/browser/hotkeys';
+import { ReaderNavigation, type ReaderOrigin } from '@shared/browser/reader-navigation';
+import type { Command } from '@shared/ui/command-palette';
+import { Icon } from '@shared/ui/icon';
+import { Notice } from '@shared/ui/notice';
+import { ProductTour } from '@shared/ui/product-tour';
+import { ShareDialog } from '@features/sharing/share-dialog';
+import type { ConversationAction } from '@features/conversations/conversation-actions';
+import { ConversationSettingsDialog } from '@features/conversations/conversation-settings-dialog';
+import { PromptLibraryDialog } from '@features/library/prompt-library-dialog';
+import { ChatComposer } from './composer/chat-composer';
+import { ChatConversations } from './state/chat-conversations';
+import { ChatSidebar } from './sidebar/chat-sidebar';
 import { ChatStore } from './chat-store';
-import { ChatThread } from './chat-thread';
+import { ChatThread } from './thread/chat-thread';
 import { ChatTopbar } from './chat-topbar';
 import { chatTour } from './chat-tour';
 import { ConversationDialog } from './conversation-dialog';
-import { ConversationFind } from './conversation-find';
+import { ConversationFind } from './thread/conversation-find';
 import { conversationMarkdown } from './conversation-markdown';
 
 /**
@@ -91,6 +91,8 @@ export class ChatWorkspace {
   private navigationSequence = 0;
   readonly saveSettings = (conversation: ConversationDto, settings: ConversationSettingsRequest) =>
     this.conversations.organize(conversation, settings);
+  readonly assignProject = (conversation: ConversationDto, projectId: string | null) =>
+    this.conversations.assignProject(conversation, projectId);
   private readonly actions = computed<Command[]>(() => [
     {
       id: 'new',

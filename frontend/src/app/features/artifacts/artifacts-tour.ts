@@ -1,6 +1,4 @@
-import type { ProductTourDefinition, TourStep } from '../../shared/ui/product-tour';
-
-const replay = '右上角的問號圖示可隨時重播導覽。';
+import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
 
 /**
  * The collection tour. The opening step points to the chat's "儲存成果" only for viewers with chat;
@@ -35,7 +33,7 @@ export function artifactsTour(options: { chat: boolean }): ProductTourDefinition
       {
         target: 'nx-artifacts-page .artifact-create',
         title: '新增成果',
-        description: `填寫名稱並撰寫 Markdown 內容，儲存後直接開啟成果頁。${replay}`,
+        description: '填寫名稱並撰寫 Markdown 內容，儲存後直接開啟成果頁。',
         side: 'bottom',
       },
     ],
@@ -44,8 +42,7 @@ export function artifactsTour(options: { chat: boolean }): ProductTourDefinition
 
 /**
  * The document tour. Which steps exist follows the viewer's rights and whether the editor is open,
- * so the replay hint always lands on the last one; the version picker shows only once a second
- * version exists and is skipped when the tour starts without it.
+ * and the version picker shows only once a second version exists.
  */
 export function artifactTour(options: {
   /** The viewer may edit the version on screen. */
@@ -120,7 +117,5 @@ export function artifactTour(options: {
         ]
       : []),
   ];
-  const last = steps.length - 1;
-  steps[last] = { ...steps[last], description: `${steps[last].description}${replay}` };
   return { steps };
 }

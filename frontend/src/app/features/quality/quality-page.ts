@@ -1,13 +1,13 @@
 import { map } from 'rxjs';
-import { apiResource } from '../../core/api/api-resource';
-import { Notice } from '../../shared/ui/notice';
-import { ToastService } from '../../shared/ui/toast-service';
-import { EmptyState } from '../../shared/ui/empty-state';
-import { Card } from '../../shared/ui/card';
-import { DialogHeader } from '../../shared/ui/dialog-header';
-import { CompactDialog } from '../../shared/ui/compact-dialog';
-import { Field } from '../../shared/ui/field';
-import { ApiError, ClientValidationError, issueInMessage } from '../../core/errors/safe-errors';
+import { apiResource } from '@core/api/api-resource';
+import { Notice } from '@shared/ui/notice';
+import { ToastService } from '@shared/ui/toast-service';
+import { EmptyState } from '@shared/ui/empty-state';
+import { Card } from '@shared/ui/card';
+import { DialogHeader } from '@shared/ui/dialog-header';
+import { CompactDialog } from '@shared/ui/compact-dialog';
+import { Field } from '@shared/ui/field';
+import { ApiError, ClientValidationError, issueInMessage } from '@core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -21,8 +21,8 @@ import {
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { NexusApi } from '../../core/api/nexus-api';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { NexusApi } from '@core/api/nexus-api';
 import type {
   EvaluationCase,
   EvaluationDetailDto,
@@ -32,30 +32,30 @@ import type {
   FeedbackDto,
   ModelDto,
   ModelPolicyDto,
-} from '../../core/api/schema';
-import { ViewScope } from '../../shared/browser/view-scope';
+} from '@core/api/schema';
+import { ViewScope } from '@shared/browser/view-scope';
 import {
   formatDate,
   formatModelName,
   formatModelDisplayName,
   relativeTime,
-} from '../../shared/browser/format';
-import { downloadFile } from '../../shared/browser/download';
-import { FeaturePage } from '../../core/layout/feature-page';
-import { Select } from '../../shared/ui/select';
-import { Icon } from '../../shared/ui/icon';
-import { MarkdownView } from '../../shared/markdown/markdown-view';
-import { JobProgress } from '../tasks/job-progress';
-import { ResourceSharing } from '../sharing/resource-sharing';
-import { JobsApi } from '../tasks/jobs-api';
-import { JobToasts } from '../tasks/job-toasts';
+} from '@shared/browser/format';
+import { downloadFile } from '@shared/browser/download';
+import { FeaturePage } from '@core/layout/feature-page';
+import { Select } from '@shared/ui/select';
+import { Icon } from '@shared/ui/icon';
+import { MarkdownView } from '@shared/markdown/markdown-view';
+import { JobProgress } from '@features/jobs/job-progress';
+import { ResourceSharing } from '@features/collaboration/resource-sharing';
+import { JobsApi } from '@features/jobs/jobs-api';
+import { JobToasts } from '@features/jobs/job-toasts';
 import { QualityApi } from './quality-api';
-import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
-import { ActionMenu, type MenuAction } from '../../shared/ui/action-menu';
-import { Panel } from '../../shared/ui/panel';
-import { ResourceCard } from '../../shared/ui/resource-card';
-import { ResourceGallery } from '../../shared/ui/resource-gallery';
-import { accessLabel } from '../sharing/access-label';
+import { ConfirmDialog } from '@shared/ui/confirm-dialog';
+import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
+import { Panel } from '@shared/ui/panel';
+import { ResourceCard } from '@shared/ui/resource-card';
+import { ResourceGallery } from '@shared/ui/resource-gallery';
+import { accessLabel } from '@features/collaboration/access-label';
 import { evaluationSetTour, qualityTour } from './quality-tour';
 
 type VariantForm = { label: string; modelId: string | null; instruction: string };

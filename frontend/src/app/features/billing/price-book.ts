@@ -6,23 +6,18 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { apiResource } from '../../core/api/api-resource';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import type { PriceDto, PriceTargetDto } from '../../core/api/schema';
-import { formatDate, formatDay, formatModelDisplayName } from '../../shared/browser/format';
-import type { BadgeTone } from '../../shared/ui/count-badge';
-import {
-  DataTable,
-  DataTableColumn,
-  DataTableRow,
-  type TableColumn,
-} from '../../shared/ui/data-table';
-import { EmptyState } from '../../shared/ui/empty-state';
-import { Icon } from '../../shared/ui/icon';
-import { Notice } from '../../shared/ui/notice';
-import { SearchField } from '../../shared/ui/search-field';
-import { StatusBadge } from '../../shared/ui/status-badge';
-import { ViewSwitch } from '../../shared/ui/view-switch';
+import { apiResource } from '@core/api/api-resource';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import type { PriceDto, PriceTargetDto } from '@core/api/schema';
+import { formatDate, formatDay, formatModelDisplayName } from '@shared/browser/format';
+import type { BadgeTone } from '@shared/ui/count-badge';
+import { DataTable, DataTableColumn, DataTableRow, type TableColumn } from '@shared/ui/data-table';
+import { EmptyState } from '@shared/ui/empty-state';
+import { Icon } from '@shared/ui/icon';
+import { Notice } from '@shared/ui/notice';
+import { SearchField } from '@shared/ui/search-field';
+import { StatusBadge } from '@shared/ui/status-badge';
+import { ViewSwitch } from '@shared/ui/view-switch';
 import { BillingApi, chargeKind, providerName } from './billing-api';
 import { PriceVersionDialog } from './price-version-dialog';
 
@@ -115,7 +110,7 @@ function rank(provider: string) {
     ViewSwitch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrls: ['../admin/operations/operations-tabs.scss', './price-book.scss'],
+  styleUrls: ['../administration/operations-tabs.scss', './price-book.scss'],
   templateUrl: './price-book.html',
 })
 export class PriceBook {

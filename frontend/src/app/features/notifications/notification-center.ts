@@ -1,5 +1,5 @@
-import { Notice } from '../../shared/ui/notice';
-import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { Notice } from '@shared/ui/notice';
+import { CompactDialog } from '@shared/ui/compact-dialog';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -14,17 +14,17 @@ import {
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { below } from '../../shared/browser/breakpoints';
-import { mediaQuery } from '../../shared/browser/media-query';
-import { anchoredPopover } from '../../shared/browser/anchored-popover';
-import { positionBesidePopover, positionPopover } from '../../shared/browser/popover-position';
-import { WorkspaceLayout } from '../../core/layout/workspace-layout';
+import { below } from '@shared/browser/breakpoints';
+import { mediaQuery } from '@shared/browser/media-query';
+import { anchoredPopover } from '@shared/browser/anchored-popover';
+import { positionBesidePopover, positionPopover } from '@shared/browser/popover-position';
+import { WorkspaceLayout } from '@core/layout/workspace-layout';
 import { NotificationStore } from './notification-store';
-import { Icon } from '../../shared/ui/icon';
-import { Tabs, type TabItem } from '../../shared/ui/tabs';
-import { ToastHistory } from '../../shared/ui/toast-history';
-import { ToastService } from '../../shared/ui/toast-service';
-import { FrameMotion, ViewMotion } from '../../shared/ui/view-motion';
+import { Icon } from '@shared/ui/icon';
+import { Tabs, type TabItem } from '@shared/ui/tabs';
+import { ToastHistory } from '@shared/ui/toast-history';
+import { ToastService } from '@shared/ui/toast-service';
+import { FrameMotion, ViewMotion } from '@shared/ui/view-motion';
 import { NotificationFeed } from './notification-feed';
 
 /**

@@ -1,15 +1,18 @@
 import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { WorkspaceMenuButton } from '../../core/layout/workspace-menu-button';
-import { below } from '../../shared/browser/breakpoints';
-import { mediaQuery } from '../../shared/browser/media-query';
-import { Icon } from '../../shared/ui/icon';
-import { InlineTitle } from '../../shared/ui/inline-title';
-import type { ProductTourDefinition } from '../../shared/ui/product-tour';
-import { ProductTourButton } from '../../shared/ui/product-tour-button';
-import { ConversationSpendView } from '../billing/conversation-spend';
-import { ConversationActions, type ConversationAction } from '../workspace/conversation-actions';
-import { ChatConversations } from './chat-conversations';
+import { WorkspaceMenuButton } from '@core/layout/workspace-menu-button';
+import { below } from '@shared/browser/breakpoints';
+import { mediaQuery } from '@shared/browser/media-query';
+import { Icon } from '@shared/ui/icon';
+import { InlineTitle } from '@shared/ui/inline-title';
+import type { ProductTourDefinition } from '@shared/ui/product-tour';
+import { ProductTourButton } from '@shared/ui/product-tour-button';
+import { ConversationSpendView } from '@features/billing/conversation-spend';
+import {
+  ConversationActions,
+  type ConversationAction,
+} from '@features/conversations/conversation-actions';
+import { ChatConversations } from './state/chat-conversations';
 import { ChatStore } from './chat-store';
 
 /** The open conversation's title and actions; generation status lives in the composer island. */

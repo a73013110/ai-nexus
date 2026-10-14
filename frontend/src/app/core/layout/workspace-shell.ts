@@ -1,10 +1,10 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, viewChild } from '@angular/core';
 import { Router, RouterOutlet } from '@angular/router';
-import { bindHotkeys } from '../../shared/browser/hotkeys';
-import { CommandPalette, type Command } from '../../shared/ui/command-palette';
-import { ProductTour } from '../../shared/ui/product-tour';
-import { Toaster } from '../../shared/ui/toaster';
+import { bindHotkeys } from '@shared/browser/hotkeys';
+import { CommandPalette, type Command } from '@shared/ui/command-palette';
+import { ProductTour } from '@shared/ui/product-tour';
+import { Toaster } from '@shared/ui/toaster';
 import { FEATURE_ICONS, groupFeatures } from './feature-groups';
 import { NavigationPreferences } from './navigation-preferences';
 import { SidebarPanel } from './sidebar-panel';

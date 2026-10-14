@@ -7,11 +7,11 @@ import {
   viewChild,
 } from '@angular/core';
 import { FormField, form, maxLength, required } from '@angular/forms/signals';
-import type { ConversationDto } from '../../core/api/schema';
-import { CompactDialog } from '../../shared/ui/compact-dialog';
-import { DialogHeader } from '../../shared/ui/dialog-header';
-import { Field } from '../../shared/ui/field';
-import { ChatConversations } from './chat-conversations';
+import type { ConversationDto } from '@core/api/schema';
+import { CompactDialog } from '@shared/ui/compact-dialog';
+import { DialogHeader } from '@shared/ui/dialog-header';
+import { Field } from '@shared/ui/field';
+import { ChatConversations } from './state/chat-conversations';
 
 /** Confirms renaming or deleting a conversation from the history list or the topbar menu. */
 @Component({

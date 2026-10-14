@@ -9,7 +9,7 @@ import {
   signal,
   untracked,
 } from '@angular/core';
-import { ThemeService } from '../../core/preferences/theme-service';
+import { ThemeService } from '@core/preferences/theme-service';
 import { MarkdownView } from './markdown-view';
 import { CopyFeedback } from '../browser/copy-feedback';
 import { Notice } from '../ui/notice';

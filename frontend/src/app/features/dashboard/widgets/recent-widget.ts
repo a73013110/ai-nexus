@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { EmptyState } from '../../../shared/ui/empty-state';
-import { Icon } from '../../../shared/ui/icon';
+import { EmptyState } from '@shared/ui/empty-state';
+import { Icon } from '@shared/ui/icon';
 import { DashboardStore } from '../dashboard-store';
-import { relativeTime } from '../../../shared/browser/format';
+import { relativeTime } from '@shared/browser/format';
 import { sectionIcon, workspaceLink } from '../dashboard-format';
 
 /** The viewer's latest work across every feature, to pick up where they left off. */

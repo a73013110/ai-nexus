@@ -12,7 +12,7 @@
 
 ## 長對話
 
-- 除了最後一則，每則訊息都是 `content-visibility: auto`（`frontend/src/app/features/chat/chat-message.scss`）。離開畫面的訊息不排版、不繪製；`contain-intrinsic-size: auto` 記住實際高度，捲回時不跳動。
+- 除了最後一則，每則訊息都是 `content-visibility: auto`（`frontend/src/app/features/chat/thread/chat-message.scss`）。離開畫面的訊息不排版、不繪製；`contain-intrinsic-size: auto` 記住實際高度，捲回時不跳動。
 - 這會套用 paint containment，超出訊息框的東西會被裁掉。訊息內不要放絕對定位的浮層，要用 popover／top layer；焦點框靠左右的 `padding-inline` 留空間。
 - 下一步若仍不夠，再做分頁或虛擬捲動；目前的「回到最新」、對話定位、搜尋都依賴所有訊息都在 DOM 中。
 - 捲動跟隨用 `shared/browser/follow-scroll.ts`：每 frame 最多捲一次；往上讀歷史就暫停，捲回底部才恢復。其他要跟隨最新內容的畫面也用它，不另寫。

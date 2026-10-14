@@ -1,4 +1,4 @@
-import type { NotificationTargetDto } from '../../core/api/schema';
+import type { NotificationTargetDto } from '@core/api/schema';
 
 /** Only typed internal destinations may be opened by a notification. */
 export function notificationUrl(target: NotificationTargetDto, version = 1): string | null {

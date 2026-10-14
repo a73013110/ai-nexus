@@ -1,19 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { SERIES_COLORS } from '../../../shared/ui/donut-chart';
-import { Icon } from '../../../shared/ui/icon';
-import { NumberTicker } from '../../../shared/ui/number-ticker';
-import { Sparkline } from '../../../shared/ui/sparkline';
-import { relativeTime } from '../../../shared/browser/format';
+import { SERIES_COLORS } from '@shared/ui/donut-chart';
+import { Icon } from '@shared/ui/icon';
+import { NumberTicker } from '@shared/ui/number-ticker';
+import { Sparkline } from '@shared/ui/sparkline';
 import { DashboardStore } from '../dashboard-store';
-import {
-  fillDays,
-  metricFormatter,
-  metricText,
-  tone,
-  TONE_COLORS,
-  workspaceLink,
-} from '../dashboard-format';
+import { metricFormatter, metricText, relativeTime } from '@shared/browser/format';
+import { fillDays, tone, TONE_COLORS, workspaceLink } from '../dashboard-format';
 
 /**
  * Any overview section as sent by the backend: figures, the first daily series, a distribution

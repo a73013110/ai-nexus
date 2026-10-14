@@ -1,6 +1,4 @@
-import type { ProductTourDefinition, TourStep } from '../../shared/ui/product-tour';
-
-const replay = '右上角的問號圖示可隨時重播導覽。';
+import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
 
 /** The collection tour; the card step is skipped while no collection is listed. */
 export const KNOWLEDGE_TOUR: ProductTourDefinition = {
@@ -32,7 +30,7 @@ export const KNOWLEDGE_TOUR: ProductTourDefinition = {
     {
       target: 'nx-knowledge-page .knowledge-create',
       title: '建立知識庫',
-      description: `填寫名稱與說明即可建立，新知識庫只有你能存取，之後再放入文件與授權同事。${replay}`,
+      description: '填寫名稱與說明即可建立，新知識庫只有你能存取，之後再放入文件與授權同事。',
       side: 'bottom',
     },
   ],
@@ -40,8 +38,7 @@ export const KNOWLEDGE_TOUR: ProductTourDefinition = {
 
 /**
  * The open collection's tour. Adding sources and the collection menu follow the viewer's rights,
- * so the replay hint always lands on the last step; document steps are skipped while the list is
- * empty, and the filter only while it is hidden (six documents or fewer).
+ * and steps not on screen (documents of an empty list, the hidden filter) are skipped.
  */
 export function collectionTour(options: { edit: boolean; manage: boolean }): ProductTourDefinition {
   const steps: TourStep[] = [
@@ -110,7 +107,5 @@ export function collectionTour(options: { edit: boolean; manage: boolean }): Pro
         ]
       : []),
   ];
-  const last = steps.length - 1;
-  steps[last] = { ...steps[last], description: `${steps[last].description}${replay}` };
   return { steps };
 }

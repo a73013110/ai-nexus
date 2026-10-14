@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiError } from '../api/api-client';
+import { ApiError } from '../errors/safe-errors';
 import { jsonEvents } from './json-events';
 
 describe('typed JSON event stream', () => {

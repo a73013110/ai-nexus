@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
-import { TESTING_IDENTITY_NOTE } from '../../core/auth/workspace-session';
-import { CompactDialog } from '../../shared/ui/compact-dialog';
-import { DialogHeader } from '../../shared/ui/dialog-header';
-import { DialogSaveBar } from '../../shared/ui/dialog-save-bar';
-import { Field } from '../../shared/ui/field';
-import { Icon } from '../../shared/ui/icon';
-import { SearchField } from '../../shared/ui/search-field';
-import { Tabs, type TabItem } from '../../shared/ui/tabs';
-import { ToastService } from '../../shared/ui/toast-service';
+import { TESTING_IDENTITY_NOTE } from '@core/auth/workspace-session';
+import { CompactDialog } from '@shared/ui/compact-dialog';
+import { DialogHeader } from '@shared/ui/dialog-header';
+import { DialogSaveBar } from '@shared/ui/dialog-save-bar';
+import { Field } from '@shared/ui/field';
+import { Icon } from '@shared/ui/icon';
+import { SearchField } from '@shared/ui/search-field';
+import { Tabs, type TabItem } from '@shared/ui/tabs';
+import { ToastService } from '@shared/ui/toast-service';
 import { DesignExample, DesignSection } from './design-section';
 
 const FILES = [

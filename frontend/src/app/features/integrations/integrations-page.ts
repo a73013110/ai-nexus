@@ -1,9 +1,9 @@
-import { apiResource } from '../../core/api/api-resource';
-import { Notice } from '../../shared/ui/notice';
-import { Card } from '../../shared/ui/card';
-import { EmptyState } from '../../shared/ui/empty-state';
-import { FilterPanel } from '../../shared/ui/filter-panel';
-import { Field } from '../../shared/ui/field';
+import { apiResource } from '@core/api/api-resource';
+import { Notice } from '@shared/ui/notice';
+import { Card } from '@shared/ui/card';
+import { EmptyState } from '@shared/ui/empty-state';
+import { FilterPanel } from '@shared/ui/filter-panel';
+import { Field } from '@shared/ui/field';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -13,15 +13,15 @@ import {
   linkedSignal,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { ConversationDraftTransfer } from '../../core/preferences/conversation-draft-transfer';
-import type { SourceDetailDto, SourceDto, SourceRecordDto } from '../../core/api/schema';
-import { FeaturePage } from '../../core/layout/feature-page';
-import { Select } from '../../shared/ui/select';
-import { Icon } from '../../shared/ui/icon';
-import { MarkdownView } from '../../shared/markdown/markdown-view';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { formatDate } from '../../shared/browser/format';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { ConversationDraftTransfer } from '@core/preferences/conversation-draft-transfer';
+import type { SourceDetailDto, SourceDto, SourceRecordDto } from '@core/api/schema';
+import { FeaturePage } from '@core/layout/feature-page';
+import { Select } from '@shared/ui/select';
+import { Icon } from '@shared/ui/icon';
+import { MarkdownView } from '@shared/markdown/markdown-view';
+import { ViewScope } from '@shared/browser/view-scope';
+import { formatDate } from '@shared/browser/format';
 import { IntegrationsApi } from './integrations-api';
 
 @Component({

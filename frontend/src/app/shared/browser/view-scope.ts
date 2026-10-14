@@ -1,6 +1,6 @@
-import { safeMessage } from '../../core/errors/safe-errors';
+import { safeMessage } from '@core/errors/safe-errors';
 import { DestroyRef, Injectable, inject } from '@angular/core';
-import { AuthService } from '../../core/auth/auth-service';
+import { AuthService } from '@core/auth/auth-service';
 
 /** Per-view guards and timers prevent late responses from crossing account/navigation changes. */
 @Injectable()

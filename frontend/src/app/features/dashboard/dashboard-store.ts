@@ -1,11 +1,11 @@
 import { computed, DestroyRef, inject, Injectable, linkedSignal, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { apiResource } from '../../core/api/api-resource';
-import type { DashboardDto, DashboardSectionDto } from '../../core/api/schema';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { downloadBlob } from '../../shared/browser/download';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { BillingApi, chargeKind, datePeriod, localDate } from '../billing/billing-api';
+import { apiResource } from '@core/api/api-resource';
+import type { DashboardDto, DashboardSectionDto } from '@core/api/schema';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { downloadBlob } from '@shared/browser/download';
+import { ViewScope } from '@shared/browser/view-scope';
+import { BillingApi, chargeKind, datePeriod, localDate } from '@features/billing/billing-api';
 import { DashboardApi } from './dashboard-api';
 import { dayRange, fillDays } from './dashboard-format';
 

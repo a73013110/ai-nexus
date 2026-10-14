@@ -1,9 +1,9 @@
-import { Notice } from '../../shared/ui/notice';
-import { DialogHeader } from '../../shared/ui/dialog-header';
-import { CompactDialog } from '../../shared/ui/compact-dialog';
-import { ViewMotion } from '../../shared/ui/view-motion';
-import { MarkdownEditor } from '../../shared/markdown/markdown-editor';
-import { Field } from '../../shared/ui/field';
+import { Notice } from '@shared/ui/notice';
+import { DialogHeader } from '@shared/ui/dialog-header';
+import { CompactDialog } from '@shared/ui/compact-dialog';
+import { ViewMotion } from '@shared/ui/view-motion';
+import { MarkdownEditor } from '@shared/markdown/markdown-editor';
+import { Field } from '@shared/ui/field';
 import {
   ChangeDetectionStrategy,
   afterRenderEffect,
@@ -17,12 +17,12 @@ import {
   viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { ViewScope } from '../../shared/browser/view-scope';
-import { CopyFeedback } from '../../shared/browser/copy-feedback';
-import { Icon } from '../../shared/ui/icon';
-import { ViewSwitch } from '../../shared/ui/view-switch';
-import { InferenceSignal } from '../../shared/ui/inference-signal';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { ViewScope } from '@shared/browser/view-scope';
+import { CopyFeedback } from '@shared/browser/copy-feedback';
+import { Icon } from '@shared/ui/icon';
+import { ViewSwitch } from '@shared/ui/view-switch';
+import { InferenceSignal } from '@shared/ui/inference-signal';
 import { ArtifactsApi } from './artifacts-api';
 import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
 

@@ -1,5 +1,5 @@
 import { DestroyRef, Injectable, inject, signal, type Signal } from '@angular/core';
-import type { Command } from '../../shared/ui/command-palette';
+import type { Command } from '@shared/ui/command-palette';
 
 /** What a page adds to Ctrl+K: its actions come before the features, its entries after. */
 export interface CommandSource {

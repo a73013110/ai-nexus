@@ -1,20 +1,20 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { Router } from '@angular/router';
-import { CopyFeedback } from '../../shared/browser/copy-feedback';
-import { EmptyState } from '../../shared/ui/empty-state';
-import { Icon } from '../../shared/ui/icon';
-import { Notice } from '../../shared/ui/notice';
-import { Select, type SelectOption } from '../../shared/ui/select';
-import { ViewMotion } from '../../shared/ui/view-motion';
-import { ViewSwitch, type ViewOption } from '../../shared/ui/view-switch';
-import { RepositoryChange } from './repository-change';
-import { RepositoryCode } from './repository-code';
-import { RepositoryCommits } from './repository-commits';
-import { RepositoryReview } from './repository-review';
-import { RepositoryReviews } from './repository-reviews';
+import { CopyFeedback } from '@shared/browser/copy-feedback';
+import { EmptyState } from '@shared/ui/empty-state';
+import { Icon } from '@shared/ui/icon';
+import { Notice } from '@shared/ui/notice';
+import { Select, type SelectOption } from '@shared/ui/select';
+import { ViewMotion } from '@shared/ui/view-motion';
+import { ViewSwitch, type ViewOption } from '@shared/ui/view-switch';
+import { RepositoryChange } from './browsing/repository-change';
+import { RepositoryCode } from './browsing/repository-code';
+import { RepositoryCommits } from './browsing/repository-commits';
+import { RepositoryReview } from './reviews/repository-review';
+import { RepositoryReviews } from './reviews/repository-reviews';
 import { isSha, RepositoryStore, shortSha } from './repository-store';
-import { RepositoryThread } from './repository-thread';
-import { RepositoryThreads } from './repository-threads';
+import { RepositoryThread } from './browsing/repository-thread';
+import { RepositoryThreads } from './browsing/repository-threads';
 
 export type RepositorySection = 'code' | 'commits' | 'pulls' | 'issues' | 'reviews';
 

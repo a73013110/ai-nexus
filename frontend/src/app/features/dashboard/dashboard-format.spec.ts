@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { dayRange, fillDays, metricLabel, workspaceLink } from './dashboard-format';
-import { relativeTime } from '../../shared/browser/format';
+import { relativeTime } from '@shared/browser/format';
 
 describe('dashboard format', () => {
   it('reads a metric aloud with its unit, and unknown values as a dash', () => {

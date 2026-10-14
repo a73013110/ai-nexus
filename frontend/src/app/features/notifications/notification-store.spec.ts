@@ -2,9 +2,9 @@ import { ApplicationRef, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { NotificationDto } from '../../core/api/schema';
-import { WorkspaceSession } from '../../core/auth/workspace-session';
-import { WorkspaceLayout } from '../../core/layout/workspace-layout';
+import type { NotificationDto } from '@core/api/schema';
+import { WorkspaceSession } from '@core/auth/workspace-session';
+import { WorkspaceLayout } from '@core/layout/workspace-layout';
 import { NotificationStore } from './notification-store';
 import { NotificationsApi } from './notifications-api';
 

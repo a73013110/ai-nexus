@@ -1,4 +1,4 @@
-import type { MessageDto } from '../../core/api/schema';
+import type { MessageDto } from '@core/api/schema';
 
 type ExportedMessage = Pick<MessageDto, 'role' | 'content' | 'attachments'>;
 

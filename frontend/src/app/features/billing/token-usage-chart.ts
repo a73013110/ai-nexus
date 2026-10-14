@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
-import type { TokenUsageDto } from '../../core/api/schema';
-import { formatModelDisplayName } from '../../shared/browser/format';
-import { DataTable, DataTableRow } from '../../shared/ui/data-table';
-import { Select } from '../../shared/ui/select';
-import { TrendChart } from '../../shared/ui/trend-chart';
+import type { TokenUsageDto } from '@core/api/schema';
+import { formatModelDisplayName } from '@shared/browser/format';
+import { DataTable, DataTableRow } from '@shared/ui/data-table';
+import { Select } from '@shared/ui/select';
+import { TrendChart } from '@shared/ui/trend-chart';
 
 @Component({
   selector: 'nx-token-usage-chart',

@@ -2,7 +2,7 @@ import { Notice } from './notice';
 import { CompactDialog } from './compact-dialog';
 import { DialogHeader } from './dialog-header';
 import { Field } from './field';
-import { safeMessage } from '../../core/errors/safe-errors';
+import { safeMessage } from '@core/errors/safe-errors';
 import {
   ChangeDetectionStrategy,
   Component,
