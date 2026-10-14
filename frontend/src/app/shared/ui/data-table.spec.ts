@@ -74,4 +74,43 @@ describe('DataTable', () => {
     second.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
     expect(document.activeElement).toBe(first);
   });
+
+  it('returns focus from a dialog without the ring when the row was clicked open', () => {
+    const fixture = TestBed.createComponent(Host);
+    fixture.detectChanges();
+    const row = (fixture.nativeElement as HTMLElement).querySelector('tr')!;
+    const action = row.querySelector<HTMLElement>('[data-row-action]')!;
+    // The browser's focus-visible decision, which a dialog closed with Escape sets to true.
+    let visible = false;
+    Object.defineProperty(action, 'matches', {
+      value: (selector: string) =>
+        selector === ':focus-visible' ? visible : Element.prototype.matches.call(action, selector),
+    });
+    const dialog = document.createElement('dialog');
+    const inside = dialog.appendChild(document.createElement('button'));
+    document.body.append(dialog);
+    const focus = (from: Element | null) =>
+      action.dispatchEvent(new FocusEvent('focusin', { bubbles: true, relatedTarget: from }));
+    try {
+      focus(null);
+      visible = true;
+      focus(inside);
+      expect(row.classList).toContain('is-focus-returned');
+      action.dispatchEvent(new KeyboardEvent('keydown', { key: 'Shift', bubbles: true }));
+      expect(row.classList).toContain('is-focus-returned');
+      action.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+      expect(row.classList).not.toContain('is-focus-returned');
+      // Opened from the keyboard, the returning focus keeps its ring.
+      focus(inside);
+      expect(row.classList).not.toContain('is-focus-returned');
+      // A focus move from a live control is the keyboard's, never a return.
+      visible = false;
+      focus(row.ownerDocument.body);
+      visible = true;
+      focus(row.ownerDocument.body);
+      expect(row.classList).not.toContain('is-focus-returned');
+    } finally {
+      dialog.remove();
+    }
+  });
 });
