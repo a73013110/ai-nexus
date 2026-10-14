@@ -1,7 +1,6 @@
 <div class="page-toolbar">
   <p class="form-note">
-    功能由模組註冊，路由與 API
-    授權由程式定義。可調整顯示名稱、啟用，以及分群內的順序（與側欄一致）。
+    功能由模組註冊，路由與 API 授權固定；可調整名稱、啟用與分群內順序（側欄同序）。
   </p>
 </div>
 <nx-data-table
@@ -12,35 +11,35 @@
 >
   <div table-toolbar class="ui-table-toolbar">
     <h2>
-      功能配置 <span class="ui-count-label">{{ features().length }} 項</span>
+      功能 <span class="ui-count-label">{{ features().length }} 項</span>
     </h2>
-    <span class="form-note">{{
-      saving() ? '正在儲存順序…' : '拖曳把手或聚焦後按 ↑↓ 調整分群內順序'
+    <span class="form-note feature-order-hint">{{
+      saving() ? '正在儲存順序…' : '拖曳把手或用「⋯」調整分群內順序'
     }}</span>
   </div>
   <table>
     <colgroup>
-      <col class="admin-handle-column" />
-      <col />
-      <col />
+      <col class="feature-handle-column" />
+      <col class="admin-name-column" />
       <col class="admin-status-column" />
+      <col />
       <col class="admin-row-action-column" />
     </colgroup>
     <thead>
       <tr>
         <th scope="col"><span class="sr-only">移動</span></th>
         <th scope="col">功能</th>
-        <th scope="col">路由</th>
         <th scope="col">狀態</th>
+        <th scope="col">路由</th>
         <th scope="col"><span class="sr-only">調整順序</span></th>
       </tr>
     </thead>
     @for (section of sections(); track section.id) {
       <tbody [attr.data-section]="section.id">
-        <tr class="admin-feature-section">
+        <tr class="feature-section">
           <th scope="rowgroup" colspan="5">
             {{ section.name }}
-            <span class="ui-count-label">{{ section.features.length }} 項</span>
+            <nx-count-badge tone="neutral" [count]="section.features.length" />
           </th>
         </tr>
         @for (feature of section.features; track feature.id) {
@@ -54,6 +53,7 @@
               <button
                 type="button"
                 class="icon-button feature-handle"
+                title="拖曳或按 ↑↓ 調整順序"
                 [attr.data-handle]="feature.id"
                 [attr.aria-label]="'移動「' + feature.name + '」，用上下鍵調整順序'"
                 [attr.aria-disabled]="saving() || section.features.length < 2"
@@ -64,24 +64,31 @@
               </button>
             </td>
             <td>
-              <button
-                type="button"
-                class="ui-table-link admin-table-name"
-                data-row-action
-                aria-haspopup="dialog"
-                [attr.aria-label]="'編輯功能：' + feature.name"
-                (click)="edit.emit(feature)"
-              >
-                <nx-icon [name]="featureIcons[feature.id] || 'document'" /><span
-                  class="ui-truncate"
-                  >{{ feature.name }}</span
+              <div class="feature-name">
+                <nx-icon [name]="featureIcons[feature.id] || 'document'" />
+                <button
+                  type="button"
+                  class="ui-table-link admin-table-name"
+                  data-row-action
+                  aria-haspopup="dialog"
+                  [attr.aria-label]="'編輯功能：' + feature.name"
+                  (click)="edit.emit(feature)"
                 >
-              </button>
-            </td>
-            <td>
-              <span class="ui-truncate" [title]="feature.route">{{ feature.route || '—' }}</span>
+                  <span class="ui-truncate" [title]="feature.name">{{ feature.name }}</span>
+                </button>
+                <small class="ui-truncate" [title]="feature.id">{{ feature.id }}</small>
+              </div>
             </td>
             <td><nx-access-status [enabled]="feature.enabled" /></td>
+            <td data-stack="hide">
+              @if (feature.route) {
+                <span class="ui-truncate ui-table-code feature-route" [title]="feature.route">{{
+                  feature.route
+                }}</span>
+              } @else {
+                <span class="form-note">無頁面，僅權限</span>
+              }
+            </td>
             <td data-stack="end">
               <nx-action-menu
                 [label]="'調整順序：' + feature.name"

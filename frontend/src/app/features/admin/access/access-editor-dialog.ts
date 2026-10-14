@@ -141,7 +141,8 @@ export class AccessEditorDialog {
       id: item?.id || '',
       name,
       title: (item ? '編輯' : '新增') + this.label(kind) + (item ? '：' + name : ''),
-      subtitle: feature ? feature.id + ' · ' + feature.route : item?.id || '',
+      // A feature without a page (a permission such as `logs.export`) has no route to show.
+      subtitle: feature ? [feature.id, feature.route].filter(Boolean).join(' · ') : item?.id || '',
       enabled: role?.enabled ?? group?.enabled ?? feature?.enabled ?? true,
       ids: role?.groupIds || group?.featureIds || [],
       modelPolicy: modelPolicyDraft(group?.policy),
