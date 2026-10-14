@@ -6,7 +6,6 @@ import {
   ElementRef,
   effect,
   inject,
-  signal,
   viewChild,
 } from '@angular/core';
 import { Router, NavigationStart } from '@angular/router';
@@ -25,7 +24,6 @@ import { DocumentViewer } from './document-viewer';
     #dialog
     class="platform-dialog reader-dialog"
     aria-label="檔案預覽"
-    [class.reader-expanded]="expanded()"
     (cancel)="$event.preventDefault(); overlay.close()"
     (close)="overlay.close()"
   >
@@ -34,9 +32,7 @@ import { DocumentViewer } from './document-viewer';
         <nx-document-viewer
           [target]="target"
           [embedded]="true"
-          [expanded]="expanded()"
           (closeRequested)="overlay.close()"
-          (expandRequested)="expanded.update(toggle)"
         />
       }
     } @placeholder {
@@ -46,17 +42,13 @@ import { DocumentViewer } from './document-viewer';
 })
 export class ReaderDialog {
   readonly overlay = inject(ReaderOverlay);
-  readonly expanded = signal(false);
-  readonly toggle = (value: boolean) => !value;
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   constructor() {
     effect(() => {
       const target = this.overlay.target(),
         dialog = this.dialog().nativeElement;
-      if (target && !dialog.open) {
-        this.expanded.set(false);
-        dialog.showModal();
-      } else if (!target && dialog.open) dialog.close();
+      if (target && !dialog.open) dialog.showModal();
+      else if (!target && dialog.open) dialog.close();
     });
     let generation = this.overlay.auth.generation();
     effect(() => {

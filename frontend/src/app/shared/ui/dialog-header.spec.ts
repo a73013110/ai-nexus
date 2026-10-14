@@ -1,7 +1,9 @@
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { beforeAll, describe, expect, it } from 'vitest';
+import { CompactDialog } from './compact-dialog';
 import { DialogHeader } from './dialog-header';
+import { IdleChrome } from './idle-chrome';
 
 @Component({
   selector: 'nx-dialog-header-host',
@@ -21,6 +23,16 @@ class Host {}
   </dialog>`,
 })
 class ProjectionHost {}
+
+@Component({
+  selector: 'nx-dialog-header-maximize-host',
+  imports: [DialogHeader, CompactDialog, IdleChrome],
+  template: `<dialog nxCompactDialog nxIdleChrome size="full">
+      <nx-dialog-header heading="圖表" maximizable />
+    </dialog>
+    <dialog nxCompactDialog size="full"><nx-dialog-header heading="表單" maximizable /></dialog>`,
+})
+class MaximizeHost {}
 
 function setup() {
   const fixture = TestBed.createComponent(Host);
@@ -74,5 +86,24 @@ describe('DialogHeader', () => {
     dialog.addEventListener('cancel', (event) => event.preventDefault());
     button.click();
     expect(dialog.open).toBe(true);
+  });
+
+  it('toggles the dialog to maximized; only inside a viewer scope does the bar become idle chrome', () => {
+    const fixture = TestBed.createComponent(MaximizeHost);
+    fixture.detectChanges();
+    const [viewer, form] = [...(fixture.nativeElement as HTMLElement).querySelectorAll('dialog')];
+    const toggle = (dialog: HTMLDialogElement) => {
+      dialog.querySelector<HTMLButtonElement>('button[aria-label="放大視窗"]')!.click();
+      fixture.detectChanges();
+    };
+    expect(viewer.hasAttribute('data-maximized')).toBe(false);
+    expect(viewer.querySelector('nx-dialog-header')!.hasAttribute('data-chrome')).toBe(false);
+    toggle(viewer);
+    expect(viewer.hasAttribute('data-maximized')).toBe(true);
+    expect(viewer.querySelector('nx-dialog-header')!.getAttribute('data-chrome')).toBe('shown');
+    expect(viewer.querySelector('button[aria-label="還原視窗"]')).not.toBeNull();
+    toggle(form);
+    expect(form.hasAttribute('data-maximized')).toBe(true);
+    expect(form.querySelector('nx-dialog-header')!.hasAttribute('data-chrome')).toBe(false);
   });
 });

@@ -21,6 +21,7 @@ import { DesignDialogs } from './design-dialogs';
 import { DesignExample, DesignSection } from './design-section';
 import { DesignSamples } from './design-samples';
 import { FloatingToolbar } from '../../shared/ui/floating-toolbar';
+import { IdleChrome } from '../../shared/ui/idle-chrome';
 
 /** Buttons, menus, confirmation and every selection control. */
 @Component({
@@ -34,6 +35,7 @@ import { FloatingToolbar } from '../../shared/ui/floating-toolbar';
     DesignExample,
     DesignSection,
     FloatingToolbar,
+    IdleChrome,
     Icon,
     NameDialog,
     Select,
@@ -215,9 +217,15 @@ import { FloatingToolbar } from '../../shared/ui/floating-toolbar';
       id="design-floating-toolbar"
       title="浮動工具列"
       api="FloatingToolbar"
-      description="檢視器的內容功能（模式、頁碼、縮放、搜尋）浮在內容上方、不佔版面；指標移動、觸控或焦點進入時出現，閒置約 2 秒淡出，焦點在內、下拉展開或 pinned 時保留。標題列只留視窗層級動作。"
+      description="檢視器的內容功能（模式、頁碼、縮放、搜尋）浮在內容上方、不佔版面；範圍（nxIdleChrome）開啟時短暫出現，指標移近或停在工具列、觸控點一下內容、Tab 時出現，閒置約 2 秒或 Esc 淡出；鍵盤焦點在內、下拉展開或 pinned 時保留。放大的檢視器標題列遵循同一規則。"
     >
-      <div class="design-floating" role="region" aria-label="浮動工具列示範內容" tabindex="0">
+      <div
+        class="design-floating"
+        role="region"
+        aria-label="浮動工具列示範內容"
+        tabindex="0"
+        nxIdleChrome
+      >
         <nx-floating-toolbar label="示範檢視工具">
           <nx-view-switch
             label="示範檢視方式"
@@ -234,7 +242,7 @@ import { FloatingToolbar } from '../../shared/ui/floating-toolbar';
             (valueChange)="zoom.set($event)"
           />
         </nx-floating-toolbar>
-        在這個區域移動指標、點一下或用 Tab 進入，工具列就會出現。
+        在內容上移動指標不會喚回工具列；移到上緣附近、觸控點一下或用 Tab 進入才會出現。
       </div>
     </nx-design-section>
     <nx-design-section

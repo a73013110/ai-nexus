@@ -4,6 +4,8 @@ import { EmptyState } from '../../shared/ui/empty-state';
 import { SearchField } from '../../shared/ui/search-field';
 import { ViewSwitch } from '../../shared/ui/view-switch';
 import { FloatingToolbar } from '../../shared/ui/floating-toolbar';
+import { IdleChrome, IdleChromePart } from '../../shared/ui/idle-chrome';
+import { CompactDialog } from '../../shared/ui/compact-dialog';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -52,6 +54,7 @@ import { richKind } from './html-scripts';
     SearchField,
     ViewSwitch,
     FloatingToolbar,
+    IdleChromePart,
     Icon,
     Select,
     TextHighlight,
@@ -60,6 +63,8 @@ import { richKind } from './html-scripts';
     HtmlPreview,
   ],
   host: { '(keydown)': 'shortcut($event)' },
+  // 標題列（放大時）與浮動工具列共用同一套出現／淡出規則。
+  hostDirectives: [IdleChrome],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './document-viewer.scss',
@@ -77,9 +82,11 @@ export class DocumentViewer {
   private readonly injector = inject(Injector);
   readonly target = input.required<ReaderTarget>();
   readonly embedded = input(false);
-  readonly expanded = input(false);
   readonly closeRequested = output<void>();
-  readonly expandRequested = output<void>();
+  /** 嵌在 `ReaderDialog` 時可放大；放大後標題列浮在內容上、閒置淡出。 */
+  readonly dialog = inject(CompactDialog, { optional: true });
+  readonly maximized = computed(() => !!this.dialog?.maximized());
+  private readonly chrome = inject(IdleChrome);
   readonly document = signal<DocumentDto | null>(null);
   readonly pages = signal<DocumentPageDto[]>([]);
   readonly job = signal<JobDto | null>(null);
@@ -208,7 +215,10 @@ export class DocumentViewer {
   constructor() {
     effect(() => {
       const target = this.target();
-      untracked(() => void this.load(target));
+      untracked(() => {
+        this.chrome.reveal();
+        void this.load(target);
+      });
     });
     afterRenderEffect(() => {
       const canvas = this.canvas()?.nativeElement,

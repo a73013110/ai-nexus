@@ -20,6 +20,7 @@ import { Notice } from '../ui/notice';
 import { downloadBlob } from '../browser/download';
 import { DialogHeader } from '../ui/dialog-header';
 import { FloatingToolbar } from '../ui/floating-toolbar';
+import { IdleChrome } from '../ui/idle-chrome';
 import { CompactDialog } from '../ui/compact-dialog';
 import { Icon, EXTRA_ICONS } from '../ui/icon';
 import { SquareCode, ZoomIn, ZoomOut, Scan } from 'lucide';
@@ -149,6 +150,7 @@ export class DiagramCanvas {
     CompactDialog,
     DialogHeader,
     FloatingToolbar,
+    IdleChrome,
     DiagramCanvas,
     NgTemplateOutlet,
     Notice,
@@ -273,12 +275,17 @@ export class DiagramCanvas {
     </ng-template>
     <dialog
       nxCompactDialog
+      nxIdleChrome
       size="full"
       #dialog
       class="platform-dialog"
       aria-label="展開 Mermaid 圖表"
     >
-      <nx-dialog-header [heading]="diagram()?.title || 'Mermaid 圖表'" closeLabel="關閉圖表">
+      <nx-dialog-header
+        [heading]="diagram()?.title || 'Mermaid 圖表'"
+        closeLabel="關閉圖表"
+        maximizable
+      >
         <button
           class="icon-button"
           type="button"
