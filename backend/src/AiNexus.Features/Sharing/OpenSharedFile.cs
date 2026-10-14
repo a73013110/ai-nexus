@@ -24,6 +24,9 @@ internal sealed class OpenSharedFile(NexusDbContext db, ShareAccess shares, Atta
             .WithName("PreviewSharedFile");
         routes.MapGet("/{id:guid}/files/{file:guid}", (Guid id, Guid file, bool? download, ICurrentUser user, OpenSharedFile handler, HttpContext http, CancellationToken ct) =>
             handler.OpenAsync(user.Id, id, file, ct).ToHttpResultAsync(x => WebSecurity.File(http, x.Content, x.File.ContentType, x.File.FileName, download == true)));
+        routes.MapGet("/{id:guid}/files/{file:guid}/render", (Guid id, Guid file, ICurrentUser user, OpenSharedFile handler, HttpContext http, CancellationToken ct) =>
+                handler.RenderAsync(user.Id, id, file, ct).ToHttpResultAsync(x => WebSecurity.SandboxedHtml(http, x)))
+            .WithName("RenderSharedFileHtml");
     }
 
     public async Task<Result<(Attachment File, Stream Content)>> OpenAsync(Guid actor, Guid id, Guid fileId, CancellationToken ct)
@@ -31,6 +34,14 @@ internal sealed class OpenSharedFile(NexusDbContext db, ShareAccess shares, Atta
         var found = await FindAsync(actor, id, fileId, ct);
         if (!found.IsSuccess) return found.Error;
         return (found.Value, await files.OpenAsync(found.Value, ct));
+    }
+
+    public async Task<Result<Stream>> RenderAsync(Guid actor, Guid id, Guid fileId, CancellationToken ct)
+    {
+        var found = await FindAsync(actor, id, fileId, ct);
+        if (!found.IsSuccess) return found.Error;
+        if (!WebSecurity.IsHtml(found.Value.ContentType, found.Value.FileName)) return SharingErrors.Unavailable;
+        return await files.OpenAsync(found.Value, ct);
     }
 
     public async Task<Result<Attachment>> FindAsync(Guid actor, Guid id, Guid fileId, CancellationToken ct)

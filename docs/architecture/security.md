@@ -10,7 +10,7 @@
 
 - API 在生成 antiforgery token 前及回應開始前使用一致的 `Cache-Control: no-cache, no-store`、`Pragma: no-cache`、`Expires: 0`，涵蓋登入、錯誤、JSON、檔案與 SSE。Antiforgery 不需再覆寫不完整的快取政策；保留原本 CSRF 檢查及警告層級。原始碼政策見 [ASP.NET Core Antiforgery](https://source.dot.net/Microsoft.AspNetCore.Antiforgery/Internal/DefaultAntiforgery.cs.html)。
 - CSP 限制 script、connect、font、worker 到同源；image 限同源與本機建立的 `blob:`（Mermaid 清理後的 SVG 圖片），禁用 object、跨來源表單與任何 framing。Angular 動態樣式需要 `style-src 'unsafe-inline'`；script 沒有允許 inline 或 eval。另有 nosniff、DENY、no-referrer、COOP／CORP same-origin、停用不使用的 camera／microphone／geolocation／payment／USB，以及移除 Kestrel Server 標頭。
-- 原檔必須經 owner 或知識／專案／分享 ACL。只有 PDF／PNG／JPEG／WebP 可 inline 顯示；文字、XML、Markdown、Word 等作為附件下載。原檔回應使用獨立 `default-src 'none'; sandbox` CSP，防止上傳內容取得網站的執行能力。檔名不成為檔案系統路徑，binary 不在 wwwroot。
+- 原檔必須經 owner 或知識／專案／分享 ACL。只有 PDF／PNG／JPEG／WebP 可 inline 顯示；文字、XML、Markdown、Word 等作為附件下載。原檔回應使用獨立 `default-src 'none'; sandbox` CSP，防止上傳內容取得網站的執行能力。唯一例外是 HTML：`/render` 路由（附件、文件、分享檔案）回傳 `sandbox allow-scripts` CSP（無 `allow-same-origin`，不可連外、不載入外部資源）與 `X-Frame-Options: SAMEORIGIN`，只供應用程式自己的 iframe 預覽。檔名不成為檔案系統路徑，binary 不在 wwwroot。
 - 上傳沿用格式 allowlist、標記驗證、大小／頁數／擷取上限、owner quota 及寫入鎖；拒絕 SVG 與巨集文件。讀檔、文件頁面、背景任務及檔案庫關聯均重新驗證權限。
 - Markdown 包含串流尾段，先關閉 raw HTML，再通過同一個 DOMPurify allowlist。外部連結僅 HTTP(S)，帶 noopener／noreferrer；圖片語法只顯示說明文字，不發起任意外部請求。
 - Mermaid 只接受完成的程式碼區塊。渲染使用 strict 模式與站點固定的設定；圖表圖片節點在量測前拒絕。輸出的 SVG 移除 active HTML／事件／圖片／連結及外部 CSS resource；清理完成後在隱藏量測容器確認完整圖形邊界，容器於 finally 移除。閱讀畫面只透過惰性 Blob 圖片呈現，不啟用圖表的 click handler；下載沿用同一份清理與邊界修正後的 SVG。

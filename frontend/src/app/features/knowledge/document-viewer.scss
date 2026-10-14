@@ -1,8 +1,5 @@
 @use 'breakpoints' as bp;
 
-.viewer-toolbar > nx-view-switch {
-  margin-bottom: 0;
-}
 .reader-pagination nx-select {
   width: 104px;
 }
@@ -14,54 +11,9 @@
   min-height: 0;
   height: 100%;
 }
-.viewer-actions .icon-button {
-  width: var(--button-target);
-  height: var(--button-target);
-}
 .reader-pagination .icon-button {
   width: var(--button-target);
   height: var(--button-target);
-}
-.viewer-heading {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-2);
-  min-height: calc(var(--button-target) + 2 * var(--p-space-2));
-  padding: var(--p-space-2) var(--p-space-2) var(--p-space-2) var(--p-space-4);
-  flex: none;
-  border-bottom: 1px solid var(--line);
-}
-// Same as .dialog-title: the format sits beside the name instead of on a second line.
-.viewer-title {
-  display: flex;
-  align-items: baseline;
-  flex: 1;
-  gap: var(--p-space-2);
-  min-width: 0;
-}
-.viewer-title h1 {
-  min-width: 0;
-  font-size: var(--text-ui);
-  font-weight: 600;
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.viewer-title small {
-  flex: none;
-  font-size: var(--text-caption);
-  color: var(--secondary);
-}
-.viewer-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex: none;
-}
-.viewer-close {
-  margin-left: 8px;
-  background: var(--hover);
 }
 .viewer-toolbar {
   display: flex;
@@ -81,11 +33,44 @@
 .viewer-zoom {
   width: 132px;
 }
+// The header title keeps its room; the search field takes what the tools leave.
+.dialog-bar h1 {
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-heading);
+  font-weight: 600;
+}
+.dialog-title :is(h1, h2) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.viewer-bar-page {
+  min-height: calc(var(--button-target) + 2 * var(--p-space-2));
+  padding-block: var(--p-space-2);
+  border-bottom: 1px solid var(--line);
+}
 .viewer-search {
+  flex: 0 1 240px;
   min-width: 120px;
-  max-width: 240px;
-  flex: 1;
-  margin-left: auto;
+}
+.viewer-frame {
+  overflow: hidden;
+}
+.viewer-rich {
+  height: 100%;
+}
+.viewer-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.viewer-pane {
+  height: 100%;
+  min-width: 0;
+  overflow: auto;
+}
+.viewer-split > .viewer-pane:first-child {
+  border-inline-end: 1px solid var(--line);
 }
 .viewer-processing {
   flex: none;
@@ -175,7 +160,6 @@
   overflow: auto;
 }
 @include bp.below(phone) {
-  .viewer-heading,
   .viewer-toolbar,
   .viewer-processing {
     padding-inline-start: var(--p-space-3);
@@ -183,14 +167,8 @@
   .viewer-new-tab {
     display: none;
   }
-  .viewer-actions {
-    gap: 0;
-  }
-  .viewer-close {
-    margin-left: 0;
-  }
   .viewer-search {
-    max-width: none;
+    flex: 1;
   }
   .reader-original {
     padding: 12px;

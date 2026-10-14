@@ -21,6 +21,7 @@ import { DocumentViewer } from './document-viewer';
   styleUrl: './reader-dialog.scss',
   template: `<dialog
     nxCompactDialog
+    size="full"
     #dialog
     class="platform-dialog reader-dialog"
     aria-label="檔案預覽"

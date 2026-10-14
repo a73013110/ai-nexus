@@ -78,6 +78,7 @@ test("PDF reader renders real pages, searches extracted text and treats text as 
   await expect(page.locator(".reader-text")).toContainText(
     "<img src=x onerror=alert(1)>",
   );
+  await page.getByRole("button", { name: "搜尋文件文字" }).click();
   await page.getByRole("searchbox", { name: "搜尋文件文字" }).fill("差旅");
   await expect(page.locator(".reader-text mark")).toHaveCount(1);
   await page.getByRole("button", { name: "第 1 頁", exact: true }).click();

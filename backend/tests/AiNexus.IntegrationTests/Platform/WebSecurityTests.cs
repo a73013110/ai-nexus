@@ -33,6 +33,7 @@ public sealed class WebSecurityTests
         var csp = me.Headers.GetValues("Content-Security-Policy").Single();
         Assert.Contains("img-src 'self' blob:;", csp);
         Assert.Contains("script-src 'self';", csp);
+        Assert.Contains("frame-src 'self';", csp);
         Assert.DoesNotContain("img-src *", csp);
         using var missing = await client.GetAsync("/api/v1/not-a-real-api"); Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode); AssertNoStore(missing);
         Assert.DoesNotContain(logs.Events, entry => entry.Category == "Microsoft.AspNetCore.Antiforgery.DefaultAntiforgery" && entry.Id == 8);

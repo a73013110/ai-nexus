@@ -1,14 +1,5 @@
-@use 'breakpoints' as bp;
-
-// The frame and the open/close motion come from .platform-dialog (styles/dialogs.scss); the
-// reader only sizes itself to the viewport and darkens the page further.
-.reader-dialog {
-  width: min(1600px, 100vw - 32px);
-  height: calc(100dvh - 32px);
-  max-height: none;
-  padding: 0;
-  box-shadow: 0 24px 100px rgba(0, 0, 0, 0.3333333333);
-}
+// Size, frame and motion come from size="full" (styles/dialogs.scss); the reader only darkens the
+// backdrop further and can expand edge to edge.
 .reader-dialog::backdrop {
   background: rgba(17, 29, 44, 0.7607843137);
   backdrop-filter: blur(4px);
@@ -18,12 +9,4 @@
   height: 100dvh;
   border-radius: 0;
   border: 0;
-}
-@include bp.below(phone) {
-  .reader-dialog {
-    width: 100vw;
-    height: 100dvh;
-    border: 0;
-    border-radius: 0;
-  }
 }
