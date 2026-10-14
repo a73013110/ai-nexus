@@ -48,37 +48,6 @@
 .setting-row:last-child {
   padding-bottom: 0;
 }
-.switch {
-  position: relative;
-  width: 48px;
-  height: var(--button-target);
-  flex: none;
-}
-.switch::before {
-  content: '';
-  position: absolute;
-  inset: calc(50% - 12px) 0;
-  background: var(--line);
-  border-radius: 99px;
-  transition: background var(--motion) var(--ease);
-}
-.switch span {
-  position: absolute;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: var(--surface);
-  left: 3px;
-  top: calc(50% - 9px);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 15%);
-  transition: transform var(--motion) var(--ease);
-}
-.switch[aria-checked='true']::before {
-  background: var(--signal);
-}
-.switch[aria-checked='true'] span {
-  transform: translateX(24px);
-}
 .reading-preview {
   padding: var(--section-padding);
   background: var(--surface-subtle);
@@ -119,7 +88,10 @@
   font-size: var(--text-caption);
   color: var(--secondary);
 }
+// One band across the scroll area, padding included (scroll-pad.scss); its contents keep the
+// centered column of the settings above.
 .settings-savebar {
+  --savebar-center: max(0px, (100% - var(--settings-content-width)) / 2);
   position: sticky;
   bottom: 0;
   z-index: 3;
@@ -127,7 +99,10 @@
   display: flex;
   align-items: center;
   gap: var(--p-space-3);
-  padding: var(--p-space-3) 0;
+  margin-inline: calc(-1 * var(--scroll-pad-start)) calc(-1 * var(--scroll-pad-end));
+  padding-block: var(--p-space-3);
+  padding-inline: calc(var(--scroll-pad-start) + var(--savebar-center))
+    calc(var(--scroll-pad-end) + var(--savebar-center));
   background: var(--canvas);
   border-top: 1px solid var(--line);
 }

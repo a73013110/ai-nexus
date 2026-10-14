@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'scroll-pad';
 
 // A master-detail workspace filling the dialog under its tabs: a fixed list column and the
 // reading pane, each scrolling on its own, both aligned with the dialog's 20px edge.
@@ -45,14 +46,15 @@
   gap: var(--p-space-2);
   --selection-control-padding: 0;
 }
-// Rows keep their own inset, so the list starts 8px in to line titles up with the search field.
+// Rows keep their own inset, so the list starts 8px in to line titles up with the search field
+// and ends 12px in, under the tools' end.
 .conversation-items {
   flex: 1;
   min-height: 0;
-  padding: 0 0 var(--p-space-3) var(--p-space-2);
+  padding-block: 0 var(--p-space-3);
+  @include scroll-pad.inline(var(--p-space-3), $start: var(--p-space-2));
   overflow: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
 }
 .conversation-loading {
   padding: var(--p-space-1) var(--p-space-3);
@@ -107,10 +109,10 @@
 }
 .conversation-reading {
   min-height: 0;
-  padding: var(--p-space-4) var(--p-space-5) var(--p-space-5);
+  padding-block: var(--p-space-4) var(--p-space-5);
+  @include scroll-pad.inline(var(--p-space-5));
   overflow: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
 }
 .reading-back {
   margin: 0 0 var(--p-space-2) -7px;

@@ -11,18 +11,19 @@
 | Component | `--reading-width`、`--dialog-width`、`--button-target` | 單一元件或版面的尺寸與密度 |
 
 - 新顏色先建立用途（semantic）再選 primitive。換品牌色只改 `--accent`、`--accent-soft`、`--focus`、`--signal` 的兩種主題映射。
-- 全站字級調 font primitives；單一區域密度調 component tokens；元件要讓父層調整時開 custom property，不讓父層覆寫內部。
+- 全站字級調 font primitives；單一區域密度調 component tokens。
 - 材質、受光漸層、分層陰影與狀態光暈依 [質感](materials.md) 使用；不用多色相漸層、漸層文字、彩色發光、彩色側邊線與透視網格。低層次表面共用 `--surface-subtle`。
-- 模型活動（生成光點矩陣、動態島生成狀態、`InferenceSignal`、串流游標、生成中的輸入框外框與側欄轉圈）一律單色：用 `--activity`／`--activity-rest`／`--activity-glint`，動態只改明暗（`--activity-sheen` 光帶掃過），不換色相、不發光。不用多彩漸層，是為了避免「AI 炫光」的廉價感；完成與成功仍用 `--signal`／`--success`。
+- 模型活動（生成光點矩陣、`InferenceSignal`、串流游標、生成中的外框與轉圈）一律單色：用 `--activity`／`--activity-rest`／`--activity-glint`，動態只改明暗（`--activity-sheen` 光帶掃過），不換色相、不發光。不用多彩漸層，是為了避免「AI 炫光」的廉價感；完成與成功仍用 `--signal`／`--success`。
 - 建議 chip（如對話起點）：透明底、1px `--line`、膠囊圓角，hover 用 `--hover`；不用卡片外框，也不加 chevron（chevron 只給會開啟另一個畫面的列）。
 - 選取 chip：「目前所在／已選取」與展開後取代原內容的切換鈕（如「全部功能」）用 `--surface`＋`--selected-ring` 凸起、圖示 `--accent`；hover 只用平的 `--hover`，兩者不能一樣。同組只有一個選取 chip（或底線），換選取以 `--ease-spring` 滑動（`SlidingIndicator`）。
 
 ## 資料視覺化與總覽的例外
 
-- 圖表的類別色依序用 `--series-1`～`--series-7`，熱圖用 `--heat`；兩種主題各自映射，不在元件寫色碼。共用元件：`StatTile`（頭條數字列，管理頁的摘要）、`NumberTicker`、`Sparkline`、`DonutChart`、`HeatmapCalendar`、`nxSpotlight`（見 `/design`「資料視覺化」）。
+- 圖表的類別色依序用 `--series-1`～`--series-7`，熱圖用 `--heat`；兩種主題各自映射，不在元件寫色碼。共用元件（`StatTile`、`Sparkline`、`DonutChart` 等）見 `/design`「資料視覺化」。
+- `meter`／`progress` 由 `controls.scss` 統一：軌道 `--line`、填色 `--meter-color`（預設 `--accent`），元件只改這個變數。
 - [總覽](../features/dashboard.md)與監控同樣依 [質感](materials.md)，不用傾斜與 3D。總覽在 `dashboard-page.scss` 把 `--series-*`、`--heat` 與走勢色改成 `--accent` 的明度階，所以圖表單色、只有真實狀態（warning／danger）帶色。
 - 資源表面 `--tile-*`（20px 圓角、髮絲邊框、極淡陰影，hover 只加深兩者）在 `tokens.scss` 的 `resource-surfaces`，總覽、`Panel`、`ResourceCard`、檔案卡片共用。工具列用膠囊：segment `ViewSwitch`、`Select` 的 `pill`、`--search-field-radius`。
-- 頭條數字用 `tabular-nums`、依容器寬度（`cqi`）縮放，金額超過一萬改用縮寫（`figureMoney`），完整值放在 title 與報讀文字；任何尺寸的卡片都不能溢出。
+- 頭條數字用 `tabular-nums`、依容器寬度（`cqi`）縮放，金額過萬用縮寫（`figureMoney`），完整值放 title 與報讀文字，卡片不能溢出。
 
 ## 主題
 
@@ -57,17 +58,13 @@
 ## 捲軸與彈窗外框
 
 - 捲軸樣式集中在 `frontend/src/styles/scrollbars.scss`，不用 JavaScript 捲動或覆寫滾輪；forced-colors 保留原生捲軸。
-- 主要內容與 dialog body 用 stable `scrollbar-gutter`，資料變多時寬度不跳動。
+- 有內距的捲動區（頁面、dialog body、抽屜、窗格）用 `frontend/src/styles/scroll-pad.scss` 的 mixin 設左右內距：保留 stable gutter，內容變動時不位移；gutter 寬度從結尾內距扣掉，有無捲軸左右留白都一樣。沒有內距的清單、表格與畫布用 `scrollbar-gutter: auto`。
 - Playwright 不用 headless 預設的 `--hide-scrollbars`，截圖與溢出檢查涵蓋實際捲軸。
 
 ## 樣式載入
 
 - 元件樣式放在元件旁的 `.scss`，用預設 Emulated 封裝隨元件載入；不用 `ViewEncapsulation.None` 與 `::ng-deep`。
-- `frontend/src/styles.scss` 只決定載入順序；`frontend/src/styles` 只放跨多個元件或封裝碰不到的規則：
-  - Markdown 由 `innerHTML` 產生（`markdown.scss`）。
-  - 投影內容（`ng-content`）帶宣告端的屬性：Notice、EmptyState 放 `projected.scss`，表格內容放 `data-workspace.scss`。
-  - View Transition 名稱與 pseudo-element 樣式（`motion.scss`）。
-  - 多頁共用的載入佔位 `.skeleton`（`skeleton.scss`）；減少動態時由全域開關停在靜止色塊。
+- `frontend/src/styles.scss` 只決定載入順序；`frontend/src/styles` 只放跨多個元件或封裝碰不到的規則：`innerHTML` 產生的 Markdown、帶宣告端屬性的投影內容（`projected.scss`、表格的 `data-workspace.scss`）、View Transition（`motion.scss`）與共用的 `.skeleton`。
 - driver.js 的覆寫是獨立 bundle（`angular.json` 的 `driver-tour`，`inject: false`），導覽啟動時才載入。
 - 跨元件調整：祖先狀態用 `:host(.x)`／`:host-context(.x)`；父層要改子元件內部，由子元件開 custom property 或 input（例：`--inline-title-max-width`、`Select` 的 `appearance`）；父層可以排版子元件的 host。
 - 元件樣式檔在 `anyComponentStyle` 預算（4 kB）內；超過時拆子元件或分檔，不提高預算、不搬到全域。
@@ -76,7 +73,7 @@
 ## 元件工作臺 /design
 
 - 持有 `admin` 的管理員從存取管理頁首「⋯」→「介面元件」進入；正式元件配本機範例，淺色／深色局部預覽、匯出 semantic tokens，不改偏好、不呼叫模型、不建立資料。
-- 側欄是元件索引（捲動時標示目前區段）；每個元件一個 `DesignSection`（名稱、用途、來源元件、範例舞台），各組分檔於 `frontend/src/app/features/design`。
+- 側欄是元件索引；每個元件一個 `DesignSection`，各組分檔於 `frontend/src/app/features/design`。
 - 新共用元件要放範例（含停用、錯誤、選填等狀態）。
 
 ## 改 token 或元件後的檢查

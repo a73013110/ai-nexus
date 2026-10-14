@@ -1,13 +1,14 @@
 @use 'breakpoints' as bp;
+@use 'scroll-pad';
 
 .feature-main {
   position: relative;
-  padding: var(--p-space-6) var(--workspace-gutter) var(--p-space-8);
+  padding-block: var(--p-space-6) var(--p-space-8);
+  @include scroll-pad.inline(var(--workspace-gutter), $expose: true);
   overflow: auto;
   min-width: 0;
   min-height: 0;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable both-edges;
 }
 .feature-header {
   display: flex;
@@ -45,12 +46,9 @@
   margin: 0;
   line-height: 1.65;
 }
-// The compact page reserves the scrollbar on one side and takes it out of the end padding
-// (styles/scrollbars.scss), so the content sits centered with or without a scrollbar.
 :host(.feature-layout-compact) .feature-main {
-  padding: var(--p-space-5) var(--p-space-6);
-  padding-inline-end: max(0px, var(--p-space-6) - var(--scrollbar-gutter));
-  scrollbar-gutter: stable;
+  padding-block: var(--p-space-5);
+  @include scroll-pad.inline(var(--p-space-6), $expose: true);
 }
 :host(.feature-layout-compact) .feature-header {
   gap: var(--p-space-4);
@@ -76,7 +74,8 @@
 // description repeats what the content already says, so the content starts higher.
 @include bp.below(phone) {
   :host(.feature-layout-compact) .feature-main {
-    padding: var(--p-space-3) var(--p-space-3) var(--p-space-4);
+    padding-block: var(--p-space-3) var(--p-space-4);
+    @include scroll-pad.inline(var(--p-space-3), $expose: true);
   }
   .feature-header,
   :host(.feature-layout-compact) .feature-header {
@@ -107,8 +106,8 @@
     position: sticky;
     top: 0;
     z-index: 5;
-    margin-inline: calc(-1 * var(--feature-gutter)) calc(-1 * var(--feature-gutter-end));
-    padding: var(--p-space-4) var(--feature-gutter-end) var(--p-space-3) var(--feature-gutter);
+    margin-inline: calc(-1 * var(--scroll-pad-start)) calc(-1 * var(--scroll-pad-end));
+    padding: var(--p-space-4) var(--scroll-pad-end) var(--p-space-3) var(--scroll-pad-start);
     border-bottom: 1px solid var(--material-line);
     background-color: var(--material-thick);
     backdrop-filter: var(--material-filter);
@@ -116,12 +115,4 @@
     animation-timeline: scroll(nearest block);
     animation-range: 0 var(--p-space-6);
   }
-}
-:host(.feature-layout-sticky) {
-  --feature-gutter: var(--workspace-gutter);
-  --feature-gutter-end: var(--feature-gutter);
-}
-:host(.feature-layout-sticky.feature-layout-compact) {
-  --feature-gutter: var(--p-space-6);
-  --feature-gutter-end: max(0px, var(--p-space-6) - var(--scrollbar-gutter));
 }
