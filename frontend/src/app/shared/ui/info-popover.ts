@@ -116,7 +116,9 @@ export class InfoPopover {
       this.panel().nativeElement.focus();
     }
   }
+  /** Escape closes this panel only: cancelling the key keeps an enclosing dialog open. */
   close(event?: Event) {
+    event?.preventDefault();
     event?.stopPropagation();
     this.popover.hide();
     this.opener?.focus();
