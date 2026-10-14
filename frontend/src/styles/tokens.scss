@@ -38,6 +38,8 @@
   --hover: var(--p-stone-200);
   --ink: var(--p-ink-900);
   --secondary: var(--p-stone-600);
+  // Text colors keep 4.5:1 on the tints rows and badges sit on (--hover, --accent-soft), not only
+  // on --surface; check both themes when changing a primitive.
   --muted: var(--p-stone-500);
   --line: var(--p-stone-300);
   --accent: var(--p-navy-700);
@@ -94,13 +96,13 @@
   --p-stone-100: #f1f2ee;
   --p-stone-200: #e8ebe6;
   --p-stone-300: #dce0da;
-  --p-stone-500: #65706a;
+  --p-stone-500: #5f6964;
   --p-stone-600: #59615f;
   --p-ink-900: #242a2d;
   --p-navy-700: #273f51;
   --p-blue-100: #e3eaf0;
   --p-blue-600: #3b6b8d;
-  --p-teal-700: #087e83;
+  --p-teal-700: #077479;
   --p-red-700: #97462c;
   --p-orange-50: #fff4e9;
   --p-amber-700: #885900;

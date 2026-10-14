@@ -43,16 +43,13 @@ export class AccountMenu {
   readonly error = signal('');
   readonly items = computed(() => [
     { id: 'settings', label: '設定', icon: 'settings' },
-    ...(this.session.auth.session()?.testing
-      ? [{ id: 'restore', label: '返回管理者', icon: 'shield' }]
-      : []),
-    ...(!this.session.auth.session()?.testing &&
-    (this.session.auth.session()?.methods?.length ?? 0) > 1
+    ...(this.session.testing() ? [{ id: 'restore', label: '返回管理者', icon: 'shield' }] : []),
+    ...(!this.session.testing() && (this.session.auth.session()?.methods?.length ?? 0) > 1
       ? [{ id: 'login', label: '切換登入方式', icon: 'lock' }]
       : []),
     ...(this.session.auth.session()?.mode === 'Ldap' ||
     this.session.auth.session()?.method === 'local' ||
-    this.session.auth.session()?.testing
+    this.session.testing()
       ? [{ id: 'logout', label: '登出工作區', icon: 'logout' }]
       : []),
   ]);

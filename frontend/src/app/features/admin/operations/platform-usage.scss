@@ -1,18 +1,68 @@
-:host {
-  display: block;
+@use 'breakpoints' as bp;
+
+.usage-period {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--p-space-1) var(--p-space-2);
+  font-variant-numeric: tabular-nums;
+  strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  > :not(:last-child)::after {
+    content: '·';
+    margin-inline-start: var(--p-space-2);
+    color: var(--muted);
+    font-weight: 400;
+  }
 }
-.admin-usage-section {
-  margin-top: var(--section-gap);
+.usage-models {
+  --table-min-width: 46rem;
 }
-.admin-usage-section h2 {
-  font-size: var(--text-heading);
+.usage-count-column {
+  width: 6rem;
 }
-.admin-service-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
-  gap: 12px;
+.usage-token-column {
+  width: 8.5rem;
 }
-.admin-service-card p {
-  font-size: var(--text-caption);
+.usage-time-column {
+  width: 8rem;
+}
+.usage-share-column {
+  width: 11rem;
+}
+.usage-service-column {
+  width: 8rem;
+}
+.usage-status-column {
+  width: 6.5rem;
+}
+// The meter and its percentage stay inline, so a card still reads 「占比 ▬▬ 81.3%」 after its label.
+.usage-share {
+  white-space: nowrap;
+  meter {
+    width: calc(100% - 4rem);
+    height: 0.375rem;
+    vertical-align: middle;
+  }
+  .ui-table-numeric {
+    display: inline-block;
+    min-width: 3.5rem;
+    text-align: end;
+  }
+}
+.usage-rate {
+  margin-inline-start: var(--p-space-2);
   color: var(--secondary);
+  font-size: var(--p-font-xs);
+}
+.usage-notice {
+  color: var(--secondary);
+  overflow-wrap: anywhere;
+}
+@include bp.below(narrow) {
+  .usage-share meter {
+    width: 8rem;
+  }
 }

@@ -2,21 +2,21 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FloatingToolbar } from './floating-toolbar';
+import { IdleChrome } from './idle-chrome';
 
 @Component({
   selector: 'nx-floating-toolbar-host',
-  imports: [FloatingToolbar],
-  template: `<div class="region" #region>
-    <nx-floating-toolbar label="檢視工具" [region]="region" [pinned]="pinned()">
-      <button type="button" class="tool">放大</button>
-      <button type="button" class="menu" [attr.aria-expanded]="expanded()">縮放</button>
-    </nx-floating-toolbar>
-    <p class="content" tabindex="-1">內容</p>
-  </div>`,
+  imports: [FloatingToolbar, IdleChrome],
+  template: `<div class="region" nxIdleChrome>
+      <nx-floating-toolbar label="檢視工具" [pinned]="pinned()">
+        <button type="button" class="tool">放大</button>
+      </nx-floating-toolbar>
+      <p class="content">內容</p>
+    </div>
+    <nx-floating-toolbar class="unscoped" label="無範圍" />`,
 })
 class Host {
   readonly pinned = signal(false);
-  readonly expanded = signal(false);
 }
 
 function setup() {
@@ -25,16 +25,16 @@ function setup() {
   fixture.detectChanges();
   const root = fixture.nativeElement as HTMLElement;
   const toolbar = root.querySelector('nx-floating-toolbar')!;
-  const hidden = () => {
+  const state = (element: Element = toolbar) => {
     fixture.detectChanges();
-    return toolbar.classList.contains('is-hidden');
+    return element.getAttribute('data-chrome');
   };
   const idle = (ms = 2000) => {
     fixture.detectChanges();
     vi.advanceTimersByTime(ms);
-    return hidden();
+    return state();
   };
-  return { fixture, host: fixture.componentInstance, root, toolbar, hidden, idle };
+  return { fixture, host: fixture.componentInstance, root, toolbar, state, idle };
 }
 
 describe('FloatingToolbar', () => {
@@ -45,62 +45,27 @@ describe('FloatingToolbar', () => {
     document.body.replaceChildren();
   });
 
-  it('names its group, shows on open and fades after the idle delay', () => {
-    const { toolbar, hidden, idle } = setup();
+  it('names its group and follows its IdleChrome scope', () => {
+    const { toolbar, state, idle } = setup();
     expect(toolbar.querySelector('[role="group"]')?.getAttribute('aria-label')).toBe('檢視工具');
-    expect(hidden()).toBe(false);
-    expect(idle(1999)).toBe(false);
-    expect(idle(1)).toBe(true);
+    expect(state()).toBe('shown');
+    expect(idle()).toBe('hidden');
   });
 
-  it('comes back when the pointer moves or a touch lands in the region, and restarts the delay', () => {
-    const { root, idle, hidden } = setup();
-    expect(idle()).toBe(true);
-    const content = root.querySelector('.content')!;
-    content.dispatchEvent(new Event('pointermove', { bubbles: true }));
-    expect(hidden()).toBe(false);
-    expect(idle(1500)).toBe(false);
-    content.dispatchEvent(new Event('pointermove', { bubbles: true }));
-    expect(idle(1500)).toBe(false);
-    expect(idle(500)).toBe(true);
-    content.dispatchEvent(new Event('pointerdown', { bubbles: true }));
-    expect(hidden()).toBe(false);
-  });
-
-  it('stays while focus is inside and fades once it leaves', () => {
-    const { root, idle } = setup();
-    root.querySelector<HTMLButtonElement>('.tool')!.focus();
-    expect(idle(6000)).toBe(false);
-    root.querySelector<HTMLElement>('.content')!.focus();
-    expect(idle()).toBe(true);
-  });
-
-  it('reveals when keyboard focus enters the region', () => {
-    const { root, idle, hidden } = setup();
-    expect(idle()).toBe(true);
-    root.querySelector<HTMLElement>('.content')!.focus();
-    expect(hidden()).toBe(false);
-  });
-
-  it('stays while a control is expanded or the host pins it', () => {
-    const { host, idle, hidden } = setup();
-    host.expanded.set(true);
-    expect(idle(6000)).toBe(false);
-    host.expanded.set(false);
-    expect(idle()).toBe(true);
+  it('stays while the host pins it and fades once unpinned', () => {
+    const { host, state, idle } = setup();
+    expect(idle()).toBe('hidden');
     host.pinned.set(true);
-    expect(hidden()).toBe(false);
-    expect(idle(6000)).toBe(false);
+    expect(state()).toBe('shown');
+    expect(idle(6000)).toBe('shown');
     host.pinned.set(false);
-    expect(idle()).toBe(true);
+    expect(idle()).toBe('hidden');
   });
 
-  it('stays while the pointer rests on the bar', () => {
-    const { toolbar, idle } = setup();
-    const bar = toolbar.querySelector('.floating-toolbar')!;
-    bar.dispatchEvent(new Event('pointerenter'));
-    expect(idle(6000)).toBe(false);
-    bar.dispatchEvent(new Event('pointerleave'));
-    expect(idle()).toBe(true);
+  it('stays visible without a scope', () => {
+    const { root, state, idle } = setup();
+    const unscoped = root.querySelector('.unscoped')!;
+    idle(6000);
+    expect(state(unscoped)).toBeNull();
   });
 });

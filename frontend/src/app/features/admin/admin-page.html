@@ -1,6 +1,7 @@
 <nx-feature-page
   [title]="session.featureName('admin')"
   description="管理公司身分、功能授權與 AI 使用政策。"
+  layoutMode="data"
 >
   @if (pageTools().length) {
     <div page-actions class="page-actions">
@@ -23,22 +24,23 @@
       [value]="tab()"
       (valueChange)="selectTab($event)"
     />
-    <div class="admin-tab-panel" [nxViewMotion]="tab()">
+    <div class="admin-tab-panel ui-table-fill" [nxViewMotion]="tab()">
       @switch (tab()) {
         @case ('users') {
           <nx-admin-users-tab
+            class="ui-table-fill"
             [selectedId]="inspected()?.id ?? null"
             (inspect)="inspected.set($event)"
           />
         }
         @case ('roles') {
-          <nx-admin-roles-tab (edit)="editor.open('role', $event)" />
+          <nx-admin-roles-tab class="ui-table-fill" (edit)="editor.open('role', $event)" />
         }
         @case ('groups') {
-          <nx-admin-groups-tab (edit)="editor.open('group', $event)" />
+          <nx-admin-groups-tab class="ui-table-fill" (edit)="editor.open('group', $event)" />
         }
         @case ('features') {
-          <nx-admin-features-tab (edit)="editor.open('feature', $event)" />
+          <nx-admin-features-tab class="ui-table-fill" (edit)="editor.open('feature', $event)" />
         }
       }
     </div>

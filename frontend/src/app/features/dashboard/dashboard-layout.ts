@@ -9,10 +9,11 @@ import {
 } from './dashboard-widgets';
 
 /**
- * Tiles that no longer exist anywhere (the administrator-only sections). Saved arrangements may
- * still name them; they are dropped on read so they neither show nor linger.
+ * Tiles that no longer exist anywhere (the administrator-only sections and the service status
+ * tile, which belong to the administration pages). Saved arrangements may still name them; they
+ * are dropped on read so they neither show nor linger.
  */
-const RETIRED = new Set(['section:monitoring', 'section:platform']);
+const RETIRED = new Set(['section:monitoring', 'section:platform', 'services']);
 
 /** A tile's place and shape as the viewer arranged it. */
 export interface TileState {

@@ -119,15 +119,56 @@ select:where(.ui-input) {
   font: inherit;
   color: inherit;
 }
+// Figures line up at the end in tabular numerals, so digits of the same place stack; give the
+// column's header the class too. A card (`stacked`) reads them after their label, from the start.
 .ui-table-numeric {
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
+.ui-table-scroll :is(td, th).ui-table-numeric {
+  text-align: end;
+}
+.ui-table-numeric .ui-table-sort {
+  justify-content: flex-end;
+}
+// Row states, the one definition for every table (docs/frontend/data-workspace.md): a clickable row
+// (`nxTableRow`) tints on hover; the row whose detail or dialog is open (`is-selected`) takes the
+// accent tint; keyboard focus on the row's action draws one ring around the row instead of a
+// second one around the action. A mouse click leaves no ring, and no state changes the layout.
+// The ring follows the row's corners, which match the frame where the last row meets it.
 .ui-table-row {
   cursor: pointer;
 }
-.ui-table-row:focus-within {
+.ui-table-row:hover {
+  background: var(--table-row-hover, color-mix(in srgb, var(--ink) 4%, var(--surface)));
+}
+.ui-table-row.is-selected {
+  background: var(--accent-soft);
+}
+// `is-focus-returned`: focus came back from a dialog the row was clicked open from (DataTableRow).
+.ui-table-row:not(.is-focus-returned):has([data-row-action]:focus-visible) {
   outline: 2px solid var(--focus);
   outline-offset: -2px;
+}
+.ui-table-row [data-row-action]:focus-visible {
+  outline: none;
+}
+// Forced colors drop the tint, so the selected row keeps a thin inset system-color line instead.
+@media (forced-colors: active) {
+  .ui-table-row.is-selected {
+    outline: 1px solid Highlight;
+    outline-offset: -3px;
+  }
+}
+// With nothing under the scroll region (no footer, no state), the last row sits in the frame's
+// rounded bottom corners; its tint and ring take the frame's inner radius instead of being cut off.
+.ui-table-frame
+  > .ui-table-scroll:last-child
+  > table:last-child
+  > tbody:last-of-type
+  > tr:last-child {
+  border-end-start-radius: calc(var(--table-radius) - 1px);
+  border-end-end-radius: calc(var(--table-radius) - 1px);
 }
 .ui-table-pagination {
   display: flex;
@@ -148,13 +189,16 @@ select:where(.ui-input) {
   font-variant-numeric: tabular-nums;
 }
 .ui-table-scroll {
-  flex: 1;
+  flex: 0 1 auto;
   min-height: 0;
   position: relative;
   overflow: auto;
+  // Only for a table outside a data page (a panel or dialog); a data page caps it by layout.
   max-height: var(--table-max-height, none);
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  // No reserved gutter: the header and row lines reach the frame, and a scrollbar appears only
+  // when the rows overflow (data changes, not interaction, so the columns do not shift under use).
+  scrollbar-gutter: auto;
   scroll-padding-block-start: 2.5rem;
 }
 .ui-table-scroll > table {
@@ -184,17 +228,8 @@ select:where(.ui-input) {
 .ui-table-scroll tbody th {
   font-weight: 400;
 }
-.ui-table-scroll tr:last-child td {
+.ui-table-scroll tbody:last-of-type > tr:last-child > :is(td, th) {
   border-bottom: 0;
-}
-.ui-table-scroll tbody tr:hover {
-  background: var(--surface-subtle);
-}
-.ui-table-scroll tbody tr.is-selected {
-  background: var(--accent-soft);
-}
-.ui-table-scroll tbody tr.is-selected td:first-child {
-  box-shadow: inset 3px 0 var(--accent);
 }
 // `<nx-data-table stacked>`: one card per row at `narrow` and below, so a phone never scrolls a
 // table sideways. The header stays for assistive technology; cells name themselves by `data-label`.
@@ -204,7 +239,6 @@ select:where(.ui-input) {
 @include bp.below(narrow) {
   .ui-table-stack .ui-table-scroll {
     max-height: none;
-    scrollbar-gutter: auto;
     > table,
     tbody,
     tbody :is(td, th) {
@@ -252,17 +286,14 @@ select:where(.ui-input) {
     .ui-table-row .ui-table-link {
       min-height: 1.5rem;
     }
+    tbody .ui-table-numeric {
+      text-align: start;
+    }
     td[data-label]::before {
       content: attr(data-label);
       margin-inline-end: var(--p-space-2);
       color: var(--secondary);
       font-size: var(--p-font-xs);
-    }
-    tbody tr.is-selected {
-      box-shadow: inset 3px 0 var(--accent);
-      td:first-child {
-        box-shadow: none;
-      }
     }
   }
 }

@@ -7,7 +7,6 @@ import { MixWidget } from './widgets/mix-widget';
 import { OverviewWidget } from './widgets/overview-widget';
 import { RecentWidget } from './widgets/recent-widget';
 import { SectionWidget } from './widgets/section-widget';
-import { ServicesWidget } from './widgets/services-widget';
 import { SpendWidget } from './widgets/spend-widget';
 import { TokensWidget } from './widgets/tokens-widget';
 import { UsersWidget } from './widgets/users-widget';
@@ -60,14 +59,13 @@ const ORDER: readonly string[] = [
   'mix',
   'section:notifications',
   'tokens',
+  'section:web-search',
   'section:files',
   'section:projects',
   'section:artifacts',
   'section:shared',
   'section:quality',
   'section:repositories',
-  'section:web-search',
-  'services',
 ];
 
 /** Default sizes chosen so the default order fills whole rows. */
@@ -76,8 +74,8 @@ const SECTION_SIZES: Record<string, TileSize> = {
   projects: 's',
   artifacts: 's',
   shared: 's',
-  quality: 's',
-  repositories: 's',
+  quality: 'l',
+  repositories: 'l',
   'web-search': 'l',
 };
 
@@ -142,14 +140,6 @@ export function dashboardWidgets(context: WidgetContext): DashboardWidget[] {
       icon: 'database',
       size: 'l',
       component: TokensWidget,
-    },
-    {
-      id: 'services',
-      title: '服務狀態',
-      description: '檢索方式、網路搜尋、Gitea 與模型服務',
-      icon: 'shield',
-      size: 'l',
-      component: ServicesWidget,
     },
     ...context.sections.map((section): DashboardWidget => ({
       id: 'section:' + section.id,

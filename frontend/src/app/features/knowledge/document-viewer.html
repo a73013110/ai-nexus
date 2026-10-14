@@ -1,4 +1,4 @@
-<header class="dialog-bar" [class.viewer-bar-page]="!embedded()">
+<header class="dialog-bar" [class.viewer-bar-page]="!embedded()" [nxIdleChromePart]="maximized()">
   <div class="dialog-title">
     @if (embedded()) {
       <h2 [title]="document()?.fileName || ''">{{ document()?.fileName || '檔案預覽' }}</h2>
@@ -26,14 +26,16 @@
       title="在新分頁開啟"
       ><nx-icon name="external"
     /></a>
-    <button
-      class="icon-button"
-      [attr.aria-label]="expanded() ? '還原預覽視窗' : '放大預覽視窗'"
-      [title]="expanded() ? '還原視窗' : '放大視窗'"
-      (click)="expandRequested.emit()"
-    >
-      <nx-icon [name]="expanded() ? 'minimize' : 'maximize'" />
-    </button>
+    @if (dialog) {
+      <button
+        class="icon-button"
+        [attr.aria-label]="maximized() ? '還原預覽視窗' : '放大預覽視窗'"
+        [title]="maximized() ? '還原視窗' : '放大視窗'"
+        (click)="dialog.maximized.set(!maximized())"
+      >
+        <nx-icon [name]="maximized() ? 'minimize' : 'maximize'" />
+      </button>
+    }
     <button
       autofocus
       class="icon-button"
@@ -83,9 +85,9 @@
 @if (error() || renderError()) {
   <nx-notice tone="danger" [message]="error() || renderError()" />
 }
-<div class="viewer-body" #body>
+<div class="viewer-body">
   @if (hasTools()) {
-    <nx-floating-toolbar label="檢視工具" [region]="body" [pinned]="!!query()">
+    <nx-floating-toolbar label="檢視工具" [pinned]="!!query()">
       @if (isPdf() || isImage() || isRich()) {
         <nx-view-switch
           label="文件檢視方式"

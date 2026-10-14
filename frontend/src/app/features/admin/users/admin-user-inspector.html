@@ -4,7 +4,6 @@
   #dialog
   class="platform-dialog admin-inspector"
   [class.inspector-wide]="store.tab() === 'conversations'"
-  [nxDialogView]="store.tab()"
   (cancel)="cancel($event)"
   (close)="closing()"
 >
@@ -35,7 +34,7 @@
   <nx-tabs
     #sections
     label="使用者管理分類"
-    [items]="tabs"
+    [items]="tabs()"
     [value]="store.tab()"
     (valueChange)="selectTab($event)"
   />

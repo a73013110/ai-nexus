@@ -1,9 +1,12 @@
-import { Injectable, effect, inject, signal, untracked } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { AuthService } from './auth-service';
 import { NexusApi } from '../api/nexus-api';
 import type { MeDto } from '../api/schema';
 import { UserSettingsService } from '../preferences/user-settings';
 import { FEATURE_NAMES } from './feature-names';
+
+/** Shown where a management write is refused because the account is testing another identity. */
+export const TESTING_IDENTITY_NOTE = '測試身分期間不能修改管理設定';
 
 /** Account context shared by feature pages; it never loads conversation history. */
 @Injectable({ providedIn: 'root' })
@@ -13,6 +16,10 @@ export class WorkspaceSession {
   private readonly api = inject(NexusApi);
   readonly settings = inject(UserSettingsService);
   private generation = -1;
+  /** An administrator is acting as another identity; management writes are refused meanwhile. */
+  readonly testing = computed(() => !!this.auth.session()?.testing);
+  /** {@link TESTING_IDENTITY_NOTE} while testing, otherwise empty (for a save bar's `note`). */
+  readonly testingNote = computed(() => (this.testing() ? TESTING_IDENTITY_NOTE : ''));
   constructor() {
     effect(() => {
       const generation = this.auth.generation();

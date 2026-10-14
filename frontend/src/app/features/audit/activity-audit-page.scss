@@ -1,7 +1,6 @@
 @use 'breakpoints' as bp;
 
 .activity-audit-table {
-  --table-max-height: min(60dvh, 42rem);
   margin-top: var(--section-gap);
 }
 .activity-audit-table table {
@@ -93,9 +92,6 @@
 }
 .audit-feature-change small {
   color: var(--secondary);
-}
-.audit-row {
-  align-items: flex-start;
 }
 .audit-row time {
   min-width: 10rem;

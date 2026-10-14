@@ -1,175 +1,291 @@
-@if (loading()) {
-  <p role="status">正在載入知識檢索設定…</p>
-}
+<div class="page-toolbar">
+  <p class="form-note">
+    檢索只使用「使用中」索引。換向量模型或維度時會建立新索引，覆蓋率達 100%
+    且文件全部就緒後才能啟用。
+  </p>
+  <div class="page-actions">
+    <button
+      type="button"
+      class="icon-button"
+      aria-label="重新整理檢索狀態"
+      title="重新整理檢索狀態"
+      [disabled]="profilesRead.refreshing()"
+      (click)="load()"
+    >
+      <nx-icon [name]="profilesRead.refreshing() ? 'loading' : 'refresh'" />
+    </button>
+  </div>
+</div>
 @if (error()) {
   <nx-notice [message]="error()"
     ><button notice-actions type="button" (click)="load()">重新載入</button>
   </nx-notice>
 }
-<section nxCard>
-  <div class="page-toolbar">
-    <h2>檢索索引</h2>
-    <button type="button" class="secondary-button" [disabled]="working()" (click)="load()">
-      重新整理
+<nx-data-table
+  class="ops-table retrieval-profiles"
+  label="檢索索引"
+  [busy]="profilesRead.refreshing()"
+  [stacked]="true"
+>
+  <div table-toolbar class="ui-table-toolbar">
+    <h2>
+      檢索索引 <span class="ui-count-label">{{ profiles().length }} 個</span>
+    </h2>
+    <span class="ops-table-note">重建、啟用與清除會先確認，並留下管理稽核</span>
+  </div>
+  <table>
+    <colgroup>
+      <col class="retrieval-name-column" />
+      <col class="retrieval-status-column" />
+      <col />
+      <col class="retrieval-time-column" />
+      <col class="retrieval-action-column" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col">向量模型</th>
+        <th scope="col">狀態</th>
+        <th scope="col">向量覆蓋率</th>
+        <th scope="col">時間</th>
+        <th scope="col"><span class="sr-only">操作</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (profile of profiles(); track profile.id) {
+        <tr class="retrieval-profile">
+          <th scope="row">
+            <strong class="ui-truncate" [title]="profile.model">{{ profile.model }}</strong
+            ><small class="ui-truncate" [title]="profile.key"
+              >{{ profile.provider }} · {{ profile.dimensions }} 維</small
+            >
+          </th>
+          <td data-stack="end">
+            <nx-status-badge [tone]="status(profile).tone">{{
+              status(profile).label
+            }}</nx-status-badge>
+          </td>
+          <td>
+            <div class="retrieval-coverage">
+              <progress
+                [attr.aria-label]="profile.model + ' 向量覆蓋率'"
+                [value]="profile.coverage.ratio"
+                max="1"
+              ></progress
+              ><span class="ui-table-numeric">{{ coverage(profile) }}</span>
+            </div>
+            <small
+              >{{ format(profile.coverage.completedChunks) }} /
+              {{ format(profile.coverage.totalChunks) }} 個片段 · 待處理文件
+              {{ format(profile.coverage.pendingDocuments) }}</small
+            >
+            @if (profile.job; as job) {
+              <nx-job-progress [job]="job" />
+            }
+          </td>
+          <td class="retrieval-time">
+            <span [title]="date(profile.createdAt)">建立 {{ day(profile.createdAt) }}</span>
+            @if (profile.retiredAt) {
+              <small [title]="date(profile.retiredAt)">退役 {{ day(profile.retiredAt) }}</small>
+            } @else if (profile.activatedAt) {
+              <small [title]="date(profile.activatedAt)">啟用 {{ day(profile.activatedAt) }}</small>
+            }
+          </td>
+          <td>
+            <div class="retrieval-actions">
+              @switch (profile.status) {
+                @case ('building') {
+                  <button
+                    type="button"
+                    class="primary-button"
+                    [disabled]="working() || session.testing() || !profile.coverage.complete"
+                    [title]="
+                      profile.coverage.complete ? '' : '覆蓋率達 100% 且文件全部就緒後才能啟用'
+                    "
+                    (click)="operate(profile, 'activate')"
+                  >
+                    啟用索引
+                  </button>
+                }
+                @case ('retired') {
+                  <button
+                    type="button"
+                    class="danger-button"
+                    [disabled]="
+                      working() || session.testing() || profile.coverage.completedChunks === 0
+                    "
+                    (click)="operate(profile, 'clear')"
+                  >
+                    清除退役向量
+                  </button>
+                }
+              }
+              @if (profile.status !== 'retired') {
+                <button
+                  type="button"
+                  class="secondary-button"
+                  [disabled]="working() || session.testing() || jobActive(profile)"
+                  (click)="operate(profile, 'rebuild')"
+                >
+                  開始重建
+                </button>
+              }
+            </div>
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  @if (!profiles().length) {
+    <nx-empty-state table-state class="ui-table-state">
+      @if (profilesRead.loading()) {
+        <nx-icon name="loading" />
+        <p>正在讀取檢索索引</p>
+      } @else {
+        <nx-icon name="database" />
+        <p>尚未建立檢索索引；第一次處理知識庫文件時會建立。</p>
+      }
+    </nx-empty-state>
+  }
+</nx-data-table>
+<nx-data-table
+  class="ops-table retrieval-capabilities"
+  label="服務能力"
+  [busy]="capabilitiesRead.refreshing() || probing()"
+  [stacked]="true"
+>
+  <div table-toolbar class="ui-table-toolbar">
+    <h2>服務能力</h2>
+    <span class="ops-table-note retrieval-probe-note"
+      >驗證只傳送合成資料，會計入檢索模型呼叫配額</span
+    >
+    <button
+      type="button"
+      class="secondary-button"
+      [disabled]="probing() || session.testing() || !capabilities().length"
+      (click)="probe()"
+    >
+      <nx-icon [name]="probing() ? 'loading' : 'check'" />{{
+        probing() ? '正在驗證…' : '驗證檢索模型'
+      }}
     </button>
   </div>
-  <p class="form-note">覆蓋率 100% 且全部文件就緒後才能啟用。重新上傳的資料會建立新索引。</p>
-  <div class="resource-list">
-    @for (profile of profiles(); track profile.id) {
-      <div class="resource-row retrieval-profile">
-        <div class="resource-summary">
-          <strong>{{ profile.model }} · {{ profile.dimensions }} 維</strong>
-          <small>{{ statuses[profile.status] || profile.status }} · {{ profile.provider }}</small>
-          <small
-            >建立 {{ date(profile.createdAt)
-            }}{{ profile.activatedAt ? ' · 啟用 ' + date(profile.activatedAt) : '' }}</small
+  <table>
+    <colgroup>
+      <col class="retrieval-name-column" />
+      <col class="retrieval-status-column" />
+      <col />
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col">項目</th>
+        <th scope="col">狀態</th>
+        <th scope="col">說明</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (item of capabilities(); track item.key) {
+        <tr>
+          <th scope="row">
+            <strong class="ui-truncate" [title]="item.name">{{ item.name }}</strong>
+          </th>
+          <td data-stack="end">
+            <nx-status-badge [tone]="item.tone">{{ item.status }}</nx-status-badge>
+          </td>
+          <td class="retrieval-detail">
+            {{ item.detail || '—' }}
+            @if (item.endpoint) {
+              <small class="ui-truncate" [title]="item.endpoint">{{ item.endpoint }}</small>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  @if (!capabilities().length) {
+    <nx-empty-state table-state class="ui-table-state">
+      <p>{{ capabilitiesRead.loading() ? '正在讀取服務能力' : '無法讀取服務能力。' }}</p>
+    </nx-empty-state>
+  }
+</nx-data-table>
+<section nxCard class="retrieval-bench" aria-labelledby="retrieval-bench-title">
+  <header class="ui-section-header">
+    <h2 id="retrieval-bench-title">檢索測試台</h2>
+    <span class="ops-table-note">以使用中索引搜尋你有權限的知識庫</span>
+  </header>
+  <form class="form-sections" [formGroup]="form" (submit)="search($event)">
+    <section class="form-section" role="group" aria-labelledby="retrieval-bench-collections">
+      <header class="form-section-head">
+        <h3 id="retrieval-bench-collections">知識庫</h3>
+        <p class="form-note">最多 {{ limit }} 個，已選 {{ selected().length }} 個。</p>
+      </header>
+      <div class="form-section-body retrieval-collections">
+        @for (collection of collections(); track collection.resource.id) {
+          <nx-checkbox
+            [label]="collection.resource.name"
+            [checked]="selected().includes(collection.resource.id)"
+            [disabled]="!selected().includes(collection.resource.id) && selected().length >= limit"
+            (checkedChange)="select(collection.resource.id, $event)"
+          />
+        } @empty {
+          <p class="form-note">目前沒有可存取的知識庫。</p>
+        }
+      </div>
+    </section>
+    <section class="form-section" role="group" aria-labelledby="retrieval-bench-mode">
+      <header class="form-section-head">
+        <h3 id="retrieval-bench-mode">檢索方式</h3>
+        <p class="form-note">混合檢索合併向量與全文排名。</p>
+      </header>
+      <div class="form-section-body">
+        <label class="retrieval-mode"
+          >檢索模式<nx-select
+            label="檢索模式"
+            [options]="modes"
+            [value]="mode()"
+            (valueChange)="mode.set($event)"
+        /></label>
+        <nx-checkbox
+          label="使用重排模型"
+          description="以重排模型重新排序召回結果，會多一次模型呼叫。"
+          [checked]="rerank()"
+          (checkedChange)="rerank.set($event)"
+        />
+      </div>
+    </section>
+    <section class="form-section" role="group" aria-labelledby="retrieval-bench-query">
+      <header class="form-section-head">
+        <h3 id="retrieval-bench-query">查詢</h3>
+        <p class="form-note">最多 2,000 字。</p>
+      </header>
+      <div class="form-section-body">
+        <label
+          >查詢內容<textarea
+            nxField
+            formControlName="query"
+            aria-label="管理端查詢內容"
+            rows="3"
+            maxlength="2000"
+            required
+          ></textarea>
+        </label>
+        <div class="retrieval-submit">
+          <button
+            type="submit"
+            class="primary-button"
+            [disabled]="form.invalid || !selected().length || searching()"
           >
-          <label class="retrieval-coverage"
-            >向量覆蓋率 {{ profile.coverage.completedChunks }} /
-            {{ profile.coverage.totalChunks }} · 待處理文件 {{ profile.coverage.pendingDocuments }}
-            <progress
-              [attr.aria-label]="profile.model + '向量覆蓋率'"
-              [value]="profile.coverage.ratio"
-              max="1"
-            ></progress>
-          </label>
-          @if (profile.job; as job) {
-            <nx-job-progress [job]="job" />
-          }
-        </div>
-        <div class="page-actions">
-          @if (profile.status !== 'retired') {
-            <button
-              type="button"
-              class="secondary-button"
-              [disabled]="
-                working() ||
-                !!session.auth.session()?.testing ||
-                profile.job?.status === 'queued' ||
-                profile.job?.status === 'running'
-              "
-              (click)="operate(profile, 'rebuild')"
-            >
-              開始重建
-            </button>
-          }
-          @if (profile.status === 'building') {
-            <button
-              type="button"
-              class="primary-button"
-              [disabled]="
-                working() || !profile.coverage.complete || !!session.auth.session()?.testing
-              "
-              (click)="operate(profile, 'activate')"
-            >
-              啟用索引
-            </button>
-          }
-          @if (profile.status === 'retired') {
-            <button
-              type="button"
-              class="secondary-button"
-              [disabled]="
-                working() ||
-                profile.coverage.completedChunks === 0 ||
-                !!session.auth.session()?.testing
-              "
-              (click)="operate(profile, 'clear')"
-            >
-              清除退役向量
-            </button>
-          }
+            <nx-icon [name]="searching() ? 'loading' : 'search'" />{{
+              searching() ? '正在檢索…' : '測試檢索'
+            }}
+          </button>
         </div>
       </div>
-    }
-  </div>
-</section>
-@if (capabilities(); as capabilities) {
-  <section nxCard>
-    <div class="page-toolbar">
-      <h2>服務能力</h2>
-      <button
-        type="button"
-        class="secondary-button"
-        [disabled]="working() || !!session.auth.session()?.testing"
-        (click)="probe()"
-      >
-        {{ working() ? '正在驗證…' : '驗證檢索模型' }}
-      </button>
-    </div>
-    <p class="form-note">模型驗證只傳送合成資料，會計入檢索模型呼叫配額。</p>
-    <div class="usage-grid">
-      <div nxCard class="usage-stat-card">
-        <span>SQL 原生向量</span
-        ><strong>{{
-          capabilities.sql?.nativeVector
-            ? '可用'
-            : capabilities.testStore
-              ? 'SQLite 測試儲存'
-              : '無法使用'
-        }}</strong>
-      </div>
-      <div nxCard class="usage-stat-card">
-        <span>全文／1028 斷詞器／索引</span
-        ><strong
-          >{{ capabilities.sql?.fullTextInstalled ? '可用' : '未安裝' }} /
-          {{ capabilities.sql?.traditionalChineseWordBreaker ? '可用' : '缺少' }} /
-          {{ capabilities.sql?.fullTextIndex ? '已建立' : '未建立' }}</strong
-        >
-      </div>
-      <div nxCard class="usage-stat-card">
-        <span>向量模型 {{ capabilities.embedding.model }}</span
-        ><strong>{{ capabilities.embedding.notice }}</strong
-        ><small>{{ capabilities.embedding.endpoint }}</small>
-      </div>
-      <div nxCard class="usage-stat-card">
-        <span>重排模型 {{ capabilities.rerank.model }}</span
-        ><strong>{{ capabilities.rerank.notice }}</strong
-        ><small>{{ capabilities.rerank.endpoint }}</small>
-      </div>
-    </div>
-  </section>
-}
-<section nxCard>
-  <h2>檢索測試台</h2>
-  <p class="form-note">選擇最多三個有權限的知識庫。每次測試會使用目前 active 索引。</p>
-  <div class="usage-grid">
-    @for (collection of collections(); track collection.resource.id) {
-      <nx-checkbox
-        [label]="collection.resource.name"
-        [checked]="selected().includes(collection.resource.id)"
-        [disabled]="!selected().includes(collection.resource.id) && selected().length >= 3"
-        (checkedChange)="select(collection.resource.id, $event)"
-      />
-    } @empty {
-      <p class="form-note">目前沒有可存取的知識庫。</p>
-    }
-  </div>
-  <form class="platform-form" [formGroup]="form" (submit)="search($event)">
-    <label
-      >檢索模式<nx-select
-        label="檢索模式"
-        [options]="modes"
-        [value]="mode()"
-        (valueChange)="mode.set($event)"
-    /></label>
-    <nx-checkbox label="使用重排模型" [checked]="rerank()" (checkedChange)="rerank.set($event)" />
-    <label
-      >查詢內容<textarea
-        nxField
-        formControlName="query"
-        aria-label="管理端查詢內容"
-        rows="3"
-        maxlength="2000"
-        required
-      ></textarea>
-    </label>
-    <button class="primary-button" [disabled]="form.invalid || !selected().length || searching()">
-      {{ searching() ? '正在檢索…' : '測試檢索' }}
-    </button>
+    </section>
   </form>
   @if (result(); as result) {
-    <nx-retrieval-results [result]="result" />
+    <div class="retrieval-result">
+      <nx-retrieval-results [result]="result" />
+    </div>
   }
 </section>
 <nx-confirm-dialog />

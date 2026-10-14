@@ -2,6 +2,7 @@
 
 // Shared by the four access tabs: one table shape, fixed column widths and the toolbar above it;
 // a tab's own cells (e.g. the features' order handle) are styled in its own file.
+// The admin page is a data page: each tab passes the remaining height to its table (`ui-table-fill`).
 // At `narrow` and below the tables turn into cards (`DataTable` `stacked`).
 :host {
   display: block;
@@ -10,7 +11,6 @@
   flex: 1 1 20rem;
 }
 .admin-access-table {
-  --table-max-height: min(60dvh, 42rem);
   --table-min-width: 52rem;
 }
 .admin-access-table table {

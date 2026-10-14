@@ -40,7 +40,6 @@ import { AccessStatus } from './access-status';
           <col class="admin-model-column" />
           <col class="admin-storage-column" />
           <col />
-          <col class="admin-row-action-column" />
         </colgroup>
         <thead>
           <tr>
@@ -49,14 +48,21 @@ import { AccessStatus } from './access-status';
             <th scope="col">AI 模型</th>
             <th scope="col">附件容量</th>
             <th scope="col">功能授權</th>
-            <th scope="col"><span class="sr-only">編輯</span></th>
           </tr>
         </thead>
         <tbody>
           @for (group of groups(); track group.id) {
             <tr nxTableRow (rowActivate)="edit.emit(group)">
               <td>
-                <strong>{{ group.name }}</strong
+                <button
+                  type="button"
+                  class="ui-table-link admin-table-name"
+                  data-row-action
+                  aria-haspopup="dialog"
+                  [attr.aria-label]="'編輯功能群組：' + group.name"
+                  (click)="edit.emit(group)"
+                >
+                  <span class="ui-truncate" [title]="group.name">{{ group.name }}</span></button
                 ><small class="ui-truncate" [title]="group.id">{{ group.id }}</small>
               </td>
               <td><nx-access-status [enabled]="group.enabled" /></td>
@@ -73,16 +79,6 @@ import { AccessStatus } from './access-status';
               <td data-label="附件容量">{{ storage(group) }}</td>
               <td data-label="功能授權">
                 <nx-feature-summary [features]="summaries()[group.id] || []" />
-              </td>
-              <td data-stack="end">
-                <button
-                  class="icon-button"
-                  data-row-action
-                  [attr.aria-label]="'編輯功能群組：' + group.name"
-                  (click)="edit.emit(group)"
-                >
-                  <nx-icon name="edit" />
-                </button>
               </td>
             </tr>
           }

@@ -1,0 +1,12 @@
+@use 'breakpoints' as bp;
+
+// Unsaved changes read like the personal settings' save bar.
+.dialog-note.is-dirty {
+  color: var(--signal);
+}
+// On a phone the short note shares the row with the actions; a long one wraps beside them.
+@include bp.below(phone) {
+  .dialog-note {
+    flex-basis: 0;
+  }
+}

@@ -5,11 +5,7 @@
     [value]="store.search()"
     (valueChange)="store.find($event)"
   />
-  <button
-    class="primary-button"
-    [disabled]="!!session.auth.session()?.testing"
-    (click)="createDialog().open()"
-  >
+  <button class="primary-button" [disabled]="session.testing()" (click)="createDialog().open()">
     <nx-icon name="plus" />新增使用者
   </button>
 </div>

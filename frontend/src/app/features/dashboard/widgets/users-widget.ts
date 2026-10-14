@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { DataTable } from '../../../shared/ui/data-table';
+import { DataTable, DataTableRow } from '../../../shared/ui/data-table';
 import { money } from '../../billing/billing-api';
 import { DashboardStore } from '../dashboard-store';
 
 /** Spend per user in the chosen currency; picking one narrows the whole overview to them. */
 @Component({
   selector: 'nx-users-widget',
-  imports: [DataTable],
+  imports: [DataTable, DataTableRow],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -47,22 +47,26 @@ import { DashboardStore } from '../dashboard-store';
         <thead>
           <tr>
             <th scope="col">使用者</th>
-            <th scope="col">呼叫</th>
-            <th scope="col">已知費用</th>
+            <th scope="col" class="ui-table-numeric">呼叫</th>
+            <th scope="col" class="ui-table-numeric">已知費用</th>
             <th scope="col">占比</th>
-            <th scope="col">費用未知次數</th>
+            <th scope="col" class="ui-table-numeric">費用未知次數</th>
             <th scope="col"><span class="sr-only">操作</span></th>
           </tr>
         </thead>
         <tbody>
           @for (user of users(); track user.ownerId) {
-            <tr>
+            <tr
+              nxTableRow
+              [class.is-selected]="store.appliedOwner() === user.ownerId"
+              (rowActivate)="store.viewOwner(user.ownerId)"
+            >
               <th scope="row">
                 <strong>{{ user.displayName }}</strong
                 ><small>{{ user.account }}</small>
               </th>
-              <td>{{ user.requests.toLocaleString() }}</td>
-              <td>{{ money(user.amount, user.currency) }}</td>
+              <td class="ui-table-numeric">{{ user.requests.toLocaleString() }}</td>
+              <td class="ui-table-numeric">{{ money(user.amount, user.currency) }}</td>
               <td>
                 <meter
                   min="0"
@@ -71,9 +75,14 @@ import { DashboardStore } from '../dashboard-store';
                   [attr.aria-label]="user.displayName + ' 費用占比'"
                 ></meter>
               </td>
-              <td>{{ user.unknownCalls }}</td>
+              <td class="ui-table-numeric">{{ user.unknownCalls }}</td>
               <td>
-                <button type="button" class="quiet-button" (click)="store.viewOwner(user.ownerId)">
+                <button
+                  type="button"
+                  class="quiet-button"
+                  data-row-action
+                  (click)="store.viewOwner(user.ownerId)"
+                >
                   檢視
                 </button>
               </td>

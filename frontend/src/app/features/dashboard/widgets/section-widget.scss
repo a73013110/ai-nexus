@@ -116,18 +116,6 @@ small {
     font-weight: 600;
   }
 }
-.facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--p-space-2) var(--p-space-3);
-  color: var(--secondary);
-  font-size: var(--p-font-xs);
-  span {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--p-space-1);
-  }
-}
 .items {
   display: grid;
   border-top: 1px solid var(--line);

@@ -14,6 +14,8 @@ export interface TabItem {
   label: string;
   /** A neutral CountBadge after the label; the tab's name carries the number. */
   count?: number;
+  /** The tab holds unsaved changes: a dot after the label, and the tab's name says so. */
+  dirty?: boolean;
 }
 let sequence = 0;
 
@@ -81,6 +83,13 @@ let sequence = 0;
       color: var(--accent);
       font-weight: 600;
     }
+    /* The save bar's unsaved colour (dialog-save-bar.scss), so the two read as one signal. */
+    .tab-dirty {
+      width: 0.375rem;
+      height: 0.375rem;
+      border-radius: var(--p-radius-pill);
+      background: var(--signal);
+    }
   `,
   template: `@for (item of items(); track item.value) {
     <button
@@ -88,7 +97,7 @@ let sequence = 0;
       role="tab"
       [id]="tabId(item.value)"
       [attr.aria-controls]="panelId(item.value)"
-      [attr.aria-label]="item.count ? item.label + '，' + item.count + ' 則' : null"
+      [attr.aria-label]="accessibleName(item)"
       [attr.aria-selected]="value() === item.value"
       [tabIndex]="value() === item.value ? 0 : -1"
       (click)="valueChange.emit(item.value)"
@@ -97,6 +106,9 @@ let sequence = 0;
       {{ item.label }}
       @if (item.count) {
         <nx-count-badge tone="neutral" [count]="item.count" />
+      }
+      @if (item.dirty) {
+        <span class="tab-dirty" aria-hidden="true"></span>
       }
     </button>
   }`,
@@ -108,6 +120,15 @@ export class Tabs {
   readonly valueChange = output<string>();
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly id = `nx-tabs-${++sequence}`;
+  /** Only when the visible label is not the whole name: a count, or unsaved changes. */
+  accessibleName(item: TabItem) {
+    if (!item.count && !item.dirty) return null;
+    return (
+      item.label +
+      (item.count ? '，' + item.count + ' 則' : '') +
+      (item.dirty ? '（有未儲存的變更）' : '')
+    );
+  }
   tabId(value: string) {
     return `${this.id}-tab-${value}`;
   }

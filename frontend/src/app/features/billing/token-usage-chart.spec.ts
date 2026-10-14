@@ -57,6 +57,21 @@ describe('token usage reporting', () => {
     expect(chart.totals().known).toBe(2);
     chart.model.set('removed-model');
     expect(chart.selectedModel()).toBe('all');
+
+    // A breakdown row filters the chart and is marked like any open table row; choosing it again
+    // shows every model.
+    const row = () =>
+      fixture.nativeElement.querySelectorAll('nx-data-table tbody tr')[1] as HTMLElement;
+    const action = () => row().querySelector<HTMLButtonElement>('[data-row-action]')!;
+    action().click();
+    fixture.detectChanges();
+    expect(chart.selectedModel()).toBe('a');
+    expect(row().classList).toContain('is-selected');
+    expect(action().getAttribute('aria-pressed')).toBe('true');
+    action().click();
+    fixture.detectChanges();
+    expect(chart.selectedModel()).toBe('all');
+    expect(row().classList).not.toContain('is-selected');
     fixture.destroy();
   });
 });

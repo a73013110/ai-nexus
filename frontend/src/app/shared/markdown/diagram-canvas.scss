@@ -13,6 +13,8 @@
 }
 .mermaid-canvas {
   overflow: auto;
+  // The fit scale is read from the client width, so a scrollbar must not change it; the dotted
+  // background runs under the gutter, which leaves no blank strip.
   scrollbar-gutter: stable;
   cursor: grab;
   overscroll-behavior: contain;

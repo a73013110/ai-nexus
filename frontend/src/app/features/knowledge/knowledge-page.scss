@@ -21,8 +21,11 @@ nx-notice {
 .upload-status {
   margin-bottom: var(--p-space-2);
 }
+// One shrinkable track: a long name ellipsizes instead of widening the panel. Rows hang their hover
+// fill into the panel's padding, so their text lines up with the filter and notes.
 .document-rows {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
 }
 .document-skeleton {
   height: 2.75rem;

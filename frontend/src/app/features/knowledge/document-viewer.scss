@@ -49,7 +49,17 @@
   width: min(14rem, 60vw);
 }
 .viewer-tooled {
-  --viewer-tools-clearance: calc(var(--button-target) + 2 * var(--p-space-3));
+  --viewer-tools-clearance: calc(
+    var(--floating-toolbar-offset, var(--p-space-3)) + var(--button-target) + var(--p-space-3)
+  );
+}
+// 放大時標題列浮在最上方（styles/dialogs.scss）。搜尋結果、處理進度等狀態列讓出它的高度，
+// 其下的內容區不再被標題列蓋住，工具列回到一般位置。
+.dialog-bar[data-chrome] + :not(.viewer-body) {
+  margin-top: var(--dialog-chrome-height);
+}
+.dialog-bar[data-chrome] ~ :not(.viewer-body) ~ .viewer-body {
+  --floating-toolbar-offset: var(--p-space-3);
 }
 .viewer-tooled .reader-text {
   padding-top: max(var(--viewer-tools-clearance), clamp(20px, 4vw, 48px));

@@ -1095,7 +1095,6 @@ function section(
     }[];
     shares?: { key: string; label: string; value: number; tone: Tone }[];
     items?: FixtureItem[];
-    facts?: { label: string; value: string; tone: Tone }[];
   },
 ) {
   return {
@@ -1108,7 +1107,7 @@ function section(
     series: parts.series ?? [],
     shares: parts.shares ?? [],
     items: parts.items ?? [],
-    facts: parts.facts ?? [],
+    facts: [],
   };
 }
 const ago = (minutes: number) =>
@@ -1188,7 +1187,6 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
           points: fixtureSeries(1, 4),
         },
       ],
-      facts: [{ label: "網路搜尋", value: "已啟用", tone: "success" }],
     }),
     section("knowledge", "knowledge", "知識庫", "/knowledge", {
       state: "attention",
@@ -1214,7 +1212,6 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
         { key: "ready", label: "可查詢", value: 7, tone: "success" },
         { key: "failed", label: "處理失敗", value: 1, tone: "danger" },
       ],
-      facts: [{ label: "檢索方式", value: "語意向量", tone: "success" }],
     }),
     section("files", "files", "檔案庫", "/files", {
       metrics: [
@@ -1332,13 +1329,10 @@ export function dashboardFixture(fixture: ApiFixture, scope = "personal") {
     }),
     section("repositories", "repositories", "程式庫", "/repositories", {
       metrics: [
+        metric("connections", "已連線帳號", 1, "個"),
         metric("running", "Review 進行中", 0, "次"),
         metric("reviews", "期間 Review", 5, "次", { period: true }),
         metric("failed", "Review 失敗", 0, "次", { period: true }),
-      ],
-      facts: [
-        { label: "Gitea", value: "已啟用", tone: "success" },
-        { label: "帳號連線", value: "已連線", tone: "success" },
       ],
     }),
     section("notifications", "dashboard", "通知", "", {

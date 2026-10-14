@@ -185,15 +185,31 @@ test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", as
   ).toBeVisible();
   await page.getByRole("button", { name: "知識檢索", exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/operations\?tab=retrieval$/);
-  const activate = page.getByRole("button", { name: "啟用索引", exact: true });
+  const indexes = page.getByRole("region", { name: "檢索索引", exact: true });
+  await expect(
+    indexes.locator(".retrieval-profile").filter({ hasText: "bge-m3-v2" }),
+  ).toContainText("0 / 1 個片段");
+  const activate = indexes.getByRole("button", {
+    name: "啟用索引",
+    exact: true,
+  });
   await expect(activate).toBeDisabled();
-  await page
+  // Rebuilding and activating change what every search uses, so both ask first.
+  await indexes
     .locator(".retrieval-profile")
     .filter({ hasText: "bge-m3-v2" })
     .getByRole("button", { name: "開始重建" })
     .click();
+  await page
+    .getByRole("dialog", { name: "重建檢索索引" })
+    .getByRole("button", { name: "開始重建", exact: true })
+    .click();
   await expect(activate).toBeEnabled();
   await activate.click();
+  await page
+    .getByRole("dialog", { name: "切換使用中索引" })
+    .getByRole("button", { name: "啟用索引", exact: true })
+    .click();
   await expect(
     toasts(page).filter({ hasText: "使用中索引已切換" }),
   ).toBeVisible();
@@ -207,7 +223,9 @@ test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", as
   await expect(
     page.getByText("向量排名 1 · 全文排名 2", { exact: false }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "清除退役向量", exact: true }).click();
+  await indexes
+    .getByRole("button", { name: "清除退役向量", exact: true })
+    .click();
   await page
     .getByRole("dialog", { name: "清除退役向量" })
     .getByRole("button", { name: "清除向量", exact: true })
@@ -237,9 +255,10 @@ test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", as
       ),
     ).toBe(true);
     await expectCompactWorkspace(page);
-    await expect(page.locator(".usage-stat-card strong").first()).toHaveCSS(
+    // The index table keeps the compact data size in both themes and widths.
+    await expect(page.locator(".retrieval-profile strong").first()).toHaveCSS(
       "font-size",
-      "16px",
+      "13px",
     );
   }
 });
@@ -416,9 +435,13 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
   await expect(
     page.locator("dialog.admin-editor nx-dialog-header small"),
   ).toHaveText("logs.export");
+  // Nothing changed: the save bar rests and closing asks nothing.
+  await expect(page.locator("dialog.admin-editor .dialog-foot")).toContainText(
+    "尚未變更",
+  );
   await page
     .locator("dialog.admin-editor")
-    .getByRole("button", { name: "取消", exact: true })
+    .getByRole("button", { name: "關閉管理編輯", exact: true })
     .click();
   await features
     .getByRole("button", { name: "編輯功能：對話", exact: true })
@@ -463,9 +486,22 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
     page.getByRole("dialog", { name: "編輯角色：一般使用者", exact: true }),
   ).toContainText("member");
   await expect(editor.locator(".panel-eyebrow")).toHaveCount(0);
-  // A section is one light frame; a checked row is not filled.
-  const section = editor.locator("fieldset").first();
-  await expect(section).toHaveCSS("border-left-style", "solid");
+  // Like the user dialog: sections divided by hairlines, the title beside the fields on a wide
+  // dialog; a checked row is not filled.
+  await expect(editor.locator("fieldset")).toHaveCount(0);
+  const groupsSection = editor.getByRole("group", {
+    name: "功能群組",
+    exact: true,
+  });
+  await expect(groupsSection).toHaveCSS("border-top-style", "solid");
+  const groupsTitle = (await groupsSection
+    .getByRole("heading")
+    .first()
+    .boundingBox())!;
+  const roleName = (await editor
+    .getByLabel("名稱", { exact: true })
+    .boundingBox())!;
+  expect(roleName.x).toBeGreaterThan(groupsTitle.x + groupsTitle.width);
   await expect(
     editor.getByRole("checkbox", { name: "基本工作區", exact: true }),
   ).toBeChecked();
@@ -474,7 +510,41 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
       has: page.getByRole("checkbox", { name: "基本工作區", exact: true }),
     }),
   ).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
-  await editor.getByRole("button", { name: "取消", exact: true }).click();
+  // The foot is note | revert | save; both actions rest until something changes, and revert
+  // puts the draft back.
+  const revert = editor.getByRole("button", { name: "還原", exact: true });
+  const saveRole = editor.getByRole("button", {
+    name: "儲存角色",
+    exact: true,
+  });
+  await expect(editor.locator(".dialog-foot")).toContainText("尚未變更");
+  await expect(revert).toBeDisabled();
+  await expect(saveRole).toBeDisabled();
+  await editor
+    .getByRole("checkbox", { name: "基本工作區", exact: true })
+    .uncheck();
+  await expect(editor.locator(".dialog-foot")).toContainText("有未儲存的變更");
+  await expect(saveRole).toBeEnabled();
+  await revert.click();
+  await expect(
+    editor.getByRole("checkbox", { name: "基本工作區", exact: true }),
+  ).toBeChecked();
+  await expect(revert).toBeDisabled();
+  // Closing with unsaved changes asks first; cancelling keeps the draft.
+  await editor.getByLabel("名稱", { exact: true }).fill("成員");
+  await editor
+    .getByRole("button", { name: "關閉管理編輯", exact: true })
+    .click();
+  const discard = page.getByRole("dialog", {
+    name: "放棄未儲存的變更？",
+    exact: true,
+  });
+  await discard.getByRole("button", { name: "取消", exact: true }).click();
+  await expect(editor.getByLabel("名稱", { exact: true })).toHaveValue("成員");
+  await editor
+    .getByRole("button", { name: "關閉管理編輯", exact: true })
+    .click();
+  await discard.getByRole("button", { name: "放棄變更", exact: true }).click();
   await expect(editor).not.toBeVisible();
   await page
     .getByRole("button", { name: "功能群組與模型", exact: true })
@@ -486,20 +556,28 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
     groups.locator("tbody tr").nth(1).locator("nx-status-badge"),
   ).toHaveAttribute("data-tone", "warning");
   await expect(groups.locator("tbody tr").nth(1)).toContainText("停用");
-  // Each feature category is its own framed card with a count; no outer fieldset wraps them.
+  // Like a role: one page of sections (basics, features, storage), with the model policy beside it.
   await groups.locator("tbody tr").first().locator("td").first().click();
-  await editor.getByRole("tab", { name: "功能授權", exact: true }).click();
+  await expect(editor.getByRole("tab")).toHaveText(["群組設定", "AI 模型"]);
   await expect(editor.getByRole("tabpanel")).toHaveAttribute(
     "aria-labelledby",
     (await editor
-      .getByRole("tab", { name: "功能授權", exact: true })
+      .getByRole("tab", { name: "群組設定", exact: true })
       .getAttribute("id"))!,
   );
+  await expect(editor.locator(".form-section-head h3")).toHaveText([
+    "基本資料",
+    "功能授權",
+    "附件容量",
+  ]);
+  // Each feature category is its own framed card with a count; no outer fieldset wraps them.
   await expect(editor.locator("fieldset")).toHaveCount(0);
   const work = editor.getByRole("group", { name: "工作", exact: true });
   await expect(work).toHaveCSS("border-left-style", "solid");
   await expect(work.locator(".choice-group-count")).toHaveText(/^\d+\/\d+$/);
-  await editor.getByRole("button", { name: "取消", exact: true }).click();
+  await editor
+    .getByRole("button", { name: "關閉管理編輯", exact: true })
+    .click();
   await expect(editor).not.toBeVisible();
   await page.setViewportSize({ width: 375, height: 812 });
   await expectViewportContained(page);
@@ -588,7 +666,9 @@ test("手機版存取管理四個分頁改為卡片列，不橫向捲動，點�
         await editor.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
       ).toBe(true);
     }
-    await editor.getByRole("button", { name: "取消", exact: true }).click();
+    await editor
+      .getByRole("button", { name: "關閉管理編輯", exact: true })
+      .click();
     await expect(editor).not.toBeVisible();
   }
   // Moving a feature on a phone goes through the card's menu; the drag handle is left out.
@@ -1266,8 +1346,9 @@ test("manual user creation, dual login editing and removal keep one place for ea
   await expect(edit.getByLabel("使用者姓名", { exact: true })).toHaveValue(
     "本地測試員",
   );
+  // The tab holding the draft says so in its name until it is saved.
   await expect(
-    edit.getByRole("tab", { name: "帳號", exact: true }),
+    edit.getByRole("tab", { name: "帳號（有未儲存的變更）", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
   await edit
     .getByRole("checkbox", { name: "允許 AD 驗證", exact: true })
@@ -1277,6 +1358,9 @@ test("manual user creation, dual login editing and removal keep one place for ea
   await expect(edit).toContainText("登入：AD · 本地密碼");
   await expect(edit).toHaveAccessibleName("本地測試員");
   await expect(edit).not.toContainText("有未儲存的變更");
+  await expect(
+    edit.getByRole("tab", { name: "帳號", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
   expect(created.authentication.adEnabled).toBe(true);
   expect(created.displayName).toBe("本地測試員");
   // Saved: Escape closes without asking and focus returns to the row.
@@ -1433,11 +1517,13 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
         tab === "活動稽核"
           ? "nx-filter-panel"
           : tab === "平台用量"
-            ? ".feature-content > nx-platform-usage > .page-toolbar"
+            ? ".feature-content nx-platform-usage > .page-toolbar"
             : ".feature-content nx-admin-features-tab > .page-toolbar";
       await expect(page.locator(target).first()).toBeVisible();
       if (tab === "平台用量") {
-        await expect(page.locator(".stat-card")).toHaveCount(4);
+        await expect(
+          page.locator("nx-platform-usage nx-stat-tile"),
+        ).toHaveCount(4);
         // The tabs are the way to prices; the usage tab only refreshes itself.
         await expect(page.locator("nx-platform-usage a")).toHaveCount(0);
         await expect(
@@ -1474,7 +1560,6 @@ test("group model limits and self-lockout errors work on desktop and mobile", as
   await dialog
     .getByRole("textbox", { name: "名稱", exact: true })
     .fill("研發工作區");
-  await dialog.getByRole("tab", { name: "功能授權", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "對話", exact: true }).check();
   await dialog.getByRole("tab", { name: "AI 模型", exact: true }).click();
   await dialog.getByRole("checkbox", { name: "限制可用模型" }).check();
@@ -2087,30 +2172,46 @@ test("dialog tabs animate their content and necessary frame changes, preserve fo
     .click();
   const group = page.locator("dialog.admin-editor");
   await settleEntrance(page);
-  // A feature group keeps one frame for all four tabs: switching never resizes or moves it,
-  // and the tabs stay above the scrolling body.
+  // A feature group's frame follows its two tabs like the user's: same width, the height moves
+  // instead of jumping, and the tabs stay above the scrolling body.
   const groupFrame = (await group.boundingBox())!;
   const tabs = group.getByRole("tablist", { name: "功能群組設定分類" });
-  const tabsTop = (await tabs.boundingBox())!.y;
-  for (const name of [
-    "功能授權",
-    "AI 模型",
-    "附件容量",
-    "基本資料",
-    "功能授權",
-  ]) {
+  await group.getByRole("tab", { name: "AI 模型", exact: true }).click();
+  await expect
+    .poll(() =>
+      group.evaluate((el) =>
+        el
+          .getAnimations()
+          .some(
+            (a) =>
+              a.effect instanceof KeyframeEffect &&
+              a.effect.getKeyframes().some((frame) => !!frame.height),
+          ),
+      ),
+    )
+    .toBe(true);
+  await settleEntrance(page);
+  const modelsFrame = (await group.boundingBox())!;
+  expect(Math.abs(modelsFrame.width - groupFrame.width)).toBeLessThan(1);
+  expect(Math.abs(modelsFrame.height - groupFrame.height)).toBeGreaterThan(1);
+  for (const name of ["群組設定", "AI 模型", "群組設定"]) {
     await group.getByRole("tab", { name, exact: true }).click();
     await settleEntrance(page);
-    const box = (await group.boundingBox())!;
-    expect(Math.abs(box.width - groupFrame.width)).toBeLessThan(1);
-    expect(Math.abs(box.height - groupFrame.height)).toBeLessThan(1);
+    // Each tab starts at the top of the body.
+    expect(
+      await group.locator(".dialog-body").evaluate((el) => el.scrollTop),
+    ).toBe(0);
+    const tabsTop = (await tabs.boundingBox())!.y;
     await group
       .locator(".dialog-body")
       .evaluate((el) => (el.scrollTop = el.scrollHeight));
     expect(Math.abs((await tabs.boundingBox())!.y - tabsTop)).toBeLessThan(1);
   }
+  expect(
+    Math.abs((await group.boundingBox())!.height - groupFrame.height),
+  ).toBeLessThan(1);
   await expect(
-    group.getByRole("tab", { name: "功能授權", exact: true }),
+    group.getByRole("tab", { name: "群組設定", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
   // The selected tab's underline sits on the tabs' bottom rule.
   const underline = await tabs.evaluate((el) => {

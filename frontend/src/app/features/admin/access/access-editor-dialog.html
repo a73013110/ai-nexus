@@ -2,154 +2,213 @@
   nxCompactDialog
   #editorDialog
   class="platform-dialog admin-editor"
-  [attr.data-kind]="editor()?.kind"
-  [size]="editor()?.kind === 'group' ? 'lg' : editor()?.kind === 'feature' ? 'sm' : 'md'"
-  (close)="editor.set(null)"
+  [size]="editor()?.kind === 'feature' ? 'sm' : 'lg'"
   (cancel)="cancel($event)"
 >
   @if (editor(); as e) {
     <form class="dialog-form" (submit)="save($event)">
       <nx-dialog-header [heading]="e.title" [detail]="e.subtitle" closeLabel="關閉管理編輯" />
-      <!-- Identifier, name and switch: the whole role/feature form, a group's first tab. -->
-      <ng-template #basics>
-        @if (e.isNew) {
-          <label
-            >識別碼<input
-              nxField
-              aria-label="識別碼"
-              required
-              maxlength="64"
-              pattern="[a-z][a-z0-9_-]{0,63}"
-              placeholder="例如：document-reviewers"
-              [value]="e.id"
-              [readOnly]="saving()"
-              (input)="update('id', $any($event.target).value)"
-          /></label>
-        }
-        <label
-          >名稱<input
-            nxField
-            aria-label="名稱"
-            required
-            maxlength="120"
-            [value]="e.name"
-            [readOnly]="saving()"
-            (input)="update('name', $any($event.target).value)"
-        /></label>
-        <nx-checkbox
-          [label]="'啟用' + label(e.kind)"
-          [description]="enabledNote[e.kind]"
-          [checked]="e.enabled"
-          [disabled]="saving()"
-          (checkedChange)="update('enabled', $event)"
-        />
-      </ng-template>
       @if (e.kind === 'group') {
-        <!-- The tabs stay above the scrolling body; the dialog keeps one height for every tab. -->
+        <!-- The tabs stay above the scrolling body; the frame follows each tab's height. -->
         <nx-tabs
           #sections
           label="功能群組設定分類"
-          [items]="groupSections"
+          [items]="groupSections()"
           [value]="groupSection()"
-          (valueChange)="groupSection.set($any($event))"
+          (valueChange)="selectSection($any($event))"
         />
         <div
+          #body
           class="dialog-body"
           role="tabpanel"
           tabindex="0"
           [id]="sections.panelId(groupSection())"
           [attr.aria-labelledby]="sections.tabId(groupSection())"
+          [nxViewMotion]="groupSection()"
         >
-          @if (editorError()) {
-            <nx-notice tone="danger" [message]="editorError()" />
-          }
-          <div class="platform-form admin-editor-fields" [nxViewMotion]="groupSection()">
-            @switch (groupSection()) {
-              @case ('general') {
-                <ng-container [ngTemplateOutlet]="basics" />
-              }
-              @case ('features') {
-                <p class="form-note">
-                  使用者的功能取所有有效群組的聯集；停用的功能即使勾選也不會授予。
-                </p>
-                <nx-choice-groups
-                  label="授予功能"
-                  [groups]="featureChoices()"
-                  [selected]="e.ids"
-                  [disabled]="saving()"
-                  (selectedChange)="update('ids', $event)"
-                />
-              }
-              @case ('models') {
-                <nx-model-policy-editor
-                  [models]="store.catalog()?.models || []"
-                  [value]="e.modelPolicy"
-                  [disabled]="saving()"
-                  (valueChange)="update('modelPolicy', $event)"
-                />
-              }
-              @case ('storage') {
-                <p class="form-note">
-                  限制成員可保存的原始附件總量，依每位使用者計算；1 GB = 1,000,000,000 bytes。
-                </p>
-                <label class="admin-editor-short"
-                  >附件空間上限（GB）<input
-                    nxField
-                    type="number"
-                    aria-label="群組附件空間上限"
-                    min="0"
-                    max="1000000"
-                    step="0.000000001"
-                    placeholder="留空使用網站預設（5 GB）"
-                    [value]="e.storage"
-                    [readOnly]="saving()"
-                    (input)="update('storage', $any($event.target).value)"
-                /></label>
-                <ul class="form-note admin-editor-rules">
-                  <li>留空使用網站預設；0 禁止新增上傳。</li>
-                  <li>多個有效群組取最低值；使用者的個人設定優先。</li>
-                  <li>降低上限不刪除既有檔案，只阻擋新的上傳。</li>
-                </ul>
-              }
-            }
-          </div>
+          <ng-container [ngTemplateOutlet]="content" />
         </div>
       } @else {
-        <div class="dialog-body">
-          @if (editorError()) {
-            <nx-notice tone="danger" [message]="editorError()" />
-          }
-          <div class="platform-form admin-editor-fields">
-            <ng-container [ngTemplateOutlet]="basics" />
+        <div #body class="dialog-body"><ng-container [ngTemplateOutlet]="content" /></div>
+      }
+      <!-- A role, a feature or a group's first tab is one page of sections, like the user's tabs. -->
+      <ng-template #content>
+        @if (editorError()) {
+          <nx-notice tone="danger" [message]="editorError()" />
+        }
+        @if (e.kind === 'group' && groupSection() === 'models') {
+          <nx-model-policy-editor
+            [models]="store.catalog()?.models || []"
+            [value]="e.modelPolicy"
+            [disabled]="locked()"
+            (valueChange)="update('modelPolicy', $event)"
+          />
+        } @else {
+          <div class="form-sections">
+            <section class="form-section" role="group" [attr.aria-labelledby]="id + '-basics'">
+              <header class="form-section-head">
+                <h3 [id]="id + '-basics'">基本資料</h3>
+                @if (e.kind === 'feature') {
+                  <p class="form-note">路由與授權由模組註冊；順序在功能列表調整。</p>
+                } @else if (e.isNew) {
+                  <p class="form-note">識別碼建立後不能修改。</p>
+                }
+              </header>
+              <div class="form-section-body">
+                @if (e.isNew) {
+                  <label class="form-field-short"
+                    >識別碼<input
+                      nxField
+                      data-field="id"
+                      aria-label="識別碼"
+                      required
+                      maxlength="64"
+                      pattern="[a-z][a-z0-9_-]{0,63}"
+                      placeholder="例如：document-reviewers"
+                      autocomplete="off"
+                      [attr.aria-describedby]="id + '-id-hint'"
+                      [value]="e.id"
+                      [readOnly]="locked()"
+                      (input)="update('id', $any($event.target).value)"
+                  /></label>
+                  <p class="form-note" [id]="id + '-id-hint'">
+                    小寫英文開頭，可用小寫英文、數字、- 與 _。
+                  </p>
+                }
+                <label class="form-field-short"
+                  >名稱<input
+                    nxField
+                    data-field="name"
+                    aria-label="名稱"
+                    required
+                    maxlength="120"
+                    [value]="e.name"
+                    [readOnly]="locked()"
+                    (input)="update('name', $any($event.target).value)"
+                /></label>
+                <nx-checkbox
+                  [label]="'啟用' + label(e.kind)"
+                  [description]="enabledNote[e.kind]"
+                  [checked]="e.enabled"
+                  [disabled]="locked()"
+                  (checkedChange)="update('enabled', $event)"
+                />
+              </div>
+            </section>
             @if (e.kind === 'role') {
-              <nx-choice-groups
-                label="加入功能群組"
-                [groups]="groupChoices()"
-                [selected]="e.ids"
-                [disabled]="saving()"
-                (selectedChange)="update('ids', $event)"
-              />
-              <fieldset>
-                <legend>儲存後可用功能（預覽）</legend>
-                <nx-feature-summary [features]="proposedFeatures()" />
-              </fieldset>
+              <section class="form-section" role="group" [attr.aria-labelledby]="id + '-groups'">
+                <header class="form-section-head">
+                  <h3 [id]="id + '-groups'">功能群組</h3>
+                  <p class="form-note">可複選；可用功能取各群組的聯集。</p>
+                </header>
+                <div class="form-section-body">
+                  <nx-choice-groups
+                    label="加入功能群組"
+                    [groups]="groupChoices()"
+                    [selected]="e.ids"
+                    [disabled]="locked()"
+                    (selectedChange)="update('ids', $event)"
+                  />
+                </div>
+              </section>
+              <section class="form-section" role="group" [attr.aria-labelledby]="id + '-preview'">
+                <header class="form-section-head">
+                  <h3 [id]="id + '-preview'">儲存後可用功能</h3>
+                  <p class="form-note">依目前勾選的功能群組試算。</p>
+                </header>
+                <div class="form-section-body">
+                  @if (!e.enabled) {
+                    <nx-notice tone="warning" message="角色已停用，儲存後不授予任何功能。" />
+                  }
+                  <nx-feature-summary [features]="proposedFeatures()" />
+                </div>
+              </section>
+            }
+            @if (e.kind === 'group') {
+              <section
+                class="form-section form-section-wide"
+                role="group"
+                [attr.aria-labelledby]="id + '-features'"
+              >
+                <header class="form-section-head">
+                  <h3 [id]="id + '-features'">功能授權</h3>
+                  <p class="form-note">可複選；使用者取各有效群組的聯集，停用的功能不授予。</p>
+                </header>
+                <div class="form-section-body">
+                  <nx-choice-groups
+                    label="授予功能"
+                    [groups]="featureChoices()"
+                    [selected]="e.ids"
+                    [disabled]="locked()"
+                    (selectedChange)="update('ids', $event)"
+                  />
+                </div>
+              </section>
+              <section class="form-section" role="group" [attr.aria-labelledby]="id + '-storage'">
+                <header class="form-section-head">
+                  <h3 [id]="id + '-storage'">附件容量</h3>
+                  <p class="form-note">依每位使用者計算；個人設定優先於群組。</p>
+                  <nx-info-popover label="計算方式" panelLabel="附件容量的計算方式" [width]="300">
+                    <ul class="form-note-list">
+                      <li>使用者屬於多個有效群組時取最低值。</li>
+                      <li>同一原檔的多處引用只計一次。</li>
+                      <li>1 GB = 1,000,000,000 bytes。</li>
+                    </ul>
+                  </nx-info-popover>
+                </header>
+                <div class="form-section-body">
+                  <label class="form-field-short"
+                    >附件容量上限（GB）<input
+                      nxField
+                      data-field="storage"
+                      type="number"
+                      aria-label="群組附件容量上限（GB）"
+                      min="0"
+                      max="1000000"
+                      step="0.000000001"
+                      placeholder="使用網站預設容量"
+                      [attr.aria-describedby]="id + '-storage-hint'"
+                      [value]="e.storage"
+                      [readOnly]="locked()"
+                      (input)="update('storage', $any($event.target).value)"
+                  /></label>
+                  <p class="form-note" [id]="id + '-storage-hint'">
+                    留空使用網站預設 5 GB，0 禁止新增上傳；降低上限只阻擋新的上傳，既有檔案仍保留。
+                  </p>
+                </div>
+              </section>
             }
           </div>
-        </div>
-      }
-      <footer class="dialog-foot">
-        @if (e.kind === 'feature') {
-          <p class="dialog-note">順序在功能列表調整。</p>
-        } @else if (e.kind === 'group') {
-          <p class="dialog-note">一次儲存四個分類的變更。</p>
         }
-        <button type="button" class="secondary-button" [disabled]="saving()" (click)="close()">
-          取消
-        </button>
-        <button type="submit" class="primary-button" [disabled]="saving()">
-          {{ saving() ? '儲存中…' : (e.isNew ? '建立' : '儲存') + label(e.kind) }}
-        </button>
-      </footer>
+      </ng-template>
+      @if (e.isNew) {
+        <footer class="dialog-foot">
+          @if (session.testing()) {
+            <span class="dialog-note" role="status">{{ session.testingNote() }}</span>
+          }
+          <button
+            type="button"
+            class="secondary-button"
+            [disabled]="saving()"
+            (click)="requestClose()"
+          >
+            取消
+          </button>
+          <button type="submit" class="primary-button" [disabled]="locked()">
+            {{ saving() ? '建立中…' : '建立' + label(e.kind) }}
+          </button>
+        </footer>
+      } @else {
+        <nx-dialog-save-bar
+          [label]="'儲存' + label(e.kind)"
+          [dirty]="dirty()"
+          [saving]="saving()"
+          [disabled]="session.testing()"
+          [note]="session.testingNote()"
+          (revert)="revert()"
+        />
+      }
     </form>
   }
 </dialog>
+<nx-confirm-dialog />
