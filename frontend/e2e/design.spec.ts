@@ -89,6 +89,23 @@ test("共用密度、檢視鍵盤與選填日期保留桌面和手機可用性",
   await expect(
     page.locator(".design-data-workspace nx-data-table tbody tr"),
   ).toHaveCount(3);
+  // Row states: a click selects the row without a ring, closing returns focus to the row without
+  // one either, and keyboard focus rings the row once (not its action as well).
+  const rows = page.locator(".design-data-workspace nx-data-table tbody tr");
+  const actions = rows.locator("[data-row-action]");
+  await rows.nth(1).locator("td").first().click();
+  await expect(rows.nth(1)).toHaveClass(/is-selected/);
+  await page
+    .getByRole("button", { name: "關閉資料詳情示範", exact: true })
+    .click();
+  await expect(rows.nth(1)).not.toHaveClass(/is-selected/);
+  await expect(actions.nth(1)).toBeFocused();
+  await expect(rows.nth(1)).toHaveCSS("outline-style", "none");
+  await expect(actions.nth(1)).toHaveCSS("outline-style", "none");
+  await actions.nth(1).press("ArrowDown");
+  await expect(actions.nth(2)).toBeFocused();
+  await expect(rows.nth(2)).toHaveCSS("outline-style", "solid");
+  await expect(actions.nth(2)).toHaveCSS("outline-style", "none");
   const optional = page.getByRole("textbox", { name: "選填日期", exact: true });
   await optional.fill("2026/02/30");
   await optional.press("Tab");

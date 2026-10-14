@@ -69,9 +69,24 @@ nx-feature-page {
 .feature-layout-data .feature-content > * {
   flex: none;
 }
-.feature-layout-data .feature-content > nx-data-table {
+// The table gets the height left under the header and filters (at least 18rem, or the page
+// scrolls) and draws its frame only as tall as its rows (DataTable). A wrapper between the page and
+// its table, such as a tab panel or a tab's host, adds `ui-table-fill` to pass the height on.
+.feature-layout-data .ui-table-fill {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+.feature-layout-data :is(.feature-content, .ui-table-fill) > nx-data-table {
   flex: 1 0 18rem;
   min-height: 0;
+}
+// Cards (`stacked`) have no header to keep in view, so a phone scrolls the page instead.
+@include bp.below(narrow) {
+  .feature-layout-data :is(.feature-content, .ui-table-fill) > nx-data-table.ui-table-stack {
+    flex: none;
+  }
 }
 .feature-layout-compact .panel-eyebrow {
   margin-bottom: var(--p-space-1);

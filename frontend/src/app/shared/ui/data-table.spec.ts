@@ -15,6 +15,11 @@ import { DataTable, DataTableColumn, DataTableRow } from './data-table';
           <td data-stack="end"><button type="button" data-row-action>開啟</button></td>
         </tr>
       </tbody>
+      <tbody>
+        <tr nxTableRow>
+          <td><button type="button" data-row-action>第二組</button></td>
+        </tr>
+      </tbody>
     </table>
   </nx-data-table>`,
 })
@@ -55,5 +60,18 @@ describe('DataTable', () => {
     table.toggleColumn('note');
     fixture.detectChanges();
     expect(element.querySelector<HTMLElement>('[data-label]')!.hidden).toBe(true);
+  });
+
+  it('moves between row actions across row groups with the arrow keys', () => {
+    const fixture = TestBed.createComponent(Host);
+    fixture.detectChanges();
+    const [first, second] = (fixture.nativeElement as HTMLElement).querySelectorAll<HTMLElement>(
+      'button[data-row-action]',
+    );
+    first.focus();
+    first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    expect(document.activeElement).toBe(second);
+    second.dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true }));
+    expect(document.activeElement).toBe(first);
   });
 });

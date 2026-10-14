@@ -72,12 +72,12 @@
     <thead>
       <tr>
         <th scope="col">模型</th>
-        <th scope="col" class="ops-num">請求</th>
-        <th scope="col" class="ops-num">失敗</th>
-        <th scope="col" class="ops-num">輸入 tokens</th>
-        <th scope="col" class="ops-num">輸出 tokens</th>
-        <th scope="col" class="ops-num">處理時間</th>
-        <th scope="col" class="ops-num">未完整回報</th>
+        <th scope="col" class="ui-table-numeric">請求</th>
+        <th scope="col" class="ui-table-numeric">失敗</th>
+        <th scope="col" class="ui-table-numeric">輸入 tokens</th>
+        <th scope="col" class="ui-table-numeric">輸出 tokens</th>
+        <th scope="col" class="ui-table-numeric">處理時間</th>
+        <th scope="col" class="ui-table-numeric">未完整回報</th>
       </tr>
     </thead>
     <tbody>
@@ -86,15 +86,17 @@
           <th scope="row">
             <strong class="ui-truncate" [title]="modelName(model)">{{ modelName(model) }}</strong>
           </th>
-          <td class="ops-num" data-label="請求">{{ format(model.requests) }}</td>
-          <td class="ops-num" data-label="失敗">
+          <td class="ui-table-numeric" data-label="請求">{{ format(model.requests) }}</td>
+          <td class="ui-table-numeric" data-label="失敗">
             {{ format(model.failed)
             }}<span class="usage-rate">{{ share(model.failed, model.requests) }}</span>
           </td>
-          <td class="ops-num" data-label="輸入">{{ format(model.inputTokens) }}</td>
-          <td class="ops-num" data-label="輸出">{{ format(model.outputTokens) }}</td>
-          <td class="ops-num" data-label="處理時間">{{ duration(model.durationMilliseconds) }}</td>
-          <td class="ops-num" data-label="未完整回報">
+          <td class="ui-table-numeric" data-label="輸入">{{ format(model.inputTokens) }}</td>
+          <td class="ui-table-numeric" data-label="輸出">{{ format(model.outputTokens) }}</td>
+          <td class="ui-table-numeric" data-label="處理時間">
+            {{ duration(model.durationMilliseconds) }}
+          </td>
+          <td class="ui-table-numeric" data-label="未完整回報">
             {{ format(model.requests - model.requestsWithUsage) }}
           </td>
         </tr>
@@ -135,8 +137,8 @@
       <thead>
         <tr>
           <th scope="col">來源</th>
-          <th scope="col" class="ops-num">請求</th>
-          <th scope="col" class="ops-num">tokens</th>
+          <th scope="col" class="ui-table-numeric">請求</th>
+          <th scope="col" class="ui-table-numeric">tokens</th>
           <th scope="col">請求占比</th>
         </tr>
       </thead>
@@ -146,8 +148,8 @@
             <th scope="row">
               <strong>{{ kindName(kind.kind) }}</strong>
             </th>
-            <td class="ops-num" data-label="請求">{{ format(kind.requests) }}</td>
-            <td class="ops-num" data-label="tokens">
+            <td class="ui-table-numeric" data-label="請求">{{ format(kind.requests) }}</td>
+            <td class="ui-table-numeric" data-label="tokens">
               {{ format(kind.inputTokens + kind.outputTokens) }}
             </td>
             <td class="usage-share ops-span" data-label="占比">
@@ -157,7 +159,7 @@
                 [value]="kind.requests"
                 [attr.aria-label]="kindName(kind.kind) + ' 請求占比'"
               ></meter
-              ><span class="ops-num">{{ share(kind.requests, kindTotal()) }}</span>
+              ><span class="ui-table-numeric">{{ share(kind.requests, kindTotal()) }}</span>
             </td>
           </tr>
         }

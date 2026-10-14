@@ -1,11 +1,30 @@
+// The host takes whatever height the page gives it and stays transparent; the frame inside is as
+// tall as its rows and never taller than the host, so a short list leaves no empty framed area.
 :host {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  min-height: 0;
+}
+.ui-table-frame {
+  display: flex;
+  flex: 0 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
   border: 1px solid var(--line);
   border-radius: var(--p-radius-lg);
   background: var(--surface);
   overflow: clip;
+}
+// The scroll region takes keyboard focus for scrolling; its ring goes around the frame, since the
+// sticky header would cover the top of an inset ring.
+.ui-table-frame:has(> .ui-table-scroll:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: -1px;
+}
+.ui-table-scroll:focus-visible {
+  outline: none;
 }
 .ui-table-toolbar-wrap {
   display: flex;
