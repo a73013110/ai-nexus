@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { randomUUID } from "node:crypto";
-import type { ShareDto } from "../src/app/core/api/schema";
+import type { SharedContentDto, ShareDto } from "../src/app/core/api/schema";
 import {
   expectCompactWorkspace,
   ApiFixture,
@@ -272,3 +272,118 @@ test("sent shares preserve their list and reuse the authorized PDF reader, citat
   await page.setViewportSize({ width: 375, height: 812 });
   await expectViewportContained(page);
 });
+
+for (const width of [1440, 375]) {
+  test(`sharing tours walk the list and what the viewer can do with a share at ${width}px`, async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const core = new ApiFixture();
+    core.extraFeatures.push({ id: "shared", name: "分享", route: "/shared" });
+    // A recipient reading an artifact version has no share menu, so the tour ends on its facts.
+    const recipient = width === 375;
+    const createdAt = new Date().toISOString();
+    const content: SharedContentDto = {
+      share: {
+        id: randomUUID(),
+        kind: recipient ? "artifact" : "conversation",
+        title: "季度工作摘要",
+        owner: recipient ? "林同事" : "測試使用者",
+        isOwner: !recipient,
+        isRevoked: false,
+        expiresAt: new Date(Date.now() + 86400000).toISOString(),
+        createdAt,
+        recipients: recipient ? ["測試使用者"] : ["林同事"],
+        includeAttachments: !recipient,
+      },
+      snapshot: recipient
+        ? {
+            content: "# 季度工作摘要\n\n第一段內容。",
+            artifactVersion: 2,
+            messages: [],
+          }
+        : {
+            content: "",
+            artifactVersion: null,
+            messages: (["user", "assistant"] as const).map((role) => ({
+              role,
+              content:
+                role === "user" ? "請摘要這季的工作" : "本季完成三項工作。",
+              status: "completed",
+              createdAt,
+              attachments: [],
+              modelId: null,
+              errorCode: null,
+              sources: null,
+              webSources: null,
+              timing: null,
+              modelDisplayName: null,
+              issueCode: null,
+            })),
+          },
+    };
+    await core.attach(page);
+    await page.route("**/api/v1/shares**", (route) => {
+      const path = new URL(route.request().url()).pathname;
+      return route.fulfill({
+        json: path === "/api/v1/shares" ? [content.share] : content,
+      });
+    });
+    const height = width === 375 ? 812 : 1000;
+    await page.setViewportSize({ width, height });
+    const launcher = page
+      .locator(".feature-header")
+      .getByRole("button", { name: "操作導覽", exact: true });
+    const tour = page.locator(".driver-popover.nx-tour");
+    const title = tour.locator(".driver-popover-title");
+    const progress = tour.locator(".driver-popover-progress-text");
+    // Walks to the end and returns each step's title and the last description.
+    const walk = async () => {
+      await launcher.click();
+      await expect(title).toHaveText(/./);
+      const total = Number((await progress.innerText()).split("/")[1]);
+      const titles = [await title.innerText()];
+      for (let step = 2; step <= total; step++) {
+        await tour.getByRole("button", { name: "下一步", exact: true }).click();
+        await expect(progress).toHaveText(`${step} / ${total}`);
+        titles.push(await title.innerText());
+        await settleEntrance(page);
+        const bounds = (await tour.boundingBox())!;
+        expect(bounds.x).toBeGreaterThanOrEqual(0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+        expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
+      }
+      const last = await tour
+        .locator(".driver-popover-description")
+        .innerText();
+      await tour.getByRole("button", { name: "開始使用", exact: true }).click();
+      await expect(tour).toHaveCount(0);
+      await expect(launcher).toBeFocused();
+      await expect(page.locator(".driver-overlay")).toHaveCount(0);
+      return { titles, last };
+    };
+    await page.goto("/shared");
+    await expect(page.locator(".resource-card")).toBeVisible();
+    const list = await walk();
+    expect(list.titles).toEqual([
+      "收到的分享集中閱讀",
+      "分享給我與我分享的",
+      "用標題尋找分享",
+      "打開分享",
+    ]);
+    expect(list.last).toContain("重播導覽");
+    await page.locator(".resource-card").click();
+    await expect(page.locator(".share-content")).toContainText(
+      recipient ? "第一段內容" : "本季完成三項工作",
+    );
+    const detail = await walk();
+    expect(detail.titles).toEqual(
+      recipient
+        ? ["分享者與期限", "分享當下的成果版本", "分享資訊"]
+        : ["分享者與期限", "分享當下的對話", "分享資訊", "撤銷分享"],
+    );
+    expect(detail.last).toContain("重播導覽");
+    expect(errors).toEqual([]);
+  });
+}

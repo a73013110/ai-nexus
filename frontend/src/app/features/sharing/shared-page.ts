@@ -32,6 +32,7 @@ import { ResourceGallery } from '../../shared/ui/resource-gallery';
 import { StatusBadge } from '../../shared/ui/status-badge';
 import type { BadgeTone } from '../../shared/ui/count-badge';
 import { SharingApi } from './sharing-api';
+import { shareTour, sharesTour } from './shared-tour';
 
 @Component({
   selector: 'nx-shared-page',
@@ -112,6 +113,23 @@ export class SharedPage {
       ? [{ id: 'revoke', label: '撤銷分享', icon: 'stop', danger: true, disabled: this.busy() }]
       : [],
   );
+  /** The collection's tour, or the open share's for what it holds and who is viewing. */
+  readonly tour = computed(() => {
+    const share = this.content()?.share;
+    if (this.id())
+      return share
+        ? shareTour({
+            artifact: share.kind === 'artifact',
+            attachments: share.includeAttachments,
+            manage: this.shareActions().length > 0,
+          })
+        : null;
+    return sharesTour({
+      chat: this.session.has('chat'),
+      artifacts: this.session.has('artifacts'),
+      cards: !this.listLoading() && this.visible().length > 0,
+    });
+  });
   readonly busy = signal(false);
   readonly actionError = signal('');
   readonly error = computed(

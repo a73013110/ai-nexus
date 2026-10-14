@@ -8,10 +8,16 @@
         : '收到的內容集中閱讀，自己建立的分享可隨時撤銷。'
   "
   [back]="id() ? { path: '/shared', label: '全部分享', query: { sent: sent() } } : null"
+  [tour]="tour()"
 >
   <div page-actions class="page-actions">
     @if (shareActions().length) {
-      <nx-action-menu label="分享操作" [items]="shareActions()" (action)="shareAction($event)" />
+      <nx-action-menu
+        class="share-menu"
+        label="分享操作"
+        [items]="shareActions()"
+        (action)="shareAction($event)"
+      />
     }
   </div>
   @if (error()) {
@@ -96,7 +102,7 @@
           }
         }
       </nx-panel>
-      <nx-panel heading="分享資訊" icon="share">
+      <nx-panel heading="分享資訊" icon="share" class="share-info">
         <dl class="share-facts">
           <div>
             <dt>分享者</dt>
