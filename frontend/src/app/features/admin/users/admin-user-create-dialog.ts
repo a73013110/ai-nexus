@@ -42,17 +42,19 @@ import { UserRoleFields } from './user-role-fields';
             @if (error()) {
               <nx-notice tone="danger" [message]="error()" />
             }
-            <nx-user-account-fields
-              [value]="account()"
-              [disabled]="saving()"
-              (valueChange)="account.set($event)"
-            />
-            <nx-user-role-fields
-              [roleIds]="roleIds()"
-              [enabled]="account().enabled"
-              [disabled]="saving()"
-              (roleIdsChange)="roleIds.set($event)"
-            />
+            <div class="form-sections">
+              <nx-user-account-fields
+                [value]="account()"
+                [disabled]="saving()"
+                (valueChange)="account.set($event)"
+              />
+              <nx-user-role-fields
+                [roleIds]="roleIds()"
+                [enabled]="account().enabled"
+                [disabled]="saving()"
+                (roleIdsChange)="roleIds.set($event)"
+              />
+            </div>
           </div>
           <footer class="dialog-foot">
             <button

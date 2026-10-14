@@ -1,18 +1,45 @@
-.model-policy-intro {
+// Head (the restriction and the rules), the table and the field hint keep one rhythm; used both in
+// the user inspector and in the feature group dialog.
+:host {
   display: grid;
-  gap: var(--p-space-2);
-  margin-bottom: var(--section-gap);
+  gap: var(--p-space-3);
+  min-width: 0;
+}
+.model-policy-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--p-space-3);
+  min-width: 0;
+}
+// The box lines up with the table's edge; its hover keeps room around it.
+.model-policy-head > nx-checkbox {
+  flex: 1 1 auto;
+  margin-inline-start: calc(-1 * var(--control-padding-inline));
+}
+.model-policy-head > nx-info-popover {
+  flex: none;
 }
 .model-policy-table table {
   table-layout: fixed;
 }
-.model-policy-limit-column {
-  width: 35%;
+.model-policy-effective-column {
+  width: 34%;
 }
-.model-policy-name {
-  min-width: 0;
-  overflow-wrap: anywhere;
+.model-policy-limit-column {
+  width: 30%;
 }
 .model-policy-name {
   --selection-control-padding: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.model-policy-name strong {
+  font-weight: 500;
+}
+.model-policy-blocked {
+  color: var(--warning);
+}
+nx-notice {
+  margin-block: 0;
 }

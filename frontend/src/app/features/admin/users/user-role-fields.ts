@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, input, output } from '@angular/core';
 import type { AdminCatalogDto } from '../../../core/api/schema';
 import { ChoiceGroups, type ChoiceGroup } from '../../../shared/ui/choice-groups';
+import { Notice } from '../../../shared/ui/notice';
 import { AdminStore } from '../admin-store';
 import { FeatureSummary } from '../feature-summary';
 
@@ -20,48 +21,64 @@ export function sameIds(a: readonly string[], b: readonly string[]) {
   return a.length === b.length && a.every((id) => b.includes(id));
 }
 
-/** Role assignment with a preview of the features it grants; shared by create and inspector. */
+let sequence = 0;
+
+/**
+ * Role assignment and a preview of the features it grants, as two form sections; shared by the
+ * create dialog and the inspector, which wrap them in `.form-sections`.
+ */
 @Component({
   selector: 'nx-user-role-fields',
-  imports: [ChoiceGroups, FeatureSummary],
+  imports: [ChoiceGroups, FeatureSummary, Notice],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrls: ['../form-sections.scss'],
   styles: `
     :host {
-      display: grid;
-      gap: var(--p-space-3);
-      min-width: 0;
+      display: contents;
     }
   `,
   template: `
-    <nx-choice-groups
-      label="分派角色"
-      [groups]="choices()"
-      [selected]="roleIds()"
-      [disabled]="disabled()"
-      (selectedChange)="roleIdsChange.emit($event)"
-    />
-    <fieldset>
-      <legend>儲存後可用功能（預覽）</legend>
-      @if (!enabled()) {
-        <p class="form-note">使用者已停用，儲存後無法使用任何功能。</p>
-      }
-      <nx-feature-summary [features]="features()" />
-    </fieldset>
+    <section class="form-section" role="group" [attr.aria-labelledby]="id + '-roles'">
+      <header class="form-section-head">
+        <h3 [id]="id + '-roles'">角色</h3>
+        <p class="form-note">可複選；可用功能取各角色的聯集。</p>
+      </header>
+      <div class="form-section-body">
+        <nx-choice-groups
+          label="分派角色"
+          [groups]="choices()"
+          [selected]="roleIds()"
+          [disabled]="disabled()"
+          (selectedChange)="roleIdsChange.emit($event)"
+        />
+      </div>
+    </section>
+    <section class="form-section" role="group" [attr.aria-labelledby]="id + '-preview'">
+      <header class="form-section-head">
+        <h3 [id]="id + '-preview'">儲存後可用功能</h3>
+        <p class="form-note">依目前勾選的角色試算。</p>
+      </header>
+      <div class="form-section-body">
+        @if (!enabled()) {
+          <nx-notice tone="warning" message="使用者已停用，儲存後無法使用任何功能。" />
+        }
+        <nx-feature-summary [features]="features()" />
+      </div>
+    </section>
   `,
 })
 export class UserRoleFields {
+  readonly id = `nx-user-roles-${++sequence}`;
   private readonly store = inject(AdminStore);
   readonly roleIds = input.required<string[]>();
   /** A disabled user keeps their roles but can open nothing. */
   readonly enabled = input(true);
   readonly disabled = input(false);
   readonly roleIdsChange = output<string[]>();
-  /** 角色沒有分類，收成一張卡片。 */
+  /** 角色沒有分類，收成一張卡片；段落標題已是「角色」，卡片名稱說明範圍。 */
   readonly choices = computed<ChoiceGroup[]>(() => [
     {
       id: 'roles',
-      name: '角色',
+      name: '全部角色',
       options: (this.store.catalog()?.roles ?? []).map((role) => ({
         id: role.id,
         label: role.name + (role.enabled ? '' : '（停用）'),

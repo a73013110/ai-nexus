@@ -28,6 +28,7 @@
 - 原生 input／select／textarea 用 `nxField`，搜尋用 `SearchField`（對話框列內 `appearance="bare"`）。互斥篩選或版面用 `ViewSwitch`；切換一塊內容（含對話框分類）用 `Tabs` 並連 tabpanel。共用元件不接管查詢、驗證、草稿或 API。
 - 驗證說明靠近欄位，不放頁面提示容器。
 - 段落用單層輕量外框（legend 在框線上），框內不疊框。多選清單用 `ChoiceGroups`：每類一張有框卡片（標題、已選數、全選；無分類就一張），不包總 fieldset。`Checkbox` 勾選只靠方框，列不填色。
+- 設定表單（例：使用者管理）用 `.form-sections`（`frontend/src/styles/platform.scss`）：段落以細線分隔、不加框，標題下最多一句說明，寬時標題在左欄、欄位限寬在右欄。填欄位需要的限制寫在欄位旁，其餘規則收進標題旁的 `InfoPopover`；勾選框對齊欄位左緣，依附欄位用 `.form-subfields`。
 - 日期用 `DateTimePicker` 與 `shared/browser/format.ts`：台北 wall-clock 輸入與顯示、送出轉 UTC，不讓瀏覽器把日期正規化成另一天；民國曆只影響顯示。選填（`[required]="false"`）日期無效時暫停自動查詢。
 - 有未儲存變更的頁面實作 `canLeave()`，路由加 `pendingChanges` guard；對話框切頁籤或關閉前用 `ConfirmDialog` 確認。
 - 文字輸入：IME 組字中（含 keyCode 229）的 Enter 不送出，Shift+Enter 換行；長草稿自動增高，上下限讀 CSS token。
@@ -41,7 +42,7 @@
 - `.dialog-note` 放頁尾左側的說明；取消在左、主要動作在右。標題自我說明（「編輯角色：成員」），不加眉標。
 - `ConfirmDialog` 初始焦點在「取消」，Esc／關閉視為取消，結束後返回先前焦點。危險動作一律經過確認。
 - 詳情用 `DetailDrawer`：桌面 modeless（可繼續操作列表），`tablet` 斷點以下改為原生 modal。
-- 多頁籤視窗：`Tabs` 在標題區（標題列與選用的摘要）下、tabpanel 上，不隨內容捲動；tabpanel 是 `.dialog-body`，各頁籤分開儲存時是含 body 與頁尾的面板。高度固定不跳動，要換寬度（例：使用者「對話」）才用 `DialogMotion`。內容用 `ViewMotion`。
+- 多頁籤視窗：`Tabs` 在標題區（標題列與選用的摘要）下、tabpanel 上，不隨內容捲動；tabpanel 是 `.dialog-body`，各頁籤分開儲存時是含 body 與頁尾的面板，頁尾固定為「說明｜還原｜儲存」，未變更時兩鈕停用並寫明。一次儲存全部頁籤時高度固定不跳動；各頁籤分開儲存或要換寬度（例：使用者「對話」）時用 `DialogMotion` 過渡尺寸。內容用 `ViewMotion`。
 - 只在開啟時建立昂貴內容（`CompactDialog.opened`），關閉時銷毀閱讀器、圖表與 Blob URL。
 
 ## 提示、載入與錯誤

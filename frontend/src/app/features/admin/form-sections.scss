@@ -1,4 +1,5 @@
-// Shared by the access editor and the user forms (styleUrls, so each component keeps its own copy).
+// The access editor's framed sections (styleUrls). The user forms use the hairline `.form-sections`
+// in styles/platform.scss instead.
 // A section is one light frame with its legend on the line; groups inside a section are named by a
 // caption and never framed again.
 fieldset {
