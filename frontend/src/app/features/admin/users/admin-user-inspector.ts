@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  computed,
   effect,
   inject,
   input,
@@ -18,7 +19,7 @@ import { ConfirmDialog } from '../../../shared/ui/confirm-dialog';
 import { DialogHeader } from '../../../shared/ui/dialog-header';
 import { Icon } from '../../../shared/ui/icon';
 import { Tabs, type TabItem } from '../../../shared/ui/tabs';
-import { DialogMotion, ViewMotion } from '../../../shared/ui/view-motion';
+import { ViewMotion } from '../../../shared/ui/view-motion';
 import { AccessStatus } from '../access/access-status';
 import { AdminUserConversations } from './admin-user-conversations';
 import { AdminUserSettings } from './admin-user-settings';
@@ -41,7 +42,6 @@ import { UserConversationReader } from './user-conversation-reader';
     CompactDialog,
     ConfirmDialog,
     DialogHeader,
-    DialogMotion,
     Icon,
     RouterLink,
     Tabs,
@@ -59,13 +59,17 @@ export class AdminUserInspector {
   readonly session = inject(WorkspaceSession);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly confirmation = viewChild.required(ConfirmDialog);
-  readonly tabs: readonly (TabItem & { value: UserTab })[] = [
-    { value: 'account', label: '帳號' },
-    { value: 'roles', label: '角色與權限' },
-    { value: 'models', label: 'AI 模型' },
-    { value: 'storage', label: '附件容量' },
-    { value: 'conversations', label: '對話' },
-  ];
+  /** Each settings tab saves on its own and marks its unsaved changes. */
+  readonly tabs = computed<readonly (TabItem & { value: UserTab })[]>(() => {
+    const dirty = this.store.dirty();
+    return [
+      { value: 'account', label: '帳號', dirty: dirty.account },
+      { value: 'roles', label: '角色與權限', dirty: dirty.roles },
+      { value: 'models', label: 'AI 模型', dirty: dirty.models },
+      { value: 'storage', label: '附件容量', dirty: dirty.storage },
+      { value: 'conversations', label: '對話' },
+    ];
+  });
   constructor() {
     effect(() => {
       const user = this.user(),
@@ -111,7 +115,7 @@ export class AdminUserInspector {
     if (tab === 'conversations' || !this.store.dirty()[tab]) return true;
     return this.confirmation().ask({
       title: '放棄未儲存的變更？',
-      message: `「${this.tabs.find((x) => x.value === tab)?.label}」的變更尚未儲存，離開後會恢復為已儲存的設定。`,
+      message: `「${this.tabs().find((x) => x.value === tab)?.label}」的變更尚未儲存，離開後會恢復為已儲存的設定。`,
       confirm: '放棄變更',
     });
   }

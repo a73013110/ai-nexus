@@ -31,7 +31,8 @@ function setup(testing = false) {
   };
   const admin = { saved: vi.fn(), readUsers: vi.fn() };
   const session = {
-    auth: { generation, session: signal(testing ? { testing: {} } : null) },
+    auth: { generation },
+    testing: signal(testing),
     load: vi.fn(async () => true),
     has: () => true,
   };

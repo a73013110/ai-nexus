@@ -31,22 +31,28 @@ import { AccessStatus } from './access-status';
           <col class="admin-status-column" />
           <col class="admin-count-column" />
           <col />
-          <col class="admin-row-action-column" />
         </colgroup>
         <thead>
           <tr>
             <th scope="col">角色</th>
             <th scope="col">狀態</th>
-            <th scope="col">使用者</th>
+            <th scope="col" class="ui-table-numeric">使用者</th>
             <th scope="col">功能群組</th>
-            <th scope="col"><span class="sr-only">編輯</span></th>
           </tr>
         </thead>
         <tbody>
           @for (role of roles(); track role.id) {
             <tr nxTableRow (rowActivate)="edit.emit(role)">
               <td>
-                <strong>{{ role.name }}</strong
+                <button
+                  type="button"
+                  class="ui-table-link admin-table-name"
+                  data-row-action
+                  aria-haspopup="dialog"
+                  [attr.aria-label]="'編輯角色：' + role.name"
+                  (click)="edit.emit(role)"
+                >
+                  <span class="ui-truncate" [title]="role.name">{{ role.name }}</span></button
                 ><small class="ui-truncate" [title]="role.id">{{ role.id }}</small>
               </td>
               <td><nx-access-status [enabled]="role.enabled" /></td>
@@ -61,16 +67,6 @@ import { AccessStatus } from './access-status';
                 } @else {
                   <span class="form-note">尚未加入功能群組</span>
                 }
-              </td>
-              <td data-stack="end">
-                <button
-                  class="icon-button"
-                  data-row-action
-                  [attr.aria-label]="'編輯角色：' + role.name"
-                  (click)="edit.emit(role)"
-                >
-                  <nx-icon name="edit" />
-                </button>
               </td>
             </tr>
           }

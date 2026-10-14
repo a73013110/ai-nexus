@@ -1,7 +1,7 @@
 import { Notice } from '../../shared/ui/notice';
 import { DialogHeader } from '../../shared/ui/dialog-header';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
-import { DialogMotion, ViewMotion } from '../../shared/ui/view-motion';
+import { ViewMotion } from '../../shared/ui/view-motion';
 import { MarkdownEditor } from '../../shared/markdown/markdown-editor';
 import { Field } from '../../shared/ui/field';
 import {
@@ -32,7 +32,6 @@ import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
     Notice,
     CompactDialog,
     DialogHeader,
-    DialogMotion,
     ViewMotion,
     MarkdownEditor,
     Field,
@@ -49,7 +48,6 @@ import { TEXT_ACTIONS, TEXT_ACTION_ICON_PROVIDER } from './text-actions';
     #surface="nxCompactDialog"
     #dialog
     class="platform-dialog text-tools-dialog"
-    [nxDialogView]="expanded()"
     (cancel)="cancel($event)"
   >
     <nx-dialog-header

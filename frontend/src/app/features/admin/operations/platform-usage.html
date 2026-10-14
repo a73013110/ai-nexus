@@ -1,118 +1,212 @@
+<div class="page-toolbar">
+  <p class="form-note usage-period">
+    <strong>最近 30 天</strong>
+    @if (period()) {
+      <span>{{ period() }}</span>
+    }
+    <span>全平台</span>
+  </p>
+  <div class="page-actions">
+    <button
+      type="button"
+      class="icon-button"
+      aria-label="更新用量"
+      title="更新用量"
+      [disabled]="read.refreshing()"
+      (click)="read.reload()"
+    >
+      <nx-icon [name]="read.refreshing() ? 'loading' : 'refresh'" />
+    </button>
+  </div>
+</div>
 @if (read.error()) {
   <nx-notice [message]="read.error()"
-    ><button notice-actions (click)="read.reload()">重新載入</button>
+    ><button notice-actions type="button" (click)="read.reload()">重新載入</button>
   </nx-notice>
 }
-@if (read.value(); as stats) {
-  <div class="page-toolbar">
-    <p class="form-note">
-      最近 30 天 · {{ date(stats.since) }} 至 {{ date(stats.until) }} · 全平台
-    </p>
-    <div class="page-actions">
-      <button class="icon-button" aria-label="更新用量" title="更新用量" (click)="read.reload()">
-        <nx-icon name="refresh" />
-      </button>
-    </div>
-  </div>
-  <div class="usage-grid">
-    <div nxCard class="stat-card">
-      <span>啟用帳號</span><strong>{{ format(stats.users) }}</strong
-      ><small>{{ format(stats.activeUsers) }} 位在區間內使用 AI</small>
-    </div>
-    <div nxCard class="stat-card">
-      <span>生成次數</span><strong>{{ format(stats.requests) }}</strong
-      ><small
-        >{{ format(stats.completed) }} 完成 · {{ format(stats.failed) }} 失敗 ·
-        {{ format(stats.cancelled) }} 取消</small
-      >
-    </div>
-    <div nxCard class="stat-card">
-      <span>回報 tokens</span><strong>{{ format(stats.inputTokens + stats.outputTokens) }}</strong
-      ><small>輸入 {{ format(stats.inputTokens) }} · 輸出 {{ format(stats.outputTokens) }}</small>
-    </div>
-    <div nxCard class="stat-card">
-      <span>原檔容量</span><strong>{{ bytes(stats.storedBytes) }}</strong
-      ><small>{{ format(stats.storedFiles) }} 份原檔 · 所有期間，重複引用不重複計算</small>
-    </div>
-  </div>
+@if (stats() || read.loading()) {
+  <nx-stat-grid label="平台用量摘要">
+    @for (tile of tiles(); track tile.key) {
+      <nx-stat-tile
+        [label]="tile.label"
+        [value]="tile.value"
+        [unit]="tile.unit"
+        [hint]="tile.hint"
+      />
+    }
+  </nx-stat-grid>
+}
+@if (stats(); as stats) {
   <p class="form-note">
-    {{ format(stats.requestsWithUsage) }} 次請求回報完整用量；其餘
-    {{ format(stats.requests - stats.requestsWithUsage) }} 次未回報完整
-    token，不估算實際用量。累計處理 {{ duration(stats.totalDurationMilliseconds) }}（{{
-      stats.timedRequests
+    {{ format(stats.requestsWithUsage) }} 次請求回報完整用量；{{
+      format(stats.requests - stats.requestsWithUsage)
+    }}
+    次未完整回報，不估算其用量。累計處理 {{ duration(stats.totalDurationMilliseconds) }}（{{
+      format(stats.timedRequests)
     }}
     次有紀錄）。
   </p>
-  <section class="admin-usage-section" aria-label="各模型用量">
-    <h2>各模型使用狀況</h2>
-    <nx-data-table label="各模型使用狀況">
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">模型</th>
-            <th scope="col">請求</th>
-            <th scope="col">輸入 tokens</th>
-            <th scope="col">輸出 tokens</th>
-            <th scope="col">失敗</th>
-            <th scope="col">缺少完整用量</th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (model of stats.models; track model.modelId) {
-            <tr>
-              <td>{{ usageModelName(model) }}</td>
-              <td>{{ format(model.requests) }}</td>
-              <td>{{ format(model.inputTokens) }}</td>
-              <td>{{ format(model.outputTokens) }}</td>
-              <td>{{ format(model.failed) }}</td>
-              <td>{{ format(model.requests - model.requestsWithUsage) }}</td>
-            </tr>
-          } @empty {
-            <tr>
-              <td colspan="6">區間內尚無模型使用紀錄。</td>
-            </tr>
-          }
-        </tbody>
-      </table>
-    </nx-data-table>
-  </section>
-  <section class="admin-usage-section" aria-label="功能用量">
-    <h2>使用來源</h2>
-    <div class="resource-badges">
-      @for (kind of stats.kinds; track kind.kind) {
-        <span>{{ usageKindName(kind.kind) }} · {{ format(kind.requests) }} 次</span>
-      } @empty {
-        <p class="form-note">尚無使用紀錄。</p>
-      }
-    </div>
-  </section>
-  <section class="admin-usage-section" aria-label="模型與搜尋服務">
-    <h2>服務狀態</h2>
-    <div class="admin-service-grid">
-      @for (provider of stats.providers; track provider.id) {
-        <article nxCard class="admin-service-card">
-          <strong
-            >{{
-              provider.id === 'ollama'
-                ? '地端 Ollama'
-                : provider.id === 'google'
-                  ? 'Google AI'
-                  : provider.id
-            }}
-            · {{ provider.available ? '已連線' : '無法連線' }}</strong
-          >
-          <p>
-            {{ provider.notice || '模型目錄可正常讀取。圖片能力依各模型實際回報判定。' }}
-          </p>
-        </article>
-      }
-      <article nxCard class="admin-service-card">
-        <strong>網路搜尋 · {{ stats.webSearch.available ? '已設定' : '尚未啟用' }}</strong>
-        <p>{{ stats.webSearch.notice }}</p>
-        <p>地端部署可搭配公司自架 SearXNG；模型本身不會自動連網。</p>
-      </article>
-    </div>
-  </section>
-} @else if (!read.error()) {
-  <p role="status">正在載入平台用量…</p>
 }
+<nx-data-table
+  class="ops-table ops-figures usage-models"
+  label="各模型使用狀況"
+  [busy]="read.refreshing()"
+  [stacked]="true"
+>
+  <div table-toolbar class="ui-table-toolbar">
+    <h2>
+      各模型使用狀況 <span class="ui-count-label">{{ models().length }} 個模型</span>
+    </h2>
+    <span class="ops-table-note">依請求數排序</span>
+  </div>
+  <table>
+    <colgroup>
+      <col />
+      <col class="usage-count-column" />
+      <col class="usage-count-column" />
+      <col class="usage-token-column" />
+      <col class="usage-token-column" />
+      <col class="usage-time-column" />
+      <col class="usage-count-column" />
+    </colgroup>
+    <thead>
+      <tr>
+        <th scope="col">模型</th>
+        <th scope="col" class="ui-table-numeric">請求</th>
+        <th scope="col" class="ui-table-numeric">失敗</th>
+        <th scope="col" class="ui-table-numeric">輸入 tokens</th>
+        <th scope="col" class="ui-table-numeric">輸出 tokens</th>
+        <th scope="col" class="ui-table-numeric">處理時間</th>
+        <th scope="col" class="ui-table-numeric">未完整回報</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (model of models(); track model.modelId) {
+        <tr>
+          <th scope="row">
+            <strong class="ui-truncate" [title]="modelName(model)">{{ modelName(model) }}</strong>
+          </th>
+          <td class="ui-table-numeric" data-label="請求">{{ format(model.requests) }}</td>
+          <td class="ui-table-numeric" data-label="失敗">
+            {{ format(model.failed)
+            }}<span class="usage-rate">{{ share(model.failed, model.requests) }}</span>
+          </td>
+          <td class="ui-table-numeric" data-label="輸入">{{ format(model.inputTokens) }}</td>
+          <td class="ui-table-numeric" data-label="輸出">{{ format(model.outputTokens) }}</td>
+          <td class="ui-table-numeric" data-label="處理時間">
+            {{ duration(model.durationMilliseconds) }}
+          </td>
+          <td class="ui-table-numeric" data-label="未完整回報">
+            {{ format(model.requests - model.requestsWithUsage) }}
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+  @if (!models().length) {
+    <nx-empty-state table-state class="ui-table-state">
+      @if (read.loading()) {
+        <nx-icon name="loading" />
+        <p>正在讀取平台用量</p>
+      } @else {
+        <nx-icon name="chart" />
+        <p>區間內尚無模型使用紀錄。</p>
+      }
+    </nx-empty-state>
+  }
+</nx-data-table>
+<div class="ops-pair">
+  <nx-data-table
+    class="ops-table ops-figures"
+    label="使用來源"
+    [busy]="read.refreshing()"
+    [stacked]="true"
+  >
+    <div table-toolbar class="ui-table-toolbar">
+      <h2>
+        使用來源 <span class="ui-count-label">{{ kinds().length }} 類</span>
+      </h2>
+    </div>
+    <table>
+      <colgroup>
+        <col />
+        <col class="usage-count-column" />
+        <col class="usage-token-column" />
+        <col class="usage-share-column" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th scope="col">來源</th>
+          <th scope="col" class="ui-table-numeric">請求</th>
+          <th scope="col" class="ui-table-numeric">tokens</th>
+          <th scope="col">請求占比</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (kind of kinds(); track kind.kind) {
+          <tr>
+            <th scope="row">
+              <strong>{{ kindName(kind.kind) }}</strong>
+            </th>
+            <td class="ui-table-numeric" data-label="請求">{{ format(kind.requests) }}</td>
+            <td class="ui-table-numeric" data-label="tokens">
+              {{ format(kind.inputTokens + kind.outputTokens) }}
+            </td>
+            <td class="usage-share ops-span" data-label="占比">
+              <meter
+                min="0"
+                [max]="kindTotal() || 1"
+                [value]="kind.requests"
+                [attr.aria-label]="kindName(kind.kind) + ' 請求占比'"
+              ></meter
+              ><span class="ui-table-numeric">{{ share(kind.requests, kindTotal()) }}</span>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    @if (!kinds().length) {
+      <nx-empty-state table-state class="ui-table-state">
+        <p>{{ read.loading() ? '正在讀取使用來源' : '區間內尚無使用紀錄。' }}</p>
+      </nx-empty-state>
+    }
+  </nx-data-table>
+  <nx-data-table class="ops-table" label="服務狀態" [busy]="read.refreshing()" [stacked]="true">
+    <div table-toolbar class="ui-table-toolbar">
+      <h2>服務狀態</h2>
+      <span class="ops-table-note">模型本身不會自動連網；地端可搭配自架 SearXNG</span>
+    </div>
+    <table>
+      <colgroup>
+        <col class="usage-service-column" />
+        <col class="usage-status-column" />
+        <col />
+      </colgroup>
+      <thead>
+        <tr>
+          <th scope="col">服務</th>
+          <th scope="col">狀態</th>
+          <th scope="col">說明</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (service of services(); track service.id) {
+          <tr>
+            <th scope="row">
+              <strong>{{ service.name }}</strong>
+            </th>
+            <td>
+              <nx-status-badge [tone]="service.tone">{{ service.status }}</nx-status-badge>
+            </td>
+            <td class="usage-notice">{{ service.notice }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    @if (!services().length) {
+      <nx-empty-state table-state class="ui-table-state">
+        <p>{{ read.loading() ? '正在讀取服務狀態' : '沒有服務狀態。' }}</p>
+      </nx-empty-state>
+    }
+  </nx-data-table>
+</div>

@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'scroll-pad';
 
 :host-context(.settings-dialog) .settings-layout {
   height: 100%;
@@ -8,10 +9,11 @@
   padding: var(--p-space-5) var(--p-space-3);
   gap: var(--p-space-3);
 }
+// Edge to edge like a dialog body: the save bar meets the dialog's bottom edge, and the scrollbar
+// track keeps its own inset from the rounded corners (scrollbars.scss).
 :host-context(.settings-dialog) .settings-main {
-  padding: 0 var(--p-space-6);
-  margin-block: var(--dialog-inset);
-  margin-right: var(--dialog-inset);
+  padding-block: 0;
+  @include scroll-pad.inline(var(--p-space-6), $expose: true);
 }
 :host-context(.settings-dialog) .settings-page-header {
   position: sticky;
@@ -50,7 +52,7 @@
     overflow: auto;
   }
   :host-context(.settings-dialog) .settings-main {
-    padding: 0 var(--p-space-3);
+    @include scroll-pad.inline(var(--p-space-3), $expose: true);
   }
   :host-context(.settings-dialog) .settings-page-header {
     padding-top: var(--p-space-4);

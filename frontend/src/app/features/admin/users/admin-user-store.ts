@@ -11,6 +11,7 @@ import { AdminStore } from '../admin-store';
 import {
   modelPolicyDraft,
   modelPolicyRequest,
+  sameModelPolicy,
   type ModelPolicyDraft,
 } from '../model-policy-editor';
 import {
@@ -27,21 +28,6 @@ type Keyed<T> = readonly [string | undefined, T];
 export type UserTab = 'account' | 'roles' | 'models' | 'storage' | 'conversations';
 /** The tabs that edit something; each saves on its own. */
 export type UserSettingsTab = Exclude<UserTab, 'conversations'>;
-
-/** Token limits left blank mean "inherit", so a blank and a missing limit are the same policy. */
-function sameModelPolicy(a: ModelPolicyDraft, b: ModelPolicyDraft) {
-  const limits = (draft: ModelPolicyDraft) =>
-    Object.entries(draft.tokenLimits)
-      .filter(([, value]) => value.trim() !== '')
-      .map(([id, value]) => `${id}=${value.trim()}`)
-      .sort()
-      .join();
-  return (
-    a.restricted === b.restricted &&
-    (!a.restricted || sameIds(a.modelIds, b.modelIds)) &&
-    limits(a) === limits(b)
-  );
-}
 
 /**
  * One user's management state for the inspector: the saved account, a draft per tab and the
@@ -66,8 +52,6 @@ export class AdminUserStore {
     source: this.key,
     computation: () => 'account',
   });
-  /** Management writes are refused while testing another identity. */
-  readonly testing = computed(() => !!this.session.auth.session()?.testing);
   readonly saving = linkedSignal<string | undefined, UserSettingsTab | null>({
     source: this.key,
     computation: () => null,
@@ -76,7 +60,8 @@ export class AdminUserStore {
     source: this.key,
     computation: () => ({}),
   });
-  readonly locked = computed(() => !!this.saving() || this.testing());
+  /** Fields are read-only while a tab saves or while testing another identity. */
+  readonly locked = computed(() => !!this.saving() || this.session.testing());
 
   private readonly request = computed(() => {
     const key = this.key(),

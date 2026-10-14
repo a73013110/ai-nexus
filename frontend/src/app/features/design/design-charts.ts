@@ -4,6 +4,7 @@ import { HeatmapCalendar } from '../../shared/ui/heatmap-calendar';
 import { NumberTicker } from '../../shared/ui/number-ticker';
 import { Sparkline } from '../../shared/ui/sparkline';
 import { Spotlight } from '../../shared/ui/spotlight';
+import { StatGrid, StatTile } from '../../shared/ui/stat-tile';
 import { DesignExample, DesignSection } from './design-section';
 
 function day(offset: number) {
@@ -23,6 +24,8 @@ const TREND = [4, 7, 5, 9, 6, 11, 8, 13, 10, 15, 12, 18];
     NumberTicker,
     Sparkline,
     Spotlight,
+    StatGrid,
+    StatTile,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
@@ -40,6 +43,9 @@ const TREND = [4, 7, 5, 9, 6, 11, 8, 13, 10, 15, 12, 18];
     }
     nx-sparkline {
       width: 12rem;
+    }
+    nx-stat-grid {
+      width: 100%;
     }
     nx-donut-chart,
     nx-heatmap-calendar {
@@ -85,6 +91,19 @@ const TREND = [4, 7, 5, 9, 6, 11, 8, 13, 10, 15, 12, 18];
       <nx-design-example label="無填色">
         <nx-sparkline [values]="trend" [area]="false" />
       </nx-design-example>
+    </nx-design-section>
+    <nx-design-section
+      id="design-stat"
+      title="頭條數字"
+      api="StatGrid · StatTile"
+      description="管理頁摘要的一列數字：標籤、表格數字與一句脈絡，字級隨卡片寬度縮放；手機兩欄。值為 null 時保留同高的載入佔位，只有真實的警告或危險才上色。"
+    >
+      <nx-stat-grid label="示範摘要">
+        <nx-stat-tile label="生成次數" value="18,452" unit="次" hint="完成 17,980 · 失敗 312" />
+        <nx-stat-tile label="原檔容量" value="31.23 GB" hint="4,210 份原檔" />
+        <nx-stat-tile label="載入中" [value]="null" hint="形狀已知的內容先佔位" />
+        <nx-stat-tile label="未定價" value="2" unit="項" hint="費用顯示為未知" tone="warning" />
+      </nx-stat-grid>
     </nx-design-section>
     <nx-design-section
       id="design-donut"

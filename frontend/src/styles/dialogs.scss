@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'scroll-pad';
 
 // Every modal shares one frame: a hairline, a layered shadow and a 12px radius. It rises and
 // scales in on the spring and leaves the same way; `overlay` and `display` keep it in the top layer
@@ -146,14 +147,17 @@ form.dialog-form {
   flex: 1;
   gap: var(--section-gap);
   min-height: 0;
-  padding: var(--p-space-3) var(--p-space-5);
+  // Tabs of different heights never shift sideways (scroll-pad.scss).
+  padding-block: var(--p-space-3);
+  @include scroll-pad.inline(var(--p-space-5));
   overflow: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
 }
+// Edge-to-edge content (a list, panes that scroll on their own) reserves no gutter either.
 .dialog-body-flush {
   gap: 0;
   padding: 0;
+  scrollbar-gutter: auto;
 }
 .dialog-body :where(label:not(.selection-control), .field-label) {
   display: block;
@@ -208,7 +212,7 @@ form.dialog-form {
     border-bottom: 0;
   }
   .dialog-body {
-    padding: var(--p-space-4) var(--p-space-5);
+    padding-block: var(--p-space-4);
   }
   .dialog-body-flush {
     padding: 0;
@@ -285,5 +289,50 @@ form.dialog-form {
   }
   .dialog-note {
     flex-basis: 100%;
+  }
+}
+
+// 放大（CompactDialog.maximized）貼齊視窗邊緣。檢視器（nxIdleChrome）裡的標題列此時浮在內容上，
+// 與浮動工具列一起閒置淡出（data-chrome，shared/ui/idle-chrome.ts），隱藏時以 ::after 擋住看不見的
+// 按鈕；其後的內容區把工具列排在它下方。放在最後，覆蓋手機底部 sheet 的尺寸。
+.platform-dialog[data-maximized] {
+  --dialog-max-height: none;
+  --dialog-chrome-height: calc(var(--button-target) + 2 * var(--p-space-3));
+  width: 100vw;
+  height: 100dvh;
+  border: 0;
+  border-radius: 0;
+  .dialog-bar[data-chrome] {
+    position: absolute;
+    inset: 0 0 auto;
+    z-index: 3;
+    height: var(--dialog-chrome-height);
+    padding-block: 0;
+    border-bottom: 1px solid var(--material-line);
+    background: var(--material-thick);
+    backdrop-filter: var(--material-filter);
+    transition:
+      opacity var(--motion) var(--ease),
+      translate var(--motion) var(--ease-spring);
+    :is(h1, h2) {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    ~ * {
+      --floating-toolbar-offset: calc(var(--dialog-chrome-height) + var(--p-space-2));
+    }
+  }
+  .dialog-bar[data-chrome='hidden']:not(:has(:focus-visible)) {
+    opacity: 0;
+    translate: 0 -0.5rem;
+    transition:
+      opacity var(--motion-panel) var(--ease-exit),
+      translate var(--motion-panel) var(--ease-exit);
+    &::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+    }
   }
 }

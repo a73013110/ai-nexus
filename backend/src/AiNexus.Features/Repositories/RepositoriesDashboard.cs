@@ -9,17 +9,18 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Repositories;
 
-/// <summary>Overview of Gitea use: connected accounts, AI reviews started in the period and those still running.</summary>
+/// <summary>
+/// Overview of Gitea use: connected accounts, AI reviews started in the period and those still running. Without Gitea
+/// configured there is nothing to count, so the section is left out.
+/// </summary>
 internal sealed class RepositoriesDashboard(NexusDbContext db, IOptions<GiteaOptions> gitea) : IDashboardSource
 {
     public string Feature => FeatureIds.Repositories;
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
+        if (!gitea.Value.Enabled) return null;
         var owner = scope.Owner;
-        var section = new DashboardSection("repositories", Feature)
-            .Fact("Gitea", gitea.Value.Enabled ? "已啟用" : "待設定", gitea.Value.Enabled ? DashboardTones.Success : DashboardTones.Warning);
-        if (!gitea.Value.Enabled) return section.Build();
         var reviews = db.Set<RepositoryReview>().AsNoTracking().Where(x => owner == null || x.OwnerId == owner);
         var jobs = db.Set<BackgroundJob>().AsNoTracking();
         var status = await reviews.Where(r => r.CreatedAt >= scope.From && r.CreatedAt < scope.Until)
@@ -29,9 +30,8 @@ internal sealed class RepositoriesDashboard(NexusDbContext db, IOptions<GiteaOpt
         var daily = await DashboardDays.CountAsync(db, reviews.Select(x => x.CreatedAt), scope, ct);
         var failed = status.Where(x => x.Status == "failed").Sum(x => x.Count);
         var connections = await db.Set<RepositoryConnection>().AsNoTracking().CountAsync(x => owner == null || x.OwnerId == owner, ct);
-        if (owner == null) section.Count("connections", "已連線帳號", connections, "個");
-        else section.Fact("帳號連線", connections > 0 ? "已連線" : "未連線", connections > 0 ? DashboardTones.Success : DashboardTones.Neutral);
-        section
+        var section = new DashboardSection("repositories", Feature)
+            .Count("connections", "已連線帳號", connections, "個")
             .Count("running", "Review 進行中", active, "次", active > 0 ? DashboardTones.Info : DashboardTones.Neutral)
             .Period("reviews", "期間 Review", daily.Sum(x => x.Value), "次")
             .Period("failed", "Review 失敗", failed, "次", tone: failed > 0 ? DashboardTones.Danger : DashboardTones.Neutral)

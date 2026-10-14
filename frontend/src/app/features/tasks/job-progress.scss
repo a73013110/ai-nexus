@@ -26,20 +26,11 @@
   overflow-wrap: anywhere;
 }
 .job-progress progress {
+  --meter-color: var(--signal);
   display: block;
   width: 100%;
   height: var(--p-space-2);
-  accent-color: var(--signal);
-  border: 0;
-  border-radius: var(--p-radius-pill);
-  overflow: hidden;
   margin-block: var(--p-space-2);
-  &::-webkit-progress-bar {
-    background: var(--hover);
-  }
-  &::-webkit-progress-value {
-    background: var(--signal);
-  }
 }
 .job-progress[data-status='completed'] .job-stage {
   color: var(--signal);

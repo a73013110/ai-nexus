@@ -31,6 +31,10 @@ export type TableSortDirection = 'asc' | 'desc';
  * one column, `data-stack="end"` sits top-right (the row's menu or edit button), `data-stack="hide"`
  * is left to the detail view and `data-label` names a value that needs its column header. The
  * table's own minimum width goes in `--table-min-width` so the cards can drop it.
+ *
+ * The visible frame is as tall as its rows and never taller than the host: a page that gives the
+ * host the remaining height (`layoutMode="data"`) gets an inner scroll with a sticky header and no
+ * empty area under a short list. Row states and the shared styles are in `styles/data-workspace.scss`.
  */
 @Component({
   selector: 'nx-data-table',
@@ -42,7 +46,8 @@ export type TableSortDirection = 'asc' | 'desc';
     '[class.ui-table-stack]': 'stacked()',
     '[attr.aria-busy]': 'busy()',
   },
-  template: `<div class="ui-table-toolbar-wrap">
+  template: `<div class="ui-table-frame">
+    <div class="ui-table-toolbar-wrap">
       <ng-content select="[table-toolbar]" />
       @if (columns().length) {
         <button
@@ -87,7 +92,8 @@ export type TableSortDirection = 'asc' | 'desc';
       <ng-content select="table" />
       <ng-content select="[table-state]" />
     </div>
-    <ng-content select="[table-footer]" />`,
+    <ng-content select="[table-footer]" />
+  </div>`,
 })
 export class DataTable {
   readonly label = input.required<string>();
@@ -184,6 +190,10 @@ export class DataTable {
 
 let tableSequence = 0;
 
+function isRowAction(target: EventTarget | null): target is HTMLElement {
+  return target instanceof HTMLElement && target.matches('[data-row-action]');
+}
+
 /** Apply the same column ID to col/th/td; visibility has one owner. */
 @Directive({ selector: '[nxTableColumn]', host: { '[hidden]': '!table.isVisible(id())' } })
 export class DataTableColumn {
@@ -221,19 +231,51 @@ export class TableSortHeader {
   readonly directionChange = output<TableSortDirection>();
 }
 
-/** Row-sized pointer target; nested controls and text selection retain their own behavior. */
+/**
+ * Row-sized pointer target; nested controls and text selection retain their own behavior. A click
+ * moves focus to the row's `[data-row-action]` without a visible ring, so a dialog or drawer can
+ * return focus to the row; keyboard focus on that action rings the whole row (data-workspace.scss).
+ * Focus that comes back on its own (a dialog or drawer closing, the window regaining focus) keeps
+ * the ring state it left with: browsers ring a restored focus after Escape even when the row was
+ * clicked, so the row is marked `is-focus-returned` until the next key press or focus move.
+ * Arrow keys, Home and End move between the actions of every row group in the table.
+ */
 @Directive({
   selector: 'tr[nxTableRow]',
   host: {
     '[class.ui-table-row]': 'enabled()',
     '(click)': 'activate($event)',
     '(keydown)': 'navigate($event)',
+    '(focusout)': 'focusLeft($event)',
+    '(focusin)': 'focusReturned($event)',
   },
 })
 export class DataTableRow {
   readonly enabled = input(true, { alias: 'rowEnabled' });
   readonly rowActivate = output<void>();
   private readonly host = inject<ElementRef<HTMLTableRowElement>>(ElementRef);
+  /** Whether the row action shows its ring; read when focus comes back to it. */
+  private ringed = true;
+  focusReturned(event: FocusEvent) {
+    if (!isRowAction(event.target)) return;
+    const from = event.relatedTarget;
+    // Set before paint (not through change detection), so the ring never flashes.
+    if (
+      !this.ringed &&
+      !(from instanceof Element && from.isConnected && !from.closest('dialog:not([open])'))
+    )
+      this.quiet(true);
+    this.ringed = event.target.matches(':focus-visible') && !this.quieted();
+  }
+  focusLeft(event: FocusEvent) {
+    if (isRowAction(event.target)) this.quiet(false);
+  }
+  private quieted() {
+    return this.host.nativeElement.classList.contains('is-focus-returned');
+  }
+  private quiet(on: boolean) {
+    this.host.nativeElement.classList.toggle('is-focus-returned', on);
+  }
   activate(event: MouseEvent) {
     if (
       !this.enabled() ||
@@ -245,10 +287,15 @@ export class DataTableRow {
       return;
     this.host.nativeElement
       .querySelector<HTMLButtonElement>('[data-row-action]')
-      ?.focus({ preventScroll: true });
+      ?.focus({ preventScroll: true, focusVisible: false });
     this.rowActivate.emit();
   }
   navigate(event: KeyboardEvent) {
+    // Any key but a modifier shows the ring again, as the browser does for a clicked control.
+    if (isRowAction(event.target) && !['Shift', 'Control', 'Alt', 'Meta'].includes(event.key)) {
+      this.quiet(false);
+      this.ringed = true;
+    }
     if (
       !this.enabled() ||
       !(event.target instanceof Element) ||
@@ -257,9 +304,9 @@ export class DataTableRow {
     )
       return;
     const actions = [
-      ...this.host.nativeElement.parentElement!.querySelectorAll<HTMLButtonElement>(
-        '[data-row-action]:not(:disabled)',
-      ),
+      ...(
+        this.host.nativeElement.closest('table') ?? this.host.nativeElement.parentElement!
+      ).querySelectorAll<HTMLButtonElement>('[data-row-action]:not(:disabled)'),
     ];
     const current = actions.indexOf(event.target as HTMLButtonElement);
     const index =

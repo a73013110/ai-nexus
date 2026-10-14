@@ -5,7 +5,9 @@ import {
   formatDateTimeInput,
   parseDateTimeInput,
   formatDate,
+  formatDay,
   compactNumber,
+  formatDuration,
   figureMoney,
   metricFormatter,
   metricText,
@@ -34,6 +36,8 @@ describe('workspace date inputs', () => {
     expect(Number.isNaN(parseDateTimeInput('').getTime())).toBe(true);
     expect(formatDate('2026-12-31T16:05:09Z')).toBe('2027/01/01 00:05:09');
     expect(formatDate('2026-12-31T16:05:09Z', 'roc')).toBe('民國 116/01/01 00:05:09');
+    expect(formatDay('2026-12-31T16:05:09Z')).toBe('2027/01/01');
+    expect(formatDay('2026-12-31T16:05:09Z', 'roc')).toBe('民國 116/01/01');
     expect(Number.isNaN(parseDateTimeInput('2026-02-30T00:00:00').getTime())).toBe(true);
   });
 });
@@ -62,6 +66,15 @@ describe('figures and metrics', () => {
     expect(metricText(4820, 'duration')).toBe('4.8 秒');
     expect(metricText(Number.NaN, 'bytes')).toBe('—');
     expect(metricText(75_000, 'duration')).toBe('1 分 15 秒');
+  });
+
+  it('reads durations in the two largest units', () => {
+    expect(formatDuration(4820)).toBe('4.8 秒');
+    expect(formatDuration(75_000)).toBe('1 分 15 秒');
+    expect(formatDuration(120_000)).toBe('2 分');
+    expect(formatDuration(39_888_000)).toBe('11 小時 4 分');
+    expect(formatDuration(7_200_000)).toBe('2 小時');
+    expect(formatDuration(183_600_000)).toBe('2 天 3 小時');
   });
 
   it('shortens counts for headline figures and reuses one formatter per kind', () => {

@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, computed, input, signal } from '@angular/core';
 import type { TokenUsageDto } from '../../core/api/schema';
 import { formatModelDisplayName } from '../../shared/browser/format';
+import { DataTable, DataTableRow } from '../../shared/ui/data-table';
 import { Select } from '../../shared/ui/select';
 import { TrendChart } from '../../shared/ui/trend-chart';
 
 @Component({
   selector: 'nx-token-usage-chart',
-  imports: [Select, TrendChart],
+  imports: [DataTable, DataTableRow, Select, TrendChart],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `@if (usage(); as data) {
       <div class="token-controls">
@@ -40,34 +41,42 @@ import { TrendChart } from '../../shared/ui/trend-chart';
       @if (models().length) {
         <details class="token-models">
           <summary>依模型檢視 Token 分布（{{ models().length }}）</summary>
-          <div class="token-table">
+          <nx-data-table class="token-table" label="各模型 Token 使用量" [stacked]="true">
             <table>
-              <caption class="sr-only">
-                各模型 Token 使用量
-              </caption>
               <thead>
                 <tr>
                   <th scope="col">模型</th>
-                  <th scope="col">輸入</th>
-                  <th scope="col">輸出</th>
-                  <th scope="col">合計</th>
-                  <th scope="col">完整回報／呼叫</th>
+                  <th scope="col" class="ui-table-numeric">輸入</th>
+                  <th scope="col" class="ui-table-numeric">輸出</th>
+                  <th scope="col" class="ui-table-numeric">合計</th>
+                  <th scope="col" class="ui-table-numeric">完整回報／呼叫</th>
                 </tr>
               </thead>
               <tbody>
                 @for (row of models(); track row.id) {
-                  <tr>
+                  <tr
+                    nxTableRow
+                    [class.is-selected]="selectedModel() === row.id"
+                    (rowActivate)="pick(row.id)"
+                  >
                     <th scope="row">
                       <button
-                        (click)="model.set(row.id)"
+                        type="button"
+                        class="ui-table-link"
+                        data-row-action
                         [attr.aria-pressed]="selectedModel() === row.id"
+                        (click)="pick(row.id)"
                       >
                         {{ modelName(row) }}
                       </button>
                     </th>
-                    <td>{{ row.input.toLocaleString() }}</td>
-                    <td>{{ row.output.toLocaleString() }}</td>
-                    <td>
+                    <td class="ui-table-numeric" data-label="輸入">
+                      {{ row.input.toLocaleString() }}
+                    </td>
+                    <td class="ui-table-numeric" data-label="輸出">
+                      {{ row.output.toLocaleString() }}
+                    </td>
+                    <td class="ui-table-numeric" data-label="合計">
                       <strong>{{ (row.input + row.output).toLocaleString() }}</strong
                       ><meter
                         min="0"
@@ -76,12 +85,14 @@ import { TrendChart } from '../../shared/ui/trend-chart';
                         [attr.aria-label]="modelName(row) + ' Token 占比'"
                       ></meter>
                     </td>
-                    <td>{{ row.known }} / {{ row.requests }}</td>
+                    <td class="ui-table-numeric" data-label="完整回報／呼叫">
+                      {{ row.known }} / {{ row.requests }}
+                    </td>
                   </tr>
                 }
               </tbody>
             </table>
-          </div>
+          </nx-data-table>
         </details>
       }
     } @else {
@@ -126,41 +137,14 @@ import { TrendChart } from '../../shared/ui/trend-chart';
       font-size: var(--text-caption);
     }
     .token-table {
-      overflow: auto;
+      margin-bottom: 1rem;
     }
-    table {
-      width: 100%;
-      font-size: var(--text-caption);
-      border-collapse: collapse;
-    }
-    th,
-    td {
-      padding: 0.6rem 0.4rem;
-      text-align: right;
-      border-bottom: 1px solid var(--line);
-      white-space: nowrap;
-    }
-    th:first-child {
-      text-align: left;
-    }
-    th {
-      font-weight: 500;
-    }
-    td meter {
+    meter {
       display: block;
       width: 100%;
       min-width: 60px;
       height: 4px;
       margin-top: 0.4rem;
-    }
-    th button {
-      text-align: left;
-      padding: 0.3rem;
-      border-radius: var(--p-radius-sm);
-    }
-    th button[aria-pressed='true'] {
-      background: var(--accent-soft);
-      color: var(--signal);
     }
   `,
 })
@@ -216,6 +200,10 @@ export class TokenUsageChart {
   readonly selectedModel = computed(() =>
     this.models().some((row) => row.id === this.model()) ? this.model() : 'all',
   );
+  /** A breakdown row filters the chart to its model; choosing it again shows every model. */
+  pick(id: string) {
+    this.model.set(this.selectedModel() === id ? 'all' : id);
+  }
   readonly rows = computed(() =>
     (this.usage()?.daily ?? []).filter(
       (row) => this.selectedModel() === 'all' || row.modelId === this.selectedModel(),

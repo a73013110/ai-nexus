@@ -8,6 +8,7 @@ import {
   output,
   signal,
 } from '@angular/core';
+import { DataTableRow } from '../../../shared/ui/data-table';
 import { Icon } from '../../../shared/ui/icon';
 import { StatusBadge } from '../../../shared/ui/status-badge';
 import { SearchField } from '../../../shared/ui/search-field';
@@ -17,7 +18,7 @@ import { presenceState, monitoringTime, monitoringFeature } from './monitoring-f
 
 @Component({
   selector: 'nx-monitoring-sessions',
-  imports: [Icon, StatusBadge, SearchField, Select],
+  imports: [DataTableRow, Icon, StatusBadge, SearchField, Select],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './monitoring-sessions.html',
   styles: ':host { display: block; min-width: 0; }',
@@ -25,6 +26,8 @@ import { presenceState, monitoringTime, monitoringFeature } from './monitoring-f
 export class MonitoringSessions {
   readonly sessions = input.required<OnlineSession[]>();
   readonly timeoutSeconds = input.required<number>();
+  /** The session open in the inspector, highlighted like any open row. */
+  readonly selectedId = input<string | null>(null);
   readonly selected = output<OnlineSession>();
   readonly feature = model('all');
   readonly query = signal('');

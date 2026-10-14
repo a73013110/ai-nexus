@@ -101,8 +101,32 @@ test("attachment modals preserve the live conversation, draft, scroll and focus 
   ).toBe(true);
   await chooseSelect(page, "圖片縮放", "符合視窗");
   await dialog.getByRole("button", { name: "放大預覽視窗" }).click();
-  await expect(dialog).toHaveClass(/reader-expanded/);
+  await expect(dialog).toHaveAttribute("data-maximized", "");
+  // 放大後標題列浮在內容上，閒置後與工具列一起淡出；閱讀時在內容上移動指標不喚回，移到上緣才出現。
+  const header = dialog.locator("header.dialog-bar");
+  const tools = dialog.locator("nx-floating-toolbar");
+  // 內容貼齊視窗頂端，標題列浮在其上（等放大的 morph 結束）。
+  const viewerStage = dialog.locator(".viewer-stage");
+  await expect
+    .poll(async () => (await viewerStage.boundingBox())!.y)
+    .toBeLessThan(1);
+  const stage = (await viewerStage.boundingBox())!;
+  const middle = {
+    x: stage.x + stage.width / 2,
+    y: stage.y + stage.height / 2,
+  };
+  await page.mouse.move(middle.x, middle.y);
+  await expect(header).toHaveAttribute("data-chrome", "hidden");
+  await expect(tools).toHaveAttribute("data-chrome", "hidden");
+  for (let step = 1; step <= 8; step++)
+    await page.mouse.move(middle.x + step * 25, middle.y - step * 20);
+  await expect(header).toHaveAttribute("data-chrome", "hidden");
+  await page.mouse.move(middle.x, 8, { steps: 4 });
+  await expect(header).toHaveAttribute("data-chrome", "shown");
+  await expect(tools).toHaveAttribute("data-chrome", "shown");
   await dialog.getByRole("button", { name: "還原預覽視窗" }).click();
+  await expect(dialog).not.toHaveAttribute("data-maximized");
+  await expect(header).not.toHaveAttribute("data-chrome");
   await settleEntrance(page);
   await page.setViewportSize({ width: 375, height: 812 });
   expect(

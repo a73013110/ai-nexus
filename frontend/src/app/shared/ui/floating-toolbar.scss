@@ -1,8 +1,8 @@
 @use 'breakpoints' as bp;
 
-// host 橫跨內容區頂端但不接點擊，只有工具列本身接。隱藏時整個外框由一層
-// ::after 蓋住，作為指向（或點一下）喚回的位置，點到那裡不會按到看不見的按鈕。減少動態時由全域開關
-// （styles/motion.scss）移除 transition，只直接出現與消失，不位移。
+// host 橫跨內容區頂端但不接點擊，只有工具列本身接。隱藏（data-chrome="hidden"，見 idle-chrome.ts）時
+// 整個外框由一層 ::after 蓋住，作為指向（或點一下）喚回的位置，點到那裡不會按到看不見的按鈕。
+// 減少動態時由全域開關（styles/motion.scss）移除 transition，只直接出現與消失，不位移。
 :host {
   position: absolute;
   inset-block-start: var(--floating-toolbar-offset, var(--p-space-3));
@@ -32,20 +32,20 @@
     opacity var(--motion) var(--ease),
     translate var(--motion) var(--ease-spring);
 }
-:host(.is-hidden) .floating-toolbar {
+:host([data-chrome='hidden']) .floating-toolbar {
   opacity: 0;
   translate: 0 -0.25rem;
   transition:
     opacity var(--motion-panel) var(--ease-exit),
     translate var(--motion-panel) var(--ease-exit);
 }
-:host(.is-hidden) .floating-toolbar::after {
+:host([data-chrome='hidden']) .floating-toolbar::after {
   content: '';
   position: absolute;
   inset: 0;
 }
-// 鍵盤使用者 Tab 進入淡出的工具列時立即顯示，焦點外框不會落在透明的按鈕上。
-:host(.is-hidden) .floating-toolbar:focus-within {
+// 鍵盤焦點進入淡出的工具列時立即顯示，焦點外框不會落在透明的按鈕上。
+:host([data-chrome='hidden']) .floating-toolbar:has(:focus-visible) {
   opacity: 1;
   translate: none;
 }

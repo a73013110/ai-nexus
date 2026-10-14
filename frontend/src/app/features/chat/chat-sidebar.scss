@@ -76,7 +76,9 @@
   min-height: 0;
   flex: 1;
   padding-bottom: var(--p-space-2);
-  scrollbar-gutter: stable;
+  // Rows run to the sidebar's edge like the controls above; a scrollbar only takes room when the
+  // history overflows, and single-line rows only re-ellipsize.
+  scrollbar-gutter: auto;
   overscroll-behavior: contain;
 }
 .history-group h2 {

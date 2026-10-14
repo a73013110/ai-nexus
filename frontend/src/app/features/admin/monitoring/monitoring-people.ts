@@ -91,6 +91,7 @@ import { monitoringFeature } from './monitoring-format';
     <nx-monitoring-sessions
       [sessions]="sessions()"
       [timeoutSeconds]="timeoutSeconds()"
+      [selectedId]="selectedId()"
       [(feature)]="feature"
       (selected)="selected.emit($event)"
     />
@@ -99,6 +100,7 @@ import { monitoringFeature } from './monitoring-format';
 export class MonitoringPeople {
   readonly sessions = input.required<OnlineSession[]>();
   readonly timeoutSeconds = input.required<number>();
+  readonly selectedId = input<string | null>(null);
   readonly feature = model('all');
   readonly selected = output<OnlineSession>();
   readonly features = computed(() => {

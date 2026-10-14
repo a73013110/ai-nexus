@@ -83,6 +83,7 @@
         class="monitor-deferred"
         [sessions]="data.sessions"
         [timeoutSeconds]="data.sessionTimeoutSeconds"
+        [selectedId]="openSessionId()"
         [(feature)]="featureFilter"
         (selected)="showSession($event)"
       />
@@ -141,7 +142,7 @@
     </div>
   }
 </nx-feature-page>
-<nx-detail-drawer [title]="drawerTitle()">
+<nx-detail-drawer [title]="drawerTitle()" (closed)="drawerOpen.set(false)">
   <nx-monitoring-inspector
     [selectedSession]="selectedSession()"
     [liveSession]="liveSession()"

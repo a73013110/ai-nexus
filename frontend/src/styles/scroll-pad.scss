@@ -1,0 +1,24 @@
+// Inline padding for a padded scroll region (a page, a dialog body, a drawer, a reading pane): the
+// region keeps a stable gutter, so nothing shifts when a scrollbar comes or goes, and the gutter's
+// width (`--scrollbar-gutter`, scrollbars.scss; zero where scrollbars overlay the content) comes
+// out of the end padding, so both sides show the same inset with or without a scrollbar. An
+// unpadded list or canvas uses `scrollbar-gutter: auto` instead (docs/frontend/design-system.md).
+
+/// `$inset` is what each side shows; a gutter wider than it sets both sides. `$start` replaces the
+/// start side for a deliberately uneven inset. `$expose` also sets `--scroll-pad-start` and
+/// `--scroll-pad-end`, for a region with a full-bleed child (a sticky header or save bar) that
+/// spans the padding; other regions leave them out to keep component styles small.
+@mixin inline($inset, $start: null, $expose: false) {
+  @if not $start {
+    $start: max(#{$inset}, var(--scrollbar-gutter));
+  }
+  $end: max(0px, #{$inset} - var(--scrollbar-gutter));
+  @if $expose {
+    --scroll-pad-start: #{$start};
+    --scroll-pad-end: #{$end};
+    padding-inline: var(--scroll-pad-start) var(--scroll-pad-end);
+  } @else {
+    padding-inline: $start $end;
+  }
+  scrollbar-gutter: stable;
+}

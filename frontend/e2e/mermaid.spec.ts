@@ -173,6 +173,19 @@ test("shared Mermaid reader renders Chinese flowcharts and nested sequences with
   ).toBe(true);
   expect(svg).not.toMatch(/<foreignObject|<script|<image/i);
   expect(svg).not.toMatch(/(?:href|onload|onclick)=/i);
+  // 放大後標題列浮在畫布上，閒置時與縮放工具列一起淡出；鍵盤焦點進入工具列時一起出現。
+  await dialog.getByRole("button", { name: "放大視窗", exact: true }).click();
+  await expect(dialog).toHaveAttribute("data-maximized", "");
+  const bar = dialog.locator("nx-dialog-header");
+  const zoomBar = dialog.locator("nx-floating-toolbar");
+  const box = (await canvas.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(bar).toHaveAttribute("data-chrome", "hidden");
+  await expect(zoomBar).toHaveAttribute("data-chrome", "hidden");
+  await canvas.focus();
+  await page.keyboard.press("Shift+Tab");
+  await expect(bar).toHaveAttribute("data-chrome", "shown");
+  await expect(zoomBar).toHaveAttribute("data-chrome", "shown");
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
   await expect(
