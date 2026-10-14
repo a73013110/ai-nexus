@@ -1,8 +1,5 @@
 @use 'breakpoints' as bp;
 
-.quality-dialog {
-  --dialog-width: 48rem;
-}
 .quality-case-form {
   display: grid;
   gap: var(--p-space-3);

@@ -8,7 +8,6 @@
 .library-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  padding: 0;
 }
 .library-layout > nx-notice {
   grid-column: 1 / -1;
@@ -83,11 +82,18 @@
   color: var(--secondary);
 }
 .template-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--section-gap);
   position: sticky;
   top: 0;
   align-self: start;
   min-width: 0;
   padding: var(--p-space-3) var(--p-space-4) var(--p-space-4);
+}
+.template-actions {
+  display: flex;
+  justify-content: flex-end;
 }
 .template-editor h3 {
   margin: 0;

@@ -1,7 +1,0 @@
-@use 'breakpoints' as bp;
-
-@include bp.below(phone) {
-  .settings-dialog {
-    height: calc(100dvh - 1.5rem);
-  }
-}

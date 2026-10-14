@@ -9,48 +9,43 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { DialogHeader } from '../../shared/ui/dialog-header';
 import { Icon } from '../../shared/ui/icon';
 import { isSubmitKey } from '../../shared/browser/submit-key';
 
 @Component({
   selector: 'nx-focus-composer',
-  imports: [CompactDialog, Icon],
+  imports: [CompactDialog, DialogHeader, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './focus-composer.scss',
   template: `<dialog
     nxCompactDialog
+    size="lg"
     #dialog
     class="platform-dialog focus-composer-dialog"
-    aria-labelledby="focus-composer-title"
   >
-    <header class="dialog-heading">
-      <div>
-        <span class="panel-eyebrow">專注輸入</span>
-        <h2 id="focus-composer-title">讓長篇提問也容易整理</h2>
-      </div>
-      <button type="button" class="icon-button" aria-label="收合輸入區" (click)="dialog.close()">
-        <nx-icon name="minimize" />
-      </button>
-    </header>
-    <textarea
-      #editor
-      autofocus
-      aria-label="放大的訊息輸入"
-      [value]="text()"
-      [readOnly]="readonly()"
-      placeholder="輸入訊息，或整理長篇提問…"
-      (input)="textChange.emit(editor.value)"
-      (keydown)="keydown($event)"
-      (compositionstart)="composing.set(true)"
-      (compositionend)="composing.set(false)"
-    ></textarea>
-    <footer class="focus-composer-footer">
-      <span
-        >草稿同步保留 ·
+    <nx-dialog-header heading="讓長篇提問也容易整理" closeLabel="收合輸入區" />
+    <div class="dialog-body">
+      <textarea
+        #editor
+        autofocus
+        aria-label="放大的訊息輸入"
+        [value]="text()"
+        [readOnly]="readonly()"
+        placeholder="輸入訊息，或整理長篇提問…"
+        (input)="textChange.emit(editor.value)"
+        (keydown)="keydown($event)"
+        (compositionstart)="composing.set(true)"
+        (compositionend)="composing.set(false)"
+      ></textarea>
+    </div>
+    <footer class="dialog-foot">
+      <p class="dialog-note">
+        草稿同步保留 ·
         <span class="focus-composer-count" [class.is-over]="over()"
           >{{ text().length.toLocaleString() }} / {{ limit().toLocaleString() }} 字元</span
-        ></span
-      >
+        >
+      </p>
       <button type="button" class="secondary-button" (click)="dialog.close()">
         繼續在對話中編輯
       </button>

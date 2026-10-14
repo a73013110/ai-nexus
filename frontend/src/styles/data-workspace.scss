@@ -306,26 +306,6 @@ select:where(.ui-input) {
   font-size: var(--p-font-xs);
   font-variant-numeric: tabular-nums;
 }
-.ui-dialog-compact {
-  --dialog-width: 28rem;
-  --dialog-padding: var(--p-space-4);
-  --dialog-radius: var(--p-radius-lg);
-}
-.ui-dialog-compact .dialog-heading {
-  gap: var(--p-space-2);
-  margin-bottom: var(--p-space-3);
-}
-.ui-dialog-compact .dialog-actions {
-  gap: var(--p-space-2);
-  margin-top: var(--p-space-4);
-}
-.ui-dialog-compact .platform-form {
-  gap: var(--p-space-3);
-}
-.ui-dialog-compact .platform-form > h2 {
-  margin: 0;
-  font-size: var(--p-font-lg);
-}
 @include bp.below(phone, $or: '(pointer: coarse)') {
   .ui-density-compact {
     --button-target: 2.75rem;

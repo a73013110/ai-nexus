@@ -1,7 +1,7 @@
 @switch (tab()) {
   @case ('account') {
-    <form class="settings-form" (submit)="submit($event)">
-      <div class="settings-fields">
+    <form class="dialog-form" (submit)="submit($event)">
+      <div class="dialog-body">
         <ng-container [ngTemplateOutlet]="error" />
         <nx-user-account-fields
           [value]="store.account()"
@@ -16,8 +16,8 @@
     </form>
   }
   @case ('roles') {
-    <form class="settings-form" (submit)="submit($event)">
-      <div class="settings-fields">
+    <form class="dialog-form" (submit)="submit($event)">
+      <div class="dialog-body">
         <ng-container [ngTemplateOutlet]="error" />
         <nx-user-role-fields
           [roleIds]="store.roles()"
@@ -34,8 +34,8 @@
   }
   @case ('models') {
     @if (store.modelPolicy(); as policy) {
-      <form class="settings-form" (submit)="submit($event)">
-        <div class="settings-fields">
+      <form class="dialog-form" (submit)="submit($event)">
+        <div class="dialog-body">
           <ng-container [ngTemplateOutlet]="error" />
           <nx-model-policy-editor
             [models]="admin.catalog()?.models || []"
@@ -52,9 +52,11 @@
         />
       </form>
     } @else if (store.loadingModels()) {
-      <p class="form-note settings-loading" role="status">正在載入模型政策…</p>
+      <div class="dialog-body">
+        <p class="form-note" role="status">正在載入模型政策…</p>
+      </div>
     } @else {
-      <div class="settings-fields">
+      <div class="dialog-body">
         @if (store.modelsError()) {
           <nx-notice tone="danger" [message]="store.modelsError()" />
         }
@@ -65,8 +67,8 @@
     }
   }
   @case ('storage') {
-    <form class="settings-form" (submit)="submit($event)">
-      <div class="settings-fields">
+    <form class="dialog-form" (submit)="submit($event)">
+      <div class="dialog-body">
         <ng-container [ngTemplateOutlet]="error" />
         <fieldset>
           <legend>原檔容量</legend>
@@ -104,8 +106,8 @@
   }
 </ng-template>
 <ng-template #actions let-label="label">
-  <div class="dialog-actions settings-actions">
-    <span class="settings-state" role="status">{{
+  <footer class="dialog-foot">
+    <span class="dialog-note" role="status">{{
       store.testing()
         ? '測試身分期間不能修改管理設定'
         : store.dirty()[tab()]
@@ -129,5 +131,5 @@
     >
       {{ store.saving() === tab() ? '儲存中…' : label }}
     </button>
-  </div>
+  </footer>
 </ng-template>

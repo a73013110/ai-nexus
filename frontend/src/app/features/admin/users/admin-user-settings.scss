@@ -4,39 +4,6 @@
   flex: 1 1 auto;
   min-height: 0;
 }
-.settings-form {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-}
-// Only the fields scroll; the save bar stays reachable however long the model list grows.
-.settings-fields {
-  display: grid;
-  align-content: start;
-  gap: var(--p-space-3);
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-  padding: var(--p-space-1) var(--p-space-1) var(--p-space-3) 0;
-}
-.settings-actions.dialog-actions {
-  position: static;
-  flex: none;
-  align-items: center;
-  margin: 0;
-  padding: var(--p-space-3) 0 0;
-  border-top: 1px solid var(--line);
-}
-.settings-state {
-  margin-right: auto;
-  color: var(--secondary);
-  font-size: var(--text-caption);
-}
-.settings-loading {
-  padding: var(--p-space-3) 0;
-}
 .storage-limit {
   display: grid;
   gap: var(--field-label-gap);

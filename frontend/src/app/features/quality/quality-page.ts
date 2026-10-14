@@ -4,6 +4,7 @@ import { Notice } from '../../shared/ui/notice';
 import { ToastService } from '../../shared/ui/toast-service';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { Card } from '../../shared/ui/card';
+import { DialogHeader } from '../../shared/ui/dialog-header';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { Field } from '../../shared/ui/field';
 import { ApiError, ClientValidationError, issueInMessage } from '../../core/errors/safe-errors';
@@ -67,6 +68,7 @@ const blankCase = (): EvaluationCase => ({
   selector: 'nx-quality-page',
   styleUrl: './quality-page.scss',
   imports: [
+    DialogHeader,
     Notice,
     EmptyState,
     Card,

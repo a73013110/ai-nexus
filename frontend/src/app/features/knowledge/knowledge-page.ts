@@ -5,6 +5,7 @@ import { ToastService } from '../../shared/ui/toast-service';
 import { StatusBadge } from '../../shared/ui/status-badge';
 import { EmptyState } from '../../shared/ui/empty-state';
 import { SearchField } from '../../shared/ui/search-field';
+import { DialogHeader } from '../../shared/ui/dialog-header';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { ConfirmDialog } from '../../shared/ui/confirm-dialog';
 import { Field } from '../../shared/ui/field';
@@ -58,6 +59,7 @@ import { KNOWLEDGE_TOUR, collectionTour } from './knowledge-tour';
     EmptyState,
     SearchField,
     CompactDialog,
+    DialogHeader,
     ConfirmDialog,
     Field,
     FeaturePage,

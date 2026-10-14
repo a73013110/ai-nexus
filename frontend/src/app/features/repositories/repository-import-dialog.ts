@@ -13,7 +13,7 @@ import { apiResource } from '../../core/api/api-resource';
 import type { CollectionDto } from '../../core/api/schema';
 import { ViewScope } from '../../shared/browser/view-scope';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
-import { Icon } from '../../shared/ui/icon';
+import { DialogHeader } from '../../shared/ui/dialog-header';
 import { Notice } from '../../shared/ui/notice';
 import { Select } from '../../shared/ui/select';
 import { ToastService } from '../../shared/ui/toast-service';
@@ -25,28 +25,17 @@ import { RepositoryStore, shortSha } from './repository-store';
 /** Imports the text files under a folder, at the pinned commit, into a knowledge collection. */
 @Component({
   selector: 'nx-repository-import-dialog',
-  imports: [RouterLink, CompactDialog, Icon, Notice, Select],
+  imports: [RouterLink, CompactDialog, DialogHeader, Notice, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<dialog
     nxCompactDialog
     #dialog
     class="platform-dialog"
-    (cancel)="saving() && $event.preventDefault()"
+    (cancel)="saving() ? $event.preventDefault() : null"
   >
-    <div class="dialog-scroll">
-      <div class="dialog-heading">
-        <h2>匯入知識庫</h2>
-        <button
-          type="button"
-          class="icon-button"
-          aria-label="關閉匯入知識庫"
-          [disabled]="saving()"
-          (click)="dialog.close()"
-        >
-          <nx-icon name="close" />
-        </button>
-      </div>
+    <nx-dialog-header heading="匯入知識庫" closeLabel="關閉匯入知識庫" />
+    <div class="dialog-body">
       <p class="form-note">
         匯入 <strong>{{ folder() || store.fullName() }}</strong> 底下的文字檔（版本
         {{ short(commit()) }}），在背景逐一建立檢索索引；二進位與過大的檔案會略過。
@@ -68,25 +57,28 @@ import { RepositoryStore, shortSha } from './repository-store';
           [value]="selected()"
           (valueChange)="selected.set($event)"
         />
-        <div class="dialog-actions">
-          <button
-            type="button"
-            class="secondary-button"
-            [disabled]="saving()"
-            (click)="dialog.close()"
-          >
-            取消</button
-          ><button
-            type="button"
-            class="primary-button"
-            [disabled]="saving() || !selected()"
-            (click)="save()"
-          >
-            {{ saving() ? '正在安排…' : '開始匯入' }}
-          </button>
-        </div>
       }
     </div>
+    @if (!loading() && choices().length) {
+      <footer class="dialog-foot">
+        <button
+          type="button"
+          class="secondary-button"
+          [disabled]="saving()"
+          (click)="dialog.close()"
+        >
+          取消
+        </button>
+        <button
+          type="button"
+          class="primary-button"
+          [disabled]="saving() || !selected()"
+          (click)="save()"
+        >
+          {{ saving() ? '正在安排…' : '開始匯入' }}
+        </button>
+      </footer>
+    }
   </dialog>`,
 })
 export class RepositoryImportDialog {

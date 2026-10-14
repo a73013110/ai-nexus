@@ -14,7 +14,7 @@ import {
 } from '@angular/core';
 import { FormField, form, maxLength } from '@angular/forms/signals';
 import type { ConversationDto, ConversationSettingsRequest } from '../../core/api/schema';
-import { Icon } from '../../shared/ui/icon';
+import { DialogHeader } from '../../shared/ui/dialog-header';
 import { Select } from '../../shared/ui/select';
 import { ProjectsApi } from '../projects/projects-api';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
@@ -23,47 +23,30 @@ import { ViewScope } from '../../shared/browser/view-scope';
 import { ChatConversations } from '../chat/chat-conversations';
 @Component({
   selector: 'nx-conversation-settings',
-  imports: [Notice, CompactDialog, Field, Icon, FormField, Select],
+  imports: [Notice, CompactDialog, DialogHeader, Field, FormField, Select],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './conversation-settings-dialog.scss',
-  template: ` <dialog
+  template: `<dialog
     nxCompactDialog
     #dialog
-    class="workspace-dialog settings-dialog"
-    aria-labelledby="settings-title"
-    (cancel)="busy() && $event.preventDefault()"
+    class="platform-dialog"
+    (cancel)="busy() ? $event.preventDefault() : null"
   >
-    <div class="dialog-scroll">
-      <form (submit)="submit($event)">
-        <div class="dialog-heading">
-          <h2 id="settings-title">讓這段對話更合用</h2>
-          <button
-            type="button"
-            class="icon-button"
-            aria-label="關閉對話設定"
-            [disabled]="busy()"
-            (click)="dialog.close()"
-          >
-            <nx-icon name="close" />
-          </button>
-        </div>
-        <label for="conversation-instruction">對話指令</label
-        ><textarea
-          nxField
-          id="conversation-instruction"
-          [formField]="fields.instruction"
-          rows="5"
-          placeholder="例如：先提供摘要，再列出待辦事項；專有名詞保留英文。"
-        ></textarea>
+    <form class="dialog-form" (submit)="submit($event)">
+      <nx-dialog-header heading="讓這段對話更合用" closeLabel="關閉對話設定" />
+      <div class="dialog-body">
+        <label
+          >對話指令<textarea
+            nxField
+            [formField]="fields.instruction"
+            rows="5"
+            placeholder="例如：先提供摘要，再列出待辦事項；專有名詞保留英文。"
+          ></textarea>
+        </label>
         <p class="panel-note">套用至這段對話後續的提問；已生成的回答與其他對話保留原樣。</p>
-        <label for="conversation-labels">標籤</label
-        ><input
-          nxField
-          id="conversation-labels"
-          [formField]="fields.labels"
-          placeholder="工作, 企劃, 會議"
-        />
+        <label
+          >標籤<input nxField [formField]="fields.labels" placeholder="工作, 企劃, 會議"
+        /></label>
         <p class="panel-note">以逗號分隔，最多 5 個標籤，每個最多 24 字元。</p>
         @if (session.has('projects') || projectId()) {
           <span class="field-label" aria-hidden="true">所屬專案</span
@@ -79,20 +62,16 @@ import { ChatConversations } from '../chat/chat-conversations';
         @if (error()) {
           <nx-notice tone="danger" [message]="error()" />
         }
-        <div class="dialog-actions">
-          <button
-            type="button"
-            class="secondary-button"
-            [disabled]="busy()"
-            (click)="dialog.close()"
-          >
-            取消</button
-          ><button type="submit" class="primary-button" [disabled]="busy() || fields().invalid()">
-            {{ busy() ? '儲存中…' : '儲存設定' }}
-          </button>
-        </div>
-      </form>
-    </div>
+      </div>
+      <footer class="dialog-foot">
+        <button type="button" class="secondary-button" [disabled]="busy()" (click)="dialog.close()">
+          取消
+        </button>
+        <button type="submit" class="primary-button" [disabled]="busy() || fields().invalid()">
+          {{ busy() ? '儲存中…' : '儲存設定' }}
+        </button>
+      </footer>
+    </form>
   </dialog>`,
 })
 export class ConversationSettingsDialog {

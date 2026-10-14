@@ -18,6 +18,7 @@ import { ResourceApi, type SharedResourceKind } from './resource-api';
 import { directorySearch } from './directory-search';
 import { WorkspaceSession } from '../../core/auth/workspace-session';
 import { ViewScope } from '../../shared/browser/view-scope';
+import { DialogHeader } from '../../shared/ui/dialog-header';
 import { Icon } from '../../shared/ui/icon';
 import { Select } from '../../shared/ui/select';
 import { Checkbox } from '../../shared/ui/checkbox';
@@ -25,30 +26,18 @@ import { SearchField } from '../../shared/ui/search-field';
 
 @Component({
   selector: 'nx-resource-sharing',
-  imports: [Notice, CompactDialog, Icon, Select, Checkbox, SearchField],
+  imports: [Notice, CompactDialog, DialogHeader, Icon, Select, Checkbox, SearchField],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './resource-sharing.scss',
   template: `<dialog
     nxCompactDialog
+    size="md"
     #dialog
-    class="platform-dialog dialog-flush access-dialog"
+    class="platform-dialog"
     (cancel)="cancel($event)"
   >
-    <header class="dialog-bar">
-      <div class="dialog-title">
-        <h2>存取權限</h2>
-        <small [title]="name()">{{ name() }}</small>
-      </div>
-      <button
-        class="icon-button"
-        aria-label="關閉存取權限"
-        [disabled]="saving()"
-        (click)="dialog.close()"
-      >
-        <nx-icon name="close" />
-      </button>
-    </header>
+    <nx-dialog-header heading="存取權限" [detail]="name()" closeLabel="關閉存取權限" />
     <div class="dialog-body">
       @if (error()) {
         <nx-notice tone="danger" [message]="error()" />
@@ -124,14 +113,15 @@ import { SearchField } from '../../shared/ui/search-field';
       }
     </div>
     @if (!loading()) {
-      <div class="dialog-foot">
-        <span>擁有者保留完整權限</span
-        ><button class="secondary-button" [disabled]="saving()" (click)="dialog.close()">
-          取消</button
-        ><button class="primary-button" [disabled]="saving()" (click)="save()">
+      <footer class="dialog-foot">
+        <p class="dialog-note">擁有者保留完整權限</p>
+        <button class="secondary-button" [disabled]="saving()" (click)="dialog.close()">
+          取消
+        </button>
+        <button class="primary-button" [disabled]="saving()" (click)="save()">
           {{ saving() ? '正在儲存…' : '儲存權限' }}
         </button>
-      </div>
+      </footer>
     }
   </dialog>`,
 })

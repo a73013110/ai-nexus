@@ -35,8 +35,10 @@
 
 ## 對話框與抽屜
 
-- 用原生 `<dialog>`，加 `nxCompactDialog` 套用共用密度；沒有可存取名稱時由 h2 建立，不接管 focus、Escape 或業務狀態。
-- 外框只負責圓角、top layer、焦點與關閉；表單放 `.dialog-scroll`。選取器、清單用 `.dialog-flush`：`.dialog-bar`（標題或搜尋＋關閉）、`.dialog-body`、選用的 `.dialog-foot`。標題自我說明（「編輯角色：成員」），不加眉標。
+- 用原生 `<dialog class="platform-dialog" nxCompactDialog size="…">`；`size` 為 `sm`（確認、單欄）、`md`（預設，表單）、`lg`（含工具列的清單、檢視器）、`full`。不接管 focus、Escape 或業務狀態。
+- 結構固定：`<nx-dialog-header heading detail>`（可投影搜尋欄等工具，自帶關閉鈕，經 `cancel` 事件關閉，忙碌或未存檔的攔截照常生效）＋ `.dialog-body`（唯一捲動區，內含欄位免寫 CSS；清單、檢視器加 `.dialog-body-flush`）＋ 選用的 `.dialog-foot`。表單可用 `form.dialog-form` 包住三者。
+- 密度隨尺寸：`sm`、`md` 無分隔線、留白較大；`lg`、`full` 以分隔線切開標題列、內容、頁尾。不要在元件內重寫外框、padding 或寬度。
+- `.dialog-note` 放頁尾左側的說明；取消在左、主要動作在右。標題自我說明（「編輯角色：成員」），不加眉標。
 - `ConfirmDialog` 初始焦點在「取消」，Esc／關閉視為取消，結束後返回先前焦點。危險動作一律經過確認。
 - 詳情用 `DetailDrawer`：桌面 modeless（可繼續操作列表），`tablet` 斷點以下改為原生 modal。
 - 多頁籤視窗：頁籤尺寸相近就同寬高；不同（例：群組基本資料與功能授權）才用 `DialogMotion` 過渡寬高，不硬跳。內容用 `ViewMotion`。

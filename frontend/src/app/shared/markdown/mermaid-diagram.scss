@@ -59,20 +59,8 @@
   min-height: 10rem;
   justify-content: center;
 }
-// A flush viewer: the .dialog-bar header and the canvas run edge to edge (styles/dialogs.scss).
-.platform-dialog.mermaid-dialog {
-  --dialog-width: 88rem;
-  height: calc(100dvh - 48px);
-  max-height: 60rem;
-  overflow: hidden;
-}
-.mermaid-dialog .dialog-bar {
-  flex-wrap: wrap;
-}
-.mermaid-dialog .dialog-bar h2 {
-  overflow-wrap: anywhere;
-}
-.mermaid-dialog nx-diagram-canvas {
+// The viewer canvas runs edge to edge between the header and the dialog frame.
+dialog nx-diagram-canvas {
   border: 0;
   border-radius: 0;
 }
@@ -83,8 +71,5 @@
   }
   .mermaid-actions {
     justify-content: flex-end;
-  }
-  .platform-dialog.mermaid-dialog {
-    height: calc(100dvh - 24px);
   }
 }

@@ -9,33 +9,28 @@ import {
 import { FormField, form, maxLength, required } from '@angular/forms/signals';
 import type { ConversationDto } from '../../core/api/schema';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { DialogHeader } from '../../shared/ui/dialog-header';
 import { Field } from '../../shared/ui/field';
-import { Icon } from '../../shared/ui/icon';
 import { ChatConversations } from './chat-conversations';
 
 /** Confirms renaming or deleting a conversation from the history list or the topbar menu. */
 @Component({
   selector: 'nx-conversation-dialog',
-  imports: [CompactDialog, Field, FormField, Icon],
+  imports: [CompactDialog, DialogHeader, Field, FormField],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './conversation-dialog.scss',
   template: `<dialog
     nxCompactDialog
+    size="sm"
     #dialog
-    class="platform-dialog action-dialog"
+    class="platform-dialog"
+    (cancel)="busy() ? $event.preventDefault() : null"
     (close)="mode.set(null)"
   >
-    <div class="dialog-scroll">
-      <form (submit)="confirm($event)">
-        <div class="dialog-heading">
-          <h2>{{ mode() === 'delete' ? '刪除這段對話？' : '重新命名對話' }}</h2>
-          <button type="button" class="icon-button" aria-label="關閉對話視窗" (click)="close()">
-            <nx-icon name="close" />
-          </button>
-        </div>
+    <form class="dialog-form" (submit)="confirm($event)">
+      <nx-dialog-header [heading]="mode() === 'delete' ? '刪除這段對話？' : '重新命名對話'" />
+      <div class="dialog-body">
         @if (mode() === 'rename') {
-          <label for="conversation-title">對話標題</label
-          ><input nxField id="conversation-title" [formField]="renameForm.title" autofocus />
+          <label>對話標題<input nxField [formField]="renameForm.title" autofocus /></label>
         } @else {
           <p>
             「{{
@@ -43,20 +38,21 @@ import { ChatConversations } from './chat-conversations';
             }}」將從歷史移除，附件原檔仍保留在檔案庫。若想之後再接續，可先取消並使用封存。
           </p>
         }
-        <div class="dialog-actions">
-          <button type="button" class="secondary-button" (click)="close()" [disabled]="busy()">
-            取消</button
-          ><button
-            type="submit"
-            class="primary-button"
-            [class.danger-button]="mode() === 'delete'"
-            [disabled]="busy() || (mode() === 'rename' && renameForm.title().invalid())"
-          >
-            {{ busy() ? '處理中…' : mode() === 'delete' ? '刪除對話' : '儲存標題' }}
-          </button>
-        </div>
-      </form>
-    </div>
+      </div>
+      <footer class="dialog-foot">
+        <button type="button" class="secondary-button" (click)="close()" [disabled]="busy()">
+          取消
+        </button>
+        <button
+          type="submit"
+          class="primary-button"
+          [class.danger-button]="mode() === 'delete'"
+          [disabled]="busy() || (mode() === 'rename' && renameForm.title().invalid())"
+        >
+          {{ busy() ? '處理中…' : mode() === 'delete' ? '刪除對話' : '儲存標題' }}
+        </button>
+      </footer>
+    </form>
   </dialog>`,
 })
 export class ConversationDialog {

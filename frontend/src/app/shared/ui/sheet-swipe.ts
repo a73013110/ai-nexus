@@ -1,14 +1,14 @@
+import { requestDialogClose } from '../browser/dialog-close';
 import { bindSwipe, swipeSettleTime } from '../browser/swipe';
 
-const SHEET = 'dialog[open]:is(.platform-dialog, .workspace-dialog)';
+const SHEET = 'dialog[open].platform-dialog';
 /** Where a sheet can be grabbed: its header, or its own padding around the content. */
-const HANDLE = '.dialog-heading, .dialog-bar, header, [data-sheet-handle]';
+const HANDLE = '.dialog-bar, header, [data-sheet-handle]';
 
 /**
  * Drag a phone bottom sheet down by its header to dismiss it, like Escape: the dialog receives a
  * cancelable `cancel` event and closes unless its owner prevents it (busy, unsaved changes), in
- * which case it springs back. Bound once on the document so every `.platform-dialog` and
- * `.workspace-dialog` gets it; dialogs.scss marks the sheet layout with `--dialog-sheet: 1`.
+ * which case it springs back. Bound once on the document so every `.platform-dialog` gets it; dialogs.scss marks the sheet layout with `--dialog-sheet: 1`.
  */
 export function bindSheetSwipe() {
   return bindSwipe(document, {
@@ -34,8 +34,7 @@ export function bindSheetSwipe() {
           sheet.style.removeProperty('translate');
           sheet.style.removeProperty('--swipe-progress');
           delete sheet.dataset['swipe'];
-          if (dismiss && sheet.dispatchEvent(new Event('cancel', { cancelable: true })))
-            sheet.close();
+          if (dismiss) requestDialogClose(sheet);
           if (!sheet.open) return;
           sheet.dataset['swipe'] = 'return';
           window.setTimeout(() => {

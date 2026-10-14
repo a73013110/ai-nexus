@@ -1,22 +1,18 @@
-@use 'breakpoints' as bp;
-
-.platform-dialog.focus-composer-dialog {
+.platform-dialog.focus-composer-dialog[data-size] {
   --dialog-width: calc(var(--reading-width) + 2 * var(--dialog-padding) + 2px);
-  display: none;
   height: min(720px, calc(100dvh - 3rem));
+}
+.platform-dialog.focus-composer-dialog .dialog-body {
+  // The editor fills the body and scrolls itself: no gutter eating into the reading width.
+  padding-inline: var(--dialog-padding);
   overflow: hidden;
-  flex-direction: column;
+  scrollbar-gutter: auto;
 }
-// Layout lives outside [open]: the exit keeps `display` but would drop the rest at once.
-.platform-dialog.focus-composer-dialog[open] {
-  display: flex;
-}
-.focus-composer-dialog textarea {
+.focus-composer-dialog .dialog-body textarea {
   flex: 1;
-  width: 100%;
-  min-height: 0;
-  padding: var(--p-space-4);
+  max-height: none;
   resize: none;
+  padding: var(--p-space-4);
   border: 1px solid var(--line);
   border-radius: var(--p-radius-md);
   color: var(--ink);
@@ -24,26 +20,6 @@
   font-size: var(--text-body);
   line-height: var(--line-reading);
 }
-.focus-composer-footer {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--p-space-2);
-  padding-top: var(--p-space-4);
-}
-.focus-composer-footer > span {
-  flex: 1;
-  color: var(--secondary);
-  font-size: var(--text-caption);
-}
 .focus-composer-count.is-over {
   color: var(--error);
-}
-@include bp.below(phone) {
-  .focus-composer-footer > span {
-    flex-basis: 100%;
-  }
-  .focus-composer-footer button {
-    flex: 1;
-  }
 }

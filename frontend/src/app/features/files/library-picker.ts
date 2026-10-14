@@ -1,4 +1,5 @@
 import { Notice } from '../../shared/ui/notice';
+import { DialogHeader } from '../../shared/ui/dialog-header';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
 import { EmptyState } from '../../shared/ui/empty-state';
 import {
@@ -21,7 +22,7 @@ import { SearchField } from '../../shared/ui/search-field';
 
 @Component({
   selector: 'nx-library-picker',
-  imports: [Notice, CompactDialog, ReaderLink, Icon, SearchField, EmptyState],
+  imports: [Notice, CompactDialog, DialogHeader, ReaderLink, Icon, SearchField, EmptyState],
   providers: [ViewScope, FileLibraryStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './library-picker.scss',
@@ -38,13 +39,8 @@ import { SearchField } from '../../shared/ui/search-field';
         {{ label() }}
       }
     </button>
-    <dialog
-      nxCompactDialog
-      #dialog
-      class="platform-dialog dialog-flush file-picker-dialog"
-      aria-label="從檔案庫選取"
-    >
-      <div class="dialog-bar">
+    <dialog nxCompactDialog size="lg" #dialog class="platform-dialog" aria-label="從檔案庫選取">
+      <nx-dialog-header heading="從檔案庫選取" closeLabel="關閉檔案選取">
         <nx-search-field
           appearance="bare"
           label="搜尋檔案庫"
@@ -52,11 +48,8 @@ import { SearchField } from '../../shared/ui/search-field';
           [value]="store.search()"
           (valueChange)="store.find($event)"
         />
-        <button class="icon-button" aria-label="關閉檔案選取" (click)="dialog.close()">
-          <nx-icon name="close" />
-        </button>
-      </div>
-      <div class="dialog-body" [attr.aria-busy]="store.loading()">
+      </nx-dialog-header>
+      <div class="dialog-body dialog-body-flush" [attr.aria-busy]="store.loading()">
         @if (store.error()) {
           <nx-notice tone="danger" [message]="store.error()" />
         }
@@ -110,9 +103,9 @@ import { SearchField } from '../../shared/ui/search-field';
         }
       </div>
       @if (store.offset() || store.canNext()) {
-        <div class="dialog-foot">
-          <span>{{ store.total() }} 份檔案</span
-          ><button
+        <footer class="dialog-foot">
+          <p class="dialog-note">{{ store.total() }} 份檔案</p>
+          <button
             class="quiet-button"
             [disabled]="store.loading() || !store.offset()"
             (click)="store.page(-1)"
@@ -125,7 +118,7 @@ import { SearchField } from '../../shared/ui/search-field';
           >
             下一頁
           </button>
-        </div>
+        </footer>
       }
     </dialog>`,
 })

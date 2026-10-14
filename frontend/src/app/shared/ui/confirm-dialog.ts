@@ -9,7 +9,7 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { Icon } from './icon';
+import { DialogHeader } from './dialog-header';
 
 export interface Confirmation {
   title: string;
@@ -20,38 +20,32 @@ export interface Confirmation {
 let sequence = 0;
 @Component({
   selector: 'nx-confirm-dialog',
-  imports: [CompactDialog, Icon],
+  imports: [CompactDialog, DialogHeader],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './confirm-dialog.scss',
   template: `<dialog
     [nxCompactDialog]="compact()"
+    size="sm"
     #dialog
     class="platform-dialog"
-    [class.ui-dialog-compact]="compact()"
-    [attr.aria-labelledby]="id + '-title'"
+    [attr.aria-label]="value()?.title"
     [attr.aria-describedby]="id + '-message'"
     (cancel)="$event.preventDefault(); answer(false)"
   >
-    <div class="dialog-scroll">
-      <div class="dialog-heading">
-        <h2 [id]="id + '-title'">{{ value()?.title }}</h2>
-        <button type="button" class="icon-button" aria-label="關閉確認視窗" (click)="answer(false)">
-          <nx-icon name="close" />
-        </button>
-      </div>
+    <nx-dialog-header [heading]="value()?.title ?? ''" closeLabel="關閉確認視窗" />
+    <div class="dialog-body">
       <p class="confirmation-message" [id]="id + '-message'">{{ value()?.message }}</p>
-      <div class="dialog-actions">
-        <button type="button" autofocus class="secondary-button" (click)="answer(false)">
-          取消</button
-        ><button
-          type="button"
-          [class]="value()?.danger ? 'danger-button' : 'primary-button'"
-          (click)="answer(true)"
-        >
-          {{ value()?.confirm }}
-        </button>
-      </div>
     </div>
+    <footer class="dialog-foot">
+      <button type="button" autofocus class="secondary-button" (click)="answer(false)">取消</button>
+      <button
+        type="button"
+        [class]="value()?.danger ? 'danger-button' : 'primary-button'"
+        (click)="answer(true)"
+      >
+        {{ value()?.confirm }}
+      </button>
+    </footer>
   </dialog>`,
 })
 export class ConfirmDialog {

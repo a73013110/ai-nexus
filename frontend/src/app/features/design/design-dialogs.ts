@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CompactDialog } from '../../shared/ui/compact-dialog';
+import { DialogHeader } from '../../shared/ui/dialog-header';
+import { Field } from '../../shared/ui/field';
 import { Icon } from '../../shared/ui/icon';
 import { SearchField } from '../../shared/ui/search-field';
 import { ToastService } from '../../shared/ui/toast-service';
@@ -14,24 +16,21 @@ const FILES = [
   { name: '資安自評表.xlsx', detail: '204 KB · 09/18' },
 ];
 
-/** The flush picker layout and the phone bottom sheet, both on the shared dialog frame. */
+/** The shared dialog structure in its three common sizes. */
 @Component({
   selector: 'nx-design-dialogs',
-  imports: [CompactDialog, DesignExample, DesignSection, Icon, SearchField],
+  imports: [CompactDialog, DesignExample, DesignSection, DialogHeader, Field, Icon, SearchField],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
       display: grid;
       gap: var(--p-space-6);
     }
-    .design-flush {
-      --dialog-width: 30rem;
-    }
     ul {
       display: grid;
       gap: 1px;
       margin: 0;
-      padding: 0;
+      padding: var(--p-space-2);
       list-style: none;
     }
     li > button {
@@ -44,64 +43,72 @@ const FILES = [
     li > button:hover {
       background: var(--hover);
     }
-    small,
+    li small,
     .design-empty {
       color: var(--secondary);
       font-size: var(--text-caption);
     }
     .design-empty {
       margin: 0;
-      padding: var(--p-space-4) var(--p-space-2);
+      padding: var(--p-space-4);
     }
   `,
   template: `<nx-design-section
-      id="design-flush"
-      title="扁平對話框"
-      api=".dialog-flush · .dialog-bar · .dialog-body · .dialog-foot"
-      description="選取器與清單用：標題列放標題或搜尋＋關閉，不加眉標；只有內容區捲動；頁尾放必要的數量或分頁。表單仍用 .dialog-scroll。"
+      id="design-dialog"
+      title="對話框"
+      api="nxCompactDialog size · nx-dialog-header · .dialog-body · .dialog-foot · .dialog-note"
+      description="一個結構：標題列（nx-dialog-header，自帶關閉）、只有內容區捲動、選用頁尾。sm、md 無分隔線；lg、full 以分隔線切開三區。640px 以下一律變底部 sheet，可由標題列下拉關閉。"
     >
-      <nx-design-example label="搜尋列＋頁尾">
+      <nx-design-example label="sm · 確認或單一欄位">
+        <button type="button" class="secondary-button" (click)="show(small)">開啟 sm</button>
+      </nx-design-example>
+      <nx-design-example label="md · 表單加說明">
+        <button type="button" class="secondary-button" (click)="show(form)">開啟 md</button>
+      </nx-design-example>
+      <nx-design-example label="lg · 工具列加清單">
         <button type="button" class="secondary-button" (click)="show(picker)">
-          <nx-icon name="files" />開啟選取對話框
-        </button>
-      </nx-design-example>
-      <nx-design-example label="標題列＋說明">
-        <button type="button" class="secondary-button" (click)="show(titled)">
-          <nx-icon name="list" />開啟清單對話框
+          <nx-icon name="files" />開啟 lg
         </button>
       </nx-design-example>
     </nx-design-section>
-    <nx-design-section
-      id="design-sheet"
-      title="底部 sheet"
-      api=".platform-dialog · .workspace-dialog"
-      description="640px 以下，所有置中對話框改為全寬底部 sheet，由下方升起、不回彈（快捷指令例外）。桌面寬度看到的是置中對話框，請縮窄視窗或用裝置模擬檢視。"
-    >
-      <button type="button" class="secondary-button" (click)="show(sheet)">開啟表單對話框</button>
-    </nx-design-section>
-    <dialog
-      nxCompactDialog
-      #picker
-      class="platform-dialog dialog-flush design-flush"
-      aria-label="選取示範檔案"
-    >
-      <div class="dialog-bar">
+    <dialog nxCompactDialog size="sm" #small class="platform-dialog">
+      <nx-dialog-header heading="刪除示範項目？" closeLabel="關閉示範確認" />
+      <div class="dialog-body">
+        <p>刪除後無法復原。</p>
+      </div>
+      <footer class="dialog-foot">
+        <button type="button" class="secondary-button" (click)="small.close()">取消</button>
+        <button type="button" class="danger-button" (click)="small.close()">刪除</button>
+      </footer>
+    </dialog>
+    <dialog nxCompactDialog size="md" #form class="platform-dialog">
+      <form class="dialog-form" (submit)="$event.preventDefault(); form.close()">
+        <nx-dialog-header heading="新增知識庫" closeLabel="關閉示範表單" />
+        <div class="dialog-body">
+          <label>名稱<input nxField required /></label>
+          <label>說明<textarea nxField></textarea></label>
+        </div>
+        <footer class="dialog-foot">
+          <p class="dialog-note">建立後可再加入文件與設定存取權限。</p>
+          <button type="button" class="secondary-button" (click)="form.close()">取消</button>
+          <button class="primary-button">建立</button>
+        </footer>
+      </form>
+    </dialog>
+    <dialog nxCompactDialog size="lg" #picker class="platform-dialog">
+      <nx-dialog-header
+        heading="選取檔案"
+        [detail]="matches().length + ' 份'"
+        closeLabel="關閉示範選取"
+      >
         <nx-search-field
           appearance="bare"
           label="搜尋示範檔案"
           [value]="query()"
           (valueChange)="query.set($event)"
         />
-        <button
-          type="button"
-          class="icon-button"
-          aria-label="關閉示範選取"
-          (click)="picker.close()"
-        >
-          <nx-icon name="close" />
-        </button>
-      </div>
-      <div class="dialog-body">
+      </nx-dialog-header>
+      <div class="dialog-body dialog-body-flush">
         @if (matches().length) {
           <ul>
             @for (file of matches(); track file.name) {
@@ -116,62 +123,10 @@ const FILES = [
           <p class="design-empty">沒有符合的示範檔案。</p>
         }
       </div>
-      <div class="dialog-foot">
-        <span>{{ matches().length }} 份檔案</span>
-      </div>
-    </dialog>
-    <dialog nxCompactDialog #titled class="platform-dialog dialog-flush design-flush">
-      <header class="dialog-bar">
-        <div class="dialog-title">
-          <h2>最近檔案</h2>
-          <small>{{ files.length }} 份</small>
-        </div>
-        <button
-          type="button"
-          class="icon-button"
-          aria-label="關閉示範清單"
-          (click)="titled.close()"
-        >
-          <nx-icon name="close" />
-        </button>
-      </header>
-      <div class="dialog-body">
-        <ul>
-          @for (file of files; track file.name) {
-            <li>
-              <button type="button" (click)="pick(titled, file.name)">
-                {{ file.name }}<small>{{ file.detail }}</small>
-              </button>
-            </li>
-          }
-        </ul>
-      </div>
-    </dialog>
-    <dialog nxCompactDialog #sheet class="platform-dialog">
-      <div class="dialog-scroll">
-        <div class="dialog-heading">
-          <h2>表單示範</h2>
-          <button
-            type="button"
-            class="icon-button"
-            aria-label="關閉表單示範"
-            (click)="sheet.close()"
-          >
-            <nx-icon name="close" />
-          </button>
-        </div>
-        <p class="form-note">
-          在 640px 以下，這個對話框貼齊畫面底部、佔滿寬度，並保留裝置底部的安全區域。
-        </p>
-        <div class="dialog-actions">
-          <button type="button" class="primary-button" (click)="sheet.close()">知道了</button>
-        </div>
-      </div>
     </dialog>`,
 })
 export class DesignDialogs {
   private readonly toast = inject(ToastService);
-  readonly files = FILES;
   readonly query = signal('');
   readonly matches = computed(() => {
     const query = this.query().trim().toLowerCase();
