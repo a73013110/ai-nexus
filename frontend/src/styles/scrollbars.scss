@@ -2,9 +2,8 @@
 // Chromium/WebKit get an inset, rounded thumb with a wider pointer target.
 //
 // `--scrollbar-gutter` is the width a `scrollbar-gutter: stable` gutter takes (zero where
-// scrollbars overlay the content). A padded scroll region that keeps a stable gutter takes it out of
-// its end padding — `max(0px, <padding> - var(--scrollbar-gutter))` — so both sides look alike
-// without a scrollbar and nothing moves when one appears (docs/frontend/data-workspace.md).
+// scrollbars overlay the content). Padded scroll regions take it out of their end padding through
+// the one mixin in scroll-pad.scss.
 :root {
   --scrollbar-gutter: 0px;
 }

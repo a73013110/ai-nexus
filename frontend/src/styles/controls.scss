@@ -86,3 +86,79 @@ kbd {
   font-size: var(--text-caption);
   font-weight: 600;
 }
+// Meters and progress bars: a --line track and a --meter-color fill (default --accent) in every
+// theme, never the browser's green or grey. Each vendor pseudo-element is its own rule, so an
+// unknown one does not drop the others.
+:where(meter, progress) {
+  appearance: none;
+  border: 0;
+  border-radius: var(--p-radius-pill);
+  overflow: hidden;
+  background: var(--meter-track, var(--line));
+}
+:where(meter)::-webkit-meter-bar {
+  border: 0;
+  border-radius: inherit;
+  background: var(--meter-track, var(--line));
+}
+:where(meter)::-webkit-meter-optimum-value,
+:where(meter)::-webkit-meter-suboptimum-value,
+:where(meter)::-webkit-meter-even-less-good-value {
+  border-radius: inherit;
+  background: var(--meter-color, var(--accent));
+}
+:where(meter)::-moz-meter-bar {
+  border-radius: inherit;
+  background: var(--meter-color, var(--accent));
+}
+:where(progress)::-webkit-progress-bar {
+  background: var(--meter-track, var(--line));
+}
+:where(progress)::-webkit-progress-value {
+  border-radius: inherit;
+  background: var(--meter-color, var(--accent));
+}
+:where(progress)::-moz-progress-bar {
+  border-radius: inherit;
+  background: var(--meter-color, var(--accent));
+}
+@media (forced-colors: active) {
+  :where(meter, progress) {
+    --meter-track: Canvas;
+    --meter-color: Highlight;
+    forced-color-adjust: none;
+    outline: 1px solid CanvasText;
+  }
+}
+// An on/off switch: `<button role="switch" class="switch" [attr.aria-checked]><span></span></button>`.
+.switch {
+  position: relative;
+  width: 48px;
+  height: var(--button-target);
+  flex: none;
+}
+.switch::before {
+  content: '';
+  position: absolute;
+  inset: calc(50% - 12px) 0;
+  background: var(--line);
+  border-radius: 99px;
+  transition: background var(--motion) var(--ease);
+}
+.switch span {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface);
+  left: 3px;
+  top: calc(50% - 9px);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 15%);
+  transition: transform var(--motion) var(--ease);
+}
+.switch[aria-checked='true']::before {
+  background: var(--signal);
+}
+.switch[aria-checked='true'] span {
+  transform: translateX(24px);
+}

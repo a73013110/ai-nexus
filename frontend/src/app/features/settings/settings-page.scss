@@ -1,4 +1,5 @@
 @use 'breakpoints' as bp;
+@use 'scroll-pad';
 
 .settings-layout {
   display: grid;
@@ -80,13 +81,12 @@
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-  padding: clamp(24px, 5vw, 72px) var(--workspace-gutter) 0;
+  padding-block: clamp(24px, 5vw, 72px) 0;
+  @include scroll-pad.inline(var(--workspace-gutter), $expose: true);
   scroll-padding-top: 32px;
 }
 .settings-page-header,
-.settings-content,
-.settings-savebar {
+.settings-content {
   max-width: var(--settings-content-width);
   margin: 0 auto;
 }
