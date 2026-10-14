@@ -5,6 +5,7 @@ import {
   formatDateTimeInput,
   parseDateTimeInput,
   formatDate,
+  formatDay,
   compactNumber,
   figureMoney,
   metricFormatter,
@@ -34,6 +35,8 @@ describe('workspace date inputs', () => {
     expect(Number.isNaN(parseDateTimeInput('').getTime())).toBe(true);
     expect(formatDate('2026-12-31T16:05:09Z')).toBe('2027/01/01 00:05:09');
     expect(formatDate('2026-12-31T16:05:09Z', 'roc')).toBe('民國 116/01/01 00:05:09');
+    expect(formatDay('2026-12-31T16:05:09Z')).toBe('2027/01/01');
+    expect(formatDay('2026-12-31T16:05:09Z', 'roc')).toBe('民國 116/01/01');
     expect(Number.isNaN(parseDateTimeInput('2026-02-30T00:00:00').getTime())).toBe(true);
   });
 });

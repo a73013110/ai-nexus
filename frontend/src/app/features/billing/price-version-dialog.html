@@ -1,0 +1,151 @@
+<dialog
+  nxCompactDialog
+  size="lg"
+  #dialog
+  class="platform-dialog price-dialog"
+  (cancel)="cancel($event)"
+>
+  <form class="dialog-form" (submit)="save($event)">
+    <nx-dialog-header heading="新增價格版本" [detail]="detail()" closeLabel="關閉新增價格版本" />
+    @if (opened()) {
+      <div class="dialog-body">
+        @if (error()) {
+          <nx-notice tone="danger" [message]="error()" />
+        }
+        <div class="form-sections">
+          <section class="form-section" role="group" aria-labelledby="price-target-title">
+            <header class="form-section-head">
+              <h3 id="price-target-title">計費對象</h3>
+              <p class="form-note">依名稱選擇；計費以供應商與原生識別碼對應。</p>
+            </header>
+            <div class="form-section-body price-pair">
+              <label
+                >供應商<nx-select
+                  label="計費供應商"
+                  [options]="providers"
+                  [value]="draft().provider"
+                  (valueChange)="setProvider($event)"
+              /></label>
+              <label
+                >模型或工具<nx-select
+                  label="計費模型或工具"
+                  placeholder="此供應商尚無可計費項目"
+                  [options]="modelChoices()"
+                  [value]="draft().modelId"
+                  [disabled]="!modelChoices().length"
+                  (valueChange)="field('modelId', $event)"
+              /></label>
+            </div>
+          </section>
+          <section class="form-section" role="group" aria-labelledby="price-rates-title">
+            <header class="form-section-head">
+              <h3 id="price-rates-title">費率</h3>
+              <nx-info-popover label="計費方式" panelLabel="費用類型與計費方式" [width]="320">
+                <ul class="form-note-list">
+                  <li>API 計費估算：依對外 API 方案估算。</li>
+                  <li>內部成本估算：自行制定的本機成本，例如每次處理成本。</li>
+                  <li>免費：明確標示免費，費率固定為 0。</li>
+                  <li>系統不預填價格，也不推定本機模型為零成本；請依實際方案與折扣填寫。</li>
+                </ul>
+              </nx-info-popover>
+              <p class="form-note">token 單價以每百萬 tokens 計，最多 8 位小數。</p>
+            </header>
+            <div class="form-section-body">
+              <div class="price-pair">
+                <label
+                  >幣別<nx-select
+                    label="計費幣別"
+                    [options]="currencies"
+                    [value]="draft().currency"
+                    (valueChange)="field('currency', $event)"
+                /></label>
+                <label
+                  >費用類型<nx-select
+                    label="費用類型"
+                    [options]="kinds"
+                    [value]="draft().kind"
+                    (valueChange)="setKind($event)"
+                /></label>
+              </div>
+              <div class="price-pair">
+                @for (rate of rates; track rate.key) {
+                  <label
+                    >{{ rate.label
+                    }}<input
+                      nxField
+                      class="price-rate"
+                      type="number"
+                      inputmode="decimal"
+                      min="0"
+                      max="100000"
+                      step="0.00000001"
+                      required
+                      [disabled]="draft().kind === 'free'"
+                      [attr.aria-invalid]="
+                        rate.key === 'cachedInputPerMillion' && rateError() ? true : null
+                      "
+                      [attr.aria-describedby]="
+                        rate.key === 'cachedInputPerMillion' && rateError()
+                          ? 'price-rate-error'
+                          : null
+                      "
+                      [value]="draft()[rate.key]"
+                      (input)="rateField(rate.key, $event)"
+                  /></label>
+                }
+              </div>
+              @if (rateError()) {
+                <p id="price-rate-error" class="form-note price-error" role="alert">
+                  {{ rateError() }}
+                </p>
+              }
+              <label class="price-trigger"
+                >單次計費時機<nx-select
+                  label="單次計費時機"
+                  [options]="triggers"
+                  [value]="draft().requestCharge"
+                  (valueChange)="field('requestCharge', $event)"
+              /></label>
+              <p class="form-note">只決定每次固定費用；token 費依有效用量計算。</p>
+            </div>
+          </section>
+          <section class="form-section" role="group" aria-labelledby="price-effective-title">
+            <header class="form-section-head">
+              <h3 id="price-effective-title">生效與依據</h3>
+              <p class="form-note">只影響之後的呼叫，已記錄的費用不重算。</p>
+            </header>
+            <div class="form-section-body">
+              <div class="ui-field price-effective">
+                <nx-date-time-picker
+                  label="生效時間"
+                  [required]="false"
+                  [value]="effective()"
+                  (valueChange)="effective.set($event)"
+                /><small>台北時區；留空即儲存時生效，可排定未來版本。</small>
+              </div>
+              <label
+                >價格依據或備註<textarea
+                  nxField
+                  maxlength="500"
+                  rows="2"
+                  [value]="draft().note"
+                  (input)="field('note', $any($event.target).value)"
+                  placeholder="例如：內部每次處理成本，或合約／官方價格表日期"
+                ></textarea>
+              </label>
+            </div>
+          </section>
+        </div>
+      </div>
+      <nx-dialog-save-bar
+        label="新增價格版本"
+        [dirty]="dirty()"
+        [saving]="saving()"
+        [disabled]="!canSave()"
+        [note]="note()"
+        (revert)="revert()"
+      />
+    }
+  </form>
+</dialog>
+<nx-confirm-dialog />

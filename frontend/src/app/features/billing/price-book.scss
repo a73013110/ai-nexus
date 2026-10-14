@@ -1,58 +1,62 @@
 @use 'breakpoints' as bp;
 
-:host {
-  display: grid;
-  gap: var(--section-gap);
+.price-toolbar {
+  justify-content: flex-start;
 }
-.price-fields {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+.price-toolbar > nx-search-field {
+  flex: 0 1 18rem;
 }
-.price-form label {
+.price-toolbar > .primary-button {
+  margin-inline-start: auto;
+}
+.ui-table-toolbar h2 {
   display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  min-width: 0;
-}
-.price-form small {
-  font-size: var(--text-caption);
-  color: var(--secondary);
-}
-.price-form {
-  margin-top: var(--section-gap);
-}
-.price-actions {
-  display: flex;
-  justify-content: flex-end;
-}
-.price-history-row {
-  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  width: 100%;
-  padding: 0.8rem 0.4rem;
-  text-align: left;
-  border-bottom: 1px solid var(--line);
+  gap: var(--p-space-2);
 }
-.price-history-row:last-of-type {
-  border-bottom: 0;
+.price-current {
+  --table-min-width: 58rem;
 }
-.price-history-row span {
-  min-width: 0;
-  overflow-wrap: anywhere;
+.price-history {
+  --table-min-width: 60rem;
 }
-.price-history-row small {
-  display: block;
+.price-name-column {
+  width: 12rem;
+}
+.price-state-column {
+  width: 6.5rem;
+}
+.price-kind-column {
+  width: 8rem;
+}
+.price-currency-column {
+  width: 4.5rem;
+}
+.price-rate-column {
+  width: 6.5rem;
+}
+.price-time-column {
+  width: 10.5rem;
+}
+.price-time {
+  font-variant-numeric: tabular-nums;
+}
+.price-note {
   color: var(--secondary);
-  margin-top: 0.2rem;
 }
+.price-unpriced > small {
+  display: inline;
+  margin-inline-start: var(--p-space-2);
+}
+// A phone keeps the view switch and the add button on the first row and gives search the second.
 @include bp.below(phone) {
-  .price-fields {
-    grid-template-columns: 1fr;
-  }
-  .price-history-row {
+  .page-toolbar.price-toolbar {
     flex-wrap: wrap;
+    align-items: center;
+  }
+  .page-toolbar.price-toolbar > nx-search-field {
+    order: 3;
+    flex: 1 1 100%;
   }
 }

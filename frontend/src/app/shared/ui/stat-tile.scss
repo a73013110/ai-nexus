@@ -1,0 +1,64 @@
+// The same hairline surface as the data tables beside it; the figure scales with the tile (cqi).
+:host {
+  --stat-color: var(--ink);
+  display: grid;
+  align-content: start;
+  gap: var(--p-space-1);
+  min-width: 0;
+  padding: var(--p-space-3) var(--p-space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-lg);
+  background: var(--surface);
+  container-type: inline-size;
+}
+:host([data-tone='warning']) {
+  --stat-color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 30%, var(--line));
+  background: color-mix(in srgb, var(--warning) 5%, var(--surface));
+}
+:host([data-tone='danger']) {
+  --stat-color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 32%, var(--line));
+  background: color-mix(in srgb, var(--danger) 5%, var(--surface));
+}
+.stat-label {
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  font-weight: 500;
+}
+.stat-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25em;
+  min-width: 0;
+  color: var(--stat-color);
+  font-size: clamp(1.125rem, 9cqi, 1.75rem);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+.stat-number {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+em {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--p-font-xs);
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.stat-skeleton {
+  width: 60%;
+  height: calc(clamp(1.125rem, 9cqi, 1.75rem) * 1.25);
+}
+.stat-hint {
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}

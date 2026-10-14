@@ -3,7 +3,7 @@
   description="檢查平台用量、管理知識檢索索引與模型價格。"
 >
   @if (account.loading()) {
-    <p role="status">正在載入平台營運…</p>
+    <p class="form-note" role="status">正在載入平台營運…</p>
   } @else if (account.error()) {
     <nx-notice [message]="account.error()"
       ><button notice-actions type="button" (click)="account.reload()">重新載入</button>
@@ -17,16 +17,18 @@
       [value]="tab()"
       (valueChange)="selectTab($event)"
     />
-    @switch (tab()) {
-      @case ('usage') {
-        <nx-platform-usage />
+    <div class="operations-tab-panel" [nxViewMotion]="tab()">
+      @switch (tab()) {
+        @case ('usage') {
+          <nx-platform-usage />
+        }
+        @case ('retrieval') {
+          <nx-retrieval-admin />
+        }
+        @case ('prices') {
+          <nx-price-book />
+        }
       }
-      @case ('retrieval') {
-        <nx-retrieval-admin />
-      }
-      @case ('prices') {
-        <nx-price-book />
-      }
-    }
+    </div>
   }
 </nx-feature-page>
