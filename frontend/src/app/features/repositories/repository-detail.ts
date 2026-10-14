@@ -16,6 +16,16 @@ import { isSha, RepositoryStore, shortSha } from './repository-store';
 import { RepositoryThread } from './repository-thread';
 import { RepositoryThreads } from './repository-threads';
 
+export type RepositorySection = 'code' | 'commits' | 'pulls' | 'issues' | 'reviews';
+
+/** The section a route's `view` opens; a compare range belongs to the history. */
+export function repositorySection(view: string): RepositorySection {
+  if (view === 'compare') return 'commits';
+  return view === 'commits' || view === 'pulls' || view === 'issues' || view === 'reviews'
+    ? view
+    : 'code';
+}
+
 /** One repository: the ref it is pinned to, its sections, and the section in the URL. */
 @Component({
   selector: 'nx-repository-detail',
@@ -142,14 +152,7 @@ export class RepositoryDetail {
   readonly copy = inject(CopyFeedback);
   private readonly router = inject(Router);
   readonly short = shortSha;
-  readonly section = computed(() => {
-    const view = this.view();
-    return view === 'compare'
-      ? 'commits'
-      : ['commits', 'pulls', 'issues', 'reviews'].includes(view)
-        ? view
-        : 'code';
-  });
+  readonly section = computed(() => repositorySection(this.view()));
   readonly number = computed(() => (/^\d{1,9}$/.test(this.item()) ? Number(this.item()) : 0));
   /** `base...head` of a compare view. */
   readonly range = computed(() => {

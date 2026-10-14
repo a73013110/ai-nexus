@@ -59,7 +59,7 @@ const chatLimit = 20;
       @if (!filePath() && canImport()) {
         <button
           type="button"
-          class="quiet-button"
+          class="quiet-button repository-import"
           (click)="importer().open(folder(), store.commit())"
         >
           <nx-icon name="library" />匯入知識庫
