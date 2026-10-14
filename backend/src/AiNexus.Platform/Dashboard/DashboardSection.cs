@@ -10,7 +10,6 @@ public sealed class DashboardSection(string id, string feature, string title = "
     private readonly List<DashboardSeriesDto> series = [];
     private readonly List<DashboardShareDto> shares = [];
     private readonly List<DashboardItemDto> items = [];
-    private readonly List<DashboardFactDto> facts = [];
     private string? state;
 
     /// <summary>A current figure, such as how many collections exist now.</summary>
@@ -46,18 +45,13 @@ public sealed class DashboardSection(string id, string feature, string title = "
         return this;
     }
 
-    public DashboardSection Fact(string label, string value, string tone = DashboardTones.Neutral)
-    {
-        facts.Add(new(label, value, tone));
-        return this;
-    }
-
     public DashboardSection State(string value) { state = value; return this; }
 
     /// <summary>Marks the section active when <paramref name="active"/> is above zero.</summary>
     public DashboardSection ActiveWhen(double? active) => active > 0 && state is null ? State(DashboardStates.Active) : this;
 
-    public DashboardSectionDto Build() => new(id, feature, title, route, state ?? Derived(), metrics, series, shares, items, facts);
+    /// <summary>Builds the section. Facts stay empty: configuration and service status belong to the administration pages.</summary>
+    public DashboardSectionDto Build() => new(id, feature, title, route, state ?? Derived(), metrics, series, shares, items, []);
 
     private string Derived() => metrics.Any(x => x.Tone == DashboardTones.Danger && x.Value > 0) ? DashboardStates.Attention : DashboardStates.Idle;
 }

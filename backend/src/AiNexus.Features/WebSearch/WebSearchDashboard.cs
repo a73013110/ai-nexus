@@ -6,16 +6,16 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.WebSearch;
 
 /// <summary>
-/// Overview of web searches made from chat. "Enabled" means the setting is usable, not that the remote service was
-/// just verified.
+/// Overview of web searches made from chat. Whether search is configured is shown on the administration pages, not
+/// here.
 /// </summary>
-internal sealed class WebSearchDashboard(NexusDbContext db, WebSearchService search) : IDashboardSource
+internal sealed class WebSearchDashboard(NexusDbContext db) : IDashboardSource
 {
     public string Feature => FeatureIds.Chat;
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
-        var owner = scope.Owner; var available = search.Status.Available;
+        var owner = scope.Owner;
         var searches = db.Set<WebSearchRecord>().AsNoTracking().Where(x => owner == null || x.OwnerId == owner);
         var period = searches.Where(x => x.CreatedAt >= scope.From && x.CreatedAt < scope.Until);
         var failed = await period.CountAsync(x => x.Status == "failed", ct);
@@ -27,7 +27,6 @@ internal sealed class WebSearchDashboard(NexusDbContext db, WebSearchService sea
             .Daily("searches", "每日網路搜尋", "次", daily)
             .Share("completed", "完成", all - failed, DashboardTones.Success)
             .Share("failed", "失敗", failed, DashboardTones.Danger)
-            .Fact("網路搜尋", available ? "已啟用" : "待設定", available ? DashboardTones.Success : DashboardTones.Warning)
             .Build();
     }
 }

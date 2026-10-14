@@ -60,7 +60,7 @@ export class OverviewWidget {
         exact: total?.knownCalls ? money(total.amount, total.currency) : null,
         unit: '',
         hint:
-          (total ? chargeKind(total.kind) : '請由管理員設定模型與工具價格') +
+          (total ? chargeKind(total.kind) : '期間沒有已知費用') +
           (unknown ? ` · 各類型共 ${unknown} 次費用未知` : ''),
         trend: this.store.spendDaily().map((x) => x.value),
         live: false,

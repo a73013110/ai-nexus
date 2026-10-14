@@ -2,7 +2,6 @@ using AiNexus.Features.AccessControl;
 using AiNexus.Features.Collaboration;
 using AiNexus.Features.Knowledge.Collections;
 using AiNexus.Features.Knowledge.Documents;
-using AiNexus.Features.Knowledge.Embeddings;
 using AiNexus.Features.Knowledge.Indexing;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform.Dashboard;
@@ -14,7 +13,7 @@ namespace AiNexus.Features.Knowledge;
 /// Overview of knowledge collections: their source documents by processing status and the index segments. Only
 /// documents added to a collection count here; private reader and project documents are not knowledge documents.
 /// </summary>
-internal sealed class KnowledgeDashboard(NexusDbContext db, EmbeddingService embedding) : IDashboardSource
+internal sealed class KnowledgeDashboard(NexusDbContext db) : IDashboardSource
 {
     public string Feature => FeatureIds.Knowledge;
 
@@ -47,7 +46,6 @@ internal sealed class KnowledgeDashboard(NexusDbContext db, EmbeddingService emb
             .Share("ready", "可查詢", ready, DashboardTones.Success)
             .Share("processing", "處理中", processing, DashboardTones.Info)
             .Share("failed", "處理失敗", failed, DashboardTones.Danger)
-            .Fact("檢索方式", embedding.Enabled ? "語意向量" : "關鍵字", embedding.Enabled ? DashboardTones.Success : DashboardTones.Neutral)
             .ActiveWhen(processing);
         var recent = await db.Set<WorkspaceResource>().AsNoTracking().Where(x => x.OwnerId == scope.Actor && x.Kind == KnowledgeCollection.Kind)
             .OrderByDescending(x => x.UpdatedAt).Take(5).Select(x => new { x.Id, x.Name, x.UpdatedAt }).ToListAsync(ct);

@@ -77,7 +77,8 @@ test("dashboard shows every granted feature, keeps currencies apart and narrows 
     await expect(tile(page, name)).toBeVisible();
   const knowledge = tile(page, "知識庫");
   await expect(knowledge).toContainText("214");
-  await expect(knowledge).toContainText("語意向量");
+  // Service configuration belongs to the administration pages, not the overview.
+  await expect(tile(page, "服務狀態")).toHaveCount(0);
   await expect(
     knowledge.getByRole("link", { name: "前往知識庫", exact: true }),
   ).toHaveAttribute("href", "/knowledge");
@@ -239,18 +240,18 @@ test("one overview style, and tiles can be moved, resized, hidden and reset", as
     .click();
   await expect(activity).toHaveClass(/is-tall/);
   await page
-    .getByRole("button", { name: "隱藏 服務狀態", exact: true })
+    .getByRole("button", { name: "隱藏 Token 使用量", exact: true })
     .click();
-  await expect(tile(page, "服務狀態")).toHaveCount(0);
+  await expect(tile(page, "Token 使用量")).toHaveCount(0);
   await page.reload();
   await expect(
     page.locator('nx-dashboard-tile[data-id="activity"]'),
   ).toHaveAttribute("data-size", "xl");
   expect((await tileOrder(page))[0]).toBe("activity");
-  await expect(tile(page, "服務狀態")).toHaveCount(0);
+  await expect(tile(page, "Token 使用量")).toHaveCount(0);
   await page.getByRole("button", { name: "自訂版面", exact: true }).click();
-  await bar.getByRole("button", { name: "服務狀態" }).click();
-  await expect(tile(page, "服務狀態")).toBeVisible();
+  await bar.getByRole("button", { name: "Token 使用量" }).click();
+  await expect(tile(page, "Token 使用量")).toBeVisible();
   await bar.getByRole("button", { name: "恢復預設", exact: true }).click();
   await expect.poll(() => tileOrder(page)).toEqual(defaults);
   await bar.getByRole("button", { name: "完成", exact: true }).click();
