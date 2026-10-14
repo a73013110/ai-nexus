@@ -56,6 +56,7 @@ import { Panel } from '../../shared/ui/panel';
 import { ResourceCard } from '../../shared/ui/resource-card';
 import { ResourceGallery } from '../../shared/ui/resource-gallery';
 import { accessLabel } from '../sharing/access-label';
+import { evaluationSetTour, qualityTour } from './quality-tour';
 
 type VariantForm = { label: string; modelId: string | null; instruction: string };
 const blankCase = (): EvaluationCase => ({
@@ -186,6 +187,17 @@ export class QualityPage {
     if (!set) return '';
     const facts = `${set.cases.length} 題 · v${set.version}`;
     return set.description ? `${set.description} · ${facts}` : facts;
+  });
+  /** The collection's tour for the open tab, or the open set's for what this viewer can do there. */
+  readonly tour = computed(() => {
+    const resource = this.current()?.resource;
+    return this.id()
+      ? evaluationSetTour({
+          edit: !!resource?.canEdit,
+          owner: !!resource?.isOwner,
+          review: !!this.detail()?.canReview,
+        })
+      : qualityTour({ feedback: this.tab() === 'feedback', chat: this.session.has('chat') });
   });
   readonly listActions: MenuAction[] = [
     { id: 'import', label: '匯入題庫', icon: 'upload' },

@@ -4,18 +4,29 @@
     current() ? summary() : id() ? '' : '用固定題目比較模型與指令，留下可重現的結果與人工判讀。'
   "
   [back]="id() ? { path: '/quality', label: '全部評測' } : null"
+  [tour]="tour()"
 >
   <div page-actions class="page-actions">
     @if (current()) {
-      <button class="primary-button" (click)="openRun()" [disabled]="busy()">
+      <button class="primary-button quality-run" (click)="openRun()" [disabled]="busy()">
         <nx-icon name="play" />開始比較
       </button>
-      <nx-action-menu label="評測集操作" [items]="setActions()" (action)="setAction($event)" />
+      <nx-action-menu
+        class="quality-set-menu"
+        label="評測集操作"
+        [items]="setActions()"
+        (action)="setAction($event)"
+      />
     } @else if (!id()) {
-      <button class="primary-button" (click)="openSet()" [disabled]="busy()">
+      <button class="primary-button quality-create" (click)="openSet()" [disabled]="busy()">
         <nx-icon name="plus" />建立評測集
       </button>
-      <nx-action-menu label="評測操作" [items]="listActions" (action)="listAction($event)" />
+      <nx-action-menu
+        class="quality-list-menu"
+        label="評測操作"
+        [items]="listActions"
+        (action)="listAction($event)"
+      />
       <input #importInput type="file" accept=".json" hidden (change)="importSet($event)" />
     }
   </div>
@@ -80,7 +91,7 @@
     </nx-resource-gallery>
   } @else if (current(); as set) {
     <div class="quality-layout">
-      <nx-panel heading="比較紀錄" icon="history" [count]="runs().length">
+      <nx-panel class="quality-runs" heading="比較紀錄" icon="history" [count]="runs().length">
         @if (runs().length) {
           <nx-select
             panel-actions
@@ -181,7 +192,7 @@
                       >
                       @if (view.canReview) {
                         <button
-                          class="quiet-button"
+                          class="quiet-button evaluation-review"
                           (click)="openReview(answer)"
                           [disabled]="busy()"
                         >

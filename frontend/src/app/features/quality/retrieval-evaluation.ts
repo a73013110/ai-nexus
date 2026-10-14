@@ -33,6 +33,7 @@ import { Panel } from '../../shared/ui/panel';
 import { KnowledgeApi } from '../knowledge/knowledge-api';
 import { JobsApi } from '../tasks/jobs-api';
 import { JobToasts } from '../tasks/job-toasts';
+import { RETRIEVAL_TOUR } from './quality-tour';
 
 @Component({
   selector: 'nx-retrieval-evaluation',
@@ -98,6 +99,7 @@ export class RetrievalEvaluation {
   readonly busy = signal(false);
   readonly loading = computed(() => this.collectionsRead.loading() || this.runsRead.loading());
   readonly date = formatDate;
+  readonly tour = RETRIEVAL_TOUR;
   readonly form = new FormGroup({
     title: new FormControl('', {
       nonNullable: true,
