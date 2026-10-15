@@ -9,7 +9,7 @@
 ```
 
 - 只在 `AiNexus` 不存在時建庫（並開啟 RCSI），然後套用未完成的 migration；不會 DROP、清空資料或修改 history。
-- DBA 也可以先自建空的 `AiNexus`（記得開啟 RCSI，見下節），再審閱執行發布套件的 `migrations.sql`（idempotent，只執行未套用的部分）或依物件拆分的 [`database/`](iis-deployment.md#給-dba-的拆檔-sql)，其中沒有 CREATE LOGIN／DATABASE 或秘密。
+- DBA 也可以先自建空的 `AiNexus`（記得開啟 RCSI，見下節），再審閱執行發布套件的 `migrations.sql`（idempotent，只執行未套用的部分）或依物件拆分的 [`database/`](iis-deployment.md#給-dba-的拆檔-sql)，其中沒有 CREATE LOGIN／DATABASE 或秘密；執行後以 `Verify-Database.ps1` [驗證實際結構](database-verification.md#部署後驗證)。
 - **2026-10-09 以前建立的資料庫無法升級**（舊 migration 已刪除，不保留升級路徑），必須刪除後重新初始化；初始化遇到舊表會直接失敗。
 
 ## SQL 帳號權限

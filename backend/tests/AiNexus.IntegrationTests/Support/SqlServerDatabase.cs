@@ -38,7 +38,7 @@ internal static class SqlServerDatabase
     }
 
     /// <summary>The test server's master database, from the raw test connection string rather than <c>Databases</c> settings.</summary>
-    private sealed class MasterDatabase(string connectionString) : DapperSqlDatabase<NexusMasterDatabase>
+    internal sealed class MasterDatabase(string connectionString) : DapperSqlDatabase<NexusMasterDatabase>
     {
         protected override async Task<TResult> RunAsync<TResult>(Func<DbConnection, DbTransaction?, Task<TResult>> command, CancellationToken cancellationToken)
         {

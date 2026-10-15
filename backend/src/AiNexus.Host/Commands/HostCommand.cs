@@ -1,3 +1,4 @@
+using System.Data.Common;
 using AiNexus.Features.Persistence;
 using AiNexus.Features.Persistence.ReleaseScripts;
 using AiNexus.Platform.Data;
@@ -6,7 +7,7 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.Host.Commands;
 
 /// <summary>
-/// Command line of the host. Without a command it serves HTTP; a command (<c>db init</c>, <c>db script</c>, <c>verify …</c>)
+/// Command line of the host. Without a command it serves HTTP; a command (<c>db init</c>, <c>db script</c>, <c>db diff</c>, <c>verify …</c>)
 /// runs once against the fully built host, sets the exit code and exits. Parsed before the web host is created, so an
 /// unknown command or <c>--help</c> never starts the site.
 /// </summary>
@@ -38,6 +39,14 @@ public sealed class HostCommand
                 new("--output", "目錄", true, "輸出目錄，必須不存在或是空的"),
             ],
             (_, command) => Task.FromResult(WriteReleaseScript(command.Option("--from")!, command.Option("--to"), command.Output!))),
+        new("db diff", "在 Databases:Nexus 的伺服器建暫存庫並套用 migration，以 SqlPackage 產生每個物件的差異（diff/）與部署後驗證用的 expected.dacpac；結束一定刪除暫存庫",
+            [
+                new("--from", "migration", true, "正式機目前最後一個 migration，0 代表空庫"),
+                new("--to", "migration", false, "發布的最後一個 migration，預設最新"),
+                new("--output", "目錄", true, "輸出目錄，其中不能已有 diff/ 或 expected.dacpac"),
+                new("--sqlpackage", "檔案", false, "SqlPackage 執行檔或 .dll，預設在目前目錄執行 dotnet tool run sqlpackage"),
+            ],
+            (app, command) => WriteSchemaDiffAsync(app, command)),
         new("verify deployment", "唯讀檢查 SQL、設定、模型清單、embedding／rerank 與站外目錄寫入，不產生 AI 回答", [],
             (app, _) => DeploymentVerifier.VerifyAsync(app.Services, app.Configuration, app.Environment, CancellationToken.None)),
         new("verify connections", "以合成資料實測 SQL 讀寫、AD、模型串流、附件辨識與檢索模型（會使用模型配額）", [Report], async (app, command) =>
@@ -69,7 +78,7 @@ public sealed class HostCommand
     /// <summary>Arguments left for host configuration (<c>--LocalConfigPath</c>, <c>--urls</c>, …).</summary>
     public string[] HostArguments { get; }
 
-    /// <summary>Report file of a <c>verify</c> command, or the output directory of <c>db script</c> (<c>--output</c>).</summary>
+    /// <summary>Report file of a <c>verify</c> command, or the output directory of <c>db script</c> and <c>db diff</c> (<c>--output</c>).</summary>
     public string? Output => Option("--output");
 
     public bool Help { get; }
@@ -161,6 +170,40 @@ public sealed class HostCommand
             Console.Error.WriteLine(ex.Message);
             return false;
         }
+    }
+
+    private static async Task<bool> WriteSchemaDiffAsync(WebApplication app, HostCommand command)
+    {
+        // Ctrl+C cancels instead of killing the process, so the temporary database is still dropped.
+        using var cancel = new CancellationTokenSource();
+        void Stop(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; cancel.Cancel(); }
+        Console.CancelKeyPress += Stop;
+        try
+        {
+            using var scope = app.Services.CreateScope();
+            var diff = await scope.ServiceProvider.GetRequiredService<SchemaDiffGenerator>().GenerateAsync(
+                command.Option("--from")!, command.Option("--to"), command.Output!, new SqlPackage(command.Option("--sqlpackage")), cancel.Token);
+            var output = Path.GetFullPath(command.Output!);
+            Console.WriteLine($"已產生 {diff.Changes.Count} 個物件的差異：{Path.Combine(output, SchemaDiffGenerator.DiffDirectoryName, SchemaDiff.ManifestFileName)}；部署後驗證用 {Path.Combine(output, SchemaDiffGenerator.ExpectedDacpacFileName)}。");
+            if (!diff.FullTextAvailable) Console.WriteLine("注意：參考伺服器缺全文元件或繁中斷詞器，結構不含 KnowledgeSearch 全文索引。");
+            return true;
+        }
+        catch (OperationCanceledException)
+        {
+            Console.Error.WriteLine("已取消。");
+            return false;
+        }
+        catch (ReleaseScriptException ex)
+        {
+            Console.Error.WriteLine(ex.Message);
+            return false;
+        }
+        catch (Exception ex) when (ex is DbException or InvalidOperationException)
+        {
+            Console.Error.WriteLine(DatabaseDiagnosis.Describe(ex, NexusDbContext.DatabaseName));
+            return false;
+        }
+        finally { Console.CancelKeyPress -= Stop; }
     }
 
     private static async Task<bool> InScopeAsync(WebApplication app, Func<IServiceProvider, Task> work)
