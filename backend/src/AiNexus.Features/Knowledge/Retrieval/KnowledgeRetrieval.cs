@@ -51,19 +51,48 @@ public sealed class KnowledgeRetrieval(NexusDbContext db, ConversationService co
             query = original?.Content; parent = original?.ParentId;
         }
         if (string.IsNullOrWhiteSpace(query)) return KnowledgeErrors.PromptRequired;
-        var history = new List<RewriteTurn>(); var visited = new HashSet<Guid>();
-        while (parent is Guid id && history.Count < options.Value.QueryRewrite.MaxTurns * 2)
+        var history = await HistoryAsync(request.ConversationId, parent, options.Value.QueryRewrite.MaxTurns * 2, ct);
+        if (!history.IsSuccess) return history.Error;
+        var length = Math.Min(query.Length, 2000); if (char.IsHighSurrogate(query[length - 1])) length--;
+        var result = await pipeline.SearchAsync(actor, new(query[..length], selection.CollectionIds), ct, history.Value);
+        return result.IsSuccess ? Result<IReadOnlyList<KnowledgeHitDto>>.Ok(result.Value.Hits) : result.Error;
+    }
+
+    private sealed record Node(Guid Id, Guid? ParentId, string Role, string Status, int Length);
+
+    /// <summary>
+    /// Up to <paramref name="limit"/> non-empty user messages and finished answers above <paramref name="parent"/>, oldest
+    /// first. Reads the branch's shape once and then only the texts it keeps, instead of one round trip per message.
+    /// </summary>
+    private async Task<Result<IReadOnlyList<RewriteTurn>>> HistoryAsync(Guid conversation, Guid? parent, int limit, CancellationToken ct)
+    {
+        if (parent is null || limit <= 0) return Result<IReadOnlyList<RewriteTurn>>.Ok([]);
+        var tree = await db.Messages.AsNoTracking().Where(x => x.ConversationId == conversation)
+            .Select(x => new Node(x.Id, x.ParentId, x.Role, x.Status, x.Content.Length)).ToDictionaryAsync(x => x.Id, ct);
+        // Newest first. SQL Server's LEN ignores trailing spaces, so a zero length may still be a blank text: such a message
+        // is read but does not count toward the limit until its text shows it is not empty.
+        var candidates = new List<Node>(); var visited = new HashSet<Guid>(); var known = 0;
+        while (parent is Guid id && known < limit)
         {
-            if (!visited.Add(id)) return KnowledgeErrors.InvalidHistory;
-            var message = await db.Messages.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id && x.ConversationId == request.ConversationId, ct);
-            if (message is null) return KnowledgeErrors.InvalidHistory;
-            if (message.Content.Length > 0 && (message.Role == "user" || !RunStates.IsActive(message.Status))) history.Add(new(message.Role, message.Content));
-            parent = message.ParentId;
+            if (!visited.Add(id) || !tree.TryGetValue(id, out var node)) return KnowledgeErrors.InvalidHistory;
+            if (node.Role == "user" || !RunStates.IsActive(node.Status))
+            {
+                candidates.Add(node);
+                if (node.Length > 0) known++;
+            }
+            parent = node.ParentId;
+        }
+        if (candidates.Count == 0) return Result<IReadOnlyList<RewriteTurn>>.Ok([]);
+        var ids = candidates.Select(x => x.Id).ToArray();
+        var texts = await db.Messages.AsNoTracking().Where(x => ids.Contains(x.Id)).Select(x => new { x.Id, x.Content }).ToDictionaryAsync(x => x.Id, x => x.Content, ct);
+        var history = new List<RewriteTurn>(limit);
+        foreach (var node in candidates)
+        {
+            if (!texts.TryGetValue(node.Id, out var content)) return KnowledgeErrors.InvalidHistory;
+            if (content.Length > 0 && history.Count < limit) history.Add(new(node.Role, content));
         }
         history.Reverse();
-        var length = Math.Min(query.Length, 2000); if (char.IsHighSurrogate(query[length - 1])) length--;
-        var result = await pipeline.SearchAsync(actor, new(query[..length], selection.CollectionIds), ct, history);
-        return result.IsSuccess ? Result<IReadOnlyList<KnowledgeHitDto>>.Ok(result.Value.Hits) : result.Error;
+        return Result<IReadOnlyList<RewriteTurn>>.Ok(history);
     }
     public Task<Result> ValidateHitsAsync(Guid actor, IReadOnlyList<KnowledgeHitDto> hits, CancellationToken ct) => authorization.HitsAsync(actor, hits, ct);
     private static readonly System.Text.Json.JsonSerializerOptions Readable = new() { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
