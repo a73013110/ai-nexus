@@ -153,6 +153,14 @@ public sealed partial class ReleaseScriptGeneratorTests
         Assert.Equal("sql", ReleaseScriptGenerator.TargetOf(builder.Operations[1]));
     }
 
+    [Fact]
+    public void HandWrittenDataSqlCompilesWhenItRuns()
+    {
+        var builder = new MigrationBuilder("Microsoft.EntityFrameworkCore.SqlServer");
+        builder.DataSql("UPDATE [repositories].[RepositoryReviews] SET [Purpose] = N'review';", "repositories.RepositoryReviews");
+        Assert.Equal("EXEC(N'UPDATE [repositories].[RepositoryReviews] SET [Purpose] = N''review'';');", ((SqlOperation)builder.Operations[0]).Sql);
+    }
+
     [Theory]
     [InlineData("0", "0")]
     [InlineData("NoSuchMigration", null)]

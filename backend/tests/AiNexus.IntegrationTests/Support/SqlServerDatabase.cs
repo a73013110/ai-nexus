@@ -9,11 +9,12 @@ namespace AiNexus.IntegrationTests.Support;
 
 /// <summary>
 /// Real SQL Server 2025 for <c>Category=SqlServer</c> tests, from <c>AINEXUS_SQLSERVER_TEST</c>: each test gets a database
-/// created the way <c>db init</c> creates AiNexus (<see cref="DatabaseInitializer.CreateAsync"/>), migrated, and dropped afterwards.
+/// created the way <c>db init</c> creates AiNexus (<see cref="DatabaseInitializer.CreateAsync"/>), migrated unless
+/// <c>migrate</c> is false, and dropped afterwards.
 /// </summary>
 internal static class SqlServerDatabase
 {
-    public static async Task WithDatabase(Func<NexusDbContext, Task> test)
+    public static async Task WithDatabase(Func<NexusDbContext, Task> test, bool migrate = true)
     {
         var connection = Environment.GetEnvironmentVariable("AINEXUS_SQLSERVER_TEST");
         Assert.SkipWhen(string.IsNullOrWhiteSpace(connection), "未設定 AINEXUS_SQLSERVER_TEST，略過真實 SQL Server 2025 整合測試。");
@@ -25,7 +26,7 @@ internal static class SqlServerDatabase
         {
             await DatabaseInitializer.CreateAsync(new MasterDatabase(masterConnection), name, CancellationToken.None);
             await using var db = new NexusDbContext(new DbContextOptionsBuilder<NexusDbContext>().UseSqlServer(settings.ConnectionString).Options);
-            await db.Database.MigrateAsync();
+            if (migrate) await db.Database.MigrateAsync();
             await test(db);
         }
         finally

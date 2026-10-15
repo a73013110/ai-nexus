@@ -45,7 +45,7 @@ dotnet ef migrations add DescriptiveChange --project backend/src/AiNexus.Feature
 ```
 
 - 先改實體與組態（含 `[Comment]`），再產生 migration；一起提交 source、designer 與 snapshot。給 DBA 的 SQL 不進版控，由 `Publish-IIS.ps1` 發布時產生（`migrations.sql`；加 `-FromMigration` 另有[拆檔的 `database/`](../operations/iis-deployment.md#給-dba-的拆檔-sql)）。不要手改產生的 migration，只有 EF 表達不了的 DDL（例如全文索引）才在產生後加入 `migrationBuilder.Sql`。
-- **改資料的手寫 SQL 必須用 `migrationBuilder.DataSql(sql, "schema.Table")`**：拆檔只把它與 `HasData` 放進 `data/`，`Sql` 一律算結構。
+- **改資料的手寫 SQL 必須用 `migrationBuilder.DataSql(sql, "schema.Table")`**：拆檔只把它與 `HasData` 放進 `data/`，`Sql` 一律算結構。它以 `EXEC` 執行，才能引用同一個 migration 新增的欄位，所以只能是單一批次（不含 `GO`）。
 - 不可有在 SQL Server 重建資料表的操作（既有表的叢集鍵／索引、IDENTITY 等），拆檔會失敗並列出原因。
 - 已設定 SQL 的 host 在 HTTP 與背景 worker 啟動前檢查 migration（`DatabaseSchema`）：有未套用版本或模型與 snapshot 不一致就以退出碼 1 停止。`Persistence:ApplyMigrationsOnStartup` 預設 false，只做唯讀檢查。
 - 測試用 SQLite 依目前模型建庫（`SqliteModel.cs` 處理向量與全文差異），不執行 SQL Server migration；真實 SQL Server 的測試方式見 [測試](../development/testing.md#真實-sql-server)。
