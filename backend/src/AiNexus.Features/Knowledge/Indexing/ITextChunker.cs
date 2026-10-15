@@ -5,5 +5,5 @@ namespace AiNexus.Features.Knowledge.Indexing;
 
 public interface ITextChunker
 {
-    Result<IReadOnlyList<StructuredChunk>> Chunk(IReadOnlyList<DocumentPage> pages, ChunkerSnapshot? configuration = null);
+    Result<IReadOnlyList<StructuredChunk>> Chunk(IReadOnlyList<DocumentPage> pages);
 }

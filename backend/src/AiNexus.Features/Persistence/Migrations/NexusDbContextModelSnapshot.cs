@@ -18,7 +18,7 @@ namespace AiNexus.Features.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
@@ -2134,12 +2134,6 @@ namespace AiNexus.Features.Persistence.Migrations
                         .HasColumnType("datetimeoffset")
                         .HasComment("此 profile 完整覆蓋並切換為 active 的 UTC 時間。");
 
-                    b.Property<string>("ChunkerConfiguration")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)")
-                        .HasComment("切段器版本及 token／重疊參數快照；重建期間保留舊版本。");
-
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("datetimeoffset")
                         .HasComment("資料建立時間，採 UTC offset。");
@@ -2205,7 +2199,7 @@ namespace AiNexus.Features.Persistence.Migrations
 
                     b.ToTable("EmbeddingProfiles", "knowledge", t =>
                         {
-                            t.HasComment("向量空間及切段規則的不可變快照；同時最多一個 active。");
+                            t.HasComment("向量空間的不可變快照，切段規則納入 Key 指紋；同時最多一個 active。");
                         });
                 });
 

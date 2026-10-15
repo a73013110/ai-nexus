@@ -12,9 +12,9 @@ public sealed partial class StructuredChunker(IOptions<KnowledgeOptions> options
 {
     public const int Version = 1;
     private sealed record Block(int Page, string Heading, string Text, bool Boundary, bool Table);
-    public Result<IReadOnlyList<StructuredChunk>> Chunk(IReadOnlyList<DocumentPage> pages, ChunkerSnapshot? configuration = null)
+    public Result<IReadOnlyList<StructuredChunk>> Chunk(IReadOnlyList<DocumentPage> pages)
     {
-        var settings = configuration?.Options() ?? options.Value; var blocks = new List<Block>(); var headings = new SortedDictionary<int, string>();
+        var settings = options.Value; var blocks = new List<Block>(); var headings = new SortedDictionary<int, string>();
         foreach (var page in pages.OrderBy(x => x.PageNumber))
         {
             var blank = true;
@@ -106,10 +106,4 @@ public sealed partial class StructuredChunker(IOptions<KnowledgeOptions> options
     [GeneratedRegex(@"^(?:[一二三四五六七八九十百]+、|（[一二三四五六七八九十百]+）|\d+\.\s|\(\d+\))", RegexOptions.CultureInvariant)] private static partial Regex NumberHeading();
     [GeneratedRegex(@"[^。！？；.!?]+[。！？；.!?]*|[。！？；.!?]+", RegexOptions.CultureInvariant)] private static partial Regex Sentences();
     [GeneratedRegex(@"[。！？；.!?]$", RegexOptions.CultureInvariant)] private static partial Regex SentenceEnd();
-}
-
-public sealed record ChunkerSnapshot(int Version, int TargetTokens, int MaxTokens, int MinTokens, double OverlapRatio)
-{
-    public static ChunkerSnapshot Capture(KnowledgeOptions x) => new(StructuredChunker.Version, x.Indexing.ChunkTargetTokens, x.Indexing.ChunkMaxTokens, x.Indexing.ChunkMinTokens, x.Indexing.ChunkOverlapRatio);
-    public KnowledgeOptions Options() => new() { Indexing = new() { ChunkTargetTokens = TargetTokens, ChunkMaxTokens = MaxTokens, ChunkMinTokens = MinTokens, ChunkOverlapRatio = OverlapRatio } };
 }

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Knowledge.Embeddings;
 
-[Comment("向量空間及切段規則的不可變快照；同時最多一個 active。")]
+[Comment("向量空間的不可變快照，切段規則納入 Key 指紋；同時最多一個 active。")]
 public sealed class EmbeddingProfile
 {
     [Comment("資料的主鍵識別碼。")]
@@ -23,8 +23,6 @@ public sealed class EmbeddingProfile
     public string QueryInstruction { get; set; } = "";
     [Comment("外部來源或 repository 的固定版本識別。")]
     public string Revision { get; set; } = "";
-    [Comment("切段器版本及 token／重疊參數快照；重建期間保留舊版本。")]
-    public string ChunkerConfiguration { get; set; } = "";
     [Comment("業務執行狀態。")]
     public string Status { get; set; } = "building";
     [Comment("資料建立時間，採 UTC offset。")]
@@ -43,7 +41,7 @@ internal sealed class EmbeddingProfileConfiguration : IEntityTypeConfiguration<E
         profile.ToTable("EmbeddingProfiles", "knowledge"); profile.HasKey(x => x.Id);
         profile.Property(x => x.Key).HasMaxLength(200); profile.HasIndex(x => x.Key).IsUnique();
         profile.Property(x => x.Provider).HasMaxLength(32); profile.Property(x => x.Model).HasMaxLength(160); profile.Property(x => x.InputFormat).HasMaxLength(32);
-        profile.Property(x => x.QueryInstruction).HasMaxLength(500); profile.Property(x => x.Revision).HasMaxLength(64); profile.Property(x => x.ChunkerConfiguration).HasMaxLength(500);
+        profile.Property(x => x.QueryInstruction).HasMaxLength(500); profile.Property(x => x.Revision).HasMaxLength(64);
         profile.Property(x => x.Status).HasMaxLength(16); profile.HasIndex(x => x.Status).IsUnique().HasFilter("[Status] = 'active'");
     }
 }

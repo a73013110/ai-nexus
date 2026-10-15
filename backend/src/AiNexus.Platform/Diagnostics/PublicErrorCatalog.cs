@@ -34,8 +34,6 @@ public static class PublicErrorCatalog
         ["attachment_upload_expired"] = "上傳已失效，請重新上傳。",
         ["authentication_mode"] = "此工作區未使用 Windows 整合驗證。",
         ["authentication_required"] = "請先登入工作區。",
-        ["chunker_configuration_invalid"] = "索引切段設定快照無效，請重新建立 profile。",
-        ["chunker_version_unsupported"] = "此切段器版本已不受支援，請先重建並啟用新 profile。",
         ["client_issue_invalid"] = "問題回報格式不正確。",
         ["collection_limit"] = "個人知識庫數量已達上限。",
         ["context_budget_exceeded"] = "提問超過此模型的上下文預算，請縮短內容或選擇較大上下文的模型。",

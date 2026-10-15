@@ -93,6 +93,24 @@ public sealed class EmbeddingProfileTests
     }
 
     [Fact]
+    public async Task ChunkSettingChangeRebuildsOneSharedLayoutForActiveAndBuildingProfiles()
+    {
+        await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
+        var seed = await KnowledgeApi.SeedAsync(factory, client);
+        var text = new string('甲', 90) + "。\n\n" + new string('乙', 90) + "。\n\n" + new string('丙', 90) + "。";
+        (await client.PutAsJsonAsync($"/api/v1/documents/{seed.Document.Id}/text", new TextDocumentRequest("採購規範", text, 1))).EnsureSuccessStatusCode(); await Drain(factory);
+        var original = Assert.Single(await Profiles(client)); Assert.Equal(1, original.Coverage.CompletedChunks);
+        var indexing = factory.Services.GetRequiredService<IOptions<KnowledgeOptions>>().Value.Indexing;
+        indexing.ChunkTargetTokens = 80; indexing.ChunkMaxTokens = 100; indexing.ChunkMinTokens = 20; indexing.ChunkOverlapRatio = 0;
+        var target = (await Profiles(client)).Single(x => x.Status == "building");
+        (await client.PostAsync($"/api/v1/admin/knowledge/profiles/{target.Id}/rebuild", null)).EnsureSuccessStatusCode(); await Drain(factory);
+        // Chunks are shared, so the rebuild re-chunks with current settings and re-embeds the active profile on that layout.
+        var all = await Profiles(client);
+        Assert.All(all, x => Assert.Equal((3, true), (x.Coverage.CompletedChunks, x.Coverage.Complete)));
+        Assert.Equal(original.Id, all.Single(x => x.Status == "active").Id);
+    }
+
+    [Fact]
     public async Task PartialReindexResumesCompletedBatchesWithoutRepeatingEmbedding()
     {
         await using var factory = new NexusFactory(administrators: ["alice"], services: services => services.PostConfigure<KnowledgeOptions>(x => {
