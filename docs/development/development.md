@@ -17,7 +17,7 @@ dotnet dev-certs https --trust
 ./scripts/Start-Local.ps1
 ```
 
-開啟 https://localhost:5080/ 。初始化需要有 DDL 權限的 SQL 登入；`Initialize-Database.ps1` 只在資料庫不存在時建庫，再套用未完成的 migration，不刪除既有資料（見 [資料庫](../architecture/database.md#初始化與-sql-權限)）。
+開啟 https://localhost:5080/ 。初始化需要有 DDL 權限的 SQL 登入；`Initialize-Database.ps1` 只在資料庫不存在時建庫，再套用未完成的 migration，不刪除既有資料（見 [資料庫建置與權限](../operations/database-setup.md#初始化)）。
 
 ## 兩種運行方式
 

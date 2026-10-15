@@ -60,7 +60,10 @@ public static class DatabaseStartup
         try
         {
             if (migrate) await db.Database.MigrateAsync();
-            await scope.ServiceProvider.GetRequiredService<DatabaseSchema>().RequireCurrentAsync(CancellationToken.None);
+            var schema = scope.ServiceProvider.GetRequiredService<DatabaseSchema>();
+            await schema.RequireCurrentAsync(CancellationToken.None);
+            // Only warns: an existing database is switched by the DBA, never by a starting host.
+            await schema.ReadCommittedSnapshotAsync(CancellationToken.None);
             return true;
         }
         catch (Exception ex)
