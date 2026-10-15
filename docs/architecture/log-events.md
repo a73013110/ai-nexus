@@ -28,6 +28,7 @@
 | 3105 / 3106 | `generation.recovery_pending` / `generation.recovery_postponed` | `GenerationWorker.cs`、`RunRecoveryWorker.cs` |
 | 4001 | `client.unhandled` | `Diagnostics/ReportClientIssue.cs` |
 | 5000 / 5001 / 5002 | `service.started` / `service.stopping` / `service.startup.failed` | `Host/Program.cs`、`DiagnosticStartup.cs` |
+| 5003 | `database.read_committed_snapshot_off` | `Persistence/DatabaseSchema.cs` |
 | 6001 / 6002 / 6003 | `attachment.delete_deferred` / `attachment.untracked_delete_deferred` / `attachment.cleanup_deferred` | `Attachments/Storage/AttachmentLifecycle.cs` |
 | 6101 | `share.cleanup_deferred` | `Sharing/ShareService.cs` |
 

@@ -1,9 +1,11 @@
 using AiNexus.Features.Persistence;
+using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Errors;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace AiNexus.IntegrationTests.Persistence;
 
@@ -15,7 +17,7 @@ public sealed class DatabaseSchemaTests
         await using var connection = new SqliteConnection("Data Source=:memory:");
         await connection.OpenAsync();
         await using var db = Context(connection);
-        var schema = new DatabaseSchema(db);
+        var schema = Schema(db);
         Assert.Equal(db.Database.GetMigrations(), await schema.PendingMigrationsAsync(CancellationToken.None));
         var error = await Assert.ThrowsAsync<ExternalServiceException>(() => schema.RequireCurrentAsync(CancellationToken.None));
         Assert.Equal(Error.Unavailable("migrations_pending"), error.Error);
@@ -33,7 +35,7 @@ public sealed class DatabaseSchemaTests
         Assert.EndsWith("_InitialCreate", migrations[0]);
         var missing = migrations;
         await RecordHistoryAsync(db, []);
-        var schema = new DatabaseSchema(db);
+        var schema = Schema(db);
         Assert.Equal(missing, await schema.PendingMigrationsAsync(CancellationToken.None));
         var error = await Assert.ThrowsAsync<ExternalServiceException>(() => schema.RequireCurrentAsync(CancellationToken.None));
         Assert.All(missing, id => Assert.Contains(id, error.Message));
@@ -51,7 +53,7 @@ public sealed class DatabaseSchemaTests
         await connection.OpenAsync();
         await using var db = Context(connection);
         await RecordHistoryAsync(db, db.Database.GetMigrations());
-        var schema = new DatabaseSchema(db);
+        var schema = Schema(db);
         await schema.RequireCurrentAsync(CancellationToken.None);
         Assert.Empty(await schema.PendingMigrationsAsync(CancellationToken.None));
         Assert.Equal(1, await TableCountAsync(db));
@@ -59,6 +61,8 @@ public sealed class DatabaseSchemaTests
 
     private static NexusDbContext Context(SqliteConnection connection)
         => new(new DbContextOptionsBuilder<NexusDbContext>().UseSqlite(connection).Options);
+
+    private static DatabaseSchema Schema(NexusDbContext db) => new(db, new DbContextSqlDatabase<NexusDbContext>(db), NullLogger<DatabaseSchema>.Instance);
 
     private static async Task RecordHistoryAsync(NexusDbContext db, IEnumerable<string> migrations)
     {

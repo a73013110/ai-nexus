@@ -19,8 +19,9 @@ public sealed class HostCommand
     [
         new("db init", "建立資料庫（不存在時）並套用 migration；不刪除或清空既有資料", false, (app, _) => InScopeAsync(app, async services =>
         {
-            await services.GetRequiredService<DatabaseInitializer>().InitializeAsync(CancellationToken.None);
+            var snapshot = await services.GetRequiredService<DatabaseInitializer>().InitializeAsync(CancellationToken.None);
             Console.WriteLine("AiNexus 資料庫與 migrations 初始化完成。");
+            if (!snapshot) Console.WriteLine("注意：既有資料庫尚未開啟 READ_COMMITTED_SNAPSHOT，請 DBA 依 docs/architecture/database.md 在維護時段開啟。");
         })),
         new("verify deployment", "唯讀檢查 SQL、設定、模型清單、embedding／rerank 與站外目錄寫入，不產生 AI 回答", false,
             (app, _) => DeploymentVerifier.VerifyAsync(app.Services, app.Configuration, app.Environment, CancellationToken.None)),

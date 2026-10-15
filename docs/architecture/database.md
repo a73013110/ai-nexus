@@ -1,27 +1,15 @@
 # 資料庫
 
-- 業務資料都在 SQL Server 2025 的 `AiNexus` 資料庫，由單一 `NexusDbContext` 對應；跨模組外鍵與同一交易可直接使用。外部來源（公文、校務）另有唯讀連線，不在這個資料庫。
-- **每個模組一個 schema**，名稱＝模組資料夾名小寫。`DatabaseModelTests.SchemaMatchesOwningModule` 強制這條規則；唯一例外是 `Persistence/AuditEvent.cs`（`NexusDbContext` 為所有模組寫入並遮罩稽核紀錄），它的表在 `audit`。
-- **說明跟著實體走**：資料表與欄位說明寫在實體類別與屬性上的 `[Comment]`（shadow 屬性用 `HasComment`），EF 會產生 SQL Server 的 `MS_Description`。漏寫會讓 `DatabaseModelTests.EveryTableAndColumnHasDescription` 失敗。索引、約束與 schema 不另寫說明。
-- **migration 基線**：2026-10-09 重建為單一 `InitialCreate`（之前的 14 個 migration 已刪除，不保留舊資料庫的升級路徑）。之後的模型變更一律追加具名 migration，不再重置基線。
+- 業務資料在 SQL Server 2025 的 `AiNexus` 資料庫，由單一 `NexusDbContext` 對應；跨模組外鍵與同一交易可直接使用。
+- **每個模組一個 schema**，名稱＝模組資料夾名小寫。`DatabaseModelTests` 強制這條規則；唯一例外是 `Persistence/AuditEvent.cs`（`NexusDbContext` 為所有模組寫入並遮罩稽核紀錄），它的表在 `audit`。
+- **說明跟著實體走**：資料表與欄位說明寫在實體類別與屬性上的 `[Comment]`（shadow 屬性用 `HasComment`），EF 會產生 SQL Server 的 `MS_Description`。漏寫時 `DatabaseModelTests` 失敗。索引、約束與 schema 不另寫說明。
+- **migration 基線**：2026-10-09 重建為單一 `InitialCreate`，之後一律追加具名 migration，不再重置基線。
 
 ## Schema 與模組
 
-| Schema | 模組 | Schema | 模組 |
-| --- | --- | --- | --- |
-| `accesscontrol` | AccessControl | `inference` | Inference |
-| `administration` | Administration | `integrations` | Integrations |
-| `artifacts` | Artifacts | `jobs` | Jobs |
-| `attachments` | Attachments | `knowledge` | Knowledge |
-| `audit` | Audit | `library` | Library |
-| `billing` | Billing | `notifications` | Notifications |
-| `collaboration` | Collaboration | `projects` | Projects |
-| `conversations` | Conversations | `quality` | Quality |
-| `diagnostics` | Diagnostics | `repositories` | Repositories |
-| `identity` | Identity | `sharing` | Sharing |
-| `websearch` | WebSearch | `dbo` | 只有 `__EFMigrationsHistory` |
+`accesscontrol`、`administration`、`artifacts`、`attachments`、`audit`、`billing`、`collaboration`、`conversations`、`diagnostics`、`identity`、`inference`、`integrations`、`jobs`、`knowledge`、`library`、`notifications`、`projects`、`quality`、`repositories`、`sharing`、`websearch`；`dbo` 只有 `__EFMigrationsHistory`。
 
-各表的欄位、型別與說明以實體及其 `IEntityTypeConfiguration` 為準；兩端分屬不同模組的外鍵集中在 `Persistence/CrossModuleRelationships.cs`。新增模組時 schema 名稱跟著資料夾走，測試會擋下不一致。
+欄位、型別與說明以實體及其 `IEntityTypeConfiguration` 為準；兩端分屬不同模組的外鍵集中在 `Persistence/CrossModuleRelationships.cs`。
 
 ## 欄位規則
 
@@ -32,7 +20,7 @@
 
 ## 授權關聯
 
-使用者→角色→群組→功能的關聯見 [身分與授權](access-control.md)；資源（專案、知識庫、成果）共用 `collaboration` 的 `Resources`／`ResourceMembers`／`ResourceGroups` ACL。功能 grant 不等於資料 grant：knowledge 不授予全庫閱讀，專案不公開彼此的私人對話。
+使用者→角色→群組→功能見 [身分與授權](access-control.md)；資源（專案、知識庫、成果）共用 `collaboration` 的 `Resources`／`ResourceMembers`／`ResourceGroups` ACL。功能 grant 不等於資料 grant：knowledge 不授予全庫閱讀，專案不公開彼此的私人對話。
 
 ## 重要約束與索引（為什麼存在）
 
@@ -45,26 +33,23 @@
 - 重要業務外鍵採 `Restrict`，刪使用者或專案不會連鎖刪除歷史；純附屬資料才 `Cascade`。
 - `knowledge.Chunks` 有 `KnowledgeSearch` 全文索引（繁中 1028 斷詞）。`CREATE FULLTEXT` 不能在交易內執行，所以由 `InitialCreate` 末尾的 raw SQL 建立；缺少全文元件或斷詞器時跳過並警示，執行期改用 vector 模式並明確回報。向量表與擴充方式見 [VECTOR_ARCHITECTURE](../research/vector-architecture.md)。
 
+## 讀取隔離（RCSI）
+
+資料庫開啟 `READ_COMMITTED_SNAPSHOT`：一般讀取取最後已提交版本，不等寫入。所以防併發只能靠會加鎖的做法：`Serializable`、`UPDLOCK`／`HOLDLOCK`、唯一索引、條件式 `ExecuteUpdate`，或先以無害 UPDATE 鎖擁有者列再查詢（查詢開始時才取快照）。既有庫的切換步驟與代價見 [資料庫建置與權限](../operations/database-setup.md)。
+
 ## Migration
 
 ```powershell
 dotnet ef migrations add DescriptiveChange --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host --output-dir Persistence/Migrations
-dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host
 ```
 
 - 先改實體與組態（含 `[Comment]`），再產生 migration；一起提交 source、designer 與 snapshot。給 DBA 的 idempotent SQL 不進版控，由 `Publish-IIS.ps1` 在發布時產生（套件的 `migrations.sql`），所以不會與程式不同步。不要手改產生的 migration，只有 EF 表達不了的 DDL（例如全文索引）才在產生後加入 `migrationBuilder.Sql`。
 - 已設定 SQL 的 host 在 HTTP 與背景 worker 啟動前檢查 migration（`DatabaseSchema`）：有未套用版本或模型與 snapshot 不一致就以退出碼 1 停止並列出版本。`Persistence:ApplyMigrationsOnStartup=false`（預設）時只檢查、不修改 schema。
 - 測試用 SQLite 依目前模型建庫（`SqliteModel.cs` 處理向量與全文差異），不執行 SQL Server migration；真實 SQL Server 的測試方式見 [測試](../development/testing.md#真實-sql-server)。
 
-## 初始化與 SQL 權限
+## 初始化與權限
 
-```powershell
-./scripts/Initialize-Database.ps1
-```
-
-- 只在 `AiNexus` 不存在時建庫，然後套用未完成的 migration；不會 DROP、清空資料或修改 history。DBA 也可以先建空的 `AiNexus`，再審閱執行發布套件的 `migrations.sql`（idempotent，依 `__EFMigrationsHistory` 只執行未套用的部分），其中沒有 CREATE LOGIN／DATABASE 或秘密。
-- **2026-10-09 以前建立的資料庫無法升級**（舊 migration 已刪除），必須刪除後重新初始化；初始化遇到舊表會直接失敗。
-- 正式環境的 DDL 用獨立部署帳號。runtime 登入需要上表所有業務 schema 的 SELECT／INSERT／UPDATE／DELETE 與 `dbo.__EFMigrationsHistory` 的 SELECT，不給建庫、ALTER 或 `db_owner`。目前管理與一般端點共用同一條連線，沒有管理專用的寫入連線。外部來源登入只授權固定 view 的 SELECT（見 [INTEGRATIONS](../features/integrations.md)）。
+建庫、`migrations.sql`、SQL 帳號權限與 RCSI 切換見 [資料庫建置與權限](../operations/database-setup.md)。
 
 ## 手寫 SQL
 

@@ -72,6 +72,6 @@ dotnet 'D:\CoreProject\AiNexus\app\AiNexus.Host.dll' `
 if ($LASTEXITCODE -ne 0) { throw '資料庫初始化未完成，先不要啟動網站。' }
 ```
 
-工具只建立不存在的 AiNexus，套用 InitialCreate 並檢查模型／snapshot 一致。重跑不會重建；DBA 亦可審閱套用套件的 `migrations.sql`。完成後移除 runtime 身分的 DDL 權限。SQL Server 2025 額外建立 VECTOR(768)／VECTOR(1024)，舊 SQL 使用 portable 路徑。
+工具只建立不存在的 AiNexus，套用 InitialCreate 並檢查模型／snapshot 一致。重跑不會重建；DBA 亦可審閱套用套件的 `migrations.sql`。完成後移除 runtime 身分的 DDL 權限。SQL Server 2025 額外建立 VECTOR(768)／VECTOR(1024)，舊 SQL 使用 portable 路徑。新建的庫會開啟 RCSI；既有庫的一次性切換見 [資料庫建置與權限](database-setup.md#讀取隔離rcsi)。
 
 runtime 需要所有業務 schema（每模組一個，清單見 [資料庫](../architecture/database.md)）的 DML 與 history 的 SELECT。每個 app 使用一個程序；provider 可各自多個推論 worker，MaxConcurrency 只限制本程序的聊天／模型任務，沒有跨主機全域 GPU 限制。生成租約每 15 秒續期、兩分鐘有效，主機時鐘須同步。
