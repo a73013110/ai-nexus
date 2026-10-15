@@ -24,7 +24,7 @@
 
 ## Schema 與 profile
 
-`EmbeddingProfiles` 保存 provider、model、dimensions、input format、query instruction、revision、chunker 版本及參數快照。Key 的 hash 防止向量空間混用；filtered unique index 強制最多一個 active。`Chunks` 使用一套切段布局，保留 Guid 引用鍵、唯一 int identity SearchId、文件序號、頁碼範圍、HeadingPath、ContentHash 與 TokenEstimate。
+`EmbeddingProfiles` 保存 provider、model、dimensions、input format、query instruction、revision。chunker 版本及參數只進 Key 的 hash，不另存快照：切段布局由所有 profile 共用，一律依目前設定，無法讓各 profile 各自凍結切段。Key 的 hash 防止向量空間混用；filtered unique index 強制最多一個 active。`Chunks` 使用一套切段布局，保留 Guid 引用鍵、唯一 int identity SearchId、文件序號、頁碼範圍、HeadingPath、ContentHash 與 TokenEstimate。
 
 `ChunkEmbeddings768`／`ChunkEmbeddings1024` 以 int identity clustered PK 預留 ANN 映射，真正保存 `VECTOR(n)`；每個 `(ProfileId, ChunkId)` 唯一，片段刪除 cascade 向量。同一片段可持有 active 與 building 向量，但一次查詢只排名 active profile。SQLite 使用 blob converter 與測試用 cosine／詞頻，正式環境沒有 portable 或舊索引查詢。
 

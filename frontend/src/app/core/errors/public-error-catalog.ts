@@ -181,8 +181,6 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   profile_not_retired: '只能清除已退役索引的向量。',
   profile_not_found: '找不到這個檢索索引。',
   document_pages_missing: '文件尚無完整逐頁文字，請重新上傳資料後再重建。',
-  chunker_configuration_invalid: '索引切段設定快照無效，請重新建立 profile。',
-  chunker_version_unsupported: '此切段器版本已不受支援，請先重建並啟用新 profile。',
   knowledge_collection_limit: '每次最多使用三個不同知識庫。',
   knowledge_source_changed: '知識來源已改變，請重新送出提問。',
   knowledge_query_invalid: '查詢需為 1 至 2000 個字元。',

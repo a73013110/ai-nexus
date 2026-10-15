@@ -1,10 +1,7 @@
 using System.Data;
-using System.Text.Json;
-using AiNexus.Platform.Errors;
 using AiNexus.Features.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using AiNexus.Features.Knowledge.Indexing;
 
 namespace AiNexus.Features.Knowledge.Embeddings;
 
@@ -23,7 +20,7 @@ public sealed class EmbeddingProfiles(NexusDbContext db, IOptions<KnowledgeOptio
                 var active = await db.Set<EmbeddingProfile>().AnyAsync(x => x.Status == "active", ct);
                 target = new() { Key = key, Provider = settings.Embedding.Provider, Model = settings.Embedding.Model, Dimensions = settings.Embedding.Dimensions,
                     InputFormat = settings.Embedding.InputFormat, QueryInstruction = settings.Embedding.QueryInstruction, Revision = settings.Embedding.Revision,
-                    ChunkerConfiguration = JsonSerializer.Serialize(ChunkerSnapshot.Capture(settings)), Status = active ? "building" : "active",
+                    Status = active ? "building" : "active",
                     ActivatedAt = active ? null : clock.GetUtcNow() };
                 db.Add(target); await db.SaveChangesAsync(ct);
             }
@@ -39,12 +36,5 @@ public sealed class EmbeddingProfiles(NexusDbContext db, IOptions<KnowledgeOptio
     {
         var active = await db.Set<EmbeddingProfile>().AsNoTracking().SingleOrDefaultAsync(x => x.Status == "active", ct);
         return active ?? await TargetAsync(ct);
-    }
-    public static ChunkerSnapshot ChunkerSettings(EmbeddingProfile profile)
-    {
-        var snapshot = JsonSerializer.Deserialize<ChunkerSnapshot>(profile.ChunkerConfiguration)
-            ?? throw new ExternalServiceException(Error.Conflict("chunker_configuration_invalid"), "索引切段設定快照無效，請重新建立 profile。");
-        if (snapshot.Version != StructuredChunker.Version) throw new ExternalServiceException(Error.Conflict("chunker_version_unsupported"), "此切段器版本已不受支援，請先重建並啟用新 profile。");
-        return snapshot;
     }
 }
