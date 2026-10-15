@@ -4,7 +4,7 @@
 
 維運窗口先等待背景任務結束，停止網站／集區，保存同一時點的 SQL＋原檔備份組、config、keys 和上一版 app。不要在程序仍鎖住 DLL 時直接覆蓋，也不要刪整個 AiNexus 根目錄。用全新的 release app 資料夾替換舊 app，保持外部 config／keys／logs／data。需移動目錄時先確認 `Resolve-Path` 真的是 `D:\CoreProject\AiNexus\app`，不是 junction 或其他位置。
 
-更新前先完成 [SQL＋原檔一致性備份](backup.md) 並停止全部 host，再以 [初始化指令](iis-site.md#空資料庫初始化) 或 DBA 審閱套件的 `migrations.sql` 套用新的 migration；沒有 schema 變更時省略。使用 `app_offline.htm` 亦可讓 ANCM 停止應用，移除後重啟；不要把該檔留在發版套件。[ANCM 的部署與啟動診斷](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/aspnet-core-module?view=aspnetcore-10.0) 說明了此機制。
+更新前先完成 [SQL＋原檔一致性備份](backup.md) 並停止全部 host，再以 [初始化指令](iis-site.md#空資料庫初始化) 或 DBA 審閱套件的 `migrations.sql`（或[拆檔的 `database/`](iis-deployment.md#給-dba-的拆檔-sql)）套用新的 migration；沒有 schema 變更時省略。使用 `app_offline.htm` 亦可讓 ANCM 停止應用，移除後重啟；不要把該檔留在發版套件。[ANCM 的部署與啟動診斷](https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/aspnet-core-module?view=aspnetcore-10.0) 說明了此機制。
 
 失敗時先停止新版，回復相符的 app／config／SQL／原檔備份組。app 版本必須與 SQL 的 migration 相符，不可只回退 DLL 再指向較新的資料庫。不要未確認就執行 migration Down，也不要混用不同時點的 SQL 和附件；完整還原程序見 [備份與還原](backup.md)。keys 保留原位置與保護身分。
 

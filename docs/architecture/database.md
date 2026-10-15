@@ -31,7 +31,7 @@
 - `EvaluationResults` 以 `RunId`＋`CaseIndex`＋`VariantIndex` 為主鍵，重試時跳過已完成的結果。
 - `AuditEvents` 以 `At` 及 `Action`／`ResourceId`／`ActorId`＋`Id` 索引支援日期篩選與遞減游標；`DiagnosticEvents` 以 `At`＋`LogId` 為叢集索引，`LogId` 唯一，補送時去重。
 - 重要業務外鍵採 `Restrict`，刪使用者或專案不會連鎖刪除歷史；純附屬資料才 `Cascade`。
-- `knowledge.Chunks` 有 `KnowledgeSearch` 全文索引（繁中 1028 斷詞）。`CREATE FULLTEXT` 不能在交易內執行，所以由 `InitialCreate` 末尾的 raw SQL 建立；缺少全文元件或斷詞器時跳過並警示，執行期改用 vector 模式並明確回報。向量表與擴充方式見 [VECTOR_ARCHITECTURE](../research/vector-architecture.md)。
+- `knowledge.Chunks` 有 `KnowledgeSearch` 全文索引（繁中 1028 斷詞）。`CREATE FULLTEXT` 不能在交易內執行，所以由 `InitialCreate` 末尾的 raw SQL 建立；缺全文元件或斷詞器時跳過並警示，執行期改用 vector 模式。向量表與擴充方式見 [VECTOR_ARCHITECTURE](../research/vector-architecture.md)。
 
 ## 讀取隔離（RCSI）
 
@@ -43,8 +43,10 @@
 dotnet ef migrations add DescriptiveChange --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host --output-dir Persistence/Migrations
 ```
 
-- 先改實體與組態（含 `[Comment]`），再產生 migration；一起提交 source、designer 與 snapshot。給 DBA 的 idempotent SQL 不進版控，由 `Publish-IIS.ps1` 在發布時產生（套件的 `migrations.sql`），所以不會與程式不同步。不要手改產生的 migration，只有 EF 表達不了的 DDL（例如全文索引）才在產生後加入 `migrationBuilder.Sql`。
-- 已設定 SQL 的 host 在 HTTP 與背景 worker 啟動前檢查 migration（`DatabaseSchema`）：有未套用版本或模型與 snapshot 不一致就以退出碼 1 停止並列出版本。`Persistence:ApplyMigrationsOnStartup=false`（預設）時只檢查、不修改 schema。
+- 先改實體與組態（含 `[Comment]`），再產生 migration；一起提交 source、designer 與 snapshot。給 DBA 的 SQL 不進版控，由 `Publish-IIS.ps1` 發布時產生（`migrations.sql`；加 `-FromMigration` 另有[拆檔的 `database/`](../operations/iis-deployment.md#給-dba-的拆檔-sql)）。不要手改產生的 migration，只有 EF 表達不了的 DDL（例如全文索引）才在產生後加入 `migrationBuilder.Sql`。
+- **改資料的手寫 SQL 必須用 `migrationBuilder.DataSql(sql, "schema.Table")`**：拆檔只把它與 `HasData` 放進 `data/`，`Sql` 一律算結構。
+- 不可有在 SQL Server 重建資料表的操作（既有表的叢集鍵／索引、IDENTITY 等），拆檔會失敗並列出原因。
+- 已設定 SQL 的 host 在 HTTP 與背景 worker 啟動前檢查 migration（`DatabaseSchema`）：有未套用版本或模型與 snapshot 不一致就以退出碼 1 停止。`Persistence:ApplyMigrationsOnStartup` 預設 false，只做唯讀檢查。
 - 測試用 SQLite 依目前模型建庫（`SqliteModel.cs` 處理向量與全文差異），不執行 SQL Server migration；真實 SQL Server 的測試方式見 [測試](../development/testing.md#真實-sql-server)。
 
 ## 初始化與權限
