@@ -374,7 +374,21 @@ export class ApiFixture {
   /** Platform operations; administrators have it unless a test sets it on its own. */
   operationsAccess: boolean | null = null;
   auditAccess = false;
-  extraFeatures: { id: string; name: string; route: string }[] = [];
+  /** Features beyond the switches above; a test may place one with `groupId`／`sortOrder`. */
+  extraFeatures: {
+    id: string;
+    name: string;
+    route: string;
+    groupId?: string | null;
+    sortOrder?: number;
+  }[] = [];
+  /** The menu groups `/me` returns; the seeded ones unless a test nests its own. */
+  navigationGroups: {
+    id: string;
+    parentId: string | null;
+    name: string;
+    sortOrder: number;
+  }[] = FIXTURE_NAVIGATION_GROUPS;
   modelPolicy: ModelPolicyDto = {
     allowModelSelection: true,
     showModelNames: true,
@@ -483,7 +497,7 @@ export class ApiFixture {
               : []),
           ],
           groups: [{ id: "workspace", name: "基本工作區" }],
-          navigationGroups: FIXTURE_NAVIGATION_GROUPS,
+          navigationGroups: this.navigationGroups,
           features: [
             ...this.extraFeatures,
             ...(this.chatAccess
