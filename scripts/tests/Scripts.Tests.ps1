@@ -58,6 +58,38 @@ Describe '<Name>' -ForEach ($entries + $tools) {
     }
 }
 
+Describe 'Host commands called by scripts' {
+    BeforeAll {
+        $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
+        $hostCommand = [IO.File]::ReadAllText((Join-Path $root 'backend/src/AiNexus.Host/Commands/HostCommand.cs'))
+        $calls = foreach ($file in Get-ChildItem -LiteralPath (Join-Path $root 'scripts') -Filter '*.ps1') {
+            $ast = [Management.Automation.Language.Parser]::ParseFile($file.FullName, [ref]$null, [ref]$null)
+            $ast.FindAll({ param($node) $node -is [Management.Automation.Language.CommandAst] -and $node.GetCommandName() -eq 'Invoke-NexusHostCommand' }, $true) |
+                ForEach-Object { @{ Script = $file.Name; Words = @($_.CommandElements[1].Elements | Where-Object { $_ -is [Management.Automation.Language.StringConstantExpressionAst] } | ForEach-Object Value) } }
+        }
+    }
+
+    It 'name commands and options the host defines' {
+        $calls | Should -Not -BeNullOrEmpty
+        foreach ($call in $calls) {
+            $name = @($call.Words | Where-Object { $_ -notlike '--*' } | Select-Object -First 2) -join ' '
+            $hostCommand | Should -Match ([regex]::Escape("new(`"$name`"")) -Because "$($call.Script) 呼叫 $name"
+            foreach ($option in @($call.Words | Where-Object { $_ -like '--*' })) {
+                $hostCommand | Should -Match ([regex]::Escape("`"$option`"")) -Because "$($call.Script) 傳 $option 給 $name"
+            }
+        }
+    }
+
+    It 'splits the release SQL in Publish-IIS.ps1 only when -FromMigration is given' {
+        $publish = @($calls | Where-Object { $_.Script -eq 'Publish-IIS.ps1' })
+        $publish.Count | Should -Be 1
+        $publish[0].Words | Should -Be @('db', 'script', '--from', '--output')
+        $text = [IO.File]::ReadAllText((Join-Path $root 'scripts/Publish-IIS.ps1'))
+        $text | Should -Match "PSBoundParameters\.ContainsKey\('FromMigration'\)"
+        $text | Should -Match 'migrations script --idempotent'
+    }
+}
+
 Describe 'Verify-IIS.ps1' {
     It 'runs on its own, because it is copied into the release package' {
         $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path

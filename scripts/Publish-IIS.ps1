@@ -2,13 +2,14 @@
 
 <#
 .SYNOPSIS
-產生新的 IIS 發布套件（app、config 範本、keys、logs、migrations.sql 與 Verify-IIS.ps1）。
+產生新的 IIS 發布套件（app、config 範本、keys、logs、migrations.sql、選用的 database/ 與 Verify-IIS.ps1）。
 
 .DESCRIPTION
 預設先執行 Build.ps1，再把發布產物複製到 artifacts/iis/<時間>/app；web.config 由 SDK 從
 backend/src/AiNexus.Host/web.config 帶入，不再改寫。config/ 只在不存在時由範本建立，
 並把 Attachments.StoragePath 與 Diagnostics.Directory 設為 -DataRoot 下的 attachments、diagnostics。
 migrations.sql 是發布當下以 dotnet ef 產生的 idempotent SQL，給 DBA 審閱套用。
+提供 -FromMigration 時另以主機的 db script 指令產生 database/：同一份 SQL 依物件與結構／資料拆成編號檔，附 manifest.md。
 套件不含秘密；只有 app/ 是 IIS 的實體路徑。替換執行中網站的步驟見 docs/operations/iis-deployment.md。
 
 .PARAMETER DataRoot
@@ -23,6 +24,10 @@ migrations.sql 是發布當下以 dotnet ef 產生的 idempotent SQL，給 DBA �
 .PARAMETER AllowUntrustedSql
 設定 Databases.Nexus.TrustServerCertificate=true，用於自簽憑證的 SQL Server。
 
+.PARAMETER FromMigration
+正式機目前最後一個已套用的 migration（id 或名稱；0 代表空庫）。提供時在套件產生 database/（schema/、data/ 與
+manifest.md），範圍到最新 migration；不連線資料庫。
+
 .PARAMETER SkipBuild
 使用 PublishDirectory 既有的發布產物。
 
@@ -34,6 +39,9 @@ migrations.sql 是發布當下以 dotnet ef 產生的 idempotent SQL，給 DBA �
 
 .EXAMPLE
 ./scripts/Publish-IIS.ps1 -DataRoot 'D:\AiNexus\data' -SkipBuild -PublishDirectory artifacts/verification
+
+.EXAMPLE
+./scripts/Publish-IIS.ps1 -DataRoot 'D:\AiNexus\data' -FromMigration 20261014140318_NavigationGroups
 #>
 [CmdletBinding()]
 param(
@@ -41,6 +49,7 @@ param(
     [string]$DestinationPath,
     [switch]$IncludeLocalConfig,
     [switch]$AllowUntrustedSql,
+    [ValidateNotNullOrEmpty()][string]$FromMigration,
     [switch]$SkipBuild,
     [string]$PublishDirectory = 'artifacts/publish'
 )
@@ -88,5 +97,11 @@ try {
     dotnet ef migrations script --idempotent --configuration Release --project backend/src/AiNexus.Features --startup-project backend/src/AiNexus.Host --output (Join-Path $package 'migrations.sql')
     if ($LASTEXITCODE -ne 0) { throw 'migration SQL 產生失敗；請先執行 scripts/Restore.ps1 還原 dotnet-ef。' }
 } finally { Pop-Location }
+# Same migrations, split for DBAs who run DDL and DML separately and file by file; see docs/operations/iis-deployment.md.
+if ($PSBoundParameters.ContainsKey('FromMigration')) {
+    if ((Invoke-NexusHostCommand 'db', 'script', '--from', $FromMigration, '--output', (Join-Path $package 'database')) -ne 0) {
+        throw '拆檔 SQL 產生失敗；原因見上方輸出（例如 -FromMigration 不存在，或 migration 含會重建資料表的操作）。'
+    }
+}
 Write-Output "IIS 發布套件：$package"
 Write-Output "只有 app/ 是 IIS 實體路徑。更新時保留執行中的 config/、keys/ 與 $DataRoot；首次啟動前建立站外資料目錄並給 application pool Modify 權限，見 docs/operations/iis-deployment.md。套件的 logs/ 只給 ANCM stdout 使用。"

@@ -78,6 +78,34 @@ public sealed class HostCommandTests
     }
 
     [Theory]
+    [InlineData("--to=20261015031630_RemoveEmbeddingProfileChunkerConfiguration")]
+    [InlineData("--to", "20261015031630_RemoveEmbeddingProfileChunkerConfiguration")]
+    public void ReleaseScriptOptionsAreNotConfiguration(params string[] to)
+    {
+        var command = HostCommand.Parse(["db", "script", "--from", "0", .. to, "--output=release/database", "--LocalConfigPath", "a.json"]);
+        Assert.Null(command.Error);
+        Assert.Equal("db script", command.Name);
+        Assert.Equal("0", command.Option("--from"));
+        Assert.Equal("20261015031630_RemoveEmbeddingProfileChunkerConfiguration", command.Option("--to"));
+        Assert.Equal("release/database", command.Output);
+        Assert.Equal(["--LocalConfigPath", "a.json"], command.HostArguments);
+        Assert.Contains("--from <migration>", HostCommand.Usage);
+    }
+
+    [Theory]
+    [InlineData("--from", "db", "script", "--output", "out")]
+    [InlineData("--output", "db", "script", "--from", "0")]
+    [InlineData("--from", "db", "script", "--output", "out", "--from")]
+    [InlineData("--from", "db", "init", "--from", "0")]
+    [InlineData("--to", "verify", "sql", "--to", "x")]
+    public void ReleaseScriptOptionErrorsNameTheOption(string option, params string[] args)
+    {
+        var command = HostCommand.Parse(args);
+        Assert.Null(command.Name);
+        Assert.Contains(option, command.Error);
+    }
+
+    [Theory]
     [InlineData("--help")]
     [InlineData("db", "init", "-h")]
     public void HelpNeverStartsTheHost(params string[] args)
