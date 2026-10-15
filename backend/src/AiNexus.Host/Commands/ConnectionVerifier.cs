@@ -28,7 +28,7 @@ public static class ConnectionVerifier
         async Task Check(string name, Func<Task<string>> action)
         {
             try { var detail = await action(); results.Add(new { name, passed = true, detail }); Console.WriteLine($"{name}: PASS · {detail}"); }
-            catch (Exception ex) { passed = false; var detail = ex is ExternalServiceException external ? external.Message : name == "SQL" ? LocalDatabaseSettings.Diagnose(ex) : $"連線未通過（{ex.GetType().Name}）。"; results.Add(new { name, passed = false, detail }); Console.WriteLine($"{name}: FAIL · {detail}"); }
+            catch (Exception ex) { passed = false; var detail = ex is ExternalServiceException external ? external.Message : name == "SQL" ? DatabaseDiagnosis.Describe(ex, NexusDbContext.DatabaseName) : $"連線未通過（{ex.GetType().Name}）。"; results.Add(new { name, passed = false, detail }); Console.WriteLine($"{name}: FAIL · {detail}"); }
         }
         await Check("SQL", async () =>
         {

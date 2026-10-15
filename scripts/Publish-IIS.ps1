@@ -21,7 +21,7 @@ migrations.sql 是發布當下以 dotnet ef 產生的 idempotent SQL，給 DBA �
 以這台機器 .local/ 的設定與秘密取代範本（只用於自己的測試主機）。
 
 .PARAMETER AllowUntrustedSql
-設定 Database.TrustServerCertificate=true，用於自簽憑證的 SQL Server。
+設定 Databases.Nexus.TrustServerCertificate=true，用於自簽憑證的 SQL Server。
 
 .PARAMETER SkipBuild
 使用 PublishDirectory 既有的發布產物。
@@ -76,7 +76,7 @@ if (!(Test-Path -LiteralPath $secretsPath)) { Copy-Item -LiteralPath $sources.Se
 $settings = Read-NexusJson $settingsPath
 Set-NexusSetting $settings 'Attachments.StoragePath' ($DataRoot.TrimEnd('\') + '\attachments')
 Set-NexusSetting $settings 'Diagnostics.Directory' ($DataRoot.TrimEnd('\') + '\diagnostics')
-if ($AllowUntrustedSql) { Set-NexusSetting $settings 'Database.TrustServerCertificate' $true }
+if ($AllowUntrustedSql) { Set-NexusSetting $settings 'Databases.Nexus.TrustServerCertificate' $true }
 Save-NexusJson $settingsPath $settings
 $settings = $null
 

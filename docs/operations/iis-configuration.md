@@ -9,8 +9,8 @@
 | 欄位 | 本環境要填 |
 | --- | --- |
 | `AllowedHosts` | 實際 IIS DNS Host，例如 `ai.company.internal`；多個用 `;`，不要含 https／port |
-| `Database.Server`／`Name` | `192.168.2.95`／`AiNexus`，非預設 SQL port 時填 `192.168.2.95,port` |
-| `Database.TrustServerCertificate` | true（依目前內部 SQL 自簽憑證需求） |
+| `Databases.Nexus.Server`／`Name` | `192.168.2.95`／`AiNexus`，非預設 SQL port 時填 `192.168.2.95,port` |
+| `Databases.Nexus.TrustServerCertificate` | true（依目前內部 SQL 自簽憑證需求） |
 | `Identity.ActiveDirectory.Domain` | `hanglong.com.tw` |
 | `Identity.ActiveDirectory.BindUser` | `hanglong`（服務帳號名稱，自動補 `@Domain`；也可填 UPN、`網域\帳號` 或 DN） |
 | `Administration.BootstrapAdministrators` | `["a73013110"]`，一般帳號不會自動取得管理員 |
@@ -19,11 +19,9 @@
 | `Inference.Providers.<provider>.Enabled`、`Inference.DefaultModelId` | Google／Ollama 可同時啟用；DefaultModelId 使用完整 `provider/model` 路由 |
 | `Knowledge.Embedding.Provider` | 與對話分開設定；離線使用 ollama 或暫用 none |
 
-`Identity.ActiveDirectory.Mode`（Ldap）、`Database.ApplyMigrationsOnStartup`（false）與附件容量沿用預設，不必寫入。AD 的 `Server` 預設連 `Domain`（DNS 解析到網域控制站）、`SearchBase` 預設由 `Domain` 推出 `DC=…`、`UseLdaps` 預設 false（389 StartTLS），只有要指定網域控制站、縮小搜尋範圍或改走 636 時才填。
+`Identity.ActiveDirectory.Mode`（Ldap）、`Persistence.ApplyMigrationsOnStartup`（false）與附件容量沿用預設，不必寫入。AD 的 `Server` 預設連 `Domain`（DNS 解析到網域控制站）、`SearchBase` 預設由 `Domain` 推出 `DC=…`、`UseLdaps` 預設 false（389 StartTLS），只有要指定網域控制站、縮小搜尋範圍或改走 636 時才填。
 
-秘密檔填 `Database.User`、`Database.Password`、`Identity.ActiveDirectory.BindPassword`；Google 模式再填 `Inference.Providers.Google.ApiKey`。不要將使用者 AD 密碼保存到設定檔。來源系統另外使用專用唯讀帳號。
-
-若秘密檔另有非空 `ConnectionStrings.Nexus`，它會優先於 Database 分項欄位；自簽 SQL 憑證需在完整字串也設定 `Encrypt=True;TrustServerCertificate=True`。`Encrypt=Strict` 仍會驗證憑證，這種情況不能只修改一般檔的 TrustServerCertificate。
+秘密檔填 `Databases.Nexus.User`、`Databases.Nexus.Password`（application pool 以 gMSA 或網域身分登入 SQL 時改設 `Databases.Nexus.IntegratedSecurity=true`，帳密留空）、`Identity.ActiveDirectory.BindPassword`；Google 模式再填 `Inference.Providers.Google.ApiKey`。不要將使用者 AD 密碼保存到設定檔。來源系統另外使用專用唯讀帳號。
 
 ## web.config 的完整定位
 

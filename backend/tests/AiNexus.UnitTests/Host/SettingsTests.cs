@@ -5,6 +5,7 @@ using AiNexus.Features.Inference;
 using AiNexus.Features.Knowledge;
 using AiNexus.Features.Repositories;
 using AiNexus.Platform;
+using AiNexus.Platform.Data;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -84,6 +85,15 @@ public sealed class SettingsTests
     }
 
     [Fact]
+    public void EveryDatabaseEntryIsDeclaredByAModuleAndSourcesStayReadOnly()
+    {
+        using var services = Settings(new() { ["Databases:LegacyGdweb:Server"] = "sql", ["Databases:Gdweb:ReadOnly"] = "false" });
+        var error = Assert.Throws<OptionsValidationException>(() => services.GetRequiredService<IOptions<DatabasesOptions>>().Value);
+        Assert.Contains("Databases:LegacyGdweb is not a database of this application. Known: Gdweb, Meiho, Nexus.", error.Message, StringComparison.Ordinal);
+        Assert.Contains("Databases:Gdweb:ReadOnly must be true", error.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void EverySettingsRootIsValidatedOnStartByAGeneratedValidator()
     {
         Assert.True(Roots.Length >= 11, "Settings roots were not discovered.");
@@ -136,7 +146,7 @@ public sealed class SettingsTests
                 var next = path.Length == 0 ? key : path + ":" + key;
                 if (value is JsonObject) foreach (var secret in Secrets(value, next)) yield return secret;
                 else if (value is JsonValue v && v.TryGetValue<string>(out var text) && text.Length > 0
-                    && (key is "Password" or "BindPassword" or "ApiKey" || key == "User" && path.EndsWith("Database", StringComparison.Ordinal) || path == "ConnectionStrings"))
+                    && (key is "Password" or "BindPassword" or "ApiKey" || key == "User" && path.StartsWith("Databases:", StringComparison.Ordinal)))
                     yield return (next, text);
             }
         }

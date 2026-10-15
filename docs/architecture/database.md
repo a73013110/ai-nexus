@@ -53,7 +53,7 @@ dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Fea
 ```
 
 - 先改實體與組態（含 `[Comment]`），再產生 migration；一起提交 source、designer 與 snapshot。給 DBA 的 idempotent SQL 不進版控，由 `Publish-IIS.ps1` 在發布時產生（套件的 `migrations.sql`），所以不會與程式不同步。不要手改產生的 migration，只有 EF 表達不了的 DDL（例如全文索引）才在產生後加入 `migrationBuilder.Sql`。
-- 已設定 SQL 的 host 在 HTTP 與背景 worker 啟動前檢查 migration（`DatabaseSchema`）：有未套用版本或模型與 snapshot 不一致就以退出碼 1 停止並列出版本。`Database:ApplyMigrationsOnStartup=false`（預設）時只做唯讀檢查，不修改 schema。
+- 已設定 SQL 的 host 在 HTTP 與背景 worker 啟動前檢查 migration（`DatabaseSchema`）：有未套用版本或模型與 snapshot 不一致就以退出碼 1 停止並列出版本。`Persistence:ApplyMigrationsOnStartup=false`（預設）時只檢查、不修改 schema。
 - 測試用 SQLite 依目前模型建庫（`SqliteModel.cs` 處理向量與全文差異），不執行 SQL Server migration；真實 SQL Server 的測試方式見 [測試](../development/testing.md#真實-sql-server)。
 
 ## 初始化與 SQL 權限
@@ -68,13 +68,13 @@ dotnet ef migrations has-pending-model-changes --project backend/src/AiNexus.Fea
 
 ## 手寫 SQL
 
-EF Core（直接注入 `NexusDbContext`）負責 mapping、migration 與業務寫入。EF 表達不了的 SQL 一律透過 `ISqlDatabase<T>`（`AiNexus.Platform/Data/Sql`，Dapper，只有非同步的查詢與執行）；值用參數，物件名稱只取程式固定清單。
+EF Core 負責 mapping、migration 與業務寫入；EF 表達不了的 SQL 一律透過 `ISqlDatabase<T>`（`AiNexus.Platform/Data/Sql`，Dapper，只有非同步）。值用參數，物件名稱只取程式固定清單。
 
-- `ISqlDatabase<NexusDbContext>`：主資料庫。使用 `NexusDbContext` 的連線並加入目前的交易，與同一請求的 EF 寫入一起提交或回復。
-- `ISqlDatabase<NexusMasterDatabase>`：只給初始化指令建庫用的 master。
-- `ISqlDatabase<LegacyGdwebDatabase>`／`ISqlDatabase<LegacyMeihoDatabase>`：外部來源，每次呼叫自開連線，連線字串強制唯讀意圖與加密；這不取代 SQL 端的 view-only 權限。
+- `ISqlDatabase<NexusDbContext>`：主資料庫，共用 `NexusDbContext` 的連線與目前交易，與 EF 寫入一起提交或回復。
+- `ISqlDatabase<NexusMasterDatabase>`：初始化建庫用，以 `Databases:Nexus` 連 `master`。
+- `ISqlDatabase<GdwebDatabase>`／`ISqlDatabase<MeihoDatabase>`：外部來源，每次呼叫自開連線；設定須 `ReadOnly=true`，不取代 SQL 端 view-only 權限。
 
-新增外部資料庫時，在擁有它的模組加一個實作 `ISqlDatabaseDefinition` 的類別（決定連線字串），再以 `AddSqlDatabase<T>()` 註冊。手寫 SQL 裡的 schema 名稱要與上表一致。
+連線由 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) 組成。新增資料庫＝在擁有它的模組加一個 `ISqlDatabaseDefinition` 類別（`Name` 對應 `Databases.<Name>`）以 `AddSqlDatabase<T>()` 註冊，再於 `appsettings.json` 加設定；未宣告的項目會讓啟動失敗。schema 名稱要與上表一致。
 
 ## 保存與備份
 

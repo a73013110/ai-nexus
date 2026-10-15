@@ -19,7 +19,7 @@
 | 500.19 | web.config XML、AspNetCoreModuleV2、IIS 區段鎖定；不要在 app/web.config 強行設被鎖的 authentication 區段 |
 | 403／Host 不符 | HTTPS Host 名稱與 AllowedHosts、IIS binding、實際入口是否走 IP |
 | 登入成功又回登入 | 只用 HTTP、Secure cookie 未送出、keys ACL／執行身分變更、多台 key ring 不一致；不是 SQL TrustServerCertificate 問題 |
-| SQL 憑證錯誤 | 外部 Production 是否真的載入；若完整 ConnectionStrings.Nexus 非空，該字串優先，須自行含 Encrypt=True;TrustServerCertificate=True |
+| SQL 憑證錯誤 | 外部 Production 是否真的載入，且 `Databases.Nexus.TrustServerCertificate=true` |
 | 模型未就緒 | SQL migrations、服務啟動、Ollama Endpoint 指到哪台、模型已安裝與 profile Id 一致、Google key／quota |
 | 生成中斷，executor_lost | 執行主機停止、心跳逾期、時鐘不同步；確認共用資料庫的所有主機是同一版本 |
 | 附件／PDF 匯出錯誤 | Attachments.StoragePath／環境覆寫、站外目錄 Modify ACL／磁碟剩餘、容量／引用／待刪重試；PDF 匯出需該執行身分可用的 Edge／Chromium，伺服器未安裝時改成已部署瀏覽器 |

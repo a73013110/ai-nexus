@@ -1,6 +1,7 @@
 using AiNexus.Features.Integrations.Sources;
 using AiNexus.Features.Repositories;
 using AiNexus.Features.WebSearch;
+using AiNexus.Platform.Data;
 using AiNexus.Platform.Monitoring;
 using Microsoft.Extensions.Options;
 
@@ -12,7 +13,7 @@ namespace AiNexus.Features.Integrations;
 /// missing part of its setup, idle when none is enabled.
 /// </summary>
 internal sealed class IntegrationsMonitoring(IOptions<WebSearchOptions> search, IOptions<GiteaOptions> gitea, IOptions<IntegrationsOptions> sources,
-    IConfiguration config) : IMonitoringSource
+    IOptions<DatabasesOptions> databases) : IMonitoringSource
 {
     public string Id => "integrations";
     public string Name => "外部整合";
@@ -26,10 +27,10 @@ internal sealed class IntegrationsMonitoring(IOptions<WebSearchOptions> search, 
         var web = WebSearchService.StatusOf(search.Value);
         Add("web_search", "連網搜尋", search.Value.Enabled, web.Available);
         Add("gitea", "Gitea 程式庫", gitea.Value.Enabled, gitea.Value.Enabled);
-        foreach (var (id, name) in SourceGateway.Sources)
+        foreach (var (id, name, database) in SourceGateway.Sources)
         {
             var option = sources.Value.For(id);
-            var setup = SourceGateway.SetupStatus(option, !string.IsNullOrWhiteSpace(config.GetConnectionString(IntegrationsOptions.ConnectionKey(id))));
+            var setup = SourceGateway.SetupStatus(option, databases.Value.For(database).Configured);
             Add(id, name, option.Enabled, setup == "configured");
         }
         var (status, summary) =

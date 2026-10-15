@@ -1,5 +1,6 @@
 using AiNexus.Features.Monitoring;
 using AiNexus.Features.Monitoring.Traffic;
+using AiNexus.Platform.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
@@ -15,10 +16,10 @@ public sealed class RuntimeSamplerTests
     public void SqlObserverReadsOnlyConnectionClassificationAndTracksFailures()
     {
         var clock = new FakeTimeProvider(new DateTimeOffset(2026, 10, 8, 0, 0, 0, TimeSpan.Zero)); var traffic = Traffic(clock);
-        var config = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:Nexus"] = "Server=fixture;Database=fixture-db;Integrated Security=True" }).Build();
-        var catalog = new DependencyCatalog(config, traffic);
+        var databases = new DatabasesOptions { ["Nexus"] = new() { Server = "fixture", Name = "fixture-db", IntegratedSecurity = true } };
+        var catalog = new DependencyCatalog(new ConfigurationBuilder().Build(), Options.Create(databases), traffic);
         var observer = new RuntimeSampler(traffic, catalog, clock);
-        using var connection = new SqlConnection(config.GetConnectionString("Nexus"));
+        using var connection = new SqlConnection(databases.ConnectionString("Nexus"));
         using var command = new SqlCommand("SELECT 'private-password-prompt'", connection);
         var operation = Guid.NewGuid();
         observer.OnNext(new KeyValuePair<string, object?>("Microsoft.Data.SqlClient.WriteCommandBefore", new { OperationId = operation, Command = command }));

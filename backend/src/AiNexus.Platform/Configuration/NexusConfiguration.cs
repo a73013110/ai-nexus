@@ -4,8 +4,7 @@ public static class NexusConfiguration
 {
     /// <param name="builder">The host whose configuration sources are replaced.</param>
     /// <param name="args">Command-line arguments; they override every other source.</param>
-    /// <param name="normalize">Feature-owned derivations from machine settings, applied after all sources are loaded.</param>
-    public static void Load(WebApplicationBuilder builder, string[] args, Action<ConfigurationManager>? normalize = null)
+    public static void Load(WebApplicationBuilder builder, string[] args)
     {
         ResolvedConfigPaths? resolved = null;
         // Test hosts never load machine credentials. Production uses explicit paths or environment.
@@ -35,7 +34,6 @@ public static class NexusConfiguration
             var keyRing = builder.Configuration["DataProtection:KeyRingPath"];
             builder.Configuration["DataProtection:KeyRingPath"] = string.IsNullOrWhiteSpace(keyRing)
                 ? resolved.KeyRingPath : NexusConfigResolver.Absolute(builder.Environment.ContentRootPath, keyRing);
-            normalize?.Invoke(builder.Configuration);
         }
     }
 }

@@ -1,6 +1,6 @@
 # 公文與校務系統唯讀整合
 
-本版提供公文／校務兩個 Dapper adapter、資料來源狀態、參數化搜尋、逐筆本文／狀態／版本／簽核歷程，以及帶入聊天草稿與匯入個人成果快照。呼叫使用 `ISqlDatabase<LegacyGdwebDatabase>`／`ISqlDatabase<LegacyMeihoDatabase>`（每次呼叫自開連線）；外部 SQL 與 AI Nexus EF 寫入分開，不持有資料庫交易等待外部查詢。
+本版提供公文／校務兩個 Dapper adapter、資料來源狀態、參數化搜尋、逐筆本文／狀態／版本／簽核歷程，以及帶入聊天草稿與匯入個人成果快照。呼叫使用 `ISqlDatabase<GdwebDatabase>`／`ISqlDatabase<MeihoDatabase>`（每次呼叫自開連線）；外部 SQL 與 AI Nexus EF 寫入分開，不持有資料庫交易等待外部查詢。
 
 **目前未設定兩套來源連線，也未宣稱已完成正式連線驗證。** 預設停用且沒有來源群組授權。程式、關係式權限測試、SQL 參數邊界與瀏覽器操作使用測試資料驗證；實際來源 view 需原系統管理員確認，不能從登入／選單權限推定所有資料都可公開。
 
@@ -24,7 +24,7 @@
 
 1. 原系統 DBA 準備兩個 `nexus` view，契約見 [authorized-views.sql](../../deploy/sql/authorized-views.sql)。範本故意不回傳任何列；先根據原系統資料列授權替換內容並驗證撤權、代理、停用、機密、學生範圍等案例。
 2. 建立專用唯讀 SQL login/user，只給 `nexus_reader` 對兩個 view 的 SELECT。不給來源全庫 `db_datareader`、原始表 SELECT、寫入或簽核 procedure 權限。`ApplicationIntent=ReadOnly` 只是連線意圖，不能取代真正的 SQL 權限。
-3. 在 `.local/config/appsettings.Local.json` 的 `Integrations.Gdweb.Database`／`Meiho.Database` 設定 Server、Name、TrustServerCertificate、ConnectTimeoutSeconds；帳密在 `.local/secrets/appsettings.Secrets.json` 的相同位置填 User／Password。進階使用者仍可在秘密檔填 `ConnectionStrings.LegacyGdweb`／`LegacyMeiho` 完整 SqlClient 字串，非空時優先於分項設定。
+3. 在 `.local/config/appsettings.Local.json` 的 `Databases.Gdweb`／`Databases.Meiho` 設定 Server、Name、TrustServerCertificate、ConnectTimeoutSeconds；帳密在 `.local/secrets/appsettings.Secrets.json` 的相同位置填 User／Password（或 `IntegratedSecurity=true`）。`ReadOnly` 預設 true，改成 false 會啟動失敗。欄位規則見 [設定與秘密](../development/configuration.md#程式碼表達不了的注意事項)。
 4. 在一般設定的 `Integrations.Gdweb`／`Meiho` 設定 `Transport=sql`、`Enabled=true`、`AclContractConfirmed=true`、`AllowedGroupIds`、`CommandTimeoutSeconds`（2–30 秒）及 `MaxResults`（1–50）。空群組不會授權任何人，平台管理員也不能繞過。未來 API adapter 可沿用來源識別與 ACL 契約；目前設定其他 transport 會明確顯示未支援。
 5. 「存取管理 → 功能群組與模型」將 `資料來源` 功能授予需要的群組。此功能初始只提供給平台管理員，來源權限仍須另外設定。重新啟動後查詢，測試帳號應只有原系統核准的列。
 
@@ -34,16 +34,18 @@
     "Gdweb": {
       "Enabled": true,
       "AclContractConfirmed": true,
-      "AllowedGroupIds": ["gdweb-readers"],
-      "Database": { "Server": "sql.company.internal", "Name": "GdwebViews" }
+      "AllowedGroupIds": ["gdweb-readers"]
     }
+  },
+  "Databases": {
+    "Gdweb": { "Server": "sql.company.internal", "Name": "GdwebViews" }
   }
 }
 ```
 
 其餘欄位（`Transport`、逾時、筆數上限）沿用 `appsettings.json` 的預設；完整欄位與範圍見 [`IntegrationsOptions`](../../backend/src/AiNexus.Features/Integrations/IntegrationsOptions.cs)。
 
-兩個來源 marker 強制加密與唯讀意圖，連線 timeout 預設 10 秒。Production 也可明確設定 `TrustServerCertificate=true` 使用自簽 SQL 憑證，連線仍加密。API 不回傳連線字串，失敗記錄僅保留來源代碼與例外類型。
+兩個來源的連線一律加密並帶唯讀意圖，連線 timeout 預設 10 秒。Production 也可明確設定 `TrustServerCertificate=true` 使用自簽 SQL 憑證，連線仍加密。API 不回傳連線字串，失敗記錄僅保留來源代碼與例外類型。
 
 ## View 契約與查詢
 

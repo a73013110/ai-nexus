@@ -1,3 +1,4 @@
+using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Data.Sql;
 using AiNexus.Platform.Diagnostics;
@@ -6,6 +7,7 @@ using AiNexus.Platform.Events;
 using AiNexus.Platform.Health;
 using AiNexus.Platform.Modules;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Persistence;
 
@@ -15,7 +17,12 @@ public sealed class PersistenceModule : IFeatureModule
     {
         var services = builder.Services;
         services.AddDomainEvents();
-        services.AddDbContext<NexusDbContext>((scope, options) => options.UseSqlServer(builder.Configuration.GetConnectionString("Nexus") ?? "").AddNexusInterceptors(scope));
+        services.AddSettings<PersistenceOptions, PersistenceOptionsValidator>(PersistenceOptions.Section);
+        services.AddDatabase(NexusDbContext.DatabaseName);
+        // Empty until Databases:Nexus is configured; StorageReadiness keeps requests away from it until then.
+        services.AddDbContext<NexusDbContext>((scope, options) => options
+            .UseSqlServer(scope.GetRequiredService<IOptions<DatabasesOptions>>().Value.ConnectionString(NexusDbContext.DatabaseName))
+            .AddNexusInterceptors(scope));
         services.AddDbContextSqlDatabase<NexusDbContext>();
         services.AddSqlDatabase<NexusMasterDatabase>();
         services.AddScoped<DatabaseInitializer>();
@@ -47,7 +54,7 @@ public static class DatabaseStartup
         using var scope = app.Services.CreateScope();
         var storage = scope.ServiceProvider.GetRequiredService<StorageReadiness>();
         var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
-        var migrate = app.Configuration.GetValue<bool>("Database:ApplyMigrationsOnStartup");
+        var migrate = scope.ServiceProvider.GetRequiredService<IOptions<PersistenceOptions>>().Value.ApplyMigrationsOnStartup;
         if (migrate) storage.RequireConfigured();
         if (!storage.Configured || !db.Database.IsSqlServer()) return true;
         try
@@ -59,7 +66,7 @@ public static class DatabaseStartup
         catch (Exception ex)
         {
             await DiagnosticStartup.RecordAsync(ex, app.Configuration, app.Environment);
-            Console.Error.WriteLine(ex is ExternalServiceException external ? external.Message : LocalDatabaseSettings.Diagnose(ex));
+            Console.Error.WriteLine(ex is ExternalServiceException external ? external.Message : DatabaseDiagnosis.Describe(ex, NexusDbContext.DatabaseName));
             return false;
         }
     }

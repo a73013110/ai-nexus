@@ -21,11 +21,11 @@ Describe 'Resolve-NexusArtifactPath' {
 
 Describe 'Get-NexusSetting and Set-NexusSetting' {
     It 'creates missing sections and replaces non-section values' {
-        $settings = [ordered]@{ Database = 'invalid' }
-        Set-NexusSetting $settings 'Database.Server' 'sql'
+        $settings = [ordered]@{ Databases = 'invalid' }
+        Set-NexusSetting $settings 'Databases.Nexus.Server' 'sql'
         Set-NexusSetting $settings 'Inference.Providers.Google.ApiKey' 'key'
         Set-NexusSetting $settings 'AllowedHosts' 'host'
-        Get-NexusSetting $settings 'Database.Server' | Should -Be 'sql'
+        Get-NexusSetting $settings 'Databases.Nexus.Server' | Should -Be 'sql'
         Get-NexusSetting $settings 'Inference.Providers.Google.ApiKey' | Should -Be 'key'
         Get-NexusSetting $settings 'AllowedHosts' | Should -Be 'host'
     }
@@ -55,7 +55,7 @@ Describe 'Save-NexusJson' {
         $path = Join-Path $TestDrive 'secrets.json'
         Save-NexusJson $path @{}
         Protect-NexusSecrets $path
-        Save-NexusJson $path @{ Database = @{ Password = 'changed' } }
+        Save-NexusJson $path @{ Databases = @{ Nexus = @{ Password = 'changed' } } }
         [IO.File]::GetUnixFileMode($path) | Should -Be ([IO.UnixFileMode]'UserRead, UserWrite')
     }
 }
@@ -63,15 +63,14 @@ Describe 'Save-NexusJson' {
 Describe 'Get-NexusSecretValues' {
     BeforeAll {
         $settings = [ordered]@{
-            ConnectionStrings = [ordered]@{ Nexus = 'Server=x;Password=y' }
-            Database = [ordered]@{ Server = 'sql'; User = 'login'; Password = 'secret-1' }
+            Databases = [ordered]@{ Nexus = [ordered]@{ Server = 'sql'; User = 'login'; Password = 'secret-1' }; Gdweb = [ordered]@{ Server = 'sql'; Password = 'secret-0' } }
             Identity = [ordered]@{ ActiveDirectory = [ordered]@{ BindUser = 'reader'; BindPassword = 'secret-2' } }
             Inference = [ordered]@{ Providers = [ordered]@{ Google = [ordered]@{ ApiKey = 'secret-3' }; Ollama = [ordered]@{ ApiKey = '' } } }
         }
     }
 
-    It 'returns non-empty passwords, keys and connection strings' {
-        @(Get-NexusSecretValues $settings) | Should -Be @('Server=x;Password=y', 'secret-1', 'secret-2', 'secret-3')
+    It 'returns non-empty passwords and keys' {
+        @(Get-NexusSecretValues $settings) | Should -Be @('secret-1', 'secret-0', 'secret-2', 'secret-3')
     }
 
     It 'adds SQL logins with -IncludeUser' {

@@ -84,13 +84,13 @@ function Save-NexusJson {
 }
 
 function Get-NexusSecretValues {
-    <# .SYNOPSIS Non-empty credential values: passwords, keys and connection strings; with -IncludeUser also SQL logins. #>
+    <# .SYNOPSIS Non-empty credential values: passwords and keys; with -IncludeUser also SQL logins. #>
     param([Parameter(Mandatory)][Collections.IDictionary]$Settings, [switch]$IncludeUser, [string]$Path = '')
     foreach ($key in $Settings.Keys) {
         $value = $Settings[$key]
         $next = if ($Path) { "$Path.$key" } else { $key }
         if ($value -is [Collections.IDictionary]) { Get-NexusSecretValues $value -IncludeUser:$IncludeUser -Path $next }
-        elseif ($value -is [string] -and $value.Length -gt 0 -and ($key -match '^(Password|BindPassword|ApiKey)$' -or $Path -eq 'ConnectionStrings' -or ($IncludeUser -and $key -eq 'User'))) { $value }
+        elseif ($value -is [string] -and $value.Length -gt 0 -and ($key -match '^(Password|BindPassword|ApiKey)$' -or ($IncludeUser -and $key -eq 'User'))) { $value }
     }
 }
 

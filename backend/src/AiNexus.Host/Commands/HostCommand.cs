@@ -125,7 +125,7 @@ public sealed class HostCommand
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine(ex is ExternalServiceException external ? external.Message : LocalDatabaseSettings.Diagnose(ex));
+            Console.Error.WriteLine(ex is ExternalServiceException external ? external.Message : DatabaseDiagnosis.Describe(ex, NexusDbContext.DatabaseName));
             return false;
         }
     }

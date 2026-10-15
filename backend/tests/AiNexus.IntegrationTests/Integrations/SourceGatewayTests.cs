@@ -24,13 +24,18 @@ public sealed class SourceGatewayTests
         var me = (await client.GetFromJsonAsync<MeDto>("/api/v1/me"))!; client.DefaultRequestHeaders.Add("X-Nexus-CSRF", me.CsrfToken); return client;
     }
 
+    private static readonly Dictionary<string, string?> GdwebConnection = new()
+    {
+        ["Databases:Gdweb:Server"] = "sql.fixture.test", ["Databases:Gdweb:Name"] = "GdwebViews", ["Databases:Gdweb:User"] = "reader", ["Databases:Gdweb:Password"] = "fixture-only"
+    };
+
     [Fact]
     public async Task ServerIdentityAndSourceAclProtectQueriesAndImportedSnapshotsStayPrivate()
     {
         await using var baseFactory = new NexusFactory(db => db.Add(new RoleGroupFeature { GroupId = BuiltInAccess.WorkspaceGroup, FeatureId = "integrations" }));
         var adapter = new FixtureSource();
         await using var f = baseFactory.WithWebHostBuilder(b => {
-            b.ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:LegacyGdweb"] = "fixture-only" }));
+            b.ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(GdwebConnection));
             b.ConfigureServices(s => { s.RemoveAll<IControlledSourceAdapter>(); s.AddSingleton<IControlledSourceAdapter>(adapter); s.PostConfigure<IntegrationsOptions>(o => { o.Gdweb.Enabled = true; o.Gdweb.AclContractConfirmed = true; o.Gdweb.AllowedGroupIds = ["workspace"]; }); });
         });
         using var owner = await SignIn(f, "alice"); using var other = await SignIn(f, "bob");
@@ -50,7 +55,7 @@ public sealed class SourceGatewayTests
     public async Task UnconfirmedAclAndMissingSourceGroupsNeverInvokeTheAdapter()
     {
         await using var baseFactory = new NexusFactory(db => db.Add(new RoleGroupFeature { GroupId = BuiltInAccess.WorkspaceGroup, FeatureId = "integrations" })); var adapter = new FixtureSource();
-        await using var f = baseFactory.WithWebHostBuilder(b => { b.ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(new Dictionary<string, string?> { ["ConnectionStrings:LegacyGdweb"] = "fixture-only" })); b.ConfigureServices(s => { s.RemoveAll<IControlledSourceAdapter>(); s.AddSingleton<IControlledSourceAdapter>(adapter); s.PostConfigure<IntegrationsOptions>(o => { o.Gdweb.Enabled = true; o.Gdweb.AclContractConfirmed = true; o.Gdweb.AllowedGroupIds = []; }); }); });
+        await using var f = baseFactory.WithWebHostBuilder(b => { b.ConfigureAppConfiguration((_, c) => c.AddInMemoryCollection(GdwebConnection)); b.ConfigureServices(s => { s.RemoveAll<IControlledSourceAdapter>(); s.AddSingleton<IControlledSourceAdapter>(adapter); s.PostConfigure<IntegrationsOptions>(o => { o.Gdweb.Enabled = true; o.Gdweb.AclContractConfirmed = true; o.Gdweb.AllowedGroupIds = []; }); }); });
         using var owner = await SignIn(f, "alice"); Assert.Equal(HttpStatusCode.Forbidden, (await owner.GetAsync("/api/v1/integrations/gdweb/records?query=通知")).StatusCode); Assert.Equal(0, adapter.Calls);
         Assert.Equal(HttpStatusCode.ServiceUnavailable, (await owner.GetAsync("/api/v1/integrations/meiho/records?query=規範")).StatusCode);
         Assert.Equal("not-authorized", (await owner.GetFromJsonAsync<List<SourceDto>>("/api/v1/integrations"))!.Single(x => x.Id == "gdweb").Status);
