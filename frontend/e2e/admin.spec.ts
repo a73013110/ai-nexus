@@ -853,6 +853,203 @@ test("功能在分群內以鍵盤、選單或拖曳重新排序，只送出變�
   ).toHaveText(["存取管理", "活動稽核"]);
 });
 
+test("選單分群可新增、改上層、移入功能，非空分群拒絕刪除而空分群可刪除", async ({
+  page,
+}) => {
+  const state = await administration(page);
+  const groups = FIXTURE_NAVIGATION_GROUPS.map((group) => ({ ...group }));
+  state.catalog.navigationGroups = groups;
+  const writes: { method: string; path: string; body: unknown }[] = [];
+  // Like the server: a group with features or subgroups is refused (409), never cascaded.
+  await page.route("**/api/v1/admin/navigation-groups**", async (route) => {
+    const request = route.request(),
+      method = request.method(),
+      id = decodeURIComponent(
+        new URL(request.url()).pathname.split("/navigation-groups")[1].slice(1),
+      ),
+      body = method === "DELETE" ? null : request.postDataJSON();
+    writes.push({ method, path: id, body });
+    if (method === "POST") groups.push(body);
+    if (method === "PUT")
+      Object.assign(
+        groups.find((x) => x.id === id)!,
+        body,
+      );
+    if (method === "DELETE") {
+      if (
+        groups.some((x) => x.parentId === id) ||
+        state.catalog.features.some((x) => x.groupId === id)
+      )
+        return route.fulfill({
+          status: 409,
+          contentType: "application/problem+json",
+          body: JSON.stringify({
+            title: "Conflict",
+            code: "navigation_group_not_empty",
+          }),
+        });
+      groups.splice(
+        groups.findIndex((x) => x.id === id),
+        1,
+      );
+      return route.fulfill({ status: 204 });
+    }
+    return route.fulfill({ status: 204 });
+  });
+  await page.getByRole("button", { name: "功能", exact: true }).click();
+  const table = page.locator(".admin-features-table");
+  const sections = table.locator(".feature-section-head > span");
+  const editor = page.locator("dialog.admin-editor");
+  // No feature sits at the top level here, so the list starts with the first group.
+  await expect(sections).toHaveText(["AI 工作台", "協作", "系統管理"]);
+
+  // Create at the top level: it goes after the existing groups.
+  await page.getByRole("button", { name: "新增選單分群", exact: true }).click();
+  await expect(
+    page.getByRole("dialog", { name: "新增選單分群", exact: true }),
+  ).toBeVisible();
+  await editor.getByLabel("識別碼", { exact: true }).fill("diagnostics");
+  await editor.getByLabel("名稱", { exact: true }).fill("診斷");
+  await editor
+    .getByRole("button", { name: "建立選單分群", exact: true })
+    .click();
+  await expect(editor).not.toBeVisible();
+  expect(writes.at(-1)).toEqual({
+    method: "POST",
+    path: "",
+    body: { id: "diagnostics", name: "診斷", parentId: null, sortOrder: 40 },
+  });
+  const diagnostics = table.locator('tbody[data-section="diagnostics"]');
+  await expect(sections).toHaveText(["AI 工作台", "協作", "系統管理", "診斷"]);
+  // An empty group is listed for the administrator but says it stays out of the sidebar.
+  await expect(diagnostics.locator(".feature-empty")).toContainText(
+    "空分群不會出現在側欄",
+  );
+
+  // Set its parent: it moves under 系統管理, to the end of that group's subgroups.
+  await diagnostics
+    .getByRole("button", { name: "選單分群：診斷", exact: true })
+    .click();
+  await page
+    .getByRole("menu", { name: "選單分群：診斷", exact: true })
+    .getByRole("menuitem", { name: "重新命名或移動…", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "編輯選單分群：診斷", exact: true }),
+  ).toBeVisible();
+  await expect(editor.getByLabel("識別碼", { exact: true })).toHaveCount(0);
+  await chooseSelect(page, "上層分群", "系統管理");
+  await editor
+    .getByRole("button", { name: "儲存選單分群", exact: true })
+    .click();
+  await expect(editor).not.toBeVisible();
+  expect(writes.at(-1)).toEqual({
+    method: "PUT",
+    path: "diagnostics",
+    body: { name: "診斷", parentId: "system", sortOrder: 10 },
+  });
+  await expect(sections).toHaveText([
+    "AI 工作台",
+    "協作",
+    "系統管理",
+    "系統管理 › 診斷",
+  ]);
+  // A group cannot move under itself or its own subgroups.
+  await page
+    .getByRole("button", { name: "選單分群：系統管理", exact: true })
+    .click();
+  await page
+    .getByRole("menu", { name: "選單分群：系統管理", exact: true })
+    .getByRole("menuitem", { name: "重新命名或移動…", exact: true })
+    .click();
+  await page.getByRole("combobox", { name: "上層分群", exact: true }).click();
+  const parents = page.getByRole("listbox", { name: "上層分群", exact: true });
+  await expect(parents.getByRole("option")).toHaveText([
+    "最上層（不分群）",
+    "AI 工作台",
+    "協作",
+  ]);
+  await page.keyboard.press("Escape");
+  await expect(parents).toBeHidden();
+  await editor
+    .getByRole("button", { name: "關閉管理編輯", exact: true })
+    .click();
+  await expect(editor).not.toBeVisible();
+
+  // Move a feature in through the editor: it goes to the end of the new group.
+  await table
+    .getByRole("button", { name: "編輯功能：活動稽核", exact: true })
+    .click();
+  await chooseSelect(page, "選單分群", "系統管理 › 診斷");
+  await editor.getByRole("button", { name: "儲存功能", exact: true }).click();
+  await expect(editor).not.toBeVisible();
+  const featureNames = (section: string) =>
+    table.locator(
+      `tbody[data-section="${section}"] .ui-table-row .admin-table-name`,
+    );
+  await expect(featureNames("diagnostics")).toHaveText(["活動稽核"]);
+  await expect(featureNames("system")).toHaveText(["存取管理"]);
+  expect(state.catalog.features.find((x) => x.id === "audit")).toMatchObject({
+    groupId: "diagnostics",
+    sortOrder: 10,
+  });
+
+  // A group that still has a feature is refused and stays.
+  const deleteGroup = async (path: string) => {
+    await page
+      .getByRole("button", { name: "選單分群：" + path, exact: true })
+      .click();
+    await page
+      .getByRole("menu", { name: "選單分群：" + path, exact: true })
+      .getByRole("menuitem", { name: "刪除分群", exact: true })
+      .click();
+    const confirm = page.getByRole("dialog", {
+      name: "刪除選單分群？",
+      exact: true,
+    });
+    await expect(confirm).toContainText(`刪除「${path}」`);
+    await confirm
+      .getByRole("button", { name: "刪除分群", exact: true })
+      .click();
+    await expect(confirm).not.toBeVisible();
+  };
+  await deleteGroup("系統管理 › 診斷");
+  await expect(page.getByRole("alert")).toContainText(
+    "選單分群仍有子分群或功能，請先移出後再刪除。",
+  );
+  expect(writes.at(-1)).toEqual({
+    method: "DELETE",
+    path: "diagnostics",
+    body: null,
+  });
+  await expect(table).toHaveAttribute("aria-busy", "false");
+  await expect(featureNames("diagnostics")).toHaveText(["活動稽核"]);
+  // So is a parent whose only content is a subgroup.
+  await deleteGroup("系統管理");
+  expect(writes.at(-1)).toMatchObject({ method: "DELETE", path: "system" });
+  await expect(sections).toContainText(["系統管理", "系統管理 › 診斷"]);
+
+  // Once emptied, the group can go.
+  await table
+    .getByRole("button", { name: "編輯功能：活動稽核", exact: true })
+    .click();
+  await chooseSelect(page, "選單分群", "系統管理");
+  await editor.getByRole("button", { name: "儲存功能", exact: true }).click();
+  await expect(editor).not.toBeVisible();
+  await expect(featureNames("system")).toHaveText(["存取管理", "活動稽核"]);
+  await expect(diagnostics.locator(".feature-empty")).toBeVisible();
+  await deleteGroup("系統管理 › 診斷");
+  await expect(diagnostics).toHaveCount(0);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  expect(writes.at(-1)).toEqual({
+    method: "DELETE",
+    path: "diagnostics",
+    body: null,
+  });
+  await expect(sections).toHaveText(["AI 工作台", "協作", "系統管理"]);
+  expect(groups.map((x) => x.id)).toEqual(["work", "collaboration", "system"]);
+});
+
 async function administration(page: Page) {
   const fixture = new ApiFixture();
   fixture.adminAccess = true;

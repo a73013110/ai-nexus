@@ -966,6 +966,112 @@ test("Ctrl+K finds every feature, the pinned pill follows the route and the disp
   await expectViewportContained(page);
 });
 
+test("nested menu groups list features before subgroups, hide empty groups and show their path in Ctrl+K", async ({
+  page,
+}) => {
+  const fixture = new ApiFixture();
+  fixture.adminAccess = true;
+  fixture.auditAccess = true;
+  fixture.navigationGroups = [
+    ...fixture.navigationGroups,
+    // Subgroups sort among themselves; their small SortOrder never puts them above features.
+    { id: "diagnostics", parentId: "system", name: "診斷", sortOrder: 20 },
+    { id: "insights", parentId: "system", name: "洞察", sortOrder: 10 },
+    // Empty at every depth: none of these may show.
+    { id: "archive", parentId: "diagnostics", name: "封存", sortOrder: 5 },
+    { id: "reports", parentId: null, name: "報表", sortOrder: 15 },
+    { id: "drafts", parentId: "reports", name: "草稿", sortOrder: 10 },
+  ];
+  fixture.extraFeatures = [
+    { id: "dashboard", name: "總覽", route: "/dashboard" },
+    {
+      id: "monitoring",
+      name: "即時監控",
+      route: "/admin/monitoring",
+      groupId: "diagnostics",
+      sortOrder: 2,
+    },
+    {
+      id: "logs.query",
+      name: "系統日誌",
+      route: "/admin/logs",
+      groupId: "diagnostics",
+      sortOrder: 1,
+    },
+    {
+      id: "quality",
+      name: "品質評測",
+      route: "/quality",
+      groupId: "insights",
+      sortOrder: 1,
+    },
+  ];
+  await fixture.attach(page);
+  await page.goto("/files");
+  const launcher = page
+    .getByRole("navigation", { name: "工作區功能" })
+    .locator("nx-feature-launcher");
+  await expect(
+    launcher.getByRole("link", { name: "系統日誌", exact: true }),
+  ).toBeVisible();
+  // Groups in menu order, depth first; 協作 has no feature here and 報表 only an empty subgroup.
+  await expect(launcher.locator(".workspace-group > :is(h3, h4)")).toHaveText([
+    "AI 工作台",
+    "系統管理",
+    "洞察",
+    "診斷",
+  ]);
+  for (const name of ["協作", "報表", "草稿", "封存"])
+    await expect(
+      launcher.getByRole("region", { name, exact: true }),
+    ).toHaveCount(0);
+  const system = launcher.getByRole("region", {
+    name: "系統管理",
+    exact: true,
+  });
+  await expect(
+    system.locator(":scope > .workspace-icons").getByRole("link"),
+  ).toHaveText(["存取管理", "平台營運", "活動稽核"]);
+  // Its subgroups nest inside it, ordered by SortOrder.
+  await expect(system.locator(":scope > section.is-nested > h4")).toHaveText([
+    "洞察",
+    "診斷",
+  ]);
+  // Inside a group, its own features come before its subgroups.
+  await expect(system.getByRole("link")).toHaveText([
+    "存取管理",
+    "平台營運",
+    "活動稽核",
+    "品質評測",
+    "系統日誌",
+    "即時監控",
+  ]);
+  // The top level sits above every group.
+  await expect(launcher.getByRole("link").first()).toHaveAccessibleName("總覽");
+
+  await page.keyboard.press("Control+k");
+  const search = page.getByRole("combobox", { name: "快捷指令" });
+  await expect(search).toBeFocused();
+  // A nested group's features carry the whole path, and the path is searchable.
+  await search.fill("診斷");
+  const options = page.getByRole("option");
+  await expect(options.locator("strong")).toHaveText(["系統日誌", "即時監控"]);
+  await expect(options.locator("small")).toHaveText([
+    "前往功能 · 系統管理 › 診斷",
+    "前往功能 · 系統管理 › 診斷",
+  ]);
+  await search.fill("品質評測");
+  await expect(options.locator("small")).toHaveText([
+    "前往功能 · 系統管理 › 洞察",
+  ]);
+  // Top-level features have no group to name.
+  await search.fill("總覽");
+  await expect(options.locator("small")).toHaveText(["前往功能"]);
+  await search.fill("系統日誌");
+  await search.press("Enter");
+  await expect(page).toHaveURL(/\/admin\/logs$/);
+});
+
 test("short mobile drawers expose scrolling and preserve the focus escape route", async ({
   page,
 }) => {
