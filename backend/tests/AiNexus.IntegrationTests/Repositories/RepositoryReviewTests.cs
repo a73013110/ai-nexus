@@ -119,6 +119,23 @@ public sealed class RepositoryReviewTests
     }
 
     [Fact]
+    public async Task ListShowsEachReviewsPurposeNewestFirstWithoutReadingTheSnapshot()
+    {
+        await using var factory = Factory(new() { Diff = Diff(1, 10) }, new ReviewProvider()); using var client = await factory.SignedInAsync();
+        var review = await Create(client); var summary = await Create(client, "summary");
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            Assert.Equal(["review", "summary"], await db.Set<RepositoryReview>().OrderBy(x => x.CreatedAt).Select(x => x.Purpose).ToListAsync());
+            // The list reads the purpose column; an unreadable snapshot would otherwise show every review as "review".
+            await db.Set<RepositoryReview>().ExecuteUpdateAsync(p => p.SetProperty(x => x.SnapshotJson, "{}"));
+        }
+        var listed = (await client.GetFromJsonAsync<RepositoryReviewDto[]>(Reviews))!;
+        Assert.Equal([(summary.Id, "summary"), (review.Id, "review")], listed.Select(x => (x.Id, x.Purpose)));
+        Assert.All(listed, x => Assert.Equal("queued", x.Job.Status));
+    }
+
+    [Fact]
     public async Task UnsupportedPurposeIsRejectedBeforeEnqueuingWork()
     {
         var provider = new ReviewProvider(); await using var factory = Factory(new(), provider); using var client = await factory.SignedInAsync();

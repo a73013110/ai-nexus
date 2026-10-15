@@ -25,6 +25,7 @@
 ## 重要約束與索引（為什麼存在）
 
 - `GenerationRuns`：`OwnerId`＋`IdempotencyKey` 唯一索引防重複送出；`ActiveOwnerId` 非空的 filtered unique index 限制每人一個進行中的生成；`ActiveOwnerId`＋`LeaseExpiresAt` 索引供租約復原。它與 `ModelInvocations`的 `CreatedAt` 覆蓋索引供全平台用量報表依日期讀取。
+- `RunEvents.CreatedAt` 供保留清理分批刪除（每批自動提交，避免鎖升級與長交易）；`Resources` 的 `Kind`＋`UpdatedAt`（INCLUDE `OwnerId`、`ParentId`、`IsDeleted`）供 `ResourceAccess` 依種類列出可讀資源。
 - `Messages.ParentId` 形成訊息樹，`Conversations.ActiveLeafId` 決定目前分支；編輯與重新生成都新增訊息，不覆寫。
 - `ArtifactRevisions` 以 `ArtifactId`＋`Version` 為主鍵；expected version 不符時不覆蓋他人的修改。
 - `BackgroundJobs.ActiveKey` 唯一，避免同一業務重複排程；`LeaseToken` 做 fencing，過期 worker 不能提交。

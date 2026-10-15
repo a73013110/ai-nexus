@@ -58,6 +58,9 @@ internal sealed class WorkspaceResourceConfiguration : IEntityTypeConfiguration<
         resource.ToTable("Resources", "collaboration"); resource.HasKey(x => x.Id);
         resource.Property(x => x.Kind).HasMaxLength(24); resource.Property(x => x.Name).HasMaxLength(120);
         resource.HasIndex(x => new { x.OwnerId, x.Kind, x.UpdatedAt });
+        // ResourceAccess.QueryAsync filters by Kind alone (owned, shared or inherited) and lists newest first: the soft-delete
+        // flag and the columns of its access checks are carried, so rows are ruled out without a lookup.
+        resource.HasIndex(x => new { x.Kind, x.UpdatedAt }).IncludeProperties(x => new { x.OwnerId, x.ParentId, x.IsDeleted });
         resource.HasQueryFilter(SoftDelete.Filter, x => !x.IsDeleted);
         resource.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Restrict);
     }

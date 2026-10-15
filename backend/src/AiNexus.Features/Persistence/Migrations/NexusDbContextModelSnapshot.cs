@@ -1117,6 +1117,10 @@ namespace AiNexus.Features.Persistence.Migrations
 
                     b.HasIndex("ParentId");
 
+                    b.HasIndex("Kind", "UpdatedAt");
+
+                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("Kind", "UpdatedAt"), new[] { "OwnerId", "ParentId", "IsDeleted" });
+
                     b.HasIndex("OwnerId", "Kind", "UpdatedAt");
 
                     b.ToTable("Resources", "collaboration", t =>
@@ -1711,6 +1715,8 @@ namespace AiNexus.Features.Persistence.Migrations
                         .HasComment("事件的種類。");
 
                     b.HasKey("RunId", "Sequence");
+
+                    b.HasIndex("CreatedAt");
 
                     b.ToTable("RunEvents", "inference", t =>
                         {
@@ -3188,6 +3194,12 @@ namespace AiNexus.Features.Persistence.Migrations
                     b.Property<int?>("PullRequest")
                         .HasColumnType("int")
                         .HasComment("來源 Pull Request 編號；空值表示直接選擇的 commit 或區間。");
+
+                    b.Property<string>("Purpose")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("nvarchar(16)")
+                        .HasComment("Review 目的：review（程式碼檢閱）或 summary（變更摘要）；與快照相同，列表不必讀取快照。");
 
                     b.Property<string>("Repository")
                         .IsRequired()

@@ -97,7 +97,7 @@ internal sealed class CreateRepositoryReview(NexusDbContext db, RepositoryServic
             if (!snapshot.IsSuccess) return snapshot.Error!;
             var row = new RepositoryReview { OwnerId = owner, Repository = repo, Commit = head, BaseCommit = basis, PullRequest = request.PullRequest,
                 BaseUrl = gitea.BaseUrl, ModelId = model.Id, Note = note, ConfigurationFingerprint = ModelTaskConfiguration.Capture(model, inference.Value).Fingerprint,
-                SnapshotJson = JsonSerializer.Serialize(snapshot.Value), IdempotencyKey = request.IdempotencyKey, RequestHash = hash, CreatedAt = clock.GetUtcNow() };
+                SnapshotJson = JsonSerializer.Serialize(snapshot.Value), Purpose = snapshot.Value.Purpose, IdempotencyKey = request.IdempotencyKey, RequestHash = hash, CreatedAt = clock.GetUtcNow() };
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             // This account lock and unique request key also protect multiple application hosts.
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);

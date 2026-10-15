@@ -29,8 +29,9 @@ public sealed class RepositoryReviewService(NexusDbContext db, RepositoryService
     internal async Task<RepositoryReviewDto> DescribeAsync(RepositoryReview x, CancellationToken ct) =>
         Describe(x, await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(j => j.Id == x.JobId, ct));
 
+    /// <summary>The review's summary; reads only columns, never <see cref="RepositoryReview.SnapshotJson"/>.</summary>
     internal RepositoryReviewDto Describe(RepositoryReview x, BackgroundJob job) => new(x.Id, x.Repository, x.Commit, x.BaseCommit, x.PullRequest,
-        Snapshot(x) is { IsSuccess: true } snapshot ? snapshot.Value.Purpose : "review", presentation.PublicId(x.ModelId), presentation.DisplayName(x.ModelId) ?? presentation.PublicId(x.ModelId),
+        x.Purpose, presentation.PublicId(x.ModelId), presentation.DisplayName(x.ModelId) ?? presentation.PublicId(x.ModelId),
         x.Note, x.CreatedAt, JobService.Describe(job), x.CommentUrl);
 
     public static Result<ReviewSnapshot> Snapshot(RepositoryReview row) => JsonSerializer.Deserialize<ReviewSnapshot>(row.SnapshotJson) is { Version: ReviewSnapshot.Current } snapshot
