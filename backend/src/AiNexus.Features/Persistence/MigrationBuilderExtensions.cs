@@ -23,10 +23,22 @@ public static class MigrationBuilderExtensions
     /// Raw SQL that inserts, updates or deletes rows; <paramref name="target"/> (<c>schema.Table</c>) names its release SQL
     /// file. Migrations live in a child namespace, so they call it without a using.
     /// </summary>
+    /// <remarks>
+    /// The SQL runs through <c>EXEC</c>: the idempotent script puts a whole migration in one batch, and SQL Server compiles
+    /// a batch before running it, so a statement naming a column added earlier in the same migration would fail with
+    /// "Invalid column name". <c>EXEC</c> compiles it only when it runs. It is therefore one batch without <c>GO</c>.
+    /// </remarks>
     public static OperationBuilder<SqlOperation> DataSql(this MigrationBuilder migrationBuilder, string sql, string? target = null, bool suppressTransaction = false)
     {
         ArgumentNullException.ThrowIfNull(migrationBuilder);
-        var operation = migrationBuilder.Sql(sql, suppressTransaction).Annotation(KindAnnotation, DataKind);
+        var operation = migrationBuilder.Sql(Deferred(sql), suppressTransaction).Annotation(KindAnnotation, DataKind);
         return target is null ? operation : operation.Annotation(ObjectAnnotation, target);
+    }
+
+    /// <summary><paramref name="sql"/> wrapped in <c>EXEC</c> so SQL Server compiles it when it runs, not with its batch.</summary>
+    public static string Deferred(string sql)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sql);
+        return $"EXEC(N'{sql.Replace("'", "''", StringComparison.Ordinal)}');";
     }
 }
