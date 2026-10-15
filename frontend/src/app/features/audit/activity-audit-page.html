@@ -304,10 +304,17 @@
                     @if (change.featureBefore && change.featureAfter) {
                       <div>
                         <small>異動前</small
-                        ><nx-feature-summary [features]="change.featureBefore" />
+                        ><nx-feature-summary
+                          [features]="change.featureBefore"
+                          [groups]="navigationGroups()"
+                        />
                       </div>
                       <div>
-                        <small>異動後</small><nx-feature-summary [features]="change.featureAfter" />
+                        <small>異動後</small
+                        ><nx-feature-summary
+                          [features]="change.featureAfter"
+                          [groups]="navigationGroups()"
+                        />
                       </div>
                     } @else {
                       <span class="audit-before">{{ change.before }}</span

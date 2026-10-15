@@ -17,6 +17,7 @@ test("audit-only access keeps deep-link filters and same-page links without requ
         json: {
           features: [{ id: "audit", name: "活動稽核", route: "/admin/audit" }],
           models: [],
+          navigationGroups: [],
         },
       });
     if (url.pathname === "/api/v1/admin/audit") {
@@ -92,4 +93,95 @@ test("management access alone does not imply audit access or issue protected aud
   ).toHaveCount(0);
   await expect(page.locator(".audit-row")).toHaveCount(0);
   expect(requests).toEqual([]);
+});
+
+test("recorded feature changes read under their menu groups like the menu", async ({
+  page,
+}) => {
+  const fixture = new ApiFixture();
+  fixture.auditAccess = true;
+  await fixture.attach(page);
+  await page.route("**/api/v1/admin/**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname === "/api/v1/admin/audit/catalog")
+      return route.fulfill({
+        json: {
+          features: [
+            {
+              id: "chat",
+              name: "對話",
+              route: "/chat",
+              groupId: "work",
+              icon: "chat",
+              sortOrder: 10,
+            },
+            {
+              id: "audit",
+              name: "活動稽核",
+              route: "/admin/audit",
+              groupId: "system",
+              icon: "audit",
+              sortOrder: 97,
+            },
+            {
+              id: "reports",
+              name: "月報",
+              route: "/reports",
+              groupId: "reports",
+              icon: "chart",
+              sortOrder: 40,
+            },
+          ],
+          models: [],
+          navigationGroups: [
+            { id: "work", parentId: null, name: "AI 工作台", sortOrder: 10 },
+            { id: "system", parentId: null, name: "系統管理", sortOrder: 30 },
+            { id: "reports", parentId: "system", name: "報表", sortOrder: 40 },
+          ],
+        },
+      });
+    if (url.pathname === "/api/v1/admin/audit")
+      return route.fulfill({
+        json: [
+          {
+            id: 7,
+            actor: "AD\admin",
+            action: "admin.group",
+            category: "administration",
+            result: "saved",
+            at: "2026-10-08T00:00:00Z",
+            resourceId: "auditors",
+            detailsJson: JSON.stringify({
+              before: { featureIds: ["chat"] },
+              after: { featureIds: ["chat", "audit", "reports"] },
+            }),
+          },
+        ],
+      });
+    return route.fulfill({ status: 403, json: { code: "feature_forbidden" } });
+  });
+  await page.goto("/admin/audit");
+  await page.getByRole("button", { name: /^檢視稽核：#/ }).click();
+  const [before, after] = [
+    "nx-feature-summary >> nth=0",
+    "nx-feature-summary >> nth=1",
+  ].map((selector) =>
+    page
+      .getByRole("dialog", { name: "稽核詳情" })
+      .locator(".audit-feature-change")
+      .locator(selector),
+  );
+  await expect(before.locator(".feature-category-label")).toHaveText([
+    "AI 工作台",
+  ]);
+  await expect(after.locator(".feature-category-label")).toHaveText([
+    "AI 工作台",
+    "系統管理",
+    "系統管理 › 報表",
+  ]);
+  await expect(after.locator(".resource-badges")).toHaveText([
+    "對話",
+    "活動稽核",
+    "月報",
+  ]);
 });

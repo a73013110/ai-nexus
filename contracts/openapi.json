@@ -34469,7 +34469,8 @@
       "AuditCatalogDto": {
         "required": [
           "features",
-          "models"
+          "models",
+          "navigationGroups"
         ],
         "type": "object",
         "properties": {
@@ -34483,6 +34484,12 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ModelDto"
+            }
+          },
+          "navigationGroups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NavigationGroupDto"
             }
           }
         }

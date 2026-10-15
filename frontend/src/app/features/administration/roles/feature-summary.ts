@@ -7,8 +7,8 @@ import {
 } from '@core/layout/navigation-tree';
 
 /**
- * Feature names in menu order, under the path of their menu group. Without `groups` (the audit
- * log has none) every feature sits in one unlabelled list.
+ * Feature names in menu order, under the path of their menu group. Without `groups` every feature
+ * sits in one unlabelled list.
  */
 @Component({
   selector: 'nx-feature-summary',

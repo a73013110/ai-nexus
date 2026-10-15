@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using AiNexus.Features.Account;
+using AiNexus.Features.Administration.Navigation;
 using AiNexus.Features.Administration.Roles;
 using AiNexus.Features.Administration.Users;
 using AiNexus.Features.Audit;
@@ -26,9 +27,13 @@ public sealed class ListActivityAuditTests
         var me = (await auditor.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
         Assert.Contains(me.Access.Features, feature => feature.Id == "audit" && feature.Route == "/admin/audit");
         Assert.DoesNotContain(me.Access.Features, feature => feature.Id == "admin");
+        (await admin.PostAsJsonAsync("/api/v1/admin/navigation-groups", new NavigationGroupCreateRequest("reports", "報表", "system", 40))).EnsureSuccessStatusCode();
         var catalog = (await auditor.GetFromJsonAsync<AuditCatalogDto>("/api/v1/admin/audit/catalog"))!;
-        Assert.Contains(catalog.Features, feature => feature.Id == "audit");
+        Assert.Contains(catalog.Features, feature => feature.Id == "audit" && feature.GroupId == "system");
         Assert.NotEmpty(catalog.Models);
+        // Every group, not only those of the auditor's own menu: recorded changes may name any feature.
+        Assert.Equal(["work", "collaboration", "system", "reports"], catalog.NavigationGroups.Select(x => x.Id));
+        Assert.Contains(catalog.NavigationGroups, group => group is { Id: "reports", ParentId: "system", Name: "報表" });
         var rows = (await auditor.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?category=administration"))!;
         Assert.Contains(rows, row => row.Action == "admin.user_roles" && row.ResourceId == target.Id);
         Assert.Equal(HttpStatusCode.Forbidden, (await auditor.GetAsync("/api/v1/admin/catalog")).StatusCode);

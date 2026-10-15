@@ -1185,7 +1185,11 @@ async function administration(page: Page) {
       });
     if (path === "/catalog") return json(catalog);
     if (path === "/audit/catalog")
-      return json({ features: catalog.features, models: catalog.models });
+      return json({
+        features: catalog.features,
+        models: catalog.models,
+        navigationGroups: catalog.navigationGroups,
+      });
     if (path.endsWith("/model-policy")) {
       if (method === "PUT") {
         personalPolicy = route.request().postDataJSON();
