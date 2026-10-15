@@ -41,10 +41,13 @@ public sealed class AccessService(NexusDbContext db, IActiveUsers activeUsers, I
     public async Task<AccessDto> WithNavigationAsync(Guid user, CancellationToken ct)
     {
         var access = await ForUserAsync(user, ct);
-        var groups = await db.Set<NavigationGroup>().AsNoTracking().OrderBy(x => x.SortOrder).ThenBy(x => x.Id)
-            .Select(x => new NavigationGroupDto(x.Id, x.ParentId, x.Name, x.SortOrder)).ToListAsync(ct);
-        return access with { NavigationGroups = NavigationTree.VisibleGroups(groups, access.Features) };
+        return access with { NavigationGroups = NavigationTree.VisibleGroups(await NavigationGroupsAsync(ct), access.Features) };
     }
+
+    /// <summary>Every menu group in display order, for views that arrange any feature (catalogs, audit history) rather than one user's menu.</summary>
+    public async Task<IReadOnlyList<NavigationGroupDto>> NavigationGroupsAsync(CancellationToken ct) =>
+        await db.Set<NavigationGroup>().AsNoTracking().OrderBy(x => x.SortOrder).ThenBy(x => x.Id)
+            .Select(x => new NavigationGroupDto(x.Id, x.ParentId, x.Name, x.SortOrder)).ToArrayAsync(ct);
 
     private async Task<AccessDto> ReadAsync(Guid user, CancellationToken ct)
     {

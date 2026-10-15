@@ -27,7 +27,7 @@ import {
   effect,
 } from '@angular/core';
 import { AuditApi, type AuditFilters } from './audit-api';
-import type { AuditDto, FeatureDto, ModelDto } from '@core/api/schema';
+import type { AuditDto, FeatureDto, ModelDto, NavigationGroupDto } from '@core/api/schema';
 import { FeatureSummary } from '@features/administration/roles/feature-summary';
 import { SearchField } from '@shared/ui/search-field';
 import { Select } from '@shared/ui/select';
@@ -99,6 +99,10 @@ export class ActivityAuditPage {
   });
   readonly features = computed<readonly FeatureDto[]>(
     () => this.catalogRead.value()?.features ?? [],
+  );
+  /** Every menu group, so recorded feature changes read in menu order under their group. */
+  readonly navigationGroups = computed<readonly NavigationGroupDto[]>(
+    () => this.catalogRead.value()?.navigationGroups ?? [],
   );
   readonly models = computed<readonly ModelDto[]>(() => this.catalogRead.value()?.models ?? []);
   readonly modelNames = computed(() =>

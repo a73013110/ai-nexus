@@ -9135,6 +9135,7 @@ export interface components {
         AuditCatalogDto: {
             features: components["schemas"]["FeatureDto"][];
             models: components["schemas"]["ModelDto"][];
+            navigationGroups: components["schemas"]["NavigationGroupDto"][];
         };
         AuditDto: {
             /** Format: int64 */
