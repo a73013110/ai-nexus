@@ -42,7 +42,7 @@ public sealed class KnowledgeRetrieval(NexusDbContext db, ConversationService co
             selection = selected.Value;
         }
         if (selection.CollectionIds.Count == 0) return Result<IReadOnlyList<KnowledgeHitDto>>.Ok([]);
-        var owned = await conversations.OwnedAsync(actor, request.ConversationId, ct);
+        var owned = await conversations.RequireOwnedAsync(actor, request.ConversationId, ct);
         if (!owned.IsSuccess) return owned.Error;
         var query = request.Prompt; var parent = request.ParentMessageId;
         if (request.RegenerateUserMessageId is Guid user)

@@ -61,7 +61,7 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
         var previous = await db.Runs.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct);
         if (previous is not null)
         {
-            if (await conversations.OwnedAsync(owner, previous.ConversationId, ct) is { IsSuccess: false } denied) return denied.Error;
+            if (await conversations.RequireOwnedAsync(owner, previous.ConversationId, ct) is { IsSuccess: false } denied) return denied.Error;
             if (previous.RequestHash != hash) return InferenceErrors.IdempotencyConflict;
             return presentation.Run(previous);
         }
@@ -83,7 +83,7 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
         WebSearchRecord? search = null;
         if (request.WebSearch)
         {
-            if (await conversations.OwnedAsync(owner, request.ConversationId, ct) is { IsSuccess: false } missing) return missing.Error;
+            if (await conversations.RequireOwnedAsync(owner, request.ConversationId, ct) is { IsSuccess: false } missing) return missing.Error;
             if (!scheduler.Ready) return ChatErrors.SchedulerUnavailable;
             if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) return InferenceErrors.GenerationActive;
             var query = request.RegenerateUserMessageId is Guid old ? await db.Messages.Where(x => x.Id == old && x.ConversationId == request.ConversationId && x.Role == "user").Select(x => x.Content).SingleOrDefaultAsync(ct) : request.Prompt;
@@ -106,7 +106,7 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             var existing = await db.Runs.SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct);
             if (existing is not null)
             {
-                if (await conversations.OwnedAsync(owner, existing.ConversationId, ct) is { IsSuccess: false } denied) return denied.Error;
+                if (await conversations.RequireOwnedAsync(owner, existing.ConversationId, ct) is { IsSuccess: false } denied) return denied.Error;
                 if (existing.RequestHash != hash) return InferenceErrors.IdempotencyConflict;
                 return presentation.Run(existing);
             }
@@ -126,11 +126,12 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             // that raced in another conversation has committed, so its run is visible here.
             if (await db.Runs.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct) is { } raced)
             {
-                if (await conversations.OwnedAsync(owner, raced.ConversationId, ct) is { IsSuccess: false } denied) return denied.Error;
+                if (await conversations.RequireOwnedAsync(owner, raced.ConversationId, ct) is { IsSuccess: false } denied) return denied.Error;
                 if (raced.RequestHash != hash) return InferenceErrors.IdempotencyConflict;
                 return presentation.Run(raced);
             }
             if (await db.Runs.AnyAsync(x => x.ActiveOwnerId == owner, ct)) return InferenceErrors.GenerationActive;
+            // The one load of the conversation entity in this request: PrepareGenerationAsync below changes this instance.
             var owned = await conversations.OwnedAsync(owner, request.ConversationId, ct);
             if (!owned.IsSuccess) return owned.Error;
             var conversation = owned.Value;
@@ -155,7 +156,7 @@ internal sealed class CreateRun(NexusDbContext db, ConversationService conversat
             };
             run.TraceId = Activity.Current?.TraceId.ToHexString() ?? ActivityTraceId.CreateRandom().ToHexString(); run.ParentSpanId = Activity.Current?.SpanId.ToHexString() ?? ActivitySpanId.CreateRandom().ToHexString(); run.OperationId = run.Id;
             await billing.ReserveAsync(run.Id, owner, request.ConversationId, profile.Provider, profile.NativeId, "chat", run.CreatedAt, ct);
-            var saved = await conversations.PrepareGenerationAsync(owner, turn, profile.Id, run.Id, ct);
+            var saved = await conversations.PrepareGenerationAsync(conversation, turn, profile.Id, run.Id, ct);
             if (!saved.IsSuccess) return saved.Error;
             var (user, assistant) = saved.Value;
             run.UserMessageId = user.Id;
