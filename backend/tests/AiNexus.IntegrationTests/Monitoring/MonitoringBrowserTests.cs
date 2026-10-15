@@ -34,7 +34,7 @@ public sealed class MonitoringBrowserTests
         await Expect(page.GetByText("即時連線", new() { Exact = true })).ToBeVisibleAsync();
         await Expect(page.Locator(".monitor-table")).ToContainTextAsync("alice");
         await Expect(page.Locator(".activity-list")).ToContainTextAsync("執行對話", new() { Timeout = 15000 });
-        await page.GetByRole(AriaRole.Button, new() { Name = "檢視 alice 的連線" }).ClickAsync();
+        await page.Locator(".monitor-table").GetByRole(AriaRole.Button, new() { Name = "alice" }).ClickAsync();
         var inspector = page.GetByRole(AriaRole.Dialog, new() { Name = "工作階段詳情", Exact = true });
         await Expect(inspector).ToContainTextAsync("Active Directory");
         await Expect(inspector).ToContainTextAsync((await page.EvaluateAsync<string>("navigator.userAgent")).Contains(" Edg/", StringComparison.Ordinal) ? "Edge" : "Chrome");
