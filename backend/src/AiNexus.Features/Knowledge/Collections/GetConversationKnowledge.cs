@@ -16,7 +16,7 @@ internal sealed class GetConversationKnowledge(NexusDbContext db, ConversationSe
 
     public async Task<Result<KnowledgeSelectionDto>> HandleAsync(Guid actor, Guid conversation, CancellationToken ct)
     {
-        var owned = await conversations.OwnedAsync(actor, conversation, ct);
+        var owned = await conversations.RequireOwnedAsync(actor, conversation, ct);
         if (!owned.IsSuccess) return owned.Error;
         return new KnowledgeSelectionDto(await db.Set<ConversationKnowledge>().Where(x => x.ConversationId == conversation).Select(x => x.CollectionId).ToListAsync(ct));
     }

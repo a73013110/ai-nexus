@@ -26,7 +26,7 @@ internal sealed class SaveConversationKnowledge(NexusDbContext db, ConversationS
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await db.Users.Where(x => x.Id == actor).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
-            var owned = await conversations.OwnedAsync(actor, conversation, ct);
+            var owned = await conversations.RequireOwnedAsync(actor, conversation, ct);
             if (!owned.IsSuccess) return owned.Error;
             var allowed = await authorization.CollectionsAsync(actor, request.CollectionIds, ct);
             if (!allowed.IsSuccess) return allowed.Error;

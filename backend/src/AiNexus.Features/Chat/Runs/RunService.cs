@@ -19,7 +19,7 @@ public sealed partial class RunService(NexusDbContext db, RunSignals signals, Co
     {
         var run = await db.Runs.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct);
         if (run is null) return InferenceErrors.RunNotFound;
-        if (await conversations.OwnedAsync(owner, run.ConversationId, ct) is { IsSuccess: false } denied) return denied.Error;
+        if (await conversations.RequireOwnedAsync(owner, run.ConversationId, ct) is { IsSuccess: false } denied) return denied.Error;
         return run;
     }
 

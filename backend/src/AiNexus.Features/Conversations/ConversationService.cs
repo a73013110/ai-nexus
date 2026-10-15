@@ -15,17 +15,21 @@ public sealed record ConversationTurn(Guid ConversationId, string? Prompt, Guid?
 /// </summary>
 public sealed class ConversationService(NexusDbContext db, TimeProvider clock)
 {
+    /// <summary>The user's own conversation (tracked, without its labels) for callers that read or change its fields.</summary>
     public async Task<Result<Conversation>> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
-        => await db.OwnedConversationAsync(owner, id, ct) is { } conversation ? conversation : ConversationsErrors.NotFound;
+        => await db.Set<Conversation>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct) is { } conversation ? conversation : ConversationsErrors.NotFound;
+
+    /// <summary>Succeeds when the conversation is the user's own and not deleted; the same error as <see cref="OwnedAsync"/> otherwise, without loading it.</summary>
+    public async Task<Result> RequireOwnedAsync(Guid owner, Guid id, CancellationToken ct)
+        => await db.Set<Conversation>().AnyAsync(x => x.Id == id && x.OwnerId == owner, ct) ? Result.Success : ConversationsErrors.NotFound;
 
     public Task<Result<ConversationDto>> CreateAsync(Guid owner, string? title, CancellationToken ct) => new CreateConversation(db, clock).HandleAsync(owner, title, ct);
 
-    // The chat module changes conversation history through this module's contract.
-    public async Task<Result<(Message User, Message Assistant)>> PrepareGenerationAsync(Guid owner, ConversationTurn request, string modelId, Guid runId, CancellationToken ct)
+    // The chat module changes conversation history through this module's contract. The caller passes the conversation it
+    // loaded with OwnedAsync in the same unit of work, so it is checked and changed without being read again.
+    public async Task<Result<(Message User, Message Assistant)>> PrepareGenerationAsync(Conversation conversation, ConversationTurn request, string modelId, Guid runId, CancellationToken ct)
     {
-        var owned = await OwnedAsync(owner, request.ConversationId, ct);
-        if (!owned.IsSuccess) return owned.Error;
-        var conversation = owned.Value;
+        if (conversation.Id != request.ConversationId) throw new ArgumentException("The turn belongs to another conversation.", nameof(request));
         if (conversation.IsArchived) return ConversationsErrors.Archived;
         Message user;
         if (request.RegenerateUserMessageId is Guid userId)

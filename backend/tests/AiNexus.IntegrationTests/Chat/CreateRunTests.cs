@@ -87,6 +87,44 @@ public sealed class CreateRunTests
     }
 
     [Fact]
+    public async Task OnlyTheOwnerOfAKeptConversationCanSendReplayOrReadItsRuns()
+    {
+        await using var factory = new NexusFactory();
+        using var alice = await factory.SignedInAsync();
+        using var bob = await factory.SignedInAsync("bob");
+        var conversation = await CreateConversation(alice);
+        var key = Guid.NewGuid().ToString();
+        var request = new CreateRunRequest(conversation.Id, "test-model", "你好", null, null);
+        var accepted = await PostRun(alice, request, key);
+        accepted.EnsureSuccessStatusCode();
+        var run = (await accepted.Content.ReadFromJsonAsync<RunDto>())!;
+        await WaitForTerminal(alice, run.Id);
+
+        await AssertError(await PostRun(bob, request), HttpStatusCode.NotFound, "conversation_not_found");
+        await AssertError(await PostRun(bob, request with { WebSearch = true }), HttpStatusCode.NotFound, "conversation_not_found");
+        await AssertError(await bob.GetAsync($"/api/v1/runs/{run.Id}"), HttpStatusCode.NotFound, "run_not_found");
+
+        (await alice.PatchAsJsonAsync($"/api/v1/conversations/{conversation.Id}/settings", new ConversationSettingsRequest(IsArchived: true))).EnsureSuccessStatusCode();
+        await AssertError(await PostRun(alice, request with { Prompt = "封存後" }), HttpStatusCode.Conflict, "conversation_archived");
+
+        (await alice.DeleteAsync($"/api/v1/conversations/{conversation.Id}")).EnsureSuccessStatusCode();
+        await AssertError(await PostRun(alice, request, key), HttpStatusCode.NotFound, "conversation_not_found");
+        await AssertError(await alice.GetAsync($"/api/v1/runs/{run.Id}"), HttpStatusCode.NotFound, "conversation_not_found");
+        await AssertError(await alice.GetAsync($"/api/v1/runs/{run.Id}/events"), HttpStatusCode.NotFound, "conversation_not_found");
+        using var scope = factory.Services.CreateScope();
+        Assert.Equal(1, await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Runs.CountAsync());
+    }
+
+    private static async Task AssertError(HttpResponseMessage response, HttpStatusCode status, string code)
+    {
+        using (response)
+        {
+            Assert.Equal(status, response.StatusCode);
+            Assert.Contains(code, await response.Content.ReadAsStringAsync());
+        }
+    }
+
+    [Fact]
     public async Task CrossConversationParentAndOversizedContextAreRejectedAtomically()
     {
         await using var factory = new NexusFactory();
