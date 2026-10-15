@@ -39,6 +39,8 @@ public sealed class RepositoryReview
     public string RequestHash { get; set; } = "";
     [Comment("分享時的固定內容快照；不隨後續編輯變動。")]
     public string SnapshotJson { get; set; } = "";
+    [Comment("Review 目的：review（程式碼檢閱）或 summary（變更摘要）；與快照相同，列表不必讀取快照。")]
+    public string Purpose { get; set; } = "review";
     [Comment("資料建立時間，採 UTC offset。")]
     public DateTimeOffset CreatedAt { get; set; }
     [Comment("報告貼到 Pull Request 的留言網址；空值表示尚未張貼。")]
@@ -79,6 +81,7 @@ internal sealed class RepositoryReviewConfiguration : IEntityTypeConfiguration<R
         r.Property(x => x.BaseUrl).HasMaxLength(500); r.Property(x => x.Repository).HasMaxLength(201); r.Property(x => x.Commit).HasMaxLength(64); r.Property(x => x.BaseCommit).HasMaxLength(64);
         r.Property(x => x.ModelId).HasMaxLength(160); r.Property(x => x.ConfigurationFingerprint).HasMaxLength(64); r.Property(x => x.Note).HasMaxLength(RepositoryReview.NoteMaxLength);
         r.Property(x => x.CommentUrl).HasMaxLength(500); r.Property(x => x.IdempotencyKey).HasMaxLength(80); r.Property(x => x.RequestHash).HasMaxLength(64); r.Property(x => x.SnapshotJson).HasMaxLength(1000000);
+        r.Property(x => x.Purpose).HasMaxLength(16);
         r.HasIndex(x => new { x.OwnerId, x.IdempotencyKey }).IsUnique(); r.HasIndex(x => new { x.OwnerId, x.CreatedAt });
     }
 }

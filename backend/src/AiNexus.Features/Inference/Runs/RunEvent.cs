@@ -32,6 +32,8 @@ internal sealed class RunEventConfiguration : IEntityTypeConfiguration<RunEvent>
         runEvent.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
         runEvent.ToTable("RunEvents", "inference");
         runEvent.HasKey(x => new { x.RunId, x.Sequence });
+        // Retention deletes expired events by age; the clustered key (RunId, Sequence) rides along for the run check.
+        runEvent.HasIndex(x => x.CreatedAt);
         runEvent.Property(x => x.Type).HasMaxLength(16);
         runEvent.Property(x => x.Status).HasMaxLength(16);
         runEvent.Property(x => x.IssueCode).HasMaxLength(40);
