@@ -199,6 +199,8 @@ test("one overview style, and tiles can be moved, resized, hidden and reset", as
     /.+/,
   );
 
+  // The tiles arrive with the dashboard read, after the page itself has loaded.
+  await expect(tile(page, "關鍵指標")).toBeVisible();
   const defaults = await tileOrder(page);
   await page.getByRole("button", { name: "自訂版面", exact: true }).click();
   const bar = page.getByRole("region", { name: "自訂總覽版面", exact: true });
@@ -221,6 +223,8 @@ test("one overview style, and tiles can be moved, resized, hidden and reset", as
   await tile(page, "對話").evaluate((el) =>
     el.scrollIntoView({ block: "center" }),
   );
+  // Measure where the tiles rest, not where the keyboard move's glide has them now.
+  await settleEntrance(page);
   const start = (await handle.boundingBox())!;
   const target = (await tile(page, "對話").boundingBox())!;
   await page.mouse.move(start.x + start.width / 2, start.y + start.height / 2);
