@@ -14,7 +14,6 @@ using AiNexus.Features.WebSearch;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AiNexus.Host.Commands;
@@ -44,7 +43,7 @@ public static class DeploymentVerifier
             _ = scope.ServiceProvider.GetRequiredService<IOptions<IntegrationsOptions>>().Value;
             var search = scope.ServiceProvider.GetRequiredService<IOptions<WebSearchOptions>>().Value;
             var gitea = scope.ServiceProvider.GetRequiredService<IOptions<GiteaOptions>>().Value;
-            var sql = new SqlConnectionStringBuilder(config.GetConnectionString("Nexus"));
+            var sql = new SqlConnectionStringBuilder(scope.ServiceProvider.GetRequiredService<IOptions<DatabasesOptions>>().Value.ConnectionString(NexusDbContext.DatabaseName));
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             var connected = await db.Database.CanConnectAsync(ct);
             if (connected) await scope.ServiceProvider.GetRequiredService<DatabaseSchema>().RequireCurrentAsync(ct);
@@ -71,7 +70,7 @@ public static class DeploymentVerifier
         }
         catch (Exception ex)
         {
-            Console.Error.WriteLine(ex is ExternalServiceException external ? external.Message : ex is Microsoft.Extensions.Options.OptionsValidationException ? "Deployment configuration validation failed. Check model, authentication, tool, connector and limit settings." : LocalDatabaseSettings.Diagnose(ex));
+            Console.Error.WriteLine(ex is ExternalServiceException external ? external.Message : ex is Microsoft.Extensions.Options.OptionsValidationException ? "Deployment configuration validation failed. Check database, model, authentication, tool, connector and limit settings." : DatabaseDiagnosis.Describe(ex, NexusDbContext.DatabaseName));
             return false;
         }
     }

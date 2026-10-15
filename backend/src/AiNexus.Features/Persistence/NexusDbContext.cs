@@ -2,8 +2,10 @@ using AiNexus.Features.Conversations;
 using AiNexus.Features.Identity.Users;
 using AiNexus.Features.Inference.Models;
 using AiNexus.Features.Inference.Runs;
+using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Persistence;
 
@@ -16,6 +18,9 @@ namespace AiNexus.Features.Persistence;
 /// </summary>
 public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, TimeProvider? clock = null) : DbContext(options)
 {
+    /// <summary>The <c>Databases</c> entry this context connects with.</summary>
+    public const string DatabaseName = "Nexus";
+
     public TimeProvider Clock { get; } = clock ?? TimeProvider.System;
 
     public DbSet<NexusUser> Users => Set<NexusUser>();
@@ -33,9 +38,9 @@ public sealed class NexusDbContext(DbContextOptions<NexusDbContext> options, Tim
     }
 }
 
-public sealed class StorageReadiness(IConfiguration configuration, IHostEnvironment environment)
+public sealed class StorageReadiness(IOptions<DatabasesOptions> databases, IHostEnvironment environment)
 {
-    public bool Configured => environment.IsEnvironment("Testing") || !string.IsNullOrWhiteSpace(configuration.GetConnectionString("Nexus"));
+    public bool Configured => environment.IsEnvironment("Testing") || databases.Value.For(NexusDbContext.DatabaseName).Configured;
     public void RequireConfigured()
     {
         if (!Configured) throw new ExternalServiceException(Error.Unavailable("storage_not_configured"), "伺服器尚未完成資料庫設定。請由管理員設定 SQL 連線。");

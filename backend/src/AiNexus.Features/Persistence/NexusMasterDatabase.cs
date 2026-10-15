@@ -1,5 +1,4 @@
 using AiNexus.Platform.Data.Sql;
-using Microsoft.Data.SqlClient;
 
 namespace AiNexus.Features.Persistence;
 
@@ -8,6 +7,6 @@ public sealed class NexusMasterDatabase : ISqlDatabaseDefinition
 {
     private NexusMasterDatabase() { }
 
-    public static string ConnectionString(IConfiguration configuration)
-        => new SqlConnectionStringBuilder(configuration.GetConnectionString("Nexus") ?? "") { InitialCatalog = "master" }.ConnectionString;
+    public static string Name => NexusDbContext.DatabaseName;
+    public static string? Catalog => "master";
 }

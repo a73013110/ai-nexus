@@ -1,7 +1,4 @@
-using AiNexus.Features.Integrations;
-using AiNexus.Features.Integrations.Sources;
 using AiNexus.Platform.Configuration;
-using Microsoft.Extensions.Configuration;
 
 namespace AiNexus.UnitTests.Platform;
 
@@ -43,25 +40,5 @@ public sealed class NexusConfigResolverTests
         Assert.Equal(Path.Combine(Root, "config", "site.json"), paths.LocalConfigPath);
         Assert.Equal(Path.Combine(Root, "config", "private.json"), paths.SecretsConfigPath);
         Assert.Equal(Path.Combine(Root, "keys"), paths.KeyRingPath);
-    }
-
-    [Fact]
-    public void SourceSqlSettingsPreserveEncryptionTrustAndTimeoutWithoutLeakingIntoNexus()
-    {
-        var config = new ConfigurationManager();
-        config.AddInMemoryCollection(new Dictionary<string, string?> {
-            ["Integrations:Gdweb:Database:Server"] = "fixture",
-            ["Integrations:Gdweb:Database:Name"] = "source",
-            ["Integrations:Gdweb:Database:User"] = "reader",
-            ["Integrations:Gdweb:Database:Password"] = "fixture",
-            ["Integrations:Gdweb:Database:TrustServerCertificate"] = "true",
-            ["Integrations:Gdweb:Database:ConnectTimeoutSeconds"] = "7"
-        });
-        IntegrationsSettings.SourceConnections(config);
-        var sql = new Microsoft.Data.SqlClient.SqlConnectionStringBuilder(LegacyGdwebDatabase.ConnectionString(config));
-        Assert.Equal(Microsoft.Data.SqlClient.SqlConnectionEncryptOption.Mandatory, sql.Encrypt);
-        Assert.True(sql.TrustServerCertificate); Assert.Equal(7, sql.ConnectTimeout);
-        Assert.Equal(Microsoft.Data.SqlClient.ApplicationIntent.ReadOnly, sql.ApplicationIntent);
-        Assert.Null(config.GetConnectionString("Nexus"));
     }
 }

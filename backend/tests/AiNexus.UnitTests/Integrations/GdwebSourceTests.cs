@@ -16,7 +16,7 @@ public sealed class GdwebSourceTests
     }
 }
 
-public sealed class QueryProbe : ISqlDatabase<LegacyGdwebDatabase>
+public sealed class QueryProbe : ISqlDatabase<GdwebDatabase>
 {
     public string Sql = ""; public object? Args; public bool RevokeOnRecheck; public int SingleReads;
     public Task<IReadOnlyList<T>> QueryAsync<T>(string sql, object? parameters = null, int? commandTimeout = null, CancellationToken cancellationToken = default)

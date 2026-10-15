@@ -2,6 +2,7 @@ using System.Data.Common;
 using System.Text.Json;
 using AiNexus.Features.AccessControl;
 using AiNexus.Features.Persistence;
+using AiNexus.Platform.Data;
 using AiNexus.Platform.Errors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -12,18 +13,18 @@ namespace AiNexus.Features.Integrations.Sources;
 /// The only path to the read-only legacy sources. Authorization is checked before every query and again after it, so a
 /// grant revoked mid-query never releases data; every read is audited.
 /// </summary>
-internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOptions<IntegrationsOptions> options, IConfiguration config,
+internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOptions<IntegrationsOptions> options, IOptions<DatabasesOptions> databases,
     IEnumerable<IControlledSourceAdapter> adapters, ILogger<SourceGateway> logger)
 {
-    private static readonly (string Id, string Name, string Description, string[] Kinds)[] Catalog = [
-        ("gdweb", "公文系統", "查詢授權文件、狀態、版本與簽核歷程。", ["document"]),
-        ("meiho", "校務系統", "先提供核准的規範與單位資料；學生資料須另建逐筆授權 adapter。", ["reference", "organization"])
+    private static readonly (string Id, string Name, string Description, string[] Kinds, string Database)[] Catalog = [
+        ("gdweb", "公文系統", "查詢授權文件、狀態、版本與簽核歷程。", ["document"], GdwebDatabase.Name),
+        ("meiho", "校務系統", "先提供核准的規範與單位資料；學生資料須另建逐筆授權 adapter。", ["reference", "organization"], MeihoDatabase.Name)
     ];
 
     private sealed record Target(IControlledSourceAdapter Adapter, SourceOptions Options, SourceActor Actor);
 
-    /// <summary>The configured sources with their display names.</summary>
-    public static IEnumerable<(string Id, string Name)> Sources => Catalog.Select(x => (x.Id, x.Name));
+    /// <summary>The configured sources with their display names and <c>Databases</c> entries.</summary>
+    public static IEnumerable<(string Id, string Name, string Database)> Sources => Catalog.Select(x => (x.Id, x.Name, x.Database));
 
     /// <summary>How far a source is set up, before any user's grant: disabled, unsupported-transport, acl-unconfirmed, unconfigured or configured.</summary>
     public static string SetupStatus(SourceOptions option, bool connectionConfigured) => !option.Enabled ? "disabled" : option.Transport != "sql" ? "unsupported-transport"
@@ -38,7 +39,7 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
         foreach (var item in Catalog)
         {
             var option = options.Value.For(item.Id);
-            var configured = !string.IsNullOrWhiteSpace(config.GetConnectionString(IntegrationsOptions.ConnectionKey(item.Id)));
+            var configured = databases.Value.For(item.Database).Configured;
             var allowed = option.AllowedGroupIds.Any(id => grants.Groups.Any(g => g.Id == id));
             var status = SetupStatus(option, configured);
             if (status == "configured" && !allowed) status = "not-authorized";
@@ -86,13 +87,14 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
     // A re-check after the source call is fresh: grants read earlier in this request may have been revoked meanwhile.
     private async Task<Result<Target>> AuthorizeAsync(Guid actor, string source, CancellationToken ct, bool fresh = false)
     {
-        if (!Catalog.Any(x => x.Id == source)) return IntegrationsErrors.UnknownSource;
+        var item = Catalog.SingleOrDefault(x => x.Id == source);
+        if (item.Id is null) return IntegrationsErrors.UnknownSource;
         if (fresh) access.Invalidate();
         var grants = await access.ForUserAsync(actor, ct);
         if (!grants.Features.Any(x => x.Id == FeatureIds.Integrations)) return AccessControlErrors.FeatureForbidden;
         var value = options.Value.For(source);
         if (value.Transport != "sql") return IntegrationsErrors.TransportUnsupported;
-        if (!value.Enabled || !value.AclContractConfirmed || string.IsNullOrWhiteSpace(config.GetConnectionString(IntegrationsOptions.ConnectionKey(source)))) return IntegrationsErrors.NotConfigured;
+        if (!value.Enabled || !value.AclContractConfirmed || !databases.Value.For(item.Database).Configured) return IntegrationsErrors.NotConfigured;
         if (!value.AllowedGroupIds.Any(id => grants.Groups.Any(g => g.Id == id))) return IntegrationsErrors.SourceForbidden;
         var user = await db.Users.AsNoTracking().SingleAsync(x => x.Id == actor, ct);
         if (string.IsNullOrWhiteSpace(user.Sid) || string.IsNullOrWhiteSpace(user.Account)) return IntegrationsErrors.IdentityMissing;

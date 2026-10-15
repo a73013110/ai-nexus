@@ -1,6 +1,8 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
 using System.Threading.RateLimiting;
+using AiNexus.Platform.Configuration;
+using AiNexus.Platform.Data;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Errors;
 using AiNexus.Platform.Http;
@@ -22,6 +24,7 @@ public static class PlatformServices
         services.AddHttpContextAccessor();
         services.TryAddSingleton(TimeProvider.System);
         services.AddMemoryCache();
+        services.AddSettings<DatabasesOptions, DatabasesOptionsValidator>(DatabasesOptions.Section);
         services.AddCsrfProtection(builder.Environment, builder.Configuration);
         // Deny by default: endpoints opt into anonymous access explicitly.
         services.AddAuthorization(options => options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());

@@ -1,12 +1,10 @@
 using AiNexus.Host;
 using AiNexus.Host.Commands;
 using AiNexus.Features;
-using AiNexus.Features.Integrations;
 using AiNexus.Features.Monitoring;
 using AiNexus.Features.Persistence;
 using AiNexus.Platform;
 using AiNexus.Platform.Configuration;
-using AiNexus.Platform.Data;
 using AiNexus.Platform.Diagnostics;
 using AiNexus.Platform.Health;
 using AiNexus.Platform.Http;
@@ -25,8 +23,7 @@ var builder = WebApplication.CreateBuilder(command.HostArguments);
 WebApplication app;
 try
 {
-    NexusConfiguration.Load(builder, command.HostArguments, IntegrationsSettings.SourceConnections);
-    LocalDatabaseSettings.Apply(builder.Configuration);
+    NexusConfiguration.Load(builder, command.HostArguments);
     builder.AddPlatform();
     builder.AddFeatures();
     builder.Services.AddOpenApiContract();

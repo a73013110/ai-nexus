@@ -28,8 +28,8 @@ $settings = Read-NexusJson $local.Settings
 $secrets = Read-NexusJson $local.Secrets
 Write-Output 'Enter 保留現有值。密碼與 key 以遮蔽輸入，儲存於 .local/secrets。'
 foreach ($field in @(
-    @{ Path = 'Database.Server'; Prompt = 'SQL server／instance' },
-    @{ Path = 'Database.Name'; Prompt = '專用資料庫名稱' },
+    @{ Path = 'Databases.Nexus.Server'; Prompt = 'SQL server／instance' },
+    @{ Path = 'Databases.Nexus.Name'; Prompt = '專用資料庫名稱' },
     @{ Path = 'Identity.ActiveDirectory.Domain'; Prompt = 'AD 網域，例如 company.internal' },
     @{ Path = 'Identity.ActiveDirectory.BindUser'; Prompt = 'AD 服務帳號名稱' }
 )) {
@@ -37,8 +37,8 @@ foreach ($field in @(
     if ($value) { Set-NexusSetting $settings $field.Path $value.Trim() }
 }
 foreach ($field in @(
-    @{ Path = 'Database.User'; Prompt = '既有 SQL 登入帳號' },
-    @{ Path = 'Database.Password'; Prompt = 'SQL 密碼' },
+    @{ Path = 'Databases.Nexus.User'; Prompt = '既有 SQL 登入帳號' },
+    @{ Path = 'Databases.Nexus.Password'; Prompt = 'SQL 密碼' },
     @{ Path = 'Identity.ActiveDirectory.BindPassword'; Prompt = 'AD 服務帳號密碼' },
     @{ Path = 'Inference.Providers.Google.ApiKey'; Prompt = 'Google AI API key' }
 )) {

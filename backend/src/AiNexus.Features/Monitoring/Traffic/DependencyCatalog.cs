@@ -1,5 +1,6 @@
 using System.Data.Common;
-using Microsoft.Data.SqlClient;
+using AiNexus.Platform.Data;
+using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Monitoring.Traffic;
 
@@ -7,7 +8,13 @@ public sealed class DependencyCatalog
 {
     private readonly List<(string Host, int Port, string Id)> http = [];
     private readonly List<(string Server, string Database, string Id)> sql = [];
-    public DependencyCatalog(IConfiguration config, RuntimeTraffic traffic)
+    /// <summary>Display names of the known <c>Databases</c> entries; any other configured entry is listed by its name.</summary>
+    private static readonly Dictionary<string, string> DatabaseLabels = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Nexus"] = "主資料庫", ["Gdweb"] = "公文資料庫", ["Meiho"] = "校務資料庫"
+    };
+
+    public DependencyCatalog(IConfiguration config, IOptions<DatabasesOptions> databases, RuntimeTraffic traffic)
     {
         AddHttp("https://generativelanguage.googleapis.com", "google", "Google AI");
         AddHttp(config["Inference:Providers:Ollama:Endpoint"], "ollama", "Ollama");
@@ -15,16 +22,11 @@ public sealed class DependencyCatalog
         AddHttp(config["Knowledge:Rerank:Endpoint"], "rerank", "重排序服務");
         AddHttp(config["WebSearch:Endpoint"], "search", "連網搜尋");
         AddHttp(config["Repositories:Gitea:BaseUrl"], "gitea", "Gitea 程式庫");
-        foreach (var (key, id, name) in new[] { ("Nexus", "sql.nexus", "主資料庫"), ("LegacyGdweb", "sql.gdweb", "公文資料庫"), ("LegacyMeiho", "sql.meiho", "校務資料庫") })
+        foreach (var (name, database) in databases.Value.Where(x => x.Value.Configured).OrderBy(x => x.Key, StringComparer.Ordinal))
         {
-            var connection = config.GetConnectionString(key);
-            if (string.IsNullOrWhiteSpace(connection)) continue;
-            try
-            {
-                var parsed = new SqlConnectionStringBuilder(connection);
-                sql.Add((parsed.DataSource, parsed.InitialCatalog, id)); traffic.RegisterDependency(id, name, "database");
-            }
-            catch (ArgumentException) { /* Startup/storage validation owns malformed connection settings. */ }
+            var id = "sql." + name.ToLowerInvariant();
+            sql.Add((database.Server, database.Name, id));
+            traffic.RegisterDependency(id, DatabaseLabels.GetValueOrDefault(name, name), "database");
         }
         traffic.RegisterDependency("http.other", "其他 HTTP 服務", "http");
         traffic.RegisterDependency("sql.other", "其他 SQL 資料庫", "database");
