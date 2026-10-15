@@ -210,7 +210,7 @@ export class DashboardBoard {
   private target(drag: Drag, event: PointerEvent) {
     for (const [id, element] of this.elements()) {
       if (id === drag.id) continue;
-      const box = element.getBoundingClientRect();
+      const box = this.slot(element);
       const insetX = box.width * SWAP_INSET,
         insetY = box.height * SWAP_INSET;
       if (
@@ -222,6 +222,21 @@ export class DashboardBoard {
         return id;
     }
     return null;
+  }
+
+  /**
+   * Where a tile sits in the grid, ignoring any glide still under way. A tile that just made room
+   * still looks like it is under the pointer (on a busy device its glide may not even have
+   * started), and hitting it there would swap the dragged tile straight back.
+   */
+  private slot(element: HTMLElement) {
+    const board = element.parentElement!;
+    const origin = board.getBoundingClientRect();
+    const left = origin.left + element.offsetLeft - board.offsetLeft,
+      top = origin.top + element.offsetTop - board.offsetTop;
+    const width = element.offsetWidth,
+      height = element.offsetHeight;
+    return { left, top, width, height, right: left + width, bottom: top + height };
   }
 
   private elements() {
