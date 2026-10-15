@@ -186,7 +186,7 @@ public sealed class ReleaseScriptGenerator(Func<DbContext> createContext)
         return builder.ToString();
     }
 
-    private static string Resolve(IMigrationsAssembly assembly, string nameOrId, string option)
+    internal static string Resolve(IMigrationsAssembly assembly, string nameOrId, string option)
         => assembly.FindMigrationId(nameOrId)
             ?? throw new ReleaseScriptException($"{option} 找不到 migration：{nameOrId}。請用 migration id（例如 20261009225825_InitialCreate）或名稱；空庫用 0。");
 

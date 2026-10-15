@@ -5,7 +5,7 @@
 還原所有鎖定版本的相依套件。
 
 .DESCRIPTION
-依 lockfile 還原 npm（frontend，含 Playwright）、NuGet 與 dotnet 本機工具（dotnet-ef），
+依 lockfile 還原 npm（frontend，含 Playwright）、NuGet 與 dotnet 本機工具（dotnet-ef、SqlPackage），
 並在缺少時為目前使用者安裝 Verify.ps1 需要的 Pester。
 
 .EXAMPLE
@@ -28,5 +28,5 @@ try {
     dotnet tool restore
     if ($LASTEXITCODE -ne 0) { throw '.NET 本機工具還原失敗。' }
     Install-NexusPester
-    Write-Output '已還原鎖定版本的相依套件、EF 工具與 Pester。'
+    Write-Output '已還原鎖定版本的相依套件、EF 工具、SqlPackage 與 Pester。'
 } finally { Pop-Location }

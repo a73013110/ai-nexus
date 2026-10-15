@@ -1,3 +1,4 @@
+using AiNexus.Features.Persistence.ReleaseScripts;
 using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Data;
 using AiNexus.Platform.Data.Sql;
@@ -26,6 +27,7 @@ public sealed class PersistenceModule : IFeatureModule
         services.AddDbContextSqlDatabase<NexusDbContext>();
         services.AddSqlDatabase<NexusMasterDatabase>();
         services.AddScoped<DatabaseInitializer>();
+        services.AddScoped<SchemaDiffGenerator>();
         services.AddScoped<DatabaseSchema>();
         services.AddScoped<SqlVectorCapabilities>();
         services.AddSingleton<StorageReadiness>();

@@ -2,14 +2,15 @@
 
 <#
 .SYNOPSIS
-產生新的 IIS 發布套件（app、config 範本、keys、logs、migrations.sql、選用的 database/ 與 Verify-IIS.ps1）。
+產生新的 IIS 發布套件（app、config 範本、keys、logs、migrations.sql、選用的 database/、Verify-IIS.ps1 與 Verify-Database.ps1）。
 
 .DESCRIPTION
 預設先執行 Build.ps1，再把發布產物複製到 artifacts/iis/<時間>/app；web.config 由 SDK 從
 backend/src/AiNexus.Host/web.config 帶入，不再改寫。config/ 只在不存在時由範本建立，
 並把 Attachments.StoragePath 與 Diagnostics.Directory 設為 -DataRoot 下的 attachments、diagnostics。
 migrations.sql 是發布當下以 dotnet ef 產生的 idempotent SQL，給 DBA 審閱套用。
-提供 -FromMigration 時另以主機的 db script 指令產生 database/：同一份 SQL 依物件與結構／資料拆成編號檔，附 manifest.md。
+提供 -FromMigration 時另以主機的 db script 指令產生 database/：同一份 SQL 依物件與結構／資料拆成編號檔，附 manifest.md；
+再以 db diff 指令（SqlPackage）產生 database/diff/ 與 database/expected.dacpac，部署後以 Verify-Database.ps1 驗證實際結構。
 套件不含秘密；只有 app/ 是 IIS 的實體路徑。替換執行中網站的步驟見 docs/operations/iis-deployment.md。
 
 .PARAMETER DataRoot
@@ -26,7 +27,11 @@ migrations.sql 是發布當下以 dotnet ef 產生的 idempotent SQL，給 DBA �
 
 .PARAMETER FromMigration
 正式機目前最後一個已套用的 migration（id 或名稱；0 代表空庫）。提供時在套件產生 database/（schema/、data/ 與
-manifest.md），範圍到最新 migration；不連線資料庫。
+manifest.md），範圍到最新 migration；另在 Databases.Nexus 的 SQL Server 建暫存庫，產生每個物件的差異（diff/）與部署後
+驗證用的 expected.dacpac，並附 Verify-Database.ps1。暫存庫結束時一定刪除。
+
+.PARAMETER SkipSchemaDiff
+搭配 -FromMigration：只產生拆檔 SQL，不連 SQL Server；套件沒有 diff/、expected.dacpac 與 Verify-Database.ps1。
 
 .PARAMETER SkipBuild
 使用 PublishDirectory 既有的發布產物。
@@ -50,6 +55,7 @@ param(
     [switch]$IncludeLocalConfig,
     [switch]$AllowUntrustedSql,
     [ValidateNotNullOrEmpty()][string]$FromMigration,
+    [switch]$SkipSchemaDiff,
     [switch]$SkipBuild,
     [string]$PublishDirectory = 'artifacts/publish'
 )
@@ -99,8 +105,22 @@ try {
 } finally { Pop-Location }
 # Same migrations, split for DBAs who run DDL and DML separately and file by file; see docs/operations/iis-deployment.md.
 if ($PSBoundParameters.ContainsKey('FromMigration')) {
-    if ((Invoke-NexusHostCommand 'db', 'script', '--from', $FromMigration, '--output', (Join-Path $package 'database')) -ne 0) {
+    $database = Join-Path $package 'database'
+    if ((Invoke-NexusHostCommand 'db', 'script', '--from', $FromMigration, '--output', $database) -ne 0) {
         throw '拆檔 SQL 產生失敗；原因見上方輸出（例如 -FromMigration 不存在，或 migration 含會重建資料表的操作）。'
+    }
+    # Per-object diff and the expected schema for Verify-Database.ps1, from a temporary database on the Databases:Nexus
+    # server. The host runs SqlPackage with dotnet tool run, so the version pinned in .config/dotnet-tools.json.
+    if (!$SkipSchemaDiff) {
+        Push-Location -LiteralPath $root
+        try {
+            dotnet tool restore | Out-Host
+            if ($LASTEXITCODE -ne 0) { throw '.NET 本機工具（SqlPackage）還原失敗。' }
+            if ((Invoke-NexusHostCommand 'db', 'diff', '--from', $FromMigration, '--output', $database) -ne 0) {
+                throw '結構差異產生失敗；原因見上方輸出（Databases.Nexus 需可連線且能建庫）。不需要時加 -SkipSchemaDiff。'
+            }
+        } finally { Pop-Location }
+        Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Verify-Database.ps1') -Destination $package
     }
 }
 Write-Output "IIS 發布套件：$package"

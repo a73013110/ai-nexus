@@ -21,7 +21,7 @@ Describe 'scripts/ entry list' {
         $names = @(Get-ChildItem -LiteralPath (Join-Path $root 'scripts') -Filter '*.ps1').BaseName | Sort-Object
         $names | Should -Be (@(
             'Build', 'Configure-Local', 'Export-Contracts', 'Initialize-Database', 'Publish-IIS', 'Restore', 'Start-Dev',
-            'Start-Local', 'Test-Environment', 'Test-Repository', 'Verify', 'Verify-IIS') | Sort-Object)
+            'Start-Local', 'Test-Environment', 'Test-Repository', 'Verify', 'Verify-Database', 'Verify-IIS') | Sort-Object)
     }
 }
 
@@ -80,13 +80,17 @@ Describe 'Host commands called by scripts' {
         }
     }
 
-    It 'splits the release SQL in Publish-IIS.ps1 only when -FromMigration is given' {
+    It 'splits the release SQL and diffs the schema in Publish-IIS.ps1 only when -FromMigration is given' {
         $publish = @($calls | Where-Object { $_.Script -eq 'Publish-IIS.ps1' })
-        $publish.Count | Should -Be 1
+        $publish.Count | Should -Be 2
         $publish[0].Words | Should -Be @('db', 'script', '--from', '--output')
+        $publish[1].Words | Should -Be @('db', 'diff', '--from', '--output')
         $text = [IO.File]::ReadAllText((Join-Path $root 'scripts/Publish-IIS.ps1'))
         $text | Should -Match "PSBoundParameters\.ContainsKey\('FromMigration'\)"
         $text | Should -Match 'migrations script --idempotent'
+        # db diff runs the SqlPackage pinned by the tool manifest, which needs a restore from the repository root.
+        $text | Should -Match 'dotnet tool restore'
+        $text | Should -Match "Verify-Database\.ps1"
     }
 }
 
@@ -94,5 +98,42 @@ Describe 'Verify-IIS.ps1' {
     It 'runs on its own, because it is copied into the release package' {
         $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
         [IO.File]::ReadAllText((Join-Path $root 'scripts/Verify-IIS.ps1')) | Should -Not -Match 'Import-Module|\$PSScriptRoot'
+    }
+}
+
+Describe 'Verify-Database.ps1' {
+    BeforeAll {
+        $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
+        $script = Join-Path $root 'scripts/Verify-Database.ps1'
+    }
+
+    It 'runs on its own, because it is copied into the release package' {
+        [IO.File]::ReadAllText($script) | Should -Not -Match 'Import-Module|\$PSScriptRoot'
+    }
+
+    It 'names the SqlPackage version the tool manifest pins' {
+        $manifest = [IO.File]::ReadAllText((Join-Path $root '.config/dotnet-tools.json')) | ConvertFrom-Json -AsHashtable
+        $version = $manifest['tools']['microsoft.sqlpackage']['version']
+        [IO.File]::ReadAllText($script) | Should -Match ([regex]::Escape("`$sqlPackageVersion = '$version'"))
+    }
+
+    It 'ignores column order and environment differences but reports objects missing from either side' {
+        $text = [IO.File]::ReadAllText($script)
+        foreach ($property in 'IgnoreColumnOrder=True', 'DropObjectsNotInSource=True', 'IgnorePermissions=True', 'ScriptDatabaseOptions=False') { $text | Should -Match ([regex]::Escape($property)) }
+        foreach ($type in "'Users'", "'Logins'", "'Permissions'", "'Filegroups'", "'FullTextCatalogs'") { $text | Should -Match ([regex]::Escape($type)) }
+    }
+
+    It 'fails with installation steps instead of skipping when SqlPackage is missing' {
+        $dacpac = Join-Path $TestDrive 'expected.dacpac'
+        Set-Content -LiteralPath $dacpac -Value 'x'
+        { & $script -Server 'sql.invalid' -DacpacPath $dacpac -SqlPackagePath (Join-Path $TestDrive 'missing/SqlPackage.exe') } | Should -Throw '*SqlPackagePath*'
+        $output = pwsh -NoProfile -Command "`$env:PATH = ''; `$env:ProgramFiles = '$TestDrive'; & '$script' -Server sql.invalid -DacpacPath '$dacpac'" 2>&1 | Out-String
+        $LASTEXITCODE | Should -Not -Be 0
+        $output | Should -Match 'microsoft\.sqlpackage'
+        $output | Should -Match 'sqlpackage-download'
+    }
+
+    It 'fails clearly without the expected dacpac' {
+        { & $script -Server 'sql.invalid' -DacpacPath (Join-Path $TestDrive 'none.dacpac') } | Should -Throw '*expected.dacpac*'
     }
 }

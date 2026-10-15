@@ -54,13 +54,15 @@ DBA 要把結構（DDL）與資料（DML）分給不同人、逐檔執行時，�
 pwsh -NoProfile -File scripts/Publish-IIS.ps1 -DataRoot 'D:\CoreProject\AiNexus\data' -FromMigration 20261014140318_NavigationGroups
 ```
 
-套件多一個 `database\`，`migrations.sql` 照舊保留。兩者出自同一個 EF SQL Server 產生器，語句相同，只差切檔與交易邊界；產生時不連線資料庫。
+套件多一個 `database\`，`migrations.sql` 照舊保留。兩者出自同一個 EF SQL Server 產生器，語句相同，只差切檔與交易邊界；拆檔不連線資料庫。`diff\`、`expected.dacpac` 與部署後驗證見[結構差異與部署後驗證](database-verification.md)。
 
 ```text
 database\
 ├─ manifest.md                             ← 執行清單：編號、類型、物件、migration、檔名、注意
 ├─ schema\0010_accesscontrol.Features.sql  ← 結構
-└─ data\0030_accesscontrol.Features.sql    ← 資料（HasData 種子與 DataSql）
+├─ data\0030_accesscontrol.Features.sql    ← 資料（HasData 種子與 DataSql）
+├─ diff\                                   ← 每個物件的定義差異
+└─ expected.dacpac                         ← 部署後驗證用的預期結構
 ```
 
 - **依編號由小到大執行**：編號在 `schema\`、`data\` 之間連續（間隔 10），資料常依賴前一個結構檔（例如先加欄再填值），兩人要照 manifest 交接，不能各跑各的資料夾。
@@ -69,5 +71,5 @@ database\
 - 每個 migration 的最後一檔寫入 `__EFMigrationsHistory`。寫入後該 migration 的檔都會被略過，所以要等它前面的檔（含資料）都成功才執行。
 - 中途失敗時，修正原因後**從失敗的那一檔繼續**；已成功的檔在 history 寫入前不會被略過，重跑會因物件已存在而失敗。
 - manifest 標「交易外」的檔（例如全文索引）不能包進交易；同一 migration 的 history 檔也在交易外，與 EF 相同。
-- 檔案為 UTF-8（含 BOM）、以 `GO` 分批：`sqlcmd -S <主機> -d AiNexus -b -f 65001 -i <檔案>`，或在 SSMS 逐檔開啟執行。
+- 檔案為 UTF-8（含 BOM）、以 `GO` 分批：`sqlcmd -S <主機> -d AiNexus -b -I -f 65001 -i <檔案>`（`-I` 開 QUOTED_IDENTIFIER，filtered index 需要），或在 SSMS 逐檔開啟執行。
 - 範圍內有會重建資料表的操作時發布直接失敗並列出原因，見 [資料庫](../architecture/database.md#migration)。工具本身是主機指令 `db script --from <migration> [--to <migration>] --output <目錄>`（`AiNexus.Host --help`）。

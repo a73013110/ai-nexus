@@ -12,6 +12,8 @@ pwsh -NoProfile -File 'D:\Packages\AiNexus\Verify-IIS.ps1' `
 
 它檢查必要檔案、Production、外部設定位置、金鑰及站外原檔目錄、Host、集區與 HTTPS session；不會顯示秘密，也不聲稱讀得到檔案就代表集區身分可讀。
 
+DBA 逐檔執行拆檔 SQL 後，先以套件的 `Verify-Database.ps1` 比對正式庫的實際結構，見[結構差異與部署後驗證](database-verification.md#部署後驗證)。
+
 再做 **SQL／設定與原檔 IO 驗證**，不啟動背景 workers、不登入 AD、不產生 AI 回答（僅讀取模型清單）：
 
 ```powershell
