@@ -33,7 +33,9 @@
   align-items: center;
   border-bottom: 1px solid var(--line);
 }
-.ui-table-toolbar-wrap:empty {
+// 沒有標題、表格動作與欄位選擇時（面板裡的小表格）不留空白列與分隔線。
+.ui-table-toolbar-wrap:empty,
+.ui-table-toolbar-wrap:has(> .ui-table-actions:only-child:empty) {
   display: none;
 }
 .ui-table-actions {

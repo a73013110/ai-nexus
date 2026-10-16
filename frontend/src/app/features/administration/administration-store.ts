@@ -33,8 +33,12 @@ export class AdministrationStore {
   readonly loading = this.catalogRead.loading;
   readonly loadingUsers = computed(() => this.typing() || this.usersRead.refreshing());
   readonly actionError = signal('');
+  /** 使用者列表沒有資料時讀取失敗由表格狀態顯示（附重試），頁首只提示已有資料時的失敗。 */
   readonly error = computed(
-    () => this.actionError() || this.catalogRead.error() || this.usersRead.error(),
+    () =>
+      this.actionError() ||
+      this.catalogRead.error() ||
+      (this.users()?.users.length ? this.usersRead.error() : ''),
   );
   readonly toast = inject(ToastService);
 

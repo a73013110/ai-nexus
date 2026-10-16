@@ -375,7 +375,24 @@ test("health, service map, session filters, inspectors, range changes and snapsh
       exact: true,
     });
     await expect(drawer).toBeVisible();
-    await expect(drawer.getByText("10.20.3.40")).toBeVisible();
+    await expect(drawer.getByText("10.20.3.40", { exact: true })).toBeVisible();
+    // 識別碼可複製，原始資料預設收合；上下筆只在線上人員目前這一頁移動。
+    await expect(
+      drawer.getByRole("button", { name: "複製工作階段識別", exact: true }),
+    ).toBeVisible();
+    await expect(drawer.locator("details.ui-raw-record")).not.toHaveAttribute(
+      "open",
+    );
+    const heading = page.locator(".ui-drawer-summary h3");
+    const first = await heading.textContent();
+    await page
+      .getByRole("button", { name: "下一筆工作階段", exact: true })
+      .click();
+    await expect(heading).not.toHaveText(first ?? "");
+    await page
+      .getByRole("button", { name: "上一筆工作階段", exact: true })
+      .click();
+    await expect(heading).toHaveText(first ?? "");
     await page
       .getByRole("button", { name: "關閉工作階段詳情", exact: true })
       .click();
@@ -406,7 +423,10 @@ test("health, service map, session filters, inspectors, range changes and snapsh
     await chooseSelect(page, "在線狀態", "背景分頁");
     await expect(page.getByRole("table").getByRole("row")).toHaveCount(3);
     await chooseSelect(page, "在線狀態", "所有在線狀態");
-    await page.getByRole("button", { name: "下一頁連線" }).click();
+    await page
+      .locator("nx-monitoring-sessions")
+      .getByRole("button", { name: "下一頁", exact: true })
+      .click();
     await expect(page.getByRole("table").getByRole("row")).toHaveCount(3);
     await page
       .getByRole("list", { name: "依目前功能篩選工作階段" })

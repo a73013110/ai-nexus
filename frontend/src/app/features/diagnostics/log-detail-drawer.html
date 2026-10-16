@@ -171,10 +171,10 @@
             <h3 class="ui-section-heading log-exception-type">{{ selected.exceptionType }}</h3>
             <nx-code-block label="例外堆疊" [value]="selected.exceptionDetail || '無例外堆疊'" />
           } @else {
-            <div class="ui-table-state">
+            <nx-empty-state>
               <nx-icon name="check" /><strong>無例外</strong>
               <p>此事件未記錄例外堆疊。</p>
-            </div>
+            </nx-empty-state>
           }
         }
       }

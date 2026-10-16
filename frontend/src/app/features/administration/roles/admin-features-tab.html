@@ -1,7 +1,7 @@
 <div class="page-toolbar">
   <p class="form-note">
     功能由模組註冊，路由與 API
-    授權固定；可調整名稱、圖示、啟用、選單分群與順序（側欄同序）。選單分群只決定排列，不影響授權。
+    授權固定；可調整名稱、圖示、啟用、選單分群與順序（拖曳把手或用「⋯」，側欄同序）。選單分群只決定排列，不影響授權。
   </p>
   <button class="secondary-button" [disabled]="saving()" (click)="editGroup.emit(undefined)">
     <nx-icon name="plus" />新增選單分群
@@ -17,9 +17,9 @@
     <h2>
       功能 <span class="ui-count-label">{{ features().length }} 項</span>
     </h2>
-    <span class="form-note feature-order-hint">{{
-      saving() ? '正在儲存順序…' : '拖曳把手或用「⋯」調整分群內順序'
-    }}</span>
+    @if (saving()) {
+      <span class="form-note" role="status">正在儲存順序…</span>
+    }
   </div>
   <table>
     <colgroup>

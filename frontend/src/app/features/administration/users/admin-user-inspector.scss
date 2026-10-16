@@ -12,9 +12,13 @@
   flex: 1 1 auto;
   min-height: 0;
 }
-
+.inspector-audit {
+  flex: none;
+  min-height: 1.75rem;
+  font-size: var(--text-caption);
+}
+// 手機上關聯列維持一行：ID 截斷，稽核連結只留圖示與觸控尺寸。
 @include bp.below(phone) {
-  // The title keeps the room; the audit link keeps its icon, its name and a touch-sized target.
   .inspector-audit {
     justify-content: center;
     min-width: var(--button-target);

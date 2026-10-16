@@ -44,6 +44,16 @@ export class AdministrationPage {
   readonly store = inject(AdministrationStore);
   private readonly router = inject(Router);
   readonly inspected = signal<AdminUserDto | null>(null);
+  /** 使用者列表目前這一頁；管理對話框的上下筆只在這一頁內移動。 */
+  readonly pageUsers = computed(() => this.store.users()?.users ?? []);
+  readonly inspectedIndex = computed(() => {
+    const id = this.inspected()?.id;
+    return id ? this.pageUsers().findIndex((user) => user.id === id) : -1;
+  });
+  inspectAdjacent(direction: -1 | 1) {
+    const next = this.pageUsers()[this.inspectedIndex() + direction];
+    if (next) this.inspected.set(next);
+  }
   readonly tab = signal('users');
   readonly tabs = [
     { value: 'users', label: '使用者' },

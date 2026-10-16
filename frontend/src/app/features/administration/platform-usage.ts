@@ -9,8 +9,7 @@ import {
   formatPercent,
 } from '@shared/browser/format';
 import type { BadgeTone } from '@shared/ui/count-badge';
-import { DataTable } from '@shared/ui/data-table';
-import { EmptyState } from '@shared/ui/empty-state';
+import { DataTable, TableState } from '@shared/ui/data-table';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { StatGrid, StatTile } from '@shared/ui/stat-tile';
@@ -43,7 +42,7 @@ interface ServiceRow {
  */
 @Component({
   selector: 'nx-platform-usage',
-  imports: [DataTable, EmptyState, Icon, Notice, StatGrid, StatTile, StatusBadge],
+  imports: [DataTable, Icon, Notice, StatGrid, StatTile, StatusBadge, TableState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrls: ['./operations-tabs.scss', './platform-usage.scss'],
   templateUrl: './platform-usage.html',

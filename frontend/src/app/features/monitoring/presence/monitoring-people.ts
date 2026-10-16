@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, computed, input, model, output } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  input,
+  model,
+  output,
+  viewChild,
+} from '@angular/core';
 import type { OnlineSession } from '@core/api/schema';
 import { Panel } from '@shared/ui/panel';
 import { MonitoringSessions } from './monitoring-sessions';
@@ -90,7 +98,6 @@ import { monitoringFeatureNames } from '../monitoring-format';
     </ul>
     <nx-monitoring-sessions
       [sessions]="sessions()"
-      [timeoutSeconds]="timeoutSeconds()"
       [selectedId]="selectedId()"
       [(feature)]="feature"
       (selected)="selected.emit($event)"
@@ -99,10 +106,11 @@ import { monitoringFeatureNames } from '../monitoring-format';
 })
 export class MonitoringPeople {
   readonly sessions = input.required<OnlineSession[]>();
-  readonly timeoutSeconds = input.required<number>();
   readonly selectedId = input<string | null>(null);
   readonly feature = model('all');
   readonly selected = output<OnlineSession>();
+  /** 工作階段表格；頁面的詳情抽屜依它目前這一頁逐筆瀏覽。 */
+  readonly list = viewChild(MonitoringSessions);
   private readonly featureName = monitoringFeatureNames();
   readonly features = computed(() => {
     const counts = new Map<string, number>();

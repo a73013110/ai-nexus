@@ -71,9 +71,6 @@ tr.is-dragging .feature-handle {
 }
 // Cards have no handle: a phone moves features with the row menu.
 @include bp.below(narrow) {
-  .feature-order-hint {
-    display: none;
-  }
   tbody tr.feature-section {
     min-height: 0;
     padding-block: var(--p-space-2);

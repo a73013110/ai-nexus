@@ -82,7 +82,6 @@
       <nx-monitoring-people
         class="monitor-deferred"
         [sessions]="data.sessions"
-        [timeoutSeconds]="data.sessionTimeoutSeconds"
         [selectedId]="openSessionId()"
         [(feature)]="featureFilter"
         (selected)="showSession($event)"
@@ -102,7 +101,8 @@
         </summary>
         <p>
           此頁呈現單一應用程式執行個體，資料保留最近 15
-          分鐘，重啟後重新採集。在線狀態以瀏覽器心跳判定；工作階段可來自同一電腦的不同分頁，IP
+          分鐘，重啟後重新採集。在線狀態以瀏覽器心跳判定（{{ data.sessionTimeoutSeconds }}
+          秒未收到即離線）；工作階段可來自同一電腦的不同分頁，IP
           可能是代理位址，裝置與頁面分類是瀏覽器提供的提示。
         </p>
         <p>
@@ -143,6 +143,29 @@
   }
 </nx-feature-page>
 <nx-detail-drawer [title]="drawerTitle()" (closed)="drawerOpen.set(false)">
+  @if (selectedSession()) {
+    <nx-drawer-pager
+      drawer-actions
+      noun="工作階段"
+      [index]="sessionIndex()"
+      [count]="pageSessions().length"
+      (move)="showAdjacentSession($event)"
+    />
+  }
+  <div drawer-summary class="ui-drawer-summary">
+    @if (summary(); as item) {
+      <div>
+        <nx-status-badge [tone]="item.tone">{{ item.status }}</nx-status-badge>
+        @if (item.at) {
+          <time [attr.datetime]="item.at">{{ time(item.at) }}</time>
+        }
+      </div>
+      <h3>{{ item.title }}</h3>
+      @if (item.subtitle) {
+        <span class="ui-drawer-subtitle">{{ item.subtitle }}</span>
+      }
+    }
+  </div>
   <nx-monitoring-inspector
     [selectedSession]="selectedSession()"
     [liveSession]="liveSession()"

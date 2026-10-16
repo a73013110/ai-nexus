@@ -14,13 +14,16 @@ import { FeatureAccessNotice } from '@core/layout/feature-access-notice';
 import { FeaturePage } from '@core/layout/feature-page';
 import { downloadBlob } from '@shared/browser/download';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
+import { DrawerPager } from '@shared/ui/drawer-pager';
 import { EmptyState } from '@shared/ui/empty-state';
 import { EXTRA_ICONS, Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
+import { StatusBadge } from '@shared/ui/status-badge';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { MonitoringActivity } from './traffic/monitoring-activity';
 import { MonitoringHero } from './health/monitoring-hero';
-import { MonitoringInspector } from './monitoring-inspector';
+import { MonitoringInspector, monitoringSummary } from './monitoring-inspector';
+import { monitoringTime } from './monitoring-format';
 import { MonitoringIssues, type MonitoringTarget } from './health/monitoring-issues';
 import { MonitoringPeople } from './presence/monitoring-people';
 import { MonitoringRuntime } from './health/monitoring-runtime';
@@ -45,6 +48,7 @@ const DRAWER_TITLES = {
   selector: 'nx-monitoring-page',
   imports: [
     DetailDrawer,
+    DrawerPager,
     EmptyState,
     FeaturePage,
     FeatureAccessNotice,
@@ -60,6 +64,7 @@ const DRAWER_TITLES = {
     MonitoringTraffic,
     MonitoringVitals,
     Notice,
+    StatusBadge,
     ViewSwitch,
   ],
   providers: [
@@ -82,6 +87,8 @@ export class MonitoringPage {
   readonly exporting = signal(false);
   readonly actionError = signal('');
   private readonly drawer = viewChild.required(DetailDrawer);
+  private readonly people = viewChild(MonitoringPeople);
+  readonly time = monitoringTime;
   readonly windows = [
     { value: '1', label: '1 分鐘' },
     { value: '5', label: '5 分鐘' },
@@ -115,6 +122,21 @@ export class MonitoringPage {
     const id = this.subsystemId();
     return (id && this.store.subsystems().find((s) => s.id === id)) || null;
   });
+  readonly summary = computed(() =>
+    monitoringSummary(
+      this.selectedSession(),
+      this.liveSession(),
+      this.subsystemId(),
+      this.liveSubsystem(),
+      this.liveDependency(),
+    ),
+  );
+  /** 線上人員表格目前這一頁的工作階段；上下筆只在這一頁內移動。 */
+  readonly pageSessions = computed(() => this.people()?.list()?.visible() ?? []);
+  readonly sessionIndex = computed(() => {
+    const id = this.selectedSession()?.id;
+    return id ? this.pageSessions().findIndex((s) => s.id === id) : -1;
+  });
   constructor() {
     void this.load();
   }
@@ -135,6 +157,10 @@ export class MonitoringPage {
   }
   showSession(session: OnlineSession) {
     this.show({ kind: 'session', session });
+  }
+  showAdjacentSession(direction: -1 | 1) {
+    const next = this.pageSessions()[this.sessionIndex() + direction];
+    if (next) this.selection.set({ kind: 'session', session: next });
   }
   showDependency(id: string) {
     this.show({ kind: 'dependency', id });

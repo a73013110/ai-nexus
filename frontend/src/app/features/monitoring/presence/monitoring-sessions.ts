@@ -8,7 +8,7 @@ import {
   output,
   signal,
 } from '@angular/core';
-import { DataTableRow } from '@shared/ui/data-table';
+import { DataTable, DataTableRow, TablePagination, TableState } from '@shared/ui/data-table';
 import { Icon } from '@shared/ui/icon';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { SearchField } from '@shared/ui/search-field';
@@ -16,16 +16,26 @@ import { Select } from '@shared/ui/select';
 import type { OnlineSession } from '@core/api/schema';
 import { presenceState, monitoringTime, monitoringFeatureNames } from '../monitoring-format';
 
+const PAGE_SIZE = 10;
+
 @Component({
   selector: 'nx-monitoring-sessions',
-  imports: [DataTableRow, Icon, StatusBadge, SearchField, Select],
+  imports: [
+    DataTable,
+    DataTableRow,
+    TablePagination,
+    TableState,
+    Icon,
+    StatusBadge,
+    SearchField,
+    Select,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './monitoring-sessions.html',
-  styles: ':host { display: block; min-width: 0; }',
+  styles: ':host { display: grid; gap: var(--p-space-3); min-width: 0; }',
 })
 export class MonitoringSessions {
   readonly sessions = input.required<OnlineSession[]>();
-  readonly timeoutSeconds = input.required<number>();
   /** The session open in the inspector, highlighted like any open row. */
   readonly selectedId = input<string | null>(null);
   readonly selected = output<OnlineSession>();
@@ -34,6 +44,7 @@ export class MonitoringSessions {
   readonly state = signal('all');
   readonly sort = signal<'name' | 'requests'>('name');
   readonly page = signal(0);
+  readonly pageSize = PAGE_SIZE;
   readonly featureName = monitoringFeatureNames();
   readonly stateName = presenceState;
   readonly time = monitoringTime;
@@ -68,10 +79,12 @@ export class MonitoringSessions {
           : a.displayName.localeCompare(b.displayName, 'zh-TW') || a.id.localeCompare(b.id),
       );
   });
-  readonly lastPage = computed(() => Math.max(0, Math.ceil(this.filtered().length / 10) - 1));
+  readonly lastPage = computed(() =>
+    Math.max(0, Math.ceil(this.filtered().length / PAGE_SIZE) - 1),
+  );
   readonly currentPage = computed(() => Math.min(this.page(), this.lastPage()));
   readonly visible = computed(() =>
-    this.filtered().slice(this.currentPage() * 10, this.currentPage() * 10 + 10),
+    this.filtered().slice(this.currentPage() * PAGE_SIZE, (this.currentPage() + 1) * PAGE_SIZE),
   );
 
   constructor() {

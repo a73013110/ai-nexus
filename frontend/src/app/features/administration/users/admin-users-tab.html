@@ -19,10 +19,7 @@
   preferenceKey="admin-users"
 >
   <div table-toolbar class="ui-table-toolbar">
-    <h2>
-      使用者 <span class="ui-count-label">{{ store.users()?.total || 0 }} 位</span>
-    </h2>
-    <span class="form-note">選取使用者管理帳號、角色、模型、容量與對話</span>
+    <h2>使用者</h2>
   </div>
   <table>
     <colgroup>
@@ -104,12 +101,16 @@
       }
     </tbody>
   </table>
-  @if (!store.users()?.users?.length) {
-    <nx-empty-state table-state
-      ><h2>沒有符合的使用者</h2>
-      <p>可手動建立使用者，或在第一次 AD 登入時自動建立。</p></nx-empty-state
-    >
-  }
+  <nx-table-state
+    [count]="store.users()?.users?.length || 0"
+    [loading]="store.loadingUsers()"
+    [error]="store.usersRead.error()"
+    loadingText="正在讀取使用者"
+    errorTitle="無法載入使用者"
+    emptyTitle="沒有符合的使用者"
+    emptyText="可手動建立使用者，或在第一次 AD 登入時自動建立。"
+    (retry)="store.readUsers()"
+  />
   <div table-footer class="ui-table-footer">
     <nx-table-pagination
       mode="offset"

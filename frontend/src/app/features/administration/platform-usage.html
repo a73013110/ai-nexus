@@ -19,7 +19,7 @@
     </button>
   </div>
 </div>
-@if (read.error()) {
+@if (read.error() && stats()) {
   <nx-notice [message]="read.error()"
     ><button notice-actions type="button" (click)="read.reload()">重新載入</button>
   </nx-notice>
@@ -55,9 +55,11 @@
 >
   <div table-toolbar class="ui-table-toolbar">
     <h2>
-      各模型使用狀況 <span class="ui-count-label">{{ models().length }} 個模型</span>
+      各模型使用狀況
+      @if (stats()) {
+        <span class="ui-count-label">{{ models().length }} 個模型</span>
+      }
     </h2>
-    <span class="ops-table-note">依請求數排序</span>
   </div>
   <table>
     <colgroup>
@@ -103,17 +105,15 @@
       }
     </tbody>
   </table>
-  @if (!models().length) {
-    <nx-empty-state table-state class="ui-table-state">
-      @if (read.loading()) {
-        <nx-icon name="loading" />
-        <p>正在讀取平台用量</p>
-      } @else {
-        <nx-icon name="chart" />
-        <p>區間內尚無模型使用紀錄。</p>
-      }
-    </nx-empty-state>
-  }
+  <nx-table-state
+    [count]="models().length"
+    [loading]="read.loading()"
+    [error]="read.error()"
+    loadingText="正在讀取平台用量"
+    errorTitle="無法載入平台用量"
+    emptyTitle="區間內尚無模型使用紀錄"
+    (retry)="read.reload()"
+  />
 </nx-data-table>
 <div class="ops-pair">
   <nx-data-table
@@ -124,7 +124,10 @@
   >
     <div table-toolbar class="ui-table-toolbar">
       <h2>
-        使用來源 <span class="ui-count-label">{{ kinds().length }} 類</span>
+        使用來源
+        @if (stats()) {
+          <span class="ui-count-label">{{ kinds().length }} 類</span>
+        }
       </h2>
     </div>
     <table>
@@ -165,16 +168,19 @@
         }
       </tbody>
     </table>
-    @if (!kinds().length) {
-      <nx-empty-state table-state class="ui-table-state">
-        <p>{{ read.loading() ? '正在讀取使用來源' : '區間內尚無使用紀錄。' }}</p>
-      </nx-empty-state>
-    }
+    <nx-table-state
+      [count]="kinds().length"
+      [loading]="read.loading()"
+      [error]="read.error()"
+      loadingText="正在讀取使用來源"
+      errorTitle="無法載入使用來源"
+      emptyTitle="區間內尚無使用紀錄"
+      (retry)="read.reload()"
+    />
   </nx-data-table>
   <nx-data-table class="ops-table" label="服務狀態" [busy]="read.refreshing()" [stacked]="true">
     <div table-toolbar class="ui-table-toolbar">
       <h2>服務狀態</h2>
-      <span class="ops-table-note">模型本身不會自動連網；地端可搭配自架 SearXNG</span>
     </div>
     <table>
       <colgroup>
@@ -203,10 +209,14 @@
         }
       </tbody>
     </table>
-    @if (!services().length) {
-      <nx-empty-state table-state class="ui-table-state">
-        <p>{{ read.loading() ? '正在讀取服務狀態' : '沒有服務狀態。' }}</p>
-      </nx-empty-state>
-    }
+    <nx-table-state
+      [count]="services().length"
+      [loading]="read.loading()"
+      [error]="read.error()"
+      loadingText="正在讀取服務狀態"
+      errorTitle="無法載入服務狀態"
+      emptyTitle="沒有服務狀態"
+      (retry)="read.reload()"
+    />
   </nx-data-table>
 </div>

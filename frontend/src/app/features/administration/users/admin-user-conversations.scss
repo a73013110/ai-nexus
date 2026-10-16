@@ -94,18 +94,9 @@
   font-variant-numeric: tabular-nums;
 }
 .conversation-pages {
-  display: flex;
-  align-items: center;
   flex: none;
-  gap: var(--p-space-1);
   padding: var(--p-space-1) var(--p-space-2) var(--p-space-1) var(--p-space-5);
   border-top: 1px solid var(--line);
-  color: var(--secondary);
-  font-size: var(--text-caption);
-  font-variant-numeric: tabular-nums;
-}
-.conversation-pages > span {
-  margin-right: auto;
 }
 .conversation-reading {
   min-height: 0;

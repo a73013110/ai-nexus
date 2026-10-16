@@ -17,16 +17,6 @@ code {
 .audit-time-column {
   width: 11rem;
 }
-.audit-detail-text {
-  margin: var(--p-space-2) 0 var(--section-gap);
-  padding: var(--section-padding);
-  border: 1px solid var(--line);
-  border-radius: var(--p-radius-md);
-  background: var(--surface-subtle);
-  font-size: var(--text-caption);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
 .audit-changes {
   display: grid;
   gap: 8px;
@@ -75,28 +65,4 @@ code {
 }
 .audit-feature-change small {
   color: var(--secondary);
-}
-.audit-record-details {
-  margin-top: var(--section-gap);
-}
-.audit-record-details summary {
-  display: flex;
-  align-items: center;
-  gap: var(--p-space-1);
-  width: fit-content;
-  min-height: var(--button-target);
-  color: var(--secondary);
-  font-weight: 600;
-  list-style: none;
-  cursor: pointer;
-}
-.audit-record-details summary::-webkit-details-marker {
-  display: none;
-}
-.audit-record-details summary nx-icon {
-  --icon-size: var(--icon-sm);
-  transition: transform var(--motion) var(--ease);
-}
-.audit-record-details[open] summary nx-icon {
-  transform: rotate(90deg);
 }

@@ -16,7 +16,9 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import { ViewScope } from '@shared/browser/view-scope';
 import { CompactDialog } from '@shared/ui/compact-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
+import { CopyValue } from '@shared/ui/copy-value';
 import { DialogHeader } from '@shared/ui/dialog-header';
+import { DrawerPager } from '@shared/ui/drawer-pager';
 import { Icon } from '@shared/ui/icon';
 import { Tabs, type TabItem } from '@shared/ui/tabs';
 import { ViewMotion } from '@shared/ui/view-motion';
@@ -31,6 +33,8 @@ import { UserConversationReader } from './user-conversation-reader';
  * One user's management centre: who they are and their last 30 days above tabs for the account,
  * roles, model policy, storage and an audited read-only view of their conversations. The shared
  * title bar names the dialog after the user; the summary and the tabs follow it.
+ * 標題列的上下筆只在列表目前這一頁內移動，離開前與切換頁籤一樣確認未儲存的變更；
+ * 使用者 ID 與活動稽核反查放在摘要的關聯列。
  */
 @Component({
   selector: 'nx-admin-user-inspector',
@@ -41,7 +45,9 @@ import { UserConversationReader } from './user-conversation-reader';
     AdminUserSummary,
     CompactDialog,
     ConfirmDialog,
+    CopyValue,
     DialogHeader,
+    DrawerPager,
     Icon,
     RouterLink,
     Tabs,
@@ -54,7 +60,11 @@ import { UserConversationReader } from './user-conversation-reader';
 })
 export class AdminUserInspector {
   readonly user = input<AdminUserDto | null>(null);
+  /** 開啟中的使用者在列表目前這一頁的位置；不在這一頁時為 -1。 */
+  readonly index = input(-1);
+  readonly count = input(0);
   readonly closed = output<void>();
+  readonly move = output<-1 | 1>();
   readonly store = inject(AdminUserStore);
   readonly session = inject(WorkspaceSession);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
@@ -101,6 +111,13 @@ export class AdminUserInspector {
   cancel(event: Event) {
     event.preventDefault();
     void this.requestClose();
+  }
+  async step(direction: -1 | 1) {
+    if (await this.mayLeave()) {
+      const tab = this.store.tab();
+      if (tab !== 'conversations') this.store.revert(tab);
+      this.move.emit(direction);
+    }
   }
   async selectTab(value: string) {
     const tab = value as UserTab,

@@ -17,7 +17,9 @@
           (checkedChange)="reader.deletedChanged($event)"
         />
         @if (reader.page(); as page) {
-          <span class="ui-count-label">{{ format(page.total) }} 段</span>
+          @if (page.total <= reader.pageSize) {
+            <span class="ui-count-label">{{ format(page.total) }} 段</span>
+          }
         }
       </div>
       @if (reader.error()) {
@@ -56,27 +58,17 @@
     @if (reader.page(); as page) {
       @if (page.total > reader.pageSize) {
         <div class="conversation-pages">
-          <span
-            >{{ page.offset + 1 }}–{{ page.offset + page.items.length }} /
-            {{ format(page.total) }}</span
-          >
-          <button
-            type="button"
-            class="icon-button"
-            aria-label="上一頁對話"
-            [disabled]="reader.loading() || !page.offset"
-            (click)="reader.loadList(page.offset - reader.pageSize)"
-          >
-            <nx-icon name="left" /></button
-          ><button
-            type="button"
-            class="icon-button"
-            aria-label="下一頁對話"
-            [disabled]="reader.loading() || page.offset + reader.pageSize >= page.total"
-            (click)="reader.loadList(page.offset + reader.pageSize)"
-          >
-            <nx-icon name="chevron" />
-          </button>
+          <nx-table-pagination
+            mode="offset"
+            [pageIndex]="page.offset / reader.pageSize"
+            [pageSize]="reader.pageSize"
+            [pageSizes]="[reader.pageSize]"
+            [count]="page.items.length"
+            [total]="page.total"
+            [busy]="reader.loading()"
+            (pageChange)="reader.loadList(page.offset + $event * reader.pageSize)"
+            (pageSelect)="reader.loadList($event * reader.pageSize)"
+          />
         </div>
       }
     }

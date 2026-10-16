@@ -23,7 +23,6 @@ import { AccessStatus } from './access-status';
         <h2>
           角色 <span class="ui-count-label">{{ roles().length }} 個</span>
         </h2>
-        <span class="form-note">選取角色進行編輯</span>
       </div>
       <table>
         <colgroup>

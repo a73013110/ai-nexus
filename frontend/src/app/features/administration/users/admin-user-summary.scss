@@ -24,6 +24,16 @@
   font-size: var(--text-caption);
   overflow-wrap: anywhere;
 }
+.summary-relations {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1) var(--p-space-3);
+  min-width: 0;
+  margin-inline-start: auto;
+}
+.summary-relations:empty {
+  display: none;
+}
 // Figures sit on inset panels like the overview's, at a tool's density: the label above, the
 // value with its detail on one baseline.
 .inspector-stats {
@@ -84,6 +94,10 @@
   }
   .summary-stat {
     padding: var(--p-space-1) var(--p-space-2);
+  }
+  .summary-relations {
+    flex: 1 1 100%;
+    margin-inline-start: 0;
   }
 }
 @media (max-height: 600px) {

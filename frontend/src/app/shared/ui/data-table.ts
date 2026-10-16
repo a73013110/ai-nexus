@@ -94,7 +94,7 @@ export type TableSortDirection = 'asc' | 'desc';
     </div>
     <div class="ui-table-scroll" role="region" tabindex="0" [attr.aria-label]="label()">
       <ng-content select="table" />
-      <ng-content select="[table-state], nx-table-state" />
+      <ng-content select="nx-table-state" />
     </div>
     <ng-content select="[table-footer]" />
   </div>`,
@@ -335,10 +335,29 @@ export class DataTableRow {
   imports: [Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
-    class: 'ui-table-state',
     role: 'status',
     '[hidden]': '!visible()',
   },
+  styles: `
+    :host {
+      display: grid;
+      justify-items: center;
+      gap: var(--p-space-2);
+      padding: var(--p-space-8) var(--p-space-4);
+      color: var(--secondary);
+      font-size: var(--p-font-sm);
+      text-align: center;
+    }
+    :host([hidden]) {
+      display: none;
+    }
+    p {
+      margin: 0;
+    }
+    :host > nx-icon {
+      color: var(--muted);
+    }
+  `,
   template: `@if (error()) {
       <nx-icon name="info" />
       <strong>{{ errorTitle() }}</strong>

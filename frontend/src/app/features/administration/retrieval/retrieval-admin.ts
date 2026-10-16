@@ -23,8 +23,7 @@ import { Card } from '@shared/ui/card';
 import { Checkbox } from '@shared/ui/checkbox';
 import { ConfirmDialog, type Confirmation } from '@shared/ui/confirm-dialog';
 import type { BadgeTone } from '@shared/ui/count-badge';
-import { DataTable } from '@shared/ui/data-table';
-import { EmptyState } from '@shared/ui/empty-state';
+import { DataTable, TableState } from '@shared/ui/data-table';
 import { Field } from '@shared/ui/field';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
@@ -65,7 +64,6 @@ const BENCH_COLLECTIONS = 3;
     Checkbox,
     ConfirmDialog,
     DataTable,
-    EmptyState,
     Field,
     Icon,
     JobProgress,
@@ -74,6 +72,7 @@ const BENCH_COLLECTIONS = 3;
     RetrievalResults,
     Select,
     StatusBadge,
+    TableState,
   ],
   providers: [ViewScope],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -115,11 +114,12 @@ export class RetrievalAdmin {
   readonly probing = signal(false);
   readonly searching = signal(false);
   readonly actionError = signal('');
+  /** 表格沒有資料時讀取失敗由表格狀態顯示（附重試）；已有資料的重新整理失敗才放到頁首提示。 */
   readonly error = computed(
     () =>
       this.actionError() ||
-      this.profilesRead.error() ||
-      this.capabilitiesRead.error() ||
+      (this.profiles().length ? this.profilesRead.error() : '') ||
+      (this.capabilities().length ? this.capabilitiesRead.error() : '') ||
       this.collectionsRead.error(),
   );
   private readonly confirmation = viewChild.required(ConfirmDialog);
