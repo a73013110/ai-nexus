@@ -72,7 +72,7 @@
 
 ## 元件工作臺 /design
 
-- 持有 `admin` 的管理員從存取管理頁首「⋯」→「介面元件」進入；正式元件配本機範例，淺色／深色局部預覽、匯出 semantic tokens，不改偏好、不呼叫模型、不建立資料。
+- 系統管理選單的「介面元件」（功能 `design`，預設授予 `administrators`，與 `admin` 分開授權）；純前端頁面、沒有 API，所以只有選單授權、沒有 policy。正式元件配本機範例，淺色／深色局部預覽、匯出 semantic tokens，不改偏好、不呼叫模型、不建立資料。
 - 側欄是元件索引；每個元件一個 `DesignSection`，各組分檔於 `frontend/src/app/features/design`。
 - 新共用元件要放範例（含停用、錯誤、選填等狀態）。
 

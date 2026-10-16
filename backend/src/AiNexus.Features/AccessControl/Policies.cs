@@ -16,6 +16,7 @@ public static class FeatureIds
     public const string Repositories = "repositories";
     public const string Admin = "admin";
     public const string Operations = "operations";
+    public const string Design = "design";
 }
 
 /// <summary>

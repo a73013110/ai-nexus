@@ -1031,7 +1031,7 @@ test("nested menu groups list features before subgroups, hide empty groups and s
   });
   await expect(
     system.locator(":scope > .workspace-icons").getByRole("link"),
-  ).toHaveText(["存取管理", "平台營運", "活動稽核"]);
+  ).toHaveText(["存取管理", "平台營運", "活動稽核", "介面元件"]);
   // Its subgroups nest inside it, ordered by SortOrder.
   await expect(system.locator(":scope > section.is-nested > h4")).toHaveText([
     "洞察",
@@ -1042,6 +1042,7 @@ test("nested menu groups list features before subgroups, hide empty groups and s
     "存取管理",
     "平台營運",
     "活動稽核",
+    "介面元件",
     "品質評測",
     "系統日誌",
     "即時監控",

@@ -170,34 +170,108 @@ select:where(.ui-input) {
   border-end-start-radius: calc(var(--table-radius) - 1px);
   border-end-end-radius: calc(var(--table-radius) - 1px);
 }
+// 分頁列：資訊靠左、翻頁按鈕組靠右；按鈕組有外框，一看就知道能按，頁碼夾在中間。
 .ui-table-pagination {
   display: flex;
+  flex: 1 1 auto;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--p-space-2);
-  font-size: var(--p-font-xs);
+  justify-content: space-between;
+  gap: var(--p-space-2) var(--p-space-4);
+  min-width: 0;
+  font-size: var(--text-caption);
+  font-variant-numeric: tabular-nums;
 }
-.ui-table-pagination nx-select {
-  width: 7.5rem;
+.ui-pagination-info,
+.ui-pagination-size {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  min-width: 0;
+  color: var(--secondary);
+  white-space: nowrap;
 }
-.ui-table-footer > .ui-table-pagination:only-child {
+:is(.ui-pagination-info, .ui-pagination-page) b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.ui-pagination-group {
+  display: inline-flex;
+  align-items: stretch;
   margin-inline-start: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  background: var(--surface);
 }
-.ui-table-page-jump {
+.ui-pagination-group > * + * {
+  border-inline-start: 1px solid var(--line);
+}
+.ui-pagination-group .icon-button {
+  width: 2.125rem;
+  height: auto;
+  min-height: 1.875rem;
+  border-radius: 0;
+}
+.ui-pagination-group > :first-child {
+  border-start-start-radius: calc(var(--p-radius-md) - 1px);
+  border-end-start-radius: calc(var(--p-radius-md) - 1px);
+}
+.ui-pagination-group > :last-child {
+  border-start-end-radius: calc(var(--p-radius-md) - 1px);
+  border-end-end-radius: calc(var(--p-radius-md) - 1px);
+}
+.ui-pagination-group .icon-button:hover:not([aria-disabled='true']) {
+  background: var(--hover);
+  color: var(--ink);
+}
+// 停用只淡化圖示：整顆按鈕半透明會連分隔線一起變淡，按鈕組看起來像斷掉。
+.ui-pagination-group .icon-button[aria-disabled='true'] {
+  opacity: 1;
+  background: transparent;
+}
+.ui-pagination-group .icon-button[aria-disabled='true'] nx-icon {
+  opacity: 0.4;
+}
+.ui-pagination-page {
   display: inline-flex;
   align-items: center;
   gap: var(--p-space-1);
+  padding-inline: var(--p-space-3);
+  color: var(--secondary);
+  white-space: nowrap;
 }
-.ui-table-page-jump input {
-  width: 3.5rem;
-  min-height: 1.75rem;
-  padding: 0 var(--p-space-2);
-  border: 1px solid var(--line);
+.ui-pagination-page input {
+  width: 3em;
+  height: 1.375rem;
+  padding: 0 var(--p-space-1);
+  border: 0;
   border-radius: var(--p-radius-sm);
-  background: var(--surface);
+  background: var(--hover);
   color: var(--ink);
   font: inherit;
-  text-align: end;
+  font-weight: 600;
+  text-align: center;
+  appearance: textfield;
+}
+.ui-pagination-page input::-webkit-inner-spin-button,
+.ui-pagination-page input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+.ui-pagination-page input:disabled {
+  background: transparent;
+}
+@include bp.below(phone) {
+  // 手機只留範圍與翻頁；每頁筆數維持預設。
+  .ui-pagination-size {
+    display: none;
+  }
+}
+@media (pointer: coarse) {
+  .ui-pagination-group .icon-button {
+    width: var(--button-target);
+    min-height: var(--button-target);
+  }
 }
 // QueryBar fields grow from 12rem and wrap (`ui-query-wide` from 18rem, e.g. a search); the
 // buttons keep their size at the end of the last line. A phone gives each field its own line.
@@ -207,6 +281,10 @@ select:where(.ui-input) {
 }
 .ui-query-row > .ui-query-wide {
   flex: 2 1 18rem;
+}
+// 自訂起訖（含秒、同年省略結束年份）約需 20rem；起點放寬，寬螢幕上不必靠省略號。
+.ui-query-row > .ui-time-range {
+  flex: 1.5 1 20rem;
 }
 @include bp.below(phone) {
   .ui-query-row > :not(.ui-query-actions, .ui-query-more) {

@@ -93,6 +93,16 @@ namespace AiNexus.Features.Persistence.Migrations
                         },
                         new
                         {
+                            Id = "design",
+                            Enabled = true,
+                            GroupId = "system",
+                            Icon = "sliders",
+                            Name = "介面元件",
+                            Route = "/design",
+                            SortOrder = 99
+                        },
+                        new
+                        {
                             Id = "operations",
                             Enabled = true,
                             GroupId = "system",
@@ -464,6 +474,11 @@ namespace AiNexus.Features.Persistence.Migrations
                         {
                             GroupId = "administrators",
                             FeatureId = "admin"
+                        },
+                        new
+                        {
+                            GroupId = "administrators",
+                            FeatureId = "design"
                         },
                         new
                         {

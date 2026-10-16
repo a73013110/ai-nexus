@@ -131,8 +131,8 @@ describe('DataTable', () => {
     fixture.componentRef.setInput('count', 100);
     fixture.componentRef.setInput('total', 523);
     fixture.detectChanges();
-    expect(host.textContent).toContain('1–100 / 523');
-    expect(host.textContent).toContain('/ 6 頁');
+    expect(host.querySelector('[role="status"]')!.textContent!.trim()).toBe('1–100 / 523 筆');
+    expect(host.textContent).toContain('/ 6');
     const jump = host.querySelector<HTMLInputElement>('[aria-label="跳到頁碼"]')!;
     jump.value = '4';
     jump.dispatchEvent(new Event('change'));

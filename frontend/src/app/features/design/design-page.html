@@ -18,7 +18,7 @@
   </nav>
 </ng-template>
 <nx-feature-page
-  title="介面元件"
+  [title]="session.featureName('design')"
   description="正式元件的本機範例；不呼叫 AI、不修改資料，預覽主題不影響個人設定。"
 >
   <div page-actions class="page-actions">
@@ -29,9 +29,6 @@
       [value]="theme()"
       (valueChange)="theme.set($event === 'dark' ? 'dark' : 'light')"
     />
-    <a routerLink="/admin" class="secondary-button"
-      ><nx-icon name="left" />{{ session.featureName('admin') }}</a
-    >
   </div>
   @if (loading()) {
     <p role="status">正在載入介面工作區…</p>
@@ -39,8 +36,8 @@
     <nx-notice [message]="error()"
       ><button notice-actions type="button" (click)="load()">重新載入</button>
     </nx-notice>
-  } @else if (!session.has('admin')) {
-    <nx-notice tone="danger">介面元件工作區僅提供平台管理員使用。</nx-notice>
+  } @else if (!session.has('design')) {
+    <nx-feature-access-notice feature="design" />
   } @else {
     <div #preview class="design-preview" [attr.data-theme]="theme()">
       <section aria-labelledby="design-foundations-title">

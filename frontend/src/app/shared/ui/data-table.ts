@@ -90,7 +90,9 @@ export type TableSortDirection = 'asc' | 'desc';
           {{ column.label }}</label
         >
       }
-      <button type="button" class="quiet-button" (click)="resetColumns()">還原預設欄位</button>
+      <button type="button" class="quiet-button" (click)="resetColumns()">
+        <nx-icon name="reset" />還原預設欄位
+      </button>
     </div>
     <div class="ui-table-scroll" role="region" tabindex="0" [attr.aria-label]="label()">
       <ng-content select="table" />
@@ -391,6 +393,7 @@ export class TableState {
 }
 
 /**
+ * 表格頁尾的分頁列：左側是範圍與每頁筆數，右側是一組有外框的翻頁按鈕，頁碼在按鈕中間。
  * `cursor`（游標分頁、不算總數）：上一頁、下一頁與回到第一頁，大表不必計數也不會跳過資料。
  * `offset`（已知總數）：顯示範圍，可輸入頁碼跳頁。`pageChange` 前後移一頁；`pageSelect` 到指定頁（第一頁、輸入的頁碼）。
  * 讀取中（`busy`）不送出事件，但按鈕與頁碼欄只用 `aria-disabled`／`readonly`：真的停用會讓剛操作的控制項失去焦點。
@@ -400,65 +403,90 @@ export class TableState {
   imports: [Icon, Select],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { class: 'ui-table-pagination' },
-  template: `@if (pageSizes().length > 1) {
-      <nx-select
-        label="每頁筆數"
-        [options]="sizes()"
-        [value]="pageSize().toString()"
-        (valueChange)="changeSize(+$event)"
-      />
-    } @else {
-      <span>每頁最多 {{ pageSize() }} 筆</span>
-    }
-    @if (mode() === 'offset') {
-      <span role="status">{{ range() }}</span>
-      <label class="ui-table-page-jump"
-        >第<input
-          type="number"
-          inputmode="numeric"
-          min="1"
-          [max]="pageCount()"
-          aria-label="跳到頁碼"
-          [value]="pageIndex() + 1"
-          [readOnly]="busy()"
-          [disabled]="pageCount() <= 1"
-          (keydown.enter)="jump($event)"
-          (change)="jump($event)"
-        />/ {{ pageCount() }} 頁</label
-      >
-    } @else {
-      <span role="status">第 {{ pageIndex() + 1 }} 頁 · 本頁 {{ count() }} 筆</span>
+  template: `<div class="ui-pagination-info">
+      @if (mode() === 'offset') {
+        <span role="status">
+          @if (total()) {
+            <b>{{ span() }}</b> / {{ totalText() }} 筆
+          } @else {
+            0 筆
+          }
+        </span>
+      } @else {
+        <span role="status"
+          >本頁 <b>{{ count() }}</b> 筆</span
+        >
+      }
+      <span class="ui-pagination-size">
+        <span aria-hidden="true">·</span>
+        @if (pageSizes().length > 1) {
+          <nx-select
+            appearance="inline"
+            label="每頁筆數"
+            [options]="sizes()"
+            [value]="pageSize().toString()"
+            (valueChange)="changeSize(+$event)"
+          />
+        } @else {
+          <span>每頁 {{ pageSize() }} 筆</span>
+        }
+      </span>
+    </div>
+    <div class="ui-pagination-group" role="group" aria-label="分頁">
+      @if (mode() === 'cursor') {
+        <button
+          type="button"
+          class="icon-button"
+          aria-label="回到第一頁"
+          title="回到第一頁"
+          [attr.aria-disabled]="busy() || pageIndex() === 0 || null"
+          (click)="select(0)"
+        >
+          <nx-icon name="first" />
+        </button>
+      }
       <button
         type="button"
         class="icon-button"
-        aria-label="回到第一頁"
-        title="回到第一頁"
+        aria-label="上一頁"
+        title="上一頁"
         [attr.aria-disabled]="busy() || pageIndex() === 0 || null"
-        (click)="select(0)"
+        (click)="step(-1)"
       >
-        <nx-icon name="first" />
+        <nx-icon name="left" />
       </button>
-    }
-    <button
-      type="button"
-      class="icon-button"
-      aria-label="上一頁"
-      title="上一頁"
-      [attr.aria-disabled]="busy() || pageIndex() === 0 || null"
-      (click)="step(-1)"
-    >
-      <nx-icon name="left" />
-    </button>
-    <button
-      type="button"
-      class="icon-button"
-      aria-label="下一頁"
-      title="下一頁"
-      [attr.aria-disabled]="busy() || !next() || null"
-      (click)="step(1)"
-    >
-      <nx-icon name="chevron" />
-    </button>`,
+      @if (mode() === 'offset') {
+        <label class="ui-pagination-page"
+          ><input
+            type="number"
+            inputmode="numeric"
+            min="1"
+            [max]="pageCount()"
+            aria-label="跳到頁碼"
+            title="輸入頁碼後按 Enter"
+            [value]="pageIndex() + 1"
+            [readOnly]="busy()"
+            [disabled]="pageCount() <= 1"
+            (keydown.enter)="jump($event)"
+            (change)="jump($event)"
+          />/ {{ pageCount() }}</label
+        >
+      } @else {
+        <span class="ui-pagination-page"
+          >第 <b>{{ pageIndex() + 1 }}</b> 頁</span
+        >
+      }
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="下一頁"
+        title="下一頁"
+        [attr.aria-disabled]="busy() || !next() || null"
+        (click)="step(1)"
+      >
+        <nx-icon name="chevron" />
+      </button>
+    </div>`,
 })
 export class TablePagination {
   readonly mode = input<'cursor' | 'offset'>('cursor');
@@ -485,12 +513,12 @@ export class TablePagination {
   readonly next = computed(() =>
     this.mode() === 'offset' ? this.pageIndex() < this.pageCount() - 1 : this.hasNext(),
   );
-  readonly range = computed(() => {
+  /** 這一頁的起訖列號，例如 `101–150`。 */
+  readonly span = computed(() => {
     const first = this.pageIndex() * this.pageSize();
-    return this.total()
-      ? `${first + 1}–${first + this.count()} / ${this.total().toLocaleString('zh-TW')}`
-      : '0 筆';
+    return `${first + 1}–${first + this.count()}`;
   });
+  readonly totalText = computed(() => this.total().toLocaleString('zh-TW'));
   /** 已送出、尚未讀完的頁；Enter 之後失焦還會再觸發一次 change，靠它避免重複讀同一頁。 */
   private requested = -1;
   constructor() {

@@ -8,6 +8,12 @@ export const FIXTURE_MENU: Record<
   { name: string; groupId: string | null; sortOrder: number; icon: string }
 > = {
   dashboard: { name: "總覽", groupId: null, sortOrder: 5, icon: "dashboard" },
+  design: {
+    name: "介面元件",
+    groupId: "system",
+    sortOrder: 99,
+    icon: "sliders",
+  },
   chat: { name: "對話", groupId: "work", sortOrder: 10, icon: "chat" },
   projects: { name: "專案", groupId: "work", sortOrder: 15, icon: "projects" },
   files: { name: "檔案庫", groupId: "work", sortOrder: 20, icon: "files" },
@@ -528,7 +534,10 @@ export class ApiFixture {
                 ]
               : []),
             ...(this.adminAccess
-              ? [{ id: "admin", name: "存取管理", route: "/admin" }]
+              ? [
+                  { id: "admin", name: "存取管理", route: "/admin" },
+                  { id: "design", name: "介面元件", route: "/design" },
+                ]
               : []),
             ...((this.operationsAccess ?? this.adminAccess)
               ? [

@@ -460,9 +460,7 @@ test("時間範圍合併預設與自訂，保留秒數，日曆支援鍵盤與 2
     .getByLabel("結束時間", { exact: true })
     .fill("2026/10/08 12:34:57");
   await popover.getByRole("button", { name: "套用自訂", exact: true }).click();
-  await expect(range).toContainText(
-    "2026/10/07 12:34:56 — 2026/10/08 12:34:57",
-  );
+  await expect(range).toContainText("2026/10/07 12:34:56 — 10/08 12:34:57");
   await page.getByRole("button", { name: "查詢", exact: true }).click();
   await expect
     .poll(() => fixture.queries.at(-1)?.searchParams.get("from"))

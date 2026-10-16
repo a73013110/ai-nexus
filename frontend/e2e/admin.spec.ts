@@ -417,15 +417,10 @@ test("存取管理只留四個分頁與「⋯」選單，使用者分頁及功�
     "功能群組與模型",
     "功能",
   ]);
+  // 介面元件是系統管理選單裡獨立的功能，存取管理頁首不再放工具選單。
   await expect(
     page.locator(".feature-header .page-actions button:visible"),
-  ).toHaveCount(1);
-  const tools = page.getByRole("button", { name: "存取管理工具", exact: true });
-  await tools.click();
-  const menu = page.getByRole("menu", { name: "存取管理工具", exact: true });
-  await expect(menu.getByRole("menuitem")).toHaveText(["介面元件"]);
-  await page.keyboard.press("Escape");
-  await expect(tools).toBeFocused();
+  ).toHaveCount(0);
   await page.getByRole("button", { name: "功能", exact: true }).click();
   const features = page.locator(".admin-features-table");
   await expect(
@@ -2067,7 +2062,7 @@ test("audit dates validate input, keep Taipei boundaries and allow clearing opti
   await start.fill("2026/10/04");
   await end.fill("2026/10/07");
   await popover.getByRole("button", { name: "套用自訂", exact: true }).click();
-  await expect(range).toContainText("2026/10/04 — 2026/10/07");
+  await expect(range).toContainText("2026/10/04 — 10/07");
   await page.getByRole("button", { name: "查詢", exact: true }).click();
   await expect
     .poll(() => queries.at(-1)?.searchParams.get("from"))

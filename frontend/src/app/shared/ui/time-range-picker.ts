@@ -73,7 +73,11 @@ export function timeRangeLabel(range: TimeRange, presets: readonly TimeRangePres
   if (range.preset !== CUSTOM_RANGE)
     return presets.find((item) => item.value === range.preset)?.label ?? '';
   const show = (value: string) => formatCalendarValue(value, 'gregory', value.includes('T'));
-  if (range.from && range.to) return `${show(range.from)} — ${show(range.to)}`;
+  // 同一年的結束端省略年份：起訖常在同一年，省下的寬度讓觸發鈕少被省略號截斷。
+  if (range.from && range.to)
+    return range.from.slice(0, 4) === range.to.slice(0, 4)
+      ? `${show(range.from)} — ${show(range.to).slice(5)}`
+      : `${show(range.from)} — ${show(range.to)}`;
   if (range.from) return `${show(range.from)} 起`;
   if (range.to) return `至 ${show(range.to)}`;
   return '不限時間';
@@ -89,6 +93,7 @@ let sequence = 0;
 @Component({
   selector: 'nx-time-range-picker',
   imports: [DateTimePicker, Icon],
+  host: { class: 'ui-time-range' },
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './time-range-picker.scss',
   template: `<span class="ui-field" [id]="id + '-label'">{{ label() }}</span>

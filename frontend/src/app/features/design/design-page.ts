@@ -7,14 +7,13 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
 import { apiResource } from '@core/api/api-resource';
 import { WorkspaceSession } from '@core/auth/workspace-session';
+import { FeatureAccessNotice } from '@core/layout/feature-access-notice';
 import { FeaturePage } from '@core/layout/feature-page';
 import { SidebarPanelContent } from '@core/layout/sidebar-panel';
 import { downloadFile } from '@shared/browser/download';
 import { ViewScope } from '@shared/browser/view-scope';
-import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { SlidingIndicator } from '@shared/ui/sliding-indicator';
 import { ViewSwitch } from '@shared/ui/view-switch';
@@ -140,10 +139,9 @@ const TOKEN_NAMES = [
     DesignFeedback,
     DesignForms,
     DesignFoundations,
+    FeatureAccessNotice,
     FeaturePage,
-    Icon,
     Notice,
-    RouterLink,
     SidebarPanelContent,
     SlidingIndicator,
     ViewSwitch,
