@@ -328,8 +328,7 @@ export class DataTableRow {
 }
 
 /**
- * Loading, empty and failed reads of a table, under its header. A read that failed shows its
- * message and a retry; rows that are still shown hide it (the page shows that error itself).
+ * 表頭下方的載入中、無資料與讀取失敗狀態。失敗時顯示訊息與重試；仍有列顯示時整個隱藏（錯誤由頁面自己顯示）。
  */
 @Component({
   selector: 'nx-table-state',
@@ -360,7 +359,7 @@ export class DataTableRow {
     }`,
 })
 export class TableState {
-  /** Rows on show; any rows hide the state. */
+  /** 顯示中的列數；有列就隱藏。 */
   readonly count = input(0);
   readonly loading = input(false);
   readonly error = input<string | null | undefined>('');
@@ -373,9 +372,9 @@ export class TableState {
 }
 
 /**
- * `cursor` (keyset pages, no total): previous, next and back to the first page, so a large table
- * never counts or skips rows. `offset` (a known total): the range, and a page number to jump to.
- * `pageChange` steps by one page; `pageSelect` goes to a page index (first page, a typed page).
+ * `cursor`（游標分頁、不算總數）：上一頁、下一頁與回到第一頁，大表不必計數也不會跳過資料。
+ * `offset`（已知總數）：顯示範圍，可輸入頁碼跳頁。`pageChange` 前後移一頁；`pageSelect` 到指定頁（第一頁、輸入的頁碼）。
+ * 讀取中（`busy`）不送出事件，但按鈕與頁碼欄只用 `aria-disabled`／`readonly`：真的停用會讓剛操作的控制項失去焦點。
  */
 @Component({
   selector: 'nx-table-pagination',
@@ -387,8 +386,7 @@ export class TableState {
         label="每頁筆數"
         [options]="sizes()"
         [value]="pageSize().toString()"
-        [disabled]="busy()"
-        (valueChange)="pageSizeChange.emit(+$event)"
+        (valueChange)="changeSize(+$event)"
       />
     } @else {
       <span>每頁最多 {{ pageSize() }} 筆</span>
@@ -403,7 +401,8 @@ export class TableState {
           [max]="pageCount()"
           aria-label="跳到頁碼"
           [value]="pageIndex() + 1"
-          [disabled]="busy() || pageCount() <= 1"
+          [readOnly]="busy()"
+          [disabled]="pageCount() <= 1"
           (keydown.enter)="jump($event)"
           (change)="jump($event)"
         />/ {{ pageCount() }} 頁</label
@@ -415,8 +414,8 @@ export class TableState {
         class="icon-button"
         aria-label="回到第一頁"
         title="回到第一頁"
-        [disabled]="busy() || pageIndex() === 0"
-        (click)="pageSelect.emit(0)"
+        [attr.aria-disabled]="busy() || pageIndex() === 0 || null"
+        (click)="select(0)"
       >
         <nx-icon name="first" />
       </button>
@@ -426,8 +425,8 @@ export class TableState {
       class="icon-button"
       aria-label="上一頁"
       title="上一頁"
-      [disabled]="busy() || pageIndex() === 0"
-      (click)="pageChange.emit(-1)"
+      [attr.aria-disabled]="busy() || pageIndex() === 0 || null"
+      (click)="step(-1)"
     >
       <nx-icon name="left" />
     </button>
@@ -436,8 +435,8 @@ export class TableState {
       class="icon-button"
       aria-label="下一頁"
       title="下一頁"
-      [disabled]="busy() || !next()"
-      (click)="pageChange.emit(1)"
+      [attr.aria-disabled]="busy() || !next() || null"
+      (click)="step(1)"
     >
       <nx-icon name="chevron" />
     </button>`,
@@ -447,11 +446,11 @@ export class TablePagination {
   readonly pageIndex = input(0);
   readonly pageSize = input(50);
   readonly pageSizes = input<readonly number[]>([25, 50, 100]);
-  /** Rows on the shown page. */
+  /** 目前這一頁的列數。 */
   readonly count = input(0);
-  /** `cursor`: whether the read returned a next cursor. */
+  /** `cursor`：這次讀取是否回傳下一頁游標。 */
   readonly hasNext = input(false);
-  /** `offset`: rows matching the query. */
+  /** `offset`：符合條件的總列數。 */
   readonly total = input(0);
   readonly busy = input(false);
   readonly pageChange = output<-1 | 1>();
@@ -473,6 +472,27 @@ export class TablePagination {
       ? `${first + 1}–${first + this.count()} / ${this.total().toLocaleString('zh-TW')}`
       : '0 筆';
   });
+  /** 已送出、尚未讀完的頁；Enter 之後失焦還會再觸發一次 change，靠它避免重複讀同一頁。 */
+  private requested = -1;
+  constructor() {
+    // 讀完（或沒有 busy 的呼叫端換了頁）才清掉；讀取失敗時可以再送同一頁。
+    effect(() => {
+      this.pageIndex();
+      if (!this.busy()) this.requested = -1;
+    });
+  }
+  step(direction: -1 | 1) {
+    if (this.busy() || (direction === -1 ? this.pageIndex() === 0 : !this.next())) return;
+    this.pageChange.emit(direction);
+  }
+  select(index: number) {
+    if (this.busy() || index === this.pageIndex() || index === this.requested) return;
+    this.requested = index;
+    this.pageSelect.emit(index);
+  }
+  changeSize(size: number) {
+    if (!this.busy() && size !== this.pageSize()) this.pageSizeChange.emit(size);
+  }
   jump(event: Event) {
     const input = event.target as HTMLInputElement;
     const page = Math.round(Number(input.value));
@@ -480,6 +500,6 @@ export class TablePagination {
       input.value = String(this.pageIndex() + 1);
       return;
     }
-    if (page - 1 !== this.pageIndex()) this.pageSelect.emit(page - 1);
+    this.select(page - 1);
   }
 }

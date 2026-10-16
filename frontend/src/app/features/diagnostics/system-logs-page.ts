@@ -96,7 +96,7 @@ export class SystemLogsPage {
   readonly draft = this.query.draft;
   readonly searchKind = computed(() => searchKind(this.draft().search));
   readonly moreCount = computed(() => logMoreCount(this.draft()));
-  /** The applied query, the page of it to show, and the cursor that reads that page. */
+  /** 已套用的條件、要顯示第幾頁，以及讀那一頁的游標。 */
   private readonly request = signal<LogPageRequest | undefined>(undefined);
   private readonly pageRead = apiResource({
     feature: 'logs.query',
@@ -138,14 +138,14 @@ export class SystemLogsPage {
   readonly milliseconds = milliseconds;
   readonly tone = levelTone;
   readonly categoryName = (value: string) => value.split('.').at(-1) || value;
-  /** Cursor that reads each page already visited, for going back. */
+  /** 看過的每一頁的游標，上一頁時用。 */
   private cursors: (string | null)[] = [null];
 
   constructor() {
     effect(() => {
       if (this.page()) this.table()?.resetScroll();
     });
-    // Each applied query reads its first page, with the time bounds of that moment.
+    // 每次套用條件都從第一頁讀起，預設區間以套用當下計算起訖。
     effect(() => {
       const query = this.query.applied();
       untracked(() => {
@@ -218,13 +218,22 @@ export class SystemLogsPage {
     if (entry) this.inspect(entry);
   }
   async export() {
-    const filter = this.submitted();
-    if (!filter || this.exporting() || !this.session.has('logs.export')) return;
+    const request = this.request();
+    if (!request || this.exporting() || !this.session.has('logs.export')) return;
+    // 預設區間（最近 N 小時）以按下匯出的當下重算，才與標籤相符；畫面上的結果可能是較早套用的。
+    const filter = logFilter(this.query.applied());
+    if (typeof filter === 'string') {
+      this.exportError.set(filter);
+      return;
+    }
     const guard = this.view.guard();
     this.exporting.set(true);
     this.exportError.set('');
     try {
-      const response = await this.api.export(filter);
+      const response = await this.api.export({
+        ...filter,
+        sortDirection: request.filter.sortDirection,
+      });
       const blob = await response.blob();
       if (guard()) downloadBlob(blob, 'ai-nexus-logs', 'csv');
     } catch (error) {

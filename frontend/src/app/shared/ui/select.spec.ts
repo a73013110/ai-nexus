@@ -30,6 +30,24 @@ describe('Select multiple', () => {
     expect(trigger().textContent).toContain('已選 2 項');
   });
 
+  it('names the trigger by its label and every choice, and keeps focus off the options', () => {
+    const fixture = setup(['Error', 'Warning']);
+    const host = fixture.nativeElement as HTMLElement;
+    const trigger = host.querySelector('.select-trigger')!;
+    const name = trigger
+      .getAttribute('aria-labelledby')!
+      .split(' ')
+      .map((id) => host.querySelector('#' + id)!.textContent!.trim())
+      .join(' ');
+    expect(name).toBe('等級 Warning、Error');
+    expect(trigger.hasAttribute('aria-label')).toBe(false);
+    // 滑鼠點選項時焦點留在 trigger，方向鍵才繼續有效。
+    const option = host.querySelector('[role="option"]')!;
+    const press = new MouseEvent('mousedown', { bubbles: true, cancelable: true });
+    option.dispatchEvent(press);
+    expect(press.defaultPrevented).toBe(true);
+  });
+
   it('toggles a choice in option order and marks the listbox multiselectable', () => {
     const fixture = setup(['Error']);
     const emitted: string[][] = [];

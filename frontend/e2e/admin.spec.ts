@@ -11,6 +11,7 @@ import {
   ApiFixture,
   settleEntrance,
   chooseOptions,
+  multiSelect,
   chooseSelect,
   openSettings,
   expectViewportContained,
@@ -2036,9 +2037,10 @@ test("audit shows readable before after differences and server filters", async (
     page.getByRole("dialog", { name: "稽核詳情" }),
   ).not.toBeVisible();
   await chooseOptions(page, "稽核結果", ["已檢視", "已受理／完成"]);
-  await expect(
-    page.getByRole("combobox", { name: "稽核結果", exact: true }),
-  ).toHaveText("已選 2 項");
+  const results = multiSelect(page, "稽核結果");
+  await expect(results).toHaveText("已選 2 項");
+  // 報讀器讀得到完整的已選內容，不只是「已選 2 項」。
+  await expect(results).toHaveAccessibleName("稽核結果 已受理／完成、已檢視");
   await page.getByRole("button", { name: "查詢", exact: true }).click();
   await expect(page.locator(".audit-row")).toHaveCount(0);
   await expect(

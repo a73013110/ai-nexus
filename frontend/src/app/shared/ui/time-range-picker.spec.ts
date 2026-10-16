@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest';
-import { CUSTOM_RANGE, hoursAgo, timeRangeBounds, timeRangeLabel } from './time-range-picker';
+import { TestBed } from '@angular/core/testing';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  CUSTOM_RANGE,
+  TimeRangePicker,
+  hoursAgo,
+  timeRangeBounds,
+  timeRangeLabel,
+  type TimeRange,
+} from './time-range-picker';
 
 const presets = [
   { value: 'all', label: '不限時間' },
@@ -55,5 +63,76 @@ describe('time range', () => {
     expect(timeRangeLabel({ preset: CUSTOM_RANGE, from: '2026-10-01', to: '' }, presets)).toBe(
       '2026/10/01 起',
     );
+  });
+});
+
+describe('TimeRangePicker', () => {
+  beforeEach(() => {
+    HTMLElement.prototype.showPopover = vi.fn();
+    HTMLElement.prototype.hidePopover = vi.fn();
+  });
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    delete (HTMLElement.prototype as Partial<HTMLElement>).showPopover;
+    delete (HTMLElement.prototype as Partial<HTMLElement>).hidePopover;
+  });
+
+  function setup() {
+    const fixture = TestBed.createComponent(TimeRangePicker);
+    const emitted: TimeRange[] = [];
+    fixture.componentInstance.valueChange.subscribe((value) => emitted.push(value));
+    fixture.componentRef.setInput('presets', presets);
+    fixture.componentRef.setInput('value', { preset: 'all', from: '', to: '' });
+    fixture.componentRef.setInput('withTime', false);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const trigger = host.querySelector<HTMLButtonElement>('.ui-time-range-trigger')!;
+    trigger.click();
+    fixture.detectChanges();
+    const apply = [...host.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent?.trim() === '套用自訂',
+    )!;
+    return { fixture, emitted, host, trigger, apply };
+  }
+
+  it('waits for 套用自訂 before asking for the other end, without disabling the button', () => {
+    const { fixture, emitted, host, apply } = setup();
+    const picker = fixture.componentInstance;
+    picker.from.set('2026-10-01');
+    fixture.detectChanges();
+    // 輸入到一半不報錯。
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    apply.click();
+    fixture.detectChanges();
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('請填寫起訖兩端');
+    expect(apply.disabled).toBe(false);
+    // 沒有真的停用，按下後焦點仍留在按鈕上（jsdom 無法聚焦未開啟的 popover，這裡只驗屬性）。
+    expect(apply.getAttribute('aria-disabled')).toBe('true');
+    expect(emitted).toEqual([]);
+
+    picker.to.set('2026-10-03');
+    fixture.detectChanges();
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    apply.click();
+    expect(emitted).toEqual([{ preset: CUSTOM_RANGE, from: '2026-10-01', to: '2026-10-03' }]);
+  });
+
+  it('closes with Escape and returns focus to the trigger', () => {
+    const { fixture, host, trigger } = setup();
+    expect(trigger.getAttribute('aria-expanded')).toBe('true');
+    host
+      .querySelector('[role="dialog"]')!
+      .dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('chooses a preset from the panel', () => {
+    const { emitted, host } = setup();
+    [...host.querySelectorAll<HTMLButtonElement>('.ui-time-range-presets button')]
+      .find((button) => button.textContent?.includes('最近 1 小時'))!
+      .click();
+    expect(emitted).toEqual([{ preset: '1h', from: '', to: '' }]);
   });
 });

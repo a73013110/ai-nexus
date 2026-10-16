@@ -52,8 +52,9 @@ export class QueryState<T extends object> {
     private readonly route?: ActivatedRoute,
   ) {
     const initial = this.fromRoute(route?.snapshot.queryParamMap);
-    this.draft = signal(initial);
-    this.current = signal(initial);
+    this.draft = signal(initial.draft);
+    this.current = signal(initial.applied);
+    this.error.set(initial.error);
     this.applied = this.current.asReadonly();
     this.dirty = computed(() => stableJson(this.draft()) !== stableJson(this.current()));
     this.chips = computed(() => this.options.chips?.(this.current()) ?? []);
@@ -62,9 +63,6 @@ export class QueryState<T extends object> {
 
   set<K extends keyof T>(key: K, value: T[K]) {
     this.draft.update((draft) => ({ ...draft, [key]: value }));
-  }
-  patch(values: Partial<T>) {
-    this.draft.update((draft) => ({ ...draft, ...values }));
   }
   /** 以草稿查詢；驗證不過時設定 `error`、回傳 false，結果維持不變。 */
   apply(): boolean {
@@ -82,9 +80,6 @@ export class QueryState<T extends object> {
     this.error.set('');
     this.write(value);
   }
-  remove(chip: QueryChip<T>) {
-    this.commit(chip.clear);
-  }
   reset() {
     const value = this.options.defaults();
     this.draft.set(value);
@@ -97,18 +92,26 @@ export class QueryState<T extends object> {
       const key = paramsKey(params);
       if (key === this.seen) return;
       this.seen = key;
-      const value = this.fromRoute(params);
-      this.draft.set(value);
-      this.error.set('');
-      this.current.set({ ...value });
+      const next = this.fromRoute(params);
+      this.draft.set(next.draft);
+      this.error.set(next.error);
+      this.current.set(next.applied);
     });
   }
-  private fromRoute(params: ParamMap | undefined): T {
+  private fromRoute(params: ParamMap | undefined): { draft: T; applied: T; error: string } {
     const defaults = this.options.defaults();
-    if (!params || !this.options.fromParams) return defaults;
+    if (!params || !this.options.fromParams)
+      return { draft: defaults, applied: { ...defaults }, error: '' };
     const value = this.options.fromParams(params, defaults);
-    // 連結帶入的條件整組驗證不過就全部退回預設，不留半套可能誤導的條件。
-    return this.options.validate?.(value) ? defaults : value;
+    const error = this.options.validate?.(value) ?? '';
+    if (!error) return { draft: value, applied: { ...value }, error: '' };
+    // 連結帶入的條件驗證不過時不查詢、結果顯示預設條件；連結的條件留在草稿並說明原因，
+    // 使用者可以修正後再查，不會誤以為連結的條件已生效。
+    return {
+      draft: value,
+      applied: this.options.defaults(),
+      error: '連結的條件無法查詢，目前顯示預設條件：' + error,
+    };
   }
   private write(value: T) {
     this.current.set(value);

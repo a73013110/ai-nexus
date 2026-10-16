@@ -43,7 +43,7 @@ kbd {
   color: var(--accent-text);
 }
 // Hover deepens the fill toward the ink (lighter in dark mode) instead of fading it.
-.primary-button:not(:disabled):hover {
+.primary-button:not(:disabled, [aria-disabled='true']):hover {
   background: color-mix(in srgb, var(--accent) 86%, var(--ink));
 }
 .secondary-button {
@@ -57,9 +57,21 @@ kbd {
 .danger-button:not(:disabled):hover {
   background: color-mix(in srgb, var(--danger-surface) 86%, var(--ink));
 }
+// 忙碌時以 aria-disabled 停用、仍可聚焦的按鈕：外觀同 :disabled，焦點不會因按鈕停用而掉回 body。
+:is(
+  .primary-button,
+  .secondary-button,
+  .danger-button,
+  .quiet-button,
+  .icon-button
+)[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
 // A pressed button gives a little under the finger; reduced motion removes the transition only.
 :is(.primary-button, .secondary-button, .danger-button, .quiet-button, .icon-button):not(
-    :disabled
+    :disabled,
+    [aria-disabled='true']
   ):active {
   scale: 0.97;
 }

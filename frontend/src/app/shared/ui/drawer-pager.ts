@@ -4,6 +4,7 @@ import { Icon } from './icon';
 /**
  * 詳情抽屜的「第 N／M 筆」與上一筆、下一筆（放在 `drawer-actions`）。
  * 只在表格目前這一頁內移動；跨頁由表格的分頁負責。
+ * 到頭尾時用 `aria-disabled` 而非 `disabled`，按到最後一筆時焦點才不會掉回 body。
  */
 @Component({
   selector: 'nx-drawer-pager',
@@ -28,8 +29,8 @@ import { Icon } from './icon';
       class="icon-button"
       [attr.aria-label]="'上一筆' + noun()"
       [title]="'上一筆' + noun()"
-      [disabled]="index() <= 0"
-      (click)="move.emit(-1)"
+      [attr.aria-disabled]="!canMove(-1) || null"
+      (click)="go(-1)"
     >
       <nx-icon name="left" />
     </button>
@@ -38,8 +39,8 @@ import { Icon } from './icon';
       class="icon-button"
       [attr.aria-label]="'下一筆' + noun()"
       [title]="'下一筆' + noun()"
-      [disabled]="index() < 0 || index() >= count() - 1"
-      (click)="move.emit(1)"
+      [attr.aria-disabled]="!canMove(1) || null"
+      (click)="go(1)"
     >
       <nx-icon name="chevron" />
     </button>`,
@@ -51,4 +52,12 @@ export class DrawerPager {
   /** 列的名稱，組成按鈕文字：「日誌」→「上一筆日誌」。 */
   readonly noun = input('');
   readonly move = output<-1 | 1>();
+  canMove(direction: -1 | 1) {
+    return direction === -1
+      ? this.index() > 0
+      : this.index() >= 0 && this.index() < this.count() - 1;
+  }
+  go(direction: -1 | 1) {
+    if (this.canMove(direction)) this.move.emit(direction);
+  }
 }

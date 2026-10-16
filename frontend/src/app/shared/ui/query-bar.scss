@@ -119,7 +119,11 @@ form {
   border-radius: var(--p-radius-pill);
   color: var(--secondary);
 }
-.ui-query-chips button:hover:not(:disabled) {
+.ui-query-chips button[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.ui-query-chips button:hover:not([aria-disabled='true']) {
   background: var(--hover);
   color: var(--ink);
 }

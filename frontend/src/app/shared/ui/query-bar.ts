@@ -13,6 +13,7 @@ let sequence = 0;
  * 投影位置：`[query-lead]` 放在欄位上方（會立即套用的分類 `ViewSwitch`）；預設 slot 放主要欄位；
  * `[query-more]` 放較少用的欄位，收在「＋條件」popover（需 `more`）。
  * 表單加 `novalidate`：必填欄位可能藏在關閉的 popover 裡，瀏覽器原生驗證會卡住送出，改由 state 的 `validate` 判斷。
+ * 查詢中的按鈕用 `aria-disabled` 而非 `disabled`：停用的按鈕無法聚焦，剛按下的按鈕或移除 chip 後的焦點目標會讓焦點掉回 body。
  */
 @Component({
   selector: 'nx-query-bar',
@@ -41,10 +42,15 @@ let sequence = 0;
         </button>
       }
       <div class="ui-query-actions">
-        <button type="submit" class="primary-button" [disabled]="busy()">
+        <button type="submit" class="primary-button" [attr.aria-disabled]="busy() || null">
           <nx-icon [name]="busy() ? 'loading' : 'search'" />查詢
         </button>
-        <button type="button" class="quiet-button" [disabled]="busy()" (click)="reset()">
+        <button
+          type="button"
+          class="quiet-button"
+          [attr.aria-disabled]="busy() || null"
+          (click)="reset()"
+        >
           重設
         </button>
       </div>
@@ -55,15 +61,18 @@ let sequence = 0;
       role="dialog"
       class="popover-panel ui-query-more-panel ui-density-compact"
       [id]="id + '-more'"
-      [attr.aria-label]="moreLabel()"
+      aria-label="更多條件"
       (toggle)="morePopover.sync($event)"
+      (focusout)="leaveMore($event)"
       (keydown.escape)="closeMore($event)"
     >
-      <h3>{{ moreLabel() }}</h3>
+      <h3>更多條件</h3>
       <div class="ui-query-more-fields"><ng-content select="[query-more]" /></div>
       <div class="ui-query-more-foot">
         <button type="button" class="secondary-button" (click)="closeMore()">完成</button>
-        <button type="submit" class="primary-button" [disabled]="busy()">查詢</button>
+        <button type="submit" class="primary-button" [attr.aria-disabled]="busy() || null">
+          查詢
+        </button>
       </div>
     </div>
     @if (state().error()) {
@@ -85,7 +94,7 @@ let sequence = 0;
                 data-chip-remove
                 [attr.aria-label]="'移除條件：' + chip.label"
                 [title]="'移除條件'"
-                [disabled]="busy()"
+                [attr.aria-disabled]="busy() || null"
                 (click)="remove(chip, i)"
               >
                 <nx-icon name="close" />
@@ -104,7 +113,6 @@ export class QueryBar {
   readonly busy = input(false);
   /** 顯示「＋條件」按鈕與 `[query-more]` 欄位的 popover。 */
   readonly more = input(false);
-  readonly moreLabel = input('更多條件');
   /** popover 中已填的欄位數，顯示在按鈕上。 */
   readonly moreCount = input(0);
   readonly id = 'nx-query-' + ++sequence;
@@ -127,11 +135,12 @@ export class QueryBar {
     this.state().apply();
   }
   reset() {
-    this.state().reset();
+    if (!this.busy()) this.state().reset();
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 各頁的查詢型別不同
   remove(chip: QueryChip<any>, index: number) {
-    this.state().remove(chip);
+    if (this.busy()) return;
+    this.state().commit(chip.clear);
     // 被移除的 chip 按鈕會消失，焦點移到補上同位置的 chip；沒有 chip 了就移到「查詢」，避免焦點掉回 body。
     requestAnimationFrame(() => {
       const form = this.form().nativeElement;
@@ -152,6 +161,17 @@ export class QueryBar {
           ?.focus(),
       );
     }
+  }
+  /** Tab 離開 popover 時關閉；popover="auto" 只處理點擊外面與 Escape。 */
+  leaveMore(event: FocusEvent) {
+    const next = event.relatedTarget as Node | null;
+    if (
+      this.moreOpen() &&
+      next &&
+      !this.morePanel().nativeElement.contains(next) &&
+      next !== this.moreTrigger()?.nativeElement
+    )
+      this.morePopover.hide();
   }
   closeMore(event?: Event) {
     event?.preventDefault();

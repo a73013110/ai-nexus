@@ -12,7 +12,7 @@ namespace AiNexus.Features.Audit;
 
 /// <summary>
 /// 匯出符合條件的全部紀錄為 CSV（新到舊），有獨立的 rate limit。
-/// 超過筆數上限時直接拒絕而不是截斷，避免使用者誤以為拿到完整資料；回傳前先寫入匯出本身的稽核。
+/// 超過筆數上限時直接拒絕而不是截斷，避免使用者誤以為拿到完整資料。
 /// </summary>
 internal sealed class ExportActivityAudit(NexusDbContext db, IOptions<AuditOptions> options)
 {
@@ -31,13 +31,16 @@ internal sealed class ExportActivityAudit(NexusDbContext db, IOptions<AuditOptio
     public async Task<Result<string>> HandleAsync(Guid actor, ActivityAuditFilter filter, CancellationToken ct)
     {
         if (!filter.IsValid()) return AuditErrors.InvalidFilter;
+        // 匯出屬於特權讀取，與日誌匯出一樣先寫稽核再讀：寫不進去就整個失敗（fail closed），逾時或超過上限被拒的嘗試也留有紀錄。
+        // 稽核不可修改，所以紀錄的是這次要讀的範圍，不含筆數。
+        db.AuditEvents.Add(new() { OwnerId = actor, Action = Action, Result = "read", DetailsJson = JsonSerializer.Serialize(new {
+            search = filter.Search, action = filter.Action, results = filter.Result, category = filter.Category, from = filter.From, to = filter.Until, traceId = filter.TraceId }) });
+        await db.SaveChangesAsync(ct);
+        db.Database.SetCommandTimeout(options.Value.ExportTimeoutSeconds);
         var limit = options.Value.MaxExportRows;
         // 多讀一筆只為判斷是否超過上限，不必另做 COUNT。
         var rows = await filter.Query(db).Take(limit + 1).ToListAsync(ct);
         if (rows.Count > limit) return AuditErrors.ExportLimit;
-        // 匯出屬於特權讀取：自己的稽核寫不進去就整個失敗（fail closed）。詳情只記核准的欄位，不存搜尋文字。
-        db.AuditEvents.Add(new() { OwnerId = actor, Action = Action, Result = "csv", DetailsJson = JsonSerializer.Serialize(new { from = filter.From, to = filter.Until, traceId = filter.TraceId, count = rows.Count }) });
-        await db.SaveChangesAsync(ct);
         var csv = new StringBuilder("\uFEFF").Append(Line(Header));
         foreach (var row in rows.Select(ActivityAuditFilter.Present))
             csv.Append(Line([row.Id.ToString(CultureInfo.InvariantCulture), row.At.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture), row.Actor, row.ActingAs, row.Action,

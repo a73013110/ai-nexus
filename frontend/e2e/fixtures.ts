@@ -117,13 +117,21 @@ export async function chooseSelect(
   // The panel stays painted while it leaves; wait so the next lookup cannot match it.
   await expect(list).toBeHidden();
 }
+/** 多選 Select 的 trigger：名稱是欄位名稱加上已選內容（aria-labelledby）。 */
+export function multiSelect(
+  page: import("@playwright/test").Page,
+  label: string,
+) {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return page.getByRole("combobox", { name: new RegExp(`^${escaped}( |$)`) });
+}
 /** Toggles options of a multiple Select, which stays open until Escape. */
 export async function chooseOptions(
   page: import("@playwright/test").Page,
   label: string,
   texts: string[],
 ) {
-  await page.getByRole("combobox", { name: label, exact: true }).click();
+  await multiSelect(page, label).click();
   const list = page.getByRole("listbox", { name: label, exact: true });
   for (const text of texts)
     await list.getByRole("option", { name: text, exact: true }).click();

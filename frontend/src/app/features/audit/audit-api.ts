@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { ApiClient, type ApiQuery } from '@core/api/api-client';
 
-/** The applied conditions of a read; paging (`before`, `take`) is added per page. */
+/** 已套用的查詢條件；分頁參數（`before`、`take`）每頁另外加上。 */
 export type AuditFilters = ApiQuery<'/api/v1/admin/audit/export', 'get'>;
 
 @Injectable({ providedIn: 'root' })

@@ -161,7 +161,7 @@ public sealed class ListActivityAuditTests
                 new AuditEvent { OwnerId = user.Id, Action = "fixture.overflow", Result = "saved" });
             await db.SaveChangesAsync();
         }
-        using var response = await admin.GetAsync("/api/v1/admin/audit/export?action=fixture.export");
+        using var response = await admin.GetAsync("/api/v1/admin/audit/export?action=fixture.export&result=saved&result=failed");
         response.EnsureSuccessStatusCode();
         Assert.Equal("text/csv", response.Content.Headers.ContentType!.MediaType);
         Assert.Contains("no-store", response.Headers.CacheControl!.ToString());
@@ -177,10 +177,43 @@ public sealed class ListActivityAuditTests
         {
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             var record = Assert.Single(db.AuditEvents.AsNoTracking().Where(x => x.Action == "audit.export"));
-            Assert.Equal(user.Id, record.OwnerId); Assert.Contains("\"count\":2", record.DetailsJson);
+            Assert.Equal(user.Id, record.OwnerId); Assert.Equal("read", record.Result);
+            Assert.Contains("\"action\":\"fixture.export\"", record.DetailsJson); Assert.Contains("\"results\":[\"saved\",\"failed\"]", record.DetailsJson);
         }
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.GetAsync("/api/v1/admin/audit/export?action=fixture.overflow")).StatusCode);
+        using (var scope = factory.Services.CreateScope())
+        {
+            // 超過上限被拒的嘗試同樣留有紀錄。
+            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            Assert.Single(db.AuditEvents.AsNoTracking().Where(x => x.Action == "audit.export" && x.DetailsJson!.Contains("fixture.overflow")));
+        }
         Assert.Equal(HttpStatusCode.Forbidden, (await member.GetAsync("/api/v1/admin/audit/export?action=fixture.export")).StatusCode);
+    }
+
+    [Fact]
+    public async Task ExportCombinesResultGroupsWithAnActionPrefix()
+    {
+        await using var factory = new NexusFactory(administrators: ["alice"]);
+        using var admin = await factory.SignedInAsync();
+        var user = (await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+            db.AuditEvents.AddRange(
+                new AuditEvent { OwnerId = user.Id, Action = "fixture.multi.saved", Result = "saved" },
+                new AuditEvent { OwnerId = user.Id, Action = "fixture.multi.failed", Result = "failed" },
+                new AuditEvent { OwnerId = user.Id, Action = "fixture.multi.read", Result = "read" },
+                new AuditEvent { OwnerId = user.Id, Action = "fixture.other", Result = "failed" });
+            await db.SaveChangesAsync();
+        }
+        async Task<string[]> ActionsAsync(string query)
+        {
+            var text = (await admin.GetStringAsync("/api/v1/admin/audit/export?" + query)).TrimStart('\uFEFF');
+            return text.Split("\r\n", StringSplitOptions.RemoveEmptyEntries).Skip(1).Select(line => line.Split("\",\"")[4]).Order().ToArray();
+        }
+        // 群組與精確結果混用時符合任一即可；動作前綴排除不相干的 fixture.other。
+        Assert.Equal(["fixture.multi.failed", "fixture.multi.read"], await ActionsAsync("action=fixture.multi.&result=failed&result=read"));
+        Assert.Equal(["fixture.multi.read", "fixture.multi.saved"], await ActionsAsync("action=fixture.multi.&result=success"));
     }
 
     [Fact]

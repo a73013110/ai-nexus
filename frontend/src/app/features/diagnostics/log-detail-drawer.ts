@@ -40,7 +40,7 @@ const outcomes: Record<string, string> = {
   cancelled: '用戶端取消',
 };
 
-/** One log event's detail, masked properties, exception and correlated flow. */
+/** 單筆日誌的詳情：遮罩後的屬性、例外與同一流程的關聯事件。 */
 @Component({
   selector: 'nx-log-detail-drawer',
   imports: [
@@ -64,10 +64,10 @@ export class LogDetailDrawer {
   private readonly api = inject(DiagnosticsApi);
   private readonly drawer = viewChild.required(DetailDrawer);
   readonly current = input<DiagnosticSummary | null>(null);
-  /** Position of `current` in the shown page, or -1. */
+  /** `current` 在目前這一頁的位置；不在時為 -1。 */
   readonly index = input(-1);
   readonly count = input(0);
-  /** The submitted query, whose time range bounds the correlated flow. */
+  /** 已送出的查詢；關聯流程只在它的時間範圍內找。 */
   readonly range = input<Pick<LogFilter, 'from' | 'to'> | null>(null);
   readonly move = output<-1 | 1>();
   readonly closed = output<void>();
@@ -78,7 +78,7 @@ export class LogDetailDrawer {
     { value: 'exception', label: '例外堆疊' },
     { value: 'timeline', label: '關聯流程' },
   ];
-  /** Opening the drawer starts on the overview; moving between events keeps the tab. */
+  /** 開啟時回到總覽分頁；上一筆、下一筆之間保留目前分頁。 */
   readonly detailTab = linkedSignal({
     source: () => !!this.current(),
     computation: () => 'overview',
@@ -132,7 +132,7 @@ export class LogDetailDrawer {
       return raw;
     }
   });
-  /** Each `{Name}` of the stored template with the value it renders, so the template does not read as unfilled. */
+  /** 範本中每個 `{Name}` 與其代入值，範本才不會看起來像沒填值。 */
   readonly messageFields = computed(() => {
     const selected = this.detail();
     if (!selected) return [];
@@ -140,9 +140,9 @@ export class LogDetailDrawer {
     try {
       properties = JSON.parse(selected.propertiesJson);
     } catch {
-      // Malformed historical metadata still lists the names.
+      // 舊資料的 metadata 格式不正確時仍列出名稱。
     }
-    // Correlation values live in summary columns (IssueCode → issueCode), not always in the properties.
+    // 關聯值在摘要欄位（IssueCode → issueCode），不一定在屬性裡。
     const columns = selected.event as unknown as Record<string, unknown>;
     const names = new Set(
       Array.from(
@@ -187,7 +187,7 @@ export class LogDetailDrawer {
   readonly date = formatDate;
   readonly tone = levelTone;
   readonly milliseconds = milliseconds;
-  /** The event's correlation IDs that are set, each copyable. */
+  /** 這筆事件有值的關聯 ID，各自可複製。 */
   identifiers(event: DiagnosticSummary) {
     return [
       { label: '查證代碼', value: event.issueCode, wide: true },

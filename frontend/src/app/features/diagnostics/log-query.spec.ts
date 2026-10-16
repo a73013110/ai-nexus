@@ -4,6 +4,7 @@ import {
   emptyLogQuery,
   logFilter,
   logQueryOptions,
+  MAX_QUERY_DAYS,
   searchKind,
   validateLogQuery,
   type LogQuery,
@@ -22,7 +23,14 @@ describe('log query', () => {
     expect(searchKind(guid)).toBe('guid');
     expect(searchKind('timeout')).toBe('text');
     expect(searchKind('  ')).toBe('');
-    expect(logFilter(query({ search: issue }), now)).toMatchObject({ issueCode: issue, text: '' });
+    expect(logFilter(query({ search: issue }), now)).toMatchObject({
+      issueCode: issue.toUpperCase(),
+      text: '',
+    });
+    // 伺服器只認大寫 NX-；小寫的手貼代碼送出前正規化。
+    expect(logFilter(query({ search: issue.toLowerCase() }), now)).toMatchObject({
+      issueCode: 'NX-0123456789ABCDEF0123456789ABCDEF',
+    });
     expect(logFilter(query({ search: trace }), now)).toMatchObject({
       traceId: trace.toLowerCase(),
     });
@@ -45,6 +53,11 @@ describe('log query', () => {
       validateLogQuery(query({ search: trace, range: { preset: '7d', from: '', to: '' } }), now),
     ).toBe('');
     expect(validateLogQuery(query({ search: 'NX-short' }), now)).toContain('NX-');
+    const custom = (from: string, to: string) => query({ range: { preset: 'custom', from, to } });
+    expect(validateLogQuery(custom('2026-09-01T00:00:00', '2026-10-01T00:00:00'), now)).toBe('');
+    expect(validateLogQuery(custom('2026-08-01T00:00:00', '2026-10-01T00:00:00'), now)).toContain(
+      `最長 ${MAX_QUERY_DAYS} 天`,
+    );
   });
 
   it('presets the query from links, including the older single-ID links', () => {

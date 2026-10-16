@@ -54,7 +54,7 @@ describe('QueryState', () => {
     state.set('text', 'timeout');
     state.apply();
     state.set('tags', ['a']);
-    state.remove(state.chips()[0]);
+    state.commit(state.chips()[0].clear);
     expect(state.applied()).toEqual({ text: '', tags: [] });
     expect(state.draft()).toEqual({ text: '', tags: ['a'] });
     expect(state.dirty()).toBe(true);
@@ -78,5 +78,39 @@ describe('QueryState', () => {
     await router.navigateByUrl('/?q=other');
     expect(state.applied()).toEqual({ text: 'other', tags: [] });
     expect(state.draft()).toEqual({ text: 'other', tags: [] });
+  });
+
+  it('keeps an invalid link in the draft with its reason and shows the defaults', async () => {
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/?q=bad&tag=a');
+    const state = TestBed.runInInjectionContext(() => queryState(options));
+    expect(state.applied()).toEqual({ text: '', tags: [] });
+    expect(state.draft()).toEqual({ text: 'bad', tags: ['a'] });
+    expect(state.error()).toContain('不可查詢');
+    expect(state.dirty()).toBe(true);
+    // 同一頁導覽到另一個無效連結也一樣；有效的連結清掉錯誤。
+    await router.navigateByUrl('/?q=bad');
+    expect(state.draft()).toEqual({ text: 'bad', tags: [] });
+    expect(state.error()).toContain('不可查詢');
+    await router.navigateByUrl('/?q=good');
+    expect(state.applied()).toEqual({ text: 'good', tags: [] });
+    expect(state.error()).toBe('');
+  });
+
+  it('ends on the last of two writes made before the first navigation settles', async () => {
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    const router = TestBed.inject(Router);
+    await router.navigateByUrl('/');
+    const state = TestBed.runInInjectionContext(() => queryState(options));
+    state.set('text', 'one');
+    state.apply();
+    state.set('text', 'two');
+    state.apply();
+    await new Promise((resolve) => setTimeout(resolve));
+    await new Promise((resolve) => setTimeout(resolve));
+    expect(router.url).toBe('/?q=two');
+    expect(state.applied()).toEqual({ text: 'two', tags: [] });
+    expect(state.draft()).toEqual({ text: 'two', tags: [] });
   });
 });
