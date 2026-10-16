@@ -54,6 +54,8 @@ export const LOG_MORE_FIELDS: { key: LogMoreField; label: string; maxLength: num
 ];
 const DEFAULT_RANGE = '24h';
 const DAY = hoursAgo(24);
+/** 與伺服器 `Diagnostics.MaxQueryDays` 的預設值相同；調整設定時伺服器仍會擋，這裡只是先給明確的訊息。 */
+export const MAX_QUERY_DAYS = 31;
 const TRACE = /^[a-f\d]{32}$/i;
 const ISSUE = /^NX-[a-f\d]{32}$/i;
 const GUID = /^[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}$/i;
@@ -88,6 +90,8 @@ export function validateLogQuery(query: LogQuery, now = Date.now()): string {
   const bounds = timeRangeBounds(query.range, LOG_RANGES, now);
   if (typeof bounds === 'string') return bounds;
   if (!bounds.from || !bounds.to) return '請選擇起訖時間。';
+  if (Date.parse(bounds.to) - Date.parse(bounds.from) > MAX_QUERY_DAYS * DAY)
+    return `查詢範圍最長 ${MAX_QUERY_DAYS} 天，請縮小時間範圍。`;
   const search = query.search.trim();
   if (/^NX-/i.test(search) && !ISSUE.test(search)) return '查證代碼是 NX- 加 32 碼英數字。';
   if (searchKind(search) === 'text') {
@@ -112,14 +116,15 @@ export function logFilter(query: LogQuery, now = Date.now()): LogFilter | string
     eventName: query.eventName.trim(),
     errorCode: query.errorCode.trim(),
     instance: query.instance.trim(),
-    issueCode: kind === 'issueCode' ? search : '',
+    // 伺服器只認大寫的 `NX-`；手貼或舊書籤可能是小寫。
+    issueCode: kind === 'issueCode' ? search.toUpperCase() : '',
     traceId: kind === 'traceId' ? search.toLowerCase() : '',
     text: kind === 'text' ? search : '',
     ...(kind === 'guid' ? { [query.guid]: search.toLowerCase() } : {}),
   };
 }
 
-export function logSearchLabel(query: Pick<LogQuery, 'search' | 'guid'>): string {
+function logSearchLabel(query: Pick<LogQuery, 'search' | 'guid'>): string {
   const search = query.search.trim();
   switch (searchKind(search)) {
     case 'issueCode':

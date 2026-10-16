@@ -91,9 +91,7 @@ let sequence = 0;
   imports: [DateTimePicker, Icon],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './time-range-picker.scss',
-  template: `<span class="ui-field" [class.sr-only]="hideLabel()" [id]="id + '-label'">{{
-      label()
-    }}</span>
+  template: `<span class="ui-field" [id]="id + '-label'">{{ label() }}</span>
     <button
       #trigger
       type="button"
@@ -102,7 +100,6 @@ let sequence = 0;
       [attr.aria-labelledby]="id + '-label ' + id + '-value'"
       [attr.aria-expanded]="opened()"
       [attr.aria-controls]="id + '-panel'"
-      [disabled]="disabled()"
       (click)="toggle()"
     >
       <nx-icon name="clock" /><span [id]="id + '-value'" [title]="summary()">{{ summary() }}</span
@@ -158,7 +155,7 @@ let sequence = 0;
         <button
           type="button"
           class="primary-button"
-          [disabled]="!canApply()"
+          [attr.aria-disabled]="!canApply() || null"
           (click)="applyCustom()"
         >
           套用自訂
@@ -168,12 +165,10 @@ let sequence = 0;
 })
 export class TimeRangePicker {
   readonly label = input('時間範圍');
-  readonly hideLabel = input(false);
   readonly presets = input.required<readonly TimeRangePreset[]>();
   readonly value = input.required<TimeRange>();
   readonly withTime = input(true);
   readonly required = input(true);
-  readonly disabled = input(false);
   readonly valueChange = output<TimeRange>();
   readonly id = 'nx-time-range-' + ++sequence;
   readonly timezone = APP_TIME_ZONE;
@@ -182,11 +177,15 @@ export class TimeRangePicker {
   readonly to = signal('');
   readonly summary = computed(() => timeRangeLabel(this.value(), this.presets()));
   private readonly pickers = viewChildren(DateTimePicker);
+  /** 必填時只填了一端。輸入到一半不算錯，按「套用自訂」後才提示。 */
+  private readonly incomplete = computed(() => this.required() && !this.from() !== !this.to());
+  private readonly attempted = signal(false);
   readonly customError = computed(() => {
-    const from = this.from(),
-      to = this.to();
-    if (this.required() && (!from || !to)) return from || to ? '請填寫起訖兩端。' : '';
-    const bounds = timeRangeBounds({ preset: CUSTOM_RANGE, from, to }, this.presets());
+    if (this.incomplete()) return this.attempted() ? '請填寫起訖兩端。' : '';
+    const bounds = timeRangeBounds(
+      { preset: CUSTOM_RANGE, from: this.from(), to: this.to() },
+      this.presets(),
+    );
     return typeof bounds === 'string' ? bounds : '';
   });
   /** 輸入了但不是有效日期的一端要擋下，不能當成留空而變成開放區間。 */
@@ -209,6 +208,7 @@ export class TimeRangePicker {
     else this.open();
   }
   private open() {
+    this.attempted.set(false);
     const range = this.value();
     if (range.preset === CUSTOM_RANGE) {
       this.from.set(range.from);
@@ -240,8 +240,10 @@ export class TimeRangePicker {
     this.valueChange.emit({ preset, from: '', to: '' });
     this.close();
   }
+  /** 按鈕用 `aria-disabled`：真的停用的話，按下後才出現錯誤會讓焦點掉回 body。 */
   applyCustom() {
-    if (!this.canApply()) return;
+    if (this.incomplete()) this.attempted.set(true);
+    if (!this.canApply() || this.incomplete()) return;
     this.valueChange.emit({ preset: CUSTOM_RANGE, from: this.from(), to: this.to() });
     this.close();
   }

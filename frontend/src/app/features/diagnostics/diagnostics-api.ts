@@ -3,7 +3,7 @@ import { ApiClient } from '@core/api/api-client';
 import type { LogLevel } from '@core/api/schema';
 import type { TableSortDirection } from '@shared/ui/data-table';
 
-/** One read of the log query; blank fields are left out of the request. */
+/** 一次日誌查詢的條件；空白欄位不送出。 */
 export interface LogFilter {
   from: string;
   to: string;

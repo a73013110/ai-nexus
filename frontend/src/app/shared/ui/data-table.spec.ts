@@ -141,4 +141,43 @@ describe('DataTable', () => {
     expect(selected).toEqual([0, 3]);
     expect(jump.value).toBe('1');
   });
+
+  it('reads a typed page once although Enter and the later change both fire', () => {
+    const fixture = TestBed.createComponent(TablePagination);
+    const selected: number[] = [];
+    fixture.componentInstance.pageSelect.subscribe((index) => selected.push(index));
+    fixture.componentRef.setInput('mode', 'offset');
+    fixture.componentRef.setInput('pageSize', 100);
+    fixture.componentRef.setInput('count', 100);
+    fixture.componentRef.setInput('total', 523);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    const jump = host.querySelector<HTMLInputElement>('[aria-label="跳到頁碼"]')!;
+    jump.value = '3';
+    jump.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    fixture.componentRef.setInput('busy', true);
+    fixture.detectChanges();
+    // 讀取中頁碼欄只是唯讀，焦點不會被拿走；失焦時的 change 不再送一次。
+    expect(jump.disabled).toBe(false);
+    expect(jump.readOnly).toBe(true);
+    jump.dispatchEvent(new Event('change'));
+    expect(selected).toEqual([2]);
+
+    fixture.componentRef.setInput('pageIndex', 2);
+    fixture.componentRef.setInput('busy', false);
+    fixture.detectChanges();
+    const next = host.querySelector<HTMLButtonElement>('[aria-label="下一頁"]')!;
+    next.focus();
+    fixture.componentRef.setInput('busy', true);
+    fixture.detectChanges();
+    expect(next.disabled).toBe(false);
+    expect(document.activeElement).toBe(next);
+    jump.value = '1';
+    jump.dispatchEvent(new Event('change'));
+    expect(selected).toEqual([2]);
+    fixture.componentRef.setInput('busy', false);
+    fixture.detectChanges();
+    jump.dispatchEvent(new Event('change'));
+    expect(selected).toEqual([2, 0]);
+  });
 });

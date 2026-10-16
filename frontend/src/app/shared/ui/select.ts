@@ -23,11 +23,11 @@ export interface SelectOption {
 let sequence = 0;
 
 /**
- * Single- or multiple-choice listbox. `multiple` toggles options with a check box, keeps the panel
- * open and reads `values`; the trigger names one choice or counts several (「已選 N 項」) and shows
- * the placeholder for none, so a filter's placeholder reads as its "all" choice. The native top layer prevents clipping inside dialogs and scroll panels.
- * A projected `[select-footer]` adds a related setting under the options (e.g. reasoning effort
- * under the model); Tab moves into it and focus leaving the panel closes it.
+ * 單選或多選的下拉清單。`multiple` 以核取方塊切換選項、選後不關閉，讀寫 `values`；
+ * trigger 顯示單一選項名稱或「已選 N 項」，沒選時顯示 placeholder（篩選器的 placeholder 即「全部」）。
+ * 多選的摘要只有「已選 N 項」，trigger 改以 `aria-labelledby` 指向欄位名稱＋完整已選內容，報讀器才讀得到選了什麼。
+ * 面板在原生 top layer，不會被對話框或捲動區裁切。
+ * 投影的 `[select-footer]` 放在選項下方的相關設定（例如模型下的推理強度）；Tab 會移入，焦點離開面板即關閉。
  */
 @Component({
   selector: 'nx-select',
@@ -43,7 +43,8 @@ let sequence = 0;
       type="button"
       class="select-trigger"
       role="combobox"
-      [attr.aria-label]="label()"
+      [attr.aria-label]="multiple() ? null : label()"
+      [attr.aria-labelledby]="multiple() ? id + '-label ' + id + '-value' : null"
       [attr.aria-expanded]="opened()"
       [attr.aria-haspopup]="search() ? 'dialog' : 'listbox'"
       [attr.aria-controls]="search() ? id + '-panel' : id"
@@ -55,7 +56,11 @@ let sequence = 0;
       <span [attr.title]="title()">{{ summary() }}</span
       ><nx-icon name="chevron" />
     </button>
-    <!-- Focus stays on the projected footer controls; the panel only routes their Escape. -->
+    @if (multiple()) {
+      <span hidden [id]="id + '-label'">{{ label() }}</span>
+      <span hidden [id]="id + '-value'">{{ title() }}</span>
+    }
+    <!-- 焦點留在投影的 footer 控制項上，面板只轉送它們的 Escape。 -->
     <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
     <div
       #panel
@@ -106,6 +111,7 @@ let sequence = 0;
             [disabled]="option.disabled"
             [class.is-active]="active() === i"
             (pointermove)="active.set(i)"
+            (mousedown)="$event.preventDefault()"
             (click)="choose(i)"
           >
             @if (multiple()) {
@@ -136,16 +142,16 @@ export class Select {
   readonly label = input.required<string>();
   readonly value = input('');
   readonly multiple = input(false);
-  /** The choices of a `multiple` select. */
+  /** `multiple` 時已選的值。 */
   readonly values = input<readonly string[]>([]);
   readonly options = input.required<SelectOption[]>();
   readonly disabled = input(false);
   readonly placeholder = input('請選擇');
   readonly searchable = input(false);
-  /** Shows the filter only from this many options, so short lists open straight to their choices. */
+  /** 選項達到這個數量才顯示搜尋框，短清單打開直接是選項。 */
   readonly searchFrom = input(0);
   readonly search = computed(() => this.searchable() && this.options().length >= this.searchFrom());
-  /** `inline` drops the field chrome for toolbars such as the composer controls. */
+  /** `inline` 去掉欄位外框，用在輸入區控制列這類工具列。 */
   readonly appearance = input<'field' | 'inline' | 'pill'>('field');
   readonly query = signal('');
   readonly visibleOptions = computed(() =>
@@ -219,7 +225,7 @@ export class Select {
     const option = this.options()[index];
     if (!option || option.disabled) return;
     if (this.multiple()) {
-      // Option order, not click order, so the same choices always read the same.
+      // 依選項順序而非點選順序輸出，同一組選擇永遠讀起來一樣。
       const values = this.isSelected(option.value)
         ? this.values().filter((value) => value !== option.value)
         : [...this.values(), option.value];
@@ -305,7 +311,7 @@ export class Select {
     )
       this.close();
   }
-  /** Escape from footer controls; the trigger and search field handle their own. */
+  /** footer 控制項上的 Escape；trigger 與搜尋框自己處理。 */
   dismiss(event: Event) {
     event.preventDefault();
     this.close();

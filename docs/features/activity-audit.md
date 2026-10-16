@@ -24,7 +24,7 @@
 - 動作篩選清單在 [`AuditActions`](../../backend/src/AiNexus.Features/Audit/AuditActions.cs)，經 catalog 提供；每項的 `categories` 由同一個 expression 推得，前綴涵蓋的管理讀取（如 `admin.` 下的對話檢視）也列入「查閱與匯出」。新增動作前綴改這份清單，不改前端。
 - 分類、動作（前綴）、結果（可多選；`success`／`failed` 代表全部受理／其餘結果）、帳號／資源／Trace ID／查證代碼搜尋與台北日期可組合；每頁 25／50／100 筆（預設 100），以 ID 游標分頁，新事件不會造成重複；不算總數。
 - 詳情顯示欄位前後差異與原始 metadata；DTO 帶 TraceId／OperationId／IssueCode。「查證相關日誌」帶入同一 trace（缺少時用查證代碼）與前後五分鐘。
-- `GET /api/v1/admin/audit/export` 匯出整個查詢（與列表同一組篩選，不分頁）：新到舊、UTF-8 BOM、正確引號與公式前綴防護；時間為 UTC，結果為原始代碼，異動資訊為遮罩後的 metadata JSON。筆數超過 `Audit.MaxExportRows`（預設 10000）就拒絕（`audit_export_limit`），不截斷。每人每分鐘 2 次；先寫 `audit.export` 讀取稽核（範圍、Trace 與筆數）再回傳，稽核失敗就不匯出。
+- `GET /api/v1/admin/audit/export` 匯出整個查詢（與列表同一組篩選，不分頁）：新到舊、UTF-8 BOM、正確引號與公式前綴防護；時間為 UTC，結果為原始代碼，異動資訊為遮罩後的 metadata JSON。筆數超過 `Audit.MaxExportRows`（預設 10000）就拒絕（`audit_export_limit`），不截斷。每人每分鐘 2 次；與日誌匯出相同，先寫 `audit.export` 讀取稽核（搜尋、動作、結果、分類、期間與 Trace）再讀資料，稽核失敗就不匯出，超過上限被拒或逾時（`Audit.ExportTimeoutSeconds`）的嘗試也留有紀錄。
 - 稽核沒有更新或刪除的 API；資料庫管理帳號直接改表的權限依公司政策限制。SQL 無法寫入時不能保證稽核仍被保存。
 
 ## 驗證

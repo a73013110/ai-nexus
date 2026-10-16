@@ -252,8 +252,13 @@ export class ActivityAuditPage {
     if (row) this.openDetails(row.entry.id);
   }
   async export() {
-    const filters = this.request()?.filters;
-    if (!filters || this.exporting()) return;
+    if (!this.request() || this.exporting()) return;
+    // 預設區間（最近 N 天）以按下匯出的當下重算，才與標籤相符；畫面上的結果可能是較早套用的。
+    const filters = auditFilters(this.query.applied());
+    if (typeof filters === 'string') {
+      this.exportError.set(filters);
+      return;
+    }
     const guard = this.view.guard();
     this.exporting.set(true);
     this.exportError.set('');
