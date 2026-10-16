@@ -12,6 +12,7 @@ import { formatBytes, formatDate, formatNumber } from '@shared/browser/format';
 import { mediaQuery } from '@shared/browser/media-query';
 import { MarkdownView } from '@shared/markdown/markdown-view';
 import { Checkbox } from '@shared/ui/checkbox';
+import { TablePagination } from '@shared/ui/data-table';
 import { EmptyState } from '@shared/ui/empty-state';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
@@ -36,6 +37,7 @@ import { UserConversationReader } from './user-conversation-reader';
     RunTimingDisplay,
     SearchField,
     StatusBadge,
+    TablePagination,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './admin-user-conversations.scss',

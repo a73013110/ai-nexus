@@ -54,9 +54,6 @@ td > nx-job-progress {
   color: var(--secondary);
   overflow-wrap: anywhere;
 }
-.ui-table-toolbar > .retrieval-probe-note {
-  flex: 1 1 12rem;
-}
 .retrieval-collections {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr));
   max-width: none;

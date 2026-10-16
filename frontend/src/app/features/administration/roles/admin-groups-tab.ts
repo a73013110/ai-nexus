@@ -31,7 +31,6 @@ import { AccessStatus } from './access-status';
         <h2>
           功能群組 <span class="ui-count-label">{{ groups().length }} 個</span>
         </h2>
-        <span class="form-note">選取群組編輯基本資料、功能、模型與容量</span>
       </div>
       <table>
         <colgroup>

@@ -18,6 +18,7 @@ import { DetailDrawer } from '@shared/ui/detail-drawer';
 import { Icon } from '@shared/ui/icon';
 import { CopyValue } from '@shared/ui/copy-value';
 import { DrawerPager } from '@shared/ui/drawer-pager';
+import { EmptyState } from '@shared/ui/empty-state';
 import { Notice } from '@shared/ui/notice';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { Tabs, type TabItem } from '@shared/ui/tabs';
@@ -48,6 +49,7 @@ const outcomes: Record<string, string> = {
     CopyValue,
     DetailDrawer,
     DrawerPager,
+    EmptyState,
     Icon,
     Notice,
     RouterLink,

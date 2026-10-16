@@ -334,21 +334,6 @@ select:where(.ui-input) {
     }
   }
 }
-.ui-table-state {
-  display: grid;
-  justify-items: center;
-  gap: var(--p-space-2);
-  padding: var(--p-space-8) var(--p-space-4);
-  color: var(--secondary);
-  font-size: var(--p-font-sm);
-  text-align: center;
-}
-.ui-table-state p {
-  margin: 0;
-}
-.ui-table-state > nx-icon {
-  color: var(--muted);
-}
 .ui-table-link {
   min-height: 1.5rem;
   width: 100%;
@@ -385,6 +370,41 @@ select:where(.ui-input) {
   }
 }
 // Detail content patterns shared by inspectors and management pages.
+// 詳情最後的原始資料：預設收合，展開後以純文字呈現（不當 HTML）。
+.ui-raw-record {
+  margin-top: var(--section-gap);
+}
+.ui-raw-record summary {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  width: fit-content;
+  min-height: var(--button-target);
+  color: var(--secondary);
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
+}
+.ui-raw-record summary::-webkit-details-marker {
+  display: none;
+}
+.ui-raw-record summary nx-icon {
+  --icon-size: var(--icon-sm);
+  transition: transform var(--motion) var(--ease);
+}
+.ui-raw-record[open] summary nx-icon {
+  transform: rotate(90deg);
+}
+.ui-raw-record pre {
+  margin: var(--p-space-2) 0 0;
+  padding: var(--section-padding);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-md);
+  background: var(--surface-subtle);
+  font-size: var(--text-caption);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 .ui-drawer-summary {
   padding: var(--p-space-3) var(--p-space-4);
   flex: none;

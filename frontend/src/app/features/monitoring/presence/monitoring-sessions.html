@@ -17,11 +17,8 @@
     (valueChange)="setFilter('feature', $event)"
   />
 </div>
-<div class="ui-table-scroll">
+<nx-data-table label="在線瀏覽器工作階段" class="monitor-sessions-table" [stacked]="true">
   <table class="monitor-table">
-    <caption class="sr-only">
-      可篩選與排序的在線瀏覽器工作階段
-    </caption>
     <thead>
       <tr>
         <th scope="col" [attr.aria-sort]="sort() === 'name' ? 'ascending' : 'none'">
@@ -59,64 +56,48 @@
               ><small>{{ s.account }}{{ s.testingIdentity ? ' · 測試身分' : '' }}</small>
             </button>
           </td>
-          <td>
+          <td data-label="裝置">
             <span>{{ s.device }} · {{ s.browser }}</span
             ><small class="ui-table-code">{{ s.address }}</small>
           </td>
-          <td>{{ featureName(s.feature) }}</td>
-          <td>
+          <td data-label="功能">{{ featureName(s.feature) }}</td>
+          <td data-stack="end">
             <nx-status-badge [tone]="s.state === 'active' ? 'success' : 'neutral'">{{
               stateName(s.state)
             }}</nx-status-badge>
           </td>
-          <td class="ui-table-numeric">
+          <td class="ui-table-numeric" data-label="請求">
             {{ s.requests }}
             @if (s.errors) {
               <small class="ui-error-text">{{ s.errors }} 錯誤</small>
             }
           </td>
-          <td>
+          <td data-stack="hide">
             <span>{{ s.lastAction || '等待操作' }}</span
             ><small>{{ s.lastActionAt ? time(s.lastActionAt) : '—' }}</small>
-          </td>
-        </tr>
-      } @empty {
-        <tr>
-          <td colspan="6" class="ui-table-state">
-            {{
-              query() || state() !== 'all' || feature() !== 'all'
-                ? '沒有符合篩選的連線'
-                : '目前沒有在線工作階段'
-            }}
           </td>
         </tr>
       }
     </tbody>
   </table>
-</div>
-<footer class="ui-table-footer">
-  <span
-    >{{ filtered().length }} 個工作階段 · 每頁 10 筆 ·
-    {{ timeoutSeconds() }} 秒未收到心跳即離線</span
-  >
-  <div class="ui-table-pagination">
-    <button
-      type="button"
-      class="icon-button"
-      aria-label="上一頁連線"
-      [disabled]="currentPage() === 0"
-      (click)="page.set(currentPage() - 1)"
-    >
-      <nx-icon name="back" /></button
-    ><span>{{ currentPage() + 1 }} / {{ lastPage() + 1 }}</span
-    ><button
-      type="button"
-      class="icon-button"
-      aria-label="下一頁連線"
-      [disabled]="currentPage() >= lastPage()"
-      (click)="page.set(currentPage() + 1)"
-    >
-      <nx-icon name="chevron" />
-    </button>
+  <nx-table-state
+    [count]="visible().length"
+    [emptyTitle]="
+      query() || state() !== 'all' || feature() !== 'all'
+        ? '沒有符合篩選的連線'
+        : '目前沒有在線工作階段'
+    "
+  />
+  <div table-footer class="ui-table-footer">
+    <nx-table-pagination
+      mode="offset"
+      [pageIndex]="currentPage()"
+      [pageSize]="pageSize"
+      [pageSizes]="[pageSize]"
+      [count]="visible().length"
+      [total]="filtered().length"
+      (pageChange)="page.set(currentPage() + $event)"
+      (pageSelect)="page.set($event)"
+    />
   </div>
-</footer>
+</nx-data-table>

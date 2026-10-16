@@ -22,7 +22,7 @@
     <nx-icon name="plus" />新增價格版本
   </button>
 </div>
-@if (catalogRead.error()) {
+@if (catalogRead.error() && catalogRead.value()) {
   <nx-notice [message]="catalogRead.error()"
     ><button notice-actions type="button" (click)="catalogRead.reload()">重新載入</button>
   </nx-notice>
@@ -36,12 +36,14 @@
   >
     <div table-toolbar class="ui-table-toolbar">
       <h2>
-        目前價格 <span class="ui-count-label">{{ current().length }} 項</span>
+        目前價格
+        @if (catalogRead.value()) {
+          <span class="ui-count-label">{{ current().length }} 項</span>
+        }
         @if (unpriced()) {
           <nx-status-badge tone="warning">{{ unpriced() }} 項未定價</nx-status-badge>
         }
       </h2>
-      <span class="ops-table-note">token 單價為每百萬 tokens；選取項目新增下一個版本</span>
     </div>
     <table>
       <colgroup>
@@ -60,9 +62,15 @@
           <th scope="col">模型或工具</th>
           <th scope="col">費用類型</th>
           <th scope="col">幣別</th>
-          <th scope="col" class="ui-table-numeric">輸入</th>
-          <th scope="col" class="ui-table-numeric">快取輸入</th>
-          <th scope="col" class="ui-table-numeric">輸出</th>
+          <th scope="col" class="ui-table-numeric">
+            輸入<small class="price-unit">每百萬 tokens</small>
+          </th>
+          <th scope="col" class="ui-table-numeric">
+            快取輸入<small class="price-unit">每百萬 tokens</small>
+          </th>
+          <th scope="col" class="ui-table-numeric">
+            輸出<small class="price-unit">每百萬 tokens</small>
+          </th>
           <th scope="col" class="ui-table-numeric">每次固定</th>
           <th scope="col">生效時間</th>
           <th scope="col"><span class="sr-only">操作</span></th>
@@ -126,20 +134,16 @@
         }
       </tbody>
     </table>
-    @if (!current().length) {
-      <nx-empty-state table-state class="ui-table-state">
-        @if (loading()) {
-          <nx-icon name="loading" />
-          <p>正在讀取價格</p>
-        } @else if (search()) {
-          <nx-icon name="search" />
-          <p>沒有符合的模型或工具。</p>
-        } @else {
-          <nx-icon name="money" />
-          <p>尚未設定可計費的模型或工具。系統會明確標示未定價，不會把未知費用算成零。</p>
-        }
-      </nx-empty-state>
-    }
+    <nx-table-state
+      [count]="current().length"
+      [loading]="loading()"
+      [error]="catalogRead.error()"
+      loadingText="正在讀取價格"
+      errorTitle="無法載入價格"
+      [emptyTitle]="search() ? '沒有符合的模型或工具' : '尚未設定可計費的模型或工具'"
+      [emptyText]="search() ? '' : '系統會明確標示未定價，不會把未知費用算成零。'"
+      (retry)="catalogRead.reload()"
+    />
   </nx-data-table>
 } @else {
   <nx-data-table
@@ -152,9 +156,14 @@
   >
     <div table-toolbar class="ui-table-toolbar">
       <h2>
-        價格歷史 <span class="ui-count-label">{{ history().length }} 個版本</span>
+        價格歷史
+        @if (catalogRead.value()) {
+          <span class="ui-count-label">{{ history().length }} 個版本</span>
+        }
+        @if (prices().length >= historyLimit) {
+          <nx-status-badge tone="neutral">只顯示最新 {{ historyLimit }} 個</nx-status-badge>
+        }
       </h2>
-      <span class="ops-table-note">版本不可修改；帶入舊版本後另存成新版本。顯示最新 500 個</span>
     </div>
     <table>
       <colgroup>
@@ -173,9 +182,15 @@
           <th scope="col" nxTableColumn="effective">生效時間</th>
           <th scope="col" nxTableColumn="model">模型或工具</th>
           <th scope="col" nxTableColumn="state">狀態</th>
-          <th scope="col" class="ui-table-numeric" nxTableColumn="input">輸入</th>
-          <th scope="col" class="ui-table-numeric" nxTableColumn="cached">快取輸入</th>
-          <th scope="col" class="ui-table-numeric" nxTableColumn="output">輸出</th>
+          <th scope="col" class="ui-table-numeric" nxTableColumn="input">
+            輸入<small class="price-unit">每百萬 tokens</small>
+          </th>
+          <th scope="col" class="ui-table-numeric" nxTableColumn="cached">
+            快取輸入<small class="price-unit">每百萬 tokens</small>
+          </th>
+          <th scope="col" class="ui-table-numeric" nxTableColumn="output">
+            輸出<small class="price-unit">每百萬 tokens</small>
+          </th>
           <th scope="col" class="ui-table-numeric" nxTableColumn="request">每次固定</th>
           <th scope="col" nxTableColumn="note">備註</th>
           <th scope="col"><span class="sr-only">操作</span></th>
@@ -238,20 +253,16 @@
         }
       </tbody>
     </table>
-    @if (!history().length) {
-      <nx-empty-state table-state class="ui-table-state">
-        @if (loading()) {
-          <nx-icon name="loading" />
-          <p>正在讀取價格</p>
-        } @else if (search()) {
-          <nx-icon name="search" />
-          <p>沒有符合的價格版本。</p>
-        } @else {
-          <nx-icon name="history" />
-          <p>尚未設定價格。系統會明確標示未定價，不會把未知費用算成零。</p>
-        }
-      </nx-empty-state>
-    }
+    <nx-table-state
+      [count]="history().length"
+      [loading]="loading()"
+      [error]="catalogRead.error()"
+      loadingText="正在讀取價格"
+      errorTitle="無法載入價格"
+      [emptyTitle]="search() ? '沒有符合的價格版本' : '尚未設定價格'"
+      [emptyText]="search() ? '' : '系統會明確標示未定價，不會把未知費用算成零。'"
+      (retry)="catalogRead.reload()"
+    />
   </nx-data-table>
 }
 <nx-price-version-dialog [prices]="prices()" [targets]="targets()" (saved)="catalogRead.reload()" />

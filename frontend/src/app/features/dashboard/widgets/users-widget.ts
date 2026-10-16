@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import { DataTable, DataTableRow } from '@shared/ui/data-table';
+import { DataTable, DataTableRow, TableState } from '@shared/ui/data-table';
 import { money } from '@features/billing/billing-api';
 import { DashboardStore } from '../dashboard-store';
 
 /** Spend per user in the chosen currency; picking one narrows the whole overview to them. */
 @Component({
   selector: 'nx-users-widget',
-  imports: [DataTable, DataTableRow],
+  imports: [DataTable, DataTableRow, TableState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -90,10 +90,12 @@ import { DashboardStore } from '../dashboard-store';
           }
         </tbody>
       </table>
-    </nx-data-table>
-    @if (!users().length) {
-      <p>此期間尚無符合條件的費用紀錄。</p>
-    }`,
+      <nx-table-state
+        [count]="users().length"
+        [loading]="store.loading()"
+        emptyTitle="此期間尚無符合條件的費用紀錄"
+      />
+    </nx-data-table>`,
 })
 export class UsersWidget {
   readonly store = inject(DashboardStore);

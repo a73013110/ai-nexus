@@ -1,16 +1,7 @@
 @if (selectedSession(); as selected) {
   @if (liveSession(); as s) {
-    <div class="inspector-heading">
-      <nx-icon name="monitor" />
-      <div>
-        <h3>{{ s.displayName }}</h3>
-        <p>{{ s.account }}</p>
-      </div>
-      <nx-status-badge [tone]="s.state === 'active' ? 'success' : 'neutral'">{{
-        stateName(s.state)
-      }}</nx-status-badge>
-    </div>
-    <dl class="monitor-details">
+    <h3 class="ui-section-heading">連線</h3>
+    <dl class="ui-description-list">
       <div>
         <dt>身分驗證</dt>
         <dd>
@@ -19,16 +10,16 @@
         </dd>
       </div>
       <div>
-        <dt>連線位址</dt>
-        <dd class="ui-table-code">{{ s.address }}</dd>
+        <dt>目前功能</dt>
+        <dd>{{ featureName(s.feature) }}</dd>
       </div>
-      <div>
+      <div class="ui-description-wide">
         <dt>裝置／瀏覽器</dt>
         <dd>{{ s.device }} / {{ s.browser }}</dd>
       </div>
-      <div>
-        <dt>目前功能</dt>
-        <dd>{{ featureName(s.feature) }}</dd>
+      <div class="ui-description-wide">
+        <dt>最近操作</dt>
+        <dd>{{ s.lastAction || '等待操作' }}</dd>
       </div>
       <div>
         <dt>首次連線</dt>
@@ -40,38 +31,38 @@
       </div>
       <div>
         <dt>累計請求／錯誤</dt>
-        <dd>{{ s.requests }} / {{ s.errors }}</dd>
+        <dd [attr.data-tone]="s.errors > 0 ? 'danger' : null">{{ s.requests }} / {{ s.errors }}</dd>
       </div>
       <div>
         <dt>接收／傳送內容</dt>
         <dd>{{ bytes(s.receivedBytes) }} / {{ bytes(s.sentBytes) }}</dd>
       </div>
-      <div>
-        <dt>最近操作</dt>
-        <dd>{{ s.lastAction || '等待操作' }}</dd>
+    </dl>
+    <h3 class="ui-section-heading">關聯</h3>
+    <dl class="ui-description-list">
+      <div class="ui-description-wide">
+        <dt>連線位址</dt>
+        <dd><nx-copy-value label="連線位址" [value]="s.address" /></dd>
       </div>
-      <div>
+      <div class="ui-description-wide">
         <dt>工作階段識別</dt>
-        <dd class="ui-table-code session-key">{{ s.id }}</dd>
+        <dd><nx-copy-value label="工作階段識別" [value]="s.id" /></dd>
       </div>
     </dl>
-    <p class="monitor-caption">
+    <p class="form-note monitor-caption">
       不收集輸入內容。裝置類型由 User-Agent 推定，工作階段識別是隨機分頁代碼。
     </p>
+    <details class="ui-raw-record">
+      <summary><nx-icon name="chevron" />原始資料</summary>
+      <pre>{{ raw(s) }}</pre>
+    </details>
   } @else {
-    <p class="monitor-empty">{{ selected.displayName }} 的連線已離線，或已不在目前快照的清單中。</p>
+    <p class="form-note">{{ selected.displayName }} 的連線已離線，或已不在目前快照的清單中。</p>
   }
 } @else if (subsystemId()) {
   @if (liveSubsystem(); as s) {
-    <div class="inspector-heading">
-      <nx-icon name="chart" />
-      <div>
-        <h3>{{ s.name }}</h3>
-        <p>{{ s.summary || '尚未取得這個子系統的狀態。' }}</p>
-      </div>
-      <nx-status-badge [tone]="tone(s.status)">{{ subsystemStatus(s.status) }}</nx-status-badge>
-    </div>
-    <dl class="monitor-details">
+    <h3 class="ui-section-heading">指標</h3>
+    <dl class="ui-description-list">
       @for (fact of s.facts; track fact.id) {
         <div>
           <dt>{{ fact.label }}</dt>
@@ -88,22 +79,19 @@
         <dd>{{ s.observedAt ? time(s.observedAt) : '尚未讀取' }}</dd>
       </div>
     </dl>
-    <p class="monitor-caption">
+    <p class="form-note monitor-caption">
       子系統由各模組在背景讀取，更新頻率依模組而定；讀取失敗或逾時時列為需要注意。
     </p>
+    <details class="ui-raw-record">
+      <summary><nx-icon name="chevron" />原始資料</summary>
+      <pre>{{ raw(s) }}</pre>
+    </details>
   } @else {
-    <p class="monitor-empty">這個子系統已不在目前的快照中。</p>
+    <p class="form-note">這個子系統已不在目前的快照中。</p>
   }
 } @else if (liveDependency(); as d) {
-  <div class="inspector-heading">
-    <nx-icon [name]="d.kind === 'database' ? 'database' : 'server'" />
-    <div>
-      <h3>{{ d.name }}</h3>
-      <p>{{ d.kind === 'database' ? 'SQL 資料庫' : 'HTTP 服務' }}</p>
-    </div>
-    <nx-status-badge [tone]="tone(d.status)">{{ dependencyStatus(d.status) }}</nx-status-badge>
-  </div>
-  <dl class="monitor-details">
+  <h3 class="ui-section-heading">呼叫統計</h3>
+  <dl class="ui-description-list">
     <div>
       <dt>呼叫數</dt>
       <dd>{{ d.metrics.requests }}</dd>
@@ -141,7 +129,7 @@
       <dd>{{ d.lastSeenAt ? time(d.lastSeenAt) : '尚未觀測到呼叫' }}</dd>
     </div>
   </dl>
-  <p class="monitor-caption">
+  <p class="form-note monitor-caption">
     {{
       d.kind === 'database'
         ? '資料庫觀測來自 SqlClient，涵蓋 EF、Dapper 與直接 SQL 呼叫，不包含 SQL 指令或資料內容。'
@@ -149,4 +137,8 @@
     }}
     狀態依選定時間範圍內的實際呼叫判定。
   </p>
+  <details class="ui-raw-record">
+    <summary><nx-icon name="chevron" />原始資料</summary>
+    <pre>{{ raw(d) }}</pre>
+  </details>
 }

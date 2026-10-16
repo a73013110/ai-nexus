@@ -18,9 +18,9 @@ import {
   DataTableColumn,
   DataTableRow,
   TablePagination,
+  TableState,
   type TableColumn,
 } from '@shared/ui/data-table';
-import { EmptyState } from '@shared/ui/empty-state';
 import { Icon } from '@shared/ui/icon';
 import { SearchField } from '@shared/ui/search-field';
 import { AdministrationApi } from '../administration-api';
@@ -37,7 +37,7 @@ import { TestIdentityDialog } from './test-identity-dialog';
     DataTableColumn,
     DataTableRow,
     TablePagination,
-    EmptyState,
+    TableState,
     Icon,
     SearchField,
     AccessStatus,

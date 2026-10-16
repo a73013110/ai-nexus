@@ -42,6 +42,13 @@
 .price-time {
   font-variant-numeric: tabular-nums;
 }
+// 單價的單位寫在表頭，工具列只放標題與計數。
+.price-unit {
+  display: block;
+  color: var(--secondary);
+  font-size: var(--p-font-xs);
+  font-weight: 400;
+}
 .price-note {
   color: var(--secondary);
 }

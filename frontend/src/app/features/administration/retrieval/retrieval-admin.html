@@ -29,9 +29,11 @@
 >
   <div table-toolbar class="ui-table-toolbar">
     <h2>
-      檢索索引 <span class="ui-count-label">{{ profiles().length }} 個</span>
+      檢索索引
+      @if (profilesRead.value()) {
+        <span class="ui-count-label">{{ profiles().length }} 個</span>
+      }
     </h2>
-    <span class="ops-table-note">重建、啟用與清除會先確認，並留下管理稽核</span>
   </div>
   <table>
     <colgroup>
@@ -135,17 +137,16 @@
       }
     </tbody>
   </table>
-  @if (!profiles().length) {
-    <nx-empty-state table-state class="ui-table-state">
-      @if (profilesRead.loading()) {
-        <nx-icon name="loading" />
-        <p>正在讀取檢索索引</p>
-      } @else {
-        <nx-icon name="database" />
-        <p>尚未建立檢索索引；第一次處理知識庫文件時會建立。</p>
-      }
-    </nx-empty-state>
-  }
+  <nx-table-state
+    [count]="profiles().length"
+    [loading]="profilesRead.loading()"
+    [error]="profilesRead.error()"
+    loadingText="正在讀取檢索索引"
+    errorTitle="無法載入檢索索引"
+    emptyTitle="尚未建立檢索索引"
+    emptyText="第一次處理知識庫文件時會建立。"
+    (retry)="profilesRead.reload()"
+  />
 </nx-data-table>
 <nx-data-table
   class="ops-table retrieval-capabilities"
@@ -155,20 +156,19 @@
 >
   <div table-toolbar class="ui-table-toolbar">
     <h2>服務能力</h2>
-    <span class="ops-table-note retrieval-probe-note"
-      >驗證只傳送合成資料，會計入檢索模型呼叫配額</span
-    >
-    <button
-      type="button"
-      class="secondary-button"
-      [disabled]="probing() || session.testing() || !capabilities().length"
-      (click)="probe()"
-    >
-      <nx-icon [name]="probing() ? 'loading' : 'check'" />{{
-        probing() ? '正在驗證…' : '驗證檢索模型'
-      }}
-    </button>
   </div>
+  <button
+    table-actions
+    type="button"
+    class="quiet-button"
+    title="驗證只傳送合成資料，會計入檢索模型呼叫配額"
+    [disabled]="probing() || session.testing() || !capabilities().length"
+    (click)="probe()"
+  >
+    <nx-icon [name]="probing() ? 'loading' : 'check'" />{{
+      probing() ? '正在驗證…' : '驗證檢索模型'
+    }}
+  </button>
   <table>
     <colgroup>
       <col class="retrieval-name-column" />
@@ -201,11 +201,15 @@
       }
     </tbody>
   </table>
-  @if (!capabilities().length) {
-    <nx-empty-state table-state class="ui-table-state">
-      <p>{{ capabilitiesRead.loading() ? '正在讀取服務能力' : '無法讀取服務能力。' }}</p>
-    </nx-empty-state>
-  }
+  <nx-table-state
+    [count]="capabilities().length"
+    [loading]="capabilitiesRead.loading()"
+    [error]="capabilitiesRead.error()"
+    loadingText="正在讀取服務能力"
+    errorTitle="無法載入服務能力"
+    emptyTitle="沒有服務能力資料"
+    (retry)="capabilitiesRead.reload()"
+  />
 </nx-data-table>
 <section nxCard class="retrieval-bench" aria-labelledby="retrieval-bench-title">
   <header class="ui-section-header">

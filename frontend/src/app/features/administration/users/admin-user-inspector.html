@@ -16,20 +16,27 @@
     @if (user) {
       <nx-access-status dialog-title [enabled]="user.enabled !== false" />
     }
-    @if (user && session.has('audit')) {
-      <a
-        class="quiet-button inspector-audit"
-        routerLink="/admin/audit"
-        aria-label="查閱活動稽核"
-        title="查閱活動稽核"
-        [queryParams]="{ search: user.id }"
-        (click)="close()"
-      >
-        <nx-icon name="audit" /><span>查閱活動稽核</span>
-      </a>
+    @if (count() > 1) {
+      <nx-drawer-pager noun="使用者" [index]="index()" [count]="count()" (move)="step($event)" />
     }
   </nx-dialog-header>
-  <nx-admin-user-summary />
+  <nx-admin-user-summary>
+    @if (user) {
+      <nx-copy-value class="is-truncated" label="使用者 ID" [value]="user.id" />
+      @if (session.has('audit')) {
+        <a
+          class="quiet-button inspector-audit"
+          routerLink="/admin/audit"
+          aria-label="查閱活動稽核"
+          title="查閱活動稽核"
+          [queryParams]="{ search: user.id }"
+          (click)="close()"
+        >
+          <nx-icon name="audit" /><span>查閱活動稽核</span>
+        </a>
+      }
+    }
+  </nx-admin-user-summary>
   <!-- 頁籤固定在面板上方；每個設定頁籤是各自儲存的表單，面板含自己的頁尾。 -->
   <nx-tabs
     #sections

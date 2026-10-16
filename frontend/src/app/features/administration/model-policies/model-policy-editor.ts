@@ -4,7 +4,7 @@ import { ClientValidationError } from '@core/errors/safe-errors';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import type { EffectiveModelPolicyDto, ModelDto, ModelPolicyRequest } from '@core/api/schema';
 import { Checkbox } from '@shared/ui/checkbox';
-import { DataTable } from '@shared/ui/data-table';
+import { DataTable, TableState } from '@shared/ui/data-table';
 import { InfoPopover } from '@shared/ui/info-popover';
 import { formatModelName, formatNumber } from '@shared/browser/format';
 
@@ -53,7 +53,7 @@ export function sameModelPolicy(a: ModelPolicyDraft, b: ModelPolicyDraft) {
  */
 @Component({
   selector: 'nx-model-policy-editor',
-  imports: [Notice, Field, Checkbox, DataTable, InfoPopover],
+  imports: [Notice, Field, Checkbox, DataTable, InfoPopover, TableState],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './model-policy-editor.scss',
   template: `
@@ -167,15 +167,14 @@ export function sameModelPolicy(a: ModelPolicyDraft, b: ModelPolicyDraft) {
                 />
               </td>
             </tr>
-          } @empty {
-            <tr>
-              <td [attr.colspan]="effective() ? 3 : 2">
-                目前沒有設定模型，請先設定地端模型供應商。
-              </td>
-            </tr>
           }
         </tbody>
       </table>
+      <nx-table-state
+        [count]="models().length"
+        emptyTitle="目前沒有設定模型"
+        emptyText="請先設定地端模型供應商。"
+      />
     </nx-data-table>
     @if (value().restricted && !value().modelIds.length) {
       <nx-notice

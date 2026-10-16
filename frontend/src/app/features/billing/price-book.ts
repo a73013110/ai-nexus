@@ -11,8 +11,13 @@ import { WorkspaceSession } from '@core/auth/workspace-session';
 import type { PriceDto, PriceTargetDto } from '@core/api/schema';
 import { formatDate, formatDay, formatModelDisplayName } from '@shared/browser/format';
 import type { BadgeTone } from '@shared/ui/count-badge';
-import { DataTable, DataTableColumn, DataTableRow, type TableColumn } from '@shared/ui/data-table';
-import { EmptyState } from '@shared/ui/empty-state';
+import {
+  DataTable,
+  DataTableColumn,
+  DataTableRow,
+  TableState,
+  type TableColumn,
+} from '@shared/ui/data-table';
 import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { SearchField } from '@shared/ui/search-field';
@@ -38,6 +43,8 @@ export interface PriceVersion {
 }
 const providerOrder = ['google', 'ollama', 'searxng', 'brave'];
 const keyOf = (x: { provider: string; modelId: string }) => `${x.provider}\n${x.modelId}`;
+/** 伺服器只回傳最新的這麼多個版本；達到時提示歷史不完整。 */
+const HISTORY_LIMIT = 500;
 const rateFormat = new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 8 });
 
 /**
@@ -101,12 +108,12 @@ function rank(provider: string) {
     DataTable,
     DataTableColumn,
     DataTableRow,
-    EmptyState,
     Icon,
     Notice,
     PriceVersionDialog,
     SearchField,
     StatusBadge,
+    TableState,
     ViewSwitch,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -151,6 +158,7 @@ export class PriceBook {
     { id: 'note', label: '備註' },
   ];
   readonly loading = this.catalogRead.loading;
+  readonly historyLimit = HISTORY_LIMIT;
   private readonly editor = viewChild.required(PriceVersionDialog);
   readonly kind = chargeKind;
   readonly provider = providerName;
