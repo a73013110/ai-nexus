@@ -57,7 +57,7 @@ describe('file library store', () => {
     await settle();
     expect(store.offset()).toBe(0);
     expect(list).toHaveBeenLastCalledWith(
-      { search: '', type: 'image', source: 'all', offset: 0 },
+      { search: '', type: 'image', source: 'all', offset: 0, limit: 40 },
       expect.anything(),
     );
   });
@@ -71,7 +71,7 @@ describe('file library store', () => {
     await pause(250);
     await settle();
     expect(list).toHaveBeenLastCalledWith(
-      { search: '報告', type: 'all', source: 'all', offset: 0 },
+      { search: '報告', type: 'all', source: 'all', offset: 0, limit: 40 },
       expect.anything(),
     );
     expect(store.loading()).toBe(false);
