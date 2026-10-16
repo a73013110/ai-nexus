@@ -60,7 +60,10 @@ public sealed class MonitoringSnapshotTests
         var jobs = Assert.Single(snapshot.Subsystems, x => x.Id == "jobs");
         Assert.Equal(SubsystemStates.Degraded, jobs.Status);
         Assert.Equal(1, Assert.Single(jobs.Facts, x => x.Id == "expired_leases").Value);
-        Assert.Equal(SubsystemStates.Healthy, Assert.Single(snapshot.Subsystems, x => x.Id == "log-pipeline").Status);
+        var logs = Assert.Single(snapshot.Subsystems, x => x.Id == "log-pipeline");
+        Assert.Equal(SubsystemStates.Healthy, logs.Status);
+        // The monitoring card carries every pipeline fact; the system log page only notes degradation.
+        Assert.Superset(new HashSet<string> { "replayed", "sampled", "disk_bytes", "estimated_sql_rows", "export_failures", "last_sql_write", "last_file_write" }, logs.Facts.Select(x => x.Id).ToHashSet());
         Assert.Equal(MonitoringHealth.Attention, snapshot.Health.Status);
         Assert.Contains(snapshot.Health.Issues, x => x is { Code: "subsystem_degraded", Subject: "jobs" });
     }

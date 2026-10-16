@@ -16,7 +16,8 @@ public sealed class DiagnosticFilter
 {
     public DateTimeOffset? From { get; set; }
     public DateTimeOffset? To { get; set; }
-    public LogLevel? Level { get; set; }
+    /// <summary>Any of these levels; empty or absent means every level.</summary>
+    public LogLevel[]? Levels { get; set; }
     public string? Category { get; set; }
     public int? EventId { get; set; }
     public string? EventName { get; set; }
@@ -49,7 +50,7 @@ public sealed class DiagnosticQuery(NexusDbContext db, IDataProtectionProvider p
     {
         var to = (filter.To ?? clock.GetUtcNow()).ToUniversalTime(); var from = (filter.From ?? to.AddDays(-1)).ToUniversalTime();
         if (from >= to || to - from > TimeSpan.FromDays(export ? options.Value.MaxExportDays : options.Value.MaxQueryDays)
-            || filter.Take is < 1 or > 100 || filter.Level is < LogLevel.Trace or > LogLevel.Critical || filter.EventId < 0
+            || filter.Take is < 1 or > 100 || filter.Levels?.Length > 6 || filter.Levels?.Any(level => level is < LogLevel.Trace or > LogLevel.Critical) == true || filter.EventId < 0
             || filter.Category?.Length > 180 || filter.EventName?.Length > 100 || filter.ErrorCode?.Length > 80 || filter.Instance?.Length > 100
             || filter.SortDirection is not (null or "asc" or "desc")
             || filter.Text?.Length > 72 || filter.Cursor?.Length > 2048 || filter.IssueCode is not null && !Issues.ValidCode(filter.IssueCode)
@@ -59,10 +60,12 @@ public sealed class DiagnosticQuery(NexusDbContext db, IDataProtectionProvider p
         if (!string.IsNullOrWhiteSpace(filter.Text) && to - from > TimeSpan.FromDays(1)) return DiagnosticsErrors.TextRange;
         return (from, to);
     }
+    /// <summary>Distinct and ordered, so the same selection in any order shares a cursor fingerprint.</summary>
+    private static LogLevel[]? Levels(DiagnosticFilter f) => f.Levels?.Distinct().Order().ToArray();
     private IQueryable<DiagnosticEvent> Filter(DiagnosticFilter f, DateTimeOffset from, DateTimeOffset to)
     {
         var query = db.Set<DiagnosticEvent>().AsNoTracking().Where(x => x.At >= from && x.At <= to);
-        if (f.Level is { } level) query = query.Where(x => x.Level == level);
+        if (Levels(f) is { Length: > 0 } levels) query = query.Where(x => levels.Contains(x.Level));
         if (f.Category is { Length: > 0 } category) query = query.Where(x => x.Category == category);
         if (f.EventId is { } eventId) query = query.Where(x => x.EventId == eventId);
         if (f.EventName is { Length: > 0 } eventName) query = query.Where(x => x.EventName == eventName);
@@ -83,7 +86,7 @@ public sealed class DiagnosticQuery(NexusDbContext db, IDataProtectionProvider p
         if (!range.IsSuccess) return range.Error;
         var (from, to) = range.Value;
         await AuditAsync(actor, "logs.query", null, filter, ct);
-        var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { from, to, filter.Level, filter.Category, filter.EventId, filter.EventName, filter.IssueCode, filter.TraceId, filter.JobId, filter.RunId, filter.OperationId, filter.ErrorCode, filter.Instance, filter.Text, sortDirection = filter.SortDirection ?? "desc", take = filter.Take ?? 50 }))));
+        var fingerprint = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new { from, to, levels = Levels(filter), filter.Category, filter.EventId, filter.EventName, filter.IssueCode, filter.TraceId, filter.JobId, filter.RunId, filter.OperationId, filter.ErrorCode, filter.Instance, filter.Text, sortDirection = filter.SortDirection ?? "desc", take = filter.Take ?? 50 }))));
         var query = Filter(filter, from, to); db.Database.SetCommandTimeout(options.Value.SqlTimeoutSeconds);
         if (filter.Cursor is { Length: > 0 } token)
         {

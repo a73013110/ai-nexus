@@ -1,4 +1,6 @@
 using AiNexus.Features.AccessControl;
+using AiNexus.Features.Identity;
+using AiNexus.Platform.Configuration;
 using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Audit;
@@ -11,10 +13,13 @@ public sealed class AuditModule : IFeatureModule
 {
     /// <summary>The feature id; <c>NexusDbContext</c> seeds the feature from it.</summary>
     public const string Feature = "audit", Policy = Policies.Prefix + Feature;
+    public const string ExportRateLimit = "audit-export";
 
     public static void AddServices(IHostApplicationBuilder builder)
     {
         builder.Services.AddFeaturePolicy(Feature);
+        builder.Services.AddSettings<AuditOptions, AuditOptionsValidator>(AuditOptions.Section);
+        builder.Services.AddRateLimiter(options => options.AddPerUserLimit(ExportRateLimit, 2));
     }
 
     public static void MapEndpoints(RouteGroupBuilder api)
@@ -23,6 +28,7 @@ public sealed class AuditModule : IFeatureModule
         var audit = api.MapGroup("/admin/audit").RequireAuthorization(Policy).WithTags("Activity audit");
         ListActivityAudit.Map(audit);
         GetAuditCatalog.Map(audit);
+        ExportActivityAudit.Map(audit);
     }
 }
 

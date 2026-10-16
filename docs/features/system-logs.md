@@ -16,12 +16,13 @@
 
 ## 查詢
 
-- 預設最近一天，可用 UTC 範圍、等級、模組（Category）、EventId／名稱、查證代碼、TraceId、JobId／RunId／OperationId、錯誤代碼、Instance 與模板文字篩選；最長範圍由 `Diagnostics.MaxQueryDays` 決定。
+- 預設最近一天，可用 UTC 範圍、等級（可多選，`levels` 重複參數）、模組（Category）、EventId／名稱、查證代碼、TraceId、JobId／RunId／OperationId、錯誤代碼、Instance 與模板文字篩選；最長範圍由 `Diagnostics.MaxQueryDays` 決定。
 - 每頁 25／50／100 筆，預設新到舊；keyset cursor 以 Data Protection 保護，綁定操作者、全部篩選條件、時間範圍、排序與每頁筆數。
 - 代碼與 trace 查詢走索引，不用全文檢索；模板文字的子字串搜尋最多 72 字且限一天，避免全表掃描。
 - 同一 Trace／Job／Run 的關聯事件依時間最多顯示 50 筆；更長的流程用篩選與 cursor 繼續查，不要把 50 筆當成全部。
 - 稽核詳情的「查證相關日誌」帶入同一 trace（缺少時用查證代碼）與事件前後五分鐘；日誌詳情也能反查同一 trace 的稽核。兩側連結依各自權限顯示。
-- 匯出只含摘要欄位，範圍與筆數受 `MaxExportDays`／`MaxExportRows` 限制，並有公式注入防護。
+- 匯出整個查詢（不接受 cursor）只含摘要欄位，範圍與筆數受 `MaxExportDays`／`MaxExportRows` 限制，超過就拒絕而不截斷；UTF-8 BOM、公式注入防護。
+- 管線健康（佇列、遺失、補寫、暫存、採樣、SQL 筆數、匯出失敗、最後寫入）完整呈現在 [即時營運監控](monitoring.md) 的「日誌管線」卡；日誌頁只在降級時提示。`GET /api/v1/admin/logs/health` 仍保留且有讀取稽核，前端改用監控後移除。
 
 ## 用查證代碼追查
 
