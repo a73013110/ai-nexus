@@ -5,7 +5,7 @@ namespace AiNexus.Features.Audit;
 
 public sealed record AuditCategoryDto(string Value, string Label);
 
-/// <summary>One classification expression serves SQL filtering and historical record presentation.</summary>
+/// <summary>同一個分類 expression 同時用於 SQL 篩選（轉成 CASE WHEN）與輸出時的分類，兩邊不會不一致。</summary>
 public static class AuditCategories
 {
     public static readonly string[] Values = ["authentication", "administration", "access", "activity"];
@@ -21,12 +21,12 @@ public static class AuditCategories
     public static string For(string action) => Classify(new() { Action = action });
     public static string Label(string category) => All.FirstOrDefault(x => x.Value == category)?.Label ?? category;
     /// <summary>
-    /// The categories of the records an action filter (a stored action or a prefix) can match; the prefix's own category
-    /// comes first. <c>admin.</c> covers administration and the administrative reads.
+    /// 某個動作篩選（完整動作或前綴）可能查到的紀錄分類，自身分類排第一；稽核頁依此決定動作屬於哪些分類。
+    /// 例如 <c>admin.</c> 屬於「管理異動」，但也涵蓋 <c>admin.conversation_read</c> 這類「查閱與匯出」的動作。
     /// </summary>
     public static IReadOnlyList<string> Covering(string action) =>
         [.. Reads.Concat(Administrative).Where(x => x.StartsWith(action, StringComparison.Ordinal)).Prepend(action).Select(For).Distinct()];
-    /// <summary>The caller checks <paramref name="category"/> against <see cref="Values"/> and reports its own error.</summary>
+    /// <summary>呼叫端要先以 <see cref="Values"/> 驗證 <paramref name="category"/> 並回報自己的錯誤；這裡遇到未知值直接 throw。</summary>
     public static IQueryable<AuditEvent> Filter(IQueryable<AuditEvent> query, string? category)
     {
         if (string.IsNullOrEmpty(category)) return query;

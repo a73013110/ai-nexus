@@ -12,9 +12,9 @@ import {
 } from '@shared/ui/time-range-picker';
 import { emptyLogFilter, type LogFilter } from './diagnostics-api';
 
-/** What an ID-shaped search matches: one GUID can be a job, a run or an operation. */
+/** GUID 格式的搜尋要比對哪個欄位：同一種格式可能是 Job、Run 或 Operation，由使用者指定。 */
 export type LogGuidField = 'runId' | 'jobId' | 'operationId';
-/** The log page's conditions; IDs and message text share one search (`searchKind`). */
+/** 日誌頁的查詢條件。查證代碼、TraceId、GUID 與訊息文字共用一個搜尋欄，依格式判斷（`searchKind`）。 */
 export interface LogQuery {
   range: TimeRange;
   levels: LogLevel[];
@@ -70,7 +70,7 @@ export const emptyLogQuery = (): LogQuery => ({
 });
 
 export type LogSearchKind = '' | 'issueCode' | 'traceId' | 'guid' | 'text';
-/** `NX-…` is an issue code, 32 hex a TraceId, a GUID a job, run or operation; anything else is message text. */
+/** `NX-…` 是查證代碼、32 碼 hex 是 TraceId、GUID 是 Job／Run／Operation，其餘當訊息文字。 */
 export function searchKind(search: string): LogSearchKind {
   const value = search.trim();
   if (!value) return '';
@@ -80,7 +80,10 @@ export function searchKind(search: string): LogSearchKind {
   return 'text';
 }
 
-/** Why the conditions cannot be queried, or ''. */
+/**
+ * 無法查詢的原因，可查詢時為空字串。
+ * 訊息文字是子字串搜尋、走不到索引，伺服器限制 72 字且一天內；這裡先擋，避免送出必定失敗的查詢。
+ */
 export function validateLogQuery(query: LogQuery, now = Date.now()): string {
   const bounds = timeRangeBounds(query.range, LOG_RANGES, now);
   if (typeof bounds === 'string') return bounds;
@@ -95,7 +98,7 @@ export function validateLogQuery(query: LogQuery, now = Date.now()): string {
   return '';
 }
 
-/** The request for the conditions, with the time bounds of this moment. */
+/** 轉成 API 參數；預設區間以呼叫當下計算起訖，所以每次查詢都是最新的「最近 N 小時」。 */
 export function logFilter(query: LogQuery, now = Date.now()): LogFilter | string {
   const error = validateLogQuery(query, now);
   if (error) return error;
@@ -167,11 +170,12 @@ function toParams(query: LogQuery): Params {
       query.range.preset !== DEFAULT_RANGE && query.range.preset !== CUSTOM_RANGE
         ? query.range.preset
         : undefined,
-    // Custom ends as instants, the same spelling links from activity audit use.
+    // 自訂起訖寫成 ISO 時間點，與活動稽核「查證相關日誌」連結的格式相同，兩邊的連結可以共用。
     from: bounds && typeof bounds !== 'string' ? bounds.from : undefined,
     to: bounds && typeof bounds !== 'string' ? bounds.to : undefined,
     level: query.levels.length ? query.levels : undefined,
     q: search || undefined,
+    // 預設比對 RunId，只有改成 Job／Operation 時才寫 match，網址保持簡短。
     match: searchKind(search) === 'guid' && query.guid !== 'runId' ? query.guid : undefined,
     category: query.category.trim() || undefined,
     event: query.eventName.trim() || undefined,
@@ -180,7 +184,10 @@ function toParams(query: LogQuery): Params {
   };
 }
 
-/** Reads `q` and the older single-ID links (`traceId`, `issueCode`, `jobId`, `runId`). */
+/**
+ * 讀取 `q`，也相容舊版連結的單一 ID 參數（`traceId`、`issueCode`、`jobId`、`runId`、`operationId`），
+ * 稽核頁的「查證相關日誌」與已存的書籤仍會帶這些參數。
+ */
 function fromParams(params: ParamMap, defaults: LogQuery): LogQuery {
   const text = (key: string, max: number) => (params.get(key) ?? '').trim().slice(0, max);
   const legacy = (['issueCode', 'traceId', 'jobId', 'runId', 'operationId'] as const).find((key) =>

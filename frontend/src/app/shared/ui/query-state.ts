@@ -9,7 +9,7 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, type ParamMap, type Params } from '@angular/router';
 
-/** One applied condition shown as a removable chip; removing it applies `clear`. */
+/** 一個已套用的條件，顯示成可移除的 chip；移除時以 `clear` 覆蓋並立即套用。 */
 export interface QueryChip<T> {
   id: string;
   label: string;
@@ -17,24 +17,24 @@ export interface QueryChip<T> {
 }
 
 export interface QueryStateOptions<T> {
-  /** A fresh query; called again on reset, so relative times start from that moment. */
+  /** 全新的條件；重設時會再呼叫一次，「最近 24 小時」這類相對時間才會從重設當下起算。 */
   defaults: () => T;
-  /** Applied values as URL parameters; leave out values at their defaults. */
+  /** 已套用條件轉成 URL 參數；等於預設值的不要寫入。 */
   toParams?: (value: T) => Params;
-  /** The query a link presets; parameters that are absent or malformed keep `defaults`. */
+  /** 從連結帶入條件；缺少或格式不對的參數沿用 `defaults`。 */
   fromParams?: (params: ParamMap, defaults: T) => T;
-  /** The applied conditions to show as chips, usually those away from their defaults. */
+  /** 要顯示成 chip 的已套用條件，通常是不等於預設值的那些。 */
   chips?: (value: T) => QueryChip<T>[];
-  /** Why the values cannot be queried, or '' when they can. */
+  /** 無法查詢的原因；可以查詢時回傳空字串。 */
   validate?: (value: T) => string;
 }
 
 /**
- * The conditions a query form holds (`draft`) apart from those its results were read with
- * (`applied`). Every `apply` sets a new `applied` value, so the same conditions read again; the
- * applied conditions replace the URL query, and a navigation to other parameters on the same page
- * (a link, the sidebar) applies them. Paging, sorting and page size belong to the page, not here.
- * Create it with `queryState()` in an injection context.
+ * 查詢表單的兩份條件：`draft` 是正在編輯、尚未送出的，`applied` 是目前結果所用的。
+ * - `apply` 每次都給 `applied` 新物件，條件沒變也會重新查詢（等於重新整理）。
+ * - 已套用條件以 replaceUrl 寫回 URL；同一頁的其他導覽（連結、側邊欄）改了參數時，反過來套用 URL 的條件。
+ * - 分頁、排序、每頁筆數不屬於查詢條件，由頁面自己管理。
+ * 在 injection context 用 `queryState()` 建立。
  */
 export class QueryState<T extends object> {
   readonly draft: WritableSignal<T>;
@@ -43,7 +43,7 @@ export class QueryState<T extends object> {
   readonly error = signal('');
   readonly dirty: Signal<boolean>;
   readonly chips: Signal<QueryChip<T>[]>;
-  /** The URL query last written or read, so the page's own writes are not applied twice. */
+  /** 最近寫入或讀到的 URL 參數。自己寫 URL 也會觸發 queryParamMap，靠它比對才不會把同一組條件再套用一次。 */
   private seen = '';
 
   constructor(
@@ -66,7 +66,7 @@ export class QueryState<T extends object> {
   patch(values: Partial<T>) {
     this.draft.update((draft) => ({ ...draft, ...values }));
   }
-  /** Reads with the draft; returns false (and sets `error`) when it cannot be queried. */
+  /** 以草稿查詢；驗證不過時設定 `error`、回傳 false，結果維持不變。 */
   apply(): boolean {
     const value = this.draft();
     const error = this.options.validate?.(value) ?? '';
@@ -75,7 +75,7 @@ export class QueryState<T extends object> {
     this.write({ ...value });
     return true;
   }
-  /** Applies these values at once (a view switch, a removed chip); other draft edits stay pending. */
+  /** 只把這幾個值立即套用（分類切換、移除 chip）；草稿裡其他未送出的修改仍留在草稿。 */
   commit(values: Partial<T>) {
     const value = { ...this.current(), ...values };
     this.draft.update((draft) => ({ ...draft, ...values }));
@@ -91,7 +91,7 @@ export class QueryState<T extends object> {
     this.error.set('');
     this.write({ ...value });
   }
-  /** Follows the URL when another navigation changes it; call once, after construction. */
+  /** 跟隨其他導覽造成的 URL 變更；建構後呼叫一次。 */
   listen(destroy: DestroyRef) {
     this.route?.queryParamMap.pipe(takeUntilDestroyed(destroy)).subscribe((params) => {
       const key = paramsKey(params);
@@ -107,6 +107,7 @@ export class QueryState<T extends object> {
     const defaults = this.options.defaults();
     if (!params || !this.options.fromParams) return defaults;
     const value = this.options.fromParams(params, defaults);
+    // 連結帶入的條件整組驗證不過就全部退回預設，不留半套可能誤導的條件。
     return this.options.validate?.(value) ? defaults : value;
   }
   private write(value: T) {
@@ -120,13 +121,14 @@ export class QueryState<T extends object> {
   }
 }
 
-/** A `QueryState` bound to the current route's URL query. */
+/** 綁定目前路由 URL 參數的 `QueryState`。 */
 export function queryState<T extends object>(options: QueryStateOptions<T>): QueryState<T> {
   const state = new QueryState(options, inject(Router), inject(ActivatedRoute));
   state.listen(inject(DestroyRef));
   return state;
 }
 
+/** 鍵排序後再序列化，鍵順序不同的同一組條件才不會被判定為「已變更」。 */
 function stableJson(value: unknown): string {
   return JSON.stringify(value, (_, item: unknown) =>
     item && typeof item === 'object' && !Array.isArray(item)
@@ -135,7 +137,7 @@ function stableJson(value: unknown): string {
   );
 }
 
-/** One spelling for the same parameters, whether read from the URL or about to be written. */
+/** 把從 URL 讀到的 ParamMap 與準備寫入的 Params 轉成同一種字串，才能比對兩者是否相同。 */
 function paramsKey(params: ParamMap | Params): string {
   const entries: [string, string[]][] =
     'keys' in params && typeof params.getAll === 'function'

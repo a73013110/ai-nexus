@@ -3,9 +3,8 @@ import { CopyFeedback } from '../browser/copy-feedback';
 import { Icon } from './icon';
 
 /**
- * A value with its copy button: identifiers in details (TraceId, RunId) show the value in code
- * type; `showValue=false` leaves only the button for a value shown elsewhere (`IssueCode`). The
- * result is announced once, in a status region, not by changing the button's name.
+ * 值加上複製按鈕：詳情中的識別碼（TraceId、RunId）以等寬字顯示；值已顯示在別處時（`IssueCode`）用
+ * `showValue=false` 只留按鈕。複製結果由 status 區域報讀一次，不改按鈕名稱，避免螢幕報讀器重複唸。
  */
 @Component({
   selector: 'nx-copy-value',
@@ -69,7 +68,7 @@ import { Icon } from './icon';
 })
 export class CopyValue {
   readonly value = input<string | null | undefined>();
-  /** Names the value in the button and the announcement, e.g. 「TraceId」. */
+  /** 值的名稱，用於按鈕與報讀，例如「TraceId」。 */
   readonly label = input.required<string>();
   readonly showValue = input(true);
   readonly compact = input(true);

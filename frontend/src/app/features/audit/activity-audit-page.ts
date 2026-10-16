@@ -62,7 +62,7 @@ import {
 interface AuditPageRequest {
   filters: AuditFilters;
   take: number;
-  /** The last ID of the previous page; none for the first. */
+  /** 游標：上一頁最後一筆的 ID，只讀比它舊的紀錄；第一頁為 undefined。 */
   before: number | undefined;
   index: number;
 }
@@ -107,7 +107,7 @@ export class ActivityAuditPage {
   });
   private readonly catalog = computed(() => this.catalogRead.value());
   readonly features = computed<readonly FeatureDto[]>(() => this.catalog()?.features ?? []);
-  /** Every menu group, so recorded feature changes read in menu order under their group. */
+  /** 全部選單分群，讓功能異動依選單順序、分群顯示（與存取管理相同）。 */
   readonly navigationGroups = computed<readonly NavigationGroupDto[]>(
     () => this.catalog()?.navigationGroups ?? [],
   );
@@ -143,7 +143,7 @@ export class ActivityAuditPage {
   });
   readonly rows = computed<AuditDto[]>(() => this.pageRead.value()?.rows ?? []);
   readonly pageIndex = computed(() => this.pageRead.value()?.request.index ?? 0);
-  /** A full page means older entries may remain. */
+  /** 游標分頁不算總數：本頁筆數等於每頁筆數，才表示可能還有更舊的紀錄。 */
   readonly hasNext = computed(() => {
     const page = this.pageRead.value();
     return !!page && page.rows.length === page.request.take;
@@ -190,11 +190,11 @@ export class ActivityAuditPage {
     this.presentedRows().findIndex((row) => row.entry.id === this.selectedId()),
   );
   readonly selected = computed(() => this.presentedRows()[this.selectedIndex()] ?? null);
-  /** The `before` ID that reads each page already visited, for going back. */
+  /** 已看過各頁的游標，上一頁時用；只能往後讀，所以要記下來。 */
   private cursors: (number | undefined)[] = [undefined];
 
   constructor() {
-    // Each applied query reads its newest page, with the time bounds of that moment.
+    // 每次套用條件都從最新一頁重讀；相對時間（最近 24 小時）以套用當下計算。
     effect(() => {
       const query = this.query.applied();
       untracked(() => {
@@ -206,7 +206,7 @@ export class ActivityAuditPage {
       if (this.pageRead.value()) this.table()?.resetScroll();
     });
   }
-  /** The category switch applies at once and drops an action outside the category. */
+  /** 分類切換立即套用；已選的動作不屬於新分類時一併清除，避免查出空結果。 */
   changeCategory(category: string) {
     const action = this.draft().action;
     const keep = !action || actionsFor(this.actions(), category).some((x) => x.value === action);

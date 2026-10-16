@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 import { Icon } from './icon';
 
 /**
- * Position and previous/next for a detail drawer over the shown page of a table
- * (`drawer-actions`). It moves within that page only; the table owns paging.
+ * 詳情抽屜的「第 N／M 筆」與上一筆、下一筆（放在 `drawer-actions`）。
+ * 只在表格目前這一頁內移動；跨頁由表格的分頁負責。
  */
 @Component({
   selector: 'nx-drawer-pager',
@@ -45,10 +45,10 @@ import { Icon } from './icon';
     </button>`,
 })
 export class DrawerPager {
-  /** Position of the open row in the shown page, or -1 when it is not on it. */
+  /** 開啟中的列在目前這一頁的位置；不在這一頁時為 -1。 */
   readonly index = input(-1);
   readonly count = input(0);
-  /** What a row is, for the button names: 「日誌」 reads 「上一筆日誌」. */
+  /** 列的名稱，組成按鈕文字：「日誌」→「上一筆日誌」。 */
   readonly noun = input('');
   readonly move = output<-1 | 1>();
 }

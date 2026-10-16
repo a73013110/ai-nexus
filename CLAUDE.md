@@ -52,6 +52,7 @@ GitHub Actions 只能手動觸發，驗證在本機完成。
 - 預期內的失敗回傳 `Result<T>`，錯誤定義在 `<Module>Errors`；不要為此 throw。
 - request body 要有 `RequestValidator<T>`，刻意交給 handler 驗證的標 `[ValidatedInHandler(原因)]`；時間用 `TimeProvider`；使用者用 `ICurrentUser`。
 - 設定用 `AddSettings<T, TValidator>(區段)` 註冊（`[OptionsValidator]` 驗證、啟動即檢查），區段名＝模組名；預設值寫進 `appsettings.json`。
+- 註解用繁體中文，寫程式碼看不出來的事：為什麼這樣做、邊界與陷阱（游標、時區、URL 同步、權限、失敗即拒絕）；不逐行重述程式在做什麼，公開型別與共用元件一句說明用途。既有英文註解改到該段時順手改寫，不整批翻譯。
 - 日誌用 `[LoggerMessage]`，EventId 固定且唯一；NuGet 版本只寫在 `backend/Directory.Packages.props`。
 - 跨模組的副作用用 domain event；跨模組讀取只透過對方的 `public` 服務。
 - 模組之間不可有循環依賴（`ModuleBoundaryTests`）。

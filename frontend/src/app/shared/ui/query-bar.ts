@@ -7,14 +7,12 @@ import type { QueryChip, QueryState } from './query-state';
 let sequence = 0;
 
 /**
- * The query form of a data page over a `QueryState`: the fields edit the draft, 「查詢」 applies
- * it (Enter in a field too), 「重設」 applies the defaults. A pending edit is announced until it is
- * applied, and the applied conditions show as chips that remove one condition each.
+ * 資料頁的查詢列，搭配 `QueryState`：欄位只改草稿，按「查詢」（或在欄位按 Enter）才套用，「重設」套用預設值。
+ * 草稿未套用時顯示提示；已套用條件顯示成 chip，可逐一移除。
  *
- * Slots: `[query-lead]` above the fields (a category `ViewSwitch` that applies at once), the
- * fields themselves, and `[query-more]` for the less used fields in a 「＋條件」 popover (`more`).
- * The form does not run native validation: closed popovers hold required fields, and the state's
- * `validate` decides.
+ * 投影位置：`[query-lead]` 放在欄位上方（會立即套用的分類 `ViewSwitch`）；預設 slot 放主要欄位；
+ * `[query-more]` 放較少用的欄位，收在「＋條件」popover（需 `more`）。
+ * 表單加 `novalidate`：必填欄位可能藏在關閉的 popover 裡，瀏覽器原生驗證會卡住送出，改由 state 的 `validate` 判斷。
  */
 @Component({
   selector: 'nx-query-bar',
@@ -100,14 +98,14 @@ let sequence = 0;
   </form>`,
 })
 export class QueryBar {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- any query shape
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 各頁的查詢型別不同
   readonly state = input.required<QueryState<any>>();
   readonly label = input('查詢條件');
   readonly busy = input(false);
-  /** Shows the 「＋條件」 popover with the `[query-more]` fields. */
+  /** 顯示「＋條件」按鈕與 `[query-more]` 欄位的 popover。 */
   readonly more = input(false);
   readonly moreLabel = input('更多條件');
-  /** Fields in the popover that are set, shown on its button. */
+  /** popover 中已填的欄位數，顯示在按鈕上。 */
   readonly moreCount = input(0);
   readonly id = 'nx-query-' + ++sequence;
   private readonly form = viewChild.required<ElementRef<HTMLFormElement>>('form');
@@ -131,10 +129,10 @@ export class QueryBar {
   reset() {
     this.state().reset();
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- any query shape
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- 各頁的查詢型別不同
   remove(chip: QueryChip<any>, index: number) {
     this.state().remove(chip);
-    // The removed chip's button goes away: focus the chip that takes its place, else 「查詢」.
+    // 被移除的 chip 按鈕會消失，焦點移到補上同位置的 chip；沒有 chip 了就移到「查詢」，避免焦點掉回 body。
     requestAnimationFrame(() => {
       const form = this.form().nativeElement;
       const buttons = form.querySelectorAll<HTMLButtonElement>('[data-chip-remove]');
