@@ -21,11 +21,16 @@ internal static class OpenApiContract
             return Task.CompletedTask;
         });
         // [AsParameters] classes contribute their PascalCase property names; binding ignores case and every other API
-        // name is camelCase, so the contract (and the generated client) uses camelCase for these too.
+        // name is camelCase, so the contract (and the generated client) uses camelCase for these too. A query array binds
+        // to an empty array when absent, yet is described as required; the contract marks it optional.
         options.AddOperationTransformer((operation, _, _) =>
         {
             foreach (var parameter in operation.Parameters?.OfType<OpenApiParameter>() ?? [])
-                if (parameter.In == ParameterLocation.Query && parameter.Name is { } name) parameter.Name = JsonNamingPolicy.CamelCase.ConvertName(name);
+            {
+                if (parameter.In != ParameterLocation.Query) continue;
+                if (parameter.Name is { } name) parameter.Name = JsonNamingPolicy.CamelCase.ConvertName(name);
+                if (parameter.Schema?.Type is { } type && type.HasFlag(JsonSchemaType.Array)) parameter.Required = false;
+            }
             return Task.CompletedTask;
         });
         options.AddSchemaTransformer<ResponseSchemaRequirements>();

@@ -32,6 +32,7 @@ public static class PublicErrorCatalog
         ["attachment_quota"] = "附件容量不足，請刪除未引用的檔案，或聯絡管理員調整個人容量上限。",
         ["attachment_total_limit"] = "這次附件總大小超過上限。",
         ["attachment_upload_expired"] = "上傳已失效，請重新上傳。",
+        ["audit_export_limit"] = "匯出筆數超過上限，請縮小時間範圍或篩選條件。",
         ["authentication_mode"] = "此工作區未使用 Windows 整合驗證。",
         ["authentication_required"] = "請先登入工作區。",
         ["client_issue_invalid"] = "問題回報格式不正確。",

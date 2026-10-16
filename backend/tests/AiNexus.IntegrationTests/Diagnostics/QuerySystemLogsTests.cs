@@ -40,8 +40,28 @@ public sealed class QuerySystemLogsTests
         var first = await alice.GetFromJsonAsync<DiagnosticPage>(query); var second = await alice.GetFromJsonAsync<DiagnosticPage>(query + "&cursor=" + Uri.EscapeDataString(first!.NextCursor!));
         Assert.Equal(3, first.Events.Count); Assert.Equal(3, second!.Events.Count); Assert.Empty(first.Events.Select(x => x.LogId).Intersect(second.Events.Select(x => x.LogId)));
         Assert.Equal(HttpStatusCode.BadRequest, (await bob.GetAsync(query + "&cursor=" + Uri.EscapeDataString(first.NextCursor!))).StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, (await alice.GetAsync(query + "&level=Warning&cursor=" + Uri.EscapeDataString(first.NextCursor!))).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await alice.GetAsync(query + "&levels=Warning&cursor=" + Uri.EscapeDataString(first.NextCursor!))).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await alice.GetAsync("/api/v1/admin/logs?take=100000")).StatusCode);
+    }
+
+    [Fact]
+    public async Task LevelsAreMultiSelectAndTheirOrderDoesNotInvalidateTheCursor()
+    {
+        await using var factory = new NexusFactory(administrators: ["alice"]); using var client = await factory.SignedInAsync();
+        var code = Issues.NewCode(); using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
+        var at = DateTimeOffset.UtcNow.AddMinutes(-2);
+        db.AddRange(new[] { LogLevel.Error, LogLevel.Warning, LogLevel.Information, LogLevel.Error, LogLevel.Warning }.Select((level, i) => new DiagnosticEvent { IssueCode = code, At = at.AddSeconds(i), Level = level }));
+        await db.SaveChangesAsync();
+        var query = "/api/v1/admin/logs?" + Range() + "&issueCode=" + code;
+        Assert.Equal(5, (await client.GetFromJsonAsync<DiagnosticPage>(query))!.Events.Count);
+        var both = (await client.GetFromJsonAsync<DiagnosticPage>(query + "&levels=Error&levels=Warning&take=2"))!;
+        Assert.Equal(2, both.Events.Count); Assert.All(both.Events, x => Assert.Contains(x.Level, new[] { "Error", "Warning" }));
+        var rest = (await client.GetFromJsonAsync<DiagnosticPage>(query + "&levels=Warning&levels=Error&take=2&cursor=" + Uri.EscapeDataString(both.NextCursor!)))!;
+        Assert.Equal(2, rest.Events.Count); Assert.DoesNotContain(rest.Events, x => x.Level == "Information");
+        var exported = await client.GetStringAsync("/api/v1/admin/logs/export?" + Range() + "&issueCode=" + code + "&levels=Information");
+        Assert.Equal(2, exported.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Length);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync(query + "&levels=None")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await client.GetAsync(query + "&levels=Unknown")).StatusCode);
     }
 
     [Theory]

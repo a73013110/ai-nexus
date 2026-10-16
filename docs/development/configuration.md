@@ -27,6 +27,7 @@ Development 向上尋找 `global.json`，使用工作區 `.local`。Production �
 | `Databases` | [`DatabasesOptions`](../../backend/src/AiNexus.Platform/Data/DatabasesOptions.cs)，每個資料庫一項（`Nexus`、`Gdweb`、`Meiho`），欄位見 [`DatabaseOptions`](../../backend/src/AiNexus.Platform/Data/DatabaseOptions.cs) | `<資料庫>.User`／`Password` |
 | `Persistence` | [`PersistenceOptions`](../../backend/src/AiNexus.Features/Persistence/PersistenceOptions.cs) | — |
 | `Identity.ActiveDirectory` | [`AdAuthenticationOptions`](../../backend/src/AiNexus.Features/Identity/Authentication/AdAuthenticationOptions.cs) | `BindPassword` |
+| `Audit` | [`AuditOptions`](../../backend/src/AiNexus.Features/Audit/AuditOptions.cs) | — |
 | `Administration` | [`AdministrationOptions`](../../backend/src/AiNexus.Features/Administration/AdministrationOptions.cs) | — |
 | `Inference` | [`InferenceOptions`](../../backend/src/AiNexus.Features/Inference/InferenceOptions.cs) | `Providers.Google.ApiKey` |
 | `Knowledge` | [`KnowledgeOptions`](../../backend/src/AiNexus.Features/Knowledge/KnowledgeOptions.cs) | — |

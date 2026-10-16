@@ -37,6 +37,7 @@ export const publicErrorHints: Readonly<Record<string, string>> = {
   invalid_model_policy: '群組容量上限不正確。',
   invalid_order: '排序值必須介於 0 與 10000。',
   invalid_audit_filter: '稽核篩選條件不正確。',
+  audit_export_limit: '匯出筆數超過上限，請縮小時間範圍或篩選條件。',
   invalid_access_id: '識別碼使用小寫英文、數字、底線與連字號，最多 64 字元。',
   invalid_access_ids: '授權清單過長或有重複。',
   invalid_access_name: '請輸入 120 字元內的名稱。',

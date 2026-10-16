@@ -1259,6 +1259,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/audit/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["ExportActivityAudit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/jobs": {
         parameters: {
             query?: never;
@@ -9132,10 +9148,21 @@ export interface components {
             /** Format: int64 */
             limitBytes: null | number;
         };
+        AuditActionDto: {
+            value: string;
+            label: string;
+            categories: string[];
+        };
         AuditCatalogDto: {
             features: components["schemas"]["FeatureDto"][];
             models: components["schemas"]["ModelDto"][];
             navigationGroups: components["schemas"]["NavigationGroupDto"][];
+            categories: components["schemas"]["AuditCategoryDto"][];
+            actions: components["schemas"]["AuditActionDto"][];
+        };
+        AuditCategoryDto: {
+            value: string;
+            label: string;
         };
         AuditDto: {
             /** Format: int64 */
@@ -9906,7 +9933,7 @@ export interface components {
             canDelete: boolean;
         };
         /** @enum {unknown} */
-        LogLevel: "Trace" | "Debug" | "Information" | "Warning" | "Error" | "Critical" | "None" | null;
+        LogLevel: "Trace" | "Debug" | "Information" | "Warning" | "Error" | "Critical" | "None";
         MeDto: {
             /** Format: uuid */
             id: string;
@@ -11262,7 +11289,9 @@ export type AttachmentDto = components['schemas']['AttachmentDto'];
 export type AttachmentPolicyDto = components['schemas']['AttachmentPolicyDto'];
 export type AttachmentStorageDto = components['schemas']['AttachmentStorageDto'];
 export type AttachmentStorageLimitRequest = components['schemas']['AttachmentStorageLimitRequest'];
+export type AuditActionDto = components['schemas']['AuditActionDto'];
 export type AuditCatalogDto = components['schemas']['AuditCatalogDto'];
+export type AuditCategoryDto = components['schemas']['AuditCategoryDto'];
 export type AuditDto = components['schemas']['AuditDto'];
 export type AuthSessionDto = components['schemas']['AuthSessionDto'];
 export type BackupMessage = components['schemas']['BackupMessage'];
@@ -11474,7 +11503,7 @@ export interface operations {
             query?: {
                 from?: string;
                 to?: string;
-                level?: components["schemas"]["LogLevel"];
+                levels?: components["schemas"]["LogLevel"][];
                 category?: string;
                 eventId?: number;
                 eventName?: string;
@@ -11905,7 +11934,7 @@ export interface operations {
             query?: {
                 from?: string;
                 to?: string;
-                level?: components["schemas"]["LogLevel"];
+                levels?: components["schemas"]["LogLevel"][];
                 category?: string;
                 eventId?: number;
                 eventName?: string;
@@ -18855,14 +18884,15 @@ export interface operations {
     ListAdminAudit: {
         parameters: {
             query?: {
-                before?: number;
                 search?: string;
                 action?: string;
-                result?: string;
+                result?: string[];
                 from?: string;
                 until?: string;
                 category?: string;
                 traceId?: string;
+                before?: number;
+                take?: number;
             };
             header?: never;
             path?: never;
@@ -19016,6 +19046,142 @@ export interface operations {
                     "application/json": components["schemas"]["AuditCatalogDto"];
                 };
             };
+            /** @description Bad Request */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Forbidden */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Method Not Allowed */
+            405: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Payload Too Large */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Unsupported Media Type */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Too Many Requests */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Internal Server Error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Bad Gateway */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+            /** @description Gateway Timeout */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
+                };
+            };
+        };
+    };
+    ExportActivityAudit: {
+        parameters: {
+            query?: {
+                search?: string;
+                action?: string;
+                result?: string[];
+                from?: string;
+                until?: string;
+                category?: string;
+                traceId?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
             /** @description Bad Request */
             400: {
                 headers: {
