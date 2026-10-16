@@ -1,6 +1,6 @@
 # 存取管理
 
-存取管理在 `/admin`，分為使用者、角色、功能群組與模型、功能四個分頁（窄螢幕改為卡片列，點卡片開詳情或編輯），只有有效權限包含 `admin` 的使用者可用；一般登入不會取得管理權。API 每次查詢與異動都重新驗證，寫入另要求 CSRF。頁首「⋯」選單只有「介面元件」（`/design`，見 [設計系統](../frontend/design-system.md#元件工作臺-design)）。
+存取管理在 `/admin`，分為使用者、角色、功能群組與模型、功能四個分頁（窄螢幕改為卡片列，點卡片開詳情或編輯），只有有效權限包含 `admin` 的使用者可用；一般登入不會取得管理權。API 每次查詢與異動都重新驗證，寫入另要求 CSRF。
 
 平台用量、知識檢索與價格是另一個功能 [平台營運](operations.md)；稽核、監控、日誌各自從側欄進入：[活動稽核](activity-audit.md)、[系統日誌](system-logs.md)、[即時監控](monitoring.md)。相關頁面：[模型政策與配額](model-policy.md)、[測試身分](test-identity.md)。授權模型見 [身分與授權](../architecture/access-control.md)。
 

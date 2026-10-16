@@ -9,7 +9,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { WorkspaceSession } from '@core/auth/workspace-session';
 import type { AdminUserDto } from '@core/api/schema';
 import { ViewScope } from '@shared/browser/view-scope';
-import { ActionMenu, type MenuAction } from '@shared/ui/action-menu';
 import { AdministrationStore } from './administration-store';
 import { AdminUserInspector } from './users/admin-user-inspector';
 import { AccessEditorDialog } from './roles/access-editor-dialog';
@@ -27,7 +26,6 @@ import { AdminFeaturesTab } from './roles/admin-features-tab';
     ViewMotion,
     FeaturePage,
     FeatureAccessNotice,
-    ActionMenu,
     AdminUserInspector,
     AccessEditorDialog,
     AdminUsersTab,
@@ -61,13 +59,6 @@ export class AdministrationPage {
     { value: 'groups', label: '功能群組與模型' },
     { value: 'features', label: '功能' },
   ];
-  /** Page tools beyond access management itself; the component workbench shares its grant. */
-  readonly pageTools = computed<MenuAction[]>(() =>
-    this.session.has('admin') ? [{ id: 'design', label: '介面元件', icon: 'sliders' }] : [],
-  );
-  pageAction(action: string) {
-    if (action === 'design') void this.router.navigateByUrl('/design');
-  }
   constructor() {
     inject(ActivatedRoute)
       .queryParamMap.pipe(takeUntilDestroyed())

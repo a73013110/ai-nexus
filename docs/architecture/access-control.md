@@ -6,7 +6,7 @@ AD 或本地密碼驗證決定「你是誰」，access schema 決定「你可以
 
 ## 預設授權
 
-每個首次登入的使用者取得 `member` 角色，加入 `workspace` 群組。各模組以 `FeatureSeed` 宣告自己的功能與預設群組：`workspace` 預設有 dashboard、chat、files、projects、knowledge、artifacts、shared、quality、repositories、tasks；`administrators` 預設有 admin、operations、integrations、monitoring、audit 與 `logs.query`／`logs.detail`／`logs.export`。`admin` 不隱含其他管理功能，operations、monitoring、audit、logs 都要明確授予（見 [平台營運](../features/operations.md)、[活動稽核](../features/activity-audit.md)、[系統日誌](../features/system-logs.md)、[監控](../features/monitoring.md)）。預設授權只寫進內建群組；新增的功能不會自動加到既有的自訂群組，需要時由管理員手動授予。管理員可調整群組功能。三種主檔皆有 Enabled，停用會排除 grant。多個角色／群組的功能取聯集並去重，不採名稱或前端路由推斷權限。
+每個首次登入的使用者取得 `member` 角色，加入 `workspace` 群組。各模組以 `FeatureSeed` 宣告自己的功能與預設群組：`workspace` 預設有 dashboard、chat、files、projects、knowledge、artifacts、shared、quality、repositories、tasks；`administrators` 預設有 admin、operations、integrations、monitoring、audit、design 與 `logs.query`／`logs.detail`／`logs.export`。`admin` 不隱含其他管理功能，operations、monitoring、audit、logs 都要明確授予（見 [平台營運](../features/operations.md)、[活動稽核](../features/activity-audit.md)、[系統日誌](../features/system-logs.md)、[監控](../features/monitoring.md)）。預設授權只寫進內建群組；新增的功能不會自動加到既有的自訂群組，需要時由管理員手動授予。管理員可調整群組功能。三種主檔皆有 Enabled，停用會排除 grant。多個角色／群組的功能取聯集並去重，不採名稱或前端路由推斷權限。
 
 模型授權也取有效群組聯集；任一群組未限制模型即可使用全部平台可用模型，個人白名單只能進一步限縮。逐模型 token 額度只合併有授權該模型的群組，取最高值、無上限優先，個人覆寫優先。停用群組或撤銷角色後，下一次請求重新計算授權與額度。詳見 [模型政策與配額](../features/model-policy.md)。
 

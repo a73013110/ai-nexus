@@ -51,7 +51,7 @@ let sequence = 0;
           [attr.aria-disabled]="busy() || null"
           (click)="reset()"
         >
-          重設
+          <nx-icon name="reset" />重設
         </button>
       </div>
     </div>

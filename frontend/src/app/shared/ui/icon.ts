@@ -80,6 +80,7 @@ import {
   Pin,
   ChevronsLeft,
   Clock,
+  RotateCcw,
 } from 'lucide';
 import { LucideDynamicIcon } from '@lucide/angular';
 
@@ -125,6 +126,7 @@ const icons: Record<string, IconNode> = {
   edit: Pencil,
   repeat: RefreshCw,
   refresh: RefreshCw,
+  reset: RotateCcw,
   stop: Square,
   close: X,
   check: Check,

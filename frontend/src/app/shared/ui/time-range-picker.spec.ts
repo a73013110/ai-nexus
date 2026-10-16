@@ -59,7 +59,13 @@ describe('time range', () => {
     expect(timeRangeLabel({ preset: '1h', from: '', to: '' }, presets)).toBe('最近 1 小時');
     expect(
       timeRangeLabel({ preset: CUSTOM_RANGE, from: '2026-10-01', to: '2026-10-03' }, presets),
-    ).toBe('2026/10/01 — 2026/10/03');
+    ).toBe('2026/10/01 — 10/03');
+    expect(
+      timeRangeLabel(
+        { preset: CUSTOM_RANGE, from: '2025-12-31T08:00:00', to: '2026-01-01T09:30:00' },
+        presets,
+      ),
+    ).toBe('2025/12/31 08:00:00 — 2026/01/01 09:30:00');
     expect(timeRangeLabel({ preset: CUSTOM_RANGE, from: '2026-10-01', to: '' }, presets)).toBe(
       '2026/10/01 起',
     );

@@ -90,7 +90,7 @@
   font-weight: 500;
   font-size: var(--control-font-size);
 }
-.select-option > span {
+.select-option > span:not(.select-check) {
   min-width: 0;
   flex: 1;
 }

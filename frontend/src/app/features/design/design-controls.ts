@@ -108,7 +108,8 @@ import { IdleChrome } from '@shared/ui/idle-chrome';
           (click)="toast.success('圖示操作示範')"
         >
           <nx-icon name="settings" /></button
-        ><button type="button" class="danger-button" (click)="reset()">重設示範</button
+        ><button type="button" class="danger-button" (click)="reset()">
+          <nx-icon name="reset" />重設示範</button
         ><button type="button" class="secondary-button" disabled>停用操作</button>
       </div>
     </nx-design-section>
@@ -364,7 +365,7 @@ export class DesignControls {
   readonly actions: MenuAction[] = [
     { id: 'edit', label: '修改示範標題', icon: 'edit' },
     { id: 'export', label: '未開放操作', icon: 'download', disabled: true },
-    { id: 'reset', label: '重設示範', icon: 'restore', danger: true },
+    { id: 'reset', label: '重設示範', icon: 'reset', danger: true },
   ];
   toggle(id: string) {
     if (id === 'web' || id === 'time')

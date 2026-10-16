@@ -1,5 +1,8 @@
 :host {
   display: grid;
+  // 單欄寫成 minmax(0, 1fr)：auto 欄的最小寬度是觸發鈕不換行文字的 min-content，
+  // 自訂起訖較長時會撐出欄位、壓到右側欄位底下，而不是在鈕內省略。
+  grid-template-columns: minmax(0, 1fr);
   min-width: 0;
   gap: var(--field-label-gap);
 }

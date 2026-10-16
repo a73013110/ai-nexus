@@ -22,4 +22,5 @@ export const FEATURE_NAMES: Readonly<Record<string, string>> = {
   'logs.query': '系統日誌',
   'logs.detail': '日誌診斷詳情',
   'logs.export': '日誌匯出',
+  design: '介面元件',
 };
