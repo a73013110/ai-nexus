@@ -19,10 +19,20 @@ import { formatBytes, formatDate } from '@shared/browser/format';
 import { FileLibraryStore } from '../file-library-store';
 import { Icon } from '@shared/ui/icon';
 import { SearchField } from '@shared/ui/search-field';
+import { TablePagination } from '@shared/ui/data-table';
 
 @Component({
   selector: 'nx-library-picker',
-  imports: [Notice, CompactDialog, DialogHeader, ReaderLink, Icon, SearchField, EmptyState],
+  imports: [
+    Notice,
+    CompactDialog,
+    DialogHeader,
+    ReaderLink,
+    Icon,
+    SearchField,
+    EmptyState,
+    TablePagination,
+  ],
   providers: [ViewScope, FileLibraryStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './library-picker.scss',
@@ -49,7 +59,7 @@ import { SearchField } from '@shared/ui/search-field';
           (valueChange)="store.find($event)"
         />
       </nx-dialog-header>
-      <div class="dialog-body dialog-body-flush" [attr.aria-busy]="store.loading()">
+      <div #body class="dialog-body dialog-body-flush" [attr.aria-busy]="store.loading()">
         @if (store.error()) {
           <nx-notice tone="danger" [message]="store.error()" />
         }
@@ -102,22 +112,19 @@ import { SearchField } from '@shared/ui/search-field';
           </ul>
         }
       </div>
-      @if (store.offset() || store.canNext()) {
+      @if (store.paged()) {
         <footer class="dialog-foot">
-          <p class="dialog-note">{{ store.total() }} 份檔案</p>
-          <button
-            class="quiet-button"
-            [disabled]="store.loading() || !store.offset()"
-            (click)="store.page(-1)"
-          >
-            上一頁</button
-          ><button
-            class="quiet-button"
-            [disabled]="store.loading() || !store.canNext()"
-            (click)="store.page(1)"
-          >
-            下一頁
-          </button>
+          <nx-table-pagination
+            mode="offset"
+            [pageIndex]="store.pageIndex()"
+            [pageSize]="store.pageSize"
+            [pageSizes]="[store.pageSize]"
+            [count]="store.items().length"
+            [total]="store.total()"
+            [busy]="store.loading()"
+            (pageChange)="turn(store.pageIndex() + $event)"
+            (pageSelect)="turn($event)"
+          />
         </footer>
       }
     </dialog>`,
@@ -131,9 +138,15 @@ export class LibraryPicker {
   readonly bytes = formatBytes;
   readonly date = (value: string) => formatDate(value).split(' ')[0];
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+  private readonly body = viewChild.required<ElementRef<HTMLElement>>('body');
   open() {
     this.dialog().nativeElement.showModal();
     void this.store.load();
+  }
+  /** 翻頁回到清單開頭。 */
+  turn(index: number) {
+    this.store.select(index);
+    this.body().nativeElement.scrollTop = 0;
   }
   pick(file: LibraryFileDto) {
     this.dialog().nativeElement.close();

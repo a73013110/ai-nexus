@@ -6,6 +6,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   computed,
   inject,
   signal,
@@ -21,6 +22,7 @@ import { Icon } from '@shared/ui/icon';
 import { Select } from '@shared/ui/select';
 import { NameDialog } from '@shared/ui/name-dialog';
 import { ConfirmDialog } from '@shared/ui/confirm-dialog';
+import { TablePagination } from '@shared/ui/data-table';
 import { AttachmentsApi } from './attachments-api';
 import { apiResource } from '@core/api/api-resource';
 import { FileBrowser } from './file-library/file-browser';
@@ -44,6 +46,7 @@ import { filesTour } from './files-tour';
     ConfirmDialog,
     NameDialog,
     StorageUsage,
+    TablePagination,
   ],
   providers: [ViewScope, FileLibraryStore],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -58,6 +61,7 @@ export class FilesPage {
   readonly knowledge = viewChild.required(AddToKnowledge);
   readonly names = viewChild.required(NameDialog);
   private readonly confirm = viewChild.required(ConfirmDialog);
+  private readonly gallery = viewChild.required<ElementRef<HTMLElement>>('gallery');
   private readonly policyRead = apiResource({ loader: () => this.api.policy() });
   readonly policy = computed<AttachmentPolicyDto | null>(() => this.policyRead.value() ?? null);
   readonly uploading = signal(false);
@@ -91,6 +95,12 @@ export class FilesPage {
     this.actionError.set('');
     this.policyRead.reload();
     this.store.load();
+  }
+  /** 分頁在格線下方，翻頁後捲回格線開頭，否則畫面會停在新一頁的最後幾張。 */
+  turn(index: number) {
+    this.store.select(index);
+    const gallery = this.gallery().nativeElement;
+    if (gallery.getBoundingClientRect().top < 0) gallery.scrollIntoView({ block: 'start' });
   }
   async upload(files: FileList | File[]) {
     const candidates = Array.from(files),
@@ -167,8 +177,7 @@ export class FilesPage {
       await this.api.removeFile(item.file.id);
       if (valid()) {
         this.toast.success('檔案已刪除');
-        if (this.store.items().length === 1 && this.store.offset())
-          this.store.offset.update((value) => Math.max(0, value - 40));
+        if (this.store.items().length === 1 && this.store.offset()) this.store.page(-1);
         this.store.load();
       }
     } catch (error) {

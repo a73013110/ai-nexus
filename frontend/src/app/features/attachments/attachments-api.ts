@@ -19,7 +19,7 @@ export class AttachmentsApi {
   }
   removeAttachment = (id: string) => this.api.delete('/api/v1/attachments/{id}', { path: { id } });
   files = (filters: FileFilters, signal?: AbortSignal) =>
-    this.api.get('/api/v1/files', { query: { limit: 40, ...filters }, signal });
+    this.api.get('/api/v1/files', { query: filters, signal });
   renameFile = (id: string, fileName: string, expectedFileName: string) =>
     this.api.put('/api/v1/files/{id}/name', { path: { id }, body: { fileName, expectedFileName } });
   retainFile = (id: string) => this.api.post('/api/v1/files/{id}/retain', { path: { id } });

@@ -16,10 +16,17 @@ export class FileLibraryStore {
   readonly type = signal('all');
   readonly source = signal('all');
   readonly offset = signal(0);
+  readonly pageSize = 40;
   readonly result = apiResource({
     params: () =>
       this.active()
-        ? { search: this.query(), type: this.type(), source: this.source(), offset: this.offset() }
+        ? {
+            search: this.query(),
+            type: this.type(),
+            source: this.source(),
+            offset: this.offset(),
+            limit: this.pageSize,
+          }
         : undefined,
     loader: (filters, signal) => this.api.files(filters, signal),
   });
@@ -28,6 +35,9 @@ export class FileLibraryStore {
   readonly items = computed(() => this.result.value()?.items ?? []);
   readonly total = computed(() => this.result.value()?.total ?? 0);
   readonly canNext = computed(() => this.offset() + this.items().length < this.total());
+  readonly pageIndex = computed(() => Math.floor(this.offset() / this.pageSize));
+  /** 超過一頁才顯示分頁；已翻到後面的頁時即使總數變少也保留，才能回到前面。 */
+  readonly paged = computed(() => this.total() > this.pageSize || this.offset() > 0);
   /** Start reading, or read again after a change elsewhere. */
   load() {
     if (this.active()) this.result.reload();
@@ -52,6 +62,9 @@ export class FileLibraryStore {
     this.offset.set(0);
   }
   page(direction: number) {
-    this.offset.update((value) => Math.max(0, value + direction * 40));
+    this.select(this.pageIndex() + direction);
+  }
+  select(index: number) {
+    this.offset.set(Math.max(0, index) * this.pageSize);
   }
 }

@@ -252,6 +252,76 @@ test("retained project originals are discoverable through the library and explic
   expect(core.retainedFiles.has(id)).toBe(false);
 });
 
+test("the library and its chooser page with the shared offset pagination", async ({
+  page,
+}) => {
+  const core = new ApiFixture();
+  for (let index = 1; index <= 45; index++) {
+    const id = randomUUID();
+    core.attachments.push({
+      id,
+      fileName: `報告 ${String(index).padStart(2, "0")}.txt`,
+      contentType: "text/plain",
+      size: 100,
+      isImage: false,
+      analysisMode: "extracted-text",
+    });
+    core.retainedFiles.add(id);
+  }
+  await core.attach(page);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/files");
+  const footer = page.locator(".file-footer");
+  const pager = footer.locator("nx-table-pagination");
+  await expect(page.locator(".file-card")).toHaveCount(40);
+  await expect(pager.getByRole("status")).toHaveText("1–40 / 45");
+  // 筆數只在分頁出現一次，不另寫「45 份」。
+  await expect(footer).not.toContainText("45 份");
+  const previous = pager.getByRole("button", { name: "上一頁", exact: true }),
+    next = pager.getByRole("button", { name: "下一頁", exact: true }),
+    jump = pager.getByRole("spinbutton", { name: "跳到頁碼", exact: true });
+  await expect(previous).toBeDisabled();
+  await next.click();
+  await expect(page.locator(".file-card")).toHaveCount(5);
+  await expect(pager.getByRole("status")).toHaveText("41–45 / 45");
+  await expect(next).toBeDisabled();
+  await expect(next).toBeFocused();
+  await jump.fill("1");
+  await jump.press("Enter");
+  await expect(page.locator(".file-card")).toHaveCount(40);
+  await expect(jump).toHaveValue("1");
+  await page
+    .getByRole("searchbox", { name: "搜尋檔案庫", exact: true })
+    .fill("報告 01");
+  await expect(page.locator(".file-card")).toHaveCount(1);
+  await expect(pager).toHaveCount(0);
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page
+    .getByRole("searchbox", { name: "搜尋檔案庫", exact: true })
+    .fill("");
+  await expect(pager).toBeVisible();
+  await expectViewportContained(page);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/chat");
+  await page.getByRole("button", { name: "從檔案庫加入", exact: true }).click();
+  const picker = page.getByRole("dialog", {
+    name: "從檔案庫選取",
+    exact: true,
+  });
+  const chooser = picker.locator("nx-table-pagination");
+  await expect(picker.locator(".picker-list > li")).toHaveCount(40);
+  await expect(chooser.getByRole("status")).toHaveText("1–40 / 45");
+  await expect(picker).not.toContainText("45 份檔案");
+  await chooser.getByRole("button", { name: "下一頁", exact: true }).click();
+  await expect(picker.locator(".picker-list > li")).toHaveCount(5);
+  await picker
+    .getByRole("button", { name: "選取 報告 01.txt", exact: true })
+    .click();
+  await expect(page.locator(".composer nx-attachment-list")).toContainText(
+    "報告 01.txt",
+  );
+});
+
 for (const width of [1440, 375]) {
   test(`the library tour walks upload, filters, a file and capacity at ${width}px`, async ({
     page,

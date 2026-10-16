@@ -25,7 +25,12 @@
       ><button notice-actions type="button" (click)="reload()">重試</button></nx-notice
     >
   }
-  <div class="file-drop" [nxFileDrop]="!uploading() && !!policy()" (filesDropped)="upload($event)">
+  <div
+    #gallery
+    class="file-drop"
+    [nxFileDrop]="!uploading() && !!policy()"
+    (filesDropped)="upload($event)"
+  >
     <nx-resource-gallery
       label="檔案庫"
       placeholder="搜尋檔案名稱"
@@ -70,23 +75,18 @@
   </div>
   <footer class="file-footer">
     <nx-storage-usage [storage]="store.result.value()?.storage" />
-    @if (store.total() > 40) {
-      <div class="file-pagination">
-        <span>{{ store.total() }} 份 · 第 {{ store.offset() / 40 + 1 }} 頁</span
-        ><button
-          class="secondary-button"
-          [disabled]="store.loading() || !store.offset()"
-          (click)="store.page(-1)"
-        >
-          上一頁</button
-        ><button
-          class="secondary-button"
-          [disabled]="store.loading() || !store.canNext()"
-          (click)="store.page(1)"
-        >
-          下一頁
-        </button>
-      </div>
+    @if (store.paged()) {
+      <nx-table-pagination
+        mode="offset"
+        [pageIndex]="store.pageIndex()"
+        [pageSize]="store.pageSize"
+        [pageSizes]="[store.pageSize]"
+        [count]="store.items().length"
+        [total]="store.total()"
+        [busy]="store.loading()"
+        (pageChange)="turn(store.pageIndex() + $event)"
+        (pageSelect)="turn($event)"
+      />
     }
   </footer>
   <nx-add-to-knowledge (added)="added()" /><nx-confirm-dialog /><nx-name-dialog />
