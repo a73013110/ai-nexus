@@ -1,29 +1,11 @@
 <nx-detail-drawer class="log-detail" title="診斷詳情" (closed)="closed.emit()">
-  <div drawer-actions class="log-detail-navigation">
-    @if (index() >= 0) {
-      <span>{{ index() + 1 }} / {{ count() }}</span>
-    }
-    <button
-      type="button"
-      class="icon-button"
-      aria-label="上一筆日誌"
-      title="上一筆日誌"
-      [disabled]="index() <= 0"
-      (click)="move.emit(-1)"
-    >
-      <nx-icon name="left" />
-    </button>
-    <button
-      type="button"
-      class="icon-button"
-      aria-label="下一筆日誌"
-      title="下一筆日誌"
-      [disabled]="index() < 0 || index() >= count() - 1"
-      (click)="move.emit(1)"
-    >
-      <nx-icon name="chevron" />
-    </button>
-  </div>
+  <nx-drawer-pager
+    drawer-actions
+    noun="日誌"
+    [index]="index()"
+    [count]="count()"
+    (move)="move.emit($event)"
+  />
   <div drawer-summary class="ui-drawer-summary">
     @if (current(); as entry) {
       <div>
@@ -63,15 +45,6 @@
       @switch (detailTab()) {
         @case ('overview') {
           <h3 class="ui-section-heading">事件訊息</h3>
-          @if (selected.event.traceId && session.has('audit')) {
-            <a
-              routerLink="/admin/audit"
-              [queryParams]="{ traceId: selected.event.traceId }"
-              class="quiet-button"
-            >
-              <nx-icon name="audit" />查閱同一流程的活動稽核
-            </a>
-          }
           <p class="ui-message-box">{{ selected.event.message }}</p>
           @if (selected.exceptionType) {
             <button type="button" class="ui-notice-link" (click)="selectTab('exception')">
@@ -154,70 +127,24 @@
           } @else {
             <p class="ui-panel-note">此事件未記錄請求資訊（歷史日誌或背景事件）。</p>
           }
-          <h3 class="ui-section-heading">查證與關聯識別</h3>
+          <h3 class="ui-section-heading">關聯</h3>
           <dl class="ui-description-list">
-            <div class="ui-description-wide">
-              <dt>查證代碼</dt>
-              <dd>
-                <code>{{ selected.event.issueCode || '—' }}</code
-                ><nx-issue-code [message]="selected.event.issueCode" [compact]="true" />
-              </dd>
-            </div>
-            <div class="ui-description-wide">
-              <dt>LogId</dt>
-              <dd>
-                <code>{{ selected.event.logId }}</code>
-              </dd>
-            </div>
-            @if (selected.event.traceId) {
-              <div class="ui-description-wide">
-                <dt>TraceId</dt>
-                <dd>
-                  <code>{{ selected.event.traceId }}</code>
-                </dd>
-              </div>
-            }
-            @if (selected.event.spanId) {
-              <div>
-                <dt>SpanId</dt>
-                <dd>
-                  <code>{{ selected.event.spanId }}</code>
-                </dd>
-              </div>
-            }
-            @if (selected.event.requestId) {
-              <div>
-                <dt>RequestId</dt>
-                <dd>
-                  <code>{{ selected.event.requestId }}</code>
-                </dd>
-              </div>
-            }
-            @if (selected.event.operationId) {
-              <div class="ui-description-wide">
-                <dt>OperationId</dt>
-                <dd>
-                  <code>{{ selected.event.operationId }}</code>
-                </dd>
-              </div>
-            }
-            @if (selected.event.jobId) {
-              <div class="ui-description-wide">
-                <dt>JobId</dt>
-                <dd>
-                  <code>{{ selected.event.jobId }}</code>
-                </dd>
-              </div>
-            }
-            @if (selected.event.runId) {
-              <div class="ui-description-wide">
-                <dt>RunId</dt>
-                <dd>
-                  <code>{{ selected.event.runId }}</code>
-                </dd>
+            @for (id of identifiers(selected.event); track id.label) {
+              <div [class.ui-description-wide]="id.wide">
+                <dt>{{ id.label }}</dt>
+                <dd><nx-copy-value [label]="id.label" [value]="id.value" /></dd>
               </div>
             }
           </dl>
+          @if (selected.event.traceId && session.has('audit')) {
+            <a
+              routerLink="/admin/audit"
+              [queryParams]="{ traceId: selected.event.traceId }"
+              class="quiet-button"
+            >
+              <nx-icon name="audit" />查閱同一流程的活動稽核
+            </a>
+          }
         }
         @case ('properties') {
           @if (messageFields().length) {

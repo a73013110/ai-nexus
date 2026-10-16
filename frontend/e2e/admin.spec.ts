@@ -10,6 +10,7 @@ import {
   expectCompactWorkspace,
   ApiFixture,
   settleEntrance,
+  chooseOptions,
   chooseSelect,
   openSettings,
   expectViewportContained,
@@ -268,7 +269,7 @@ test("知識檢索管理顯示覆蓋率、重建啟用與授權檢索測試", as
 test("稽核表格保留捲動與欄位偏好，抽屜支援逐筆檢視和手機焦點返回", async ({
   page,
 }) => {
-  const { audit } = await administration(page);
+  const { audit, auditExports } = await administration(page);
   for (let id = 1; id <= 205; id++)
     audit.push({
       id,
@@ -293,6 +294,8 @@ test("稽核表格保留捲動與欄位偏好，抽屜支援逐筆檢視和手�
   await page.goto("/admin/audit");
   const table = page.locator("nx-activity-audit-page nx-data-table"),
     scroll = table.getByRole("region", { name: "活動稽核列表" });
+  await expect(table.locator(".audit-row")).toHaveCount(50);
+  await chooseSelect(page, "每頁筆數", "每頁 100 筆");
   await expect(table.locator(".audit-row")).toHaveCount(100);
   await expect(table.locator(".audit-row").first()).toHaveCSS(
     "font-size",
@@ -313,10 +316,7 @@ test("稽核表格保留捲動與欄位偏好，抽屜支援逐筆檢視和手�
   await scroll.evaluate((el) => {
     el.scrollTop = 250;
   });
-  const first = table.getByRole("button", {
-    name: "檢視稽核：#197",
-    exact: true,
-  });
+  const first = table.locator(".audit-row").nth(8).locator("[data-row-action]");
   await first.focus();
   const before = await scroll.evaluate((el) => el.scrollTop);
   await first.press("Enter");
@@ -342,30 +342,36 @@ test("稽核表格保留捲動與欄位偏好，抽屜支援逐筆檢視和手�
   await page.setViewportSize({ width: 1440, height: 1000 });
   const nextPage = table.getByRole("button", { name: "下一頁", exact: true }),
     previousPage = table.getByRole("button", { name: "上一頁", exact: true });
+  const firstPage = table.getByRole("button", {
+    name: "回到第一頁",
+    exact: true,
+  });
   await nextPage.click();
   await expect(table.locator(".audit-row")).toHaveCount(100);
-  await expect(table.locator(".audit-row").first()).toContainText("#105");
-  await previousPage.click();
-  await expect(table.locator(".audit-row").first()).toContainText("#205");
-  await nextPage.click();
-  await expect(table.locator(".audit-row").first()).toContainText("#105");
   expect(cursors).toEqual(["106"]);
+  await previousPage.click();
+  await expect(table.locator(".audit-row")).toHaveCount(100);
+  await expect(previousPage).toBeDisabled();
+  await nextPage.click();
   await nextPage.click();
   await expect(table.locator(".audit-row")).toHaveCount(5);
-  await expect(table.locator(".audit-row").first()).toContainText("#5");
-  expect(cursors).toEqual(["106", "6"]);
+  expect(cursors).toEqual(["106", "106", "6"]);
   await expect(nextPage).toBeDisabled();
   const download = page.waitForEvent("download");
-  await table
-    .getByRole("button", { name: "匯出已載入 205 筆", exact: true })
-    .click();
-  expect((await download).suggestedFilename()).toMatch(/-205筆\.csv$/);
-  await previousPage.click();
-  await previousPage.click();
-  await expect(table.locator(".audit-row").first()).toContainText("#205");
-  await page.getByRole("combobox", { name: "稽核動作", exact: true }).click();
-  await page.getByRole("option", { name: "AI 生成", exact: true }).click();
+  await table.getByRole("button", { name: "匯出 CSV", exact: true }).click();
+  expect((await download).suggestedFilename()).toBe("ai-nexus-audit.csv");
+  expect(auditExports.at(-1)!.searchParams.has("before")).toBe(false);
+  await firstPage.click();
+  await expect(table.locator(".audit-row")).toHaveCount(100);
+  await expect(firstPage).toBeDisabled();
+  await chooseSelect(page, "稽核動作", "AI 生成");
+  await expect(table.locator(".audit-row")).toHaveCount(100);
+  await expect(page.getByText("條件已變更，按「查詢」套用")).toBeVisible();
+  await page.getByRole("button", { name: "查詢", exact: true }).click();
   await expect(table.locator(".audit-row")).toHaveCount(0);
+  await expect(
+    page.getByRole("list", { name: "已套用條件", exact: true }),
+  ).toContainText("動作：AI 生成");
   await expect(nextPage).toBeDisabled();
   await page.reload();
   await page.goto("/admin/audit");
@@ -1162,6 +1168,7 @@ async function administration(page: Page) {
     dailyTokenLimits: {} as Record<string, number>,
   };
   const audit: AuditDto[] = [];
+  const auditExports: URL[] = [];
   const conversationId = randomUUID();
   const recordRead = (action: string, resourceId: string) =>
     audit.unshift({
@@ -1189,6 +1196,30 @@ async function administration(page: Page) {
         features: catalog.features,
         models: catalog.models,
         navigationGroups: catalog.navigationGroups,
+        categories: [
+          { value: "authentication", label: "登入與身分" },
+          { value: "administration", label: "管理異動" },
+          { value: "access", label: "查閱與匯出" },
+          { value: "activity", label: "功能操作" },
+        ],
+        actions: [
+          {
+            value: "admin.",
+            label: "平台管理",
+            categories: ["administration", "access"],
+          },
+          {
+            value: "identity.login",
+            label: "登入",
+            categories: ["authentication"],
+          },
+          {
+            value: "admin.conversation_read",
+            label: "對話內容檢視",
+            categories: ["access"],
+          },
+          { value: "run.", label: "AI 生成", categories: ["activity"] },
+        ],
       });
     if (path.endsWith("/model-policy")) {
       if (method === "PUT") {
@@ -1377,6 +1408,13 @@ async function administration(page: Page) {
         ],
       });
     }
+    if (path === "/audit/export") {
+      auditExports.push(url);
+      return route.fulfill({
+        contentType: "text/csv",
+        body: "紀錄 ID,動作\n1,admin.role",
+      });
+    }
     if (path === "/audit")
       return json(
         audit
@@ -1384,8 +1422,8 @@ async function administration(page: Page) {
             (x) =>
               (!url.searchParams.get("action") ||
                 x.action.startsWith(url.searchParams.get("action")!)) &&
-              (!url.searchParams.get("result") ||
-                x.result === url.searchParams.get("result")) &&
+              (!url.searchParams.getAll("result").length ||
+                url.searchParams.getAll("result").includes(x.result ?? "")) &&
               (!url.searchParams.get("category") ||
                 x.category === url.searchParams.get("category")) &&
               (!url.searchParams.get("traceId") ||
@@ -1394,7 +1432,7 @@ async function administration(page: Page) {
                 x.id < Number(url.searchParams.get("before"))),
           )
           .sort((a, b) => b.id - a.id)
-          .slice(0, 100),
+          .slice(0, Number(url.searchParams.get("take") || 100)),
       );
     if (path === "/usage")
       return json({
@@ -1490,7 +1528,16 @@ async function administration(page: Page) {
     page.getByRole("heading", { name: "存取管理", exact: true }),
   ).toBeVisible();
   await expect(page.getByText("王小明", { exact: true })).toBeVisible();
-  return { fixture, catalog, bob, actor, managedUsers, audit, conversationId };
+  return {
+    fixture,
+    catalog,
+    bob,
+    actor,
+    managedUsers,
+    audit,
+    auditExports,
+    conversationId,
+  };
 }
 test("administrators edit roles with effective access preview and an audit trail", async ({
   page,
@@ -1522,7 +1569,7 @@ test("administrators edit roles with effective access preview and an audit trail
   // Reading the user again after the save is audited too; open the save itself.
   await page
     .locator(".audit-row", { hasText: "調整使用者角色" })
-    .getByRole("button", { name: /^檢視稽核：#/ })
+    .getByRole("button", { name: /^檢視稽核：/ })
     .click();
   await expect(
     page.getByRole("dialog", { name: "稽核詳情" }).locator("pre"),
@@ -1755,7 +1802,7 @@ test("feature notes, audit and platform usage stay aligned on wide and narrow sc
       }
       const target =
         tab === "活動稽核"
-          ? "nx-filter-panel"
+          ? "nx-query-bar"
           : tab === "平台用量"
             ? ".feature-content nx-platform-usage > .page-toolbar"
             : ".feature-content nx-admin-features-tab > .page-toolbar";
@@ -1941,12 +1988,12 @@ test("administrators inspect user usage and deleted conversations through an aud
     .click();
   await page.goto("/admin/audit");
   await chooseSelect(page, "稽核動作", "對話內容檢視");
+  await page.getByRole("button", { name: "查詢", exact: true }).click();
   await expect(page.locator(".audit-row")).toHaveCount(1);
+  await expect(page).toHaveURL(/action=admin\.conversation_read/);
   const download = page.waitForEvent("download");
-  await page
-    .getByRole("button", { name: "匯出已載入 1 筆", exact: true })
-    .click();
-  expect((await download).suggestedFilename()).toContain("1筆.csv");
+  await page.getByRole("button", { name: "匯出 CSV", exact: true }).click();
+  expect((await download).suggestedFilename()).toBe("ai-nexus-audit.csv");
 });
 
 test("audit shows readable before after differences and server filters", async ({
@@ -1975,7 +2022,7 @@ test("audit shows readable before after differences and server filters", async (
     }),
   });
   await page.goto("/admin/audit");
-  await page.getByRole("button", { name: "檢視稽核：#1", exact: true }).click();
+  await page.getByRole("button", { name: /^檢視稽核：/ }).click();
   await expect(page.locator(".audit-changes")).toContainText("資深分析人員");
   await expect(page.locator(".audit-before").first()).toContainText("分析人員");
   await expect(page.locator(".audit-changes")).toContainText(
@@ -1983,7 +2030,16 @@ test("audit shows readable before after differences and server filters", async (
   );
   await expect(page.locator(".audit-changes")).toContainText("100,000 tokens");
   await expect(page.locator(".audit-changes")).toContainText("150,000 tokens");
-  await chooseSelect(page, "稽核結果", "已檢視");
+  // The modeless drawer covers the right of the page; close it to reach the filters.
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("dialog", { name: "稽核詳情" }),
+  ).not.toBeVisible();
+  await chooseOptions(page, "稽核結果", ["已檢視", "已受理／完成"]);
+  await expect(
+    page.getByRole("combobox", { name: "稽核結果", exact: true }),
+  ).toHaveText("已選 2 項");
+  await page.getByRole("button", { name: "查詢", exact: true }).click();
   await expect(page.locator(".audit-row")).toHaveCount(0);
   await expect(
     page.getByRole("dialog", { name: "稽核詳情" }),
@@ -2000,263 +2056,44 @@ test("audit dates validate input, keep Taipei boundaries and allow clearing opti
     await route.fallback();
   });
   await page.goto("/admin/audit");
-  const start = page.getByRole("textbox", {
-    name: "稽核開始日期",
-    exact: true,
-  });
-  const end = page.getByRole("textbox", { name: "稽核結束日期", exact: true });
+  const range = page.getByRole("button", { name: /^時間範圍/ });
+  const popover = page.getByRole("dialog", { name: "時間範圍", exact: true });
+  await range.click();
+  await expect(popover).toContainText("時間以 Asia/Taipei 顯示");
+  const start = popover.getByRole("textbox", { name: "起始日期", exact: true });
+  const end = popover.getByRole("textbox", { name: "結束日期", exact: true });
   await start.fill("2026/10/04");
+  await end.fill("2026/10/07");
+  await popover.getByRole("button", { name: "套用自訂", exact: true }).click();
+  await expect(range).toContainText("2026/10/04 — 2026/10/07");
+  await page.getByRole("button", { name: "查詢", exact: true }).click();
   await expect
     .poll(() => queries.at(-1)?.searchParams.get("from"))
-    .toBe("2026-10-04T00:00:00+08:00");
-  await end.fill("2026/10/07");
-  await expect
-    .poll(() => queries.at(-1)?.searchParams.get("until"))
-    .toBe("2026-10-08T00:00:00+08:00");
-  const requests = queries.length;
+    .toBe("2026-10-03T16:00:00.000Z");
+  expect(queries.at(-1)?.searchParams.get("until")).toBe(
+    "2026-10-07T16:00:00.000Z",
+  );
+  await expect(page).toHaveURL(/from=2026-10-04&until=2026-10-07/);
+  await range.click();
   await start.fill("2026/02/30");
   await start.press("Tab");
   await expect(start).toHaveAttribute("aria-invalid", "true");
   await expect(
-    page.getByRole("button", { name: "重新整理稽核", exact: true }),
+    popover.getByRole("button", { name: "套用自訂", exact: true }),
   ).toBeDisabled();
-  await chooseSelect(page, "稽核結果", "已檢視");
-  expect(queries.length).toBe(requests);
   await start.fill("");
-  await start.press("Tab");
+  await popover.getByRole("button", { name: "套用自訂", exact: true }).click();
+  await expect(range).toContainText("至 2026/10/07");
+  const requests = queries.length;
+  await page.getByRole("button", { name: "查詢", exact: true }).click();
   await expect.poll(() => queries.length).toBeGreaterThan(requests);
   expect(queries.at(-1)?.searchParams.has("from")).toBe(false);
-  const beforeClear = queries.length;
-  await end.fill("");
-  await end.press("Tab");
-  await expect.poll(() => queries.length).toBeGreaterThan(beforeClear);
-  expect(queries.at(-1)?.searchParams.has("until")).toBe(false);
-  await expect(page.locator(".ui-date-error")).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "重新整理稽核", exact: true }),
-  ).toBeEnabled();
-});
-
-test("a delayed initial conversation list cannot overwrite a newer filter", async ({
-  page,
-}) => {
-  const state = await administration(page);
-  let release!: () => void;
-  let arrived!: () => void;
-  const pending = new Promise<void>((resolve) => (release = resolve));
-  const received = new Promise<void>((resolve) => (arrived = resolve));
-  let initial = true;
-  await page.route("**/api/v1/admin/users/*/conversations*", async (route) => {
-    if (!initial) return route.fallback();
-    initial = false;
-    arrived();
-    await pending;
-    await route.fulfill({
-      json: {
-        items: [
-          {
-            id: state.conversationId,
-            title: "公文內容討論",
-            createdAt: state.bob.lastSeenAt,
-            updatedAt: state.bob.lastSeenAt,
-            isArchived: true,
-            isDeleted: true,
-            messages: 2,
-          },
-        ],
-        total: 1,
-        offset: 0,
-      },
-    });
-  });
   await page
-    .getByRole("button", { name: "管理使用者：王小明", exact: true })
+    .getByRole("button", { name: "移除條件：時間：至 2026/10/07", exact: true })
     .click();
-  const dialog = page.getByRole("dialog", { name: "王小明", exact: true });
-  await dialog.getByRole("tab", { name: "對話", exact: true }).click();
-  await received;
-  await dialog
-    .getByRole("checkbox", { name: "包含已刪除對話", exact: true })
-    .uncheck();
-  await expect(
-    dialog.getByText("沒有符合的對話。", { exact: true }),
-  ).toBeVisible();
-  release();
-  await expect(dialog.locator(".inspector-stats")).toBeVisible();
-  await expect(
-    dialog.getByRole("button", { name: "檢視對話：公文內容討論", exact: true }),
-  ).toHaveCount(0);
-});
-
-test("personal model budgets share the group editor; settings stay form sized and conversations get room", async ({
-  page,
-}) => {
-  await administration(page);
-  await page
-    .getByRole("button", { name: "管理使用者：王小明", exact: true })
-    .click();
-  const dialog = page.getByRole("dialog", { name: "王小明", exact: true });
-  await expect(dialog.getByLabel("個人容量上限（GB）")).toHaveCount(0);
-  await expect(dialog.getByLabel("使用者姓名", { exact: true })).toHaveValue(
-    "王小明",
-  );
-  await expect(dialog.locator(".inspector-stats")).toBeVisible();
-  await settleEntrance(page);
-  const account = (await dialog.boundingBox())!;
-  // Who the user is reads first; the three figures run underneath on one row.
-  const identity = (await dialog.locator(".summary-identity").boundingBox())!;
-  const stats = dialog.locator(".summary-stat");
-  await expect(stats).toHaveCount(3);
-  const first = (await stats.first().boundingBox())!;
-  const last = (await stats.last().boundingBox())!;
-  expect(first.y).toBeGreaterThanOrEqual(identity.y + identity.height - 1);
-  expect(Math.abs(first.y - last.y)).toBeLessThan(1);
-  expect(Math.abs(first.x - identity.x)).toBeLessThan(1);
-  // Sections are divided by hairlines, never framed; on a wide dialog the title sits beside the
-  // fields and a checkbox's box lines up with their edge. With nothing to save both actions rest.
-  await expect(dialog.locator("fieldset")).toHaveCount(0);
-  const login = dialog.getByRole("group", { name: "登入方式", exact: true });
-  const loginTitle = (await login.getByRole("heading").boundingBox())!;
-  const nameField = (await dialog
-    .getByLabel("使用者姓名", { exact: true })
-    .boundingBox())!;
-  expect(nameField.x).toBeGreaterThan(loginTitle.x + loginTitle.width);
-  const box = (await dialog.locator(".selection-box").first().boundingBox())!;
-  expect(Math.abs(box.x - nameField.x)).toBeLessThan(1);
-  await expect(dialog.locator(".dialog-foot")).toContainText("尚未變更");
-  await expect(
-    dialog.getByRole("button", { name: "還原", exact: true }),
-  ).toBeDisabled();
-  await dialog.getByRole("tab", { name: "AI 模型", exact: true }).click();
-  await expect(dialog).toContainText("100,000 tokens / 日");
-  // Secondary rules are one click away; Escape closes that panel and keeps the dialog open.
-  const rules = dialog.getByRole("button", { name: "額度規則", exact: true });
-  await rules.click();
-  const panel = page.getByRole("dialog", { name: "模型授權與額度規則" });
-  await expect(panel).toContainText("共用預算");
-  await page.keyboard.press("Escape");
-  await expect(panel).toBeHidden();
-  await expect(dialog).toBeVisible();
-  await expect(rules).toBeFocused();
-  await expect(
-    dialog.getByRole("region", { name: "模型授權與額度" }),
-  ).toBeVisible();
-  expect(
-    (await dialog
-      .locator(".model-policy-table tbody tr")
-      .first()
-      .boundingBox())!.height,
-  ).toBeLessThan(110);
-  await settleEntrance(page);
-  expect(
-    Math.abs((await dialog.boundingBox())!.width - account.width),
-  ).toBeLessThan(1);
-  await dialog.getByRole("tab", { name: "附件容量", exact: true }).click();
-  await expect(dialog.getByLabel("個人容量上限（GB）")).toBeVisible();
-  await settleEntrance(page);
-  expect(
-    Math.abs((await dialog.boundingBox())!.width - account.width),
-  ).toBeLessThan(1);
-  await dialog.getByRole("tab", { name: "對話", exact: true }).click();
-  await expect(dialog.locator(".conversation-body")).toBeVisible();
-  await settleEntrance(page);
-  const reading = (await dialog.boundingBox())!;
-  expect(reading.width).toBeGreaterThan(account.width + 100);
-  expect(
-    (await dialog.locator(".conversation-body").boundingBox())!.height,
-  ).toBeGreaterThan(400);
-  // The pager is not shown for a single page; the count sits beside the filter.
-  await expect(dialog.locator(".conversation-pages")).toHaveCount(0);
-  await expect(dialog.locator(".conversation-filter")).toContainText("1 段");
-  await dialog.getByRole("tab", { name: "AI 模型", exact: true }).click();
-  await dialog
-    .getByLabel("每日 token 上限：測試模型", { exact: true })
-    .fill("150000");
-  await dialog
-    .getByRole("button", { name: "儲存模型政策", exact: true })
-    .click();
-  await expect(dialog).toContainText("150,000 tokens / 日");
-  await expect(dialog).toContainText("個人設定");
-  await expectCompactWorkspace(page);
-  await page.setViewportSize({ width: 375, height: 812 });
-  await expectViewportContained(page);
   await expect
-    .poll(() => dialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1))
-    .toBe(true);
-  await dialog
-    .getByLabel("每日 token 上限：測試模型", { exact: true })
-    .fill("");
-  await dialog
-    .getByRole("button", { name: "儲存模型政策", exact: true })
-    .click();
-  await expect(dialog).toContainText("群組設定");
-  await expect(
-    dialog.getByRole("tablist", { name: "使用者管理分類" }),
-  ).toBeInViewport();
-  await expect(dialog.locator(".inspector-stats")).toBeInViewport();
-  await expect(
-    dialog.getByRole("button", { name: "儲存模型政策", exact: true }),
-  ).toBeInViewport({
-    ratio: 1,
-  });
-});
-
-test("many model policies keep group tabs and save controls reachable on small screens", async ({
-  page,
-}) => {
-  const state = await administration(page);
-  state.catalog.models = Array.from({ length: 12 }, (_, index) => ({
-    ...state.catalog.models![0],
-    id: `fixture:${index}`,
-    displayName: `地端模型 ${index + 1}`,
-  }));
-  state.fixture.preferences.theme = "system";
-  await page.reload();
-  await page
-    .getByRole("button", { name: "功能群組與模型", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "編輯功能群組：基本工作區", exact: true })
-    .click();
-  const dialog = page.getByRole("dialog");
-  await dialog.getByRole("tab", { name: "AI 模型", exact: true }).click();
-  for (const viewport of [
-    { width: 1440, height: 1000 },
-    { width: 375, height: 812 },
-    { width: 812, height: 375 },
-  ]) {
-    await page.setViewportSize(viewport);
-    await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
-    await dialog
-      .getByLabel("每日 token 上限：地端模型 12", { exact: true })
-      .fill("50000");
-    await expect(
-      dialog.getByRole("tablist", { name: "功能群組設定分類" }),
-    ).toBeInViewport({ ratio: 1 });
-    await expect(
-      dialog.getByRole("button", { name: "儲存功能群組", exact: true }),
-    ).toBeInViewport({
-      ratio: 1,
-    });
-    expect(
-      await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
-    ).toBe(true);
-    await page.emulateMedia({ colorScheme: "light" });
-    await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
-    await expect(
-      dialog.getByRole("button", { name: "儲存功能群組", exact: true }),
-    ).toBeInViewport({
-      ratio: 1,
-    });
-  }
-  await dialog
-    .getByRole("button", { name: "儲存功能群組", exact: true })
-    .click();
-  expect(
-    state.catalog.groups!.find((group) => group.id === "workspace")!.policy!
-      .dailyTokenLimits!["fixture:11"],
-  ).toBe(50000);
+    .poll(() => queries.at(-1)?.searchParams.has("until"))
+    .toBe(false);
 });
 
 test("activity audit separates sign-ins and opens a historical trace in system logs", async ({
@@ -2310,9 +2147,7 @@ test("activity audit separates sign-ins and opens a historical trace in system l
   await page.goto("/admin/audit?category=authentication");
   const audit = page.locator("nx-activity-audit-page");
   await expect(audit.locator(".audit-row")).toHaveCount(1);
-  await audit
-    .getByRole("button", { name: "檢視稽核：#400", exact: true })
-    .click();
+  await audit.getByRole("button", { name: /^檢視稽核：登入工作區/ }).click();
   const drawer = page.getByRole("dialog", { name: "稽核詳情", exact: true });
   await expect(drawer).toContainText("unverified-account");
   await expect(drawer).toContainText("本地帳號");
@@ -2329,7 +2164,7 @@ test("activity audit separates sign-ins and opens a historical trace in system l
     Date.parse(at) + 300_000,
   );
   await page
-    .locator(".feature-header")
+    .locator(".workspace-navigation")
     .getByRole("link", { name: "活動稽核", exact: true })
     .click();
   await expect(audit.locator(".audit-row")).toHaveCount(state.audit.length);

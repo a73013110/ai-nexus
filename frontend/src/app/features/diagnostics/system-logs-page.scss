@@ -1,19 +1,30 @@
-@use 'breakpoints' as bp;
-
-.log-table-title,
-.log-table-hint {
+.log-search {
+  display: grid;
+  gap: var(--field-label-gap);
+  min-width: 0;
+}
+.log-search-kind {
   display: flex;
   align-items: center;
-  gap: var(--p-space-2);
-}
-.log-table-hint {
-  gap: var(--p-space-4);
+  gap: var(--p-space-1);
+  min-height: 1rem;
   color: var(--secondary);
   font-size: var(--p-font-xs);
 }
+.log-search-kind:empty {
+  display: none;
+}
+.log-search-kind nx-select {
+  --select-trigger-padding-inline: var(--p-space-1);
+  --select-trigger-color: var(--accent);
+}
+.log-more-fields {
+  display: grid;
+  gap: var(--p-space-3);
+}
 .log-table {
   table-layout: fixed;
-  min-width: 58rem;
+  min-width: 60rem;
 }
 .log-col-time {
   width: 11.75rem;
@@ -25,41 +36,22 @@
   width: 13rem;
 }
 .log-col-correlation {
-  width: 13rem;
-}
-.log-col-actions {
-  width: 3rem;
+  width: 14rem;
 }
 .log-col-status {
-  width: 6.5rem;
+  width: 4.5rem;
 }
 .log-col-duration {
-  width: 7rem;
-}
-th nx-icon {
-  --icon-size: var(--icon-xs);
-  margin-left: 0.25rem;
+  width: 6.5rem;
 }
 .log-correlation {
   display: flex;
-  align-items: center;
   min-height: 1.5rem;
 }
-.log-correlation code {
-  flex: 1;
-  min-width: 0;
-}
-.log-id,
-code {
+.log-id {
   font-family: var(--font-code);
   font-size: var(--p-font-xs);
 }
 .log-http-error {
   color: var(--danger);
-}
-@include bp.below(phone) {
-  .log-table-hint {
-    flex-wrap: wrap;
-    gap: var(--p-space-2);
-  }
 }

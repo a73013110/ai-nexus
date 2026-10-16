@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import {
   expectCompactWorkspace,
   ApiFixture,
+  chooseOptions,
   chooseSelect,
   expectViewportContained,
   settleEntrance,
@@ -17,6 +18,8 @@ class LogFixture {
   readonly api = new ApiFixture();
   readonly queries: URL[] = [];
   readonly exports: URL[] = [];
+  /** Features added to the page's grants, beside the log features. */
+  moreFeatures: { id: string; name: string; route: string }[] = [];
   detailDelay = 0;
   detailFailure = false;
   relatedFailure = false;
@@ -102,6 +105,7 @@ class LogFixture {
             { id: "logs.export", name: "匯出日誌", route: "" },
           ]
         : []),
+      ...this.moreFeatures,
     ];
     await this.api.attach(page);
     await page.route("**/api/v1/admin/logs**", async (route) => {
@@ -121,7 +125,6 @@ class LogFixture {
           },
           503,
         );
-      if (url.pathname.endsWith("/health")) return json(this.health);
       if (url.pathname.endsWith("/export")) {
         this.exports.push(url);
         return route.fulfill({
@@ -169,7 +172,10 @@ class LogFixture {
       if (query.get("traceId") && this.relatedFailure) return failure();
       let events = this.events.filter(
         (entry) =>
-          (!query.get("level") || query.get("level") === entry.level) &&
+          (!query.getAll("levels").length ||
+            query.getAll("levels").includes(entry.level)) &&
+          (!query.get("eventName") ||
+            query.get("eventName") === entry.eventName) &&
           (!query.get("issueCode") ||
             query.get("issueCode") === entry.issueCode) &&
           (!query.get("traceId") || query.get("traceId") === entry.traceId),
@@ -335,9 +341,10 @@ test("詳情分頁支援鍵盤、複製與長內容，Escape 回到原列", asyn
 test("分頁與匯出沿用已查詢條件，重設可回到第一頁", async ({ page }) => {
   const fixture = new LogFixture();
   await fixture.attach(page);
-  await page
-    .getByLabel("查證代碼", { exact: true })
-    .fill("NX-" + "C".repeat(32));
+  const search = page.getByRole("searchbox", { name: "搜尋", exact: true });
+  await search.fill("NX-" + "C".repeat(32));
+  await expect(page.getByText("以查證代碼查詢", { exact: true })).toBeVisible();
+  await expect(page.getByText("條件已變更，按「查詢」套用")).toBeVisible();
   await page.getByRole("button", { name: "下一頁", exact: true }).click();
   await expect(page.locator(".log-table tbody tr")).toHaveCount(15);
   expect(fixture.queries.at(-1)!.searchParams.get("issueCode")).toBeNull();
@@ -349,8 +356,12 @@ test("分頁與匯出沿用已查詢條件，重設可回到第一頁", async ({
   await page.getByRole("button", { name: "匯出 CSV", exact: true }).click();
   expect((await download).suggestedFilename()).toBe("ai-nexus-logs.csv");
   expect(fixture.exports.at(-1)!.searchParams.get("issueCode")).toBeNull();
+  await page.getByRole("button", { name: "下一頁", exact: true }).click();
+  await page.getByRole("button", { name: "回到第一頁", exact: true }).click();
+  await expect(page.locator(".log-table tbody tr")).toHaveCount(50);
+  expect(fixture.queries.at(-1)!.searchParams.get("cursor")).toBeNull();
   await page.getByRole("button", { name: "重設", exact: true }).click();
-  await expect(page.getByLabel("查證代碼", { exact: true })).toHaveValue("");
+  await expect(search).toHaveValue("");
   await expect(
     page.getByRole("button", { name: "上一頁", exact: true }),
   ).toBeDisabled();
@@ -403,28 +414,73 @@ test("深色、窄螢幕、進階篩選與查詢權限", async ({ page }) => {
   await expectViewportContained(page);
   await page.setViewportSize({ width: 375, height: 900 });
   await expectViewportContained(page);
-  await page.locator(".advanced-filters summary").click();
-  await page.getByLabel("事件名稱", { exact: true }).fill("http.completed");
-  await expect(page.locator(".log-filter-count")).toHaveText("1");
-  await chooseSelect(page, "等級", "Warning");
+  await page.getByRole("button", { name: /^條件/ }).click();
+  const more = page.getByRole("dialog", { name: "更多條件", exact: true });
+  await more.getByLabel("事件名稱", { exact: true }).fill("http.completed");
+  await more.getByRole("button", { name: "完成", exact: true }).click();
+  await expect(page.getByRole("button", { name: /^條件/ })).toContainText("1");
+  await chooseOptions(page, "等級", ["Warning", "Error"]);
   await page.getByRole("button", { name: "查詢", exact: true }).click();
   await expect(page.locator(".log-table tbody tr")).toHaveCount(
-    fixture.events.filter((entry) => entry.level === "Warning").length,
+    fixture.events.filter(
+      (entry) =>
+        entry.level === "Warning" && entry.eventName === "http.completed",
+    ).length,
   );
+  expect(fixture.queries.at(-1)!.searchParams.getAll("levels")).toEqual([
+    "Warning",
+    "Error",
+  ]);
+  const chips = page.getByRole("list", { name: "已套用條件", exact: true });
+  await expect(chips).toContainText("等級：Warning、Error");
+  await expect(page).toHaveURL(/level=Warning&level=Error/);
+  await page
+    .getByRole("button", {
+      name: "移除條件：事件名稱：http.completed",
+      exact: true,
+    })
+    .click();
+  await expect
+    .poll(() => fixture.queries.at(-1)!.searchParams.get("eventName"))
+    .toBeNull();
   await expectViewportContained(page);
   await expectCompactWorkspace(page);
 });
 
-test("日期輸入保留秒數，日曆支援鍵盤與 24 小時制", async ({ page }) => {
+test("時間範圍合併預設與自訂，保留秒數，日曆支援鍵盤與 24 小時制", async ({
+  page,
+}) => {
   const fixture = new LogFixture();
   await fixture.attach(page);
-  await expect(page.getByText("篩選", { exact: true })).toBeVisible();
-  await page
+  const range = page.getByRole("button", { name: /^時間範圍/ });
+  const popover = page.getByRole("dialog", { name: "時間範圍", exact: true });
+  await expect(range).toContainText("最近 24 小時");
+  await range.click();
+  await expect(popover).toContainText("時間以 Asia/Taipei 顯示");
+  await popover
+    .getByRole("button", { name: "最近 1 小時", exact: true })
+    .click();
+  await expect(popover).not.toBeVisible();
+  await expect(range).toBeFocused();
+  await page.getByRole("button", { name: "查詢", exact: true }).click();
+  await expect
+    .poll(() => {
+      const query = fixture.queries.at(-1)!.searchParams;
+      return Date.parse(query.get("to")!) - Date.parse(query.get("from")!);
+    })
+    .toBe(3_600_000);
+  await expect(page).toHaveURL(/range=1h/);
+  await range.click();
+  await popover
     .getByLabel("起始時間", { exact: true })
     .fill("2026/10/07 12:34:56");
-  await page
+  await popover
     .getByLabel("結束時間", { exact: true })
     .fill("2026/10/08 12:34:57");
+  await popover.getByRole("button", { name: "套用自訂", exact: true }).click();
+  await expect(range).toContainText(
+    "2026/10/07 12:34:56 — 2026/10/08 12:34:57",
+  );
   await page.getByRole("button", { name: "查詢", exact: true }).click();
   await expect
     .poll(() => fixture.queries.at(-1)?.searchParams.get("from"))
@@ -432,7 +488,8 @@ test("日期輸入保留秒數，日曆支援鍵盤與 24 小時制", async ({ p
   expect(fixture.queries.at(-1)?.searchParams.get("to")).toBe(
     "2026-10-08T04:34:57.000Z",
   );
-  await page
+  await range.click();
+  await popover
     .getByRole("button", { name: "起始時間選擇日期", exact: true })
     .click();
   const calendar = page.getByRole("dialog", {
@@ -447,19 +504,19 @@ test("日期輸入保留秒數，日曆支援鍵盤與 24 小時制", async ({ p
     calendar.getByRole("button", { name: "2026/10/08", exact: true }),
   ).toBeFocused();
   await page.keyboard.press("Enter");
-  await calendar.getByLabel("時", { exact: true }).fill("23");
+  await calendar.getByLabel("時", { exact: true }).fill("10");
   await calendar.getByLabel("分", { exact: true }).fill("59");
   await calendar.getByLabel("秒", { exact: true }).fill("58");
   await calendar.getByRole("button", { name: "套用", exact: true }).click();
-  await expect(page.getByLabel("起始時間", { exact: true })).toHaveValue(
-    "2026/10/08 23:59:58",
-  );
   await expect(calendar).not.toBeVisible();
-  await expect(page.getByLabel("起始時間", { exact: true })).toBeFocused();
-  await page.getByRole("button", { name: "重設", exact: true }).click();
-  await expect(page.getByLabel("起始時間", { exact: true })).toHaveValue(
-    /^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}$/,
+  // The range popover stays open around its nested calendar.
+  await expect(popover.getByLabel("起始時間", { exact: true })).toHaveValue(
+    "2026/10/08 10:59:58",
   );
+  await expect(popover.getByLabel("起始時間", { exact: true })).toBeFocused();
+  await popover.getByRole("button", { name: "套用自訂", exact: true }).click();
+  await page.getByRole("button", { name: "重設", exact: true }).click();
+  await expect(range).toContainText("最近 24 小時");
 });
 
 test("整列可開啟明細，複製不會開啟，訊息與請求資訊可判讀", async ({ page }) => {
@@ -480,7 +537,7 @@ test("整列可開啟明細，複製不會開啟，訊息與請求資訊可判�
   await page.keyboard.press("Enter");
   await expect(drawer).toBeVisible();
   await page.keyboard.press("Escape");
-  await rows.first().getByRole("button", { name: "複製問題查證代碼" }).click();
+  await rows.first().getByRole("button", { name: "複製查證代碼" }).click();
   await expect(drawer).not.toBeVisible();
 });
 
@@ -489,13 +546,12 @@ test("欄位偏好可還原，排序與每頁筆數使用伺服器查詢快照",
   await fixture.attach(page);
   const columns = page.getByRole("dialog", { name: "顯示欄位", exact: true });
   await page.getByRole("button", { name: "顯示欄位", exact: true }).click();
-  await columns.getByLabel("HTTP 狀態", { exact: true }).check();
-  await columns.getByLabel("耗時", { exact: true }).check();
+  await columns.getByLabel("HTTP 狀態", { exact: true }).uncheck();
   await columns.getByLabel("等級", { exact: true }).uncheck();
   await page.keyboard.press("Escape");
   await expect(
     page.locator('.log-table th[nxTableColumn="status"]'),
-  ).toBeVisible();
+  ).not.toBeVisible();
   await expect(
     page.locator('.log-table th[nxTableColumn="level"]'),
   ).not.toBeVisible();
@@ -505,7 +561,7 @@ test("欄位偏好可還原，排序與每頁筆數使用伺服器查詢快照",
     page.locator('.log-table th[nxTableColumn="level"]'),
   ).not.toBeVisible();
   await page
-    .getByLabel("查證代碼", { exact: true })
+    .getByRole("searchbox", { name: "搜尋", exact: true })
     .fill("NX-" + "C".repeat(32));
   await chooseSelect(page, "每頁筆數", "每頁 25 筆");
   await expect(page.locator(".log-table tbody tr")).toHaveCount(25);
@@ -529,5 +585,51 @@ test("欄位偏好可還原，排序與每頁筆數使用伺服器查詢快照",
   ).toBeVisible();
   await expect(
     page.locator('.log-table th[nxTableColumn="status"]'),
-  ).not.toBeVisible();
+  ).toBeVisible();
+});
+
+test("智慧搜尋依格式查詢，降級時提示並連到監控", async ({ page }) => {
+  const fixture = new LogFixture();
+  fixture.health = { ...fixture.health, status: "degraded" };
+  fixture.moreFeatures.push({
+    id: "monitoring",
+    name: "即時監控",
+    route: "/admin/monitoring",
+  });
+  await fixture.attach(page);
+  await expect(
+    page.getByRole("status").filter({ hasText: "日誌系統降級" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "前往監控", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".feature-header").getByRole("link")).toHaveCount(
+    0,
+  );
+  const search = page.getByRole("searchbox", { name: "搜尋", exact: true });
+  const trace = fixture.events[0].traceId!;
+  await search.fill(trace.toUpperCase());
+  await expect(
+    page.getByText("以 TraceId 查詢", { exact: true }),
+  ).toBeVisible();
+  await search.press("Enter");
+  await expect
+    .poll(() => fixture.queries.at(-1)!.searchParams.get("traceId"))
+    .toBe(trace);
+  const guid = randomUUID();
+  await search.fill(guid);
+  await chooseSelect(page, "此 ID 比對的欄位", "JobId");
+  await search.press("Enter");
+  await expect
+    .poll(() => fixture.queries.at(-1)!.searchParams.get("jobId"))
+    .toBe(guid);
+  await expect(page).toHaveURL(/match=jobId/);
+  await search.fill("timeout");
+  await expect(page.getByText("以訊息模板文字查詢（限一天內）")).toBeVisible();
+  await page.getByRole("button", { name: /^時間範圍/ }).click();
+  await page.getByRole("button", { name: "最近 7 天", exact: true }).click();
+  const queries = fixture.queries.length;
+  await page.getByRole("button", { name: "查詢", exact: true }).click();
+  await expect(page.getByRole("alert")).toContainText("限一天內");
+  expect(fixture.queries.length).toBe(queries);
 });

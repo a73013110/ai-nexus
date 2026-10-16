@@ -1,31 +1,21 @@
 @use 'breakpoints' as bp;
 
-.activity-audit-table {
-  margin-top: var(--section-gap);
-}
 .activity-audit-table table {
   table-layout: fixed;
   min-width: 52rem;
+}
+nx-view-switch {
+  margin-bottom: 0;
+}
+code {
+  font-family: var(--font-code);
+  font-size: var(--p-font-xs);
 }
 .audit-result-column {
   width: 6.5rem;
 }
 .audit-time-column {
   width: 11rem;
-}
-.audit-toolbar {
-  display: flex;
-  gap: var(--p-space-3);
-  align-items: end;
-  flex-wrap: wrap;
-  margin-bottom: 0;
-}
-.audit-toolbar nx-search-field {
-  flex: 1;
-  min-width: 220px;
-}
-.audit-toolbar nx-select {
-  width: 160px;
 }
 .audit-detail-text {
   margin: var(--p-space-2) 0 var(--section-gap);
@@ -74,13 +64,6 @@
     grid-template-columns: 1fr;
     gap: 4px;
   }
-  .audit-toolbar nx-search-field {
-    flex-basis: 100%;
-  }
-  .audit-toolbar nx-select {
-    flex: 1;
-    min-width: 130px;
-  }
 }
 .audit-changes dd.audit-feature-change {
   display: grid;
@@ -93,16 +76,27 @@
 .audit-feature-change small {
   color: var(--secondary);
 }
-.audit-row time {
-  min-width: 10rem;
+.audit-record-details {
+  margin-top: var(--section-gap);
+}
+.audit-record-details summary {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+  width: fit-content;
+  min-height: var(--button-target);
   color: var(--secondary);
-  font-size: var(--text-caption);
+  font-weight: 600;
+  list-style: none;
+  cursor: pointer;
 }
-@include bp.below(narrow) {
-  .audit-row time {
-    min-width: 100%;
-  }
+.audit-record-details summary::-webkit-details-marker {
+  display: none;
 }
-.admin-row-action-column {
-  width: 3.25rem;
+.audit-record-details summary nx-icon {
+  --icon-size: var(--icon-sm);
+  transition: transform var(--motion) var(--ease);
+}
+.audit-record-details[open] summary nx-icon {
+  transform: rotate(90deg);
 }

@@ -128,3 +128,28 @@
 .select-option > nx-icon {
   color: var(--signal);
 }
+.select-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  border: 1.5px solid var(--muted);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--accent-text);
+}
+.select-check nx-icon {
+  --icon-size: 0.75rem;
+}
+.select-option[aria-selected='true'] .select-check {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.select-option.is-multiple {
+  justify-content: flex-start;
+}
+.select-option.is-multiple[aria-selected='true'] {
+  color: var(--ink);
+}

@@ -76,6 +76,7 @@ const INDEX = [
     name: '資料與內容',
     sections: [
       { id: 'design-table', name: '資料工作區' },
+      { id: 'design-pagination', name: '分頁' },
       { id: 'design-resources', name: '資源集合' },
       { id: 'design-markdown', name: '內容閱讀' },
     ],

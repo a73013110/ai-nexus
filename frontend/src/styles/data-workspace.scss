@@ -160,11 +160,11 @@ select:where(.ui-input) {
     outline-offset: -3px;
   }
 }
-// With nothing under the scroll region (no footer, no state), the last row sits in the frame's
+// With nothing under the scroll region (no footer, no shown state), the last row sits in the frame's
 // rounded bottom corners; its tint and ring take the frame's inner radius instead of being cut off.
 .ui-table-frame
   > .ui-table-scroll:last-child
-  > table:last-child
+  > table:is(:last-child, :has(+ nx-table-state[hidden]:last-child))
   > tbody:last-of-type
   > tr:last-child {
   border-end-start-radius: calc(var(--table-radius) - 1px);
@@ -179,6 +179,43 @@ select:where(.ui-input) {
 }
 .ui-table-pagination nx-select {
   width: 7.5rem;
+}
+.ui-table-footer > .ui-table-pagination:only-child {
+  margin-inline-start: auto;
+}
+.ui-table-page-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--p-space-1);
+}
+.ui-table-page-jump input {
+  width: 3.5rem;
+  min-height: 1.75rem;
+  padding: 0 var(--p-space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--p-radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: end;
+}
+// QueryBar fields grow from 12rem and wrap (`ui-query-wide` from 18rem, e.g. a search); the
+// buttons keep their size at the end of the last line. A phone gives each field its own line.
+.ui-query-row > :not(.ui-query-actions, .ui-query-more) {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.ui-query-row > .ui-query-wide {
+  flex: 2 1 18rem;
+}
+@include bp.below(phone) {
+  .ui-query-row > :not(.ui-query-actions, .ui-query-more) {
+    flex-basis: 100%;
+  }
+}
+// Table actions (export) sit beside the column picker, in its type size.
+.ui-table-actions :is(button, a) {
+  font-size: var(--p-font-xs);
 }
 .ui-data-table [hidden] {
   display: none !important;

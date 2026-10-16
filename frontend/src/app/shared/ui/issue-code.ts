@@ -1,43 +1,29 @@
-import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, viewChild } from '@angular/core';
 import { issueInMessage } from '@core/errors/safe-errors';
-import { CopyFeedback } from '../browser/copy-feedback';
-import { Icon } from './icon';
+import { CopyValue } from './copy-value';
 
+/** The copy button for the issue code inside an error message; the message shows the code. */
 @Component({
   selector: 'nx-issue-code',
-  imports: [Icon],
-  providers: [CopyFeedback],
+  imports: [CopyValue],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styles:
-    ':host { display: inline; } button { margin-inline-start: .25rem; } .icon-button { width: 1.5rem; height: 1.5rem; } .icon-button nx-icon { --icon-size: var(--icon-sm); } @media (pointer: coarse) { .icon-button { width: var(--button-target); height: var(--button-target); } }',
+  styles: ':host { display: inline; } nx-copy-value { margin-inline-start: .25rem; }',
   template: `@if (code()) {
-    <button
-      type="button"
-      [class]="compact() ? 'icon-button' : 'secondary-button'"
-      aria-label="複製問題查證代碼"
-      title="複製問題查證代碼"
-      (click)="copy()"
-    >
-      @if (compact()) {
-        <nx-icon [name]="copied() ? 'check' : 'copy'" />
-      } @else {
-        {{ copied() ? '已複製' : '複製代碼' }}
-      }</button
-    ><span [class]="compact() ? 'sr-only' : 'form-note'" role="status">{{ notice() }}</span>
+    <nx-copy-value
+      [value]="code()"
+      label="問題查證代碼"
+      [showValue]="false"
+      [compact]="compact()"
+    />
   }`,
 })
 export class IssueCode {
   readonly message = input<string | null | undefined>();
   readonly compact = input(true);
-  private readonly feedback = inject(CopyFeedback);
+  private readonly button = viewChild(CopyValue);
   readonly code = computed(() => issueInMessage(this.message()));
-  readonly copied = this.feedback.copied;
-  readonly notice = computed(
-    () => this.feedback.error() || (this.copied() ? '查證代碼已複製。' : ''),
-  );
+  readonly copied = computed(() => this.button()?.copied() ?? false);
   async copy() {
-    const code = this.code();
-    if (!code) return;
-    await this.feedback.copy(code);
+    await this.button()?.copy();
   }
 }
