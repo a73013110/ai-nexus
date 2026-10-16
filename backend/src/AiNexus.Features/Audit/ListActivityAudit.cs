@@ -8,8 +8,8 @@ public sealed record AuditDto(long Id, string Actor, string Action, Guid? Resour
     string? Category = null, string? TraceId = null, Guid? OperationId = null, string? IssueCode = null);
 
 /// <summary>
-/// The newest 25, 50 or 100 (default) audit records matching the filters, before an optional cursor. Actor and subject
-/// accounts are joined in; stored details are redacted again on the way out.
+/// 符合條件的最新 25、50 或 100（預設）筆稽核紀錄，可用游標 <c>before</c> 往舊的讀。
+/// 不回傳總筆數：游標分頁省掉大表 COUNT，期間新寫入的紀錄也不會讓翻頁重複。
 /// </summary>
 internal sealed class ListActivityAudit(NexusDbContext db)
 {

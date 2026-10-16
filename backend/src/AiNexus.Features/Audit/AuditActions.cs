@@ -1,9 +1,9 @@
 namespace AiNexus.Features.Audit;
 
-/// <summary>An action filter: a stored action or an action prefix, with the categories its records fall in (its own first).</summary>
+/// <summary>一個動作篩選：完整動作或動作前綴，附上它可能查到的紀錄分類（自身分類排第一）。</summary>
 public sealed record AuditActionDto(string Value, string Label, IReadOnlyList<string> Categories);
 
-/// <summary>The action filters the audit page offers, in menu order. Categories come from <see cref="AuditCategories"/>.</summary>
+/// <summary>稽核頁的動作選單，依顯示順序排列；分類由 <see cref="AuditCategories"/> 推算，前端不再寫死。</summary>
 public static class AuditActions
 {
     public static readonly IReadOnlyList<AuditActionDto> All = new (string Value, string Label)[]

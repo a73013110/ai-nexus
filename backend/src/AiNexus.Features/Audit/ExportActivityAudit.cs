@@ -11,8 +11,8 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Audit;
 
 /// <summary>
-/// A CSV of every record matching the filters, newest first, under its own rate limit. A result over the configured row limit
-/// is refused rather than cut short; the export is audited before it is returned.
+/// 匯出符合條件的全部紀錄為 CSV（新到舊），有獨立的 rate limit。
+/// 超過筆數上限時直接拒絕而不是截斷，避免使用者誤以為拿到完整資料；回傳前先寫入匯出本身的稽核。
 /// </summary>
 internal sealed class ExportActivityAudit(NexusDbContext db, IOptions<AuditOptions> options)
 {
@@ -32,9 +32,10 @@ internal sealed class ExportActivityAudit(NexusDbContext db, IOptions<AuditOptio
     {
         if (!filter.IsValid()) return AuditErrors.InvalidFilter;
         var limit = options.Value.MaxExportRows;
+        // 多讀一筆只為判斷是否超過上限，不必另做 COUNT。
         var rows = await filter.Query(db).Take(limit + 1).ToListAsync(ct);
         if (rows.Count > limit) return AuditErrors.ExportLimit;
-        // The export is a privileged read: it fails closed when its own record cannot be saved. Details keep to approved audit fields.
+        // 匯出屬於特權讀取：自己的稽核寫不進去就整個失敗（fail closed）。詳情只記核准的欄位，不存搜尋文字。
         db.AuditEvents.Add(new() { OwnerId = actor, Action = Action, Result = "csv", DetailsJson = JsonSerializer.Serialize(new { from = filter.From, to = filter.Until, traceId = filter.TraceId, count = rows.Count }) });
         await db.SaveChangesAsync(ct);
         var csv = new StringBuilder("\uFEFF").Append(Line(Header));
@@ -46,7 +47,7 @@ internal sealed class ExportActivityAudit(NexusDbContext db, IOptions<AuditOptio
 
     private static string Line(IEnumerable<string?> cells) => string.Join(",", cells.Select(CsvCell.Quote)) + "\r\n";
 
-    /// <summary>The resource the record names in its details, as the audit page shows it.</summary>
+    /// <summary>詳情中記錄的資源識別碼，取法與稽核頁的「資源」欄相同。</summary>
     private static string? ResourceKey(string? json)
     {
         if (string.IsNullOrEmpty(json)) return null;

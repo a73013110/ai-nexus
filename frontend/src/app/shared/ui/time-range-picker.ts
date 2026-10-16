@@ -17,15 +17,15 @@ import { DateTimePicker } from './date-time-picker';
 import { Icon } from './icon';
 
 /**
- * A preset (`preset` is its value; `from`/`to` unused) or a custom range (`preset: 'custom'`)
- * of workspace wall-clock values: `YYYY-MM-DDTHH:mm:ss`, or `YYYY-MM-DD` without time.
+ * 預設區間（`preset` 為其值，`from`／`to` 不用）或自訂區間（`preset: 'custom'`）。
+ * 自訂的起訖是工作區時區（台北）的牆上時間：`YYYY-MM-DDTHH:mm:ss`，或不含時間的 `YYYY-MM-DD`。
  */
 export interface TimeRange {
   preset: string;
   from: string;
   to: string;
 }
-/** `duration` reaches back from the query time (ms); without it the preset has no bounds. */
+/** `duration` 是從查詢當下往回推的毫秒數；沒有 `duration` 表示不限時間。 */
 export interface TimeRangePreset {
   value: string;
   label: string;
@@ -36,8 +36,9 @@ const hour = 60 * 60_000;
 export const hoursAgo = (hours: number) => hours * hour;
 
 /**
- * The UTC bounds to query, or why the range cannot be queried. A preset ends a minute after now
- * (events written while the page loads); a date-only custom range ends at the next midnight.
+ * 要查詢的 UTC 起訖，或無法查詢的原因。
+ * - 預設區間的結束時間是「現在＋1 分鐘」，涵蓋頁面載入期間剛寫入的事件。
+ * - 只有日期的自訂結束日取隔天 00:00（不含），整天都會被包含。
  */
 export function timeRangeBounds(
   range: TimeRange,
@@ -58,7 +59,7 @@ export function timeRangeBounds(
   return { from: from?.toISOString(), to: to?.toISOString() };
 }
 
-/** A Taipei wall-clock value as an instant; a date alone is its midnight, or the next one for an end. */
+/** 台北牆上時間轉成時間點；只有日期時取當天 00:00，結束端取隔天 00:00。 */
 function wallClock(value: string, end: boolean): Date | null {
   if (!parseLocalDateTime(value)) return null;
   if (value.includes('T')) return parseDateTimeInput(value);
@@ -67,7 +68,7 @@ function wallClock(value: string, end: boolean): Date | null {
   return date;
 }
 
-/** The range as one line: the preset's name, or its custom ends. */
+/** 區間的一行摘要：預設區間的名稱，或自訂的起訖。 */
 export function timeRangeLabel(range: TimeRange, presets: readonly TimeRangePreset[]): string {
   if (range.preset !== CUSTOM_RANGE)
     return presets.find((item) => item.value === range.preset)?.label ?? '';
@@ -81,9 +82,9 @@ export function timeRangeLabel(range: TimeRange, presets: readonly TimeRangePres
 let sequence = 0;
 
 /**
- * Preset ranges and a custom range in one popover; the time zone is said once, in it. Choosing a
- * preset or applying the custom ends changes the value (a query's draft), not the query itself.
- * `required` asks for both custom ends; otherwise either may stay open.
+ * 預設區間與自訂區間合在一個 popover，時區只在這裡說明一次。
+ * 選預設或按「套用自訂」只改 value（查詢草稿），不會直接查詢。
+ * `required` 時自訂起訖都必填；否則可以只填一端（開放區間）。
  */
 @Component({
   selector: 'nx-time-range-picker',
@@ -176,7 +177,7 @@ export class TimeRangePicker {
   readonly valueChange = output<TimeRange>();
   readonly id = 'nx-time-range-' + ++sequence;
   readonly timezone = APP_TIME_ZONE;
-  /** The custom ends being edited; they reach the value only when applied. */
+  /** 正在編輯的自訂起訖；按「套用自訂」才寫回 value。 */
   readonly from = signal('');
   readonly to = signal('');
   readonly summary = computed(() => timeRangeLabel(this.value(), this.presets()));
@@ -188,7 +189,7 @@ export class TimeRangePicker {
     const bounds = timeRangeBounds({ preset: CUSTOM_RANGE, from, to }, this.presets());
     return typeof bounds === 'string' ? bounds : '';
   });
-  /** A typed end that is not a date (its picker says so) blocks the range instead of leaving it open. */
+  /** 輸入了但不是有效日期的一端要擋下，不能當成留空而變成開放區間。 */
   readonly canApply = computed(
     () =>
       !this.customError() &&
@@ -213,7 +214,7 @@ export class TimeRangePicker {
       this.from.set(range.from);
       this.to.set(range.to);
     } else {
-      // Editing starts from the preset's window, so a small change is a small edit.
+      // 從目前預設區間的實際起訖開始編輯，微調時不必從空白重填。
       const bounds = timeRangeBounds(range, this.presets());
       const local = (iso?: string) =>
         iso ? formatDateTimeInput(new Date(iso)).slice(0, this.withTime() ? 19 : 10) : '';

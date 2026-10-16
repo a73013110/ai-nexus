@@ -11,7 +11,7 @@ import {
 } from '@shared/ui/time-range-picker';
 import type { AuditFilters } from './audit-api';
 
-/** The audit page's conditions; `category` is the view switch and applies at once. */
+/** 稽核頁的查詢條件；`category` 是上方的分類切換，切換即套用，不經過「查詢」。 */
 export interface AuditQuery {
   category: string;
   search: string;
@@ -27,7 +27,7 @@ export const AUDIT_RANGES: TimeRangePreset[] = [
   { value: '7d', label: '最近 7 天', duration: hoursAgo(24 * 7) },
   { value: '30d', label: '最近 30 天', duration: hoursAgo(24 * 30) },
 ];
-/** `success` and `failed` are groups on the server; the others are stored results. */
+/** `success`、`failed` 是伺服器端的結果群組（受理類／其餘全部），其他值是實際儲存的結果。 */
 export const AUDIT_RESULTS = [
   { value: 'success', label: '已受理／完成' },
   { value: 'failed', label: '未完成／拒絕' },
@@ -46,7 +46,7 @@ export const emptyAuditQuery = (): AuditQuery => ({
   traceId: '',
 });
 
-/** The action filters of a category; every category's when none is chosen. */
+/** 分類下可選的動作；未選分類時列出全部。 */
 export const actionsFor = (actions: readonly AuditActionDto[], category: string) =>
   category ? actions.filter((action) => action.categories.includes(category)) : actions;
 
@@ -78,7 +78,7 @@ function toParams(query: AuditQuery): Params {
   };
 }
 
-/** Links from user details (`search`) and system logs (`traceId`) preset the query. */
+/** 使用者詳情（`search`）與系統日誌（`traceId`）的連結會帶入條件；日期只收 `YYYY-MM-DD`。 */
 function fromParams(params: ParamMap, defaults: AuditQuery): AuditQuery {
   const day = (key: string) => (DAY.test(params.get(key) ?? '') ? params.get(key)! : '');
   const from = day('from'),
@@ -102,7 +102,7 @@ function fromParams(params: ParamMap, defaults: AuditQuery): AuditQuery {
   };
 }
 
-/** Options for the page's `QueryState`; chips name actions from the catalog as it loads. */
+/** 稽核頁 `QueryState` 的設定；動作 chip 的名稱來自 catalog，catalog 載入前先顯示原始值。 */
 export function auditQueryOptions(
   actions: () => readonly AuditActionDto[],
 ): QueryStateOptions<AuditQuery> {
