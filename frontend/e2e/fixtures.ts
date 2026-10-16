@@ -117,6 +117,19 @@ export async function chooseSelect(
   // The panel stays painted while it leaves; wait so the next lookup cannot match it.
   await expect(list).toBeHidden();
 }
+/** Toggles options of a multiple Select, which stays open until Escape. */
+export async function chooseOptions(
+  page: import("@playwright/test").Page,
+  label: string,
+  texts: string[],
+) {
+  await page.getByRole("combobox", { name: label, exact: true }).click();
+  const list = page.getByRole("listbox", { name: label, exact: true });
+  for (const text of texts)
+    await list.getByRole("option", { name: text, exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(list).toBeHidden();
+}
 /** The shell's bottom-right toast stack; it stays visible above modal dialogs. */
 export function toasts(page: Page) {
   return page.locator("nx-toaster .toast");

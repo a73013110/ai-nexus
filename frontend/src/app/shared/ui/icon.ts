@@ -78,6 +78,8 @@ import {
   LayoutGrid,
   List,
   Pin,
+  ChevronsLeft,
+  Clock,
 } from 'lucide';
 import { LucideDynamicIcon } from '@lucide/angular';
 
@@ -156,6 +158,8 @@ const icons: Record<string, IconNode> = {
   play: Play,
   calendar: Calendar,
   columns: SlidersHorizontal,
+  first: ChevronsLeft,
+  clock: Clock,
 };
 /** Names `nx-icon` draws without a feature bundle; menu icons from the API fall back when unknown. */
 export const ICON_NAMES: ReadonlySet<string> = new Set(Object.keys(icons));

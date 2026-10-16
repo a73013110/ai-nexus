@@ -36,6 +36,14 @@
 .ui-table-toolbar-wrap:empty {
   display: none;
 }
+.ui-table-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--p-space-1);
+}
+.ui-table-actions:empty {
+  display: none;
+}
 .ui-table-columns-trigger {
   margin-inline-end: var(--p-space-3);
   font-size: var(--p-font-xs);

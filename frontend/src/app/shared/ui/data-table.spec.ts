@@ -1,7 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
-import { DataTable, DataTableColumn, DataTableRow } from './data-table';
+import { DataTable, DataTableColumn, DataTableRow, TablePagination } from './data-table';
 
 @Component({
   selector: 'nx-data-table-host',
@@ -112,5 +112,33 @@ describe('DataTable', () => {
     } finally {
       dialog.remove();
     }
+  });
+
+  it('goes back to the first page in cursor mode and jumps to a typed page in offset mode', () => {
+    const fixture = TestBed.createComponent(TablePagination);
+    const selected: number[] = [];
+    fixture.componentInstance.pageSelect.subscribe((index) => selected.push(index));
+    fixture.componentRef.setInput('pageIndex', 2);
+    fixture.componentRef.setInput('hasNext', true);
+    fixture.detectChanges();
+    const host = fixture.nativeElement as HTMLElement;
+    host.querySelector<HTMLButtonElement>('[aria-label="回到第一頁"]')!.click();
+    expect(selected).toEqual([0]);
+
+    fixture.componentRef.setInput('mode', 'offset');
+    fixture.componentRef.setInput('pageIndex', 0);
+    fixture.componentRef.setInput('pageSize', 100);
+    fixture.componentRef.setInput('count', 100);
+    fixture.componentRef.setInput('total', 523);
+    fixture.detectChanges();
+    expect(host.textContent).toContain('1–100 / 523');
+    expect(host.textContent).toContain('/ 6 頁');
+    const jump = host.querySelector<HTMLInputElement>('[aria-label="跳到頁碼"]')!;
+    jump.value = '4';
+    jump.dispatchEvent(new Event('change'));
+    jump.value = '9';
+    jump.dispatchEvent(new Event('change'));
+    expect(selected).toEqual([0, 3]);
+    expect(jump.value).toBe('1');
   });
 });

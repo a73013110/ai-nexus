@@ -111,20 +111,16 @@
     >
   }
   <div table-footer class="ui-table-footer">
-    <span
-      >{{ store.users()?.total ? (store.users()?.offset || 0) + 1 : 0 }}–{{
-        (store.users()?.offset || 0) + (store.users()?.users?.length || 0)
-      }}
-      / {{ store.users()?.total || 0 }}</span
-    >
     <nx-table-pagination
+      mode="offset"
       [pageIndex]="(store.users()?.offset || 0) / 100"
       [pageSize]="100"
       [pageSizes]="[100]"
       [count]="store.users()?.users?.length || 0"
-      [hasNext]="(store.users()?.offset || 0) + 100 < (store.users()?.total || 0)"
+      [total]="store.users()?.total || 0"
       [busy]="store.loadingUsers()"
       (pageChange)="store.readUsers((store.users()?.offset || 0) + $event * 100)"
+      (pageSelect)="store.readUsers($event * 100)"
     />
   </div>
 </nx-data-table>

@@ -16,14 +16,14 @@ import { CodeBlock } from '@shared/markdown/code-block';
 import { formatDate } from '@shared/browser/format';
 import { DetailDrawer } from '@shared/ui/detail-drawer';
 import { Icon } from '@shared/ui/icon';
-import { IssueCode } from '@shared/ui/issue-code';
+import { CopyValue } from '@shared/ui/copy-value';
+import { DrawerPager } from '@shared/ui/drawer-pager';
 import { Notice } from '@shared/ui/notice';
 import { StatusBadge } from '@shared/ui/status-badge';
 import { Tabs, type TabItem } from '@shared/ui/tabs';
 import { ViewMotion } from '@shared/ui/view-motion';
-import { emptyLogFields } from './log-filter-state';
 import { levelTone, milliseconds } from './log-display';
-import { DiagnosticsApi, type LogFilter } from './diagnostics-api';
+import { DiagnosticsApi, emptyLogFilter, type LogFilter } from './diagnostics-api';
 
 const requestFields = [
   ['ClientAddress', '連線 IP'],
@@ -45,9 +45,10 @@ const outcomes: Record<string, string> = {
   selector: 'nx-log-detail-drawer',
   imports: [
     CodeBlock,
+    CopyValue,
     DetailDrawer,
+    DrawerPager,
     Icon,
-    IssueCode,
     Notice,
     RouterLink,
     StatusBadge,
@@ -105,9 +106,7 @@ export class LogDetailDrawer {
     params: this.flow,
     loader: async ({ entry, from, to }, signal) => {
       const filter: LogFilter = {
-        ...emptyLogFields(),
-        from,
-        to,
+        ...emptyLogFilter(from, to),
         traceId: entry.traceId ?? '',
         jobId: entry.jobId ?? '',
         runId: entry.runId ?? '',
@@ -188,6 +187,19 @@ export class LogDetailDrawer {
   readonly date = formatDate;
   readonly tone = levelTone;
   readonly milliseconds = milliseconds;
+  /** The event's correlation IDs that are set, each copyable. */
+  identifiers(event: DiagnosticSummary) {
+    return [
+      { label: '查證代碼', value: event.issueCode, wide: true },
+      { label: 'TraceId', value: event.traceId, wide: true },
+      { label: 'SpanId', value: event.spanId, wide: false },
+      { label: 'RequestId', value: event.requestId, wide: false },
+      { label: 'OperationId', value: event.operationId, wide: true },
+      { label: 'JobId', value: event.jobId, wide: true },
+      { label: 'RunId', value: event.runId, wide: true },
+      { label: 'LogId', value: event.logId, wide: true },
+    ].filter((id) => !!id.value);
+  }
   open() {
     this.drawer().open();
   }

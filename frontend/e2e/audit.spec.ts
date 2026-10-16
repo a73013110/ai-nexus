@@ -65,7 +65,7 @@ test("audit-only access keeps deep-link filters and same-page links without requ
     .getByRole("link", { name: "活動稽核", exact: true })
     .click();
   await expect(
-    page.getByRole("searchbox", { name: "搜尋稽核", exact: true }),
+    page.getByRole("searchbox", { name: "搜尋", exact: true }),
   ).toHaveValue("");
   await expect
     .poll(() => queries.at(-1)?.searchParams.has("traceId"))
@@ -161,7 +161,7 @@ test("recorded feature changes read under their menu groups like the menu", asyn
     return route.fulfill({ status: 403, json: { code: "feature_forbidden" } });
   });
   await page.goto("/admin/audit");
-  await page.getByRole("button", { name: /^檢視稽核：#/ }).click();
+  await page.getByRole("button", { name: /^檢視稽核：/ }).click();
   const [before, after] = [
     "nx-feature-summary >> nth=0",
     "nx-feature-summary >> nth=1",

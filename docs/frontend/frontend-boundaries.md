@@ -57,7 +57,7 @@
 - `/<功能>` 與 `/<功能>/:id` 共用一個路由（`optionalId`），切換時頁面元件被重用，列表不會因導覽重讀。在詳細頁新增、刪除或改變列表內容的寫入，要自己更新列表的 `value` 或 `reload()`（例：`projects-page.ts` 的建立與刪除）。
 - 聊天的送出與整理對話先更新畫面再寫入：成功換成伺服器回傳值，失敗就還原，提問退回輸入框；只有網路中斷時保留提問供重試。
 - 寫入失敗時保留使用者的輸入（例：`NameDialog`、`TextSourceEditor`）；防止覆蓋他人變更靠伺服器的 conditional update／concurrency token，不靠前端判斷。
-- 大頁面拆成元件；同頁多個元件共用的讀取放在頁面提供（`providers`）的 store，例如 `AdministrationStore`（存取管理四個分頁共用的功能目錄與使用者；平台營運的分頁各自讀取，不共用它）與 `LogFilterState`（日誌篩選）。
+- 大頁面拆成元件；同頁多個元件共用的讀取放在頁面提供（`providers`）的 store，例如 `AdministrationStore`（存取管理四個分頁共用的功能目錄與使用者；平台營運的分頁各自讀取，不共用它）。
 - 例外：以下是有自己生命週期的狀態機，保留為 store，不改成 `apiResource()`：
   - 聊天：`ChatStore` 與 `ChatModels`、`ChatHistory`、`ChatRun`、`ChatDraft`、`DraftAttachments`、`KnowledgeSelection`（串流、草稿、分支與送出佇列互相牽動）。整理對話的寫入在 `ChatConversations`。
   - `NotificationStore`：輪詢後合併、保留已讀並發出瀏覽器通知；登入世代切換時清除。

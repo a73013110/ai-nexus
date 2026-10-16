@@ -11,13 +11,22 @@ import { DateTimePicker } from '@shared/ui/date-time-picker';
 import { Field } from '@shared/ui/field';
 import { InlineTitle } from '@shared/ui/inline-title';
 import { SearchField } from '@shared/ui/search-field';
+import { TimeRangePicker, hoursAgo, type TimeRange } from '@shared/ui/time-range-picker';
 import { DesignExample, DesignSection } from './design-section';
 import { DesignSamples } from './design-samples';
 
 /** Text fields, search, dates and in-place editing. */
 @Component({
   selector: 'nx-design-forms',
-  imports: [DateTimePicker, DesignExample, DesignSection, Field, InlineTitle, SearchField],
+  imports: [
+    DateTimePicker,
+    DesignExample,
+    DesignSection,
+    Field,
+    InlineTitle,
+    SearchField,
+    TimeRangePicker,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     :host {
@@ -84,8 +93,8 @@ import { DesignSamples } from './design-samples';
     <nx-design-section
       id="design-dates"
       title="日期與時間"
-      api="DateTimePicker"
-      description="以台北 wall-clock 輸入與顯示、送出時轉 UTC；民國曆只影響顯示。"
+      api="DateTimePicker · TimeRangePicker"
+      description="以台北 wall-clock 輸入與顯示、送出時轉 UTC；民國曆只影響顯示。查詢的時間範圍用 TimeRangePicker：預設區間與自訂起訖在同一個浮層，時區只寫一次。"
     >
       <nx-design-example label="西元">
         <nx-date-time-picker
@@ -111,6 +120,24 @@ import { DesignSamples } from './design-samples';
           (valueChange)="optionalDate.set($event)"
         />
       </nx-design-example>
+      <nx-design-example label="時間範圍">
+        <nx-time-range-picker
+          label="示範時間範圍"
+          [presets]="ranges"
+          [value]="range()"
+          (valueChange)="range.set($event)"
+        />
+      </nx-design-example>
+      <nx-design-example label="時間範圍、只有日期、可不限">
+        <nx-time-range-picker
+          label="示範日期範圍"
+          [presets]="dayRanges"
+          [withTime]="false"
+          [required]="false"
+          [value]="dayRange()"
+          (valueChange)="dayRange.set($event)"
+        />
+      </nx-design-example>
     </nx-design-section>
     <nx-design-section
       id="design-inline"
@@ -133,6 +160,16 @@ export class DesignForms {
   readonly bareSearch = signal('');
   readonly calendarDate = signal('2026-10-08T14:30:45');
   readonly optionalDate = signal('');
+  readonly ranges = [
+    { value: '1h', label: '最近 1 小時', duration: hoursAgo(1) },
+    { value: '24h', label: '最近 24 小時', duration: hoursAgo(24) },
+  ];
+  readonly range = signal<TimeRange>({ preset: '24h', from: '', to: '' });
+  readonly dayRanges = [
+    { value: 'all', label: '不限時間' },
+    { value: '7d', label: '最近 7 天', duration: hoursAgo(24 * 7) },
+  ];
+  readonly dayRange = signal<TimeRange>({ preset: 'all', from: '', to: '' });
   readonly saveTitle = async (value: string) => {
     this.samples.title.set(value);
     return true;

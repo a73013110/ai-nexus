@@ -23,7 +23,9 @@ export interface SelectOption {
 let sequence = 0;
 
 /**
- * Single-choice listbox. The native top layer prevents clipping inside dialogs and scroll panels.
+ * Single- or multiple-choice listbox. `multiple` toggles options with a check box, keeps the panel
+ * open and reads `values`; the trigger names one choice or counts several (「已選 N 項」) and shows
+ * the placeholder for none, so a filter's placeholder reads as its "all" choice. The native top layer prevents clipping inside dialogs and scroll panels.
  * A projected `[select-footer]` adds a related setting under the options (e.g. reasoning effort
  * under the model); Tab moves into it and focus leaving the panel closes it.
  */
@@ -50,9 +52,7 @@ let sequence = 0;
       (click)="toggle()"
       (keydown)="key($event)"
     >
-      <span [attr.title]="selected()?.label || placeholder()">{{
-        selected()?.label || placeholder()
-      }}</span
+      <span [attr.title]="title()">{{ summary() }}</span
       ><nx-icon name="chevron" />
     </button>
     <!-- Focus stays on the projected footer controls; the panel only routes their Escape. -->
@@ -86,7 +86,12 @@ let sequence = 0;
         </div>
         <p class="sr-only" role="status">{{ visibleOptions().length }} 個選項</p>
       }
-      <div role="listbox" [id]="id" [attr.aria-label]="label()">
+      <div
+        role="listbox"
+        [id]="id"
+        [attr.aria-label]="label()"
+        [attr.aria-multiselectable]="multiple() || null"
+      >
         @for (entry of visibleOptions(); track entry.option.value) {
           @let option = entry.option; @let i = entry.index;
           <button
@@ -94,21 +99,29 @@ let sequence = 0;
             role="option"
             tabindex="-1"
             class="select-option"
+            [class.is-multiple]="multiple()"
             [id]="id + '-' + i"
-            [attr.aria-selected]="option.value === value()"
+            [attr.aria-selected]="isSelected(option.value)"
             [attr.aria-disabled]="!!option.disabled"
             [disabled]="option.disabled"
             [class.is-active]="active() === i"
             (pointermove)="active.set(i)"
             (click)="choose(i)"
           >
+            @if (multiple()) {
+              <span class="select-check" aria-hidden="true">
+                @if (isSelected(option.value)) {
+                  <nx-icon name="check" />
+                }
+              </span>
+            }
             <span
               ><strong [attr.title]="option.label">{{ option.label }}</strong>
               @if (option.description) {
                 <small>{{ option.description }}</small>
               }
             </span>
-            @if (option.value === value()) {
+            @if (!multiple() && option.value === value()) {
               <nx-icon name="check" />
             }
           </button>
@@ -122,6 +135,9 @@ let sequence = 0;
 export class Select {
   readonly label = input.required<string>();
   readonly value = input('');
+  readonly multiple = input(false);
+  /** The choices of a `multiple` select. */
+  readonly values = input<readonly string[]>([]);
   readonly options = input.required<SelectOption[]>();
   readonly disabled = input(false);
   readonly placeholder = input('請選擇');
@@ -142,7 +158,27 @@ export class Select {
       ),
   );
   readonly valueChange = output<string>();
+  readonly valuesChange = output<string[]>();
   readonly selected = computed(() => this.options().find((x) => x.value === this.value()));
+  private readonly chosen = computed(() =>
+    this.options().filter((option) => this.values().includes(option.value)),
+  );
+  readonly summary = computed(() => {
+    if (!this.multiple()) return this.selected()?.label || this.placeholder();
+    const chosen = this.chosen();
+    return chosen.length === 0
+      ? this.placeholder()
+      : chosen.length === 1
+        ? chosen[0].label
+        : `已選 ${chosen.length} 項`;
+  });
+  readonly title = computed(() =>
+    this.multiple() && this.chosen().length > 1
+      ? this.chosen()
+          .map((option) => option.label)
+          .join('、')
+      : this.summary(),
+  );
   readonly active = signal(-1);
   readonly id = `nx-select-${++sequence}`;
   private readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
@@ -167,7 +203,7 @@ export class Select {
     this.active.set(
       Math.max(
         0,
-        this.options().findIndex((x) => x.value === this.value()),
+        this.options().findIndex((x) => this.isSelected(x.value)),
       ),
     );
     this.popover.show();
@@ -176,9 +212,24 @@ export class Select {
   close() {
     this.popover.hide();
   }
+  isSelected(value: string) {
+    return this.multiple() ? this.values().includes(value) : value === this.value();
+  }
   choose(index: number) {
     const option = this.options()[index];
     if (!option || option.disabled) return;
+    if (this.multiple()) {
+      // Option order, not click order, so the same choices always read the same.
+      const values = this.isSelected(option.value)
+        ? this.values().filter((value) => value !== option.value)
+        : [...this.values(), option.value];
+      this.valuesChange.emit(
+        this.options()
+          .map((x) => x.value)
+          .filter((value) => values.includes(value)),
+      );
+      return;
+    }
     this.valueChange.emit(option.value);
     this.close();
     this.trigger().nativeElement.focus();

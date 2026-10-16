@@ -32,6 +32,9 @@ export type TableSortDirection = 'asc' | 'desc';
  * is left to the detail view and `data-label` names a value that needs its column header. The
  * table's own minimum width goes in `--table-min-width` so the cards can drop it.
  *
+ * The toolbar holds the title (`[table-toolbar]`), then the table's own actions such as export
+ * (`[table-actions]`) beside the column picker; `nx-table-state` covers loading, empty and error.
+ *
  * The visible frame is as tall as its rows and never taller than the host: a page that gives the
  * host the remaining height (`layoutMode="data"`) gets an inner scroll with a sticky header and no
  * empty area under a short list. Row states and the shared styles are in `styles/data-workspace.scss`.
@@ -49,6 +52,7 @@ export type TableSortDirection = 'asc' | 'desc';
   template: `<div class="ui-table-frame">
     <div class="ui-table-toolbar-wrap">
       <ng-content select="[table-toolbar]" />
+      <div class="ui-table-actions"><ng-content select="[table-actions]" /></div>
       @if (columns().length) {
         <button
           #columnTrigger
@@ -90,7 +94,7 @@ export type TableSortDirection = 'asc' | 'desc';
     </div>
     <div class="ui-table-scroll" role="region" tabindex="0" [attr.aria-label]="label()">
       <ng-content select="table" />
-      <ng-content select="[table-state]" />
+      <ng-content select="[table-state], nx-table-state" />
     </div>
     <ng-content select="[table-footer]" />
   </div>`,
@@ -323,6 +327,56 @@ export class DataTableRow {
   }
 }
 
+/**
+ * Loading, empty and failed reads of a table, under its header. A read that failed shows its
+ * message and a retry; rows that are still shown hide it (the page shows that error itself).
+ */
+@Component({
+  selector: 'nx-table-state',
+  imports: [Icon],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    class: 'ui-table-state',
+    role: 'status',
+    '[hidden]': '!visible()',
+  },
+  template: `@if (error()) {
+      <nx-icon name="info" />
+      <strong>{{ errorTitle() }}</strong>
+      <p>{{ error() }}</p>
+      <button type="button" class="secondary-button" [disabled]="loading()" (click)="retry.emit()">
+        <nx-icon [name]="loading() ? 'loading' : 'refresh'" />重試
+      </button>
+    } @else if (loading()) {
+      <nx-icon name="loading" />
+      <p>{{ loadingText() }}</p>
+    } @else {
+      <nx-icon name="search" />
+      <strong>{{ emptyTitle() }}</strong>
+      @if (emptyText()) {
+        <p>{{ emptyText() }}</p>
+      }
+      <ng-content />
+    }`,
+})
+export class TableState {
+  /** Rows on show; any rows hide the state. */
+  readonly count = input(0);
+  readonly loading = input(false);
+  readonly error = input<string | null | undefined>('');
+  readonly loadingText = input('正在載入…');
+  readonly errorTitle = input('無法載入資料');
+  readonly emptyTitle = input('沒有符合條件的資料');
+  readonly emptyText = input('');
+  readonly retry = output<void>();
+  readonly visible = computed(() => this.count() === 0);
+}
+
+/**
+ * `cursor` (keyset pages, no total): previous, next and back to the first page, so a large table
+ * never counts or skips rows. `offset` (a known total): the range, and a page number to jump to.
+ * `pageChange` steps by one page; `pageSelect` goes to a page index (first page, a typed page).
+ */
 @Component({
   selector: 'nx-table-pagination',
   imports: [Icon, Select],
@@ -339,7 +393,34 @@ export class DataTableRow {
     } @else {
       <span>每頁最多 {{ pageSize() }} 筆</span>
     }
-    <span role="status">第 {{ pageIndex() + 1 }} 頁 · 本頁 {{ count() }} 筆</span>
+    @if (mode() === 'offset') {
+      <span role="status">{{ range() }}</span>
+      <label class="ui-table-page-jump"
+        >第<input
+          type="number"
+          inputmode="numeric"
+          min="1"
+          [max]="pageCount()"
+          aria-label="跳到頁碼"
+          [value]="pageIndex() + 1"
+          [disabled]="busy() || pageCount() <= 1"
+          (keydown.enter)="jump($event)"
+          (change)="jump($event)"
+        />/ {{ pageCount() }} 頁</label
+      >
+    } @else {
+      <span role="status">第 {{ pageIndex() + 1 }} 頁 · 本頁 {{ count() }} 筆</span>
+      <button
+        type="button"
+        class="icon-button"
+        aria-label="回到第一頁"
+        title="回到第一頁"
+        [disabled]="busy() || pageIndex() === 0"
+        (click)="pageSelect.emit(0)"
+      >
+        <nx-icon name="first" />
+      </button>
+    }
     <button
       type="button"
       class="icon-button"
@@ -355,20 +436,26 @@ export class DataTableRow {
       class="icon-button"
       aria-label="下一頁"
       title="下一頁"
-      [disabled]="busy() || !hasNext()"
+      [disabled]="busy() || !next()"
       (click)="pageChange.emit(1)"
     >
       <nx-icon name="chevron" />
     </button>`,
 })
 export class TablePagination {
+  readonly mode = input<'cursor' | 'offset'>('cursor');
   readonly pageIndex = input(0);
   readonly pageSize = input(50);
   readonly pageSizes = input<readonly number[]>([25, 50, 100]);
+  /** Rows on the shown page. */
   readonly count = input(0);
+  /** `cursor`: whether the read returned a next cursor. */
   readonly hasNext = input(false);
+  /** `offset`: rows matching the query. */
+  readonly total = input(0);
   readonly busy = input(false);
   readonly pageChange = output<-1 | 1>();
+  readonly pageSelect = output<number>();
   readonly pageSizeChange = output<number>();
   readonly sizes = computed(() =>
     this.pageSizes().map((size) => ({
@@ -376,4 +463,23 @@ export class TablePagination {
       label: '每頁 ' + size + ' 筆',
     })),
   );
+  readonly pageCount = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
+  readonly next = computed(() =>
+    this.mode() === 'offset' ? this.pageIndex() < this.pageCount() - 1 : this.hasNext(),
+  );
+  readonly range = computed(() => {
+    const first = this.pageIndex() * this.pageSize();
+    return this.total()
+      ? `${first + 1}–${first + this.count()} / ${this.total().toLocaleString('zh-TW')}`
+      : '0 筆';
+  });
+  jump(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const page = Math.round(Number(input.value));
+    if (!Number.isFinite(page) || page < 1 || page > this.pageCount()) {
+      input.value = String(this.pageIndex() + 1);
+      return;
+    }
+    if (page - 1 !== this.pageIndex()) this.pageSelect.emit(page - 1);
+  }
 }

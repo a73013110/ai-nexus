@@ -130,7 +130,7 @@ import { IdleChrome } from '@shared/ui/idle-chrome';
       id="design-menus"
       title="選單與下拉"
       api="ActionMenu · Select"
-      description="浮層在 top layer，跨越捲動區；Tab 移動、方向鍵選取、Enter 套用、Esc 關閉。"
+      description="浮層在 top layer，跨越捲動區；Tab 移動、方向鍵選取、Enter 套用、Esc 關閉。multiple 用勾選框切換、不關閉浮層，觸發鈕顯示「已選 N 項」。"
     >
       <nx-design-example label="Select">
         <nx-select
@@ -138,6 +138,16 @@ import { IdleChrome } from '@shared/ui/idle-chrome';
           [value]="samples.selection()"
           [options]="choices"
           (valueChange)="samples.selection.set($event)"
+        />
+      </nx-design-example>
+      <nx-design-example label="Select multiple">
+        <nx-select
+          label="示範等級"
+          placeholder="全部等級"
+          [multiple]="true"
+          [options]="levels"
+          [values]="levelValues()"
+          (valuesChange)="levelValues.set($event)"
         />
       </nx-design-example>
       <nx-design-example label="ActionMenu">
@@ -282,6 +292,11 @@ export class DesignControls {
   private readonly confirmation = viewChild.required(ConfirmDialog);
   private readonly naming = viewChild.required(NameDialog);
   readonly checked = signal(true);
+  readonly levels: SelectOption[] = ['Information', 'Warning', 'Error'].map((value) => ({
+    value,
+    label: value,
+  }));
+  readonly levelValues = signal(['Warning', 'Error']);
   readonly chosen = signal(['chat', 'files']);
   readonly choiceGroups: ChoiceGroup[] = [
     {

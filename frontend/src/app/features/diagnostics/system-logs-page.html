@@ -1,37 +1,110 @@
 <nx-feature-page
   [title]="session.featureName('logs.query')"
-  description="查證錯誤、耗時與技術流程；登入、操作及授權紀錄請查看活動稽核。"
+  description="查證錯誤、耗時與技術流程。"
   density="compact"
   layoutMode="data"
   [wide]="true"
 >
-  <div page-actions class="page-actions">
-    @if (session.has('audit')) {
-      <a routerLink="/admin/audit" class="secondary-button"
-        ><nx-icon name="audit" />{{ session.featureName('audit') }}</a
-      >
-    }
-    @if (session.has('logs.export')) {
-      <button
-        type="button"
-        class="secondary-button"
-        [disabled]="loading() || exporting() || !page()"
-        (click)="export()"
-      >
-        <nx-icon [name]="exporting() ? 'loading' : 'download'" />{{
-          exporting() ? '匯出中…' : '匯出 CSV'
-        }}
-      </button>
-    }
-  </div>
   @if (!session.has('logs.query') && session.me()) {
     <nx-feature-access-notice feature="logs.query" />
   }
   @if (session.has('logs.query')) {
-    <nx-log-health [reported]="page()?.health ?? null" />
-    <nx-log-filter-form [busy]="loading()" (submitted)="search()" />
-    @if (error()) {
-      <nx-notice tone="danger" [message]="error()" />
+    @if (degraded()) {
+      <nx-notice
+        tone="warning"
+        message="日誌系統降級：部分事件可能延遲寫入或遺失，查詢結果可能不完整。"
+      >
+        @if (session.has('monitoring')) {
+          <a notice-actions routerLink="/admin/monitoring" class="secondary-button"
+            ><nx-icon name="activity" />前往監控</a
+          >
+        }
+      </nx-notice>
+    }
+    <nx-query-bar
+      label="日誌查詢條件"
+      [state]="query"
+      [busy]="loading()"
+      [more]="true"
+      moreLabel="更多條件"
+      [moreCount]="moreCount()"
+    >
+      <nx-time-range-picker
+        [presets]="ranges"
+        [value]="draft().range"
+        (valueChange)="query.set('range', $event)"
+      />
+      <div class="ui-field">
+        <span aria-hidden="true">等級</span>
+        <nx-select
+          label="等級"
+          placeholder="全部等級"
+          [multiple]="true"
+          [options]="levelOptions"
+          [values]="draft().levels"
+          (valuesChange)="setLevels($event)"
+        />
+      </div>
+      <div class="ui-query-wide log-search">
+        <label class="ui-field" for="log-search">搜尋</label>
+        <input
+          nxField
+          id="log-search"
+          type="search"
+          maxlength="72"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="查證代碼、TraceId、Job／Run ID 或訊息文字"
+          aria-describedby="log-search-kind"
+          [value]="draft().search"
+          (input)="query.set('search', $any($event.target).value)"
+        />
+        <div id="log-search-kind" class="log-search-kind">
+          @switch (searchKind()) {
+            @case ('issueCode') {
+              <span>以查證代碼查詢</span>
+            }
+            @case ('traceId') {
+              <span>以 TraceId 查詢</span>
+            }
+            @case ('guid') {
+              <span>以</span>
+              <nx-select
+                appearance="inline"
+                label="此 ID 比對的欄位"
+                [options]="guidOptions"
+                [value]="draft().guid"
+                (valueChange)="setGuid($event)"
+              />
+              <span>查詢</span>
+            }
+            @case ('text') {
+              <span>以訊息模板文字查詢（限一天內）</span>
+            }
+          }
+        </div>
+      </div>
+      <div query-more class="log-more-fields">
+        @for (field of moreFields; track field.key) {
+          <label class="ui-field"
+            >{{ field.label
+            }}<input
+              nxField
+              autocomplete="off"
+              [maxLength]="field.maxLength"
+              [value]="draft()[field.key]"
+              (input)="setMore(field.key, $any($event.target).value)"
+          /></label>
+        }
+      </div>
+    </nx-query-bar>
+    @if (exportError()) {
+      <nx-notice
+        tone="danger"
+        [message]="exportError()"
+        [dismissible]="true"
+        (dismissed)="exportError.set('')"
+      />
     }
     <nx-data-table
       label="系統日誌資料表，可捲動查看更多事件"
@@ -40,26 +113,27 @@
       preferenceKey="system-logs"
     >
       <div table-toolbar class="ui-table-toolbar">
-        <div class="log-table-title">
-          <h2>事件列表</h2>
-          <span class="log-result-count ui-count-label">{{ page()?.events?.length ?? 0 }} 筆</span>
-        </div>
-        <div class="log-table-hint">
-          @if (loading()) {
-            <span role="status">正在載入日誌…</span>
-          } @else {
-            <span>{{ timezone }}</span>
-          }
-          @if (session.has('logs.detail')) {
-            <span>點選列檢視 · ↑↓ 移動</span>
-          }
-        </div>
+        <h2>事件列表</h2>
+        @if (loading()) {
+          <span class="sr-only" role="status">正在載入日誌…</span>
+        }
       </div>
+      @if (session.has('logs.export')) {
+        <button
+          table-actions
+          type="button"
+          class="quiet-button"
+          [disabled]="loading() || exporting() || !page()"
+          (click)="export()"
+        >
+          <nx-icon [name]="exporting() ? 'loading' : 'download'" />{{
+            exporting() ? '匯出中…' : '匯出 CSV'
+          }}
+        </button>
+      }
       <table class="log-table">
         <caption class="sr-only">
-          系統日誌，{{
-            timezone
-          }}，依時間{{
+          系統日誌，依時間{{
             sortDirection() === 'desc' ? '由新到舊' : '由舊到新'
           }}排列。
         </caption>
@@ -71,7 +145,6 @@
           <col class="log-col-status" nxTableColumn="status" />
           <col class="log-col-duration" nxTableColumn="duration" />
           <col class="log-col-correlation" nxTableColumn="correlation" />
-          <col class="log-col-actions" />
         </colgroup>
         <thead>
           <tr>
@@ -87,14 +160,13 @@
             <th scope="col" nxTableColumn="level">等級</th>
             <th scope="col" nxTableColumn="event">事件／模組</th>
             <th scope="col" nxTableColumn="message">訊息</th>
-            <th scope="col" nxTableColumn="status">HTTP 狀態</th>
-            <th scope="col" nxTableColumn="duration">耗時</th>
+            <th scope="col" class="ui-table-numeric" nxTableColumn="status">HTTP</th>
+            <th scope="col" class="ui-table-numeric" nxTableColumn="duration">耗時</th>
             <th scope="col" nxTableColumn="correlation">查證／關聯</th>
-            <th scope="col"><span class="sr-only">操作</span></th>
           </tr>
         </thead>
         <tbody>
-          @for (entry of page()?.events ?? []; track entry.logId) {
+          @for (entry of events(); track entry.logId) {
             <tr
               nxTableRow
               [rowEnabled]="session.has('logs.detail') && !loading()"
@@ -135,91 +207,59 @@
               </td>
               <td nxTableColumn="message">
                 <span class="ui-truncate" [title]="entry.message">{{ entry.message }}</span>
-                <small class="ui-truncate">
-                  @if (entry.statusCode) {
-                    <span [class.log-http-error]="entry.statusCode >= 400"
-                      >HTTP {{ entry.statusCode }}</span
-                    >
-                  }
-                  @if (entry.durationMs !== null) {
-                    <span> · {{ milliseconds(entry.durationMs) }}</span>
-                  }
-                  @if (entry.route) {
-                    <span [title]="entry.route"> · {{ entry.method }} {{ entry.route }}</span>
-                  }
-                  @if (entry.untrustedClient) {
-                    <span> · 不可信用戶端事件</span>
-                  }
-                  @if (entry.errorCode) {
-                    <span> · {{ entry.errorCode }}</span>
-                  }
-                </small>
+                @if (entry.route) {
+                  <small class="ui-truncate" [title]="entry.method + ' ' + entry.route"
+                    >{{ entry.method }} {{ entry.route }}</small
+                  >
+                }
               </td>
-              <td nxTableColumn="status">
+              <td class="ui-table-numeric" nxTableColumn="status">
                 <span [class.log-http-error]="(entry.statusCode ?? 0) >= 400">{{
                   entry.statusCode ?? '—'
                 }}</span>
               </td>
-              <td nxTableColumn="duration">{{ milliseconds(entry.durationMs) }}</td>
+              <td class="ui-table-numeric" nxTableColumn="duration">
+                {{ milliseconds(entry.durationMs) }}
+              </td>
               <td nxTableColumn="correlation">
-                <div class="log-correlation">
-                  <code class="ui-truncate" [title]="entry.issueCode || ''">{{
-                    entry.issueCode || '—'
-                  }}</code
-                  ><nx-issue-code [message]="entry.issueCode" [compact]="true" />
-                </div>
+                @if (entry.issueCode) {
+                  <nx-copy-value
+                    class="is-truncated log-correlation"
+                    label="查證代碼"
+                    [value]="entry.issueCode"
+                  />
+                } @else {
+                  <span class="log-id">—</span>
+                }
                 <small
                   class="ui-truncate log-id"
                   [title]="entry.traceId || entry.jobId || entry.runId || ''"
                   >{{ entry.traceId || entry.jobId || entry.runId || '無關聯識別' }}</small
                 >
               </td>
-              <td>
-                @if (session.has('logs.detail')) {
-                  <nx-icon name="chevron" />
-                } @else {
-                  <span class="sr-only">僅可查詢</span>
-                }
-              </td>
             </tr>
           }
         </tbody>
       </table>
-      @if (!loading() && !page()?.events?.length) {
-        <nx-empty-state table-state class="ui-table-state">
-          <nx-icon name="search" /><strong>{{
-            error() ? '無法載入日誌' : '此範圍沒有日誌'
-          }}</strong>
-          <p>
-            {{
-              error()
-                ? '請調整篩選條件或重新查詢。'
-                : '試著擴大時間範圍，或調整查證代碼與篩選條件。'
-            }}
-          </p>
-        </nx-empty-state>
-      }
-      @if (loading() && !page()) {
-        <div table-state class="ui-table-state">
-          <nx-icon name="loading" />
-          <p>正在讀取事件資料</p>
-        </div>
-      }
+      <nx-table-state
+        [count]="events().length"
+        [loading]="loading()"
+        [error]="readError()"
+        loadingText="正在讀取事件資料"
+        errorTitle="無法載入日誌"
+        emptyTitle="此範圍沒有日誌"
+        emptyText="試著擴大時間範圍，或移除部分條件。"
+        (retry)="retry()"
+      />
       <div table-footer class="ui-table-footer">
-        <span>
-          @if (page(); as result) {
-            {{ date(result.from) }} — {{ date(result.to) }}
-          } @else {
-            時間以 {{ timezone }} 顯示
-          }
-        </span>
         <nx-table-pagination
           [pageIndex]="pageIndex()"
           [pageSize]="pageSize()"
-          [count]="page()?.events?.length ?? 0"
+          [count]="events().length"
           [hasNext]="!!page()?.nextCursor"
           [busy]="loading()"
           (pageChange)="changePage($event)"
+          (pageSelect)="firstPage()"
           (pageSizeChange)="changePageSize($event)"
         />
       </div>
@@ -231,7 +271,7 @@
   #inspector
   [current]="selectedEntry()"
   [index]="selectedIndex()"
-  [count]="page()?.events?.length ?? 0"
+  [count]="events().length"
   [range]="submitted()"
   (move)="inspectAdjacent($event)"
   (closed)="closeDetail()"
