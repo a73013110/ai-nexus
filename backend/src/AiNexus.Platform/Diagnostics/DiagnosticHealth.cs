@@ -47,8 +47,10 @@ public sealed class DiagnosticHealth : IDisposable
                 finally { Volatile.Write(ref emergencyPending, 0); }
             }, null);
     }
-    public DiagnosticHealthDto Snapshot() => new(Failure is not null || PendingBytes > 0 || Lost > 0 || Corrupt > 0 ? "degraded" : "healthy",
+    public bool Degraded => Failure is not null || Interlocked.Read(ref PendingBytes) > 0 || Interlocked.Read(ref Lost) > 0 || Interlocked.Read(ref Corrupt) > 0;
+    public DiagnosticHealthSnapshot Snapshot() => new(Degraded,
         QueueDepth, Accepted, Written, Replayed, WriteFailures, Lost, Sampled, Corrupt, ExportFailures, DiskBytes, PendingBytes, EstimatedSqlRows, LastFileWrite, LastSqlWrite, Failure);
     public void Dispose() => meter.Dispose();
 }
-public sealed record DiagnosticHealthDto(string Status, long QueueDepth, long Accepted, long Written, long Replayed, long WriteFailures, long Lost, long Sampled, long Corrupt, long ExportFailures, long DiskBytes, long PendingBytes, long EstimatedSqlRows, DateTimeOffset? LastFileWrite, DateTimeOffset? LastSqlWrite, string? Failure);
+/// <summary>One reading of the pipeline counters, for the monitoring <c>log-pipeline</c> source.</summary>
+public sealed record DiagnosticHealthSnapshot(bool Degraded, long QueueDepth, long Accepted, long Written, long Replayed, long WriteFailures, long Lost, long Sampled, long Corrupt, long ExportFailures, long DiskBytes, long PendingBytes, long EstimatedSqlRows, DateTimeOffset? LastFileWrite, DateTimeOffset? LastSqlWrite, string? Failure);

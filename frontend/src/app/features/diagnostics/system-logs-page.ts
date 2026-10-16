@@ -112,8 +112,7 @@ export class SystemLogsPage {
   readonly submitted = computed(() => this.request()?.filter ?? null);
   readonly loading = this.pageRead.refreshing;
   readonly readError = this.pageRead.error;
-  /** Pages from older servers or test doubles may leave the health out. */
-  readonly degraded = computed(() => this.page()?.health?.status === 'degraded');
+  readonly degraded = computed(() => this.page()?.degraded === true);
   readonly exporting = signal(false);
   readonly exportError = signal('');
   readonly selectedEntry = signal<DiagnosticSummary | null>(null);

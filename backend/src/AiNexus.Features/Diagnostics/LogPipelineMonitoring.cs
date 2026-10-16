@@ -5,7 +5,7 @@ namespace AiNexus.Features.Diagnostics;
 
 /// <summary>
 /// Runtime monitoring of the diagnostic log pipeline, read from the in-memory <see cref="DiagnosticHealth"/> counters
-/// (the same status as the system log page). This is the full set of pipeline facts; the system log page only notes degradation.
+/// (the same degraded flag as the system log page). This is the full set of pipeline facts; the system log page only notes degradation.
 /// Counts are since process start; disk bytes and SQL rows are the latest readings.
 /// </summary>
 internal sealed class LogPipelineMonitoring(DiagnosticHealth health, TimeProvider clock) : IMonitoringSource
@@ -21,7 +21,7 @@ internal sealed class LogPipelineMonitoring(DiagnosticHealth health, TimeProvide
         var last = new[] { state.LastSqlWrite, state.LastFileWrite }.Max();
         double? Age(DateTimeOffset? at) => at is { } value ? Math.Max(0, Math.Round((clock.GetUtcNow() - value).TotalSeconds)) : null;
         var age = Age(last);
-        var degraded = state.Status != "healthy";
+        var degraded = state.Degraded;
         var summary = !degraded ? "日誌正常寫入。"
             : state.Failure is not null ? $"日誌寫入異常（{state.Failure}），已遺失 {state.Lost} 筆。"
             : state.Lost > 0 ? $"啟動後已遺失 {state.Lost} 筆日誌。"

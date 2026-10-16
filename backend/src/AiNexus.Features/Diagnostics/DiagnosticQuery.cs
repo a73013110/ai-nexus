@@ -36,7 +36,8 @@ public sealed class DiagnosticFilter
 public sealed record DiagnosticSummary(Guid LogId, DateTimeOffset At, string Level, string Category, int EventId, string EventName, string MessageTemplate,
     string? IssueCode, string? TraceId, string? SpanId, string? RequestId, Guid? OperationId, Guid? JobId, Guid? RunId, int? Attempt,
     string? Method, string? Route, int? StatusCode, double? DurationMs, string? ExternalService, string? ErrorCode, string Instance, bool UntrustedClient, string Message);
-public sealed record DiagnosticPage(IReadOnlyList<DiagnosticSummary> Events, string? NextCursor, DateTimeOffset From, DateTimeOffset To, DiagnosticHealthDto Health);
+/// <summary>One page of events. <c>Degraded</c> means the log pipeline is degraded, so results may be incomplete; its full metrics are the monitoring <c>log-pipeline</c> source.</summary>
+public sealed record DiagnosticPage(IReadOnlyList<DiagnosticSummary> Events, string? NextCursor, DateTimeOffset From, DateTimeOffset To, bool Degraded);
 public sealed record DiagnosticDetail(DiagnosticSummary Event, string Service, string Environment, string Version, Guid? UserId, string PropertiesJson, string? ExceptionType, string? ExceptionDetail);
 
 /// <summary>Validated, audited reads of the stored diagnostic events for the log slices.</summary>
@@ -107,7 +108,7 @@ public sealed class DiagnosticQuery(NexusDbContext db, IDataProtectionProvider p
             Method = x.Method, Route = x.Route, StatusCode = x.StatusCode, DurationMs = x.DurationMs, ExternalService = x.ExternalService, ErrorCode = x.ErrorCode, Instance = x.Instance, UntrustedClient = x.UntrustedClient
         }).Take(take + 1).ToArrayAsync(ct);
         var last = rows.Take(take).LastOrDefault();
-        return new DiagnosticPage(rows.Take(take).Select(x => Describe(x)).ToArray(), rows.Length > take && last is not null ? cursorProtector.Protect(JsonSerializer.Serialize(new CursorData(last.At, last.LogId, fingerprint, actor))) : null, from, to, health.Snapshot());
+        return new DiagnosticPage(rows.Take(take).Select(x => Describe(x)).ToArray(), rows.Length > take && last is not null ? cursorProtector.Protect(JsonSerializer.Serialize(new CursorData(last.At, last.LogId, fingerprint, actor))) : null, from, to, health.Degraded);
     }
     private static IOrderedQueryable<DiagnosticEvent> Order(IQueryable<DiagnosticEvent> query, string? direction) =>
         direction == "asc" ? query.OrderBy(x => x.At).ThenBy(x => x.LogId) : query.OrderByDescending(x => x.At).ThenByDescending(x => x.LogId);
@@ -118,11 +119,6 @@ public sealed class DiagnosticQuery(NexusDbContext db, IDataProtectionProvider p
         var item = await db.Set<DiagnosticEvent>().AsNoTracking().SingleOrDefaultAsync(x => x.LogId == id, ct);
         if (item is null) return DiagnosticsErrors.NotFound;
         return new DiagnosticDetail(Describe(item, detail: true), item.Service, item.Environment, item.Version, item.UserId, item.PropertiesJson, item.ExceptionType, item.ExceptionDetail);
-    }
-    public async Task<DiagnosticHealthDto> HealthAsync(Guid actor, CancellationToken ct)
-    {
-        using var suppress = DiagnosticSuppression.Enter();
-        await AuditAsync(actor, "logs.health", null, null, ct); return health.Snapshot();
     }
     public async Task<Result<string>> ExportAsync(Guid actor, DiagnosticFilter filter, CancellationToken ct)
     {
