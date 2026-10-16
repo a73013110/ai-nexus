@@ -11,7 +11,6 @@ import {
 import type {
   DiagnosticDetail,
   DiagnosticSummary,
-  DiagnosticHealthDto,
 } from "../src/app/core/api/schema";
 
 class LogFixture {
@@ -23,24 +22,7 @@ class LogFixture {
   detailDelay = 0;
   detailFailure = false;
   relatedFailure = false;
-  health: DiagnosticHealthDto = {
-    status: "healthy",
-    queueDepth: 3,
-    accepted: 8000,
-    written: 7980,
-    replayed: 1877,
-    writeFailures: 0,
-    lost: 0,
-    sampled: 40,
-    corrupt: 0,
-    exportFailures: 0,
-    diskBytes: 9_100_000,
-    pendingBytes: 0,
-    estimatedSqlRows: 7128,
-    lastFileWrite: new Date().toISOString(),
-    lastSqlWrite: new Date().toISOString(),
-    failure: null,
-  };
+  degraded = false;
   readonly events: DiagnosticSummary[] = Array.from(
     { length: 65 },
     (_, index) => ({
@@ -197,7 +179,7 @@ class LogFixture {
             : null,
         from: query.get("from"),
         to: query.get("to"),
-        health: this.health,
+        degraded: this.degraded,
       });
     });
     await page.goto("/admin/logs?view=events");
@@ -590,7 +572,7 @@ test("欄位偏好可還原，排序與每頁筆數使用伺服器查詢快照",
 
 test("智慧搜尋依格式查詢，降級時提示並連到監控", async ({ page }) => {
   const fixture = new LogFixture();
-  fixture.health = { ...fixture.health, status: "degraded" };
+  fixture.degraded = true;
   fixture.moreFeatures.push({
     id: "monitoring",
     name: "即時監控",

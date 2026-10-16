@@ -33,7 +33,6 @@ public sealed class DiagnosticsModule : IFeatureModule
         var logs = api.MapGroup("/admin/logs").RequireAuthorization(DiagnosticConfiguration.QueryPolicy).WithTags("System logs").RequireRateLimiting(QueryRateLimit)
             .WithMetadata(new SuppressSuccessfulRequestLog());
         QuerySystemLogs.Map(logs);
-        GetSystemLogHealth.Map(logs);
         GetSystemLogDetail.Map(logs);
         ExportSystemLogs.Map(logs);
         ReportClientIssue.Map(api);

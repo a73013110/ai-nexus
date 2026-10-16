@@ -53,22 +53,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/logs/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["GetSystemLogHealth"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/admin/logs/{id}": {
         parameters: {
             query?: never;
@@ -9502,38 +9486,6 @@ export interface components {
             exceptionType: null | string;
             exceptionDetail: null | string;
         };
-        DiagnosticHealthDto: {
-            status: string;
-            /** Format: int64 */
-            queueDepth: number;
-            /** Format: int64 */
-            accepted: number;
-            /** Format: int64 */
-            written: number;
-            /** Format: int64 */
-            replayed: number;
-            /** Format: int64 */
-            writeFailures: number;
-            /** Format: int64 */
-            lost: number;
-            /** Format: int64 */
-            sampled: number;
-            /** Format: int64 */
-            corrupt: number;
-            /** Format: int64 */
-            exportFailures: number;
-            /** Format: int64 */
-            diskBytes: number;
-            /** Format: int64 */
-            pendingBytes: number;
-            /** Format: int64 */
-            estimatedSqlRows: number;
-            /** Format: date-time */
-            lastFileWrite: null | string;
-            /** Format: date-time */
-            lastSqlWrite: null | string;
-            failure: null | string;
-        };
         DiagnosticPage: {
             events: components["schemas"]["DiagnosticSummary"][];
             nextCursor: null | string;
@@ -9541,7 +9493,7 @@ export interface components {
             from: string;
             /** Format: date-time */
             to: string;
-            health: components["schemas"]["DiagnosticHealthDto"];
+            degraded: boolean;
         };
         DiagnosticSummary: {
             /** Format: uuid */
@@ -11327,7 +11279,6 @@ export type DashboardSeriesDto = components['schemas']['DashboardSeriesDto'];
 export type DashboardShareDto = components['schemas']['DashboardShareDto'];
 export type DependencyTraffic = components['schemas']['DependencyTraffic'];
 export type DiagnosticDetail = components['schemas']['DiagnosticDetail'];
-export type DiagnosticHealthDto = components['schemas']['DiagnosticHealthDto'];
 export type DiagnosticPage = components['schemas']['DiagnosticPage'];
 export type DiagnosticSummary = components['schemas']['DiagnosticSummary'];
 export type DirectoryGroupDto = components['schemas']['DirectoryGroupDto'];
@@ -11532,143 +11483,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DiagnosticPage"];
-                };
-            };
-            /** @description Bad Request */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Unauthorized */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Forbidden */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Not Found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Method Not Allowed */
-            405: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Conflict */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Payload Too Large */
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Unsupported Media Type */
-            415: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Too Many Requests */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Internal Server Error */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Bad Gateway */
-            502: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Service Unavailable */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-            /** @description Gateway Timeout */
-            504: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["SafeProblemDetails"];
-                };
-            };
-        };
-    };
-    GetSystemLogHealth: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DiagnosticHealthDto"];
                 };
             };
             /** @description Bad Request */

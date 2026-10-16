@@ -32,6 +32,6 @@ public sealed class DiagnosticLoggerProviderTests
         for (var i = 0; i < 20; i++) buffer.Enqueue(new() { Level = LogLevel.Debug });
         buffer.Enqueue(new() { Level = LogLevel.Error }); buffer.Enqueue(new() { Level = LogLevel.Critical }); buffer.Enqueue(new() { Level = LogLevel.Error });
         var rows = buffer.Drain(); Assert.Contains(rows, x => x.Level == LogLevel.Critical); Assert.Contains(rows, x => x.Level == LogLevel.Error);
-        Assert.Equal(18, health.Sampled); Assert.Equal(2, health.Lost); Assert.Equal(0, health.QueueDepth); Assert.Equal("degraded", health.Snapshot().Status);
+        Assert.Equal(18, health.Sampled); Assert.Equal(2, health.Lost); Assert.Equal(0, health.QueueDepth); Assert.True(health.Degraded);
     }
 }

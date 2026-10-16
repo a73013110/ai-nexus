@@ -33,7 +33,7 @@ public sealed class OpenApiContractTests
     public async Task OpenApiContainsDiagnosticContractsAndCanBeExportedWithoutMachineSecrets()
     {
         await using var factory = new NexusFactory(); using var client = factory.CreateClient(); var contract = await client.GetStringAsync("/openapi/v1.json");
-        Assert.Contains("QuerySystemLogs", contract); Assert.Contains("DiagnosticHealthDto", contract); Assert.Contains("issueCode", contract);
+        Assert.Contains("QuerySystemLogs", contract); Assert.Contains("DiagnosticPage", contract); Assert.Contains("issueCode", contract);
         if (Environment.GetEnvironmentVariable("NEXUS_OPENAPI_OUTPUT") is { Length: > 0 } path) await File.WriteAllTextAsync(path, contract);
     }
 

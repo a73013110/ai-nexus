@@ -81,8 +81,8 @@ public sealed partial class DiagnosticBrowserTests
         var csvPath = Path.Combine(evidence, "safe-export.csv"); await download.SaveAsAsync(csvPath);
         Assert.Contains("'=HYPERLINK", await File.ReadAllTextAsync(csvPath));
         factory.Services.GetRequiredService<DiagnosticHealth>().Emergency("important_queue_full", 1); // Controlled health-state injection, not a physical disk outage.
-        await page.GetByRole(AriaRole.Button, new() { Name = "更新狀態", Exact = true }).ClickAsync();
-        await Expect(page.Locator(".log-health")).ToContainTextAsync("日誌系統降級");
+        await page.GetByRole(AriaRole.Button, new() { Name = "查詢", Exact = true }).ClickAsync();
+        await Expect(page.GetByRole(AriaRole.Status).Filter(new() { HasText = "日誌系統降級" })).ToBeVisibleAsync();
         await page.RouteAsync("**/api/v1/admin/logs?*", route => route.FulfillAsync(new() { Status = 503, ContentType = "application/problem+json", Body = JsonSerializer.Serialize(new { code = "service_unavailable", title = "Password=fixture-ui-secret https://private.test/provider", issueCode = issue }) }));
         await page.GetByRole(AriaRole.Button, new() { Name = "查詢", Exact = true }).ClickAsync();
         await Expect(page.GetByRole(AriaRole.Alert).Filter(new() { HasText = "操作未完成，請聯絡管理員" })).ToBeVisibleAsync();
