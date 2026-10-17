@@ -54,7 +54,7 @@ public sealed class MonitoringHealthTests
         Assert.Equal(["server_errors", "latency_high"], issues.Select(x => x.Code));
         Assert.Contains("5 秒", issues[1].Detail);
         Assert.Empty(MonitoringHealth.Evaluate(Snapshot(Metrics(50, p95: 3000))).Issues);
-        // Beyond the last histogram bound the P95 is null while timed requests exist.
+        // 超過直方圖最後一個區間上限時，P95 會是 null（但仍有計時請求），延遲只能靠平均值判定。
         Assert.Equal("latency_high", Assert.Single(MonitoringHealth.Evaluate(Snapshot(Metrics(50, average: 700000))).Issues).Code);
         Assert.Empty(MonitoringHealth.Evaluate(Snapshot(Metrics(5, p95: 10000))).Issues);
     }

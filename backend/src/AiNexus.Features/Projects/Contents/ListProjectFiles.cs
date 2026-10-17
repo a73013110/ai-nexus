@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Projects.Contents;
 
-/// <summary>Up to 50 reference documents of a project the user may read.</summary>
+/// <summary>使用者可讀取的專案中，最多 50 個參考文件。</summary>
 internal sealed class ListProjectFiles(NexusDbContext db, ResourceAccess access, DocumentService documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

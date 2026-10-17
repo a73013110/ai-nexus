@@ -5,7 +5,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Billing.Reports;
 
-/// <summary>Spend reports: personal, per conversation, and platform-wide (platform operations, audited).</summary>
+/// <summary>花費報表：個人、單一對話，以及全平台（平台營運用，每次讀取與匯出都會稽核）。</summary>
 internal sealed class ReportSpend(NexusDbContext db, SpendReports reports, TimeProvider clock)
 {
     public static void MapPersonal(RouteGroupBuilder api)
@@ -36,7 +36,7 @@ internal sealed class ReportSpend(NexusDbContext db, SpendReports reports, TimeP
 
     public Task<Result<ConversationSpendDto>> ConversationAsync(Guid owner, Guid id, CancellationToken ct) => reports.ConversationAsync(owner, id, ct);
 
-    /// <summary>A platform-wide (or one owner's) report for an administrator; every read or export is audited.</summary>
+    /// <summary>管理員讀取全平台（或單一擁有者）的報表；每次讀取或匯出都會稽核。</summary>
     public async Task<Result<SpendReportDto>> AdministrativeAsync(Guid actor, Guid? owner, DateTimeOffset? from, DateTimeOffset? until, int? offset, string action, string result, CancellationToken ct)
     {
         var period = SpendPeriod.Create(from, until, offset, clock.GetUtcNow());

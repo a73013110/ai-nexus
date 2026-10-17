@@ -66,7 +66,7 @@ public sealed class DatabaseSchemaTests
 
     private static async Task RecordHistoryAsync(NexusDbContext db, IEnumerable<string> migrations)
     {
-        // Only this isolated fixture writes history; SQL Server migration bodies cannot run on SQLite.
+        // 只有這個隔離的 fixture 會寫入歷史；SQL Server 的 migration 內容無法在 SQLite 上執行。
         var history = db.GetService<IHistoryRepository>();
         await db.Database.ExecuteSqlRawAsync(history.GetCreateIfNotExistsScript());
         foreach (var id in migrations)

@@ -20,23 +20,56 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Chat.Runs;
 
-public sealed partial class GenerationWorker(IServiceScopeFactory scopes, GenerationScheduler scheduler, RunSignals signals, InferenceRouter router, IOptions<InferenceOptions> options, StorageReadiness storage, ILogger<GenerationWorker> logger, Issues issues, TimeProvider clock) : BackgroundService
+/// <summary>
+/// 生成背景工作者：啟動時復原孤兒 Run 並同步模型設定，之後依各供應商通道的並行度消費佇列。
+/// 推論前會重驗權限與引用來源（排隊期間可能已被撤銷）。串流文字以增量批次寫入（約 80ms 或 512 字元一批），
+/// 不逐 token 寫庫，也不需把完整回答載回記憶體。
+/// </summary>
+public sealed partial class GenerationWorker(
+    IServiceScopeFactory scopes,
+    GenerationScheduler scheduler,
+    RunSignals signals,
+    InferenceRouter router,
+    IOptions<InferenceOptions> options,
+    StorageReadiness storage,
+    ILogger<GenerationWorker> logger,
+    Issues issues,
+    TimeProvider clock) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!storage.Configured) { LogStorageNotConfigured(logger); return; }
+        if (!storage.Configured)
+        {
+            LogStorageNotConfigured(logger);
+            return;
+        }
+
         try
         {
             using var startup = scopes.CreateScope();
             var db = startup.ServiceProvider.GetRequiredService<NexusDbContext>();
-            if (!await db.Database.CanConnectAsync(stoppingToken)) { LogStorageUnavailable(logger); return; }
+            if (!await db.Database.CanConnectAsync(stoppingToken))
+            {
+                LogStorageUnavailable(logger);
+                return;
+            }
+
+            // 先復原上一個程序遺留的孤兒 Run，再同步設定；兩者都完成後才標記就緒，避免接收新生成
             await startup.ServiceProvider.GetRequiredService<RunLeaseRecovery>().RecoverAsync(clock.GetUtcNow(), stoppingToken);
+
             foreach (var profile in options.Value.Models)
             {
                 var existing = await db.ModelProfiles.FindAsync([profile.Id], stoppingToken);
-                if (existing is null) db.ModelProfiles.Add(profile);
-                else db.Entry(existing).CurrentValues.SetValues(profile);
+                if (existing is null)
+                {
+                    db.ModelProfiles.Add(profile);
+                }
+                else
+                {
+                    db.Entry(existing).CurrentValues.SetValues(profile);
+                }
             }
+
             await db.SaveChangesAsync(stoppingToken);
             scheduler.Ready = true;
         }
@@ -45,12 +78,19 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
             LogStartupFailed(logger, ex.GetType().Name);
             return;
         }
+
         try
         {
-            await Task.WhenAll(scheduler.Workers.SelectMany(queue => Enumerable.Range(0, queue.Concurrency).Select(_ => ConsumeAsync(queue.Reader, stoppingToken))));
+            var consumerTasks = scheduler.Workers.SelectMany(queue =>
+                Enumerable.Range(0, queue.Concurrency).Select(_ => ConsumeAsync(queue.Reader, stoppingToken)));
+
+            await Task.WhenAll(consumerTasks);
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { }
-        finally { scheduler.Ready = false; }
+        finally
+        {
+            scheduler.Ready = false;
+        }
     }
 
     private async Task ConsumeAsync(System.Threading.Channels.ChannelReader<GenerationJob> reader, CancellationToken stoppingToken)
@@ -59,10 +99,23 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
         {
             scheduler.Dequeued();
             scheduler.Started();
+
             using var activity = DiagnosticTrace.Start("generation.execute", job.TraceId, job.ParentSpanId, ActivityKind.Consumer);
             activity.SetTag("operation.id", job.RunId.ToString());
-            using var logging = logger.BeginScope(new Dictionary<string, object?> { ["RunId"] = job.RunId, ["OperationId"] = job.RunId, ["UserId"] = job.OwnerId, ["Provider"] = job.Provider, ["RequestId"] = null });
-            try { await GenerateAsync(job, stoppingToken); }
+
+            using var logging = logger.BeginScope(new Dictionary<string, object?>
+            {
+                ["RunId"] = job.RunId,
+                ["OperationId"] = job.RunId,
+                ["UserId"] = job.OwnerId,
+                ["Provider"] = job.Provider,
+                ["RequestId"] = null
+            });
+
+            try
+            {
+                await GenerateAsync(job, stoppingToken);
+            }
             catch (Exception ex) when (!stoppingToken.IsCancellationRequested)
             {
                 var issue = issues.Report(ex, "generation_persistence_failed");
@@ -73,58 +126,88 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
                         using var scope = scopes.CreateScope();
                         var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
                         var run = await db.Runs.SingleAsync(x => x.Id == job.RunId, CancellationToken.None);
-                        if (RunStates.IsActive(run.Status)) await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, RunStates.Failed, "internal_error", CancellationToken.None, issue);
+                        if (RunStates.IsActive(run.Status))
+                        {
+                            await scope.ServiceProvider.GetRequiredService<RunService>()
+                                .FinishAsync(run, RunStates.Failed, "internal_error", CancellationToken.None, issue);
+                        }
                     }
                 }
-                catch (Exception recovery) { LogRecoveryPending(logger, job.RunId, recovery.GetType().Name); }
+                catch (Exception recovery)
+                {
+                    LogRecoveryPending(logger, job.RunId, recovery.GetType().Name);
+                }
             }
-            finally { scheduler.Stopped(); scheduler.Finish(job); }
+            finally
+            {
+                scheduler.Stopped();
+                scheduler.Finish(job);
+            }
         }
     }
 
     private async Task GenerateAsync(GenerationJob job, CancellationToken stoppingToken)
     {
         LogStarted(logger);
+
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(options.Value.TimeoutSeconds), clock);
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(job.Cancellation.Token, stoppingToken, deadline.Token);
+
         GenerationParameters parameters;
         IReadOnlyList<InferenceMessage> messages;
         string model;
         string provider;
         RunProgress progress;
+
         using (await scheduler.LockConversationAsync(job.ConversationId, stoppingToken))
         {
             using var scope = scopes.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             var run = await db.Runs.SingleAsync(x => x.Id == job.RunId, stoppingToken);
+
             if (!RunStates.IsActive(run.Status) || run.ExecutorId != scheduler.InstanceId) return;
+
+            // 排隊期間使用者權限或引用來源可能已被撤銷，開始推論前必須重驗
             if (await RecheckAsync(scope.ServiceProvider, db, run, stoppingToken) is { IsSuccess: false } revoked)
             {
-                await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, RunStates.Failed, revoked.Error.Code, stoppingToken);
+                await scope.ServiceProvider.GetRequiredService<RunService>()
+                    .FinishAsync(run, RunStates.Failed, revoked.Error.Code, stoppingToken);
                 return;
             }
+
             run.Status = RunStates.Running;
             run.StartedAt = clock.GetUtcNow();
             RunService.AddEvent(db, run, "status");
+
             await scope.ServiceProvider.GetRequiredService<ConversationService>().UpdateAnswerAsync(run, stoppingToken);
             await db.SaveChangesAsync(stoppingToken);
+
             parameters = JsonSerializer.Deserialize<GenerationParameters>(run.ParametersJson)!;
             var contexts = scope.ServiceProvider.GetRequiredService<ContextBuilder>();
-            // Answered history does not change, so the context CreateRun reserved for is sent as is; only image bytes are read now.
-            var built = job.Context is { } prepared ? await contexts.WithImagesAsync(prepared, stoppingToken) : await contexts.BuildAsync(run.ConversationId, run.UserMessageId, parameters, stoppingToken);
+
+            // 若 CreateRun 時已有準備好的上下文直接加載圖片；否則重新構建
+            var built = job.Context is { } prepared
+                ? await contexts.WithImagesAsync(prepared, stoppingToken)
+                : await contexts.BuildAsync(run.ConversationId, run.UserMessageId, parameters, stoppingToken);
+
             if (!built.IsSuccess)
             {
-                await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, RunStates.Failed, built.Error.Code, stoppingToken);
+                await scope.ServiceProvider.GetRequiredService<RunService>()
+                    .FinishAsync(run, RunStates.Failed, built.Error.Code, stoppingToken);
                 return;
             }
+
             messages = built.Value;
             await scope.ServiceProvider.GetRequiredService<BillingService>().StartAsync(run.Id, stoppingToken);
             await db.SaveChangesAsync(stoppingToken);
+
             model = run.ProviderModelId;
             provider = run.Provider;
             progress = new RunProgress(run.LastSequence, run.AssistantMessageId);
         }
+
         signals.Notify(job.RunId);
+
         var buffer = new StringBuilder();
         var elapsed = Stopwatch.StartNew();
         long? input = null, output = null, cached = null, reasoning = null;
@@ -132,17 +215,24 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
         var completed = false;
         string finalStatus = RunStates.Completed;
         string? error = null, issueCode = null;
+
         try
         {
             await foreach (var chunk in router.StreamAsync(provider, model, messages, parameters, timeout.Token))
             {
                 characters += chunk.Text.Length;
-                if (characters > options.Value.MaxOutputCharacters) throw new ExternalServiceException(Error.Upstream("output_limit_exceeded"), "回答超過文字上限，請分段提問。");
+                if (characters > options.Value.MaxOutputCharacters)
+                {
+                    throw new ExternalServiceException(Error.Upstream("output_limit_exceeded"), "回答超過文字上限，請分段提問。");
+                }
+
                 completed |= chunk.Done;
                 buffer.Append(chunk.Text);
                 input = chunk.InputTokens ?? input;
                 output = chunk.OutputTokens ?? output;
-                cached = chunk.CachedInputTokens ?? cached; reasoning = chunk.ReasoningTokens ?? reasoning;
+                cached = chunk.CachedInputTokens ?? cached;
+                reasoning = chunk.ReasoningTokens ?? reasoning;
+
                 if (elapsed.ElapsedMilliseconds >= 80 || buffer.Length >= 512 || chunk.Done)
                 {
                     await FlushAsync(job, progress, buffer.ToString(), input, output, cached, reasoning, completed, stoppingToken);
@@ -150,12 +240,18 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
                     elapsed.Restart();
                 }
             }
-            if (!completed) throw new ExternalServiceException(Error.Upstream("provider_stream_incomplete"), "模型串流提前結束。");
+
+            if (!completed)
+            {
+                throw new ExternalServiceException(Error.Upstream("provider_stream_incomplete"), "模型串流提前結束。");
+            }
         }
         catch (OperationCanceledException)
         {
             finalStatus = job.Cancellation.IsCancellationRequested ? RunStates.Cancelled : RunStates.Failed;
-            error = finalStatus == RunStates.Cancelled ? null : stoppingToken.IsCancellationRequested ? "server_stopping" : "generation_timeout";
+            error = finalStatus == RunStates.Cancelled
+                ? null
+                : stoppingToken.IsCancellationRequested ? "server_stopping" : "generation_timeout";
         }
         catch (Exception ex) when (ex is HttpRequestException or IOException or JsonException or InvalidOperationException or ExternalServiceException)
         {
@@ -163,31 +259,56 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
             error = (ex as ExternalServiceException)?.Error.Code ?? (ex is HttpRequestException or IOException ? "provider_connection_lost" : "provider_protocol_error");
             issueCode = issues.Report(ex, error);
         }
-        // Request cancellation does not interrupt persistence; partial output survives.
+
+        // 終止前沖刷最後剩餘的文字與用量，使用 CancellationToken.None 確保局部產出必定能持久化
         await FlushAsync(job, progress, buffer.ToString(), input, output, cached, reasoning, completed, CancellationToken.None);
+
         using (await scheduler.LockConversationAsync(job.ConversationId, CancellationToken.None))
         {
             using var scope = scopes.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             var run = await db.Runs.SingleAsync(x => x.Id == job.RunId, CancellationToken.None);
-            if (RunStates.IsActive(run.Status)) await scope.ServiceProvider.GetRequiredService<RunService>().FinishAsync(run, finalStatus, error, CancellationToken.None, issueCode);
+            if (RunStates.IsActive(run.Status))
+            {
+                await scope.ServiceProvider.GetRequiredService<RunService>()
+                    .FinishAsync(run, finalStatus, error, CancellationToken.None, issueCode);
+            }
         }
     }
 
-    /// <summary>What CreateRun checked and can change before the run starts: the chat grant, the model policy, the cited documents and the project.</summary>
+    /// <summary>
+    /// 在開始生成前二次驗證權限與引用項目（權限、模型原則、知識庫、專案上下文）。
+    /// </summary>
     private static async Task<Result> RecheckAsync(IServiceProvider services, NexusDbContext db, GenerationRun run, CancellationToken ct)
     {
         var grants = await services.GetRequiredService<AccessService>().ForUserAsync(run.OwnerId, ct);
         if (!grants.Features.Any(x => x.Id == "chat")) return AccessControlErrors.FeatureForbidden;
-        if (await services.GetRequiredService<ModelPolicyService>().RequireAsync(run.OwnerId, run.ModelId, ct, checkQuota: false) is { IsSuccess: false } refused) return refused.Error;
-        var sources = await db.Set<MessageCitation>().Where(x => x.MessageId == run.AssistantMessageId).Select(x => new KnowledgeHitDto(x.DocumentId, x.Title, x.PageNumber, x.Excerpt, 0, Guid.Empty, x.EndPage)).ToListAsync(ct);
-        if (await services.GetRequiredService<KnowledgeRetrieval>().ValidateHitsAsync(run.OwnerId, sources, ct) is { IsSuccess: false } hidden) return hidden.Error;
-        var projectId = await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.Id == run.ConversationId).Select(x => x.ProjectId).SingleAsync(ct);
+
+        if (await services.GetRequiredService<ModelPolicyService>().RequireAsync(run.OwnerId, run.ModelId, ct, checkQuota: false) is { IsSuccess: false } refused)
+        {
+            return refused.Error;
+        }
+
+        var sources = await db.Set<MessageCitation>()
+            .Where(x => x.MessageId == run.AssistantMessageId)
+            .Select(x => new KnowledgeHitDto(x.DocumentId, x.Title, x.PageNumber, x.Excerpt, 0, Guid.Empty, x.EndPage))
+            .ToListAsync(ct);
+
+        if (await services.GetRequiredService<KnowledgeRetrieval>().ValidateHitsAsync(run.OwnerId, sources, ct) is { IsSuccess: false } hidden)
+        {
+            return hidden.Error;
+        }
+
+        var projectId = await db.Conversations
+            .IgnoreQueryFilters([SoftDelete.Filter])
+            .Where(x => x.Id == run.ConversationId)
+            .Select(x => x.ProjectId)
+            .SingleAsync(ct);
+
         var project = await services.GetRequiredService<ProjectService>().ContextAsync(run.OwnerId, projectId, ct);
         return project.IsSuccess ? Result.Success : project.Error;
     }
 
-    /// <summary>What this worker has already written for its run. Flushes only append, so this is all a flush needs.</summary>
     private sealed class RunProgress(long sequence, Guid answer)
     {
         public long Sequence = sequence;
@@ -197,51 +318,99 @@ public sealed partial class GenerationWorker(IServiceScopeFactory scopes, Genera
     }
 
     /// <summary>
-    /// Costs O(delta): the stored answer is appended in SQL and never read back or resent. The delta event, the run
-    /// (content and sequence move together, so a snapshot at LastSequence equals the deltas up to it), the usage and the
-    /// answer message are written in one transaction, and only while the run is still active, so a cancellation or a
-    /// recovery is never overwritten. Usage values are cumulative: only the ones that changed are metered again.
+    /// 增量沖刷：在單一交易內附加文字、寫入 RunEvent、結算計費並更新回答訊息。
+    /// 序號不符（別的寫入者先動了）時改用最新序號重試一次。
     /// </summary>
-    private async Task FlushAsync(GenerationJob job, RunProgress progress, string delta, long? input, long? output, long? cached, long? reasoning, bool complete, CancellationToken ct)
+    private async Task FlushAsync(
+        GenerationJob job,
+        RunProgress progress,
+        string delta,
+        long? input,
+        long? output,
+        long? cached,
+        long? reasoning,
+        bool complete,
+        CancellationToken ct)
     {
         if (delta.Length == 0 && input is null && output is null) return;
+
         static long? Changed(long? value, long? written) => value is not null && value != written ? value : null;
-        var (newInput, newOutput, newCached, newReasoning) = (Changed(input, progress.Input), Changed(output, progress.Output), Changed(cached, progress.Cached), Changed(reasoning, progress.Reasoning));
+        var (newInput, newOutput, newCached, newReasoning) = (
+            Changed(input, progress.Input),
+            Changed(output, progress.Output),
+            Changed(cached, progress.Cached),
+            Changed(reasoning, progress.Reasoning));
+
         var completes = complete && !progress.Complete;
-        if (delta.Length == 0 && newInput is null && newOutput is null && newCached is null && newReasoning is null && !completes) return;
+        if (delta.Length == 0 && newInput is null && newOutput is null && newCached is null && newReasoning is null && !completes)
+        {
+            return;
+        }
+
         var expected = progress.Sequence;
+
         using (await scheduler.LockConversationAsync(job.ConversationId, ct))
         {
             using var scope = scopes.CreateScope();
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             db.Database.AutoSavepointsEnabled = false;
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
+
+            // 樂觀更新：若預期序號不符，說明其他工作者寫入了事件，重新查詢當前最新序號
             if (await AppendRunAsync(db, job.RunId, expected, delta, newInput, newOutput, ct) == 0)
             {
-                var current = await db.Runs.Where(x => x.Id == job.RunId).Select(x => new { x.Status, x.LastSequence }).SingleAsync(ct);
+                var current = await db.Runs
+                    .Where(x => x.Id == job.RunId)
+                    .Select(x => new { x.Status, x.LastSequence })
+                    .SingleAsync(ct);
+
                 if (!RunStates.IsActive(current.Status)) return;
-                // Another writer added an event to the still active run: continue after it.
+
                 expected = current.LastSequence;
                 if (await AppendRunAsync(db, job.RunId, expected, delta, newInput, newOutput, ct) == 0) return;
             }
+
             if (delta.Length > 0)
             {
-                db.RunEvents.Add(new RunEvent { RunId = job.RunId, Sequence = expected + 1, Type = "delta", Status = RunStates.Running, Delta = delta });
+                db.RunEvents.Add(new RunEvent
+                {
+                    RunId = job.RunId,
+                    Sequence = expected + 1,
+                    Type = "delta",
+                    Status = RunStates.Running,
+                    Delta = delta
+                });
                 await db.SaveChangesAsync(ct);
             }
-            await scope.ServiceProvider.GetRequiredService<BillingService>().MeterInPlaceAsync(job.RunId, newInput, newOutput, newCached, newReasoning, completes, ct);
-            await scope.ServiceProvider.GetRequiredService<ConversationService>().AppendAnswerAsync(progress.Answer, job.ConversationId, delta, ct);
+
+            await scope.ServiceProvider.GetRequiredService<BillingService>()
+                .MeterInPlaceAsync(job.RunId, newInput, newOutput, newCached, newReasoning, completes, ct);
+
+            await scope.ServiceProvider.GetRequiredService<ConversationService>()
+                .AppendAnswerAsync(progress.Answer, job.ConversationId, delta, ct);
+
             await transaction.CommitAsync(ct);
         }
+
         signals.Notify(job.RunId);
+
         progress.Sequence = expected + (delta.Length > 0 ? 1 : 0);
-        progress.Input = input ?? progress.Input; progress.Output = output ?? progress.Output;
-        progress.Cached = cached ?? progress.Cached; progress.Reasoning = reasoning ?? progress.Reasoning;
+        progress.Input = input ?? progress.Input;
+        progress.Output = output ?? progress.Output;
+        progress.Cached = cached ?? progress.Cached;
+        progress.Reasoning = reasoning ?? progress.Reasoning;
         progress.Complete |= complete;
     }
 
-    private static Task<int> AppendRunAsync(NexusDbContext db, Guid id, long expected, string delta, long? input, long? output, CancellationToken ct)
-        => db.Runs.Where(x => x.Id == id && x.LastSequence == expected && (x.Status == RunStates.Queued || x.Status == RunStates.Running))
+    private static Task<int> AppendRunAsync(
+        NexusDbContext db,
+        Guid id,
+        long expected,
+        string delta,
+        long? input,
+        long? output,
+        CancellationToken ct) =>
+        db.Runs.Where(x => x.Id == id && x.LastSequence == expected && (x.Status == RunStates.Queued || x.Status == RunStates.Running))
             .ExecuteUpdateAsync(setters =>
             {
                 setters.SetProperty(x => x.LastSequence, expected + (delta.Length > 0 ? 1 : 0));

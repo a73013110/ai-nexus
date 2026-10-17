@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Identity;
 
+/// <summary>目前請求的使用者解析器。首次解析時把 Windows SID 對應到 <see cref="NexusUser"/>（必要時建立、綁定或更新），結果在同一請求內快取。</summary>
 public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, IEnumerable<ISignInGrant> grants,
     DisplayNameCache names, TimeProvider clock) : IRequestUser, ICurrentUser
 {
@@ -31,7 +32,7 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
         if (principal?.Identity?.IsAuthenticated != true) return IdentityErrors.AuthenticationRequired;
         if (Guid.TryParse(principal.FindFirstValue(SessionIdentity.UserId), out var userId))
         {
-            // Cookie validation has just read this row; track that copy instead of reading it again.
+            // Cookie 驗證剛讀過這一列，直接追蹤那份副本，避免再查一次。
             var linked = Track(SessionIdentity.ValidatedUser(accessor.HttpContext!, userId)) ?? await db.Users.SingleOrDefaultAsync(x => x.Id == userId, ct);
             var testing = principal.HasClaim(x => x.Type == SessionIdentity.ActorId);
             if (linked is null || !SessionIdentity.Available(linked) || !SessionIdentity.MatchesVersion(linked, principal.FindFirstValue(SessionIdentity.Version)) ||
@@ -44,8 +45,8 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
         if (string.IsNullOrWhiteSpace(sid)) return IdentityErrors.WindowsSidRequired;
         if (principal.Identity.Name is not { } account) return IdentityErrors.WindowsAccountRequired;
         var displayName = principal.FindFirstValue("display_name") ?? names.GetOrAdd(sid, () => ResolveName(sid, account));
-        // Most requests only read an existing mapping. The global gate is taken only to create, bind or refresh a user,
-        // or to apply a bootstrap grant: binding goes by account across SIDs, and local sign-in writes the same rows.
+        // 多數請求只讀既有的對應，不取全域寫入鎖；只有建立、綁定或更新使用者，或套用初始授權時才取鎖。
+        // 綁定是依帳號跨 SID 進行，且本地登入寫的也是同一批資料列，所以鎖必須共用。
         var existing = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Sid == sid, ct);
         if (existing is not null && !SessionIdentity.Allows(existing, "ad")) return IdentityErrors.LoginMethodDisabled;
         if (existing is not null && !Stale(existing, displayName) && !await PendingGrantAsync(existing, ct))
@@ -95,7 +96,7 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
 
     private bool Stale(NexusUser user, string displayName) => clock.GetUtcNow() - user.LastSeenAt > SeenInterval || !user.ProfileManaged && user.DisplayName != displayName;
 
-    /// <summary>The request's tracked copy of a user read without tracking; handlers may change and save it.</summary>
+    /// <summary>回傳本請求中追蹤的使用者實體（未追蹤則 Attach 進來），讓 handler 可以修改並儲存。</summary>
     private NexusUser? Track(NexusUser? user)
     {
         if (user is null) return null;

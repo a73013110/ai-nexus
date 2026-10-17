@@ -16,16 +16,19 @@ public sealed class InferenceOptions : IValidatableObject
     [Required] public string SystemPrompt { get; set; } = "請用繁體中文回答。";
     public bool AllowModelSelection { get; set; } = true;
     public bool ShowModelNames { get; set; } = true;
-    /// <summary>Routed id (<c>provider/native-id</c>) of the preselected model; null picks the first approved model.</summary>
+
+    /// <summary>預先選取之模型路由識別碼（格式為 <c>provider/native-id</c>）；為 null 時自動挑選第一個已核准模型。</summary>
     public string? DefaultModelId { get; set; }
+
     [ValidateObjectMembers] public InferenceProviders Providers { get; set; } = new();
 
-    /// <summary>Approved models of the enabled providers, routed as <c>provider/native-id</c>; derived from <see cref="Providers"/> after binding.</summary>
+    /// <summary>已啟用的供應商所提供之經核准模型清單，路由識別碼格式為 <c>provider/native-id</c>；於組態繫結後自 <see cref="Providers"/> 推導而得。</summary>
     public List<ModelProfile> Models { get; set; } = [];
-    /// <summary>Concurrent calls per enabled provider; derived from <see cref="Providers"/> after binding.</summary>
+
+    /// <summary>每個已啟用供應商的並行呼叫數限制；於組態繫結後自 <see cref="Providers"/> 推導而得。</summary>
     public Dictionary<string, int> ProviderConcurrency { get; set; } = new(StringComparer.Ordinal) { ["google"] = 1 };
 
-    /// <summary>Flattens the enabled providers into <see cref="Models"/> and <see cref="ProviderConcurrency"/>; each model keeps its native id for the adapter.</summary>
+    /// <summary>將已啟用的供應商攤平為 <see cref="Models"/> 與 <see cref="ProviderConcurrency"/>；每個模型均保留其原生識別碼供供應商介面介接。</summary>
     internal void RouteProviders()
     {
         Models = [];
@@ -41,21 +44,21 @@ public sealed class InferenceOptions : IValidatableObject
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (ProviderConcurrency.Count == 0 || !ProviderConcurrency.All(p => p.Key is "google" or "ollama" && p.Value is >= 1 and <= 8))
-            yield return new("Enable at least one provider (Providers:Google or Providers:Ollama) with MaxConcurrency 1–8.", [nameof(Providers)]);
-        if (Models.Count == 0) yield return new("The enabled providers need at least one model.", [nameof(Models)]);
-        if (Models.Select(m => m.Id).Distinct(StringComparer.Ordinal).Count() != Models.Count) yield return new("Model ids must be unique per provider.", [nameof(Models)]);
+            yield return new("至少需啟用一個推論供應商（Providers:Google 或 Providers:Ollama）且 MaxConcurrency 介於 1 至 8。", [nameof(Providers)]);
+        if (Models.Count == 0) yield return new("啟用的供應商至少需包含一個可用模型。", [nameof(Models)]);
+        if (Models.Select(m => m.Id).Distinct(StringComparer.Ordinal).Count() != Models.Count) yield return new("每個供應商下的模型識別碼必須唯一。", [nameof(Models)]);
         if (DefaultModelId is not null && !Models.Any(m => m.Id == DefaultModelId))
-            yield return new($"{nameof(DefaultModelId)} must be the provider/native-id of an enabled model.", [nameof(DefaultModelId)]);
+            yield return new($"{nameof(DefaultModelId)} 必須是已啟用模型的 provider/native-id。", [nameof(DefaultModelId)]);
         foreach (var m in Models)
         {
             if (string.IsNullOrWhiteSpace(m.Id) || m.Id.Length > 160 || m.NativeId.Length is 0 or > 150
                 || !m.NativeId.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or ':' or '.' or '/'))
-                yield return new($"Model '{m.Id}': Id must be 1–150 ASCII letters, digits, '-', '_', ':', '.' or '/'.", [nameof(Models)]);
+                yield return new($"模型 '{m.Id}'：Id 必須為 1–150 個 ASCII 英文字母、數字、'-'、'_'、':'、'.' 或 '/'。", [nameof(Models)]);
             if (m.ContextTokens is < 1024 or > 32768 || m.MaxOutputTokens < 128 || m.MaxOutputTokens >= m.ContextTokens)
-                yield return new($"Model '{m.Id}': ContextTokens must be 1024–32768 and MaxOutputTokens 128 to below ContextTokens.", [nameof(Models)]);
-            if (!m.SupportsStreaming) yield return new($"Model '{m.Id}': SupportsStreaming must be true.", [nameof(Models)]);
+                yield return new($"模型 '{m.Id}'：ContextTokens 必須介於 1024–32768，且 MaxOutputTokens 介於 128 至 ContextTokens 之間。", [nameof(Models)]);
+            if (!m.SupportsStreaming) yield return new($"模型 '{m.Id}'：SupportsStreaming 必須為 true。", [nameof(Models)]);
             if (!ProviderConcurrency.ContainsKey(m.Provider) || !m.ValidReasoning(m.Provider))
-                yield return new($"Model '{m.Id}': ReasoningControl, ReasoningEfforts and DefaultReasoningEffort do not match the provider.", [nameof(Models)]);
+                yield return new($"模型 '{m.Id}'：ReasoningControl、ReasoningEfforts 與 DefaultReasoningEffort 設定不符合供應商規範。", [nameof(Models)]);
         }
     }
 }
@@ -70,13 +73,14 @@ public abstract class ProviderOptions
 {
     public bool Enabled { get; set; }
     [Range(1, 8)] public int MaxConcurrency { get; set; } = 1;
-    /// <summary>Approved models by a stable alias (<c>default</c>, <c>secondary</c>); configuration sources merge by alias.</summary>
+
+    /// <summary>經核准的模型別名字典（例如 <c>default</c>、<c>secondary</c>）；各組態來源依別名進行合併覆寫。</summary>
     public Dictionary<string, ModelProfile> Models { get; set; } = new(StringComparer.Ordinal);
 }
 
 public sealed class GoogleProviderOptions : ProviderOptions
 {
-    /// <summary>Belongs in the secrets file; the endpoint is fixed to Google's HTTPS API.</summary>
+    /// <summary>應配置於機密設定檔中；端點固定指向 Google HTTPS API。</summary>
     public string ApiKey { get; set; } = "";
 }
 

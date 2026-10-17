@@ -17,7 +17,7 @@ public sealed class CurrentUserTests
         try { (await client.GetAsync("/api/v1/me").WaitAsync(TimeSpan.FromSeconds(10))).EnsureSuccessStatusCode(); }
         finally { gate.Release(); }
 
-        // A user due a last-seen refresh still waits for the gate, then is updated.
+        // 需要更新最後上線時間的使用者，仍要先通過閘門，之後才會被更新。
         using (var scope = factory.Services.CreateScope())
             await scope.ServiceProvider.GetRequiredService<NexusDbContext>().Users.ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, DateTimeOffset.UtcNow.AddHours(-1)));
         await gate.WaitAsync();

@@ -12,7 +12,7 @@ public sealed class RetrievalDependencyTests
     {
         await using var factory = new NexusFactory();
         using var scope = factory.Services.CreateScope();
-        // Exercise the production constructor even though this host uses SQLite.
+        // 即使此 host 使用 SQLite，仍要走正式環境的建構子。
         Assert.IsType<SqlServerRetrievalStore>(ActivatorUtilities.CreateInstance<SqlServerRetrievalStore>(scope.ServiceProvider));
     }
 

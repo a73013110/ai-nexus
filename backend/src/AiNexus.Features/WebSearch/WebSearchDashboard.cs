@@ -5,10 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.WebSearch;
 
-/// <summary>
-/// Overview of web searches made from chat. Whether search is configured is shown on the administration pages, not
-/// here.
-/// </summary>
+/// <summary>聊天中網路搜尋的總覽區塊；是否已設定由管理頁面顯示，不在這裡重複。</summary>
 internal sealed class WebSearchDashboard(NexusDbContext db) : IDashboardSource
 {
     public string Feature => FeatureIds.Chat;

@@ -5,7 +5,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Quality.Evaluations;
 
-/// <summary>Deletes a set through the shared resource lifecycle; finished runs keep their frozen copy of the cases.</summary>
+/// <summary>刪除題組（走共用的資源生命週期）；已結束的執行保有凍結的題目副本，不受影響。</summary>
 internal sealed class DeleteEvaluationSet(ResourceLifecycle lifecycle)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

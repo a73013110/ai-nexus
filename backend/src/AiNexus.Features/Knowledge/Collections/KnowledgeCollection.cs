@@ -6,8 +6,7 @@ using AiNexus.Features.Knowledge.Documents;
 namespace AiNexus.Features.Knowledge.Collections;
 
 /// <summary>
-/// A shared knowledge collection. Its name, owner and sharing live on the <see cref="WorkspaceResource"/> with the same
-/// id; its documents are <see cref="KnowledgeDocument"/> rows that point back to it.
+/// 知識庫本體。名稱、擁有者與分享設定存在同 Id 的 <see cref="WorkspaceResource"/>；文件是指回此知識庫的 <see cref="KnowledgeDocument"/> 資料列。
 /// </summary>
 [Comment("知識庫的資料資源關聯及索引資訊。")]
 public sealed class KnowledgeCollection

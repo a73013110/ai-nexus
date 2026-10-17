@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Billing.Reports;
 
-/// <summary>A validated reporting window: 1 to 366 days, with the viewer's UTC offset for day buckets.</summary>
+/// <summary>經驗證的報表期間（起訖必須有先後，長度最多 366 天），並帶有檢視者的 UTC 位移，用來切分每日統計。</summary>
 public sealed record SpendPeriod(DateTimeOffset From, DateTimeOffset Until, int Offset)
 {
     public static Result<SpendPeriod> Create(DateTimeOffset? from, DateTimeOffset? until, int? offset, DateTimeOffset now)
@@ -27,7 +27,7 @@ public sealed class SpendReports(NexusDbContext db, ModelPresentation presentati
     {
         var query = db.Set<ModelCharge>().AsNoTracking().Where(x => x.CreatedAt >= p.From && x.CreatedAt < p.Until);
         if (owner is Guid id) query = query.Where(x => x.OwnerId == id);
-        // Aggregates stay in SQL. SQLite is used only by the isolated test host.
+        // 彙總盡量在 SQL 完成；SQLite 只用於隔離的測試主機，那裡才改為記憶體內計算。
         var groups = query.GroupBy(x => new { x.Currency, x.Kind }).Select(g => new MoneyTotalDto(g.Key.Currency, g.Key.Kind,
             g.Sum(x => x.Amount ?? 0), g.Count(x => x.Amount != null), g.Count(x => x.Amount == null && x.State != "pending")));
         IReadOnlyList<MoneyTotalDto> totals;
@@ -100,7 +100,7 @@ public sealed class SpendReports(NexusDbContext db, ModelPresentation presentati
         calls.Sum(x => x.Amount ?? 0), calls.Count(), calls.Count(x => x.Amount == null && x.State != "pending"), calls.Sum(x => x.InputTokens ?? 0), calls.Sum(x => x.OutputTokens ?? 0));
     private IReadOnlyList<SpendBucketDto> ModelBuckets(IEnumerable<ModelCharge> calls, bool administrator) => calls
         .GroupBy(x => new { x.Provider, x.ModelId, x.Currency, x.Kind }).Select(g => Bucket(Label(g.Key.Provider, g.Key.ModelId, administrator), g)).ToArray();
-    // A hidden model name may map several real models to the same public label.
+    // 隱藏的模型名稱可能對應多個真實模型，它們會被合併到同一個公開標籤。
     private static IReadOnlyList<SpendBucketDto> MergePresentedModels(IEnumerable<SpendBucketDto> rows) => rows
         .GroupBy(x => new { x.Label, x.Currency, x.Kind }).Select(g => new SpendBucketDto(g.Key.Label, g.Key.Currency, g.Key.Kind,
             g.Sum(x => x.Amount), g.Sum(x => x.Requests), g.Sum(x => x.UnknownCalls), g.Sum(x => x.InputTokens), g.Sum(x => x.OutputTokens)))

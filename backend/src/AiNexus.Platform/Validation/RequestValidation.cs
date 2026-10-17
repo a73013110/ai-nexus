@@ -5,7 +5,7 @@ using FluentValidation.Results;
 
 namespace AiNexus.Platform.Validation;
 
-/// <summary>Base for request validators. Override <see cref="ProblemCode"/> to keep a feature's established public code.</summary>
+/// <summary>請求驗證器基底類別。可覆寫 <see cref="ProblemCode"/> 以保留特定功能模組既有的公開錯誤代碼。</summary>
 public abstract class RequestValidator<T> : AbstractValidator<T>, IRequestValidator
 {
     public virtual string ProblemCode => RequestValidation.DefaultCode;
@@ -17,8 +17,8 @@ public interface IRequestValidator
 }
 
 /// <summary>
-/// Validates every endpoint argument that has an <see cref="IValidator{T}"/> before the handler runs. Applied once to a
-/// route group, so a new endpoint cannot forget it; endpoints without validated arguments get no filter at all.
+/// 於 Handler 執行前自動驗證所有具備 <see cref="IValidator{T}"/> 的端點引數。
+/// 一次套用於路由群組即可全面生效，避免新增端點時遺漏驗證；無須驗證參數的端點不會產生額外過濾器開銷。
 /// </summary>
 public static class RequestValidation
 {
@@ -50,14 +50,14 @@ public static class RequestValidation
         };
     }
 
-    /// <summary>JSON member path → stable rule codes. Never the validator's message or the submitted value.</summary>
+    /// <summary>將驗證錯誤轉換為「JSON 成員路徑（camelCase）→ 穩定規則代碼」之字典。絕不洩漏驗證器原生訊息或使用者提交的原始值。</summary>
     internal static Dictionary<string, string[]> Fields(ValidationResult result) => result.Errors
         .GroupBy(failure => Path(failure.PropertyName), StringComparer.Ordinal)
         .ToDictionary(group => group.Key, group => group.Select(failure => Rule(failure.ErrorCode)).Distinct(StringComparer.Ordinal).ToArray(), StringComparer.Ordinal);
 
     private static string Path(string property) => string.Join('.', property.Split('.').Select(JsonNamingPolicy.CamelCase.ConvertName));
 
-    // Built-in rules report e.g. "MaximumLengthValidator"; custom rules set an explicit snake_case code with WithErrorCode.
+    // FluentValidation 內建規則回報如 "MaximumLengthValidator"，自動轉為 snake_case；自訂規則則可透過 WithErrorCode 指定明確代碼。
     private static string Rule(string code) => code.EndsWith("Validator", StringComparison.Ordinal)
         ? JsonNamingPolicy.SnakeCaseLower.ConvertName(code[..^"Validator".Length])
         : code;

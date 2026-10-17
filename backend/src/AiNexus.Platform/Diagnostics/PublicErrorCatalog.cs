@@ -1,6 +1,9 @@
 namespace AiNexus.Platform.Diagnostics;
 
-/// <summary>Reviewed, fixed public hints. Never supplied by an exception or provider response.</summary>
+/// <summary>
+/// 對外公開錯誤提示字典。
+/// 存放經人工審查核准的固定繁體中文錯誤提示與引導說明，絕不直接顯示底層例外文字或外部供應商原始錯誤訊息。
+/// </summary>
 public static class PublicErrorCatalog
 {
     private static readonly IReadOnlyDictionary<string, string> Hints = new Dictionary<string, string>

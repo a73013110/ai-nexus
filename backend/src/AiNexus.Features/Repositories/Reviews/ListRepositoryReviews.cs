@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Repositories.Reviews;
 
-/// <summary>The user's 50 most recent reviews of one repository on the current Gitea host.</summary>
+/// <summary>使用者在目前 Gitea 主機上，某個程式庫最近 50 筆 review。</summary>
 internal sealed class ListRepositoryReviews(NexusDbContext db, RepositoryService gitea, RepositoryReviewService reviews)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository
@@ -17,7 +17,7 @@ internal sealed class ListRepositoryReviews(NexusDbContext db, RepositoryService
     public async Task<Result<IReadOnlyList<RepositoryReviewDto>>> HandleAsync(Guid owner, string repo, CancellationToken ct)
     {
         if (!RepositoryService.IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
-        // Only the columns the summary shows: the frozen snapshot (up to a million characters per review) stays in the database.
+        // 只查列表需要的欄位；凍結的快照（每筆最多一百萬字元）留在資料庫，不載入記憶體。
         var rows = await db.Set<RepositoryReview>().AsNoTracking().Where(x => x.OwnerId == owner && x.BaseUrl == gitea.BaseUrl && x.Repository == repo)
             .OrderByDescending(x => x.CreatedAt).Take(50)
             .Join(db.Set<BackgroundJob>().AsNoTracking(), x => x.JobId, job => job.Id, (x, job) => new

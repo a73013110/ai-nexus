@@ -5,24 +5,42 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Inference.Models;
 
+/// <summary>
+/// 模型供應商狀態資料傳輸物件。
+/// </summary>
 public sealed record ProviderStatusDto(string Id, bool Available, string? Notice);
 
 /// <summary>
-/// Installed models and provider availability, discovered over HTTP. Stale-while-revalidate: callers get the cached
-/// result at once; when it is older than <see cref="FreshFor"/> one background refresh (single-flight) replaces it.
-/// Only the first load is awaited.
+/// 系統模型目錄服務。
+/// 管理已安裝的模型組態與各供應商的即時可用性（透過 HTTP 探測）。
+/// 採用 Stale-While-Revalidate（SWR）快取機制：
+/// - 當前快取在 <see cref="FreshFor"/>（10 秒）內時直接回傳；
+/// - 過期時啟動背景單趟更新（single-flight），後續呼叫端可立即取得過期快取；
+/// - 僅有首次無任何快取時呼叫端才需要同步等待更新完成。
 /// </summary>
-public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptions> options, ModelPresentation presentation, AiNexus.Platform.Diagnostics.Issues issues, TimeProvider? clock = null)
+public sealed class ModelCatalog(
+    InferenceRouter router,
+    IOptions<InferenceOptions> options,
+    ModelPresentation presentation,
+    AiNexus.Platform.Diagnostics.Issues issues,
+    TimeProvider? clock = null)
 {
+    /// <summary>快取新鮮期（10 秒）。在此期間內不發動探測。</summary>
     public static readonly TimeSpan FreshFor = TimeSpan.FromSeconds(10);
-    // Provider clients have no timeout of their own; a refresh that nobody cancels must still end.
+
+    /// <summary>供應商探測超時門檻（30 秒）。避免連線卡死導致背景 Task 永遠佔用。</summary>
     private static readonly TimeSpan DiscoveryTimeout = TimeSpan.FromSeconds(30);
+
     private readonly TimeProvider time = clock ?? TimeProvider.System;
     private readonly Lock gate = new();
     private Snapshot? current;
     private Task<Snapshot>? refreshing;
 
-    private sealed record Snapshot(IReadOnlyList<ProviderStatusDto> Providers, IReadOnlySet<string> Installed, IReadOnlyDictionary<string, ModelProfile> Profiles, DateTimeOffset CheckedAt);
+    private sealed record Snapshot(
+        IReadOnlyList<ProviderStatusDto> Providers,
+        IReadOnlySet<string> Installed,
+        IReadOnlyDictionary<string, ModelProfile> Profiles,
+        DateTimeOffset CheckedAt);
 
     private async Task<Snapshot> SnapshotAsync(CancellationToken ct)
     {
@@ -30,17 +48,28 @@ public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptio
         lock (gate)
         {
             var cached = current;
-            if (cached is not null && time.GetUtcNow() - cached.CheckedAt <= FreshFor) return cached;
+            if (cached is not null && time.GetUtcNow() - cached.CheckedAt <= FreshFor)
+            {
+                return cached;
+            }
+
             if (refreshing is null)
             {
+                // 單趟背景更新，避免多個請求同時觸發重複探測
                 refreshing = pending = Task.Run(RefreshAsync, CancellationToken.None);
-                // A background refresh may fail with nobody awaiting it; RefreshAsync has reported it already.
+                // 背景刷新若拋出例外且未被 await，由 ContinueWith 吸收未處理例外（RefreshAsync 內已主動向 issues 回報）
                 _ = pending.ContinueWith(static x => _ = x.Exception, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
             }
-            else pending = refreshing;
+            else
+            {
+                pending = refreshing;
+            }
+
+            // 若已有過期快取，立即回傳舊值以達成 Stale-While-Revalidate，呼叫端無需等待
             if (cached is not null) return cached;
         }
-        // First load: wait for the shared refresh without cancelling it for the other callers.
+
+        // 首次啟動尚無任何快取時，呼叫端必須等待共用的刷新完成，但不取消共享的 Task
         return await pending.WaitAsync(ct);
     }
 
@@ -49,16 +78,39 @@ public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptio
         try
         {
             using var timeout = new CancellationTokenSource(DiscoveryTimeout);
-            var discovered = await Task.WhenAll(options.Value.ProviderConcurrency.Keys.Select(x => DiscoverAsync(x, timeout.Token)));
-            var installed = options.Value.Models.Where(m => discovered.Any(p => p.Status.Id == m.Provider && p.Models.Contains(m.NativeId))).Select(m => m.Id).ToHashSet(StringComparer.Ordinal);
-            var profiles = (await Task.WhenAll(options.Value.Models.Select(x => ResolveAsync(x, installed, timeout.Token)))).ToDictionary(x => x.Id, StringComparer.Ordinal);
-            var snapshot = new Snapshot(discovered.Select(x => x.Status).ToArray(), installed, profiles, time.GetUtcNow());
-            lock (gate) { current = snapshot; refreshing = null; }
+
+            // 並行探測所有在 ProviderConcurrency 中註冊的供應商狀態
+            var discovered = await Task.WhenAll(
+                options.Value.ProviderConcurrency.Keys.Select(x => DiscoverAsync(x, timeout.Token)));
+
+            // 比對各供應商回報的已安裝模型清單，篩選出符合系統設定的已就緒模型
+            var installed = options.Value.Models
+                .Where(m => discovered.Any(p => p.Status.Id == m.Provider && p.Models.Contains(m.NativeId)))
+                .Select(m => m.Id)
+                .ToHashSet(StringComparer.Ordinal);
+
+            // 解析各模型的實際支援功能（例如視覺能力動態探測）
+            var profileTasks = options.Value.Models.Select(x => ResolveAsync(x, installed, timeout.Token));
+            var resolvedProfiles = await Task.WhenAll(profileTasks);
+            var profiles = resolvedProfiles.ToDictionary(x => x.Id, StringComparer.Ordinal);
+
+            var snapshot = new Snapshot(
+                discovered.Select(x => x.Status).ToArray(),
+                installed,
+                profiles,
+                time.GetUtcNow());
+
+            lock (gate)
+            {
+                current = snapshot;
+                refreshing = null;
+            }
+
             return snapshot;
         }
         catch (Exception error)
         {
-            // Keep serving the previous result; the next caller starts another refresh.
+            // 探測失敗時清空 refreshing 狀態，讓下次呼叫能再次嘗試，同時維持上一份快取繼續對外服務
             lock (gate) refreshing = null;
             issues.Report(error, "provider_discovery_unavailable", LogLevel.Warning);
             throw;
@@ -72,6 +124,7 @@ public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptio
         {
             try
             {
+                // Ollama 模型在本地若未明確強制指定 ImageCapabilityOverride，則動態呼叫 CapabilitiesAsync 查詢是否支援視覺
                 var capabilities = await router.For(profile.Provider).CapabilitiesAsync(profile.NativeId, ct);
                 images = profile.ImageCapabilityOverride != false && (capabilities?.SupportsImages ?? profile.ImageCapabilityOverride ?? false);
             }
@@ -81,32 +134,54 @@ public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptio
                 images = false;
             }
         }
+
         return Copy(profile, images);
     }
 
     private static ModelProfile Copy(ModelProfile profile, bool images) => new ModelProfile
-        {
-            Id = profile.Id, Provider = profile.Provider, ProviderModelId = profile.ProviderModelId,
-            DisplayName = profile.DisplayName, ContextTokens = profile.ContextTokens, MaxOutputTokens = profile.MaxOutputTokens,
-            SupportsStreaming = profile.SupportsStreaming, SupportsUsage = profile.SupportsUsage, SupportsImages = images,
-            ImageCapabilityOverride = profile.ImageCapabilityOverride, ReasoningControl = profile.ReasoningControl,
-            ReasoningEfforts = profile.ReasoningEfforts, DefaultReasoningEffort = profile.DefaultReasoningEffort
-        };
+    {
+        Id = profile.Id,
+        Provider = profile.Provider,
+        ProviderModelId = profile.ProviderModelId,
+        DisplayName = profile.DisplayName,
+        ContextTokens = profile.ContextTokens,
+        MaxOutputTokens = profile.MaxOutputTokens,
+        SupportsStreaming = profile.SupportsStreaming,
+        SupportsUsage = profile.SupportsUsage,
+        SupportsImages = images,
+        ImageCapabilityOverride = profile.ImageCapabilityOverride,
+        ReasoningControl = profile.ReasoningControl,
+        ReasoningEfforts = profile.ReasoningEfforts,
+        DefaultReasoningEffort = profile.DefaultReasoningEffort
+    };
 
-    private static ModelProfile Current(ModelProfile profile, Snapshot snapshot) => Copy(profile, profile.Provider == "ollama" ? profile.ImageCapabilityOverride != false && (snapshot.Profiles.GetValueOrDefault(profile.Id)?.SupportsImages ?? false) : profile.SupportsImages);
+    private static ModelProfile Current(ModelProfile profile, Snapshot snapshot) =>
+        Copy(profile, profile.Provider == "ollama"
+            ? profile.ImageCapabilityOverride != false && (snapshot.Profiles.GetValueOrDefault(profile.Id)?.SupportsImages ?? false)
+            : profile.SupportsImages);
 
+    /// <summary>
+    /// 取得目前系統組態中已設定的模型清單（包含動態更新後的功能特性）。
+    /// </summary>
     public async Task<IReadOnlyList<ModelProfile>> ProfilesAsync(CancellationToken ct)
     {
         var snapshot = await SnapshotAsync(ct);
         return options.Value.Models.Select(x => Current(x, snapshot)).ToArray();
     }
 
-    public async Task<IReadOnlyList<ProviderStatusDto>> ProviderStatusesAsync(CancellationToken ct) => (await SnapshotAsync(ct)).Providers;
+    /// <summary>
+    /// 取得各模型供應商目前的健康與可用性狀態清單。
+    /// </summary>
+    public async Task<IReadOnlyList<ProviderStatusDto>> ProviderStatusesAsync(CancellationToken ct) =>
+        (await SnapshotAsync(ct)).Providers;
 
     private async Task<(ProviderStatusDto Status, IReadOnlySet<string> Models)> DiscoverAsync(string id, CancellationToken ct)
     {
-        try { return (new(id, true, null), await router.For(id).InstalledModelsAsync(ct)); }
-        // The token is the refresh's own timeout: a provider that does not answer in time is unavailable.
+        try
+        {
+            var models = await router.For(id).InstalledModelsAsync(ct);
+            return (new(id, true, null), models);
+        }
         catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException or JsonException or InvalidOperationException or IOException or ExternalServiceException)
         {
             var issue = issues.Report(exception, "provider_discovery_unavailable", LogLevel.Warning);
@@ -114,33 +189,81 @@ public sealed class ModelCatalog(InferenceRouter router, IOptions<InferenceOptio
         }
     }
 
+    /// <summary>
+    /// 取得模型全域目錄資訊（包含可用模型清單、供應商健康狀態與注意事項提示）。
+    /// </summary>
     public async Task<ModelsDto> GetAsync(CancellationToken ct) => Describe(await SnapshotAsync(ct));
 
     private ModelsDto Describe(Snapshot snapshot)
     {
         var providers = snapshot.Providers;
-        var allowed = options.Value.Models.Select(x => Current(x, snapshot)).Where(x => snapshot.Installed.Contains(x.Id) && (options.Value.AllowModelSelection || x.Id == presentation.DefaultId)).Select(presentation.Model).ToList();
+        var allowed = options.Value.Models
+            .Select(x => Current(x, snapshot))
+            .Where(x => snapshot.Installed.Contains(x.Id) && (options.Value.AllowModelSelection || x.Id == presentation.DefaultId))
+            .Select(presentation.Model)
+            .ToList();
+
         var available = providers.Any(x => x.Available);
-        return new(allowed, available, !available ? (providers.Count > 0 ? providers[0].Notice : null) ?? "目前無法連線至模型服務，請稍後重試。" : allowed.Count == 0 ? "系統指定的模型尚未就緒，請由管理員確認模型設定。" : providers.Any(x => !x.Available) ? "部分模型供應商暫時無法使用，其餘模型可正常使用。" : null, presentation.Policy,
+        var notice = !available
+            ? (providers.Count > 0 ? providers[0].Notice : null) ?? "目前無法連線至模型服務，請稍後重試。"
+            : allowed.Count == 0
+                ? "系統指定的模型尚未就緒，請由管理員確認模型設定。"
+                : providers.Any(x => !x.Available)
+                    ? "部分模型供應商暫時無法使用，其餘模型可正常使用。"
+                    : null;
+
+        return new(
+            allowed,
+            available,
+            notice,
+            presentation.Policy,
             options.Value.ShowModelNames ? providers : []);
     }
 
+    /// <summary>
+    /// 驗證並取得請求呼叫的模型規格。
+    /// 若請求未指定則選用系統預設模型；同時驗證模型是否在允許清單內且其供應商目前正常連線。
+    /// </summary>
     public async Task<Result<ModelProfile>> RequireAsync(string? id, CancellationToken ct)
     {
         var requested = id ?? presentation.Policy.DefaultModelId;
-        if (!options.Value.AllowModelSelection && requested != presentation.Policy.DefaultModelId) return InferenceErrors.ModelSelectionDisabled;
+
+        // 若系統組態關閉「允許使用者切換模型」，且請求的模型不是預設模型時拒絕
+        if (!options.Value.AllowModelSelection && requested != presentation.Policy.DefaultModelId)
+        {
+            return InferenceErrors.ModelSelectionDisabled;
+        }
+
         var snapshot = await SnapshotAsync(ct);
         var catalog = Describe(snapshot);
-        if (!catalog.ProviderAvailable) return InferenceErrors.ProviderUnavailable;
+
+        if (!catalog.ProviderAvailable)
+        {
+            return InferenceErrors.ProviderUnavailable;
+        }
+
         var profile = options.Value.Models.FirstOrDefault(x => presentation.PublicId(x.Id) == requested);
-        if (profile is not null && snapshot.Providers.Any(x => x.Id == profile.Provider && !x.Available)) return InferenceErrors.ProviderUnavailable;
-        if (!catalog.Models.Any(x => x.Id == requested)) return InferenceErrors.ModelNotAllowed;
+        if (profile is not null && snapshot.Providers.Any(x => x.Id == profile.Provider && !x.Available))
+        {
+            return InferenceErrors.ProviderUnavailable;
+        }
+
+        if (!catalog.Models.Any(x => x.Id == requested))
+        {
+            return InferenceErrors.ModelNotAllowed;
+        }
+
         return Current(options.Value.Models.Single(x => presentation.PublicId(x.Id) == requested), snapshot);
     }
 
+    /// <summary>
+    /// 檢查並決定模型推論時使用的思考/推理強度（Reasoning Effort）。
+    /// </summary>
     public static Result<string> RequireReasoning(ModelProfile model, string? effort)
     {
         var value = effort ?? model.DefaultReasoningEffort;
-        return value == "auto" || model.ReasoningEfforts.Contains(value, StringComparer.Ordinal) ? value : InferenceErrors.ReasoningNotSupported;
+        return value == "auto" || model.ReasoningEfforts.Contains(value, StringComparer.Ordinal)
+            ? value
+            : InferenceErrors.ReasoningNotSupported;
     }
 }

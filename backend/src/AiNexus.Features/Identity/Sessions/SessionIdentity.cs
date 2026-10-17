@@ -22,7 +22,7 @@ public static class SessionIdentity
     public const string Restored = "Nexus.IdentityRestored";
     private const string Validated = "Nexus.ValidatedUser";
 
-    /// <summary>The untracked user row this request's cookie was validated against, when it is still the signed-in user.</summary>
+    /// <summary>此請求的 cookie 驗證時讀到的使用者列（未追蹤）；只有該使用者仍是目前登入者時才回傳。</summary>
     internal static NexusUser? ValidatedUser(HttpContext http, Guid id) => http.Items[Validated] is NexusUser user && user.Id == id ? user : null;
 
     public static ClaimsPrincipal Principal(NexusUser user, string method, NexusUser? actor = null, string? actorMethod = null, DateTimeOffset? testExpires = null, Guid? testId = null)
@@ -57,7 +57,7 @@ public static class SessionIdentity
         var principal = context.Principal!;
         if (!Guid.TryParse(principal.FindFirstValue(UserId), out var id))
         {
-            // Cookies from the previous AD-only release remain usable until a policy change.
+            // 舊版（僅 AD 登入）發出的 cookie 沒有 UserId，改以 SID 對應；只有仍可 AD 登入且安全版本為 0 的使用者才繼續有效。
             var sid = principal.FindFirstValue(ClaimTypes.PrimarySid);
             var legacy = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Sid == sid, context.HttpContext.RequestAborted);
             if (legacy is null || Allows(legacy, "ad") && legacy.SecurityVersion == 0) return;
@@ -73,12 +73,12 @@ public static class SessionIdentity
             { context.RejectPrincipal(); await context.HttpContext.SignOutAsync(AuthEndpoints.CookieScheme); return; }
             if (!Guid.TryParse(principal.FindFirstValue(TestId), out var testId))
             { context.RejectPrincipal(); await context.HttpContext.SignOutAsync(AuthEndpoints.CookieScheme); return; }
-            // Reuse the indexed audit resource key for session revocation, without parsing/scanning JSON.
+            // 直接用已建索引的 ResourceId 欄位查稽核紀錄判斷測試身分是否已結束，不解析 DetailsJson。
             var ended = await db.AuditEvents.AsNoTracking().AnyAsync(x => x.ResourceId == testId && x.OwnerId == actorId && x.Action == "identity.test_end", context.HttpContext.RequestAborted);
             var expired = !long.TryParse(principal.FindFirstValue(TestExpires), out var seconds) || seconds <= context.HttpContext.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow().ToUnixTimeSeconds();
             if (ended || expired || user is null || !Available(user) || !MatchesVersion(user, principal.FindFirstValue(Version)))
             {
-                // Restore only the still-authorized source administrator, never extend the test.
+                // 只切回仍有權限的原管理者，且絕不延長測試身分的有效期。
                 context.ReplacePrincipal(Principal(actor, principal.FindFirstValue(ActorMethod)!)); context.ShouldRenew = true;
                 context.HttpContext.Items[Restored] = true;
                 context.Properties.AllowRefresh = true;

@@ -34,8 +34,8 @@ public sealed class RetrievalPipeline(NexusDbContext db, RetrievalAuthorization 
         var vector = actual == "keyword" ? null : await cache.GetAsync(actor, profile, query, ct);
         embedMs = timer.ElapsedMilliseconds;
         timer.Restart(); var result = await store.SearchAsync(request.CollectionIds, profile, query, vector, actual, ct); searchMs = timer.ElapsedMilliseconds;
-        // Collection access is read once per search, then again only after a remote call and before any source text leaves:
-        // before reranking sends it out, and before the result is returned.
+        // 權限在搜尋開始時讀一次；取得命中後、重排前（來源文字即將送往外部）、回傳前，各再檢查一次。
+        // 遠端呼叫期間被撤銷的權限，必須在來源文字離開伺服器之前就被擋下。
         if (await authorization.HitsAsync(actor, result.Hits, ct, request.CollectionIds) is { IsSuccess: false } changed) return changed.Error;
         var hits = result.Hits; actual = result.Mode;
         if (rerank ?? settings.Rerank.Provider != "none")
@@ -45,7 +45,7 @@ public sealed class RetrievalPipeline(NexusDbContext db, RetrievalAuthorization 
             try
             {
                 if (settings.Rerank.Provider == "none") throw new ExternalServiceException(Error.Unavailable("rerank_disabled"), "尚未啟用重排模型。");
-                // Source text leaves the server here; access was checked immediately above.
+                // 來源文字在此送往外部的重排服務；存取權剛才已檢查過。
                 if (hits.Count > 0) hits = await reranker.RerankAsync(actor, query, hits, ct);
                 actual += "+rerank";
             }

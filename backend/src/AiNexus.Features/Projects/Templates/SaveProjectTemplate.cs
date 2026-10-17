@@ -21,7 +21,7 @@ internal sealed class ProjectTemplateRequestValidator : RequestValidator<Project
     }
 }
 
-/// <summary>Adds a template (at most 30) to, or edits one of, an active project the user may edit.</summary>
+/// <summary>在可編輯的有效專案中新增範本（每個專案最多 30 個）或編輯既有範本。</summary>
 internal sealed class SaveProjectTemplate(NexusDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes

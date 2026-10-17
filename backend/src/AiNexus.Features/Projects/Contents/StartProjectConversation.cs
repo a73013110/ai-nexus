@@ -11,12 +11,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Projects.Contents;
 
-/// <summary>A template's title replaces <c>Title</c>, and its content is returned as the prompt to prefill.</summary>
+/// <summary>範本的標題會取代 <c>Title</c>，範本內容則以預填提示詞的形式回傳。</summary>
 [ValidatedInHandler("The title is checked after project access, and a template's title replaces it.")]
 public sealed record ProjectConversationRequest(string? Title = null, Guid? TemplateId = null);
 public sealed record ProjectConversationDto(ConversationDto Conversation, string Prompt);
 
-/// <summary>Starts the user's own conversation in an active project they may read; requires the chat feature.</summary>
+/// <summary>在可讀取的有效專案中開啟使用者自己的對話；需要聊天功能。</summary>
 internal sealed class StartProjectConversation(NexusDbContext db, ResourceAccess access, AccessService features)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

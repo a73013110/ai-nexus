@@ -4,11 +4,11 @@ using System.Text.RegularExpressions;
 
 namespace AiNexus.Features.Repositories.Reviews;
 
-/// <summary>A small provider-independent contract keeps final reports complete, localized and bounded.</summary>
+/// <summary>與模型供應商無關的固定格式契約，確保最終報告完整、為繁體中文，且長度有上限。</summary>
 /// <remarks>
-/// Local models overshoot character limits or wrap JSON in fences even when they follow the structure. Mild deviations are
-/// normalized (fences, line breaks, extra items, text up to twice its limit is shortened); only output that cannot be rendered
-/// faithfully is rejected, and the rejection carries a stable reason for the log.
+/// 本地模型常超過字數上限，或即使照結構輸出，也會把 JSON 包進 Markdown 圍欄。輕微偏差會被正規化
+/// （去圍欄、換行、多出的項目，以及超過上限但不到兩倍的文字會被截短）；只有無法忠實呈現的輸出才會被拒絕，
+/// 拒絕時附上穩定的原因代碼供日誌使用。
 /// </remarks>
 public static partial class RepositoryReviewBrief
 {
@@ -52,7 +52,7 @@ public static partial class RepositoryReviewBrief
     {
         if (text.Length > 6000) throw new BriefException("length");
         text = Think().Replace(text, "");
-        // Tolerate fences or a sentence around the object; the object itself must still be complete JSON.
+        // 容忍圍欄或物件前後的文字，但物件本身仍必須是完整的 JSON。
         var start = text.IndexOf('{'); var end = text.LastIndexOf('}');
         if (start < 0 || end < start) throw new BriefException("json");
         using var document = JsonDocument.Parse(text[start..(end + 1)], new JsonDocumentOptions { AllowTrailingCommas = true, CommentHandling = JsonCommentHandling.Skip });
@@ -87,7 +87,7 @@ public static partial class RepositoryReviewBrief
         if (text.Length == 0) return optional ? "" : null;
         if (text.Contains("```")) throw new BriefException($"{name}.code");
         if (localized && !text.Any(c => c is >= '㐀' and <= '鿿')) throw new BriefException($"{name}.language");
-        // Twice the limit means the model ignored the brief format; a correction is cheaper than a mangled sentence.
+        // 超過上限兩倍，代表模型沒有遵守格式；要求修正比接受一句被截斷的文字更可靠。
         if (text.Length > limit * 2) throw new BriefException($"{name}.length");
         return text.Length <= limit ? text : string.Concat(text.AsSpan(0, limit - 1), "…");
     }

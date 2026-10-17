@@ -5,8 +5,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Jobs;
 
 /// <summary>
-/// Runtime monitoring of durable background jobs across all owners. Degraded when a running job's lease has expired
-/// (its worker stopped renewing it) or a job failed in the last hour. Reads seek the (Status, LeaseUntil, CreatedAt) index.
+/// 持久化背景工作的執行期監控，涵蓋所有擁有者。執行中工作的租約已過期（worker 停止續租）或最近 1 小時內有工作失敗，即為 degraded。
+/// 查詢會走 (Status, LeaseUntil, CreatedAt) 索引。
 /// </summary>
 internal sealed class JobsMonitoring(NexusDbContext db, TimeProvider clock) : IMonitoringSource
 {
@@ -26,7 +26,7 @@ internal sealed class JobsMonitoring(NexusDbContext db, TimeProvider clock) : IM
             Stuck = g.Count(x => x.Status == "running" && x.LeaseUntil < now),
         }).SingleOrDefaultAsync(ct);
         var oldest = await jobs.Where(x => x.Status == "queued").OrderBy(x => x.CreatedAt).Select(x => (DateTimeOffset?)x.CreatedAt).FirstOrDefaultAsync(ct);
-        // A failed job's last update is when it failed.
+        // 失敗工作的 UpdatedAt 即為失敗時間。
         var failed = await jobs.Where(x => x.Status == "failed" && x.UpdatedAt >= day).GroupBy(x => 1).Select(g => new
         {
             Day = g.Count(),

@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Artifacts.Management;
 
-/// <summary>A deleted project's artifacts stay with their owners; only the project link is cleared, in the deleting transaction.</summary>
+/// <summary>已刪除專案的成果仍歸原擁有者；只在刪除專案的交易中清除專案關聯。</summary>
 internal sealed class DetachDeletedProjectArtifacts(NexusDbContext db) : IDomainEventHandler<ContainerDeleted>
 {
     public async Task HandleAsync(ContainerDeleted e, CancellationToken ct)

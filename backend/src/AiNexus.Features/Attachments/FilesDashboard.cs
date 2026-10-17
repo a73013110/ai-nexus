@@ -7,8 +7,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Attachments;
 
 /// <summary>
-/// Overview of the file library: saved originals (each counted once, however many places reuse it), their size by
-/// kind, uploads per day and, for one owner, how much of the storage quota is used.
+/// 檔案庫總覽：已儲存的原始檔（同一檔案被多處重複使用也只計一次）、依類型的大小、每日上傳量，
+/// 以及單一擁有者的儲存配額使用量。
 /// </summary>
 internal sealed class FilesDashboard(NexusDbContext db, AttachmentQuota quota) : IDashboardSource
 {

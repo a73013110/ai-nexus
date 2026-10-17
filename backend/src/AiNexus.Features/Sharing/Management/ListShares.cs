@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Sharing.Management;
 
-/// <summary>Shares the user sent, or live shares addressed to them whose source still exists.</summary>
+/// <summary>使用者寄出的分享，或寄給使用者且來源仍存在的有效分享。</summary>
 internal sealed class ListShares(NexusDbContext db, ShareAccess shares, TimeProvider clock)
 {
     private const int PageSize = 100;

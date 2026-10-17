@@ -1,6 +1,6 @@
 namespace AiNexus.Features.Monitoring;
 
-/// <summary>A fixed vocabulary prevents client URLs, resource titles and query strings entering telemetry.</summary>
+/// <summary>固定詞彙表，避免客戶端 URL、資源標題與查詢字串進入監控資料。</summary>
 public static class MonitoringVocabulary
 {
     private static readonly IReadOnlyDictionary<string, string> Features = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -17,7 +17,7 @@ public static class MonitoringVocabulary
         var segments = route.Replace("/api/v1/", "", StringComparison.Ordinal).TrimStart('/').Split('/');
         var segment = segments[0];
         if (segment == "admin" && segments.Length > 1 && segments[1] is "monitoring" or "audit" or "logs") return segments[1];
-        // Platform operations APIs keep their /admin paths: usage, retrieval administration and prices.
+        // 平台營運 API 仍使用 /admin 路徑（用量、檢索管理與價格），歸入「平台營運」而非即時監控。
         if (segment == "admin" && segments.Length > 1 && segments[1] is "usage" or "knowledge" or "billing") return "operations";
         return segment switch
         {

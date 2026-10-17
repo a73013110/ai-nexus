@@ -3,8 +3,7 @@ using AiNexus.Features.AccessControl;
 namespace AiNexus.Features.Administration;
 
 /// <summary>
-/// Platform operations: platform usage, retrieval administration, model and tool prices and the platform-wide overview.
-/// It is a grant of its own, separate from access management (<see cref="AdministrationConfiguration"/>).
+/// 平台營運：平台用量、檢索管理、模型與工具價格，以及全平台總覽。它有自己的授權，與存取管理（<see cref="AdministrationConfiguration"/>）分開。
 /// </summary>
 public sealed class OperationsConfiguration() : FeatureSeed(new PlatformFeature(Feature, "平台營運", "/admin/operations", 91, BuiltInAccess.SystemNavigation, "chart", AdministratorsOnly: true))
 {

@@ -2,12 +2,12 @@ using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Account;
 
-/// <summary>The signed-in user's own profile, preferences, settings and usage. Each use case has its own file.</summary>
+/// <summary>登入者本人的個人資料、偏好、設定與用量。</summary>
 public sealed class AccountModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder) => builder.Services.AddScoped<PersonalUsage>();
 
-    /// <summary>Endpoint order is the published OpenAPI order.</summary>
+    /// <summary>端點註冊順序即公開的 OpenAPI 順序，調整會改變對外文件。</summary>
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         GetMe.Map(api);

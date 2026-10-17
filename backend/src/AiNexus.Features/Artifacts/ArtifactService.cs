@@ -4,8 +4,7 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.Features.Artifacts;
 
 /// <summary>
-/// The module's contract for other modules (projects, source imports): create an artifact with every check of the
-/// <c>CreateArtifact</c> endpoint.
+/// 提供給其他模組（專案、來源匯入）的建立介面，與 <c>CreateArtifact</c> 端點套用相同的所有檢查。
 /// </summary>
 public sealed class ArtifactService
 {

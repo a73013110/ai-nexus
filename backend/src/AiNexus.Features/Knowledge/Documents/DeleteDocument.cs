@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Knowledge.Documents;
 
 /// <summary>
-/// Deletes a document the user may edit: its jobs are cancelled, its index and pages erased and its original released
-/// when nothing else holds it. Bytes are deleted after commit.
+/// 刪除使用者可編輯的文件：取消其工作、清除索引與頁面；原始檔若無其他參照才釋放。
+/// 檔案位元組在交易提交後才刪除。
 /// </summary>
 internal sealed class DeleteDocument(NexusDbContext db, DocumentAccess documents, AttachmentService attachments, AttachmentWriteLock writes, AttachmentLifecycle lifecycle)
 {

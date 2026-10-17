@@ -1,6 +1,6 @@
 namespace AiNexus.Platform.Errors;
 
-/// <summary>What went wrong, independent of transport. <see cref="Problems"/> owns the only mapping to HTTP status codes.</summary>
+/// <summary>錯誤分類列舉，獨立於傳輸層通訊協定。<see cref="Problems"/> 是全系統唯一將其對應至 HTTP 狀態碼之處。</summary>
 public enum ErrorKind
 {
     Invalid,
@@ -16,7 +16,7 @@ public enum ErrorKind
     Timeout,
 }
 
-/// <summary>An expected failure. <see cref="Code"/> is a stable public identifier listed in <c>PublicErrorCatalog</c>.</summary>
+/// <summary>預期內的業務失敗。<see cref="Code"/> 為公開穩定的識別碼，列於 <c>PublicErrorCatalog</c>。</summary>
 public sealed record Error(ErrorKind Kind, string Code)
 {
     public static Error Invalid(string code) => new(ErrorKind.Invalid, code);

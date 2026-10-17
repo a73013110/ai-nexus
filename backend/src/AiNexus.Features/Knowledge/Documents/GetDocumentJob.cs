@@ -8,7 +8,7 @@ namespace AiNexus.Features.Knowledge.Documents;
 
 public sealed record DocumentJobDto(JobDto Job, bool CanControl);
 
-/// <summary>The current processing job of a document the user may read; only its owner who may still edit the document controls it.</summary>
+/// <summary>使用者可讀取文件的目前處理工作；只有工作擁有者且仍具編輯權的人，才能控制（例如取消）此工作。</summary>
 internal sealed class GetDocumentJob(NexusDbContext db, DocumentAccess documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

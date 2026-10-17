@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Knowledge.Collections;
 
-/// <summary>A collection the owner of a conversation selected for its answers (at most three).</summary>
+/// <summary>對話所有者為該對話選定、用於回答的知識庫（最多三個）。</summary>
 [Comment("對話選定的知識庫來源關聯。")]
 public sealed class ConversationKnowledge
 {

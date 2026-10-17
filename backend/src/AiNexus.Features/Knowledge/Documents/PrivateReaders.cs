@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Knowledge.Documents;
 
-/// <summary>Standalone documents outside any collection and project; their resources are read past the soft-delete filter.</summary>
+/// <summary>不屬於任何知識庫與專案的獨立文件；讀取其 WorkspaceResource 時需略過軟刪除過濾。</summary>
 internal sealed class PrivateReaders(NexusDbContext db) : IPrivateReaders
 {
     public IQueryable<PrivateReader> All => from doc in db.Set<KnowledgeDocument>() join resource in db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]) on doc.Id equals resource.Id

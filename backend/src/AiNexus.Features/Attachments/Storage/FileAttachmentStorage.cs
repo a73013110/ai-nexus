@@ -41,7 +41,7 @@ public sealed class FileAttachmentStorage : IAttachmentStorage
         foreach (var path in entries)
         {
             ct.ThrowIfCancellationRequested();
-            // Yield regularly even when every entry is recent, keeping large scans cancellable.
+            // 即使每一筆都是近期的也要定期讓出執行緒，確保大量掃描仍可被取消。
             if (++count % 100 == 0) await Task.Yield();
             var name = Path.GetFileName(path);
             var suffix = name.EndsWith(".blob.upload", StringComparison.Ordinal) ? ".blob.upload" : name.EndsWith(".blob", StringComparison.Ordinal) ? ".blob" : null;

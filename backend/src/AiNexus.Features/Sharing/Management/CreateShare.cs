@@ -26,7 +26,7 @@ internal sealed class CreateShareRequestValidator : RequestValidator<CreateShare
 {
     public override string ProblemCode => SharingErrors.InvalidCode;
 
-    // The /api/v1 group resolves the current user before validation runs.
+    // /api/v1 群組在驗證前就已解析目前使用者。
     public CreateShareRequestValidator(ICurrentUser user)
     {
         RuleFor(x => x.Kind).Must(x => x is "conversation" or "artifact").WithErrorCode("unknown");
@@ -38,7 +38,7 @@ internal sealed class CreateShareRequestValidator : RequestValidator<CreateShare
     }
 }
 
-/// <summary>Freezes a conversation branch or an artifact version for named recipients and notifies them.</summary>
+/// <summary>凍結對話分支或成果版本給指定收件人，並通知他們。</summary>
 internal sealed class CreateShare(NexusDbContext db, ResourceAccess access, ShareAccess shares, AttachmentWriteLock attachmentWrites, ShareWriteLock writes,
     GenerationScheduler scheduler, AttachmentQuota quota, NotificationService notifications, TimeProvider clock)
 {

@@ -9,15 +9,14 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Persistence.ReleaseScripts;
 
 /// <summary>
-/// What a release changes in each schema object, taken from a real SQL Server instead of the migration code: a temporary
-/// database on the <c>Databases:Nexus</c> server is created the way <c>db init</c> creates AiNexus, migrated to the
-/// production version and extracted per object, then migrated to the release version and extracted again, also as the
-/// <see cref="ExpectedDacpacFileName"/> that the deployed database is compared with. The temporary database is always
-/// dropped, also after a failure or Ctrl+C.
+/// 比對一次發布會改變哪些結構物件。結果來自真正的 SQL Server，而不是 migration 程式碼：
+/// 在 <c>Databases:Nexus</c> 伺服器上建立暫存庫（建立方式同 <c>db init</c>），套用正式版 migration 後逐物件匯出，
+/// 再套用發布版 migration 並再次匯出；另外也匯出一份 <see cref="ExpectedDacpacFileName"/>，供部署後的資料庫比對。
+/// 暫存庫無論成功或失敗（包括 Ctrl+C）都會刪除。
 /// </summary>
 /// <remarks>
-/// Needs the same right as <c>db init</c> (CREATE DATABASE), so it runs on a development or build server, never against
-/// production. The migrations are the shipped ones, so the expected schema cannot drift from what the DBA runs.
+/// 需要與 <c>db init</c> 相同的權限（CREATE DATABASE），因此只能在開發或建置伺服器執行，不可對正式環境執行。
+/// 使用的是實際出貨的 migration，預期結構不會與 DBA 實際執行的內容產生落差。
 /// </remarks>
 public sealed class SchemaDiffGenerator(IOptions<DatabasesOptions> databases, ISqlDatabase<NexusMasterDatabase> master)
 {
@@ -25,15 +24,15 @@ public sealed class SchemaDiffGenerator(IOptions<DatabasesOptions> databases, IS
     public const string ExpectedDacpacFileName = "expected.dacpac";
     public const string DiffDirectoryName = "diff";
 
-    // Migrations and SqlPackage on a fresh database take seconds, but InitialCreate builds every table and the full-text index.
+    // 新資料庫上的 migration 與 SqlPackage 通常只要幾秒，但 InitialCreate 會建立所有資料表與全文索引，所以給較長的逾時。
     private const int MigrationTimeoutSeconds = 600;
 
-    /// <param name="from">The production database's last migration (id or name), or <c>0</c> for an empty database.</param>
-    /// <param name="to">The release's last migration; <see langword="null"/> for the latest.</param>
-    /// <param name="output">Receives <see cref="DiffDirectoryName"/>/ and <see cref="ExpectedDacpacFileName"/>; neither may exist yet.</param>
-    /// <param name="sqlPackage">Extracts the temporary database.</param>
-    /// <param name="ct">Cancels the work; the temporary database is dropped all the same.</param>
-    /// <exception cref="ReleaseScriptException">The range or output is invalid, or SqlPackage failed.</exception>
+    /// <param name="from">正式資料庫目前最後套用的 migration（id 或名稱）；空庫用 <c>0</c>。</param>
+    /// <param name="to">發布的最後一個 migration；<see langword="null"/> 表示最新。</param>
+    /// <param name="output">輸出 <see cref="DiffDirectoryName"/> 目錄與 <see cref="ExpectedDacpacFileName"/>；兩者都不能已存在。</param>
+    /// <param name="sqlPackage">用來匯出暫存庫的 SqlPackage。</param>
+    /// <param name="ct">取消作業；暫存庫仍會照常刪除。</param>
+    /// <exception cref="ReleaseScriptException">範圍或輸出目錄無效，或 SqlPackage 失敗。</exception>
     public async Task<SchemaDiff> GenerateAsync(string from, string? to, string output, SqlPackage sqlPackage, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(sqlPackage);
@@ -46,7 +45,7 @@ public sealed class SchemaDiffGenerator(IOptions<DatabasesOptions> databases, IS
 
         var name = TemporaryDatabasePrefix + Guid.NewGuid().ToString("N");
         var connection = nexus.ConnectionString(name);
-        // Resolving the range opens no connection, so a mistyped migration fails before anything is created.
+        // 解析範圍不會開連線，因此 migration 名稱打錯時，會在建立任何暫存庫之前就失敗。
         await using var db = new NexusDbContext(new DbContextOptionsBuilder<NexusDbContext>()
             .UseSqlServer(connection, sql => sql.CommandTimeout(MigrationTimeoutSeconds)).Options);
         var (fromId, toId, migrations) = Range(db.GetService<IMigrationsAssembly>(), from, to);
@@ -75,16 +74,16 @@ public sealed class SchemaDiffGenerator(IOptions<DatabasesOptions> databases, IS
         }
         finally
         {
-            // Also when CREATE succeeded and the RCSI switch did not. A failed drop must not hide the error that came first.
+            // CREATE 成功但後續失敗（例如 RCSI 切換失敗）時也要刪除；刪除失敗不可蓋掉先發生的錯誤。
             try { await DropAsync(name, throwOnFailure: succeeded); }
             finally { work.Delete(recursive: true); }
         }
     }
 
-    /// <summary>Drops the temporary database whatever happened before; a database left behind is named so a DBA can drop it.</summary>
+    /// <summary>不論先前發生什麼都刪除暫存庫；若刪除失敗，訊息會列出名稱，讓 DBA 能手動處理。</summary>
     private async Task DropAsync(string name, bool throwOnFailure)
     {
-        // EF keeps pooled connections to the temporary database open; SINGLE_USER would roll them back anyway.
+        // 清空連線池，避免池中指向暫存庫的連線在資料庫刪除後被重用。SINGLE_USER 只會回滾連線，並不會清掉連線池。
         SqlConnection.ClearAllPools();
         try
         {

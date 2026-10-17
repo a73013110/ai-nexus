@@ -9,8 +9,8 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Attachments;
 
 /// <summary>
-/// The module's contract for other modules: upload, ownership lookup, quota locking and reading stored bytes. A stored
-/// file that is missing or does not match its record is an infrastructure failure and is thrown.
+/// 附件模組對其他模組的契約：上傳、擁有者查詢、配額鎖定與讀取儲存位元組。
+/// 儲存的檔案若遺失或與記錄不符，屬於基礎設施錯誤，會直接拋出例外。
 /// </summary>
 public sealed class AttachmentService(DocumentExtractor extractor, IOptions<AttachmentOptions> options, AttachmentWriteLock writes, NexusDbContext db, IAttachmentStorage storage, AttachmentQuota quota, AttachmentLifecycle lifecycle, TimeProvider clock)
 {
@@ -37,7 +37,7 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<Atta
         var extracted = extractor.Extract(name, bytes, ct);
         if (!extracted.IsSuccess) return extracted.Error;
         var (type, text) = extracted.Value;
-        // Only this owner's expired drafts: they must not count against the quota checked below. Everyone else's are the cleanup worker's.
+        // 只回收此擁有者的過期草稿，它們不應計入下方的配額檢查；其他人的草稿交給清理 Worker。
         await lifecycle.ReclaimAsync(ct, owner);
         var attachment = new Attachment { OwnerId = owner, FileName = name, ContentType = type, Size = bytes.Length, ExtractedText = text, StorageState = AttachmentStates.Pending, CreatedAt = clock.GetUtcNow() };
         await writes.Gate.WaitAsync(ct);
@@ -87,8 +87,7 @@ public sealed class AttachmentService(DocumentExtractor extractor, IOptions<Atta
     }
 
     /// <summary>
-    /// A ready attachment of <paramref name="owner"/>. A file sent only in conversations stays reachable while one of
-    /// the owner's conversations that holds it still exists.
+    /// 擁有者的就緒附件。只在對話中送出的檔案，只要擁有者仍有持有它的對話，就仍可存取。
     /// </summary>
     public async Task<Result<Attachment>> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
     {

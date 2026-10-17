@@ -7,16 +7,16 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Monitoring.Traffic;
 
-/// <summary>Single-instance rolling telemetry. All cardinality, samples and retention are bounded.</summary>
+/// <summary>單一實例的滾動式遙測；基數、取樣數與保留時間都有上限，避免監控本身耗盡記憶體。</summary>
 public sealed class RuntimeTraffic : IDisposable
 {
     private readonly IOptions<MonitoringOptions> options;
     private readonly TimeProvider clock;
     public const int BucketSeconds = 10;
-    /// <summary>Health reads the last minute of completed buckets, whatever window the viewer picked.</summary>
+    /// <summary>健康判定固定讀最後一分鐘的已完成區間，不受檢視者所選時間窗影響。</summary>
     public const int RecentSeconds = 60;
     private const int RetentionSeconds = 900, MaxEndpoints = 128, MaxActivities = 120;
-    // One resource bucket per retained ten-second bucket plus the open one.
+    // 每個保留的十秒區間各一格，外加一格給正在累計的區間。
     private const int ResourceBuckets = RetentionSeconds / BucketSeconds + 1;
     private static readonly double[] LatencyBounds = [1, 2, 5, 10, 20, 30, 50, 75, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000, 3000, 5000, 10000, 30000, 60000, 300000, 600000];
     private readonly object gate = new();
@@ -101,7 +101,7 @@ public sealed class RuntimeTraffic : IDisposable
                 if (method is not ("GET" or "HEAD" or "OPTIONS") || error)
                 { session.Action = MonitoringVocabulary.Action(method, feature); session.ActionAt = now; }
             }
-            // Polls and successful reads remain in RED metrics; the timeline emphasizes meaningful operations.
+            // 輪詢與成功的讀取仍計入 RED 指標，但活動時間軸只保留有意義的操作。
             if (method is not ("GET" or "HEAD" or "OPTIONS") || error || cancelled)
             {
                 activities.Enqueue(new(++sequence, now, user, key, session?.Name ?? (user is null ? "未驗證連線" : "已驗證使用者"),
@@ -126,7 +126,7 @@ public sealed class RuntimeTraffic : IDisposable
             stats.Add(error && !cancelled, error && !cancelled, cancelled, duration, 0, 0);
         }
     }
-    /// <summary>Records the latest process sample and folds it into its ten-second bucket of a fixed ring.</summary>
+    /// <summary>記錄最新的程序取樣，併入固定環狀陣列中對應的十秒區間。</summary>
     public void SampleResources(RuntimeResources sample)
     {
         lock (gate)
@@ -140,12 +140,11 @@ public sealed class RuntimeTraffic : IDisposable
     }
 
     /// <summary>
-    /// The snapshot for a 1, 5 or 15 minute window. <paramref name="subsystems"/> are other modules' cached readings;
-    /// health is evaluated after the lock is released.
+    /// 1、5 或 15 分鐘時間窗的快照。<paramref name="subsystems"/> 為其他模組的快取讀數；健康判定在釋放鎖之後才進行。
     /// </summary>
     public MonitoringSnapshot Snapshot(int minutes, MonitoredSubsystem[]? subsystems = null)
     {
-        // Callers validate the window with MonitoringReads.ValidWindow.
+        // 呼叫端需先以 MonitoringReads.ValidWindow 驗證時間窗。
         if (!MonitoringReads.ValidWindow(minutes)) throw new ArgumentOutOfRangeException(nameof(minutes));
         var snapshot = Collect(minutes, subsystems ?? []);
         return snapshot with { Health = MonitoringHealth.Evaluate(snapshot) };
@@ -156,7 +155,7 @@ public sealed class RuntimeTraffic : IDisposable
         lock (gate)
         {
             var now = clock.GetUtcNow(); Prune(now);
-            // Completed ten-second buckets give stable, comparable rates and clearly dated chart points.
+            // 只取已完成的十秒區間：數字穩定可比較，圖表點的時間也明確。
             var end = now.ToUnixTimeSeconds() / BucketSeconds * BucketSeconds;
             var since = Math.Max(started.ToUnixTimeSeconds() / BucketSeconds * BucketSeconds, end - minutes * 60);
             var selected = buckets.Where(x => x.Key >= since && x.Key < end).Select(x => x.Value).ToArray();
@@ -240,7 +239,7 @@ public sealed class RuntimeTraffic : IDisposable
             Received += other.Received; Sent += other.Sent; Timed += other.Timed; duration += other.duration;
             for (var i = 0; i < histogram.Length; i++) histogram[i] += other.histogram[i];
         }
-        /// <summary>Upper bound of the histogram bucket holding the 95th percentile; null without samples or beyond the last bound.</summary>
+        /// <summary>第 95 百分位所在直方圖區間的上界；沒有樣本，或落在最後一個上界之外時為 null。</summary>
         public double? P95()
         {
             long sum = 0;

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Attachments.Files;
 
-/// <summary>Keeps one of the caller's attachments in the file library. Retaining a library file again changes nothing.</summary>
+/// <summary>把呼叫者的一個附件保留到檔案庫；對已在檔案庫的檔案重複保留不會有任何變更。</summary>
 internal sealed class RetainLibraryFile(NexusDbContext db, AttachmentService files, AttachmentWriteLock writes, AttachmentQuota quota)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

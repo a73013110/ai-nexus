@@ -1,22 +1,21 @@
 namespace AiNexus.Platform.Dashboard;
 
 /// <summary>
-/// One section of the overview, owned by the module whose data it counts. The dashboard reads every registered source
-/// the viewer may see, so a new feature appears on the overview by registering a source in its own module; the
-/// frontend renders an unknown section with the generic widget until it gets a dedicated one.
+/// 總覽儀表板的區塊資料來源，由統計該資料的業務模組自行擁有。
+/// 儀表板會動態讀取檢視者有權限看見的所有註冊來源，因此新增功能時只需在自身模組中註冊來源，前端即可透過通用 Widget 自動渲染。
 /// </summary>
 public interface IDashboardSource
 {
-    /// <summary>Feature grant that shows the section. An empty title or route falls back to this feature's name and route.</summary>
+    /// <summary>顯示此區塊所需之功能授權代碼。若未提供 Title 或 Route，則預設回退至該功能的名稱與路徑。</summary>
     string Feature { get; }
 
-    /// <summary>Counts for the scope, or <c>null</c> when the section has nothing to say (for example, the service is off).</summary>
+    /// <summary>讀取指定統計範圍下的數據指標。當該區塊無內容可呈現時（例如功能未啟用）回傳 <c>null</c>。</summary>
     Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct);
 }
 
 public static class DashboardSourceRegistration
 {
-    /// <summary>Adds a section to the overview. Sources are scoped and read one after another on the request's context.</summary>
+    /// <summary>將區塊資料來源加入至總覽儀表板。來源為 Scoped 生命週期，在當前請求內循序執行讀取。</summary>
     public static IServiceCollection AddDashboardSource<TSource>(this IServiceCollection services) where TSource : class, IDashboardSource
         => services.AddScoped<IDashboardSource, TSource>();
 }

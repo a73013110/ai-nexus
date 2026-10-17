@@ -5,8 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace AiNexus.Features.AccessControl;
 
 /// <summary>
-/// A navigation entry and the grant behind it. Rows are seeded by each owning module's <see cref="FeatureSeed"/>; an empty
-/// <see cref="Route"/> is a grant without a page and never appears in the menu.
+/// 選單入口及其背後的授權。資料列由各模組的 <see cref="FeatureSeed"/> 寫入；<see cref="Route"/> 為空代表只是授權、沒有頁面，不會出現在選單中。
 /// </summary>
 [Comment("模組註冊的功能入口、顯示名稱、路由、選單分群及啟用狀態。")]
 public sealed class Feature

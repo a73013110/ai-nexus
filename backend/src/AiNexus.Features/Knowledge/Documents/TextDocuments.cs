@@ -5,12 +5,12 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Knowledge.Documents;
 
-/// <summary>Plain-text sources: stored as a .txt attachment and indexed like any other document; the text stays editable.</summary>
+/// <summary>純文字來源：以 .txt 附件儲存並與其他文件一樣建立索引，內容仍可編輯。</summary>
 internal static class TextDocuments
 {
     public const int MaxCharacters = 64000;
 
-    /// <summary>The request with its trimmed title, or the first broken rule.</summary>
+    /// <summary>回傳標題已去除空白的請求；若有規則不符，回傳第一個錯誤。</summary>
     public static Result<TextDocumentRequest> Clean(TextDocumentRequest request)
     {
         var named = ResourceAccess.Name(request.Title);

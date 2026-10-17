@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Repositories.Reviews;
 
-/// <summary>The comment exactly as the user previewed and edited it.</summary>
+/// <summary>使用者預覽並編輯過的留言內容，原樣送出。</summary>
 public sealed record PostRepositoryReviewCommentRequest(string Body);
 
 internal sealed class PostRepositoryReviewCommentRequestValidator : RequestValidator<PostRepositoryReviewCommentRequest>
@@ -20,8 +20,8 @@ internal sealed class PostRepositoryReviewCommentRequestValidator : RequestValid
 }
 
 /// <summary>
-/// The module's only Gitea write: posts a finished pull-request review as one comment, with the user's own token (which needs
-/// <c>write:issue</c>). The source is re-checked first; a review is posted at most once and the post is audited.
+/// 本模組唯一的 Gitea 寫入：以使用者自己的 token（需要 <c>write:issue</c> 權限）把已完成的 pull request review 貼成一則留言。
+/// 送出前會先重新檢查來源；每份 review 最多貼一次，並寫入稽核紀錄。
 /// </summary>
 internal sealed class PostRepositoryReviewComment(NexusDbContext db, RepositoryService gitea, RepositoryReviewService reviews, RepositoryWriteLock writes, TimeProvider clock)
 {

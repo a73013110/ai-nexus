@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Artifacts.Management;
 
-/// <summary>One version (the current one by default) of an artifact the user may read.</summary>
+/// <summary>使用者可讀取的成果之單一版本，預設為目前版本。</summary>
 internal sealed class GetArtifact(NexusDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

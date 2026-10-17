@@ -1,6 +1,6 @@
 namespace AiNexus.Features.AccessControl;
 
-/// <summary>Platform feature identifiers as stored in role/group grants.</summary>
+/// <summary>平台功能 id，與角色／群組授權表中儲存的值相同。</summary>
 public static class FeatureIds
 {
     public const string Chat = BuiltInAccess.ChatFeature;
@@ -20,8 +20,7 @@ public static class FeatureIds
 }
 
 /// <summary>
-/// Authorization policy names. Endpoints reference these constants, never string literals, and
-/// <c>EndpointConventionTests</c> checks that every referenced policy is registered.
+/// 授權 policy 名稱。端點一律引用這些常數而非字串字面值；<c>EndpointConventionTests</c> 會檢查每個被引用的 policy 都已註冊。
 /// </summary>
 public static class Policies
 {
@@ -40,9 +39,9 @@ public static class Policies
     public const string Admin = Prefix + FeatureIds.Admin;
     public const string Operations = Prefix + FeatureIds.Operations;
 
-    /// <summary>Chat or artifacts: text tools available from either surface.</summary>
+    /// <summary>對話或成果：兩個入口都可使用的文字工具。</summary>
     public const string Text = Prefix + "text";
 
-    /// <summary>Any feature that can hold attachments: files, chat, knowledge or projects.</summary>
+    /// <summary>任何可以持有附件的功能：檔案、對話、知識庫或專案。</summary>
     public const string Attachments = Prefix + "attachments";
 }

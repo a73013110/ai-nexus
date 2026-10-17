@@ -6,7 +6,7 @@ namespace AiNexus.Features.Knowledge.Documents;
 
 public sealed record TextDocumentDto(Guid Id, string Title, string Text, int Version);
 
-/// <summary>The editable text and version of a plain-text source the user may read.</summary>
+/// <summary>使用者可讀取的純文字來源內容與版本號。</summary>
 internal sealed class ReadTextDocument(DocumentAccess documents)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

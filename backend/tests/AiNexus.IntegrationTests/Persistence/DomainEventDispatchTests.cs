@@ -21,14 +21,14 @@ public sealed class DomainEventDispatchTests
 
     private sealed record Saving(Guid OwnerId) : IDomainEvent;
 
-    /// <summary>What the handlers observed, shared with the test.</summary>
+    /// <summary>handler 所觀察到的結果，與測試共用。</summary>
     private sealed class Recorder
     {
         public ConcurrentQueue<string> Handled { get; } = new();
         public ConcurrentQueue<Guid?> Transactions { get; } = new();
     }
 
-    // Adds an audit row, renames the owner with a bulk update and raises a follow-up event.
+    // 新增一筆稽核紀錄、以批次更新改名擁有者，並發出後續事件。
     private sealed class ProbeHandler(NexusDbContext db, DomainEvents events, Recorder recorder) : IDomainEventHandler<Probe>
     {
         public async Task HandleAsync(Probe e, CancellationToken ct)
@@ -119,7 +119,7 @@ public sealed class DomainEventDispatchTests
         }
         var (name, actions) = await StateAsync(f, owner);
         Assert.Equal("committed", name);
-        // Handler rows are written by the publisher's save and get the same audit redaction as the publisher's own.
+        // handler 的資料列由發布者的 save 一併寫入，並套用與發布者本身相同的稽核遮罩。
         Assert.Equal(3, actions.Length);
         Assert.Contains("publisher.saved", actions); Assert.Contains("echo.handled", actions);
         Assert.DoesNotContain(actions, x => x.Contains("secret.example"));
@@ -136,7 +136,7 @@ public sealed class DomainEventDispatchTests
         {
             var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
             scope.ServiceProvider.GetRequiredService<DomainEvents>().Raise(new Probe(owner, "failed"));
-            // The publisher's own write fails after the handler's bulk update already ran.
+            // 發布者自己的寫入在 handler 的批次更新已執行後才失敗。
             db.Users.Add(new NexusUser { Id = owner, Sid = "S-1-5-21-duplicate", Account = "duplicate", DisplayName = "duplicate" });
             await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
             Assert.NotNull(Assert.Single(recorder.Transactions));
@@ -162,7 +162,7 @@ public sealed class DomainEventDispatchTests
             db.AuditEvents.Add(new() { OwnerId = owner, Action = "loop.saved", Result = "failed" });
             await Assert.ThrowsAsync<InvalidOperationException>(() => db.SaveChangesAsync());
             Assert.Equal(DomainEvents.MaxRounds, recorder.Handled.Count);
-            // A failed dispatch leaves nothing behind for a later save in the same scope.
+            // 失敗的分派不會留下任何東西，影響同一 scope 之後的 save。
             Assert.False(events.HasPending);
             db.ChangeTracker.Clear();
             await db.SaveChangesAsync();

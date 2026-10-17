@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Repositories.Handoff;
 
-/// <summary>A folder snapshot import: the files chosen when it was requested, imported one by one by its background job.</summary>
+/// <summary>資料夾快照匯入的紀錄：申請時選定的檔案清單，由背景工作逐一匯入。</summary>
 [Comment("程式庫資料夾匯入知識庫的固定版本、檔案清單與背景工作。")]
 public sealed class RepositoryFolderImport
 {

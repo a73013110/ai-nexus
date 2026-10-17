@@ -17,8 +17,8 @@ using AiNexus.Features.Knowledge.Retrieval;
 namespace AiNexus.Features.Quality.RetrievalEvaluations;
 
 /// <summary>
-/// Access and comparability checks shared by the retrieval evaluation slices and <see cref="RetrievalEvaluationHandler"/>.
-/// The checks re-run between job steps; a failure fails the job with its code.
+/// 檢索評測各切片與 <see cref="RetrievalEvaluationHandler"/> 共用的存取與可比較性檢查。
+/// 每個工作步驟之間都會重新檢查；失敗時以其代碼讓工作失敗。
 /// </summary>
 public sealed class RetrievalEvaluationService(NexusDbContext db, RetrievalAuthorization authorization, AccessService features,
     EmbeddingProfiles profiles, IOptions<KnowledgeOptions> options, IOptions<InferenceOptions> inference)

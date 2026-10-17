@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Artifacts;
 
-/// <summary>Overview of artifacts: how many exist and how many immutable versions were saved in the period.</summary>
+/// <summary>成果文件總覽：目前數量，以及期間內保存的不可變版本數。</summary>
 internal sealed class ArtifactsDashboard(NexusDbContext db) : IDashboardSource
 {
     public string Feature => FeatureIds.Artifacts;
@@ -18,7 +18,7 @@ internal sealed class ArtifactsDashboard(NexusDbContext db) : IDashboardSource
         var counts = await db.Set<Artifact>().AsNoTracking().Where(a => resources.Any(r => r.Id == a.Id)).GroupBy(x => 1)
             .Select(g => new { All = g.Count(), InProjects = g.Count(x => x.ProjectId != null), FromChat = g.Count(x => x.SourceMessageId != null) })
             .SingleOrDefaultAsync(ct);
-        // Versions count by author: edits by collaborators belong to them, not to the artifact's owner.
+        // 版本數依作者計算：協作者的編輯算在協作者名下，而不是成果擁有者。
         var revisions = db.Set<ArtifactRevision>().AsNoTracking().Where(x => owner == null || x.AuthorId == owner);
         var saved = await DashboardDays.CountAsync(db, revisions.Select(x => x.CreatedAt), scope, ct);
         var all = counts?.All ?? 0; var projects = counts?.InProjects ?? 0;

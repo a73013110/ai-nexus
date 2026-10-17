@@ -2,10 +2,9 @@
 namespace AiNexus.ArchitectureTests;
 
 /// <summary>
-/// A type is found by its file name and a file by its folder: each file is named after the main type it declares, and
-/// its namespace is the project's root namespace followed by its folders. Helper types (a use case's DTOs and validator,
-/// an entity's configuration) may share the file; a type other files also use gets its own file. Tests follow the same
-/// rules, and are filed by the module whose use case they cover, so a change to one module runs one folder.
+/// 型別靠檔名找到、檔案靠資料夾找到：每個檔案以它的主要型別命名，namespace 為專案根 namespace 加上資料夾路徑。
+/// 輔助型別（use case 的 DTO 與驗證器、實體的設定類別）可以與主型別同檔；其他檔案也會用到的型別則要獨立成檔。
+/// 測試依其涵蓋的 use case 所屬模組歸檔，讓修改單一模組時只需跑一個資料夾。
 /// </summary>
 public sealed class SourceLayoutTests
 {
@@ -37,8 +36,8 @@ public sealed class SourceLayoutTests
     }
 
     /// <summary>
-    /// A module stays flat up to <see cref="MaxModuleRootFiles"/> files. A larger one files its use cases, entities and
-    /// services in capability folders one level below the module, and its root keeps only what spans the module.
+    /// 模組檔案數不超過 <see cref="MaxModuleRootFiles"/> 時維持扁平；超過就把 use case、實體與服務放進模組下一層的能力資料夾，
+    /// 模組根目錄只保留跨整個模組的檔案。
     /// </summary>
     [Fact]
     public void LargeModulesAreSplitIntoCapabilityFolders()
@@ -55,8 +54,8 @@ public sealed class SourceLayoutTests
     private const int MaxModuleRootFiles = 15;
 
     /// <summary>
-    /// A frontend feature folder is the kebab-case name of the backend module that owns its API, so either side finds
-    /// the other by name (ADR 0009). <c>design</c> is the design-system gallery and has no backend.
+    /// 前端 feature 資料夾名稱即擁有其 API 的後端模組的 kebab-case，兩邊可以用名稱互相找到（ADR 0009）。
+    /// <c>design</c> 是設計系統展示頁，沒有對應的後端模組，因此排除。
     /// </summary>
     [Fact]
     public void FrontendFeaturesAreNamedAfterBackendModules()
@@ -80,7 +79,7 @@ public sealed class SourceLayoutTests
         Assert.True(misplaced.Count == 0, "Put tests in <Module>/<UseCase>Tests.cs (or Host, Platform) and shared helpers in Support:\n" + string.Join("\n", misplaced));
     }
 
-    /// <summary>A test name states the behavior as a PascalCase sentence; the class already names the use case.</summary>
+    /// <summary>測試方法名稱以 PascalCase 句子描述行為；類別名稱已指出 use case，方法名不必重複。</summary>
     [Theory]
     [MemberData(nameof(TestProjects))]
     public void TestMethodsArePascalCaseSentences(string project)

@@ -9,10 +9,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Artifacts.Management;
 
-/// <summary>An edit names the <c>ExpectedVersion</c> it was based on; a newer saved version is a conflict.</summary>
+/// <summary>編輯時帶入所依據的 <c>ExpectedVersion</c>；若資料庫已有更新的版本，即為衝突。</summary>
 public sealed record SaveArtifactRequest(string Title, string Content, int ExpectedVersion);
 
-/// <summary>Content only. An invalid title is reported first, with its own code, by the handler.</summary>
+/// <summary>只驗證內容；標題不合法時由 handler 先回傳自己的錯誤代碼。</summary>
 internal sealed class SaveArtifactRequestValidator : RequestValidator<SaveArtifactRequest>
 {
     public override string ProblemCode => ArtifactsErrors.ContentInvalidCode;
@@ -23,7 +23,7 @@ internal sealed class SaveArtifactRequestValidator : RequestValidator<SaveArtifa
     }
 }
 
-/// <summary>Adds an immutable revision to an artifact the user may edit. Never overwrites a version saved in the meantime.</summary>
+/// <summary>對使用者可編輯的成果新增一筆不可變的版本；不會覆寫其他人在此期間保存的版本。</summary>
 internal sealed class SaveArtifact(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, GetArtifact reader, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

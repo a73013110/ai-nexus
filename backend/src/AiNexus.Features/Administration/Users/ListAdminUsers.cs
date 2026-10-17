@@ -15,7 +15,7 @@ public sealed record AdminUserDto(Guid Id, string Account, string DisplayName, D
 
 public sealed record AdminUsersDto(IReadOnlyList<AdminUserDto> Users, int Total, int Offset);
 
-/// <summary>Active users, 100 per page by account, with roles, usage, conversation count and storage.</summary>
+/// <summary>未刪除使用者的列表，每頁 100 筆、依帳號排序，附角色、用量、對話數與儲存空間。</summary>
 internal sealed class ListAdminUsers(NexusDbContext db, UsageReports reports, AttachmentQuota quota)
 {
     public static void Map(RouteGroupBuilder routes) => routes

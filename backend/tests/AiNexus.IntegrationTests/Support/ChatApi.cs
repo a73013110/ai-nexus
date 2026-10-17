@@ -39,7 +39,7 @@ internal static class ChatApi
         return (await response.Content.ReadFromJsonAsync<RunDto>())!;
     }
 
-    /// <summary>Reads the run's event stream until the first streamed text has been saved and sent.</summary>
+    /// <summary>讀取 run 的事件串流，直到第一段串流文字已儲存並送出為止。</summary>
     internal static async Task WaitForFirstDelta(HttpClient client, Guid id)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);
@@ -52,7 +52,7 @@ internal static class ChatApi
         Assert.Fail($"Run {id} ended without streaming any text.");
     }
 
-    /// <summary>Follows the run's event stream, which the server ends once the run is terminal and every event is sent.</summary>
+    /// <summary>追蹤 run 的事件串流；run 結束且所有事件送出後，伺服器才會關閉此串流。</summary>
     internal static async Task<RunDto> WaitForTerminal(HttpClient client, Guid id)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(TestContext.Current.CancellationToken);

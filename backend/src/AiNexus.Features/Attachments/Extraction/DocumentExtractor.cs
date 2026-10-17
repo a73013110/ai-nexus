@@ -16,7 +16,7 @@ public sealed class DocumentExtractor(IOptions<AttachmentOptions> options)
         catch (DocumentRejectedException rejected) { return rejected.Error; }
     }
 
-    // Limits are checked deep inside the parsers, so they unwind with DocumentRejectedException; it never leaves this class.
+    // 上限在解析器深處檢查，會以 DocumentRejectedException 逐層展開；此例外不會離開這個類別。
     private (string Type, string? Text) ExtractOrReject(string name, byte[] data, CancellationToken ct)
     {
         var extension = Path.GetExtension(name).ToLowerInvariant();
@@ -77,7 +77,7 @@ public sealed class DocumentExtractor(IOptions<AttachmentOptions> options)
     }
 }
 
-/// <summary>An expected rejection raised inside the document parsers; <see cref="DocumentExtractor.Extract"/> returns its error.</summary>
+/// <summary>解析器內預期內的拒絕（例如超出上限）；<see cref="DocumentExtractor.Extract"/> 會把它轉成錯誤回傳。</summary>
 internal sealed class DocumentRejectedException(Error error) : Exception(error.Code)
 {
     public Error Error { get; } = error;

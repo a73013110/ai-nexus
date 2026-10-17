@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace AiNexus.Features.AccessControl.Navigation;
 
 /// <summary>
-/// A heading of the workspace menu. Groups nest through <see cref="ParentId"/> and only arrange features; they grant nothing.
-/// The built-in groups are seeded here; a module that needs its own group seeds it next to its <see cref="FeatureSeed"/>.
+/// 工作區選單的一個標題。透過 <see cref="ParentId"/> 巢狀，只負責排列功能，不授予任何權限。
+/// 內建分群在這裡寫入；模組需要自己的分群時，寫在自己的 <see cref="FeatureSeed"/> 旁邊。
 /// </summary>
 [Comment("工作區選單的分群；可巢狀，只決定功能入口的排列，不影響授權。")]
 public sealed class NavigationGroup

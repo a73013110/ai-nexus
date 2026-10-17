@@ -8,7 +8,7 @@ namespace AiNexus.Features.Conversations;
 
 public sealed record CreateConversationRequest(string? Title = null);
 
-/// <summary>A missing title becomes 「新對話」; a given one must be 1 to 120 characters once trimmed.</summary>
+/// <summary>沒有標題時使用「新對話」；給定的標題去除頭尾空白後必須為 1 到 120 字元。</summary>
 internal sealed class CreateConversationRequestValidator : RequestValidator<CreateConversationRequest>
 {
     public override string ProblemCode => ConversationsErrors.InvalidTitleCode;
@@ -17,7 +17,7 @@ internal sealed class CreateConversationRequestValidator : RequestValidator<Crea
         => RuleFor(x => x.Title).Must(x => x is null || Conversation.TitleIsValid(x)).WithErrorCode("length");
 }
 
-/// <summary>Starts an empty conversation owned by the user. Other modules reach it through <see cref="ConversationService.CreateAsync"/>.</summary>
+/// <summary>建立使用者自己的空對話。其他模組經由 <see cref="ConversationService.CreateAsync"/> 建立。</summary>
 internal sealed class CreateConversation(NexusDbContext db, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

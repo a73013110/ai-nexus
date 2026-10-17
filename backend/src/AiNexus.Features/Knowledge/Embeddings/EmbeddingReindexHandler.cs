@@ -15,7 +15,7 @@ public sealed class EmbeddingReindexHandler(NexusDbContext db, EmbeddingLifecycl
     public string Kind => "embedding-reindex";
     public async Task<Result> ValidateRetryAsync(BackgroundJob job, CancellationToken ct) => (await ProfileAsync(job, ct)) is { IsSuccess: false } invalid ? invalid.Error : Result.Success;
 
-    /// <summary>The profile to rebuild, while its owner still has platform operations and it is not retired.</summary>
+    /// <summary>取得要重建的向量模型設定；擁有者仍需具備營運權限，且模型未退役。</summary>
     private async Task<Result<EmbeddingProfile>> ProfileAsync(BackgroundJob job, CancellationToken ct)
     {
         if (!(await access.ForUserAsync(job.OwnerId, ct)).Features.Any(x => x.Id == FeatureIds.Operations)) return AccessControlErrors.FeatureForbidden;
@@ -34,7 +34,7 @@ public sealed class EmbeddingReindexHandler(NexusDbContext db, EmbeddingLifecycl
         foreach (var id in ids)
         {
             if (await ValidateRetryAsync(execution.Job, ct) is { IsSuccess: false } revoked) return revoked.Error;
-            // An ingest/embedding job owns a changing document; its own checkpoints will fill this profile.
+            // 匯入或嵌入工作正在改寫這份文件，由它們自己的檢查點填入此向量模型，這裡直接略過。
             if (await db.Set<BackgroundJob>().AnyAsync(x => x.SubjectId == id && x.ActiveKey != null, ct)) continue;
             var doc = await db.Set<KnowledgeDocument>().SingleAsync(x => x.Id == id, ct);
             if (!await db.Set<DocumentPage>().AnyAsync(x => x.DocumentId == id, ct)) return KnowledgeErrors.DocumentPagesMissing;

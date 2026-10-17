@@ -14,7 +14,7 @@ public sealed class WebSearchService(NexusDbContext db, IWebSearchProvider provi
 {
     public const int ReservedTokens = 3600;
     public WebSearchStatusDto Status => StatusOf(options.Value);
-    /// <summary>Availability from configuration alone; no request to the search service.</summary>
+    /// <summary>只看設定判斷是否可用，不會實際呼叫搜尋服務。</summary>
     public static WebSearchStatusDto StatusOf(WebSearchOptions settings) => new(settings.Enabled && (settings.Provider != "brave" || settings.ApiKey.Length > 0),
         !settings.Enabled ? "管理員尚未啟用網路搜尋。可設定自架 SearXNG 或 Brave Search。"
         : settings.Provider == "brave" && settings.ApiKey.Length == 0 ? "管理員尚未設定 Brave Search 的 API key。"
@@ -26,7 +26,7 @@ public sealed class WebSearchService(NexusDbContext db, IWebSearchProvider provi
         if (options.Value.Provider == "brave" && (query.Length > 600 || query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length > 75))
             return WebSearchErrors.QueryTooLong;
         WebSearchRecord record; ModelInvocation call;
-        // The owner row lock taken first in this transaction serializes the reservation; it ends before the provider call.
+        // 先鎖住擁有者的使用者列，讓同一人的配額保留依序進行。交易在呼叫搜尋服務前結束，避免外部 I/O 期間持有鎖。
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);

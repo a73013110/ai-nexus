@@ -6,10 +6,7 @@ using AiNexus.Platform.Monitoring;
 
 namespace AiNexus.Features.Diagnostics;
 
-/// <summary>
-/// Persistent diagnostic store, administrator log queries and browser issue intake. Logging itself is a platform concern.
-/// Each use case has its own file.
-/// </summary>
+/// <summary>診斷事件的持久化儲存、管理員日誌查詢與瀏覽器問題回報；寫日誌本身屬於平台層。</summary>
 public sealed class DiagnosticsModule : IFeatureModule
 {
     public const string ClientIssueRateLimit = "client-issues", QueryRateLimit = "diagnostic-query", ExportRateLimit = "diagnostic-export";
@@ -26,10 +23,10 @@ public sealed class DiagnosticsModule : IFeatureModule
         services.AddRateLimiter(options => options.AddPerUserLimit(ClientIssueRateLimit, 10).AddPerUserLimit(QueryRateLimit, 60).AddPerUserLimit(ExportRateLimit, 2));
     }
 
-    // Endpoint order is the published OpenAPI order.
+    // 端點註冊順序即公開的 OpenAPI 順序，調整會改變對外文件。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        // Log reads are rate limited and kept out of the request log; each read is audited by DiagnosticQuery.
+        // 日誌讀取有速率限制，且不進一般請求日誌（查日誌不該再產生日誌）；稽核由 DiagnosticQuery 負責。
         var logs = api.MapGroup("/admin/logs").RequireAuthorization(DiagnosticConfiguration.QueryPolicy).WithTags("System logs").RequireRateLimiting(QueryRateLimit)
             .WithMetadata(new SuppressSuccessfulRequestLog());
         QuerySystemLogs.Map(logs);

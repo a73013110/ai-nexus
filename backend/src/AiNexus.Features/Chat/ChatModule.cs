@@ -8,36 +8,34 @@ using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Chat;
 
-/// <summary>
-/// The chat workspace: builds a turn's context from the conversation, attachments, project, knowledge and web search,
-/// runs and streams the answer, and reads, exports, duplicates or deletes a whole conversation with everything attached
-/// to it. It sits above the modules it combines; each use case has its own file.
-/// </summary>
+/// <summary>對話工作區功能模組：上下文建置、生成與 SSE 串流、對話生命週期（查詢、複製、匯出、刪除）。</summary>
 public sealed class ChatModule : IFeatureModule
 {
-    /// <summary>
-    /// Sending (including regenerate, edit and web search, which are runs too). Above any human pace; it stops scripts
-    /// from turning one user's quota checks, context building and provider queue into a load on everyone.
-    /// </summary>
+    /// <summary>所有會觸發生成的請求（新發問、重新生成、編輯發問、網路搜尋）共用的限流原則。</summary>
     public const string SendRateLimit = "chat-send";
+
+    /// <summary>每位使用者每分鐘最多發送 30 次生成請求，防止惡意腳本轟炸引發全域排隊延遲。</summary>
     public const int SendsPerMinute = 30;
 
     public static void AddServices(IHostApplicationBuilder builder)
     {
         var services = builder.Services;
+
         services.AddDashboardSource<ChatDashboard>();
         services.AddScoped<RunService>();
         services.AddScoped<RunLeaseRecovery>();
         services.AddScoped<ContextBuilder>();
         services.AddSingleton<SubscriptionLimits>();
         services.AddSingleton<RunSignals>();
+
         services.AddHostedService<GenerationWorker>();
         services.AddHostedService<RunRecoveryWorker>();
         services.AddHostedService<RunEventRetentionWorker>();
+
         services.AddRateLimiter(options => options.AddPerUserLimit(SendRateLimit, SendsPerMinute));
     }
 
-    // Endpoint order is the published OpenAPI order; the endpoints keep the tags of the API sections they belong to.
+    /// <summary>註冊對話相關之 HTTP 端點。</summary>
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         var runs = api.MapGroup("").RequireAuthorization(Policies.Chat).WithTags("Inference");
@@ -46,6 +44,7 @@ public sealed class ChatModule : IFeatureModule
         GetRun.Map(runs);
         CancelRun.Map(runs);
         StreamRunEvents.Map(runs);
+
         var conversations = api.MapGroup("/conversations").RequireAuthorization(Policies.Chat).WithTags("Conversations");
         GetConversation.Map(conversations);
         DuplicateConversation.Map(conversations);

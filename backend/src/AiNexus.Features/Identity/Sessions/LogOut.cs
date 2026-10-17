@@ -9,7 +9,7 @@ using AiNexus.Features.Identity.Authentication;
 
 namespace AiNexus.Features.Identity.Sessions;
 
-/// <summary>Ends any test identity, audits the sign-out, clears the cookie and announces the ended browser session.</summary>
+/// <summary>結束任何測試身分、寫入登出稽核、清除 cookie，並發出 <see cref="UserSignedOut"/> 事件，通知該瀏覽器 session 已結束。</summary>
 internal sealed class LogOut(NexusDbContext db, CurrentUser current, AuthenticationAudit audit, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, DomainEvents events)
 {
     public static void Map(RouteGroupBuilder auth) => auth

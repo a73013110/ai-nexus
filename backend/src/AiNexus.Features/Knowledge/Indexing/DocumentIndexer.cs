@@ -47,7 +47,7 @@ public sealed class DocumentIndexer(NexusDbContext db, EmbeddingProfiles profile
                 await db.Set<KnowledgeChunk>().Where(x => x.DocumentId == document.Id && !retained.Contains(x.Id)).ExecuteDeleteAsync(ct);
                 foreach (var old in existing.Where(x => !retained.Contains(x.Id))) db.Entry(old).State = EntityState.Detached;
                 db.AddRange(chunks.Where(x => !existing.Any(e => e.Id == x.Id))); await db.SaveChangesAsync(ct);
-                // Copy cached vectors before the old chunk rows disappear across job boundaries.
+                // 舊片段列可能在工作之間被移除，因此要在此先把已快取的向量複製到保留下來的片段上。
                 foreach (var profile in current.Where(x => x.Provider != "none"))
                 {
                     var copy = chunks.Where(x => cached[profile.Id].ContainsKey(Convert.ToHexString(x.ContentHash)))
@@ -118,7 +118,7 @@ public sealed class DocumentIndexer(NexusDbContext db, EmbeddingProfiles profile
     }
     public async Task<Result> IndexAsync(JobExecution execution, KnowledgeDocument document, EmbeddingProfile target, CancellationToken ct)
     {
-        // Reindex uses saved pages, under the source owner's ACL and quota, without reopening OCR.
+        // 重新索引使用已儲存的頁面，並沿用來源擁有者的 ACL 與配額，不重新開啟 OCR。
         var owner = await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.Id == document.Id).Select(x => x.OwnerId).SingleAsync(ct);
         var allowed = await documents.RequireAsync(owner, document.Id, ct, write: true);
         if (!allowed.IsSuccess) return allowed.Error;

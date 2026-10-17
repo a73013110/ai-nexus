@@ -17,8 +17,8 @@ internal sealed class SelectIdentityRequestValidator : RequestValidator<SelectId
 }
 
 /// <summary>
-/// Switches the session to another identity the account offers (<see cref="AuthSession.Identities"/>), keeping the
-/// signed-in user, the login method and the cookie lifetime. The answer carries a fresh CSRF token.
+/// 把 session 切換到帳號提供的另一個身分（<see cref="AuthSession.Identities"/>），保留同一位使用者、登入方式與 cookie 存續時間。
+/// 回應附新的 CSRF token。
 /// </summary>
 internal sealed class SelectIdentity(IOptions<AdAuthenticationOptions> options, IAntiforgery csrf)
 {

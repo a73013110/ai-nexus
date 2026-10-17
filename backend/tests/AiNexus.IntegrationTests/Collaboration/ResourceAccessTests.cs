@@ -26,7 +26,7 @@ public sealed class ResourceAccessTests
         await Share(bob, $"/api/v1/projects/{viewed.Resource.Id}/access", (aliceId, "viewer"));
         queries.Clear(); (await alice.GetAsync("/api/v1/projects")).EnsureSuccessStatusCode(); var fewer = queries.Count("/api/v1/projects");
         await Share(carol, $"/api/v1/projects/{edited.Resource.Id}/access", (aliceId, "editor"));
-        // The list costs the same however many shared projects it describes.
+        // 不論清單涵蓋多少個分享專案，查詢成本都應相同（避免 N+1）。
         queries.Clear(); (await alice.GetAsync("/api/v1/projects")).EnsureSuccessStatusCode();
         Assert.Equal(fewer, queries.Count("/api/v1/projects"));
         var projects = (await alice.GetFromJsonAsync<ProjectDto[]>("/api/v1/projects"))!;

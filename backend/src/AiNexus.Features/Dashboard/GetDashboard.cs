@@ -10,13 +10,13 @@ namespace AiNexus.Features.Dashboard;
 public sealed record DashboardPeriodDto(DateTimeOffset From, DateTimeOffset Until, int OffsetMinutes);
 
 /// <summary>
-/// The overview: spend and token usage for the period, plus one section per feature the viewer can open. Sections come
-/// from every registered <see cref="IDashboardSource"/>, so a feature adds itself here from its own module.
+/// 總覽：期間內的花費與 token 用量，加上檢視者可開啟的每個功能一區。區塊來自所有已註冊的 <see cref="IDashboardSource"/>，
+/// 功能在自己的模組註冊即會出現在這裡。
 /// </summary>
 public sealed record DashboardDto(string Scope, Guid? OwnerId, DateTimeOffset GeneratedAt, DashboardPeriodDto Period, SpendReportDto Spend,
     TokenUsageDto Tokens, IReadOnlyList<DashboardSectionDto> Sections);
 
-/// <summary>Personal overview, or the platform-wide one for platform operations (audited).</summary>
+/// <summary>個人總覽；平台營運權限者可看全平台總覽，且每次查看都會留稽核。</summary>
 internal sealed class GetDashboard(NexusDbContext db, SpendReports reports, UsageReports usage, AccessService access,
     IEnumerable<IDashboardSource> sources, TimeProvider clock)
 {
@@ -36,7 +36,7 @@ internal sealed class GetDashboard(NexusDbContext db, SpendReports reports, Usag
         Guid? owner = platform ? ownerId : actor;
         var window = new DashboardScope(actor, owner, platform, period.Value.From, period.Value.Until, period.Value.Offset);
         var sections = new List<DashboardSectionDto>();
-        // Sources share this request's context, so they run one after another.
+        // 各來源共用同一個請求的 DbContext，不能並行，所以依序執行。
         foreach (var source in sources)
         {
             if (!features.TryGetValue(source.Feature, out var feature)) continue;

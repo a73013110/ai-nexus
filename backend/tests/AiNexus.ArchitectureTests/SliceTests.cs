@@ -2,7 +2,7 @@ using AiNexus.Platform.Modules;
 
 namespace AiNexus.ArchitectureTests;
 
-/// <summary>One use case, one shape: the endpoint lambda receives the slice itself, which <see cref="EndpointHandlers"/> registers.</summary>
+/// <summary>一個 use case 只有一種形狀：endpoint lambda 直接接收 slice 本身，由 <see cref="EndpointHandlers"/> 註冊。</summary>
 public sealed class SliceTests
 {
     [Fact]

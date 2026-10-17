@@ -55,12 +55,17 @@ app.UseCsrfProtection();
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "alive" })).AllowAnonymous();
 app.MapReadinessCheck();
-if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing")) app.MapOpenApi().AllowAnonymous();
+if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
+{
+    app.MapOpenApi().AllowAnonymous();
+}
 app.MapFeatures();
-// Unknown API paths must never return the SPA's HTML document.
+
+// 未知的 API 路徑絕不可意外傳回 SPA 前端應用的 index.html。
 app.Map("/api/{**path}", () => Results.NotFound()).RequireAuthorization();
-// The default fallback skips any path whose last segment has a dot, taking it for a missing file. Repository
-// routes end in Gitea names (`team/my.repo`) and `base...head` ranges, and no static file lives under them.
+
+// 預設的 FallbackToFile 會略過任何最後一段路徑包含點號（.）的網址（誤當作遺失的靜態檔案）。
+// 程式庫路由常以 Gitea 專案名稱（例如 `team/my.repo`）與版本比對區間（`base...head`）結尾，其下無實體檔案，需特別處理。
 app.MapFallbackToFile("/repositories/{**path}", "index.html").AllowAnonymous();
 app.MapFallbackToFile("index.html").AllowAnonymous();
 

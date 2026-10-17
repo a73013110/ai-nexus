@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Quality.Feedback;
 
-/// <summary>A user's private rating of one assistant answer in a conversation they own.</summary>
+/// <summary>使用者在自己擁有的對話中，對某則 AI 回答的私人評分。</summary>
 [Comment("使用者對 AI 回答的私人評分與意見。")]
 public sealed class MessageFeedback
 {

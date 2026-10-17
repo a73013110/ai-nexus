@@ -5,7 +5,7 @@ using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Quality.RetrievalEvaluations;
 
-/// <summary>The owner's latest retrieval evaluations, leaving out any whose collections they can no longer read.</summary>
+/// <summary>擁有者最近的檢索評測；若某筆所用的知識庫已無法讀取，則略過該筆。</summary>
 internal sealed class ListRetrievalEvaluations(NexusDbContext db, RetrievalEvaluationService evaluations)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

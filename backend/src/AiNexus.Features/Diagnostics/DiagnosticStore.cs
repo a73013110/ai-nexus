@@ -13,7 +13,7 @@ using AiNexus.Platform.Diagnostics;
 
 namespace AiNexus.Features.Diagnostics;
 
-/// <summary>New connection/transaction, never the caller's business DbContext or transaction.</summary>
+/// <summary>使用自己的連線與交易寫入，絕不共用呼叫端的業務 DbContext 或交易，避免日誌寫入跟著業務交易一起回滾。</summary>
 public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<DiagnosticOptions> options, DiagnosticHealth health, TimeProvider clock) : IDiagnosticStore
 {
     private static readonly PropertyInfo[] Columns = typeof(DiagnosticEvent).GetProperties();
@@ -36,8 +36,8 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
         var settings = options.Value;
         var connectionString = new SqlConnectionStringBuilder(db.Database.GetConnectionString()) { Enlist = false, ConnectTimeout = settings.SqlTimeoutSeconds }.ConnectionString;
         await using var connection = new SqlConnection(connectionString); await connection.OpenAsync(ct);
-        // Metadata row count avoids COUNT(*) on a growing table. Capacity is an approximate soft limit
-        // (concurrent import batches and SQL metadata estimates can overshoot); no early retention purge.
+        // 列數取自系統中繼資料，避免對持續成長的表做 COUNT(*)。容量只是近似的軟上限（並行批次與估計值可能略超出），
+        // 這裡不會為了騰空間而提前清除，保留期清理由 CleanupAsync 負責。
         await using (var count = new SqlCommand("SELECT COALESCE(SUM([rows]),0) FROM sys.partitions WHERE [object_id]=OBJECT_ID(N'diagnostics.DiagnosticEvents') AND [index_id] IN (0,1);", connection) { CommandTimeout = settings.SqlTimeoutSeconds })
         {
             var rows = Convert.ToInt64(await count.ExecuteScalarAsync(ct), CultureInfo.InvariantCulture); Interlocked.Exchange(ref health.EstimatedSqlRows, rows);
@@ -76,8 +76,8 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
         if (!configurationRecorded)
         {
             var o = options.Value;
-            // Audit policy changes once per configuration, after SQL becomes available. Locations and
-            // exporter URLs are deliberately excluded. A host event supplies version/instance evidence.
+            // 設定變更只稽核一次，且要等 SQL 可用後才寫。路徑與匯出端 URL 刻意排除，避免把內部位置寫進稽核；
+            // 版本與實例證據由主機事件提供。
             var snapshot = JsonSerializer.Serialize(new {
                 serviceName = o.ServiceName, minimumLevel = o.MinimumLevel.ToString(), frameworkMinimumLevel = o.FrameworkMinimumLevel.ToString(),
                 queueCapacity = o.QueueCapacity, importantQueueCapacity = o.ImportantQueueCapacity, batchSize = o.BatchSize, flushIntervalMs = o.FlushIntervalMs,
@@ -102,7 +102,7 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
         }
         var diagnosticBefore = clock.GetUtcNow().AddDays(-options.Value.RetentionDays);
         var auditBefore = clock.GetUtcNow().AddDays(-options.Value.AuditRetentionDays);
-        // Separate autocommit batches; cancellation/timeout bounds total work, no long purge transaction.
+        // 每批各自 autocommit，總工作量由取消與逾時限制；刻意不用一筆長交易清除。
         for (var batch = 0; batch < 100; batch++)
         {
             var ids = await db.Set<DiagnosticEvent>().Where(x => x.At < diagnosticBefore).OrderBy(x => x.At).Select(x => x.LogId).Take(options.Value.CleanupBatchSize).ToArrayAsync(ct);

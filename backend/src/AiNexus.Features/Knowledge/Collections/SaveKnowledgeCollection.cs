@@ -11,7 +11,7 @@ namespace AiNexus.Features.Knowledge.Collections;
 [ValidatedInHandler("An edit checks the body only after collection access (a 404/403 must win over a 400), and create shares the body; the order is name, then description.")]
 public sealed record CollectionRequest(string Name, string Description);
 
-/// <summary>Creates a personal collection (up to the configured limit), or renames and describes one the user may edit.</summary>
+/// <summary>建立個人知識庫（數量受設定上限限制），或修改使用者可編輯的知識庫名稱與描述。</summary>
 internal sealed class SaveKnowledgeCollection(NexusDbContext db, ResourceAccess access, IOptions<KnowledgeOptions> options, TimeProvider clock)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes

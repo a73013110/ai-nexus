@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Conversations;
 
 /// <summary>
-/// A page of 100 of the user's conversations for one view (active, archived, favorites or all), optionally filtered by
-/// label and by text in the title or any message. Favorites first, then the most recently updated.
+/// 使用者對話列表，每頁 100 筆。依檢視（active、archived、favorites、all）篩選，可再依標籤，以及標題或任一訊息內文搜尋。
+/// 收藏優先，其次依更新時間由新到舊。
 /// </summary>
 internal sealed class ListConversations(NexusDbContext db)
 {

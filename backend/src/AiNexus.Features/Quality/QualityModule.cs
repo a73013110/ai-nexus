@@ -9,13 +9,13 @@ using AiNexus.Features.Quality.RetrievalEvaluations;
 
 namespace AiNexus.Features.Quality;
 
-/// <summary>Answer feedback, model comparison sets and runs, and retrieval evaluations. Each use case has its own file.</summary>
+/// <summary>回答回饋、模型比較題組與執行，以及檢索評測。每個用例各自一個檔案。</summary>
 public sealed class QualityModule : IFeatureModule
 {
-    /// <summary>Evaluation sets carry up to 224,000 characters of questions and references.</summary>
+    /// <summary>題組的題目與參考答案合計上限（字元數）。</summary>
     public const int MaxSetCharacters = 224000;
 
-    /// <summary>Applied to each /quality/sets endpoint; a nested route group would reorder the published OpenAPI document.</summary>
+    /// <summary>套用在每個 /quality/sets 端點上；若改用巢狀路由群組，會改變已發布的 OpenAPI 文件順序。</summary>
     internal static readonly long SetBodyLimit = RequestBodyLimits.ForJsonCharacters(MaxSetCharacters);
 
     public static void AddServices(IHostApplicationBuilder builder)

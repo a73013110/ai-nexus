@@ -17,9 +17,9 @@ using static AiNexus.IntegrationTests.Support.ChatApi;
 namespace AiNexus.IntegrationTests.Chat;
 
 /// <summary>
-/// Several users stream long answers at the same time. Each flush must write only its delta (no full-content rewrite),
-/// and runs of different conversations must not wait for each other. TestServer + SQLite: the numbers describe the app's
-/// own write volume and locking, not production SQL Server latency (SQLite itself admits one writer at a time).
+/// 多位使用者同時串流長回答。每次 flush 只能寫入增量（不得整段重寫），
+/// 不同對話的 run 之間也不能互相等待。使用 TestServer + SQLite 時，數字反映的是應用程式自身的
+/// 寫入量與鎖定，不代表正式環境 SQL Server 的延遲（SQLite 同一時間只允許一個寫入者）。
 /// </summary>
 public sealed class StreamingPerformanceTests(ITestOutputHelper output)
 {
@@ -61,7 +61,7 @@ public sealed class StreamingPerformanceTests(ITestOutputHelper output)
         Assert.All(finished, run => { Assert.Equal(RunStates.Completed, run.Status); Assert.Equal(expected, run.Content); });
         for (var i = 0; i < Users; i++)
         {
-            // The replayed deltas rebuild exactly the persisted answer, and the message holds the same text.
+            // 重播的增量必須完整重建已儲存的回答，且訊息內容要與之相同。
             var stream = await clients[i].GetStringAsync($"/api/v1/runs/{runs[i].Id}/events?after=0");
             var deltas = stream.Split('\n').Where(x => x.StartsWith("data: ", StringComparison.Ordinal))
                 .Select(x => JsonSerializer.Deserialize<RunEventDto>(x[6..], JsonSerializerOptions.Web)!)
@@ -77,11 +77,11 @@ public sealed class StreamingPerformanceTests(ITestOutputHelper output)
         output.WriteLine($"users={Users} chunks={Chunks} chunkChars={ChunkSize} wall={watch.ElapsedMilliseconds}ms serializedProviderFloor={serializedFloor}ms");
         output.WriteLine($"writes={writes.Commands} writesPerFlush={(double)writes.Commands / flushes:F2} writtenChars={writes.Characters} writtenCharsPerFlush={writes.Characters / flushes} largestWriteChars={writes.Largest}");
         output.WriteLine($"workerCommands={writes.WorkerCommands} workerCommandsPerFlush={(double)writes.WorkerCommands / flushes:F2}");
-        // Each delta is written a bounded number of times (event row, run, message): linear, not quadratic, in the answer length.
-        // (SQLite also sends ids and timestamps as text; rewriting the whole answer per flush would be about Chunks times more.)
+        // 每個增量只會寫入固定次數（事件列、run、訊息）：寫入量隨回答長度線性成長，而非平方成長。
+        // （SQLite 也會把 id 與時間戳以文字送出；若每次 flush 都重寫整段回答，寫入量約為 Chunks 倍。）
         Assert.True(writes.Largest < 4 * ChunkSize, $"A single write carried {writes.Largest} characters; flushes must not resend the whole answer.");
         Assert.True(writes.Characters < 12L * Users * expected.Length, $"Wrote {writes.Characters} characters for {Users * expected.Length} characters of answers.");
-        // A flush neither reloads the run, charge, message and conversation nor rewrites them: a few set-based statements.
+        // flush 不會重新讀取或重寫 run、charge、訊息與對話，只執行少數集合式（set-based）陳述式。
         Assert.True(writes.WorkerCommands < 6 * flushes, $"The worker issued {writes.WorkerCommands} commands for {flushes} flushes.");
         foreach (var client in clients) client.Dispose();
     }
@@ -101,7 +101,7 @@ public sealed class StreamingPerformanceTests(ITestOutputHelper output)
         }
         var scheduler = factory.Services.GetRequiredService<GenerationScheduler>();
         Task<HttpResponseMessage> blocked;
-        // Hold the first conversation as a slow branch switch, deletion or share would.
+        // 與緩慢的分支切換、刪除或分享一樣，先持有第一個對話的鎖，讓其他對話的串流不必等待它。
         using (await scheduler.LockConversationAsync(conversations[0], CancellationToken.None))
         {
             blocked = PostRun(clients[0], new(conversations[0], "test-model", "等待中", null, null));
@@ -144,7 +144,7 @@ public sealed class StreamingPerformanceTests(ITestOutputHelper output)
         }
     }
 
-    /// <summary>Counts INSERT/UPDATE commands with the characters their string parameters carry, and every command of the generation worker.</summary>
+    /// <summary>統計 INSERT／UPDATE 指令中字串參數所帶的字元數，以及生成工作者（generation worker）發出的每一筆指令。</summary>
     private sealed class WriteCounter : DbCommandInterceptor
     {
         private long commands, characters, largest, worker;

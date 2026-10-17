@@ -9,7 +9,7 @@ public sealed class TestProvider : IInferenceProvider
     public int DelayMs { get; set; } = 30;
     public bool Fail { get; set; }
     public bool NeverFinish { get; set; }
-    /// <summary>Finishes normally without text, as a vision model does for a photo with nothing to transcribe.</summary>
+    /// <summary>正常結束且不產生文字，如同視覺模型遇到沒有可轉錄文字的照片時的行為。</summary>
     public bool Empty { get; set; }
     private TaskCompletionSource? hold;
     public int Calls;
@@ -18,7 +18,7 @@ public sealed class TestProvider : IInferenceProvider
     private readonly List<(int Calls, TaskCompletionSource Signal)> callWaiters = [];
     public IReadOnlyList<InferenceMessage> LastMessages { get; private set; } = [];
 
-    /// <summary>Completes once the provider has been called <paramref name="calls"/> times, so tests need not poll <see cref="Calls"/>.</summary>
+    /// <summary>供應商被呼叫 <paramref name="calls"/> 次後即完成，讓測試不必輪詢 <see cref="Calls"/>。</summary>
     public Task WhenCalledAsync(int calls = 1)
     {
         lock (callWaiters)
@@ -30,7 +30,7 @@ public sealed class TestProvider : IInferenceProvider
         }
     }
 
-    /// <summary>Streams stop before their final chunk until <see cref="Release"/>, so a test controls how long a run stays active.</summary>
+    /// <summary>串流在 <see cref="Release"/> 呼叫前會停在最後一段之前，讓測試控制 run 保持活動的時間。</summary>
     public void Hold() => hold = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public void Release() => hold?.TrySetResult();
 

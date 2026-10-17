@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Notifications;
 
-/// <summary>The viewer's own unread notifications. Notifications are personal, so the scope's owner does not apply.</summary>
+/// <summary>檢視者自己的未讀通知。通知是個人資料，因此不套用 scope 的 owner 條件。</summary>
 internal sealed class NotificationsDashboard(NexusDbContext db) : IDashboardSource
 {
     public string Feature => FeatureIds.Dashboard;
@@ -27,7 +27,7 @@ internal sealed class NotificationsDashboard(NexusDbContext db) : IDashboardSour
             .Select(x => new { x.Id, x.Title, x.Body, x.Severity, x.IssueCode, x.TargetKind, x.TargetId, x.CreatedAt }).ToListAsync(ct);
         foreach (var item in recent)
         {
-            // Failures read like the notification center: the reviewed issue message, never the stored text.
+            // 失敗的顯示與通知中心一致：只用審過的問題訊息，絕不顯示儲存的原始文字。
             var error = item.Severity == "error";
             var body = error ? Issues.Message(item.IssueCode) : item.Body;
             section.Item(item.Id.ToString(), error ? "操作未完成" : item.Title, body.Length > 80 ? body[..80] + "…" : body, item.CreatedAt,
@@ -36,7 +36,7 @@ internal sealed class NotificationsDashboard(NexusDbContext db) : IDashboardSour
         return section.Build();
     }
 
-    /// <summary>The same typed destinations the notification center opens.</summary>
+    /// <summary>與通知中心相同的型別化跳轉目標。</summary>
     private static string? Link(string kind, Guid id) => kind switch
     {
         "conversation" => "/chat/" + id,

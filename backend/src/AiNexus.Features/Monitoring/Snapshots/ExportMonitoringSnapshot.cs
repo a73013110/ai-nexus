@@ -6,7 +6,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Monitoring.Snapshots;
 
-/// <summary>The snapshot as a JSON download, under the export rate limit. The export is audited before it is released.</summary>
+/// <summary>以 JSON 檔案下載即時監控快照，受匯出速率限制；釋出前會先寫入稽核紀錄。</summary>
 internal sealed class ExportMonitoringSnapshot(MonitoringSnapshots snapshots, NexusDbContext db)
 {
     public static void Map(RouteGroupBuilder monitor) => monitor

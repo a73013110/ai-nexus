@@ -8,7 +8,7 @@ using FluentValidation;
 
 namespace AiNexus.Features.Account;
 
-/// <summary>Reading and layout settings. The nested appearance is checked afterwards by the handler, with its own codes.</summary>
+/// <summary>閱讀與版面設定。巢狀的外觀設定由 handler 在之後檢查，使用自己的錯誤代碼。</summary>
 internal sealed class UserSettingsValidator : RequestValidator<UserSettingsDto>
 {
     public override string ProblemCode => "invalid_settings";
@@ -24,7 +24,7 @@ internal sealed class UserSettingsValidator : RequestValidator<UserSettingsDto>
     }
 }
 
-/// <summary>Saves the appearance preferences and the reading, layout and composer settings together.</summary>
+/// <summary>一次儲存外觀偏好，以及閱讀、版面與輸入框設定。</summary>
 internal sealed class SaveUserSettings(NexusDbContext db, ModelPresentation models)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
@@ -34,7 +34,7 @@ internal sealed class SaveUserSettings(NexusDbContext db, ModelPresentation mode
 
     public async Task<Result<UserSettingsDto>> HandleAsync(NexusUser user, UserSettingsDto value, CancellationToken ct)
     {
-        // Validate the complete request before changing any tracked values.
+        // 先驗證整個請求，再改動任何已追蹤的值，避免失敗時留下只改了一半的設定。
         var appearance = UpdatePreferences.Apply(user, value.Appearance, models);
         if (!appearance.IsSuccess) return appearance.Error;
         var p = user.Preferences;

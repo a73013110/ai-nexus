@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Quality.Evaluations;
 
-/// <summary>Sets the user may read: the latest 100, and one set with its cases.</summary>
+/// <summary>使用者可讀取的題組：最近 100 筆，以及單一題組（含題目）。</summary>
 internal sealed class BrowseEvaluationSets(NexusDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder MapList(RouteGroupBuilder routes) => routes

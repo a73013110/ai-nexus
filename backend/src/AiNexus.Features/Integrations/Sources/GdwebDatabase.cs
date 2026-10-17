@@ -2,7 +2,7 @@ using AiNexus.Platform.Data.Sql;
 
 namespace AiNexus.Features.Integrations.Sources;
 
-/// <summary>The read-only Gdweb (official documents) source database, settings <c>Databases:Gdweb</c>.</summary>
+/// <summary>公文系統（Gdweb）的唯讀來源資料庫，連線設定位於 <c>Databases:Gdweb</c>。</summary>
 public sealed class GdwebDatabase : ISqlDatabaseDefinition
 {
     private GdwebDatabase() { }

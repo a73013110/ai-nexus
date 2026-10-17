@@ -3,7 +3,7 @@ using AiNexus.Features.Persistence.ReleaseScripts;
 
 namespace AiNexus.UnitTests.Persistence;
 
-/// <summary>Per-object comparison of two SqlPackage <c>ExtractTarget=SchemaObjectType</c> folders.</summary>
+/// <summary>逐物件比較兩個 SqlPackage <c>ExtractTarget=SchemaObjectType</c> 輸出資料夾。</summary>
 public sealed class SchemaDiffTests : IDisposable
 {
     private readonly DirectoryInfo root = Directory.CreateTempSubdirectory("schema-diff-tests-");

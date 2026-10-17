@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Quality.Feedback;
 
-/// <summary>The user's own ratings: the one on an answer (none yet is an empty 200), and the latest 100 across conversations.</summary>
+/// <summary>使用者自己的評分：單則回答的評分（尚未評分時回 200 空內容），以及跨對話最近 100 筆。</summary>
 internal sealed class ReadFeedback(NexusDbContext db)
 {
     public static RouteHandlerBuilder MapForMessage(RouteGroupBuilder api) => api

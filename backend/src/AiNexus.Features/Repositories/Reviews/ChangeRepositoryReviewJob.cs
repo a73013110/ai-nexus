@@ -4,7 +4,7 @@ using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Repositories.Reviews;
 
-/// <summary>Cancels or retries the review's background job. Retry re-validates access and the source through <see cref="RepositoryReviewHandler"/>.</summary>
+/// <summary>取消或重試 review 的背景工作。重試時會經由 <see cref="RepositoryReviewHandler"/> 重新驗證權限與來源。</summary>
 internal sealed class ChangeRepositoryReviewJob(RepositoryReviewService reviews, JobService jobs)
 {
     public static void Map(RouteGroupBuilder routes)

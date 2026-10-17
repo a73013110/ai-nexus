@@ -43,7 +43,7 @@ public sealed class ConversationKnowledgeTests
         });
         using var client = await factory.SignedInAsync(); var seed = await SeedAsync(factory, client);
         var conversation = await CreateConversation(client);
-        // u0 → a0 → u1 → a1 → u2 → a2 (empty) → u3 → a3 (still running); a sibling branch below u1 is not on the path.
+        // 路徑為 u0 → a0 → u1 → a1 → u2 → a2（空）→ u3 → a3（仍在執行）；u1 之下的另一條分支不在此路徑上。
         var path = await AddMessagesAsync(factory, conversation.Id, null,
             ("user", "零問", RunStates.Completed), ("assistant", "零答", RunStates.Completed), ("user", "一問", RunStates.Completed), ("assistant", "一答", RunStates.Completed),
             ("user", "二問", RunStates.Completed), ("assistant", "", RunStates.Completed), ("user", "三問", RunStates.Completed), ("assistant", "三答進行中", RunStates.Running));
@@ -53,7 +53,7 @@ public sealed class ConversationKnowledgeTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal([("user", "一問"), ("assistant", "一答"), ("user", "二問"), ("user", "三問")], rewriter.History!.Select(x => (x.Role, x.Text)));
-        // Regenerating the third question reads it as the query and the history above it.
+        // 重新產生第三個問題時，它會作為查詢，連同其上方的歷史一起讀取。
         Assert.True((await ForRunAsync(factory, seed.Actor, new(conversation.Id, null, null, path[6]), seed.Collection)).IsSuccess);
         Assert.Equal("三問", rewriter.Query);
         Assert.Equal(["零答", "一問", "一答", "二問"], rewriter.History!.Select(x => x.Text));
@@ -85,7 +85,7 @@ public sealed class ConversationKnowledgeTests
         return await scope.ServiceProvider.GetRequiredService<KnowledgeRetrieval>().ForRunAsync(actor, turn, CancellationToken.None, [collection]);
     }
 
-    /// <summary>A chain of messages below <paramref name="parent"/>, oldest first; returns their ids in the same order.</summary>
+    /// <summary>在 <paramref name="parent"/> 之下建立一串訊息（由舊到新），並依相同順序回傳它們的 id。</summary>
     private static async Task<Guid[]> AddMessagesAsync(NexusFactory factory, Guid conversation, Guid? parent, params (string Role, string Content, string Status)[] chain)
     {
         using var scope = factory.Services.CreateScope();

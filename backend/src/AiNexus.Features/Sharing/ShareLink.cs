@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Sharing;
 
-/// <summary>A frozen snapshot of a conversation branch or artifact version, readable only by its owner and named recipients.</summary>
+/// <summary>凍結的對話分支或成果版本快照，只有擁有者與指定收件人能讀取。</summary>
 [Comment("分享版本快照、有效期限、附件選項及撤銷狀態。")]
 public sealed class ShareLink
 {

@@ -64,10 +64,10 @@ public sealed partial class BackgroundJobWorker(IServiceScopeFactory scopes, Sto
             issue = issues.Report(ex, code); message = ex is ExternalServiceException known ? Issues.Message(known.Error, issue) : Issues.Message(issue);
         }
         finally { monitor.Cancel(); try { await heartbeat; } catch (OperationCanceledException) { } }
-        // Host shutdown keeps the lease and checkpoint so another process can resume later.
+        // 主機關閉時保留租約與檢查點，讓其他程序之後能接續執行，因此這裡不寫入終態。
         if (stop.IsCancellationRequested) return true;
-        // Only a fenced checkpoint may persist handler changes. Discard unfinished tracked work
-        // before recording the terminal state and its notification in a separate transaction.
+        // 只有帶正確 fencing 租約的檢查點能保存處理器的變更。寫入終態與通知前，先丟棄未完成的追蹤變更，
+        // 終態與通知另開交易記錄。
         db.ChangeTracker.Clear();
         await using var completion = await db.Database.BeginTransactionAsync(CancellationToken.None);
         var finished = await db.Set<BackgroundJob>().Where(x => x.Id == id && x.LeaseToken == lease && x.Status == "running")

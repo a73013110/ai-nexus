@@ -5,7 +5,7 @@ using AiNexus.Features.Jobs;
 
 namespace AiNexus.Features.Repositories.Reviews;
 
-/// <summary>A review whose source and model configuration are frozen before its durable job is enqueued.</summary>
+/// <summary>在持久化背景工作排入佇列之前，就已凍結來源與模型設定的 review。</summary>
 [Comment("固定 commit 或區間 diff 的私人 review、模型設定指紋與背景任務。")]
 public sealed class RepositoryReview
 {

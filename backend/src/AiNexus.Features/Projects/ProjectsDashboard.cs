@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Projects;
 
-/// <summary>Overview of projects: owned, archived, prompt templates and, for one owner, projects shared with them.</summary>
+/// <summary>專案總覽：自己擁有的、已封存的、提示詞範本數，以及單一擁有者時別人分享給他的專案。</summary>
 internal sealed class ProjectsDashboard(NexusDbContext db) : IDashboardSource
 {
     public string Feature => FeatureIds.Projects;

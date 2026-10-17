@@ -8,9 +8,9 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.IntegrationTests.Support;
 
 /// <summary>
-/// Real SQL Server 2025 for <c>Category=SqlServer</c> tests, from <c>AINEXUS_SQLSERVER_TEST</c>: each test gets a database
-/// created the way <c>db init</c> creates AiNexus (<see cref="DatabaseInitializer.CreateAsync"/>), migrated unless
-/// <c>migrate</c> is false, and dropped afterwards.
+/// 供 <c>Category=SqlServer</c> 測試使用的真實 SQL Server 2025，連線字串來自 <c>AINEXUS_SQLSERVER_TEST</c>：每個測試都會取得一個資料庫，
+/// 建立方式與 <c>db init</c> 建立 AiNexus 相同（<see cref="DatabaseInitializer.CreateAsync"/>），除非
+/// <c>migrate</c> 為 false，否則會套用 migration；測試結束後會刪除。
 /// </summary>
 internal static class SqlServerDatabase
 {
@@ -31,13 +31,13 @@ internal static class SqlServerDatabase
         }
         finally
         {
-            // Also after a failed setting change: CREATE may have succeeded on its own.
+            // 設定變更失敗後也要清除：CREATE 可能已自行成功。
             SqlConnection.ClearAllPools();
             await master.ExecuteAsync($"IF DB_ID(@Name) IS NOT NULL BEGIN ALTER DATABASE [{name}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [{name}] END", new { Name = name });
         }
     }
 
-    /// <summary>The test server's master database, from the raw test connection string rather than <c>Databases</c> settings.</summary>
+    /// <summary>測試伺服器的 master 資料庫，使用原始測試連線字串，而非 <c>Databases</c> 設定。</summary>
     internal sealed class MasterDatabase(string connectionString) : DapperSqlDatabase<NexusMasterDatabase>
     {
         protected override async Task<TResult> RunAsync<TResult>(Func<DbConnection, DbTransaction?, Task<TResult>> command, CancellationToken cancellationToken)

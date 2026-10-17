@@ -3,7 +3,7 @@ using AiNexus.Features.Billing.Reports;
 
 namespace AiNexus.Features.Account;
 
-/// <summary>One user's last 30 days of model use and their attachment storage. Callers own authorization.</summary>
+/// <summary>單一使用者最近 30 天的模型用量與附件儲存量；權限檢查由呼叫端負責。</summary>
 public sealed class PersonalUsage(UsageReports usage, AttachmentQuota quota, TimeProvider clock)
 {
     public async Task<PersonalUsageDto> ForOwnerAsync(Guid owner, CancellationToken ct)

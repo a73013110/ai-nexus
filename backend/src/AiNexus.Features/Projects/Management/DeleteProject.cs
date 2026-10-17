@@ -4,7 +4,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Projects.Management;
 
-/// <summary>Owner-only soft delete through the shared resource lifecycle; conversations, files and artifacts are detached, not destroyed.</summary>
+/// <summary>僅限擁有者的軟刪除，走共用資源的生命週期；對話、檔案與成果會被解除關聯，而不是被銷毀。</summary>
 internal sealed class DeleteProject(ResourceLifecycle lifecycle)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

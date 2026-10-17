@@ -9,10 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Quality;
 
-/// <summary>
-/// Overview of answer quality: helpful and unhelpful ratings given in the period and evaluation runs started. Only the
-/// ratings are counted; reasons and notes stay private to their author.
-/// </summary>
+/// <summary>回答品質總覽：期間內的有幫助／沒幫助評分數與發起的評測次數；只計入評分，理由與備註仍只對作者可見。</summary>
 internal sealed class QualityDashboard(NexusDbContext db) : IDashboardSource
 {
     public string Feature => FeatureIds.Quality;

@@ -8,8 +8,7 @@ using AiNexus.Features.Knowledge.Embeddings;
 namespace AiNexus.Features.Administration.Retrieval;
 
 /// <summary>
-/// Embedding profile lifecycle: list, rebuild, activate and clear retired vectors. Each change holds the knowledge write
-/// lock and is audited as an administrative change that requires platform operations.
+/// Embedding profile 生命週期：列出、重建、啟用、清除已退役的向量。每次變更都持有 knowledge 寫入鎖，並以需要「平台營運」權限的行政變更稽核。
 /// </summary>
 internal sealed class ManageEmbeddingProfiles(EmbeddingLifecycle lifecycle, KnowledgeWriteLock writes, AdministrativeAudit audit)
 {

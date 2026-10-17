@@ -7,7 +7,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Knowledge.Collections;
 
-/// <summary>The collections selected for one of the user's own conversations. Also used by generation through <see cref="KnowledgeRetrieval"/>.</summary>
+/// <summary>讀取使用者自己對話所選定的知識庫；生成流程也會透過 <see cref="KnowledgeRetrieval"/> 使用同一份選取。</summary>
 internal sealed class GetConversationKnowledge(NexusDbContext db, ConversationService conversations)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

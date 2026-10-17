@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Repositories.Browsing;
 
-/// <summary>A repository the user keeps at the top of the list. Name and description are what Gitea showed when it was pinned.</summary>
+/// <summary>使用者釘在清單頂端的程式庫；名稱與說明是釘選當時 Gitea 顯示的內容。</summary>
 [Comment("使用者釘選的 Gitea 程式庫；名稱與說明為釘選當時的快照。")]
 public sealed class RepositoryPin
 {

@@ -5,9 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace AiNexus.Platform.Errors;
 
 /// <summary>
-/// The single place that turns failures into the public <see cref="SafeProblemDetails"/> body. Every producer
-/// (expected <see cref="Error"/> results, validation, thrown exceptions, empty framework status codes) goes through
-/// <see cref="IProblemDetailsService"/>, so the format, logging and issue codes cannot diverge.
+/// 全系統唯一將執行失敗轉換為公開 <see cref="SafeProblemDetails"/> 回應結構之處。
+/// 任何失敗來源（預期內的 <see cref="Error"/> 結果、模型驗證錯誤、拋出之例外、框架預設空狀態碼）皆經由
+/// <see cref="IProblemDetailsService"/> 處理，確保錯誤格式、日誌記錄與查證代碼（issue code）完全一致。
 /// </summary>
 public static class Problems
 {
@@ -29,16 +29,20 @@ public static class Problems
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null),
     };
 
-    /// <summary>Public code for a framework status code that carried no body (challenge, forbid, unmatched route).</summary>
+    /// <summary>針對框架未附帶回應本體的狀態碼（如驗證挑戰、存取拒絕、未配對路由）提供預設公開代碼。</summary>
     public static string DefaultCode(int status) => status switch
     {
-        401 => "authentication_required", 403 => "access_denied", 404 => "not_found", 429 => "rate_limited", _ => "invalid_request",
+        401 => "authentication_required",
+        403 => "access_denied",
+        404 => "not_found",
+        429 => "rate_limited",
+        _ => "invalid_request",
     };
 
     public static ProblemHttpResult ToProblem(this Error error, IReadOnlyDictionary<string, string[]>? errors = null)
         => TypedResults.Problem(Details(Status(error.Kind), error.Code, errors));
 
-    /// <summary>For a failure already recorded with <see cref="Issues.Report(Error)"/>, for example to audit it: the response reuses that issue code.</summary>
+    /// <summary>適用於已透過 <see cref="Issues.Report(Error)"/> 記錄的失敗（例如需寫入稽核日誌時）：回應中將沿用該既有查證代碼。</summary>
     public static ProblemHttpResult ToProblem(this Error error, string issueCode)
     {
         var details = Details(Status(error.Kind), error.Code, null);
@@ -52,7 +56,7 @@ public static class Problems
     public static Results<NoContent, ProblemHttpResult> ToHttpResult(this Result result)
         => result.IsSuccess ? TypedResults.NoContent() : result.Error.ToProblem();
 
-    /// <summary>For a success that is not <c>200 OK</c> with the value as JSON (a file, a redirect, <c>201 Created</c>).</summary>
+    /// <summary>適用於成功時非回傳純 JSON 資料之案例（如檔案下載、重新導向或 <c>201 Created</c>）。</summary>
     public static Results<TSuccess, ProblemHttpResult> ToHttpResult<T, TSuccess>(this Result<T> result, Func<T, TSuccess> success)
         where TSuccess : IResult => result.IsSuccess ? success(result.Value) : result.Error.ToProblem();
 
@@ -66,8 +70,8 @@ public static class Problems
         where TSuccess : IResult => (await result).ToHttpResult(success);
 
     /// <summary>
-    /// For a server-sent event stream: a failure before the stream started is a problem response; after it started, the
-    /// stream ends with an <c>error</c> event carrying the same public problem.
+    /// 適用於 Server-Sent Events (SSE) 串流回應：
+    /// 若串流尚未啟動則回傳標準 ProblemDetails 回應；若串流已在傳輸中，則在末端發送帶有相同公開 Problem 資料的 <c>error</c> 事件。
     /// </summary>
     public static async Task<Results<EmptyHttpResult, ProblemHttpResult>> ToStreamResultAsync(this Task<Result> result, HttpContext http)
     {
@@ -79,20 +83,20 @@ public static class Problems
         return TypedResults.Empty;
     }
 
-    /// <summary>Writes a problem from middleware that runs outside endpoint execution.</summary>
+    /// <summary>於端點管線執行範圍外之中介軟體（Middleware）直接寫入錯誤回應。</summary>
     public static Task WriteAsync(HttpContext http, int status, string code)
         => http.RequestServices.GetRequiredService<IProblemDetailsService>()
             .WriteAsync(new() { HttpContext = http, ProblemDetails = Details(status, code, null) }).AsTask();
 
-    /// <summary>Writes the problem for an exception thrown by the request pipeline.</summary>
+    /// <summary>將請求管線中拋出之例外狀況轉換並寫入為錯誤回應。</summary>
     public static Task WriteAsync(HttpContext http, Exception exception)
         => http.RequestServices.GetRequiredService<IProblemDetailsService>()
             .WriteAsync(new() { HttpContext = http, Exception = exception, ProblemDetails = new() }).AsTask();
 
     public static IServiceCollection AddNexusProblemDetails(this IServiceCollection services)
     {
-        // Registered first so it is chosen over the framework writer, which declines for non-JSON Accept headers and
-        // would add trace identifiers to the public body.
+        // 優先註冊 NexusProblemWriter，以取代框架預設寫入器；
+        // 避免框架針對非 application/json 的 Accept 標頭拒絕處理，並防止將內部追蹤識別碼洩漏至公開回應。
         services.AddSingleton<IProblemDetailsWriter, NexusProblemWriter>();
         return services.AddProblemDetails();
     }

@@ -25,7 +25,7 @@ public sealed class SoftDeleteFilterTests
     public void OnlySoftDeletedEntitiesDeclareTheNamedFilterAndTheModelBuildsWithoutFilterWarnings()
     {
         using var connection = new SqliteConnection("Data Source=:memory:"); connection.Open();
-        // A separate options set builds and validates its own model, so the required-navigation warning would throw here.
+        // 獨立的 options 會自行建立並驗證模型，因此必填導覽屬性的警告在此會拋出例外。
         using var db = new NexusDbContext(new DbContextOptionsBuilder<NexusDbContext>().UseSqlite(connection)
             .ConfigureWarnings(w => w.Throw(CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning)).Options);
         var filtered = db.Model.GetEntityTypes().Where(x => x.GetDeclaredQueryFilters().Count > 0).Select(x => x.ClrType).OrderBy(x => x.Name).ToArray();
@@ -50,7 +50,7 @@ public sealed class SoftDeleteFilterTests
             Assert.Null(await db.Conversations.FirstOrDefaultAsync(x => x.Id == deleted.Id));
             var row = await db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).SingleAsync(x => x.Id == deleted.Id);
             Assert.True(row.IsDeleted);
-            // Joins filter the joined conversation too: messages of the deleted conversation drop out.
+            // join 也會對被 join 的對話套用篩選：已刪除對話的訊息會一併被排除。
             var joined = await (from m in db.Messages join c in db.Conversations on m.ConversationId equals c.Id where c.OwnerId == user.Id select c.Id).Distinct().ToListAsync();
             Assert.DoesNotContain(deleted.Id, joined);
         }
@@ -89,7 +89,7 @@ public sealed class SoftDeleteFilterTests
         Assert.Equal(HttpStatusCode.NotFound, (await owner.GetAsync($"/api/v1/artifacts/{artifact.Resource.Id}")).StatusCode);
         Assert.Empty((await owner.GetFromJsonAsync<DocumentDto[]>($"/api/v1/projects/{project}/files"))!);
 
-        // Container deletion opts out of the filter: deleted children and conversations are detached as before.
+        // 容器（父層）刪除會略過篩選：已刪除的子項與對話仍照舊被分離（detach）。
         Assert.Equal(HttpStatusCode.NoContent, (await owner.DeleteAsync($"/api/v1/projects/{project}")).StatusCode);
         using (var scope = factory.Services.CreateScope())
         {

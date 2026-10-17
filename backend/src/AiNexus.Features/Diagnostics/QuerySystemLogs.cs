@@ -3,7 +3,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Diagnostics;
 
-/// <summary>One page of stored diagnostic events matching the filter. <see cref="DiagnosticQuery"/> validates, audits and pages.</summary>
+/// <summary>符合篩選條件的一頁診斷事件；驗證、稽核與分頁都由 <see cref="DiagnosticQuery"/> 處理。</summary>
 internal sealed class QuerySystemLogs(DiagnosticQuery query)
 {
     public static void Map(RouteGroupBuilder logs) => logs

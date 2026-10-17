@@ -12,7 +12,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Repositories.Reviews;
 
-/// <summary>Runs a frozen review snapshot. Every model call re-checks access and the source, and results are checkpointed per ordinal.</summary>
+/// <summary>執行凍結的 review 快照。每次模型呼叫前都會重新檢查權限與來源，結果依序號存檢查點。</summary>
 public sealed partial class RepositoryReviewHandler(NexusDbContext db, RepositoryReviewService reviews, AccessService features, ModelTaskService model,
     ModelCatalog catalog, ModelPresentation presentation, IOptions<InferenceOptions> inference, ILogger<RepositoryReviewHandler> logger) : IBackgroundJobHandler
 {
@@ -69,7 +69,7 @@ public sealed partial class RepositoryReviewHandler(NexusDbContext db, Repositor
         }
         if (results.ContainsKey(RepositoryReviewPlan.ReportOrdinal)) return Result.Success;
 
-        // Intermediate reductions have deterministic ordinals after the source slices, so retries reuse their checkpoints too.
+        // 中間彙整的序號在來源區段之後是固定的，所以重試時也能沿用已存的檢查點。
         var evidence = slices.Select((x, i) => $"來源區段 {i + 1}：{x.Label}\n{results[i].Output}" +
             (results[i].Truncated ? "\n注意：此區段分析已達輸出上限，檢閱不完整。" : "")).ToArray();
         var batches = RepositoryReviewPlan.Batches(evidence, snapshot.InputBudget);
@@ -140,7 +140,7 @@ public sealed partial class RepositoryReviewHandler(NexusDbContext db, Repositor
         Task<Result<ModelTaskResult>> GenerateModelAsync(string source) => model.GenerateAsync(row.OwnerId, Kind, source,
             instruction, ct, presentation.PublicId(row.ModelId), expectedConfiguration: row.ConfigurationFingerprint, maxOutputTokens: maxOutputTokens);
         static long? Sum(long? first, long? second) => first is null || second is null ? null : first + second;
-        // The rejected text is user code and model output, so only the reason and size reach the log.
+        // 被拒絕的文字含有使用者程式碼與模型輸出，所以日誌只記錄原因與長度。
         bool Rendered(ModelTaskResult candidate, string stage, out string markdown)
         {
             markdown = "";

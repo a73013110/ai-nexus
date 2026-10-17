@@ -43,7 +43,7 @@ public sealed class DiagnosticStoreTests
         var old = Enumerable.Range(0, 1000).Select(_ => new DiagnosticEvent { At = DateTimeOffset.UtcNow.AddDays(-31), Level = LogLevel.Information }).ToArray();
         db.AddRange(old); var retained = new AuditEvent { Action = "fixture.retained", At = DateTimeOffset.UtcNow.AddDays(-31) }; var expired = new AuditEvent { Action = "fixture.expired", At = DateTimeOffset.UtcNow.AddDays(-366) };
         db.AddRange(retained, expired); await db.SaveChangesAsync(); var store = factory.Services.GetRequiredService<IDiagnosticStore>();
-        await store.WriteAsync([old[0]], CancellationToken.None); // Duplicate replay is safe even above the soft capacity limit.
+        await store.WriteAsync([old[0]], CancellationToken.None); // 重複寫入是安全的，即使已超過軟性容量上限。
         await Assert.ThrowsAsync<DiagnosticCapacityException>(() => store.WriteAsync([new DiagnosticEvent()], CancellationToken.None));
         await store.CleanupAsync(CancellationToken.None);
         Assert.False(await db.Set<DiagnosticEvent>().AnyAsync(x => x.LogId == old[0].LogId)); Assert.True(await db.AuditEvents.AnyAsync(x => x.Id == retained.Id));

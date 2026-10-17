@@ -84,7 +84,7 @@ public sealed class LoginAuditTests
         var success = Assert.Single(rows, x => x.Result == "success");
         Assert.Equal(me.Id, success.ResourceId); Assert.Equal(me.Account, success.Actor);
         Assert.Equal("authentication", success.Category);
-        // Routine session refreshes do not become another login event.
+        // 例行的 session 續期不應產生另一筆登入事件。
         await client.GetAsync("/api/v1/auth/session"); await client.GetAsync("/api/v1/me");
         var refreshed = (await client.GetFromJsonAsync<AuditDto[]>("/api/v1/admin/audit?action=identity.login"))!;
         Assert.Equal(2, refreshed.Length);

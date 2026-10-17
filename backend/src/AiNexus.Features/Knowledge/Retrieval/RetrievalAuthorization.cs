@@ -10,8 +10,8 @@ namespace AiNexus.Features.Knowledge.Retrieval;
 public sealed class RetrievalAuthorization(NexusDbContext db, ResourceAccess access, AccessService features)
 {
     /// <summary>
-    /// The actor may use these collections. <paramref name="fresh"/> re-reads grants already read in this request: use it for
-    /// a re-check after a remote call, so a revocation during the call still applies.
+    /// 確認呼叫者可使用這些知識庫。<paramref name="fresh"/> 會重新讀取本次請求已讀過的授權，用於遠端呼叫之後的再次檢查，
+    /// 確保呼叫期間被撤銷的權限仍會生效。
     /// </summary>
     public async Task<Result> CollectionsAsync(Guid actor, IReadOnlyList<Guid> ids, CancellationToken ct, bool fresh = false)
     {
@@ -23,8 +23,7 @@ public sealed class RetrievalAuthorization(NexusDbContext db, ResourceAccess acc
     }
 
     /// <summary>
-    /// The hits' documents are still ready in collections the actor may use. Collections in <paramref name="authorized"/>
-    /// were checked earlier in the same search and are not checked again.
+    /// 命中的文件仍為就緒，且位於呼叫者可使用的知識庫中。<paramref name="authorized"/> 內的知識庫已在同一次搜尋中檢查過，這裡不重複檢查。
     /// </summary>
     public async Task<Result> HitsAsync(Guid actor, IReadOnlyList<KnowledgeHitDto> hits, CancellationToken ct, IReadOnlyCollection<Guid>? authorized = null)
     {

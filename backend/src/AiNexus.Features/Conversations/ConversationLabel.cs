@@ -11,7 +11,7 @@ public sealed class ConversationLabel
     [Comment("業務物件的顯示名稱。")]
     public string Name { get; set; } = "";
 
-    /// <summary>At most 5 labels of 1 to 24 characters, trimmed and distinct; null when the list is invalid.</summary>
+    /// <summary>最多 5 個標籤，每個 1 到 24 字元，去除頭尾空白後彼此不可重複；清單不合法時回傳 null。</summary>
     public static string[]? Clean(IReadOnlyList<string> labels)
     {
         if (labels.Count > 5 || labels.Any(x => string.IsNullOrWhiteSpace(x) || x.Trim().Length > 24 || x.Any(char.IsControl))) return null;

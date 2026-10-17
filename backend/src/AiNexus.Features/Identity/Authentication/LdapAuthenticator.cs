@@ -8,6 +8,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Identity.Authentication;
 
+/// <summary>以 LDAP 驗證 AD 帳密：先用服務帳號查出使用者的 DN 與 SID，再以使用者自己的密碼 bind 驗證。</summary>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1001:Types that own disposable fields should be disposable", Justification = "SemaphoreSlim without AvailableWaitHandle holds nothing to release; disposing a shared gate would throw in work still releasing it during shutdown.")]
 public sealed class LdapAuthenticator(IOptions<AdAuthenticationOptions> options) : IAdAuthenticator
 {
@@ -38,10 +39,12 @@ public sealed class LdapAuthenticator(IOptions<AdAuthenticationOptions> options)
         catch (DirectoryOperationException error) { throw Unavailable("ad_search_unavailable", "AD 查詢暫時無法使用。", error); }
         if (result.Entries.Count != 1) return IdentityErrors.AdInvalidCredentials;
         var entry = result.Entries[0];
+        // userAccountControl 的 ACCOUNTDISABLE 位元（2）代表帳號已停用；直接當成帳密錯誤回覆，不透露停用狀態。
         if (entry.Attributes["userAccountControl"]?[0] is string flags && int.TryParse(flags, out var value) && (value & 2) != 0) return IdentityErrors.AdInvalidCredentials;
         ct.ThrowIfCancellationRequested();
         using var user = Connect(settings, entry.DistinguishedName, password);
         try { user.Bind(); }
+        // 錯誤碼 49 為 invalid credentials；其他 LDAP 錯誤代表服務異常，不可當成帳密錯誤，否則會誤導使用者與稽核。
         catch (LdapException ex) when (ex.ErrorCode == 49) { return IdentityErrors.AdInvalidCredentials; }
         catch (LdapException error) { throw Unavailable("ad_unavailable", "AD 服務暫時無法使用，請稍後重試。", error); }
         ct.ThrowIfCancellationRequested();
@@ -79,6 +82,7 @@ public sealed class LdapAuthenticator(IOptions<AdAuthenticationOptions> options)
         catch { connection.Dispose(); throw Unavailable("ad_tls_unavailable", "無法建立 AD 加密連線，請確認 StartTLS／LDAPS 與憑證設定。"); }
     }
 
+    /// <summary>依 RFC 4515 跳脫 LDAP 篩選器中的特殊字元，避免帳號名稱被注入成額外的查詢條件。</summary>
     public static string EscapeFilter(string value)
     {
         var escaped = new StringBuilder();

@@ -19,7 +19,7 @@ internal sealed class ConnectRepositoryRequestValidator : RequestValidator<Conne
     }
 }
 
-/// <summary>Verifies a personal access token against Gitea, then stores it encrypted for this user and host.</summary>
+/// <summary>向 Gitea 驗證個人存取 token，然後以加密形式存給此使用者與主機。</summary>
 internal sealed class ConnectRepository(NexusDbContext db, RepositoryService gitea, IGiteaClient client, RepositoryWriteLock writes, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
@@ -33,6 +33,7 @@ internal sealed class ConnectRepository(NexusDbContext db, RepositoryService git
         using var identity = await client.GetAsync(token, "api/v1/user", ct);
         var login = GiteaJson.Text(identity.RootElement, "login", 100);
         if (login.Length == 0) return RepositoriesErrors.IdentityInvalid;
+        // 網路驗證在鎖外進行，只有寫入資料列時才取鎖，避免佔住鎖等待 Gitea 回應。
         await writes.Gate.WaitAsync(ct);
         try
         {

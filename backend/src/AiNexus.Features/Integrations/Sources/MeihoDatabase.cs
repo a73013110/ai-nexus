@@ -2,7 +2,7 @@ using AiNexus.Platform.Data.Sql;
 
 namespace AiNexus.Features.Integrations.Sources;
 
-/// <summary>The read-only Meiho (school administration) source database, settings <c>Databases:Meiho</c>.</summary>
+/// <summary>校務系統（Meiho）的唯讀來源資料庫，連線設定位於 <c>Databases:Meiho</c>。</summary>
 public sealed class MeihoDatabase : ISqlDatabaseDefinition
 {
     private MeihoDatabase() { }

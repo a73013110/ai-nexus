@@ -6,8 +6,8 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Attachments.Storage;
 
 /// <summary>
-/// Runtime monitoring of stored files: count and bytes of every owner's ready files, and free space on the storage
-/// volume. Degraded below <see cref="LowFreePercent"/>, failing below <see cref="CriticalFreePercent"/> percent free.
+/// 執行期監控儲存的檔案：每位擁有者就緒檔案的數量與位元組，以及儲存磁碟的可用空間。
+/// 可用比例低於 <see cref="LowFreePercent"/> 為降級，低於 <see cref="CriticalFreePercent"/> 為失敗。
 /// </summary>
 internal sealed class StorageMonitoring(NexusDbContext db, IOptions<AttachmentOptions> options) : IMonitoringSource
 {
@@ -38,7 +38,7 @@ internal sealed class StorageMonitoring(NexusDbContext db, IOptions<AttachmentOp
         return new(status, summary, facts);
     }
 
-    /// <summary>Free and total bytes of the volume holding <paramref name="path"/>; unknown for paths DriveInfo cannot read (such as UNC shares).</summary>
+    /// <summary>所在磁碟的可用與總位元組；DriveInfo 讀不到的路徑（例如 UNC 網路共用）回傳 null。</summary>
     private static (long? Free, long? Total) Volume(string path)
     {
         try

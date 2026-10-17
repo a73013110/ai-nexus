@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Collaboration;
 
 /// <summary>
-/// People and enabled groups a signed-in user can name when sharing a resource. The <see cref="ICurrentUser"/>
-/// parameter makes the request filter resolve (and so admit) the caller before anything is read.
+/// 登入者分享資源時可指定的人員與已啟用群組。端點參數中的 <see cref="ICurrentUser"/> 不可省略：
+/// 請求篩選靠它先解析並放行呼叫者，之後才會讀取資料。
 /// </summary>
 internal sealed class SearchDirectory(NexusDbContext db)
 {
@@ -19,7 +19,7 @@ internal sealed class SearchDirectory(NexusDbContext db)
         .MapGet("/directory/groups", async (ICurrentUser user, SearchDirectory handler, CancellationToken ct) => TypedResults.Ok(await handler.GroupsAsync(ct)))
         .WithName("ListDirectoryGroups");
 
-    /// <summary>Up to 20 accounts matching 2 to 120 characters of account or display name; anything else finds no one.</summary>
+    /// <summary>最多 20 筆。搜尋字需為 2 到 120 字，帳號或顯示名稱包含即符合；長度不符直接回傳空清單。</summary>
     public async Task<IReadOnlyList<DirectoryUserDto>> UsersAsync(string search, CancellationToken ct)
     {
         var term = search.Trim();

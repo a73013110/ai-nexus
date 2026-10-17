@@ -17,32 +17,66 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Host.Commands;
 
+/// <summary>
+/// 跨子系統連線整合實測器。
+/// 使用合成資料實測 SQL 讀寫交易、Active Directory 服務帳號綁定、模型即時串流、附件抽取辨識與檢索向量模型。
+/// 執行會真實調用配置的模型並消耗少許測試配額。
+/// </summary>
 public static class ConnectionVerifier
 {
     private static readonly JsonSerializerOptions Indented = new() { WriteIndented = true };
 
+    /// <summary>
+    /// 執行完整連線檢查並將結果寫入報告檔案。
+    /// </summary>
     public static async Task<bool> VerifyAsync(IServiceProvider services, string reportPath, CancellationToken ct)
     {
         var results = new List<object>();
         var passed = true;
+
         async Task Check(string name, Func<Task<string>> action)
         {
-            try { var detail = await action(); results.Add(new { name, passed = true, detail }); Console.WriteLine($"{name}: PASS · {detail}"); }
-            catch (Exception ex) { passed = false; var detail = ex is ExternalServiceException external ? external.Message : name == "SQL" ? DatabaseDiagnosis.Describe(ex, NexusDbContext.DatabaseName) : $"連線未通過（{ex.GetType().Name}）。"; results.Add(new { name, passed = false, detail }); Console.WriteLine($"{name}: FAIL · {detail}"); }
+            try
+            {
+                var detail = await action();
+                results.Add(new { name, passed = true, detail });
+                Console.WriteLine($"{name}: PASS · {detail}");
+            }
+            catch (Exception ex)
+            {
+                passed = false;
+                var detail = ex is ExternalServiceException external
+                    ? external.Message
+                    : name == "SQL"
+                        ? DatabaseDiagnosis.Describe(ex, NexusDbContext.DatabaseName)
+                        : $"連線未通過（{ex.GetType().Name}）。";
+                results.Add(new { name, passed = false, detail });
+                Console.WriteLine($"{name}: FAIL · {detail}");
+            }
         }
+
         await Check("SQL", async () =>
         {
             await services.GetRequiredService<ISqlDatabase<NexusDbContext>>().QuerySingleAsync<int>("SELECT 1", commandTimeout: 5, cancellationToken: ct);
             await services.GetRequiredService<DatabaseSchema>().RequireCurrentAsync(ct);
             await VerifyPersistenceAsync(services, ct);
             var db = services.GetRequiredService<NexusDbContext>();
+
             if (!await db.Set<RoleGroupRole>().AnyAsync(x => x.RoleId == BuiltInAccess.MemberRole && x.GroupId == BuiltInAccess.WorkspaceGroup, ct)
                 || !await db.Set<RoleGroupFeature>().AnyAsync(x => x.GroupId == BuiltInAccess.WorkspaceGroup && x.FeatureId == BuiltInAccess.ChatFeature, ct))
+            {
                 throw new ExternalServiceException(Error.Unavailable("default_access_missing"), "預設角色、群組與 chat 功能關聯尚未完成。");
+            }
+
             var members = await db.Set<UserRole>().CountAsync(x => x.RoleId == BuiltInAccess.MemberRole, ct);
             return $"SQL migrations、EF Core／Dapper CRUD 與清理通過；預設 chat 授權完整，member 對應 {members} 位使用者";
         });
-        await Check("AD", async () => { await services.GetRequiredService<IAdAuthenticator>().VerifyServiceAsync(ct); return "服務帳號加密 LDAP bind 成功；個人登入仍需實際帳號驗收"; });
+
+        await Check("AD", async () =>
+        {
+            await services.GetRequiredService<IAdAuthenticator>().VerifyServiceAsync(ct);
+            return "服務帳號加密 LDAP bind 成功；個人登入仍需實際帳號驗收";
+        });
         await Check("Inference", async () =>
         {
             var router = services.GetRequiredService<InferenceRouter>();
@@ -51,15 +85,34 @@ public static class ConnectionVerifier
                 ?? throw new ExternalServiceException(Error.Unavailable("model_not_configured"), "請設定預設模型。");
             var provider = router.For(profile.Provider);
             var models = await provider.InstalledModelsAsync(ct);
-            if (!models.Contains(profile.NativeId)) throw new ExternalServiceException(Error.Unavailable("model_unavailable"), "目前的模型服務無法使用系統預設模型。");
+            if (!models.Contains(profile.NativeId))
+            {
+                throw new ExternalServiceException(Error.Unavailable("model_unavailable"), "目前的模型服務無法使用系統預設模型。");
+            }
+
             var efforts = profile.ReasoningEfforts.Count > 0 ? profile.ReasoningEfforts : ["auto"];
             var counts = new List<string>();
             foreach (var effort in efforts)
             {
-                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(60));
-                var text = new StringBuilder(); var done = false;
-                await foreach (var chunk in provider.StreamAsync(profile.NativeId, [new("user", "2+2 等於多少？請只回覆一個數字，不要解釋。")], new(profile.ContextTokens, Math.Min(profile.MaxOutputTokens, 512), .2, "簡短回答。", effort, profile.ReasoningControl), timeout.Token)) { text.Append(chunk.Text); done |= chunk.Done; }
-                if (!done || text.Length == 0) throw new InvalidDataException("Empty or incomplete model response.");
+                using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                timeout.CancelAfter(TimeSpan.FromSeconds(60));
+                var text = new StringBuilder();
+                var done = false;
+
+                await foreach (var chunk in provider.StreamAsync(
+                    profile.NativeId,
+                    [new("user", "2+2 等於多少？請只回覆一個數字，不要解釋。")],
+                    new(profile.ContextTokens, Math.Min(profile.MaxOutputTokens, 512), .2, "簡短回答。", effort, profile.ReasoningControl),
+                    timeout.Token))
+                {
+                    text.Append(chunk.Text);
+                    done |= chunk.Done;
+                }
+
+                if (!done || text.Length == 0)
+                {
+                    throw new InvalidDataException("模型未傳回內容或傳輸未完成。");
+                }
                 counts.Add($"{effort} 收到 {text.Length} 字元");
             }
             return $"{profile.Provider} 系統預設模型真實串流完成：{string.Join("；", counts)}";
@@ -70,7 +123,7 @@ public static class ConnectionVerifier
             var profiles = await services.GetRequiredService<ModelCatalog>().ProfilesAsync(ct);
             var profile = profiles.FirstOrDefault(x => x.Id == (options.DefaultModelId ?? options.Models.FirstOrDefault()?.Id))
                 ?? throw new ExternalServiceException(Error.Unavailable("model_not_configured"), "請設定預設模型。");
-            // Synthetic content only: no personal files, prompt history or identity credentials.
+            // 僅使用合成內容測試：不包含任何個人檔案、歷史對話或身分憑證。
             var document = services.GetRequiredService<DocumentExtractor>().Extract("connection-check.txt", Encoding.UTF8.GetBytes("Project verification code: NEXUSCHECK42"), ct).Value.Text;
             var images = profile.SupportsImages ? new[] { new InferenceImage(Guid.NewGuid(), "image/png", Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAIAAABMXPacAAABWklEQVR4nO3OQQ0AMBAEofVv+iqDxzRBALvtg/wgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vzg2h4gaMOyHY2XLAAAAABJRU5ErkJggg=="), 4096) } : [];
             var prompt = "Read the attached document and reply with its project verification code." + (images.Length > 0 ? " Also identify the dominant color in the attached image using one English color word." : "") + "\n<document>\n" + document + "\n</document>";
@@ -112,12 +165,12 @@ public static class ConnectionVerifier
         {
             if (probe.Id != 0)
             {
-                // This CLI-only probe has no user identity and touches only its own random resource.
+                // 此僅供 CLI 測試使用的探針不具備使用者身分，且僅操作自身產生的隨機資源。
                 await sql.ExecuteAsync("DELETE FROM [audit].[AuditEvents] WHERE [Id] = @Id AND [ResourceId] = @ResourceId AND [Action] = @Action", new { probe.Id, probe.ResourceId, probe.Action }, commandTimeout: 5, cancellationToken: CancellationToken.None);
                 removed = await sql.QuerySingleAsync<int>("SELECT COUNT(*) FROM [audit].[AuditEvents] WHERE [Id] = @Id AND [ResourceId] = @ResourceId", new { probe.Id, probe.ResourceId }, commandTimeout: 5, cancellationToken: CancellationToken.None) == 0;
             }
         }
-        // Reported only after a successful check; a failed check keeps its own exception.
-        if (!removed) throw new InvalidDataException("Connection-check cleanup did not complete.");
+        // 探針紀錄清不掉時必須視為失敗，否則測試資料會殘留在稽核表中。注意：finally 中的清理若拋出例外，會取代先前的測試失敗例外。
+        if (!removed) throw new InvalidDataException("連線測試之暫時性測試紀錄清理未順利完成。");
     }
 }

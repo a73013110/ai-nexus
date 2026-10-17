@@ -22,8 +22,8 @@ internal sealed class ClientIssueRequestValidator : RequestValidator<ClientIssue
 }
 
 /// <summary>
-/// An untrusted browser report of an unhandled exception or rejection, logged once per user and fingerprint a minute.
-/// Only the kind and a hash reach the log; the issue code is accepted when the diagnostic queue admits the event.
+/// 瀏覽器回報的未處理例外或 rejection。來源不可信，因此每位使用者與指紋每分鐘只記錄一次，日誌只寫種類與雜湊。
+/// Accepted 代表診斷佇列已接受這筆事件，不代表已寫入資料庫。
 /// </summary>
 internal sealed partial class ReportClientIssue(ClientIssueDeduplication dedup, ILogger<ClientIssueDeduplication> logger)
 {
@@ -38,7 +38,7 @@ internal sealed partial class ReportClientIssue(ClientIssueDeduplication dedup, 
         var receipt = new DiagnosticDelivery();
         using var scope = logger.BeginScope(new Dictionary<string, object?> { ["NexusDelivery"] = receipt, ["IssueCode"] = code, ["UserId"] = user, ["UntrustedClient"] = true, ["ClientKind"] = request.Kind, ["ClientFingerprint"] = request.Fingerprint });
         LogClientIssue(logger, request.Kind, request.Fingerprint);
-        // Queue admission is not a synchronous durable-storage acknowledgement.
+        // 佇列接受不等於同步落盤；這裡回傳的 receipt 只反映進入佇列與否。
         return receipt.Accepted;
     }
 

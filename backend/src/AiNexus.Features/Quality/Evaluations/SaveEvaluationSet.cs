@@ -10,12 +10,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Quality.Evaluations;
 
-/// <summary>An edit names the <c>ExpectedVersion</c> it was based on; a newer saved version is a conflict.</summary>
+/// <summary>編輯時需帶上所依據的 <c>ExpectedVersion</c>；資料庫已有更新的版本時即為衝突。</summary>
 public sealed record EvaluationSetRequest(string Name, string Description, IReadOnlyList<EvaluationCase> Cases, int ExpectedVersion = 1);
 
 /// <summary>
-/// Description and cases. An invalid name is reported first, with its own code, by the handler, so these rules only
-/// apply once the name is valid.
+/// 描述與案例的規則。名稱由 handler 先以專屬代碼回報，因此這些規則只在名稱合法後才套用。
 /// </summary>
 internal sealed class EvaluationSetRequestValidator : RequestValidator<EvaluationSetRequest>
 {
@@ -37,11 +36,11 @@ internal sealed class EvaluationSetRequestValidator : RequestValidator<Evaluatio
         });
     }
 
-    // At most 20 distinct (case-insensitive) terms of 1 to 80 characters.
+    // 詞彙最多 20 個，去除空白後不分大小寫不得重複，每個 1 至 80 字元。
     private static bool TermsValid(IReadOnlyList<string>? terms) => terms is null || terms.Count <= 20 && terms.All(x => x.Trim().Length is > 0 and <= 80) && terms.Select(x => x.Trim()).Distinct(StringComparer.OrdinalIgnoreCase).Count() == terms.Count;
 }
 
-/// <summary>Creates a personal set (at most 100), or saves a new version of one the user may edit.</summary>
+/// <summary>建立個人題組（每人上限 100 個），或為可編輯的既有題組儲存新版本。</summary>
 internal sealed class SaveEvaluationSet(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, TimeProvider clock)
 {
     public static RouteHandlerBuilder MapCreate(RouteGroupBuilder routes) => routes
@@ -55,7 +54,7 @@ internal sealed class SaveEvaluationSet(NexusDbContext db, ResourceAccess access
     public async Task<Result<EvaluationSetDto>> HandleAsync(Guid actor, Guid? id, EvaluationSetRequest request, CancellationToken ct)
     {
         if (ResourceAccess.Name(request.Name) is not { IsSuccess: true } name) return QualityErrors.InvalidName;
-        // An update is per set; a create checks the owner's set limit.
+        // 更新只鎖該題組；建立則改鎖擁有者，讓上限計數在並行建立時仍然準確。
         using (await (id is Guid key ? writes.AcquireAsync(key, ct) : writes.AcquireAsync("evaluation-sets", actor, ct)))
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct); WorkspaceResource resource;

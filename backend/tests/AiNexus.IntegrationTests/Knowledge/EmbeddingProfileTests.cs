@@ -61,7 +61,7 @@ public sealed class EmbeddingProfileTests
         var job = (await response.Content.ReadFromJsonAsync<JobDto>())!;
         using var scope = factory.Services.CreateScope(); var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();
         Assert.Contains(await db.AuditEvents.ToListAsync(), x => x.Action == "admin.embedding_rebuild" && x.Result == "saved" && x.OwnerId == bobId);
-        // The reindex runs as its owner: once platform operations is revoked, the queued rebuild is refused.
+        // 重新索引以擁有者身分執行：撤銷平台營運權限後，排入佇列的重建會被拒絕。
         db.Remove(await db.Set<UserRole>().SingleAsync(x => x.UserId == bobId && x.RoleId == "operator")); await db.SaveChangesAsync();
         await Drain(factory);
         var failed = await db.Set<BackgroundJob>().AsNoTracking().SingleAsync(x => x.Id == job.Id);
@@ -104,7 +104,7 @@ public sealed class EmbeddingProfileTests
         indexing.ChunkTargetTokens = 80; indexing.ChunkMaxTokens = 100; indexing.ChunkMinTokens = 20; indexing.ChunkOverlapRatio = 0;
         var target = (await Profiles(client)).Single(x => x.Status == "building");
         (await client.PostAsync($"/api/v1/admin/knowledge/profiles/{target.Id}/rebuild", null)).EnsureSuccessStatusCode(); await Drain(factory);
-        // Chunks are shared, so the rebuild re-chunks with current settings and re-embeds the active profile on that layout.
+        // Chunk 是共用的，因此重建會以目前設定重新切塊，並在該切塊配置上為啟用中的 profile 重新產生向量。
         var all = await Profiles(client);
         Assert.All(all, x => Assert.Equal((3, true), (x.Coverage.CompletedChunks, x.Coverage.Complete)));
         Assert.Equal(original.Id, all.Single(x => x.Status == "active").Id);
@@ -125,7 +125,7 @@ public sealed class EmbeddingProfileTests
         await Drain(factory); Assert.Equal(1, (await Profiles(client)).Single(x => x.Id == target.Id).Coverage.CompletedChunks);
         factory.Embeddings.FailOnCall = null; (await client.PostAsync($"/api/v1/jobs/{job.Id}/retry", null)).EnsureSuccessStatusCode(); await Drain(factory);
         Assert.True((await Profiles(client)).Single(x => x.Id == target.Id).Coverage.Complete);
-        Assert.Equal(before + 4, factory.Embeddings.Calls); // three distinct chunks plus one failed request
+        Assert.Equal(before + 4, factory.Embeddings.Calls); // 三個不同的 chunk 加上一次失敗的請求。
     }
 
     [Fact]

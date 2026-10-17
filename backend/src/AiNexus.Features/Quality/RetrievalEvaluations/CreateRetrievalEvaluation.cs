@@ -17,8 +17,7 @@ namespace AiNexus.Features.Quality.RetrievalEvaluations;
 public sealed record RetrievalEvaluationRequest(string Title, IReadOnlyList<Guid> CollectionIds, IReadOnlyList<RetrievalEvaluationCase> Cases);
 
 /// <summary>
-/// The request's outline. The per-case annotations are checked by the handler because they report the corpus code
-/// (<c>retrieval_corpus_invalid</c>) that the document and page checks share.
+/// 檢查請求的外形（數量與長度）。逐案例的標註改由 handler 檢查，因為它回報的 <c>retrieval_corpus_invalid</c> 與文件、頁碼檢查共用同一代碼。
 /// </summary>
 internal sealed class RetrievalEvaluationRequestValidator : RequestValidator<RetrievalEvaluationRequest>
 {
@@ -32,7 +31,7 @@ internal sealed class RetrievalEvaluationRequestValidator : RequestValidator<Ret
     }
 }
 
-/// <summary>Freezes a retrieval acceptance set with a fingerprint of the index and settings, and queues it.</summary>
+/// <summary>凍結檢索驗收題組並附上索引與設定的指紋，然後排入背景工作。</summary>
 internal sealed class CreateRetrievalEvaluation(NexusDbContext db, RetrievalEvaluationService evaluations, EmbeddingProfiles profiles, IOptions<KnowledgeOptions> options,
     ResourceWriteLock writes, JobService jobs, TimeProvider clock)
 {
@@ -50,7 +49,7 @@ internal sealed class CreateRetrievalEvaluation(NexusDbContext db, RetrievalEval
         var pages = await db.Set<DocumentPage>().AsNoTracking().Where(x => ids.Contains(x.DocumentId)).Select(x => new { x.DocumentId, x.PageNumber }).ToListAsync(ct);
         if (request.Cases.SelectMany(x => x.Relevant).Any(x => x.Pages.Any(p => !pages.Any(page => page.DocumentId == x.DocumentId && page.PageNumber == p)))) return QualityErrors.PagesInvalid;
         await profiles.ActiveAsync(ct);
-        // The owner's one active retrieval evaluation and run limit.
+        // 擁有者同時只能有一個進行中的檢索評測，並有總執行次數上限。
         using (await writes.AcquireAsync("retrieval-evaluations", actor, ct))
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
@@ -68,7 +67,7 @@ internal sealed class CreateRetrievalEvaluation(NexusDbContext db, RetrievalEval
         }
     }
 
-    // Unique case ids and bounded queries; answerable cases name graded documents with positive, distinct pages; no-answer cases name none.
+    // 案例 id 唯一、查詢長度有界；有答案的題目須指向分級為正、頁碼為正且不重複的相關文件；無答案的題目則不得指定任何文件。
     private static bool AnnotationsValid(IReadOnlyList<RetrievalEvaluationCase> cases)
         => !cases.Any(x => x is null || string.IsNullOrWhiteSpace(x.Id) || x.Id.Length > 80 || string.IsNullOrWhiteSpace(x.Query) || x.Query.Length > 2000 || x.Relevant is null
                || x.Relevant.Count > 100 || (x.NoAnswer ? x.Relevant.Count != 0 : x.Relevant.Count == 0)

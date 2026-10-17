@@ -11,8 +11,7 @@ public sealed record ConversationBackup(int Version, string Title, string System
 public sealed record BackupMessage(Guid Id, Guid? ParentId, string Role, string Content, string Status, DateTimeOffset CreatedAt, IReadOnlyList<string> AttachmentNames);
 
 /// <summary>
-/// Version, title, instruction and overall size. The handler then reports invalid labels with their own code, and only
-/// after that checks each message and the message tree, again as <c>invalid_backup</c>.
+/// 只驗證版本、標題、指令與整體大小。接著由 handler 以自己的代碼回報無效標籤，之後才以 <c>invalid_backup</c> 檢查每則訊息與訊息樹。
 /// </summary>
 internal sealed class ConversationBackupValidator : RequestValidator<ConversationBackup>
 {
@@ -32,8 +31,8 @@ internal sealed class ConversationBackupValidator : RequestValidator<Conversatio
 }
 
 /// <summary>
-/// Restores a backup as a new conversation of the user's, with new message ids. Every message must belong to a complete
-/// user/assistant chain that starts with a user message and has no cycles, and the active leaf must be an answer.
+/// 把備份還原為使用者的新對話，訊息會重新指派 Id。每則訊息都必須屬於完整的 user/assistant 鏈（從 user 開始且無循環），
+/// 作用中葉節點必須是回答。
 /// </summary>
 internal sealed class ImportConversation(NexusDbContext db, TimeProvider clock)
 {

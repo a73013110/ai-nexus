@@ -10,7 +10,7 @@ using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Identity.Authentication;
 
-/// <summary>Windows integrated sign-in: Negotiate has already authenticated the caller; this resolves and audits the user.</summary>
+/// <summary>Windows 整合驗證登入：呼叫者已由 Negotiate 驗證完成，這裡只負責解析使用者並寫入稽核。</summary>
 internal sealed class WindowsLogin(IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, CurrentUser current, AuthenticationAudit audit, Issues issues)
 {
     public static void Map(RouteGroupBuilder auth) => auth

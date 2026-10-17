@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Knowledge.Documents;
 
 /// <summary>
-/// Replaces the text of a plain-text source the user may edit and reindexes it. The edit names the version it was based
-/// on; a newer saved version, or a source still being processed, is a conflict.
+/// 取代使用者可編輯的純文字來源內容並重新索引。編輯需附上所依據的版本號；若已有更新的儲存版本，
+/// 或來源仍在處理中，即為衝突。
 /// </summary>
 internal sealed class UpdateTextDocument(NexusDbContext db, DocumentAccess documents, AttachmentService attachments, AttachmentWriteLock writes, AttachmentQuota quota, JobService jobs, TimeProvider clock)
 {

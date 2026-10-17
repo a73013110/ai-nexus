@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Billing.Prices;
 
-// Prices are append-only versions. A charge copies the applicable tariff before dispatch.
+// 價格只新增、不修改。呼叫在派送前複製當時適用的價格，之後的價格變動不影響已發出的呼叫。
 [Comment("依供應商、模型、幣別及成本類型保存的不可變價格版本。")]
 public sealed class ModelPrice
 {

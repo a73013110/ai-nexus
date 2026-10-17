@@ -3,6 +3,7 @@ using AiNexus.Features.Persistence;
 
 namespace AiNexus.Features.Identity.Users;
 
+/// <summary>已啟用且未刪除的使用者 id 查詢，供其他模組透過 <see cref="IActiveUsers"/> 取得可用使用者集合。</summary>
 internal sealed class ActiveUsers(NexusDbContext db) : IActiveUsers
 {
     public IQueryable<Guid> Ids => db.Users.Where(x => x.Enabled && x.DeletedAt == null).Select(x => x.Id);

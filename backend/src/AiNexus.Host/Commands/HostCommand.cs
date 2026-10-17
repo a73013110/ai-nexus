@@ -7,9 +7,10 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.Host.Commands;
 
 /// <summary>
-/// Command line of the host. Without a command it serves HTTP; a command (<c>db init</c>, <c>db script</c>, <c>db diff</c>, <c>verify …</c>)
-/// runs once against the fully built host, sets the exit code and exits. Parsed before the web host is created, so an
-/// unknown command or <c>--help</c> never starts the site.
+/// 主機命令列指令處理器。
+/// 在不帶指令時啟動 HTTP 伺服器；若帶有指令（<c>db init</c>、<c>db script</c>、<c>db diff</c>、<c>verify …</c>）
+/// 則針對完整構建的主機執行一次該作業、設定處理程序結束碼後立即退出。
+/// 在 Web 主機建立之前先行剖析，因此未知的指令或 <c>--help</c> 絕不會意外啟動 Web 網站。
 /// </summary>
 public sealed class HostCommand
 {
@@ -30,7 +31,10 @@ public sealed class HostCommand
         {
             var snapshot = await services.GetRequiredService<DatabaseInitializer>().InitializeAsync(CancellationToken.None);
             Console.WriteLine("AiNexus 資料庫與 migrations 初始化完成。");
-            if (!snapshot) Console.WriteLine("注意：既有資料庫尚未開啟 READ_COMMITTED_SNAPSHOT，請 DBA 依 docs/architecture/database.md 在維護時段開啟。");
+            if (!snapshot)
+            {
+                Console.WriteLine("注意：既有資料庫尚未開啟 READ_COMMITTED_SNAPSHOT，請 DBA 依 docs/architecture/database.md 在維護時段開啟。");
+            }
         })),
         new("db script", "不連線資料庫，產生發布用 SQL：依物件拆成 schema／data 編號檔與 manifest.md",
             [
@@ -58,7 +62,9 @@ public sealed class HostCommand
             services.GetRequiredService<SqlVectorCapabilities>().VerifyAsync(command.Output ?? "sql-capabilities.json", CancellationToken.None))),
     ];
 
-    /// <summary>Option names some command takes; given to another command they would silently become configuration keys.</summary>
+    /// <summary>
+    /// 各指令所能接受的選項名稱清單；若給予不支援該選項的指令，將會被誤當作組態覆寫鍵處理，故需集中列舉驗證。
+    /// </summary>
     private static readonly string[] CommandOptions = [.. Definitions.SelectMany(x => x.Options).Select(x => x.Name).Distinct()];
 
     private readonly Dictionary<string, string> options;
@@ -72,20 +78,20 @@ public sealed class HostCommand
         Error = error;
     }
 
-    /// <summary>The command, or <see langword="null"/> to serve HTTP.</summary>
+    /// <summary>指令名稱；若為 <see langword="null"/> 則代表啟動 HTTP 伺服器。</summary>
     public string? Name { get; }
 
-    /// <summary>Arguments left for host configuration (<c>--LocalConfigPath</c>, <c>--urls</c>, …).</summary>
+    /// <summary>留給 Web 主機組態設定的引數（例如 <c>--LocalConfigPath</c>、<c>--urls</c> 等）。</summary>
     public string[] HostArguments { get; }
 
-    /// <summary>Report file of a <c>verify</c> command, or the output directory of <c>db script</c> and <c>db diff</c> (<c>--output</c>).</summary>
+    /// <summary><c>verify</c> 指令的報告輸出檔，或 <c>db script</c> 與 <c>db diff</c> 的輸出目錄（由 <c>--output</c> 指定）。</summary>
     public string? Output => Option("--output");
 
     public bool Help { get; }
 
     public string? Error { get; }
 
-    /// <summary>Value of a command option such as <c>--from</c>, or <see langword="null"/> when it was not given.</summary>
+    /// <summary>取得指令特定選項之值（例如 <c>--from</c>）；未提供時傳回 <see langword="null"/>。</summary>
     public string? Option(string name) => options.GetValueOrDefault(name);
 
     public static string Usage { get; } = $"""
@@ -103,8 +109,8 @@ public sealed class HostCommand
     {
         if (args.Any(x => x is "--help" or "-h" or "-?" or "/?")) return new(null, [], null, help: true, error: null);
 
-        // Same tokenizing as the command-line configuration provider: "--key value" pairs, "--key=value" singles; any other
-        // word belongs to the command, so "--contentRoot app db init" is never mistaken for serving.
+        // 與命令列組態提供者相同的斷詞邏輯："--key value" 配對、"--key=value" 單一詞；其餘詞彙均視為指令名稱，
+        // 故 "--contentRoot app db init" 絕不會被誤判為直接啟動站台。
         var words = new List<string>();
         var options = new List<string>();
         for (var i = 0; i < args.Length; i++)
@@ -145,7 +151,7 @@ public sealed class HostCommand
         return new(name, [.. options], values, help: false, error: null);
     }
 
-    /// <summary>Runs the command and disposes the host; returns the process exit code.</summary>
+    /// <summary>執行特定指令並於完成後釋放 Web 主機資源；傳回處理程序結束碼（0 成功、1 失敗）。</summary>
     public async Task<int> RunAsync(WebApplication app)
     {
         var definition = Definitions.Single(x => x.Name == Name);
@@ -158,7 +164,7 @@ public sealed class HostCommand
     {
         try
         {
-            // The design-time context: SQL Server's generator without credentials, so no connection is ever opened.
+            // 設計時期 DbContext：使用 SQL Server 產生器且不夾帶連線認證，故絕不會對外開啟真實資料庫連線。
             var factory = new DesignTimeDbContextFactory();
             var script = new ReleaseScriptGenerator(() => factory.CreateDbContext([])).Generate(from, to);
             script.WriteTo(output);
@@ -174,7 +180,7 @@ public sealed class HostCommand
 
     private static async Task<bool> WriteSchemaDiffAsync(WebApplication app, HostCommand command)
     {
-        // Ctrl+C cancels instead of killing the process, so the temporary database is still dropped.
+        // 攔截 Ctrl+C 取消訊號而非強制中斷處理程序，確保暫存資料庫能正常執行 Drop 刪除清理。
         using var cancel = new CancellationTokenSource();
         void Stop(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; cancel.Cancel(); }
         Console.CancelKeyPress += Stop;

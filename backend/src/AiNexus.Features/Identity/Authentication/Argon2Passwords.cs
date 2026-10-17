@@ -5,24 +5,24 @@ using Konscious.Security.Cryptography;
 
 namespace AiNexus.Features.Identity.Authentication;
 
-/// <summary>Argon2id work for new hashes. Production always uses <see cref="Recommended"/>; only tests register a cheaper cost.</summary>
+/// <summary>新雜湊使用的 Argon2id 工作參數。正式環境一律用 <see cref="Recommended"/>，只有測試才註冊較低的成本。</summary>
 public sealed record Argon2Cost(int MemoryKiB, int Iterations)
 {
     public static readonly Argon2Cost Recommended = new(65536, 3);
 }
 
-/// <summary>Versioned PHC hashes; bounded memory/work and constant-time verification.</summary>
+/// <summary>PHC 格式的密碼雜湊（內含版本與參數）。記憶體與工作量有上下限，比對採固定時間以避免時序攻擊。</summary>
 public sealed class Argon2Passwords(Argon2Cost cost) : IDisposable
 {
-    // Stored hashes below the OWASP minimum (19 MiB, 2 passes) are rejected unless the configured cost is itself lower.
+    // 低於 OWASP 下限（19 MiB、2 次）的既有雜湊會被拒絕；但若目前設定的成本本身就低於下限，則以設定值為準，否則自己產生的雜湊也驗不過。
     private readonly int minimumMemoryKiB = Math.Min(19456, cost.MemoryKiB);
     private readonly int minimumIterations = Math.Min(2, cost.Iterations);
     private readonly SemaphoreSlim gate = new(2, 2);
 
-    /// <summary>Invalid accounts still perform the same work without allocating a hash per request.</summary>
+    /// <summary>帳號不存在時仍以同樣的工作量比對這個假雜湊，避免從回應時間推測帳號是否存在。只建一次，不逐次配置。</summary>
     public string DummyHash { get; } = $"$argon2id$v=19$m={cost.MemoryKiB},t={cost.Iterations},p=1${Encode(new byte[16])}${Encode(new byte[32])}";
 
-    /// <summary>The local password policy (<c>invalid_password</c> when refused); <see cref="HashAsync"/> requires it.</summary>
+    /// <summary>本地密碼政策；不符時由呼叫端回傳 <c>invalid_password</c>。<see cref="HashAsync"/> 會要求先通過此檢查。</summary>
     public static bool IsAcceptable(string password) => password.Length is >= 12 and <= 128 && !password.All(char.IsWhiteSpace);
 
     public async Task<string> HashAsync(string password, CancellationToken ct)
@@ -65,7 +65,7 @@ public sealed class Argon2Passwords(Argon2Cost cost) : IDisposable
         try
         {
             using var algorithm = new Argon2id(bytes) { Salt = salt, MemorySize = memory, Iterations = iterations, DegreeOfParallelism = parallelism };
-            // The library's work is not cancellable; keep its slot until it has finished.
+            // Argon2 套件的運算無法取消，所以必須等它跑完才釋放 gate，否則並行上限會被破壞。
             return await algorithm.GetBytesAsync(32);
         }
         finally { CryptographicOperations.ZeroMemory(bytes); gate.Release(); }

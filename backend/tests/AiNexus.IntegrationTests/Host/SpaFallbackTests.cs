@@ -25,7 +25,7 @@ public sealed class SpaFallbackTests : IDisposable
         Assert.Contains("<title>shell</title>", await response.Content.ReadAsStringAsync(), StringComparison.Ordinal);
     }
 
-    // A stale chunk must fail as a missing file; answering it with the shell would hide the failure behind a MIME error.
+    // 過期的 chunk 必須以「找不到檔案」失敗；若改回傳 SPA 外殼，錯誤會被 MIME 類型錯誤掩蓋。
     [Fact]
     public async Task MissingStaticFilesStayNotFound()
     {

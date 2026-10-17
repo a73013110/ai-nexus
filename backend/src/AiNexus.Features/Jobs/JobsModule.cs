@@ -6,9 +6,8 @@ using AiNexus.Platform.Monitoring;
 namespace AiNexus.Features.Jobs;
 
 /// <summary>
-/// Durable background jobs: other modules enqueue work with <see cref="JobService"/> and implement
-/// <see cref="IBackgroundJobHandler"/>; the worker leases, runs, fences checkpoints and records the outcome. Each use case
-/// has its own file.
+/// 持久化背景工作：其他模組以 <see cref="JobService"/> 排入工作，並實作 <see cref="IBackgroundJobHandler"/>；
+/// worker 負責租約、執行、檢查點 fencing 與結果記錄。每個 use case 各一個檔案。
 /// </summary>
 public sealed class JobsModule : IFeatureModule
 {
@@ -21,7 +20,7 @@ public sealed class JobsModule : IFeatureModule
         builder.Services.AddFeaturePolicy(FeatureIds.Tasks);
     }
 
-    // Endpoint order is the published OpenAPI order.
+    // 端點註冊順序即 OpenAPI 發佈順序。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         var jobs = api.MapGroup("/jobs").WithTags("Background jobs");

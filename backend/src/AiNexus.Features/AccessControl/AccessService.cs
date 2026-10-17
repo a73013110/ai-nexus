@@ -7,15 +7,14 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.AccessControl;
 
 /// <summary>
-/// Effective grants read from SQL. Within one HTTP request each user's grants are read at most once; the next request
-/// reads them again, so revocation still applies to every later request. Background jobs and the fresh scopes that
-/// long-lived requests create for periodic checks are not the request's own scope and always re-read.
+/// 有效授權，直接從 SQL 讀取。同一個 HTTP 請求內每位使用者最多讀一次；下一個請求會重新讀，所以撤銷對之後的每個請求都會生效。
+/// 背景工作，以及長駐請求為定期檢查建立的新 scope，都不是該請求自己的 scope，因此每次都重新讀取。
 /// </summary>
 public sealed class AccessService(NexusDbContext db, IActiveUsers activeUsers, IHttpContextAccessor http, IServiceProvider scope)
 {
     private readonly Dictionary<Guid, AccessDto> grants = [];
 
-    /// <summary>Forgets grants read so far in this request; call after a write that may change them, or before a re-check that must see SQL.</summary>
+    /// <summary>清除本請求已讀取的授權。授權可能被寫入改變之後，或必須讀到最新 SQL 結果的重新檢查之前呼叫。</summary>
     public void Invalidate() => grants.Clear();
 
     public IQueryable<UserGroupGrant> GroupMemberships(IReadOnlyList<Guid> users) =>
@@ -35,8 +34,8 @@ public sealed class AccessService(NexusDbContext db, IActiveUsers activeUsers, I
     }
 
     /// <summary>
-    /// <see cref="ForUserAsync"/> with the menu groups the user's features need (<see cref="NavigationTree.VisibleGroups"/>),
-    /// for the payloads that draw a menu; grant checks call <see cref="ForUserAsync"/> and skip the group read.
+    /// 在 <see cref="ForUserAsync"/> 的結果上加入使用者功能所需的選單分群（<see cref="NavigationTree.VisibleGroups"/>），供繪製選單的 payload 使用；
+    /// 授權檢查直接呼叫 <see cref="ForUserAsync"/>，略過分群查詢。
     /// </summary>
     public async Task<AccessDto> WithNavigationAsync(Guid user, CancellationToken ct)
     {
@@ -44,7 +43,7 @@ public sealed class AccessService(NexusDbContext db, IActiveUsers activeUsers, I
         return access with { NavigationGroups = NavigationTree.VisibleGroups(await NavigationGroupsAsync(ct), access.Features) };
     }
 
-    /// <summary>Every menu group in display order, for views that arrange any feature (catalogs, audit history) rather than one user's menu.</summary>
+    /// <summary>依顯示順序列出所有選單分群，供需要排列任意功能的檢視使用（例如目錄、稽核歷史），而非單一使用者的選單。</summary>
     public async Task<IReadOnlyList<NavigationGroupDto>> NavigationGroupsAsync(CancellationToken ct) =>
         await db.Set<NavigationGroup>().AsNoTracking().OrderBy(x => x.SortOrder).ThenBy(x => x.Id)
             .Select(x => new NavigationGroupDto(x.Id, x.ParentId, x.Name, x.SortOrder)).ToArrayAsync(ct);
@@ -66,7 +65,7 @@ public sealed class AccessService(NexusDbContext db, IActiveUsers activeUsers, I
     }
 }
 
-/// <summary>Ids of enabled, not deleted users. Identity implements it, so grants can be filtered without reading its user table here.</summary>
+/// <summary>已啟用且未刪除的使用者 id。由 Identity 實作，讓 AccessControl 不必直接讀取使用者表就能過濾授權。</summary>
 public interface IActiveUsers
 {
     IQueryable<Guid> Ids { get; }
@@ -78,5 +77,5 @@ public sealed class UserGroupGrant
     public string GroupId { get; init; } = "";
 }
 
-/// <summary>Evaluated by Identity's feature authorization handler against the signed-in user's current grants.</summary>
+/// <summary>由 Identity 的 <c>FeatureAuthorizationHandler</c> 依登入者當下的授權評估。</summary>
 public sealed record FeatureRequirement(params string[] FeatureIds) : IAuthorizationRequirement;

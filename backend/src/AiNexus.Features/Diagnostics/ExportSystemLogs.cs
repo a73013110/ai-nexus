@@ -4,7 +4,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Diagnostics;
 
-/// <summary>A redacted CSV of the events matching the filter, under its own policy and rate limit. The export is audited first.</summary>
+/// <summary>符合篩選條件的事件匯出為已遮罩的 CSV，有獨立的權限政策與速率限制；匯出前會先寫稽核。</summary>
 internal sealed class ExportSystemLogs(DiagnosticQuery query)
 {
     public static void Map(RouteGroupBuilder logs) => logs

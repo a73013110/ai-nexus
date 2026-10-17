@@ -6,7 +6,7 @@ using AiNexus.Features.Knowledge.Documents;
 
 namespace AiNexus.Features.Knowledge.Collections;
 
-/// <summary>Up to 100 collections the user may read, most recently changed first, with their document counts.</summary>
+/// <summary>使用者可讀取的知識庫，依最近更新排序，最多 100 筆，附文件數與已就緒文件數。</summary>
 internal sealed class ListKnowledgeCollections(NexusDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

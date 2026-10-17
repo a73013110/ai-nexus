@@ -4,13 +4,13 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace AiNexus.Platform.Events;
 
-/// <summary>Something that happened in the publishing module. Declare events as past-tense records next to the code that raises them.</summary>
+/// <summary>領域事件標記介面：表示發布端模組內已發生的重要事件。請以過去式命名（名詞＋過去分詞），並宣告於引發該事件的程式碼旁。</summary>
 public interface IDomainEvent;
 
 /// <summary>
-/// Same-transaction reaction of another module. Handlers run inside the publisher's SaveChanges, before its own changes
-/// are written, on the same DbContext and transaction: they may track entities, run ExecuteUpdate/ExecuteDelete and raise
-/// further events, but must not call SaveChanges or begin/commit transactions themselves.
+/// 跨模組之同交易反應處理常式。
+/// 處理器於發布端的 SaveChanges 內部、在異動實際寫入資料庫前執行，共用同一個 DbContext 與資料庫交易：
+/// 可追蹤實體、執行 ExecuteUpdate/ExecuteDelete 或引發後續領域事件，但自身絕不可呼叫 SaveChanges 或開啟/認可交易。
 /// </summary>
 public interface IDomainEventHandler<in TEvent> where TEvent : IDomainEvent
 {
@@ -18,12 +18,13 @@ public interface IDomainEventHandler<in TEvent> where TEvent : IDomainEvent
 }
 
 /// <summary>
-/// Scoped collector. <see cref="Raise"/> only records the event; the DbContext dispatches every pending event at the start
-/// of its next SaveChangesAsync, so the handlers commit or roll back together with the publisher.
+/// Scoped 生命週期的領域事件收集與派送器。
+/// <see cref="Raise"/> 僅登記事件；DbContext 於下次呼叫 SaveChangesAsync 開始時統一派送所有待處理事件，
+/// 確保所有處理器的異動與發布端一同認可或復原。
 /// </summary>
 public sealed class DomainEvents(IServiceProvider services)
 {
-    /// <summary>Handlers may raise further events; a chain longer than this is a bug, not a workload.</summary>
+    /// <summary>處理器可引發連鎖事件；超過 8 輪視為遞迴錯誤而非正常工作負載。</summary>
     public const int MaxRounds = 8;
 
     private static readonly ConcurrentDictionary<Type, Func<IServiceProvider, IDomainEvent, CancellationToken, Task>> Dispatchers = new();
@@ -39,7 +40,7 @@ public sealed class DomainEvents(IServiceProvider services)
         pending.Add(e);
     }
 
-    /// <summary>Synchronous saves cannot run async handlers; they fail instead of silently dropping the side effects.</summary>
+    /// <summary>同步 SaveChanges 無法執行非同步處理常式；在此主動拋出例外防禦，避免副作用被無聲遺漏。</summary>
     public void ThrowIfPending()
     {
         if (dispatching) throw new InvalidOperationException("Domain event handlers must not save changes; the publisher's SaveChanges persists their work.");
@@ -50,7 +51,7 @@ public sealed class DomainEvents(IServiceProvider services)
         }
     }
 
-    /// <summary>Runs handlers until no new events are raised. Called by the DbContext before it writes its own changes.</summary>
+    /// <summary>持續執行處理器直到沒有新事件引發為止。由 DbContext 在寫入自身變更前呼叫。</summary>
     public async Task DispatchAsync(CancellationToken ct)
     {
         if (dispatching) throw new InvalidOperationException("Domain event handlers must not save changes; the publisher's SaveChanges persists their work.");
@@ -69,7 +70,7 @@ public sealed class DomainEvents(IServiceProvider services)
         }
         catch
         {
-            // A failed save must not leave events behind for a later, unrelated SaveChanges in the same scope.
+            // 失敗的儲存操作絕不可將殘留事件留給同一個 Scope 內後續無關的 SaveChanges 執行
             pending.Clear();
             throw;
         }
@@ -81,7 +82,7 @@ public sealed class DomainEvents(IServiceProvider services)
 
     private static async Task DispatchToHandlersAsync<TEvent>(IServiceProvider services, IDomainEvent e, CancellationToken ct) where TEvent : IDomainEvent
     {
-        // Registration order; handlers of one event must not depend on each other's effects.
+        // 依照註冊順序執行；同一事件的多個處理器彼此之間不得依賴對方的執行副作用
         foreach (var handler in services.GetServices<IDomainEventHandler<TEvent>>())
             await handler.HandleAsync((TEvent)e, ct);
     }
@@ -95,7 +96,7 @@ public static class DomainEventServices
         return services;
     }
 
-    /// <summary>Registers a subscriber in the subscribing module's AddServices.</summary>
+    /// <summary>在訂閱端模組的 AddServices 中註冊事件處理器。</summary>
     public static IServiceCollection AddDomainEventHandler<TEvent, THandler>(this IServiceCollection services)
         where TEvent : IDomainEvent where THandler : class, IDomainEventHandler<TEvent>
     {

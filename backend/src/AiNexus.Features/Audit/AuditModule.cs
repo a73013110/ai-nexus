@@ -6,12 +6,11 @@ using AiNexus.Platform.Modules;
 namespace AiNexus.Features.Audit;
 
 /// <summary>
-/// The activity audit: read-only investigation of who did what. It lives under /admin/audit but is granted separately
-/// from /admin management through its own feature. Each use case has its own file.
+/// 活動稽核：唯讀地查出誰做了什麼。路由在 /admin/audit 下，但權限是獨立功能，不跟 /admin 管理功能綁在一起。
 /// </summary>
 public sealed class AuditModule : IFeatureModule
 {
-    /// <summary>The feature id; <c>NexusDbContext</c> seeds the feature from it.</summary>
+    /// <summary>功能代碼；<c>NexusDbContext</c> 以此植入功能資料。</summary>
     public const string Feature = "audit", Policy = Policies.Prefix + Feature;
     public const string ExportRateLimit = "audit-export";
 
@@ -24,7 +23,7 @@ public sealed class AuditModule : IFeatureModule
 
     public static void MapEndpoints(RouteGroupBuilder api)
     {
-        // Preserve the API URL while separating its authorization from /admin management.
+        // 保留 API 路徑不變（前端與已發布的文件依賴它），只把授權與 /admin 管理功能分開。
         var audit = api.MapGroup("/admin/audit").RequireAuthorization(Policy).WithTags("Activity audit");
         ListActivityAudit.Map(audit);
         GetAuditCatalog.Map(audit);

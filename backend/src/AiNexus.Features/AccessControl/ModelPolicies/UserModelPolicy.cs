@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.AccessControl.ModelPolicies;
 
-/// <summary>A user's personal whitelist (narrows group grants) and token cap overrides.</summary>
+/// <summary>使用者個人的模型白名單（會再限縮群組授權）與 token 上限覆寫。</summary>
 [Comment("使用者的模型白名單與各模型每日 token 覆寫政策。")]
 public sealed class UserModelPolicy
 {

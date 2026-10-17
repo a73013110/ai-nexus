@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Quality.RetrievalEvaluations;
 
-/// <summary>A retrieval acceptance run over the owner's collections, executed by <see cref="RetrievalEvaluationHandler"/>.</summary>
+/// <summary>在擁有者的知識庫上執行的一次檢索驗收，由 <see cref="RetrievalEvaluationHandler"/> 執行。</summary>
 [Comment("檢索驗收集、授權知識庫、索引與設定指紋及可續跑背景工作；不保存檢索來源原文。")]
 public sealed class RetrievalEvaluation
 {

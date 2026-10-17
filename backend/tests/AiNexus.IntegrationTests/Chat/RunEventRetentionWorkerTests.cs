@@ -19,7 +19,7 @@ public sealed class RunEventRetentionWorkerTests
         var active = await CreateRun(client, (await CreateConversation(client)).Id, "進行中");
         await WaitForTerminal(client, active.Id);
         var expired = DateTimeOffset.UtcNow - RunEventRetentionWorker.Retention - TimeSpan.FromHours(1);
-        // More than two batches, so the cleanup has to loop until the backlog is gone.
+        // 資料超過兩批，因此清理必須重複執行，直到積壓的資料清空。
         var backlog = RunEventRetentionWorker.BatchSize * 2 + 7;
         using (var scope = factory.Services.CreateScope())
         {

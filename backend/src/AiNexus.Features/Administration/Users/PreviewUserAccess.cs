@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Administration.Users;
 
-/// <summary>The roles, groups and features a user currently receives, with the menu groups those features appear in.</summary>
+/// <summary>使用者目前實際取得的角色、群組與功能，並附上這些功能所在的選單群組（唯讀預覽）。</summary>
 internal sealed class PreviewUserAccess(NexusDbContext db, AccessService access)
 {
     public static void Map(RouteGroupBuilder routes) => routes

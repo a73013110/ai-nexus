@@ -9,13 +9,12 @@ using AiNexus.Features.Jobs;
 namespace AiNexus.Features.Collaboration;
 
 /// <summary>
-/// Raised when a project or evaluation set is soft-deleted, inside its serializable transaction, after every
-/// <see cref="IContainerDeletionCheck"/> allowed it. Subscribers detach their own records from the container before the
-/// save (Conversations: a project's conversations; Artifacts: a project's artifacts).
+/// 專案或評估集被邏輯刪除時發出。位於可序列化交易內，且所有 <see cref="IContainerDeletionCheck"/> 都已放行之後。
+/// 訂閱者要在儲存前先解除自己的紀錄與該容器的關聯（對話模組解除專案下的對話，成果模組解除專案下的成果）。
 /// </summary>
 public sealed record ContainerDeleted(string Kind, Guid ContainerId, Guid ActorId) : IDomainEvent;
 
-/// <summary>Remove a container without destroying private conversations, owned files or audit evidence.</summary>
+/// <summary>刪除容器，但保留私人對話、擁有的檔案與稽核證據；只做邏輯刪除。</summary>
 public sealed class ResourceLifecycle(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, DomainEvents events, IEnumerable<IContainerDeletionCheck> checks, TimeProvider clock)
 {
     public async Task<Result> DeleteAsync(Guid actor, Guid id, string kind, CancellationToken ct)
@@ -27,7 +26,7 @@ public sealed class ResourceLifecycle(NexusDbContext db, ResourceAccess access, 
             var owned = await access.OwnerAsync(actor, id, kind, ct);
             if (!owned.IsSuccess) return owned.Error;
             var resource = owned.Value;
-            // Deleted children count too: their active work blocks deletion and their links are cleared.
+            // 已邏輯刪除的子資源也要納入檢查（查詢需忽略軟刪除過濾器）：它們仍在進行中的工作會阻擋刪除。
             var children = db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.ParentId == id).Select(x => x.Id);
             if (await db.Set<BackgroundJob>().AnyAsync(x => (x.ResourceId == id || children.Contains(x.ResourceId ?? Guid.Empty)) && x.ActiveKey != null, ct))
                 return CollaborationErrors.TasksActive;
@@ -35,7 +34,7 @@ public sealed class ResourceLifecycle(NexusDbContext db, ResourceAccess access, 
                 if (await check.CheckAsync(kind, id, ct) is { IsSuccess: false } refused) return refused.Error;
             if (kind == "project")
             {
-                // Direct ACLs and ownership survive. Inherited project access stops with the container.
+                // 子資源的直接授權與擁有者保留；只有經由專案繼承的存取會隨容器停止，所以要把子資源的 ParentId 清空。
                 await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.ParentId == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ParentId, (Guid?)null), ct);
             }
             resource.IsDeleted = true;

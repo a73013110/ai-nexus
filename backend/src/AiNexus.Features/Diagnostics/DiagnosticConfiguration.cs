@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Diagnostics;
 
-/// <summary>The system-log features, seeded with <c>HasData</c>, and their policy names.</summary>
+/// <summary>系統日誌功能與其權限政策名稱；功能由 <c>HasData</c> 植入資料庫。</summary>
 public sealed class DiagnosticConfiguration() : FeatureSeed(
     new PlatformFeature(Query, "系統日誌", "/admin/logs", 94, BuiltInAccess.SystemNavigation, "logs", AdministratorsOnly: true),
     new PlatformFeature(Detail, "日誌診斷詳情", "", 95, BuiltInAccess.SystemNavigation, "search", AdministratorsOnly: true),

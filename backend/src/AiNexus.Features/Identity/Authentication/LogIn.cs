@@ -15,7 +15,7 @@ namespace AiNexus.Features.Identity.Authentication;
 [ValidatedInHandler("An empty or oversized account or password answers 401 invalid_credentials and is audited like wrong credentials, so the two cannot be told apart.")]
 public sealed record AdLoginRequest(string Account, string Password, string Method = "ad");
 
-/// <summary>Local or LDAP password sign-in. Every failure is audited with the issue code its response carries.</summary>
+/// <summary>本地或 LDAP 帳密登入。每次失敗都會以回應中帶的 issue code 寫入稽核。</summary>
 internal sealed class LogIn(IAdAuthenticator directory, LocalAuthenticator local, CurrentUser current, NexusDbContext db, AuthenticationAudit audit, Issues issues,
     IOptions<AdAuthenticationOptions> options, IAntiforgery csrf)
 {

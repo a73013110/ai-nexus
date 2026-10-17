@@ -31,9 +31,15 @@ using FluentValidation;
 
 namespace AiNexus.Features;
 
-/// <summary>The only place that lists modules. Adding a feature means one line in each method below.</summary>
+/// <summary>
+/// 應用程式功能模組集中宣告與註冊中心。
+/// 系統中唯一完整列出所有業務功能模組的地方；新增功能模組時僅需在以下各方法新增一行註冊。
+/// </summary>
 public static class FeatureModules
 {
+    /// <summary>
+    /// 註冊所有業務功能模組的服務。注意註冊順序會決定 <c>IEnumerable&lt;T&gt;</c> 的順序（例如儀表板區塊），調整時要留意。
+    /// </summary>
     public static IHostApplicationBuilder AddFeatures(this IHostApplicationBuilder builder)
     {
         Add<PersistenceModule>(builder);
@@ -62,16 +68,25 @@ public static class FeatureModules
         Add<InferenceModule>(builder);
         Add<ChatModule>(builder);
         Add<MonitoringModule>(builder);
+
         builder.Services.AddEndpointHandlers(typeof(FeatureModules).Assembly);
         builder.Services.AddValidatorsFromAssembly(typeof(FeatureModules).Assembly, includeInternalTypes: true);
         return builder;
     }
 
-    /// <summary>Endpoint order is the published OpenAPI order; keep it stable.</summary>
+    /// <summary>
+    /// 將各業務模組的 API 端點對應至路由群組。
+    /// 端點註冊順序即為公開的 OpenAPI 文件順序，請保持穩定。
+    /// </summary>
     public static WebApplication MapFeatures(this WebApplication app)
     {
-        // Filters run in this order: resolve the user (authentication outcome), then validate the request.
-        var api = app.MapGroup("/api/v1").RequireAuthorization().WithSafeErrors().WithCurrentUser().WithRequestValidation();
+        // 篩選器依此順序執行：解析目前使用者（身分驗證結果），接著執行請求驗證。
+        var api = app.MapGroup("/api/v1")
+            .RequireAuthorization()
+            .WithSafeErrors()
+            .WithCurrentUser()
+            .WithRequestValidation();
+
         Map<DiagnosticsModule>(api);
         Map<AccountModule>(api);
         Map<ConversationsModule>(api);
@@ -95,11 +110,14 @@ public static class FeatureModules
         Map<DashboardModule>(api);
         Map<WebSearchModule>(api);
         Map<MonitoringModule>(api);
+
         IdentityModule.MapPublicEndpoints(app);
         return app;
     }
 
-    /// <summary>Resolves services whose construction validates machine state, so the host stops before serving traffic.</summary>
+    /// <summary>
+    /// 在主機啟動前解析並驗證關鍵實體狀態（如附件磁碟目錄），若環境不健全則在對外提供服務前立即中止。
+    /// </summary>
     public static void VerifyStartup(IServiceProvider services) => AttachmentsModule.VerifyStorage(services);
 
     private static void Add<TModule>(IHostApplicationBuilder builder) where TModule : IFeatureModule => TModule.AddServices(builder);

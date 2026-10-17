@@ -16,8 +16,7 @@ namespace AiNexus.Features.Identity.Sessions;
 public sealed record TestIdentityRequest(Guid UserId, string Reason);
 
 /// <summary>
-/// The test purpose. A session that is already a test identity is refused first, with its own code, by the handler,
-/// so this rule only applies outside one.
+/// 測試用途（reason）的長度規則。若目前已是測試身分，handler 會先以專屬代碼拒絕，所以這條規則只在非測試身分時生效。
 /// </summary>
 internal sealed class TestIdentityRequestValidator : RequestValidator<TestIdentityRequest>
 {
@@ -32,8 +31,7 @@ internal sealed class TestIdentityRequestValidator : RequestValidator<TestIdenti
 }
 
 /// <summary>
-/// Lets a platform administrator act as another enabled user for 15 minutes. The audit row is written before the cookie
-/// changes; the original administrator's cookie lifetime is kept.
+/// 讓平台管理員以另一位已啟用使用者的身分操作，為期 15 分鐘。稽核紀錄先於 cookie 變更寫入；原管理者 cookie 的存續時間保持不變。
 /// </summary>
 internal sealed class StartTestIdentity(CurrentUser current, NexusDbContext db, AccessService access, IOptions<AdAuthenticationOptions> options, IAntiforgery csrf, TimeProvider clock)
 {

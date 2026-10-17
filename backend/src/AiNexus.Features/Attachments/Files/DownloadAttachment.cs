@@ -4,7 +4,7 @@ using AiNexus.Platform.Security;
 
 namespace AiNexus.Features.Attachments.Files;
 
-/// <summary>Streams one of the caller's attachments, inline or as a download, through the safe file response.</summary>
+/// <summary>以安全的檔案回應串流呼叫者的附件，可選擇內嵌預覽或當作下載。</summary>
 internal sealed class DownloadAttachment(AttachmentService files)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes)

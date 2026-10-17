@@ -11,9 +11,7 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Monitoring.Snapshots;
 
 /// <summary>
-/// At most <see cref="PerUser"/> live streams per user. A new stream supersedes the user's oldest instead of being refused:
-/// after a reload the old stream lingers until the server notices the browser left (a proxy may hide that until the
-/// stream expires), and refusing would lock the page out meanwhile.
+/// 每位使用者最多 <see cref="PerUser"/> 個即時串流。新串流會取代該使用者最舊的一個，而不是拒絕它：重新整理後舊串流可能仍掛著，直到伺服器察覺瀏覽器已離開（代理伺服器可能隱藏這件事，直到串流逾時）；這段時間若拒絕，頁面會被鎖在外面。
 /// </summary>
 public sealed class MonitoringStreams
 {
@@ -28,7 +26,7 @@ public sealed class MonitoringStreams
             if (!open.TryGetValue(user, out var streams)) open[user] = streams = [];
             if (streams.Count >= PerUser)
             {
-                // Cancelled under the lock, so the superseded stream's lease cannot dispose the source meanwhile.
+                // 在鎖內取消：若放到鎖外，被取代串流的 lease 可能同時釋放同一個來源，造成競態。
                 streams[0].Cancel();
                 streams.RemoveAt(0);
             }
@@ -46,7 +44,7 @@ public sealed class MonitoringStreams
         }
     }
 
-    /// <summary>One open stream; <see cref="Superseded"/> fires when a newer stream of the same user takes its place.</summary>
+    /// <summary>一個開啟中的串流；同一使用者有較新的串流取代它時，<see cref="Superseded"/> 會被觸發。</summary>
     public sealed class Lease(MonitoringStreams owner, Guid user, CancellationTokenSource source) : IDisposable
     {
         public CancellationToken Superseded { get; } = source.Token;
@@ -55,9 +53,7 @@ public sealed class MonitoringStreams
 }
 
 /// <summary>
-/// Server-sent snapshots for up to ten minutes; a user's fourth stream ends the oldest with <c>stream_superseded</c>. The view
-/// is audited once; every 15 seconds a fresh scope re-checks the monitoring grant and a testing identity's administrator, so
-/// revocation ends the stream with an error event.
+/// 以 Server-Sent Events 推送快照，最長十分鐘；使用者的第四個串流會以 <c>stream_superseded</c> 結束最舊的一個。整個檢視只稽核一次；每 15 秒以新的 scope 重新檢查監控權限與測試身分的管理者狀態，因此權限被撤銷時，串流會以錯誤事件結束。
 /// </summary>
 internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, MonitoringStreams streams, NexusDbContext db, IServiceScopeFactory scopes, IOptions<MonitoringOptions> options, TimeProvider clock)
 {
@@ -76,6 +72,7 @@ internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, M
             ct = stream.Token;
             await MonitoringReads.AuditAsync(db, user, "monitoring.view", ct);
             http.Response.ContentType = "text/event-stream";
+            // 關閉代理（如 nginx）與 ASP.NET 的回應緩衝，否則事件會被攢住，頁面收不到即時快照。
             http.Response.Headers.CacheControl = "no-store"; http.Response.Headers["X-Accel-Buffering"] = "no";
             http.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpResponseBodyFeature>()?.DisableBuffering();
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(options.Value.RefreshSeconds), clock);
@@ -84,7 +81,7 @@ internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, M
             {
                 if (clock.GetUtcNow() >= nextCheck)
                 {
-                    // Fresh scopes re-read account versions and grants; a long-lived stream must honor revocation.
+                    // 每次都以新的 scope 重新讀取帳號版本與權限；長時間存活的串流必須遵守撤銷。
                     await using var scope = scopes.CreateAsyncScope();
                     var identity = await scope.ServiceProvider.GetRequiredService<CurrentUser>().GetAsync(ct);
                     if (!identity.IsSuccess) return identity.Error;

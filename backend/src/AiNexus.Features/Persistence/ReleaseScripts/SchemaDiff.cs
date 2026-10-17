@@ -3,17 +3,13 @@ using System.Text;
 
 namespace AiNexus.Features.Persistence.ReleaseScripts;
 
-/// <summary>
-/// Per-object definition changes of a release: the production version's schema against the release version's, both
-/// extracted by SqlPackage one file per object. Written as <c>diff/</c> with one unified diff per changed object and
-/// <see cref="ManifestFileName"/> listing them.
-/// </summary>
-/// <param name="FromMigration">The production database's last migration; <see langword="null"/> for an empty database.</param>
-/// <param name="ToMigration">The release's last migration.</param>
-/// <param name="Migrations">The migrations between them, in order.</param>
-/// <param name="ServerVersion">The reference SQL Server's product version.</param>
-/// <param name="FullTextAvailable">The reference server has full-text search with the Traditional Chinese word breaker, so <c>InitialCreate</c> created the knowledge full-text index.</param>
-/// <param name="Changes">The changed objects, ordered by path.</param>
+/// <summary>一次發布在各結構物件上的定義變化：正式版與發布版的結構，各自由 SqlPackage 逐物件匯出後比對。</summary>
+/// <param name="FromMigration">正式資料庫目前最後套用的 migration；空庫為 <see langword="null"/>。</param>
+/// <param name="ToMigration">發布的最後一個 migration。</param>
+/// <param name="Migrations">兩者之間的 migration，依順序排列。</param>
+/// <param name="ServerVersion">參考 SQL Server 的產品版本。</param>
+/// <param name="FullTextAvailable">參考伺服器是否有全文元件與繁中斷詞器；有的話 <c>InitialCreate</c> 會建立知識全文索引。</param>
+/// <param name="Changes">有變化的物件，依路徑排序。</param>
 public sealed record SchemaDiff(
     string? FromMigration,
     string ToMigration,
@@ -24,10 +20,10 @@ public sealed record SchemaDiff(
 {
     public const string ManifestFileName = "manifest.md";
 
-    // Same as the release SQL: Notepad and SSMS read the Chinese column descriptions in the diffs reliably with a BOM.
+    // 與發布 SQL 相同：記事本與 SSMS 只有在帶 BOM 時才能正確顯示差異中的中文欄位說明。
     private static readonly UTF8Encoding DiffEncoding = new(encoderShouldEmitUTF8Identifier: true);
 
-    /// <summary>Compares two SqlPackage <c>ExtractTarget=SchemaObjectType</c> folders file by file.</summary>
+    /// <summary>逐檔比對兩個 SqlPackage <c>ExtractTarget=SchemaObjectType</c> 匯出資料夾。</summary>
     public static IReadOnlyList<SchemaObjectChange> Compare(string before, string after)
     {
         var old = Scripts(before);
@@ -50,7 +46,7 @@ public sealed record SchemaDiff(
         return changes;
     }
 
-    /// <summary>Writes the diffs and the manifest into <paramref name="directory"/>, which must be missing or empty.</summary>
+    /// <summary>把差異檔與清單寫入 <paramref name="directory"/>；目錄必須不存在或為空。</summary>
     public void WriteTo(string directory)
     {
         var root = Path.GetFullPath(directory);
@@ -61,7 +57,7 @@ public sealed record SchemaDiff(
         File.WriteAllText(Path.Combine(root, ManifestFileName), Manifest(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
-    /// <summary>The list the DBA reviews: every added, removed and modified object with its diff file.</summary>
+    /// <summary>DBA 要審查的清單：每個新增、刪除與修改的物件，附上差異檔。</summary>
     public string Manifest()
     {
         var text = new StringBuilder();
@@ -82,10 +78,9 @@ public sealed record SchemaDiff(
     }
 
     /// <summary>
-    /// The object script with its <c>GO</c> batches in a fixed order and its alignment collapsed (<see cref="Collapse"/>). SqlPackage writes the batches after the object's
-    /// own CREATE (indexes, the full-text index, <c>MS_Description</c> properties) in a different order on every extract, so
-    /// unsorted they would show every table as changed. The order kept is the readable one: the object, its indexes and
-    /// other statements, its full-text index, its descriptions; text order within each.
+    /// 把物件腳本的 <c>GO</c> 批次排成固定順序，並合併對齊用的空白（<see cref="Collapse"/>）。
+    /// SqlPackage 每次匯出時，物件本體之後的批次（索引、全文索引、<c>MS_Description</c>）順序都會不同，
+    /// 不排序的話每張表都會被誤判為有變動。排序後的順序是最好讀的：物件本體、索引與其他語句、全文索引、說明；各類內部保持原文順序。
     /// </summary>
     public static string Normalize(string script)
     {
@@ -109,8 +104,8 @@ public sealed record SchemaDiff(
     }
 
     /// <summary>
-    /// One space for each run of white space after the indentation and outside string literals. SqlPackage aligns the
-    /// column types of a table, so adding or dropping a long column name would otherwise change every column line.
+    /// 縮排之後、字串常值之外的連續空白合併為一個空白。SqlPackage 會把資料表的欄位型別對齊，
+    /// 若不合併，新增或刪除一個較長的欄位名稱就會讓每一行欄位都顯示為變動。
     /// </summary>
     private static string Collapse(string line)
     {

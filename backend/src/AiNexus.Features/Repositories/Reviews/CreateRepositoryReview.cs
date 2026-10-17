@@ -16,12 +16,11 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Repositories.Reviews;
 
-/// <summary>A pull request, or a commit (against its parent, or against <see cref="BaseCommit"/> as a range).</summary>
+/// <summary>一個 pull request，或一個 commit（與其父 commit 比對，或以 <see cref="BaseCommit"/> 為範圍比對）。</summary>
 public sealed record CreateRepositoryReviewRequest(string? Commit, string? BaseCommit, int? PullRequest, string? ModelId, string? Note, string IdempotencyKey, string Purpose = "review");
 
 /// <summary>
-/// Rules reported as <c>review_request_invalid</c>. Commits, range and purpose keep their own public codes, shared with the
-/// browsing endpoints, so the handler checks them.
+/// 規則錯誤回報為 <c>review_request_invalid</c>。commit、範圍與用途有自己的公開代碼（與瀏覽端點共用），因此由 handler 檢查。
 /// </summary>
 internal sealed class CreateRepositoryReviewRequestValidator : RequestValidator<CreateRepositoryReviewRequest>
 {
@@ -35,9 +34,8 @@ internal sealed class CreateRepositoryReviewRequestValidator : RequestValidator<
 }
 
 /// <summary>
-/// Freezes the diff, prompts and model configuration, then enqueues the durable job. A pull request is resolved now to
-/// its head and merge base, so later pushes do not change the review. The request key makes retries of the same request
-/// return the same review; reusing it for a different request is a conflict.
+/// 凍結 diff、提示詞與模型設定，然後把持久化工作排入佇列。pull request 會在此時解析為 head 與 merge base，
+/// 之後的 push 不會改變這次 review。request key 讓同一請求的重試回傳同一個 review；同一個 key 用於不同請求則為衝突。
 /// </summary>
 internal sealed class CreateRepositoryReview(NexusDbContext db, RepositoryService gitea, RepositoryReviewService reviews, BrowseRepositoryIssues pulls, JobService jobs,
     RepositoryWriteLock writes, ModelCatalog catalog, ModelPolicyService policy, IOptions<InferenceOptions> inference, TimeProvider clock)
@@ -99,7 +97,8 @@ internal sealed class CreateRepositoryReview(NexusDbContext db, RepositoryServic
                 BaseUrl = gitea.BaseUrl, ModelId = model.Id, Note = note, ConfigurationFingerprint = ModelTaskConfiguration.Capture(model, inference.Value).Fingerprint,
                 SnapshotJson = JsonSerializer.Serialize(snapshot.Value), Purpose = snapshot.Value.Purpose, IdempotencyKey = request.IdempotencyKey, RequestHash = hash, CreatedAt = clock.GetUtcNow() };
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            // This account lock and unique request key also protect multiple application hosts.
+            // 對使用者列做一次 UPDATE（值不變）以取得該列的鎖，讓同一使用者的並行建立請求依序進行；
+            // 它與唯一的 request key 一起，也能防止多台應用程式主機重複建立。
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
             var duplicate = await db.Set<RepositoryReview>().AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == request.IdempotencyKey, ct);
             if (duplicate is not null) return duplicate.RequestHash == hash ? await reviews.DescribeAsync(duplicate, ct) : RepositoriesErrors.IdempotencyConflict;

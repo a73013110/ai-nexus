@@ -3,7 +3,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Persistence;
 
-/// <summary>How the host treats the schema of the Nexus database; its connection is <c>Databases:Nexus</c>.</summary>
+/// <summary>主機如何處理 Nexus 資料庫的結構；連線設定位於 <c>Databases:Nexus</c>。</summary>
 public sealed class PersistenceOptions : IValidatableObject
 {
     public const string Section = "Persistence";
@@ -12,8 +12,8 @@ public sealed class PersistenceOptions : IValidatableObject
     public bool ApplyMigrationsOnStartup { get; set; }
 
     /// <summary>
-    /// A single flag has no rule of its own. Implementing this keeps the section on a generated validator like every
-    /// other one (the generator refuses a type with nothing to validate); unknown keys still fail binding.
+    /// 此選項只有一個旗標、沒有自己的驗證規則。仍實作此介面，才能和其他選項一樣經由產生的 validator 驗證
+    /// （產生器不接受沒有可驗證內容的型別）；未知的設定鍵仍會在綁定時失敗。
     /// </summary>
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext) => [];
 }

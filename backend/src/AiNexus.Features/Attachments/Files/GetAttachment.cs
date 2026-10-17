@@ -3,7 +3,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Attachments.Files;
 
-/// <summary>Metadata of one of the caller's attachments.</summary>
+/// <summary>呼叫者某個附件的中繼資料。</summary>
 internal sealed class GetAttachment(AttachmentService files)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

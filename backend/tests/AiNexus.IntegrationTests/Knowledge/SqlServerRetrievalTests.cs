@@ -58,7 +58,7 @@ public sealed class SqlServerRetrievalTests
         private string Rewrite(string sql)
         {
             if (!sql.Contains("FREETEXTTABLE", StringComparison.Ordinal)) return sql;
-            // Raise a real SqlException without depending on a broken server installation.
+            // 直接拋出真實的 SqlException，而不依賴損壞的伺服器安裝。
             Failures++; return "RAISERROR (30053, 16, 1)";
         }
     }

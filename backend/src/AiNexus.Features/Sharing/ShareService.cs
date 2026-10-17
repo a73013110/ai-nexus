@@ -4,10 +4,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Sharing;
 
-/// <summary>Share revocation and expiry purge; shares of a deleted source stop working immediately.</summary>
+/// <summary>分享的撤銷與過期清除；來源被刪除時，其分享立即失效。</summary>
 public sealed class ShareService(NexusDbContext db, TimeProvider clock)
 {
-    /// <summary>Revokes every share of a source and drops its file grants. Caller owns the transaction.</summary>
+    /// <summary>撤銷來源的所有分享並移除其檔案授權。交易由呼叫端管理。</summary>
     internal async Task RevokeSourceAsync(string kind, Guid id, CancellationToken ct)
     {
         var ids = db.Set<ShareLink>().Where(x => x.Kind == kind && x.SourceId == id).Select(x => x.Id);
@@ -15,7 +15,7 @@ public sealed class ShareService(NexusDbContext db, TimeProvider clock)
         await db.Set<ShareLink>().Where(x => x.Kind == kind && x.SourceId == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.IsRevoked, true).SetProperty(x => x.SnapshotJson, ""), ct);
     }
 
-    /// <summary>Drops file grants of expired or revoked shares and erases the snapshot text of expired ones.</summary>
+    /// <summary>移除已過期或已撤銷分享的檔案授權，並清空已過期分享的快照文字。</summary>
     public async Task PurgeExpiredAsync(CancellationToken ct)
     {
         var now = clock.GetUtcNow();

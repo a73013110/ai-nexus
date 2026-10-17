@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Integrations.Handoff;
 
-/// <summary>Provenance of a private snapshot imported from a read-only source.</summary>
+/// <summary>從唯讀來源匯入的私人快照的出處資訊。</summary>
 [Comment("外部來源匯入的識別、來源版本與匯入時間。")]
 public sealed class ImportedSourceReference
 {

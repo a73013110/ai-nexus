@@ -4,7 +4,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Platform.Data.Sql;
 
-/// <summary>A database outside EF Core: every call opens its own pooled connection and closes it before returning.</summary>
+/// <summary>非 EF Core 管理的獨立 SQL 資料庫執行器：每次呼叫從連線池取得獨立連線，並在呼叫結束時自動釋放歸還連線池。</summary>
 public sealed class SqlDatabase<TDatabase>(IOptions<DatabasesOptions> databases) : DapperSqlDatabase<TDatabase> where TDatabase : ISqlDatabaseDefinition
 {
     protected override async Task<TResult> RunAsync<TResult>(Func<DbConnection, DbTransaction?, Task<TResult>> command, CancellationToken cancellationToken)

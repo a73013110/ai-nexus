@@ -6,27 +6,64 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Persistence;
 
-public sealed class DatabaseInitializer(IOptions<DatabasesOptions> databases, ISqlDatabase<NexusMasterDatabase> master, NexusDbContext db, DatabaseSchema schema)
+/// <summary>
+/// 資料庫初始化執行器，負責在全新 SQL Server 實例上建立 <c>AiNexus</c> 專用資料庫並開啟 RCSI。
+/// </summary>
+public sealed class DatabaseInitializer(
+    IOptions<DatabasesOptions> databases,
+    ISqlDatabase<NexusMasterDatabase> master,
+    NexusDbContext db,
+    DatabaseSchema schema)
 {
-    /// <returns>Whether READ_COMMITTED_SNAPSHOT is on; an existing database may still need the DBA's one-time switch.</returns>
+    /// <summary>
+    /// 執行初始化流程：建立資料庫實體、套用所有 EF Core 遷移，並驗證 RCSI 快照隔離級別狀態。
+    /// </summary>
+    /// <returns>若 READ_COMMITTED_SNAPSHOT 已開啟回傳 <see langword="true"/>；否則回傳 <see langword="false"/>。</returns>
     public async Task<bool> InitializeAsync(CancellationToken ct)
     {
         var nexus = databases.Value.For(NexusDbContext.DatabaseName);
-        if (!nexus.Configured) throw new ExternalServiceException(Error.Unavailable("storage_not_configured"), "請先設定 Databases.Nexus 的 Server、Name，以及秘密檔的 User／Password（或 IntegratedSecurity=true）。");
+        if (!nexus.Configured)
+        {
+            throw new ExternalServiceException(
+                Error.Unavailable("storage_not_configured"),
+                "請先設定 Databases.Nexus 的 Server、Name，以及秘密檔的 User／Password（或 IntegratedSecurity=true）。");
+        }
+
         var target = nexus.Name;
-        if (target != "AiNexus") throw new ExternalServiceException(Error.Invalid("database_name"), "本初始化指令只允許建立或更新 AiNexus 專用資料庫。");
-        var exists = await master.QuerySingleAsync<int>("SELECT COUNT(*) FROM sys.databases WHERE name = @Name", new { Name = target }, commandTimeout: 5, cancellationToken: ct);
-        if (exists == 0) await CreateAsync(master, target, ct);
+        // 安全防禦：防止誤操作既有非 AiNexus 的重要系統或業務資料庫
+        if (target != "AiNexus")
+        {
+            throw new ExternalServiceException(
+                Error.Invalid("database_name"),
+                "本初始化指令只允許建立或更新 AiNexus 專用資料庫。");
+        }
+
+        var exists = await master.QuerySingleAsync<int>(
+            "SELECT COUNT(*) FROM sys.databases WHERE name = @Name",
+            new { Name = target },
+            commandTimeout: 5,
+            cancellationToken: ct);
+
+        // 只有全新建立的資料庫才會在建立當下切換 RCSI（見 CreateAsync）；既有資料庫不在此處理。
+        if (exists == 0)
+        {
+            await CreateAsync(master, target, ct);
+        }
+
         await db.Database.MigrateAsync(ct);
         await schema.RequireCurrentAsync(ct);
         return await schema.ReadCommittedSnapshotAsync(ct) ?? false;
     }
 
     /// <summary>
-    /// Creates an empty database whose READ COMMITTED reads use row versions (READ_COMMITTED_SNAPSHOT). The switch runs
-    /// outside a transaction and needs the database to itself, which only a database nobody has opened yet guarantees,
-    /// so an existing database is never switched here. <paramref name="name"/> is chosen by code, never by a request.
+    /// 建立全新資料庫，並立即啟用 READ_COMMITTED_SNAPSHOT (RCSI)。
     /// </summary>
+    /// <remarks>
+    /// 為什麼在這裡執行：
+    /// <c>ALTER DATABASE ... SET READ_COMMITTED_SNAPSHOT ON</c> 不能在事務中執行，且需要排他性連線（Exclusive Access）。
+    /// 全新剛建立的資料庫沒有任何外部連線，是唯一能保證 100% 成功無衝突切換的時間點。
+    /// 若為已運行的生產資料庫，絕不可自動執行，需由 DBA 在維護窗口操作。
+    /// </remarks>
     public static async Task CreateAsync(ISqlDatabase<NexusMasterDatabase> master, string name, CancellationToken ct)
     {
         var quoted = "[" + name.Replace("]", "]]", StringComparison.Ordinal) + "]";

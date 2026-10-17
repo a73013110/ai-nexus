@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Authorization.Policy;
 
 namespace AiNexus.Platform.Security;
 
-/// <summary>Writes the first <see cref="ErrorFailureReason"/> as the problem response; other outcomes keep the framework behavior.</summary>
+/// <summary>自訂授權結果處理器：若授權失敗原因包含 <see cref="ErrorFailureReason"/>，則直接寫入自訂錯誤 ProblemDetails 回應；其餘狀況保留框架預設行為。</summary>
 public sealed class ErrorAuthorizationResultHandler : IAuthorizationMiddlewareResultHandler
 {
     private readonly AuthorizationMiddlewareResultHandler fallback = new();

@@ -9,6 +9,7 @@ public sealed class RuntimeTrafficMiddleware(RequestDelegate next)
     public async Task InvokeAsync(HttpContext http, RuntimeTraffic traffic)
     {
         var path = http.Request.Path;
+        // 觀測自身的請求（心跳與監控讀取）不計入流量，否則監控會量到自己。
         if (path.StartsWithSegments("/api/v1/presence") || path.StartsWithSegments("/api/v1/admin/monitoring"))
         { using var suppression = new MonitoringSuppression(); await next(http); return; }
         if (!traffic.Enabled || !path.StartsWithSegments("/api/v1")) { await next(http); return; }

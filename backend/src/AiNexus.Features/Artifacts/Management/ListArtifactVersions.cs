@@ -8,7 +8,7 @@ namespace AiNexus.Features.Artifacts.Management;
 
 public sealed record ArtifactRevisionDto(int Version, string Title, string Author, DateTimeOffset CreatedAt);
 
-/// <summary>Revision history, newest first, of an artifact the user may read.</summary>
+/// <summary>使用者可讀取的成果之版本歷程，由新到舊。</summary>
 internal sealed class ListArtifactVersions(NexusDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

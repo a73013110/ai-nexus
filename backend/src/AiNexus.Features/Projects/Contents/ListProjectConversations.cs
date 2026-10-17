@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Projects.Contents;
 
-/// <summary>The user's own newest 100 conversations in a project they may read; conversations stay private to their owner.</summary>
+/// <summary>使用者可讀取的專案中，使用者自己最新的 100 個對話；對話只對擁有者可見。</summary>
 internal sealed class ListProjectConversations(NexusDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

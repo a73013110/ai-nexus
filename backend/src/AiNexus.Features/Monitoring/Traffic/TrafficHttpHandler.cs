@@ -2,7 +2,7 @@ using System.Diagnostics;
 
 namespace AiNexus.Features.Monitoring.Traffic;
 
-/// <summary>Shared by every factory client; a call ends at response headers, independently of model streaming.</summary>
+/// <summary>所有工廠建立的 HTTP 用戶端共用；呼叫在回應標頭送達時即結束計時，與模型串流的長短無關。</summary>
 public sealed class TrafficHttpHandler(RuntimeTraffic traffic, DependencyCatalog catalog) : DelegatingHandler
 {
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)

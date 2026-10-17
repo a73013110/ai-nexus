@@ -4,8 +4,8 @@ namespace AiNexus.IntegrationTests.Host;
 
 public sealed class OpenApiContractTests
 {
-    // The published contract is the frontend's generated type source. Refactors must keep it byte-for-byte equivalent;
-    // intentional API changes regenerate it with scripts/Export-Contracts.ps1 in the same change.
+    // 已發佈的契約是前端產生型別的來源。重構必須讓它逐位元組等價；
+    // 刻意的 API 變更則須在同一個變更中，以 scripts/Export-Contracts.ps1 重新產生。
     [Fact]
     public async Task OpenApiMatchesPublishedContract()
     {

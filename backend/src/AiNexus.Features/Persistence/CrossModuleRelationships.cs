@@ -32,11 +32,13 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Persistence;
 
-/// <summary>
-/// Foreign keys whose two ends live in different modules. A module's own entity configuration only references its own
-/// entities, so the database constraints stay intact without creating code dependencies between modules. Each overload
-/// configures the dependent entity; <c>ApplyConfigurationsFromAssembly</c> applies one per implemented interface.
-/// </summary>
+/// <summary>集中設定跨模組的外鍵關係。</summary>
+/// <remarks>
+/// 跨模組的外鍵必須集中在這裡宣告：各模組的實體配置只能看見自己的型別，這樣才不會為了設定外鍵而產生 C# 模組間的循環依賴，
+/// 同時仍保有資料庫層級的外鍵約束。
+/// 大多數跨模組關聯使用 <see cref="DeleteBehavior.Restrict"/>，刪除必須經由領域的生命週期服務先解綁或清理，
+/// 不可交給資料庫連鎖刪除。只有從屬資料（如引用、知識關聯）才用 <see cref="DeleteBehavior.Cascade"/>。
+/// </remarks>
 internal sealed class CrossModuleRelationships :
     IEntityTypeConfiguration<UserRole>,
     IEntityTypeConfiguration<AdministratorBootstrap>,
@@ -87,7 +89,7 @@ internal sealed class CrossModuleRelationships :
     {
         artifact.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.Id).OnDelete(DeleteBehavior.Restrict);
         artifact.HasOne<Message>().WithMany().HasForeignKey(x => x.SourceMessageId).OnDelete(DeleteBehavior.Restrict);
-        // An artifact may belong to a project; ResourceLifecycle detaches artifacts before a project is deleted.
+        // Artifact 可以隸屬於專案；刪除專案前，ResourceLifecycle 會先解除這些 Artifact 的關聯。
         artifact.HasOne<Project>().WithMany().HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Restrict);
     }
 

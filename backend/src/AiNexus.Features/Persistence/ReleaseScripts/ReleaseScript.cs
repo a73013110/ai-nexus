@@ -3,20 +3,19 @@ using System.Text;
 
 namespace AiNexus.Features.Persistence.ReleaseScripts;
 
-/// <summary>The release SQL of one migration range, ready to write as schema/, data/ and manifest.md.</summary>
-/// <param name="FromMigration">The production database's last migration (exclusive); <see langword="null"/> for an empty database.</param>
-/// <param name="ToMigration">The last migration included; <see langword="null"/> when the assembly has none.</param>
-/// <param name="Migrations">The migrations in the range, in order.</param>
-/// <param name="Files">Every file in execution order.</param>
+/// <summary>一段 migration 範圍的發布 SQL，準備寫入 schema/、data/ 與 manifest.md。</summary>
+/// <param name="FromMigration">正式資料庫目前最後套用的 migration（不含）；空庫為 <see langword="null"/>。</param>
+/// <param name="ToMigration">範圍內最後一個 migration；組件中沒有任何 migration 時為 <see langword="null"/>。</param>
+/// <param name="Migrations">範圍內的 migration，依順序排列。</param>
+/// <param name="Files">所有檔案，依執行順序排列。</param>
 public sealed record ReleaseScript(string? FromMigration, string? ToMigration, IReadOnlyList<string> Migrations, IReadOnlyList<ReleaseScriptFile> Files)
 {
     public const string ManifestFileName = "manifest.md";
 
-    // SSMS and sqlcmd -f 65001 read UTF-8 with a BOM reliably; without one sqlcmd falls back to the ANSI code page and
-    // garbles the Chinese column descriptions.
+    // SSMS 與 sqlcmd -f 65001 只有在檔案帶 BOM 時才能穩定讀成 UTF-8；沒有 BOM 時 sqlcmd 會退回 ANSI 碼頁，中文欄位說明會亂碼。
     private static readonly UTF8Encoding SqlEncoding = new(encoderShouldEmitUTF8Identifier: true);
 
-    /// <summary>Writes every file and the manifest into <paramref name="directory"/>, which must be missing or empty.</summary>
+    /// <summary>把所有檔案與清單寫入 <paramref name="directory"/>；目錄必須不存在或為空，避免舊檔混入。</summary>
     public void WriteTo(string directory)
     {
         var root = Path.GetFullPath(directory);
@@ -28,7 +27,7 @@ public sealed record ReleaseScript(string? FromMigration, string? ToMigration, I
         File.WriteAllText(Path.Combine(root, ManifestFileName), Manifest(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
-    /// <summary>The run sheet the DBA follows: every file in execution order.</summary>
+    /// <summary>DBA 執行時依循的清單，依執行順序列出所有檔案。</summary>
     public string Manifest()
     {
         var text = new StringBuilder();

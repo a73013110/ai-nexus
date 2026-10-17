@@ -16,7 +16,7 @@ public sealed class DiagnosticFilter
 {
     public DateTimeOffset? From { get; set; }
     public DateTimeOffset? To { get; set; }
-    /// <summary>Any of these levels; empty or absent means every level.</summary>
+    /// <summary>符合任一等級即可；空或未提供代表全部等級。</summary>
     public LogLevel[]? Levels { get; set; }
     public string? Category { get; set; }
     public int? EventId { get; set; }
@@ -36,11 +36,11 @@ public sealed class DiagnosticFilter
 public sealed record DiagnosticSummary(Guid LogId, DateTimeOffset At, string Level, string Category, int EventId, string EventName, string MessageTemplate,
     string? IssueCode, string? TraceId, string? SpanId, string? RequestId, Guid? OperationId, Guid? JobId, Guid? RunId, int? Attempt,
     string? Method, string? Route, int? StatusCode, double? DurationMs, string? ExternalService, string? ErrorCode, string Instance, bool UntrustedClient, string Message);
-/// <summary>One page of events. <c>Degraded</c> means the log pipeline is degraded, so results may be incomplete; its full metrics are the monitoring <c>log-pipeline</c> source.</summary>
+/// <summary>一頁事件。<c>Degraded</c> 代表日誌管線降級、結果可能不完整；完整指標見監控來源 <c>log-pipeline</c>。</summary>
 public sealed record DiagnosticPage(IReadOnlyList<DiagnosticSummary> Events, string? NextCursor, DateTimeOffset From, DateTimeOffset To, bool Degraded);
 public sealed record DiagnosticDetail(DiagnosticSummary Event, string Service, string Environment, string Version, Guid? UserId, string PropertiesJson, string? ExceptionType, string? ExceptionDetail);
 
-/// <summary>Validated, audited reads of the stored diagnostic events for the log slices.</summary>
+/// <summary>經過驗證並留有稽核的日誌讀取；列表、詳情與匯出都會先寫稽核，寫不進去就失敗。</summary>
 public sealed class DiagnosticQuery(NexusDbContext db, IDataProtectionProvider protection, IOptions<DiagnosticOptions> options, DiagnosticHealth health, TimeProvider clock)
 {
     private readonly IDataProtector cursorProtector = protection.CreateProtector("AiNexus.Diagnostics.Cursor.v1");
@@ -57,11 +57,11 @@ public sealed class DiagnosticQuery(NexusDbContext db, IDataProtectionProvider p
             || filter.Text?.Length > 72 || filter.Cursor?.Length > 2048 || filter.IssueCode is not null && !Issues.ValidCode(filter.IssueCode)
             || filter.TraceId is not null && (filter.TraceId.Length != 32 || !filter.TraceId.All(char.IsAsciiHexDigit)))
             return DiagnosticsErrors.FilterInvalid;
-        // Text scans have an explicit narrow time bound; exact correlation lookups use ordinary indexes.
+        // 文字掃描必須有明確的窄時間範圍；精確的關聯 ID 查詢走一般索引，不受此限制。
         if (!string.IsNullOrWhiteSpace(filter.Text) && to - from > TimeSpan.FromDays(1)) return DiagnosticsErrors.TextRange;
         return (from, to);
     }
-    /// <summary>Distinct and ordered, so the same selection in any order shares a cursor fingerprint.</summary>
+    /// <summary>去重並排序，讓同樣的條件不論順序為何都得到相同的游標指紋。</summary>
     private static LogLevel[]? Levels(DiagnosticFilter f) => f.Levels?.Distinct().Order().ToArray();
     private IQueryable<DiagnosticEvent> Filter(DiagnosticFilter f, DateTimeOffset from, DateTimeOffset to)
     {
@@ -100,7 +100,7 @@ public sealed class DiagnosticQuery(NexusDbContext db, IDataProtectionProvider p
                 : query.Where(x => x.At < cursor.At || x.At == cursor.At && x.LogId.CompareTo(cursor.LogId) < 0);
         }
         var take = filter.Take ?? 50;
-        // Projection keeps privileged stacks/properties out of list responses and prevents large materialization.
+        // 只投影列表需要的欄位：堆疊與屬性可能含敏感資料，只留給詳情 API，也避免整批物件化。
         var ordered = Order(query, filter.SortDirection);
         var rows = await ordered.Select(x => new DiagnosticEvent {
             LogId = x.LogId, At = x.At, Level = x.Level, Category = x.Category, EventId = x.EventId, EventName = x.EventName, MessageTemplate = x.MessageTemplate,
@@ -140,7 +140,7 @@ public sealed class DiagnosticQuery(NexusDbContext db, IDataProtectionProvider p
     private static string Csv(object? value) => CsvCell.Quote(DiagnosticRedactor.Text(Convert.ToString(value, CultureInfo.InvariantCulture), 240));
     private async Task AuditAsync(Guid actor, string action, Guid? logId, DiagnosticFilter? filter, CancellationToken ct)
     {
-        // Privileged reads fail closed if the audit cannot be persisted. This is separate from diagnostic sampling/queues.
+        // 特權讀取採 fail closed：稽核寫不進去就整個失敗。這與診斷事件的抽樣或佇列無關。
         db.AuditEvents.Add(new() { OwnerId = actor, Action = action, ResourceId = logId, Result = "read", DetailsJson = JsonSerializer.Serialize(new { from = filter?.From, to = filter?.To, issueCode = filter?.IssueCode, traceId = filter?.TraceId, jobId = filter?.JobId, runId = filter?.RunId }) });
         await db.SaveChangesAsync(ct);
     }

@@ -9,7 +9,7 @@ using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Sharing;
 
-/// <summary>Account-bound snapshots of conversations and artifacts. Deleting a source revokes its shares through domain events.</summary>
+/// <summary>綁定帳號的對話與成果快照。刪除來源時，透過領域事件撤銷其分享。</summary>
 public sealed class SharingModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)

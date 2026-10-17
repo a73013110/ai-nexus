@@ -13,7 +13,7 @@ public sealed class MenuNavigationTests
     {
         await using var factory = new NexusFactory(); using var member = await factory.SignedInAsync();
         var access = (await member.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access;
-        // quality is the only system feature members hold, so the system group comes with it.
+        // quality 是成員唯一持有的系統功能，因此系統群組會一併帶出。
         Assert.Equal(["work", "collaboration", "system"], access.NavigationGroups.Select(x => x.Id));
         Assert.Contains(access.Features, x => x.Id == "dashboard" && x.GroupId == null && x.Icon == "dashboard");
         Assert.All(access.NavigationGroups, x => Assert.Null(x.ParentId));
@@ -35,10 +35,10 @@ public sealed class MenuNavigationTests
         Assert.Contains("system", groups);
         Assert.DoesNotContain("empty", groups);
         Assert.DoesNotContain("permissions", groups);
-        // The grant-only feature is still granted; only the menu leaves it out.
+        // 僅有授權、沒有選單入口的功能仍然有效；選單只是不列出它。
         Assert.Contains(access.Features, x => x.Id == "logs.export" && x.Route == "");
 
-        // A group whose only feature is disabled disappears with it.
+        // 群組內唯一的功能若被停用，整個群組也會一併從選單消失。
         (await admin.PutAsJsonAsync("/api/v1/admin/features/monitoring", new FeatureUpdateRequest("即時監控", 93, false, "diagnosis", "activity"))).EnsureSuccessStatusCode();
         Assert.DoesNotContain((await admin.GetFromJsonAsync<MeDto>("/api/v1/me"))!.Access.NavigationGroups, x => x.Id == "diagnosis");
     }

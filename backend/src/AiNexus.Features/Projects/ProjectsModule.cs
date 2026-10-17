@@ -7,7 +7,7 @@ using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.Projects;
 
-/// <summary>Shared projects: settings, sharing, reference files, templates and the user's conversations in them. Each use case has its own file.</summary>
+/// <summary>共用專案：設定、分享、參考檔案、範本，以及使用者在專案中的對話。每個用例各自一個檔案。</summary>
 public sealed class ProjectsModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)
@@ -18,7 +18,7 @@ public sealed class ProjectsModule : IFeatureModule
         services.AddFeaturePolicy(FeatureIds.Projects);
     }
 
-    // Endpoint order is the published OpenAPI order.
+    // 端點順序即已發布的 OpenAPI 順序。
     public static void MapEndpoints(RouteGroupBuilder api)
     {
         AssignConversationProject.Map(api);

@@ -11,7 +11,7 @@ public sealed record AdminUsageDto(int Users, int Requests, int Completed, long 
     int ActiveUsers, int Failed, int Cancelled, long StoredBytes, int StoredFiles, IReadOnlyList<UsageModelDto> Models, IReadOnlyList<UsageKindDto> Kinds,
     IReadOnlyList<ProviderStatusDto> Providers, WebSearchStatusDto WebSearch, DateTimeOffset Since, DateTimeOffset Until);
 
-/// <summary>Platform usage since <see cref="UsageReports.Since"/>, storage, provider health and web search status.</summary>
+/// <summary>自 <see cref="UsageReports.Since"/> 起的平台用量、儲存空間、模型供應商健康度與網路搜尋狀態。</summary>
 internal sealed class GetAdminUsage(NexusDbContext db, UsageReports reports, ModelCatalog catalog, WebSearchService search, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes) => routes

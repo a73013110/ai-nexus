@@ -7,8 +7,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Attachments.Files;
 
 /// <summary>
-/// Removes an unsent composer draft, or deletes a file from the library. Files held by a conversation or by another
-/// workspace resource stay; the owner's private readers of the file are removed with it. Bytes are deleted after commit.
+/// 移除尚未送出的輸入框草稿，或從檔案庫刪除檔案。仍被對話或其他工作區資源持有的檔案會保留；
+/// 擁有者對該檔案的私人讀取器會一併移除。位元組在交易提交後才刪除。
 /// </summary>
 internal sealed class RemoveAttachment(NexusDbContext db, AttachmentService files, AttachmentWriteLock writes, AttachmentQuota quota, AttachmentLifecycle lifecycle)
 {
@@ -31,9 +31,9 @@ internal sealed class RemoveAttachment(NexusDbContext db, AttachmentService file
             await quota.LockOwnerAsync(owner, ct);
             var file = await files.OwnedAsync(owner, id, ct);
             if (!file.IsSuccess) return file.Error;
-            // Removing a reused file from the composer must never delete its library original.
+            // 從輸入框移除重複使用的檔案，絕不能刪掉檔案庫中的原檔。
             if (file.Value.InLibrary && !fromLibrary) return Result.Success;
-            // Sent files are kept by their conversation; other resources must release the file themselves.
+            // 已送出的檔案由對話保留；其他資源必須自行釋放對檔案的引用。
             if (await db.Set<MessageAttachment>().AnyAsync(x => x.AttachmentId == id, ct)) return AttachmentsErrors.InUse;
             if (await db.Set<AttachmentReference>().AnyAsync(x => x.AttachmentId == id && !lifecycle.PrivateReaders(owner).Contains(x.ResourceId), ct)) return AttachmentsErrors.InUse;
             await lifecycle.RemovePrivateReadersAsync(owner, [id], ct);

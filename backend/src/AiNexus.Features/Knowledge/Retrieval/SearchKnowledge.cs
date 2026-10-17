@@ -8,8 +8,8 @@ namespace AiNexus.Features.Knowledge.Retrieval;
 public sealed record KnowledgeSearchRequest(string Query, IReadOnlyList<Guid> CollectionIds);
 
 /// <summary>
-/// The query rule of <see cref="RetrievalPipeline.SearchAsync"/>, its first check. The collection limit, mode and access
-/// checks that follow stay in the pipeline, which also serves callers outside this endpoint.
+/// 查詢字串規則，是 <see cref="RetrievalPipeline.SearchAsync"/> 的第一道檢查。之後的知識庫數量上限、模式與權限檢查
+/// 留在 pipeline 內，因為 pipeline 也服務此端點以外的呼叫者。
 /// </summary>
 internal sealed class KnowledgeSearchRequestValidator : RequestValidator<KnowledgeSearchRequest>
 {
@@ -21,7 +21,7 @@ internal sealed class KnowledgeSearchRequestValidator : RequestValidator<Knowled
     }
 }
 
-/// <summary>Searches up to three collections the user may read, through the full retrieval pipeline.</summary>
+/// <summary>在使用者可讀取的最多三個知識庫中搜尋，經過完整的檢索 pipeline。</summary>
 internal sealed class SearchKnowledge(RetrievalPipeline pipeline)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

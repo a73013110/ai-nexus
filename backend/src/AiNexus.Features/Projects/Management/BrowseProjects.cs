@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Projects.Management;
 
-/// <summary>The newest 100 projects the user may read, and one project by id.</summary>
+/// <summary>使用者可讀取的最新 100 個專案，以及依 id 取得單一專案。</summary>
 internal sealed class BrowseProjects(NexusDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder MapList(RouteGroupBuilder routes) => routes

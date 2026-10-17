@@ -46,7 +46,7 @@ public sealed class SearchKnowledgeTests
         Assert.Equal(calls, factory.Embeddings.Calls);
     }
 
-    // Only the effective-feature read of AccessService joins this table.
+    // 只有 AccessService 的有效功能查詢會 join 這張表。
     private const string GrantRead = "RoleGroupFeatures";
 
     [Fact]
@@ -58,7 +58,7 @@ public sealed class SearchKnowledgeTests
         using var response = await client.PostAsJsonAsync("/api/v1/knowledge/search", new KnowledgeSearchRequest("採購", [seed.Collection]));
         response.EnsureSuccessStatusCode();
         Assert.Single((await response.Content.ReadFromJsonAsync<KnowledgeSearchDto>())!.Hits);
-        // Collection ACL: once at the start and once, with fresh grants, before the result leaves.
+        // 集合 ACL 會檢查兩次：開始時一次，結果送出前再以最新授權檢查一次。
         Assert.Equal(2, queries.Count("/api/v1/knowledge/search", "\"ResourceGroups\""));
         Assert.Equal(2, queries.Count("/api/v1/knowledge/search", GrantRead));
     }

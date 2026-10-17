@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Repositories.Browsing;
 
-/// <summary>Removes a pin; no Gitea call, so a repository the user can no longer read can still be unpinned.</summary>
+/// <summary>移除釘選。不呼叫 Gitea，因此使用者已無權讀取的程式庫仍能取消釘選。</summary>
 internal sealed class UnpinRepository(NexusDbContext db, RepositoryService gitea)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder repository) => repository

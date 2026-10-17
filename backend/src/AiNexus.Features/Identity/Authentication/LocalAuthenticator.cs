@@ -6,6 +6,9 @@ using AiNexus.Features.Identity.Users;
 
 namespace AiNexus.Features.Identity.Authentication;
 
+/// <summary>
+/// 本地帳密驗證。雜湊比對耗時，所以比對時不持鎖；比對完才取得寫入鎖並重讀使用者，讓撤銷與並行登入都以較新的狀態為準。
+/// </summary>
 public sealed class LocalAuthenticator(NexusDbContext db, Argon2Passwords passwords, IdentityWriteLock writes, TimeProvider clock)
 {
     public async Task<Result<NexusUser>> AuthenticateAsync(string account, string password, CancellationToken ct)
@@ -18,7 +21,7 @@ public sealed class LocalAuthenticator(NexusDbContext db, Argon2Passwords passwo
         await writes.Gate.WaitAsync(ct);
         try
         {
-            // Re-read policies after the expensive hash so revocation wins a concurrent login.
+            // 比對完雜湊後才重讀使用者，若期間被撤銷、停用或改了密碼，就以新狀態拒絕登入。
             if (user is not null) await db.Entry(user).ReloadAsync(ct);
             var now = clock.GetUtcNow();
             var locked = user?.LockedUntil > now;
@@ -39,7 +42,7 @@ public sealed class LocalAuthenticator(NexusDbContext db, Argon2Passwords passwo
         }
         catch (DbUpdateConcurrencyException)
         {
-            // Sign-in settings changed while the hash was checked.
+            // 比對雜湊期間登入設定被改動（樂觀併發衝突），一律視為帳密錯誤，不透露原因。
             return IdentityErrors.InvalidCredentials;
         }
         finally { writes.Gate.Release(); }

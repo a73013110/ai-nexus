@@ -4,7 +4,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Features.Projects.Management;
 
-/// <summary>Who may read or edit a project, through the shared resource access list (owner only).</summary>
+/// <summary>決定誰能讀取或編輯專案，透過共用資源的存取清單設定（僅限擁有者）。</summary>
 internal sealed class ShareProject(ResourceAccess access)
 {
     public static void Map(RouteGroupBuilder routes)

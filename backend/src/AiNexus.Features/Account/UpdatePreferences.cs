@@ -8,7 +8,7 @@ using FluentValidation;
 
 namespace AiNexus.Features.Account;
 
-/// <summary>The theme is checked first; the model id length and server approval are checked by the handler, in that order.</summary>
+/// <summary>驗證順序固定：先檢查主題，再由 handler 檢查模型 ID 長度與伺服器是否核准該模型。</summary>
 internal sealed class PreferencesValidator : RequestValidator<PreferencesDto>
 {
     public override string ProblemCode => AccountErrors.InvalidTheme.Code;
@@ -16,7 +16,7 @@ internal sealed class PreferencesValidator : RequestValidator<PreferencesDto>
     public PreferencesValidator() => RuleFor(x => x.Theme).Must(UpdatePreferences.ValidTheme).WithErrorCode("unknown");
 }
 
-/// <summary>Saves the user's theme, motion and default model preferences.</summary>
+/// <summary>儲存使用者的主題、動畫與預設模型偏好。</summary>
 internal sealed class UpdatePreferences(NexusDbContext db, ModelPresentation models)
 {
     public const int MaxModelIdLength = 160;
@@ -36,7 +36,7 @@ internal sealed class UpdatePreferences(NexusDbContext db, ModelPresentation mod
 
     public static bool ValidTheme(string? theme) => theme is "light" or "dark" or "system";
 
-    /// <summary>Checks and applies <paramref name="value"/> to the tracked user without saving; nothing changes on failure.</summary>
+    /// <summary>檢查並把 <paramref name="value"/> 套用到已追蹤的使用者，但不儲存；失敗時不改動任何值。</summary>
     public static Result<PreferencesDto> Apply(NexusUser user, PreferencesDto value, ModelPresentation models)
     {
         if (!ValidTheme(value.Theme)) return AccountErrors.InvalidTheme;

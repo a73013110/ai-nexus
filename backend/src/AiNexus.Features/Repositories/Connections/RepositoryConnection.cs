@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Repositories.Connections;
 
-/// <summary>A user's own Gitea token, encrypted for that user and host. Only <see cref="RepositoryService"/> decrypts it.</summary>
+/// <summary>使用者自己的 Gitea token，以該使用者與主機為範圍加密；只有 <see cref="RepositoryService"/> 會解密。</summary>
 [Comment("使用者個人的 Gitea 連線及 Data Protection 保護的存取 token。")]
 public sealed class RepositoryConnection
 {

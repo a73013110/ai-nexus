@@ -13,7 +13,7 @@ namespace AiNexus.Features.Administration.Users;
 
 public sealed record AdminUserDetailDto(AdminUserDto User, PersonalUsageDto Usage, IReadOnlyList<UsageKindDto> Kinds, int Conversations);
 
-/// <summary>One user's account, roles, usage and storage. The read is audited.</summary>
+/// <summary>單一使用者的帳號、角色、用量與儲存空間；讀取會稽核。</summary>
 internal sealed class GetAdminUserInsights(NexusDbContext db, AdministrativeReadAudit reads, UsageReports usage, PersonalUsage personal)
 {
     public static void Map(RouteGroupBuilder routes) => routes

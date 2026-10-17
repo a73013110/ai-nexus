@@ -6,7 +6,9 @@ using AiNexus.Features.Identity.Sessions;
 
 namespace AiNexus.Features.Identity.Authentication;
 
-/// <summary>Durable authentication events use a fresh context, independent of failed credential writes.</summary>
+/// <summary>
+/// 驗證事件使用獨立的 scope（新的 DbContext）寫入，不受同一請求中失敗的帳密相關寫入影響，確保失敗紀錄一定留得下來。
+/// </summary>
 public sealed class AuthenticationAudit(IServiceScopeFactory scopes, IHttpContextAccessor accessor)
 {
     public async Task WriteAsync(string action, Guid? userId, string? account, string? method, string result,
@@ -14,7 +16,7 @@ public sealed class AuthenticationAudit(IServiceScopeFactory scopes, IHttpContex
     {
         var http = accessor.HttpContext;
         var actor = userId ?? Guid.Empty;
-        // An attempted account is unverified; never attribute a rejected login to the current cookie.
+        // 只有登出時才以目前 cookie 的管理者身分當作 actor。登入嘗試的帳號尚未驗證，絕不能把被拒絕的登入歸屬到現有 cookie。
         if (action == "identity.logout" && Guid.TryParse(http?.User.FindFirstValue(SessionIdentity.ActorId), out var administrator)) actor = administrator;
         await using var scope = scopes.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<NexusDbContext>();

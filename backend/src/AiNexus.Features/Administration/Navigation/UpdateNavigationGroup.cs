@@ -10,7 +10,7 @@ namespace AiNexus.Features.Administration.Navigation;
 [ValidatedInHandler("Format failures are audited inside the administrative transaction (NavigationRules).")]
 public sealed record NavigationGroupUpdateRequest(string Name, string? ParentId, int SortOrder);
 
-/// <summary>Renames, moves or reorders a menu group. Audited; refused when the new parent is the group itself or one of its subgroups.</summary>
+/// <summary>更新選單群組的名稱、父層與排序。會稽核；新父層若是自己或自己的子孫則拒絕，以防止循環。</summary>
 internal sealed class UpdateNavigationGroup(NexusDbContext db, AdministrativeAudit audit)
 {
     public static void Map(RouteGroupBuilder routes) => routes

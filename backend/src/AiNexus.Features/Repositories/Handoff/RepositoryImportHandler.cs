@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Repositories.Handoff;
 
 /// <summary>
-/// Imports a folder snapshot file by file. Each file is re-read at the pinned commit and checked against the user's current
-/// Gitea, feature and collection access; files imported before (by this job or another) are reused, so retries resume.
+/// 逐檔匯入資料夾快照。每個檔案都在固定 commit 上重新讀取，並檢查使用者目前的 Gitea、功能與知識庫權限；
+/// 先前已匯入的檔案（不論是否為本工作匯入）直接沿用，因此重試可以接續進行。
 /// </summary>
 internal sealed class RepositoryImportHandler(NexusDbContext db, RepositoryService gitea, AccessService features, ResourceAccess access,
     AttachmentService attachments, DocumentService documents) : IBackgroundJobHandler
@@ -33,6 +33,7 @@ internal sealed class RepositoryImportHandler(NexusDbContext db, RepositoryServi
         for (var i = 0; i < paths.Length; i++)
         {
             await execution.CheckpointAsync($"正在匯入 {i + 1} / {paths.Length}：{Path.GetFileName(paths[i])}", i, paths.Length, ct);
+            // 從第二個檔案開始每次都重新檢查權限：匯入可能跑好幾分鐘，中途撤權或關閉功能就要停止。
             if (i > 0 && await RequireAsync(execution.Job, ct) is { IsSuccess: false } revoked) return revoked.Error!;
             var result = await ImportAsync(row, paths[i], ct);
             if (!result.IsSuccess) return result.Error!;
@@ -71,7 +72,7 @@ internal sealed class RepositoryImportHandler(NexusDbContext db, RepositoryServi
         if (!added.IsSuccess) return added.Error!;
         db.Add(new RepositoryImport { OwnerId = row.OwnerId, CollectionId = row.CollectionId, DocumentId = added.Value!.Id, Repository = row.Repository,
             Commit = row.Commit, Path = path, BaseUrl = row.BaseUrl });
-        // Saved with the document, so a retry after a crash reuses it instead of adding a duplicate.
+        // 與文件同一次儲存；若當機後重試，就會沿用既有紀錄，而不是再新增一份重複的文件。
         await db.SaveChangesAsync(ct);
         return true;
     }

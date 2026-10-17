@@ -12,8 +12,8 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Knowledge.Retrieval;
 
 /// <summary>
-/// The module's retrieval contract for generation: the conversation's selected collections, permission-checked sources
-/// for a run, the reserved context and citations. The module's own endpoints are the slices next to this file.
+/// 本模組提供給生成流程的檢索契約：對話所選的知識庫、單次執行經權限檢查的來源、預留的上下文與引用。
+/// 模組自己的端點是本檔旁邊的各個 slice。
 /// </summary>
 public sealed class KnowledgeRetrieval(NexusDbContext db, ConversationService conversations, RetrievalPipeline pipeline, RetrievalAuthorization authorization, IOptions<KnowledgeOptions> options)
 {
@@ -61,16 +61,16 @@ public sealed class KnowledgeRetrieval(NexusDbContext db, ConversationService co
     private sealed record Node(Guid Id, Guid? ParentId, string Role, string Status, int Length);
 
     /// <summary>
-    /// Up to <paramref name="limit"/> non-empty user messages and finished answers above <paramref name="parent"/>, oldest
-    /// first. Reads the branch's shape once and then only the texts it keeps, instead of one round trip per message.
+    /// 取最多 <paramref name="limit"/> 則非空的使用者訊息與已完成的回答（位於 <paramref name="parent"/> 之上），依由舊到新排列。
+    /// 先一次讀取分支的結構，再只載入保留下來的文字，避免每則訊息各打一次資料庫。
     /// </summary>
     private async Task<Result<IReadOnlyList<RewriteTurn>>> HistoryAsync(Guid conversation, Guid? parent, int limit, CancellationToken ct)
     {
         if (parent is null || limit <= 0) return Result<IReadOnlyList<RewriteTurn>>.Ok([]);
         var tree = await db.Messages.AsNoTracking().Where(x => x.ConversationId == conversation)
             .Select(x => new Node(x.Id, x.ParentId, x.Role, x.Status, x.Content.Length)).ToDictionaryAsync(x => x.Id, ct);
-        // Newest first. SQL Server's LEN ignores trailing spaces, so a zero length may still be a blank text: such a message
-        // is read but does not count toward the limit until its text shows it is not empty.
+        // 由新到舊走訪。SQL Server 的 LEN 會忽略結尾空白，長度為 0 的訊息仍可能是空白文字，因此這類訊息會被讀取，
+        // 但要等文字確實非空，才計入上限。
         var candidates = new List<Node>(); var visited = new HashSet<Guid>(); var known = 0;
         while (parent is Guid id && known < limit)
         {

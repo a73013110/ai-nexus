@@ -4,8 +4,10 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 namespace AiNexus.Platform.Health;
 
 /// <summary>
-/// <c>/health/live</c> only says the process answers; <c>/health/ready</c> runs the checks tagged <see cref="ReadyTag"/>
-/// (the database) and answers 200 or 503. Both are anonymous, so the body never names a check or its failure.
+/// 應用程式健康檢查端點：
+/// <c>/health/live</c> 僅確認處理程序存活並可回應；
+/// <c>/health/ready</c> 則執行標記為 <see cref="ReadyTag"/> 的核心相依性檢查（如資料庫連線）並回應 200 或 503。
+/// 兩者皆允許匿名存取，回應本體不洩漏任何內部元件名稱或失敗細節。
 /// </summary>
 public static class HealthEndpoints
 {

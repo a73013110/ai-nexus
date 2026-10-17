@@ -6,15 +6,13 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace AiNexus.Features.AccessControl;
 
 /// <summary>
-/// The features a module adds, the built-in group that grants each one and their default menu placement, seeded with
-/// <c>HasData</c>. A module declares one sealed subclass with a parameterless constructor next to its module class;
-/// <c>ApplyConfigurationsFromAssembly</c> applies it like any other entity configuration. A module whose features need a
-/// menu group of their own (say <c>workforce</c> 「員工服務」) overrides <see cref="NavigationGroups"/>; the built-in groups
-/// are seeded by <see cref="NavigationGroupConfiguration"/>.
+/// 模組新增的功能、各功能預設由哪個內建群組授權，以及預設選單位置，以 <c>HasData</c> 寫入。模組在自己的模組類別旁宣告一個
+/// sealed 子類別（無參數建構子），<c>ApplyConfigurationsFromAssembly</c> 會像其他實體設定一樣套用它。
+/// 若模組的功能需要自己的選單分群（例如 <c>workforce</c>「員工服務」），覆寫 <see cref="NavigationGroups"/>；內建分群則由 <see cref="NavigationGroupConfiguration"/> 寫入。
 /// </summary>
 public abstract class FeatureSeed(params PlatformFeature[] features) : IEntityTypeConfiguration<Feature>, IEntityTypeConfiguration<RoleGroupFeature>, IEntityTypeConfiguration<NavigationGroup>
 {
-    /// <summary>Menu groups this module adds; none by default.</summary>
+    /// <summary>此模組額外新增的選單分群；預設沒有。</summary>
     protected virtual IEnumerable<NavigationGroup> NavigationGroups => [];
 
     public void Configure(EntityTypeBuilder<Feature> builder)

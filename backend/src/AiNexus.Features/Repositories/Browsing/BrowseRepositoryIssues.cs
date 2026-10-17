@@ -12,10 +12,10 @@ public sealed record RepositoryIssueDetailDto(RepositoryIssueDto Issue, string B
 public sealed record RepositoryPullDto(int Number, string Title, string State, bool Merged, bool Draft, string Author, string HeadRef, string BaseRef,
     IReadOnlyList<RepositoryLabelDto> Labels, int Comments, DateTimeOffset? CreatedAt, DateTimeOffset? UpdatedAt, string Url);
 public sealed record RepositoryPullPageDto(IReadOnlyList<RepositoryPullDto> Items, int Page, bool HasMore);
-/// <summary>A pull request with the commits a review compares: its head and the merge base with the target branch.</summary>
+/// <summary>pull request 的詳情，附上 review 要比對的 commit：head 與目標分支的 merge base。</summary>
 public sealed record RepositoryPullDetailDto(RepositoryPullDto Pull, string Body, string HeadCommit, string BaseCommit, IReadOnlyList<RepositoryCommentDto> Comments);
 
-/// <summary>Issues and pull requests, read-only, with their conversations.</summary>
+/// <summary>唯讀瀏覽 issue 與 pull request，包含其留言。</summary>
 internal sealed class BrowseRepositoryIssues(RepositoryService gitea)
 {
     private const int PageSize = 20;
@@ -59,7 +59,7 @@ internal sealed class BrowseRepositoryIssues(RepositoryService gitea)
         RepositoryIssueDto issue; string body;
         using (var json = read.Value!)
         {
-            // Gitea serves pull requests through the issue endpoint too; they have their own page.
+            // Gitea 也會從 issue 端點回傳 pull request，但它們有自己的頁面；這裡必須排除，否則會被當成 issue 顯示。
             if (json.RootElement.TryGetProperty("pull_request", out var pull) && pull.ValueKind == JsonValueKind.Object) return RepositoriesErrors.NotFound;
             issue = Issue(repo, json.RootElement); body = GiteaJson.Text(json.RootElement, "body", 32000);
         }

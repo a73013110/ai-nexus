@@ -9,8 +9,8 @@ namespace AiNexus.IntegrationTests.Support;
 internal static class PlatformGrants
 {
     /// <summary>
-    /// Separates platform operations from access management: the administrators group keeps access management only, and
-    /// <paramref name="operatorId"/> gets platform operations alone through a role and group of its own.
+    /// 將平台營運與存取管理分開：administrators 群組只保留存取管理，而
+    /// <paramref name="operatorId"/> 則透過自己的角色與群組，只取得平台營運權限。
     /// </summary>
     internal static async Task SplitOperationsAsync(NexusFactory factory, Guid operatorId)
     {

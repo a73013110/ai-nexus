@@ -68,7 +68,7 @@ public sealed partial class StructuredChunker(IOptions<KnowledgeOptions> options
             if (pending.Count > 0 && (headingChanged && length >= settings.Indexing.ChunkMinTokens || length >= settings.Indexing.ChunkTargetTokens && block.Boundary
                 || TokenEstimator.Estimate(Text() + "\n" + block.Text) > settings.Indexing.ChunkMaxTokens || Text().Length + block.Text.Length + 1 > 4000))
                 Flush(!headingChanged);
-            // Drop overlap if it would force a hard split of the next sentence or table row.
+            // 若保留重疊會迫使下一句或表格列被硬切，就捨棄重疊內容。
             if (pending.Count > 0 && TokenEstimator.Estimate(Text() + "\n" + block.Text) > settings.Indexing.ChunkMaxTokens) pending.Clear();
             pending.Add(block);
             if (TokenEstimator.Estimate(Text()) >= settings.Indexing.ChunkTargetTokens && !block.Table) Flush(true);

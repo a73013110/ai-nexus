@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Repositories.Reviews;
 
-/// <summary>A review with its source sections and checkpointed results, readable only while the user can still read the source.</summary>
+/// <summary>review 與其來源區段及已存的各區段結果；只有使用者仍能讀取來源時才可讀取。</summary>
 internal sealed class ReadRepositoryReview(NexusDbContext db, RepositoryReviewService reviews)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

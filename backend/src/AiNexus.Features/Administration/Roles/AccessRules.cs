@@ -5,8 +5,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Administration.Roles;
 
 /// <summary>
-/// Format rules for role, group and feature edits. They run inside <see cref="AdministrativeAudit.MutateAsync(string, Guid?, string, Func{Task{Result}}, CancellationToken)"/>, after
-/// the administrator check, so a rejected edit is still audited with its code; that is why they are not request validators.
+/// 角色、群組與功能編輯的格式規則。在 <see cref="AdministrativeAudit.MutateAsync(string, Guid?, string, Func{Task{Result}}, CancellationToken)"/> 內、管理者檢查之後執行，
+/// 所以被拒絕的編輯仍會留下錯誤代碼的稽核；因此這些規則刻意不做成 request validator。
 /// </summary>
 internal static class AccessRules
 {

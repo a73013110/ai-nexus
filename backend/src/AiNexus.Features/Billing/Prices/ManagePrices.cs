@@ -15,7 +15,7 @@ internal sealed class PriceRequestValidator : RequestValidator<PriceRequest>
 {
     public override string ProblemCode => "invalid_price";
 
-    // A new price only takes effect from now on, so recorded charges never change retroactively.
+    // 新價格只對 EffectiveAt 之後的呼叫生效，已記錄的費用不會被追溯改寫。
     public PriceRequestValidator(TimeProvider clock)
     {
         RuleFor(x => x.Provider).Must(x => x is "google" or "ollama" or "searxng" or "brave").WithErrorCode("unknown");
@@ -34,7 +34,7 @@ internal sealed class PriceRequestValidator : RequestValidator<PriceRequest>
     }
 }
 
-/// <summary>Administrative price list: the models that can be priced, existing versions, and new versions.</summary>
+/// <summary>管理用價格表：可計價的模型、既有價格版本，以及新增版本。</summary>
 internal sealed class ManagePrices(NexusDbContext db, BillingService billing)
 {
     public static void Map(RouteGroupBuilder admin)

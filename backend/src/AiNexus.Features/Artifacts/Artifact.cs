@@ -5,8 +5,8 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace AiNexus.Features.Artifacts;
 
 /// <summary>
-/// A versioned document. Its name, owner, project and sharing live on the <see cref="WorkspaceResource"/> with the same
-/// id; every save adds an immutable <see cref="ArtifactRevision"/>.
+/// 有版本的成果文件。名稱、擁有者、專案與分享設定存放在同 Id 的 <see cref="WorkspaceResource"/> 上；
+/// 每次保存都會新增一筆不可變的 <see cref="ArtifactRevision"/>。
 /// </summary>
 [Comment("使用者保存的成果文件與目前版本。")]
 public sealed class Artifact
@@ -26,10 +26,10 @@ public sealed class Artifact
     [Comment("關聯專案的識別碼。")]
     public Guid? ProjectId { get; set; }
 
-    /// <summary>The rule of <see cref="ResourceAccess.Name"/>.</summary>
+    /// <summary>與 <see cref="ResourceAccess.Name"/> 相同的規則：去除頭尾空白後 1 到 120 字元，且不含控制字元。</summary>
     internal static bool TitleIsValid(string? title) => title?.Trim() is { Length: >= 1 and <= TitleMaxLength } trimmed && !trimmed.Any(char.IsControl);
 
-    /// <summary>1 to 64,000 characters, not only whitespace, and no control characters other than line breaks and tabs.</summary>
+    /// <summary>1 到 64,000 字元、不可全為空白，且除換行與 Tab 外不得含控制字元。</summary>
     internal static bool ContentIsValid(string? content) => content is { Length: >= 1 and <= ContentMaxLength } && !string.IsNullOrWhiteSpace(content)
         && !content.Any(x => char.IsControl(x) && x is not ('\n' or '\r' or '\t'));
 }

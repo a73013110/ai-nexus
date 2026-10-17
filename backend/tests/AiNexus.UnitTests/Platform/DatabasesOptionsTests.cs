@@ -94,7 +94,7 @@ public sealed class DatabasesOptionsTests
     {
         using var services = Services(new() { ["Databases:Nexus:ConnectionString"] = "Server=x" });
         var error = Assert.ThrowsAny<InvalidOperationException>(() => services.GetRequiredService<IOptions<DatabasesOptions>>().Value);
-        // A dictionary entry's binding error is wrapped; the inner message names the unknown key.
+        // 字典項目的綁定錯誤會被包裝一層，真正指出未知欄位的訊息在 InnerException。
         Assert.Contains("DatabaseOptions: 'ConnectionString'", error.InnerException?.Message, StringComparison.Ordinal);
     }
 

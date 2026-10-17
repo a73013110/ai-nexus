@@ -9,7 +9,7 @@ public sealed record RepositoryCommitPageDto(IReadOnlyList<RepositoryCommitDto> 
 /// <summary>A commit against its parent, or the net change from <see cref="Base"/>; <see cref="TooLarge"/> leaves <see cref="Diff"/> empty.</summary>
 public sealed record RepositoryDiffDto(RepositoryCommitDto Head, RepositoryCommitDto? Base, string Diff, bool TooLarge);
 
-/// <summary>What changed: the commit history of a ref and the diff of one commit or between two.</summary>
+/// <summary>變更歷史：某個 ref 的 commit 清單，以及單一 commit 或兩個 commit 之間的 diff。</summary>
 internal sealed class BrowseRepositoryHistory(RepositoryService gitea)
 {
     private const int PageSize = 30;

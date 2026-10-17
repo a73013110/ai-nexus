@@ -4,8 +4,8 @@ using Microsoft.Extensions.Logging;
 namespace AiNexus.ArchitectureTests;
 
 /// <summary>
-/// Diagnostics are queried by EventId and EventName, so every [LoggerMessage] names a fixed, unique pair
-/// (docs/architecture/log-events.md). CA1848 already forbids logging outside [LoggerMessage] methods.
+/// 診斷紀錄以 EventId 與 EventName 查詢，所以每個 [LoggerMessage] 都必須是固定且唯一的一組（見 docs/architecture/log-events.md）。
+/// 在 [LoggerMessage] 以外寫日誌已由 CA1848 禁止，這裡不重複檢查。
 /// </summary>
 public sealed class LoggingTests
 {

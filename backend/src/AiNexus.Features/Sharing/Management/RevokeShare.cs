@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Sharing.Management;
 
-/// <summary>The owner withdraws a share: recipients lose it and its file grants at once, and the snapshot text is erased.</summary>
+/// <summary>擁有者撤銷分享：收件人立即失去存取權與檔案授權，快照文字也會被清除。</summary>
 internal sealed class RevokeShare(NexusDbContext db, ShareWriteLock writes)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

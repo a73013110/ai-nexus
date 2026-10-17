@@ -8,8 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Administration.Navigation;
 
 /// <summary>
-/// Format and placement rules for menu-group and feature-placement edits. Like <see cref="AccessRules"/> they run inside the
-/// audited administrative transaction, so a rejected edit is still audited with its code.
+/// 選單群組與功能掛載位置的格式規則。與 <see cref="AccessRules"/> 相同，在稽核交易內執行，被拒絕的編輯仍會留下錯誤代碼的稽核紀錄。
 /// </summary>
 internal static class NavigationRules
 {
@@ -19,7 +18,7 @@ internal static class NavigationRules
 
     public static Error? Icon(string icon) => Regex.IsMatch(icon, "^[a-z][a-z0-9-]{0,39}$", RegexOptions.CultureInvariant) ? null : AdministrationErrors.InvalidFeatureIcon;
 
-    /// <summary>A null group is the top level; any other id must name an existing group.</summary>
+    /// <summary>null 代表頂層；其他值必須指向既有群組。</summary>
     public static async Task<Error?> ExistingGroupAsync(NexusDbContext db, string? id, CancellationToken ct)
         => id is null || await db.Set<NavigationGroup>().AnyAsync(x => x.Id == id, ct) ? null : AdministrationErrors.NavigationGroupNotFound;
 }

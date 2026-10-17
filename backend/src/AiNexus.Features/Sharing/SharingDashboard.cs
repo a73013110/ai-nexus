@@ -6,8 +6,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Sharing;
 
 /// <summary>
-/// Overview of shares: read-only snapshots sent and received that are still open, and those about to expire. Sharing is
-/// not collaboration; resources opened to collaborators are counted by their own feature.
+/// 分享總覽：仍有效的唯讀快照（已寄出與已收到）以及即將到期的分享。分享不等於協作；
+/// 開放給協作者的資源由各自的功能統計。
 /// </summary>
 internal sealed class SharingDashboard(NexusDbContext db, TimeProvider clock) : IDashboardSource
 {

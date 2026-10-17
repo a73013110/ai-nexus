@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Quality.Evaluations;
 
-/// <summary>A null <c>Score</c> clears the human score.</summary>
+/// <summary>Score 為 null 即清除人工分數；備註則每次都以本次內容覆寫。</summary>
 public sealed record ReviewRequest(int? Score, string Note = "");
 
 internal sealed class ReviewRequestValidator : RequestValidator<ReviewRequest>
@@ -23,7 +23,7 @@ internal sealed class ReviewRequestValidator : RequestValidator<ReviewRequest>
     }
 }
 
-/// <summary>A human score for one case and variant of a run; requires edit access to the set.</summary>
+/// <summary>對執行中單一案例與變體給予人工分數；需要題組的編輯權限。</summary>
 internal sealed class ReviewEvaluationResult(NexusDbContext db, ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
