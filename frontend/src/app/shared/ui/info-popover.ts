@@ -5,10 +5,10 @@ import { positionPopover } from '../browser/popover-position';
 let sequence = 0;
 
 /**
- * A non-modal information panel in the native top layer, shared by compact metrics. The trigger
- * defaults to an icon and label; project `[popover-trigger]` content for a custom glyph (e.g. the
- * context ring). Being in the top layer, the panel is never clipped by a scrolling parent. With an
- * `anchor` there is no trigger: another control (e.g. an overflow menu item) calls `toggle()`.
+ * 原生最上層中的非模態資訊面板，供精簡指標共用。觸發器預設是圖示加標籤；
+ * 若要自訂圖形（例如脈絡環），請在 `[popover-trigger]` 中放入專案內容。位於最上層，
+ * 面板不會被捲動的父層裁切。
+ * 有 `anchor` 時沒有觸發器：由其他控制項（例如溢出選單項目）呼叫 `toggle()`。
  */
 @Component({
   selector: 'nx-info-popover',
@@ -85,15 +85,15 @@ export class InfoPopover {
   readonly description = input('');
   readonly icon = input('info');
   readonly align = input<'left' | 'right'>('left');
-  /** Name of the panel when it differs from the trigger's (which may carry a live value). */
+  /** 面板的名稱，與觸發器不同時使用（觸發器可能帶有即時值）。 */
   readonly panelLabel = input('');
   readonly hint = input('');
   readonly width = input(320);
-  /** Positions the panel against this element instead of rendering a trigger. */
+  /** 把面板對齊到此元素，而不是渲染觸發器。 */
   readonly anchor = input<HTMLElement | null>(null);
   readonly id = 'nx-info-' + ++sequence;
   private readonly trigger = viewChild<ElementRef<HTMLButtonElement>>('trigger');
-  /** Where focus returns: the trigger, or whatever opened an anchored panel. */
+  /** 焦點回去的地方：觸發器，或開啟已錨定面板的元素。 */
   private opener: HTMLElement | null = null;
   private readonly panel = viewChild.required<ElementRef<HTMLDivElement>>('panel');
   protected readonly popover = anchoredPopover({
@@ -116,7 +116,7 @@ export class InfoPopover {
       this.panel().nativeElement.focus();
     }
   }
-  /** Escape closes this panel only: cancelling the key keeps an enclosing dialog open. */
+  /** Escape 只關閉此面板：取消該按鍵，外層對話框才會保持開啟。 */
   close(event?: Event) {
     event?.preventDefault();
     event?.stopPropagation();

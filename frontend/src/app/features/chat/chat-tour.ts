@@ -18,7 +18,7 @@ export function chatTour(narrow: boolean, knowledge: boolean): ProductTourDefini
           '描述目標、補充背景與期待的格式。下方會顯示目前的送出與換行快捷鍵；右上角可展開輸入區。',
       },
       {
-        // Narrow composers fold attachments and sources into the tools menu.
+        // 窄版輸入框會把附件與來源收進工具選單。
         target: '.composer .attach-button, .composer .tools-menu',
         title: '帶上你的文件與圖片',
         description:

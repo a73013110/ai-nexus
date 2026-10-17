@@ -23,7 +23,7 @@ import { DesignSamples } from './design-samples';
 import { FloatingToolbar } from '@shared/ui/floating-toolbar';
 import { IdleChrome } from '@shared/ui/idle-chrome';
 
-/** Buttons, menus, confirmation and every selection control. */
+/** 按鈕、選單、確認與所有選取控制項。 */
 @Component({
   selector: 'nx-design-controls',
   imports: [
@@ -372,7 +372,7 @@ export class DesignControls {
       this.options.update((value) => ({ ...value, [id]: !value[id] }));
   }
   action(id: string) {
-    if (id === 'edit') this.samples.editRequest.update((x) => x + 1);
+    if (id === 'edit') this.samples.editRequest.update((item) => item + 1);
     if (id === 'reset') void this.reset();
   }
   async reset() {

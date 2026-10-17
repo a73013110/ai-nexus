@@ -1,6 +1,6 @@
 import type { NotificationTargetDto } from '@core/api/schema';
 
-/** Only typed internal destinations may be opened by a notification. */
+/** 通知只能開啟有型別的內部目的地。 */
 export function notificationUrl(target: NotificationTargetDto, version = 1): string | null {
   if (
     version !== 1 ||

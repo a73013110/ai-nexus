@@ -29,12 +29,12 @@ export class ChargeLabel {
   readonly charge = input.required<ChargeDto>();
   readonly kind = computed(() => chargeKind(this.charge().kind));
   readonly label = computed(() => {
-    const c = this.charge();
-    if (c.state === 'pending') return '費用待結算';
-    if (c.state === 'not_started') return '未呼叫模型';
-    if (c.state === 'unpriced') return '未設定價格';
-    if (c.amount == null) return '用量未完整回報';
-    return money(c.amount, c.currency) + (c.kind === 'internal' ? ' · 內部' : '');
+    const card = this.charge();
+    if (card.state === 'pending') return '費用待結算';
+    if (card.state === 'not_started') return '未呼叫模型';
+    if (card.state === 'unpriced') return '未設定價格';
+    if (card.amount == null) return '用量未完整回報';
+    return money(card.amount, card.currency) + (card.kind === 'internal' ? ' · 內部' : '');
   });
   readonly explanation = computed(() =>
     this.charge().kind === 'internal'

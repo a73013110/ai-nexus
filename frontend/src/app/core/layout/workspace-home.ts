@@ -1,2 +1,2 @@
-/** The landing page used by routing, sign-in and the shared workspace chrome. */
+/** 路由、登入與共用工作區外框使用的首頁。 */
 export const WORKSPACE_HOME = '/dashboard';

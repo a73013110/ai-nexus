@@ -19,14 +19,14 @@ export interface MenuAction {
   icon: string;
   disabled?: boolean;
   danger?: boolean;
-  /** Makes the item a checkbox toggle (menuitemcheckbox) that shows its state. */
+  /** 讓此項目成為顯示狀態的核取方塊（menuitemcheckbox）。 */
   checked?: boolean;
 }
 let sequence = 0;
 
 /**
- * A top-layer menu that opens next to any trigger. `ActionMenu` pairs it with its own button; a
- * list renders one panel and opens it from each row, so rows stay plain elements.
+ * 在任何觸發元素旁開啟的最上層選單。`ActionMenu` 與自己的按鈕配對；列表則只渲染一個面板，
+ * 由每一列開啟它，因此列保持為一般元素。
  */
 @Component({
   selector: 'nx-menu-panel',
@@ -73,11 +73,11 @@ let sequence = 0;
 export class MenuPanel {
   readonly label = input('更多操作');
   readonly items = input.required<MenuAction[]>();
-  /** Narrowest width; 0 matches the trigger, as the account menu does. */
+  /** 最窄寬度；0 代表與觸發元素相同，與帳號選單的做法一致。 */
   readonly minWidth = input(260);
-  /** `beside` opens to the right of an icon-rail trigger instead of below it. */
+  /** `beside` 會在圖示欄觸發元素的右側開啟，而不是下方。 */
   readonly placement = input<'below' | 'beside'>('below');
-  /** Context the trigger cannot show, such as the account name on the collapsed rail. */
+  /** 觸發元素無法顯示的脈絡，例如收合圖示欄上的帳號名稱。 */
   readonly heading = input<{ title: string; detail?: string } | null>(null);
   readonly action = output<string>();
   readonly id = `nx-menu-${++sequence}`;
@@ -94,12 +94,12 @@ export class MenuPanel {
     },
   });
   readonly opened = this.popover.opened;
-  /** Opens beside `anchor`; focus returns there when the menu closes from the keyboard. */
+  /** 在 `anchor` 旁開啟；用鍵盤關閉時焦點回到該處。 */
   open(anchor: HTMLElement, focus: 'first' | 'last' = 'first') {
     if (this.opened()) this.popover.hide();
     this.anchor = anchor;
     this.popover.show();
-    // Items may belong to the row that just asked, so place and focus once they have rendered.
+    // 項目可能屬於剛剛請求的那一列，所以要等它們渲染完成後再放置與聚焦。
     afterNextRender(
       () => {
         if (!this.isOpenFor(anchor)) return;
@@ -132,7 +132,7 @@ export class MenuPanel {
       event.preventDefault();
       const buttons = this.buttons();
       if (!buttons.length) return;
-      const current = buttons.findIndex((x) => x === document.activeElement);
+      const current = buttons.findIndex((item) => item === document.activeElement);
       const index =
         event.key === 'Home'
           ? 0

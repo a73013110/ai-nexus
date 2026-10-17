@@ -1,9 +1,9 @@
 import { computed, signal } from '@angular/core';
 import { hasScripts } from './html-scripts';
 
-/** Whether an HTML preview needs the script notice, and whether the user chose to run scripts. */
+/** HTML 預覽是否需要腳本提示，以及使用者是否選擇執行腳本。 */
 export class HtmlScriptGate {
-  /** null until the HTML text has been inspected. */
+  /** HTML 文字尚未檢查前為 null。 */
   readonly scripts = signal<boolean | null>(null);
   readonly allowed = signal(false);
   readonly gated = computed(() => this.scripts() === true && !this.allowed());

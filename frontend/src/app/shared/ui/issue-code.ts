@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, viewChild } from '
 import { issueInMessage } from '@core/errors/safe-errors';
 import { CopyValue } from './copy-value';
 
-/** The copy button for the issue code inside an error message; the message shows the code. */
+/** 錯誤訊息中問題代碼旁的複製按鈕；訊息本身會顯示代碼。 */
 @Component({
   selector: 'nx-issue-code',
   imports: [CopyValue],

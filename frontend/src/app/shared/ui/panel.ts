@@ -4,8 +4,9 @@ import { Icon } from './icon';
 let sequence = 0;
 
 /**
- * A titled resource surface in the overview's tile skin: a quiet heading with an optional icon and
- * count, actions at the right, then the feature's content. Its region is named by the heading.
+ * 總覽磚塊外觀中的有標題資源表面：安靜的標題（可選圖示與數量），右側是動作，接著是功能的內容。
+ * 其區域由標題命名。
+ * 數量、右側的動作，接著是功能的內容。其區域由標題命名。
  */
 @Component({
   selector: 'nx-panel',

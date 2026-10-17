@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 
-/** Shared empty/loading layout, with headings, descriptions and actions projected by the feature. */
+/** 共用的空狀態／載入版面，標題、說明與動作由功能投影提供。 */
 @Component({
   selector: 'nx-empty-state',
   changeDetection: ChangeDetectionStrategy.OnPush,

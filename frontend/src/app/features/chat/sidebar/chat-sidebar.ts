@@ -27,8 +27,8 @@ import { ChatStore } from '../chat-store';
 import { historyGroups } from './history-groups';
 
 /**
- * Chat history in the shared sidebar. Rows are plain links with one shared action menu, and the
- * browser skips rendering rows outside the viewport, so long histories stay cheap.
+ * 共用側邊欄中的聊天歷史。列是一般連結，共用同一個動作選單；瀏覽器會略過視口外列的渲染，
+ * 因此很長的歷史仍維持輕量。
  */
 @Component({
   selector: 'nx-chat-sidebar',
@@ -63,10 +63,10 @@ export class ChatSidebar {
   private readonly today = currentDay();
   readonly groups = computed(() => historyGroups(this.store.conversations(), this.today()));
   readonly menu = viewChild.required(MenuPanel);
-  /** The row whose menu is open; items follow its latest state and running generation. */
+  /** 選單開啟中的那一列；項目會跟隨它最新的狀態與執行中的生成。 */
   readonly menuTarget = signal<string | null>(null);
   readonly menuItems = computed(() => {
-    const conversation = this.store.conversations().find((x) => x.id === this.menuTarget());
+    const conversation = this.store.conversations().find((item) => item.id === this.menuTarget());
     return conversation
       ? conversationMenu(conversation, {
           compact: true,
@@ -78,9 +78,9 @@ export class ChatSidebar {
   readonly menuLabel = computed(
     () =>
       '對話操作：' +
-      (this.store.conversations().find((x) => x.id === this.menuTarget())?.title ?? ''),
+      (this.store.conversations().find((item) => item.id === this.menuTarget())?.title ?? ''),
   );
-  /** A plain click morphs the row title into the topbar once the conversation loads. */
+  /** 對話載入後，一般點擊會把列的標題 morph 到頂部列。 */
   open(event: MouseEvent, title: HTMLElement) {
     this.navigate.emit();
     if (!event.ctrlKey && !event.metaKey && !event.shiftKey && event.button === 0)
@@ -112,10 +112,10 @@ export class ChatSidebar {
     this.menu().open(trigger);
   }
   chooseMenu(action: string) {
-    const conversation = this.store.conversations().find((x) => x.id === this.menuTarget());
+    const conversation = this.store.conversations().find((item) => item.id === this.menuTarget());
     if (conversation) this.action.emit({ conversation, action: action as ConversationAction });
   }
-  /** Arrow keys move between conversations, like a list; Tab still visits each row's menu. */
+  /** 方向鍵在對話之間移動，如同列表；Tab 仍會逐列進入各自的選單。 */
   historyKey(event: KeyboardEvent, history: HTMLElement) {
     if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
     const links = [...history.querySelectorAll<HTMLElement>('.history-row > a')];

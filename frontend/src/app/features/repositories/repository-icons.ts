@@ -16,7 +16,7 @@ import {
 } from 'lucide';
 import { EXTRA_ICONS } from '@shared/ui/icon';
 
-/** Repository vocabulary, kept in the feature's lazy bundle. */
+/** 儲存庫用語，保留在功能的延遲載入套件中。 */
 export const repositoryIcons: Provider = {
   provide: EXTRA_ICONS,
   useValue: {

@@ -8,7 +8,7 @@ export interface ReaderTarget {
   shareId?: string | null;
 }
 
-/** Keeps the origin mounted, including chat drafts, scroll position and active generation. */
+/** 保留來源端的掛載，包括聊天草稿、捲動位置與進行中的生成。 */
 @Injectable({ providedIn: 'root' })
 export class ReaderOverlay {
   readonly target = signal<ReaderTarget | null>(null);

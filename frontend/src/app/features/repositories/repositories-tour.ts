@@ -5,7 +5,7 @@ import type { RepositorySection } from './repository-detail';
 const either = (items: string[]) =>
   items.length > 1 ? `${items.slice(0, -1).join('、')}或${items.at(-1)}` : (items[0] ?? '');
 
-/** The connection menu, which every connected viewer has; tours end with it. */
+/** 連線選單，每個已連線的檢視者都有；導覽最後都會停在這裡。 */
 const connection = (): TourStep => ({
   target: 'nx-repositories-page .repository-account',
   title: '你的 Gitea 連線',
@@ -14,7 +14,7 @@ const connection = (): TourStep => ({
   side: 'bottom',
 });
 
-/** The list tour; the pinned row and the card step are skipped while there is nothing to show. */
+/** 清單導覽；沒有東西可顯示時，固定列與卡片步驟會略過。 */
 export function repositoriesTour(options: {
   chat: boolean;
   knowledge: boolean;
@@ -55,7 +55,7 @@ export function repositoriesTour(options: {
   };
 }
 
-/** The open section's own steps; they sit between the shared header steps and the menus. */
+/** 已開啟區段自己的步驟；位於共用標題步驟與選單之間。 */
 function sectionSteps(options: {
   section: RepositorySection;
   item: boolean;
@@ -189,15 +189,14 @@ function sectionSteps(options: {
 }
 
 /**
- * One repository's tour. Its steps follow the open section and whether one of its items is open,
- * plus the viewer's chat and knowledge features; an empty repository has no ref or content to
- * show. The connection menu is always last.
+ * 單一儲存庫的導覽。步驟依已開啟的區段、其中一個項目是否開啟，
+ * 以及檢視者是否有聊天與知識庫功能而定；空的儲存庫沒有可顯示的 ref 或內容。連線選單永遠排在最後。
  */
 export function repositoryTour(options: {
   section: RepositorySection;
-  /** A file, commit or range, issue, pull request or review of the section is open. */
+  /** 區段中有檔案、提交或範圍、議題、拉取請求或審查被開啟。 */
   item: boolean;
-  /** The repository has no commits yet. */
+  /** 儲存庫還沒有任何提交。 */
   empty: boolean;
   chat: boolean;
   knowledge: boolean;

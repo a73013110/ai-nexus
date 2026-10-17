@@ -14,11 +14,11 @@ import { Icon } from './icon';
 import { idleChromePart } from './idle-chrome';
 
 /**
- * Title bar of a `.platform-dialog`: heading, optional detail and tools, and the close button.
- * Content marked `dialog-title` (a status badge) sits beside the heading, outside the h2 so the
- * dialog's accessible name stays the heading alone; other content is placed before the close button.
+ * `.platform-dialog` 的標題列：標題、可選的細節與工具，以及關閉鈕。
+ * 標記為 `dialog-title` 的內容（例如狀態徽章）會放在標題旁邊、h2 之外，讓對話框的無障礙名稱只剩標題；
+ * 其他內容則放在關閉鈕之前。
  * `maximizable` adds the 放大視窗 toggle of `CompactDialog.maximized`; while maximized inside an
- * `nxIdleChrome` viewer the bar floats over the content and fades with its toolbar (idle-chrome.ts).
+ * `nxIdleChrome` 的檢視者會讓標題列浮在內容之上，並隨其工具列淡出（idle-chrome.ts）。
  */
 let headerSequence = 0;
 
@@ -70,7 +70,7 @@ export class DialogHeader {
   protected readonly chrome = idleChromePart(this.host.nativeElement, this.maximized);
   protected readonly titleId = `nx-dialog-header-${++headerSequence}`;
   constructor() {
-    // Content rendered after showModal() is missing at beforetoggle, so name the dialog here.
+    // showModal() 之後渲染的內容在 beforetoggle 時還不存在，所以在這裡為對話框命名。
     afterNextRender(() => {
       const dialog = this.host.nativeElement.closest('dialog');
       if (dialog && !dialog.hasAttribute('aria-label'))

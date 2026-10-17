@@ -1,6 +1,6 @@
 import type { MessageDto } from '@core/api/schema';
 
-/** One index per history snapshot instead of scanning all messages for each visible row. */
+/** 每個歷史快照一個索引，而不是為每個可見列掃描所有訊息。 */
 export class MessageTree {
   private readonly byId = new Map<string, MessageDto>();
   private readonly children = new Map<string | null, MessageDto[]>();
@@ -25,11 +25,11 @@ export class MessageTree {
     return result.reverse();
   }
   versions(message: MessageDto) {
-    return (this.children.get(message.parentId) ?? []).filter((x) => x.role === message.role);
+    return (this.children.get(message.parentId) ?? []).filter((item) => item.role === message.role);
   }
   versionLeaf(message: MessageDto, direction: number): string | null {
     const siblings = this.versions(message);
-    let next = siblings[siblings.findIndex((x) => x.id === message.id) + direction];
+    let next = siblings[siblings.findIndex((item) => item.id === message.id) + direction];
     if (!next) return null;
     const seen = new Set<string>();
     while (!seen.has(next.id)) {

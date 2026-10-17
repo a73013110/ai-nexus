@@ -17,7 +17,7 @@ import { RepositoryDiff } from './repository-diff';
 import { RepositoryReviewDialog } from '../reviews/repository-review-dialog';
 import { RepositoryStore, shortSha } from '../repository-store';
 
-/** One commit against its parent, or everything after `base` up to `head`. */
+/** 單一提交與其父提交的比較，或從 `base` 到 `head` 之間的全部變更。 */
 @Component({
   selector: 'nx-repository-change',
   imports: [RouterLink, Icon, Notice, RepositoryDiff, RepositoryReviewDialog],

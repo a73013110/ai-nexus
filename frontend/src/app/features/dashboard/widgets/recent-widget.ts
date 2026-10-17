@@ -6,7 +6,7 @@ import { DashboardStore } from '../dashboard-store';
 import { relativeTime } from '@shared/browser/format';
 import { sectionIcon, workspaceLink } from '../dashboard-format';
 
-/** The viewer's latest work across every feature, to pick up where they left off. */
+/** 檢視者跨所有功能最近的工作，方便接續上次的進度。 */
 @Component({
   selector: 'nx-recent-widget',
   imports: [EmptyState, Icon, RouterLink],

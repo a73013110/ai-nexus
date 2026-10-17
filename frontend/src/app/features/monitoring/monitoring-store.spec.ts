@@ -18,7 +18,7 @@ const metrics = {
   p95Ms: 25,
 };
 function snapshot(overrides: Partial<MonitoringSnapshot> = {}): MonitoringSnapshot {
-  const at = (i: number) => new Date(Date.UTC(2026, 9, 13, 4, 0, i * 10)).toISOString();
+  const at = (index: number) => new Date(Date.UTC(2026, 9, 13, 4, 0, index * 10)).toISOString();
   return {
     version: 2,
     enabled: true,
@@ -51,9 +51,9 @@ function snapshot(overrides: Partial<MonitoringSnapshot> = {}): MonitoringSnapsh
       gcPausePercent: null,
       uptimeSeconds: 300,
     },
-    resourceTimeline: [0, 1, 2].map((i) => ({
-      at: at(i),
-      cpuPercent: i,
+    resourceTimeline: [0, 1, 2].map((index2) => ({
+      at: at(index2),
+      cpuPercent: index2,
       workingSetBytes: 1,
       managedHeapBytes: 1,
       threadPoolQueueLength: 0,
@@ -61,9 +61,9 @@ function snapshot(overrides: Partial<MonitoringSnapshot> = {}): MonitoringSnapsh
     })),
     traffic: metrics,
     recentTraffic: metrics,
-    timeline: [0, 1, 2].map((i) => ({
-      at: at(i),
-      requestsPerSecond: i,
+    timeline: [0, 1, 2].map((index3) => ({
+      at: at(index3),
+      requestsPerSecond: index3,
       errorPercent: 0,
       serverErrors: 0,
       averageMs: null,
@@ -98,7 +98,7 @@ function snapshot(overrides: Partial<MonitoringSnapshot> = {}): MonitoringSnapsh
     ...overrides,
   };
 }
-/** A fresh copy, as every frame of the stream is. */
+/** 一份新的副本，如同串流的每一幀。 */
 const copy = (value: MonitoringSnapshot) => JSON.parse(JSON.stringify(value)) as MonitoringSnapshot;
 
 describe('readSnapshot', () => {
@@ -136,7 +136,7 @@ describe('AnnouncementGate', () => {
   });
 });
 
-/** An SSE response carrying the given frames; `open` keeps it from ending, as a live stream does. */
+/** 帶有指定幀的 SSE 回應；`open` 讓它不結束，如同即時串流。 */
 function sse(frames: string[], open = false) {
   return new Response(
     new ReadableStream<Uint8Array>({

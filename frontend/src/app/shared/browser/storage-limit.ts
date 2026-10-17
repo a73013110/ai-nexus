@@ -2,7 +2,7 @@ import { ClientValidationError } from '@core/errors/safe-errors';
 const bytesPerGb = 1_000_000_000;
 const maximumStorageGb = 1_000_000;
 
-/** Convert decimal GB to integer bytes without floating-point rounding. Blank restores inheritance. */
+/** 把十進位 GB 轉成整數位元組，不經浮點數捨入。空白則還原為繼承。 */
 export function parseStorageLimitGb(value: string): number | null {
   const clean = value.trim();
   if (!clean) return null;

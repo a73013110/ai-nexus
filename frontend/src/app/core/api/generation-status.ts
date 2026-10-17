@@ -1,4 +1,4 @@
-/** Runs and background jobs share these two non-terminal states. */
+/** 執行與背景工作共用這兩個非終止狀態。 */
 export const isActive = (state: string) => state === 'queued' || state === 'running';
 
 export interface GenerationStatus {
@@ -7,7 +7,7 @@ export interface GenerationStatus {
   detail: string;
 }
 
-/** Describe observed run state, without inferring model activity from reasoning settings. */
+/** 描述觀察到的執行狀態，不從推理設定推斷模型活動。 */
 export function generationStatus(status: string, hasContent: boolean): GenerationStatus | null {
   if (status === 'queued')
     return { phase: 'queued', label: '等待模型回應', detail: '已加入佇列，可隨時停止' };

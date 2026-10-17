@@ -16,8 +16,8 @@ import { Panel } from '@shared/ui/panel';
 import { monitoringFeatureNames, monitoringLatency, monitoringTime } from '../monitoring-format';
 
 /**
- * Recent changes, errors and cancellations next to the busiest API routes. Once the first rows
- * have rendered, new events settle in at the top; the first paint does not animate every row.
+ * 最近的變更、錯誤與取消，旁邊是最忙碌的 API 路由。第一批列渲染後，新事件會落在最上方；
+ * 第一次繪製時不會讓每一列都做動畫。
  */
 @Component({
   selector: 'nx-monitoring-activity',

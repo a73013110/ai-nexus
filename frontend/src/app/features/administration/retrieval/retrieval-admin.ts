@@ -50,12 +50,12 @@ const statuses: Record<string, { label: string; tone: BadgeTone }> = {
   building: { label: '建立中', tone: 'info' },
   retired: { label: '已退役', tone: 'neutral' },
 };
-/** How many collections one test may search. */
+/** 一次測試最多能搜尋的集合數。 */
 const BENCH_COLLECTIONS = 3;
 
 /**
- * Retrieval administration: the embedding indexes with their coverage and lifecycle actions, the
- * services retrieval depends on, and a test bench that searches with the active index.
+ * 檢索管理：嵌入索引與其覆蓋率和生命週期動作、檢索所依賴的服務，
+ * 以及用作用中索引搜尋的測試台。
  */
 @Component({
   selector: 'nx-retrieval-admin',
@@ -90,7 +90,9 @@ export class RetrievalAdmin {
     feature: 'operations',
     loader: () => this.api.embeddingProfiles(),
     poll: (profiles) =>
-      profiles?.some((x) => x.job && ['queued', 'running'].includes(x.job.status)) ? 2000 : null,
+      profiles?.some((item) => item.job && ['queued', 'running'].includes(item.job.status))
+        ? 2000
+        : null,
   });
   readonly capabilitiesRead = apiResource({
     feature: 'operations',
@@ -100,12 +102,12 @@ export class RetrievalAdmin {
   readonly profiles = computed<EmbeddingProfileDto[]>(() => this.profilesRead.value() ?? []);
   readonly collections = computed<CollectionDto[]>(() => this.collectionsRead.value() ?? []);
   readonly capabilities = computed(() => capabilityRows(this.capabilitiesRead.value() ?? null));
-  /** Chosen collections, pruned to those still readable after each read. */
+  /** 已選的集合，每次讀取後會修剪為仍可讀取的集合。 */
   readonly selected = linkedSignal<CollectionDto[] | undefined, string[]>({
     source: this.collectionsRead.value,
     computation: (collections, previous) =>
       (previous?.value ?? []).filter(
-        (id) => !collections || collections.some((x) => x.resource.id === id),
+        (id) => !collections || collections.some((item) => item.resource.id === id),
       ),
   });
   readonly limit = BENCH_COLLECTIONS;
@@ -155,7 +157,7 @@ export class RetrievalAdmin {
     this.collectionsRead.reload();
   }
   select(id: string, checked: boolean) {
-    this.selected.update((ids) => (checked ? [...ids, id] : ids.filter((x) => x !== id)));
+    this.selected.update((ids) => (checked ? [...ids, id] : ids.filter((item) => item !== id)));
   }
   async operate(profile: EmbeddingProfileDto, action: ProfileAction) {
     if (this.working() || !(await this.confirmation().ask(confirmations[action](profile)))) return;
@@ -239,7 +241,7 @@ const confirmations: Record<ProfileAction, (profile: EmbeddingProfileDto) => Con
   }),
 };
 
-/** What retrieval depends on, one row each, with a status a badge can show. */
+/** 檢索所依賴的項目，每項一列，附上徽章可顯示的狀態。 */
 function capabilityRows(value: RetrievalCapabilitiesDto | null): Capability[] {
   if (!value) return [];
   const sql = value.sql;
@@ -251,13 +253,13 @@ function capabilityRows(value: RetrievalCapabilitiesDto | null): Capability[] {
     detail: '',
     endpoint: '',
   });
-  const connection = (key: string, name: string, x: RetrievalConnectionDto): Capability => ({
+  const connection = (key: string, name: string, item2: RetrievalConnectionDto): Capability => ({
     key,
-    name: `${name} ${x.model}`.trim(),
-    tone: x.available === null ? 'neutral' : x.available ? 'success' : 'danger',
-    status: x.available === null ? '未驗證' : x.available ? '可用' : '無法使用',
-    detail: x.notice,
-    endpoint: x.endpoint,
+    name: `${name} ${item2.model}`.trim(),
+    tone: item2.available === null ? 'neutral' : item2.available ? 'success' : 'danger',
+    status: item2.available === null ? '未驗證' : item2.available ? '可用' : '無法使用',
+    detail: item2.notice,
+    endpoint: item2.endpoint,
   });
   return [
     {

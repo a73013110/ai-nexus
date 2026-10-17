@@ -6,7 +6,7 @@ import { compactNumber, figureMoney, formatModelDisplayName } from '@shared/brow
 
 const SHOWN = 6;
 
-/** How the period's spend or tokens divide between models and tools. */
+/** 期間的花費或 token 在模型與工具之間的分配。 */
 @Component({
   selector: 'nx-mix-widget',
   imports: [DonutChart, ViewSwitch],
@@ -58,7 +58,11 @@ export class MixWidget {
     return (value: number) => (currency ? figureMoney(value, currency) : compactNumber(value));
   });
   readonly spend = computed(() =>
-    top(this.store.modelRows().map((x) => ({ key: x.label, label: x.label, value: x.amount }))),
+    top(
+      this.store
+        .modelRows()
+        .map((item) => ({ key: item.label, label: item.label, value: item.amount })),
+    ),
   );
   readonly tokens = computed(() => {
     const models = new Map<string, { key: string; label: string; value: number }>();
@@ -71,14 +75,14 @@ export class MixWidget {
       model.value += row.inputTokens + row.outputTokens;
       models.set(row.modelId, model);
     }
-    return top([...models.values()].sort((a, b) => b.value - a.value));
+    return top([...models.values()].sort((first, second) => second.value - first.value));
   });
 }
 
-/** The largest parts, with the rest folded into one. */
+/** 最大的幾個部分，其餘合併為一項。 */
 function top(parts: { key: string; label: string; value: number }[]) {
-  const sorted = [...parts].sort((a, b) => b.value - a.value);
-  const rest = sorted.slice(SHOWN).reduce((sum, x) => sum + x.value, 0);
+  const sorted = [...parts].sort((first2, second2) => second2.value - first2.value);
+  const rest = sorted.slice(SHOWN).reduce((sum, item2) => sum + item2.value, 0);
   return rest > 0
     ? [...sorted.slice(0, SHOWN), { key: '__other', label: '其他', value: rest }]
     : sorted;

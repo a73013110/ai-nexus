@@ -2,7 +2,7 @@ import { safeMessage } from '@core/errors/safe-errors';
 import { DestroyRef, Injectable, inject } from '@angular/core';
 import { AuthService } from '@core/auth/auth-service';
 
-/** Per-view guards and timers prevent late responses from crossing account/navigation changes. */
+/** 每個視圖的守衛與計時器，防止遲到的回應跨越帳號或導覽的改變。 */
 @Injectable()
 export class ViewScope {
   private readonly auth = inject(AuthService);

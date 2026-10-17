@@ -11,8 +11,8 @@ interface Opened {
 }
 
 /**
- * The audited, read-only conversation view of the inspected user. Listing starts when the tab is
- * first shown (every list and every read is audited) and keeps its place across tab switches.
+ * 受稽核、唯讀的被檢視使用者對話檢視。分頁第一次顯示時才開始列出（每次列出與每次讀取都會被稽核），
+ * 切換分頁時會保留其位置。
  */
 @Injectable()
 export class UserConversationReader {
@@ -57,12 +57,12 @@ export class UserConversationReader {
   });
   readonly loading = computed(() => this.typing() || this.listRead.refreshing());
   readonly error = this.listRead.error;
-  /** The conversation being read and how many of its messages are already shown. */
+  /** 正在閱讀的對話，以及其中已顯示的訊息數。 */
   private readonly opened = linkedSignal<string | undefined, Opened | null>({
     source: this.key,
     computation: () => null,
   });
-  /** The conversation chosen for reading, before and after its messages arrive. */
+  /** 為閱讀而選的對話，在其訊息抵達前後都是如此。 */
   readonly selected = computed(() => this.opened()?.id ?? null);
   private readonly detailRead = apiResource({
     params: () => this.opened() ?? undefined,
@@ -114,7 +114,7 @@ export class UserConversationReader {
   loadList(offset = 0) {
     this.offset.set(offset);
   }
-  /** Back to the list on narrow screens; the next read starts afresh. */
+  /** 窄螢幕上回到列表；下一次讀取會重新開始。 */
   close() {
     this.opened.set(null);
   }

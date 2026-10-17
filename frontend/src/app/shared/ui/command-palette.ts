@@ -28,7 +28,7 @@ export interface Command {
     #dialog
     class="platform-dialog command-dialog"
     aria-labelledby="command-title"
-    (close)="query.set(''); index.set(0)"
+    (close)="resetSearch()"
   >
     <div class="command-search">
       <nx-icon name="search" /><label class="sr-only" id="command-title" for="command-search"
@@ -90,7 +90,7 @@ export class CommandPalette {
   readonly filtered = computed(() => {
     const query = this.query().trim().toLocaleLowerCase();
     return this.commands()
-      .filter((x) => (x.label + ' ' + x.detail).toLocaleLowerCase().includes(query))
+      .filter((item) => (item.label + ' ' + item.detail).toLocaleLowerCase().includes(query))
       .slice(0, 30);
   });
   private readonly dialog = viewChild<ElementRef<HTMLDialogElement>>('dialog');
@@ -118,6 +118,10 @@ export class CommandPalette {
       event.preventDefault();
       this.choose(this.filtered()[this.index()].id);
     }
+  }
+  resetSearch() {
+    this.query.set('');
+    this.index.set(0);
   }
   choose(id: string) {
     this.dialog()?.nativeElement.close();

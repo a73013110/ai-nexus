@@ -2,7 +2,7 @@ import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
 
 /**
  * The collection tour. The card step follows the open tab (評測集 or 我的回饋) and is skipped while
- * that tab lists nothing; a feedback card leads back to its conversation only for viewers with chat.
+ * 該分頁沒有列出任何東西；回饋卡只對有聊天功能的檢視者導回對話。
  */
 export function qualityTour(options: { feedback: boolean; chat: boolean }): ProductTourDefinition {
   return {
@@ -55,15 +55,15 @@ export function qualityTour(options: { feedback: boolean; chat: boolean }): Prod
 }
 
 /**
- * The evaluation set tour. Which steps exist follows the viewer's rights on the set and the run on
- * screen; the answers and the review button are skipped while no result is shown.
+ * 評估集導覽。有哪些步驟取決於檢視者對此集合的權限，以及畫面上的執行；
+ * 沒有顯示結果時，會略過答案與審查按鈕。
  */
 export function evaluationSetTour(options: {
-  /** The viewer may edit the cases. */
+  /** 檢視者可以編輯案例。 */
   edit: boolean;
-  /** The viewer owns the set (access and delete). */
+  /** 檢視者擁有此集合（可存取並刪除）。 */
   owner: boolean;
-  /** The run on screen accepts the viewer's manual review. */
+  /** 畫面上的執行接受檢視者的手動審查。 */
   review: boolean;
 }): ProductTourDefinition {
   const steps: TourStep[] = [
@@ -111,7 +111,7 @@ export function evaluationSetTour(options: {
   return { steps };
 }
 
-/** The retrieval evaluation tour; the report step is skipped until the first evaluation exists. */
+/** 檢索評估導覽；在第一次評估存在之前，會略過報告步驟。 */
 export const RETRIEVAL_TOUR: ProductTourDefinition = {
   steps: [
     {

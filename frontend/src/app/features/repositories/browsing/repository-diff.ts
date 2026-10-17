@@ -3,13 +3,13 @@ import { formatNumber } from '@shared/browser/format';
 import { Icon } from '@shared/ui/icon';
 import { type DiffFile, parseDiff } from './repository-diff-parser';
 
-/** Lines opened at first; later and very large files wait for a click so long diffs stay quick. */
+/** 先開啟的行；較後的與非常大的檔案要點擊才會展開，讓長的 diff 維持快速。 */
 const openBudget = 1600;
 const largeFile = 600;
 const statusMarks = { added: 'A', deleted: 'D', renamed: 'R', modified: 'M' } as const;
 const statusNames = { added: '新增', deleted: '刪除', renamed: '更名', modified: '修改' } as const;
 
-/** A unified diff as collapsible files with old and new line numbers. */
+/** 統一格式的 diff，以可摺疊的檔案呈現，附上舊與新的行號。 */
 @Component({
   selector: 'nx-repository-diff',
   imports: [Icon],
@@ -94,9 +94,9 @@ export class RepositoryDiff {
   readonly files = computed(() => parseDiff(this.diff()));
   readonly totals = computed(() =>
     this.files().reduce(
-      (sum, x) => ({
-        additions: sum.additions + x.additions,
-        deletions: sum.deletions + x.deletions,
+      (sum, item) => ({
+        additions: sum.additions + item.additions,
+        deletions: sum.deletions + item.deletions,
       }),
       { additions: 0, deletions: 0 },
     ),
@@ -106,10 +106,10 @@ export class RepositoryDiff {
     computation: (files) => {
       const open = new Set<number>();
       let budget = openBudget;
-      files.forEach((file, i) => {
+      files.forEach((file, index2) => {
         const size = file.additions + file.deletions;
         if (size <= largeFile && size <= budget) {
-          open.add(i);
+          open.add(index2);
           budget -= size;
         }
       });
@@ -129,9 +129,9 @@ export class RepositoryDiff {
     });
   }
   all(open: boolean) {
-    this.opened.set(open ? new Set(this.files().map((_, i) => i)) : new Set());
+    this.opened.set(open ? new Set(this.files().map((_, index3) => index3)) : new Set());
   }
-  /** Five squares split between additions and deletions, like the hosting sites draw it. */
+  /** 五個方塊分為新增與刪除兩部分，與代管網站的繪製方式相同。 */
   blocks(file: DiffFile) {
     const total = file.additions + file.deletions;
     if (!total) return Array<string>(5).fill('none');

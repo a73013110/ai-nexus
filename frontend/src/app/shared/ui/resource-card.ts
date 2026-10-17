@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { Icon } from './icon';
 
 /**
- * One resource in a gallery, on the link that opens it: an icon, the name, an optional two-line
- * description and the feature's meta line (projected). The whole card is the link's target.
+ * 圖庫中的一個資源，其連結即為開啟它的入口：圖示、名稱、可選的兩行說明，
+ * 以及功能的中繼資料列（投影）。整張卡片都是連結的目標。
  */
 @Component({
   selector: 'a[nxResourceCard]',

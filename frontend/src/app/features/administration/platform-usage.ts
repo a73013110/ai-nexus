@@ -37,8 +37,8 @@ interface ServiceRow {
 }
 
 /**
- * The last 30 days of platform usage, read each time the tab is shown: four headline figures, then
- * the models, the sources of use and the state of the model and search services.
+ * 最近 30 天的平台使用量，每次顯示分頁時讀取：四個標題數字，接著是
+ * 模型、使用來源，以及模型與搜尋服務的狀態。
  */
 @Component({
   selector: 'nx-platform-usage',
@@ -54,54 +54,54 @@ export class PlatformUsage {
   readonly format = formatNumber;
   readonly modelName = formatModelDisplayName;
   readonly duration = formatDuration;
-  /** The period's days; the API reads a fixed 30 days ending now. */
+  /** 期間的天數；API 固定讀取截至現在的 30 天。 */
   readonly period = computed(() => {
     const stats = this.stats();
     return stats ? `${formatDay(stats.since)} – ${formatDay(stats.until)}` : '';
   });
   readonly tiles = computed(() => {
     const stats = this.stats(),
-      n = formatNumber;
+      count = formatNumber;
     return [
       {
         key: 'users',
         label: '啟用帳號',
-        value: stats ? n(stats.users) : null,
+        value: stats ? count(stats.users) : null,
         unit: '位',
-        hint: stats ? `${n(stats.activeUsers)} 位在區間內使用 AI` : '',
+        hint: stats ? `${count(stats.activeUsers)} 位在區間內使用 AI` : '',
       },
       {
         key: 'requests',
         label: '生成次數',
-        value: stats ? n(stats.requests) : null,
+        value: stats ? count(stats.requests) : null,
         unit: '次',
         hint: stats
-          ? `完成 ${n(stats.completed)} · 失敗 ${n(stats.failed)} · 取消 ${n(stats.cancelled)}`
+          ? `完成 ${count(stats.completed)} · 失敗 ${count(stats.failed)} · 取消 ${count(stats.cancelled)}`
           : '',
       },
       {
         key: 'tokens',
         label: '回報 tokens',
-        value: stats ? n(stats.inputTokens + stats.outputTokens) : null,
+        value: stats ? count(stats.inputTokens + stats.outputTokens) : null,
         unit: '',
-        hint: stats ? `輸入 ${n(stats.inputTokens)} · 輸出 ${n(stats.outputTokens)}` : '',
+        hint: stats ? `輸入 ${count(stats.inputTokens)} · 輸出 ${count(stats.outputTokens)}` : '',
       },
       {
         key: 'storage',
         label: '原檔容量',
         value: stats ? formatBytes(stats.storedBytes) : null,
         unit: '',
-        hint: stats ? `${n(stats.storedFiles)} 份原檔 · 所有期間，重複引用只計一次` : '',
+        hint: stats ? `${count(stats.storedFiles)} 份原檔 · 所有期間，重複引用只計一次` : '',
       },
     ];
   });
   readonly models = computed(() =>
-    [...(this.stats()?.models ?? [])].sort((a, b) => b.requests - a.requests),
+    [...(this.stats()?.models ?? [])].sort((first, second) => second.requests - first.requests),
   );
   readonly kinds = computed(() =>
-    [...(this.stats()?.kinds ?? [])].sort((a, b) => b.requests - a.requests),
+    [...(this.stats()?.kinds ?? [])].sort((first2, second2) => second2.requests - first2.requests),
   );
-  readonly kindTotal = computed(() => this.kinds().reduce((sum, x) => sum + x.requests, 0));
+  readonly kindTotal = computed(() => this.kinds().reduce((sum, item) => sum + item.requests, 0));
   readonly services = computed<ServiceRow[]>(() => {
     const stats = this.stats();
     if (!stats) return [];

@@ -1,6 +1,6 @@
 import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
 
-/** The collection tour; the card step is skipped while no project is listed. */
+/** 集合導覽；沒有列出任何專案時，卡片步驟會略過。 */
 export const PROJECTS_TOUR: ProductTourDefinition = {
   steps: [
     {
@@ -36,7 +36,7 @@ export const PROJECTS_TOUR: ProductTourDefinition = {
 };
 
 /**
- * The project tour. Which steps exist follows the viewer's features and rights.
+ * 專案導覽。哪些步驟存在取決於檢視者的功能與權限。
  */
 export function projectTour(options: {
   chat: boolean;

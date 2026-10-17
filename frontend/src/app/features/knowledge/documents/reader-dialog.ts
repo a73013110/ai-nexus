@@ -24,7 +24,7 @@ import { DocumentViewer } from './document-viewer';
     #dialog
     class="platform-dialog reader-dialog"
     aria-label="檔案預覽"
-    (cancel)="$event.preventDefault(); overlay.close()"
+    (cancel)="onCancel($event)"
     (close)="overlay.close()"
   >
     @defer (when overlay.target()) {
@@ -43,6 +43,10 @@ import { DocumentViewer } from './document-viewer';
 export class ReaderDialog {
   readonly overlay = inject(ReaderOverlay);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
+  onCancel(event: Event) {
+    event.preventDefault();
+    this.overlay.close();
+  }
   constructor() {
     effect(() => {
       const target = this.overlay.target(),

@@ -118,7 +118,7 @@ export class RunStream {
           if (!isActive(run.status)) return run;
         } catch (stateError) {
           if (signal.aborted || this.permanent(stateError)) throw stateError;
-          /* Next attempt fetches state again; no POST is ever repeated here. */
+          /* 下一次嘗試會重新讀取狀態；這裡絕不重送 POST。 */
         }
       }
     }

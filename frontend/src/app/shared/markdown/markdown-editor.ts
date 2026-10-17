@@ -4,7 +4,7 @@ import { Field } from '../ui/field';
 import { ViewSwitch } from '../ui/view-switch';
 import { ViewMotion } from '../ui/view-motion';
 
-/** One document value, with a readable default and an explicit Markdown editing mode. */
+/** 單一文件的值，有可讀的預設值與明確的 Markdown 編輯模式。 */
 @Component({
   selector: 'nx-markdown-editor',
   imports: [MarkdownView, Field, ViewSwitch, ViewMotion],
@@ -46,9 +46,9 @@ export class MarkdownEditor {
   readonly label = input('Markdown 內容');
   readonly disabled = input(false);
   readonly maxLength = input(64000);
-  /** Reading or editing; bind it to drive the switch from outside. */
+  /** 閱讀或編輯；綁定它即可從外部切換。 */
   readonly mode = model<'read' | 'edit'>('read');
-  /** False when the host renders its own switch. */
+  /** 宿主自行渲染切換鈕時為 false。 */
   readonly showModeSwitch = input(true);
   readonly views = [
     { value: 'read', label: '閱讀', icon: 'document' },

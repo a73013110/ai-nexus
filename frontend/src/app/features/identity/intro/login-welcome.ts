@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
-/** Greets by the local time of day. */
+/** 依一天中的當地時間問候。 */
 export function salutation(hour: number) {
   if (hour >= 5 && hour < 11) return '早安';
   if (hour >= 11 && hour < 14) return '午安';
@@ -8,7 +8,7 @@ export function salutation(hour: number) {
   return '晚上好';
 }
 
-/** The greeting under the centred wordmark while the workspace opens; its avatar flies on. */
+/** 工作區開啟時，置中字標下方的問候語；頭像會飛離。 */
 @Component({
   selector: 'nx-login-welcome',
   styleUrl: './login-welcome.scss',
@@ -22,7 +22,7 @@ export function salutation(hour: number) {
 })
 export class LoginWelcome {
   readonly name = input('');
-  /** The identity chosen on the previous step, when the account had a choice to make. */
+  /** 上一步所選的身分，帳號需要做選擇時才會有。 */
   readonly identity = input<string | null>(null);
   readonly greeting = salutation(new Date().getHours());
 }

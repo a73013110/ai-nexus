@@ -27,7 +27,7 @@
 </div>
 <div class="topbar-actions" #actions>
   @if (store.selected(); as conversation) {
-    <!-- Phones fold the cost, find, favourite and rename into the conversation menu. -->
+    <!-- 手機版把費用、搜尋、收藏與重新命名收進對話選單。 -->
     <nx-conversation-spend
       #spend
       [class.in-menu]="compact()"
@@ -55,6 +55,6 @@
       (action)="choose($event, spend)"
     />
   }
-  <!-- Every page keeps its tour at the far right of its header. -->
+  <!-- 每個頁面的導覽按鈕都放在標題列最右側。 -->
   <nx-product-tour-button [tour]="tour()" [compact]="true" />
 </div>

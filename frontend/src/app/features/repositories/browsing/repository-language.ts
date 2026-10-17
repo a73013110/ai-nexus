@@ -39,7 +39,7 @@ const languages: Readonly<Record<string, string>> = {
   patch: 'diff',
 };
 
-/** The highlight grammar for a path, or '' for plain text. */
+/** 路徑對應的高亮文法；純文字則為空字串。 */
 export function codeLanguage(path: string) {
   const name = path.slice(path.lastIndexOf('/') + 1).toLowerCase();
   const dot = name.lastIndexOf('.');

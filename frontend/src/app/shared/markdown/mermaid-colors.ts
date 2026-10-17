@@ -1,4 +1,4 @@
-/** Keep authored solid node colors while making their SVG labels readable in either theme. */
+/** 保留作者設定的實心節點顏色，同時讓其 SVG 標籤在任一主題下都可讀。 */
 export function applyDiagramContrast(svg: Element, ink: string, background: string) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 1;
@@ -32,7 +32,7 @@ export function applyDiagramContrast(svg: Element, ink: string, background: stri
         Math.min(1, parseFloat(authoredOpacity) / (authoredOpacity.endsWith('%') ? 100 : 1)),
       );
     const light = luminance(
-      fill.map((channel, i) => channel * opacity + surface[i] * (1 - opacity)),
+      fill.map((channel, index) => channel * opacity + surface[index] * (1 - opacity)),
     );
     const contrast =
       (Math.max(light, foregroundLight) + 0.05) / (Math.min(light, foregroundLight) + 0.05);

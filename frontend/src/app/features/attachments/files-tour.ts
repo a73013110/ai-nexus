@@ -2,8 +2,8 @@ import type { ProductTourDefinition } from '@shared/ui/product-tour';
 
 /**
  * The library tour. The menu step names "加入知識庫" only for viewers with the knowledge feature;
- * the card and menu steps are skipped while no file is listed, and the capacity step ends the tour
- * because the footer is always shown once the list loads.
+ * 卡片與選單步驟在沒有檔案列出時會略過，而容量步驟會結束導覽，
+ * 因為列表載入後頁尾一律會顯示。
  */
 export function filesTour(options: { knowledge: boolean }): ProductTourDefinition {
   return {

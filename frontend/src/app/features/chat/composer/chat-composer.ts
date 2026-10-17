@@ -56,8 +56,8 @@ const SUGGESTIONS = [
 ];
 
 /**
- * The prompt box with its attachments, model controls and the island of composer notices. It also keeps the Context
- * estimate current while the person types.
+ * 提示框，含附件、模型控制項，以及輸入框通知的島。它也會在使用者輸入時，
+ * 讓 Context 的估算保持最新。
  */
 @Component({
   selector: 'div[nxChatComposer]',
@@ -83,7 +83,7 @@ export class ChatComposer {
   readonly store = inject(ChatStore);
   private readonly themes = inject(ThemeService);
   private readonly morph = inject(ViewMorph);
-  /** A prompt was handed to the store, so the thread can follow its answer. */
+  /** 提示已交給 store，讓 thread 能跟隨其回答。 */
   readonly sent = output<void>();
   readonly suggestions = SUGGESTIONS;
   readonly composing = signal(false);
@@ -99,7 +99,7 @@ export class ChatComposer {
       message: '訊息超過系統允許的字數，請縮短內容。',
     });
   });
-  /** Send needs a ready store and a non-blank prompt within the length limit. */
+  /** 送出需要 store 就緒，且提示不能是空白、長度需在上限之內。 */
   readonly canSubmit = computed(
     () =>
       this.store.canSend() && !!this.store.draft().text.trim() && !this.promptForm.text().invalid(),
@@ -111,7 +111,7 @@ export class ChatComposer {
   private readonly knowledge = viewChild(KnowledgePicker);
   private readonly toolsAnchor = viewChild.required('toolsMenu', { read: ElementRef });
   private contextScope = '';
-  /** The narrow composer's tools menu: the same actions its wide row shows as separate controls. */
+  /** 窄版輸入框的工具選單：寬版那一列以獨立控制項顯示的同樣動作。 */
   readonly tools = computed<MenuAction[]>(() => {
     const store = this.store;
     const sources = store.knowledge.ids().length;
@@ -154,8 +154,8 @@ export class ChatComposer {
         webSearch = this.store.webSearchEnabled();
       this.store.messages();
       this.store.knowledge.revision();
-      // The last estimate stays until the next one arrives, so the ring, the budget notice and the
-      // send gate hold steady while typing; it only stops applying in another model or conversation.
+      // 上一次的估算會保留到下一次抵達，讓輸入時的用量環、預算通知與送出閘門維持穩定；
+      // 只有切換到其他模型或對話時才停止套用。
       const scope = ready && modelId ? `${modelId}|${conversation?.id ?? ''}` : '';
       if (scope !== this.contextScope) this.store.contextUsage.set(null);
       this.contextScope = scope;
@@ -203,7 +203,7 @@ export class ChatComposer {
       this.sent.emit();
       void this.store.send();
     };
-    // The first prompt moves the composer from the centred start screen to the bottom.
+    // 第一則提問會讓輸入框從置中的起始畫面移到底部。
     if (this.store.starting()) void this.morph.run(send);
     else send();
   }

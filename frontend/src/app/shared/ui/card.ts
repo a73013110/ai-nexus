@@ -1,6 +1,6 @@
 import { Directive } from '@angular/core';
 
-/** A neutral surface; its feature owns the content layout and native element semantics. */
+/** 中性的表面；內容版面與原生元素語意由其功能負責。 */
 @Directive({
   selector: '[nxCard]',
   host: { class: 'ui-card' },

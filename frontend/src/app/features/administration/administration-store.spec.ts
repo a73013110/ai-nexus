@@ -59,7 +59,7 @@ describe('admin store', () => {
   });
 
   it('explains a missing access management grant without reading the catalog', async () => {
-    // Platform operations is a grant of its own and does not open access management.
+    // 平台營運是獨立的授權，不會開放權限管理。
     const { store, api, settle } = setup(['chat', 'operations']);
     await settle();
     expect(api.catalog).not.toHaveBeenCalled();

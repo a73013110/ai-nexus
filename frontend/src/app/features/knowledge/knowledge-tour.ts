@@ -1,6 +1,6 @@
 import type { ProductTourDefinition, TourStep } from '@shared/ui/product-tour';
 
-/** The collection tour; the card step is skipped while no collection is listed. */
+/** 集合導覽；沒有列出任何集合時，卡片步驟會略過。 */
 export const KNOWLEDGE_TOUR: ProductTourDefinition = {
   steps: [
     {
@@ -37,8 +37,8 @@ export const KNOWLEDGE_TOUR: ProductTourDefinition = {
 };
 
 /**
- * The open collection's tour. Adding sources and the collection menu follow the viewer's rights,
- * and steps not on screen (documents of an empty list, the hidden filter) are skipped.
+ * 已開啟集合的導覽。新增來源與集合選單依檢視者的權限而定，
+ * 不在畫面上的步驟（空列表的文件、隱藏的篩選）會略過。
  */
 export function collectionTour(options: { edit: boolean; manage: boolean }): ProductTourDefinition {
   const steps: TourStep[] = [

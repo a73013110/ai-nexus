@@ -3,7 +3,7 @@ import { Icon } from '@shared/ui/icon';
 import { DashboardLayout } from './dashboard-layout';
 import { DashboardStore } from '../dashboard-store';
 
-/** Shown while customizing: how to arrange tiles, hidden tiles to bring back, reset and done. */
+/** 自訂時顯示：如何排列磚塊、要復原的隱藏磚塊、重設與完成。 */
 @Component({
   selector: 'nx-dashboard-edit-bar',
   imports: [Icon],

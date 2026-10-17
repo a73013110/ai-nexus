@@ -5,7 +5,7 @@ import { Icon } from '@shared/ui/icon';
 import { AdministrationStore } from '../administration-store';
 import { AccessStatus } from './access-status';
 
-/** Roles bundle feature groups; users receive roles. */
+/** 角色組合功能群組；使用者則領取角色。 */
 @Component({
   selector: 'nx-admin-roles-tab',
   imports: [Icon, DataTable, DataTableRow, AccessStatus],

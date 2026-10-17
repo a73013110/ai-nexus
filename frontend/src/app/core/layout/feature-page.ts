@@ -50,7 +50,7 @@ import { WorkspaceMenuButton } from './workspace-menu-button';
 export class FeaturePage {
   readonly title = input.required<string>();
   readonly description = input('');
-  /** A detail page's way back to its collection, shown before the title. */
+  /** 細節頁面返回所屬集合的方式，顯示在標題之前。 */
   readonly back = input<{
     path: string;
     label: string;
@@ -60,10 +60,10 @@ export class FeaturePage {
   readonly wide = input(true);
   readonly layoutMode = input<'flow' | 'data'>('flow');
   /**
-   * Keeps the header and its actions at the top while the page scrolls; it becomes a translucent
-   * material once content passes beneath it. For live pages whose controls stay in use.
+   * 頁面捲動時讓標題與其動作留在最上方；內容捲過其下方時，會變成半透明的材質。適用於控制項仍在使用
+   * 中的即時頁面。
    */
   readonly stickyHeader = input(false);
-  /** The page's guided tour; its trigger sits at the far right of the header. */
+  /** 頁面的導覽；觸發鈕位於標題最右側。 */
   readonly tour = input<ProductTourDefinition | null>(null);
 }

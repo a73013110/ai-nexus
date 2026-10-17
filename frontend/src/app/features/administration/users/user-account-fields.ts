@@ -3,7 +3,7 @@ import type { AdminUserDto, UserAccountRequest } from '@core/api/schema';
 import { Checkbox } from '@shared/ui/checkbox';
 import { Field } from '@shared/ui/field';
 
-/** A user's name, switch and sign-in methods as edited; the password is never read back. */
+/** 使用者編輯中的名稱、開關與登入方式；密碼永遠不會被讀回。 */
 export interface UserAccountDraft {
   name: string;
   enabled: boolean;
@@ -15,7 +15,7 @@ export interface UserAccountDraft {
   hasLocalPassword: boolean;
 }
 
-/** A new user signs in with a local password until an AD account is added. */
+/** 新使用者在加入 AD 帳號之前，以本地密碼登入。 */
 export function userAccountDraft(user?: AdminUserDto | null): UserAccountDraft {
   const login = user?.authentication;
   return {
@@ -43,7 +43,7 @@ export function userAccountRequest(draft: UserAccountDraft, roleIds: string[]): 
   };
 }
 
-/** How a user may sign in, for lists and headers. */
+/** 使用者如何登入，供列表與標頭使用。 */
 export function signInMethods(user: AdminUserDto) {
   const login = user.authentication;
   const methods = [
@@ -53,15 +53,17 @@ export function signInMethods(user: AdminUserDto) {
   return methods.join(' · ') || '未開放登入';
 }
 
-export function sameUserAccount(a: UserAccountDraft, b: UserAccountDraft) {
-  return (Object.keys(a) as (keyof UserAccountDraft)[]).every((key) => a[key] === b[key]);
+export function sameUserAccount(first: UserAccountDraft, second: UserAccountDraft) {
+  return (Object.keys(first) as (keyof UserAccountDraft)[]).every(
+    (key) => first[key] === second[key],
+  );
 }
 
 let sequence = 0;
 
 /**
- * Name, switch and sign-in methods as two form sections; shared by the create dialog and the user
- * inspector, which wrap them in `.form-sections`.
+ * 名稱、開關與登入方式，分成兩個表單區段；由建立對話框與使用者檢視器共用，
+ * 兩者會把它們包在 `.form-sections` 中。
  */
 @Component({
   selector: 'nx-user-account-fields',

@@ -28,10 +28,8 @@ import { FrameMotion, ViewMotion } from '@shared/ui/view-motion';
 import { NotificationFeed } from './notification-feed';
 
 /**
- * The server inbox, and beside it this tab's toasts: the inbox is what lasts, the session list
- * only helps find a confirmation that left before it was read. On desktop it is a non-modal
- * popover anchored to the bell; on phones the same content is a modal bottom sheet. Either frame
- * follows the selected tab's height.
+ * 伺服器收件匣，以及旁邊此分頁的提示：收件匣才會保留，工作階段列表只用來找讀取前就消失的確認訊息。
+ * 桌面版是綁定到鈴鐺的非模態 popover；手機上是同內容的模態底部面板。兩者都會跟隨所選分頁的高度。
  */
 @Component({
   selector: 'nx-notification-center',
@@ -61,7 +59,7 @@ import { NotificationFeed } from './notification-feed';
             type="button"
             class="quiet-button"
             [attr.aria-pressed]="store.unreadOnly()"
-            (click)="store.unreadOnly.update(toggle); store.refresh()"
+            (click)="toggleUnreadOnly()"
           >
             只看未讀
           </button>
@@ -160,7 +158,7 @@ export class NotificationCenter {
   ]);
   readonly toggle = (value: boolean) => !value;
   private readonly phone = mediaQuery(below('phone'));
-  /** Phones get the modal bottom sheet; wider screens a popover. Chosen on open, kept for the exit. */
+  /** 手機使用模態底部面板，較寬的螢幕使用 popover。開啟時決定，退場時沿用。 */
   readonly sheet = linkedSignal<boolean, boolean>({
     source: this.store.opened,
     computation: (opened, previous) =>
@@ -183,11 +181,11 @@ export class NotificationCenter {
       const shown = panel.matches(':popover-open');
       if (opened && !shown) {
         const trigger = this.store.trigger?.isConnected ? this.store.trigger : undefined;
-        // The bell becomes the invoker: Tab continues from the bell into the panel and back out.
+        // 鈴鐺成為觸發者：Tab 會從鈴鐺進入面板，離開後再回到鈴鐺。
         this.popover.show(trigger);
       } else if (!opened && shown) this.popover.hide();
     });
-    // The feed loads after opening; keep the panel on its anchor as it grows.
+    // 開啟後才載入動態；面板隨內容增長時仍要貼在錨點上。
     const observer = new ResizeObserver(() => this.popover.reposition());
     afterRenderEffect((onCleanup) => {
       const panel = this.panel()?.nativeElement;
@@ -195,7 +193,7 @@ export class NotificationCenter {
       observer.observe(panel);
       onCleanup(() => observer.unobserve(panel));
     });
-    // Crossing the phone breakpoint while open would leave the wrong form on screen.
+    // 面板開啟中跨越手機斷點，會讓畫面上留著錯誤的形式。
     effect(() => {
       const phone = this.phone();
       untracked(() => {
@@ -204,7 +202,7 @@ export class NotificationCenter {
     });
     inject(DestroyRef).onDestroy(() => observer.disconnect());
   }
-  /** Below the bell, or beside it on the icon rail. */
+  /** 在鈴鐺下方，或在圖示欄上時位於其旁邊。 */
   private place(panel: HTMLElement) {
     const trigger = this.store.trigger;
     if (!trigger?.isConnected) {
@@ -221,7 +219,11 @@ export class NotificationCenter {
       );
     else positionPopover(trigger, panel, 480, 'right', 640);
   }
-  /** Light dismiss closes the panel natively; the store follows and focus returns to the bell. */
+  /** 點外部輕關閉由原生處理；store 同步，焦點回到鈴鐺。 */
+  toggleUnreadOnly() {
+    this.store.unreadOnly.update(this.toggle);
+    this.store.refresh();
+  }
   toggled(event: Event) {
     this.popover.sync(event);
     if (this.popover.opened()) return;
@@ -232,12 +234,12 @@ export class NotificationCenter {
   }
   key(event: KeyboardEvent) {
     if (event.key !== 'Escape') return;
-    // Handled here so the mobile sidebar's Escape does not close the drawer underneath.
+    // 在這裡處理，避免手機側邊欄的 Escape 把底下的抽屜一起關掉。
     event.preventDefault();
     event.stopPropagation();
     this.store.close();
   }
-  /** A recorded action may navigate, so the panel and the mobile sidebar get out of the way. */
+  /** 已記錄的動作可能會導覽，因此面板與手機側邊欄要先讓開。 */
   leave() {
     this.store.close();
     this.layout.closeMobile();

@@ -4,7 +4,7 @@ import { Checkbox } from './checkbox';
 export interface ChoiceOption {
   id: string;
   label: string;
-  /** A second line under the label, e.g. the stable id. */
+  /** 標籤下方的第二行，例如穩定的 id。 */
   description?: string;
 }
 export interface ChoiceGroup {
@@ -15,10 +15,10 @@ export interface ChoiceGroup {
 let sequence = 0;
 
 /**
- * A multi-select list split by category: each category is its own framed card with its name, the
- * selected count and one "select all / none" button, and the cards share the width (two columns
- * where they fit, one on narrow screens). No outer fieldset: the cards are the sections.
- * `selected` may hold ids outside these groups; changes keep them and emit the whole selection.
+ * 依分類拆開的多選列表：每個分類是一張有框的卡片，附上名稱、已選數量，以及一個「全選／全不選」按鈕；
+ * 卡片共用寬度
+ * （能放下時為兩欄，窄螢幕為一欄）。沒有外層 fieldset：卡片本身就是區段。
+ * `selected` 可能含有這些群組以外的 id；變更時會保留它們，並送出完整的選取內容。
  */
 @Component({
   selector: 'nx-choice-groups',
@@ -67,7 +67,7 @@ export class ChoiceGroups {
   readonly groups = input.required<readonly ChoiceGroup[]>();
   readonly selected = input.required<readonly string[]>();
   readonly disabled = input(false);
-  /** Shows the per-group select all / none button. */
+  /** 顯示每個群組的全選／全不選按鈕。 */
   readonly batch = input(true);
   readonly selectedChange = output<string[]>();
   readonly chosen = computed(() => new Set(this.selected()));
@@ -89,7 +89,7 @@ export class ChoiceGroups {
       checked,
     );
   }
-  /** Adds missing ids at the end or removes them; the rest keeps its order. */
+  /** 缺少的 id 加到末端、或移除；其餘保持原順序。 */
   private change(ids: readonly string[], checked: boolean) {
     const chosen = this.chosen();
     this.selectedChange.emit(

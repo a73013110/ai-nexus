@@ -1,6 +1,6 @@
 import type { AuditDto } from '@core/api/schema';
 
-/** Use the event time, not today's default range, for investigations of older activity. */
+/** 調查較早的活動時，使用事件時間，而非今天的預設範圍。 */
 export function auditLogQuery(entry: AuditDto): Record<string, string> | null {
   const time = Date.parse(entry.at);
   const traceId = /^[a-f\d]{32}$/i.test(entry.traceId || '') ? entry.traceId! : '';

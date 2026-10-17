@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { ApiClient } from '@core/api/api-client';
 
-/** Copying and backing up a conversation; sign-in, the list and runs are in the core `NexusApi`. */
+/** 複製與備份對話；登入、列表與執行在核心的 `NexusApi` 中。 */
 @Injectable({ providedIn: 'root' })
 export class ChatApi {
   private readonly api = inject(ApiClient);

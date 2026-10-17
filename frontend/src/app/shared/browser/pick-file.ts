@@ -1,6 +1,6 @@
 /**
- * Opens the system file chooser without a permanent hidden input, so any button or command can
- * ask for a file. Resolves null when the person cancels; call it from a user gesture.
+ * 開啟系統的檔案選擇器，且不保留隱藏的 input，因此任何按鈕或指令都能要求檔案。
+ * 使用者取消時回傳 null；需在使用者手勢中呼叫。
  */
 export function pickFile(accept: string): Promise<File | null> {
   return new Promise((resolve) => {

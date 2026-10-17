@@ -22,12 +22,12 @@ markdown.renderer.rules['fence'] = (tokens, index, _options, env) => {
     return `<div class="markdown-diagram-slot" data-diagram-index="${index}"></div>`;
   }
   const label = /^[\w#+-]{1,24}$/.test(language) ? language : 'text';
-  // Highlighting happens later, near the viewport (code-highlighting.ts); text is escaped here.
+  // 語法高亮稍後在視窗附近進行（code-highlighting.ts）；這裡先跳脫文字。
   const deferred =
     !env?.['streaming'] && label !== 'text' ? ` data-language="${escape(label)}"` : '';
   return `<div class="code-block"><div class="code-toolbar"><span>${escape(label)}</span><button type="button" class="code-copy" title="複製程式碼" aria-label="複製程式碼">複製程式碼</button></div><pre><code${deferred}>${escape(token.content)}</code></pre></div>`;
 };
-/** Start lines of the top-level blocks and, when the last block is a list, of its items. */
+/** 最上層區塊的起始行；若最後一個區塊是列表，則也包含其項目的起始行。 */
 export function markdownBlockStructure(content: string) {
   const starts: number[] = [];
   let items: number[] = [];
@@ -43,8 +43,8 @@ export function markdownBlockStructure(content: string) {
   return { starts, items };
 }
 
-// This is the sole trusted-HTML boundary. Raw HTML is disabled at parsing, then the
-// generated markup is reduced to a small HTML allowlist. No arbitrary HTML input is trusted.
+// 這裡是唯一的可信 HTML 邊界。解析時停用原始 HTML，接著把產生的標記縮減為一個小的 HTML 白名單。
+// 任何任意的 HTML 輸入都不被信任。
 export const renderMarkdown = (content: string, streaming = false): string =>
   sanitizeMarkdown(markdown.render(content, { streaming }));
 
@@ -53,17 +53,17 @@ export interface RenderedMarkdown {
   readonly diagrams: readonly string[];
 }
 
-// Rendering depends only on the text, so remounts (conversation switches, shares, artifacts) reuse
-// it. About two long conversations of answers; at most ~8 MB of UTF-16 source plus HTML.
+// 渲染只取決於文字，所以重新掛載（切換對話、分享、成品）會重用它。
+// 約為兩段長對話的回答，最多約 8 MB UTF-16 的原始碼與 HTML。
 const rendered = new LruCache<string, RenderedMarkdown>({
   maxEntries: 256,
   maxWeight: 4_000_000,
   weigh: (value, content) => content.length + value.html.length,
 });
 
-/** Fences keep their original nesting; only renderer-owned slots host Angular widgets. */
+/** 圍欄保留原本的巢狀結構；只有渲染器自有的插槽會掛載 Angular 元件。 */
 export function renderMarkdownWithDiagrams(content: string, streaming = false): RenderedMarkdown {
-  // The streaming frontier changes every frame and is never shown twice; it is not cached.
+  // 串流的前緣每幀都會改變，且從不重複顯示，因此不快取。
   const cached = streaming ? undefined : rendered.get(content);
   if (cached) return cached;
   const diagrams: string[] = [];

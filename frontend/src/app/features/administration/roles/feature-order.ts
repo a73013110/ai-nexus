@@ -1,17 +1,17 @@
-/** A feature's (or menu group's) place: the server lists them by `sortOrder`, then `id`. */
+/** 功能（或選單群組）的位置：伺服器依 `sortOrder`、再依 `id` 排列。 */
 export interface FeatureOrder {
   id: string;
   sortOrder: number;
 }
 export type OrderShift = number | 'first' | 'last';
 
-/** The largest `sortOrder` the server accepts (`NavigationRules`). */
+/** 伺服器接受的最大 `sortOrder`（見 `NavigationRules`）。 */
 export const MAX_SORT_ORDER = 10000;
 const STEP = 10;
 
 /**
- * Features in display order with `overrides` (values being saved) applied, the way the sidebar
- * and the catalog order them; `navigationTree` keeps this order inside each group.
+ * 依顯示順序排列的功能，套用 `overrides`（正在儲存的值）；側邊欄與目錄也是這樣排序，
+ * `navigationTree` 會在每個群組內保留這個順序。
  */
 export function orderFeatures<T extends FeatureOrder>(
   features: readonly T[],
@@ -21,15 +21,19 @@ export function orderFeatures<T extends FeatureOrder>(
     .map((feature) =>
       feature.id in overrides ? { ...feature, sortOrder: overrides[feature.id] } : feature,
     )
-    .sort((a, b) => a.sortOrder - b.sortOrder || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+    .sort(
+      (first, second) =>
+        first.sortOrder - second.sortOrder ||
+        (first.id < second.id ? -1 : first.id > second.id ? 1 : 0),
+    );
 }
 
-/** The place after the last of `siblings` (10 when there are none), within the accepted range. */
+/** `siblings` 中最後一個之後的位置（沒有則為 10），並限制在可接受的範圍內。 */
 export function nextSortOrder(siblings: readonly { sortOrder: number }[]): number {
-  return Math.min(MAX_SORT_ORDER, Math.max(0, ...siblings.map((x) => x.sortOrder)) + STEP);
+  return Math.min(MAX_SORT_ORDER, Math.max(0, ...siblings.map((item) => item.sortOrder)) + STEP);
 }
 
-/** `ids` with `id` moved by `shift` places (or to either end), clamped to the list. */
+/** 把 `id` 往前或往後移動 `shift` 個位置（或直接移到兩端），並限制在列表範圍內。 */
 export function shiftId(ids: readonly string[], id: string, shift: OrderShift): string[] {
   const from = ids.indexOf(id);
   if (from < 0) return [...ids];
@@ -39,17 +43,17 @@ export function shiftId(ids: readonly string[], id: string, shift: OrderShift): 
       : shift === 'last'
         ? ids.length - 1
         : Math.max(0, Math.min(ids.length - 1, from + shift));
-  const next = ids.filter((x) => x !== id);
+  const next = ids.filter((item) => item !== id);
   next.splice(to, 0, id);
   return next;
 }
 
 /**
- * The `sortOrder` writes that put one group in the order `ids` after `moved` changed place.
- * `current` is the group in its present order. The other features keep their values, so a move is
- * usually one write: the moved feature takes the middle of the gap it lands in, or 10 beyond an
- * end. Without room (equal neighbours, a gap of 1, the 0–10000 range) the group is renumbered
- * 10, 20, 30… so later moves fit again. Only values that change are returned.
+ * 在 `moved` 改變位置後，讓群組依 `ids` 排序所需的 `sortOrder` 寫入。
+ * `current` 是目前順序的群組。其他功能保留原值，因此一次移動通常只需一筆寫入：
+ * 移動的功能取落點間隙的中間值，
+ * 超出末端時取 10 之外的值。沒有空間（相鄰值相同、間隙為 1、0–10000 範圍）時，群組會重新編號為
+ * 10、20、30…，讓之後的移動又能放得下。只回傳有變更的值。
  */
 export function reorderWrites(
   current: readonly FeatureOrder[],

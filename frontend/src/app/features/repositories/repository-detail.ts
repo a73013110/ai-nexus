@@ -18,7 +18,7 @@ import { RepositoryThreads } from './browsing/repository-threads';
 
 export type RepositorySection = 'code' | 'commits' | 'pulls' | 'issues' | 'reviews';
 
-/** The section a route's `view` opens; a compare range belongs to the history. */
+/** 路由的 `view` 所開啟的區段；比較範圍屬於歷史。 */
 export function repositorySection(view: string): RepositorySection {
   if (view === 'compare') return 'commits';
   return view === 'commits' || view === 'pulls' || view === 'issues' || view === 'reviews'
@@ -26,7 +26,7 @@ export function repositorySection(view: string): RepositorySection {
     : 'code';
 }
 
-/** One repository: the ref it is pinned to, its sections, and the section in the URL. */
+/** 單一儲存庫：它釘選的 ref、其區段，以及網址中的區段。 */
 @Component({
   selector: 'nx-repository-detail',
   imports: [
@@ -154,7 +154,7 @@ export class RepositoryDetail {
   readonly short = shortSha;
   readonly section = computed(() => repositorySection(this.view()));
   readonly number = computed(() => (/^\d{1,9}$/.test(this.item()) ? Number(this.item()) : 0));
-  /** `base...head` of a compare view. */
+  /** 比較檢視的 `base...head`。 */
   readonly range = computed(() => {
     const [base, head] = this.item().split('...');
     return base && head && isSha(base) && isSha(head) ? { base, head } : null;
@@ -174,15 +174,15 @@ export class RepositoryDetail {
     const detail = this.store.detail();
     if (!detail) return [];
     const options: SelectOption[] = [
-      ...detail.branches.map((x) => ({
-        value: x.name,
-        label: x.name,
-        description: x.name === detail.repository.defaultBranch ? '預設分支' : '分支',
+      ...detail.branches.map((item2) => ({
+        value: item2.name,
+        label: item2.name,
+        description: item2.name === detail.repository.defaultBranch ? '預設分支' : '分支',
       })),
-      ...detail.tags.map((x) => ({ value: x.name, label: x.name, description: '標籤' })),
+      ...detail.tags.map((item) => ({ value: item.name, label: item.name, description: '標籤' })),
     ];
     const ref = this.store.refName();
-    if (ref && !options.some((x) => x.value === ref))
+    if (ref && !options.some((item) => item.value === ref))
       options.unshift({
         value: ref,
         label: isSha(ref) ? shortSha(ref) : ref,
@@ -200,7 +200,7 @@ export class RepositoryDetail {
   selectRef(ref: string) {
     const detail = this.store.detail();
     const value = ref === detail?.repository.defaultBranch ? null : ref || null;
-    // Folders and files may not exist on another ref, so a new ref starts at its root.
+    // 資料夾與檔案在另一個 ref 上可能不存在，所以新的 ref 會從根目錄開始。
     void this.router.navigate(
       this.store.link(...(this.section() === 'commits' ? ['commits'] : [])),
       {

@@ -1,4 +1,4 @@
-/** Matches `<script`, inline `on…=` handlers and `javascript:` URLs in an HTML document. */
+/** 比對 HTML 文件中的 `<script`、行內 `on…=` 處理器與 `javascript:` URL。 */
 const SCRIPT_PATTERNS = [
   /<script[\s>/]/i,
   /<[a-z][^>]*\son[a-z]+\s*=/i,

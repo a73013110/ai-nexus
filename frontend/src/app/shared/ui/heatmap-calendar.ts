@@ -9,16 +9,16 @@ export interface HeatmapPoint {
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日'];
 
 function day(value: string) {
-  const [y, m, d] = value.split('-').map(Number);
-  return new Date(y, m - 1, d);
+  const [pointY, max2, delta] = value.split('-').map(Number);
+  return new Date(pointY, max2 - 1, delta);
 }
 function key(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 /**
- * A calendar of local days, one column per week (Monday first), shaded in five steps relative to
- * the busiest day. Days outside the range stay blank; hover or focus a day to read its value.
+ * 本地日期的日曆，每週一欄（週一在前），依最忙的那一天分為五級上色。範圍外的日子留白；
+ * 移到某一天或使其聚焦，即可讀取它的數值。
  */
 @Component({
   selector: 'nx-heatmap-calendar',
@@ -70,7 +70,7 @@ function key(date: Date) {
 })
 export class HeatmapCalendar {
   readonly points = input.required<readonly HeatmapPoint[]>();
-  /** First and last local day, `YYYY-MM-DD`. */
+  /** 第一個與最後一個本地日期，格式為 `YYYY-MM-DD`。 */
   readonly from = input.required<string>();
   readonly through = input.required<string>();
   readonly label = input.required<string>();
@@ -94,8 +94,8 @@ export class HeatmapCalendar {
       inRange: boolean;
       delay: number;
     }[][] = [];
-    for (let cursor = new Date(start), i = 0; cursor <= last && i < 60 * 7; i++) {
-      if (i % 7 === 0) weeks.push([]);
+    for (let cursor = new Date(start), index = 0; cursor <= last && index < 60 * 7; index++) {
+      if (index % 7 === 0) weeks.push([]);
       const id = key(cursor),
         value = values.get(id) ?? 0;
       weeks[weeks.length - 1].push({
@@ -103,7 +103,7 @@ export class HeatmapCalendar {
         value,
         level: value > 0 && max > 0 ? Math.max(1, Math.ceil((value / max) * 4)) : 0,
         inRange: cursor >= first,
-        delay: Math.min(600, weeks.length * 18 + (i % 7) * 10),
+        delay: Math.min(600, weeks.length * 18 + (index % 7) * 10),
       });
       cursor.setDate(cursor.getDate() + 1);
     }
@@ -112,10 +112,10 @@ export class HeatmapCalendar {
   readonly summary = computed(() => {
     const cells = this.weeks()
       .flat()
-      .filter((x) => x.inRange);
-    const total = cells.reduce((sum, x) => sum + x.value, 0);
+      .filter((item) => item.inRange);
+    const total = cells.reduce((sum, item2) => sum + item2.value, 0);
     const busiest = cells.reduce(
-      (a, b) => (b.value > a.value ? b : a),
+      (first2, second) => (second.value > first2.value ? second : first2),
       cells[0] ?? { key: '', value: 0 },
     );
     return total

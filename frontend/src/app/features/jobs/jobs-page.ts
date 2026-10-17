@@ -138,13 +138,14 @@ export class JobsPage {
   private readonly api = inject(JobsApi);
   private readonly jobToasts = inject(JobToasts);
   readonly target = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('job') || '');
-  /** Jobs are re-read every few seconds; a linked job outside the recent list is added to it. */
+  /** 任務每幾秒重新讀取一次；不在最近列表中的已連結任務會加入其中。 */
   readonly jobs = apiResource({
     feature: 'tasks',
     params: () => this.target(),
     loader: async (target) => {
       const jobs = await this.api.list();
-      if (target && !jobs.some((x) => x.id === target)) jobs.push(await this.api.get(target));
+      if (target && !jobs.some((item2) => item2.id === target))
+        jobs.push(await this.api.get(target));
       return jobs;
     },
     poll: () => 3000,
@@ -162,17 +163,17 @@ export class JobsPage {
   readonly term = signal('');
   readonly visible = computed(() =>
     (this.jobs.value() ?? []).filter(
-      (x) =>
-        x.label.toLowerCase().includes(this.term().toLowerCase()) &&
+      (item3) =>
+        item3.label.toLowerCase().includes(this.term().toLowerCase()) &&
         (this.filter() === 'all' ||
           (this.filter() === 'active'
-            ? ['queued', 'running'].includes(x.status)
+            ? ['queued', 'running'].includes(item3.status)
             : this.filter() === 'attention'
-              ? ['failed', 'cancelled'].includes(x.status)
-              : x.status === 'completed')),
+              ? ['failed', 'cancelled'].includes(item3.status)
+              : item3.status === 'completed')),
     ),
   );
-  /** The list's tour; card steps follow the cards and actions the current filter shows. */
+  /** 列表的導覽；卡片步驟依目前篩選顯示的卡片與動作而定。 */
   readonly tour = computed(() => {
     const jobs = this.jobs.loading() ? [] : this.visible();
     return jobsTour({
@@ -214,7 +215,9 @@ export class JobsPage {
       const value = await (retry ? this.api.retry(job.id) : this.api.cancel(job.id));
       if (retry) this.jobToasts.track(value);
       if (valid())
-        this.jobs.value.update((items) => items?.map((x) => (x.id === value.id ? value : x)));
+        this.jobs.value.update((items) =>
+          items?.map((item) => (item.id === value.id ? value : item)),
+        );
     } catch (error) {
       if (valid()) this.actionError.set(this.scope.message(error));
     } finally {

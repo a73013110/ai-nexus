@@ -45,8 +45,8 @@ const PAGES: Readonly<Record<string, string>> = {
 };
 
 /**
- * Names the feature or page ids that presence and traffic report. Feature names are the ones
- * administrators set (from the viewer's `/me`); call it where `inject` works, e.g. a field.
+ * 為 presence 與流量回報的功能或頁面 id 命名。功能名稱是管理員設定的名稱（取自檢視者的 `/me`）；
+ * 在 `inject` 可用處呼叫，例如欄位初始化時。
  */
 export function monitoringFeatureNames() {
   const session = inject(WorkspaceSession);
@@ -54,8 +54,8 @@ export function monitoringFeatureNames() {
 }
 
 /**
- * Status words of dependencies and subsystems as badge tones. Only real problems carry warning or
- * danger; healthy is the quiet success tone and anything not observed stays neutral.
+ * 依賴項與子系統的狀態字，對應為徽章色調。只有真正的問題才用警告或危險色；
+ * 健康是安靜的成功色，未觀察到的則維持中性。
  */
 export function toneOf(status: string): BadgeTone {
   switch (status) {
@@ -72,7 +72,7 @@ export function toneOf(status: string): BadgeTone {
       return 'neutral';
   }
 }
-/** A fact's tone from the backend as a badge tone; positive reads as success. */
+/** 來自後端的事實，以徽章色調表示；正向狀態顯示為成功色。 */
 export function factTone(tone: string): BadgeTone {
   return tone === 'positive'
     ? 'success'
@@ -93,7 +93,7 @@ export function uptimeText(seconds: number | null | undefined) {
   return '不到 1 分鐘';
 }
 
-/** A subsystem fact as text in its unit; an unknown value is 「—」, never zero. */
+/** 子系統的事實以其單位呈現為文字；未知的值顯示「—」，絕不顯示為零。 */
 export function factText(fact: Pick<SubsystemFact, 'value' | 'unit' | 'text'>): string {
   if (fact.unit === 'text') return fact.text?.trim() || '—';
   const value = fact.value;
@@ -124,14 +124,14 @@ export interface HealthView {
   readonly minutes: number;
 }
 export interface HealthHeadline {
-  /** Changes only when the words do, so the headline animates on real changes. */
+  /** 只有文字改變時才改變，讓標題只在真正的變化時動畫。 */
   readonly key: string;
   readonly title: string;
   readonly detail: string;
   readonly tone: BadgeTone;
 }
 
-/** The hero's one-line answer to "is the system all right?", with what to do next. */
+/** 健康區塊的一行答案，回答「系統是否正常？」並說明接下來要做什麼。 */
 export function healthHeadline(view: HealthView): HealthHeadline {
   const issues = view.health.issues;
   if (!view.enabled)
@@ -193,7 +193,7 @@ export function healthHeadline(view: HealthView): HealthHeadline {
   }
 }
 
-/** What a screen reader hears when the health settles on a new state. */
+/** 健康狀態穩定到新狀態時，螢幕閱讀器會聽到的內容。 */
 export function healthAnnouncement(health: HealthSummary) {
   const first = health.issues[0]?.title;
   switch (health.status) {

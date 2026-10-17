@@ -3,8 +3,8 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 let sequence = 0;
 
 /**
- * A word-sized trend line in `currentColor`, drawn in from left to right. It is decorative: the
- * figure it accompanies carries the meaning, so give it a `label` only when it stands alone.
+ * 字詞大小的趨勢線，使用 `currentColor`，由左至右繪出。它是裝飾：
+ * 所附的數字才承載意義，因此只有單獨出現時才給 `label`。
  */
 @Component({
   selector: 'nx-sparkline',
@@ -69,8 +69,8 @@ export class Sparkline {
     const max = Math.max(...values),
       min = Math.min(0, ...values);
     const span = max - min || 1;
-    return values.map((value, i) => ({
-      x: values.length === 1 ? 100 : (i * 100) / (values.length - 1),
+    return values.map((value, index) => ({
+      x: values.length === 1 ? 100 : (index * 100) / (values.length - 1),
       y: 30 - ((value - min) / span) * 28,
     }));
   });
@@ -78,18 +78,18 @@ export class Sparkline {
   readonly path = computed(() => {
     const points = this.points();
     if (points.length === 1) return `M0 ${points[0].y} L100 ${points[0].y}`;
-    // A light Catmull-Rom smoothing keeps the line honest at the data points.
+    // 輕量的 Catmull-Rom 平滑，讓線條在資料點上保持誠實。
     return points
-      .map((p, i) => {
-        if (!i) return `M${p.x} ${p.y}`;
-        const a = points[i - 2] ?? points[i - 1],
-          b = points[i - 1],
-          c = points[i + 1] ?? p;
-        const c1x = b.x + (p.x - a.x) / 6,
-          c1y = b.y + (p.y - a.y) / 6,
-          c2x = p.x - (c.x - b.x) / 6,
-          c2y = p.y - (c.y - b.y) / 6;
-        return `C${c1x} ${c1y} ${c2x} ${c2y} ${p.x} ${p.y}`;
+      .map((part, index2) => {
+        if (!index2) return `M${part.x} ${part.y}`;
+        const first = points[index2 - 2] ?? points[index2 - 1],
+          second = points[index2 - 1],
+          card = points[index2 + 1] ?? part;
+        const c1x = second.x + (part.x - first.x) / 6,
+          c1y = second.y + (part.y - first.y) / 6,
+          c2x = part.x - (card.x - second.x) / 6,
+          c2y = part.y - (card.y - second.y) / 6;
+        return `C${c1x} ${c1y} ${c2x} ${c2y} ${part.x} ${part.y}`;
       })
       .join(' ');
   });

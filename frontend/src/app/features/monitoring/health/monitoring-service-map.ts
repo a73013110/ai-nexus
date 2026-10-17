@@ -8,35 +8,35 @@ import { MonitoringStore } from '../monitoring-store';
 import { dependencyStatus, monitoringLatency, toneOf } from '../monitoring-format';
 
 type Point = readonly [number, number];
-const lerp = (a: Point, b: Point, t: number): Point => [
-  a[0] + (b[0] - a[0]) * t,
-  a[1] + (b[1] - a[1]) * t,
+const lerp = (first: Point, second: Point, time: number): Point => [
+  first[0] + (second[0] - first[0]) * time,
+  first[1] + (second[1] - first[1]) * time,
 ];
 const d = (points: readonly Point[]) =>
   `M${points[0].join(' ')} C${points
     .slice(1)
-    .map((p) => p.join(' '))
+    .map((part) => part.join(' '))
     .join(', ')}`;
-/** A wire from the core's anchor (0, 50) to a row at `y`, and its tail from 18% on (de Casteljau). */
-export function wire(y: number) {
+/** 從核心錨點（0, 50）到第 `y` 位置那一列的連線，以及從 18% 起的尾段（de Casteljau 演算法）。 */
+export function wire(pointY: number) {
   const curve: Point[] = [
     [0, 50],
     [50, 50],
-    [50, y],
-    [100, y],
+    [50, pointY],
+    [100, pointY],
   ];
-  const t = 0.18;
-  const a = lerp(curve[0], curve[1], t),
-    b = lerp(curve[1], curve[2], t),
-    c = lerp(curve[2], curve[3], t);
-  const ab = lerp(a, b, t),
-    bc = lerp(b, c, t);
-  return { wire: d(curve), transit: d([lerp(ab, bc, t), bc, c, curve[3]]) };
+  const target = 0.18;
+  const first2 = lerp(curve[0], curve[1], target),
+    second2 = lerp(curve[1], curve[2], target),
+    card = lerp(curve[2], curve[3], target);
+  const ab = lerp(first2, second2, target),
+    bc = lerp(second2, card, target);
+  return { wire: d(curve), transit: d([lerp(ab, bc, target), bc, card, curve[3]]) };
 }
 
 /**
- * The application and the services it calls: one row per observed dependency, joined to the core
- * by hairlines. A wire carries a moving signal only while calls are in flight on live data;
+ * 應用程式與它呼叫的服務：每個觀察到的依賴一列，以細線連到核心。
+ * 連線只有在即時資料上有呼叫進行中時才帶著移動的訊號；
  * dependencies never observed wait in a disclosure, since 「尚無觀測」 is not a state to watch.
  */
 @Component({
@@ -56,19 +56,19 @@ export class MonitoringServiceMap {
   readonly snapshot = this.store.snapshot;
   readonly moving = computed(() => !this.store.stale() && !this.theme.reducedMotion());
   readonly observed = computed(() =>
-    this.store.dependencies().filter((d) => d.status !== 'unobserved'),
+    this.store.dependencies().filter((draft) => draft.status !== 'unobserved'),
   );
   readonly unobserved = computed(() =>
-    this.store.dependencies().filter((d) => d.status === 'unobserved'),
+    this.store.dependencies().filter((draft2) => draft2.status === 'unobserved'),
   );
   private readonly count = computed(() => this.observed().length);
   /**
-   * Wires depend on the number of rows only: rows share the column's height equally. Each leaves
-   * the core's anchor and lands on its row level at both ends; the moving signal is the same curve
-   * minus its first stretch, so dashes never pile up where the wires meet.
+   * 連線只取決於列數：各列平分欄位高度。每條線從核心錨點出發，
+   * 兩端都落在它自己那一列的高度上；移動的訊號與同一條曲線相同，只是略去起始的一段，
+   * 因此虛線不會在連線相交處堆疊。
    */
   readonly paths = computed(() =>
-    Array.from({ length: this.count() }, (_, i) => wire(((i + 0.5) * 100) / this.count())),
+    Array.from({ length: this.count() }, (_, index) => wire(((index + 0.5) * 100) / this.count())),
   );
   rate(value: number) {
     return value.toLocaleString('zh-TW', { maximumFractionDigits: value >= 10 ? 1 : 2 });

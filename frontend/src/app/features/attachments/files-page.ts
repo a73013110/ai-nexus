@@ -102,6 +102,10 @@ export class FilesPage {
     const gallery = this.gallery().nativeElement;
     if (gallery.getBoundingClientRect().top < 0) gallery.scrollIntoView({ block: 'start' });
   }
+  chooseFiles(picker: HTMLInputElement) {
+    void this.upload(picker.files!);
+    picker.value = '';
+  }
   async upload(files: FileList | File[]) {
     const candidates = Array.from(files),
       policy = this.policy();
@@ -124,7 +128,7 @@ export class FilesPage {
     this.controller = new AbortController();
     this.uploading.set(true);
     this.actionError.set('');
-    // One toast follows the batch from the first file to done; a failure withdraws it.
+    // 一則提示從第一個檔案追蹤到完成；失敗時撤回它。
     const progress = 'library-upload';
     let saved = 0,
       done = false;

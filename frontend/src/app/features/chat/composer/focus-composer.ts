@@ -60,7 +60,7 @@ export class FocusComposer {
   readonly readonly = input(false);
   readonly canSend = input(false);
   readonly enterToSend = input(true);
-  /** Longer text stays editable, like the main composer, and only blocks sending. */
+  /** 較長的文字仍可編輯，與主輸入框相同，只阻擋送出。 */
   readonly limit = input(24000);
   readonly over = computed(() => this.text().length > this.limit());
   readonly textChange = output<string>();

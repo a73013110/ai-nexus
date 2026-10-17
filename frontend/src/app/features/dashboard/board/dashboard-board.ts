@@ -15,26 +15,26 @@ interface Drag {
   id: string;
   element: HTMLElement;
   pointer: number;
-  /** Pointer position minus the tile's untranslated position, kept while the tile changes slot. */
+  /** 指標位置減去磚塊未轉換的位置；磚塊換位時保留。 */
   offsetX: number;
   offsetY: number;
   lastTarget: string | null;
   lastSwap: number;
-  /** The latest pointer position, replayed while the page scrolls under a still pointer. */
+  /** 最新的指標位置；頁面在靜止指標下捲動時會重播。 */
   last: PointerEvent;
   scroll: number;
 }
 
-/** A swap needs the pointer well inside the other tile, so tiles of unequal size do not flicker. */
+/** 交換需要指標明顯位於另一磚塊內，不同大小的磚塊才不會閃爍。 */
 const SWAP_INSET = 0.18;
 const SWAP_COOLDOWN = 160;
-/** Near the top or bottom of the scroll area, a dragged tile scrolls the page. */
+/** 位於捲動區域的頂部或底部附近時，被拖曳的磚塊會捲動頁面。 */
 const SCROLL_EDGE = 72;
 const SCROLL_SPEED = 18;
 
 /**
- * The tiles on a 12-column grid. In edit mode tiles are reordered by dragging their handle (others
- * glide out of the way), or by arrow keys on the handle, with each move announced.
+ * 12 欄格狀排列的磚塊。編輯模式下，拖曳把手可重新排序（其他磚塊會滑開），
+ * 或在把手上用方向鍵，每次移動都會播報。
  */
 @Component({
   selector: 'nx-dashboard-board',
@@ -71,7 +71,7 @@ export class DashboardBoard {
     inject(DestroyRef).onDestroy(() => this.end());
   }
 
-  /** Runs a layout change and lets the tiles glide from their old places to the new ones. */
+  /** 執行版面變更，讓磚塊從舊位置滑到新位置。 */
   flip(change: () => void, except?: string) {
     const before = this.rects();
     change();
@@ -96,8 +96,8 @@ export class DashboardBoard {
     const visible = this.layout.visible();
     const step = offset === 'first' ? -visible.length : offset === 'last' ? visible.length : offset;
     this.flip(() => this.layout.shift(id, step));
-    const position = this.layout.visible().findIndex((x) => x.id === id) + 1;
-    const title = visible.find((x) => x.id === id)?.widget.title ?? '';
+    const position = this.layout.visible().findIndex((item) => item.id === id) + 1;
+    const title = visible.find((item) => item.id === id)?.widget.title ?? '';
     this.announcement.set(`${title}：第 ${position} 個，共 ${visible.length} 個`);
     this.handle(id)?.focus();
   }
@@ -120,7 +120,7 @@ export class DashboardBoard {
       scroll: 0,
     };
     this.dragging.set(id);
-    // Window listeners, not pointer capture: reordering moves tiles in the DOM, which drops capture.
+    // 使用視窗監聽器而非指標捕獲：重新排序會在 DOM 中移動磚塊，這會讓捕獲失效。
     window.addEventListener('pointermove', this.move);
     window.addEventListener('pointerup', this.drop);
     window.addEventListener('pointercancel', this.drop);
@@ -146,7 +146,7 @@ export class DashboardBoard {
     this.follow(drag, event);
   }
 
-  /** Scrolls while the pointer rests near an edge, so far tiles can be reached. */
+  /** 指標停在邊緣附近時捲動，讓較遠的磚塊也能被抵達。 */
   private autoscroll() {
     const drag = this.drag;
     if (!drag) return;
@@ -154,12 +154,12 @@ export class DashboardBoard {
     const scroller = this.host.closest<HTMLElement>('.feature-main');
     if (!scroller) return;
     const box = scroller.getBoundingClientRect(),
-      y = drag.last.clientY;
+      pointY = drag.last.clientY;
     const speed =
-      y < box.top + SCROLL_EDGE
-        ? -SCROLL_SPEED * (1 - Math.max(0, y - box.top) / SCROLL_EDGE)
-        : y > box.bottom - SCROLL_EDGE
-          ? SCROLL_SPEED * (1 - Math.max(0, box.bottom - y) / SCROLL_EDGE)
+      pointY < box.top + SCROLL_EDGE
+        ? -SCROLL_SPEED * (1 - Math.max(0, pointY - box.top) / SCROLL_EDGE)
+        : pointY > box.bottom - SCROLL_EDGE
+          ? SCROLL_SPEED * (1 - Math.max(0, box.bottom - pointY) / SCROLL_EDGE)
           : 0;
     if (!speed) return;
     const before = scroller.scrollTop;
@@ -180,7 +180,7 @@ export class DashboardBoard {
         easing: 'cubic-bezier(0.34, 1.3, 0.64, 1)',
       });
     const visible = this.layout.visible();
-    const position = visible.findIndex((x) => x.id === drag.id) + 1;
+    const position = visible.findIndex((item) => item.id === drag.id) + 1;
     this.announcement.set(
       `${visible[position - 1]?.widget.title ?? ''}：第 ${position} 個，共 ${visible.length} 個`,
     );
@@ -198,7 +198,7 @@ export class DashboardBoard {
     this.dragging.set(null);
   }
 
-  /** Keeps the dragged tile under the pointer, wherever its grid slot now is. */
+  /** 讓被拖曳的磚塊跟著指標，不論它的格狀位置現在在哪。 */
   private follow(drag: Drag, event: PointerEvent) {
     drag.element.style.removeProperty('translate');
     const box = drag.element.getBoundingClientRect();
@@ -225,9 +225,9 @@ export class DashboardBoard {
   }
 
   /**
-   * Where a tile sits in the grid, ignoring any glide still under way. A tile that just made room
-   * still looks like it is under the pointer (on a busy device its glide may not even have
-   * started), and hitting it there would swap the dragged tile straight back.
+   * 磚塊在格狀中的位置，忽略仍在進行中的滑動。剛讓出空間的磚塊
+   * 仍會被視為位於指標下（在忙碌的裝置上，它的滑動甚至可能還沒開始），
+   * 若在那裡命中它，被拖曳的磚塊會立刻被換回去。
    */
   private slot(element: HTMLElement) {
     const board = element.parentElement!;
@@ -245,7 +245,7 @@ export class DashboardBoard {
     );
   }
   private element(id: string) {
-    return this.elements().find(([x]) => x === id)?.[1] ?? null;
+    return this.elements().find(([text]) => text === id)?.[1] ?? null;
   }
   private handle(id: string) {
     return this.host.querySelector<HTMLElement>(`[data-handle="${CSS.escape(id)}"]`);

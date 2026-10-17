@@ -22,7 +22,7 @@ describe('Mermaid render cache', () => {
   const urls = { created: 0, revoked: [] as string[] };
   const { createObjectURL, revokeObjectURL } = URL;
   beforeAll(() => {
-    // jsdom has no font loading, Blob URLs, SVG geometry or canvas.
+    // jsdom 沒有字型載入、Blob URL、SVG 幾何或 canvas。
     Object.defineProperty(document, 'fonts', {
       configurable: true,
       value: { ready: Promise.resolve() },
@@ -78,7 +78,7 @@ describe('Mermaid render cache', () => {
   it('keeps a finished render for later mounts even when its requester is gone', async () => {
     const source = 'sequenceDiagram\nA->>B: 交接';
     let mounted = true;
-    // The streaming view is replaced by the final answer while Mermaid is still drawing.
+    // Mermaid 還在繪製時，串流視圖已被最終回答取代。
     mermaid.render.mockImplementationOnce(async (id: string) => {
       mounted = false;
       return { svg: `<svg id="${id}" viewBox="0 0 10 10"></svg>` };

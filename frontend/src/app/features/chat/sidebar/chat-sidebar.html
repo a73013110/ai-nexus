@@ -53,7 +53,7 @@
       />
     }
   </div>
-  <!-- Keys come from the focused row links; the list itself only routes arrows. -->
+  <!-- 按鍵由取得焦點的列連結處理；列表本身只負責轉送方向鍵。 -->
   <!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus -->
   <nav #history class="history" aria-label="對話歷史" (keydown)="historyKey($event, history)">
     @if (store.loading()) {

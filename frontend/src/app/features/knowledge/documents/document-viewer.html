@@ -52,13 +52,13 @@
     <div class="reader-matches">
       <span role="status">{{ matches().length }} 頁符合</span>
       @for (match of matches(); track match.pageNumber) {
-        <button class="quiet-button" (click)="navigate(match.pageNumber); setMode('text')">
+        <button class="quiet-button" (click)="openMatch(match.pageNumber)">
           第 {{ match.pageNumber }} 頁
         </button>
       }
     </div>
   }
-  <!-- The OCR caution lives on each page's text meta; only an unfinished job needs a strip. -->
+  <!-- OCR 提醒放在每頁的文字中繼資料上；只有尚未完成的工作才需要提示列。 -->
   @if (job(); as job) {
     @if (job.status !== 'completed') {
       <nx-job-progress class="viewer-processing" [job]="job">

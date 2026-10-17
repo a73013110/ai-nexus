@@ -1,6 +1,6 @@
 import { Directive } from '@angular/core';
 
-/** Native form semantics and Angular forms, with the shared control tokens. */
+/** 原生表單語意與 Angular 表單，搭配共用的控制項 token。 */
 @Directive({
   selector: 'input[nxField], textarea[nxField], select[nxField]',
   host: { class: 'ui-input' },

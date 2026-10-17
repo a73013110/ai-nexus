@@ -22,24 +22,24 @@ import {
 } from '@shared/graphics/nexus-logo';
 import { Icon } from '@shared/ui/icon';
 
-/** Two signals leave the stem tips and trace the outline until they meet at the other tip. */
+/** 兩條訊號從主幹尖端射出，沿著外框走，直到在另一端相遇。 */
 const DRAW = 1500;
-/** Where they meet, colour floods in from both tips and a ring leaves each. */
+/** 相遇後，顏色從兩端湧入，並各自留下一個光環。 */
 const MEET = 1950;
-/** Then the mark lands on the wordmark N. */
+/** 接著標記落到字標的 N 上。 */
 const LAND = 2900;
 const TAIL = 0.16;
 const playedKey = 'nexus.login-mark-played';
 
-const clamp = (n: number) => Math.min(1, Math.max(0, n));
-const inOut = (n: number) => (n < 0.5 ? 4 * n ** 3 : 1 - (-2 * n + 2) ** 3 / 2);
-const out = (n: number) => 1 - (1 - n) ** 3;
-/** Emphasised: a quick start that settles slowly, like the sign-in morphs (motion.scss). */
-const land = (n: number) => 1 - (1 - n) ** 4;
+const clamp = (count: number) => Math.min(1, Math.max(0, count));
+const inOut = (count2: number) => (count2 < 0.5 ? 4 * count2 ** 3 : 1 - (-2 * count2 + 2) ** 3 / 2);
+const out = (count3: number) => 1 - (1 - count3) ** 3;
+/** 強調：快速開始、緩慢落定，與登入的 morph 相同（motion.scss）。 */
+const land = (count4: number) => 1 - (1 - count4) ** 4;
 
 /**
- * The drawing greets a tab once; later visits (after sign-out, say) start from the docked mark,
- * so a page can render the finished wordmark from its first frame.
+ * 繪製動畫在一個分頁中只播放一次；之後的造訪（例如登出後）從已停靠的標記開始，
+ * 讓頁面能在第一幀就渲染完成的字標。
  */
 export function markPlayed() {
   try {
@@ -53,7 +53,7 @@ function firstVisitThisSession() {
     if (sessionStorage.getItem(playedKey)) return false;
     sessionStorage.setItem(playedKey, '1');
   } catch {
-    // Without storage every visit plays; the drawing stays skippable.
+    // 沒有儲存空間時每次造訪都會播放；繪製動畫仍可略過。
   }
   return true;
 }
@@ -65,8 +65,8 @@ interface Box {
 }
 
 /**
- * The sign-in mark. It draws in `origin` (any box the page leaves free) and lands on `anchor`,
- * the N of the wordmark, which takes over once it docks. Without that room it does not play.
+ * 登入標記。它在 `origin`（頁面留出的任何空間）中繪製，並落到 `anchor`，即字標的 N，
+ * 停靠後由字標接手。空間不夠時不會播放。
  */
 @Component({
   selector: 'nx-signal-mark',
@@ -137,10 +137,10 @@ export class SignalMark {
         cancelAnimationFrame(this.frame);
         this.previous = 0;
         if (!document.hidden && !this.complete())
-          this.frame = requestAnimationFrame((t) => this.tick(t));
+          this.frame = requestAnimationFrame((time2) => this.tick(time2));
       };
       document.addEventListener('visibilitychange', visibility);
-      // Layout changes while the mark waits or flies keep it on its boxes.
+      // 標記等待或飛行時發生的版面變化，會讓它留在自己的盒子上。
       const resize = new ResizeObserver(() => this.complete() || this.paint(this.elapsed));
       resize.observe(this.host.nativeElement);
       if (firstVisitThisSession()) this.play();
@@ -158,13 +158,13 @@ export class SignalMark {
     this.previous = 0;
     this.complete.set(false);
     this.finishedChange.emit(false);
-    // Small screens leave no room to draw; the wordmark simply appears.
+    // 小螢幕沒有空間繪製，字標直接出現。
     if (this.themes.reducedMotion() || !this.box(this.origin())) {
       this.finish();
       return;
     }
     this.paint(0);
-    if (!document.hidden) this.frame = requestAnimationFrame((t) => this.tick(t));
+    if (!document.hidden) this.frame = requestAnimationFrame((time3) => this.tick(time3));
   }
   finish() {
     cancelAnimationFrame(this.frame);
@@ -177,9 +177,9 @@ export class SignalMark {
     this.previous = time;
     if (this.elapsed >= LAND) return this.finish();
     this.paint(this.elapsed);
-    this.frame = requestAnimationFrame((t) => this.tick(t));
+    this.frame = requestAnimationFrame((time4) => this.tick(time4));
   }
-  /** Boxes in host pixels; the anchor is read every frame so a resize mid-flight is followed. */
+  /** 宿主像素的盒子；錨點每幀都會重新讀取，因此飛行途中的縮放會被跟上。 */
   private box(element: Element | null): Box | null {
     const rect = element?.getBoundingClientRect();
     if (!rect?.width || !rect.height) return null;
@@ -199,15 +199,15 @@ export class SignalMark {
       flight = clamp((elapsed - MEET) / (LAND - MEET)),
       moved = land(flight);
     const size = start.size + (end.size - start.size) * moved,
-      x = start.x + (end.x - start.x) * moved,
-      y = start.y + (end.y - start.y) * moved;
+      pointX = start.x + (end.x - start.x) * moved,
+      pointY = start.y + (end.y - start.y) * moved;
     const stage = this.stage().nativeElement;
     stage.style.width = stage.style.height = `${size}px`;
-    stage.style.translate = `${x - size / 2}px ${y - size / 2}px`;
-    // Pixel sizes in viewBox units, so the light keeps its size while the mark scales.
+    stage.style.translate = `${pointX - size / 2}px ${pointY - size / 2}px`;
+    // 以 viewBox 單位計算像素大小，讓標記縮放時線條維持原本的粗細。
     const px = 2 / size;
     stage.style.setProperty('--px', `${px}`);
-    // Each flood reaches past the centre, so together they cover the mark.
+    // 每個光湧都會越過中心，所以合起來能覆蓋整個標記。
     this.floods().forEach(({ nativeElement: flood }) =>
       flood.setAttribute('r', `${inOut(met) * 1.7}`),
     );
@@ -222,8 +222,8 @@ export class SignalMark {
       path.style.strokeDashoffset = `${-(drawn - tail)}`;
       path.style.opacity = `${1 - met}`;
     });
-    this.heads().forEach(({ nativeElement: head }, i) => {
-      const at = pointAlong(nexusHalves[i], drawn);
+    this.heads().forEach(({ nativeElement: head }, index) => {
+      const at = pointAlong(nexusHalves[index], drawn);
       head.setAttribute('transform', `translate(${at.x} ${at.y})`);
       head.style.opacity = `${clamp(elapsed / 200) * (1 - met)}`;
       head.children[0].setAttribute('r', `${9 * px}`);

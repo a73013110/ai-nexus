@@ -5,7 +5,7 @@ import { AuthService } from '@core/auth/auth-service';
 
 const CHECKING_SEARCH = { available: false, notice: '正在確認網路搜尋設定…' };
 
-/** ModelDto catalog, the chosen model and effort, and whether web search may join the request. */
+/** ModelDto 目錄、所選的模型與強度，以及請求是否可加入網路搜尋。 */
 @Injectable({ providedIn: 'root' })
 export class ChatModels {
   private readonly api = inject(NexusApi);
@@ -22,18 +22,18 @@ export class ChatModels {
   readonly notice = signal<string | null>(null);
   readonly webSearchEnabled = signal(false);
   readonly webSearchStatus = signal(CHECKING_SEARCH);
-  readonly current = computed(() => this.models().find((x) => x.id === this.modelId()));
+  readonly current = computed(() => this.models().find((item) => item.id === this.modelId()));
 
-  /** The user's default model when policy allows a choice, else the policy default, else the first. */
+  /** 政策允許選擇時為使用者的預設模型；否則為政策預設，再沒有則為第一個。 */
   adopt(catalog: ModelsDto, preferredModelId: string | null | undefined, preferredEffort: string) {
     const models = catalog.models as ModelDto[];
     this.models.set(models);
     this.policy.set(catalog.policy as ModelPolicyDto);
     this.notice.set(catalog.notice ?? null);
     this.modelId.set(
-      catalog.policy.allowModelSelection && models.some((x) => x.id === preferredModelId)
+      catalog.policy.allowModelSelection && models.some((item) => item.id === preferredModelId)
         ? preferredModelId!
-        : models.some((x) => x.id === catalog.policy.defaultModelId)
+        : models.some((item) => item.id === catalog.policy.defaultModelId)
           ? catalog.policy.defaultModelId!
           : (models[0]?.id ?? ''),
     );
@@ -45,9 +45,9 @@ export class ChatModels {
     );
   }
 
-  /** Returns false when policy fixes the model or the id is not in the catalog. */
+  /** 政策固定了模型，或 id 不在目錄中時回傳 false。 */
   choose(id: string) {
-    const model = this.models().find((x) => x.id === id);
+    const model = this.models().find((item) => item.id === id);
     if (!this.policy().allowModelSelection || !model) return false;
     this.modelId.set(id);
     this.reasoningEffort.set(model.defaultReasoningEffort);

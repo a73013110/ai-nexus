@@ -24,7 +24,9 @@ describe('history groups', () => {
       ],
       today,
     );
-    expect(groups.map((group) => [group.label, group.conversations.map((x) => x.id)])).toEqual([
+    expect(
+      groups.map((group) => [group.label, group.conversations.map((item) => item.id)]),
+    ).toEqual([
       ['收藏', ['pin']],
       ['今天', ['a']],
       ['昨天', ['b']],

@@ -24,10 +24,13 @@ let sequence = 0;
 
 /**
  * 單選或多選的下拉清單。`multiple` 以核取方塊切換選項、選後不關閉，讀寫 `values`；
- * trigger 顯示單一選項名稱或「已選 N 項」，沒選時顯示 placeholder（篩選器的 placeholder 即「全部」）。
- * 多選的摘要只有「已選 N 項」，trigger 改以 `aria-labelledby` 指向欄位名稱＋完整已選內容，報讀器才讀得到選了什麼。
+ * trigger 顯示單一選項名稱或「已選 N 項」，沒選時顯示 placeholder（篩選器的 placeholder
+ * 即「全部」）。
+ * 多選的摘要只有「已選 N 項」，trigger 改以 `aria-labelledby` 指向欄位名稱＋完整已選內容，
+ * 報讀器才讀得到選了什麼。
  * 面板在原生 top layer，不會被對話框或捲動區裁切。
- * 投影的 `[select-footer]` 放在選項下方的相關設定（例如模型下的推理強度）；Tab 會移入，焦點離開面板即關閉。
+ * 投影的 `[select-footer]` 放在選項下方的相關設定（例如模型下的推理強度）；Tab 會移入，
+ * 焦點離開面板即關閉。
  */
 @Component({
   selector: 'nx-select',
@@ -165,7 +168,7 @@ export class Select {
   );
   readonly valueChange = output<string>();
   readonly valuesChange = output<string[]>();
-  readonly selected = computed(() => this.options().find((x) => x.value === this.value()));
+  readonly selected = computed(() => this.options().find((item) => item.value === this.value()));
   private readonly chosen = computed(() =>
     this.options().filter((option) => this.values().includes(option.value)),
   );
@@ -209,7 +212,7 @@ export class Select {
     this.active.set(
       Math.max(
         0,
-        this.options().findIndex((x) => this.isSelected(x.value)),
+        this.options().findIndex((item) => this.isSelected(item.value)),
       ),
     );
     this.popover.show();
@@ -231,7 +234,7 @@ export class Select {
         : [...this.values(), option.value];
       this.valuesChange.emit(
         this.options()
-          .map((x) => x.value)
+          .map((item) => item.value)
           .filter((value) => values.includes(value)),
       );
       return;
@@ -259,7 +262,7 @@ export class Select {
       if (!this.opened()) this.open();
       const enabled = this.visibleOptions()
         .map(({ option, index }) => (option.disabled ? -1 : index))
-        .filter((x) => x >= 0);
+        .filter((item) => item >= 0);
       if (!enabled.length) return;
       const old = enabled.indexOf(this.active());
       this.active.set(
@@ -283,7 +286,7 @@ export class Select {
       clearTimeout(this.searchTimer);
       this.typed += key.toLocaleLowerCase();
       const index = this.options().findIndex(
-        (x) => !x.disabled && x.label.toLocaleLowerCase().startsWith(this.typed),
+        (item) => !item.disabled && item.label.toLocaleLowerCase().startsWith(this.typed),
       );
       if (index >= 0) {
         this.active.set(index);
@@ -324,7 +327,7 @@ export class Select {
   }
   filter(query: string) {
     this.query.set(query);
-    this.active.set(this.visibleOptions().find((x) => !x.option.disabled)?.index ?? -1);
+    this.active.set(this.visibleOptions().find((item) => !item.option.disabled)?.index ?? -1);
     this.popover.reposition();
   }
   searchKey(event: KeyboardEvent) {

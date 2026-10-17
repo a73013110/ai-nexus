@@ -11,7 +11,8 @@
   --tile-shadow-raised:
     0 1px 2px color-mix(in srgb, var(--ink) 5%, transparent),
     0 12px 32px -16px color-mix(in srgb, var(--ink) 22%, transparent);
-  // Light falling on a surface from above: one hue, a few percent of contrast (docs/frontend/materials.md).
+  // Light falling on a surface from above: one hue, a few percent of contrast
+  // (docs/frontend/materials.md).
   --surface-sheen: linear-gradient(
     180deg,
     color-mix(in srgb, var(--ink) 3%, var(--surface)),

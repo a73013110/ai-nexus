@@ -9,9 +9,8 @@ import { metricFormatter, metricText, relativeTime } from '@shared/browser/forma
 import { fillDays, tone, TONE_COLORS, workspaceLink } from '../dashboard-format';
 
 /**
- * Any overview section as sent by the backend: figures, the first daily series, a distribution
- * and the viewer's recent items. A feature that registers a dashboard source appears here
- * without frontend changes.
+ * 後端送來的任何總覽區段：數字、第一個每日數列、分布，以及檢視者最近的項目。
+ * 註冊了儀表板來源的功能會出現在這裡，不需要前端修改。
  */
 @Component({
   selector: 'nx-section-widget',
@@ -103,19 +102,19 @@ export class SectionWidget {
   readonly series = computed(() => {
     const series = this.section()?.series[0];
     if (!series) return null;
-    const values = fillDays(this.store.days(), series.points).map((x) => x.value);
-    const total = values.reduce((a, b) => a + b, 0);
+    const values = fillDays(this.store.days(), series.points).map((item) => item.value);
+    const total = values.reduce((start, end) => start + end, 0);
     return { label: series.label, values, total: metricText(total, 'count') + ' ' + series.unit };
   });
   readonly shares = computed(() => {
     const shares = this.section()?.shares ?? [];
-    const total = shares.reduce((a, b) => a + b.value, 0) || 1;
-    return shares.map((part, i) => ({
+    const total = shares.reduce((first, second) => first + second.value, 0) || 1;
+    return shares.map((part, index) => ({
       ...part,
       color:
         part.tone !== 'neutral'
           ? TONE_COLORS[tone(part.tone)]
-          : SERIES_COLORS[i % SERIES_COLORS.length],
+          : SERIES_COLORS[index % SERIES_COLORS.length],
       text: `${metricText(part.value, 'count')}（${Math.round((part.value / total) * 100)}%）`,
     }));
   });

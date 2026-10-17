@@ -41,7 +41,7 @@ function setup(testing = false) {
       },
     ],
   });
-  // The draft's logic is under test; the form needs browser layout APIs jsdom lacks.
+  // 草稿邏輯由測試覆蓋；表單需要 jsdom 沒有的瀏覽器版面 API。
   TestBed.overrideComponent(PriceVersionDialog, {
     set: {
       template: '<dialog #dialog></dialog><nx-confirm-dialog />',

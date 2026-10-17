@@ -12,7 +12,7 @@ import { PriceBook } from '@features/billing/price-book';
 import { PlatformUsage } from './platform-usage';
 import { RetrievalAdmin } from './retrieval/retrieval-admin';
 
-/** Platform operations: usage, retrieval indexes and model and tool prices, one tab each. */
+/** 平台營運：用量、檢索索引，以及模型與工具價格，各一個分頁。 */
 @Component({
   selector: 'nx-operations-page',
   imports: [
@@ -30,7 +30,7 @@ import { RetrievalAdmin } from './retrieval/retrieval-admin';
 })
 export class OperationsPage {
   readonly session = inject(WorkspaceSession);
-  /** The tabs read their own data; the page reads the account to know whether to show them. */
+  /** 各分頁讀取自己的資料；頁面讀取帳號以決定是否顯示它們。 */
   readonly account = apiResource({ loader: () => this.session.load() });
   private readonly router = inject(Router);
   readonly tab = signal('usage');

@@ -1,4 +1,4 @@
-/** Align a reading preview to its actual tick and keep it inside the conversation body. */
+/** 把閱讀預覽對齊到其實際刻度，並讓它留在對話內容區之內。 */
 export function positionSidePopover(trigger: HTMLElement, panel: HTMLElement, body: HTMLElement) {
   const anchor = trigger.getBoundingClientRect(),
     bounds = body.getBoundingClientRect();

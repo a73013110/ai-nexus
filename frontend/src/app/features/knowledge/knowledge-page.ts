@@ -50,7 +50,7 @@ import { JobToasts } from '@features/jobs/job-toasts';
 import { documentBusy, documentStatus } from './documents/document-status';
 import { KNOWLEDGE_TOUR, collectionTour } from './knowledge-tour';
 
-/** `/knowledge` lists the collections; `/knowledge/:id` is one collection's sources and query. */
+/** `/knowledge` 列出集合；`/knowledge/:id` 則是單一集合的來源與查詢。 */
 @Component({
   selector: 'nx-knowledge-page',
   imports: [
@@ -87,7 +87,7 @@ export class KnowledgePage {
   private readonly scope = inject(ViewScope);
   private readonly router = inject(Router);
   readonly session = inject(WorkspaceSession);
-  readonly id = toSignal(inject(ActivatedRoute).paramMap.pipe(map((p) => p.get('id'))), {
+  readonly id = toSignal(inject(ActivatedRoute).paramMap.pipe(map((part) => part.get('id'))), {
     initialValue: null,
   });
   private readonly collectionsRead = apiResource({
@@ -99,13 +99,15 @@ export class KnowledgePage {
     loader: () => this.uploads.policy(),
   });
   readonly collections = computed<CollectionDto[]>(() => this.collectionsRead.value() ?? []);
-  readonly current = computed(() => this.collections().find((x) => x.resource.id === this.id()));
-  /** Documents are re-read while any of them is still being processed. */
+  readonly current = computed(() =>
+    this.collections().find((item) => item.resource.id === this.id()),
+  );
+  /** 只要任何文件仍在處理中，就會重新讀取文件。 */
   private readonly documentsRead = apiResource({
     feature: 'knowledge',
     params: () => this.id() || undefined,
     loader: async (id) => ({ id, rows: await this.api.documents(id) }),
-    poll: (value) => (value?.rows.some((x) => documentBusy(x.status)) ? 2500 : null),
+    poll: (value) => (value?.rows.some((item) => documentBusy(item.status)) ? 2500 : null),
   });
   readonly documents = computed<DocumentDto[]>(() => {
     const value = this.documentsRead.value();
@@ -137,14 +139,14 @@ export class KnowledgePage {
     const term = this.term().toLowerCase(),
       ownership = this.ownership();
     return this.collections().filter(
-      (x) =>
-        (ownership === 'all' || x.resource.isOwner === (ownership === 'mine')) &&
-        x.resource.name.toLowerCase().includes(term),
+      (item2) =>
+        (ownership === 'all' || item2.resource.isOwner === (ownership === 'mine')) &&
+        item2.resource.name.toLowerCase().includes(term),
     );
   });
   readonly uploading = signal(false);
   readonly uploadLabel = signal('');
-  // The filter, query and its result belong to the collection on screen.
+  // 篩選、查詢與其結果，都屬於畫面上的那個集合。
   readonly filter = linkedSignal(() => (this.id(), ''));
   readonly query = linkedSignal(() => (this.id(), ''));
   readonly result = linkedSignal<KnowledgeSearchDto | null>(() => (this.id(), null));
@@ -158,7 +160,7 @@ export class KnowledgePage {
   readonly confirm = viewChild.required(ConfirmDialog);
   readonly textEditor = viewChild.required(TextSourceEditor);
   readonly sharing = viewChild(ResourceSharing);
-  /** The collections tour, or the open collection's for what this viewer can change there. */
+  /** 集合的導覽，或已開啟集合的導覽（依此檢視者在該處可以變更的內容決定）。 */
   readonly tour = computed(() => {
     const resource = this.current()?.resource;
     return this.id()
@@ -169,7 +171,9 @@ export class KnowledgePage {
       : KNOWLEDGE_TOUR;
   });
   readonly visible = computed(() =>
-    this.documents().filter((x) => x.fileName.toLowerCase().includes(this.filter().toLowerCase())),
+    this.documents().filter((item) =>
+      item.fileName.toLowerCase().includes(this.filter().toLowerCase()),
+    ),
   );
   readonly accept = computed(
     () => this.policy()?.extensions.join(',') || '.pdf,.docx,.txt,.md,.png,.jpg,.jpeg,.webp',
@@ -191,9 +195,9 @@ export class KnowledgePage {
     },
   ]);
   constructor() {
-    effect(() => this.documents().forEach((x) => this.jobToasts.observeDocument(x)));
+    effect(() => this.documents().forEach((item) => this.jobToasts.observeDocument(item)));
   }
-  /** Read the collections and the open collection's documents again. */
+  /** 重新讀取集合與已開啟集合的文件。 */
   load() {
     this.actionError.set('');
     this.collectionsRead.reload();
@@ -259,6 +263,10 @@ export class KnowledgePage {
     if (id === 'access') void this.sharing()?.open();
     if (id === 'delete') void this.remove(current.resource.id, current.resource.name, true);
   }
+  chooseFiles(picker: HTMLInputElement) {
+    void this.upload(picker.files!);
+    picker.value = '';
+  }
   async upload(files: FileList | File[]) {
     const collection = this.id(),
       valid = this.scope.guard(),
@@ -271,9 +279,9 @@ export class KnowledgePage {
     }
     if (
       candidates.some(
-        (x) =>
-          x.size > policy.maxFileBytes ||
-          !policy.extensions.includes('.' + x.name.split('.').pop()?.toLowerCase()),
+        (item3) =>
+          item3.size > policy.maxFileBytes ||
+          !policy.extensions.includes('.' + item3.name.split('.').pop()?.toLowerCase()),
       )
     ) {
       this.actionError.set(
@@ -322,7 +330,7 @@ export class KnowledgePage {
       if (valid()) this.searching.set(false);
     }
   }
-  /** Removes a source, or a whole collection, after confirmation; originals stay in the library. */
+  /** 確認後移除來源或整個集合；原始檔案仍保留在檔案庫中。 */
   async remove(id: string, name: string, collection = false) {
     const valid = this.scope.guard();
     if (

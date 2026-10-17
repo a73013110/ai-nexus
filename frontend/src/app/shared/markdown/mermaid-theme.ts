@@ -6,7 +6,7 @@ export interface DiagramPalette {
 }
 export type DiagramSemantics = Record<string, DiagramPalette>;
 
-/** The application's tokens own diagram styling, including common semantic class names. */
+/** 圖表樣式由應用程式的 token 決定，包括常見的語意 class 名稱。 */
 export function diagramTheme(style: CSSStyleDeclaration) {
   const token = (name: string) => style.getPropertyValue(name).trim();
   const ink = token('--ink'),
@@ -79,7 +79,7 @@ export function applyDiagramSemantics(svg: Element, palette: DiagramSemantics) {
         shape.style.setProperty('fill', palette[semantic].fill, 'important');
         shape.style.setProperty('stroke', palette[semantic].stroke, 'important');
       }
-      // Round rectangular process nodes; preserve decision, terminal and specialized geometry.
+      // 圓角矩形的流程節點；決策、終點與專用的幾何形狀則保留原樣。
       if (shape.localName === 'rect' && !Number(shape.getAttribute('rx'))) {
         shape.setAttribute('rx', '7');
         shape.setAttribute('ry', '7');

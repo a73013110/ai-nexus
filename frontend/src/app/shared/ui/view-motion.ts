@@ -17,19 +17,19 @@ function timing(element: HTMLElement) {
   };
 }
 
-/** Layout size, unaffected by the dialog's own open/close scale. */
+/** 版面大小，不受對話框自身開啟／關閉縮放的影響。 */
 function size(element: HTMLElement) {
   return { width: element.offsetWidth, height: element.offsetHeight };
 }
 
-/** Shown: an open dialog or popover; a closing one is still painted but no longer counts. */
+/** 顯示中：開啟的對話框或 popover；關閉中的仍會繪製，但不再計入。 */
 function shown(element: HTMLElement) {
   return element instanceof HTMLDialogElement ? element.open : element.matches(':popover-open');
 }
 
 const frames = new WeakMap<Element, FrameMotion>();
 
-/** The nearest frame around an element, if any. */
+/** 元素最近的框架（若有）。 */
 function frameAround(element: Element) {
   for (let node = element.parentElement; node; node = node.parentElement) {
     const frame = frames.get(node);
@@ -39,8 +39,8 @@ function frameAround(element: Element) {
 }
 
 /**
- * A keyed panel transition keeps tabs and their keyboard focus stationary. Inside a frame (every
- * `nxCompactDialog`, see `FrameMotion`) the frame follows the new view's size at the same time.
+ * 有鍵的面板過場會讓分頁與其鍵盤焦點保持不動。在框架內（每個 `nxCompactDialog`，見 `FrameMotion`），
+ * 框架會同時跟隨新視圖的大小。
  */
 @Directive({ selector: '[nxViewMotion]' })
 export class ViewMotion {
@@ -73,11 +73,11 @@ export class ViewMotion {
 }
 
 /**
- * A dialog or popover whose size follows its content: when a view inside changes (`ViewMotion`) or
- * its owner calls `morph()` after a render, it moves from the size it had to the new one instead
- * of jumping. Width and height come from the content and CSS, so a frame needs no fixed height to
- * keep tabs still. It remembers its laid-out size only while shown and forgets it on close, so
- * opening never animates; the native dialog keeps focus, Escape and viewport limits.
+ * 大小跟著內容走的對話框或 popover：內部視圖變更（`ViewMotion`）或擁有者在渲染後呼叫 `morph()` 時，
+ * 會從原本的大小過渡到新大小，而不是直接跳動。寬高來自內容與 CSS，因此框架不需要固定高度就能
+ * 保持分頁不動。
+ * 只在顯示時記住排版後的大小，關閉時遺忘，因此開啟時不會有動畫；原生 dialog 仍負責焦點、Escape
+ * 與視口限制。
  */
 @Directive({
   selector: '[nxFrameMotion]',
@@ -85,7 +85,7 @@ export class ViewMotion {
 })
 export class FrameMotion {
   private readonly element = inject<ElementRef<HTMLElement>>(ElementRef).nativeElement;
-  /** Read when morphing: every dialog is a frame, including ones in unit tests without layout. */
+  /** 進行 morph 時讀取：每個對話框都是框架，包括單元測試中沒有版面的對話框。 */
   private readonly injector = inject(Injector);
   private animation?: Animation;
   private rectangle?: { width: number; height: number };
@@ -113,7 +113,7 @@ export class FrameMotion {
     this.animation?.cancel();
     this.rectangle = undefined;
   }
-  /** Call after the render that changed the content; the size before comes from the observer. */
+  /** 在改變內容的渲染之後呼叫；之前的大小由觀察者提供。 */
   morph() {
     if (!this.observer) return;
     if (!shown(this.element)) return this.forget();

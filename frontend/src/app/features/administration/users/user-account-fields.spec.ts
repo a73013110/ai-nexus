@@ -77,7 +77,7 @@ describe('user role preview', () => {
 
   it('grants enabled features of enabled groups of enabled roles only', () => {
     const ids = (roles: string[], enabled = true) =>
-      userFeatures(catalog, roles, enabled).map((x) => x.id);
+      userFeatures(catalog, roles, enabled).map((item) => item.id);
     expect(ids(['member'])).toEqual(['chat']);
     expect(ids(['member', 'reviewer', 'retired'])).toEqual(['chat', 'repositories']);
     expect(ids(['member'], false)).toEqual([]);

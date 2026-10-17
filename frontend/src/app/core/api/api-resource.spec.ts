@@ -69,7 +69,7 @@ describe('apiResource', () => {
     TestBed.tick();
     await vi.waitFor(() => expect(loader).toHaveBeenCalledOnce());
     expect(read.loading()).toBe(true);
-    // A write lands while the first read is still in flight.
+    // 寫入在第一次讀取仍在途中時完成。
     version = 2;
     read.reload();
     release();

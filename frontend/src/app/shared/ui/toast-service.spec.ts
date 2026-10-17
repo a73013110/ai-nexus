@@ -20,8 +20,8 @@ describe('ToastService', () => {
 
   it('stacks newest first and keeps only the most recent five', () => {
     const toasts = setup();
-    for (let i = 1; i <= 6; i++) toasts.success(`第 ${i} 則`);
-    expect(toasts.toasts().map((x) => x.title)).toEqual([
+    for (let index = 1; index <= 6; index++) toasts.success(`第 ${index} 則`);
+    expect(toasts.toasts().map((item2) => item2.title)).toEqual([
       '第 6 則',
       '第 5 則',
       '第 4 則',
@@ -66,7 +66,7 @@ describe('ToastService', () => {
   it('keeps the latest twenty settled toasts for the session with the time shown', () => {
     vi.setSystemTime(new Date('2026-10-11T06:00:00Z'));
     const toasts = setup();
-    for (let i = 1; i <= HISTORY_LIMIT + 2; i++) toasts.success(`第 ${i} 則`);
+    for (let index2 = 1; index2 <= HISTORY_LIMIT + 2; index2++) toasts.success(`第 ${index2} 則`);
     vi.advanceTimersByTime(60_000);
     expect(toasts.toasts()).toEqual([]);
     expect(toasts.history()).toHaveLength(HISTORY_LIMIT);
@@ -84,10 +84,10 @@ describe('ToastService', () => {
     expect(toasts.history()).toEqual([]);
     toasts.show({ id: 'upload', title: '已上傳' });
     toasts.show({ id: 'upload', title: '已上傳並辨識' });
-    expect(toasts.history().map((x) => x.title)).toEqual(['已上傳並辨識']);
+    expect(toasts.history().map((item) => item.title)).toEqual(['已上傳並辨識']);
     vi.advanceTimersByTime(10_000);
     toasts.show({ id: 'upload', title: '已上傳' });
-    expect(toasts.history().map((x) => x.title)).toEqual(['已上傳', '已上傳並辨識']);
+    expect(toasts.history().map((item) => item.title)).toEqual(['已上傳', '已上傳並辨識']);
     toasts.show({ id: 'cancelled', tone: 'info', title: '正在上傳', duration: 0 });
     toasts.dismiss('cancelled');
     expect(toasts.history()).toHaveLength(2);

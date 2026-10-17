@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { WorkspaceSession } from '../auth/workspace-session';
 import { NavigationPreferences } from './navigation-preferences';
 
-// The seeded menu: each feature's group and place, as `/me` reports them.
+// 預設的選單：每個功能的群組與位置，與 `/me` 回報的相同。
 const MENU: Record<string, [string | null, number]> = {
   dashboard: [null, 5],
   chat: ['work', 10],
@@ -45,8 +45,10 @@ describe('navigation preferences', () => {
   it('builds the menu tree from the features with a page', () => {
     const { preferences } = setup(['admin', 'files', 'dashboard']);
     const tree = preferences.tree();
-    expect(tree.features.map((x) => x.id)).toEqual(['dashboard']);
-    expect(tree.groups.map((x) => [x.group.id, x.features.map((f) => f.id)])).toEqual([
+    expect(tree.features.map((item) => item.id)).toEqual(['dashboard']);
+    expect(
+      tree.groups.map((item2) => [item2.group.id, item2.features.map((file) => file.id)]),
+    ).toEqual([
       ['work', ['files']],
       ['system', ['admin']],
     ]);

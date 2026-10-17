@@ -25,8 +25,8 @@ let sequence = 0;
 
 /**
  * Pinned features on top, then “全部功能”: inline when the page has no sidebar panel, a disclosure
- * that replaces the panel when it has one, and a flyout beside the icon rail. Icon display puts
- * the pins in one row so chat history keeps the height; list display gives each feature a line.
+ * 會取代面板（若有）的浮出層，以及圖示欄旁的飛出層。圖示顯示時會把釘選排成一列，讓對話歷史保持高度；
+ * 列表顯示時，每個功能各佔一行。
  */
 @Component({
   selector: 'nx-workspace-navigation',
@@ -137,7 +137,7 @@ export class WorkspaceNavigation {
   readonly expanded = input(false);
   readonly expandedChange = output<boolean>();
   readonly flyoutId = `launcher-flyout-${++sequence}`;
-  /** Icon display packs the pins (and the launcher toggle) into one row beside each other. */
+  /** 圖示顯示時，把釘選（與啟動器切換）並排放在同一列。 */
   readonly strip = computed(() => !this.compact() && this.pins.display() === 'icons');
   private readonly flyout = viewChild<ElementRef<HTMLElement>>('flyout');
   private readonly flyoutTrigger = viewChild<ElementRef<HTMLElement>>('flyoutTrigger');
@@ -147,7 +147,7 @@ export class WorkspaceNavigation {
   });
   readonly flyoutOpen = this.flyoutPopover.opened;
   private readonly injector = inject(Injector);
-  /** Select the deepest matching feature; its own detail routes still belong to it. */
+  /** 選取最深的符合功能；它自己的細節路由仍屬於它。 */
   readonly activeFeature = computed(() => {
     this.navigation();
     let active: string | null = null;
@@ -171,13 +171,13 @@ export class WorkspaceNavigation {
     }
     return active;
   });
-  /** Row of the sliding pill; -1 hides it when the current feature is not pinned. */
+  /** 滑動膠囊的那一列；目前的功能沒有釘選時為 -1，隱藏它。 */
   readonly activeIndex = computed(() => {
     const active = this.activeFeature();
     return active ? this.pins.ids().indexOf(active) : -1;
   });
   readonly icon = featureIcon;
-  /** Opens beside the rail, aligned with its trigger and kept inside the viewport. */
+  /** 在圖示欄旁開啟，與觸發器對齊，並保持在視口內。 */
   placeFlyout(flyout: HTMLElement) {
     const trigger = this.flyoutTrigger()?.nativeElement;
     if (!trigger) return;

@@ -22,7 +22,7 @@ const escape = (value: string) =>
 
 const REPLAY_HINT = '右上角的問號圖示可隨時重播導覽。';
 
-/** Lazy tour engine; pages supply content, while lifecycle, motion and theming stay shared. */
+/** 延遲載入的導覽引擎；頁面提供內容，生命週期、動效與主題則共用。 */
 @Injectable({ providedIn: 'root' })
 export class ProductTour {
   private readonly themes = inject(ThemeService);
@@ -56,7 +56,7 @@ export class ProductTour {
         element: () => visible(step.target)!,
         popover: {
           title: escape(step.title),
-          // Steps not on screen are skipped, so the replay hint goes on the last step shown.
+          // 不在畫面上的步驟會略過，因此重播提示放在最後一個顯示的步驟上。
           description: escape(
             index === shown.length - 1 ? step.description + REPLAY_HINT : step.description,
           ),
@@ -122,8 +122,8 @@ export class ProductTour {
     this.active.set(false);
     this.loading.set(false);
   }
-  // driver.js styles and the Nexus overrides load only when a tour starts; the override is
-  // appended after driver.css so it wins at equal specificity.
+  // driver.js 的樣式與 Nexus 的覆寫只在導覽開始時載入；覆寫會接在 driver.css 之後，
+  // 因此在相同特異性下會勝出。
   private loadStyles() {
     return (this.stylesheet ??= Promise.all(
       ['vendor/driver/driver.css', 'driver-tour.css'].map((href) => this.loadStylesheet(href)),

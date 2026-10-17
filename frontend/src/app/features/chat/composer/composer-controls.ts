@@ -163,7 +163,7 @@ export class ComposerControls {
   readonly webSearchAvailable = input(false);
   readonly webSearchNotice = input('');
   readonly webSearchChange = output<boolean>();
-  readonly selected = computed(() => this.models().find((x) => x.id === this.modelId()));
+  readonly selected = computed(() => this.models().find((item) => item.id === this.modelId()));
   readonly modelPlaceholder = computed(() =>
     this.loading()
       ? '正在載入模型…'
@@ -174,10 +174,10 @@ export class ComposerControls {
           : '沒有可用模型',
   );
   readonly modelOptions = computed(() =>
-    this.models().map((x) => ({
-      value: x.id,
-      label: formatModelName(x),
-      description: `${x.contextTokens.toLocaleString()} Context${x.supportsImages ? ' · 圖片分析' : ''}`,
+    this.models().map((item2) => ({
+      value: item2.id,
+      label: formatModelName(item2),
+      description: `${item2.contextTokens.toLocaleString()} Context${item2.supportsImages ? ' · 圖片分析' : ''}`,
     })),
   );
   readonly effortOptions = computed(() => [

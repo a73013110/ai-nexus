@@ -2,7 +2,7 @@ import { DestroyRef, Injectable, computed, effect, inject, signal, untracked } f
 import { below } from '@shared/browser/breakpoints';
 import { mediaQuery } from '@shared/browser/media-query';
 
-/** Desktop density and mobile disclosure are independent across workspace routes. */
+/** 桌面的密度與手機的收合在不同工作區路由之間彼此獨立。 */
 @Injectable({ providedIn: 'root' })
 export class WorkspaceLayout {
   readonly narrow = mediaQuery(below('narrow'));
@@ -14,7 +14,7 @@ export class WorkspaceLayout {
   private opener: HTMLElement | null = null;
   private focusFrame = 0;
   constructor() {
-    // Crossing the breakpoint closes the drawer; focus left in the sidebar moves to the visible toggle.
+    // 跨過斷點會關閉抽屜；焦點停在側邊欄時，會移到可見的切換鈕。
     let narrow = this.narrow();
     effect(() => {
       if (this.narrow() === narrow) return;

@@ -23,7 +23,7 @@ import { Icon } from './icon';
         type="button"
         class="icon-button"
         [attr.aria-label]="'清除' + label()"
-        (click)="valueChange.emit(''); field.focus()"
+        (click)="clearSearch(field)"
       >
         <nx-icon name="close" />
       </button>
@@ -36,7 +36,12 @@ export class SearchField {
   readonly value = input('');
   readonly disabled = input(false);
   readonly maxLength = input(120);
-  /** `bare` drops the field chrome where a dialog bar or panel already frames the search. */
+  /** `bare` 會去掉欄位外框；用於對話框列或面板已框住搜尋的地方。 */
   readonly appearance = input<'field' | 'bare'>('field');
   readonly valueChange = output<string>();
+
+  clearSearch(field: HTMLInputElement) {
+    this.valueChange.emit('');
+    field.focus();
+  }
 }

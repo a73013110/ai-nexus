@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, output } from '@angular/core';
 import { DesignSection } from './design-section';
 
-/** Colour, type, spacing, radius and motion tokens, rendered from the live CSS variables. */
+/** 顏色、字體、間距、圓角與動效 token，取自即時的 CSS 變數渲染。 */
 @Component({
   selector: 'nx-design-foundations',
   imports: [DesignSection],

@@ -26,7 +26,7 @@ import { ToastService } from '@shared/ui/toast-service';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { DesignExample, DesignSection } from './design-section';
 
-/** The compact data workspace (filters, table, detail drawer) and the reading components. */
+/** 精簡的資料工作區（篩選、表格、詳情抽屜）與閱讀元件。 */
 @Component({
   selector: 'nx-design-data',
   imports: [
@@ -327,9 +327,9 @@ export class DesignData {
     { event: 'provider.request.retry', time: '10:41:55', status: '重試', tone: 'warning' as const },
   ];
   readonly event = signal(this.rows[0].event);
-  /** The row whose detail is open; the drawer keeps its content while it leaves. */
+  /** 詳情已開啟的那一列；抽屜退場時會保留它的內容。 */
   readonly selected = signal<string | null>(null);
-  /** Local only: the workbench keeps its URL, so the state has no router. */
+  /** 只存在本地：工作台保留自己的 URL，因此狀態不需要路由。 */
   readonly query = new QueryState<{ view: string; event: string }>({
     defaults: () => ({ view: 'all', event: '' }),
     chips: (query) =>

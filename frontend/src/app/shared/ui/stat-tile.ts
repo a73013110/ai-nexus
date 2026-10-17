@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import type { BadgeTone } from './count-badge';
 
 /**
- * A row of headline figures: as many columns as fit (`--stat-tile-min`, 10rem by default), two on
- * a phone. The grid is a list so assistive technology announces how many figures follow.
+ * 一列標題數字：能放下幾欄就放幾欄（`--stat-tile-min`，預設 10rem），手機上為兩欄。
+ * 格線用列表實作，讓輔助科技能宣告後面還有幾個數字。
  */
 @Component({
   selector: 'nx-stat-grid',
@@ -24,10 +24,9 @@ export class StatGrid {
 }
 
 /**
- * One headline figure in a `StatGrid`: a quiet label, the value in tabular numerals scaled to the
- * tile (never spilling out of it), an optional unit and one line of context. The feature passes the
- * formatted value; `null` shows a loading placeholder of the same height, and a shortened figure
- * puts its full value in `exact`. Only a real warning or danger tints the tile.
+ * `StatGrid` 中的一個標題數字：安靜的標籤、依磚塊縮放的等寬數字（不會溢出磚塊），
+ * 可選的單位與一行脈絡。功能傳入已格式化的值；
+ * `null` 顯示同高度的載入占位；縮短的數字會把完整值放在 `exact`。只有真正的警告或危險才會為磚塊上色。
  */
 @Component({
   selector: 'nx-stat-tile',

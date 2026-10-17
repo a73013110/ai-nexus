@@ -17,9 +17,9 @@ import { markPlayed, SignalMark } from './signal-mark';
 export type LoginStage = 'credentials' | 'identity' | 'welcome';
 
 /**
- * The brand side of the login page. The copy reads at once; the wordmark waits for its N, which
- * two signals draw in the free space above the copy before it lands in place. After sign-in the side widens into the welcome screen, the wordmark moves to its centre, and
- * from there it and the avatar fly into the sidebar of the workspace.
+ * 登入頁的品牌區。文案會立即讀取；字標等待其 N 到位，
+ * 兩條訊號先在文案上方的空白處繪出，之後才落到正確位置。登入後，側邊欄展開為歡迎畫面，字標移到中央，
+ * 接著字標與頭像飛進工作區的側邊欄。
  */
 @Component({
   selector: 'section[nxLoginIntro]',
@@ -63,23 +63,23 @@ export class LoginIntro {
   private readonly themes = inject(ThemeService);
   readonly stage = input<LoginStage>('credentials');
   readonly name = input('');
-  /** The identity chosen on the previous step, when the account had a choice to make. */
+  /** 帳號需要選擇時，上一步所選的身分。 */
   readonly identity = input<string | null>(null);
-  /** Ready from the start when the mark has already played, e.g. right after a sign-out. */
+  /** 標記已播放過時（例如剛登出後）一開始就就緒。 */
   readonly ready = signal(markPlayed() || this.themes.reducedMotion());
   readonly spot = signal<{ x: string; y: string } | null>(null);
   private readonly mark = viewChild.required(SignalMark);
   readonly trace = viewChild.required(LoginTrace, { read: ElementRef });
   private frame = 0;
   constructor() {
-    // Signing in while the N is still being drawn settles it, so the wordmark can travel whole.
+    // N 還在繪製時登入，會讓它定格，字標才能完整移動。
     effect(() => {
       if (this.stage() === 'credentials') return;
       if (!this.mark().complete()) this.mark().finish();
       this.spot.set(null);
     });
   }
-  /** A soft light follows a fine pointer across the dot field; touch and reduced motion skip it. */
+  /** 柔和的光會跟著精細指標在點陣上移動；觸控與減少動態效果會略過。 */
   follow(event: PointerEvent) {
     if (event.pointerType !== 'mouse' || this.themes.reducedMotion() || this.stage() === 'welcome')
       return;

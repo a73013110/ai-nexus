@@ -17,7 +17,7 @@ import { AdminRolesTab } from './roles/admin-roles-tab';
 import { AdminGroupsTab } from './roles/admin-groups-tab';
 import { AdminFeaturesTab } from './roles/admin-features-tab';
 
-/** Access management: users, roles, feature groups and features over one shared catalog. */
+/** 權限管理：在同一個共用目錄上管理使用者、角色、功能群組與功能。 */
 @Component({
   selector: 'nx-administration-page',
   imports: [

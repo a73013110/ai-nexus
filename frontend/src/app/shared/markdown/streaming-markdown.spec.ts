@@ -44,7 +44,7 @@ describe('progressive Markdown', () => {
     expect(result.fence!.chunks.map((chunk) => chunk.text).join('') + result.fence!.tail).toBe(
       lines.join(''),
     );
-    // A shorter marker or one with an info string does not close a four-backtick fence.
+    // 較短的標記，或帶有 info 字串的標記，不會關閉四個反引號的圍欄。
     result = stream.update((text += '```\n```js\n'));
     expect(result.fence).not.toBeNull();
     result = stream.update((text += '````'));

@@ -8,13 +8,13 @@ function startOfDay(time: number) {
   return date.getTime();
 }
 
-/** Whole local calendar days from `from` to `to`; rounding absorbs daylight-saving hours. */
+/** 從 `from` 到 `to` 的完整本地日曆日數；夏令時間的小時差由四捨五入吸收。 */
 export const calendarDaysBetween = (from: number, to: number) =>
   Math.round((startOfDay(to) - startOfDay(from)) / DAY);
 
 /**
- * The start of the viewer's local day as a signal for the calling component's lifetime. It moves
- * at midnight and whenever the page becomes visible again, because timers sleep with the device.
+ * 檢視者本地日期的起點，作為呼叫元件生命週期內的 signal。它會在午夜與頁面重新可見時更新，
+ * 因為計時器會隨裝置休眠。
  */
 export function currentDay() {
   const day = signal(startOfDay(Date.now()));

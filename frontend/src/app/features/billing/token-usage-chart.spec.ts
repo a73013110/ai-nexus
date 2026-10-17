@@ -53,13 +53,13 @@ describe('token usage reporting', () => {
     expect(chart.totals()).toEqual({ input: 350, output: 70, requests: 4, known: 3 });
     chart.model.set('a');
     chart.metric.set('output');
-    expect(chart.points().map((x) => x.value)).toEqual([20, 0, 10]);
+    expect(chart.points().map((item) => item.value)).toEqual([20, 0, 10]);
     expect(chart.totals().known).toBe(2);
     chart.model.set('removed-model');
     expect(chart.selectedModel()).toBe('all');
 
-    // A breakdown row filters the chart and is marked like any open table row; choosing it again
-    // shows every model.
+    // 明細列會篩選圖表，並如同任何開啟的表格列一樣標示；再次選取它
+    // 會顯示所有模型。
     const row = () =>
       fixture.nativeElement.querySelectorAll('nx-data-table tbody tr')[1] as HTMLElement;
     const action = () => row().querySelector<HTMLButtonElement>('[data-row-action]')!;

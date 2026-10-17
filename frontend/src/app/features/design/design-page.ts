@@ -25,7 +25,7 @@ import { DesignForms } from './design-forms';
 import { DesignFoundations } from './design-foundations';
 import { DesignSamples } from './design-samples';
 
-/** Index of the workbench; ids match the `nx-design-section` ids. */
+/** 工作台的索引；id 與 `nx-design-section` 的 id 相同。 */
 const INDEX = [
   {
     name: '基礎',
@@ -126,8 +126,8 @@ const TOKEN_NAMES = [
 ];
 
 /**
- * The component workbench: production components with local samples, indexed in the sidebar and
- * previewed in either theme. Nothing here calls a model or writes data.
+ * 元件工作台：正式環境的元件搭配本地範例，列在側邊欄索引中，並在淺色或深色主題下預覽。
+ * 這裡不會呼叫模型，也不寫入資料。
  */
 @Component({
   selector: 'nx-design-page',
@@ -152,7 +152,7 @@ const TOKEN_NAMES = [
 })
 export class DesignPage {
   readonly session = inject(WorkspaceSession);
-  /** The page shows only the account's feature names, so the account is its one read. */
+  /** 頁面只顯示帳號的功能名稱，所以帳號是它唯一的讀取。 */
   private readonly account = apiResource({ loader: () => this.session.load() });
   readonly loading = this.account.loading;
   readonly error = this.account.error;
@@ -162,17 +162,16 @@ export class DesignPage {
     { value: 'light', label: '淺色' },
     { value: 'dark', label: '深色' },
   ];
-  /** The section nearest the top of the scroll area, highlighted in the index. */
+  /** 捲動區域中最靠近頂部的區段，在索引中標示為目前位置。 */
   readonly current = signal(INDEX[0].sections[0].id);
   readonly preview = viewChild<ElementRef<HTMLElement>>('preview');
 
-  /** A section picked in the index stays current until the reader scrolls by hand. */
+  /** 從索引選取的區段會保持為目前位置，直到讀者自己捲動。 */
   private picked: string | null = null;
 
   constructor() {
-    // The preview renders once the account loads. The current section is the last one whose
-    // heading has passed a line near the top of the scroll area; a line further down would pick
-    // the next short section right after jumping to the one above it.
+    // 帳號載入後才渲染預覽。目前區段是標題已越過捲動區域頂部附近某一線的最後一個；
+    // 若線設得更低，跳到前面區段之後，會立刻選到緊接其後的短區段。
     afterRenderEffect((onCleanup) => {
       const preview = this.preview()?.nativeElement;
       const root = preview?.closest<HTMLElement>('.feature-main');

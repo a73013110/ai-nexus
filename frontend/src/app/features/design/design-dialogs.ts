@@ -21,7 +21,7 @@ const FILES = [
 
 const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
 
-/** The shared dialog structure in its three common sizes, and the save bar of settings forms. */
+/** 三種常見尺寸的共用對話框結構，以及設定表單的儲存列。 */
 @Component({
   selector: 'nx-design-dialogs',
   imports: [
@@ -163,7 +163,7 @@ const SAVED = { name: '示範角色', note: '可檢視知識庫與專案。' };
       </footer>
     </dialog>
     <dialog nxCompactDialog size="md" #form class="platform-dialog">
-      <form class="dialog-form" (submit)="$event.preventDefault(); form.close()">
+      <form class="dialog-form" (submit)="closeSubmittedDialog($event, form)">
         <nx-dialog-header heading="新增知識庫" closeLabel="關閉示範表單" />
         <div class="dialog-body">
           <label>名稱<input nxField required /></label>
@@ -213,7 +213,7 @@ export class DesignDialogs {
   readonly draft = signal(SAVED);
   readonly tab = signal('name');
   readonly dirty = computed(() => this.tabs().some((tab) => tab.dirty));
-  /** One save covers both tabs, so each marks the changes it holds. */
+  /** 一次儲存涵蓋兩個分頁，因此各自標記其持有的變更。 */
   readonly tabs = computed<TabItem[]>(() => [
     { value: 'name', label: '名稱', dirty: this.draft().name !== this.saved().name },
     { value: 'note', label: '說明', dirty: this.draft().note !== this.saved().note },
@@ -223,6 +223,10 @@ export class DesignDialogs {
     const query = this.query().trim().toLowerCase();
     return FILES.filter((file) => file.name.toLowerCase().includes(query));
   });
+  closeSubmittedDialog(event: Event, dialog: HTMLDialogElement) {
+    event.preventDefault();
+    dialog.close();
+  }
   show(dialog: HTMLDialogElement) {
     this.query.set('');
     dialog.showModal();

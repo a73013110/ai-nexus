@@ -6,13 +6,13 @@ export type ToastTone = 'success' | 'info' | 'warning' | 'danger';
 export const toastIcon = (tone: ToastTone) => (tone === 'success' ? 'check' : 'info');
 
 export interface ToastOptions {
-  /** Showing the same id again replaces that toast and restarts its timer (e.g. upload → done). */
+  /** 再次以同一 id 顯示時會取代該提示並重新計時（例如上傳 → 完成）。 */
   id?: string;
   tone?: ToastTone;
   title: string;
   description?: string;
   action?: { label: string; run: () => void };
-  /** Milliseconds; 0 keeps it until dismissed. Defaults depend on tone and action. */
+  /** 毫秒；`0` 代表直到關閉才消失。預設值依語氣與動作而定。 */
   duration?: number;
 }
 
@@ -23,37 +23,35 @@ export interface Toast {
   description?: string;
   action?: { label: string; run: () => void };
   duration: number;
-  /** Bumped when the same id is shown again, so the toaster can replay its arrival. */
+  /** 同一 id 再次顯示時遞增，讓 toaster 能重播進場動畫。 */
   version: number;
-  /** Key of the session record this toast writes to; in-progress toasts have none yet. */
+  /** 此提示寫入的工作階段紀錄 key；進行中的提示還沒有紀錄。 */
   record?: number;
 }
 
-/** A settled toast kept for the session, so one that timed out unread can still be found. */
+/** 結束後保留在工作階段中的提示，讓逾時前沒讀到的提示仍找得到。 */
 export interface ToastRecord {
   key: number;
   tone: ToastTone;
   title: string;
   description?: string;
-  /** Cleared once run, from the toast or from the history, so it never runs twice. */
+  /** 執行一次後清掉（不論從提示或歷史執行），避免重複執行。 */
   action?: { label: string; run: () => void };
-  /** ISO time it was last shown. */
+  /** 最後顯示的 ISO 時間。 */
   at: string;
 }
 
-/** Most recent first; older toasts beyond this leave the stack. */
+/** 最新的在前；超過此數量的較舊提示會離開堆疊。 */
 const LIMIT = 5;
-/** Session history kept in memory only; never sent to the server. */
+/** 工作階段歷史只存在記憶體中，絕不送到伺服器。 */
 export const HISTORY_LIMIT = 20;
 let sequence = 0;
 let records = 0;
 
 /**
- * Transient confirmations of work the person just did, shown by `Toaster` in the shell's
- * bottom-right corner. Failures, risks and anything that must stay readable remain in-page
- * `Notice`s; toasts never carry the only copy of information. Settled toasts (not the in-progress
- * ones with `duration: 0`) are also kept in `history` for this tab, newest first, for the
- * notification center's session list.
+ * 使用者剛完成的操作之暫時確認，由殼層右下角的 `Toaster` 顯示。失敗、風險與必須持續可讀的資訊，
+ * 仍用頁內的 `Notice`；提示不能是資訊的唯一來源。已結束的提示（不含 `duration: 0` 的進行中提示）
+ * 也會保存在此分頁的 `history` 中（新的在前），供通知中心的工作階段列表使用。
  */
 @Injectable({ providedIn: 'root' })
 export class ToastService {
@@ -68,7 +66,7 @@ export class ToastService {
   private paused = false;
 
   constructor() {
-    // A signed-out or switched account must not see the previous account's confirmations.
+    // 已登出或切換帳號後，不能再看到前一個帳號的確認訊息。
     const auth = inject(AuthService);
     let generation = auth.generation();
     effect(() => {
@@ -88,7 +86,7 @@ export class ToastService {
       options.duration ??
       (options.action ? 8000 : tone === 'success' || tone === 'info' ? 4000 : 6000);
     const previous = this.items().find((item) => item.id === id);
-    // A toast updated in place keeps one record; a later toast reusing the id starts a new one.
+    // 原地更新的提示只保留一筆紀錄；之後重用同一 id 的提示會開新紀錄。
     const record = duration > 0 ? (previous?.record ?? ++records) : undefined;
     const toast: Toast = {
       ...options,
@@ -114,7 +112,7 @@ export class ToastService {
   info(title: string, description?: string) {
     return this.show({ tone: 'info', title, description });
   }
-  /** Runs the toast's action once, for this toast and its record, and closes it. */
+  /** 執行此提示的動作一次（同時影響其紀錄），然後關閉它。 */
   act(id: string) {
     const toast = this.items().find((item) => item.id === id);
     if (!toast) return;
@@ -122,7 +120,7 @@ export class ToastService {
     if (toast.record !== undefined) this.spend(toast.record);
     toast.action?.run();
   }
-  /** Runs a recorded action later, from the history; the toast still on screen leaves too. */
+  /** 之後從歷史執行一筆已記錄的動作；畫面上仍在的提示也會一起離開。 */
   replay(key: number) {
     const action = this.records().find((record) => record.key === key)?.action;
     if (!action) return;
@@ -139,7 +137,7 @@ export class ToastService {
     for (const id of [...this.timers.keys()]) this.stop(id);
     this.items.set([]);
   }
-  /** Hovering, focusing or hiding the page holds every timer, as the stack is read together. */
+  /** 滑鼠懸停、聚焦或頁面隱藏時會暫停所有計時器，因為堆疊是一起讀取的。 */
   pause() {
     if (this.paused) return;
     this.paused = true;

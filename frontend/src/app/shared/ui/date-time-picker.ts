@@ -27,7 +27,7 @@ import {
 } from '../browser/date-time';
 
 let sequence = 0;
-/** ISO Gregorian wall-clock values at the boundary; calendar/locale affect display only. */
+/** 邊界上的 ISO 公曆牆上時間值；日曆與語系只影響顯示。 */
 @Component({
   selector: 'nx-date-time-picker',
   imports: [Icon, Field, Select],
@@ -37,7 +37,7 @@ let sequence = 0;
 })
 export class DateTimePicker {
   readonly label = input.required<string>();
-  /** Keeps the label for assistive technology only, for toolbars that say it another way. */
+  /** 只給無障礙技術使用的標籤，供以其他方式說明的工具列使用。 */
   readonly hideLabel = input(false);
   readonly value = input('');
   readonly calendarSystem = input<CalendarSystem>('gregory');
@@ -84,7 +84,7 @@ export class DateTimePicker {
       this.view().month +
       ' 月',
   );
-  readonly months = Array.from({ length: 12 }, (_, i) => i + 1);
+  readonly months = Array.from({ length: 12 }, (_, index2) => index2 + 1);
   readonly monthOptions = this.months.map((month) => ({
     value: String(month),
     label: `${month} 月`,
@@ -105,7 +105,7 @@ export class DateTimePicker {
         disabled: !this.dayAvailable(value),
       };
     });
-    return Array.from({ length: 6 }, (_, i) => days.slice(i * 7, i * 7 + 7));
+    return Array.from({ length: 6 }, (_, index3) => days.slice(index3 * 7, index3 * 7 + 7));
   });
   readonly invalidTimeFields = signal<string[]>([]);
   readonly draftValid = computed(

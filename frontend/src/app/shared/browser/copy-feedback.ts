@@ -1,6 +1,6 @@
 import { DestroyRef, inject, Injectable, signal } from '@angular/core';
 
-/** Component-scoped feedback; timers and pending completion never outlive the view. */
+/** 元件範圍的回饋；計時器與待完成的狀態不會比視圖存活更久。 */
 @Injectable()
 export class CopyFeedback {
   readonly copied = signal(false);

@@ -162,11 +162,11 @@ export class ChatMessage {
   readonly saveArtifact = output<MessageDto>();
   readonly rated = output<{ id: string; rating: number }>();
   readonly busy = input(false);
-  /** The live answer's text; read only by the active message, so other rows skip each token. */
+  /** 即時回答的文字；只有使用中的訊息會讀取，其他列略過每個 token。 */
   readonly stream = input<Signal<string>>(idle);
   readonly streamContent = computed(() => (this.active() ? this.stream()() : ''));
   readonly status = input('');
-  /** Arrived after the conversation was shown, so it animates in. */
+  /** 對話顯示之後才抵達，因此會有進場動畫。 */
   readonly enter = input(false);
   readonly generation = computed(() => generationStatus(this.status(), !!this.streamContent()));
   readonly rendered = output<void>();
@@ -178,7 +178,7 @@ export class ChatMessage {
   readonly copyError = this.feedback.error;
   readonly versions = computed(() => this.tree().versions(this.message()));
   readonly versionIndex = computed(() =>
-    this.versions().findIndex((x) => x.id === this.message().id),
+    this.versions().findIndex((item) => item.id === this.message().id),
   );
   async copyAnswer() {
     await this.feedback.copy(this.message().content);

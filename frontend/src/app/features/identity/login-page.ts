@@ -29,11 +29,11 @@ import { LoginIntro, type LoginStage } from './intro/login-intro';
 import { isLoginMethod, LOGIN_METHODS, type LoginMethod, offeredMethods } from './login-methods';
 import { LoginSubmit, type SubmitPhase } from './login-submit';
 
-/** Long enough for the button to dock into its check before the page cross-fades away. */
+/** 按鈕需要夠長的時間停靠到勾號上，之後頁面才會淡出。 */
 const SUCCESS_HOLD_MS = 420;
-/** The greeting stays while the account loads, so the workspace opens with its sidebar filled. */
+/** 帳號載入時問候語保持不變，讓工作區開啟時側邊欄已填好。 */
 const WELCOME_HOLD_MS = 900;
-/** Covers the staggered arrival of the first workspace page (motion.scss, `data-entrance`). */
+/** 涵蓋第一個工作區頁面的交錯進場（motion.scss，`data-entrance`）。 */
 const ENTRANCE_MS = 2400;
 
 @Component({
@@ -53,17 +53,17 @@ export class LoginPage {
   private readonly workspace = inject(WorkspaceSession);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly account = viewChild<ElementRef<HTMLInputElement>>('account');
-  /** Sign-in → (identity, when the account offers several) → welcome → the workspace. */
+  /** 登入 → （帳號有多個時）身分 → 歡迎畫面 → 工作區。 */
   readonly stage = signal<LoginStage>('credentials');
   readonly identities = computed(() => this.auth.session()?.identities ?? []);
-  /** Named on the welcome screen only when the account actually chose one. */
+  /** 只有帳號實際選過身分時，才會在歡迎畫面上顯示名稱。 */
   readonly chosenIdentity = computed(() =>
     this.identities().length > 1
-      ? (this.identities().find((x) => x.id === this.auth.session()?.identity)?.name ?? null)
+      ? (this.identities().find((item) => item.id === this.auth.session()?.identity)?.name ?? null)
       : null,
   );
   readonly choosing = signal<string | null>(null);
-  /** Each rejection flips the shake, so a second wrong password shakes again. */
+  /** 每次拒絕都會觸發一次搖動，所以第二次輸錯密碼也會再搖一次。 */
   readonly rejections = signal(0);
   readonly catalog = LOGIN_METHODS;
   readonly credentials = signal({ account: '', password: '' });
@@ -75,7 +75,7 @@ export class LoginPage {
   readonly spec = computed(() => LOGIN_METHODS[this.method()]);
   readonly passwordVisible = signal(false);
   readonly capsLock = signal(false);
-  /** The Windows hint explains a failed challenge, so it waits for the first attempt. */
+  /** Windows 提示說明的是失敗的挑戰，所以要等第一次嘗試之後才出現。 */
   readonly windowsFailed = signal(false);
   readonly loginForm = form(this.credentials, (schema) => {
     readonlyField(schema.account, { when: () => this.submitting() });
@@ -108,13 +108,13 @@ export class LoginPage {
     } finally {
       this.loading.set(false);
     }
-    // Touch keyboards would cover the form, so only pointer devices start in the account field.
+    // 觸控鍵盤會遮住表單，所以只有指標裝置才會在帳號欄位開始輸入。
     if (this.spec().credentials && matchMedia('(pointer: fine)').matches)
       this.account()?.nativeElement.focus({ preventScroll: true });
   }
   /**
-   * Router navigation never leaves the app, so any app path is a safe destination; only the login
-   * page itself is excluded to avoid a loop. Unknown paths fall back through the wildcard route.
+   * 路由導覽不會離開應用，所以任何應用內路徑都可以當成目的地；只有登入頁本身會排除，避免迴圈。
+   * 未知路徑會經由萬用路由回退。
    */
   private returnUrl() {
     const url = this.route.snapshot.queryParamMap.get('returnUrl');
@@ -127,7 +127,7 @@ export class LoginPage {
     await this.attempt(
       () => this.auth.windowsLogin(),
       (error) => {
-        // A refused challenge is the expected "no Windows identity" case; the hint explains it.
+        // 被拒絕的挑戰是預期中的「沒有 Windows 身分」情況，提示會解釋它。
         const refused = error instanceof ApiError && error.status === 401;
         this.windowsFailed.set(refused);
         return !refused;
@@ -142,7 +142,7 @@ export class LoginPage {
     await this.attempt(() => this.auth.login(account.trim(), password, this.method()));
     this.credentials.update((value) => ({ ...value, password: '' }));
   }
-  /** `report` decides whether a failure also shows as an error; by default it does. */
+  /** `report` 決定失敗是否也顯示為錯誤；預設會顯示。 */
   private async attempt(
     signIn: () => Promise<void>,
     report: (error: unknown) => boolean = () => true,
@@ -185,7 +185,7 @@ export class LoginPage {
       this.choosing.set(null);
     }
   }
-  /** Leaves the identity step for another account; the sign-out keeps this page. */
+  /** 離開身分步驟去使用另一個帳號；登出時仍停留在這個頁面。 */
   async useAnotherAccount() {
     try {
       await this.auth.logout();
@@ -194,15 +194,15 @@ export class LoginPage {
       return;
     }
     await this.morph.run(() => this.stage.set('credentials'));
-    // Sign-out clears the session the form reads its methods from.
+    // 登出會清掉表單讀取登入方式所依賴的工作階段。
     await this.initialize();
   }
   /**
-   * The brand side widens into a greeting while the account loads, then the workspace opens from
-   * the wordmark: it and the avatar fly into the sidebar as the page widens out from behind them.
+   * 帳號載入時，品牌區會放大成問候語；工作區則從品牌字樣開啟：
+   * 頁面從它們後面展開時，品牌字樣與頭像會飛進側邊欄。
    */
   private async welcome() {
-    // Without motion the checked button stays until the workspace replaces the page.
+    // 沒有動效時，勾選的按鈕會停留到工作區取代此頁面為止。
     if (!this.morph.enabled) {
       await this.router.navigateByUrl(this.returnUrl());
       return;
@@ -225,7 +225,7 @@ export class LoginPage {
     await this.router.navigateByUrl(this.returnUrl());
     this.morph.discard();
   }
-  /** Reduced motion skips every hold. */
+  /** 減少動態效果時會跳過所有停留。 */
   private pause(ms: number) {
     return this.themes.reducedMotion()
       ? Promise.resolve()
@@ -238,7 +238,7 @@ export class LoginPage {
     this.windowsFailed.set(false);
     this.error.set(null);
   }
-  /** CapsLock has no event of its own; every key in the password field reports its state. */
+  /** CapsLock 沒有自己的事件，所以密碼欄位中的每個按鍵都會回報其狀態。 */
   readCapsLock(event: KeyboardEvent) {
     this.capsLock.set(event.getModifierState?.('CapsLock') ?? false);
   }

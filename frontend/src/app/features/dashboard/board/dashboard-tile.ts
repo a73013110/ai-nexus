@@ -5,9 +5,9 @@ import type { PlacedTile } from './dashboard-layout';
 import { TILE_SIZES, type TileSize } from '../widgets/dashboard-widgets';
 
 /**
- * One tile of the board: a titled surface around its widget. In edit mode it shows a move handle
- * (drag, or arrow keys), every size, height and hide; the board owns the order. The tools wrap
- * under the title on narrow tiles instead of hiding, so a small tile can always grow again.
+ * 看板的一塊磚塊：環繞其小工具的有標題表面。編輯模式下會顯示移動把手（拖曳或方向鍵）、
+ * 所有大小、高度與隱藏的控制；順序由看板決定。窄磚塊上，工具會換行到標題下方而非隱藏，
+ * 讓小磚塊隨時都能再放大。
  */
 @Component({
   selector: 'nx-dashboard-tile',

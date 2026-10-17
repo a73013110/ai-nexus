@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { ApiClient } from '@core/api/api-client';
 
-/** The user's prompt templates. */
+/** 使用者的提示範本。 */
 @Injectable({ providedIn: 'root' })
 export class LibraryApi {
   private readonly api = inject(ApiClient);

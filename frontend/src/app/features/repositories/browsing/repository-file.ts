@@ -19,10 +19,10 @@ import { Icon } from '@shared/ui/icon';
 import { ViewSwitch } from '@shared/ui/view-switch';
 import { baseName, codeLanguage, isMarkdown } from './repository-language';
 
-/** Past this, colour would cost more than it helps; the source stays plain text. */
+/** 超過此大小，上色的成本會大於效益；原始碼維持純文字。 */
 const highlightLimit = 160_000;
 
-/** One file at a fixed commit: Markdown as a page, everything else as numbered source. */
+/** 釘選提交的單一檔案：Markdown 以頁面呈現，其他則是帶行號的原始碼。 */
 @Component({
   selector: 'nx-repository-file',
   imports: [Icon, MarkdownView, ViewSwitch],
@@ -80,7 +80,7 @@ const highlightLimit = 160_000;
 })
 export class RepositoryFile {
   readonly file = input.required<RepositoryFileDto>();
-  /** A README under a folder: no link out, the name is the heading. */
+  /** 資料夾下的 README：不連出去，名稱即為標題。 */
   readonly compact = input(false);
   readonly copy = inject(CopyFeedback);
   private readonly code = viewChild<ElementRef<HTMLElement>>('code');
@@ -95,19 +95,23 @@ export class RepositoryFile {
     const text = this.file().text;
     if (!text) return 0;
     let count = 1;
-    for (let i = text.indexOf('\n'); i >= 0 && i < text.length - 1; i = text.indexOf('\n', i + 1))
+    for (
+      let index = text.indexOf('\n');
+      index >= 0 && index < text.length - 1;
+      index = text.indexOf('\n', index + 1)
+    )
       count++;
     return count;
   });
   readonly lines = computed(() => formatNumber(this.lineCount()));
   readonly size = computed(() => formatBytes(this.file().size));
   readonly numbers = computed(() =>
-    Array.from({ length: this.lineCount() }, (_, i) => i + 1).join('\n'),
+    Array.from({ length: this.lineCount() }, (_, index2) => index2 + 1).join('\n'),
   );
   private clear: () => void = () => undefined;
 
   constructor() {
-    // Highlighting rewrites the code element, so its text is set here rather than bound.
+    // 語法高亮會改寫 code 元素，所以它的文字在這裡設定，而不是綁定。
     afterRenderEffect(() => {
       const code = this.code()?.nativeElement;
       const file = this.file();

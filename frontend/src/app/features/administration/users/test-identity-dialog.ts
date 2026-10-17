@@ -14,7 +14,7 @@ import { DialogHeader } from '@shared/ui/dialog-header';
 import { Field } from '@shared/ui/field';
 import { Notice } from '@shared/ui/notice';
 
-/** Switches to another user's identity for a short, audited test. */
+/** 切換為另一位使用者的身分，進行短暫、受稽核的測試。 */
 @Component({
   selector: 'nx-test-identity-dialog',
   imports: [CompactDialog, DialogHeader, Field, Notice],

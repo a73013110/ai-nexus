@@ -154,7 +154,7 @@
           [disabled]="busy()"
           maxlength="64000"
           [value]="content()"
-          (input)="content.set($any($event.target).value); selection.set(null)"
+          (input)="onEditorInput($event)"
           (select)="pick()"
           (keyup)="pick()"
           spellcheck="false"

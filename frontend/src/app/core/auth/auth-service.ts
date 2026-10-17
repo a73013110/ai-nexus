@@ -50,12 +50,12 @@ export class AuthService {
       this.pending = null;
     }
   }
-  /** The returned check stays true until the account changes; late responses test it first. */
+  /** 回傳的檢查結果會維持為 true，直到帳號改變；遲到的回應會先檢查它。 */
   guard() {
     const generation = this.generation();
     return () => generation === this.generation();
   }
-  /** The route guard has just confirmed the session; a page loading right after reuses it. */
+  /** 路由守衛剛確認過工作階段；緊接著載入的頁面會直接沿用它。 */
   async requireLogin(): Promise<boolean> {
     if (this.session()?.authenticated && Date.now() - this.confirmedAt < RECENT_SESSION_MS)
       return true;
@@ -79,7 +79,7 @@ export class AuthService {
     this.generation.update((value) => value + 1);
     this.channel?.postMessage('changed');
   }
-  /** Acts as another identity the account offers; pages reload their data for it. */
+  /** 以帳號提供的另一個身分執行；頁面會為它重新載入資料。 */
   async selectIdentity(identity: string) {
     this.session.set(await this.api.selectIdentity(identity));
     this.generation.update((value) => value + 1);
@@ -88,9 +88,9 @@ export class AuthService {
   async logout() {
     await this.api.logout();
     this.session.set(null);
-    // The workspace closes into the avatar the sign-out was chosen from (motion.scss, `sign-out`).
-    // The new generation waits until it has left, so it still shows who signed out and its pages
-    // do not reload for the signed-out account on the way.
+    // 工作區會收合進登出時所選的頭像（motion.scss，`sign-out`）。
+    // 新的世代要等它離開後才開始，這樣它仍會顯示是誰登出，
+    // 而且路上不會為已登出的帳號重新載入頁面。
     const avatar = document.querySelector('nx-account-menu .avatar')?.getBoundingClientRect();
     this.morph.next(
       'sign-out',
@@ -114,7 +114,7 @@ export class AuthService {
     this.session.set(session);
     this.generation.update((value) => value + 1);
     this.channel?.postMessage('changed');
-    // A rare identity transition clears every route/provider and in-flight view together.
+    // 罕見的身分轉換會一起清掉所有路由、提供者與進行中的檢視。
     window.location.assign(url);
   }
 }

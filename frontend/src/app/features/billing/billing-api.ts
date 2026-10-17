@@ -39,7 +39,7 @@ export function chargeKind(kind: string): string {
     )[kind] ?? kind
   );
 }
-/** Display names of the model and search providers; an unknown id is shown as is. */
+/** 模型與搜尋供應商的顯示名稱；未知的 id 原樣顯示。 */
 export function providerName(id: string): string {
   return (
     (

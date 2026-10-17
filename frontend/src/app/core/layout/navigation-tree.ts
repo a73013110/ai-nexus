@@ -1,46 +1,48 @@
 import type { NavigationGroupDto } from '@core/api/schema';
 import { ICON_NAMES } from '@shared/ui/icon';
 
-/** What the menu needs from a feature; both `/me` features and the admin catalog have it. */
+/** 選單需要功能的哪些欄位；`/me` 的功能與管理目錄都有。 */
 export interface NavigationEntry {
   id: string;
   groupId?: string | null;
   sortOrder: number;
 }
 
-/** A menu group with its own features and subgroups, each list in display order. */
+/** 選單群組，含其自己的功能與子群組，各自依顯示順序排列。 */
 export interface NavigationNode<T> {
   group: NavigationGroupDto;
   features: T[];
   groups: NavigationNode<T>[];
 }
 
-/** The menu's top level: features without a group first, then the top-level groups. */
+/** 選單最上層：先是沒有群組的功能，接著是最上層群組。 */
 export interface NavigationTree<T> {
   features: T[];
   groups: NavigationNode<T>[];
 }
 
-/** One group (or the top level, `id` '') as a flat section, for lists that do not nest. */
+/** 一個群組（或最上層，`id` 為空字串）扁平化成一個區段，供不巢狀的列表使用。 */
 export interface NavigationSection<T> {
   id: string;
-  /** The group's name, or `topName` for the top level. */
+  /** 群組名稱；最上層則為 `topName`。 */
   name: string;
-  /** Ancestor names and the group's own, for a flat list that must still tell nested groups apart. */
+  /** 祖先名稱加上群組自己的名稱；扁平列表仍要能分辨巢狀群組。 */
   path: string;
   depth: number;
   features: T[];
 }
 
-const byOrder = (a: { sortOrder: number; id: string }, b: { sortOrder: number; id: string }) =>
-  a.sortOrder - b.sortOrder || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+const byOrder = (
+  first: { sortOrder: number; id: string },
+  second: { sortOrder: number; id: string },
+) =>
+  first.sortOrder - second.sortOrder || (first.id < second.id ? -1 : first.id > second.id ? 1 : 0);
 
 /**
- * Builds the menu from the API's flat lists. At every level features come first, then subgroups,
- * each ordered by `sortOrder` and then id (the same order the server lists them in). A feature or
- * group whose parent is unknown sits at the top level, so nothing granted is ever hidden by a
- * stale reference; a group inside a cycle is treated the same way. Groups with no feature in
- * their subtree are dropped unless `keepEmpty` (the administrator's editor shows every group).
+ * 由 API 的扁平列表建立選單。每一層都是功能在前、子群組在後，
+ * 各自依 `sortOrder`，再依 id 排序（與伺服器列出的順序相同）。上層未知的功能或群組放在最上層，
+ * 因此不會因為過期的參照而隱藏已授權的內容；循環中的群組也以同樣方式處理。
+ * 子樹中沒有功能的群組會被丟棄，除非 `keepEmpty`（管理員的編輯器會顯示所有群組）。
  */
 export function navigationTree<T extends NavigationEntry>(
   features: readonly T[],
@@ -77,8 +79,8 @@ export function navigationTree<T extends NavigationEntry>(
 }
 
 /**
- * The tree as sections in menu order (depth first). The top level is the first section, named
- * `topName`, and is left out when it has no features unless `keepTop`.
+ * 依選單順序（深度優先）回傳區段樹。第一個區段是最上層，名稱為
+ * `topName`；沒有功能時會省略，除非 `keepTop`。
  */
 export function navigationSections<T>(
   tree: NavigationTree<T>,
@@ -102,12 +104,12 @@ export function navigationSections<T>(
   return sections;
 }
 
-/** Every feature of the tree in menu order. */
+/** 依選單順序列出樹中的每個功能。 */
 export function navigationOrder<T>(tree: NavigationTree<T>): T[] {
   return navigationSections(tree).flatMap((section) => section.features);
 }
 
-/** The group and its descendants' ids; a group cannot move under any of them. */
+/** 群組與其所有子孫的 id；群組不能移到其中任何一個之下。 */
 export function descendantIds(groups: readonly NavigationGroupDto[], id: string): Set<string> {
   const ids = new Set([id]);
   for (let grown = true; grown;) {
@@ -121,7 +123,7 @@ export function descendantIds(groups: readonly NavigationGroupDto[], id: string)
   return ids;
 }
 
-/** An icon name the menu can draw: the API's value when known, otherwise one neutral fallback. */
+/** 選單能繪製的圖示名稱：已知時用 API 的值，否則用一個中性的備用圖示。 */
 export function featureIcon(icon: string | null | undefined): string {
   return icon && ICON_NAMES.has(icon) ? icon : 'document';
 }

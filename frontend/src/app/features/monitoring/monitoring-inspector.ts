@@ -35,13 +35,13 @@ export function monitoringSummary(
   dependency: DependencyTraffic | null,
 ): MonitoringSummary | null {
   if (selected) {
-    const s = session ?? selected;
+    const segment = session ?? selected;
     return {
       tone: session?.state === 'active' ? 'success' : 'neutral',
       status: session ? presenceState(session.state) : '已離線',
       at: session?.lastSeenAt ?? '',
-      title: s.displayName,
-      subtitle: s.account + (s.testingIdentity ? ' · 測試身分' : ''),
+      title: segment.displayName,
+      subtitle: segment.account + (segment.testingIdentity ? ' · 測試身分' : ''),
     };
   }
   if (subsystemId)
@@ -80,7 +80,7 @@ export class MonitoringInspector {
   readonly selectedSession = input<OnlineSession | null>(null);
   readonly liveSession = input<OnlineSession | null>(null);
   readonly liveDependency = input<DependencyTraffic | null>(null);
-  /** A subsystem by id; null once it is gone from the snapshot. */
+  /** 依 id 取得的子系統；從快照中消失後為 null。 */
   readonly subsystemId = input<string | null>(null);
   readonly liveSubsystem = input<MonitoredSubsystem | null>(null);
   readonly bytes = formatBytes;

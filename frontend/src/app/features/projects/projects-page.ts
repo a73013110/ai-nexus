@@ -86,7 +86,7 @@ export class ProjectsPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly scope = inject(ViewScope);
-  readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id'))), {
+  readonly id = toSignal(this.route.paramMap.pipe(map((part) => part.get('id'))), {
     initialValue: null,
   });
   private readonly projectsRead = apiResource({
@@ -102,7 +102,7 @@ export class ProjectsPage {
     params: () => this.id() || undefined,
     loader: (id) => this.api.get(id),
   });
-  /** Files, templates and related work of the open project; re-read while files are processed. */
+  /** 已開啟專案的檔案、範本與相關工作；檔案處理中會重新讀取。 */
   private readonly detailRead = apiResource({
     feature: 'projects',
     params: () => this.id() || undefined,
@@ -118,13 +118,13 @@ export class ProjectsPage {
         files,
         templates,
         conversations,
-        outputs: outputs.filter((x) => x.projectId === id),
+        outputs: outputs.filter((item) => item.projectId === id),
       };
     },
-    poll: (detail) => (detail?.files.some((x) => documentBusy(x.status)) ? 2000 : null),
+    poll: (detail) => (detail?.files.some((item) => documentBusy(item.status)) ? 2000 : null),
   });
   readonly projects = computed<ProjectDto[]>(() => this.projectsRead.value() ?? []);
-  /** Another project's data is never shown while the requested one loads or fails. */
+  /** 所要求的專案載入或失敗時，絕不顯示另一個專案的資料。 */
   readonly current = computed<ProjectDto | null>(() => {
     const value = this.currentRead.value();
     return value && value.resource.id === this.id() ? value : null;
@@ -139,7 +139,7 @@ export class ProjectsPage {
   readonly outputs = computed<ArtifactSummaryDto[]>(() => this.detail()?.outputs ?? []);
   readonly loading = computed(() => this.projectsRead.loading() || this.currentRead.loading());
   readonly projectsLoading = this.projectsRead.loading;
-  /** Members with edit access may change an active project; an archived one is read-only. */
+  /** 具有編輯權限的成員可以變更進行中的專案；已封存的則唯讀。 */
   readonly editable = computed(() => {
     const project = this.current();
     return !!project?.resource.canEdit && !project.isArchived;
@@ -187,7 +187,7 @@ export class ProjectsPage {
         : []),
     ];
   });
-  /** The collection's tour, or the open project's for what this viewer can use there. */
+  /** 集合的導覽，或已開啟專案的導覽（依此檢視者在該處可用的功能決定）。 */
   readonly tour = computed(() =>
     this.id()
       ? projectTour({
@@ -199,9 +199,9 @@ export class ProjectsPage {
   );
   readonly visible = computed(() =>
     this.projects().filter(
-      (x) =>
-        x.isArchived === this.archived() &&
-        x.resource.name.toLowerCase().includes(this.filter().toLowerCase()),
+      (item2) =>
+        item2.isArchived === this.archived() &&
+        item2.resource.name.toLowerCase().includes(this.filter().toLowerCase()),
     ),
   );
   readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
@@ -290,7 +290,7 @@ export class ProjectsPage {
         this.toast.success('專案設定已儲存');
         this.busy.set(false);
         if (!this.editingId) {
-          // The page stays mounted across /projects and /projects/:id, so the list is read again.
+          // 頁面在 /projects 與 /projects/:id 之間保持掛載，所以列表會重新讀取。
           this.projectsRead.reload();
           await this.router.navigate(['/projects', value.resource.id]);
           return;
@@ -305,8 +305,8 @@ export class ProjectsPage {
         this.dialog().nativeElement.close();
         this.refresh();
       }
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scope.message(e));
+    } catch (error2) {
+      if (valid()) this.actionError.set(this.scope.message(error2));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -323,8 +323,8 @@ export class ProjectsPage {
         this.transfer.put(value.conversation.id, value.prompt);
         await this.router.navigate(['/chat', value.conversation.id]);
       }
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scope.message(e));
+    } catch (error3) {
+      if (valid()) this.actionError.set(this.scope.message(error3));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -346,15 +346,15 @@ export class ProjectsPage {
       if (valid()) {
         this.currentRead.value.set(value);
         this.projectsRead.value.update((all) =>
-          all?.map((x) => (x.resource.id === value.resource.id ? value : x)),
+          all?.map((item) => (item.resource.id === value.resource.id ? value : item)),
         );
         this.toast.success(
           value.isArchived ? '專案已封存' : '專案已還原',
           value.isArchived ? '文件仍可閱讀。' : undefined,
         );
       }
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scope.message(e));
+    } catch (error4) {
+      if (valid()) this.actionError.set(this.scope.message(error4));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -380,12 +380,12 @@ export class ProjectsPage {
       await this.api.remove(current.resource.id);
       if (!valid()) return;
       this.projectsRead.value.update((all) =>
-        all?.filter((x) => x.resource.id !== current.resource.id),
+        all?.filter((item) => item.resource.id !== current.resource.id),
       );
       this.projectsRead.reload();
       await this.router.navigate(['/projects']);
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scope.message(e));
+    } catch (error5) {
+      if (valid()) this.actionError.set(this.scope.message(error5));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -401,14 +401,14 @@ export class ProjectsPage {
       valid = this.guard();
     if (!current || !current.resource.canEdit || current.isArchived || this.busy() || !policy)
       return;
-    if (files.length > 4 || files.some((f) => f.size > policy.maxFileBytes)) {
+    if (files.length > 4 || files.some((file2) => file2.size > policy.maxFileBytes)) {
       this.actionError.set('每批最多 4 份文件，單檔需符合平台容量限制。');
       return;
     }
     this.busy.set(true);
     this.actionError.set('');
     const controller = (this.controller = new AbortController());
-    // One toast follows the batch from upload to done; anything else withdraws it.
+    // 一則提示隨批次從上傳進行到完成；其他情況則撤回它。
     const progress = 'project-upload';
     let done = false;
     try {
@@ -423,9 +423,9 @@ export class ProjectsPage {
         if (!valid()) return;
         try {
           await this.api.addFile(current.resource.id, uploaded.id);
-        } catch (e) {
+        } catch (error6) {
           await this.attachments.removeAttachment(uploaded.id).catch(() => undefined);
-          throw e;
+          throw error6;
         }
         if (!valid()) return;
       }
@@ -436,8 +436,8 @@ export class ProjectsPage {
       });
       done = true;
       this.refresh();
-    } catch (e) {
-      if (valid() && !controller.signal.aborted) this.actionError.set(this.scope.message(e));
+    } catch (error7) {
+      if (valid() && !controller.signal.aborted) this.actionError.set(this.scope.message(error7));
     } finally {
       if (!done) this.toast.dismiss(progress);
       if (valid()) this.busy.set(false);
@@ -462,8 +462,8 @@ export class ProjectsPage {
       if (kind === 'file') await this.knowledge.remove(id);
       else await this.api.removeTemplate(current.resource.id, id);
       if (valid()) this.refresh();
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scope.message(e));
+    } catch (error8) {
+      if (valid()) this.actionError.set(this.scope.message(error8));
     } finally {
       if (valid()) this.busy.set(false);
     }

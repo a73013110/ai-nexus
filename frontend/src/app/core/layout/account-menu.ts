@@ -34,7 +34,7 @@ import { WorkspaceLayout } from './workspace-layout';
 export class AccountMenu {
   readonly session = inject(WorkspaceSession);
   readonly layout = inject(WorkspaceLayout);
-  /** The rail hides the name, so the menu opened from it repeats who is signed in. */
+  /** 圖示欄會隱藏名稱，因此從它開啟的選單會重複顯示目前登入的是誰。 */
   readonly profile = computed(() => ({
     title: this.session.me()?.displayName || '帳號',
     detail: this.session.me()?.account,

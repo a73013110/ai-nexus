@@ -60,9 +60,9 @@ describe('directory search', () => {
     const context = setup();
     await type(context, '王小');
     expect(context.directory).toHaveBeenCalledWith('王小');
-    expect(context.search.results().map((x) => x.id)).toEqual(['a', 'b']);
+    expect(context.search.results().map((item) => item.id)).toEqual(['a', 'b']);
     context.chosen.set(['a']);
-    expect(context.search.results().map((x) => x.id)).toEqual(['b']);
+    expect(context.search.results().map((item) => item.id)).toEqual(['b']);
   });
 
   it('hides results for text that has not been searched yet and clears everything', async () => {

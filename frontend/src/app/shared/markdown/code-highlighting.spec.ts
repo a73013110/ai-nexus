@@ -15,7 +15,7 @@ describe('deferred code highlighting', () => {
     expect(plain.hasAttribute('data-language')).toBe(false);
 
     highlightWhenVisible(host);
-    // Blocks are highlighted in time slices, so a slow machine may reach the unknown block later.
+    // 區塊是以時間片段上色的，因此較慢的機器可能會較晚才處理未知的區塊。
     await vi.waitFor(() => {
       expect(known.innerHTML).toContain('hljs-keyword');
       expect(unknown.hasAttribute('data-language')).toBe(false);

@@ -2,8 +2,8 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { nexusPath, nexusTips } from '@shared/graphics/nexus-logo';
 
 /**
- * The outline the sign-in signals trace (signal-mark.ts). It stays after the mark has moved into
- * the wordmark, so the brand side keeps its weight; a fine pointer's light warms its line.
+ * 登入訊號所描繪的外框（signal-mark.ts）。標記移入字標後仍會保留，因此品牌區保有其重量；
+ * 細緻指標的光會讓它的線條變暖。
  */
 @Component({
   selector: 'svg[nxLoginTrace]',

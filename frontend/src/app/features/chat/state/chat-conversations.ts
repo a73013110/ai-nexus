@@ -14,9 +14,8 @@ import { ChatApi } from '../chat-api';
 import { ChatStore } from '../chat-store';
 
 /**
- * Organizing conversations: rename, delete, settings, project, copies and backups. Edits show at
- * once in the open conversation and the history list, then settle to the server's copy or roll
- * back; failures are reported through ChatStore.
+ * 整理對話：重新命名、刪除、設定、專案、副本與備份。編輯會立即顯示在開啟中的對話與歷史列表，
+ * 之後再與伺服器的版本一致，或復原；失敗則透過 ChatStore 回報。
  */
 @Injectable({ providedIn: 'root' })
 export class ChatConversations {
@@ -82,7 +81,7 @@ export class ChatConversations {
     const changes = Object.fromEntries(
       Object.entries(settings).filter(([, value]) => value !== null && value !== undefined),
     );
-    // The open conversation's copy is newer than a history row, e.g. its active branch.
+    // 開啟中的對話副本比歷史列新，例如它的作用中分支。
     const previous = this.find(conversation.id) ?? conversation;
     this.show({ ...previous, ...changes });
     try {
@@ -127,7 +126,7 @@ export class ChatConversations {
       if (current()) this.store.report(error);
     }
   }
-  /** Asks for a backup file; call from a click so the browser allows the file chooser. */
+  /** 要求備份檔；須在點擊中呼叫，瀏覽器才會允許開啟檔案選擇器。 */
   async chooseBackup() {
     const file = await pickFile('application/json,.json');
     if (file) await this.importBackup(file);
@@ -156,7 +155,9 @@ export class ChatConversations {
   }
   private find(id: string) {
     const selected = this.store.selected();
-    return selected?.id === id ? selected : this.store.conversations().find((x) => x.id === id);
+    return selected?.id === id
+      ? selected
+      : this.store.conversations().find((item) => item.id === id);
   }
   private show(conversation: ConversationDto) {
     if (this.store.selected()?.id === conversation.id) this.store.selected.set(conversation);

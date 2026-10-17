@@ -108,12 +108,12 @@ export class KnowledgePicker {
   readonly visible = computed(() =>
     this.selection
       .collections()
-      .filter((x) => x.resource.name.toLowerCase().includes(this.query().toLowerCase())),
+      .filter((item) => item.resource.name.toLowerCase().includes(this.query().toLowerCase())),
   );
   readonly unavailable = computed(() =>
     this.selection
       .ids()
-      .filter((x) => !this.selection.collections().some((c) => c.resource.id === x)),
+      .filter((item) => !this.selection.collections().some((card) => card.resource.id === item)),
   );
   readonly trigger = viewChild.required<ElementRef<HTMLButtonElement>>('trigger');
   readonly panel = viewChild.required<ElementRef<HTMLDivElement>>('panel');
@@ -124,7 +124,7 @@ export class KnowledgePicker {
       positionPopover(this.from ?? this.trigger().nativeElement, panel, 360, 'left'),
   });
   readonly opened = this.popover.opened;
-  /** Opens beside `from` when another control (the narrow composer's tools menu) asks. */
+  /** 當另一個控制項（窄版輸入框的工具選單）要求時，在 `from` 旁開啟。 */
   open(from?: HTMLElement) {
     if (this.opened()) {
       this.popover.hide();

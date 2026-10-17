@@ -13,9 +13,8 @@ import { DashboardToolbar } from './dashboard-toolbar';
 import { DASHBOARD_TOUR } from './dashboard-tour';
 
 /**
- * The overview: a greeting that says what is happening now, the period toolbar and a board of
- * tiles the viewer can reorder, resize and hide. Data comes from one read (`DashboardStore`);
- * arrangement is a browser preference (`DashboardLayout`).
+ * 總覽：一句說明目前狀況的問候語、期間工具列，以及一塊檢視者可以重新排序、調整大小與隱藏的磚塊看板。
+ * 資料來自一次讀取（`DashboardStore`）；排列則是瀏覽器偏好（`DashboardLayout`）。
  */
 @Component({
   selector: 'nx-dashboard-page',
@@ -48,7 +47,7 @@ export class DashboardPage {
     { value: 'personal', label: '我的工作' },
     { value: 'platform', label: '整個平台' },
   ];
-  /** The line under the title: a greeting, then work in progress or what needs attention. */
+  /** 標題下方的一行：問候語，接著是進行中的工作或需要注意的事。 */
   readonly summary = computed(() => {
     const hour = new Date().getHours();
     const part =
@@ -59,7 +58,8 @@ export class DashboardPage {
     const active = this.store.activeWork(),
       attention = this.store.attention();
     if (active) return `${greeting}目前有 ${active} 件工作處理中。`;
-    if (attention.length) return `${greeting}${attention.map((x) => x.title).join('、')}需要留意。`;
+    if (attention.length)
+      return `${greeting}${attention.map((item) => item.title).join('、')}需要留意。`;
     return `${greeting}一切就緒，沒有進行中的工作。`;
   });
 }

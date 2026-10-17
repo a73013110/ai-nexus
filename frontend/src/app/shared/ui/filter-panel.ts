@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { Icon } from './icon';
 
-/** Query state and submission stay in the feature's native form. */
+/** 查詢狀態與送出仍留在功能自己的原生表單中。 */
 @Component({
   selector: 'nx-filter-panel',
   imports: [Icon],

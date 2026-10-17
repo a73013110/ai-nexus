@@ -1,8 +1,8 @@
 import type { ProductTourDefinition } from '@shared/ui/product-tour';
 
 /**
- * The overview tour. Steps for controls or tiles the viewer cannot see (no platform scope, no
- * currencies yet, a hidden tile) are skipped when the tour starts.
+ * 總覽導覽。檢視者看不到的控制項或磚塊（沒有平台範圍、尚無幣別、已隱藏的磚塊）的步驟，
+ * 會在導覽開始時略過。
  */
 export const DASHBOARD_TOUR: ProductTourDefinition = {
   steps: [

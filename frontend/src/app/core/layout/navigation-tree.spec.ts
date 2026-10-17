@@ -26,7 +26,7 @@ const features = [
   feature('dashboard', null, 5),
   feature('extra', null, 50),
 ];
-const ids = (list: readonly { id: string }[]) => list.map((x) => x.id);
+const ids = (list: readonly { id: string }[]) => list.map((item) => item.id);
 
 describe('navigation tree', () => {
   it('puts top-level features first and orders every level by sortOrder, then id', () => {
@@ -55,7 +55,7 @@ describe('navigation tree', () => {
     const all = navigationTree([], groups, { keepEmpty: true });
     expect(all.groups.map((node) => node.group.id)).toEqual(['work', 'system', 'empty']);
     expect(all.groups[1].groups[0].group.id).toBe('diagnosis');
-    // A parent with features only in a subgroup is kept for it.
+    // 只有子群組中有功能的上層群組，仍為它保留。
     const nested = navigationTree([feature('logs', 'diagnosis', 1)], groups);
     expect(nested.groups.map((node) => [node.group.id, node.groups.length])).toEqual([
       ['system', 1],
@@ -79,7 +79,9 @@ describe('navigation tree', () => {
 
   it('flattens to sections with paths and depth, the top level first when it has features', () => {
     const sections = navigationSections(navigationTree(features, groups), { topName: '最上層' });
-    expect(sections.map((x) => [x.id, x.path, x.depth, ids(x.features)])).toEqual([
+    expect(
+      sections.map((item2) => [item2.id, item2.path, item2.depth, ids(item2.features)]),
+    ).toEqual([
       ['', '最上層', 0, ['dashboard', 'extra']],
       ['work', 'AI 工作台', 0, ['chat', 'files']],
       ['system', '系統管理', 0, ['admin']],

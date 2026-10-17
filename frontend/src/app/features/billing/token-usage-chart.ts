@@ -188,7 +188,9 @@ export class TokenUsageChart {
       row.known += day.requestsWithUsage;
       map.set(day.modelId, row);
     }
-    return [...map.values()].sort((a, b) => b.input + b.output - a.input - a.output);
+    return [...map.values()].sort(
+      (first, second) => second.input + second.output - first.input - first.output,
+    );
   });
   readonly allTokens = computed(() =>
     this.models().reduce((sum, row) => sum + row.input + row.output, 0),
@@ -200,7 +202,7 @@ export class TokenUsageChart {
   readonly selectedModel = computed(() =>
     this.models().some((row) => row.id === this.model()) ? this.model() : 'all',
   );
-  /** A breakdown row filters the chart to its model; choosing it again shows every model. */
+  /** 明細列會把圖表篩選到其模型；再次選取則顯示所有模型。 */
   pick(id: string) {
     this.model.set(this.selectedModel() === id ? 'all' : id);
   }

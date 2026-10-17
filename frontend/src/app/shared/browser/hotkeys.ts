@@ -1,11 +1,11 @@
 import { DestroyRef, inject } from '@angular/core';
 
 /**
- * Normalizes a key press to a combo such as `mod+shift+l`, where `mod` is Ctrl or ⌘. Letters come
- * from the physical key, so macOS Option combinations still read as their letter.
+ * 把按鍵正規化為組合鍵，例如 `mod+shift+l`，其中 `mod` 是 Ctrl 或 ⌘。字母取自實體按鍵，
+ * 因此 macOS 的 Option 組合仍會被讀成其字母。
  */
 export function hotkey(event: KeyboardEvent) {
-  // Chrome autofill dispatches a bare `keydown` Event without `code` or `key`; it is no combo.
+  // Chrome 的自動填入會派送沒有 `code` 與 `key` 的裸 `keydown` 事件；它不是組合鍵。
   const { code = '', key: name = '' } = event as Partial<KeyboardEvent>;
   const key = code.startsWith('Key') ? code.slice(3) : name;
   if (!key) return '';
@@ -20,8 +20,8 @@ export function hotkey(event: KeyboardEvent) {
 }
 
 /**
- * Binds document shortcuts for the calling component's lifetime. A matched combo always cancels
- * the browser default, while held keys, IME composition and a false `enabled` skip the handler.
+ * 在呼叫元件的生命週期內綁定文件快捷鍵。符合的組合鍵一律會取消瀏覽器預設行為；
+ * 按住的鍵、IME 組字與 `enabled` 為 false 時則會略過處理器。
  */
 export function bindHotkeys(
   keys: Record<string, (event: KeyboardEvent) => void>,

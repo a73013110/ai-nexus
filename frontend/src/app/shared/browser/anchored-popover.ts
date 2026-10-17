@@ -1,13 +1,14 @@
 import { DestroyRef, inject, type Signal, signal } from '@angular/core';
 
 export interface AnchoredPopoverOptions {
-  /** The `popover` element; it may come and go with the view. */
+  /** `popover` 元素；它可能隨視圖出現或消失。 */
   panel: () => HTMLElement | undefined;
-  /** Places the open panel against its anchor, e.g. with `positionPopover`. */
+  /** 把開啟的面板對齊到其錨點，例如使用 `positionPopover`。 */
   place: (panel: HTMLElement) => void;
   /**
-   * Light dismiss for `popover="manual"`: a pointerdown outside `within` (the panel by default) or
-   * Escape anywhere calls this. Auto popovers get it from the browser.
+   * `popover="manual"` 的輕關閉：在 `within`（預設為面板）以外按下指標，或在任何地方按 Escape，
+   * 都會呼叫此函式。
+   * 自動 popover 則由瀏覽器處理。
    */
   dismiss?: () => void;
   within?: () => Node | undefined;
@@ -15,18 +16,17 @@ export interface AnchoredPopoverOptions {
 
 export interface AnchoredPopover {
   readonly opened: Signal<boolean>;
-  /** Shows and places the panel; `source` becomes its invoker for Tab order. */
+  /** 顯示並放置面板；`source` 成為它的 Tab 順序觸發者。 */
   show(source?: HTMLElement): void;
   hide(): void;
-  /** Bind to the panel's `(toggle)` so a native light dismiss updates `opened`. */
+  /** 綁定到面板的 `(toggle)`，讓原生的輕關閉能更新 `opened`。 */
   sync(event: Event): void;
   reposition(): void;
 }
 
 /**
- * A top-layer panel kept on its anchor: `opened` follows the panel, and while it is open the panel
- * is placed again on resize and on scroll anywhere (once per frame). Focus and keyboard rules stay
- * with the caller. Call it in an injection context; listeners end with the caller.
+ * 固定在錨點上的最上層面板：`opened` 跟隨面板，開啟期間在縮放與任何地方捲動時（每幀一次）會重新放置。
+ * 焦點與鍵盤規則仍由呼叫端決定。在 injection context 中呼叫；監聽器隨呼叫端結束。
  */
 export function anchoredPopover(options: AnchoredPopoverOptions): AnchoredPopover {
   const opened = signal(false);

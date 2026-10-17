@@ -17,7 +17,7 @@ import { Icon } from './icon';
 
 let sequence = 0;
 
-/** A modeless desktop inspector, becoming a native modal on narrow screens. */
+/** 桌面版的非模態檢視器；窄螢幕時變成原生模態。 */
 @Component({
   selector: 'nx-detail-drawer',
   imports: [Icon],
@@ -29,7 +29,7 @@ let sequence = 0;
     [class.is-wide]="wide()"
     [attr.aria-labelledby]="id + '-title'"
     [attr.aria-modal]="modal() ? 'true' : null"
-    (cancel)="$event.preventDefault(); close()"
+    (cancel)="onCancel($event)"
     (close)="didClose()"
   >
     <header class="ui-drawer-header">
@@ -72,13 +72,13 @@ export class DetailDrawer {
   readonly id = `nx-drawer-${++sequence}`;
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly body = viewChild.required<ElementRef<HTMLElement>>('body');
-  /** Narrower viewports get a modal drawer; wider ones keep the page usable beside it. */
+  /** 較窄的視口使用模態抽屜；較寬的則保留頁面可在其旁邊操作。 */
   private readonly narrow = mediaQuery(below('tablet'));
   private returnFocus: HTMLElement | null = null;
   private suppressedCloses = 0;
   private destroyed = false;
   constructor() {
-    // An open drawer reopens in the other form when the viewport crosses the breakpoint.
+    // 開啟中的抽屜在視口跨過斷點時，會以另一種形式重新開啟。
     let narrow = this.narrow();
     effect(() => {
       if (this.narrow() === narrow) return;
@@ -101,7 +101,7 @@ export class DetailDrawer {
         !this.dialog().nativeElement.open
       )
         return;
-      // The toaster's layer is always open and never owns Escape for the page.
+      // 提示的層永遠是開啟的，且從不為頁面持有 Escape。
       if (document.querySelector('dialog:modal, [popover]:popover-open:not(.toaster)')) return;
       event.preventDefault();
       this.close();
@@ -122,13 +122,17 @@ export class DetailDrawer {
     this.resetScroll();
   }
   private showNative() {
-    // Hosts may open the drawer from an effect; the viewport must not become its dependency.
+    // 宿主可能從 effect 開啟抽屜；視口不能成為它的依賴。
     const modal = untracked(this.narrow);
     this.modal.set(modal);
     modal ? this.dialog().nativeElement.showModal() : this.dialog().nativeElement.show();
   }
   resetScroll() {
     this.body().nativeElement.scrollTop = 0;
+  }
+  onCancel(event: Event) {
+    event.preventDefault();
+    this.close();
   }
   close() {
     this.dialog().nativeElement.close();
@@ -141,9 +145,9 @@ export class DetailDrawer {
     if (this.destroyed) return;
     if (this.returnFocus?.isConnected) this.returnFocus.focus({ preventScroll: true });
     this.returnFocus = null;
-    // Hosts clear the content on `closed`, so wait for the exit; reopening meanwhile cancels it.
+    // 宿主會在 `closed` 時清空內容，所以要等退場完成；這段期間重新開啟會取消它。
     const dialog = this.dialog().nativeElement;
-    void Promise.allSettled(dialog.getAnimations().map((x) => x.finished)).then(() => {
+    void Promise.allSettled(dialog.getAnimations().map((item) => item.finished)).then(() => {
       if (this.destroyed || dialog.open) return;
       this.wide.set(false);
       this.closed.emit();

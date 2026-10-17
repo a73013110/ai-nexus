@@ -54,7 +54,7 @@ export class AdminUsersTab {
   readonly session = inject(WorkspaceSession);
   readonly store = inject(AdministrationStore);
   private readonly api = inject(AdministrationApi);
-  /** The user open in the inspector, where the account, roles and policies are edited. */
+  /** 在檢視器中開啟的使用者，帳號、角色與政策都在那裡編輯。 */
   readonly selectedId = input<string | null>(null);
   readonly inspect = output<AdminUserDto>();
   private readonly userTable = viewChild<DataTable>('userTable');
@@ -76,7 +76,7 @@ export class AdminUsersTab {
       if (this.store.users()) this.userTable()?.resetScroll();
     });
   }
-  /** Only what the inspector does not hold: switching identity and removal. */
+  /** 只有檢視器沒有持有的部分：切換身分與移除。 */
   actions(user: AdminUserDto): MenuAction[] {
     const testing = this.session.testing();
     return [

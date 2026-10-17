@@ -24,12 +24,11 @@ import { RepositoryImportDialog } from '../handoff/repository-import-dialog';
 import { baseName } from './repository-language';
 import { RepositoryStore } from '../repository-store';
 
-/** Files a conversation can take at once; the server keeps the same limit. */
+/** 對話一次能接受的檔案數；伺服器的上限相同。 */
 const chatLimit = 20;
 
 /**
- * Folders and files at the pinned commit. Files can be picked across folders and handed to a new
- * conversation as one attachment; a folder can be imported into a knowledge collection.
+ * 釘選提交的資料夾與檔案。檔案可跨資料夾挑選，並以一個附件交給新對話；資料夾可以匯入知識庫集合。
  */
 @Component({
   selector: 'nx-repository-code',
@@ -188,7 +187,7 @@ export class RepositoryCode {
   readonly canImport = computed(() => this.session.has('knowledge'));
   readonly crumbs = computed(() => {
     const parts = (this.filePath() || this.folder()).split('/').filter(Boolean);
-    return parts.map((name, i) => ({ name, path: parts.slice(0, i + 1).join('/') }));
+    return parts.map((name, index) => ({ name, path: parts.slice(0, index + 1).join('/') }));
   });
   private readonly treeRead = apiResource({
     feature: 'repositories',
@@ -202,7 +201,7 @@ export class RepositoryCode {
       value: await this.api.tree(key, commit, path),
     }),
   });
-  /** The folder read last; it stays, dimmed, while the next one loads. */
+  /** 上次讀取的資料夾；下一個載入時它會保留並變暗。 */
   readonly tree = computed(() => this.treeRead.value()?.value ?? null);
   readonly treeStale = computed(
     () => this.treeRead.value()?.id !== `${this.store.commit()}:${this.folder()}`,
@@ -236,7 +235,7 @@ export class RepositoryCode {
   );
 
   constructor() {
-    // A pick belongs to one repository at one commit.
+    // 挑選只屬於同一個儲存庫的同一個提交。
     effect(() => {
       this.store.fullName();
       this.store.commit();
@@ -274,8 +273,8 @@ export class RepositoryCode {
           title: `${result.skipped.length} 個檔案沒有帶入`,
           description: '非文字或超過大小上限的檔案會略過：' + result.skipped.slice(0, 3).join('、'),
         });
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scope.message(e));
+    } catch (error2) {
+      if (valid()) this.actionError.set(this.scope.message(error2));
     } finally {
       if (valid()) this.busy.set(false);
     }

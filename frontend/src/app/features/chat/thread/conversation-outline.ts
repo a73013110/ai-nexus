@@ -19,9 +19,9 @@ import { Icon } from '@shared/ui/icon';
 import { anchoredPopover } from '@shared/browser/anchored-popover';
 import { positionSidePopover } from '@shared/browser/side-popover-position';
 
-/** How far below the viewport's top a prompt counts as the current turn. */
+/** 距離視口頂端多遠以內的提問，會被視為目前這一輪。 */
 const currentLine = 90;
-/** Reaches above any conversation, so every prompt scrolled past stays reported. */
+/** 延伸到任何對話之上，因此所有已捲過的提問都會被回報。 */
 const reach = 10_000_000;
 
 @Component({
@@ -45,7 +45,7 @@ const reach = 10_000_000;
         class="outline-count"
         [attr.aria-expanded]="expanded()"
         aria-label="開啟對話目錄"
-        (click)="expanded.update(toggle); preview.set(null)"
+        (click)="toggleExpanded()"
       >
         {{ active() + 1 }}<span>/{{ turns().length }}</span>
       </button>
@@ -83,7 +83,7 @@ const reach = 10_000_000;
               type="button"
               class="outline-entry"
               [class.is-current]="active() === i"
-              (click)="jump(i); close()"
+              (click)="jumpAndClose(i)"
             >
               <span>{{ i + 1 }}</span
               ><strong>{{ turn.prompt }}</strong>
@@ -97,7 +97,7 @@ const reach = 10_000_000;
             <span class="panel-eyebrow">第 {{ preview()! + 1 }} 輪</span
             ><strong>{{ turn.prompt }}</strong>
             <p>{{ excerpt(turn.answer) || '尚未有 AI 回覆' }}</p>
-            <button type="button" class="quiet-button" (click)="jump(preview()!); close()">
+            <button type="button" class="quiet-button" (click)="jumpAndClose(preview()!)">
               跳到這段對話 <nx-icon name="arrow" />
             </button>
           </div>
@@ -116,13 +116,13 @@ export class ConversationOutline {
   readonly toggle = (value: boolean) => !value;
   readonly turns = computed(() => {
     const rows = this.messages();
-    return rows.flatMap((message, i) =>
+    return rows.flatMap((message, index2) =>
       message.role === 'user'
         ? [
             {
               id: message.id,
               prompt: message.content,
-              answer: rows[i + 1]?.role === 'assistant' ? rows[i + 1].content : '',
+              answer: rows[index2 + 1]?.role === 'assistant' ? rows[index2 + 1].content : '',
             },
           ]
         : [],
@@ -147,7 +147,7 @@ export class ConversationOutline {
     within: () => this.element,
   });
   constructor() {
-    // Placed again against the hovered tick, or the count once the directory opens.
+    // 會依被 hover 的刻度重新定位，或在目錄展開後重新定位計數。
     effect((onCleanup) => {
       const panel = this.panel()?.nativeElement,
         root = this.viewport();
@@ -162,9 +162,9 @@ export class ConversationOutline {
       this.preview.set(null);
       this.expanded.set(false);
     });
-    // The current turn is the last prompt whose top has passed a line 90px below the viewport's top.
-    // An observer whose root reaches far above the viewport and ends at that line reports exactly
-    // those prompts, so scrolling reads no layout. Its margin follows the viewport's height.
+    // 目前這一輪是最後一則其頂端已越過視口頂端下方 90px 那條線的提問。
+    // 觀察者的 root 延伸到視口之上並止於那條線，因此只回報這些提問，捲動時不需要讀取版面。
+    // 它的 margin 隨視口高度而變。
     afterRenderEffect((onCleanup) => {
       const root = this.viewport();
       this.turns();
@@ -172,7 +172,7 @@ export class ConversationOutline {
         ? Array.from(root.querySelectorAll<HTMLElement>('nx-chat-message[data-role="user"]'))
         : [];
       if (!root || !prompts.length) return;
-      const order = new Map<Element, number>(prompts.map((node, i) => [node, i]));
+      const order = new Map<Element, number>(prompts.map((node, index3) => [node, index3]));
       const passed = new Set<number>();
       let observer: IntersectionObserver | undefined;
       let height = -1;
@@ -231,6 +231,14 @@ export class ConversationOutline {
     this.cancelLeave();
     this.preview.set(null);
     this.expanded.set(false);
+  }
+  toggleExpanded() {
+    this.expanded.update(this.toggle);
+    this.preview.set(null);
+  }
+  jumpAndClose(index: number) {
+    this.jump(index);
+    this.close();
   }
   jump(index: number) {
     const turn = this.turns()[index];

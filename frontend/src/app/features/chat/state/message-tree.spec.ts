@@ -32,13 +32,13 @@ describe('Conversation branch index', () => {
       message('follow-up', 'revised', 'user'),
       message('latest', 'follow-up'),
     ]);
-    expect(tree.branch('latest').map((x) => x.id)).toEqual([
+    expect(tree.branch('latest').map((item2) => item2.id)).toEqual([
       'question',
       'revised',
       'follow-up',
       'latest',
     ]);
-    expect(tree.branch('first').map((x) => x.id)).toEqual(['question', 'first']);
+    expect(tree.branch('first').map((item) => item.id)).toEqual(['question', 'first']);
     expect(tree.branch(null)).toEqual([]);
   });
 
@@ -52,7 +52,7 @@ describe('Conversation branch index', () => {
       message('next-question', 'revised', 'user'),
       message('next-answer', 'next-question'),
     ]);
-    expect(tree.versions(first).map((x) => x.id)).toEqual(['first', 'revised']);
+    expect(tree.versions(first).map((item) => item.id)).toEqual(['first', 'revised']);
     expect(tree.versionLeaf(first, 1)).toBe('next-answer');
     expect(tree.versionLeaf(revised, -1)).toBe('first');
     expect(tree.versionLeaf(first, -1)).toBeNull();
@@ -64,8 +64,8 @@ describe('Conversation branch index', () => {
       message('b', 'a', 'user'),
       message('orphan', 'missing'),
     ]);
-    expect(tree.branch('a').map((x) => x.id)).toEqual(['b', 'a']);
-    expect(tree.branch('orphan').map((x) => x.id)).toEqual(['orphan']);
+    expect(tree.branch('a').map((item) => item.id)).toEqual(['b', 'a']);
+    expect(tree.branch('orphan').map((item) => item.id)).toEqual(['orphan']);
     expect(tree.branch('missing')).toEqual([]);
   });
 });

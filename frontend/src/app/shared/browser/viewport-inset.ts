@@ -1,6 +1,6 @@
 import { Directive, ElementRef, afterRenderEffect, inject, input } from '@angular/core';
 
-/** Keep workspace height and overlay offsets aligned with a responsive global banner. */
+/** 讓工作區高度與覆蓋式位移，與響應式的全域橫幅保持一致。 */
 @Directive({ selector: '[nxViewportInset]' })
 export class ViewportInset {
   readonly property = input.required<'--global-issue-height' | '--identity-banner-height'>({

@@ -35,8 +35,8 @@ describe('priceCatalog', () => {
       current = price('p2', 'gemma', '2026-10-01T00:00:00Z'),
       old = price('p1', 'gemma', '2026-09-01T00:00:00Z');
     const { current: rows } = priceCatalog([old, scheduled, current], targets, now);
-    // Providers in a fixed order, then by name; every configured target has a row.
-    expect(rows.map((x) => x.name)).toEqual(['雲端助理', '本地助理', '網路搜尋']);
+    // 供應商依固定順序排列，再依名稱；每個已設定的目標都有一列。
+    expect(rows.map((item) => item.name)).toEqual(['雲端助理', '本地助理', '網路搜尋']);
     expect(rows[0].current?.id).toBe('p2');
     expect(rows[0].next?.id).toBe('p3');
     expect(rows[1].current).toBeNull();
@@ -53,7 +53,7 @@ describe('priceCatalog', () => {
       targets,
       now,
     );
-    expect(history.map((x) => [x.price.id, x.name, x.state.label])).toEqual([
+    expect(history.map((item2) => [item2.price.id, item2.name, item2.state.label])).toEqual([
       ['p3', '雲端助理', '已排定'],
       ['p2', '雲端助理', '適用中'],
       ['p1', '雲端助理', '已取代'],

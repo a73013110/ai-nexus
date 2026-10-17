@@ -99,7 +99,7 @@ export class TrendChart {
   readonly id = 'nx-trend-' + ++sequence;
   readonly Math = Math;
   readonly active = signal<number | null>(null);
-  readonly max = computed(() => Math.max(1e-8, ...this.points().map((x) => x.value)));
+  readonly max = computed(() => Math.max(1e-8, ...this.points().map((item) => item.value)));
   readonly selected = computed(() =>
     this.active() === null ? null : (this.points()[this.active()!] ?? null),
   );
@@ -111,7 +111,7 @@ export class TrendChart {
   }
   readonly line = computed(() =>
     this.points()
-      .map((x, i) => `${this.x(i)},${this.y(x.value)}`)
+      .map((item2, index2) => `${this.x(index2)},${this.y(item2.value)}`)
       .join(' '),
   );
   readonly area = computed(() =>

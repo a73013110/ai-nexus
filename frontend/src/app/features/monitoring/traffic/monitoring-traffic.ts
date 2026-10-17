@@ -12,7 +12,7 @@ const METRICS = [
   { value: 'bytes', label: 'HTTP 回應量', title: 'HTTP 回應量', unit: 'KB／秒' },
 ] as const;
 
-/** Traffic over the chosen window, one metric at a time. */
+/** 所選視窗內的流量，一次一個指標。 */
 @Component({
   selector: 'nx-monitoring-traffic',
   imports: [Panel, TrendChart, ViewSwitch],
@@ -62,20 +62,22 @@ export class MonitoringTraffic {
   private readonly store = inject(MonitoringStore);
   readonly metrics = METRICS;
   readonly metric = signal<string>('requests');
-  readonly current = computed(() => METRICS.find((m) => m.value === this.metric()) ?? METRICS[0]);
+  readonly current = computed(
+    () => METRICS.find((match) => match.value === this.metric()) ?? METRICS[0],
+  );
   readonly points = computed(() => {
     const metric = this.metric();
     const points: { label: string; value: number }[] = [];
-    for (const p of this.store.timeline()) {
+    for (const part of this.store.timeline()) {
       const value =
         metric === 'requests'
-          ? p.requestsPerSecond
+          ? part.requestsPerSecond
           : metric === 'p95'
-            ? p.p95Ms
+            ? part.p95Ms
             : metric === 'errors'
-              ? p.serverErrors
-              : p.sentBytes / 10 / 1000;
-      if (value !== null) points.push({ label: monitoringTime(p.at), value });
+              ? part.serverErrors
+              : part.sentBytes / 10 / 1000;
+      if (value !== null) points.push({ label: monitoringTime(part.at), value });
     }
     return points;
   });

@@ -25,7 +25,7 @@ describe('parseDiff', () => {
       deletions: 1,
     });
     expect(file.hunks[0].header).toBe('export class App {');
-    expect(file.hunks[0].lines.map((x) => [x.kind, x.old, x.new])).toEqual([
+    expect(file.hunks[0].lines.map((item2) => [item2.kind, item2.old, item2.new])).toEqual([
       ['ctx', 3, 3],
       ['del', 4, null],
       ['add', null, 4],
@@ -58,7 +58,7 @@ describe('parseDiff', () => {
         'Binary files a/logo.png and b/logo.png differ',
       ].join('\n'),
     );
-    expect(files.map((x) => [x.status, x.oldPath, x.path, x.binary])).toEqual([
+    expect(files.map((item3) => [item3.status, item3.oldPath, item3.path, item3.binary])).toEqual([
       ['added', 'new.md', 'new.md', false],
       ['deleted', 'gone.txt', 'gone.txt', false],
       ['renamed', 'old name.txt', 'new name.txt', false],
@@ -79,7 +79,7 @@ describe('parseDiff', () => {
       ].join('\n'),
     );
     expect(file.path).toBe('a.md');
-    expect(file.hunks[0].lines.map((x) => x.kind)).toEqual(['del', 'add']);
+    expect(file.hunks[0].lines.map((item) => item.kind)).toEqual(['del', 'add']);
   });
 
   it('decodes quoted non-ASCII paths', () => {

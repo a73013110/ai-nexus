@@ -8,10 +8,10 @@ const accessPaths = {
   artifact: '/api/v1/artifacts/{id}/access',
   evaluationSet: '/api/v1/quality/sets/{id}/access',
 } as const;
-/** Resource kinds whose members and groups are managed through the shared access dialog. */
+/** 成員與群組透過共用存取對話框管理的資源種類。 */
 export type SharedResourceKind = keyof typeof accessPaths;
 
-/** Shared access management for collections, projects, evaluation sets and saved artifacts. */
+/** 集合、專案、評估集與已保存成品的共用存取管理。 */
 @Injectable({ providedIn: 'root' })
 export class CollaborationApi {
   private readonly api = inject(ApiClient);

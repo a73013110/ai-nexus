@@ -1,4 +1,4 @@
-// Fixed public operation hints; kept in sync with PublicErrorCatalog.cs.
+// 固定的公開操作提示；與 PublicErrorCatalog.cs 保持同步。
 export const publicErrorHints: Readonly<Record<string, string>> = {
   attachment_limit: '附件數量超過單則訊息上限，或包含重複的附件。',
   https_required: '此工作區需要 HTTPS 安全連線。',

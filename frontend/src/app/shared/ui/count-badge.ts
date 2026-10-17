@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 
 export type BadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
 
-/** A decorative count by default; the parent control supplies its contextual accessible name. */
+/** 預設為裝飾性的計數；無障礙名稱由上層控制項提供脈絡。 */
 @Component({
   selector: 'nx-count-badge',
   changeDetection: ChangeDetectionStrategy.OnPush,

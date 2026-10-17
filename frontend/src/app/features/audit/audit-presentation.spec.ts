@@ -15,11 +15,11 @@ describe('audit presentation', () => {
     });
     const names = { [id]: '本地助理' };
     const changes = auditChanges(json, names);
-    expect(changes.find((x) => x.key === 'allowedModelIds')).toMatchObject({
+    expect(changes.find((item2) => item2.key === 'allowedModelIds')).toMatchObject({
       before: '本地助理',
       after: '已停用的模型',
     });
-    expect(changes.some((x) => x.label === '每日 token 上限 · 已停用的模型')).toBe(true);
+    expect(changes.some((item) => item.label === '每日 token 上限 · 已停用的模型')).toBe(true);
     const details = auditDetails(json, names);
     expect(details).toContain('本地助理');
     expect(details).not.toContain(id);
@@ -76,7 +76,7 @@ describe('audit presentation', () => {
         { [modelId]: '測試模型' },
       );
       expect(changes).toHaveLength(2);
-      expect(changes.find((x) => x.key.endsWith(modelId))).toMatchObject({
+      expect(changes.find((item3) => item3.key.endsWith(modelId))).toMatchObject({
         label: '每日 token 上限 · 測試模型',
         before: '100,000 tokens',
         after: '繼承設定',

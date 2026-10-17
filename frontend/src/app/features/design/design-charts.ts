@@ -13,7 +13,7 @@ function day(offset: number) {
 }
 const TREND = [4, 7, 5, 9, 6, 11, 8, 13, 10, 15, 12, 18];
 
-/** Data visualization used by the overview: counters, trends, distributions and day heat. */
+/** 總覽使用的資料視覺化：計數器、趨勢、分布與每日熱度。 */
 @Component({
   selector: 'nx-design-charts',
   imports: [
@@ -153,8 +153,8 @@ export class DesignCharts {
   readonly trend = TREND;
   readonly from = day(55);
   readonly through = day(0);
-  readonly heat = Array.from({ length: 56 }, (_, i) => ({
-    date: day(i),
-    value: i % 7 === 5 || i % 7 === 6 ? i % 3 : 4 + ((i * 7) % 11),
+  readonly heat = Array.from({ length: 56 }, (_, index) => ({
+    date: day(index),
+    value: index % 7 === 5 || index % 7 === 6 ? index % 3 : 4 + ((index * 7) % 11),
   }));
 }

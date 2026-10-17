@@ -103,7 +103,7 @@ export class QualityPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly scope = inject(ViewScope);
-  readonly id = toSignal(this.route.paramMap.pipe(map((p) => p.get('id'))), {
+  readonly id = toSignal(this.route.paramMap.pipe(map((part) => part.get('id'))), {
     initialValue: null,
   });
   private readonly setsRead = apiResource({ feature: 'quality', loader: () => this.api.sets() });
@@ -131,7 +131,7 @@ export class QualityPage {
     const value = this.runsRead.value();
     return value && value.id === this.id() ? value.rows : [];
   });
-  /** The run on screen: the linked one, then the newest, until the user picks another. */
+  /** 畫面上的執行：先是連結的那個，然後是最新的，直到使用者選了別的。 */
   private readonly runId = linkedSignal<{ id: string | null; runs: EvaluationRunDto[] }, string>({
     source: () => ({ id: this.id(), runs: this.runs() }),
     computation: (source, previous) =>
@@ -140,7 +140,7 @@ export class QualityPage {
       source.runs[0]?.id ??
       '',
   });
-  /** A queued or running evaluation is read again every 2 seconds. */
+  /** 排隊中或執行中的評估每 2 秒重新讀取一次。 */
   private readonly detailRead = apiResource({
     feature: 'quality',
     params: () => this.runId() || undefined,
@@ -174,21 +174,23 @@ export class QualityPage {
   readonly toast = inject(ToastService);
   readonly filter = signal('');
   readonly visible = computed(() =>
-    this.sets().filter((x) => x.resource.name.toLowerCase().includes(this.filter().toLowerCase())),
-  );
-  readonly visibleFeedback = computed(() =>
-    this.feedback().filter((x) =>
-      x.conversationTitle.toLowerCase().includes(this.filter().toLowerCase()),
+    this.sets().filter((item) =>
+      item.resource.name.toLowerCase().includes(this.filter().toLowerCase()),
     ),
   );
-  /** The open set's description with its size and version, under the page title. */
+  readonly visibleFeedback = computed(() =>
+    this.feedback().filter((item2) =>
+      item2.conversationTitle.toLowerCase().includes(this.filter().toLowerCase()),
+    ),
+  );
+  /** 頁面標題下方，已開啟集合的描述與其大小、版本。 */
   readonly summary = computed(() => {
     const set = this.current();
     if (!set) return '';
     const facts = `${set.cases.length} 題 · v${set.version}`;
     return set.description ? `${set.description} · ${facts}` : facts;
   });
-  /** The collection's tour for the open tab, or the open set's for what this viewer can do there. */
+  /** 目前分頁的集合導覽，或已開啟集合的導覽（依此檢視者在該處可做的事決定）。 */
   readonly tour = computed(() => {
     const resource = this.current()?.resource;
     return this.id()
@@ -238,19 +240,19 @@ export class QualityPage {
   readonly models = signal<ModelDto[]>([]);
   readonly policy = signal<ModelPolicyDto | null>(null);
   readonly modelOptions = computed(() =>
-    this.models().map((x) => ({ value: x.id, label: formatModelName(x) })),
+    this.models().map((item) => ({ value: item.id, label: formatModelName(item) })),
   );
   readonly score = signal('');
   readonly reviewNote = signal('');
   readonly scores = [
     { value: '', label: '未評分' },
-    ...[1, 2, 3, 4, 5].map((x) => ({ value: String(x), label: `${x} 分` })),
+    ...[1, 2, 3, 4, 5].map((pointX) => ({ value: String(pointX), label: `${pointX} 分` })),
   ];
   readonly runOptions = computed(() =>
-    this.runs().map((x) => ({
-      value: x.id,
-      label: `${this.date(x.createdAt)} · 題庫 v${x.setVersion}`,
-      description: x.job.stage,
+    this.runs().map((item3) => ({
+      value: item3.id,
+      label: `${this.date(item3.createdAt)} · 題庫 v${item3.setVersion}`,
+      description: item3.job.stage,
     })),
   );
   private editingId: string | null = null;
@@ -310,14 +312,14 @@ export class QualityPage {
     try {
       await this.api.remove(current.resource.id);
       if (!valid()) return;
-      // The page stays mounted across /quality and /quality/:id, so the list drops it here.
+      // 頁面在 /quality 與 /quality/:id 之間保持掛載，所以列表在這裡移除它。
       this.setsRead.value.update((all) =>
-        all?.filter((x) => x.resource.id !== current.resource.id),
+        all?.filter((item) => item.resource.id !== current.resource.id),
       );
       this.setsRead.reload();
       await this.router.navigate(['/quality']);
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scope.message(e));
+    } catch (error2) {
+      if (valid()) this.actionError.set(this.scope.message(error2));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -342,14 +344,14 @@ export class QualityPage {
     value: string,
   ) {
     this.cases.update((items) =>
-      items.map((item, i) =>
-        i === index
+      items.map((item, index2) =>
+        index2 === index
           ? {
               ...item,
               [field]: field.endsWith('Terms')
                 ? value
                     .split(/[,，\n]/)
-                    .map((x) => x.trim())
+                    .map((item) => item.trim())
                     .filter(Boolean)
                 : value,
             }
@@ -358,10 +360,11 @@ export class QualityPage {
     );
   }
   addCase() {
-    if (this.cases().length < 20) this.cases.update((x) => [...x, blankCase()]);
+    if (this.cases().length < 20) this.cases.update((items2) => [...items2, blankCase()]);
   }
-  removeCase(i: number) {
-    if (this.cases().length > 1) this.cases.update((x) => x.filter((_, n) => n !== i));
+  removeCase(index3: number) {
+    if (this.cases().length > 1)
+      this.cases.update((item) => item.filter((_, count) => count !== index3));
   }
   exportSet() {
     const value = this.current();
@@ -405,13 +408,15 @@ export class QualityPage {
         data.cases.length < 1 ||
         data.cases.length > 20 ||
         data.cases.some(
-          (x: EvaluationCase) =>
-            !x ||
-            typeof x.question !== 'string' ||
-            typeof x.reference !== 'string' ||
-            !Array.isArray(x.requiredTerms) ||
-            !Array.isArray(x.forbiddenTerms) ||
-            [...x.requiredTerms, ...x.forbiddenTerms].some((t) => typeof t !== 'string'),
+          (item4: EvaluationCase) =>
+            !item4 ||
+            typeof item4.question !== 'string' ||
+            typeof item4.reference !== 'string' ||
+            !Array.isArray(item4.requiredTerms) ||
+            !Array.isArray(item4.forbiddenTerms) ||
+            [...item4.requiredTerms, ...item4.forbiddenTerms].some(
+              (target2) => typeof target2 !== 'string',
+            ),
         )
       )
         throw new ClientValidationError('evaluationFormat');
@@ -419,8 +424,8 @@ export class QualityPage {
       this.name.set(data.name);
       this.description.set(data.description);
       this.cases.set(data.cases);
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scope.message(e));
+    } catch (error3) {
+      if (valid()) this.actionError.set(this.scope.message(error3));
     }
   }
   async openRun() {
@@ -449,28 +454,30 @@ export class QualityPage {
       ]);
       this.form.set('run');
       this.dialog().nativeElement.showModal();
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scope.message(e));
+    } catch (error4) {
+      if (valid()) this.actionError.set(this.scope.message(error4));
     } finally {
       if (valid()) this.busy.set(false);
     }
   }
-  variant(i: number, field: keyof VariantForm, value: string) {
-    this.variants.update((x) => x.map((item, n) => (i === n ? { ...item, [field]: value } : item)));
+  variant(index4: number, field: keyof VariantForm, value: string) {
+    this.variants.update((items3) =>
+      items3.map((item, count2) => (index4 === count2 ? { ...item, [field]: value } : item)),
+    );
   }
   addVariant() {
     if (this.variants().length < 3)
-      this.variants.update((x) => [
-        ...x,
+      this.variants.update((items4) => [
+        ...items4,
         {
-          label: `方案 ${String.fromCharCode(65 + x.length)}`,
+          label: `方案 ${String.fromCharCode(65 + items4.length)}`,
           modelId: this.policy()?.defaultModelId ?? this.models()[0]?.id ?? null,
           instruction: '',
         },
       ]);
   }
-  removeVariant(i: number) {
-    this.variants.update((x) => x.filter((_, n) => n !== i));
+  removeVariant(index5: number) {
+    this.variants.update((item) => item.filter((_, count3) => count3 !== index5));
   }
   close(event?: Event) {
     event?.preventDefault();
@@ -495,9 +502,9 @@ export class QualityPage {
         if (!valid()) return;
         this.dialog().nativeElement.close();
         this.currentRead.value.set(value);
-        this.setsRead.value.update((x) => [
+        this.setsRead.value.update((item5) => [
           value,
-          ...(x ?? []).filter((y) => y.resource.id !== value.resource.id),
+          ...(item5 ?? []).filter((item6) => item6.resource.id !== value.resource.id),
         ]);
         await this.router.navigate(['/quality', value.resource.id]);
         this.toast.success('題庫已儲存');
@@ -506,7 +513,7 @@ export class QualityPage {
         this.jobToasts.track(run.job);
         if (!valid()) return;
         this.dialog().nativeElement.close();
-        this.runsRead.value.update((x) => x && { ...x, rows: [run, ...x.rows] });
+        this.runsRead.value.update((item7) => item7 && { ...item7, rows: [run, ...item7.rows] });
         this.selectRun(run.id);
       } else if (this.form() === 'review') {
         const target = this.reviewTarget;
@@ -522,8 +529,8 @@ export class QualityPage {
         this.selectRun(target.run);
         this.toast.success('人工評分已儲存');
       }
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scope.message(e));
+    } catch (error5) {
+      if (valid()) this.actionError.set(this.scope.message(error5));
     } finally {
       if (valid()) this.busy.set(false);
     }
@@ -537,8 +544,10 @@ export class QualityPage {
     this.form.set('review');
     this.dialog().nativeElement.showModal();
   }
-  result(c: number, v: number) {
-    return this.detail()?.results.find((x) => x.caseIndex === c && x.variantIndex === v);
+  result(column: number, value2: number) {
+    return this.detail()?.results.find(
+      (item) => item.caseIndex === column && item.variantIndex === value2,
+    );
   }
   async control(retry: boolean) {
     const detail = this.detail(),
@@ -549,8 +558,8 @@ export class QualityPage {
       if (retry) this.jobToasts.track(await this.jobs.retry(detail.run.job.id));
       else await this.jobs.cancel(detail.run.job.id);
       if (valid()) this.selectRun(detail.run.id);
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scope.message(e));
+    } catch (error6) {
+      if (valid()) this.actionError.set(this.scope.message(error6));
     } finally {
       if (valid()) this.busy.set(false);
     }

@@ -23,7 +23,7 @@ import { highlightWhenVisible } from './code-highlighting';
   selector: 'nx-markdown-view',
   providers: [CopyFeedback],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  // Copy buttons inside the rendered Markdown are real buttons; the click is delegated.
+  // 已渲染 Markdown 中的複製按鈕是真正的按鈕；點擊由事件委派處理。
   template: `<!-- eslint-disable-next-line @angular-eslint/template/interactive-supports-focus, @angular-eslint/template/click-events-have-key-events -->
     <div #body class="markdown" [innerHTML]="html()" (click)="copyCode($event)"></div>
     @if (widgetError()) {

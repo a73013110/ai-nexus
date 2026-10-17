@@ -3,7 +3,7 @@ import { TrendChart } from '@shared/ui/trend-chart';
 import { chargeKind } from '@features/billing/billing-api';
 import { DashboardStore } from '../dashboard-store';
 
-/** Known spend per day in one currency and charge kind; kinds and currencies never add up. */
+/** 單一幣別與收費類型下，每天的已知花費；類型與幣別不會相加。 */
 @Component({
   selector: 'nx-spend-widget',
   imports: [TrendChart],
@@ -25,7 +25,7 @@ import { DashboardStore } from '../dashboard-store';
 export class SpendWidget {
   readonly store = inject(DashboardStore);
   readonly points = computed(() =>
-    this.store.spendDaily().map((x) => ({ label: x.date, value: x.value })),
+    this.store.spendDaily().map((item) => ({ label: item.date, value: item.value })),
   );
   readonly currency = computed(() => this.store.total()?.currency ?? '');
   readonly note = computed(() => {

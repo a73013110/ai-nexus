@@ -6,8 +6,8 @@ let highlighter: Promise<Highlighter | null> | null = null;
 let observer: IntersectionObserver | null | undefined;
 let flushing = false;
 const queue = new Set<HTMLElement>();
-// Remounts (stream → final answer, conversation switches) reapply colour before paint instead of
-// flashing plain text. null records a language without a grammar. ~2 MB of UTF-16 at most.
+// 重新掛載（串流轉最終回答、切換對話）時，會在繪製前重新套用顏色，而不是閃現純文字。
+// null 代表沒有文法的語言。最多約 2 MB 的 UTF-16。
 const highlighted = new LruCache<string, string | null>({
   maxEntries: 512,
   maxWeight: 1_000_000,
@@ -17,10 +17,9 @@ const cacheKey = (block: HTMLElement) =>
   `${block.dataset['language'] ?? ''}\n${block.textContent ?? ''}`;
 
 /**
- * Syntax colour is decoration: code first renders as escaped text, and only blocks near the
- * viewport are highlighted, in short slices, so long conversations open without parsing every
- * block; code highlighted before is coloured at once from the cache. Returns a cleanup for blocks
- * that are replaced before they were reached.
+ * 語法著色只是裝飾：程式碼先以跳脫後的文字渲染，只有接近視口的區塊才會以短片段上色，
+ * 因此長對話開啟時不需要解析每個區塊；先前上過色的程式碼會直接從快取上色。
+ * 回傳的清理函式，用於處理在抵達之前就被替換掉的區塊。
  */
 export function highlightWhenVisible(root: HTMLElement): () => void {
   const blocks = [...root.querySelectorAll<HTMLElement>('code[data-language]')];

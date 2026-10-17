@@ -24,14 +24,14 @@ export interface DiffFile {
 
 const hunkHeader = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@ ?(.*)$/;
 
-/** Splits a git unified diff into files, hunks and numbered lines. */
+/** 把 git 的 unified diff 拆成檔案、hunk 與帶行號的行。 */
 export function parseDiff(diff: string): DiffFile[] {
   const files: DiffFile[] = [];
   let file: DiffFile | null = null,
     hunk: DiffHunk | null = null,
     oldLine = 0,
     newLine = 0,
-    // Lines the hunk header promised; a blank line inside a hunk is context whose space was trimmed.
+    // hunk 標頭承諾的行數；hunk 內的空白行是被修剪掉空格的上下文行。
     oldLeft = 0,
     newLeft = 0;
   for (const raw of diff.split('\n')) {
@@ -111,7 +111,7 @@ function headerPaths(rest: string): [string, string] {
     const match = /^("(?:[^"\\]|\\.)*") ("(?:[^"\\]|\\.)*"|\S.*)$/.exec(rest);
     if (match) return [side(match[1]), side(match[2])];
   }
-  // `a/x b/x`: the same path twice, so the middle is found by length when names contain spaces.
+  // `a/x b/x`：同一路徑出現兩次，因此中間的部分要依長度找出，才能處理含空白的名稱。
   const half = (rest.length - 1) / 2;
   if (Number.isInteger(half) && rest.slice(2, half) === rest.slice(half + 3))
     return [rest.slice(2, half), rest.slice(half + 3)];
@@ -124,7 +124,7 @@ function side(value: string) {
   return /^[ab]\//.test(path) ? path.slice(2) : path;
 }
 
-/** Git quotes paths with special characters and writes non-ASCII bytes as octal escapes. */
+/** Git 會為含特殊字元的路徑加引號，並把非 ASCII 位元組寫成八進位跳脫。 */
 function unquote(value: string) {
   if (!value.startsWith('"') || !value.endsWith('"')) return value;
   const bytes: number[] = [];
@@ -140,19 +140,19 @@ function unquote(value: string) {
     r: 13,
     v: 11,
   };
-  for (let i = 0; i < body.length; i++) {
-    const char = body[i];
+  for (let index = 0; index < body.length; index++) {
+    const char = body[index];
     if (char !== '\\') {
       bytes.push(...new TextEncoder().encode(char));
       continue;
     }
-    const octal = /^[0-7]{3}/.exec(body.slice(i + 1));
+    const octal = /^[0-7]{3}/.exec(body.slice(index + 1));
     if (octal) {
       bytes.push(parseInt(octal[0], 8));
-      i += 3;
+      index += 3;
     } else {
-      bytes.push(escapes[body[i + 1]] ?? body.charCodeAt(i + 1));
-      i++;
+      bytes.push(escapes[body[index + 1]] ?? body.charCodeAt(index + 1));
+      index++;
     }
   }
   return new TextDecoder().decode(new Uint8Array(bytes));

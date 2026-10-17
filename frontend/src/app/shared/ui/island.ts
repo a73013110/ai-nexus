@@ -23,10 +23,10 @@ import { IssueCode } from './issue-code';
 export type IslandMode = 'hidden' | 'compact' | 'split' | 'expanded';
 
 /**
- * One morphing capsule for the notices registered with `IslandService`. A single notice is a
- * compact pill, two or more split off a bubble for the rest, and opening either expands every
- * notice with its action. Urgent notices expand on arrival until the person collapses them.
- * The capsule animates between measured sizes, so the morph works without `interpolate-size`.
+ * `IslandService` 登記的通知所形成的單一變形膠囊。只有一則通知時是精簡膠囊；兩則以上時，
+ * 其餘的會分到一個泡泡中。開啟任何一個，都會展開每則通知與其動作。緊急通知會在出現時展開，
+ * 直到使用者收合。
+ * 膠囊在量測過的尺寸之間做動畫，因此不需要 `interpolate-size` 也能變形。
  */
 @Component({
   selector: 'nx-island',
@@ -140,13 +140,13 @@ export class NexusIsland {
   readonly items = this.island.items;
   readonly primary = computed<IslandItem | null>(() => this.items()[0] ?? null);
   readonly rest = computed(() => this.items().slice(1));
-  /** Closes by itself once the island empties. */
+  /** 島清空後自行關閉。 */
   private readonly opened = linkedSignal({
     source: () => this.items().length > 0,
     computation: () => false,
   });
   private readonly ids = computed(() => this.items().map((item) => item.id));
-  /** Notices the person already collapsed; urgent ones expand again only after they reappear. */
+  /** 使用者已收合的通知；緊急的通知要重新出現後才會再次展開。 */
   private readonly seen = linkedSignal<readonly string[], ReadonlySet<string>>({
     source: this.ids,
     computation: (ids, previous) =>
@@ -154,7 +154,7 @@ export class NexusIsland {
   });
   readonly mode = computed<IslandMode>(() => {
     const items = this.items();
-    // Read even when empty, so notices that left are forgotten before they can return.
+    // 即使為空也要讀取，讓離開的通知在重新出現前就被遺忘。
     const seen = this.seen();
     if (!items.length) return 'hidden';
     if (this.opened() || items.some((item) => item.urgent && !seen.has(item.id))) return 'expanded';

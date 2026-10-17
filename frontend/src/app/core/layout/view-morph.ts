@@ -7,11 +7,10 @@ import {
 import { ThemeService } from '../preferences/theme-service';
 
 /**
- * Shared-element morphs with the View Transitions API. Static pairs are named in `motion.scss`
- * under `:root[data-morphing]`, so the names (and the stacking contexts they create) exist only
- * while a transition runs; one-off pairs are armed by the element they start from and land on the
- * element marked `data-morph="<name>"`. Without the API, or with reduced motion, updates apply
- * directly.
+ * 以 View Transitions API 做共享元素的 morph。靜態配對在 `motion.scss` 的
+ * `:root[data-morphing]` 下命名，
+ * 所以名稱（以及它們建立的堆疊脈絡）只在轉場進行時存在；一次性的配對由起點元素預先武裝，
+ * 並落在標有 `data-morph="<name>"` 的元素上。沒有該 API 或啟用了減少動態效果時，直接套用更新。
  */
 @Injectable({ providedIn: 'root' })
 export class ViewMorph {
@@ -23,7 +22,7 @@ export class ViewMorph {
   private kind: { name: string; origin?: { x: number; y: number } } | null = null;
   private settled: Promise<unknown> = Promise.resolve();
 
-  /** A morph is running; route transitions give way instead of cutting it short. */
+  /** 正在進行 morph；路由轉場會讓位，不會中途打斷它。 */
   get active() {
     return this.morphs > 0;
   }
@@ -33,25 +32,24 @@ export class ViewMorph {
   }
 
   /**
-   * The next transition (a route change or `run`) is choreographed as `name`: it is exposed as
-   * `:root[data-morph-kind]` while it runs, with `origin` (viewport pixels) as `--morph-x`,
-   * `--morph-y` and the radius `--morph-r` that reaches the farthest corner from it.
+   * 下一次轉場（路由切換或 `run`）會以 `name` 編排：執行中會暴露為 `:root[data-morph-kind]`，
+   * `origin`（視窗像素）是 `--morph-x` 與 `--morph-y`，半徑 `--morph-r` 則延伸到離它最遠的角落。
    */
   next(name: string, origin?: { x: number; y: number }) {
     this.kind = { name, origin };
   }
 
-  /** A transition is not going to run; the pending kind must not leak into a later one. */
+  /** 轉場不會執行時，清掉待處理的 kind，避免滲入之後的轉場。 */
   discard() {
     this.kind = null;
   }
 
-  /** Resolves once the `run` morphs started so far have finished. */
+  /** 目前為止開始的 `run` morph 結束後才會 resolve。 */
   whenSettled() {
     return this.settled;
   }
 
-  /** Marks the document while `transition` runs so the CSS names apply. */
+  /** 轉場期間標記文件，讓 CSS 的名稱生效。 */
   track(transition: ViewTransition) {
     const root = document.documentElement;
     const kind = this.kind;
@@ -61,14 +59,17 @@ export class ViewMorph {
     if (kind) {
       root.dataset['morphKind'] = kind.name;
       if (kind.origin) {
-        const { x, y } = kind.origin;
-        const reach = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
-        root.style.setProperty('--morph-x', `${x}px`);
-        root.style.setProperty('--morph-y', `${y}px`);
+        const { x: pointX, y: pointY } = kind.origin;
+        const reach = Math.hypot(
+          Math.max(pointX, innerWidth - pointX),
+          Math.max(pointY, innerHeight - pointY),
+        );
+        root.style.setProperty('--morph-x', `${pointX}px`);
+        root.style.setProperty('--morph-y', `${pointY}px`);
         root.style.setProperty('--morph-r', `${Math.ceil(reach)}px`);
       }
     }
-    // A newer transition skips this one; its promises then reject, which is expected.
+    // 較新的轉場會略過這一次；這次的 promise 會被 reject，屬預期行為。
     transition.ready.catch(() => undefined);
     return transition.finished
       .catch(() => undefined)
@@ -82,14 +83,14 @@ export class ViewMorph {
       });
   }
 
-  /** The next `run` for `name` starts from this element. */
+  /** 下一次針對 `name` 的 `run` 從這個元素開始。 */
   arm(name: string, element: HTMLElement) {
     this.armed = { name, element };
   }
 
   /**
-   * Applies `update` inside a view transition. With `name`, it only animates when an armed source
-   * for that name is still on the page; otherwise the update is applied at once.
+   * 在 view transition 中套用 `update`。帶 `name` 時，只有該名稱的起點仍在頁面上才會做動畫；
+   * 否則直接套用更新。
    */
   async run(update: () => void, name?: string) {
     const source = this.armed?.name === name ? this.armed?.element : null;
@@ -119,18 +120,19 @@ export class ViewMorph {
 }
 
 const reusedPage = (from: ActivatedRouteSnapshot, to: ActivatedRouteSnapshot) => {
-  let a: ActivatedRouteSnapshot | null = from;
-  let b: ActivatedRouteSnapshot | null = to;
-  while (a?.firstChild && b?.firstChild) [a, b] = [a.firstChild, b.firstChild];
-  return !!a?.routeConfig && a.routeConfig === b?.routeConfig;
+  let first: ActivatedRouteSnapshot | null = from;
+  let second: ActivatedRouteSnapshot | null = to;
+  while (first?.firstChild && second?.firstChild)
+    [first, second] = [first.firstChild, second.firstChild];
+  return !!first?.routeConfig && first.routeConfig === second?.routeConfig;
 };
 
 /**
- * Router view transitions: pages cross-fade while named elements (brand, navigation pill) morph.
- * Angular activates the new route one task later with this feature (also when skipped), so code
- * and tests that act right after a click wait for the URL instead of assuming it changed.
- * Skipped for reduced motion, while a `ViewMorph` runs, and when the page component is reused
- * (`/chat` ↔ `/chat/:id`), whose own state changes decide what morphs.
+ * 路由的 view transition：頁面交叉淡入，具名元素（品牌、導覽膠囊）則 morph。
+ * Angular 會在此功能啟用後延遲一個 task 才切換到新路由（略過時也一樣），
+ * 所以點擊後立刻操作的程式碼與測試，要等 URL 真的變了才繼續，而不是假設已經切換。
+ * 減少動態效果、`ViewMorph` 執行中，或頁面元件被重用（`/chat` ↔ `/chat/:id`）時會略過，
+ * 由頁面自己的狀態變化決定要 morph 什麼。
  */
 export const withNexusViewTransitions = () =>
   withViewTransitions({

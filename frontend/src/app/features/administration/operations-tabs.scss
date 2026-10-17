@@ -35,7 +35,8 @@
   font-size: var(--p-font-xs);
 }
 // On cards, tables of figures (`.ops-figures`) list them two to a row under the name instead of
-// one per line; the row's button keeps the top-right corner and `.ops-span` cells take the whole row.
+// one per line; the row's button keeps the top-right corner and `.ops-span` cells take
+// the whole row.
 @include bp.below(narrow) {
   .ops-figures.ui-table-stack tbody tr {
     position: relative;

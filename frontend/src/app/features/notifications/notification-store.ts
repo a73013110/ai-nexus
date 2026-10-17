@@ -20,7 +20,7 @@ export class NotificationStore {
   readonly error = signal('');
   readonly opened = signal(false);
   readonly unreadOnly = signal(false);
-  /** The center's tab: the server inbox or this tab's toast history. */
+  /** 通知中心的分頁：伺服器收件匣，或此分頁的提示歷史。 */
   readonly view = signal<'inbox' | 'session'>('inbox');
   private timer?: ReturnType<typeof setTimeout>;
   private controller?: AbortController;
@@ -97,19 +97,24 @@ export class NotificationStore {
         this.seen.add(item.id);
       }
       if (!more) {
-        this.latest = Math.max(this.latest, ...page.items.map((x) => Date.parse(x.createdAt)));
+        this.latest = Math.max(
+          this.latest,
+          ...page.items.map((item) => Date.parse(item.createdAt)),
+        );
         this.primed = true;
       }
       const preserve = poll && this.opened() && this.items().length > 50;
       const old = this.items();
-      const freshIds = new Set(page.items.map((x) => x.id));
+      const freshIds = new Set(page.items.map((item) => item.id));
       this.items.set(
         more
-          ? [...new Map([...old, ...page.items].map((x) => [x.id, x])).values()]
+          ? [...new Map([...old, ...page.items].map((item) => [item.id, item])).values()]
           : preserve
             ? [
                 ...page.items,
-                ...old.filter((x) => !freshIds.has(x.id) && (!this.unreadOnly() || !x.readAt)),
+                ...old.filter(
+                  (item) => !freshIds.has(item.id) && (!this.unreadOnly() || !item.readAt),
+                ),
               ]
             : page.items,
       );
@@ -123,7 +128,7 @@ export class NotificationStore {
       if (valid()) this.loading.set(false);
     }
   }
-  /** The bell that opened the center; the desktop popover anchors to it and returns focus there. */
+  /** 開啟通知中心的鈴鐺；桌面版 popover 會錨定於它並把焦點還給它。 */
   trigger: HTMLElement | null = null;
   open(trigger: HTMLElement | null = null) {
     this.trigger = trigger;
@@ -135,11 +140,11 @@ export class NotificationStore {
   }
   completed(id: string) {
     return this.items().some(
-      (x) =>
-        x.target.kind === 'conversation' &&
-        x.target.id === id &&
-        x.type === 'conversation.completed' &&
-        !x.readAt,
+      (item2) =>
+        item2.target.kind === 'conversation' &&
+        item2.target.id === id &&
+        item2.type === 'conversation.completed' &&
+        !item2.readAt,
     );
   }
   readConversation(id: string) {
@@ -153,16 +158,18 @@ export class NotificationStore {
     try {
       await this.api.read(item.id);
       if (owner !== this.owner || generation !== this.session.auth.generation()) return;
-      const unread = this.items().some((x) => x.id === item.id && !x.readAt);
+      const unread = this.items().some((item3) => item3.id === item.id && !item3.readAt);
       this.items.update((rows) =>
-        rows.map((x) => (x.id === item.id ? { ...x, readAt: new Date().toISOString() } : x)),
+        rows.map((item4) =>
+          item4.id === item.id ? { ...item4, readAt: new Date().toISOString() } : item4,
+        ),
       );
-      if (this.unreadOnly()) this.items.update((rows) => rows.filter((x) => !x.readAt));
+      if (this.unreadOnly()) this.items.update((rows) => rows.filter((item) => !item.readAt));
       if (unread) this.unread.update((value) => Math.max(0, value - 1));
-    } catch (e) {
+    } catch (error2) {
       if (owner === this.owner && generation === this.session.auth.generation())
-        this.error.set(safeMessage(e));
-      throw e;
+        this.error.set(safeMessage(error2));
+      throw error2;
     }
   }
   async activate(item: NotificationDto) {
@@ -184,8 +191,8 @@ export class NotificationStore {
     try {
       await this.api.readThrough(through);
       if (generation === this.session.auth.generation()) await this.refresh();
-    } catch (e) {
-      if (generation === this.session.auth.generation()) this.error.set(safeMessage(e));
+    } catch (error3) {
+      if (generation === this.session.auth.generation()) this.error.set(safeMessage(error3));
     }
   }
   async dismiss(item: NotificationDto) {
@@ -193,8 +200,8 @@ export class NotificationStore {
     try {
       await this.api.dismiss(item.id);
       if (generation === this.session.auth.generation()) await this.refresh();
-    } catch (e) {
-      if (generation === this.session.auth.generation()) this.error.set(safeMessage(e));
+    } catch (error4) {
+      if (generation === this.session.auth.generation()) this.error.set(safeMessage(error4));
     }
   }
   private browserNotify(item: NotificationDto) {
@@ -213,7 +220,7 @@ export class NotificationStore {
         notification.close();
       };
     } catch {
-      /* Some browsers only permit notifications through a service worker. In-app delivery remains available. */
+      /* 有些瀏覽器只允許 service worker 送出通知；應用內的通知仍可用。 */
     }
   }
 }

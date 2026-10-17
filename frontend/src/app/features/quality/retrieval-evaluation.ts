@@ -72,12 +72,12 @@ export class RetrievalEvaluation {
   readonly collections = computed<CollectionDto[]>(() => this.collectionsRead.value() ?? []);
   readonly selected = signal<string[]>([]);
   readonly runs = computed<RetrievalEvaluationDto[]>(() => this.runsRead.value() ?? []);
-  /** The report on screen: the newest run until the user picks another. */
+  /** 畫面上的報告：最新的執行，直到使用者選了別的。 */
   private readonly reportId = linkedSignal<RetrievalEvaluationDto[], string>({
     source: this.runs,
     computation: (runs, previous) => previous?.value || runs[0]?.id || '',
   });
-  /** A running evaluation is read again every 2 seconds. */
+  /** 執行中的評估每 2 秒重新讀取一次。 */
   private readonly reportRead = apiResource({
     feature: 'knowledge',
     params: () => this.reportId() || undefined,
@@ -128,14 +128,14 @@ export class RetrievalEvaluation {
     this.runsRead.reload();
   }
   options() {
-    return this.runs().map((x) => ({
-      value: x.id,
-      label: `${x.title} · ${this.date(x.createdAt)}`,
-      description: x.job.stage,
+    return this.runs().map((item2) => ({
+      value: item2.id,
+      label: `${item2.title} · ${this.date(item2.createdAt)}`,
+      description: item2.job.stage,
     }));
   }
   choose(id: string, checked: boolean) {
-    this.selected.update((ids) => (checked ? [...ids, id] : ids.filter((x) => x !== id)));
+    this.selected.update((ids) => (checked ? [...ids, id] : ids.filter((item) => item !== id)));
   }
   select(id: string) {
     this.actionError.set('');

@@ -3,9 +3,8 @@ import { SearchField } from './search-field';
 import { ViewSwitch, type ViewOption } from './view-switch';
 
 /**
- * A collection's index: one quiet toolbar (an optional segment filter, the feature's own tools and
- * a search) over a grid of cards. While loading it holds the grid's shape; when nothing matches it
- * shows the feature's `[gallery-empty]` content instead.
+ * 集合的索引：一列安靜的工具列（可選的分段篩選、功能自己的工具與搜尋），下方是卡片格狀排列。
+ * 載入中時保持格狀的形狀；沒有符合項目時，改顯示功能的 `[gallery-empty]` 內容。
  */
 @Component({
   selector: 'nx-resource-gallery',

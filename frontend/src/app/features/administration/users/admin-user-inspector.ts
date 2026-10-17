@@ -30,9 +30,9 @@ import { AdminUserSummary } from './admin-user-summary';
 import { UserConversationReader } from './user-conversation-reader';
 
 /**
- * One user's management centre: who they are and their last 30 days above tabs for the account,
- * roles, model policy, storage and an audited read-only view of their conversations. The shared
- * title bar names the dialog after the user; the summary and the tabs follow it.
+ * 單一使用者的管理中心：他是誰，以及其最近 30 天的資料；分頁包括帳號、
+ * 角色、模型政策、儲存空間，以及稽核過的唯讀對話檢視。共用的標題列以使用者名稱為對話框命名；
+ * 摘要與分頁隨之變化。
  * 標題列的上下筆只在列表目前這一頁內移動，離開前與切換頁籤一樣確認未儲存的變更；
  * 使用者 ID 與活動稽核反查放在摘要的關聯列。
  */
@@ -69,7 +69,7 @@ export class AdminUserInspector {
   readonly session = inject(WorkspaceSession);
   private readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
   private readonly confirmation = viewChild.required(ConfirmDialog);
-  /** Each settings tab saves on its own and marks its unsaved changes. */
+  /** 每個設定分頁各自儲存，並標示其未儲存的變更。 */
   readonly tabs = computed<readonly (TabItem & { value: UserTab })[]>(() => {
     const dirty = this.store.dirty();
     return [
@@ -92,22 +92,22 @@ export class AdminUserInspector {
       });
     });
   }
-  /** The content stays for the exit, then the user's details leave the page with it. */
+  /** 內容在退場期間保留，之後使用者的詳情才一併離開頁面。 */
   async closing() {
     this.closed.emit();
     const dialog = this.dialog().nativeElement;
     await new Promise((done) => requestAnimationFrame(done));
-    await Promise.allSettled(dialog.getAnimations({ subtree: true }).map((x) => x.finished));
+    await Promise.allSettled(dialog.getAnimations({ subtree: true }).map((item) => item.finished));
     if (!dialog.open) this.store.release();
   }
-  /** Leaving for the audit page: nothing is asked, the dialog simply goes. */
+  /** 離開前往稽核頁面：不會詢問，對話框直接關閉。 */
   close() {
     this.dialog().nativeElement.close();
   }
   async requestClose() {
     if (await this.mayLeave()) this.close();
   }
-  /** Escape, the close button and the sheet's swipe arrive here; unsaved changes are confirmed. */
+  /** Escape、關閉鈕與抽屜的滑動都會到這裡；未儲存的變更會先確認。 */
   cancel(event: Event) {
     event.preventDefault();
     void this.requestClose();
@@ -132,7 +132,7 @@ export class AdminUserInspector {
     if (tab === 'conversations' || !this.store.dirty()[tab]) return true;
     return this.confirmation().ask({
       title: '放棄未儲存的變更？',
-      message: `「${this.tabs().find((x) => x.value === tab)?.label}」的變更尚未儲存，離開後會恢復為已儲存的設定。`,
+      message: `「${this.tabs().find((item) => item.value === tab)?.label}」的變更尚未儲存，離開後會恢復為已儲存的設定。`,
       confirm: '放棄變更',
     });
   }

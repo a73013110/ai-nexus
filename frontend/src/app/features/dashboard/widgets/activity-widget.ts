@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { HeatmapCalendar } from '@shared/ui/heatmap-calendar';
 import { DashboardStore } from '../dashboard-store';
 
-/** Which days the period was busy, by model and tool calls. */
+/** 期間內哪些日子忙碌，依模型與工具呼叫計算。 */
 @Component({
   selector: 'nx-activity-widget',
   imports: [HeatmapCalendar],

@@ -4,9 +4,9 @@ import type { SelectOption } from '@shared/ui/select';
 let sequence = 0;
 
 /**
- * Reasoning effort as a section of the model panel. Narrow composers show it instead of a second
+ * 推理強度，作為模型面板中的一個區段。窄版輸入框改為顯示它，而不是第二個
  * select so the model name keeps the row; wide composers hide it and keep the 「思考強度」 select.
- * Enter is swallowed because on a radio it would submit the composer form.
+ * Enter 會被吞掉，因為在 radio 上它會送出輸入框的表單。
  */
 @Component({
   selector: 'nx-reasoning-choice',

@@ -1,4 +1,4 @@
-/** Fixed top-layer placement shared by selects and action menus. */
+/** 由選取器與動作選單共用的固定最上層定位。 */
 export function positionPopover(
   trigger: HTMLElement,
   panel: HTMLElement,
@@ -27,8 +27,8 @@ export function positionPopover(
 }
 
 /**
- * Opens to the right of a rail trigger, bottom-aligned with it, for menus on the icon rail.
- * `edge` is the x the panel clears, such as the rail's right edge; the trigger's by default.
+ * 在圖示欄的觸發器右側開啟，底部與其對齊，供圖示欄上的選單使用。
+ * `edge` 是面板要避開的 x 座標，例如圖示欄的右邊緣；預設為觸發器的右邊緣。
  */
 export function positionBesidePopover(
   trigger: HTMLElement,
@@ -50,16 +50,16 @@ export function positionBesidePopover(
 }
 
 /**
- * Records which side of its trigger the panel opened on and grows it from the trigger, for the
- * shared `.popover-panel` motion (styles/popovers.scss). The point is clamped to the panel.
+ * 記錄面板在觸發器哪一側開啟，並從觸發器處展開，供共用的 `.popover-panel`
+ * 動效使用（styles/popovers.scss）。定位點會被夾在面板之內。
  */
 export function setPopoverOrigin(
   panel: HTMLElement,
   side: 'top' | 'right' | 'bottom' | 'left',
-  x: number,
-  y: number,
+  pointX: number,
+  pointY: number,
 ) {
   const { offsetWidth: width, offsetHeight: height } = panel;
   panel.dataset['side'] = side;
-  panel.style.transformOrigin = `${Math.max(0, Math.min(x, width))}px ${Math.max(0, Math.min(y, height))}px`;
+  panel.style.transformOrigin = `${Math.max(0, Math.min(pointX, width))}px ${Math.max(0, Math.min(pointY, height))}px`;
 }

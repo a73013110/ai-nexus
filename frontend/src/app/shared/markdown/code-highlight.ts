@@ -16,7 +16,7 @@ import powershell from 'highlight.js/lib/languages/powershell';
 import ini from 'highlight.js/lib/languages/ini';
 import diff from 'highlight.js/lib/languages/diff';
 
-// Grammars register their aliases too (ts, cs, sh, html, yml, py, ps1, toml, patch).
+// 文法也會登記它們的別名（ts、cs、sh、html、yml、py、ps1、toml、patch）。
 for (const [name, language] of Object.entries({
   typescript,
   javascript,
@@ -36,11 +36,11 @@ for (const [name, language] of Object.entries({
 }))
   hljs.registerLanguage(name, language);
 
-/** Loaded on demand; returns null for languages without a registered grammar. */
+/** 按需載入；沒有登記文法的語言回傳 null。 */
 export function highlightCode(language: string, source: string): string | null {
   if (!hljs.getLanguage(language)) return null;
   const html = hljs.highlight(source, { language, ignoreIllegals: true }).value;
-  // highlight.js escapes the source; the allowlist keeps the token spans and nothing else.
+  // highlight.js 會跳脫原始碼；白名單只保留 token 的 span，其他一律移除。
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS: ['span'],
     ALLOWED_ATTR: ['class'],

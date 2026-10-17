@@ -2,13 +2,13 @@ import { Injectable, inject } from '@angular/core';
 import type { AttachmentDto } from '../api/schema';
 import { AuthService } from '../auth/auth-service';
 
-/** The prompt and attachments a feature prepared for a new conversation. */
+/** 功能為新對話準備的提示與附件。 */
 export interface TransferredDraft {
   text: string;
   attachments: AttachmentDto[];
 }
 
-/** One-time, account-bound handoff. Private text is kept out of URLs and history state. */
+/** 一次性、綁定帳號的交接；私人文字不放進 URL 與歷史狀態。 */
 @Injectable({ providedIn: 'root' })
 export class ConversationDraftTransfer {
   private readonly auth = inject(AuthService);

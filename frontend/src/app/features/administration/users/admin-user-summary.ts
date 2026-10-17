@@ -7,7 +7,7 @@ import { AdminUserStore } from './admin-user-store';
 import { signInMethods } from './user-account-fields';
 
 /**
- * How the user signs in, their roles and their last 30 days, between the inspector's title bar
+ * 使用者的登入方式、角色與最近 30 天，位於檢視器標題列與分頁之間。
  * (name, status, account) and its tabs. 投影的內容是關聯（可複製的 ID、跨功能反查）。
  */
 @Component({

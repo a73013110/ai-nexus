@@ -31,7 +31,7 @@ interface Thread {
   base: string;
 }
 
-/** One issue or pull request with its discussion; a pull request can go to AI review. */
+/** 單一議題或拉取請求與其討論；拉取請求可送交 AI 審查。 */
 @Component({
   selector: 'nx-repository-thread',
   imports: [RouterLink, Icon, MarkdownView, Notice, RepositoryReviewDialog],
@@ -235,8 +235,8 @@ export class RepositoryThread {
         },
         valid,
       );
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scope.message(e));
+    } catch (error2) {
+      if (valid()) this.actionError.set(this.scope.message(error2));
     } finally {
       if (valid()) this.busy.set(false);
     }

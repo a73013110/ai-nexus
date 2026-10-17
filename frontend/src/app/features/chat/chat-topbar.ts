@@ -15,7 +15,7 @@ import {
 import { ChatConversations } from './state/chat-conversations';
 import { ChatStore } from './chat-store';
 
-/** The open conversation's title and actions; generation status lives in the composer island. */
+/** 開啟中對話的標題與動作；生成狀態則在輸入框的島中。 */
 @Component({
   selector: 'header[nxChatTopbar]',
   imports: [
@@ -37,7 +37,7 @@ export class ChatTopbar {
   private readonly router = inject(Router);
   readonly tour = input.required<ProductTourDefinition>();
   readonly action = output<ConversationAction>();
-  /** Phones keep the menu button, the title, one overflow menu and the tour. */
+  /** 手機保留選單按鈕、標題、一個溢出選單與導覽。 */
   readonly compact = mediaQuery(below('phone'));
   choose(action: ConversationAction, spend: ConversationSpendView) {
     const projectId = this.store.selected()?.projectId;

@@ -3,12 +3,12 @@ import { apiResource } from '@core/api/api-resource';
 import { ViewScope } from '@shared/browser/view-scope';
 import { AttachmentsApi } from './attachments-api';
 
-/** Bounded server-side browsing, shared by the library and file chooser. */
+/** 有上限的伺服器端瀏覽，由檔案庫與檔案選擇器共用。 */
 @Injectable()
 export class FileLibraryStore {
   private readonly api = inject(AttachmentsApi);
   private readonly scope = inject(ViewScope);
-  /** The chooser reads nothing until it is first opened. */
+  /** 選擇器在第一次開啟前不讀取任何東西。 */
   private readonly active = signal(false);
   readonly search = signal('');
   private readonly query = signal('');
@@ -38,7 +38,7 @@ export class FileLibraryStore {
   readonly pageIndex = computed(() => Math.floor(this.offset() / this.pageSize));
   /** 超過一頁才顯示分頁；已翻到後面的頁時即使總數變少也保留，才能回到前面。 */
   readonly paged = computed(() => this.total() > this.pageSize || this.offset() > 0);
-  /** Start reading, or read again after a change elsewhere. */
+  /** 開始讀取，或在其他地方變更後重新讀取。 */
   load() {
     if (this.active()) this.result.reload();
     else this.active.set(true);

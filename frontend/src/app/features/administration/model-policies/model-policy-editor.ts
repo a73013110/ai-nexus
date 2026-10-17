@@ -33,8 +33,8 @@ export function modelPolicyRequest(draft: ModelPolicyDraft): ModelPolicyRequest 
   }
   return { allowedModelIds: draft.restricted ? draft.modelIds : null, dailyTokenLimits: limits };
 }
-/** Token limits left blank mean "inherit", so a blank and a missing limit are the same policy. */
-export function sameModelPolicy(a: ModelPolicyDraft, b: ModelPolicyDraft) {
+/** 留白的 token 上限代表「繼承」，因此留白與缺少上限是同一個政策。 */
+export function sameModelPolicy(first: ModelPolicyDraft, second: ModelPolicyDraft) {
   const ids = (draft: ModelPolicyDraft) => [...draft.modelIds].sort().join('\n');
   const limits = (draft: ModelPolicyDraft) =>
     Object.entries(draft.tokenLimits)
@@ -43,7 +43,9 @@ export function sameModelPolicy(a: ModelPolicyDraft, b: ModelPolicyDraft) {
       .sort()
       .join('\n');
   return (
-    a.restricted === b.restricted && (!a.restricted || ids(a) === ids(b)) && limits(a) === limits(b)
+    first.restricted === second.restricted &&
+    (!first.restricted || ids(first) === ids(second)) &&
+    limits(first) === limits(second)
   );
 }
 

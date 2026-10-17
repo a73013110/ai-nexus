@@ -39,8 +39,8 @@ import { ConversationFind } from './thread/conversation-find';
 import { conversationMarkdown } from './conversation-markdown';
 
 /**
- * The chat page: it opens the routed conversation and routes commands, shortcuts and menu actions
- * to the topbar, thread, composer and dialogs that carry them out.
+ * 聊天頁：開啟路由中的對話，並把指令、快捷鍵與選單動作
+ * 送到負責執行它們的頂部列、對話串、輸入框與對話框。
  */
 @Component({
   selector: 'nx-chat-workspace',

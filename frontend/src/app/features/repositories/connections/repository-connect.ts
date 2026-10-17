@@ -14,7 +14,7 @@ import { Icon } from '@shared/ui/icon';
 import { Notice } from '@shared/ui/notice';
 import { RepositoriesApi } from '../repositories-api';
 
-/** Connecting (or re-authorizing) the user's own Gitea token, in three short steps. */
+/** 以三個簡短步驟連接（或重新授權）使用者自己的 Gitea token。 */
 @Component({
   selector: 'nx-repository-connect',
   imports: [Field, Icon, Notice],
@@ -123,8 +123,8 @@ export class RepositoryConnect {
     try {
       const status = await this.api.connect(token);
       if (valid()) this.connected.emit(status);
-    } catch (e) {
-      if (valid()) this.error.set(this.scope.message(e));
+    } catch (error2) {
+      if (valid()) this.error.set(this.scope.message(error2));
     } finally {
       if (valid()) this.busy.set(false);
     }

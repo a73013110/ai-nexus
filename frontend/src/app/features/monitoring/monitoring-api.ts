@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { ApiClient } from '@core/api/api-client';
 
-/** Live runtime snapshots and their export for the monitoring console. */
+/** 監控主控台的即時執行環境快照與其匯出。 */
 @Injectable({ providedIn: 'root' })
 export class MonitoringApi {
   private readonly api = inject(ApiClient);

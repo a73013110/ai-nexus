@@ -39,7 +39,7 @@ export class IntegrationsPage {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly transfer = inject(ConversationDraftTransfer);
-  /** Source and record named by the link that opened the page. */
+  /** 開啟此頁時連結指定的來源與紀錄。 */
   private readonly linked = {
     source: this.route.snapshot.queryParamMap.get('source'),
     record: this.route.snapshot.queryParamMap.get('record'),
@@ -49,17 +49,17 @@ export class IntegrationsPage {
     loader: () => this.api.list(),
   });
   readonly sources = computed<SourceDto[]>(() => this.sourcesRead.value() ?? []);
-  /** The linked source, else the first one, until the user picks another. */
+  /** 連結指定的來源；沒有則為第一個，直到使用者選了別的。 */
   readonly current = linkedSignal<SourceDto[], SourceDto | null>({
     source: this.sources,
     computation: (sources, previous) =>
-      sources.find((x) => x.id === (previous?.value?.id ?? this.linked.source)) ??
+      sources.find((item) => item.id === (previous?.value?.id ?? this.linked.source)) ??
       sources[0] ??
       null,
   });
   readonly query = signal('');
   readonly kind = signal('all');
-  /** The search last submitted; results belong to it and its source. */
+  /** 最後送出的搜尋；結果屬於它與它的來源。 */
   private readonly submitted = signal<{ source: string; query: string; kind: string } | null>(null);
   private readonly rowsRead = apiResource({
     feature: 'integrations',
@@ -76,13 +76,13 @@ export class IntegrationsPage {
   readonly rows = computed<SourceRecordDto[]>(() => this.results() ?? []);
   readonly searched = computed(() => this.results() !== null);
   readonly searching = this.rowsRead.loading;
-  /** The record on screen: the linked one, a single search hit, or the one the user opened. */
+  /** 畫面上的紀錄：連結指定的、單一搜尋命中，或使用者開啟的那一筆。 */
   private readonly record = linkedSignal<SourceRecordDto[] | null, string | null>({
     source: this.results,
     computation: (rows, previous) =>
       !previous ? this.linked.record : rows?.length === 1 ? rows[0].id : null,
   });
-  /** The open record is checked again every 30 seconds while the tab is visible. */
+  /** 分頁可見時，已開啟的紀錄每 30 秒重新檢查一次。 */
   private readonly detailRead = apiResource({
     feature: 'integrations',
     params: () => {
@@ -110,7 +110,7 @@ export class IntegrationsPage {
   );
   readonly kindOptions = computed(() => [
     { value: 'all', label: '全部類型' },
-    ...(this.current()?.kinds ?? []).map((x) => ({ value: x, label: this.label(x) })),
+    ...(this.current()?.kinds ?? []).map((item) => ({ value: item, label: this.label(item) })),
   ]);
   private revision = 0;
   private guard() {
@@ -159,8 +159,8 @@ export class IntegrationsPage {
           await this.router.navigate(['/chat', next.conversation.id]);
         }
       }
-    } catch (e) {
-      if (valid()) this.actionError.set(this.scope.message(e));
+    } catch (error2) {
+      if (valid()) this.actionError.set(this.scope.message(error2));
     } finally {
       if (valid()) this.busy.set(false);
     }

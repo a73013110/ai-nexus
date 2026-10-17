@@ -28,9 +28,9 @@ import { ChatModels } from './state/chat-models';
 import { ChatRun } from './state/chat-run';
 
 /**
- * Orchestrates the chat page: bootstrap, conversation selection and submission. State with its
- * own lifecycle lives in ChatModels, ChatRun, ChatDraft and ChatHistory; the aliases below keep
- * one surface for templates.
+ * 協調聊天頁：啟動、選取對話與送出。有自己生命週期的狀態放在 ChatModels、ChatRun、ChatDraft 與
+ * ChatHistory，
+ * 下方的別名讓範本只需面對同一組介面。
  */
 @Injectable({ providedIn: 'root' })
 export class ChatStore {
@@ -61,7 +61,7 @@ export class ChatStore {
   readonly webSearchStatus = this.model.webSearchStatus;
   readonly modelNotice = this.model.notice;
   readonly contextUsage = signal<ContextUsageDto | null>(null);
-  /** A newer estimate is on its way; contextUsage still holds the last one. */
+  /** 較新的用量估算正在路上；`contextUsage` 仍保留上一筆。 */
   readonly contextPending = signal(false);
   readonly contextNotice = signal<string | null>(null);
   readonly hasChatAccess = computed(() => this.session.has('chat'));
@@ -87,14 +87,14 @@ export class ChatStore {
   readonly draft = this.composer.content;
   readonly tree = computed(() => new MessageTree(this.messages()));
   readonly visionNotice = computed(() =>
-    this.attachments.files().some((x) => x.isImage) && !this.model.current()?.supportsImages
+    this.attachments.files().some((item) => item.isImage) && !this.model.current()?.supportsImages
       ? '目前模型不支援圖片，請切換模型或移除圖片。'
       : '',
   );
   readonly busy = computed(
     () => this.submitting() || this.liveRun() !== null || this.pendingSubmission(),
   );
-  /** The page or conversation is still loading, or the conversation is archived. */
+  /** 頁面或對話還在載入，或對話已封存。 */
   readonly conversationLocked = computed(
     () => this.loading() || this.loadingConversation() || !!this.selected()?.isArchived,
   );
@@ -106,7 +106,7 @@ export class ChatStore {
       !!this.modelId() &&
       !this.conversationLocked() &&
       !this.attachments.uploading() &&
-      !this.attachments.files().some((x) => x.analysisMode === 'ocr-required') &&
+      !this.attachments.files().some((item) => item.analysisMode === 'ocr-required') &&
       !this.knowledge.saving() &&
       !this.knowledge.loadFailed() &&
       !this.visionNotice() &&
@@ -122,7 +122,7 @@ export class ChatStore {
       !this.attachments.uploading() &&
       !!this.attachments.policy(),
   );
-  /** The prompt being submitted, shown at once until the server's copy arrives. */
+  /** 送出中的提問，在伺服器的版本抵達前先立即顯示。 */
   private readonly prompt = signal<MessageDto | null>(null);
   readonly visibleMessages = computed(() => {
     const prompt = this.prompt();
@@ -130,7 +130,7 @@ export class ChatStore {
       ? [...this.tree().branch(prompt.parentId), prompt]
       : this.tree().branch(this.selected()?.activeLeafId);
   });
-  /** No conversation content yet, so the page shows its start screen. */
+  /** 目前沒有對話內容，頁面會顯示起始畫面。 */
   readonly starting = computed(() => !this.visibleMessages().length && !this.loadingConversation());
   private unsent: { text: string; editing: MessageDto | null; files: AttachmentDto[] } | null =
     null;
@@ -145,8 +145,8 @@ export class ChatStore {
   private preferenceWrite: Promise<void> = Promise.resolve();
   private preferenceVersion = 0;
   private authGeneration = -1;
-  // Saving waits for the session's stored draft; a slow start must not overwrite it with an empty one.
-  // The owner is kept here because the shared session forgets the account before this store resets.
+  // 儲存要等工作階段的草稿讀取完成；啟動太慢時，不可以用空白草稿覆寫它。
+  // 擁有者保存在此處，因為共用工作階段在此 store 重設前就會忘記帳號。
   private draftOwner: string | null = null;
 
   constructor() {
@@ -197,7 +197,7 @@ export class ChatStore {
     this.loading.set(true);
     this.error.set(null);
     try {
-      // Account and settings load together; the account is always fresh here for its active run.
+      // 帳號與設定一起載入；這裡的帳號對進行中的執行是最新的。
       const me = await this.session.load(true);
       if (!me || !current()) return;
       this.themes.apply({
@@ -210,7 +210,7 @@ export class ChatStore {
         this.error.set('你的角色目前沒有對話功能，請聯絡管理員。');
         return;
       }
-      // Optional services never block the composer, so they start alongside models and history.
+      // 選用服務不會阻擋輸入框，所以與模型與歷史一起啟動。
       const extensions = Promise.allSettled([
         this.attachments.initialize(),
         this.history.reloadLabels(),
@@ -263,7 +263,7 @@ export class ChatStore {
 
   async select(id: string | null, force = false) {
     if (id && id === this.selected()?.id && !force) return;
-    // Initial route resolution must preserve text entered while bootstrap is still loading.
+    // 啟動期間輸入的文字，在初始路由解析時必須保留。
     if (!id && !this.selected() && this.messages().length === 0 && !this.loadingConversation()) {
       this.loadingConversation.set(false);
       return;
@@ -353,7 +353,7 @@ export class ChatStore {
     if (this.pending && !this.submitting()) await this.whileSubmitting(() => this.submitPending());
   }
 
-  /** Holds `submitting` while work runs; a failure in the same account keeps or returns the prompt. */
+  /** 工作執行時維持 `submitting`；同一帳號的失敗會保留或退回提問。 */
   private async whileSubmitting(work: (current: () => boolean) => Promise<void>) {
     const current = this.auth.guard();
     this.submitting.set(true);
@@ -407,15 +407,14 @@ export class ChatStore {
   }
 
   /**
-   * Updates one history row from a fresh copy instead of reloading the list. A search is matched by
-   * the server, so it still reloads.
+   * 以新的副本更新單一歷史列，而不重新讀取列表。搜尋由伺服器比對，所以仍會重讀。
    */
   private async showInHistory(conversation: ConversationDto) {
     if (this.search()) await this.refreshHistory();
     else this.history.place(conversation);
   }
 
-  /** A network failure keeps the prompt for retry; any other failure returns it to the composer. */
+  /** 網路失敗會保留提問以便重試；其他失敗則退回輸入框。 */
   private submissionError(error: unknown) {
     this.report(error);
     this.pendingSubmission.set(!!this.pending && error instanceof ApiError && error.status === 0);
@@ -456,7 +455,7 @@ export class ChatStore {
     this.attachments.reset();
   }
 
-  /** The server's copy of the open conversation replaces any prompt shown ahead of it. */
+  /** 伺服器上開啟對話的版本，會取代排在前面的提問顯示。 */
   private adopt(detail: { conversation: unknown; messages: unknown }) {
     this.selected.set(detail.conversation as ConversationDto);
     this.messages.set(detail.messages as MessageDto[]);
@@ -560,7 +559,7 @@ export class ChatStore {
       conversation = detail.conversation as ConversationDto;
     }
     this.run.settle(run);
-    // Another conversation's run has no fresh copy here, so its row needs the server's list.
+    // 其他對話的執行在這裡沒有新副本，所以它的列需要伺服器的列表。
     await (conversation ? this.showInHistory(conversation) : this.refreshHistory());
     if (current()) await this.notifications.refresh();
   }
@@ -593,7 +592,9 @@ export class ChatStore {
 
   rateMessage(value: { id: string; rating: number }) {
     this.messages.update((items) =>
-      items.map((x) => (x.id === value.id ? { ...x, feedbackRating: value.rating } : x)),
+      items.map((item2) =>
+        item2.id === value.id ? { ...item2, feedbackRating: value.rating } : item2,
+      ),
     );
   }
 

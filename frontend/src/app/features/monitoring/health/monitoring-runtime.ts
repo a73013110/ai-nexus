@@ -10,15 +10,15 @@ import { Sparkline } from '@shared/ui/sparkline';
 import { MonitoringStore } from '../monitoring-store';
 
 const known = (values: readonly (number | null)[]) =>
-  values.filter((v): v is number => v !== null && Number.isFinite(v));
+  values.filter((value2): value2 is number => value2 !== null && Number.isFinite(value2));
 const megabytes = (value: number) => formatNumber(Math.round(value / 1e6));
 const percent = (value: number) => metricText(value, 'percent').replace('%', '');
 const count = (value: number) => formatNumber(Math.round(value));
 
 /**
- * The .NET process behind the page: memory against the limit the GC sees, the managed heap, the
- * thread pool's queue and time paused for garbage collection, then the counters behind them.
- * Phones fold it away; the vital signs above already carry CPU and memory.
+ * 此頁面背後的 .NET 程序：GC 看到的記憶體與上限、受管理的堆積、
+ * 執行緒池的佇列與為垃圾回收而暫停的時間，以及它們背後的計數器。
+ * 手機會把它收起來；上方的生命指標已經包含 CPU 與記憶體。
  */
 @Component({
   selector: 'nx-monitoring-runtime',
@@ -102,9 +102,9 @@ export class MonitoringRuntime {
   private readonly series = computed(() => {
     const points = this.store.resourceTimeline();
     return {
-      heap: known(points.map((p) => p.managedHeapBytes)),
-      queue: known(points.map((p) => p.threadPoolQueueLength)),
-      gc: known(points.map((p) => p.gcPausePercent)),
+      heap: known(points.map((part) => part.managedHeapBytes)),
+      queue: known(points.map((part2) => part2.threadPoolQueueLength)),
+      gc: known(points.map((part3) => part3.gcPausePercent)),
     };
   });
   private readonly alerts = computed(
