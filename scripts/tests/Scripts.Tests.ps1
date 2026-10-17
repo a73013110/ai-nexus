@@ -20,7 +20,7 @@ Describe 'scripts/ entry list' {
         $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
         $names = @(Get-ChildItem -LiteralPath (Join-Path $root 'scripts') -Filter '*.ps1').BaseName | Sort-Object
         $names | Should -Be (@(
-            'Build', 'Configure-Local', 'Export-Contracts', 'Initialize-Database', 'Publish-IIS', 'Restore', 'Start-Dev',
+            'Build', 'Configure-Local', 'Export-Contracts', 'Export-Database', 'Initialize-Database', 'Publish-IIS', 'Restore', 'Start-Dev',
             'Start-Local', 'Test-Environment', 'Test-Repository', 'Verify', 'Verify-Database', 'Verify-IIS') | Sort-Object)
     }
 }
