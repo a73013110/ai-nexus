@@ -9,7 +9,12 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Billing;
 
-public sealed class BillingService(NexusDbContext db, ModelPresentation presentation, IOptions<InferenceOptions> inference, IEnumerable<ServiceModel> services, TimeProvider clock) : IModelCallMeter
+public sealed class BillingService(
+    NexusDbContext db,
+    ModelPresentation presentation,
+    IOptions<InferenceOptions> inference,
+    IEnumerable<ServiceModel> services,
+    TimeProvider clock) : IModelCallMeter
 {
     private static readonly string[] WebSearchProviders = ["searxng", "brave"];
 
@@ -18,35 +23,62 @@ public sealed class BillingService(NexusDbContext db, ModelPresentation presenta
         .Concat(services.Select(x => Target(x.Provider, x.Id)))
         .Concat(WebSearchProviders.Select(x => Target(x, "web-search")))
         .DistinctBy(x => (x.Provider, x.ModelId)).ToArray();
-    private PriceTargetDto Target(string provider, string model) => new(provider, model, presentation.DisplayName(model, administrator: true, provider: provider)!);
+
+    private PriceTargetDto Target(string provider, string model) =>
+        new(provider, model, presentation.DisplayName(model, administrator: true, provider: provider)!);
+
+    // 費用在呼叫發出前就以當時生效的價格登記，之後的價格變動不影響這筆呼叫。
     public async Task<ModelCharge> ReserveAsync(Guid callId, Guid owner, Guid? conversation, string provider,
         string model, string operation, DateTimeOffset created, CancellationToken ct)
     {
-        var price = await db.Set<ModelPrice>().AsNoTracking().Where(x => x.Provider == provider && x.ModelId == model && x.EffectiveAt <= created)
-            .OrderByDescending(x => x.EffectiveAt).FirstOrDefaultAsync(ct);
-        var call = new ModelCharge { Id = callId, OwnerId = owner, ConversationId = conversation, Provider = provider,
-            ModelId = model, Operation = operation, CreatedAt = created, PriceId = price?.Id, Currency = price?.Currency ?? "",
-            Kind = price?.Kind ?? "unpriced", InputPerMillion = price?.InputPerMillion ?? 0,
-            CachedInputPerMillion = price?.CachedInputPerMillion ?? 0, OutputPerMillion = price?.OutputPerMillion ?? 0,
-            PerRequest = price?.PerRequest ?? 0, RequestCharge = price?.RequestCharge ?? "completed" };
-        db.Add(call); return call;
+        var price = await db.Set<ModelPrice>().AsNoTracking()
+            .Where(x => x.Provider == provider && x.ModelId == model && x.EffectiveAt <= created)
+            .OrderByDescending(x => x.EffectiveAt)
+            .FirstOrDefaultAsync(ct);
+        var call = new ModelCharge
+        {
+            Id = callId,
+            OwnerId = owner,
+            ConversationId = conversation,
+            Provider = provider,
+            ModelId = model,
+            Operation = operation,
+            CreatedAt = created,
+            PriceId = price?.Id,
+            Currency = price?.Currency ?? "",
+            Kind = price?.Kind ?? "unpriced",
+            InputPerMillion = price?.InputPerMillion ?? 0,
+            CachedInputPerMillion = price?.CachedInputPerMillion ?? 0,
+            OutputPerMillion = price?.OutputPerMillion ?? 0,
+            PerRequest = price?.PerRequest ?? 0,
+            RequestCharge = price?.RequestCharge ?? "completed",
+        };
+        db.Add(call);
+        return call;
     }
+
     public async Task StartAsync(Guid id, CancellationToken ct)
     {
         var charge = await db.Set<ModelCharge>().FindAsync([id], ct);
-        if (charge is null) return; // 遷移前的呼叫沒有費用紀錄，這裡不補算價格，費用保持未知。
-        charge.StartedAt ??= clock.GetUtcNow(); charge.Outcome = "running";
+        // 遷移前的呼叫沒有費用紀錄，這裡不補算價格，費用保持未知。
+        if (charge is null) return;
+        charge.StartedAt ??= clock.GetUtcNow();
+        charge.Outcome = "running";
     }
+
     public async Task MeterAsync(Guid id, long? input, long? output, long? cached, long? reasoning, CancellationToken ct, bool complete = false)
     {
         var charge = await db.Set<ModelCharge>().FindAsync([id], ct);
         if (charge is null) return;
-        charge.InputTokens = input ?? charge.InputTokens; charge.OutputTokens = output ?? charge.OutputTokens;
-        charge.CachedInputTokens = cached ?? charge.CachedInputTokens; charge.ReasoningTokens = reasoning ?? charge.ReasoningTokens;
+        charge.InputTokens = input ?? charge.InputTokens;
+        charge.OutputTokens = output ?? charge.OutputTokens;
+        charge.CachedInputTokens = cached ?? charge.CachedInputTokens;
+        charge.ReasoningTokens = reasoning ?? charge.ReasoningTokens;
         charge.UsageComplete |= complete;
     }
+
     /// <summary>
-    /// 串流呼叫端使用的 <see cref="MeterAsync"/> 單一 UPDATE 版本，不需先載入費用紀錄：null 保留既有值，完成旗標只會由 false 變為 true。
+    /// 串流呼叫端使用的計量版本：只發出一條 UPDATE，不先載入費用紀錄。null 保留既有值，完成旗標只會由 false 變為 true。
     /// 立即執行，因此應在呼叫端的交易內呼叫。
     /// </summary>
     public async Task MeterInPlaceAsync(Guid id, long? input, long? output, long? cached, long? reasoning, bool complete, CancellationToken ct)
@@ -61,14 +93,19 @@ public sealed class BillingService(NexusDbContext db, ModelPresentation presenta
             if (complete) p.SetProperty(x => x.UsageComplete, true);
         }, ct);
     }
+
     public async Task FinishAsync(Guid id, string outcome, CancellationToken ct)
     {
         var charge = await db.Set<ModelCharge>().FindAsync([id], ct);
         if (charge is null) return;
-        charge.FinishedAt ??= clock.GetUtcNow(); ChargeCalculator.Finalize(charge, outcome);
+        charge.FinishedAt ??= clock.GetUtcNow();
+        ChargeCalculator.Finalize(charge, outcome);
     }
-    Task IModelCallMeter.ReserveAsync(Guid callId, Guid owner, Guid? conversation, string provider, string model, string operation, DateTimeOffset created, CancellationToken ct)
-        => ReserveAsync(callId, owner, conversation, provider, model, operation, created, ct);
+
+    Task IModelCallMeter.ReserveAsync(Guid callId, Guid owner, Guid? conversation, string provider, string model, string operation,
+        DateTimeOffset created, CancellationToken ct) =>
+        ReserveAsync(callId, owner, conversation, provider, model, operation, created, ct);
+
     public PriceDto Describe(ModelPrice p) => new(p.Id, p.Provider, p.ModelId, p.Currency, p.Kind,
         p.InputPerMillion, p.CachedInputPerMillion, p.OutputPerMillion, p.PerRequest, p.RequestCharge, p.EffectiveAt, p.Note,
         presentation.DisplayName(p.ModelId, administrator: true, provider: p.Provider));

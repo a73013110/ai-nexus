@@ -39,7 +39,10 @@ public sealed class RepositoryReviewService(NexusDbContext db, RepositoryService
     {
         if (string.IsNullOrWhiteSpace(diff)) return RepositoriesErrors.ReviewNoChanges;
         if (Encoding.UTF8.GetByteCount(diff) > 256000) return RepositoriesErrors.DiffLimit;
-        var files = System.Text.RegularExpressions.Regex.Split(diff.Replace("\r\n", "\n"), "(?=^diff --git )", System.Text.RegularExpressions.RegexOptions.Multiline).Where(x => !string.IsNullOrWhiteSpace(x));
+        // 以每個 "diff --git" 行首切開，讓每個檔案的 diff 獨立成段。
+        var files = System.Text.RegularExpressions.Regex
+            .Split(diff.Replace("\r\n", "\n"), "(?=^diff --git )", System.Text.RegularExpressions.RegexOptions.Multiline)
+            .Where(x => !string.IsNullOrWhiteSpace(x));
         var slices = new List<ReviewSlice>();
         foreach (var file in files)
         {

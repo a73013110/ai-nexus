@@ -35,8 +35,21 @@ internal sealed class GetAdminCatalog(NexusDbContext db, ModelCatalog catalog, A
         var grants = await db.Set<RoleGroupFeature>().AsNoTracking().ToListAsync(ct);
         var policies = await db.Set<GroupModelPolicy>().AsNoTracking().ToDictionaryAsync(x => x.GroupId, ct);
         var counts = await db.Set<UserRole>().GroupBy(x => x.RoleId).Select(x => new { RoleId = x.Key, Count = x.Count() }).ToDictionaryAsync(x => x.RoleId, x => x.Count, ct);
-        return new(roles.Select(x => new AdminRoleDto(x.Id, x.Name, x.Enabled, links.Where(y => y.RoleId == x.Id).Select(y => y.GroupId).ToArray(), counts.GetValueOrDefault(x.Id))).ToArray(),
-            groups.Select(x => new AdminGroupDto(x.Id, x.Name, x.Enabled, grants.Where(y => y.GroupId == x.Id).Select(y => y.FeatureId).ToArray(), policies.TryGetValue(x.Id, out var p) ? new(ModelPolicyService.Allowed(p.AllowedModelsJson), ModelPolicyService.Limits(p.DailyTokenLimitsJson), p.StoredAttachmentLimitBytes) : null)).ToArray(),
-            features.Select(x => new AdminFeatureDto(x.Id, x.Name, x.Route, x.SortOrder, x.Enabled, x.GroupId, x.Icon)).ToArray(), (await catalog.ProfilesAsync(ct)).Select(x => x.ToDto()).ToArray(), navigation);
+        var roleDtos = roles
+            .Select(x => new AdminRoleDto(x.Id, x.Name, x.Enabled, links.Where(y => y.RoleId == x.Id).Select(y => y.GroupId).ToArray(), counts.GetValueOrDefault(x.Id)))
+            .ToArray();
+        // 沒有模型策略列時 Policy 為 null，代表該群組未設定策略。
+        var groupDtos = groups
+            .Select(x => new AdminGroupDto(
+                x.Id,
+                x.Name,
+                x.Enabled,
+                grants.Where(y => y.GroupId == x.Id).Select(y => y.FeatureId).ToArray(),
+                policies.TryGetValue(x.Id, out var p)
+                    ? new(ModelPolicyService.Allowed(p.AllowedModelsJson), ModelPolicyService.Limits(p.DailyTokenLimitsJson), p.StoredAttachmentLimitBytes)
+                    : null))
+            .ToArray();
+        var featureDtos = features.Select(x => new AdminFeatureDto(x.Id, x.Name, x.Route, x.SortOrder, x.Enabled, x.GroupId, x.Icon)).ToArray();
+        return new(roleDtos, groupDtos, featureDtos, (await catalog.ProfilesAsync(ct)).Select(x => x.ToDto()).ToArray(), navigation);
     }
 }

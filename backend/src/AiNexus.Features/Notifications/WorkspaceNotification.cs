@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Notifications;
 
-// 內容版本與型別化的目標與投遞管道、前端 URL 無關；改 URL 不應影響已存下的通知。
+// 通知只存類型與業務 ID，不存前端 URL 或投遞管道；改版路由時，已存下的通知不必遷移。
 [Comment("使用者個人通知、版本化導向、閱讀狀態與事件去重鍵。")]
 public sealed class WorkspaceNotification
 {

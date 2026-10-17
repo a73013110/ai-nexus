@@ -21,7 +21,8 @@ public sealed class LdapAuthenticator(IOptions<AdAuthenticationOptions> options)
     public async Task<Result<AdIdentity>> AuthenticateAsync(string account, string password, CancellationToken ct)
     {
         Require(options.Value);
-        if (!Regex.IsMatch(account, @"^[\p{L}\p{N}._-]{1,64}$") || string.IsNullOrEmpty(password) || password.Length > 1024) return IdentityErrors.AdInvalidCredentials;
+        if (!Regex.IsMatch(account, @"^[\p{L}\p{N}._-]{1,64}$") || string.IsNullOrEmpty(password) || password.Length > 1024)
+            return IdentityErrors.AdInvalidCredentials;
         await gate.WaitAsync(ct);
         try { return await Task.Run(() => Authenticate(account, password, ct), ct); }
         finally { gate.Release(); }
@@ -33,14 +34,21 @@ public sealed class LdapAuthenticator(IOptions<AdAuthenticationOptions> options)
         if (!OperatingSystem.IsWindows()) throw Unavailable("ad_platform_unavailable", "此部署的 AD 登入需要 Windows 主機。");
         using var service = BindService(settings);
         ct.ThrowIfCancellationRequested();
-        var search = new SearchRequest(settings.Base, $"(&(objectClass=user)({settings.AccountAttribute}={EscapeFilter(account)}))", SearchScope.Subtree, "objectSid", "sAMAccountName", "displayName", "userAccountControl") { SizeLimit = 2, TimeLimit = TimeSpan.FromSeconds(5) };
+        var filter = $"(&(objectClass=user)({settings.AccountAttribute}={EscapeFilter(account)}))";
+        // SizeLimit 設為 2 而非 1：多於一筆就能判定為異常（同名帳號），而不是靜默取第一筆。
+        var search = new SearchRequest(settings.Base, filter, SearchScope.Subtree, "objectSid", "sAMAccountName", "displayName", "userAccountControl")
+        {
+            SizeLimit = 2,
+            TimeLimit = TimeSpan.FromSeconds(5),
+        };
         SearchResponse result;
         try { result = (SearchResponse)service.SendRequest(search); }
         catch (DirectoryOperationException error) { throw Unavailable("ad_search_unavailable", "AD 查詢暫時無法使用。", error); }
         if (result.Entries.Count != 1) return IdentityErrors.AdInvalidCredentials;
         var entry = result.Entries[0];
         // userAccountControl 的 ACCOUNTDISABLE 位元（2）代表帳號已停用；直接當成帳密錯誤回覆，不透露停用狀態。
-        if (entry.Attributes["userAccountControl"]?[0] is string flags && int.TryParse(flags, out var value) && (value & 2) != 0) return IdentityErrors.AdInvalidCredentials;
+        if (entry.Attributes["userAccountControl"]?[0] is string flags && int.TryParse(flags, out var value) && (value & 2) != 0)
+            return IdentityErrors.AdInvalidCredentials;
         ct.ThrowIfCancellationRequested();
         using var user = Connect(settings, entry.DistinguishedName, password);
         try { user.Bind(); }
@@ -70,7 +78,8 @@ public sealed class LdapAuthenticator(IOptions<AdAuthenticationOptions> options)
 
     private static LdapConnection Connect(AdAuthenticationOptions settings, string user, string password)
     {
-        var connection = new LdapConnection(new LdapDirectoryIdentifier(settings.Host, settings.Port), new NetworkCredential(user, password), AuthType.Basic) { Timeout = TimeSpan.FromSeconds(5) };
+        var identifier = new LdapDirectoryIdentifier(settings.Host, settings.Port);
+        var connection = new LdapConnection(identifier, new NetworkCredential(user, password), AuthType.Basic) { Timeout = TimeSpan.FromSeconds(5) };
         try
         {
             connection.SessionOptions.ProtocolVersion = 3;

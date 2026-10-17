@@ -4,11 +4,9 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Chat.Runs;
 
 /// <summary>
-/// 生成事件保留期限清理背景工作者。
-/// 僅清理用於 SSE 斷線重播的中繼事件（RunEvents），不刪除任何對話或訊息本體。
-/// 【防鎖升級設計】：
-/// 每小時定期執行，每次採用分批刪除（每批 1,000 筆，各自提交交易），
-/// 確保單一語句不會接近 SQL Server 預設的鎖升級門檻（約 5,000 個行鎖），避免觸發資料表鎖（Table Lock）阻塞正常讀寫。
+/// 生成事件保留期限的清理背景工作者。只刪 SSE 斷線重播用的中繼事件（RunEvents），不動對話與訊息。
+/// 每小時分批刪除，每批各自提交。單一語句的行鎖數要遠低於 SQL Server 的鎖升級門檻（約 5,000），
+/// 否則會升級成資料表鎖，阻塞正常的讀寫。
 /// </summary>
 public sealed partial class RunEventRetentionWorker(
     IServiceScopeFactory scopes,

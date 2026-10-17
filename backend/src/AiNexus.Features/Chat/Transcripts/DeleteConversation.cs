@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Chat.Transcripts;
 
 /// <summary>
-/// 在刪除對話的事務中發布的領域事件。
-/// 訂閱者（例如 Sharing 模組撤銷對話的共享權限）會在事務提交前同步執行。
+/// 刪除對話的交易中發布的領域事件。
+/// 訂閱者（例如 Sharing 模組撤銷分享）會在交易提交前同步執行。
 /// </summary>
 public sealed record ConversationDeleted(Guid ConversationId, Guid OwnerId) : IDomainEvent;
 
@@ -89,7 +89,7 @@ internal sealed class DeleteConversation(
             conversationLock.Dispose();
         }
 
-        // 事務與排程鎖皆完全釋放後，再執行實際實體檔案刪除 I/O，避免佔用事務時間
+        // 交易與鎖都釋放後才刪實體檔案，避免磁碟 I/O 拖長交易
         await lifecycle.DeletePendingAsync(ct);
         return Result.Success;
     }

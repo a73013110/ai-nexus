@@ -12,6 +12,7 @@ public sealed class NotificationService(NexusDbContext db)
     {
         if (target is not ("conversation" or "task" or "share" or "repository-review") || severity is not ("info" or "success" or "error"))
             throw new InvalidOperationException("Unknown notification target or severity.");
+        // 同一交易裡尚未儲存的通知只存在 Local，資料庫查不到，所以兩邊都要檢查，否則同一交易內的重複會撞上唯一索引。
         if (db.Set<WorkspaceNotification>().Local.Any(x => x.OwnerId == owner && x.EventKey == key)
             || await db.Set<WorkspaceNotification>().AnyAsync(x => x.OwnerId == owner && x.EventKey == key, ct)) return;
         db.Add(new WorkspaceNotification { OwnerId = owner, EventKey = key, Type = type, Severity = severity,

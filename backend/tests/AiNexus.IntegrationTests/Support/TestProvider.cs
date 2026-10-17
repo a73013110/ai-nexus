@@ -30,7 +30,7 @@ public sealed class TestProvider : IInferenceProvider
         }
     }
 
-    /// <summary>串流在 <see cref="Release"/> 呼叫前會停在最後一段之前，讓測試控制 run 保持活動的時間。</summary>
+    /// <summary>在 <see cref="Release"/> 被呼叫前，串流會停在最後一段之前，讓測試能控制 run 保持活動的時間。</summary>
     public void Hold() => hold = new(TaskCreationOptions.RunContinuationsAsynchronously);
     public void Release() => hold?.TrySetResult();
 

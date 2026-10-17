@@ -7,8 +7,7 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.Platform.Diagnostics;
 
 /// <summary>
-/// 診斷資訊資料脫敏過濾器。
-/// 僅允許經明確核准的純量中繼資料離開日誌邊界，並遮蔽金鑰、權杖、密碼、URL 與檔案路徑。
+/// 診斷資料的脫敏過濾器。只允許明確核准的純量中繼資料離開日誌邊界，並遮蔽金鑰、權杖、密碼、URL 與檔案路徑。
 /// </summary>
 public static partial class DiagnosticRedactor
 {
@@ -20,7 +19,7 @@ public static partial class DiagnosticRedactor
     };
 
     /// <summary>
-    /// 文字脫敏：移除機密金鑰、URL、實體路徑、電子郵件與跳脫控制字元，並截斷至安全上限長度。
+    /// 文字脫敏：移除機密、URL、實體路徑與電子郵件，把控制字元換成空白，並截斷到上限長度。
     /// </summary>
     public static string Text(string? value, int limit = 512)
     {
@@ -29,7 +28,7 @@ public static partial class DiagnosticRedactor
             return "";
         }
 
-        // 限制正則處理前的輸入大小；清除 CR/LF/控制字元以杜絕終端機跳脫序列注入攻擊。
+        // 先限制正規表示式的輸入大小，再把 CR／LF 與控制字元換成空白，避免終端機跳脫序列注入。
         value = value[..Math.Min(value.Length, 16000)];
         value = Secret().Replace(value, "$1=[REDACTED]");
         value = Bearer().Replace(value, "[REDACTED]");
@@ -41,7 +40,7 @@ public static partial class DiagnosticRedactor
     }
 
     /// <summary>
-    /// 屬性字典脫敏：過濾未核准之欄位名稱，僅保留白名單內的純量欄位，最多 32 個。
+    /// 屬性字典脫敏：丟棄未核准的欄位名稱，只保留白名單內的純量欄位，最多 32 個。
     /// </summary>
     public static Dictionary<string, object?> Properties(IEnumerable<KeyValuePair<string, object?>> values)
     {
@@ -70,7 +69,7 @@ public static partial class DiagnosticRedactor
     }
 
     /// <summary>
-    /// 例外堆疊脫敏：忽略任意格式之錯誤訊息自由文字（可能含 SQL 或 Prompt 隱私），保留型別、錯誤代碼與前 30 層堆疊框架。
+    /// 例外脫敏：不保留錯誤訊息的自由文字（可能含 SQL 或提示詞內容），只保留型別、錯誤代碼與前 30 層堆疊框架。
     /// </summary>
     public static string Exception(Exception? exception)
     {
@@ -79,8 +78,8 @@ public static partial class DiagnosticRedactor
             return "";
         }
 
-        // 例外訊息可能包含任意提示詞、SQL 數值或第三方服務回應酬載，故不予持久化。
-        // 強型別代碼與堆疊框架已足夠提供診斷線索，且無需承擔信任自由文字之風險。
+        // 例外訊息可能含有任意提示詞、SQL 值或第三方服務回應，因此不持久化。
+        // 強型別代碼與堆疊框架已足夠用來診斷，不必冒險信任自由文字。
         var parts = new List<string>();
         for (var e = exception; e is not null && parts.Count < 6; e = e.InnerException)
         {
@@ -106,7 +105,7 @@ public static partial class DiagnosticRedactor
     }
 
     /// <summary>
-    /// 將中繼資料序列化為 JSON，並確保長度不超過 8KB。
+    /// 把中繼資料序列化為 JSON，並確保不超過 8 KB；超過時從尾端逐一移除欄位。
     /// </summary>
     public static string Json(Dictionary<string, object?> properties)
     {
@@ -118,7 +117,7 @@ public static partial class DiagnosticRedactor
     }
 
     /// <summary>
-    /// 從 JSON 還原並重新校驗屬性字典。
+    /// 從 JSON 還原屬性字典，並重新套用白名單與型別檢查。
     /// </summary>
     public static string RecoverProperties(string? json)
     {
@@ -145,7 +144,7 @@ public static partial class DiagnosticRedactor
     }
 
     /// <summary>
-    /// 再次套用於持久化與重放邊界；強制收斂長度與正規化欄位，保護 SQL 免於惡意污染紀錄。
+    /// 在持久化與重放的邊界再套用一次：收斂長度、正規化欄位，避免惡意內容污染 SQL 中的紀錄。
     /// </summary>
     public static void Normalize(DiagnosticEvent item)
     {
@@ -167,7 +166,9 @@ public static partial class DiagnosticRedactor
         item.ExternalService = item.ExternalService is null ? null : Text(item.ExternalService, 32);
         item.ErrorCode = item.ErrorCode is null ? null : Text(item.ErrorCode, 80);
         item.ExceptionType = item.ExceptionType is null ? null : Text(item.ExceptionType, 180);
-        item.ExceptionDetail = item.ExceptionDetail is null ? null : string.Join('\n', item.ExceptionDetail[..Math.Min(item.ExceptionDetail.Length, 12000)].Split('\n').Take(200).Select(line => Text(line, 320)));
+        item.ExceptionDetail = item.ExceptionDetail is null
+            ? null
+            : string.Join('\n', item.ExceptionDetail[..Math.Min(item.ExceptionDetail.Length, 12000)].Split('\n').Take(200).Select(line => Text(line, 320)));
         if (item.DurationMs is { } duration && (!double.IsFinite(duration) || duration < 0))
         {
             item.DurationMs = null;

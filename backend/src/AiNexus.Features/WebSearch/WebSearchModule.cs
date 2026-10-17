@@ -4,6 +4,7 @@ using AiNexus.Platform.Modules;
 
 namespace AiNexus.Features.WebSearch;
 
+/// <summary>網路搜尋模組的註冊入口。</summary>
 public sealed class WebSearchModule : IFeatureModule
 {
     public static void AddServices(IHostApplicationBuilder builder)

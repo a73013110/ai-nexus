@@ -6,7 +6,7 @@ using AiNexus.Platform.Errors;
 namespace AiNexus.Features.Administration;
 
 /// <summary>
-/// 管理者唯讀存取使用者資料的稽核關卡。不會放寬對話擁有者檢查；權限在讀取前後各檢一次，且稽核寫入成功後才回應資料。
+/// 管理者唯讀存取使用者資料的稽核關卡。它不放寬對話擁有者檢查，且稽核寫入成功後才會回傳資料。
 /// </summary>
 internal sealed class AdministrativeReadAudit(NexusDbContext db, AccessService access)
 {

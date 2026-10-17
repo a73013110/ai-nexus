@@ -7,8 +7,7 @@ using AiNexus.Platform.Security;
 namespace AiNexus.Platform.Diagnostics;
 
 /// <summary>
-/// 核心診斷事件識別碼常數。
-/// 供宣告於 [LoggerMessage] 之外的各層級程式碼引用；每個事件 ID 與名稱均登載於 docs/architecture/log-events.md。
+/// 核心診斷事件的 ID 常數，供 [LoggerMessage] 以外的程式碼引用。每個事件 ID 與名稱都登錄在 docs/architecture/log-events.md。
 /// </summary>
 public static class DiagnosticEvents
 {
@@ -17,14 +16,12 @@ public static class DiagnosticEvents
 }
 
 /// <summary>
-/// 可觀測性端點成功請求日誌抑制標記。
-/// 成功的可觀測性查詢操作已具備稽核記錄；不可重複反饋寫入自身的日誌清單中。
+/// 標記成功時不需寫入請求日誌的可觀測性端點。這類查詢本身已有稽核紀錄，再寫一次只會自我循環。
 /// </summary>
 public sealed class SuppressSuccessfulRequestLog;
 
 /// <summary>
-/// 受信任的平台 W3C 分散式追蹤工廠。
-/// 確保內部 Trace 不會意外被外部不受信任的 HTTP 標頭污染。
+/// 受信任的 W3C 分散式追蹤工廠。確保內部 Trace 不會被外部、不受信任的 HTTP 標頭汙染。
 /// </summary>
 public static class DiagnosticTrace
 {
@@ -32,8 +29,8 @@ public static class DiagnosticTrace
     public static readonly ActivitySource Source = new(SourceName, "1.0");
 
     /// <summary>
-    /// 啟動一組新的受信任 Activity。
-    /// 明確指定父內容（包含預設值），以防止意外繼承未受信任的請求或佇列呼叫端。
+    /// 啟動一個新的受信任 Activity。父內容由呼叫端明確指定（未指定時為新的根），
+    /// 避免意外承接不受信任的請求或佇列呼叫端的追蹤。
     /// </summary>
     public static Activity Start(string name, string? traceId = null, string? spanId = null, ActivityKind kind = ActivityKind.Internal)
     {
@@ -54,12 +51,12 @@ public static class DiagnosticTrace
 }
 
 /// <summary>
-/// 公開問題結果紀錄。
+/// 對外公開的問題結果。
 /// </summary>
 public sealed record PublicProblem(int Status, string Code, string Title, string IssueCode);
 
 /// <summary>
-/// 符合 RFC 7807 且安全脫敏的 ProblemDetails。
+/// 符合 RFC 7807 且已脫敏的 ProblemDetails。
 /// </summary>
 public sealed record SafeProblemDetails(
     string Type,
@@ -71,7 +68,7 @@ public sealed record SafeProblemDetails(
     IReadOnlyDictionary<string, string[]>? Errors = null);
 
 /// <summary>
-/// 路由群組安全錯誤中繼資料宣告擴充。
+/// 路由群組的錯誤回應中繼資料擴充，讓 OpenAPI 文件列出常見錯誤狀態碼對應的 <see cref="SafeProblemDetails"/>。
 /// </summary>
 public static class SafeErrorMetadata
 {
@@ -86,8 +83,8 @@ public static class SafeErrorMetadata
 }
 
 /// <summary>
-/// 平台錯誤與查證代碼（IssueCode）集中管理器。
-/// 確保例外跨層時僅被記錄一次，產生全域不重複且不透明的 NX- 查證代碼，並映射對外安全的錯誤提示。
+/// 平台錯誤與查證代碼（IssueCode）的集中管理器。確保同一例外跨層時只記錄一次，
+/// 產生全域唯一、不透明的 NX- 查證代碼，並對應到對外安全的錯誤提示。
 /// </summary>
 public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? factory = null)
 {
@@ -98,7 +95,7 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
     public static string Message(string? issue) => "操作未完成，請聯絡管理員。查證代碼：" + (ValidCode(issue) ? issue : "無法取得");
 
     /// <summary>
-    /// 無 HTTP 回應之失敗事件的持久化文字（如背景任務）；預期內的錯誤保留審查過的繁中提示。
+    /// 沒有 HTTP 回應的失敗事件（如背景任務）所用的持久化文字。預期內的錯誤保留審查過的繁中提示。
     /// </summary>
     public static string Message(Error error, string issue)
         => Problems.Status(error.Kind) is var status && status < 500 ? PublicErrorCatalog.Message(error.Code, status) + " 查證代碼：" + issue : Message(issue);
@@ -112,7 +109,7 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
 
     private string Report(Exception exception, string code, LogLevel level, bool rejection)
     {
-        // 跨越各架構層級的例外只記錄一次；每個不同的例外獲取其獨一無二的不透明代碼。
+        // 跨層傳遞的例外只記錄一次；每個例外取得獨一無二的不透明代碼。
         lock (exception.Data)
         {
             if (exception.Data[Key] is string existing)
@@ -146,7 +143,7 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
     }
 
     /// <summary>
-    /// 判斷逃逸出請求範圍之例外的公開 HTTP 狀態碼與錯誤代碼。
+    /// 判斷逃出請求範圍的例外，應回傳的公開 HTTP 狀態碼與錯誤代碼。
     /// </summary>
     public static (int Status, string Code) Classify(Exception exception) => exception switch
     {
@@ -164,7 +161,7 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
     }
 
     /// <summary>
-    /// 無例外時寫入的公開問題：如 <see cref="Error"/> 結果、模型驗證失敗或框架空狀態。
+    /// 沒有例外時寫入的公開問題，例如 <see cref="Error"/> 結果、模型驗證失敗，或框架的空狀態。
     /// </summary>
     public PublicProblem Problem(int status, string code, string? recordedIssue = null) => Public(status, code, recordedIssue ?? Record(status, code));
 
@@ -191,13 +188,13 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
     [LoggerMessage(EventId = DiagnosticEvents.Failure, EventName = "operation.failed", Message = "Operation failed with {ErrorCode}; issue {IssueCode}.")]
     private static partial void LogFailure(ILogger logger, LogLevel level, Exception? exception, string errorCode, string issueCode);
 
-    // 診斷日誌提供者常態維持過濾拒絕事件於其最低層級之下，此處產生的 IsEnabled 檢查不得直接將其捨棄。
+    // 診斷日誌提供者的最低層級通常高於拒絕事件，因此這裡必須略過 IsEnabled 檢查，否則拒絕紀錄會被丟掉。
     [LoggerMessage(EventId = DiagnosticEvents.Rejection, EventName = "http.rejected", Message = "Operation failed with {ErrorCode}; issue {IssueCode}.", SkipEnabledCheck = true)]
     private static partial void LogRejection(ILogger logger, LogLevel level, Exception? exception, string errorCode, string issueCode);
 
-    // 僅供 Problems 錯誤寫入器呼叫；其餘皆透過標準 IProblemDetailsService 傳遞。
     /// <summary>
-    /// 當 Server-Sent Events (SSE) 串流已經啟動時，將錯誤作為最後一個 error 事件輸出並正常結束。
+    /// SSE 串流已經開始時，把錯誤寫成最後一個 <c>error</c> 事件，然後正常結束串流。
+    /// 只給 Problems 的寫入器呼叫；其餘錯誤都經由標準的 IProblemDetailsService 傳遞。
     /// </summary>
     internal static Task WriteEventAsync(HttpContext http, PublicProblem problem)
         => http.Response.WriteAsync("event: error\ndata: " + System.Text.Json.JsonSerializer.Serialize(new { status = problem.Status, code = problem.Code, message = problem.Status >= 500 ? Message(problem.IssueCode) : problem.Title, issueCode = problem.IssueCode }) + "\n\n", http.RequestAborted);
@@ -208,8 +205,8 @@ public sealed partial class Issues(ILogger<Issues> logger, ILoggerFactory? facto
 }
 
 /// <summary>
-/// HTTP 請求診斷與可觀測性中介軟體。
-/// 注入 WebSecurity 標頭、初始化受信任的 W3C Trace、捕獲例外並轉換為安全脫敏之 RFC 7807 錯誤結構。
+/// HTTP 請求的診斷與可觀測性中介軟體：套用 WebSecurity 標頭、建立受信任的 W3C Trace、
+/// 捕捉例外，並轉成已脫敏的 RFC 7807 錯誤。
 /// </summary>
 public sealed partial class DiagnosticRequestMiddleware(RequestDelegate next)
 {
@@ -233,8 +230,8 @@ public sealed partial class DiagnosticRequestMiddleware(RequestDelegate next)
             address = address.MapToIPv4();
         }
 
-        // 連線中繼資料可能已由主機信任的反向代理中介軟體解析完畢。
-        // 此處切勿重複解析客戶端可任意偽造的 X-Forwarded-For 標頭。
+        // 連線中繼資料可能已由主機信任的反向代理中介軟體解析過。
+        // 這裡不可重新解析客戶端能任意偽造的 X-Forwarded-For 標頭。
         using var scope = logger.BeginScope(new Dictionary<string, object?>
         {
             ["RequestId"] = http.TraceIdentifier,
@@ -249,7 +246,7 @@ public sealed partial class DiagnosticRequestMiddleware(RequestDelegate next)
         var outcome = "completed";
         try
         {
-            // 框架空狀態錯誤（驗證挑戰、禁止存取、無匹配路由）交由 UseStatusCodePages 提供本體。
+            // 框架的空狀態錯誤（驗證挑戰、禁止存取、無匹配路由）交給 UseStatusCodePages 產生本體。
             await next(http);
         }
         catch (OperationCanceledException) when (http.RequestAborted.IsCancellationRequested)

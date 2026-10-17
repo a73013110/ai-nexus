@@ -7,8 +7,8 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Platform.Diagnostics;
 
 /// <summary>
-/// 應用程式核心診斷日誌提供者。
-/// 攔截所有 ILogger 事件、提取 W3C Trace、執行屬性脫敏並排入記憶體緩衝區。
+/// 攔截所有 ILogger 事件，轉成診斷事件後放進記憶體緩衝區。
+/// 屬性在入列前就完成脫敏，緩衝區與之後的輸出都只會看到脫敏後的值。
 /// </summary>
 public sealed class DiagnosticLoggerProvider(
     DiagnosticBuffer buffer,
@@ -24,21 +24,40 @@ public sealed class DiagnosticLoggerProvider(
     private readonly TimeProvider clock = clock ?? TimeProvider.System;
     private IExternalScopeProvider scopes = new LoggerExternalScopeProvider();
 
-    public string Instance { get; } = System.Environment.MachineName + "-" + System.Environment.ProcessId + "-" + Guid.NewGuid().ToString("N")[..8];
-    public static string Version { get; } = typeof(DiagnosticLoggerProvider).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "unknown";
+    public string Instance { get; } =
+        System.Environment.MachineName + "-" + System.Environment.ProcessId + "-" + Guid.NewGuid().ToString("N")[..8];
+
+    public static string Version { get; } =
+        typeof(DiagnosticLoggerProvider).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+        ?? "unknown";
 
     public ILogger CreateLogger(string categoryName) => new Logger(this, categoryName);
+
     public void SetScopeProvider(IExternalScopeProvider scopeProvider) => scopes = scopeProvider;
+
     public void Dispose() { }
 
     private sealed class Logger(DiagnosticLoggerProvider provider, string category) : ILogger
     {
-        public bool IsEnabled(LogLevel level) => level != LogLevel.None && (level >= LogLevel.Error || level >= (category.StartsWith("Microsoft.", StringComparison.Ordinal) || category.StartsWith("System.", StringComparison.Ordinal) ? provider.options.Value.FrameworkMinimumLevel : provider.options.Value.MinimumLevel));
+        public bool IsEnabled(LogLevel level)
+        {
+            if (level == LogLevel.None)
+            {
+                return false;
+            }
+
+            // 框架與系統元件常有大量低階日誌，改用獨立的門檻，避免淹沒應用程式自己的事件。
+            var minimum = IsFrameworkCategory()
+                ? provider.options.Value.FrameworkMinimumLevel
+                : provider.options.Value.MinimumLevel;
+            return level >= LogLevel.Error || level >= minimum;
+        }
 
         public IDisposable? BeginScope<TState>(TState state) where TState : notnull => provider.scopes.Push(state);
 
         public void Log<TState>(LogLevel level, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
+            // 拒絕事件即使低於門檻也要記錄，否則限流與拒絕的證據會消失。
             if ((!IsEnabled(level) && eventId.Id != DiagnosticEvents.Rejection) || DiagnosticSuppression.Active)
             {
                 return;
@@ -70,20 +89,26 @@ public sealed class DiagnosticLoggerProvider(
             }
 
             var properties = DiagnosticRedactor.Properties(values);
-            string? S(string key) => properties.GetValueOrDefault(key)?.ToString();
-            Guid? G(string key) => Guid.TryParse(S(key), out var id) ? id : null;
-            int? I(string key) => int.TryParse(S(key), out var n) ? n : null;
-            double? D(string key) => double.TryParse(S(key), System.Globalization.CultureInfo.InvariantCulture, out var n) && double.IsFinite(n) ? n : null;
+            string? StringOf(string key) => properties.GetValueOrDefault(key)?.ToString();
+            Guid? GuidOf(string key) => Guid.TryParse(StringOf(key), out var id) ? id : null;
+            int? IntOf(string key) => int.TryParse(StringOf(key), out var n) ? n : null;
+            double? DoubleOf(string key) =>
+                double.TryParse(StringOf(key), System.Globalization.CultureInfo.InvariantCulture, out var n) && double.IsFinite(n)
+                    ? n
+                    : null;
 
             template = DiagnosticRedactor.Text(template, 2048);
-            var stableId = eventId.Id != 0 ? eventId.Id : BitConverter.ToInt32(SHA256.HashData(Encoding.UTF8.GetBytes(category + ":" + template)), 0) & int.MaxValue;
+            var stableId = eventId.Id != 0
+                ? eventId.Id
+                : BitConverter.ToInt32(SHA256.HashData(Encoding.UTF8.GetBytes(category + ":" + template)), 0) & int.MaxValue;
 
-            // 中介軟體以外的主機 Span 可能包含呼叫端提供的 traceparent；絕不可將其視為受信任的關聯追蹤。
+            // 只信任本程式自己的 Activity 來源，或明確標記為可信的 Activity。
+            // 其他 Span（例如主機層）可能帶著呼叫端送來的 traceparent，直接沿用會讓外部請求偽造追蹤關聯，所以這裡寧可不附上。
             var activity = Activity.Current?.Source.Name == DiagnosticTrace.SourceName || Activity.Current?.GetTagItem("nexus.trusted") is true
                 ? Activity.Current
                 : null;
 
-            var userId = G("UserId");
+            var userId = GuidOf("UserId");
             if (userId is null && provider.http?.HttpContext is { User.Identity.IsAuthenticated: true } context)
             {
                 userId = context.RequestServices.GetService<AiNexus.Platform.Security.IRequestUser>()?.ResolvedId;
@@ -102,24 +127,26 @@ public sealed class DiagnosticLoggerProvider(
                 Environment = DiagnosticRedactor.Text(provider.environment.EnvironmentName, 32),
                 Version = DiagnosticRedactor.Text(Version, 80),
                 Instance = provider.Instance,
-                IssueCode = S("IssueCode") ?? (level >= LogLevel.Warning ? Issues.NewCode() : null),
+                IssueCode = StringOf("IssueCode") ?? (level >= LogLevel.Warning ? Issues.NewCode() : null),
                 TraceId = activity?.TraceId.ToHexString(),
                 SpanId = activity?.SpanId.ToHexString(),
-                RequestId = S("RequestId"),
-                OperationId = G("OperationId"),
-                JobId = G("JobId"),
-                RunId = G("RunId"),
+                RequestId = StringOf("RequestId"),
+                OperationId = GuidOf("OperationId"),
+                JobId = GuidOf("JobId"),
+                RunId = GuidOf("RunId"),
                 UserId = userId,
-                Attempt = I("Attempt"),
-                Method = S("Method"),
-                Route = S("Route"),
-                StatusCode = I("StatusCode"),
-                DurationMs = D("DurationMs"),
-                ExternalService = S("ExternalService") ?? S("Provider"),
-                ErrorCode = S("ErrorCode") ?? S("Code"),
-                ExceptionType = exception is null ? S("ErrorType") : DiagnosticRedactor.Text(exception.GetType().FullName, 180),
+                Attempt = IntOf("Attempt"),
+                Method = StringOf("Method"),
+                Route = StringOf("Route"),
+                StatusCode = IntOf("StatusCode"),
+                DurationMs = DoubleOf("DurationMs"),
+                ExternalService = StringOf("ExternalService") ?? StringOf("Provider"),
+                ErrorCode = StringOf("ErrorCode") ?? StringOf("Code"),
+                ExceptionType = exception is null
+                    ? StringOf("ErrorType")
+                    : DiagnosticRedactor.Text(exception.GetType().FullName, 180),
                 ExceptionDetail = exception is null ? null : DiagnosticRedactor.Exception(exception),
-                UntrustedClient = S("UntrustedClient") == "True"
+                UntrustedClient = StringOf("UntrustedClient") == "True"
             });
 
             foreach (var receipt in values.Where(x => x.Key == "NexusDelivery").Select(x => x.Value).OfType<DiagnosticDelivery>())
@@ -127,5 +154,8 @@ public sealed class DiagnosticLoggerProvider(
                 receipt.Accepted = accepted;
             }
         }
+
+        private bool IsFrameworkCategory() =>
+            category.StartsWith("Microsoft.", StringComparison.Ordinal) || category.StartsWith("System.", StringComparison.Ordinal);
     }
 }

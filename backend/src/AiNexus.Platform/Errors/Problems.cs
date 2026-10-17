@@ -42,7 +42,10 @@ public static class Problems
     public static ProblemHttpResult ToProblem(this Error error, IReadOnlyDictionary<string, string[]>? errors = null)
         => TypedResults.Problem(Details(Status(error.Kind), error.Code, errors));
 
-    /// <summary>適用於已透過 <see cref="Issues.Report(Error)"/> 記錄的失敗（例如需寫入稽核日誌時）：回應中將沿用該既有查證代碼。</summary>
+    /// <summary>
+    /// 適用於已由 <see cref="Issues.Report(Error)"/> 記錄過的失敗（例如同時要寫入稽核日誌）。
+    /// 回應會沿用既有的查證代碼，不另外產生新的。
+    /// </summary>
     public static ProblemHttpResult ToProblem(this Error error, string issueCode)
     {
         var details = Details(Status(error.Kind), error.Code, null);
@@ -56,7 +59,7 @@ public static class Problems
     public static Results<NoContent, ProblemHttpResult> ToHttpResult(this Result result)
         => result.IsSuccess ? TypedResults.NoContent() : result.Error.ToProblem();
 
-    /// <summary>適用於成功時非回傳純 JSON 資料之案例（如檔案下載、重新導向或 <c>201 Created</c>）。</summary>
+    /// <summary>適用於成功時不回傳 JSON 本體的端點，例如檔案下載、重新導向或 <c>201 Created</c>。</summary>
     public static Results<TSuccess, ProblemHttpResult> ToHttpResult<T, TSuccess>(this Result<T> result, Func<T, TSuccess> success)
         where TSuccess : IResult => result.IsSuccess ? success(result.Value) : result.Error.ToProblem();
 
@@ -70,8 +73,8 @@ public static class Problems
         where TSuccess : IResult => (await result).ToHttpResult(success);
 
     /// <summary>
-    /// 適用於 Server-Sent Events (SSE) 串流回應：
-    /// 若串流尚未啟動則回傳標準 ProblemDetails 回應；若串流已在傳輸中，則在末端發送帶有相同公開 Problem 資料的 <c>error</c> 事件。
+    /// 適用於 Server-Sent Events (SSE) 串流：
+    /// 若串流尚未開始，回傳標準 ProblemDetails；若已開始傳輸，則在串流結尾送出 <c>error</c> 事件，內容與公開 Problem 資料相同。
     /// </summary>
     public static async Task<Results<EmptyHttpResult, ProblemHttpResult>> ToStreamResultAsync(this Task<Result> result, HttpContext http)
     {
@@ -83,20 +86,20 @@ public static class Problems
         return TypedResults.Empty;
     }
 
-    /// <summary>於端點管線執行範圍外之中介軟體（Middleware）直接寫入錯誤回應。</summary>
+    /// <summary>供端點管線之外的中介軟體（Middleware）直接寫出錯誤回應。</summary>
     public static Task WriteAsync(HttpContext http, int status, string code)
         => http.RequestServices.GetRequiredService<IProblemDetailsService>()
             .WriteAsync(new() { HttpContext = http, ProblemDetails = Details(status, code, null) }).AsTask();
 
-    /// <summary>將請求管線中拋出之例外狀況轉換並寫入為錯誤回應。</summary>
+    /// <summary>把請求管線中拋出的例外轉成錯誤回應並寫出。</summary>
     public static Task WriteAsync(HttpContext http, Exception exception)
         => http.RequestServices.GetRequiredService<IProblemDetailsService>()
             .WriteAsync(new() { HttpContext = http, Exception = exception, ProblemDetails = new() }).AsTask();
 
     public static IServiceCollection AddNexusProblemDetails(this IServiceCollection services)
     {
-        // 優先註冊 NexusProblemWriter，以取代框架預設寫入器；
-        // 避免框架針對非 application/json 的 Accept 標頭拒絕處理，並防止將內部追蹤識別碼洩漏至公開回應。
+        // 以 NexusProblemWriter 取代框架預設的寫入器。框架預設會拒絕非 application/json 的 Accept 標頭，
+        // 而且可能把內部追蹤識別碼寫進公開回應。
         services.AddSingleton<IProblemDetailsWriter, NexusProblemWriter>();
         return services.AddProblemDetails();
     }

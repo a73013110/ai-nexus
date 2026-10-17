@@ -8,8 +8,10 @@ namespace AiNexus.Features.Artifacts.Management;
 internal sealed class ReadArtifactAccess(ResourceAccess access)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}/access", (Guid id, ICurrentUser user, ReadArtifactAccess handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .MapGet("/{id:guid}/access", (Guid id, ICurrentUser user, ReadArtifactAccess handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
         .WithName("ArtifactAccess");
 
-    public Task<Result<ResourceAclDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct) => access.AclAsync(actor, id, Artifact.Kind, ct);
+    public Task<Result<ResourceAclDto>> HandleAsync(Guid actor, Guid id, CancellationToken ct) =>
+        access.AclAsync(actor, id, Artifact.Kind, ct);
 }

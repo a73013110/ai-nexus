@@ -21,7 +21,7 @@ namespace AiNexus.Host.Commands;
 /// <summary>
 /// 系統部署就緒度驗證器。
 /// 執行唯讀 SQL 檢查、設定檢驗、模型清單盤點、合成 Embedding/Rerank 探針以及暫時性儲存目錄寫入測試。
-/// 絕不調用大型語言模型生成實際對話回答，不消耗生產環境提問配額。
+/// 不會呼叫大型語言模型產生回答，因此不消耗正式環境的提問配額。
 /// </summary>
 public static class DeploymentVerifier
 {

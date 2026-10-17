@@ -27,7 +27,13 @@ internal sealed class CreateArtifactRequestValidator : RequestValidator<CreateAr
 /// 建立個人成果（每人上限 200 份），可選擇由使用者擁有的訊息產生，並可放入使用者有編輯權的專案。
 /// 其他模組會經由 <see cref="ArtifactService"/> 直接呼叫、不經請求過濾器，因此這裡自己檢查內文。
 /// </summary>
-internal sealed class CreateArtifact(NexusDbContext db, ResourceAccess access, ConversationService conversations, AccessService features, GetArtifact reader, TimeProvider clock)
+internal sealed class CreateArtifact(
+    NexusDbContext db,
+    ResourceAccess access,
+    ConversationService conversations,
+    AccessService features,
+    GetArtifact reader,
+    TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("", async (CreateArtifactRequest request, ICurrentUser user, CreateArtifact handler, CancellationToken ct) =>
@@ -45,7 +51,8 @@ internal sealed class CreateArtifact(NexusDbContext db, ResourceAccess access, C
             var owned = await conversations.RequireOwnedAsync(actor, conversation.Value, ct);
             if (!owned.IsSuccess) return owned.Error;
         }
-        if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == Artifact.Kind, ct) >= Artifact.MaxPerOwner) return ArtifactsErrors.LimitReached;
+        var count = await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == Artifact.Kind, ct);
+        if (count >= Artifact.MaxPerOwner) return ArtifactsErrors.LimitReached;
         if (request.ProjectId is Guid project)
         {
             if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == FeatureIds.Projects)) return AccessControlErrors.FeatureForbidden;
@@ -53,10 +60,26 @@ internal sealed class CreateArtifact(NexusDbContext db, ResourceAccess access, C
             if (!editable.IsSuccess) return editable.Error;
         }
         var now = clock.GetUtcNow();
-        var resource = new WorkspaceResource { OwnerId = actor, ParentId = request.ProjectId, Kind = Artifact.Kind, Name = request.Title.Trim(), CreatedAt = now, UpdatedAt = now };
+        var resource = new WorkspaceResource
+        {
+            OwnerId = actor,
+            ParentId = request.ProjectId,
+            Kind = Artifact.Kind,
+            Name = request.Title.Trim(),
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
         db.Add(resource);
         db.Add(new Artifact { Id = resource.Id, SourceMessageId = request.SourceMessageId, ProjectId = request.ProjectId });
-        db.Add(new ArtifactRevision { ArtifactId = resource.Id, Version = 1, AuthorId = actor, Title = resource.Name, Content = request.Content, CreatedAt = now });
+        db.Add(new ArtifactRevision
+        {
+            ArtifactId = resource.Id,
+            Version = 1,
+            AuthorId = actor,
+            Title = resource.Name,
+            Content = request.Content,
+            CreatedAt = now,
+        });
         await db.SaveChangesAsync(ct);
         return await reader.HandleAsync(actor, resource.Id, null, ct);
     }

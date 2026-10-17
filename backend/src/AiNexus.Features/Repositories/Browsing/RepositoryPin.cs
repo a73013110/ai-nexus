@@ -29,8 +29,12 @@ internal sealed class RepositoryPinConfiguration : IEntityTypeConfiguration<Repo
 {
     public void Configure(EntityTypeBuilder<RepositoryPin> p)
     {
-        p.ToTable("RepositoryPins", "repositories"); p.HasKey(x => x.Id); p.HasIndex(x => new { x.OwnerId, x.BaseUrl, x.Repository }).IsUnique();
-        p.Property(x => x.BaseUrl).HasMaxLength(500); p.Property(x => x.Repository).HasMaxLength(201); p.Property(x => x.Description).HasMaxLength(500);
+        p.ToTable("RepositoryPins", "repositories");
+        p.HasKey(x => x.Id);
+        p.HasIndex(x => new { x.OwnerId, x.BaseUrl, x.Repository }).IsUnique();
+        p.Property(x => x.BaseUrl).HasMaxLength(500);
+        p.Property(x => x.Repository).HasMaxLength(201);
+        p.Property(x => x.Description).HasMaxLength(500);
         p.Property(x => x.PinnedAt).HasValueGenerator<Persistence.CreationTime>();
     }
 }

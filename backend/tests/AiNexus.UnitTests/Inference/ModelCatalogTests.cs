@@ -21,7 +21,8 @@ public sealed class ModelCatalogTests
         var provider = new CapabilityProvider(vision);
         var services = new ServiceCollection(); services.AddKeyedSingleton<IInferenceProvider>("ollama", provider);
         using var container = services.BuildServiceProvider();
-        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]), new AiNexus.Platform.Diagnostics.Issues(Microsoft.Extensions.Logging.Abstractions.NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance));
+        var issues = new AiNexus.Platform.Diagnostics.Issues(Microsoft.Extensions.Logging.Abstractions.NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance);
+        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]), issues);
         var dto = Assert.Single((await catalog.GetAsync(CancellationToken.None)).Models);
         Assert.Equal(expected, dto.SupportsImages); Assert.Equal("model-1", dto.Id); Assert.Equal("AI 助理 1", dto.DisplayName);
         Assert.Equal(expected, (await catalog.RequireAsync("model-1", CancellationToken.None)).Value!.SupportsImages);
@@ -40,12 +41,13 @@ public sealed class ModelCatalogTests
         var services = new ServiceCollection(); services.AddKeyedSingleton<IInferenceProvider>("ollama", provider);
         using var container = services.BuildServiceProvider();
         var clock = new ManualClock();
-        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]), new AiNexus.Platform.Diagnostics.Issues(Microsoft.Extensions.Logging.Abstractions.NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance), clock);
+        var issues = new AiNexus.Platform.Diagnostics.Issues(Microsoft.Extensions.Logging.Abstractions.NullLogger<AiNexus.Platform.Diagnostics.Issues>.Instance);
+        var catalog = new ModelCatalog(new InferenceRouter(container, options), options, new ModelPresentation(options, [KnowledgeModule.EmbeddingModel(new KnowledgeOptions())]), issues, clock);
         Assert.Single((await catalog.GetAsync(CancellationToken.None)).Models);
         Assert.Equal(1, provider.Calls);
         clock.Now += ModelCatalog.FreshFor + TimeSpan.FromSeconds(1);
         provider.Pending = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        // 此時模型探索卡住：呼叫端仍會立即拿到快取的模型，而且背景刷新只會啟動一次。
+        // 模型探索卡住時，呼叫端仍要立即拿到快取的模型；而且重複呼叫不會讓背景刷新多啟動一次。
         for (var i = 0; i < 3; i++) Assert.Single((await catalog.GetAsync(CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(5))).Models);
         await provider.SecondCall.Task.WaitAsync(TimeSpan.FromSeconds(5), TestContext.Current.CancellationToken);
         Assert.Equal(2, provider.Calls);

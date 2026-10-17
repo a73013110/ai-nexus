@@ -49,7 +49,7 @@ internal sealed class StreamRunEvents(
             return ChatErrors.InvalidCursor;
         }
 
-        // 游標越界防禦：不得為負數，亦不可超過目前資料庫中最新序號
+        // 游標不得為負數，也不能超過資料庫中目前的最新序號，否則視為無效
         if (cursor < 0 || cursor > run.LastSequence)
         {
             return ChatErrors.CursorAhead;

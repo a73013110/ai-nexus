@@ -2,7 +2,9 @@ using AiNexus.Features.Monitoring.Traffic;
 namespace AiNexus.Features.Monitoring.Snapshots;
 
 /// <summary>
-/// 所有監控讀取與串流推送共用的快照。同一時間窗內，距上次建置不到 <see cref="ReuseFor"/> 者直接共用，因此 N 位檢視者每個時間窗每秒只建置一次，子系統讀數也來自快取。
+/// 監控讀取與串流推送共用的快照。
+/// 同一時間窗內，距上次建置不到 <see cref="ReuseFor"/> 就直接共用，
+/// 因此不論有幾位檢視者，每個時間窗每秒只建置一次，子系統讀數也來自快取。
 /// </summary>
 public sealed class MonitoringSnapshots(RuntimeTraffic traffic, SubsystemReadings subsystems, TimeProvider clock)
 {

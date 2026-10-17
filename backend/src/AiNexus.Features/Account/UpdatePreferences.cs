@@ -42,7 +42,12 @@ internal sealed class UpdatePreferences(NexusDbContext db, ModelPresentation mod
         if (!ValidTheme(value.Theme)) return AccountErrors.InvalidTheme;
         if (value.DefaultModelId?.Length > MaxModelIdLength) return AccountErrors.InvalidModel;
         string? model = null;
-        if (value.DefaultModelId is not null && (model = models.InternalId(value.DefaultModelId)) is null) return AccountErrors.ModelNotAllowed;
+        if (value.DefaultModelId is not null)
+        {
+            // 模型必須由伺服器核准才會轉成內部 ID，前端送來的字串不可直接存。
+            model = models.InternalId(value.DefaultModelId);
+            if (model is null) return AccountErrors.ModelNotAllowed;
+        }
         user.Preferences.Theme = value.Theme;
         user.Preferences.ReducedMotion = value.ReducedMotion;
         user.Preferences.DefaultModelId = model;

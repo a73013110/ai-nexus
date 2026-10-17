@@ -14,7 +14,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Identity;
 
-/// <summary>目前請求的使用者解析器。首次解析時把 Windows SID 對應到 <see cref="NexusUser"/>（必要時建立、綁定或更新），結果在同一請求內快取。</summary>
+/// <summary>
+/// 目前請求的使用者解析器。首次解析時把 Windows SID 對應到 <see cref="NexusUser"/>（必要時建立、綁定或更新），結果在同一請求內快取。
+/// </summary>
 public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor, StorageReadiness storage, IdentityWriteLock writeLock, IEnumerable<ISignInGrant> grants,
     DisplayNameCache names, TimeProvider clock) : IRequestUser, ICurrentUser
 {
@@ -35,8 +37,9 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
             // Cookie 驗證剛讀過這一列，直接追蹤那份副本，避免再查一次。
             var linked = Track(SessionIdentity.ValidatedUser(accessor.HttpContext!, userId)) ?? await db.Users.SingleOrDefaultAsync(x => x.Id == userId, ct);
             var testing = principal.HasClaim(x => x.Type == SessionIdentity.ActorId);
-            if (linked is null || !SessionIdentity.Available(linked) || !SessionIdentity.MatchesVersion(linked, principal.FindFirstValue(SessionIdentity.Version)) ||
-                !testing && !SessionIdentity.Allows(linked, principal.FindFirstValue(SessionIdentity.Method)))
+            if (linked is null || !SessionIdentity.Available(linked)
+                || !SessionIdentity.MatchesVersion(linked, principal.FindFirstValue(SessionIdentity.Version))
+                || (!testing && !SessionIdentity.Allows(linked, principal.FindFirstValue(SessionIdentity.Method))))
                 return IdentityErrors.SessionRevoked;
             return resolved = linked;
         }
@@ -94,7 +97,8 @@ public sealed class CurrentUser(NexusDbContext db, IHttpContextAccessor accessor
         return false;
     }
 
-    private bool Stale(NexusUser user, string displayName) => clock.GetUtcNow() - user.LastSeenAt > SeenInterval || !user.ProfileManaged && user.DisplayName != displayName;
+    private bool Stale(NexusUser user, string displayName)
+        => clock.GetUtcNow() - user.LastSeenAt > SeenInterval || (!user.ProfileManaged && user.DisplayName != displayName);
 
     /// <summary>回傳本請求中追蹤的使用者實體（未追蹤則 Attach 進來），讓 handler 可以修改並儲存。</summary>
     private NexusUser? Track(NexusUser? user)

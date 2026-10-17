@@ -44,12 +44,18 @@ internal sealed class ModelPriceConfiguration : IEntityTypeConfiguration<ModelPr
     {
         price.Property(x => x.EffectiveAt).HasValueGenerator<CreationTime>();
         price.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
-        price.ToTable("ModelPrices", "billing"); price.HasKey(x => x.Id);
+        price.ToTable("ModelPrices", "billing");
+        price.HasKey(x => x.Id);
         price.HasIndex(x => new { x.Provider, x.ModelId, x.EffectiveAt }).IsUnique();
-        price.Property(x => x.Provider).HasMaxLength(32); price.Property(x => x.ModelId).HasMaxLength(160);
-        price.Property(x => x.Currency).HasMaxLength(3); price.Property(x => x.Kind).HasMaxLength(16);
-        price.Property(x => x.RequestCharge).HasMaxLength(16); price.Property(x => x.Note).HasMaxLength(500);
-        price.Property(x => x.InputPerMillion).HasPrecision(20, 8); price.Property(x => x.CachedInputPerMillion).HasPrecision(20, 8);
-        price.Property(x => x.OutputPerMillion).HasPrecision(20, 8); price.Property(x => x.PerRequest).HasPrecision(20, 8);
+        price.Property(x => x.Provider).HasMaxLength(32);
+        price.Property(x => x.ModelId).HasMaxLength(160);
+        price.Property(x => x.Currency).HasMaxLength(3);
+        price.Property(x => x.Kind).HasMaxLength(16);
+        price.Property(x => x.RequestCharge).HasMaxLength(16);
+        price.Property(x => x.Note).HasMaxLength(500);
+        price.Property(x => x.InputPerMillion).HasPrecision(20, 8);
+        price.Property(x => x.CachedInputPerMillion).HasPrecision(20, 8);
+        price.Property(x => x.OutputPerMillion).HasPrecision(20, 8);
+        price.Property(x => x.PerRequest).HasPrecision(20, 8);
     }
 }

@@ -104,7 +104,7 @@ public sealed class EmbeddingProfileTests
         indexing.ChunkTargetTokens = 80; indexing.ChunkMaxTokens = 100; indexing.ChunkMinTokens = 20; indexing.ChunkOverlapRatio = 0;
         var target = (await Profiles(client)).Single(x => x.Status == "building");
         (await client.PostAsync($"/api/v1/admin/knowledge/profiles/{target.Id}/rebuild", null)).EnsureSuccessStatusCode(); await Drain(factory);
-        // Chunk 是共用的，因此重建會以目前設定重新切塊，並在該切塊配置上為啟用中的 profile 重新產生向量。
+        // Chunk 是所有 profile 共用的，因此重建會依目前設定重新切塊，再為啟用中的 profile 在新切塊上產生向量。
         var all = await Profiles(client);
         Assert.All(all, x => Assert.Equal((3, true), (x.Coverage.CompletedChunks, x.Coverage.Complete)));
         Assert.Equal(original.Id, all.Single(x => x.Status == "active").Id);

@@ -20,7 +20,9 @@ internal sealed class GetArtifact(NexusDbContext db, ResourceAccess access)
         if (!found.IsSuccess) return found.Error;
         var resource = found.Value;
         var item = await db.Set<Artifact>().AsNoTracking().SingleAsync(x => x.Id == id, ct);
-        var revision = await db.Set<ArtifactRevision>().AsNoTracking().SingleOrDefaultAsync(x => x.ArtifactId == id && x.Version == (version ?? item.Version), ct);
+        var wanted = version ?? item.Version;
+        var revision = await db.Set<ArtifactRevision>().AsNoTracking()
+            .SingleOrDefaultAsync(x => x.ArtifactId == id && x.Version == wanted, ct);
         if (revision is null) return ArtifactsErrors.VersionMissing;
         var info = await access.DescribeAsync(actor, resource, ct);
         return new ArtifactDto(info with { Name = revision.Title }, revision.Version, item.Version, revision.Content, item.SourceMessageId, item.ProjectId);

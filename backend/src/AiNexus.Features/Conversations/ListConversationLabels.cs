@@ -8,9 +8,16 @@ namespace AiNexus.Features.Conversations;
 internal sealed class ListConversationLabels(NexusDbContext db)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/labels", async (ICurrentUser user, ListConversationLabels handler, CancellationToken ct) => TypedResults.Ok(await handler.HandleAsync(user.Id, ct)))
+        .MapGet("/labels", async (ICurrentUser user, ListConversationLabels handler, CancellationToken ct) =>
+            TypedResults.Ok(await handler.HandleAsync(user.Id, ct)))
         .WithName("ListConversationLabels");
 
-    public async Task<IReadOnlyList<string>> HandleAsync(Guid owner, CancellationToken ct)
-        => await (from label in db.Set<ConversationLabel>() join conversation in db.Set<Conversation>() on label.ConversationId equals conversation.Id where conversation.OwnerId == owner select label.Name).Distinct().OrderBy(x => x).ToListAsync(ct);
+    public async Task<IReadOnlyList<string>> HandleAsync(Guid owner, CancellationToken ct) => await (
+            from label in db.Set<ConversationLabel>()
+            join conversation in db.Set<Conversation>() on label.ConversationId equals conversation.Id
+            where conversation.OwnerId == owner
+            select label.Name)
+        .Distinct()
+        .OrderBy(x => x)
+        .ToListAsync(ct);
 }

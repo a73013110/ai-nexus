@@ -17,8 +17,8 @@ public interface IRequestValidator
 }
 
 /// <summary>
-/// 於 Handler 執行前自動驗證所有具備 <see cref="IValidator{T}"/> 的端點引數。
-/// 一次套用於路由群組即可全面生效，避免新增端點時遺漏驗證；無須驗證參數的端點不會產生額外過濾器開銷。
+/// 在 Handler 執行前，自動驗證端點引數中所有有 <see cref="IValidator{T}"/> 的型別。
+/// 套在路由群組上即全面生效，新增端點時不會漏掉驗證；沒有驗證器的端點不會增加過濾器開銷。
 /// </summary>
 public static class RequestValidation
 {
@@ -38,10 +38,10 @@ public static class RequestValidation
         if (targets.Length == 0) return next;
         return async invocation =>
         {
-            foreach (var (index, type) in targets)
+            foreach (var (index, validatorType) in targets)
             {
                 if (invocation.Arguments[index] is not { } argument) continue;
-                var validator = (IValidator)invocation.HttpContext.RequestServices.GetRequiredService(type);
+                var validator = (IValidator)invocation.HttpContext.RequestServices.GetRequiredService(validatorType);
                 var result = await validator.ValidateAsync(new ValidationContext<object>(argument), invocation.HttpContext.RequestAborted);
                 if (!result.IsValid)
                     return Error.Invalid(validator is IRequestValidator coded ? coded.ProblemCode : DefaultCode).ToProblem(Fields(result));
@@ -50,14 +50,18 @@ public static class RequestValidation
         };
     }
 
-    /// <summary>將驗證錯誤轉換為「JSON 成員路徑（camelCase）→ 穩定規則代碼」之字典。絕不洩漏驗證器原生訊息或使用者提交的原始值。</summary>
+    /// <summary>
+    /// 把驗證錯誤轉成「JSON 成員路徑（camelCase）→ 穩定規則代碼」的字典。
+    /// 不回傳驗證器的原始訊息，也不回傳使用者提交的值，避免洩漏內容。
+    /// </summary>
     internal static Dictionary<string, string[]> Fields(ValidationResult result) => result.Errors
         .GroupBy(failure => Path(failure.PropertyName), StringComparer.Ordinal)
         .ToDictionary(group => group.Key, group => group.Select(failure => Rule(failure.ErrorCode)).Distinct(StringComparer.Ordinal).ToArray(), StringComparer.Ordinal);
 
     private static string Path(string property) => string.Join('.', property.Split('.').Select(JsonNamingPolicy.CamelCase.ConvertName));
 
-    // FluentValidation 內建規則回報如 "MaximumLengthValidator"，自動轉為 snake_case；自訂規則則可透過 WithErrorCode 指定明確代碼。
+    // FluentValidation 內建規則的代碼（如 MaximumLengthValidator）會轉為 snake_case；
+    // 自訂規則若需要固定代碼，應改用 WithErrorCode 指定。
     private static string Rule(string code) => code.EndsWith("Validator", StringComparison.Ordinal)
         ? JsonNamingPolicy.SnakeCaseLower.ConvertName(code[..^"Validator".Length])
         : code;

@@ -25,7 +25,10 @@ internal sealed class ListAdminUserConversations(NexusDbContext db, Administrati
         if (!AdministrativeReadAudit.ValidPage(search, offset)) return AdministrationErrors.InvalidSearch;
         if (!await db.Users.AnyAsync(x => x.Id == owner, ct)) return AdministrationErrors.NotFound;
         var query = db.Conversations.IgnoreQueryFilters([SoftDelete.Filter]).AsNoTracking().Where(x => x.OwnerId == owner && (includeDeleted || !x.IsDeleted));
-        if (!string.IsNullOrWhiteSpace(search)) query = query.Where(x => x.Title.Contains(search) || db.Messages.Any(m => m.ConversationId == x.Id && m.Content.Contains(search)));
+        // 搜尋範圍包含訊息內文，所以只要標題或任一則訊息命中就列出。
+        if (!string.IsNullOrWhiteSpace(search))
+            query = query.Where(x => x.Title.Contains(search)
+                || db.Messages.Any(m => m.ConversationId == x.Id && m.Content.Contains(search)));
         var total = await query.CountAsync(ct);
         var rows = await query.OrderByDescending(x => x.UpdatedAt).ThenBy(x => x.Id).Skip(offset).Take(50)
             .Select(x => new AdminConversationDto(x.Id, x.Title, x.CreatedAt, x.UpdatedAt, x.IsArchived, x.IsDeleted, db.Messages.Count(m => m.ConversationId == x.Id))).ToListAsync(ct);

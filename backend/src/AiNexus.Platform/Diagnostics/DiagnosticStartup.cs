@@ -4,14 +4,13 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Platform.Diagnostics;
 
 /// <summary>
-/// 應用程式啟動引導失敗記錄器。
-/// 處理在託管背景工作（Hosted Worker）與相依性注入容器完全建立前所爆發的致命錯誤。
-/// 僅將固定格式中繼資料寫入緊急磁碟日誌期刊與本機主控台。
+/// 應用程式啟動失敗的紀錄器，處理在 Hosted Worker 與 DI 容器建立前發生的致命錯誤。
+/// 只把固定格式的中繼資料寫入緊急磁碟期刊與本機主控台。
 /// </summary>
 public static class DiagnosticStartup
 {
     /// <summary>
-    /// 於主機啟動崩潰時記錄致命事件，產生 NX- 代碼並嘗試寫入期刊。
+    /// 主機啟動崩潰時記錄致命事件：產生 NX- 查證代碼，並嘗試寫入期刊。
     /// </summary>
     public static async Task RecordAsync(Exception exception, IConfiguration configuration, IHostEnvironment environment)
     {
@@ -57,7 +56,7 @@ public static class DiagnosticStartup
             health.Emergency("startup_journal_failed", 1);
         }
 
-        // 不透明查證代碼亦輸出至標準錯誤流，供本機或維運工程師在應用程式無法啟動時比對。
+        // 查證代碼也寫到標準錯誤流，方便本機或維運人員在應用程式無法啟動時比對。
         try
         {
             Console.Error.WriteLine("AiNexus startup failed. Issue: " + issue);

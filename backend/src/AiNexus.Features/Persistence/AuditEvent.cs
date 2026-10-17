@@ -45,7 +45,8 @@ internal sealed class AuditEventConfiguration : IEntityTypeConfiguration<AuditEv
         audit.ToTable("AuditEvents", "audit");
         audit.HasKey(x => x.Id);
         audit.Property(x => x.Action).HasMaxLength(64);
-        audit.Property(x => x.TraceId).HasMaxLength(32); audit.Property(x => x.IssueCode).HasMaxLength(40);
+        audit.Property(x => x.TraceId).HasMaxLength(32);
+        audit.Property(x => x.IssueCode).HasMaxLength(40);
         audit.Property(x => x.Result).HasMaxLength(80);
         audit.Property(x => x.DetailsJson).HasMaxLength(40000);
         audit.HasIndex(x => x.At);

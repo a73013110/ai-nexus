@@ -71,7 +71,8 @@ internal sealed class ImportRepositoryFolder(NexusDbContext db, RepositoryServic
         if (folder.Length > 0)
         {
             var parent = folder.Contains('/') ? folder[..folder.LastIndexOf('/')] : "";
-            var read = await gitea.GetAsync(owner, route + "/contents" + (parent.Length == 0 ? "" : "/" + RepositoryService.EncodePath(parent)) + "?ref=" + commit, ct);
+            var contents = route + "/contents" + (parent.Length == 0 ? "" : "/" + RepositoryService.EncodePath(parent)) + "?ref=" + commit;
+            var read = await gitea.GetAsync(owner, contents, ct);
             if (!read.IsSuccess) return read.Error!;
             using var listing = read.Value!;
             var name = folder[(folder.LastIndexOf('/') + 1)..];
@@ -89,10 +90,12 @@ internal sealed class ImportRepositoryFolder(NexusDbContext db, RepositoryServic
             foreach (var entry in GiteaJson.Items(json.RootElement, "tree"))
             {
                 var path = GiteaJson.Text(entry, "path", 500);
-                if (GiteaJson.Text(entry, "type", 16) != "blob" || GiteaJson.Number(entry, "size") is < 1 || GiteaJson.Number(entry, "size") > gitea.Options.MaxFileBytes) continue;
+                var size = GiteaJson.Number(entry, "size");
+                if (GiteaJson.Text(entry, "type", 16) != "blob" || size is < 1 || size > gitea.Options.MaxFileBytes) continue;
                 var full = folder.Length == 0 ? path : folder + "/" + path;
                 var fileName = Path.GetFileName(path);
-                if (!RepositoryService.IsFilePath(full, false) || !(TextExtensions.Contains(Path.GetExtension(fileName)) || TextNames.Contains(Path.GetFileNameWithoutExtension(fileName)))) continue;
+                var isTextFile = TextExtensions.Contains(Path.GetExtension(fileName)) || TextNames.Contains(Path.GetFileNameWithoutExtension(fileName));
+                if (!RepositoryService.IsFilePath(full, false) || !isTextFile) continue;
                 paths.Add(full);
                 if (paths.Count > gitea.Options.MaxImportFiles) return Result<IReadOnlyList<string>>.Ok(paths);
             }

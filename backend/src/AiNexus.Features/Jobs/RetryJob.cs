@@ -12,7 +12,8 @@ namespace AiNexus.Features.Jobs;
 internal sealed class RetryJob(NexusDbContext db, IServiceProvider services, TimeProvider clock)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("/{id:guid}/retry", (Guid id, ICurrentUser user, RetryJob handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .MapPost("/{id:guid}/retry", (Guid id, ICurrentUser user, RetryJob handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
         .WithName("RetryJob");
 
     public async Task<Result<JobDto>> HandleAsync(Guid owner, Guid id, CancellationToken ct)
@@ -28,9 +29,18 @@ internal sealed class RetryJob(NexusDbContext db, IServiceProvider services, Tim
         if (!allowed.IsSuccess) return allowed.Error;
         var active = job.Kind + ":" + job.SubjectId.ToString("N");
         if (await db.Set<BackgroundJob>().AnyAsync(x => x.ActiveKey == active && x.Id != id, ct)) return JobsErrors.JobActive;
-        var changed = await db.Set<BackgroundJob>().Where(x => x.Id == id && x.Status == job.Status && x.LeaseToken == null).ExecuteUpdateAsync(p =>
-            p.SetProperty(x => x.Status, "queued").SetProperty(x => x.Stage, "等待重試").SetProperty(x => x.ActiveKey, active)
-             .SetProperty(x => x.CancelRequested, false).SetProperty(x => x.ErrorCode, (string?)null).SetProperty(x => x.IssueCode, (string?)null).SetProperty(x => x.ErrorMessage, (string?)null).SetProperty(x => x.UpdatedAt, clock.GetUtcNow()), ct);
+        // 條件中的 Status 即為讀到的狀態（fencing）：若在此之間被別人改過，UPDATE 不會命中。
+        var changed = await db.Set<BackgroundJob>()
+            .Where(x => x.Id == id && x.Status == job.Status && x.LeaseToken == null)
+            .ExecuteUpdateAsync(p => p
+                .SetProperty(x => x.Status, "queued")
+                .SetProperty(x => x.Stage, "等待重試")
+                .SetProperty(x => x.ActiveKey, active)
+                .SetProperty(x => x.CancelRequested, false)
+                .SetProperty(x => x.ErrorCode, (string?)null)
+                .SetProperty(x => x.IssueCode, (string?)null)
+                .SetProperty(x => x.ErrorMessage, (string?)null)
+                .SetProperty(x => x.UpdatedAt, clock.GetUtcNow()), ct);
         if (changed != 1) return JobsErrors.JobChanged;
         return await db.ReloadJobAsync(owner, id, ct);
     }

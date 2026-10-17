@@ -17,10 +17,11 @@ public sealed class ResourceWriteLock
 
     public Task<IDisposable> AcquireAsync(Guid resource, CancellationToken ct) => keys.AcquireAsync(("resource", resource), ct);
 
-    /// <summary>其他以 ID 為範圍的不變式鎖，例如單一擁有者的額度、單一訊息的回饋；<paramref name="scope"/> 用來區分不同用途。</summary>
+    /// <summary>為不屬於資源本身、但以 ID 為範圍的不變式加鎖，例如單一擁有者的額度或單一訊息的回饋。<paramref name="scope"/> 用來區分用途，避免不同用途的鎖互相等待。</summary>
     public Task<IDisposable> AcquireAsync(string scope, Guid id, CancellationToken ct) => keys.AcquireAsync((scope, id), ct);
 }
 
+/// <summary>資源的可見性、編輯權與 ACL 判斷；所有分享資源的模組都透過它決定能否讀寫。</summary>
 public sealed class ResourceAccess(NexusDbContext db, AccessService access, ResourceWriteLock writes, TimeProvider clock)
 {
     public async Task<IQueryable<WorkspaceResource>> QueryAsync(Guid actor, string kind, CancellationToken ct)

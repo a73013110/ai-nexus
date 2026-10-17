@@ -20,7 +20,12 @@ public sealed partial class StructuredChunker(IOptions<KnowledgeOptions> options
             var blank = true;
             foreach (var raw in page.Text.Replace("\r\n", "\n").Split('\n'))
             {
-                var line = raw.Trim(); if (line.Length == 0) { blank = true; continue; }
+                var line = raw.Trim();
+                if (line.Length == 0)
+                {
+                    blank = true;
+                    continue;
+                }
                 var level = HeadingLevel(line);
                 if (level > 0)
                 {
@@ -47,11 +52,12 @@ public sealed partial class StructuredChunker(IOptions<KnowledgeOptions> options
             }
         }
         var result = new List<StructuredChunk>(); var pending = new List<Block>();
-        string Text() => string.Join('\n', pending.Select(x => x.Text));
+        string PendingText() => string.Join('\n', pending.Select(x => x.Text));
         void Flush(bool overlap)
         {
             if (pending.Count == 0) return;
-            var text = Text(); result.Add(new(pending[0].Page, pending[^1].Page, pending[^1].Heading, text, TokenEstimator.Estimate(text)));
+            var text = PendingText();
+            result.Add(new(pending[0].Page, pending[^1].Page, pending[^1].Heading, text, TokenEstimator.Estimate(text)));
             var tail = new List<Block>(); var budget = (int)(settings.Indexing.ChunkTargetTokens * settings.Indexing.ChunkOverlapRatio);
             if (overlap)
                 foreach (var block in pending.AsEnumerable().Reverse())
@@ -63,25 +69,34 @@ public sealed partial class StructuredChunker(IOptions<KnowledgeOptions> options
         }
         foreach (var block in blocks)
         {
-            var length = TokenEstimator.Estimate(Text());
+            var length = TokenEstimator.Estimate(PendingText());
             var headingChanged = pending.Count > 0 && pending[0].Heading != block.Heading;
-            if (pending.Count > 0 && (headingChanged && length >= settings.Indexing.ChunkMinTokens || length >= settings.Indexing.ChunkTargetTokens && block.Boundary
-                || TokenEstimator.Estimate(Text() + "\n" + block.Text) > settings.Indexing.ChunkMaxTokens || Text().Length + block.Text.Length + 1 > 4000))
-                Flush(!headingChanged);
+            if (pending.Count > 0)
+            {
+                // 標題換了且已達最小長度就換段；內容達目標長度、且這個區塊是句界時也換段。
+                var headingBreak = headingChanged && length >= settings.Indexing.ChunkMinTokens;
+                var targetBreak = length >= settings.Indexing.ChunkTargetTokens && block.Boundary;
+                var overflow = TokenEstimator.Estimate(PendingText() + "\n" + block.Text) > settings.Indexing.ChunkMaxTokens
+                    || PendingText().Length + block.Text.Length + 1 > 4000;
+                if (headingBreak || targetBreak || overflow)
+                    Flush(!headingChanged);
+            }
             // 若保留重疊會迫使下一句或表格列被硬切，就捨棄重疊內容。
-            if (pending.Count > 0 && TokenEstimator.Estimate(Text() + "\n" + block.Text) > settings.Indexing.ChunkMaxTokens) pending.Clear();
+            if (pending.Count > 0 && TokenEstimator.Estimate(PendingText() + "\n" + block.Text) > settings.Indexing.ChunkMaxTokens) pending.Clear();
             pending.Add(block);
-            if (TokenEstimator.Estimate(Text()) >= settings.Indexing.ChunkTargetTokens && !block.Table) Flush(true);
+            if (TokenEstimator.Estimate(PendingText()) >=settings.Indexing.ChunkTargetTokens && !block.Table) Flush(true);
         }
         if (pending.Count > 0)
         {
-            var text = Text();
+            var text = PendingText();
             if (result.Count > 0 && result[^1].Text.EndsWith(text, StringComparison.Ordinal)) pending.Clear();
             else if (result.Count > 0 && TokenEstimator.Estimate(text) < settings.Indexing.ChunkMinTokens
                 && TokenEstimator.Estimate(result[^1].Text + "\n" + text) <= settings.Indexing.ChunkMaxTokens && result[^1].Text.Length + text.Length + 1 <= 4000)
             {
-                var last = result[^1]; var combined = last.Text + "\n" + text;
-                result[^1] = last with { EndPage = pending[^1].Page, Text = combined, TokenEstimate = TokenEstimator.Estimate(combined) }; pending.Clear();
+                var last = result[^1];
+                var combined = last.Text + "\n" + text;
+                result[^1] = last with { EndPage = pending[^1].Page, Text = combined, TokenEstimate = TokenEstimator.Estimate(combined) };
+                pending.Clear();
             }
             Flush(false);
         }

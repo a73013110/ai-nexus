@@ -3,8 +3,8 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Platform.Diagnostics;
 
 /// <summary>
-/// 診斷日誌背景服務。檔案系統日誌寫入（Journal）與 SQL 資料庫匯入雙軌獨立運作，
-/// 確保即使 SQL 資料庫緩慢或離線，亦絕不拖慢或阻塞即時日誌寫入本機檔案系統。
+/// 診斷日誌的背景服務。檔案日誌（Journal）與 SQL 匯入是兩條獨立的軌道；
+/// 即使 SQL 緩慢或離線，也不會拖慢或阻塞本機檔案的即時寫入。
 /// </summary>
 public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal journal, IDiagnosticStore store, DiagnosticHealth health, IOptions<DiagnosticOptions> options, DiagnosticExporter exporter, TimeProvider clock) : BackgroundService
 {
@@ -80,7 +80,7 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
                 delay = options.Value.RetrySeconds * 1000;
             }
 
-            // 清理機制必須在匯入器達到容量上限遭阻塞時仍持續運作
+            // 匯入器因容量上限被阻塞時，清理仍必須能執行。
             if (!ct.IsCancellationRequested && cleanupAt < clock.GetUtcNow())
             {
                 try
@@ -118,7 +118,7 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
 
         if (ExecuteTask is { IsCompleted: false })
         {
-            // 主機關閉期限逾期。切勿啟動並行寫入器或偽稱記憶體佇列已完全衝刷。日誌生命週期會負責關閉未結的容量控制碼。
+            // 主機關閉期限已逾。不可啟動並行的寫入器，也不能假裝記憶體佇列已排清；未結的容量控制碼由日誌生命週期負責關閉。
             health.Emergency("shutdown_flush_incomplete", pending.Count + Interlocked.Read(ref health.QueueDepth));
             return;
         }
@@ -138,7 +138,7 @@ public sealed class DiagnosticWorker(DiagnosticBuffer buffer, IDiagnosticJournal
         }
         catch (Exception)
         {
-            // 剩餘佇列記錄於下方緊急狀態；絕不可透過 ILogger 產生遞迴
+            // 剩餘的佇列會記在下方的緊急狀態；絕不可透過 ILogger 寫入，否則會遞迴。
         }
 
         var remaining = pending.Count + Interlocked.Read(ref health.QueueDepth);

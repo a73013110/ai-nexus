@@ -45,7 +45,8 @@ internal sealed class SaveProjectTemplate(NexusDbContext db, ResourceAccess acce
         else
         {
             if (await db.Set<ProjectTemplate>().CountAsync(x => x.ProjectId == id, ct) >= ProjectTemplate.MaxPerProject) return ProjectsErrors.TemplateLimit;
-            row = new() { ProjectId = id }; db.Add(row);
+            row = new() { ProjectId = id };
+            db.Add(row);
         }
         row.Title = request.Title.Trim(); row.Content = request.Content.Trim();
         db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = row.Id, Action = key is null ? "project.template.created" : "project.template.updated", Result = "saved" });

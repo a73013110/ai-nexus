@@ -25,7 +25,10 @@ internal sealed class RepositoryConnectionConfiguration : IEntityTypeConfigurati
     public void Configure(EntityTypeBuilder<RepositoryConnection> c)
     {
         c.Property(x => x.ConnectedAt).HasValueGenerator<CreationTime>();
-        c.ToTable("RepositoryConnections", "repositories"); c.HasKey(x => x.OwnerId);
-        c.Property(x => x.BaseUrl).HasMaxLength(500); c.Property(x => x.Login).HasMaxLength(100); c.Property(x => x.ProtectedToken).HasMaxLength(4096);
+        c.ToTable("RepositoryConnections", "repositories");
+        c.HasKey(x => x.OwnerId);
+        c.Property(x => x.BaseUrl).HasMaxLength(500);
+        c.Property(x => x.Login).HasMaxLength(100);
+        c.Property(x => x.ProtectedToken).HasMaxLength(4096);
     }
 }

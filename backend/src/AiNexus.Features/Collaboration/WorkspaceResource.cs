@@ -58,8 +58,8 @@ internal sealed class WorkspaceResourceConfiguration : IEntityTypeConfiguration<
         resource.ToTable("Resources", "collaboration"); resource.HasKey(x => x.Id);
         resource.Property(x => x.Kind).HasMaxLength(24); resource.Property(x => x.Name).HasMaxLength(120);
         resource.HasIndex(x => new { x.OwnerId, x.Kind, x.UpdatedAt });
-        // ResourceAccess.QueryAsync 依 Kind 篩選（擁有、直接分享或繼承）並以新到舊排序。軟刪除旗標與存取判斷欄位都放進 INCLUDE，
-        // 讓索引本身就能排除不可見的列，不必回表。
+        // ResourceAccess.QueryAsync 依 Kind 篩選並以新到舊排序。把軟刪除旗標與存取判斷欄位放進 INCLUDE，
+        // 索引本身就能排除不可見的列，省去回表。
         resource.HasIndex(x => new { x.Kind, x.UpdatedAt }).IncludeProperties(x => new { x.OwnerId, x.ParentId, x.IsDeleted });
         resource.HasQueryFilter(SoftDelete.Filter, x => !x.IsDeleted);
         resource.HasOne<WorkspaceResource>().WithMany().HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Restrict);

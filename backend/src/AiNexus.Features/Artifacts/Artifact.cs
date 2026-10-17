@@ -27,10 +27,13 @@ public sealed class Artifact
     public Guid? ProjectId { get; set; }
 
     /// <summary>與 <see cref="ResourceAccess.Name"/> 相同的規則：去除頭尾空白後 1 到 120 字元，且不含控制字元。</summary>
-    internal static bool TitleIsValid(string? title) => title?.Trim() is { Length: >= 1 and <= TitleMaxLength } trimmed && !trimmed.Any(char.IsControl);
+    internal static bool TitleIsValid(string? title) =>
+        title?.Trim() is { Length: >= 1 and <= TitleMaxLength } trimmed && !trimmed.Any(char.IsControl);
 
     /// <summary>1 到 64,000 字元、不可全為空白，且除換行與 Tab 外不得含控制字元。</summary>
-    internal static bool ContentIsValid(string? content) => content is { Length: >= 1 and <= ContentMaxLength } && !string.IsNullOrWhiteSpace(content)
+    internal static bool ContentIsValid(string? content) =>
+        content is { Length: >= 1 and <= ContentMaxLength }
+        && !string.IsNullOrWhiteSpace(content)
         && !content.Any(x => char.IsControl(x) && x is not ('\n' or '\r' or '\t'));
 }
 
@@ -38,6 +41,7 @@ internal sealed class ArtifactConfiguration : IEntityTypeConfiguration<Artifact>
 {
     public void Configure(EntityTypeBuilder<Artifact> item)
     {
-        item.ToTable("Artifacts", "artifacts"); item.HasKey(x => x.Id);
+        item.ToTable("Artifacts", "artifacts");
+        item.HasKey(x => x.Id);
     }
 }

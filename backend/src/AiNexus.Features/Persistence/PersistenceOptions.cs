@@ -8,7 +8,9 @@ public sealed class PersistenceOptions : IValidatableObject
 {
     public const string Section = "Persistence";
 
-    /// <summary>Applies pending migrations at startup. When false, startup only checks them and stops if any are pending.</summary>
+    /// <summary>
+    /// 啟動時是否自動套用待執行的 migration。關閉時只檢查；有待執行的 migration 就拒絕啟動，由 DBA 或腳本先行套用。
+    /// </summary>
     public bool ApplyMigrationsOnStartup { get; set; }
 
     /// <summary>

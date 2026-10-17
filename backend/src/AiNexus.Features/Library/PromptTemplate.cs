@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AiNexus.Features.Library;
 
+/// <summary>使用者私人的提示詞範本；每位使用者最多 <see cref="MaxPerOwner"/> 筆。</summary>
 [Comment("使用者私人提示詞範本。")]
 public sealed class PromptTemplate
 {

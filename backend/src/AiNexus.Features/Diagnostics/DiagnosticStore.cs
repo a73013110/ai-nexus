@@ -91,6 +91,7 @@ public sealed class DiagnosticStore(IServiceScopeFactory scopes, IOptions<Diagno
             var previous = await db.AuditEvents.AsNoTracking().Where(x => x.Action == "system.diagnostics.configuration").OrderByDescending(x => x.Id).Select(x => x.DetailsJson).FirstOrDefaultAsync(ct);
             string? previousFingerprint = null;
             try { if (previous is not null) { using var document = JsonDocument.Parse(previous); previousFingerprint = document.RootElement.GetProperty("fingerprint").GetString(); } }
+            // 舊紀錄格式無法解析時視為沒有先前指紋，會多寫一筆稽核，但不會阻擋清理。
             catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException) { }
             if (previousFingerprint != fingerprint)
             {

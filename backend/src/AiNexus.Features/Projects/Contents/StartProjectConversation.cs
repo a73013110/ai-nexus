@@ -28,16 +28,19 @@ internal sealed class StartProjectConversation(NexusDbContext db, ResourceAccess
         var active = await access.RequireActiveAsync(db, actor, id, write: false, ct);
         if (!active.IsSuccess) return active.Error;
         if (!(await features.ForUserAsync(actor, ct)).Features.Any(x => x.Id == "chat")) return AccessControlErrors.FeatureForbidden;
-        var prompt = ""; var title = request.Title ?? "新對話";
+        var prompt = "";
+        var title = request.Title ?? "新對話";
         if (request.TemplateId is Guid key)
         {
             var template = await db.Set<ProjectTemplate>().SingleOrDefaultAsync(x => x.Id == key && x.ProjectId == id, ct);
             if (template is null) return ProjectsErrors.TemplateMissing;
-            title = template.Title; prompt = template.Content;
+            title = template.Title;
+            prompt = template.Content;
         }
         if (ResourceAccess.Name(title) is not { IsSuccess: true } name) return ProjectsErrors.InvalidName;
         var row = new Conversation { OwnerId = actor, ProjectId = id, Title = name.Value };
-        db.Add(row); await db.SaveChangesAsync(ct);
+        db.Add(row);
+        await db.SaveChangesAsync(ct);
         return new ProjectConversationDto(row.ToDto(), prompt);
     }
 }

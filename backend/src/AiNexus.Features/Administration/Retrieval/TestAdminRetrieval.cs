@@ -23,7 +23,8 @@ internal sealed class AdminRetrievalSearchRequestValidator : RequestValidator<Ad
 internal sealed class TestAdminRetrieval(RetrievalPipeline pipeline)
 {
     public static void Map(RouteGroupBuilder routes) => routes
-        .MapPost("/search", (AdminRetrievalSearchRequest body, ICurrentUser user, TestAdminRetrieval handler, CancellationToken ct) => handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
+        .MapPost("/search", (AdminRetrievalSearchRequest body, ICurrentUser user, TestAdminRetrieval handler, CancellationToken ct)
+            => handler.HandleAsync(user.Id, body, ct).ToHttpResultAsync())
         .WithName("TestAdminRetrieval");
 
     public Task<Result<KnowledgeSearchDto>> HandleAsync(Guid actor, AdminRetrievalSearchRequest request, CancellationToken ct)

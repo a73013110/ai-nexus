@@ -12,5 +12,6 @@ public sealed class ArtifactService
 
     internal ArtifactService(CreateArtifact create) => this.create = create;
 
-    public Task<Result<ArtifactDto>> CreateAsync(Guid actor, CreateArtifactRequest request, CancellationToken ct) => create.HandleAsync(actor, request, ct);
+    public Task<Result<ArtifactDto>> CreateAsync(Guid actor, CreateArtifactRequest request, CancellationToken ct) =>
+        create.HandleAsync(actor, request, ct);
 }

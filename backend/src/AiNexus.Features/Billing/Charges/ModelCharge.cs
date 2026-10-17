@@ -65,15 +65,24 @@ internal sealed class ModelChargeConfiguration : IEntityTypeConfiguration<ModelC
 {
     public void Configure(EntityTypeBuilder<ModelCharge> charge)
     {
-        charge.ToTable("ModelCharges", "billing"); charge.HasKey(x => x.Id);
-        charge.HasIndex(x => new { x.OwnerId, x.CreatedAt }); charge.HasIndex(x => x.CreatedAt); charge.HasIndex(x => x.ConversationId);
-        charge.Property(x => x.Provider).HasMaxLength(32); charge.Property(x => x.ModelId).HasMaxLength(160);
-        charge.Property(x => x.Operation).HasMaxLength(32); charge.Property(x => x.Currency).HasMaxLength(3);
-        charge.Property(x => x.Kind).HasMaxLength(16); charge.Property(x => x.RequestCharge).HasMaxLength(16);
-        charge.Property(x => x.State).HasMaxLength(24); charge.Property(x => x.Outcome).HasMaxLength(16);
+        charge.ToTable("ModelCharges", "billing");
+        charge.HasKey(x => x.Id);
+        charge.HasIndex(x => new { x.OwnerId, x.CreatedAt });
+        charge.HasIndex(x => x.CreatedAt);
+        charge.HasIndex(x => x.ConversationId);
+        charge.Property(x => x.Provider).HasMaxLength(32);
+        charge.Property(x => x.ModelId).HasMaxLength(160);
+        charge.Property(x => x.Operation).HasMaxLength(32);
+        charge.Property(x => x.Currency).HasMaxLength(3);
+        charge.Property(x => x.Kind).HasMaxLength(16);
+        charge.Property(x => x.RequestCharge).HasMaxLength(16);
+        charge.Property(x => x.State).HasMaxLength(24);
+        charge.Property(x => x.Outcome).HasMaxLength(16);
         charge.HasOne<ModelPrice>().WithMany().HasForeignKey(x => x.PriceId).OnDelete(DeleteBehavior.Restrict);
-        charge.Property(x => x.InputPerMillion).HasPrecision(20, 8); charge.Property(x => x.CachedInputPerMillion).HasPrecision(20, 8);
-        charge.Property(x => x.OutputPerMillion).HasPrecision(20, 8); charge.Property(x => x.PerRequest).HasPrecision(20, 8);
+        charge.Property(x => x.InputPerMillion).HasPrecision(20, 8);
+        charge.Property(x => x.CachedInputPerMillion).HasPrecision(20, 8);
+        charge.Property(x => x.OutputPerMillion).HasPrecision(20, 8);
+        charge.Property(x => x.PerRequest).HasPrecision(20, 8);
         charge.Property(x => x.Amount).HasPrecision(20, 8);
     }
 }

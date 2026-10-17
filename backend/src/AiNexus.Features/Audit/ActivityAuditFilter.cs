@@ -18,15 +18,22 @@ public sealed class ActivityAuditFilter
     public string? Category { get; set; }
     public string? TraceId { get; set; }
 
-    internal bool IsValid() =>
-        !(Search?.Length > 120 || Action?.Length > 120 || Result?.Length > 10 || Result?.Any(x => x is null || x.Length > 80) == true || From > Until ||
-          TraceId is not null && (TraceId.Length != 32 || !TraceId.All(char.IsAsciiHexDigit)) ||
-          !string.IsNullOrEmpty(Category) && !AuditCategories.Values.Contains(Category));
+    internal bool IsValid()
+    {
+        var textInvalid = Search?.Length > 120 || Action?.Length > 120 || Result?.Length > 10 || Result?.Any(x => x is null || x.Length > 80) == true;
+        var traceInvalid = TraceId is not null && (TraceId.Length != 32 || !TraceId.All(char.IsAsciiHexDigit));
+        var categoryInvalid = !string.IsNullOrEmpty(Category) && !AuditCategories.Values.Contains(Category);
+        return !(textInvalid || From > Until || traceInvalid || categoryInvalid);
+    }
 
-    /// <summary>符合條件的紀錄，新到舊；有 <paramref name="before"/> 時只取 ID 比它小的（游標分頁）。每列回傳前要經過 <see cref="Present"/>。</summary>
+    /// <summary>
+    /// 符合條件的紀錄，新到舊；有 <paramref name="before"/> 時只取 ID 比它小的（游標分頁）。
+    /// 每列回傳前都要經過 <see cref="Present"/>。
+    /// </summary>
     internal IQueryable<AuditDto> Query(NexusDbContext db, long? before = null)
     {
-        // actor 是實際操作的人（未記錄時視為擁有者本人）；subject 是紀錄的擁有者。兩者不同表示代為操作（介面顯示為測試身分），對象帳號放進 ActingAs。
+        // actor 是實際操作者（沒有記錄時視為擁有者本人），subject 是紀錄的擁有者。兩者不同代表代為操作，
+        // 介面會以測試身分顯示，對象帳號則放進 ActingAs。
         var query = from entry in AuditCategories.Filter(db.AuditEvents.AsNoTracking(), Category)
                     join actorRecord in db.Users on (entry.ActorId ?? entry.OwnerId) equals actorRecord.Id into actors
                     from actor in actors.DefaultIfEmpty()

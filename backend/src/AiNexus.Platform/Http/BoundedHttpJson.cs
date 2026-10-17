@@ -3,7 +3,7 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Platform.Http;
 
-/// <summary>提供受嚴格位元組上限防護的 HTTP JSON 回應讀取機制，防止惡意過大回應導致記憶體耗盡。</summary>
+/// <summary>讀取遠端 JSON 回應時設定位元組上限，避免惡意的超大回應耗盡記憶體。</summary>
 public static class BoundedHttpJson
 {
     /// <summary>

@@ -1,12 +1,10 @@
 namespace AiNexus.Features.Chat.Runs;
 
 /// <summary>
-/// 進程內的生成事件喚醒訊號機制。
-/// 【並發防禦與無漏失喚醒設計】：
-/// - 寫入端（Worker）在 Commit 資料庫後呼叫 <see cref="Notify"/> 觸發訊號；
-/// - 讀取端（訂閱者）在查詢資料庫「前」先獲取 <see cref="Subscription.Next"/> 的 Task，查詢完成後才 await 它；
-///   這樣即便寫入剛好發生在「查詢完成後」與「進入等待前」的空隙，也能透過已取出的 Task 成功被喚醒，杜絕 Race Condition。
-/// - 同時保留 1 秒輪詢作為多伺服器行程寫入時的後備機制。
+/// 程序內的生成事件喚醒訊號。寫入端在資料庫 Commit 後呼叫 <see cref="Notify"/>。
+/// 讀取端必須先取得 <see cref="Subscription.Next"/> 的 Task 再查詢資料庫，查完才等待。
+/// 這樣寫入即使落在「查詢結束」與「開始等待」之間，已取得的 Task 仍會被完成，不會漏掉喚醒。
+/// 多個程序寫入時無法跨程序喚醒，因此另有 1 秒輪詢作為後備。
 /// </summary>
 public sealed class RunSignals
 {

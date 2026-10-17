@@ -3,13 +3,13 @@ using System.ComponentModel.DataAnnotations;
 namespace AiNexus.Platform.Configuration;
 
 /// <summary>
-/// 伺服器受控之 HTTP(S) 端點驗證屬性：必須為絕對 URL，且嚴格禁止包含使用者資訊（user info）、查詢字串（query）或片段標記（fragment），
-/// 確保認證金鑰與參數絕不透過組態 URL 傳遞。空值視為合法；若為必填請與 <see cref="RequiredAttribute"/> 搭配使用。
+/// 伺服器端受控的 HTTP(S) 端點驗證屬性：必須是絕對 URL，且不得含使用者資訊、查詢字串或片段。
+/// 這樣認證金鑰與參數就不會經由組態 URL 傳遞。空值視為合法；若必填，請搭配 <see cref="RequiredAttribute"/>。
 /// </summary>
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class HttpEndpointAttribute : ValidationAttribute
 {
-    /// <summary>除本機迴路（Loopback）主機外，全面強制使用 HTTPS 通訊協定。</summary>
+    /// <summary>除本機迴路（Loopback）外，一律強制使用 HTTPS。</summary>
     public bool HttpsOutsideLoopback { get; set; }
 
     public HttpEndpointAttribute() : base("{0} must be an absolute HTTP(S) URL without user info, query or fragment.") { }

@@ -13,8 +13,10 @@ public sealed class FeatureAuthorizationHandler(CurrentUser current, AccessServi
     {
         if (context.User.Identity?.IsAuthenticated != true) return;
         // 測試身分可讀取管理 API（存取管理與平台營運），但絕不可變更。
-        if ((requirement.FeatureIds.Contains(FeatureIds.Admin) || requirement.FeatureIds.Contains(FeatureIds.Operations)) && context.User.HasClaim(x => x.Type == SessionIdentity.ActorId) &&
-            http.HttpContext?.Request.Method is not ("GET" or "HEAD" or "OPTIONS"))
+        var guardsAdminApi = requirement.FeatureIds.Contains(FeatureIds.Admin) || requirement.FeatureIds.Contains(FeatureIds.Operations);
+        var isTestIdentity = context.User.HasClaim(x => x.Type == SessionIdentity.ActorId);
+        var isMutation = http.HttpContext?.Request.Method is not ("GET" or "HEAD" or "OPTIONS");
+        if (guardsAdminApi && isTestIdentity && isMutation)
         {
             context.Fail(new ErrorFailureReason(this, IdentityErrors.TestAdminReadOnly));
             return;

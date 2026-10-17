@@ -1,6 +1,8 @@
 namespace AiNexus.Platform.Security;
 
-/// <summary>供試算表軟體開啟的 CSV 輸出防護：每個儲存格皆以雙引號包裹；若開頭字元可能觸發公式計算（=, +, -, @），則前綴單引號以防止公式注入（CSV Formula Injection）。</summary>
+/// <summary>
+/// 匯出 CSV 時的儲存格防護。每格都以雙引號包住；開頭字元若可能被試算表當成公式（=、+、-、@），就前綴單引號，防止 CSV 公式注入。
+/// </summary>
 public static class CsvCell
 {
     private static readonly char[] FormulaStarts = ['=', '+', '-', '@'];

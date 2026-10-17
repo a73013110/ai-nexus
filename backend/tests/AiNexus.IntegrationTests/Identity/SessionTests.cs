@@ -103,7 +103,7 @@ public sealed class SessionTests
         selected.EnsureSuccessStatusCode();
         var switched = (await selected.Content.ReadFromJsonAsync<AuthSessionDto>())!;
         Assert.Equal(("personal", session.UserId), (switched.Identity, switched.UserId));
-        // 回應帶有重新簽發之 cookie 的 token；之後的寫入要能以它正常進行。
+        // 切換身分會換發新的 CSRF token，之後的寫入必須改用它，否則會被拒絕。
         client.DefaultRequestHeaders.Remove("X-Nexus-CSRF"); client.DefaultRequestHeaders.Add("X-Nexus-CSRF", switched.CsrfToken);
         Assert.Equal(HttpStatusCode.OK, (await client.PostAsync("/api/v1/auth/logout", null)).StatusCode);
         Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/v1/auth/identity", new SelectIdentityRequest("personal"))).StatusCode);

@@ -61,7 +61,7 @@ public sealed class StreamingPerformanceTests(ITestOutputHelper output)
         Assert.All(finished, run => { Assert.Equal(RunStates.Completed, run.Status); Assert.Equal(expected, run.Content); });
         for (var i = 0; i < Users; i++)
         {
-            // 重播的增量必須完整重建已儲存的回答，且訊息內容要與之相同。
+            // 重播增量應能完整還原已儲存的回答，並與訊息內容一致；否則代表 flush 寫入的內容有缺漏。
             var stream = await clients[i].GetStringAsync($"/api/v1/runs/{runs[i].Id}/events?after=0");
             var deltas = stream.Split('\n').Where(x => x.StartsWith("data: ", StringComparison.Ordinal))
                 .Select(x => JsonSerializer.Deserialize<RunEventDto>(x[6..], JsonSerializerOptions.Web)!)

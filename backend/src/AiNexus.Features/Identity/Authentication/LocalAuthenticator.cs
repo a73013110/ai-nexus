@@ -25,7 +25,8 @@ public sealed class LocalAuthenticator(NexusDbContext db, Argon2Passwords passwo
             if (user is not null) await db.Entry(user).ReloadAsync(ct);
             var now = clock.GetUtcNow();
             var locked = user?.LockedUntil > now;
-            if (user is null || !SessionIdentity.Allows(user, "local") || !result.Valid || locked || user.PasswordHash != checkedHash || user.SecurityVersion != checkedVersion)
+            if (user is null || !SessionIdentity.Allows(user, "local") || !result.Valid || locked
+                || user.PasswordHash != checkedHash || user.SecurityVersion != checkedVersion)
             {
                 if (user is not null && SessionIdentity.Allows(user, "local") && !locked)
                 {

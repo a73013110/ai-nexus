@@ -127,7 +127,7 @@ public sealed class ModelPolicyService(
         var start = UtcDay.Start(asOf ?? clock.GetUtcNow());
         var end = start.AddDays(1);
 
-        // 彙整對話執行（Runs）與其他後台任務調用（ModelInvocations）的用量
+        // 對話生成與其他背景任務都會消耗同一份每日配額，因此兩邊的用量要合併計算
         var chatRunsQuery = db.Runs
             .AsNoTracking()
             .Where(x => x.OwnerId == owner && x.CreatedAt >= start && x.CreatedAt < end)
@@ -165,7 +165,7 @@ public sealed class ModelPolicyService(
             })
             .ToDictionaryAsync(x => x.ModelId, ct);
 
-        string Id(string id) => publicIds ? presentation.PublicId(id) : id;
+        string PublicIdOf(string id) => publicIds ? presentation.PublicId(id) : id;
 
         var budgets = inference.Value.Models.Select(model =>
         {
@@ -177,7 +177,7 @@ public sealed class ModelPolicyService(
             var source = overrides.ContainsKey(model.Id) ? "personal" : limit is not null ? "group" : "unlimited";
 
             return new ModelTokenBudgetDto(
-                Id(model.Id),
+                PublicIdOf(model.Id),
                 limit,
                 used,
                 reserved,
@@ -187,7 +187,7 @@ public sealed class ModelPolicyService(
         }).ToArray();
 
         return new(
-            effective.AllowedModelIds?.Select(Id).ToArray(),
+            effective.AllowedModelIds?.Select(PublicIdOf).ToArray(),
             policies.Select(x => x.StoredAttachmentLimitBytes).Min(),
             budgets,
             end);
@@ -210,7 +210,8 @@ public sealed class ModelPolicyService(
 
     /// <summary>
     /// 根據當日剩餘 Token 配額調整生成參數。
-    /// 【併發防禦】：必須在使用者行鎖（owner row-lock）交易內呼叫，並在釋放鎖之前將預扣值寫入資料庫，以防超扣。
+    /// 必須在使用者的行鎖（owner row-lock）交易內呼叫，且預扣值要在釋放鎖之前寫入資料庫；
+    /// 否則並行請求會同時通過檢查，合計超出配額。
     /// </summary>
     public async Task<Result<GenerationParameters>> BudgetAsync(
         Guid owner,
@@ -227,7 +228,7 @@ public sealed class ModelPolicyService(
         var output = remaining is long cap ? Math.Min(parameters.MaxOutputTokens, cap - inputEstimate) : parameters.MaxOutputTokens;
         if (output < 1) return InferenceErrors.ModelTokenQuota;
 
-        // 當縮減允許輸出的 Token 時，相應調整 ContextTokens 以維持原有的對話歷史修剪基準
+        // 輸出上限縮減多少，ContextTokens 就跟著縮減多少，讓輸入可用的空間維持不變
         return parameters with
         {
             MaxOutputTokens = (int)output,

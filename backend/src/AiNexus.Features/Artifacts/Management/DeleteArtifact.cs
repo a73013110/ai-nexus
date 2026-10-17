@@ -14,7 +14,8 @@ public sealed record ArtifactDeleted(Guid ArtifactId, Guid OwnerId) : IDomainEve
 internal sealed class DeleteArtifact(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, DomainEvents events)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeleteArtifact handler, CancellationToken ct) => handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
+        .MapDelete("/{id:guid}", (Guid id, ICurrentUser user, DeleteArtifact handler, CancellationToken ct) =>
+            handler.HandleAsync(user.Id, id, ct).ToHttpResultAsync())
         .WithName("DeleteArtifact");
 
     public async Task<Result> HandleAsync(Guid actor, Guid id, CancellationToken ct)
@@ -28,7 +29,8 @@ internal sealed class DeleteArtifact(NexusDbContext db, ResourceAccess access, R
             events.Raise(new ArtifactDeleted(id, actor));
             await db.Set<ArtifactRevision>().Where(x => x.ArtifactId == id).ExecuteDeleteAsync(ct);
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "artifact.deleted", Result = "deleted" });
-            await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
             return Result.Success;
         }
     }

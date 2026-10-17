@@ -24,8 +24,10 @@ internal sealed class ArtifactRevisionConfiguration : IEntityTypeConfiguration<A
 {
     public void Configure(EntityTypeBuilder<ArtifactRevision> revision)
     {
-        revision.ToTable("ArtifactRevisions", "artifacts"); revision.HasKey(x => new { x.ArtifactId, x.Version });
-        revision.Property(x => x.Title).HasMaxLength(Artifact.TitleMaxLength); revision.Property(x => x.Content).HasMaxLength(Artifact.ContentMaxLength);
+        revision.ToTable("ArtifactRevisions", "artifacts");
+        revision.HasKey(x => new { x.ArtifactId, x.Version });
+        revision.Property(x => x.Title).HasMaxLength(Artifact.TitleMaxLength);
+        revision.Property(x => x.Content).HasMaxLength(Artifact.ContentMaxLength);
         revision.HasOne<Artifact>().WithMany().HasForeignKey(x => x.ArtifactId).OnDelete(DeleteBehavior.Cascade);
     }
 }

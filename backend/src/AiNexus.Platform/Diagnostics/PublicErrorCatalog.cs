@@ -1,8 +1,7 @@
 namespace AiNexus.Platform.Diagnostics;
 
 /// <summary>
-/// 對外公開錯誤提示字典。
-/// 存放經人工審查核准的固定繁體中文錯誤提示與引導說明，絕不直接顯示底層例外文字或外部供應商原始錯誤訊息。
+/// 對外公開的錯誤提示字典。內容是經人工審查核准的固定繁體中文提示，絕不直接顯示底層例外或外部供應商的原始訊息。
 /// </summary>
 public static class PublicErrorCatalog
 {

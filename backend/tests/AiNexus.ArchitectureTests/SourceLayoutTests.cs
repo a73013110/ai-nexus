@@ -73,8 +73,20 @@ public sealed class SourceLayoutTests
     public void TestsAreFiledByModule(string project)
     {
         var folders = SourceTree.Modules().Union(["Host", "Platform", "Support"]).ToHashSet(StringComparer.Ordinal);
+        // Support 底下的共用輔助檔不需要 Tests.cs 結尾；其他檔案必須是模組或 Host/Platform 底下的測試。
+        bool IsMisplaced(string[] parts)
+        {
+            if (parts.Length < 3 || !folders.Contains(parts[1]))
+            {
+                return true;
+            }
+
+            var isSupport = parts[1] == "Support";
+            return !isSupport && !parts[^1].EndsWith("Tests.cs", StringComparison.Ordinal);
+        }
+
         var misplaced = SourceTree.Files(project).Select(SourceTree.Relative).Select(path => path.Split('/'))
-            .Where(parts => parts.Length < 3 || !folders.Contains(parts[1]) || (parts[1] != "Support" && !parts[^1].EndsWith("Tests.cs", StringComparison.Ordinal)))
+            .Where(IsMisplaced)
             .Select(parts => string.Join('/', parts)).Order(StringComparer.Ordinal).ToList();
         Assert.True(misplaced.Count == 0, "Put tests in <Module>/<UseCase>Tests.cs (or Host, Platform) and shared helpers in Support:\n" + string.Join("\n", misplaced));
     }

@@ -49,8 +49,10 @@ internal sealed class CreateRepositoryReview(NexusDbContext db, RepositoryServic
     {
         if (!RepositoryService.IsRepository(repo)) return RepositoriesErrors.InvalidRepository;
         if (!RepositoryReviewPlan.IsPurpose(request.Purpose)) return RepositoriesErrors.ReviewPurposeInvalid;
-        if ((request.PullRequest is null) == (request.Commit is null) || (request.PullRequest is not null && request.BaseCommit is not null))
-            return RepositoriesErrors.ReviewSourceInvalid;
+        // 必須二選一：PR 或 commit；選 PR 時不能再指定基準 commit。
+        var sourceCountInvalid = (request.PullRequest is null) == (request.Commit is null);
+        var baseWithPullRequest = request.PullRequest is not null && request.BaseCommit is not null;
+        if (sourceCountInvalid || baseWithPullRequest) return RepositoriesErrors.ReviewSourceInvalid;
         string head; string? basis = null;
         if (request.PullRequest is { } number)
         {
@@ -70,7 +72,9 @@ internal sealed class CreateRepositoryReview(NexusDbContext db, RepositoryServic
         }
         if (basis == head) return RepositoriesErrors.ReviewEmptyRange;
         var note = request.Note?.Trim() ?? "";
-        var hash = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(new { repo, head, basis, request.PullRequest, request.ModelId, note, request.Purpose })));
+        // 請求指紋只涵蓋會改變結果的欄位；同一個 idempotency key 若指紋不同，就視為衝突。
+        var fingerprintInput = new { repo, head, basis, request.PullRequest, request.ModelId, note, request.Purpose };
+        var hash = Convert.ToHexString(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(fingerprintInput)));
         await writes.Gate.WaitAsync(ct);
         try
         {
@@ -106,7 +110,8 @@ internal sealed class CreateRepositoryReview(NexusDbContext db, RepositoryServic
             row.JobId = jobs.Enqueue(owner, null, row.Id, "repository-review", label).Id;
             db.Add(row);
             db.AuditEvents.Add(new() { OwnerId = owner, ResourceId = row.Id, Action = "repository.review.created", Result = "queued" });
-            await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
             return await reviews.DescribeAsync(row, ct);
         }
         finally { writes.Gate.Release(); }

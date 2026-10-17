@@ -34,7 +34,7 @@ public sealed class ResourceLifecycle(NexusDbContext db, ResourceAccess access, 
                 if (await check.CheckAsync(kind, id, ct) is { IsSuccess: false } refused) return refused.Error;
             if (kind == "project")
             {
-                // 子資源的直接授權與擁有者保留；只有經由專案繼承的存取會隨容器停止，所以要把子資源的 ParentId 清空。
+                // 子資源的直接分享與擁有者保持不變；只有靠專案繼承的存取會隨專案失效，所以要清空它們的 ParentId。
                 await db.Set<WorkspaceResource>().IgnoreQueryFilters([SoftDelete.Filter]).Where(x => x.ParentId == id).ExecuteUpdateAsync(p => p.SetProperty(x => x.ParentId, (Guid?)null), ct);
             }
             resource.IsDeleted = true;

@@ -57,7 +57,8 @@ public sealed class ModelCatalog(
             {
                 // 單趟背景更新，避免多個請求同時觸發重複探測
                 refreshing = pending = Task.Run(RefreshAsync, CancellationToken.None);
-                // 背景刷新若拋出例外且未被 await，由 ContinueWith 吸收未處理例外（RefreshAsync 內已主動向 issues 回報）
+                // 沒有呼叫端會 await 背景刷新，失敗時必須在這裡吸收例外，否則會變成未觀察的例外。
+                // 實際的錯誤記錄已由 RefreshAsync 透過 issues 回報。
                 _ = pending.ContinueWith(static x => _ = x.Exception, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
             }
             else
@@ -69,7 +70,8 @@ public sealed class ModelCatalog(
             if (cached is not null) return cached;
         }
 
-        // 首次啟動尚無任何快取時，呼叫端必須等待共用的刷新完成，但不取消共享的 Task
+        // 首次啟動尚無快取時只能等待。WaitAsync 只會放棄這一次等待，不會取消共用的刷新 Task，
+        // 否則其他同時等待的呼叫端會跟著失敗。
         return await pending.WaitAsync(ct);
     }
 
@@ -79,17 +81,17 @@ public sealed class ModelCatalog(
         {
             using var timeout = new CancellationTokenSource(DiscoveryTimeout);
 
-            // 並行探測所有在 ProviderConcurrency 中註冊的供應商狀態
+            // 並行探測 ProviderConcurrency 中登記的每個供應商
             var discovered = await Task.WhenAll(
                 options.Value.ProviderConcurrency.Keys.Select(x => DiscoverAsync(x, timeout.Token)));
 
-            // 比對各供應商回報的已安裝模型清單，篩選出符合系統設定的已就緒模型
+            // 只保留供應商實際安裝、且設定檔有列出的模型
             var installed = options.Value.Models
                 .Where(m => discovered.Any(p => p.Status.Id == m.Provider && p.Models.Contains(m.NativeId)))
                 .Select(m => m.Id)
                 .ToHashSet(StringComparer.Ordinal);
 
-            // 解析各模型的實際支援功能（例如視覺能力動態探測）
+            // 視覺能力等功能無法只靠設定檔判斷，需要向供應商實際查詢
             var profileTasks = options.Value.Models.Select(x => ResolveAsync(x, installed, timeout.Token));
             var resolvedProfiles = await Task.WhenAll(profileTasks);
             var profiles = resolvedProfiles.ToDictionary(x => x.Id, StringComparer.Ordinal);
@@ -110,7 +112,7 @@ public sealed class ModelCatalog(
         }
         catch (Exception error)
         {
-            // 探測失敗時清空 refreshing 狀態，讓下次呼叫能再次嘗試，同時維持上一份快取繼續對外服務
+            // 清掉 refreshing 才能讓下次呼叫重新探測；舊的 current 快取保留，繼續對外服務
             lock (gate) refreshing = null;
             issues.Report(error, "provider_discovery_unavailable", LogLevel.Warning);
             throw;
@@ -124,7 +126,7 @@ public sealed class ModelCatalog(
         {
             try
             {
-                // Ollama 模型在本地若未明確強制指定 ImageCapabilityOverride，則動態呼叫 CapabilitiesAsync 查詢是否支援視覺
+                // 設定檔沒有強制覆寫時，才向 Ollama 查詢是否支援圖片；覆寫值優先
                 var capabilities = await router.For(profile.Provider).CapabilitiesAsync(profile.NativeId, ct);
                 images = profile.ImageCapabilityOverride != false && (capabilities?.SupportsImages ?? profile.ImageCapabilityOverride ?? false);
             }

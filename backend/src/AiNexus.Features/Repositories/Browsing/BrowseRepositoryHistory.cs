@@ -6,7 +6,7 @@ namespace AiNexus.Features.Repositories.Browsing;
 
 public sealed record RepositoryCommitDto(string Sha, string Title, string Message, string Author, DateTimeOffset? At, IReadOnlyList<string> Parents);
 public sealed record RepositoryCommitPageDto(IReadOnlyList<RepositoryCommitDto> Items, int Page, bool HasMore);
-/// <summary>A commit against its parent, or the net change from <see cref="Base"/>; <see cref="TooLarge"/> leaves <see cref="Diff"/> empty.</summary>
+/// <summary>同一 commit 相對於父 commit 的差異，或相對於 <see cref="Base"/> 的淨變更；<see cref="TooLarge"/> 為 true 時 <see cref="Diff"/> 為空。</summary>
 public sealed record RepositoryDiffDto(RepositoryCommitDto Head, RepositoryCommitDto? Base, string Diff, bool TooLarge);
 
 /// <summary>變更歷史：某個 ref 的 commit 清單，以及單一 commit 或兩個 commit 之間的 diff。</summary>

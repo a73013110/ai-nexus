@@ -52,7 +52,7 @@ public sealed partial class RunService(
 
     /// <summary>
     /// 結算生成任務並終止其活躍狀態。
-    /// 必須在對話鎖（LockConversationAsync）內呼叫，否則可能與背景沖刷互相覆蓋狀態。
+    /// 必須在對話鎖（LockConversationAsync）內呼叫，否則可能與背景的增量寫入互相覆蓋狀態。
     /// </summary>
     public async Task FinishAsync(
         GenerationRun run,

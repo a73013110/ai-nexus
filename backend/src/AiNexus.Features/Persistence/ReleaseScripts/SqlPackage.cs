@@ -43,9 +43,12 @@ public sealed class SqlPackage(string? executable)
         {
             var response = Path.Combine(folder.FullName, "connection.rsp");
             await File.WriteAllTextAsync(response, ResponseFileArgument("SourceConnectionString", connectionString), ct);
-            var start = executable is null ? new ProcessStartInfo("dotnet") { ArgumentList = { "tool", "run", "sqlpackage", "--" } }
-                : executable.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) ? new ProcessStartInfo("dotnet") { ArgumentList = { executable } }
-                : new ProcessStartInfo(executable);
+            var start = executable switch
+            {
+                null => new ProcessStartInfo("dotnet") { ArgumentList = { "tool", "run", "sqlpackage", "--" } },
+                var path when path.EndsWith(".dll", StringComparison.OrdinalIgnoreCase) => new ProcessStartInfo("dotnet") { ArgumentList = { path } },
+                var path => new ProcessStartInfo(path),
+            };
             start.UseShellExecute = false;
             foreach (var argument in (string[])[$"/Action:{action}", "@" + response, .. arguments]) start.ArgumentList.Add(argument);
 

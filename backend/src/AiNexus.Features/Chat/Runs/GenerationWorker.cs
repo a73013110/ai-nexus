@@ -260,7 +260,7 @@ public sealed partial class GenerationWorker(
             issueCode = issues.Report(ex, error);
         }
 
-        // 終止前沖刷最後剩餘的文字與用量，使用 CancellationToken.None 確保局部產出必定能持久化
+        // 結束前寫入剩餘的文字與用量。使用 CancellationToken.None，即使已被取消，局部產出也要保存下來
         await FlushAsync(job, progress, buffer.ToString(), input, output, cached, reasoning, completed, CancellationToken.None);
 
         using (await scheduler.LockConversationAsync(job.ConversationId, CancellationToken.None))
@@ -318,7 +318,7 @@ public sealed partial class GenerationWorker(
     }
 
     /// <summary>
-    /// 增量沖刷：在單一交易內附加文字、寫入 RunEvent、結算計費並更新回答訊息。
+    /// 增量寫入（flush）：在同一個交易內附加文字、寫入 RunEvent、結算計費並更新回答訊息。
     /// 序號不符（別的寫入者先動了）時改用最新序號重試一次。
     /// </summary>
     private async Task FlushAsync(
@@ -356,7 +356,7 @@ public sealed partial class GenerationWorker(
             db.Database.AutoSavepointsEnabled = false;
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
-            // 樂觀更新：若預期序號不符，說明其他工作者寫入了事件，重新查詢當前最新序號
+            // 以序號做樂觀並行控制：序號不符代表其他寫入者已先寫入，改查最新序號後重試
             if (await AppendRunAsync(db, job.RunId, expected, delta, newInput, newOutput, ct) == 0)
             {
                 var current = await db.Runs

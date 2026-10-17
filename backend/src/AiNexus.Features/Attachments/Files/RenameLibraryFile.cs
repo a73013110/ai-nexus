@@ -44,7 +44,8 @@ internal sealed class RenameLibraryFile(NexusDbContext db, AttachmentService fil
             .ExecuteUpdateAsync(p => p.SetProperty(x => x.FileName, name), ct);
         if (changed != 1) return AttachmentsErrors.FileNameChanged;
         db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "file.renamed", Result = "saved" });
-        await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
         file.FileName = name;
         return AttachmentService.Describe(file);
     }

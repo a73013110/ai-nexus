@@ -60,7 +60,9 @@ public sealed class AccessService(NexusDbContext db, IActiveUsers activeUsers, I
         var enabledGroups = groups.Select(x => x.Id).ToArray();
         var featureIds = db.Set<RoleGroupFeature>().Where(x => enabledGroups.Contains(x.GroupId)).Select(x => x.FeatureId);
         var features = await db.Set<Feature>().AsNoTracking().Where(x => featureIds.Contains(x.Id) && x.Enabled)
-            .OrderBy(x => x.SortOrder).ThenBy(x => x.Id).Select(x => new FeatureDto(x.Id, x.Name, x.Route, x.GroupId, x.Icon, x.SortOrder)).ToListAsync(ct);
+            .OrderBy(x => x.SortOrder).ThenBy(x => x.Id)
+            .Select(x => new FeatureDto(x.Id, x.Name, x.Route, x.GroupId, x.Icon, x.SortOrder))
+            .ToListAsync(ct);
         return new(roles, groups, features, []);
     }
 }

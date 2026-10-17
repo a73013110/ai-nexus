@@ -20,7 +20,7 @@ public sealed class KeyedAsyncLockTests
         Task<IDisposable> third;
         using (await second.WaitAsync(TimeSpan.FromSeconds(5)))
         {
-            // 等待者的 Task 只有在持有者釋放後才會完成，所以此時立即斷言未完成是確定性的，不受排程時序影響。
+            // 等待者的 Task 要等持有者釋放後才會完成，所以這裡立即斷言「未完成」是確定的，不會因排程時序而不穩。
             third = locks.AcquireAsync(a, CancellationToken.None);
             Assert.False(third.IsCompleted);
             Assert.Equal(1, locks.Count);

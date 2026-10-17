@@ -32,7 +32,7 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
         return new(Enabled, connected, BaseUrl, connected ? connection!.Login : null, connected ? connection!.ConnectedAt : null);
     }
 
-    /// <summary>Encrypts a token for this user and the current host; a host change makes it unreadable.</summary>
+    /// <summary>為此使用者與目前主機加密 token；主機變更後，舊的密文就無法解開。</summary>
     public string Protect(Guid owner, string token) => Protector(owner).Protect(token);
 
     public async Task<Result<JsonDocument>> GetAsync(Guid owner, string path, CancellationToken ct)
@@ -41,7 +41,7 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
         return access.IsSuccess ? Result<JsonDocument>.Ok(await client.GetAsync(access.Value!, path, ct)) : access.Error!;
     }
 
-    /// <summary>A JSON array response; anything else is a malformed Gitea response.</summary>
+    /// <summary>要求 JSON 陣列回應；其他形狀代表 Gitea 回應格式不正確，直接拋出例外。</summary>
     public async Task<Result<JsonDocument>> GetListAsync(Guid owner, string path, CancellationToken ct)
     {
         var read = await GetAsync(owner, path, ct);
@@ -86,7 +86,10 @@ public sealed class RepositoryService(NexusDbContext db, IGiteaClient client, ID
 
     public const int MaxDiffBytes = 256000;
 
-    /// <summary>在指定的 commit 讀取文字檔。交給對話或知識庫時會再呼叫一次：瀏覽器上的內容不能當成可信的快照。</summary>
+    /// <summary>
+    /// 在指定的 commit 讀取文字檔。交給對話或知識庫時會重新讀取一次，不沿用瀏覽器送回的內容，
+    /// 確保匯入的確實是該 commit 的檔案。
+    /// </summary>
     public async Task<Result<RepositoryFileDto>> FileAsync(Guid owner, string repo, string commit, string path, CancellationToken ct)
     {
         if (!IsRepository(repo)) return RepositoriesErrors.InvalidRepository;

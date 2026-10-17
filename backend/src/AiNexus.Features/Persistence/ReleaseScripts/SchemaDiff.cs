@@ -20,7 +20,7 @@ public sealed record SchemaDiff(
 {
     public const string ManifestFileName = "manifest.md";
 
-    // 與發布 SQL 相同：記事本與 SSMS 只有在帶 BOM 時才能正確顯示差異中的中文欄位說明。
+    // 與發布 SQL 相同：要帶 BOM，記事本與 SSMS 才能正確顯示差異中的中文說明。
     private static readonly UTF8Encoding DiffEncoding = new(encoderShouldEmitUTF8Identifier: true);
 
     /// <summary>逐檔比對兩個 SqlPackage <c>ExtractTarget=SchemaObjectType</c> 匯出資料夾。</summary>
@@ -79,8 +79,9 @@ public sealed record SchemaDiff(
 
     /// <summary>
     /// 把物件腳本的 <c>GO</c> 批次排成固定順序，並合併對齊用的空白（<see cref="Collapse"/>）。
-    /// SqlPackage 每次匯出時，物件本體之後的批次（索引、全文索引、<c>MS_Description</c>）順序都會不同，
-    /// 不排序的話每張表都會被誤判為有變動。排序後的順序是最好讀的：物件本體、索引與其他語句、全文索引、說明；各類內部保持原文順序。
+    /// SqlPackage 每次匯出時，物件本體之後的批次（索引、全文索引、<c>MS_Description</c>）順序都不固定，
+    /// 不排序的話每張表都會被誤判為有變動。排序後物件本體排在最前，接著是索引與其他語句、全文索引、說明；
+    /// 同一類內保留原本的先後順序。
     /// </summary>
     public static string Normalize(string script)
     {
@@ -142,6 +143,9 @@ public sealed record SchemaDiff(
         var root = Path.GetFullPath(directory);
         if (!Directory.Exists(root)) return new(StringComparer.OrdinalIgnoreCase);
         return Directory.EnumerateFiles(root, "*.sql", SearchOption.AllDirectories)
-            .ToDictionary(file => Path.GetRelativePath(root, file).Replace('\\', '/'), file => Normalize(File.ReadAllText(file)), StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(
+                file => Path.GetRelativePath(root, file).Replace('\\', '/'),
+                file => Normalize(File.ReadAllText(file)),
+                StringComparer.OrdinalIgnoreCase);
     }
 }

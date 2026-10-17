@@ -60,7 +60,7 @@ public static class SessionIdentity
             // 舊版（僅 AD 登入）發出的 cookie 沒有 UserId，改以 SID 對應；只有仍可 AD 登入且安全版本為 0 的使用者才繼續有效。
             var sid = principal.FindFirstValue(ClaimTypes.PrimarySid);
             var legacy = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Sid == sid, context.HttpContext.RequestAborted);
-            if (legacy is null || Allows(legacy, "ad") && legacy.SecurityVersion == 0) return;
+            if (legacy is null || (Allows(legacy, "ad") && legacy.SecurityVersion == 0)) return;
             context.RejectPrincipal(); await context.HttpContext.SignOutAsync(AuthEndpoints.CookieScheme); return;
         }
         var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id, context.HttpContext.RequestAborted);
@@ -68,8 +68,8 @@ public static class SessionIdentity
         {
             var actor = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == actorId, context.HttpContext.RequestAborted);
             var access = context.HttpContext.RequestServices.GetRequiredService<AccessService>();
-            if (actor is null || !Allows(actor, principal.FindFirstValue(ActorMethod)) || !MatchesVersion(actor, principal.FindFirstValue(ActorVersion)) ||
-                !(await access.ForUserAsync(actorId, context.HttpContext.RequestAborted)).Features.Any(x => x.Id == FeatureIds.Admin))
+            if (actor is null || !Allows(actor, principal.FindFirstValue(ActorMethod)) || !MatchesVersion(actor, principal.FindFirstValue(ActorVersion))
+                || !(await access.ForUserAsync(actorId, context.HttpContext.RequestAborted)).Features.Any(x => x.Id == FeatureIds.Admin))
             { context.RejectPrincipal(); await context.HttpContext.SignOutAsync(AuthEndpoints.CookieScheme); return; }
             if (!Guid.TryParse(principal.FindFirstValue(TestId), out var testId))
             { context.RejectPrincipal(); await context.HttpContext.SignOutAsync(AuthEndpoints.CookieScheme); return; }
@@ -84,7 +84,14 @@ public static class SessionIdentity
                 context.Properties.AllowRefresh = true;
                 if (!ended)
                 {
-                    db.AuditEvents.Add(new() { OwnerId = actorId, ResourceId = testId, Action = "identity.test_end", Result = "restored", DetailsJson = System.Text.Json.JsonSerializer.Serialize(new { testId, userId = id, reason = expired ? "expired" : "target_changed" }) });
+                    db.AuditEvents.Add(new()
+                    {
+                        OwnerId = actorId,
+                        ResourceId = testId,
+                        Action = "identity.test_end",
+                        Result = "restored",
+                        DetailsJson = System.Text.Json.JsonSerializer.Serialize(new { testId, userId = id, reason = expired ? "expired" : "target_changed" })
+                    });
                     await db.SaveChangesAsync(context.HttpContext.RequestAborted);
                 }
                 return;

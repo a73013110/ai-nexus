@@ -14,8 +14,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 namespace AiNexus.Platform;
 
 /// <summary>
-/// 跨橫切關注點平台共用服務註冊。
-/// 由每個功能模組共享之主機核心基礎建設（診斷、資料保護金鑰、CSRF、嚴格授權、限流與安全 JSON 選項）。
+/// 平台共用服務的註冊，提供所有功能模組共用的主機核心基礎建設：
+/// 診斷、資料保護金鑰、CSRF、預設拒絕的授權、限流，以及安全的 JSON 選項。
 /// </summary>
 public static class PlatformServices
 {
@@ -34,7 +34,7 @@ public static class PlatformServices
         services.AddSettings<DatabasesOptions, DatabasesOptionsValidator>(DatabasesOptions.Section);
         services.AddCsrfProtection(builder.Environment, builder.Configuration);
 
-        // 預設拒絕存取原則：所有端點除非明確宣告 AllowAnonymous，否則必須具備已驗證身分。
+        // 預設拒絕：端點除非明確標上 AllowAnonymous，否則都必須通過身分驗證。
         services.AddAuthorization(options =>
             options.FallbackPolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
 
@@ -56,7 +56,7 @@ public static class PlatformServices
             options.SerializerOptions.RespectRequiredConstructorParameters = true;
             options.SerializerOptions.MaxDepth = 32;
 
-            // 列舉以名稱（字串）傳遞，使 API 契約與前端產生之型別能列出核准的名稱。
+            // 列舉以字串名稱傳遞，讓 API 契約與前端產生的型別能列出核准的名稱。
             options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
         });
 

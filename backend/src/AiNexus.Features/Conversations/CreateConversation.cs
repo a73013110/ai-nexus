@@ -22,7 +22,8 @@ internal sealed class CreateConversation(NexusDbContext db, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
         .MapPost("", (CreateConversationRequest body, ICurrentUser user, CreateConversation handler, CancellationToken ct) =>
-            handler.HandleAsync(user.Id, body.Title, ct).ToHttpResultAsync(created => TypedResults.Created($"/api/v1/conversations/{created.Id}", created)))
+            handler.HandleAsync(user.Id, body.Title, ct).ToHttpResultAsync(created =>
+                TypedResults.Created($"/api/v1/conversations/{created.Id}", created)))
         .WithName("CreateConversation");
 
     public async Task<Result<ConversationDto>> HandleAsync(Guid owner, string? title, CancellationToken ct)

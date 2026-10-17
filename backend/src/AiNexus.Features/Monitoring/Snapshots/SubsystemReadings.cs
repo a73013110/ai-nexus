@@ -3,7 +3,10 @@ using AiNexus.Platform.Monitoring;
 namespace AiNexus.Features.Monitoring.Snapshots;
 
 /// <summary>
-/// 所有已註冊 <see cref="IMonitoringSource"/> 的快取讀數。讀取本身從不等待：過期的來源會啟動一次背景讀取（同時只允許一個、使用獨立 scope、抑制觀測流量，逾時為 <see cref="Timeout"/>），呼叫端則立即拿到上一次的讀數。沒有人要快照時完全不讀。應用程式停止中就不再啟動新讀取；停止時會等待進行中的讀取至多 <see cref="Timeout"/>，確保關機期間不再碰資料庫。
+/// 所有已註冊 <see cref="IMonitoringSource"/> 的快取讀數。
+/// 呼叫端永遠不必等待：過期的來源只會啟動一次背景讀取（同時最多一個、使用獨立 scope、抑制觀測流量，
+/// 逾時為 <see cref="Timeout"/>），呼叫端拿到的是上一次的讀數。沒有人要快照時完全不讀。
+/// 應用程式停止後不再啟動新讀取，並最多等待進行中的讀取 <see cref="Timeout"/>，確保關機期間不再碰資料庫。
 /// </summary>
 public sealed partial class SubsystemReadings
 {

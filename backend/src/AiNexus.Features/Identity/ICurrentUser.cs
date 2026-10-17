@@ -17,9 +17,13 @@ public static class CurrentUserResolution
 {
     /// <summary>在有 <see cref="ICurrentUser"/> 參數的 handler 執行前解析使用者；其他端點不受影響。</summary>
     public static RouteGroupBuilder WithCurrentUser(this RouteGroupBuilder group) => group.AddEndpointFilterFactory((context, next) =>
-        !context.MethodInfo.GetParameters().Any(parameter => parameter.ParameterType == typeof(ICurrentUser)) ? next : async invocation =>
+    {
+        // 沒有宣告 ICurrentUser 的端點直接略過，不產生任何解析成本。
+        if (!context.MethodInfo.GetParameters().Any(parameter => parameter.ParameterType == typeof(ICurrentUser))) return next;
+        return async invocation =>
         {
             var user = await invocation.HttpContext.RequestServices.GetRequiredService<CurrentUser>().GetAsync(invocation.HttpContext.RequestAborted);
             return user.IsSuccess ? await next(invocation) : user.Error.ToProblem();
-        });
+        };
+    });
 }

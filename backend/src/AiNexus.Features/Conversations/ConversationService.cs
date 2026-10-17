@@ -6,13 +6,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Conversations;
 
-/// <summary>
-/// 使用者對話互動回合請求資料傳輸物件。
-/// </summary>
+/// <summary>一次對話互動的請求：新提問，或針對既有提問重新回答，兩者擇一。</summary>
 /// <remarks>
-/// 兩種模式：
-/// 1. 新問題模式：提供 <paramref name="Prompt"/> 與父訊息 <paramref name="ParentMessageId"/>，在對話分支樹下方掛載新提問。
-/// 2. 重新回答模式：指定 <paramref name="RegenerateUserMessageId"/>，針對該歷史提問重新生成全新 Assistant 答案分支（此時禁止傳入 Prompt）。
+/// 新提問：提供 <paramref name="Prompt"/> 與父訊息 <paramref name="ParentMessageId"/>，在分支樹下方掛上新提問。
+/// 重新回答：指定 <paramref name="RegenerateUserMessageId"/>，為該提問另開一個新的回答分支；此時不可再傳入 Prompt。
 /// </remarks>
 public sealed record ConversationTurn(
     Guid ConversationId,
@@ -21,26 +18,23 @@ public sealed record ConversationTurn(
     Guid? RegenerateUserMessageId);
 
 /// <summary>
-/// 跨模組對話服務契約。
-/// 提供給 Chat、Inference、Knowledge、Artifacts 模組操作對話歷史與訊息樹。
+/// 其他模組（Chat、Inference、Knowledge、Artifacts）操作對話歷史與訊息樹的入口。
 /// </summary>
 public sealed class ConversationService(NexusDbContext db, TimeProvider clock)
 {
-    /// <summary>
-    /// 取得使用者擁有的對話實體（受 EF 跟蹤，不預先載入標籤）。供後續需修改對話屬性之操作使用。
-    /// </summary>
+    /// <summary>取得使用者擁有的對話並交由 EF 追蹤（不預先載入標籤），供之後修改對話屬性時使用。</summary>
     public async Task<Result<Conversation>> OwnedAsync(Guid owner, Guid id, CancellationToken ct)
-        => await db.Set<Conversation>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct) is { } conversation
-            ? conversation
-            : ConversationsErrors.NotFound;
+    {
+        var conversation = await db.Set<Conversation>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == owner, ct);
+        return conversation is null ? ConversationsErrors.NotFound : conversation;
+    }
 
-    /// <summary>
-    /// 快速驗證對話是否存在且屬於該使用者（僅使用 SQL ANY，不將實體載入記憶體）。
-    /// </summary>
+    /// <summary>只確認對話存在且屬於該使用者，用 SQL EXISTS 查詢，不把實體載入記憶體。</summary>
     public async Task<Result> RequireOwnedAsync(Guid owner, Guid id, CancellationToken ct)
-        => await db.Set<Conversation>().AnyAsync(x => x.Id == id && x.OwnerId == owner, ct)
-            ? Result.Success
-            : ConversationsErrors.NotFound;
+    {
+        var exists = await db.Set<Conversation>().AnyAsync(x => x.Id == id && x.OwnerId == owner, ct);
+        return exists ? Result.Success : ConversationsErrors.NotFound;
+    }
 
     public Task<Result<ConversationDto>> CreateAsync(Guid owner, string? title, CancellationToken ct)
         => new CreateConversation(db, clock).HandleAsync(owner, title, ct);
@@ -98,9 +92,10 @@ public sealed class ConversationService(NexusDbContext db, TimeProvider clock)
                 return ConversationsErrors.PromptRequired;
             }
 
+            // 父訊息必須是已結束生成的回答；排隊中或生成中的回答還沒有定案，不能再接續提問。
             if (request.ParentMessageId is Guid parentId && !await db.Set<Message>().AnyAsync(
-                x => x.Id == parentId && x.ConversationId == conversation.Id && x.Role == "assistant" &&
-                     x.Status != RunStates.Queued && x.Status != RunStates.Running, ct))
+                x => x.Id == parentId && x.ConversationId == conversation.Id && x.Role == "assistant"
+                    && x.Status != RunStates.Queued && x.Status != RunStates.Running, ct))
             {
                 return ConversationsErrors.InvalidParent;
             }
@@ -109,7 +104,7 @@ public sealed class ConversationService(NexusDbContext db, TimeProvider clock)
             {
                 ConversationId = conversation.Id,
                 ParentId = request.ParentMessageId,
-                Content = request.Prompt.Trim()
+                Content = request.Prompt.Trim(),
             };
 
             db.Set<Message>().Add(user);
@@ -127,11 +122,12 @@ public sealed class ConversationService(NexusDbContext db, TimeProvider clock)
             Role = "assistant",
             Status = RunStates.Queued,
             RunId = runId,
-            ModelId = modelId
+            ModelId = modelId,
         };
 
         db.Set<Message>().Add(assistant);
 
+        // 作用中葉節點指向新回答，之後的 UI 與上下文才會沿著這條分支走。
         conversation.ActiveLeafId = assistant.Id;
         conversation.UpdatedAt = clock.GetUtcNow();
 

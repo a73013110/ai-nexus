@@ -33,7 +33,23 @@ public sealed partial class ShareCleanupWorker(IServiceScopeFactory scopes, Stor
     {
         if (!storage.Configured) return;
         using var timer = new PeriodicTimer(TimeSpan.FromMinutes(20));
-        do { try { using var scope = scopes.CreateScope(); await scope.ServiceProvider.GetRequiredService<ShareService>().PurgeExpiredAsync(ct); } catch (OperationCanceledException) when (ct.IsCancellationRequested) { return; } catch (Exception ex) { LogDeferred(logger, ex.GetType().Name); } } while (await timer.WaitForNextTickAsync(ct));
+        do
+        {
+            try
+            {
+                using var scope = scopes.CreateScope();
+                await scope.ServiceProvider.GetRequiredService<ShareService>().PurgeExpiredAsync(ct);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                LogDeferred(logger, ex.GetType().Name);
+            }
+        }
+        while (await timer.WaitForNextTickAsync(ct));
     }
 
     [LoggerMessage(EventId = 6101, EventName = "share.cleanup_deferred", Level = LogLevel.Warning, Message = "Share cleanup deferred ({ErrorType}).")]

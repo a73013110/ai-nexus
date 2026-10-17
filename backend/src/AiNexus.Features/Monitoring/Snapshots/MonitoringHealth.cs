@@ -5,7 +5,9 @@ using AiNexus.Platform.Monitoring;
 namespace AiNexus.Features.Monitoring.Snapshots;
 
 /// <summary>
-/// 把快照轉成頁面的判定。純函式、以門檻為準：流量規則讀 <see cref="MonitoringSnapshot.RecentTraffic"/>（最後一分鐘），資源規則讀最後 <see cref="SustainedPoints"/> 個資源區間，相依服務讀所選時間窗。
+/// 把快照轉成頁面上的健康判定，是純函式，只依門檻運算。
+/// 流量規則讀 <see cref="MonitoringSnapshot.RecentTraffic"/>（最後一分鐘）；
+/// 資源規則讀最後 <see cref="SustainedPoints"/> 個資源區間；相依服務讀使用者所選的時間窗。
 /// 門檻值的說明見 docs/features/monitoring.md。
 /// </summary>
 public static class MonitoringHealth

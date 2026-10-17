@@ -52,9 +52,8 @@ internal sealed class AuditEventInterceptor(IHttpContextAccessor? http) : SaveCh
 
             // 追蹤識別取自目前的 Activity；沒有 Activity（例如測試或非請求情境）時維持 null。
             audit.TraceId ??= System.Diagnostics.Activity.Current?.TraceId.ToHexString();
-            audit.OperationId ??= Guid.TryParse(System.Diagnostics.Activity.Current?.GetTagItem("operation.id")?.ToString(), out var operation)
-                ? operation
-                : null;
+            var operationTag = System.Diagnostics.Activity.Current?.GetTagItem("operation.id")?.ToString();
+            audit.OperationId ??= Guid.TryParse(operationTag, out var operation) ? operation : null;
 
             audit.ActorId ??= actor;
         }

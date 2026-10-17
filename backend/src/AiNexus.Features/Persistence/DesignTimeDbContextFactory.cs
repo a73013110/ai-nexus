@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Design;
 
 namespace AiNexus.Features.Persistence;
 
+/// <summary>供 <c>dotnet ef</c> 工具在設計時建立 <see cref="NexusDbContext"/>，只產生 migration 不會真的連線。</summary>
 public sealed class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<NexusDbContext>
 {
     public NexusDbContext CreateDbContext(string[] args)

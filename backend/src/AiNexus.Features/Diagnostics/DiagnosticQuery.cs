@@ -12,6 +12,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.Diagnostics;
 
+/// <summary>日誌查詢的篩選條件；所有欄位都會在 <see cref="DiagnosticQuery"/> 內驗證。</summary>
 public sealed class DiagnosticFilter
 {
     public DateTimeOffset? From { get; set; }
@@ -33,11 +34,13 @@ public sealed class DiagnosticFilter
     public int? Take { get; set; }
     public string? SortDirection { get; set; }
 }
+/// <summary>列表用的單筆日誌，不含堆疊與屬性等可能敏感的欄位。</summary>
 public sealed record DiagnosticSummary(Guid LogId, DateTimeOffset At, string Level, string Category, int EventId, string EventName, string MessageTemplate,
     string? IssueCode, string? TraceId, string? SpanId, string? RequestId, Guid? OperationId, Guid? JobId, Guid? RunId, int? Attempt,
     string? Method, string? Route, int? StatusCode, double? DurationMs, string? ExternalService, string? ErrorCode, string Instance, bool UntrustedClient, string Message);
 /// <summary>一頁事件。<c>Degraded</c> 代表日誌管線降級、結果可能不完整；完整指標見監控來源 <c>log-pipeline</c>。</summary>
 public sealed record DiagnosticPage(IReadOnlyList<DiagnosticSummary> Events, string? NextCursor, DateTimeOffset From, DateTimeOffset To, bool Degraded);
+/// <summary>單筆日誌的完整內容，含屬性與例外詳情，只提供給詳情 API。</summary>
 public sealed record DiagnosticDetail(DiagnosticSummary Event, string Service, string Environment, string Version, Guid? UserId, string PropertiesJson, string? ExceptionType, string? ExceptionDetail);
 
 /// <summary>經過驗證並留有稽核的日誌讀取；列表、詳情與匯出都會先寫稽核，寫不進去就失敗。</summary>
@@ -50,13 +53,16 @@ public sealed class DiagnosticQuery(NexusDbContext db, IDataProtectionProvider p
     private Result<(DateTimeOffset From, DateTimeOffset To)> Validate(DiagnosticFilter filter, bool export = false)
     {
         var to = (filter.To ?? clock.GetUtcNow()).ToUniversalTime(); var from = (filter.From ?? to.AddDays(-1)).ToUniversalTime();
-        if (from >= to || to - from > TimeSpan.FromDays(export ? options.Value.MaxExportDays : options.Value.MaxQueryDays)
-            || filter.Take is < 1 or > 100 || filter.Levels?.Length > 6 || filter.Levels?.Any(level => level is < LogLevel.Trace or > LogLevel.Critical) == true || filter.EventId < 0
-            || filter.Category?.Length > 180 || filter.EventName?.Length > 100 || filter.ErrorCode?.Length > 80 || filter.Instance?.Length > 100
-            || filter.SortDirection is not (null or "asc" or "desc")
-            || filter.Text?.Length > 72 || filter.Cursor?.Length > 2048 || filter.IssueCode is not null && !Issues.ValidCode(filter.IssueCode)
-            || filter.TraceId is not null && (filter.TraceId.Length != 32 || !filter.TraceId.All(char.IsAsciiHexDigit)))
-            return DiagnosticsErrors.FilterInvalid;
+        var maxDays = export ? options.Value.MaxExportDays : options.Value.MaxQueryDays;
+        // 匯出與查詢共用同一套長度與格式上限，只有可回溯天數不同。
+        var rangeInvalid = from >= to || to - from > TimeSpan.FromDays(maxDays);
+        var pagingInvalid = filter.Take is < 1 or > 100 || filter.SortDirection is not (null or "asc" or "desc") || filter.Cursor?.Length > 2048;
+        var levelInvalid = filter.Levels?.Length > 6 || filter.Levels?.Any(level => level is < LogLevel.Trace or > LogLevel.Critical) == true;
+        var fieldInvalid = filter.EventId < 0 || filter.Category?.Length > 180 || filter.EventName?.Length > 100 || filter.ErrorCode?.Length > 80
+            || filter.Instance?.Length > 100 || filter.Text?.Length > 72;
+        var idInvalid = filter.IssueCode is not null && !Issues.ValidCode(filter.IssueCode)
+            || filter.TraceId is not null && (filter.TraceId.Length != 32 || !filter.TraceId.All(char.IsAsciiHexDigit));
+        if (rangeInvalid || pagingInvalid || levelInvalid || fieldInvalid || idInvalid) return DiagnosticsErrors.FilterInvalid;
         // 文字掃描必須有明確的窄時間範圍；精確的關聯 ID 查詢走一般索引，不受此限制。
         if (!string.IsNullOrWhiteSpace(filter.Text) && to - from > TimeSpan.FromDays(1)) return DiagnosticsErrors.TextRange;
         return (from, to);
