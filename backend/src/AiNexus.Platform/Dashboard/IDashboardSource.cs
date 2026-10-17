@@ -6,16 +6,16 @@ namespace AiNexus.Platform.Dashboard;
 /// </summary>
 public interface IDashboardSource
 {
-    /// <summary>顯示此區塊所需之功能授權代碼。若未提供 Title 或 Route，則預設回退至該功能的名稱與路徑。</summary>
+    /// <summary>區塊所需的功能授權代碼；未提供 Title 或 Route 時，會沿用該功能的名稱與路徑。</summary>
     string Feature { get; }
 
-    /// <summary>讀取指定統計範圍下的數據指標。當該區塊無內容可呈現時（例如功能未啟用）回傳 <c>null</c>。</summary>
+    /// <summary>讀取指定範圍的指標。區塊沒有內容可顯示時（例如功能未啟用）回傳 <c>null</c>。</summary>
     Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct);
 }
 
 public static class DashboardSourceRegistration
 {
-    /// <summary>將區塊資料來源加入至總覽儀表板。來源為 Scoped 生命週期，在當前請求內循序執行讀取。</summary>
+    /// <summary>註冊區塊來源。來源為 Scoped，同一請求內會依序讀取。</summary>
     public static IServiceCollection AddDashboardSource<TSource>(this IServiceCollection services) where TSource : class, IDashboardSource
         => services.AddScoped<IDashboardSource, TSource>();
 }

@@ -32,8 +32,8 @@ using FluentValidation;
 namespace AiNexus.Features;
 
 /// <summary>
-/// 應用程式功能模組集中宣告與註冊中心。
-/// 系統中唯一完整列出所有業務功能模組的地方；新增功能模組時僅需在以下各方法新增一行註冊。
+/// 業務功能模組的註冊中心，系統中唯一完整列出所有模組的地方。
+/// 新增模組時，在下面的 <c>AddFeatures</c> 與 <c>MapFeatures</c> 各加一行即可。
 /// </summary>
 public static class FeatureModules
 {
@@ -116,7 +116,7 @@ public static class FeatureModules
     }
 
     /// <summary>
-    /// 在主機啟動前解析並驗證關鍵實體狀態（如附件磁碟目錄），若環境不健全則在對外提供服務前立即中止。
+    /// 啟動時檢查功能模組依賴的外部環境（目前是附件儲存目錄）。環境不健全時要在對外服務前中止，而不是等到第一次請求才失敗。
     /// </summary>
     public static void VerifyStartup(IServiceProvider services) => AttachmentsModule.VerifyStorage(services);
 

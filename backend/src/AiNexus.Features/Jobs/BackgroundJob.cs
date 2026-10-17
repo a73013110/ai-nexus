@@ -62,12 +62,24 @@ internal sealed class BackgroundJobConfiguration : IEntityTypeConfiguration<Back
     {
         job.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
         job.Property(x => x.UpdatedAt).HasValueGenerator<CreationTime>();
-        job.ToTable("BackgroundJobs", "jobs"); job.HasKey(x => x.Id);
-        job.Property(x => x.Kind).HasMaxLength(32); job.Property(x => x.Label).HasMaxLength(180); job.Property(x => x.Status).HasMaxLength(16); job.Property(x => x.Stage).HasMaxLength(120);
-        job.Property(x => x.IssueCode).HasMaxLength(40); job.Property(x => x.TraceId).HasMaxLength(32); job.Property(x => x.ParentSpanId).HasMaxLength(16);
-        job.Property(x => x.ActiveKey).HasMaxLength(100); job.Property(x => x.ErrorCode).HasMaxLength(80); job.Property(x => x.ErrorMessage).HasMaxLength(240);
-        job.HasIndex(x => x.ActiveKey).IsUnique().HasFilter("[ActiveKey] IS NOT NULL"); job.HasIndex(x => new { x.Status, x.LeaseUntil, x.CreatedAt }); job.HasIndex(x => new { x.OwnerId, x.CreatedAt });
-        job.HasIndex(x => x.SubjectId); // 依業務對象（文件或向量設定檔）查詢其工作。
+        job.ToTable("BackgroundJobs", "jobs");
+        job.HasKey(x => x.Id);
+        job.Property(x => x.Kind).HasMaxLength(32);
+        job.Property(x => x.Label).HasMaxLength(180);
+        job.Property(x => x.Status).HasMaxLength(16);
+        job.Property(x => x.Stage).HasMaxLength(120);
+        job.Property(x => x.IssueCode).HasMaxLength(40);
+        job.Property(x => x.TraceId).HasMaxLength(32);
+        job.Property(x => x.ParentSpanId).HasMaxLength(16);
+        job.Property(x => x.ActiveKey).HasMaxLength(100);
+        job.Property(x => x.ErrorCode).HasMaxLength(80);
+        job.Property(x => x.ErrorMessage).HasMaxLength(240);
+        // ActiveKey 唯一，同一業務對象同時只能有一個排隊或執行中的工作；NULL 不參與比對。
+        job.HasIndex(x => x.ActiveKey).IsUnique().HasFilter("[ActiveKey] IS NOT NULL");
+        job.HasIndex(x => new { x.Status, x.LeaseUntil, x.CreatedAt });
+        job.HasIndex(x => new { x.OwnerId, x.CreatedAt });
+        // 依業務對象（文件或向量設定檔）查詢其工作。
+        job.HasIndex(x => x.SubjectId);
     }
 }
 

@@ -37,8 +37,15 @@ public sealed class DocumentIndexer(NexusDbContext db, EmbeddingProfiles profile
             var chunks = new List<KnowledgeChunk>();
             for (var i = 0; i < pieces.Count; i++)
             {
-                var piece = pieces[i]; var old = existing.FirstOrDefault(x => x.Ordinal == i);
-                if (old is not null && old.ContentHash.SequenceEqual(hashes[i])) { old.StartPage = piece.StartPage; old.EndPage = piece.EndPage; chunks.Add(old); continue; }
+                var piece = pieces[i];
+                var old = existing.FirstOrDefault(x => x.Ordinal == i);
+                if (old is not null && old.ContentHash.SequenceEqual(hashes[i]))
+                {
+                    old.StartPage = piece.StartPage;
+                    old.EndPage = piece.EndPage;
+                    chunks.Add(old);
+                    continue;
+                }
                 chunks.Add(new() { DocumentId = document.Id, Ordinal = i, SearchId = nextSearch == 0 ? 0 : nextSearch++,
                     StartPage = piece.StartPage, EndPage = piece.EndPage, HeadingPath = piece.HeadingPath, Text = piece.Text, ContentHash = hashes[i], TokenEstimate = piece.TokenEstimate });
             }

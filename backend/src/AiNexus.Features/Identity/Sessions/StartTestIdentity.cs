@@ -39,7 +39,8 @@ internal sealed class StartTestIdentity(CurrentUser current, NexusDbContext db, 
     private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(15);
 
     public static void Map(RouteGroupBuilder auth) => auth
-        .MapPost("/test-identity", (TestIdentityRequest body, HttpContext http, StartTestIdentity handler, CancellationToken ct) => handler.HandleAsync(http, body, ct).ToHttpResultAsync())
+        .MapPost("/test-identity", (TestIdentityRequest body, HttpContext http, StartTestIdentity handler, CancellationToken ct)
+            => handler.HandleAsync(http, body, ct).ToHttpResultAsync())
         .RequireAuthorization(Policies.Admin).WithName("StartTestIdentity");
 
     public static bool IsTestIdentity(ClaimsPrincipal? user) => user?.HasClaim(x => x.Type == SessionIdentity.ActorId) == true;
@@ -58,7 +59,14 @@ internal sealed class StartTestIdentity(CurrentUser current, NexusDbContext db, 
         var expiry = now.Add(Lifetime);
         var testId = Guid.NewGuid();
         var sourceMethod = http.User.FindFirstValue(SessionIdentity.Method) ?? (options.Value.Mode == "Windows" ? "windows" : "ad");
-        db.AuditEvents.Add(new() { OwnerId = actor.Id, ResourceId = testId, Action = "identity.test_start", Result = "started", DetailsJson = JsonSerializer.Serialize(new { testId, administratorId = actor.Id, userId = target.Id, reason = body.Reason.Trim(), expiresAt = expiry }) });
+        db.AuditEvents.Add(new()
+        {
+            OwnerId = actor.Id,
+            ResourceId = testId,
+            Action = "identity.test_start",
+            Result = "started",
+            DetailsJson = JsonSerializer.Serialize(new { testId, administratorId = actor.Id, userId = target.Id, reason = body.Reason.Trim(), expiresAt = expiry })
+        });
         await db.SaveChangesAsync(ct);
         var previous = await http.AuthenticateAsync(AuthEndpoints.CookieScheme);
         var properties = new AuthenticationProperties { IsPersistent = false, AllowRefresh = false, ExpiresUtc = previous.Properties?.ExpiresUtc ?? now.AddHours(8) };

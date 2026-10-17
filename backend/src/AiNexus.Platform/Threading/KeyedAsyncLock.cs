@@ -1,10 +1,9 @@
 namespace AiNexus.Platform.Threading;
 
 /// <summary>
-/// 依鍵值（Key）劃分的行程內非同步互斥鎖（in-process async mutex）：
-/// 持有相同鍵的操作循序執行，不同鍵之間完全並行、不互相阻塞。
-/// 內部項目僅在該鍵被持有或等待時存在，無人使用時自動清除，避免鍵值字典無限膨脹。
-/// 注意：本鎖不具可重新進入性（not reentrant），且協調範圍僅限於單一處理程序。
+/// 依鍵（Key）區分的程序內非同步互斥鎖：同一個鍵的操作依序執行，不同鍵之間完全並行、互不阻塞。
+/// 項目只在鍵被持有或等待時存在，沒有人使用就會清除，避免字典無限成長。
+/// 注意：本鎖不可重入（not reentrant），協調範圍也只限於單一程序。
 /// </summary>
 public sealed class KeyedAsyncLock<TKey> where TKey : notnull
 {
@@ -54,7 +53,7 @@ public sealed class KeyedAsyncLock<TKey> where TKey : notnull
         public void Dispose()
         {
             if (Interlocked.Exchange(ref released, 1) != 0) return;
-            // 先從字典中移除項目再釋放號誌：後續進來的呼叫者將建立全新項目，而當前等待佇列中的等待者仍持有此執行個體
+            // 先從字典移除再釋放號誌：之後進來的呼叫者會建立新項目；已在佇列中的等待者仍持有這個舊執行個體，會依序取得號誌。
             owner.Leave(key, entry);
             entry.Gate.Release();
         }

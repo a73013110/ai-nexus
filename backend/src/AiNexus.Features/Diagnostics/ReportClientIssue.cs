@@ -46,6 +46,7 @@ internal sealed partial class ReportClientIssue(ClientIssueDeduplication dedup, 
     private static partial void LogClientIssue(ILogger logger, string clientKind, string clientFingerprint);
 }
 
+/// <summary>以使用者與指紋在一分鐘內去重，避免同一錯誤被瀏覽器反覆回報而灌爆日誌。</summary>
 public sealed class ClientIssueDeduplication : IDisposable
 {
     private readonly MemoryCache cache = new(new MemoryCacheOptions { SizeLimit = 10000 });

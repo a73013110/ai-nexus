@@ -18,7 +18,8 @@ public sealed partial class InMemoryRetrievalStore(NexusDbContext db, EmbeddingV
             select new RetrievalRow { ChunkId = c.Id, DocumentId = c.DocumentId, Title = d.FileName, PageNumber = c.StartPage, EndPage = c.EndPage, Ordinal = c.Ordinal, Text = c.Text, HeadingPath = c.HeadingPath }).ToListAsync(ct);
         var ids = rows.Select(x => x.ChunkId).ToArray();
         var stored = vector is null ? [] : await vectors.Rows(profile).Where(x => ids.Contains(x.ChunkId)).ToListAsync(ct);
-        var map = stored.ToDictionary(x => x.ChunkId, x => x.Vector.Memory.ToArray()); var terms = Terms(query);
+        var map = stored.ToDictionary(x => x.ChunkId, x => x.Vector.Memory.ToArray());
+        var terms = Terms(query);
         foreach (var row in rows) row.VectorScore = vector is not null && map.TryGetValue(row.ChunkId, out var value) ? Dot(vector, value) : null;
         var settings = options.Value;
         var semantic = vector is null ? [] : rows.Where(x => x.VectorScore != null && (settings.Retrieval.MinVectorScore == 0 || x.VectorScore >= settings.Retrieval.MinVectorScore))
@@ -30,13 +31,20 @@ public sealed partial class InMemoryRetrievalStore(NexusDbContext db, EmbeddingV
     public static double Dot(float[] query, float[] stored)
     {
         if (query.Length != stored.Length) return -2;
-        double score = 0; for (var i = 0; i < query.Length; i++) score += (double)query[i] * stored[i]; return Math.Clamp(score, -1, 1);
+        double score = 0;
+        for (var i = 0; i < query.Length; i++)
+            score += (double)query[i] * stored[i];
+        return Math.Clamp(score, -1, 1);
     }
     public static string[] Terms(string query)
     {
         var words = WordPattern().Matches(query.ToLowerInvariant()).Select(x => x.Value).ToList();
+        // 中文沒有空白可切詞，這裡以相鄰兩字當詞元，只是測試用的近似，斷詞結果與 SQL Server 全文索引不同。
         foreach (var part in HanPattern().Matches(query).Select(x => x.Value))
-            for (var i = 0; i < part.Length - 1; i++) words.Add(part.Substring(i, 2));
+        {
+            for (var i = 0; i < part.Length - 1; i++)
+                words.Add(part.Substring(i, 2));
+        }
         return words.Distinct().Take(128).ToArray();
     }
     public static double Lexical(string[] terms, string text) => terms.Sum(term => Regex.Count(text, Regex.Escape(term), RegexOptions.IgnoreCase | RegexOptions.CultureInvariant));

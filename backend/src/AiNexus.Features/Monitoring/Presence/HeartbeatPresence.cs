@@ -25,7 +25,8 @@ internal sealed class PresenceRequestValidator : RequestValidator<PresenceReques
 public sealed record PresenceReceipt(bool Enabled, int HeartbeatSeconds);
 
 /// <summary>
-/// 分頁心跳：使用者、粗略的瀏覽器與裝置名稱、位址與固定的功能名稱。原始 User-Agent、URL 與標題絕不進入監控資料；此端點有速率限制，且不列入請求日誌。
+/// 分頁心跳：記錄使用者、粗略的瀏覽器與裝置名稱、位址與固定的功能名稱。
+/// 原始 User-Agent、URL 與標題絕不進入監控資料。此端點有速率限制，且不列入請求日誌。
 /// </summary>
 internal sealed class HeartbeatPresence(RuntimeTraffic traffic)
 {

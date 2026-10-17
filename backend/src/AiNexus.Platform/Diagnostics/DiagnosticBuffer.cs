@@ -4,9 +4,8 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Platform.Diagnostics;
 
 /// <summary>
-/// 記憶體內日誌緩衝區。
-/// 分為一般佇列（Normal）與重要佇列（Important，Warning 以上或帶有 IssueCode）。
-/// 支援低層級事件抽樣與佇列滿載時的降級緊急處置。
+/// 記憶體內的日誌緩衝區，分為一般佇列（Normal）與重要佇列（Important：Warning 以上，或帶有 IssueCode）。
+/// 支援低層級事件抽樣，佇列滿時走緊急降級流程。
 /// </summary>
 public sealed class DiagnosticBuffer(IOptions<DiagnosticOptions> options, DiagnosticHealth health)
 {
@@ -27,8 +26,8 @@ public sealed class DiagnosticBuffer(IOptions<DiagnosticOptions> options, Diagno
     private long sampleSequence;
 
     /// <summary>
-    /// 將日誌事件排入對應緩衝佇列。
-    /// 若為非重要低階事件且設定抽樣，則依比例拋棄計入 Sampled；佇列滿時觸發降級警報。
+    /// 把日誌事件放進對應的緩衝佇列。非重要的低層級事件若有設定抽樣，會依比例丟棄並計入 Sampled；
+    /// 佇列滿時觸發降級警報。
     /// </summary>
     public bool Enqueue(DiagnosticEvent item)
     {
@@ -57,8 +56,7 @@ public sealed class DiagnosticBuffer(IOptions<DiagnosticOptions> options, Diagno
     }
 
     /// <summary>
-    /// 從佇列中依重要性批次取出已緩衝事件。
-    /// 優先排空重要佇列，其次為一般佇列，最多取出 BatchSize 筆。
+    /// 從佇列批次取出已緩衝的事件。先排空重要佇列，再排一般佇列，最多取 BatchSize 筆。
     /// </summary>
     public List<DiagnosticEvent> Drain()
     {

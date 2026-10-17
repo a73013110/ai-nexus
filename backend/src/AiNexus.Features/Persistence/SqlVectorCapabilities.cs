@@ -88,11 +88,18 @@ public sealed class SqlVectorCapabilities(ISqlDatabase<NexusDbContext> sql)
         Console.WriteLine($"SQL {result.Version} · {result.Edition} · 原生向量／精確距離：{(result.ExactDistance ? "通過" : "無法使用；需要 SQL Server 2025")}");
         Console.WriteLine($"全文元件：{result.FullTextInstalled} · 繁中 1028 斷詞器：{result.TraditionalChineseWordBreaker} · 知識全文索引：{result.FullTextIndex}");
     }
+
     private sealed class ServerInfo
     {
         public string Version { get; set; } = "";
         public string Edition { get; set; } = "";
         public int MajorVersion { get; set; }
     }
-    private sealed class FullTextInfo { public int Installed { get; set; } public int Chinese { get; set; } public int Indexed { get; set; } }
+
+    private sealed class FullTextInfo
+    {
+        public int Installed { get; set; }
+        public int Chinese { get; set; }
+        public int Indexed { get; set; }
+    }
 }

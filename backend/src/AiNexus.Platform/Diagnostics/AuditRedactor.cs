@@ -3,8 +3,7 @@ using System.Text.Json;
 namespace AiNexus.Platform.Diagnostics;
 
 /// <summary>
-/// 稽核日誌遮罩器。
-/// 稽核紀錄擁有獨立的核准結構描述（Schema）與持久化交易策略，絕不進行抽樣略過。
+/// 稽核日誌的遮罩器。稽核紀錄有自己核准的結構描述與持久化交易策略，因此絕不抽樣略過。
 /// </summary>
 public static class AuditRedactor
 {
@@ -20,7 +19,7 @@ public static class AuditRedactor
     };
 
     /// <summary>
-    /// 清理並過濾稽核 JSON 物件，僅保留核准白名單欄位並限制深淺大小。
+    /// 清理稽核 JSON：只保留核准的白名單欄位，並限制巢狀深度與大小。
     /// </summary>
     public static string? Sanitize(string? json, bool historical = false)
     {
@@ -110,8 +109,8 @@ public static class AuditRedactor
 
             case JsonValueKind.String:
                 var text = value.GetString();
-                // 自由填寫的身分測試理由可能包含敏感文件或對話文字；僅保留其存在性，
-                // 同時保留伺服器預設的固定工作階段結束/撤銷原因代碼。
+                // 自由填寫的身分測試理由可能含有機敏文件或對話文字，因此只保留「有填寫」的事實。
+                // 伺服器預設的固定工作階段結束或撤銷代碼則保留原值。
                 if (key.Equals("reason", StringComparison.OrdinalIgnoreCase) && text is not ("returned" or "signed_in" or "signed_out" or "expired" or "target_changed"))
                 {
                     text = "[REASON PROVIDED; TEXT OMITTED]";

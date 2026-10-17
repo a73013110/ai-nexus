@@ -11,6 +11,7 @@ public interface IWebSearchProvider
 {
     Task<IReadOnlyList<WebSourceDto>> SearchAsync(string query, CancellationToken ct);
 }
+/// <summary>以 SearXNG 或 Brave 的 JSON 介面取得搜尋結果，並過濾不安全的來源網址。</summary>
 public sealed partial class WebSearchProvider(IHttpClientFactory clients, IOptions<WebSearchOptions> options, TimeProvider clock) : IWebSearchProvider
 {
     public async Task<IReadOnlyList<WebSourceDto>> SearchAsync(string query, CancellationToken ct)

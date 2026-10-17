@@ -13,8 +13,12 @@ namespace AiNexus.Features.Conversations;
 internal sealed class DetachDeletedProjectConversations(NexusDbContext db) : IDomainEventHandler<ContainerDeleted>, IContainerDeletionCheck
 {
     public async Task<Result> CheckAsync(string kind, Guid containerId, CancellationToken ct)
-        => kind == "project" && await db.Runs.AnyAsync(r => r.ActiveOwnerId != null && Conversations(containerId).Any(c => c.Id == r.ConversationId), ct)
-            ? ConversationsErrors.GenerationActive : Result.Success;
+    {
+        if (kind != "project") return Result.Success;
+        var generating = await db.Runs.AnyAsync(
+            r => r.ActiveOwnerId != null && Conversations(containerId).Any(c => c.Id == r.ConversationId), ct);
+        return generating ? ConversationsErrors.GenerationActive : Result.Success;
+    }
 
     public async Task HandleAsync(ContainerDeleted e, CancellationToken ct)
     {

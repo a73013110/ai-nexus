@@ -59,7 +59,7 @@ public sealed class ModelTaskService(
         var policy = scope.ServiceProvider.GetRequiredService<ModelPolicyService>();
         var billing = scope.ServiceProvider.GetRequiredService<IModelCallMeter>();
 
-        // 邊界防禦：輸入長度校驗
+        // 輸入過長直接拒絕，避免後面的 token 估算與配額預扣白做
         if (prompt.Length > MaxPromptCharacters || instruction.Length > 24000)
         {
             return InferenceErrors.TaskInputTooLong;
@@ -77,7 +77,7 @@ public sealed class ModelTaskService(
 
         var outputBudget = Math.Min(maxOutputTokens ?? profile.MaxOutputTokens, profile.MaxOutputTokens);
 
-        // 對於評測與代碼審查，嚴格比對指紋，組態更動則拒絕執行
+        // 評測與代碼審查的結果必須可重現，模型組態與送審時不同就拒絕執行
         if (kind is "evaluation" or "repository-review" &&
             ModelTaskConfiguration.Require(profile, options.Value, expectedConfiguration) is { IsSuccess: false } changed)
         {
@@ -89,7 +89,7 @@ public sealed class ModelTaskService(
             return InferenceErrors.VisionNotSupported;
         }
 
-        // 在扣減配額前先驗證是否超出上下文總容量上限
+        // 先確認內容能放進上下文，超出時不要產生任何配額預扣
         var estimatedPromptTokens = Encoding.UTF8.GetByteCount(prompt + instruction);
         var estimatedImageTokens = images?.Sum(x => x.EstimatedTokens) ?? 0;
         if (estimatedPromptTokens + estimatedImageTokens + outputBudget + FramingTokenReserve > profile.ContextTokens)
@@ -123,8 +123,9 @@ public sealed class ModelTaskService(
 
         var inputEstimate = MessageCost.Estimate(messages);
 
-        // 【資料庫交易與帳號行鎖區塊】
-        // 透過無害更新觸發帳號行鎖，將同帳號跨站點的配額預扣串行化；在呼叫外部模型前即刻提交事務釋放鎖
+        // 【資料庫交易與帳號行鎖】
+        // 對使用者列做一次自我更新，取得行鎖後才能讓同一帳號的配額預扣依序進行。
+        // 交易在呼叫外部模型前提交，避免連線在等待網路回應期間一直被占住。
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
@@ -167,7 +168,7 @@ public sealed class ModelTaskService(
                 await billing.MeterAsync(call.Id, chunk.InputTokens, chunk.OutputTokens, chunk.CachedInputTokens, chunk.ReasoningTokens, ct, chunk.Done);
                 finish = chunk.FinishReason ?? finish;
 
-                // 任務輸出上限防禦（64,000 字元）
+                // 輸出超過 64,000 字元就中止，避免失控的模型輸出吃光記憶體
                 if (text.Length > 64000)
                 {
                     throw new ExternalServiceException(Error.Upstream("task_output_too_long"), "模型輸出超過處理上限。");
@@ -207,7 +208,7 @@ public sealed class ModelTaskService(
         }
         finally
         {
-            // 在 finally 中計算總耗時並結算計費；使用 CancellationToken.None 確保狀態必定能持久化
+            // 即使呼叫已被取消也要結算用量與狀態，所以這裡刻意不沿用 ct
             call.DurationMilliseconds = RunTiming.Milliseconds(call.CreatedAt, clock.GetUtcNow());
             await billing.FinishAsync(call.Id, call.Status, CancellationToken.None);
             await db.SaveChangesAsync(CancellationToken.None);

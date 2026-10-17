@@ -61,11 +61,11 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
 }
 app.MapFeatures();
 
-// 未知的 API 路徑絕不可意外傳回 SPA 前端應用的 index.html。
+// 未知的 API 路徑不能回傳 SPA 的 index.html，否則前端會收到錯誤的內容。
 app.Map("/api/{**path}", () => Results.NotFound()).RequireAuthorization();
 
-// 預設的 FallbackToFile 會略過任何最後一段路徑包含點號（.）的網址（誤當作遺失的靜態檔案）。
-// 程式庫路由常以 Gitea 專案名稱（例如 `team/my.repo`）與版本比對區間（`base...head`）結尾，其下無實體檔案，需特別處理。
+// 預設的 FallbackToFile 會把最後一段含點號（.）的路徑當成遺失的靜態檔而略過。
+// Gitea 程式庫路由常以 `team/my.repo` 或 `base...head` 這類路徑結尾，沒有實體檔案，所以要明確指定。
 app.MapFallbackToFile("/repositories/{**path}", "index.html").AllowAnonymous();
 app.MapFallbackToFile("index.html").AllowAnonymous();
 

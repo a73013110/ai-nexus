@@ -17,7 +17,10 @@ public sealed class DisplayNameCache(TimeProvider clock)
         // 超過容量時先清掉過期項目，仍然滿就整個清空：寧可多查幾次目錄，也不讓快取無上限膨脹。
         if (names.Count >= Capacity)
         {
-            foreach (var entry in names) if (now - entry.Value.At >= Lifetime) names.TryRemove(entry);
+            foreach (var entry in names)
+            {
+                if (now - entry.Value.At >= Lifetime) names.TryRemove(entry);
+            }
             if (names.Count >= Capacity) names.Clear();
         }
         names[sid] = (name, now);

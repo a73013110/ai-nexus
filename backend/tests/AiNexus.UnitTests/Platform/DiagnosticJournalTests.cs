@@ -30,7 +30,8 @@ public sealed class DiagnosticJournalTests
             await first.AppendAsync(rows, CancellationToken.None); await second.AppendAsync([new() { Level = LogLevel.Error }], CancellationToken.None);
             Assert.All(Directory.EnumerateFiles(directory, "*.jsonl", SearchOption.AllDirectories), f => Assert.True(new FileInfo(f).Length <= 65536));
             await Assert.ThrowsAnyAsync<IOException>(() => second.AppendAsync(rows.Select(_ => new DiagnosticEvent { Level = LogLevel.Error, ExceptionDetail = detail }).ToArray(), CancellationToken.None));
-            var store = new MemoryStore(); await first.ReplayAsync(store, CancellationToken.None); Assert.Equal(3, store.Events.Count); // 另一個仍存活的實例擁有的檔案不會被接手，因此這裡只回放自己寫入的 3 筆。
+            // 另一個仍存活的實例擁有的檔案不會被接手，所以第一個實例只回放自己寫入的 3 筆。
+            var store = new MemoryStore(); await first.ReplayAsync(store, CancellationToken.None); Assert.Equal(3, store.Events.Count);
             await second.ReplayAsync(store, CancellationToken.None); Assert.Equal(4, store.Events.Count); Assert.Equal(0, otherHealth.Corrupt);
         } finally { Directory.Delete(directory, true); }
     }

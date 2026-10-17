@@ -9,8 +9,8 @@ namespace AiNexus.Host;
 
 /// <summary>
 /// OpenAPI 文件規格合約產生器。
-/// OpenAPI 文件為前端唯一的 API 型別來源（contracts/openapi.json → schema.ts），
-/// 因此合約必須明確精確指出回應中各屬性是否必然存在（Required）。
+/// 前端的 API 型別只從這份 OpenAPI 文件產生（contracts/openapi.json → schema.ts），
+/// 因此必須精確標出回應屬性是否必然存在（Required）。
 /// </summary>
 internal static class OpenApiContract
 {
@@ -22,9 +22,9 @@ internal static class OpenApiContract
             return Task.CompletedTask;
         });
 
-        // [AsParameters] 類別會貢獻其 PascalCase 屬性名稱；模型繫結不分大小寫，而所有 API 屬性均為 camelCase，
-        // 因此合約（與產生的客戶端）此處統一轉換為 camelCase。
-        // 查詢陣列在未傳入時繫結為空陣列，框架常將其標記為必填，此處將其校正為選填（Required = false）。
+        // [AsParameters] 類別的屬性名稱是 PascalCase，但所有 API 參數都是 camelCase。
+        // 這裡統一改成 camelCase，合約與產生的客戶端才會一致。
+        // 查詢陣列未傳入時會繫結為空陣列，框架卻常標成必填，這裡校正為選填。
         options.AddOperationTransformer((operation, _, _) =>
         {
             foreach (var parameter in operation.Parameters?.OfType<OpenApiParameter>() ?? [])
@@ -53,9 +53,9 @@ internal static class OpenApiContract
 
 /// <summary>
 /// 回應 Schema 必填屬性轉換器。
-/// 框架產生的結構僅將無預設值的建構子參數標記為必填，然而伺服器端會完整輸出回應物件之每個屬性（無全域跳過 null 行為）。
-/// 因此針對僅作為輸出（Response）的型別，凡必然輸出的屬性皆標記為 Required；帶有條件式 JsonIgnore 的屬性維持選填。
-/// 至於同時作為請求主體（Request Body）的型別則保留原樣，因呼叫端可省略帶預設值的欄位。
+/// 框架只把沒有預設值的建構子參數標成必填，但伺服器會輸出回應物件的每個屬性（沒有全域略過 null）。
+/// 因此只作為回應的型別，會輸出的屬性一律標為 Required；帶條件式 JsonIgnore 的屬性維持選填。
+/// 同時當作請求主體的型別保持原樣，因為呼叫端可以省略有預設值的欄位。
 /// </summary>
 internal sealed class ResponseSchemaRequirements(IApiDescriptionGroupCollectionProvider apis) : IOpenApiSchemaTransformer
 {
@@ -85,7 +85,7 @@ internal sealed class ResponseSchemaRequirements(IApiDescriptionGroupCollectionP
         return Task.CompletedTask;
     }
 
-    // 收集所有自 JSON 請求主體可達之型別（包含巢狀屬性與集合元素型別）。
+    // 收集所有能從 JSON 請求主體走到的型別，包含巢狀屬性與集合元素。
     private HashSet<Type> RequestTypes(JsonSerializerOptions options)
     {
         var found = new HashSet<Type>();

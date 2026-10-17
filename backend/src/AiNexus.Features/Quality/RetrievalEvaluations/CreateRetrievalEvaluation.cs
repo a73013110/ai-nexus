@@ -17,7 +17,7 @@ namespace AiNexus.Features.Quality.RetrievalEvaluations;
 public sealed record RetrievalEvaluationRequest(string Title, IReadOnlyList<Guid> CollectionIds, IReadOnlyList<RetrievalEvaluationCase> Cases);
 
 /// <summary>
-/// 檢查請求的外形（數量與長度）。逐案例的標註改由 handler 檢查，因為它回報的 <c>retrieval_corpus_invalid</c> 與文件、頁碼檢查共用同一代碼。
+/// 只檢查請求的數量與長度。逐題的標註由 handler 檢查，因為 <c>retrieval_corpus_invalid</c> 這個代碼同時用於文件與頁碼的檢查。
 /// </summary>
 internal sealed class RetrievalEvaluationRequestValidator : RequestValidator<RetrievalEvaluationRequest>
 {

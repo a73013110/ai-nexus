@@ -53,7 +53,8 @@ internal sealed class StartRepositoryChat(AccessService access, RepositoryServic
         if (text.Length > gitea.Options.MaxChatCharacters) return RepositoriesErrors.ChatTooLarge;
         var bytes = Encoding.UTF8.GetBytes(text);
         using var stream = new MemoryStream(bytes);
-        var upload = new FormFile(stream, 0, bytes.Length, "file", string.Concat((shortName + "-" + file).Take(170)) + ".md") { Headers = new HeaderDictionary(), ContentType = "text/markdown" };
+        var uploadName = string.Concat((shortName + "-" + file).Take(170)) + ".md";
+        var upload = new FormFile(stream, 0, bytes.Length, "file", uploadName) { Headers = new HeaderDictionary(), ContentType = "text/markdown" };
         var attachment = await attachments.UploadAsync(owner, upload, ct);
         if (!attachment.IsSuccess) return attachment.Error!;
         var conversation = await conversations.CreateAsync(owner, string.Concat((shortName + " · " + title).Take(120)), ct);
@@ -124,8 +125,12 @@ internal sealed class StartRepositoryChat(AccessService access, RepositoryServic
         if (comments.Count == 0) return;
         text.Append("\n## 留言\n");
         foreach (var comment in comments)
-            text.Append("\n### ").Append(comment.Author).Append(comment.CreatedAt is { } at ? " · " + at.ToString("yyyy-MM-dd HH:mm 'UTC'", System.Globalization.CultureInfo.InvariantCulture) : "")
-                .Append("\n\n").Append(Quoted(comment.Body));
+        {
+            var stamp = comment.CreatedAt is { } at
+                ? " · " + at.ToString("yyyy-MM-dd HH:mm 'UTC'", System.Globalization.CultureInfo.InvariantCulture)
+                : "";
+            text.Append("\n### ").Append(comment.Author).Append(stamp).Append("\n\n").Append(Quoted(comment.Body));
+        }
     }
 
     private static string Quoted(string body) => body.Trim().Length == 0 ? "（沒有內容）\n" : body.Trim() + "\n";

@@ -2,8 +2,8 @@ namespace AiNexus.Platform.Monitoring;
 
 /// <summary>
 /// 執行階段監控頁面上的單一子系統來源，由匯報該狀態的業務模組所擁有。
-/// 監控系統採延遲讀取策略：僅在有人檢視時、至多每 <see cref="Refresh"/> 週期一次、於獨立的 DI Scope 中執行，並設置短逾時時間，確保任何單一來源的故障絕不拖慢整個監控頁面。
-/// 讀取實作應維持極低成本：僅查詢記憶體狀態、設定值或具索引之彙總。
+/// 監控採延遲讀取：只有有人檢視時才讀，至多每 <see cref="Refresh"/> 週期一次，在獨立的 DI Scope 中執行，並設有短逾時，
+/// 確保單一來源故障不會拖慢整個頁面。讀取實作要保持極低成本，只查記憶體狀態、設定值或有索引的彙總。
 /// </summary>
 public interface IMonitoringSource
 {
@@ -19,7 +19,7 @@ public interface IMonitoringSource
     /// <summary>讀數快取有效期限；在此期間內不會重複讀取。</summary>
     TimeSpan Refresh { get; }
 
-    /// <summary>讀取當前狀態。若拋出例外或逾時，頁面將該子系統標記為未觀察到（unobserved）。</summary>
+    /// <summary>讀取目前狀態。若拋出例外或逾時，頁面會把該子系統標為 unobserved（未觀察到）。</summary>
     Task<SubsystemReading> ReadAsync(CancellationToken ct);
 }
 

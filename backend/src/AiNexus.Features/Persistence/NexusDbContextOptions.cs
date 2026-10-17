@@ -14,7 +14,7 @@ public static class NexusDbContextOptions
     /// <remarks>
     /// 攔截器順序性保證（極為關鍵）：
     /// 1. <see cref="DomainEventInterceptor"/> 必須先執行：在保存事務開始前分發領域事件，事件處理常式（Handlers）中
-    ///    若有產生新的業務異動或追加 <see cref="AuditEvent"/>， ChangeTracker 能即時捕捉。
+    ///    若有產生新的業務異動或追加 <see cref="AuditEvent"/>，ChangeTracker 能即時捕捉。
     /// 2. <see cref="AuditEventInterceptor"/> 接續執行：在所有業務實體（包括上述領域事件引發的異動）準備就緒後，
     ///    統一對所有新增的審計日誌進行欄位補全（TraceId、ActorId）與高敏資料脫敏。
     /// </remarks>

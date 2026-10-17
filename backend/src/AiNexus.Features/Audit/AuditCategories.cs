@@ -26,7 +26,7 @@ public static class AuditCategories
     /// </summary>
     public static IReadOnlyList<string> Covering(string action) =>
         [.. Reads.Concat(Administrative).Where(x => x.StartsWith(action, StringComparison.Ordinal)).Prepend(action).Select(For).Distinct()];
-    /// <summary>呼叫端要先以 <see cref="Values"/> 驗證 <paramref name="category"/> 並回報自己的錯誤；這裡遇到未知值直接 throw。</summary>
+    /// <summary>呼叫端應先以 <see cref="Values"/> 驗證並回報錯誤；走到這裡仍遇到未知分類，代表程式有錯，所以直接 throw。</summary>
     public static IQueryable<AuditEvent> Filter(IQueryable<AuditEvent> query, string? category)
     {
         if (string.IsNullOrEmpty(category)) return query;

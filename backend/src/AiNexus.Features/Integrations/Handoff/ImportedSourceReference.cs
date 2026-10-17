@@ -25,8 +25,11 @@ internal sealed class ImportedSourceReferenceConfiguration : IEntityTypeConfigur
     public void Configure(EntityTypeBuilder<ImportedSourceReference> r)
     {
         r.Property(x => x.ImportedAt).HasValueGenerator<CreationTime>();
-        r.ToTable("SourceReferences", "integrations"); r.HasKey(x => x.ArtifactId);
-        r.Property(x => x.SourceId).HasMaxLength(32); r.Property(x => x.ExternalId).HasMaxLength(160); r.Property(x => x.Revision).HasMaxLength(160);
+        r.ToTable("SourceReferences", "integrations");
+        r.HasKey(x => x.ArtifactId);
+        r.Property(x => x.SourceId).HasMaxLength(32);
+        r.Property(x => x.ExternalId).HasMaxLength(160);
+        r.Property(x => x.Revision).HasMaxLength(160);
         r.HasIndex(x => new { x.SourceId, x.ExternalId });
     }
 }

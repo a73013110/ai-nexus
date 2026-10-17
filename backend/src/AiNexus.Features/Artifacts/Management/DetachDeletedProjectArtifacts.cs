@@ -11,6 +11,8 @@ internal sealed class DetachDeletedProjectArtifacts(NexusDbContext db) : IDomain
     public async Task HandleAsync(ContainerDeleted e, CancellationToken ct)
     {
         if (e.Kind != "project") return;
-        await db.Set<Artifact>().Where(x => x.ProjectId == e.ContainerId).ExecuteUpdateAsync(p => p.SetProperty(x => x.ProjectId, (Guid?)null), ct);
+        await db.Set<Artifact>()
+            .Where(x => x.ProjectId == e.ContainerId)
+            .ExecuteUpdateAsync(p => p.SetProperty(x => x.ProjectId, (Guid?)null), ct);
     }
 }

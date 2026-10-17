@@ -16,7 +16,8 @@ internal static class NavigationRules
 
     public static Error? Order(int sortOrder) => sortOrder is < 0 or > MaxSortOrder ? AdministrationErrors.InvalidOrder : null;
 
-    public static Error? Icon(string icon) => Regex.IsMatch(icon, "^[a-z][a-z0-9-]{0,39}$", RegexOptions.CultureInvariant) ? null : AdministrationErrors.InvalidFeatureIcon;
+    public static Error? Icon(string icon)
+        => Regex.IsMatch(icon, "^[a-z][a-z0-9-]{0,39}$", RegexOptions.CultureInvariant) ? null : AdministrationErrors.InvalidFeatureIcon;
 
     /// <summary>null 代表頂層；其他值必須指向既有群組。</summary>
     public static async Task<Error?> ExistingGroupAsync(NexusDbContext db, string? id, CancellationToken ct)

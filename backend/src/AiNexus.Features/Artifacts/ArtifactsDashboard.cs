@@ -21,7 +21,8 @@ internal sealed class ArtifactsDashboard(NexusDbContext db) : IDashboardSource
         // 版本數依作者計算：協作者的編輯算在協作者名下，而不是成果擁有者。
         var revisions = db.Set<ArtifactRevision>().AsNoTracking().Where(x => owner == null || x.AuthorId == owner);
         var saved = await DashboardDays.CountAsync(db, revisions.Select(x => x.CreatedAt), scope, ct);
-        var all = counts?.All ?? 0; var projects = counts?.InProjects ?? 0;
+        var all = counts?.All ?? 0;
+        var projects = counts?.InProjects ?? 0;
         var section = new DashboardSection("artifacts", Feature)
             .Count("artifacts", "成果文件", all, "份", hint: $"{counts?.FromChat ?? 0} 份由對話建立")
             .Period("versions", "期間保存版本", saved.Sum(x => x.Value), "版")

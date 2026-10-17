@@ -14,7 +14,8 @@ public sealed record SelectBranchRequest(Guid LeafId);
 internal sealed class SelectBranch(NexusDbContext db, GenerationScheduler scheduler, TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPatch("/{id:guid}/branch", async (Guid id, SelectBranchRequest body, ICurrentUser user, SelectBranch handler, CancellationToken ct) =>
+        .MapPatch("/{id:guid}/branch", async (
+                Guid id, SelectBranchRequest body, ICurrentUser user, SelectBranch handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, body.LeafId, ct)).ToHttpResult())
         .WithName("SelectBranch");
 
@@ -32,6 +33,9 @@ internal sealed class SelectBranch(NexusDbContext db, GenerationScheduler schedu
             await db.SaveChangesAsync(ct);
             return Result.Success;
         }
-        finally { conversationLock.Dispose(); }
+        finally
+        {
+            conversationLock.Dispose();
+        }
     }
 }

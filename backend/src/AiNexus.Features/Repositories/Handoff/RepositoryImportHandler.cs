@@ -44,7 +44,7 @@ internal sealed class RepositoryImportHandler(NexusDbContext db, RepositoryServi
         return Result.Success;
     }
 
-    /// <summary>True when the file is in the collection (new or reused); false when it was skipped as non-text or too large.</summary>
+    /// <summary>檔案已在知識庫中（新匯入或沿用既有文件）回傳 true；因非文字或過大而略過回傳 false。</summary>
     private async Task<Result<bool>> ImportAsync(RepositoryFolderImport row, string path, CancellationToken ct)
     {
         var reused = await db.Set<RepositoryImport>().AsNoTracking()
@@ -59,10 +59,11 @@ internal sealed class RepositoryImportHandler(NexusDbContext db, RepositoryServi
         var bytes = Encoding.UTF8.GetBytes(text);
         using var stream = new MemoryStream(bytes);
         var markdown = Path.GetExtension(path).ToLowerInvariant() is ".md" or ".markdown";
-        var name = string.Concat((row.Repository.Split('/')[1] + "_" + path.Replace('/', '_')).Take(170)) + (markdown ? ".md" : ".txt");
+        var stem = row.Repository.Split('/')[1] + "_" + path.Replace('/', '_');
+        var name = string.Concat(stem.Take(170)) + (markdown ? ".md" : ".txt");
         var upload = new FormFile(stream, 0, bytes.Length, "file", name) { Headers = new HeaderDictionary(), ContentType = markdown ? "text/markdown" : "text/plain" };
         var attachment = await attachments.UploadAsync(row.OwnerId, upload, ct);
-        // A full quota stops the import; a file the extractor rejects (too long, no text) is skipped like a binary one.
+        // 配額用完會中止整個匯入；抽取器拒絕的檔案（太長、沒有文字）與二進位檔一樣略過。
         if (!attachment.IsSuccess)
         {
             if (attachment.Error!.Code == "attachment_quota") return attachment.Error;

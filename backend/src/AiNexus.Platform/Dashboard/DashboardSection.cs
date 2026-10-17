@@ -2,7 +2,7 @@ namespace AiNexus.Platform.Dashboard;
 
 /// <summary>
 /// 儀表板區塊建立器。將各模組指標資料組裝為 <see cref="DashboardSectionDto"/>。
-/// 除非明確指定，否則區塊狀態會自動根據指標色調（Tone）推導為 active 或 attention。
+/// 未明確指定狀態時，會依指標推導：有危險色調且數值大於 0 為 attention，否則為 idle。
 /// </summary>
 public sealed class DashboardSection(string id, string feature, string title = "", string? route = null)
 {
@@ -12,11 +12,11 @@ public sealed class DashboardSection(string id, string feature, string title = "
     private readonly List<DashboardItemDto> items = [];
     private string? state;
 
-    /// <summary>當前狀態指標，例如現存的知識庫集合總數。</summary>
+    /// <summary>目前狀態的計數指標，例如現存的知識庫數量。</summary>
     public DashboardSection Count(string key, string label, double? value, string unit, string tone = DashboardTones.Neutral, string? hint = null)
         => Metric(new(key, label, value, unit, DashboardFormats.Count, tone, false, hint));
 
-    /// <summary>當前容量大小指標（以位元組為單位）。</summary>
+    /// <summary>目前容量的指標，單位為位元組。</summary>
     public DashboardSection Size(string key, string label, long bytes, string? hint = null)
         => Metric(new(key, label, bytes, "", DashboardFormats.Bytes, DashboardTones.Neutral, false, hint));
 
@@ -50,7 +50,7 @@ public sealed class DashboardSection(string id, string feature, string title = "
     /// <summary>當 <paramref name="active"/> 大於零時，將此區塊標記為活躍狀態（Active）。</summary>
     public DashboardSection ActiveWhen(double? active) => active > 0 && state is null ? State(DashboardStates.Active) : this;
 
-    /// <summary>建立區塊 DTO。注意 Facts 保持為空，因系統配置與服務狀態屬於維運管理頁面範疇。</summary>
+    /// <summary>建立區塊 DTO。Facts 固定留空：系統設定與服務狀態屬於維運頁面，不放在總覽。</summary>
     public DashboardSectionDto Build() => new(id, feature, title, route, state ?? Derived(), metrics, series, shares, items, []);
 
     private string Derived() => metrics.Any(x => x.Tone == DashboardTones.Danger && x.Value > 0) ? DashboardStates.Attention : DashboardStates.Idle;

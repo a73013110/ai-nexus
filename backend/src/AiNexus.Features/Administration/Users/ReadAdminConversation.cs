@@ -35,11 +35,22 @@ internal sealed class ReadAdminConversation(NexusDbContext db, AdministrativeRea
         var timings = await RunTiming.ReadAsync(db, rows.Where(x => x.RunId != null).Select(x => x.RunId!.Value).Distinct().ToArray(), ct);
         var attachments = await db.Set<MessageAttachment>().AsNoTracking().Where(x => ids.Contains(x.MessageId))
             .Select(x => new { x.MessageId, x.Attachment.Id, x.Attachment.FileName, x.Attachment.ContentType, x.Attachment.Size }).ToListAsync(ct);
-        var messages = rows.Select(x => new AdminMessageDto(x.Id, x.ParentId, x.Role, x.Content, x.Status, x.CreatedAt, x.ModelId is { } model ? models.PublicId(model) : null,
-            attachments.Where(a => a.MessageId == x.Id).Select(a => new AttachmentDto(a.Id, a.FileName, a.ContentType, a.Size, a.ContentType.StartsWith("image/", StringComparison.Ordinal), "reference")).ToArray(), x.RunId is Guid run ? timings.GetValueOrDefault(run) : null, models.DisplayName(x.ModelId))).ToArray();
+        var messages = rows.Select(x => new AdminMessageDto(
+            x.Id,
+            x.ParentId,
+            x.Role,
+            x.Content,
+            x.Status,
+            x.CreatedAt,
+            x.ModelId is { } model ? models.PublicId(model) : null,
+            attachments.Where(a => a.MessageId == x.Id)
+                .Select(a => new AttachmentDto(a.Id, a.FileName, a.ContentType, a.Size, a.ContentType.StartsWith("image/", StringComparison.Ordinal), "reference"))
+                .ToArray(),
+            x.RunId is Guid run ? timings.GetValueOrDefault(run) : null,
+            models.DisplayName(x.ModelId))).ToArray();
         var audited = await reads.RecordAsync(actor, "admin.conversation_read", id, new { userId = owner.Id, conversationId = id, offset, count = messages.Length }, ct);
-        return audited.IsSuccess
-            ? new AdminConversationDetailDto(new(id, value.Title, value.CreatedAt, value.UpdatedAt, value.IsArchived, value.IsDeleted, total), owner.Account, owner.DisplayName, value.SystemInstruction, messages, offset, total)
-            : audited.Error;
+        if (!audited.IsSuccess) return audited.Error;
+        var conversation = new AdminConversationDto(id, value.Title, value.CreatedAt, value.UpdatedAt, value.IsArchived, value.IsDeleted, total);
+        return new AdminConversationDetailDto(conversation, owner.Account, owner.DisplayName, value.SystemInstruction, messages, offset, total);
     }
 }

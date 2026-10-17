@@ -10,11 +10,9 @@ using Microsoft.EntityFrameworkCore;
 namespace AiNexus.Features.Chat.Runs;
 
 /// <summary>
-/// 生成租約逾期復原服務。
-/// 當伺服器程序異常崩潰、網路中斷或重啟時，由其他健康程序接管並復原懸掛的孤兒生成。
-/// 【並行防禦】：
-/// - 租約超時檢查在原子性 UPDATE 條件中執行，若其他節點剛好成功續約則 UPDATE 回傳 0 行自動略過；
-/// - 每個生成在所屬對話鎖（LockConversationAsync）保護下結算，避免與本機沖刷或取消競態。
+/// 生成租約逾期的復原服務。伺服器程序崩潰、斷線或重啟後，由其他健康程序接手，
+/// 把懸掛的孤兒生成標記為失敗。租約檢查寫在同一條條件式 UPDATE 中，原執行者若剛好續約會回傳 0 行而略過；
+/// 每個生成仍在所屬對話鎖下結算，避免與本機沖刷或取消互相競態。
 /// </summary>
 public sealed class RunLeaseRecovery(
     NexusDbContext db,
@@ -44,7 +42,7 @@ public sealed class RunLeaseRecovery(
             using var conversationLock = await scheduler.LockConversationAsync(conversation, ct);
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
 
-            // 原子更新：若租約已被原執行者續約，此更新影響行數為 0，安全跳過
+            // 條件式 UPDATE：若原執行者剛好續約，影響行數為 0，直接略過，不會誤判為失敗
             var changed = await db.Runs
                 .Where(x => x.Id == id && x.ActiveOwnerId != null && (x.LeaseExpiresAt == null || x.LeaseExpiresAt <= now))
                 .ExecuteUpdateAsync(p => p.SetProperty(x => x.Status, RunStates.Failed)

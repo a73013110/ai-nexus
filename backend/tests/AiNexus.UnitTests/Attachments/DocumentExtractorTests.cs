@@ -28,7 +28,15 @@ public sealed class DocumentExtractorTests
 
     private static byte[] Zip(Dictionary<string, string> files)
     {
-        using var bytes = new MemoryStream(); using (var zip = new ZipArchive(bytes, ZipArchiveMode.Create, true)) foreach (var (path, text) in files) { using var writer = new StreamWriter(zip.CreateEntry(path).Open(), Encoding.UTF8); writer.Write(text); }
+        using var bytes = new MemoryStream();
+        using (var zip = new ZipArchive(bytes, ZipArchiveMode.Create, true))
+        {
+            foreach (var (path, text) in files)
+            {
+                using var writer = new StreamWriter(zip.CreateEntry(path).Open(), Encoding.UTF8);
+                writer.Write(text);
+            }
+        }
         return bytes.ToArray();
     }
 }

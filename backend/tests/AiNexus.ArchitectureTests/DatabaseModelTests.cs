@@ -30,7 +30,8 @@ public sealed class DatabaseModelTests
         Assert.True(mismatched.Length == 0, string.Join(", ", mismatched));
     }
 
-    // AuditEvent 放在 Persistence，是因為 NexusDbContext 會替每個模組遮罩並寫入它；但資料表屬於 audit 結構描述，所以這裡特別對應。
+    // AuditEvent 實際放在 Persistence（NexusDbContext 會替所有模組遮罩並寫入它），
+    // 但資料表屬於 audit 結構描述，所以不能照資料夾名稱對應，這裡特別處理。
     private static string ExpectedSchema(Type type)
         => type == typeof(AuditEvent) ? "audit" : type.Namespace!.Split('.')[2].ToLowerInvariant();
 

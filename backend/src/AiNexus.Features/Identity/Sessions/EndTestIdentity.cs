@@ -31,7 +31,14 @@ internal sealed class EndTestIdentity(NexusDbContext db, AccessService access, I
             return IdentityErrors.TestSourceRevoked;
         _ = Guid.TryParse(http.User.FindFirstValue(SessionIdentity.UserId), out var targetId);
         if (!Guid.TryParse(http.User.FindFirstValue(SessionIdentity.TestId), out var testId)) return IdentityErrors.TestSessionInvalid;
-        db.AuditEvents.Add(new() { OwnerId = actorId, ResourceId = testId, Action = "identity.test_end", Result = "restored", DetailsJson = JsonSerializer.Serialize(new { testId, userId = targetId, reason = "returned" }) });
+        db.AuditEvents.Add(new()
+        {
+            OwnerId = actorId,
+            ResourceId = testId,
+            Action = "identity.test_end",
+            Result = "restored",
+            DetailsJson = JsonSerializer.Serialize(new { testId, userId = targetId, reason = "returned" })
+        });
         await db.SaveChangesAsync(ct);
         var previous = await http.AuthenticateAsync(AuthEndpoints.CookieScheme);
         var principal = SessionIdentity.Principal(actor, method!);

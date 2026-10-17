@@ -50,10 +50,14 @@ internal sealed class ManageUserAccounts(NexusDbContext db, CurrentUser current,
         if (!signedIn.IsSuccess) return signedIn.Error;
         var actor = signedIn.Value;
         var local = UserAccounts.Normalize(request.LocalAccount); var ad = UserAccounts.Normalize(request.AdAccount);
-        if (string.IsNullOrWhiteSpace(request.DisplayName) || request.DisplayName.Trim().Length > 120 || request.RoleIds is null || request.RoleIds.Count > 100 || request.RoleIds.Distinct().Count() != request.RoleIds.Count)
+        var displayNameInvalid = string.IsNullOrWhiteSpace(request.DisplayName) || request.DisplayName.Trim().Length > 120;
+        // 角色清單要在這裡就確認非 null，編譯器才能保證後面的 RoleIds 使用安全；不要抽成布林變數。
+        if (displayNameInvalid || request.RoleIds is null || request.RoleIds.Count > 100
+            || request.RoleIds.Distinct().Count() != request.RoleIds.Count)
             return AdministrationErrors.InvalidUser;
-        if (!request.AdEnabled && !request.LocalEnabled || request.AdEnabled && ad is null || request.LocalEnabled && local is null)
-            return AdministrationErrors.InvalidLoginMethods;
+        var noLoginMethod = !request.AdEnabled && !request.LocalEnabled;
+        var missingAccount = (request.AdEnabled && ad is null) || (request.LocalEnabled && local is null);
+        if (noLoginMethod || missingAccount) return AdministrationErrors.InvalidLoginMethods;
         if (request.Password is { Length: > 0 } candidate && !Argon2Passwords.IsAcceptable(candidate))
             return AdministrationErrors.InvalidPassword;
         var hash = request.Password is { Length: > 0 } password ? await passwords.HashAsync(password, ct) : null;
@@ -66,11 +70,13 @@ internal sealed class ManageUserAccounts(NexusDbContext db, CurrentUser current,
             if (request.LocalEnabled && hash is null && user.PasswordHash is null)
                 return AdministrationErrors.LocalPasswordRequired;
             var currentMethod = http.HttpContext?.User.FindFirst(SessionIdentity.Method)?.Value ?? "ad";
-            if (key == actor.Id && (!request.Enabled || currentMethod == "local" && !request.LocalEnabled || currentMethod != "local" && !request.AdEnabled))
-                return AdministrationErrors.Lockout;
-            if (await db.Users.AnyAsync(x => x.Id != key && (local != null && x.LocalAccount == local || ad != null && x.AdAccount == ad), ct))
+            var disablesSelf = !request.Enabled
+                || (currentMethod == "local" && !request.LocalEnabled)
+                || (currentMethod != "local" && !request.AdEnabled);
+            if (key == actor.Id && disablesSelf) return AdministrationErrors.Lockout;
+            if (await db.Users.AnyAsync(x => x.Id != key && ((local != null && x.LocalAccount == local) || (ad != null && x.AdAccount == ad)), ct))
                 return AdministrationErrors.AccountExists;
-            // 預先建立的 AD 帳號名稱不可接管既有、已綁定 SID 的使用者，否則等於把別人的身分轉移過來。
+            // 綁定 AD 帳號時，不可與既有 AD 使用者同名（等於接管他的身分），也不可改動由 AD 同步建立的帳號名稱。
             if (ad is not null)
             {
                 var accounts = await db.Users.AsNoTracking().Where(x => x.Id != key && x.AdAccount == null && !x.Sid.StartsWith("managed:")).Select(x => x.Account).ToListAsync(ct);
@@ -82,8 +88,9 @@ internal sealed class ManageUserAccounts(NexusDbContext db, CurrentUser current,
             var validRoles = await db.Set<Role>().CountAsync(x => request.RoleIds.Contains(x.Id), ct);
             if (validRoles != request.RoleIds.Count) return AdministrationErrors.InvalidRoles;
             if (id is null) db.Users.Add(user);
-            if (user.Enabled != request.Enabled || user.AdEnabled != request.AdEnabled || user.LocalEnabled != request.LocalEnabled || user.AdAccount != ad || user.LocalAccount != local || hash is not null)
-                user.SecurityVersion++;
+            var flagsChanged = user.Enabled != request.Enabled || user.AdEnabled != request.AdEnabled || user.LocalEnabled != request.LocalEnabled;
+            var credentialsChanged = user.AdAccount != ad || user.LocalAccount != local || hash is not null;
+            if (flagsChanged || credentialsChanged) user.SecurityVersion++;
             user.DisplayName = request.DisplayName.Trim(); user.ProfileManaged = true;
             user.Enabled = request.Enabled; user.AdEnabled = request.AdEnabled; user.LocalEnabled = request.LocalEnabled;
             user.AdAccount = ad; user.LocalAccount = local;
@@ -103,7 +110,7 @@ internal sealed class ManageUserAccounts(NexusDbContext db, CurrentUser current,
             if (user is null) return AdministrationErrors.UserNotFound;
             user.DeletedAt = clock.GetUtcNow(); user.Enabled = false; user.AdEnabled = false; user.LocalEnabled = false;
             user.PasswordHash = null; user.SecurityVersion++;
-            // 只做軟刪除，保留 SID、帳號名稱、資源與歷史關聯：避免帳號名被重新註冊接管，也避免連鎖遺失資料。
+            // 只做軟刪除並保留 SID、帳號名與關聯資料：帳號名不會被重新註冊接管，歷史資料也不會連帶遺失。
             return Result.Success;
         }, ct);
 }

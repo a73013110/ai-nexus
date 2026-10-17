@@ -4,9 +4,9 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Platform.Data;
 
 /// <summary>
-/// 應用程式所有 SQL Server 連線設定集合字典，以資料庫名稱為鍵值（如 <c>Databases:Nexus</c>、<c>Databases:Gdweb</c>）。
-/// 各業務模組必須主動宣告其所使用的資料庫名稱（<see cref="Sql.SqlDatabaseServices.AddDatabase"/>）；
-/// 未經任何模組宣告的額外設定項目將導致啟動驗證失敗，防止因設定檔鍵名拼錯而導致資料庫靜默未配置。
+/// 應用程式所有 SQL Server 連線設定的集合，以資料庫名稱為鍵（如 <c>Databases:Nexus</c>）。
+/// 模組必須用 <see cref="Sql.SqlDatabaseServices.AddDatabase"/> 宣告自己用到的資料庫；
+/// 沒有被宣告的設定項目會讓啟動驗證失敗，避免鍵名拼錯時資料庫被悄悄略過。
 /// </summary>
 public sealed class DatabasesOptions() : Dictionary<string, DatabaseOptions>(StringComparer.OrdinalIgnoreCase), IValidatableObject
 {
@@ -14,13 +14,13 @@ public sealed class DatabasesOptions() : Dictionary<string, DatabaseOptions>(Str
 
     private readonly Dictionary<string, bool> declared = new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>取得指定 <paramref name="name"/> 的連線設定；若無此名稱則回傳空的未配置項目。</summary>
+    /// <summary>取得指定名稱的連線設定；沒有該名稱時回傳未設定的空白項目。</summary>
     public DatabaseOptions For(string name) => TryGetValue(name, out var database) ? database : new();
 
     /// <inheritdoc cref="DatabaseOptions.ConnectionString"/>
     public string ConnectionString(string name, string? catalog = null) => For(name).ConnectionString(catalog);
 
-    /// <summary>業務模組宣告使用項目 <paramref name="name"/>；若 <paramref name="readOnly"/> 為 true 則該設定必須明確指定 <c>ReadOnly=true</c>。</summary>
+    /// <summary>模組宣告使用此資料庫；<paramref name="readOnly"/> 為 true 時，該設定必須明確設 <c>ReadOnly=true</c>。</summary>
     internal void Declare(string name, bool readOnly) => declared[name] = readOnly || declared.GetValueOrDefault(name);
 
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)

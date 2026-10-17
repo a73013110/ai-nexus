@@ -6,7 +6,7 @@ namespace AiNexus.ArchitectureTests;
 
 /// <summary>
 /// 模組之間可以互相依賴，但不可形成循環，依賴圖必須維持分層，讓每個模組只需考慮下層模組即可閱讀與修改。
-/// 打破新循環的做法：把型別搬到擁有該行為的模組、由下層定義介面讓上層實作，或改用領域事件（domain event）。
+/// 要打破循環，可以把型別搬到真正擁有該行為的模組、由下層定義介面讓上層實作，或改用領域事件（domain event）。
 /// </summary>
 public sealed class ModuleBoundaryTests
 {
@@ -28,7 +28,8 @@ public sealed class ModuleBoundaryTests
     public void EveryModuleHasAModuleClassAtItsRoot()
     {
         var folders = Directory.EnumerateDirectories(Path.Combine(SourceTree.Root, "backend", "src", "AiNexus.Features"))
-            .Select(Path.GetFileName).OfType<string>().Where(x => x is not ("bin" or "obj") && !Infrastructure.Contains(x)).ToList();
+            .Select(Path.GetFileName).OfType<string>()
+            .Where(x => x is not ("bin" or "obj") && !Infrastructure.Contains(x)).ToList();
         Assert.NotEmpty(folders);
         var missing = folders.Where(module => Assemblies.Features.GetType(Root + module + "." + module + "Module") is null
             || !File.Exists(Path.Combine(SourceTree.Root, "backend", "src", "AiNexus.Features", module, module + "Module.cs"))).ToList();
@@ -66,7 +67,12 @@ public sealed class ModuleBoundaryTests
             {
                 var result = types.That().ResideInNamespace(Root + from)
                     .ShouldNot().HaveDependencyOnAny(Root + to).GetResult();
-                if (!result.IsSuccessful) edges[(from, to)] = result.FailingTypes?.Select(t => TopLevelName(t.FullName)).Distinct().Order(StringComparer.Ordinal).ToList() ?? [];
+                if (result.IsSuccessful)
+                {
+                    continue;
+                }
+
+                edges[(from, to)] = result.FailingTypes?.Select(t => TopLevelName(t.FullName)).Distinct().Order(StringComparer.Ordinal).ToList() ?? [];
             }
         }
         return edges;

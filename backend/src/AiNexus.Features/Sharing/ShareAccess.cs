@@ -26,7 +26,7 @@ internal sealed class ShareAccess(NexusDbContext db, AccessService features, Tim
         ? await db.Conversations.AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId, ct)
         : await db.Set<WorkspaceResource>().AnyAsync(x => x.Id == row.SourceId && x.OwnerId == row.OwnerId && x.Kind == "artifact", ct);
 
-    /// <summary><paramref name="rows"/> 中來源仍存在（<see cref="SourceExistsAsync"/>）的列，維持原順序，最多兩次查詢。</summary>
+    /// <summary><paramref name="rows"/> 中來源仍存在的列（見 <see cref="SourceExistsAsync"/>），維持原順序，最多兩次查詢。</summary>
     public async Task<IReadOnlyList<ShareLink>> WithSourcesAsync(IReadOnlyList<ShareLink> rows, CancellationToken ct)
     {
         var conversations = rows.Where(x => x.Kind == "conversation").Select(x => x.SourceId).Distinct().ToArray();

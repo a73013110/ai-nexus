@@ -10,8 +10,10 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Features.WebSearch;
 
+/// <summary>聊天網路搜尋的服務：負責配額、計費、稽核，並把結果組成提示詞。</summary>
 public sealed class WebSearchService(NexusDbContext db, IWebSearchProvider provider, BillingService billing, IOptions<WebSearchOptions> options, TimeProvider clock)
 {
+    /// <summary>為搜尋摘要保留的提示詞預算（UTF-8 位元組）。</summary>
     public const int ReservedTokens = 3600;
     public WebSearchStatusDto Status => StatusOf(options.Value);
     /// <summary>只看設定判斷是否可用，不會實際呼叫搜尋服務。</summary>
@@ -26,7 +28,8 @@ public sealed class WebSearchService(NexusDbContext db, IWebSearchProvider provi
         if (options.Value.Provider == "brave" && (query.Length > 600 || query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length > 75))
             return WebSearchErrors.QueryTooLong;
         WebSearchRecord record; ModelInvocation call;
-        // 先鎖住擁有者的使用者列，讓同一人的配額保留依序進行。交易在呼叫搜尋服務前結束，避免外部 I/O 期間持有鎖。
+        // 先鎖住擁有者的使用者列，讓同一人的配額檢查與保留依序進行。
+        // 交易在呼叫搜尋服務前就結束，否則外部 I/O 期間會一直持有這把鎖。
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             await db.Users.Where(x => x.Id == owner).ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);

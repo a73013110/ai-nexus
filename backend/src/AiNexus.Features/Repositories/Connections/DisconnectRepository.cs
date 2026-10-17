@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace AiNexus.Features.Repositories.Connections;
 
-/// <summary>Deletes the stored token. Imported snapshots and reviews stay; reading their source needs a new connection.</summary>
+/// <summary>刪除已儲存的 token。已匯入的快照與 review 會保留；要再讀取其來源，必須重新連線。</summary>
 internal sealed class DisconnectRepository(NexusDbContext db, RepositoryWriteLock writes)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

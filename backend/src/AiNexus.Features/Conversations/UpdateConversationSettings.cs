@@ -23,7 +23,8 @@ internal sealed class ConversationSettingsRequestValidator : RequestValidator<Co
 internal sealed class UpdateConversationSettings(NexusDbContext db, GenerationScheduler scheduler)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPatch("/{id:guid}/settings", async (Guid id, ConversationSettingsRequest body, ICurrentUser user, UpdateConversationSettings handler, CancellationToken ct) =>
+        .MapPatch("/{id:guid}/settings", async (
+                Guid id, ConversationSettingsRequest body, ICurrentUser user, UpdateConversationSettings handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, body, ct)).ToHttpResult())
         .WithName("UpdateConversationSettings");
 
@@ -46,12 +47,18 @@ internal sealed class UpdateConversationSettings(NexusDbContext db, GenerationSc
                 var removed = conversation.Labels.Where(x => !names.Contains(x.Name, StringComparer.Ordinal)).ToList();
                 db.Set<ConversationLabel>().RemoveRange(removed);
                 foreach (var label in removed) conversation.Labels.Remove(label);
-                foreach (var name in names.Where(name => !conversation.Labels.Any(x => x.Name == name))) conversation.Labels.Add(new() { ConversationId = id, Name = name });
+                foreach (var name in names.Where(name => !conversation.Labels.Any(x => x.Name == name)))
+                {
+                    conversation.Labels.Add(new() { ConversationId = id, Name = name });
+                }
             }
             db.AuditEvents.Add(new() { OwnerId = owner, Action = "conversation.organized", ResourceId = id });
             await db.SaveChangesAsync(ct);
             return conversation.ToDto();
         }
-        finally { conversationLock.Dispose(); }
+        finally
+        {
+            conversationLock.Dispose();
+        }
     }
 }

@@ -44,7 +44,8 @@ public sealed partial class GiteaClient(IHttpClientFactory clients, IOptions<Git
             using var response = await SendAsync(token, HttpMethod.Get, path, "text/plain", null, timeout.Token);
             if (response.Content.Headers.ContentLength > maxBytes) return null;
             await using var stream = await response.Content.ReadAsStreamAsync(timeout.Token);
-            using var buffer = new MemoryStream(); var block = new byte[8192];
+            using var buffer = new MemoryStream();
+            var block = new byte[8192];
             int count;
             while ((count = await stream.ReadAsync(block, timeout.Token)) > 0)
             {
@@ -82,10 +83,12 @@ public sealed partial class GiteaClient(IHttpClientFactory clients, IOptions<Git
     {
         if (!path.StartsWith("api/v1/", StringComparison.Ordinal)) throw new InvalidOperationException("Controlled Gitea path required.");
         using var request = new HttpRequestMessage(method, new Uri(new Uri(options.Value.BaseUrl.TrimEnd('/') + "/"), path)) { Content = content };
-        request.Headers.Authorization = new AuthenticationHeaderValue("token", token); request.Headers.Accept.ParseAdd(accept);
+        request.Headers.Authorization = new AuthenticationHeaderValue("token", token);
+        request.Headers.Accept.ParseAdd(accept);
         var response = await clients.CreateClient(ControlledHttpClients.Tools).SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
         if (response.IsSuccessStatusCode) return response;
-        var status = response.StatusCode; response.Dispose();
+        var status = response.StatusCode;
+        response.Dispose();
         throw new ExternalServiceException(status switch
         {
             HttpStatusCode.Unauthorized => RepositoriesErrors.Unauthorized,

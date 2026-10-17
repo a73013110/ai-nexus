@@ -2,8 +2,8 @@ namespace AiNexus.Host;
 
 /// <summary>
 /// 伺服器全域請求與上傳大小配額上限。
-/// 各個別端點均會宣告更小、更嚴格之限制（請參閱 RequestBodyLimits）；此處僅設定最寬鬆之上限防線，
-/// 確保 Kestrel 與 IIS 絕不會快取超過應用程式所能接受之最大承載量。
+/// 各端點會宣告更嚴格的限制（見 RequestBodyLimits）；這裡只設最寬鬆的全域上限，
+/// 避免 Kestrel 與 IIS 先接受超過應用程式可承受的承載量。
 /// </summary>
 internal static class ServerLimits
 {

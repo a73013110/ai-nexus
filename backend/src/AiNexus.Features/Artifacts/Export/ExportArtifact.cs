@@ -10,7 +10,8 @@ namespace AiNexus.Features.Artifacts.Export;
 internal sealed class ExportArtifact(GetArtifact reader, ArtifactExport exporter)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapGet("/{id:guid}/export/{format}", (Guid id, string format, int? version, ICurrentUser user, ExportArtifact handler, HttpContext http, CancellationToken ct) =>
+        .MapGet("/{id:guid}/export/{format}", (
+                Guid id, string format, int? version, ICurrentUser user, ExportArtifact handler, HttpContext http, CancellationToken ct) =>
             handler.HandleAsync(user.Id, id, format, version, ct).ToHttpResultAsync(exported =>
             {
                 http.Response.Headers.CacheControl = "private, no-store";

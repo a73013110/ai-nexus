@@ -3,12 +3,12 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace AiNexus.Platform.Data.Sql;
 
-/// <summary>SQL 資料庫服務註冊擴充方法。提供模組資料庫宣告與原生 SQL 資料庫執行個體的相依性注入機制。</summary>
+/// <summary>SQL 資料庫的註冊擴充方法，提供模組宣告資料庫，以及注入原生 SQL 執行器。</summary>
 public static class SqlDatabaseServices
 {
     /// <summary>
-    /// 宣告模組需使用 <c>Databases:&lt;name&gt;</c> 連線設定。僅有經宣告的項目能通過啟動驗證；
-    /// 若 <paramref name="readOnly"/> 為 true，則對應設定必須包含 <c>ReadOnly=true</c>。
+    /// 宣告模組要使用 <c>Databases:&lt;name&gt;</c> 的連線設定。只有宣告過的項目能通過啟動驗證；
+    /// <paramref name="readOnly"/> 為 true 時，對應設定必須有 <c>ReadOnly=true</c>。
     /// </summary>
     public static IServiceCollection AddDatabase(this IServiceCollection services, string name, bool readOnly = false)
     {

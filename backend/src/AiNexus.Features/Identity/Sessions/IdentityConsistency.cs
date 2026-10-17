@@ -21,7 +21,7 @@ public static class IdentityConsistency
         if (http.Items.ContainsKey(SessionIdentity.Restored) && http.Request.Path.StartsWithSegments("/api/v1") &&
             !http.Request.Path.StartsWithSegments("/api/v1/auth"))
         {
-            // 以測試目標身分送出的操作，絕不能在已切回的管理者身分下執行，因此直接回 identity_changed。
+            // 這個請求是以測試目標身分送出的，但 cookie 驗證時已切回管理者；不能改在管理者身分下執行，所以回 identity_changed。
             await Problems.WriteAsync(http, Problems.Status(IdentityErrors.IdentityChanged.Kind), IdentityErrors.IdentityChanged.Code);
             return;
         }

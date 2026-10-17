@@ -20,12 +20,17 @@ internal sealed class RevokeShare(NexusDbContext db, ShareWriteLock writes)
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             var row = await db.Set<ShareLink>().SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == actor, ct);
             if (row is null) return SharingErrors.Unavailable;
-            row.IsRevoked = true; row.SnapshotJson = "";
+            row.IsRevoked = true;
+            row.SnapshotJson = "";
             await db.Set<AttachmentReference>().Where(x => x.ResourceId == id).ExecuteDeleteAsync(ct);
             db.AuditEvents.Add(new() { OwnerId = actor, Action = "share.revoked", ResourceId = id, Result = "revoked" });
-            await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
+            await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
             return Result.Success;
         }
-        finally { writes.Gate.Release(); }
+        finally
+        {
+            writes.Gate.Release();
+        }
     }
 }

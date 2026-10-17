@@ -99,8 +99,8 @@ internal sealed class BrowseRepositories(NexusDbContext db, RepositoryService gi
         }
         var readme = entries.Where(x => x.Kind == "file" && x.Size <= gitea.Options.MaxFileBytes && IsReadme(x.Name))
             .OrderBy(x => x.Name.EndsWith(".md", StringComparison.OrdinalIgnoreCase) ? 0 : 1).FirstOrDefault();
-        var text = readme is null ? default(Result<RepositoryFileDto>?) : await gitea.FileAsync(owner, repo, commit, readme.Path, ct);
-        return new RepositoryTreeDto(commit, path, entries, text is { IsSuccess: true } file ? file.Value : null);
+        var readmeRead = readme is null ? default(Result<RepositoryFileDto>?) : await gitea.FileAsync(owner, repo, commit, readme.Path, ct);
+        return new RepositoryTreeDto(commit, path, entries, readmeRead is { IsSuccess: true } file ? file.Value : null);
     }
 
     private static bool IsReadme(string name) => Path.GetFileNameWithoutExtension(name).Equals("README", StringComparison.OrdinalIgnoreCase) &&

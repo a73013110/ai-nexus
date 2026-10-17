@@ -22,7 +22,8 @@ internal sealed class IntegrationsMonitoring(IOptions<WebSearchOptions> search, 
     public Task<SubsystemReading> ReadAsync(CancellationToken ct)
     {
         var facts = new List<SubsystemFact>();
-        var enabled = 0; var incomplete = new List<string>();
+        var enabled = 0;
+        var incomplete = new List<string>();
         var web = WebSearchService.StatusOf(search.Value);
         Add("web_search", "連網搜尋", search.Value.Enabled, web.Available);
         Add("gitea", "Gitea 程式庫", gitea.Value.Enabled, gitea.Value.Enabled);

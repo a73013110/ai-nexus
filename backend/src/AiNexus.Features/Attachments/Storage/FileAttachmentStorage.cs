@@ -85,13 +85,20 @@ public sealed class FileAttachmentStorage : IAttachmentStorage
     private static void DeleteFile(string path)
     {
         try { File.Delete(path); }
-        catch (DirectoryNotFoundException) { } // Missing shard directories are already deleted.
+        catch (DirectoryNotFoundException) { } // 分片目錄不存在，代表檔案早已被刪除。
     }
 
     public async Task VerifyAsync(CancellationToken ct)
     {
         var key = Guid.NewGuid().ToString("N");
-        try { await WriteAsync(key, new byte[] { 42 }, ct); await using var read = await OpenReadAsync(key, ct); }
-        finally { await DeleteAsync(key, CancellationToken.None); }
+        try
+        {
+            await WriteAsync(key, new byte[] { 42 }, ct);
+            await using var read = await OpenReadAsync(key, ct);
+        }
+        finally
+        {
+            await DeleteAsync(key, CancellationToken.None);
+        }
     }
 }

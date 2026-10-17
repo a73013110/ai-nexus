@@ -5,13 +5,12 @@ using System.Text.RegularExpressions;
 namespace AiNexus.Platform.Diagnostics;
 
 /// <summary>
-/// 診斷訊息範本安全渲染器。
-/// 僅渲染經核准的純量數值與白名單中繼資料，絕不直接調用應用程式原始未受控的 ILogger 格式化字串。
+/// 診斷訊息模板的安全渲染器。只渲染核准的純量數值與白名單中繼資料，不直接使用應用程式未受控的 ILogger 格式字串。
 /// </summary>
 public static partial class DiagnosticMessage
 {
     /// <summary>
-    /// 將日誌事件模板以安全參數渲染為文字。
+    /// 把日誌事件的模板，以安全參數渲染成文字。
     /// </summary>
     public static string Render(DiagnosticEvent item, bool includeProperties = false)
     {
@@ -36,11 +35,11 @@ public static partial class DiagnosticMessage
             }
             catch (JsonException)
             {
-                // 歷史遺留之畸形中繼資料不可導致查詢中斷。
+                // 歷史遺留的格式錯誤中繼資料不可讓查詢中斷。
             }
         }
 
-        // 這些已屬於查詢權限摘要的一環，不包含機敏身分或客戶端 IP。
+        // 以下欄位屬於查詢權限摘要的一部分，不含機敏的身分或客戶端 IP。
         var standardFields = new Dictionary<string, object?>
         {
             ["IssueCode"] = item.IssueCode,
@@ -71,7 +70,7 @@ public static partial class DiagnosticMessage
     }
 
     /// <summary>
-    /// 根據安全字典替換訊息模板中的具名欄位，未匹配者以 [omitted] 遮蔽。
+    /// 依安全字典替換模板中的具名欄位；找不到的欄位以 [omitted] 遮蔽。
     /// </summary>
     public static string Render(string template, IReadOnlyDictionary<string, object?> values)
     {

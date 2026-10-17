@@ -29,8 +29,12 @@ internal sealed class RepositoryImportConfiguration : IEntityTypeConfiguration<R
 {
     public void Configure(EntityTypeBuilder<RepositoryImport> i)
     {
-        i.ToTable("RepositoryImports", "repositories"); i.HasKey(x => x.Id);
-        i.Property(x => x.Repository).HasMaxLength(201); i.Property(x => x.Path).HasMaxLength(500); i.Property(x => x.Commit).HasMaxLength(64); i.Property(x => x.BaseUrl).HasMaxLength(500);
+        i.ToTable("RepositoryImports", "repositories");
+        i.HasKey(x => x.Id);
+        i.Property(x => x.Repository).HasMaxLength(201);
+        i.Property(x => x.Path).HasMaxLength(500);
+        i.Property(x => x.Commit).HasMaxLength(64);
+        i.Property(x => x.BaseUrl).HasMaxLength(500);
         i.HasIndex(x => new { x.OwnerId, x.CollectionId, x.Repository, x.Commit, x.Path });
     }
 }

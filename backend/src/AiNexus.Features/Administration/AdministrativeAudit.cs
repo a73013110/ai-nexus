@@ -25,8 +25,8 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
         => MutateAsync(AdministrationConfiguration.Feature, action, resource, key, mutation, ct);
 
     /// <summary>
-    /// 在行政寫入鎖與 Serializable 交易內執行變更。執行者必須在交易內仍持有 <paramref name="feature"/>（前後各檢一次，
-    /// 且不採用請求開始時授權用的快取）；任何失敗（回傳錯誤或 <see cref="ExternalServiceException"/>）都會回滾，並以錯誤代碼寫入稽核。
+    /// 在行政寫入鎖與 Serializable 交易內執行變更，並於交易內前後各檢一次 <paramref name="feature"/> 權限（不採用請求開始時的授權快取）。
+    /// 任何失敗（回傳錯誤或 <see cref="ExternalServiceException"/>）都會回滾，並以錯誤代碼寫入稽核。
     /// </summary>
     internal async Task<Result> MutateAsync(string feature, string action, Guid? resource, string key, Func<Task<Result>> mutation, CancellationToken ct)
     {
@@ -59,12 +59,20 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
             access.Invalidate();
             if (!await HoldsAsync(actor, feature, ct)) return AdministrationErrors.Lockout;
             var after = await SnapshotAsync(action, resource, key, ct);
-            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource, Action = action, Result = "saved", DetailsJson = JsonSerializer.Serialize(new { resourceKey = key, before, after }, Json) });
-            await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
+            db.AuditEvents.Add(new()
+            {
+                OwnerId = actor,
+                ResourceId = resource,
+                Action = action,
+                Result = "saved",
+                DetailsJson = JsonSerializer.Serialize(new { resourceKey = key, before, after }, Json)
+            });
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
             return null;
         }
 
-        // 失敗交易釋放後才會執行。先清空 ChangeTracker，避免交易中尚未提交的授權變更被順便寫入。
+        // 交易已回滾後才會執行。先清空 ChangeTracker，避免交易中尚未提交的授權變更被一併寫入稽核。
         async Task RecordFailureAsync(string code)
         {
             db.ChangeTracker.Clear(); access.Invalidate();
@@ -96,7 +104,18 @@ public sealed class AdministrativeAudit(NexusDbContext db, CurrentUser current, 
         if (action is "admin.user" or "admin.user_delete")
         {
             var user = await db.Users.AsNoTracking().SingleOrDefaultAsync(x => x.Id == resource, ct);
-            return user is null ? null : new { user.Account, user.DisplayName, user.Enabled, user.DeletedAt, user.SecurityVersion, authentication = UserAccounts.Authentication(user), roleIds = await db.Set<UserRole>().AsNoTracking().Where(x => x.UserId == resource).OrderBy(x => x.RoleId).Select(x => x.RoleId).ToArrayAsync(ct) };
+            if (user is null) return null;
+            var roleIds = await db.Set<UserRole>().AsNoTracking().Where(x => x.UserId == resource).OrderBy(x => x.RoleId).Select(x => x.RoleId).ToArrayAsync(ct);
+            return new
+            {
+                user.Account,
+                user.DisplayName,
+                user.Enabled,
+                user.DeletedAt,
+                user.SecurityVersion,
+                authentication = UserAccounts.Authentication(user),
+                roleIds
+            };
         }
         if (action == "admin.user_roles") return new { roleIds = await db.Set<UserRole>().AsNoTracking().Where(x => x.UserId == resource).OrderBy(x => x.RoleId).Select(x => x.RoleId).ToArrayAsync(ct) };
         if (action == "admin.role")

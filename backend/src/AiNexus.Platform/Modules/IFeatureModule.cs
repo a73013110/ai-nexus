@@ -2,7 +2,7 @@ namespace AiNexus.Platform.Modules;
 
 /// <summary>
 /// 業務功能模組介面契約。各模組獨立管理其內部服務、設定選項、授權原則與端點路由。
-/// Host 宿主層從明確清單一次性組裝各模組，因此新增功能時完全不需要修改 Program.cs，且每個模組的服務註冊皆與其程式碼緊密就近組織。
+/// Host 從明確清單一次組裝所有模組，所以新增功能不需要修改 Program.cs；每個模組的服務註冊也與其程式碼放在一起。
 /// </summary>
 public interface IFeatureModule
 {

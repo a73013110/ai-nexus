@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace AiNexus.Platform.Configuration;
 
-/// <summary>字串清單中之每個元素皆必須為 1–64 個字元的 ASCII 字母、數字、<c>.</c>、<c>_</c> 或 <c>-</c> 識別碼（如帳號、群組識別碼）。</summary>
+/// <summary>字串清單中的每個元素，都必須是 1–64 個字元的 ASCII 英數字，或 <c>.</c>、<c>_</c>、<c>-</c> 組成的識別碼（如帳號、群組代碼）。</summary>
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class IdentifierItemsAttribute : ValidationAttribute
 {

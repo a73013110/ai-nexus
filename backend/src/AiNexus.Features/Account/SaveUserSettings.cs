@@ -8,7 +8,7 @@ using FluentValidation;
 
 namespace AiNexus.Features.Account;
 
-/// <summary>閱讀與版面設定。巢狀的外觀設定由 handler 在之後檢查，使用自己的錯誤代碼。</summary>
+/// <summary>閱讀與版面設定的形狀檢查。外觀（Appearance）不在這裡驗證，由 <c>UpdatePreferences.Apply</c> 使用它自己的錯誤代碼檢查。</summary>
 internal sealed class UserSettingsValidator : RequestValidator<UserSettingsDto>
 {
     public override string ProblemCode => "invalid_settings";

@@ -26,8 +26,12 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
     public static IEnumerable<(string Id, string Name, string Database)> Sources => Catalog.Select(x => (x.Id, x.Name, x.Database));
 
     /// <summary>在任何使用者授權之前，判斷來源的設定進度（停用、傳輸不支援、ACL 未確認、未設定連線、已設定）。</summary>
-    public static string SetupStatus(SourceOptions option, bool connectionConfigured) => !option.Enabled ? "disabled" : option.Transport != "sql" ? "unsupported-transport"
-        : !option.AclContractConfirmed ? "acl-unconfirmed" : !connectionConfigured ? "unconfigured" : "configured";
+    public static string SetupStatus(SourceOptions option, bool connectionConfigured) =>
+        !option.Enabled ? "disabled"
+        : option.Transport != "sql" ? "unsupported-transport"
+        : !option.AclContractConfirmed ? "acl-unconfirmed"
+        : !connectionConfigured ? "unconfigured"
+        : "configured";
 
     public static bool ValidRecordId(string id) => id.Trim().Length is >= 1 and <= 160 && !id.Any(char.IsControl);
 
@@ -42,7 +46,15 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
             var allowed = option.AllowedGroupIds.Any(id => grants.Groups.Any(g => g.Id == id));
             var status = SetupStatus(option, configured);
             if (status == "configured" && !allowed) status = "not-authorized";
-            var message = status switch { "disabled" => "來源尚未啟用。", "unsupported-transport" => "此來源的 API adapter 尚未實作，請使用 sql 傳輸。", "acl-unconfirmed" => "等待確認來源端的帳號映射與逐筆唯讀授權 view。", "unconfigured" => "等待設定專用的唯讀 SQL 連線。", "not-authorized" => "你的有效群組尚未取得此來源權限。", _ => "已設定。搜尋時才會驗證實際連線及資料權限。" };
+            var message = status switch
+            {
+                "disabled" => "來源尚未啟用。",
+                "unsupported-transport" => "此來源的 API adapter 尚未實作，請使用 sql 傳輸。",
+                "acl-unconfirmed" => "等待確認來源端的帳號映射與逐筆唯讀授權 view。",
+                "unconfigured" => "等待設定專用的唯讀 SQL 連線。",
+                "not-authorized" => "你的有效群組尚未取得此來源權限。",
+                _ => "已設定。搜尋時才會驗證實際連線及資料權限。",
+            };
             result.Add(new(item.Id, item.Name, item.Description, status, message, status == "configured", item.Kinds));
         }
         return result;
@@ -52,12 +64,16 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
     {
         var item = Catalog.SingleOrDefault(x => x.Id == source);
         if (item.Id is null) return IntegrationsErrors.UnknownSource;
-        if (request.Query.Trim().Length is < 2 or > 120 || request.Query.Any(char.IsControl) || request.Kind != "all" && !item.Kinds.Contains(request.Kind))
-            return IntegrationsErrors.SearchInvalid;
+        // 查詢字串與類別都是純計算，先算出來再判斷，不影響結果。
+        var queryInvalid = request.Query.Trim().Length is < 2 or > 120 || request.Query.Any(char.IsControl);
+        var kindInvalid = request.Kind != "all" && !item.Kinds.Contains(request.Kind);
+        if (queryInvalid || kindInvalid) return IntegrationsErrors.SearchInvalid;
         var target = await AuthorizeAsync(actor, source, ct);
         if (!target.IsSuccess) return target.Error;
         var rows = await SafeAsync(source, () => target.Value.Adapter.SearchAsync(target.Value.Actor, request, target.Value.Options.MaxResults, target.Value.Options.CommandTimeoutSeconds, ct), ct);
-        if (rows.Count > target.Value.Options.MaxResults || rows.Any(x => !item.Kinds.Contains(x.Kind) || string.IsNullOrWhiteSpace(x.Id) || x.Id.Length > 160 || string.IsNullOrWhiteSpace(x.Title) || x.Title.Length > 120))
+        if (rows.Count > target.Value.Options.MaxResults
+            || rows.Any(x => !item.Kinds.Contains(x.Kind) || string.IsNullOrWhiteSpace(x.Id) || x.Id.Length > 160
+                || string.IsNullOrWhiteSpace(x.Title) || x.Title.Length > 120))
             return IntegrationsErrors.ContractInvalid;
         var still = await AuthorizeAsync(actor, source, ct, fresh: true);
         if (!still.IsSuccess) return still.Error;
@@ -74,7 +90,12 @@ internal sealed class SourceGateway(NexusDbContext db, AccessService access, IOp
         var read = await SafeAsync(source, () => target.Value.Adapter.ReadAsync(target.Value.Actor, id, target.Value.Options.CommandTimeoutSeconds, ct), ct);
         if (!read.IsSuccess) return read.Error;
         var row = read.Value;
-        if (row.Body.Length > 16000 || row.Record.Title.Length is < 1 or > 120 || row.Record.Revision.Length is < 1 or > 160 || row.Record.Id != id || row.SourceId != source || !Catalog.Single(x => x.Id == source).Kinds.Contains(row.Record.Kind))
+        if (row.Body.Length > 16000
+            || row.Record.Title.Length is < 1 or > 120
+            || row.Record.Revision.Length is < 1 or > 160
+            || row.Record.Id != id
+            || row.SourceId != source
+            || !Catalog.Single(x => x.Id == source).Kinds.Contains(row.Record.Kind))
             return IntegrationsErrors.ContractInvalid;
         var still = await AuthorizeAsync(actor, source, ct, fresh: true);
         if (!still.IsSuccess) return still.Error;

@@ -8,9 +8,9 @@ namespace AiNexus.Host.Commands;
 
 /// <summary>
 /// 主機命令列指令處理器。
-/// 在不帶指令時啟動 HTTP 伺服器；若帶有指令（<c>db init</c>、<c>db script</c>、<c>db diff</c>、<c>verify …</c>）
-/// 則針對完整構建的主機執行一次該作業、設定處理程序結束碼後立即退出。
-/// 在 Web 主機建立之前先行剖析，因此未知的指令或 <c>--help</c> 絕不會意外啟動 Web 網站。
+/// 不帶指令時啟動 HTTP 伺服器；帶指令（<c>db init</c>、<c>db script</c>、<c>db diff</c>、<c>verify …</c>）時，
+/// 會對完整建好的主機執行一次該作業，設定結束碼後退出。
+/// 指令在建立 Web 主機之前就先解析，因此未知指令或 <c>--help</c> 不會意外啟動網站。
 /// </summary>
 public sealed class HostCommand
 {
@@ -63,7 +63,8 @@ public sealed class HostCommand
     ];
 
     /// <summary>
-    /// 各指令所能接受的選項名稱清單；若給予不支援該選項的指令，將會被誤當作組態覆寫鍵處理，故需集中列舉驗證。
+    /// 所有指令選項名稱的聯集。解析時只靠這份清單辨識 --key；不在清單內的選項會被當成設定覆寫鍵，
+    /// 所以每個指令接受哪些選項，必須在 Definitions 中明確宣告。
     /// </summary>
     private static readonly string[] CommandOptions = [.. Definitions.SelectMany(x => x.Options).Select(x => x.Name).Distinct()];
 
@@ -109,8 +110,8 @@ public sealed class HostCommand
     {
         if (args.Any(x => x is "--help" or "-h" or "-?" or "/?")) return new(null, [], null, help: true, error: null);
 
-        // 與命令列組態提供者相同的斷詞邏輯："--key value" 配對、"--key=value" 單一詞；其餘詞彙均視為指令名稱，
-        // 故 "--contentRoot app db init" 絕不會被誤判為直接啟動站台。
+        // 斷詞規則必須與命令列組態提供者一致："--key value" 成對、"--key=value" 為單一詞。
+        // 其餘詞彙才是指令名稱，所以 "--contentRoot app db init" 仍會解析為 db init，而不是直接啟動網站。
         var words = new List<string>();
         var options = new List<string>();
         for (var i = 0; i < args.Length; i++)
@@ -164,7 +165,7 @@ public sealed class HostCommand
     {
         try
         {
-            // 設計時期 DbContext：使用 SQL Server 產生器且不夾帶連線認證，故絕不會對外開啟真實資料庫連線。
+            // 設計時期 DbContext 只用來產生 SQL，不帶連線認證，因此不會對外開啟真實資料庫連線。
             var factory = new DesignTimeDbContextFactory();
             var script = new ReleaseScriptGenerator(() => factory.CreateDbContext([])).Generate(from, to);
             script.WriteTo(output);
@@ -180,7 +181,7 @@ public sealed class HostCommand
 
     private static async Task<bool> WriteSchemaDiffAsync(WebApplication app, HostCommand command)
     {
-        // 攔截 Ctrl+C 取消訊號而非強制中斷處理程序，確保暫存資料庫能正常執行 Drop 刪除清理。
+        // 攔截 Ctrl+C 改為取消作業，而不是直接中斷處理程序，讓暫存資料庫仍能執行 Drop 清理。
         using var cancel = new CancellationTokenSource();
         void Stop(object? sender, ConsoleCancelEventArgs e) { e.Cancel = true; cancel.Cancel(); }
         Console.CancelKeyPress += Stop;

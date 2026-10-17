@@ -35,7 +35,10 @@ internal sealed class JobsDashboard(NexusDbContext db) : IDashboardSource
         }).SingleOrDefaultAsync(ct);
         var period = jobs.Where(x => x.CreatedAt >= scope.From && x.CreatedAt < scope.Until);
         var completed = await period.CountAsync(x => x.Status == "completed", ct);
-        var kinds = await period.GroupBy(x => x.Kind).Select(g => new { Kind = g.Key, Count = g.Count() }).OrderByDescending(x => x.Count).ToListAsync(ct);
+        var kinds = await period.GroupBy(x => x.Kind)
+            .Select(g => new { Kind = g.Key, Count = g.Count() })
+            .OrderByDescending(x => x.Count)
+            .ToListAsync(ct);
         var daily = await DashboardDays.CountAsync(db, jobs.Select(x => x.CreatedAt), scope, ct);
         var active = (current?.Queued ?? 0) + (current?.Running ?? 0);
         var failed = current?.Failed ?? 0;
@@ -50,7 +53,10 @@ internal sealed class JobsDashboard(NexusDbContext db) : IDashboardSource
         foreach (var kind in kinds) section.Share(kind.Kind, Kinds.GetValueOrDefault(kind.Kind, kind.Kind), kind.Count);
         var mine = await db.Set<BackgroundJob>().AsNoTracking()
             .Where(x => x.OwnerId == scope.Actor && (x.Status == "queued" || x.Status == "running" || x.Status == "failed"))
-            .OrderByDescending(x => x.UpdatedAt).Take(6).Select(x => new { x.Id, x.Label, x.Kind, x.Stage, x.Status, x.UpdatedAt }).ToListAsync(ct);
+            .OrderByDescending(x => x.UpdatedAt)
+            .Take(6)
+            .Select(x => new { x.Id, x.Label, x.Kind, x.Stage, x.Status, x.UpdatedAt })
+            .ToListAsync(ct);
         foreach (var job in mine)
             section.Item(job.Id.ToString(), job.Label.Length > 0 ? job.Label : Kinds.GetValueOrDefault(job.Kind, job.Kind),
                 job.Status == "failed" ? "失敗" : job.Stage, job.UpdatedAt, "/tasks?job=" + job.Id,

@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace AiNexus.Platform.Security;
 
-/// <summary>統籌會話（Session）、API 快取控制與瀏覽器/檔案隔離之全域安全性原則。</summary>
+/// <summary>工作階段、API 快取控制，以及瀏覽器與檔案隔離的全域安全原則。</summary>
 public static class WebSecurity
 {
     public static bool AllowsLocalHttp(IHostEnvironment environment, IConfiguration configuration) =>
@@ -15,7 +15,7 @@ public static class WebSecurity
 
     public static void NoStore(HttpResponse response)
     {
-        // 含個人資料的回應不可被瀏覽器或中間代理留存；匿名情境（尚未產生防偽權杖）也一併禁止快取。
+        // 含個人資料的回應不可被瀏覽器或中間代理快取。匿名請求（尚未產生防偽權杖）同樣禁止快取。
         response.Headers.CacheControl = "no-cache, no-store";
         response.Headers.Pragma = "no-cache";
         response.Headers.Expires = "0";
@@ -48,7 +48,7 @@ public static class WebSecurity
     public static FileStreamHttpResult File(HttpContext http, Stream stream, string contentType, string name, bool download)
     {
         NoStore(http.Response);
-        // 使用者上傳之檔案在被直接開啟時，絕不繼承應用程式之指令碼執行權限（以 CSP 完全限制）。
+        // 使用者上傳的檔案若被直接開啟，不可繼承應用程式的指令碼權限，因此以 CSP 完全限制。
         http.Response.Headers["Content-Security-Policy"] = "default-src 'none'; sandbox; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
         var inline = !download && (contentType is "application/pdf" or "image/png" or "image/jpeg" or "image/webp");
         return TypedResults.File(stream, contentType, fileDownloadName: inline ? null : name);
@@ -59,8 +59,8 @@ public static class WebSecurity
         name.EndsWith(".html", StringComparison.OrdinalIgnoreCase) || name.EndsWith(".htm", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// 以完全隔離的沙箱提供上傳的 HTML 內容，使應用程式內建 iframe 能夠安全渲染。
-    /// CSP 沙箱中排除 allow-same-origin，確保即使直接開啟亦具備不透明來源（opaque origin），且無法載入任何外部資源或對外發送請求。
+    /// 以沙箱提供使用者上傳的 HTML，讓應用程式內的 iframe 能安全渲染。
+    /// 沙箱不含 allow-same-origin，因此即使直接開啟也是不透明來源（opaque origin），無法載入外部資源，也無法對外發出請求。
     /// </summary>
     public static FileStreamHttpResult SandboxedHtml(HttpContext http, Stream stream)
     {

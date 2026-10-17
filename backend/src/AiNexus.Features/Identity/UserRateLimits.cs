@@ -19,7 +19,9 @@ public static class UserRateLimits
     private static string Partition(HttpContext http)
     {
         var user = http.User;
-        if (user.Identity?.IsAuthenticated == true && (user.FindFirstValue(SessionIdentity.UserId) ?? user.FindFirstValue(ClaimTypes.PrimarySid)) is { Length: > 0 } id)
+        // 未驗證的請求拿不到可信的 user id，只能退回來源位址；不可用未驗證的 header 或 cookie 當 key。
+        var id = user.FindFirstValue(SessionIdentity.UserId) ?? user.FindFirstValue(ClaimTypes.PrimarySid);
+        if (user.Identity?.IsAuthenticated == true && id is { Length: > 0 })
             return "user:" + id;
         return "address:" + (http.Connection.RemoteIpAddress?.ToString() ?? "unknown");
     }

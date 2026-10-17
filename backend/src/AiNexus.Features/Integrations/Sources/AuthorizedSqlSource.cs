@@ -43,7 +43,8 @@ public abstract class AuthorizedSqlSource<TDatabase>(ISqlDatabase<TDatabase> db)
     public async Task<IReadOnlyList<SourceRecordDto>> SearchAsync(SourceActor actor, SourceSearchRequest request, int take, int timeout, CancellationToken ct)
     {
         var pattern = "%" + request.Query.Trim().Replace("~", "~~").Replace("%", "~%").Replace("_", "~_").Replace("[", "~[") + "%";
-        var rows = await db.QueryAsync<SourceRow>(SearchSql, new { ActorSid = actor.Sid, ActorAccount = actor.Account, Kind = request.Kind, Pattern = pattern, Take = take }, commandTimeout: timeout, cancellationToken: ct);
+        var args = new { ActorSid = actor.Sid, ActorAccount = actor.Account, Kind = request.Kind, Pattern = pattern, Take = take };
+        var rows = await db.QueryAsync<SourceRow>(SearchSql, args, commandTimeout: timeout, cancellationToken: ct);
         return rows.Select(x => x.Describe()).ToArray();
     }
     public async Task<Result<SourceDetailDto>> ReadAsync(SourceActor actor, string id, int timeout, CancellationToken ct)

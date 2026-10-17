@@ -32,7 +32,7 @@ internal sealed class ListNotifications(NexusDbContext db)
             if (previous is null) return NotificationsErrors.CursorInvalid;
             query = query.Where(x => x.CreatedAt < previous.CreatedAt || (x.CreatedAt == previous.CreatedAt && x.Id.CompareTo(cursor) < 0));
         }
-        // 失敗細節不存進通知來顯示：改用固定訊息與問題代碼，避免把原始錯誤文字直接給使用者看到。
+        // 失敗通知不顯示儲存的原始文字，只用固定訊息與問題代碼，避免把原始錯誤直接給使用者看。
         var rows = await query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id).Take(PageSize + 1)
             .Select(x => new NotificationDto(x.Id, x.Version, x.Type, x.Severity, x.Severity == "error" ? "操作未完成" : x.Title,
                 x.Severity == "error" ? Issues.Message(x.IssueCode) : x.Body, new(x.TargetKind, x.TargetId), x.CreatedAt, x.ReadAt, x.IssueCode))

@@ -10,7 +10,12 @@ public sealed class IntegrationsOptions
 
     [ValidateObjectMembers] public SourceOptions Gdweb { get; set; } = new();
     [ValidateObjectMembers] public SourceOptions Meiho { get; set; } = new();
-    public SourceOptions For(string id) => id switch { "gdweb" => Gdweb, "meiho" => Meiho, _ => throw new ArgumentOutOfRangeException(nameof(id), id, "Unknown source.") };
+    public SourceOptions For(string id) => id switch
+    {
+        "gdweb" => Gdweb,
+        "meiho" => Meiho,
+        _ => throw new ArgumentOutOfRangeException(nameof(id), id, "Unknown source."),
+    };
 }
 
 /// <summary>單一來源的業務設定；其 SQL 連線位於 <c>Databases</c> 下同名的項目。</summary>

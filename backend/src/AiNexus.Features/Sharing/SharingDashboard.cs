@@ -17,7 +17,9 @@ internal sealed class SharingDashboard(NexusDbContext db, TimeProvider clock) : 
 
     public async Task<DashboardSectionDto?> ReadAsync(DashboardScope scope, CancellationToken ct)
     {
-        var owner = scope.Owner; var now = clock.GetUtcNow(); var soon = now + Soon;
+        var owner = scope.Owner;
+        var now = clock.GetUtcNow();
+        var soon = now + Soon;
         var sent = db.Set<ShareLink>().AsNoTracking().Where(x => owner == null || x.OwnerId == owner);
         var open = sent.Where(x => !x.IsRevoked && x.ExpiresAt > now);
         var counts = await open.GroupBy(x => 1).Select(g => new { Open = g.Count(), Expiring = g.Count(x => x.ExpiresAt <= soon) }).SingleOrDefaultAsync(ct);

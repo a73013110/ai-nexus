@@ -17,7 +17,9 @@ internal sealed class JobsMonitoring(NexusDbContext db, TimeProvider clock) : IM
 
     public async Task<SubsystemReading> ReadAsync(CancellationToken ct)
     {
-        var now = clock.GetUtcNow(); var hour = now.AddHours(-1); var day = now.AddDays(-1);
+        var now = clock.GetUtcNow();
+        var hour = now.AddHours(-1);
+        var day = now.AddDays(-1);
         var jobs = db.Set<BackgroundJob>().AsNoTracking();
         var active = await jobs.Where(x => x.Status == "queued" || x.Status == "running").GroupBy(x => 1).Select(g => new
         {
@@ -32,8 +34,11 @@ internal sealed class JobsMonitoring(NexusDbContext db, TimeProvider clock) : IM
             Day = g.Count(),
             Hour = g.Count(x => x.UpdatedAt >= hour),
         }).SingleOrDefaultAsync(ct);
-        var queued = active?.Queued ?? 0; var running = active?.Running ?? 0; var stuck = active?.Stuck ?? 0;
-        var failedDay = failed?.Day ?? 0; var failedHour = failed?.Hour ?? 0;
+        var queued = active?.Queued ?? 0;
+        var running = active?.Running ?? 0;
+        var stuck = active?.Stuck ?? 0;
+        var failedDay = failed?.Day ?? 0;
+        var failedHour = failed?.Hour ?? 0;
         var waited = oldest is { } created ? Math.Max(0, Math.Round((now - created).TotalSeconds)) : (double?)null;
         var (status, summary) =
             stuck > 0 ? (SubsystemStates.Degraded, $"{stuck} 個執行中的工作租約已過期，可能已停止。")

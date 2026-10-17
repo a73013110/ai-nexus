@@ -7,6 +7,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Platform.Diagnostics;
 
+/// <summary>本機診斷日誌的分段儲存：寫入磁碟、回放至 SQL，並清除已同步完成的舊分段。</summary>
 public interface IDiagnosticJournal
 {
     Task AppendAsync(IReadOnlyList<DiagnosticEvent> events, CancellationToken ct);
@@ -14,12 +15,12 @@ public interface IDiagnosticJournal
     void Cleanup();
 }
 
-/// <summary>當本機診斷日誌磁碟容量超出上限時拋出之例外狀況。</summary>
+/// <summary>本機診斷日誌的磁碟用量超過上限時拋出的例外。</summary>
 public sealed class DiagnosticCapacityException() : IOException("Diagnostic capacity exhausted.");
 
 /// <summary>
-/// 診斷日誌核心：採僅附加（Append-only）分段儲存，依曆日與容量大小自動滾動（Rolling）。
-/// 寫入本機磁碟並強制落盤（fsync）後，才非同步回放匯入至 SQL；SQL 認可後原子性更新位元組游標檢查點（Checkpoint）。
+/// 診斷日誌核心：採僅附加（append-only）的分段儲存，依日期與大小自動換段（rolling）。
+/// 寫入本機磁碟並 fsync 落盤後，才非同步回放到 SQL；SQL 認可後，再以原子方式更新位元組游標（checkpoint）。
 /// </summary>
 public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, DiagnosticHealth health, IHostEnvironment environment, TimeProvider? clock = null) : IDiagnosticJournal, IDisposable
 {
@@ -78,7 +79,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
         ? System.IO.Directory.EnumerateDirectories(root).Where(d => Guid.TryParseExact(Path.GetFileName(d), "N", out _))
         : [];
 
-    // 短期的本機主機互斥鎖，協調所有在線的 IIS 執行處理程序共同遵守容量配額；SQL 存取期間絕不持有此鎖。
+    // 短期的本機互斥鎖，用來協調所有在線的 IIS 工作處理程序共同遵守容量配額。SQL 存取期間絕不持有此鎖。
     private sealed class CapacityLease(DiagnosticJournal journal, FileStream file) : IDisposable, IAsyncDisposable
     {
         private FileStream? handle = file;
@@ -145,7 +146,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
     {
         DiagnosticRedactor.Normalize(item);
         var payload = JsonSerializer.SerializeToUtf8Bytes(item, Json);
-        // 限制 UTF-8 位元組數：非 ASCII 字元與跳脫可能會使 bounded .NET 字串長度膨脹
+        // 以 UTF-8 位元組數為準：非 ASCII 字元與跳脫序列會讓序列化後的長度膨脹，不能只看字元數。
         if (payload.Length > 60000)
         {
             item.ExceptionDetail = item.ExceptionDetail is null ? null : DiagnosticRedactor.Text(item.ExceptionDetail, 6000);
@@ -226,20 +227,19 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
     }
 
     /// <summary>
-    /// 將本機分段日誌重放回放至 SQL 儲存庫。
-    /// 即使在離線啟動時，磁碟用量與待處理積壓仍保持可見。每個存活處理程序獨佔所屬工作目錄；離線殘留目錄由任一匯入器依序接管復原。
+    /// 把本機分段日誌回放到 SQL 儲存庫。每個在線處理程序獨佔自己的目錄；離線遺留的目錄由匯入器接手復原。
     /// </summary>
     public async Task ReplayAsync(IDiagnosticStore store, CancellationToken ct)
     {
         if (!System.IO.Directory.Exists(root)) return;
 
-        // 離線啟動時磁碟積壓仍保持可見，不受 SQL 可用性影響
+        // 即使 SQL 離線，也要先量測磁碟用量，讓積壓保持可見。
         await using (var capacity = await CapacityLeaseAsync(ct))
         {
             MeasureUsage();
         }
 
-        // 每個在線處理程序排他性擁有自身目錄；離線殘留目錄由單一匯入器接管復原
+        // 自己的目錄優先處理；其他目錄要先取得 owner.lock。取不到代表仍有存活的處理程序，直接略過。
         foreach (var directory in Sessions().OrderBy(d => d == SessionDirectory ? 0 : 1).ThenBy(d => d, StringComparer.Ordinal))
         {
             FileStream? recoveryLease = null;
@@ -271,7 +271,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
                     }
                     if (offset == length) continue;
 
-                    // 限制每個分段/週期的復原工作量，同時允許每個衝刷週期內執行多個批次
+                    // 限制每個分段每個週期的復原量，但允許同一個衝刷週期內處理多個批次。
                     for (var batch = 0; batch < 20 && offset < length; batch++)
                     {
                         var result = await ReadAsync(file, offset, !own || file != currentFile, ct);
@@ -339,7 +339,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
                         throw new JsonException();
 
                     var item = JsonSerializer.Deserialize<DiagnosticEvent>(raw, Json) ?? throw new JsonException();
-                    // 復原時重新套用邊界與脫敏規則：本機檔案亦不可作為任意未受信任中繼資料的注入管道
+                    // 復原時重新套用長度與脫敏規則：本機檔案也可能被竄改，不能當成任意中繼資料的注入管道。
                     if (raw.Length > 48000 || item.LogId == Guid.Empty || item.Level is < LogLevel.Trace or > LogLevel.Critical)
                         throw new JsonException();
 
@@ -370,7 +370,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
         return (events, checkpoint);
     }
 
-    /// <summary>清理已完全認可同步至 SQL 且超出保留期限的歷史日誌段。未經確認同步的日誌絕不因容量或保留限制而刪除。</summary>
+    /// <summary>清除已完整同步到 SQL、且超出保留期限的歷史分段。尚未確認同步的資料，絕不因容量或保留期限而刪除。</summary>
     public void Cleanup()
     {
         if (!System.IO.Directory.Exists(root)) return;
@@ -410,7 +410,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
                         if (remaining == 0) break;
                         if (file == currentFile) continue;
                         var info = new FileInfo(file);
-                        // 未經確認同步至 SQL 的資料絕不予以刪除，哪怕已達保留天數上限
+                        // 尚未確認同步到 SQL 的資料絕不刪除，即使已超過保留天數。
                         if (info.LastWriteTimeUtc < clock.GetUtcNow().UtcDateTime.AddDays(-options.Value.FileRetentionDays) && Cursor(file) == info.Length)
                         {
                             File.Delete(file);
@@ -427,7 +427,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
 
                 if (directory != SessionDirectory && !System.IO.Directory.EnumerateFiles(directory, "*.jsonl").Any())
                 {
-                    // 絕不進行遞迴刪除：僅在受管會話目錄為空時移除已知鎖定檔與目錄自身
+                    // 絕不遞迴刪除：只有受管的工作目錄已經清空時，才移除已知的鎖定檔與目錄本身。
                     try
                     {
                         File.Delete(Path.Combine(directory, "owner.lock"));
@@ -435,7 +435,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
                     }
                     catch (IOException)
                     {
-                        // 可能有其他匯入器競爭，或維運人員遺留的除錯檔案
+                        // 可能是其他匯入器正在競爭，或維運人員留下的除錯檔案；失敗就略過，留待下次清理。
                     }
                 }
             }
@@ -453,7 +453,7 @@ public sealed class DiagnosticJournal(IOptions<DiagnosticOptions> options, Diagn
             active = leases.ToArray();
         }
 
-        // 處置邏輯亦涵蓋被強制逾時終止的主機：日誌生命週期結束後，絕不允許任何匯入器繼續保留容量控制代碼
+        // 主機若被強制逾時終止，這裡仍要釋放資源：日誌生命週期結束後，任何匯入器都不能再持有容量控制代碼。
         try
         {
             writer?.Dispose();

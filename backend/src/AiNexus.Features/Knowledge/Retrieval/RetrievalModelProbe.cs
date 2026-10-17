@@ -33,8 +33,12 @@ public sealed class RetrievalModelProbe(IEnumerable<IEmbeddingClient> embeddings
                 embedding = embedding with { Available = true, Notice = $"批次向量化通過，維度 {settings.Embedding.Dimensions}。" };
             }
             catch (Exception error) when (error is ExternalServiceException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
-            { ct.ThrowIfCancellationRequested(); using var logging = logger.BeginScope(new Dictionary<string, object?> { ["Stage"] = "embedding-probe", ["ExternalService"] = "embedding" });
-                var issue = issues.Report(error, "embedding_probe_failed", LogLevel.Warning); embedding = embedding with { Available = false, Notice = Issues.Message(issue) }; }
+            {
+                ct.ThrowIfCancellationRequested();
+                using var logging = logger.BeginScope(new Dictionary<string, object?> { ["Stage"] = "embedding-probe", ["ExternalService"] = "embedding" });
+                var issue = issues.Report(error, "embedding_probe_failed", LogLevel.Warning);
+                embedding = embedding with { Available = false, Notice = Issues.Message(issue) };
+            }
         }
         if (settings.Rerank.Provider != "none")
         {
@@ -50,8 +54,12 @@ public sealed class RetrievalModelProbe(IEnumerable<IEmbeddingClient> embeddings
                 rerank = rerank with { Available = true, Notice = "合成查詢與候選重排通過。" };
             }
             catch (Exception error) when (error is ExternalServiceException or HttpRequestException or OperationCanceledException or System.Text.Json.JsonException)
-            { ct.ThrowIfCancellationRequested(); using var logging = logger.BeginScope(new Dictionary<string, object?> { ["Stage"] = "rerank-probe", ["ExternalService"] = "rerank" });
-                var issue = issues.Report(error, "rerank_probe_failed", LogLevel.Warning); rerank = rerank with { Available = false, Notice = Issues.Message(issue) }; }
+            {
+                ct.ThrowIfCancellationRequested();
+                using var logging = logger.BeginScope(new Dictionary<string, object?> { ["Stage"] = "rerank-probe", ["ExternalService"] = "rerank" });
+                var issue = issues.Report(error, "rerank_probe_failed", LogLevel.Warning);
+                rerank = rerank with { Available = false, Notice = Issues.Message(issue) };
+            }
         }
         return (embedding, rerank);
     }

@@ -20,7 +20,7 @@ namespace AiNexus.Host.Commands;
 /// <summary>
 /// 跨子系統連線整合實測器。
 /// 使用合成資料實測 SQL 讀寫交易、Active Directory 服務帳號綁定、模型即時串流、附件抽取辨識與檢索向量模型。
-/// 執行會真實調用配置的模型並消耗少許測試配額。
+/// 會真的呼叫已設定的模型，因此會消耗少量測試配額。
 /// </summary>
 public static class ConnectionVerifier
 {
@@ -123,15 +123,23 @@ public static class ConnectionVerifier
             var profiles = await services.GetRequiredService<ModelCatalog>().ProfilesAsync(ct);
             var profile = profiles.FirstOrDefault(x => x.Id == (options.DefaultModelId ?? options.Models.FirstOrDefault()?.Id))
                 ?? throw new ExternalServiceException(Error.Unavailable("model_not_configured"), "請設定預設模型。");
-            // 僅使用合成內容測試：不包含任何個人檔案、歷史對話或身分憑證。
+            // 只送合成內容，不含任何個人檔案、對話紀錄或身分憑證。
             var document = services.GetRequiredService<DocumentExtractor>().Extract("connection-check.txt", Encoding.UTF8.GetBytes("Project verification code: NEXUSCHECK42"), ct).Value.Text;
             var images = profile.SupportsImages ? new[] { new InferenceImage(Guid.NewGuid(), "image/png", Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAIAAABMXPacAAABWklEQVR4nO3OQQ0AMBAEofVv+iqDxzRBALvtg/wgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vwgzg/i/CDOD+L8IM4P4vzg2h4gaMOyHY2XLAAAAABJRU5ErkJggg=="), 4096) } : [];
             var prompt = "Read the attached document and reply with its project verification code." + (images.Length > 0 ? " Also identify the dominant color in the attached image using one English color word." : "") + "\n<document>\n" + document + "\n</document>";
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct); timeout.CancelAfter(TimeSpan.FromSeconds(60));
-            var text = new StringBuilder(); var done = false;
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            timeout.CancelAfter(TimeSpan.FromSeconds(60));
+            var text = new StringBuilder();
+            var done = false;
             var parameters = new GenerationParameters(profile.ContextTokens, Math.Min(profile.MaxOutputTokens, 512), .2, "Answer concisely in English.", profile.DefaultReasoningEffort, profile.ReasoningControl, profile.SupportsImages);
-            await foreach (var chunk in services.GetRequiredService<InferenceRouter>().For(profile.Provider).StreamAsync(profile.NativeId, [new("user", prompt, images)], parameters, timeout.Token)) { text.Append(chunk.Text); done |= chunk.Done; }
-            if (!done || !text.ToString().Contains("NEXUSCHECK42", StringComparison.OrdinalIgnoreCase) || (images.Length > 0 && !text.ToString().Contains("red", StringComparison.OrdinalIgnoreCase)))
+            await foreach (var chunk in services.GetRequiredService<InferenceRouter>().For(profile.Provider).StreamAsync(profile.NativeId, [new("user", prompt, images)], parameters, timeout.Token))
+            {
+                text.Append(chunk.Text);
+                done |= chunk.Done;
+            }
+
+            var answer = text.ToString();
+            if (!done || !answer.Contains("NEXUSCHECK42", StringComparison.OrdinalIgnoreCase) || (images.Length > 0 && !answer.Contains("red", StringComparison.OrdinalIgnoreCase)))
                 throw new ExternalServiceException(Error.Unavailable("attachment_probe_failed"), "模型未正確識別合成文件或圖片，請檢查模型能力設定。");
             return images.Length > 0 ? "真實模型已辨識合成文件代碼及紅色 PNG 圖片；未傳送私人資料" : "真實模型已辨識合成文件代碼；此 profile 未啟用圖片能力";
         });
@@ -165,12 +173,13 @@ public static class ConnectionVerifier
         {
             if (probe.Id != 0)
             {
-                // 此僅供 CLI 測試使用的探針不具備使用者身分，且僅操作自身產生的隨機資源。
+                // 探針沒有使用者身分，且只會刪除自己剛建立的隨機資料列。
                 await sql.ExecuteAsync("DELETE FROM [audit].[AuditEvents] WHERE [Id] = @Id AND [ResourceId] = @ResourceId AND [Action] = @Action", new { probe.Id, probe.ResourceId, probe.Action }, commandTimeout: 5, cancellationToken: CancellationToken.None);
                 removed = await sql.QuerySingleAsync<int>("SELECT COUNT(*) FROM [audit].[AuditEvents] WHERE [Id] = @Id AND [ResourceId] = @ResourceId", new { probe.Id, probe.ResourceId }, commandTimeout: 5, cancellationToken: CancellationToken.None) == 0;
             }
         }
-        // 探針紀錄清不掉時必須視為失敗，否則測試資料會殘留在稽核表中。注意：finally 中的清理若拋出例外，會取代先前的測試失敗例外。
+        // 探針紀錄若清不掉，必須視為失敗，否則測試資料會殘留在稽核表。
+        // 注意：finally 中的清理若拋出例外，會蓋掉先前的測試失敗例外。
         if (!removed) throw new InvalidDataException("連線測試之暫時性測試紀錄清理未順利完成。");
     }
 }

@@ -77,10 +77,19 @@ internal sealed class RepositoryReviewConfiguration : IEntityTypeConfiguration<R
     public void Configure(EntityTypeBuilder<RepositoryReview> r)
     {
         r.Property(x => x.CreatedAt).HasValueGenerator<CreationTime>();
-        r.ToTable("RepositoryReviews", "repositories"); r.HasKey(x => x.Id);
-        r.Property(x => x.BaseUrl).HasMaxLength(500); r.Property(x => x.Repository).HasMaxLength(201); r.Property(x => x.Commit).HasMaxLength(64); r.Property(x => x.BaseCommit).HasMaxLength(64);
-        r.Property(x => x.ModelId).HasMaxLength(160); r.Property(x => x.ConfigurationFingerprint).HasMaxLength(64); r.Property(x => x.Note).HasMaxLength(RepositoryReview.NoteMaxLength);
-        r.Property(x => x.CommentUrl).HasMaxLength(500); r.Property(x => x.IdempotencyKey).HasMaxLength(80); r.Property(x => x.RequestHash).HasMaxLength(64); r.Property(x => x.SnapshotJson).HasMaxLength(1000000);
+        r.ToTable("RepositoryReviews", "repositories");
+        r.HasKey(x => x.Id);
+        r.Property(x => x.BaseUrl).HasMaxLength(500);
+        r.Property(x => x.Repository).HasMaxLength(201);
+        r.Property(x => x.Commit).HasMaxLength(64);
+        r.Property(x => x.BaseCommit).HasMaxLength(64);
+        r.Property(x => x.ModelId).HasMaxLength(160);
+        r.Property(x => x.ConfigurationFingerprint).HasMaxLength(64);
+        r.Property(x => x.Note).HasMaxLength(RepositoryReview.NoteMaxLength);
+        r.Property(x => x.CommentUrl).HasMaxLength(500);
+        r.Property(x => x.IdempotencyKey).HasMaxLength(80);
+        r.Property(x => x.RequestHash).HasMaxLength(64);
+        r.Property(x => x.SnapshotJson).HasMaxLength(1000000);
         r.Property(x => x.Purpose).HasMaxLength(16);
         r.HasIndex(x => new { x.OwnerId, x.IdempotencyKey }).IsUnique(); r.HasIndex(x => new { x.OwnerId, x.CreatedAt });
     }

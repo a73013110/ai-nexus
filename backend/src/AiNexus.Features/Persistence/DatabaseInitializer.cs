@@ -30,7 +30,7 @@ public sealed class DatabaseInitializer(
         }
 
         var target = nexus.Name;
-        // 安全防禦：防止誤操作既有非 AiNexus 的重要系統或業務資料庫
+        // 只允許操作 AiNexus 專用資料庫，避免設定誤指到既有的其他系統或業務資料庫。
         if (target != "AiNexus")
         {
             throw new ExternalServiceException(

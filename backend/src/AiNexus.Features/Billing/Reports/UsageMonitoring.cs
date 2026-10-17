@@ -30,7 +30,8 @@ internal sealed class UsageMonitoring(UsageReports reports, TimeProvider clock) 
             : (SubsystemStates.Healthy, $"今日 {people} 位使用者共 {usage.Requests} 次模型呼叫。");
         IReadOnlyList<SubsystemFact> facts = [
             SubsystemFact.Count("requests", "模型呼叫", usage.Requests),
-            SubsystemFact.Count("failed", "失敗", usage.Failed, failing ? SubsystemTones.Danger : usage.Failed > 0 ? SubsystemTones.Warning : SubsystemTones.Neutral),
+            SubsystemFact.Count("failed", "失敗", usage.Failed,
+                failing ? SubsystemTones.Danger : usage.Failed > 0 ? SubsystemTones.Warning : SubsystemTones.Neutral),
             SubsystemFact.Tokens("tokens", "Token", usage.InputTokens + usage.OutputTokens),
             SubsystemFact.Count("active_users", "使用者", people),
         ];

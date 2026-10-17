@@ -19,6 +19,8 @@ internal sealed class GetUserModelPolicy(NexusDbContext db, ModelPolicyService p
     {
         if (!await db.Users.AnyAsync(x => x.Id == owner && x.DeletedAt == null, ct)) return AdministrationErrors.NotFound;
         var personal = await db.Set<UserModelPolicy>().AsNoTracking().SingleOrDefaultAsync(x => x.UserId == owner, ct);
-        return new AdminUserModelPolicyDto(new(ModelPolicyService.Allowed(personal?.AllowedModelsJson), ModelPolicyService.Limits(personal?.DailyTokenLimitsJson)), await policies.ForAsync(owner, ct, publicIds: false));
+        var personalDto = new ModelPolicyRequest(ModelPolicyService.Allowed(personal?.AllowedModelsJson), ModelPolicyService.Limits(personal?.DailyTokenLimitsJson));
+        var effective = await policies.ForAsync(owner, ct, publicIds: false);
+        return new AdminUserModelPolicyDto(personalDto, effective);
     }
 }

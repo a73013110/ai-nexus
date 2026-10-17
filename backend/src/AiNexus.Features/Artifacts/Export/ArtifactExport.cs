@@ -41,16 +41,23 @@ public sealed class ExportOptions : IValidatableObject
 public sealed partial class ExportOptionsValidator : IValidateOptions<ExportOptions>;
 
 public sealed record ExportFile(byte[] Data, string ContentType);
+
 public sealed class ArtifactExport(PdfExportRenderer pdf)
 {
     private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder().UsePipeTables().DisableHtml().Build();
+
     internal async Task<Result<ExportFile>> ExportAsync(ArtifactDto document, string format, CancellationToken ct) => format switch
     {
         "md" => new ExportFile(Encoding.UTF8.GetBytes(document.Content), "text/markdown; charset=utf-8"),
-        "docx" => new ExportFile(Word(document.Resource.Name, document.Content), "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
-        "pdf" => new ExportFile(await pdf.RenderAsync(Html(document.Resource.Name, document.Content), ct), "application/pdf"),
+        "docx" => new ExportFile(
+            Word(document.Resource.Name, document.Content),
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+        "pdf" => new ExportFile(
+            await pdf.RenderAsync(Html(document.Resource.Name, document.Content), ct),
+            "application/pdf"),
         _ => ArtifactsErrors.ExportFormatInvalid,
     };
+
     public static string Html(string title, string content)
     {
         // Markdown 管線已停用原始 HTML；網路請求則由 PdfExportRenderer 全部攔截，這裡不再處理。
@@ -64,12 +71,33 @@ public sealed class ArtifactExport(PdfExportRenderer pdf)
         using var stream = new MemoryStream();
         using (var document = WordprocessingDocument.Create(stream, WordprocessingDocumentType.Document, true))
         {
-            var main = document.AddMainDocumentPart(); main.Document = new W.Document(new W.Body()); var body = main.Document.Body!;
-            var style = main.AddNewPart<StyleDefinitionsPart>(); style.Styles = new W.Styles(new W.DocDefaults(new W.RunPropertiesDefault(new W.RunPropertiesBaseStyle(new W.RunFonts { Ascii = "Segoe UI", HighAnsi = "Segoe UI", EastAsia = "Microsoft JhengHei" }, new W.FontSize { Val = "22" })), new W.ParagraphPropertiesDefault(new W.ParagraphPropertiesBaseStyle(new W.SpacingBetweenLines { After = "160", Line = "360", LineRule = W.LineSpacingRuleValues.Auto }))));
-            body.Append(new W.Paragraph(new W.ParagraphProperties(new W.KeepNext(), new W.SpacingBetweenLines { After = "320" }), new W.Run(new W.RunProperties(new W.Bold(), new W.FontSize { Val = "40" }), new W.Text(title) { Space = SpaceProcessingModeValues.Preserve })));
+            var main = document.AddMainDocumentPart();
+            main.Document = new W.Document(new W.Body());
+            var body = main.Document.Body!;
+
+            // 預設字型與行距；中文字體放在 EastAsia，英數字與中文才會各自使用正確字型。
+            var style = main.AddNewPart<StyleDefinitionsPart>();
+            style.Styles = new W.Styles(
+                new W.DocDefaults(
+                    new W.RunPropertiesDefault(new W.RunPropertiesBaseStyle(
+                        new W.RunFonts { Ascii = "Segoe UI", HighAnsi = "Segoe UI", EastAsia = "Microsoft JhengHei" },
+                        new W.FontSize { Val = "22" })),
+                    new W.ParagraphPropertiesDefault(new W.ParagraphPropertiesBaseStyle(
+                        new W.SpacingBetweenLines { After = "160", Line = "360", LineRule = W.LineSpacingRuleValues.Auto }))));
+
+            body.Append(new W.Paragraph(
+                new W.ParagraphProperties(new W.KeepNext(), new W.SpacingBetweenLines { After = "320" }),
+                new W.Run(
+                    new W.RunProperties(new W.Bold(), new W.FontSize { Val = "40" }),
+                    new W.Text(title) { Space = SpaceProcessingModeValues.Preserve })));
             AppendBlocks(body, Markdown.Parse(content, Pipeline));
-            body.Append(new W.SectionProperties(new W.PageSize { Width = 11906U, Height = 16838U }, new W.PageMargin { Top = 1134, Bottom = 1247, Left = 1020U, Right = 1020U, Header = 567U, Footer = 567U }));
-            document.PackageProperties.Title = title; document.PackageProperties.Creator = "AI Nexus"; main.Document.Save();
+            body.Append(new W.SectionProperties(
+                new W.PageSize { Width = 11906U, Height = 16838U },
+                new W.PageMargin { Top = 1134, Bottom = 1247, Left = 1020U, Right = 1020U, Header = 567U, Footer = 567U }));
+
+            document.PackageProperties.Title = title;
+            document.PackageProperties.Creator = "AI Nexus";
+            main.Document.Save();
         }
         return stream.ToArray();
     }
@@ -80,24 +108,76 @@ public sealed class ArtifactExport(PdfExportRenderer pdf)
             if (block is MarkdownTable table)
             {
                 var rows = table.OfType<MarkdownRow>().ToArray();
-                if (rows.Any(x => x.Count > 16)) { foreach (var row in rows) parent.Append(TextParagraph(string.Join(" | ", row.OfType<MarkdownCell>().Select(Plain)))); continue; }
-                var borders = new W.TableBorders { TopBorder = new() { Val = W.BorderValues.Single, Size = 4U }, LeftBorder = new() { Val = W.BorderValues.Single, Size = 4U }, BottomBorder = new() { Val = W.BorderValues.Single, Size = 4U }, RightBorder = new() { Val = W.BorderValues.Single, Size = 4U }, InsideHorizontalBorder = new() { Val = W.BorderValues.Single, Size = 4U }, InsideVerticalBorder = new() { Val = W.BorderValues.Single, Size = 4U } };
+                // 超過 16 欄的表格在 Word 中寬度不足，改成每列一段純文字。
+                if (rows.Any(x => x.Count > 16))
+                {
+                    foreach (var row in rows)
+                        parent.Append(TextParagraph(string.Join(" | ", row.OfType<MarkdownCell>().Select(Plain))));
+                    continue;
+                }
+
+                var borders = new W.TableBorders
+                {
+                    TopBorder = new() { Val = W.BorderValues.Single, Size = 4U },
+                    LeftBorder = new() { Val = W.BorderValues.Single, Size = 4U },
+                    BottomBorder = new() { Val = W.BorderValues.Single, Size = 4U },
+                    RightBorder = new() { Val = W.BorderValues.Single, Size = 4U },
+                    InsideHorizontalBorder = new() { Val = W.BorderValues.Single, Size = 4U },
+                    InsideVerticalBorder = new() { Val = W.BorderValues.Single, Size = 4U },
+                };
                 var columns = Math.Max(1, rows.Max(x => x.Count));
-                var output = new W.Table(new W.TableProperties(new W.TableWidth { Width = "5000", Type = W.TableWidthUnitValues.Pct }, borders), new W.TableGrid(Enumerable.Range(0, columns).Select(_ => new W.GridColumn { Width = (9866 / columns).ToString(CultureInfo.InvariantCulture) })));
-                foreach (var row in rows) { var target = new W.TableRow(); foreach (var cell in row.OfType<MarkdownCell>()) { var value = new W.TableCell(); AppendBlocks(value, cell); if (!value.Elements<W.Paragraph>().Any()) value.Append(new W.Paragraph()); target.Append(value); } output.Append(target); }
-                parent.Append(output); parent.Append(new W.Paragraph());
+                var output = new W.Table(
+                    new W.TableProperties(new W.TableWidth { Width = "5000", Type = W.TableWidthUnitValues.Pct }, borders),
+                    new W.TableGrid(Enumerable.Range(0, columns)
+                        .Select(_ => new W.GridColumn { Width = (9866 / columns).ToString(CultureInfo.InvariantCulture) })));
+                foreach (var row in rows)
+                {
+                    var target = new W.TableRow();
+                    foreach (var cell in row.OfType<MarkdownCell>())
+                    {
+                        // OOXML 規定儲存格至少要有一個段落，缺少時 Word 會判定檔案損毀。
+                        var value = new W.TableCell();
+                        AppendBlocks(value, cell);
+                        if (!value.Elements<W.Paragraph>().Any()) value.Append(new W.Paragraph());
+                        target.Append(value);
+                    }
+                    output.Append(target);
+                }
+                parent.Append(output);
+                parent.Append(new W.Paragraph());
             }
-            else if (block is CodeBlock code) { foreach (var line in code.Lines.Lines.Take(code.Lines.Count)) parent.Append(new W.Paragraph(new W.Run(new W.RunProperties(new W.RunFonts { Ascii = "Consolas", HighAnsi = "Consolas" }, new W.FontSize { Val = "20" }), new W.Text(line.Slice.ToString()) { Space = SpaceProcessingModeValues.Preserve }))); }
+            else if (block is CodeBlock code)
+            {
+                foreach (var line in code.Lines.Lines.Take(code.Lines.Count))
+                    parent.Append(new W.Paragraph(new W.Run(
+                        new W.RunProperties(new W.RunFonts { Ascii = "Consolas", HighAnsi = "Consolas" }, new W.FontSize { Val = "20" }),
+                        new W.Text(line.Slice.ToString()) { Space = SpaceProcessingModeValues.Preserve })));
+            }
             else if (block is LeafBlock leaf)
             {
-                var paragraph = new W.Paragraph(); if (block is HeadingBlock heading) paragraph.ParagraphProperties = new(new W.KeepNext(), new W.SpacingBetweenLines { Before = "240", After = "120" });
-                var properties = block is HeadingBlock h ? new W.RunProperties(new W.Bold(), new W.FontSize { Val = (h.Level == 1 ? 32 : h.Level == 2 ? 28 : 24).ToString(CultureInfo.InvariantCulture) }) : new W.RunProperties();
+                var paragraph = new W.Paragraph();
+                if (block is HeadingBlock heading)
+                    paragraph.ParagraphProperties = new(new W.KeepNext(), new W.SpacingBetweenLines { Before = "240", After = "120" });
+                var properties = block is HeadingBlock h
+                    ? new W.RunProperties(new W.Bold(), new W.FontSize { Val = (h.Level == 1 ? 32 : h.Level == 2 ? 28 : 24).ToString(CultureInfo.InvariantCulture) })
+                    : new W.RunProperties();
                 if (prefix is not null) paragraph.Append(new W.Run(new W.Text(prefix)));
-                if (leaf.Inline is not null) Inline(paragraph, leaf.Inline, properties); else paragraph.Append(new W.Run(new W.Text(leaf.Lines.ToString()) { Space = SpaceProcessingModeValues.Preserve }));
+                if (leaf.Inline is not null)
+                    Inline(paragraph, leaf.Inline, properties);
+                else
+                    paragraph.Append(new W.Run(new W.Text(leaf.Lines.ToString()) { Space = SpaceProcessingModeValues.Preserve }));
                 parent.Append(paragraph);
             }
-            else if (block is ListBlock list) { var number = 0; foreach (var child in list.OfType<ListItemBlock>()) AppendBlocks(parent, child, list.IsOrdered ? (++number) + ". " : "• "); }
-            else if (block is ContainerBlock container) AppendBlocks(parent, container, prefix);
+            else if (block is ListBlock list)
+            {
+                var number = 0;
+                foreach (var child in list.OfType<ListItemBlock>())
+                    AppendBlocks(parent, child, list.IsOrdered ? (++number) + ". " : "• ");
+            }
+            else if (block is ContainerBlock container)
+            {
+                AppendBlocks(parent, container, prefix);
+            }
         }
     }
     private static string Plain(MarkdownCell cell) => string.Join(" ", cell.OfType<LeafBlock>().Select(x => x.Inline?.ToString() ?? x.Lines.ToString()));
@@ -107,10 +187,32 @@ public sealed class ArtifactExport(PdfExportRenderer pdf)
         for (var item = container.FirstChild; item is not null; item = item.NextSibling)
         {
             var format = (W.RunProperties)properties.CloneNode(true);
-            if (item is EmphasisInline emphasis) { format.Append(emphasis.DelimiterCount >= 2 ? (OpenXmlElement)new W.Bold() : new W.Italic()); Inline(paragraph, emphasis, format); }
-            else if (item is ContainerInline nested) Inline(paragraph, nested, format);
-            else if (item is LineBreakInline) paragraph.Append(new W.Run(new W.Break()));
-            else { var text = item switch { LiteralInline literal => literal.Content.ToString(), CodeInline code => code.Content, AutolinkInline link => link.Url, HtmlInline html => html.Tag, _ => item.ToString() ?? "" }; if (item is CodeInline) format.Append(new W.RunFonts { Ascii = "Consolas", HighAnsi = "Consolas" }); paragraph.Append(new W.Run(format, new W.Text(text) { Space = SpaceProcessingModeValues.Preserve })); }
+            if (item is EmphasisInline emphasis)
+            {
+                format.Append(emphasis.DelimiterCount >= 2 ? (OpenXmlElement)new W.Bold() : new W.Italic());
+                Inline(paragraph, emphasis, format);
+            }
+            else if (item is ContainerInline nested)
+            {
+                Inline(paragraph, nested, format);
+            }
+            else if (item is LineBreakInline)
+            {
+                paragraph.Append(new W.Run(new W.Break()));
+            }
+            else
+            {
+                var text = item switch
+                {
+                    LiteralInline literal => literal.Content.ToString(),
+                    CodeInline code => code.Content,
+                    AutolinkInline link => link.Url,
+                    HtmlInline html => html.Tag,
+                    _ => item.ToString() ?? "",
+                };
+                if (item is CodeInline) format.Append(new W.RunFonts { Ascii = "Consolas", HighAnsi = "Consolas" });
+                paragraph.Append(new W.Run(format, new W.Text(text) { Space = SpaceProcessingModeValues.Preserve }));
+            }
         }
     }
 }
@@ -123,23 +225,85 @@ public sealed class PdfExportRenderer(IOptions<ExportOptions> options) : IAsyncD
     private IBrowser? browser;
     public async Task<byte[]> RenderAsync(string html, CancellationToken ct)
     {
-        if (!await concurrency.WaitAsync(0, ct)) throw new ExternalServiceException(Error.RateLimited("pdf_export_busy"), "PDF 匯出正在忙碌，請稍後重試。");
+        // 併發上限為 2；超過時立即拒絕，不排隊等待，避免 PDF 請求堆積佔住伺服器。
+        if (!await concurrency.WaitAsync(0, ct))
+            throw new ExternalServiceException(Error.RateLimited("pdf_export_busy"), "PDF 匯出正在忙碌，請稍後重試。");
         IBrowserContext? context = null;
         try
         {
+            // 瀏覽器啟動只能一次一個進行，且斷線後要重新啟動。
             await startup.WaitAsync(ct);
-            try { if (browser?.IsConnected != true) { driver ??= await Playwright.CreateAsync(); browser = await driver.Chromium.LaunchAsync(options.Value.LaunchOptions()); } ct.ThrowIfCancellationRequested(); }
-            finally { startup.Release(); }
-            context = await browser.NewContextAsync(new() { JavaScriptEnabled = false, ServiceWorkers = ServiceWorkerPolicy.Block, AcceptDownloads = false }); ct.ThrowIfCancellationRequested();
+            try
+            {
+                if (browser?.IsConnected != true)
+                {
+                    driver ??= await Playwright.CreateAsync();
+                    browser = await driver.Chromium.LaunchAsync(options.Value.LaunchOptions());
+                }
+                ct.ThrowIfCancellationRequested();
+            }
+            finally
+            {
+                startup.Release();
+            }
+
+            // 關閉 JavaScript 與 Service Worker，並由 RouteAsync 攔截所有網路請求，避免文件內容對外連線。
+            context = await browser.NewContextAsync(new()
+            {
+                JavaScriptEnabled = false,
+                ServiceWorkers = ServiceWorkerPolicy.Block,
+                AcceptDownloads = false,
+            });
+            ct.ThrowIfCancellationRequested();
             await context.RouteAsync("**/*", route => route.AbortAsync());
             var page = await context.NewPageAsync();
             page.SetDefaultTimeout(options.Value.TimeoutSeconds * 1000);
             await page.SetContentAsync(html, new() { WaitUntil = WaitUntilState.DOMContentLoaded });
-            return await page.PdfAsync(new() { Format = "A4", PrintBackground = true, PreferCSSPageSize = true, DisplayHeaderFooter = true, HeaderTemplate = "<span></span>", FooterTemplate = "<div style=\"font:9px sans-serif;width:100%;text-align:center;color:#65706a\"><span class=\"pageNumber\"></span> / <span class=\"totalPages\"></span></div>" }).WaitAsync(TimeSpan.FromSeconds(options.Value.TimeoutSeconds), ct);
+            return await page.PdfAsync(new()
+                {
+                    Format = "A4",
+                    PrintBackground = true,
+                    PreferCSSPageSize = true,
+                    DisplayHeaderFooter = true,
+                    HeaderTemplate = "<span></span>",
+                    FooterTemplate = "<div style=\"font:9px sans-serif;width:100%;text-align:center;color:#65706a\">"
+                        + "<span class=\"pageNumber\"></span> / <span class=\"totalPages\"></span></div>",
+                })
+                .WaitAsync(TimeSpan.FromSeconds(options.Value.TimeoutSeconds), ct);
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
-        catch (Exception error) when (error is PlaywrightException or TimeoutException) { throw new ExternalServiceException(Error.Unavailable("pdf_renderer_unavailable"), "PDF 匯出暫時無法使用，請由管理員檢查匯出瀏覽器安裝與執行權限；可先匯出 Word。", error); }
-        finally { try { if (context is not null) await context.CloseAsync(); } catch (PlaywrightException) { } finally { concurrency.Release(); } }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception error) when (error is PlaywrightException or TimeoutException)
+        {
+            throw new ExternalServiceException(
+                Error.Unavailable("pdf_renderer_unavailable"),
+                "PDF 匯出暫時無法使用，請由管理員檢查匯出瀏覽器安裝與執行權限；可先匯出 Word。",
+                error);
+        }
+        finally
+        {
+            try
+            {
+                if (context is not null) await context.CloseAsync();
+            }
+            catch (PlaywrightException)
+            {
+                // 關閉 context 失敗不影響已產出的 PDF；context 只用一次，不會被重用。
+            }
+            finally
+            {
+                concurrency.Release();
+            }
+        }
     }
-    public async ValueTask DisposeAsync() { if (browser is not null) await browser.CloseAsync(); driver?.Dispose(); concurrency.Dispose(); startup.Dispose(); }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (browser is not null) await browser.CloseAsync();
+        driver?.Dispose();
+        concurrency.Dispose();
+        startup.Dispose();
+    }
 }

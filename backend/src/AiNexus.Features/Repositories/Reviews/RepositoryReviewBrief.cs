@@ -21,7 +21,7 @@ public static partial class RepositoryReviewBrief
 
     public static bool TryRender(string json, string purpose, out string markdown) => TryRender(json, purpose, out markdown, out _);
 
-    /// <summary>Renders the brief, or returns a stable, content-free <paramref name="reason"/> such as <c>json</c> or <c>conclusion.length</c>.</summary>
+    /// <summary>渲染成 Markdown；格式不合時，<paramref name="reason"/> 會回傳不含內容的穩定代碼，例如 <c>json</c> 或 <c>conclusion.length</c>。</summary>
     public static bool TryRender(string json, string purpose, out string markdown, out string reason)
     {
         markdown = ""; reason = "";
@@ -32,7 +32,7 @@ public static partial class RepositoryReviewBrief
             var conclusion = Field(root, "conclusion", 80) ?? throw new BriefException("conclusion.missing");
             var limitation = Field(root, "limitation", 60, optional: true) ?? "";
             var changes = Items(root, "changes").Select(x => Text(x, "changes", 60)).OfType<string>().Take(MaxItems).ToArray();
-            // A summary has no findings by contract; dropping them keeps the summary instead of failing the whole report.
+            // summary 模式依契約不應有 findings；直接捨棄，比讓整份摘要失敗更可靠。
             var findings = purpose == "summary" ? [] : Items(root, "findings").Take(MaxItems).Select(Finding).ToArray();
 
             var output = new StringBuilder(conclusion);

@@ -38,9 +38,13 @@ internal sealed class RepositoryFolderImportConfiguration : IEntityTypeConfigura
     public void Configure(EntityTypeBuilder<RepositoryFolderImport> i)
     {
         i.Property(x => x.CreatedAt).HasValueGenerator<Persistence.CreationTime>();
-        i.ToTable("RepositoryFolderImports", "repositories"); i.HasKey(x => x.Id);
-        i.Property(x => x.BaseUrl).HasMaxLength(500); i.Property(x => x.Repository).HasMaxLength(201); i.Property(x => x.Commit).HasMaxLength(64);
-        i.Property(x => x.Path).HasMaxLength(500); i.Property(x => x.PathsJson).HasMaxLength(600000);
+        i.ToTable("RepositoryFolderImports", "repositories");
+        i.HasKey(x => x.Id);
+        i.Property(x => x.BaseUrl).HasMaxLength(500);
+        i.Property(x => x.Repository).HasMaxLength(201);
+        i.Property(x => x.Commit).HasMaxLength(64);
+        i.Property(x => x.Path).HasMaxLength(500);
+        i.Property(x => x.PathsJson).HasMaxLength(600000);
         i.HasIndex(x => new { x.OwnerId, x.CreatedAt });
     }
 }

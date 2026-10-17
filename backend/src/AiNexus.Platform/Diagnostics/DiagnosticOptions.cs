@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 
 namespace AiNexus.Platform.Diagnostics;
 
+/// <summary>診斷日誌的組態，對應 <c>Diagnostics</c> 區段。</summary>
 public sealed class DiagnosticOptions : IValidatableObject
 {
     public const string Section = "Diagnostics";
@@ -39,8 +40,8 @@ public sealed class DiagnosticOptions : IValidatableObject
     }
 
     /// <summary>
-    /// 在相依性注入容器建立之前讀取診斷組態（供啟動失敗期刊記錄與匯出器接線使用）。
-    /// 若組態格式不正確，此處將自動回退至預設值，因為主機啟動時 Options 驗證會負責回報詳細驗證錯誤。
+    /// 在 DI 容器建立前讀取診斷組態（供啟動失敗時的紀錄與匯出器接線使用）。
+    /// 組態格式不正確時回退為預設值；正式的錯誤回報由啟動時的 Options 驗證負責。
     /// </summary>
     public static DiagnosticOptions Read(IConfiguration configuration)
     {

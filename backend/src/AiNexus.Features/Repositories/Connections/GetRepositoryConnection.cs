@@ -2,7 +2,7 @@ using AiNexus.Features.Identity;
 
 namespace AiNexus.Features.Repositories.Connections;
 
-/// <summary>Whether Gitea is enabled and the user has a usable connection on the current host.</summary>
+/// <summary>回傳 Gitea 是否啟用，以及使用者在目前主機上是否已有可用的連線。</summary>
 internal sealed class GetRepositoryConnection(RepositoryService gitea)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes

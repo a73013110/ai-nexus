@@ -43,7 +43,8 @@ internal sealed class SaveProject(NexusDbContext db, ResourceAccess access, Reso
         if (ResourceAccess.Name(request.Name) is not { IsSuccess: true } name) return ProjectsErrors.InvalidName;
         if (await db.Set<WorkspaceResource>().CountAsync(x => x.OwnerId == actor && x.Kind == Project.Kind, ct) >= Project.MaxPerOwner) return ProjectsErrors.Limit;
         var resource = new WorkspaceResource { OwnerId = actor, Name = name.Value, Kind = Project.Kind };
-        db.Add(resource); db.Add(new Project { Id = resource.Id, Description = request.Description.Trim(), Instructions = request.Instructions.Trim() });
+        db.Add(resource);
+        db.Add(new Project { Id = resource.Id, Description = request.Description.Trim(), Instructions = request.Instructions.Trim() });
         db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = resource.Id, Action = "project.created", Result = "created" });
         await db.SaveChangesAsync(ct);
         return await access.LoadProjectAsync(db, actor, resource.Id, ct);
@@ -60,9 +61,11 @@ internal sealed class SaveProject(NexusDbContext db, ResourceAccess access, Reso
             var resource = allowed.Value;
             var count = await db.Set<Project>().Where(x => x.Id == id && x.Version == request.ExpectedVersion).ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1).SetProperty(x => x.Description, request.Description.Trim()).SetProperty(x => x.Instructions, request.Instructions.Trim()).SetProperty(x => x.IsArchived, request.IsArchived), ct);
             if (count != 1) return ProjectsErrors.Conflict;
-            resource.Name = name.Value; resource.UpdatedAt = clock.GetUtcNow();
+            resource.Name = name.Value;
+            resource.UpdatedAt = clock.GetUtcNow();
             db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "project.updated", Result = "saved" });
-            await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
+            await db.SaveChangesAsync(ct);
+            await tx.CommitAsync(ct);
             return await access.LoadProjectAsync(db, actor, id, ct);
         }
     }

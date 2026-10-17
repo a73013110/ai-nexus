@@ -11,7 +11,9 @@ using Microsoft.Extensions.Options;
 namespace AiNexus.Features.Monitoring.Snapshots;
 
 /// <summary>
-/// 每位使用者最多 <see cref="PerUser"/> 個即時串流。新串流會取代該使用者最舊的一個，而不是拒絕它：重新整理後舊串流可能仍掛著，直到伺服器察覺瀏覽器已離開（代理伺服器可能隱藏這件事，直到串流逾時）；這段時間若拒絕，頁面會被鎖在外面。
+/// 每位使用者最多 <see cref="PerUser"/> 個即時串流。超過時取代最舊的一個，而不是拒絕新串流。
+/// 原因是重新整理後，舊串流可能還掛著，要等伺服器察覺瀏覽器已離開（代理伺服器可能會隱藏這件事，直到串流逾時）。
+/// 這段時間若拒絕，新頁面就會被擋在外面。
 /// </summary>
 public sealed class MonitoringStreams
 {
@@ -53,7 +55,9 @@ public sealed class MonitoringStreams
 }
 
 /// <summary>
-/// 以 Server-Sent Events 推送快照，最長十分鐘；使用者的第四個串流會以 <c>stream_superseded</c> 結束最舊的一個。整個檢視只稽核一次；每 15 秒以新的 scope 重新檢查監控權限與測試身分的管理者狀態，因此權限被撤銷時，串流會以錯誤事件結束。
+/// 以 Server-Sent Events 推送快照，最長十分鐘。使用者的第四個串流會以 <c>stream_superseded</c> 結束最舊的一個。
+/// 整個檢視只稽核一次。每 15 秒以新的 scope 重新檢查監控權限與測試身分的管理者狀態，
+/// 所以權限被撤銷後，串流會以錯誤事件結束，不會一直沿用舊的授權。
 /// </summary>
 internal sealed class StreamMonitoringSnapshots(MonitoringSnapshots snapshots, MonitoringStreams streams, NexusDbContext db, IServiceScopeFactory scopes, IOptions<MonitoringOptions> options, TimeProvider clock)
 {

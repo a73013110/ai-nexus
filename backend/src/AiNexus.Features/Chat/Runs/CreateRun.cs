@@ -215,7 +215,7 @@ internal sealed class CreateRun(
                 .Where(x => x.Id == owner)
                 .ExecuteUpdateAsync(p => p.SetProperty(x => x.LastSeenAt, x => x.LastSeenAt), ct);
 
-            // 在行鎖下再次確認無競態請求
+            // 持有帳號列鎖後再檢查一次，擋下並行送出、同一 Key 的重複請求
             if (await db.Runs.AsNoTracking().SingleOrDefaultAsync(x => x.OwnerId == owner && x.IdempotencyKey == key, ct) is { } raced)
             {
                 if (await conversations.RequireOwnedAsync(owner, raced.ConversationId, ct) is { IsSuccess: false } denied)

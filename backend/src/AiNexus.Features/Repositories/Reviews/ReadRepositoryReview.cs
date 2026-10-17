@@ -24,10 +24,17 @@ internal sealed class ReadRepositoryReview(NexusDbContext db, RepositoryReviewSe
         var frozen = RepositoryReviewService.Snapshot(row);
         if (!frozen.IsSuccess) return frozen.Error;
         var snapshot = frozen.Value;
-        results.TryGetValue(RepositoryReviewPlan.ReportOrdinal, out var report);
-        return new RepositoryReviewDetailDto(await reviews.DescribeAsync(row, ct), snapshot.Slices.Select((slice, i) => {
+        var description = await reviews.DescribeAsync(row, ct);
+        var sections = snapshot.Slices.Select((slice, i) =>
+        {
             results.TryGetValue(i, out var result);
-            return new RepositoryReviewSectionDto(i, slice.Label, slice.Diff, slice.Binary, result?.Output, result?.Truncated ?? false, result?.InputTokens, result?.OutputTokens, result?.ElapsedMs);
-        }).ToArray(), report is null ? null : new(report.Output, report.Truncated, report.InputTokens, report.OutputTokens, report.ElapsedMs));
+            return new RepositoryReviewSectionDto(i, slice.Label, slice.Diff, slice.Binary, result?.Output, result?.Truncated ?? false,
+                result?.InputTokens, result?.OutputTokens, result?.ElapsedMs);
+        }).ToArray();
+        results.TryGetValue(RepositoryReviewPlan.ReportOrdinal, out var report);
+        RepositoryReviewReportDto? reportDto = report is null
+            ? null
+            : new(report.Output, report.Truncated, report.InputTokens, report.OutputTokens, report.ElapsedMs);
+        return new RepositoryReviewDetailDto(description, sections, reportDto);
     }
 }

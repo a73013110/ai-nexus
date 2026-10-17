@@ -4,8 +4,8 @@ using System.Collections.Concurrent;
 namespace AiNexus.Platform.Diagnostics;
 
 /// <summary>
-/// 診斷管線健康狀態指標。
-/// 追蹤佇列深度、寫入與重放次數、失敗、遺失與抽樣數，並在管線降級或發生嚴重故障時觸發緊急處置。
+/// 診斷管線的健康指標：追蹤佇列深度、寫入與重放次數、失敗、遺失與抽樣數量；
+/// 管線降級或發生嚴重故障時，觸發緊急處置。
 /// </summary>
 public sealed class DiagnosticHealth : IDisposable
 {
@@ -51,8 +51,8 @@ public sealed class DiagnosticHealth : IDisposable
     }
 
     /// <summary>
-    /// 觸發日誌管線緊急降級警報。
-    /// 故意繞過 ILogger、EF Core 與所有外部日誌管道，絕不夾帶原始例外內容；限流寫入本機控制台與 Windows 事件日誌。
+    /// 觸發日誌管線的緊急降級警報。刻意繞過 ILogger、EF Core 與所有外部日誌管道，也不夾帶原始例外內容。
+    /// 寫入本機主控台與 Windows 事件日誌時會限流。
     /// </summary>
     public void Emergency(string code, long lost = 0, string? issueCode = null)
     {
@@ -101,7 +101,7 @@ public sealed class DiagnosticHealth : IDisposable
                 }
                 catch (Exception)
                 {
-                    // 緊急回報基礎建設絕不可造成整個應用程式異常終止。
+                    // 緊急回報本身不可讓整個應用程式異常終止。
                 }
                 finally
                 {
@@ -122,7 +122,7 @@ public sealed class DiagnosticHealth : IDisposable
 }
 
 /// <summary>
-/// 診斷管線當前計量快照，供系統監控子系統讀取。
+/// 診斷管線目前的計量快照，供系統監控子系統讀取。
 /// </summary>
 public sealed record DiagnosticHealthSnapshot(
     bool Degraded,

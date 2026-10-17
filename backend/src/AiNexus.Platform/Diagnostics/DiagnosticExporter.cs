@@ -12,8 +12,7 @@ using OpenTelemetry.Metrics;
 namespace AiNexus.Platform.Diagnostics;
 
 /// <summary>
-/// OTLP 遙測日誌匯出器。
-/// 僅接收已清洗且脫敏的日誌事件；絕不可額外註冊第二個原始應用程式日誌提供者，以防敏感資料外洩。
+/// OTLP 遙測日誌匯出器。只接收已清洗、已脫敏的日誌事件；絕不可再註冊第二個未脫敏的應用程式日誌提供者，否則敏感資料會外洩。
 /// </summary>
 public sealed class DiagnosticExporter : IDisposable
 {
@@ -77,7 +76,7 @@ public sealed class DiagnosticExporter : IDisposable
     }
 
     /// <summary>
-    /// 將已清洗事件批次轉換為 OpenTelemetry LogRecord 並匯出。
+    /// 把已清洗的事件批次轉成 OpenTelemetry LogRecord 後匯出。
     /// </summary>
     public void Export(IReadOnlyList<DiagnosticEvent> events)
     {
@@ -208,13 +207,13 @@ public sealed class DiagnosticExporter : IDisposable
 }
 
 /// <summary>
-/// 平台診斷日誌與 OpenTelemetry 遙測註冊延伸模組。
+/// 平台診斷日誌與 OpenTelemetry 遙測的註冊擴充。
 /// </summary>
 public static class DiagnosticRegistration
 {
     /// <summary>
-    /// 自訂計量表與框架內建計量表清單（路由耗時、Kestrel 連線、限流與授權結果、對外 HTTP、EF Core 查詢計數、GC 與執行緒池）。
-    /// 其標籤絕不攜帶 SQL 全文、完整 URL、使用者或客戶端 IP 位址；自動追蹤探針維持停用以防外洩。
+    /// 自訂與框架內建的計量表清單（路由耗時、Kestrel 連線、限流與授權結果、對外 HTTP、EF Core 查詢數、GC 與執行緒池）。
+    /// 標籤絕不攜帶 SQL 全文、完整 URL、使用者或客戶端 IP；自動追蹤探針維持停用，以防外洩。
     /// </summary>
     public static readonly string[] Meters =
     [
@@ -236,14 +235,14 @@ public static class DiagnosticRegistration
         builder.Logging.ClearProviders();
         builder.Services.AddSingleton<ILoggerProvider>(sp => sp.GetRequiredService<DiagnosticLoggerProvider>());
 
-        // 類別預設值不可默默覆蓋集中化最低/錯誤層級過濾政策。
+        // 只排除 None；其餘層級由集中的最低層級政策決定，不能讓類別預設值悄悄覆寫。
         builder.Logging.AddFilter<DiagnosticLoggerProvider>((_, level) => level != LogLevel.None);
         builder.Services.AddSingleton<DiagnosticJournal>();
         builder.Services.AddSingleton<IDiagnosticJournal>(sp => sp.GetRequiredService<DiagnosticJournal>());
         builder.Services.AddSingleton<DiagnosticExporter>();
         builder.Services.AddSingleton<Issues>();
 
-        // 最先註冊，以便在應用程式關閉時最後停止，確保業務 Worker 發出的終態事件皆能寫入。
+        // 最先註冊，因此最後才停止，確保業務 Worker 發出的終態事件都能寫入。
         builder.Services.AddHostedService<DiagnosticWorker>();
 
         var configuration = DiagnosticOptions.Read(builder.Configuration);

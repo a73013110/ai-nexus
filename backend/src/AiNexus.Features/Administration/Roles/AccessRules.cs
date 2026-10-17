@@ -19,7 +19,10 @@ internal static class AccessRules
         return null;
     }
 
-    public static Error? Name(string name) => string.IsNullOrWhiteSpace(name) || name.Trim().Length > 120 || name.Any(char.IsControl) ? AdministrationErrors.InvalidAccessName : null;
+    public static Error? Name(string name)
+        => string.IsNullOrWhiteSpace(name) || name.Trim().Length > 120 || name.Any(char.IsControl)
+            ? AdministrationErrors.InvalidAccessName
+            : null;
 
     public static async Task<Error?> ExistingAsync(IQueryable<string> query, IReadOnlyList<string> ids, CancellationToken ct)
         => await query.CountAsync(x => ids.Contains(x), ct) != ids.Count ? AdministrationErrors.UnknownAccessId : null;

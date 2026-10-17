@@ -31,8 +31,8 @@ internal sealed class ExportActivityAudit(NexusDbContext db, IOptions<AuditOptio
     public async Task<Result<string>> HandleAsync(Guid actor, ActivityAuditFilter filter, CancellationToken ct)
     {
         if (!filter.IsValid()) return AuditErrors.InvalidFilter;
-        // 匯出屬於特權讀取，與日誌匯出一樣先寫稽核再讀：寫不進去就整個失敗（fail closed），逾時或超過上限被拒的嘗試也留有紀錄。
-        // 稽核不可修改，所以紀錄的是這次要讀的範圍，不含筆數。
+        // 匯出屬於特權讀取，與日誌匯出相同：先寫稽核再讀取，寫不進去就整個失敗（fail closed）。
+        // 逾時或超過上限被拒的嘗試也會留下紀錄；稽核不可改，所以記的是查詢範圍，不含筆數。
         db.AuditEvents.Add(new() { OwnerId = actor, Action = Action, Result = "read", DetailsJson = JsonSerializer.Serialize(new {
             search = filter.Search, action = filter.Action, results = filter.Result, category = filter.Category, from = filter.From, to = filter.Until, traceId = filter.TraceId }) });
         await db.SaveChangesAsync(ct);

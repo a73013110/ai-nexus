@@ -52,13 +52,21 @@ internal sealed class LogIn(IAdAuthenticator directory, LocalAuthenticator local
 
     private async Task<Result<NexusUser>> AuthenticateAsync(HttpContext http, AdLoginRequest body, CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(body.Account) || body.Account.Length > 256 || body.Password is null || body.Password.Length is < 1 or > 1024)
+        // 空白或超長的帳密與帳號密碼錯誤走同一個回應與稽核，避免從回應差異推測輸入格式。
+        if (string.IsNullOrWhiteSpace(body.Account) || body.Account.Length > 256
+            || body.Password is null || body.Password.Length is < 1 or > 1024)
             return IdentityErrors.InvalidCredentials;
         if (body.Method == "local") return await local.AuthenticateAsync(body.Account, body.Password, ct);
         if (body.Method != "ad" || options.Value.Mode != "Ldap") return IdentityErrors.AuthenticationModeUnsupported;
         var identity = await directory.AuthenticateAsync(body.Account.Trim(), body.Password, ct);
         if (!identity.IsSuccess) return identity.Error;
-        http.User = new(new ClaimsIdentity([new(ClaimTypes.PrimarySid, identity.Value.Sid), new(ClaimTypes.Name, identity.Value.Account), new("display_name", identity.Value.DisplayName)], AuthEndpoints.CookieScheme));
+        var claims = new ClaimsIdentity(
+        [
+            new(ClaimTypes.PrimarySid, identity.Value.Sid),
+            new(ClaimTypes.Name, identity.Value.Account),
+            new("display_name", identity.Value.DisplayName),
+        ], AuthEndpoints.CookieScheme);
+        http.User = new(claims);
         return await current.GetAsync(ct);
     }
 }

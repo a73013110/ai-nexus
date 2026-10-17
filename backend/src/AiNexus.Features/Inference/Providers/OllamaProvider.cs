@@ -42,7 +42,7 @@ public sealed class OllamaProvider(HttpClient client) : IInferenceProvider
         using var response = await client.PostAsJsonAsync("api/show", new { model }, timeout.Token);
         response.EnsureSuccessStatusCode();
 
-        // 讀取模型規格 JSON，限制大小為 4MB 邊界防禦
+        // 模型規格回應最多讀 4MB，超過就拒絕，避免異常回應撐爆記憶體
         using var json = await AiNexus.Platform.Http.BoundedHttpJson.ReadAsync(response, 4 * 1024 * 1024, timeout.Token);
         if (!json.RootElement.TryGetProperty("capabilities", out var capabilities) || capabilities.ValueKind != JsonValueKind.Array)
         {
@@ -77,7 +77,7 @@ public sealed class OllamaProvider(HttpClient client) : IInferenceProvider
                 num_predict = parameters.MaxOutputTokens,
                 temperature = parameters.Temperature
             },
-            // 保留模型在記憶體 5 分鐘，避免連續對話時反覆冷啟動載入
+            // keep_alive 設為 5 分鐘，連續對話時不必每次重新載入模型
             ["keep_alive"] = "5m"
         };
 

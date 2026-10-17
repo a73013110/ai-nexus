@@ -34,7 +34,9 @@ internal static class AuthSession
     {
         WebSecurity.NoStore(http.Response);
         TestIdentityDto? testing = null;
-        if (Guid.TryParse(http.User.FindFirstValue(SessionIdentity.ActorId), out var actorId) && Guid.TryParse(http.User.FindFirstValue(SessionIdentity.UserId), out var targetId) && long.TryParse(http.User.FindFirstValue(SessionIdentity.TestExpires), out var seconds))
+        if (Guid.TryParse(http.User.FindFirstValue(SessionIdentity.ActorId), out var actorId)
+            && Guid.TryParse(http.User.FindFirstValue(SessionIdentity.UserId), out var targetId)
+            && long.TryParse(http.User.FindFirstValue(SessionIdentity.TestExpires), out var seconds))
             testing = new(actorId, http.User.FindFirstValue("nexus_actor_name") ?? "管理者", targetId, DateTimeOffset.FromUnixTimeSeconds(seconds));
         var methods = new List<string> { "local" };
         if (options.Mode == "Windows") methods.Insert(0, "windows"); else if (options.Configured) methods.Insert(0, "ad");
@@ -53,7 +55,15 @@ internal static class AuthSession
             !Guid.TryParse(previous.FindFirstValue(SessionIdentity.TestId), out var testId) ||
             !Guid.TryParse(previous.FindFirstValue(SessionIdentity.UserId), out var targetId)) return;
         if (await db.AuditEvents.AnyAsync(x => x.OwnerId == actorId && x.ResourceId == testId && x.Action == "identity.test_end", ct)) return;
-        db.AuditEvents.Add(new() { OwnerId = actorId, ActorId = actorId, ResourceId = testId, Action = "identity.test_end", Result = "revoked", DetailsJson = JsonSerializer.Serialize(new { testId, userId = targetId, reason }) });
+        db.AuditEvents.Add(new()
+        {
+            OwnerId = actorId,
+            ActorId = actorId,
+            ResourceId = testId,
+            Action = "identity.test_end",
+            Result = "revoked",
+            DetailsJson = JsonSerializer.Serialize(new { testId, userId = targetId, reason })
+        });
         await db.SaveChangesAsync(ct);
     }
 }

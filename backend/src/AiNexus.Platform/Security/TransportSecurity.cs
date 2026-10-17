@@ -2,9 +2,10 @@ using AiNexus.Platform.Errors;
 
 namespace AiNexus.Platform.Security;
 
+/// <summary>套用 HSTS 與 HTTPS 強制轉址，並拒絕非 HTTPS 的請求。</summary>
 public static class TransportSecurity
 {
-    /// <summary>全域強制啟用 HSTS 與 HTTPS 傳輸安全；僅在開發環境明確配置且來源為 Loopback（本機迴路）時才允許純 HTTP 連線。</summary>
+    /// <summary>全域強制 HSTS 與 HTTPS。只有開發環境明確設定且來源為 Loopback 時，才允許純 HTTP。</summary>
     public static WebApplication UseTransportSecurity(this WebApplication app)
     {
         var testing = app.Environment.IsEnvironment("Testing");

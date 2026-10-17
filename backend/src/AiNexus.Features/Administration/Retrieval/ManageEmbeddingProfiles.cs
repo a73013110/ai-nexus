@@ -8,7 +8,8 @@ using AiNexus.Features.Knowledge.Embeddings;
 namespace AiNexus.Features.Administration.Retrieval;
 
 /// <summary>
-/// Embedding profile 生命週期：列出、重建、啟用、清除已退役的向量。每次變更都持有 knowledge 寫入鎖，並以需要「平台營運」權限的行政變更稽核。
+/// Embedding profile 生命週期：列出、重建、啟用、清除已退役的向量。
+/// 每次變更都先取得 knowledge 寫入鎖，再經 <see cref="AdministrativeAudit"/> 以「平台營運」權限執行並稽核。
 /// </summary>
 internal sealed class ManageEmbeddingProfiles(EmbeddingLifecycle lifecycle, KnowledgeWriteLock writes, AdministrativeAudit audit)
 {

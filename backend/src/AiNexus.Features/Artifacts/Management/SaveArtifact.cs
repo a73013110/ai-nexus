@@ -24,10 +24,16 @@ internal sealed class SaveArtifactRequestValidator : RequestValidator<SaveArtifa
 }
 
 /// <summary>對使用者可編輯的成果新增一筆不可變的版本；不會覆寫其他人在此期間保存的版本。</summary>
-internal sealed class SaveArtifact(NexusDbContext db, ResourceAccess access, ResourceWriteLock writes, GetArtifact reader, TimeProvider clock)
+internal sealed class SaveArtifact(
+    NexusDbContext db,
+    ResourceAccess access,
+    ResourceWriteLock writes,
+    GetArtifact reader,
+    TimeProvider clock)
 {
     public static RouteHandlerBuilder Map(RouteGroupBuilder routes) => routes
-        .MapPut("/{id:guid}", async (Guid id, SaveArtifactRequest request, ICurrentUser user, SaveArtifact handler, CancellationToken ct) =>
+        .MapPut("/{id:guid}", async (
+                Guid id, SaveArtifactRequest request, ICurrentUser user, SaveArtifact handler, CancellationToken ct) =>
             (await handler.HandleAsync(user.Id, id, request, ct)).ToHttpResult())
         .WithName("SaveArtifact");
 
@@ -41,13 +47,34 @@ internal sealed class SaveArtifact(NexusDbContext db, ResourceAccess access, Res
             var found = await access.RequireAsync(actor, id, Artifact.Kind, ct, write: true);
             if (!found.IsSuccess) return found.Error;
             var resource = found.Value;
-            var changed = await db.Set<Artifact>().Where(x => x.Id == id && x.Version == request.ExpectedVersion).ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1), ct);
+            // 版本號以條件式 UPDATE 遞增：只有讀到的版本仍是最新時才會成功，否則即為併發衝突。
+            var changed = await db.Set<Artifact>()
+                .Where(x => x.Id == id && x.Version == request.ExpectedVersion)
+                .ExecuteUpdateAsync(p => p.SetProperty(x => x.Version, x => x.Version + 1), ct);
             if (changed != 1) return ArtifactsErrors.VersionConflict;
             var now = clock.GetUtcNow();
-            resource.Name = request.Title.Trim(); resource.UpdatedAt = now;
-            db.Add(new ArtifactRevision { ArtifactId = id, Version = request.ExpectedVersion + 1, AuthorId = actor, Title = resource.Name, Content = request.Content, CreatedAt = now });
-            db.AuditEvents.Add(new() { OwnerId = actor, ResourceId = id, Action = "artifact.revised", Result = "saved", DetailsJson = JsonSerializer.Serialize(new { version = request.ExpectedVersion + 1 }) });
-            await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
+            var newVersion = request.ExpectedVersion + 1;
+            resource.Name = request.Title.Trim();
+            resource.UpdatedAt = now;
+            db.Add(new ArtifactRevision
+            {
+                ArtifactId = id,
+                Version = newVersion,
+                AuthorId = actor,
+                Title = resource.Name,
+                Content = request.Content,
+                CreatedAt = now,
+            });
+            db.AuditEvents.Add(new()
+            {
+                OwnerId = actor,
+                ResourceId = id,
+                Action = "artifact.revised",
+                Result = "saved",
+                DetailsJson = JsonSerializer.Serialize(new { version = newVersion }),
+            });
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
             return await reader.HandleAsync(actor, id, null, ct);
         }
     }

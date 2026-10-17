@@ -12,7 +12,8 @@ namespace AiNexus.Features.Chat.Transcripts;
 /// 前端介面呈現之訊息資料傳輸物件。
 /// </summary>
 /// <remarks>
-/// <c>ModelId</c> 是對外脫敏後的識別碼，內部模型 ID 不會出現在這個 DTO 中；<c>ModelDisplayName</c> 由 <see cref="ModelPresentation"/> 產生。
+/// <c>ModelId</c> 是對外脫敏後的識別碼，內部模型 ID 不會出現在這個 DTO 中。
+/// <c>ModelDisplayName</c> 由 <see cref="ModelPresentation"/> 產生。
 /// </remarks>
 public sealed record MessageDto(
     Guid Id,

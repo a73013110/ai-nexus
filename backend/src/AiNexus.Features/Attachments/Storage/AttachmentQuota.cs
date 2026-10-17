@@ -29,9 +29,12 @@ public sealed class AttachmentQuota(NexusDbContext db, AccessService access, IOp
             .Select(g => new { OwnerId = g.Key, Bytes = g.Sum(x => x.Size) }).ToDictionaryAsync(x => x.OwnerId, x => x.Bytes, ct);
         return users.ToDictionary(x => x.Id, x =>
         {
-            var personal = x.AttachmentLimitBytes; var group = groups.GetValueOrDefault(x.Id);
-            var limit = Effective(personal, group, options.Value.DefaultOwnerLimitBytes); var used = bytes.GetValueOrDefault(x.Id);
-            return new AttachmentStorageDto(used, limit, Math.Max(0, limit - used), personal, group, options.Value.DefaultOwnerLimitBytes, personal is not null ? "personal" : group is not null ? "group" : "default");
+            var personal = x.AttachmentLimitBytes;
+            var group = groups.GetValueOrDefault(x.Id);
+            var limit = Effective(personal, group, options.Value.DefaultOwnerLimitBytes);
+            var used = bytes.GetValueOrDefault(x.Id);
+            var source = personal is not null ? "personal" : group is not null ? "group" : "default";
+            return new AttachmentStorageDto(used, limit, Math.Max(0, limit - used), personal, group, options.Value.DefaultOwnerLimitBytes, source);
         });
     }
 

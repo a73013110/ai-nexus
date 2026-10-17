@@ -20,7 +20,8 @@ internal sealed class ProjectsDashboard(NexusDbContext db) : IDashboardSource
         var counts = await projects.GroupBy(x => 1).Select(g => new { All = g.Count(), Archived = g.Count(x => x.IsArchived) }).SingleOrDefaultAsync(ct);
         var templates = await db.Set<ProjectTemplate>().AsNoTracking().CountAsync(t => projects.Any(p => p.Id == t.ProjectId), ct);
         var created = await DashboardDays.CountAsync(db, resources.Select(x => x.CreatedAt), scope, ct);
-        var all = counts?.All ?? 0; var archived = counts?.Archived ?? 0;
+        var all = counts?.All ?? 0;
+        var archived = counts?.Archived ?? 0;
         var section = new DashboardSection("projects", Feature)
             .Count("projects", "專案", all - archived, "個", hint: archived > 0 ? $"另有 {archived} 個封存" : null)
             .Count("templates", "提問範本", templates, "個")

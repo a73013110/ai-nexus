@@ -17,7 +17,7 @@ namespace AiNexus.Features.Projects.Contents;
 public sealed record ConversationProjectRequest(Guid? ProjectId);
 
 /// <summary>
-/// 把使用者自己的對話移入可讀取的有效專案，或移出專案。在對話的生成鎖下執行，避免與正在開始的回答競態。
+/// 把使用者自己的對話移入可讀取的有效專案，或移出專案。在對話的生成鎖下執行，避免與正在開始的回答互相競爭。
 /// </summary>
 internal sealed class AssignConversationProject(NexusDbContext db, ResourceAccess access, AccessService features, GenerationScheduler scheduler, TimeProvider clock)
 {

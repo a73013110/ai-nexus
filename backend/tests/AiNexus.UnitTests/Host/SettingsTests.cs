@@ -145,11 +145,16 @@ public sealed class SettingsTests
             {
                 var next = path.Length == 0 ? key : path + ":" + key;
                 if (value is JsonObject) foreach (var secret in Secrets(value, next)) yield return secret;
-                else if (value is JsonValue v && v.TryGetValue<string>(out var text) && text.Length > 0
-                    && (key is "Password" or "BindPassword" or "ApiKey" || key == "User" && path.StartsWith("Databases:", StringComparison.Ordinal)))
+                else if (value is JsonValue v && v.TryGetValue<string>(out var text) && text.Length > 0 && IsSecretKey(key, path))
                     yield return (next, text);
             }
         }
+
+        // Databases 底下的 User 也視為秘密：資料庫帳號通常與密碼成對使用，只留下帳號也會洩漏連線資訊。
+        // 其他區段的 User 不算，避免把一般的使用者名稱誤判為秘密。
+        static bool IsSecretKey(string key, string path) =>
+            key is "Password" or "BindPassword" or "ApiKey"
+            || (key == "User" && path.StartsWith("Databases:", StringComparison.Ordinal));
     }
 
     private static ServiceProvider Settings(Dictionary<string, string?> values)

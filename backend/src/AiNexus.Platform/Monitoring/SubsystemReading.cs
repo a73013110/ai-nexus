@@ -1,10 +1,11 @@
 namespace AiNexus.Platform.Monitoring;
 
-/// <summary><see cref="IMonitoringSource"/> 回報的監控讀數：包含來自 <see cref="SubsystemStates"/> 的狀態碼、選填的單行摘要與數值指標清單。</summary>
+/// <summary><see cref="IMonitoringSource"/> 的讀數：狀態碼（見 <see cref="SubsystemStates"/>）、選填的單行摘要，以及指標清單。</summary>
 public sealed record SubsystemReading(string Status, string? Summary, IReadOnlyList<SubsystemFact> Facts);
 
 /// <summary>
-/// 子系統的單一指標數值。<c>Value</c> 為 null 代表未知；<c>Unit</c> (<see cref="SubsystemUnits"/>) 指引前端頁面的格式化方式，文字類型指標則將內容置於 <c>Text</c>。
+/// 子系統的單一指標。<c>Value</c> 為 null 代表未知；<c>Unit</c>（見 <see cref="SubsystemUnits"/>）決定前端如何格式化；
+/// 文字型指標的內容放在 <c>Text</c>。
 /// </summary>
 public sealed record SubsystemFact(string Id, string Label, double? Value, string Unit, string? Text, string Tone)
 {
